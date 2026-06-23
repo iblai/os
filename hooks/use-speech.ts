@@ -77,12 +77,14 @@ function attachMediaSourceStream(
 
       const pump = async () => {
         const reader = body.getReader();
+        let appendedAny = false;
         try {
           while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            if (value && value.byteLength > 0) {
-              await appendChunk(value);
+            const result = await reader.read();
+            if (result.done) break;
+            if (result.value.byteLength > 0) {
+              await appendChunk(result.value);
+              appendedAny = true;
               // First playable chunk is buffered — let the caller start
               // playback while the rest continues to stream. `resolve` is a
               // no-op on subsequent chunks.
@@ -91,6 +93,11 @@ function attachMediaSourceStream(
           }
           if (mediaSource.readyState === 'open') {
             mediaSource.endOfStream();
+          }
+          // An empty stream would otherwise leave the caller awaiting `ready`
+          // forever; surface it so playback can reset / fall back instead.
+          if (!appendedAny) {
+            reject(new Error('TTS stream produced no audio'));
           }
         } catch (err) {
           // Once playback has started this reject is a no-op; the audio
@@ -141,7 +148,7 @@ async function loadTtsAudio(
     throw new Error(`TTS request failed with status ${response.status}`);
   }
 
-  const contentType = response.headers?.get?.('Content-Type') ?? null;
+  const contentType = response.headers.get('Content-Type');
   // An explicit non-audio payload (e.g. a JSON error) means there is nothing to
   // play — let the caller fall back to browser speech synthesis.
   if (contentType && !contentType.toLowerCase().startsWith('audio/')) {
