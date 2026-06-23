@@ -234,14 +234,26 @@ export class SidebarPage {
    * on its clickability.
    */
   async ensureExpanded(timeoutMs = 10_000): Promise<void> {
-    const visible = await this.logoImage
-      .isVisible({ timeout: 3_000 })
-      .catch(() => false);
-    if (visible) return;
+    // Fast path: logo already visible (sidebar expanded and mounted).
+    if (await this.logoImage.isVisible().catch(() => false)) return;
+
     // The embedded layout blocks rendering until mentor settings load, which
-    // can be slow against the embed backend — callers (e.g. the embed Show
-    // Catalogue tests) pass a generous timeout so the sidebar has time to mount.
-    await this.toggle(timeoutMs);
+    // can be slow against the embed backend. Wait for the sidebar chrome
+    // (the toggle control) to mount first — otherwise we'd misread a slow-
+    // mounting sidebar as collapsed and toggle it *shut*, hiding the logo for
+    // good. Callers (e.g. the embed Show Catalogue tests) pass a generous
+    // timeout so the sidebar has time to appear.
+    await expect(this.toggleButton).toBeVisible({ timeout: timeoutMs });
+
+    // Only expand when actually collapsed: the toggle reads "Expand sidebar"
+    // while collapsed and "Collapse sidebar" while expanded.
+    const expandButton = this.sidebar.getByRole('button', {
+      name: /expand sidebar/i,
+    });
+    if (await expandButton.isVisible().catch(() => false)) {
+      await expandButton.click();
+    }
+
     await expect(this.logoImage).toBeVisible({ timeout: timeoutMs });
   }
 

@@ -42,6 +42,16 @@ describe('config', () => {
       // Should return env value or empty string
       expect(typeof result).toBe('string');
     });
+
+    it('should fall back when the runtime value is an empty string', () => {
+      // env.js templating commonly emits unset vars as "" — that must not
+      // shadow a meaningful fallback (plain ?? would return the empty string).
+      (global.window as any).__ENV__ = {
+        NEXT_PUBLIC_AUTH_URL: '',
+      };
+      const result = getEnv('NEXT_PUBLIC_AUTH_URL', 'fallback');
+      expect(result).toBe('fallback');
+    });
   });
 
   describe('config methods', () => {
@@ -394,6 +404,16 @@ describe('config', () => {
         };
         const result = config.maximumCharacterSizeToCopy();
         expect(result).toBe('500');
+      });
+
+      it('should default to 2000 when the runtime value is an empty string', () => {
+        // An empty value must not collapse to Number("") === 0, which would
+        // turn every paste into an attachment chip.
+        (global.window as any).__ENV__ = {
+          NEXT_PUBLIC_MAXIMUM_CHARACTER_SIZE_TO_COPY: '',
+        };
+        const result = config.maximumCharacterSizeToCopy();
+        expect(result).toBe('2000');
       });
     });
 
