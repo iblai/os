@@ -4,7 +4,7 @@
   "identifier": "ai.ibl.mentorai",
   "version": "1.1.20",
   "build": {
-    "devUrl": "https://mentorai.iblai.app",
+    "devUrl": "https://os.ibl.ai",
     "frontendDist": "offline-shell"
   },
   "bundle": {
@@ -76,6 +76,7 @@
     "deep-link": {
       "mobile": [
         { "host": "mentorai.iblai.app", "pathPrefix": ["/"] },
+        { "host": "os.ibl.ai", "pathPrefix": ["/"] },
         { "host": "login.iblai.app", "pathPrefix": ["/"] },
         { "scheme": ["iblai-mentor", "ai.ibl.mentorai"] }
       ],

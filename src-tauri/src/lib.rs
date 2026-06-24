@@ -90,14 +90,14 @@ fn get_app_url() -> String {
         return "https://mentorai.iblai.app".to_string();
     }
 
-    // Desktop: .org for debug, .app for release
+    // Desktop default app URL (override with TAURI_DEV_URL) — same for debug and release
     #[cfg(not(any(target_os = "ios", target_os = "android")))]
     {
         #[cfg(debug_assertions)]
-        return "https://mentorai.iblai.org".to_string();
+        return "https://os.ibl.ai".to_string();
 
         #[cfg(not(debug_assertions))]
-        return "https://mentorai.iblai.app".to_string();
+        return "https://os.ibl.ai".to_string();
     }
 }
 
@@ -1586,6 +1586,7 @@ const URL_MONITOR_SCRIPT_ONLINE: &str = r#"
 
         // Only cache when on the mentor app domain - prevents errors on auth app
         var isMentorDomain = window.location.hostname === 'mentorai.iblai.app' ||
+                            window.location.hostname === 'os.ibl.ai' ||
                             window.location.hostname === 'localhost' ||
                             window.location.hostname === '127.0.0.1';
 
@@ -1675,6 +1676,7 @@ const URL_MONITOR_SCRIPT_ONLINE: &str = r#"
 
         // Only cache when on mentor app domain - prevents IPC errors on auth app
         var isMentorDomain = window.location.hostname === 'mentorai.iblai.app' ||
+                            window.location.hostname === 'os.ibl.ai' ||
                             window.location.hostname === 'localhost' ||
                             window.location.hostname === '127.0.0.1';
 
@@ -1722,6 +1724,7 @@ const URL_MONITOR_SCRIPT_ONLINE: &str = r#"
 
         // Only save when on mentor app domain - prevents IPC errors on auth app
         var isMentorDomain = window.location.hostname === 'mentorai.iblai.app' ||
+                            window.location.hostname === 'os.ibl.ai' ||
                             window.location.hostname === 'localhost' ||
                             window.location.hostname === '127.0.0.1';
 
@@ -1775,6 +1778,7 @@ const URL_MONITOR_SCRIPT_ONLINE: &str = r#"
 
         // Only save when on mentor app domain - prevents IPC errors on auth app
         var isMentorDomain = window.location.hostname === 'mentorai.iblai.app' ||
+                            window.location.hostname === 'os.ibl.ai' ||
                             window.location.hostname === 'localhost' ||
                             window.location.hostname === '127.0.0.1';
 
@@ -1971,6 +1975,7 @@ const URL_MONITOR_SCRIPT_OFFLINE: &str = r#"
     function checkAndSaveRoute() {
         // Only save when on mentor app domain - prevents IPC errors on auth app
         var isMentorDomain = window.location.hostname === 'mentorai.iblai.app' ||
+                            window.location.hostname === 'os.ibl.ai' ||
                             window.location.hostname === 'localhost' ||
                             window.location.hostname === '127.0.0.1';
 
