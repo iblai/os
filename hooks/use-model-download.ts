@@ -268,7 +268,7 @@ export function useModelDownload() {
         '[useModelDownload] Skipping checkStatus - already checked (hasCheckedStatus.current = true)',
       );
     }
-     
+
     // checkStatus is intentionally omitted - we only want to run once on mount using hasCheckedStatus ref guard
   }, [isAvailable, invoke, foundryStatus, foundryStatusLoaded]);
 
