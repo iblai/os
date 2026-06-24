@@ -54,7 +54,20 @@ const runtimeEnv = () =>
   typeof window !== 'undefined' ? (window as any).__ENV__ || {} : {};
 
 export const getEnv = (key: keyof typeof env, fallback = ''): string => {
-  return runtimeEnv()[key] ?? env[key] ?? fallback;
+  // Prefer the first *non-empty* value. Plain `??` only falls back on
+  // null/undefined, so an empty-string runtime value — which `env.js`
+  // templating commonly emits for unset vars (`KEY: ""`) — would shadow a
+  // meaningful fallback. e.g. NEXT_PUBLIC_MAXIMUM_CHARACTER_SIZE_TO_COPY=""
+  // yields Number("") === 0 and turns every paste into an attachment chip.
+  const runtime = runtimeEnv()[key];
+  if (runtime !== undefined && runtime !== null && runtime !== '') {
+    return runtime;
+  }
+  const build = env[key];
+  if (build !== undefined && build !== null && build !== '') {
+    return build;
+  }
+  return fallback;
 };
 
 const domain = () => getEnv('NEXT_PUBLIC_PLATFORM_BASE_DOMAIN', 'iblai.app');

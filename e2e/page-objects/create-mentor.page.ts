@@ -110,12 +110,26 @@ export class CreateMentorPage {
       description || `E2E test mentor created at ${Date.now()}`,
     );
 
-    // Select first available category. The cmdk option list re-renders as
-    // categories stream in, detaching the first <div role="option"> mid-click
-    // ("element is not stable / detached from the DOM"). reliableClick waits
-    // for stability and retries the whole click, so a detach just re-runs.
+    // Select first available category. The cmdk option list streams in from
+    // the categories API and can be slow — or briefly empty — under parallel
+    // load, so the first <div role="option"> may not exist yet. Wait
+    // generously for it to populate; if it never shows, toggle the combobox
+    // closed and re-open to re-trigger the fetch, then wait again.
     await this.categoryCombobox.click();
     const firstCategory = this.page.locator('[role="option"]').first();
+    const optionVisible = await firstCategory
+      .waitFor({ state: 'visible', timeout: 20_000 })
+      .then(() => true)
+      .catch(() => false);
+    if (!optionVisible) {
+      await this.categoryCombobox.click(); // toggle closed
+      await this.page.waitForTimeout(1_000);
+      await this.categoryCombobox.click(); // re-open to re-trigger the fetch
+      await firstCategory.waitFor({ state: 'visible', timeout: 20_000 });
+    }
+    // The list re-renders as more categories arrive, detaching the first
+    // option mid-click; reliableClick waits for stability and retries the
+    // whole click, so a detach just re-runs.
     await reliableClick(this.page, firstCategory, 10_000);
 
     // Wait for Next button to become enabled

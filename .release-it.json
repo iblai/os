@@ -37,6 +37,10 @@
     }
   },
   "hooks": {
-    "before:init": ["git fetch --tags"]
+    "before:init": ["git fetch --tags"],
+    "after:bump": [
+      "node scripts/sync-tauri-version.mjs ${version}",
+      "git add src-tauri/tauri.conf.json"
+    ]
   }
 }
