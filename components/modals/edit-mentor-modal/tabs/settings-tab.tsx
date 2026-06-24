@@ -1127,13 +1127,13 @@ export function SettingsTab() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium text-[#646464]">
-                            Verbose Reasoning
+                            Enable verbose reasoning
                           </span>
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger
                                 type="button"
-                                aria-label="More info about verbose reasoning"
+                                aria-label="More info about enable verbose reasoning"
                               >
                                 <Info className="h-4 w-4 text-gray-400" />
                               </TooltipTrigger>
@@ -1152,7 +1152,7 @@ export function SettingsTab() {
                             field.handleChange(checked)
                           }
                           disabled={isDisabled}
-                          aria-label={`Verbose reasoning ${field.state.value ? 'enabled' : 'disabled'}`}
+                          aria-label={`Enable verbose reasoning ${field.state.value ? 'enabled' : 'disabled'}`}
                         />
                       </div>
                     )}
@@ -1169,13 +1169,13 @@ export function SettingsTab() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-medium text-[#646464]">
-                                Enhanced document retrieval
+                                Enable enhanced document retrieval
                               </span>
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger
                                     type="button"
-                                    aria-label="More info about enhanced document retrieval"
+                                    aria-label="More info about enable enhanced document retrieval"
                                   >
                                     <Info className="h-4 w-4 text-gray-400" />
                                   </TooltipTrigger>
@@ -1195,7 +1195,7 @@ export function SettingsTab() {
                                 field.handleChange(checked)
                               }
                               disabled={isDisabled || disabled}
-                              aria-label="Enhanced document retrieval"
+                              aria-label="Enable enhanced document retrieval"
                               aria-checked={field.state.value}
                             />
                           </div>
@@ -1387,13 +1387,13 @@ export function SettingsTab() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium text-[#646464]">
-                            Smart document retrieval
+                            Enable smart document retrieval
                           </span>
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger
                                 type="button"
-                                aria-label="More info about smart document retrieval"
+                                aria-label="More info about enable smart document retrieval"
                               >
                                 <Info className="h-4 w-4 text-gray-400" />
                               </TooltipTrigger>
@@ -1414,7 +1414,7 @@ export function SettingsTab() {
                             field.handleChange(checked)
                           }
                           disabled={isDisabled}
-                          aria-label={`Smart document retrieval ${field.state.value ? 'enabled' : 'disabled'}`}
+                          aria-label={`Enable smart document retrieval ${field.state.value ? 'enabled' : 'disabled'}`}
                           data-testid="settings-use-function-calling-for-rag-switch"
                         />
                       </div>
