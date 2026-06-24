@@ -5,11 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ChevronRight } from 'lucide-react';
 import { useNavigate } from '@/hooks/user-navigate';
-import {
-  useGetAiSearchMentorsQuery,
-  useGetPublicMentorsQuery,
-} from '@iblai/iblai-js/data-layer';
-import { useUsername } from '@/hooks/use-user';
+import { useGetAiSearchMentorsQuery } from '@iblai/iblai-js/data-layer';
 import { useParams } from 'next/navigation';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { format } from 'date-fns';
@@ -18,11 +14,10 @@ import { useTenantMetadata } from '@iblai/iblai-js/web-utils';
 const QUERY_LIMIT = 6;
 
 export function ExploreMentors() {
-  const username = useUsername();
   const { tenantKey } = useParams<TenantKeyMentorIdParams>();
   const { navigateToExplore, navigateToMentor } = useNavigate();
   const { metadata } = useTenantMetadata({ org: tenantKey });
-  const { data: mentors } = useGetAiSearchMentorsQuery(
+  const { data: allMentors } = useGetAiSearchMentorsQuery(
     {
       platform_key: tenantKey ?? '',
       limit: QUERY_LIMIT,
@@ -34,19 +29,6 @@ export function ExploreMentors() {
       skip: !tenantKey,
     },
   );
-
-  const { data: publicMentors } = useGetPublicMentorsQuery(
-    {
-      includeMainPublicMentors: true,
-      limit: QUERY_LIMIT,
-      orderBy: 'recently_accessed_at',
-    },
-    {
-      skip: username,
-    },
-  );
-
-  const allMentors = username ? mentors : publicMentors;
 
   if (!allMentors?.results || allMentors?.results.length === 0) {
     return null;
