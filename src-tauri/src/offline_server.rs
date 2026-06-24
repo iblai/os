@@ -39,12 +39,12 @@ fn get_app_origin() -> String {
         return url;
     }
 
-    // Default: localhost for debug, production URL for release
+    // Default app origin (override with TAURI_APP_URL) — same for debug and release
     #[cfg(debug_assertions)]
-    return "http://mentorai.iblai.app".to_string();
+    return "https://os.ibl.ai".to_string();
 
     #[cfg(not(debug_assertions))]
-    return "https://mentorai.iblai.app".to_string();
+    return "https://os.ibl.ai".to_string();
 }
 
 #[derive(Clone)]
@@ -259,6 +259,7 @@ async fn serve_file(
         // This handles cases where chunks were cached from different environments (dev/prod)
         let possible_origins = [
             app_origin.as_str(),
+            "https://os.ibl.ai",
             "https://mentorai.iblai.app",
             "http://localhost:3001",
             "http://localhost:3000",

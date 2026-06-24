@@ -76,6 +76,7 @@ yalc.lock
 # signing artifacts (never commit provisioning profiles)
 *.provisionprofile
 src-tauri/embedded.provisionprofile
+src-tauri/gen/schemas
 
 # playwright
 test-results

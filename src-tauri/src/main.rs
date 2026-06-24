@@ -177,12 +177,12 @@ fn get_app_url() -> String {
         return url;
     }
 
-    // Default: localhost for debug, production URL for release
+    // Default app URL (override with TAURI_APP_URL) — same for debug and release
     #[cfg(debug_assertions)]
-    return "https://mentorai.iblai.app".to_string();
+    return "https://os.ibl.ai".to_string();
 
     #[cfg(not(debug_assertions))]
-    return "https://mentorai.iblai.app".to_string();
+    return "https://os.ibl.ai".to_string();
 }
 
 // Fallback internet connectivity check using multiple reliable services
@@ -2370,6 +2370,7 @@ fn main() {
                     let allowed = url_str.starts_with("http://localhost")
                         || url_str.starts_with("http://127.0.0.1")
                         || url_str.starts_with("https://mentorai.iblai.app")
+                        || url_str.starts_with("https://os.ibl.ai")
                         || url_str.starts_with("https://login.iblai.app")
                         || url_str.starts_with("https://base.manager.iblai.app")
                         || url_str.starts_with("https://base.manager.iblai.org")
