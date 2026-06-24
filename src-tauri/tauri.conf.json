@@ -2,9 +2,9 @@
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "ibl.ai",
   "identifier": "ai.ibl.mentorai",
-  "version": "1.1.20",
+  "version": "0.82.0",
   "build": {
-    "devUrl": "https://mentorai.iblai.app",
+    "devUrl": "https://os.ibl.ai",
     "frontendDist": "offline-shell"
   },
   "bundle": {
@@ -61,7 +61,7 @@
     "withGlobalTauri": true,
     "security": {
       "csp": null,
-      "capabilities": ["default", "offline-server-access"],
+      "capabilities": ["default", "offline-server-access", "macos-permissions"],
       "assetProtocol": {
         "enable": true,
         "scope": ["**"]
@@ -76,6 +76,7 @@
     "deep-link": {
       "mobile": [
         { "host": "mentorai.iblai.app", "pathPrefix": ["/"] },
+        { "host": "os.ibl.ai", "pathPrefix": ["/"] },
         { "host": "login.iblai.app", "pathPrefix": ["/"] },
         { "scheme": ["iblai-mentor", "ai.ibl.mentorai"] }
       ],
