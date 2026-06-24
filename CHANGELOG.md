@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.81.1](https://github.com/iblai/os/compare/v0.81.0...v0.81.1) (2026-06-24)
+
+### Bug Fixes
+
+* playwright tests issues fixed ([081da29](https://github.com/iblai/os/commit/081da2989c6edfad486ddc5f07a2159df9d04ce9))
+* playwright tests issues fixed > test coverage ([36e3acb](https://github.com/iblai/os/commit/36e3acb40b4202dcc27590c5be124c130e01b430))
+
 ## [0.81.0](https://github.com/iblai/os/compare/v0.80.2...v0.81.0) (2026-06-24)
 
 ### Features
