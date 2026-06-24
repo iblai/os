@@ -61,7 +61,7 @@
     "withGlobalTauri": true,
     "security": {
       "csp": null,
-      "capabilities": ["default", "offline-server-access"],
+      "capabilities": ["default", "offline-server-access", "macos-permissions"],
       "assetProtocol": {
         "enable": true,
         "scope": ["**"]
