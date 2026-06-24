@@ -1,0 +1,92 @@
+name: Release macOS DMG
+
+# Watches src-tauri/ on main and produces a signed + notarized Developer ID DMG
+# (the non-sandboxed variant where System Control / GhostOS works — see
+# docs/macos-builds.md). Builds a universal binary so one DMG runs on both
+# Intel and Apple Silicon. Also runnable on demand via "Run workflow".
+#
+# The app version comes from src-tauri/tauri.conf.json, which release-it keeps
+# in sync via its after:bump hook (see .release-it.json). So a `chore(release):`
+# commit — which bumps tauri.conf.json — trips this same src-tauri path filter
+# and ships a freshly-versioned DMG as the `app-v<version>` Release.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src-tauri/**'
+      - '.github/workflows/release-macos-dmg.yml'
+  workflow_dispatch:
+
+# Never let two release builds clobber the same GitHub Release at once.
+concurrency:
+  group: release-macos-dmg
+  cancel-in-progress: false
+
+permissions:
+  contents: write # create / update the GitHub Release and upload the DMG asset
+
+jobs:
+  build-dmg:
+    runs-on: macos-latest # Apple Silicon runner; cross-compiles the x86_64 slice too
+    env:
+      # Not secret — these already live in src-tauri/tauri.devid.conf.json and
+      # docs/macos-builds.md. tauri-action needs them in the environment to pick
+      # the right identity in the temporary signing keychain and to notarize.
+      APPLE_SIGNING_IDENTITY: 'Developer ID Application: Class Generation, LLC (L4FWRM8W5Z)'
+      APPLE_TEAM_ID: L4FWRM8W5Z
+    steps:
+      - uses: actions/checkout@v4
+
+      # Node/pnpm are only needed so tauri-action can resolve the project's
+      # package manager; the frontend itself is the committed static
+      # src-tauri/offline-shell (no `next build` required for the bundle).
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '25.3.0'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Cache Rust build
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Build, sign, notarize & release DMG
+        id: tauri
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # --- Code signing (Developer ID Application cert, exported as .p12) ---
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          # --- Notarization (Apple ID + app-specific password) ---
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          # APPLE_SIGNING_IDENTITY / APPLE_TEAM_ID are inherited from job env.
+        with:
+          # Apply the Developer ID overlay, build only the DMG, as a universal
+          # binary. Mirrors `pnpm tauri:build:devid` with the CI target added.
+          args: --config src-tauri/tauri.devid.conf.json --target universal-apple-darwin --bundles app,dmg
+          tagName: app-v__VERSION__ # __VERSION__ is read from tauri.conf.json
+          releaseName: 'ibl.ai __VERSION__ (macOS)'
+          releaseBody: 'Automated, notarized Developer ID macOS build.'
+          releaseDraft: false
+          prerelease: false
+
+      # Keep the DMG available as a build artifact too, independent of the Release.
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ibl-ai-macos-dmg
+          path: src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+          if-no-files-found: error
