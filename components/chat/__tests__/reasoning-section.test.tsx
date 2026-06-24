@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 
 vi.mock('@/components/markdown', () => ({
   default: ({ children }: { children: string }) => (
@@ -21,6 +21,10 @@ import { ReasoningSection } from '../reasoning-section';
 describe('ReasoningSection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    cleanup();
   });
 
   it('returns null when reasoningContent is empty', () => {
@@ -111,6 +115,106 @@ describe('ReasoningSection', () => {
       expect(
         container.querySelector('.animate-bounce'),
       ).not.toBeInTheDocument();
+    });
+  });
+
+  describe('thought-process delimiter splitting', () => {
+    it('renders two separate step blocks for content with **** and no literal **** in DOM', () => {
+      const { container } = render(
+        <ReasoningSection
+          reasoningContent="Preparing first lesson greeting****Planning first lesson content"
+          isReasoning={false}
+        />,
+      );
+      fireEvent.click(screen.getByText('Thought'));
+
+      const blocks = container.querySelectorAll('[data-testid="markdown"]');
+      expect(blocks).toHaveLength(2);
+      expect(blocks[0]).toHaveTextContent('Preparing first lesson greeting');
+      expect(blocks[1]).toHaveTextContent('Planning first lesson content');
+      expect(container.innerHTML).not.toContain('****');
+    });
+
+    it('splits a bold span unclosed across blank lines into clean steps', () => {
+      const { container } = render(
+        <ReasoningSection
+          reasoningContent={
+            "**Assessing Portugal's World Cup match timing\n\nRequesting tournament clarification\n\nPreparing clarifying question with LaTeX**"
+          }
+          isReasoning={false}
+        />,
+      );
+      fireEvent.click(screen.getByText('Thought'));
+
+      const blocks = container.querySelectorAll('[data-testid="markdown"]');
+      expect(blocks).toHaveLength(3);
+      expect(blocks[0]).toHaveTextContent(
+        "Assessing Portugal's World Cup match timing",
+      );
+      expect(blocks[1]).toHaveTextContent(
+        'Requesting tournament clarification',
+      );
+      expect(blocks[2]).toHaveTextContent(
+        'Preparing clarifying question with LaTeX',
+      );
+      expect(container.innerHTML).not.toContain('**');
+    });
+
+    it('filters mixed asterisk and blank-line delimiters into clean steps', () => {
+      const { container } = render(
+        <ReasoningSection
+          reasoningContent={'a****\n****b**\n\n  **c'}
+          isReasoning={false}
+        />,
+      );
+      fireEvent.click(screen.getByText('Thought'));
+
+      const blocks = container.querySelectorAll('[data-testid="markdown"]');
+      expect(blocks).toHaveLength(3);
+      expect(blocks[0]).toHaveTextContent('a');
+      expect(blocks[1]).toHaveTextContent('b');
+      expect(blocks[2]).toHaveTextContent('c');
+      expect(container.innerHTML).not.toContain('**');
+    });
+
+    it('renders a bold-wrapped single step with asterisks stripped', () => {
+      const { container } = render(
+        <ReasoningSection
+          reasoningContent="**Just thinking**"
+          isReasoning={false}
+        />,
+      );
+      fireEvent.click(screen.getByText('Thought'));
+
+      const blocks = container.querySelectorAll('[data-testid="markdown"]');
+      expect(blocks).toHaveLength(1);
+      expect(blocks[0]).toHaveTextContent('Just thinking');
+      expect(container.innerHTML).not.toContain('**');
+    });
+
+    it('falls back to raw content when nothing parseable remains', () => {
+      const { container } = render(
+        <ReasoningSection reasoningContent="****" isReasoning={false} />,
+      );
+      fireEvent.click(screen.getByText('Thought'));
+
+      const blocks = container.querySelectorAll('[data-testid="markdown"]');
+      expect(blocks).toHaveLength(1);
+      expect(blocks[0]).toHaveTextContent('****');
+    });
+
+    it('renders content without **** unchanged as a single block', () => {
+      const { container } = render(
+        <ReasoningSection
+          reasoningContent="Just a normal reasoning blob"
+          isReasoning={false}
+        />,
+      );
+      fireEvent.click(screen.getByText('Thought'));
+
+      const blocks = container.querySelectorAll('[data-testid="markdown"]');
+      expect(blocks).toHaveLength(1);
+      expect(blocks[0]).toHaveTextContent('Just a normal reasoning blob');
     });
   });
 

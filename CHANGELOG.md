@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.82.1](https://github.com/iblai/os/compare/v0.82.0...v0.82.1) (2026-06-24)
+
+### Bug Fixes
+
+* **chat:** split thought-process steps on bold delimiters ([318d713](https://github.com/iblai/os/commit/318d7136bbc32a1e9cf0f0ecb8ddad98412c8bab))
+* **settings:** use "Enable …" wording for three capability toggles ([c0dd67d](https://github.com/iblai/os/commit/c0dd67d9501dd7b1e556d3a483769550425a0917))
+
+### Tests
+
+* **chat:** cover thought-process step splitting ([c6e22a0](https://github.com/iblai/os/commit/c6e22a044837c637dd89ec3b39f47e779c96306f))
+* **e2e:** update selectors and coverage for "Enable …" toggle labels ([3abcb74](https://github.com/iblai/os/commit/3abcb740f3f89f5e95b1717919d686f3bb16219e))
+
 ## [0.82.0](https://github.com/iblai/os/compare/v0.81.1...v0.82.0) (2026-06-24)
 
 ### Features
