@@ -555,10 +555,10 @@
       "description": "Permission identifier",
       "oneOf": [
         {
-          "description": "Default permissions for IBL.ai OS custom commands\n#### This default permission set includes:\n\n- `allow-open-external-url`\n- `allow-navigate-to`\n- `allow-get-os-type`\n- `allow-install-ollama`\n- `allow-stop-ollama`\n- `allow-check-ollama-status`\n- `allow-check-disk-space-for-model`\n- `allow-download-phi3-model`\n- `allow-download-model`\n- `allow-cancel-model-download`\n- `allow-check-network-status`\n- `allow-ollama-chat`\n- `allow-ollama-chat-stream`",
+          "description": "Default permissions for IBL.ai OS custom commands\n#### This default permission set includes:\n\n- `allow-open-external-url`\n- `allow-navigate-to`\n- `allow-get-os-type`\n- `allow-install-ollama`\n- `allow-stop-ollama`\n- `allow-check-ollama-status`\n- `allow-check-disk-space-for-model`\n- `allow-download-phi3-model`\n- `allow-download-model`\n- `allow-cancel-model-download`\n- `allow-check-network-status`\n- `allow-ollama-chat`\n- `allow-ollama-chat-stream`\n- `allow-get-mcp-config-path`\n- `allow-install-ghost-os`\n- `allow-stop-ghost-os`\n- `allow-check-ghost-os-status`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Default permissions for IBL.ai OS custom commands\n#### This default permission set includes:\n\n- `allow-open-external-url`\n- `allow-navigate-to`\n- `allow-get-os-type`\n- `allow-install-ollama`\n- `allow-stop-ollama`\n- `allow-check-ollama-status`\n- `allow-check-disk-space-for-model`\n- `allow-download-phi3-model`\n- `allow-download-model`\n- `allow-cancel-model-download`\n- `allow-check-network-status`\n- `allow-ollama-chat`\n- `allow-ollama-chat-stream`"
+          "markdownDescription": "Default permissions for IBL.ai OS custom commands\n#### This default permission set includes:\n\n- `allow-open-external-url`\n- `allow-navigate-to`\n- `allow-get-os-type`\n- `allow-install-ollama`\n- `allow-stop-ollama`\n- `allow-check-ollama-status`\n- `allow-check-disk-space-for-model`\n- `allow-download-phi3-model`\n- `allow-download-model`\n- `allow-cancel-model-download`\n- `allow-check-network-status`\n- `allow-ollama-chat`\n- `allow-ollama-chat-stream`\n- `allow-get-mcp-config-path`\n- `allow-install-ghost-os`\n- `allow-stop-ghost-os`\n- `allow-check-ghost-os-status`"
         },
         {
           "description": "Enables canceling model downloads",
@@ -571,6 +571,12 @@
           "type": "string",
           "const": "allow-check-disk-space-for-model",
           "markdownDescription": "Enables checking disk space for model downloads"
+        },
+        {
+          "description": "Enables checking GhostOS (System Control) status",
+          "type": "string",
+          "const": "allow-check-ghost-os-status",
+          "markdownDescription": "Enables checking GhostOS (System Control) status"
         },
         {
           "description": "Enables checking network status",
@@ -597,6 +603,12 @@
           "markdownDescription": "Enables downloading the phi3 model"
         },
         {
+          "description": "Enables reading the path to the user-editable MCP servers config file",
+          "type": "string",
+          "const": "allow-get-mcp-config-path",
+          "markdownDescription": "Enables reading the path to the user-editable MCP servers config file"
+        },
+        {
           "description": "Enables getting the OS type",
           "type": "string",
           "const": "allow-get-os-type",
@@ -607,6 +619,12 @@
           "type": "string",
           "const": "allow-get-system-memory",
           "markdownDescription": "Allow getting system memory"
+        },
+        {
+          "description": "Enables installing GhostOS (System Control) via Homebrew",
+          "type": "string",
+          "const": "allow-install-ghost-os",
+          "markdownDescription": "Enables installing GhostOS (System Control) via Homebrew"
         },
         {
           "description": "Enables installing Ollama",
@@ -643,6 +661,12 @@
           "type": "string",
           "const": "allow-open-external-url",
           "markdownDescription": "Enables opening URLs in the system browser for OAuth flows"
+        },
+        {
+          "description": "Enables stopping the GhostOS (System Control) processes",
+          "type": "string",
+          "const": "allow-stop-ghost-os",
+          "markdownDescription": "Enables stopping the GhostOS (System Control) processes"
         },
         {
           "description": "Enables stopping the Ollama model manager server",
