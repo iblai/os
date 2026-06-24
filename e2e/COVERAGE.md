@@ -939,7 +939,7 @@ Covers the "Enable prompt caching" toggle added to the Capabilities sub-tab of t
 - [x] Reasoning section shows "Thinking" with bounce dots during streaming and auto-collapses to "Thought" after
 - [x] Reasoning section does not appear for non-reasoning model
 - [x] Tool call indicator and reasoning section both render in correct order in same message
-- [x] Tool call indicator and reasoning section are gated by the Verbose Reasoning setting — hidden when the toggle is off, shown when on
+- [x] Tool call indicator and reasoning section are gated by the Enable verbose reasoning setting — hidden when the toggle is off, shown when on
 
 ---
 

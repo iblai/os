@@ -2235,7 +2235,7 @@
         },
         {
           "id": "tcr-08",
-          "description": "Tool call indicator and reasoning section are gated by the Verbose Reasoning setting — hidden when the toggle is off, shown when on",
+          "description": "Tool call indicator and reasoning section are gated by the Enable verbose reasoning setting — hidden when the toggle is off, shown when on",
           "status": "covered"
         }
       ]
@@ -2562,7 +2562,7 @@
         },
         {
           "id": "vo-09",
-          "description": "Settings tab surfaces both voice-call toggles (Smart document retrieval, Enable screen sharing)",
+          "description": "Settings tab surfaces both voice-call toggles (Enable smart document retrieval, Enable screen sharing)",
           "status": "covered"
         },
         {

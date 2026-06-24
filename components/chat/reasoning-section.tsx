@@ -27,6 +27,14 @@ export function ReasoningSection({
     return null;
   }
 
+  const steps = reasoningContent
+    .split(/\*{2,}|\n{2,}/)
+    .map((s) => s.replace(/^\*+|\*+$/g, '').trim())
+    .filter(Boolean);
+
+  const markdownClassName =
+    'prose prose-xs max-w-none [&_*]:text-xs [&_*]:text-gray-500 [&_em]:font-normal [&_strong]:font-normal';
+
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen} className="mb-2">
       <CollapsibleTrigger className="flex cursor-pointer items-center gap-1 py-1 text-xs text-gray-500 transition-colors hover:text-gray-600">
@@ -46,10 +54,18 @@ export function ReasoningSection({
         )}
       </CollapsibleTrigger>
       <CollapsibleContent className="pb-2 pl-4">
-        <div className="max-h-[200px] overflow-y-auto border-l-2 border-gray-200 pl-3 text-xs leading-relaxed text-gray-500">
-          <Markdown className="prose prose-xs max-w-none [&_*]:text-xs [&_*]:text-gray-500 [&_em]:font-normal [&_strong]:font-normal">
-            {reasoningContent}
-          </Markdown>
+        <div className="max-h-[200px] space-y-2 overflow-y-auto border-l-2 border-gray-200 pl-3 text-xs leading-relaxed text-gray-500">
+          {steps.length > 0 ? (
+            steps.map((step, index) => (
+              <div key={index}>
+                <Markdown className={markdownClassName}>{step}</Markdown>
+              </div>
+            ))
+          ) : (
+            <Markdown className={markdownClassName}>
+              {reasoningContent}
+            </Markdown>
+          )}
         </div>
       </CollapsibleContent>
     </Collapsible>

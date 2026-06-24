@@ -174,7 +174,7 @@ test.describe('Journey 47: Mentor Voice Tab', () => {
     await editMentorPage.close();
   });
 
-  // VO-09: The two voice-call toggles ("Smart document retrieval"
+  // VO-09: The two voice-call toggles ("Enable smart document retrieval"
   // and "Enable screen sharing") are surfaced in the Settings
   // tab so admins can toggle them without leaving the main configuration
   // panel. They still write to the CallConfiguration endpoint under the
@@ -202,7 +202,7 @@ test.describe('Journey 47: Mentor Voice Tab', () => {
     await editMentorPage.close();
   });
 
-  // VO-10: Flipping the "Smart document retrieval" toggle in
+  // VO-10: Flipping the "Enable smart document retrieval" toggle in
   // Settings and clicking Save surfaces the "Agent updated successfully"
   // toast — proving the Settings-side Save handler routes the
   // call-configurations mutation alongside the mentor-settings mutation

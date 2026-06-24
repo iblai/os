@@ -1304,11 +1304,11 @@ describe('SettingsTab', () => {
     });
   });
 
-  describe('Verbose Reasoning Toggle', () => {
-    it('renders Verbose Reasoning toggle', () => {
+  describe('Enable Verbose Reasoning Toggle', () => {
+    it('renders Enable verbose reasoning toggle', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText('Verbose Reasoning')).toBeInTheDocument();
+      expect(screen.getByText('Enable verbose reasoning')).toBeInTheDocument();
     });
 
     it('reflects show_reasoning checked state', () => {
@@ -1319,30 +1319,32 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Verbose reasoning enabled');
+      const toggle = screen.getByLabelText('Enable verbose reasoning enabled');
       expect(toggle).toBeChecked();
     });
 
     it('reflects show_reasoning unchecked state', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Verbose reasoning disabled');
+      const toggle = screen.getByLabelText('Enable verbose reasoning disabled');
       expect(toggle).not.toBeChecked();
     });
 
     it('toggles show_reasoning switch', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Verbose reasoning disabled');
+      const toggle = screen.getByLabelText('Enable verbose reasoning disabled');
       fireEvent.click(toggle);
 
-      expect(screen.getByLabelText('Verbose reasoning enabled')).toBeChecked();
+      expect(
+        screen.getByLabelText('Enable verbose reasoning enabled'),
+      ).toBeChecked();
     });
 
     it('submits show_reasoning value when saving', async () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Verbose reasoning disabled');
+      const toggle = screen.getByLabelText('Enable verbose reasoning disabled');
       fireEvent.click(toggle);
 
       const saveButton = screen.getByText('Save');
@@ -1363,7 +1365,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText('More info about verbose reasoning'),
+        screen.getByLabelText('More info about enable verbose reasoning'),
       ).toBeInTheDocument();
     });
   });
@@ -1833,10 +1835,12 @@ describe('SettingsTab', () => {
   });
 
   describe('Voice-call toggles (CallConfiguration sync)', () => {
-    it('renders the "Smart document retrieval" toggle defaulting to off when no call config exists', () => {
+    it('renders the "Enable smart document retrieval" toggle defaulting to off when no call config exists', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Smart document retrieval disabled');
+      const toggle = screen.getByLabelText(
+        'Enable smart document retrieval disabled',
+      );
       expect(toggle).not.toBeChecked();
     });
 
@@ -1863,7 +1867,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText('Smart document retrieval enabled'),
+        screen.getByLabelText('Enable smart document retrieval enabled'),
       ).toBeChecked();
       expect(
         screen.getByLabelText('Enable screen sharing enabled'),
@@ -1886,7 +1890,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       fireEvent.click(
-        screen.getByLabelText('Smart document retrieval disabled'),
+        screen.getByLabelText('Enable smart document retrieval disabled'),
       );
       fireEvent.click(screen.getByText('Save'));
 
@@ -1949,7 +1953,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       fireEvent.click(
-        screen.getByLabelText('Smart document retrieval disabled'),
+        screen.getByLabelText('Enable smart document retrieval disabled'),
       );
       fireEvent.click(screen.getByText('Save'));
 
