@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.82.0](https://github.com/iblai/os/compare/v0.81.1...v0.82.0) (2026-06-24)
+
+### Features
+
+* add DMG release for macos ([ea335d4](https://github.com/iblai/os/commit/ea335d4b806ebdf7d3c8df9bc0df9fb8d91a8570))
+
+### Chores
+
+* remove auto generated files ([2ffcfec](https://github.com/iblai/os/commit/2ffcfec29958de62a1bd006e06f49a21558d605e))
+
 ## [0.81.1](https://github.com/iblai/os/compare/v0.81.0...v0.81.1) (2026-06-24)
 
 ### Bug Fixes
