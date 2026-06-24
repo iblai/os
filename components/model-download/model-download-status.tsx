@@ -221,7 +221,11 @@ export function ModelDownloadStatus() {
               )}
 
               {showDownloadButton && (
-                <Button onClick={startDownload} size="sm" className="flex-1">
+                <Button
+                  onClick={() => startDownload()}
+                  size="sm"
+                  className="flex-1"
+                >
                   <Download className="mr-2 h-4 w-4" />
                   Download Model
                 </Button>

@@ -1,6 +1,12 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import {
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+  type ComponentProps,
+} from 'react';
 import {
   useParams,
   useRouter,
@@ -152,9 +158,11 @@ export function UserProfile() {
     isAvailable: isLocalLLMAvailable,
     state: localLLMState,
     ollamaStatus,
+    systemMemory,
     startDownload,
     cancelDownload,
     installOllama,
+    stopManager,
     installFoundry,
     checkStatus,
     resetState,
@@ -335,6 +343,7 @@ export function UserProfile() {
         isAvailable: isLocalLLMAvailable,
         state: localLLMState,
         ollamaStatus,
+        systemMemory,
         isUsingFoundry,
         foundryModels,
         selectedFoundryModel,
@@ -342,11 +351,21 @@ export function UserProfile() {
         onStartDownload: startDownload,
         onCancelDownload: cancelDownload,
         onInstallOllama: installOllama,
+        onStopManager: stopManager,
         onInstallFoundry: installFoundry,
         onCheckStatus: checkStatus,
         onResetState: resetState,
         onSelectFoundryModel,
       }}
+      // System Control (Computer Assistant): configure the size gate to 13 GB.
+      // The dropdown self-wires the rest of systemControlProps via useGhostOs;
+      // the SDK types the object as fully required, but each field falls back at
+      // runtime, so we intentionally pass only the gate.
+      systemControlProps={
+        { requiredSizeGb: 13 } as unknown as NonNullable<
+          ComponentProps<typeof UserProfileDropdown>['systemControlProps']
+        >
+      }
       // Controlled modal state for URL sync
       isModalOpen={isProfileModalOpen}
       onModalOpenChange={handleModalOpenChange}

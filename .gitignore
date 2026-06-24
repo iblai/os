@@ -71,6 +71,7 @@ src-tauri/gen/apple/
 .cache/
 .yalc
 .yalc.lock
+yalc.lock
 
 # signing artifacts (never commit provisioning profiles)
 *.provisionprofile
