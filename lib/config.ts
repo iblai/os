@@ -48,6 +48,8 @@ const env = {
     process.env.NEXT_PUBLIC_DEFAULT_SUPPORT_PHONE_NUMBER,
   NEXT_PUBLIC_MAXIMUM_CHARACTER_SIZE_TO_COPY:
     process.env.NEXT_PUBLIC_MAXIMUM_CHARACTER_SIZE_TO_COPY,
+  NEXT_PUBLIC_ENABLE_SUPPORT_PHONE:
+    process.env.NEXT_PUBLIC_ENABLE_SUPPORT_PHONE,
 };
 
 const runtimeEnv = () =>
@@ -146,4 +148,6 @@ export const config = {
     '(571) 293-0242',
   maximumCharacterSizeToCopy: () =>
     getEnv('NEXT_PUBLIC_MAXIMUM_CHARACTER_SIZE_TO_COPY', '2000'),
+  enableSupportPhone: () =>
+    getEnv('NEXT_PUBLIC_ENABLE_SUPPORT_PHONE', 'false') === 'true',
 };
