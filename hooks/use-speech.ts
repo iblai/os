@@ -9,10 +9,6 @@ import { LOCAL_STORAGE_KEYS } from '@/lib/constants';
 import { useUsername } from '@/providers/use-user';
 import { useMentorSettings } from './use-mentors/use-mentor-settings';
 
-// The TTS endpoint streams audio, so playback can begin as soon as the first
-// bytes arrive instead of waiting for the whole file. `audio/mp3` is a common
-// (non-standard) alias the browser's MediaSource only recognises as
-// `audio/mpeg`, so we normalise it to keep the streaming path available.
 const DEFAULT_TTS_MIME = 'audio/mpeg';
 
 function normalizeAudioMime(contentType: string | null): string {
@@ -30,10 +26,6 @@ function canStreamWithMediaSource(mime: string): boolean {
   );
 }
 
-// Pipes a fetch response body into a MediaSource so the audio element can play
-// the stream progressively. Resolves once the first chunk has been buffered
-// (enough to start playback); the remaining chunks keep streaming in the
-// background. The returned object URL must be revoked once playback is done.
 function attachMediaSourceStream(
   audio: HTMLAudioElement,
   body: ReadableStream<Uint8Array>,
@@ -85,30 +77,21 @@ function attachMediaSourceStream(
             if (result.value.byteLength > 0) {
               await appendChunk(result.value);
               appendedAny = true;
-              // First playable chunk is buffered — let the caller start
-              // playback while the rest continues to stream. `resolve` is a
-              // no-op on subsequent chunks.
               resolve();
             }
           }
           if (mediaSource.readyState === 'open') {
             mediaSource.endOfStream();
           }
-          // An empty stream would otherwise leave the caller awaiting `ready`
-          // forever; surface it so playback can reset / fall back instead.
           if (!appendedAny) {
             reject(new Error('TTS stream produced no audio'));
           }
         } catch (err) {
-          // Once playback has started this reject is a no-op; the audio
-          // element's error handler covers mid-stream failures.
           reject(err);
           if (!signal.aborted && mediaSource.readyState === 'open') {
             try {
               mediaSource.endOfStream();
-            } catch {
-              // The source may already be torn down; nothing to recover.
-            }
+            } catch {}
           }
         }
       };
@@ -122,10 +105,6 @@ function attachMediaSourceStream(
   return { objectUrl, ready };
 }
 
-// Loads the TTS audio for a message into `audio`, streaming progressively when
-// the browser supports it and falling back to a buffered object URL otherwise.
-// Resolves `true` once the audio has a playable source, or `false` when the
-// response was not audio (the caller should fall back to browser speech).
 async function loadTtsAudio(
   audio: HTMLAudioElement,
   org: string,
@@ -149,8 +128,7 @@ async function loadTtsAudio(
   }
 
   const contentType = response.headers.get('Content-Type');
-  // An explicit non-audio payload (e.g. a JSON error) means there is nothing to
-  // play — let the caller fall back to browser speech synthesis.
+
   if (contentType && !contentType.toLowerCase().startsWith('audio/')) {
     return false;
   }
@@ -168,7 +146,6 @@ async function loadTtsAudio(
     return true;
   }
 
-  // No streaming support — buffer the whole response, then play it.
   const blob = await response.blob();
   const objectUrl = URL.createObjectURL(blob);
   activeObjectUrl = objectUrl;
@@ -176,10 +153,6 @@ async function loadTtsAudio(
   return true;
 }
 
-// Module-level store so every consumer of useSpeech (the per-message
-// AIMessageSpeak buttons and the ChatMessages autoplay flow) shares one active
-// playback. This is what lets the icon on a specific message bubble light up
-// when autoplay reads that message from elsewhere in the tree.
 type SpeechSnapshot = {
   currentMessageId: string | null;
   isSpeaking: boolean;
@@ -193,8 +166,6 @@ let snapshot: SpeechSnapshot = {
 };
 
 let activeAudio: HTMLAudioElement | null = null;
-// Tracks the in-flight TTS stream so stopping playback can abort the fetch and
-// stop pumping chunks, and the object URL backing playback so it can be revoked.
 let activeStreamController: AbortController | null = null;
 let activeObjectUrl: string | null = null;
 

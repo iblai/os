@@ -94,14 +94,10 @@ beforeEach(() => {
   // Audio constructor used by useSpeech
   (globalThis as unknown as { Audio: typeof FakeAudio }).Audio = FakeAudio;
 
-  // jsdom doesn't implement object URLs — stub them so playback can attach.
   URL.createObjectURL = vi.fn(
     () => 'blob:fake-url',
   ) as typeof URL.createObjectURL;
   URL.revokeObjectURL = vi.fn() as typeof URL.revokeObjectURL;
-
-  // jsdom has no MediaSource, so the hook uses the buffered fallback by
-  // default. Streaming-specific tests install a fake MediaSource explicitly.
   delete (window as unknown as { MediaSource?: unknown }).MediaSource;
 });
 
@@ -116,8 +112,6 @@ function headers(contentType: string | null) {
   };
 }
 
-// A successful, fully-buffered response (no streaming body). The hook reads it
-// via response.blob() and plays it from an object URL.
 function mockFetchOk(contentType: string | null = 'audio/mpeg') {
   const blob = new Blob([new ArrayBuffer(8)]);
   globalThis.fetch = vi.fn(async () => ({
