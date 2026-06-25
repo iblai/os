@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.84.1](https://github.com/iblai/os/compare/v0.84.0...v0.84.1) (2026-06-25)
+
+### Bug Fixes
+
+* **i18n:** force dynamic rendering so cookie-based locale doesn't break build ([9b6d332](https://github.com/iblai/os/commit/9b6d332d89d58f61cc4f73939983f4ab0a0db03a))
+
 ## [0.84.0](https://github.com/iblai/os/compare/v0.83.0...v0.84.0) (2026-06-25)
 
 ### Features
