@@ -62,6 +62,8 @@ import { customErrorMessages } from '@/lib/error';
 import { useIframeHandlers } from '@/lib/handlers';
 import { useIframeMessageHandler } from '@iblai/iblai-js/web-containers';
 import { SentryInit } from '@/components/sentry-init';
+import { LanguagePreferenceSync } from '@/components/language-preference-sync';
+import { WebContainersLocaleProvider } from '@/components/web-containers-locale-provider';
 import { MentorTimeTrackingProvider } from '@/hooks/use-mentor-time-tracking';
 import { useSelector } from 'react-redux';
 import { updateRbacPermissions } from '@/features/rbac/rbac-slice';
@@ -262,7 +264,11 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   }
 
   function redirectToNoMentorsPage() {
-    router.push(`/platform/${tenantKey}/explore`);
+    let queryParams = '';
+    if (window.location.pathname === '/') {
+      queryParams = window.location.search;
+    }
+    router.push(`/platform/${tenantKey}/explore${queryParams}`);
   }
 
   function redirectToCreateMentor() {
@@ -270,7 +276,11 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   }
 
   function redirectToMentor(tenantKey: string, mentorId: string) {
-    router.push(`/platform/${tenantKey}/${mentorId}`);
+    let queryParams = '';
+    if (window.location.pathname === '/') {
+      queryParams = window.location.search;
+    }
+    router.push(`/platform/${tenantKey}/${mentorId}${queryParams}`);
   }
 
   function onLoadMentorsPermissions(
@@ -436,7 +446,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     };
 
     return (
-      <>
+      <WebContainersLocaleProvider>
         <SentryInit />
         <MentorTimeTrackingProvider intervalSeconds={30} enabled={false} />
         <AuthContextProvider value={stubAuthContext}>
@@ -447,13 +457,14 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             </AppProvider>
           </TenantContextProvider>
         </AuthContextProvider>
-      </>
+      </WebContainersLocaleProvider>
     );
   }
 
   return (
-    <>
+    <WebContainersLocaleProvider>
       <SentryInit />
+      <LanguagePreferenceSync />
       <MentorTimeTrackingProvider intervalSeconds={30} enabled={true} />
 
       <AuthProvider
@@ -672,6 +683,6 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           )}
         </TenantProvider>
       </AuthProvider>
-    </>
+    </WebContainersLocaleProvider>
   );
 }

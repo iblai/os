@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import { Search, Plus } from 'lucide-react';
 import {
   Dialog,
@@ -25,6 +26,7 @@ interface ProjectFilesModalProps {
 }
 
 export function ProjectFilesModal({ isOpen, onClose }: ProjectFilesModalProps) {
+  const t = useTranslations('projectsProjectFilesModal');
   const [showAddResourceModal, setShowAddResourceModal] = React.useState(false);
   const openAddResourceModal = () => setShowAddResourceModal(true);
   const closeAddResourceModal = () => setShowAddResourceModal(false);
@@ -49,7 +51,7 @@ export function ProjectFilesModal({ isOpen, onClose }: ProjectFilesModalProps) {
         <DialogContent className="max-h-[85vh] max-w-4xl overflow-hidden p-0">
           <DialogHeader className="flex flex-row items-center justify-between space-y-0 p-6 pb-4">
             <DialogTitle className="text-xl font-semibold text-gray-900">
-              Project Files
+              {t('projectFiles')}
             </DialogTitle>
           </DialogHeader>
 
@@ -72,7 +74,7 @@ export function ProjectFilesModal({ isOpen, onClose }: ProjectFilesModalProps) {
                   )}
                   <Input
                     type="search"
-                    placeholder="Search datasets..."
+                    placeholder={t('searchDatasetsPlaceholder')}
                     className="pl-8"
                     value={searchQuery}
                     onChange={(event) => setSearchQuery(event.target.value)}
@@ -86,7 +88,7 @@ export function ProjectFilesModal({ isOpen, onClose }: ProjectFilesModalProps) {
                   className="cursor-pointer bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90"
                 >
                   <Plus className="h-4 w-4" />
-                  Add Files
+                  {t('addFiles')}
                 </Button>
               </div>
               <div className="overflow-hidden rounded-md border">
@@ -101,22 +103,22 @@ export function ProjectFilesModal({ isOpen, onClose }: ProjectFilesModalProps) {
                         <TableHeader>
                           <TableRow className="bg-muted/50 border-b">
                             <TableHead className="p-3 text-left text-sm whitespace-nowrap text-[#646464]">
-                              NAME
+                              {t('columnName')}
                             </TableHead>
                             <TableHead className="p-3 text-left text-sm whitespace-nowrap text-[#646464]">
-                              TYPE
+                              {t('columnType')}
                             </TableHead>
                             <TableHead className="p-3 text-left text-sm whitespace-nowrap text-[#646464]">
-                              TOKENS
+                              {t('columnTokens')}
                             </TableHead>
                             <TableHead className="p-3 text-left text-sm whitespace-nowrap text-[#646464]">
-                              INTERVAL
+                              {t('columnInterval')}
                             </TableHead>
                             <TableHead className="p-3 text-left text-sm whitespace-nowrap text-[#646464]">
-                              VISIBILITY
+                              {t('columnVisibility')}
                             </TableHead>
                             <TableHead className="p-3 text-left text-sm whitespace-nowrap text-[#646464]">
-                              STATUS
+                              {t('columnStatus')}
                             </TableHead>
                           </TableRow>
                         </TableHeader>

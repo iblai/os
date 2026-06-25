@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useTranslations } from 'next-intl';
 import { z } from 'zod';
 import {
   Dialog,
@@ -82,6 +83,7 @@ export function EditPromptModal({
   handleSave,
   isEditing,
 }: Props) {
+  const t = useTranslations('modalsEditPromptModal');
   const { tenantKey } = useParams<TenantKeyMentorIdParams>();
   const username = useUsername();
 
@@ -135,7 +137,7 @@ export function EditPromptModal({
           >
             <DialogHeader>
               <DialogTitle className="text-start text-base font-semibold text-[#646464]">
-                Edit {selectedPrompt.label}
+                {t('editTitle', { label: selectedPrompt.label })}
               </DialogTitle>
             </DialogHeader>
 
@@ -145,7 +147,7 @@ export function EditPromptModal({
                   {(field) => (
                     <div className="space-y-2">
                       <Label className="flex items-center text-sm font-medium text-[#646464]">
-                        Category
+                        {t('categoryLabel')}
                       </Label>
                       <Select
                         disabled={isDisabled}
@@ -154,9 +156,11 @@ export function EditPromptModal({
                       >
                         <SelectTrigger
                           className="py-6"
-                          aria-label="Select a category"
+                          aria-label={t('selectCategoryAriaLabel')}
                         >
-                          <SelectValue placeholder="Select a category" />
+                          <SelectValue
+                            placeholder={t('selectCategoryPlaceholder')}
+                          />
                         </SelectTrigger>
                         <SelectContent>
                           {promptCategories?.map((category) => (
@@ -176,7 +180,7 @@ export function EditPromptModal({
                   {(field) => (
                     <div className="space-y-2">
                       <Label className="flex items-center text-sm font-medium text-[#646464]">
-                        Visibility
+                        {t('visibilityLabel')}
                       </Label>
                       <Select
                         disabled={isDisabled}
@@ -187,9 +191,11 @@ export function EditPromptModal({
                       >
                         <SelectTrigger
                           className="py-6"
-                          aria-label="Select visibility"
+                          aria-label={t('selectVisibilityAriaLabel')}
                         >
-                          <SelectValue placeholder="Select visibility" />
+                          <SelectValue
+                            placeholder={t('selectVisibilityPlaceholder')}
+                          />
                         </SelectTrigger>
                         <SelectContent>
                           {MENTOR_VISIBILITY.map((option) => (
@@ -225,7 +231,7 @@ export function EditPromptModal({
                       />
                       {hasNoValueAndIsDirty && (
                         <p className="text-xs text-red-500">
-                          Prompt is required
+                          {t('promptRequired')}
                         </p>
                       )}
                     </div>
@@ -244,7 +250,7 @@ export function EditPromptModal({
                       className="bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90"
                       disabled={isDisabled || !isFormValue}
                     >
-                      {isEditing ? 'Saving...' : 'Save'}
+                      {isEditing ? t('saving') : t('save')}
                     </Button>
                   )}
                 </form.Subscribe>

@@ -5,6 +5,12 @@ vi.mock('@sentry/nextjs', () => ({
   withSentryConfig: vi.fn((config) => config),
 }));
 
+// Mock the next-intl plugin as a passthrough so these tests assert the base
+// Next.js config (basePath/webpack/output) without next-intl's wrapping.
+vi.mock('next-intl/plugin', () => ({
+  default: () => (config: unknown) => config,
+}));
+
 describe('next.config', () => {
   let originalEnv: NodeJS.ProcessEnv;
 

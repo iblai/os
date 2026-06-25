@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Plus } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 import { useGetPersonnalizedMentorsQuery } from '@iblai/iblai-js/data-layer';
 import { Button } from '@/components/ui/button';
@@ -28,6 +29,7 @@ interface MentorWithProfile {
 }
 
 export function CustomMentorsSection() {
+  const t = useTranslations('exploreCustomMentorsSection');
   const {
     tenantKey,
     username,
@@ -88,7 +90,7 @@ export function CustomMentorsSection() {
         role="heading"
         aria-level={2}
       >
-        Custom
+        {t('sectionHeading')}
       </h2>
       {customMentors.length > 0 ? (
         <>
@@ -96,7 +98,7 @@ export function CustomMentorsSection() {
             className="grid grid-cols-1 gap-6 md:grid-cols-2"
             data-testid="custom-mentors-card-list"
             role="list"
-            aria-label="Custom agents"
+            aria-label={t('listAriaLabel')}
           >
             {customMentors.map((mentor) => (
               <div key={mentor.id} role="listitem">
@@ -114,15 +116,15 @@ export function CustomMentorsSection() {
                   )
                 }
                 disabled={customMentorsFetching}
-                aria-label="Load more custom agents"
+                aria-label={t('loadMoreAriaLabel')}
               >
                 {customMentorsFetching ? (
                   <div className="flex items-center gap-2">
                     <Spinner className="h-4 w-4" aria-hidden="true" />
-                    <span>Loading more</span>
+                    <span>{t('loadingMore')}</span>
                   </div>
                 ) : (
-                  'See more'
+                  t('seeMore')
                 )}
               </Button>
             </div>
@@ -142,7 +144,7 @@ export function CustomMentorsSection() {
                         handleCreateMentor();
                       }
                     }}
-                    aria-label="Create Custom Agent"
+                    aria-label={t('createAgentAriaLabel')}
                   >
                     <CardContent className="p-6">
                       <div className="flex items-start gap-4">
@@ -155,14 +157,13 @@ export function CustomMentorsSection() {
                             role="heading"
                             aria-level={3}
                           >
-                            Create Custom Agent
+                            {t('createAgentHeading')}
                           </h3>
                           <p className="mb-3 text-sm leading-relaxed text-gray-600">
-                            Build your own custom agent tailored to your
-                            specific needs
+                            {t('createAgentDescription')}
                           </p>
                           <p className="text-xs text-gray-500">
-                            Get started today
+                            {t('getStartedToday')}
                           </p>
                         </div>
                       </div>
@@ -189,7 +190,7 @@ export function CustomMentorsSection() {
                       handleCreateMentor();
                     }
                   }}
-                  aria-label="Create Custom Agent"
+                  aria-label={t('createAgentAriaLabel')}
                 >
                   <CardContent className="p-6">
                     <div className="flex items-start gap-4">
@@ -202,14 +203,13 @@ export function CustomMentorsSection() {
                           role="heading"
                           aria-level={3}
                         >
-                          Create Custom Agent
+                          {t('createAgentHeading')}
                         </h3>
                         <p className="mb-3 text-sm leading-relaxed text-gray-600">
-                          Build your own custom agent tailored to your specific
-                          learning needs
+                          {t('createAgentDescription')}
                         </p>
                         <p className="text-xs text-gray-500">
-                          Get started today
+                          {t('getStartedToday')}
                         </p>
                       </div>
                     </div>
