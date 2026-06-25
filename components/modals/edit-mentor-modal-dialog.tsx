@@ -5,7 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { RichTextEditor } from '@iblai/iblai-js/web-containers';
+import { RichTextEditor } from '@iblai/web-containers';
 
 export type Prompt = {
   label: string;

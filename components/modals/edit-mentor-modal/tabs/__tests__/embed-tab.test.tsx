@@ -88,7 +88,7 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
   useTenantMetadata: (args: unknown) => mockUseTenantMetadata(args),
 }));
 
-vi.mock('@iblai/iblai-js/web-containers', () => ({
+vi.mock('@iblai/web-containers', () => ({
   Spinner: () => <div data-testid="spinner">Loading...</div>,
 }));
 

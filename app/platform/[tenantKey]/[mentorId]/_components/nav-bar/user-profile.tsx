@@ -7,7 +7,7 @@ import {
   useSearchParams,
   usePathname,
 } from 'next/navigation';
-import { UserProfileDropdown } from '@iblai/iblai-js/web-containers/next';
+import { UserProfileDropdown } from '@iblai/web-containers/next';
 import {
   useCurrentTenant,
   useIsAdmin,

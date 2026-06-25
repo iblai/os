@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import {
   Accordion,
   AccordionContent,
@@ -55,6 +56,7 @@ export function PinnedMessages({
   onSelectMessage,
   mentorId,
 }: PinnedMessagesProps) {
+  const t = useTranslations('appSidebarPinnedMessages');
   const { isMobile, setOpenMobile } = useSidebar();
   const dispatch = useAppDispatch();
   const params = useParams<{ tenantKey: string }>();
@@ -206,7 +208,7 @@ export function PinnedMessages({
           <AccordionTrigger className="cursor-pointer space-x-1 rounded-md px-2 py-1.5 text-sm font-medium text-gray-700 hover:bg-[#c9d8f8] hover:no-underline">
             <span className="flex items-center gap-3">
               <Pin className="h-4 w-4 text-gray-500" />
-              Pinned
+              {t('pinned')}
             </span>
           </AccordionTrigger>
           <AccordionContent className="mt-1 ml-4 pb-0">
@@ -223,7 +225,7 @@ export function PinnedMessages({
                       {pinnedMessage.mentor.profile_image ? (
                         <Image
                           src={pinnedMessage.mentor.profile_image}
-                          alt="User avatar"
+                          alt={t('userAvatar')}
                           className="h-full w-full object-cover"
                           width={20}
                           height={20}
@@ -245,7 +247,7 @@ export function PinnedMessages({
                           if (artifactTitle) {
                             return artifactTitle;
                           }
-                          return 'No content';
+                          return t('noContent');
                         }
 
                         return (
@@ -262,7 +264,9 @@ export function PinnedMessages({
                           size="icon"
                           className="h-6 w-6 p-0"
                         >
-                          <span className="sr-only">More chat options</span>
+                          <span className="sr-only">
+                            {t('moreChatOptions')}
+                          </span>
                           <MoreHorizontal className="h-4 w-4 text-gray-400" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -271,7 +275,7 @@ export function PinnedMessages({
                           onClick={() => handlePin(pinnedMessage.session_id)}
                         >
                           <Pin className="mr-2 h-4 w-4" />
-                          <span>Unpin</span>
+                          <span>{t('unpin')}</span>
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() =>
@@ -279,13 +283,13 @@ export function PinnedMessages({
                           }
                         >
                           <Download className="mr-2 h-4 w-4" />
-                          <span>Export</span>
+                          <span>{t('export')}</span>
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => handleDelete(pinnedMessage)}
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
-                          <span>Delete</span>
+                          <span>{t('delete')}</span>
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

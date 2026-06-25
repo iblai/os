@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -40,6 +41,7 @@ export function MentorCategories({
   const [selectedCreatedBy, setSelectedCreatedBy] = useState<
     'me' | 'my-organization' | 'community' | ''
   >('');
+  const t = useTranslations('exploreMentorCategories');
 
   // Extract facet options from API response
   const categories = facets?.categories?.terms
@@ -55,10 +57,10 @@ export function MentorCategories({
 
   const createdByOptions = [
     ...(includeMeToCreatedByFilter
-      ? [{ label: 'Me', value: 'me' as const }]
+      ? [{ label: t('createdByMe'), value: 'me' as const }]
       : []),
-    { label: 'My Organization', value: 'my-organization' as const },
-    { label: 'Community', value: 'community' as const },
+    { label: t('createdByMyOrganization'), value: 'my-organization' as const },
+    { label: t('createdByCommunity'), value: 'community' as const },
   ];
 
   const handleCategorySelect = (category: string, event?: React.MouseEvent) => {
@@ -184,7 +186,7 @@ export function MentorCategories({
             }`}
             aria-haspopup="menu"
           >
-            <span>Promotion</span>
+            <span>{t('promotion')}</span>
             <ChevronDown className="h-3 w-3" aria-hidden="true" />
           </Button>
         </DropdownMenuTrigger>
@@ -192,7 +194,7 @@ export function MentorCategories({
           align="start"
           className="z-[80] w-48"
           role="menu"
-          aria-label="Promotion"
+          aria-label={t('promotion')}
         >
           <DropdownMenuItem
             onSelect={preventDefaultSelect}
@@ -202,7 +204,7 @@ export function MentorCategories({
           >
             <div className="flex items-center gap-2">
               {selectedFeatured === 'true' && <Check className="h-4 w-4" />}
-              <span>Featured</span>
+              <span>{t('featured')}</span>
             </div>
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -223,7 +225,7 @@ export function MentorCategories({
               }`}
               aria-haspopup="menu"
             >
-              <span>{selectedCategory || 'Category'}</span>
+              <span>{selectedCategory || t('category')}</span>
               <ChevronDown className="h-3 w-3" aria-hidden="true" />
             </Button>
           </DropdownMenuTrigger>
@@ -231,7 +233,7 @@ export function MentorCategories({
             align="start"
             className="z-[80] w-48"
             role="menu"
-            aria-label="Category"
+            aria-label={t('category')}
           >
             {categories.map((category) => (
               <DropdownMenuItem
@@ -277,7 +279,7 @@ export function MentorCategories({
               }`}
               aria-haspopup="menu"
             >
-              <span>{selectedSubject || 'Subject'}</span>
+              <span>{selectedSubject || t('subject')}</span>
               <ChevronDown className="h-3 w-3" aria-hidden="true" />
             </Button>
           </DropdownMenuTrigger>
@@ -285,7 +287,7 @@ export function MentorCategories({
             align="start"
             className="z-[80] w-48"
             role="menu"
-            aria-label="Subject"
+            aria-label={t('subject')}
           >
             {subjects.map((subject) => (
               <DropdownMenuItem
@@ -327,7 +329,7 @@ export function MentorCategories({
               }`}
               aria-haspopup="menu"
             >
-              <span>{selectedType || 'Type'}</span>
+              <span>{selectedType || t('type')}</span>
               <ChevronDown className="h-3 w-3" aria-hidden="true" />
             </Button>
           </DropdownMenuTrigger>
@@ -335,7 +337,7 @@ export function MentorCategories({
             align="start"
             className="z-[80] w-48"
             role="menu"
-            aria-label="Type"
+            aria-label={t('type')}
           >
             {types.map((type) => (
               <DropdownMenuItem
@@ -373,7 +375,7 @@ export function MentorCategories({
               <span>
                 {selectedLlmProvider
                   ? getLLMProviderDetails(selectedLlmProvider).name
-                  : 'LLM Provider'}
+                  : t('llmProvider')}
               </span>
               <ChevronDown className="h-3 w-3" aria-hidden="true" />
             </Button>
@@ -382,7 +384,7 @@ export function MentorCategories({
             align="start"
             className="z-[80] w-48"
             role="menu"
-            aria-label="LLM Provider"
+            aria-label={t('llmProvider')}
           >
             {llmProviders.map((llmProvider) => (
               <DropdownMenuItem
@@ -430,7 +432,7 @@ export function MentorCategories({
             >
               <span>
                 {createdByOptions.find((opt) => opt.value === selectedCreatedBy)
-                  ?.label || 'Created By'}
+                  ?.label || t('createdBy')}
               </span>
               <ChevronDown className="h-3 w-3" aria-hidden="true" />
             </Button>
@@ -439,7 +441,7 @@ export function MentorCategories({
             align="start"
             className="z-[80] w-48"
             role="menu"
-            aria-label="Created By"
+            aria-label={t('createdBy')}
           >
             {createdByOptions.map((option) => (
               <DropdownMenuItem
@@ -473,10 +475,10 @@ export function MentorCategories({
             size="sm"
             onClick={handleClearAll}
             className="h-8 px-3 text-gray-600 hover:bg-gray-100 hover:text-gray-800"
-            aria-label="Clear All"
+            aria-label={t('clearAll')}
             role="button"
           >
-            Clear All
+            {t('clearAll')}
           </Button>
         </>
       )}

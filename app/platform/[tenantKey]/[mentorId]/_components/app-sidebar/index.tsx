@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import * as React from 'react';
 import dynamic from 'next/dynamic';
 import {
@@ -77,7 +78,7 @@ import {
   BillingTab,
   MonetizationTab,
   AdvancedTab,
-} from '@iblai/iblai-js/web-containers';
+} from '@iblai/web-containers';
 
 import { useNavigate } from '@/hooks/user-navigate';
 import {
@@ -576,10 +577,12 @@ function SidebarProjectsSection({
     name: string;
   } | null>(null);
 
+  const t = useTranslations('appSidebarIndex');
+
   const openProject = (projectId: string) => {
     const href = projectHref(projectId);
     if (!href) {
-      toast('Add an agent to this project first.');
+      toast(t('addAgentToProjectFirst'));
       return;
     }
     router.push(href);
@@ -634,7 +637,7 @@ function SidebarProjectsSection({
               style={{ color: NAV_MUTED }}
               strokeWidth={1.5}
             />
-            <span className="min-w-0 flex-1 truncate">Projects</span>
+            <span className="min-w-0 flex-1 truncate">{t('projects')}</span>
             {open ? (
               <ChevronDown
                 className="size-4 shrink-0 text-[#7d7e82]"
@@ -662,13 +665,15 @@ function SidebarProjectsSection({
                     strokeWidth={1.5}
                     aria-hidden
                   />
-                  <span className="min-w-0 flex-1 truncate">New Project</span>
+                  <span className="min-w-0 flex-1 truncate">
+                    {t('newProject')}
+                  </span>
                 </button>
               </li>
               {projects.length === 0 ? (
                 <li>
                   <span className="block px-2 py-1.5 text-[13px] text-[#94a3b8] italic">
-                    No projects yet
+                    {t('noProjectsYet')}
                   </span>
                 </li>
               ) : (
@@ -689,7 +694,7 @@ function SidebarProjectsSection({
                           type="button"
                           onClick={() => openProject(id)}
                           className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 bg-transparent text-left"
-                          title={p.name ?? 'Untitled project'}
+                          title={p.name ?? t('untitledProject')}
                         >
                           <Folder
                             className="size-3.5 shrink-0 opacity-70"
@@ -697,7 +702,7 @@ function SidebarProjectsSection({
                             aria-hidden
                           />
                           <span className="min-w-0 flex-1 truncate">
-                            {p.name ?? 'Untitled project'}
+                            {p.name ?? t('untitledProject')}
                           </span>
                         </button>
                         <DropdownMenu>
@@ -709,7 +714,7 @@ function SidebarProjectsSection({
                                 'inline-flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-[#7d7e82] transition-opacity hover:bg-[#eef0f3] hover:text-[#1f2937]',
                                 'opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100',
                               )}
-                              aria-label="Project actions"
+                              aria-label={t('projectActions')}
                             >
                               <MoreVertical
                                 className="size-3.5"
@@ -733,7 +738,7 @@ function SidebarProjectsSection({
                                 strokeWidth={1.5}
                                 aria-hidden
                               />
-                              Rename
+                              {t('rename')}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onSelect={() =>
@@ -749,7 +754,7 @@ function SidebarProjectsSection({
                                 strokeWidth={1.5}
                                 aria-hidden
                               />
-                              Delete
+                              {t('delete')}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -787,6 +792,7 @@ function CollapsedProjectsFlyout({
   onIconClick?: () => void;
   onCreateClick: () => void;
 }) {
+  const t = useTranslations('appSidebarIndex');
   return (
     <HoverCard openDelay={180} closeDelay={120}>
       <HoverCardTrigger asChild>
@@ -794,7 +800,7 @@ function CollapsedProjectsFlyout({
           type="button"
           onClick={onIconClick}
           className="text-foreground inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-[8px] transition-colors outline-none hover:bg-[#f0f0f0] focus-visible:ring-2 focus-visible:ring-[#c4c4c8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#fafafa]"
-          aria-label="Projects"
+          aria-label={t('projects')}
         >
           <Folder
             className="size-4 shrink-0"
@@ -814,7 +820,7 @@ function CollapsedProjectsFlyout({
             className="text-[13px] leading-tight font-medium"
             style={{ color: FLYOUT_TITLE_COLOR }}
           >
-            Projects
+            {t('projects')}
           </span>
         </div>
         <ul className="scrollbar-thin m-0 min-h-0 list-none space-y-0 overflow-y-auto p-0 pr-1">
@@ -830,13 +836,13 @@ function CollapsedProjectsFlyout({
                 strokeWidth={1.5}
                 aria-hidden
               />
-              New Project
+              {t('newProject')}
             </button>
           </li>
           {projects.length === 0 ? (
             <li>
               <span className="block rounded-md px-1.5 py-1.5 text-[14px] text-[#94a3b8] italic">
-                No projects yet
+                {t('noProjectsYet')}
               </span>
             </li>
           ) : (
@@ -853,7 +859,7 @@ function CollapsedProjectsFlyout({
                       active && 'bg-[#eef6fc] text-[#1e40af]',
                     )}
                     style={active ? undefined : { color: FLYOUT_ITEM_COLOR }}
-                    title={p.name ?? 'Untitled project'}
+                    title={p.name ?? t('untitledProject')}
                   >
                     <Folder
                       className="size-3.5 shrink-0 opacity-70"
@@ -861,7 +867,7 @@ function CollapsedProjectsFlyout({
                       aria-hidden
                     />
                     <span className="min-w-0 flex-1 truncate">
-                      {p.name ?? 'Untitled project'}
+                      {p.name ?? t('untitledProject')}
                     </span>
                   </button>
                 </li>
@@ -930,7 +936,7 @@ type ChatRow = {
   messages?: unknown;
 };
 
-function chatRowLabel(row: ChatRow): React.ReactNode {
+function chatRowLabel(row: ChatRow, noContentLabel: string): React.ReactNode {
   const messages = (row.messages as unknown[]) ?? [];
   const content = getFirstMessageWithContent(messages as never);
   if (content) {
@@ -941,7 +947,7 @@ function chatRowLabel(row: ChatRow): React.ReactNode {
     );
   }
   const artifactTitle = getCurrentArtifactTitle(messages as never);
-  return artifactTitle || 'No content';
+  return artifactTitle || noContentLabel;
 }
 
 function ChatThreeDotMenu({
@@ -957,6 +963,7 @@ function ChatThreeDotMenu({
   onExport: () => void;
   onDelete: () => void;
 }) {
+  const t = useTranslations('appSidebarIndex');
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild disabled={isLoading}>
@@ -972,7 +979,7 @@ function ChatThreeDotMenu({
             'inline-flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-[#7d7e82] transition-opacity hover:bg-[#eef0f3] hover:text-[#1f2937] data-[state=open]:opacity-100',
             isLoading ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
           )}
-          aria-label="Chat actions"
+          aria-label={t('chatActions')}
           aria-busy={isLoading}
         >
           {isLoading ? (
@@ -997,7 +1004,7 @@ function ChatThreeDotMenu({
           ) : (
             <Pin className="size-3.5 shrink-0" strokeWidth={1.5} aria-hidden />
           )}
-          {isPinned ? 'Unpin' : 'Pin'}
+          {isPinned ? t('unpin') : t('pin')}
         </DropdownMenuItem>
         <DropdownMenuItem className="gap-2" onSelect={onExport}>
           <Download
@@ -1005,14 +1012,14 @@ function ChatThreeDotMenu({
             strokeWidth={1.5}
             aria-hidden
           />
-          Export
+          {t('export')}
         </DropdownMenuItem>
         <DropdownMenuItem
           className="gap-2 text-red-600 focus:text-red-700"
           onSelect={onDelete}
         >
           <Trash2 className="size-3.5 shrink-0" strokeWidth={1.5} aria-hidden />
-          Delete
+          {t('delete')}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -1038,6 +1045,7 @@ function ChatRowItem({
   onExport: () => void;
   onDelete: () => void;
 }) {
+  const t = useTranslations('appSidebarIndex');
   return (
     <div className="group relative">
       <button
@@ -1051,7 +1059,7 @@ function ChatRowItem({
         )}
       >
         <span className="line-clamp-1 min-w-0 flex-1 overflow-hidden">
-          {chatRowLabel(row)}
+          {chatRowLabel(row, t('noContent'))}
         </span>
       </button>
       <div className="absolute top-1/2 right-1.5 -translate-y-1/2">
@@ -1087,6 +1095,7 @@ function SidebarChatsSection({
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { onAfterNav } = useSidebarNavCallback();
+  const t = useTranslations('appSidebarIndex');
   const appSessionId = useAppSelector(selectSessionId);
   const resolvedUserId = username ?? getUserName();
   // The message-loader effect in `useAdvancedChat` keys EXCLUSIVELY on
@@ -1420,7 +1429,7 @@ function SidebarChatsSection({
             type="button"
             onClick={onCollapsedIconClick}
             className="text-foreground inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-[8px] transition-colors outline-none hover:bg-[#f0f0f0] focus-visible:ring-2 focus-visible:ring-[#c4c4c8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#fafafa]"
-            aria-label="Chats"
+            aria-label={t('chats')}
           >
             <MessageSquare
               className="size-4 shrink-0"
@@ -1439,13 +1448,13 @@ function SidebarChatsSection({
             className="mb-1.5 shrink-0 text-[13px] leading-tight font-medium"
             style={{ color: FLYOUT_TITLE_COLOR }}
           >
-            Chats
+            {t('chats')}
           </span>
           <div className="scrollbar-thin min-h-0 overflow-y-auto pr-1">
             {pinned.length > 0 && (
               <>
                 <p className="px-1 pb-1 text-[10px] font-semibold tracking-wider text-[#9ca3af] uppercase">
-                  Pinned
+                  {t('pinned')}
                 </p>
                 {pinned.map((row) => (
                   <button
@@ -1455,7 +1464,7 @@ function SidebarChatsSection({
                     className="block w-full truncate rounded-md px-1.5 py-1.5 text-left text-[14px] leading-snug font-medium transition-colors hover:bg-[#f4f4f4]"
                     style={{ color: FLYOUT_ITEM_COLOR }}
                   >
-                    {chatRowLabel(row)}
+                    {chatRowLabel(row, t('noContent'))}
                   </button>
                 ))}
               </>
@@ -1466,7 +1475,7 @@ function SidebarChatsSection({
                 pinned.length > 0 && 'pt-2',
               )}
             >
-              Recent
+              {t('recent')}
             </p>
             {recent.length > 0 ? (
               recent.map((row) => (
@@ -1477,12 +1486,12 @@ function SidebarChatsSection({
                   className="block w-full truncate rounded-md px-1.5 py-1.5 text-left text-[14px] leading-snug font-medium transition-colors hover:bg-[#f4f4f4]"
                   style={{ color: FLYOUT_ITEM_COLOR }}
                 >
-                  {chatRowLabel(row)}
+                  {chatRowLabel(row, t('noContent'))}
                 </button>
               ))
             ) : (
               <span className="block rounded-md px-1.5 py-1.5 text-[14px] text-[#94a3b8] italic">
-                No recent chats
+                {t('noRecentChats')}
               </span>
             )}
           </div>
@@ -1505,7 +1514,7 @@ function SidebarChatsSection({
             style={{ color: NAV_MUTED }}
             strokeWidth={1.5}
           />
-          <span className="min-w-0 flex-1 truncate">Chats</span>
+          <span className="min-w-0 flex-1 truncate">{t('chats')}</span>
           {open ? (
             <ChevronDown
               className="size-4 shrink-0 text-[#7d7e82]"
@@ -1524,7 +1533,7 @@ function SidebarChatsSection({
           {pinned.length > 0 && (
             <>
               <p className="px-2 pt-1 pb-0.5 text-[10px] font-semibold tracking-wider text-[#9ca3af] uppercase">
-                Pinned
+                {t('pinned')}
               </p>
               <ul className="flex flex-col gap-0.5" role="list">
                 {pinned.map((row) => (
@@ -1541,7 +1550,7 @@ function SidebarChatsSection({
               pinned.length > 0 && 'mt-1',
             )}
           >
-            Recent
+            {t('recent')}
           </p>
           {recent.length > 0 ? (
             <ul className="flex flex-col gap-0.5" role="list">
@@ -1553,7 +1562,7 @@ function SidebarChatsSection({
             </ul>
           ) : (
             <span className="block px-2 py-1.5 text-[13px] text-[#94a3b8] italic">
-              No recent chats
+              {t('noRecentChats')}
             </span>
           )}
         </div>
@@ -1581,6 +1590,7 @@ export function AppSidebar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const dispatch = useDispatch();
+  const t = useTranslations('appSidebarIndex');
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
   const { projectId } = useParams<ProjectPageParams>();
   const username = useUsername();
@@ -1800,27 +1810,43 @@ export function AppSidebar() {
     const base = analyticsBasePath ?? '/analytics';
     return {
       id: 'analytics',
-      label: 'Analytics',
+      label: t('analytics'),
       icon: LineChart,
       items: [
         {
           id: 'analytics-overview',
-          label: 'Overview',
+          label: t('analyticsOverview'),
           href: base,
           exact: true,
         },
-        { id: 'analytics-users', label: 'Users', href: `${base}/users` },
-        { id: 'analytics-topics', label: 'Topics', href: `${base}/topics` },
+        {
+          id: 'analytics-users',
+          label: t('analyticsUsers'),
+          href: `${base}/users`,
+        },
+        {
+          id: 'analytics-topics',
+          label: t('analyticsTopics'),
+          href: `${base}/topics`,
+        },
         {
           id: 'analytics-transcripts',
-          label: 'Transcripts',
+          label: t('analyticsTranscripts'),
           href: `${base}/transcripts`,
         },
-        { id: 'analytics-costs', label: 'Costs', href: `${base}/financial` },
-        { id: 'analytics-audit', label: 'Audit', href: `${base}/audit` },
+        {
+          id: 'analytics-costs',
+          label: t('analyticsCosts'),
+          href: `${base}/financial`,
+        },
+        {
+          id: 'analytics-audit',
+          label: t('analyticsAudit'),
+          href: `${base}/audit`,
+        },
         {
           id: 'analytics-reports',
-          label: 'Data Reports',
+          label: t('analyticsDataReports'),
           href: `${base}/reports`,
         },
       ],
@@ -1857,7 +1883,7 @@ export function AppSidebar() {
     // Embed mode shows a minimal sidebar (New Chat + chat history only),
     // mirroring the pre-rewrite behavior — no Agents section at all.
     if (embedMode)
-      return { id: 'agents', label: 'Agents', icon: Globe2, items };
+      return { id: 'agents', label: t('agents'), icon: Globe2, items };
     // New Agent / My Agents are shown when ANY of:
     //  - `showTrialGatedAdminMenu`: main-tenant non-admins (trial-gated
     //    on click),
@@ -1871,19 +1897,19 @@ export function AppSidebar() {
       showAnonymousAdminMenu ||
       (isLiveAdmin && isUserTypeAllowed(PERMISSION_GATES.agentsNew))
     )
-      items.push({ id: 'agents-new', label: 'New Agent' });
+      items.push({ id: 'agents-new', label: t('newAgent') });
     if (
       showTrialGatedAdminMenu ||
       studentCanCreateMentors ||
       showAnonymousAdminMenu ||
       (isLiveAdmin && isUserTypeAllowed(PERMISSION_GATES.agentsMy))
     )
-      items.push({ id: 'agents-my', label: 'My Agents' });
+      items.push({ id: 'agents-my', label: t('myAgents') });
     // Explore is open to STUDENT/VISITING too, so it doesn't need the
     // live-admin guard — `isUserTypeAllowed` is sufficient.
     if (isUserTypeAllowed(PERMISSION_GATES.agentsExplore))
-      items.push({ id: 'agents-explore', label: 'Explore' });
-    return { id: 'agents', label: 'Agents', icon: Globe2, items };
+      items.push({ id: 'agents-explore', label: t('explore') });
+    return { id: 'agents', label: t('agents'), icon: Globe2, items };
   }, [
     embedMode,
     isLiveAdmin,
@@ -1902,12 +1928,12 @@ export function AppSidebar() {
         (isLiveAdmin && isUserTypeAllowed(PERMISSION_GATES.workflows)));
     return {
       id: 'workflows',
-      label: 'Workflows',
+      label: t('workflows'),
       icon: Workflow,
       items: allowed
         ? [
-            { id: 'workflows-create', label: 'New Workflow' },
-            { id: 'workflows-my', label: 'My Workflows' },
+            { id: 'workflows-create', label: t('newWorkflow') },
+            { id: 'workflows-my', label: t('myWorkflows') },
           ]
         : [],
     };
@@ -1988,7 +2014,7 @@ export function AppSidebar() {
     if (isUserTypeAllowed(PERMISSION_GATES.notifications)) {
       actions.push({
         id: 'footer-notifications',
-        label: 'Notifications',
+        label: t('notifications'),
         icon: Bell,
       });
     }
@@ -2037,30 +2063,30 @@ export function AppSidebar() {
         hasInviteUserPermission &&
         isUserTypeAllowed(PERMISSION_GATES.invites)
       ) {
-        actions.push({ id: 'footer-invites', label: 'Invites', icon: Mail });
+        actions.push({ id: 'footer-invites', label: t('invites'), icon: Mail });
       }
       if (hasManagementPermissions) {
         actions.push({
           id: 'footer-users',
-          label: 'Management',
+          label: t('management'),
           icon: Users,
         });
       }
       actions.push({
         id: 'footer-api',
-        label: 'Integrations',
+        label: t('integrations'),
         icon: KeyRound,
       });
       if (canMonetize) {
         actions.push({
           id: 'footer-monetization',
-          label: 'Monetization',
+          label: t('monetization'),
           icon: Coins,
         });
       }
       actions.push({
         id: 'footer-settings',
-        label: 'Advanced',
+        label: t('advanced'),
         icon: Settings,
       });
     } else if (showTrialGatedAdminMenu || showAnonymousAdminMenu) {
@@ -2072,17 +2098,21 @@ export function AppSidebar() {
       // `runAdminAction`, instead of the real surface. Checked BEFORE the
       // permission branch below so a trial/advertising non-admin still gets
       // the full (trial-gated) cluster rather than only their held permissions.
-      actions.push({ id: 'footer-invites', label: 'Invites', icon: Mail });
-      actions.push({ id: 'footer-users', label: 'Management', icon: Users });
-      actions.push({ id: 'footer-api', label: 'Integrations', icon: KeyRound });
+      actions.push({ id: 'footer-invites', label: t('invites'), icon: Mail });
+      actions.push({ id: 'footer-users', label: t('management'), icon: Users });
+      actions.push({
+        id: 'footer-api',
+        label: t('integrations'),
+        icon: KeyRound,
+      });
       actions.push({
         id: 'footer-monetization',
-        label: 'Monetization',
+        label: t('monetization'),
         icon: Coins,
       });
       actions.push({
         id: 'footer-settings',
-        label: 'Advanced',
+        label: t('advanced'),
         icon: Settings,
       });
     } else if (!isAdmin && config.enableRBAC()) {
@@ -2094,19 +2124,19 @@ export function AppSidebar() {
       // admin-in-learner-mode excluded. Integrations and Advanced have no
       // dedicated RBAC permission, so they stay admin/trial/anonymous-only.
       if (hasInviteUserPermission) {
-        actions.push({ id: 'footer-invites', label: 'Invites', icon: Mail });
+        actions.push({ id: 'footer-invites', label: t('invites'), icon: Mail });
       }
       if (hasManagementPermissions) {
         actions.push({
           id: 'footer-users',
-          label: 'Management',
+          label: t('management'),
           icon: Users,
         });
       }
       if (canMonetize) {
         actions.push({
           id: 'footer-monetization',
-          label: 'Monetization',
+          label: t('monetization'),
           icon: Coins,
         });
       }
@@ -2222,14 +2252,14 @@ export function AppSidebar() {
                 </>
               )}
               <SidebarCollapsedLabelFlyout
-                label={isExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
+                label={isExpanded ? t('collapseSidebar') : t('expandSidebar')}
               >
                 <button
                   type="button"
                   onClick={toggleSidebar}
                   className="inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md font-sans text-[#7d7e82] transition-colors hover:bg-[#f0f0f0]"
                   aria-label={
-                    isExpanded ? 'Collapse sidebar' : 'Expand sidebar'
+                    isExpanded ? t('collapseSidebar') : t('expandSidebar')
                   }
                   aria-expanded={isExpanded}
                 >
@@ -2253,15 +2283,15 @@ export function AppSidebar() {
           {railCollapsed ? (
             <nav
               className="flex min-h-0 flex-1 flex-col items-center gap-1 overflow-y-auto px-2 pt-1 pb-2"
-              aria-label="Main navigation"
+              aria-label={t('mainNavigation')}
             >
               {newChatAllowed && (
-                <SidebarCollapsedLabelFlyout label="New Chat">
+                <SidebarCollapsedLabelFlyout label={t('newChat')}>
                   <button
                     type="button"
                     onClick={startNewChat}
                     className="text-foreground inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-[8px] border border-[#e0e0e2] bg-white transition-colors hover:bg-[#f8f8f9]"
-                    aria-label="New chat"
+                    aria-label={t('newChat')}
                   >
                     <SquarePen className="size-4 shrink-0" strokeWidth={1.5} />
                   </button>
@@ -2343,7 +2373,7 @@ export function AppSidebar() {
                         strokeWidth={1.5}
                         aria-hidden
                       />
-                      <span>New Chat</span>
+                      <span>{t('newChat')}</span>
                     </button>
                   </div>
                 )}
@@ -2429,13 +2459,13 @@ export function AppSidebar() {
                     </SidebarCollapsedLabelFlyout>
                   );
                 })}
-                <SidebarCollapsedLabelFlyout label={DOCUMENTATION_MENU.label}>
+                <SidebarCollapsedLabelFlyout label={t('support')}>
                   <a
                     href="https://ibl.ai/docs"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex size-10 items-center justify-center rounded-lg text-[#5f5f61] transition-colors hover:bg-[#f0f0f0]"
-                    aria-label={DOCUMENTATION_MENU.label}
+                    aria-label={t('support')}
                   >
                     <DOCUMENTATION_MENU.icon
                       className="size-4 shrink-0"
@@ -2478,7 +2508,7 @@ export function AppSidebar() {
                     strokeWidth={1.5}
                   />
                   <span className="min-w-0 flex-1 truncate">
-                    {DOCUMENTATION_MENU.label}
+                    {t('support')}
                   </span>
                 </a>
               </div>
@@ -2509,27 +2539,6 @@ export function AppSidebar() {
   );
 }
 
-const ACCOUNT_TAB_TITLES: Record<AccountTab, string> = {
-  organization: 'Organization',
-  management: 'Management',
-  integrations: 'Integrations',
-  monetization: 'Monetization',
-  advanced: 'Advanced',
-  billing: 'Billing',
-};
-
-// Default subtitles the SDK's `Account` component shows under each
-// section heading — copied verbatim so the standalone popups feel
-// continuous with the SDK profile dialog.
-const ACCOUNT_TAB_DESCRIPTIONS: Record<AccountTab, string> = {
-  organization: 'Manage your organization settings.',
-  management: 'Manage users and their permissions in the system.',
-  integrations: 'Manage your integrations with other services.',
-  monetization: 'Configure paywalls, pricing, and revenue.',
-  advanced: 'Configure advanced organization settings.',
-  billing: 'Manage your billing and subscription.',
-};
-
 /**
  * Renders one of the SDK's organization-level tab components in its
  * own dialog — `Admin` (Users), `IntegrationsTab` (API), `BillingTab`,
@@ -2556,7 +2565,27 @@ function AccountSheet({
   email: string;
   onInviteClick: () => void;
 }) {
+  const t = useTranslations('appSidebarIndex');
   const open = tab !== null;
+
+  const accountTabTitles: Record<AccountTab, string> = {
+    organization: t('accountTabOrganization'),
+    management: t('management'),
+    integrations: t('integrations'),
+    monetization: t('monetization'),
+    advanced: t('advanced'),
+    billing: t('accountTabBilling'),
+  };
+
+  const accountTabDescriptions: Record<AccountTab, string> = {
+    organization: t('accountDescOrganization'),
+    management: t('accountDescManagement'),
+    integrations: t('accountDescIntegrations'),
+    monetization: t('accountDescMonetization'),
+    advanced: t('accountDescAdvanced'),
+    billing: t('accountDescBilling'),
+  };
+
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       {/*
@@ -2574,10 +2603,10 @@ function AccountSheet({
       <DialogContent className="mx-auto my-auto flex h-[90vh] w-[95vw] max-w-none flex-col justify-between gap-0 rounded-lg p-0 sm:max-w-7xl">
         <DialogHeader className="flex-shrink-0 border-b border-gray-200 p-4 pt-[30px]">
           <DialogTitle className="text-lg font-medium text-gray-900 dark:text-gray-100">
-            {tab ? ACCOUNT_TAB_TITLES[tab] : ''}
+            {tab ? accountTabTitles[tab] : ''}
           </DialogTitle>
           <DialogDescription className="text-sm leading-relaxed text-gray-600">
-            {tab ? ACCOUNT_TAB_DESCRIPTIONS[tab] : ''}
+            {tab ? accountTabDescriptions[tab] : ''}
           </DialogDescription>
         </DialogHeader>
         <div className="min-h-0 flex-1 overflow-y-auto p-6">

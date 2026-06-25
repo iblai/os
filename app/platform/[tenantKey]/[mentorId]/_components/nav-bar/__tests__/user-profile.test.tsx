@@ -193,7 +193,7 @@ vi.mock('./learner-mode-switch', () => ({
 let capturedCallbacks: any = {};
 
 // Mock UserProfileDropdown to capture all callbacks
-vi.mock('@iblai/iblai-js/web-containers/next', () => ({
+vi.mock('@iblai/web-containers/next', () => ({
   UserProfileDropdown: (props: any) => {
     // Capture all callbacks for testing
     capturedCallbacks = {

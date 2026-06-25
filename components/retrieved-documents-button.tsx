@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DocumentSidebar } from '@/components/document-sidebar';
@@ -22,6 +23,7 @@ type Props = {
 };
 
 export function RetrievedDocumentsButton({ sessionId }: Props) {
+  const t = useTranslations('componentsRetrievedDocumentsButton');
   const [isOpen, setIsOpen] = useState(false);
   const params = useParams<{ tenantKey: string }>();
   const username = useUsername();
@@ -61,7 +63,7 @@ export function RetrievedDocumentsButton({ sessionId }: Props) {
         onClick={() => setIsOpen(true)}
       >
         <FileText className="h-4 w-4 text-blue-600" />
-        <span>Retrieved Documents</span>
+        <span>{t('retrievedDocuments')}</span>
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -69,7 +71,7 @@ export function RetrievedDocumentsButton({ sessionId }: Props) {
           <DialogHeader className="border-b px-4 py-2">
             <DialogTitle className="flex items-center gap-2 text-base font-medium text-[#646464]">
               <FileText className="h-5 w-5 text-blue-600" />
-              Retrieved Documents
+              {t('retrievedDocuments')}
             </DialogTitle>
           </DialogHeader>
           <div className="flex-1 overflow-hidden">

@@ -383,7 +383,7 @@ vi.mock('@/components/modals/auth-modal', () => ({
 }));
 
 let lastCreditBalanceProps: any = null;
-vi.mock('@iblai/iblai-js/web-containers', () => ({
+vi.mock('@iblai/web-containers', () => ({
   NotificationDropdown: () => (
     <div data-testid="notification-dropdown">Notifications</div>
   ),
@@ -423,7 +423,7 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
   ),
 }));
 
-vi.mock('@iblai/iblai-js/web-containers/next', () => ({
+vi.mock('@iblai/web-containers/next', () => ({
   UserProfileModal: (props: any) =>
     props.isOpen ? (
       <div data-testid="user-profile-modal">

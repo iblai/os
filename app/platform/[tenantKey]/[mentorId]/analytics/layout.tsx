@@ -1,7 +1,7 @@
 'use client';
 
 import type React from 'react';
-import { AnalyticsLayout } from '@iblai/iblai-js/web-containers';
+import { AnalyticsLayout } from '@iblai/web-containers';
 import { useGetMentorPublicSettingsQuery } from '@iblai/iblai-js/data-layer';
 import { useParams, usePathname, useRouter } from 'next/navigation';
 import { useAppSelector } from '@/lib/hooks';

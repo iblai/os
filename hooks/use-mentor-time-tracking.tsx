@@ -2,7 +2,7 @@
 
 import { useParams, usePathname } from 'next/navigation';
 import { useCallback, useEffect, useRef } from 'react';
-import { TimeTrackingProvider } from '@iblai/iblai-js/web-containers';
+import { TimeTrackingProvider } from '@iblai/web-containers';
 import { selectActiveTab, selectSessionIds } from '@iblai/iblai-js/web-utils';
 import { useAppSelector } from '@/lib/hooks';
 

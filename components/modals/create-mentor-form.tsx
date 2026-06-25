@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 
 import { Info, Edit, X, ChevronsUpDown, Check } from 'lucide-react';
 import { useGetMentorCategoriesQuery } from '@iblai/iblai-js/data-layer';
@@ -84,6 +85,7 @@ export function CreateMentorForm({
   className,
   onCreated,
 }: CreateMentorFormProps) {
+  const t = useTranslations('modalsCreateMentorForm');
   const { tenant: tenantKey } = useTenantKey();
   const username = useUsername();
 
@@ -130,8 +132,7 @@ export function CreateMentorForm({
     <>
       {variant === 'dialog' && (
         <DialogDescription className="sr-only">
-          Create a new agent by filling out the required information and
-          customizing prompts
+          {t('dialogDescription')}
         </DialogDescription>
       )}
       <div
@@ -156,14 +157,14 @@ export function CreateMentorForm({
               value="settings"
               className="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-200 data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#2563EB] data-[state=active]:to-[#93C5FD] data-[state=active]:text-white"
             >
-              Settings
+              {t('settingsTab')}
             </TabsTrigger>
             <TabsTrigger
               value="prompts"
               disabled={disablePromptsTab}
               className="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-200 data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#2563EB] data-[state=active]:to-[#93C5FD] data-[state=active]:text-white"
             >
-              Prompts
+              {t('promptsTab')}
             </TabsTrigger>
           </TabsList>
 
@@ -180,11 +181,11 @@ export function CreateMentorForm({
                       return (
                         <div className="space-y-2">
                           <label className="flex items-center text-sm font-medium text-gray-700">
-                            Name
+                            {t('nameLabel')}
                             <span className="ml-1 text-red-500">*</span>
                           </label>
                           <Input
-                            placeholder="Agent Name"
+                            placeholder={t('namePlaceholder')}
                             value={field.state.value}
                             onChange={(e) => field.handleChange(e.target.value)}
                             autoComplete="name"
@@ -192,7 +193,7 @@ export function CreateMentorForm({
                           />
                           {hasNoValueAndIsDirty && (
                             <p className="text-xs text-red-500">
-                              Agent name is required
+                              {t('nameRequired')}
                             </p>
                           )}
                         </div>
@@ -209,11 +210,11 @@ export function CreateMentorForm({
                       return (
                         <div className="space-y-2">
                           <label className="flex items-center text-sm font-medium text-gray-700">
-                            Description
+                            {t('descriptionLabel')}
                             <span className="ml-1 text-red-500">*</span>
                           </label>
                           <Textarea
-                            placeholder="Agent Description"
+                            placeholder={t('descriptionPlaceholder')}
                             value={field.state.value}
                             onChange={(e) => field.handleChange(e.target.value)}
                             required
@@ -221,7 +222,7 @@ export function CreateMentorForm({
                           />
                           {hasNoValueAndIsDirty && (
                             <p className="text-xs text-red-500">
-                              Agent description is required
+                              {t('descriptionRequired')}
                             </p>
                           )}
                         </div>
@@ -233,7 +234,7 @@ export function CreateMentorForm({
                     {(field) => (
                       <div className="space-y-2">
                         <label className="flex items-center text-sm font-medium text-gray-700">
-                          Category
+                          {t('categoryLabel')}
                           <span className="ml-1 text-red-500">*</span>
                         </label>
                         <Popover>
@@ -241,7 +242,7 @@ export function CreateMentorForm({
                             <Button
                               variant="outline"
                               role="combobox"
-                              aria-label="Select category"
+                              aria-label={t('selectCategoryAriaLabel')}
                               className="w-full justify-between"
                             >
                               {field.state.value
@@ -249,23 +250,25 @@ export function CreateMentorForm({
                                     (mentorCategory) =>
                                       mentorCategory.id === field.state.value,
                                   )?.name
-                                : 'Select category...'}
+                                : t('selectCategoryPlaceholder')}
                               <ChevronsUpDown className="opacity-50" />
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent
-                            aria-label="Categories dropdown container"
+                            aria-label={t('categoriesDropdownAriaLabel')}
                             role="listbox"
                             aria-labelledby="Categories dropdown container"
                             className="w-full max-w-[490px] p-0 sm:w-[400px] lg:w-[490px]"
                           >
                             <Command>
                               <CommandInput
-                                placeholder="Search category..."
+                                placeholder={t('searchCategoryPlaceholder')}
                                 className="h-9"
                               />
                               <CommandList>
-                                <CommandEmpty>No Category found.</CommandEmpty>
+                                <CommandEmpty>
+                                  {t('noCategoryFound')}
+                                </CommandEmpty>
                                 <CommandGroup>
                                   {mentorCategories?.map((mentorCategory) => (
                                     <CommandItem
@@ -302,7 +305,7 @@ export function CreateMentorForm({
                     {(field) => (
                       <div className="space-y-2">
                         <label className="flex items-center text-sm font-medium text-gray-700">
-                          Agent Visibility
+                          {t('agentVisibilityLabel')}
                           <span className="ml-1 text-red-500">*</span>
                         </label>
                         <Select
@@ -311,8 +314,12 @@ export function CreateMentorForm({
                           required
                           disabled={isDisabled}
                         >
-                          <SelectTrigger aria-label="Select agent visibility">
-                            <SelectValue placeholder="Select a visibility" />
+                          <SelectTrigger
+                            aria-label={t('selectAgentVisibilityAriaLabel')}
+                          >
+                            <SelectValue
+                              placeholder={t('selectVisibilityPlaceholder')}
+                            />
                           </SelectTrigger>
                           <SelectContent>
                             {MENTOR_VISIBILITY.map((visibility) => (
@@ -334,7 +341,7 @@ export function CreateMentorForm({
                       {(field) => (
                         <div className="space-y-2">
                           <label className="flex items-center text-sm font-medium text-gray-700">
-                            Base
+                            {t('baseLabel')}
                             <span className="ml-1 text-red-500">*</span>
                           </label>
                           <Select
@@ -343,8 +350,12 @@ export function CreateMentorForm({
                             required
                             disabled={isDisabled}
                           >
-                            <SelectTrigger aria-label="Select base model">
-                              <SelectValue placeholder="Select base" />
+                            <SelectTrigger
+                              aria-label={t('selectBaseModelAriaLabel')}
+                            >
+                              <SelectValue
+                                placeholder={t('selectBasePlaceholder')}
+                              />
                             </SelectTrigger>
                             <SelectContent>
                               {MODEL_AGENTS.map((agent) => (
@@ -367,7 +378,7 @@ export function CreateMentorForm({
                     <>
                       <div className="order-1 mb-4 space-y-2 md:order-2 md:mb-0 md:w-[200px]">
                         <label className="text-sm font-medium text-gray-700">
-                          Image
+                          {t('imageLabel')}
                         </label>
                         <div
                           className="flex h-[200px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-200"
@@ -377,7 +388,7 @@ export function CreateMentorForm({
                           }}
                           role="button"
                           tabIndex={0}
-                          aria-label="Upload agent image"
+                          aria-label={t('uploadImageAriaLabel')}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' || e.key === ' ') {
                               e.preventDefault();
@@ -391,7 +402,7 @@ export function CreateMentorForm({
                             <div className="relative h-full w-full">
                               <Image
                                 src={URL.createObjectURL(file)}
-                                alt="Agent Image"
+                                alt={t('agentImageAlt')}
                                 className="h-full w-full object-cover"
                                 width={200}
                                 height={200}
@@ -409,14 +420,14 @@ export function CreateMentorForm({
                                     fileInputRef.current.value = '';
                                   }
                                 }}
-                                aria-label="Remove uploaded image"
+                                aria-label={t('removeImageAriaLabel')}
                               >
                                 <X className="h-3 w-3" />
                               </Button>
                             </div>
                           ) : (
                             <span className="text-sm text-gray-700">
-                              + Upload
+                              {t('uploadButton')}
                             </span>
                           )}
                         </div>
@@ -431,7 +442,7 @@ export function CreateMentorForm({
                               field.handleChange(file);
                             }
                           }}
-                          aria-label="Select agent image file"
+                          aria-label={t('selectImageFileAriaLabel')}
                         />
                       </div>
                     </>
@@ -446,7 +457,7 @@ export function CreateMentorForm({
                   className="w-full gap-2 bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90 sm:w-auto"
                   onClick={() => setActiveTab('prompts')}
                 >
-                  Next
+                  {t('nextButton')}
                 </Button>
               </div>
             </div>
@@ -467,21 +478,21 @@ export function CreateMentorForm({
                     <div className="space-y-4">
                       <div className="flex items-center gap-2">
                         <h3 className="text-sm font-medium text-gray-700">
-                          System Prompts
+                          {t('systemPromptsHeading')}
                         </h3>
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <button
                                 type="button"
-                                aria-label="System prompts information"
+                                aria-label={t('systemPromptsInfoAriaLabel')}
                                 className="flex items-center justify-center"
                               >
                                 <Info className="h-4 w-4 text-gray-400" />
                               </button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>Suggested prompts to guide the user</p>
+                              <p>{t('systemPromptsTooltip')}</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -492,7 +503,7 @@ export function CreateMentorForm({
                           tabIndex={0}
                           role="textbox"
                           aria-readonly="true"
-                          aria-label="System prompt content"
+                          aria-label={t('systemPromptContentAriaLabel')}
                         >
                           <p className="text-sm text-gray-600">
                             {field.state.value}
@@ -507,13 +518,13 @@ export function CreateMentorForm({
                             onClick={() => {
                               field.handleChange(field.state.value);
                               setPrompt({
-                                label: 'System Prompt',
+                                label: t('systemPromptLabel'),
                                 type: 'systemPrompt',
                               });
                             }}
                           >
                             <Edit className="mr-1.5 h-3 w-3" />
-                            Edit
+                            {t('editButton')}
                           </Button>
                         </div>
                       </div>
@@ -526,24 +537,21 @@ export function CreateMentorForm({
                     <div className="space-y-4">
                       <div className="flex items-center gap-2">
                         <h3 className="text-sm font-medium text-gray-700">
-                          Proactive Prompts
+                          {t('proactivePromptsHeading')}
                         </h3>
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <button
                                 type="button"
-                                aria-label="Proactive prompts information"
+                                aria-label={t('proactivePromptsInfoAriaLabel')}
                                 className="flex items-center justify-center"
                               >
                                 <Info className="h-4 w-4 text-gray-400" />
                               </button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>
-                                The system prompt defines the agent&apos;s
-                                behavior
-                              </p>
+                              <p>{t('proactivePromptsTooltip')}</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -554,7 +562,7 @@ export function CreateMentorForm({
                           tabIndex={0}
                           role="textbox"
                           aria-readonly="true"
-                          aria-label="Proactive prompt content"
+                          aria-label={t('proactivePromptContentAriaLabel')}
                         >
                           <p className="text-sm text-gray-600">
                             {field.state.value}
@@ -569,13 +577,13 @@ export function CreateMentorForm({
                             onClick={() => {
                               field.handleChange(field.state.value);
                               setPrompt({
-                                label: 'Proactive Prompt',
+                                label: t('proactivePromptLabel'),
                                 type: 'proactivePrompt',
                               });
                             }}
                           >
                             <Edit className="mr-1.5 h-3 w-3" />
-                            Edit
+                            {t('editButton')}
                           </Button>
                         </div>
                       </div>
@@ -588,23 +596,21 @@ export function CreateMentorForm({
                     <div className="space-y-4">
                       <div className="flex items-center gap-2">
                         <h3 className="text-sm font-medium text-gray-700">
-                          Guided Prompts
+                          {t('guidedPromptsHeading')}
                         </h3>
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <button
                                 type="button"
-                                aria-label="Guided prompts information"
+                                aria-label={t('guidedPromptsInfoAriaLabel')}
                                 className="flex items-center justify-center"
                               >
                                 <Info className="h-4 w-4 text-gray-400" />
                               </button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>
-                                The proactive prompt guides the conversation
-                              </p>
+                              <p>{t('guidedPromptsTooltip')}</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -615,7 +621,7 @@ export function CreateMentorForm({
                           tabIndex={0}
                           role="textbox"
                           aria-readonly="true"
-                          aria-label="Guided prompt content"
+                          aria-label={t('guidedPromptContentAriaLabel')}
                         >
                           <p className="text-sm text-gray-600">
                             {field.state.value}
@@ -630,13 +636,13 @@ export function CreateMentorForm({
                             onClick={() => {
                               field.handleChange(field.state.value);
                               setPrompt({
-                                label: 'Guided Prompt',
+                                label: t('guidedPromptLabel'),
                                 type: 'guidedPrompt',
                               });
                             }}
                           >
                             <Edit className="mr-1.5 h-3 w-3" />
-                            Edit
+                            {t('editButton')}
                           </Button>
                         </div>
                       </div>
@@ -651,7 +657,7 @@ export function CreateMentorForm({
                   className="bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90"
                   disabled={isDisabled}
                 >
-                  {isLoadingCreateMentor ? 'Saving...' : 'Save'}
+                  {isLoadingCreateMentor ? t('saving') : t('saveButton')}
                 </Button>
               </div>
             </form>

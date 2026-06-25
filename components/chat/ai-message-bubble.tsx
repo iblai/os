@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { RefreshCcw } from 'lucide-react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -76,6 +77,7 @@ export function AIMessageBubble({
   onOpenCanvas,
   streamingArtifactId,
 }: AIMessageBubbleProps) {
+  const t = useTranslations('chatAiMessageBubble');
   const showingSharedChat = useAppSelector(selectShowingSharedChat);
   const { metadata: tenantMetadata } = useTenantMetadataHook({
     org: tenantKey,
@@ -176,12 +178,12 @@ export function AIMessageBubble({
                       }}
                       className="-ml-1 text-gray-500 hover:text-gray-700"
                     >
-                      <span className="sr-only">Retry for a new response</span>
+                      <span className="sr-only">{t('retryScreenReader')}</span>
                       <RefreshCcw className="h-4 w-4" />
                     </button>
                   </TooltipTrigger>
                   <TooltipContent className="ibl-tooltip-content">
-                    Retry
+                    {t('retryTooltip')}
                   </TooltipContent>
                 </Tooltip>
               )}

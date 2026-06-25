@@ -27,11 +27,11 @@ vi.mock('@/hooks/use-user', () => ({
   useUsername: () => mockUseUsername(),
 }));
 
-// PrivacyTab imports from `@iblai/iblai-js/web-containers/next` (the
+// PrivacyTab imports from `@iblai/web-containers/next` (the
 // Next-only entry — that's where AgentPrivacyTab is actually exported).
 // Vitest keys mocks by module specifier, so we mock the exact path the
-// source uses, not the underlying `@iblai/iblai-js/web-containers/next`.
-vi.mock('@iblai/iblai-js/web-containers/next', () => ({
+// source uses, not the underlying `@iblai/web-containers/next`.
+vi.mock('@iblai/web-containers/next', () => ({
   AgentPrivacyTab: (props: any) => {
     mockAgentPrivacyTab(props);
     return (

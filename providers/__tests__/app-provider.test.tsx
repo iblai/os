@@ -48,7 +48,7 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
   useLazyGetPinnedMessagesQuery: () => [mockGetPinnedMessages],
 }));
 
-vi.mock('@iblai/iblai-js/web-containers', () => ({
+vi.mock('@iblai/web-containers', () => ({
   useIframeMessageHandler: (opts: {
     handlers?: Record<string, (event: MessageEvent) => unknown>;
     defaultHandler?: (data: Record<string, unknown>) => void;

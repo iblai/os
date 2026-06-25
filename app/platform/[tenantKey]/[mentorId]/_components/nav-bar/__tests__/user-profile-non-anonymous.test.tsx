@@ -158,7 +158,7 @@ vi.mock('./learner-mode-switch', () => ({
   LearnerModeSwitch: () => <div data-testid="learner-mode-switch">Switch</div>,
 }));
 
-vi.mock('@iblai/iblai-js/web-containers/next', () => ({
+vi.mock('@iblai/web-containers/next', () => ({
   UserProfileDropdown: (props: any) => (
     <div data-testid="user-profile-dropdown">
       <span data-testid="tenant">{props.tenantKey}</span>

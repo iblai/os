@@ -8,6 +8,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Camera, Plus } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 import { UploadIcon } from '@/components/icons/svg-icons';
 import { useShowAttachment } from '@/hooks/use-show-attachment';
@@ -23,16 +24,17 @@ export const UploadMenu = ({
   onCameraTrigger,
   disabled = false,
 }: UploadMenuProps) => {
+  const t = useTranslations('chatInputFormUploadMenu');
   const showAttachment = useShowAttachment();
 
   const uploadMenuItems = [
     {
-      name: 'Upload File',
+      labelKey: 'uploadFile' as const,
       icon: <UploadIcon className="h-5 w-5 text-gray-600" />,
       action: onFileInputTrigger,
     },
     {
-      name: 'Camera',
+      labelKey: 'camera' as const,
       icon: <Camera className="h-5 w-5 text-gray-600" />,
       action: onCameraTrigger,
     },
@@ -71,22 +73,22 @@ export const UploadMenu = ({
           variant="ghost"
           size="icon"
           disabled={disabled}
-          aria-label="Attach file"
+          aria-label={t('attachFile')}
           className="h-8 w-8 rounded-lg text-gray-600 transition-all duration-200 hover:border hover:border-[#38A1E5] hover:bg-[#F5F8FF] disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Plus className="h-4 w-4" />
-          <span className="sr-only">Attach file</span>
+          <span className="sr-only">{t('attachFile')}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="z-50 w-56 p-2">
         {uploadMenuItems.map((item) => (
           <DropdownMenuItem
-            key={item.name}
+            key={item.labelKey}
             onClick={item.action}
             className="flex cursor-pointer items-center gap-3 rounded-lg p-3 hover:border-[#38A1E5] hover:bg-gray-50"
           >
             {item.icon}
-            <span className="text-gray-700">{item.name}</span>
+            <span className="text-gray-700">{t(item.labelKey)}</span>
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

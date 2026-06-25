@@ -1,4 +1,5 @@
 import { CircleStop, Loader2, Mic } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -36,6 +37,7 @@ export function VoiceChatButton({
   recording,
   disabled = false,
 }: Props) {
+  const t = useTranslations('chatInputFormVoiceChatButton');
   const showVoiceRecorder = useShowVoiceRecorder();
 
   if (!showVoiceRecorder) {
@@ -54,20 +56,20 @@ export function VoiceChatButton({
             type="button"
             aria-label={
               processing
-                ? 'Processing voice input'
+                ? t('processingVoiceInput')
                 : recording
-                  ? 'Stop voice input'
-                  : 'Voice input'
+                  ? t('stopVoiceInput')
+                  : t('voiceInput')
             }
             onClick={handleMicrophoneBtnClick}
           >
             <Icon processing={processing} recording={recording} />
-            <span className="sr-only">Voice input</span>
+            <span className="sr-only">{t('voiceInput')}</span>
           </Button>
         </div>
       </TooltipTrigger>
       <TooltipContent className="ibl-tooltip-content capitalize">
-        Voice Record
+        {t('voiceRecord')}
       </TooltipContent>
     </Tooltip>
   );

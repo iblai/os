@@ -20,7 +20,7 @@ vi.mock('@/hooks/user-navigate', () => ({
   }),
 }));
 
-vi.mock('@iblai/iblai-js/web-containers', () => ({
+vi.mock('@iblai/web-containers', () => ({
   AnalyticsAuditLogStats: vi.fn(
     ({ tenantKey, mentorId, userId, selectedMentorId }) => (
       <div data-testid="analytics-audit-log-stats">

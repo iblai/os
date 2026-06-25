@@ -3,6 +3,7 @@
 import type React from 'react';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Send } from 'lucide-react';
@@ -11,6 +12,7 @@ import { Send } from 'lucide-react';
 export const dynamic = 'force-dynamic';
 
 export default function JobScoutPage() {
+  const t = useTranslations('jobScoutPage');
   const [, setSelectedPrompt] = useState<string | null>(null);
   const [messages, setMessages] = useState<
     Array<{ role: 'user' | 'assistant'; content: string }>
@@ -24,10 +26,7 @@ export default function JobScoutPage() {
       { role: 'user', content: prompt },
       {
         role: 'assistant',
-        content:
-          "I'm thinking about your question regarding " +
-          prompt.toLowerCase() +
-          ' ...',
+        content: t('thinkingAboutQuestion', { prompt: prompt.toLowerCase() }),
       },
     ]);
     setIsLoading(true);
@@ -36,17 +35,13 @@ export default function JobScoutPage() {
     setTimeout(() => {
       let response = '';
       if (prompt.includes('presentation skills')) {
-        response =
-          "Improving presentation skills is a great goal! Here are some tips:\n\n1. Practice regularly - even if it's just in front of a mirror\n2. Record yourself and review the footage\n3. Join groups like Toastmasters\n4. Focus on body language and vocal variety\n5. Use storytelling techniques to engage your audience\n\nWould you like more specific advice on any of these areas?";
+        response = t('responsePresentationSkills');
       } else if (prompt.includes('advocate with my manager')) {
-        response =
-          "Advocating for a promotion requires preparation and strategy. Here's how to approach it:\n\n1. Document your achievements and contributions\n2. Research comparable roles and salary ranges\n3. Tie your accomplishments to business outcomes\n4. Choose the right timing for the conversation\n5. Practice your talking points beforehand\n\nWould you like me to help you prepare specific talking points?";
+        response = t('responseAdvocatePromotion');
       } else if (prompt.includes('job interview')) {
-        response =
-          'Preparing for behavioral interviews is crucial! The STAR method can help structure your answers:\n\n- Situation: Describe the context\n- Task: Explain your responsibility\n- Action: Detail the steps you took\n- Result: Share the outcome\n\nCommon behavioral questions include:\n- Tell me about a time you faced a challenge\n- Describe a situation where you showed leadership\n- Share an example of resolving a conflict\n\nWould you like to practice with some sample questions?';
+        response = t('responseJobInterview');
       } else if (prompt.includes('find an agent')) {
-        response =
-          "Finding an agent can significantly accelerate your career growth. Here's how to approach it:\n\n1. Identify what you want to learn and develop\n2. Look within your organization first\n3. Attend industry events and networking opportunities\n4. Consider professional associations in your field\n5. Don't limit yourself to just one agent\n\nWhen approaching potential agents, be specific about what you admire about their work and what you hope to learn.";
+        response = t('responseFindAgent');
       }
 
       setMessages([
@@ -75,8 +70,7 @@ export default function JobScoutPage() {
         ...newMessages,
         {
           role: 'assistant' as const,
-          content:
-            "Thank you for your follow-up question. I'm here to help with more specific advice about your career development. Could you provide more details about your situation so I can give you more tailored guidance?",
+          content: t('responseFollowUp'),
         },
       ]);
       setIsLoading(false);
@@ -86,30 +80,30 @@ export default function JobScoutPage() {
   const suggestionCards = [
     {
       id: 1,
-      text: "I'd like to improve my presentation skills.",
+      text: t('suggestionPresentationSkills'),
     },
     {
       id: 2,
-      text: 'Help me figure out how to advocate with my manager for a promotion.',
+      text: t('suggestionAdvocatePromotion'),
     },
     {
       id: 3,
-      text: 'How do I prepare for a job interview with behavioral questions?',
+      text: t('suggestionJobInterview'),
     },
     {
       id: 4,
-      text: 'Give me advice on how to find an agent.',
+      text: t('suggestionFindAgent'),
     },
   ];
 
   const recentActivities = [
     {
       id: 1,
-      title: 'Improving Presentation Skills',
+      title: t('recentImprovingPresentationSkills'),
     },
     {
       id: 2,
-      title: 'Career Guidance Offered',
+      title: t('recentCareerGuidanceOffered'),
     },
   ];
 
@@ -122,21 +116,17 @@ export default function JobScoutPage() {
               <Avatar className="h-14 w-14 border-2 border-amber-400">
                 <AvatarImage
                   src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Screenshot%202025-03-07%20at%2018.22.00-3usAlQ4ctrcMPSnZcXBJdR0PtVg6QF.png"
-                  alt="AI Job Scout Assistant"
+                  alt={t('avatarAlt')}
                 />
                 <AvatarFallback className="bg-amber-400 text-white">
-                  AI
+                  {t('avatarFallback')}
                 </AvatarFallback>
               </Avatar>
               <div>
                 <h1 className="text-xl font-bold text-gray-800">
-                  AI Job Scout Assistant • Careers
+                  {t('pageTitle')}
                 </h1>
-                <p className="mt-1 text-gray-600">
-                  Hello! I&apos;m your AI Job Scout Assistant, here to help you
-                  find job opportunities. What type of job are you interested in
-                  exploring today?
-                </p>
+                <p className="mt-1 text-gray-600">{t('greeting')}</p>
               </div>
             </div>
 
@@ -153,17 +143,19 @@ export default function JobScoutPage() {
             </div>
 
             <div>
-              <h2 className="mb-3 text-sm font-medium text-gray-500">Recent</h2>
+              <h2 className="mb-3 text-sm font-medium text-gray-500">
+                {t('recentHeading')}
+              </h2>
               <div className="space-y-3">
                 {recentActivities.map((activity) => (
                   <div key={activity.id} className="flex items-center gap-3">
                     <Avatar className="h-8 w-8">
                       <AvatarImage
                         src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Screenshot%202025-03-07%20at%2018.22.00-3usAlQ4ctrcMPSnZcXBJdR0PtVg6QF.png"
-                        alt="AI Job Scout Assistant"
+                        alt={t('avatarAlt')}
                       />
                       <AvatarFallback className="bg-amber-400 text-white">
-                        AI
+                        {t('avatarFallback')}
                       </AvatarFallback>
                     </Avatar>
                     <span className="text-sm text-gray-700">
@@ -180,17 +172,19 @@ export default function JobScoutPage() {
               <Avatar className="h-10 w-10">
                 <AvatarImage
                   src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Screenshot%202025-03-07%20at%2018.22.00-3usAlQ4ctrcMPSnZcXBJdR0PtVg6QF.png"
-                  alt="AI Job Scout Assistant"
+                  alt={t('avatarAlt')}
                 />
                 <AvatarFallback className="bg-amber-400 text-white">
-                  AI
+                  {t('avatarFallback')}
                 </AvatarFallback>
               </Avatar>
               <div>
                 <h2 className="font-medium text-gray-800">
-                  AI Job Scout Assistant
+                  {t('assistantName')}
                 </h2>
-                <p className="text-xs text-gray-500">Careers</p>
+                <p className="text-xs text-gray-500">
+                  {t('assistantSubtitle')}
+                </p>
               </div>
               <Button
                 variant="ghost"
@@ -201,7 +195,7 @@ export default function JobScoutPage() {
                   setSelectedPrompt(null);
                 }}
               >
-                New Chat
+                {t('newChat')}
               </Button>
             </div>
 
@@ -215,10 +209,10 @@ export default function JobScoutPage() {
                     <Avatar className="mt-1 mr-2 h-8 w-8 flex-shrink-0">
                       <AvatarImage
                         src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Screenshot%202025-03-07%20at%2018.22.00-3usAlQ4ctrcMPSnZcXBJdR0PtVg6QF.png"
-                        alt="AI Job Scout Assistant"
+                        alt={t('avatarAlt')}
                       />
                       <AvatarFallback className="bg-amber-400 text-white">
-                        AI
+                        {t('avatarFallback')}
                       </AvatarFallback>
                     </Avatar>
                   )}
@@ -238,10 +232,10 @@ export default function JobScoutPage() {
                   <Avatar className="mt-1 mr-2 h-8 w-8 flex-shrink-0">
                     <AvatarImage
                       src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Screenshot%202025-03-07%20at%2018.22.00-3usAlQ4ctrcMPSnZcXBJdR0PtVg6QF.png"
-                      alt="AI Job Scout Assistant"
+                      alt={t('avatarAlt')}
                     />
                     <AvatarFallback className="bg-amber-400 text-white">
-                      AI
+                      {t('avatarFallback')}
                     </AvatarFallback>
                   </Avatar>
                   <div className="max-w-[80%] rounded-lg bg-gray-100 p-3 text-gray-800">
@@ -267,7 +261,7 @@ export default function JobScoutPage() {
                   type="text"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
-                  placeholder="Type your message..."
+                  placeholder={t('inputPlaceholder')}
                   className="flex-1 rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:outline-none"
                   autoComplete="off"
                   disabled={isLoading}

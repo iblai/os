@@ -1,3 +1,4 @@
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -30,6 +31,7 @@ export function FileAttachmentsList({
   onRemoveFile,
   onRetryFile,
 }: FileAttachmentsListProps) {
+  const t = useTranslations('chatInputFormFileAttachmentsList');
   if (!attachedFiles || attachedFiles.length === 0) return null;
 
   const statusColors = {
@@ -78,14 +80,16 @@ export function FileAttachmentsList({
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="text-xs text-gray-500 uppercase">
-                        {file.fileType.split('/')[1] || 'FILE'}
+                        {file.fileType.split('/')[1] || t('fileTypeFallback')}
                       </div>
                       {file.uploadStatus === 'uploading' && (
                         <span className="text-xs font-medium text-blue-600">
-                          {file.uploadProgress}%
+                          {t('uploadProgress', {
+                            progress: file.uploadProgress,
+                          })}
                           {file.retryCount &&
                             file.retryCount > 0 &&
-                            ` (retry ${file.retryCount})`}
+                            ` ${t('uploadProgressRetry', { count: file.retryCount })}`}
                         </span>
                       )}
                       {file.uploadStatus === 'error' && (
@@ -94,7 +98,7 @@ export function FileAttachmentsList({
                           className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700"
                         >
                           <RotateCw className="h-3 w-3" />
-                          Retry
+                          {t('retry')}
                         </button>
                       )}
                     </div>
@@ -112,12 +116,12 @@ export function FileAttachmentsList({
               <TooltipContent className="ibl-tooltip-content">
                 <p>{file.fileName}</p>
                 <p className="mt-1 text-xs text-gray-500 capitalize">
-                  Status: {file.uploadStatus}
+                  {t('statusLabel', { status: file.uploadStatus })}
                   {file.uploadStatus === 'uploading' &&
-                    ` (${file.uploadProgress}%)`}
+                    ` ${t('statusWithProgress', { progress: file.uploadProgress })}`}
                   {file.retryCount && file.retryCount > 0 && (
                     <span className="block text-yellow-600">
-                      Retry attempt {file.retryCount}
+                      {t('retryAttempt', { count: file.retryCount })}
                     </span>
                   )}
                 </p>
@@ -132,7 +136,7 @@ export function FileAttachmentsList({
             disabled={file.uploadStatus === 'uploading'}
           >
             <X className="h-3 w-3" />
-            <span className="sr-only">Remove file</span>
+            <span className="sr-only">{t('removeFile')}</span>
           </Button>
         </div>
       ))}
