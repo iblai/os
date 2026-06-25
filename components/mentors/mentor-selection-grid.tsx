@@ -4,7 +4,7 @@ import React from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Search, Check } from 'lucide-react';
-import { useMentorsWithPagination } from '@/hooks/use-mentors';
+import { useAiSearchMentorsWithPagination } from '@/hooks/use-mentors';
 import IblPagination from '@/components/ibl-pagination';
 import { Spinner } from '@/components/spinner';
 
@@ -35,7 +35,7 @@ export function MentorSelectionGrid({
     totalPages,
     setSearchQuery: setMentorSearch,
     handlePageChange,
-  } = useMentorsWithPagination(itemsPerPage);
+  } = useAiSearchMentorsWithPagination(itemsPerPage);
 
   // Update search query with debounce effect handled by the hook
   React.useEffect(() => {
