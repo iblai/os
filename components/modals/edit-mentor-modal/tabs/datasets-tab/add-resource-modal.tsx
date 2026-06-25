@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Script from 'next/script';
+import { useTranslations } from 'next-intl';
 
 import {
   Dialog,
@@ -24,6 +25,7 @@ interface AddResourceModalProps {
 }
 
 export function AddResourceModal({ isOpen, onClose }: AddResourceModalProps) {
+  const t = useTranslations('datasetsTabAddResourceModal');
   const [selectedResource, setSelectedResource] =
     React.useState<ResourceType | null>(null);
 
@@ -48,22 +50,19 @@ export function AddResourceModal({ isOpen, onClose }: AddResourceModalProps) {
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[800px]">
           <DialogHeader className="flex flex-row items-center justify-between">
-            <DialogTitle>Add Resources</DialogTitle>
+            <DialogTitle>{t('addResources')}</DialogTitle>
           </DialogHeader>
 
           <div className="pt-4">
             <div>
-              <p className="mb-6 text-gray-600">
-                Add knowledge to help your agent provide more relevant insights.
-                Others with edit access can reuse these sources for more topics.
-              </p>
+              <p className="mb-6 text-gray-600">{t('description')}</p>
 
               {pickerError && (
                 <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="text-sm font-medium text-red-800">
-                        Google Drive Picker Error
+                        {t('googleDrivePickerError')}
                       </h4>
                       <p className="mt-1 text-sm text-red-600">{pickerError}</p>
                     </div>
@@ -71,7 +70,7 @@ export function AddResourceModal({ isOpen, onClose }: AddResourceModalProps) {
                       onClick={forceClosePickerModal}
                       className="ml-4 rounded bg-red-100 px-3 py-1 text-sm font-medium text-red-800 hover:bg-red-200"
                     >
-                      Force Close Picker
+                      {t('forceClosePicker')}
                     </button>
                   </div>
                 </div>

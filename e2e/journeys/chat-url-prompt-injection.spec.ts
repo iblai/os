@@ -152,10 +152,9 @@ test.describe('Journey: Chat URL ?prompt= Auto-Injection', () => {
     await waitForPageReady(page);
 
     // TC2-a: exactly one user bubble for this prompt text (no duplicate)
-    const bubbleCount = await page
-      .locator('.chat-user-message-query', { hasText: promptText })
-      .count();
-    expect(bubbleCount).toBe(1);
+    await expect(
+      page.locator('.chat-user-message-query', { hasText: promptText }),
+    ).toHaveCount(1, { timeout: 15_000 });
 
     // TC2-b: session id is unchanged (no new session was created)
     const sessionIdAfterSecond = await page.evaluate(

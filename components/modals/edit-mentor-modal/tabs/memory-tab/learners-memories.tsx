@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useTranslations } from 'next-intl';
 import { format, formatDistanceToNow } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
 
@@ -48,6 +49,7 @@ interface MemoryItem {
 }
 
 export function LearnersMemories() {
+  const t = useTranslations('memoryTabLearnersMemories');
   const username = useUsername();
   const [open, setOpen] = useState(false);
   const [selectedLearner, setSelectedLearner] = useState('');
@@ -151,7 +153,7 @@ export function LearnersMemories() {
   const categories = useMemo(() => {
     if (adminCategories && adminCategories.length > 0) {
       return [
-        { id: 0, name: 'All', slug: 'all' },
+        { id: 0, name: t('categoryAll'), slug: 'all' },
         ...adminCategories.map((cat: MentorMemoryCategory) => ({
           id: cat.id,
           name: cat.name,
@@ -160,14 +162,14 @@ export function LearnersMemories() {
       ];
     }
     if (!memoriesByCategoryResponse)
-      return [{ id: 0, name: 'All', slug: 'all' }];
+      return [{ id: 0, name: t('categoryAll'), slug: 'all' }];
     const responseCats = memoriesByCategoryResponse.map((item) => ({
       id: item.category.id,
       name: item.category.name,
       slug: item.category.slug,
     }));
-    return [{ id: 0, name: 'All', slug: 'all' }, ...responseCats];
-  }, [adminCategories, memoriesByCategoryResponse]);
+    return [{ id: 0, name: t('categoryAll'), slug: 'all' }, ...responseCats];
+  }, [adminCategories, memoriesByCategoryResponse, t]);
 
   const selectedMemory =
     filteredMemories.find((m) => m.id === selectedMemoryId) ?? null;
@@ -175,7 +177,9 @@ export function LearnersMemories() {
   return (
     <div className="space-y-4 border-t border-gray-200 pt-6">
       <div className="flex items-center gap-2">
-        <h3 className="text-sm font-medium text-gray-900">Learner Memories</h3>
+        <h3 className="text-sm font-medium text-gray-900">
+          {t('learnerMemoriesHeading')}
+        </h3>
         <Info className="h-4 w-4 text-gray-400" />
       </div>
 
@@ -195,15 +199,15 @@ export function LearnersMemories() {
                       ? learners.find(
                           (learner) => learner.username === selectedLearner,
                         )?.username
-                      : 'Select Learner'}
+                      : t('selectLearner')}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[300px] p-0" align="start">
                   <Command>
-                    <CommandInput placeholder="Search learner..." />
+                    <CommandInput placeholder={t('searchLearnerPlaceholder')} />
                     <CommandList>
-                      <CommandEmpty>No learner found.</CommandEmpty>
+                      <CommandEmpty>{t('noLearnerFound')}</CommandEmpty>
                       <CommandGroup>
                         <CommandItem
                           value="all"
@@ -220,7 +224,7 @@ export function LearnersMemories() {
                                 : 'opacity-0',
                             )}
                           />
-                          All Learners
+                          {t('allLearners')}
                         </CommandItem>
                         {learners.map((learner) => (
                           <CommandItem
@@ -265,7 +269,7 @@ export function LearnersMemories() {
                   <Calendar className="h-4 w-4" />
                   {dateRange?.from && dateRange?.to
                     ? `${format(dateRange.from, 'MMM dd')} - ${format(dateRange.to, 'MMM dd')}`
-                    : 'Pick a Date Range'}
+                    : t('pickDateRange')}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -287,7 +291,7 @@ export function LearnersMemories() {
                     className="w-40 justify-between bg-transparent font-normal"
                   >
                     {categories.find((c) => c.slug === selectedCategorySlug)
-                      ?.name ?? 'All'}
+                      ?.name ?? t('categoryAll')}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
@@ -330,7 +334,7 @@ export function LearnersMemories() {
         </div>
       ) : filteredMemories.length === 0 ? (
         <div className="flex items-center justify-center rounded-md border p-8 text-gray-500 md:p-20">
-          No Memories
+          {t('noMemories')}
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -342,7 +346,7 @@ export function LearnersMemories() {
                       addSuffix: true,
                     })
                   : '';
-                const displayUser = memory.username || 'Unknown';
+                const displayUser = memory.username || t('unknownUser');
                 return (
                   <div
                     key={memory.id}
@@ -399,14 +403,14 @@ export function LearnersMemories() {
                     )}
                   </div>
                   <h3 className="mb-1 text-base font-semibold text-gray-900">
-                    {selectedMemory.username || 'Unknown'}
+                    {selectedMemory.username || t('unknownUser')}
                   </h3>
                 </div>
 
                 <div className="space-y-4">
                   <div>
                     <h4 className="mb-2 text-sm font-semibold text-gray-900">
-                      Memory Content
+                      {t('memoryContentHeading')}
                     </h4>
                     <div className="text-sm text-gray-600">
                       {selectedMemory.content}
@@ -416,7 +420,7 @@ export function LearnersMemories() {
               </>
             ) : (
               <div className="flex h-full items-center justify-center text-gray-500">
-                Select a memory to view details.
+                {t('selectMemoryPrompt')}
               </div>
             )}
           </div>

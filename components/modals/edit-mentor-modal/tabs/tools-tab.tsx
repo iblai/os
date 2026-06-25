@@ -1,6 +1,7 @@
 import type React from 'react';
 
 import { Info } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 import { useGetMentorSettingsQuery } from '@iblai/iblai-js/data-layer';
 import {
@@ -19,6 +20,7 @@ import { useToggleTools } from '@/hooks/use-tools/use-toggle-tools';
 import WithFormPermissions from '@/hoc/withPermissions';
 
 export function ToolsTab() {
+  const t = useTranslations('tabsToolsTab');
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
   const username = useUsername();
   const { getMentorId } = useNavigate();
@@ -61,10 +63,10 @@ export function ToolsTab() {
     <>
       <div className="flex hidden h-[73px] flex-shrink-0 items-center border-b border-gray-200 bg-white p-4 lg:block">
         <div>
-          <h3 className="mb-1 text-base font-medium text-gray-900">Tools</h3>
-          <p className="text-xs text-gray-700">
-            Configure tools and integrations for your agent.
-          </p>
+          <h3 className="mb-1 text-base font-medium text-gray-900">
+            {t('heading')}
+          </h3>
+          <p className="text-xs text-gray-700">{t('subheading')}</p>
         </div>
       </div>
       <div
@@ -98,7 +100,9 @@ export function ToolsTab() {
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger
-                            aria-label={`More info about ${tool?.display_name}`}
+                            aria-label={t('moreInfoAbout', {
+                              name: tool?.display_name ?? '',
+                            })}
                           >
                             <Info className="h-4 w-4 text-gray-400" />
                           </TooltipTrigger>
@@ -114,7 +118,10 @@ export function ToolsTab() {
                         await toggleTools(tool?.slug ?? '');
                       }}
                       disabled={isDisabled || disabled}
-                      aria-label={`${tool?.display_name} ${isEnabled ? 'enabled' : 'disabled'}`}
+                      aria-label={t('switchAriaLabel', {
+                        name: tool?.display_name ?? '',
+                        state: isEnabled ? t('enabled') : t('disabled'),
+                      })}
                     />
                   </div>
                 );

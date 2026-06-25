@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
 import { useForm } from '@tanstack/react-form';
 import {
@@ -52,6 +53,7 @@ interface AddPromptModalProps {
 }
 
 export function AddPromptModal({ isOpen, onClose }: AddPromptModalProps) {
+  const t = useTranslations('modalsAddPromptModal');
   const username = useUsername();
   const { getMentorId } = useNavigate();
   const { tenantKey, mentorId: mentorIdParam } =
@@ -90,11 +92,11 @@ export function AddPromptModal({ isOpen, onClose }: AddPromptModalProps) {
             prompt_visibility: value.promptVisibility,
           },
         }).unwrap();
-        toast.success('Prompt created successfully');
+        toast.success(t('promptCreatedSuccessfully'));
         onClose();
       } catch (error) {
         console.error(JSON.stringify(error));
-        toast.error('Failed to create prompt');
+        toast.error(t('failedToCreatePrompt'));
         console.error(JSON.stringify({ tenant: tenantKey, error }));
       }
     },
@@ -108,7 +110,7 @@ export function AddPromptModal({ isOpen, onClose }: AddPromptModalProps) {
         <DialogContent className="w-full">
           <DialogHeader>
             <DialogTitle className="ibl-dialog-title">
-              Add New Prompt
+              {t('addNewPrompt')}
             </DialogTitle>
           </DialogHeader>
 
@@ -129,7 +131,7 @@ export function AddPromptModal({ isOpen, onClose }: AddPromptModalProps) {
                 return (
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-gray-700">
-                      Category
+                      {t('categoryLabel')}
                     </Label>
                     <Select
                       value={field.state.value}
@@ -138,9 +140,11 @@ export function AddPromptModal({ isOpen, onClose }: AddPromptModalProps) {
                     >
                       <SelectTrigger
                         className="py-6"
-                        aria-label="Select a category"
+                        aria-label={t('selectCategoryAriaLabel')}
                       >
-                        <SelectValue placeholder="Select a category" />
+                        <SelectValue
+                          placeholder={t('selectCategoryPlaceholder')}
+                        />
                       </SelectTrigger>
                       <SelectContent>
                         {promptCategories?.map((category: any) => (
@@ -152,7 +156,7 @@ export function AddPromptModal({ isOpen, onClose }: AddPromptModalProps) {
                     </Select>
                     {hasNoValueAndIsDirty && (
                       <p className="text-xs text-red-500">
-                        Category is required
+                        {t('categoryRequired')}
                       </p>
                     )}
                   </div>
@@ -165,7 +169,7 @@ export function AddPromptModal({ isOpen, onClose }: AddPromptModalProps) {
                 return (
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-gray-700">
-                      Visibility
+                      {t('visibilityLabel')}
                     </Label>
                     <Select
                       value={field.state.value}
@@ -176,9 +180,11 @@ export function AddPromptModal({ isOpen, onClose }: AddPromptModalProps) {
                     >
                       <SelectTrigger
                         className="py-6"
-                        aria-label="Select visibility"
+                        aria-label={t('selectVisibilityAriaLabel')}
                       >
-                        <SelectValue placeholder="Select visibility" />
+                        <SelectValue
+                          placeholder={t('selectVisibilityPlaceholder')}
+                        />
                       </SelectTrigger>
                       <SelectContent>
                         {MENTOR_VISIBILITY.map((option) => (
@@ -190,7 +196,7 @@ export function AddPromptModal({ isOpen, onClose }: AddPromptModalProps) {
                     </Select>
                     {!field.state.value && field.state.meta.isDirty && (
                       <p className="text-xs text-red-500">
-                        Visibility is required
+                        {t('visibilityRequired')}
                       </p>
                     )}
                   </div>
@@ -210,7 +216,7 @@ export function AddPromptModal({ isOpen, onClose }: AddPromptModalProps) {
                       className="text-sm font-medium text-gray-700"
                       htmlFor="prompt-textarea"
                     >
-                      Prompt
+                      {t('promptLabel')}
                     </Label>
                     <RichTextEditor
                       value={field.state.value}
@@ -218,7 +224,9 @@ export function AddPromptModal({ isOpen, onClose }: AddPromptModalProps) {
                       disabled={isDisabled}
                     />
                     {hasNoValueAndIsDirty && (
-                      <p className="text-xs text-red-500">Prompt is required</p>
+                      <p className="text-xs text-red-500">
+                        {t('promptRequired')}
+                      </p>
                     )}
                   </div>
                 );
@@ -235,7 +243,7 @@ export function AddPromptModal({ isOpen, onClose }: AddPromptModalProps) {
                     className="bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90"
                     disabled={isDisabled || !isFormValue}
                   >
-                    {isCreatingPrompt ? 'Submitting...' : 'Submit'}
+                    {isCreatingPrompt ? t('submitting') : t('submit')}
                   </Button>
                 )}
               </form.Subscribe>

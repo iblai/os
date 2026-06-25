@@ -7,6 +7,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { useTranslations } from 'next-intl';
 
 interface DeleteMemoryModalProps {
   open: boolean;
@@ -23,26 +24,26 @@ export function DeleteMemoryModal({
   onCancel,
   isDeleting,
 }: DeleteMemoryModalProps) {
+  const t = useTranslations('memoryTabDeleteMemoryModal');
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="mx-4 max-w-md sm:mx-auto">
         <DialogHeader>
-          <DialogTitle>Delete Memory</DialogTitle>
+          <DialogTitle>{t('title')}</DialogTitle>
         </DialogHeader>
         <p className="text-muted-foreground text-sm">
-          Are you sure you want to delete this memory? This action cannot be
-          undone.
+          {t('confirmationMessage')}
         </p>
         <div className="mt-4 flex justify-end gap-2">
           <Button variant="outline" onClick={onCancel}>
-            Cancel
+            {t('cancelButton')}
           </Button>
           <Button
             className="ibl-button-primary"
             onClick={onConfirm}
             disabled={isDeleting}
           >
-            {isDeleting ? 'Deleting...' : 'Delete'}
+            {isDeleting ? t('deletingButton') : t('deleteButton')}
           </Button>
         </div>
       </DialogContent>

@@ -1,3 +1,6 @@
+'use client';
+
+import { useTranslations } from 'next-intl';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -22,11 +25,12 @@ export function SearchSection({
   onTabChange,
   categories,
 }: SearchSectionProps) {
+  const t = useTranslations('exploreSearchSection');
   return (
     <div className="sticky top-0 z-10 mx-auto mb-3 w-full max-w-[800px] space-y-2 overflow-hidden border-b bg-white pt-0 pb-2 sm:mb-4 sm:pb-3 md:mb-6">
       <div className="relative mb-2 w-full max-w-full">
         <label htmlFor="mentor-search" className="sr-only">
-          Search agents
+          {t('searchAgents')}
         </label>
         <Search
           className="absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2 text-gray-500 sm:h-4 sm:w-4"
@@ -35,8 +39,8 @@ export function SearchSection({
         <Input
           id="mentor-search"
           type="search"
-          placeholder="Search agents"
-          aria-label="Search agents"
+          placeholder={t('searchAgents')}
+          aria-label={t('searchAgents')}
           className="w-full py-4 pl-9 text-base shadow-[0_0_10px_rgba(0,0,0,0.05)] sm:h-10 sm:py-2 sm:pl-12"
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
@@ -46,12 +50,12 @@ export function SearchSection({
         className="scrollbar-none mb-1 w-full overflow-x-auto pb-1"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         role="region"
-        aria-label="Category filters"
+        aria-label={t('categoryFiltersAriaLabel')}
       >
         <div
           className="inline-flex min-w-full"
           role="tablist"
-          aria-label="Filter agents by category"
+          aria-label={t('filterAgentsByCategoryAriaLabel')}
         >
           <div className="scrollbar-none flex w-full flex-nowrap justify-start gap-1 overflow-x-auto sm:gap-2">
             {categories.map((category) => (
@@ -68,7 +72,9 @@ export function SearchSection({
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200',
                 )}
                 onClick={() => onTabChange(category.value)}
-                aria-label={`Filter by ${category.label} category`}
+                aria-label={t('filterByCategoryAriaLabel', {
+                  label: category.label,
+                })}
               >
                 {category.label}
               </button>

@@ -4,6 +4,7 @@ import React from 'react';
 import Image from 'next/image';
 
 import { Search } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 import {
   Dialog,
@@ -63,6 +64,7 @@ export function LLMProviderModal({
   mentorSettings,
   llms,
 }: Props) {
+  const t = useTranslations('modalsLlmProviderModal');
   const [searchQuery, setSearchQuery] = React.useState('');
 
   const filteredLLMs = React.useMemo(() => {
@@ -78,21 +80,18 @@ export function LLMProviderModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl space-y-6 p-4">
         <DialogDescription className="sr-only">
-          Select select on of the agents provided by {llmProvider.name}
+          {t('dialogDescription', { providerName: llmProvider.name })}
         </DialogDescription>
         <DialogHeader>
-          <DialogTitle className="ibl-dialog-title">LLM Selection</DialogTitle>
+          <DialogTitle className="ibl-dialog-title">{t('title')}</DialogTitle>
         </DialogHeader>
 
-        <p className="text-sm text-gray-600">
-          Choose your preferred LLM from the available provider to tailor your
-          experience.
-        </p>
+        <p className="text-sm text-gray-600">{t('subtitle')}</p>
 
         <div className="relative">
           <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <Input
-            placeholder="Search"
+            placeholder={t('searchPlaceholder')}
             className="py-6 pl-9"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -137,7 +136,9 @@ export function LLMProviderModal({
                 <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg">
                   <Image
                     src={providerDetails.logo}
-                    alt={`${providerDetails.name} icon`}
+                    alt={t('providerIconAlt', {
+                      providerName: providerDetails.name,
+                    })}
                     className={cn('h-full w-full object-contain', {
                       grayscale: isDisabled && !isActive,
                     })}
