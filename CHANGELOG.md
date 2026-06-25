@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.84.2](https://github.com/iblai/os/compare/v0.84.1...v0.84.2) (2026-06-25)
+
+### Bug Fixes
+
+* **docker:** copy pnpm-workspace.yaml so frozen install sees overrides ([4d0b38e](https://github.com/iblai/os/commit/4d0b38e412f73397e7dcf72c323da0f477cc9b7c))
+
 ## [0.84.1](https://github.com/iblai/os/compare/v0.84.0...v0.84.1) (2026-06-25)
 
 ### Bug Fixes
