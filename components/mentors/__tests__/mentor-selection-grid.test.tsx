@@ -13,7 +13,7 @@ const hoisted = vi.hoisted(() => ({
 
 // Mock the data hook so we fully control the component's inputs.
 vi.mock('@/hooks/use-mentors', () => ({
-  useMentorsWithPagination: (itemsPerPage?: number) => {
+  useAiSearchMentorsWithPagination: (itemsPerPage?: number) => {
     hoisted.itemsPerPageArg = itemsPerPage;
     return hoisted.hookReturn;
   },
