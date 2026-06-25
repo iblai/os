@@ -599,29 +599,24 @@ export function Header({
         authURL={config.authUrl()}
         currentPlatformBaseDomain={config.platformBaseDomain()}
         defaultSupportPhone={config.defaultSupportPhoneNumber()}
-        localLLMProps={
-          {
-            isAvailable: isLocalLLMAvailable,
-            state: localLLMState,
-            ollamaStatus,
-            systemMemory,
-            isUsingFoundry,
-            foundryModels,
-            selectedFoundryModel,
-            foundryStatus,
-            onStartDownload: startDownload,
-            onCancelDownload: cancelDownload,
-            onInstallOllama: installOllama,
-            onStopManager: stopManager,
-            onInstallFoundry: installFoundry,
-            onCheckStatus: checkStatus,
-            onResetState: resetState,
-            onSelectFoundryModel,
-            // systemMemory is supported by the SDK runtime but not yet declared
-            // in the published @iblai/iblai-js localLLMProps type; cast until the
-            // SDK republishes with the field.
-          } as React.ComponentProps<typeof UserProfileModal>['localLLMProps']
-        }
+        localLLMProps={{
+          isAvailable: isLocalLLMAvailable,
+          state: localLLMState,
+          ollamaStatus,
+          systemMemory,
+          isUsingFoundry,
+          foundryModels,
+          selectedFoundryModel,
+          foundryStatus,
+          onStartDownload: startDownload,
+          onCancelDownload: cancelDownload,
+          onInstallOllama: installOllama,
+          onStopManager: stopManager,
+          onInstallFoundry: installFoundry,
+          onCheckStatus: checkStatus,
+          onResetState: resetState,
+          onSelectFoundryModel,
+        }}
       />
     </header>
   );
