@@ -17,6 +17,11 @@ RUN corepack enable && corepack prepare pnpm@10 --activate
 
 # Copy package manifests from repo root (deps live here, not in e2e/)
 COPY package.json pnpm-lock.yaml ./
+# pnpm v10 reads `overrides` and `patchedDependencies` from pnpm-workspace.yaml
+# (no longer from the package.json `pnpm` field). Without this file the frozen
+# install fails with ERR_PNPM_LOCKFILE_CONFIG_MISMATCH because the lockfile
+# records overrides the install config can't see.
+COPY pnpm-workspace.yaml ./
 # pnpm patchedDependencies reference files under patches/ that must exist at
 # install time (pnpm hashes them), so copy them before install.
 COPY patches ./patches
