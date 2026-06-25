@@ -16,41 +16,41 @@
 
 ### Features
 
-* add DMG release for macos ([ea335d4](https://github.com/iblai/os/commit/ea335d4b806ebdf7d3c8df9bc0df9fb8d91a8570))
+- add DMG release for macos ([ea335d4](https://github.com/iblai/os/commit/ea335d4b806ebdf7d3c8df9bc0df9fb8d91a8570))
 
 ### Chores
 
-* remove auto generated files ([2ffcfec](https://github.com/iblai/os/commit/2ffcfec29958de62a1bd006e06f49a21558d605e))
+- remove auto generated files ([2ffcfec](https://github.com/iblai/os/commit/2ffcfec29958de62a1bd006e06f49a21558d605e))
 
 ## [0.81.1](https://github.com/iblai/os/compare/v0.81.0...v0.81.1) (2026-06-24)
 
 ### Bug Fixes
 
-* playwright tests issues fixed ([081da29](https://github.com/iblai/os/commit/081da2989c6edfad486ddc5f07a2159df9d04ce9))
-* playwright tests issues fixed > test coverage ([36e3acb](https://github.com/iblai/os/commit/36e3acb40b4202dcc27590c5be124c130e01b430))
+- playwright tests issues fixed ([081da29](https://github.com/iblai/os/commit/081da2989c6edfad486ddc5f07a2159df9d04ce9))
+- playwright tests issues fixed > test coverage ([36e3acb](https://github.com/iblai/os/commit/36e3acb40b4202dcc27590c5be124c130e01b430))
 
 ## [0.81.0](https://github.com/iblai/os/compare/v0.80.2...v0.81.0) (2026-06-24)
 
 ### Features
 
-* add fallbacks for program installations ([9dbc61d](https://github.com/iblai/os/commit/9dbc61d11addb4ac79edbde1db4852192c730f8f))
-* add ghostos support ([440d7f6](https://github.com/iblai/os/commit/440d7f67ed0c0c82eacc1325fc4a73fafd36d3f3))
-* add repoll for model manager installation status ([0bb8023](https://github.com/iblai/os/commit/0bb8023239eef080df688ece9e7311c1d5f350c6))
-* add usable memory (ram/vram) checks ([0257a3a](https://github.com/iblai/os/commit/0257a3aa694d8aa21c1c8aa72d408e0cbd63f00e))
-* **app:** rewrite custom-scheme deep links to app URL in webview ([e6e016a](https://github.com/iblai/os/commit/e6e016af8d7280cdc23e7a4fb21d27a0c8e58d3e))
-* update tauri backend with new ollama functions ([b7357f9](https://github.com/iblai/os/commit/b7357f9a7290a134d9a7aad277969f8934604e01))
+- add fallbacks for program installations ([9dbc61d](https://github.com/iblai/os/commit/9dbc61d11addb4ac79edbde1db4852192c730f8f))
+- add ghostos support ([440d7f6](https://github.com/iblai/os/commit/440d7f67ed0c0c82eacc1325fc4a73fafd36d3f3))
+- add repoll for model manager installation status ([0bb8023](https://github.com/iblai/os/commit/0bb8023239eef080df688ece9e7311c1d5f350c6))
+- add usable memory (ram/vram) checks ([0257a3a](https://github.com/iblai/os/commit/0257a3aa694d8aa21c1c8aa72d408e0cbd63f00e))
+- **app:** rewrite custom-scheme deep links to app URL in webview ([e6e016a](https://github.com/iblai/os/commit/e6e016af8d7280cdc23e7a4fb21d27a0c8e58d3e))
+- update tauri backend with new ollama functions ([b7357f9](https://github.com/iblai/os/commit/b7357f9a7290a134d9a7aad277969f8934604e01))
 
 ### Bug Fixes
 
-* add permission for get_system_memory ([7a1c707](https://github.com/iblai/os/commit/7a1c7076aa00b24746561cda6988de72a0645133))
-* **config:** treat empty-string env values as unset so paste threshold defaults correctly; harden flaky e2e specs ([798bd57](https://github.com/iblai/os/commit/798bd57c39a2ca3242edd5e0c44cc26d92c023a2))
-* more stable usable memory detection ([7fc286d](https://github.com/iblai/os/commit/7fc286df74d4c709dc1a8baf1f2bfe7663acd24c))
+- add permission for get_system_memory ([7a1c707](https://github.com/iblai/os/commit/7a1c7076aa00b24746561cda6988de72a0645133))
+- **config:** treat empty-string env values as unset so paste threshold defaults correctly; harden flaky e2e specs ([798bd57](https://github.com/iblai/os/commit/798bd57c39a2ca3242edd5e0c44cc26d92c023a2))
+- more stable usable memory detection ([7fc286d](https://github.com/iblai/os/commit/7fc286df74d4c709dc1a8baf1f2bfe7663acd24c))
 
 ### Chores
 
-* update deps ([7471fd6](https://github.com/iblai/os/commit/7471fd66c880bb41680805b1a5ed9d80159a2448))
-* update iblai-js number to npm release ([a25205d](https://github.com/iblai/os/commit/a25205dc9dfe65944df5e1d0afeaeca3d7f96726))
-* update lockfile ([c881204](https://github.com/iblai/os/commit/c881204fa6bc9be7fe1a16a2036c14ae2c16fd7d))
+- update deps ([7471fd6](https://github.com/iblai/os/commit/7471fd66c880bb41680805b1a5ed9d80159a2448))
+- update iblai-js number to npm release ([a25205d](https://github.com/iblai/os/commit/a25205dc9dfe65944df5e1d0afeaeca3d7f96726))
+- update lockfile ([c881204](https://github.com/iblai/os/commit/c881204fa6bc9be7fe1a16a2036c14ae2c16fd7d))
 
 ## [0.80.2](https://github.com/iblai/os/compare/v0.80.1...v0.80.2) (2026-06-22)
 
