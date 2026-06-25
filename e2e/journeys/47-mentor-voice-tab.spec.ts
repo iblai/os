@@ -5,7 +5,7 @@ import { waitForPageReady } from '../utils/resilient';
 /**
  * Journey 47 — Mentor Voice Tab.
  *
- * The Voice tab is rendered by `AgentVoiceTab` from `@iblai/web-containers`.
+ * The Voice tab is rendered by `AgentVoiceTab` from `@iblai/iblai-js/web-containers`.
  * All selectors flow through the SDK's official Playwright helpers
  * (re-exported by `@iblai/iblai-js/playwright`) via the VoiceTab page
  * object. If the host overrides VoiceTabLabels, update the constants

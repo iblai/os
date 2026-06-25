@@ -274,7 +274,7 @@ export class PromptsTab {
   /**
    * Returns the row/card locator for an agent config field by its label.
    *
-   * AgentConfigPrompts in @iblai/web-containers exposes two stable
+   * AgentConfigPrompts in @iblai/iblai-js/web-containers exposes two stable
    * accessible markers per card:
    *   - a TooltipTrigger button with aria-label="More info about ${label}"
    *   - an "Edit" button next to it (plain text label)
@@ -289,7 +289,7 @@ export class PromptsTab {
 
   /**
    * Returns the EditFieldModal locator for an agent config field by label.
-   * The OverlayModal in @iblai/web-containers sets the dialog title to
+   * The OverlayModal in @iblai/iblai-js/web-containers sets the dialog title to
    * `Edit ${label}` (e.g. "Edit Identity"). We match by accessible name
    * (DialogPrimitive.Title) so we don't accidentally match the parent Edit
    * Mentor dialog when its content contains the label text.

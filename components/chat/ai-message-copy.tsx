@@ -1,5 +1,6 @@
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import { Copy } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import {
   Tooltip,
   TooltipContent,
@@ -11,6 +12,7 @@ type Props = {
 };
 
 export function AIMessageCopy({ content }: Props) {
+  const t = useTranslations('chatAiMessageCopy');
   const { copy, status } = useCopyToClipboard();
   const isCopied = status === 'success';
 
@@ -24,9 +26,9 @@ export function AIMessageCopy({ content }: Props) {
         <button
           onClick={handleCopy}
           className="text-gray-500 hover:text-gray-700"
-          aria-label="Copy to Clipboard"
+          aria-label={t('copyToClipboard')}
         >
-          <span className="sr-only">Copy to Clipboard</span>
+          <span className="sr-only">{t('copyToClipboard')}</span>
           {isCopied ? (
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -48,7 +50,7 @@ export function AIMessageCopy({ content }: Props) {
         </button>
       </TooltipTrigger>
       <TooltipContent className="ibl-tooltip-content">
-        {isCopied ? 'Copied' : 'Copy to Clipboard'}
+        {isCopied ? t('copied') : t('copyToClipboard')}
       </TooltipContent>
     </Tooltip>
   );

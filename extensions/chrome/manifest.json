@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "ibl.ai",
+  "version": "1.0.0",
+  "description": "Chat with your ibl.ai agents from a Chrome side panel, on any page.",
+  "icons": {
+    "16": "icons/icon-32.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-128.png",
+    "128": "icons/icon-128.png"
+  },
+  "action": {
+    "default_title": "Open ibl.ai Agent",
+    "default_icon": {
+      "16": "icons/icon-32.png",
+      "32": "icons/icon-32.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "side_panel": {
+    "default_path": "panel.html"
+  },
+  "permissions": ["sidePanel"],
+  "host_permissions": ["https://*.iblai.app/*", "https://*.ibl.ai/*"],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://*.iblai.app https://*.ibl.ai; frame-src https://*.iblai.app https://*.ibl.ai https://accounts.google.com https://appleid.apple.com; child-src https://*.iblai.app https://*.ibl.ai"
+  }
+}

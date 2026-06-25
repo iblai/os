@@ -13,6 +13,7 @@ import {
 import { useUsername } from '@/hooks/use-user';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { useDeleteModerationLogMutation } from '@iblai/iblai-js/data-layer';
+import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
 import { toast } from 'sonner';
 
@@ -29,6 +30,7 @@ export function DeleteModerationLogModal({
   logId,
   onDeleteSuccess,
 }: DeleteModerationLogModalProps) {
+  const t = useTranslations('flaggedPromptsDeleteModerationLogModal');
   const [deleteModerationLog, { isLoading }] = useDeleteModerationLogMutation();
   const { tenantKey } = useParams<TenantKeyMentorIdParams>();
   const username = useUsername();
@@ -45,11 +47,11 @@ export function DeleteModerationLogModal({
       // wait for the modal to close
       // avoid race conditions
       await new Promise((resolve) => setTimeout(resolve, 10));
-      toast.success('Moderation log deleted successfully');
+      toast.success(t('deleteSuccess'));
       onDeleteSuccess?.();
     } catch (error) {
       console.error(JSON.stringify(error));
-      toast.error('Failed to delete moderation log');
+      toast.error(t('deleteError'));
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     }
   };
@@ -58,11 +60,8 @@ export function DeleteModerationLogModal({
     <AlertDialog open={isOpen} onOpenChange={onClose}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete Moderation Log</AlertDialogTitle>
-          <AlertDialogDescription>
-            Are you sure you want to delete this moderation log? This action
-            cannot be undone and will permanently remove this record.
-          </AlertDialogDescription>
+          <AlertDialogTitle>{t('title')}</AlertDialogTitle>
+          <AlertDialogDescription>{t('description')}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel
@@ -70,7 +69,7 @@ export function DeleteModerationLogModal({
             disabled={isLoading}
             className="ibl-button-primary"
           >
-            Cancel
+            {t('cancelButton')}
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={async (event) => {
@@ -80,7 +79,7 @@ export function DeleteModerationLogModal({
             disabled={isLoading}
             className="border-input bg-background text-accent-foreground hover:bg-accent hover:text-accent-foreground border"
           >
-            {isLoading ? 'Deleting...' : 'Delete'}
+            {isLoading ? t('deletingButton') : t('deleteButton')}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

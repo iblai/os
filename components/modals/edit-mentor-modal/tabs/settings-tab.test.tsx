@@ -1835,12 +1835,10 @@ describe('SettingsTab', () => {
   });
 
   describe('Voice-call toggles (CallConfiguration sync)', () => {
-    it('renders the "Enable smart document retrieval" toggle defaulting to off when no call config exists', () => {
+    it('renders the "Smart document retrieval" toggle defaulting to off when no call config exists', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText(
-        'Enable smart document retrieval disabled',
-      );
+      const toggle = screen.getByLabelText('Smart document retrieval disabled');
       expect(toggle).not.toBeChecked();
     });
 
@@ -1867,7 +1865,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText('Enable smart document retrieval enabled'),
+        screen.getByLabelText('Smart document retrieval enabled'),
       ).toBeChecked();
       expect(
         screen.getByLabelText('Enable screen sharing enabled'),
@@ -1890,7 +1888,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       fireEvent.click(
-        screen.getByLabelText('Enable smart document retrieval disabled'),
+        screen.getByLabelText('Smart document retrieval disabled'),
       );
       fireEvent.click(screen.getByText('Save'));
 
@@ -1953,7 +1951,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       fireEvent.click(
-        screen.getByLabelText('Enable smart document retrieval disabled'),
+        screen.getByLabelText('Smart document retrieval disabled'),
       );
       fireEvent.click(screen.getByText('Save'));
 

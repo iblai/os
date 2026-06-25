@@ -518,7 +518,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByText('Enable enhanced document retrieval'),
+        screen.getByText('Enhanced document retrieval'),
       ).toBeInTheDocument();
     });
 
@@ -536,9 +536,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText(
-          'More info about enable enhanced document retrieval',
-        ),
+        screen.getByLabelText('More info about enhanced document retrieval'),
       ).toBeInTheDocument();
     });
 
@@ -758,9 +756,7 @@ describe('SettingsTab', () => {
     it('toggles rag switch', () => {
       render(<SettingsTab />);
 
-      const ragSwitch = screen.getByLabelText(
-        'Enable enhanced document retrieval',
-      );
+      const ragSwitch = screen.getByLabelText('Enhanced document retrieval');
       expect(ragSwitch).not.toBeChecked();
 
       fireEvent.click(ragSwitch);
@@ -981,9 +977,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      const ragSwitch = screen.getByLabelText(
-        'Enable enhanced document retrieval',
-      );
+      const ragSwitch = screen.getByLabelText('Enhanced document retrieval');
       fireEvent.click(ragSwitch);
 
       const saveButton = screen.getByRole('button', { name: /save/i });
@@ -1008,9 +1002,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      const ragSwitch = screen.getByLabelText(
-        'Enable enhanced document retrieval',
-      );
+      const ragSwitch = screen.getByLabelText('Enhanced document retrieval');
       fireEvent.click(ragSwitch);
 
       const saveButton = screen.getByRole('button', { name: /save/i });
@@ -1610,7 +1602,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText('Enable enhanced document retrieval'),
+        screen.getByLabelText('Enhanced document retrieval'),
       ).toBeChecked();
     });
 
@@ -1623,7 +1615,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText('Enable enhanced document retrieval'),
+        screen.getByLabelText('Enhanced document retrieval'),
       ).not.toBeChecked();
     });
 
@@ -1636,7 +1628,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText('Enable enhanced document retrieval'),
+        screen.getByLabelText('Enhanced document retrieval'),
       ).not.toBeChecked();
     });
 

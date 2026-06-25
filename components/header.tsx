@@ -3,6 +3,7 @@
 import React from 'react';
 import Image from 'next/image';
 import { useParams, usePathname } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
 import {
   PenSquare,
@@ -60,75 +61,92 @@ import { config } from '@/lib/config';
 import { useModelDownload } from '@/hooks/use-model-download';
 
 const menuItems = [
-  { icon: PenSquare, label: 'New chat', isAdmin: false },
+  { icon: PenSquare, labelKey: 'newChat', label: 'New chat', isAdmin: false },
   {
     icon: Settings,
+    labelKey: 'settings',
     label: 'Settings',
     tab: MODALS.EDIT_MENTOR.tabs.settings,
     isAdmin: true,
   },
   {
     icon: Brain,
+    labelKey: 'llm',
     label: 'LLM',
     tab: MODALS.EDIT_MENTOR.tabs.llm,
     isAdmin: true,
   },
   {
     icon: Terminal,
+    labelKey: 'prompts',
     label: 'Prompts',
     tab: MODALS.EDIT_MENTOR.tabs.prompts,
     isAdmin: true,
   },
   {
     icon: Wrench,
+    labelKey: 'tools',
     label: 'Tools',
     tab: MODALS.EDIT_MENTOR.tabs.tools,
     isAdmin: true,
   },
   {
     icon: Plug,
+    labelKey: 'mcp',
     label: 'MCP',
     tab: MODALS.EDIT_MENTOR.tabs.mcp,
     isAdmin: true,
   },
   {
     icon: Shield,
+    labelKey: 'safety',
     label: 'Safety',
     tab: MODALS.EDIT_MENTOR.tabs.safety,
     isAdmin: true,
   },
   {
     icon: Network,
+    labelKey: 'flow',
     label: 'Flow',
     tab: MODALS.EDIT_MENTOR.tabs.flow,
     isAdmin: true,
   },
   {
     icon: Clock,
+    labelKey: 'history',
     label: 'History',
     tab: MODALS.EDIT_MENTOR.tabs.history,
     isAdmin: true,
   },
   {
     icon: ScrollText,
+    labelKey: 'audit',
     label: 'Audit',
     tab: MODALS.EDIT_MENTOR.tabs.audit_log,
     isAdmin: true,
   },
   {
     icon: Grid,
+    labelKey: 'datasets',
     label: 'Datasets',
     tab: MODALS.EDIT_MENTOR.tabs.datasets,
     isAdmin: true,
   },
-  { icon: Key, label: 'API', tab: MODALS.EDIT_MENTOR.tabs.api, isAdmin: true },
+  {
+    icon: Key,
+    labelKey: 'api',
+    label: 'API',
+    tab: MODALS.EDIT_MENTOR.tabs.api,
+    isAdmin: true,
+  },
   {
     icon: MonitorSmartphone,
+    labelKey: 'embed',
     label: 'Embed',
     tab: MODALS.EDIT_MENTOR.tabs.embed,
     isAdmin: true,
   },
-  { icon: LineChart, label: 'Analytics', isAdmin: true },
+  { icon: LineChart, labelKey: 'analytics', label: 'Analytics', isAdmin: true },
 ];
 
 // Define the ProfileButton component
@@ -146,6 +164,7 @@ export function Header({
   toggleDrawer = () => {},
   isMobileOrTablet = false,
 }: HeaderProps) {
+  const t = useTranslations('header');
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
   const username = useUsername();
   const isAdmin = useIsAdmin();
@@ -307,7 +326,7 @@ export function Header({
                       }}
                     >
                       <item.icon className="mr-3 h-4 w-4 text-gray-600" />
-                      {item.label}
+                      {t(item.labelKey)}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
@@ -492,7 +511,7 @@ export function Header({
                         }}
                       >
                         <item.icon className="mr-3 h-4 w-4 text-gray-600" />
-                        {item.label}
+                        {t(item.labelKey)}
                       </DropdownMenuItem>
                     ))}
                 </DropdownMenuContent>
@@ -580,24 +599,29 @@ export function Header({
         authURL={config.authUrl()}
         currentPlatformBaseDomain={config.platformBaseDomain()}
         defaultSupportPhone={config.defaultSupportPhoneNumber()}
-        localLLMProps={{
-          isAvailable: isLocalLLMAvailable,
-          state: localLLMState,
-          ollamaStatus,
-          systemMemory,
-          isUsingFoundry,
-          foundryModels,
-          selectedFoundryModel,
-          foundryStatus,
-          onStartDownload: startDownload,
-          onCancelDownload: cancelDownload,
-          onInstallOllama: installOllama,
-          onStopManager: stopManager,
-          onInstallFoundry: installFoundry,
-          onCheckStatus: checkStatus,
-          onResetState: resetState,
-          onSelectFoundryModel,
-        }}
+        localLLMProps={
+          {
+            isAvailable: isLocalLLMAvailable,
+            state: localLLMState,
+            ollamaStatus,
+            systemMemory,
+            isUsingFoundry,
+            foundryModels,
+            selectedFoundryModel,
+            foundryStatus,
+            onStartDownload: startDownload,
+            onCancelDownload: cancelDownload,
+            onInstallOllama: installOllama,
+            onStopManager: stopManager,
+            onInstallFoundry: installFoundry,
+            onCheckStatus: checkStatus,
+            onResetState: resetState,
+            onSelectFoundryModel,
+            // systemMemory is supported by the SDK runtime but not yet declared
+            // in the published @iblai/iblai-js localLLMProps type; cast until the
+            // SDK republishes with the field.
+          } as React.ComponentProps<typeof UserProfileModal>['localLLMProps']
+        }
       />
     </header>
   );

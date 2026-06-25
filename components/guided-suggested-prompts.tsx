@@ -2,6 +2,7 @@ import React from 'react';
 
 import { useGetGuidedPromptsQuery } from '@iblai/iblai-js/data-layer';
 import { ArrowRight, Loader2, RotateCcw } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
 import { CSS_CLASS_NAMES } from '@/lib/constants';
@@ -25,6 +26,7 @@ export function GuidedSuggestedPrompts({
   isPending,
   onPromptSelect,
 }: Props) {
+  const t = useTranslations('componentsGuidedSuggestedPrompts');
   const realUsername = username || 'anonymous';
   const { data, refetch, isFetching, status } = useGetGuidedPromptsQuery(
     {
@@ -58,7 +60,7 @@ export function GuidedSuggestedPrompts({
 
   const Icon = isFetching ? Loader2 : RotateCcw;
 
-  const ariaLabel = `Your guided prompts are below. Click on a prompt to add it to your chat.`;
+  const ariaLabel = t('guidedPromptsAriaLabel');
 
   return (
     <div
@@ -103,7 +105,7 @@ export function GuidedSuggestedPrompts({
               CSS_CLASS_NAMES.APP_LAYOUT.GUIDED_SUGGESTED_PROMPTS_REFRESH,
             )}
           >
-            <span className="sr-only">Refresh Guided Prompts</span>
+            <span className="sr-only">{t('refreshGuidedPrompts')}</span>
             <Icon
               className={cn('h-4 w-4 text-blue-700', {
                 'animate-spin': isFetching,

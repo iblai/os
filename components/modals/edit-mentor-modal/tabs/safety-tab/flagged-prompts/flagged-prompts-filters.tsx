@@ -1,6 +1,9 @@
+'use client';
+
 import { Search, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -34,6 +37,7 @@ export function FlaggedPromptsFilters({
   dateRange,
   onDateRangeChange,
 }: FlaggedPromptsFiltersProps) {
+  const t = useTranslations('flaggedPromptsFlaggedPromptsFilters');
   return (
     <div className="rounded-lg border p-4">
       <div className="flex flex-col gap-3 lg:flex-row">
@@ -43,7 +47,7 @@ export function FlaggedPromptsFilters({
             <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-gray-500" />
             <Input
               type="search"
-              placeholder="Search for User"
+              placeholder={t('searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               className="w-full pl-9"
@@ -59,7 +63,7 @@ export function FlaggedPromptsFilters({
                 <Calendar className="h-4 w-4" />
                 {dateRange?.from && dateRange?.to
                   ? `${format(dateRange.from, 'MMM dd')} - ${format(dateRange.to, 'MMM dd')}`
-                  : 'Pick a Date Range'}
+                  : t('pickDateRange')}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
@@ -77,12 +81,12 @@ export function FlaggedPromptsFilters({
           <div className="hidden gap-3 lg:flex">
             <Select value={filterType} onValueChange={onFilterTypeChange}>
               <SelectTrigger className="w-40">
-                <SelectValue placeholder="All Types" />
+                <SelectValue placeholder={t('allTypes')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="moderation">Moderation</SelectItem>
-                <SelectItem value="safety">Safety</SelectItem>
+                <SelectItem value="all">{t('allTypes')}</SelectItem>
+                <SelectItem value="moderation">{t('moderation')}</SelectItem>
+                <SelectItem value="safety">{t('safety')}</SelectItem>
               </SelectContent>
             </Select>
 
@@ -103,12 +107,12 @@ export function FlaggedPromptsFilters({
         <div className="flex gap-3 lg:hidden">
           <Select value={filterType} onValueChange={onFilterTypeChange}>
             <SelectTrigger className="flex-1">
-              <SelectValue placeholder="All Types" />
+              <SelectValue placeholder={t('allTypes')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="moderation">Moderation</SelectItem>
-              <SelectItem value="safety">Safety</SelectItem>
+              <SelectItem value="all">{t('allTypes')}</SelectItem>
+              <SelectItem value="moderation">{t('moderation')}</SelectItem>
+              <SelectItem value="safety">{t('safety')}</SelectItem>
             </SelectContent>
           </Select>
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { ReactNode, useEffect, useMemo, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
 import { useGetRbacPermissionsMutation } from '@iblai/iblai-js/data-layer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -83,6 +84,7 @@ export const EDIT_MENTOR_TAB_COMPONENTS: Record<string, ReactNode> = {
 };
 
 export function EditMentorModal({ isOpen, onClose }: Props) {
+  const t = useTranslations('editMentorModalIndex');
   const { changeModalTab, getEditMentorTab } = useNavigate();
   const {
     filteredSegments,
@@ -274,8 +276,7 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
           }}
         >
           <DialogDescription className="sr-only">
-            Edit Agent settings, prompts, tools, safety, flow, history,
-            datasets, and API keys
+            {t('dialogDescription')}
           </DialogDescription>
           {isLoading ? (
             // While the per-mentor settings query is in flight, the segment
@@ -288,7 +289,7 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
             <div className="flex flex-1 flex-col">
               <DialogHeader className="flex h-[73px] flex-shrink-0 justify-start border-b border-gray-200 p-4 dark:border-gray-800">
                 <DialogTitle className="text-lg font-semibold text-gray-900">
-                  Edit Agent
+                  {t('editAgentTitle')}
                 </DialogTitle>
               </DialogHeader>
               <Spinner />
@@ -304,7 +305,7 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
                 <div className="lg:hidden">
                   <DialogHeader className="border-b border-gray-200 px-3 py-4">
                     <DialogTitle className="text-lg font-semibold text-gray-900">
-                      Edit Agent
+                      {t('editAgentTitle')}
                     </DialogTitle>
                   </DialogHeader>
                 </div>
@@ -312,7 +313,7 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
                 <div className="hidden w-80 min-w-0 flex-shrink-0 flex-col border-r border-gray-200 bg-gray-50 lg:flex dark:border-gray-800 dark:bg-gray-900">
                   <DialogHeader className="flex h-[73px] flex-shrink-0 justify-start border-b border-gray-200 p-4 dark:border-gray-800">
                     <DialogTitle className="text-lg font-semibold text-gray-900">
-                      Edit Agent
+                      {t('editAgentTitle')}
                     </DialogTitle>
                   </DialogHeader>
                   <div className="scrollbar-none flex-1 overflow-y-auto p-2">
@@ -342,7 +343,7 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
                       // shrinks unexpectedly.
                       <div
                         role="tablist"
-                        aria-label="Agent settings categories"
+                        aria-label={t('agentSettingsCategories')}
                         className="mb-2 box-border grid h-auto w-full gap-1 rounded-lg bg-gray-100 p-1 dark:bg-gray-800"
                         style={{
                           gridTemplateColumns: `repeat(${visibleCategories.length}, minmax(0, 1fr))`,
@@ -388,7 +389,7 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
 
                     <TabsList
                       className="h-auto w-full flex-col space-y-1 bg-transparent p-0"
-                      aria-label="Agent settings tabs"
+                      aria-label={t('agentSettingsTabs')}
                     >
                       {visibleSidebarItems.map((tab) => (
                         <TabsTrigger
@@ -417,7 +418,7 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
                     // even more comfortably at `text-[11px] px-1.5`.
                     <div
                       role="tablist"
-                      aria-label="Agent settings categories"
+                      aria-label={t('agentSettingsCategories')}
                       className="mx-3 mt-2 box-border grid h-auto w-[calc(100%-1.5rem)] gap-1 rounded-lg bg-gray-100 p-1"
                       style={{
                         gridTemplateColumns: `repeat(${visibleCategories.length}, minmax(0, 1fr))`,
@@ -453,7 +454,7 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
                   )}
                   <TabsList
                     className="h-auto w-full justify-start gap-1 overflow-x-auto rounded-none bg-white px-3 py-2"
-                    aria-label="Agent settings tabs"
+                    aria-label={t('agentSettingsTabs')}
                   >
                     {visibleSidebarItems.map((tab) => (
                       <TabsTrigger

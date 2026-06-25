@@ -3,6 +3,7 @@
 import type React from 'react';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   Play,
   MousePointer,
@@ -238,6 +239,7 @@ export function WorkflowCanvas({
   org,
   defaultMentorId,
 }: WorkflowCanvasProps) {
+  const t = useTranslations('workflowsWorkflowCanvas');
   // Use initialNodes if provided (from API), otherwise use defaults for new workflows
   const [nodes, setNodes] = useState<Node[]>(
     initialNodes && initialNodes.length > 0 ? initialNodes : DEFAULT_NODES,
@@ -1423,7 +1425,9 @@ export function WorkflowCanvas({
                               className="bg-muted/50 relative flex items-center justify-between rounded-lg px-4 py-3"
                             >
                               <span className="text-muted-foreground text-sm">
-                                {index === 0 ? 'If' : `Else if ${index}`}
+                                {index === 0
+                                  ? t('ifCondition')
+                                  : t('elseIf', { index })}
                               </span>
                               <div
                                 className="border-background absolute top-1/2 -right-[18px] h-3 w-3 -translate-y-1/2 cursor-crosshair rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
@@ -1442,7 +1446,7 @@ export function WorkflowCanvas({
                         {/* Else condition */}
                         <div className="bg-muted/50 relative flex items-center justify-between rounded-lg px-4 py-3">
                           <span className="text-muted-foreground text-sm">
-                            Else
+                            {t('elseCondition')}
                           </span>
                           <div
                             className="border-background absolute top-1/2 -right-[18px] h-3 w-3 -translate-y-1/2 cursor-crosshair rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
@@ -1485,7 +1489,9 @@ export function WorkflowCanvas({
                   </div>
                   <div className="space-y-2 px-4 pb-4">
                     <div className="bg-muted/50 flex items-center justify-between rounded-lg px-4 py-3">
-                      <span className="text-muted-foreground">Approve</span>
+                      <span className="text-muted-foreground">
+                        {t('approve')}
+                      </span>
                       <div
                         className="border-background h-3 w-3 cursor-crosshair rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
                         style={{ backgroundColor: '#38A1E5' }}
@@ -1495,7 +1501,9 @@ export function WorkflowCanvas({
                       />
                     </div>
                     <div className="bg-muted/50 flex items-center justify-between rounded-lg px-4 py-3">
-                      <span className="text-muted-foreground">Reject</span>
+                      <span className="text-muted-foreground">
+                        {t('reject')}
+                      </span>
                       <div
                         className="border-background h-3 w-3 cursor-crosshair rounded-full border-2 opacity-0 transition-opacity group-hover:opacity-100"
                         style={{ backgroundColor: '#38A1E5' }}
@@ -1594,7 +1602,7 @@ export function WorkflowCanvas({
                     />
                   ) : (
                     <div className="text-foreground p-3 text-sm whitespace-pre-wrap">
-                      {node.data.content || 'Sticky Note'}
+                      {node.data.content || t('stickyNote')}
                     </div>
                   )}
 
@@ -1624,7 +1632,7 @@ export function WorkflowCanvas({
                           <TooltipTrigger asChild>
                             <button
                               type="button"
-                              aria-label="Change agent"
+                              aria-label={t('changeAgent')}
                               className="text-muted-foreground hover:text-foreground hover:bg-muted/60 ml-auto cursor-pointer rounded-full p-1 transition-colors"
                               onMouseDown={(e) => e.stopPropagation()}
                               onClick={(e) => {
@@ -1635,7 +1643,7 @@ export function WorkflowCanvas({
                               <Pencil className="h-3.5 w-3.5" />
                             </button>
                           </TooltipTrigger>
-                          <TooltipContent>Change agent</TooltipContent>
+                          <TooltipContent>{t('changeAgent')}</TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
                     )}
@@ -1710,7 +1718,7 @@ export function WorkflowCanvas({
           >
             <DialogContent className="max-w-3xl">
               <DialogHeader>
-                <DialogTitle>Change agent</DialogTitle>
+                <DialogTitle>{t('changeAgent')}</DialogTitle>
               </DialogHeader>
               <MentorSelectionGrid
                 selectedMentorIds={selectedMentorIds}
