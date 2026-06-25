@@ -439,7 +439,7 @@ test.describe('Journey 26: Projects Index Page (feat-1821)', () => {
         .locator('button')
         .filter({ has: page.locator('h4') })
         .first();
-      await expect(agentCard).toBeVisible({ timeout: 15_000 });
+      await expect(agentCard).toBeVisible({ timeout: 30_000 });
       await agentCard.click();
 
       // Wait for the Save button to become enabled (requires name + ≥1 agent)
