@@ -138,14 +138,36 @@ describe('shared access-tab utilities', () => {
         'analytics',
       );
     });
+
+    it('should have dataset_curator description mentioning datasets', () => {
+      expect(roleDescriptions.dataset_curator).toBeDefined();
+      expect(roleDescriptions.dataset_curator.toLowerCase()).toContain(
+        'datasets',
+      );
+    });
+
+    it('should have viewer description mentioning viewing without editing', () => {
+      expect(roleDescriptions.viewer).toBeDefined();
+      const description = roleDescriptions.viewer.toLowerCase();
+      expect(description).toContain('view');
+      expect(description).toContain('cannot edit');
+    });
   });
 
   describe('DEFAULT_MENTOR_ROLES', () => {
-    it('should include editor, chat, and analytics_viewer roles', () => {
-      expect(DEFAULT_MENTOR_ROLES.length).toBe(3);
+    it('should include editor, chat, analytics_viewer, dataset_curator, and viewer roles', () => {
+      expect(DEFAULT_MENTOR_ROLES.length).toBe(5);
       expect(DEFAULT_MENTOR_ROLES).toContain('editor');
       expect(DEFAULT_MENTOR_ROLES).toContain('chat');
       expect(DEFAULT_MENTOR_ROLES).toContain('analytics_viewer');
+      expect(DEFAULT_MENTOR_ROLES).toContain('dataset_curator');
+      expect(DEFAULT_MENTOR_ROLES).toContain('viewer');
+    });
+
+    it('should not contain duplicate roles', () => {
+      expect(new Set(DEFAULT_MENTOR_ROLES).size).toBe(
+        DEFAULT_MENTOR_ROLES.length,
+      );
     });
 
     it('should have a description for every default role', () => {
@@ -160,6 +182,14 @@ describe('shared access-tab utilities', () => {
   describe('formatRoleName for default roles', () => {
     it('formats analytics_viewer as "Analytics Viewer"', () => {
       expect(formatRoleName('analytics_viewer')).toBe('Analytics Viewer');
+    });
+
+    it('formats dataset_curator as "Dataset Curator"', () => {
+      expect(formatRoleName('dataset_curator')).toBe('Dataset Curator');
+    });
+
+    it('formats viewer as "Viewer"', () => {
+      expect(formatRoleName('viewer')).toBe('Viewer');
     });
   });
 });

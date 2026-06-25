@@ -6,6 +6,7 @@ import { useDebounce } from 'use-debounce';
 import { useUsername } from '@/hooks/use-user';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import {
+  useGetAiSearchMentorsQuery,
   useGetMentorsQuery,
   useGetPublicMentorsQuery,
 } from '@iblai/iblai-js/data-layer';
@@ -102,6 +103,76 @@ export function useMentorsWithPagination(
     isLoading: username ? isMentorsLoading : isPublicMentorsLoading,
     isFetching: username ? isMentorsFetching : isPublicMentorsFetching,
     error: username ? mentorsError : publicMentorsError,
+    searchQuery,
+    setSearchQuery,
+    currentPage,
+    totalPages,
+    handlePageChange,
+    queryParams,
+    itemsPerPage,
+  };
+}
+
+// Paginated agent list backed by the fast `/api/ai-search/mentors/` endpoint.
+// Returns only publicly-discoverable agents but loads far faster than the
+// org/user search; used by the shared agent-picker grid.
+export function useAiSearchMentorsWithPagination(itemsPerPage = 8) {
+  const { tenantKey } = useParams<TenantKeyMentorIdParams>();
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [debouncedSearchQuery] = useDebounce(searchQuery, 500);
+  const [currentPage, setCurrentPage] = React.useState(1);
+
+  const [queryParams, setQueryParams] = React.useState({
+    limit: itemsPerPage,
+    offset: 0,
+    query: debouncedSearchQuery,
+  });
+
+  const { data, isLoading, isFetching, error } = useGetAiSearchMentorsQuery(
+    {
+      platform_key: tenantKey ?? '',
+      query: debouncedSearchQuery || undefined,
+      limit: queryParams.limit,
+      offset: queryParams.offset,
+    },
+    {
+      skip: !tenantKey,
+      refetchOnMountOrArgChange: true,
+    },
+  );
+
+  // Effect to update offset when page changes
+  React.useEffect(() => {
+    setQueryParams((prev) => ({
+      ...prev,
+      offset: (currentPage - 1) * itemsPerPage,
+    }));
+  }, [currentPage, itemsPerPage]);
+
+  // Effect to update query parameter when search changes
+  React.useEffect(() => {
+    setQueryParams((prev) => ({
+      ...prev,
+      query: debouncedSearchQuery,
+      offset: 0, // Reset to first page when search changes
+    }));
+    setCurrentPage(1); // Also reset current page state
+  }, [debouncedSearchQuery]);
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    // Scroll to top of the list when changing pages
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const totalPages = data ? Math.ceil(data.count / itemsPerPage) : 0;
+
+  return {
+    mentors: data?.results ?? [],
+    totalCount: data?.count ?? 0,
+    isLoading,
+    isFetching,
+    error,
     searchQuery,
     setSearchQuery,
     currentPage,
