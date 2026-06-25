@@ -7,15 +7,16 @@ onlyBuiltDependencies:
   - sharp
   - unrs-resolver
 
-# Force a single @iblai/web-containers instance (the local yalc build) so its
-# i18n React context is shared between WebContainersI18nProvider and the
-# components re-exported via @iblai/iblai-js.
+# Security version floors. They previously lived in the `pnpm` field of
+# package.json, which pnpm v10 no longer reads — this file is the supported home
+# for them (and for patchedDependencies, below).
 #
-# The remaining entries are security version floors. They previously lived in
-# the `pnpm` field of package.json, which pnpm v10 no longer reads — this file
-# is the supported home for them (and for patchedDependencies, below).
+# NOTE: web-containers is now consumed exclusively via @iblai/iblai-js
+# (>=1.20.11), which bundles the i18n-aware build (WebContainersI18nProvider +
+# the re-exported components share a single context). The previous
+# `@iblai/web-containers: file:.yalc/...` override is therefore obsolete and was
+# removed — it broke CI installs since .yalc is gitignored.
 overrides:
-  '@iblai/web-containers': file:.yalc/@iblai/web-containers
   vite: '>=7.3.2'
   basic-ftp: '>=5.2.1'
   follow-redirects: '>=1.16.0'

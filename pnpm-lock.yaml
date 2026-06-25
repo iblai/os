@@ -5,7 +5,6 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  '@iblai/web-containers': file:.yalc/@iblai/web-containers
   vite: '>=7.3.2'
   basic-ftp: '>=5.2.1'
   follow-redirects: '>=1.16.0'
@@ -883,13 +882,13 @@ packages:
     engines: {node: '>=20.0.0'}
     hasBin: true
 
-  '@iblai/web-containers@file:.yalc/@iblai/web-containers':
-    resolution: {directory: .yalc/@iblai/web-containers, type: directory}
+  '@iblai/web-containers@1.10.10':
+    resolution: {integrity: sha512-4Ms910hSEc5flTcT4tglIBPBSyZCtVO2uhnCWOzV3ONJxPrYNyuRGZ5A33J/ETcMu9JktFw875mXZeEMbL/uLw==}
     engines: {node: 25.3.0}
     peerDependencies:
-      '@iblai/data-layer': '*'
+      '@iblai/data-layer': 1.8.6
       '@iblai/iblai-api': 4.166.0-ai
-      '@iblai/web-utils': '*'
+      '@iblai/web-utils': 1.11.5
       '@livekit/components-react': 2.8.1
       '@radix-ui/react-dialog': ^1.1.7
       '@reduxjs/toolkit': 2.7.0
@@ -10064,7 +10063,7 @@ snapshots:
       '@iblai/data-layer': 1.8.6(@reduxjs/toolkit@2.7.0(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0)
       '@iblai/iblai-api': 4.166.0-ai
       '@iblai/mcp': 1.7.5
-      '@iblai/web-containers': file:.yalc/@iblai/web-containers(0b4e5251d670b35131f9aeb94a12c52b)
+      '@iblai/web-containers': 1.10.10(0b4e5251d670b35131f9aeb94a12c52b)
       '@iblai/web-utils': 1.11.5(@iblai/data-layer@1.8.6(@reduxjs/toolkit@2.7.0(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0))(@iblai/iblai-api@4.166.0-ai)(@tauri-apps/api@2.11.0)(@tauri-apps/plugin-os@2.3.2)(@types/react@19.1.17)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(redux@5.0.1)(sonner@2.0.7(react-dom@19.1.0(react@19.1.0))(react@19.1.0))
       '@radix-ui/react-dialog': 1.1.7(@types/react-dom@19.2.1(@types/react@19.1.17))(@types/react@19.1.17)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@reduxjs/toolkit': 2.7.0(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0)
@@ -10114,7 +10113,7 @@ snapshots:
       - '@cfworker/json-schema'
       - supports-color
 
-  '@iblai/web-containers@file:.yalc/@iblai/web-containers(0b4e5251d670b35131f9aeb94a12c52b)':
+  '@iblai/web-containers@1.10.10(0b4e5251d670b35131f9aeb94a12c52b)':
     dependencies:
       '@iblai/data-layer': 1.8.6(@reduxjs/toolkit@2.7.0(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0)
       '@iblai/iblai-api': 4.166.0-ai
