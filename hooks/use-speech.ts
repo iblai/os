@@ -62,8 +62,6 @@ function attachMediaSourceStream(
           };
           sourceBuffer.addEventListener('updateend', onUpdateEnd);
           sourceBuffer.addEventListener('error', onError);
-          // A fetch body is never SharedArrayBuffer-backed, so this view is a
-          // valid BufferSource even though the generic type allows otherwise.
           sourceBuffer.appendBuffer(chunk as BufferSource);
         });
 
