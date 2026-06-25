@@ -28,6 +28,13 @@ export const metadata: Metadata = {
   description: 'ibl.ai | Agentic OS',
 };
 
+// The root layout resolves the active locale from cookies (see i18n/request.ts),
+// which is a dynamic API. Force dynamic rendering app-wide so the build does not
+// try to statically prerender pages — calling cookies() during static
+// generation crashes the page-data collection worker. Cookie-based locale means
+// nothing under this layout can be static anyway.
+export const dynamic = 'force-dynamic';
+
 export default async function RootLayout({
   children,
 }: Readonly<{
