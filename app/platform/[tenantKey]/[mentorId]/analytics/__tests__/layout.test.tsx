@@ -16,7 +16,7 @@ vi.mock('next/navigation', () => ({
   useRouter: () => mockUseRouter(),
 }));
 
-vi.mock('@iblai/iblai-js/web-containers', () => ({
+vi.mock('@iblai/web-containers', () => ({
   AnalyticsLayout: (props: {
     excludeTabs: string[];
     children: React.ReactNode;

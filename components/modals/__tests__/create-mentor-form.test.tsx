@@ -74,7 +74,7 @@ vi.mock('next/image', () => ({
 }));
 
 // Avoid pulling the heavy rich-text editor (and its transitive deps).
-vi.mock('@iblai/iblai-js/web-containers', () => ({
+vi.mock('@iblai/web-containers', () => ({
   RichTextEditor: ({
     value,
     onChange,
@@ -353,7 +353,10 @@ describe('CreateMentorForm', () => {
         );
         expect(onCreated).toHaveBeenCalledTimes(1);
       });
-    });
+      // This test drives many sequential userEvent interactions (opening each
+      // prompt editor in turn). It runs in ~1s in isolation but can exceed the
+      // default 5s under the heavily-parallel full-suite run, so give it headroom.
+    }, 15000);
   });
 
   describe('free trial dialog', () => {

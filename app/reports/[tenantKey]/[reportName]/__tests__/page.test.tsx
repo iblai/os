@@ -6,7 +6,7 @@ vi.mock('next/navigation', () => ({
   useParams: () => mockUseParams(),
 }));
 
-vi.mock('@iblai/iblai-js/web-containers', () => ({
+vi.mock('@iblai/web-containers', () => ({
   AnalyticsReportDownload: ({
     platform_key,
     report_name,

@@ -102,7 +102,7 @@ vi.mock('@/components/ui/card', () => ({
 }));
 
 // Mock CreateWorkflowModal
-vi.mock('@iblai/iblai-js/web-containers', () => ({
+vi.mock('@iblai/web-containers', () => ({
   CreateWorkflowModal: ({
     open,
     onOpenChange,

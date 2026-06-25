@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
 // Mock dependencies
-vi.mock('@iblai/iblai-js/web-containers/next', () => ({
+vi.mock('@iblai/web-containers/next', () => ({
   SsoLogin: vi.fn(
     ({ localStorageKeys, redirectPathKey, defaultRedirectPath }) => (
       <div data-testid="sso-login-component">

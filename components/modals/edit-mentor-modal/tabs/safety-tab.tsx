@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 
@@ -40,6 +41,7 @@ import { parsePrompt } from '@/lib/utils';
 import Markdown from '@/components/markdown';
 
 export function SafetyTab() {
+  const t = useTranslations('tabsSafetyTab');
   const username = useUsername();
   const { executeWithTrialCheck, isModalOpen, FreeTrialDialog, closeModal } =
     useShowFreeTrialDialog();
@@ -81,12 +83,12 @@ export function SafetyTab() {
           userId: username ?? '',
           formData: { [tool]: value },
         }).unwrap();
-        toast.success('Agent updated successfully');
+        toast.success(t('agentUpdatedSuccess'));
         callback?.();
       });
     } catch (error) {
       console.error(JSON.stringify(error));
-      toast.error('Failed to update agent');
+      toast.error(t('agentUpdateFailed'));
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     }
   }
@@ -103,10 +105,10 @@ export function SafetyTab() {
         // @ts-ignore
         userId: username ?? '',
       }).unwrap();
-      toast.success('Agent updated successfully');
+      toast.success(t('agentUpdatedSuccess'));
     } catch (error) {
       console.error(JSON.stringify(error));
-      toast.error('Failed to update agent');
+      toast.error(t('agentUpdateFailed'));
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     }
   }
@@ -115,10 +117,10 @@ export function SafetyTab() {
     <>
       <div className="flex hidden h-[73px] flex-shrink-0 items-center border-b border-gray-200 bg-white p-4 lg:block">
         <div>
-          <h3 className="mb-1 text-base font-medium text-gray-900">Safety</h3>
-          <p className="text-xs text-gray-700">
-            Configure safety and moderation settings.
-          </p>
+          <h3 className="mb-1 text-base font-medium text-gray-900">
+            {t('safetyTitle')}
+          </h3>
+          <p className="text-xs text-gray-700">{t('safetyDescription')}</p>
         </div>
       </div>
       <div
@@ -141,7 +143,7 @@ export function SafetyTab() {
                     className="bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90"
                   >
                     <AlertTriangle className="mr-2 h-4 w-4" />
-                    View Flagged Prompts
+                    {t('viewFlaggedPrompts')}
                   </Button>
                 </div>
               )
@@ -160,15 +162,17 @@ export function SafetyTab() {
                   <div className="flex items-center justify-between border-b border-gray-200 p-4">
                     <div className="flex items-center gap-2">
                       <h3 className="text-sm font-medium text-gray-900">
-                        Moderation Prompt
+                        {t('moderationPromptTitle')}
                       </h3>
                       <TooltipProvider>
                         <Tooltip>
-                          <TooltipTrigger aria-label="More info about moderation prompt">
+                          <TooltipTrigger
+                            aria-label={t('moderationPromptTooltipAriaLabel')}
+                          >
                             <Info className="h-4 w-4 text-gray-400" />
                           </TooltipTrigger>
                           <TooltipContent className="ibl-tooltip-content">
-                            <p>Controls Content Moderation</p>
+                            <p>{t('moderationPromptTooltipContent')}</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -182,8 +186,8 @@ export function SafetyTab() {
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-gray-600">
                             {mentorSettings?.enable_moderation
-                              ? 'Active'
-                              : 'Inactive'}
+                              ? t('active')
+                              : t('inactive')}
                           </span>
                           <Switch
                             checked={mentorSettings?.enable_moderation}
@@ -194,7 +198,11 @@ export function SafetyTab() {
                               );
                             }}
                             disabled={isDisabled || disabled}
-                            aria-label={`Moderation prompt ${mentorSettings?.enable_moderation ? 'enabled' : 'disabled'}`}
+                            aria-label={t('moderationPromptSwitchAriaLabel', {
+                              status: mentorSettings?.enable_moderation
+                                ? 'enabled'
+                                : 'disabled',
+                            })}
                           />
                         </div>
                       )}
@@ -207,7 +215,7 @@ export function SafetyTab() {
                         className="mb-4 flex-grow overflow-y-auto"
                         tabIndex={0}
                         role="region"
-                        aria-label="Moderation prompt content"
+                        aria-label={t('moderationPromptContentAriaLabel')}
                       >
                         {/* @ts-ignore */}
                         <Markdown className="text-sm text-gray-700">
@@ -226,7 +234,7 @@ export function SafetyTab() {
                       className="h-8 flex-1 py-5"
                       onClick={() =>
                         setSelectedPrompt({
-                          label: 'Moderation Prompt',
+                          label: t('moderationPromptTitle'),
                           isSystem: true,
                           name: 'moderation_system_prompt',
                           prompt:
@@ -237,7 +245,7 @@ export function SafetyTab() {
                       disabled={isDisabled || disabled}
                     >
                       <Edit className="mr-2 h-4 w-4" />
-                      Edit
+                      {t('edit')}
                     </Button>
                     <CopyButton
                       disabled={isDisabled || disabled}
@@ -260,15 +268,17 @@ export function SafetyTab() {
                   <div className="flex items-center justify-between border-b border-gray-200 p-4">
                     <div className="flex items-center gap-2">
                       <h3 className="text-sm font-medium text-gray-900">
-                        Safety Prompt
+                        {t('safetyPromptTitle')}
                       </h3>
                       <TooltipProvider>
                         <Tooltip>
-                          <TooltipTrigger aria-label="More info about safety prompt">
+                          <TooltipTrigger
+                            aria-label={t('safetyPromptTooltipAriaLabel')}
+                          >
                             <Info className="h-4 w-4 text-gray-400" />
                           </TooltipTrigger>
                           <TooltipContent className="ibl-tooltip-content">
-                            <p>Controls Safety Filtering</p>
+                            <p>{t('safetyPromptTooltipContent')}</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -282,8 +292,8 @@ export function SafetyTab() {
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-gray-600">
                             {mentorSettings?.enable_safety_system
-                              ? 'Active'
-                              : 'Inactive'}
+                              ? t('active')
+                              : t('inactive')}
                           </span>
                           <Switch
                             checked={mentorSettings?.enable_safety_system}
@@ -294,7 +304,11 @@ export function SafetyTab() {
                               );
                             }}
                             disabled={isDisabled || disabled}
-                            aria-label={`Safety prompt ${mentorSettings?.enable_safety_system ? 'enabled' : 'disabled'}`}
+                            aria-label={t('safetyPromptSwitchAriaLabel', {
+                              status: mentorSettings?.enable_safety_system
+                                ? 'enabled'
+                                : 'disabled',
+                            })}
                           />
                         </div>
                       )}
@@ -307,7 +321,7 @@ export function SafetyTab() {
                         className="mb-4 flex-grow overflow-y-auto"
                         tabIndex={0}
                         role="region"
-                        aria-label="Safety prompt content"
+                        aria-label={t('safetyPromptContentAriaLabel')}
                       >
                         {/* @ts-ignore */}
                         <Markdown className="text-sm text-gray-700">
@@ -327,7 +341,7 @@ export function SafetyTab() {
                       disabled={disabled || isDisabled}
                       onClick={() =>
                         setSelectedPrompt({
-                          label: 'Safety Prompt',
+                          label: t('safetyPromptTitle'),
                           isSystem: true,
                           name: 'safety_system_prompt',
                           // @ts-ignore
@@ -336,7 +350,7 @@ export function SafetyTab() {
                       }
                     >
                       <Edit className="mr-2 h-4 w-4" />
-                      Edit
+                      {t('edit')}
                     </Button>
                     <CopyButton
                       disabled={disabled || isDisabled}
@@ -359,7 +373,7 @@ export function SafetyTab() {
                   <div className="flex items-center justify-between border-b border-gray-200 p-4">
                     <div className="flex items-center gap-2">
                       <h3 className="text-sm font-medium text-gray-900">
-                        Moderation Response
+                        {t('moderationResponseTitle')}
                       </h3>
                     </div>
                   </div>
@@ -370,7 +384,7 @@ export function SafetyTab() {
                         className="mb-4 flex-grow overflow-y-auto"
                         tabIndex={0}
                         role="region"
-                        aria-label="Moderation response content"
+                        aria-label={t('moderationResponseContentAriaLabel')}
                       >
                         {/* @ts-ignore */}
                         <Markdown className="text-sm text-gray-700">
@@ -390,7 +404,7 @@ export function SafetyTab() {
                       disabled={isDisabled || disabled}
                       onClick={() =>
                         setSelectedPrompt({
-                          label: 'Moderation Response',
+                          label: t('moderationResponseTitle'),
                           isSystem: true,
                           name: 'moderation_response',
                           // @ts-ignore
@@ -399,7 +413,7 @@ export function SafetyTab() {
                       }
                     >
                       <Edit className="mr-2 h-4 w-4" />
-                      Edit
+                      {t('edit')}
                     </Button>
                     <CopyButton
                       disabled={isDisabled || disabled}
@@ -422,7 +436,7 @@ export function SafetyTab() {
                   <div className="flex items-center justify-between border-b border-gray-200 p-4">
                     <div className="flex items-center gap-2">
                       <h3 className="text-sm font-medium text-gray-900">
-                        Safety Response
+                        {t('safetyResponseTitle')}
                       </h3>
                     </div>
                   </div>
@@ -433,7 +447,7 @@ export function SafetyTab() {
                         className="mb-4 flex-grow overflow-y-auto"
                         tabIndex={0}
                         role="region"
-                        aria-label="Safety response content"
+                        aria-label={t('safetyResponseContentAriaLabel')}
                       >
                         {/* @ts-ignore */}
                         <Markdown className="text-sm text-gray-700">
@@ -451,7 +465,7 @@ export function SafetyTab() {
                       disabled={isDisabled || disabled}
                       onClick={() =>
                         setSelectedPrompt({
-                          label: 'Safety Response',
+                          label: t('safetyResponseTitle'),
                           isSystem: true,
                           name: 'safety_response',
                           // @ts-ignore
@@ -460,7 +474,7 @@ export function SafetyTab() {
                       }
                     >
                       <Edit className="mr-2 h-4 w-4" />
-                      Edit
+                      {t('edit')}
                     </Button>
                     <CopyButton
                       disabled={isDisabled || disabled}

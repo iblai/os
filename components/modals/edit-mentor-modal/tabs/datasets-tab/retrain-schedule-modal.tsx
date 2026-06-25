@@ -23,6 +23,7 @@ import { useParams } from 'next/navigation';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { useUsername } from '@/hooks/use-user';
 import { toast } from 'sonner';
+import { useTranslations } from 'next-intl';
 
 type Props = {
   isOpen: boolean;
@@ -35,6 +36,7 @@ type Props = {
 };
 
 export function RetrainScheduleModal({ isOpen, onClose, dataset }: Props) {
+  const t = useTranslations('datasetsTabRetrainScheduleModal');
   const username = useUsername();
   const { tenantKey } = useParams<TenantKeyMentorIdParams>();
   const { data, isLoading } = useGetTrainingDocumentRetrainScheduleQuery({
@@ -77,9 +79,9 @@ export function RetrainScheduleModal({ isOpen, onClose, dataset }: Props) {
           retrain_interval_days: retrainIntervalDays,
         },
       }).unwrap();
-      toast.success('Successfully updated retrain interval');
+      toast.success(t('toastSuccess'));
     } catch (error) {
-      toast.error('Failed to update retrain interval');
+      toast.error(t('toastError'));
       console.log(error);
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     }
@@ -90,10 +92,10 @@ export function RetrainScheduleModal({ isOpen, onClose, dataset }: Props) {
       <DialogContent className="max-h-[90vh] max-w-[95vw] overflow-x-hidden overflow-y-auto sm:max-w-[540px]">
         <DialogHeader>
           <DialogTitle className="ibl-dialog-title">
-            Schedule Retraining
+            {t('dialogTitle')}
           </DialogTitle>
           <DialogDescription className="mt-4 text-left">
-            Configure automatic retraining schedule for <br />{' '}
+            {t('dialogDescription')} <br />{' '}
             <span className="font-medium break-all">
               {dataset.document_name || dataset.url}
             </span>
@@ -105,7 +107,7 @@ export function RetrainScheduleModal({ isOpen, onClose, dataset }: Props) {
           <div className="space-y-3">
             <Label className="flex items-center gap-2 text-sm font-medium">
               <Repeat className="h-4 w-4" />
-              Retrain Interval
+              {t('retrainIntervalLabel')}
             </Label>
 
             {/* Preset Buttons */}
@@ -122,7 +124,7 @@ export function RetrainScheduleModal({ isOpen, onClose, dataset }: Props) {
                     : inactiveButtonClass
                 }
               >
-                Daily (1 day)
+                {t('presetDaily')}
               </Button>
               <Button
                 type="button"
@@ -136,7 +138,7 @@ export function RetrainScheduleModal({ isOpen, onClose, dataset }: Props) {
                     : inactiveButtonClass
                 }
               >
-                Weekly (7 days)
+                {t('presetWeekly')}
               </Button>
               <Button
                 type="button"
@@ -150,14 +152,14 @@ export function RetrainScheduleModal({ isOpen, onClose, dataset }: Props) {
                     : inactiveButtonClass
                 }
               >
-                Monthly (30 days)
+                {t('presetMonthly')}
               </Button>
             </div>
 
             {/* Custom Days Input */}
             <div className="space-y-2">
               <Label htmlFor="interval-days" className="text-sm font-medium">
-                Custom Interval (days)
+                {t('customIntervalLabel')}
               </Label>
               <Input
                 id="interval-days"
@@ -169,25 +171,28 @@ export function RetrainScheduleModal({ isOpen, onClose, dataset }: Props) {
                   setRetrainIntervalDays(Number.parseInt(e.target.value) || 0)
                 }
                 className="h-10"
-                placeholder="Enter days"
+                placeholder={t('customIntervalPlaceholder')}
               />
               <p className="text-muted-foreground text-xs">
-                Dataset will retrain every {retrainIntervalDays}{' '}
-                {retrainIntervalDays === 1 ? 'day' : 'days'}
+                {t('retrainIntervalHint', {
+                  days: retrainIntervalDays,
+                  unit:
+                    retrainIntervalDays === 1 ? t('dayUnit') : t('daysUnit'),
+                })}
               </p>
             </div>
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
             <Button type="button" variant="outline" onClick={() => onClose()}>
-              Cancel
+              {t('cancelButton')}
             </Button>
             <Button
               type="submit"
               className="ibl-button-primary"
               disabled={isDisabled}
             >
-              Schedule Retraining
+              {t('submitButton')}
             </Button>
           </DialogFooter>
         </form>

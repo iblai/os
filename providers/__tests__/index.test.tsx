@@ -33,6 +33,17 @@ vi.mock('@/lib/hooks', () => ({
 
 vi.mock('react-redux', () => ({
   useSelector: vi.fn(() => false),
+  // RTK Query's reactHooksModule (pulled in transitively via @iblai/data-layer)
+  // reads `useDispatch`, `useSelector`, `useStore` and `batch` from react-redux
+  // at module init and throws if any are undefined. Provide pass-through stubs
+  // so the suite can load; the component under test only consumes useSelector.
+  useDispatch: vi.fn(() => vi.fn()),
+  useStore: vi.fn(() => ({
+    getState: vi.fn(),
+    dispatch: vi.fn(),
+    subscribe: vi.fn(),
+  })),
+  batch: (fn: () => void) => fn(),
 }));
 
 // ── Tauri / offline ─────────────────────────────────────────────────────────
@@ -215,7 +226,7 @@ let capturedIframeMessageHandler: {
 // Messages to simulate being received by the defaultHandler after render
 let pendingIframeMessages: Record<string, unknown>[] = [];
 
-vi.mock('@iblai/iblai-js/web-containers', () => ({
+vi.mock('@iblai/web-containers', () => ({
   sanitizeCss: (css: string) => css,
   useIframeMessageHandler: (opts: {
     handlers?: unknown;
@@ -364,6 +375,18 @@ vi.mock('@/components/spinner', () => ({
 
 vi.mock('@/components/sentry-init', () => ({
   SentryInit: () => null,
+}));
+
+// Side-effect-only component (syncs language pref via useGetUserMetadataQuery);
+// stub it out so the suite needn't wire up a real RTK store.
+vi.mock('@/components/language-preference-sync', () => ({
+  LanguagePreferenceSync: () => null,
+}));
+
+// Wrapper provider — render children straight through.
+vi.mock('@/components/web-containers-locale-provider', () => ({
+  WebContainersLocaleProvider: ({ children }: { children: React.ReactNode }) =>
+    children,
 }));
 
 vi.mock('@/hooks/use-mentor-time-tracking', () => ({

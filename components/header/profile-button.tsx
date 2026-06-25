@@ -11,13 +11,14 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { handleTenantSwitch } from '@/lib/utils';
-import { TenantSwitcher } from '@iblai/iblai-js/web-containers';
+import { TenantSwitcher } from '@iblai/web-containers';
 import { useParams } from 'next/navigation';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { useUserTenants } from '@/hooks/use-user';
 import { useState } from 'react';
 import { useAppSelector } from '@/lib/hooks';
 import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
+import { useTranslations } from 'next-intl';
 
 interface ProfileButtonProps {
   userImage: string;
@@ -37,6 +38,7 @@ export function ProfileButton({
   setIsInstructor,
   isMobile = false,
 }: ProfileButtonProps) {
+  const t = useTranslations('headerProfileButton');
   const { tenantKey } = useParams<TenantKeyMentorIdParams>();
   const { userTenants } = useUserTenants();
   const [hideTenantSwitcher, setHideTenantSwitcher] = useState<boolean>(false);
@@ -48,7 +50,7 @@ export function ProfileButton({
           variant="ghost"
           size="icon"
           className="flex h-8 w-8 items-center overflow-hidden rounded-full"
-          aria-label="User profile"
+          aria-label={t('userProfile')}
         >
           <Avatar className="h-8 w-8">
             <AvatarImage src={userImage} alt={userName} />
@@ -60,7 +62,7 @@ export function ProfileButton({
       <DropdownMenuContent align="end" className="space-y-2">
         <DropdownMenuItem onSelect={onProfileClick}>
           <User className="mr-2 h-4 w-4" />
-          Profile
+          {t('profile')}
         </DropdownMenuItem>
         {isMobile && (
           <div className="px-2 py-2">
@@ -68,7 +70,7 @@ export function ProfileButton({
               <span
                 className={`text-sm ${isInstructor ? 'text-gray-500' : 'font-semibold'}`}
               >
-                User
+                {t('user')}
               </span>
               <Switch
                 checked={isInstructor}
@@ -78,7 +80,7 @@ export function ProfileButton({
               <span
                 className={`text-sm ${isInstructor ? 'font-semibold' : 'text-gray-500'}`}
               >
-                Admin
+                {t('admin')}
               </span>
             </div>
           </div>
@@ -96,7 +98,7 @@ export function ProfileButton({
         )}
         <DropdownMenuItem onClick={() => handleLogout()}>
           <LogOut className="mr-2 h-4 w-4" />
-          Logout
+          {t('logout')}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

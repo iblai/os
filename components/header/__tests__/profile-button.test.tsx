@@ -10,7 +10,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock the iblai-js TenantSwitcher — render a sentinel we can assert on
-vi.mock('@iblai/iblai-js/web-containers', () => ({
+vi.mock('@iblai/web-containers', () => ({
   TenantSwitcher: ({ currentTenantKey }: { currentTenantKey?: string }) => (
     <div data-testid="tenant-switcher">{currentTenantKey ?? ''}</div>
   ),

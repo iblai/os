@@ -4,6 +4,7 @@ import React from 'react';
 import { useParams } from 'next/navigation';
 
 import dynamic from 'next/dynamic';
+import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -48,6 +49,7 @@ const DeleteProjectModal = dynamic(
 );
 
 export function ProjectsSidebarDropdown() {
+  const t = useTranslations('appSidebarProjectsSidebarDropdown');
   const { navigateToProject } = useNavigate();
   const { executeWithTrialCheck } = useShowFreeTrialDialog();
   const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] =
@@ -129,12 +131,12 @@ export function ProjectsSidebarDropdown() {
             <div className="flex items-center gap-2.5">
               <Image
                 src="/icons/new-project.svg"
-                alt="New Project"
+                alt={t('newProject')}
                 width={18}
                 height={18}
                 className="flex-shrink-0"
               />
-              <span className="flex-1 text-left">New Project</span>
+              <span className="flex-1 text-left">{t('newProject')}</span>
             </div>
           </Button>
         ) : (
@@ -148,12 +150,12 @@ export function ProjectsSidebarDropdown() {
               <div className="flex items-center gap-2.5">
                 <Image
                   src="/icons/new-project.svg"
-                  alt="New Project"
+                  alt={t('newProject')}
                   width={18}
                   height={18}
                   className="flex-shrink-0"
                 />
-                <span className="flex-1 text-left">New Project</span>
+                <span className="flex-1 text-left">{t('newProject')}</span>
               </div>
             </Button>
           </AuthPopover>

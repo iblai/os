@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -28,7 +29,7 @@ import {
   WorkflowSidebar,
   DeleteWorkflowModal,
   type NodeTypeSection,
-} from '@iblai/iblai-js/web-containers';
+} from '@iblai/web-containers';
 import {
   useGetWorkflowQuery,
   usePatchWorkflowMutation,
@@ -113,6 +114,7 @@ function transformNodeTypesToSections(
 }
 
 export default function WorkflowDetailPage() {
+  const t = useTranslations('workflowsPage');
   const router = useRouter();
   const params = useParams<{
     tenantKey: string;
@@ -395,9 +397,9 @@ export default function WorkflowDetailPage() {
           uniqueId: workflowId,
           data: { name: workflowName },
         }).unwrap();
-        toast.success('Workflow name updated');
+        toast.success(t('workflowNameUpdated'));
       } catch {
-        toast.error('Failed to update name');
+        toast.error(t('failedToUpdateName'));
         setWorkflowName(workflow.name);
       }
     }
@@ -416,9 +418,9 @@ export default function WorkflowDetailPage() {
         data: patchData,
       }).unwrap();
       setHasUnsavedChanges(false);
-      toast.success('Workflow saved');
+      toast.success(t('workflowSaved'));
     } catch {
-      toast.error('Failed to save workflow');
+      toast.error(t('failedToSaveWorkflow'));
     }
   };
 
@@ -434,7 +436,7 @@ export default function WorkflowDetailPage() {
       }).unwrap();
       setHasUnsavedChanges(false);
       setValidationResult(null);
-      toast.success('Workflow published');
+      toast.success(t('workflowPublished'));
     } catch (err: unknown) {
       const errorData = (err as { data?: unknown })?.data;
       if (
@@ -448,9 +450,9 @@ export default function WorkflowDetailPage() {
           warnings: validation.warnings,
         });
         setIsValidationBannerOpen(true);
-        toast.error('Workflow has validation issues');
+        toast.error(t('workflowHasValidationIssues'));
       } else {
-        toast.error('Failed to publish workflow');
+        toast.error(t('failedToPublishWorkflow'));
       }
     }
   };
@@ -461,9 +463,9 @@ export default function WorkflowDetailPage() {
         org: params.tenantKey,
         uniqueId: workflowId,
       }).unwrap();
-      toast.success('Workflow deactivated');
+      toast.success(t('workflowDeactivated'));
     } catch {
-      toast.error('Failed to deactivate workflow');
+      toast.error(t('failedToDeactivateWorkflow'));
     }
   };
 
@@ -475,14 +477,14 @@ export default function WorkflowDetailPage() {
       }).unwrap();
       if (result.is_valid) {
         setValidationResult(null);
-        toast.success('Workflow activated');
+        toast.success(t('workflowActivated'));
       } else {
         setValidationResult({
           errors: result.errors,
           warnings: result.warnings,
         });
         setIsValidationBannerOpen(true);
-        toast.error('Workflow has validation issues');
+        toast.error(t('workflowHasValidationIssues'));
       }
     } catch (err: unknown) {
       const errorData = (err as { data?: unknown })?.data;
@@ -497,9 +499,9 @@ export default function WorkflowDetailPage() {
           warnings: validation.warnings,
         });
         setIsValidationBannerOpen(true);
-        toast.error('Workflow has validation issues');
+        toast.error(t('workflowHasValidationIssues'));
       } else {
-        toast.error('Failed to activate workflow');
+        toast.error(t('failedToActivateWorkflow'));
       }
     }
   };
@@ -510,11 +512,11 @@ export default function WorkflowDetailPage() {
         org: params.tenantKey,
         uniqueId: workflowId,
       }).unwrap();
-      toast.success('Workflow deleted');
+      toast.success(t('workflowDeleted'));
       setIsDeleteModalOpen(false);
       router.push(`/platform/${params.tenantKey}/workflows/${listMentorId}`);
     } catch {
-      toast.error('Failed to delete workflow');
+      toast.error(t('failedToDeleteWorkflow'));
     }
   };
 
@@ -532,10 +534,10 @@ export default function WorkflowDetailPage() {
       <div className="flex h-screen items-center justify-center">
         <div className="text-center">
           <AlertCircle className="mx-auto mb-4 h-12 w-12 text-red-500" />
-          <p className="mb-4 text-gray-600">Failed to load workflow</p>
+          <p className="mb-4 text-gray-600">{t('failedToLoadWorkflow')}</p>
           <Button variant="outline" onClick={() => router.back()}>
             <ChevronLeft className="mr-2 h-4 w-4" />
-            Go Back
+            {t('goBack')}
           </Button>
         </div>
       </div>
@@ -599,7 +601,7 @@ export default function WorkflowDetailPage() {
               <span
                 className={`rounded-md px-2 py-0.5 text-xs ${workflow.is_active ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'}`}
               >
-                {workflow.is_active ? 'Active' : 'Draft'}
+                {workflow.is_active ? t('statusActive') : t('statusDraft')}
               </span>
             </div>
           ) : (
@@ -621,13 +623,13 @@ export default function WorkflowDetailPage() {
                     onKeyDown={(e) => e.key === 'Enter' && handleNameSave()}
                     className="text-foreground h-8 w-[200px] font-medium"
                     autoFocus
-                    aria-label="Enter workflow name"
+                    aria-label={t('enterWorkflowNameLabel')}
                   />
                 ) : (
                   <button
                     onClick={() => setIsEditingName(true)}
                     className="text-foreground hover:text-foreground/80 flex items-center gap-1 font-medium"
-                    aria-label="Edit workflow name"
+                    aria-label={t('editWorkflowNameLabel')}
                   >
                     {workflowName}
                     <Pencil className="h-3 w-3 opacity-50" />
@@ -636,10 +638,12 @@ export default function WorkflowDetailPage() {
                 <span
                   className={`rounded-md px-2 py-0.5 text-xs ${workflow.is_active ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'}`}
                 >
-                  {workflow.is_active ? 'Active' : 'Draft'}
+                  {workflow.is_active ? t('statusActive') : t('statusDraft')}
                 </span>
                 {hasUnsavedChanges && (
-                  <span className="text-muted-foreground text-xs">Unsaved</span>
+                  <span className="text-muted-foreground text-xs">
+                    {t('unsaved')}
+                  </span>
                 )}
               </div>
             </>
@@ -656,17 +660,17 @@ export default function WorkflowDetailPage() {
                 onClick={handleClosePreview}
               >
                 <X className="mr-2 h-4 w-4" />
-                Close preview
+                {t('closePreview')}
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
                 className="text-foreground hover:text-foreground hover:bg-gray-100"
                 onClick={handleNewChat}
-                aria-label="New chat for workflow preview"
+                aria-label={t('newChatLabel')}
               >
                 <RotateCcw className="mr-2 h-4 w-4" />
-                New Chat
+                {t('newChat')}
               </Button>
               <Button
                 size="sm"
@@ -677,7 +681,7 @@ export default function WorkflowDetailPage() {
                 {isPublishing ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  'Publish'
+                  t('publish')
                 )}
               </Button>
             </>
@@ -689,7 +693,7 @@ export default function WorkflowDetailPage() {
                     variant="ghost"
                     size="icon"
                     className="text-muted-foreground hover:text-foreground"
-                    aria-label="More workflow options"
+                    aria-label={t('moreOptionsLabel')}
                   >
                     <MoreHorizontal className="h-5 w-5" />
                   </Button>
@@ -698,7 +702,7 @@ export default function WorkflowDetailPage() {
                   {workflow.is_active ? (
                     <DropdownMenuItem onClick={handleDeactivate}>
                       <Power className="mr-2 h-4 w-4" />
-                      Deactivate
+                      {t('deactivate')}
                     </DropdownMenuItem>
                   ) : (
                     <DropdownMenuItem
@@ -706,7 +710,7 @@ export default function WorkflowDetailPage() {
                       disabled={isActivating}
                     >
                       <Power className="mr-2 h-4 w-4" />
-                      {isActivating ? 'Activating...' : 'Activate'}
+                      {isActivating ? t('activating') : t('activate')}
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem
@@ -714,7 +718,7 @@ export default function WorkflowDetailPage() {
                     className="text-red-600"
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
+                    {t('delete')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -725,7 +729,7 @@ export default function WorkflowDetailPage() {
                 onClick={handlePreviewClick}
               >
                 <Eye className="mr-2 h-4 w-4" />
-                Preview
+                {t('preview')}
               </Button>
               <Button
                 size="sm"
@@ -736,7 +740,7 @@ export default function WorkflowDetailPage() {
                 {isSaving ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  'Save'
+                  t('save')
                 )}
               </Button>
               <Button
@@ -748,7 +752,7 @@ export default function WorkflowDetailPage() {
                 {isPublishing ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  'Publish'
+                  t('publish')
                 )}
               </Button>
             </>
@@ -781,12 +785,16 @@ export default function WorkflowDetailPage() {
                       }
                     >
                       {validationResult.errors.length > 0 &&
-                        `${validationResult.errors.length} error${validationResult.errors.length !== 1 ? 's' : ''}`}
+                        t('validationErrors', {
+                          count: validationResult.errors.length,
+                        })}
                       {validationResult.errors.length > 0 &&
                         validationResult.warnings.length > 0 &&
                         ', '}
                       {validationResult.warnings.length > 0 &&
-                        `${validationResult.warnings.length} warning${validationResult.warnings.length !== 1 ? 's' : ''}`}
+                        t('validationWarnings', {
+                          count: validationResult.warnings.length,
+                        })}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">

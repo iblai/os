@@ -55,7 +55,7 @@ import {
   useUpdateShareableLinkMutation,
 } from '@iblai/iblai-js/data-layer';
 import { useUsername } from '@/hooks/use-user';
-import { Spinner } from '@iblai/iblai-js/web-containers';
+import { Spinner } from '@iblai/web-containers';
 import { useToast } from '@/components/ui/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -70,6 +70,7 @@ import { cn } from '@/lib/utils';
 import { useEditMentorMutation } from '@iblai/iblai-js/data-layer';
 import { useTenantMetadata } from '@iblai/iblai-js/web-utils';
 import { config } from '@/lib/config';
+import { useTranslations } from 'next-intl';
 
 interface CssValidationResult {
   isValid: boolean;
@@ -200,6 +201,7 @@ export function validateJavaScript(js: string): JsValidationResult {
 }
 
 export function EmbedTab() {
+  const t = useTranslations('tabsEmbedTab');
   // Dynamically import web component to avoid HTMLElement ReferenceError during SSR pre-warming
   useEffect(() => {
     import('@iblai/iblai-web-mentor');
@@ -337,10 +339,10 @@ export function EmbedTab() {
       }).unwrap();
 
       setOriginalCssValue(cssValue);
-      sonnerToast.success('Advanced CSS saved successfully');
+      sonnerToast.success(t('toastCssSaveSuccess'));
     } catch (error) {
       console.error('Failed to save advanced CSS:', error);
-      sonnerToast.error('Failed to save advanced CSS');
+      sonnerToast.error(t('toastCssSaveFail'));
     }
   }, [canSaveCss, cssValue, editMentor, mentorId, tenantKey, username]);
 
@@ -363,10 +365,10 @@ export function EmbedTab() {
       }).unwrap();
 
       setOriginalJsValue(jsValue);
-      sonnerToast.success('Advanced JavaScript saved successfully');
+      sonnerToast.success(t('toastJsSaveSuccess'));
     } catch (error) {
       console.error('Failed to save advanced JavaScript:', error);
-      sonnerToast.error('Failed to save advanced JavaScript');
+      sonnerToast.error(t('toastJsSaveFail'));
     }
   }, [canSaveJs, jsValue, editMentor, mentorId, tenantKey, username]);
 
@@ -400,13 +402,13 @@ export function EmbedTab() {
 
       setIsLoadingShareableLink(false);
       toast.toast({
-        description: 'Successfully regenerate shareable link',
+        description: t('toastRegenerateSuccess'),
       });
     } catch (error) {
       console.error('handleRegenerateToken (regenerate token) error: ', error);
       setIsLoadingShareableLink(false);
       toast.toast({
-        description: 'Failed to regenerate shareable link',
+        description: t('toastRegenerateFail'),
       });
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     }
@@ -433,7 +435,7 @@ export function EmbedTab() {
 
           setIsLoadingShareableLink(false);
           toast.toast({
-            description: 'Sucessfully enabled shareable link',
+            description: t('toastEnableSuccess'),
           });
         } catch (error) {
           console.error(
@@ -442,7 +444,7 @@ export function EmbedTab() {
           );
           setIsLoadingShareableLink(false);
           toast.toast({
-            description: 'Failed to enable shareable link',
+            description: t('toastEnableFail'),
           });
           console.error(JSON.stringify({ tenant: tenantKey, error }));
         }
@@ -461,7 +463,7 @@ export function EmbedTab() {
 
           setIsLoadingShareableLink(false);
           toast.toast({
-            description: 'Successfull created shareable link',
+            description: t('toastCreateSuccess'),
           });
         } catch (error) {
           console.error(
@@ -470,7 +472,7 @@ export function EmbedTab() {
           );
           setIsLoadingShareableLink(false);
           toast.toast({
-            description: 'Failed to create shareable link',
+            description: t('toastCreateFail'),
           });
           console.error(JSON.stringify({ tenant: tenantKey, error }));
         }
@@ -494,7 +496,7 @@ export function EmbedTab() {
 
         setIsLoadingShareableLink(false);
         toast.toast({
-          description: 'Successfully disabled shareable link',
+          description: t('toastDisableSuccess'),
         });
       } catch (error) {
         console.error(
@@ -503,7 +505,7 @@ export function EmbedTab() {
         );
         setIsLoadingShareableLink(false);
         toast.toast({
-          description: 'Failed to disable shareable link',
+          description: t('toastDisableFail'),
         });
         console.error(JSON.stringify({ tenant: tenantKey, error }));
       }
@@ -514,10 +516,10 @@ export function EmbedTab() {
     <>
       <div className="hidden h-[73px] flex-shrink-0 items-center border-b border-gray-200 bg-white p-4 lg:flex">
         <div>
-          <h3 className="mb-1 text-base font-medium text-gray-900">Embed</h3>
-          <p className="text-xs text-gray-600">
-            Configure embedding options for your agent.
-          </p>
+          <h3 className="mb-1 text-base font-medium text-gray-900">
+            {t('heading')}
+          </h3>
+          <p className="text-xs text-gray-600">{t('headingDescription')}</p>
         </div>
       </div>
       <div className="flex flex-1 flex-col overflow-hidden">
@@ -547,30 +549,26 @@ export function EmbedTab() {
                     aria-expanded={isCssExpanded}
                     aria-label={
                       isCssExpanded
-                        ? 'Collapse Advanced CSS'
-                        : 'Expand Advanced CSS'
+                        ? t('collapseAdvancedCss')
+                        : t('expandAdvancedCss')
                     }
                   >
                     <div className="flex items-center gap-3">
                       <Palette className="h-4 w-4 text-gray-500" />
                       <span className="text-sm font-medium text-gray-700">
-                        Advanced CSS
+                        {t('advancedCssLabel')}
                       </span>
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger
                             asChild
                             onClick={(e) => e.stopPropagation()}
-                            aria-label="More info about Advanced CSS"
+                            aria-label={t('moreInfoAdvancedCss')}
                           >
                             <Info className="h-4 w-4 text-gray-400 hover:text-gray-600" />
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
-                            <p>
-                              Add custom CSS to style your agent chat interface.
-                              Styles will be applied to the embedded chat
-                              widget.
-                            </p>
+                            <p>{t('advancedCssTooltip')}</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -578,7 +576,7 @@ export function EmbedTab() {
                     <div className="flex items-center gap-2">
                       {hasCssChanges && (
                         <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
-                          Unsaved changes
+                          {t('unsavedChanges')}
                         </span>
                       )}
                       {isCssExpanded ? (
@@ -620,7 +618,7 @@ export function EmbedTab() {
                                     'border-red-300 focus:border-red-500 focus:ring-red-500/20',
                                 )}
                                 disabled={isAdvancedDisabled || disabled}
-                                aria-label="Custom CSS input"
+                                aria-label={t('customCssInputLabel')}
                                 aria-invalid={!cssValidation.isValid}
                                 aria-describedby={
                                   !cssValidation.isValid
@@ -642,12 +640,12 @@ export function EmbedTab() {
                                     {cssValidation.isValid ? (
                                       <>
                                         <Check className="h-3.5 w-3.5" />
-                                        Valid
+                                        {t('validationValid')}
                                       </>
                                     ) : (
                                       <>
                                         <AlertCircle className="h-3.5 w-3.5" />
-                                        Invalid
+                                        {t('validationInvalid')}
                                       </>
                                     )}
                                   </div>
@@ -662,7 +660,7 @@ export function EmbedTab() {
                                 role="alert"
                               >
                                 <p className="mb-1 text-sm font-medium text-red-800">
-                                  CSS validation errors:
+                                  {t('cssValidationErrors')}
                                 </p>
                                 <ul className="list-inside list-disc space-y-0.5 text-sm text-red-700">
                                   {cssValidation.errors.map((error, index) => (
@@ -674,8 +672,7 @@ export function EmbedTab() {
 
                             <div className="flex items-center justify-between pt-2">
                               <p className="text-xs text-gray-500">
-                                Changes will apply to the embedded chat widget
-                                after saving.
+                                {t('cssChangesHint')}
                               </p>
                               <div className="flex items-center gap-2">
                                 {hasCssChanges && (
@@ -685,9 +682,9 @@ export function EmbedTab() {
                                     size="sm"
                                     onClick={handleDiscardCss}
                                     disabled={isAdvancedDisabled || disabled}
-                                    aria-label="Discard changes"
+                                    aria-label={t('discardChanges')}
                                   >
-                                    Discard
+                                    {t('discard')}
                                   </Button>
                                 )}
                                 <Button
@@ -696,9 +693,9 @@ export function EmbedTab() {
                                   onClick={handleSaveCss}
                                   disabled={!canSaveCss || disabled}
                                   className="bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90"
-                                  aria-label="Save advanced CSS"
+                                  aria-label={t('saveAdvancedCss')}
                                 >
-                                  {isSavingAdvanced ? 'Saving...' : 'Save'}
+                                  {isSavingAdvanced ? t('saving') : t('save')}
                                 </Button>
                               </div>
                             </div>
@@ -718,30 +715,26 @@ export function EmbedTab() {
                     aria-expanded={isJsExpanded}
                     aria-label={
                       isJsExpanded
-                        ? 'Collapse Advanced JavaScript'
-                        : 'Expand Advanced JavaScript'
+                        ? t('collapseAdvancedJs')
+                        : t('expandAdvancedJs')
                     }
                   >
                     <div className="flex items-center gap-3">
                       <Code2 className="h-4 w-4 text-gray-500" />
                       <span className="text-sm font-medium text-gray-700">
-                        Advanced JavaScript
+                        {t('advancedJsLabel')}
                       </span>
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger
                             asChild
                             onClick={(e) => e.stopPropagation()}
-                            aria-label="More info about Advanced JavaScript"
+                            aria-label={t('moreInfoAdvancedJs')}
                           >
                             <Info className="h-4 w-4 text-gray-400 hover:text-gray-600" />
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
-                            <p>
-                              Add custom JavaScript to enhance your agent chat
-                              interface. Scripts will be executed when the
-                              embedded chat widget loads.
-                            </p>
+                            <p>{t('advancedJsTooltip')}</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -749,7 +742,7 @@ export function EmbedTab() {
                     <div className="flex items-center gap-2">
                       {hasJsChanges && (
                         <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
-                          Unsaved changes
+                          {t('unsavedChanges')}
                         </span>
                       )}
                       {isJsExpanded ? (
@@ -772,24 +765,21 @@ export function EmbedTab() {
                             />
                           </div>
                           <h4 className="mb-2 text-center text-base font-semibold text-gray-900">
-                            Custom JavaScript is Disabled
+                            {t('customJsDisabledTitle')}
                           </h4>
                           <p className="mb-4 max-w-sm text-center text-xs text-gray-600">
-                            For security reasons, the ability to add custom
-                            JavaScript to your agent is restricted. This feature
-                            requires explicit approval from your organization's
-                            administrator.
+                            {t('customJsDisabledDescription')}
                           </p>
                           <div className="flex flex-col items-center gap-2">
                             <p className="text-center text-xs text-gray-500">
-                              To request access, please contact support
+                              {t('contactSupportPrompt')}
                             </p>
                             <a
                               href={`mailto:${supportEmail}?subject=Request%20to%20Enable%20Custom%20JavaScript&body=Hello%2C%0A%0AI%20would%20like%20to%20request%20access%20to%20the%20Custom%20JavaScript%20feature%20for%20my%20agent.%0A%0AAgent%20ID%3A%20${mentorId}%0ATenant%3A%20${tenantKey}%0A%0AThank%20you.`}
                               className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-700"
                             >
                               <Mail className="h-3.5 w-3.5" />
-                              Contact Support
+                              {t('contactSupport')}
                             </a>
                             <span className="text-xs text-gray-400">
                               {supportEmail}
@@ -802,9 +792,7 @@ export function EmbedTab() {
                           <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
                             <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-600" />
                             <p className="text-xs text-blue-700">
-                              Custom JavaScript runs in the context of your
-                              agent. Ensure your code is secure and doesn't
-                              expose sensitive information.
+                              {t('jsSecurityNotice')}
                             </p>
                           </div>
 
@@ -832,7 +820,7 @@ export function EmbedTab() {
                                   'border-red-300 focus:border-red-500 focus:ring-red-500/20',
                               )}
                               disabled={isAdvancedDisabled}
-                              aria-label="Custom JavaScript input"
+                              aria-label={t('customJsInputLabel')}
                               aria-invalid={!jsValidation.isValid}
                               aria-describedby={
                                 !jsValidation.isValid
@@ -859,18 +847,18 @@ export function EmbedTab() {
                                     jsValidation.warnings.length > 0 ? (
                                       <>
                                         <AlertTriangle className="h-3.5 w-3.5" />
-                                        Warnings
+                                        {t('validationWarnings')}
                                       </>
                                     ) : (
                                       <>
                                         <Check className="h-3.5 w-3.5" />
-                                        Valid
+                                        {t('validationValid')}
                                       </>
                                     )
                                   ) : (
                                     <>
                                       <AlertCircle className="h-3.5 w-3.5" />
-                                      Invalid
+                                      {t('validationInvalid')}
                                     </>
                                   )}
                                 </div>
@@ -885,7 +873,7 @@ export function EmbedTab() {
                               role="alert"
                             >
                               <p className="mb-1 text-sm font-medium text-red-800">
-                                JavaScript validation errors:
+                                {t('jsValidationErrors')}
                               </p>
                               <ul className="list-inside list-disc space-y-0.5 text-sm text-red-700">
                                 {jsValidation.errors.map((error, index) => (
@@ -903,7 +891,7 @@ export function EmbedTab() {
                                 role="status"
                               >
                                 <p className="mb-1 text-sm font-medium text-blue-800">
-                                  Warnings:
+                                  {t('warningsLabel')}
                                 </p>
                                 <ul className="list-inside list-disc space-y-0.5 text-sm text-blue-700">
                                   {jsValidation.warnings.map(
@@ -917,8 +905,7 @@ export function EmbedTab() {
 
                           <div className="flex items-center justify-between pt-2">
                             <p className="text-xs text-gray-500">
-                              Scripts will execute when the embedded chat widget
-                              loads.
+                              {t('jsChangesHint')}
                             </p>
                             <div className="flex items-center gap-2">
                               {hasJsChanges && (
@@ -928,9 +915,9 @@ export function EmbedTab() {
                                   size="sm"
                                   onClick={handleDiscardJs}
                                   disabled={isAdvancedDisabled}
-                                  aria-label="Discard changes"
+                                  aria-label={t('discardChanges')}
                                 >
-                                  Discard
+                                  {t('discard')}
                                 </Button>
                               )}
                               <Button
@@ -939,9 +926,9 @@ export function EmbedTab() {
                                 onClick={handleSaveJs}
                                 disabled={!canSaveJs}
                                 className="bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90"
-                                aria-label="Save advanced JavaScript"
+                                aria-label={t('saveAdvancedJs')}
                               >
-                                {isSavingAdvanced ? 'Saving...' : 'Save'}
+                                {isSavingAdvanced ? t('saving') : t('save')}
                               </Button>
                             </div>
                           </div>
@@ -961,7 +948,7 @@ export function EmbedTab() {
                         {(field) => (
                           <div className="space-y-2">
                             <h3 className="text-sm font-medium text-[#646464]">
-                              Icon Selection
+                              {t('iconSelectionLabel')}
                             </h3>
                             <Select
                               defaultValue={field.state.value}
@@ -972,10 +959,10 @@ export function EmbedTab() {
                             >
                               <SelectTrigger
                                 className="text-[#646464]"
-                                aria-label="Select an embed mode"
+                                aria-label={t('selectEmbedModeAriaLabel')}
                               >
                                 <SelectValue
-                                  placeholder="Select mode"
+                                  placeholder={t('selectModePlaceholder')}
                                   className="text-[#646464]"
                                 />
                               </SelectTrigger>
@@ -984,13 +971,13 @@ export function EmbedTab() {
                                   value="default"
                                   className="text-[#646464]"
                                 >
-                                  Default
+                                  {t('iconSelectionDefault')}
                                 </SelectItem>
                                 <SelectItem
                                   value="custom"
                                   className="text-[#646464]"
                                 >
-                                  Custom
+                                  {t('iconSelectionCustom')}
                                 </SelectItem>
                               </SelectContent>
                             </Select>
@@ -1008,12 +995,12 @@ export function EmbedTab() {
                             }
                             //disabled={form.state.isSubmitting}
                           >
-                            Icon Editor
+                            {t('iconEditorButton')}
                           </Button>
                           <Card>
                             <CardHeader className="mb-0 pt-4 pb-0">
                               <CardTitle className="text-sm font-medium text-[#646464]">
-                                Live Preview
+                                {t('livePreview')}
                               </CardTitle>
                             </CardHeader>
                             <CardContent className="mt-0">
@@ -1037,7 +1024,7 @@ export function EmbedTab() {
                   {(field) => (
                     <div className="space-y-2">
                       <h3 className="text-sm font-medium text-[#646464]">
-                        Mode Selection
+                        {t('modeSelectionLabel')}
                       </h3>
                       <Select
                         defaultValue={field.state.value}
@@ -1048,10 +1035,10 @@ export function EmbedTab() {
                       >
                         <SelectTrigger
                           className="text-[#646464]"
-                          aria-label="Select an embed mode"
+                          aria-label={t('selectEmbedModeAriaLabel')}
                         >
                           <SelectValue
-                            placeholder="Select mode"
+                            placeholder={t('selectModePlaceholder')}
                             className="text-[#646464]"
                           />
                         </SelectTrigger>
@@ -1060,13 +1047,13 @@ export function EmbedTab() {
                             value="default"
                             className="text-[#646464]"
                           >
-                            Default
+                            {t('iconSelectionDefault')}
                           </SelectItem>
                           <SelectItem
                             value="advanced"
                             className="text-[#646464]"
                           >
-                            Advanced
+                            {t('modeAdvanced')}
                           </SelectItem>
                         </SelectContent>
                       </Select>
@@ -1079,17 +1066,17 @@ export function EmbedTab() {
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
                         <h3 className="text-sm font-medium text-[#646464]">
-                          Starter Prompts
+                          {t('starterPromptsLabel')}
                         </h3>
                         <TooltipProvider>
                           <Tooltip>
-                            <TooltipTrigger aria-label="More info about starter prompts">
+                            <TooltipTrigger
+                              aria-label={t('moreInfoStarterPrompts')}
+                            >
                               <Info className="h-4 w-4 text-gray-400" />
                             </TooltipTrigger>
                             <TooltipContent className="ibl-tooltip-content">
-                              <p>
-                                Choose the type of starter prompts to display.
-                              </p>
+                              <p>{t('starterPromptsTooltip')}</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -1105,10 +1092,10 @@ export function EmbedTab() {
                       >
                         <SelectTrigger
                           className="text-[#646464]"
-                          aria-label="Select starter prompts type"
+                          aria-label={t('selectStarterPromptsAriaLabel')}
                         >
                           <SelectValue
-                            placeholder="Select starter prompts"
+                            placeholder={t('selectStarterPromptsPlaceholder')}
                             className="text-[#646464]"
                           />
                         </SelectTrigger>
@@ -1117,13 +1104,13 @@ export function EmbedTab() {
                             value="guided_prompt"
                             className="text-[#646464]"
                           >
-                            Guided Prompts
+                            {t('guidedPrompts')}
                           </SelectItem>
                           <SelectItem
                             value="suggested_prompt"
                             className="text-[#646464]"
                           >
-                            Suggested Prompts
+                            {t('suggestedPrompts')}
                           </SelectItem>
                         </SelectContent>
                       </Select>
@@ -1142,15 +1129,17 @@ export function EmbedTab() {
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
                             <Label className="text-sm font-medium text-[#646464]">
-                              Who Can View?
+                              {t('whoCanViewLabel')}
                             </Label>
                             <TooltipProvider>
                               <Tooltip>
-                                <TooltipTrigger aria-label="More info about chat access">
+                                <TooltipTrigger
+                                  aria-label={t('moreInfoChatAccess')}
+                                >
                                   <Info className="h-4 w-4 text-gray-400" />
                                 </TooltipTrigger>
                                 <TooltipContent className="ibl-tooltip-content">
-                                  <p>Control who can view this agent.</p>
+                                  <p>{t('whoCanViewTooltip')}</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
@@ -1166,10 +1155,10 @@ export function EmbedTab() {
                           >
                             <SelectTrigger
                               className="text-[#646464]"
-                              aria-label="Select who can view"
+                              aria-label={t('selectWhoCanViewAriaLabel')}
                             >
                               <SelectValue
-                                placeholder="Select who can view"
+                                placeholder={t('selectWhoCanViewPlaceholder')}
                                 className="text-[#646464]"
                               />
                             </SelectTrigger>
@@ -1202,15 +1191,17 @@ export function EmbedTab() {
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
                             <Label className="text-sm font-medium text-[#646464]">
-                              Who Can Chat?
+                              {t('whoCanChatLabel')}
                             </Label>
                             <TooltipProvider>
                               <Tooltip>
-                                <TooltipTrigger aria-label="More info about chat access">
+                                <TooltipTrigger
+                                  aria-label={t('moreInfoChatAccess')}
+                                >
                                   <Info className="h-4 w-4 text-gray-400" />
                                 </TooltipTrigger>
                                 <TooltipContent className="ibl-tooltip-content">
-                                  <p>Control who can chat with this agent.</p>
+                                  <p>{t('whoCanChatTooltip')}</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
@@ -1224,10 +1215,10 @@ export function EmbedTab() {
                           >
                             <SelectTrigger
                               className="text-[#646464]"
-                              aria-label="Select who can chat"
+                              aria-label={t('selectWhoCanChatAriaLabel')}
                             >
                               <SelectValue
-                                placeholder="Select who can chat"
+                                placeholder={t('selectWhoCanChatPlaceholder')}
                                 className="text-[#646464]"
                               />
                             </SelectTrigger>
@@ -1236,13 +1227,13 @@ export function EmbedTab() {
                                 value="true"
                                 className="text-[#646464]"
                               >
-                                Anyone
+                                {t('anyone')}
                               </SelectItem>
                               <SelectItem
                                 value="false"
                                 className="text-[#646464]"
                               >
-                                Authenticated Users
+                                {t('authenticatedUsers')}
                               </SelectItem>
                             </SelectContent>
                           </Select>
@@ -1267,7 +1258,7 @@ export function EmbedTab() {
                           {(field) => (
                             <div className="space-y-2">
                               <h3 className="text-sm font-medium text-[#646464]">
-                                Website URL
+                                {t('websiteUrlLabel')}
                               </h3>
                               <Input
                                 placeholder="https://ibl.ai"
@@ -1297,8 +1288,8 @@ export function EmbedTab() {
                           disabled={form.state.isSubmitting}
                         >
                           {isCreateTokenLoading
-                            ? 'Generating Token...'
-                            : 'Get Token'}
+                            ? t('generatingToken')
+                            : t('getToken')}
                         </Button>
                       </>
                     )
@@ -1310,15 +1301,17 @@ export function EmbedTab() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-[#646464]">
-                          Context Aware
+                          {t('contextAwareLabel')}
                         </span>
                         <TooltipProvider>
                           <Tooltip>
-                            <TooltipTrigger aria-label="More info about context awareness">
+                            <TooltipTrigger
+                              aria-label={t('moreInfoContextAwareness')}
+                            >
                               <Info className="h-4 w-4 text-gray-400" />
                             </TooltipTrigger>
                             <TooltipContent className="ibl-tooltip-content">
-                              <p>Enable Context Awareness</p>
+                              <p>{t('enableContextAwareness')}</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -1329,7 +1322,11 @@ export function EmbedTab() {
                           field.handleChange(checked)
                         }
                         disabled={form.state.isSubmitting}
-                        aria-label={`Context awareness ${field.state.value ? 'enabled' : 'disabled'}`}
+                        aria-label={
+                          field.state.value
+                            ? t('contextAwarenessEnabled')
+                            : t('contextAwarenessDisabled')
+                        }
                       />
                     </div>
                   )}
@@ -1369,7 +1366,7 @@ export function EmbedTab() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium text-[#646464]">
-                            Single Sign On
+                            {t('singleSignOnLabel')}
                           </span>
                           <TooltipProvider>
                             <Tooltip>
@@ -1377,7 +1374,7 @@ export function EmbedTab() {
                                 <Info className="h-4 w-4 text-gray-400" />
                               </TooltipTrigger>
                               <TooltipContent className="ibl-tooltip-content">
-                                <p>Enable Single Sign-On</p>
+                                <p>{t('enableSingleSignOn')}</p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
@@ -1415,7 +1412,7 @@ export function EmbedTab() {
                             >
                               <SelectTrigger className="text-[#646464]">
                                 <SelectValue
-                                  placeholder="Select one"
+                                  placeholder={t('selectOneProvider')}
                                   className="text-[#646464]"
                                 />
                               </SelectTrigger>
@@ -1444,15 +1441,17 @@ export function EmbedTab() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-[#646464]">
-                          Open By Default
+                          {t('openByDefaultLabel')}
                         </span>
                         <TooltipProvider>
                           <Tooltip>
-                            <TooltipTrigger aria-label="More info about open by default">
+                            <TooltipTrigger
+                              aria-label={t('moreInfoOpenByDefault')}
+                            >
                               <Info className="h-4 w-4 text-gray-400" />
                             </TooltipTrigger>
                             <TooltipContent className="ibl-tooltip-content">
-                              <p>Open Chat Interface by Default</p>
+                              <p>{t('openChatInterfaceByDefault')}</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -1463,7 +1462,11 @@ export function EmbedTab() {
                           field.handleChange(checked)
                         }
                         disabled={form.state.isSubmitting}
-                        aria-label={`Open by default ${field.state.value ? 'enabled' : 'disabled'}`}
+                        aria-label={
+                          field.state.value
+                            ? t('openByDefaultEnabled')
+                            : t('openByDefaultDisabled')
+                        }
                       />
                     </div>
                   )}
@@ -1474,15 +1477,17 @@ export function EmbedTab() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-[#646464]">
-                          Show Attachment
+                          {t('showAttachmentLabel')}
                         </span>
                         <TooltipProvider>
                           <Tooltip>
-                            <TooltipTrigger aria-label="More info about show attachment">
+                            <TooltipTrigger
+                              aria-label={t('moreInfoShowAttachment')}
+                            >
                               <Info className="h-4 w-4 text-gray-400" />
                             </TooltipTrigger>
                             <TooltipContent className="ibl-tooltip-content">
-                              <p>Show Attachment Options in Chat Interface</p>
+                              <p>{t('showAttachmentTooltip')}</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -1493,7 +1498,11 @@ export function EmbedTab() {
                           field.handleChange(checked)
                         }
                         disabled={form.state.isSubmitting}
-                        aria-label={`Show attachment ${field.state.value ? 'enabled' : 'disabled'}`}
+                        aria-label={
+                          field.state.value
+                            ? t('showAttachmentEnabled')
+                            : t('showAttachmentDisabled')
+                        }
                       />
                     </div>
                   )}
@@ -1504,15 +1513,17 @@ export function EmbedTab() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-[#646464]">
-                          Show Voice Call
+                          {t('showVoiceCallLabel')}
                         </span>
                         <TooltipProvider>
                           <Tooltip>
-                            <TooltipTrigger aria-label="More info about show voice call">
+                            <TooltipTrigger
+                              aria-label={t('moreInfoShowVoiceCall')}
+                            >
                               <Info className="h-4 w-4 text-gray-400" />
                             </TooltipTrigger>
                             <TooltipContent className="ibl-tooltip-content">
-                              <p>Show Voice Call Options in Chat Interface</p>
+                              <p>{t('showVoiceCallTooltip')}</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -1523,7 +1534,11 @@ export function EmbedTab() {
                           field.handleChange(checked)
                         }
                         disabled={form.state.isSubmitting}
-                        aria-label={`Show voice call ${field.state.value ? 'enabled' : 'disabled'}`}
+                        aria-label={
+                          field.state.value
+                            ? t('showVoiceCallEnabled')
+                            : t('showVoiceCallDisabled')
+                        }
                       />
                     </div>
                   )}
@@ -1534,17 +1549,17 @@ export function EmbedTab() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-[#646464]">
-                          Show Voice Record
+                          {t('showVoiceRecordLabel')}
                         </span>
                         <TooltipProvider>
                           <Tooltip>
-                            <TooltipTrigger aria-label="More info about show voice record">
+                            <TooltipTrigger
+                              aria-label={t('moreInfoShowVoiceRecord')}
+                            >
                               <Info className="h-4 w-4 text-gray-400" />
                             </TooltipTrigger>
                             <TooltipContent className="ibl-tooltip-content">
-                              <p>
-                                Show Voice Recording Options in Chat Interface
-                              </p>
+                              <p>{t('showVoiceRecordTooltip')}</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -1555,7 +1570,11 @@ export function EmbedTab() {
                           field.handleChange(checked)
                         }
                         disabled={form.state.isSubmitting}
-                        aria-label={`Show voice record ${field.state.value ? 'enabled' : 'disabled'}`}
+                        aria-label={
+                          field.state.value
+                            ? t('showVoiceRecordEnabled')
+                            : t('showVoiceRecordDisabled')
+                        }
                       />
                     </div>
                   )}
@@ -1566,15 +1585,17 @@ export function EmbedTab() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-[#646464]">
-                          Show Catalogue
+                          {t('showCatalogueLabel')}
                         </span>
                         <TooltipProvider>
                           <Tooltip>
-                            <TooltipTrigger aria-label="More info about show catalogue">
+                            <TooltipTrigger
+                              aria-label={t('moreInfoShowCatalogue')}
+                            >
                               <Info className="h-4 w-4 text-gray-400" />
                             </TooltipTrigger>
                             <TooltipContent className="ibl-tooltip-content">
-                              <p>Show Catalogue in Chat Interface</p>
+                              <p>{t('showCatalogueTooltip')}</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -1585,7 +1606,11 @@ export function EmbedTab() {
                           field.handleChange(checked)
                         }
                         disabled={form.state.isSubmitting}
-                        aria-label={`Show catalogue ${field.state.value ? 'enabled' : 'disabled'}`}
+                        aria-label={
+                          field.state.value
+                            ? t('showCatalogueEnabled')
+                            : t('showCatalogueDisabled')
+                        }
                       />
                     </div>
                   )}
@@ -1596,18 +1621,17 @@ export function EmbedTab() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-[#646464]">
-                          Shareable Link
+                          {t('shareableLinkLabel')}
                         </span>
                         <TooltipProvider>
                           <Tooltip>
-                            <TooltipTrigger aria-label="More info about generate shareable link">
+                            <TooltipTrigger
+                              aria-label={t('moreInfoShareableLink')}
+                            >
                               <Info className="h-4 w-4 text-gray-400" />
                             </TooltipTrigger>
                             <TooltipContent className="ibl-tooltip-content">
-                              <p>
-                                Generate a link users can use to chat with this
-                                agent anonymously
-                              </p>
+                              <p>{t('shareableLinkTooltip')}</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -1625,7 +1649,11 @@ export function EmbedTab() {
                             onCheckedChange={(checked) =>
                               handleShareableTokenToggle(checked)
                             }
-                            aria-label={`Generate / Revoke shareable link ${field.state.value ? 'enabled' : 'disabled'}`}
+                            aria-label={
+                              field.state.value
+                                ? t('shareableLinkEnabled')
+                                : t('shareableLinkDisabled')
+                            }
                           />
                         </div>
                       )}
@@ -1673,10 +1701,10 @@ export function EmbedTab() {
                 <DialogContent className="max-h-[80vh] max-w-[600px] overflow-y-auto">
                   <DialogHeader className="mb-1">
                     <DialogTitle className="ibl-dialog-title">
-                      Icon Editor
+                      {t('iconEditorButton')}
                     </DialogTitle>
                     <p className="text-xs text-gray-600">
-                      Customize your floating embed icon appearance
+                      {t('iconEditorDialogSubtitle')}
                     </p>
                   </DialogHeader>
                   <Tabs defaultValue="appearance" className="w-full">
@@ -1686,21 +1714,21 @@ export function EmbedTab() {
                         className="flex items-center gap-2"
                       >
                         <Palette className="h-4 w-4" />
-                        Appearance
+                        {t('tabAppearance')}
                       </TabsTrigger>
                       <TabsTrigger
                         value="position"
                         className="flex items-center gap-2"
                       >
                         <Settings className="h-4 w-4" />
-                        Position
+                        {t('tabPosition')}
                       </TabsTrigger>
                       <TabsTrigger
                         value="content"
                         className="flex items-center gap-2"
                       >
                         <MessageCircle className="h-4 w-4" />
-                        Content
+                        {t('tabContent')}
                       </TabsTrigger>
                       {/* <TabsTrigger
                         value="behavior"
@@ -1715,7 +1743,7 @@ export function EmbedTab() {
                       <Card>
                         <CardHeader className="mb-0 px-4 py-3">
                           <CardTitle className="text-sm font-medium text-gray-600">
-                            Visual Styling
+                            {t('visualStylingCard')}
                           </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-6 pt-2">
@@ -1725,7 +1753,7 @@ export function EmbedTab() {
                                 htmlFor="backgroundColor"
                                 className="text-sm text-gray-600"
                               >
-                                Background Color
+                                {t('backgroundColorLabel')}
                               </Label>
                               <div className="mt-2 flex gap-2">
                                 <Input
@@ -1763,7 +1791,7 @@ export function EmbedTab() {
                                 htmlFor="textColor"
                                 className="text-sm text-gray-600"
                               >
-                                Title Text Color
+                                {t('titleTextColorLabel')}
                               </Label>
                               <div className="mt-2 flex gap-2">
                                 <Input
@@ -1791,7 +1819,7 @@ export function EmbedTab() {
                                 htmlFor="subtitleTextColor"
                                 className="text-sm text-gray-600"
                               >
-                                Subtitle Text Color
+                                {t('subtitleTextColorLabel')}
                               </Label>
                               <div className="mt-2 flex gap-2">
                                 <Input
@@ -1829,7 +1857,7 @@ export function EmbedTab() {
                                 htmlFor="borderRadius"
                                 className="text-sm text-gray-600"
                               >
-                                Border Radius
+                                {t('borderRadiusLabel')}
                               </Label>
                               <div className="mt-2 flex gap-2">
                                 <Input
@@ -1855,7 +1883,7 @@ export function EmbedTab() {
                                 htmlFor="imageSize"
                                 className="text-sm text-gray-600"
                               >
-                                Image size
+                                {t('imageSizeLabel')}
                               </Label>
                               <div className="mt-2 flex gap-2">
                                 <Input
@@ -1878,7 +1906,7 @@ export function EmbedTab() {
                                 htmlFor="fontSize"
                                 className="text-sm text-gray-600"
                               >
-                                Title Font Size
+                                {t('titleFontSizeLabel')}
                               </Label>
                               <div className="mt-2 flex gap-2">
                                 <Input
@@ -1905,7 +1933,7 @@ export function EmbedTab() {
                                 htmlFor="subtitleFontSize"
                                 className="text-sm text-gray-600"
                               >
-                                Subtitle Font Size
+                                {t('subtitleFontSizeLabel')}
                               </Label>
                               <div className="mt-2 flex gap-2">
                                 <Input
@@ -1938,7 +1966,7 @@ export function EmbedTab() {
                                 htmlFor="shadow"
                                 className="text-sm text-gray-600"
                               >
-                                Use Shadow
+                                {t('useShadowLabel')}
                               </Label>
                               <div className="mt-2">
                                 <Select
@@ -1955,8 +1983,12 @@ export function EmbedTab() {
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    <SelectItem value={'1'}>Yes</SelectItem>
-                                    <SelectItem value={'0'}>No</SelectItem>
+                                    <SelectItem value={'1'}>
+                                      {t('yes')}
+                                    </SelectItem>
+                                    <SelectItem value={'0'}>
+                                      {t('no')}
+                                    </SelectItem>
                                   </SelectContent>
                                 </Select>
                               </div>
@@ -1966,7 +1998,7 @@ export function EmbedTab() {
                                 htmlFor="padding"
                                 className="text-sm text-gray-600"
                               >
-                                Padding
+                                {t('paddingLabel')}
                               </Label>
                               <div className="mt-2 flex gap-2">
                                 <Input
@@ -1988,7 +2020,7 @@ export function EmbedTab() {
                                 htmlFor="strokeWidth"
                                 className="text-sm text-gray-600"
                               >
-                                Stroke Thickness
+                                {t('strokeThicknessLabel')}
                               </Label>
                               <div className="mt-2 flex gap-2">
                                 <Input
@@ -2010,7 +2042,7 @@ export function EmbedTab() {
                                 htmlFor="strokeColor"
                                 className="text-sm text-gray-600"
                               >
-                                Stroke Color
+                                {t('strokeColorLabel')}
                               </Label>
                               <div className="mt-2 flex gap-2">
                                 <Input
@@ -2041,7 +2073,7 @@ export function EmbedTab() {
                       <Card>
                         <CardHeader className="mb-0 px-4 py-3">
                           <CardTitle className="text-sm font-medium text-gray-600">
-                            Position & Layout
+                            {t('positionLayoutCard')}
                           </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-6 pt-0">
@@ -2050,7 +2082,7 @@ export function EmbedTab() {
                               htmlFor="position"
                               className="text-sm text-gray-600"
                             >
-                              Screen Position
+                              {t('screenPositionLabel')}
                             </Label>
                             <div className="mt-2">
                               <Select
@@ -2064,16 +2096,16 @@ export function EmbedTab() {
                                 </SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="bottom-right">
-                                    Bottom Right
+                                    {t('bottomRight')}
                                   </SelectItem>
                                   <SelectItem value="bottom-left">
-                                    Bottom Left
+                                    {t('bottomLeft')}
                                   </SelectItem>
                                   <SelectItem value="top-right">
-                                    Top Right
+                                    {t('topRight')}
                                   </SelectItem>
                                   <SelectItem value="top-left">
-                                    Top Left
+                                    {t('topLeft')}
                                   </SelectItem>
                                 </SelectContent>
                               </Select>
@@ -2087,7 +2119,7 @@ export function EmbedTab() {
                       <Card>
                         <CardHeader className="mb-0 px-4 py-3">
                           <CardTitle className="text-sm font-medium text-gray-600">
-                            Text Content
+                            {t('textContentCard')}
                           </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4 pt-0">
@@ -2096,7 +2128,7 @@ export function EmbedTab() {
                               htmlFor="title"
                               className="text-sm text-gray-600"
                             >
-                              Title
+                              {t('titleInputLabel')}
                             </Label>
                             <Input
                               id="title"
@@ -2104,7 +2136,7 @@ export function EmbedTab() {
                               onChange={(e) =>
                                 updateConfig('title', e.target.value)
                               }
-                              placeholder="AI-powered assistant"
+                              placeholder={t('titleInputPlaceholder')}
                               className="mt-2"
                             />
                           </div>
@@ -2113,7 +2145,7 @@ export function EmbedTab() {
                               htmlFor="subtitle"
                               className="text-sm text-gray-600"
                             >
-                              Subtitle Text
+                              {t('subtitleTextLabel')}
                             </Label>
                             <Input
                               id="subtitle"
@@ -2121,7 +2153,7 @@ export function EmbedTab() {
                               onChange={(e) =>
                                 updateConfig('subtitle', e.target.value)
                               }
-                              placeholder="Created with Agentic OS"
+                              placeholder={t('subtitleInputPlaceholder')}
                               className="mt-2"
                             />
                           </div>
@@ -2131,7 +2163,7 @@ export function EmbedTab() {
                               htmlFor="iconImage"
                               className="text-sm text-gray-600"
                             >
-                              Icon Image
+                              {t('iconImageLabel')}
                             </Label>
                             <div className="mt-2 space-y-1">
                               <Input
@@ -2160,7 +2192,7 @@ export function EmbedTab() {
                                       customFloatingBubbleConfig.image ||
                                       '/placeholder.svg'
                                     }
-                                    alt="Chat icon preview"
+                                    alt={t('chatIconPreviewAlt')}
                                     className="h-12 w-12 rounded-lg border bg-gray-100 object-cover p-1"
                                   />
                                   <Button
@@ -2174,12 +2206,12 @@ export function EmbedTab() {
                                       })
                                     }
                                   >
-                                    Remove Image
+                                    {t('removeImage')}
                                   </Button>
                                 </div>
                               )}
                               <p className="text-xs text-gray-500">
-                                Upload a custom icon. Recommended size: 64x64px
+                                {t('uploadIconHint')}
                               </p>
                             </div>
                           </div>
@@ -2278,7 +2310,7 @@ export function EmbedTab() {
                   <Card>
                     <CardHeader className="mb-0 pt-4 pb-0">
                       <CardTitle className="text-sm font-medium text-gray-600">
-                        Live Preview
+                        {t('livePreview')}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -2301,7 +2333,7 @@ export function EmbedTab() {
             className="bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-sm text-white hover:text-white hover:opacity-90"
             disabled={form.state.isSubmitting}
           >
-            {form.state.isSubmitting ? 'Generating Embed' : 'Create Embed'}
+            {form.state.isSubmitting ? t('generatingEmbed') : t('createEmbed')}
           </Button>
         </div>
       </div>
@@ -2316,11 +2348,11 @@ export function EmbedTab() {
         >
           <DialogContent className="max-w-[425px] md:max-w-[85%]">
             <DialogDescription className="sr-only">
-              Generated embed code
+              {t('generatedEmbedCodeSrOnly')}
             </DialogDescription>
             <DialogHeader>
               <DialogTitle className="ibl-dialog-title">
-                Embedded Code
+                {t('embeddedCodeTitle')}
               </DialogTitle>
             </DialogHeader>
             <CopyCodeBlock code={embedCode} />
@@ -2338,6 +2370,7 @@ const InteractiveBubbleConfigDisplay = ({
   customFloatingBubbleConfig: Record<string, any>;
   handleFloatingBubbleImageError: () => void;
 }) => {
+  const t = useTranslations('tabsEmbedTab');
   return (
     <div className="relative min-h-[200px] overflow-hidden rounded-lg bg-gray-100 p-8">
       <div
@@ -2372,7 +2405,7 @@ const InteractiveBubbleConfigDisplay = ({
         >
           <Image
             src={customFloatingBubbleConfig.image}
-            alt="Chat icon"
+            alt={t('chatIconAlt')}
             //className="w-6 h-6"
             width={customFloatingBubbleConfig.imageSize}
             height={customFloatingBubbleConfig.imageSize}
@@ -2408,8 +2441,9 @@ const InteractiveBubbleConfigDisplay = ({
       </div>
       <div className="mt-8 text-center text-sm text-gray-500">
         <p>
-          Icon will appear on the{' '}
-          {customFloatingBubbleConfig.position.replace('-', ' ')} corner
+          {t('iconPositionHint', {
+            position: customFloatingBubbleConfig.position.replace('-', ' '),
+          })}
         </p>
       </div>
     </div>

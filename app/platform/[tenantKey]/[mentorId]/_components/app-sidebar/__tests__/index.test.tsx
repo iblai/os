@@ -429,7 +429,7 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
   selectSessionId: () => mockActiveSessionId,
 }));
 
-vi.mock('@iblai/iblai-js/web-containers', () => ({
+vi.mock('@iblai/web-containers', () => ({
   Admin: ({ initialTab }: { initialTab?: string }) => (
     <div data-testid="sdk-admin-tab" data-initial-tab={initialTab}>
       Admin SDK Tab

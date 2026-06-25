@@ -229,12 +229,12 @@ vi.mock('@iblai/iblai-api', () => ({
 }));
 
 const mockAgentConfigPrompts = vi.fn();
-// PromptsTab imports from `@iblai/iblai-js/web-containers` (the unified
+// PromptsTab imports from `@iblai/web-containers` (the unified
 // SDK barrel). Vitest keys mocks by module specifier — without mocking
 // the exact path the source uses, the real AgentConfigPrompts loads and
 // transitively imports the real `@iblai/data-layer`, which then needs
 // `CoreService` from `@iblai/iblai-api`.
-vi.mock('@iblai/iblai-js/web-containers', () => ({
+vi.mock('@iblai/web-containers', () => ({
   AgentConfigPrompts: (props: any) => {
     mockAgentConfigPrompts(props);
     return (

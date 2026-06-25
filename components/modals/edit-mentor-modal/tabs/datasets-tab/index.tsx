@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
 import { Search, Plus } from 'lucide-react';
 
@@ -31,6 +32,7 @@ export function DatasetsTab({
   onSelect,
   selectedDatasetId,
 }: DatasetsTabProps = {}) {
+  const t = useTranslations('datasetsTabIndex');
   const [showAddResourceModal, setShowAddResourceModal] = React.useState(false);
 
   const openAddResourceModal = () => setShowAddResourceModal(true);
@@ -69,10 +71,10 @@ export function DatasetsTab({
     <>
       <div className="flex h-[73px] flex-shrink-0 items-center border-b border-gray-200 bg-white p-4 lg:block">
         <div>
-          <h3 className="mb-1 text-base font-medium text-gray-900">Datasets</h3>
-          <p className="text-xs text-gray-600">
-            Manage training datasets and knowledge sources.
-          </p>
+          <h3 className="mb-1 text-base font-medium text-gray-900">
+            {t('heading')}
+          </h3>
+          <p className="text-xs text-gray-600">{t('subheading')}</p>
         </div>
       </div>
       <div
@@ -92,7 +94,7 @@ export function DatasetsTab({
               )}
               <Input
                 type="search"
-                placeholder="Search datasets..."
+                placeholder={t('searchPlaceholder')}
                 className="pl-8"
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
@@ -111,7 +113,7 @@ export function DatasetsTab({
                     className="cursor-pointer bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90"
                   >
                     <Plus className="h-4 w-4" />
-                    Add Resource
+                    {t('addResource')}
                   </Button>
                 ) : null
               }
@@ -129,22 +131,22 @@ export function DatasetsTab({
                     <TableHeader>
                       <TableRow className="bg-muted/50 border-b">
                         <TableHead className="p-3 text-left text-sm whitespace-nowrap text-[#646464]">
-                          NAME
+                          {t('columnName')}
                         </TableHead>
                         <TableHead className="p-3 text-left text-sm whitespace-nowrap text-[#646464]">
-                          TYPE
+                          {t('columnType')}
                         </TableHead>
                         <TableHead className="p-3 text-left text-sm whitespace-nowrap text-[#646464]">
-                          TOKENS
+                          {t('columnTokens')}
                         </TableHead>
                         <TableHead className="p-3 text-left text-sm whitespace-nowrap text-[#646464]">
-                          INTERVAL
+                          {t('columnInterval')}
                         </TableHead>
                         <TableHead className="p-3 text-left text-sm whitespace-nowrap text-[#646464]">
-                          VISIBILITY
+                          {t('columnVisibility')}
                         </TableHead>
                         <TableHead className="p-3 text-left text-sm whitespace-nowrap text-[#646464]">
-                          STATUS
+                          {t('columnStatus')}
                         </TableHead>
                       </TableRow>
                     </TableHeader>

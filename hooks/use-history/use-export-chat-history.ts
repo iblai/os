@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { format } from 'date-fns';
 
-import { useReports } from '@iblai/iblai-js/web-containers';
+import { useReports } from '@iblai/web-containers';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { useNavigate } from '@/hooks/user-navigate';
 import { ChatHistoryFilter } from '@/hooks/use-history';

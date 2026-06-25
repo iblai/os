@@ -2,6 +2,7 @@
 
 import type React from 'react';
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,6 +31,7 @@ export function ProjectItem({
   onRename,
   onDelete,
 }: ProjectItemProps) {
+  const t = useTranslations('appSidebarProjectItem');
   const [isHovered, setIsHovered] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
 
@@ -68,7 +70,7 @@ export function ProjectItem({
           {isOpen ? (
             <Image
               src="/icons/open-folder.svg"
-              alt="Open Folder"
+              alt={t('openFolder')}
               width={16}
               height={16}
               className={cn(isActive ? 'text-blue-600' : 'text-gray-500')}
@@ -76,7 +78,7 @@ export function ProjectItem({
           ) : (
             <Image
               src="/icons/projects.svg"
-              alt="Close Folder"
+              alt={t('closeFolder')}
               width={16}
               height={16}
               className={cn(isActive ? 'text-blue-600' : 'text-gray-500')}
@@ -121,11 +123,11 @@ export function ProjectItem({
             <DropdownMenuContent align="end" className="z-50">
               <DropdownMenuItem onClick={handleRename}>
                 <PenSquare className="mr-2 h-4 w-4" />
-                <span>Rename Project</span>
+                <span>{t('renameProject')}</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleDelete}>
                 <Trash2 className="mr-2 h-4 w-4" />
-                <span>Delete Project</span>
+                <span>{t('deleteProject')}</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

@@ -3,7 +3,7 @@
 // Prevent static generation - this page uses browser APIs
 export const dynamic = 'force-dynamic';
 
-import { AnalyticsTopicsStats } from '@iblai/iblai-js/web-containers';
+import { AnalyticsTopicsStats } from '@iblai/web-containers';
 import { useParams } from 'next/navigation';
 import { useSelector } from 'react-redux';
 import { selectSelectedMentor } from '@/features/analytics/slice';

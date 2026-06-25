@@ -34,7 +34,7 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
 
 // Mock TimeTrackingProvider to verify props
 const TimeTrackingProviderMock = vi.fn();
-vi.mock('@iblai/iblai-js/web-containers', () => ({
+vi.mock('@iblai/web-containers', () => ({
   TimeTrackingProvider: (props: Record<string, unknown>) => {
     TimeTrackingProviderMock(props);
     return null;

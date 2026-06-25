@@ -387,7 +387,7 @@ vi.mock('@/components/copy-code-block', () => ({
   ),
 }));
 
-vi.mock('@iblai/iblai-js/web-containers', () => ({
+vi.mock('@iblai/web-containers', () => ({
   Spinner: () => <div data-testid="spinner">Loading...</div>,
 }));
 

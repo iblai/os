@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useTranslations } from 'next-intl';
 import dynamic from 'next/dynamic';
 import {
   Dialog,
@@ -84,6 +85,7 @@ export function SavedMemoriesModal({
   tenantKey,
   username,
 }: SavedMemoriesModalProps) {
+  const t = useTranslations('memoryTabSavedMemoriesModal');
   const { mentorId } = useParams<TenantKeyMentorIdParams>();
 
   // API hooks
@@ -137,7 +139,7 @@ export function SavedMemoriesModal({
   const categories = useMemo(() => {
     if (adminCategories && adminCategories.length > 0) {
       return [
-        { id: 0, name: 'All', slug: 'all' },
+        { id: 0, name: t('categoryAll'), slug: 'all' },
         ...adminCategories.map((cat: MentorMemoryCategory) => ({
           id: cat.id,
           name: cat.name,
@@ -147,7 +149,7 @@ export function SavedMemoriesModal({
     }
 
     if (!memoriesByCategoryResponse)
-      return [{ id: 0, name: 'All', slug: 'all' }];
+      return [{ id: 0, name: t('categoryAll'), slug: 'all' }];
 
     const responseCats = memoriesByCategoryResponse.map((item) => ({
       id: item.category.id,
@@ -155,7 +157,7 @@ export function SavedMemoriesModal({
       slug: item.category.slug,
     }));
 
-    return [{ id: 0, name: 'All', slug: 'all' }, ...responseCats];
+    return [{ id: 0, name: t('categoryAll'), slug: 'all' }, ...responseCats];
   }, [adminCategories, memoriesByCategoryResponse]);
 
   const [selectedCategorySlug, setSelectedCategorySlug] = useState('all');
@@ -173,7 +175,8 @@ export function SavedMemoriesModal({
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   const selectedCategoryName =
-    categories.find((c) => c.slug === selectedCategorySlug)?.name ?? 'All';
+    categories.find((c) => c.slug === selectedCategorySlug)?.name ??
+    t('categoryAll');
 
   const filteredMemories =
     selectedCategorySlug === 'all'
@@ -193,10 +196,10 @@ export function SavedMemoriesModal({
         memoryId: id,
       }).unwrap();
       setShowDeleteConfirm(null);
-      toast.success('Memory deleted successfully');
+      toast.success(t('toastMemoryDeleted'));
     } catch (error) {
       console.error('Failed to delete memory:', error);
-      toast.error('Failed to delete memory');
+      toast.error(t('toastMemoryDeleteFailed'));
     }
   };
 
@@ -219,12 +222,12 @@ export function SavedMemoriesModal({
         ),
       );
       toast.success(
-        `All ${selectedCategoryName} memories deleted successfully`,
+        t('toastBulkMemoriesDeleted', { category: selectedCategoryName }),
       );
       setShowBulkDeleteConfirm(false);
     } catch (error) {
       console.error('Failed to delete memories:', error);
-      toast.error('Failed to delete memories');
+      toast.error(t('toastBulkMemoriesDeleteFailed'));
     } finally {
       setIsBulkDeleting(false);
     }
@@ -253,14 +256,14 @@ export function SavedMemoriesModal({
             : {}),
         },
       }).unwrap();
-      toast.success('Memory updated successfully');
+      toast.success(t('toastMemoryUpdated'));
 
       setEditingMemory(null);
       setEditContent('');
       setEditCategory('');
     } catch (error) {
       console.error('Failed to update memory:', error);
-      toast.error('Failed to update memory');
+      toast.error(t('toastMemoryUpdateFailed'));
     }
   };
 
@@ -298,10 +301,10 @@ export function SavedMemoriesModal({
       if (selectedCat) {
         setSelectedCategorySlug(selectedCat.slug);
       }
-      toast.success('Memory created successfully');
+      toast.success(t('toastMemoryCreated'));
     } catch (error) {
       console.error('Failed to create memory:', error);
-      toast.error('Failed to create memory');
+      toast.error(t('toastMemoryCreateFailed'));
     }
   };
 
@@ -319,7 +322,7 @@ export function SavedMemoriesModal({
         <DialogHeader className="space-y-0">
           <div className="">
             <DialogTitle className="text-md font-medium">
-              Saved Memories
+              {t('title')}
             </DialogTitle>
           </div>
         </DialogHeader>
@@ -391,15 +394,15 @@ export function SavedMemoriesModal({
               className="ibl-button-primary shrink-0"
             >
               <Plus className="mr-1 h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Add Memory</span>
-              <span className="sm:hidden">Add</span>
+              <span className="hidden sm:inline">{t('addMemoryButton')}</span>
+              <span className="sm:hidden">{t('addMemoryButtonShort')}</span>
             </Button>
           </div>
 
           <div className="max-h-96 space-y-3 overflow-y-auto px-1 sm:px-0">
             {isLoadingMemories ? (
               <div className="text-muted-foreground py-8 text-center">
-                <p>Loading memories...</p>
+                <p>{t('loadingMemories')}</p>
               </div>
             ) : (
               filteredMemories.map((memory) => (
@@ -422,12 +425,12 @@ export function SavedMemoriesModal({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => startEdit(memory)}>
-                        Edit
+                        {t('menuEdit')}
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => setShowDeleteConfirm(memory.id)}
                       >
-                        Delete
+                        {t('menuDelete')}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -442,14 +445,14 @@ export function SavedMemoriesModal({
                 variant="outline"
                 onClick={() => setShowBulkDeleteConfirm(true)}
               >
-                Delete All
+                {t('deleteAllButton')}
               </Button>
             </div>
           )}
 
           {filteredMemories.length === 0 && !isLoadingMemories && (
             <div className="text-muted-foreground py-8 text-center">
-              <p>No saved memories yet.</p>
+              <p>{t('emptyState')}</p>
             </div>
           )}
         </div>

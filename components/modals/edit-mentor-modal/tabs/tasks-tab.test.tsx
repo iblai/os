@@ -35,11 +35,11 @@ vi.mock('@/lib/config', () => ({
   },
 }));
 
-// TasksTab imports from `@iblai/iblai-js/web-containers/next` (the Next-only
+// TasksTab imports from `@iblai/web-containers/next` (the Next-only
 // entry — that's where AgentTasksTab / AgentSettingsProvider are actually
 // exported). Vitest keys mocks by module specifier, so we mock the exact path
 // the source uses.
-vi.mock('@iblai/iblai-js/web-containers/next', () => ({
+vi.mock('@iblai/web-containers/next', () => ({
   AgentSettingsProvider: ({
     children,
     ...value

@@ -1,5 +1,7 @@
 import React, { useEffect } from 'react';
 
+import { useTranslations } from 'next-intl';
+
 import {
   BadgeHelp,
   CircleUser,
@@ -55,6 +57,7 @@ export function EmbedNavBar({
   openSidebar,
   tenantKey,
 }: Props) {
+  const t = useTranslations('navBarEmbedNavBar');
   const username = useUsername();
   const isPreviewMode = useIsPreviewMode();
   const isIframed = useIsIframed();
@@ -97,7 +100,7 @@ export function EmbedNavBar({
     ...(metadata?.show_help !== false
       ? [
           {
-            label: 'Help',
+            labelKey: 'help' as const,
             icon: BadgeHelp,
             onClick: () => {
               window.open(
@@ -111,7 +114,7 @@ export function EmbedNavBar({
         ]
       : []),
     {
-      label: 'Support',
+      labelKey: 'support' as const,
       icon: ShieldQuestion,
       onClick: () => {
         window.open(
@@ -126,14 +129,14 @@ export function EmbedNavBar({
     ...(username
       ? [
           {
-            label: username ?? '',
+            labelKey: username ?? '',
             icon: CircleUser,
             onClick: () => {},
           },
         ]
       : []),
     /* {
-      label: 'theme mode',
+      labelKey: 'theme mode',
       icon: currentTheme === 'light' ? Moon : Sun,
       onClick: () => {
         setCurrentTheme(currentTheme === 'light' ? 'dark' : 'light');
@@ -154,14 +157,14 @@ export function EmbedNavBar({
                 size="icon"
                 className="cursor-pointer"
                 onClick={toggleSidebar}
-                aria-label={openSidebar ? 'Close sidebar' : 'Open sidebar'}
+                aria-label={openSidebar ? t('closeSidebar') : t('openSidebar')}
                 data-testid="(Close|Open) sidebar"
               >
                 <Menu className="h-5 w-5" />
               </Button>
             </TooltipTrigger>
             <TooltipContent className="ibl-tooltip-content" side="right">
-              Toggle Sidebar
+              {t('toggleSidebar')}
             </TooltipContent>
           </Tooltip>
         )}
@@ -174,7 +177,7 @@ export function EmbedNavBar({
             dispatch(chatActions.setShouldStartNewChat(true));
           }}
           className="flex cursor-pointer items-center gap-4"
-          aria-label={`Start new chat with ${mentorName}`}
+          aria-label={t('startNewChat', { mentorName })}
         >
           <Avatar
             className={cn(
@@ -198,25 +201,25 @@ export function EmbedNavBar({
                 variant="ghost"
                 size="icon"
                 className="rounded-full"
-                aria-label="Open menu options"
+                aria-label={t('openMenuOptions')}
                 aria-haspopup="menu"
               >
                 <EllipsisVertical className="h-5 w-5" />
-                <span className="sr-only">Menu options</span>
+                <span className="sr-only">{t('menuOptions')}</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
               {helpItems.map((item) => (
                 <DropdownMenuItem
                   className="h-10"
-                  key={item.label}
+                  key={item.labelKey}
                   onClick={() => {
                     // if (isPreviewMode) return;
                     item.onClick();
                   }}
                 >
                   <item.icon className="h-7 w-7" />
-                  {item.label}
+                  {t(item.labelKey)}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
@@ -229,27 +232,29 @@ export function EmbedNavBar({
                   variant="ghost"
                   size="icon"
                   className="rounded-full"
-                  aria-label="Open settings menu"
+                  aria-label={t('openSettingsMenu')}
                   aria-haspopup="menu"
                   onClick={() => {
                     if (isPreviewMode) return;
                   }}
                 >
                   <Settings className="h-5 w-5" />
-                  <span className="sr-only">Settings menu</span>
+                  <span className="sr-only">{t('settingsMenu')}</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 {advancedChatSettings.map((item) => (
                   <DropdownMenuItem
-                    key={item.label}
+                    key={item.labelKey}
                     onClick={() => {
                       if (isPreviewMode) return;
                       item.onClick();
                     }}
                   >
                     <item.icon className="h-7 w-7" />
-                    {item.label}
+                    {item.labelKey === 'help' || item.labelKey === 'support'
+                      ? t(item.labelKey)
+                      : item.labelKey}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
@@ -261,14 +266,14 @@ export function EmbedNavBar({
             variant="ghost"
             size="icon"
             className="rounded-full"
-            aria-label="Close chat"
+            aria-label={t('closeChat')}
             onClick={() => {
               if (isPreviewMode) return;
               notifyParentOnEmbedClose();
             }}
           >
             <X className="h-5 w-5" />
-            <span className="sr-only">Close chat</span>
+            <span className="sr-only">{t('closeChat')}</span>
           </Button>
         )}
       </div>

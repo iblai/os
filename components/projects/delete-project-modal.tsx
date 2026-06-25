@@ -14,6 +14,7 @@ import { TenantKeyMentorIdParams } from '@/lib/types';
 import { useDeleteUserProjectMutation } from '@iblai/iblai-js/data-layer';
 import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { useTranslations } from 'next-intl';
 
 interface DeleteProjectModalProps {
   isOpen: boolean;
@@ -30,6 +31,7 @@ export function DeleteProjectModal({
   projectName,
   onSuccess,
 }: DeleteProjectModalProps) {
+  const t = useTranslations('projectsDeleteProjectModal');
   const router = useRouter();
   const [deleteProject, { isLoading }] = useDeleteUserProjectMutation();
   const { tenantKey } = useParams<TenantKeyMentorIdParams>();
@@ -50,7 +52,7 @@ export function DeleteProjectModal({
       // Wait for the modal to close to avoid race conditions
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      toast.success('Project deleted successfully');
+      toast.success(t('toastDeleteSuccess'));
 
       onSuccess?.();
 
@@ -61,7 +63,7 @@ export function DeleteProjectModal({
       }
     } catch (error) {
       console.error(JSON.stringify(error));
-      toast.error('Failed to delete project');
+      toast.error(t('toastDeleteError'));
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     }
   };
@@ -70,11 +72,9 @@ export function DeleteProjectModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="space-y-1">
         <DialogHeader>
-          <DialogTitle className="mb-4">Delete Project</DialogTitle>
+          <DialogTitle className="mb-4">{t('dialogTitle')}</DialogTitle>
           <DialogDescription>
-            Are you sure you want to delete "{projectName}"? This action cannot
-            be undone and will permanently remove the project and all associated
-            data including chats, files, and settings.
+            {t('dialogDescription', { projectName })}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
@@ -84,7 +84,7 @@ export function DeleteProjectModal({
             disabled={isLoading}
             className="ibl-button-primary"
           >
-            Cancel
+            {t('cancelButton')}
           </Button>
           <Button
             variant="outline"
@@ -95,7 +95,7 @@ export function DeleteProjectModal({
             disabled={isLoading}
             className="border-input bg-background text-accent-foreground hover:bg-accent hover:text-accent-foreground border"
           >
-            {isLoading ? 'Deleting...' : 'Delete Project'}
+            {isLoading ? t('deletingButton') : t('deleteButton')}
           </Button>
         </DialogFooter>
       </DialogContent>

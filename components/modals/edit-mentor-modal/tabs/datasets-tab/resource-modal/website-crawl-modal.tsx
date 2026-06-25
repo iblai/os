@@ -13,12 +13,14 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { X, Plus } from 'lucide-react';
 import { useWebsiteCrawlerResource } from '@/hooks/use-website-crawler-resource';
+import { useTranslations } from 'next-intl';
 
 type Props = {
   resource: ResourceType;
 };
 
 export function WebsiteCrawlModal({ resource }: Props) {
+  const t = useTranslations('resourceModalWebsiteCrawlModal');
   const {
     form,
     handleCheckUrlIsValid,
@@ -38,10 +40,10 @@ export function WebsiteCrawlModal({ resource }: Props) {
           id="crawler-title"
           className="text-md font-semibold text-gray-600"
         >
-          Web Crawler Configuration
+          {t('title')}
         </CardTitle>
         <p id="crawler-description" className="text-muted-foreground text-sm">
-          Configure your web crawler settings and URL patterns
+          {t('description')}
         </p>
       </CardHeader>
       <CardContent>
@@ -52,20 +54,20 @@ export function WebsiteCrawlModal({ resource }: Props) {
             e.stopPropagation();
             form.handleSubmit();
           }}
-          aria-label="Web crawler configuration form"
+          aria-label={t('formAriaLabel')}
         >
           <>
             <form.Field
               name="url"
               validators={{
                 onChange: ({ value }) =>
-                  (!value && 'URL is required') ||
-                  (!handleCheckUrlIsValid(value) && 'Invalid URL'),
+                  (!value && t('urlRequired')) ||
+                  (!handleCheckUrlIsValid(value) && t('invalidUrl')),
               }}
             >
               {(field) => (
                 <div className="grid gap-2">
-                  <Label htmlFor={field.name}>URL</Label>
+                  <Label htmlFor={field.name}>{t('urlLabel')}</Label>
                   <Input
                     id={field.name}
                     type="url"
@@ -98,14 +100,16 @@ export function WebsiteCrawlModal({ resource }: Props) {
                 name="crawler_max_depth"
                 validators={{
                   onChange: ({ value }) =>
-                    (!value && 'Field is required') ||
-                    (value < 1 && 'Must be greater than 0') ||
-                    (value > 10000 && 'Must be less than 10000'),
+                    (!value && t('fieldRequired')) ||
+                    (value < 1 && t('mustBeGreaterThanZero')) ||
+                    (value > 10000 && t('mustBeLessThan10000')),
                 }}
               >
                 {(field) => (
                   <div className="grid gap-2">
-                    <Label htmlFor={field.name}>Max Crawl Depth</Label>
+                    <Label htmlFor={field.name}>
+                      {t('maxCrawlDepthLabel')}
+                    </Label>
                     <Input
                       id={field.name}
                       type="number"
@@ -139,13 +143,15 @@ export function WebsiteCrawlModal({ resource }: Props) {
                 name="crawler_max_pages_limit"
                 validators={{
                   onChange: ({ value }) =>
-                    (!value && 'Field is required') ||
-                    (value < 1 && 'Must be greater than 0'),
+                    (!value && t('fieldRequired')) ||
+                    (value < 1 && t('mustBeGreaterThanZero')),
                 }}
               >
                 {(field) => (
                   <div className="grid gap-2">
-                    <Label htmlFor={field.name}>Max Pages Limit</Label>
+                    <Label htmlFor={field.name}>
+                      {t('maxPagesLimitLabel')}
+                    </Label>
                     <Input
                       id={field.name}
                       type="number"
@@ -178,20 +184,22 @@ export function WebsiteCrawlModal({ resource }: Props) {
             <form.Field name="crawler_pattern_type">
               {(field) => (
                 <div className="grid gap-2">
-                  <Label htmlFor="pattern-type">Pattern Type</Label>
+                  <Label htmlFor="pattern-type">{t('patternTypeLabel')}</Label>
                   <Select
                     value={field.state.value}
                     onValueChange={(value) => field.handleChange(value)}
                   >
                     <SelectTrigger
                       id="pattern-type"
-                      aria-label="Select pattern type"
+                      aria-label={t('selectPatternTypeAriaLabel')}
                     >
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="glob">Glob Pattern</SelectItem>
-                      <SelectItem value="regex">Regular Expression</SelectItem>
+                      <SelectItem value="glob">{t('globPattern')}</SelectItem>
+                      <SelectItem value="regex">
+                        {t('regularExpression')}
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -211,13 +219,13 @@ export function WebsiteCrawlModal({ resource }: Props) {
                       value &&
                       crawlerPatternType === 'glob' &&
                       !handleCheckUrlIsValid(value) &&
-                      'Invalid URL',
+                      t('invalidUrl'),
                   }}
                 >
                   {(field) => (
                     <div className="grid gap-2">
                       <Label htmlFor="pattern-input">
-                        Crawler Match Patterns
+                        {t('crawlerMatchPatternsLabel')}
                       </Label>
                       <div className="space-y-3">
                         <div className="flex gap-2">
@@ -263,7 +271,7 @@ export function WebsiteCrawlModal({ resource }: Props) {
                             }}
                             disabled={!String(tempCrawlerMatchPatterns).trim()}
                             size="sm"
-                            aria-label="Add pattern"
+                            aria-label={t('addPatternAriaLabel')}
                           >
                             <Plus className="h-4 w-4" />
                           </Button>
@@ -281,16 +289,16 @@ export function WebsiteCrawlModal({ resource }: Props) {
                           id="pattern-help"
                           className="text-muted-foreground text-sm"
                         >
-                          Press Enter or click the plus button to add a pattern
+                          {t('patternHelpText')}
                         </p>
                         <div
                           className="bg-muted/50 flex min-h-[2rem] flex-wrap gap-2 rounded-md border p-2"
                           role="list"
-                          aria-label="Added crawler match patterns"
+                          aria-label={t('addedPatternsAriaLabel')}
                         >
                           {crawlerMatchPatterns.length === 0 ? (
                             <span className="text-muted-foreground text-sm">
-                              No patterns added
+                              {t('noPatternsAdded')}
                             </span>
                           ) : (
                             crawlerMatchPatterns.map((pattern, index) => (
@@ -311,7 +319,9 @@ export function WebsiteCrawlModal({ resource }: Props) {
                                     )
                                   }
                                   className="hover:bg-destructive/20 ml-1 rounded-full p-0.5"
-                                  aria-label={`Remove pattern: ${pattern}`}
+                                  aria-label={t('removePatternAriaLabel', {
+                                    pattern,
+                                  })}
                                 >
                                   <X className="h-3 w-3" />
                                 </button>
@@ -336,7 +346,7 @@ export function WebsiteCrawlModal({ resource }: Props) {
                       isSubmitting ? 'submitting-status' : undefined
                     }
                   >
-                    {isSubmitting ? 'Submitting...' : 'Submit'}
+                    {isSubmitting ? t('submitting') : t('submit')}
                   </Button>
                   {isSubmitting && (
                     <div
@@ -345,7 +355,7 @@ export function WebsiteCrawlModal({ resource }: Props) {
                       role="status"
                       aria-live="polite"
                     >
-                      Form is being submitted
+                      {t('formBeingSubmitted')}
                     </div>
                   )}
                 </div>
