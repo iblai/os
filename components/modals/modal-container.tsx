@@ -18,15 +18,18 @@ import { SettingsModal } from '@/components/modals/settings-modal';
 import { EditMentorModal } from '@/components/modals/edit-mentor-modal';
 // import { CreateMentorModal } from '@/components/modals/create-mentor-modal';
 import { CustomAlertDialog } from '../custom-alert-dialog';
-import { UpgradePackageModal } from '@iblai/web-containers';
+import { UpgradePackageModal } from '@iblai/iblai-js/web-containers';
 import { setOpenPricingModal } from '@/features/subscription/subscription-slice';
 import {
   setOpenAppleRestrictionModal,
   type AppleRestrictionState,
 } from '@iblai/iblai-js/web-utils';
-import { AppleRestrictionModal } from '@iblai/web-containers';
+import { AppleRestrictionModal } from '@iblai/iblai-js/web-containers';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
-import { InvitedUsersDialog, InviteUserDialog } from '@iblai/web-containers';
+import {
+  InvitedUsersDialog,
+  InviteUserDialog,
+} from '@iblai/iblai-js/web-containers';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { useParams } from 'next/navigation';
 import { ShortcutsModal } from './shortcuts-modal';

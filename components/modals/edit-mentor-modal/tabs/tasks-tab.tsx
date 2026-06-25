@@ -4,7 +4,7 @@ import { useParams } from 'next/navigation';
 import {
   AgentSettingsProvider,
   AgentTasksTab,
-} from '@iblai/web-containers/next';
+} from '@iblai/iblai-js/web-containers/next';
 
 import { useNavigate } from '@/hooks/user-navigate';
 import { useUsername } from '@/hooks/use-user';

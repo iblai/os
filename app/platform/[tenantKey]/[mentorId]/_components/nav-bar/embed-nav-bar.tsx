@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 
 import { useTranslations } from 'next-intl';
 
@@ -11,6 +12,8 @@ import {
   ShieldQuestion,
   X,
 } from 'lucide-react';
+
+import { ChatPrivacyToggle } from '@iblai/iblai-js/web-containers';
 
 import { Button } from '@/components/ui/button';
 import { useIsPreviewMode } from '@/hooks/use-is-preview-mode';
@@ -46,6 +49,7 @@ type Props = {
   toggleSidebar: () => void;
   openSidebar: boolean;
   tenantKey: string;
+  mentorId: string;
 };
 
 export function EmbedNavBar({
@@ -56,6 +60,7 @@ export function EmbedNavBar({
   toggleSidebar,
   openSidebar,
   tenantKey,
+  mentorId,
 }: Props) {
   const t = useTranslations('navBarEmbedNavBar');
   const username = useUsername();
@@ -63,6 +68,13 @@ export function EmbedNavBar({
   const isIframed = useIsIframed();
   const chatMode = useChatMode();
   const dispatch = useAppDispatch();
+  const pathname = usePathname();
+  const isWorkflowsPage = /\/workflows\/[^/]+\/?$/.test(pathname ?? '');
+  const isOnChatPage =
+    !pathname?.includes('/prompt-gallery') &&
+    !pathname?.includes('/analytics') &&
+    !pathname?.includes('/explore') &&
+    !isWorkflowsPage;
 
   const { metadata } = useTenantMetadata({
     org: tenantKey,
@@ -193,39 +205,47 @@ export function EmbedNavBar({
           <span className="text-sm font-bold text-gray-800">{mentorName}</span>
         </button>
 
-        {/* Close button */}
-        {chatMode === 'default' ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild className="ml-auto">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="rounded-full"
-                aria-label={t('openMenuOptions')}
-                aria-haspopup="menu"
-              >
-                <EllipsisVertical className="h-5 w-5" />
-                <span className="sr-only">{t('menuOptions')}</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              {helpItems.map((item) => (
-                <DropdownMenuItem
-                  className="h-10"
-                  key={item.labelKey}
-                  onClick={() => {
-                    // if (isPreviewMode) return;
-                    item.onClick();
-                  }}
+        <div className="ml-auto flex items-center gap-2">
+          {isOnChatPage && isLoggedIn() && tenantKey && (
+            <ChatPrivacyToggle
+              org={tenantKey}
+              userId={username ?? ''}
+              mentor={mentorId}
+              className="inline-flex max-md:[&>span]:hidden"
+            />
+          )}
+
+          {chatMode === 'default' ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-full"
+                  aria-label={t('openMenuOptions')}
+                  aria-haspopup="menu"
                 >
-                  <item.icon className="h-7 w-7" />
-                  {t(item.labelKey)}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : (
-          <div className="ml-auto flex items-center gap-2">
+                  <EllipsisVertical className="h-5 w-5" />
+                  <span className="sr-only">{t('menuOptions')}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {helpItems.map((item) => (
+                  <DropdownMenuItem
+                    className="h-10"
+                    key={item.labelKey}
+                    onClick={() => {
+                      // if (isPreviewMode) return;
+                      item.onClick();
+                    }}
+                  >
+                    <item.icon className="h-7 w-7" />
+                    {t(item.labelKey)}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -259,23 +279,24 @@ export function EmbedNavBar({
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-          </div>
-        )}
-        {isIframed && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-full"
-            aria-label={t('closeChat')}
-            onClick={() => {
-              if (isPreviewMode) return;
-              notifyParentOnEmbedClose();
-            }}
-          >
-            <X className="h-5 w-5" />
-            <span className="sr-only">{t('closeChat')}</span>
-          </Button>
-        )}
+          )}
+
+          {isIframed && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full"
+              aria-label={t('closeChat')}
+              onClick={() => {
+                if (isPreviewMode) return;
+                notifyParentOnEmbedClose();
+              }}
+            >
+              <X className="h-5 w-5" />
+              <span className="sr-only">{t('closeChat')}</span>
+            </Button>
+          )}
+        </div>
       </div>
     </nav>
   );

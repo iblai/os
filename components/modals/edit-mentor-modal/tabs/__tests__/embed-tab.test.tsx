@@ -48,7 +48,6 @@ vi.mock('next/navigation', () => ({
 // next/image
 vi.mock('next/image', () => ({
   default: ({ src, alt, onError, onClick, ...props }: any) => (
-    // eslint-disable-next-line @next/next/no-img-element
     <img src={src} alt={alt} onError={onError} onClick={onClick} {...props} />
   ),
 }));
@@ -88,7 +87,7 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
   useTenantMetadata: (args: unknown) => mockUseTenantMetadata(args),
 }));
 
-vi.mock('@iblai/web-containers', () => ({
+vi.mock('@iblai/iblai-js/web-containers', () => ({
   Spinner: () => <div data-testid="spinner">Loading...</div>,
 }));
 

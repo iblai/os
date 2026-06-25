@@ -9,7 +9,7 @@ import {
   useLazyGetRecentMessageQuery,
   useLazyGetVectorDocumentsQuery,
 } from '@iblai/iblai-js/data-layer';
-import { useIframeMessageHandler } from '@iblai/web-containers';
+import { useIframeMessageHandler } from '@iblai/iblai-js/web-containers';
 import { useParams } from 'next/navigation';
 import { useEffect } from 'react';
 import { MessageBridgeProvider } from './message-bridge-provider';

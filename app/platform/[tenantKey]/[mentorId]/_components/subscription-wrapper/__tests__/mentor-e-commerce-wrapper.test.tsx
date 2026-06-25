@@ -20,7 +20,7 @@ vi.mock('@/hooks/subscription/use-top-banner-button-handler', () => ({
   useTopBannerButtonHandler: () => mockGetTopBannerButtonHandler,
 }));
 
-vi.mock('@iblai/web-containers', () => ({
+vi.mock('@iblai/iblai-js/web-containers', () => ({
   TopBanner: (props: any) => {
     lastTopBannerProps = props;
     // Capture the ref via onLoad with a fake banner element

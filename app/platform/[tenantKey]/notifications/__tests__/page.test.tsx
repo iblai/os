@@ -15,7 +15,7 @@ vi.mock('@/lib/hooks', () => ({
   useAppSelector: () => ({}),
 }));
 
-vi.mock('@iblai/web-containers', () => ({
+vi.mock('@iblai/iblai-js/web-containers', () => ({
   NotificationDisplay: () => <div data-testid="notification-display" />,
 }));
 

@@ -74,7 +74,7 @@ vi.mock('next/image', () => ({
 }));
 
 // Avoid pulling the heavy rich-text editor (and its transitive deps).
-vi.mock('@iblai/web-containers', () => ({
+vi.mock('@iblai/iblai-js/web-containers', () => ({
   RichTextEditor: ({
     value,
     onChange,

@@ -41,7 +41,7 @@ vi.mock('@/hooks/user-user-actions', () => ({
 }));
 
 // Mock RichTextEditor
-vi.mock('@iblai/web-containers', () => ({
+vi.mock('@iblai/iblai-js/web-containers', () => ({
   RichTextEditor: ({
     value,
     onChange,

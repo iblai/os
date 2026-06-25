@@ -13,7 +13,7 @@ vi.mock('react-redux', () => ({
   useSelector: (selector: any) => mockUseSelector(selector),
 }));
 
-vi.mock('@iblai/web-containers', () => ({
+vi.mock('@iblai/iblai-js/web-containers', () => ({
   AnalyticsOverview: vi.fn(({ tenantKey, mentorId, selectedMentorId }) => (
     <div data-testid="analytics-overview">
       <span data-testid="tenant-key">{tenantKey}</span>

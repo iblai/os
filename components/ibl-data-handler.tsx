@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
-import { initializeLocalStorageWithObject } from '@iblai/web-containers/next';
+import { initializeLocalStorageWithObject } from '@iblai/iblai-js/web-containers/next';
 import { LOCAL_STORAGE_KEYS } from '@/lib/constants';
 
 /**

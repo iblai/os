@@ -20,8 +20,11 @@ export class SettingsTab {
   readonly advancedSandboxToggle: Locator;
   readonly chatAccessCombobox: Locator;
   readonly memoryToggle: Locator;
+  readonly verboseReasoningToggle: Locator;
   readonly enhanceDocumentRetrievalToggle: Locator;
   readonly enhanceDocumentRetrievalTooltipTrigger: Locator;
+  readonly promptCachingToggle: Locator;
+  readonly promptCachingTooltipTrigger: Locator;
   /**
    * Voice-call toggle: persists `use_function_calling_for_rag` on the
    * mentor's CallConfiguration. Resolved via `data-testid` so the
@@ -36,6 +39,17 @@ export class SettingsTab {
   readonly enableVideoToggle: Locator;
   /** "Enable file attachments" toggle (Capabilities sub-tab, feat/1902) */
   readonly allowFileAttachmentsToggle: Locator;
+  /**
+   * "Filter PII from messages" — agent-level toggle for the privacy router
+   * (`mentor.enable_privacy_router`). Lives in the Capabilities sub-tab.
+   * Previously this lived as the master switch inside the Privacy tab body;
+   * that switch was removed from the SDK and the master state is now
+   * controlled exclusively from here. Privacy-tab field rendering is gated
+   * on the new value of `enable_privacy_router` so flipping this toggle on
+   * is the precondition for any Privacy-tab assertion that reads the
+   * action select / entity chips / output filter.
+   */
+  readonly enablePrivacyRouterToggle: Locator;
 
   constructor(page: Page, dialog: Locator) {
     this.page = page;
@@ -95,12 +109,25 @@ export class SettingsTab {
     this.memoryToggle = dialog.getByRole('switch', {
       name: /remember past conversations/i,
     });
-    // Capabilities sub-tab. Renamed visible label "Enhanced document retrieval".
+    // Capabilities sub-tab. The "Enable verbose reasoning" toggle (show_reasoning);
+    // aria-label is "Enable verbose reasoning enabled" / "Enable verbose reasoning disabled"
+    // depending on current state.
+    this.verboseReasoningToggle = dialog.getByRole('switch', {
+      name: /^Enable verbose reasoning /i,
+    });
+    // Capabilities sub-tab. Renamed visible label "Enable enhanced document retrieval".
     this.enhanceDocumentRetrievalToggle = dialog.getByRole('switch', {
-      name: /enhanced document retrieval/i,
+      name: /enable enhanced document retrieval/i,
     });
     this.enhanceDocumentRetrievalTooltipTrigger = dialog.getByRole('button', {
-      name: 'More info about enhanced document retrieval',
+      name: 'More info about enable enhanced document retrieval',
+    });
+    // Capabilities sub-tab. Label: "Enable prompt caching".
+    this.promptCachingToggle = dialog.getByRole('switch', {
+      name: /enable prompt caching/i,
+    });
+    this.promptCachingTooltipTrigger = dialog.getByRole('button', {
+      name: 'More info about enable prompt caching',
     });
     this.useFunctionCallingForRagToggle = dialog.getByTestId(
       'settings-use-function-calling-for-rag-switch',
@@ -109,6 +136,12 @@ export class SettingsTab {
     // Capabilities sub-tab. Labelled "Enable file attachments" (feat/1902).
     this.allowFileAttachmentsToggle = dialog.getByRole('switch', {
       name: /enable file attachments/i,
+    });
+    // Capabilities sub-tab. Labelled "Filter PII from messages" — the only
+    // surface that flips `enable_privacy_router` after the SDK removed the
+    // in-tab master toggle from the Privacy tab.
+    this.enablePrivacyRouterToggle = dialog.getByRole('switch', {
+      name: /filter PII from messages/i,
     });
   }
 
@@ -123,7 +156,7 @@ export class SettingsTab {
     return attr === 'true';
   }
 
-  /** Whether the "Smart document retrieval" toggle is currently on. */
+  /** Whether the "Enable smart document retrieval" toggle is currently on. */
   async isUseFunctionCallingForRagEnabled(): Promise<boolean> {
     return this.readSwitchState(this.useFunctionCallingForRagToggle);
   }
@@ -160,12 +193,12 @@ export class SettingsTab {
 
     await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
     await this.saveButton.click();
-    await expect(this.page.getByText('Agent updated successfully')).toBeVisible(
-      { timeout: 30_000 },
-    );
+    await expect(
+      this.page.getByText(/agent updated successfully/i).first(),
+    ).toBeVisible({ timeout: 30_000 });
   }
 
-  /** Idempotently toggle "Smart document retrieval" + Save. */
+  /** Idempotently toggle "Enable smart document retrieval" + Save. */
   async setUseFunctionCallingForRagAndSave(target: boolean): Promise<void> {
     // Lives in the Capabilities sub-tab — switch there before interacting.
     await this.selectSubTab('Capabilities');
@@ -184,9 +217,48 @@ export class SettingsTab {
 
     await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
     await this.saveButton.click();
-    await expect(this.page.getByText('Agent updated successfully')).toBeVisible(
-      { timeout: 30_000 },
+    await expect(
+      this.page.getByText(/agent updated successfully/i).first(),
+    ).toBeVisible({ timeout: 30_000 });
+  }
+
+  /** Read the current state of the "Filter PII from messages" switch. */
+  async isEnablePrivacyRouterEnabled(): Promise<boolean> {
+    return this.readSwitchState(this.enablePrivacyRouterToggle);
+  }
+
+  /**
+   * Idempotently flip "Filter PII from messages" + Save. This is the only
+   * surface that mutates `enable_privacy_router` after the SDK removed the
+   * in-Privacy-tab master switch. The Privacy tab's field rendering is
+   * gated on the new value, so the journey-45 PrivacyTab page-object
+   * delegates here for every router flip.
+   *
+   * Resolves after the "Agent updated successfully" toast appears so the
+   * caller can immediately switch back to the Privacy tab and read the
+   * updated render shape — RTK Query has already invalidated the relevant
+   * tags by then.
+   */
+  async setEnablePrivacyRouterAndSave(target: boolean): Promise<void> {
+    await this.selectSubTab('Capabilities');
+    await expect(this.enablePrivacyRouterToggle).toBeVisible({
+      timeout: 10_000,
+    });
+    const isOn = await this.isEnablePrivacyRouterEnabled();
+    if (isOn === target) return;
+
+    await this.enablePrivacyRouterToggle.click();
+    await expect(this.enablePrivacyRouterToggle).toHaveAttribute(
+      'aria-checked',
+      String(target),
+      { timeout: 10_000 },
     );
+
+    await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
+    await this.saveButton.click();
+    await expect(
+      this.page.getByText(/agent updated successfully/i).first(),
+    ).toBeVisible({ timeout: 30_000 });
   }
 
   /**
@@ -387,6 +459,50 @@ export class SettingsTab {
     await this.page.waitForTimeout(500);
   }
 
+  /**
+   * Returns true when the Enable verbose reasoning toggle is ON (aria-checked="true").
+   */
+  async isVerboseReasoningEnabled(): Promise<boolean> {
+    await this.selectSubTab('Capabilities');
+    await expect(this.verboseReasoningToggle).toBeVisible({ timeout: 10_000 });
+    return (
+      (await this.verboseReasoningToggle
+        .getAttribute('aria-checked')
+        .catch(() => 'false')) === 'true'
+    );
+  }
+
+  /**
+   * Sets the Enable verbose reasoning toggle to the desired state and saves the form.
+   * A no-op if the toggle is already in the desired state. Save is called
+   * internally (same as setMemoryEnabled) and we block on the success toast so
+   * callers can immediately send a chat message that relies on the new setting.
+   */
+  async setVerboseReasoning(target: boolean): Promise<void> {
+    await this.selectSubTab('Capabilities');
+    await expect(this.verboseReasoningToggle).toBeVisible({ timeout: 10_000 });
+    const isChecked =
+      (await this.verboseReasoningToggle.getAttribute('aria-checked')) ===
+      'true';
+    if (isChecked === target) {
+      return;
+    }
+    await this.verboseReasoningToggle.click();
+    await expect(this.verboseReasoningToggle).toHaveAttribute(
+      'aria-checked',
+      String(target),
+      { timeout: 10_000 },
+    );
+    await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
+    await this.saveButton.click();
+    await expect(
+      this.page.getByText(/Agent updated successfully/i).first(),
+    ).toBeVisible({ timeout: 30_000 });
+    // Small buffer for RTK Query cache invalidation before the caller closes
+    // or re-opens the dialog.
+    await this.page.waitForTimeout(500);
+  }
+
   async isEnhanceDocumentRetrievalEnabled(): Promise<boolean> {
     await this.selectSubTab('Capabilities');
     await expect(this.enhanceDocumentRetrievalToggle).toBeVisible({
@@ -473,6 +589,45 @@ export class SettingsTab {
     await expect(
       this.page.getByText(/agent updated successfully/i).first(),
     ).toBeVisible({ timeout: 30_000 });
+  }
+
+  async isPromptCachingEnabled(): Promise<boolean> {
+    await this.selectSubTab('Capabilities');
+    await expect(this.promptCachingToggle).toBeVisible({ timeout: 10_000 });
+    return (
+      (await this.promptCachingToggle
+        .getAttribute('aria-checked')
+        .catch(() => 'false')) === 'true'
+    );
+  }
+
+  /**
+   * Sets the Prompt Caching toggle to the desired state and saves the form.
+   * Waits for the success toast before returning so callers can rely on the
+   * persisted state immediately (e.g. close → reopen → assert).
+   */
+  async setPromptCaching(target: boolean): Promise<void> {
+    await this.selectSubTab('Capabilities');
+    await expect(this.promptCachingToggle).toBeVisible({ timeout: 10_000 });
+    const isChecked =
+      (await this.promptCachingToggle.getAttribute('aria-checked')) === 'true';
+    if (isChecked !== target) {
+      await this.promptCachingToggle.click();
+      await expect(this.promptCachingToggle).toHaveAttribute(
+        'aria-checked',
+        String(target),
+        { timeout: 10_000 },
+      );
+    }
+    await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
+    await this.saveButton.click();
+    await expect(
+      this.page.getByText(/Agent updated successfully/i).first(),
+    ).toBeVisible({ timeout: 30_000 });
+    // Buffer for RTK Query cache invalidation: the mutation response triggers
+    // an invalidate tag, but the refetch is async. 2 s is enough for the
+    // follow-on GET to land and React to re-render before close+reopen.
+    await this.page.waitForTimeout(2_000);
   }
 
   /**

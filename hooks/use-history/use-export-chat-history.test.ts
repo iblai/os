@@ -32,7 +32,7 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
 // Mock useReports from web-containers
 const mockInitializeReportDownload = vi.fn();
 const mockUseReports = vi.fn();
-vi.mock('@iblai/web-containers', () => ({
+vi.mock('@iblai/iblai-js/web-containers', () => ({
   useReports: (params: unknown) => mockUseReports(params),
 }));
 

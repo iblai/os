@@ -19,7 +19,7 @@ vi.mock('@/hooks/use-user', () => ({
   useUsername: () => mockUseUsername(),
 }));
 
-vi.mock('@iblai/web-containers', () => ({
+vi.mock('@iblai/iblai-js/web-containers', () => ({
   AnalyticsAuditLogStats: vi.fn(
     ({ tenantKey, mentorId, userId, selectedMentorId }) => (
       <div data-testid="analytics-audit-log-stats">

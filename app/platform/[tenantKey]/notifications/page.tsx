@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import { NotificationDisplay } from '@iblai/web-containers';
+import { NotificationDisplay } from '@iblai/iblai-js/web-containers';
 import { useIsAdmin, useUsername } from '@/hooks/use-user';
 import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
 import { config } from '@/lib/config';

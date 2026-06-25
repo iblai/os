@@ -117,6 +117,31 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
     () => ({ unwrap: () => Promise.resolve({}) }),
     { isLoading: false },
   ],
+  // settings-tab.tsx dispatches `chatPrivacyApiSlice.util.invalidateTags`
+  // after saving disable_chathistory so the nav-bar's privacy toggle picks
+  // up the new lock state without a refresh. Stub the slice util so the
+  // dispatch is a no-op in unit tests.
+  chatPrivacyApiSlice: {
+    util: {
+      invalidateTags: vi.fn(() => ({ type: 'rtk/invalidateTags' })),
+    },
+  },
+  // settings-tab.tsx reads the tenant "Allow users to control chat privacy"
+  // gate to decide whether to render the "Enable private mode" agent kill
+  // switch. Return `allow_user_chat_privacy_control: true` so the row is
+  // visible in the existing test cases that assert on it.
+  useGetTenantChatPrivacyConfigQuery: () => ({
+    data: { allow_user_chat_privacy_control: true },
+    isLoading: false,
+    isError: false,
+  }),
+}));
+
+// Stub react-redux so `useDispatch()` works without a real Provider —
+// the test doesn't exercise any reducer behavior, only that the dispatch
+// call doesn't crash and (where asserted) is invoked with the right tag.
+vi.mock('react-redux', () => ({
+  useDispatch: () => vi.fn(),
 }));
 
 // Mock sonner
@@ -515,6 +540,28 @@ describe('SettingsTab', () => {
       ).toBeInTheDocument();
     });
 
+    it('renders Prompt Caching toggle', () => {
+      render(<SettingsTab />);
+
+      expect(screen.getByText('Enable prompt caching')).toBeInTheDocument();
+    });
+
+    it('renders Prompt Caching tooltip text', () => {
+      render(<SettingsTab />);
+
+      expect(
+        screen.getByText(/Caches large or long system prompts/i),
+      ).toBeInTheDocument();
+    });
+
+    it('renders tooltip trigger for Prompt Caching', () => {
+      render(<SettingsTab />);
+
+      expect(
+        screen.getByLabelText('More info about enable prompt caching'),
+      ).toBeInTheDocument();
+    });
+
     it('renders the Image upload section', () => {
       render(<SettingsTab />);
 
@@ -715,6 +762,19 @@ describe('SettingsTab', () => {
       fireEvent.click(ragSwitch);
 
       expect(ragSwitch).toBeChecked();
+    });
+
+    it('toggles prompt caching switch', () => {
+      render(<SettingsTab />);
+
+      const promptCachingSwitch = screen.getByLabelText(
+        'Enable prompt caching',
+      );
+      expect(promptCachingSwitch).not.toBeChecked();
+
+      fireEvent.click(promptCachingSwitch);
+
+      expect(promptCachingSwitch).toBeChecked();
     });
   });
 
@@ -953,6 +1013,60 @@ describe('SettingsTab', () => {
           expect.objectContaining({
             formData: expect.objectContaining({
               enable_multi_query_rag: false,
+            }),
+          }),
+        );
+      });
+    });
+
+    it('submits enable_prompt_caching as true after toggling ON', async () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_prompt_caching: false },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      const promptCachingSwitch = screen.getByLabelText(
+        'Enable prompt caching',
+      );
+      fireEvent.click(promptCachingSwitch);
+
+      const saveButton = screen.getByRole('button', { name: /save/i });
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            formData: expect.objectContaining({
+              enable_prompt_caching: true,
+            }),
+          }),
+        );
+      });
+    });
+
+    it('submits enable_prompt_caching as false after toggling OFF', async () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_prompt_caching: true },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      const promptCachingSwitch = screen.getByLabelText(
+        'Enable prompt caching',
+      );
+      fireEvent.click(promptCachingSwitch);
+
+      const saveButton = screen.getByRole('button', { name: /save/i });
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            formData: expect.objectContaining({
+              enable_prompt_caching: false,
             }),
           }),
         );
@@ -1516,6 +1630,39 @@ describe('SettingsTab', () => {
       expect(
         screen.getByLabelText('Enhanced document retrieval'),
       ).not.toBeChecked();
+    });
+
+    it('reflects enable_prompt_caching true in switch', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_prompt_caching: true },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(screen.getByLabelText('Enable prompt caching')).toBeChecked();
+    });
+
+    it('reflects enable_prompt_caching false in switch', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_prompt_caching: false },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(screen.getByLabelText('Enable prompt caching')).not.toBeChecked();
+    });
+
+    it('defaults enable_prompt_caching to false when undefined', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_prompt_caching: undefined },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(screen.getByLabelText('Enable prompt caching')).not.toBeChecked();
     });
   });
 

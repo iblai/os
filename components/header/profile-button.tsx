@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { handleTenantSwitch } from '@/lib/utils';
-import { TenantSwitcher } from '@iblai/web-containers';
+import { TenantSwitcher } from '@iblai/iblai-js/web-containers';
 import { useParams } from 'next/navigation';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { useUserTenants } from '@/hooks/use-user';

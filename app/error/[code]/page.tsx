@@ -6,7 +6,7 @@ import { config } from '@/lib/config';
 import { customErrorMessages } from '@/lib/error';
 import { hideInitialLoader } from '@/lib/initial-loader';
 
-import { ClientErrorPage } from '@iblai/web-containers/next';
+import { ClientErrorPage } from '@iblai/iblai-js/web-containers/next';
 
 export default function ErrorPage() {
   const params = useParams();

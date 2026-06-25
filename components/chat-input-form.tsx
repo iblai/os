@@ -14,6 +14,7 @@ import { MENTOR_CHAT_DOCUMENTS_EXTENSIONS } from '@iblai/iblai-js/web-utils';
 import { useAccessingPublicRoute } from '@/hooks/use-anonymous-mentor';
 import { useChatFileUpload } from '@/hooks/use-chat-file-upload';
 import { cn, isLoggedIn } from '@/lib/utils';
+import { extractFilesFromClipboard } from '@/lib/clipboard';
 import useVoiceChat from '@/hooks/use-voice-chat';
 import { VoiceChatButton } from './chat-input-form/voice-chat-button';
 import { RetrievedDocumentsButton } from './retrieved-documents-button';
@@ -48,6 +49,12 @@ import { toast } from 'sonner';
 import { useModelFileUploadCapabilities } from '@/hooks/use-model-file-upload-capabilities';
 import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
 import { checkRbacPermission } from '@/hoc/withPermissions';
+import { config } from '@/lib/config';
+
+// Fallback used when the configured paste-to-attachment threshold is missing
+// or non-numeric, so a misconfigured env value can't make a 0-char threshold
+// convert every paste into an attachment. Mirrors the config default.
+const DEFAULT_MAX_CHARACTERS_TO_COPY = 2000;
 
 const PromptGalleryModal = dynamic(
   () =>
@@ -285,6 +292,28 @@ export function ChatInputForm({
     setInputValue(text);
   };
 
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    if (!e.clipboardData) return;
+    const files = extractFilesFromClipboard(e.clipboardData);
+    if (files.length) {
+      e.preventDefault();
+      void processFiles(files);
+      return;
+    }
+    const text = e.clipboardData.getData('text/plain');
+    const parsedMax = Number(config.maximumCharacterSizeToCopy());
+    const maxCharacters =
+      Number.isFinite(parsedMax) && parsedMax > 0
+        ? parsedMax
+        : DEFAULT_MAX_CHARACTERS_TO_COPY;
+    if (text.length > maxCharacters) {
+      e.preventDefault();
+      void processFiles([
+        new File([text], `pasted-${Date.now()}.txt`, { type: 'text/plain' }),
+      ]);
+    }
+  };
+
   const textAreaPlaceholder = () => {
     if (recording) {
       const formattedTime = format(new Date(time), 'mm:ss');
@@ -370,6 +399,7 @@ export function ChatInputForm({
               }
               value={inputValue}
               onChange={handleInputChange}
+              onPaste={handlePaste}
               onSubmit={handleSubmit}
               sessionId={sessionId}
               isPreviewMode={isPreviewMode}

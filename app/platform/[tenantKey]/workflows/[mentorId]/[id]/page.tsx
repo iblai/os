@@ -29,7 +29,7 @@ import {
   WorkflowSidebar,
   DeleteWorkflowModal,
   type NodeTypeSection,
-} from '@iblai/web-containers';
+} from '@iblai/iblai-js/web-containers';
 import {
   useGetWorkflowQuery,
   usePatchWorkflowMutation,

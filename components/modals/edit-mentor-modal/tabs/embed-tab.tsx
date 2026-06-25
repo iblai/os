@@ -55,7 +55,7 @@ import {
   useUpdateShareableLinkMutation,
 } from '@iblai/iblai-js/data-layer';
 import { useUsername } from '@/hooks/use-user';
-import { Spinner } from '@iblai/web-containers';
+import { Spinner } from '@iblai/iblai-js/web-containers';
 import { useToast } from '@/components/ui/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';

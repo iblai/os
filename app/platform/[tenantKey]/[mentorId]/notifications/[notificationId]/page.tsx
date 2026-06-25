@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { NotificationDisplay } from '@iblai/web-containers';
+import { NotificationDisplay } from '@iblai/iblai-js/web-containers';
 import { useIsAdmin, useUsername } from '@/hooks/use-user';
 import { useAppSelector } from '@/lib/hooks';
 import { selectRbacPermissions } from '@/features/rbac/rbac-slice';

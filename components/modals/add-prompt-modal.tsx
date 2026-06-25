@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/dialog';
 import { useUsername } from '@/hooks/use-user';
 import { Button } from '@/components/ui/button';
-import { RichTextEditor } from '@iblai/web-containers';
+import { RichTextEditor } from '@iblai/iblai-js/web-containers';
 
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { toast } from 'sonner';

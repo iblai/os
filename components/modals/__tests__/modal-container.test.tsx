@@ -149,8 +149,9 @@ vi.mock('@/components/modals/no-mentor-selected-modal', () => ({
     ) : null,
 }));
 
-vi.mock('@iblai/web-containers', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@iblai/web-containers')>();
+vi.mock('@iblai/iblai-js/web-containers', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@iblai/iblai-js/web-containers')>();
   return {
     ...actual,
     InviteUserDialog: ({

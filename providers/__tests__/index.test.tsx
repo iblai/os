@@ -226,7 +226,7 @@ let capturedIframeMessageHandler: {
 // Messages to simulate being received by the defaultHandler after render
 let pendingIframeMessages: Record<string, unknown>[] = [];
 
-vi.mock('@iblai/web-containers', () => ({
+vi.mock('@iblai/iblai-js/web-containers', () => ({
   sanitizeCss: (css: string) => css,
   useIframeMessageHandler: (opts: {
     handlers?: unknown;

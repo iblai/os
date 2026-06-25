@@ -260,7 +260,7 @@ vi.mock('@/components/workflows', () => ({
   ),
 }));
 
-vi.mock('@iblai/web-containers', () => ({
+vi.mock('@iblai/iblai-js/web-containers', () => ({
   WorkflowSidebar: ({
     onDragStart,
     onItemClick,
