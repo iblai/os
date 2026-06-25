@@ -27,10 +27,10 @@ vi.mock('@/hooks/use-user', () => ({
   useUsername: () => mockUseUsername(),
 }));
 
-// VoiceTab imports AgentVoiceTab from `@iblai/web-containers/next` directly
+// VoiceTab imports AgentVoiceTab from `@iblai/iblai-js/web-containers/next` directly
 // (bypassing the `@iblai/iblai-js` re-export). Vitest keys mocks by module
 // specifier — mock the exact path the source uses.
-vi.mock('@iblai/web-containers/next', () => ({
+vi.mock('@iblai/iblai-js/web-containers/next', () => ({
   AgentVoiceTab: (props: any) => {
     mockAgentVoiceTab(props);
     return (

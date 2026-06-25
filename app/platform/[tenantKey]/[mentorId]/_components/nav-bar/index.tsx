@@ -22,7 +22,7 @@ import {
   DropdownMenuTrigger,
   type CategoryConfig,
   type CategorizedItem,
-} from '@iblai/web-containers';
+} from '@iblai/iblai-js/web-containers';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from '@/hooks/user-navigate';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -31,8 +31,12 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { CreditBalance, NotificationDropdown } from '@iblai/web-containers';
-import { UserProfileModal } from '@iblai/web-containers/next';
+import {
+  ChatPrivacyToggle,
+  CreditBalance,
+  NotificationDropdown,
+} from '@iblai/iblai-js/web-containers';
+import { UserProfileModal } from '@iblai/iblai-js/web-containers/next';
 import { CreateMentorModal } from '@/components/modals/create-mentor-modal';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LLMProviderSelectionModal } from '@/components/modals/llm-provider-selection-modal';
@@ -220,9 +224,11 @@ export function NavBar() {
     isAvailable: isLocalLLMAvailable,
     state: localLLMState,
     ollamaStatus,
+    systemMemory,
     startDownload,
     cancelDownload,
     installOllama,
+    stopManager,
     installFoundry,
     checkStatus,
     resetState,
@@ -398,11 +404,17 @@ export function NavBar() {
   const isPromptGalleryOrAnalytics =
     pathname.includes('/prompt-gallery') || pathname.includes('/analytics');
   const isWorkflowsPage = /\/workflows\/[^/]+\/?$/.test(pathname);
+  // The tenant-scoped Projects index (/platform/<tenant>/projects) is not a chat
+  // surface, so chat-only nav controls (e.g. the LLM provider selector) are hidden
+  // there. The project chat route (/platform/<tenant>/projects/<id>/<mentorId>) is
+  // still a chat page and keeps them.
+  const isProjectsIndexPage = /\/projects\/?$/.test(pathname);
   const isOnChatPage =
     !pathname.includes('/prompt-gallery') &&
     !pathname.includes('/analytics') &&
     !pathname.includes('/explore') &&
-    !isWorkflowsPage;
+    !isWorkflowsPage &&
+    !isProjectsIndexPage;
 
   const handleCloseModal = () => {
     setOpenModal(false);
@@ -439,6 +451,7 @@ export function NavBar() {
           mentorSettingsCombinedPublicAndPrivate?.profileImage ?? ''
         }
         tenantKey={tenantKey}
+        mentorId={mentorId}
       />
     );
   }
@@ -500,7 +513,8 @@ export function NavBar() {
                     </div>
                     <span
                       className={cn(
-                        'max-w-[150px] overflow-hidden text-ellipsis whitespace-nowrap',
+                        // Hidden below sm; the name is shown in the tooltip.
+                        'hidden max-w-[150px] overflow-hidden text-ellipsis whitespace-nowrap sm:block',
                         creditBalanceComponentIsDisplayed
                           ? 'max-w-[100px] md:max-w-[150px]'
                           : '',
@@ -514,7 +528,8 @@ export function NavBar() {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent className="ibl-tooltip-content" side="bottom">
-                  {isAdmin ? t('selectModel') : selectedMentorName}
+                  {selectedMentorCategory ||
+                    (isAdmin ? t('selectModel') : selectedMentorName)}
                 </TooltipContent>
               </Tooltip>
             )}
@@ -627,6 +642,14 @@ export function NavBar() {
             </div>
           )}
           <div className="flex items-center gap-2">
+            {isOnChatPage && visibleToLoggedInUsersOnly && tenantKey && (
+              <ChatPrivacyToggle
+                org={tenantKey}
+                userId={username ?? ''}
+                mentor={mentorId}
+                className="inline-flex max-md:[&>span]:hidden"
+              />
+            )}
             {creditBalanceComponentIsDisplayed && (
               <CreditBalance
                 tenant={tenantKey}
@@ -692,22 +715,29 @@ export function NavBar() {
           authURL={config.authUrl()}
           currentPlatformBaseDomain={config.platformBaseDomain()}
           defaultSupportPhone={config.defaultSupportPhoneNumber()}
-          localLLMProps={{
-            isAvailable: isLocalLLMAvailable,
-            state: localLLMState,
-            ollamaStatus,
-            isUsingFoundry,
-            foundryModels,
-            selectedFoundryModel,
-            foundryStatus,
-            onStartDownload: startDownload,
-            onCancelDownload: cancelDownload,
-            onInstallOllama: installOllama,
-            onInstallFoundry: installFoundry,
-            onCheckStatus: checkStatus,
-            onResetState: resetState,
-            onSelectFoundryModel,
-          }}
+          localLLMProps={
+            {
+              isAvailable: isLocalLLMAvailable,
+              state: localLLMState,
+              ollamaStatus,
+              systemMemory,
+              isUsingFoundry,
+              foundryModels,
+              selectedFoundryModel,
+              foundryStatus,
+              onStartDownload: startDownload,
+              onCancelDownload: cancelDownload,
+              onInstallOllama: installOllama,
+              onStopManager: stopManager,
+              onInstallFoundry: installFoundry,
+              onCheckStatus: checkStatus,
+              onResetState: resetState,
+              onSelectFoundryModel,
+              // systemMemory is supported by the SDK runtime but not yet declared
+              // in the published @iblai/iblai-js localLLMProps type; cast until the
+              // SDK republishes with the field.
+            } as React.ComponentProps<typeof UserProfileModal>['localLLMProps']
+          }
         />
       )}
       {isModalOpen && FreeTrialDialog && (

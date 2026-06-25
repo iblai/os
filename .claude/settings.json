@@ -1,4 +1,19 @@
 {
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/scripts/lint-on-save.sh",
+            "timeout": 120,
+            "statusMessage": "Running prettier, eslint & tsc..."
+          }
+        ]
+      }
+    ]
+  },
   "permissions": {
     "allow": [
       "Read(//Users/macbookpro/ibl-projects/spa-app/frontend/**)",

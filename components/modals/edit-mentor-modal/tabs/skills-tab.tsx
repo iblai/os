@@ -2,7 +2,7 @@
 
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { AgentSkills } from '@iblai/web-containers';
+import { AgentSkills } from '@iblai/iblai-js/web-containers';
 
 import { useNavigate } from '@/hooks/user-navigate';
 import { TenantKeyMentorIdParams } from '@/lib/types';

@@ -77,8 +77,7 @@ export class SidebarPage {
       exact: true,
     });
     this.newChatButton = this.sidebar.getByRole('button', {
-      name: 'New Chat',
-      exact: true,
+      name: /^new chat$/i,
     });
     // "New Project" lives inside the collapsible "Projects" section in
     // the new sidebar — consumers that just need the locator (e.g.
@@ -235,14 +234,117 @@ export class SidebarPage {
    * on its clickability.
    */
   async ensureExpanded(timeoutMs = 10_000): Promise<void> {
-    const visible = await this.logoImage
-      .isVisible({ timeout: 3_000 })
-      .catch(() => false);
-    if (visible) return;
+    // Fast path: logo already visible (sidebar expanded and mounted).
+    if (await this.logoImage.isVisible().catch(() => false)) return;
+
     // The embedded layout blocks rendering until mentor settings load, which
-    // can be slow against the embed backend — callers (e.g. the embed Show
-    // Catalogue tests) pass a generous timeout so the sidebar has time to mount.
-    await this.toggle(timeoutMs);
+    // can be slow against the embed backend. Wait for the sidebar chrome
+    // (the toggle control) to mount first — otherwise we'd misread a slow-
+    // mounting sidebar as collapsed and toggle it *shut*, hiding the logo for
+    // good. Callers (e.g. the embed Show Catalogue tests) pass a generous
+    // timeout so the sidebar has time to appear.
+    await expect(this.toggleButton).toBeVisible({ timeout: timeoutMs });
+
+    // Only expand when actually collapsed: the toggle reads "Expand sidebar"
+    // while collapsed and "Collapse sidebar" while expanded.
+    const expandButton = this.sidebar.getByRole('button', {
+      name: /expand sidebar/i,
+    });
+    if (await expandButton.isVisible().catch(() => false)) {
+      await expandButton.click();
+    }
+
     await expect(this.logoImage).toBeVisible({ timeout: timeoutMs });
+  }
+
+  /**
+   * Expand the "Chats" collapsible section in the sidebar (no-op if already
+   * expanded). Prerequisite for any recent/pinned chat assertions.
+   */
+  async expandChatsSection(): Promise<void> {
+    await this.expandSection('Chats');
+  }
+
+  /**
+   * Returns the `<ul role="list">` that holds recent chat row buttons inside
+   * the expanded Chats collapsible. Scoped to the sidebar `<aside>` so it
+   * cannot collide with any page-content lists.
+   *
+   * The "Recent" heading `<p>` immediately precedes this list. We locate it
+   * via the sibling structure: find the heading text node then locate the
+   * following list. In practice the whole Chats content area is the only
+   * `role="list"` container inside the sidebar that follows a "Recent" heading.
+   */
+  getRecentChatsList(): import('@playwright/test').Locator {
+    return this.sidebar
+      .locator('p', { hasText: /^recent$/i })
+      .locator('~ ul[role="list"]');
+  }
+
+  /**
+   * Returns ALL button elements inside the Recent chats list. Each row is a
+   * `<button type="button">` whose text content is the first message in that
+   * chat session (rendered by `chatRowLabel()`).
+   */
+  getRecentChatRows(): import('@playwright/test').Locator {
+    return this.getRecentChatsList().getByRole('button');
+  }
+
+  /**
+   * Returns a locator for a specific Recent chat row whose text contains
+   * `text`. Uses `hasText` rather than exact matching because `chatRowLabel`
+   * renders the first message content which may be truncated or markdown-
+   * wrapped by the time it reaches the DOM.
+   */
+  getRecentChatRow(text: string): import('@playwright/test').Locator {
+    return this.getRecentChatsList().getByRole('button', { name: text });
+  }
+
+  /**
+   * Returns true if a Recent chat row matching `text` is visible within
+   * `timeoutMs`. Uses `waitFor` (NOT `isVisible().catch()`) so the timeout
+   * is honoured for cases where the row appears after an async refetch.
+   */
+  async isRecentChatVisible(
+    text: string,
+    timeoutMs = 15_000,
+  ): Promise<boolean> {
+    const row = this.getRecentChatsList().locator('button', { hasText: text });
+    try {
+      await row.waitFor({ state: 'visible', timeout: timeoutMs });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Returns true if the "No recent chats" empty-state span is currently
+   * visible inside the Chats section. Uses `waitFor` with a short timeout
+   * so the check fast-fails when the list has items.
+   */
+  async isRecentChatsEmpty(timeoutMs = 5_000): Promise<boolean> {
+    const emptyState = this.sidebar.locator('span', {
+      hasText: /no recent chats/i,
+    });
+    try {
+      await emptyState.waitFor({ state: 'visible', timeout: timeoutMs });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Click the first visible Recent chat row and return its text content so
+   * the caller can assert on it. Prerequisite: `expandChatsSection()` must
+   * have been called first so the Chats collapsible is open.
+   */
+  async clickFirstRecentChat(): Promise<string> {
+    const firstRow = this.getRecentChatRows().first();
+    await expect(firstRow).toBeVisible({ timeout: 10_000 });
+    const text = (await firstRow.textContent()) ?? '';
+    await firstRow.click();
+    return text.trim();
   }
 }

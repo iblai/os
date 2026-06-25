@@ -3,7 +3,7 @@ import { Page, Locator, expect } from '@playwright/test';
 /**
  * Page object for the Skills tab inside the Edit Mentor dialog.
  *
- * Renders the AgentSkills component from @iblai/web-containers. Gated on
+ * Renders the AgentSkills component from @iblai/iblai-js/web-containers. Gated on
  * both `enable_claw=true` AND a wired ClawMentorConfig (`isSandboxActive`),
  * so the tab may not appear in all envs. When not wired the component
  * renders:
@@ -159,9 +159,8 @@ export class SkillsTab {
     // both — i.e. the row card itself, not the panel/wrapper above it.
     return this.dialog
       .locator('div')
-      .filter({ has: toggle })
-      .filter({ has: actionsBtn })
-      .last();
+      .filter({ hasText: new RegExp(`^${escapeRegex(name)}v1\\.0\\.0$`, 'i') })
+      .first();
   }
 
   /**

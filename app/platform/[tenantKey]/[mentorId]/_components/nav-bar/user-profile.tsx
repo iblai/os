@@ -1,13 +1,20 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import {
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+  type ComponentProps,
+  type ComponentType,
+} from 'react';
 import {
   useParams,
   useRouter,
   useSearchParams,
   usePathname,
 } from 'next/navigation';
-import { UserProfileDropdown } from '@iblai/web-containers/next';
+import { UserProfileDropdown } from '@iblai/iblai-js/web-containers/next';
 import {
   useCurrentTenant,
   useIsAdmin,
@@ -152,9 +159,11 @@ export function UserProfile() {
     isAvailable: isLocalLLMAvailable,
     state: localLLMState,
     ollamaStatus,
+    systemMemory,
     startDownload,
     cancelDownload,
     installOllama,
+    stopManager,
     installFoundry,
     checkStatus,
     resetState,
@@ -280,8 +289,17 @@ export function UserProfile() {
     dispatch(updateRbacPermissions(permissions ?? {}));
   };
 
+  // systemControlProps is supported by the SDK runtime but not yet declared in
+  // the published @iblai/iblai-js UserProfileDropdownProps type; widen the
+  // component type until the SDK republishes with the field.
+  const UserProfileDropdownTyped = UserProfileDropdown as ComponentType<
+    ComponentProps<typeof UserProfileDropdown> & {
+      systemControlProps?: Record<string, unknown>;
+    }
+  >;
+
   return (
-    <UserProfileDropdown
+    <UserProfileDropdownTyped
       email={email}
       mainPlatformKey={config.mainTenantKey()}
       // User data
@@ -331,22 +349,37 @@ export function UserProfile() {
       enableRbac={config.enableRBAC()}
       onLoadGroupPermissions={handleLoadGroupPermissions}
       // Local LLM props
-      localLLMProps={{
-        isAvailable: isLocalLLMAvailable,
-        state: localLLMState,
-        ollamaStatus,
-        isUsingFoundry,
-        foundryModels,
-        selectedFoundryModel,
-        foundryStatus,
-        onStartDownload: startDownload,
-        onCancelDownload: cancelDownload,
-        onInstallOllama: installOllama,
-        onInstallFoundry: installFoundry,
-        onCheckStatus: checkStatus,
-        onResetState: resetState,
-        onSelectFoundryModel,
-      }}
+      localLLMProps={
+        {
+          isAvailable: isLocalLLMAvailable,
+          state: localLLMState,
+          ollamaStatus,
+          systemMemory,
+          isUsingFoundry,
+          foundryModels,
+          selectedFoundryModel,
+          foundryStatus,
+          onStartDownload: startDownload,
+          onCancelDownload: cancelDownload,
+          onInstallOllama: installOllama,
+          onStopManager: stopManager,
+          onInstallFoundry: installFoundry,
+          onCheckStatus: checkStatus,
+          onResetState: resetState,
+          onSelectFoundryModel,
+          // systemMemory is supported by the SDK runtime but not yet declared in
+          // the published @iblai/iblai-js localLLMProps type; cast until the SDK
+          // republishes with the field.
+        } as ComponentProps<typeof UserProfileDropdown>['localLLMProps']
+      }
+      // System Control (Computer Assistant): configure the size gate to 13 GB.
+      // The dropdown self-wires the rest of systemControlProps via useGhostOs;
+      // the SDK types the object as fully required, but each field falls back at
+      // runtime, so we intentionally pass only the gate. systemControlProps is
+      // not yet declared in the published @iblai/iblai-js types, so we cast.
+      systemControlProps={
+        { requiredSizeGb: 13 } as unknown as Record<string, unknown>
+      }
       // Controlled modal state for URL sync
       isModalOpen={isProfileModalOpen}
       onModalOpenChange={handleModalOpenChange}

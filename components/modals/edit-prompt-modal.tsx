@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { RichTextEditor } from '@iblai/web-containers';
+import { RichTextEditor } from '@iblai/iblai-js/web-containers';
 import {
   Select,
   SelectContent,

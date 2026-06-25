@@ -1,6 +1,6 @@
 'use client';
 
-import { AnalyticsAuditLogStats } from '@iblai/web-containers';
+import { AnalyticsAuditLogStats } from '@iblai/iblai-js/web-containers';
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useUsername } from '@/hooks/use-user';

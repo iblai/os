@@ -1,11 +1,11 @@
 'use client';
 
 import { useLocale } from 'next-intl';
-import { WebContainersI18nProvider } from '@iblai/web-containers/next';
+import { WebContainersI18nProvider } from '@iblai/iblai-js/web-containers/next';
 
 /**
  * Bridges the app's active next-intl locale into the web-containers i18n
- * provider so shared @iblai/web-containers components (UserProfileModal, etc.)
+ * provider so shared @iblai/iblai-js/web-containers components (UserProfileModal, etc.)
  * render in the selected language.
  */
 export function WebContainersLocaleProvider({

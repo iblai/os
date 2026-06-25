@@ -280,7 +280,7 @@ vi.mock('@/components/modals/create-mentor-modal', () => ({
     ) : null,
 }));
 
-vi.mock('@iblai/web-containers/next', () => ({
+vi.mock('@iblai/iblai-js/web-containers/next', () => ({
   UserProfileModal: ({
     isOpen,
     onClose,

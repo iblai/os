@@ -213,11 +213,11 @@ vi.mock('@sentry/nextjs', () => ({
   captureException: vi.fn(),
 }));
 
-// @iblai/web-containers transitively imports @iblai/web-utils which imports
+// @iblai/iblai-js/web-containers transitively imports @iblai/web-utils which imports
 // axios — which fails to resolve in Vitest's transform pipeline. Stub it here
 // so importing the tabs barrel (which re-exports SandboxTab/SkillsTab that use
 // these components) doesn't break the test.
-vi.mock('@iblai/web-containers', () => ({
+vi.mock('@iblai/iblai-js/web-containers', () => ({
   SandboxConfig: () => null,
   AgentSkills: () => null,
   AgentConfigPrompts: () => null,

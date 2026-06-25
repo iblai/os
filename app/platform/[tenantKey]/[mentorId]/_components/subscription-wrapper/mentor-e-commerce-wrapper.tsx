@@ -1,6 +1,6 @@
 'use client';
 
-import { TopBanner } from '@iblai/web-containers';
+import { TopBanner } from '@iblai/iblai-js/web-containers';
 import { useAppSelector } from '@/lib/hooks';
 import { useState, useEffect } from 'react';
 import { useIsPreviewMode } from '@/hooks/use-is-preview-mode';

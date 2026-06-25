@@ -14,7 +14,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
-import { CreateWorkflowModal } from '@iblai/web-containers';
+import { CreateWorkflowModal } from '@iblai/iblai-js/web-containers';
 import {
   useGetWorkflowsQuery,
   useCreateWorkflowMutation,

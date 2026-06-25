@@ -90,6 +90,8 @@ export function MentorSelectionGrid({
                 <button
                   key={mentor.unique_id}
                   onClick={() => onMentorSelect(mentor)}
+                  aria-label={`Select agent ${mentor.name}`}
+                  aria-pressed={isSelected}
                   className={`flex cursor-pointer items-center gap-3 rounded-lg border-2 p-3 transition-all ${
                     isSelected
                       ? 'border-blue-500 bg-blue-50'
@@ -116,14 +118,14 @@ export function MentorSelectionGrid({
                     </p>
                   </div>
                   {isSelected && (
-                    <div className="flex-shrink-0">
+                    <div className="flex-shrink-0" aria-hidden="true">
                       <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600">
                         <Check className="h-4 w-4 text-white" />
                       </div>
                     </div>
                   )}
                   {isAlreadyAdded && !isSelected && (
-                    <div className="flex-shrink-0">
+                    <div className="flex-shrink-0" aria-hidden="true">
                       <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-400">
                         <Check className="h-4 w-4 text-white" />
                       </div>

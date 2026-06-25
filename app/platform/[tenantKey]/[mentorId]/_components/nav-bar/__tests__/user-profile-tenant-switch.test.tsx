@@ -187,7 +187,7 @@ vi.mock('./learner-mode-switch', () => ({
 }));
 
 // Mock UserProfileDropdown
-vi.mock('@iblai/web-containers/next', () => ({
+vi.mock('@iblai/iblai-js/web-containers/next', () => ({
   UserProfileDropdown: (props: any) => (
     <div data-testid="user-profile-dropdown">
       <span data-testid="tenant">{props.tenantKey}</span>

@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import { AnalyticsReportDownload } from '@iblai/web-containers';
+import { AnalyticsReportDownload } from '@iblai/iblai-js/web-containers';
 import { useParams } from 'next/navigation';
 
 export default function ReportDownloadPage() {

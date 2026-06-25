@@ -41,7 +41,7 @@ import { EditMentorModal } from '@/components/modals/edit-mentor-modal';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { HelpModal } from '@/components/modals/help-modal';
 import { CreateMentorModal } from '@/components/modals/create-mentor-modal';
-import { UserProfileModal } from '@iblai/web-containers/next';
+import { UserProfileModal } from '@iblai/iblai-js/web-containers/next';
 import {
   Tooltip,
   TooltipContent,
@@ -204,9 +204,11 @@ export function Header({
     isAvailable: isLocalLLMAvailable,
     state: localLLMState,
     ollamaStatus,
+    systemMemory,
     startDownload,
     cancelDownload,
     installOllama,
+    stopManager,
     installFoundry,
     checkStatus,
     resetState,
@@ -385,6 +387,7 @@ export function Header({
             onStartDownload: startDownload,
             onCancelDownload: cancelDownload,
             onInstallOllama: installOllama,
+            onStopManager: stopManager,
             onInstallFoundry: installFoundry,
             onCheckStatus: checkStatus,
             onResetState: resetState,
@@ -596,22 +599,29 @@ export function Header({
         authURL={config.authUrl()}
         currentPlatformBaseDomain={config.platformBaseDomain()}
         defaultSupportPhone={config.defaultSupportPhoneNumber()}
-        localLLMProps={{
-          isAvailable: isLocalLLMAvailable,
-          state: localLLMState,
-          ollamaStatus,
-          isUsingFoundry,
-          foundryModels,
-          selectedFoundryModel,
-          foundryStatus,
-          onStartDownload: startDownload,
-          onCancelDownload: cancelDownload,
-          onInstallOllama: installOllama,
-          onInstallFoundry: installFoundry,
-          onCheckStatus: checkStatus,
-          onResetState: resetState,
-          onSelectFoundryModel,
-        }}
+        localLLMProps={
+          {
+            isAvailable: isLocalLLMAvailable,
+            state: localLLMState,
+            ollamaStatus,
+            systemMemory,
+            isUsingFoundry,
+            foundryModels,
+            selectedFoundryModel,
+            foundryStatus,
+            onStartDownload: startDownload,
+            onCancelDownload: cancelDownload,
+            onInstallOllama: installOllama,
+            onStopManager: stopManager,
+            onInstallFoundry: installFoundry,
+            onCheckStatus: checkStatus,
+            onResetState: resetState,
+            onSelectFoundryModel,
+            // systemMemory is supported by the SDK runtime but not yet declared
+            // in the published @iblai/iblai-js localLLMProps type; cast until the
+            // SDK republishes with the field.
+          } as React.ComponentProps<typeof UserProfileModal>['localLLMProps']
+        }
       />
     </header>
   );

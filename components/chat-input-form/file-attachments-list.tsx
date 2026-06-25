@@ -50,6 +50,7 @@ export function FileAttachmentsList({
             <Tooltip>
               <TooltipTrigger asChild>
                 <div
+                  data-testid="attachment-chip"
                   className={cn(
                     'inline-flex max-w-fit cursor-pointer items-center gap-2 rounded-lg border p-2 transition-colors',
                     statusColors[file.uploadStatus],
@@ -79,8 +80,8 @@ export function FileAttachmentsList({
                       {file.fileName}
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="text-xs text-gray-500 uppercase">
-                        {file.fileType.split('/')[1] || t('fileTypeFallback')}
+                      <div className="text-xs text-gray-500">
+                        {file.fileType || t('fileTypeFallback')}
                       </div>
                       {file.uploadStatus === 'uploading' && (
                         <span className="text-xs font-medium text-blue-600">

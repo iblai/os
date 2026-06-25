@@ -58,14 +58,25 @@ describe('useTauri', () => {
       consoleSpy.mockRestore();
     });
 
-    it('should throw error when listen is called', async () => {
+    it('falls back to the dynamically-imported listen when not in Tauri environment', async () => {
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      // listen() no longer throws when Tauri is unavailable. The synchronous
+      // global often exposes `invoke` but not `event.listen`, so listen() falls
+      // back to the real `@tauri-apps/api/event` import so download
+      // progress/completion events are still delivered.
+      const unlisten = vi.fn();
+      mockListen.mockResolvedValue(unlisten);
 
       const { result } = renderHook(() => useTauri());
 
-      await expect(
-        result.current.listen('test_event', () => {}),
-      ).rejects.toThrow('Tauri is not available');
+      await expect(result.current.listen('test_event', () => {})).resolves.toBe(
+        unlisten,
+      );
+      expect(mockListen).toHaveBeenCalledWith(
+        'test_event',
+        expect.any(Function),
+      );
 
       consoleSpy.mockRestore();
     });

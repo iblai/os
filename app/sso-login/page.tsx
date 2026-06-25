@@ -1,7 +1,7 @@
 'use client';
 
 import React, { Suspense, useEffect } from 'react';
-import { SsoLogin as SsoLoginComponent } from '@iblai/web-containers/next';
+import { SsoLogin as SsoLoginComponent } from '@iblai/iblai-js/web-containers/next';
 import { LOCAL_STORAGE_KEYS } from '@/lib/constants';
 import { hideInitialLoader } from '@/lib/initial-loader';
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { AgentVoiceTab } from '@iblai/web-containers/next';
+import { AgentVoiceTab } from '@iblai/iblai-js/web-containers/next';
 
 import { useNavigate } from '@/hooks/user-navigate';
 import { useUsername } from '@/hooks/use-user';
