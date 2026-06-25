@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.83.0](https://github.com/iblai/os/compare/v0.82.1...v0.83.0) (2026-06-25)
+
+### Features
+
+- add dataset curator viewer role on access tab ([c892565](https://github.com/iblai/os/commit/c892565ff592e3660edf0c66cdfe4cc94d8024af))
+- add dataset curator viewer role on access tab > test coverage ([213a72e](https://github.com/iblai/os/commit/213a72e06739072b9b0eeab5162e4dbf8ac74e6f))
+- add dataset curator viewer role on access tab > test coverage ([be3f0de](https://github.com/iblai/os/commit/be3f0de3094f8d1357a016b59983d2fd5f94527d))
+- add dataset curator viewer role on access tab > test coverage ([494c3ed](https://github.com/iblai/os/commit/494c3edce92853b2006b5a6e4df4e6407b6a3dce))
+
+### Bug Fixes
+
+- failing playwright test fix ([aab5693](https://github.com/iblai/os/commit/aab569378c29db2cdcfba151d85e20407d8957e8))
+- **mentor:** load agent picker from ai-search endpoint ([b855fbe](https://github.com/iblai/os/commit/b855fbe7805cd5f8d302ee3e00344f09138f13f5))
+
+### Chores
+
+- **deps:** bump @iblai/iblai-js to 1.20.11 ([ee29c03](https://github.com/iblai/os/commit/ee29c03048049aa5cea1056d750b1ce1b330d01d))
+
+### Tests
+
+- **e2e:** widen project agent-card wait for slow agent loads ([7c3ac05](https://github.com/iblai/os/commit/7c3ac05fdb243622fafba7797db463d21dce9037))
+- **mentor:** cover ai-search agent picker hook and grid ([79de6cd](https://github.com/iblai/os/commit/79de6cd028202a105c62ecc7ef9628b6f0e596e8))
+
 ## [0.82.1](https://github.com/iblai/os/compare/v0.82.0...v0.82.1) (2026-06-24)
 
 ### Bug Fixes
