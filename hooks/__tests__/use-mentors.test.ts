@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useMentorsWithPagination } from '../use-mentors';
+import {
+  useAiSearchMentorsWithPagination,
+  useMentorsWithPagination,
+} from '../use-mentors';
 
 // Mock next/navigation
 const mockUseParams = vi.fn();
@@ -22,10 +25,13 @@ vi.mock('@/hooks/use-user', () => ({
 // Mock data-layer hooks
 const mockUseGetMentorsQuery = vi.fn();
 const mockUseGetPublicMentorsQuery = vi.fn();
+const mockUseGetAiSearchMentorsQuery = vi.fn();
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetMentorsQuery: (...args: unknown[]) => mockUseGetMentorsQuery(...args),
   useGetPublicMentorsQuery: (...args: unknown[]) =>
     mockUseGetPublicMentorsQuery(...args),
+  useGetAiSearchMentorsQuery: (...args: unknown[]) =>
+    mockUseGetAiSearchMentorsQuery(...args),
 }));
 
 describe('useMentorsWithPagination', () => {
@@ -257,5 +263,177 @@ describe('useMentorsWithPagination', () => {
         orderDirection: 'desc',
       });
     });
+  });
+});
+
+describe('useAiSearchMentorsWithPagination', () => {
+  const scrollToSpy = window.scrollTo as unknown as ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseParams.mockReturnValue({ tenantKey: 'tenant-1' });
+    mockUseGetAiSearchMentorsQuery.mockReturnValue({
+      data: { results: [], count: 0 },
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    });
+  });
+
+  it('returns initial state values with the default items per page', () => {
+    const { result } = renderHook(() => useAiSearchMentorsWithPagination());
+
+    expect(result.current.searchQuery).toBe('');
+    expect(result.current.currentPage).toBe(1);
+    expect(result.current.itemsPerPage).toBe(8);
+  });
+
+  it('accepts a custom items per page', () => {
+    const { result } = renderHook(() => useAiSearchMentorsWithPagination(12));
+
+    expect(result.current.itemsPerPage).toBe(12);
+  });
+
+  it('maps results and count from the ai-search response', () => {
+    mockUseGetAiSearchMentorsQuery.mockReturnValue({
+      data: {
+        results: [{ unique_id: 'a1', name: 'Agent 1' }],
+        count: 1,
+      },
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    });
+
+    const { result } = renderHook(() => useAiSearchMentorsWithPagination());
+
+    expect(result.current.mentors).toEqual([
+      { unique_id: 'a1', name: 'Agent 1' },
+    ]);
+    expect(result.current.totalCount).toBe(1);
+  });
+
+  it('returns empty mentors and zero count when there is no data', () => {
+    mockUseGetAiSearchMentorsQuery.mockReturnValue({
+      data: null,
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    });
+
+    const { result } = renderHook(() => useAiSearchMentorsWithPagination());
+
+    expect(result.current.mentors).toEqual([]);
+    expect(result.current.totalCount).toBe(0);
+    expect(result.current.totalPages).toBe(0);
+  });
+
+  it('passes the platform_key and query args to the ai-search query', () => {
+    renderHook(() => useAiSearchMentorsWithPagination(8));
+
+    expect(mockUseGetAiSearchMentorsQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        platform_key: 'tenant-1',
+        query: undefined,
+        limit: 8,
+        offset: 0,
+      }),
+      expect.objectContaining({
+        skip: false,
+        refetchOnMountOrArgChange: true,
+      }),
+    );
+  });
+
+  it('skips the query when tenantKey is missing', () => {
+    mockUseParams.mockReturnValue({});
+
+    renderHook(() => useAiSearchMentorsWithPagination());
+
+    expect(mockUseGetAiSearchMentorsQuery).toHaveBeenCalledWith(
+      expect.objectContaining({ platform_key: '' }),
+      expect.objectContaining({ skip: true }),
+    );
+  });
+
+  it('computes total pages from the count and items per page', () => {
+    mockUseGetAiSearchMentorsQuery.mockReturnValue({
+      data: { results: [], count: 25 },
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    });
+
+    const { result } = renderHook(() => useAiSearchMentorsWithPagination(5));
+
+    expect(result.current.totalPages).toBe(5);
+  });
+
+  it('passes through isLoading and isFetching', () => {
+    mockUseGetAiSearchMentorsQuery.mockReturnValue({
+      data: null,
+      isLoading: true,
+      isFetching: true,
+      error: { message: 'boom' },
+    });
+
+    const { result } = renderHook(() => useAiSearchMentorsWithPagination());
+
+    expect(result.current.isLoading).toBe(true);
+    expect(result.current.isFetching).toBe(true);
+    expect(result.current.error).toEqual({ message: 'boom' });
+  });
+
+  it('sends the debounced query as the search arg when set', () => {
+    const { result } = renderHook(() => useAiSearchMentorsWithPagination());
+
+    act(() => {
+      result.current.setSearchQuery('design');
+    });
+
+    expect(result.current.searchQuery).toBe('design');
+    expect(mockUseGetAiSearchMentorsQuery).toHaveBeenLastCalledWith(
+      expect.objectContaining({ query: 'design' }),
+      expect.anything(),
+    );
+  });
+
+  it('resets to the first page and offset when the search changes', () => {
+    const { result } = renderHook(() => useAiSearchMentorsWithPagination(5));
+
+    act(() => {
+      result.current.handlePageChange(3);
+    });
+    expect(result.current.currentPage).toBe(3);
+    expect(result.current.queryParams.offset).toBe(10);
+
+    act(() => {
+      result.current.setSearchQuery('newterm');
+    });
+
+    expect(result.current.currentPage).toBe(1);
+    expect(result.current.queryParams.offset).toBe(0);
+    expect(result.current.queryParams.query).toBe('newterm');
+  });
+
+  it('updates the offset when the page changes', () => {
+    const { result } = renderHook(() => useAiSearchMentorsWithPagination(8));
+
+    act(() => {
+      result.current.handlePageChange(2);
+    });
+
+    expect(result.current.currentPage).toBe(2);
+    expect(result.current.queryParams.offset).toBe(8);
+  });
+
+  it('scrolls to the top when changing pages', () => {
+    const { result } = renderHook(() => useAiSearchMentorsWithPagination());
+
+    act(() => {
+      result.current.handlePageChange(2);
+    });
+
+    expect(scrollToSpy).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
   });
 });
