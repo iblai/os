@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import Image from 'next/image';
 import { useParams, usePathname, useSearchParams } from 'next/navigation';
 
@@ -133,6 +134,7 @@ export const ANALYTICS_NAV_ITEM: MentorSegment = {
 };
 
 export function NavBar() {
+  const t = useTranslations('navBarIndex');
   const [openModal, setOpenModal] = React.useState(false);
   const dispatch = useAppDispatch();
   const selectedAnalyticsMentor = useAppSelector(selectSelectedMentor);
@@ -177,7 +179,7 @@ export function NavBar() {
       MentorVisibilityEnum.VIEWABLE_BY_ANYONE &&
     mentorSettingsCombinedPublicAndPrivate?.allowAnonymous === false;
 
-  const loginButtonLabel = requiresLoginForChat ? 'Log in' : 'Log in';
+  const loginButtonLabel = requiresLoginForChat ? t('logIn') : t('logIn');
 
   const handleLoginClick = React.useCallback(() => {
     if (requiresLoginForChat && tenantKey) {
@@ -281,7 +283,7 @@ export function NavBar() {
 
   const handleModifyMentor = async () => {
     if (!tenantKey || !mentorId || !username) {
-      toast.error('Unable to modify agent. Missing context.');
+      toast.error(t('unableToModifyAgent'));
       return;
     }
     try {
@@ -312,7 +314,7 @@ export function NavBar() {
         }).unwrap();
       }
       //REDIRECT TO THE NEW MENTOR
-      toast.success('Agent successfully forked. Switching to new agent...');
+      toast.success(t('agentForkedSuccess'));
       const newStack = getUpdatedModalStack(
         MODALS.EDIT_MENTOR.name,
         MODALS.EDIT_MENTOR.tabs.settings,
@@ -324,7 +326,7 @@ export function NavBar() {
         `modal=${JSON.stringify(newStack)}`,
       );
     } catch (error) {
-      toast.error('Failed to modify agent');
+      toast.error(t('failedToModifyAgent'));
       // console.error(JSON.stringify(error));;
     }
   };
@@ -468,14 +470,16 @@ export function NavBar() {
                     size="icon"
                     className="ml-4 cursor-pointer"
                     onClick={toggleSidebar}
-                    aria-label={openSidebar ? 'Close sidebar' : 'Open sidebar'}
+                    aria-label={
+                      openSidebar ? t('closeSidebar') : t('openSidebar')
+                    }
                     data-testid="(Close|Open) sidebar"
                   >
                     <Menu className="h-5 w-5" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent className="ibl-tooltip-content" side="right">
-                  Toggle Sidebar
+                  {t('toggleSidebar')}
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -491,7 +495,7 @@ export function NavBar() {
                     onClick={() =>
                       !userIsVisiting && setIsProviderSelectionOpen(true)
                     }
-                    aria-label="LLM Model Selector"
+                    aria-label={t('llmModelSelector')}
                   >
                     <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white">
                       {llmProviderDetails?.logo ? (
@@ -525,7 +529,7 @@ export function NavBar() {
                 </TooltipTrigger>
                 <TooltipContent className="ibl-tooltip-content" side="bottom">
                   {selectedMentorCategory ||
-                    (isAdmin ? 'Select Model' : selectedMentorName)}
+                    (isAdmin ? t('selectModel') : selectedMentorName)}
                 </TooltipContent>
               </Tooltip>
             )}
@@ -555,7 +559,7 @@ export function NavBar() {
                     <Button
                       variant="ghost"
                       className="flex cursor-pointer items-center gap-1"
-                      aria-label="Selected agent dropdown button"
+                      aria-label={t('selectedAgentDropdownButton')}
                     >
                       <User className="h-4 w-4 text-[#646464]" />
                       <span className="hidden sm:block">
@@ -586,14 +590,14 @@ export function NavBar() {
                       onItemSelect={handleSegmentClick}
                       topAction={{
                         value: NEW_CHAT_NAV_ITEM.value,
-                        label: NEW_CHAT_NAV_ITEM.label,
+                        label: t('newChat'),
                         icon: NEW_CHAT_NAV_ITEM.icon,
                       }}
                       footerAction={
                         showForkButton
                           ? {
                               value: FORK_ACTION_VALUE,
-                              label: 'Modify',
+                              label: t('modify'),
                               icon: GitFork,
                               disabled: isForkingMentor,
                             }
@@ -606,7 +610,7 @@ export function NavBar() {
                 <Button
                   variant="ghost"
                   className="flex items-center gap-1 text-sm font-medium text-[#646464]"
-                  aria-label="Selected agent"
+                  aria-label={t('selectedAgent')}
                 >
                   <User className="h-4 w-4 text-[#646464]" />
                   <span className="hidden sm:block">{selectedMentorName}</span>
@@ -624,7 +628,7 @@ export function NavBar() {
                   userIsStudent ? 'font-semibold' : 'text-gray-500',
                 )}
               >
-                User
+                {t('user')}
               </span>
               <LearnerModeSwitch />
               <span
@@ -633,7 +637,7 @@ export function NavBar() {
                   userIsStudent ? 'text-gray-500' : 'font-semibold',
                 )}
               >
-                Admin
+                {t('admin')}
               </span>
             </div>
           )}
@@ -673,7 +677,7 @@ export function NavBar() {
                 {loginButtonLabel}
               </Button>
               <Button onClick={handleLoginClick} variant="outline">
-                Sign up for free
+                {t('signUpForFree')}
               </Button>
             </div>
           )}
@@ -711,24 +715,29 @@ export function NavBar() {
           authURL={config.authUrl()}
           currentPlatformBaseDomain={config.platformBaseDomain()}
           defaultSupportPhone={config.defaultSupportPhoneNumber()}
-          localLLMProps={{
-            isAvailable: isLocalLLMAvailable,
-            state: localLLMState,
-            ollamaStatus,
-            systemMemory,
-            isUsingFoundry,
-            foundryModels,
-            selectedFoundryModel,
-            foundryStatus,
-            onStartDownload: startDownload,
-            onCancelDownload: cancelDownload,
-            onInstallOllama: installOllama,
-            onStopManager: stopManager,
-            onInstallFoundry: installFoundry,
-            onCheckStatus: checkStatus,
-            onResetState: resetState,
-            onSelectFoundryModel,
-          }}
+          localLLMProps={
+            {
+              isAvailable: isLocalLLMAvailable,
+              state: localLLMState,
+              ollamaStatus,
+              systemMemory,
+              isUsingFoundry,
+              foundryModels,
+              selectedFoundryModel,
+              foundryStatus,
+              onStartDownload: startDownload,
+              onCancelDownload: cancelDownload,
+              onInstallOllama: installOllama,
+              onStopManager: stopManager,
+              onInstallFoundry: installFoundry,
+              onCheckStatus: checkStatus,
+              onResetState: resetState,
+              onSelectFoundryModel,
+              // systemMemory is supported by the SDK runtime but not yet declared
+              // in the published @iblai/iblai-js localLLMProps type; cast until the
+              // SDK republishes with the field.
+            } as React.ComponentProps<typeof UserProfileModal>['localLLMProps']
+          }
         />
       )}
       {isModalOpen && FreeTrialDialog && (

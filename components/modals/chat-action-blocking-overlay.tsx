@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { Phone, Monitor, StopCircle } from 'lucide-react';
 
 type ChatActionType = 'voice-call' | 'screen-share';
@@ -15,10 +16,13 @@ export function ChatActionBlockingOverlay({
   actionType,
   onStopScreenShare,
 }: ChatActionBlockingOverlayProps) {
+  const t = useTranslations('modalsChatActionBlockingOverlay');
   if (!isOpen) return null;
 
   const isVoiceCall = actionType === 'voice-call';
-  const actionLabel = isVoiceCall ? 'voice call' : 'screen sharing';
+  const actionLabel = isVoiceCall
+    ? t('voiceCallLabel')
+    : t('screenSharingLabel');
   const ActionIcon = isVoiceCall ? Phone : Monitor;
 
   return (
@@ -41,13 +45,12 @@ export function ChatActionBlockingOverlay({
           id="blocking-overlay-title"
           className="mb-3 text-xl font-semibold text-gray-900"
         >
-          {isVoiceCall ? 'Voice Call Active' : 'Screen Sharing Active'}
+          {isVoiceCall ? t('voiceCallActive') : t('screenSharingActive')}
         </h2>
 
         {/* Description */}
         <p id="blocking-overlay-description" className="mb-6 text-gray-600">
-          Your {actionLabel} session is now active. Please return to the
-          original window to continue your conversation with your agent.
+          {t('sessionDescription', { actionLabel })}
         </p>
 
         {/* Action Buttons */}
@@ -59,7 +62,7 @@ export function ChatActionBlockingOverlay({
               className="flex w-full items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-3 font-medium text-white transition-colors hover:bg-red-700"
             >
               <StopCircle className="h-5 w-5" />
-              <span>Stop Screen Sharing</span>
+              <span>{t('stopScreenSharing')}</span>
             </button>
           )}
         </div>
@@ -74,8 +77,7 @@ export function ChatActionBlockingOverlay({
 
         {/* Additional help text */}
         <p className="mt-4 text-xs text-gray-500">
-          This window will handle your {actionLabel} in the background. You can
-          close this window when you&apos;re done.
+          {t('backgroundHelpText', { actionLabel })}
         </p>
       </div>
     </div>

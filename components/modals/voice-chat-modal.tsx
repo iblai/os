@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import {
   Dialog,
   DialogContent,
@@ -104,6 +105,7 @@ export function VoiceChatModal({
   connectionState,
   isSpeaking,
 }: VoiceChatModalProps) {
+  const t = useTranslations('modalsVoiceChatModal');
   const isLoading =
     connectionState === 'requesting-permission' ||
     connectionState === 'connecting';
@@ -112,8 +114,8 @@ export function VoiceChatModal({
 
   const loadingMessage = isLoading
     ? connectionState === 'requesting-permission'
-      ? 'Requesting microphone access...'
-      : 'Connecting to voice chat...'
+      ? t('requestingMicrophoneAccess')
+      : t('connectingToVoiceChat')
     : null;
 
   return (
@@ -121,9 +123,9 @@ export function VoiceChatModal({
       <style dangerouslySetInnerHTML={{ __html: pulseAnimations }} />
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 m-0 bg-white p-0">
-          <DialogTitle className="sr-only">Voice Chat</DialogTitle>
+          <DialogTitle className="sr-only">{t('voiceChat')}</DialogTitle>
           <DialogDescription className="sr-only">
-            Real-time voice conversation with your agent
+            {t('dialogDescription')}
           </DialogDescription>
           <div className="flex h-[100vh] w-full flex-col items-center justify-between">
             <div className="flex w-full flex-1 flex-col items-center justify-center px-4">
@@ -255,7 +257,7 @@ export function VoiceChatModal({
                         : 'hover:scale-105 active:scale-95'
                     }`}
                     aria-label={
-                      isMuted ? 'Unmute microphone' : 'Mute microphone'
+                      isMuted ? t('unmuteMicrophone') : t('muteMicrophone')
                     }
                   >
                     {isLoading || isMuted ? (
@@ -268,7 +270,11 @@ export function VoiceChatModal({
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent className="ibl-tooltip-content">
-                  {isLoading ? 'Connecting...' : isMuted ? 'Unmute' : 'Mute'}
+                  {isLoading
+                    ? t('connecting')
+                    : isMuted
+                      ? t('unmute')
+                      : t('mute')}
                 </TooltipContent>
               </Tooltip>
 
@@ -278,13 +284,13 @@ export function VoiceChatModal({
                     onClick={onClose}
                     size="icon"
                     className="ibl-button-primary h-14 w-14 rounded-full transition-all hover:scale-105 active:scale-95"
-                    aria-label="Close voice chat"
+                    aria-label={t('closeVoiceChat')}
                   >
                     <X className="h-5 w-5" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent className="ibl-tooltip-content">
-                  End Call
+                  {t('endCall')}
                 </TooltipContent>
               </Tooltip>
             </div>

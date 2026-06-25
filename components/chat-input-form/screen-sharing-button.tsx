@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { ScreenShare } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -25,11 +26,13 @@ export function ScreenSharingButton({
   isPreviewMode,
   disabled = false,
 }: Props) {
+  const t = useTranslations('chatInputFormScreenSharingButton');
+
   function dynamicTooltipContent() {
     if (isScreenSharingModalOpen) {
-      return 'Screen Sharing';
+      return t('screenSharing');
     }
-    return 'Enable Screen Sharing';
+    return t('enableScreenSharing');
   }
 
   if (
@@ -54,7 +57,7 @@ export function ScreenSharingButton({
             )}
             disabled={disabled || isPreviewMode}
             onClick={onClick}
-            aria-label="Screen Sharing"
+            aria-label={t('screenSharing')}
           >
             <ScreenShare
               className={cn('h-6 w-6 text-gray-400', {

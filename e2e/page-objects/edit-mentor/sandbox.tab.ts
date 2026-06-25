@@ -3,7 +3,7 @@ import { Page, Locator, expect } from '@playwright/test';
 /**
  * Page object for the Sandbox tab inside the Edit Mentor dialog.
  *
- * Renders the SandboxConfig component from @iblai/web-containers. The
+ * Renders the SandboxConfig component from @iblai/iblai-js/web-containers. The
  * component has two distinct states keyed off `mentorConfig`:
  *
  *  - NOT CONNECTED: instance picker (search input + Add Instance + table).

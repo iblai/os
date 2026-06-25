@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   Plus,
   Plug,
@@ -611,6 +612,7 @@ export function ConnectorManagementContent({
   mentorId,
   onSelect,
 }: ConnectorManagementContentProps) {
+  const t = useTranslations('mcpTabConnectorManagementContent');
   const itemsPerPage = 12;
 
   // Filter state
@@ -913,7 +915,7 @@ export function ConnectorManagementContent({
   const handleToggleConnector = useCallback(
     async (serverId: number, serverName: string, isActive: boolean) => {
       if (!Number.isFinite(serverId) || serverId <= 0) {
-        toast.error('Invalid server ID');
+        toast.error(t('invalidServerId'));
         return;
       }
 
@@ -979,7 +981,9 @@ export function ConnectorManagementContent({
 
         await refetchMentorSettings();
         toast.success(
-          `${serverName} ${isActive ? 'activated' : 'deactivated'} successfully`,
+          isActive
+            ? t('activatedSuccessfully', { name: serverName })
+            : t('deactivatedSuccessfully', { name: serverName }),
         );
       } catch (error: unknown) {
         const err = error as {
@@ -988,12 +992,12 @@ export function ConnectorManagementContent({
         };
         const msg = err?.data?.detail || err?.data?.error || err?.message || '';
         if (msg.includes('does not exist') || msg.includes('not accessible')) {
-          toast.error(
-            `${serverName} does not exist or is not accessible. Please refresh the page.`,
-          );
+          toast.error(t('doesNotExistOrNotAccessible', { name: serverName }));
         } else {
           toast.error(
-            `Failed to ${isActive ? 'activate' : 'deactivate'} ${serverName}. ${msg}`,
+            isActive
+              ? t('failedToActivate', { name: serverName, msg })
+              : t('failedToDeactivate', { name: serverName, msg }),
           );
         }
       } finally {
@@ -1026,7 +1030,7 @@ export function ConnectorManagementContent({
       mentor?: string | null;
     }) => {
       if (!tenantKey || !username) {
-        toast.error('Missing required parameters');
+        toast.error(t('missingRequiredParams'));
         return;
       }
 
@@ -1070,7 +1074,9 @@ export function ConnectorManagementContent({
               : { body: basePayload }),
           };
           await updateMCPServer(args).unwrap();
-          toast.success(`${connector.name} connector updated successfully`);
+          toast.success(
+            t('connectorUpdatedSuccessfully', { name: connector.name }),
+          );
         } else {
           // Create new server
           const args = {
@@ -1086,7 +1092,9 @@ export function ConnectorManagementContent({
               : { body: basePayload }),
           };
           const newServer = await createMCPServer(args).unwrap();
-          toast.success(`${connector.name} connector added successfully`);
+          toast.success(
+            t('connectorAddedSuccessfully', { name: connector.name }),
+          );
 
           // Auto-activate new connector
           try {
@@ -1111,7 +1119,7 @@ export function ConnectorManagementContent({
             }
           } catch {
             toast.warning(
-              `${connector.name} was created but couldn't be activated automatically.`,
+              t('createdButCouldNotActivate', { name: connector.name }),
             );
           }
         }
@@ -1121,7 +1129,9 @@ export function ConnectorManagementContent({
         await Promise.all([refetchFeatured(), refetchMy()]);
       } catch {
         toast.error(
-          `Failed to ${editingServer ? 'update' : 'add'} ${connector.name} connector`,
+          editingServer
+            ? t('failedToUpdateConnector', { name: connector.name })
+            : t('failedToAddConnector', { name: connector.name }),
         );
       }
     },
@@ -1144,7 +1154,7 @@ export function ConnectorManagementContent({
   const handleDeleteConnector = useCallback(
     async (serverId: number, serverName: string) => {
       if (!tenantKey || !username) {
-        toast.error('Missing required parameters');
+        toast.error(t('missingRequiredParams'));
         return;
       }
 
@@ -1156,7 +1166,7 @@ export function ConnectorManagementContent({
           org: tenantKey,
           userId: username,
         }).unwrap();
-        toast.success(`${serverName} connector removed successfully`);
+        toast.success(t('connectorRemovedSuccessfully', { name: serverName }));
         await Promise.all([refetchFeatured(), refetchMy()]);
 
         try {
@@ -1164,12 +1174,10 @@ export function ConnectorManagementContent({
           await updateMCPServers(updatedIds);
           await refetchMentorSettings();
         } catch {
-          toast.warning(
-            `${serverName} was deleted but may still appear as active. Please refresh.`,
-          );
+          toast.warning(t('deletedButMayStillAppear', { name: serverName }));
         }
       } catch {
-        toast.error(`Failed to remove ${serverName} connector`);
+        toast.error(t('failedToRemoveConnector', { name: serverName }));
       } finally {
         setDeletingServerId(null);
         setConnectorToDelete(null);
@@ -1191,7 +1199,7 @@ export function ConnectorManagementContent({
   const handleConnectOAuth = useCallback(
     async (server: MCPServer) => {
       if (!tenantKey || !username || !server.oauth_service_data) {
-        toast.error('Missing required parameters or OAuth data');
+        toast.error(t('missingRequiredParamsOrOAuth'));
         return;
       }
 
@@ -1378,7 +1386,9 @@ export function ConnectorManagementContent({
           }, 2000);
         }
       } /* istanbul ignore next */ catch {
-        toast.error(`Failed to connect ${oauthData.display_name || name}`);
+        toast.error(
+          t('failedToConnect', { name: oauthData.display_name || name }),
+        );
         setConnectingServiceIds((prev) => {
           const next = new Set(prev);
           next.delete(serviceKey);
@@ -1415,7 +1425,7 @@ export function ConnectorManagementContent({
 
       /* istanbul ignore next -- @preserve validation error branch */
       if (!validation.isValid) {
-        toast.error(validation.error || 'Validation failed');
+        toast.error(validation.error || t('validationFailed'));
         return;
       }
 
@@ -1437,9 +1447,9 @@ export function ConnectorManagementContent({
           refetchMCPServerConnections(),
           refetchMentorSettings(),
         ]);
-        toast.success('Service disconnected successfully');
+        toast.success(t('serviceDisconnectedSuccessfully'));
       } catch {
-        toast.error('Failed to disconnect service');
+        toast.error(t('failedToDisconnectService'));
       } finally {
         setDisconnectingServiceIds((prev) => {
           const next = new Set(prev);
@@ -1482,7 +1492,7 @@ export function ConnectorManagementContent({
   const renderServerCard = (server: MCPServer, isFeatured: boolean) => {
     const oauthData = server.oauth_service_data;
     const displayName =
-      server.name || oauthData?.display_name || 'Unknown Connector';
+      server.name || oauthData?.display_name || t('unknownConnector');
     const authType = server.auth_type?.toLowerCase();
     const isOAuth2 = authType === 'oauth2';
     const isToken = authType === 'token';
@@ -1529,7 +1539,7 @@ export function ConnectorManagementContent({
           </div>
           <div className="flex shrink-0 items-center gap-2">
             {needsOAuthConnection ? (
-              <span className="text-xs text-gray-600">Not Connected</span>
+              <span className="text-xs text-gray-600">{t('notConnected')}</span>
             ) : (
               <WithFormPermissions
                 name="mcp_servers"
@@ -1539,7 +1549,7 @@ export function ConnectorManagementContent({
                   disabled ? null : (
                     <>
                       <span className="text-xs text-gray-600">
-                        {isActive ? 'Active' : 'Inactive'}
+                        {isActive ? t('active') : t('inactive')}
                       </span>
                       <Switch
                         checked={isActive}
@@ -1547,7 +1557,11 @@ export function ConnectorManagementContent({
                           handleToggleConnector(server.id, displayName, checked)
                         }
                         disabled={togglingServerIds.has(server.id)}
-                        aria-label={`${displayName} ${isActive ? 'enabled' : 'disabled'}`}
+                        aria-label={
+                          isActive
+                            ? t('ariaLabelEnabled', { name: displayName })
+                            : t('ariaLabelDisabled', { name: displayName })
+                        }
                       />
                     </>
                   )
@@ -1569,10 +1583,10 @@ export function ConnectorManagementContent({
             {isOAuth2 && server.auth_scope && (
               <span className="rounded bg-amber-100 px-2 py-1 text-xs text-amber-700">
                 {server.auth_scope === 'user'
-                  ? 'User'
+                  ? t('scopeUser')
                   : server.auth_scope === 'mentor'
-                    ? 'Agent'
-                    : 'Tenant'}
+                    ? t('scopeAgent')
+                    : t('scopeTenant')}
               </span>
             )}
             {isToken && (
@@ -1608,12 +1622,12 @@ export function ConnectorManagementContent({
                         {isDisconnecting ? (
                           <>
                             <Spinner className="mr-2 h-4 w-4" />
-                            Disconnecting...
+                            {t('disconnecting')}
                           </>
                         ) : (
                           <>
                             <Unlink className="mr-2 h-4 w-4" />
-                            Disconnect
+                            {t('disconnect')}
                           </>
                         )}
                       </Button>
@@ -1628,12 +1642,12 @@ export function ConnectorManagementContent({
                         {isConnecting ? (
                           <>
                             <Spinner className="mr-2 h-4 w-4" />
-                            Connecting...
+                            {t('connecting')}
                           </>
                         ) : (
                           <>
                             <Link2 className="mr-2 h-4 w-4" />
-                            Connect
+                            {t('connect')}
                           </>
                         )}
                       </Button>
@@ -1659,7 +1673,7 @@ export function ConnectorManagementContent({
                           }}
                         >
                           <Edit className="mr-2 h-4 w-4" />
-                          Edit
+                          {t('edit')}
                         </Button>
                       ) : null
                     }
@@ -1685,7 +1699,7 @@ export function ConnectorManagementContent({
                           disabled={deletingServerId === server.id}
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
+                          {t('delete')}
                         </Button>
                       ) : null
                     }
@@ -1706,12 +1720,12 @@ export function ConnectorManagementContent({
                     {isDisconnecting ? (
                       <>
                         <Spinner className="mr-2 h-4 w-4" />
-                        Disconnecting...
+                        {t('disconnecting')}
                       </>
                     ) : (
                       <>
                         <Unlink className="mr-2 h-4 w-4" />
-                        Disconnect
+                        {t('disconnect')}
                       </>
                     )}
                   </Button>
@@ -1726,12 +1740,12 @@ export function ConnectorManagementContent({
                     {isConnecting ? (
                       <>
                         <Spinner className="mr-2 h-4 w-4" />
-                        Connecting...
+                        {t('connecting')}
                       </>
                     ) : (
                       <>
                         <Link2 className="mr-2 h-4 w-4" />
-                        Connect
+                        {t('connect')}
                       </>
                     )}
                   </Button>
@@ -1753,11 +1767,13 @@ export function ConnectorManagementContent({
               }}
             >
               <Check className="mr-2 h-4 w-4" />
-              Select
+              {t('select')}
             </Button>
           )}
           <div className="mt-2 text-xs text-gray-500">
-            Created {new Date(server.created_at).toLocaleDateString()}
+            {t('created', {
+              date: new Date(server.created_at).toLocaleDateString(),
+            })}
           </div>
         </div>
       </div>
@@ -1773,7 +1789,7 @@ export function ConnectorManagementContent({
             <div className="relative min-w-[200px] flex-1">
               <Input
                 type="text"
-                placeholder="Search by name..."
+                placeholder={t('searchByName')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-transparent"
@@ -1790,7 +1806,7 @@ export function ConnectorManagementContent({
                   {
                     /* istanbul ignore next */ dateRange?.from && dateRange?.to
                       ? `${format(dateRange.from, 'MMM dd')} - ${format(dateRange.to, 'MMM dd')}`
-                      : 'Pick a Date Range'
+                      : t('pickADateRange')
                   }
                 </Button>
               </PopoverTrigger>
@@ -1810,22 +1826,22 @@ export function ConnectorManagementContent({
                 <Button
                   variant="outline"
                   role="combobox"
-                  aria-label="Select Transport"
+                  aria-label={t('selectTransport')}
                   className="w-full justify-between bg-transparent font-normal lg:w-[200px]"
                 >
                   {selectedTransport
                     ? TRANSPORT_OPTIONS.find(
                         (opt) => opt.value === selectedTransport,
                       )?.label
-                    : 'All Transports'}
+                    : t('allTransports')}
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-full p-0" align="start">
                 <Command>
-                  <CommandInput placeholder="Search transport..." />
+                  <CommandInput placeholder={t('searchTransport')} />
                   <CommandList>
-                    <CommandEmpty>No transport found.</CommandEmpty>
+                    <CommandEmpty>{t('noTransportFound')}</CommandEmpty>
                     <CommandGroup>
                       {TRANSPORT_OPTIONS.map((option) => (
                         <CommandItem
@@ -1860,7 +1876,7 @@ export function ConnectorManagementContent({
               {/* Match the MCP page header (`text-base font-medium`) so the
                   section titles don't visually outweigh the tab title. */}
               <h3 className="text-base font-medium text-gray-900">
-                Featured Connectors
+                {t('featuredConnectors')}
               </h3>
             </div>
             {/* c8 ignore next 5 */}
@@ -1868,7 +1884,7 @@ export function ConnectorManagementContent({
               <div className="flex flex-col items-center justify-center py-12">
                 <Spinner className="mb-4 h-8 w-8" />
                 <p className="text-sm text-gray-500">
-                  Loading featured connectors...
+                  {t('loadingFeaturedConnectors')}
                 </p>
               </div>
             ) : featuredError ? (
@@ -1877,7 +1893,7 @@ export function ConnectorManagementContent({
                   <Plug className="h-8 w-8 text-red-400" />
                 </div>
                 <p className="mb-2 text-sm text-red-600">
-                  Failed to load featured connectors
+                  {t('failedToLoadFeaturedConnectors')}
                 </p>
                 <Button
                   variant="outline"
@@ -1885,7 +1901,7 @@ export function ConnectorManagementContent({
                   onClick={() => refetchFeatured()}
                   className="text-sm"
                 >
-                  Retry
+                  {t('retry')}
                 </Button>
               </div>
             ) : (
@@ -1916,7 +1932,9 @@ export function ConnectorManagementContent({
         {/* Connectors Section */}
         <div>
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-            <h3 className="text-base font-medium text-gray-900">Connectors</h3>
+            <h3 className="text-base font-medium text-gray-900">
+              {t('connectors')}
+            </h3>
             <WithPermissions rbacResource="/mcpservers/#create">
               {({ hasPermission }) =>
                 hasPermission ? (
@@ -1926,8 +1944,10 @@ export function ConnectorManagementContent({
                     className="ibl-button-primary shrink-0"
                   >
                     <Plus className="mr-2 h-4 w-4" />
-                    <span className="hidden sm:inline">Add Connector</span>
-                    <span className="sm:hidden">Add</span>
+                    <span className="hidden sm:inline">
+                      {t('addConnector')}
+                    </span>
+                    <span className="sm:hidden">{t('add')}</span>
                   </Button>
                 ) : null
               }
@@ -1936,7 +1956,7 @@ export function ConnectorManagementContent({
           {isLoadingMy ? (
             <div className="flex flex-col items-center justify-center py-12">
               <Spinner className="mb-4 h-8 w-8" />
-              <p className="text-sm text-gray-500">Loading connectors...</p>
+              <p className="text-sm text-gray-500">{t('loadingConnectors')}</p>
             </div>
           ) : myError ? (
             <div className="flex flex-col items-center justify-center py-12">
@@ -1944,7 +1964,7 @@ export function ConnectorManagementContent({
                 <Plug className="h-8 w-8 text-red-400" />
               </div>
               <p className="mb-2 text-sm text-red-600">
-                Failed to load connectors
+                {t('failedToLoadConnectors')}
               </p>
               <Button
                 variant="outline"
@@ -1952,7 +1972,7 @@ export function ConnectorManagementContent({
                 onClick={() => refetchMy()}
                 className="text-sm"
               >
-                Retry
+                {t('retry')}
               </Button>
             </div>
           ) : !filteredMyServers.length ? (
@@ -1960,7 +1980,9 @@ export function ConnectorManagementContent({
               <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-200">
                 <Plug className="h-8 w-8 text-gray-400" />
               </div>
-              <p className="text-sm text-gray-500">No connectors configured</p>
+              <p className="text-sm text-gray-500">
+                {t('noConnectorsConfigured')}
+              </p>
             </div>
           ) : (
             <>
@@ -2012,14 +2034,14 @@ export function ConnectorManagementContent({
           >
             <DialogHeader className="space-y-2">
               <DialogTitle className="text-xl font-semibold text-gray-700">
-                Remove Connector
+                {t('removeConnector')}
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <p className="text-sm text-gray-600">
-                Are you sure you want to remove{' '}
-                <strong>{connectorToDelete.name}</strong>? This action cannot be
-                undone.
+                {t('removeConfirmationPrefix')}
+                <strong>{connectorToDelete.name}</strong>
+                {t('removeConfirmationSuffix')}
               </p>
               <div className="flex justify-end gap-3">
                 <Button
@@ -2027,7 +2049,7 @@ export function ConnectorManagementContent({
                   onClick={() => setConnectorToDelete(null)}
                   disabled={deletingServerId !== null}
                 >
-                  Cancel
+                  {t('cancel')}
                 </Button>
                 <Button
                   onClick={() =>
@@ -2040,8 +2062,8 @@ export function ConnectorManagementContent({
                   className="ibl-button-primary"
                 >
                   {deletingServerId === connectorToDelete.id
-                    ? 'Deleting...'
-                    : 'Delete'}
+                    ? t('deleting')
+                    : t('deleteConfirm')}
                 </Button>
               </div>
             </div>

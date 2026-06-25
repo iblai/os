@@ -159,6 +159,13 @@ export function useTauri() {
       // delivered — otherwise the UI never leaves the "downloading" state.
       let listenFn = apis?.listen;
       if (!listenFn) {
+        // `apis.listen` can be undefined even when Tauri is fully available, so
+        // fall back to the real event API via dynamic import. But if Tauri
+        // isn't available at all, there's nothing to listen to — surface the
+        // same error as `invoke` instead of attempting a doomed import.
+        if (!isTauriApp()) {
+          throw new Error('Tauri is not available');
+        }
         const { listen: importedListen } = await import(
           '@tauri-apps/api/event'
         );

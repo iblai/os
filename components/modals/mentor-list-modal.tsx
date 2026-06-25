@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useTranslations } from 'next-intl';
 import { Search } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
@@ -59,6 +60,7 @@ export function MentorListModal({
   onClose,
   onSelect,
 }: MentorListModalProps) {
+  const t = useTranslations('modalsMentorListModal');
   const [searchQuery, setSearchQuery] = React.useState('');
 
   const filteredMentors = React.useMemo(() => {
@@ -78,7 +80,7 @@ export function MentorListModal({
               <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-500" />
               <Input
                 type="search"
-                placeholder="Search"
+                placeholder={t('searchPlaceholder')}
                 className="pl-9"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
