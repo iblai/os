@@ -462,13 +462,14 @@ test.describe('Journey 20: Dataset Management', () => {
     await expect(imageDialog).toBeVisible({ timeout: 5_000 });
     const fileInput = imageDialog.locator('input[type="file"]');
     await fileInput.setInputFiles(IMAGE_FILE);
-    const closeBtn = page.getByRole('button', { name: 'Close' });
-    await expect(closeBtn).toBeVisible();
-    await closeBtn.click();
-    await page.waitForTimeout(2_000);
-    const fileName = editMentorPage.dialog.getByText(/acessibility png/i);
-    const fileVisible = await fileName.isVisible().catch(() => false);
-    logger.info(`TC22: Image file visible in list: ${fileVisible}`);
+    const submitBtn = imageDialog.getByRole('button', { name: 'Submit' });
+    await expect(submitBtn).toBeVisible();
+    await submitBtn.click();
+
+    await expect(
+      page.getByText(/Document has been queued for training/i),
+    ).toBeVisible({ timeout: 15_000 });
+    logger.info('TC22: Image file submitted and queued for training');
   });
 
   // ── TC23: Multiple file types ──────────────────────────────────────────────
