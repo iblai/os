@@ -217,7 +217,7 @@ describe('AccessTab', () => {
       screen.getByText('1 user assigned to this role'),
     ).toBeInTheDocument();
     expect(screen.getByTestId('add-access-dialog')).toHaveTextContent(
-      'add-access-editor,chat,analytics_viewer-ready',
+      'add-access-editor,chat,analytics_viewer,dataset_curator-ready',
     );
   });
 
@@ -247,9 +247,9 @@ describe('AccessTab', () => {
     expect(
       screen.getByRole('button', { name: 'Edit Analytics Viewer access' }),
     ).toBeInTheDocument();
-    // analytics_viewer is one of three defaults; two remain available
+    // analytics_viewer is one of five defaults; four remain available
     expect(screen.getByTestId('add-access-dialog')).toHaveTextContent(
-      'add-access-editor,chat-ready',
+      'add-access-editor,chat,dataset_curator,viewer-ready',
     );
   });
 
@@ -286,6 +286,18 @@ describe('AccessTab', () => {
         mentor_id: 101,
         platform_key: 'tenant-1',
         role: 'analytics_viewer',
+      },
+      {
+        id: 4,
+        mentor_id: 101,
+        platform_key: 'tenant-1',
+        role: 'dataset_curator',
+      },
+      {
+        id: 5,
+        mentor_id: 101,
+        platform_key: 'tenant-1',
+        role: 'viewer',
       },
     ];
 

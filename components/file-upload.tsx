@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { useDropzone } from 'react-dropzone';
 import { Upload, File, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,7 @@ export function FileUpload({
     'application/msword': ['.doc'],
   },
 }: FileUploadProps) {
+  const t = useTranslations('componentsFileUpload');
   const [files, setFiles] = useState<File[]>([]);
   const [isDraggingOverDocument, setIsDraggingOverDocument] = useState(false);
 
@@ -113,13 +115,11 @@ export function FileUpload({
                 <Upload className="text-primary h-16 w-16" />
               </div>
               <div>
-                <h3 className="text-2xl font-bold">Drop your files here</h3>
-                <p className="mt-2 text-gray-500">
-                  Release to upload your documents
-                </p>
+                <h3 className="text-2xl font-bold">{t('dropFilesHere')}</h3>
+                <p className="mt-2 text-gray-500">{t('releaseToUpload')}</p>
               </div>
               <div className="mt-2 text-sm text-gray-500">
-                Supported file types: PDF, TXT, CSV, DOC, DOCX
+                {t('supportedFileTypes')}
               </div>
             </div>
           </div>
@@ -138,9 +138,11 @@ export function FileUpload({
                 <Upload className="text-primary h-8 w-8" />
               </div>
               <div>
-                <p className="text-lg font-medium">Upload your documents</p>
+                <p className="text-lg font-medium">
+                  {t('uploadYourDocuments')}
+                </p>
                 <p className="mt-1 text-sm text-gray-500">
-                  Drag & drop files anywhere on the page or click to browse
+                  {t('dragAndDropOrClick')}
                 </p>
               </div>
             </div>
@@ -152,7 +154,7 @@ export function FileUpload({
           <Card className="mt-6">
             <CardContent className="p-4">
               <h3 className="mb-3 font-medium">
-                Uploaded Files ({files.length}/{maxFiles})
+                {t('uploadedFiles', { count: files.length, max: maxFiles })}
               </h3>
               <ul className="space-y-2">
                 {files.map((file) => (
@@ -176,7 +178,7 @@ export function FileUpload({
                       className="h-8 w-8 p-0"
                     >
                       <X className="h-4 w-4" />
-                      <span className="sr-only">Remove file</span>
+                      <span className="sr-only">{t('removeFile')}</span>
                     </Button>
                   </li>
                 ))}

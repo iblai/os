@@ -1,14 +1,18 @@
+'use client';
+
 import { useTopTrialBanner } from '@/hooks/use-top-trial-banner';
 import { TopTrialBannerProps } from '@/lib/types';
+import { useTranslations } from 'next-intl';
 import React from 'react';
 
 export function TopTrialBanner({
   parentContainer,
-  bannerText = 'Upgrade to create your own agents. No credit card required 😎',
+  bannerText,
   onUpgrade,
   loading = false,
-  tooltipText = 'Upgrade to create your own agents. No credit card required 😎',
+  tooltipText,
 }: TopTrialBannerProps) {
+  const t = useTranslations('topTrialBannerTopTrialBanner');
   const {
     visible,
     setVisible,
@@ -21,10 +25,12 @@ export function TopTrialBanner({
     parentContainer,
     onUpgrade,
     loading,
-    tooltipText,
+    tooltipText: tooltipText ?? t('defaultBannerText'),
   });
 
   if (!visible) return null;
+
+  const resolvedBannerText = bannerText ?? t('defaultBannerText');
 
   return (
     <div
@@ -64,17 +70,17 @@ export function TopTrialBanner({
           </svg>
           {showTooltip && (
             <div className="absolute top-full left-1/2 z-50 mt-2 -translate-x-1/2 rounded bg-gray-900 px-3 py-1 text-xs whitespace-nowrap text-white shadow-lg">
-              {tooltipText}
+              {tooltipText ?? t('defaultBannerText')}
             </div>
           )}
         </div>
         <span className="ml-2 max-w-[250px] font-medium break-words text-white sm:max-w-none">
-          {bannerText}
+          {resolvedBannerText}
         </span>
         {/* Upgrade button: icon-only on mobile, text on md+ */}
         <button
           className="ml-4 block flex-shrink-0 rounded-full border border-white/70 bg-transparent px-2 py-1 text-sm font-medium whitespace-nowrap text-white transition hover:bg-white/10 sm:hidden"
-          aria-label="Upgrade"
+          aria-label={t('upgradeAriaLabel')}
           onClick={isLoading ? () => {} : () => bannerButtonTriggerHandler()}
           disabled={isLoading}
           style={{ position: 'relative', minWidth: '40px', minHeight: '32px' }}
@@ -154,14 +160,14 @@ export function TopTrialBanner({
               </svg>
             </span>
           ) : (
-            'Upgrade'
+            t('upgradeButton')
           )}
         </button>
       </div>
       {/* Close button at the right edge */}
       <button
         className="absolute top-1/2 right-0 rounded-full p-1 transition hover:bg-white/20 md:right-4"
-        aria-label="Close banner"
+        aria-label={t('closeBannerAriaLabel')}
         onClick={() => setVisible(false)}
         style={{ transform: 'translateY(-50%)' }}
       >

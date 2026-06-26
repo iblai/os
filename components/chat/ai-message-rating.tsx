@@ -14,6 +14,7 @@ import { useUsername } from '@/hooks/use-user';
 import type { Message } from '@iblai/iblai-js/web-utils';
 import React from 'react';
 import { cn } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
 
 function getUserMessageBeforeCurrentId(messages: Message[], currentId: string) {
   // get the position of the current message in the array
@@ -53,6 +54,7 @@ export function AIMessageRating({
   sessionId,
   tenantKey,
 }: Props) {
+  const t = useTranslations('chatAiMessageRating');
   const [rating, setRating] = React.useState<number | null>(null);
 
   const username = useUsername();
@@ -78,7 +80,7 @@ export function AIMessageRating({
       }).unwrap();
       setRating(rating);
     } catch (error) {
-      toast.error('Failed to update message feedback');
+      toast.error(t('failedToUpdateFeedback'));
       console.error(JSON.stringify(error));
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     }
@@ -96,7 +98,7 @@ export function AIMessageRating({
             }}
             className="-ml-1 text-gray-500 hover:text-gray-700"
           >
-            <span className="sr-only">Positive Feedback Thumbs Up</span>
+            <span className="sr-only">{t('positiveFeedbackSrOnly')}</span>
             <ThumbsUp
               className={cn('h-4 w-4', {
                 'fill-gray-400 stroke-1 text-gray-400': rating === RATING.GOOD,
@@ -105,7 +107,7 @@ export function AIMessageRating({
           </button>
         </TooltipTrigger>
         <TooltipContent className="ibl-tooltip-content">
-          Positive Feedback
+          {t('positiveFeedbackTooltip')}
         </TooltipContent>
       </Tooltip>
       <Tooltip>
@@ -118,7 +120,7 @@ export function AIMessageRating({
             }}
             className="-ml-1 text-gray-500 hover:text-gray-700"
           >
-            <span className="sr-only">Negative Feedback Thumbs Down</span>
+            <span className="sr-only">{t('negativeFeedbackSrOnly')}</span>
             <ThumbsDown
               className={cn('h-4 w-4', {
                 'fill-gray-400 stroke-1 text-gray-400': rating === RATING.BAD,
@@ -127,7 +129,7 @@ export function AIMessageRating({
           </button>
         </TooltipTrigger>
         <TooltipContent className="ibl-tooltip-content">
-          Negative Feedback
+          {t('negativeFeedbackTooltip')}
         </TooltipContent>
       </Tooltip>
     </>

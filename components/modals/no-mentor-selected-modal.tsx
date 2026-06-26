@@ -11,6 +11,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useNavigate } from '@/hooks/user-navigate';
+import { useTranslations } from 'next-intl';
 
 interface NoMentorSelectedModalProps {
   isOpen: boolean;
@@ -21,6 +22,7 @@ export function NoMentorSelectedModal({
   isOpen,
   onClose,
 }: NoMentorSelectedModalProps) {
+  const t = useTranslations('modalsNoMentorSelectedModal');
   const { navigateToExplore } = useNavigate();
 
   const handleExplore = (event: React.MouseEvent) => {
@@ -38,21 +40,18 @@ export function NoMentorSelectedModal({
     <AlertDialog open={isOpen} onOpenChange={onClose}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>No Agent Selected</AlertDialogTitle>
-          <AlertDialogDescription>
-            You need to select an agent before starting a new chat. Would you
-            like to explore available agents?
-          </AlertDialogDescription>
+          <AlertDialogTitle>{t('title')}</AlertDialogTitle>
+          <AlertDialogDescription>{t('description')}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel onClick={onClose} className="ibl-button-primary">
-            Cancel
+            {t('cancel')}
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={handleExplore}
             className="border-input bg-background text-accent-foreground hover:bg-accent hover:text-accent-foreground border"
           >
-            Explore Agents
+            {t('exploreAgents')}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

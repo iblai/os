@@ -48,13 +48,28 @@ const env = {
     process.env.NEXT_PUBLIC_DEFAULT_SUPPORT_PHONE_NUMBER,
   NEXT_PUBLIC_MAXIMUM_CHARACTER_SIZE_TO_COPY:
     process.env.NEXT_PUBLIC_MAXIMUM_CHARACTER_SIZE_TO_COPY,
+  NEXT_PUBLIC_ENABLE_SUPPORT_PHONE:
+    process.env.NEXT_PUBLIC_ENABLE_SUPPORT_PHONE,
 };
 
 const runtimeEnv = () =>
   typeof window !== 'undefined' ? (window as any).__ENV__ || {} : {};
 
 export const getEnv = (key: keyof typeof env, fallback = ''): string => {
-  return runtimeEnv()[key] ?? env[key] ?? fallback;
+  // Prefer the first *non-empty* value. Plain `??` only falls back on
+  // null/undefined, so an empty-string runtime value — which `env.js`
+  // templating commonly emits for unset vars (`KEY: ""`) — would shadow a
+  // meaningful fallback. e.g. NEXT_PUBLIC_MAXIMUM_CHARACTER_SIZE_TO_COPY=""
+  // yields Number("") === 0 and turns every paste into an attachment chip.
+  const runtime = runtimeEnv()[key];
+  if (runtime !== undefined && runtime !== null && runtime !== '') {
+    return runtime;
+  }
+  const build = env[key];
+  if (build !== undefined && build !== null && build !== '') {
+    return build;
+  }
+  return fallback;
 };
 
 const domain = () => getEnv('NEXT_PUBLIC_PLATFORM_BASE_DOMAIN', 'iblai.app');
@@ -146,4 +161,6 @@ export const config = {
     '(571) 293-0242',
   maximumCharacterSizeToCopy: () =>
     getEnv('NEXT_PUBLIC_MAXIMUM_CHARACTER_SIZE_TO_COPY', '2000'),
+  enableSupportPhone: () =>
+    getEnv('NEXT_PUBLIC_ENABLE_SUPPORT_PHONE', 'false') === 'true',
 };

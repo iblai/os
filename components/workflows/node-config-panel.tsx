@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   Copy,
   Plus,
@@ -115,6 +116,7 @@ export function NodeConfigPanel({
   org,
   defaultMentorId,
 }: NodeConfigPanelProps) {
+  const t = useTranslations('workflowsNodeConfigPanel');
   const dispatch = useAppDispatch();
 
   // Initialize state from nodeData
@@ -516,14 +518,14 @@ export function NodeConfigPanel({
               <div className="flex-1">
                 <div className="mb-0.5 flex items-center gap-2">
                   <h3 className="text-foreground text-base font-semibold">
-                    Start
+                    {t('startTitle')}
                   </h3>
                   <Button variant="ghost" size="icon" className="h-5 w-5">
                     <Copy className="text-muted-foreground h-3 w-3" />
                   </Button>
                 </div>
                 <p className="text-muted-foreground text-xs">
-                  Define the workflow inputs
+                  {t('startDescription')}
                 </p>
               </div>
               <Button
@@ -539,7 +541,7 @@ export function NodeConfigPanel({
             {/* Input Variables */}
             <div className="space-y-1.5">
               <h4 className="text-foreground text-xs font-medium">
-                Input variables
+                {t('inputVariables')}
               </h4>
               <div className="space-y-1">
                 {inputVariables.map((variable) => (
@@ -568,7 +570,7 @@ export function NodeConfigPanel({
             {/* State Variables */}
             <div className="space-y-1.5">
               <h4 className="text-foreground text-xs font-medium">
-                State variables
+                {t('stateVariables')}
               </h4>
               <div className="space-y-1">
                 {stateVariables.map((variable) => (
@@ -599,7 +601,7 @@ export function NodeConfigPanel({
                 onClick={() => setShowAddModal(true)}
               >
                 <Plus className="mr-1 h-3 w-3" />
-                Add
+                {t('addButton')}
               </Button>
             </div>
           </div>
@@ -613,7 +615,9 @@ export function NodeConfigPanel({
             onMouseDown={(e) => e.stopPropagation()}
           >
             <DialogHeader>
-              <DialogTitle className="sr-only">Add State Variable</DialogTitle>
+              <DialogTitle className="sr-only">
+                {t('addStateVariableDialogTitle')}
+              </DialogTitle>
             </DialogHeader>
             <div className="space-y-6 pt-4">
               {/* Type Selection */}
@@ -652,11 +656,11 @@ export function NodeConfigPanel({
               {/* Name Input */}
               <div className="space-y-2">
                 <Label htmlFor="var-name" className="text-sm font-medium">
-                  Name
+                  {t('nameLabel')}
                 </Label>
                 <Input
                   id="var-name"
-                  placeholder="Enter the variable name"
+                  placeholder={t('variableNamePlaceholder')}
                   value={newVarName}
                   onChange={(e) => setNewVarName(e.target.value)}
                   className="bg-muted border-border"
@@ -666,9 +670,9 @@ export function NodeConfigPanel({
               {/* Default Value Input - Dynamic based on type */}
               <div className="space-y-2">
                 <Label htmlFor="var-default" className="text-sm font-medium">
-                  Default value{' '}
+                  {t('defaultValueLabel')}{' '}
                   <span className="text-muted-foreground font-normal">
-                    Optional
+                    {t('defaultValueOptional')}
                   </span>
                 </Label>
                 {selectedType === 'Boolean' ? (
@@ -681,7 +685,9 @@ export function NodeConfigPanel({
                       }
                     />
                     <span className="text-muted-foreground text-sm">
-                      {newVarDefault === 'true' ? 'True' : 'False'}
+                      {newVarDefault === 'true'
+                        ? t('booleanTrue')
+                        : t('booleanFalse')}
                     </span>
                   </div>
                 ) : selectedType === 'Number' ? (
@@ -712,7 +718,7 @@ export function NodeConfigPanel({
                 ) : (
                   <Input
                     id="var-default"
-                    placeholder="Enter default value"
+                    placeholder={t('defaultValueStringPlaceholder')}
                     value={newVarDefault}
                     onChange={(e) => setNewVarDefault(e.target.value)}
                     className="bg-muted border-border"
@@ -727,7 +733,7 @@ export function NodeConfigPanel({
                   disabled={!newVarName}
                   className="bg-background hover:bg-muted text-foreground border-border border"
                 >
-                  Save
+                  {t('saveButton')}
                 </Button>
               </div>
             </div>
@@ -758,7 +764,7 @@ export function NodeConfigPanel({
                   {nodeData.label}
                 </h3>
                 <p className="text-muted-foreground text-[11px]">
-                  Configure the agent instructions, model, and tools
+                  {t('mentorDescription')}
                 </p>
               </div>
               <div className="flex items-center gap-0.5">
@@ -780,7 +786,7 @@ export function NodeConfigPanel({
             <div className="space-y-1">
               <div className="flex items-center justify-between">
                 <Label className="text-foreground text-[11px] font-medium">
-                  Name
+                  {t('nameLabel')}
                 </Label>
                 <Button
                   variant="ghost"
@@ -788,7 +794,7 @@ export function NodeConfigPanel({
                   className="h-6 px-2 text-[11px]"
                   onClick={() => setShowMentorModal(true)}
                 >
-                  {selectedMentorId ? 'Change' : 'Select'}
+                  {selectedMentorId ? t('changeButton') : t('selectButton')}
                 </Button>
               </div>
               <Input
@@ -798,7 +804,7 @@ export function NodeConfigPanel({
               />
               {!selectedMentorId && (
                 <p className="text-muted-foreground text-[10px]">
-                  Select an agent to load configuration.
+                  {t('selectAgentHint')}
                 </p>
               )}
             </div>
@@ -806,7 +812,7 @@ export function NodeConfigPanel({
             {/* Instructions */}
             <div className="space-y-1">
               <Label className="text-foreground text-[11px] font-medium">
-                Instructions
+                {t('instructionsLabel')}
               </Label>
               <Textarea
                 value={instructions}
@@ -818,7 +824,7 @@ export function NodeConfigPanel({
             {/* Model */}
             <div className="space-y-1">
               <Label className="text-foreground text-[11px] font-medium">
-                Model
+                {t('modelLabel')}
               </Label>
               <Input
                 value={modelDisplay}
@@ -826,9 +832,9 @@ export function NodeConfigPanel({
                 placeholder={
                   selectedMentorId
                     ? isMentorSettingsLoading
-                      ? 'Loading model...'
-                      : 'No model configured'
-                    : 'Select an agent to load model'
+                      ? t('loadingModelPlaceholder')
+                      : t('noModelConfiguredPlaceholder')
+                    : t('selectAgentModelPlaceholder')
                 }
                 className="bg-muted border-border h-8 text-sm"
               />
@@ -837,22 +843,22 @@ export function NodeConfigPanel({
             {/* Tools */}
             <div className="space-y-1">
               <Label className="text-foreground text-[11px] font-medium">
-                Tools
+                {t('toolsLabel')}
               </Label>
               {!selectedMentorId && (
                 <p className="text-muted-foreground text-[10px]">
-                  Select an agent to configure tools.
+                  {t('selectAgentToolsHint')}
                 </p>
               )}
               {selectedMentorId &&
                 (isToolsLoading || isMentorSettingsLoading) && (
                   <p className="text-muted-foreground text-[10px]">
-                    Loading tools...
+                    {t('loadingTools')}
                   </p>
                 )}
               {selectedMentorId && !isToolsLoading && tools?.length === 0 && (
                 <p className="text-muted-foreground text-[10px]">
-                  No tools available.
+                  {t('noToolsAvailable')}
                 </p>
               )}
               {selectedMentorId && !isToolsLoading && tools?.length ? (
@@ -883,7 +889,9 @@ export function NodeConfigPanel({
                                 <TooltipProvider>
                                   <Tooltip>
                                     <TooltipTrigger
-                                      aria-label={`More info about ${toolLabel}`}
+                                      aria-label={t('toolInfoAriaLabel', {
+                                        toolLabel,
+                                      })}
                                     >
                                       <Info className="text-muted-foreground h-3 w-3" />
                                     </TooltipTrigger>
@@ -901,7 +909,12 @@ export function NodeConfigPanel({
                                 toggleTools(slug);
                               }}
                               disabled={isDisabled}
-                              aria-label={`${toolLabel} ${isEnabled ? 'enabled' : 'disabled'}`}
+                              aria-label={t('toolSwitchAriaLabel', {
+                                toolLabel,
+                                status: isEnabled
+                                  ? t('toolEnabled')
+                                  : t('toolDisabled'),
+                              })}
                             />
                           </div>
                         );
@@ -930,7 +943,7 @@ export function NodeConfigPanel({
           >
             <DialogHeader className="border-b border-gray-200 bg-white px-6 py-4">
               <DialogTitle className="text-lg font-semibold text-gray-900">
-                Select Agent
+                {t('selectAgentDialogTitle')}
               </DialogTitle>
             </DialogHeader>
             <div className="px-6 py-4">
@@ -965,7 +978,7 @@ export function NodeConfigPanel({
                 {nodeData.label}
               </h3>
               <p className="text-muted-foreground text-[11px]">
-                Run moderation, PII, jailbreak, or hallucination checks
+                {t('guardrailsDescription')}
               </p>
             </div>
             <div className="flex items-center gap-0.5">
@@ -986,7 +999,7 @@ export function NodeConfigPanel({
           {/* Name Field */}
           <div className="space-y-1">
             <Label className="text-foreground text-[11px] font-medium">
-              Name
+              {t('nameLabel')}
             </Label>
             <Input
               value={nodeName}
@@ -998,7 +1011,7 @@ export function NodeConfigPanel({
           {/* Input Field */}
           <div className="space-y-1">
             <Label className="text-foreground text-[11px] font-medium">
-              Input
+              {t('inputLabel')}
             </Label>
             <div className="bg-muted border-border flex items-center gap-2 rounded-lg border p-2">
               <div className="flex h-4 w-4 items-center justify-center rounded bg-green-500/20">
@@ -1025,7 +1038,7 @@ export function NodeConfigPanel({
             <div className="flex items-center justify-between py-1">
               <div className="flex items-center gap-1">
                 <Label className="text-foreground text-[11px] font-medium">
-                  Personally identifiable information
+                  {t('piiLabel')}
                 </Label>
                 <Info className="text-muted-foreground h-3 w-3" />
               </div>
@@ -1040,7 +1053,7 @@ export function NodeConfigPanel({
             <div className="flex items-center justify-between py-1">
               <div className="flex items-center gap-1">
                 <Label className="text-foreground text-[11px] font-medium">
-                  Moderation
+                  {t('moderationLabel')}
                 </Label>
                 <Info className="text-muted-foreground h-3 w-3" />
               </div>
@@ -1055,7 +1068,7 @@ export function NodeConfigPanel({
             <div className="flex items-center justify-between py-1">
               <div className="flex items-center gap-1">
                 <Label className="text-foreground text-[11px] font-medium">
-                  Jailbreak
+                  {t('jailbreakLabel')}
                 </Label>
                 <Info className="text-muted-foreground h-3 w-3" />
               </div>
@@ -1070,7 +1083,7 @@ export function NodeConfigPanel({
             <div className="flex items-center justify-between py-1">
               <div className="flex items-center gap-1">
                 <Label className="text-foreground text-[11px] font-medium">
-                  Hallucination
+                  {t('hallucinationLabel')}
                 </Label>
                 <Info className="text-muted-foreground h-3 w-3" />
               </div>
@@ -1086,7 +1099,7 @@ export function NodeConfigPanel({
           {/* Continue on error */}
           <div className="border-border flex items-center justify-between border-t py-1 pt-2">
             <Label className="text-foreground text-[11px] font-medium">
-              Continue on error
+              {t('continueOnErrorLabel')}
             </Label>
             <Switch
               checked={continueOnError}
@@ -1155,7 +1168,7 @@ export function NodeConfigPanel({
                   {nodeData.label}
                 </h3>
                 <p className="text-muted-foreground text-[11px]">
-                  Search datasets for relevant information
+                  {t('fileSearchDescription')}
                 </p>
               </div>
               <div className="flex items-center gap-0.5">
@@ -1177,7 +1190,7 @@ export function NodeConfigPanel({
             <div className="space-y-1">
               <div className="flex items-center justify-between">
                 <Label className="text-foreground text-[11px] font-medium">
-                  Dataset
+                  {t('datasetLabel')}
                 </Label>
                 <Button
                   variant="ghost"
@@ -1185,7 +1198,7 @@ export function NodeConfigPanel({
                   className="h-6 px-2 text-[11px]"
                   onClick={openDatasetDialog}
                 >
-                  {datasetId ? 'Change' : 'Select'}
+                  {datasetId ? t('changeButton') : t('selectButton')}
                 </Button>
               </div>
               {datasetId ? (
@@ -1194,7 +1207,7 @@ export function NodeConfigPanel({
                 </p>
               ) : (
                 <p className="text-muted-foreground text-[10px]">
-                  Select a dataset to search against.
+                  {t('selectDatasetHint')}
                 </p>
               )}
             </div>
@@ -1202,7 +1215,7 @@ export function NodeConfigPanel({
             {/* Max results */}
             <div className="space-y-1">
               <Label className="text-foreground text-[11px] font-medium">
-                Max results
+                {t('maxResultsLabel')}
               </Label>
               <Input
                 type="number"
@@ -1215,12 +1228,12 @@ export function NodeConfigPanel({
             {/* Query */}
             <div className="space-y-1">
               <Label className="text-foreground text-[11px] font-medium">
-                Query
+                {t('queryLabel')}
               </Label>
               <Textarea
                 value={fileSearchQuery}
                 onChange={(e) => handleFileSearchQueryChange(e.target.value)}
-                placeholder="Enter file search input. Use {{ curly braces }} to insert variables."
+                placeholder={t('fileSearchQueryPlaceholder')}
                 className="bg-muted border-border min-h-[100px] resize-none text-xs"
               />
             </div>
@@ -1240,7 +1253,7 @@ export function NodeConfigPanel({
             onMouseDown={(e) => e.stopPropagation()}
           >
             <DialogHeader className="sr-only">
-              <DialogTitle>Select Dataset</DialogTitle>
+              <DialogTitle>{t('selectDatasetDialogTitle')}</DialogTitle>
             </DialogHeader>
             <DatasetsTab
               onSelect={handleDatasetSelect}
@@ -1297,7 +1310,7 @@ export function NodeConfigPanel({
                   {nodeData.label}
                 </h3>
                 <p className="text-muted-foreground text-[11px]">
-                  Invoke a Model Context Protocol tool
+                  {t('mcpDescription')}
                 </p>
               </div>
               <div className="flex items-center gap-0.5">
@@ -1332,14 +1345,14 @@ export function NodeConfigPanel({
                   onClick={openMcpDialog}
                 >
                   <Plus className="mr-1 h-3 w-3" />
-                  Add
+                  {t('addButton')}
                 </Button>
               </div>
             ) : (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label className="text-foreground text-[11px] font-medium">
-                    Connected Tools
+                    {t('connectedToolsLabel')}
                   </Label>
                   <Button
                     variant="ghost"
@@ -1400,7 +1413,7 @@ export function NodeConfigPanel({
             onMouseDown={(e) => e.stopPropagation()}
           >
             <DialogHeader className="sr-only">
-              <DialogTitle>Select MCP Connector</DialogTitle>
+              <DialogTitle>{t('selectMcpDialogTitle')}</DialogTitle>
             </DialogHeader>
             <McpTab onSelect={handleMcpSelect} />
           </DialogContent>
@@ -1424,7 +1437,7 @@ export function NodeConfigPanel({
                 {nodeData.label}
               </h3>
               <p className="text-muted-foreground text-[11px]">
-                Loop while a condition is true
+                {t('whileDescription')}
               </p>
             </div>
             <div className="flex items-center gap-0.5">
@@ -1444,7 +1457,7 @@ export function NodeConfigPanel({
 
           <div className="space-y-1">
             <Label className="text-foreground text-[11px] font-medium">
-              Expression
+              {t('expressionLabel')}
             </Label>
             <Textarea
               value={whileExpression}
@@ -1453,9 +1466,9 @@ export function NodeConfigPanel({
               className="bg-muted border-border min-h-[100px] resize-none font-mono text-xs"
             />
             <p className="text-muted-foreground text-[10px]">
-              Use Common Expression Language to create a custom expression.{' '}
+              {t('celHintFull')}{' '}
               <a href="#" className="underline">
-                Learn more.
+                {t('learnMore')}
               </a>
             </p>
           </div>
@@ -1479,7 +1492,7 @@ export function NodeConfigPanel({
                 {nodeData.label}
               </h3>
               <p className="text-muted-foreground text-[11px]">
-                Pause for a human to approve or reject a step
+                {t('userApprovalDescription')}
               </p>
             </div>
             <div className="flex items-center gap-0.5">
@@ -1499,7 +1512,7 @@ export function NodeConfigPanel({
 
           <div className="space-y-1">
             <Label className="text-foreground text-[11px] font-medium">
-              Name
+              {t('nameLabel')}
             </Label>
             <Input
               value={nodeName}
@@ -1510,12 +1523,12 @@ export function NodeConfigPanel({
 
           <div className="space-y-1">
             <Label className="text-foreground text-[11px] font-medium">
-              Message
+              {t('messageLabel')}
             </Label>
             <Textarea
               value={userApprovalMessage}
               onChange={(e) => handleUserApprovalMessageChange(e.target.value)}
-              placeholder="Describe the message to show the user. Eg. ok to proceed?"
+              placeholder={t('approvalMessagePlaceholder')}
               className="bg-muted border-border min-h-[120px] resize-none text-xs"
             />
           </div>
@@ -1538,7 +1551,9 @@ export function NodeConfigPanel({
               <h3 className="text-foreground mb-0.5 text-base font-semibold">
                 {nodeData.label}
               </h3>
-              <p className="text-muted-foreground text-[11px]">Reshape data</p>
+              <p className="text-muted-foreground text-[11px]">
+                {t('transformDescription')}
+              </p>
             </div>
             <div className="flex items-center gap-0.5">
               <Button variant="ghost" size="icon" className="h-6 w-6">
@@ -1557,7 +1572,7 @@ export function NodeConfigPanel({
 
           <div className="space-y-1">
             <Label className="text-foreground text-[11px] font-medium">
-              Name
+              {t('nameLabel')}
             </Label>
             <Input
               value={nodeName}
@@ -1576,7 +1591,7 @@ export function NodeConfigPanel({
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              Expressions
+              {t('expressionsMode')}
             </button>
             <button
               onClick={() => handleTransformModeChange('object')}
@@ -1586,7 +1601,7 @@ export function NodeConfigPanel({
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              Object
+              {t('objectMode')}
             </button>
           </div>
 
@@ -1599,7 +1614,7 @@ export function NodeConfigPanel({
                 >
                   <div className="flex items-center justify-between">
                     <Label className="text-foreground text-[10px] font-medium">
-                      Key
+                      {t('keyLabel')}
                     </Label>
                     {transformExpressions.length > 1 && (
                       <Button
@@ -1623,7 +1638,7 @@ export function NodeConfigPanel({
                     className="bg-background border-border h-7 text-xs"
                   />
                   <Label className="text-foreground text-[10px] font-medium">
-                    Value
+                    {t('valueLabel')}
                   </Label>
                   <Textarea
                     value={expr.value}
@@ -1636,9 +1651,9 @@ export function NodeConfigPanel({
                     className="bg-background border-border min-h-[60px] font-mono text-xs"
                   />
                   <p className="text-muted-foreground text-[9px]">
-                    Use Common Expression Language.{' '}
+                    {t('celHintShort')}{' '}
                     <a href="#" className="underline">
-                      Learn more.
+                      {t('learnMore')}
                     </a>
                   </p>
                 </div>
@@ -1651,7 +1666,7 @@ export function NodeConfigPanel({
                 onClick={handleAddTransformExpression}
               >
                 <Plus className="mr-1 h-3 w-3" />
-                Add
+                {t('addButton')}
               </Button>
             </div>
           ) : (
@@ -1662,7 +1677,7 @@ export function NodeConfigPanel({
                 className="h-7 w-full text-xs"
               >
                 <Plus className="mr-1 h-3 w-3" />
-                Add schema
+                {t('addSchemaButton')}
               </Button>
             </div>
           )}
@@ -1686,7 +1701,7 @@ export function NodeConfigPanel({
                 {nodeData.label}
               </h3>
               <p className="text-muted-foreground text-[11px]">
-                Assign values to workflow's state variables
+                {t('setStateDescription')}
               </p>
             </div>
             <div className="flex items-center gap-0.5">
@@ -1712,7 +1727,7 @@ export function NodeConfigPanel({
               >
                 <div className="flex items-center justify-between">
                   <Label className="text-foreground text-[10px] font-medium">
-                    Assign value
+                    {t('assignValueLabel')}
                   </Label>
                   {setStateAssignments.length > 1 && (
                     <Button
@@ -1738,13 +1753,13 @@ export function NodeConfigPanel({
                   className="bg-background border-border min-h-[60px] font-mono text-xs"
                 />
                 <p className="text-muted-foreground text-[9px]">
-                  Use Common Expression Language.{' '}
+                  {t('celHintShort')}{' '}
                   <a href="#" className="underline">
-                    Learn more.
+                    {t('learnMore')}
                   </a>
                 </p>
                 <Label className="text-foreground text-[10px] font-medium">
-                  To variable
+                  {t('toVariableLabel')}
                 </Label>
                 <div className="flex gap-1">
                   <Select
@@ -1756,12 +1771,12 @@ export function NodeConfigPanel({
                     }
                   >
                     <SelectTrigger className="bg-background border-border h-7 flex-1 text-xs">
-                      <SelectValue placeholder="Select" />
+                      <SelectValue placeholder={t('selectPlaceholder')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="var1">Variable 1</SelectItem>
-                      <SelectItem value="var2">Variable 2</SelectItem>
-                      <SelectItem value="var3">Variable 3</SelectItem>
+                      <SelectItem value="var1">{t('variable1')}</SelectItem>
+                      <SelectItem value="var2">{t('variable2')}</SelectItem>
+                      <SelectItem value="var3">{t('variable3')}</SelectItem>
                     </SelectContent>
                   </Select>
                   <Button
@@ -1770,7 +1785,7 @@ export function NodeConfigPanel({
                     className="h-7 bg-transparent px-2 text-xs"
                   >
                     <Plus className="mr-0.5 h-2.5 w-2.5" />
-                    New
+                    {t('newButton')}
                   </Button>
                 </div>
               </div>
@@ -1783,7 +1798,7 @@ export function NodeConfigPanel({
               onClick={handleAddSetStateAssignment}
             >
               <Plus className="mr-1 h-3 w-3" />
-              Add
+              {t('addButton')}
             </Button>
           </div>
         </div>
@@ -1806,7 +1821,7 @@ export function NodeConfigPanel({
                 {nodeData.label}
               </h3>
               <p className="text-muted-foreground text-[11px]">
-                Create conditions to branch your workflow
+                {t('ifElseDescription')}
               </p>
             </div>
             <div className="flex items-center gap-0.5">
@@ -1832,7 +1847,9 @@ export function NodeConfigPanel({
             >
               <div className="flex items-center justify-between">
                 <Label className="text-foreground text-[11px] font-medium">
-                  {index === 0 ? 'If' : `Else if ${index}`}
+                  {index === 0
+                    ? t('conditionIf')
+                    : t('conditionElseIf', { index })}
                 </Label>
                 {conditions.length > 1 && (
                   <Button
@@ -1846,7 +1863,7 @@ export function NodeConfigPanel({
                 )}
               </div>
               <Input
-                placeholder="Case name (optional)"
+                placeholder={t('caseNamePlaceholder')}
                 className="bg-background border-border h-8 text-sm"
                 value={condition.caseName}
                 onChange={(e) =>
@@ -1856,7 +1873,7 @@ export function NodeConfigPanel({
                 }
               />
               <Textarea
-                placeholder="Enter condition, e.g. input == 5"
+                placeholder={t('conditionPlaceholder')}
                 className="bg-background border-border min-h-[60px] resize-none text-xs"
                 value={condition.expression}
                 onChange={(e) =>
@@ -1869,9 +1886,9 @@ export function NodeConfigPanel({
           ))}
 
           <p className="text-muted-foreground text-[10px]">
-            Use Common Expression Language to create a custom expression.{' '}
+            {t('celHintFull')}{' '}
             <a href="#" className="underline">
-              Learn more.
+              {t('learnMore')}
             </a>
           </p>
 
@@ -1882,7 +1899,7 @@ export function NodeConfigPanel({
             onClick={handleAddCondition}
           >
             <Plus className="mr-1 h-3 w-3" />
-            Add
+            {t('addButton')}
           </Button>
         </div>
       </div>
@@ -1904,7 +1921,7 @@ export function NodeConfigPanel({
                 {nodeData.label}
               </h3>
               <p className="text-muted-foreground text-[11px]">
-                Define the workflow output
+                {t('endDescription')}
               </p>
             </div>
             <div className="flex items-center gap-0.5">
@@ -1925,10 +1942,10 @@ export function NodeConfigPanel({
           {/* Output */}
           <div className="space-y-1">
             <Label className="text-foreground text-[11px] font-medium">
-              Output
+              {t('outputLabel')}
             </Label>
             <Textarea
-              placeholder="Enter output value. Use {{ curly braces }} to insert variables."
+              placeholder={t('outputPlaceholder')}
               className="bg-muted border-border min-h-[100px] resize-none text-xs"
             />
           </div>

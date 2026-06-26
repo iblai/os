@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { Open_Sans } from 'next/font/google';
 import { Suspense } from 'react';
+import { NextIntlClientProvider } from 'next-intl';
+import { getLocale, getMessages } from 'next-intl/server';
 
 import Providers from '@/providers';
 import { Toaster } from '@/components/ui/sonner';
@@ -26,13 +28,23 @@ export const metadata: Metadata = {
   description: 'ibl.ai | Agentic OS',
 };
 
-export default function RootLayout({
+// The root layout resolves the active locale from cookies (see i18n/request.ts),
+// which is a dynamic API. Force dynamic rendering app-wide so the build does not
+// try to statically prerender pages — calling cookies() during static
+// generation crashes the page-data collection worker. Cookie-based locale means
+// nothing under this layout can be static anyway.
+export const dynamic = 'force-dynamic';
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getLocale();
+  const messages = await getMessages();
+
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.png" />
@@ -88,22 +100,24 @@ export default function RootLayout({
         </div>
         <ConsoleSetup />
         <Script src="/env.js" strategy="afterInteractive" />
-        <StoreProvider>
-          <ChunkErrorRecovery />
-          <ServiceWorkerProvider>
-            <Suspense
-              fallback={
-                <div className="flex h-dvh w-screen items-center justify-center">
-                  <Spinner />
-                </div>
-              }
-            >
-              <IblDataHandler />
-              <Providers>{children}</Providers>
-            </Suspense>
-          </ServiceWorkerProvider>
-        </StoreProvider>
-        <Toaster />
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <StoreProvider>
+            <ChunkErrorRecovery />
+            <ServiceWorkerProvider>
+              <Suspense
+                fallback={
+                  <div className="flex h-dvh w-screen items-center justify-center">
+                    <Spinner />
+                  </div>
+                }
+              >
+                <IblDataHandler />
+                <Providers>{children}</Providers>
+              </Suspense>
+            </ServiceWorkerProvider>
+          </StoreProvider>
+          <Toaster />
+        </NextIntlClientProvider>
       </body>
     </html>
   );

@@ -9,6 +9,7 @@ import { useUpdateChatSessionSharedMutation } from '@iblai/iblai-js/data-layer';
 import { useUsername } from '@/hooks/use-user';
 import { toast } from 'sonner';
 import { ANONYMOUS_USERNAME } from '@iblai/iblai-js/web-utils';
+import { useTranslations } from 'next-intl';
 
 type Props = {
   sessionId: string;
@@ -16,6 +17,7 @@ type Props = {
 };
 
 export function AIMessageShare({ sessionId, tenantKey }: Props) {
+  const t = useTranslations('chatAiMessageShare');
   const { copy, status } = useCopyToClipboard();
   const isCopied = status === 'success';
   const username = useUsername();
@@ -40,9 +42,9 @@ export function AIMessageShare({ sessionId, tenantKey }: Props) {
         },
       }).unwrap();
 
-      toast.success('Share link copied to clipboard');
+      toast.success(t('shareLinkCopied'));
     } catch (error) {
-      toast.error('Failed to share chat');
+      toast.error(t('failedToShare'));
       console.error('Error sharing chat:', error);
     }
   };
@@ -55,7 +57,7 @@ export function AIMessageShare({ sessionId, tenantKey }: Props) {
           disabled={isLoading}
           className="text-gray-500 hover:text-gray-700 disabled:opacity-50"
         >
-          <span className="sr-only">Share this chat</span>
+          <span className="sr-only">{t('shareThisChat')}</span>
           {isLoading ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : isCopied ? (
@@ -79,7 +81,7 @@ export function AIMessageShare({ sessionId, tenantKey }: Props) {
         </button>
       </TooltipTrigger>
       <TooltipContent className="ibl-tooltip-content">
-        {isLoading ? 'Sharing...' : isCopied ? 'Copied' : 'Share'}
+        {isLoading ? t('sharing') : isCopied ? t('copied') : t('share')}
       </TooltipContent>
     </Tooltip>
   );
