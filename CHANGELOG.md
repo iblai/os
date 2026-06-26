@@ -4,15 +4,15 @@
 
 ### Features
 
-* test coverage from uncovered files ([04a8460](https://github.com/iblai/os/commit/04a84607c17ebcce9423f4834b47b56a9686e035))
-* user phone support now behind env flag ([b2c57c6](https://github.com/iblai/os/commit/b2c57c641db8752beb544b4d02dbd86893f73710))
-* user phone support now behind env flag > test coverage ([0136bf0](https://github.com/iblai/os/commit/0136bf0c44d0e48e3fd1e01bbae87cdff2f39e6b))
-* user phone support now behind env flag > test coverage ([8fac079](https://github.com/iblai/os/commit/8fac0795c355d215b3d4179359f5945519a5beaa))
+- test coverage from uncovered files ([04a8460](https://github.com/iblai/os/commit/04a84607c17ebcce9423f4834b47b56a9686e035))
+- user phone support now behind env flag ([b2c57c6](https://github.com/iblai/os/commit/b2c57c641db8752beb544b4d02dbd86893f73710))
+- user phone support now behind env flag > test coverage ([0136bf0](https://github.com/iblai/os/commit/0136bf0c44d0e48e3fd1e01bbae87cdff2f39e6b))
+- user phone support now behind env flag > test coverage ([8fac079](https://github.com/iblai/os/commit/8fac0795c355d215b3d4179359f5945519a5beaa))
 
 ### Chores
 
-* bumper iblai-js to 1.20.11 ([7f1e887](https://github.com/iblai/os/commit/7f1e887d8ede874b52d0e93fea92d978783ea8ac))
-* rebase against main ([2acedb3](https://github.com/iblai/os/commit/2acedb3c0af9872409000f50b1631b17ccdcc901))
+- bumper iblai-js to 1.20.11 ([7f1e887](https://github.com/iblai/os/commit/7f1e887d8ede874b52d0e93fea92d978783ea8ac))
+- rebase against main ([2acedb3](https://github.com/iblai/os/commit/2acedb3c0af9872409000f50b1631b17ccdcc901))
 
 ## [0.84.3](https://github.com/iblai/os/compare/v0.84.2...v0.84.3) (2026-06-25)
 

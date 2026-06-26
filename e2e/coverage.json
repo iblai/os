@@ -1,14 +1,14 @@
 {
   "version": 2,
-  "lastUpdated": "2026-06-21",
+  "lastUpdated": "2026-06-26",
   "summary": {
-    "totalCheckpoints": 494,
-    "coveredCheckpoints": 473,
+    "totalCheckpoints": 498,
+    "coveredCheckpoints": 477,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 8,
     "percent": 100,
-    "totalJourneys": 56,
-    "activeJourneys": 55
+    "totalJourneys": 57,
+    "activeJourneys": 56
   },
   "journeys": [
     {
@@ -3170,6 +3170,38 @@
         {
           "id": "pta-04",
           "description": "Pasting an oversized file triggers a sonner validation error toast and no attachment chip is added",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "free-credits-checkout-onboarding",
+      "name": "Free Credits Checkout Onboarding",
+      "spec": "55-free-credits-checkout-onboarding.spec.ts",
+      "sourceFiles": [
+        "app/sso-login-complete/page.tsx",
+        "app/platform/[tenantKey]/[mentorId]/page.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "fcc-01",
+          "description": "ECOMMERCE_CHECKOUT_URL redirects to the Stripe-hosted checkout page exposing the email field and Subscribe submit button",
+          "status": "covered"
+        },
+        {
+          "id": "fcc-02",
+          "description": "Submitting the email completes checkout and lands authenticated on the mentor SPA at <base-url>/platform/<platform-key>/<mentor-id>",
+          "status": "covered"
+        },
+        {
+          "id": "fcc-03",
+          "description": "The credit-balance dropdown shows a positive remaining credit balance and a Free plan pill",
+          "status": "covered"
+        },
+        {
+          "id": "fcc-04",
+          "description": "Clicking Upgrade Plan in the credit dropdown creates a Stripe checkout session and redirects to a Stripe-hosted page requiring credit-card input (secure Stripe Elements card iframe + pay button)",
           "status": "covered"
         }
       ]
