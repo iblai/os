@@ -17,6 +17,21 @@ SKIP_COVERAGE_FILES=(
   "components/version.tsx"
   "edit-mentor-modal/utils.ts"
   "edit-mentor-modal/tabs/embed-tab.tsx"
+  # App-router pages/components are exercised via E2E (see vitest.config.ts
+  # coverage.exclude: app/platform/**, app/provider-association/**).
+  "app/layout.tsx"
+  "explore/_components/all-mentors-section.tsx"
+  "explore/_components/search-section.tsx"
+  "job-scout/page.tsx"
+  "stripe/callback/[launch_id]/page.tsx"
+  # Third-party vendored bundle and the chrome extension service worker
+  # (uses chrome.* APIs) are not unit-testable.
+  "extensions/chrome/background.js"
+  "extensions/chrome/vendor/agent-ai.umd.js"
+  # i18n/locale runtime glue (server-only request config, cookie helpers).
+  "i18n/config.ts"
+  "i18n/request.ts"
+  "lib/locale-cookie.ts"
 )
 
 RED='\033[0;31m'

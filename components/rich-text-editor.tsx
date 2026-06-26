@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import { useEditor, EditorContent, Editor } from '@tiptap/react';
 import { Heading } from '@tiptap/extension-heading';
 import StarterKit from '@tiptap/starter-kit';
@@ -26,6 +27,8 @@ interface RichTextEditorProps {
 }
 
 const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
+  const t = useTranslations('componentsRichTextEditor');
+
   if (!editor) {
     return null;
   }
@@ -39,7 +42,7 @@ const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
         onPressedChange={() =>
           editor.chain().focus().toggleHeading({ level: 1 }).run()
         }
-        aria-label="Toggle heading 1"
+        aria-label={t('toggleHeading1')}
       >
         <Heading1 className="h-4 w-4" />
       </Toggle>
@@ -49,7 +52,7 @@ const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
         onPressedChange={() =>
           editor.chain().focus().toggleHeading({ level: 2 }).run()
         }
-        aria-label="Toggle heading 2"
+        aria-label={t('toggleHeading2')}
       >
         <Heading2 className="h-4 w-4" />
       </Toggle>
@@ -59,7 +62,7 @@ const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
         onPressedChange={() =>
           editor.chain().focus().toggleHeading({ level: 3 }).run()
         }
-        aria-label="Toggle heading 3"
+        aria-label={t('toggleHeading3')}
       >
         <Heading3 className="h-4 w-4" />
       </Toggle>
@@ -70,7 +73,7 @@ const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
         size="sm"
         pressed={editor.isActive('bold')}
         onPressedChange={() => editor.chain().focus().toggleBold().run()}
-        aria-label="Toggle bold"
+        aria-label={t('toggleBold')}
       >
         <Bold className="h-4 w-4" />
       </Toggle>
@@ -78,7 +81,7 @@ const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
         size="sm"
         pressed={editor.isActive('italic')}
         onPressedChange={() => editor.chain().focus().toggleItalic().run()}
-        aria-label="Toggle italic"
+        aria-label={t('toggleItalic')}
       >
         <Italic className="h-4 w-4" />
       </Toggle>
@@ -86,7 +89,7 @@ const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
         size="sm"
         pressed={editor.isActive('code')}
         onPressedChange={() => editor.chain().focus().toggleCode().run()}
-        aria-label="Toggle inline code"
+        aria-label={t('toggleInlineCode')}
       >
         <Code2 className="h-4 w-4" />
       </Toggle>
@@ -97,7 +100,7 @@ const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
         size="sm"
         pressed={editor.isActive('codeBlock')}
         onPressedChange={() => editor.chain().focus().toggleCodeBlock().run()}
-        aria-label="Toggle code block"
+        aria-label={t('toggleCodeBlock')}
       >
         <FileCode className="h-4 w-4" />
       </Toggle>
@@ -105,7 +108,7 @@ const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
         size="sm"
         pressed={editor.isActive('blockquote')}
         onPressedChange={() => editor.chain().focus().toggleBlockquote().run()}
-        aria-label="Toggle blockquote"
+        aria-label={t('toggleBlockquote')}
       >
         <Quote className="h-4 w-4" />
       </Toggle>

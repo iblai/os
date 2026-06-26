@@ -3,6 +3,7 @@
 import React from 'react';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
 import { Search } from 'lucide-react';
 import {
@@ -30,6 +31,7 @@ type LLMTabProps = {
 };
 
 export function LLMTab({ showConfigurationHeader = true }: LLMTabProps) {
+  const t = useTranslations('tabsLlmTab');
   const username = useUsername();
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
   const { getMentorId } = useNavigate();
@@ -82,10 +84,10 @@ export function LLMTab({ showConfigurationHeader = true }: LLMTabProps) {
           llm_name: llmName,
         },
       }).unwrap();
-      toast.success('LLM updated successfully');
+      toast.success(t('llmUpdatedSuccessfully'));
     } catch (error) {
       console.error(JSON.stringify(error));
-      const errorMessage = extractErrorMessage(error, 'Failed to update LLM');
+      const errorMessage = extractErrorMessage(error, t('failedToUpdateLlm'));
       toast.error(errorMessage);
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     }
@@ -97,10 +99,10 @@ export function LLMTab({ showConfigurationHeader = true }: LLMTabProps) {
         <div className="flex hidden h-[73px] flex-shrink-0 items-center border-b border-gray-200 bg-white p-4 lg:block">
           <div>
             <h3 className="mb-1 text-base font-medium text-gray-900">
-              LLM Configuration
+              {t('llmConfiguration')}
             </h3>
             <p className="text-xs text-gray-700">
-              Configure the language model settings for your agent.
+              {t('configureLanguageModelSettings')}
             </p>
           </div>
         </div>
@@ -120,7 +122,7 @@ export function LLMTab({ showConfigurationHeader = true }: LLMTabProps) {
             <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-500" />
             <Input
               type="search"
-              placeholder="Search Providers"
+              placeholder={t('searchProviders')}
               className="w-full py-6 pl-9 md:w-1/2"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -178,7 +180,9 @@ export function LLMTab({ showConfigurationHeader = true }: LLMTabProps) {
                           <div className="h-8 w-8 flex-shrink-0">
                             <Image
                               src={providerDetails.logo}
-                              alt={`${providerDetails.name} logo`}
+                              alt={t('providerLogoAlt', {
+                                providerName: providerDetails.name,
+                              })}
                               className="h-full w-full object-contain"
                               width={32}
                               height={32}

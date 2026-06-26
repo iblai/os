@@ -2,6 +2,7 @@
 
 import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -53,6 +54,7 @@ export const MemoryMenu = ({
   tenantKey,
   username,
 }: MemoryMenuProps) => {
+  const t = useTranslations('chatInputFormMemoryMenu');
   const { mentorId: mentorIdFromParams } = useParams<TenantKeyMentorIdParams>();
   const { getMentorId } = useNavigate();
   const mentorId = getMentorId() ?? mentorIdFromParams ?? '';
@@ -170,9 +172,9 @@ export const MemoryMenu = ({
         memoryId,
       }).unwrap();
       resetPagination();
-      toast.success('Memory deleted');
+      toast.success(t('toastMemoryDeleted'));
     } catch {
-      toast.error('Failed to delete memory');
+      toast.error(t('toastDeleteFailed'));
     } finally {
       setDeletingId(null);
     }
@@ -194,9 +196,9 @@ export const MemoryMenu = ({
       setNewMemory({ content: '', categorySlug: '' });
       setIsAddingMemory(false);
       resetPagination();
-      toast.success('Memory created');
+      toast.success(t('toastMemoryCreated'));
     } catch {
-      toast.error('Failed to create memory');
+      toast.error(t('toastCreateFailed'));
     }
   };
 
@@ -228,9 +230,9 @@ export const MemoryMenu = ({
       setEditContent('');
       setEditCategorySlug('');
       resetPagination();
-      toast.success('Memory updated');
+      toast.success(t('toastMemoryUpdated'));
     } catch {
-      toast.error('Failed to update memory');
+      toast.error(t('toastUpdateFailed'));
     }
   };
 
@@ -247,7 +249,7 @@ export const MemoryMenu = ({
     <>
       <div className="border-b border-gray-100 p-4">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-semibold text-gray-900">Your Memory</h3>
+          <h3 className="font-semibold text-gray-900">{t('yourMemory')}</h3>
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
@@ -271,7 +273,7 @@ export const MemoryMenu = ({
         <div className="relative">
           <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-gray-400" />
           <Input
-            placeholder="Search memories..."
+            placeholder={t('searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="h-8 rounded-md border border-gray-300 pl-10 text-sm"
@@ -279,17 +281,19 @@ export const MemoryMenu = ({
         </div>
 
         <p className="mt-2 text-sm text-gray-500">
-          Your saved memories for this agent
+          {t('savedMemoriesDescription')}
         </p>
       </div>
 
       {/* Add Memory Form */}
       {isAddingMemory && (
         <div className="border-b border-gray-100 bg-gray-50 p-4">
-          <h4 className="mb-3 font-medium text-gray-900">Add New Memory</h4>
+          <h4 className="mb-3 font-medium text-gray-900">
+            {t('addNewMemory')}
+          </h4>
           <div className="space-y-3">
             <Textarea
-              placeholder="Memory content..."
+              placeholder={t('memoryContentPlaceholder')}
               value={newMemory.content}
               onChange={(e) =>
                 setNewMemory({ ...newMemory, content: e.target.value })
@@ -304,7 +308,7 @@ export const MemoryMenu = ({
                 }
               >
                 <SelectTrigger className="h-8 text-sm">
-                  <SelectValue placeholder="Select category" />
+                  <SelectValue placeholder={t('selectCategory')} />
                 </SelectTrigger>
                 <SelectContent>
                   {categories.map((cat) => (
@@ -325,7 +329,7 @@ export const MemoryMenu = ({
                 {isCreating ? (
                   <Loader2 className="mr-1 h-3 w-3 animate-spin" />
                 ) : null}
-                Save
+                {t('save')}
               </Button>
               <Button
                 size="sm"
@@ -335,7 +339,7 @@ export const MemoryMenu = ({
                   setNewMemory({ content: '', categorySlug: '' });
                 }}
               >
-                Cancel
+                {t('cancel')}
               </Button>
             </div>
           </div>
@@ -367,7 +371,7 @@ export const MemoryMenu = ({
                         value={editContent}
                         onChange={(e) => setEditContent(e.target.value)}
                         className="min-h-[60px] resize-none rounded-md border border-gray-300 text-sm"
-                        placeholder="Memory content..."
+                        placeholder={t('memoryContentPlaceholder')}
                       />
                       {categories.length > 0 && (
                         <Select
@@ -375,7 +379,7 @@ export const MemoryMenu = ({
                           onValueChange={setEditCategorySlug}
                         >
                           <SelectTrigger className="h-8 text-sm">
-                            <SelectValue placeholder="Select category" />
+                            <SelectValue placeholder={t('selectCategory')} />
                           </SelectTrigger>
                           <SelectContent>
                             {categories.map((cat) => (
@@ -396,7 +400,7 @@ export const MemoryMenu = ({
                           {isUpdating ? (
                             <Loader2 className="mr-1 h-3 w-3 animate-spin" />
                           ) : null}
-                          Save
+                          {t('save')}
                         </Button>
                         <Button
                           size="sm"
@@ -407,7 +411,7 @@ export const MemoryMenu = ({
                             setEditCategorySlug('');
                           }}
                         >
-                          Cancel
+                          {t('cancel')}
                         </Button>
                       </div>
                     </div>
@@ -460,8 +464,8 @@ export const MemoryMenu = ({
             {filteredMemories.length === 0 && !isInitialLoading && (
               <div className="p-4 text-center text-sm text-gray-500">
                 {searchQuery
-                  ? 'No memories found matching your search.'
-                  : 'No memories yet.'}
+                  ? t('noMemoriesMatchingSearch')
+                  : t('noMemoriesYet')}
               </div>
             )}
 

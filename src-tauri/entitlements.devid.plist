@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  Non-MAS (Developer ID + notarized) entitlements.
+
+	  The App Sandbox is intentionally OMITTED here. macOS blocks a sandboxed
+	  app from controlling OTHER apps via the Accessibility API even when the
+	  user grants permission, so System Control (GhostOS) cannot work under the
+	  sandbox. This build is therefore distributed outside the Mac App Store.
+
+	  Note: macOS Accessibility itself needs no entitlement — it is a runtime
+	  (TCC) permission the user grants in System Settings; the app requests it
+	  via tauri-plugin-macos-permissions.
+
+	  No `com.apple.application-identifier` here — that key is Mac App Store /
+	  provisioning-profile specific (see entitlements.mac.plist).
+	-->
+
+	<!-- App Sandbox disabled so the app is not isolated from the rest of the system -->
+	<key>com.apple.security.app-sandbox</key>
+	<false/>
+
+	<!-- Network access for API communication -->
+	<key>com.apple.security.network.client</key>
+	<true/>
+
+	<!-- Required for WebView to work properly -->
+	<key>com.apple.security.cs.allow-jit</key>
+	<true/>
+
+	<!-- Allow loading unsigned executable memory (required for JIT in WebView) -->
+	<key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+	<true/>
+
+	<!-- File access for user-selected save locations (e.g. exports) -->
+	<key>com.apple.security.files.user-selected.read-write</key>
+	<true/>
+
+	<!-- Audio/Video for voice calls and screen sharing -->
+	<key>com.apple.security.device.audio-input</key>
+	<true/>
+	<key>com.apple.security.device.camera</key>
+	<true/>
+</dict>
+</plist>

@@ -1,5 +1,123 @@
 # Changelog
 
+## [0.85.0](https://github.com/iblai/os/compare/v0.84.3...v0.85.0) (2026-06-26)
+
+### Features
+
+* test coverage from uncovered files ([04a8460](https://github.com/iblai/os/commit/04a84607c17ebcce9423f4834b47b56a9686e035))
+* user phone support now behind env flag ([b2c57c6](https://github.com/iblai/os/commit/b2c57c641db8752beb544b4d02dbd86893f73710))
+* user phone support now behind env flag > test coverage ([0136bf0](https://github.com/iblai/os/commit/0136bf0c44d0e48e3fd1e01bbae87cdff2f39e6b))
+* user phone support now behind env flag > test coverage ([8fac079](https://github.com/iblai/os/commit/8fac0795c355d215b3d4179359f5945519a5beaa))
+
+### Chores
+
+* bumper iblai-js to 1.20.11 ([7f1e887](https://github.com/iblai/os/commit/7f1e887d8ede874b52d0e93fea92d978783ea8ac))
+* rebase against main ([2acedb3](https://github.com/iblai/os/commit/2acedb3c0af9872409000f50b1631b17ccdcc901))
+
+## [0.84.3](https://github.com/iblai/os/compare/v0.84.2...v0.84.3) (2026-06-25)
+
+### Bug Fixes
+
+- **docker:** copy pnpm-workspace.yaml in e2e image so frozen install sees overrides ([172edb2](https://github.com/iblai/os/commit/172edb2a3f2c76f4d97a19b55edcc9981e490269))
+
+## [0.84.2](https://github.com/iblai/os/compare/v0.84.1...v0.84.2) (2026-06-25)
+
+### Bug Fixes
+
+- **docker:** copy pnpm-workspace.yaml so frozen install sees overrides ([4d0b38e](https://github.com/iblai/os/commit/4d0b38e412f73397e7dcf72c323da0f477cc9b7c))
+
+## [0.84.1](https://github.com/iblai/os/compare/v0.84.0...v0.84.1) (2026-06-25)
+
+### Bug Fixes
+
+- **i18n:** force dynamic rendering so cookie-based locale doesn't break build ([9b6d332](https://github.com/iblai/os/commit/9b6d332d89d58f61cc4f73939983f4ab0a0db03a))
+
+## [0.84.0](https://github.com/iblai/os/compare/v0.83.0...v0.84.0) (2026-06-25)
+
+### Features
+
+- **extensions:** add Chrome side-panel extension hosting <agent-ai> ([1467aa1](https://github.com/iblai/os/commit/1467aa10ebf15aa943f14652920bf47b0d6386ee))
+- **i18n:** internationalize the app with next-intl ([646f891](https://github.com/iblai/os/commit/646f891bf54b50bb3196351d06cfb24cee16c205))
+
+### Bug Fixes
+
+- **deps:** drop obsolete .yalc web-containers override; use published SDK ([f9e493b](https://github.com/iblai/os/commit/f9e493b45da709db4681efb3774cae85d4943940))
+
+## [0.83.0](https://github.com/iblai/os/compare/v0.82.1...v0.83.0) (2026-06-25)
+
+### Features
+
+- add dataset curator viewer role on access tab ([c892565](https://github.com/iblai/os/commit/c892565ff592e3660edf0c66cdfe4cc94d8024af))
+- add dataset curator viewer role on access tab > test coverage ([213a72e](https://github.com/iblai/os/commit/213a72e06739072b9b0eeab5162e4dbf8ac74e6f))
+- add dataset curator viewer role on access tab > test coverage ([be3f0de](https://github.com/iblai/os/commit/be3f0de3094f8d1357a016b59983d2fd5f94527d))
+- add dataset curator viewer role on access tab > test coverage ([494c3ed](https://github.com/iblai/os/commit/494c3edce92853b2006b5a6e4df4e6407b6a3dce))
+
+### Bug Fixes
+
+- failing playwright test fix ([aab5693](https://github.com/iblai/os/commit/aab569378c29db2cdcfba151d85e20407d8957e8))
+- **mentor:** load agent picker from ai-search endpoint ([b855fbe](https://github.com/iblai/os/commit/b855fbe7805cd5f8d302ee3e00344f09138f13f5))
+
+### Chores
+
+- **deps:** bump @iblai/iblai-js to 1.20.11 ([ee29c03](https://github.com/iblai/os/commit/ee29c03048049aa5cea1056d750b1ce1b330d01d))
+
+### Tests
+
+- **e2e:** widen project agent-card wait for slow agent loads ([7c3ac05](https://github.com/iblai/os/commit/7c3ac05fdb243622fafba7797db463d21dce9037))
+- **mentor:** cover ai-search agent picker hook and grid ([79de6cd](https://github.com/iblai/os/commit/79de6cd028202a105c62ecc7ef9628b6f0e596e8))
+
+## [0.82.1](https://github.com/iblai/os/compare/v0.82.0...v0.82.1) (2026-06-24)
+
+### Bug Fixes
+
+- **chat:** split thought-process steps on bold delimiters ([318d713](https://github.com/iblai/os/commit/318d7136bbc32a1e9cf0f0ecb8ddad98412c8bab))
+- **settings:** use "Enable …" wording for three capability toggles ([c0dd67d](https://github.com/iblai/os/commit/c0dd67d9501dd7b1e556d3a483769550425a0917))
+
+### Tests
+
+- **chat:** cover thought-process step splitting ([c6e22a0](https://github.com/iblai/os/commit/c6e22a044837c637dd89ec3b39f47e779c96306f))
+- **e2e:** update selectors and coverage for "Enable …" toggle labels ([3abcb74](https://github.com/iblai/os/commit/3abcb740f3f89f5e95b1717919d686f3bb16219e))
+
+## [0.82.0](https://github.com/iblai/os/compare/v0.81.1...v0.82.0) (2026-06-24)
+
+### Features
+
+- add DMG release for macos ([ea335d4](https://github.com/iblai/os/commit/ea335d4b806ebdf7d3c8df9bc0df9fb8d91a8570))
+
+### Chores
+
+- remove auto generated files ([2ffcfec](https://github.com/iblai/os/commit/2ffcfec29958de62a1bd006e06f49a21558d605e))
+
+## [0.81.1](https://github.com/iblai/os/compare/v0.81.0...v0.81.1) (2026-06-24)
+
+### Bug Fixes
+
+- playwright tests issues fixed ([081da29](https://github.com/iblai/os/commit/081da2989c6edfad486ddc5f07a2159df9d04ce9))
+- playwright tests issues fixed > test coverage ([36e3acb](https://github.com/iblai/os/commit/36e3acb40b4202dcc27590c5be124c130e01b430))
+
+## [0.81.0](https://github.com/iblai/os/compare/v0.80.2...v0.81.0) (2026-06-24)
+
+### Features
+
+- add fallbacks for program installations ([9dbc61d](https://github.com/iblai/os/commit/9dbc61d11addb4ac79edbde1db4852192c730f8f))
+- add ghostos support ([440d7f6](https://github.com/iblai/os/commit/440d7f67ed0c0c82eacc1325fc4a73fafd36d3f3))
+- add repoll for model manager installation status ([0bb8023](https://github.com/iblai/os/commit/0bb8023239eef080df688ece9e7311c1d5f350c6))
+- add usable memory (ram/vram) checks ([0257a3a](https://github.com/iblai/os/commit/0257a3aa694d8aa21c1c8aa72d408e0cbd63f00e))
+- **app:** rewrite custom-scheme deep links to app URL in webview ([e6e016a](https://github.com/iblai/os/commit/e6e016af8d7280cdc23e7a4fb21d27a0c8e58d3e))
+- update tauri backend with new ollama functions ([b7357f9](https://github.com/iblai/os/commit/b7357f9a7290a134d9a7aad277969f8934604e01))
+
+### Bug Fixes
+
+- add permission for get_system_memory ([7a1c707](https://github.com/iblai/os/commit/7a1c7076aa00b24746561cda6988de72a0645133))
+- **config:** treat empty-string env values as unset so paste threshold defaults correctly; harden flaky e2e specs ([798bd57](https://github.com/iblai/os/commit/798bd57c39a2ca3242edd5e0c44cc26d92c023a2))
+- more stable usable memory detection ([7fc286d](https://github.com/iblai/os/commit/7fc286df74d4c709dc1a8baf1f2bfe7663acd24c))
+
+### Chores
+
+- update deps ([7471fd6](https://github.com/iblai/os/commit/7471fd66c880bb41680805b1a5ed9d80159a2448))
+- update iblai-js number to npm release ([a25205d](https://github.com/iblai/os/commit/a25205dc9dfe65944df5e1d0afeaeca3d7f96726))
+- update lockfile ([c881204](https://github.com/iblai/os/commit/c881204fa6bc9be7fe1a16a2036c14ae2c16fd7d))
+
 ## [0.80.2](https://github.com/iblai/os/compare/v0.80.1...v0.80.2) (2026-06-22)
 
 ### Chores

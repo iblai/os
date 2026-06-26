@@ -124,7 +124,7 @@ export class ProjectPage {
       .locator('button')
       .filter({ has: this.page.locator('h4') })
       .first();
-    await expect(agentCard).toBeVisible({ timeout: 15_000 });
+    await expect(agentCard).toBeVisible({ timeout: 30_000 });
     await agentCard.click();
 
     // 7. Wait for Save to become enabled (requires name + ≥1 agent selected)

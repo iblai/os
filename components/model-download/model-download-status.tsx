@@ -11,6 +11,7 @@ import {
   X,
   Terminal,
 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -36,6 +37,7 @@ interface StatusBadgeProps {
 }
 
 function StatusBadge({ status, progress, osType }: StatusBadgeProps) {
+  const t = useTranslations('modelDownloadModelDownloadStatus');
   // On Windows, don't show percentage - just show "Downloading..."
   const isWindows = osType === 'windows';
 
@@ -44,35 +46,35 @@ function StatusBadge({ status, progress, osType }: StatusBadgeProps) {
       return (
         <Badge variant="secondary" className="gap-1 text-xs">
           <Loader2 className="h-3 w-3 animate-spin" />
-          {isWindows ? 'Downloading...' : `${Math.round(progress)}%`}
+          {isWindows ? t('downloading') : `${Math.round(progress)}%`}
         </Badge>
       );
     case 'completed':
       return (
         <Badge variant="default" className="gap-1 bg-green-500 text-xs">
           <CheckCircle className="h-3 w-3" />
-          Ready
+          {t('ready')}
         </Badge>
       );
     case 'error':
       return (
         <Badge variant="destructive" className="gap-1 text-xs">
           <XCircle className="h-3 w-3" />
-          Error
+          {t('error')}
         </Badge>
       );
     case 'cancelled':
       return (
         <Badge variant="outline" className="gap-1 text-xs">
           <X className="h-3 w-3" />
-          Cancelled
+          {t('cancelled')}
         </Badge>
       );
     case 'checking':
       return (
         <Badge variant="secondary" className="gap-1 text-xs">
           <Loader2 className="h-3 w-3 animate-spin" />
-          Checking
+          {t('checking')}
         </Badge>
       );
     default:
@@ -85,6 +87,7 @@ function StatusBadge({ status, progress, osType }: StatusBadgeProps) {
  * Shows download progress and provides controls for managing local AI model
  */
 export function ModelDownloadStatus() {
+  const t = useTranslations('modelDownloadModelDownloadStatus');
   const {
     isAvailable,
     state,
@@ -127,7 +130,7 @@ export function ModelDownloadStatus() {
                 variant="ghost"
                 size="icon"
                 className="relative"
-                aria-label="Local AI model status"
+                aria-label={t('localAiModelStatusAriaLabel')}
               >
                 <HardDrive className="h-5 w-5" />
                 {/* Status indicator dot */}
@@ -146,14 +149,16 @@ export function ModelDownloadStatus() {
               </Button>
             </DropdownMenuTrigger>
           </TooltipTrigger>
-          <TooltipContent side="bottom">Local AI Model</TooltipContent>
+          <TooltipContent side="bottom">
+            {t('localAiModelTooltip')}
+          </TooltipContent>
         </Tooltip>
 
         <DropdownMenuContent align="end" className="w-[320px] p-4">
           <div className="space-y-4">
             {/* Header */}
             <div className="flex items-center justify-between">
-              <h4 className="text-sm font-semibold">Phi Mini 3 Model</h4>
+              <h4 className="text-sm font-semibold">{t('modelName')}</h4>
               <StatusBadge
                 status={state.status}
                 progress={state.progress}
@@ -170,8 +175,11 @@ export function ModelDownloadStatus() {
                   }`}
                 />
                 <span>
-                  Model Manager:{' '}
-                  {ollamaStatus?.installed ? 'Installed' : 'Not installed'}
+                  {t('modelManagerStatus', {
+                    status: ollamaStatus?.installed
+                      ? t('installed')
+                      : t('notInstalled'),
+                  })}
                 </span>
               </div>
               {ollamaStatus?.installed && (
@@ -182,7 +190,11 @@ export function ModelDownloadStatus() {
                     }`}
                   />
                   <span>
-                    Service: {ollamaStatus?.running ? 'Running' : 'Stopped'}
+                    {t('serviceStatus', {
+                      status: ollamaStatus?.running
+                        ? t('running')
+                        : t('stopped'),
+                    })}
                   </span>
                 </div>
               )}
@@ -216,14 +228,18 @@ export function ModelDownloadStatus() {
               {showInstallOllamaButton && (
                 <Button onClick={installOllama} size="sm" className="flex-1">
                   <Download className="mr-2 h-4 w-4" />
-                  Install Model Manager
+                  {t('installModelManager')}
                 </Button>
               )}
 
               {showDownloadButton && (
-                <Button onClick={startDownload} size="sm" className="flex-1">
+                <Button
+                  onClick={() => startDownload()}
+                  size="sm"
+                  className="flex-1"
+                >
                   <Download className="mr-2 h-4 w-4" />
-                  Download Model
+                  {t('downloadModel')}
                 </Button>
               )}
 
@@ -235,7 +251,7 @@ export function ModelDownloadStatus() {
                   className="flex-1"
                 >
                   <X className="mr-2 h-4 w-4" />
-                  Cancel
+                  {t('cancel')}
                 </Button>
               )}
 
@@ -244,13 +260,13 @@ export function ModelDownloadStatus() {
                 state.status === 'cancelled') && (
                 <Button onClick={checkStatus} variant="outline" size="sm">
                   <RefreshCw className="mr-2 h-4 w-4" />
-                  Refresh
+                  {t('refresh')}
                 </Button>
               )}
 
               {state.status === 'error' && (
                 <Button onClick={resetState} variant="ghost" size="sm">
-                  Reset
+                  {t('reset')}
                 </Button>
               )}
             </div>
@@ -265,7 +281,7 @@ export function ModelDownloadStatus() {
                 className="flex items-center gap-1 text-xs text-blue-600 hover:underline dark:text-blue-400"
               >
                 <Terminal className="h-3 w-3" />
-                View logs ({state.logs.length})
+                {t('viewLogs', { count: state.logs.length })}
               </button>
             )}
           </div>

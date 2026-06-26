@@ -489,4 +489,190 @@ describe('LearnersMemories', () => {
       );
     });
   });
+
+  // Helpers to reach into the stubbed popovers. Both the learner filter and
+  // the category filter render their options as `command-item` test ids, so
+  // we discriminate by text content.
+  const findLearnerItem = (username: string) => {
+    const items = screen.getAllByTestId('command-item');
+    const item = items.find((el) => el.textContent?.includes(username));
+    if (!item) throw new Error(`Learner item "${username}" not found`);
+    return item;
+  };
+
+  const findAllLearnersItem = () => {
+    const items = screen.getAllByTestId('command-item');
+    const item = items.find((el) => el.textContent?.includes('All Learners'));
+    if (!item) throw new Error('"All Learners" item not found');
+    return item;
+  };
+
+  const findCategoryItem = (name: string) => {
+    const items = screen.getAllByTestId('command-item');
+    // Category items have text exactly equal to the category name (no email
+    // sub-line like learner items), which lets us discriminate them cleanly.
+    const item = items.find((el) => el.textContent?.trim() === name);
+    if (!item) throw new Error(`Category item "${name}" not found`);
+    return item;
+  };
+
+  describe('Learner filter selection', () => {
+    it('selects a learner, sends user_id in the query params, and reflects the choice in the trigger label', () => {
+      render(<LearnersMemories />);
+
+      fireEvent.click(findLearnerItem('alice'));
+
+      // The filtered memories query should now carry user_id=alice.
+      const lastWithUserId = mockGetMentorMemoriesQuery.mock.calls
+        .map((c) => c[0])
+        .reverse()
+        .find((arg) => arg?.params?.user_id);
+      expect(lastWithUserId?.params).toEqual(
+        expect.objectContaining({ user_id: 'alice' }),
+      );
+
+      // The combobox trigger label now shows the selected learner's username.
+      const trigger = screen.getByRole('combobox');
+      expect(trigger.textContent).toContain('alice');
+    });
+
+    it('clears the learner selection via the "All Learners" item', () => {
+      render(<LearnersMemories />);
+
+      // First select a learner so there is something to clear.
+      fireEvent.click(findLearnerItem('bob'));
+      // Then clear via the synthetic "All Learners" option.
+      fireEvent.click(findAllLearnersItem());
+
+      // After clearing, the trigger reverts to the default placeholder and
+      // the latest filtered query no longer constrains by user_id.
+      const trigger = screen.getByRole('combobox');
+      expect(trigger.textContent).toContain('Select Learner');
+
+      const lastCall = mockGetMentorMemoriesQuery.mock.calls
+        .map((c) => c[0])
+        .reverse()
+        .find((arg) => arg !== undefined);
+      expect(lastCall?.params?.user_id).toBeUndefined();
+    });
+  });
+
+  describe('Category filter selection', () => {
+    it('filters the memory list down to the selected category', () => {
+      render(<LearnersMemories />);
+
+      // Before filtering, both Preferences and Background memories show.
+      expect(screen.getByText('Loves dark mode')).toBeInTheDocument();
+      expect(screen.getByText('Former backend dev')).toBeInTheDocument();
+
+      fireEvent.click(findCategoryItem('Background'));
+
+      // Only the Background memory survives the client-side category filter.
+      expect(screen.getByText('Former backend dev')).toBeInTheDocument();
+      expect(screen.queryByText('Loves dark mode')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('Prefers vim keybindings'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('updates the desktop category trigger label to the selected category', () => {
+      render(<LearnersMemories />);
+      fireEvent.click(findCategoryItem('Background'));
+      // The category trigger button label reflects the active category name.
+      const buttons = screen.getAllByRole('button');
+      const categoryButton = buttons.find((b) =>
+        b.textContent?.trim().startsWith('Background'),
+      );
+      expect(categoryButton).toBeDefined();
+    });
+
+    it('keeps the trigger label on "All" when the synthetic All item is selected', () => {
+      // Admin categories empty + response undefined ⇒ the only category is the
+      // synthetic "All". Clicking it sets slug='all' and the trigger label
+      // resolves to the "All" category name.
+      mockGetMemoryCategoriesAdminQuery.mockReturnValue({ data: [] });
+      mockGetMentorMemoriesQuery.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+      });
+      render(<LearnersMemories />);
+
+      fireEvent.click(findCategoryItem('All'));
+      const buttons = screen.getAllByRole('button');
+      const categoryButton = buttons.find((b) =>
+        /^All/.test(b.textContent ?? ''),
+      );
+      expect(categoryButton).toBeDefined();
+    });
+  });
+
+  describe('Category list fallbacks', () => {
+    it('returns just "All" when adminCategories is empty and the memories response is undefined', () => {
+      mockGetMemoryCategoriesAdminQuery.mockReturnValue({ data: [] });
+      mockGetMentorMemoriesQuery.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+      });
+      render(<LearnersMemories />);
+      const items = screen.getAllByTestId('command-item');
+      const categoryLabels = items.map((el) => el.textContent?.trim());
+      // The category popover should only carry the synthetic "All" item.
+      expect(categoryLabels.filter((l) => l === 'All').length).toBe(1);
+      expect(categoryLabels).not.toContain('Preferences');
+    });
+  });
+
+  describe('Memory card edge cases', () => {
+    it('renders no relative time when a memory has no createdAt', () => {
+      mockGetMentorMemoriesQuery.mockReturnValue({
+        data: byCategoryResponse([
+          {
+            category: mockCategory(1, 'Preferences', 'preferences'),
+            memories: [
+              {
+                id: 77,
+                content: 'Timeless memory',
+                category: mockCategory(1, 'Preferences', 'preferences'),
+                username: 'carol',
+                created_at: undefined,
+              },
+            ],
+          },
+        ]),
+        isLoading: false,
+      });
+      render(<LearnersMemories />);
+      // The memory content renders, but without a "... ago" relative time.
+      expect(screen.getByText('Timeless memory')).toBeInTheDocument();
+      expect(screen.queryByText(/ago/)).not.toBeInTheDocument();
+    });
+
+    it('shows "Unknown" in the detail panel when the selected memory has no username', () => {
+      mockGetMentorMemoriesQuery.mockReturnValue({
+        data: byCategoryResponse([
+          {
+            category: mockCategory(1, 'Preferences', 'preferences'),
+            memories: [
+              {
+                id: 88,
+                content: 'Anonymous detail memory',
+                category: mockCategory(1, 'Preferences', 'preferences'),
+                username: undefined,
+                created_at: '2024-01-15T10:30:00.000Z',
+              },
+            ],
+          },
+        ]),
+        isLoading: false,
+      });
+      render(<LearnersMemories />);
+      fireEvent.click(
+        screen.getByText('Anonymous detail memory').closest('div')!,
+      );
+      // The detail panel header falls back to "Unknown". It appears both in the
+      // card and the detail panel, so at least two occurrences are expected.
+      expect(screen.getAllByText('Unknown').length).toBeGreaterThanOrEqual(2);
+      expect(screen.getByText('Memory Content')).toBeInTheDocument();
+    });
+  });
 });

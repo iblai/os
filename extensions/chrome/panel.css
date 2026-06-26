@@ -1,0 +1,13 @@
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* The agent fills the full height of the side panel. */
+agent-ai {
+  display: block;
+  width: 100%;
+  height: 100vh;
+}

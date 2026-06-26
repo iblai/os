@@ -109,18 +109,18 @@ export class SettingsTab {
     this.memoryToggle = dialog.getByRole('switch', {
       name: /remember past conversations/i,
     });
-    // Capabilities sub-tab. The "Verbose Reasoning" toggle (show_reasoning);
-    // aria-label is "Verbose reasoning enabled" / "Verbose reasoning disabled"
+    // Capabilities sub-tab. The "Enable verbose reasoning" toggle (show_reasoning);
+    // aria-label is "Enable verbose reasoning enabled" / "Enable verbose reasoning disabled"
     // depending on current state.
     this.verboseReasoningToggle = dialog.getByRole('switch', {
-      name: /^Verbose reasoning /i,
+      name: /^Enable verbose reasoning /i,
     });
-    // Capabilities sub-tab. Renamed visible label "Enhanced document retrieval".
+    // Capabilities sub-tab. Renamed visible label "Enable enhanced document retrieval".
     this.enhanceDocumentRetrievalToggle = dialog.getByRole('switch', {
-      name: /enhanced document retrieval/i,
+      name: /enable enhanced document retrieval/i,
     });
     this.enhanceDocumentRetrievalTooltipTrigger = dialog.getByRole('button', {
-      name: 'More info about enhanced document retrieval',
+      name: 'More info about enable enhanced document retrieval',
     });
     // Capabilities sub-tab. Label: "Enable prompt caching".
     this.promptCachingToggle = dialog.getByRole('switch', {
@@ -156,7 +156,7 @@ export class SettingsTab {
     return attr === 'true';
   }
 
-  /** Whether the "Smart document retrieval" toggle is currently on. */
+  /** Whether the "Enable smart document retrieval" toggle is currently on. */
   async isUseFunctionCallingForRagEnabled(): Promise<boolean> {
     return this.readSwitchState(this.useFunctionCallingForRagToggle);
   }
@@ -198,7 +198,7 @@ export class SettingsTab {
     ).toBeVisible({ timeout: 30_000 });
   }
 
-  /** Idempotently toggle "Smart document retrieval" + Save. */
+  /** Idempotently toggle "Enable smart document retrieval" + Save. */
   async setUseFunctionCallingForRagAndSave(target: boolean): Promise<void> {
     // Lives in the Capabilities sub-tab — switch there before interacting.
     await this.selectSubTab('Capabilities');
@@ -460,7 +460,7 @@ export class SettingsTab {
   }
 
   /**
-   * Returns true when the Verbose Reasoning toggle is ON (aria-checked="true").
+   * Returns true when the Enable verbose reasoning toggle is ON (aria-checked="true").
    */
   async isVerboseReasoningEnabled(): Promise<boolean> {
     await this.selectSubTab('Capabilities');
@@ -473,7 +473,7 @@ export class SettingsTab {
   }
 
   /**
-   * Sets the Verbose Reasoning toggle to the desired state and saves the form.
+   * Sets the Enable verbose reasoning toggle to the desired state and saves the form.
    * A no-op if the toggle is already in the desired state. Save is called
    * internally (same as setMemoryEnabled) and we block on the success toast so
    * callers can immediately send a chat message that relies on the new setting.
