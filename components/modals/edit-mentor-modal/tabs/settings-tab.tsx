@@ -1129,41 +1129,49 @@ export function SettingsTab() {
                     )}
                   </WithFormPermissions>
 
-                  <form.Field name="show_reasoning">
-                    {(field) => (
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-[#646464]">
-                            Enable verbose reasoning
-                          </span>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger
-                                type="button"
-                                aria-label="More info about enable verbose reasoning"
-                              >
-                                <Info className="h-4 w-4 text-gray-400" />
-                              </TooltipTrigger>
-                              <TooltipContent className="ibl-tooltip-content">
-                                <p>
-                                  Show the agent’s reasoning steps while it
-                                  responds.
-                                </p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
-                        <Switch
-                          checked={field.state.value}
-                          onCheckedChange={(checked) =>
-                            field.handleChange(checked)
-                          }
-                          disabled={isDisabled}
-                          aria-label={`Enable verbose reasoning ${field.state.value ? 'enabled' : 'disabled'}`}
-                        />
-                      </div>
+                  <WithFormPermissions
+                    name="show_reasoning"
+                    // @ts-ignore
+                    permissions={mentor?.permissions?.field}
+                  >
+                    {({ disabled }) => (
+                      <form.Field name="show_reasoning">
+                        {(field) => (
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-[#646464]">
+                                Enable verbose reasoning
+                              </span>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger
+                                    type="button"
+                                    aria-label="More info about enable verbose reasoning"
+                                  >
+                                    <Info className="h-4 w-4 text-gray-400" />
+                                  </TooltipTrigger>
+                                  <TooltipContent className="ibl-tooltip-content">
+                                    <p>
+                                      Show the agent’s reasoning steps while it
+                                      responds.
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </div>
+                            <Switch
+                              checked={field.state.value}
+                              onCheckedChange={(checked) =>
+                                field.handleChange(checked)
+                              }
+                              disabled={isDisabled || disabled}
+                              aria-label={`Enable verbose reasoning ${field.state.value ? 'enabled' : 'disabled'}`}
+                            />
+                          </div>
+                        )}
+                      </form.Field>
                     )}
-                  </form.Field>
+                  </WithFormPermissions>
 
                   <WithFormPermissions
                     name="enable_multi_query_rag"
