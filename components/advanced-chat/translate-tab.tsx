@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslations } from 'next-intl';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
@@ -10,15 +11,15 @@ type Props = {
 
 const languages = [
   {
-    name: 'English',
+    labelKey: 'languageEnglish' as const,
     value: 'English',
   },
   {
-    name: 'French (France)',
+    labelKey: 'languageFrenchFrance' as const,
     value: 'French',
   },
   {
-    name: 'Spanish (Español)',
+    labelKey: 'languageSpanish' as const,
     value: 'Spanish',
   },
 ];
@@ -28,10 +29,13 @@ export function TranslateTab({
   profileImage,
   onLanguageSelect,
 }: Props) {
+  const t = useTranslations('advancedChatTranslateTab');
   return (
     <div className="flex flex-1 flex-col">
       <div className="flex-1 px-6 pt-6">
-        <h2 className="mb-6 text-sm font-medium text-gray-800">Translate</h2>
+        <h2 className="mb-6 text-sm font-medium text-gray-800">
+          {t('translate')}
+        </h2>
 
         <div className="mb-6">
           <div className="mb-4 flex items-center gap-3">
@@ -42,14 +46,14 @@ export function TranslateTab({
               </AvatarFallback>
             </Avatar>
             <span className="text-sm text-gray-600">
-              Would you like me to translate?
+              {t('wouldYouLikeToTranslate')}
             </span>
           </div>
         </div>
 
         <div>
           <h3 className="mb-4 text-sm font-medium text-gray-700">
-            Suggested Languages:
+            {t('suggestedLanguages')}
           </h3>
           <div className="space-y-3 text-sm">
             {languages.map((language) => (
@@ -58,7 +62,7 @@ export function TranslateTab({
                 className="w-full rounded-lg bg-blue-100 px-4 py-3 text-left font-medium text-blue-700 transition-colors hover:bg-blue-200"
                 onClick={() => onLanguageSelect(language.value)}
               >
-                {language.name}
+                {t(language.labelKey)}
               </button>
             ))}
           </div>

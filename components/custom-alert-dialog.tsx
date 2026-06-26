@@ -11,6 +11,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useCustomAlertDialog } from '@/hooks/use-custom-alert-dialog';
+import { useTranslations } from 'next-intl';
 
 interface CustomAlertDialogProps {
   message: string;
@@ -24,23 +25,24 @@ export function CustomAlertDialog({
   message,
   validateTrigger,
   cancelTrigger = '',
-  title = 'Are you sure?',
+  title,
   isOpen,
 }: CustomAlertDialogProps) {
+  const t = useTranslations('componentsCustomAlertDialog');
   const { triggerHandler } = useCustomAlertDialog();
   return (
     <AlertDialog open={isOpen}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>{title}</AlertDialogTitle>
+          <AlertDialogTitle>{title ?? t('areYouSure')}</AlertDialogTitle>
           <AlertDialogDescription>{message}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel onClick={() => triggerHandler(cancelTrigger)}>
-            Cancel
+            {t('cancel')}
           </AlertDialogCancel>
           <AlertDialogAction onClick={() => triggerHandler(validateTrigger)}>
-            Continue
+            {t('continue')}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -404,7 +404,7 @@ test.describe('Journey 44: CLAW Advanced Sandbox', () => {
       await editMentorPage.navigateToTab('Sandbox');
       await waitForPageReady(page);
 
-      // The SandboxConfig component from @iblai/web-containers is rendered
+      // The SandboxConfig component from @iblai/iblai-js/web-containers is rendered
       // inside the tabpanel. Verify the panel is visible.
       const sandboxPanel = editMentorPage.dialog.getByRole('tabpanel').first();
       await expect(sandboxPanel).toBeVisible({ timeout: 10_000 });
@@ -461,7 +461,7 @@ test.describe('Journey 44: CLAW Advanced Sandbox', () => {
       await editMentorPage.navigateToTab('Skills');
       await waitForPageReady(page);
 
-      // The AgentSkills component from @iblai/web-containers is rendered inside
+      // The AgentSkills component from @iblai/iblai-js/web-containers is rendered inside
       // the tabpanel — verify the panel is visible and not blank.
       const skillsPanel = editMentorPage.dialog.getByRole('tabpanel').first();
       await expect(skillsPanel).toBeVisible({ timeout: 10_000 });

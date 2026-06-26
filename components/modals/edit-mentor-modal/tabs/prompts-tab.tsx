@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
 import { Edit, Info, Loader2, Play, Plus, Trash2 } from 'lucide-react';
 import { AgentConfigPrompts } from '@iblai/iblai-js/web-containers';
@@ -45,6 +46,7 @@ import Markdown from '@/components/markdown';
 const SUGGESTED_PROMPTS_PAGE_SIZE = 6;
 
 export function PromptsTab() {
+  const t = useTranslations('tabsPromptsTab');
   const {
     showAddPromptModal,
     closeAddPromptModal,
@@ -151,12 +153,12 @@ export function PromptsTab() {
           userId: username ?? '',
           formData: { [tool]: value },
         }).unwrap();
-        toast.success('Agent updated successfully');
+        toast.success(t('agentUpdatedSuccess'));
         callback?.();
       });
     } catch (error) {
       console.error(JSON.stringify(error));
-      toast.error('Failed to update agent');
+      toast.error(t('agentUpdateFailed'));
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     }
   }
@@ -174,10 +176,10 @@ export function PromptsTab() {
           userId: username ?? '',
           formData: { [selectedPrompt.name]: value.prompt },
         }).unwrap();
-        toast.success('Agent updated successfully');
+        toast.success(t('agentUpdatedSuccess'));
       } catch (error) {
         console.error(JSON.stringify(error));
-        toast.error('Failed to update agent');
+        toast.error(t('agentUpdateFailed'));
         console.error(JSON.stringify({ tenant: tenantKey, error }));
       }
     } else {
@@ -197,10 +199,10 @@ export function PromptsTab() {
             prompt_visibility: value.promptVisibility,
           },
         }).unwrap();
-        toast.success('Prompt updated successfully');
+        toast.success(t('promptUpdatedSuccess'));
       } catch (error) {
         console.error(JSON.stringify(error));
-        toast.error('Failed to update prompt');
+        toast.error(t('promptUpdateFailed'));
         console.error(JSON.stringify({ tenant: tenantKey, error }));
       }
     }
@@ -221,11 +223,11 @@ export function PromptsTab() {
           id: promptId,
           org: tenantKey,
         }).unwrap();
-        toast.success('Prompt deleted successfully');
+        toast.success(t('promptDeletedSuccess'));
       });
     } catch (error) {
       console.error(JSON.stringify(error));
-      toast.error('Failed to delete prompt');
+      toast.error(t('promptDeleteFailed'));
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     } finally {
       setDeletingPromptId(null);
@@ -238,10 +240,10 @@ export function PromptsTab() {
     <>
       <div className="flex hidden h-[73px] flex-shrink-0 items-center border-b border-gray-200 bg-white p-4 lg:block">
         <div>
-          <h3 className="mb-1 text-base font-medium text-gray-900">Prompts</h3>
-          <p className="text-xs text-gray-700">
-            Manage and configure prompts for your agent.
-          </p>
+          <h3 className="mb-1 text-base font-medium text-gray-900">
+            {t('heading')}
+          </h3>
+          <p className="text-xs text-gray-700">{t('description')}</p>
         </div>
       </div>
       <div
@@ -264,15 +266,17 @@ export function PromptsTab() {
                   <div className="flex items-center justify-between border-b border-gray-200 p-[1.12rem]">
                     <div className="flex items-center gap-2">
                       <h3 className="text-sm font-medium text-gray-900">
-                        System Prompt
+                        {t('systemPromptTitle')}
                       </h3>
                       <TooltipProvider>
                         <Tooltip>
-                          <TooltipTrigger aria-label="More info about system prompt">
+                          <TooltipTrigger
+                            aria-label={t('systemPromptInfoAriaLabel')}
+                          >
                             <Info className="h-4 w-4 text-gray-400" />
                           </TooltipTrigger>
                           <TooltipContent className="ibl-tooltip-content">
-                            <p>Define the agent&apos;s behavior</p>
+                            <p>{t('systemPromptTooltip')}</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -285,7 +289,7 @@ export function PromptsTab() {
                         className="mb-4 flex-grow overflow-y-auto"
                         tabIndex={0}
                         role="region"
-                        aria-label="System prompt content"
+                        aria-label={t('systemPromptContentAriaLabel')}
                       >
                         <Markdown className="text-sm text-gray-700">
                           {/* @ts-expect-error - system_prompt property does not exist on MentorSettingsPublic type */}
@@ -302,7 +306,7 @@ export function PromptsTab() {
                       disabled={disabled}
                       onClick={() =>
                         setSelectedPrompt({
-                          label: 'System Prompt',
+                          label: t('systemPromptLabel'),
                           isSystem: true,
                           name: 'system_prompt',
                           // @ts-expect-error - system_prompt property may not exist on mentorSettings type
@@ -311,7 +315,7 @@ export function PromptsTab() {
                       }
                     >
                       <Edit className="mr-2 h-4 w-4" />
-                      Edit
+                      {t('editButton')}
                     </Button>
                     <CopyButton
                       // @ts-expect-error - system_prompt property may not exist on mentorSettings type
@@ -333,15 +337,17 @@ export function PromptsTab() {
                   <div className="flex items-center justify-between border-b border-gray-200 p-4">
                     <div className="flex items-center gap-2">
                       <h3 className="text-sm font-medium text-gray-900">
-                        Proactive Prompt
+                        {t('proactivePromptTitle')}
                       </h3>
                       <TooltipProvider>
                         <Tooltip>
-                          <TooltipTrigger aria-label="More info about proactive prompt">
+                          <TooltipTrigger
+                            aria-label={t('proactivePromptInfoAriaLabel')}
+                          >
                             <Info className="h-4 w-4 text-gray-400" />
                           </TooltipTrigger>
                           <TooltipContent className="ibl-tooltip-content">
-                            <p>Guide the conversation flow</p>
+                            <p>{t('proactivePromptTooltip')}</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -356,8 +362,8 @@ export function PromptsTab() {
                           <span className="text-primary text-xs">
                             {mentorSettings?.greeting_method ===
                             GreetingMethod.PROACTIVE_PROMPT
-                              ? 'Active'
-                              : 'Inactive'}
+                              ? t('activeStatus')
+                              : t('inactiveStatus')}
                           </span>
                           <Switch
                             checked={
@@ -373,7 +379,13 @@ export function PromptsTab() {
                               );
                             }}
                             disabled={isLoading || isEditingMentor || disabled}
-                            aria-label={`Proactive prompt ${mentorSettings?.greeting_method === GreetingMethod.PROACTIVE_PROMPT ? 'enabled' : 'disabled'}`}
+                            aria-label={t('proactivePromptAriaLabel', {
+                              status:
+                                mentorSettings?.greeting_method ===
+                                GreetingMethod.PROACTIVE_PROMPT
+                                  ? 'enabled'
+                                  : 'disabled',
+                            })}
                           />
                         </div>
                       )}
@@ -386,7 +398,7 @@ export function PromptsTab() {
                         className="mb-4 flex-grow overflow-y-auto"
                         tabIndex={0}
                         role="region"
-                        aria-label="Proactive prompt content"
+                        aria-label={t('proactivePromptContentAriaLabel')}
                       >
                         <Markdown className="text-sm text-gray-700">
                           {parsePrompt(mentorSettings?.proactive_prompt ?? '')}
@@ -402,7 +414,7 @@ export function PromptsTab() {
                       disabled={disabled}
                       onClick={() =>
                         setSelectedPrompt({
-                          label: 'Proactive Prompt',
+                          label: t('proactivePromptLabel'),
                           isSystem: true,
                           name: 'proactive_prompt',
                           prompt: mentorSettings?.proactive_prompt ?? '',
@@ -410,7 +422,7 @@ export function PromptsTab() {
                       }
                     >
                       <Edit className="mr-2 h-4 w-4" />
-                      Edit
+                      {t('editButton')}
                     </Button>
                     <CopyButton text={mentorSettings?.proactive_prompt ?? ''} />
                   </div>
@@ -429,15 +441,17 @@ export function PromptsTab() {
                   <div className="flex items-center justify-between border-b border-gray-200 p-4">
                     <div className="flex items-center gap-2">
                       <h3 className="text-sm font-medium text-gray-900">
-                        Study Prompt
+                        {t('studyPromptTitle')}
                       </h3>
                       <TooltipProvider>
                         <Tooltip>
-                          <TooltipTrigger aria-label="More info about study mode prompt">
+                          <TooltipTrigger
+                            aria-label={t('studyPromptInfoAriaLabel')}
+                          >
                             <Info className="h-4 w-4 text-gray-400" />
                           </TooltipTrigger>
                           <TooltipContent className="ibl-tooltip-content">
-                            <p>Define behavior when Study Mode is active</p>
+                            <p>{t('studyPromptTooltip')}</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -450,7 +464,7 @@ export function PromptsTab() {
                         className="mb-4 flex-grow overflow-y-auto"
                         tabIndex={0}
                         role="region"
-                        aria-label="Study prompt content"
+                        aria-label={t('studyPromptContentAriaLabel')}
                       >
                         <Markdown className="text-sm text-gray-700">
                           {parsePrompt(mentorSettings?.study_mode_prompt ?? '')}
@@ -466,7 +480,7 @@ export function PromptsTab() {
                       disabled={disabled}
                       onClick={() =>
                         setSelectedPrompt({
-                          label: 'Study Prompt',
+                          label: t('studyPromptLabel'),
                           isSystem: true,
                           name: 'study_mode_prompt',
                           prompt: mentorSettings?.study_mode_prompt ?? '',
@@ -474,7 +488,7 @@ export function PromptsTab() {
                       }
                     >
                       <Edit className="mr-2 h-4 w-4" />
-                      Edit
+                      {t('editButton')}
                     </Button>
                     <CopyButton
                       text={mentorSettings?.study_mode_prompt ?? ''}
@@ -495,15 +509,17 @@ export function PromptsTab() {
                   <div className="flex items-center justify-between border-b border-gray-200 p-4">
                     <div className="flex items-center gap-2">
                       <h3 className="text-sm font-medium text-gray-900">
-                        Guided Prompt
+                        {t('guidedPromptTitle')}
                       </h3>
                       <TooltipProvider>
                         <Tooltip>
-                          <TooltipTrigger aria-label="More info about guided prompt">
+                          <TooltipTrigger
+                            aria-label={t('guidedPromptInfoAriaLabel')}
+                          >
                             <Info className="h-4 w-4 text-gray-400" />
                           </TooltipTrigger>
                           <TooltipContent className="ibl-tooltip-content">
-                            <p>Guide the user interaction</p>
+                            <p>{t('guidedPromptTooltip')}</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -517,8 +533,8 @@ export function PromptsTab() {
                         <div className="flex items-center gap-2">
                           <span className="text-primary text-xs">
                             {mentorSettings?.enable_guided_prompts
-                              ? 'Active'
-                              : 'Inactive'}
+                              ? t('activeStatus')
+                              : t('inactiveStatus')}
                           </span>
                           <Switch
                             checked={mentorSettings?.enable_guided_prompts}
@@ -529,7 +545,11 @@ export function PromptsTab() {
                               );
                             }}
                             disabled={isLoading || isEditingMentor || disabled}
-                            aria-label={`Guided prompt ${mentorSettings?.enable_guided_prompts ? 'enabled' : 'disabled'}`}
+                            aria-label={t('guidedPromptAriaLabel', {
+                              status: mentorSettings?.enable_guided_prompts
+                                ? 'enabled'
+                                : 'disabled',
+                            })}
                           />
                         </div>
                       )}
@@ -542,7 +562,7 @@ export function PromptsTab() {
                         className="mb-4 flex-grow overflow-y-auto"
                         tabIndex={0}
                         role="region"
-                        aria-label="Guided prompt content"
+                        aria-label={t('guidedPromptContentAriaLabel')}
                       >
                         <Markdown className="text-sm text-gray-700">
                           {parsePrompt(
@@ -561,7 +581,7 @@ export function PromptsTab() {
                       disabled={disabled}
                       onClick={() =>
                         setSelectedPrompt({
-                          label: 'Guided Prompt',
+                          label: t('guidedPromptLabel'),
                           isSystem: true,
                           name: 'guided_prompt_instructions',
                           prompt:
@@ -571,7 +591,7 @@ export function PromptsTab() {
                       }
                     >
                       <Edit className="mr-2 h-4 w-4" />
-                      Edit
+                      {t('editButton')}
                     </Button>
                     <CopyButton
                       // @ts-ignore
@@ -593,15 +613,17 @@ export function PromptsTab() {
               <div className="mt-8">
                 <div className="mb-4 flex items-center gap-2">
                   <h3 className="text-sm font-medium text-gray-900">
-                    Suggested Prompts
+                    {t('suggestedPromptsTitle')}
                   </h3>
                   <TooltipProvider>
                     <Tooltip>
-                      <TooltipTrigger aria-label="More info about suggested prompts">
+                      <TooltipTrigger
+                        aria-label={t('suggestedPromptsInfoAriaLabel')}
+                      >
                         <Info className="h-4 w-4 text-gray-400" />
                       </TooltipTrigger>
                       <TooltipContent className="ibl-tooltip-content">
-                        <p>Quick access to common prompts</p>
+                        <p>{t('suggestedPromptsTooltip')}</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -621,7 +643,9 @@ export function PromptsTab() {
                             className="mb-4 flex-grow overflow-y-auto"
                             tabIndex={0}
                             role="region"
-                            aria-label={`Suggested prompt ${index + 1} content`}
+                            aria-label={t('suggestedPromptContentAriaLabel', {
+                              index: index + 1,
+                            })}
                           >
                             <Markdown className="text-sm text-gray-700">
                               {parsePrompt(prompt?.prompt ?? '')}
@@ -637,7 +661,7 @@ export function PromptsTab() {
                           disabled={disabled || deletingPromptId === prompt.id}
                           onClick={() => {
                             setSelectedPrompt({
-                              label: 'Suggested Prompt',
+                              label: t('suggestedPromptLabel'),
                               id: prompt.id,
                               isSystem: false,
                               name: 'prompt',
@@ -652,7 +676,7 @@ export function PromptsTab() {
                           }}
                         >
                           <Edit className="h-4 w-4" />
-                          <span>Edit</span>
+                          <span>{t('editButton')}</span>
                         </Button>
                         <Button
                           variant="outline"
@@ -660,10 +684,12 @@ export function PromptsTab() {
                           className="flex h-8 flex-1 items-center justify-center gap-2 py-5"
                           disabled={disabled || deletingPromptId === prompt.id}
                           onClick={() => handleRunPrompt(prompt?.prompt ?? '')}
-                          aria-label={`Run suggested prompt ${prompt?.prompt ?? ''}`}
+                          aria-label={t('runSuggestedPromptAriaLabel', {
+                            prompt: prompt?.prompt ?? '',
+                          })}
                         >
                           <Play className="h-4 w-4" />
-                          <span>Run</span>
+                          <span>{t('runButton')}</span>
                         </Button>
                         <Button
                           variant="outline"
@@ -675,14 +701,16 @@ export function PromptsTab() {
                               handleDeletePrompt(prompt.id);
                             }
                           }}
-                          aria-label={`Delete suggested prompt ${prompt?.prompt ?? ''}`}
+                          aria-label={t('deleteSuggestedPromptAriaLabel', {
+                            prompt: prompt?.prompt ?? '',
+                          })}
                         >
                           {deletingPromptId === prompt.id ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
                           ) : (
                             <Trash2 className="h-4 w-4" />
                           )}
-                          <span>Delete</span>
+                          <span>{t('deleteButton')}</span>
                         </Button>
                       </div>
                     </div>
@@ -697,7 +725,9 @@ export function PromptsTab() {
                       onClick={loadMorePrompts}
                       disabled={isFetchingPrompts}
                     >
-                      {isFetchingPrompts ? 'Loading...' : 'See More'}
+                      {isFetchingPrompts
+                        ? t('loadingText')
+                        : t('seeMoreButton')}
                     </Button>
                   </div>
                 )}
@@ -708,7 +738,7 @@ export function PromptsTab() {
                   onClick={() => openAddPromptModal()}
                 >
                   <Plus className="mr-2 h-5 w-5" />
-                  Add New Prompt
+                  {t('addNewPromptButton')}
                 </Button>
               </div>
             )}
@@ -721,7 +751,7 @@ export function PromptsTab() {
             <div className="mt-8">
               <div className="mb-4 flex items-center gap-2">
                 <h3 className="text-sm font-medium text-gray-900">
-                  Agent Configuration
+                  {t('agentConfigurationTitle')}
                 </h3>
                 <Info className="h-4 w-4 text-gray-400" />
               </div>

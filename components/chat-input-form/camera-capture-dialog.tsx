@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Camera, RotateCcw } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -19,16 +20,13 @@ interface CameraCaptureDialogProps {
   facingMode?: 'user' | 'environment';
 }
 
-const CAMERA_UNAVAILABLE_ERROR = 'Camera is not available in this browser.';
-const CAMERA_PERMISSION_ERROR =
-  'Unable to access the camera. Please grant permission and make sure a camera is connected.';
-
 export const CameraCaptureDialog = ({
   open,
   onOpenChange,
   onCapture,
   facingMode = 'user',
 }: CameraCaptureDialogProps) => {
+  const t = useTranslations('chatInputFormCameraCaptureDialog');
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const capturedBlobRef = useRef<Blob | null>(null);
@@ -69,7 +67,7 @@ export const CameraCaptureDialog = ({
       typeof navigator === 'undefined' ||
       !navigator.mediaDevices?.getUserMedia
     ) {
-      setError(CAMERA_UNAVAILABLE_ERROR);
+      setError(t('cameraUnavailableError'));
       return;
     }
 
@@ -90,7 +88,7 @@ export const CameraCaptureDialog = ({
       })
       .catch(() => {
         if (!cancelled) {
-          setError(CAMERA_PERMISSION_ERROR);
+          setError(t('cameraPermissionError'));
         }
       });
 
@@ -175,7 +173,7 @@ export const CameraCaptureDialog = ({
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Take a photo</DialogTitle>
+          <DialogTitle>{t('takeAPhoto')}</DialogTitle>
         </DialogHeader>
 
         {error ? (
@@ -186,9 +184,9 @@ export const CameraCaptureDialog = ({
                 type="button"
                 variant="outline"
                 onClick={handleClose}
-                aria-label="Close camera"
+                aria-label={t('closeCamera')}
               >
-                Close
+                {t('close')}
               </Button>
             </DialogFooter>
           </div>
@@ -196,7 +194,7 @@ export const CameraCaptureDialog = ({
           <div className="flex flex-col gap-4">
             <img
               src={capturedUrl}
-              alt="Captured photo preview"
+              alt={t('capturedPhotoPreview')}
               className="w-full rounded-lg bg-black"
             />
             <DialogFooter>
@@ -204,17 +202,17 @@ export const CameraCaptureDialog = ({
                 type="button"
                 variant="outline"
                 onClick={handleRetake}
-                aria-label="Retake photo"
+                aria-label={t('retakePhoto')}
               >
                 <RotateCcw className="h-4 w-4" />
-                Retake
+                {t('retake')}
               </Button>
               <Button
                 type="button"
                 onClick={handleUsePhoto}
-                aria-label="Use photo"
+                aria-label={t('usePhoto')}
               >
-                Use Photo
+                {t('usePhotoLabel')}
               </Button>
             </DialogFooter>
           </div>
@@ -232,10 +230,10 @@ export const CameraCaptureDialog = ({
               <Button
                 type="button"
                 onClick={handleCapture}
-                aria-label="Capture photo"
+                aria-label={t('capturePhoto')}
               >
                 <Camera className="h-4 w-4" />
-                Capture
+                {t('capture')}
               </Button>
             </DialogFooter>
           </div>

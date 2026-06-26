@@ -2,6 +2,7 @@ import React from 'react';
 import { Trash } from 'lucide-react';
 import { format } from 'date-fns';
 import { useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
 import {
   Table,
@@ -21,6 +22,7 @@ import { Spinner } from '@/components/spinner';
 import { WithPermissions } from '@/hoc/withPermissions';
 
 export function ApiTab() {
+  const t = useTranslations('tabsApiTab');
   const { tenantKey } = useParams<TenantKeyMentorIdParams>();
   const { data: apiKeys, isLoading: isApiKeysLoading } = useGetApiKeysQuery({
     platformKey: tenantKey,
@@ -55,9 +57,11 @@ export function ApiTab() {
     <>
       <div className="flex hidden h-[73px] flex-shrink-0 items-center border-b border-gray-200 bg-white p-4 lg:block">
         <div>
-          <h3 className="mb-1 text-base font-medium text-gray-900">API</h3>
+          <h3 className="mb-1 text-base font-medium text-gray-900">
+            {t('apiHeading')}
+          </h3>
           <p className="text-xs text-gray-700">
-            Manage API keys and integrations.
+            {t('manageApiKeysDescription')}
           </p>
         </div>
       </div>
@@ -71,15 +75,9 @@ export function ApiTab() {
         <div className="space-y-6">
           <div className="space-y-4">
             <p className="text-sm text-gray-700">
-              Your secret API keys are listed below. Please note that we do not
-              display your secret API keys again after you generate them.
+              {t('secretKeysListedBelow')}
             </p>
-            <p className="text-sm text-gray-700">
-              Do not share your API key with others, or expose it in the browser
-              or other client-side code. In order to protect the security of
-              your account, IBL may also automatically rotate any API key that
-              we&apos;ve found has leaked publicly.
-            </p>
+            <p className="text-sm text-gray-700">{t('doNotShareApiKey')}</p>
           </div>
 
           {isApiKeysLoading ? (
@@ -92,19 +90,19 @@ export function ApiTab() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="p-2 text-left text-sm text-gray-700">
-                      NAME
+                      {t('columnName')}
                     </TableHead>
                     <TableHead className="p-2 text-left text-sm text-gray-700">
-                      CREATED
+                      {t('columnCreated')}
                     </TableHead>
                     <TableHead className="p-2 text-left text-sm text-gray-700">
-                      EXPIRES
+                      {t('columnExpires')}
                     </TableHead>
                     <TableHead
                       className="p-2 text-left text-sm text-gray-700"
-                      aria-label="Actions"
+                      aria-label={t('columnActions')}
                     >
-                      <span className="sr-only">Actions</span>
+                      <span className="sr-only">{t('columnActions')}</span>
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -115,7 +113,7 @@ export function ApiTab() {
                         colSpan={5}
                         className="p-4 text-center text-sm text-gray-700"
                       >
-                        No API keys found
+                        {t('noApiKeysFound')}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -128,7 +126,7 @@ export function ApiTab() {
                                 colSpan={5}
                                 className="p-4 text-center text-sm text-gray-700"
                               >
-                                You do not have permission to view API keys
+                                {t('noPermissionToViewApiKeys')}
                               </TableCell>
                             </TableRow>
                           );
@@ -146,12 +144,12 @@ export function ApiTab() {
                                 <TableCell className="p-2 whitespace-nowrap text-gray-700">
                                   {apiKey.created
                                     ? format(apiKey.created, 'PPP')
-                                    : 'N/A'}
+                                    : t('notAvailable')}
                                 </TableCell>
                                 <TableCell className="p-2 whitespace-nowrap text-gray-700">
                                   {apiKey.expires
                                     ? format(apiKey.expires, 'PPP')
-                                    : 'N/A'}
+                                    : t('notAvailable')}
                                 </TableCell>
                                 <TableCell className="p-2">
                                   <WithPermissions
@@ -173,7 +171,7 @@ export function ApiTab() {
                                         >
                                           <Trash className="h-4 w-4" />
                                           <span className="sr-only">
-                                            Delete API Key
+                                            {t('deleteApiKey')}
                                           </span>
                                         </Button>
                                       )
@@ -199,7 +197,7 @@ export function ApiTab() {
                   onClick={openCreateApiModal}
                   className="cursor-pointer bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90"
                 >
-                  Create New
+                  {t('createNew')}
                 </Button>
               )
             }
