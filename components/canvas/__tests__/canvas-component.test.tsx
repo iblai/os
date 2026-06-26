@@ -6,6 +6,7 @@ import {
   fireEvent,
   cleanup,
   waitFor,
+  act,
 } from '@testing-library/react';
 
 import {
@@ -1151,6 +1152,160 @@ describe('CanvasComponent', () => {
           screen.queryByTestId('canvas-highlight-popup'),
         ).not.toBeInTheDocument();
       });
+    });
+  });
+
+  // ==========================================================================
+  // Export Item Click Handlers
+  // ==========================================================================
+
+  describe('Export Item Click Handlers', () => {
+    it('invokes PDF export when the PDF menu item is clicked', async () => {
+      const exportHandlers = await import('../canvas-export-handlers');
+      render(<CanvasComponent {...defaultProps} />);
+      const pdfOption = screen.getByText('PDF Document').closest('button');
+      fireEvent.click(pdfOption as HTMLElement);
+      await waitFor(() => {
+        expect(exportHandlers.exportAsPDF).toHaveBeenCalled();
+      });
+    });
+
+    it('invokes DOCX export when the Word menu item is clicked', async () => {
+      const exportHandlers = await import('../canvas-export-handlers');
+      render(<CanvasComponent {...defaultProps} />);
+      const docxOption = screen.getByText('Microsoft Word').closest('button');
+      fireEvent.click(docxOption as HTMLElement);
+      await waitFor(() => {
+        expect(exportHandlers.exportAsDOCX).toHaveBeenCalled();
+      });
+    });
+
+    it('invokes Markdown export when the Markdown menu item is clicked', async () => {
+      const exportHandlers = await import('../canvas-export-handlers');
+      render(<CanvasComponent {...defaultProps} />);
+      const mdOption = screen.getByText('Markdown Document').closest('button');
+      fireEvent.click(mdOption as HTMLElement);
+      await waitFor(() => {
+        expect(exportHandlers.exportAsMarkdown).toHaveBeenCalled();
+      });
+    });
+  });
+
+  // ==========================================================================
+  // Highlight Popup Rendering
+  // ==========================================================================
+
+  describe('Highlight Popup Rendering', () => {
+    const openHighlightPopup = async () => {
+      const editorContent = screen.getByTestId('editor-content');
+      const mockRange = {
+        cloneRange: vi.fn().mockReturnThis(),
+        getBoundingClientRect: vi.fn().mockReturnValue({
+          left: 50,
+          top: 40,
+          bottom: 60,
+          width: 30,
+          height: 18,
+        }),
+        getClientRects: vi.fn().mockReturnValue([]),
+        commonAncestorContainer: editorContent,
+        startContainer: editorContent,
+        startOffset: 0,
+      };
+      const mockSelection = {
+        rangeCount: 1,
+        getRangeAt: vi.fn().mockReturnValue(mockRange),
+        toString: vi.fn().mockReturnValue('selected words'),
+        removeAllRanges: vi.fn(),
+        addRange: vi.fn(),
+      };
+      vi.spyOn(window, 'getSelection').mockReturnValue(mockSelection as any);
+
+      fireEvent.mouseUp(editorContent);
+      // handleTextSelection runs via setTimeout(..., 10)
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(20);
+      });
+    };
+
+    it('renders the highlight popup and updates input value', async () => {
+      vi.useFakeTimers();
+      try {
+        render(<CanvasComponent {...defaultProps} />);
+        await openHighlightPopup();
+
+        const popup = screen.getByTestId('canvas-highlight-popup');
+        expect(popup).toBeInTheDocument();
+
+        const input = screen.getByPlaceholderText('Ask Anything...');
+        fireEvent.change(input, { target: { value: 'explain this part' } });
+        expect(input).toHaveValue('explain this part');
+
+        // onMouseDown / onMouseUp stopPropagation handlers on the popup div
+        fireEvent.mouseDown(popup);
+        fireEvent.mouseUp(popup);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('submits the highlight query on Enter and closes the popup', async () => {
+      vi.useFakeTimers();
+      try {
+        const sendMessage = vi.fn();
+        render(<CanvasComponent {...defaultProps} sendMessage={sendMessage} />);
+        await openHighlightPopup();
+
+        const input = screen.getByPlaceholderText('Ask Anything...');
+        fireEvent.change(input, { target: { value: 'what is this?' } });
+        fireEvent.keyDown(input, { key: 'Enter' });
+
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(20);
+        });
+        expect(
+          screen.queryByTestId('canvas-highlight-popup'),
+        ).not.toBeInTheDocument();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('dismisses the highlight popup on Escape', async () => {
+      vi.useFakeTimers();
+      try {
+        render(<CanvasComponent {...defaultProps} />);
+        await openHighlightPopup();
+
+        const input = screen.getByPlaceholderText('Ask Anything...');
+        fireEvent.keyDown(input, { key: 'Escape' });
+
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(20);
+        });
+        expect(
+          screen.queryByTestId('canvas-highlight-popup'),
+        ).not.toBeInTheDocument();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('ignores other keys in the highlight input', async () => {
+      vi.useFakeTimers();
+      try {
+        render(<CanvasComponent {...defaultProps} />);
+        await openHighlightPopup();
+
+        const input = screen.getByPlaceholderText('Ask Anything...');
+        fireEvent.keyDown(input, { key: 'x' });
+
+        expect(
+          screen.getByTestId('canvas-highlight-popup'),
+        ).toBeInTheDocument();
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 
