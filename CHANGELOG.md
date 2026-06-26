@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.86.0](https://github.com/iblai/os/compare/v0.85.0...v0.86.0) (2026-06-26)
+
+### Features
+
+* text to speech endpoint now streamable ([0dbb773](https://github.com/iblai/os/commit/0dbb77353e417cfb0c07227deec0e9c7fa8c0ced))
+* text to speech endpoint now streamable ([5039df8](https://github.com/iblai/os/commit/5039df8262e27c01bc5da82f711551411fe1ac32))
+* text to speech endpoint now streamable ([7106acd](https://github.com/iblai/os/commit/7106acd82cdcb88e6793ac9036677ea4d1726686))
+* text to speech endpoint now streamable > test coverage ([72ccd50](https://github.com/iblai/os/commit/72ccd50907249fcc4b5c4234dc29d7e0c79382c7))
+
 ## [0.85.0](https://github.com/iblai/os/compare/v0.84.3...v0.85.0) (2026-06-26)
 
 ### Features
