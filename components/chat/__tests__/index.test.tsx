@@ -217,6 +217,7 @@ vi.mock('@/lib/config', () => ({
     supportEmail: () => 'support@test.com',
     iblTemplateMentor: () => 'default-agent',
     defaultSupportPhoneNumber: () => '(571) 293-0242',
+    enableSupportPhone: () => false,
   },
 }));
 

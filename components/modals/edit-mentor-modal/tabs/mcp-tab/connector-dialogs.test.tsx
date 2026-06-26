@@ -5831,5 +5831,191 @@ describe('ConnectorDialogs', () => {
         'tenant',
       );
     });
+
+    it('updates connector scope when "This Agent" radio is selected', () => {
+      render(<ConnectorDialogs {...defaultProps} />);
+
+      // Starts as tenant
+      expect(screen.getByTestId('radio-group')).toHaveAttribute(
+        'data-value',
+        'tenant',
+      );
+
+      // Click the radio option wrapping "This Agent" to trigger onValueChange
+      const thisAgentOption = screen.getByText('This Agent').closest('div');
+      fireEvent.click(thisAgentOption as HTMLElement);
+
+      expect(screen.getByTestId('radio-group')).toHaveAttribute(
+        'data-value',
+        'this-mentor',
+      );
+      expect(
+        screen.getByText('This MCP will only be available for this agent.'),
+      ).toBeInTheDocument();
+    });
+  });
+
+  describe('Custom Token Type Validation on Submit', () => {
+    const fillNameAndServer = () => {
+      const nameInput = screen.getByPlaceholderText('Enter connector name');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
+      fireEvent.change(nameInput, { target: { value: 'Token Connector' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://api.example.com/mcp' },
+      });
+    };
+
+    const selectApiKeyAndOther = () => {
+      const authSelect = screen.getAllByTestId('select')[1];
+      fireEvent.change(authSelect, { target: { value: 'api-key' } });
+      // Token type is the third select once api-key fields are shown
+      const tokenTypeSelect = screen.getAllByTestId('select')[2];
+      fireEvent.change(tokenTypeSelect, { target: { value: 'Other' } });
+    };
+
+    it('shows "too long" error when custom token type exceeds 50 characters', async () => {
+      const { toast } = await import('sonner');
+      render(<ConnectorDialogs {...defaultProps} />);
+
+      selectApiKeyAndOther();
+      fillNameAndServer();
+
+      const customInput = screen.getByPlaceholderText('e.g. X-Custom-Auth');
+      fireEvent.change(customInput, {
+        target: { value: 'a'.repeat(51) },
+      });
+
+      fireEvent.click(screen.getByText('Connect'));
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith(
+          'Token type must be 50 characters or fewer.',
+        );
+      });
+      expect(mockOnAddConnector).not.toHaveBeenCalled();
+    });
+
+    it('shows "invalid characters" error when custom token type has illegal characters', async () => {
+      const { toast } = await import('sonner');
+      render(<ConnectorDialogs {...defaultProps} />);
+
+      selectApiKeyAndOther();
+      fillNameAndServer();
+
+      const customInput = screen.getByPlaceholderText('e.g. X-Custom-Auth');
+      fireEvent.change(customInput, {
+        target: { value: 'Bad Token!' },
+      });
+
+      fireEvent.click(screen.getByText('Connect'));
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith(
+          'Token type may only contain letters, numbers, and hyphens.',
+        );
+      });
+      expect(mockOnAddConnector).not.toHaveBeenCalled();
+    });
+
+    it('submits successfully with a valid custom token type', async () => {
+      render(<ConnectorDialogs {...defaultProps} />);
+
+      selectApiKeyAndOther();
+      fillNameAndServer();
+
+      const customInput = screen.getByPlaceholderText('e.g. X-Custom-Auth');
+      fireEvent.change(customInput, {
+        target: { value: 'X-Custom-Auth' },
+      });
+
+      const tokenInput = screen.getByPlaceholderText('Enter your token');
+      fireEvent.change(tokenInput, { target: { value: 'secret-token' } });
+
+      fireEvent.click(screen.getByText('Connect'));
+
+      await waitFor(() => {
+        expect(mockOnAddConnector).toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe('OAuth Popup Close Detection', () => {
+    const oauthProps = {
+      ...defaultProps,
+      tenantKey: 'test-tenant',
+      username: 'test-user',
+      mentorId: 'mentor-123',
+      onOAuthComplete: vi.fn(),
+    };
+
+    const startOAuth = () => {
+      const existingServer = {
+        id: 5,
+        url: 'https://oauth.example.com/mcp',
+        auth_type: 'oauth2',
+        oauth_service_data: {
+          oauth_provider: 'google',
+          name: 'test-service',
+        },
+      };
+
+      mockGetMCPServers.mockReturnValue({
+        unwrap: vi.fn().mockResolvedValue({ results: [existingServer] }),
+      });
+      mockStartOAuthFlow.mockReturnValue({
+        unwrap: vi
+          .fn()
+          .mockResolvedValue({ auth_url: 'https://oauth.example.com/auth' }),
+      });
+      mockRefetchConnected.mockResolvedValue({ data: [] });
+
+      render(<ConnectorDialogs {...oauthProps} />);
+
+      const selects = screen.getAllByTestId('select');
+      fireEvent.change(selects[1], { target: { value: 'oauth' } });
+
+      const nameInput = screen.getByPlaceholderText('Enter connector name');
+      const serverInput = screen.getByPlaceholderText(
+        'https://api.example.com/mcp',
+      );
+      fireEvent.change(nameInput, { target: { value: 'OAuth Connector' } });
+      fireEvent.change(serverInput, {
+        target: { value: 'https://oauth.example.com/mcp' },
+      });
+
+      fireEvent.click(screen.getByText('Connect'));
+    };
+
+    it('cleans up when the OAuth popup is closed by the user', async () => {
+      vi.useFakeTimers();
+
+      const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
+
+      // window.open returns a popup that the user then closes
+      const popup = { closed: false };
+      (window.open as ReturnType<typeof vi.fn>).mockReturnValue(popup);
+
+      startOAuth();
+
+      // Let the OAuth flow start and register the popup-check interval
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(mockStartOAuthFlow).toHaveBeenCalled();
+
+      // Simulate the user closing the popup
+      popup.closed = true;
+
+      // Advance to trigger the popup-check interval (2s) and the 10s grace period
+      await vi.advanceTimersByTimeAsync(2000);
+      await vi.advanceTimersByTimeAsync(10000);
+
+      // Cleanup should have removed the event listeners
+      expect(removeEventListenerSpy).toHaveBeenCalled();
+
+      removeEventListenerSpy.mockRestore();
+      (window.open as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
+      vi.useRealTimers();
+    });
   });
 });
