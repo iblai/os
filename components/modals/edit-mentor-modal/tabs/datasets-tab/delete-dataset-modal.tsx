@@ -13,6 +13,7 @@ import { useParams } from 'next/navigation';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { toast } from 'sonner';
 import { useUsername } from '@/hooks/use-user';
+import { useTranslations } from 'next-intl';
 
 type Props = {
   isOpen: boolean;
@@ -25,6 +26,7 @@ export type Dataset = {
 };
 
 export function DeleteDatasetModal({ isOpen, onClose, dataset }: Props) {
+  const t = useTranslations('datasetsTabDeleteDatasetModal');
   const { tenantKey } = useParams<TenantKeyMentorIdParams>();
   const username = useUsername();
 
@@ -39,9 +41,9 @@ export function DeleteDatasetModal({ isOpen, onClose, dataset }: Props) {
         // @ts-ignore
         userId: username ?? '',
       }).unwrap();
-      toast.success('Training document deleted successfully');
+      toast.success(t('deleteSuccess'));
     } catch (error) {
-      toast.error('Failed to delete training document');
+      toast.error(t('deleteError'));
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     }
   };
@@ -50,24 +52,23 @@ export function DeleteDatasetModal({ isOpen, onClose, dataset }: Props) {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent aria-describedby="delete-dataset-description">
         <DialogHeader>
-          <DialogTitle className="ibl-dialog-title">Delete Dataset</DialogTitle>
+          <DialogTitle className="ibl-dialog-title">
+            {t('dialogTitle')}
+          </DialogTitle>
         </DialogHeader>
         <div className="my-5">
-          <p className="text-sm text-[#646464]">
-            You have successfully untrained a dataset, do you want to delete it?
-            This action cannot be undone.
-          </p>
+          <p className="text-sm text-[#646464]">{t('confirmationText')}</p>
         </div>
         <DialogFooter className="gap-3">
           <Button variant="outline" onClick={onClose}>
-            Cancel
+            {t('cancelButton')}
           </Button>
           <Button
             className="bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90"
             onClick={handleDeleteTrainingDocument}
             disabled={isLoading}
           >
-            {isLoading ? 'Deleting...' : 'Delete'}
+            {isLoading ? t('deletingButton') : t('deleteButton')}
           </Button>
         </DialogFooter>
       </DialogContent>

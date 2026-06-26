@@ -17,6 +17,7 @@ import { useDeleteMentorMutation } from '@iblai/iblai-js/data-layer';
 import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { urlRoutes } from '@/url-routes';
+import { useTranslations } from 'next-intl';
 
 interface DeleteMentorModalProps {
   isOpen: boolean;
@@ -24,6 +25,7 @@ interface DeleteMentorModalProps {
 }
 
 export function DeleteMentorModal({ isOpen, onClose }: DeleteMentorModalProps) {
+  const t = useTranslations('settingsTabDeleteMentorModal');
   const router = useRouter();
   const [deleteMentor, { isLoading }] = useDeleteMentorMutation();
   const { mentorId, tenantKey } = useParams<TenantKeyMentorIdParams>();
@@ -45,7 +47,7 @@ export function DeleteMentorModal({ isOpen, onClose }: DeleteMentorModalProps) {
       // avoid race conditions
       await new Promise((resolve) => setTimeout(resolve, 10));
       closeEditMentorModal();
-      toast.success('Agent deleted successfully');
+      toast.success(t('deleteSuccess'));
 
       if (activeMentorId === mentorId) {
         router.replace(urlRoutes.platform.explore(tenantKey));
@@ -57,7 +59,7 @@ export function DeleteMentorModal({ isOpen, onClose }: DeleteMentorModalProps) {
       }
     } catch (error) {
       console.error(JSON.stringify(error));
-      toast.error('Failed to delete agent');
+      toast.error(t('deleteError'));
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     }
   };
@@ -66,11 +68,8 @@ export function DeleteMentorModal({ isOpen, onClose }: DeleteMentorModalProps) {
     <AlertDialog open={isOpen} onOpenChange={onClose}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete Agent</AlertDialogTitle>
-          <AlertDialogDescription>
-            Are you sure you want to delete this agent? This action cannot be
-            undone and will permanently remove all associated data.
-          </AlertDialogDescription>
+          <AlertDialogTitle>{t('title')}</AlertDialogTitle>
+          <AlertDialogDescription>{t('description')}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel
@@ -78,7 +77,7 @@ export function DeleteMentorModal({ isOpen, onClose }: DeleteMentorModalProps) {
             disabled={isLoading}
             className="ibl-button-primary"
           >
-            Cancel
+            {t('cancel')}
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={async (event) => {
@@ -88,7 +87,7 @@ export function DeleteMentorModal({ isOpen, onClose }: DeleteMentorModalProps) {
             disabled={isLoading}
             className="border-input bg-background text-accent-foreground hover:bg-accent hover:text-accent-foreground border"
           >
-            {isLoading ? 'Deleting...' : 'Delete'}
+            {isLoading ? t('deleting') : t('delete')}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

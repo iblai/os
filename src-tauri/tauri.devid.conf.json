@@ -1,0 +1,9 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "bundle": {
+    "macOS": {
+      "signingIdentity": "Developer ID Application: Class Generation, LLC (L4FWRM8W5Z)",
+      "entitlements": "entitlements.devid.plist"
+    }
+  }
+}

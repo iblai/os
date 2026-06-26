@@ -274,7 +274,7 @@ describe('useTauri', () => {
       const mockListenFn = vi.fn();
 
       // Set up window with __TAURI_INTERNALS__
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       (global.window as any).__TAURI_INTERNALS__ = {
         core: { invoke: mockInvokeFn },
         event: { listen: mockListenFn },
@@ -286,7 +286,7 @@ describe('useTauri', () => {
       expect(result.current.isAvailable).toBe(true);
 
       // Clean up
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       delete (global.window as any).__TAURI_INTERNALS__;
       consoleSpy.mockRestore();
     });
@@ -299,7 +299,7 @@ describe('useTauri', () => {
       const mockListenFn = vi.fn();
 
       // Set up window with __TAURI__ (alternative structure)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       (global.window as any).__TAURI__ = {
         invoke: mockInvokeFn,
         listen: mockListenFn,
@@ -310,7 +310,7 @@ describe('useTauri', () => {
       expect(result.current.isAvailable).toBe(true);
 
       // Clean up
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       delete (global.window as any).__TAURI__;
       consoleSpy.mockRestore();
     });
@@ -323,7 +323,7 @@ describe('useTauri', () => {
       const mockListenFn = vi.fn();
 
       // Set up window with __TAURI__.tauri structure
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       (global.window as any).__TAURI__ = {
         tauri: { invoke: mockInvokeFn, listen: mockListenFn },
       };
@@ -333,7 +333,7 @@ describe('useTauri', () => {
       expect(result.current.isAvailable).toBe(true);
 
       // Clean up
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       delete (global.window as any).__TAURI__;
       consoleSpy.mockRestore();
     });
@@ -346,7 +346,7 @@ describe('useTauri', () => {
       const mockListenFn = vi.fn();
 
       // Set up window with plugins structure
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       (global.window as any).__TAURI__ = {
         plugins: {
           core: { invoke: mockInvokeFn },
@@ -359,7 +359,7 @@ describe('useTauri', () => {
       expect(result.current.isAvailable).toBe(true);
 
       // Clean up
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       delete (global.window as any).__TAURI__;
       consoleSpy.mockRestore();
     });
@@ -369,7 +369,7 @@ describe('useTauri', () => {
       mockIsTauriApp.mockReturnValue(true);
 
       // Set up window with __TAURI__ but no invoke function
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       (global.window as any).__TAURI__ = {
         someOtherProperty: true,
       };
@@ -381,7 +381,7 @@ describe('useTauri', () => {
       expect(result.current).toBeDefined();
 
       // Clean up
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       delete (global.window as any).__TAURI__;
       consoleSpy.mockRestore();
     });
@@ -396,7 +396,7 @@ describe('useTauri', () => {
       const mockGlobalListen = vi.fn().mockResolvedValue(() => {});
 
       // Set up window with __TAURI_INTERNALS__
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       (global.window as any).__TAURI_INTERNALS__ = {
         core: { invoke: mockGlobalInvoke },
         event: { listen: mockGlobalListen },
@@ -416,8 +416,59 @@ describe('useTauri', () => {
       expect(mockGlobalInvoke).toHaveBeenCalledWith('test_cmd', undefined);
 
       // Clean up
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       delete (global.window as any).__TAURI_INTERNALS__;
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe('listen fallback when the global lacks event.listen', () => {
+    const originalWindow = global.window;
+
+    afterEach(() => {
+      global.window = originalWindow;
+
+      delete (global.window as any).__TAURI_INTERNALS__;
+    });
+
+    it('dynamically imports the event API and forwards the payload', async () => {
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      mockIsTauriApp.mockReturnValue(true);
+
+      // The synchronous global exposes `invoke` but NOT `event.listen`, so the
+      // hook must fall back to the dynamically imported event API.
+      const mockInvokeFn = vi.fn();
+
+      (global.window as any).__TAURI_INTERNALS__ = {
+        core: { invoke: mockInvokeFn },
+      };
+
+      const handler = vi.fn();
+      const mockUnlisten = vi.fn();
+      let capturedWrapper: ((event: { payload: unknown }) => void) | undefined;
+      mockListen.mockImplementation((_event, wrapper) => {
+        capturedWrapper = wrapper;
+        return Promise.resolve(mockUnlisten);
+      });
+
+      const { result } = renderHook(() => useTauri());
+
+      // invoke is available synchronously, so the hook is immediately available.
+      expect(result.current.isAvailable).toBe(true);
+
+      let returnedUnlisten: (() => void) | undefined;
+      await act(async () => {
+        returnedUnlisten = await result.current.listen('evt', handler);
+      });
+
+      // The imported listen was used and its unlisten returned through.
+      expect(mockListen).toHaveBeenCalledWith('evt', expect.any(Function));
+      expect(returnedUnlisten).toBe(mockUnlisten);
+
+      // The wrapper unwraps `event.payload` before invoking the handler.
+      capturedWrapper?.({ payload: { value: 42 } });
+      expect(handler).toHaveBeenCalledWith({ value: 42 });
+
       consoleSpy.mockRestore();
     });
   });
@@ -431,9 +482,9 @@ describe('useTauri', () => {
       mockIsTauriApp.mockReturnValue(true);
 
       // No global window Tauri object set, so sync check will fail
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       delete (global.window as any).__TAURI_INTERNALS__;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       delete (global.window as any).__TAURI__;
 
       // The dynamic import will try to load the mocked modules
@@ -463,9 +514,9 @@ describe('useTauri', () => {
       mockIsTauriApp.mockReturnValue(true);
 
       // Remove global Tauri objects to force dynamic import path
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       delete (global.window as any).__TAURI_INTERNALS__;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       delete (global.window as any).__TAURI__;
 
       const { result } = renderHook(() => useTauri());
@@ -493,9 +544,9 @@ describe('useTauri', () => {
       mockIsTauriApp.mockReturnValue(true);
 
       // Remove global Tauri objects
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       delete (global.window as any).__TAURI_INTERNALS__;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       delete (global.window as any).__TAURI__;
 
       // Mock invoke to throw to simulate import failure scenario
@@ -544,9 +595,9 @@ describe('useTauri error path coverage', () => {
     const { useTauri: useTauriFailing } = await import('../use-tauri');
 
     // Clear global Tauri objects
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     delete (global.window as any).__TAURI_INTERNALS__;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     delete (global.window as any).__TAURI__;
 
     const { result } = renderHook(() => useTauriFailing());
@@ -594,9 +645,9 @@ describe('useTauri - getTauriAPIs error handling', () => {
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
     // No global Tauri objects so sync check fails
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     delete (global.window as any).__TAURI_INTERNALS__;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     delete (global.window as any).__TAURI__;
 
     // Import the module fresh with new mocks
@@ -650,9 +701,9 @@ describe('useTauri - dynamic import promise rejection', () => {
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
     // No global Tauri objects so sync check fails
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     delete (global.window as any).__TAURI_INTERNALS__;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     delete (global.window as any).__TAURI__;
 
     const { useTauri: useTauriFresh } = await import('../use-tauri');

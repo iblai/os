@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { Trash2, Download } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 import {
   Dialog,
@@ -52,6 +53,7 @@ function LogEntry({ log }: { log: InstallationLog }) {
  * Modal for displaying detailed installation logs
  */
 export function ModelDownloadLogsModal({ isOpen, onClose }: Props) {
+  const t = useTranslations('modalsModelDownloadLogsModal');
   const { state, clearLogs } = useModelDownload();
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -90,16 +92,13 @@ export function ModelDownloadLogsModal({ isOpen, onClose }: Props) {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-h-[80vh] max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Model Installation Logs</DialogTitle>
-          <DialogDescription>
-            Detailed logs for the Phi Mini 3 model download process.
-          </DialogDescription>
+          <DialogTitle>{t('title')}</DialogTitle>
+          <DialogDescription>{t('description')}</DialogDescription>
         </DialogHeader>
 
         <div className="flex items-center justify-between">
           <span className="text-sm text-gray-500 dark:text-gray-400">
-            {state.logs.length} log{' '}
-            {state.logs.length === 1 ? 'entry' : 'entries'}
+            {t('logCount', { count: state.logs.length })}
           </span>
           <div className="flex gap-2">
             <Button
@@ -109,7 +108,7 @@ export function ModelDownloadLogsModal({ isOpen, onClose }: Props) {
               disabled={state.logs.length === 0}
             >
               <Download className="mr-2 h-4 w-4" />
-              Export
+              {t('exportButton')}
             </Button>
             <Button
               variant="ghost"
@@ -118,7 +117,7 @@ export function ModelDownloadLogsModal({ isOpen, onClose }: Props) {
               disabled={state.logs.length === 0}
             >
               <Trash2 className="mr-2 h-4 w-4" />
-              Clear
+              {t('clearButton')}
             </Button>
           </div>
         </div>
@@ -129,7 +128,7 @@ export function ModelDownloadLogsModal({ isOpen, onClose }: Props) {
         >
           {state.logs.length === 0 ? (
             <p className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
-              No logs available. Start a download to see logs.
+              {t('noLogsAvailable')}
             </p>
           ) : (
             <div className="space-y-1">
@@ -147,7 +146,7 @@ export function ModelDownloadLogsModal({ isOpen, onClose }: Props) {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75"></span>
               <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500"></span>
             </span>
-            Download in progress... ({Math.round(state.progress)}%)
+            {t('downloadInProgress', { progress: Math.round(state.progress) })}
           </div>
         )}
       </DialogContent>

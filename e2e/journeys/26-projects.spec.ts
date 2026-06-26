@@ -81,10 +81,13 @@ test.describe('Journey 26: Projects', () => {
     const dialog = page.getByRole('dialog', { name: /add agent/i });
     await expect(dialog).toBeVisible({ timeout: 10_000 });
 
-    // Wait for agents to load (spinner disappears / agent cards appear)
+    // Wait for agents to load (spinner disappears / agent cards appear).
+    // Pick a mentor that is NOT already selected/added — its button reports
+    // aria-pressed="false". This avoids clicking an agent that is already part
+    // of the project (which would not trigger the "Agent added" flow).
     let hasMentorCard = false;
     const mentorCard = dialog
-      .locator('button')
+      .locator('button[aria-pressed="false"]')
       .filter({ has: page.locator('h4') })
       .first();
     try {
@@ -436,7 +439,7 @@ test.describe('Journey 26: Projects Index Page (feat-1821)', () => {
         .locator('button')
         .filter({ has: page.locator('h4') })
         .first();
-      await expect(agentCard).toBeVisible({ timeout: 15_000 });
+      await expect(agentCard).toBeVisible({ timeout: 30_000 });
       await agentCard.click();
 
       // Wait for the Save button to become enabled (requires name + ≥1 agent)

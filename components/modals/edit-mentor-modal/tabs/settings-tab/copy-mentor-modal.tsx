@@ -34,12 +34,14 @@ import { useParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { handleTenantSwitch } from '@/lib/utils';
 import React from 'react';
+import { useTranslations } from 'next-intl';
 
 interface CopyMentorModalProps {
   onClose: () => void;
 }
 
 export function CopyMentorModal({ onClose }: CopyMentorModalProps) {
+  const t = useTranslations('settingsTabCopyMentorModal');
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
   const username = useUsername();
   const { getMentorId, navigateToMentor } = useNavigate();
@@ -65,7 +67,9 @@ export function CopyMentorModal({ onClose }: CopyMentorModalProps) {
 
   const hasMultipleAdminTenants = adminTenants.length > 1;
 
-  const defaultName = `Copy of ${mentor?.mentor_name ?? 'Agent'}`;
+  const defaultName = t('defaultCopyName', {
+    name: mentor?.mentor_name ?? t('defaultAgentName'),
+  });
   const [newMentorName, setNewMentorName] = React.useState(defaultName);
   const [destinationTenantKey, setDestinationTenantKey] =
     React.useState<string>(tenantKey ?? '');
@@ -89,7 +93,7 @@ export function CopyMentorModal({ onClose }: CopyMentorModalProps) {
       !destinationTenantKey ||
       !newMentorName.trim()
     ) {
-      toast.error('Unable to copy agent. Missing context.');
+      toast.error(t('errorMissingContext'));
       return;
     }
     try {
@@ -122,7 +126,7 @@ export function CopyMentorModal({ onClose }: CopyMentorModalProps) {
         }).unwrap();
       }
 
-      toast.success('Agent copied successfully. Switching to new agent');
+      toast.success(t('successCopied'));
       onClose();
 
       const isCrossTenantCopy = destinationTenantKey !== tenantKey;
@@ -151,7 +155,7 @@ export function CopyMentorModal({ onClose }: CopyMentorModalProps) {
         );
       }
     } catch {
-      toast.error('Failed to copy agent');
+      toast.error(t('errorCopyFailed'));
     }
   };
 
@@ -159,20 +163,20 @@ export function CopyMentorModal({ onClose }: CopyMentorModalProps) {
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Copy Agent</DialogTitle>
-          <DialogDescription>Create a copy of this agent.</DialogDescription>
+          <DialogTitle>{t('dialogTitle')}</DialogTitle>
+          <DialogDescription>{t('dialogDescription')}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
           <div className="space-y-2">
             <Label className="flex items-center text-sm font-medium text-[#646464]">
-              Name
+              {t('nameLabel')}
               <span className="ml-1 text-red-500">*</span>
             </Label>
             <Input
               value={newMentorName}
               onChange={(e) => setNewMentorName(e.target.value)}
-              placeholder="Agent Name"
+              placeholder={t('namePlaceholder')}
               disabled={isCopying}
             />
           </div>
@@ -180,19 +184,19 @@ export function CopyMentorModal({ onClose }: CopyMentorModalProps) {
           {hasMultipleAdminTenants && (
             <div className="space-y-2">
               <Label className="flex items-center text-sm font-medium text-[#646464]">
-                Destination
+                {t('destinationLabel')}
               </Label>
               <Select
                 value={destinationTenantKey}
                 onValueChange={setDestinationTenantKey}
                 disabled={isCopying || isLoadingTenants}
               >
-                <SelectTrigger aria-label="Select destination tenant">
+                <SelectTrigger aria-label={t('selectDestinationAriaLabel')}>
                   <SelectValue
                     placeholder={
                       isLoadingTenants
-                        ? 'Loading tenants...'
-                        : 'Select a tenant'
+                        ? t('loadingTenants')
+                        : t('selectTenantPlaceholder')
                     }
                   />
                 </SelectTrigger>
@@ -209,13 +213,18 @@ export function CopyMentorModal({ onClose }: CopyMentorModalProps) {
 
           <div className="flex items-center justify-between">
             <Label className="text-sm font-medium text-[#646464]">
-              Include training data
+              {t('includeTrainingDataLabel')}
             </Label>
             <Switch
               checked={canCloneDocuments && cloneDocuments}
               onCheckedChange={setCloneDocuments}
               disabled={isCopying || !canCloneDocuments}
-              aria-label={`Include training data ${canCloneDocuments && cloneDocuments ? 'enabled' : 'disabled'}`}
+              aria-label={t('includeTrainingDataAriaLabel', {
+                state:
+                  canCloneDocuments && cloneDocuments
+                    ? t('stateEnabled')
+                    : t('stateDisabled'),
+              })}
             />
           </div>
         </div>
@@ -227,7 +236,7 @@ export function CopyMentorModal({ onClose }: CopyMentorModalProps) {
             onClick={onClose}
             disabled={isCopying}
           >
-            Cancel
+            {t('cancelButton')}
           </Button>
           <Button
             type="button"
@@ -237,7 +246,7 @@ export function CopyMentorModal({ onClose }: CopyMentorModalProps) {
             }
             className="bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90"
           >
-            {isCopying ? 'Copying...' : 'Copy'}
+            {isCopying ? t('copyingButton') : t('copyButton')}
           </Button>
         </DialogFooter>
       </DialogContent>
