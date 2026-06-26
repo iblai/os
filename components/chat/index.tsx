@@ -1477,7 +1477,10 @@ export function Chat({
     const aiMessage: Message = {
       id: `user-${Date.now()}`,
       role: 'assistant',
-      content: `Whoops! Looks like access to me is restricted to users of <b>${tenantPlatformName ?? tenantKey.toUpperCase()}</b>. If you’d like to join then please reach out to our <a target="_self" href="mailto:${email}">support team</a>`,
+      content: t('restrictedAccessMessage', {
+        platformName: tenantPlatformName ?? tenantKey.toUpperCase(),
+        email,
+      }),
       timestamp: new Date().toISOString(),
       visible: true,
     };
@@ -1510,7 +1513,9 @@ export function Chat({
         const aiMessage: Message = {
           id: `user-${Date.now()}`,
           role: 'assistant',
-          content: `It looks like you need to be logged in to chat with me. Please <a target="_self" href="${getAuthSpaJoinUrl(tenantKey)}">log in or sign up for free</a> to get started!`,
+          content: t('loginRequiredMessage', {
+            joinUrl: getAuthSpaJoinUrl(tenantKey),
+          }),
           timestamp: new Date().toISOString(),
           visible: true,
         };

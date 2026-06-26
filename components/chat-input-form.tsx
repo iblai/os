@@ -3,6 +3,7 @@
 import type React from 'react';
 
 import { useState, useRef, ChangeEvent } from 'react';
+import { useTranslations } from 'next-intl';
 import { format } from 'date-fns';
 import { useMediaQuery } from 'react-responsive';
 import { FileText } from 'lucide-react';
@@ -127,6 +128,7 @@ export function ChatInputForm({
   chatAreaMaxWidth,
   isConnecting = false,
 }: ChatInputFormProps) {
+  const t = useTranslations('chatInputForm');
   const dispatch = useAppDispatch();
   const mentorSettings = useMentorSettings();
   const showingSharedChat = useAppSelector(selectShowingSharedChat);
@@ -239,9 +241,7 @@ export function ChatInputForm({
     if (files.length === 0) return;
 
     // Show notification
-    setFileAddedNotification(
-      `Uploading ${files.length} file${files.length > 1 ? 's' : ''}...`,
-    );
+    setFileAddedNotification(t('uploadingFiles', { count: files.length }));
 
     // Upload files (validation happens inside the hook)
     await uploadFiles(files);
@@ -317,12 +317,12 @@ export function ChatInputForm({
   const textAreaPlaceholder = () => {
     if (recording) {
       const formattedTime = format(new Date(time), 'mm:ss');
-      return `Listening... ${formattedTime}`;
+      return t('listening', { time: formattedTime });
     }
     if (processing) {
-      return 'Processing...';
+      return t('processing');
     }
-    return persistentChatInputLabel ? '' : 'Ask anything';
+    return persistentChatInputLabel ? '' : t('askAnything');
   };
 
   return (
@@ -387,7 +387,7 @@ export function ChatInputForm({
                   : 'sr-only',
               )}
             >
-              Ask anything
+              {t('askAnything')}
             </label>
             <AutoResizeTextarea
               id="chat-input-textarea"
@@ -406,7 +406,7 @@ export function ChatInputForm({
               textAreaRows={textAreaRows}
               placeholder={
                 isChatDisabledByRbac
-                  ? "Sorry about that! You don't have permission to chat."
+                  ? t('noChatPermission')
                   : textAreaPlaceholder()
               }
               disabled={isChatDisabledByRbac || hasUploadingFiles}

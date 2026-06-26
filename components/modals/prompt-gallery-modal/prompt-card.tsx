@@ -20,6 +20,7 @@ import { SelectedPrompt } from '../edit-prompt-modal';
 import { useUserIsStudent } from '@/hooks/use-user';
 import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import Markdown from '@/components/markdown';
+import { useTranslations } from 'next-intl';
 
 type Props = {
   prompt: SelectedPrompt;
@@ -29,6 +30,7 @@ type Props = {
 };
 
 export function PromptCard({ prompt, onEdit, onSelect, title }: Props) {
+  const t = useTranslations('modalsPromptGalleryModalPromptCard');
   const { copy, status } = useCopyToClipboard(700);
   const { tenantKey } = useParams<TenantKeyMentorIdParams>();
   const [deletePrompt, { isLoading: isDeleting }] = useDeletePromptMutation();
@@ -43,9 +45,9 @@ export function PromptCard({ prompt, onEdit, onSelect, title }: Props) {
   const handleDelete = async () => {
     try {
       await deletePrompt({ id: prompt.id as number, org: tenantKey }).unwrap();
-      toast.success('Prompt deleted successfully');
+      toast.success(t('promptDeletedSuccess'));
     } catch (error) {
-      toast.error('Failed to delete prompt');
+      toast.error(t('promptDeleteFailed'));
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     }
   };
@@ -81,7 +83,7 @@ export function PromptCard({ prompt, onEdit, onSelect, title }: Props) {
                 disabled={isDeleting}
               >
                 <Edit className="mr-1.5 h-3 w-3" />
-                Edit
+                {t('edit')}
               </Button>
             )}
             <Button
@@ -92,7 +94,7 @@ export function PromptCard({ prompt, onEdit, onSelect, title }: Props) {
               disabled={isDeleting}
             >
               <Play className="mr-1.5 h-3 w-3" />
-              Run
+              {t('run')}
             </Button>
             <Button
               variant="outline"
@@ -103,11 +105,11 @@ export function PromptCard({ prompt, onEdit, onSelect, title }: Props) {
             >
               {status === 'success' ? (
                 <>
-                  <Check className="mr-1.5 h-3 w-3" /> Copied
+                  <Check className="mr-1.5 h-3 w-3" /> {t('copied')}
                 </>
               ) : (
                 <>
-                  <Copy className="mr-1.5 h-3 w-3" /> Copy
+                  <Copy className="mr-1.5 h-3 w-3" /> {t('copy')}
                 </>
               )}
             </Button>
@@ -122,7 +124,7 @@ export function PromptCard({ prompt, onEdit, onSelect, title }: Props) {
                 <DeleteIcon
                   className={cn('mr-1.5 h-3 w-3', isDeleting && 'animate-spin')}
                 />
-                Delete
+                {t('delete')}
               </Button>
             )}
           </div>

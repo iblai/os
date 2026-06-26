@@ -6,10 +6,12 @@ import {
 import { useUsername } from './use-user';
 import { useParams } from 'next/navigation';
 import { TenantKeyMentorIdParams } from '@/lib/types';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { DEFAULT_DISCLAIMER_CONTENT } from '@/constants/disclaimer';
 
 export function useUserAgreement() {
+  const t = useTranslations('useUserAgreement');
   const username = useUsername();
   const { mentorId, tenantKey } = useParams<TenantKeyMentorIdParams>();
   const [showDisclaimerModal, setShowDisclaimerModal] = useState(false);
@@ -70,10 +72,10 @@ export function useUserAgreement() {
 
       setUserHasAgreedToDisclaimer(true);
       setShowDisclaimerModal(false);
-      toast.success('User Agreement accepted');
+      toast.success(t('userAgreementAccepted'));
     } catch (error) {
       console.error('Failed to agree to user agreement:', error);
-      toast.error('Failed to update user agreement status');
+      toast.error(t('failedToUpdateStatus'));
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     } finally {
       setIsAgreeing(false);

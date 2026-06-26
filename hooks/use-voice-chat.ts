@@ -3,6 +3,7 @@
 import React from 'react';
 import { useParams } from 'next/navigation';
 
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { useAudioToTextMutation } from '@iblai/iblai-js/data-layer';
 
@@ -15,6 +16,7 @@ type Props = {
 };
 
 export default function useVoiceChat({ sendMessage }: Props) {
+  const t = useTranslations('useVoiceChat');
   const { start, stop, time } = useTimer();
   const username = useUsername();
   const { tenantKey } = useParams<TenantKeyMentorIdParams>();
@@ -46,7 +48,7 @@ export default function useVoiceChat({ sendMessage }: Props) {
       sendMessage(response.text);
     } catch (error) {
       console.error(JSON.stringify(error));
-      toast.error('Could not process your audio, please try again');
+      toast.error(t('couldNotProcessAudio'));
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     } finally {
       setProcessing(false);

@@ -18,6 +18,7 @@ import { useUpdateUserProjectMutation } from '@iblai/iblai-js/data-layer';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useNavigate } from '@/hooks/user-navigate';
+import { useTranslations } from 'next-intl';
 
 const MinimumMentorAlert = dynamic(
   () =>
@@ -50,6 +51,7 @@ export function ProjectMentorsList({
   onAddMentorClick,
   showTitle = false,
 }: ProjectMentorsListProps) {
+  const t = useTranslations('projectsProjectMentorsList');
   const { tenantKey, projectId, mentorId } = useParams<ProjectPageParams>();
   const username = useUsername();
   const [updateProject] = useUpdateUserProjectMutation();
@@ -75,7 +77,7 @@ export function ProjectMentorsList({
         },
       }).unwrap();
 
-      toast.success('Agent removed from project');
+      toast.success(t('agentRemoved'));
 
       // If the removed mentor is the currently active one, navigate to the first remaining mentor
       if (mentorId === mentorUniqueId) {
@@ -91,7 +93,7 @@ export function ProjectMentorsList({
       onMentorRemoved?.();
     } catch (error) {
       console.error(JSON.stringify(error));
-      toast.error('Failed to remove agent');
+      toast.error(t('removeError'));
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     }
   };
@@ -99,12 +101,8 @@ export function ProjectMentorsList({
   if (projectMentors.length === 0) {
     return (
       <div className="py-8 text-center">
-        <p className="mb-4 text-gray-600">
-          No agents assigned to this project yet.
-        </p>
-        <p className="text-sm text-gray-500">
-          Select agents below to add them to your project.
-        </p>
+        <p className="mb-4 text-gray-600">{t('noAgentsAssigned')}</p>
+        <p className="text-sm text-gray-500">{t('selectAgentsBelow')}</p>
       </div>
     );
   }
@@ -115,13 +113,13 @@ export function ProjectMentorsList({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <h2 className="text-lg font-semibold text-gray-900">
-              Project Agents
+              {t('projectAgents')}
             </h2>
           </div>
           {onAddMentorClick && (
             <Button onClick={onAddMentorClick} className="ibl-button-primary">
               <Plus className="mr-2 h-4 w-4" />
-              Add Agent
+              {t('addAgent')}
             </Button>
           )}
         </div>
@@ -156,7 +154,7 @@ export function ProjectMentorsList({
               onKeyDown={handleKeyDown}
               tabIndex={0}
               role="button"
-              aria-label={`Select agent ${mentor.name}`}
+              aria-label={t('selectAgentAriaLabel', { name: mentor.name })}
             >
               <div className="flex h-full items-start gap-3">
                 <Avatar className="h-12 w-12 flex-shrink-0">
@@ -194,7 +192,7 @@ export function ProjectMentorsList({
                       className="cursor-pointer"
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
-                      Remove from project
+                      {t('removeFromProject')}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

@@ -1,3 +1,4 @@
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 
 import { useEditMentorMutation } from '@iblai/iblai-js/data-layer';
@@ -15,6 +16,7 @@ export function useToggleTools({
   username,
   tools = [],
 }: Props) {
+  const t = useTranslations('useToggleTools');
   const [editMentor, { isLoading }] = useEditMentorMutation();
 
   async function toggleTools(toolSlug: string, callback?: () => void) {
@@ -34,12 +36,12 @@ export function useToggleTools({
         // @ts-ignore
         userId: username ?? '',
       }).unwrap();
-      toast.success('Agent updated successfully');
+      toast.success(t('agentUpdatedSuccessfully'));
       callback?.();
     } catch (error: any) {
       console.error(JSON.stringify(error));
       const errorMessage =
-        error?.data?.error || error?.error?.error || 'Failed to update tool';
+        error?.data?.error || error?.error?.error || t('failedToUpdateTool');
       toast.error(errorMessage);
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     }

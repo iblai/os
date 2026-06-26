@@ -1,6 +1,7 @@
 import React from 'react';
 import { useParams } from 'next/navigation';
 
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { useLazyGetCredentialsQuery } from '@iblai/iblai-js/data-layer';
 
@@ -8,6 +9,7 @@ import { TenantKeyMentorIdParams } from '@/lib/types';
 import { useUsername } from './use-user';
 
 export default function useGoogleDrivePicker() {
+  const t = useTranslations('useGoogleDrivePickerV2');
   const { tenantKey } = useParams<TenantKeyMentorIdParams>();
   const username = useUsername();
 
@@ -37,7 +39,7 @@ export default function useGoogleDrivePicker() {
         setCredentialLoaded(true);
       }
     } catch (error) {
-      toast.error('Failed to fetch Google Drive credentials');
+      toast.error(t('failedToFetchCredentials'));
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     }
   }
@@ -64,7 +66,7 @@ export default function useGoogleDrivePicker() {
   }, []);
 
   function handlePickerOpen() {
-    toast.error('Not implemented');
+    toast.error(t('notImplemented'));
   }
 
   return { handlePickerOpen, credentials };

@@ -15,6 +15,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import Markdown from '@/components/markdown';
 import type { ToolCallInfo } from '@iblai/iblai-js/web-utils';
@@ -41,6 +42,7 @@ export function ToolCallIndicator({
   toolCalls,
   isCurrentlyStreaming = false,
 }: ToolCallIndicatorProps) {
+  const t = useTranslations('chatToolCallIndicator');
   const [isOpen, setIsOpen] = useState(false);
 
   if (!toolCalls || toolCalls.length === 0) {
@@ -50,7 +52,7 @@ export function ToolCallIndicator({
   const isStreaming = isCurrentlyStreaming;
 
   const uniqueToolCount = new Set(toolCalls.map((tc) => tc.name)).size;
-  const headerLabel = `Used ${uniqueToolCount} tool${uniqueToolCount === 1 ? '' : 's'}`;
+  const headerLabel = t('usedTools', { count: uniqueToolCount });
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen} className="mb-2">

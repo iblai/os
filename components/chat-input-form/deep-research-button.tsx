@@ -1,4 +1,5 @@
 import { X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
 import { DeepSearchIcon } from '../icons/svg-icons';
@@ -15,6 +16,7 @@ export function DeepResearchButton({
   updateSessionTools,
   activeTools,
 }: Props) {
+  const t = useTranslations('chatInputFormDeepResearchButton');
   const isActiveTool = activeTools.includes(TOOLS.DEEP_RESEARCH);
 
   if (!isActive) {
@@ -39,7 +41,7 @@ export function DeepResearchButton({
         <span className={isActiveTool ? 'text-[#38A1E5]' : 'text-gray-600'}>
           <DeepSearchIcon />
         </span>
-        Deep Research
+        {t('deepResearch')}
         {isActiveTool && (
           <span
             onClick={(e) => {

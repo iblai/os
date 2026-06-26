@@ -1,4 +1,7 @@
+'use client';
+
 import { ArrowUp, Loader2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 import { Button } from '../ui/button';
 import {
@@ -24,6 +27,7 @@ export function SubmitMessageButton({
   disabled = false,
   isConnecting = false,
 }: Props) {
+  const t = useTranslations('chatSubmitMessageButton');
   const isDisabled =
     disabled ||
     (isPreviewMode && !allowAnonymousAccess) ||
@@ -31,9 +35,9 @@ export function SubmitMessageButton({
     isConnecting;
 
   const getTooltipText = () => {
-    if (isConnecting) return 'Connecting...';
-    if (isUploading) return 'Uploading Files';
-    return 'Send Message';
+    if (isConnecting) return t('connectingEllipsis');
+    if (isUploading) return t('uploadingFiles');
+    return t('sendMessageTitle');
   };
 
   return (
@@ -50,7 +54,7 @@ export function SubmitMessageButton({
               (isUploading || isConnecting) && 'cursor-not-allowed opacity-50',
             )}
             disabled={isDisabled}
-            aria-label={isConnecting ? 'Connecting' : 'Send message'}
+            aria-label={isConnecting ? t('connecting') : t('sendMessage')}
           >
             {isConnecting ? (
               <Loader2
@@ -61,7 +65,7 @@ export function SubmitMessageButton({
               <ArrowUp className="h-5 w-5 text-white" aria-hidden="true" />
             )}
             <span className="sr-only">
-              {isConnecting ? 'Connecting' : 'Send message'}
+              {isConnecting ? t('connecting') : t('sendMessage')}
             </span>
           </Button>
         </div>

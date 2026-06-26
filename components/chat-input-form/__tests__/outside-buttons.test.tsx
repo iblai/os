@@ -900,11 +900,7 @@ describe('OutsideButtons', () => {
         ) {
           filterCallCount++;
           // First filter call is for allButtons array - enable PowerPoint
-          if (
-            filterCallCount === 1 &&
-            this.length === 6 &&
-            this[5]?.name === 'PowerPoint'
-          ) {
+          if (this.length === 6 && this[5]?.name === 'PowerPoint') {
             return this; // Return all buttons including PowerPoint
           }
           return originalFilter.apply(
@@ -1430,11 +1426,7 @@ describe('OutsideButtons', () => {
           filterCallCount++;
           // Bypass filter for the moreMenuItems array (typically the second filter call in the component)
           // Return all items regardless of isEnabled for testing
-          if (
-            filterCallCount === 2 &&
-            this.length === 5 &&
-            this[0]?.name === 'Quiz'
-          ) {
+          if (this.length === 5 && this[0]?.name === 'Quiz') {
             return this; // Return unfiltered moreMenuItems
           }
           return originalFilter.apply(
@@ -1472,11 +1464,7 @@ describe('OutsideButtons', () => {
           ...args: Parameters<typeof Array.prototype.filter>
         ) {
           filterCallCount++;
-          if (
-            filterCallCount === 2 &&
-            this.length === 5 &&
-            this[0]?.name === 'Quiz'
-          ) {
+          if (this.length === 5 && this[0]?.name === 'Quiz') {
             return this;
           }
           return originalFilter.apply(
@@ -1515,11 +1503,7 @@ describe('OutsideButtons', () => {
           ...args: Parameters<typeof Array.prototype.filter>
         ) {
           filterCallCount++;
-          if (
-            filterCallCount === 2 &&
-            this.length === 5 &&
-            this[0]?.name === 'Quiz'
-          ) {
+          if (this.length === 5 && this[0]?.name === 'Quiz') {
             return this;
           }
           return originalFilter.apply(
@@ -1562,11 +1546,7 @@ describe('OutsideButtons', () => {
           ...args: Parameters<typeof Array.prototype.filter>
         ) {
           filterCallCount++;
-          if (
-            filterCallCount === 2 &&
-            this.length === 5 &&
-            this[0]?.name === 'Quiz'
-          ) {
+          if (this.length === 5 && this[0]?.name === 'Quiz') {
             return this;
           }
           return originalFilter.apply(
@@ -1610,11 +1590,7 @@ describe('OutsideButtons', () => {
           ...args: Parameters<typeof Array.prototype.filter>
         ) {
           filterCallCount++;
-          if (
-            filterCallCount === 2 &&
-            this.length === 5 &&
-            this[0]?.name === 'Quiz'
-          ) {
+          if (this.length === 5 && this[0]?.name === 'Quiz') {
             return this;
           }
           return originalFilter.apply(
@@ -1658,11 +1634,7 @@ describe('OutsideButtons', () => {
           ...args: Parameters<typeof Array.prototype.filter>
         ) {
           filterCallCount++;
-          if (
-            filterCallCount === 2 &&
-            this.length === 5 &&
-            this[0]?.name === 'Quiz'
-          ) {
+          if (this.length === 5 && this[0]?.name === 'Quiz') {
             return this;
           }
           return originalFilter.apply(
@@ -1706,11 +1678,7 @@ describe('OutsideButtons', () => {
           ...args: Parameters<typeof Array.prototype.filter>
         ) {
           filterCallCount++;
-          if (
-            filterCallCount === 2 &&
-            this.length === 5 &&
-            this[0]?.name === 'Quiz'
-          ) {
+          if (this.length === 5 && this[0]?.name === 'Quiz') {
             return this;
           }
           return originalFilter.apply(

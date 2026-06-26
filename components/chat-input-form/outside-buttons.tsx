@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useLazyGetConnectedServiceAuthUrlQuery } from '@iblai/iblai-js/data-layer';
@@ -57,6 +58,7 @@ export const OutsideButtons = ({
   userId,
   disabled = false,
 }: OutsideButtonsProps) => {
+  const t = useTranslations('chatInputFormOutsideButtons');
   const [getConnectedServiceAuthUrl] = useLazyGetConnectedServiceAuthUrlQuery();
   const [pendingAuth, setPendingAuth] = useState<GoogleService | null>(null);
   const [savedTools, setSavedTools] = useState<string[]>([]);
@@ -105,9 +107,7 @@ export const OutsideButtons = ({
     const popup = window.open('about:blank', '_blank', 'width=600,height=600');
 
     if (!popup || popup.closed) {
-      toast.error(
-        'Please allow popups for this site to connect Google services',
-      );
+      toast.error(t('allowPopupsToConnectGoogle'));
       return;
     }
 
@@ -148,14 +148,14 @@ export const OutsideButtons = ({
       } else {
         // No auth URL returned, close the popup
         popup.close();
-        toast.error('Failed to get authentication URL');
+        toast.error(t('failedToGetAuthUrl'));
         setPendingAuth(null);
       }
     } catch (error) {
       // Close the popup on error
       popup.close();
       console.error('Failed to initiate Google authentication:', error);
-      toast.error('Failed to initiate Google authentication');
+      toast.error(t('failedToInitiateGoogleAuth'));
       setPendingAuth(null);
     }
   };
@@ -163,6 +163,7 @@ export const OutsideButtons = ({
   const allButtons = [
     {
       name: 'Web Search',
+      label: t('webSearch'),
       slug: TOOLS.WEB_SEARCH,
       icon: <Globe className="h-4 w-4" />,
       isActive: activeOptions.includes(TOOLS.WEB_SEARCH),
@@ -171,6 +172,7 @@ export const OutsideButtons = ({
     },
     {
       name: 'Code',
+      label: t('code'),
       slug: TOOLS.CODE_INTERPRETER,
       icon: <Code className="h-4 w-4" />,
       isActive: activeOptions.includes(TOOLS.CODE_INTERPRETER),
@@ -179,6 +181,7 @@ export const OutsideButtons = ({
     },
     {
       name: 'Image',
+      label: t('image'),
       slug: TOOLS.IMAGE_GENERATION,
       icon: <ImageIcon className="h-4 w-4" />,
       isActive: activeOptions.includes(TOOLS.IMAGE_GENERATION),
@@ -187,6 +190,7 @@ export const OutsideButtons = ({
     },
     {
       name: 'Google Slides',
+      label: t('googleSlides'),
       slug: TOOLS.GOOGLE_SLIDES,
       icon: <Presentation className="h-4 w-4" />,
       isActive: activeOptions.includes(TOOLS.GOOGLE_SLIDES),
@@ -195,6 +199,7 @@ export const OutsideButtons = ({
     },
     {
       name: 'Google Docs',
+      label: t('googleDocs'),
       slug: TOOLS.GOOGLE_DOCUMENT,
       icon: <FileText className="h-4 w-4" />,
       isActive: activeOptions.includes(TOOLS.GOOGLE_DOCUMENT),
@@ -203,6 +208,7 @@ export const OutsideButtons = ({
     },
     {
       name: 'PowerPoint',
+      label: t('powerPoint'),
       slug: TOOLS.POWERPOINT,
       icon: <PowerPointIcon className="h-4 w-4" />,
       isActive: activeOptions.includes(TOOLS.POWERPOINT),
@@ -339,9 +345,9 @@ export const OutsideButtons = ({
             >
               {button.icon}
             </span>
-            {button.name}
+            {button.label}
             {pendingAuth === button.slug && (
-              <span className="text-xs text-gray-500">(connecting...)</span>
+              <span className="text-xs text-gray-500">{t('connecting')}</span>
             )}
             {button.isActive && (
               <X
@@ -388,13 +394,15 @@ export const OutsideButtons = ({
                     >
                       {selectedMoreOption.icon}
                     </span>
-                    {selectedMoreOption.name}
+                    {'label' in selectedMoreOption
+                      ? selectedMoreOption.label
+                      : selectedMoreOption.name}
                     <MoreIcon className="ml-1 h-3 w-3 cursor-pointer text-[#38A1E5]" />
                   </>
                 ) : (
                   <>
                     <MoreIcon className="text-gray-600" />
-                    More
+                    {t('more')}
                   </>
                 )}
               </Button>
@@ -412,7 +420,7 @@ export const OutsideButtons = ({
                     <span
                       className={`${selectedMoreOption && selectedMoreOption.name === button.name ? 'text-[#38A1E5]' : 'text-gray-600'}`}
                     >
-                      {button.name}
+                      {button.label}
                     </span>
                   </div>
                 </DropdownMenuItem>

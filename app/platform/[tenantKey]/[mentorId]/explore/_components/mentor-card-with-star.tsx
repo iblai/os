@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import { Star, Loader2 } from 'lucide-react';
 
 import { Card, CardContent } from '@/components/ui/card';
@@ -28,6 +29,7 @@ interface MentorCardWithStarProps {
 }
 
 export function MentorCardWithStar({ mentor }: MentorCardWithStarProps) {
+  const t = useTranslations('exploreMentorCardWithStar');
   const { handleMentorClick, toggleFavorite, togglingMentorId, username } =
     useExplorePageContext();
 
@@ -57,7 +59,10 @@ export function MentorCardWithStar({ mentor }: MentorCardWithStarProps) {
       onClick={handleCardClick}
       tabIndex={0}
       onKeyDown={handleCardKeyDown}
-      aria-label={`Explore agent: ${mentor.name}. ${mentor.description || ''}`}
+      aria-label={t('cardAriaLabel', {
+        name: mentor.name,
+        description: mentor.description || '',
+      })}
     >
       <CardContent className="p-6 md:h-full">
         <div className="flex items-start gap-4 md:h-full">
@@ -85,7 +90,7 @@ export function MentorCardWithStar({ mentor }: MentorCardWithStarProps) {
                     }}
                     className="rounded p-1 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
                     aria-label={
-                      isStarred ? 'Remove from favorites' : 'Add to favorites'
+                      isStarred ? t('removeFromFavorites') : t('addToFavorites')
                     }
                     disabled={isDisabled}
                   >
@@ -103,7 +108,7 @@ export function MentorCardWithStar({ mentor }: MentorCardWithStarProps) {
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  {isStarred ? 'Unset as favorite' : 'Set as favorite'}
+                  {isStarred ? t('unsetAsFavorite') : t('setAsFavorite')}
                 </TooltipContent>
               </Tooltip>
             </div>
@@ -112,7 +117,7 @@ export function MentorCardWithStar({ mentor }: MentorCardWithStarProps) {
             </p>
             {mentor.updated_at && (
               <p className="text-xs text-gray-500">
-                Updated on {formatDateString(mentor.updated_at)}
+                {t('updatedOn', { date: formatDateString(mentor.updated_at) })}
               </p>
             )}
           </div>

@@ -1,4 +1,7 @@
+'use client';
+
 import { ChevronRight } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import { FlaggedPrompt } from './types';
 
@@ -13,12 +16,13 @@ export function FlaggedPromptsList({
   selectedPrompt,
   onPromptClick,
 }: FlaggedPromptsListProps) {
+  const t = useTranslations('flaggedPromptsFlaggedPromptsList');
   return (
     <div className="col-span-full space-y-4 md:col-span-1">
       <div className="scrollbar-hide max-h-[500px] overflow-hidden overflow-y-auto rounded-md border">
         {prompts.length === 0 ? (
           <div className="p-8 text-center text-gray-500">
-            No flagged prompts found
+            {t('noFlaggedPrompts')}
           </div>
         ) : (
           prompts.map((prompt) => (

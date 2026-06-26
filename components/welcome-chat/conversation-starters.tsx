@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { Card, CardContent } from '@/components/ui/card';
 import { useUsername } from '@/hooks/use-user';
 import { TenantKeyMentorIdParams } from '@/lib/types';
@@ -34,6 +35,7 @@ export function ConversationStarters({
   enabledGuidedPrompts,
   sessionId,
 }: Props) {
+  const t = useTranslations('welcomeChatConversationStarters');
   const username = useUsername();
   const realUsername = username ?? 'anonymous';
   const { tenantKey } = useParams<TenantKeyMentorIdParams>();
@@ -71,7 +73,7 @@ export function ConversationStarters({
   return (
     <div className="mx-auto w-full max-w-6xl px-4">
       <h2 className="mb-6 text-xl font-semibold text-gray-900">
-        Conversation Starters
+        {t('heading')}
       </h2>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {guidedPrompts?.results?.map((guidedPrompt, index) => (
@@ -95,7 +97,9 @@ export function ConversationStarters({
             }}
             tabIndex={isChatDisabledByRbac ? -1 : 0}
             role="button"
-            aria-label={`Select starter template: ${guidedPrompt.prompt}`}
+            aria-label={t('selectStarterTemplate', {
+              prompt: guidedPrompt.prompt,
+            })}
             aria-disabled={isChatDisabledByRbac}
           >
             <CardContent className="flex h-full flex-col p-4">

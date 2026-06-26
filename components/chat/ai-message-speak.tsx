@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/tooltip';
 import { useSpeech } from '@/hooks/use-speech';
 import { type Message } from '@iblai/iblai-js/web-utils';
+import { useTranslations } from 'next-intl';
 
 type Props = {
   message: Message;
@@ -17,6 +18,7 @@ type Props = {
 };
 
 export function AIMessageSpeak({ message, mentorId, tenantKey }: Props) {
+  const t = useTranslations('chatAiMessageSpeak');
   const { currentMessageId, isSpeaking, isLoading, isSupported, toggle } =
     useSpeech({ mentorId, tenantKey });
 
@@ -29,10 +31,10 @@ export function AIMessageSpeak({ message, mentorId, tenantKey }: Props) {
   const isThisLoading = isActive && isLoading;
 
   const label = isThisLoading
-    ? 'Loading audio'
+    ? t('loadingAudio')
     : isThisSpeaking
-      ? 'Stop Reading Aloud'
-      : 'Read Aloud';
+      ? t('stopReadingAloud')
+      : t('readAloud');
 
   return (
     <Tooltip>

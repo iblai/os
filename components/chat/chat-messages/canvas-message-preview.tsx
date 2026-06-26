@@ -1,4 +1,7 @@
+'use client';
+
 import { ExternalLink, Loader2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 import { CanvasIcon } from '@/components/icons/svg-icons';
 import { Button } from '@/components/ui/button';
@@ -46,6 +49,7 @@ export const CanvasMessagePreview = ({
   onOpenCanvas?: (payload: CanvasOpenPayload) => void;
   isStreaming?: boolean;
 }) => {
+  const t = useTranslations('chatMessagesCanvasMessagePreview');
   const handleOpenCanvas = () => {
     if (onOpenCanvas) {
       onOpenCanvas(payload);
@@ -75,7 +79,7 @@ export const CanvasMessagePreview = ({
           {isStreaming && (
             <div className="mb-2 flex items-center gap-2 text-xs text-blue-600">
               <Loader2 className="h-3 w-3 animate-spin" />
-              <span>Generating...</span>
+              <span>{t('generating')}</span>
             </div>
           )}
           <Button
@@ -86,7 +90,7 @@ export const CanvasMessagePreview = ({
             data-testid="canvas-open-button"
           >
             <ExternalLink className="mr-1 h-3 w-3" />
-            Open Canvas
+            {t('openCanvas')}
           </Button>
         </div>
       </div>

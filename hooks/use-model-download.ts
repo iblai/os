@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 
 import { useTauri } from './use-tauri';
@@ -43,6 +44,7 @@ let didResetPersistedState = false;
  * - Provides installation logs
  */
 export function useModelDownload() {
+  const t = useTranslations('useModelDownload');
   const { isAvailable, invoke, listen } = useTauri();
   const [state, setState] = useLocalStorage<ModelDownloadState>(
     LOCAL_STORAGE_KEY,
@@ -435,7 +437,7 @@ export function useModelDownload() {
           ...prev,
           status: 'completed',
           progress: 100,
-          message: 'Local LLM available via Foundry Local (preferred)',
+          message: t('statusLocalLlmAvailable'),
         }));
         // Still set ollama status from backend (which will return "ready" when Foundry is available)
         const status = await invoke<OllamaStatus>(
@@ -468,7 +470,7 @@ export function useModelDownload() {
           ...prev,
           status: 'completed',
           progress: 100,
-          message: 'Model installed',
+          message: t('statusModelInstalled'),
         }));
       } else {
         setState((prev) => ({
@@ -497,7 +499,7 @@ export function useModelDownload() {
   const startDownload = useCallback(
     async (modelId?: string) => {
       if (!isAvailable) {
-        toast.error('Desktop app required for local model download');
+        toast.error(t('desktopAppRequired'));
         return;
       }
 
@@ -506,7 +508,7 @@ export function useModelDownload() {
           ...prev,
           status: 'downloading',
           progress: 0,
-          message: 'Starting download...',
+          message: t('statusStartingDownload'),
           error: undefined,
           logs: [],
           // Record which model is downloading so the right row shows progress even
@@ -540,11 +542,11 @@ export function useModelDownload() {
             ...prev,
             status: 'completed',
             progress: 100,
-            message: 'Download complete',
+            message: t('statusDownloadComplete'),
           };
         });
         if (didComplete) {
-          toast.success('Model downloaded successfully!');
+          toast.success(t('modelDownloadedSuccessfully'));
         }
         // Refresh installed models so the row flips to "Ready" and is selectable.
         checkStatusRef.current();
@@ -560,7 +562,7 @@ export function useModelDownload() {
           return { ...prev, status: 'error', error: errorMessage };
         });
         if (!wasCancelled) {
-          toast.error(`Download failed: ${errorMessage}`);
+          toast.error(t('downloadFailed', { errorMessage }));
         }
       }
     },
@@ -580,12 +582,12 @@ export function useModelDownload() {
       ...prev,
       status: 'cancelled',
       progress: 0,
-      message: 'Download cancelled',
+      message: t('downloadCancelled'),
     }));
 
     try {
       await invoke(TAURI_COMMANDS.CANCEL_DOWNLOAD);
-      toast.info('Download cancelled');
+      toast.info(t('downloadCancelled'));
     } catch (error) {
       console.error('Failed to cancel download:', error);
     }
@@ -664,7 +666,7 @@ export function useModelDownload() {
         error: errorMessage,
       }));
 
-      toast.error(`Failed to enable local models: ${errorMessage}`);
+      toast.error(t('failedToEnableLocalModels', { errorMessage }));
       addLog({
         timestamp: new Date().toISOString(),
         level: 'error',
@@ -731,7 +733,7 @@ export function useModelDownload() {
 
         if (!model) {
           console.error('[useModelDownload] Model not found:', modelId);
-          toast.error('Model not found');
+          toast.error(t('modelNotFound'));
           return;
         }
 
@@ -748,7 +750,9 @@ export function useModelDownload() {
             ...prev,
             status: 'downloading',
             progress: 0,
-            message: `Downloading ${model.name || modelId}...`,
+            message: t('statusDownloadingModel', {
+              model: model.name || modelId,
+            }),
             error: undefined,
           }));
 
@@ -776,7 +780,9 @@ export function useModelDownload() {
               ...prev,
               status: 'downloading',
               progress: 100,
-              message: `Loading ${model.name || modelId}...`,
+              message: t('statusLoadingModel', {
+                model: model.name || modelId,
+              }),
             }));
 
             // Now load the model into Foundry Local (use foundry_id)
@@ -792,7 +798,7 @@ export function useModelDownload() {
               ...prev,
               status: 'completed',
               progress: 100,
-              message: `Model ready: ${model.name || modelId}`,
+              message: t('statusModelReady', { model: model.name || modelId }),
             }));
 
             addLog({
@@ -802,7 +808,7 @@ export function useModelDownload() {
             });
 
             toast.success(
-              `Model downloaded and loaded: ${model.name || modelId}`,
+              t('modelDownloadedAndLoaded', { model: model.name || modelId }),
             );
 
             // Refresh status to update the downloaded flag
@@ -821,7 +827,9 @@ export function useModelDownload() {
               ...prev,
               status: 'error',
               error: errorMessage,
-              message: `Failed to download ${model.name || modelId}`,
+              message: t('statusFailedToDownload', {
+                model: model.name || modelId,
+              }),
             }));
 
             addLog({
@@ -830,7 +838,7 @@ export function useModelDownload() {
               message: `Download failed: ${errorMessage}`,
             });
 
-            toast.error(`Failed to download model: ${errorMessage}`);
+            toast.error(t('failedToDownloadModel', { errorMessage }));
           }
         } else {
           // Model already downloaded, just load it
@@ -844,7 +852,7 @@ export function useModelDownload() {
             ...prev,
             status: 'downloading',
             progress: 50,
-            message: `Loading ${model.name || modelId}...`,
+            message: t('statusLoadingModel', { model: model.name || modelId }),
           }));
 
           // Save selection to storage
@@ -864,10 +872,10 @@ export function useModelDownload() {
             ...prev,
             status: 'completed',
             progress: 100,
-            message: `Model ready: ${model.name || modelId}`,
+            message: t('statusModelReady', { model: model.name || modelId }),
           }));
 
-          toast.success(`Loaded model: ${model.name || modelId}`);
+          toast.success(t('loadedModel', { model: model.name || modelId }));
         }
       } catch (error) {
         const errorMessage =
@@ -876,7 +884,7 @@ export function useModelDownload() {
           '[useModelDownload] Failed to handle model selection:',
           errorMessage,
         );
-        toast.error(`Failed to load model: ${errorMessage}`);
+        toast.error(t('failedToLoadModel', { errorMessage }));
 
         setState((prev) => ({
           ...prev,
@@ -899,7 +907,7 @@ export function useModelDownload() {
         ...prev,
         status: 'downloading',
         progress: 0,
-        message: 'Installing Foundry Local...',
+        message: t('statusInstallingFoundry'),
       }));
 
       addLog({
@@ -921,7 +929,7 @@ export function useModelDownload() {
       setState((prev) => ({
         ...prev,
         progress: 50,
-        message: 'Downloading default model (qwen2.5-0.5b)...',
+        message: t('statusDownloadingDefaultModel'),
       }));
 
       addLog({
@@ -938,7 +946,7 @@ export function useModelDownload() {
         ...prev,
         status: 'completed',
         progress: 100,
-        message: 'Foundry Local installed successfully',
+        message: t('statusFoundryInstalledSuccessfully'),
       }));
 
       addLog({
@@ -958,7 +966,7 @@ export function useModelDownload() {
         ...prev,
         status: 'error',
         error: errorMessage,
-        message: 'Failed to install Foundry Local',
+        message: t('statusFailedToInstallFoundry'),
       }));
 
       addLog({

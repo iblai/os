@@ -90,7 +90,7 @@ export function MentorSelectionGrid({
                 <button
                   key={mentor.unique_id}
                   onClick={() => onMentorSelect(mentor)}
-                  aria-label={`Select agent ${mentor.name}`}
+                  aria-label={t('selectAgentAriaLabel', { name: mentor.name })}
                   aria-pressed={isSelected}
                   className={`flex cursor-pointer items-center gap-3 rounded-lg border-2 p-3 transition-all ${
                     isSelected

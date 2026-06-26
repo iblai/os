@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useAdvancedChat, ANONYMOUS_USERNAME } from '@iblai/iblai-js/web-utils';
 import { toast } from 'sonner';
 import { Bot } from 'lucide-react';
@@ -26,6 +27,7 @@ export function WorkflowPreviewChat({
   tenantKey,
   mentorId,
 }: WorkflowPreviewChatProps) {
+  const t = useTranslations('workflowsWorkflowPreviewChat');
   const username = useUsername();
   const token = useAxdToken() ?? '';
   const [highlightedMessageId, setHighlightedMessageId] = useState<
@@ -97,10 +99,10 @@ export function WorkflowPreviewChat({
           <div className="flex h-full flex-col items-center justify-center text-center">
             <Bot className="text-muted-foreground mb-3 h-10 w-10" />
             <h2 className="text-foreground text-xl font-semibold">
-              Preview your agent
+              {t('previewYourAgent')}
             </h2>
             <p className="text-muted-foreground mt-2 text-sm">
-              Prompt the agent as if you&apos;re the user.
+              {t('promptAgentHint')}
             </p>
           </div>
         ) : (

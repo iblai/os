@@ -7,6 +7,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Star } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useAppDispatch } from '@/lib/hooks';
 import { useAppSelector } from '@/lib/hooks';
 import { MentorSubscriptionFlowV2 } from '@/hooks/subscription/subscription-flow-v2';
@@ -27,6 +28,7 @@ type Props = {
 };
 
 export function FreeTrialDialog({ isOpen, onClose }: Props) {
+  const t = useTranslations('freeTrialDialog');
   const dispatch = useAppDispatch();
   const topBannerOptions = useAppSelector(
     (state) => state.topBanner.topBannerOptions,
@@ -65,44 +67,32 @@ export function FreeTrialDialog({ isOpen, onClose }: Props) {
       case SUBSCRIPTION_USER_CAPABILITIES.FREE_PACKAGE:
         return (
           <>
+            <p>{t('freePackageLine1')}</p>
+            <p>{t('freePackageLine2')}</p>
             <p>
-              You're currently using our free package with basic access to
-              agents and you've used all your credits.
-            </p>
-            <p>
-              Upgrade to unlock unlimited chat time, custom data sources, and
-              advanced agent behaviors.
-            </p>
-            <p>
-              For organizations needing enterprise solutions,{' '}
+              {t('freePackageLine3Before')}{' '}
               <a
                 className="cursor-pointer text-[#2563EB]"
                 href="mailto:support@iblai.zendesk.com"
               >
-                contact our team
+                {t('contactOurTeam')}
               </a>{' '}
-              for special packages.
+              {t('freePackageLine3After')}
             </p>
           </>
         );
       case SUBSCRIPTION_USER_CAPABILITIES.STUDENT_UNDER_PAID_PACKAGE:
         return (
           <>
+            <p>{t('studentPackageLine1')}</p>
+            <p>{t('studentPackageLine2')}</p>
             <p>
-              You're accessing premium features through your institution's
-              subscription and you've used all your credits.
-            </p>
-            <p>
-              Enjoy unlimited chat time and access to specialized agents. Some
-              advanced customization options may require additional permissions.
-            </p>
-            <p>
-              For questions about your access or institutional features,{' '}
+              {t('studentPackageLine3Before')}{' '}
               <a
                 className="cursor-pointer text-[#2563EB]"
                 href="mailto:support@iblai.zendesk.com"
               >
-                contact support
+                {t('contactSupport')}
               </a>
               .
             </p>
@@ -111,43 +101,32 @@ export function FreeTrialDialog({ isOpen, onClose }: Props) {
       case SUBSCRIPTION_USER_CAPABILITIES.PAID_PACKAGE:
         return (
           <>
+            <p>{t('paidPackageLine1')}</p>
+            <p>{t('paidPackageLine2')}</p>
             <p>
-              You've used all your available credits for this period. Your full
-              access to premium features will renew on your next billing cycle.
-            </p>
-            <p>
-              To continue creating custom agents and accessing advanced features
-              immediately, you can purchase additional credits or upgrade to a
-              higher plan.
-            </p>
-            <p>
-              For enterprise solutions or high-volume needs,{' '}
+              {t('paidPackageLine3Before')}{' '}
               <a
                 className="cursor-pointer text-[#2563EB]"
                 href="mailto:support@iblai.zendesk.com"
               >
-                contact our sales team
+                {t('contactOurSalesTeam')}
               </a>{' '}
-              for customized options.
+              {t('paidPackageLine3After')}
             </p>
           </>
         );
       default:
         return (
           <>
-            <p>Upgrade to create your own agents.</p>
+            <p>{t('defaultLine1')}</p>
+            <p>{t('defaultLine2')}</p>
             <p>
-              Enjoy unlimited chat time, custom data sources, and create your
-              own specialized agents.
-            </p>
-            <p>
-              For full enterprise control — trusted by leading universities and
-              companies —{' '}
+              {t('defaultLine3Before')}{' '}
               <a
                 className="cursor-pointer text-[#2563EB]"
                 href="mailto:support@iblai.zendesk.com"
               >
-                contact our partnerships team.
+                {t('contactOurPartnershipsTeam')}
               </a>
             </p>
           </>

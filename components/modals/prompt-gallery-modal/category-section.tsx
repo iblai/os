@@ -1,5 +1,6 @@
 import { useParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 
 import { useGetPromptsSearchQuery } from '@iblai/iblai-js/data-layer';
 
@@ -28,6 +29,7 @@ export function CategorySection({
   category,
   activeCategory,
 }: Props) {
+  const t = useTranslations('modalsPromptGalleryModalCategorySection');
   const { tenantKey } = useParams<TenantKeyMentorIdParams>();
   const username = useUsername();
 
@@ -112,7 +114,7 @@ export function CategorySection({
             prompt={{
               id: prompt.id,
               category: prompt?.category?.name ?? '',
-              label: 'Prompt',
+              label: t('promptLabel'),
               prompt: prompt.prompt,
               isSystem: false,
               name: 'prompt',
@@ -133,7 +135,7 @@ export function CategorySection({
             onClick={loadMore}
             disabled={getPromptsSearchQuery?.isFetching}
           >
-            {getPromptsSearchQuery?.isFetching ? 'Loading...' : 'See More'}
+            {getPromptsSearchQuery?.isFetching ? t('loading') : t('seeMore')}
           </Button>
         </div>
       )}

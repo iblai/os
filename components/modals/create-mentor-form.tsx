@@ -80,12 +80,13 @@ export interface CreateMentorFormProps {
 export function CreateMentorForm({
   variant = 'dialog',
   initialValues,
-  title = 'Create Agent',
+  title,
   showHeader = true,
   className,
   onCreated,
 }: CreateMentorFormProps) {
   const t = useTranslations('modalsCreateMentorForm');
+  const headingTitle = title ?? t('createAgentTitle');
   const { tenant: tenantKey } = useTenantKey();
   const username = useUsername();
 
@@ -144,9 +145,11 @@ export function CreateMentorForm({
         {showHeader && (
           <DialogHeader>
             {variant === 'dialog' ? (
-              <DialogTitle className="ibl-dialog-title">{title}</DialogTitle>
+              <DialogTitle className="ibl-dialog-title">
+                {headingTitle}
+              </DialogTitle>
             ) : (
-              <h2 className="ibl-dialog-title">{title}</h2>
+              <h2 className="ibl-dialog-title">{headingTitle}</h2>
             )}
           </DialogHeader>
         )}

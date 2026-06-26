@@ -1,4 +1,5 @@
 import { useAppDispatch } from '@/lib/hooks';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import {
   setPricingModalData,
@@ -18,6 +19,7 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useIsAdmin } from '../use-user';
 
 export const use402ErrorCheck = () => {
+  const t = useTranslations('use402ErrorCheck');
   const dispatch = useAppDispatch();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -28,9 +30,7 @@ export const use402ErrorCheck = () => {
   const handle402Error = useCallback(
     async (messageData: Error402MessageData) => {
       toast.error(
-        messageData.error ||
-          messageData.message ||
-          'Insufficient balance. Please add credits to continue.',
+        messageData.error || messageData.message || t('insufficientBalance'),
         {
           //duration: 1000 * 60 * 2, // 2 minutes
           closeButton: true,

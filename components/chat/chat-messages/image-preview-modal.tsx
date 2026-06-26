@@ -1,4 +1,7 @@
+'use client';
+
 import { X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 type Props = {
   url: string;
@@ -6,6 +9,7 @@ type Props = {
 };
 
 export function ImagePreviewModal({ url, onClose }: Props) {
+  const t = useTranslations('chatMessagesImagePreviewModal');
   return (
     <div
       className="bg-opacity-75 fixed inset-0 z-50 flex items-center justify-center bg-black p-4"
@@ -23,7 +27,7 @@ export function ImagePreviewModal({ url, onClose }: Props) {
         </button>
         <img
           src={url || '/placeholder.svg'}
-          alt="Preview"
+          alt={t('preview')}
           className="h-[80vh] w-auto max-w-[90%] object-contain"
           onClick={(e) => e.stopPropagation()}
         />

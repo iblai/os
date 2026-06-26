@@ -1134,21 +1134,20 @@ export function SettingsTab() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium text-[#646464]">
-                            Enable verbose reasoning
+                            {t('enableVerboseReasoningLabel')}
                           </span>
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger
                                 type="button"
-                                aria-label="More info about enable verbose reasoning"
+                                aria-label={t(
+                                  'enableVerboseReasoningInfoAriaLabel',
+                                )}
                               >
                                 <Info className="h-4 w-4 text-gray-400" />
                               </TooltipTrigger>
                               <TooltipContent className="ibl-tooltip-content">
-                                <p>
-                                  Show the agent’s reasoning steps while it
-                                  responds.
-                                </p>
+                                <p>{t('enableVerboseReasoningTooltip')}</p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
@@ -1159,7 +1158,11 @@ export function SettingsTab() {
                             field.handleChange(checked)
                           }
                           disabled={isDisabled}
-                          aria-label={`Enable verbose reasoning ${field.state.value ? 'enabled' : 'disabled'}`}
+                          aria-label={
+                            field.state.value
+                              ? t('verboseReasoningAriaEnabled')
+                              : t('verboseReasoningAriaDisabled')
+                          }
                         />
                       </div>
                     )}
@@ -1486,22 +1489,18 @@ export function SettingsTab() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-medium text-[#646464]">
-                                Filter PII from messages
+                                {t('filterPiiLabel')}
                               </span>
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger
                                     type="button"
-                                    aria-label="More info about filter PII from messages"
+                                    aria-label={t('filterPiiInfoAriaLabel')}
                                   >
                                     <Info className="h-4 w-4 text-gray-400" />
                                   </TooltipTrigger>
                                   <TooltipContent className="ibl-tooltip-content">
-                                    <p>
-                                      Enable the privacy router. When on, a
-                                      dedicated Privacy tab appears for
-                                      configuring PII detection rules.
-                                    </p>
+                                    <p>{t('filterPiiTooltip')}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
@@ -1512,7 +1511,7 @@ export function SettingsTab() {
                                 field.handleChange(checked)
                               }
                               disabled={isDisabled || disabled}
-                              aria-label="Filter PII from messages"
+                              aria-label={t('filterPiiLabel')}
                               aria-checked={field.state.value}
                             />
                           </div>
@@ -1534,24 +1533,20 @@ export function SettingsTab() {
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
                                 <span className="text-sm font-medium text-[#646464]">
-                                  Enable private mode
+                                  {t('enablePrivateModeLabel')}
                                 </span>
                                 <TooltipProvider>
                                   <Tooltip>
                                     <TooltipTrigger
                                       type="button"
-                                      aria-label="More info about enable private mode"
+                                      aria-label={t(
+                                        'enablePrivateModeInfoAriaLabel',
+                                      )}
                                     >
                                       <Info className="h-4 w-4 text-gray-400" />
                                     </TooltipTrigger>
                                     <TooltipContent className="ibl-tooltip-content">
-                                      <p>
-                                        When on, every conversation with this
-                                        agent runs in private mode — no chat
-                                        history or memory is stored for any
-                                        user. Use this for sensitive or
-                                        compliance-bound deployments.
-                                      </p>
+                                      <p>{t('enablePrivateModeTooltip')}</p>
                                     </TooltipContent>
                                   </Tooltip>
                                 </TooltipProvider>
@@ -1562,7 +1557,7 @@ export function SettingsTab() {
                                   field.handleChange(checked)
                                 }
                                 disabled={isDisabled || disabled}
-                                aria-label="Enable private mode"
+                                aria-label={t('enablePrivateModeLabel')}
                                 aria-checked={field.state.value}
                               />
                             </div>

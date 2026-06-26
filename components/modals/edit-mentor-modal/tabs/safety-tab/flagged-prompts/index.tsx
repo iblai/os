@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
+import { useTranslations } from 'next-intl';
 import {
   Dialog,
   DialogContent,
@@ -41,6 +42,7 @@ export function FlaggedPromptsModal({
   tenantKey,
   username,
 }: FlaggedPromptsModalProps) {
+  const t = useTranslations('flaggedPromptsIndex');
   const [selectedPrompt, setSelectedPrompt] = useState<FlaggedPrompt | null>(
     null,
   );
@@ -98,7 +100,7 @@ export function FlaggedPromptsModal({
           <DialogHeader className="flex-shrink-0 border-b border-gray-200 px-6 pt-6 pb-4">
             <div className="flex items-center justify-between">
               <DialogTitle className="text-xl font-semibold text-gray-900">
-                Flagged Prompts
+                {t('title')}
               </DialogTitle>
             </div>
           </DialogHeader>
@@ -121,7 +123,7 @@ export function FlaggedPromptsModal({
               {totalFlagged === 0 ? (
                 <div className="flex items-center justify-center py-12">
                   <p className="text-sm text-gray-500">
-                    No flagged prompts found
+                    {t('noFlaggedPrompts')}
                   </p>
                 </div>
               ) : (

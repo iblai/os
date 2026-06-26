@@ -1,4 +1,7 @@
+'use client';
+
 import React from 'react';
+import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -24,6 +27,7 @@ export function TrainOrDeleteModal({
   onDelete,
   isLoading,
 }: Props) {
+  const t = useTranslations('datasetsTabTrainOrDeleteModal');
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
@@ -32,7 +36,7 @@ export function TrainOrDeleteModal({
       >
         <DialogHeader>
           <DialogTitle className="ibl-dialog-title">
-            What would you like to do?
+            {t('dialogTitle')}
           </DialogTitle>
         </DialogHeader>
         <div className="my-5">
@@ -40,21 +44,19 @@ export function TrainOrDeleteModal({
             id="train-or-delete-description"
             className="text-sm text-[#646464]"
           >
-            This dataset is currently untrained. You can train it to make it
-            available for your agent, or permanently delete it if it's no longer
-            needed.
+            {t('description')}
           </p>
         </div>
         <DialogFooter className="gap-3">
           <Button variant="outline" onClick={onDelete} disabled={isLoading}>
-            Delete
+            {t('deleteButton')}
           </Button>
           <Button
             className="bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90"
             onClick={onTrain}
             disabled={isLoading}
           >
-            {isLoading ? 'Training...' : 'Train'}
+            {isLoading ? t('trainingButton') : t('trainButton')}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,3 +1,4 @@
+import { useTranslations } from 'next-intl';
 import { useDatasetsWithPagination } from '@/hooks/use-datasets';
 
 type ProjectActionButtonsProps = {
@@ -11,6 +12,7 @@ export function ProjectActionButtons({
   onInstructionsClick,
   instructions,
 }: ProjectActionButtonsProps) {
+  const t = useTranslations('projectsProjectActionButtons');
   const { datasets: projectFiles } = useDatasetsWithPagination();
 
   return (
@@ -30,21 +32,23 @@ export function ProjectActionButtons({
           role="button"
           aria-label={
             projectFiles?.results && projectFiles?.results?.length > 0
-              ? 'View project files'
-              : 'Add files to project'
+              ? t('viewProjectFilesAriaLabel')
+              : t('addFilesToProjectAriaLabel')
           }
         >
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <h3 className="mb-1 font-semibold text-gray-900">
                 {projectFiles?.results && projectFiles?.results?.length > 0
-                  ? 'Project files'
-                  : 'Add files'}
+                  ? t('projectFiles')
+                  : t('addFiles')}
               </h3>
               <p className="text-sm text-gray-600">
                 {projectFiles?.results && projectFiles?.results?.length === 0
-                  ? 'Chats in this project can access file content'
-                  : `${projectFiles?.results?.length ?? 0} file${projectFiles?.results?.length === 1 ? '' : 's'} added`}
+                  ? t('chatsCanAccessFiles')
+                  : t('filesAdded', {
+                      count: projectFiles?.results?.length ?? 0,
+                    })}
               </p>
             </div>
             <div className="ml-4 flex items-center">
@@ -67,21 +71,19 @@ export function ProjectActionButtons({
           role="button"
           aria-label={
             instructions
-              ? 'Edit project instructions'
-              : 'Add project instructions'
+              ? t('editInstructionsAriaLabel')
+              : t('addInstructionsAriaLabel')
           }
         >
           <div className="flex items-start gap-4">
             <div className="flex-1">
               <h3 className="mb-1 font-semibold text-gray-900">
                 {instructions
-                  ? 'Project Instructions'
-                  : 'Add project instructions'}
+                  ? t('projectInstructions')
+                  : t('addProjectInstructions')}
               </h3>
               <p className="line-clamp-2 text-sm text-gray-600">
-                {instructions
-                  ? instructions
-                  : 'Tailor the way the agent responds in this project'}
+                {instructions ? instructions : t('tailorResponses')}
               </p>
             </div>
           </div>

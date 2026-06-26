@@ -6,6 +6,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { RichTextEditor } from '@iblai/iblai-js/web-containers';
+import { useTranslations } from 'next-intl';
 
 export type Prompt = {
   label: string;
@@ -27,11 +28,12 @@ export function EditMentorModalDialog({
   editPrompt,
   value,
 }: Props) {
+  const t = useTranslations('modalsEditMentorModalDialog');
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-full">
         <DialogDescription className="sr-only">
-          Edit {prompt.label}
+          {t('editPromptDescription', { label: prompt.label })}
         </DialogDescription>
         <DialogHeader>
           <DialogTitle className="ibl-dialog-title">{prompt.label}</DialogTitle>

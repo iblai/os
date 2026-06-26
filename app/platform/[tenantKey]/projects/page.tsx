@@ -1,6 +1,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
 import { ProjectsPage } from '@iblai/iblai-js/web-containers';
 import type { Project } from '@iblai/iblai-js/data-layer';
@@ -12,6 +13,7 @@ import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 
 export default function ProjectsRoute() {
+  const t = useTranslations('projectsPage');
   const { tenantKey } = useParams<TenantKeyMentorIdParams>();
   const username = useUsername();
   const { navigateToProject, navigateToMentorInProject } = useNavigate();
@@ -20,7 +22,7 @@ export default function ProjectsRoute() {
 
   const handleOpenProject = async (project: Project) => {
     if (project.mentor_count === 0) {
-      toast.error('This project has no agents yet.');
+      toast.error(t('projectHasNoAgents'));
       return;
     }
 
@@ -40,7 +42,7 @@ export default function ProjectsRoute() {
     }
 
     if (!firstMentorId) {
-      toast.error("Couldn't open this project. Please try again.");
+      toast.error(t('couldNotOpenProject'));
       return;
     }
 

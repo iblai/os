@@ -25,10 +25,12 @@ import {
   useLazyGetShareableLinkQuery,
 } from '@iblai/iblai-js/data-layer';
 import { useMediaQuery } from 'react-responsive';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { config } from '@/lib/config';
 
 export default function Page() {
+  const t = useTranslations('projectIdMentorIdPage');
   const { tenantKey } = useParams<ProjectPageParams>();
   const { mentorId } = useParams<TenantKeyMentorIdParams>();
   const router = useRouter();
@@ -88,13 +90,12 @@ export default function Page() {
             toast.error(
               <>
                 <p>
-                  The shareable link is not enabled. Please contact support to
-                  enable it.{' '}
+                  {t('shareableLinkNotEnabled')}{' '}
                   <a
                     href={`mailto:${metadata?.support_email || config.supportEmail()}`}
                     style={{ color: '#2563eb', textDecoration: 'underline' }}
                   >
-                    Contact Support
+                    {t('contactSupport')}
                   </a>
                 </p>
               </>,

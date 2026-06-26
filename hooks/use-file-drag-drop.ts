@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { MENTOR_CHAT_DOCUMENTS_EXTENSIONS } from '@iblai/iblai-js/web-utils';
 import { useModelFileUploadCapabilities } from '@/hooks/use-model-file-upload-capabilities';
@@ -11,6 +12,7 @@ interface UseFileDragDropOptions {
 }
 
 export function useFileDragDrop({ org, userId }: UseFileDragDropOptions) {
+  const t = useTranslations('useFileDragDrop');
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   const fileUploadCapabilities = useModelFileUploadCapabilities();
 
@@ -75,15 +77,13 @@ export function useFileDragDrop({ org, userId }: UseFileDragDropOptions) {
         );
 
         if (files.length === 0) {
-          toast.error('The dropped file type is not supported.');
+          toast.error(t('droppedFileTypeNotSupported'));
           return;
         }
 
         if (files.length < allFiles.length) {
           const rejectedCount = allFiles.length - files.length;
-          toast.error(
-            `${rejectedCount} file${rejectedCount > 1 ? 's were' : ' was'} rejected due to unsupported type.`,
-          );
+          toast.error(t('filesRejected', { rejectedCount }));
         }
 
         await uploadFiles(files);

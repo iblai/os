@@ -17,6 +17,7 @@ import {
 } from '@iblai/iblai-js/data-layer';
 import { toast } from 'sonner';
 import { MentorSelectionGrid } from '@/components/mentors/mentor-selection-grid';
+import { useTranslations } from 'next-intl';
 
 interface AddMentorToProjectModalProps {
   isOpen: boolean;
@@ -29,6 +30,7 @@ export function AddMentorToProjectModal({
   onClose,
   projectName,
 }: AddMentorToProjectModalProps) {
+  const t = useTranslations('projectsAddMentorToProjectModal');
   const { tenantKey, projectId } = useParams<ProjectPageParams>();
   const username = useUsername();
   const [updateProject] = useUpdateUserProjectMutation();
@@ -63,10 +65,10 @@ export function AddMentorToProjectModal({
         },
       }).unwrap();
 
-      toast.success('Agent added to project');
+      toast.success(t('agentAdded'));
     } catch (error) {
       console.error(JSON.stringify(error));
-      toast.error('Failed to add agent to project');
+      toast.error(t('addError'));
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     }
   };
@@ -83,7 +85,7 @@ export function AddMentorToProjectModal({
       <DialogContent className="flex max-h-[80vh] w-[95vw] max-w-4xl flex-col gap-0 overflow-hidden p-0">
         <DialogHeader className="border-b border-gray-200 px-6 py-4">
           <DialogTitle className="text-xl font-semibold text-gray-900">
-            Add Agent to {projectName}
+            {t('addAgentToProject', { projectName })}
           </DialogTitle>
         </DialogHeader>
 
@@ -92,7 +94,7 @@ export function AddMentorToProjectModal({
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">
-                Available Agents
+                {t('availableAgents')}
               </h3>
             </div>
 
@@ -116,7 +118,7 @@ export function AddMentorToProjectModal({
             onClick={onClose}
             className="bg-transparent"
           >
-            Done
+            {t('done')}
           </Button>
         </div>
       </DialogContent>

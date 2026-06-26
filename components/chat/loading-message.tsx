@@ -1,5 +1,7 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface LoadingMessageProps {
@@ -11,6 +13,7 @@ export function LoadingMessage({
   mentorName,
   profileImage,
 }: LoadingMessageProps) {
+  const t = useTranslations('chatLoadingMessage');
   return (
     <div className="mb-4">
       <div className="ml-0 flex items-center">
@@ -23,7 +26,7 @@ export function LoadingMessage({
             </AvatarFallback>
           </Avatar>
         </div>
-        <span className="text-sm text-gray-700">Just a sec...</span>
+        <span className="text-sm text-gray-700">{t('justASec')}</span>
       </div>
     </div>
   );

@@ -693,7 +693,9 @@ function SidebarProjectsSection({
                     strokeWidth={1.5}
                     aria-hidden
                   />
-                  <span className="min-w-0 flex-1 truncate">My Projects</span>
+                  <span className="min-w-0 flex-1 truncate">
+                    {t('myProjects')}
+                  </span>
                 </button>
               </li>
               {projects.length === 0 ? (
@@ -879,7 +881,7 @@ function CollapsedProjectsFlyout({
                 strokeWidth={1.5}
                 aria-hidden
               />
-              My Projects
+              {t('myProjects')}
             </button>
           </li>
           {projects.length === 0 ? (

@@ -2,6 +2,7 @@
 
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Spinner } from '@/components/spinner';
 import { useLazyConnectedServicesCallbackQuery } from '@iblai/iblai-js/data-layer';
 import { toast } from 'sonner';
@@ -28,6 +29,7 @@ interface PendingOAuthServer {
 }
 
 export default function OAuthCallbackPage() {
+  const t = useTranslations('googleOauthCallbackPage');
   const searchParams = useSearchParams();
   const [callbackTriggered, setCallbackTriggered] = useState(false);
 
@@ -66,7 +68,7 @@ export default function OAuthCallbackPage() {
         // Call the connected services callback endpoint with all params
         const result = await connectedServicesCallback(params).unwrap();
 
-        toast.success('Successfully connected service');
+        toast.success(t('successfullyConnectedService'));
 
         // Extract service info from response
         const serviceName =
@@ -123,7 +125,7 @@ export default function OAuthCallbackPage() {
           err?.data?.detail ||
           err?.data?.error ||
           err?.message ||
-          'Failed to connect service';
+          t('failedToConnectService');
         toast.error(errorMessage);
         setTimeout(() => {
           window.close();
@@ -138,6 +140,7 @@ export default function OAuthCallbackPage() {
     connectedServicesCallback,
     setOAuthComplete,
     pendingOAuthServer,
+    t,
   ]);
 
   return (

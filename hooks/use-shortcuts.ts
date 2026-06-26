@@ -1,21 +1,24 @@
+import { useTranslations } from 'next-intl';
+
 import { useNavigate } from '@/hooks/user-navigate';
 import { useSidebar } from '@/components/ui/sidebar';
 import { useAppDispatch } from '@/lib/hooks';
 import { shortcutsModalUpdated } from '@/features/navigation/slice';
 
 export function useShortcuts() {
+  const t = useTranslations('useShortcuts');
   const { navigateToHome } = useNavigate();
   const { toggleSidebar } = useSidebar();
   const dispatch = useAppDispatch();
 
   const shortcuts = {
     startNewChat: {
-      label: 'Start New Chat',
+      label: t('startNewChat'),
       keys: 'meta+shift+o',
       callback: navigateToHome,
     },
     focusInput: {
-      label: 'Focus Input',
+      label: t('focusInput'),
       keys: 'shift+esc',
       callback: () => {
         const textarea = document.querySelector(
@@ -27,12 +30,12 @@ export function useShortcuts() {
       },
     },
     toggleSidebar: {
-      label: 'Toggle Sidebar',
+      label: t('toggleSidebar'),
       keys: 'meta+shift+s',
       callback: toggleSidebar,
     },
     openShortcutsModal: {
-      label: 'Open Shortcuts',
+      label: t('openShortcuts'),
       keys: 'meta+y',
       callback: () => {
         dispatch(shortcutsModalUpdated(true));

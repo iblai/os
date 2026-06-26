@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 
 import {
@@ -13,6 +14,7 @@ import { useUsername } from './use-user';
 import { extractErrorMessage } from '@/components/modals/edit-mentor-modal/tabs/datasets-tab/resource-modal/utils';
 
 const useGoogleDrivePicker = () => {
+  const t = useTranslations('useGoogleDrivePickerV3');
   const [authToken, setAuthToken] = useState<any>(null);
   const [driveFiles, setDriveFiles] = useState<any[]>([]);
   const [openPicker, authRes] = GoogleDrivePicker();
@@ -111,7 +113,7 @@ const useGoogleDrivePicker = () => {
         console.error(JSON.stringify(error));
         const errorMessage = extractErrorMessage(
           error,
-          'Error adding training document',
+          t('errorAddingTrainingDocument'),
         );
 
         toast.error(errorMessage);

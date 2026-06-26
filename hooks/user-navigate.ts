@@ -7,6 +7,7 @@ import {
   useRouter,
   useSearchParams,
 } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { useDispatch, useSelector } from 'react-redux';
 
 import {
@@ -489,6 +490,7 @@ export function useNavigate() {
 
 // useSidebarNavigation remains unchanged as its interface relies on useNavigate
 export function useSidebarNavigation() {
+  const t = useTranslations('userNavigate');
   const dispatch = useDispatch<AppDispatch>();
   const {
     navigateToHome,
@@ -523,7 +525,7 @@ export function useSidebarNavigation() {
 
   const contentItems = [
     {
-      label: 'New Chat',
+      label: t('newChat'),
       icon: PenSquare,
       onClick: () => {
         dispatch(clearFiles(undefined));
@@ -550,7 +552,7 @@ export function useSidebarNavigation() {
       hasBorder: true,
     },
     {
-      label: 'Agents',
+      label: t('agents'),
       icon: Globe2,
       onClick: navigateToExplore,
       userTypes: [
@@ -563,7 +565,7 @@ export function useSidebarNavigation() {
       isAnAdminAction: false,
     },
     {
-      label: 'New Agent',
+      label: t('newAgent'),
       icon: CirclePlus,
       onClick: () => {
         executeWithTrialCheck(openCreateMentorModal);
@@ -575,7 +577,7 @@ export function useSidebarNavigation() {
       isAnAdminAction: true,
     },
     {
-      label: 'Invite Users',
+      label: t('inviteUsers'),
       icon: Mail,
       onClick: () => {
         executeWithTrialCheck(openInviteUserModal);
@@ -584,7 +586,7 @@ export function useSidebarNavigation() {
       isAnAdminAction: true,
     },
     {
-      label: 'Workflows',
+      label: t('workflows'),
       icon: Workflow,
       onClick: () => {
         if (!mentorId) {
@@ -597,7 +599,7 @@ export function useSidebarNavigation() {
       isAnAdminAction: true,
     },
     {
-      label: 'Projects',
+      label: t('projects'),
       icon: FolderKanban,
       onClick: () => {
         executeWithTrialCheck(navigateToProjects);
@@ -609,14 +611,14 @@ export function useSidebarNavigation() {
 
   const footerItems = [
     {
-      label: 'Notifications',
+      label: t('notifications'),
       icon: LucideMail,
       onClick: () => navigateToNotifications(),
       userTypes: [UserType.STUDENT, UserType.FREE_TRIAL, UserType.ADMIN],
       isAnAdminAction: false,
     },
     {
-      label: 'Analytics',
+      label: t('analytics'),
       icon: ChartLine,
       onClick: () => {
         executeWithTrialCheck(navigateToAnalytics);
@@ -629,7 +631,7 @@ export function useSidebarNavigation() {
       isAnAdminAction: true,
     },
     {
-      label: 'Settings',
+      label: t('settings'),
       icon: Settings,
       onClick: () => {
         executeWithTrialCheck(openSettingsModal);
@@ -639,7 +641,7 @@ export function useSidebarNavigation() {
     },
   ].filter(
     (item) =>
-      !(config.hideAnalytics() === 'true' && item.label === 'Analytics'),
+      !(config.hideAnalytics() === 'true' && item.label === t('analytics')),
   );
 
   return { contentItems, footerItems };

@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { toast } from 'sonner';
+import { useTranslations } from 'next-intl';
 import {
   Room,
   RoomEvent,
@@ -70,6 +71,7 @@ export function LiveKitChat({
   onClose,
   isOpen,
 }: Props) {
+  const t = useTranslations('liveKitVoiceChat');
   const [initiateCall] = useCreateCallCredentialsMutation();
 
   const [room] = React.useState(() => {
@@ -130,9 +132,7 @@ export function LiveKitChat({
     } catch (error) {
       voiceError('Microphone permission denied', error);
       console.error(JSON.stringify({ tenant: tenantKey, error }));
-      toast.error(
-        'Microphone permission denied. Please enable microphone in your browser settings.',
-      );
+      toast.error(t('microphonePermissionDenied'));
       setConnectionState('error');
       postRoomStatusToOpener('error', 'voice-call');
       return;
@@ -170,7 +170,7 @@ export function LiveKitChat({
           ? error.message
           : (error as any)?.data?.error ||
             (error as any)?.error?.error ||
-            'Failed to initiate call. Please try again.';
+            t('failedToInitiateCall');
 
       voiceError('Failed to get call credentials', { errorMessage, error });
       console.error(JSON.stringify({ tenant: tenantKey, error }));
@@ -204,7 +204,7 @@ export function LiveKitChat({
       } catch (error) {
         voiceError('Failed to connect to LiveKit room', error);
         console.error(JSON.stringify({ tenant: tenantKey, error }));
-        toast.error('Failed to connect to room. Please try again.');
+        toast.error(t('failedToConnectToRoom'));
         stopPermissionStream();
         setConnectionState('error');
         postRoomStatusToOpener('error', 'voice-call');
@@ -232,9 +232,7 @@ export function LiveKitChat({
       } catch (error) {
         voiceError('Failed to enable microphone', error);
         console.error(JSON.stringify({ tenant: tenantKey, error }));
-        toast.error(
-          'Microphone is not enabled. Please enable microphone in your browser settings.',
-        );
+        toast.error(t('microphoneNotEnabled'));
         stopPermissionStream();
         setConnectionState('error');
         postRoomStatusToOpener('error', 'voice-call');

@@ -3,6 +3,7 @@
 import type React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 // @ts-expect-error - error-utils module does not exist yet
 import { getErrorData, type ErrorData } from '@/lib/error-utils';
@@ -23,9 +24,10 @@ export function ErrorPage({
   customDescription,
   customIcon,
   showHomeButton = true,
-  homeButtonText = 'Back to Home',
+  homeButtonText,
   homeButtonHref = '/',
 }: ErrorPageProps) {
+  const t = useTranslations('errorPage');
   // Get default error data based on error code
   const defaultErrorData: ErrorData = getErrorData(errorCode);
 
@@ -62,7 +64,7 @@ export function ErrorPage({
           {showHomeButton && (
             <Link href={homeButtonHref} className="mt-8">
               <Button className="bg-blue-500 hover:bg-blue-600">
-                {homeButtonText}
+                {homeButtonText ?? t('backToHome')}
               </Button>
             </Link>
           )}
@@ -73,7 +75,7 @@ export function ErrorPage({
       <div className="mt-16 flex items-center justify-center">
         <div className="flex items-end justify-center text-sm text-gray-500">
           <span className="flex h-6 items-end text-xs">
-            Powered by
+            {t('poweredBy')}
             <Image
               src="/iblai-logo.png"
               alt="ibl.ai"
@@ -81,7 +83,7 @@ export function ErrorPage({
               height={19}
               className="mx-2 mb-1 h-4 w-auto"
             />
-            in New York
+            {t('inNewYork')}
           </span>
         </div>
       </div>

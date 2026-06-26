@@ -9,6 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Markdown from '@/components/markdown';
 import { parsePrompt } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
 
 type Props = {
   isOpen: boolean;
@@ -23,6 +24,7 @@ export function DisclaimerModal({
   isAgreeing,
   content,
 }: Props) {
+  const t = useTranslations('modalsDisclaimerModal');
   return (
     <Dialog open={isOpen}>
       <DialogContent
@@ -31,7 +33,7 @@ export function DisclaimerModal({
       >
         <DialogHeader className="p-6 pb-4">
           <DialogTitle className="text-left text-xl font-semibold">
-            User Agreement
+            {t('userAgreement')}
           </DialogTitle>
           <Separator className="mt-4" />
         </DialogHeader>
@@ -51,7 +53,7 @@ export function DisclaimerModal({
               className="ibl-button-primary w-full"
               disabled={isAgreeing}
             >
-              {isAgreeing ? 'Submitting...' : 'I Accept'}
+              {isAgreeing ? t('submitting') : t('accept')}
             </Button>
           </div>
         </div>

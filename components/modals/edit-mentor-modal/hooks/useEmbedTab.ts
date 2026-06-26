@@ -10,6 +10,7 @@ import {
 import { useForm } from '@tanstack/react-form';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 
 import { z } from 'zod';
 import { getEmbedCode } from '../utils';
@@ -103,6 +104,7 @@ const defaultEmbedFormValues: EmbedFormValues = {
 };
 
 const useEmbedTab = () => {
+  const t = useTranslations('useEmbedTab');
   const [embedCode, setEmbedCode] = useState('');
   const { getMentorId } = useNavigate();
   const username = useUsername();
@@ -186,7 +188,7 @@ const useEmbedTab = () => {
       (!value.website_url ||
         !z.string().url().safeParse(value.website_url).success)
     ) {
-      setCreateTokenError('Please specify a valid Website URL');
+      setCreateTokenError(t('validWebsiteUrlRequired'));
       return { success: false };
     }
 
@@ -211,7 +213,7 @@ const useEmbedTab = () => {
         if (response.error) {
           const errorObj = response.error as any;
           const errorMessage =
-            errorObj?.error?.url?.[0] ?? 'Unknown error occurred';
+            errorObj?.error?.url?.[0] ?? t('unknownErrorOccurred');
           throw new Error(errorMessage);
         }
         redirectTokenResponse = response;
@@ -221,7 +223,10 @@ const useEmbedTab = () => {
           error,
         );
         setCreateTokenError(
-          `Failed to create redirect token for website (${formValues.website_url}) in org (${params.tenantKey})`,
+          t('failedToCreateRedirectToken', {
+            website: formValues.website_url,
+            org: params.tenantKey,
+          }),
         );
         console.error(JSON.stringify({ tenant: tenantKey, error }));
         return { success: false };
@@ -250,8 +255,7 @@ const useEmbedTab = () => {
         response.error,
       );
       const errorMessage =
-        (response.error as any)?.error?.error ??
-        'An Unknown error occurred. Please try again';
+        (response.error as any)?.error?.error ?? t('unknownErrorTryAgain');
       setCreateTokenError(errorMessage);
       toast.error(errorMessage);
       return { success: false };
@@ -313,7 +317,7 @@ const useEmbedTab = () => {
   const createTokenHandler = async () => {
     const websiteUrl = form.getFieldValue('website_url');
     if (!websiteUrl || !z.string().url().safeParse(websiteUrl).success) {
-      setCreateTokenError('A valid url is required!');
+      setCreateTokenError(t('validUrlRequired'));
       return;
     }
 
@@ -329,7 +333,7 @@ const useEmbedTab = () => {
           errorObj,
         );
         setCreateTokenError(
-          errorObj?.error?.url?.[0] ?? 'Unknown error occurred',
+          errorObj?.error?.url?.[0] ?? t('unknownErrorOccurred'),
         );
       }
     } catch (error) {
@@ -338,7 +342,10 @@ const useEmbedTab = () => {
         error,
       );
       setCreateTokenError(
-        `Failed to create redirect token for website (${websiteUrl}) in org (${params.tenantKey})`,
+        t('failedToCreateRedirectToken', {
+          website: websiteUrl,
+          org: params.tenantKey,
+        }),
       );
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     }

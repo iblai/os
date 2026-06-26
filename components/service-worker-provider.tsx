@@ -8,6 +8,7 @@ import {
   useCallback,
 } from 'react';
 import { toast } from 'sonner';
+import { useTranslations } from 'next-intl';
 import {
   initServiceWorker,
   onUpdate,
@@ -82,6 +83,7 @@ interface ServiceWorkerProviderProps {
 export function ServiceWorkerProvider({
   children,
 }: ServiceWorkerProviderProps) {
+  const t = useTranslations('serviceWorkerProvider');
   // Get initial status, considering the shell's offline flag
   const [status, setStatus] = useState<ServiceWorkerStatus>(() => {
     const baseStatus = getServiceWorkerStatus();
@@ -135,11 +137,11 @@ export function ServiceWorkerProvider({
 
     // Subscribe to updates
     const unsubscribeUpdate = onUpdate(() => {
-      toast.info('App update available', {
-        description: 'A new version is ready. Click to update.',
+      toast.info(t('appUpdateAvailable'), {
+        description: t('appUpdateDescription'),
         duration: 10000,
         action: {
-          label: 'Update',
+          label: t('update'),
           onClick: () => {
             skipWaiting();
           },
@@ -260,8 +262,8 @@ export function ServiceWorkerProvider({
 
   const clearCache = useCallback(() => {
     clearAllCaches();
-    toast.success('Cache cleared', {
-      description: 'All cached data has been cleared.',
+    toast.success(t('cacheCleared'), {
+      description: t('cacheClearedDescription'),
     });
   }, []);
 

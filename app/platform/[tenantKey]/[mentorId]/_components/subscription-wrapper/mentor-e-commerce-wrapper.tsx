@@ -1,12 +1,14 @@
 'use client';
 
 import { TopBanner } from '@iblai/iblai-js/web-containers';
+import { useTranslations } from 'next-intl';
 import { useAppSelector } from '@/lib/hooks';
 import { useState, useEffect } from 'react';
 import { useIsPreviewMode } from '@/hooks/use-is-preview-mode';
 import { useTopBannerButtonHandler } from '@/hooks/subscription/use-top-banner-button-handler';
 
 export function MentorECommerceWrapper() {
+  const t = useTranslations('mentorECommerceWrapper');
   const isPreviewMode = useIsPreviewMode();
 
   const topBannerOptions = useAppSelector(
@@ -156,7 +158,7 @@ export function MentorECommerceWrapper() {
           parentContainerSelector=".mentor-parent-container"
           bannerText={topBannerOptions.bannerText}
           buttonHandler={getTopBannerButtonHandler(topBannerOptions.onUpgrade)}
-          buttonLabel={topBannerOptions?.buttonLabel || 'Upgrade'}
+          buttonLabel={topBannerOptions?.buttonLabel || t('upgrade')}
           loading={topBannerOptions.loading}
           tooltipText={topBannerOptions.tooltipText}
           onLoad={handleTopBannerLoad}

@@ -251,13 +251,15 @@ export function Header({
                   size="icon"
                   className="ml-4"
                   onClick={toggleDrawer}
-                  aria-label={isDrawerOpen ? 'Close sidebar' : 'Open sidebar'}
+                  aria-label={
+                    isDrawerOpen ? t('closeSidebar') : t('openSidebar')
+                  }
                 >
                   <Menu className="h-5 w-5" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent className="ibl-tooltip-content" side="right">
-                Toggle Sidebar
+                {t('toggleSidebar')}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -275,7 +277,7 @@ export function Header({
                       <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white">
                         <Image
                           src={'/placeholder.svg'}
-                          alt="LLM model icon"
+                          alt={t('llmModelIcon')}
                           className="h-5 w-5 object-contain"
                           height={32}
                           width={32}
@@ -288,7 +290,7 @@ export function Header({
                     </button>
                   </TooltipTrigger>
                   <TooltipContent className="ibl-tooltip-content" side="bottom">
-                    Select LLM Model
+                    {t('selectLlmModelTitle')}
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -300,7 +302,7 @@ export function Header({
                   <Avatar className="h-5 w-5">
                     <AvatarImage
                       src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/mentorAI_logo%202-g0IIg5g9339HMl0lTgvLQSm02plhB3.png"
-                      alt="Agentic OS"
+                      alt={t('agenticOs')}
                     />
                     <AvatarFallback>
                       {selectedMentorName.substring(0, 2)}
@@ -411,13 +413,15 @@ export function Header({
                   size="icon"
                   className="ml-4"
                   onClick={toggleDrawer}
-                  aria-label={isDrawerOpen ? 'Close sidebar' : 'Open sidebar'}
+                  aria-label={
+                    isDrawerOpen ? t('closeSidebar') : t('openSidebar')
+                  }
                 >
                   <Menu className="h-5 w-5" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent className="ibl-tooltip-content" side="right">
-                Toggle Sidebar
+                {t('toggleSidebar')}
               </TooltipContent>
             </Tooltip>
           )}
@@ -440,7 +444,7 @@ export function Header({
                     <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white">
                       <Image
                         src={'/placeholder.svg'}
-                        alt="LLM model icon"
+                        alt={t('llmModelIcon')}
                         className="h-5 w-5 object-contain"
                         height={32}
                         width={32}
@@ -455,7 +459,7 @@ export function Header({
                   </button>
                 </TooltipTrigger>
                 <TooltipContent className="ibl-tooltip-content" side="bottom">
-                  {isAdmin ? 'Select LLM model' : selectedMentorName}
+                  {isAdmin ? t('selectLlmModel') : selectedMentorName}
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -467,7 +471,7 @@ export function Header({
                 <Avatar className="mr-1 h-5 w-5">
                   <AvatarImage
                     src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/mentorAI_logo%202-g0IIg5g9339HMl0lTgvLQSm02plhB3.png"
-                    alt="Agentic OS"
+                    alt={t('agenticOs')}
                   />
                   <AvatarFallback>
                     {selectedMentorName.substring(0, 2)}
@@ -481,7 +485,7 @@ export function Header({
                   <Avatar className="h-5 w-5">
                     <AvatarImage
                       src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/mentorAI_logo%202-g0IIg5g9339HMl0lTgvLQSm02plhB3.png"
-                      alt="Agentic OS"
+                      alt={t('agenticOs')}
                     />
                     <AvatarFallback>
                       {selectedMentorName.substring(0, 2)}
@@ -528,11 +532,11 @@ export function Header({
                       onClick={() => openCreateMentorModal()}
                     >
                       <Plus className="h-4 w-4" />
-                      Create
+                      {t('create')}
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent className="ibl-tooltip-content" side="bottom">
-                    Create New Agent
+                    {t('createNewAgent')}
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -547,7 +551,7 @@ export function Header({
             <span
               className={`text-sm ${isInstructor ? 'text-gray-500' : 'font-semibold'}`}
             >
-              User
+              {t('user')}
             </span>
             <Switch
               checked={isInstructor}
@@ -557,7 +561,7 @@ export function Header({
             <span
               className={`text-sm ${isInstructor ? 'font-semibold' : 'text-gray-500'}`}
             >
-              Admin
+              {t('admin')}
             </span>
           </div>
         )}

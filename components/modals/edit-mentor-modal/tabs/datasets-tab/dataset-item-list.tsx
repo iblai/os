@@ -1,3 +1,7 @@
+'use client';
+
+import { useTranslations } from 'next-intl';
+
 import { DatasetItem, Dataset } from './dataset-item';
 import { TableCell, TableRow, TableBody } from '@/components/ui/table';
 
@@ -12,6 +16,7 @@ export function DatasetItemList({
   onSelect,
   selectedDatasetId,
 }: Props) {
+  const t = useTranslations('datasetsTabDatasetItemList');
   return (
     <TableBody>
       {datasets?.length > 0 ? (
@@ -26,7 +31,7 @@ export function DatasetItemList({
       ) : (
         <TableRow>
           <TableCell colSpan={6} className="p-4 text-center text-[#646464]">
-            No datasets found
+            {t('noDatasetsFound')}
           </TableCell>
         </TableRow>
       )}

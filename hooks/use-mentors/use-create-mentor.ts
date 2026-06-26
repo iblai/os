@@ -1,6 +1,7 @@
 import { useForm, useStore } from '@tanstack/react-form';
 
 import { useUsername } from '@/hooks/use-user';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { useTenantKey } from '@/hooks/use-tenants';
 import { useNavigate } from '@/hooks/user-navigate';
@@ -43,6 +44,7 @@ export function useCreateMentor(
   initialValues?: Partial<CreateMentorFormValues>,
   onCreated?: () => void,
 ) {
+  const t = useTranslations('useCreateMentor');
   const username = useUsername();
   const { tenant: tenantKey = '' } = useTenantKey();
   const { navigateToMentor } = useNavigate();
@@ -80,7 +82,7 @@ export function useCreateMentor(
           userId: username ?? '',
         }).unwrap();
 
-        toast.success('Agent created successfully');
+        toast.success(t('agentCreatedSuccessfully'));
         if (mentor?.unique_id) {
           navigateToMentor(
             mentor?.unique_id,
@@ -90,7 +92,7 @@ export function useCreateMentor(
         }
         onCreated?.();
       } catch (error: any) {
-        const errorMessage = error?.error?.error || 'Failed to create agent';
+        const errorMessage = error?.error?.error || t('failedToCreateAgent');
         toast.error(errorMessage);
         console.error(JSON.stringify({ tenant: tenantKey, error }));
       }

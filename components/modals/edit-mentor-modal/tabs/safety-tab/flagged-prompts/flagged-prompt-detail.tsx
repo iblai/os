@@ -1,6 +1,7 @@
 'use client';
 
 import { Trash2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { FlaggedPrompt } from './types';
 import { useState } from 'react';
@@ -16,6 +17,7 @@ export function FlaggedPromptDetail({
   prompt,
   onDeleteSuccess,
 }: FlaggedPromptDetailProps) {
+  const t = useTranslations('flaggedPromptsFlaggedPromptDetail');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   return (
@@ -24,7 +26,7 @@ export function FlaggedPromptDetail({
         <>
           <div className="mb-4">
             <h3 className="mb-1 text-base font-semibold text-gray-700">
-              Flagged by {prompt.type} System
+              {t('flaggedBySystem', { type: prompt.type })}
             </h3>
             <span className="text-sm text-gray-500">{prompt.fullDate}</span>
           </div>
@@ -58,7 +60,7 @@ export function FlaggedPromptDetail({
               </div>
               <div className="flex-1">
                 <div className="font-medium text-gray-700">
-                  {prompt.type} System
+                  {t('systemLabel', { type: prompt.type })}
                 </div>
                 <p className="mt-1 text-sm whitespace-pre-line text-gray-500">
                   {prompt.systemResponse}
@@ -73,7 +75,7 @@ export function FlaggedPromptDetail({
                 className="ibl-button-primary flex w-full items-center justify-center gap-2"
               >
                 <Trash2 className="h-4 w-4" />
-                Delete
+                {t('deleteButton')}
               </Button>
             </div>
           </div>
@@ -87,7 +89,7 @@ export function FlaggedPromptDetail({
         </>
       ) : (
         <div className="flex h-full items-center justify-center text-gray-500">
-          Select a flagged prompt to view details.
+          {t('selectPrompt')}
         </div>
       )}
     </div>

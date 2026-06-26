@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import { Version } from '@/components/version';
 import { appVersion } from '@/lib/version';
 import { hideInitialLoader } from '@/lib/initial-loader';
@@ -16,9 +17,13 @@ const logo = (
   />
 );
 export default function AppVersion() {
+  const t = useTranslations('versionPage');
+
   useEffect(() => {
     hideInitialLoader();
   }, []);
 
-  return <Version appName="Agent" appVersion={appVersion} poweredBy={logo} />;
+  return (
+    <Version appName={t('agent')} appVersion={appVersion} poweredBy={logo} />
+  );
 }

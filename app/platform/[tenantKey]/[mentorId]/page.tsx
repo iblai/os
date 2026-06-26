@@ -25,6 +25,7 @@ import {
   useLazyGetShareableLinkPublicQuery,
 } from '@iblai/iblai-js/data-layer';
 import { useParams, useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { config } from '@/lib/config';
 import { TenantKeyMentorIdParams } from '@/lib/types';
@@ -41,6 +42,7 @@ import { isTauriApp } from '@/types/tauri';
 import { hideInitialLoader } from '@/lib/initial-loader';
 
 export default function Page() {
+  const t = useTranslations('mentorIdPage');
   const isMobile = useMediaQuery({ maxWidth: 767 });
   const sessionId = useAppSelector(selectSessionId);
   const dispatch = useAppDispatch();
@@ -140,13 +142,12 @@ export default function Page() {
             toast.error(
               <>
                 <p>
-                  The shareable link is not enabled. Please contact support to
-                  enable it.{' '}
+                  {t('shareableLinkNotEnabled')}{' '}
                   <a
                     href={`mailto:${metadata?.support_email || config.supportEmail()}`}
                     style={{ color: '#2563eb', textDecoration: 'underline' }}
                   >
-                    Contact Support
+                    {t('contactSupport')}
                   </a>
                 </p>
               </>,

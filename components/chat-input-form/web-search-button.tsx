@@ -1,4 +1,5 @@
 import { Globe } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 import {
   Tooltip,
@@ -22,16 +23,17 @@ export function WebSearchButton({
   isPreviewMode,
   updateSessionTools,
 }: Props) {
+  const t = useTranslations('chatInputFormWebSearchButton');
   const userHasActivatedWebSearch = activeTools.includes(TOOLS.WEB_SEARCH);
 
   function dynamicTooltipContent() {
     if (!enableWebBrowsing) {
-      return 'Web Search Disabled';
+      return t('webSearchDisabled');
     }
     if (userHasActivatedWebSearch) {
-      return 'Web Search Enabled';
+      return t('webSearchEnabled');
     }
-    return 'Web Search Disabled';
+    return t('webSearchDisabled');
   }
 
   return (

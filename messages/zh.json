@@ -236,7 +236,8 @@
     "accountDescIntegrations": "管理与其他服务的集成。",
     "accountDescMonetization": "配置付费墙、定价和收入。",
     "accountDescAdvanced": "配置组织的高级设置。",
-    "accountDescBilling": "管理您的账单和订阅。"
+    "accountDescBilling": "管理您的账单和订阅。",
+    "myProjects": "我的项目"
   },
   "appSidebarPinnedMessages": {
     "pinned": "已置顶",
@@ -425,7 +426,9 @@
     "cancelButton": "取消",
     "confirmButton": "确认",
     "confirmScreenSharingTitle": "确认屏幕共享",
-    "confirmScreenSharingDescription": "您想与您的代理开始屏幕共享吗？"
+    "confirmScreenSharingDescription": "您想与您的代理开始屏幕共享吗？",
+    "restrictedAccessMessage": "哎呀！看来只有 <b>{platformName}</b> 的用户才能访问我。如果您想加入，请联系我们的<a target=\"_self\" href=\"mailto:{email}\">支持团队</a>",
+    "loginRequiredMessage": "看来您需要登录后才能与我聊天。请<a target=\"_self\" href=\"{joinUrl}\">登录或免费注册</a>以开始使用！"
   },
   "chatInputFormCameraCaptureDialog": {
     "cameraUnavailableError": "此浏览器中无法使用摄像头。",
@@ -793,7 +796,18 @@
     "api": "API",
     "embed": "嵌入",
     "analytics": "分析",
-    "changeLanguage": "切换语言"
+    "changeLanguage": "切换语言",
+    "closeSidebar": "关闭侧边栏",
+    "openSidebar": "打开侧边栏",
+    "toggleSidebar": "切换侧边栏",
+    "llmModelIcon": "LLM 模型图标",
+    "agenticOs": "Agentic OS",
+    "selectLlmModelTitle": "选择 LLM 模型",
+    "selectLlmModel": "选择 LLM 模型",
+    "create": "创建",
+    "createNewAgent": "创建新智能体",
+    "user": "用户",
+    "admin": "管理员"
   },
   "headerProfileButton": {
     "userProfile": "用户资料",
@@ -1072,7 +1086,8 @@
   "mentorsMentorSelectionGrid": {
     "searchPlaceholder": "搜索代理",
     "loadingAgents": "正在加载代理...",
-    "noAgentsFound": "未找到与您搜索匹配的代理。"
+    "noAgentsFound": "未找到与您搜索匹配的代理。",
+    "selectAgentAriaLabel": "选择智能体 {name}"
   },
   "modalsAddPromptModal": {
     "promptCreatedSuccessfully": "提示词创建成功",
@@ -1219,7 +1234,8 @@
     "guidedPromptContentAriaLabel": "引导提示词内容",
     "guidedPromptLabel": "引导提示词",
     "saving": "保存中...",
-    "saveButton": "保存"
+    "saveButton": "保存",
+    "createAgentTitle": "创建智能体"
   },
   "modalsEditPromptModal": {
     "editTitle": "编辑 {label}",
@@ -1907,7 +1923,18 @@
     "deleteButton": "删除",
     "voiceCallSettingsError": "语音通话设置保存失败",
     "agentUpdatedSuccess": "智能体更新成功",
-    "agentUpdateError": "更新智能体失败"
+    "agentUpdateError": "更新智能体失败",
+    "enableVerboseReasoningLabel": "启用详细推理",
+    "enableVerboseReasoningInfoAriaLabel": "关于启用详细推理的更多信息",
+    "enableVerboseReasoningTooltip": "在智能体回复时显示其推理步骤。",
+    "verboseReasoningAriaEnabled": "详细推理已启用",
+    "verboseReasoningAriaDisabled": "详细推理已禁用",
+    "filterPiiLabel": "从消息中过滤 PII",
+    "filterPiiInfoAriaLabel": "关于从消息中过滤 PII 的更多信息",
+    "filterPiiTooltip": "启用隐私路由器。启用后，将出现一个专用的隐私选项卡，用于配置 PII 检测规则。",
+    "enablePrivateModeLabel": "启用私密模式",
+    "enablePrivateModeInfoAriaLabel": "关于启用私密模式的更多信息",
+    "enablePrivateModeTooltip": "启用后，与此智能体的每次对话都以私密模式运行——不会为任何用户存储聊天记录或记忆。请将其用于敏感或受合规要求约束的部署。"
   },
   "tabsSkillsTab": {
     "heading": "技能",
@@ -1956,6 +1983,10 @@
     "sidebarTitle": "侧边栏",
     "mobileDescription": "显示移动端侧边栏。",
     "toggleSidebar": "切换侧边栏"
+  },
+  "welcomeChatConversationStarters": {
+    "heading": "对话开场白",
+    "selectStarterTemplate": "选择开场模板：{prompt}"
   },
   "welcomeChatExploreMentors": {
     "exploreAgents": "探索智能体",
@@ -2114,5 +2145,478 @@
     "reject": "拒绝",
     "stickyNote": "便利贴",
     "changeAgent": "更换代理"
+  },
+  "errorIndex": {
+    "somethingWentWrong": "出了点问题！",
+    "unexpectedErrorOccurred": "发生了意外错误"
+  },
+  "notFound": {
+    "pageNotFound": "未找到页面",
+    "pageDoesNotExist": "您查找的页面不存在。"
+  },
+  "loadingIndex": {
+    "loading": "加载中..."
+  },
+  "layoutIndex": {
+    "loading": "加载中..."
+  },
+  "uploadsPage": {
+    "loading": "加载中..."
+  },
+  "versionPage": {
+    "agent": "智能体"
+  },
+  "googleOauthCallbackPage": {
+    "successfullyConnectedService": "服务连接成功",
+    "failedToConnectService": "服务连接失败"
+  },
+  "toggleSidebarButton": {
+    "closeSidebar": "关闭侧边栏",
+    "openSidebar": "打开侧边栏",
+    "toggleSidebar": "切换侧边栏"
+  },
+  "learnerModeSwitch": {
+    "userModeEnabled": "用户模式已启用",
+    "userModeDisabled": "用户模式已禁用"
+  },
+  "mentorECommerceWrapper": {
+    "upgrade": "升级"
+  },
+  "exploreMentorCardWithStar": {
+    "cardAriaLabel": "探索智能体：{name}。{description}",
+    "removeFromFavorites": "从收藏中移除",
+    "addToFavorites": "添加到收藏",
+    "unsetAsFavorite": "取消收藏",
+    "setAsFavorite": "设为收藏",
+    "updatedOn": "更新于 {date}"
+  },
+  "exploreMentorCard": {
+    "openAgentAriaLabel": "打开智能体 {name}。{description}",
+    "recentlyAccessedOn": "最近访问于 {date}"
+  },
+  "exploreEmptyState": {
+    "noAgentsFound": "抱歉，未找到任何智能体！"
+  },
+  "mentorIdPage": {
+    "shareableLinkNotEnabled": "分享链接未启用。请联系支持团队以启用它。",
+    "contactSupport": "联系支持团队"
+  },
+  "projectIdMentorIdPage": {
+    "shareableLinkNotEnabled": "分享链接未启用。请联系支持团队以启用它。",
+    "contactSupport": "联系支持团队"
+  },
+  "notificationsLoading": {
+    "loading": "加载中..."
+  },
+  "projectsPage": {
+    "projectHasNoAgents": "该项目还没有智能体。",
+    "couldNotOpenProject": "无法打开此项目。请重试。"
+  },
+  "modalsDisclaimerModal": {
+    "userAgreement": "用户协议",
+    "submitting": "提交中...",
+    "accept": "我接受"
+  },
+  "modalsEditMentorModalDialog": {
+    "editPromptDescription": "编辑 {label}"
+  },
+  "modalsShortcutsModal": {
+    "title": "键盘快捷键"
+  },
+  "modalsVoiceTermsModal": {
+    "title": "语音条款和条件",
+    "description": "查看并接受语音聊天的条款",
+    "heading": "创建语音智能体",
+    "ruleNoRecordingWithoutConsent": "未经第三方同意，请勿录制其声音",
+    "ruleNoCopyrightedVoices": "请勿使用受版权保护的声音",
+    "ruleNoMaliciousUse": "请勿将声音用于深度伪造、欺凌、欺诈或诈骗",
+    "agreeAndContinue": "同意并继续"
+  },
+  "modalsPromptGalleryModalCategorySection": {
+    "promptLabel": "提示词",
+    "loading": "加载中...",
+    "seeMore": "查看更多"
+  },
+  "modalsPromptGalleryModalEmptyPrompts": {
+    "noPromptsAvailable": "没有可用的提示词",
+    "noPromptsHelpText": "此类别中还没有提示词。点击\"添加提示词\"按钮创建第一个。"
+  },
+  "modalsPromptGalleryModalPromptCard": {
+    "promptDeletedSuccess": "提示词删除成功",
+    "promptDeleteFailed": "删除提示词失败",
+    "edit": "编辑",
+    "run": "运行",
+    "copied": "已复制",
+    "copy": "复制",
+    "delete": "删除"
+  },
+  "flowTab": {
+    "comingSoon": "流程内容即将推出"
+  },
+  "promptsTabCopyButton": {
+    "textCopiedToClipboard": "文本已复制到剪贴板",
+    "copyTextToClipboard": "将文本复制到剪贴板",
+    "copied": "已复制",
+    "copy": "复制"
+  },
+  "datasetsTabTrainOrDeleteModal": {
+    "dialogTitle": "您想做什么？",
+    "description": "此数据集目前尚未训练。您可以训练它以供您的智能体使用，或者如果不再需要则永久删除它。",
+    "deleteButton": "删除",
+    "trainingButton": "训练中...",
+    "trainButton": "训练"
+  },
+  "datasetsTabDatasetItemList": {
+    "noDatasetsFound": "未找到数据集"
+  },
+  "mcpTabIndex": {
+    "description": "管理您的智能体的 Model Context Protocol 连接器。"
+  },
+  "memoryTabBulkDeleteMemoryModal": {
+    "confirmationTextAll": "您确定要删除所有记忆吗？此操作无法撤销。",
+    "confirmationTextCategory": "您确定要删除 {category} 类别中的所有记忆吗？此操作无法撤销。",
+    "titleAll": "删除所有记忆",
+    "titleCategory": "删除所有 {category} 记忆",
+    "cancelButton": "取消",
+    "deletingButton": "删除中...",
+    "deleteButton": "删除"
+  },
+  "flaggedPromptsIndex": {
+    "title": "已标记的提示",
+    "noFlaggedPrompts": "未找到已标记的提示"
+  },
+  "flaggedPromptsFlaggedPromptMobileDetail": {
+    "dialogTitle": "已标记提示的详情",
+    "flaggedBySystem": "由 {type} 系统标记",
+    "systemLabel": "{type} 系统",
+    "deleteButton": "删除"
+  },
+  "flaggedPromptsFlaggedPromptDetail": {
+    "flaggedBySystem": "由 {type} 系统标记",
+    "systemLabel": "{type} 系统",
+    "deleteButton": "删除",
+    "selectPrompt": "选择一个已标记的提示以查看详情。"
+  },
+  "flaggedPromptsFlaggedPromptsList": {
+    "noFlaggedPrompts": "未找到已标记的提示"
+  },
+  "flaggedPromptsFlaggedPromptsSummary": {
+    "totalFlaggedPrompts": "共 {count} 条已标记的提示",
+    "description": "查看被我们的自动审核和安全系统标记的提示。每条已标记的提示包含用户信息、被标记的内容以及系统的分析。使用联系功能可通过通知系统直接联系用户进行跟进或澄清。"
+  },
+  "useEmbedTab": {
+    "validWebsiteUrlRequired": "请指定有效的网站 URL",
+    "unknownErrorOccurred": "发生未知错误",
+    "unknownErrorTryAgain": "发生未知错误。请重试",
+    "validUrlRequired": "需要有效的 URL！",
+    "failedToCreateRedirectToken": "无法为组织 ({org}) 中的网站 ({website}) 创建重定向令牌"
+  },
+  "freeTrialDialog": {
+    "freePackageLine1": "您当前正在使用我们的免费套餐，仅可基本访问智能体，并且您已用完所有积分。",
+    "freePackageLine2": "升级即可解锁无限聊天时长、自定义数据源以及高级智能体行为。",
+    "freePackageLine3Before": "如果您的组织需要企业级解决方案，",
+    "freePackageLine3After": "以获取特别套餐。",
+    "contactOurTeam": "联系我们的团队",
+    "studentPackageLine1": "您正通过所在机构的订阅使用高级功能，并且您已用完所有积分。",
+    "studentPackageLine2": "享受无限聊天时长以及访问专业智能体。某些高级自定义选项可能需要额外权限。",
+    "studentPackageLine3Before": "如果您对自己的访问权限或机构功能有疑问，",
+    "contactSupport": "联系支持团队",
+    "paidPackageLine1": "您已用完本周期的所有可用积分。您对高级功能的完整访问权限将在下一个计费周期续订。",
+    "paidPackageLine2": "如需继续创建自定义智能体并立即使用高级功能，您可以购买额外积分或升级到更高级的套餐。",
+    "paidPackageLine3Before": "如需企业级解决方案或大批量需求，",
+    "paidPackageLine3After": "以获取定制方案。",
+    "contactOurSalesTeam": "联系我们的销售团队",
+    "defaultLine1": "升级即可创建您自己的智能体。",
+    "defaultLine2": "享受无限聊天时长、自定义数据源，并创建您自己的专业智能体。",
+    "defaultLine3Before": "如需完整的企业级控制——深受领先大学和企业的信赖——",
+    "contactOurPartnershipsTeam": "请联系我们的合作伙伴团队。"
+  },
+  "authPopover": {
+    "tryAdvanced": "免费试用高级功能",
+    "getBetterResponses": "登录后即可获得更好的回复、使用您的数据创建智能体等更多功能。",
+    "logIn": "登录",
+    "signUpForFree": "免费注册"
+  },
+  "fileDropZone": {
+    "dropYourFilesHere": "将文件拖放到此处",
+    "dropAnyFile": "将任意文件拖放到此处即可将其添加到对话中"
+  },
+  "documentSidebar": {
+    "retrievedDocuments": "已检索的文档"
+  },
+  "chatInputForm": {
+    "uploadingFiles": "正在上传 {count} 个文件……",
+    "listening": "正在聆听…… {time}",
+    "processing": "处理中……",
+    "askAnything": "问点什么吧",
+    "noChatPermission": "很抱歉！您没有聊天权限。"
+  },
+  "errorPage": {
+    "backToHome": "返回首页",
+    "poweredBy": "技术支持",
+    "inNewYork": "于纽约"
+  },
+  "serviceWorkerProvider": {
+    "appUpdateAvailable": "应用更新可用",
+    "appUpdateDescription": "新版本已就绪。点击以更新。",
+    "update": "更新",
+    "cacheCleared": "缓存已清除",
+    "cacheClearedDescription": "所有缓存数据已被清除。"
+  },
+  "liveKitVoiceChat": {
+    "microphonePermissionDenied": "麦克风权限被拒绝。请在浏览器设置中启用麦克风。",
+    "failedToInitiateCall": "无法发起通话。请重试。",
+    "failedToConnectToRoom": "无法连接到房间。请重试。",
+    "microphoneNotEnabled": "麦克风未启用。请在浏览器设置中启用麦克风。"
+  },
+  "chatAiMessageSpeak": {
+    "loadingAudio": "正在加载音频",
+    "stopReadingAloud": "停止朗读",
+    "readAloud": "朗读"
+  },
+  "chatMessagesCanvasMessagePreview": {
+    "generating": "生成中...",
+    "openCanvas": "打开画布"
+  },
+  "chatMessagesImagePreviewModal": {
+    "preview": "预览"
+  },
+  "chatMessagesMessagePreview": {
+    "untitledArtifact": "未命名工件",
+    "version": "版本 {versionNumber}"
+  },
+  "chatLoadingMessage": {
+    "justASec": "稍等..."
+  },
+  "chatReasoningSection": {
+    "thinking": "思考中",
+    "thought": "已思考"
+  },
+  "chatSubmitMessageButton": {
+    "connectingEllipsis": "连接中...",
+    "uploadingFiles": "正在上传文件",
+    "sendMessageTitle": "发送消息",
+    "connecting": "连接中",
+    "sendMessage": "发送消息"
+  },
+  "chatToolCallIndicator": {
+    "usedTools": "使用了 {count} 个工具"
+  },
+  "chatToolCallItem": {
+    "query": "查询",
+    "result": "结果"
+  },
+  "chatToastErrorMessage": {
+    "errorBody": "很抱歉！{message} 请重试或<contactLink>联系我们</contactLink>。",
+    "textUsAt": "如果您愿意，可以发短信给我们：<phoneLink>{phone}</phoneLink>。"
+  },
+  "chatInputFormMemoryButton": {
+    "memory": "记忆"
+  },
+  "chatInputFormWebSearchButton": {
+    "webSearchDisabled": "网络搜索已禁用",
+    "webSearchEnabled": "网络搜索已启用"
+  },
+  "chatInputFormDeepResearchButton": {
+    "deepResearch": "深度研究"
+  },
+  "advancedChatAdvancedChatHeader": {
+    "cannotSwitchTabsWhileStreaming": "流式传输时无法切换标签页"
+  },
+  "chatInputFormOutsideButtons": {
+    "allowPopupsToConnectGoogle": "请允许此网站的弹出窗口以连接 Google 服务",
+    "failedToGetAuthUrl": "获取身份验证 URL 失败",
+    "failedToInitiateGoogleAuth": "启动 Google 身份验证失败",
+    "webSearch": "网络搜索",
+    "code": "代码",
+    "image": "图片",
+    "googleSlides": "Google 幻灯片",
+    "googleDocs": "Google 文档",
+    "powerPoint": "PowerPoint",
+    "connecting": "(连接中...)",
+    "more": "更多"
+  },
+  "projectsProjectMentorsList": {
+    "agentRemoved": "已从项目中移除智能体",
+    "removeError": "移除智能体失败",
+    "noAgentsAssigned": "尚未为此项目分配智能体。",
+    "selectAgentsBelow": "在下方选择智能体以将其添加到您的项目中。",
+    "projectAgents": "项目智能体",
+    "addAgent": "添加智能体",
+    "selectAgentAriaLabel": "选择智能体 {name}",
+    "removeFromProject": "从项目中移除"
+  },
+  "projectsAddMentorToProjectModal": {
+    "agentAdded": "已将智能体添加到项目",
+    "addError": "将智能体添加到项目失败",
+    "addAgentToProject": "将智能体添加到 {projectName}",
+    "availableAgents": "可用智能体",
+    "done": "完成"
+  },
+  "projectsProjectActionButtons": {
+    "viewProjectFilesAriaLabel": "查看项目文件",
+    "addFilesToProjectAriaLabel": "向项目添加文件",
+    "projectFiles": "项目文件",
+    "addFiles": "添加文件",
+    "chatsCanAccessFiles": "此项目中的对话可以访问文件内容",
+    "filesAdded": "{count, plural, other {已添加 # 个文件}}",
+    "editInstructionsAriaLabel": "编辑项目说明",
+    "addInstructionsAriaLabel": "添加项目说明",
+    "projectInstructions": "项目说明",
+    "addProjectInstructions": "添加项目说明",
+    "tailorResponses": "定制智能体在此项目中的响应方式"
+  },
+  "modelDownloadFirstLaunchPromptDialog": {
+    "title": "下载本地 AI 模型？",
+    "description": "我们检测到您已安装 Ollama。是否要下载 <strong>Phi Mini 3</strong> 模型用于本地 AI 处理？",
+    "modelSizeLabel": "模型大小：",
+    "modelSizeValue": "约 2.4 GB",
+    "requiredSpaceLabel": "所需空间：",
+    "requiredSpaceValue": "5 GB 可用空间",
+    "downloadLaterHint": "您随时可以稍后从导航栏菜单下载该模型。",
+    "later": "稍后",
+    "downloadNow": "立即下载"
+  },
+  "workflowsWorkflowPreviewChat": {
+    "previewYourAgent": "预览您的智能体",
+    "promptAgentHint": "像用户一样向智能体提问。"
+  },
+  "useModelDownload": {
+    "desktopAppRequired": "本地模型下载需要桌面应用",
+    "modelDownloadedSuccessfully": "模型下载成功！",
+    "downloadFailed": "下载失败：{errorMessage}",
+    "downloadCancelled": "下载已取消",
+    "failedToEnableLocalModels": "无法启用本地模型：{errorMessage}",
+    "modelNotFound": "未找到模型",
+    "failedToDownloadModel": "无法下载模型：{errorMessage}",
+    "loadedModel": "已加载模型：{model}",
+    "failedToLoadModel": "无法加载模型：{errorMessage}",
+    "modelDownloadedAndLoaded": "模型已下载并加载：{model}",
+    "statusLocalLlmAvailable": "可通过 Foundry Local 使用本地 LLM（推荐）",
+    "statusModelInstalled": "模型已安装",
+    "statusStartingDownload": "正在开始下载...",
+    "statusDownloadComplete": "下载完成",
+    "statusDownloadingModel": "正在下载 {model}...",
+    "statusLoadingModel": "正在加载 {model}...",
+    "statusModelReady": "模型已就绪：{model}",
+    "statusFailedToDownload": "无法下载 {model}",
+    "statusInstallingFoundry": "正在安装 Foundry Local...",
+    "statusDownloadingDefaultModel": "正在下载默认模型 (qwen2.5-0.5b)...",
+    "statusFoundryInstalledSuccessfully": "Foundry Local 安装成功",
+    "statusFailedToInstallFoundry": "安装 Foundry Local 失败"
+  },
+  "useScreenSharing": {
+    "failedToInitiateCall": "无法发起通话。请重试。",
+    "failedToConnectToRoom": "无法连接到房间。请重试。",
+    "screenSharingNotSupported": "此设备不支持屏幕共享。请使用桌面浏览器。",
+    "microphoneNotEnabled": "麦克风未启用。请在浏览器设置中启用麦克风。",
+    "screenSharingCouldNotBeStarted": "无法开始屏幕共享。请确保您的浏览器支持屏幕共享并已授予必要的权限。"
+  },
+  "useOneDrivePicker": {
+    "failedToLoadSdk": "无法加载 OneDrive SDK",
+    "errorProcessingAuthentication": "处理 OneDrive 身份验证时出错",
+    "agentNotFound": "未找到智能体",
+    "documentQueuedForTraining": "文档已加入训练队列",
+    "credentialsNotLoadedYet": "OneDrive 凭据尚未加载",
+    "sdkNotLoadedYet": "OneDrive SDK 尚未加载",
+    "errorSelectingFiles": "从 OneDrive 选择文件时出错",
+    "failedToOpenPicker": "无法打开 OneDrive 选择器"
+  },
+  "useOneDrivePickerV2": {
+    "failedToLoadSdk": "无法加载 OneDrive SDK",
+    "credentialsNotFound": "未找到 OneDrive 凭据",
+    "failedToLoadCredentials": "无法加载 OneDrive 凭据",
+    "credentialsNotLoadedYet": "OneDrive 凭据尚未加载",
+    "sdkNotLoadedYet": "OneDrive SDK 尚未加载",
+    "filePicked": "已选择 OneDrive 文件",
+    "filePickCancelled": "已取消 OneDrive 文件选择",
+    "failedToPickFile": "无法选择 OneDrive 文件"
+  },
+  "useOneDrivePickerV3": {
+    "documentQueuedForTraining": "文档已加入训练队列",
+    "noFileSelected": "未选择文件",
+    "errorSelectingFile": "选择文件时出错"
+  },
+  "useVoiceChat": {
+    "couldNotProcessAudio": "无法处理您的音频，请重试"
+  },
+  "useGoogleDrivePicker": {
+    "errorProcessingPickerSelection": "处理选择器选择时出错",
+    "errorWithPicker": "Google Drive 选择器出错。如果卡住，请尝试刷新页面。",
+    "failedToOpenPicker": "无法打开 Google Drive 选择器",
+    "failedToOpenPickerPermission": "无法打开 Google Drive 选择器。这可能是由于权限问题（403 错误）。",
+    "agentNotFound": "未找到智能体",
+    "documentQueuedForTraining": "文档已加入训练队列",
+    "pickerClosed": "Google Drive 选择器已关闭",
+    "unableToClosePickerModal": "无法关闭选择器窗口。请刷新页面。",
+    "credentialsNotLoadedYet": "Google Drive 凭据尚未加载",
+    "pickerNotLoadedYet": "Google Picker 尚未加载。请重试。"
+  },
+  "useGoogleDrivePickerV2": {
+    "failedToFetchCredentials": "无法获取 Google Drive 凭据",
+    "notImplemented": "未实现"
+  },
+  "useGoogleDrivePickerV3": {
+    "errorAddingTrainingDocument": "添加训练文档时出错"
+  },
+  "useUserAgreement": {
+    "userAgreementAccepted": "已接受用户协议",
+    "failedToUpdateStatus": "无法更新用户协议状态"
+  },
+  "useDropboxPicker": {
+    "agentNotFound": "未找到智能体",
+    "documentQueuedForTraining": "文档已加入训练队列"
+  },
+  "useWebsiteCrawlerResource": {
+    "webCrawlStarted": "网页爬取已开始并加入训练队列",
+    "errorSubmittingWebCrawlData": "提交网页爬取数据时出错"
+  },
+  "useCanvasVersionNavigation": {
+    "unableToLoadVersion": "无法加载版本",
+    "versionRestored": "版本已恢复",
+    "failedToRestoreVersion": "无法恢复版本"
+  },
+  "useFileDragDrop": {
+    "droppedFileTypeNotSupported": "拖放的文件类型不受支持。",
+    "filesRejected": "{rejectedCount} 个文件因类型不受支持而被拒绝。"
+  },
+  "useCreateMentor": {
+    "agentCreatedSuccessfully": "智能体创建成功",
+    "failedToCreateAgent": "无法创建智能体"
+  },
+  "useToggleTools": {
+    "agentUpdatedSuccessfully": "智能体更新成功",
+    "failedToUpdateTool": "无法更新工具"
+  },
+  "use402ErrorCheck": {
+    "insufficientBalance": "余额不足。请添加额度以继续。"
+  },
+  "providersIndex": {
+    "agentSwitchedSuccessfully": "智能体切换成功"
+  },
+  "useUser": {
+    "switchToLearnerModeMessage": "切换到学习者模式将把您重定向到聊天页面。",
+    "areYouSure": "您确定吗？"
+  },
+  "providersUseUser": {
+    "switchToLearnerModeMessage": "切换到学习者模式将把您重定向到聊天页面。",
+    "areYouSure": "您确定吗？"
+  },
+  "useShortcuts": {
+    "startNewChat": "开始新对话",
+    "focusInput": "聚焦输入框",
+    "toggleSidebar": "切换侧边栏",
+    "openShortcuts": "打开快捷键"
+  },
+  "userNavigate": {
+    "newChat": "新对话",
+    "agents": "智能体",
+    "newAgent": "新建智能体",
+    "inviteUsers": "邀请用户",
+    "workflows": "工作流",
+    "projects": "项目",
+    "notifications": "通知",
+    "analytics": "分析",
+    "settings": "设置"
   }
 }

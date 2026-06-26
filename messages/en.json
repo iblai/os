@@ -236,7 +236,8 @@
     "accountDescIntegrations": "Manage your integrations with other services.",
     "accountDescMonetization": "Configure paywalls, pricing, and revenue.",
     "accountDescAdvanced": "Configure advanced organization settings.",
-    "accountDescBilling": "Manage your billing and subscription."
+    "accountDescBilling": "Manage your billing and subscription.",
+    "myProjects": "My Projects"
   },
   "appSidebarPinnedMessages": {
     "pinned": "Pinned",
@@ -425,7 +426,9 @@
     "cancelButton": "Cancel",
     "confirmButton": "Confirm",
     "confirmScreenSharingTitle": "Confirm Screen Sharing",
-    "confirmScreenSharingDescription": "Would you like to start a screen sharing with your agent?"
+    "confirmScreenSharingDescription": "Would you like to start a screen sharing with your agent?",
+    "restrictedAccessMessage": "Whoops! Looks like access to me is restricted to users of <b>{platformName}</b>. If you’d like to join then please reach out to our <a target=\"_self\" href=\"mailto:{email}\">support team</a>",
+    "loginRequiredMessage": "It looks like you need to be logged in to chat with me. Please <a target=\"_self\" href=\"{joinUrl}\">log in or sign up for free</a> to get started!"
   },
   "chatInputFormCameraCaptureDialog": {
     "cameraUnavailableError": "Camera is not available in this browser.",
@@ -793,7 +796,18 @@
     "api": "API",
     "embed": "Embed",
     "analytics": "Analytics",
-    "changeLanguage": "Change language"
+    "changeLanguage": "Change language",
+    "closeSidebar": "Close sidebar",
+    "openSidebar": "Open sidebar",
+    "toggleSidebar": "Toggle Sidebar",
+    "llmModelIcon": "LLM model icon",
+    "agenticOs": "Agentic OS",
+    "selectLlmModelTitle": "Select LLM Model",
+    "selectLlmModel": "Select LLM model",
+    "create": "Create",
+    "createNewAgent": "Create New Agent",
+    "user": "User",
+    "admin": "Admin"
   },
   "headerProfileButton": {
     "userProfile": "User profile",
@@ -1072,7 +1086,8 @@
   "mentorsMentorSelectionGrid": {
     "searchPlaceholder": "Search Agents",
     "loadingAgents": "Loading agents...",
-    "noAgentsFound": "No agents found matching your search."
+    "noAgentsFound": "No agents found matching your search.",
+    "selectAgentAriaLabel": "Select agent {name}"
   },
   "modalsAddPromptModal": {
     "promptCreatedSuccessfully": "Prompt created successfully",
@@ -1219,7 +1234,8 @@
     "guidedPromptContentAriaLabel": "Guided prompt content",
     "guidedPromptLabel": "Guided Prompt",
     "saving": "Saving...",
-    "saveButton": "Save"
+    "saveButton": "Save",
+    "createAgentTitle": "Create Agent"
   },
   "modalsEditPromptModal": {
     "editTitle": "Edit {label}",
@@ -1907,7 +1923,18 @@
     "deleteButton": "Delete",
     "voiceCallSettingsError": "Voice call settings failed to save",
     "agentUpdatedSuccess": "Agent updated successfully",
-    "agentUpdateError": "Failed to update agent"
+    "agentUpdateError": "Failed to update agent",
+    "enableVerboseReasoningLabel": "Enable verbose reasoning",
+    "enableVerboseReasoningInfoAriaLabel": "More info about enable verbose reasoning",
+    "enableVerboseReasoningTooltip": "Show the agent’s reasoning steps while it responds.",
+    "verboseReasoningAriaEnabled": "Enable verbose reasoning enabled",
+    "verboseReasoningAriaDisabled": "Enable verbose reasoning disabled",
+    "filterPiiLabel": "Filter PII from messages",
+    "filterPiiInfoAriaLabel": "More info about filter PII from messages",
+    "filterPiiTooltip": "Enable the privacy router. When on, a dedicated Privacy tab appears for configuring PII detection rules.",
+    "enablePrivateModeLabel": "Enable private mode",
+    "enablePrivateModeInfoAriaLabel": "More info about enable private mode",
+    "enablePrivateModeTooltip": "When on, every conversation with this agent runs in private mode — no chat history or memory is stored for any user. Use this for sensitive or compliance-bound deployments."
   },
   "tabsSkillsTab": {
     "heading": "Skills",
@@ -1956,6 +1983,10 @@
     "sidebarTitle": "Sidebar",
     "mobileDescription": "Displays the mobile sidebar.",
     "toggleSidebar": "Toggle Sidebar"
+  },
+  "welcomeChatConversationStarters": {
+    "heading": "Conversation Starters",
+    "selectStarterTemplate": "Select starter template: {prompt}"
   },
   "welcomeChatExploreMentors": {
     "exploreAgents": "Explore Agents",
@@ -2114,5 +2145,478 @@
     "reject": "Reject",
     "stickyNote": "Sticky Note",
     "changeAgent": "Change agent"
+  },
+  "errorIndex": {
+    "somethingWentWrong": "Something went wrong!",
+    "unexpectedErrorOccurred": "An unexpected error occurred"
+  },
+  "notFound": {
+    "pageNotFound": "Page Not Found",
+    "pageDoesNotExist": "The page you are looking for does not exist."
+  },
+  "loadingIndex": {
+    "loading": "loading..."
+  },
+  "layoutIndex": {
+    "loading": "Loading..."
+  },
+  "uploadsPage": {
+    "loading": "loading..."
+  },
+  "versionPage": {
+    "agent": "Agent"
+  },
+  "googleOauthCallbackPage": {
+    "successfullyConnectedService": "Successfully connected service",
+    "failedToConnectService": "Failed to connect service"
+  },
+  "toggleSidebarButton": {
+    "closeSidebar": "Close sidebar",
+    "openSidebar": "Open sidebar",
+    "toggleSidebar": "Toggle Sidebar"
+  },
+  "learnerModeSwitch": {
+    "userModeEnabled": "User mode enabled",
+    "userModeDisabled": "User mode disabled"
+  },
+  "mentorECommerceWrapper": {
+    "upgrade": "Upgrade"
+  },
+  "exploreMentorCardWithStar": {
+    "cardAriaLabel": "Explore agent: {name}. {description}",
+    "removeFromFavorites": "Remove from favorites",
+    "addToFavorites": "Add to favorites",
+    "unsetAsFavorite": "Unset as favorite",
+    "setAsFavorite": "Set as favorite",
+    "updatedOn": "Updated on {date}"
+  },
+  "exploreMentorCard": {
+    "openAgentAriaLabel": "Open agent {name}. {description}",
+    "recentlyAccessedOn": "Recently accessed on {date}"
+  },
+  "exploreEmptyState": {
+    "noAgentsFound": "Sorry, no agents found!"
+  },
+  "mentorIdPage": {
+    "shareableLinkNotEnabled": "The shareable link is not enabled. Please contact support to enable it.",
+    "contactSupport": "Contact Support"
+  },
+  "projectIdMentorIdPage": {
+    "shareableLinkNotEnabled": "The shareable link is not enabled. Please contact support to enable it.",
+    "contactSupport": "Contact Support"
+  },
+  "notificationsLoading": {
+    "loading": "loading..."
+  },
+  "projectsPage": {
+    "projectHasNoAgents": "This project has no agents yet.",
+    "couldNotOpenProject": "Couldn't open this project. Please try again."
+  },
+  "modalsDisclaimerModal": {
+    "userAgreement": "User Agreement",
+    "submitting": "Submitting...",
+    "accept": "I Accept"
+  },
+  "modalsEditMentorModalDialog": {
+    "editPromptDescription": "Edit {label}"
+  },
+  "modalsShortcutsModal": {
+    "title": "Keyboard Shortcuts"
+  },
+  "modalsVoiceTermsModal": {
+    "title": "Voice Terms and Conditions",
+    "description": "Review and accept the terms for voice-powered chat",
+    "heading": "Creating a voice-powered agent",
+    "ruleNoRecordingWithoutConsent": "Don't record third parties voice without their consent",
+    "ruleNoCopyrightedVoices": "Don't use copyrighted voices",
+    "ruleNoMaliciousUse": "Don't use voices in deepfakes, bullying, frauds, or scams",
+    "agreeAndContinue": "Agree & Continue"
+  },
+  "modalsPromptGalleryModalCategorySection": {
+    "promptLabel": "Prompt",
+    "loading": "Loading...",
+    "seeMore": "See More"
+  },
+  "modalsPromptGalleryModalEmptyPrompts": {
+    "noPromptsAvailable": "No prompts available",
+    "noPromptsHelpText": "There are no prompts in this category yet. Click the \"Add Prompt\" button to create the first one."
+  },
+  "modalsPromptGalleryModalPromptCard": {
+    "promptDeletedSuccess": "Prompt deleted successfully",
+    "promptDeleteFailed": "Failed to delete prompt",
+    "edit": "Edit",
+    "run": "Run",
+    "copied": "Copied",
+    "copy": "Copy",
+    "delete": "Delete"
+  },
+  "flowTab": {
+    "comingSoon": "Flow content coming soon"
+  },
+  "promptsTabCopyButton": {
+    "textCopiedToClipboard": "Text copied to clipboard",
+    "copyTextToClipboard": "Copy text to clipboard",
+    "copied": "Copied",
+    "copy": "Copy"
+  },
+  "datasetsTabTrainOrDeleteModal": {
+    "dialogTitle": "What would you like to do?",
+    "description": "This dataset is currently untrained. You can train it to make it available for your agent, or permanently delete it if it's no longer needed.",
+    "deleteButton": "Delete",
+    "trainingButton": "Training...",
+    "trainButton": "Train"
+  },
+  "datasetsTabDatasetItemList": {
+    "noDatasetsFound": "No datasets found"
+  },
+  "mcpTabIndex": {
+    "description": "Manage Model Context Protocol connectors for your agent."
+  },
+  "memoryTabBulkDeleteMemoryModal": {
+    "confirmationTextAll": "Are you sure you want to delete all memories? This action cannot be undone.",
+    "confirmationTextCategory": "Are you sure you want to delete all memories in the {category} category? This action cannot be undone.",
+    "titleAll": "Delete All Memories",
+    "titleCategory": "Delete All {category} Memories",
+    "cancelButton": "Cancel",
+    "deletingButton": "Deleting...",
+    "deleteButton": "Delete"
+  },
+  "flaggedPromptsIndex": {
+    "title": "Flagged Prompts",
+    "noFlaggedPrompts": "No flagged prompts found"
+  },
+  "flaggedPromptsFlaggedPromptMobileDetail": {
+    "dialogTitle": "Flagged Prompt Details",
+    "flaggedBySystem": "Flagged by {type} System",
+    "systemLabel": "{type} System",
+    "deleteButton": "Delete"
+  },
+  "flaggedPromptsFlaggedPromptDetail": {
+    "flaggedBySystem": "Flagged by {type} System",
+    "systemLabel": "{type} System",
+    "deleteButton": "Delete",
+    "selectPrompt": "Select a flagged prompt to view details."
+  },
+  "flaggedPromptsFlaggedPromptsList": {
+    "noFlaggedPrompts": "No flagged prompts found"
+  },
+  "flaggedPromptsFlaggedPromptsSummary": {
+    "totalFlaggedPrompts": "{count} Total Flagged Prompts",
+    "description": "Review prompts that have been flagged by our automated moderation and safety systems. Each flagged prompt includes the user's information, the flagged content, and the system's analysis. Use the contact feature to reach out to users directly through the notification system for follow-up or clarification."
+  },
+  "useEmbedTab": {
+    "validWebsiteUrlRequired": "Please specify a valid Website URL",
+    "unknownErrorOccurred": "Unknown error occurred",
+    "unknownErrorTryAgain": "An Unknown error occurred. Please try again",
+    "validUrlRequired": "A valid url is required!",
+    "failedToCreateRedirectToken": "Failed to create redirect token for website ({website}) in org ({org})"
+  },
+  "freeTrialDialog": {
+    "freePackageLine1": "You're currently using our free package with basic access to agents and you've used all your credits.",
+    "freePackageLine2": "Upgrade to unlock unlimited chat time, custom data sources, and advanced agent behaviors.",
+    "freePackageLine3Before": "For organizations needing enterprise solutions,",
+    "freePackageLine3After": "for special packages.",
+    "contactOurTeam": "contact our team",
+    "studentPackageLine1": "You're accessing premium features through your institution's subscription and you've used all your credits.",
+    "studentPackageLine2": "Enjoy unlimited chat time and access to specialized agents. Some advanced customization options may require additional permissions.",
+    "studentPackageLine3Before": "For questions about your access or institutional features,",
+    "contactSupport": "contact support",
+    "paidPackageLine1": "You've used all your available credits for this period. Your full access to premium features will renew on your next billing cycle.",
+    "paidPackageLine2": "To continue creating custom agents and accessing advanced features immediately, you can purchase additional credits or upgrade to a higher plan.",
+    "paidPackageLine3Before": "For enterprise solutions or high-volume needs,",
+    "paidPackageLine3After": "for customized options.",
+    "contactOurSalesTeam": "contact our sales team",
+    "defaultLine1": "Upgrade to create your own agents.",
+    "defaultLine2": "Enjoy unlimited chat time, custom data sources, and create your own specialized agents.",
+    "defaultLine3Before": "For full enterprise control — trusted by leading universities and companies —",
+    "contactOurPartnershipsTeam": "contact our partnerships team."
+  },
+  "authPopover": {
+    "tryAdvanced": "Try advanced features for free",
+    "getBetterResponses": "Get better responses, create agents with your data, and more by logging in.",
+    "logIn": "Log in",
+    "signUpForFree": "Sign up for free"
+  },
+  "fileDropZone": {
+    "dropYourFilesHere": "Drop your files here",
+    "dropAnyFile": "Drop any file here to add it to the conversation"
+  },
+  "documentSidebar": {
+    "retrievedDocuments": "Retrieved Documents"
+  },
+  "chatInputForm": {
+    "uploadingFiles": "Uploading {count} file{count, plural, one {} other {s}}...",
+    "listening": "Listening... {time}",
+    "processing": "Processing...",
+    "askAnything": "Ask anything",
+    "noChatPermission": "Sorry about that! You don't have permission to chat."
+  },
+  "errorPage": {
+    "backToHome": "Back to Home",
+    "poweredBy": "Powered by",
+    "inNewYork": "in New York"
+  },
+  "serviceWorkerProvider": {
+    "appUpdateAvailable": "App update available",
+    "appUpdateDescription": "A new version is ready. Click to update.",
+    "update": "Update",
+    "cacheCleared": "Cache cleared",
+    "cacheClearedDescription": "All cached data has been cleared."
+  },
+  "liveKitVoiceChat": {
+    "microphonePermissionDenied": "Microphone permission denied. Please enable microphone in your browser settings.",
+    "failedToInitiateCall": "Failed to initiate call. Please try again.",
+    "failedToConnectToRoom": "Failed to connect to room. Please try again.",
+    "microphoneNotEnabled": "Microphone is not enabled. Please enable microphone in your browser settings."
+  },
+  "chatAiMessageSpeak": {
+    "loadingAudio": "Loading audio",
+    "stopReadingAloud": "Stop Reading Aloud",
+    "readAloud": "Read Aloud"
+  },
+  "chatMessagesCanvasMessagePreview": {
+    "generating": "Generating...",
+    "openCanvas": "Open Canvas"
+  },
+  "chatMessagesImagePreviewModal": {
+    "preview": "Preview"
+  },
+  "chatMessagesMessagePreview": {
+    "untitledArtifact": "Untitled Artifact",
+    "version": "Version {versionNumber}"
+  },
+  "chatLoadingMessage": {
+    "justASec": "Just a sec..."
+  },
+  "chatReasoningSection": {
+    "thinking": "Thinking",
+    "thought": "Thought"
+  },
+  "chatSubmitMessageButton": {
+    "connectingEllipsis": "Connecting...",
+    "uploadingFiles": "Uploading Files",
+    "sendMessageTitle": "Send Message",
+    "connecting": "Connecting",
+    "sendMessage": "Send message"
+  },
+  "chatToolCallIndicator": {
+    "usedTools": "Used {count, plural, one {# tool} other {# tools}}"
+  },
+  "chatToolCallItem": {
+    "query": "Query",
+    "result": "Result"
+  },
+  "chatToastErrorMessage": {
+    "errorBody": "Sorry about that! {message} Please try again or <contactLink>contact us</contactLink>.",
+    "textUsAt": "If you prefer, text us at <phoneLink>{phone}</phoneLink>."
+  },
+  "chatInputFormMemoryButton": {
+    "memory": "Memory"
+  },
+  "chatInputFormWebSearchButton": {
+    "webSearchDisabled": "Web Search Disabled",
+    "webSearchEnabled": "Web Search Enabled"
+  },
+  "chatInputFormDeepResearchButton": {
+    "deepResearch": "Deep Research"
+  },
+  "advancedChatAdvancedChatHeader": {
+    "cannotSwitchTabsWhileStreaming": "You cannot switch tabs while streaming"
+  },
+  "chatInputFormOutsideButtons": {
+    "allowPopupsToConnectGoogle": "Please allow popups for this site to connect Google services",
+    "failedToGetAuthUrl": "Failed to get authentication URL",
+    "failedToInitiateGoogleAuth": "Failed to initiate Google authentication",
+    "webSearch": "Web Search",
+    "code": "Code",
+    "image": "Image",
+    "googleSlides": "Google Slides",
+    "googleDocs": "Google Docs",
+    "powerPoint": "PowerPoint",
+    "connecting": "(connecting...)",
+    "more": "More"
+  },
+  "projectsProjectMentorsList": {
+    "agentRemoved": "Agent removed from project",
+    "removeError": "Failed to remove agent",
+    "noAgentsAssigned": "No agents assigned to this project yet.",
+    "selectAgentsBelow": "Select agents below to add them to your project.",
+    "projectAgents": "Project Agents",
+    "addAgent": "Add Agent",
+    "selectAgentAriaLabel": "Select agent {name}",
+    "removeFromProject": "Remove from project"
+  },
+  "projectsAddMentorToProjectModal": {
+    "agentAdded": "Agent added to project",
+    "addError": "Failed to add agent to project",
+    "addAgentToProject": "Add Agent to {projectName}",
+    "availableAgents": "Available Agents",
+    "done": "Done"
+  },
+  "projectsProjectActionButtons": {
+    "viewProjectFilesAriaLabel": "View project files",
+    "addFilesToProjectAriaLabel": "Add files to project",
+    "projectFiles": "Project files",
+    "addFiles": "Add files",
+    "chatsCanAccessFiles": "Chats in this project can access file content",
+    "filesAdded": "{count, plural, one {# file added} other {# files added}}",
+    "editInstructionsAriaLabel": "Edit project instructions",
+    "addInstructionsAriaLabel": "Add project instructions",
+    "projectInstructions": "Project Instructions",
+    "addProjectInstructions": "Add project instructions",
+    "tailorResponses": "Tailor the way the agent responds in this project"
+  },
+  "modelDownloadFirstLaunchPromptDialog": {
+    "title": "Download Local AI Model?",
+    "description": "We detected that you have Ollama installed. Would you like to download the <strong>Phi Mini 3</strong> model for local AI processing?",
+    "modelSizeLabel": "Model size:",
+    "modelSizeValue": "~2.4 GB",
+    "requiredSpaceLabel": "Required space:",
+    "requiredSpaceValue": "5 GB free",
+    "downloadLaterHint": "You can always download the model later from the navbar menu.",
+    "later": "Later",
+    "downloadNow": "Download Now"
+  },
+  "workflowsWorkflowPreviewChat": {
+    "previewYourAgent": "Preview your agent",
+    "promptAgentHint": "Prompt the agent as if you're the user."
+  },
+  "useModelDownload": {
+    "desktopAppRequired": "Desktop app required for local model download",
+    "modelDownloadedSuccessfully": "Model downloaded successfully!",
+    "downloadFailed": "Download failed: {errorMessage}",
+    "downloadCancelled": "Download cancelled",
+    "failedToEnableLocalModels": "Failed to enable local models: {errorMessage}",
+    "modelNotFound": "Model not found",
+    "failedToDownloadModel": "Failed to download model: {errorMessage}",
+    "loadedModel": "Loaded model: {model}",
+    "failedToLoadModel": "Failed to load model: {errorMessage}",
+    "modelDownloadedAndLoaded": "Model downloaded and loaded: {model}",
+    "statusLocalLlmAvailable": "Local LLM available via Foundry Local (preferred)",
+    "statusModelInstalled": "Model installed",
+    "statusStartingDownload": "Starting download...",
+    "statusDownloadComplete": "Download complete",
+    "statusDownloadingModel": "Downloading {model}...",
+    "statusLoadingModel": "Loading {model}...",
+    "statusModelReady": "Model ready: {model}",
+    "statusFailedToDownload": "Failed to download {model}",
+    "statusInstallingFoundry": "Installing Foundry Local...",
+    "statusDownloadingDefaultModel": "Downloading default model (qwen2.5-0.5b)...",
+    "statusFoundryInstalledSuccessfully": "Foundry Local installed successfully",
+    "statusFailedToInstallFoundry": "Failed to install Foundry Local"
+  },
+  "useScreenSharing": {
+    "failedToInitiateCall": "Failed to initiate call. Please try again.",
+    "failedToConnectToRoom": "Failed to connect to room. Please try again.",
+    "screenSharingNotSupported": "Screen sharing is not supported on this device. Please use a desktop browser.",
+    "microphoneNotEnabled": "Microphone is not enabled. Please enable microphone in your browser settings.",
+    "screenSharingCouldNotBeStarted": "Screen sharing could not be started. Please ensure your browser supports screen sharing and that you have granted the necessary permissions."
+  },
+  "useOneDrivePicker": {
+    "failedToLoadSdk": "Failed to load OneDrive SDK",
+    "errorProcessingAuthentication": "Error processing OneDrive authentication",
+    "agentNotFound": "Agent not found",
+    "documentQueuedForTraining": "Document has been queued for training",
+    "credentialsNotLoadedYet": "OneDrive credentials are not loaded yet",
+    "sdkNotLoadedYet": "OneDrive SDK not loaded yet",
+    "errorSelectingFiles": "Error selecting files from OneDrive",
+    "failedToOpenPicker": "Failed to open OneDrive picker"
+  },
+  "useOneDrivePickerV2": {
+    "failedToLoadSdk": "Failed to load OneDrive SDK",
+    "credentialsNotFound": "OneDrive credentials not found",
+    "failedToLoadCredentials": "Failed to load OneDrive credentials",
+    "credentialsNotLoadedYet": "OneDrive credentials are not loaded yet",
+    "sdkNotLoadedYet": "OneDrive SDK not loaded yet",
+    "filePicked": "OneDrive file picked",
+    "filePickCancelled": "OneDrive file pick cancelled",
+    "failedToPickFile": "Failed to pick OneDrive file"
+  },
+  "useOneDrivePickerV3": {
+    "documentQueuedForTraining": "Document has been queued for training",
+    "noFileSelected": "No file selected",
+    "errorSelectingFile": "Error selecting file"
+  },
+  "useVoiceChat": {
+    "couldNotProcessAudio": "Could not process your audio, please try again"
+  },
+  "useGoogleDrivePicker": {
+    "errorProcessingPickerSelection": "Error processing picker selection",
+    "errorWithPicker": "Error with Google Drive picker. Try refreshing the page if it gets stuck.",
+    "failedToOpenPicker": "Failed to open Google Drive picker",
+    "failedToOpenPickerPermission": "Failed to open Google Drive picker. This might be due to permission issues (403 error).",
+    "agentNotFound": "Agent not found",
+    "documentQueuedForTraining": "Document has been queued for training",
+    "pickerClosed": "Google Drive picker closed",
+    "unableToClosePickerModal": "Unable to close picker modal. Please refresh the page.",
+    "credentialsNotLoadedYet": "Google Drive credentials are not loaded yet",
+    "pickerNotLoadedYet": "Google Picker is not loaded yet. Please try again."
+  },
+  "useGoogleDrivePickerV2": {
+    "failedToFetchCredentials": "Failed to fetch Google Drive credentials",
+    "notImplemented": "Not implemented"
+  },
+  "useGoogleDrivePickerV3": {
+    "errorAddingTrainingDocument": "Error adding training document"
+  },
+  "useUserAgreement": {
+    "userAgreementAccepted": "User Agreement accepted",
+    "failedToUpdateStatus": "Failed to update user agreement status"
+  },
+  "useDropboxPicker": {
+    "agentNotFound": "Agent not found",
+    "documentQueuedForTraining": "Document has been queued for training"
+  },
+  "useWebsiteCrawlerResource": {
+    "webCrawlStarted": "Web crawl started and queued for training",
+    "errorSubmittingWebCrawlData": "Error submitting web crawl data"
+  },
+  "useCanvasVersionNavigation": {
+    "unableToLoadVersion": "Unable to load version",
+    "versionRestored": "Version restored",
+    "failedToRestoreVersion": "Failed to restore version"
+  },
+  "useFileDragDrop": {
+    "droppedFileTypeNotSupported": "The dropped file type is not supported.",
+    "filesRejected": "{rejectedCount, plural, one {# file was} other {# files were}} rejected due to unsupported type."
+  },
+  "useCreateMentor": {
+    "agentCreatedSuccessfully": "Agent created successfully",
+    "failedToCreateAgent": "Failed to create agent"
+  },
+  "useToggleTools": {
+    "agentUpdatedSuccessfully": "Agent updated successfully",
+    "failedToUpdateTool": "Failed to update tool"
+  },
+  "use402ErrorCheck": {
+    "insufficientBalance": "Insufficient balance. Please add credits to continue."
+  },
+  "providersIndex": {
+    "agentSwitchedSuccessfully": "Agent switched successfully"
+  },
+  "useUser": {
+    "switchToLearnerModeMessage": "Switching to learner mode will redirect you to the chat page.",
+    "areYouSure": "Are you sure?"
+  },
+  "providersUseUser": {
+    "switchToLearnerModeMessage": "Switching to learner mode will redirect you to the chat page.",
+    "areYouSure": "Are you sure?"
+  },
+  "useShortcuts": {
+    "startNewChat": "Start New Chat",
+    "focusInput": "Focus Input",
+    "toggleSidebar": "Toggle Sidebar",
+    "openShortcuts": "Open Shortcuts"
+  },
+  "userNavigate": {
+    "newChat": "New Chat",
+    "agents": "Agents",
+    "newAgent": "New Agent",
+    "inviteUsers": "Invite Users",
+    "workflows": "Workflows",
+    "projects": "Projects",
+    "notifications": "Notifications",
+    "analytics": "Analytics",
+    "settings": "Settings"
   }
 }

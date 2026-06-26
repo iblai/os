@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { ChevronRight, Wrench } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import {
   Collapsible,
   CollapsibleContent,
@@ -26,6 +27,7 @@ export function ToolCallItem({
   shouldPulse,
   isCurrentlyStreaming,
 }: ToolCallItemProps) {
+  const t = useTranslations('chatToolCallItem');
   const [isOpen, setIsOpen] = useState(() => isCurrentlyStreaming);
 
   // Auto-collapse when streaming ends
@@ -80,7 +82,7 @@ export function ToolCallItem({
           {query && (
             <div className="flex items-start gap-2 bg-blue-50/60 px-3 py-2 dark:bg-blue-950/20">
               <span className="mt-0.5 shrink-0 text-[10px] font-semibold tracking-wide text-blue-700 uppercase dark:text-blue-300">
-                Query
+                {t('query')}
               </span>
               <span className="text-gray-700 dark:text-gray-300">{query}</span>
             </div>
@@ -88,7 +90,7 @@ export function ToolCallItem({
           {result && (
             <div className="border-t border-blue-100 px-3 py-2 dark:border-blue-900">
               <span className="mb-1.5 block text-[10px] font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
-                Result
+                {t('result')}
               </span>
               <div className="max-h-48 overflow-y-auto leading-relaxed whitespace-pre-wrap text-gray-600 dark:text-gray-300">
                 {result}

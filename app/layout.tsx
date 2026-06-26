@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { Open_Sans } from 'next/font/google';
 import { Suspense } from 'react';
 import { NextIntlClientProvider } from 'next-intl';
-import { getLocale, getMessages } from 'next-intl/server';
+import { getLocale, getMessages, getTranslations } from 'next-intl/server';
 
 import Providers from '@/providers';
 import { Toaster } from '@/components/ui/sonner';
@@ -42,6 +42,7 @@ export default async function RootLayout({
 }>) {
   const locale = await getLocale();
   const messages = await getMessages();
+  const t = await getTranslations('layoutIndex');
 
   return (
     <html lang={locale} suppressHydrationWarning>
@@ -83,7 +84,7 @@ export default async function RootLayout({
       </head>
       <body className={`${openSans.variable} antialiased`}>
         {/* Initial loader - shows immediately before React hydrates */}
-        <div id="initial-loader" role="status" aria-label="Loading...">
+        <div id="initial-loader" role="status" aria-label={t('loading')}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="24"

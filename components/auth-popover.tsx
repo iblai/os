@@ -1,6 +1,7 @@
 'use client';
 
 import { MouseEvent, useCallback, useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import {
   Popover,
@@ -21,6 +22,7 @@ type AuthPopoverProps = {
 };
 
 export function AuthPopover({ children, tenantKey }: AuthPopoverProps) {
+  const t = useTranslations('authPopover');
   const [open, setOpen] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
 
@@ -110,19 +112,14 @@ export function AuthPopover({ children, tenantKey }: AuthPopoverProps) {
       {shouldShowAd && (
         <PopoverContent className="w-80 p-4">
           <div className="space-y-1.5">
-            <h3 className="font-medium text-gray-900">
-              Try advanced features for free
-            </h3>
-            <p className="text-sm text-gray-600">
-              Get better responses, create agents with your data, and more by
-              logging in.
-            </p>
+            <h3 className="font-medium text-gray-900">{t('tryAdvanced')}</h3>
+            <p className="text-sm text-gray-600">{t('getBetterResponses')}</p>
             <div className="mt-4 flex space-x-2">
               <Button onClick={handleLogin} className="ibl-button-primary">
-                Log in
+                {t('logIn')}
               </Button>
               <Button onClick={handleLogin} variant="outline">
-                Sign up for free
+                {t('signUpForFree')}
               </Button>
             </div>
           </div>

@@ -1,3 +1,4 @@
+import { useTranslations } from 'next-intl';
 import { Mentor } from '@/features/mentors/types';
 import { useNavigate } from '@/hooks/user-navigate';
 import { formatDateString } from '@/lib/utils';
@@ -9,6 +10,7 @@ interface MentorCardProps {
 }
 
 export function MentorCard({ mentor }: MentorCardProps) {
+  const t = useTranslations('exploreMentorCard');
   const { navigateToMentor } = useNavigate();
   // const selectMentor = typeof window !== 'undefined' && window.location.pathname.includes('/mentor-mobile')
   //   ? useMentorStore((state) => state.selectMentor)
@@ -26,7 +28,10 @@ export function MentorCard({ mentor }: MentorCardProps) {
     <button
       className="flex h-full w-full cursor-pointer items-center gap-4 overflow-hidden rounded-lg border border-gray-200 bg-white p-2 py-4 text-left transition-colors hover:border-blue-500 focus:border-gray-400 focus:ring-1 focus:ring-gray-400 focus:ring-offset-1 focus:outline-none sm:gap-3 sm:p-3 md:p-4"
       onClick={handleClick}
-      aria-label={`Open agent ${mentor.name}. ${mentor.description}`}
+      aria-label={t('openAgentAriaLabel', {
+        name: mentor.name,
+        description: mentor.description,
+      })}
     >
       <Avatar className="h-8 w-8 flex-shrink-0 rounded-full sm:h-10 sm:w-10 md:h-12 md:w-12">
         <AvatarImage
@@ -47,7 +52,9 @@ export function MentorCard({ mentor }: MentorCardProps) {
         </p>
         {mentor.recently_accessed_at && (
           <p className="hidden truncate text-xs text-gray-500 sm:block">
-            Recently accessed on {formatDateString(mentor.recently_accessed_at)}
+            {t('recentlyAccessedOn', {
+              date: formatDateString(mentor.recently_accessed_at),
+            })}
           </p>
         )}
       </div>

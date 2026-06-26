@@ -8,10 +8,12 @@ import {
 
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { useUsername } from './use-user';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { extractErrorMessage } from '@/components/modals/edit-mentor-modal/tabs/datasets-tab/resource-modal/utils';
 
 const useOneDrivePicker = () => {
+  const t = useTranslations('useOneDrivePickerV3');
   const [onedriveAppId, setOnedriveAppId] = useState<string | null>(null);
   const [fullDomain, setFullDomain] = useState<string | null>(null);
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
@@ -71,7 +73,7 @@ const useOneDrivePicker = () => {
         userId: username ?? '',
         formData: trainPayload,
       }).unwrap();
-      toast.success('Document has been queued for training');
+      toast.success(t('documentQueuedForTraining'));
     } catch (error: unknown) {
       console.error(JSON.stringify(error));
       const errorMessage = extractErrorMessage(
@@ -98,10 +100,10 @@ const useOneDrivePicker = () => {
       },
       success: handleSuccess,
       cancel: function () {
-        toast.info('No file selected');
+        toast.info(t('noFileSelected'));
       },
       error: function () {
-        toast.error('Error selecting file');
+        toast.error(t('errorSelectingFile'));
       },
     };
     window.OneDrive.open(odOptions);

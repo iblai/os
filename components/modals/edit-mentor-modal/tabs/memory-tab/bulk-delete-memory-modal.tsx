@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import {
   Dialog,
   DialogContent,
@@ -25,22 +26,23 @@ export function BulkDeleteMemoryModal({
   isDeleting,
   selectedCategory,
 }: BulkDeleteMemoryModalProps) {
+  const t = useTranslations('memoryTabBulkDeleteMemoryModal');
   const isDeleteAll = selectedCategory === 'All';
 
   const getConfirmationText = () => {
     if (isDeleteAll) {
-      return 'Are you sure you want to delete all memories? This action cannot be undone.';
+      return t('confirmationTextAll');
     }
 
-    return `Are you sure you want to delete all memories in the ${selectedCategory} category? This action cannot be undone.`;
+    return t('confirmationTextCategory', { category: selectedCategory });
   };
 
   const getTitle = () => {
     if (isDeleteAll) {
-      return 'Delete All Memories';
+      return t('titleAll');
     }
 
-    return `Delete All ${selectedCategory} Memories`;
+    return t('titleCategory', { category: selectedCategory });
   };
 
   return (
@@ -52,14 +54,14 @@ export function BulkDeleteMemoryModal({
         <p className="text-muted-foreground text-sm">{getConfirmationText()}</p>
         <div className="mt-4 flex justify-end gap-2">
           <Button variant="outline" onClick={onCancel} disabled={isDeleting}>
-            Cancel
+            {t('cancelButton')}
           </Button>
           <Button
             className="ibl-button-primary"
             onClick={onConfirm}
             disabled={isDeleting}
           >
-            {isDeleting ? 'Deleting...' : 'Delete'}
+            {isDeleting ? t('deletingButton') : t('deleteButton')}
           </Button>
         </div>
       </DialogContent>

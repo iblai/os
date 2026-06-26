@@ -1,5 +1,8 @@
+'use client';
+
 import React, { useEffect, useMemo, useState } from 'react';
 import { FileText } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import Markdown from '@/components/markdown';
 import { CanvasMessagePreview } from './canvas-message-preview';
 import type { CanvasOpenPayload } from './types';
@@ -98,6 +101,7 @@ export function MessagePreview({
   onOpenCanvas,
   streamingArtifactId,
 }: MessagePreviewProps) {
+  const t = useTranslations('chatMessagesMessagePreview');
   const currentArtifact = useMemo(
     () => getCurrentArtifactVersion(artifactVersions),
     [artifactVersions],
@@ -116,7 +120,7 @@ export function MessagePreview({
     const nextTitle =
       selectedVersion?.title ||
       selectedVersion?.artifact?.title ||
-      'Untitled Artifact';
+      t('untitledArtifact');
     setDisplayTitle(nextTitle);
   }, [selectedVersion?.title, selectedVersion?.artifact?.title]);
 
@@ -148,7 +152,7 @@ export function MessagePreview({
   const toolType = determineToolType(fileExtension);
 
   const payload: CanvasOpenPayload = {
-    title: displayTitle || 'Untitled Artifact',
+    title: displayTitle || t('untitledArtifact'),
     content: artifactContent,
     toolType,
     artifactId: artifact.id,
@@ -172,7 +176,7 @@ export function MessagePreview({
         streamingArtifactId !== undefined && artifactId === streamingArtifactId;
       return (
         <CanvasMessagePreview
-          title={displayTitle || 'Untitled Artifact'}
+          title={displayTitle || t('untitledArtifact')}
           content={artifactContent}
           previewText={previewText}
           payload={payload}
@@ -192,10 +196,10 @@ export function MessagePreview({
         </div>
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-medium text-gray-900">
-            {displayTitle || 'Untitled Artifact'}
+            {displayTitle || t('untitledArtifact')}
           </div>
           <div className="text-xs text-gray-600">
-            Version {selectedVersion.version_number}
+            {t('version', { versionNumber: selectedVersion.version_number })}
           </div>
         </div>
       </button>

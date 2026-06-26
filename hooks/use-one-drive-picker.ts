@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 
 import {
@@ -15,6 +16,7 @@ import { extractErrorMessage } from '@/components/modals/edit-mentor-modal/tabs/
 const ONEDRIVE_SDK_URL = 'https://js.live.net/v7.2/OneDrive.js';
 
 const useOneDrivePicker = () => {
+  const t = useTranslations('useOneDrivePicker');
   const [onedriveAppId, setOnedriveAppId] = useState(null);
   const [fullDomain, setFullDomain] = useState<null | string>(null);
   const [isSDKLoaded, setIsSDKLoaded] = useState(false);
@@ -42,7 +44,7 @@ const useOneDrivePicker = () => {
           setIsSDKLoaded(true);
         };
         script.onerror = () => {
-          toast.error('Failed to load OneDrive SDK');
+          toast.error(t('failedToLoadSdk'));
           sdkLoadingStarted.current = false;
         };
 
@@ -89,7 +91,7 @@ const useOneDrivePicker = () => {
         } catch (error) {
           console.error('Error parsing OAuth data:', error);
           console.error(JSON.stringify({ tenant: tenantKey, error }));
-          toast.error('Error processing OneDrive authentication');
+          toast.error(t('errorProcessingAuthentication'));
         }
       }
     };
@@ -171,7 +173,7 @@ const useOneDrivePicker = () => {
 
   const handleSuccessOnedrive = async (files) => {
     if (!mentorId) {
-      toast.error('Agent not found');
+      toast.error(t('agentNotFound'));
       return;
     }
 
@@ -190,7 +192,7 @@ const useOneDrivePicker = () => {
         formData: trainPayload,
       }).unwrap();
 
-      toast.success('Document has been queued for training');
+      toast.success(t('documentQueuedForTraining'));
     } catch (error: unknown) {
       console.error(JSON.stringify(error));
       const errorMessage = extractErrorMessage(
@@ -205,12 +207,12 @@ const useOneDrivePicker = () => {
 
   const pickOneDriveFile = useCallback(() => {
     if (!onedriveAppId) {
-      toast.error('OneDrive credentials are not loaded yet');
+      toast.error(t('credentialsNotLoadedYet'));
       return;
     }
 
     if (!isSDKLoaded || !window.OneDrive) {
-      toast.error('OneDrive SDK not loaded yet');
+      toast.error(t('sdkNotLoadedYet'));
       return;
     }
 
@@ -233,14 +235,14 @@ const useOneDrivePicker = () => {
         },
         error: function (e) {
           console.error('OneDrive picker error:', e);
-          toast.error('Error selecting files from OneDrive');
+          toast.error(t('errorSelectingFiles'));
         },
       };
 
       window.OneDrive.open(odOptions);
     } catch (error) {
       console.error('Failed to open OneDrive picker:', error);
-      toast.error('Failed to open OneDrive picker');
+      toast.error(t('failedToOpenPicker'));
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     }
   }, [

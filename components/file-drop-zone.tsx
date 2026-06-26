@@ -1,12 +1,14 @@
 'use client';
 
 import { FileUp } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 interface FileDropZoneProps {
   onDrop?: (files: File[]) => void;
 }
 
 export function FileDropZone({}: FileDropZoneProps) {
+  const t = useTranslations('fileDropZone');
   return (
     <div className="w-full rounded-xl border-2 border-dashed border-gray-300 bg-white/50 p-10 text-center backdrop-blur-sm transition-all duration-200 hover:border-gray-400">
       <div className="flex flex-col items-center justify-center gap-8">
@@ -20,11 +22,9 @@ export function FileDropZone({}: FileDropZoneProps) {
         </div>
         <div className="mt-2 space-y-2">
           <p className="text-xl font-semibold text-gray-800">
-            Drop your files here
+            {t('dropYourFilesHere')}
           </p>
-          <p className="text-sm text-gray-500">
-            Drop any file here to add it to the conversation
-          </p>
+          <p className="text-sm text-gray-500">{t('dropAnyFile')}</p>
         </div>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import {
   useListArtifactVersionsQuery,
@@ -90,6 +91,7 @@ export function useCanvasVersionNavigation({
   isInitialLoading = false,
   debouncedSaveCancel,
 }: UseCanvasVersionNavigationProps) {
+  const t = useTranslations('useCanvasVersionNavigation');
   // Version state
   const [currentVersion, setCurrentVersion] = useState<string | null>(null);
   const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
@@ -514,7 +516,7 @@ export function useCanvasVersionNavigation({
 
       // If we get here, all attempts failed
       if (lastError) {
-        toast.error('Unable to load version');
+        toast.error(t('unableToLoadVersion'));
         suppressNextOnChangeRef.current = false;
       }
       setIsVersionLoading(false);
@@ -579,10 +581,10 @@ export function useCanvasVersionNavigation({
       await refetchVersions();
       await viewVersion(version.id);
       setActiveVersionIsCurrent(true);
-      toast.success('Version restored');
+      toast.success(t('versionRestored'));
     } catch (error) {
       console.error('[Canvas] Error restoring version:', error);
-      toast.error('Failed to restore version');
+      toast.error(t('failedToRestoreVersion'));
     }
   }, [
     activeVersionId,

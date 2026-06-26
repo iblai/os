@@ -1,4 +1,5 @@
 import { toast } from 'sonner';
+import { useTranslations } from 'next-intl';
 
 import { type AdvancedTab } from '@iblai/iblai-js/web-utils';
 
@@ -17,6 +18,7 @@ export function AdvancedChatHeader({
   setActiveTab,
   isTyping,
 }: Props) {
+  const t = useTranslations('advancedChatAdvancedChatHeader');
   return (
     <>
       {/* Tabs */}
@@ -27,7 +29,7 @@ export function AdvancedChatHeader({
             type="button"
             onClick={() => {
               if (isTyping) {
-                toast.error('You cannot switch tabs while streaming');
+                toast.error(t('cannotSwitchTabsWhileStreaming'));
                 return;
               }
               setActiveTab(tab);

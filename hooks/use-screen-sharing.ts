@@ -8,6 +8,7 @@ import {
   LocalTrackPublication,
   Track,
 } from 'livekit-client';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { useCreateCallCredentialsMutation } from '@iblai/iblai-js/data-layer';
 
@@ -40,6 +41,7 @@ export function useScreenSharing({
   onConnectionStateChange,
   onScreenShareStopped,
 }: Props) {
+  const t = useTranslations('useScreenSharing');
   const [initiateCall] = useCreateCallCredentialsMutation();
   const [connectionState, setConnectionState] =
     React.useState<ScreenSharingConnectionState>('idle');
@@ -89,7 +91,7 @@ export function useScreenSharing({
       console.error(JSON.stringify(error));
       const errorMessage =
         // @ts-ignore error is unknown at the catch binding
-        error?.error?.error || 'Failed to initiate call. Please try again.';
+        error?.error?.error || t('failedToInitiateCall');
       console.error(JSON.stringify({ tenant: tenantKey, error }));
       toast.error(errorMessage);
       updateConnectionState('error');
@@ -104,7 +106,7 @@ export function useScreenSharing({
       } catch (error) {
         console.error('failed to connect to room', error);
         console.error(JSON.stringify({ tenant: tenantKey, error }));
-        toast.error('Failed to connect to room. Please try again.');
+        toast.error(t('failedToConnectToRoom'));
         updateConnectionState('error');
         onError?.();
         return;
@@ -112,9 +114,7 @@ export function useScreenSharing({
 
       // Check if screen sharing is supported before attempting
       if (!navigator.mediaDevices?.getDisplayMedia) {
-        toast.error(
-          'Screen sharing is not supported on this device. Please use a desktop browser.',
-        );
+        toast.error(t('screenSharingNotSupported'));
         updateConnectionState('error');
         onError?.();
         return;
@@ -126,9 +126,7 @@ export function useScreenSharing({
       } catch (error) {
         console.error('failed to enable microphone', error);
         console.error(JSON.stringify({ tenant: tenantKey, error }));
-        toast.error(
-          'Microphone is not enabled. Please enable microphone in your browser settings.',
-        );
+        toast.error(t('microphoneNotEnabled'));
         updateConnectionState('error');
         onError?.();
         return;
@@ -142,9 +140,7 @@ export function useScreenSharing({
       } catch (error) {
         console.error('failed to enable screen sharing', error);
         console.error(JSON.stringify({ tenant: tenantKey, error }));
-        toast.error(
-          'Screen sharing could not be started. Please ensure your browser supports screen sharing and that you have granted the necessary permissions.',
-        );
+        toast.error(t('screenSharingCouldNotBeStarted'));
         updateConnectionState('error');
         onError?.();
         return;

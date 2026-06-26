@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Trash2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { FlaggedPrompt } from './types';
 import { useState } from 'react';
 import { DeleteModerationLogModal } from './delete-moderation-log-modal';
@@ -25,6 +26,7 @@ export function FlaggedPromptMobileDetail({
   prompt,
   onDeleteSuccess,
 }: FlaggedPromptMobileDetailProps) {
+  const t = useTranslations('flaggedPromptsFlaggedPromptMobileDetail');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   return (
@@ -32,7 +34,7 @@ export function FlaggedPromptMobileDetail({
       <DialogContent className="flex max-h-[80vh] max-w-lg flex-col p-0">
         <DialogHeader className="border-b border-gray-200 px-6 pt-6 pb-4">
           <DialogTitle className="text-lg font-semibold text-gray-900">
-            Flagged Prompt Details
+            {t('dialogTitle')}
           </DialogTitle>
         </DialogHeader>
         <div className="scrollbar-hide flex-1 overflow-y-auto p-6">
@@ -40,7 +42,7 @@ export function FlaggedPromptMobileDetail({
             <>
               <div className="mb-4">
                 <h3 className="mb-1 text-base font-semibold text-gray-700">
-                  Flagged by {prompt.type} System
+                  {t('flaggedBySystem', { type: prompt.type })}
                 </h3>
                 <span className="text-sm text-gray-500">{prompt.fullDate}</span>
               </div>
@@ -72,7 +74,7 @@ export function FlaggedPromptMobileDetail({
                   </div>
                   <div className="flex-1">
                     <div className="font-medium text-gray-700">
-                      {prompt.type} System
+                      {t('systemLabel', { type: prompt.type })}
                     </div>
                     <p className="mt-1 text-sm whitespace-pre-line text-gray-500">
                       {prompt.systemResponse}
@@ -87,7 +89,7 @@ export function FlaggedPromptMobileDetail({
                     className="ibl-button-primary flex w-full items-center justify-center gap-2"
                   >
                     <Trash2 className="h-4 w-4" />
-                    Delete
+                    {t('deleteButton')}
                   </Button>
                 </div>
               </div>

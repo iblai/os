@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { ChevronRight } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import {
   Collapsible,
   CollapsibleContent,
@@ -21,6 +22,7 @@ export function ReasoningSection({
   isReasoning,
   isCurrentlyStreaming = false,
 }: ReasoningSectionProps) {
+  const t = useTranslations('chatReasoningSection');
   const [isOpen, setIsOpen] = useState(false);
 
   if (!reasoningContent) {
@@ -44,7 +46,7 @@ export function ReasoningSection({
             isOpen && 'rotate-90',
           )}
         />
-        <span>{isReasoning ? 'Thinking' : 'Thought'}</span>
+        <span>{isReasoning ? t('thinking') : t('thought')}</span>
         {isReasoning && isCurrentlyStreaming && (
           <span className="inline-flex gap-0.5">
             <span className="inline-block h-1 w-1 animate-bounce rounded-full bg-gray-500 [animation-delay:0ms]" />

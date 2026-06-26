@@ -5,11 +5,13 @@ import { useParams } from 'next/navigation';
 import { useNavigate } from './user-navigate';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { ResourceType } from '@/components/modals/edit-mentor-modal/tabs/datasets-tab/resource-types';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { useUsername } from './use-user';
 import { extractErrorMessage } from '@/components/modals/edit-mentor-modal/tabs/datasets-tab/resource-modal/utils';
 
 export function useWebsiteCrawlerResource(resource: ResourceType) {
+  const t = useTranslations('useWebsiteCrawlerResource');
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
   const { getMentorId } = useNavigate();
   const username = useUsername();
@@ -58,12 +60,12 @@ export function useWebsiteCrawlerResource(resource: ResourceType) {
         }).unwrap();
         form.reset();
         setCrawlerMatchPatterns([]);
-        toast.success('Web crawl started and queued for training');
+        toast.success(t('webCrawlStarted'));
       } catch (error: unknown) {
         console.error(JSON.stringify(error));
         const errorMessage = extractErrorMessage(
           error,
-          'Error submitting web crawl data',
+          t('errorSubmittingWebCrawlData'),
         );
 
         toast.error(errorMessage);

@@ -1,4 +1,5 @@
 import { Copy } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
@@ -12,6 +13,7 @@ type Props = {
 
 export function CopyButton({ text, disabled = false, className }: Props) {
   const { copy, status } = useCopyToClipboard(1000);
+  const t = useTranslations('promptsTabCopyButton');
 
   return (
     <Button
@@ -25,12 +27,12 @@ export function CopyButton({ text, disabled = false, className }: Props) {
       onClick={() => copy(text)}
       aria-label={
         status === 'success'
-          ? 'Text copied to clipboard'
-          : 'Copy text to clipboard'
+          ? t('textCopiedToClipboard')
+          : t('copyTextToClipboard')
       }
     >
       <Copy className="h-4 w-4" />
-      <span>{status === 'success' ? 'Copied' : 'Copy'}</span>
+      <span>{status === 'success' ? t('copied') : t('copy')}</span>
     </Button>
   );
 }

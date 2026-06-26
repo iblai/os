@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { ConnectorManagementContent } from './connector-management-content';
 import { useUsername } from '@/hooks/use-user';
 import { useNavigate } from '@/hooks/user-navigate';
@@ -13,6 +14,7 @@ interface McpTabProps {
 }
 
 export function McpTab({ onSelect }: McpTabProps = {}) {
+  const t = useTranslations('mcpTabIndex');
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
   const username = useUsername();
   const { getMentorId } = useNavigate();
@@ -23,9 +25,7 @@ export function McpTab({ onSelect }: McpTabProps = {}) {
       <div className="flex hidden h-[73px] flex-shrink-0 items-center border-b border-gray-200 bg-white p-4 lg:block">
         <div>
           <h3 className="mb-1 text-base font-medium text-gray-900">MCP</h3>
-          <p className="text-xs text-gray-700">
-            Manage Model Context Protocol connectors for your agent.
-          </p>
+          <p className="text-xs text-gray-700">{t('description')}</p>
         </div>
       </div>
       <div

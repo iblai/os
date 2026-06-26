@@ -1,5 +1,6 @@
 import React from 'react';
 import { useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import GoogleDrivePicker from 'google-drive-picker';
 import {
@@ -17,6 +18,7 @@ declare global {
 }
 
 const useGoogleDrivePicker = () => {
+  const t = useTranslations('useGoogleDrivePicker');
   const [authToken, setAuthToken] = React.useState<any>(null);
   const [driveFiles, setDriveFiles] = React.useState<any[]>([]);
   const [openPicker, authRes] = GoogleDrivePicker();
@@ -90,7 +92,7 @@ const useGoogleDrivePicker = () => {
   React.useEffect(() => {
     const handlePickerFileSelection = async () => {
       if (!mentorId) {
-        toast.error('Agent not found');
+        toast.error(t('agentNotFound'));
         return;
       }
 
@@ -126,7 +128,7 @@ const useGoogleDrivePicker = () => {
           formData: trainPayload,
         }).unwrap();
 
-        toast.success('Document has been queued for training');
+        toast.success(t('documentQueuedForTraining'));
         setDriveFiles([]); // Clear selected files after successful upload
       } catch (error: unknown) {
         console.error(JSON.stringify(error));
@@ -181,10 +183,10 @@ const useGoogleDrivePicker = () => {
       });
 
       setPickerError(null);
-      toast.success('Google Drive picker closed');
+      toast.success(t('pickerClosed'));
     } catch (error) {
       console.error('Error closing picker modal:', error);
-      toast.error('Unable to close picker modal. Please refresh the page.');
+      toast.error(t('unableToClosePickerModal'));
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     }
   }, []);
@@ -273,33 +275,29 @@ const useGoogleDrivePicker = () => {
               }
             } catch (error) {
               console.error('Error in picker callback:', error);
-              setPickerError('Error processing picker selection');
-              toast.error(
-                'Error with Google Drive picker. Try refreshing the page if it gets stuck.',
-              );
+              setPickerError(t('errorProcessingPickerSelection'));
+              toast.error(t('errorWithPicker'));
               console.error(JSON.stringify({ tenant: tenantKey, error }));
             }
           },
         });
       } catch (error) {
         console.error('Error opening picker:', error);
-        setPickerError('Failed to open Google Drive picker');
-        toast.error(
-          'Failed to open Google Drive picker. This might be due to permission issues (403 error).',
-        );
+        setPickerError(t('failedToOpenPicker'));
+        toast.error(t('failedToOpenPickerPermission'));
         console.error(JSON.stringify({ tenant: tenantKey, error }));
       }
     };
 
     if (!credentials.client_id || !credentials.developer_key) {
-      toast.error('Google Drive credentials are not loaded yet');
+      toast.error(t('credentialsNotLoadedYet'));
       return;
     }
 
     if (isPickerLoaded) {
       openPickerInternal();
     } else {
-      toast.error('Google Picker is not loaded yet. Please try again.');
+      toast.error(t('pickerNotLoadedYet'));
     }
   }, [
     credentials,

@@ -236,7 +236,8 @@
     "accountDescIntegrations": "Gérez vos intégrations avec d'autres services.",
     "accountDescMonetization": "Configurez les paywalls, la tarification et les revenus.",
     "accountDescAdvanced": "Configurez les paramètres avancés de l'organisation.",
-    "accountDescBilling": "Gérez votre facturation et votre abonnement."
+    "accountDescBilling": "Gérez votre facturation et votre abonnement.",
+    "myProjects": "Mes projets"
   },
   "appSidebarPinnedMessages": {
     "pinned": "Épinglé",
@@ -425,7 +426,9 @@
     "cancelButton": "Annuler",
     "confirmButton": "Confirmer",
     "confirmScreenSharingTitle": "Confirmer le partage d'écran",
-    "confirmScreenSharingDescription": "Souhaitez-vous démarrer un partage d'écran avec votre agent ?"
+    "confirmScreenSharingDescription": "Souhaitez-vous démarrer un partage d'écran avec votre agent ?",
+    "restrictedAccessMessage": "Oups ! Il semble que l’accès à moi soit réservé aux utilisateurs de <b>{platformName}</b>. Si vous souhaitez nous rejoindre, veuillez contacter notre <a target=\"_self\" href=\"mailto:{email}\">équipe d’assistance</a>",
+    "loginRequiredMessage": "Il semble que vous deviez être connecté pour discuter avec moi. Veuillez <a target=\"_self\" href=\"{joinUrl}\">vous connecter ou vous inscrire gratuitement</a> pour commencer !"
   },
   "chatInputFormCameraCaptureDialog": {
     "cameraUnavailableError": "La caméra n'est pas disponible dans ce navigateur.",
@@ -793,7 +796,18 @@
     "api": "API",
     "embed": "Intégration",
     "analytics": "Analytique",
-    "changeLanguage": "Changer de langue"
+    "changeLanguage": "Changer de langue",
+    "closeSidebar": "Fermer la barre latérale",
+    "openSidebar": "Ouvrir la barre latérale",
+    "toggleSidebar": "Basculer la barre latérale",
+    "llmModelIcon": "Icône du modèle LLM",
+    "agenticOs": "Agentic OS",
+    "selectLlmModelTitle": "Sélectionner le modèle LLM",
+    "selectLlmModel": "Sélectionner le modèle LLM",
+    "create": "Créer",
+    "createNewAgent": "Créer un nouvel agent",
+    "user": "Utilisateur",
+    "admin": "Administrateur"
   },
   "headerProfileButton": {
     "userProfile": "Profil utilisateur",
@@ -1072,7 +1086,8 @@
   "mentorsMentorSelectionGrid": {
     "searchPlaceholder": "Rechercher des agents",
     "loadingAgents": "Chargement des agents...",
-    "noAgentsFound": "Aucun agent trouvé correspondant à votre recherche."
+    "noAgentsFound": "Aucun agent trouvé correspondant à votre recherche.",
+    "selectAgentAriaLabel": "Sélectionner l'agent {name}"
   },
   "modalsAddPromptModal": {
     "promptCreatedSuccessfully": "Prompt créé avec succès",
@@ -1219,7 +1234,8 @@
     "guidedPromptContentAriaLabel": "Contenu de l'invite guidée",
     "guidedPromptLabel": "Invite guidée",
     "saving": "Enregistrement...",
-    "saveButton": "Enregistrer"
+    "saveButton": "Enregistrer",
+    "createAgentTitle": "Créer un Agent"
   },
   "modalsEditPromptModal": {
     "editTitle": "Modifier {label}",
@@ -1907,7 +1923,18 @@
     "deleteButton": "Supprimer",
     "voiceCallSettingsError": "L'enregistrement des paramètres d'appel vocal a échoué",
     "agentUpdatedSuccess": "Agent mis à jour avec succès",
-    "agentUpdateError": "Échec de la mise à jour de l'agent"
+    "agentUpdateError": "Échec de la mise à jour de l'agent",
+    "enableVerboseReasoningLabel": "Activer le raisonnement détaillé",
+    "enableVerboseReasoningInfoAriaLabel": "Plus d'informations sur l'activation du raisonnement détaillé",
+    "enableVerboseReasoningTooltip": "Afficher les étapes de raisonnement de l'agent pendant qu'il répond.",
+    "verboseReasoningAriaEnabled": "Raisonnement détaillé activé",
+    "verboseReasoningAriaDisabled": "Raisonnement détaillé désactivé",
+    "filterPiiLabel": "Filtrer les PII des messages",
+    "filterPiiInfoAriaLabel": "Plus d'informations sur le filtrage des PII des messages",
+    "filterPiiTooltip": "Activer le routeur de confidentialité. Lorsqu'il est activé, un onglet Confidentialité dédié apparaît pour configurer les règles de détection des PII.",
+    "enablePrivateModeLabel": "Activer le mode privé",
+    "enablePrivateModeInfoAriaLabel": "Plus d'informations sur l'activation du mode privé",
+    "enablePrivateModeTooltip": "Lorsqu'il est activé, chaque conversation avec cet agent s'exécute en mode privé : aucun historique de discussion ni mémoire n'est stocké pour aucun utilisateur. Utilisez-le pour les déploiements sensibles ou soumis à des exigences de conformité."
   },
   "tabsSkillsTab": {
     "heading": "Compétences",
@@ -1956,6 +1983,10 @@
     "sidebarTitle": "Barre latérale",
     "mobileDescription": "Affiche la barre latérale mobile.",
     "toggleSidebar": "Afficher/masquer la barre latérale"
+  },
+  "welcomeChatConversationStarters": {
+    "heading": "Amorces de conversation",
+    "selectStarterTemplate": "Sélectionner un modèle de démarrage : {prompt}"
   },
   "welcomeChatExploreMentors": {
     "exploreAgents": "Explorer les agents",
@@ -2114,5 +2145,478 @@
     "reject": "Rejeter",
     "stickyNote": "Note autocollante",
     "changeAgent": "Changer d'agent"
+  },
+  "errorIndex": {
+    "somethingWentWrong": "Une erreur s'est produite !",
+    "unexpectedErrorOccurred": "Une erreur inattendue s'est produite"
+  },
+  "notFound": {
+    "pageNotFound": "Page introuvable",
+    "pageDoesNotExist": "La page que vous recherchez n'existe pas."
+  },
+  "loadingIndex": {
+    "loading": "chargement..."
+  },
+  "layoutIndex": {
+    "loading": "Chargement..."
+  },
+  "uploadsPage": {
+    "loading": "chargement..."
+  },
+  "versionPage": {
+    "agent": "Agent"
+  },
+  "googleOauthCallbackPage": {
+    "successfullyConnectedService": "Service connecté avec succès",
+    "failedToConnectService": "Échec de la connexion du service"
+  },
+  "toggleSidebarButton": {
+    "closeSidebar": "Fermer la barre latérale",
+    "openSidebar": "Ouvrir la barre latérale",
+    "toggleSidebar": "Basculer la barre latérale"
+  },
+  "learnerModeSwitch": {
+    "userModeEnabled": "Mode utilisateur activé",
+    "userModeDisabled": "Mode utilisateur désactivé"
+  },
+  "mentorECommerceWrapper": {
+    "upgrade": "Mettre à niveau"
+  },
+  "exploreMentorCardWithStar": {
+    "cardAriaLabel": "Explorer l'agent : {name}. {description}",
+    "removeFromFavorites": "Retirer des favoris",
+    "addToFavorites": "Ajouter aux favoris",
+    "unsetAsFavorite": "Retirer des favoris",
+    "setAsFavorite": "Définir comme favori",
+    "updatedOn": "Mis à jour le {date}"
+  },
+  "exploreMentorCard": {
+    "openAgentAriaLabel": "Ouvrir l'agent {name}. {description}",
+    "recentlyAccessedOn": "Consulté récemment le {date}"
+  },
+  "exploreEmptyState": {
+    "noAgentsFound": "Désolé, aucun agent trouvé !"
+  },
+  "mentorIdPage": {
+    "shareableLinkNotEnabled": "Le lien de partage n'est pas activé. Veuillez contacter le support pour l'activer.",
+    "contactSupport": "Contacter le support"
+  },
+  "projectIdMentorIdPage": {
+    "shareableLinkNotEnabled": "Le lien de partage n'est pas activé. Veuillez contacter le support pour l'activer.",
+    "contactSupport": "Contacter le support"
+  },
+  "notificationsLoading": {
+    "loading": "chargement..."
+  },
+  "projectsPage": {
+    "projectHasNoAgents": "Ce projet n'a pas encore d'agents.",
+    "couldNotOpenProject": "Impossible d'ouvrir ce projet. Veuillez réessayer."
+  },
+  "modalsDisclaimerModal": {
+    "userAgreement": "Accord d'utilisateur",
+    "submitting": "Envoi en cours...",
+    "accept": "J'accepte"
+  },
+  "modalsEditMentorModalDialog": {
+    "editPromptDescription": "Modifier {label}"
+  },
+  "modalsShortcutsModal": {
+    "title": "Raccourcis clavier"
+  },
+  "modalsVoiceTermsModal": {
+    "title": "Conditions générales de la voix",
+    "description": "Lisez et acceptez les conditions du chat vocal",
+    "heading": "Créer un agent vocal",
+    "ruleNoRecordingWithoutConsent": "N'enregistrez pas la voix de tiers sans leur consentement",
+    "ruleNoCopyrightedVoices": "N'utilisez pas de voix protégées par le droit d'auteur",
+    "ruleNoMaliciousUse": "N'utilisez pas de voix dans des deepfakes, du harcèlement, des fraudes ou des arnaques",
+    "agreeAndContinue": "Accepter et continuer"
+  },
+  "modalsPromptGalleryModalCategorySection": {
+    "promptLabel": "Invite",
+    "loading": "Chargement...",
+    "seeMore": "Voir plus"
+  },
+  "modalsPromptGalleryModalEmptyPrompts": {
+    "noPromptsAvailable": "Aucune invite disponible",
+    "noPromptsHelpText": "Il n'y a pas encore d'invites dans cette catégorie. Cliquez sur le bouton « Ajouter une invite » pour créer la première."
+  },
+  "modalsPromptGalleryModalPromptCard": {
+    "promptDeletedSuccess": "Invite supprimée avec succès",
+    "promptDeleteFailed": "Échec de la suppression de l'invite",
+    "edit": "Modifier",
+    "run": "Exécuter",
+    "copied": "Copié",
+    "copy": "Copier",
+    "delete": "Supprimer"
+  },
+  "flowTab": {
+    "comingSoon": "Le contenu de flux arrive bientôt"
+  },
+  "promptsTabCopyButton": {
+    "textCopiedToClipboard": "Texte copié dans le presse-papiers",
+    "copyTextToClipboard": "Copier le texte dans le presse-papiers",
+    "copied": "Copié",
+    "copy": "Copier"
+  },
+  "datasetsTabTrainOrDeleteModal": {
+    "dialogTitle": "Que souhaitez-vous faire ?",
+    "description": "Cet ensemble de données n'est actuellement pas entraîné. Vous pouvez l'entraîner pour le rendre disponible à votre Agent, ou le supprimer définitivement s'il n'est plus nécessaire.",
+    "deleteButton": "Supprimer",
+    "trainingButton": "Entraînement...",
+    "trainButton": "Entraîner"
+  },
+  "datasetsTabDatasetItemList": {
+    "noDatasetsFound": "Aucun ensemble de données trouvé"
+  },
+  "mcpTabIndex": {
+    "description": "Gérez les connecteurs Model Context Protocol pour votre Agent."
+  },
+  "memoryTabBulkDeleteMemoryModal": {
+    "confirmationTextAll": "Êtes-vous sûr de vouloir supprimer tous les souvenirs ? Cette action est irréversible.",
+    "confirmationTextCategory": "Êtes-vous sûr de vouloir supprimer tous les souvenirs de la catégorie {category} ? Cette action est irréversible.",
+    "titleAll": "Supprimer tous les souvenirs",
+    "titleCategory": "Supprimer tous les souvenirs de {category}",
+    "cancelButton": "Annuler",
+    "deletingButton": "Suppression...",
+    "deleteButton": "Supprimer"
+  },
+  "flaggedPromptsIndex": {
+    "title": "Invites signalées",
+    "noFlaggedPrompts": "Aucune invite signalée trouvée"
+  },
+  "flaggedPromptsFlaggedPromptMobileDetail": {
+    "dialogTitle": "Détails de l'invite signalée",
+    "flaggedBySystem": "Signalé par le système {type}",
+    "systemLabel": "Système {type}",
+    "deleteButton": "Supprimer"
+  },
+  "flaggedPromptsFlaggedPromptDetail": {
+    "flaggedBySystem": "Signalé par le système {type}",
+    "systemLabel": "Système {type}",
+    "deleteButton": "Supprimer",
+    "selectPrompt": "Sélectionnez une invite signalée pour afficher les détails."
+  },
+  "flaggedPromptsFlaggedPromptsList": {
+    "noFlaggedPrompts": "Aucune invite signalée trouvée"
+  },
+  "flaggedPromptsFlaggedPromptsSummary": {
+    "totalFlaggedPrompts": "{count} invites signalées au total",
+    "description": "Examinez les invites qui ont été signalées par nos systèmes automatisés de modération et de sécurité. Chaque invite signalée inclut les informations de l'utilisateur, le contenu signalé et l'analyse du système. Utilisez la fonction de contact pour joindre directement les utilisateurs via le système de notification pour un suivi ou une clarification."
+  },
+  "useEmbedTab": {
+    "validWebsiteUrlRequired": "Veuillez spécifier une URL de site web valide",
+    "unknownErrorOccurred": "Une erreur inconnue s'est produite",
+    "unknownErrorTryAgain": "Une erreur inconnue s'est produite. Veuillez réessayer",
+    "validUrlRequired": "Une URL valide est requise !",
+    "failedToCreateRedirectToken": "Échec de la création du jeton de redirection pour le site web ({website}) dans l'organisation ({org})"
+  },
+  "freeTrialDialog": {
+    "freePackageLine1": "Vous utilisez actuellement notre forfait gratuit avec un accès de base aux agents et vous avez épuisé tous vos crédits.",
+    "freePackageLine2": "Passez à une formule supérieure pour débloquer un temps de discussion illimité, des sources de données personnalisées et des comportements avancés des agents.",
+    "freePackageLine3Before": "Pour les organisations ayant besoin de solutions d'entreprise,",
+    "freePackageLine3After": "pour des forfaits spéciaux.",
+    "contactOurTeam": "contactez notre équipe",
+    "studentPackageLine1": "Vous accédez aux fonctionnalités premium via l'abonnement de votre établissement et vous avez épuisé tous vos crédits.",
+    "studentPackageLine2": "Profitez d'un temps de discussion illimité et de l'accès à des agents spécialisés. Certaines options de personnalisation avancées peuvent nécessiter des autorisations supplémentaires.",
+    "studentPackageLine3Before": "Pour toute question concernant votre accès ou les fonctionnalités institutionnelles,",
+    "contactSupport": "contactez le support",
+    "paidPackageLine1": "Vous avez épuisé tous vos crédits disponibles pour cette période. Votre accès complet aux fonctionnalités premium sera renouvelé lors de votre prochain cycle de facturation.",
+    "paidPackageLine2": "Pour continuer à créer des agents personnalisés et accéder immédiatement aux fonctionnalités avancées, vous pouvez acheter des crédits supplémentaires ou passer à une formule supérieure.",
+    "paidPackageLine3Before": "Pour des solutions d'entreprise ou des besoins à grand volume,",
+    "paidPackageLine3After": "pour des options personnalisées.",
+    "contactOurSalesTeam": "contactez notre équipe commerciale",
+    "defaultLine1": "Passez à une formule supérieure pour créer vos propres agents.",
+    "defaultLine2": "Profitez d'un temps de discussion illimité, de sources de données personnalisées et créez vos propres agents spécialisés.",
+    "defaultLine3Before": "Pour un contrôle d'entreprise complet — la confiance des plus grandes universités et entreprises —",
+    "contactOurPartnershipsTeam": "contactez notre équipe des partenariats."
+  },
+  "authPopover": {
+    "tryAdvanced": "Essayez gratuitement les fonctionnalités avancées",
+    "getBetterResponses": "Obtenez de meilleures réponses, créez des agents avec vos données et bien plus en vous connectant.",
+    "logIn": "Se connecter",
+    "signUpForFree": "Inscrivez-vous gratuitement"
+  },
+  "fileDropZone": {
+    "dropYourFilesHere": "Déposez vos fichiers ici",
+    "dropAnyFile": "Déposez n'importe quel fichier ici pour l'ajouter à la conversation"
+  },
+  "documentSidebar": {
+    "retrievedDocuments": "Documents récupérés"
+  },
+  "chatInputForm": {
+    "uploadingFiles": "Téléversement de {count} fichier{count, plural, one {} other {s}}...",
+    "listening": "Écoute en cours... {time}",
+    "processing": "Traitement en cours...",
+    "askAnything": "Posez n'importe quelle question",
+    "noChatPermission": "Désolé ! Vous n'avez pas l'autorisation de discuter."
+  },
+  "errorPage": {
+    "backToHome": "Retour à l'accueil",
+    "poweredBy": "Propulsé par",
+    "inNewYork": "à New York"
+  },
+  "serviceWorkerProvider": {
+    "appUpdateAvailable": "Mise à jour de l'application disponible",
+    "appUpdateDescription": "Une nouvelle version est prête. Cliquez pour mettre à jour.",
+    "update": "Mettre à jour",
+    "cacheCleared": "Cache vidé",
+    "cacheClearedDescription": "Toutes les données en cache ont été effacées."
+  },
+  "liveKitVoiceChat": {
+    "microphonePermissionDenied": "Autorisation du microphone refusée. Veuillez activer le microphone dans les paramètres de votre navigateur.",
+    "failedToInitiateCall": "Échec du démarrage de l'appel. Veuillez réessayer.",
+    "failedToConnectToRoom": "Échec de la connexion à la salle. Veuillez réessayer.",
+    "microphoneNotEnabled": "Le microphone n'est pas activé. Veuillez activer le microphone dans les paramètres de votre navigateur."
+  },
+  "chatAiMessageSpeak": {
+    "loadingAudio": "Chargement de l'audio",
+    "stopReadingAloud": "Arrêter la lecture à voix haute",
+    "readAloud": "Lire à voix haute"
+  },
+  "chatMessagesCanvasMessagePreview": {
+    "generating": "Génération...",
+    "openCanvas": "Ouvrir le canevas"
+  },
+  "chatMessagesImagePreviewModal": {
+    "preview": "Aperçu"
+  },
+  "chatMessagesMessagePreview": {
+    "untitledArtifact": "Artefact sans titre",
+    "version": "Version {versionNumber}"
+  },
+  "chatLoadingMessage": {
+    "justASec": "Un instant..."
+  },
+  "chatReasoningSection": {
+    "thinking": "Réflexion",
+    "thought": "Réflexion terminée"
+  },
+  "chatSubmitMessageButton": {
+    "connectingEllipsis": "Connexion...",
+    "uploadingFiles": "Téléversement des fichiers",
+    "sendMessageTitle": "Envoyer le message",
+    "connecting": "Connexion",
+    "sendMessage": "Envoyer le message"
+  },
+  "chatToolCallIndicator": {
+    "usedTools": "{count, plural, one {# outil utilisé} other {# outils utilisés}}"
+  },
+  "chatToolCallItem": {
+    "query": "Requête",
+    "result": "Résultat"
+  },
+  "chatToastErrorMessage": {
+    "errorBody": "Désolé pour cela ! {message} Veuillez réessayer ou <contactLink>nous contacter</contactLink>.",
+    "textUsAt": "Si vous préférez, envoyez-nous un SMS au <phoneLink>{phone}</phoneLink>."
+  },
+  "chatInputFormMemoryButton": {
+    "memory": "Mémoire"
+  },
+  "chatInputFormWebSearchButton": {
+    "webSearchDisabled": "Recherche web désactivée",
+    "webSearchEnabled": "Recherche web activée"
+  },
+  "chatInputFormDeepResearchButton": {
+    "deepResearch": "Recherche approfondie"
+  },
+  "advancedChatAdvancedChatHeader": {
+    "cannotSwitchTabsWhileStreaming": "Vous ne pouvez pas changer d'onglet pendant la diffusion"
+  },
+  "chatInputFormOutsideButtons": {
+    "allowPopupsToConnectGoogle": "Veuillez autoriser les fenêtres contextuelles pour ce site afin de connecter les services Google",
+    "failedToGetAuthUrl": "Échec de l'obtention de l'URL d'authentification",
+    "failedToInitiateGoogleAuth": "Échec du lancement de l'authentification Google",
+    "webSearch": "Recherche web",
+    "code": "Code",
+    "image": "Image",
+    "googleSlides": "Google Slides",
+    "googleDocs": "Google Docs",
+    "powerPoint": "PowerPoint",
+    "connecting": "(connexion...)",
+    "more": "Plus"
+  },
+  "projectsProjectMentorsList": {
+    "agentRemoved": "Agent retiré du projet",
+    "removeError": "Échec de la suppression de l'agent",
+    "noAgentsAssigned": "Aucun agent n'est encore attribué à ce projet.",
+    "selectAgentsBelow": "Sélectionnez des agents ci-dessous pour les ajouter à votre projet.",
+    "projectAgents": "Agents du projet",
+    "addAgent": "Ajouter un agent",
+    "selectAgentAriaLabel": "Sélectionner l'agent {name}",
+    "removeFromProject": "Retirer du projet"
+  },
+  "projectsAddMentorToProjectModal": {
+    "agentAdded": "Agent ajouté au projet",
+    "addError": "Échec de l'ajout de l'agent au projet",
+    "addAgentToProject": "Ajouter un agent à {projectName}",
+    "availableAgents": "Agents disponibles",
+    "done": "Terminé"
+  },
+  "projectsProjectActionButtons": {
+    "viewProjectFilesAriaLabel": "Voir les fichiers du projet",
+    "addFilesToProjectAriaLabel": "Ajouter des fichiers au projet",
+    "projectFiles": "Fichiers du projet",
+    "addFiles": "Ajouter des fichiers",
+    "chatsCanAccessFiles": "Les conversations de ce projet peuvent accéder au contenu des fichiers",
+    "filesAdded": "{count, plural, one {# fichier ajouté} other {# fichiers ajoutés}}",
+    "editInstructionsAriaLabel": "Modifier les instructions du projet",
+    "addInstructionsAriaLabel": "Ajouter des instructions au projet",
+    "projectInstructions": "Instructions du projet",
+    "addProjectInstructions": "Ajouter des instructions au projet",
+    "tailorResponses": "Adaptez la façon dont l'agent répond dans ce projet"
+  },
+  "modelDownloadFirstLaunchPromptDialog": {
+    "title": "Télécharger le modèle d'IA local ?",
+    "description": "Nous avons détecté qu'Ollama est installé. Souhaitez-vous télécharger le modèle <strong>Phi Mini 3</strong> pour le traitement de l'IA local ?",
+    "modelSizeLabel": "Taille du modèle :",
+    "modelSizeValue": "~2,4 Go",
+    "requiredSpaceLabel": "Espace requis :",
+    "requiredSpaceValue": "5 Go libres",
+    "downloadLaterHint": "Vous pouvez toujours télécharger le modèle plus tard depuis le menu de la barre de navigation.",
+    "later": "Plus tard",
+    "downloadNow": "Télécharger maintenant"
+  },
+  "workflowsWorkflowPreviewChat": {
+    "previewYourAgent": "Prévisualisez votre agent",
+    "promptAgentHint": "Interagissez avec l'agent comme si vous étiez l'utilisateur."
+  },
+  "useModelDownload": {
+    "desktopAppRequired": "Application de bureau requise pour le téléchargement de modèles locaux",
+    "modelDownloadedSuccessfully": "Modèle téléchargé avec succès !",
+    "downloadFailed": "Échec du téléchargement : {errorMessage}",
+    "downloadCancelled": "Téléchargement annulé",
+    "failedToEnableLocalModels": "Impossible d'activer les modèles locaux : {errorMessage}",
+    "modelNotFound": "Modèle introuvable",
+    "failedToDownloadModel": "Impossible de télécharger le modèle : {errorMessage}",
+    "loadedModel": "Modèle chargé : {model}",
+    "failedToLoadModel": "Impossible de charger le modèle : {errorMessage}",
+    "modelDownloadedAndLoaded": "Modèle téléchargé et chargé : {model}",
+    "statusLocalLlmAvailable": "LLM local disponible via Foundry Local (préféré)",
+    "statusModelInstalled": "Modèle installé",
+    "statusStartingDownload": "Démarrage du téléchargement...",
+    "statusDownloadComplete": "Téléchargement terminé",
+    "statusDownloadingModel": "Téléchargement de {model}...",
+    "statusLoadingModel": "Chargement de {model}...",
+    "statusModelReady": "Modèle prêt : {model}",
+    "statusFailedToDownload": "Impossible de télécharger {model}",
+    "statusInstallingFoundry": "Installation de Foundry Local...",
+    "statusDownloadingDefaultModel": "Téléchargement du modèle par défaut (qwen2.5-0.5b)...",
+    "statusFoundryInstalledSuccessfully": "Foundry Local installé avec succès",
+    "statusFailedToInstallFoundry": "Échec de l'installation de Foundry Local"
+  },
+  "useScreenSharing": {
+    "failedToInitiateCall": "Échec du démarrage de l'appel. Veuillez réessayer.",
+    "failedToConnectToRoom": "Échec de la connexion à la salle. Veuillez réessayer.",
+    "screenSharingNotSupported": "Le partage d'écran n'est pas pris en charge sur cet appareil. Veuillez utiliser un navigateur de bureau.",
+    "microphoneNotEnabled": "Le microphone n'est pas activé. Veuillez l'activer dans les paramètres de votre navigateur.",
+    "screenSharingCouldNotBeStarted": "Impossible de démarrer le partage d'écran. Veuillez vous assurer que votre navigateur prend en charge le partage d'écran et que vous avez accordé les autorisations nécessaires."
+  },
+  "useOneDrivePicker": {
+    "failedToLoadSdk": "Échec du chargement du SDK OneDrive",
+    "errorProcessingAuthentication": "Erreur lors du traitement de l'authentification OneDrive",
+    "agentNotFound": "Agent introuvable",
+    "documentQueuedForTraining": "Le document a été mis en file d'attente pour l'entraînement",
+    "credentialsNotLoadedYet": "Les identifiants OneDrive ne sont pas encore chargés",
+    "sdkNotLoadedYet": "Le SDK OneDrive n'est pas encore chargé",
+    "errorSelectingFiles": "Erreur lors de la sélection de fichiers depuis OneDrive",
+    "failedToOpenPicker": "Impossible d'ouvrir le sélecteur OneDrive"
+  },
+  "useOneDrivePickerV2": {
+    "failedToLoadSdk": "Échec du chargement du SDK OneDrive",
+    "credentialsNotFound": "Identifiants OneDrive introuvables",
+    "failedToLoadCredentials": "Impossible de charger les identifiants OneDrive",
+    "credentialsNotLoadedYet": "Les identifiants OneDrive ne sont pas encore chargés",
+    "sdkNotLoadedYet": "Le SDK OneDrive n'est pas encore chargé",
+    "filePicked": "Fichier OneDrive sélectionné",
+    "filePickCancelled": "Sélection de fichier OneDrive annulée",
+    "failedToPickFile": "Impossible de sélectionner le fichier OneDrive"
+  },
+  "useOneDrivePickerV3": {
+    "documentQueuedForTraining": "Le document a été mis en file d'attente pour l'entraînement",
+    "noFileSelected": "Aucun fichier sélectionné",
+    "errorSelectingFile": "Erreur lors de la sélection du fichier"
+  },
+  "useVoiceChat": {
+    "couldNotProcessAudio": "Impossible de traiter votre audio, veuillez réessayer"
+  },
+  "useGoogleDrivePicker": {
+    "errorProcessingPickerSelection": "Erreur lors du traitement de la sélection",
+    "errorWithPicker": "Erreur avec le sélecteur Google Drive. Essayez de rafraîchir la page si elle se bloque.",
+    "failedToOpenPicker": "Impossible d'ouvrir le sélecteur Google Drive",
+    "failedToOpenPickerPermission": "Impossible d'ouvrir le sélecteur Google Drive. Cela peut être dû à des problèmes d'autorisation (erreur 403).",
+    "agentNotFound": "Agent introuvable",
+    "documentQueuedForTraining": "Le document a été mis en file d'attente pour l'entraînement",
+    "pickerClosed": "Sélecteur Google Drive fermé",
+    "unableToClosePickerModal": "Impossible de fermer la fenêtre du sélecteur. Veuillez rafraîchir la page.",
+    "credentialsNotLoadedYet": "Les identifiants Google Drive ne sont pas encore chargés",
+    "pickerNotLoadedYet": "Google Picker n'est pas encore chargé. Veuillez réessayer."
+  },
+  "useGoogleDrivePickerV2": {
+    "failedToFetchCredentials": "Impossible de récupérer les identifiants Google Drive",
+    "notImplemented": "Non implémenté"
+  },
+  "useGoogleDrivePickerV3": {
+    "errorAddingTrainingDocument": "Erreur lors de l'ajout du document d'entraînement"
+  },
+  "useUserAgreement": {
+    "userAgreementAccepted": "Accord d'utilisateur accepté",
+    "failedToUpdateStatus": "Impossible de mettre à jour l'état de l'accord d'utilisateur"
+  },
+  "useDropboxPicker": {
+    "agentNotFound": "Agent introuvable",
+    "documentQueuedForTraining": "Le document a été mis en file d'attente pour l'entraînement"
+  },
+  "useWebsiteCrawlerResource": {
+    "webCrawlStarted": "Exploration web démarrée et mise en file d'attente pour l'entraînement",
+    "errorSubmittingWebCrawlData": "Erreur lors de l'envoi des données d'exploration web"
+  },
+  "useCanvasVersionNavigation": {
+    "unableToLoadVersion": "Impossible de charger la version",
+    "versionRestored": "Version restaurée",
+    "failedToRestoreVersion": "Impossible de restaurer la version"
+  },
+  "useFileDragDrop": {
+    "droppedFileTypeNotSupported": "Le type de fichier déposé n'est pas pris en charge.",
+    "filesRejected": "{rejectedCount, plural, one {# fichier a été rejeté} other {# fichiers ont été rejetés}} en raison d'un type non pris en charge."
+  },
+  "useCreateMentor": {
+    "agentCreatedSuccessfully": "Agent créé avec succès",
+    "failedToCreateAgent": "Impossible de créer l'agent"
+  },
+  "useToggleTools": {
+    "agentUpdatedSuccessfully": "Agent mis à jour avec succès",
+    "failedToUpdateTool": "Impossible de mettre à jour l'outil"
+  },
+  "use402ErrorCheck": {
+    "insufficientBalance": "Solde insuffisant. Veuillez ajouter des crédits pour continuer."
+  },
+  "providersIndex": {
+    "agentSwitchedSuccessfully": "Agent changé avec succès"
+  },
+  "useUser": {
+    "switchToLearnerModeMessage": "Le passage en mode apprenant vous redirigera vers la page de chat.",
+    "areYouSure": "Êtes-vous sûr ?"
+  },
+  "providersUseUser": {
+    "switchToLearnerModeMessage": "Le passage en mode apprenant vous redirigera vers la page de chat.",
+    "areYouSure": "Êtes-vous sûr ?"
+  },
+  "useShortcuts": {
+    "startNewChat": "Démarrer une nouvelle discussion",
+    "focusInput": "Activer la saisie",
+    "toggleSidebar": "Basculer la barre latérale",
+    "openShortcuts": "Ouvrir les raccourcis"
+  },
+  "userNavigate": {
+    "newChat": "Nouvelle discussion",
+    "agents": "Agents",
+    "newAgent": "Nouvel agent",
+    "inviteUsers": "Inviter des utilisateurs",
+    "workflows": "Flux de travail",
+    "projects": "Projets",
+    "notifications": "Notifications",
+    "analytics": "Analyses",
+    "settings": "Paramètres"
   }
 }

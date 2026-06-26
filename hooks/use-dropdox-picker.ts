@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, useRef } from 'react';
 import loadScript from 'load-script';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { useParams } from 'next/navigation';
 import {
@@ -25,6 +26,7 @@ const useDropboxPicker = ({
   autoShow = false,
   folderselect = true,
 }) => {
+  const t = useTranslations('useDropboxPicker');
   const [dropboxReady, setDropboxReady] = useState(false);
   const [openChooser, setOpenChooser] = useState(false);
   const [appKey, setAppKey] = useState(null);
@@ -66,7 +68,7 @@ const useDropboxPicker = ({
   // Handle successful file selection from Dropbox
   const handleSuccess = async (files) => {
     if (!mentorId) {
-      toast.error('Agent not found');
+      toast.error(t('agentNotFound'));
       return;
     }
 
@@ -89,7 +91,7 @@ const useDropboxPicker = ({
         formData: trainPayload,
       }).unwrap();
 
-      toast.success('Document has been queued for training');
+      toast.success(t('documentQueuedForTraining'));
     } catch (error: unknown) {
       console.error(JSON.stringify(error));
       const errorMessage = extractErrorMessage(

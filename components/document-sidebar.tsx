@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
 import { Radio, FileText, ChevronRight } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 import { cn, isLoggedIn } from '@/lib/utils';
 import { useAppSelector } from '@/lib/hooks';
@@ -21,6 +22,7 @@ export function DocumentSidebar({
   isModal = false,
   sessionId,
 }: DocumentSidebarProps) {
+  const t = useTranslations('documentSidebar');
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const params = useParams<{ tenantKey: string }>();
   const username = useUsername();
@@ -84,7 +86,7 @@ export function DocumentSidebar({
                 {!isCollapsed && (
                   <>
                     <h2 className="text-base font-medium text-[#646464]">
-                      Retrieved Documents
+                      {t('retrievedDocuments')}
                     </h2>
                     <ChevronRight
                       className={cn(

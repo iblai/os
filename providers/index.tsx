@@ -68,6 +68,7 @@ import { MentorTimeTrackingProvider } from '@/hooks/use-mentor-time-tracking';
 import { useSelector } from 'react-redux';
 import { updateRbacPermissions } from '@/features/rbac/rbac-slice';
 import { useAppDispatch } from '@/lib/hooks';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 //import { useLazyGetTenantMetadataQuery } from '@iblai/iblai-js/data-layer';
 import { useTenantMetadata } from '@iblai/iblai-js/web-utils';
@@ -80,6 +81,7 @@ import { isTauriApp } from '@/types/tauri';
 import { hideInitialLoader } from '@/lib/initial-loader';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
+  const t = useTranslations('providersIndex');
   const { handle402Error } = use402ErrorCheck();
   const [ready, setReady] = useState(false);
 
@@ -655,7 +657,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                   router.replace(`?${params.toString()}`);
 
                   setTimeout(() => {
-                    toast.success('Agent switched successfully');
+                    toast.success(t('agentSwitchedSuccessfully'));
                   }, 1000);
                 }
               }}

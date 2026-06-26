@@ -7,6 +7,7 @@ import { tenantSchema, userDataSchema } from '@/lib/types';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { userSliceActions } from '@/features/users/slice';
 import { usePathname } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { initCustomAlertDialog } from '@/features/navigation/slice';
 import { Tenant } from '@iblai/iblai-js/web-utils';
 import { isStripeActivated } from '@/lib/utils';
@@ -181,6 +182,7 @@ export function useUserIsStudent() {
 }
 
 export function useLearnerMode() {
+  const t = useTranslations('useUser');
   const pathname = usePathname();
   const dispatch = useDispatch<AppDispatch>();
   const userIsAdmin = useIsAdmin();
@@ -199,11 +201,10 @@ export function useLearnerMode() {
       if (isInstructorMode && isAdminPage()) {
         dispatch(
           initCustomAlertDialog({
-            message:
-              'Switching to learner mode will redirect you to the chat page.',
+            message: t('switchToLearnerModeMessage'),
             validateTrigger: 'SWITCH_TO_LEARNER',
             cancelTrigger: '',
-            title: 'Are you sure?',
+            title: t('areYouSure'),
             isOpen: true,
           }),
         );

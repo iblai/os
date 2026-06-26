@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 
 import { useLazyGetCredentialsQuery } from '@iblai/iblai-js/data-layer';
@@ -11,6 +12,7 @@ import { useUsername } from './use-user';
 const ONEDRIVE_SDK_URL = 'https://js.live.net/v7.2/OneDrive.js';
 
 const useOneDrivePicker = () => {
+  const t = useTranslations('useOneDrivePickerV2');
   const { tenantKey } = useParams<TenantKeyMentorIdParams>();
   const [onedriveAppId, setOnedriveAppId] = useState(null);
   const [fullDomain, setFullDomain] = useState<string | null>(null);
@@ -34,7 +36,7 @@ const useOneDrivePicker = () => {
           setIsSDKLoaded(true);
         };
         script.onerror = () => {
-          toast.error('Failed to load OneDrive SDK');
+          toast.error(t('failedToLoadSdk'));
           sdkLoadingStarted.current = false;
         };
 
@@ -63,10 +65,10 @@ const useOneDrivePicker = () => {
             console.log('data[0].value.appId', data[0].value.appId);
             setOnedriveAppId(data[0].value.appId);
           } else {
-            toast.error('OneDrive credentials not found');
+            toast.error(t('credentialsNotFound'));
           }
         } catch (error) {
-          toast.error('Failed to load OneDrive credentials');
+          toast.error(t('failedToLoadCredentials'));
           console.error(JSON.stringify({ tenant: tenantKey, error }));
         }
       }
@@ -92,14 +94,14 @@ const useOneDrivePicker = () => {
     (handleSuccess?: (files: any) => void) => {
       console.log('onedriveAppId', onedriveAppId);
       if (!onedriveAppId) {
-        toast.error('OneDrive credentials are not loaded yet');
+        toast.error(t('credentialsNotLoadedYet'));
         return;
       }
 
       console.log('isSDKLoaded', isSDKLoaded);
       console.log('window.OneDrive', window.OneDrive);
       if (!isSDKLoaded || !window.OneDrive) {
-        toast.error('OneDrive SDK not loaded yet');
+        toast.error(t('sdkNotLoadedYet'));
         return;
       }
 
@@ -117,13 +119,13 @@ const useOneDrivePicker = () => {
         success:
           handleSuccess ??
           (() => {
-            toast.success('OneDrive file picked');
+            toast.success(t('filePicked'));
           }),
         cancel: function () {
-          toast.info('OneDrive file pick cancelled');
+          toast.info(t('filePickCancelled'));
         },
         error: function () {
-          toast.error('Failed to pick OneDrive file');
+          toast.error(t('failedToPickFile'));
         },
       };
       window.OneDrive.open(odOptions);

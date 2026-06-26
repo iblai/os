@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Archive, X } from 'lucide-react';
 import {
   Popover,
@@ -16,6 +17,7 @@ interface MemoryButtonProps {
 }
 
 export function MemoryButton({ tenantKey, username }: MemoryButtonProps) {
+  const t = useTranslations('chatInputFormMemoryButton');
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -34,7 +36,7 @@ export function MemoryButton({ tenantKey, username }: MemoryButtonProps) {
           <span className={isOpen ? 'text-[#38A1E5]' : 'text-gray-600'}>
             <Archive className="h-4 w-4" />
           </span>
-          Memory
+          {t('memory')}
           {isOpen && (
             <X
               className="ml-1 h-3 w-3 cursor-pointer"

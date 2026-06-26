@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/dialog';
 import { useShortcuts } from '@/hooks/use-shortcuts';
 import { getUserOS } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
 
 function mapKeyboardKey(key: string): string {
   const userOS = getUserOS();
@@ -45,15 +46,14 @@ function KeyShortcut({ keys }: { keys: string }) {
 }
 
 export function ShortcutsModal({ isOpen, onClose }: Props) {
+  const t = useTranslations('modalsShortcutsModal');
   const shortcuts = useShortcuts();
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl space-y-4">
         <DialogHeader>
-          <DialogTitle className="ibl-dialog-title">
-            Keyboard Shortcuts
-          </DialogTitle>
+          <DialogTitle className="ibl-dialog-title">{t('title')}</DialogTitle>
         </DialogHeader>
         <div className="grid grid-cols-2 gap-x-10 gap-y-4">
           {Object.entries(shortcuts).map(([key, value]) => (
