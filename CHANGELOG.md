@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.84.3](https://github.com/iblai/os/compare/v0.84.2...v0.84.3) (2026-06-25)
+
+### Bug Fixes
+
+* **docker:** copy pnpm-workspace.yaml in e2e image so frozen install sees overrides ([172edb2](https://github.com/iblai/os/commit/172edb2a3f2c76f4d97a19b55edcc9981e490269))
+
+## [0.84.2](https://github.com/iblai/os/compare/v0.84.1...v0.84.2) (2026-06-25)
+
+### Bug Fixes
+
+* **docker:** copy pnpm-workspace.yaml so frozen install sees overrides ([4d0b38e](https://github.com/iblai/os/commit/4d0b38e412f73397e7dcf72c323da0f477cc9b7c))
+
+## [0.84.1](https://github.com/iblai/os/compare/v0.84.0...v0.84.1) (2026-06-25)
+
+### Bug Fixes
+
+- **i18n:** force dynamic rendering so cookie-based locale doesn't break build ([9b6d332](https://github.com/iblai/os/commit/9b6d332d89d58f61cc4f73939983f4ab0a0db03a))
+
+## [0.84.0](https://github.com/iblai/os/compare/v0.83.0...v0.84.0) (2026-06-25)
+
+### Features
+
+- **extensions:** add Chrome side-panel extension hosting <agent-ai> ([1467aa1](https://github.com/iblai/os/commit/1467aa10ebf15aa943f14652920bf47b0d6386ee))
+- **i18n:** internationalize the app with next-intl ([646f891](https://github.com/iblai/os/commit/646f891bf54b50bb3196351d06cfb24cee16c205))
+
+### Bug Fixes
+
+- **deps:** drop obsolete .yalc web-containers override; use published SDK ([f9e493b](https://github.com/iblai/os/commit/f9e493b45da709db4681efb3774cae85d4943940))
+
 ## [0.83.0](https://github.com/iblai/os/compare/v0.82.1...v0.83.0) (2026-06-25)
 
 ### Features
