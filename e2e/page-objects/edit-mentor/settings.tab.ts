@@ -115,12 +115,14 @@ export class SettingsTab {
     this.verboseReasoningToggle = dialog.getByRole('switch', {
       name: /^Enable verbose reasoning /i,
     });
-    // Capabilities sub-tab. Renamed visible label "Enable enhanced document retrieval".
+    // Capabilities sub-tab. Visible label "Enhanced document retrieval"
+    // (source: messages/en.json `enhancedDocRetrievalLabel`). Anchored so it
+    // does not also match the sibling "Smart document retrieval" switch.
     this.enhanceDocumentRetrievalToggle = dialog.getByRole('switch', {
-      name: /enable enhanced document retrieval/i,
+      name: /^Enhanced document retrieval$/i,
     });
     this.enhanceDocumentRetrievalTooltipTrigger = dialog.getByRole('button', {
-      name: 'More info about enable enhanced document retrieval',
+      name: 'More info about enhanced document retrieval',
     });
     // Capabilities sub-tab. Label: "Enable prompt caching".
     this.promptCachingToggle = dialog.getByRole('switch', {

@@ -56,9 +56,7 @@ export class DatasetsTab {
   async openAddResourceModal(): Promise<Locator> {
     await expect(this.addResourceButton).toBeVisible({ timeout: 10_000 });
     await this.addResourceButton.click();
-    const modal = this.page
-      .getByRole('dialog')
-      .filter({ hasText: /add resource/i });
+    const modal = this.page.getByRole('dialog', { name: /add resources/i });
     await expect(modal).toBeVisible({ timeout: 10_000 });
     return modal;
   }

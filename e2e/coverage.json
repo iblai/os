@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "lastUpdated": "2026-06-21",
+  "lastUpdated": "2026-06-22",
   "summary": {
-    "totalCheckpoints": 494,
+    "totalCheckpoints": 495,
     "coveredCheckpoints": 473,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 8,
@@ -710,6 +710,11 @@
           "id": "emb-09",
           "description": "Embed mode renders a minimal sidebar: New Chat present (and Chats section when the user is logged in); Agents (New Agent), Workflows, Analytics, Projects sections and the Support/docs footer link absent — holds for both expanded and rail-collapsed layouts regardless of user role",
           "status": "covered"
+        },
+        {
+          "id": "emb-10",
+          "description": "Optimize Page Context Tokens toggle: visible label present, tooltip ('Strips HTML tags from page context') reachable on hover, and the setting flips and persists after submit + modal reopen via GET /settings/ round-trip",
+          "status": "pending"
         }
       ]
     },
