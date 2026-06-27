@@ -10,6 +10,8 @@ export class EmbedTab {
   readonly voiceRecordToggle: Locator;
   readonly attachmentToggle: Locator;
   readonly showCatalogueToggle: Locator;
+  readonly optimizePageContextToggle: Locator;
+  readonly websiteUrlInput: Locator;
   readonly submitButton: Locator;
   readonly embedCodeDialog: Locator;
 
@@ -36,6 +38,28 @@ export class EmbedTab {
     this.showCatalogueToggle = dialog.getByRole('switch', {
       name: /show catalogue/i,
     });
+    this.optimizePageContextToggle = dialog.getByRole('switch', {
+      name: /optimize page context tokens/i,
+    });
+    // The Website URL input is required when the mentor is not anonymous; filling
+    // it satisfies the URL-validation guard in syncEmbedSettings() so submit()
+    // proceeds without needing to change the mentor's visibility settings.
+    // The input has placeholder "https://ibl.ai" — match by placeholder since it
+    // has no accessible label (the heading "Website URL" is not associated via
+    // aria-labelledby / htmlFor).
+    this.websiteUrlInput = dialog.locator(
+      'input[placeholder="https://ibl.ai"]',
+    );
+  }
+
+  /**
+   * Fills the Website URL field in the embed form. Required when the mentor is
+   * not anonymous — without a valid URL, "Create Embed" returns early with a
+   * validation error and the settings are never persisted.
+   */
+  async fillWebsiteUrl(url: string): Promise<void> {
+    await expect(this.websiteUrlInput).toBeVisible({ timeout: 10_000 });
+    await this.websiteUrlInput.fill(url);
   }
 
   async getEmbedCode(): Promise<string> {
@@ -83,6 +107,29 @@ export class EmbedTab {
     await expect(this.submitButton).toBeVisible({ timeout: 10_000 });
     await this.submitButton.click();
     await this.dismissEmbedCodeDialog();
+  }
+
+  /** Returns true when the Optimize Page Context Tokens switch is in the checked/enabled state. */
+  async getOptimizePageContextState(): Promise<boolean> {
+    await expect(this.optimizePageContextToggle).toBeVisible({
+      timeout: 10_000,
+    });
+    return (
+      (await this.optimizePageContextToggle.getAttribute('aria-checked')) ===
+      'true'
+    );
+  }
+
+  /** Ensures the Optimize Page Context Tokens switch matches `enabled`, toggling if needed. */
+  async setOptimizePageContext(enabled: boolean): Promise<void> {
+    if ((await this.getOptimizePageContextState()) !== enabled) {
+      await this.optimizePageContextToggle.click();
+      await expect(this.optimizePageContextToggle).toHaveAttribute(
+        'aria-checked',
+        enabled ? 'true' : 'false',
+        { timeout: 5_000 },
+      );
+    }
   }
 
   /** Closes the generated "Embedded Code" dialog if it is showing. */
