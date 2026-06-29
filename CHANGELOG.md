@@ -1,5 +1,42 @@
 # Changelog
 
+## [0.87.0](https://github.com/iblai/os/compare/v0.86.0...v0.87.0) (2026-06-27)
+
+### Features
+
+- **mentor:** add Optimize Page Context Tokens embed toggle ([cc250bb](https://github.com/iblai/os/commit/cc250bb5cfc9281848d117c064775ec6e10c4515))
+
+### Bug Fixes
+
+- **mentor:** match Advanced CSS/JS tooltip styling to the rest ([31aa961](https://github.com/iblai/os/commit/31aa96130c67e8716eb0e699cefb2c7ae5b6a97f))
+- test journey-20 ([59e5994](https://github.com/iblai/os/commit/59e5994df46f45c62f7c81e717b1d058f9a51707))
+
+### Chores
+
+- bump iblai sdk to 1.20.12 ([17da0c2](https://github.com/iblai/os/commit/17da0c2b82c8a1039cef1a6906a96ecc02fb6f21))
+- replace yalc web-containers override with published 1.10.10 ([48e222b](https://github.com/iblai/os/commit/48e222bb0e94d93f025c8c6dc2bfd9ca6dbef2fb))
+
+### Documentation
+
+- **e2e:** record emb-10 coverage for Optimize Page Context Tokens ([4f6d1f3](https://github.com/iblai/os/commit/4f6d1f3d5c5e62736f21b6107426497b664bfb09))
+
+### Tests
+
+- **e2e:** align Enhanced RAG locators with shipped "Enhanced document retrieval" label ([3fea850](https://github.com/iblai/os/commit/3fea85065ab0ded90d67b26ef5531d432319b91e))
+- **e2e:** cover embed Optimize Page Context Tokens toggle ([aab2fe3](https://github.com/iblai/os/commit/aab2fe35c32a6c82d8d0303858ba8ad32a26a46a))
+- **e2e:** match Add Resources modal by accessible name to avoid strict-mode race ([fb2c486](https://github.com/iblai/os/commit/fb2c48613db9fe2612d6f9483c1ad4a77af57d13))
+- **e2e:** park emb-10 Optimize Page Context Tokens as fixme ([8b8c6ab](https://github.com/iblai/os/commit/8b8c6abc066bdcc6f51c685a049913a22f750749))
+- **mentor:** cover Optimize Page Context Tokens toggle ([bac9a0a](https://github.com/iblai/os/commit/bac9a0a76f27984da2a0f336fb3b3add4bf74fa1))
+
+## [0.86.0](https://github.com/iblai/os/compare/v0.85.0...v0.86.0) (2026-06-26)
+
+### Features
+
+- text to speech endpoint now streamable ([0dbb773](https://github.com/iblai/os/commit/0dbb77353e417cfb0c07227deec0e9c7fa8c0ced))
+- text to speech endpoint now streamable ([5039df8](https://github.com/iblai/os/commit/5039df8262e27c01bc5da82f711551411fe1ac32))
+- text to speech endpoint now streamable ([7106acd](https://github.com/iblai/os/commit/7106acd82cdcb88e6793ac9036677ea4d1726686))
+- text to speech endpoint now streamable > test coverage ([72ccd50](https://github.com/iblai/os/commit/72ccd50907249fcc4b5c4234dc29d7e0c79382c7))
+
 ## [0.85.0](https://github.com/iblai/os/compare/v0.84.3...v0.85.0) (2026-06-26)
 
 ### Features

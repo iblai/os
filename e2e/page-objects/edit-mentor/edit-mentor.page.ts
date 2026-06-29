@@ -240,6 +240,12 @@ export class EditMentorPage {
 
     await expect(this.dialog).toBeVisible({ timeout: 15_000 });
 
+    // The SDK sometimes leaves aria-hidden on the Edit dialog's ancestor chain
+    // (e.g. after a prior dialog unmounted without fully cleaning up Radix's
+    // hideOthers). Repair the a11y tree unconditionally so that
+    // navigateToTab's getByRole queries always resolve.
+    await this.unhideEditDialog();
+
     if (tabName) {
       await this.navigateToTab(tabName);
     }
@@ -317,6 +323,12 @@ export class EditMentorPage {
         name: category,
         exact: true,
       });
+      // Wait for the category strip to mount — the dialog renders a loading
+      // spinner while mentor-settings + RBAC hydrate; tabs only appear after
+      // both resolve. Without this wait, getAttribute returns null (element
+      // not yet in the a11y tree), causing the unconditional click() below to
+      // timeout while waiting for the element to become interactable.
+      await categoryTab.waitFor({ state: 'visible', timeout: 20_000 });
       const categoryActive =
         (await categoryTab.getAttribute('data-state').catch(() => null)) ===
         'active';
