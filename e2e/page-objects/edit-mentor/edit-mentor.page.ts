@@ -15,6 +15,7 @@ import { PrivacyTab } from './privacy.tab';
 import { TasksTab } from './tasks.tab';
 import { VoiceTab } from './voice.tab';
 import { ScreenShareTab } from './screenshare.tab';
+import { LtiTab } from './lti.tab';
 
 /**
  * Which sidebar category each segment lives in. Mirrors the `navCategory`
@@ -45,6 +46,7 @@ const TAB_CATEGORY: Record<
   Datasets: 'Integrations',
   API: 'Integrations',
   Embed: 'Integrations',
+  LTI: 'Integrations',
   Voice: 'Configurations',
   'Screen Share': 'Configurations',
   Memory: 'Analytics',
@@ -73,6 +75,7 @@ export class EditMentorPage {
   readonly tasks: TasksTab;
   readonly voice: VoiceTab;
   readonly screenshare: ScreenShareTab;
+  readonly lti: LtiTab;
   readonly copyMentorDialog: CopyMentorPage;
 
   constructor(page: Page) {
@@ -98,6 +101,7 @@ export class EditMentorPage {
     this.tasks = new TasksTab(page, this.dialog);
     this.voice = new VoiceTab(page, this.dialog);
     this.screenshare = new ScreenShareTab(page, this.dialog);
+    this.lti = new LtiTab(page, this.dialog);
     this.copyMentorDialog = new CopyMentorPage(page);
 
     // The Privacy-tab master switch was removed from the SDK and now lives

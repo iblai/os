@@ -13,6 +13,7 @@ import {
   CalendarClock,
   Clock,
   Grid,
+  GraduationCap,
   Key,
   MonitorSmartphone,
   FileWarning,
@@ -69,6 +70,12 @@ export type MentorSegmentConfigFlags = {
    * removes the Voice tab from the sidebar entirely.
    */
   isVoiceCallEnabled: boolean;
+  /**
+   * True when "Allow LTI launches" (`is_lti_accessible`) is on in Settings.
+   * Gates the standalone LTI top-level tab — turning LTI access off removes
+   * the LTI tab from the sidebar entirely.
+   */
+  isLtiAccessible: boolean;
 };
 
 /**
@@ -404,6 +411,28 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     navCategory: 'integrations',
   },
   {
+    value: MODALS.EDIT_MENTOR.tabs.lti,
+    label: 'LTI',
+    icon: GraduationCap,
+    // Admin-only for now: LTI launch configuration is a platform-admin
+    // concern and the backend doesn't yet expose an RBAC resource or a
+    // permission field for it (mirrors Tasks). The userTypes filter alone
+    // gates visibility — re-add `rbacResource` + `permissionFieldsCheck`
+    // once those land.
+    userTypes: [UserType.ADMIN],
+    permissionFieldsCheck: [],
+    mentorVisibility: [
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+    ],
+    // Gated by the "Allow LTI launches" (`is_lti_accessible`) toggle in
+    // Settings → Capabilities → Advanced. Turning LTI access off hides this
+    // tab entirely — its launch configuration is meaningless when the agent
+    // can't be launched via LTI.
+    enabledThroughConfig: (flags) => flags.isLtiAccessible,
+    navCategory: 'integrations',
+  },
+  {
     value: MODALS.EDIT_MENTOR.tabs.embed,
     label: 'Embed',
     icon: MonitorSmartphone,
@@ -575,6 +604,13 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
   const isVoiceCallEnabled: boolean =
     // @ts-ignore - show_voice_call exists on API but not typed
     mentorSettings?.show_voice_call ?? true;
+
+  // The LTI tab is gated on "Allow LTI launches". Default to false to match
+  // the Settings form (`is_lti_accessible ?? false`) — a mentor that never
+  // enabled LTI access won't surface the tab.
+  const isLtiAccessible: boolean =
+    // @ts-ignore - is_lti_accessible exists on API but not typed
+    mentorSettings?.is_lti_accessible ?? false;
   const { isUserTypeAllowed } = useUserType(mentorSettings);
 
   // `isUserTypeAllowed` is a fresh function on every render of `useUserType`.
@@ -597,6 +633,7 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
         isPrivacyEnabled,
         isScreenshareEnabled,
         isVoiceCallEnabled,
+        isLtiAccessible,
       },
       isUserTypeAllowed: (segment) => isUserTypeAllowedRef.current(segment),
     }),
@@ -612,6 +649,7 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
       isPrivacyEnabled,
       isScreenshareEnabled,
       isVoiceCallEnabled,
+      isLtiAccessible,
     ],
   );
 

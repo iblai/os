@@ -140,11 +140,12 @@ describe('useMentorSegments', () => {
     setupDefaults();
   });
 
-  it('returns the canonical 20 mentor segments unfiltered', () => {
+  it('returns the canonical 21 mentor segments unfiltered', () => {
     const { result } = renderHook(() => useMentorSegments());
     expect(result.current.segments).toBe(MENTOR_SEGMENTS);
-    // 17 original + Voice + Screen Share (feat/mentor/1763) + Tasks (feat/mentor/715).
-    expect(MENTOR_SEGMENTS).toHaveLength(20);
+    // 17 original + Voice + Screen Share (feat/mentor/1763) + Tasks
+    // (feat/mentor/715) + LTI.
+    expect(MENTOR_SEGMENTS).toHaveLength(21);
   });
 
   it('places the Sandbox segment right after Settings', () => {
@@ -340,6 +341,100 @@ describe('useMentorSegments', () => {
 
       const labels = result.current.filteredSegments.map((s) => s.label);
       expect(labels).toContain('Privacy');
+    });
+  });
+
+  describe('LTI segment gating', () => {
+    it('orders LTI immediately before Embed', () => {
+      const ltiIndex = MENTOR_SEGMENTS.findIndex((s) => s.label === 'LTI');
+      expect(ltiIndex).toBeGreaterThanOrEqual(0);
+      expect(MENTOR_SEGMENTS[ltiIndex + 1]?.label).toBe('Embed');
+    });
+
+    it('hides LTI when is_lti_accessible is false', () => {
+      mockMentorSettings.mockReturnValue({
+        platform_key: 'custom-tenant',
+        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+        mentor_id: 42,
+        permissions: { field: {} },
+        is_lti_accessible: false,
+      });
+
+      const { result } = renderHook(() => useMentorSegments());
+      const labels = result.current.filteredSegments.map((s) => s.label);
+      expect(labels).not.toContain('LTI');
+      // Sibling integration tabs are unaffected.
+      expect(labels).toContain('Embed');
+    });
+
+    it('hides LTI when is_lti_accessible is missing', () => {
+      mockMentorSettings.mockReturnValue({
+        platform_key: 'custom-tenant',
+        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+        mentor_id: 42,
+        permissions: { field: {} },
+      });
+
+      const { result } = renderHook(() => useMentorSegments());
+      const labels = result.current.filteredSegments.map((s) => s.label);
+      expect(labels).not.toContain('LTI');
+    });
+
+    it('shows LTI for admins when is_lti_accessible is true', () => {
+      mockMentorSettings.mockReturnValue({
+        platform_key: 'custom-tenant',
+        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+        mentor_id: 42,
+        permissions: { field: {} },
+        is_lti_accessible: true,
+      });
+
+      const { result } = renderHook(() => useMentorSegments());
+      const labels = result.current.filteredSegments.map((s) => s.label);
+      expect(labels).toContain('LTI');
+    });
+
+    it('hides LTI from non-admins even when is_lti_accessible is true', () => {
+      mockMentorSettings.mockReturnValue({
+        platform_key: 'custom-tenant',
+        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+        mentor_id: 42,
+        permissions: { field: {} },
+        is_lti_accessible: true,
+      });
+      mockIsUserTypeAllowed.mockImplementation(
+        (s) =>
+          s.userTypes.includes(UserType.FREE_TRIAL) &&
+          !s.userTypes.includes(UserType.ADMIN),
+      );
+
+      const { result } = renderHook(() => useMentorSegments());
+      const labels = result.current.filteredSegments.map((s) => s.label);
+      expect(labels).not.toContain('LTI');
+    });
+
+    it('isSegmentVisible reflects the is_lti_accessible gate for LTI', () => {
+      mockMentorSettings.mockReturnValue({
+        platform_key: 'custom-tenant',
+        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+        mentor_id: 42,
+        permissions: { field: {} },
+        is_lti_accessible: true,
+      });
+
+      const { result } = renderHook(() => useMentorSegments());
+      const ltiSegment = MENTOR_SEGMENTS.find((s) => s.label === 'LTI')!;
+      expect(result.current.isSegmentVisible(ltiSegment)).toBe(true);
+
+      mockMentorSettings.mockReturnValue({
+        platform_key: 'custom-tenant',
+        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+        mentor_id: 42,
+        permissions: { field: {} },
+        is_lti_accessible: false,
+      });
+      const { result: result2 } = renderHook(() => useMentorSegments());
+      expect(result2.current.isSegmentVisible(ltiSegment)).toBe(false);
     });
   });
 

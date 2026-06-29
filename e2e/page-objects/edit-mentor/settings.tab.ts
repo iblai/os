@@ -40,6 +40,12 @@ export class SettingsTab {
   /** "Enable file attachments" toggle (Capabilities sub-tab, feat/1902) */
   readonly allowFileAttachmentsToggle: Locator;
   /**
+   * "Allow LTI launches" toggle (`is_lti_accessible`). Lives in the
+   * Capabilities sub-tab → Advanced section. Turning this on makes the
+   * LTI top-level tab appear in the modal sidebar.
+   */
+  readonly allowLtiLaunchesToggle: Locator;
+  /**
    * "Filter PII from messages" — agent-level toggle for the privacy router
    * (`mentor.enable_privacy_router`). Lives in the Capabilities sub-tab.
    * Previously this lived as the master switch inside the Privacy tab body;
@@ -136,6 +142,12 @@ export class SettingsTab {
     // Capabilities sub-tab. Labelled "Enable file attachments" (feat/1902).
     this.allowFileAttachmentsToggle = dialog.getByRole('switch', {
       name: /enable file attachments/i,
+    });
+    // Capabilities sub-tab → Advanced. Labelled "Allow LTI launches".
+    // Resolved by exact aria-label (the Switch emits no data-testid).
+    this.allowLtiLaunchesToggle = dialog.getByRole('switch', {
+      name: 'Allow LTI launches',
+      exact: true,
     });
     // Capabilities sub-tab. Labelled "Filter PII from messages" — the only
     // surface that flips `enable_privacy_router` after the SDK removed the
@@ -249,6 +261,41 @@ export class SettingsTab {
 
     await this.enablePrivacyRouterToggle.click();
     await expect(this.enablePrivacyRouterToggle).toHaveAttribute(
+      'aria-checked',
+      String(target),
+      { timeout: 10_000 },
+    );
+
+    await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
+    await this.saveButton.click();
+    await expect(
+      this.page.getByText(/agent updated successfully/i).first(),
+    ).toBeVisible({ timeout: 30_000 });
+  }
+
+  /** Read the current on/off state of the "Allow LTI launches" toggle. */
+  async isAllowLtiLaunchesEnabled(): Promise<boolean> {
+    return this.readSwitchState(this.allowLtiLaunchesToggle);
+  }
+
+  /**
+   * Idempotently set the "Allow LTI launches" toggle to the target state and
+   * click Save. Flipping this toggle on (and saving) is what makes the LTI
+   * top-level tab appear in the modal sidebar via `useMentorSegments`.
+   *
+   * Resolves after the "Agent updated successfully" toast appears so the
+   * next `useMentorSegments` re-render sees the updated `is_lti_accessible`
+   * value from the invalidated RTK Query cache.
+   */
+  async setAllowLtiLaunchesAndSave(target: boolean): Promise<void> {
+    // Toggle lives in Settings → Capabilities sub-tab.
+    await this.selectSubTab('Capabilities');
+    await expect(this.allowLtiLaunchesToggle).toBeVisible({ timeout: 10_000 });
+    const isOn = await this.isAllowLtiLaunchesEnabled();
+    if (isOn === target) return;
+
+    await this.allowLtiLaunchesToggle.click();
+    await expect(this.allowLtiLaunchesToggle).toHaveAttribute(
       'aria-checked',
       String(target),
       { timeout: 10_000 },

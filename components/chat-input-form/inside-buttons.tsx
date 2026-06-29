@@ -32,6 +32,13 @@ interface InsideButtonsProps {
   embedMode?: boolean;
   promptsIsEnabled?: boolean;
   memoryEnabled?: boolean;
+  /**
+   * When chat private mode is active (effective mode === 'disabled'), the
+   * Memory button is hidden — memory is not stored for a private session, so
+   * offering it would be misleading. See chat-input-form.tsx for where this
+   * is derived from `useChatPrivacy`.
+   */
+  isPrivate?: boolean;
   tenantKey?: string;
   username?: string;
 }
@@ -48,6 +55,7 @@ export const InsideButtons = ({
   embedMode = false,
   promptsIsEnabled = false,
   memoryEnabled = false,
+  isPrivate = false,
   tenantKey,
   username,
 }: InsideButtonsProps) => {
@@ -87,7 +95,8 @@ export const InsideButtons = ({
       // Memory uses <MemoryButton> in visible mode and a popover handler in
       // the hidden dropdown, so this `action` lambda is unreachable.
       action: /* istanbul ignore next */ () => onOptionClick(TOOLS.MEMORY),
-      isEnabled: memoryEnabled && !embedMode && !!username,
+      // Hidden in private mode — memory is not stored for a private session.
+      isEnabled: memoryEnabled && !embedMode && !!username && !isPrivate,
     },
   ].filter((item) => item.isEnabled);
 

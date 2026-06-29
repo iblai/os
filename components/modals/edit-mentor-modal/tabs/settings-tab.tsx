@@ -973,53 +973,6 @@ export function SettingsTab() {
                     </form.Field>
                   )}
                 </WithFormPermissions>
-
-                <WithFormPermissions
-                  name="is_lti_accessible"
-                  // @ts-ignore
-                  permissions={mentor?.permissions?.field}
-                >
-                  {({ disabled }) => (
-                    <form.Field name="is_lti_accessible">
-                      {(field) => (
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-[#646464]">
-                              Allow LTI launches
-                            </span>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger
-                                  type="button"
-                                  aria-label="More info about allow lti launches"
-                                >
-                                  <Info className="h-4 w-4 text-gray-400" />
-                                </TooltipTrigger>
-                                <TooltipContent className="ibl-tooltip-content">
-                                  <p>
-                                    Allows this agent to be accessible via LTI
-                                    launches. Unselecting this will immediately
-                                    remove access for any users users that have
-                                    launched this via LTI.
-                                  </p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </div>
-                          <Switch
-                            checked={field.state.value}
-                            onCheckedChange={(checked) =>
-                              field.handleChange(checked)
-                            }
-                            disabled={isDisabled || disabled}
-                            aria-label="Allow LTI launches"
-                            aria-checked={field.state.value}
-                          />
-                        </div>
-                      )}
-                    </form.Field>
-                  )}
-                </WithFormPermissions>
               </div>
             </TabsContent>
 
@@ -1606,6 +1559,53 @@ export function SettingsTab() {
                               }
                               disabled={isDisabled || disabled}
                               aria-label="Enable copies"
+                              aria-checked={field.state.value}
+                            />
+                          </div>
+                        )}
+                      </form.Field>
+                    )}
+                  </WithFormPermissions>
+
+                  <WithFormPermissions
+                    name="is_lti_accessible"
+                    // @ts-ignore
+                    permissions={mentor?.permissions?.field}
+                  >
+                    {({ disabled }) => (
+                      <form.Field name="is_lti_accessible">
+                        {(field) => (
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-[#646464]">
+                                Allow LTI launches
+                              </span>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger
+                                    type="button"
+                                    aria-label="More info about allow lti launches"
+                                  >
+                                    <Info className="h-4 w-4 text-gray-400" />
+                                  </TooltipTrigger>
+                                  <TooltipContent className="ibl-tooltip-content">
+                                    <p>
+                                      Allows this agent to be accessible via LTI
+                                      launches. Unselecting this will
+                                      immediately remove access for any users
+                                      users that have launched this via LTI.
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </div>
+                            <Switch
+                              checked={field.state.value}
+                              onCheckedChange={(checked) =>
+                                field.handleChange(checked)
+                              }
+                              disabled={isDisabled || disabled}
+                              aria-label="Allow LTI launches"
                               aria-checked={field.state.value}
                             />
                           </div>

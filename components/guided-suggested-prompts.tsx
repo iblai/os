@@ -62,7 +62,11 @@ export function GuidedSuggestedPrompts({
 
   return (
     <div
-      className="mt-8 flex w-full justify-end"
+      className={cn(
+        'mt-8 flex w-full justify-end',
+        CSS_CLASS_NAMES.APP_LAYOUT.GUIDED_SUGGESTED_PROMPTS_CONTAINER,
+      )}
+      data-testid="guided-suggested-prompts"
       aria-live="polite"
       aria-relevant="additions text"
       aria-atomic="true"
