@@ -19,14 +19,38 @@ import { waitForPageReady } from '../utils/resilient';
  *                             LLM/TTS/STT providers, function-calling and
  *                             screen-share toggles).
  */
+
+// Run the WHOLE file serially in a single worker AND give every test its own
+// freshly-created mentor. `show_voice_call` (the gate behind the Voice top-level
+// tab) is persisted SERVER-SIDE per mentor, and every worker shares the same
+// admin storageState + default selected agent — so without isolation a
+// concurrent `enableVoiceCall()` in another test or journey (this file's own
+// VO-12 / sibling beforeEach, or journey 09's Admin voice tests) flips the flag
+// back ON inside VO-11's "Voice tab hidden" negative-assertion window, surfacing
+// as `Received: visible`. File-level serial (NOT per-describe — separate serial
+// describes still run in parallel across workers) pins the file to one worker;
+// the per-test dedicated mentor in beforeEach guarantees no other test or worker
+// can touch this mentor's show_voice_call. Mirrors journey 44's enable_claw
+// isolation.
+test.describe.configure({ mode: 'serial' });
+
 test.describe('Journey 47: Mentor Voice Tab', () => {
-  test.beforeEach(async ({ page, editMentorPage }) => {
+  test.beforeEach(async ({ page, editMentorPage, createMentorPage }) => {
     await navigateToMentorApp(page);
     const isAdmin = await checkAdminStatus(page);
     if (!isAdmin) {
       test.skip(true, 'Voice tab requires admin access');
       return;
     }
+
+    // Create a fresh, dedicated mentor for every test so each show_voice_call
+    // mutation runs against a mentor no other test/worker can select.
+    // openAndCreate navigates THIS page to the new mentor's /platform/{...} URL
+    // (and waits for it to settle), so every editMentorPage call below edits the
+    // dedicated mentor. New mentors default show_voice_call ON, so the Voice tab
+    // is present from the start; the defensive fallback below still covers the
+    // edge case where it is not. See the file-level serial note above.
+    await createMentorPage.openAndCreate();
 
     // Open the Edit Agent modal to the Settings tab first, not directly to
     // Voice. The Voice tab is admin-gated by the segments hook (userTypes:
@@ -232,9 +256,10 @@ test.describe('Journey 47: Mentor Voice Tab', () => {
   // toggle (`show_voice_call`). Turning voice calls off in Settings hides
   // the Voice tab from the sidebar entirely — even across reloads, because
   // the gate reads from the persisted mentor settings. Mirrors the
-  // Screen Share gating in journey 47. The beforeEach opens the Voice tab,
-  // so voice calls are on at the start; we restore to on at the end to keep
-  // the suite idempotent (the next beforeEach needs the Voice tab present).
+  // Screen Share gating in journey 47. Each test runs against its own freshly
+  // created mentor (see the beforeEach + file-level serial note), so this
+  // disable can never be stomped by a parallel writer re-enabling the flag;
+  // the trailing re-enable is now just a harmless, idempotent restore of intent.
   test('Voice tab is hidden when "Enable voice calls" is off', async ({
     editMentorPage,
   }) => {
