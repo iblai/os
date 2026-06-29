@@ -400,7 +400,10 @@ export function Chat({
           supportPhone={
             metadata?.support_phone || config.defaultSupportPhoneNumber()
           }
-          useSupportPhone={metadata?.enable_support_phone !== false} //null or true consider truthy
+          useSupportPhone={
+            config.enableSupportPhone() ??
+            metadata?.enable_support_phone !== false
+          } //null or true consider truthy
         />,
         { closeButton: true, duration: TOAST_DURATION },
       );
@@ -472,7 +475,10 @@ export function Chat({
           supportPhone={
             metadata?.support_phone || config.defaultSupportPhoneNumber()
           }
-          useSupportPhone={metadata?.enable_support_phone !== false} //null or true consider truthy
+          useSupportPhone={
+            config.enableSupportPhone() ??
+            metadata?.enable_support_phone !== false
+          } //null or true consider truthy
         />,
         { closeButton: true, duration: TOAST_DURATION },
       );

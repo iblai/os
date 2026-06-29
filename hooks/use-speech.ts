@@ -9,11 +9,107 @@ import { LOCAL_STORAGE_KEYS } from '@/lib/constants';
 import { useUsername } from '@/providers/use-user';
 import { useMentorSettings } from './use-mentors/use-mentor-settings';
 
-async function fetchTtsDataUrl(
+const DEFAULT_TTS_MIME = 'audio/mpeg';
+
+function normalizeAudioMime(contentType: string | null): string {
+  const mime = (contentType ?? '').split(';')[0].trim().toLowerCase();
+  if (!mime) return DEFAULT_TTS_MIME;
+  return mime === 'audio/mp3' ? DEFAULT_TTS_MIME : mime;
+}
+
+function canStreamWithMediaSource(mime: string): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    typeof window.MediaSource !== 'undefined' &&
+    typeof window.MediaSource.isTypeSupported === 'function' &&
+    window.MediaSource.isTypeSupported(mime)
+  );
+}
+
+function attachMediaSourceStream(
+  audio: HTMLAudioElement,
+  body: ReadableStream<Uint8Array>,
+  mime: string,
+  signal: AbortSignal,
+): { objectUrl: string; ready: Promise<void> } {
+  const mediaSource = new window.MediaSource();
+  const objectUrl = URL.createObjectURL(mediaSource);
+  audio.src = objectUrl;
+
+  const ready = new Promise<void>((resolve, reject) => {
+    const onSourceOpen = () => {
+      mediaSource.removeEventListener('sourceopen', onSourceOpen);
+
+      let sourceBuffer: SourceBuffer;
+      try {
+        sourceBuffer = mediaSource.addSourceBuffer(mime);
+      } catch (err) {
+        reject(err);
+        return;
+      }
+
+      const appendChunk = (chunk: Uint8Array) =>
+        new Promise<void>((res, rej) => {
+          const onUpdateEnd = () => {
+            sourceBuffer.removeEventListener('updateend', onUpdateEnd);
+            sourceBuffer.removeEventListener('error', onError);
+            res();
+          };
+          const onError = () => {
+            sourceBuffer.removeEventListener('updateend', onUpdateEnd);
+            sourceBuffer.removeEventListener('error', onError);
+            rej(new Error('TTS source buffer append failed'));
+          };
+          sourceBuffer.addEventListener('updateend', onUpdateEnd);
+          sourceBuffer.addEventListener('error', onError);
+          sourceBuffer.appendBuffer(chunk as BufferSource);
+        });
+
+      const pump = async () => {
+        const reader = body.getReader();
+        let appendedAny = false;
+        try {
+          while (true) {
+            const result = await reader.read();
+            if (result.done) break;
+            if (result.value.byteLength > 0) {
+              await appendChunk(result.value);
+              appendedAny = true;
+              resolve();
+            }
+          }
+          if (mediaSource.readyState === 'open') {
+            mediaSource.endOfStream();
+          }
+          if (!appendedAny) {
+            reject(new Error('TTS stream produced no audio'));
+          }
+        } catch (err) {
+          reject(err);
+          if (!signal.aborted && mediaSource.readyState === 'open') {
+            try {
+              mediaSource.endOfStream();
+            } catch {}
+          }
+        }
+      };
+
+      void pump();
+    };
+
+    mediaSource.addEventListener('sourceopen', onSourceOpen);
+  });
+
+  return { objectUrl, ready };
+}
+
+async function loadTtsAudio(
+  audio: HTMLAudioElement,
   org: string,
   userId: string,
   chatMessageId: string,
-): Promise<string> {
+  signal: AbortSignal,
+): Promise<boolean> {
   const token =
     typeof window !== 'undefined'
       ? window.localStorage.getItem(LOCAL_STORAGE_KEYS.DM_TOKEN_KEY)
@@ -23,23 +119,38 @@ async function fetchTtsDataUrl(
     method: 'GET',
     cache: 'no-cache',
     headers: token ? { Authorization: `Token ${token}` } : undefined,
+    signal,
   });
   if (!response.ok) {
     throw new Error(`TTS request failed with status ${response.status}`);
   }
+
+  const contentType = response.headers.get('Content-Type');
+
+  if (contentType && !contentType.toLowerCase().startsWith('audio/')) {
+    return false;
+  }
+  const mime = normalizeAudioMime(contentType);
+
+  if (response.body && canStreamWithMediaSource(mime)) {
+    const { objectUrl, ready } = attachMediaSourceStream(
+      audio,
+      response.body,
+      mime,
+      signal,
+    );
+    activeObjectUrl = objectUrl;
+    await ready;
+    return true;
+  }
+
   const blob = await response.blob();
-  return await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result as string);
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(blob);
-  });
+  const objectUrl = URL.createObjectURL(blob);
+  activeObjectUrl = objectUrl;
+  audio.src = objectUrl;
+  return true;
 }
 
-// Module-level store so every consumer of useSpeech (the per-message
-// AIMessageSpeak buttons and the ChatMessages autoplay flow) shares one active
-// playback. This is what lets the icon on a specific message bubble light up
-// when autoplay reads that message from elsewhere in the tree.
 type SpeechSnapshot = {
   currentMessageId: string | null;
   isSpeaking: boolean;
@@ -53,6 +164,8 @@ let snapshot: SpeechSnapshot = {
 };
 
 let activeAudio: HTMLAudioElement | null = null;
+let activeStreamController: AbortController | null = null;
+let activeObjectUrl: string | null = null;
 
 const listeners = new Set<() => void>();
 
@@ -72,12 +185,24 @@ function update(patch: Partial<SpeechSnapshot>) {
   listeners.forEach((l) => l());
 }
 
+function releaseObjectUrl() {
+  if (activeObjectUrl) {
+    URL.revokeObjectURL(activeObjectUrl);
+    activeObjectUrl = null;
+  }
+}
+
 function teardownPlayback() {
+  if (activeStreamController) {
+    activeStreamController.abort();
+    activeStreamController = null;
+  }
   if (activeAudio) {
     activeAudio.pause();
     activeAudio.src = '';
     activeAudio = null;
   }
+  releaseObjectUrl();
   if (typeof window !== 'undefined' && window.speechSynthesis) {
     window.speechSynthesis.cancel();
   }
@@ -154,29 +279,38 @@ export function useSpeech({ mentorId, tenantKey }: Props = {}) {
         isLoading: true,
       });
 
+      const controller = new AbortController();
+      activeStreamController = controller;
+      const audio = new Audio();
+      activeAudio = audio;
+      audio.onended = () => {
+        activeAudio = null;
+        releaseObjectUrl();
+        update({ currentMessageId: null, isSpeaking: false });
+      };
+      audio.onerror = () => {
+        activeAudio = null;
+        releaseObjectUrl();
+        update({ currentMessageId: null, isSpeaking: false });
+      };
+
       try {
-        const dataUrl = await fetchTtsDataUrl(
+        const isAudio = await loadTtsAudio(
+          audio,
           tenantKey,
           username,
           String(message.id),
+          controller.signal,
         );
-        if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:')) {
+        if (!isAudio) {
           speakViaBrowser(message);
           return;
         }
-        const audio = new Audio(dataUrl);
-        activeAudio = audio;
-        audio.onended = () => {
-          activeAudio = null;
-          update({ currentMessageId: null, isSpeaking: false });
-        };
-        audio.onerror = () => {
-          activeAudio = null;
-          update({ currentMessageId: null, isSpeaking: false });
-        };
         update({ isSpeaking: true, isLoading: false });
         await audio.play();
       } catch {
+        // A deliberate stop aborts the stream; its teardown already reset state.
+        if (controller.signal.aborted) return;
         resetSpeech();
       }
     },

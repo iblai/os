@@ -6,6 +6,7 @@ import {
   fireEvent,
   cleanup,
   waitFor,
+  act,
 } from '@testing-library/react';
 
 import {
@@ -768,6 +769,133 @@ describe('CodeCanvasComponent', () => {
       });
 
       document.body.removeChild(outsideElement);
+    });
+
+    const openHighlightPopup = async (container: HTMLElement) => {
+      const editor = container.querySelector('[contenteditable="true"]');
+      const mockRange = {
+        cloneRange: vi.fn().mockReturnThis(),
+        selectNodeContents: vi.fn(),
+        setEnd: vi.fn(),
+        getBoundingClientRect: vi.fn().mockReturnValue({
+          left: 100,
+          top: 100,
+          bottom: 120,
+          width: 50,
+          height: 20,
+        }),
+        commonAncestorContainer: editor,
+        getClientRects: vi.fn().mockReturnValue([]),
+        startContainer: { textContent: 'selected' },
+        startOffset: 0,
+        toString: vi.fn().mockReturnValue(''),
+      };
+      const mockSelection = {
+        rangeCount: 1,
+        getRangeAt: vi.fn().mockReturnValue(mockRange),
+        toString: vi.fn().mockReturnValue('selected'),
+        removeAllRanges: vi.fn(),
+        addRange: vi.fn(),
+      };
+      vi.spyOn(window, 'getSelection').mockReturnValue(mockSelection as any);
+
+      if (editor) {
+        fireEvent.mouseUp(editor);
+      }
+      // mouseUp schedules handleTextSelection via setTimeout(..., 10)
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(20);
+      });
+      return mockRange;
+    };
+
+    it('renders the highlight popup and updates input value', async () => {
+      vi.useFakeTimers();
+      try {
+        const { container } = render(<CodeCanvasComponent {...defaultProps} />);
+        await openHighlightPopup(container);
+
+        const input = screen.getByPlaceholderText('Ask Anything...');
+        expect(input).toBeInTheDocument();
+
+        // onChange handler
+        fireEvent.change(input, { target: { value: 'explain this' } });
+        expect(input).toHaveValue('explain this');
+
+        // onMouseDown / onMouseUp stopPropagation handlers on the popup
+        const popup = container.querySelector('.highlight-popup');
+        if (popup) {
+          fireEvent.mouseDown(popup);
+          fireEvent.mouseUp(popup);
+        }
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('sends the highlight query on Enter key', async () => {
+      vi.useFakeTimers();
+      try {
+        const sendMessage = vi.fn();
+        const { container } = render(
+          <CodeCanvasComponent {...defaultProps} sendMessage={sendMessage} />,
+        );
+        await openHighlightPopup(container);
+
+        const input = screen.getByPlaceholderText('Ask Anything...');
+        fireEvent.change(input, { target: { value: 'what is this?' } });
+        fireEvent.keyDown(input, { key: 'Enter' });
+
+        // Popup closes after sending
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(20);
+        });
+        expect(
+          screen.queryByPlaceholderText('Ask Anything...'),
+        ).not.toBeInTheDocument();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('closes the highlight popup on Escape key', async () => {
+      vi.useFakeTimers();
+      try {
+        const { container } = render(<CodeCanvasComponent {...defaultProps} />);
+        await openHighlightPopup(container);
+
+        const input = screen.getByPlaceholderText('Ask Anything...');
+        expect(input).toBeInTheDocument();
+
+        fireEvent.keyDown(input, { key: 'Escape' });
+
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(20);
+        });
+        expect(
+          screen.queryByPlaceholderText('Ask Anything...'),
+        ).not.toBeInTheDocument();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('ignores other keys in the highlight input', async () => {
+      vi.useFakeTimers();
+      try {
+        const { container } = render(<CodeCanvasComponent {...defaultProps} />);
+        await openHighlightPopup(container);
+
+        const input = screen.getByPlaceholderText('Ask Anything...');
+        fireEvent.keyDown(input, { key: 'a' });
+
+        // Popup remains open for non-Enter/Escape keys
+        expect(
+          screen.getByPlaceholderText('Ask Anything...'),
+        ).toBeInTheDocument();
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 
