@@ -6,6 +6,7 @@ import {
   useCreateRedirectTokenMutation,
   useEditMentorMutation,
   useGetMentorPublicSettingsQuery,
+  useGetMentorSettingsQuery,
 } from '@iblai/iblai-js/data-layer';
 import { useForm } from '@tanstack/react-form';
 import { useParams } from 'next/navigation';
@@ -44,6 +45,7 @@ export interface EmbedFormValues {
   embed_show_voice_record: boolean;
   show_catalogue: boolean;
   starter_prompts: 'guided_prompt' | 'suggested_prompt';
+  strip_page_content_html: boolean;
 }
 
 export interface CustomFloatingBubbleConfig {
@@ -100,6 +102,7 @@ const defaultEmbedFormValues: EmbedFormValues = {
   embed_show_voice_record: true,
   show_catalogue: true,
   starter_prompts: 'guided_prompt',
+  strip_page_content_html: false,
 };
 
 const useEmbedTab = () => {
@@ -115,6 +118,14 @@ const useEmbedTab = () => {
     // @ts-ignore
     userId: username ?? ANONYMOUS_USERNAME,
   });
+  // `strip_page_content_html` is returned by the private mentor-settings GET
+  // (`/settings/`) but is not yet reflected in the published MentorSettings
+  // type — read it via a narrow cast. Defaults to `false` (backend default).
+  const { data: mentorSettings } = useGetMentorSettingsQuery(
+    // @ts-ignore - userId is required by the API but not in the query type
+    { mentor: mentorId, org: params.tenantKey, userId: username ?? '' },
+    { skip: !username || !mentorId || !params.tenantKey },
+  );
   const [
     createRedirectToken,
     { isLoading: isCreateTokenLoading, data: redirectTokenData },
@@ -283,6 +294,12 @@ const useEmbedTab = () => {
         mentorPublicSettings?.starter_prompts === 'suggested_prompt'
           ? 'suggested_prompt'
           : 'guided_prompt',
+      // `strip_page_content_html` is exposed by the private settings GET but
+      // not yet reflected in the published MentorSettings type — read it via a
+      // narrow cast. Defaults to `false` (backend default).
+      strip_page_content_html:
+        (mentorSettings as { strip_page_content_html?: boolean } | undefined)
+          ?.strip_page_content_html ?? false,
     },
     onSubmit: async ({ value }) => {
       const syncResult = await syncEmbedSettings();
