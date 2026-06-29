@@ -458,7 +458,7 @@ test.describe('Journey 20: Dataset Management', () => {
     await expect(imageBtn).toBeVisible({ timeout: 5_000 });
     await imageBtn.click();
     await page.waitForTimeout(1_000);
-    const imageDialog = page.getByRole('dialog').filter({ hasText: 'Image' });
+    const imageDialog = page.getByRole('dialog', { name: 'Image' });
     await expect(imageDialog).toBeVisible({ timeout: 5_000 });
     const fileInput = imageDialog.locator('input[type="file"]');
     await fileInput.setInputFiles(IMAGE_FILE);
@@ -493,9 +493,7 @@ test.describe('Journey 20: Dataset Management', () => {
       await expect(typeBtn).toBeVisible({ timeout: 5_000 });
       await typeBtn.click();
       await page.waitForTimeout(1_000);
-      const typeDialog = page
-        .getByRole('dialog')
-        .filter({ hasText: resource.type });
+      const typeDialog = page.getByRole('dialog', { name: resource.type });
       await expect(typeDialog).toBeVisible({ timeout: 10_000 });
       await typeDialog
         .locator('input[type="file"]')
