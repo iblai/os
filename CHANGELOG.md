@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.87.2](https://github.com/iblai/os/compare/v0.87.1...v0.87.2) (2026-06-30)
+
+### Bug Fixes
+
+* **deps:** patch vitest, dompurify, and @opentelemetry/core vulnerabilities ([4e30df7](https://github.com/iblai/os/commit/4e30df7e7c70e16fea703f66cd06120cd8dd9549))
+
+### CI
+
+* add dependency vulnerability scanning to the PR pipeline ([9c3b7b6](https://github.com/iblai/os/commit/9c3b7b645976455b1ad1f0112493b18535a8b862))
+
 ## [0.87.1](https://github.com/iblai/os/compare/v0.87.0...v0.87.1) (2026-06-30)
 
 ### Bug Fixes
