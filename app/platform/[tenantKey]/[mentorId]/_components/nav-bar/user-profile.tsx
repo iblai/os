@@ -54,6 +54,8 @@ export function UserProfile() {
   const tenantKey = params?.tenantKey || '';
   const mentorId = params?.mentorId || '';
 
+  console.log('[ENVS CONFIGS]: ', { config });
+
   // URL sync for billing tab only
   const router = useRouter();
   const pathname = usePathname();
@@ -323,6 +325,7 @@ export function UserProfile() {
       onTenantChange={handleTenantChange}
       onHelpClick={handleHelpClick}
       defaultSupportPhone={config.defaultSupportPhoneNumber()}
+      enableSupportPhone={config.enableSupportPhone()}
       // Modal props
       currentPlan={currentPlan}
       userActiveApp={userActiveApp}

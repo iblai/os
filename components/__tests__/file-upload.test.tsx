@@ -140,4 +140,68 @@ describe('FileUpload component', () => {
 
     expect(screen.getByText('test.pdf')).toBeInTheDocument();
   });
+
+  it('hides drag overlay on dragleave when leaving the document (relatedTarget null)', () => {
+    render(<FileUpload />);
+
+    act(() => {
+      fireEvent.dragOver(document, { dataTransfer: { files: [] } });
+    });
+    expect(screen.getByText('Drop your files here')).toBeInTheDocument();
+
+    // relatedTarget defaults to null when leaving the document entirely.
+    const event = new MouseEvent('dragleave', {
+      bubbles: true,
+      cancelable: true,
+      relatedTarget: null,
+    });
+    act(() => {
+      document.dispatchEvent(event);
+    });
+    expect(screen.queryByText('Drop your files here')).not.toBeInTheDocument();
+  });
+
+  it('hides drag overlay on dragleave when relatedTarget is the HTML element', () => {
+    render(<FileUpload />);
+
+    act(() => {
+      fireEvent.dragOver(document, { dataTransfer: { files: [] } });
+    });
+    expect(screen.getByText('Drop your files here')).toBeInTheDocument();
+
+    // Construct a DragEvent so relatedTarget is honored by jsdom.
+    const event = new MouseEvent('dragleave', {
+      bubbles: true,
+      cancelable: true,
+      relatedTarget: document.documentElement,
+    });
+    act(() => {
+      document.dispatchEvent(event);
+    });
+    expect(screen.queryByText('Drop your files here')).not.toBeInTheDocument();
+  });
+
+  it('keeps drag overlay on dragleave when moving to an inner (non-HTML) element', () => {
+    render(<FileUpload />);
+
+    act(() => {
+      fireEvent.dragOver(document, { dataTransfer: { files: [] } });
+    });
+    expect(screen.getByText('Drop your files here')).toBeInTheDocument();
+
+    // relatedTarget is a non-HTML node (still inside the document)
+    const inner = document.createElement('div');
+    document.body.appendChild(inner);
+    const event = new MouseEvent('dragleave', {
+      bubbles: true,
+      cancelable: true,
+      relatedTarget: inner,
+    });
+    act(() => {
+      document.dispatchEvent(event);
+    });
+    // Overlay should remain because we are not leaving the document
+    expect(screen.getByText('Drop your files here')).toBeInTheDocument();
+    document.body.removeChild(inner);
+  });
 });

@@ -34,6 +34,17 @@ export default defineConfig({
           import.meta.url,
         ).pathname,
       },
+      {
+        // `components/advanced-chart-with-tooltip.tsx` imports a not-yet-built
+        // `./detailed-chart-tooltip` placeholder module that does not exist on
+        // disk, so Vite's import-analysis cannot resolve it in tests. Point it
+        // at a test-only stub so the component is renderable under Vitest.
+        find: /^.*\/detailed-chart-tooltip$/,
+        replacement: new URL(
+          './__tests__/mocks/detailed-chart-tooltip.mock.tsx',
+          import.meta.url,
+        ).pathname,
+      },
       // Mock Tauri APIs for testing
     ],
   },

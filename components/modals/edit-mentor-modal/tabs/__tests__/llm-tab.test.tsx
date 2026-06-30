@@ -1,0 +1,323 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { LLMTab } from '../llm-tab';
+
+// ============================================================================
+// MOCKS
+// ============================================================================
+
+const mockEditMentor = vi.fn();
+const mockUnwrap = vi.fn();
+let mockIsEditing = false;
+
+const mockGetMentorSettingsQuery = vi.fn();
+const mockGetLlmsQuery = vi.fn();
+const mockGetMentorId = vi.fn();
+const mockUseParams = vi.fn();
+
+vi.mock('next/navigation', () => ({
+  useParams: () => mockUseParams(),
+}));
+
+vi.mock('next/image', () => ({
+  default: ({ src, alt, ...props }: any) => (
+    <img src={src} alt={alt} {...props} />
+  ),
+}));
+
+vi.mock('@/hooks/use-user', () => ({
+  useUsername: () => 'test-user',
+}));
+
+vi.mock('@/hooks/user-navigate', () => ({
+  useNavigate: () => ({ getMentorId: mockGetMentorId }),
+}));
+
+vi.mock('@iblai/iblai-js/data-layer', () => ({
+  useGetMentorSettingsQuery: (...args: unknown[]) =>
+    mockGetMentorSettingsQuery(...args),
+  useGetLlmsQuery: (...args: unknown[]) => mockGetLlmsQuery(...args),
+  useEditMentorMutation: () => [
+    (...args: unknown[]) => {
+      mockEditMentor(...args);
+      return { unwrap: mockUnwrap };
+    },
+    { isLoading: mockIsEditing },
+  ],
+}));
+
+const mockToastSuccess = vi.fn();
+const mockToastError = vi.fn();
+vi.mock('sonner', () => ({
+  toast: {
+    success: (...args: unknown[]) => mockToastSuccess(...args),
+    error: (...args: unknown[]) => mockToastError(...args),
+  },
+}));
+
+// extractErrorMessage just returns the fallback string here.
+vi.mock('@/lib/error', () => ({
+  extractErrorMessage: (_error: unknown, fallback: string) => fallback,
+}));
+
+// WithFormPermissions renders its children with a controllable `disabled` flag.
+const mockPermissionsDisabled = vi.fn();
+vi.mock('@/hoc/withPermissions', () => ({
+  default: ({ children }: any) =>
+    children({ disabled: mockPermissionsDisabled() }),
+}));
+
+// Stub the provider modal so we can assert it opens and forwards selection.
+const mockModalProps = vi.fn();
+vi.mock('@/components/modals/llm-provider-modal', () => ({
+  LLMProviderModal: (props: any) => {
+    mockModalProps(props);
+    return props.isOpen ? (
+      <div data-testid="llm-provider-modal">
+        <span>{props.llmProvider?.name}</span>
+        <button
+          data-testid="modal-select"
+          onClick={() => props.onSelect('openai', 'gpt-4o')}
+        >
+          select
+        </button>
+        <button data-testid="modal-close" onClick={props.onClose}>
+          close
+        </button>
+      </div>
+    ) : null;
+  },
+}));
+
+// ============================================================================
+// TEST DATA
+// ============================================================================
+
+const llmProviders = [
+  {
+    id: 1,
+    name: 'openai',
+    logo: '/openai.png',
+    description: 'OpenAI provider',
+    chat_models: [],
+    has_credentials: true,
+    main_has_credentials: true,
+    can_use_main_keys: true,
+  },
+  {
+    id: 2,
+    name: 'anthropic',
+    logo: '/anthropic.png',
+    description: 'Anthropic provider',
+    chat_models: [],
+  },
+];
+
+const mentorSettings = {
+  llm_name: 'gpt-4o',
+  llm_provider: 'openai',
+  permissions: { field: { llm_provider: { read: true, write: true } } },
+};
+
+// ============================================================================
+// TESTS
+// ============================================================================
+
+describe('LLMTab', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockIsEditing = false;
+    mockUnwrap.mockResolvedValue({});
+    mockUseParams.mockReturnValue({
+      tenantKey: 'test-tenant',
+      mentorId: 'mentor-123',
+    });
+    mockGetMentorId.mockReturnValue(null);
+    mockPermissionsDisabled.mockReturnValue(false);
+    mockGetMentorSettingsQuery.mockReturnValue({
+      data: mentorSettings,
+      isLoading: false,
+    });
+    mockGetLlmsQuery.mockReturnValue({
+      data: llmProviders,
+      isLoading: false,
+    });
+  });
+
+  it('renders the configuration header by default', () => {
+    render(<LLMTab />);
+    expect(screen.getByText('LLM Configuration')).toBeInTheDocument();
+    expect(
+      screen.getByText('Configure the language model settings for your agent.'),
+    ).toBeInTheDocument();
+  });
+
+  it('hides the configuration header when showConfigurationHeader is false', () => {
+    render(<LLMTab showConfigurationHeader={false} />);
+    expect(screen.queryByText('LLM Configuration')).not.toBeInTheDocument();
+  });
+
+  it('renders the search input and provider cards', () => {
+    render(<LLMTab />);
+    expect(screen.getByPlaceholderText('Search Providers')).toBeInTheDocument();
+    // getLLMProviderDetails maps "openai" -> OpenAI and "anthropic" -> Anthropic
+    expect(screen.getByText('OpenAI')).toBeInTheDocument();
+    expect(screen.getByText('Anthropic')).toBeInTheDocument();
+  });
+
+  it('shows a spinner while loading', () => {
+    mockGetLlmsQuery.mockReturnValue({ data: undefined, isLoading: true });
+    render(<LLMTab />);
+    expect(screen.getByTestId('spinner')).toBeInTheDocument();
+  });
+
+  it('filters provider cards by the search query', async () => {
+    const user = userEvent.setup();
+    render(<LLMTab />);
+
+    const search = screen.getByPlaceholderText('Search Providers');
+    await user.type(search, 'anthropic');
+
+    expect(screen.getByText('Anthropic')).toBeInTheDocument();
+    expect(screen.queryByText('OpenAI')).not.toBeInTheDocument();
+  });
+
+  it('highlights the currently selected provider', () => {
+    const { container } = render(<LLMTab />);
+    // openai card carries the active border-blue-500 class
+    expect(container.querySelector('.border-blue-500')).toBeInTheDocument();
+  });
+
+  it('opens the provider modal when a provider card is clicked', async () => {
+    const user = userEvent.setup();
+    render(<LLMTab />);
+
+    await user.click(screen.getByText('Anthropic'));
+
+    expect(screen.getByTestId('llm-provider-modal')).toBeInTheDocument();
+  });
+
+  it('does not open the modal when permissions disable the card', async () => {
+    mockPermissionsDisabled.mockReturnValue(true);
+    const user = userEvent.setup();
+    render(<LLMTab />);
+
+    await user.click(screen.getByText('Anthropic'));
+
+    expect(screen.queryByTestId('llm-provider-modal')).not.toBeInTheDocument();
+  });
+
+  it('does not open the modal when the tab is disabled (editing in progress)', async () => {
+    mockIsEditing = true;
+    const user = userEvent.setup();
+    render(<LLMTab />);
+
+    await user.click(screen.getByText('Anthropic'));
+
+    expect(screen.queryByTestId('llm-provider-modal')).not.toBeInTheDocument();
+  });
+
+  it('updates the mentor LLM and shows a success toast on selection', async () => {
+    const user = userEvent.setup();
+    render(<LLMTab />);
+
+    await user.click(screen.getByText('Anthropic'));
+    fireEvent.click(screen.getByTestId('modal-select'));
+
+    await waitFor(() => {
+      expect(mockEditMentor).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mentor: 'mentor-123',
+          org: 'test-tenant',
+          userId: 'test-user',
+          formData: { llm_provider: 'openai', llm_name: 'gpt-4o' },
+        }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(mockToastSuccess).toHaveBeenCalledWith('LLM updated successfully');
+    });
+  });
+
+  it('shows an error toast when the LLM update fails', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mockUnwrap.mockRejectedValue(new Error('update failed'));
+    const user = userEvent.setup();
+    render(<LLMTab />);
+
+    await user.click(screen.getByText('Anthropic'));
+    fireEvent.click(screen.getByTestId('modal-select'));
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith('Failed to update LLM');
+    });
+
+    consoleSpy.mockRestore();
+  });
+
+  it('closes the modal when its onClose is triggered', async () => {
+    const user = userEvent.setup();
+    render(<LLMTab />);
+
+    await user.click(screen.getByText('Anthropic'));
+    expect(screen.getByTestId('llm-provider-modal')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('modal-close'));
+    expect(screen.queryByTestId('llm-provider-modal')).not.toBeInTheDocument();
+  });
+
+  it('does not render the modal when mentorSettings is missing', async () => {
+    mockGetMentorSettingsQuery.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+    });
+    const user = userEvent.setup();
+    render(<LLMTab />);
+
+    await user.click(screen.getByText('Anthropic'));
+
+    expect(screen.queryByTestId('llm-provider-modal')).not.toBeInTheDocument();
+  });
+
+  it('uses getMentorId when it returns a value', () => {
+    mockGetMentorId.mockReturnValue('modal-mentor-789');
+    render(<LLMTab />);
+
+    expect(mockGetMentorSettingsQuery).toHaveBeenCalledWith(
+      expect.objectContaining({ mentor: 'modal-mentor-789' }),
+      expect.anything(),
+    );
+  });
+
+  it('falls back to the URL mentorId when getMentorId returns null', () => {
+    render(<LLMTab />);
+
+    expect(mockGetMentorSettingsQuery).toHaveBeenCalledWith(
+      expect.objectContaining({ mentor: 'mentor-123' }),
+      expect.anything(),
+    );
+  });
+
+  it('disables the search input while data is loading', () => {
+    mockGetMentorSettingsQuery.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+    });
+    render(<LLMTab />);
+    expect(screen.getByPlaceholderText('Search Providers')).toBeDisabled();
+  });
+
+  it('handles an empty providers list without crashing', () => {
+    mockGetLlmsQuery.mockReturnValue({ data: [], isLoading: false });
+    render(<LLMTab />);
+    expect(screen.getByPlaceholderText('Search Providers')).toBeInTheDocument();
+  });
+
+  it('handles an undefined providers list without crashing', () => {
+    mockGetLlmsQuery.mockReturnValue({ data: undefined, isLoading: false });
+    render(<LLMTab />);
+    expect(screen.getByPlaceholderText('Search Providers')).toBeInTheDocument();
+  });
+});
