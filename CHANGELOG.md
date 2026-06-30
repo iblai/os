@@ -1,5 +1,7 @@
 # Changelog
 
+## [0.87.3](https://github.com/iblai/os/compare/v0.87.2...v0.87.3) (2026-06-30)
+
 ## [0.87.2](https://github.com/iblai/os/compare/v0.87.1...v0.87.2) (2026-06-30)
 
 ### Bug Fixes
