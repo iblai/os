@@ -4,19 +4,19 @@
 
 ### Bug Fixes
 
-* **e2e-test:** fixing e2e test for journey 20 for nested dialouge ([efc873c](https://github.com/iblai/os/commit/efc873c410913ac4ef4db42478a234bbb8a8d06c))
-* **e2e-test:** fixing voice chat tests to have dedicated mentor to perform tests ([1cccc44](https://github.com/iblai/os/commit/1cccc448fbade330d5c46cf723ebb1668610ec99))
-* **e2e-test:** more fixes for journey 20 ([e845aca](https://github.com/iblai/os/commit/e845acab21dbb31cce2d228d89a5408a23977dab))
-* **mentor:** unify explore agents section onto ai-search endpoint ([e929083](https://github.com/iblai/os/commit/e929083c7583012c0ac74e484fa901889ae6db12))
+- **e2e-test:** fixing e2e test for journey 20 for nested dialouge ([efc873c](https://github.com/iblai/os/commit/efc873c410913ac4ef4db42478a234bbb8a8d06c))
+- **e2e-test:** fixing voice chat tests to have dedicated mentor to perform tests ([1cccc44](https://github.com/iblai/os/commit/1cccc448fbade330d5c46cf723ebb1668610ec99))
+- **e2e-test:** more fixes for journey 20 ([e845aca](https://github.com/iblai/os/commit/e845acab21dbb31cce2d228d89a5408a23977dab))
+- **mentor:** unify explore agents section onto ai-search endpoint ([e929083](https://github.com/iblai/os/commit/e929083c7583012c0ac74e484fa901889ae6db12))
 
 ### Chores
 
-* **format:** apply prettier to drifted files ([630bc8c](https://github.com/iblai/os/commit/630bc8c0f320db285864ffbda1b5bea7e71e4863))
-* **mentorai:** version bump for iblai-js ([a4034b3](https://github.com/iblai/os/commit/a4034b3f1496295b1056959fa4dcb4cc899be75d))
+- **format:** apply prettier to drifted files ([630bc8c](https://github.com/iblai/os/commit/630bc8c0f320db285864ffbda1b5bea7e71e4863))
+- **mentorai:** version bump for iblai-js ([a4034b3](https://github.com/iblai/os/commit/a4034b3f1496295b1056959fa4dcb4cc899be75d))
 
 ### Tests
 
-* **mentor:** update explore agents tests for unified endpoint ([ca48859](https://github.com/iblai/os/commit/ca48859d4a54cacbf1db760b4c533a01418f3dd8))
+- **mentor:** update explore agents tests for unified endpoint ([ca48859](https://github.com/iblai/os/commit/ca48859d4a54cacbf1db760b4c533a01418f3dd8))
 
 ## [0.87.0](https://github.com/iblai/os/compare/v0.86.0...v0.87.0) (2026-06-27)
 
