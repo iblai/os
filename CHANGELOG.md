@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.88.1](https://github.com/iblai/os/compare/v0.88.0...v0.88.1) (2026-06-30)
+
+### Bug Fixes
+
+* **mentor:** only stop generation on chat switch when one is active ([250a951](https://github.com/iblai/os/commit/250a951b7cbd763c070c006cc8a9db997bfa1370))
+
 ## [0.88.0](https://github.com/iblai/os/compare/v0.87.3...v0.88.0) (2026-06-30)
 
 ### Features
