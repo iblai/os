@@ -2044,6 +2044,34 @@ describe('SettingsTab', () => {
       ).not.toBeDisabled();
     });
 
+    it('disables the Verbose Reasoning toggle when show_reasoning is read-only', () => {
+      rbacState.enabled = true;
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: withFieldPerms({ show_reasoning: { read: true, write: false } }),
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(
+        screen.getByLabelText('Enable verbose reasoning disabled'),
+      ).toBeDisabled();
+    });
+
+    it('keeps the Verbose Reasoning toggle enabled when show_reasoning is writable', () => {
+      rbacState.enabled = true;
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: withFieldPerms({ show_reasoning: { read: true, write: true } }),
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(
+        screen.getByLabelText('Enable verbose reasoning disabled'),
+      ).not.toBeDisabled();
+    });
+
     it('omits read-only fields from the PUT payload on Save', async () => {
       rbacState.enabled = true;
       mockGetMentorSettingsQuery.mockReturnValue({
