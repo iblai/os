@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.88.2](https://github.com/iblai/os/compare/v0.88.1...v0.88.2) (2026-06-30)
+
+### Bug Fixes
+
+* **mentor:** respect RBAC on Verbose Reasoning toggle ([c6583a2](https://github.com/iblai/os/commit/c6583a2c3acb09257e3757728a4914b3046e5b06))
+
 ## [0.88.1](https://github.com/iblai/os/compare/v0.88.0...v0.88.1) (2026-06-30)
 
 ### Bug Fixes
