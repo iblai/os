@@ -12,11 +12,6 @@ vi.mock('@/hooks/user-navigate', () => ({
   }),
 }));
 
-const mockUseUsername = vi.fn((): string | null => 'test-user');
-vi.mock('@/hooks/use-user', () => ({
-  useUsername: () => mockUseUsername(),
-}));
-
 const mockUseParams = vi.fn((): { tenantKey?: string; mentorId: string } => ({
   tenantKey: 'test-tenant',
   mentorId: 'test-mentor',
@@ -38,13 +33,10 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
 
 // Mock data-layer hooks
 const mockUseGetAiSearchMentorsQuery = vi.fn();
-const mockUseGetPublicMentorsQuery = vi.fn();
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetAiSearchMentorsQuery: (...args: unknown[]) =>
     mockUseGetAiSearchMentorsQuery(...args),
-  useGetPublicMentorsQuery: (...args: unknown[]) =>
-    mockUseGetPublicMentorsQuery(...args),
 }));
 
 // Mock date-fns
@@ -73,7 +65,6 @@ describe('ExploreMentors', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    mockUseUsername.mockReturnValue('test-user');
     mockUseParams.mockReturnValue({
       tenantKey: 'test-tenant',
       mentorId: 'test-mentor',
@@ -85,10 +76,6 @@ describe('ExploreMentors', () => {
     });
 
     mockUseGetAiSearchMentorsQuery.mockReturnValue({
-      data: { results: mockMentors },
-    });
-
-    mockUseGetPublicMentorsQuery.mockReturnValue({
       data: { results: mockMentors },
     });
   });
@@ -302,9 +289,8 @@ describe('ExploreMentors', () => {
     });
   });
 
-  describe('Authenticated user behavior', () => {
-    it('uses useGetAiSearchMentorsQuery for authenticated users', () => {
-      mockUseUsername.mockReturnValue('test-user');
+  describe('Unified ai-search endpoint', () => {
+    it('uses useGetAiSearchMentorsQuery with the explore page params', () => {
       render(<ExploreMentors />);
 
       expect(mockUseGetAiSearchMentorsQuery).toHaveBeenCalledWith(
@@ -319,17 +305,10 @@ describe('ExploreMentors', () => {
       );
     });
 
-    it('skips useGetPublicMentorsQuery for authenticated users', () => {
-      mockUseUsername.mockReturnValue('test-user');
+    it('uses the ai-search endpoint regardless of auth state', () => {
       render(<ExploreMentors />);
 
-      // The component passes username directly as skip value (truthy check)
-      expect(mockUseGetPublicMentorsQuery).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.objectContaining({
-          skip: 'test-user',
-        }),
-      );
+      expect(mockUseGetAiSearchMentorsQuery).toHaveBeenCalledTimes(1);
     });
 
     it('uses empty string for platform_key when tenantKey is undefined', () => {
@@ -337,56 +316,8 @@ describe('ExploreMentors', () => {
         tenantKey: undefined,
         mentorId: 'test-mentor',
       });
-      mockUseUsername.mockReturnValue('test-user');
       render(<ExploreMentors />);
 
-      expect(mockUseGetAiSearchMentorsQuery).toHaveBeenCalledWith(
-        expect.objectContaining({
-          platform_key: '',
-        }),
-        expect.objectContaining({
-          skip: true,
-        }),
-      );
-    });
-  });
-
-  describe('Anonymous user behavior', () => {
-    it('uses useGetPublicMentorsQuery for anonymous users', () => {
-      mockUseUsername.mockReturnValue(null);
-      mockUseGetPublicMentorsQuery.mockReturnValue({
-        data: { results: mockMentors },
-      });
-
-      render(<ExploreMentors />);
-
-      // The component passes username directly as skip value (falsy null means don't skip)
-      expect(mockUseGetPublicMentorsQuery).toHaveBeenCalledWith(
-        expect.objectContaining({
-          includeMainPublicMentors: true,
-          limit: 6,
-          orderBy: 'recently_accessed_at',
-        }),
-        expect.objectContaining({
-          skip: null,
-        }),
-      );
-    });
-
-    it('skips useGetAiSearchMentorsQuery when tenantKey is missing', () => {
-      mockUseParams.mockReturnValue({
-        tenantKey: undefined,
-        mentorId: 'test-mentor',
-      });
-      mockUseUsername.mockReturnValue(null);
-
-      mockUseGetAiSearchMentorsQuery.mockReturnValue({
-        data: { results: mockMentors },
-      });
-
-      render(<ExploreMentors />);
-
-      // Verify the query was called with skip: true due to missing tenantKey
       expect(mockUseGetAiSearchMentorsQuery).toHaveBeenCalledWith(
         expect.objectContaining({
           platform_key: '',
