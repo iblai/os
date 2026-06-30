@@ -594,6 +594,9 @@ export function Chat({
     }
   }, [isStreaming, isPending]);
 
+  const isGeneratingRef = useRef(false);
+  isGeneratingRef.current = isStreaming || isPending;
+
   useEffect(() => {
     const newChatEventHandler = () => {
       // Reset showingSharedChat when user starts a new chat
@@ -607,6 +610,7 @@ export function Chat({
       startNewChat();
     };
     const stopGeneratingChatHandler = () => {
+      if (!isGeneratingRef.current) return;
       stopGenerating();
     };
     /* istanbul ignore next -- @preserve eventBus handler tested via mock */
