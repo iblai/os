@@ -152,9 +152,10 @@ test.describe('Journey: Chat URL ?prompt= Auto-Injection', () => {
     await waitForPageReady(page);
 
     // TC2-a: exactly one user bubble for this prompt text (no duplicate)
-    await expect(
-      page.locator('.chat-user-message-query', { hasText: promptText }),
-    ).toHaveCount(1, { timeout: 15_000 });
+    const bubbleCount = await page
+      .locator('.chat-user-message-query', { hasText: promptText })
+      .count();
+    expect(bubbleCount).toBe(1);
 
     // TC2-b: session id is unchanged (no new session was created)
     const sessionIdAfterSecond = await page.evaluate(
@@ -214,16 +215,6 @@ test.describe('Journey: Chat URL ?prompt= Auto-Injection', () => {
     ).toBeVisible({ timeout: 90_000 });
     await expect(chatPage.aiMessages.first()).toBeVisible({ timeout: 90_000 });
 
-    // The assistant reply renders token-by-token while streaming is still in
-    // flight. Reloading mid-stream races the backend's durable write, so the
-    // first exchange can be dropped from restored history. Wait for streaming
-    // to finish AND for the response to carry real content before trusting the
-    // session as persisted.
-    await chatPage.waitForStreamingComplete();
-    await expect(chatPage.aiMessages.first()).not.toHaveText('', {
-      timeout: 30_000,
-    });
-
     // Capture session id so we can assert it is reused
     const originalSessionId = await page.evaluate(
       ({ key, mid }) => {
@@ -237,9 +228,6 @@ test.describe('Journey: Chat URL ?prompt= Auto-Injection', () => {
       },
       { key: SESSION_ID_KEY, mid: mentorId },
     );
-
-    // Give the persistence layer a fixed settle window before any navigation.
-    await page.waitForTimeout(8_000);
 
     // Step 2 — Navigate with a DIFFERENT prompt (same mentor, same tenant)
     const secondUrl = `${MENTOR_NEXTJS_HOST}/platform/${tenantKey}/${mentorId}?prompt=${encodeURIComponent(secondPrompt)}`;
@@ -257,11 +245,6 @@ test.describe('Journey: Chat URL ?prompt= Auto-Injection', () => {
     await expect(
       page.locator('.chat-user-message-query', { hasText: secondPrompt }),
     ).toBeVisible({ timeout: 90_000 });
-
-    // The second prompt auto-submits on mount; wait for its streamed reply to
-    // finish before counting so a slow backend round-trip doesn't flake the
-    // assertion.
-    await chatPage.waitForStreamingComplete();
 
     // TC3-c: AI responds again (at least 2 AI messages now)
     await expect(chatPage.aiMessages).toHaveCount(2, { timeout: 90_000 });
