@@ -462,7 +462,7 @@ test.describe('Journey 20: Dataset Management', () => {
     await expect(imageDialog).toBeVisible({ timeout: 5_000 });
     const fileInput = imageDialog.locator('input[type="file"]');
     await fileInput.setInputFiles(IMAGE_FILE);
-    const closeBtn = page.getByRole('button', { name: 'Close' });
+    const closeBtn = imageDialog.getByRole('button', { name: 'Close' });
     await expect(closeBtn).toBeVisible();
     await closeBtn.click();
     await page.waitForTimeout(2_000);
@@ -670,7 +670,7 @@ test.describe('Journey 20: Dataset Management', () => {
     await expect(pdfBtn).toBeVisible({ timeout: 5_000 });
     await pdfBtn.click();
     await page.waitForTimeout(1_000);
-    const pdfDialog = page.getByRole('dialog').filter({ hasText: 'PDF' });
+    const pdfDialog = page.getByRole('dialog', { name: 'PDF' });
     await expect(pdfDialog).toBeVisible({ timeout: 5_000 });
     // Cancel without uploading
     await page.keyboard.press('Escape');
