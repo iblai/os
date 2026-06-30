@@ -152,9 +152,10 @@ test.describe('Journey: Chat URL ?prompt= Auto-Injection', () => {
     await waitForPageReady(page);
 
     // TC2-a: exactly one user bubble for this prompt text (no duplicate)
-    await expect(
-      page.locator('.chat-user-message-query', { hasText: promptText }),
-    ).toHaveCount(1, { timeout: 15_000 });
+    const bubbleCount = await page
+      .locator('.chat-user-message-query', { hasText: promptText })
+      .count();
+    expect(bubbleCount).toBe(1);
 
     // TC2-b: session id is unchanged (no new session was created)
     const sessionIdAfterSecond = await page.evaluate(
@@ -181,109 +182,88 @@ test.describe('Journey: Chat URL ?prompt= Auto-Injection', () => {
   // TC3 — Cached session + different prompt: history preserved, new message added
   // ---------------------------------------------------------------------------
 
-  //TODO follow up with backend on mentor responses not coming back from DB on staging env
-  test.fixme(
-    'admin navigates with a different ?prompt= on a cached session and history is preserved',
-    async ({ page, chatPage }) => {
-      const firstPrompt = `e2e first msg ${Date.now()}`;
-      const secondPrompt = `e2e second different msg ${Date.now() + 1}`;
+  test('admin navigates with a different ?prompt= on a cached session and history is preserved', async ({
+    page,
+    chatPage,
+  }) => {
+    const firstPrompt = `e2e first msg ${Date.now()}`;
+    const secondPrompt = `e2e second different msg ${Date.now() + 1}`;
 
-      // Step 1 — Start a fresh session with the first prompt
-      await page.evaluate(
-        ({ key, mid }) => {
-          try {
-            const raw = localStorage.getItem(key);
-            if (!raw) return;
-            const sessions = JSON.parse(raw) as Record<string, string>;
-            delete sessions[mid];
-            localStorage.setItem(key, JSON.stringify(sessions));
-          } catch {
-            // ignore parse errors
-          }
-        },
-        { key: SESSION_ID_KEY, mid: mentorId },
-      );
+    // Step 1 — Start a fresh session with the first prompt
+    await page.evaluate(
+      ({ key, mid }) => {
+        try {
+          const raw = localStorage.getItem(key);
+          if (!raw) return;
+          const sessions = JSON.parse(raw) as Record<string, string>;
+          delete sessions[mid];
+          localStorage.setItem(key, JSON.stringify(sessions));
+        } catch {
+          // ignore parse errors
+        }
+      },
+      { key: SESSION_ID_KEY, mid: mentorId },
+    );
 
-      const firstUrl = `${MENTOR_NEXTJS_HOST}/platform/${tenantKey}/${mentorId}?prompt=${encodeURIComponent(firstPrompt)}`;
-      await page.goto(firstUrl, {
-        waitUntil: 'domcontentloaded',
-        timeout: 60_000,
-      });
-      await expect(
-        page.locator('.chat-user-message-query', { hasText: firstPrompt }),
-      ).toBeVisible({ timeout: 90_000 });
-      await expect(chatPage.aiMessages.first()).toBeVisible({
-        timeout: 90_000,
-      });
+    const firstUrl = `${MENTOR_NEXTJS_HOST}/platform/${tenantKey}/${mentorId}?prompt=${encodeURIComponent(firstPrompt)}`;
+    await page.goto(firstUrl, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60_000,
+    });
+    await expect(
+      page.locator('.chat-user-message-query', { hasText: firstPrompt }),
+    ).toBeVisible({ timeout: 90_000 });
+    await expect(chatPage.aiMessages.first()).toBeVisible({ timeout: 90_000 });
 
-      // The assistant reply renders token-by-token while streaming is still in
-      // flight. Reloading mid-stream races the backend's durable write, so the
-      // first exchange can be dropped from restored history. Wait for streaming
-      // to finish AND for the response to carry real content before trusting the
-      // session as persisted.
-      await chatPage.waitForStreamingComplete();
-      await expect(chatPage.aiMessages.first()).not.toHaveText('', {
-        timeout: 30_000,
-      });
+    // Capture session id so we can assert it is reused
+    const originalSessionId = await page.evaluate(
+      ({ key, mid }) => {
+        try {
+          const raw = localStorage.getItem(key);
+          if (!raw) return null;
+          return (JSON.parse(raw) as Record<string, string>)[mid] ?? null;
+        } catch {
+          return null;
+        }
+      },
+      { key: SESSION_ID_KEY, mid: mentorId },
+    );
 
-      // Capture session id so we can assert it is reused
-      const originalSessionId = await page.evaluate(
-        ({ key, mid }) => {
-          try {
-            const raw = localStorage.getItem(key);
-            if (!raw) return null;
-            return (JSON.parse(raw) as Record<string, string>)[mid] ?? null;
-          } catch {
-            return null;
-          }
-        },
-        { key: SESSION_ID_KEY, mid: mentorId },
-      );
+    // Step 2 — Navigate with a DIFFERENT prompt (same mentor, same tenant)
+    const secondUrl = `${MENTOR_NEXTJS_HOST}/platform/${tenantKey}/${mentorId}?prompt=${encodeURIComponent(secondPrompt)}`;
+    await page.goto(secondUrl, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60_000,
+    });
 
-      // Give the persistence layer a fixed settle window before any navigation.
-      await page.waitForTimeout(8_000);
+    // TC3-a: original user message still visible (history preserved)
+    await expect(
+      page.locator('.chat-user-message-query', { hasText: firstPrompt }),
+    ).toBeVisible({ timeout: 60_000 });
 
-      // Step 2 — Navigate with a DIFFERENT prompt (same mentor, same tenant)
-      const secondUrl = `${MENTOR_NEXTJS_HOST}/platform/${tenantKey}/${mentorId}?prompt=${encodeURIComponent(secondPrompt)}`;
-      await page.goto(secondUrl, {
-        waitUntil: 'domcontentloaded',
-        timeout: 60_000,
-      });
+    // TC3-b: new user message also appears
+    await expect(
+      page.locator('.chat-user-message-query', { hasText: secondPrompt }),
+    ).toBeVisible({ timeout: 90_000 });
 
-      // TC3-a: original user message still visible (history preserved)
-      await expect(
-        page.locator('.chat-user-message-query', { hasText: firstPrompt }),
-      ).toBeVisible({ timeout: 60_000 });
+    // TC3-c: AI responds again (at least 2 AI messages now)
+    await expect(chatPage.aiMessages).toHaveCount(2, { timeout: 90_000 });
 
-      // TC3-b: new user message also appears
-      await expect(
-        page.locator('.chat-user-message-query', { hasText: secondPrompt }),
-      ).toBeVisible({ timeout: 90_000 });
-
-      // The second prompt auto-submits on mount; wait for its streamed reply to
-      // finish before counting so a slow backend round-trip doesn't flake the
-      // assertion.
-      await chatPage.waitForStreamingComplete();
-
-      // TC3-c: AI responds again (at least 2 AI messages now)
-      await expect(chatPage.aiMessages).toHaveCount(2, { timeout: 90_000 });
-
-      // TC3-d: session id unchanged — no new session was created
-      const newSessionId = await page.evaluate(
-        ({ key, mid }) => {
-          try {
-            const raw = localStorage.getItem(key);
-            if (!raw) return null;
-            return (JSON.parse(raw) as Record<string, string>)[mid] ?? null;
-          } catch {
-            return null;
-          }
-        },
-        { key: SESSION_ID_KEY, mid: mentorId },
-      );
-      expect(newSessionId).toBe(originalSessionId);
-    },
-  );
+    // TC3-d: session id unchanged — no new session was created
+    const newSessionId = await page.evaluate(
+      ({ key, mid }) => {
+        try {
+          const raw = localStorage.getItem(key);
+          if (!raw) return null;
+          return (JSON.parse(raw) as Record<string, string>)[mid] ?? null;
+        } catch {
+          return null;
+        }
+      },
+      { key: SESSION_ID_KEY, mid: mentorId },
+    );
+    expect(newSessionId).toBe(originalSessionId);
+  });
 
   // ---------------------------------------------------------------------------
   // TC4 — No ?prompt= → welcome state, nothing auto-submitted
