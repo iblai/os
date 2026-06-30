@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
 import {
   useGetPromptCategoriesQuery,
@@ -57,6 +58,7 @@ export function PromptGalleryModal({
   onClose,
   onSelectPrompt,
 }: PromptGalleryModalProps) {
+  const t = useTranslations('modalsPromptGalleryModal');
   const userIsStudent = useUserIsStudent();
   const [activeCategory, setActiveCategory] = React.useState('');
   const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
@@ -106,10 +108,10 @@ export function PromptGalleryModal({
             prompt_visibility: value.promptVisibility,
           },
         }).unwrap();
-        toast.success('Agent updated successfully');
+        toast.success(t('agentUpdatedSuccess'));
       } catch (error) {
         console.error(JSON.stringify(error));
-        toast.error('Failed to update agent');
+        toast.error(t('agentUpdateFailed'));
         console.error(JSON.stringify({ tenant: tenantKey, error }));
       }
     }
@@ -135,7 +137,7 @@ export function PromptGalleryModal({
       onClick={() => executeWithTrialCheck(() => setIsAddModalOpen(true))}
     >
       <Plus className="h-4 w-4" />
-      Add
+      {t('addButton')}
     </Button>
   );
 
@@ -144,12 +146,12 @@ export function PromptGalleryModal({
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="h-[90vh] w-full max-w-7xl overflow-hidden sm:w-[calc(100vw-2rem)]">
           <DialogDescription className="sr-only">
-            View and edit custom prompts for your agent.
+            {t('dialogDescription')}
           </DialogDescription>
           <div className="flex h-full w-full max-w-full flex-col overflow-hidden p-6">
             <DialogHeader>
               <DialogTitle className="ibl-dialog-title">
-                Prompt Gallery
+                {t('dialogTitle')}
               </DialogTitle>
             </DialogHeader>
 
@@ -168,10 +170,14 @@ export function PromptGalleryModal({
                           onValueChange={setActiveCategory}
                         >
                           <SelectTrigger className="h-8 w-full">
-                            <SelectValue placeholder="Select category" />
+                            <SelectValue
+                              placeholder={t('selectCategoryPlaceholder')}
+                            />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="All">All</SelectItem>
+                            <SelectItem value="All">
+                              {t('allCategory')}
+                            </SelectItem>
                             {promptCategories?.map((category) => (
                               <SelectItem
                                 key={category.name}
@@ -201,7 +207,7 @@ export function PromptGalleryModal({
                               value="All"
                               className="h-8 flex-shrink-0 rounded-md bg-gray-100 px-4 py-1.5 text-sm font-medium whitespace-nowrap text-gray-600 hover:bg-gray-200 data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#2563EB] data-[state=active]:to-[#93C5FD] data-[state=active]:text-white"
                             >
-                              All
+                              {t('allCategory')}
                             </TabsTrigger>
                             {promptCategories?.map((category) => (
                               <TabsTrigger

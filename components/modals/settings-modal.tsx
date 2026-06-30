@@ -2,6 +2,7 @@
 'use client';
 
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import { Search, Plus } from 'lucide-react';
 import { useEditMentorAndRefreshListMutation } from '@iblai/iblai-js/data-layer';
 
@@ -15,7 +16,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
-import { EditMentorModal } from '@/components/modals/edit-mentor-modal';
 import { useParams } from 'next/navigation';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { useIsAdmin, useUserIsStudent, useUsername } from '@/hooks/use-user';
@@ -42,12 +42,8 @@ interface SettingsModalProps {
 }
 
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
-  const {
-    openCreateMentorModal,
-    openEditMentorModal,
-    closeEditMentorModal,
-    showEditMentorModal,
-  } = useNavigate();
+  const t = useTranslations('modalsSettingsModal');
+  const { openCreateMentorModal, openEditMentorModal } = useNavigate();
   const username = useUsername();
   const userIsStudent = useUserIsStudent();
   const isAdmin = useIsAdmin();
@@ -94,9 +90,9 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           is_featured: checked,
         },
       }).unwrap();
-      toast.success('Agent featured status updated');
+      toast.success(t('agentFeaturedStatusUpdated'));
     } catch (error) {
-      toast.error('Failed to update agent featured status');
+      toast.error(t('failedToUpdateAgentFeaturedStatus'));
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     }
   }
@@ -108,15 +104,17 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-h-[90vh] max-w-7xl px-4 py-6 sm:p-6">
           <DialogDescription className="sr-only">
-            Showing the list of agents available in your tenant
+            {t('agentListDescription')}
           </DialogDescription>
           <DialogHeader>
-            <DialogTitle className="ibl-dialog-title">Settings</DialogTitle>
+            <DialogTitle className="ibl-dialog-title">
+              {t('settingsTitle')}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-6 overflow-hidden px-[2px]">
             <div className="mb-4">
               <p className="mt-2 pt-[10px] text-sm text-gray-700">
-                Showing the list of agents available in your tenant
+                {t('agentListDescription')}
               </p>
             </div>
 
@@ -125,7 +123,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-gray-500" />
                 <Input
                   type="search"
-                  placeholder="Search agents"
+                  placeholder={t('searchAgentsPlaceholder')}
                   className="w-full pl-9"
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
@@ -138,7 +136,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   onClick={() => openCreateMentorModal()}
                 >
                   <Plus className="h-4 w-4" />
-                  Create Agent
+                  {t('createAgent')}
                 </Button>
               )}
             </div>
@@ -151,37 +149,37 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                       <TableHeader className="sticky top-0 z-10 bg-gray-50">
                         <TableRow>
                           <TableHead className="w-[15%] px-3 py-3.5 text-left text-xs font-medium tracking-wider text-gray-700 uppercase">
-                            Name
+                            {t('columnName')}
                           </TableHead>
                           <TableHead
                             scope="col"
                             className="w-[15%] px-3 py-3.5 text-left text-xs font-medium tracking-wider text-gray-700 uppercase"
                           >
-                            LLM
+                            {t('columnLlm')}
                           </TableHead>
                           <TableHead
                             scope="col"
                             className="px-3 py-3.5 text-left text-xs font-medium tracking-wider text-gray-700 uppercase"
                           >
-                            Provider
+                            {t('columnProvider')}
                           </TableHead>
                           <TableHead
                             scope="col"
                             className="px-3 py-3.5 text-left text-xs font-medium tracking-wider text-gray-700 uppercase"
                           >
-                            Description
+                            {t('columnDescription')}
                           </TableHead>
                           <TableHead
                             scope="col"
                             className="w-[30%] px-3 py-3.5 text-left text-xs font-medium tracking-wider text-gray-700 uppercase"
                           >
-                            Updated On
+                            {t('columnUpdatedOn')}
                           </TableHead>
                           <TableHead
                             scope="col"
                             className="px-3 py-3.5 text-left text-xs font-medium tracking-wider text-gray-700 uppercase"
                           >
-                            Featured
+                            {t('columnFeatured')}
                           </TableHead>
                         </TableRow>
                       </TableHeader>
@@ -244,7 +242,9 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                                   )
                                 }
                                 disabled={isDisabled}
-                                aria-label={`Toggle featured status for ${mentor?.name || 'agent'}`}
+                                aria-label={t('toggleFeaturedAriaLabel', {
+                                  name: mentor?.name || t('defaultAgentLabel'),
+                                })}
                               />
                             </TableCell>
                           </TableRow>
@@ -269,13 +269,6 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           </div>
         </DialogContent>
       </Dialog>
-
-      {showEditMentorModal && (
-        <EditMentorModal
-          isOpen={showEditMentorModal}
-          onClose={closeEditMentorModal}
-        />
-      )}
     </>
   );
 }

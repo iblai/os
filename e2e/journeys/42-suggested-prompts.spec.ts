@@ -418,17 +418,19 @@ test.describe('Journey 42: Suggested Prompts', () => {
         .toBeGreaterThan(0);
 
       await editMentorPage.close();
-      // Let the mentor-settings refetch triggered by the modal close settle
-      // before flipping user mode, otherwise the user-mode switch click can
-      // land mid-refetch and the subsequent gallery assertions race.
+
+      // The chat "Prompts" button is gated on the SDK's `promptsIsEnabled`,
+      // derived from useGetPromptsSearchQuery (true only when the mentor has
+      // ≥1 suggested prompt). The just-added prompt leaves that query result
+      // stale on the current mount, so the button never renders. Reload to
+      // force a fresh mount and refetch.
+      await page.reload({ waitUntil: 'domcontentloaded' });
       await waitForPageReady(page);
 
       // ── Switch to User mode (acts as a non-admin / student) ──────────────
-      // Match by aria-label, not role: closing the Edit Agent dialog above
-      // can leave a stale `aria-hidden="true"` on the app shell (SDK dialog
-      // cleanup), which drops the navbar switch out of the accessibility
-      // tree so a role-based query returns nothing even though it's visible.
-      // `getByLabel` resolves by attribute and survives the stale aria-hidden.
+      // Match by aria-label, not role: a stale `aria-hidden="true"` left on the
+      // app shell can drop the navbar switch out of the accessibility tree, so
+      // `getByLabel` (attribute-based) is more robust than a role query.
       const learnerSwitch = page.getByLabel(/user mode/i);
       await expect(learnerSwitch).toBeVisible({ timeout: 10_000 });
       // The switch is `checked` when in administrator mode; click to flip to
@@ -438,7 +440,6 @@ test.describe('Journey 42: Suggested Prompts', () => {
       if (isInstructor) {
         await learnerSwitch.click();
       }
-      await page.waitForTimeout(1_000);
 
       // ── Open the Prompt Gallery from the chat area ──────────────────────────
       await expect(chatPage.promptsButton).toBeVisible({ timeout: 15_000 });

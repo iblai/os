@@ -22,6 +22,7 @@ import {
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
 import { TransportEnum } from '@iblai/iblai-api';
+import { useTranslations } from 'next-intl';
 
 const AUTH_SCOPE = {
   TENANT: 'tenant',
@@ -188,6 +189,7 @@ export function ConnectorDialogs({
   mentorId,
   onOAuthComplete,
 }: ConnectorDialogsProps) {
+  const t = useTranslations('mcpTabConnectorDialogs');
   // Form state
   const [connectorName, setConnectorName] = useState('');
   const [connectorServer, setConnectorServer] = useState('');
@@ -355,14 +357,14 @@ export function ConnectorDialogs({
       }
 
       if (!file.type.startsWith('image/')) {
-        toast.error('Please select a valid image file.');
+        toast.error(t('invalidImageFile'));
         event.target.value = '';
         return;
       }
 
       const maxSizeInBytes = 2 * 1024 * 1024; // 2 MB
       if (file.size > maxSizeInBytes) {
-        toast.error('Image size must be less than 2MB.');
+        toast.error(t('imageTooLarge'));
         event.target.value = '';
         return;
       }
@@ -375,7 +377,7 @@ export function ConnectorDialogs({
       setConnectorImage(previewUrl);
       setImageFile(file);
     },
-    [],
+    [t],
   );
 
   // Handle OAuth flow
@@ -444,12 +446,14 @@ export function ConnectorDialogs({
             if (onOAuthComplete) {
               onOAuthComplete();
             }
-            toast.success('OAuth connector connected successfully');
+            toast.success(t('oauthConnectedSuccess'));
             // Modal is closed when OAuth flow starts, so no need to close/reset here
           } catch (error: unknown) {
             const err = error as { data?: { detail?: string } };
             toast.error(
-              `Failed to create connection: ${err?.data?.detail || 'Unknown error'}`,
+              t('failedToCreateConnection', {
+                detail: err?.data?.detail || t('unknownError'),
+              }),
             );
             throw error;
           } finally {
@@ -545,11 +549,12 @@ export function ConnectorDialogs({
           }, 2000);
         }
       } catch {
-        toast.error(`Failed to start OAuth flow for ${service}`);
+        toast.error(t('failedToStartOAuthFlow', { service }));
         removePendingOAuthServer();
       }
     },
     [
+      t,
       tenantKey,
       username,
       authScope,
@@ -573,14 +578,22 @@ export function ConnectorDialogs({
 
     const validation = validateConnectorForm(connectorName, connectorServer);
     if (!validation.isValid) {
-      toast.error(getValidationErrorMessage(validation.error));
+      if (validation.error === 'Please fill in all required fields.') {
+        toast.error(t('fillRequiredFields'));
+      } else if (validation.error === 'Please enter a valid URL.') {
+        toast.error(t('enterValidUrl'));
+      } else {
+        toast.error(
+          getValidationErrorMessage(validation.error, t('validationFailed')),
+        );
+      }
       return;
     }
 
     // Handle OAuth flow
     if (authMethod === 'oauth') {
       if (!tenantKey || !username) {
-        toast.error('Missing required parameters');
+        toast.error(t('missingRequiredParams'));
         return;
       }
 
@@ -667,7 +680,7 @@ export function ConnectorDialogs({
               );
             }
           } else {
-            toast.success('Connector updated successfully');
+            toast.success(t('connectorUpdatedSuccess'));
             if (onOAuthComplete) onOAuthComplete();
           }
 
@@ -744,23 +757,13 @@ export function ConnectorDialogs({
           onClose();
         } catch (error: unknown) {
           const msg = extractApiErrorMessage(error);
-          setOauthUrlError(
-            getValidationErrorMessage(
-              msg,
-              'This MCP server URL cannot be used for OAuth authentication. Please check the URL and try again.',
-            ),
-          );
-          toast.error('Failed to find OAuth configuration for this URL');
+          setOauthUrlError(getValidationErrorMessage(msg, t('oauthUrlError')));
+          toast.error(t('failedToFindOAuthConfig'));
         }
       } catch (error: unknown) {
         const msg = extractApiErrorMessage(error);
-        setOauthUrlError(
-          getValidationErrorMessage(
-            msg,
-            'This MCP server URL cannot be used for OAuth authentication. Please check the URL and try again.',
-          ),
-        );
-        toast.error('Failed to process OAuth connector');
+        setOauthUrlError(getValidationErrorMessage(msg, t('oauthUrlError')));
+        toast.error(t('failedToProcessOAuthConnector'));
       } finally {
         setIsSubmitting(false);
       }
@@ -774,7 +777,26 @@ export function ConnectorDialogs({
     if (authMethod === 'api-key' && tokenType === 'Other') {
       const tokenTypeValidation = validateCustomTokenType(customTokenType);
       if (!tokenTypeValidation.isValid) {
-        toast.error(getValidationErrorMessage(tokenTypeValidation.error));
+        if (tokenTypeValidation.error === 'Custom token type is required.') {
+          toast.error(t('customTokenTypeRequired'));
+        } else if (
+          tokenTypeValidation.error ===
+          'Token type must be 50 characters or fewer.'
+        ) {
+          toast.error(t('tokenTypeTooLong'));
+        } else if (
+          tokenTypeValidation.error ===
+          'Token type may only contain letters, numbers, and hyphens.'
+        ) {
+          toast.error(t('tokenTypeInvalidChars'));
+        } else {
+          toast.error(
+            getValidationErrorMessage(
+              tokenTypeValidation.error,
+              t('validationFailed'),
+            ),
+          );
+        }
         return;
       }
     }
@@ -824,6 +846,7 @@ export function ConnectorDialogs({
       setIsSubmitting(false);
     }
   }, [
+    t,
     isSubmitting,
     connectorName,
     connectorServer,
@@ -870,7 +893,7 @@ export function ConnectorDialogs({
       >
         <DialogHeader className="border-border flex-shrink-0 border-b px-6 py-4">
           <DialogTitle className="text-foreground text-xl font-semibold">
-            {editingServer ? 'Edit MCP Connector' : 'Add MCP Connector'}
+            {editingServer ? t('editMcpConnector') : t('addMcpConnector')}
           </DialogTitle>
         </DialogHeader>
 
@@ -885,7 +908,7 @@ export function ConnectorDialogs({
                   accept="image/*"
                   onChange={handleImageUpload}
                   className="hidden"
-                  aria-label="Upload connector image"
+                  aria-label={t('uploadConnectorImage')}
                 />
                 <div
                   onClick={() => fileInputRef.current?.click()}
@@ -895,7 +918,7 @@ export function ConnectorDialogs({
                     <>
                       <img
                         src={connectorImage}
-                        alt="Connector thumbnail"
+                        alt={t('connectorThumbnail')}
                         className="h-full w-full object-cover"
                       />
                       <div className="absolute right-1 bottom-1 flex h-6 w-6 items-center justify-center rounded-full bg-[#38A1E5] opacity-0 transition-opacity group-hover:opacity-100">
@@ -911,12 +934,13 @@ export function ConnectorDialogs({
               </div>
               <div className="flex flex-1 flex-col gap-2">
                 <Label className="text-base font-medium">
-                  Connector Name<span className="text-red-500">*</span>
+                  {t('connectorName')}
+                  <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   value={connectorName}
                   onChange={(e) => setConnectorName(e.target.value)}
-                  placeholder="Enter connector name"
+                  placeholder={t('connectorNamePlaceholder')}
                   className="bg-muted border-border"
                   disabled={isSubmitting}
                 />
@@ -926,7 +950,8 @@ export function ConnectorDialogs({
             {/* Connector Server */}
             <div className="flex flex-col gap-2">
               <Label className="text-base font-medium">
-                Connector Server<span className="text-red-500">*</span>
+                {t('connectorServer')}
+                <span className="text-red-500">*</span>
               </Label>
               <Input
                 value={connectorServer}
@@ -943,13 +968,17 @@ export function ConnectorDialogs({
             {/* Description */}
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <Label className="text-base font-medium">Description</Label>
-                <span className="text-muted-foreground text-sm">Optional</span>
+                <Label className="text-base font-medium">
+                  {t('description')}
+                </Label>
+                <span className="text-muted-foreground text-sm">
+                  {t('optional')}
+                </span>
               </div>
               <Textarea
                 value={connectorDescription}
                 onChange={(e) => setConnectorDescription(e.target.value)}
-                placeholder="Describe what this connector does..."
+                placeholder={t('descriptionPlaceholder')}
                 className="bg-muted border-border min-h-[100px]"
                 disabled={isSubmitting}
               />
@@ -957,7 +986,9 @@ export function ConnectorDialogs({
 
             {/* Connector Scope */}
             <div className="flex flex-col gap-2">
-              <Label className="text-base font-medium">Connector Scope</Label>
+              <Label className="text-base font-medium">
+                {t('connectorScope')}
+              </Label>
               <RadioGroup
                 value={connectorScope}
                 onValueChange={(value) =>
@@ -971,7 +1002,7 @@ export function ConnectorDialogs({
                     htmlFor="scope-tenant"
                     className="cursor-pointer font-normal"
                   >
-                    All Agents
+                    {t('allAgents')}
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -980,25 +1011,25 @@ export function ConnectorDialogs({
                     htmlFor="scope-this-mentor"
                     className="cursor-pointer font-normal"
                   >
-                    This Agent
+                    {t('thisAgent')}
                   </Label>
                 </div>
               </RadioGroup>
               {connectorScope === 'tenant' && (
                 <p className="text-muted-foreground text-xs">
-                  This MCP will be available for all agents.
+                  {t('mcpAvailableAllAgents')}
                 </p>
               )}
               {connectorScope === 'this-mentor' && (
                 <p className="text-muted-foreground text-xs">
-                  This MCP will only be available for this agent.
+                  {t('mcpAvailableThisAgent')}
                 </p>
               )}
             </div>
 
             {/* Transport */}
             <div className="flex flex-col gap-2">
-              <Label className="text-base font-medium">Transport</Label>
+              <Label className="text-base font-medium">{t('transport')}</Label>
               <Select
                 value={transport}
                 onValueChange={(value) =>
@@ -1012,10 +1043,10 @@ export function ConnectorDialogs({
                 <SelectContent>
                   <SelectItem value={TransportEnum.SSE}>SSE</SelectItem>
                   <SelectItem value={TransportEnum.WEBSOCKET}>
-                    Websocket
+                    {t('websocket')}
                   </SelectItem>
                   <SelectItem value={TransportEnum.STREAMABLE_HTTP}>
-                    Streamable Http
+                    {t('streamableHttp')}
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -1024,7 +1055,7 @@ export function ConnectorDialogs({
             {/* Authentication Method */}
             <div className="flex flex-col gap-2">
               <Label className="text-base font-medium">
-                Authentication Method
+                {t('authenticationMethod')}
               </Label>
               <Select
                 value={authMethod}
@@ -1035,9 +1066,11 @@ export function ConnectorDialogs({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="no-auth">No Authentication</SelectItem>
-                  <SelectItem value="api-key">API Key</SelectItem>
-                  <SelectItem value="oauth">OAuth</SelectItem>
+                  <SelectItem value="no-auth">
+                    {t('noAuthentication')}
+                  </SelectItem>
+                  <SelectItem value="api-key">{t('apiKey')}</SelectItem>
+                  <SelectItem value="oauth">{t('oauth')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -1045,7 +1078,7 @@ export function ConnectorDialogs({
             {authMethod === 'oauth' && (
               <div className="flex flex-col gap-2">
                 <Label className="text-base font-medium">
-                  Authentication Scope
+                  {t('authenticationScope')}
                 </Label>
                 <Select
                   value={authScope}
@@ -1056,28 +1089,30 @@ export function ConnectorDialogs({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={AUTH_SCOPE.TENANT}>Tenant</SelectItem>
-                    <SelectItem value={AUTH_SCOPE.MENTOR}>Agent</SelectItem>
-                    <SelectItem value={AUTH_SCOPE.USER}>User</SelectItem>
+                    <SelectItem value={AUTH_SCOPE.TENANT}>
+                      {t('tenant')}
+                    </SelectItem>
+                    <SelectItem value={AUTH_SCOPE.MENTOR}>
+                      {t('agent')}
+                    </SelectItem>
+                    <SelectItem value={AUTH_SCOPE.USER}>{t('user')}</SelectItem>
                   </SelectContent>
                 </Select>
                 {authScope === AUTH_SCOPE.TENANT && (
                   <p className="text-muted-foreground text-xs">
-                    OAuth connection will be available for all agents in this
-                    tenant.
+                    {t('oauthScopeTenant')}
                   </p>
                 )}
                 {authScope === AUTH_SCOPE.MENTOR && (
                   <div className="flex items-center gap-1.5">
                     <p className="text-muted-foreground text-xs">
-                      OAuth connection will only be available for this agent.
+                      {t('oauthScopeAgent')}
                     </p>
                   </div>
                 )}
                 {authScope === AUTH_SCOPE.USER && (
                   <p className="text-muted-foreground text-xs">
-                    Each user will need to authenticate individually when
-                    chatting.
+                    {t('oauthScopeUser')}
                   </p>
                 )}
               </div>
@@ -1086,7 +1121,9 @@ export function ConnectorDialogs({
             {authMethod === 'api-key' && (
               <div className="space-y-4 pt-2">
                 <div className="flex flex-col gap-2">
-                  <Label className="text-base font-medium">Token Type</Label>
+                  <Label className="text-base font-medium">
+                    {t('tokenType')}
+                  </Label>
                   <Select
                     value={tokenType}
                     onValueChange={setTokenType}
@@ -1101,7 +1138,7 @@ export function ConnectorDialogs({
                       <SelectItem value="API-Key">API-Key</SelectItem>
                       <SelectItem value="API-Token">API-Token</SelectItem>
                       <SelectItem value="Token">Token</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
+                      <SelectItem value="Other">{t('other')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1109,31 +1146,30 @@ export function ConnectorDialogs({
                 {tokenType === 'Other' && (
                   <div className="flex flex-col gap-2">
                     <Label className="text-base font-medium">
-                      Custom Token Type
+                      {t('customTokenType')}
                     </Label>
                     <Input
                       value={customTokenType}
                       onChange={(e) => setCustomTokenType(e.target.value)}
-                      placeholder="e.g. X-Custom-Auth"
+                      placeholder={t('customTokenTypePlaceholder')}
                       className="bg-background border-border"
                       disabled={isSubmitting}
                       maxLength={50}
                     />
                     <p className="text-muted-foreground text-xs">
-                      Alphanumeric characters and hyphens only. Max 50
-                      characters.
+                      {t('customTokenTypeHint')}
                     </p>
                   </div>
                 )}
 
                 <div className="flex flex-col gap-2">
-                  <Label className="text-base font-medium">Token</Label>
+                  <Label className="text-base font-medium">{t('token')}</Label>
                   <div className="relative">
                     <Lock className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                     <Input
                       value={tokenValue}
                       onChange={(e) => setTokenValue(e.target.value)}
-                      placeholder="Enter your token"
+                      placeholder={t('tokenPlaceholder')}
                       type="password"
                       className="bg-background border-border pl-10"
                       disabled={isSubmitting}
@@ -1141,8 +1177,7 @@ export function ConnectorDialogs({
                   </div>
                   {credentialsMasked && (
                     <p className="text-muted-foreground text-xs">
-                      Existing token is hidden. Enter a new token to replace it,
-                      or leave as is to keep the current token.
+                      {t('existingTokenHidden')}
                     </p>
                   )}
                 </div>
@@ -1165,10 +1200,10 @@ export function ConnectorDialogs({
                 className="ibl-button-primary shrink-0"
               >
                 {isSubmitting
-                  ? 'Saving...'
+                  ? t('saving')
                   : editingServer
-                    ? 'Update'
-                    : 'Connect'}
+                    ? t('update')
+                    : t('connect')}
               </Button>
             </div>
           </div>

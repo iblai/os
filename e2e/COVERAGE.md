@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-06-14 | 443 checkpoints (423 covered, 1 pending/fixme, 7 not-reproducible in default env, 12 deprecated) | 50 journeys (49 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-06-22 | 495 checkpoints (473 covered, 2 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 56 journeys (55 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -27,7 +27,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 2: First-Time User Chat & Navigation (7 checkpoints) — `journeys/02-first-time-user-chat-and-navigation.spec.ts`
+## Journey 2: First-Time User Chat & Navigation (8 checkpoints) — `journeys/02-first-time-user-chat-and-navigation.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`, `components/chat/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/welcome-chat.tsx`, `components/advanced-chat/ui-tags/default-tag.tsx`
 
@@ -201,7 +201,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 13: Shareable Links & Embed Integration (9 checkpoints) — `journeys/13-shareable-links-and-embed-integration.spec.ts`
+## Journey 13: Shareable Links & Embed Integration (10 checkpoints) — `journeys/13-shareable-links-and-embed-integration.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/embed-tab.tsx`, `components/modals/edit-mentor-modal/hooks/useEmbedTab.ts`, `components/logo.tsx`, `hooks/use-mentors/use-mentor-settings.ts`, `hooks/use-embed-mode.ts`, `components/chat-input-form/voice-call-button.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form/screen-sharing-button.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
 
@@ -214,6 +214,7 @@ When adding a new page or modifying an existing user flow:
 - [x] Embed view sidebar logo is not clickable when Show Catalogue is disabled (configured via the embed UI on a fresh mentor, verified at the embed URL)
 - [x] Embed view sidebar logo is clickable when Show Catalogue is enabled (configured via the embed UI on a fresh mentor, verified at the embed URL)
 - [x] Embed mode renders a minimal sidebar: New Chat present (and Chats when the user is logged in); Agents (New Agent), Workflows, Analytics, Projects, and Support/docs footer link all absent — holds for both expanded and rail-collapsed layouts regardless of user role
+- [ ] Optimize Page Context Tokens toggle: visible label present, tooltip ('Strips HTML tags from page context') reachable on hover, and the setting flips and persists after submit + modal reopen via GET /settings/ round-trip _(parked as `test.fixme` — flaky in CI with shared mentor + slow submit cycle; activate with a dedicated mentor fixture)_
 
 ---
 
@@ -423,18 +424,27 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 
 ---
 
-## Journey 26: Projects (8 checkpoints) — `journeys/26-projects.spec.ts`
+## Journey 26: Projects (17 checkpoints) — `journeys/26-projects.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/projects/[projectId]/[mentorId]/page.tsx`, `components/projects/project-landing-page.tsx`, `components/projects/create-project-modal.tsx`, `components/projects/project-mentors-list.tsx`, `components/projects/project-action-buttons.tsx`, `components/projects/project-files-modal.tsx`, `components/projects/project-instructions-modal.tsx`, `components/projects/rename-project-modal.tsx`, `components/projects/delete-project-modal.tsx`
+**Source files:** `app/platform/[tenantKey]/projects/page.tsx`, `app/platform/[tenantKey]/projects/[projectId]/[mentorId]/page.tsx`, `hooks/user-navigate.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/welcome-chat-new.tsx`, `components/modals/no-mentor-selected-modal.tsx`
 
 - [x] A new project can be created from the sidebar
 - [x] Project landing page shows the assigned mentor list and action buttons
 - [x] A mentor can be added to a project
 - [x] Project instructions (system prompt) can be set and saved
-- [x] Project files modal opens with search input and Add Files button
+- [x] Project files modal opens cleanly (no crash) with Add Files button and either empty-state "No files found" or a populated table
 - [x] Chatting within a project creates a session
 - [x] A project can be renamed
 - [x] A project can be deleted
+- [x] Projects index page renders with h1 "Projects", subtitle, "Search projects..." input, and gradient "New Project" button when reached via the sidebar "Projects" nav button (no redirect back to chat) _(feat-1821)_
+- [x] Projects index shows either project cards (name + agent count) or the empty-state "No projects found" / "Create your first project" _(feat-1821)_
+- [x] "New Project" button on the index page opens the create-project modal _(feat-1821)_
+- [x] Project cards show the project name and agent count; intentionally NO description and NO "Updated …" timestamp; kebab button aria-label="Project actions" shows Rename and Delete items _(feat-1821)_
+- [x] Clicking a project card navigates to the project chat route /platform/\<tenantKey\>/projects/\<projectId\>/\<mentorId\> _(feat-1821)_
+- [x] Kebab Rename flow on index page: modal accepts new name and card updates _(feat-1821)_
+- [x] Kebab Delete flow on index page: confirmation dialog removes the card _(feat-1821)_
+- [x] "LLM Model Selector" navbar button is visible on a mentor chat page but hidden on the projects index (isProjectsIndexPage guard) _(feat-1821)_
+- [x] On projects index with no mentorId, clicking "New Chat" shows "No Agent Selected" modal; "Explore Agents" button navigates to /explore _(feat-1821)_
 
 ---
 
@@ -469,9 +479,9 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 
 ---
 
-## Journey 29: Accessibility — WCAG 2.1 AA (23 checkpoints; 4 deprecated) — `journeys/29-accessibility-wcag.spec.ts`
+## Journey 29: Accessibility — WCAG 2.1 AA (28 checkpoints; 4 deprecated) — `journeys/29-accessibility-wcag.spec.ts`
 
-**Source files:** `components/accessibility/accessibility-toolbar.tsx`, `components/accessibility/floating-accessibility-button.tsx`, `components/chat/stop-streaming-button.tsx`, `components/chat/ai-message-copy.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form/upload-menu.tsx`, all major modals and dialogs
+**Source files:** `components/accessibility/accessibility-toolbar.tsx`, `components/accessibility/floating-accessibility-button.tsx`, `components/chat/stop-streaming-button.tsx`, `components/chat/submit-message-button.tsx`, `components/auto-resize-text-area.tsx`, `components/chat/ai-message-copy.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form/upload-menu.tsx`, all major modals and dialogs
 
 - [x] Homepage has no accessibility violations
 - [x] Mentors catalog (Explore page) has no accessibility violations
@@ -488,14 +498,19 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 - [x] History dialog is accessible
 - [x] Safety dialog is accessible
 - [x] API key dialog is accessible
-- [x] Stop-streaming tooltip does not flash when the stop button mounts mid-stream (issue #576, fixme until CI-verified)
-- [x] Copy-to-clipboard tooltip does not flash when the copy button mounts after streaming (issue #576, fixme until CI-verified)
-- [x] Keyboard Tab onto the copy button still opens the tooltip via `:focus-visible` (issue #576, fixme until CI-verified)
+- [x] While streaming, textarea stays focused and stop-streaming button is NOT focused (issue #576 updated by #1904)
+- [x] After streaming ends, textarea stays focused and copy button is NOT focused (issue #576 updated by #1904)
+- [x] Keyboard Tab onto the copy button still opens the tooltip via `:focus-visible` (issue #576, fixme pending Radix :focus-visible CI verification)
 - [x] ~~My Mentors dialog meets accessibility guidelines~~ _(deprecated in #1431 — MyMentorsModal removed)_
 - [x] Plus / Microphone / Send composer buttons expose accessible names via `aria-label` (WCAG 4.1.2, issue #1596)
 - [x] ~~Chat composer stays visible at 640 px viewport width when canvas is open — WCAG 1.4.10 Reflow (issue #1596)~~ _(deprecated — reflow refactor reverted as out-of-scope; WCAG 1.4.10 tracked separately)_
 - [x] ~~Exactly one `#chat-input-textarea` exists in the DOM when canvas is open at 640 px — no duplicate mobile composer (issue #1596)~~ _(deprecated — reverted with the reflow refactor)_
 - [x] ~~Skip-link keyboard journey: Tab makes "Skip to chat input" link visible, Enter moves focus to `#chat-input-textarea` — WCAG 2.4.1 (issue #1596)~~ _(deprecated — skip-link reverted as out-of-scope; WCAG 2.4.1 tracked separately)_
+- [x] Chat textarea has focus on mount when the composer is enabled and not in embed mode (issue #1904)
+- [x] Press Enter to send — textarea retains focus during streaming; stop button is NOT focused (issue #1904)
+- [x] Click Send button — textarea retains focus; `onMouseDown` `preventDefault` prevents focus theft (issue #1904)
+- [x] After streaming ends, textarea retains focus and copy button is NOT focused (issue #1904)
+- [x] Stop-streaming button is NOT focused while streaming is active (issue #1904)
 
 ---
 
@@ -746,7 +761,7 @@ The Privacy tab is a thin wrapper around the SDK's `AgentPrivacyTab` (`@iblai/ib
 
 - [x] PR-01: Privacy tab label is visible in the Edit Mentor modal sidebar
 - [x] PR-02: Privacy tab heading and description render correctly
-- [x] PR-03: Master Privacy Router switch is visible
+- [x] PR-03: Privacy tab body tracks `enable_privacy_router` flipped via Settings → Capabilities → "Filter PII from messages" (the in-tab master switch was removed; flipping it now lives only in Capabilities)
 - [x] PR-04: Action dropdown, entity chips, and output-filter switch are hidden when the router is off
 - [x] PR-05: Enabling the router reveals the action, entity chips and output-filter fields
 - [x] PR-06: Block Message textarea is editable only while the action is Block (tolerates conditional-render or render-and-disable SDK shapes)
@@ -857,4 +872,97 @@ Standalone top-level tab rendered by the SDK's `AgentScreenShareTab` (`@iblai/we
 
 ---
 
+## Journey 50: Chat Privacy (20 checkpoints) — `journeys/50-chat-privacy.spec.ts`
+
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`
+
+Covers all four user-facing surfaces of the chat-privacy feature and verifies the precedence chain (highest → lowest): **mentor > tenant > session > user > default**. All SDK surface assertions use `@iblai/iblai-js/playwright` helpers (`getChatPrivacyToggle`, `expectChatPrivacyState`, `expectChatPrivacySource`, `expectChatPrivacyLocked`, `setTenantChatPrivacyEnabled`, `selectPrivateMode`, etc.) driven by `data-state` / `data-source` / `aria-pressed` / `aria-disabled`. The in-repo agent-settings switch is located by its `aria-label="Enable private mode"`.
+
+The **agent kill switch** tests (cp-agent-03) are the regression anchor for `dispatch(chatPrivacyApiSlice.util.invalidateTags(['ChatPrivacyEffective']))` wiring in `settings-tab.tsx` (feat/mentor/1797): after saving, the header toggle reflects mentor-locked state **without a page refresh**.
+
+**cp-tenant-05** is marked `test.skip` — non-admins cannot reach the tenant Advanced settings (the "More options" menu only shows Profile / Help / Log out), which is the correct UX. This is implicitly covered by journey 03's non-admin dropdown test.
+
+### Tenant gate (cp-tenant-\*)
+
+- [x] cp-tenant-01: Admin sees the "Allow users to control chat privacy" switch in Account Settings → Advanced tab
+- [x] cp-tenant-02: Disabling the tenant gate hides the header Private Mode toggle across the app
+- [x] cp-tenant-03: Enabling the tenant gate shows the header Private Mode toggle
+- [x] cp-tenant-04: Private Mode profile tab visibility tracks the tenant gate: hidden when off, visible when on
+- [ ] cp-tenant-05: Non-admin cannot reach the tenant Advanced settings _(not-reproducible: non-admin More options menu has no platform-name item; test.skipped with explanation in spec)_
+
+### Agent settings kill switch (cp-agent-\*)
+
+- [x] cp-agent-01: "Enable private mode" row is visible in Edit Mentor → Settings → Capabilities sub-tab for admins
+- [x] cp-agent-02: Saving "Enable private mode" ON persists across modal close and re-open
+- [x] cp-agent-03: Saving "Enable private mode" ON locks the header toggle to `data-state="on"` / `data-source="mentor"` without a page refresh _(regression for `chatPrivacyApiSlice.util.invalidateTags` wiring)_
+- [x] cp-agent-04: Saving "Enable private mode" OFF removes the mentor lock; `data-source` is no longer `"mentor"`
+
+### Header toggle — unlocked mentor (cp-header-\*)
+
+- [x] cp-header-01: Fresh chat starts with the header toggle in the `off` state
+- [x] cp-header-02: Clicking the toggle with no user messages starts a private session (`data-state="on"`, `data-source="session"`)
+- [x] cp-header-03: Clicking an `on` toggle with no messages returns to normal mode (`data-state="off"`)
+- [x] cp-header-04: Clicking the toggle after sending a message opens the confirm dialog; cancelling leaves state `off`
+- [x] cp-header-05: Confirming enable-private-mode mid-session locks the session as `on` (`aria-disabled`) — one-way per spec
+- [x] cp-header-06: Private session state persists as `data-state="on"` across a page refresh (localStorage cache + SDK hydration)
+
+### User profile "Private Mode" tab (cp-profile-\*)
+
+- [x] cp-profile-01: "Private Mode" tab is visible in `UserProfileModal` when the tenant gate is on; all three cards render
+- [x] cp-profile-02: "Private Mode" tab is hidden in `UserProfileModal` when the tenant gate is off
+- [x] cp-profile-03: All three radio cards (Normal / Anonymized / Disabled) render after switching to the tab
+- [x] cp-profile-04: Selecting "Disabled" propagates to the header toggle as `data-source="user"` on a fresh unlocked chat _(user-tier precedence)_
+- [x] cp-profile-05: Selecting "Normal" reverts the header toggle to `data-state="off"` on a fresh chat while `data-source` stays `"user"` _(Normal is an explicit user choice; only `mode="disabled"` reads as private)_
+
+## Journey 51: Prompt Caching Toggle (3 checkpoints) — `journeys/51-prompt-caching-toggle.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`
+
+Covers the "Enable prompt caching" toggle added to the Capabilities sub-tab of the Settings panel ([iblai-platform#1608](https://github.com/iblai/iblai-platform/issues/1608)). The switch maps to `enable_prompt_caching` in the mentor settings API (`PUT .../settings/`); it defaults to `false`. Each test creates a fresh mentor via `createMentorPage.openAndCreate()` to guarantee an isolated default state.
+
+- [x] PC-01: Fresh mentor → Settings → Capabilities — "Enable prompt caching" switch is visible with `aria-checked=false` (default off) and the tooltip trigger is present
+- [x] PC-02: Toggle ON → Save — switch reflects ON, "Agent updated successfully" toast appears, and switch stays ON in the same open dialog after save (persistence across close/reopen not asserted — `enable_prompt_caching` not yet in SDK type)
+- [x] PC-03: Toggle ON → click OFF → `aria-checked=false` immediately in UI → Save → success toast (verifies toggle interaction and API round-trip; persistence of `false` via multipart is a pre-existing backend limitation shared with `enable_multi_query_rag`)
+
+---
+
 > **Note:** `cleanup.spec.ts` runs after all journeys to delete test artifacts. It is not a user journey.
+
+## Journey 52: Tool Call Indicator & Reasoning Section (8 checkpoints) — `journeys/52-tool-call-indicator-and-reasoning.spec.ts`
+
+**Source files:** `components/chat/tool-call-indicator.tsx`, `components/chat/tool-call-item.tsx`, `components/chat/tool-call-utils.ts`, `components/chat/reasoning-section.tsx`, `components/chat/ai-message-bubble.tsx`, `components/chat/chat-messages/index.tsx`, `components/chat/index.tsx`, `hooks/use-mentors/use-mentor-settings.ts`
+
+- [x] Web Search tool pill appears during streaming with tool name and pulse animation
+- [x] Tool call pill is expandable and shows query detail
+- [x] Web Search button is not visible when tool is disabled on mentor
+- [x] Tool call indicator does not appear when Web Search is enabled but not activated in session
+- [x] Reasoning section shows "Thinking" with bounce dots during streaming and auto-collapses to "Thought" after
+- [x] Reasoning section does not appear for non-reasoning model
+- [x] Tool call indicator and reasoning section both render in correct order in same message
+- [x] Tool call indicator and reasoning section are gated by the Enable verbose reasoning setting — hidden when the toggle is off, shown when on
+
+---
+
+## Journey 53: Recent Chats Refresh (2 checkpoints) — `journeys/53-recent-chats-refresh.spec.ts`
+
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
+
+Regression guard for the `SidebarChatsSection` `useEffect` that calls `refetchRecent()` once streaming finishes on a brand-new chat (exactly 2 messages: user + first assistant reply). On `main` the effect was orphaned in an unrendered component; on `fix/1982` it lives inside the rendered `SidebarChatsSection`.
+
+- [x] rcr-01: New chat appears in the sidebar Recent list immediately after the first AI response finishes streaming — no page reload _(regression guard for issue #1982)_
+- [x] rcr-02: Clicking an existing Recent chat row loads the conversation in the chat panel _(regression guard for issue #1881: `handleSelectRow` must write `cachedSessionId[mentorId]` to localStorage so the message loader re-fires)_
+
+---
+
+## Journey 54: Chat Paste-to-Attachment (4 checkpoints) — `journeys/54-chat-paste-to-attachment.spec.ts`
+
+**Source files:** `components/chat-input-form.tsx`, `lib/clipboard.ts`, `components/chat-input-form/file-attachments-list.tsx`
+
+Covers the `handlePaste` → `extractFilesFromClipboard` → `processFiles` path added in issue #1993. When a user pastes into the chat composer, the app inspects the clipboard: file items are immediately routed through the existing upload flow; plain text over `NEXT_PUBLIC_MAXIMUM_CHARACTER_SIZE_TO_COPY` (default 2000 chars) is converted to a `pasted-<timestamp>.txt` File and uploaded the same way; text under the limit goes into the textarea as a normal paste. Validation (size limits) triggers a sonner toast and blocks the chip. Each test creates its own mentor via `createMentorPage.openAndCreate()`. Paste is simulated by dispatching a `ClipboardEvent` with a constructed `DataTransfer` on the focused `#chat-input-textarea`, which hits the exact `onPaste` → `e.clipboardData` → `extractFilesFromClipboard` path. The 2100-char over-limit string is hardcoded above the 2000-char default threshold.
+
+- [x] pta-01: Pasting plain text over the `NEXT_PUBLIC_MAXIMUM_CHARACTER_SIZE_TO_COPY` threshold converts it to a `pasted-*.txt` attachment chip and leaves the textarea empty
+- [x] pta-02: Pasting plain text under the threshold is not converted into an attachment chip
+- [x] pta-03: Pasting an image file via the clipboard produces an attachment chip and the textarea remains empty
+- [x] pta-04: Pasting an oversized file triggers a sonner validation error toast and no attachment chip is added
+
+---

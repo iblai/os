@@ -48,7 +48,6 @@ vi.mock('next/navigation', () => ({
 // next/image
 vi.mock('next/image', () => ({
   default: ({ src, alt, onError, onClick, ...props }: any) => (
-    // eslint-disable-next-line @next/next/no-img-element
     <img src={src} alt={alt} onError={onError} onClick={onClick} {...props} />
   ),
 }));
@@ -351,6 +350,7 @@ const defaultFormValues = {
   embed_show_voice_call: false,
   embed_show_voice_record: false,
   generateShareableLink: false,
+  strip_page_content_html: false,
 };
 
 function renderEmbedTab(
@@ -1082,5 +1082,65 @@ describe('EmbedTab', () => {
     const jsInfo = screen.getByLabelText('More info about Advanced JavaScript');
     fireEvent.click(jsInfo);
     expect(cssInfo).toBeInTheDocument();
+  });
+
+  it('renders the "Optimize page context tokens" toggle with its tooltip', () => {
+    renderEmbedTab();
+    expect(
+      screen.getByText('Optimize Page Context Tokens'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Strips HTML tags from page context before it's sent to the model. Cuts token usage; leave on unless you need the raw HTML.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByLabelText('More info about optimizing page context tokens'),
+    ).toBeInTheDocument();
+  });
+
+  it('renders the page-context toggle OFF by default (new mentor)', () => {
+    renderEmbedTab();
+    const toggle = screen.getByLabelText(
+      'Optimize page context tokens disabled',
+    ) as HTMLInputElement;
+    expect(toggle.checked).toBe(false);
+  });
+
+  it('reflects the strip_page_content_html value returned by GET settings', () => {
+    renderEmbedTab({}, { ...defaultFormValues, strip_page_content_html: true });
+    const toggle = screen.getByLabelText(
+      'Optimize page context tokens enabled',
+    ) as HTMLInputElement;
+    expect(toggle.checked).toBe(true);
+  });
+
+  it('invokes the field handler when the page-context toggle is flipped', () => {
+    const handleChange = vi.fn();
+    const customForm: any = {
+      state: { isSubmitting: false, values: defaultFormValues },
+      handleSubmit: mockFormHandleSubmit,
+      Field: ({ name, children }: any) =>
+        children({
+          state: {
+            value: defaultFormValues[name as keyof typeof defaultFormValues],
+            meta: { isDirty: false },
+          },
+          handleChange:
+            name === 'strip_page_content_html' ? handleChange : vi.fn(),
+        }),
+      Subscribe: ({ selector, children }: any) =>
+        children(selector({ values: defaultFormValues })),
+    };
+    mockUseEmbedTab.mockReturnValue(
+      buildUseEmbedTabReturn({ form: customForm }),
+    );
+    render(<EmbedTab />);
+
+    const toggle = screen.getByLabelText(
+      'Optimize page context tokens disabled',
+    );
+    fireEvent.click(toggle);
+    expect(handleChange).toHaveBeenCalledWith(true);
   });
 });

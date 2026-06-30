@@ -2,6 +2,7 @@
 
 import React from 'react';
 import dynamic from 'next/dynamic';
+import { useTranslations } from 'next-intl';
 
 /* istanbul ignore next -- @preserve dynamic import is not testable in unit tests */
 const DeleteMentorModal = dynamic(
@@ -22,6 +23,7 @@ const CopyMentorModal = dynamic(
 );
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
+import { useDispatch } from 'react-redux';
 
 import {
   useGetMentorSettingsQuery,
@@ -32,6 +34,8 @@ import {
   useGetCallConfigurationsQuery,
   useCreateCallConfigurationMutation,
   useUpdateCallConfigurationMutation,
+  useGetTenantChatPrivacyConfigQuery,
+  chatPrivacyApiSlice,
 } from '@iblai/iblai-js/data-layer';
 import { useForm, useStore } from '@tanstack/react-form';
 
@@ -98,9 +102,15 @@ interface SettingsForm {
   show_voice_record: boolean;
   is_lti_accessible: boolean;
   forkable: boolean;
+  show_reasoning: boolean;
   enable_claw: boolean;
   enable_memory_component: boolean;
   enable_multi_query_rag: boolean;
+  enable_prompt_caching: boolean;
+  /** Gates the standalone Privacy tab (PII-rules UI) — hidden when off. */
+  enable_privacy_router: boolean;
+  /** Mentor-level private-mode kill switch → `mentor.disable_chathistory`. */
+  disable_chathistory: boolean;
   /** Voice-call: function calling for RAG. Persisted on CallConfiguration, not MentorSettings. */
   use_function_calling_for_rag: boolean;
   /** Voice-call: enable screen sharing. Persisted on CallConfiguration, not MentorSettings. */
@@ -108,6 +118,7 @@ interface SettingsForm {
 }
 
 export function SettingsTab() {
+  const t = useTranslations('tabsSettingsTab');
   const { getMentorId } = useNavigate();
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
   const username = useUsername();
@@ -134,6 +145,16 @@ export function SettingsTab() {
 
   const [editMentor, { isLoading: isLoadingEditMentor }] =
     useEditMentorMutation();
+  const dispatch = useDispatch();
+
+  // Tenant gate for the agent-level "Enable private mode" row — hidden when off.
+  const { data: tenantChatPrivacyConfig } = useGetTenantChatPrivacyConfigQuery(
+    // @ts-ignore - userId is not part of the public query args type
+    { org: tenantKey ?? '', userId: username ?? '' },
+    { skip: !tenantKey || !username },
+  );
+  const tenantAllowsChatPrivacyControl =
+    !!tenantChatPrivacyConfig?.allow_user_chat_privacy_control;
 
   // Mentor UUID is required for the new mentor-scoped claw-config endpoint.
   // The route accepts it via `mentor_unique_id`; fall back to `activeMentorId`
@@ -145,11 +166,7 @@ export function SettingsTab() {
 
   const [updateClawConfig] = useUpdateClawMentorConfigMutation();
 
-  // CallConfiguration is the source of truth for the two voice-call toggles
-  // surfaced in Settings (`use_function_calling_for_rag` and `enable_video`).
-  // The backend embeds the active config inside the mentor-settings response,
-  // but we still hit the list endpoint as a fallback for older API versions
-  // that don't inline it. Skip the network call when the inline value exists.
+  // Voice-call toggles live on CallConfiguration; use the inlined config, else fetch the list.
   // @ts-ignore call_configuration is on the API response but not typed
   const inlineCallConfig = mentor?.call_configuration ?? undefined;
   const { data: callConfigList } = useGetCallConfigurationsQuery(
@@ -228,10 +245,18 @@ export function SettingsTab() {
       is_lti_accessible: mentor?.is_lti_accessible ?? false,
       // @ts-ignore - forkable exists in API response but not in type
       forkable: mentor?.forkable ?? false,
+      // @ts-ignore - show_reasoning exists in API response but not in type
+      show_reasoning: mentor?.show_reasoning ?? false,
       // @ts-ignore - enable_claw exists in API response but not in type
       enable_claw: mentor?.enable_claw ?? false,
       enable_memory_component: initialMemoryEnabled,
       enable_multi_query_rag: mentor?.enable_multi_query_rag ?? false,
+      // @ts-ignore - enable_prompt_caching exists in the API response but not yet in the installed SDK type
+      enable_prompt_caching: mentor?.enable_prompt_caching ?? false,
+      // @ts-ignore - enable_privacy_router exists on API but not in the public type yet
+      enable_privacy_router: mentor?.enable_privacy_router ?? false,
+      // @ts-ignore - disable_chathistory exists on the mentor object but not in the public type yet
+      disable_chathistory: mentor?.disable_chathistory ?? false,
       use_function_calling_for_rag:
         existingCallConfig?.use_function_calling_for_rag ?? false,
       enable_video: existingCallConfig?.enable_video ?? false,
@@ -290,6 +315,10 @@ export function SettingsTab() {
         values.forkable = value.forkable;
       }
 
+      if (value.show_reasoning !== undefined) {
+        values.show_reasoning = value.show_reasoning;
+      }
+
       if (value.enable_claw !== undefined) {
         values.enable_claw = value.enable_claw;
       }
@@ -311,6 +340,18 @@ export function SettingsTab() {
 
       if (value.enable_multi_query_rag !== undefined) {
         values.enable_multi_query_rag = value.enable_multi_query_rag;
+      }
+
+      if (value.enable_prompt_caching !== undefined) {
+        values.enable_prompt_caching = value.enable_prompt_caching;
+      }
+
+      if (value.enable_privacy_router !== undefined) {
+        values.enable_privacy_router = value.enable_privacy_router;
+      }
+
+      if (value.disable_chathistory !== undefined) {
+        values.disable_chathistory = value.disable_chathistory;
       }
 
       // Drop any field the user only has read access to. Field-level RBAC
@@ -338,6 +379,12 @@ export function SettingsTab() {
           },
         }).unwrap();
 
+        // Refresh the nav-bar chat-privacy toggle — the mentor-settings mutation
+        // doesn't invalidate chat-privacy-effective. Unconditional on purpose.
+        dispatch(
+          chatPrivacyApiSlice.util.invalidateTags(['ChatPrivacyEffective']),
+        );
+
         if (enableClawChanged && clawMentorConfig && tenantKey && mentorUuid) {
           try {
             await updateClawConfig({
@@ -353,12 +400,8 @@ export function SettingsTab() {
           }
         }
 
-        // Sync the voice-call toggles (use_function_calling_for_rag,
-        // enable_video) to the CallConfiguration endpoint. Only fire when
-        // the user actually changed one of them so we don't churn the
-        // backend on no-op saves. If no config exists yet, POST a new one
-        // with mode='realtime' as the default; otherwise PATCH the two
-        // fields against the existing config id.
+        // Sync the voice-call toggles to CallConfiguration only when changed
+        // (POST a new config if none exists, else PATCH).
         const prevFnCalling = existingCallConfig?.use_function_calling_for_rag
           ? true
           : false;
@@ -400,20 +443,18 @@ export function SettingsTab() {
               }).unwrap();
             }
           } catch (callConfigError) {
-            // Mirror the claw-config approach: don't fail the whole save
-            // if the voice-call sync fails — mentor settings already
-            // persisted. Surface a separate toast so admins know.
+            // Settings already saved — surface a separate toast if the voice-call sync fails.
             console.error(
               JSON.stringify({ tenant: tenantKey, callConfigError }),
             );
-            toast.error('Voice call settings failed to save');
+            toast.error(t('voiceCallSettingsError'));
           }
         }
 
-        toast.success('Agent updated successfully');
+        toast.success(t('agentUpdatedSuccess'));
       } catch (error) {
         console.error(JSON.stringify(error));
-        toast.error('Failed to update agent');
+        toast.error(t('agentUpdateError'));
         console.error(JSON.stringify({ tenant: tenantKey, error }));
       }
     },
@@ -443,10 +484,10 @@ export function SettingsTab() {
     <>
       <div className="flex h-[73px] flex-shrink-0 items-center border-b border-gray-200 bg-white p-4 lg:block">
         <div>
-          <h3 className="mb-1 text-base font-medium text-gray-900">Settings</h3>
-          <p className="text-xs text-gray-600">
-            Configure your agent's basic settings and preferences.
-          </p>
+          <h3 className="mb-1 text-base font-medium text-gray-900">
+            {t('settingsHeading')}
+          </h3>
+          <p className="text-xs text-gray-600">{t('settingsDescription')}</p>
         </div>
       </div>
       <div
@@ -457,7 +498,7 @@ export function SettingsTab() {
         }}
         tabIndex={0}
         role="region"
-        aria-label="Settings form content"
+        aria-label={t('settingsFormAriaLabel')}
       >
         <form
           onSubmit={(formEvent) => {
@@ -473,7 +514,7 @@ export function SettingsTab() {
           >
             <TabsList
               className="inline-flex h-auto rounded-md bg-gray-100 p-1"
-              aria-label="Settings sub-categories"
+              aria-label={t('settingsSubCategoriesAriaLabel')}
             >
               {/*
                 `text-gray-700` overrides Radix TabsList's default
@@ -487,19 +528,19 @@ export function SettingsTab() {
                 value="basic"
                 className="px-3 py-1.5 text-sm font-medium text-gray-700 data-[state=active]:bg-white data-[state=active]:text-gray-900"
               >
-                Basic
+                {t('tabBasic')}
               </TabsTrigger>
               <TabsTrigger
                 value="discovery"
                 className="px-3 py-1.5 text-sm font-medium text-gray-700 data-[state=active]:bg-white data-[state=active]:text-gray-900"
               >
-                Discovery
+                {t('tabDiscovery')}
               </TabsTrigger>
               <TabsTrigger
                 value="capabilities"
                 className="px-3 py-1.5 text-sm font-medium text-gray-700 data-[state=active]:bg-white data-[state=active]:text-gray-900"
               >
-                Capabilities
+                {t('tabCapabilities')}
               </TabsTrigger>
             </TabsList>
 
@@ -525,7 +566,7 @@ export function SettingsTab() {
                           return (
                             <div className="space-y-2">
                               <Label className="flex items-center text-sm font-medium text-[#646464]">
-                                Name
+                                {t('nameLabel')}
                                 <span className="ml-1 text-red-500">*</span>
                               </Label>
                               <Input
@@ -533,12 +574,12 @@ export function SettingsTab() {
                                 onChange={(e) =>
                                   field.handleChange(e.target.value)
                                 }
-                                placeholder="Agent Name"
+                                placeholder={t('agentNamePlaceholder')}
                                 disabled={isDisabled || disabled}
                               />
                               {hasNoValueAndIsDirty && (
                                 <p className="text-xs text-red-500">
-                                  Agent name is required
+                                  {t('agentNameRequired')}
                                 </p>
                               )}
                             </div>
@@ -550,7 +591,7 @@ export function SettingsTab() {
 
                   <div className="space-y-2">
                     <Label className="flex items-center text-sm font-medium text-[#646464]">
-                      Unique ID
+                      {t('uniqueIdLabel')}
                     </Label>
                     <div className="flex gap-2">
                       <Input
@@ -558,7 +599,7 @@ export function SettingsTab() {
                         readOnly
                         disabled
                         className="flex-1 cursor-not-allowed bg-gray-50"
-                        placeholder="Unique ID"
+                        placeholder={t('uniqueIdPlaceholder')}
                       />
                       <Button
                         type="button"
@@ -568,8 +609,8 @@ export function SettingsTab() {
                         disabled={!activeMentorId}
                         aria-label={
                           copyStatus === 'success'
-                            ? 'Unique ID copied to clipboard'
-                            : 'Copy unique ID to clipboard'
+                            ? t('uniqueIdCopied')
+                            : t('copyUniqueId')
                         }
                       >
                         {copyStatus === 'success' ? (
@@ -596,7 +637,7 @@ export function SettingsTab() {
                           return (
                             <div className="space-y-2">
                               <Label className="flex items-center text-sm font-medium text-[#646464]">
-                                Description
+                                {t('descriptionLabel')}
                                 <span className="ml-1 text-red-500">*</span>
                               </Label>
                               <Textarea
@@ -604,13 +645,13 @@ export function SettingsTab() {
                                 onChange={(e) =>
                                   field.handleChange(e.target.value)
                                 }
-                                placeholder="Agent Description"
+                                placeholder={t('agentDescriptionPlaceholder')}
                                 className="min-h-[150px]"
                                 disabled={isDisabled || disabled}
                               />
                               {hasNoValueAndIsDirty && (
                                 <p className="text-xs text-red-500">
-                                  Agent description is required
+                                  {t('agentDescriptionRequired')}
                                 </p>
                               )}
                             </div>
@@ -630,13 +671,13 @@ export function SettingsTab() {
                         {(field) => (
                           <div className="space-y-2">
                             <Label className="flex items-center text-sm font-medium text-[#646464]">
-                              Category
+                              {t('categoryLabel')}
                               <span className="ml-1 text-red-500">*</span>
                             </Label>
                             <Popover>
                               <PopoverTrigger
                                 asChild
-                                aria-label="Select a category"
+                                aria-label={t('selectCategoryAriaLabel')}
                               >
                                 <Button
                                   variant="outline"
@@ -649,19 +690,19 @@ export function SettingsTab() {
                                         (category) =>
                                           category.id === field.state.value,
                                       )?.name
-                                    : 'Select category...'}
+                                    : t('selectCategoryPlaceholder')}
                                   <ChevronsUpDown className="opacity-50" />
                                 </Button>
                               </PopoverTrigger>
                               <PopoverContent className="w-full max-w-[490px] p-0 sm:w-[400px] lg:w-[490px]">
                                 <Command>
                                   <CommandInput
-                                    placeholder="Search category..."
+                                    placeholder={t('searchCategoryPlaceholder')}
                                     className="h-9"
                                   />
                                   <CommandList>
                                     <CommandEmpty>
-                                      No Category found.
+                                      {t('noCategoryFound')}
                                     </CommandEmpty>
                                     <CommandGroup>
                                       {categories?.map((category) => (
@@ -707,7 +748,7 @@ export function SettingsTab() {
                       {(field) => (
                         <div className="order-1 mb-6 space-y-2 sm:order-2 sm:mb-0">
                           <Label className="text-sm font-medium text-[#646464]">
-                            Image
+                            {t('imageLabel')}
                           </Label>
                           <div
                             className="flex h-[200px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-200"
@@ -726,7 +767,7 @@ export function SettingsTab() {
                                       ? field.state.value
                                       : URL.createObjectURL(field.state.value)
                                   }
-                                  alt="Agent"
+                                  alt={t('agentImageAlt')}
                                   className="h-full w-full rounded-lg object-cover"
                                   height={200}
                                   width={200}
@@ -746,7 +787,7 @@ export function SettingsTab() {
                                       fileInputRef.current.value = '';
                                     }
                                   }}
-                                  aria-label="Remove image"
+                                  aria-label={t('removeImageAriaLabel')}
                                   disabled={isDisabled || disabled}
                                 >
                                   <X className="h-3 w-3" />
@@ -754,7 +795,7 @@ export function SettingsTab() {
                               </div>
                             ) : (
                               <span className="text-sm text-gray-500">
-                                + Upload
+                                {t('uploadLabel')}
                               </span>
                             )}
                             <input
@@ -797,19 +838,19 @@ export function SettingsTab() {
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
                             <Label className="flex items-center text-sm font-medium text-[#646464]">
-                              Who Can View?
+                              {t('whoCanViewLabel')}
                               <span className="ml-1 text-red-500">*</span>
                             </Label>
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger
                                   type="button"
-                                  aria-label="More info about chat access"
+                                  aria-label={t('whoCanViewInfoAriaLabel')}
                                 >
                                   <Info className="h-4 w-4 text-gray-400" />
                                 </TooltipTrigger>
                                 <TooltipContent className="ibl-tooltip-content">
-                                  <p>Control who can view this agent.</p>
+                                  <p>{t('whoCanViewTooltip')}</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
@@ -822,8 +863,10 @@ export function SettingsTab() {
                             required
                             disabled={isDisabled || disabled}
                           >
-                            <SelectTrigger aria-label="Select Who Can View">
-                              <SelectValue placeholder="Select Who Can View" />
+                            <SelectTrigger aria-label={t('selectWhoCanView')}>
+                              <SelectValue
+                                placeholder={t('selectWhoCanView')}
+                              />
                             </SelectTrigger>
                             <SelectContent>
                               {MENTOR_VISIBILITY.map((visibility) => (
@@ -853,19 +896,19 @@ export function SettingsTab() {
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
                             <Label className="text-sm font-medium text-[#646464]">
-                              Who Can Chat?
+                              {t('whoCanChatLabel')}
                               <span className="ml-1 text-red-500">*</span>
                             </Label>
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger
                                   type="button"
-                                  aria-label="More info about chat access"
+                                  aria-label={t('whoCanChatInfoAriaLabel')}
                                 >
                                   <Info className="h-4 w-4 text-gray-400" />
                                 </TooltipTrigger>
                                 <TooltipContent className="ibl-tooltip-content">
-                                  <p>Control who can chat with this agent.</p>
+                                  <p>{t('whoCanChatTooltip')}</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
@@ -877,13 +920,17 @@ export function SettingsTab() {
                             }
                             disabled={isDisabled || disabled}
                           >
-                            <SelectTrigger aria-label="Select who can chat">
-                              <SelectValue placeholder="Select who can chat" />
+                            <SelectTrigger aria-label={t('selectWhoCanChat')}>
+                              <SelectValue
+                                placeholder={t('selectWhoCanChat')}
+                              />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="true">Anyone</SelectItem>
+                              <SelectItem value="true">
+                                {t('anyoneOption')}
+                              </SelectItem>
                               <SelectItem value="false">
-                                Authenticated Users
+                                {t('authenticatedUsersOption')}
                               </SelectItem>
                             </SelectContent>
                           </Select>
@@ -904,18 +951,19 @@ export function SettingsTab() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium text-[#646464]">
-                              Highlight in featured listings
+                              {t('highlightFeaturedLabel')}
                             </span>
                             <TooltipProvider>
                               <Tooltip>
-                                <TooltipTrigger aria-label="More info about highlight in featured listings">
+                                <TooltipTrigger
+                                  aria-label={t(
+                                    'highlightFeaturedInfoAriaLabel',
+                                  )}
+                                >
                                   <Info className="h-4 w-4 text-gray-400" />
                                 </TooltipTrigger>
                                 <TooltipContent className="ibl-tooltip-content">
-                                  <p>
-                                    Feature this agent to highlight it in
-                                    listings.
-                                  </p>
+                                  <p>{t('highlightFeaturedTooltip')}</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
@@ -926,7 +974,7 @@ export function SettingsTab() {
                               field.handleChange(checked)
                             }
                             disabled={isDisabled || disabled}
-                            aria-label="Highlight in featured listings"
+                            aria-label={t('highlightFeaturedLabel')}
                             aria-checked={field.state.value}
                           />
                         </div>
@@ -946,23 +994,18 @@ export function SettingsTab() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium text-[#646464]">
-                              Allow LTI launches
+                              {t('allowLtiLabel')}
                             </span>
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger
                                   type="button"
-                                  aria-label="More info about allow lti launches"
+                                  aria-label={t('allowLtiInfoAriaLabel')}
                                 >
                                   <Info className="h-4 w-4 text-gray-400" />
                                 </TooltipTrigger>
                                 <TooltipContent className="ibl-tooltip-content">
-                                  <p>
-                                    Allows this agent to be accessible via LTI
-                                    launches. Unselecting this will immediately
-                                    remove access for any users users that have
-                                    launched this via LTI.
-                                  </p>
+                                  <p>{t('allowLtiTooltip')}</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
@@ -973,7 +1016,7 @@ export function SettingsTab() {
                               field.handleChange(checked)
                             }
                             disabled={isDisabled || disabled}
-                            aria-label="Allow LTI launches"
+                            aria-label={t('allowLtiLabel')}
                             aria-checked={field.state.value}
                           />
                         </div>
@@ -994,7 +1037,7 @@ export function SettingsTab() {
                 {/* Chat experience */}
                 <div className="space-y-3">
                   <h4 className="text-xs font-semibold tracking-wide text-gray-500 uppercase">
-                    Chat experience
+                    {t('chatExperienceHeading')}
                   </h4>
                   <WithFormPermissions
                     name="show_attachment"
@@ -1007,18 +1050,20 @@ export function SettingsTab() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-medium text-[#646464]">
-                                Enable file attachments
+                                {t('enableFileAttachmentsLabel')}
                               </span>
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger
                                     type="button"
-                                    aria-label="More info about enable file attachments"
+                                    aria-label={t(
+                                      'enableFileAttachmentsInfoAriaLabel',
+                                    )}
                                   >
                                     <Info className="h-4 w-4 text-gray-400" />
                                   </TooltipTrigger>
                                   <TooltipContent className="ibl-tooltip-content">
-                                    <p>Lets users attach files in the chat.</p>
+                                    <p>{t('enableFileAttachmentsTooltip')}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
@@ -1029,7 +1074,7 @@ export function SettingsTab() {
                                 field.handleChange(checked)
                               }
                               disabled={isDisabled || disabled}
-                              aria-label="Enable file attachments"
+                              aria-label={t('enableFileAttachmentsLabel')}
                               aria-checked={field.state.value}
                             />
                           </div>
@@ -1049,20 +1094,21 @@ export function SettingsTab() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-medium text-[#646464]">
-                                Remember past conversations
+                                {t('rememberPastConversationsLabel')}
                               </span>
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger
                                     type="button"
-                                    aria-label="More info about remember past conversations"
+                                    aria-label={t(
+                                      'rememberPastConversationsInfoAriaLabel',
+                                    )}
                                   >
                                     <Info className="h-4 w-4 text-gray-400" />
                                   </TooltipTrigger>
                                   <TooltipContent className="ibl-tooltip-content">
                                     <p>
-                                      Allow this agent to remember and reference
-                                      information from past conversations.
+                                      {t('rememberPastConversationsTooltip')}
                                     </p>
                                   </TooltipContent>
                                 </Tooltip>
@@ -1074,7 +1120,7 @@ export function SettingsTab() {
                                 field.handleChange(checked)
                               }
                               disabled={isDisabled || disabled}
-                              aria-label="Remember past conversations"
+                              aria-label={t('rememberPastConversationsLabel')}
                               aria-checked={field.state.value}
                             />
                           </div>
@@ -1082,6 +1128,42 @@ export function SettingsTab() {
                       </form.Field>
                     )}
                   </WithFormPermissions>
+
+                  <form.Field name="show_reasoning">
+                    {(field) => (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-[#646464]">
+                            Enable verbose reasoning
+                          </span>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger
+                                type="button"
+                                aria-label="More info about enable verbose reasoning"
+                              >
+                                <Info className="h-4 w-4 text-gray-400" />
+                              </TooltipTrigger>
+                              <TooltipContent className="ibl-tooltip-content">
+                                <p>
+                                  Show the agent’s reasoning steps while it
+                                  responds.
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                        <Switch
+                          checked={field.state.value}
+                          onCheckedChange={(checked) =>
+                            field.handleChange(checked)
+                          }
+                          disabled={isDisabled}
+                          aria-label={`Enable verbose reasoning ${field.state.value ? 'enabled' : 'disabled'}`}
+                        />
+                      </div>
+                    )}
+                  </form.Field>
 
                   <WithFormPermissions
                     name="enable_multi_query_rag"
@@ -1094,22 +1176,20 @@ export function SettingsTab() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-medium text-[#646464]">
-                                Enhanced document retrieval
+                                {t('enhancedDocRetrievalLabel')}
                               </span>
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger
                                     type="button"
-                                    aria-label="More info about enhanced document retrieval"
+                                    aria-label={t(
+                                      'enhancedDocRetrievalInfoAriaLabel',
+                                    )}
                                   >
                                     <Info className="h-4 w-4 text-gray-400" />
                                   </TooltipTrigger>
                                   <TooltipContent className="ibl-tooltip-content">
-                                    <p>
-                                      Runs several search queries per question
-                                      to pull more relevant documents &mdash;
-                                      more thorough answers, slightly slower.
-                                    </p>
+                                    <p>{t('enhancedDocRetrievalTooltip')}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
@@ -1120,7 +1200,51 @@ export function SettingsTab() {
                                 field.handleChange(checked)
                               }
                               disabled={isDisabled || disabled}
-                              aria-label="Enhanced document retrieval"
+                              aria-label={t('enhancedDocRetrievalLabel')}
+                              aria-checked={field.state.value}
+                            />
+                          </div>
+                        )}
+                      </form.Field>
+                    )}
+                  </WithFormPermissions>
+
+                  <WithFormPermissions
+                    name="enable_prompt_caching"
+                    // @ts-ignore
+                    permissions={mentor?.permissions?.field}
+                  >
+                    {({ disabled }) => (
+                      <form.Field name="enable_prompt_caching">
+                        {(field) => (
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-[#646464]">
+                                {t('enablePromptCachingLabel')}
+                              </span>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger
+                                    type="button"
+                                    aria-label={t(
+                                      'enablePromptCachingInfoAriaLabel',
+                                    )}
+                                  >
+                                    <Info className="h-4 w-4 text-gray-400" />
+                                  </TooltipTrigger>
+                                  <TooltipContent className="ibl-tooltip-content">
+                                    <p>{t('enablePromptCachingTooltip')}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </div>
+                            <Switch
+                              checked={field.state.value}
+                              onCheckedChange={(checked) =>
+                                field.handleChange(checked)
+                              }
+                              disabled={isDisabled || disabled}
+                              aria-label={t('enablePromptCachingLabel')}
                               aria-checked={field.state.value}
                             />
                           </div>
@@ -1133,7 +1257,7 @@ export function SettingsTab() {
                 {/* Voice & calls */}
                 <div className="space-y-3">
                   <h4 className="text-xs font-semibold tracking-wide text-gray-500 uppercase">
-                    Voice &amp; calls
+                    {t('voiceCallsHeading')}
                   </h4>
                   <WithFormPermissions
                     name="show_voice_call"
@@ -1146,20 +1270,20 @@ export function SettingsTab() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-medium text-[#646464]">
-                                Enable voice calls
+                                {t('enableVoiceCallsLabel')}
                               </span>
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger
                                     type="button"
-                                    aria-label="More info about enable voice calls"
+                                    aria-label={t(
+                                      'enableVoiceCallsInfoAriaLabel',
+                                    )}
                                   >
                                     <Info className="h-4 w-4 text-gray-400" />
                                   </TooltipTrigger>
                                   <TooltipContent className="ibl-tooltip-content">
-                                    <p>
-                                      Lets users start voice calls in the chat.
-                                    </p>
+                                    <p>{t('enableVoiceCallsTooltip')}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
@@ -1170,7 +1294,7 @@ export function SettingsTab() {
                                 field.handleChange(checked)
                               }
                               disabled={isDisabled || disabled}
-                              aria-label="Enable voice calls"
+                              aria-label={t('enableVoiceCallsLabel')}
                               aria-checked={field.state.value}
                             />
                           </div>
@@ -1190,21 +1314,20 @@ export function SettingsTab() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-medium text-[#646464]">
-                                Enable voice recordings
+                                {t('enableVoiceRecordingsLabel')}
                               </span>
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger
                                     type="button"
-                                    aria-label="More info about enable voice recordings"
+                                    aria-label={t(
+                                      'enableVoiceRecordingsInfoAriaLabel',
+                                    )}
                                   >
                                     <Info className="h-4 w-4 text-gray-400" />
                                   </TooltipTrigger>
                                   <TooltipContent className="ibl-tooltip-content">
-                                    <p>
-                                      Lets users send voice recordings in the
-                                      chat.
-                                    </p>
+                                    <p>{t('enableVoiceRecordingsTooltip')}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
@@ -1215,7 +1338,7 @@ export function SettingsTab() {
                                 field.handleChange(checked)
                               }
                               disabled={isDisabled || disabled}
-                              aria-label="Enable voice recordings"
+                              aria-label={t('enableVoiceRecordingsLabel')}
                               aria-checked={field.state.value}
                             />
                           </div>
@@ -1229,20 +1352,20 @@ export function SettingsTab() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium text-[#646464]">
-                            Enable screen sharing
+                            {t('enableScreenSharingLabel')}
                           </span>
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger
                                 type="button"
-                                aria-label="More info about enabling screen sharing"
+                                aria-label={t(
+                                  'enableScreenSharingInfoAriaLabel',
+                                )}
                               >
                                 <Info className="h-4 w-4 text-gray-400" />
                               </TooltipTrigger>
                               <TooltipContent className="ibl-tooltip-content">
-                                <p>
-                                  Lets users share their screen during a call.
-                                </p>
+                                <p>{t('enableScreenSharingTooltip')}</p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
@@ -1253,7 +1376,11 @@ export function SettingsTab() {
                             field.handleChange(checked)
                           }
                           disabled={isDisabled}
-                          aria-label={`Enable screen sharing ${field.state.value ? 'enabled' : 'disabled'}`}
+                          aria-label={
+                            field.state.value
+                              ? t('screenSharingAriaEnabled')
+                              : t('screenSharingAriaDisabled')
+                          }
                           data-testid="settings-enable-video-switch"
                         />
                       </div>
@@ -1265,23 +1392,18 @@ export function SettingsTab() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium text-[#646464]">
-                            Smart document retrieval
+                            {t('smartDocRetrievalLabel')}
                           </span>
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger
                                 type="button"
-                                aria-label="More info about smart document retrieval"
+                                aria-label={t('smartDocRetrievalInfoAriaLabel')}
                               >
                                 <Info className="h-4 w-4 text-gray-400" />
                               </TooltipTrigger>
                               <TooltipContent className="ibl-tooltip-content">
-                                <p>
-                                  On a call, the agent fetches documents only
-                                  when it needs them instead of on every turn
-                                  &mdash; faster replies. The knowledge base
-                                  stays available either way.
-                                </p>
+                                <p>{t('smartDocRetrievalTooltip')}</p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
@@ -1292,7 +1414,11 @@ export function SettingsTab() {
                             field.handleChange(checked)
                           }
                           disabled={isDisabled}
-                          aria-label={`Smart document retrieval ${field.state.value ? 'enabled' : 'disabled'}`}
+                          aria-label={
+                            field.state.value
+                              ? t('smartDocRetrievalAriaEnabled')
+                              : t('smartDocRetrievalAriaDisabled')
+                          }
                           data-testid="settings-use-function-calling-for-rag-switch"
                         />
                       </div>
@@ -1303,7 +1429,7 @@ export function SettingsTab() {
                 {/* Advanced */}
                 <div className="space-y-3">
                   <h4 className="text-xs font-semibold tracking-wide text-gray-500 uppercase">
-                    Advanced
+                    {t('advancedHeading')}
                   </h4>
                   <WithFormPermissions
                     name="enable_claw"
@@ -1316,20 +1442,65 @@ export function SettingsTab() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-medium text-[#646464]">
-                                Enable dedicated sandbox
+                                {t('enableDedicatedSandboxLabel')}
                               </span>
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger
                                     type="button"
-                                    aria-label="More info about enable dedicated sandbox"
+                                    aria-label={t(
+                                      'enableDedicatedSandboxInfoAriaLabel',
+                                    )}
+                                  >
+                                    <Info className="h-4 w-4 text-gray-400" />
+                                  </TooltipTrigger>
+                                  <TooltipContent className="ibl-tooltip-content">
+                                    <p>{t('enableDedicatedSandboxTooltip')}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </div>
+                            <Switch
+                              checked={field.state.value}
+                              onCheckedChange={(checked) =>
+                                field.handleChange(checked)
+                              }
+                              disabled={isDisabled || disabled}
+                              aria-label={t('enableDedicatedSandboxLabel')}
+                              aria-checked={field.state.value}
+                            />
+                          </div>
+                        )}
+                      </form.Field>
+                    )}
+                  </WithFormPermissions>
+
+                  <WithFormPermissions
+                    name="enable_privacy_router"
+                    // @ts-ignore - enable_privacy_router not in permissions type yet
+                    permissions={mentor?.permissions?.field}
+                  >
+                    {({ disabled }) => (
+                      <form.Field name="enable_privacy_router">
+                        {(field) => (
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-[#646464]">
+                                Filter PII from messages
+                              </span>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger
+                                    type="button"
+                                    aria-label="More info about filter PII from messages"
                                   >
                                     <Info className="h-4 w-4 text-gray-400" />
                                   </TooltipTrigger>
                                   <TooltipContent className="ibl-tooltip-content">
                                     <p>
-                                      A dedicated sandbox to securely run your
-                                      agent on independent infrastructure.
+                                      Enable the privacy router. When on, a
+                                      dedicated Privacy tab appears for
+                                      configuring PII detection rules.
                                     </p>
                                   </TooltipContent>
                                 </Tooltip>
@@ -1341,7 +1512,7 @@ export function SettingsTab() {
                                 field.handleChange(checked)
                               }
                               disabled={isDisabled || disabled}
-                              aria-label="Enable dedicated sandbox"
+                              aria-label="Filter PII from messages"
                               aria-checked={field.state.value}
                             />
                           </div>
@@ -1349,6 +1520,57 @@ export function SettingsTab() {
                       </form.Field>
                     )}
                   </WithFormPermissions>
+
+                  {/* Hidden when the tenant disables chat-privacy control — the kill switch is a no-op then. */}
+                  {tenantAllowsChatPrivacyControl && (
+                    <WithFormPermissions
+                      name="disable_chathistory"
+                      // @ts-ignore - disable_chathistory not in permissions type yet
+                      permissions={mentor?.permissions?.field}
+                    >
+                      {({ disabled }) => (
+                        <form.Field name="disable_chathistory">
+                          {(field) => (
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium text-[#646464]">
+                                  Enable private mode
+                                </span>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger
+                                      type="button"
+                                      aria-label="More info about enable private mode"
+                                    >
+                                      <Info className="h-4 w-4 text-gray-400" />
+                                    </TooltipTrigger>
+                                    <TooltipContent className="ibl-tooltip-content">
+                                      <p>
+                                        When on, every conversation with this
+                                        agent runs in private mode — no chat
+                                        history or memory is stored for any
+                                        user. Use this for sensitive or
+                                        compliance-bound deployments.
+                                      </p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+                              <Switch
+                                checked={field.state.value}
+                                onCheckedChange={(checked) =>
+                                  field.handleChange(checked)
+                                }
+                                disabled={isDisabled || disabled}
+                                aria-label="Enable private mode"
+                                aria-checked={field.state.value}
+                              />
+                            </div>
+                          )}
+                        </form.Field>
+                      )}
+                    </WithFormPermissions>
+                  )}
 
                   <WithFormPermissions
                     name="forkable"
@@ -1361,21 +1583,18 @@ export function SettingsTab() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-medium text-[#646464]">
-                                Enable copies
+                                {t('enableCopiesLabel')}
                               </span>
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger
                                     type="button"
-                                    aria-label="More info about enable copies"
+                                    aria-label={t('enableCopiesInfoAriaLabel')}
                                   >
                                     <Info className="h-4 w-4 text-gray-400" />
                                   </TooltipTrigger>
                                   <TooltipContent className="ibl-tooltip-content">
-                                    <p>
-                                      Lets other admins make their own copy of
-                                      this agent.
-                                    </p>
+                                    <p>{t('enableCopiesTooltip')}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
@@ -1386,7 +1605,7 @@ export function SettingsTab() {
                                 field.handleChange(checked)
                               }
                               disabled={isDisabled || disabled}
-                              aria-label="Enable copies"
+                              aria-label={t('enableCopiesLabel')}
                               aria-checked={field.state.value}
                             />
                           </div>
@@ -1416,7 +1635,9 @@ export function SettingsTab() {
                           disabled={isDisabled || !isFormValid}
                           className="bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90"
                         >
-                          {isLoadingEditMentor ? 'Saving...' : 'Save'}
+                          {isLoadingEditMentor
+                            ? t('savingButton')
+                            : t('saveButton')}
                         </Button>
                       )
                     }
@@ -1432,7 +1653,7 @@ export function SettingsTab() {
                   disabled={isDisabled}
                   variant="outline"
                 >
-                  Copy
+                  {t('copyButton')}
                 </Button>
               )}
 
@@ -1449,7 +1670,7 @@ export function SettingsTab() {
                       disabled={isDisabled}
                       variant="outline"
                     >
-                      Delete
+                      {t('deleteButton')}
                     </Button>
                   )
                 }

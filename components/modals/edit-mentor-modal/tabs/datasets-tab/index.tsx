@@ -1,8 +1,12 @@
 'use client';
 
 import React from 'react';
+import { useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
 import { Search, Plus } from 'lucide-react';
+
+import { useGetMentorSettingsQuery } from '@iblai/iblai-js/data-layer';
 
 import { Table, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
@@ -13,6 +17,10 @@ import { useDatasetsWithPagination } from '@/hooks/use-datasets';
 import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { AddResourceModal } from '@/components/modals/edit-mentor-modal/tabs/datasets-tab/add-resource-modal';
 import { Spinner } from '@/components/spinner';
+import { WithPermissions } from '@/hoc/withPermissions';
+import { useUsername } from '@/hooks/use-user';
+import { useNavigate } from '@/hooks/user-navigate';
+import { TenantKeyMentorIdParams } from '@/lib/types';
 import type { Dataset } from './dataset-item';
 
 interface DatasetsTabProps {
@@ -24,6 +32,7 @@ export function DatasetsTab({
   onSelect,
   selectedDatasetId,
 }: DatasetsTabProps = {}) {
+  const t = useTranslations('datasetsTabIndex');
   const [showAddResourceModal, setShowAddResourceModal] = React.useState(false);
 
   const openAddResourceModal = () => setShowAddResourceModal(true);
@@ -31,6 +40,21 @@ export function DatasetsTab({
 
   const { executeWithTrialCheck, isModalOpen, FreeTrialDialog, closeModal } =
     useShowFreeTrialDialog();
+
+  const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
+  const username = useUsername();
+  const { getMentorId } = useNavigate();
+  const activeMentorId = getMentorId() || mentorId;
+
+  const { data: mentorSettings } = useGetMentorSettingsQuery(
+    {
+      mentor: activeMentorId,
+      org: tenantKey,
+      // @ts-ignore
+      userId: username ?? '',
+    },
+    { skip: !username || !activeMentorId || !tenantKey },
+  );
 
   const {
     datasets,
@@ -47,10 +71,10 @@ export function DatasetsTab({
     <>
       <div className="flex h-[73px] flex-shrink-0 items-center border-b border-gray-200 bg-white p-4 lg:block">
         <div>
-          <h3 className="mb-1 text-base font-medium text-gray-900">Datasets</h3>
-          <p className="text-xs text-gray-600">
-            Manage training datasets and knowledge sources.
-          </p>
+          <h3 className="mb-1 text-base font-medium text-gray-900">
+            {t('heading')}
+          </h3>
+          <p className="text-xs text-gray-600">{t('subheading')}</p>
         </div>
       </div>
       <div
@@ -70,22 +94,30 @@ export function DatasetsTab({
               )}
               <Input
                 type="search"
-                placeholder="Search datasets..."
+                placeholder={t('searchPlaceholder')}
                 className="pl-8"
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
               />
             </div>
-            <Button
-              onClick={() =>
-                executeWithTrialCheck(() => openAddResourceModal())
-              }
-              size="sm"
-              className="cursor-pointer bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90"
+            <WithPermissions
+              rbacResource={`/mentors/${mentorSettings?.mentor_id}/documents/#create`}
             >
-              <Plus className="h-4 w-4" />
-              Add Resource
-            </Button>
+              {({ hasPermission }) =>
+                hasPermission ? (
+                  <Button
+                    onClick={() =>
+                      executeWithTrialCheck(() => openAddResourceModal())
+                    }
+                    size="sm"
+                    className="cursor-pointer bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90"
+                  >
+                    <Plus className="h-4 w-4" />
+                    {t('addResource')}
+                  </Button>
+                ) : null
+              }
+            </WithPermissions>
           </div>
           <div className="overflow-hidden rounded-md border">
             <div className="overflow-x-auto sm:mx-0">
@@ -99,22 +131,22 @@ export function DatasetsTab({
                     <TableHeader>
                       <TableRow className="bg-muted/50 border-b">
                         <TableHead className="p-3 text-left text-sm whitespace-nowrap text-[#646464]">
-                          NAME
+                          {t('columnName')}
                         </TableHead>
                         <TableHead className="p-3 text-left text-sm whitespace-nowrap text-[#646464]">
-                          TYPE
+                          {t('columnType')}
                         </TableHead>
                         <TableHead className="p-3 text-left text-sm whitespace-nowrap text-[#646464]">
-                          TOKENS
+                          {t('columnTokens')}
                         </TableHead>
                         <TableHead className="p-3 text-left text-sm whitespace-nowrap text-[#646464]">
-                          INTERVAL
+                          {t('columnInterval')}
                         </TableHead>
                         <TableHead className="p-3 text-left text-sm whitespace-nowrap text-[#646464]">
-                          VISIBILITY
+                          {t('columnVisibility')}
                         </TableHead>
                         <TableHead className="p-3 text-left text-sm whitespace-nowrap text-[#646464]">
-                          STATUS
+                          {t('columnStatus')}
                         </TableHead>
                       </TableRow>
                     </TableHeader>

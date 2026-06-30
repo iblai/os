@@ -13,12 +13,14 @@ import { ResourceType } from '../resource-types';
 import { useNavigate } from '@/hooks/user-navigate';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { extractErrorMessage } from './utils';
+import { useTranslations } from 'next-intl';
 
 type Props = {
   resource: ResourceType;
 };
 
 export function LocalFileUploadModal({ resource }: Props) {
+  const t = useTranslations('resourceModalLocalFileUploadModal');
   const [file, setFile] = useState<File | null>(null);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [description, setDescription] = useState('');
@@ -44,7 +46,7 @@ export function LocalFileUploadModal({ resource }: Props) {
   const handleUploadFile = async () => {
     try {
       if (!file) {
-        toast.error('File not found');
+        toast.error(t('fileNotFound'));
         return;
       }
       const formData = new FormData();
@@ -67,13 +69,10 @@ export function LocalFileUploadModal({ resource }: Props) {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
-      toast.success('Document has been queued for training');
+      toast.success(t('documentQueued'));
     } catch (error: unknown) {
       console.error(JSON.stringify(error));
-      const errorMessage = extractErrorMessage(
-        error,
-        'Error adding training document',
-      );
+      const errorMessage = extractErrorMessage(error, t('errorAddingDocument'));
 
       toast.error(errorMessage);
       console.error(JSON.stringify({ tenant: tenantKey, error }));
@@ -82,7 +81,12 @@ export function LocalFileUploadModal({ resource }: Props) {
 
   const validateFileSize = (file: File): boolean => {
     if (file.size > maxDatasetFileSize) {
-      toast.error(`File size exceeds ${maxFileSize.value} ${maxFileSize.unit}`);
+      toast.error(
+        t('fileSizeExceeds', {
+          value: maxFileSize.value,
+          unit: maxFileSize.unit,
+        }),
+      );
       return false;
     }
     return true;
@@ -161,13 +165,13 @@ export function LocalFileUploadModal({ resource }: Props) {
         </div>
 
         <h3 className="mb-1 text-lg font-medium text-gray-700">
-          Drag and drop your file here
+          {t('dragAndDrop')}
         </h3>
-        <p className="mb-4 text-sm text-gray-500">or</p>
+        <p className="mb-4 text-sm text-gray-500">{t('or')}</p>
 
         <label htmlFor="file-upload" className="cursor-pointer">
           <div className="rounded-md bg-gradient-to-r from-blue-600 to-blue-400 px-4 py-2 font-medium text-white transition-colors hover:opacity-90">
-            Browse files
+            {t('browseFiles')}
           </div>
           <input
             id="file-upload"
@@ -180,7 +184,10 @@ export function LocalFileUploadModal({ resource }: Props) {
         </label>
 
         <p className="mt-4 text-xs text-gray-500">
-          Maximum file size: {maxFileSize.value} {maxFileSize.unit}
+          {t('maxFileSize', {
+            value: maxFileSize.value,
+            unit: maxFileSize.unit,
+          })}
         </p>
 
         {file && (
@@ -229,13 +236,13 @@ export function LocalFileUploadModal({ resource }: Props) {
                   htmlFor="image-description"
                   className="mb-1 block text-sm font-medium text-gray-700"
                 >
-                  Description (optional)
+                  {t('descriptionLabel')}
                 </label>
                 <Textarea
                   id="image-description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Add a description for this image..."
+                  placeholder={t('descriptionPlaceholder')}
                   className="resize-none"
                   rows={3}
                 />
@@ -253,10 +260,10 @@ export function LocalFileUploadModal({ resource }: Props) {
         >
           {isAddTrainingDocumentLoading ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin" /> Submitting
+              <Loader2 className="h-4 w-4 animate-spin" /> {t('submitting')}
             </>
           ) : (
-            <>Submit</>
+            <>{t('submit')}</>
           )}
         </Button>
       </div>

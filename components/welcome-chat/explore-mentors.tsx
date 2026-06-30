@@ -5,24 +5,21 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ChevronRight } from 'lucide-react';
 import { useNavigate } from '@/hooks/user-navigate';
-import {
-  useGetAiSearchMentorsQuery,
-  useGetPublicMentorsQuery,
-} from '@iblai/iblai-js/data-layer';
-import { useUsername } from '@/hooks/use-user';
+import { useGetAiSearchMentorsQuery } from '@iblai/iblai-js/data-layer';
 import { useParams } from 'next/navigation';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { format } from 'date-fns';
 import { useTenantMetadata } from '@iblai/iblai-js/web-utils';
+import { useTranslations } from 'next-intl';
 
 const QUERY_LIMIT = 6;
 
 export function ExploreMentors() {
-  const username = useUsername();
+  const t = useTranslations('welcomeChatExploreMentors');
   const { tenantKey } = useParams<TenantKeyMentorIdParams>();
   const { navigateToExplore, navigateToMentor } = useNavigate();
   const { metadata } = useTenantMetadata({ org: tenantKey });
-  const { data: mentors } = useGetAiSearchMentorsQuery(
+  const { data: allMentors } = useGetAiSearchMentorsQuery(
     {
       platform_key: tenantKey ?? '',
       limit: QUERY_LIMIT,
@@ -35,19 +32,6 @@ export function ExploreMentors() {
     },
   );
 
-  const { data: publicMentors } = useGetPublicMentorsQuery(
-    {
-      includeMainPublicMentors: true,
-      limit: QUERY_LIMIT,
-      orderBy: 'recently_accessed_at',
-    },
-    {
-      skip: username,
-    },
-  );
-
-  const allMentors = username ? mentors : publicMentors;
-
   if (!allMentors?.results || allMentors?.results.length === 0) {
     return null;
   }
@@ -55,13 +39,15 @@ export function ExploreMentors() {
   return (
     <div className="mx-auto w-full max-w-6xl px-4">
       <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-gray-900">Explore Agents</h2>
+        <h2 className="text-xl font-semibold text-gray-900">
+          {t('exploreAgents')}
+        </h2>
         <Button
           variant="ghost"
           className="h-auto min-h-6 p-0 text-blue-600 hover:text-blue-700"
           onClick={() => navigateToExplore()}
         >
-          Browse All
+          {t('browseAll')}
           <ChevronRight className="ml-1 h-4 w-4" />
         </Button>
       </div>
@@ -79,10 +65,11 @@ export function ExploreMentors() {
                 navigateToMentor(mentor?.unique_id ?? '');
               }
             }}
-            aria-label={`Explore agent: ${mentor.name}. ${
+            aria-label={t('exploreAgentAriaLabel', {
+              name: mentor.name,
               // @ts-expect-error - description property may not exist on Mentor type
-              mentor.description || 'No description available'
-            }`}
+              description: mentor.description || t('noDescriptionAvailable'),
+            })}
           >
             <Card className="h-full cursor-pointer border border-[#D0E0FF] bg-[#F5F8FF] shadow-xs transition-all duration-200 focus-within:shadow-md hover:shadow-sm">
               <CardContent className="h-full p-4">
@@ -105,11 +92,15 @@ export function ExploreMentors() {
                     </h3>
                     <p className="mb-2 line-clamp-2 flex-1 text-sm leading-relaxed text-gray-600">
                       {/* @ts-expect-error - description property may not exist on Mentor type */}
-                      {mentor.description || 'No description available'}
+                      {mentor.description || t('noDescriptionAvailable')}
                     </p>
                     <p className="mt-auto text-xs text-gray-400">
-                      Updated on{' '}
-                      {format(mentor.updated_at || new Date(), 'MMM d, yyyy')}
+                      {t('updatedOn', {
+                        date: format(
+                          mentor.updated_at || new Date(),
+                          'MMM d, yyyy',
+                        ),
+                      })}
                     </p>
                   </div>
                 </div>

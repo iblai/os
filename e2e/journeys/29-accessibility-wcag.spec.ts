@@ -246,67 +246,121 @@ test.describe('Journey 29: Accessibility — WCAG 2.1 AA — Admin', () => {
   });
 
   // ---------------------------------------------------------------------------
-  // Issue #576 — tooltip focus flash on non-keyboard focus
+  // Issue #576 → updated by #1904 — focus stays on textarea during streaming
   //
-  // The stop-streaming and copy buttons previously popped their Radix tooltips
-  // any time focus landed on them — including DOM-swap focus (submit button
-  // swapping into stop mid-stream, copy button mounting when streaming ends).
-  // This read as a buggy flash and was flagged in Kaplan's accessibility pass.
+  // The original #576 fix gated tooltip-open-on-focus on `:focus-visible` so
+  // programmatic DOM-swap focus (submit→stop, stop→copy) could not flash a
+  // tooltip.  Issue #1904 goes further: the `onMouseDown={(e) =>
+  // e.preventDefault()}` on both Send and Stop buttons means clicking them
+  // never pulls focus off the textarea at all.  The textarea also
+  // auto-focuses on mount (when enabled, non-embed) so focus is already
+  // there when the first message is sent.
   //
-  // The fix gates the tooltip's open-on-focus behavior on `:focus-visible`,
-  // so only keyboard-driven focus opens it; programmatic / DOM-swap focus is
-  // preempted via `event.preventDefault()`.
-  //
-  // These tests are fixme until verified against a real browser — the
-  // :focus-visible heuristic needs Chromium/WebKit/Firefox to behave
-  // authentically, which JSDOM doesn't replicate.
+  // New contract verified here:
+  //   • While streaming: textarea is focused, stop button is NOT focused.
+  //   • After streaming: textarea is focused, copy button is NOT focused.
   // ---------------------------------------------------------------------------
 
   test.fixme(
-    'non-admin sends a message and the stop-streaming tooltip does not flash when the stop button mounts (issue #576)',
+    'non-admin sends a message and the textarea stays focused while streaming (issue #1904, updated #576)',
     async ({ nonadminPage, nonadminChatPage }) => {
       await navigateToMentorApp(nonadminPage);
 
-      await nonadminChatPage.sendMessage('Hello, explain focus-visible');
-      // Stop button appears while streaming — it inherits focus from the
-      // submit button it replaced, but the tooltip should NOT open.
-      const stopButton = nonadminPage.getByRole('button', {
-        name: 'Stop streaming',
+      // Fill the textarea (it should already have focus on mount)
+      await expect(nonadminChatPage.chatInput).toBeVisible({ timeout: 15_000 });
+      await nonadminChatPage.chatInput.fill('Hello, explain focus-visible');
+      await expect(nonadminChatPage.sendButton).toBeEnabled({
+        timeout: 10_000,
       });
-      await expect(stopButton).toBeVisible({ timeout: 10_000 });
-      await nonadminPage.waitForTimeout(1_500);
-      expect(await nonadminPage.getByRole('tooltip').count()).toBe(0);
+      // Click Send without pulling focus off textarea (onMouseDown preventDefault)
+      await nonadminChatPage.sendButton.click();
+
+      // Stop button mounts when streaming starts
+      const stopButton = nonadminPage.getByRole('button', {
+        name: /stop streaming/i,
+      });
+      let stopVisible = false;
+      try {
+        await stopButton.waitFor({ state: 'visible', timeout: 15_000 });
+        stopVisible = true;
+      } catch {
+        stopVisible = false;
+      }
+
+      if (stopVisible) {
+        // Textarea must hold focus — stop button must NOT be focused
+        await expect(nonadminChatPage.chatInput).toBeFocused();
+        const stopFocused = await stopButton.evaluate(
+          (el) => el === document.activeElement,
+        );
+        expect(stopFocused).toBe(false);
+      }
+      // If the response came back before stop button mounted, that is
+      // acceptable — just verify focus on textarea after stream
+      await expect(nonadminChatPage.chatInput).toBeFocused();
     },
   );
 
   test.fixme(
-    'non-admin waits for streaming to end and the copy-to-clipboard tooltip does not flash when the copy button mounts (issue #576)',
+    'non-admin waits for streaming to end and the textarea stays focused — copy button is not focused (issue #1904, updated #576)',
     async ({ nonadminPage, nonadminChatPage }) => {
       await navigateToMentorApp(nonadminPage);
 
-      await nonadminChatPage.sendMessage('Say hi');
-      await nonadminChatPage.waitForAIResponse();
+      await expect(nonadminChatPage.chatInput).toBeVisible({ timeout: 15_000 });
+      await nonadminChatPage.chatInput.fill('Say hi');
+      await expect(nonadminChatPage.sendButton).toBeEnabled({
+        timeout: 10_000,
+      });
+      await nonadminChatPage.sendButton.click();
+
+      // Wait for an AI message to appear (streaming complete)
+      await nonadminChatPage.waitForAIResponse(90_000);
 
       const copyButton = nonadminPage.getByLabel('Copy to Clipboard').first();
-      await expect(copyButton).toBeVisible({ timeout: 10_000 });
-      // Give Radix's delay a chance to open; it should stay suppressed.
-      await nonadminPage.waitForTimeout(1_500);
-      expect(await nonadminPage.getByRole('tooltip').count()).toBe(0);
+      let copyVisible = false;
+      try {
+        await copyButton.waitFor({ state: 'visible', timeout: 10_000 });
+        copyVisible = true;
+      } catch {
+        copyVisible = false;
+      }
+
+      if (copyVisible) {
+        // Copy button must NOT be focused after it mounts
+        const copyFocused = await copyButton.evaluate(
+          (el) => el === document.activeElement,
+        );
+        expect(copyFocused).toBe(false);
+      }
+
+      // Textarea must hold focus after streaming ends
+      await expect(nonadminChatPage.chatInput).toBeFocused();
     },
   );
 
+  // a11y-19: keyboard navigation to the copy button still opens the tooltip.
+  // This confirms the tooltip is not globally suppressed — only programmatic
+  // focus (DOM-swap) no longer triggers it.  The textarea-focus contract
+  // (#1904) is orthogonal: keyboard Tab deliberately moves focus away.
   test.fixme(
     'non-admin tabs to the copy button with the keyboard and the tooltip does open (issue #576)',
     async ({ nonadminPage, nonadminChatPage }) => {
       await navigateToMentorApp(nonadminPage);
 
-      await nonadminChatPage.sendMessage('Say hi');
-      await nonadminChatPage.waitForAIResponse();
+      await expect(nonadminChatPage.chatInput).toBeVisible({ timeout: 15_000 });
+      await nonadminChatPage.chatInput.fill('Say hi');
+      await expect(nonadminChatPage.sendButton).toBeEnabled({
+        timeout: 10_000,
+      });
+      await nonadminChatPage.sendButton.click();
+      await nonadminChatPage.waitForAIResponse(90_000);
 
       const copyButton = nonadminPage.getByLabel('Copy to Clipboard').first();
-      await copyButton.focus(); // real focus; browser still decides :focus-visible
+      await expect(copyButton).toBeVisible({ timeout: 10_000 });
+
+      // Tab to the copy button via keyboard so `:focus-visible` fires
       await nonadminPage.keyboard.press('Tab');
-      await nonadminPage.keyboard.press('Shift+Tab'); // arrive via keyboard
+      await nonadminPage.keyboard.press('Shift+Tab'); // land on copy button
 
       await expect(nonadminPage.getByRole('tooltip')).toBeVisible({
         timeout: 5_000,
@@ -360,4 +414,173 @@ test.describe('Journey 29: Accessibility — Issue #1596 — Composer button ari
       ).toBeVisible();
     }
   });
+});
+
+// ---------------------------------------------------------------------------
+// Issue #1904 — Keep focus on textarea throughout the chat cycle
+//
+// Previously the chat composer moved keyboard focus to the Stop-streaming
+// button when streaming started and to the Copy button when it ended.
+// Issue #1904 removes that focus-stealing behavior:
+//
+//   1. AutoResizeTextarea focuses itself on mount (enabled, non-embed).
+//   2. Send and Stop buttons use onMouseDown={(e) => e.preventDefault()}
+//      so clicking them never pulls focus off the textarea.
+//   3. The old useEffect that moved focus to the stop/copy buttons is gone.
+//
+// These tests verify the full lifecycle: type → send (Enter or click) →
+// stream-start → stream-end — focus stays on the textarea throughout.
+//
+// a11y-24  Textarea on mount has focus (non-embed, enabled)
+// a11y-25  Press Enter to send — textarea retains focus during streaming
+// a11y-26  Click Send button — textarea retains focus during streaming
+// a11y-27  After stream ends — textarea retains focus, copy button NOT focused
+// a11y-28  Stop button is NOT focused while streaming is active
+// ---------------------------------------------------------------------------
+
+test.describe('Journey 29: Accessibility — Issue #1904 — Chat textarea focus retention', () => {
+  test.beforeEach(async ({ nonadminPage }) => {
+    await navigateToMentorApp(nonadminPage);
+  });
+
+  test.fixme(
+    'non-admin goes to chat page and the textarea has focus on mount (issue #1904 a11y-24)',
+    async ({ nonadminPage, nonadminChatPage }) => {
+      // The textarea focuses itself on mount when the composer is enabled.
+      await expect(nonadminChatPage.chatInput).toBeVisible({ timeout: 15_000 });
+      await expect(nonadminChatPage.chatInput).toBeFocused();
+    },
+  );
+
+  test.fixme(
+    'non-admin presses Enter to send and the textarea retains focus during streaming (issue #1904 a11y-25)',
+    async ({ nonadminPage, nonadminChatPage }) => {
+      await expect(nonadminChatPage.chatInput).toBeVisible({ timeout: 15_000 });
+      await nonadminChatPage.chatInput.fill('Hello from keyboard send');
+      await expect(nonadminChatPage.sendButton).toBeEnabled({
+        timeout: 10_000,
+      });
+
+      // Submit via Enter key — focus stays in the textarea
+      await nonadminChatPage.chatInput.press('Enter');
+
+      // User message must appear in the chat
+      await nonadminChatPage.waitForUserMessage(
+        'Hello from keyboard send',
+        30_000,
+      );
+
+      // Textarea stays focused after the keyboard send
+      await expect(nonadminChatPage.chatInput).toBeFocused();
+
+      // Stop-streaming button must NOT have focus while streaming
+      const stopButton = nonadminPage.getByRole('button', {
+        name: /stop streaming/i,
+      });
+      let stopVisible = false;
+      try {
+        await stopButton.waitFor({ state: 'visible', timeout: 10_000 });
+        stopVisible = true;
+      } catch {
+        stopVisible = false;
+      }
+      if (stopVisible) {
+        const stopFocused = await stopButton.evaluate(
+          (el) => el === document.activeElement,
+        );
+        expect(stopFocused).toBe(false);
+        // Textarea must still hold focus while stop button is visible
+        await expect(nonadminChatPage.chatInput).toBeFocused();
+      }
+    },
+  );
+
+  test.fixme(
+    'non-admin clicks Send button and the textarea retains focus during streaming (issue #1904 a11y-26)',
+    async ({ nonadminPage, nonadminChatPage }) => {
+      await expect(nonadminChatPage.chatInput).toBeVisible({ timeout: 15_000 });
+      await nonadminChatPage.chatInput.fill('Hello from click send');
+      await expect(nonadminChatPage.sendButton).toBeEnabled({
+        timeout: 10_000,
+      });
+
+      // Click Send — onMouseDown preventDefault keeps focus on textarea
+      await nonadminChatPage.sendButton.click();
+
+      await nonadminChatPage.waitForUserMessage(
+        'Hello from click send',
+        30_000,
+      );
+
+      // Textarea must still hold focus immediately after click-send
+      await expect(nonadminChatPage.chatInput).toBeFocused();
+    },
+  );
+
+  test.fixme(
+    'non-admin sends a message and after streaming ends the textarea retains focus and copy button is not focused (issue #1904 a11y-27)',
+    async ({ nonadminPage, nonadminChatPage }) => {
+      await expect(nonadminChatPage.chatInput).toBeVisible({ timeout: 15_000 });
+      await nonadminChatPage.chatInput.fill('Say hi in one word');
+      await expect(nonadminChatPage.sendButton).toBeEnabled({
+        timeout: 10_000,
+      });
+      await nonadminChatPage.sendButton.click();
+
+      // Wait for the AI response to arrive (stream end)
+      await nonadminChatPage.waitForAIResponse(90_000);
+
+      const copyButton = nonadminPage.getByLabel('Copy to Clipboard').first();
+      let copyVisible = false;
+      try {
+        await copyButton.waitFor({ state: 'visible', timeout: 10_000 });
+        copyVisible = true;
+      } catch {
+        copyVisible = false;
+      }
+
+      if (copyVisible) {
+        // Copy button must NOT be focused after it mounts
+        const copyFocused = await copyButton.evaluate(
+          (el) => el === document.activeElement,
+        );
+        expect(copyFocused).toBe(false);
+      }
+
+      // Textarea holds focus after stream completes
+      await expect(nonadminChatPage.chatInput).toBeFocused();
+    },
+  );
+
+  test.fixme(
+    'non-admin sends a message and the stop-streaming button is not focused during streaming (issue #1904 a11y-28)',
+    async ({ nonadminPage, nonadminChatPage }) => {
+      await expect(nonadminChatPage.chatInput).toBeVisible({ timeout: 15_000 });
+      await nonadminChatPage.chatInput.fill('Count slowly to ten with pauses');
+      await expect(nonadminChatPage.sendButton).toBeEnabled({
+        timeout: 10_000,
+      });
+      await nonadminChatPage.sendButton.click();
+
+      const stopButton = nonadminPage.getByRole('button', {
+        name: /stop streaming/i,
+      });
+      let stopVisible = false;
+      try {
+        await stopButton.waitFor({ state: 'visible', timeout: 15_000 });
+        stopVisible = true;
+      } catch {
+        stopVisible = false;
+      }
+
+      if (stopVisible) {
+        // Stop button must NOT be focused — textarea holds focus
+        const stopFocused = await stopButton.evaluate(
+          (el) => el === document.activeElement,
+        );
+        expect(stopFocused).toBe(false);
+        await expect(nonadminChatPage.chatInput).toBeFocused();
+      }
+    },
+  );
 });

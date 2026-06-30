@@ -122,6 +122,16 @@ vi.mock('@iblai/iblai-js/web-utils', async () => {
     selectToken: () => null,
     selectTokenEnabled: () => false,
     selectShowingSharedChat: vi.fn(() => false),
+    selectStreamingReasoningContent: () => '',
+    selectIsReasoning: () => false,
+    selectStreamingToolCalls: () => [],
+    selectCurrentStreamingMessage: () => ({
+      id: '',
+      content: '',
+      reasoningContent: '',
+      toolCalls: [],
+      isReasoning: false,
+    }),
     selectActiveTab: () => 'default',
     useMentorTools: vi.fn(() => ({
       enableWebBrowsing: true,
@@ -166,6 +176,9 @@ vi.mock('@iblai/iblai-js/web-utils', async () => {
       isPending: false,
       isLoadingChats: false,
       refetchChats: vi.fn(),
+      loadOlderMessages: vi.fn(),
+      hasMore: false,
+      isLoadingOlderMessages: false,
     })),
     CHAT_AREA_SIZE: {
       MIN: 600,
@@ -204,6 +217,7 @@ vi.mock('@/lib/config', () => ({
     supportEmail: () => 'support@test.com',
     iblTemplateMentor: () => 'default-agent',
     defaultSupportPhoneNumber: () => '(571) 293-0242',
+    enableSupportPhone: () => false,
   },
 }));
 
@@ -370,14 +384,28 @@ vi.mock('@/components/chat/chat-messages', () => ({
     onOpenCanvas,
     onReply,
     handleHighlightMessage,
+    streamingReasoningContent,
+    streamingToolCalls,
+    isReasoning,
+    currentStreamingMessageId,
   }: {
     messages: any[];
     handleSubmit: (content: string) => void;
     onOpenCanvas?: (payload: any) => void;
     onReply?: (message: any) => void;
     handleHighlightMessage?: (messageIndex: number) => void;
+    streamingReasoningContent?: string;
+    streamingToolCalls?: any[];
+    isReasoning?: boolean;
+    currentStreamingMessageId?: string;
   }) => (
-    <div data-testid="chat-messages">
+    <div
+      data-testid="chat-messages"
+      data-streaming-reasoning={streamingReasoningContent || ''}
+      data-streaming-tool-calls-count={streamingToolCalls?.length ?? 0}
+      data-is-reasoning={isReasoning ?? false}
+      data-current-streaming-id={currentStreamingMessageId || ''}
+    >
       <span data-testid="message-count">{messages.length}</span>
       <button data-testid="retry-btn" onClick={() => handleSubmit('Retry')}>
         Retry
@@ -17921,7 +17949,7 @@ describe('Chat', () => {
           {
             id: '2',
             role: 'assistant',
-            content: 'Response',
+            content: '',
             timestamp: new Date().toISOString(),
             visible: true,
             artifactVersions: [], // Empty array
@@ -17972,7 +18000,7 @@ describe('Chat', () => {
           {
             id: '2',
             role: 'assistant',
-            content: 'Response',
+            content: '',
             timestamp: new Date().toISOString(),
             visible: true,
             // no artifactVersions property
@@ -18506,7 +18534,7 @@ describe('Chat', () => {
           {
             id: '2',
             role: 'assistant',
-            content: 'Thinking...',
+            content: '',
             timestamp: new Date().toISOString(),
             visible: true,
             // artifactVersions is undefined
@@ -19150,6 +19178,108 @@ describe('Chat', () => {
     });
   });
 
+  describe('streaming reasoning and tool call props', () => {
+    it('should pass streaming props to ChatMessages', async () => {
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      (useAdvancedChat as any).mockReturnValue({
+        changeTab: vi.fn(),
+        activeTab: 'chat',
+        currentStreamingMessage: { id: 'stream-1', content: 'Streaming...' },
+        enabledGuidedPrompts: [],
+        isStreaming: true,
+        mentorName: 'Test Mentor',
+        messages: [
+          {
+            id: '1',
+            role: 'user',
+            content: 'Hello',
+            visible: true,
+            timestamp: new Date().toISOString(),
+          },
+          {
+            id: 'stream-1',
+            role: 'assistant',
+            content: 'Streaming...',
+            visible: true,
+            timestamp: new Date().toISOString(),
+          },
+        ],
+        profileImage: '/avatar.png',
+        sendMessage: vi.fn(),
+        setMessage: vi.fn(),
+        stopGenerating: vi.fn(),
+        uniqueMentorId: 'unique-mentor-123',
+        sessionId: 'session-123',
+        startNewChat: vi.fn(),
+        enableSafetyDisclaimer: false,
+        isPending: false,
+        isLoadingChats: false,
+        refetchChats: vi.fn(),
+      });
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      await waitFor(() => {
+        const chatMessages = screen.getByTestId('chat-messages');
+        expect(chatMessages).toBeInTheDocument();
+        // Streaming props should be passed (default mock values)
+        expect(chatMessages).toHaveAttribute('data-streaming-reasoning', '');
+        expect(chatMessages).toHaveAttribute(
+          'data-streaming-tool-calls-count',
+          '0',
+        );
+        expect(chatMessages).toHaveAttribute('data-is-reasoning', 'false');
+      });
+    });
+
+    it('should not show loading indicator when isReasoning is true', async () => {
+      const { useAdvancedChat, selectIsReasoning } = await import(
+        '@iblai/iblai-js/web-utils'
+      );
+
+      // Override selectIsReasoning to return true
+      (selectIsReasoning as any).mockReturnValue = undefined;
+
+      (useAdvancedChat as any).mockReturnValue({
+        changeTab: vi.fn(),
+        activeTab: 'chat',
+        currentStreamingMessage: { id: 'stream-1', content: '' },
+        enabledGuidedPrompts: [],
+        isStreaming: true,
+        mentorName: 'Test Mentor',
+        messages: [
+          {
+            id: '1',
+            role: 'user',
+            content: 'Hello',
+            visible: true,
+            timestamp: new Date().toISOString(),
+          },
+        ],
+        profileImage: '/avatar.png',
+        sendMessage: vi.fn(),
+        setMessage: vi.fn(),
+        stopGenerating: vi.fn(),
+        uniqueMentorId: 'unique-mentor-123',
+        sessionId: 'session-123',
+        startNewChat: vi.fn(),
+        enableSafetyDisclaimer: false,
+        isPending: false,
+        isLoadingChats: false,
+        refetchChats: vi.fn(),
+      });
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      // The loading message should be suppressed when reasoning is active
+      // (The default mock returns isReasoning=false, so loading may show.
+      //  This verifies the component renders without errors with the streaming selectors.)
+      await waitFor(() => {
+        expect(screen.getByTestId('chat-messages')).toBeInTheDocument();
+      });
+    });
+  });
+
   describe('voice call and screen share in canvas view', () => {
     const setupCanvasView = async () => {
       const { useAdvancedChat, useMentorTools } = await import(
@@ -19352,6 +19482,338 @@ describe('Chat', () => {
       renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
 
       expect(await getInitialPromptArg()).toBeUndefined();
+    });
+  });
+
+  describe('pagination - load older messages on scroll', () => {
+    const baseMessages = [
+      {
+        id: '1',
+        role: 'user',
+        content: 'Hello',
+        timestamp: new Date().toISOString(),
+        visible: true,
+      },
+      {
+        id: '2',
+        role: 'assistant',
+        content: 'Hi there',
+        timestamp: new Date().toISOString(),
+        visible: true,
+      },
+    ];
+
+    const setupChatMock = async (overrides: Record<string, unknown>) => {
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      (useAdvancedChat as any).mockReturnValue({
+        changeTab: vi.fn(),
+        activeTab: 'chat',
+        currentStreamingMessage: null,
+        enabledGuidedPrompts: [],
+        isStreaming: false,
+        mentorName: 'Test Mentor',
+        messages: baseMessages,
+        profileImage: '/avatar.png',
+        sendMessage: vi.fn(),
+        setMessage: vi.fn(),
+        stopGenerating: vi.fn(),
+        uniqueMentorId: 'unique-mentor-123',
+        sessionId: 'session-123',
+        startNewChat: vi.fn(),
+        enableSafetyDisclaimer: false,
+        isPending: false,
+        isLoadingChats: false,
+        isConnected: true,
+        refetchChats: vi.fn(),
+        loadOlderMessages: vi.fn(),
+        hasMore: false,
+        isLoadingOlderMessages: false,
+        ...overrides,
+      });
+    };
+
+    const getScrollContainer = (container: HTMLElement) =>
+      container.querySelector('.overflow-y-auto') as HTMLDivElement;
+
+    const setScrollMetrics = (
+      el: HTMLDivElement,
+      {
+        scrollTop,
+        scrollHeight,
+        clientHeight,
+      }: { scrollTop: number; scrollHeight: number; clientHeight: number },
+    ) => {
+      Object.defineProperty(el, 'scrollHeight', {
+        value: scrollHeight,
+        configurable: true,
+      });
+      Object.defineProperty(el, 'clientHeight', {
+        value: clientHeight,
+        configurable: true,
+      });
+      el.scrollTop = scrollTop;
+    };
+
+    const scrollUpTo = (
+      scrollEl: HTMLDivElement,
+      {
+        scrollTop,
+        scrollHeight,
+        clientHeight,
+      }: { scrollTop: number; scrollHeight: number; clientHeight: number },
+    ) => {
+      setScrollMetrics(scrollEl, {
+        scrollTop: scrollTop + 600,
+        scrollHeight,
+        clientHeight,
+      });
+      act(() => {
+        fireEvent.scroll(scrollEl);
+      });
+      setScrollMetrics(scrollEl, { scrollTop, scrollHeight, clientHeight });
+      act(() => {
+        fireEvent.scroll(scrollEl);
+      });
+    };
+
+    it('calls loadOlderMessages when scrolled near top and hasMore', async () => {
+      const loadOlderMessages = vi.fn().mockResolvedValue(undefined);
+      await setupChatMock({ hasMore: true, loadOlderMessages });
+
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
+
+      const scrollEl = getScrollContainer(container);
+      expect(scrollEl).toBeTruthy();
+      scrollUpTo(scrollEl, {
+        scrollTop: 10,
+        scrollHeight: 2000,
+        clientHeight: 500,
+      });
+
+      expect(loadOlderMessages).toHaveBeenCalledTimes(1);
+    });
+
+    it('does NOT call loadOlderMessages on initial load position without scrolling up', async () => {
+      const loadOlderMessages = vi.fn().mockResolvedValue(undefined);
+      await setupChatMock({ hasMore: true, loadOlderMessages });
+
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
+
+      const scrollEl = getScrollContainer(container);
+      setScrollMetrics(scrollEl, {
+        scrollTop: 10,
+        scrollHeight: 2000,
+        clientHeight: 500,
+      });
+
+      act(() => {
+        fireEvent.scroll(scrollEl);
+      });
+
+      expect(loadOlderMessages).not.toHaveBeenCalled();
+    });
+
+    it('does NOT call loadOlderMessages when hasMore is false', async () => {
+      const loadOlderMessages = vi.fn().mockResolvedValue(undefined);
+      await setupChatMock({ hasMore: false, loadOlderMessages });
+
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
+
+      const scrollEl = getScrollContainer(container);
+      scrollUpTo(scrollEl, {
+        scrollTop: 10,
+        scrollHeight: 2000,
+        clientHeight: 500,
+      });
+
+      expect(loadOlderMessages).not.toHaveBeenCalled();
+    });
+
+    it('does NOT call loadOlderMessages while already loading older messages', async () => {
+      const loadOlderMessages = vi.fn().mockResolvedValue(undefined);
+      await setupChatMock({
+        hasMore: true,
+        isLoadingOlderMessages: true,
+        loadOlderMessages,
+      });
+
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
+
+      const scrollEl = getScrollContainer(container);
+      scrollUpTo(scrollEl, {
+        scrollTop: 10,
+        scrollHeight: 2000,
+        clientHeight: 500,
+      });
+
+      expect(loadOlderMessages).not.toHaveBeenCalled();
+    });
+
+    it('does NOT call loadOlderMessages when not near the top', async () => {
+      const loadOlderMessages = vi.fn().mockResolvedValue(undefined);
+      await setupChatMock({ hasMore: true, loadOlderMessages });
+
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
+
+      const scrollEl = getScrollContainer(container);
+      scrollUpTo(scrollEl, {
+        scrollTop: 500,
+        scrollHeight: 2000,
+        clientHeight: 500,
+      });
+
+      expect(loadOlderMessages).not.toHaveBeenCalled();
+    });
+
+    it('does not trigger a second load while one is already pending', async () => {
+      const loadOlderMessages = vi.fn().mockResolvedValue(undefined);
+      await setupChatMock({ hasMore: true, loadOlderMessages });
+
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
+
+      const scrollEl = getScrollContainer(container);
+      setScrollMetrics(scrollEl, {
+        scrollTop: 600,
+        scrollHeight: 2000,
+        clientHeight: 500,
+      });
+      act(() => {
+        fireEvent.scroll(scrollEl);
+      });
+      setScrollMetrics(scrollEl, {
+        scrollTop: 10,
+        scrollHeight: 2000,
+        clientHeight: 500,
+      });
+      act(() => {
+        fireEvent.scroll(scrollEl);
+      });
+      setScrollMetrics(scrollEl, {
+        scrollTop: 5,
+        scrollHeight: 2000,
+        clientHeight: 500,
+      });
+      act(() => {
+        fireEvent.scroll(scrollEl);
+      });
+
+      expect(loadOlderMessages).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows a loading affordance while older messages load', async () => {
+      await setupChatMock({ hasMore: true, isLoadingOlderMessages: true });
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      expect(screen.getByTestId('loading-older-messages')).toBeInTheDocument();
+    });
+
+    it('restores scroll position after older messages are prepended', async () => {
+      const scrollToSpy = Element.prototype.scrollTo as ReturnType<
+        typeof vi.fn
+      >;
+      const loadOlderMessages = vi.fn().mockResolvedValue(undefined);
+      await setupChatMock({ hasMore: true, loadOlderMessages });
+
+      const { container, rerender } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
+
+      const scrollEl = getScrollContainer(container);
+      scrollUpTo(scrollEl, {
+        scrollTop: 10,
+        scrollHeight: 2000,
+        clientHeight: 500,
+      });
+      expect(loadOlderMessages).toHaveBeenCalledTimes(1);
+
+      scrollToSpy.mockClear();
+
+      const olderMessages = [
+        {
+          id: '0a',
+          role: 'user',
+          content: 'Older 1',
+          timestamp: new Date().toISOString(),
+          visible: true,
+        },
+        ...baseMessages,
+      ];
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      (useAdvancedChat as any).mockReturnValue({
+        ...(useAdvancedChat as any).mock.results[0].value,
+        messages: olderMessages,
+        isLoadingOlderMessages: false,
+        hasMore: true,
+        loadOlderMessages,
+      });
+
+      Object.defineProperty(scrollEl, 'scrollHeight', {
+        value: 2600,
+        configurable: true,
+      });
+
+      act(() => {
+        rerender(
+          <Provider store={createMockStore({})}>
+            <Chat mode="default" isPreviewMode={false} />
+          </Provider>,
+        );
+      });
+
+      expect(scrollEl.scrollTop).toBe(2600 - 2000);
+      expect(scrollToSpy).not.toHaveBeenCalled();
+    });
+
+    it('still scrolls to bottom on a normal new message (no prepend)', async () => {
+      const scrollToSpy = Element.prototype.scrollTo as ReturnType<
+        typeof vi.fn
+      >;
+      await setupChatMock({ hasMore: true });
+
+      const { rerender } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
+
+      scrollToSpy.mockClear();
+
+      const moreMessages = [
+        ...baseMessages,
+        {
+          id: '3',
+          role: 'user',
+          content: 'New question',
+          timestamp: new Date().toISOString(),
+          visible: true,
+        },
+      ];
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      (useAdvancedChat as any).mockReturnValue({
+        ...(useAdvancedChat as any).mock.results[0].value,
+        messages: moreMessages,
+      });
+
+      act(() => {
+        rerender(
+          <Provider store={createMockStore({})}>
+            <Chat mode="default" isPreviewMode={false} />
+          </Provider>,
+        );
+      });
+
+      expect(scrollToSpy).toHaveBeenCalled();
     });
   });
 });

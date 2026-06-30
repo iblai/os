@@ -11,12 +11,14 @@ import { useParams } from 'next/navigation';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { useNavigate } from '@/hooks/user-navigate';
 import { extractErrorMessage } from './utils';
+import { useTranslations } from 'next-intl';
 
 type Props = {
   resource: ResourceType;
 };
 
 export function UrlUploadModal({ resource }: Props) {
+  const t = useTranslations('resourceModalUrlUploadModel');
   const [url, setUrl] = React.useState('');
   const username = useUsername();
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
@@ -48,12 +50,12 @@ export function UrlUploadModal({ resource }: Props) {
       }).unwrap();
 
       setUrl('');
-      toast.success('Document has been queued for training');
+      toast.success(t('documentQueuedForTraining'));
     } catch (error: unknown) {
       console.error(JSON.stringify(error));
       const errorMessage = extractErrorMessage(
         error,
-        'Error adding training document',
+        t('errorAddingTrainingDocument'),
       );
 
       toast.error(errorMessage);
@@ -66,7 +68,7 @@ export function UrlUploadModal({ resource }: Props) {
       const youtubePattern =
         /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=)?([a-zA-Z0-9_-]{11})([?&].*)?$/;
       if (!youtubePattern.test(url)) {
-        toast.error('Invalid YouTube URL');
+        toast.error(t('invalidYouTubeUrl'));
         return;
       }
       handleSubmitUrl();
@@ -75,7 +77,7 @@ export function UrlUploadModal({ resource }: Props) {
     if (resource.name.toLocaleLowerCase() === 'blackboard') {
       const blackboardPattern = /\/ultra\/courses\//;
       if (!blackboardPattern.test(url)) {
-        toast.error('Invalid Blackboard URL');
+        toast.error(t('invalidBlackboardUrl'));
         return;
       }
       handleSubmitUrl();
@@ -85,7 +87,7 @@ export function UrlUploadModal({ resource }: Props) {
       const urlPattern =
         /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})[/\w .-]*\/?$/;
       if (!urlPattern.test(url)) {
-        toast.error('Invalid URL');
+        toast.error(t('invalidUrl'));
         return;
       }
       handleSubmitUrl();
@@ -96,7 +98,7 @@ export function UrlUploadModal({ resource }: Props) {
     <div className="flex flex-col space-y-4">
       <Input
         type="url"
-        placeholder="URL"
+        placeholder={t('urlPlaceholder')}
         value={url}
         onChange={handleUrlChange}
         autoComplete="url"
@@ -112,7 +114,7 @@ export function UrlUploadModal({ resource }: Props) {
               : 'bg-gray-100 text-gray-500',
           )}
         >
-          Submit
+          {t('submitButton')}
         </Button>
       </div>
     </div>

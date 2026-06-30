@@ -1,14 +1,14 @@
 {
   "version": 2,
-  "lastUpdated": "2026-06-14",
+  "lastUpdated": "2026-06-22",
   "summary": {
-    "totalCheckpoints": 443,
-    "coveredCheckpoints": 423,
+    "totalCheckpoints": 495,
+    "coveredCheckpoints": 473,
     "deprecatedCheckpoints": 12,
-    "notReproducibleCheckpoints": 7,
+    "notReproducibleCheckpoints": 8,
     "percent": 100,
-    "totalJourneys": 51,
-    "activeJourneys": 50
+    "totalJourneys": 56,
+    "activeJourneys": 55
   },
   "journeys": [
     {
@@ -216,7 +216,7 @@
     },
     {
       "id": "mentor-discovery-explore-page",
-      "name": "Mentor Discovery \u2014 Explore Page",
+      "name": "Mentor Discovery — Explore Page",
       "spec": "05-mentor-discovery-explore-page.spec.ts",
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/explore/page.tsx",
@@ -292,7 +292,7 @@
     },
     {
       "id": "mentor-management-admin",
-      "name": "Mentor Management \u2014 Admin",
+      "name": "Mentor Management — Admin",
       "spec": "06-mentor-management-admin.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/index.tsx",
@@ -359,24 +359,24 @@
         },
         {
           "id": "mgmt-12",
-          "description": "My Agents list is scoped to created_by=username for non-admins (useMentorsWithPagination); admin sees full list; unit-covered in settings-modal.test.tsx \u2014 not e2e-reproducible without RBAC seeding",
+          "description": "My Agents list is scoped to created_by=username for non-admins (useMentorsWithPagination); admin sees full list; unit-covered in settings-modal.test.tsx — not e2e-reproducible without RBAC seeding",
           "status": "not-reproducible"
         },
         {
           "id": "mgmt-13",
-          "description": "Student with /mentors/#create RBAC permission sees New Agent + My Agents in sidebar and can click agent row to open Edit Agent dialog (studentCanCreateMentors flag); unit-covered \u2014 requires RBAC env to reproduce in e2e",
+          "description": "Student with /mentors/#create RBAC permission sees New Agent + My Agents in sidebar and can click agent row to open Edit Agent dialog (studentCanCreateMentors flag); unit-covered — requires RBAC env to reproduce in e2e",
           "status": "not-reproducible"
         },
         {
           "id": "mgmt-14",
-          "description": "Analytics shown to student mentor-creator only for their own mentor (created_by===username) or when holding per-mentor view_analytics permission; unit-covered \u2014 requires RBAC env to reproduce in e2e",
+          "description": "Analytics shown to student mentor-creator only for their own mentor (created_by===username) or when holding per-mentor view_analytics permission; unit-covered — requires RBAC env to reproduce in e2e",
           "status": "not-reproducible"
         }
       ]
     },
     {
       "id": "mentor-settings-tab-unique-id",
-      "name": "Mentor Settings Tab \u2014 Unique ID",
+      "name": "Mentor Settings Tab — Unique ID",
       "spec": "07-mentor-settings-tab-unique-id.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/tabs/settings-tab.tsx"
@@ -522,7 +522,7 @@
         },
         {
           "id": "vc-06",
-          "description": "Full voice call with real LiveKit (skipped \u2014 requires real infrastructure)",
+          "description": "Full voice call with real LiveKit (skipped — requires real infrastructure)",
           "status": "covered"
         },
         {
@@ -534,7 +534,7 @@
     },
     {
       "id": "canvas-ai-document-editor",
-      "name": "Canvas \u2014 AI Document Editor",
+      "name": "Canvas — AI Document Editor",
       "spec": "10-canvas-ai-document-editor.spec.ts",
       "sourceFiles": [
         "components/canvas/canvas-component.tsx",
@@ -600,7 +600,7 @@
     },
     {
       "id": "canvas-embed",
-      "name": "Canvas \u2014 Embed",
+      "name": "Canvas — Embed",
       "spec": "11-canvas-embed.spec.ts",
       "sourceFiles": ["components/modals/edit-mentor-modal/tabs/embed-tab.tsx"],
       "checkpoints": [
@@ -710,6 +710,11 @@
           "id": "emb-09",
           "description": "Embed mode renders a minimal sidebar: New Chat present (and Chats section when the user is logged in); Agents (New Agent), Workflows, Analytics, Projects sections and the Support/docs footer link absent — holds for both expanded and rail-collapsed layouts regardless of user role",
           "status": "covered"
+        },
+        {
+          "id": "emb-10",
+          "description": "Optimize Page Context Tokens toggle: visible label present, tooltip ('Strips HTML tags from page context') reachable on hover, and the setting flips and persists after submit + modal reopen via GET /settings/ round-trip",
+          "status": "pending"
         }
       ]
     },
@@ -1426,8 +1431,13 @@
       "name": "Projects",
       "spec": "26-projects.spec.ts",
       "sourceFiles": [
+        "app/platform/[tenantKey]/projects/page.tsx",
         "app/platform/[tenantKey]/projects/[projectId]/[mentorId]/page.tsx",
-        "components/projects/project-landing-page.tsx"
+        "hooks/user-navigate.ts",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
+        "components/welcome-chat-new.tsx",
+        "components/modals/no-mentor-selected-modal.tsx"
       ],
       "checkpoints": [
         {
@@ -1452,7 +1462,7 @@
         },
         {
           "id": "proj-05",
-          "description": "Project files modal opens with Add Files button",
+          "description": "Project files modal opens cleanly (no crash) with Add Files button and empty-state 'No files found' or populated table rows; ErrorBoundary appearance is a hard failure (regression guard for web-containers fix)",
           "status": "covered"
         },
         {
@@ -1468,6 +1478,51 @@
         {
           "id": "proj-08",
           "description": "Project can be deleted",
+          "status": "covered"
+        },
+        {
+          "id": "proj-09",
+          "description": "Projects index page renders with h1 heading 'Projects', subtitle, search input and gradient New Project button when reached via sidebar Projects nav button (feat-1821)",
+          "status": "covered"
+        },
+        {
+          "id": "proj-10",
+          "description": "Projects index page shows project cards (name + agent count, no description/timestamp) or empty-state 'No projects found' + Create your first project button (feat-1821)",
+          "status": "covered"
+        },
+        {
+          "id": "proj-11",
+          "description": "New Project button on index page opens create-project modal (feat-1821)",
+          "status": "covered"
+        },
+        {
+          "id": "proj-12",
+          "description": "Project card on index shows name + agent count but no description or timestamp; kebab aria-label 'Project actions' reveals Rename and Delete menu items (feat-1821)",
+          "status": "covered"
+        },
+        {
+          "id": "proj-13",
+          "description": "Clicking a project card on the index navigates to the project chat route /platform/<tenantKey>/projects/<projectId>/<mentorId> (feat-1821)",
+          "status": "covered"
+        },
+        {
+          "id": "proj-14",
+          "description": "Admin renames a project via the index-page card kebab menu (feat-1821)",
+          "status": "covered"
+        },
+        {
+          "id": "proj-15",
+          "description": "Admin deletes a project via the index-page card kebab menu and the card disappears (feat-1821)",
+          "status": "covered"
+        },
+        {
+          "id": "proj-16",
+          "description": "LLM Model Selector navbar button is visible on a mentor chat page but hidden on the projects index page (isProjectsIndexPage guard in nav-bar/index.tsx) (feat-1821)",
+          "status": "covered"
+        },
+        {
+          "id": "proj-17",
+          "description": "On projects index with no mentorId, clicking New Chat sidebar button shows No Agent Selected modal; Explore Agents button navigates to /explore (feat-1821)",
           "status": "covered"
         }
       ]
@@ -1581,11 +1636,13 @@
     },
     {
       "id": "accessibility-wcag",
-      "name": "Accessibility \u2014 WCAG 2.1 AA",
+      "name": "Accessibility — WCAG 2.1 AA",
       "spec": "29-accessibility-wcag.spec.ts",
       "sourceFiles": [
         "components/accessibility/accessibility-toolbar.tsx",
         "components/chat/stop-streaming-button.tsx",
+        "components/chat/submit-message-button.tsx",
+        "components/auto-resize-text-area.tsx",
         "components/chat/ai-message-copy.tsx",
         "components/chat-input-form/voice-chat-button.tsx",
         "components/chat-input-form/upload-menu.tsx"
@@ -1668,17 +1725,17 @@
         },
         {
           "id": "a11y-17",
-          "description": "Stop-streaming tooltip does not flash when the stop button mounts mid-stream (issue #576, fixme until CI-verified)",
+          "description": "While streaming, textarea stays focused and stop-streaming button is NOT focused (issue #576 updated by #1904)",
           "status": "covered"
         },
         {
           "id": "a11y-18",
-          "description": "Copy-to-clipboard tooltip does not flash when the copy button mounts after streaming (issue #576, fixme until CI-verified)",
+          "description": "After streaming ends, textarea stays focused and copy button is NOT focused (issue #576 updated by #1904)",
           "status": "covered"
         },
         {
           "id": "a11y-19",
-          "description": "Keyboard Tab onto the copy button still opens the tooltip via :focus-visible (issue #576, fixme until CI-verified)",
+          "description": "Keyboard Tab onto the copy button still opens the tooltip via :focus-visible (issue #576, fixme pending CI verification of Radix tooltip :focus-visible)",
           "status": "covered"
         },
         {
@@ -1695,22 +1752,47 @@
           "specFile": "journeys/29-accessibility-wcag.spec.ts"
         },
         {
+          "id": "a11y-24",
+          "description": "Chat textarea has focus on mount when the composer is enabled and not in embed mode (issue #1904)",
+          "status": "covered"
+        },
+        {
+          "id": "a11y-25",
+          "description": "Press Enter to send — textarea retains focus during streaming; stop button is NOT focused (issue #1904)",
+          "status": "covered"
+        },
+        {
+          "id": "a11y-26",
+          "description": "Click Send button — textarea retains focus; onMouseDown preventDefault prevents focus theft (issue #1904)",
+          "status": "covered"
+        },
+        {
+          "id": "a11y-27",
+          "description": "After streaming ends, textarea retains focus and copy button is NOT focused (issue #1904)",
+          "status": "covered"
+        },
+        {
+          "id": "a11y-28",
+          "description": "Stop-streaming button is NOT focused while streaming is active (issue #1904)",
+          "status": "covered"
+        },
+        {
           "id": "a11y-21",
-          "description": "Chat composer stays visible at 640 px viewport width when canvas is open \u2014 WCAG 1.4.10 Reflow (issue #1596)",
+          "description": "Chat composer stays visible at 640 px viewport width when canvas is open — WCAG 1.4.10 Reflow (issue #1596)",
           "status": "deprecated",
           "deprecatedIn": "scope-revert/1596",
           "deprecatedReason": "Reflow refactor reverted as out-of-scope; only WCAG 4.1.2 (button aria-labels) is in scope for #1596. Track WCAG 1.4.10 separately."
         },
         {
           "id": "a11y-22",
-          "description": "Exactly one #chat-input-textarea exists in the DOM when canvas is open at 640 px \u2014 no duplicate mobile composer (issue #1596)",
+          "description": "Exactly one #chat-input-textarea exists in the DOM when canvas is open at 640 px — no duplicate mobile composer (issue #1596)",
           "status": "deprecated",
           "deprecatedIn": "scope-revert/1596",
           "deprecatedReason": "Duplicate-composer removal reverted with the reflow refactor; out of scope for #1596."
         },
         {
           "id": "a11y-23",
-          "description": "Skip-link keyboard journey: Tab makes \"Skip to chat input\" link visible, Enter moves focus to #chat-input-textarea \u2014 WCAG 2.4.1 (issue #1596)",
+          "description": "Skip-link keyboard journey: Tab makes \"Skip to chat input\" link visible, Enter moves focus to #chat-input-textarea — WCAG 2.4.1 (issue #1596)",
           "status": "deprecated",
           "deprecatedIn": "scope-revert/1596",
           "deprecatedReason": "Skip-link added by the reflow refactor reverted as out-of-scope; track WCAG 2.4.1 separately."
@@ -2102,6 +2184,63 @@
       ]
     },
     {
+      "id": "tool-call-indicator-and-reasoning",
+      "name": "Tool Call Indicator & Reasoning Section",
+      "spec": "52-tool-call-indicator-and-reasoning.spec.ts",
+      "sourceFiles": [
+        "components/chat/tool-call-indicator.tsx",
+        "components/chat/tool-call-item.tsx",
+        "components/chat/tool-call-utils.ts",
+        "components/chat/reasoning-section.tsx",
+        "components/chat/ai-message-bubble.tsx",
+        "components/chat/chat-messages/index.tsx",
+        "components/chat/index.tsx",
+        "hooks/use-mentors/use-mentor-settings.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "tcr-01",
+          "description": "Web Search tool pill appears during streaming with tool name and pulse animation",
+          "status": "covered"
+        },
+        {
+          "id": "tcr-02",
+          "description": "Tool call pill is expandable and shows query detail",
+          "status": "covered"
+        },
+        {
+          "id": "tcr-03",
+          "description": "Web Search button is not visible when tool is disabled on mentor",
+          "status": "covered"
+        },
+        {
+          "id": "tcr-04",
+          "description": "Tool call indicator does not appear when Web Search is enabled but not activated in session",
+          "status": "covered"
+        },
+        {
+          "id": "tcr-05",
+          "description": "Reasoning section shows Thinking with bounce dots during streaming and auto-collapses to Thought after",
+          "status": "covered"
+        },
+        {
+          "id": "tcr-06",
+          "description": "Reasoning section does not appear for non-reasoning model",
+          "status": "covered"
+        },
+        {
+          "id": "tcr-07",
+          "description": "Tool call indicator and reasoning section both render in correct order in same message",
+          "status": "covered"
+        },
+        {
+          "id": "tcr-08",
+          "description": "Tool call indicator and reasoning section are gated by the Enable verbose reasoning setting — hidden when the toggle is off, shown when on",
+          "status": "covered"
+        }
+      ]
+    },
+    {
       "id": "voice-call-screen-share-canvas",
       "name": "Voice Call and Screen Share in Canvas View",
       "spec": "37-voice-call-and-screen-share-in-canvas.spec.ts",
@@ -2289,7 +2428,7 @@
         },
         {
           "id": "pr-03",
-          "description": "Master Privacy Router switch is visible",
+          "description": "Privacy tab body tracks `enable_privacy_router` flipped via Settings → Capabilities → 'Filter PII from messages' (the in-tab master switch was removed; flipping it now lives only in Capabilities)",
           "status": "covered"
         },
         {
@@ -2423,7 +2562,7 @@
         },
         {
           "id": "vo-09",
-          "description": "Settings tab surfaces both voice-call toggles (Smart document retrieval, Enable screen sharing)",
+          "description": "Settings tab surfaces both voice-call toggles (Enable smart document retrieval, Enable screen sharing)",
           "status": "covered"
         },
         {
@@ -2579,7 +2718,7 @@
         },
         {
           "id": "ac-03",
-          "description": "Access tab shows roles table or empty state \u2014 never a blank crash screen",
+          "description": "Access tab shows roles table or empty state — never a blank crash screen",
           "status": "covered"
         },
         {
@@ -2847,6 +2986,195 @@
         {
           "id": "cam-07",
           "description": "Clicking the <img> in the sent message bubble triggers the preview handler (onPreviewImage) without crashing the page",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "chat-privacy",
+      "name": "Chat Privacy",
+      "spec": "50-chat-privacy.spec.ts",
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
+        "components/modals/edit-mentor-modal/tabs/settings-tab.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "cp-tenant-01",
+          "description": "Admin sees the Allow users to control chat privacy switch in Account Settings Advanced tab",
+          "status": "covered"
+        },
+        {
+          "id": "cp-tenant-02",
+          "description": "Disabling the tenant gate hides the header Private Mode toggle across the app",
+          "status": "covered"
+        },
+        {
+          "id": "cp-tenant-03",
+          "description": "Enabling the tenant gate shows the header Private Mode toggle",
+          "status": "covered"
+        },
+        {
+          "id": "cp-tenant-04",
+          "description": "Private Mode profile tab visibility tracks the tenant gate: hidden when off, visible when on",
+          "status": "covered"
+        },
+        {
+          "id": "cp-tenant-05",
+          "description": "Non-admin cannot reach the tenant Advanced settings (no platform-name menu item in More options)",
+          "status": "not-reproducible",
+          "note": "Non-admin More options menu does not surface the platform-name item; test.skipped with explanation in spec"
+        },
+        {
+          "id": "cp-agent-01",
+          "description": "Enable private mode row is visible in Edit Mentor Settings Capabilities sub-tab for admins",
+          "status": "covered"
+        },
+        {
+          "id": "cp-agent-02",
+          "description": "Saving Enable private mode ON persists across modal close and re-open",
+          "status": "covered"
+        },
+        {
+          "id": "cp-agent-03",
+          "description": "Saving Enable private mode ON locks the header toggle to data-state=on data-source=mentor without a page refresh (regression: chatPrivacyApiSlice.util.invalidateTags wiring in settings-tab.tsx)",
+          "status": "covered"
+        },
+        {
+          "id": "cp-agent-04",
+          "description": "Saving Enable private mode OFF removes the mentor lock from the header toggle; data-source is no longer mentor",
+          "status": "covered"
+        },
+        {
+          "id": "cp-header-01",
+          "description": "Fresh chat starts with the header toggle in the off state",
+          "status": "covered"
+        },
+        {
+          "id": "cp-header-02",
+          "description": "Clicking the toggle with no user messages starts a private session (data-state=on, data-source=session)",
+          "status": "covered"
+        },
+        {
+          "id": "cp-header-03",
+          "description": "Clicking an on toggle with no messages returns to normal mode (data-state=off)",
+          "status": "covered"
+        },
+        {
+          "id": "cp-header-04",
+          "description": "Clicking the toggle after sending a message opens the confirm dialog; cancelling leaves state off",
+          "status": "covered"
+        },
+        {
+          "id": "cp-header-05",
+          "description": "Confirming enable-private-mode mid-session locks the session as on (aria-disabled) — session is one-way per spec",
+          "status": "covered"
+        },
+        {
+          "id": "cp-header-06",
+          "description": "Private session state persists as data-state=on across a page refresh (localStorage cache + SDK hydration)",
+          "status": "covered"
+        },
+        {
+          "id": "cp-profile-01",
+          "description": "Private Mode tab is visible in UserProfileModal when the tenant gate is on; all three cards render",
+          "status": "covered"
+        },
+        {
+          "id": "cp-profile-02",
+          "description": "Private Mode tab is hidden in UserProfileModal when the tenant gate is off",
+          "status": "covered"
+        },
+        {
+          "id": "cp-profile-03",
+          "description": "All three radio cards (Normal, Anonymized, Disabled) render after switching to the Private Mode tab",
+          "status": "covered"
+        },
+        {
+          "id": "cp-profile-04",
+          "description": "Selecting Disabled propagates to the header toggle as data-source=user on a fresh unlocked chat (user-tier precedence)",
+          "status": "covered"
+        },
+        {
+          "id": "cp-profile-05",
+          "description": "Selecting Normal reverts the header toggle to data-state=off on a fresh chat while data-source stays user (Normal is an explicit user choice; only mode=disabled reads as private)",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "prompt-caching-toggle",
+      "name": "Prompt Caching Toggle",
+      "spec": "51-prompt-caching-toggle.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/settings-tab.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "pc-01",
+          "description": "Fresh mentor: Settings → Capabilities — \"Enable prompt caching\" switch is visible with aria-checked=false (default off) and tooltip trigger is present",
+          "status": "covered"
+        },
+        {
+          "id": "pc-02",
+          "description": "Toggle ON → Save: switch reflects ON, \"Agent updated successfully\" toast appears, and switch stays ON in the same open dialog after save. Persistence across close/reopen is not asserted (enable_prompt_caching not yet in SDK type).",
+          "status": "covered"
+        },
+        {
+          "id": "pc-03",
+          "description": "Toggle ON → click OFF → aria-checked=false immediately in UI → Save → success toast (verifies toggle interaction and API round-trip; persistence of false via multipart is a pre-existing backend limitation shared with enable_multi_query_rag)",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "recent-chats-refresh",
+      "name": "Recent Chats Refresh",
+      "spec": "53-recent-chats-refresh.spec.ts",
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "rcr-01",
+          "description": "New chat appears in the sidebar Recent list immediately after the first AI response finishes streaming — no page reload (regression guard for issue #1982: refetchRecent() was orphaned in an unrendered component on main)",
+          "status": "covered"
+        },
+        {
+          "id": "rcr-02",
+          "description": "Clicking an existing Recent chat row loads the conversation in the chat panel (regression guard for issue #1881: handleSelectRow must write cachedSessionId[mentorId] to localStorage so the message loader re-fires)",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "chat-paste-to-attachment",
+      "name": "Chat Paste-to-Attachment",
+      "spec": "54-chat-paste-to-attachment.spec.ts",
+      "sourceFiles": [
+        "components/chat-input-form.tsx",
+        "lib/clipboard.ts",
+        "components/chat-input-form/file-attachments-list.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "pta-01",
+          "description": "Pasting plain text over the NEXT_PUBLIC_MAXIMUM_CHARACTER_SIZE_TO_COPY threshold converts it to a pasted-*.txt attachment chip and leaves the textarea empty",
+          "status": "covered"
+        },
+        {
+          "id": "pta-02",
+          "description": "Pasting plain text under the threshold is not converted into an attachment chip",
+          "status": "covered"
+        },
+        {
+          "id": "pta-03",
+          "description": "Pasting an image file via the clipboard produces an attachment chip and the textarea remains empty",
+          "status": "covered"
+        },
+        {
+          "id": "pta-04",
+          "description": "Pasting an oversized file triggers a sonner validation error toast and no attachment chip is added",
           "status": "covered"
         }
       ]

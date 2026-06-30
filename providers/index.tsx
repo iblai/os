@@ -62,6 +62,8 @@ import { customErrorMessages } from '@/lib/error';
 import { useIframeHandlers } from '@/lib/handlers';
 import { useIframeMessageHandler } from '@iblai/iblai-js/web-containers';
 import { SentryInit } from '@/components/sentry-init';
+import { LanguagePreferenceSync } from '@/components/language-preference-sync';
+import { WebContainersLocaleProvider } from '@/components/web-containers-locale-provider';
 import { MentorTimeTrackingProvider } from '@/hooks/use-mentor-time-tracking';
 import { useSelector } from 'react-redux';
 import { updateRbacPermissions } from '@/features/rbac/rbac-slice';
@@ -230,6 +232,15 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   // Workflow pages manage their own mentor context; skip MentorProvider's mentor check
   // to prevent it from redirecting when the URL's mentorId changes during navigation.
   const isWorkflowPage = /\/workflows\//.test(pathname);
+  // The tenant-scoped Projects index (/platform/<tenant>/projects) has no mentor in
+  // the URL, so MentorProvider would otherwise pick a default mentor and redirect to
+  // the chat page. Like workflow pages it manages its own context, so skip the mentor
+  // check. Match the index path only — the project chat route
+  // (/platform/<tenant>/projects/<projectId>/<mentorId>) still needs the mentor check.
+  const isProjectsIndexPage = /\/projects\/?$/.test(pathname);
+  // Pages that own their mentor context and must not be redirected away when the
+  // URL has no mentorId segment.
+  const skipMentorCheck = isWorkflowPage || isProjectsIndexPage;
 
   // Use the same offline check (already computed above)
   const isTauriOffline = isTauriOfflineEarly;
@@ -253,7 +264,11 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   }
 
   function redirectToNoMentorsPage() {
-    router.push(`/platform/${tenantKey}/explore`);
+    let queryParams = '';
+    if (window.location.pathname === '/') {
+      queryParams = window.location.search;
+    }
+    router.push(`/platform/${tenantKey}/explore${queryParams}`);
   }
 
   function redirectToCreateMentor() {
@@ -261,7 +276,11 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   }
 
   function redirectToMentor(tenantKey: string, mentorId: string) {
-    router.push(`/platform/${tenantKey}/${mentorId}`);
+    let queryParams = '';
+    if (window.location.pathname === '/') {
+      queryParams = window.location.search;
+    }
+    router.push(`/platform/${tenantKey}/${mentorId}${queryParams}`);
   }
 
   function onLoadMentorsPermissions(
@@ -427,7 +446,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     };
 
     return (
-      <>
+      <WebContainersLocaleProvider>
         <SentryInit />
         <MentorTimeTrackingProvider intervalSeconds={30} enabled={false} />
         <AuthContextProvider value={stubAuthContext}>
@@ -438,13 +457,14 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             </AppProvider>
           </TenantContextProvider>
         </AuthContextProvider>
-      </>
+      </WebContainersLocaleProvider>
     );
   }
 
   return (
-    <>
+    <WebContainersLocaleProvider>
       <SentryInit />
+      <LanguagePreferenceSync />
       <MentorTimeTrackingProvider intervalSeconds={30} enabled={true} />
 
       <AuthProvider
@@ -578,25 +598,25 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                 // Don't redirect when in Tauri offline mode
                 /* istanbul ignore next -- @preserve Tauri offline guard unreachable: component returns early at L223 */
                 if (isTauriOffline) return;
-                if (isWorkflowPage) return;
+                if (skipMentorCheck) return;
                 if (!embed) redirectToNoMentorsPage();
               }}
               redirectToCreateMentor={() => {
                 // Don't redirect when in Tauri offline mode
                 /* istanbul ignore next -- @preserve Tauri offline guard unreachable: component returns early at L223 */
                 if (isTauriOffline) return;
-                if (isWorkflowPage) return;
+                if (skipMentorCheck) return;
                 redirectToCreateMentor();
               }}
               redirectToMentor={(tKey: string, mId: string) => {
                 // Don't redirect when in Tauri offline mode
                 /* istanbul ignore next -- @preserve Tauri offline guard unreachable: component returns early at L223 */
                 if (isTauriOffline) return;
-                if (isWorkflowPage) return;
+                if (skipMentorCheck) return;
                 redirectToMentor(tKey, mId);
               }}
               onLoadMentorsPermissions={onLoadMentorsPermissions}
-              requestedMentorId={isWorkflowPage ? undefined : mentorId}
+              requestedMentorId={skipMentorCheck ? undefined : mentorId}
               onAuthSuccess={() =>
                 sendMessageToParentWebsite({
                   loaded: true,
@@ -621,7 +641,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                   );
                   return;
                 }
-                if (isWorkflowPage) return;
+                if (skipMentorCheck) return;
                 await handleMentorNotFound();
               }}
               onComplete={() => {
@@ -663,6 +683,6 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           )}
         </TenantProvider>
       </AuthProvider>
-    </>
+    </WebContainersLocaleProvider>
   );
 }

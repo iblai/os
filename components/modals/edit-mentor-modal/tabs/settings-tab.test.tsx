@@ -69,6 +69,24 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
     mockGetCallConfigurationsQuery(...args),
   useCreateCallConfigurationMutation: () => [mockCreateCallConfig, {}],
   useUpdateCallConfigurationMutation: () => [mockUpdateCallConfig, {}],
+  chatPrivacyApiSlice: {
+    util: {
+      invalidateTags: vi.fn(() => ({ type: 'rtk/invalidateTags' })),
+    },
+  },
+  // settings-tab.tsx reads the tenant "Allow users to control chat privacy"
+  // gate to decide whether to render the "Enable private mode" agent kill
+  // switch. Return `allow_user_chat_privacy_control: true` so the row stays
+  // visible in the existing test cases that assert on it.
+  useGetTenantChatPrivacyConfigQuery: () => ({
+    data: { allow_user_chat_privacy_control: true },
+    isLoading: false,
+    isError: false,
+  }),
+}));
+
+vi.mock('react-redux', () => ({
+  useDispatch: () => vi.fn(),
 }));
 
 vi.mock('@sentry/nextjs', () => ({
@@ -114,6 +132,22 @@ vi.mock('next/dynamic', () => {
 
 vi.mock('next/image', () => ({
   default: (props: any) => <img alt="" {...props} />,
+}));
+
+// SettingsTab nests the form inside Radix Tabs (Basic / Discovery /
+// Chat Interface / Capabilities) to reduce vertical scroll. Radix only
+// mounts the active TabsContent, but our existing assertions probe for
+// fields across all sections — flatten the primitive in tests so every
+// section renders unconditionally.
+vi.mock('@/components/ui/tabs', () => ({
+  Tabs: ({ children }: any) => <div>{children}</div>,
+  TabsList: ({ children }: any) => <div>{children}</div>,
+  TabsTrigger: ({ children, onClick }: any) => (
+    <button type="button" onClick={onClick}>
+      {children}
+    </button>
+  ),
+  TabsContent: ({ children }: any) => <div>{children}</div>,
 }));
 
 vi.mock('@/components/ui/button', () => ({
@@ -278,6 +312,7 @@ const defaultMentorSettings = {
   is_lti_accessible: false,
   forkable: true,
   forkable_with_training_data: true,
+  show_reasoning: false,
   permissions: {
     field: {
       mentor_name: { read: true, write: true },
@@ -1265,6 +1300,162 @@ describe('SettingsTab', () => {
 
       expect(
         screen.getByLabelText('More info about enable copies'),
+      ).toBeInTheDocument();
+    });
+  });
+
+  describe('Enable Verbose Reasoning Toggle', () => {
+    it('renders Enable verbose reasoning toggle', () => {
+      render(<SettingsTab />);
+
+      expect(screen.getByText('Enable verbose reasoning')).toBeInTheDocument();
+    });
+
+    it('reflects show_reasoning checked state', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, show_reasoning: true },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      const toggle = screen.getByLabelText('Enable verbose reasoning enabled');
+      expect(toggle).toBeChecked();
+    });
+
+    it('reflects show_reasoning unchecked state', () => {
+      render(<SettingsTab />);
+
+      const toggle = screen.getByLabelText('Enable verbose reasoning disabled');
+      expect(toggle).not.toBeChecked();
+    });
+
+    it('toggles show_reasoning switch', () => {
+      render(<SettingsTab />);
+
+      const toggle = screen.getByLabelText('Enable verbose reasoning disabled');
+      fireEvent.click(toggle);
+
+      expect(
+        screen.getByLabelText('Enable verbose reasoning enabled'),
+      ).toBeChecked();
+    });
+
+    it('submits show_reasoning value when saving', async () => {
+      render(<SettingsTab />);
+
+      const toggle = screen.getByLabelText('Enable verbose reasoning disabled');
+      fireEvent.click(toggle);
+
+      const saveButton = screen.getByText('Save');
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            formData: expect.objectContaining({
+              show_reasoning: true,
+            }),
+          }),
+        );
+      });
+    });
+
+    it('has tooltip with description', () => {
+      render(<SettingsTab />);
+
+      expect(
+        screen.getByLabelText('More info about enable verbose reasoning'),
+      ).toBeInTheDocument();
+    });
+  });
+
+  describe('Prompt caching toggle', () => {
+    it('renders the Prompt caching toggle', () => {
+      render(<SettingsTab />);
+
+      expect(screen.getByText('Enable prompt caching')).toBeInTheDocument();
+    });
+
+    it('defaults to unchecked when enable_prompt_caching is unset', () => {
+      render(<SettingsTab />);
+
+      expect(screen.getByLabelText('Enable prompt caching')).not.toBeChecked();
+    });
+
+    it('reflects enable_prompt_caching=true from mentor settings as checked', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_prompt_caching: true },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(screen.getByLabelText('Enable prompt caching')).toBeChecked();
+    });
+
+    it('toggles the Prompt caching switch', () => {
+      render(<SettingsTab />);
+
+      const toggle = screen.getByLabelText('Enable prompt caching');
+      fireEvent.click(toggle);
+
+      expect(screen.getByLabelText('Enable prompt caching')).toBeChecked();
+    });
+
+    it('submits enable_prompt_caching=true when toggled on and saved', async () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_prompt_caching: false },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      fireEvent.click(screen.getByLabelText('Enable prompt caching'));
+
+      const saveButton = screen.getByText('Save');
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            formData: expect.objectContaining({
+              enable_prompt_caching: true,
+            }),
+          }),
+        );
+      });
+    });
+
+    it('submits enable_prompt_caching=false when toggled off and saved', async () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_prompt_caching: true },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      fireEvent.click(screen.getByLabelText('Enable prompt caching'));
+
+      const saveButton = screen.getByText('Save');
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            formData: expect.objectContaining({
+              enable_prompt_caching: false,
+            }),
+          }),
+        );
+      });
+    });
+
+    it('has tooltip with description', () => {
+      render(<SettingsTab />);
+
+      expect(
+        screen.getByLabelText('More info about enable prompt caching'),
       ).toBeInTheDocument();
     });
   });

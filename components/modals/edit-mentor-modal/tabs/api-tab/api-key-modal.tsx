@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import { CheckIcon } from 'lucide-react';
 import { CopyIcon } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 type Props = {
   isOpen: boolean;
@@ -18,6 +19,7 @@ type Props = {
 };
 
 export function ApiKeyModal({ isOpen, onClose, apiKey }: Props) {
+  const t = useTranslations('apiTabApiKeyModal');
   const { copy, status } = useCopyToClipboard(800);
 
   const Icon = status === 'success' ? CheckIcon : CopyIcon;
@@ -26,21 +28,17 @@ export function ApiKeyModal({ isOpen, onClose, apiKey }: Props) {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle className="ibl-dialog-title">API Key</DialogTitle>
+          <DialogTitle className="ibl-dialog-title">
+            {t('dialogTitle')}
+          </DialogTitle>
         </DialogHeader>
         <DialogDescription className="sr-only">
-          Copy and paste the API key.
+          {t('dialogDescription')}
         </DialogDescription>
         <div className="grid gap-6">
           <p className="text-muted-foreground grid gap-2 text-sm">
-            <span>
-              Please copy your API key and store it in a secure location. For
-              security reasons, this key will only be displayed once and cannot
-              be retrieved again after you leave this page.
-            </span>
-            <span>
-              If you lose your API key, you'll need to generate a new one.
-            </span>
+            <span>{t('securityWarning')}</span>
+            <span>{t('lostKeyWarning')}</span>
           </p>
           <div className="flex items-center gap-4">
             <Input defaultValue={apiKey} readOnly />

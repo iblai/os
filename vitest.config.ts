@@ -34,6 +34,17 @@ export default defineConfig({
           import.meta.url,
         ).pathname,
       },
+      {
+        // `components/advanced-chart-with-tooltip.tsx` imports a not-yet-built
+        // `./detailed-chart-tooltip` placeholder module that does not exist on
+        // disk, so Vite's import-analysis cannot resolve it in tests. Point it
+        // at a test-only stub so the component is renderable under Vitest.
+        find: /^.*\/detailed-chart-tooltip$/,
+        replacement: new URL(
+          './__tests__/mocks/detailed-chart-tooltip.mock.tsx',
+          import.meta.url,
+        ).pathname,
+      },
       // Mock Tauri APIs for testing
     ],
   },
@@ -41,6 +52,15 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./__tests__/vitest.setup.ts'],
     environment: 'jsdom',
+    // Heavy userEvent/fireEvent interaction tests (e.g. app-sidebar,
+    // connector-management) run close to the 5s default per-test ceiling.
+    // Under cold Vite caches or CPU contention (CI, the pre-push hook) the
+    // extra wall-clock time tips them over and they flake as "timed out in
+    // 5000ms". Raising the budget removes the false negatives without hiding
+    // real failures — assertion errors still fail immediately and genuine
+    // hangs still time out.
+    testTimeout: 15000,
+    hookTimeout: 15000,
     exclude: [...configDefaults.exclude, 'e2e/**'],
     server: {
       deps: {

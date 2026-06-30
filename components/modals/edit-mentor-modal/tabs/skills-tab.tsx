@@ -1,12 +1,14 @@
 'use client';
 
 import { useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { AgentSkills } from '@iblai/iblai-js/web-containers';
 
 import { useNavigate } from '@/hooks/user-navigate';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 
 export function SkillsTab() {
+  const t = useTranslations('tabsSkillsTab');
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
   const { getMentorId } = useNavigate();
   const activeMentorId = getMentorId() ?? mentorId;
@@ -17,10 +19,10 @@ export function SkillsTab() {
     <>
       <div className="flex hidden h-[73px] flex-shrink-0 items-center border-b border-gray-200 bg-white p-4 lg:block">
         <div>
-          <h3 className="mb-1 text-base font-medium text-gray-900">Skills</h3>
-          <p className="text-xs text-gray-700">
-            Manage agent skill assignments for your mentor.
-          </p>
+          <h3 className="mb-1 text-base font-medium text-gray-900">
+            {t('heading')}
+          </h3>
+          <p className="text-xs text-gray-700">{t('description')}</p>
         </div>
       </div>
       <div

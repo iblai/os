@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import {
   Dialog,
   DialogContent,
@@ -19,22 +20,20 @@ export function MinimumMentorAlert({
   open,
   onOpenChange,
 }: MinimumMentorAlertProps) {
+  const t = useTranslations('projectsMinimumMentorAlert');
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="space-y-1">
         <DialogHeader>
-          <DialogTitle className="mb-4">Cannot Remove Agent</DialogTitle>
-          <DialogDescription>
-            A project must have at least one agent. Please add another agent
-            before removing this one.
-          </DialogDescription>
+          <DialogTitle className="mb-4">{t('cannotRemoveAgent')}</DialogTitle>
+          <DialogDescription>{t('minimumAgentWarning')}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button
             onClick={() => onOpenChange(false)}
             className="ibl-button-primary"
           >
-            Cancel
+            {t('cancel')}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -42,6 +42,16 @@ describe('config', () => {
       // Should return env value or empty string
       expect(typeof result).toBe('string');
     });
+
+    it('should fall back when the runtime value is an empty string', () => {
+      // env.js templating commonly emits unset vars as "" — that must not
+      // shadow a meaningful fallback (plain ?? would return the empty string).
+      (global.window as any).__ENV__ = {
+        NEXT_PUBLIC_AUTH_URL: '',
+      };
+      const result = getEnv('NEXT_PUBLIC_AUTH_URL', 'fallback');
+      expect(result).toBe('fallback');
+    });
   });
 
   describe('config methods', () => {
@@ -373,6 +383,37 @@ describe('config', () => {
       it('should return platform base domain', () => {
         const result = config.platformBaseDomain();
         expect(typeof result).toBe('string');
+      });
+    });
+
+    describe('maximumCharacterSizeToCopy', () => {
+      it('should return the maximum character size to copy', () => {
+        const result = config.maximumCharacterSizeToCopy();
+        expect(typeof result).toBe('string');
+      });
+
+      it('should default to 2000 when not set', () => {
+        (global.window as any).__ENV__ = {};
+        const result = config.maximumCharacterSizeToCopy();
+        expect(result).toBe('2000');
+      });
+
+      it('should use window.__ENV__ value over the fallback', () => {
+        (global.window as any).__ENV__ = {
+          NEXT_PUBLIC_MAXIMUM_CHARACTER_SIZE_TO_COPY: '500',
+        };
+        const result = config.maximumCharacterSizeToCopy();
+        expect(result).toBe('500');
+      });
+
+      it('should default to 2000 when the runtime value is an empty string', () => {
+        // An empty value must not collapse to Number("") === 0, which would
+        // turn every paste into an attachment chip.
+        (global.window as any).__ENV__ = {
+          NEXT_PUBLIC_MAXIMUM_CHARACTER_SIZE_TO_COPY: '',
+        };
+        const result = config.maximumCharacterSizeToCopy();
+        expect(result).toBe('2000');
       });
     });
 

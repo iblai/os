@@ -5,6 +5,30 @@ import 'vitest-axe/extend-expect';
 
 expect.extend(matchers);
 
+// next-intl requires a NextIntlClientProvider at runtime; the test environment
+// renders components in isolation without one, so `useTranslations` would throw.
+// Provide a real English translator (full ICU support via the actual
+// createTranslator over messages/en.json) so migrated components render their
+// English strings — matching the assertions in pre-existing component tests.
+vi.mock('next-intl', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('next-intl')>();
+  const enMessages = (await import('../messages/en.json')).default;
+  return {
+    ...actual,
+    useTranslations: (namespace?: string) =>
+      actual.createTranslator({
+        locale: 'en',
+        messages: enMessages as Record<string, unknown>,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        namespace: namespace as any,
+      }),
+    useLocale: () => 'en',
+    useMessages: () => enMessages,
+    // Passthrough provider — components are rendered directly in tests.
+    NextIntlClientProvider: ({ children }: { children: unknown }) => children,
+  };
+});
+
 // Mock URL.createObjectURL and URL.revokeObjectURL for tests that use blob URLs
 if (typeof URL.createObjectURL === 'undefined') {
   URL.createObjectURL = vi.fn(() => 'blob:mock-url');

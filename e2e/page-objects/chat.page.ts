@@ -16,6 +16,8 @@ export class ChatPage {
   readonly voiceCallButton: Locator;
   readonly voiceInputButton: Locator;
   readonly dragOverlay: Locator;
+  readonly webSearchButton: Locator;
+  readonly stopStreamingButton: Locator;
   readonly promptsButton: Locator;
   readonly promptGalleryDialog: Locator;
 
@@ -30,7 +32,18 @@ export class ChatPage {
     this.userMessages = page.locator('.chat-user-message-query');
     this.aiMessages = page.locator('.chat-ai-message-response');
     this.canvasToggle = page.getByRole('button', { name: /canvas/i });
-    this.memoryButton = page.getByRole('button', { name: /memory/i });
+    // Exact name — NOT /memory/i. The chat-privacy toggle's aria-label is
+    // "Turn on Private Mode. This chat won't be saved to history or used for
+    // memory.", so a loose /memory/i match also resolves the (always-present,
+    // desktop-visible) privacy toggle. That made `not.toBeVisible()` fail when
+    // memory was off (toggle still visible) and let `toBeVisible()` pass off the
+    // toggle even when the real button was gone. The MemoryButton renders text
+    // "Memory" with only decorative icons, so its accessible name is exactly
+    // "Memory" — which the privacy toggle never matches.
+    this.memoryButton = page.getByRole('button', {
+      name: 'Memory',
+      exact: true,
+    });
     this.createMentorDialog = page.getByRole('dialog', {
       name: /create.*mentor/i,
     });
@@ -41,6 +54,10 @@ export class ChatPage {
     this.dragOverlay = page.locator(
       '[data-testid="drag-overlay"], [class*="drag-overlay"]',
     );
+    this.webSearchButton = page.locator('button[data-slot="button"]', {
+      hasText: 'Web Search',
+    });
+    this.stopStreamingButton = page.locator('.chat-stop-streaming-button');
     this.promptsButton = page.getByRole('button', {
       name: 'Prompts',
       exact: true,
@@ -71,6 +88,33 @@ export class ChatPage {
   async startNewChat(): Promise<void> {
     await expect(this.newChatButton).toBeVisible({ timeout: 5_000 });
     await this.newChatButton.click();
+  }
+
+  /**
+   * Activate the Web Search session toggle in the chat input bar.
+   */
+  async activateWebSearch(): Promise<void> {
+    await expect(this.webSearchButton).toBeVisible({ timeout: 10_000 });
+    await this.webSearchButton.click();
+  }
+
+  /**
+   * Wait for streaming to complete by watching the stop-streaming button
+   * appear then disappear. Silently succeeds if streaming is already done.
+   */
+  async waitForStreamingComplete(timeout = 120_000): Promise<void> {
+    try {
+      await this.stopStreamingButton.waitFor({
+        state: 'visible',
+        timeout: 5_000,
+      });
+      await this.stopStreamingButton.waitFor({
+        state: 'hidden',
+        timeout,
+      });
+    } catch {
+      // Stop button may have already disappeared or streaming was very fast
+    }
   }
 
   async openPromptGallery(): Promise<void> {

@@ -373,4 +373,176 @@ describe('AccessibilityToolbar', () => {
       expect(mockUpdateSetting).toHaveBeenCalledTimes(3);
     }
   });
+
+  it('shows dyslexia font label when dyslexiaFont is active', () => {
+    mockSettings = {
+      ...defaultSettings,
+      dyslexiaFont: 'dyslexia',
+    };
+
+    render(<AccessibilityToolbar />);
+    expect(screen.getByText('Dyslexia Font')).toBeInTheDocument();
+  });
+
+  it('shows legible font label when dyslexiaFont is legible', () => {
+    mockSettings = {
+      ...defaultSettings,
+      dyslexiaFont: 'legible',
+    };
+
+    render(<AccessibilityToolbar />);
+    expect(screen.getByText('Legible Font')).toBeInTheDocument();
+  });
+
+  it('cycles dyslexia font from legible back to normal', () => {
+    mockSettings = {
+      ...defaultSettings,
+      dyslexiaFont: 'legible',
+    };
+
+    render(<AccessibilityToolbar />);
+    const button = screen.getByText('Dyslexia Friendly').closest('button');
+
+    if (button) {
+      fireEvent.click(button);
+      expect(mockUpdateSetting).toHaveBeenCalledWith('dyslexiaFont', 'normal');
+    }
+  });
+
+  it('shows high saturation label when saturation is active', () => {
+    mockSettings = {
+      ...defaultSettings,
+      saturation: 'high',
+    };
+
+    render(<AccessibilityToolbar />);
+    expect(screen.getByText('High Saturation')).toBeInTheDocument();
+  });
+
+  it('shows low saturation label when saturation is low', () => {
+    mockSettings = {
+      ...defaultSettings,
+      saturation: 'low',
+    };
+
+    render(<AccessibilityToolbar />);
+    expect(screen.getByText('Low Saturation')).toBeInTheDocument();
+  });
+
+  it('cycles saturation from low back to normal', () => {
+    mockSettings = {
+      ...defaultSettings,
+      saturation: 'low',
+    };
+
+    render(<AccessibilityToolbar />);
+    const button = screen.getByText('Saturation').closest('button');
+
+    if (button) {
+      fireEvent.click(button);
+      expect(mockUpdateSetting).toHaveBeenCalledWith('saturation', 'normal');
+    }
+  });
+
+  it('shows invert colors label when contrast mode is invert', () => {
+    mockSettings = {
+      ...defaultSettings,
+      contrastMode: 'invert',
+    };
+
+    render(<AccessibilityToolbar />);
+    expect(screen.getByText('Invert Colors')).toBeInTheDocument();
+  });
+
+  it('shows light contrast label and cycles from light back to normal', () => {
+    mockSettings = {
+      ...defaultSettings,
+      contrastMode: 'light',
+    };
+
+    render(<AccessibilityToolbar />);
+    expect(screen.getByText('Light Contrast')).toBeInTheDocument();
+
+    const button = screen.getByText('Contrast +').closest('button');
+    if (button) {
+      fireEvent.click(button);
+      expect(mockUpdateSetting).toHaveBeenCalledWith('contrastMode', 'normal');
+    }
+  });
+
+  it('shows text spacing labels for light, moderate and heavy', () => {
+    mockSettings = { ...defaultSettings, textSpacing: 'light' };
+    const { unmount: u1 } = render(<AccessibilityToolbar />);
+    expect(screen.getByText('Light Spacing')).toBeInTheDocument();
+    u1();
+
+    mockSettings = { ...defaultSettings, textSpacing: 'moderate' };
+    const { unmount: u2 } = render(<AccessibilityToolbar />);
+    expect(screen.getByText('Moderate Spacing')).toBeInTheDocument();
+    u2();
+
+    mockSettings = { ...defaultSettings, textSpacing: 'heavy' };
+    render(<AccessibilityToolbar />);
+    expect(screen.getByText('Heavy Spacing')).toBeInTheDocument();
+  });
+
+  it('cycles text spacing from heavy back to none', () => {
+    mockSettings = { ...defaultSettings, textSpacing: 'heavy' };
+
+    render(<AccessibilityToolbar />);
+    const button = screen.getByText('Text Spacing').closest('button');
+    if (button) {
+      fireEvent.click(button);
+      expect(mockUpdateSetting).toHaveBeenCalledWith('textSpacing', 'none');
+    }
+  });
+
+  it('shows text align labels and icons for each alignment', () => {
+    const cases: Array<[AccessibilitySettings['textAlign'], string]> = [
+      ['left', 'Align Left'],
+      ['center', 'Align Center'],
+      ['right', 'Align Right'],
+      ['justify', 'Justify'],
+    ];
+
+    for (const [align, label] of cases) {
+      mockSettings = { ...defaultSettings, textAlign: align };
+      const { unmount } = render(<AccessibilityToolbar />);
+      expect(screen.getByText(label)).toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  it('cycles text align from justify back to normal', () => {
+    mockSettings = { ...defaultSettings, textAlign: 'justify' };
+
+    render(<AccessibilityToolbar />);
+    const button = screen.getByText('Text Align').closest('button');
+    if (button) {
+      fireEvent.click(button);
+      expect(mockUpdateSetting).toHaveBeenCalledWith('textAlign', 'normal');
+    }
+  });
+
+  it('toggles tooltips and custom cursor off when already active', () => {
+    mockSettings = {
+      ...defaultSettings,
+      tooltips: true,
+      customCursor: true,
+    };
+
+    render(<AccessibilityToolbar />);
+
+    const tooltipsButton = screen.getByText('Tooltips').closest('button');
+    if (tooltipsButton) {
+      fireEvent.click(tooltipsButton);
+      expect(mockUpdateSetting).toHaveBeenCalledWith('tooltips', false);
+    }
+
+    const cursorButton = screen.getByText('Cursor').closest('button');
+    if (cursorButton) {
+      fireEvent.click(cursorButton);
+      expect(mockUpdateSetting).toHaveBeenCalledWith('customCursor', false);
+    }
+  });
 });
