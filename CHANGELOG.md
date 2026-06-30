@@ -4,52 +4,52 @@
 
 ### Features
 
-* **mentor:** add Optimize Page Context Tokens embed toggle ([cc250bb](https://github.com/iblai/os/commit/cc250bb5cfc9281848d117c064775ec6e10c4515))
+- **mentor:** add Optimize Page Context Tokens embed toggle ([cc250bb](https://github.com/iblai/os/commit/cc250bb5cfc9281848d117c064775ec6e10c4515))
 
 ### Bug Fixes
 
-* **mentor:** match Advanced CSS/JS tooltip styling to the rest ([31aa961](https://github.com/iblai/os/commit/31aa96130c67e8716eb0e699cefb2c7ae5b6a97f))
-* test journey-20 ([59e5994](https://github.com/iblai/os/commit/59e5994df46f45c62f7c81e717b1d058f9a51707))
+- **mentor:** match Advanced CSS/JS tooltip styling to the rest ([31aa961](https://github.com/iblai/os/commit/31aa96130c67e8716eb0e699cefb2c7ae5b6a97f))
+- test journey-20 ([59e5994](https://github.com/iblai/os/commit/59e5994df46f45c62f7c81e717b1d058f9a51707))
 
 ### Chores
 
-* bump iblai sdk to 1.20.12 ([17da0c2](https://github.com/iblai/os/commit/17da0c2b82c8a1039cef1a6906a96ecc02fb6f21))
-* replace yalc web-containers override with published 1.10.10 ([48e222b](https://github.com/iblai/os/commit/48e222bb0e94d93f025c8c6dc2bfd9ca6dbef2fb))
+- bump iblai sdk to 1.20.12 ([17da0c2](https://github.com/iblai/os/commit/17da0c2b82c8a1039cef1a6906a96ecc02fb6f21))
+- replace yalc web-containers override with published 1.10.10 ([48e222b](https://github.com/iblai/os/commit/48e222bb0e94d93f025c8c6dc2bfd9ca6dbef2fb))
 
 ### Documentation
 
-* **e2e:** record emb-10 coverage for Optimize Page Context Tokens ([4f6d1f3](https://github.com/iblai/os/commit/4f6d1f3d5c5e62736f21b6107426497b664bfb09))
+- **e2e:** record emb-10 coverage for Optimize Page Context Tokens ([4f6d1f3](https://github.com/iblai/os/commit/4f6d1f3d5c5e62736f21b6107426497b664bfb09))
 
 ### Tests
 
-* **e2e:** align Enhanced RAG locators with shipped "Enhanced document retrieval" label ([3fea850](https://github.com/iblai/os/commit/3fea85065ab0ded90d67b26ef5531d432319b91e))
-* **e2e:** cover embed Optimize Page Context Tokens toggle ([aab2fe3](https://github.com/iblai/os/commit/aab2fe35c32a6c82d8d0303858ba8ad32a26a46a))
-* **e2e:** match Add Resources modal by accessible name to avoid strict-mode race ([fb2c486](https://github.com/iblai/os/commit/fb2c48613db9fe2612d6f9483c1ad4a77af57d13))
-* **e2e:** park emb-10 Optimize Page Context Tokens as fixme ([8b8c6ab](https://github.com/iblai/os/commit/8b8c6abc066bdcc6f51c685a049913a22f750749))
-* **mentor:** cover Optimize Page Context Tokens toggle ([bac9a0a](https://github.com/iblai/os/commit/bac9a0a76f27984da2a0f336fb3b3add4bf74fa1))
+- **e2e:** align Enhanced RAG locators with shipped "Enhanced document retrieval" label ([3fea850](https://github.com/iblai/os/commit/3fea85065ab0ded90d67b26ef5531d432319b91e))
+- **e2e:** cover embed Optimize Page Context Tokens toggle ([aab2fe3](https://github.com/iblai/os/commit/aab2fe35c32a6c82d8d0303858ba8ad32a26a46a))
+- **e2e:** match Add Resources modal by accessible name to avoid strict-mode race ([fb2c486](https://github.com/iblai/os/commit/fb2c48613db9fe2612d6f9483c1ad4a77af57d13))
+- **e2e:** park emb-10 Optimize Page Context Tokens as fixme ([8b8c6ab](https://github.com/iblai/os/commit/8b8c6abc066bdcc6f51c685a049913a22f750749))
+- **mentor:** cover Optimize Page Context Tokens toggle ([bac9a0a](https://github.com/iblai/os/commit/bac9a0a76f27984da2a0f336fb3b3add4bf74fa1))
 
 ## [0.86.0](https://github.com/iblai/os/compare/v0.85.0...v0.86.0) (2026-06-26)
 
 ### Features
 
-* text to speech endpoint now streamable ([0dbb773](https://github.com/iblai/os/commit/0dbb77353e417cfb0c07227deec0e9c7fa8c0ced))
-* text to speech endpoint now streamable ([5039df8](https://github.com/iblai/os/commit/5039df8262e27c01bc5da82f711551411fe1ac32))
-* text to speech endpoint now streamable ([7106acd](https://github.com/iblai/os/commit/7106acd82cdcb88e6793ac9036677ea4d1726686))
-* text to speech endpoint now streamable > test coverage ([72ccd50](https://github.com/iblai/os/commit/72ccd50907249fcc4b5c4234dc29d7e0c79382c7))
+- text to speech endpoint now streamable ([0dbb773](https://github.com/iblai/os/commit/0dbb77353e417cfb0c07227deec0e9c7fa8c0ced))
+- text to speech endpoint now streamable ([5039df8](https://github.com/iblai/os/commit/5039df8262e27c01bc5da82f711551411fe1ac32))
+- text to speech endpoint now streamable ([7106acd](https://github.com/iblai/os/commit/7106acd82cdcb88e6793ac9036677ea4d1726686))
+- text to speech endpoint now streamable > test coverage ([72ccd50](https://github.com/iblai/os/commit/72ccd50907249fcc4b5c4234dc29d7e0c79382c7))
 
 ## [0.85.0](https://github.com/iblai/os/compare/v0.84.3...v0.85.0) (2026-06-26)
 
 ### Features
 
-* test coverage from uncovered files ([04a8460](https://github.com/iblai/os/commit/04a84607c17ebcce9423f4834b47b56a9686e035))
-* user phone support now behind env flag ([b2c57c6](https://github.com/iblai/os/commit/b2c57c641db8752beb544b4d02dbd86893f73710))
-* user phone support now behind env flag > test coverage ([0136bf0](https://github.com/iblai/os/commit/0136bf0c44d0e48e3fd1e01bbae87cdff2f39e6b))
-* user phone support now behind env flag > test coverage ([8fac079](https://github.com/iblai/os/commit/8fac0795c355d215b3d4179359f5945519a5beaa))
+- test coverage from uncovered files ([04a8460](https://github.com/iblai/os/commit/04a84607c17ebcce9423f4834b47b56a9686e035))
+- user phone support now behind env flag ([b2c57c6](https://github.com/iblai/os/commit/b2c57c641db8752beb544b4d02dbd86893f73710))
+- user phone support now behind env flag > test coverage ([0136bf0](https://github.com/iblai/os/commit/0136bf0c44d0e48e3fd1e01bbae87cdff2f39e6b))
+- user phone support now behind env flag > test coverage ([8fac079](https://github.com/iblai/os/commit/8fac0795c355d215b3d4179359f5945519a5beaa))
 
 ### Chores
 
-* bumper iblai-js to 1.20.11 ([7f1e887](https://github.com/iblai/os/commit/7f1e887d8ede874b52d0e93fea92d978783ea8ac))
-* rebase against main ([2acedb3](https://github.com/iblai/os/commit/2acedb3c0af9872409000f50b1631b17ccdcc901))
+- bumper iblai-js to 1.20.11 ([7f1e887](https://github.com/iblai/os/commit/7f1e887d8ede874b52d0e93fea92d978783ea8ac))
+- rebase against main ([2acedb3](https://github.com/iblai/os/commit/2acedb3c0af9872409000f50b1631b17ccdcc901))
 
 ## [0.84.3](https://github.com/iblai/os/compare/v0.84.2...v0.84.3) (2026-06-25)
 

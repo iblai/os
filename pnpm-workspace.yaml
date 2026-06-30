@@ -27,7 +27,7 @@ overrides:
   hono: '>=4.12.18'
   axios: '>=1.16.0'
   prismjs: '>=1.30.0'
-  dompurify: '>=3.4.0'
+  dompurify: '>=3.4.11'
   '@hono/node-server': '>=1.19.13'
   bytes: '>=1.11.1'
   devalue: '>=5.8.1'

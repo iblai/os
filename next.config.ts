@@ -115,8 +115,15 @@ const sentryWebpackPluginOptions = {
   project: 'mentorai-iblai-app',
   widenClientFileUpload: true,
   hideSourceMaps: false,
-  disableLogger: true,
-  automaticVercelMonitors: false,
+  // Sentry SDK v10 moved these under `webpack`:
+  // - `disableLogger` -> `webpack.treeshake.removeDebugLogging`
+  // - `automaticVercelMonitors` -> `webpack.automaticVercelMonitors`
+  webpack: {
+    treeshake: {
+      removeDebugLogging: true,
+    },
+    automaticVercelMonitors: false,
+  },
 };
 
 export default withSentryConfig(
