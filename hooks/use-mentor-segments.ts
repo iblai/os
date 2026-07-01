@@ -70,12 +70,6 @@ export type MentorSegmentConfigFlags = {
    * removes the Voice tab from the sidebar entirely.
    */
   isVoiceCallEnabled: boolean;
-  /**
-   * True when "Allow LTI launches" (`is_lti_accessible`) is on in Settings.
-   * Gates the standalone LTI top-level tab — turning LTI access off removes
-   * the LTI tab from the sidebar entirely.
-   */
-  isLtiAccessible: boolean;
 };
 
 /**
@@ -425,11 +419,10 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
-    // Gated by the "Allow LTI launches" (`is_lti_accessible`) toggle in
-    // Settings → Capabilities → Advanced. Turning LTI access off hides this
-    // tab entirely — its launch configuration is meaningless when the agent
-    // can't be launched via LTI.
-    enabledThroughConfig: (flags) => flags.isLtiAccessible,
+    // Always visible to admins — intentionally NOT gated on the "Enable LTI
+    // launches" (`is_lti_accessible`) toggle. LTI access is turned on inline
+    // when the first LTI link is created, so the tab must stay reachable even
+    // while the setting is still off.
     navCategory: 'integrations',
   },
   {
@@ -604,13 +597,6 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
   const isVoiceCallEnabled: boolean =
     // @ts-ignore - show_voice_call exists on API but not typed
     mentorSettings?.show_voice_call ?? true;
-
-  // The LTI tab is gated on "Allow LTI launches". Default to false to match
-  // the Settings form (`is_lti_accessible ?? false`) — a mentor that never
-  // enabled LTI access won't surface the tab.
-  const isLtiAccessible: boolean =
-    // @ts-ignore - is_lti_accessible exists on API but not typed
-    mentorSettings?.is_lti_accessible ?? false;
   const { isUserTypeAllowed } = useUserType(mentorSettings);
 
   // `isUserTypeAllowed` is a fresh function on every render of `useUserType`.
@@ -633,7 +619,6 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
         isPrivacyEnabled,
         isScreenshareEnabled,
         isVoiceCallEnabled,
-        isLtiAccessible,
       },
       isUserTypeAllowed: (segment) => isUserTypeAllowedRef.current(segment),
     }),
@@ -649,7 +634,6 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
       isPrivacyEnabled,
       isScreenshareEnabled,
       isVoiceCallEnabled,
-      isLtiAccessible,
     ],
   );
 

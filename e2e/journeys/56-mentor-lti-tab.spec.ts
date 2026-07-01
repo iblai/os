@@ -1,12 +1,26 @@
 /**
- * Journey 55 — Mentor LTI Tab
+ * Journey 56 — Mentor LTI Tab
  *
  * Covers the LTI top-level tab added to the Edit Mentor (Agent) modal. The tab
  * is rendered by the SDK's `AgentLtiTab` (`@iblai/iblai-js/web-containers/next`)
- * via `components/modals/edit-mentor-modal/tabs/lti-tab.tsx` and is gated by:
+ * via `components/modals/edit-mentor-modal/tabs/lti-tab.tsx`.
+ *
+ * ── Visibility rules (as of feat/1853) ───────────────────────────────────────
+ *
  *   1. Admin-only — non-admin users never see the tab (MENTOR_SEGMENTS filter).
- *   2. `is_lti_accessible = true` — the "Allow LTI launches" toggle in
- *      Settings → Capabilities must be ON.
+ *   2. Always visible to admins — the `is_lti_accessible` gate was REMOVED.
+ *      The "Enable LTI launches" toggle (formerly "Allow LTI launches") in
+ *      Settings → Capabilities still controls whether the backend allows LTI
+ *      launches, but the sidebar tab is always mounted for admins so they can
+ *      reach the Links sub-tab to create the first link (which auto-enables
+ *      access via the backend when that SDK callback is implemented).
+ *
+ * ── Sub-resource note ────────────────────────────────────────────────────────
+ *
+ * Sub-resource tests (Links / Keys / Tools) still require `is_lti_accessible=true`
+ * on the backend — auto-enable-on-link-creation (lti-sdk-01) is not yet
+ * implemented in the SDK. The worker fixture therefore still calls
+ * `setEnableLtiLaunchesAndSave(true)` before running sub-resource tests.
  *
  * ── Parallel-safety & no-skip design ────────────────────────────────────────
  *
@@ -24,10 +38,10 @@
  *     resources cleaned up in a `finally` block, so they never collide; each
  *     worker has its own mentor, so cross-worker runs never collide either.
  *
- *   • Self-contained tests — the gating tests (which toggle `is_lti_accessible`)
- *     and the empty-state tests (which need a guaranteed-empty mentor) each
- *     create their OWN fresh mentor and delete it in a `finally` block. They
- *     never touch the shared fixture mentor.
+ *   • Self-contained tests — the gating tests (lti-01..lti-04) and the
+ *     empty-state tests (which need a guaranteed-empty mentor) each create
+ *     their OWN fresh mentor and delete it in a `finally` block. They never
+ *     touch the shared fixture mentor.
  *
  * The default shared mentor used by other journeys is never touched by either.
  *
@@ -58,7 +72,12 @@ type LtiWorkerFixtures = {
    * URL of an LTI-enabled mentor, created once per worker and deleted on worker
    * teardown. `null` on a non-admin worker (the mentor cannot be created); such
    * tests skip via their own admin guard. Shared by read-only / mutation tests
-   * that just need any LTI-enabled mentor.
+   * that just need an LTI-enabled mentor.
+   *
+   * NOTE: `setEnableLtiLaunchesAndSave(true)` is called here so that the
+   * backend's `is_lti_accessible` flag is set — the LTI tab is always visible
+   * to admins, but creating sub-resources (links / keys / tools) still requires
+   * the flag to be on until the SDK implements auto-enable-on-link-creation.
    */
   ltiMentorUrl: string | null;
 };
@@ -88,9 +107,12 @@ const test = base.extend<object, LtiWorkerFixtures>({
           mentorUrl = page.url();
 
           const editPage = new EditMentorPage(page);
+          // Enable LTI access on the backend so sub-resource tests can create
+          // links/keys/tools. The LTI tab itself would be visible without this,
+          // but the sub-resource APIs require is_lti_accessible=true.
           await editPage.open('Settings');
           await waitForPageReady(page);
-          await editPage.settings.setAllowLtiLaunchesAndSave(true);
+          await editPage.settings.setEnableLtiLaunchesAndSave(true);
           await editPage.lti.expectTabVisible();
           await editPage.close();
         }
@@ -128,9 +150,11 @@ const test = base.extend<object, LtiWorkerFixtures>({
 // ---------------------------------------------------------------------------
 
 /**
- * Create a fresh ephemeral mentor and leave the page on it. When `enableLti` is
- * true, flips "Allow LTI launches" on (Settings → Capabilities) and confirms
- * the LTI tab appears, then closes the modal.
+ * Create a fresh ephemeral mentor and leave the page on it. When `enableLti`
+ * is true, flips "Enable LTI launches" on (Settings → Capabilities) and
+ * confirms the LTI tab appears (it would appear anyway — this call just also
+ * enables is_lti_accessible for sub-resource operations), then closes the
+ * modal.
  */
 async function createTestMentor(
   page: Page,
@@ -147,7 +171,7 @@ async function createTestMentor(
   if (enableLti) {
     await editMentorPage.open('Settings');
     await waitForPageReady(page);
-    await editMentorPage.settings.setAllowLtiLaunchesAndSave(true);
+    await editMentorPage.settings.setEnableLtiLaunchesAndSave(true);
     await editMentorPage.lti.expectTabVisible();
     await editMentorPage.close();
   }
@@ -185,7 +209,7 @@ async function openLtiTabOnSharedMentor(
 
 // ---------------------------------------------------------------------------
 
-test.describe('Journey 55 — LTI tab gating', () => {
+test.describe('Journey 56 — LTI tab visibility', () => {
   test.describe.configure({ mode: 'parallel' });
   test.setTimeout(240_000);
 
@@ -193,51 +217,32 @@ test.describe('Journey 55 — LTI tab gating', () => {
     await navigateToMentorApp(page);
     const isAdmin = await checkAdminStatus(page);
     if (!isAdmin) {
-      test.skip(true, 'LTI tab is admin-only');
+      test.skip(true, 'LTI tab visibility checks require admin access');
     }
   });
 
-  // Each gating test is self-contained: it creates its OWN mentor (so toggling
-  // is_lti_accessible never affects a sibling) and deletes it in a finally
-  // block. No shared module state, so no test can be skipped by a sibling's
-  // setup running in a different worker process.
+  // Each gating test is self-contained: it creates its OWN mentor and deletes
+  // it in a finally block. No shared module state, so no test can be skipped
+  // by a sibling's setup running in a different worker process.
 
-  // ── lti-01..lti-03: gating ────────────────────────────────────────────────
+  // ── lti-01: tab visible by default (no toggle needed) ────────────────────
 
-  // lti-01: Fresh mentor — LTI tab hidden by default (is_lti_accessible=false).
-  test('admin sees the LTI tab hidden by default on a fresh mentor before the toggle is on', async ({
+  // lti-01: Fresh mentor — LTI tab IS visible by default even without enabling
+  // "Enable LTI launches" (is_lti_accessible=false). The gate on is_lti_accessible
+  // was removed in feat/1853 so the tab is always reachable for admins.
+  test('admin sees the LTI tab visible by default on a fresh mentor without enabling the toggle', async ({
     page,
     createMentorPage,
     editMentorPage,
   }) => {
+    // Create a fresh mentor WITHOUT enabling LTI (is_lti_accessible stays false).
     await createTestMentor(page, createMentorPage, editMentorPage, {
       enableLti: false,
     });
     try {
       await editMentorPage.open('Settings');
       await waitForPageReady(page);
-      // expectTabHidden activates the Integrations category first, so a missing
-      // tab reflects the gating, not the segment simply not being mounted.
-      await editMentorPage.lti.expectTabHidden();
-      await editMentorPage.close();
-    } finally {
-      await deleteTestMentor(editMentorPage);
-    }
-  });
-
-  // lti-02: Enabling "Allow LTI launches" reveals the LTI tab.
-  test('admin enables Allow LTI launches in Settings and the LTI tab appears in the sidebar', async ({
-    page,
-    createMentorPage,
-    editMentorPage,
-  }) => {
-    await createTestMentor(page, createMentorPage, editMentorPage, {
-      enableLti: false,
-    });
-    try {
-      await editMentorPage.open('Settings');
-      await waitForPageReady(page);
-      await editMentorPage.settings.setAllowLtiLaunchesAndSave(true);
+      // Tab must be visible even though is_lti_accessible is false.
       await editMentorPage.lti.expectTabVisible();
       await editMentorPage.close();
     } finally {
@@ -245,32 +250,113 @@ test.describe('Journey 55 — LTI tab gating', () => {
     }
   });
 
-  // lti-03: Disabling "Allow LTI launches" hides the LTI tab again.
-  test('admin disables Allow LTI launches in Settings and the LTI tab disappears', async ({
+  // ── lti-02: tab remains visible after enabling "Enable LTI launches" ─────
+
+  // lti-02: Enabling "Enable LTI launches" does not hide the tab (it was
+  // already visible). Confirms the toggle can be flipped on and the tab stays.
+  test('admin enables Enable LTI launches in Settings and the LTI tab remains visible', async ({
     page,
     createMentorPage,
     editMentorPage,
   }) => {
+    await createTestMentor(page, createMentorPage, editMentorPage, {
+      enableLti: false,
+    });
+    try {
+      await editMentorPage.open('Settings');
+      await waitForPageReady(page);
+      // Verify visible before toggling.
+      await editMentorPage.lti.expectTabVisible();
+      // Flip the toggle on.
+      await editMentorPage.settings.setEnableLtiLaunchesAndSave(true);
+      // Tab must still be visible.
+      await editMentorPage.lti.expectTabVisible();
+      await editMentorPage.close();
+    } finally {
+      await deleteTestMentor(editMentorPage);
+    }
+  });
+
+  // ── lti-03: tab remains visible after disabling "Enable LTI launches" ────
+
+  // lti-03: Disabling "Enable LTI launches" does NOT hide the LTI tab. The
+  // tab stays mounted so the admin can always reach the configuration surface.
+  test('admin disables Enable LTI launches in Settings and the LTI tab stays visible', async ({
+    page,
+    createMentorPage,
+    editMentorPage,
+  }) => {
+    // Start from LTI enabled.
     await createTestMentor(page, createMentorPage, editMentorPage, {
       enableLti: true,
     });
     try {
       await editMentorPage.open('Settings');
       await waitForPageReady(page);
-      // Start from enabled (createTestMentor already turned it on).
+      // Verify visible while enabled.
       await editMentorPage.lti.expectTabVisible();
-      // The toggle lives in Settings → Capabilities (Configurations category);
-      // we are on Settings, so flip it off and confirm the tab disappears.
-      await editMentorPage.settings.setAllowLtiLaunchesAndSave(false);
-      await editMentorPage.lti.expectTabHidden();
+      // Flip the toggle off.
+      await editMentorPage.settings.setEnableLtiLaunchesAndSave(false);
+      // Tab must still be visible after disabling.
+      await editMentorPage.lti.expectTabVisible();
       await editMentorPage.close();
     } finally {
       await deleteTestMentor(editMentorPage);
     }
   });
+
+  // ── lti-04: non-admin does not see the LTI tab ───────────────────────────
+
+  // lti-04: The LTI tab is admin-only. Non-admin users should never see it.
+  // We use the nonadmin browser context to verify the tab trigger is absent
+  // inside the Integrations category.
+  test('non-admin user does not see the LTI tab in the Edit Mentor modal', async ({
+    nonadminPage,
+    nonadminEditMentorPage,
+  }) => {
+    await navigateToMentorApp(nonadminPage);
+
+    // Non-admin cannot open the edit mentor modal via the mentor dropdown
+    // (the Settings menu item is hidden for non-admins). Verify absence by
+    // checking the dropdown first; if the dialog is somehow reachable, assert
+    // the LTI tab trigger is not present in the Integrations category.
+    const dropdown = nonadminPage.getByRole('button', {
+      name: /^Selected (agent|mentor) dropdown button$/,
+    });
+    await expect(dropdown).toBeVisible({ timeout: 15_000 });
+    await dropdown.click();
+
+    const modifyItem = nonadminPage
+      .getByRole('menuitem', { name: /modify/i })
+      .or(nonadminPage.getByRole('menuitem', { name: /settings/i }).first());
+
+    let menuItemVisible = false;
+    try {
+      await modifyItem.waitFor({ state: 'visible', timeout: 3_000 });
+      menuItemVisible = true;
+    } catch {
+      menuItemVisible = false;
+    }
+
+    if (!menuItemVisible) {
+      // Non-admin cannot open the edit dialog at all — LTI tab is definitively
+      // not visible. Test passes.
+      await nonadminPage.keyboard.press('Escape');
+      return;
+    }
+
+    // If (in some env) the non-admin can open the dialog, assert the LTI tab
+    // trigger is absent in the Integrations category.
+    await modifyItem.click();
+    await expect(nonadminEditMentorPage.dialog).toBeVisible({
+      timeout: 15_000,
+    });
+    await nonadminEditMentorPage.lti.expectTabHidden();
+    await nonadminEditMentorPage.close();
+  });
 });
 
-test.describe('Journey 55 — LTI tab sub-resource tests', () => {
+test.describe('Journey 56 — LTI tab sub-resource tests', () => {
   test.describe.configure({ mode: 'parallel' });
   test.setTimeout(240_000);
 
@@ -556,8 +642,22 @@ test.describe('Journey 55 — LTI tab sub-resource tests', () => {
       authLoginUrl: 'https://raw-lms.example.com/lti/auth',
       authTokenUrl: 'https://raw-lms.example.com/lti/token',
       keySetMode: 'raw',
+      // A valid 2048-bit RSA public JWK (modulus + exponent). The backend
+      // validates the raw JWKS, so a placeholder like `n: "AQAB"` (which is the
+      // *exponent* value, not a modulus, and omits `e`) is rejected — the tool
+      // create then hangs with the modal stuck open. Uses the RFC 7517 §A.1
+      // example public key.
       jwksJson: JSON.stringify({
-        keys: [{ kty: 'RSA', use: 'sig', kid: 'test-key-1', n: 'AQAB' }],
+        keys: [
+          {
+            kty: 'RSA',
+            use: 'sig',
+            alg: 'RS256',
+            kid: 'test-key-1',
+            n: '0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw',
+            e: 'AQAB',
+          },
+        ],
       }),
       signingKeyName: keyName,
     });
@@ -628,4 +728,25 @@ test.describe('Journey 55 — LTI tab sub-resource tests', () => {
 
     await editMentorPage.close();
   });
+
+  // ── lti-sdk-01: auto-enable on link creation (SDK-PENDING) ───────────────
+
+  /**
+   * lti-sdk-01 (PENDING — SDK dependency):
+   *
+   * When an admin creates the first LTI link, `is_lti_accessible` should be
+   * automatically set to `true` via the API so the admin does not need to
+   * manually enable the "Enable LTI launches" toggle first.
+   *
+   * This is NOT implemented: the SDK's `AgentLtiTab` exposes no callback hook
+   * for post-create side effects, and there are no public LTI data-layer hooks
+   * available from `@iblai/iblai-js`. The feature must be added to the SDK.
+   *
+   * Until then: tests that require is_lti_accessible=true call
+   * `setEnableLtiLaunchesAndSave(true)` explicitly (see the `ltiMentorUrl`
+   * worker fixture and `createTestMentor` with `enableLti: true`).
+   *
+   * DO NOT uncomment this test until the SDK ships the auto-enable callback.
+   */
+  // test('admin creates the first LTI link and is_lti_accessible is auto-enabled', ...)
 });

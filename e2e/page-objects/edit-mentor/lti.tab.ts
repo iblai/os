@@ -42,9 +42,12 @@ import {
  * aria-labels emitted by the SDK. Selector changes in the SDK are absorbed by
  * bumping `@iblai/iblai-js` — no hand-rolled selectors here.
  *
- * GATING: the LTI tab is only visible when `is_lti_accessible` is `true` on
- * the mentor (toggled via Settings → Capabilities → "Allow LTI launches").
- * `isTabVisible()` returns `false` rather than throwing when the tab is absent.
+ * VISIBILITY: the LTI tab is always mounted for admins regardless of the
+ * "Enable LTI launches" (`is_lti_accessible`) toggle — the gate on that flag
+ * was removed in feat/1853 so the tab stays reachable before the first link
+ * is created. The tab remains hidden for non-admins. `expectTabHidden()` is
+ * therefore only meaningful in a non-admin context; `expectTabVisible()` should
+ * pass for any admin, even on a freshly created mentor.
  *
  * CATEGORY: the modal sidebar only mounts the segment tabs of the *active*
  * category (Configurations / Integrations / Analytics — see
@@ -101,9 +104,9 @@ export class LtiTab {
 
   /**
    * Activate the Integrations category so its segment triggers (including the
-   * LTI tab when `is_lti_accessible` is on) are mounted. No-op when already
+   * LTI tab, which is always mounted for admins) are shown. No-op when already
    * active. The Integrations category itself always exists (MCP, Datasets,
-   * API, Embed live there too), independent of the LTI toggle.
+   * API, Embed live there too).
    */
   async activateCategory(): Promise<void> {
     const active =
@@ -120,7 +123,8 @@ export class LtiTab {
   /**
    * Returns `true` when the LTI tab is currently mounted in the sidebar.
    * Activates the Integrations category first, so the result reflects the
-   * `is_lti_accessible` gating rather than the active-category accident.
+   * admin-only gating rather than the active-category accident. The
+   * `is_lti_accessible` toggle no longer affects tab visibility (feat/1853).
    */
   async isTabVisible(): Promise<boolean> {
     await this.activateCategory();
@@ -136,7 +140,10 @@ export class LtiTab {
     await expect(this.tabTrigger).toBeVisible({ timeout: 15_000 });
   }
 
-  /** Assert the LTI tab is NOT present in the sidebar (gated off). */
+  /**
+   * Assert the LTI tab is NOT present in the sidebar. Only meaningful for
+   * non-admins — the tab is always mounted for admins (feat/1853).
+   */
   async expectTabHidden(): Promise<void> {
     await this.activateCategory();
     await expect(this.tabTrigger).toHaveCount(0, { timeout: 10_000 });
@@ -145,7 +152,9 @@ export class LtiTab {
   /**
    * Activate the Integrations category, click the LTI top-level tab, and wait
    * for the SDK sub-tab bar to render. Assumes the Edit Mentor dialog is open
-   * and the mentor has `is_lti_accessible` enabled.
+   * (the tab is always mounted for admins). Note: LTI sub-resources
+   * (links/keys/tools) still require `is_lti_accessible=true` on the backend,
+   * so sub-resource tests enable it via the Settings toggle first.
    */
   async switchToTab(): Promise<void> {
     await this.activateCategory();

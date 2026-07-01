@@ -1591,23 +1591,18 @@ export function SettingsTab() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-medium text-[#646464]">
-                                Allow LTI launches
+                                {t('enableLtiLabel')}
                               </span>
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger
                                     type="button"
-                                    aria-label="More info about allow lti launches"
+                                    aria-label={t('enableLtiInfoAriaLabel')}
                                   >
                                     <Info className="h-4 w-4 text-gray-400" />
                                   </TooltipTrigger>
                                   <TooltipContent className="ibl-tooltip-content">
-                                    <p>
-                                      Allows this agent to be accessible via LTI
-                                      launches. Unselecting this will
-                                      immediately remove access for any users
-                                      users that have launched this via LTI.
-                                    </p>
+                                    <p>{t('enableLtiTooltip')}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
@@ -1618,7 +1613,7 @@ export function SettingsTab() {
                                 field.handleChange(checked)
                               }
                               disabled={isDisabled || disabled}
-                              aria-label="Allow LTI launches"
+                              aria-label={t('enableLtiLabel')}
                               aria-checked={field.state.value}
                             />
                           </div>

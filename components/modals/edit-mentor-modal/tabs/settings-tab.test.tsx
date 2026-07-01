@@ -439,7 +439,7 @@ describe('SettingsTab', () => {
     it('renders LTI Accessible toggle', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText('Allow LTI launches')).toBeInTheDocument();
+      expect(screen.getByText('Enable LTI launches')).toBeInTheDocument();
     });
 
     it('renders File Attachments toggle', () => {
@@ -488,7 +488,7 @@ describe('SettingsTab', () => {
         'More info about chat access',
       );
       const otherTriggers = [
-        screen.getByLabelText('More info about allow lti launches'),
+        screen.getByLabelText('More info about enable LTI launches'),
         screen.getByLabelText('More info about enable file attachments'),
         screen.getByLabelText('More info about enable voice calls'),
         screen.getByLabelText('More info about enable voice recordings'),
@@ -517,7 +517,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       const tooltipTrigger = screen.getByLabelText(
-        'More info about allow lti launches',
+        'More info about enable LTI launches',
       );
       fireEvent.click(tooltipTrigger);
 
@@ -655,7 +655,7 @@ describe('SettingsTab', () => {
     it('reflects is_lti_accessible unchecked state', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Allow LTI launches');
+      const toggle = screen.getByLabelText('Enable LTI launches');
       expect(toggle).not.toBeChecked();
     });
 
@@ -691,10 +691,10 @@ describe('SettingsTab', () => {
     it('toggles is_lti_accessible switch', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Allow LTI launches');
+      const toggle = screen.getByLabelText('Enable LTI launches');
       fireEvent.click(toggle);
 
-      expect(screen.getByLabelText('Allow LTI launches')).toBeChecked();
+      expect(screen.getByLabelText('Enable LTI launches')).toBeChecked();
     });
   });
 
@@ -1093,7 +1093,7 @@ describe('SettingsTab', () => {
       expect(
         screen.getByLabelText('Enable voice recordings'),
       ).toBeInTheDocument();
-      expect(screen.getByLabelText('Allow LTI launches')).toBeInTheDocument();
+      expect(screen.getByLabelText('Enable LTI launches')).toBeInTheDocument();
     });
 
     it('has proper region label for settings form content', () => {
@@ -1108,7 +1108,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText('More info about allow lti launches'),
+        screen.getByLabelText('More info about enable LTI launches'),
       ).toBeInTheDocument();
       expect(
         screen.getByLabelText('More info about enable file attachments'),

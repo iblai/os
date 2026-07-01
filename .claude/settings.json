@@ -1,14 +1,4 @@
 {
-  "permissions": {
-    "allow": [
-      "Read(//Users/macbookpro/ibl-projects/spa-app/frontend/**)",
-      "Bash(pnpm prettier *)",
-      "Bash(PORT=3000 pnpm start)",
-      "Bash(xargs -r kill)",
-      "Bash(xargs -r kill -9)",
-      "Bash(node -e ' *)"
-    ]
-  },
   "hooks": {
     "PostToolUse": [
       {
@@ -22,6 +12,15 @@
           }
         ]
       }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Read(//Users/macbookpro/ibl-projects/spa-app/frontend/**)",
+      "Bash(pnpm prettier *)",
+      "Bash(PORT=3000 pnpm start)",
+      "Bash(xargs -r kill)",
+      "Bash(xargs -r kill -9)"
     ]
   }
 }

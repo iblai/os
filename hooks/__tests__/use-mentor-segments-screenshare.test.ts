@@ -105,7 +105,6 @@ const baseFlags = {
   // by the separate Voice-tab gate.
   isVoiceCallEnabled: true,
   isPrivacyEnabled: false,
-  isLtiAccessible: false,
 };
 
 const buildContext = (

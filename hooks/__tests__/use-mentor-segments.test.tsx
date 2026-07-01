@@ -344,57 +344,38 @@ describe('useMentorSegments', () => {
     });
   });
 
-  describe('LTI segment gating', () => {
+  describe('LTI segment', () => {
     it('orders LTI immediately before Embed', () => {
       const ltiIndex = MENTOR_SEGMENTS.findIndex((s) => s.label === 'LTI');
       expect(ltiIndex).toBeGreaterThanOrEqual(0);
       expect(MENTOR_SEGMENTS[ltiIndex + 1]?.label).toBe('Embed');
     });
 
-    it('hides LTI when is_lti_accessible is false', () => {
-      mockMentorSettings.mockReturnValue({
-        platform_key: 'custom-tenant',
-        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-        mentor_id: 42,
-        permissions: { field: {} },
-        is_lti_accessible: false,
-      });
-
-      const { result } = renderHook(() => useMentorSegments());
-      const labels = result.current.filteredSegments.map((s) => s.label);
-      expect(labels).not.toContain('LTI');
-      // Sibling integration tabs are unaffected.
-      expect(labels).toContain('Embed');
+    it('is NOT gated on is_lti_accessible (no enabledThroughConfig)', () => {
+      // Unlike Voice/Screen-share, the LTI tab must stay reachable so an admin
+      // can create the first link (which turns LTI access on inline).
+      const ltiSegment = MENTOR_SEGMENTS.find((s) => s.label === 'LTI')!;
+      expect(ltiSegment.enabledThroughConfig).toBeUndefined();
     });
 
-    it('hides LTI when is_lti_accessible is missing', () => {
-      mockMentorSettings.mockReturnValue({
-        platform_key: 'custom-tenant',
-        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-        mentor_id: 42,
-        permissions: { field: {} },
-      });
+    it('is visible to admins regardless of the is_lti_accessible value', () => {
+      for (const value of [false, undefined, true]) {
+        mockMentorSettings.mockReturnValue({
+          platform_key: 'custom-tenant',
+          mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+          mentor_id: 42,
+          permissions: { field: {} },
+          is_lti_accessible: value,
+        });
 
-      const { result } = renderHook(() => useMentorSegments());
-      const labels = result.current.filteredSegments.map((s) => s.label);
-      expect(labels).not.toContain('LTI');
+        const { result, unmount } = renderHook(() => useMentorSegments());
+        const labels = result.current.filteredSegments.map((s) => s.label);
+        expect(labels).toContain('LTI');
+        unmount();
+      }
     });
 
-    it('shows LTI for admins when is_lti_accessible is true', () => {
-      mockMentorSettings.mockReturnValue({
-        platform_key: 'custom-tenant',
-        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-        mentor_id: 42,
-        permissions: { field: {} },
-        is_lti_accessible: true,
-      });
-
-      const { result } = renderHook(() => useMentorSegments());
-      const labels = result.current.filteredSegments.map((s) => s.label);
-      expect(labels).toContain('LTI');
-    });
-
-    it('hides LTI from non-admins even when is_lti_accessible is true', () => {
+    it('is hidden from non-admin users', () => {
       mockMentorSettings.mockReturnValue({
         platform_key: 'custom-tenant',
         mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
@@ -411,30 +392,6 @@ describe('useMentorSegments', () => {
       const { result } = renderHook(() => useMentorSegments());
       const labels = result.current.filteredSegments.map((s) => s.label);
       expect(labels).not.toContain('LTI');
-    });
-
-    it('isSegmentVisible reflects the is_lti_accessible gate for LTI', () => {
-      mockMentorSettings.mockReturnValue({
-        platform_key: 'custom-tenant',
-        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-        mentor_id: 42,
-        permissions: { field: {} },
-        is_lti_accessible: true,
-      });
-
-      const { result } = renderHook(() => useMentorSegments());
-      const ltiSegment = MENTOR_SEGMENTS.find((s) => s.label === 'LTI')!;
-      expect(result.current.isSegmentVisible(ltiSegment)).toBe(true);
-
-      mockMentorSettings.mockReturnValue({
-        platform_key: 'custom-tenant',
-        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-        mentor_id: 42,
-        permissions: { field: {} },
-        is_lti_accessible: false,
-      });
-      const { result: result2 } = renderHook(() => useMentorSegments());
-      expect(result2.current.isSegmentVisible(ltiSegment)).toBe(false);
     });
   });
 

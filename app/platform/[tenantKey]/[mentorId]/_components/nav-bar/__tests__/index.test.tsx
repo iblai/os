@@ -976,7 +976,6 @@ const buildContext = (
     isScreenshareEnabled: false,
     isVoiceCallEnabled: true,
     isPrivacyEnabled: false,
-    isLtiAccessible: false,
   },
   isUserTypeAllowed: (segment: MentorSegment) =>
     segment.userTypes.includes(overrides.userType),
@@ -1226,7 +1225,6 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
             isScreenshareEnabled: false,
             isVoiceCallEnabled: true,
             isPrivacyEnabled: false,
-            isLtiAccessible: false,
           },
         }),
       );
@@ -1250,7 +1248,6 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
             isScreenshareEnabled: false,
             isVoiceCallEnabled: true,
             isPrivacyEnabled: false,
-            isLtiAccessible: false,
           },
         }),
       );
@@ -1274,7 +1271,6 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
             isScreenshareEnabled: false,
             isVoiceCallEnabled: true,
             isPrivacyEnabled: false,
-            isLtiAccessible: false,
           },
         }),
       );
@@ -1295,7 +1291,6 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
             isScreenshareEnabled: false,
             isVoiceCallEnabled: true,
             isPrivacyEnabled: false,
-            isLtiAccessible: false,
           },
         }),
       );

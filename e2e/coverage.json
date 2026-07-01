@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-06-30",
+  "lastUpdated": "2026-07-02",
   "summary": {
-    "totalCheckpoints": 499,
-    "coveredCheckpoints": 477,
+    "totalCheckpoints": 526,
+    "coveredCheckpoints": 499,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 7,
-    "pendingCheckpoints": 6,
+    "pendingCheckpoints": 8,
     "percent": 100,
-    "totalJourneys": 57,
-    "activeJourneys": 56
+    "totalJourneys": 58,
+    "activeJourneys": 57
   },
   "journeys": [
     {
@@ -3255,6 +3255,112 @@
           "id": "fcc-04",
           "description": "Clicking Upgrade Plan in the credit dropdown creates a Stripe checkout session and redirects to a Stripe-hosted page requiring credit-card input (secure Stripe Elements card iframe + pay button)",
           "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "mentor-lti-tab",
+      "name": "Mentor LTI Tab",
+      "spec": "56-mentor-lti-tab.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/lti-tab.tsx",
+        "hooks/use-mentor-segments.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "lti-01",
+          "description": "Admin sees the LTI tab visible by default on a fresh mentor without enabling the 'Enable LTI launches' toggle (is_lti_accessible=false) — gate removed in feat/1853",
+          "status": "covered"
+        },
+        {
+          "id": "lti-02",
+          "description": "Admin enables 'Enable LTI launches' in Settings and the LTI tab remains visible (tab was already visible; toggle only controls backend is_lti_accessible, not tab visibility)",
+          "status": "covered"
+        },
+        {
+          "id": "lti-03",
+          "description": "Admin disables 'Enable LTI launches' in Settings and the LTI tab stays visible (the is_lti_accessible gate was removed from MENTOR_SEGMENTS in feat/1853)",
+          "status": "covered"
+        },
+        {
+          "id": "lti-04",
+          "description": "Non-admin user does not see the LTI tab in the Edit Mentor modal (LTI segment remains admin-only)",
+          "status": "covered"
+        },
+        {
+          "id": "lti-05",
+          "description": "Admin opens the LTI tab on an LTI-enabled mentor and sees the header and all four sub-tabs (Agent Links, Keys, Tools, Tool Endpoints)",
+          "status": "covered"
+        },
+        {
+          "id": "lti-06",
+          "description": "Admin opens the LTI Links sub-tab on a fresh mentor and sees the empty state when no links exist",
+          "status": "covered"
+        },
+        {
+          "id": "lti-07",
+          "description": "Admin creates an LTI link and it appears in the links list",
+          "status": "covered"
+        },
+        {
+          "id": "lti-08",
+          "description": "Admin edits (renames) an LTI link and the new name appears in the list while the old name is gone",
+          "status": "covered"
+        },
+        {
+          "id": "lti-09",
+          "description": "Admin opens the LTI Keys sub-tab on a fresh mentor and sees the empty state when no keys exist",
+          "status": "covered"
+        },
+        {
+          "id": "lti-10",
+          "description": "Admin creates an LTI key and the key detail shows non-empty public key and JWK fields",
+          "status": "covered"
+        },
+        {
+          "id": "lti-11",
+          "description": "Admin renames an LTI key and the new name appears in the list while the old name is gone",
+          "status": "covered"
+        },
+        {
+          "id": "lti-12",
+          "description": "Admin deletes an LTI key and the key is no longer in the list",
+          "status": "covered"
+        },
+        {
+          "id": "lti-13",
+          "description": "Admin opens the LTI Tools sub-tab on a fresh mentor and sees the empty state when no tools exist",
+          "status": "covered"
+        },
+        {
+          "id": "lti-14",
+          "description": "Admin creates an LTI tool with a JWKS URL signing config and it appears in the tools list",
+          "status": "covered"
+        },
+        {
+          "id": "lti-15",
+          "description": "Admin creates an LTI tool with raw JWKS JSON signing config and it appears in the tools list",
+          "status": "covered"
+        },
+        {
+          "id": "lti-16",
+          "description": "Admin opens the Tool Endpoints sub-tab and all four endpoint URLs (redirect URI, login, deep linking, JWKS) are rendered non-empty",
+          "status": "covered"
+        },
+        {
+          "id": "lti-17",
+          "description": "Admin copies the redirect URI endpoint URL and the copy button label flips to 'Copied'",
+          "status": "covered"
+        },
+        {
+          "id": "lti-18",
+          "description": "Admin opens the Tool Endpoints sub-tab and every endpoint URL is an absolute https URL on the /lti/ path sharing one origin (built from NEXT_PUBLIC_LEGACY_LMS_URL)",
+          "status": "covered"
+        },
+        {
+          "id": "lti-sdk-01",
+          "description": "PENDING (SDK dependency): When an admin creates the first LTI link, is_lti_accessible is auto-enabled via the API — not yet implemented; AgentLtiTab exposes no post-create callback hook",
+          "status": "pending"
         }
       ]
     }
