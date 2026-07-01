@@ -73,6 +73,8 @@ export const EXTERNAL_STRIPE_PRICING_URL =
   process.env.EXTERNAL_STRIPE_PRICING_URL || '';
 export const ECOMMERCE_CREDIT_CLEANUP_TOKEN =
   process.env.ECOMMERCE_CREDIT_CLEANUP_TOKEN || '';
+export const ECOMMERCE_CHECKOUT_URL =
+  process.env.ECOMMERCE_CHECKOUT_URL || 'http://ibl.ai/join';
 
 // ── Canvas LMS (Journey 11) ──────────────────────────────────────────────────
 

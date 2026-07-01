@@ -217,6 +217,7 @@ vi.mock('@/lib/config', () => ({
     supportEmail: () => 'support@test.com',
     iblTemplateMentor: () => 'default-agent',
     defaultSupportPhoneNumber: () => '(571) 293-0242',
+    enableSupportPhone: () => false,
   },
 }));
 
@@ -1203,6 +1204,46 @@ describe('Chat', () => {
         activeTab: 'chat',
         currentStreamingMessage: null,
         enabledGuidedPrompts: [],
+        isStreaming: true,
+        mentorName: 'Test Mentor',
+        messages: [],
+        profileImage: '/avatar.png',
+        sendMessage: vi.fn(),
+        setMessage: vi.fn(),
+        stopGenerating: mockStopGenerating,
+        uniqueMentorId: 'unique-mentor-123',
+        sessionId: 'session-123',
+        startNewChat: vi.fn(),
+        enableSafetyDisclaimer: false,
+        isPending: false,
+        isLoadingChats: false,
+        refetchChats: vi.fn(),
+      });
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      const stopHandlers = getRegisteredHandlers(
+        eventBus.default.on as ReturnType<typeof vi.fn>,
+        'stopChatGenerating',
+      );
+      expect(stopHandlers).toHaveLength(1);
+
+      act(() => {
+        stopHandlers[0]();
+      });
+
+      expect(mockStopGenerating).toHaveBeenCalledTimes(1);
+    });
+
+    it('emitting stopChatGenerating while idle does NOT call stopGenerating', async () => {
+      const eventBus = await import('@/lib/eventBus');
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      const mockStopGenerating = vi.fn();
+      (useAdvancedChat as any).mockReturnValue({
+        changeTab: vi.fn(),
+        activeTab: 'chat',
+        currentStreamingMessage: null,
+        enabledGuidedPrompts: [],
         isStreaming: false,
         mentorName: 'Test Mentor',
         messages: [],
@@ -1215,6 +1256,46 @@ describe('Chat', () => {
         startNewChat: vi.fn(),
         enableSafetyDisclaimer: false,
         isPending: false,
+        isLoadingChats: false,
+        refetchChats: vi.fn(),
+      });
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      const stopHandlers = getRegisteredHandlers(
+        eventBus.default.on as ReturnType<typeof vi.fn>,
+        'stopChatGenerating',
+      );
+      expect(stopHandlers).toHaveLength(1);
+
+      act(() => {
+        stopHandlers[0]();
+      });
+
+      expect(mockStopGenerating).not.toHaveBeenCalled();
+    });
+
+    it('emitting stopChatGenerating while pending calls stopGenerating', async () => {
+      const eventBus = await import('@/lib/eventBus');
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      const mockStopGenerating = vi.fn();
+      (useAdvancedChat as any).mockReturnValue({
+        changeTab: vi.fn(),
+        activeTab: 'chat',
+        currentStreamingMessage: null,
+        enabledGuidedPrompts: [],
+        isStreaming: false,
+        mentorName: 'Test Mentor',
+        messages: [],
+        profileImage: '/avatar.png',
+        sendMessage: vi.fn(),
+        setMessage: vi.fn(),
+        stopGenerating: mockStopGenerating,
+        uniqueMentorId: 'unique-mentor-123',
+        sessionId: 'session-123',
+        startNewChat: vi.fn(),
+        enableSafetyDisclaimer: false,
+        isPending: true,
         isLoadingChats: false,
         refetchChats: vi.fn(),
       });

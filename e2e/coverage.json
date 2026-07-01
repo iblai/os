@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "lastUpdated": "2026-06-26",
+  "lastUpdated": "2026-06-30",
   "summary": {
-    "totalCheckpoints": 520,
-    "coveredCheckpoints": 495,
+    "totalCheckpoints": 499,
+    "coveredCheckpoints": 477,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 7,
     "pendingCheckpoints": 6,
@@ -711,6 +711,11 @@
           "id": "emb-09",
           "description": "Embed mode renders a minimal sidebar: New Chat present (and Chats section when the user is logged in); Agents (New Agent), Workflows, Analytics, Projects sections and the Support/docs footer link absent — holds for both expanded and rail-collapsed layouts regardless of user role",
           "status": "covered"
+        },
+        {
+          "id": "emb-10",
+          "description": "Optimize Page Context Tokens toggle: visible label present, tooltip ('Strips HTML tags from page context') reachable on hover, and the setting flips and persists after submit + modal reopen via GET /settings/ round-trip",
+          "status": "pending"
         }
       ]
     },
@@ -2231,7 +2236,7 @@
         },
         {
           "id": "tcr-08",
-          "description": "Tool call indicator and reasoning section are gated by the Verbose Reasoning setting — hidden when the toggle is off, shown when on",
+          "description": "Tool call indicator and reasoning section are gated by the Enable verbose reasoning setting — hidden when the toggle is off, shown when on",
           "status": "covered"
         }
       ]
@@ -2558,7 +2563,7 @@
         },
         {
           "id": "vo-09",
-          "description": "Settings tab surfaces both voice-call toggles (Smart document retrieval, Enable screen sharing)",
+          "description": "Settings tab surfaces both voice-call toggles (Enable smart document retrieval, Enable screen sharing)",
           "status": "covered"
         },
         {
@@ -3222,105 +3227,33 @@
       ]
     },
     {
-      "id": "mentor-lti-tab",
-      "name": "Mentor LTI Tab",
-      "spec": "55-mentor-lti-tab.spec.ts",
+      "id": "free-credits-checkout-onboarding",
+      "name": "Free Credits Checkout Onboarding",
+      "spec": "55-free-credits-checkout-onboarding.spec.ts",
       "sourceFiles": [
-        "components/modals/edit-mentor-modal/tabs/lti-tab.tsx",
-        "components/modals/edit-mentor-modal/index.tsx",
-        "hooks/use-mentor-segments.ts",
-        "lib/constants.ts",
-        "components/modals/edit-mentor-modal/tabs/settings-tab.tsx"
+        "app/sso-login-complete/page.tsx",
+        "app/platform/[tenantKey]/[mentorId]/page.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx"
       ],
       "checkpoints": [
         {
-          "id": "lti-01",
-          "description": "Fresh mentor: LTI tab is hidden in the sidebar by default (is_lti_accessible defaults to false)",
+          "id": "fcc-01",
+          "description": "ECOMMERCE_CHECKOUT_URL redirects to the Stripe-hosted checkout page exposing the email field and Subscribe submit button",
           "status": "covered"
         },
         {
-          "id": "lti-02",
-          "description": "Enabling 'Allow LTI launches' in Settings → Capabilities and saving causes the LTI top-level tab to appear in the modal sidebar",
+          "id": "fcc-02",
+          "description": "Submitting the email completes checkout and lands authenticated on the mentor SPA at <base-url>/platform/<platform-key>/<mentor-id>",
           "status": "covered"
         },
         {
-          "id": "lti-03",
-          "description": "Disabling 'Allow LTI launches' and saving removes the LTI tab from the modal sidebar entirely",
+          "id": "fcc-03",
+          "description": "The credit-balance dropdown shows a positive remaining credit balance and a Free plan pill",
           "status": "covered"
         },
         {
-          "id": "lti-04",
-          "description": "Ephemeral test mentor cleanup: each self-contained gating/empty-state test deletes its own mentor in a finally block, and the shared LTI-enabled mentor is deleted on worker-fixture teardown — no orphaned mentors are left behind",
-          "status": "covered"
-        },
-        {
-          "id": "lti-05",
-          "description": "LTI tab on an LTI-enabled mentor renders the SDK header (title + description) and exposes all four sub-tab triggers: Links, Keys, Tools, Tool Endpoints",
-          "status": "covered"
-        },
-        {
-          "id": "lti-06",
-          "description": "LTI Links sub-tab shows the 'No LTI link yet for this agent.' empty state when no links have been created",
-          "status": "covered"
-        },
-        {
-          "id": "lti-07",
-          "description": "Admin creates an LTI link and it appears in the links list",
-          "status": "covered"
-        },
-        {
-          "id": "lti-08",
-          "description": "Admin edits (renames) an LTI link; the new name appears in the list and the old name is gone",
-          "status": "covered"
-        },
-        {
-          "id": "lti-09",
-          "description": "LTI Keys sub-tab shows the 'No LTI keys yet.' empty state when no keys have been created",
-          "status": "covered"
-        },
-        {
-          "id": "lti-10",
-          "description": "Admin creates an LTI key; the key detail modal shows a non-empty PEM public key and a non-empty public JWK",
-          "status": "covered"
-        },
-        {
-          "id": "lti-11",
-          "description": "Admin renames an LTI key; the new name appears in the list and the old name is gone",
-          "status": "covered"
-        },
-        {
-          "id": "lti-12",
-          "description": "Admin deletes an LTI key; the key row is removed from the keys list",
-          "status": "covered"
-        },
-        {
-          "id": "lti-13",
-          "description": "LTI Tools sub-tab shows the 'No LTI tools yet.' empty state when no tools have been created",
-          "status": "covered"
-        },
-        {
-          "id": "lti-14",
-          "description": "Admin creates an LTI tool with keySetMode='url' (JWKS URL config) and it appears in the tools list",
-          "status": "covered"
-        },
-        {
-          "id": "lti-15",
-          "description": "Admin creates an LTI tool with keySetMode='raw' (inline JWKS JSON config) and it appears in the tools list",
-          "status": "covered"
-        },
-        {
-          "id": "lti-16",
-          "description": "Tool Endpoints sub-tab: all four platform endpoints (redirectUri, login, deepLinking, jwks) render with non-empty URLs",
-          "status": "covered"
-        },
-        {
-          "id": "lti-17",
-          "description": "Tool Endpoints sub-tab: clicking the copy button for the redirectUri endpoint flips its label to 'Copied'",
-          "status": "covered"
-        },
-        {
-          "id": "lti-18",
-          "description": "Tool Endpoints sub-tab: all four endpoint URLs are built from the dedicated LMS URL (config.legacyLmsUrl(), not the <apiBase>/lms that lmsUrl() yields) — absolute https URLs on the /lti/ path that share one origin, pinned to NEXT_PUBLIC_LEGACY_LMS_URL when set",
+          "id": "fcc-04",
+          "description": "Clicking Upgrade Plan in the credit dropdown creates a Stripe checkout session and redirects to a Stripe-hosted page requiring credit-card input (secure Stripe Elements card iframe + pay button)",
           "status": "covered"
         }
       ]

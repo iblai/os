@@ -250,6 +250,7 @@ vi.mock('@/lib/config', () => ({
     authUrl: () => 'https://auth.example.com',
     platformBaseDomain: () => 'example.com',
     defaultSupportPhoneNumber: () => '(571) 293-0242',
+    enableSupportPhone: () => false,
     iblTemplateMentor: () => 'ai-mentor',
     environment: () => 'test',
     lmsUrl: () => 'https://learn.example.com',

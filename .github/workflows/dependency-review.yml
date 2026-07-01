@@ -1,0 +1,30 @@
+name: Dependency Review
+
+# Blocks PRs that INTRODUCE a dependency with a known advisory.
+# Diff-scoped (only new/changed deps), so it is low-noise — it reads the
+# GitHub dependency-graph diff between base and head. Pre-existing tree vulns
+# are covered by the scheduled job in security-audit.yml instead.
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  dependency-review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@v4
+        with:
+          # Fail the PR if a newly introduced dependency has an advisory at
+          # this severity or higher.
+          fail-on-severity: moderate
+          # Surface the findings as a PR comment for quick triage.
+          comment-summary-in-pr: on-failure

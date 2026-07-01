@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import React, { useLayoutEffect } from 'react';
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
@@ -240,6 +241,7 @@ export function Chat({
   hasBorder = true,
   isInCanvasView = false,
 }: Props) {
+  const t = useTranslations('chatIndex');
   const username = useUsername();
   const axdToken = useAxdToken();
   const { userTenants } = useUserTenants();
@@ -319,9 +321,8 @@ export function Chat({
 
   // Handler for when user is offline without local LLM enabled
   const handleOfflineWithoutLocalLLM = useCallback(() => {
-    toast.error('You are offline', {
-      description:
-        'Chat is unavailable in offline mode. Enable "Download Local LLMs" in Settings to use chat offline.',
+    toast.error(t('youAreOffline'), {
+      description: t('offlineChatUnavailable'),
       duration: 10000,
       closeButton: true,
     });
@@ -399,7 +400,10 @@ export function Chat({
           supportPhone={
             metadata?.support_phone || config.defaultSupportPhoneNumber()
           }
-          useSupportPhone={metadata?.enable_support_phone !== false} //null or true consider truthy
+          useSupportPhone={
+            config.enableSupportPhone() ??
+            metadata?.enable_support_phone !== false
+          } //null or true consider truthy
         />,
         { closeButton: true, duration: TOAST_DURATION },
       );
@@ -424,18 +428,15 @@ export function Chat({
     // OAuth callbacks for per_user MCP servers
     onOAuthRequired: (data) => {
       window.open(data.authUrl, '_blank');
-      toast.info(
-        `Authentication required for ${data.serverName}. Please complete the login in the opened window.`,
-        {
-          duration: 300000,
-          id: `oauth-${data.serverId}`,
-          closeButton: true,
-        },
-      );
+      toast.info(t('authRequired', { serverName: data.serverName }), {
+        duration: 300000,
+        id: `oauth-${data.serverId}`,
+        closeButton: true,
+      });
     },
     onOAuthResolved: (data) => {
       toast.dismiss(`oauth-${data.serverId}`);
-      toast.success(`Connected to ${data.serverName}`);
+      toast.success(t('connectedTo', { serverName: data.serverName }));
     },
     // Offline mode for Tauri desktop app
     isOffline: isOfflineInTauri,
@@ -474,7 +475,10 @@ export function Chat({
           supportPhone={
             metadata?.support_phone || config.defaultSupportPhoneNumber()
           }
-          useSupportPhone={metadata?.enable_support_phone !== false} //null or true consider truthy
+          useSupportPhone={
+            config.enableSupportPhone() ??
+            metadata?.enable_support_phone !== false
+          } //null or true consider truthy
         />,
         { closeButton: true, duration: TOAST_DURATION },
       );
@@ -493,9 +497,7 @@ export function Chat({
 
   useEffect(() => {
     if (isStreaming) {
-      setMentorAccessibilityMessage(
-        `${mentorName} is generating a response...`,
-      );
+      setMentorAccessibilityMessage(t('mentorGenerating', { mentorName }));
     }
     if (
       !isStreaming &&
@@ -503,7 +505,10 @@ export function Chat({
       messages[messages.length - 1]?.role === 'assistant'
     ) {
       setMentorAccessibilityMessage(
-        `${mentorName} says: ${messages[messages.length - 1]?.content}`,
+        t('mentorSays', {
+          mentorName,
+          content: messages[messages.length - 1]?.content,
+        }),
       );
     }
   }, [isStreaming, messages.length]);
@@ -589,6 +594,9 @@ export function Chat({
     }
   }, [isStreaming, isPending]);
 
+  const isGeneratingRef = useRef(false);
+  isGeneratingRef.current = isStreaming || isPending;
+
   useEffect(() => {
     const newChatEventHandler = () => {
       // Reset showingSharedChat when user starts a new chat
@@ -602,6 +610,7 @@ export function Chat({
       startNewChat();
     };
     const stopGeneratingChatHandler = () => {
+      if (!isGeneratingRef.current) return;
       stopGenerating();
     };
     /* istanbul ignore next -- @preserve eventBus handler tested via mock */
@@ -824,7 +833,7 @@ export function Chat({
     /* istanbul ignore next -- @preserve nullish coalescing branches */
     const resolvedTitle = payload.title?.trim()
       ? payload.title.trim()
-      : 'Untitled Artifact';
+      : t('untitledArtifact');
     /* istanbul ignore next */
     const resolvedOrg = payload.org ?? tenantKey ?? undefined;
     /* istanbul ignore next */
@@ -1089,7 +1098,7 @@ export function Chat({
             typeof artifactId === 'number'
               ? artifactId
               : parseInt(String(artifactId), 10),
-          title: title || 'Untitled Artifact',
+          title: title || t('untitledArtifact'),
           file_extension: file_extension || 'txt',
         });
         console.log(
@@ -1274,7 +1283,7 @@ export function Chat({
         setStreamingArtifactId(artifactIdNum); // Track streaming artifact
 
         const newArtifactPayload: CanvasOpenPayload = {
-          title: title || 'Untitled Artifact',
+          title: title || t('untitledArtifact'),
           content: '', // Start with empty content, will be streamed
           toolType: CODE_FILE_EXTENSIONS.has(fileExtension?.toLowerCase() || '')
             ? 'code'
@@ -1323,7 +1332,7 @@ export function Chat({
       // If canvas is not open yet (fallback case), open it now with the final content
       if (!isUpdate && artifactId && !isCanvasOpen) {
         const newArtifactPayload: CanvasOpenPayload = {
-          title: title || 'Untitled Artifact',
+          title: title || t('untitledArtifact'),
           content: content || '',
           toolType: CODE_FILE_EXTENSIONS.has(fileExtension?.toLowerCase() || '')
             ? 'code'
@@ -1421,7 +1430,7 @@ export function Chat({
         | undefined;
       if (isCanvasOpen && effectiveArtifactId) {
         artifactPayload = {
-          title: effectiveTitle || 'Untitled Artifact',
+          title: effectiveTitle || t('untitledArtifact'),
           file_extension: effectiveFileExtension || 'txt',
           id: String(effectiveArtifactId),
           is_partial: false, // Full artifact reference when canvas is open
@@ -1625,7 +1634,7 @@ export function Chat({
         <div className="animate-in fade-in absolute inset-0 z-50 flex items-center justify-center rounded-lg border-2 border-dashed border-blue-400 bg-blue-50/70 backdrop-blur-sm transition-all duration-300">
           <div className="flex flex-col items-center gap-2 text-blue-600">
             <FileText className="h-10 w-10 animate-bounce" />
-            <p className="text-lg font-medium">Drop your files here</p>
+            <p className="text-lg font-medium">{t('dropFilesHere')}</p>
           </div>
         </div>
       )}
@@ -1832,7 +1841,7 @@ export function Chat({
                             {mentorName.charAt(0).toUpperCase()}
                           </span>
                         </div>
-                        <p>Continue your conversation with {mentorName}</p>
+                        <p>{t('continueConversationWith', { mentorName })}</p>
                       </div>
                     </div>
                   )}
@@ -2096,11 +2105,11 @@ export function Chat({
                   className="pointer-events-auto absolute bottom-4 h-10 w-10 rounded-md border border-gray-200 bg-white shadow-md hover:bg-gray-100"
                 >
                   <ChevronDown className="h-5 w-5 text-gray-600" />
-                  <span className="sr-only">Scroll to bottom</span>
+                  <span className="sr-only">{t('scrollToBottomSr')}</span>
                 </Button>
               </TooltipTrigger>
               <TooltipContent className="ibl-tooltip-content">
-                Scroll to Bottom
+                {t('scrollToBottomTooltip')}
               </TooltipContent>
             </Tooltip>
           </div>
@@ -2236,9 +2245,9 @@ export function Chat({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirm Voice Call</DialogTitle>
+            <DialogTitle>{t('confirmVoiceCallTitle')}</DialogTitle>
             <DialogDescription>
-              Would you like to start a voice call with your agent?
+              {t('confirmVoiceCallDescription')}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -2252,7 +2261,7 @@ export function Chat({
                 }
               }}
             >
-              Cancel
+              {t('cancelButton')}
             </Button>
             <Button
               className="ibl-button-primary"
@@ -2265,7 +2274,7 @@ export function Chat({
                 }
               }}
             >
-              Confirm
+              {t('confirmButton')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2286,9 +2295,9 @@ export function Chat({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirm Screen Sharing</DialogTitle>
+            <DialogTitle>{t('confirmScreenSharingTitle')}</DialogTitle>
             <DialogDescription>
-              Would you like to start a screen sharing with your agent?
+              {t('confirmScreenSharingDescription')}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -2301,7 +2310,7 @@ export function Chat({
                 }
               }}
             >
-              Cancel
+              {t('cancelButton')}
             </Button>
             <Button
               className="ibl-button-primary text-white"
@@ -2314,7 +2323,7 @@ export function Chat({
                 }
               }}
             >
-              Confirm
+              {t('confirmButton')}
             </Button>
           </DialogFooter>
         </DialogContent>

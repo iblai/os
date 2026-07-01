@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Send } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 interface ChatMessage {
   id: string;
@@ -43,6 +44,7 @@ export function PipChat({
   pipWindow,
   mentorName,
 }: PipChatProps) {
+  const t = useTranslations('componentsPipChat');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -217,8 +219,14 @@ export function PipChat({
             <span>
               {currentTranscription.participantIdentity ===
               localParticipantIdentity
-                ? 'You are speaking'
-                : `${mentorName || currentTranscription.participantName || currentTranscription.participantIdentity || 'Agent'} is speaking`}
+                ? t('youAreSpeaking')
+                : t('isSpeaking', {
+                    name:
+                      mentorName ||
+                      currentTranscription.participantName ||
+                      currentTranscription.participantIdentity ||
+                      t('agentFallback'),
+                  })}
             </span>
           </div>
           <div className="pip-transcription-text">
@@ -231,10 +239,8 @@ export function PipChat({
       <div className="pip-chat-messages">
         {chatMessages.length === 0 ? (
           <div className="pip-chat-empty">
-            <p>No messages yet</p>
-            <p className="pip-chat-empty-subtitle">
-              Start chatting with the agent
-            </p>
+            <p>{t('noMessagesYet')}</p>
+            <p className="pip-chat-empty-subtitle">{t('startChatting')}</p>
           </div>
         ) : (
           chatMessages.map((msg) => {
@@ -247,11 +253,11 @@ export function PipChat({
                 <div className="pip-chat-message-header">
                   <span className="pip-chat-message-sender">
                     {isOwn
-                      ? 'You'
+                      ? t('you')
                       : mentorName ||
                         msg.from?.name ||
                         msg.from?.identity ||
-                        'Agent'}
+                        t('agentFallback')}
                   </span>
                   <span className="pip-chat-message-time">
                     {formatTime(msg.timestamp)}
@@ -272,7 +278,7 @@ export function PipChat({
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Type a message..."
+          placeholder={t('typeMessage')}
           className="pip-chat-input"
           rows={1}
           disabled={isSending}
@@ -282,7 +288,7 @@ export function PipChat({
           onClick={handleSend}
           disabled={!inputValue.trim() || isSending}
           className="pip-chat-send-button"
-          aria-label="Send message"
+          aria-label={t('sendMessage')}
         >
           {isSending ? (
             <div className="pip-chat-sending-spinner" />

@@ -14,6 +14,7 @@ import { TenantKeyMentorIdParams } from '@/lib/types';
 import { useUsername } from '@/hooks/use-user';
 import { useUpdateUserProjectMutation } from '@iblai/iblai-js/data-layer';
 import { toast } from 'sonner';
+import { useTranslations } from 'next-intl';
 
 interface RenameProjectModalProps {
   isOpen: boolean;
@@ -30,6 +31,7 @@ export function RenameProjectModal({
   currentName,
   onSuccess,
 }: RenameProjectModalProps) {
+  const t = useTranslations('projectsRenameProjectModal');
   const [projectName, setProjectName] = useState(currentName);
 
   const { tenantKey } = useParams<TenantKeyMentorIdParams>();
@@ -61,9 +63,9 @@ export function RenameProjectModal({
         onSuccess?.();
 
         // Show success toast
-        toast.success('Project renamed successfully');
+        toast.success(t('renameSuccess'));
       } catch (error) {
-        toast.error('Failed to rename project');
+        toast.error(t('renameError'));
         console.error(JSON.stringify({ tenant: tenantKey, error }));
       }
     }
@@ -88,7 +90,7 @@ export function RenameProjectModal({
         {/* Header */}
         <DialogHeader className="flex-shrink-0 border-b border-gray-200 bg-white px-6 py-4">
           <DialogTitle className="text-xl font-semibold text-gray-900">
-            Rename Project
+            {t('title')}
           </DialogTitle>
         </DialogHeader>
 
@@ -96,10 +98,10 @@ export function RenameProjectModal({
         <div className="flex-1 px-6 py-6">
           <div>
             <label className="mb-2 block text-sm font-medium text-gray-700">
-              Project Name
+              {t('projectNameLabel')}
             </label>
             <Input
-              placeholder="Enter new project name"
+              placeholder={t('projectNamePlaceholder')}
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
               className="h-12 rounded-lg border-2 border-gray-200 px-4 text-base focus:border-blue-500 focus:ring-0"
@@ -124,7 +126,7 @@ export function RenameProjectModal({
             disabled={isLoading}
             className="bg-transparent px-6"
           >
-            Cancel
+            {t('cancelButton')}
           </Button>
           <Button
             onClick={handleRename}
@@ -135,7 +137,7 @@ export function RenameProjectModal({
             }
             className="ibl-button-primary"
           >
-            {isLoading ? 'Renaming...' : 'Rename Project'}
+            {isLoading ? t('renamingButton') : t('renameButton')}
           </Button>
         </div>
       </DialogContent>

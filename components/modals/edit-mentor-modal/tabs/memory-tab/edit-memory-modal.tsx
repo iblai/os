@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import {
   Dialog,
   DialogContent,
@@ -41,20 +42,21 @@ export function EditMemoryModal({
   categories,
   isSaving,
 }: EditMemoryModalProps) {
+  const t = useTranslations('memoryTabEditMemoryModal');
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="mx-4 max-w-2xl sm:mx-auto">
         <DialogHeader>
-          <DialogTitle className="text-gray-700">Edit Memory</DialogTitle>
+          <DialogTitle className="text-gray-700">{t('title')}</DialogTitle>
         </DialogHeader>
         <div className="mt-4 space-y-4">
           <div>
             <label className="text-sm font-medium text-gray-600">
-              Category
+              {t('categoryLabel')}
             </label>
             <Select value={editCategory} onValueChange={onCategoryChange}>
               <SelectTrigger className="mt-1">
-                <SelectValue placeholder="Select a memory category" />
+                <SelectValue placeholder={t('categoryPlaceholder')} />
               </SelectTrigger>
               <SelectContent>
                 {categories
@@ -68,29 +70,31 @@ export function EditMemoryModal({
             </Select>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-600">Memory</label>
+            <label className="text-sm font-medium text-gray-600">
+              {t('memoryLabel')}
+            </label>
             <Textarea
               value={editContent}
               onChange={(e) => onContentChange(e.target.value)}
-              placeholder="Enter memory content..."
+              placeholder={t('memoryPlaceholder')}
               className="mt-1"
             />
             <p className="mt-1 text-xs text-gray-500">
               {editContent.trim().length < 10
-                ? `${editContent.trim().length}/10 characters minimum`
-                : `${editContent.trim().length} characters`}
+                ? t('charCountMinimum', { count: editContent.trim().length })
+                : t('charCount', { count: editContent.trim().length })}
             </p>
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={onCancel}>
-              Cancel
+              {t('cancelButton')}
             </Button>
             <Button
               onClick={onSave}
               className="ibl-button-primary"
               disabled={editContent.trim().length < 10 || isSaving}
             >
-              {isSaving ? 'Saving...' : 'Save'}
+              {isSaving ? t('savingButton') : t('saveButton')}
             </Button>
           </div>
         </div>

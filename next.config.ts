@@ -1,6 +1,9 @@
 import { withSentryConfig } from '@sentry/nextjs';
+import createNextIntlPlugin from 'next-intl/plugin';
 import type { NextConfig } from 'next';
 import type { RemotePattern } from 'next/dist/shared/lib/image-config';
+
+const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 
 const envPatterns = process.env.NEXT_IMAGE_PATTERNS?.trim();
 const rawPatterns = envPatterns
@@ -112,8 +115,18 @@ const sentryWebpackPluginOptions = {
   project: 'mentorai-iblai-app',
   widenClientFileUpload: true,
   hideSourceMaps: false,
-  disableLogger: true,
-  automaticVercelMonitors: false,
+  // Sentry SDK v10 moved these under `webpack`:
+  // - `disableLogger` -> `webpack.treeshake.removeDebugLogging`
+  // - `automaticVercelMonitors` -> `webpack.automaticVercelMonitors`
+  webpack: {
+    treeshake: {
+      removeDebugLogging: true,
+    },
+    automaticVercelMonitors: false,
+  },
 };
 
-export default withSentryConfig(nextConfig, sentryWebpackPluginOptions);
+export default withSentryConfig(
+  withNextIntl(nextConfig),
+  sentryWebpackPluginOptions,
+);

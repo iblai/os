@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import { FileText, Undo2, Redo2, X, Share2 } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -210,7 +211,7 @@ export const buildArtifactPayload = (
 };
 
 export function CodeCanvasComponent({
-  title = 'Code Editor',
+  title,
   content = '',
   onClose,
   isAnimating = false,
@@ -223,6 +224,7 @@ export function CodeCanvasComponent({
   tenantKey: _tenantKey,
   sendMessage,
 }: CodeCanvasComponentProps) {
+  const t = useTranslations('canvasCodeCanvasComponent');
   const [codeContent, setCodeContent] = useState(content);
   const [highlightedContent, setHighlightedContent] = useState('');
   const [showAnimation, setShowAnimation] = useState(false);
@@ -698,7 +700,7 @@ export function CodeCanvasComponent({
             onClick={
               /* istanbul ignore next -- @preserve */ () => execCommand('undo')
             }
-            title="Undo"
+            title={t('undo')}
           >
             <Undo2 className="h-4 w-4 text-gray-600" />
           </Button>
@@ -713,7 +715,7 @@ export function CodeCanvasComponent({
             onClick={
               /* istanbul ignore next -- @preserve */ () => execCommand('redo')
             }
-            title="Redo"
+            title={t('redo')}
           >
             <Redo2 className="h-4 w-4 text-gray-600" />
           </Button>
@@ -740,7 +742,7 @@ export function CodeCanvasComponent({
           </div>
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="animate-bounce font-medium text-blue-600">
-              Generating content...
+              {t('generatingContent')}
             </div>
           </div>
         </div>
@@ -775,7 +777,7 @@ export function CodeCanvasComponent({
         <div className="mr-2 flex min-w-0 flex-1 items-center gap-1 overflow-hidden sm:gap-2">
           <FileText className="h-4 w-4 flex-shrink-0 text-blue-600 sm:h-5 sm:w-5" />
           <span className="block truncate text-xs font-medium text-gray-900 sm:text-sm md:text-base">
-            {title}
+            {title ?? t('defaultTitle')}
           </span>
 
           {/* Version Dropdown */}
@@ -831,7 +833,7 @@ export function CodeCanvasComponent({
             variant="ghost"
             size="sm"
             className="h-8 w-8 p-0"
-            title="Share"
+            title={t('share')}
           >
             <Share2 className="h-4 w-4 text-gray-600" />
           </Button>
@@ -841,7 +843,7 @@ export function CodeCanvasComponent({
               size="sm"
               className="h-8 w-8 p-0"
               onClick={onClose}
-              title="Close"
+              title={t('close')}
             >
               <X className="h-4 w-4 text-gray-600" />
             </Button>
@@ -925,7 +927,7 @@ export function CodeCanvasComponent({
               <div className="flex w-[min(90vw,420px)] max-w-[420px] items-center gap-2.5 rounded-xl border border-gray-200/70 bg-white px-3.5 py-2.5 shadow-md">
                 <Image
                   src="/icons/my-mentors.svg"
-                  alt="Ask Gemini"
+                  alt={t('askGeminiAlt')}
                   width={20}
                   height={20}
                 />
@@ -953,7 +955,7 @@ export function CodeCanvasComponent({
                       }
                     }
                   }
-                  placeholder="Ask Anything..."
+                  placeholder={t('askAnythingPlaceholder')}
                   className="flex-1 rounded-lg border-none px-2 py-1 text-base text-gray-700 placeholder:text-gray-400 focus:ring-0 focus:outline-none"
                   autoFocus
                 />

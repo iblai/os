@@ -54,6 +54,11 @@ import { config } from '@/lib/config';
 import { useChatPrivacy } from '@iblai/iblai-js/web-containers';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 
+// Fallback used when the configured paste-to-attachment threshold is missing
+// or non-numeric, so a misconfigured env value can't make a 0-char threshold
+// convert every paste into an attachment. Mirrors the config default.
+const DEFAULT_MAX_CHARACTERS_TO_COPY = 2000;
+
 const PromptGalleryModal = dynamic(
   () =>
     import('@/components/modals/prompt-gallery-modal').then(
@@ -311,7 +316,12 @@ export function ChatInputForm({
       return;
     }
     const text = e.clipboardData.getData('text/plain');
-    if (text.length > Number(config.maximumCharacterSizeToCopy())) {
+    const parsedMax = Number(config.maximumCharacterSizeToCopy());
+    const maxCharacters =
+      Number.isFinite(parsedMax) && parsedMax > 0
+        ? parsedMax
+        : DEFAULT_MAX_CHARACTERS_TO_COPY;
+    if (text.length > maxCharacters) {
       e.preventDefault();
       void processFiles([
         new File([text], `pasted-${Date.now()}.txt`, { type: 'text/plain' }),

@@ -89,9 +89,17 @@ test.describe('Journey 9: Voice Chat', () => {
       page,
       editMentorPage,
       chatPage,
+      createMentorPage,
     }) => {
       const isAdmin = await checkAdminStatus(page);
       test.skip(!isAdmin, 'Requires admin access');
+      // Isolate this voice-toggle flow onto a fresh, dedicated mentor so it
+      // never mutates the shared default mentor that journey 47 (and this
+      // file's sibling Admin test) also edit in parallel. `show_voice_call` is
+      // persisted server-side per mentor, so editing the shared one races
+      // journey 47's "Voice tab hidden" assertion. New mentors default voice
+      // ON, so there is still something to toggle off. Mirrors vc-07 + journey 37.
+      await createMentorPage.openAndCreate();
       await editMentorPage.open('Settings');
       await waitForPageReady(page);
       // Voice calls toggle moved to the Capabilities sub-tab when Settings
@@ -153,9 +161,14 @@ test.describe('Journey 9: Voice Chat', () => {
       page,
       editMentorPage,
       chatPage,
+      createMentorPage,
     }) => {
       const isAdmin = await checkAdminStatus(page);
       test.skip(!isAdmin, 'Requires admin access');
+      // Isolate onto a fresh, dedicated mentor (see the sibling test above) so
+      // this re-enable flow never touches the shared default mentor that
+      // journey 47 asserts against in parallel.
+      await createMentorPage.openAndCreate();
       await editMentorPage.open('Settings');
       await waitForPageReady(page);
       // Voice calls toggle moved to the Capabilities sub-tab when Settings

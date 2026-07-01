@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-06-26 | 519 checkpoints (494 covered, 6 pending, 7 not-reproducible in default env, 12 deprecated) | 57 journeys (56 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-06-30 | 499 checkpoints (477 covered, 2 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 57 journeys (56 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -201,7 +201,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 13: Shareable Links & Embed Integration (9 checkpoints) — `journeys/13-shareable-links-and-embed-integration.spec.ts`
+## Journey 13: Shareable Links & Embed Integration (10 checkpoints) — `journeys/13-shareable-links-and-embed-integration.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/embed-tab.tsx`, `components/modals/edit-mentor-modal/hooks/useEmbedTab.ts`, `components/logo.tsx`, `hooks/use-mentors/use-mentor-settings.ts`, `hooks/use-embed-mode.ts`, `components/chat-input-form/voice-call-button.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form/screen-sharing-button.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
 
@@ -214,6 +214,7 @@ When adding a new page or modifying an existing user flow:
 - [x] Embed view sidebar logo is not clickable when Show Catalogue is disabled (configured via the embed UI on a fresh mentor, verified at the embed URL)
 - [x] Embed view sidebar logo is clickable when Show Catalogue is enabled (configured via the embed UI on a fresh mentor, verified at the embed URL)
 - [x] Embed mode renders a minimal sidebar: New Chat present (and Chats when the user is logged in); Agents (New Agent), Workflows, Analytics, Projects, and Support/docs footer link all absent — holds for both expanded and rail-collapsed layouts regardless of user role
+- [ ] Optimize Page Context Tokens toggle: visible label present, tooltip ('Strips HTML tags from page context') reachable on hover, and the setting flips and persists after submit + modal reopen via GET /settings/ round-trip _(parked as `test.fixme` — flaky in CI with shared mentor + slow submit cycle; activate with a dedicated mentor fixture)_
 
 ---
 
@@ -949,7 +950,7 @@ Covers the "Enable prompt caching" toggle added to the Capabilities sub-tab of t
 - [x] Reasoning section shows "Thinking" with bounce dots during streaming and auto-collapses to "Thought" after
 - [x] Reasoning section does not appear for non-reasoning model
 - [x] Tool call indicator and reasoning section both render in correct order in same message
-- [x] Tool call indicator and reasoning section are gated by the Verbose Reasoning setting — hidden when the toggle is off, shown when on
+- [x] Tool call indicator and reasoning section are gated by the Enable verbose reasoning setting — hidden when the toggle is off, shown when on
 
 ---
 
@@ -977,35 +978,15 @@ Covers the `handlePaste` → `extractFilesFromClipboard` → `processFiles` path
 
 ---
 
-## Journey 55: Mentor LTI Tab (18 checkpoints) — `journeys/55-mentor-lti-tab.spec.ts`
+## Journey 55: Free Credits Checkout Onboarding (4 checkpoints) — `journeys/55-free-credits-checkout-onboarding.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/lti-tab.tsx`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `lib/constants.ts`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`
+**Source files:** `app/sso-login-complete/page.tsx`, `app/platform/[tenantKey]/[mentorId]/page.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`
 
-Covers the LTI top-level tab added to the Edit Mentor (Agent) modal. The tab is rendered by the SDK's `AgentLtiTab` (`@iblai/iblai-js/web-containers/next`) and is gated by two conditions: (1) admin-only via `MENTOR_SEGMENTS` `userTypes` filter, and (2) per-mentor `is_lti_accessible = true` toggled via Settings → Capabilities → "Allow LTI launches". The tab has four sub-tabs: Links, Keys, Tools, and Tool Endpoints.
+End-to-end onboarding of a brand-new user via the `ECOMMERCE_CHECKOUT_URL` "free credits" Stripe checkout. The endpoint 302-redirects to a Stripe-hosted page exposing a single email field (`input#email`) and a Subscribe button (`[data-testid="hosted-payment-submit-button"]` — a $0 subscription, no card required). Submitting `test+<timestamp>@ibleducation.com` provisions a new account and runs the auth SSO redirect chain (`auth.iblai.org/login` → `/login/complete` → `sso-login-complete` → platform), landing authenticated on the mentor SPA. The base URL is dictated by the checkout session's redirect target (production `mentorai.iblai.org`), independent of `MENTOR_NEXTJS_HOST`, so the test follows the redirect rather than re-invoking `navigateToMentorApp`'s fresh `goto`, and asserts the URL _shape_ (each run is assigned a fresh tenant/mentor). The final step clicks "Upgrade Plan" in the credit dropdown, which creates a Stripe checkout session and redirects the same tab to a Stripe-hosted payment page (`store.ibl.ai`) requiring credit-card input — the test stops there without entering a card. Runs in a clean, unauthenticated context. Skips when `ECOMMERCE_CHECKOUT_URL` is unset. Credit-balance assertions reuse the `@iblai/iblai-js/playwright` helpers (`creditBalanceTrigger`, `openCreditBalanceDropdown`, `creditBalancePlanBadge`, `getCreditBalanceRemaining`).
 
-**Parallel-safety & no-skip design:** Tests are granular (one per checkpoint) and run in `parallel` mode with no shared module state, no temp-file hand-off, and no serial dependency — so a test can never be skipped because a sibling's setup ran in a different worker process (the earlier serial design's failure mode). Two race-free isolation strategies: (1) a **worker-scoped fixture** `ltiMentorUrl` creates one LTI-enabled mentor per worker (using the running project's own `storageState`, so the auth file is always correct) and deletes it on worker teardown — read-only and mutation tests reuse it, with each mutation test using uniquely-named resources cleaned up in `finally`; tests within a worker run sequentially and each worker has its own mentor, so neither in-worker nor cross-worker collisions are possible. (2) The **gating tests** (which toggle `is_lti_accessible`) and **empty-state tests** (which need a guaranteed-empty mentor) each create their OWN fresh mentor and delete it in a `finally` block. The default shared mentor used by other journeys is never touched.
-
-**Category note:** the LTI segment lives under the **Integrations** sidebar category; the modal only mounts the active category's tabs, so the `LtiTab` page object activates Integrations before every LTI visibility/navigation check (the SDK's category-blind `switchToLtiTab`/`isLtiTabVisible` are intentionally not used).
-
-All DOM access goes through `@iblai/iblai-js/playwright` helpers via the `LtiTab` page object (`e2e/page-objects/edit-mentor/lti.tab.ts`) — no hand-rolled selectors.
-
-- [x] lti-01: Fresh mentor — LTI tab is hidden in the sidebar by default (`is_lti_accessible` defaults to `false`)
-- [x] lti-02: Enabling "Allow LTI launches" in Settings → Capabilities and saving causes the LTI top-level tab to appear in the modal sidebar
-- [x] lti-03: Disabling "Allow LTI launches" and saving removes the LTI tab from the modal sidebar entirely
-- [x] lti-04: Ephemeral test mentor cleanup — each self-contained gating/empty-state test deletes its own mentor in a `finally` block, and the shared LTI-enabled mentor is deleted on worker-fixture teardown (no orphaned mentors left behind)
-- [x] lti-05: LTI tab on an LTI-enabled mentor renders the SDK header (title + description) and exposes all four sub-tab triggers: Links, Keys, Tools, Tool Endpoints
-- [x] lti-06: LTI Links sub-tab shows the "No LTI link yet for this agent." empty state when no links have been created
-- [x] lti-07: Admin creates an LTI link and it appears in the links list
-- [x] lti-08: Admin edits (renames) an LTI link; the new name appears in the list and the old name is gone
-- [x] lti-09: LTI Keys sub-tab shows the "No LTI keys yet." empty state when no keys have been created
-- [x] lti-10: Admin creates an LTI key; the key detail modal shows a non-empty PEM public key and a non-empty public JWK
-- [x] lti-11: Admin renames an LTI key; the new name appears in the list and the old name is gone
-- [x] lti-12: Admin deletes an LTI key; the key row is removed from the keys list
-- [x] lti-13: LTI Tools sub-tab shows the "No LTI tools yet." empty state when no tools have been created
-- [x] lti-14: Admin creates an LTI tool with `keySetMode='url'` (JWKS URL config) and it appears in the tools list
-- [x] lti-15: Admin creates an LTI tool with `keySetMode='raw'` (inline JWKS JSON config) and it appears in the tools list
-- [x] lti-16: Tool Endpoints sub-tab — all four platform endpoints (`redirectUri`, `login`, `deepLinking`, `jwks`) render with non-empty URLs
-- [x] lti-17: Tool Endpoints sub-tab — clicking the copy button for the `redirectUri` endpoint flips its label to "Copied"
-- [x] lti-18: Tool Endpoints sub-tab — all four endpoint URLs are built from the dedicated LMS URL (`config.legacyLmsUrl()`, **not** the `<apiBase>/lms` that `lmsUrl()` yields): absolute `https` URLs on the `/lti/` path sharing one origin, pinned to `NEXT_PUBLIC_LEGACY_LMS_URL` when the env exposes it
+- [x] fcc-01: `ECOMMERCE_CHECKOUT_URL` redirects to the Stripe-hosted checkout page exposing the email field and Subscribe submit button
+- [x] fcc-02: Submitting the email completes checkout and lands authenticated on the mentor SPA at `<base-url>/platform/<platform-key>/<mentor-id>`
+- [x] fcc-03: The credit-balance dropdown shows a positive remaining credit balance and a "Free" plan pill
+- [x] fcc-04: Clicking "Upgrade Plan" in the credit dropdown redirects to a Stripe-hosted checkout page (`store.ibl.ai`) requiring credit-card input (secure Stripe Elements card iframe + pay button)
 
 ---

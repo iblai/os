@@ -2,6 +2,7 @@
 
 import type React from 'react';
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -59,9 +60,11 @@ export const InsideButtons = ({
   tenantKey,
   username,
 }: InsideButtonsProps) => {
+  const t = useTranslations('chatInputFormInsideButtons');
   const allInsideButtons = [
     {
       name: 'Canvas',
+      label: t('canvas'),
       icon: <CanvasIcon className="h-4 w-4" />,
       isActive: artifactsEnabled,
       action: () => onOptionClick(TOOLS.CANVAS),
@@ -69,6 +72,7 @@ export const InsideButtons = ({
     },
     {
       name: 'Prompts',
+      label: t('prompts'),
       icon: <Terminal className="h-4 w-4" />,
       isActive: false,
       action: () => onOpenPromptGallery?.(),
@@ -76,6 +80,7 @@ export const InsideButtons = ({
     },
     {
       name: 'Study Mode',
+      label: t('studyMode'),
       icon: <BookOpen className="h-4 w-4" />,
       isActive: activeOptions.includes(TOOLS.STUDY_MODE),
       action: () => onOptionClick(TOOLS.STUDY_MODE),
@@ -83,6 +88,7 @@ export const InsideButtons = ({
     },
     {
       name: 'Deep Research',
+      label: t('deepResearch'),
       icon: <DeepSearchIcon className="h-4 w-4" />,
       isActive: activeOptions.includes(TOOLS.DEEP_RESEARCH),
       action: () => onOptionClick(TOOLS.DEEP_RESEARCH),
@@ -90,6 +96,7 @@ export const InsideButtons = ({
     },
     {
       name: 'Memory',
+      label: t('memory'),
       icon: <Archive className="h-4 w-4" />,
       isActive: activeOptions.includes(TOOLS.MEMORY),
       // Memory uses <MemoryButton> in visible mode and a popover handler in
@@ -164,7 +171,7 @@ export const InsideButtons = ({
               >
                 {button.icon}
               </span>
-              {button.name}
+              {button.label}
               {button.isActive && (
                 <X
                   className="ml-1 h-3 w-3 cursor-pointer"
@@ -196,7 +203,7 @@ export const InsideButtons = ({
                   className="h-8 w-8 rounded-lg text-gray-600 transition-all duration-200 hover:border hover:border-[#D0E0FF] hover:bg-[#F5F8FF] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <span className="text-xs">•••</span>
-                  <span className="sr-only">More options</span>
+                  <span className="sr-only">{t('moreOptions')}</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-48">
@@ -230,7 +237,7 @@ export const InsideButtons = ({
                         >
                           {button.icon}
                         </span>
-                        <span className="flex-1">{button.name}</span>
+                        <span className="flex-1">{button.label}</span>
                         {
                           /* istanbul ignore next */ button.isActive && (
                             <Check className="h-4 w-4 text-[#38A1E5]" />

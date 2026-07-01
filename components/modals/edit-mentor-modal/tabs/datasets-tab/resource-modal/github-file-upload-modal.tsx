@@ -1,3 +1,5 @@
+'use client';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -16,8 +18,10 @@ import React from 'react';
 import { toast } from 'sonner';
 import { useDebounce } from 'use-debounce';
 import { extractErrorMessage } from './utils';
+import { useTranslations } from 'next-intl';
 
 function useGithubRepoDetails(url: string) {
+  const t = useTranslations('resourceModalGithubFileUploadModal');
   const [branches, setBranches] = React.useState<string[]>([]);
   const [error, setError] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
@@ -35,7 +39,7 @@ function useGithubRepoDetails(url: string) {
       );
 
       if (!response.ok) {
-        throw new Error('Failed to fetch branches');
+        throw new Error(t('failedToFetchBranches'));
       }
 
       const branches = await response.json();
@@ -45,7 +49,7 @@ function useGithubRepoDetails(url: string) {
       if (error instanceof Error) {
         setError(error.message);
       } else {
-        setError('An unknown error occurred');
+        setError(t('unknownError'));
       }
       return [];
     } finally {
@@ -63,6 +67,7 @@ function useGithubRepoDetails(url: string) {
 }
 
 export function GithubFileUploadModal() {
+  const t = useTranslations('resourceModalGithubFileUploadModal');
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
   const { getMentorId } = useNavigate();
   const activeMentorId = getMentorId() ?? mentorId;
@@ -78,7 +83,7 @@ export function GithubFileUploadModal() {
   const handleSubmit = async () => {
     try {
       if (!activeMentorId) {
-        toast.error('Agent not found');
+        toast.error(t('agentNotFound'));
         return;
       }
       await addTrainingDocument({
@@ -94,13 +99,10 @@ export function GithubFileUploadModal() {
       }).unwrap();
       setGithubUrl('');
       setBranch('');
-      toast.success('Document has been queued for training');
+      toast.success(t('documentQueued'));
     } catch (error: unknown) {
       console.error(JSON.stringify(error));
-      const errorMessage = extractErrorMessage(
-        error,
-        'Error adding training document',
-      );
+      const errorMessage = extractErrorMessage(error, t('errorAddingDocument'));
 
       toast.error(errorMessage);
       console.error(JSON.stringify({ tenant: tenantKey, error }));
@@ -118,7 +120,7 @@ export function GithubFileUploadModal() {
     <div className="flex flex-col space-y-4">
       <Input
         type="url"
-        placeholder="Github Repo URL"
+        placeholder={t('githubRepoUrlPlaceholder')}
         value={githubUrl}
         onChange={(e) => setGithubUrl(e.target.value)}
         autoComplete="url"
@@ -131,7 +133,7 @@ export function GithubFileUploadModal() {
         disabled={isLoadingDisabled}
       >
         <SelectTrigger className="w-full rounded-md border p-2">
-          <SelectValue placeholder="Select Branch" />
+          <SelectValue placeholder={t('selectBranchPlaceholder')} />
         </SelectTrigger>
         <SelectContent>
           {branches.map((branch) => (
@@ -147,7 +149,7 @@ export function GithubFileUploadModal() {
           disabled={isDisabled}
           className={`${githubUrl ? 'bg-gradient-to-r from-blue-600 to-blue-400 text-white' : 'bg-gray-100 text-gray-500'} hover:opacity-90`}
         >
-          Submit
+          {t('submit')}
         </Button>
       </div>
     </div>

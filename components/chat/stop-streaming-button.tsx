@@ -1,4 +1,7 @@
+'use client';
+
 import { CircleStop } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 import { Button } from '../ui/button';
 import {
@@ -14,6 +17,7 @@ type Props = {
 };
 
 export function StopStreamingButton({ stopGenerating }: Props) {
+  const t = useTranslations('chatStopStreamingButton');
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -29,12 +33,12 @@ export function StopStreamingButton({ stopGenerating }: Props) {
             onClick={stopGenerating}
           >
             <CircleStop className="h-5 w-5 text-white" />
-            <span className="sr-only">Stop streaming</span>
+            <span className="sr-only">{t('stopStreaming')}</span>
           </Button>
         </div>
       </TooltipTrigger>
       <TooltipContent className="ibl-tooltip-content capitalize">
-        Stop Streaming
+        {t('stopStreamingTooltip')}
       </TooltipContent>
     </Tooltip>
   );

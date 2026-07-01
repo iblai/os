@@ -1304,11 +1304,11 @@ describe('SettingsTab', () => {
     });
   });
 
-  describe('Verbose Reasoning Toggle', () => {
-    it('renders Verbose Reasoning toggle', () => {
+  describe('Enable Verbose Reasoning Toggle', () => {
+    it('renders Enable verbose reasoning toggle', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText('Verbose Reasoning')).toBeInTheDocument();
+      expect(screen.getByText('Enable verbose reasoning')).toBeInTheDocument();
     });
 
     it('reflects show_reasoning checked state', () => {
@@ -1319,30 +1319,32 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Verbose reasoning enabled');
+      const toggle = screen.getByLabelText('Enable verbose reasoning enabled');
       expect(toggle).toBeChecked();
     });
 
     it('reflects show_reasoning unchecked state', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Verbose reasoning disabled');
+      const toggle = screen.getByLabelText('Enable verbose reasoning disabled');
       expect(toggle).not.toBeChecked();
     });
 
     it('toggles show_reasoning switch', () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Verbose reasoning disabled');
+      const toggle = screen.getByLabelText('Enable verbose reasoning disabled');
       fireEvent.click(toggle);
 
-      expect(screen.getByLabelText('Verbose reasoning enabled')).toBeChecked();
+      expect(
+        screen.getByLabelText('Enable verbose reasoning enabled'),
+      ).toBeChecked();
     });
 
     it('submits show_reasoning value when saving', async () => {
       render(<SettingsTab />);
 
-      const toggle = screen.getByLabelText('Verbose reasoning disabled');
+      const toggle = screen.getByLabelText('Enable verbose reasoning disabled');
       fireEvent.click(toggle);
 
       const saveButton = screen.getByText('Save');
@@ -1363,7 +1365,7 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(
-        screen.getByLabelText('More info about verbose reasoning'),
+        screen.getByLabelText('More info about enable verbose reasoning'),
       ).toBeInTheDocument();
     });
   });
@@ -2039,6 +2041,34 @@ describe('SettingsTab', () => {
 
       expect(
         screen.getByLabelText('Enable dedicated sandbox'),
+      ).not.toBeDisabled();
+    });
+
+    it('disables the Verbose Reasoning toggle when show_reasoning is read-only', () => {
+      rbacState.enabled = true;
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: withFieldPerms({ show_reasoning: { read: true, write: false } }),
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(
+        screen.getByLabelText('Enable verbose reasoning disabled'),
+      ).toBeDisabled();
+    });
+
+    it('keeps the Verbose Reasoning toggle enabled when show_reasoning is writable', () => {
+      rbacState.enabled = true;
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: withFieldPerms({ show_reasoning: { read: true, write: true } }),
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(
+        screen.getByLabelText('Enable verbose reasoning disabled'),
       ).not.toBeDisabled();
     });
 

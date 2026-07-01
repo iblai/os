@@ -7,6 +7,7 @@ import {
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ReactNode } from 'react';
 
 import { RoleAccessPanel } from '../update-access';
 import type { MentorAccessPolicy } from '../shared';
@@ -21,6 +22,10 @@ const mockUseGetMentorSettingsQuery = vi.fn();
 const mockToastError = vi.fn();
 const mockToastSuccess = vi.fn();
 const mockUpdateMentorAccess = vi.fn();
+// Defaults to granting every permission (matching prior behaviour). Individual
+// tests override the implementation to exercise the manual-entry mode
+// (no `/users/#list`) and the groups section (`/groups/#list`).
+const mockCheckRbacPermission = vi.fn((..._args: unknown[]) => true);
 
 vi.mock('next/navigation', () => ({
   useParams: () => mockUseParams(),
@@ -52,7 +57,7 @@ vi.mock('@/features/rbac/rbac-slice', () => ({
 }));
 
 vi.mock('@/hoc/withPermissions', () => ({
-  checkRbacPermission: () => true,
+  checkRbacPermission: (...args: unknown[]) => mockCheckRbacPermission(...args),
 }));
 
 vi.mock('sonner', () => ({
@@ -65,6 +70,41 @@ vi.mock('sonner', () => ({
 vi.mock('use-debounce', () => ({
   useDebounce: (value: string) => [value],
 }));
+
+// Render the Radix Select as a native <select> so the manual input-type switch
+// is deterministic under jsdom. The component's Select/SelectItem JSX still
+// executes (coverage is unaffected); only the interaction is simplified.
+vi.mock('@/components/ui/select', () => {
+  return {
+    Select: ({
+      value,
+      onValueChange,
+      children,
+    }: {
+      value: string;
+      onValueChange: (v: string) => void;
+      children: ReactNode;
+    }) => (
+      <select
+        aria-label="Select input type"
+        value={value}
+        onChange={(e) => onValueChange(e.target.value)}
+      >
+        {children}
+      </select>
+    ),
+    SelectTrigger: () => null,
+    SelectValue: () => null,
+    SelectContent: ({ children }: { children: ReactNode }) => children,
+    SelectItem: ({
+      value,
+      children,
+    }: {
+      value: string;
+      children: ReactNode;
+    }) => <option value={value}>{children}</option>,
+  };
+});
 
 describe('RoleAccessPanel', () => {
   const defaultPolicy: MentorAccessPolicy = {
@@ -85,6 +125,10 @@ describe('RoleAccessPanel', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+
+    // clearAllMocks only clears call history, not implementations, so reset the
+    // permission gate back to "all granted" before each test.
+    mockCheckRbacPermission.mockImplementation(() => true);
 
     // Mock scrollIntoView for jsdom
     Element.prototype.scrollIntoView = vi.fn();
@@ -1044,5 +1088,358 @@ describe('RoleAccessPanel', () => {
     expect(
       screen.getByText('No users have this role yet.'),
     ).toBeInTheDocument();
+  });
+
+  describe('manual entry mode (no users:list permission)', () => {
+    beforeEach(() => {
+      // Deny the `/users/#list` permission so the panel renders the manual
+      // email/username entry UI instead of the directory search. Deny groups
+      // too so the manual input is the only text field on screen.
+      mockCheckRbacPermission.mockImplementation(() => false);
+    });
+
+    // The manual input is labelled "Add by" (htmlFor="manual-user-input"),
+    // stable across both email and username input types.
+    const getManualInput = () => screen.getByLabelText(/add by/i);
+    // Submit button text is an ICU plural: "Add" (0), "Add 1 user", "Add N users".
+    const getSubmitButton = () =>
+      screen.getByRole('button', { name: /^add( \d+ users?| 1 user)?$/i });
+
+    it('renders the manual entry UI instead of directory search', () => {
+      render(<RoleAccessPanel {...defaultProps} />);
+
+      expect(
+        screen.queryByPlaceholderText(/search by name, username, or email/i),
+      ).not.toBeInTheDocument();
+      expect(getManualInput()).toBeInTheDocument();
+    });
+
+    it('stages an entry via the add button and submits emails', async () => {
+      const user = userEvent.setup();
+      const onAccessUpdated = vi.fn().mockResolvedValue(undefined);
+      render(
+        <RoleAccessPanel {...defaultProps} onAccessUpdated={onAccessUpdated} />,
+      );
+
+      await user.type(getManualInput(), 'new@example.com');
+      // The icon-only "+" stage button (sr-only label).
+      await user.click(screen.getByRole('button', { name: /add entry/i }));
+
+      // Staged chip appears and the input is cleared.
+      expect(screen.getByText('new@example.com')).toBeInTheDocument();
+
+      await user.click(getSubmitButton());
+
+      await waitFor(() => {
+        expect(mockUpdateMentorAccess).toHaveBeenCalledWith(
+          expect.objectContaining({
+            requestBody: expect.objectContaining({
+              emails_to_add: ['new@example.com'],
+            }),
+          }),
+        );
+      });
+      expect(mockToastSuccess).toHaveBeenCalled();
+      expect(onAccessUpdated).toHaveBeenCalled();
+    });
+
+    it('stages an entry with the Enter key', async () => {
+      const user = userEvent.setup();
+      render(<RoleAccessPanel {...defaultProps} />);
+
+      await user.type(getManualInput(), 'someone@example.com{Enter}');
+
+      expect(screen.getByText('someone@example.com')).toBeInTheDocument();
+    });
+
+    it('does not stage blank or duplicate entries', async () => {
+      const user = userEvent.setup();
+      render(<RoleAccessPanel {...defaultProps} />);
+
+      // Whitespace only -> no chip.
+      await user.type(getManualInput(), '   {Enter}');
+      expect(screen.queryByText('   ')).not.toBeInTheDocument();
+
+      // Stage a value, then attempt to stage the same value again.
+      await user.type(getManualInput(), 'dup@example.com{Enter}');
+      await user.type(getManualInput(), 'dup@example.com{Enter}');
+
+      expect(screen.getAllByText('dup@example.com')).toHaveLength(1);
+    });
+
+    it('removes a staged entry', async () => {
+      const user = userEvent.setup();
+      render(<RoleAccessPanel {...defaultProps} />);
+
+      await user.type(getManualInput(), 'remove@example.com{Enter}');
+      expect(screen.getByText('remove@example.com')).toBeInTheDocument();
+
+      await user.click(
+        screen.getByRole('button', { name: /remove remove@example\.com/i }),
+      );
+      expect(screen.queryByText('remove@example.com')).not.toBeInTheDocument();
+    });
+
+    it('submits usernames when the input type is switched', async () => {
+      const user = userEvent.setup();
+      render(<RoleAccessPanel {...defaultProps} />);
+
+      // Switch the (mocked native) Select from email to username.
+      await user.selectOptions(
+        screen.getByRole('combobox', { name: /select input type/i }),
+        'username',
+      );
+
+      await user.type(getManualInput(), 'jdoe{Enter}');
+      await user.click(getSubmitButton());
+
+      await waitFor(() => {
+        expect(mockUpdateMentorAccess).toHaveBeenCalledWith(
+          expect.objectContaining({
+            requestBody: expect.objectContaining({
+              usernames_to_add: ['jdoe'],
+            }),
+          }),
+        );
+      });
+    });
+
+    it('includes a not-yet-staged input value on submit', async () => {
+      const user = userEvent.setup();
+      render(<RoleAccessPanel {...defaultProps} />);
+
+      // Type but do NOT press Enter; the value should still be submitted.
+      await user.type(getManualInput(), 'unstaged@example.com');
+      await user.click(getSubmitButton());
+
+      await waitFor(() => {
+        expect(mockUpdateMentorAccess).toHaveBeenCalledWith(
+          expect.objectContaining({
+            requestBody: expect.objectContaining({
+              emails_to_add: ['unstaged@example.com'],
+            }),
+          }),
+        );
+      });
+    });
+
+    it('shows an error when agent context is missing', async () => {
+      const user = userEvent.setup();
+      mockUseGetMentorSettingsQuery.mockReturnValue({
+        data: { mentor_id: undefined },
+      });
+      render(<RoleAccessPanel {...defaultProps} />);
+
+      await user.type(getManualInput(), 'noctx@example.com{Enter}');
+      await user.click(getSubmitButton());
+
+      await waitFor(() => {
+        expect(mockToastError).toHaveBeenCalledWith(
+          'Agent context is missing. Close the modal and try again.',
+        );
+      });
+      expect(mockUpdateMentorAccess).not.toHaveBeenCalled();
+    });
+
+    it('shows an error toast when the manual add fails', async () => {
+      const user = userEvent.setup();
+      mockUpdateMentorAccess.mockReturnValue({
+        unwrap: vi.fn().mockRejectedValue(new Error('boom')),
+      });
+      render(<RoleAccessPanel {...defaultProps} />);
+
+      await user.type(getManualInput(), 'fail@example.com{Enter}');
+      await user.click(getSubmitButton());
+
+      await waitFor(() => {
+        expect(mockToastError).toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe('group management', () => {
+    const policyWithGroups = {
+      ...defaultPolicy,
+      groups: [{ id: 20, name: 'Sales', unique_id: 'sales' }],
+    } as typeof defaultPolicy;
+
+    it('shows the empty state when no groups are assigned', () => {
+      render(<RoleAccessPanel {...defaultProps} />);
+
+      expect(screen.getByText('Assigned groups')).toBeInTheDocument();
+      expect(
+        screen.getByText('No groups have this role yet.'),
+      ).toBeInTheDocument();
+    });
+
+    it('removes an assigned group', async () => {
+      const user = userEvent.setup();
+      const onAccessUpdated = vi.fn().mockResolvedValue(undefined);
+      render(
+        <RoleAccessPanel
+          {...defaultProps}
+          policy={policyWithGroups}
+          onAccessUpdated={onAccessUpdated}
+        />,
+      );
+
+      expect(screen.getByText('Sales')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: /remove sales/i }));
+
+      await waitFor(() => {
+        expect(mockUpdateMentorAccess).toHaveBeenCalledWith(
+          expect.objectContaining({
+            requestBody: expect.objectContaining({
+              groups_to_remove: [20],
+            }),
+          }),
+        );
+      });
+      expect(onAccessUpdated).toHaveBeenCalled();
+    });
+
+    it('searches for and adds a group', async () => {
+      const user = userEvent.setup();
+      mockUseGetRbacGroupsQuery.mockReturnValue({
+        data: { results: [{ id: 30, name: 'Engineering' }] },
+        isFetching: false,
+        isLoading: false,
+      });
+      render(<RoleAccessPanel {...defaultProps} />);
+
+      const groupSearch = screen.getByPlaceholderText(/search groups by name/i);
+      await user.type(groupSearch, 'eng');
+
+      await waitFor(() => {
+        expect(screen.getByText('Engineering')).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByText('Engineering'));
+
+      await waitFor(() => {
+        expect(mockUpdateMentorAccess).toHaveBeenCalledWith(
+          expect.objectContaining({
+            requestBody: expect.objectContaining({
+              groups_to_add: [30],
+            }),
+          }),
+        );
+      });
+    });
+
+    it('filters out already-assigned groups from search results', async () => {
+      const user = userEvent.setup();
+      mockUseGetRbacGroupsQuery.mockReturnValue({
+        data: {
+          results: [
+            { id: 20, name: 'Sales' }, // already assigned -> filtered out
+            { id: 30, name: 'Engineering' },
+          ],
+        },
+        isFetching: false,
+        isLoading: false,
+      });
+      render(<RoleAccessPanel {...defaultProps} policy={policyWithGroups} />);
+
+      await user.type(
+        screen.getByPlaceholderText(/search groups by name/i),
+        'a',
+      );
+      await user.type(
+        screen.getByPlaceholderText(/search groups by name/i),
+        'l',
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Engineering')).toBeInTheDocument();
+      });
+      // The already-assigned "Sales" should not appear as a search option.
+      const options = screen
+        .getAllByRole('button')
+        .filter((b) => b.textContent === 'Sales');
+      expect(options).toHaveLength(0);
+    });
+
+    it('shows the minimum-characters hint for a short group query', async () => {
+      const user = userEvent.setup();
+      render(<RoleAccessPanel {...defaultProps} />);
+
+      await user.type(
+        screen.getByPlaceholderText(/search groups by name/i),
+        'e',
+      );
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('Type at least two characters to search.'),
+        ).toBeInTheDocument();
+      });
+    });
+
+    it('shows the loading state while fetching groups', async () => {
+      const user = userEvent.setup();
+      mockUseGetRbacGroupsQuery.mockReturnValue({
+        data: undefined,
+        isFetching: true,
+        isLoading: true,
+      });
+      render(<RoleAccessPanel {...defaultProps} />);
+
+      await user.type(
+        screen.getByPlaceholderText(/search groups by name/i),
+        'eng',
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText(/searching groups/i)).toBeInTheDocument();
+      });
+    });
+
+    it('shows the no-results state when no groups match', async () => {
+      const user = userEvent.setup();
+      mockUseGetRbacGroupsQuery.mockReturnValue({
+        data: { results: [] },
+        isFetching: false,
+        isLoading: false,
+      });
+      render(<RoleAccessPanel {...defaultProps} />);
+
+      await user.type(
+        screen.getByPlaceholderText(/search groups by name/i),
+        'zzz',
+      );
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('No matching groups found.'),
+        ).toBeInTheDocument();
+      });
+    });
+
+    it('hides group results on blur and re-shows them on focus', async () => {
+      const user = userEvent.setup();
+      mockUseGetRbacGroupsQuery.mockReturnValue({
+        data: { results: [{ id: 30, name: 'Engineering' }] },
+        isFetching: false,
+        isLoading: false,
+      });
+      render(<RoleAccessPanel {...defaultProps} />);
+
+      const groupSearch = screen.getByPlaceholderText(/search groups by name/i);
+      await user.type(groupSearch, 'eng');
+      expect(screen.getByText('Engineering')).toBeInTheDocument();
+
+      // Blur schedules a 100ms timeout that hides the results.
+      fireEvent.blur(groupSearch);
+      await waitFor(() => {
+        expect(screen.queryByText('Engineering')).not.toBeInTheDocument();
+      });
+
+      // Focusing again with a 2+ char term re-opens the results.
+      fireEvent.focus(groupSearch);
+      await waitFor(() => {
+        expect(screen.getByText('Engineering')).toBeInTheDocument();
+      });
+    });
   });
 });
