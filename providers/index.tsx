@@ -464,7 +464,6 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <WebContainersLocaleProvider>
       <SentryInit />
-      <LanguagePreferenceSync />
       <MentorTimeTrackingProvider intervalSeconds={30} enabled={true} />
 
       <AuthProvider
@@ -503,6 +502,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           )
         }
       >
+        <LanguagePreferenceSync />
         <TenantProvider
           skip={isSsoLoginRoute || isVersionRoute || isTauriOffline}
           isIframed={isInIframe()}

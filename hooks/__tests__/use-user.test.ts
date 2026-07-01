@@ -3,6 +3,7 @@ import { renderHook, act } from '@testing-library/react';
 import {
   useUserData,
   useDmToken,
+  useEdxJwtToken,
   useDmTokenExpires,
   useAxdToken,
   useAxdTokenExpires,
@@ -155,6 +156,30 @@ describe('useDmToken', () => {
     const { result } = renderHook(() => useDmToken());
 
     expect(result.current.dmToken).toBeUndefined();
+  });
+});
+
+describe('useEdxJwtToken', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.keys(mockLocalStorageValues).forEach(
+      (key) => delete mockLocalStorageValues[key],
+    );
+  });
+
+  it('should return edxJwtToken and saveEdxJwtToken', () => {
+    mockLocalStorageValues[LOCAL_STORAGE_KEYS.EDX_TOKEN_KEY] = 'edx-token';
+
+    const { result } = renderHook(() => useEdxJwtToken());
+
+    expect(result.current.edxJwtToken).toBe('edx-token');
+    expect(typeof result.current.saveEdxJwtToken).toBe('function');
+  });
+
+  it('should return undefined when no token', () => {
+    const { result } = renderHook(() => useEdxJwtToken());
+
+    expect(result.current.edxJwtToken).toBeUndefined();
   });
 });
 
