@@ -111,6 +111,14 @@ export class EditMentorPage {
     // switch and return focus to the Privacy tab. Bound to a bound method
     // so the callback retains `this`.
     this.privacy.bindSettingsTab(this.settings, this.navigateToTab.bind(this));
+
+    // The modal only mounts the active category's segments, so the Settings
+    // sub-tab triggers (Basic / Discovery / Capabilities) are absent from the
+    // DOM whenever another category is active (e.g. LtiTab activates
+    // Integrations before every LTI check). Hand the Settings page-object the
+    // dialog's tab nav so `selectSubTab` can restore the Settings segment
+    // itself, making its helpers safe regardless of caller order.
+    this.settings.bindTabNav(this.navigateToTab.bind(this));
   }
 
   /**

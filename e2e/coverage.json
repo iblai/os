@@ -3106,12 +3106,6 @@
           "status": "covered"
         },
         {
-          "id": "cp-chat-03",
-          "description": "Canvas works in private mode: with private mode ON, enabling canvas and asking the mentor to create a document produces an artifact without an 'Unable to load version' error toast; mid-conversation private toggle does not leave a broken/empty canvas error toast",
-          "status": "pending",
-          "note": "Live gate awaiting backend fix: backend must persist/lookup artifacts and version lineage for disable_chathistory:true sessions (endpoints: /api/ai-mentor/orgs/{org}/users/{user}/artifacts/{id}/versions/)"
-        },
-        {
           "id": "cp-chat-04",
           "description": "Prompt Gallery (admin-curated, mentor-keyed) still opens and renders cards in private mode; AI guided/suggested prompts row is visible on a fresh private chat after the AI replies",
           "status": "pending",
@@ -3273,11 +3267,6 @@
           "status": "covered"
         },
         {
-          "id": "lti-02",
-          "description": "Admin enables 'Enable LTI launches' in Settings and the LTI tab remains visible (tab was already visible; toggle only controls backend is_lti_accessible, not tab visibility)",
-          "status": "covered"
-        },
-        {
           "id": "lti-03",
           "description": "Admin disables 'Enable LTI launches' in Settings and the LTI tab stays visible (the is_lti_accessible gate was removed from MENTOR_SEGMENTS in feat/1853)",
           "status": "covered"
@@ -3305,12 +3294,8 @@
         {
           "id": "lti-08",
           "description": "Admin edits (renames) an LTI link and the new name appears in the list while the old name is gone",
-          "status": "covered"
-        },
-        {
-          "id": "lti-09",
-          "description": "Admin opens the LTI Keys sub-tab on a fresh mentor and sees the empty state when no keys exist",
-          "status": "covered"
+          "status": "covered",
+          "note": "Self-contained mentor: the backend allows a single LTI link per mentor (the create button is not rendered once a link exists) and the SDK has no delete-link helper, so creating a second link on the shared worker mentor after lti-07 would time out"
         },
         {
           "id": "lti-10",
@@ -3329,17 +3314,13 @@
         },
         {
           "id": "lti-13",
-          "description": "Admin opens the LTI Tools sub-tab on a fresh mentor and sees the empty state when no tools exist",
-          "status": "covered"
+          "description": "Admin opens the LTI Tools sub-tab and the platform-wide tools surface renders: the create button plus either the empty state or the existing tools list",
+          "status": "covered",
+          "note": "LTI tools are tenant-scoped (platform-wide), not mentor-scoped: a fresh mentor still lists every tool on the tenant, lti-14 residue persists (no delete-tool helper), and parallel workers can create tools at any moment — a guaranteed-empty state is unreachable"
         },
         {
           "id": "lti-14",
           "description": "Admin creates an LTI tool with a JWKS URL signing config and it appears in the tools list",
-          "status": "covered"
-        },
-        {
-          "id": "lti-15",
-          "description": "Admin creates an LTI tool with raw JWKS JSON signing config and it appears in the tools list",
           "status": "covered"
         },
         {

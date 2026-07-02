@@ -58,6 +58,19 @@ export class SettingsTab {
    */
   readonly enablePrivacyRouterToggle: Locator;
 
+  /**
+   * Bound to `EditMentorPage.navigateToTab` (see its constructor). The modal
+   * only mounts the active category's segments, so when a preceding call
+   * switched the category (e.g. `LtiTab` activates Integrations), the
+   * Settings sub-tab triggers are not in the DOM. `selectSubTab` uses this
+   * to restore the Settings segment first; it no-ops when already active.
+   */
+  private navigateToTab?: (tabName: string) => Promise<void>;
+
+  bindTabNav(navigateToTab: (tabName: string) => Promise<void>): void {
+    this.navigateToTab = navigateToTab;
+  }
+
   constructor(page: Page, dialog: Locator) {
     this.page = page;
     this.dialog = dialog;
@@ -325,6 +338,12 @@ export class SettingsTab {
   async selectSubTab(
     name: 'Basic' | 'Discovery' | 'Capabilities',
   ): Promise<void> {
+    // Restore the Settings segment first — a preceding page-object call may
+    // have switched the modal to another category (LtiTab activates
+    // Integrations), unmounting these sub-tab triggers entirely.
+    if (this.navigateToTab) {
+      await this.navigateToTab('Settings');
+    }
     const tab = this.dialog.getByRole('tab', { name, exact: true });
     await expect(tab).toBeVisible({ timeout: 10_000 });
     const selected = await tab.getAttribute('aria-selected').catch(() => null);

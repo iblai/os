@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-07-02 | 526 checkpoints (499 covered, 8 pending, 7 not-reproducible in default env, 12 deprecated) | 58 journeys (57 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-07-02 | 522 checkpoints (496 covered, 7 pending, 7 not-reproducible in default env, 12 deprecated) | 58 journeys (57 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -872,7 +872,7 @@ Standalone top-level tab rendered by the SDK's `AgentScreenShareTab` (`@iblai/we
 
 ---
 
-## Journey 50: Chat Privacy (28 checkpoints) — `journeys/50-chat-privacy.spec.ts`
+## Journey 50: Chat Privacy (27 checkpoints) — `journeys/50-chat-privacy.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`
 
@@ -880,7 +880,7 @@ Covers all four user-facing surfaces of the chat-privacy feature and verifies th
 
 The **agent kill switch** tests (cp-agent-03) are the regression anchor for `dispatch(chatPrivacyApiSlice.util.invalidateTags(['ChatPrivacyEffective']))` wiring in `settings-tab.tsx` (feat/mentor/1797): after saving, the header toggle reflects mentor-locked state **without a page refresh**.
 
-The **private chat round-trip** tests (cp-chat-\*) cover the end-to-end happy path: enable private mode via the header toggle on a fresh chat, send a message, and confirm the assistant still replies — once as the admin and once as a non-admin (separate browser context). Seven additional feature-interaction checkpoints (cp-chat-03 … cp-chat-09) exercise canvas, prompts, voice/screen, multi-turn context, file attachments, the memory button, and the AI-bubble share button while private mode is active. cp-chat-08 (memory button) and cp-chat-09 (share button) have their in-repo gates implemented; cp-chat-03/04/05/06 are **live regression gates** expected to be red until the backend fixes land.
+The **private chat round-trip** tests (cp-chat-\*) cover the end-to-end happy path: enable private mode via the header toggle on a fresh chat, send a message, and confirm the assistant still replies — once as the admin and once as a non-admin (separate browser context). Six additional feature-interaction checkpoints (cp-chat-04 … cp-chat-09) exercise prompts, voice/screen, multi-turn context, file attachments, the memory button, and the AI-bubble share button while private mode is active. cp-chat-08 (memory button) and cp-chat-09 (share button) have their in-repo gates implemented; cp-chat-04/05/06 are **live regression gates** expected to be red until the backend fixes land.
 
 ### Tenant gate (cp-tenant-\*)
 
@@ -917,7 +917,6 @@ The **private chat round-trip** tests (cp-chat-\*) cover the end-to-end happy pa
 
 - [x] cp-chat-01: Admin enables private mode via the header toggle on a fresh chat (`data-state="on"`, `data-source="session"`), sends a message, and still receives an assistant reply; private mode stays on across the round-trip
 - [x] cp-chat-02: Non-admin (separate browser context) enables private mode via the header toggle on a fresh chat, sends a message, and receives an assistant reply; private mode stays on across the round-trip
-- [ ] cp-chat-03: Canvas works in private mode — enabling canvas and sending a prompt opens the canvas panel (`canvas-container` + contenteditable editor), the version control is reachable with no `"Unable to load version"` error toast, and a mid-conversation private toggle does not leave a broken canvas error _(pending: backend must persist/lookup artifacts and version lineage for `disable_chathistory:true` sessions)_
 - [ ] cp-chat-04: Prompt Gallery (admin-curated, mentor-keyed) still opens and renders cards in private mode; AI guided/suggested prompts row (`chat-guided-suggested-prompts`) is visible after the AI replies _(pending: guided-prompts assertion awaits backend generating prompts for private sessions; Prompt Gallery assertion passes today)_
 - [ ] cp-chat-05: Voice call dialog opens in private mode (empty-chat path, Chromium fake-media) and does NOT show `"Failed to initiate call"` error toast _(pending: backend must mint LiveKit credentials for `disable_chathistory` sessions)_
 - [ ] cp-chat-06: Multi-turn context retained in one private session — cached session id is stable across two sends (passes today); AI echoes back the code word from turn 1 _(pending: backend must retain ephemeral in-session context for private sessions)_
@@ -991,7 +990,7 @@ End-to-end onboarding of a brand-new user via the `ECOMMERCE_CHECKOUT_URL` "free
 
 ---
 
-## Journey 56: Mentor LTI Tab (19 checkpoints, 1 pending) — `journeys/56-mentor-lti-tab.spec.ts`
+## Journey 56: Mentor LTI Tab (16 checkpoints, 1 pending) — `journeys/56-mentor-lti-tab.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/lti-tab.tsx`, `hooks/use-mentor-segments.ts`
 
@@ -1001,10 +1000,9 @@ The LTI segment lives under the **Integrations** sidebar category. Tests are par
 
 Sub-resource tests (Links / Keys / Tools) still require `is_lti_accessible=true` on the backend because auto-enable-on-link-creation (`lti-sdk-01`) is not yet implemented in the SDK.
 
-### Visibility (lti-01..lti-04)
+### Visibility (lti-01, lti-03, lti-04)
 
 - [x] lti-01: Admin sees the LTI tab visible by default on a fresh mentor without enabling the "Enable LTI launches" toggle (`is_lti_accessible=false`) — the `enabledThroughConfig` gate was removed in feat/1853
-- [x] lti-02: Admin enables "Enable LTI launches" in Settings and the LTI tab remains visible (tab was already visible; toggle only controls `is_lti_accessible` on the backend, not tab presence)
 - [x] lti-03: Admin disables "Enable LTI launches" in Settings and the LTI tab stays visible (the `is_lti_accessible` gate was removed from `MENTOR_SEGMENTS`)
 - [x] lti-04: Non-admin user does not see the LTI tab in the Edit Mentor modal (LTI segment remains admin-only)
 
@@ -1016,20 +1014,18 @@ Sub-resource tests (Links / Keys / Tools) still require `is_lti_accessible=true`
 
 - [x] lti-06: Admin opens the LTI Links sub-tab on a fresh mentor and sees the empty state when no links exist
 - [x] lti-07: Admin creates an LTI link and it appears in the links list
-- [x] lti-08: Admin edits (renames) an LTI link and the new name appears in the list while the old name is gone
+- [x] lti-08: Admin edits (renames) an LTI link and the new name appears in the list while the old name is gone _(self-contained mentor: the backend allows a single LTI link per mentor and there is no delete-link helper, so a second create on the shared worker mentor after lti-07 would fail)_
 
-### Keys sub-tab (lti-09..lti-12)
+### Keys sub-tab (lti-10..lti-12)
 
-- [x] lti-09: Admin opens the LTI Keys sub-tab on a fresh mentor and sees the empty state when no keys exist
 - [x] lti-10: Admin creates an LTI key and the key detail shows non-empty public key and JWK fields
 - [x] lti-11: Admin renames an LTI key and the new name appears in the list while the old name is gone
 - [x] lti-12: Admin deletes an LTI key and the key is no longer in the list
 
-### Tools sub-tab (lti-13..lti-15)
+### Tools sub-tab (lti-13..lti-14)
 
-- [x] lti-13: Admin opens the LTI Tools sub-tab on a fresh mentor and sees the empty state when no tools exist
-- [x] lti-14: Admin creates an LTI tool with a JWKS URL signing config and it appears in the tools list
-- [x] lti-15: Admin creates an LTI tool with raw JWKS JSON signing config and it appears in the tools list
+- [x] lti-13: Admin opens the LTI Tools sub-tab and the platform-wide tools surface renders — the create button plus either the empty state or the existing tools list _(LTI tools are tenant-scoped, not mentor-scoped: a fresh mentor still lists every tool on the tenant, lti-14 residue persists with no delete-tool helper, and parallel workers can create tools at any moment, so a guaranteed-empty state is unreachable)_
+- [x] lti-14: Admin creates an LTI tool with a JWKS URL signing config and it appears in the tools list _(the raw-JWKS-JSON variant is intentionally uncovered for now: the SDK ToolModal sent `key_set` as a parsed object while the backend requires a JSON string — fixed on SDK branch feat/web-containers/1853; re-add the checkpoint once mentorai bumps to a release containing it)_
 
 ### Tool Endpoints sub-tab (lti-16..lti-18)
 

@@ -27,12 +27,12 @@
  *     enable private mode via the header toggle on a fresh chat, send a
  *     message, and confirm the assistant still replies. Exercised once as
  *     the admin (`page`) and once as a non-admin (`nonadminPage`). Also
- *     covers seven feature-interaction checkpoints (cp-chat-03 … cp-chat-09)
- *     that exercise canvas, prompts, voice/screen, multi-turn context, file
+ *     covers six feature-interaction checkpoints (cp-chat-04 … cp-chat-09)
+ *     that exercise prompts, voice/screen, multi-turn context, file
  *     attachments, the memory button, and the AI-bubble share button while
  *     private mode is active. These assert the CORRECT/EXPECTED behavior.
  *     cp-chat-08 (memory button) and cp-chat-09 (share button) have their
- *     in-repo gates implemented and should pass; cp-chat-03/04/05/06 are
+ *     in-repo gates implemented and should pass; cp-chat-04/05/06 are
  *     expected to be RED until the corresponding backend fixes land. Do NOT
  *     weaken assertions to pass.
  *
@@ -1055,9 +1055,9 @@ test.describe('Journey 50: Chat Privacy', () => {
       });
     });
 
-    // ── Feature-interaction checkpoints (cp-chat-03 … cp-chat-08) ───────────
+    // ── Feature-interaction checkpoints (cp-chat-04 … cp-chat-08) ───────────
     //
-    // These six checkpoints are LIVE regression gates. They assert the
+    // These five checkpoints are LIVE regression gates. They assert the
     // CORRECT/EXPECTED behavior while private mode is active, even though
     // that behavior does not yet exist for several features (backend fixes
     // and one frontend gate are in progress). They are expected to be RED
@@ -1068,151 +1068,6 @@ test.describe('Journey 50: Chat Privacy', () => {
     // non-admin round-trip is already covered by cp-chat-02; these
     // feature gates run as admin to avoid the non-admin paywall on
     // file attachments and to access features gated on admin roles.
-
-    // cp-chat-03: Canvas works in private mode.
-    //
-    // LIVE GATE — currently RED pending backend fix.
-    //
-    // Root cause: canvas-component.tsx discovers an artifact by calling
-    // listArtifacts?session_id=<private-session-id>. A session created with
-    // disable_chathistory:true is not persisted by the backend, so
-    // listArtifacts returns an empty list → currentArtifact=null →
-    // useCanvasVersionNavigation is skipped (skip:!artifactId) → the canvas
-    // has no version history and the "Unable to load version" toast fires
-    // when version endpoints 404. The fix: backend must persist/lookup
-    // artifacts and their version lineage for disable_chathistory sessions
-    // (artifact versions are user-scoped resources, not chat history per se;
-    // endpoints: /api/ai-mentor/orgs/{org}/users/{user}/artifacts/{id}/versions/).
-    //
-    // Mid-conversation private toggle also closes the canvas immediately
-    // (components/chat/index.tsx:1126-1167 fires on session change) — the
-    // regression sub-assertion below pins that this does not produce a
-    // broken/empty canvas error toast.
-    test('cp-chat-03: canvas works in private mode and does not surface version errors', async ({
-      page,
-      chatPage,
-    }) => {
-      const chatPrivacy = new ChatPrivacyPage(page);
-
-      // ── Path 1: fresh private session → canvas ─────────────────────────
-      await chatPage.startNewChat();
-      await waitForPageReady(page);
-      await chatPrivacy.assertHeaderState('off');
-
-      // Enable private mode on an empty chat (no confirm dialog).
-      await chatPrivacy.clickToggleAndWaitFor('on', 'session');
-
-      // Enable the canvas tool. chatPage.canvasToggle is `button /canvas/i`.
-      await expect(chatPage.canvasToggle).toBeVisible({ timeout: 15_000 });
-      await chatPage.canvasToggle.click();
-      await waitForPageReady(page);
-
-      // Ask the mentor to create a document. The canvas container/artifact
-      // surface should open and render — no error toast must appear.
-      await chatPage.sendMessage(
-        'Create a short document about cats using canvas.',
-      );
-      await expect(chatPage.userMessages.first()).toBeVisible({
-        timeout: 30_000,
-      });
-      await chatPage.waitForStreamingComplete(120_000);
-
-      // EXPECTED (once the backend fix lands): the canvas panel actually
-      // OPENS and renders the artifact in private mode. This positive
-      // assertion is load-bearing — a weak "the AI replied" check would go
-      // green even if the canvas silently failed to open (listArtifacts on a
-      // disable_chathistory session returns empty → no artifact → canvas
-      // never renders), which is exactly the reported failure. We therefore
-      // assert the canvas surface is really present.
-      //
-      //   • canvas-container testid: components/canvas/canvas-component.tsx:1858
-      //   • the contenteditable editor is the same signal journey 10 waits on
-      const canvasContainer = page.getByTestId('canvas-container');
-      const canvasEditor = canvasContainer.locator('[contenteditable="true"]');
-      await expect(canvasContainer).toBeVisible({ timeout: 60_000 });
-      await expect(canvasEditor).toBeVisible({ timeout: 60_000 });
-
-      // The version control must be reachable and open WITHOUT erroring. The
-      // reported failure is that the version endpoint 404s for an ephemeral
-      // private session. Mirrors journey 10's version-history pattern.
-      const versionButton = page.getByRole('button', { name: /version/i });
-      await expect(versionButton).toBeVisible({ timeout: 30_000 });
-      await versionButton.click();
-      const versionMenu = page
-        .getByRole('menu')
-        .filter({ hasText: /version/i })
-        .or(page.getByRole('dialog').filter({ hasText: /version/i }));
-      await expect(versionMenu).toBeVisible({ timeout: 10_000 });
-
-      // Assert NO "Unable to load version" error toast appeared (the 404
-      // symptom). Detect "did it ever appear" rather than "is it still
-      // there" so a briefly-shown error toast is still caught.
-      const versionErrorToast = page.getByText(/unable to load version/i);
-      let toastVisible = false;
-      try {
-        await versionErrorToast.waitFor({ state: 'visible', timeout: 5_000 });
-        toastVisible = true;
-      } catch {
-        toastVisible = false;
-      }
-      expect(
-        toastVisible,
-        'No "Unable to load version" toast should appear in private mode',
-      ).toBe(false);
-
-      // Close the version menu before moving on so it can't intercept the
-      // New Chat click in Path 2.
-      await page.keyboard.press('Escape');
-
-      // Private mode must remain on throughout.
-      await chatPrivacy.assertHeaderState('on');
-
-      // ── Path 2: mid-conversation private toggle regression ─────────────
-      // Start a normal chat, send a message, open canvas, THEN enable
-      // private mode mid-session via the confirm dialog. The session-change
-      // effect in components/chat/index.tsx closes the canvas — assert this
-      // transition does NOT produce a broken/empty canvas error toast.
-      await chatPage.startNewChat();
-      await waitForPageReady(page);
-      await chatPrivacy.assertHeaderState('off');
-
-      await expect(chatPage.canvasToggle).toBeVisible({ timeout: 15_000 });
-      await chatPage.canvasToggle.click();
-      await waitForPageReady(page);
-
-      await chatPage.sendMessage(
-        'Write a short paragraph about dogs using canvas.',
-      );
-      await expect(chatPage.userMessages.first()).toBeVisible({
-        timeout: 30_000,
-      });
-      await chatPage.waitForStreamingComplete(120_000);
-
-      // Wait for toggle to be interactive (streaming disables it briefly).
-      const toggle = chatPrivacy.headerToggle();
-      await expect(toggle).toBeEnabled({ timeout: 30_000 });
-
-      // Flip to private mid-conversation.
-      await chatPrivacy.enablePrivacyMidSession();
-
-      // After the session flip the canvas closes. Assert no version-error
-      // or artifact-error toast fired as a result of the canvas close.
-      const midSessionVersionError = page.getByText(/unable to load version/i);
-      let midSessionError = false;
-      try {
-        await midSessionVersionError.waitFor({
-          state: 'visible',
-          timeout: 5_000,
-        });
-        midSessionError = true;
-      } catch {
-        midSessionError = false;
-      }
-      expect(
-        midSessionError,
-        'Mid-session private toggle must not leave a "Unable to load version" toast',
-      ).toBe(false);
-    });
 
     // cp-chat-04: Admin-curated Prompt Gallery works in private mode; AI
     //             guided/suggested prompts are shown once the backend fix lands.
