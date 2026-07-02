@@ -28,7 +28,13 @@ import {
   afterEach,
   beforeAll,
 } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
@@ -148,6 +154,15 @@ let mockIsStreaming = false;
 let mockNumberOfActiveChatMessages = 0;
 let mockActiveChatMessages: Array<{ role?: string }> = [];
 const refetchRecentMock = vi.fn(() => Promise.resolve(undefined));
+const fetchNextPageMock = vi.fn(() => Promise.resolve(undefined));
+// Records the args passed to the recent infinite query so tests can assert
+// the debounced `search` / `mentor` params reached the hook.
+const recentInfiniteArgsMock = vi.fn();
+let mockHasNextPage = false;
+let mockIsFetchingNextPage = false;
+// When set, overrides the single-page wrapping so tests can supply an
+// explicit `{ pages: [...] }` payload spanning multiple pages.
+let mockRecentInfinitePages: any = undefined;
 
 // Data sources
 let mockMentorPublicSettings: any = {
@@ -374,30 +389,28 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
         }
       : { ...state, refetch: () => Promise.resolve(undefined) };
   },
-  useGetRecentMessageQuery: (
-    _args: unknown,
-    options?: { skip?: boolean; selectFromResult?: (state: any) => any },
+  useGetRecentMessagesInfiniteQuery: (
+    args: unknown,
+    options?: { skip?: boolean },
   ) => {
-    if (options?.skip) {
-      const skipped = { data: undefined, isError: false, isLoading: false };
-      return options.selectFromResult
-        ? {
-            ...options.selectFromResult(skipped),
-            refetch: refetchRecentMock,
-          }
-        : { ...skipped, refetch: refetchRecentMock };
-    }
-    const state = {
-      data: mockRecentPages,
+    recentInfiniteArgsMock(args);
+    const common = {
+      refetch: refetchRecentMock,
+      fetchNextPage: fetchNextPageMock,
+      hasNextPage: mockHasNextPage,
+      isFetching: false,
+      isFetchingNextPage: mockIsFetchingNextPage,
       isError: false,
       isLoading: false,
     };
-    return options?.selectFromResult
-      ? {
-          ...options.selectFromResult(state),
-          refetch: refetchRecentMock,
-        }
-      : { ...state, refetch: refetchRecentMock };
+    if (options?.skip) {
+      return { ...common, data: undefined };
+    }
+    const data = mockRecentInfinitePages ?? {
+      pages: [mockRecentPages],
+      pageParams: [1],
+    };
+    return { ...common, data };
   },
   useGetUserProjectsQuery: () => ({
     data: mockProjects,
@@ -654,6 +667,11 @@ function resetState() {
   updateQueryDataMock.mockClear();
   saveCachedSessionIdMock.mockReset();
   refetchRecentMock.mockClear();
+  fetchNextPageMock.mockClear();
+  recentInfiniteArgsMock.mockClear();
+  mockHasNextPage = false;
+  mockIsFetchingNextPage = false;
+  mockRecentInfinitePages = undefined;
   mockActiveSessionId = 'sess-active';
   mockCachedSessionId = {};
   mockIsStreaming = false;
@@ -2151,6 +2169,205 @@ describe('AppSidebar — chat row label fallbacks', () => {
     // Our `getCurrentArtifactTitle` mock returns 'Artifact title' — so the
     // row should render that as its label.
     expect(screen.getByText('Artifact title')).toBeInTheDocument();
+  });
+
+  it('prefers the session title over the first human message', () => {
+    mockRecentPages = {
+      results: [
+        {
+          id: 'r-titled',
+          session_id: 'sess-titled',
+          title: 'My titled chat',
+          messages: [
+            {
+              message: {
+                data: { type: 'user', content: 'Recent message one' },
+              },
+            },
+          ],
+        },
+      ],
+    };
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    expect(screen.getByText('My titled chat')).toBeInTheDocument();
+    // The first-human-message text must NOT be used as the label.
+    expect(screen.queryByText('Recent message one')).not.toBeInTheDocument();
+  });
+
+  it('falls back to the first human message when the title is whitespace-only', () => {
+    mockRecentPages = {
+      results: [
+        {
+          id: 'r-blank-title',
+          session_id: 'sess-blank-title',
+          title: '   ',
+          messages: [
+            {
+              message: {
+                data: { type: 'user', content: 'Fallback message text' },
+              },
+            },
+          ],
+        },
+      ],
+    };
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    expect(screen.getByText('Fallback message text')).toBeInTheDocument();
+  });
+});
+
+// =============================================================================
+// Recent chats — infinite-query wiring: mentor/search params, pagination
+// sentinel, and page flattening.
+// =============================================================================
+
+describe('AppSidebar — recent chats infinite query', () => {
+  it('passes the current mentor into the recent-messages query arg', () => {
+    renderSidebar();
+    const lastArgs = recentInfiniteArgsMock.mock.calls.at(-1)?.[0] as {
+      mentor?: string;
+      org?: string;
+    };
+    expect(lastArgs?.mentor).toBe('mentor-1');
+    expect(lastArgs?.org).toBe('tenant-a');
+  });
+
+  it('flattens rows across multiple pages into the recent list', () => {
+    mockRecentInfinitePages = {
+      pages: [
+        {
+          results: [
+            {
+              id: 'p1-a',
+              session_id: 'sess-p1-a',
+              messages: [
+                {
+                  message: { data: { type: 'user', content: 'Page one row' } },
+                },
+              ],
+            },
+          ],
+        },
+        {
+          results: [
+            {
+              id: 'p2-a',
+              session_id: 'sess-p2-a',
+              messages: [
+                {
+                  message: { data: { type: 'user', content: 'Page two row' } },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      pageParams: [1, 2],
+    };
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    expect(screen.getByText('Page one row')).toBeInTheDocument();
+    expect(screen.getByText('Page two row')).toBeInTheDocument();
+  });
+
+  it('updates the query arg with the debounced search term', () => {
+    vi.useFakeTimers();
+    try {
+      renderSidebar();
+      fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+      const input = screen.getByPlaceholderText('Search chats');
+      fireEvent.change(input, { target: { value: 'invoice' } });
+      // Before the debounce window elapses the arg is still empty.
+      const beforeArgs = recentInfiniteArgsMock.mock.calls.at(-1)?.[0] as {
+        search?: string;
+      };
+      expect(beforeArgs?.search).toBe('');
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+      const afterArgs = recentInfiniteArgsMock.mock.calls.at(-1)?.[0] as {
+        search?: string;
+      };
+      expect(afterArgs?.search).toBe('invoice');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('calls fetchNextPage when the sentinel intersects and a next page exists', () => {
+    let ioCallback: ((entries: unknown[]) => void) | null = null;
+    const prevIO = (window as any).IntersectionObserver;
+    (window as any).IntersectionObserver = class {
+      constructor(cb: (entries: unknown[]) => void) {
+        ioCallback = cb;
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+    try {
+      mockHasNextPage = true;
+      renderSidebar();
+      fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+      expect(ioCallback).not.toBeNull();
+      act(() => {
+        ioCallback?.([{ isIntersecting: true }]);
+      });
+      expect(fetchNextPageMock).toHaveBeenCalled();
+    } finally {
+      (window as any).IntersectionObserver = prevIO;
+    }
+  });
+
+  it('does not call fetchNextPage when already fetching the next page', () => {
+    let ioCallback: ((entries: unknown[]) => void) | null = null;
+    const prevIO = (window as any).IntersectionObserver;
+    (window as any).IntersectionObserver = class {
+      constructor(cb: (entries: unknown[]) => void) {
+        ioCallback = cb;
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+    try {
+      mockHasNextPage = true;
+      mockIsFetchingNextPage = true;
+      renderSidebar();
+      fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+      act(() => {
+        ioCallback?.([{ isIntersecting: true }]);
+      });
+      expect(fetchNextPageMock).not.toHaveBeenCalled();
+    } finally {
+      (window as any).IntersectionObserver = prevIO;
+    }
+  });
+
+  it('does not call fetchNextPage when there is no next page', () => {
+    let ioCallback: ((entries: unknown[]) => void) | null = null;
+    const prevIO = (window as any).IntersectionObserver;
+    (window as any).IntersectionObserver = class {
+      constructor(cb: (entries: unknown[]) => void) {
+        ioCallback = cb;
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+    try {
+      mockHasNextPage = false;
+      renderSidebar();
+      fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+      act(() => {
+        ioCallback?.([{ isIntersecting: true }]);
+      });
+      expect(fetchNextPageMock).not.toHaveBeenCalled();
+    } finally {
+      (window as any).IntersectionObserver = prevIO;
+    }
   });
 });
 
