@@ -3321,7 +3321,8 @@
         {
           "id": "lti-14",
           "description": "Admin creates an LTI tool with a JWKS URL signing config and it appears in the tools list",
-          "status": "covered"
+          "status": "covered",
+          "note": "Keys and tools are platform-wide and the SDK renders only page 1 of their lists (no pagination), so accumulated e2e residue used to push fresh keys off-page and break the in-list assertion; the worker fixture now reaps stale e2e-named tools/keys (>2h) via e2e/utils/lti-residue.ts"
         },
         {
           "id": "lti-16",

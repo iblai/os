@@ -65,6 +65,7 @@ import { waitForPageReady } from '../utils/resilient';
 import { LtiTab } from '../page-objects/edit-mentor/lti.tab';
 import { CreateMentorPage } from '../page-objects/create-mentor.page';
 import { EditMentorPage } from '../page-objects/edit-mentor/edit-mentor.page';
+import { reapStaleLtiResidue } from '../utils/lti-residue';
 
 // ---------------------------------------------------------------------------
 // Worker-scoped fixture: one LTI-enabled mentor per worker.
@@ -104,6 +105,13 @@ const test = base.extend<object, LtiWorkerFixtures>({
         const page = await setupCtx.newPage();
         await navigateToMentorApp(page);
         if (await checkAdminStatus(page)) {
+          // Reap stale platform-wide LTI tools/keys from earlier runs. The
+          // SDK renders only page 1 of those lists (no pagination), so
+          // accumulated residue pushes freshly created keys/tools off the
+          // page and breaks the in-list assertions. Best-effort, only
+          // touches e2e-named resources older than 2h — see
+          // e2e/utils/lti-residue.ts.
+          await reapStaleLtiResidue(page);
           const createPage = new CreateMentorPage(page);
           await createPage.openAndCreate();
           await waitForPageReady(page);
@@ -540,7 +548,8 @@ test.describe('Journey 56 — LTI tab sub-resource tests', () => {
   // PLATFORM-WIDE (tenant-scoped — the SDK surface reads "Platform-wide
   // integrations with external LTI platforms"), NOT mentor-scoped: a fresh
   // mentor still lists every tool on the tenant, tools created by
-  // lti-14 persist forever (the SDK exposes no delete-tool helper),
+  // lti-14 persist across runs (no delete-tool UI; stale ones are reaped
+  // by the fixture janitor after 2h — see e2e/utils/lti-residue.ts),
   // and parallel workers can create tools at any moment. A guaranteed-empty
   // list is therefore unreachable, so this checkpoint asserts the surface
   // renders in whichever state the tenant is in: the create button plus
@@ -598,8 +607,11 @@ test.describe('Journey 56 — LTI tab sub-resource tests', () => {
       });
       await editMentorPage.lti.expectToolInList(toolTitle);
     } finally {
-      // The SDK exposes no deleteTool helper; the worker mentor is deleted on
-      // teardown, so the tool (and its key) go with it. Nothing to undo here.
+      // No in-test cleanup is possible: tools and keys are PLATFORM-wide
+      // (they do NOT die with the worker mentor), the SDK exposes no
+      // delete-tool UI, and the key cannot be deleted while the tool
+      // references it. Both are uniquely named and reaped by
+      // `reapStaleLtiResidue` in the worker fixture once they are >2h old.
     }
 
     await editMentorPage.close();

@@ -1025,7 +1025,7 @@ Sub-resource tests (Links / Keys / Tools) still require `is_lti_accessible=true`
 ### Tools sub-tab (lti-13..lti-14)
 
 - [x] lti-13: Admin opens the LTI Tools sub-tab and the platform-wide tools surface renders — the create button plus either the empty state or the existing tools list _(LTI tools are tenant-scoped, not mentor-scoped: a fresh mentor still lists every tool on the tenant, lti-14 residue persists with no delete-tool helper, and parallel workers can create tools at any moment, so a guaranteed-empty state is unreachable)_
-- [x] lti-14: Admin creates an LTI tool with a JWKS URL signing config and it appears in the tools list _(the raw-JWKS-JSON variant is intentionally uncovered for now: the SDK ToolModal sent `key_set` as a parsed object while the backend requires a JSON string — fixed on SDK branch feat/web-containers/1853; re-add the checkpoint once mentorai bumps to a release containing it)_
+- [x] lti-14: Admin creates an LTI tool with a JWKS URL signing config and it appears in the tools list _(keys/tools are platform-wide and the SDK renders only page 1 of those lists, so the worker fixture reaps stale e2e-named residue >2h old via `e2e/utils/lti-residue.ts` to keep fresh resources on page 1)_ _(the raw-JWKS-JSON variant is intentionally uncovered for now: the SDK ToolModal sent `key_set` as a parsed object while the backend requires a JSON string — fixed on SDK branch feat/web-containers/1853; re-add the checkpoint once mentorai bumps to a release containing it)_
 
 ### Tool Endpoints sub-tab (lti-16..lti-18)
 
