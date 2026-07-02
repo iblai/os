@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.89.1](https://github.com/iblai/os/compare/v0.89.0...v0.89.1) (2026-07-02)
+
+### Bug Fixes
+
+* **i18n:** gate language-preference sync on edX JWT and mount inside AuthProvider ([a1829f9](https://github.com/iblai/os/commit/a1829f9db2b69428c2cb45d72bd4c209d5b0ffe7))
+
 ## [0.89.0](https://github.com/iblai/os/compare/v0.88.3...v0.89.0) (2026-07-02)
 
 ### Features
