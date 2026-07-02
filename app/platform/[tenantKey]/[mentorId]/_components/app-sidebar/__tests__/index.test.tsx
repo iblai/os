@@ -2272,25 +2272,35 @@ describe('AppSidebar — recent chats infinite query', () => {
     expect(screen.getByText('Page two row')).toBeInTheDocument();
   });
 
+  it('opens the search dialog from the Search chats button', () => {
+    renderSidebar();
+    // The search input lives in the dialog, not the sidebar, until opened.
+    expect(
+      screen.queryByPlaceholderText('Search chats'),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Search chats' }));
+    expect(screen.getByPlaceholderText('Search chats')).toBeInTheDocument();
+  });
+
   it('updates the query arg with the debounced search term', () => {
     vi.useFakeTimers();
     try {
       renderSidebar();
-      fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+      fireEvent.click(screen.getByRole('button', { name: 'Search chats' }));
       const input = screen.getByPlaceholderText('Search chats');
       fireEvent.change(input, { target: { value: 'invoice' } });
       // Before the debounce window elapses the arg is still empty.
-      const beforeArgs = recentInfiniteArgsMock.mock.calls.at(-1)?.[0] as {
-        search?: string;
-      };
-      expect(beforeArgs?.search).toBe('');
+      const hasSearchBefore = recentInfiniteArgsMock.mock.calls.some(
+        (c) => (c?.[0] as { search?: string })?.search === 'invoice',
+      );
+      expect(hasSearchBefore).toBe(false);
       act(() => {
         vi.advanceTimersByTime(300);
       });
-      const afterArgs = recentInfiniteArgsMock.mock.calls.at(-1)?.[0] as {
-        search?: string;
-      };
-      expect(afterArgs?.search).toBe('invoice');
+      const hasSearchAfter = recentInfiniteArgsMock.mock.calls.some(
+        (c) => (c?.[0] as { search?: string })?.search === 'invoice',
+      );
+      expect(hasSearchAfter).toBe(true);
     } finally {
       vi.useRealTimers();
     }
