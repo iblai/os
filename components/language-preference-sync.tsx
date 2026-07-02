@@ -5,7 +5,7 @@ import { useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useGetUserMetadataQuery } from '@iblai/iblai-js/data-layer';
 
-import { useUsername } from '@/hooks/use-user';
+import { useEdxJwtToken, useUsername } from '@/hooks/use-user';
 import { syncLanguageCookies } from '@/lib/locale-cookie';
 import { resolveLocale } from '@/i18n/config';
 
@@ -24,13 +24,14 @@ import { resolveLocale } from '@/i18n/config';
  */
 export function LanguagePreferenceSync() {
   const username = useUsername();
+  const { edxJwtToken } = useEdxJwtToken();
   const activeLocale = useLocale();
   const router = useRouter();
   const lastSyncedRef = useRef<string | null>(null);
 
   const { data: userMetadata } = useGetUserMetadataQuery(
     { params: { username: username ?? '' } },
-    { skip: !username },
+    { skip: !username || !edxJwtToken },
   );
 
   const storedLanguage = (

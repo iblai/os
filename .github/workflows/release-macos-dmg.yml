@@ -66,6 +66,9 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Enable in-app purchase for release builds. Read at Rust compile time
+          # via option_env!("IBL_ALLOW_IN_APP_PURCHASE") (defaults false elsewhere).
+          IBL_ALLOW_IN_APP_PURCHASE: 'true'
           # --- Code signing (Developer ID Application cert, exported as .p12) ---
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}

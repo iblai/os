@@ -1,35 +1,51 @@
 # Changelog
 
+## [0.89.1](https://github.com/iblai/os/compare/v0.89.0...v0.89.1) (2026-07-02)
+
+### Bug Fixes
+
+* **i18n:** gate language-preference sync on edX JWT and mount inside AuthProvider ([a1829f9](https://github.com/iblai/os/commit/a1829f9db2b69428c2cb45d72bd4c209d5b0ffe7))
+
+## [0.89.0](https://github.com/iblai/os/compare/v0.88.3...v0.89.0) (2026-07-02)
+
+### Features
+
+* **tauri:** add allow_in_app_purchase command gated by build-time env ([1a1ddeb](https://github.com/iblai/os/commit/1a1ddebc5475ad80bb4cd19ea60d539248ac7701))
+
+### Tests
+
+* **e2e:** wait for streaming before re-navigating in prompt-injection TC3 ([31b4edd](https://github.com/iblai/os/commit/31b4edd43968f25781982b6828ed6c06485000bc))
+
 ## [0.88.3](https://github.com/iblai/os/compare/v0.88.2...v0.88.3) (2026-07-01)
 
 ### Chores
 
-* **deps:** bump @iblai/iblai-js to 1.20.17 ([d73e457](https://github.com/iblai/os/commit/d73e457953415a97c9aaf8d0cafe0bf97da895ca))
+- **deps:** bump @iblai/iblai-js to 1.20.17 ([d73e457](https://github.com/iblai/os/commit/d73e457953415a97c9aaf8d0cafe0bf97da895ca))
 
 ## [0.88.2](https://github.com/iblai/os/compare/v0.88.1...v0.88.2) (2026-06-30)
 
 ### Bug Fixes
 
-* **mentor:** respect RBAC on Verbose Reasoning toggle ([c6583a2](https://github.com/iblai/os/commit/c6583a2c3acb09257e3757728a4914b3046e5b06))
+- **mentor:** respect RBAC on Verbose Reasoning toggle ([c6583a2](https://github.com/iblai/os/commit/c6583a2c3acb09257e3757728a4914b3046e5b06))
 
 ## [0.88.1](https://github.com/iblai/os/compare/v0.88.0...v0.88.1) (2026-06-30)
 
 ### Bug Fixes
 
-* **mentor:** only stop generation on chat switch when one is active ([250a951](https://github.com/iblai/os/commit/250a951b7cbd763c070c006cc8a9db997bfa1370))
+- **mentor:** only stop generation on chat switch when one is active ([250a951](https://github.com/iblai/os/commit/250a951b7cbd763c070c006cc8a9db997bfa1370))
 
 ## [0.88.0](https://github.com/iblai/os/compare/v0.87.3...v0.88.0) (2026-06-30)
 
 ### Features
 
-* playwright test for stripe checkout URL ([f26d672](https://github.com/iblai/os/commit/f26d672d505c2169425dc0e17dbb2916084cc4e9))
-* playwright test for stripe checkout URL ([f63c09a](https://github.com/iblai/os/commit/f63c09a395bae65bf5eae43dc3ddb6709dcb0177))
-* playwright test for stripe checkout URL > coverage json & md updated ([27aa6da](https://github.com/iblai/os/commit/27aa6da24c6effe3d6ae352c87da59591867a95d))
-* playwright test for stripe checkout URL > fixme on follow up test ([66cbfd5](https://github.com/iblai/os/commit/66cbfd5c25362a98bb985bd58b54777f6b9682a9))
+- playwright test for stripe checkout URL ([f26d672](https://github.com/iblai/os/commit/f26d672d505c2169425dc0e17dbb2916084cc4e9))
+- playwright test for stripe checkout URL ([f63c09a](https://github.com/iblai/os/commit/f63c09a395bae65bf5eae43dc3ddb6709dcb0177))
+- playwright test for stripe checkout URL > coverage json & md updated ([27aa6da](https://github.com/iblai/os/commit/27aa6da24c6effe3d6ae352c87da59591867a95d))
+- playwright test for stripe checkout URL > fixme on follow up test ([66cbfd5](https://github.com/iblai/os/commit/66cbfd5c25362a98bb985bd58b54777f6b9682a9))
 
 ### Bug Fixes
 
-* journey 36> Copy Mentor playwright issue fixed ([ef946b6](https://github.com/iblai/os/commit/ef946b6b4b18f6e67a5f25cd56115802af6333be))
+- journey 36> Copy Mentor playwright issue fixed ([ef946b6](https://github.com/iblai/os/commit/ef946b6b4b18f6e67a5f25cd56115802af6333be))
 
 ## [0.87.3](https://github.com/iblai/os/compare/v0.87.2...v0.87.3) (2026-06-30)
 
@@ -37,11 +53,11 @@
 
 ### Bug Fixes
 
-* **deps:** patch vitest, dompurify, and @opentelemetry/core vulnerabilities ([4e30df7](https://github.com/iblai/os/commit/4e30df7e7c70e16fea703f66cd06120cd8dd9549))
+- **deps:** patch vitest, dompurify, and @opentelemetry/core vulnerabilities ([4e30df7](https://github.com/iblai/os/commit/4e30df7e7c70e16fea703f66cd06120cd8dd9549))
 
 ### CI
 
-* add dependency vulnerability scanning to the PR pipeline ([9c3b7b6](https://github.com/iblai/os/commit/9c3b7b645976455b1ad1f0112493b18535a8b862))
+- add dependency vulnerability scanning to the PR pipeline ([9c3b7b6](https://github.com/iblai/os/commit/9c3b7b645976455b1ad1f0112493b18535a8b862))
 
 ## [0.87.1](https://github.com/iblai/os/compare/v0.87.0...v0.87.1) (2026-06-30)
 

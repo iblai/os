@@ -49,6 +49,17 @@ export function useDmToken() {
   return { dmToken, saveDmToken };
 }
 
+export function useEdxJwtToken() {
+  const [edxJwtToken, saveEdxJwtToken] = useLocalStorage<string | undefined>(
+    LOCAL_STORAGE_KEYS.EDX_TOKEN_KEY,
+    undefined,
+    {
+      serializer: (value: string | undefined) => value as string,
+    },
+  );
+  return { edxJwtToken, saveEdxJwtToken };
+}
+
 export function useDmTokenExpires() {
   const [dmTokenExpires, saveDmTokenExpires] = useLocalStorage<
     string | undefined
