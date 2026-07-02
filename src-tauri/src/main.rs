@@ -900,6 +900,22 @@ fn get_os_type() -> String {
     return "unknown".to_string();
 }
 
+/// Whether in-app purchase should be enabled for this build.
+///
+/// Controlled by the `IBL_ALLOW_IN_APP_PURCHASE` environment variable, read at
+/// compile time (injected at build time). Defaults to `false` when unset or not
+/// set to a truthy value (`1`, `true`, `yes`, `on`; case-insensitive).
+#[command]
+fn allow_in_app_purchase() -> bool {
+    match option_env!("IBL_ALLOW_IN_APP_PURCHASE") {
+        Some(value) => matches!(
+            value.trim().to_ascii_lowercase().as_str(),
+            "1" | "true" | "yes" | "on"
+        ),
+        None => false,
+    }
+}
+
 /// Proxy a chat request to Ollama
 /// This is needed because the app runs on HTTPS but local LLMs run on HTTP (localhost)
 /// Browsers block mixed content, so we proxy through Tauri
@@ -2628,6 +2644,7 @@ fn main() {
             save_offline_context,
             get_offline_context,
             get_os_type,
+            allow_in_app_purchase,
             ollama_chat,
             ollama_chat_stream,
             oauth::oauth_start,
