@@ -198,6 +198,7 @@
     "pinned": "已置顶",
     "recent": "最近",
     "noRecentChats": "暂无最近对话",
+    "searchChatsPlaceholder": "搜索对话",
     "noContent": "无内容",
     "chatActions": "对话操作",
     "unpin": "取消置顶",
