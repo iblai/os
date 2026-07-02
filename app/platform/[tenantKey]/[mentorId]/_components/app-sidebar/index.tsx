@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import * as React from 'react';
+import { useDebounce } from 'use-debounce';
 import dynamic from 'next/dynamic';
 import {
   useParams,
@@ -63,7 +64,7 @@ import {
   useDeleteMessageMutation,
   useGetMentorPublicSettingsQuery,
   useGetPinnedMessagesQuery,
-  useGetRecentMessageQuery,
+  useGetRecentMessagesInfiniteQuery,
   useGetUserProjectsQuery,
   useUnPinMessageMutation,
 } from '@iblai/iblai-js/data-layer';
@@ -975,11 +976,16 @@ function ProjectDialogs({
 
 type ChatRow = {
   session_id: string;
+  title?: string | null;
   mentor?: { unique_id?: string | null; profile_image?: string | null } | null;
   messages?: unknown;
 };
 
 function chatRowLabel(row: ChatRow, noContentLabel: string): React.ReactNode {
+  // Prefer the session title when the backend provides one; titles are plain
+  // text (not markdown) so they render as-is.
+  const title = typeof row.title === 'string' ? row.title.trim() : '';
+  if (title) return title;
   const messages = (row.messages as unknown[]) ?? [];
   const content = getFirstMessageWithContent(messages as never);
   if (content) {
@@ -1178,29 +1184,43 @@ function SidebarChatsSection({
     recipe: (draft: ChatCacheDraft) => void,
   ) => unknown;
 
-  // Recent — scoped to the current mentor in the cache selector so we
-  // don't paint rows from other agents. `refetch` is invoked after
-  // pin/unpin so the lists reflect server truth (no stale optimistic
-  // state if the server transitions the row in unexpected ways).
-  const { data: recentMessages, refetch: refetchRecent } =
-    useGetRecentMessageQuery(
-      {
-        org: tenantKey,
-        // @ts-ignore — userId is required at the URL path level
-        userId: resolvedUserId,
-      },
-      {
-        skip: !tenantKey || !resolvedUserId,
-        selectFromResult: (state) => ({
-          ...state,
-          data: {
-            ...state.data,
-            results: ((state.data as { results?: ChatRow[] } | undefined)
-              ?.results ?? []) as ChatRow[],
-          },
-        }),
-      },
-    );
+  // Search box (expanded mode only) — debounced into the query arg so we
+  // don't refetch on every keystroke.
+  const [searchInput, setSearchInput] = React.useState('');
+  const [debouncedSearch] = useDebounce(searchInput, 300);
+
+  // Infinite-scroll sentinel — observed below to auto-load the next page.
+  const sentinelRef = React.useRef<HTMLDivElement | null>(null);
+
+  // Recent — paginated via infinite scroll. The backend filters by `mentor`
+  // and `search`; `filterByMentor` below stays as a defensive client net in
+  // case the backend hasn't wired the param yet. `refetch` is invoked after
+  // pin/unpin so the lists reflect server truth.
+  const {
+    data: recentInfiniteData,
+    refetch: refetchRecent,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useGetRecentMessagesInfiniteQuery(
+    {
+      org: tenantKey,
+      // @ts-ignore — userId is required at the URL path level
+      userId: resolvedUserId,
+      mentor: mentorId,
+      search: debouncedSearch,
+    },
+    {
+      skip: !tenantKey || !resolvedUserId,
+    },
+  );
+
+  const recentRows = React.useMemo(
+    () =>
+      (recentInfiniteData?.pages?.flatMap((p) => p?.results ?? []) ??
+        []) as ChatRow[],
+    [recentInfiniteData],
+  );
 
   // Pinned — same shape; `sessionId` arg is the cache key the SDK uses
   // for invalidation, not a row filter.
@@ -1278,12 +1298,27 @@ function SidebarChatsSection({
   );
   const recent = React.useMemo(
     () =>
-      filterByMentor(
-        (recentMessages as unknown as { results?: ChatRow[] } | undefined)
-          ?.results ?? [],
-      ).filter((r) => !pinnedSessionIds.has(r.session_id)),
-    [recentMessages, filterByMentor, pinnedSessionIds],
+      filterByMentor(recentRows).filter(
+        (r) => !pinnedSessionIds.has(r.session_id),
+      ),
+    [recentRows, filterByMentor, pinnedSessionIds],
   );
+
+  // Auto-load the next page when the sentinel scrolls into view. Guards on
+  // `hasNextPage` (single-page backends never trigger) and `isFetchingNextPage`
+  // (no overlapping loads). `open` is a dep so the observer re-attaches when
+  // the collapsible expands and the sentinel mounts.
+  React.useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
+        void fetchNextPage();
+      }
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, open]);
 
   // Helpers shared by both lists ---------------------------------------
 
@@ -1448,6 +1483,10 @@ function SidebarChatsSection({
           },
         ) as never,
       );
+      // Recent now renders from the infinite query, so the optimistic
+      // `getRecentMessage` patch above no longer drives the list — refetch to
+      // drop the deleted row from the paginated pages.
+      void refetchRecent();
       // Active-session safety: clear file context and start a new chat
       // so the canvas/composer doesn't keep pointing at a deleted session.
       if (row.session_id === appSessionId) {
@@ -1595,6 +1634,14 @@ function SidebarChatsSection({
       </CollapsibleTrigger>
       <CollapsibleContent className="overflow-hidden">
         <div className="mt-0.5 mr-1 ml-1.5 border-l-2 border-[#e2e8f0] pb-0.5 pl-2.5">
+          <input
+            type="search"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder={t('searchChatsPlaceholder')}
+            aria-label={t('searchChatsPlaceholder')}
+            className="mt-1 mb-1 block w-full rounded-md border border-[#e2e8f0] bg-white px-2 py-1.5 text-[13px] leading-snug text-[#3f3f46] transition-colors outline-none placeholder:text-[#94a3b8] focus-visible:border-[#cfe8fa] focus-visible:ring-2 focus-visible:ring-[#cfe8fa]"
+          />
           {pinned.length > 0 && (
             <>
               <p className="px-2 pt-1 pb-0.5 text-[10px] font-semibold tracking-wider text-[#9ca3af] uppercase">
@@ -1630,6 +1677,11 @@ function SidebarChatsSection({
               {t('noRecentChats')}
             </span>
           )}
+          <div
+            ref={sentinelRef}
+            data-testid="recent-scroll-sentinel"
+            aria-hidden
+          />
         </div>
       </CollapsibleContent>
     </Collapsible>
