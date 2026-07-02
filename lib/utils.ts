@@ -1653,3 +1653,26 @@ export function getFirstMessageWithContent(messages: any[]): string {
   }
   return '';
 }
+
+export function getFirstHumanMessageWithContent(messages: any[]): string {
+  if (!messages?.length) return '';
+  for (const msg of messages) {
+    const isHuman =
+      msg?.is_human === true || msg?.message?.data?.type === 'human';
+    const content = msg?.message?.data?.content;
+    if (isHuman && content) return content;
+  }
+  return '';
+}
+
+export function getLatestMessageTimestamp(messages: any[]): number | null {
+  if (!messages?.length) return null;
+  let latest: number | null = null;
+  for (const msg of messages) {
+    const raw = msg?.inserted_at;
+    if (!raw) continue;
+    const ms = new Date(raw).getTime();
+    if (!Number.isNaN(ms) && (latest === null || ms > latest)) latest = ms;
+  }
+  return latest;
+}
