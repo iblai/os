@@ -54,6 +54,7 @@
     "allow-open-external-url",
     "allow-navigate-to",
     "allow-get-os-type",
+    "allow-allow-in-app-purchase",
     "os:default",
     "allow-check-network-status"
   ]
