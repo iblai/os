@@ -1,4 +1,4 @@
-import { Page, Locator } from '@playwright/test';
+import { expect, Page, Locator } from '@playwright/test';
 import {
   TASKS_LABELS,
   deleteTask,
@@ -149,6 +149,102 @@ export class TasksTab {
     return scheduleTask(this.dialog, opts);
   }
 
+  /**
+   * Schedule a task `minutesAhead` minutes from now (default 120).
+   *
+   * The dialog's date defaults to today, so near midnight every remaining
+   * same-day time is (about to be) in the past and the "Start time must be
+   * in the future" validation keeps the submit button disabled. When the
+   * target instant falls on a later calendar day, this picks that day in
+   * the dialog calendar and fills the form field-by-field (the SDK's
+   * one-shot `scheduleTask` cannot set a date); otherwise it defers to the
+   * SDK helper unchanged. Either way the chosen date+time is always
+   * `minutesAhead` in the future, at any hour of the day.
+   */
+  async scheduleTaskAhead(opts: {
+    name: string;
+    prompt?: string;
+    minutesAhead?: number;
+    repeat?: TaskRepeat;
+    notifyByEmail?: boolean;
+  }): Promise<void> {
+    const { minutesAhead = 120, ...task } = opts;
+    const now = new Date();
+    const target = new Date(now.getTime() + minutesAhead * 60_000);
+    const h = String(target.getHours()).padStart(2, '0');
+    const m = String(target.getMinutes()).padStart(2, '0');
+    const time = `${h}:${m}`;
+
+    if (target.toDateString() === now.toDateString()) {
+      return scheduleTask(this.dialog, { ...task, time });
+    }
+
+    await openScheduleTaskDialog(this.dialog);
+    // Portaled dialog — resolved from the page by its aria-label, exactly
+    // like the SDK's own (non-exported) getScheduleTaskDialog.
+    const dialog = this.page.getByRole('dialog', {
+      name: TASKS_LABELS.scheduleDialog.dialogName,
+    });
+    // The dialog's desktop calendar is a hand-rolled 42-cell grid of plain
+    // buttons whose accessible name is just the day number; past days are
+    // `disabled`. For a next-day target the first enabled exact match is
+    // always the target: any earlier cell with the same number belongs to a
+    // past month (disabled), and when today is the month's last day the
+    // target "1" is the next month's spillover cell, which the grid always
+    // shows.
+    await dialog
+      .getByRole('button', {
+        name: String(target.getDate()),
+        exact: true,
+        disabled: false,
+      })
+      .first()
+      .click();
+    // The form panel's heading echoes the selected date ("July 4, 2026") —
+    // assert the click landed on the right day before filling the form.
+    await expect(
+      dialog.getByRole('heading', {
+        name: target.toLocaleDateString('en-US', {
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric',
+        }),
+        exact: true,
+      }),
+    ).toBeVisible({ timeout: 5_000 });
+    await dialog
+      .getByLabel(TASKS_LABELS.scheduleDialog.taskName)
+      .fill(task.name);
+    if (task.prompt !== undefined) {
+      await dialog
+        .getByLabel(TASKS_LABELS.scheduleDialog.taskPrompt)
+        .fill(task.prompt);
+    }
+    await dialog.getByLabel(TASKS_LABELS.scheduleDialog.time).fill(time);
+    if (task.repeat) {
+      const repeatLabel = {
+        "don't-repeat": TASKS_LABELS.scheduleDialog.dontRepeat,
+        daily: TASKS_LABELS.scheduleDialog.daily,
+        weekly: TASKS_LABELS.scheduleDialog.weekly,
+        monthly: TASKS_LABELS.scheduleDialog.monthly,
+      }[task.repeat];
+      await dialog.getByLabel(TASKS_LABELS.scheduleDialog.repeat).click();
+      // Radix renders the option list in a portal outside the dialog.
+      await this.page.getByRole('option', { name: repeatLabel }).click();
+    }
+    if (task.notifyByEmail) {
+      await dialog
+        .getByLabel(TASKS_LABELS.scheduleDialog.notifyByEmail)
+        .click();
+    }
+    const submit = dialog.getByRole('button', {
+      name: TASKS_LABELS.scheduleDialog.schedule,
+    });
+    await expect(submit).toBeEnabled({ timeout: 5_000 });
+    await submit.click();
+    await expect(dialog).toBeHidden({ timeout: 15_000 });
+  }
+
   // ---------------------------------------------------------------------------
   // Search
   // ---------------------------------------------------------------------------
@@ -216,21 +312,5 @@ export class TasksTab {
     const ts = Date.now();
     const rand = Math.random().toString(36).slice(2, 7);
     return `${prefix}-${ts}-${rand}`;
-  }
-
-  /**
-   * Returns "HH:mm" for `minutesAhead` minutes from now, clamped to today so
-   * the schedule dialog does not reject it as past. When the computed time
-   * would roll over midnight, returns "23:55" instead.
-   */
-  static futureTimeOfDay(minutesAhead = 60): string {
-    const now = new Date();
-    const target = new Date(now.getTime() + minutesAhead * 60 * 1000);
-    if (target.getDate() !== now.getDate()) {
-      return '23:55';
-    }
-    const h = String(target.getHours()).padStart(2, '0');
-    const m = String(target.getMinutes()).padStart(2, '0');
-    return `${h}:${m}`;
   }
 }

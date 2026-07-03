@@ -110,10 +110,10 @@ test.describe('Journey 49: Mentor Tasks Tab', () => {
     const name = TasksTab.uniqueTaskName('e2e-create');
 
     try {
-      await tasks.scheduleTask({
+      await tasks.scheduleTaskAhead({
         name,
         prompt: 'Summarise the latest mentor activity.',
-        time: TasksTab.futureTimeOfDay(120),
+        minutesAhead: 26 * 60, // TEMP: force the midnight-crossing calendar path
         repeat: 'daily',
       });
 
@@ -134,10 +134,9 @@ test.describe('Journey 49: Mentor Tasks Tab', () => {
     const name = TasksTab.uniqueTaskName('e2e-search');
 
     try {
-      await tasks.scheduleTask({
+      await tasks.scheduleTaskAhead({
         name,
         prompt: 'Search probe task.',
-        time: TasksTab.futureTimeOfDay(120),
         repeat: 'daily',
       });
       await tasks.expectTaskInList(name);
@@ -166,10 +165,9 @@ test.describe('Journey 49: Mentor Tasks Tab', () => {
     let stillPresent = false;
 
     try {
-      await tasks.scheduleTask({
+      await tasks.scheduleTaskAhead({
         name,
         prompt: 'Delete probe task.',
-        time: TasksTab.futureTimeOfDay(120),
         repeat: 'daily',
       });
       stillPresent = true;
