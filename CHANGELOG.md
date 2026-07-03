@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.90.3](https://github.com/iblai/os/compare/v0.90.2...v0.90.3) (2026-07-03)
+
+### CI
+
+* PR image build timeout + drop dead SENTRY_AUTH_TOKEN reference ([3d530e1](https://github.com/iblai/os/commit/3d530e17ae6a78416a68ad530628ebc5ff696995))
+
 ## [0.90.2](https://github.com/iblai/os/compare/v0.90.1...v0.90.2) (2026-07-03)
 
 ### Bug Fixes
