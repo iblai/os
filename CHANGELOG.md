@@ -4,17 +4,17 @@
 
 ### Bug Fixes
 
-* **i18n:** gate language-preference sync on edX JWT and mount inside AuthProvider ([a1829f9](https://github.com/iblai/os/commit/a1829f9db2b69428c2cb45d72bd4c209d5b0ffe7))
+- **i18n:** gate language-preference sync on edX JWT and mount inside AuthProvider ([a1829f9](https://github.com/iblai/os/commit/a1829f9db2b69428c2cb45d72bd4c209d5b0ffe7))
 
 ## [0.89.0](https://github.com/iblai/os/compare/v0.88.3...v0.89.0) (2026-07-02)
 
 ### Features
 
-* **tauri:** add allow_in_app_purchase command gated by build-time env ([1a1ddeb](https://github.com/iblai/os/commit/1a1ddebc5475ad80bb4cd19ea60d539248ac7701))
+- **tauri:** add allow_in_app_purchase command gated by build-time env ([1a1ddeb](https://github.com/iblai/os/commit/1a1ddebc5475ad80bb4cd19ea60d539248ac7701))
 
 ### Tests
 
-* **e2e:** wait for streaming before re-navigating in prompt-injection TC3 ([31b4edd](https://github.com/iblai/os/commit/31b4edd43968f25781982b6828ed6c06485000bc))
+- **e2e:** wait for streaming before re-navigating in prompt-injection TC3 ([31b4edd](https://github.com/iblai/os/commit/31b4edd43968f25781982b6828ed6c06485000bc))
 
 ## [0.88.3](https://github.com/iblai/os/compare/v0.88.2...v0.88.3) (2026-07-01)
 

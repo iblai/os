@@ -15,9 +15,10 @@ import {
 } from '@iblai/iblai-js/web-utils';
 import { isStripeActivated } from '@/lib/utils';
 import { Tenant } from '@iblai/iblai-js/web-utils';
+import { useInAppPurchase } from '@/hooks/use-in-app-purchase';
 
 // Custom hook to handle trial user actions
-export const useShowFreeTrialDialog = (
+export const useShowFreeTrialDialog = async (
   options = { modalComponent: null, enableFallbackModal: true },
 ) => {
   const subscriptionStatus = useAppSelector(
@@ -46,6 +47,7 @@ export const useShowFreeTrialDialog = (
     useSubscriptionHandlerV2(subscriptionFlow);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { isAppleDevice } = useOS();
+  const { allowed: inAppPurchaseNotAllowed } = await useInAppPurchase();
   const FreeTrialDialog =
     options.modalComponent ||
     (options.enableFallbackModal ? IblFreeTrialDialog : null);
@@ -66,7 +68,7 @@ export const useShowFreeTrialDialog = (
       (subscriptionStatus.creditExhausted && subscriptionStatus.callToAction) ||
       isNewlyUserOnPreFreeOrAdvertisingMode(isAdminAction)
     ) {
-      if (isAppleDevice) {
+      if (isAppleDevice && !inAppPurchaseNotAllowed) {
         dispatch(setOpenAppleRestrictionModal(true));
         return null;
       }
