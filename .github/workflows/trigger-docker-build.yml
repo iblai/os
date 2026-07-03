@@ -5,7 +5,7 @@ on:
     tags:
       - 'v*'
 
-run-name: 'Build mentor ${{ github.ref_name }}'
+run-name: 'Build os ${{ github.ref_name }}'
 
 permissions:
   contents: read
@@ -30,7 +30,7 @@ jobs:
     needs: prepare
     uses: ./.github/workflows/reusable-spa-docker-build.yml
     with:
-      app_name: mentor
+      app_name: os
       source_repo: ${{ github.repository }}
       source_ref: ${{ github.ref }}
       version: ${{ needs.prepare.outputs.version }}
