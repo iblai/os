@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.90.1](https://github.com/iblai/os/compare/v0.90.0...v0.90.1) (2026-07-03)
+
+### Bug Fixes
+
+* **tauri:** grant ACL permission for allow_in_app_purchase command ([fee75a2](https://github.com/iblai/os/commit/fee75a24b52afe4477889a01928bdf230691a708))
+
+### CI
+
+* push release image to iblai-os-spa (replaces iblai-mentor-spa-pro) ([d1bf12f](https://github.com/iblai/os/commit/d1bf12ff7565d0f01a1fd3dfbd03c8bd20503f6a))
+
 ## [0.90.0](https://github.com/iblai/os/compare/v0.89.1...v0.90.0) (2026-07-03)
 
 ### Features
