@@ -4,9 +4,9 @@
 
 ### Features
 
-* in-app-purchase hook implemented ([396a006](https://github.com/iblai/os/commit/396a0060d03a485b66fc73c181e45a7c7ba65e80))
-* in-app-purchase hook implemented ([d5386e0](https://github.com/iblai/os/commit/d5386e04aa8164ea31b0a056cc136c97a486f413))
-* in-app-purchase hook implemented > test coverage ([73cfd1c](https://github.com/iblai/os/commit/73cfd1cd527404a0dbeb1e4decf5aea64ee1a524))
+- in-app-purchase hook implemented ([396a006](https://github.com/iblai/os/commit/396a0060d03a485b66fc73c181e45a7c7ba65e80))
+- in-app-purchase hook implemented ([d5386e0](https://github.com/iblai/os/commit/d5386e04aa8164ea31b0a056cc136c97a486f413))
+- in-app-purchase hook implemented > test coverage ([73cfd1c](https://github.com/iblai/os/commit/73cfd1cd527404a0dbeb1e4decf5aea64ee1a524))
 
 ## [0.89.1](https://github.com/iblai/os/compare/v0.89.0...v0.89.1) (2026-07-02)
 
