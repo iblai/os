@@ -113,7 +113,6 @@ test.describe('Journey 49: Mentor Tasks Tab', () => {
       await tasks.scheduleTaskAhead({
         name,
         prompt: 'Summarise the latest mentor activity.',
-        minutesAhead: 26 * 60, // TEMP: force the midnight-crossing calendar path
         repeat: 'daily',
       });
 

@@ -32,6 +32,12 @@ export type { TaskRepeat };
  * — so a label change in the SDK is picked up via a single bump of
  * `@iblai/iblai-js` rather than rewriting selectors here.
  *
+ * Sole exception: `scheduleTaskAhead`'s midnight-crossing branch drives the
+ * schedule dialog's desktop calendar directly (the SDK exposes no helper
+ * that can set the date). Its labels still come from `TASKS_LABELS`, but
+ * the day-button and date-heading locators depend on the dialog's DOM
+ * structure — re-verify that branch when bumping the SDK.
+ *
  * The instance scopes every helper to the Edit Mentor `dialog` Locator so
  * that other portaled dialogs in the same page (e.g. an unrelated toast or
  * confirm dialog) cannot match by accident.
@@ -158,8 +164,13 @@ export class TasksTab {
    * target instant falls on a later calendar day, this picks that day in
    * the dialog calendar and fills the form field-by-field (the SDK's
    * one-shot `scheduleTask` cannot set a date); otherwise it defers to the
-   * SDK helper unchanged. Either way the chosen date+time is always
-   * `minutesAhead` in the future, at any hour of the day.
+   * SDK helper unchanged.
+   *
+   * `minutesAhead` must stay within [90, 3 days]: the dialog resolves
+   * DST-ambiguous fall-back wall times to the earlier offset (so up to an
+   * hour of margin can vanish once a year), and the calendar path never
+   * navigates months (the target must sit in the initially rendered grid —
+   * current month plus at least 5 next-month spillover days).
    */
   async scheduleTaskAhead(opts: {
     name: string;
@@ -169,6 +180,12 @@ export class TasksTab {
     notifyByEmail?: boolean;
   }): Promise<void> {
     const { minutesAhead = 120, ...task } = opts;
+    if (minutesAhead < 90 || minutesAhead > 3 * 24 * 60) {
+      throw new Error(
+        `scheduleTaskAhead: minutesAhead must be within [90, ${3 * 24 * 60}] ` +
+          `(DST fall-back margin / rendered-calendar reach); got ${minutesAhead}`,
+      );
+    }
     const now = new Date();
     const target = new Date(now.getTime() + minutesAhead * 60_000);
     const h = String(target.getHours()).padStart(2, '0');
