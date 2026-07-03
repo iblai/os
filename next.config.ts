@@ -81,7 +81,7 @@ const nextConfig: NextConfig = {
     '@sentry/node',
     '@sentry/node-core',
   ],
-  productionBrowserSourceMaps: true,
+  productionBrowserSourceMaps: false,
   turbopack: {
     rules: {
       '*.svg': ['@svgr/webpack'],
@@ -114,7 +114,11 @@ const sentryWebpackPluginOptions = {
   org: 'ibl-ai',
   project: 'mentorai-iblai-app',
   widenClientFileUpload: true,
-  hideSourceMaps: false,
+  // Upload source maps to Sentry (requires SENTRY_AUTH_TOKEN at build time),
+  // then delete the emitted .map files so they are never served publicly.
+  sourcemaps: {
+    deleteSourcemapsAfterUpload: true,
+  },
   // Sentry SDK v10 moved these under `webpack`:
   // - `disableLogger` -> `webpack.treeshake.removeDebugLogging`
   // - `automaticVercelMonitors` -> `webpack.automaticVercelMonitors`
