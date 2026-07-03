@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.90.4](https://github.com/iblai/os/compare/v0.90.3...v0.90.4) (2026-07-03)
+
+### Chores
+
+* **sentry:** delete source maps after uploading them to Sentry ([700a37d](https://github.com/iblai/os/commit/700a37d311bf8dabb34713083c0fd5883efefc36))
+
 ## [0.90.3](https://github.com/iblai/os/compare/v0.90.2...v0.90.3) (2026-07-03)
 
 ### CI
