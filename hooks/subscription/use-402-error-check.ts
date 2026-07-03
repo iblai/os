@@ -18,14 +18,14 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useIsAdmin } from '../use-user';
 import { useInAppPurchase } from '../use-in-app-purchase';
 
-export const use402ErrorCheck = async () => {
+export const use402ErrorCheck = () => {
   const dispatch = useAppDispatch();
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const isAdmin = useIsAdmin();
   const { isAppleDevice } = useOS();
-  const { allowed: inAppPurchaseNotAllowed } = await useInAppPurchase();
+  const { isInAppPurchaseAllowed } = useInAppPurchase();
   const handle402Error = useCallback(
     async (messageData: Error402MessageData) => {
       toast.error(
@@ -39,7 +39,7 @@ export const use402ErrorCheck = async () => {
       );
 
       // Show Apple restriction modal for iOS/macOS users if in-app purchase is not allowed
-      if (isAppleDevice && !inAppPurchaseNotAllowed) {
+      if (isAppleDevice && !(await isInAppPurchaseAllowed())) {
         dispatch(setOpenAppleRestrictionModal(true));
         return;
       }

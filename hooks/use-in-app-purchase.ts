@@ -1,10 +1,26 @@
 import { invoke } from '@tauri-apps/api/core';
-import { TAURI_COMMANDS } from '@/types/tauri';
+import { isTauriApp, TAURI_COMMANDS } from '@/types/tauri';
 
-export const useInAppPurchase = async () => {
-  const allowed = await invoke<boolean>(TAURI_COMMANDS.ALLOW_IN_APP_PURCHASE);
+export const useInAppPurchase = () => {
+  const isInAppPurchaseAllowed = async () => {
+    let isInAppPurchaseAllowed = false;
+    try {
+      if (isTauriApp()) {
+        isInAppPurchaseAllowed = await invoke<boolean>(
+          TAURI_COMMANDS.ALLOW_IN_APP_PURCHASE,
+        );
+      }
+    } catch (error) {
+      console.error(
+        '[useInAppPurchase] Error checking in-app purchase:',
+        error,
+      );
+      isInAppPurchaseAllowed = false;
+    }
+    return isInAppPurchaseAllowed;
+  };
 
   return {
-    allowed,
+    isInAppPurchaseAllowed,
   };
 };

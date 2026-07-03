@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FreeTrialDialog as IblFreeTrialDialog } from '@/components/free-trial-dialog';
 import { useAppDispatch } from '@/lib/hooks';
 import { useAppSelector } from '@/lib/hooks';
@@ -18,7 +18,7 @@ import { Tenant } from '@iblai/iblai-js/web-utils';
 import { useInAppPurchase } from '@/hooks/use-in-app-purchase';
 
 // Custom hook to handle trial user actions
-export const useShowFreeTrialDialog = async (
+export const useShowFreeTrialDialog = (
   options = { modalComponent: null, enableFallbackModal: true },
 ) => {
   const subscriptionStatus = useAppSelector(
@@ -47,7 +47,20 @@ export const useShowFreeTrialDialog = async (
     useSubscriptionHandlerV2(subscriptionFlow);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { isAppleDevice } = useOS();
-  const { allowed: inAppPurchaseNotAllowed } = await useInAppPurchase();
+  const { isInAppPurchaseAllowed } = useInAppPurchase();
+  // Resolve the (async) in-app-purchase flag into state so the trial check below
+  // stays synchronous. It reads a build-time flag, so resolving once on mount is
+  // enough.
+  const [inAppPurchaseAllowed, setInAppPurchaseAllowed] = useState(false);
+  useEffect(() => {
+    let active = true;
+    isInAppPurchaseAllowed().then((allowed) => {
+      if (active) setInAppPurchaseAllowed(allowed);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
   const FreeTrialDialog =
     options.modalComponent ||
     (options.enableFallbackModal ? IblFreeTrialDialog : null);
@@ -68,7 +81,7 @@ export const useShowFreeTrialDialog = async (
       (subscriptionStatus.creditExhausted && subscriptionStatus.callToAction) ||
       isNewlyUserOnPreFreeOrAdvertisingMode(isAdminAction)
     ) {
-      if (isAppleDevice && !inAppPurchaseNotAllowed) {
+      if (isAppleDevice && !inAppPurchaseAllowed) {
         dispatch(setOpenAppleRestrictionModal(true));
         return null;
       }

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Mock the Tauri core `invoke` before importing the hook so the call is
 // intercepted instead of hitting the throwing test-environment mock aliased
@@ -15,12 +15,34 @@ import { TAURI_COMMANDS } from '@/types/tauri';
 describe('useInAppPurchase', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Simulate running inside a Tauri webview so the checker takes the invoke path.
+    (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = {};
+  });
+
+  afterEach(() => {
+    delete (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__;
+  });
+
+  it('exposes an isInAppPurchaseAllowed checker function', () => {
+    const { isInAppPurchaseAllowed } = useInAppPurchase();
+
+    expect(typeof isInAppPurchaseAllowed).toBe('function');
+  });
+
+  it('resolves false without invoking when not in a Tauri app', async () => {
+    delete (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__;
+
+    const { isInAppPurchaseAllowed } = useInAppPurchase();
+
+    await expect(isInAppPurchaseAllowed()).resolves.toBe(false);
+    expect(mockInvoke).not.toHaveBeenCalled();
   });
 
   it('invokes the allow_in_app_purchase Tauri command', async () => {
     mockInvoke.mockResolvedValue(true);
 
-    await useInAppPurchase();
+    const { isInAppPurchaseAllowed } = useInAppPurchase();
+    await isInAppPurchaseAllowed();
 
     expect(mockInvoke).toHaveBeenCalledTimes(1);
     expect(mockInvoke).toHaveBeenCalledWith(
@@ -28,33 +50,32 @@ describe('useInAppPurchase', () => {
     );
   });
 
-  it('returns allowed: true when the command resolves true', async () => {
+  it('resolves true when the command resolves true', async () => {
     mockInvoke.mockResolvedValue(true);
 
-    const result = await useInAppPurchase();
+    const { isInAppPurchaseAllowed } = useInAppPurchase();
 
-    expect(result).toEqual({ allowed: true });
+    await expect(isInAppPurchaseAllowed()).resolves.toBe(true);
   });
 
-  it('returns allowed: false when the command resolves false', async () => {
+  it('resolves false when the command resolves false', async () => {
     mockInvoke.mockResolvedValue(false);
 
-    const result = await useInAppPurchase();
+    const { isInAppPurchaseAllowed } = useInAppPurchase();
 
-    expect(result).toEqual({ allowed: false });
+    await expect(isInAppPurchaseAllowed()).resolves.toBe(false);
   });
 
-  it('passes through the exact boolean returned by the command', async () => {
-    mockInvoke.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+  it('resolves false when the Tauri command throws', async () => {
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
+    mockInvoke.mockRejectedValue(new Error('Tauri command failed'));
 
-    await expect(useInAppPurchase()).resolves.toEqual({ allowed: false });
-    await expect(useInAppPurchase()).resolves.toEqual({ allowed: true });
-  });
+    const { isInAppPurchaseAllowed } = useInAppPurchase();
 
-  it('propagates errors thrown by the Tauri command', async () => {
-    const error = new Error('Tauri command failed');
-    mockInvoke.mockRejectedValue(error);
-
-    await expect(useInAppPurchase()).rejects.toThrow('Tauri command failed');
+    await expect(isInAppPurchaseAllowed()).resolves.toBe(false);
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
   });
 });
