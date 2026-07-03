@@ -67,6 +67,9 @@ jobs:
             mentor)
               echo "image_name=iblai-mentor-spa-pro" >> $GITHUB_OUTPUT
               ;;
+            os)
+              echo "image_name=iblai-os-spa" >> $GITHUB_OUTPUT
+              ;;
             skills)
               echo "image_name=iblai-skills-spa-pro" >> $GITHUB_OUTPUT
               ;;
@@ -104,7 +107,7 @@ jobs:
           # whitespace or shell metachars are passed through intact.
           BUILD_ARGS=()
 
-          if [ "${{ inputs.app_name }}" = "mentor" ]; then
+          if [ "${{ inputs.app_name }}" = "mentor" ] || [ "${{ inputs.app_name }}" = "os" ]; then
             if [ -n "${{ inputs.next_image_patterns }}" ]; then
               BUILD_ARGS+=(--build-arg "NEXT_IMAGE_PATTERNS=${{ inputs.next_image_patterns }}")
             fi
