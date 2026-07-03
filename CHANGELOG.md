@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.90.2](https://github.com/iblai/os/compare/v0.90.1...v0.90.2) (2026-07-03)
+
+### Bug Fixes
+
+* **tauri:** trust https://*.ibl.ai origin in capabilities ([0c0d469](https://github.com/iblai/os/commit/0c0d4691a9d0cc8479aae620c90dbda204095f04))
+* **tauri:** trust https://*.ibl.ai origin in capabilities ([8f53622](https://github.com/iblai/os/commit/8f536224279e5e07d824dc7dd52f8b9477643a8e))
+
 ## [0.90.1](https://github.com/iblai/os/compare/v0.90.0...v0.90.1) (2026-07-03)
 
 ### Bug Fixes
