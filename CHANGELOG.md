@@ -1,20 +1,51 @@
 # Changelog
 
+## [0.90.3](https://github.com/iblai/os/compare/v0.90.2...v0.90.3) (2026-07-03)
+
+### CI
+
+* PR image build timeout + drop dead SENTRY_AUTH_TOKEN reference ([3d530e1](https://github.com/iblai/os/commit/3d530e17ae6a78416a68ad530628ebc5ff696995))
+
+## [0.90.2](https://github.com/iblai/os/compare/v0.90.1...v0.90.2) (2026-07-03)
+
+### Bug Fixes
+
+* **tauri:** trust https://*.ibl.ai origin in capabilities ([0c0d469](https://github.com/iblai/os/commit/0c0d4691a9d0cc8479aae620c90dbda204095f04))
+* **tauri:** trust https://*.ibl.ai origin in capabilities ([8f53622](https://github.com/iblai/os/commit/8f536224279e5e07d824dc7dd52f8b9477643a8e))
+
+## [0.90.1](https://github.com/iblai/os/compare/v0.90.0...v0.90.1) (2026-07-03)
+
+### Bug Fixes
+
+* **tauri:** grant ACL permission for allow_in_app_purchase command ([fee75a2](https://github.com/iblai/os/commit/fee75a24b52afe4477889a01928bdf230691a708))
+
+### CI
+
+* push release image to iblai-os-spa (replaces iblai-mentor-spa-pro) ([d1bf12f](https://github.com/iblai/os/commit/d1bf12ff7565d0f01a1fd3dfbd03c8bd20503f6a))
+
+## [0.90.0](https://github.com/iblai/os/compare/v0.89.1...v0.90.0) (2026-07-03)
+
+### Features
+
+- in-app-purchase hook implemented ([396a006](https://github.com/iblai/os/commit/396a0060d03a485b66fc73c181e45a7c7ba65e80))
+- in-app-purchase hook implemented ([d5386e0](https://github.com/iblai/os/commit/d5386e04aa8164ea31b0a056cc136c97a486f413))
+- in-app-purchase hook implemented > test coverage ([73cfd1c](https://github.com/iblai/os/commit/73cfd1cd527404a0dbeb1e4decf5aea64ee1a524))
+
 ## [0.89.1](https://github.com/iblai/os/compare/v0.89.0...v0.89.1) (2026-07-02)
 
 ### Bug Fixes
 
-* **i18n:** gate language-preference sync on edX JWT and mount inside AuthProvider ([a1829f9](https://github.com/iblai/os/commit/a1829f9db2b69428c2cb45d72bd4c209d5b0ffe7))
+- **i18n:** gate language-preference sync on edX JWT and mount inside AuthProvider ([a1829f9](https://github.com/iblai/os/commit/a1829f9db2b69428c2cb45d72bd4c209d5b0ffe7))
 
 ## [0.89.0](https://github.com/iblai/os/compare/v0.88.3...v0.89.0) (2026-07-02)
 
 ### Features
 
-* **tauri:** add allow_in_app_purchase command gated by build-time env ([1a1ddeb](https://github.com/iblai/os/commit/1a1ddebc5475ad80bb4cd19ea60d539248ac7701))
+- **tauri:** add allow_in_app_purchase command gated by build-time env ([1a1ddeb](https://github.com/iblai/os/commit/1a1ddebc5475ad80bb4cd19ea60d539248ac7701))
 
 ### Tests
 
-* **e2e:** wait for streaming before re-navigating in prompt-injection TC3 ([31b4edd](https://github.com/iblai/os/commit/31b4edd43968f25781982b6828ed6c06485000bc))
+- **e2e:** wait for streaming before re-navigating in prompt-injection TC3 ([31b4edd](https://github.com/iblai/os/commit/31b4edd43968f25781982b6828ed6c06485000bc))
 
 ## [0.88.3](https://github.com/iblai/os/compare/v0.88.2...v0.88.3) (2026-07-01)
 
