@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-06-30 | 499 checkpoints (477 covered, 2 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 57 journeys (56 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-07-03 | 504 checkpoints (482 covered, 2 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 58 journeys (57 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -977,5 +977,19 @@ End-to-end onboarding of a brand-new user via the `ECOMMERCE_CHECKOUT_URL` "free
 - [x] fcc-02: Submitting the email completes checkout and lands authenticated on the mentor SPA at `<base-url>/platform/<platform-key>/<mentor-id>`
 - [x] fcc-03: The credit-balance dropdown shows a positive remaining credit balance and a "Free" plan pill
 - [x] fcc-04: Clicking "Upgrade Plan" in the credit dropdown redirects to a Stripe-hosted checkout page (`store.ibl.ai`) requiring credit-card input (secure Stripe Elements card iframe + pay button)
+
+---
+
+## Journey 56: Chat History Export Toggle (5 checkpoints) — `journeys/56-chat-history-export-toggle.spec.ts`
+
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
+
+Covers issue #2068: a new tenant Advanced setting, `enable_chat_history_export` (org metadata boolean, default ON, rendered by the SDK's generic `AdvancedTab` metadata-switch list, label "Chat History Export"), gates the "Export" item in the sidebar Chats three-dot menu (`aria-label="Chat actions"`) COMBINED with the acting user's role: `canExport = !userIsStudent || metadata?.enable_chat_history_export !== false`. Non-students (admin/instructor) always see Export regardless of the setting; students only see it when the setting is ON or absent. "Student" is toggled via the same admin session using the nav-bar User/Admin `LearnerModeSwitch` (`aria-label` starting with "User mode") — the same technique already used by journey 42's "Non-Admin" describe block — rather than a separately-authenticated account, so the seeded chat stays visible to the acting session. Each test creates its own mentor via `createMentorPage.openAndCreate()` and restores both the tenant setting and the learner-mode toggle in a `finally` block so tests remain order-independent.
+
+- [x] chexp-01: Tenant Advanced tab renders a "Chat History Export" switch, ON by default
+- [x] chexp-02: Toggling the switch OFF persists across closing and reopening the Advanced tab (PATCH org metadata round trip)
+- [x] chexp-03: Setting OFF + student (admin in User/Learner mode) — Export is hidden from the chat row menu; Pin and Delete remain visible
+- [x] chexp-04: Setting ON + student — Export, Pin, and Delete are all visible in the chat row menu
+- [x] chexp-05: Setting OFF + non-student (admin/instructor mode) — Export is still visible (role wins over the tenant setting)
 
 ---

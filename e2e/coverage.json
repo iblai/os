@@ -1,14 +1,14 @@
 {
   "version": 2,
-  "lastUpdated": "2026-06-30",
+  "lastUpdated": "2026-07-03",
   "summary": {
-    "totalCheckpoints": 499,
-    "coveredCheckpoints": 477,
+    "totalCheckpoints": 504,
+    "coveredCheckpoints": 482,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 8,
     "percent": 100,
-    "totalJourneys": 57,
-    "activeJourneys": 56
+    "totalJourneys": 58,
+    "activeJourneys": 57
   },
   "journeys": [
     {
@@ -3207,6 +3207,41 @@
         {
           "id": "fcc-04",
           "description": "Clicking Upgrade Plan in the credit dropdown creates a Stripe checkout session and redirects to a Stripe-hosted page requiring credit-card input (secure Stripe Elements card iframe + pay button)",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "chat-history-export-toggle",
+      "name": "Chat History Export Toggle",
+      "spec": "56-chat-history-export-toggle.spec.ts",
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "chexp-01",
+          "description": "Tenant Advanced tab renders a 'Chat History Export' switch, ON by default (SDK-driven org-metadata boolean, enable_chat_history_export)",
+          "status": "covered"
+        },
+        {
+          "id": "chexp-02",
+          "description": "Toggling the 'Chat History Export' switch OFF in the Advanced tab persists across closing and reopening the dialog (PATCH org metadata round trip)",
+          "status": "covered"
+        },
+        {
+          "id": "chexp-03",
+          "description": "With the setting OFF, a student (admin toggled into User/Learner mode) does not see Export in a chat row's three-dot menu, but still sees Pin and Delete",
+          "status": "covered"
+        },
+        {
+          "id": "chexp-04",
+          "description": "With the setting ON, a student (admin toggled into User/Learner mode) sees Export, Pin, and Delete in a chat row's three-dot menu",
+          "status": "covered"
+        },
+        {
+          "id": "chexp-05",
+          "description": "With the setting OFF, a non-student (admin/instructor mode) still sees Export in a chat row's three-dot menu — role wins over the tenant setting",
           "status": "covered"
         }
       ]
