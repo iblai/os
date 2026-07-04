@@ -87,6 +87,7 @@ let mockUsername: string | null = 'admin-user';
 let mockIsLoggedIn = true;
 let mockIsAdmin = true;
 let mockUserIsStudent = false;
+let mockTenantMetadata: Record<string, unknown> = {};
 let mockCurrentTenant: any = {
   is_admin: true,
   is_advertising: false,
@@ -439,6 +440,7 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
   selectStreaming: () => mockIsStreaming,
   selectNumberOfActiveChatMessages: () => mockNumberOfActiveChatMessages,
   selectActiveChatMessages: () => mockActiveChatMessages,
+  useTenantMetadata: () => ({ metadata: mockTenantMetadata }),
 }));
 
 vi.mock('@iblai/iblai-js/web-containers', () => ({
@@ -671,6 +673,7 @@ function resetState() {
   mockIsLoggedIn = true;
   mockIsAdmin = true;
   mockUserIsStudent = false;
+  mockTenantMetadata = {};
   mockCurrentTenant = {
     is_admin: true,
     is_advertising: false,
@@ -1345,6 +1348,51 @@ describe('AppSidebar — Chats section', () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole('menuitem', { name: /^Delete$/ }),
+    ).toBeInTheDocument();
+  });
+
+  it('hides Export but keeps Pin and Delete for a student when export is disabled', async () => {
+    mockUserIsStudent = true;
+    mockTenantMetadata = { enable_chat_history_export: false };
+    const user = userEvent.setup();
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    const menus = screen.getAllByRole('button', { name: 'Chat actions' });
+    await user.click(menus[1]);
+    expect(
+      await screen.findByRole('menuitem', { name: /^Pin$/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('menuitem', { name: /^Delete$/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('menuitem', { name: /^Export$/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows Export for a student when the export setting is absent (default on)', async () => {
+    mockUserIsStudent = true;
+    mockTenantMetadata = {};
+    const user = userEvent.setup();
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    const menus = screen.getAllByRole('button', { name: 'Chat actions' });
+    await user.click(menus[1]);
+    expect(
+      await screen.findByRole('menuitem', { name: /^Export$/ }),
+    ).toBeInTheDocument();
+  });
+
+  it('shows Export for a non-student even when the export setting is disabled', async () => {
+    mockUserIsStudent = false;
+    mockTenantMetadata = { enable_chat_history_export: false };
+    const user = userEvent.setup();
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    const menus = screen.getAllByRole('button', { name: 'Chat actions' });
+    await user.click(menus[1]);
+    expect(
+      await screen.findByRole('menuitem', { name: /^Export$/ }),
     ).toBeInTheDocument();
   });
 

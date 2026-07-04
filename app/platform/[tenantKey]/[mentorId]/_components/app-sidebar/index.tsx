@@ -74,6 +74,7 @@ import {
   selectNumberOfActiveChatMessages,
   selectSessionId,
   selectStreaming,
+  useTenantMetadata,
 } from '@iblai/iblai-js/web-utils';
 import {
   Admin,
@@ -996,12 +997,14 @@ function chatRowLabel(row: ChatRow, noContentLabel: string): React.ReactNode {
 function ChatThreeDotMenu({
   isPinned,
   isLoading,
+  canExport = true,
   onPinToggle,
   onExport,
   onDelete,
 }: {
   isPinned: boolean;
   isLoading: boolean;
+  canExport?: boolean;
   onPinToggle: () => void;
   onExport: () => void;
   onDelete: () => void;
@@ -1049,14 +1052,16 @@ function ChatThreeDotMenu({
           )}
           {isPinned ? t('unpin') : t('pin')}
         </DropdownMenuItem>
-        <DropdownMenuItem className="gap-2" onSelect={onExport}>
-          <Download
-            className="size-3.5 shrink-0"
-            strokeWidth={1.5}
-            aria-hidden
-          />
-          {t('export')}
-        </DropdownMenuItem>
+        {canExport && (
+          <DropdownMenuItem className="gap-2" onSelect={onExport}>
+            <Download
+              className="size-3.5 shrink-0"
+              strokeWidth={1.5}
+              aria-hidden
+            />
+            {t('export')}
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem
           className="gap-2 text-red-600 focus:text-red-700"
           onSelect={onDelete}
@@ -1075,6 +1080,7 @@ function ChatRowItem({
   onSelect,
   isPinned,
   isLoading,
+  canExport = true,
   onPinToggle,
   onExport,
   onDelete,
@@ -1084,6 +1090,7 @@ function ChatRowItem({
   onSelect: () => void;
   isPinned: boolean;
   isLoading: boolean;
+  canExport?: boolean;
   onPinToggle: () => void;
   onExport: () => void;
   onDelete: () => void;
@@ -1109,6 +1116,7 @@ function ChatRowItem({
         <ChatThreeDotMenu
           isPinned={isPinned}
           isLoading={isLoading}
+          canExport={canExport}
           onPinToggle={onPinToggle}
           onExport={onExport}
           onDelete={onDelete}
@@ -1140,6 +1148,10 @@ function SidebarChatsSection({
   const { onAfterNav } = useSidebarNavCallback();
   const t = useTranslations('appSidebarIndex');
   const appSessionId = useAppSelector(selectSessionId);
+  const userIsStudent = useUserIsStudent();
+  const { metadata } = useTenantMetadata({ org: tenantKey });
+  const canExport =
+    !userIsStudent || metadata?.enable_chat_history_export !== false;
   const resolvedUserId = username ?? getUserName();
   // The message-loader effect in `useAdvancedChat` keys EXCLUSIVELY on
   // `cachedSessionId[mentorId]` (backed by localStorage `session_id`). Row
@@ -1478,6 +1490,7 @@ function SidebarChatsSection({
       onSelect={() => handleSelectRow(row)}
       isPinned={kind === 'pinned'}
       isLoading={actingSessionId === row.session_id}
+      canExport={canExport}
       onPinToggle={() =>
         kind === 'pinned' ? handleUnpin(row) : handlePin(row)
       }
