@@ -1144,6 +1144,7 @@ function SidebarChatsSection({
   username: string | null;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const dispatch = useAppDispatch();
   const { onAfterNav } = useSidebarNavCallback();
   const t = useTranslations('appSidebarIndex');
@@ -1297,25 +1298,18 @@ function SidebarChatsSection({
     [recentMessages, filterByMentor, pinnedSessionIds],
   );
 
-  // Helpers shared by both lists ---------------------------------------
-
-  const navHrefFor = (row: ChatRow): string | undefined => {
-    const m = row.mentor?.unique_id;
-    if (!m || !tenantKey) return undefined;
-    return `/platform/${tenantKey}/${m}?session=${encodeURIComponent(
-      String(row.session_id),
-    )}`;
-  };
-
-  // Selecting an existing chat. Navigating (`router.push(?session=...)`) is
-  // NOT enough on its own — nothing reads the query param back into state.
-  // We must also point the chat slice + the cached session id at the picked
-  // session so the loader effect re-fires and repaints the message panel.
-  // Clicking the already-active chat is a no-op for state (we only navigate /
-  // close the flyout) to avoid thrashing the in-flight session.
+  // Selecting an existing chat repaints the panel from state: the loader
+  // effect keys on the Redux session id + the localStorage `session_id`
+  // written below — nothing reads a `?session=` query param. So navigate ONLY
+  // when we're not already on this mentor's chat page (e.g. arriving from
+  // Projects / Analytics). When we're already on it — always the case inside
+  // the embed widget — skip the push: re-pushing the URL would strip params
+  // like `?embed=true`, flipping the app out of embed mode and leaking the
+  // full Agents/Projects sidebar (issue #2067). Clicking the already-active
+  // chat is a no-op for state to avoid thrashing the in-flight session.
   const handleSelectRow = (row: ChatRow) => {
-    const href = navHrefFor(row);
-    if (!href) return;
+    const mentorUniqueId = row.mentor?.unique_id;
+    if (!mentorUniqueId || !tenantKey) return;
 
     if (row.session_id !== appSessionId) {
       // Different session: tear down any in-flight streaming/typing state and
@@ -1340,7 +1334,10 @@ function SidebarChatsSection({
       }
     }
 
-    router.push(href);
+    const targetPath = `/platform/${tenantKey}/${mentorUniqueId}`;
+    if (pathname !== targetPath) {
+      router.push(targetPath);
+    }
     onAfterNav?.();
   };
 

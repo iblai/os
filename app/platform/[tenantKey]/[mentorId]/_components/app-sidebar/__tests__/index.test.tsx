@@ -1271,22 +1271,37 @@ describe('AppSidebar — Chats section', () => {
   // cached session id (localStorage `session_id`), so a row click MUST write
   // it AND point the chat slice at the selected session. ---
 
-  it('clicking a recent row navigates AND selects the session (updateSessionIds + cached session id)', () => {
+  it('clicking a recent row selects the session without navigating when already on the chat page', () => {
     mockActiveSessionId = 'sess-recent-1'; // a DIFFERENT row will be clicked
     renderSidebar();
     fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
     fireEvent.click(screen.getByText('Recent message two').closest('button')!);
 
-    // URL push still happens.
-    expect(pushMock).toHaveBeenCalledWith(
-      expect.stringContaining('session=sess-recent-2'),
-    );
+    // Already on this mentor's chat page → no navigation. Pushing the URL here
+    // would strip params like `?embed=true` and leak the full sidebar (#2067).
+    expect(pushMock).not.toHaveBeenCalled();
     // Redux session pointer is updated so the active highlight + dependent
     // queries follow the selection.
     expect(dispatchMock).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'chat/updateSessionIds' }),
     );
     // The cached session id — the loader effect's dependency — is written.
+    expect(saveCachedSessionIdMock).toHaveBeenCalledWith({
+      'mentor-1': 'sess-recent-2',
+    });
+  });
+
+  it('navigates to the mentor chat page (without ?session=) when selecting from another page', () => {
+    mockPathname = '/platform/tenant-a/mentor-1/analytics';
+    mockActiveSessionId = 'sess-recent-1'; // a DIFFERENT row will be clicked
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getByText('Recent message two').closest('button')!);
+
+    // Off the chat page → navigate to it. The session travels via state, not
+    // the URL, so the bare mentor path is pushed (no ?session=), which keeps
+    // chat-page params like `?embed=true` intact once we arrive.
+    expect(pushMock).toHaveBeenCalledWith('/platform/tenant-a/mentor-1');
     expect(saveCachedSessionIdMock).toHaveBeenCalledWith({
       'mentor-1': 'sess-recent-2',
     });
@@ -1307,25 +1322,22 @@ describe('AppSidebar — Chats section', () => {
     renderSidebar();
     fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
     fireEvent.click(screen.getByText('Pinned message one').closest('button')!);
-    expect(pushMock).toHaveBeenCalledWith(
-      expect.stringContaining('session=sess-pinned-1'),
-    );
+    // On the chat page → no navigation, but the session is still selected.
+    expect(pushMock).not.toHaveBeenCalled();
     expect(saveCachedSessionIdMock).toHaveBeenCalledWith({
       'mentor-1': 'sess-pinned-1',
     });
   });
 
-  it('clicking the already-active chat is a no-op for state (still navigates)', () => {
+  it('clicking the already-active chat on the chat page is a complete no-op', () => {
     mockActiveSessionId = 'sess-recent-1';
     renderSidebar();
     fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
     fireEvent.click(screen.getByText('Recent message one').closest('button')!);
 
-    // Navigation/flyout-close still fires.
-    expect(pushMock).toHaveBeenCalledWith(
-      expect.stringContaining('session=sess-recent-1'),
-    );
-    // But no session-selection side effects are dispatched / persisted.
+    // Already-active AND already on the chat page → nothing happens: no
+    // navigation and no session-selection side effects.
+    expect(pushMock).not.toHaveBeenCalled();
     expect(saveCachedSessionIdMock).not.toHaveBeenCalled();
     expect(dispatchMock).not.toHaveBeenCalledWith(
       expect.objectContaining({ type: 'chat/updateSessionIds' }),
@@ -2403,13 +2415,15 @@ describe('AppSidebar — Project row click behavior', () => {
 // =============================================================================
 
 // =============================================================================
-// Chat row label click — when the row has a usable href (mentor.unique_id +
-// tenantKey), clicking the label area calls router.push. Covers the
-// `if (!href) return; router.push(href)` branch in ChatRowItem.
+// Chat row label click — when the row has a usable mentor + tenantKey and we
+// are NOT already on that mentor's chat page, clicking the label navigates to
+// the bare chat page (session travels via state, not the URL). Covers the
+// `if (pathname !== targetPath) router.push(targetPath)` branch.
 // =============================================================================
 
 describe('AppSidebar — Chat row label navigation', () => {
-  it('clicking a chat row with a usable href pushes the chat URL', () => {
+  it('clicking a chat row from another page navigates to the mentor chat page', () => {
+    mockPathname = '/platform/tenant-a/mentor-1/analytics';
     mockRecentPages = {
       results: [
         {
@@ -2428,8 +2442,10 @@ describe('AppSidebar — Chat row label navigation', () => {
     const row = screen.getByText('Navigable row').closest('button');
     expect(row).not.toBeNull();
     fireEvent.click(row!);
-    expect(pushMock).toHaveBeenCalledWith(
-      expect.stringContaining('/platform/tenant-a/mentor-1?session=sess-href'),
+    expect(pushMock).toHaveBeenCalledWith('/platform/tenant-a/mentor-1');
+    // No ?session= decoration — the session is selected via state.
+    expect(pushMock).not.toHaveBeenCalledWith(
+      expect.stringContaining('session='),
     );
   });
 });
@@ -2510,7 +2526,7 @@ describe('AppSidebar — Rail-collapsed chats flyout click', () => {
     };
   });
 
-  it('clicking a pinned row in the flyout pushes the chat URL', async () => {
+  it('clicking a pinned row in the flyout selects the session', async () => {
     mockPinnedPages = {
       results: [
         {
@@ -2531,12 +2547,14 @@ describe('AppSidebar — Rail-collapsed chats flyout click', () => {
     await user.hover(screen.getAllByRole('button', { name: 'Chats' })[0]);
     const row = await screen.findByText('Flyout pin row');
     fireEvent.click(row.closest('button')!);
-    expect(pushMock).toHaveBeenCalledWith(
-      expect.stringContaining('session=sess-flyp'),
+    // On the chat page the flyout row selects the session without navigating.
+    expect(pushMock).not.toHaveBeenCalled();
+    expect(saveCachedSessionIdMock).toHaveBeenCalledWith(
+      expect.objectContaining({ 'mentor-1': 'sess-flyp' }),
     );
   });
 
-  it('clicking a recent row in the flyout pushes the chat URL', async () => {
+  it('clicking a recent row in the flyout selects the session', async () => {
     mockPinnedPages = { results: [] };
     mockRecentPages = {
       results: [
@@ -2557,8 +2575,10 @@ describe('AppSidebar — Rail-collapsed chats flyout click', () => {
     await user.hover(screen.getAllByRole('button', { name: 'Chats' })[0]);
     const row = await screen.findByText('Flyout recent row');
     fireEvent.click(row.closest('button')!);
-    expect(pushMock).toHaveBeenCalledWith(
-      expect.stringContaining('session=sess-flyr'),
+    // On the chat page the flyout row selects the session without navigating.
+    expect(pushMock).not.toHaveBeenCalled();
+    expect(saveCachedSessionIdMock).toHaveBeenCalledWith(
+      expect.objectContaining({ 'mentor-1': 'sess-flyr' }),
     );
   });
 });
@@ -2576,7 +2596,7 @@ describe('AppSidebar — Chat row without href is inert on click', () => {
         {
           id: 'r-no-mentor',
           session_id: 'sess-no-mentor',
-          // no mentor field → navHrefFor returns undefined
+          // no mentor field → handleSelectRow early-returns (no unique_id)
           messages: [
             {
               message: { data: { type: 'user', content: 'No href row' } },
