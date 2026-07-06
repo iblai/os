@@ -30,6 +30,9 @@ use tauri::{command, AppHandle, Emitter, Listener, Manager, Window};
 use tokio::sync::RwLock;
 
 use tauri::WebviewWindowBuilder;
+// OpenerExt is used to open external URLs in the system browser (non-iOS).
+#[cfg(not(target_os = "ios"))]
+use tauri_plugin_opener::OpenerExt;
 
 // OAuth provider URL patterns that should be opened in a separate auth window
 // Note: login.iblai.app loads in the main window - only OAuth providers need a separate window
@@ -2001,6 +2004,18 @@ async fn foundry_chat(
         .ok_or_else(|| "Failed to extract content from Foundry response".to_string())
 }
 
+/// Open an external URL in the system's default browser.
+/// Needed for flows (OAuth, Stripe checkout, external links) that must leave
+/// the WebView. The web frontend invokes this via `openExternalUrl`; without it
+/// registered the invoke fails and the URL wrongly loads inside the WebView.
+#[command]
+async fn open_external_url(app: AppHandle, url: String) -> Result<(), String> {
+    println!("[ibl.ai] Opening external URL: {}", url);
+    app.opener()
+        .open_url(&url, None::<&str>)
+        .map_err(|e| format!("Failed to open URL: {}", e))
+}
+
 fn main() {
     // Load .env file if present (for local development and custom builds)
     // First try current directory (dev mode), then try next to the executable (bundled app)
@@ -2645,6 +2660,7 @@ fn main() {
             get_offline_context,
             get_os_type,
             allow_in_app_purchase,
+            open_external_url,
             ollama_chat,
             ollama_chat_stream,
             oauth::oauth_start,
