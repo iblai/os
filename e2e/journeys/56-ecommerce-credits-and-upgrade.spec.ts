@@ -209,7 +209,6 @@ test.describe('Journey 56: Ecommerce Credits & Upgrade', () => {
           const email = `test-ecommerce+${Date.now()}@ibleducation.com`;
           logger.info(`[ecommerce] signup email: ${email}`);
           await signupPage.signUp(email, ECOMMERCE_SIGNUP_PASSWORD);
-          await page.waitForTimeout(10000);
           //await page.waitForLoadState('domcontentloaded', { timeout: 60_000 });
           await safeWaitForURL(
             page,
