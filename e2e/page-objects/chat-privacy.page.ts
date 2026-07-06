@@ -456,10 +456,9 @@ export class ChatPrivacyPage {
    * off — that is a valid state, not an error.
    */
   async isProfilePrivateModeTabVisible(): Promise<boolean> {
+    const tab = this.page.getByRole('tab', { name: 'Privacy', exact: true });
     try {
-      await expect(this.profilePrivateModeTab()).toBeVisible({
-        timeout: 5_000,
-      });
+      await expect(tab).toBeVisible({ timeout: 5_000 });
       return true;
     } catch {
       return false;
@@ -478,7 +477,10 @@ export class ChatPrivacyPage {
    * recurring flake.
    */
   async switchToProfilePrivateModeTab(): Promise<void> {
-    const tab = this.profilePrivateModeTab();
+    const tab = this.page.getByRole('tab', {
+      name: 'Privacy',
+      exact: true,
+    });
     await expect(tab).toBeVisible({ timeout: 15_000 });
     await tab.click();
     await expect(this.page.getByTestId('chat-privacy-tab-body')).toBeVisible({

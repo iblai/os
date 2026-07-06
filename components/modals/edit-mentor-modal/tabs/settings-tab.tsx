@@ -313,6 +313,7 @@ export function SettingsTab() {
 
       if (value.forkable !== undefined) {
         values.forkable = value.forkable;
+        values.forkable_with_training_data = value.forkable;
       }
 
       if (value.show_reasoning !== undefined) {

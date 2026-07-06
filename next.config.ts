@@ -5,6 +5,12 @@ import type { RemotePattern } from 'next/dist/shared/lib/image-config';
 
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 
+// Sourcemap generation is heavy (multi-GB) and only pays off if the maps are
+// actually uploaded to Sentry — which requires SENTRY_AUTH_TOKEN at build time.
+// With no token they were generated and thrown away, OOM-ing the 7GB CI runners
+// (the "stuck PR builds"). Gate the Sentry sourcemap pipeline on the token.
+const uploadSourcemaps = !!process.env.SENTRY_AUTH_TOKEN;
+
 const envPatterns = process.env.NEXT_IMAGE_PATTERNS?.trim();
 const rawPatterns = envPatterns
   ? envPatterns.split(',')
@@ -81,7 +87,7 @@ const nextConfig: NextConfig = {
     '@sentry/node',
     '@sentry/node-core',
   ],
-  productionBrowserSourceMaps: true,
+  productionBrowserSourceMaps: false,
   turbopack: {
     rules: {
       '*.svg': ['@svgr/webpack'],
@@ -113,8 +119,15 @@ const sentryWebpackPluginOptions = {
   silent: false,
   org: 'ibl-ai',
   project: 'mentorai-iblai-app',
-  widenClientFileUpload: true,
-  hideSourceMaps: false,
+  widenClientFileUpload: uploadSourcemaps,
+  // Upload source maps to Sentry (requires SENTRY_AUTH_TOKEN at build time),
+  // then delete the emitted .map files so they are never served publicly.
+  // When there's no token, disable the whole pipeline so `next build` doesn't
+  // generate multi-GB maps only to discard them (the OOM/hang root cause).
+  sourcemaps: {
+    disable: !uploadSourcemaps,
+    deleteSourcemapsAfterUpload: true,
+  },
   // Sentry SDK v10 moved these under `webpack`:
   // - `disableLogger` -> `webpack.treeshake.removeDebugLogging`
   // - `automaticVercelMonitors` -> `webpack.automaticVercelMonitors`

@@ -5,6 +5,7 @@ export class ProfilePage {
 
   readonly modal: Locator;
   readonly closeButton: Locator;
+  readonly tabNav: Locator;
   readonly tabs: Locator;
 
   // Basic tab
@@ -40,7 +41,8 @@ export class ProfilePage {
       name: 'Close',
       exact: true,
     });
-    this.tabs = this.modal.getByRole('tablist');
+    this.tabNav = this.modal.getByRole('navigation', { name: /profile tabs/i });
+    this.tabs = this.tabNav.getByRole('tablist');
 
     this.fullNameField = this.modal
       .getByLabel(/full name/i)
@@ -110,11 +112,28 @@ export class ProfilePage {
   }
 
   async switchToTab(tabName: string): Promise<void> {
-    const tab = this.modal
+    const tab = this.tabNav
       .getByRole('tab', { name: new RegExp(tabName, 'i') })
       .first();
     await expect(tab).toBeVisible({ timeout: 5_000 });
     await tab.click();
+    await this.page.waitForTimeout(300);
+  }
+
+  activeTab(tabName: string): Locator {
+    return this.tabNav.getByRole('tab', {
+      name: new RegExp(tabName, 'i'),
+      selected: true,
+    });
+  }
+
+  async switchToSubTab(subTabName: string): Promise<void> {
+    const subTab = this.modal
+      .getByRole('tabpanel')
+      .getByRole('tab', { name: new RegExp(`^${subTabName}$`, 'i') })
+      .first();
+    await expect(subTab).toBeVisible({ timeout: 5_000 });
+    await subTab.click();
     await this.page.waitForTimeout(300);
   }
 
