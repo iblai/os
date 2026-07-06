@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.91.2](https://github.com/iblai/os/compare/v0.91.1...v0.91.2) (2026-07-06)
+
+### Bug Fixes
+
+* **app:** register open_external_url command on desktop ([cc1b010](https://github.com/iblai/os/commit/cc1b0106096a57766b44ea2c62c8e82019ca0a15))
+
 ## [0.91.1](https://github.com/iblai/os/compare/v0.91.0...v0.91.1) (2026-07-06)
 
 ### Chores
