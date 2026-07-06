@@ -156,6 +156,7 @@ async function expectSubscribeModalAndClose(page: Page): Promise<void> {
 test.describe('Journey 56: Ecommerce Credits & Upgrade', () => {
   // Signup + two full Stripe checkouts + four agent chats + two credit
   // cleanups — give the whole lifecycle plenty of room.
+  test.use({ storageState: { cookies: [], origins: [] } });
   test.setTimeout(600_000);
 
   test('new user signs up for a free trial, exhausts credits, upgrades to the free plan via Stripe, exhausts credits again, and upgrades to Premium with a test card', async ({
@@ -189,9 +190,9 @@ test.describe('Journey 56: Ecommerce Credits & Upgrade', () => {
             timeout: 60_000,
           });
           await page.waitForLoadState('domcontentloaded', { timeout: 60_000 });
+          const pleaseWaitText = page.getByText(/please wait.../i);
           const signUpButton = page.getByRole('button', { name: 'Sign Up' });
           await expect(signUpButton).toBeVisible({ timeout: 30_000 });
-          const pleaseWaitText = page.getByText(/please wait.../i);
           await expect(pleaseWaitText).not.toBeVisible({ timeout: 30_000 });
           await signUpButton.click();
           await safeWaitForURL(
@@ -208,7 +209,13 @@ test.describe('Journey 56: Ecommerce Credits & Upgrade', () => {
           const email = `test-ecommerce+${Date.now()}@ibleducation.com`;
           logger.info(`[ecommerce] signup email: ${email}`);
           await signupPage.signUp(email, ECOMMERCE_SIGNUP_PASSWORD);
-
+          await page.waitForTimeout(10000);
+          //await page.waitForLoadState('domcontentloaded', { timeout: 60_000 });
+          await safeWaitForURL(
+            page,
+            (url) => url.href.includes(MENTOR_NEXTJS_HOST),
+            { timeout: 120_000 },
+          );
           await safeWaitForURL(
             page,
             (u) => /\/platform\/main\/[^/]+$/.test(u.pathname),
@@ -339,7 +346,7 @@ test.describe('Journey 56: Ecommerce Credits & Upgrade', () => {
 
           await sidebarPage.expandSection('Projects');
           await sidebarPage.sidebar
-            .getByRole('button', { name: 'My Projects', exact: true })
+            .getByRole('button', { name: 'New Project', exact: true })
             .click();
           await expectSubscribeModalAndClose(page);
 
@@ -624,16 +631,22 @@ test.describe('Journey 56: Ecommerce Credits & Upgrade', () => {
             page.getByText(/(\$|US)\s?\d+([.,]\d{2})?/).first(),
           ).toBeVisible({ timeout: 15_000 });
 
-          // Card is the first payment-method radio (validated order: Card,
-          // Klarna, Cash App Pay, Bank).
-          const cardRadio = page.getByRole('radio').first();
-          if (await isVisibleWithin(cardRadio, 5_000)) {
-            await cardRadio.click();
-          }
-
           const cardNumber = page
             .locator('#cardNumber')
             .or(page.locator('input[name="cardNumber"]'));
+
+          // Select the Card payment method — but only when its form isn't
+          // already expanded. Stripe sometimes preselects Card, and the open
+          // accordion renders an expanded click-area button
+          // (`card-accordion-item-button`) that overlays the radio and
+          // intercepts pointer events, making a direct radio click time out.
+          // Clicking the `card-accordion-item` row is safe in both states:
+          // the overlay button is a descendant of the row, so Playwright's
+          // hit-target check passes (validated live on store.ibl.ai).
+          if (!(await isVisibleWithin(cardNumber, 5_000))) {
+            await page.getByTestId('card-accordion-item').click();
+          }
+          await expect(cardNumber).toBeVisible({ timeout: 20_000 });
           const cardExpiry = page
             .locator('#cardExpiry')
             .or(page.locator('input[name="cardExpiry"]'));
@@ -645,7 +658,6 @@ test.describe('Journey 56: Ecommerce Credits & Upgrade', () => {
             .or(page.locator('input[name="billingName"]'));
           const billingCountry = page.locator('#billingCountry');
 
-          await expect(cardNumber).toBeVisible({ timeout: 20_000 });
           await cardNumber.fill('4242424242424242');
           await cardExpiry.fill('12 / 30');
           await cardCvc.fill('123');
@@ -653,6 +665,17 @@ test.describe('Journey 56: Ecommerce Credits & Upgrade', () => {
           // Selecting Uruguay removes the postal-code field (validated); use
           // the ISO value, not the label, since it's locale-independent.
           await billingCountry.selectOption({ value: 'UY' });
+
+          // "Save my information" (Link, #enableStripePass) is sometimes
+          // pre-checked and adds a required phone-number field that would
+          // block payment — uncheck it when present.
+          const savePass = page.locator('#enableStripePass');
+          if (
+            (await isVisibleWithin(savePass, 2_000)) &&
+            (await savePass.isChecked())
+          ) {
+            await savePass.uncheck();
+          }
 
           await submitButton.click();
         },
