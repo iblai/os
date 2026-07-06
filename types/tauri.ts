@@ -121,6 +121,8 @@ export const TAURI_COMMANDS = {
   CANCEL_DOWNLOAD: 'cancel_model_download',
   CHECK_NETWORK_STATUS: 'check_network_status',
   GET_OS_TYPE: 'get_os_type',
+  // Build-time flag (IBL_ALLOW_IN_APP_PURCHASE env, defaults false) — returns boolean.
+  ALLOW_IN_APP_PURCHASE: 'allow_in_app_purchase',
   CHECK_FOUNDRY_STATUS: 'check_foundry_local_status',
   START_FOUNDRY_SERVICE: 'start_foundry_local_service',
   LOAD_FOUNDRY_MODEL: 'load_foundry_local_model',

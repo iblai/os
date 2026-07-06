@@ -8,6 +8,7 @@ permissions = [
     "allow-open-external-url",
     "allow-navigate-to",
     "allow-get-os-type",
+    "allow-allow-in-app-purchase",
     "allow-install-ollama",
     "allow-stop-ollama",
     "allow-check-ollama-status",
@@ -53,6 +54,12 @@ identifier = "allow-get-os-type"
 description = "Enables getting the OS type"
 [permission.commands]
 allow = ["get_os_type"]
+
+[[permission]]
+identifier = "allow-allow-in-app-purchase"
+description = "Enables checking whether in-app purchase is allowed for this build"
+[permission.commands]
+allow = ["allow_in_app_purchase"]
 
 [[permission]]
 identifier = "allow-install-ollama"
