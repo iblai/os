@@ -229,6 +229,12 @@ test.describe('Journey: Chat URL ?prompt= Auto-Injection', () => {
       { key: SESSION_ID_KEY, mid: mentorId },
     );
 
+    // The message record is only saved to the backend once streaming finishes,
+    // so wait for it to complete before navigating away, then add a deliberate
+    // settle to let the save land.
+    await chatPage.waitForStreamingComplete();
+    await page.waitForTimeout(2_000);
+
     // Step 2 — Navigate with a DIFFERENT prompt (same mentor, same tenant)
     const secondUrl = `${MENTOR_NEXTJS_HOST}/platform/${tenantKey}/${mentorId}?prompt=${encodeURIComponent(secondPrompt)}`;
     await page.goto(secondUrl, {

@@ -1,6 +1,6 @@
 {
   "name": "ibl-web-nextjs-mentor-spa",
-  "version": "0.75.11",
+  "version": "0.91.1",
   "private": false,
   "packageManager": "pnpm@10.11.1",
   "engines": {
@@ -26,6 +26,8 @@
     "tauri:dev": "cargo tauri dev",
     "tauri:build": "cargo tauri build",
     "tauri:build:debug": "pnpm build && cargo tauri build --debug",
+    "tauri:build:mas": "pnpm build && cargo tauri build",
+    "tauri:build:devid": "pnpm build && cargo tauri build --config src-tauri/tauri.devid.conf.json",
     "test:e2e": "mkdir -p playwright/.auth && echo '{\"cookies\":[],\"origins\":[]}' > playwright/.auth/user-chrome.json && echo '{\"cookies\":[],\"origins\":[]}' > playwright/.auth/user-edge.json && echo '{\"cookies\":[],\"origins\":[]}' > playwright/.auth/user-safari.json && echo '{\"cookies\":[],\"origins\":[]}' > playwright/.auth/user-firefox.json && playwright test --config e2e/playwright.config.ts",
     "test:e2e:ui": "playwright test --config e2e/playwright.config.ts --ui",
     "test:e2e:headed": "playwright test --config e2e/playwright.config.ts --headed"
@@ -33,7 +35,7 @@
   "dependencies": {
     "@iblai/agent-ai": "2.5.2",
     "@iblai/iblai-api": "4.166.0-ai",
-    "@iblai/iblai-js": "1.19.0",
+    "@iblai/iblai-js": "1.22.4",
     "@iblai/iblai-web-mentor": "1.3.4",
     "@livekit/components-react": "2.8.1",
     "@livekit/components-styles": "1.1.4",
@@ -65,8 +67,7 @@
     "@radix-ui/react-toggle-group": "1.1.3",
     "@radix-ui/react-tooltip": "1.2.0",
     "@reduxjs/toolkit": "2.7.0",
-    "@sentry/nextjs": "9.47.1",
-    "@sentry/replay": "7.116.0",
+    "@sentry/nextjs": "10.62.0",
     "@tanstack/react-form": "1.6.3",
     "@tauri-apps/api": "2.11.0",
     "@tauri-apps/plugin-opener": "2.5.3",
@@ -108,6 +109,7 @@
     "marked-katex-extension": "5.1.7",
     "mitt": "3.0.1",
     "next": "15.5.18",
+    "next-intl": "4.13.0",
     "next-themes": "0.4.6",
     "next-transpile-modules": "10.0.1",
     "react": "19.1.0",
@@ -162,8 +164,8 @@
     "@types/react-gravatar": "2.6.14",
     "@types/react-syntax-highlighter": "15.5.13",
     "@vitejs/plugin-react": "5.1.2",
-    "@vitest/coverage-istanbul": "3.2.4",
-    "@vitest/ui": "3.2.4",
+    "@vitest/coverage-istanbul": "3.2.6",
+    "@vitest/ui": "3.2.6",
     "autoprefixer": "10.4.27",
     "cross-env": "7.0.3",
     "dotenv": "16.4.7",
@@ -184,42 +186,8 @@
     "turbo": "2.9.14",
     "typescript": "5.9.3",
     "vite-tsconfig-paths": "5.1.4",
-    "vitest": "3.2.4",
+    "vitest": "3.2.6",
     "vitest-axe": "0.1.0"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "core-js",
-      "sharp",
-      "@sentry/cli",
-      "unrs-resolver",
-      "canvas",
-      "husky"
-    ],
-    "overrides": {
-      "vite": ">=7.3.2",
-      "basic-ftp": ">=5.2.1",
-      "follow-redirects": ">=1.16.0",
-      "defu": ">=6.1.5",
-      "lodash-es": ">=4.18.0",
-      "lodash": ">=4.18.0",
-      "undici": ">=6.24.0",
-      "hono": ">=4.12.18",
-      "axios": ">=1.16.0",
-      "prismjs": ">=1.30.0",
-      "dompurify": ">=3.4.0",
-      "@hono/node-server": ">=1.19.13",
-      "bytes": ">=1.11.1",
-      "devalue": ">=5.8.1",
-      "fast-uri": ">=3.1.2",
-      "ip-address": ">=10.1.1",
-      "brace-expansion": ">=5.0.6",
-      "minimatch@^9>brace-expansion": "2.0.3",
-      "postcss": ">=8.5.10",
-      "ws": ">=8.20.1",
-      "qs": ">=6.15.2",
-      "uuid": "11.1.1"
-    }
   },
   "lint-staged": {
     "*.ts?(x)": [

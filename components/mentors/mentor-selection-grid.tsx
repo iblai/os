@@ -1,10 +1,11 @@
 'use client';
 
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Search, Check } from 'lucide-react';
-import { useMentorsWithPagination } from '@/hooks/use-mentors';
+import { useAiSearchMentorsWithPagination } from '@/hooks/use-mentors';
 import IblPagination from '@/components/ibl-pagination';
 import { Spinner } from '@/components/spinner';
 
@@ -27,6 +28,7 @@ export function MentorSelectionGrid({
   showSearch = true,
   minHeight = '400px',
 }: MentorSelectionGridProps) {
+  const t = useTranslations('mentorsMentorSelectionGrid');
   const {
     mentors,
     isLoading: isMentorsLoading,
@@ -35,7 +37,7 @@ export function MentorSelectionGrid({
     totalPages,
     setSearchQuery: setMentorSearch,
     handlePageChange,
-  } = useMentorsWithPagination(itemsPerPage);
+  } = useAiSearchMentorsWithPagination(itemsPerPage);
 
   // Update search query with debounce effect handled by the hook
   React.useEffect(() => {
@@ -56,7 +58,7 @@ export function MentorSelectionGrid({
             <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-gray-400" />
           )}
           <Input
-            placeholder="Search Agents"
+            placeholder={t('searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             className="h-10 border-gray-200 pl-10 focus:border-blue-500 focus:ring-0"
@@ -71,11 +73,11 @@ export function MentorSelectionGrid({
         >
           {isMentorsLoading ? (
             <div className="col-span-full py-8 text-center text-gray-500">
-              Loading agents...
+              {t('loadingAgents')}
             </div>
           ) : mentors.length === 0 ? (
             <div className="col-span-full py-8 text-center text-gray-500">
-              No agents found matching your search.
+              {t('noAgentsFound')}
             </div>
           ) : (
             mentors.map((mentor) => {
@@ -88,6 +90,8 @@ export function MentorSelectionGrid({
                 <button
                   key={mentor.unique_id}
                   onClick={() => onMentorSelect(mentor)}
+                  aria-label={`Select agent ${mentor.name}`}
+                  aria-pressed={isSelected}
                   className={`flex cursor-pointer items-center gap-3 rounded-lg border-2 p-3 transition-all ${
                     isSelected
                       ? 'border-blue-500 bg-blue-50'
@@ -114,14 +118,14 @@ export function MentorSelectionGrid({
                     </p>
                   </div>
                   {isSelected && (
-                    <div className="flex-shrink-0">
+                    <div className="flex-shrink-0" aria-hidden="true">
                       <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600">
                         <Check className="h-4 w-4 text-white" />
                       </div>
                     </div>
                   )}
                   {isAlreadyAdded && !isSelected && (
-                    <div className="flex-shrink-0">
+                    <div className="flex-shrink-0" aria-hidden="true">
                       <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-400">
                         <Check className="h-4 w-4 text-white" />
                       </div>

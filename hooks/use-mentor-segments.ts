@@ -56,6 +56,8 @@ export type MentorSegmentConfigFlags = {
   /** True when a ClawMentorConfig exists for this mentor (sandbox wired to an instance). */
   clawConfigExists: boolean;
   isMemoryComponentEnabled: boolean;
+  /** True when `enable_privacy_router` is on for this mentor. */
+  isPrivacyEnabled: boolean;
   /**
    * True when the mentor's CallConfiguration has `enable_video` on — the
    * toggle that's surfaced in the Settings tab. Gates the standalone
@@ -279,6 +281,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
+    enabledThroughConfig: (flags) => flags.isPrivacyEnabled,
     navCategory: 'configurations',
   },
   {
@@ -569,6 +572,9 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
   const isMemoryComponentEnabled =
     // @ts-ignore - enable_memory_component exists on API but not typed
     mentorSettings?.enable_memory_component ?? false;
+  const isPrivacyEnabled =
+    // @ts-ignore - enable_privacy_router exists on API but not typed
+    mentorSettings?.enable_privacy_router ?? false;
 
   // CallConfiguration is embedded directly in the mentor-settings response.
   // The host gates the Screen share tab on `enable_video` so it only shows
@@ -603,6 +609,7 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
         isMemoryComponentEnabled,
         isClawEnabled,
         clawConfigExists,
+        isPrivacyEnabled,
         isScreenshareEnabled,
         isVoiceCallEnabled,
       },
@@ -617,6 +624,7 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
       isClawEnabled,
       clawConfigExists,
       isMemoryComponentEnabled,
+      isPrivacyEnabled,
       isScreenshareEnabled,
       isVoiceCallEnabled,
     ],

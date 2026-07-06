@@ -99,6 +99,8 @@ vi.mock('@/lib/config', () => ({
     authUrl: () => 'https://auth.example.com',
     platformBaseDomain: () => 'example.com',
     defaultSupportPhoneNumber: () => '(571) 293-0242',
+    enableSupportPhone: () => false,
+    enableGradebookTab: () => false,
     enableRBAC: () => false,
     iblTemplateMentor: () => 'default-mentor',
   },

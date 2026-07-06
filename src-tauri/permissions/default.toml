@@ -8,14 +8,21 @@ permissions = [
     "allow-open-external-url",
     "allow-navigate-to",
     "allow-get-os-type",
+    "allow-allow-in-app-purchase",
     "allow-install-ollama",
+    "allow-stop-ollama",
     "allow-check-ollama-status",
     "allow-check-disk-space-for-model",
     "allow-download-phi3-model",
+    "allow-download-model",
     "allow-cancel-model-download",
     "allow-check-network-status",
     "allow-ollama-chat",
-    "allow-ollama-chat-stream"
+    "allow-ollama-chat-stream",
+    "allow-get-mcp-config-path",
+    "allow-install-ghost-os",
+    "allow-stop-ghost-os",
+    "allow-check-ghost-os-status",
 ]
 
 [[permission]]
@@ -23,6 +30,18 @@ identifier = "allow-open-external-url"
 description = "Enables opening URLs in the system browser for OAuth flows"
 [permission.commands]
 allow = ["open_external_url"]
+
+[[permission]]
+identifier = "allow-log-fe"
+description = "Allow logging from frontend"
+[permission.commands]
+allow = ["log_fe"]
+
+[[permission]]
+identifier = "allow-get-system-memory"
+description = "Allow getting system memory"
+[permission.commands]
+allow = ["get_system_memory"]
 
 [[permission]]
 identifier = "allow-navigate-to"
@@ -37,10 +56,22 @@ description = "Enables getting the OS type"
 allow = ["get_os_type"]
 
 [[permission]]
+identifier = "allow-allow-in-app-purchase"
+description = "Enables checking whether in-app purchase is allowed for this build"
+[permission.commands]
+allow = ["allow_in_app_purchase"]
+
+[[permission]]
 identifier = "allow-install-ollama"
 description = "Enables installing Ollama"
 [permission.commands]
 allow = ["install_ollama"]
+
+[[permission]]
+identifier = "allow-stop-ollama"
+description = "Enables stopping the Ollama model manager server"
+[permission.commands]
+allow = ["stop_ollama"]
 
 [[permission]]
 identifier = "allow-check-ollama-status"
@@ -59,6 +90,12 @@ identifier = "allow-download-phi3-model"
 description = "Enables downloading the phi3 model"
 [permission.commands]
 allow = ["download_phi3_model"]
+
+[[permission]]
+identifier = "allow-download-model"
+description = "Enables downloading any Ollama model (generic model download)"
+[permission.commands]
+allow = ["download_model"]
 
 [[permission]]
 identifier = "allow-cancel-model-download"
@@ -83,3 +120,27 @@ identifier = "allow-ollama-chat-stream"
 description = "Enables Ollama streaming chat"
 [permission.commands]
 allow = ["ollama_chat_stream"]
+
+[[permission]]
+identifier = "allow-get-mcp-config-path"
+description = "Enables reading the path to the user-editable MCP servers config file"
+[permission.commands]
+allow = ["get_mcp_config_path"]
+
+[[permission]]
+identifier = "allow-install-ghost-os"
+description = "Enables installing GhostOS (System Control) via Homebrew"
+[permission.commands]
+allow = ["install_ghost_os"]
+
+[[permission]]
+identifier = "allow-stop-ghost-os"
+description = "Enables stopping the GhostOS (System Control) processes"
+[permission.commands]
+allow = ["stop_ghost_os"]
+
+[[permission]]
+identifier = "allow-check-ghost-os-status"
+description = "Enables checking GhostOS (System Control) status"
+[permission.commands]
+allow = ["check_ghost_os_status"]

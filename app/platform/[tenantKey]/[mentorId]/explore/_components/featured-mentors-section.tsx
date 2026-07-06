@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Award } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 import { useGetAiSearchMentorsQuery } from '@iblai/iblai-js/data-layer';
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,7 @@ interface MentorWithProfile {
 }
 
 export function FeaturedMentorsSection() {
+  const t = useTranslations('exploreFeaturedMentorsSection');
   const {
     tenantKey,
     debouncedSearch,
@@ -79,7 +81,7 @@ export function FeaturedMentorsSection() {
         role="heading"
         aria-level={2}
       >
-        Featured
+        {t('heading')}
       </h2>
       {featuredMentors.length > 0 ? (
         <>
@@ -98,15 +100,15 @@ export function FeaturedMentorsSection() {
                   )
                 }
                 disabled={featuredMentorsFetching}
-                aria-label="Load more featured agents"
+                aria-label={t('loadMoreAriaLabel')}
               >
                 {featuredMentorsFetching ? (
                   <div className="flex items-center gap-2">
                     <Spinner className="h-4 w-4" aria-hidden="true" />
-                    <span>Loading more</span>
+                    <span>{t('loadingMore')}</span>
                   </div>
                 ) : (
-                  'See more'
+                  t('seeMore')
                 )}
               </Button>
             </div>
@@ -122,13 +124,13 @@ export function FeaturedMentorsSection() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <h3 className="mb-2 text-sm font-medium text-gray-900">
-                    Featured Agents
+                    {t('emptyStateTitle')}
                   </h3>
                   <p className="mb-3 text-sm leading-relaxed text-gray-600">
-                    Discover handpicked agents recommended by our community
+                    {t('emptyStateDescription')}
                   </p>
                   <p className="text-xs text-gray-500">
-                    No featured agents available
+                    {t('emptyStateNoAgents')}
                   </p>
                 </div>
               </div>

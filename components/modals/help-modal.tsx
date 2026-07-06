@@ -3,6 +3,7 @@ import { X, PlayCircle, AlertCircle } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { useMediaQuery } from 'react-responsive';
+import { useTranslations } from 'next-intl';
 
 interface HelpModalProps {
   isOpen: boolean;
@@ -11,36 +12,37 @@ interface HelpModalProps {
 
 const helpResources = [
   {
-    title: 'Create A Study Buddy Agent',
+    labelKey: 'resourceCreateStudyBuddy',
     icon: PlayCircle,
   },
   {
-    title: 'Teaching Assistant Agent',
+    labelKey: 'resourceTeachingAssistant',
     icon: PlayCircle,
   },
   {
-    title: 'Lesson Planner',
+    labelKey: 'resourceLessonPlanner',
     icon: PlayCircle,
   },
   {
-    title: 'Training From a Website',
+    labelKey: 'resourceTrainingFromWebsite',
     icon: PlayCircle,
   },
   {
-    title: 'Multi-language Support',
+    labelKey: 'resourceMultiLanguageSupport',
     icon: PlayCircle,
   },
   {
-    title: 'Customer Support',
+    labelKey: 'resourceCustomerSupport',
     icon: PlayCircle,
   },
   {
-    title: 'Exploring Course Subjects and Topics',
+    labelKey: 'resourceExploringCourseSubjects',
     icon: PlayCircle,
   },
 ];
 
 export function HelpModal({ isOpen, onClose }: HelpModalProps) {
+  const t = useTranslations('modalsHelpModal');
   const isMobile = useMediaQuery({ maxWidth: 767 });
 
   return (
@@ -51,7 +53,7 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
     >
       <div className="flex h-full flex-col">
         <div className="flex items-center justify-between border-b py-1.5">
-          <h2 className="text-xl font-semibold">Help</h2>
+          <h2 className="text-xl font-semibold">{t('heading')}</h2>
           <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
@@ -60,7 +62,7 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
         <div className="flex-1 overflow-auto">
           <div className="py-4">
             <h3 className="mb-4 text-sm font-medium text-gray-500">
-              Popular Resources
+              {t('popularResources')}
             </h3>
             <div className="space-y-1">
               {helpResources.map((resource, index) => (
@@ -72,7 +74,7 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
                     <resource.icon className="h-5 w-5 text-blue-600" />
                   </div>
                   <span className="text-sm text-gray-700">
-                    {resource.title}
+                    {t(resource.labelKey as Parameters<typeof t>[0])}
                   </span>
                 </button>
               ))}
@@ -85,7 +87,7 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100">
               <AlertCircle className="h-5 w-5 text-gray-600" />
             </div>
-            <span className="text-sm text-blue-600">Report a problem</span>
+            <span className="text-sm text-blue-600">{t('reportProblem')}</span>
           </button>
         </div>
       </div>

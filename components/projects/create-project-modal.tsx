@@ -18,6 +18,7 @@ import { MentorSelectionGrid } from '@/components/mentors/mentor-selection-grid'
 import { chatActions } from '@iblai/iblai-js/web-utils';
 import { useDispatch } from 'react-redux';
 import { useNavigate } from '@/hooks/user-navigate';
+import { useTranslations } from 'next-intl';
 
 interface CreateProjectModalProps {
   isOpen: boolean;
@@ -28,6 +29,7 @@ export function CreateProjectModal({
   isOpen,
   onClose,
 }: CreateProjectModalProps) {
+  const t = useTranslations('projectsCreateProjectModal');
   const dispatch = useDispatch();
   const [projectName, setProjectName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -75,7 +77,7 @@ export function CreateProjectModal({
         onClose();
 
         // Show success toast
-        toast.success('Project created successfully');
+        toast.success(t('successToast'));
         dispatch(chatActions.setShouldStartNewChat(true));
 
         // Navigate to project page
@@ -84,7 +86,7 @@ export function CreateProjectModal({
           String(project.id),
         );
       } catch (error) {
-        toast.error('Failed to create project');
+        toast.error(t('errorToast'));
         console.error(JSON.stringify({ tenant: tenantKey, error }));
       }
     }
@@ -111,7 +113,7 @@ export function CreateProjectModal({
         {/* Header */}
         <DialogHeader className="flex-shrink-0 border-b border-gray-200 bg-white px-6 py-4">
           <DialogTitle className="text-xl font-semibold text-gray-900">
-            New Project
+            {t('title')}
           </DialogTitle>
         </DialogHeader>
 
@@ -126,10 +128,10 @@ export function CreateProjectModal({
           {/* Project Name Input */}
           <div>
             <label className="mb-2 block text-sm font-medium text-gray-700">
-              Project Name
+              {t('projectNameLabel')}
             </label>
             <Input
-              placeholder="Project Name"
+              placeholder={t('projectNamePlaceholder')}
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
               className="h-12 rounded-lg border-2 border-gray-200 px-4 text-base focus:border-gray-200 focus:ring-0 focus:outline-none"
@@ -143,10 +145,10 @@ export function CreateProjectModal({
 
           <div>
             <label className="mb-3 block text-sm font-medium text-gray-700">
-              Select Agents <span className="text-red-500">*</span>
+              {t('selectAgentsLabel')} <span className="text-red-500">*</span>
               {selectedMentors.length > 0 && (
                 <span className="ml-2 font-normal text-blue-600">
-                  ({selectedMentors.length} selected)
+                  {t('selectedCount', { count: selectedMentors.length })}
                 </span>
               )}
             </label>
@@ -169,7 +171,7 @@ export function CreateProjectModal({
             onClick={handleCancel}
             className="bg-transparent px-6"
           >
-            Cancel
+            {t('cancelButton')}
           </Button>
           <Button
             onClick={handleCreate}
@@ -178,7 +180,7 @@ export function CreateProjectModal({
             }
             className="bg-gradient-to-r from-[#2563EB] to-[#93C5FD] px-6 text-white hover:opacity-90"
           >
-            {isLoading ? 'Creating...' : 'Save'}
+            {isLoading ? t('creatingButton') : t('saveButton')}
           </Button>
         </div>
       </DialogContent>

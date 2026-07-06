@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import { Star } from 'lucide-react';
 
 import { useGetAiSearchMentorsQuery } from '@iblai/iblai-js/data-layer';
@@ -24,6 +25,7 @@ interface MentorWithProfile {
 }
 
 export function StarredMentorsSection() {
+  const t = useTranslations('exploreStarredMentorsSection');
   const {
     tenantKey,
     username,
@@ -83,7 +85,7 @@ export function StarredMentorsSection() {
         role="heading"
         aria-level={2}
       >
-        Favorites
+        {t('favoritesHeading')}
       </h2>
       {favoriteMentors.length > 0 ? (
         <>
@@ -91,7 +93,7 @@ export function StarredMentorsSection() {
             className="grid grid-cols-1 gap-6 md:grid-cols-2"
             data-testid="favorites-card-list"
             role="list"
-            aria-label="Favorite agents"
+            aria-label={t('favoriteAgentsList')}
           >
             {favoriteMentors.map((mentor) => (
               <div key={mentor.id} role="listitem">
@@ -109,16 +111,16 @@ export function StarredMentorsSection() {
                   )
                 }
                 disabled={starredMentorsFetching}
-                aria-label="Load more favorite agents"
+                aria-label={t('loadMoreAriaLabel')}
                 role="button"
               >
                 {starredMentorsFetching ? (
                   <div className="flex items-center gap-2">
                     <Spinner className="h-4 w-4" aria-hidden="true" />
-                    <span>Loading more</span>
+                    <span>{t('loadingMore')}</span>
                   </div>
                 ) : (
-                  'See more'
+                  t('seeMore')
                 )}
               </Button>
             </div>
@@ -138,7 +140,7 @@ export function StarredMentorsSection() {
                 handleFavoriteCardClick();
               }
             }}
-            aria-label="Add to Favorites - Sign up to star agents"
+            aria-label={t('addToFavoritesCardAriaLabel')}
           >
             <CardContent className="p-6">
               <div className="flex items-start gap-4">
@@ -147,12 +149,12 @@ export function StarredMentorsSection() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <h3 className="mb-2 text-sm font-medium text-gray-900">
-                    Add to Favorites
+                    {t('addToFavoritesTitle')}
                   </h3>
                   <p className="mb-3 text-sm leading-relaxed text-gray-600">
-                    Star your favorite agents to quickly access them here
+                    {t('addToFavoritesDescription')}
                   </p>
-                  <p className="text-xs text-gray-500">No favorites yet</p>
+                  <p className="text-xs text-gray-500">{t('noFavoritesYet')}</p>
                 </div>
               </div>
             </CardContent>

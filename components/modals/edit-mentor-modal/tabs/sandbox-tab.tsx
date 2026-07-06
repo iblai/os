@@ -1,11 +1,13 @@
 'use client';
 
 import { useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { SandboxConfig } from '@iblai/iblai-js/web-containers';
 import { useNavigate } from '@/hooks/user-navigate';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 
 export function SandboxTab() {
+  const t = useTranslations('tabsSandboxTab');
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
   const { getMentorId } = useNavigate();
   const activeMentorId = getMentorId() ?? mentorId;
@@ -16,10 +18,10 @@ export function SandboxTab() {
     <>
       <div className="flex hidden h-[73px] flex-shrink-0 items-center border-b border-gray-200 bg-white p-4 lg:block">
         <div>
-          <h3 className="mb-1 text-base font-medium text-gray-900">Sandbox</h3>
-          <p className="text-xs text-gray-700">
-            Configure sandbox connection and deployment settings.
-          </p>
+          <h3 className="mb-1 text-base font-medium text-gray-900">
+            {t('heading')}
+          </h3>
+          <p className="text-xs text-gray-700">{t('description')}</p>
         </div>
       </div>
       <div

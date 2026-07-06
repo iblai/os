@@ -71,6 +71,8 @@ function dms() {
     // Default to true so the canonical fully-permitted-mentor case still
     // exposes the Memory tab in tests that don't override settings.
     enable_memory_component: true,
+    // Gates the Privacy tab segment; default on so the Privacy tab shows.
+    enable_privacy_router: true,
   };
 }
 
@@ -169,7 +171,7 @@ vi.mock('@/lib/config', () => ({
 
 vi.mock('@sentry/nextjs', () => ({ captureException: vi.fn() }));
 
-// @iblai/web-containers transitively imports @iblai/web-utils which imports
+// @iblai/iblai-js/web-containers transitively imports @iblai/web-utils which imports
 // axios — which fails to resolve in Vitest's transform pipeline. Stub it here
 // so importing the tabs barrel (which re-exports SandboxTab/SkillsTab that use
 // these components) doesn't break the test.

@@ -1,6 +1,7 @@
 'use client';
 
 import type React from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { useAccessibility } from '@/contexts/accessibility-contexts';
 import {
@@ -77,6 +78,7 @@ function AccessibilityOption({
 }
 
 export function AccessibilityToolbar() {
+  const t = useTranslations('accessibilityAccessibilityToolbar');
   const {
     settings,
     updateSetting,
@@ -131,58 +133,58 @@ export function AccessibilityToolbar() {
 
   const getContrastLabel = () => {
     const labels = {
-      normal: 'Contrast +',
-      invert: 'Invert Colors',
-      dark: 'Dark Contrast',
-      light: 'Light Contrast',
+      normal: t('contrastPlus'),
+      invert: t('contrastInvertColors'),
+      dark: t('contrastDark'),
+      light: t('contrastLight'),
     };
     return labels[settings.contrastMode];
   };
 
   const getTextSizeLabel = () => {
     const labels = {
-      normal: 'Normal Text',
-      large: 'Large Text',
-      larger: 'Larger Text',
+      normal: t('textSizeNormal'),
+      large: t('textSizeLarge'),
+      larger: t('textSizeLarger'),
     };
     return labels[settings.textSize];
   };
 
   const getTextSpacingLabel = () => {
     const labels = {
-      none: 'Text Spacing',
-      light: 'Light Spacing',
-      moderate: 'Moderate Spacing',
-      heavy: 'Heavy Spacing',
+      none: t('textSpacing'),
+      light: t('spacingLight'),
+      moderate: t('spacingModerate'),
+      heavy: t('spacingHeavy'),
     };
     return labels[settings.textSpacing];
   };
 
   const getDyslexiaLabel = () => {
     const labels = {
-      normal: 'Dyslexia Friendly',
-      dyslexia: 'Dyslexia Font',
-      legible: 'Legible Font',
+      normal: t('dyslexiaFriendly'),
+      dyslexia: t('dyslexiaFont'),
+      legible: t('legibleFont'),
     };
     return labels[settings.dyslexiaFont];
   };
 
   const getTextAlignLabel = () => {
     const labels = {
-      normal: 'Text Align',
-      left: 'Align Left',
-      center: 'Align Center',
-      right: 'Align Right',
-      justify: 'Justify',
+      normal: t('textAlign'),
+      left: t('alignLeft'),
+      center: t('alignCenter'),
+      right: t('alignRight'),
+      justify: t('justify'),
     };
     return labels[settings.textAlign];
   };
 
   const getSaturationLabel = () => {
     const labels = {
-      normal: 'Normal Saturation',
-      high: 'High Saturation',
-      low: 'Low Saturation',
+      normal: t('saturationNormal'),
+      high: t('saturationHigh'),
+      low: t('saturationLow'),
     };
     return labels[settings.saturation];
   };
@@ -211,7 +213,7 @@ export function AccessibilityToolbar() {
       <div className="fixed top-0 right-0 z-50 flex h-full w-80 flex-col bg-white shadow-2xl">
         {/* Header */}
         <div className="flex flex-shrink-0 items-center justify-between bg-gradient-to-r from-[#38A1E5] to-[#7284FF] p-4 text-white">
-          <h2 className="text-lg font-semibold">Accessibility Menu</h2>
+          <h2 className="text-lg font-semibold">{t('accessibilityMenu')}</h2>
           <Button
             onClick={() => setIsToolbarOpen(false)}
             variant="ghost"
@@ -229,7 +231,7 @@ export function AccessibilityToolbar() {
           <div className="grid flex-1 grid-cols-2 gap-3">
             <AccessibilityOption
               icon={<Circle className="h-5 w-5" />}
-              label="Contrast +"
+              label={t('contrastPlus')}
               isActive={settings.contrastMode !== 'normal'}
               onClick={cycleContrastMode}
               subtext={
@@ -245,7 +247,7 @@ export function AccessibilityToolbar() {
 
             <AccessibilityOption
               icon={<Link className="h-5 w-5" />}
-              label="Highlight Links"
+              label={t('highlightLinks')}
               isActive={settings.highlightLinks}
               onClick={() =>
                 updateSetting('highlightLinks', !settings.highlightLinks)
@@ -254,7 +256,7 @@ export function AccessibilityToolbar() {
 
             <AccessibilityOption
               icon={<Type className="h-5 w-5" />}
-              label="Bigger Text"
+              label={t('biggerText')}
               isActive={settings.textSize !== 'normal'}
               onClick={cycleTextSize}
               subtext={
@@ -268,7 +270,7 @@ export function AccessibilityToolbar() {
 
             <AccessibilityOption
               icon={<Minus className="h-5 w-5 rotate-90" />}
-              label="Text Spacing"
+              label={t('textSpacing')}
               isActive={settings.textSpacing !== 'none'}
               onClick={cycleTextSpacing}
               subtext={
@@ -284,7 +286,7 @@ export function AccessibilityToolbar() {
 
             <AccessibilityOption
               icon={<Pause className="h-5 w-5" />}
-              label="Pause Animations"
+              label={t('pauseAnimations')}
               isActive={settings.pauseAnimations}
               onClick={() =>
                 updateSetting('pauseAnimations', !settings.pauseAnimations)
@@ -293,14 +295,14 @@ export function AccessibilityToolbar() {
 
             <AccessibilityOption
               icon={<ImageOff className="h-5 w-5" />}
-              label="Hide Images"
+              label={t('hideImages')}
               isActive={settings.hideImages}
               onClick={() => updateSetting('hideImages', !settings.hideImages)}
             />
 
             <AccessibilityOption
               icon={<span className="text-sm font-bold">Df</span>}
-              label="Dyslexia Friendly"
+              label={t('dyslexiaFriendly')}
               isActive={settings.dyslexiaFont !== 'normal'}
               onClick={cycleDyslexiaFont}
               subtext={
@@ -316,14 +318,14 @@ export function AccessibilityToolbar() {
 
             <AccessibilityOption
               icon={<MousePointer className="h-5 w-5" />}
-              label="Cursor"
+              label={t('cursor')}
               isActive={settings.customCursor}
               onClick={toggleCustomCursor}
             />
 
             <AccessibilityOption
               icon={<MessageSquare className="h-5 w-5" />}
-              label="Tooltips"
+              label={t('tooltips')}
               isActive={settings.tooltips}
               onClick={toggleTooltips}
             />
@@ -336,14 +338,14 @@ export function AccessibilityToolbar() {
                   <div className="h-0.5 w-4 bg-current"></div>
                 </div>
               }
-              label="Line Height"
+              label={t('lineHeight')}
               isActive={settings.lineHeight}
               onClick={() => updateSetting('lineHeight', !settings.lineHeight)}
             />
 
             <AccessibilityOption
               icon={getTextAlignIcon()}
-              label="Text Align"
+              label={t('textAlign')}
               isActive={settings.textAlign !== 'normal'}
               onClick={cycleTextAlign}
               subtext={
@@ -363,7 +365,7 @@ export function AccessibilityToolbar() {
 
             <AccessibilityOption
               icon={<Droplets className="h-5 w-5" />}
-              label="Saturation"
+              label={t('saturation')}
               isActive={settings.saturation !== 'normal'}
               onClick={cycleSaturation}
               subtext={
@@ -383,7 +385,7 @@ export function AccessibilityToolbar() {
             className="mt-4 w-full flex-shrink-0 bg-gradient-to-r from-[#38A1E5] to-[#7284FF] py-3 text-white shadow-lg hover:from-[#2E8BC7] hover:to-[#0066DD]"
           >
             <RotateCcw className="mr-2 h-4 w-4" />
-            Reset All Accessibility Settings
+            {t('resetAllAccessibilitySettings')}
           </Button>
         </div>
       </div>

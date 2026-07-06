@@ -131,6 +131,9 @@ const setupDefaults = () => {
     mentor_id: 42,
     permissions: { field: {} },
     enable_memory_component: true,
+    // Default the privacy router on so the Privacy segment shows up in the
+    // canonical fully-permitted case. Gating-specific tests override it.
+    enable_privacy_router: true,
   });
   mockCheckRbacPermission.mockReturnValue(true);
 };
@@ -307,6 +310,42 @@ describe('useMentorSegments', () => {
     expect(labels).not.toContain('Memory');
     // Other segments are unaffected by the mentor-level memory gate.
     expect(labels).toContain('Settings');
+  });
+
+  describe('Privacy segment gating', () => {
+    it('hides Privacy when enable_privacy_router is false', () => {
+      mockMentorSettings.mockReturnValue({
+        platform_key: 'custom-tenant',
+        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+        mentor_id: 42,
+        permissions: { field: {} },
+        enable_memory_component: true,
+        enable_privacy_router: false,
+      });
+
+      const { result } = renderHook(() => useMentorSegments());
+
+      const labels = result.current.filteredSegments.map((s) => s.label);
+      expect(labels).not.toContain('Privacy');
+      // Other segments are unaffected.
+      expect(labels).toContain('Settings');
+    });
+
+    it('shows Privacy when enable_privacy_router is true', () => {
+      mockMentorSettings.mockReturnValue({
+        platform_key: 'custom-tenant',
+        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+        mentor_id: 42,
+        permissions: { field: {} },
+        enable_memory_component: true,
+        enable_privacy_router: true,
+      });
+
+      const { result } = renderHook(() => useMentorSegments());
+
+      const labels = result.current.filteredSegments.map((s) => s.label);
+      expect(labels).toContain('Privacy');
+    });
   });
 
   it('exposes isSegmentVisible reflecting the same filter pipeline', () => {

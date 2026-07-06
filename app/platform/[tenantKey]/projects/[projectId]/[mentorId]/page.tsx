@@ -4,7 +4,7 @@
 export const dynamic = 'force-dynamic';
 
 import React from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 
 import { ProjectPageParams } from '@/lib/types';
 import ErrorBoundary from '@/components/error-boundary';
@@ -31,6 +31,7 @@ import { config } from '@/lib/config';
 export default function Page() {
   const { tenantKey } = useParams<ProjectPageParams>();
   const { mentorId } = useParams<TenantKeyMentorIdParams>();
+  const router = useRouter();
 
   const isMobile = useMediaQuery({ maxWidth: 767 });
   const sessionId = useAppSelector(selectSessionId);
@@ -51,6 +52,12 @@ export default function Page() {
   React.useEffect(() => {
     dispatch(chatActions.setShouldStartNewChat(true));
   }, []);
+
+  React.useEffect(() => {
+    if (!mentorId) {
+      router.replace(`/platform/${tenantKey}/projects`);
+    }
+  }, [mentorId, tenantKey, router]);
 
   React.useEffect(() => {
     if (!isMobile) {
@@ -104,6 +111,10 @@ export default function Page() {
       dispatch(chatActions.updateToken(shareableToken));
     }
   }, [shareableTokenData, searchParams]);
+
+  if (!mentorId) {
+    return null;
+  }
 
   return (
     <ErrorBoundary>

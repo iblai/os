@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import { useDebounce } from 'use-debounce';
 import { Search, Loader2 } from 'lucide-react';
 
@@ -34,6 +35,7 @@ interface ExplorePageContentProps {
 }
 
 export function ExplorePageContent({ tenantKey }: ExplorePageContentProps) {
+  const t = useTranslations('exploreExplorePageContent');
   const [searchQuery, setSearchQuery] = React.useState('');
   const [debouncedSearch] = useDebounce(searchQuery, 500);
   const [filters, setFilters] = React.useState<ExplorePageFilters>({
@@ -232,28 +234,26 @@ export function ExplorePageContent({ tenantKey }: ExplorePageContentProps) {
           href="#main-content"
           className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:rounded focus:bg-blue-600 focus:px-4 focus:py-2 focus:text-white focus:shadow-lg"
         >
-          Skip to main content
+          {t('skipToMainContent')}
         </a>
         <div
           className="scrollbar-hide flex-1 overflow-y-auto"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           id="main-content"
-          aria-label="Agent exploration page"
+          aria-label={t('agentExplorationPage')}
         >
           <div className="mx-auto max-w-[920px] px-3 py-6 md:px-6 md:py-8">
             <div className="mb-6 text-center">
               <div className="mx-auto w-full">
                 <h1 className="mb-6 text-lg leading-relaxed font-medium text-gray-600 md:text-xl">
-                  Discover and create agents that combine{' '}
-                  <br className="hidden md:block" />
-                  subject expertise, resources, and skills
+                  {t('discoverAndCreateAgents')}
                 </h1>
               </div>
 
               <div className="mb-6 w-full">
                 <div className="relative">
                   <label htmlFor="mentor-search" className="sr-only">
-                    Search agents
+                    {t('searchAgentsLabel')}
                   </label>
                   {searchQuery &&
                   (starredMentorsLoading ||
@@ -272,11 +272,11 @@ export function ExplorePageContent({ tenantKey }: ExplorePageContentProps) {
                   )}
                   <Input
                     id="mentor-search"
-                    placeholder="Search"
+                    placeholder={t('searchPlaceholder')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full rounded-lg border-gray-300 py-3 pr-4 pl-12 text-base focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-                    aria-label="Search agents"
+                    aria-label={t('searchAgentsInputLabel')}
                   />
                 </div>
               </div>

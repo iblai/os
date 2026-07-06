@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import {
   BarChart,
   Bar,
@@ -25,13 +26,14 @@ const data = [
 ];
 
 export default function ChartWithTooltip() {
+  const t = useTranslations('componentsChartWithTooltip');
   return (
     <div className="h-[400px] w-full rounded-lg border bg-white p-6">
-      <h3 className="mb-4 text-lg font-medium">Monthly Performance</h3>
+      <h3 className="mb-4 text-lg font-medium">{t('monthlyPerformance')}</h3>
       <ChartContainer
         config={{
           value: {
-            label: 'Value',
+            label: t('valueLabel'),
             color: 'hsl(var(--chart-1))',
           },
         }}
