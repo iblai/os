@@ -6,12 +6,13 @@ import type { Page } from '@playwright/test';
  *
  * WHY: LTI keys and tools are TENANT-scoped, not mentor-scoped — deleting the
  * worker's ephemeral mentor does not remove them. The SDK's keys/tools
- * sections render only the FIRST page of the list API (no pagination
- * controls), and the signing-key select in the tool modal reads the same
- * page-1-only query. Once residue pushes the tenant past one page, a newly
- * created key/tool can land on page 2+ and never render — which is exactly
- * how `expectKeyInList` in lti-14 started failing. Keeping the tenant clear
- * of stale e2e residue keeps every freshly created resource on page 1.
+ * sections are server-paginated at 10 rows/page and ordered by name, so once
+ * residue pushes the tenant past one page a newly created key/tool lands on
+ * page 2+ — which is how `expectKeyInList` in lti-14 started failing. The
+ * `LtiTab` page object now walks pages to find a row (see `revealRow`), so
+ * this reaper is a hygiene measure: it keeps the tenant lists small so the
+ * page-walk (and the signing-key select in the tool modal, which reads the
+ * same list) stay fast and reliable rather than trawling many pages.
  *
  * SAFETY:
  *   • Only resources whose name matches the `LtiTab.uniqueName` pattern

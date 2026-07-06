@@ -4,21 +4,20 @@ import {
   LTI_TEST_IDS,
   copyEndpoint,
   createKey,
-  createLink,
-  createTool,
   deleteKey,
-  editLink,
-  editTool,
+  fillLinkName,
+  fillToolForm,
+  getLinkModal,
+  openCreateLinkModal,
+  openCreateToolModal,
+  openEditLinkModal,
+  openEditToolModal,
   expectAllEndpointsVisible,
-  expectKeyInList,
-  expectKeyNotInList,
   expectKeysEmpty,
   expectLinkInList,
   expectLinkNotInList,
   expectLinksEmpty,
   expectLtiHeader,
-  expectToolInList,
-  expectToolNotInList,
   expectToolsEmpty,
   openKeyDetail,
   readEndpointUrl,
@@ -207,15 +206,37 @@ export class LtiTab {
   /**
    * Full create-link flow: opens the modal, fills the name, and submits.
    */
-  createLink(name: string): Promise<void> {
-    return createLink(this.dialog, name);
+  async createLink(name: string): Promise<void> {
+    await openCreateLinkModal(this.dialog);
+    await fillLinkName(this.dialog, name);
+    await this.submitLinkModal();
   }
 
   /**
    * Full rename-link flow: opens the row's edit pencil, renames, and saves.
    */
-  editLink(currentName: string, newName: string): Promise<void> {
-    return editLink(this.dialog, currentName, newName);
+  async editLink(currentName: string, newName: string): Promise<void> {
+    await openEditLinkModal(this.dialog, currentName);
+    await fillLinkName(this.dialog, newName);
+    await this.submitLinkModal();
+  }
+
+  /**
+   * Submit the (already-open, already-filled) link modal and wait for it to
+   * close. Reimplements the SDK's `submitLinkModal` because that helper caps
+   * the modal-close wait at 15s: the create/rename POST can take longer on
+   * staging (the data layer silently retries transient failures, holding the
+   * modal in its "Creating…" state well past 15s), so the SDK's assertion
+   * flakes even though the mutation ultimately succeeds (Journey 56 lti-07).
+   * We keep the same click semantics (button enabled → click) but give the
+   * round-trip a generous 45s to complete before failing.
+   */
+  private async submitLinkModal(): Promise<void> {
+    const modal = getLinkModal(this.dialog);
+    const submit = modal.getByRole('button', { name: /^(Create|Save)$/ });
+    await expect(submit).toBeEnabled({ timeout: 10_000 });
+    await submit.click({ timeout: 10_000 });
+    await expect(modal).toBeHidden({ timeout: 45_000 });
   }
 
   expectLinkInList(name: string): Promise<void> {
@@ -224,6 +245,60 @@ export class LtiTab {
 
   expectLinkNotInList(name: string): Promise<void> {
     return expectLinkNotInList(this.dialog, name);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Pagination-aware row finder (keys + tools)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Reveal a list row by name, paginating forward if necessary, and leave that
+   * page active so the SDK's single-page row helpers (detail / rename / delete)
+   * can act on it.
+   *
+   * LTI keys and tools are platform-wide, server-paginated at
+   * `LTI_PAGE_SIZE = 10` rows/page (`IblPagination` → shadcn), and ordered by
+   * the backend (alphabetically by name). Residue from parallel workers grows
+   * the list past one page, so a freshly-created uniquely-named row routinely
+   * lands on page 2+ where the SDK's `getKeyRow`/`getToolRow` (which only see
+   * the current page) can't find it — the flake behind Journey 56 lti-14.
+   *
+   * We walk from the current page via the "Go to next page" control until the
+   * row is on screen or the control is `aria-disabled` (last page / no
+   * pagination — `IblPagination` renders nothing when there is a single page).
+   * After each click we wait for the page to actually turn (the first row's
+   * text changes on the server refetch) rather than sleeping. The page cap is
+   * a runaway guard well above any real residue level; when the row is genuinely
+   * absent we return the (hidden) locator so the caller's assertion decides.
+   */
+  private async revealRow(
+    sectionTestId: string,
+    rowTestId: string,
+    name: string,
+  ): Promise<Locator> {
+    const section = this.dialog.getByTestId(sectionTestId);
+    const row = section.getByTestId(rowTestId).filter({ hasText: name });
+    const firstRow = section.getByTestId(rowTestId).first();
+    // Match by aria-label attribute (robust to how the anchor's role resolves).
+    const nextControl = section.locator('[aria-label="Go to next page"]');
+
+    for (let i = 0; i < 30; i++) {
+      if (await row.isVisible().catch(() => false)) return row;
+
+      const nextDisabled =
+        !(await nextControl.isVisible().catch(() => false)) ||
+        (await nextControl
+          .getAttribute('aria-disabled')
+          .catch(() => 'true')) === 'true';
+      if (nextDisabled) return row;
+
+      const before = await firstRow.textContent().catch(() => null);
+      await nextControl.click();
+      if (before !== null) {
+        await expect(firstRow).not.toHaveText(before, { timeout: 15_000 });
+      }
+    }
+    return row;
   }
 
   // ---------------------------------------------------------------------------
@@ -248,7 +323,8 @@ export class LtiTab {
    * Open the key detail modal via the row's actions menu → Edit.
    * Returns after the detail modal is visible.
    */
-  openKeyDetail(name: string): Promise<void> {
+  async openKeyDetail(name: string): Promise<void> {
+    await this.revealKeyRow(name);
     return openKeyDetail(this.dialog, name);
   }
 
@@ -265,23 +341,37 @@ export class LtiTab {
   /**
    * Rename a key via detail modal (menu → Edit → rename → Save).
    */
-  renameKey(name: string, newName: string): Promise<void> {
+  async renameKey(name: string, newName: string): Promise<void> {
+    await this.revealKeyRow(name);
     return renameKey(this.dialog, name, newName);
   }
 
   /**
    * Full delete-key flow: menu → Delete → confirm. Expects the modal to close.
    */
-  deleteKey(name: string): Promise<void> {
+  async deleteKey(name: string): Promise<void> {
+    await this.revealKeyRow(name);
     return deleteKey(this.dialog, name);
   }
 
-  expectKeyInList(name: string): Promise<void> {
-    return expectKeyInList(this.dialog, name);
+  async expectKeyInList(name: string): Promise<void> {
+    const row = await this.revealKeyRow(name);
+    await expect(row).toBeVisible({ timeout: 10_000 });
   }
 
-  expectKeyNotInList(name: string): Promise<void> {
-    return expectKeyNotInList(this.dialog, name);
+  async expectKeyNotInList(name: string): Promise<void> {
+    // Walk every page: a key absent from page 1 may still exist on a later one.
+    const row = await this.revealKeyRow(name);
+    await expect(row).toBeHidden({ timeout: 10_000 });
+  }
+
+  /** Reveal a key row across the paginated Keys list. */
+  private revealKeyRow(name: string): Promise<Locator> {
+    return this.revealRow(
+      LTI_TEST_IDS.keys.section,
+      LTI_TEST_IDS.keys.row,
+      name,
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -299,23 +389,55 @@ export class LtiTab {
    * Full create-tool flow. `data.signingKeyName` must name a key that already
    * exists in the Keys sub-tab (created first in the same test).
    */
-  createTool(data: LtiToolFormData): Promise<void> {
-    return createTool(this.dialog, data);
+  async createTool(data: LtiToolFormData): Promise<void> {
+    await openCreateToolModal(this.dialog);
+    await fillToolForm(this.dialog, data);
+    await this.submitToolModal();
   }
 
   /**
    * Full edit-tool flow: opens the row's edit pencil, applies overrides, saves.
    */
-  editTool(name: string, data: LtiToolFormData): Promise<void> {
-    return editTool(this.dialog, name, data);
+  async editTool(name: string, data: LtiToolFormData): Promise<void> {
+    await this.revealToolRow(name);
+    await openEditToolModal(this.dialog, name);
+    await fillToolForm(this.dialog, data);
+    await this.submitToolModal();
   }
 
-  expectToolInList(name: string): Promise<void> {
-    return expectToolInList(this.dialog, name);
+  /**
+   * Submit the (already-open, already-filled) tool modal and wait for it to
+   * close. Reimplements the SDK's `submitToolModal` for the same reason as
+   * `submitLinkModal`: the SDK caps the modal-close wait at 15s, but the
+   * create/update POST can take longer on staging (data-layer retries hold the
+   * modal in a "Creating…" state past 15s). Gives the round-trip 45s.
+   */
+  private async submitToolModal(): Promise<void> {
+    const modal = this.dialog.getByTestId(LTI_TEST_IDS.tools.modal);
+    const submit = modal.getByRole('button', { name: /^(Create|Save)$/ });
+    await expect(submit).toBeEnabled({ timeout: 10_000 });
+    await submit.click({ timeout: 10_000 });
+    await expect(modal).toBeHidden({ timeout: 45_000 });
   }
 
-  expectToolNotInList(name: string): Promise<void> {
-    return expectToolNotInList(this.dialog, name);
+  async expectToolInList(name: string): Promise<void> {
+    const row = await this.revealToolRow(name);
+    await expect(row).toBeVisible({ timeout: 10_000 });
+  }
+
+  async expectToolNotInList(name: string): Promise<void> {
+    // Walk every page: a tool absent from page 1 may still exist on a later one.
+    const row = await this.revealToolRow(name);
+    await expect(row).toBeHidden({ timeout: 10_000 });
+  }
+
+  /** Reveal a tool row across the paginated Tools list. */
+  private revealToolRow(name: string): Promise<Locator> {
+    return this.revealRow(
+      LTI_TEST_IDS.tools.section,
+      LTI_TEST_IDS.tools.row,
+      name,
+    );
   }
 
   // ---------------------------------------------------------------------------

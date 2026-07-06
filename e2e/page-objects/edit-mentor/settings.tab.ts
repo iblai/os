@@ -204,6 +204,47 @@ export class SettingsTab {
    * Blocks until the success toast appears so the next
    * `useMentorSegments` re-render sees the updated CallConfiguration.
    */
+  /**
+   * Click the modal footer's Save button and resolve once the "Agent updated
+   * successfully" toast appears. Used only by `setEnableLtiLaunchesAndSave` —
+   * the other Capabilities `…AndSave` helpers keep the plain inline click,
+   * since only the LTI journey precedes its save with a category switch.
+   *
+   * Why this is not a plain `saveButton.click()`: saving invalidates the RTK
+   * Query cache, which remounts the modal body and can detach the footer Save
+   * button *mid-click* — Playwright then throws "element was detached from the
+   * DOM, retrying". Worse, because the LTI journey activates the Integrations
+   * category (to assert tab visibility) before flipping the capability, the
+   * remount can snap the modal back to Integrations, unmounting the Settings
+   * Save button entirely so the click never lands and times out (Journey 56
+   * lti-03 flake).
+   *
+   * Recovery is a single, explicit retry rather than a loop: if the first
+   * click doesn't produce the toast, walk the full modal hierarchy back to
+   * where the toggle was flipped — Configurations category → Settings segment
+   * → Capabilities sub-tab — via `selectSubTab('Capabilities')` (which itself
+   * restores the Configurations/Settings levels before selecting the sub-tab),
+   * then click Save once more and confirm the toast. Timeouts: enabled 10s,
+   * click 10s (so a detached/unmounted button fails fast into the retry
+   * instead of hanging), toast 30s.
+   */
+  private async clickSaveAndAwaitToast(): Promise<void> {
+    const toast = this.page.getByText(/agent updated successfully/i).first();
+    try {
+      await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
+      await this.saveButton.click({ timeout: 10_000 });
+      await expect(toast).toBeVisible({ timeout: 30_000 });
+    } catch {
+      // The save remounted the modal and snapped it off Settings before the
+      // click landed. Restore Configurations → Settings → Capabilities and
+      // click Save again.
+      await this.selectSubTab('Capabilities');
+      await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
+      await this.saveButton.click({ timeout: 10_000 });
+      await expect(toast).toBeVisible({ timeout: 30_000 });
+    }
+  }
+
   async setEnableVideoAndSave(target: boolean): Promise<void> {
     // The toggle lives in the Capabilities sub-tab. Panels are forceMounted
     // but CSS-hidden when inactive, so the switch is in the DOM yet not
@@ -319,11 +360,7 @@ export class SettingsTab {
       { timeout: 10_000 },
     );
 
-    await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
-    await this.saveButton.click();
-    await expect(
-      this.page.getByText(/agent updated successfully/i).first(),
-    ).toBeVisible({ timeout: 30_000 });
+    await this.clickSaveAndAwaitToast();
   }
 
   /**
