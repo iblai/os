@@ -9,7 +9,6 @@ import {
   getChatPrivacyConfirmDialog,
   expectChatPrivacyConfirmDialogOpen,
   cancelEnableChatPrivacyMidSession,
-  isPrivateModeTabVisible,
   getPrivateModeCard,
   selectPrivateMode,
   expectPrivateModeSelected,
@@ -443,7 +442,13 @@ export class ChatPrivacyPage {
    * off — that is a valid state, not an error.
    */
   async isProfilePrivateModeTabVisible(): Promise<boolean> {
-    return isPrivateModeTabVisible(this.page);
+    const tab = this.page.getByRole('tab', { name: 'Privacy', exact: true });
+    try {
+      await expect(tab).toBeVisible({ timeout: 5_000 });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /**
@@ -459,7 +464,7 @@ export class ChatPrivacyPage {
    */
   async switchToProfilePrivateModeTab(): Promise<void> {
     const tab = this.page.getByRole('tab', {
-      name: 'Private Mode',
+      name: 'Privacy',
       exact: true,
     });
     await expect(tab).toBeVisible({ timeout: 15_000 });
