@@ -13,6 +13,7 @@ import {
   CalendarClock,
   Clock,
   Grid,
+  Headset,
   Key,
   MonitorSmartphone,
   FileWarning,
@@ -360,6 +361,22 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     icon: Clock,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/#view_chat_history`,
+    permissionFieldsCheck: [],
+    mentorVisibility: [
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+    ],
+    navCategory: 'analytics',
+  },
+  {
+    value: MODALS.EDIT_MENTOR.tabs.human_support,
+    label: 'Human Support',
+    icon: Headset,
+    // Admin-only ticket inbox (view / reply / close support requests).
+    // No `rbacResource` yet — the backend doesn't expose one for support
+    // tickets, so the userTypes filter alone gates visibility (mirroring
+    // Tasks / Sandbox / Access).
+    userTypes: [UserType.ADMIN],
     permissionFieldsCheck: [],
     mentorVisibility: [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,

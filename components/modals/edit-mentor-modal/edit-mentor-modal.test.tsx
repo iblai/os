@@ -202,6 +202,9 @@ vi.mock('./tabs', () => ({
   ScreenShareTab: () => (
     <div data-testid="screenshare-tab">Screen Share Tab</div>
   ),
+  HumanSupportTab: () => (
+    <div data-testid="human-support-tab">Human Support Tab</div>
+  ),
 }));
 
 vi.mock('./tabs/memory-tab', () => ({

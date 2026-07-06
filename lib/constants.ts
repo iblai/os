@@ -63,6 +63,7 @@ export const MODALS = {
       audit_log: 'audit_log',
       voice: 'voice',
       screenshare: 'screenshare',
+      human_support: 'human_support',
     },
   },
   ADD_PROMPT: { name: 'add_prompt' },

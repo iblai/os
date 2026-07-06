@@ -15,6 +15,7 @@ import { PrivacyTab } from './privacy.tab';
 import { TasksTab } from './tasks.tab';
 import { VoiceTab } from './voice.tab';
 import { ScreenShareTab } from './screenshare.tab';
+import { HumanSupportTab } from './human-support.tab';
 
 /**
  * Which sidebar category each segment lives in. Mirrors the `navCategory`

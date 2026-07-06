@@ -99,6 +99,7 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
 vi.mock('@iblai/iblai-js/web-containers/next', () => ({
   AgentPrivacyTab: () => null,
   AgentTasksTab: () => null,
+  AgentHumanSupportTab: () => null,
   AgentSettingsProvider: () => null,
 }));
 
@@ -140,11 +141,12 @@ describe('useMentorSegments', () => {
     setupDefaults();
   });
 
-  it('returns the canonical 20 mentor segments unfiltered', () => {
+  it('returns the canonical 21 mentor segments unfiltered', () => {
     const { result } = renderHook(() => useMentorSegments());
     expect(result.current.segments).toBe(MENTOR_SEGMENTS);
-    // 17 original + Voice + Screen Share (feat/mentor/1763) + Tasks (feat/mentor/715).
-    expect(MENTOR_SEGMENTS).toHaveLength(20);
+    // 17 original + Voice + Screen Share (feat/mentor/1763) + Tasks
+    // (feat/mentor/715) + Human Support (feat/2081).
+    expect(MENTOR_SEGMENTS).toHaveLength(21);
   });
 
   it('places the Sandbox segment right after Settings', () => {

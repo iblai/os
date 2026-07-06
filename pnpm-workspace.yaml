@@ -11,12 +11,19 @@ onlyBuiltDependencies:
 # package.json, which pnpm v10 no longer reads — this file is the supported home
 # for them (and for patchedDependencies, below).
 #
-# NOTE: web-containers is now consumed exclusively via @iblai/iblai-js
-# (>=1.20.11), which bundles the i18n-aware build (WebContainersI18nProvider +
-# the re-exported components share a single context). The previous
-# `@iblai/web-containers: file:.yalc/...` override is therefore obsolete and was
-# removed — it broke CI installs since .yalc is gitignored.
+# NOTE: the @iblai `file:.yalc/...` overrides pin every consumer (including
+# @iblai/iblai-js's own `"*"` deps on data-layer/web-utils/web-containers) to
+# the yalc-pushed builds. Without them pnpm satisfies those `"*"` ranges from
+# the registry, so the app and the SDK re-exports load two different copies —
+# missing new components (e.g. AgentHumanSupportTab) and duplicated React
+# contexts. These must be dropped (together with the file:.yalc specs in
+# package.json) once the new SDK versions are published — .yalc is gitignored,
+# so CI installs fail while they're in place.
 overrides:
+  '@iblai/iblai-js': 'file:.yalc/@iblai/iblai-js'
+  '@iblai/data-layer': 'file:.yalc/@iblai/data-layer'
+  '@iblai/web-utils': 'file:.yalc/@iblai/web-utils'
+  '@iblai/web-containers': 'file:.yalc/@iblai/web-containers'
   vite: '>=7.3.2'
   basic-ftp: '>=5.2.1'
   follow-redirects: '>=1.16.0'
