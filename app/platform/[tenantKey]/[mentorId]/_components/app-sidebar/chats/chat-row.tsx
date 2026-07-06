@@ -84,10 +84,7 @@ function ChatThreeDotMenu({
           />
           {t('export')}
         </DropdownMenuItem>
-        <DropdownMenuItem
-          className="gap-2 text-red-600 focus:text-red-700"
-          onSelect={onDelete}
-        >
+        <DropdownMenuItem className="gap-2" onSelect={onDelete}>
           <Trash2 className="size-3.5 shrink-0" strokeWidth={1.5} aria-hidden />
           {t('delete')}
         </DropdownMenuItem>
