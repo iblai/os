@@ -326,6 +326,7 @@ export function UserProfile() {
       onHelpClick={handleHelpClick}
       defaultSupportPhone={config.defaultSupportPhoneNumber()}
       enableSupportPhone={config.enableSupportPhone()}
+      showGradebookTab={config.enableGradebookTab()}
       // Modal props
       currentPlan={currentPlan}
       userActiveApp={userActiveApp}

@@ -8,6 +8,7 @@
     "urls": [
       "https://*.iblai.app/*",
       "https://*.iblai.org/*",
+      "https://*.ibl.ai/*",
       "http://127.0.0.1:*/*",
       "http://localhost:*/*",
       "http://localhost:3456",
@@ -54,6 +55,7 @@
     "allow-open-external-url",
     "allow-navigate-to",
     "allow-get-os-type",
+    "allow-allow-in-app-purchase",
     "os:default",
     "allow-check-network-status"
   ]

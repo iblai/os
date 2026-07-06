@@ -1275,7 +1275,7 @@ describe('SettingsTab', () => {
       expect(screen.getByLabelText('Enable copies')).not.toBeChecked();
     });
 
-    it('submits forkable value when saving', async () => {
+    it('submits forkable value and mirrors it to forkable_with_training_data when disabling copies', async () => {
       render(<SettingsTab />);
 
       const toggle = screen.getByLabelText('Enable copies');
@@ -1289,6 +1289,33 @@ describe('SettingsTab', () => {
           expect.objectContaining({
             formData: expect.objectContaining({
               forkable: false,
+              forkable_with_training_data: false,
+            }),
+          }),
+        );
+      });
+    });
+
+    it('mirrors forkable_with_training_data to true when enabling copies', async () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, forkable: false },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      const toggle = screen.getByLabelText('Enable copies');
+      fireEvent.click(toggle);
+
+      const saveButton = screen.getByText('Save');
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            formData: expect.objectContaining({
+              forkable: true,
+              forkable_with_training_data: true,
             }),
           }),
         );
