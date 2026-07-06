@@ -1,14 +1,14 @@
 {
   "version": 2,
-  "lastUpdated": "2026-06-30",
+  "lastUpdated": "2026-07-02",
   "summary": {
-    "totalCheckpoints": 499,
-    "coveredCheckpoints": 477,
+    "totalCheckpoints": 505,
+    "coveredCheckpoints": 483,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 8,
     "percent": 100,
-    "totalJourneys": 57,
-    "activeJourneys": 56
+    "totalJourneys": 58,
+    "activeJourneys": 57
   },
   "journeys": [
     {
@@ -3207,6 +3207,48 @@
         {
           "id": "fcc-04",
           "description": "Clicking Upgrade Plan in the credit dropdown creates a Stripe checkout session and redirects to a Stripe-hosted page requiring credit-card input (secure Stripe Elements card iframe + pay button)",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "chat-search-dialog",
+      "name": "Chat Search Dialog",
+      "spec": "56-chat-search-dialog.spec.ts",
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/chats/chat-search-dialog.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/chats/use-recent-chats.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "csd-01",
+          "description": "Clicking Search chats in the expanded sidebar opens the dialog with the searchbox focused; pressing Escape closes it",
+          "status": "covered"
+        },
+        {
+          "id": "csd-02",
+          "description": "The dialog lists the mentor's seeded chats grouped under Previous 7 Days, each row showing its first human message as a single line with no embedded newline",
+          "status": "covered"
+        },
+        {
+          "id": "csd-03",
+          "description": "Typing in the searchbox filters the list (server-side, debounced) to only the matching session; clearing the search restores all seeded rows",
+          "status": "covered"
+        },
+        {
+          "id": "csd-04",
+          "description": "Clicking New Chat inside the dialog closes it and starts a fresh, empty chat distinct from the previously-active seeded session",
+          "status": "covered"
+        },
+        {
+          "id": "csd-05",
+          "description": "Selecting a chat result closes the dialog and loads that session's conversation into the chat panel",
+          "status": "covered"
+        },
+        {
+          "id": "csd-06",
+          "description": "Collapsing the sidebar and clicking the Search chats rail icon opens the same dialog",
           "status": "covered"
         }
       ]

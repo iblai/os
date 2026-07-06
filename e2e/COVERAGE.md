@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-06-30 | 499 checkpoints (477 covered, 2 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 57 journeys (56 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-07-02 | 505 checkpoints (483 covered, 2 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 58 journeys (57 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -977,5 +977,20 @@ End-to-end onboarding of a brand-new user via the `ECOMMERCE_CHECKOUT_URL` "free
 - [x] fcc-02: Submitting the email completes checkout and lands authenticated on the mentor SPA at `<base-url>/platform/<platform-key>/<mentor-id>`
 - [x] fcc-03: The credit-balance dropdown shows a positive remaining credit balance and a "Free" plan pill
 - [x] fcc-04: Clicking "Upgrade Plan" in the credit dropdown redirects to a Stripe-hosted checkout page (`store.ibl.ai`) requiring credit-card input (secure Stripe Elements card iframe + pay button)
+
+---
+
+## Journey 56: Chat Search Dialog (6 checkpoints) — `journeys/56-chat-search-dialog.spec.ts`
+
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/chats/chat-search-dialog.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/chats/use-recent-chats.ts`
+
+Covers the `ChatSearchDialog` (issue #2053) opened from the sidebar's "Search chats" entry point — an expanded text-label button and a collapsed "rail" icon-only button, both sharing the accessible name "Search chats". The dialog has a search input header (debounced 300ms into a server-side `search` query param), a "New Chat" row, results grouped by recency (`group-chats-by-recency.ts`), and a load-more spinner driven by an `IntersectionObserver` sentinel. Each test creates its own mentor via `createMentorPage.openAndCreate()` and seeds 3 distinct chat sessions by sending a distinguishing message and starting a new chat between each send. Infinite scroll/pagination and the "Previous 30 Days"/"Older" recency buckets are NOT covered here (not reproducible via real UI sends within a reasonable test budget) — see the spec file's top-of-file comment and the `use-recent-chats`/`groupChatRowsByRecency` unit tests instead.
+
+- [x] csd-01: Clicking "Search chats" in the expanded sidebar opens the dialog with the searchbox focused; pressing Escape closes it
+- [x] csd-02: The dialog lists the mentor's seeded chats grouped under "Previous 7 Days", each row showing its first human message as a single line with no embedded newline
+- [x] csd-03: Typing in the searchbox filters the list (server-side, debounced) to only the matching session; clearing the search restores all seeded rows
+- [x] csd-04: Clicking "New Chat" inside the dialog closes it and starts a fresh, empty chat distinct from the previously-active seeded session
+- [x] csd-05: Selecting a chat result closes the dialog and loads that session's conversation into the chat panel
+- [x] csd-06: Collapsing the sidebar and clicking the "Search chats" rail icon opens the same dialog
 
 ---
