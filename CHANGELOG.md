@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.91.1](https://github.com/iblai/os/compare/v0.91.0...v0.91.1) (2026-07-06)
+
+### Chores
+
+- bumped iblai-js version to 1.22.4 ([f2a9c3c](https://github.com/iblai/os/commit/f2a9c3c479555a0144da4303dec637b94bfc5abc))
+- bumped iblai-js version to 1.22.4 > test coverage ([6d28bd4](https://github.com/iblai/os/commit/6d28bd4f80fee0c05ff7c5a98486b6c82cf9c043))
+
 ## [0.91.0](https://github.com/iblai/os/compare/v0.90.4...v0.91.0) (2026-07-06)
 
 ### Features
