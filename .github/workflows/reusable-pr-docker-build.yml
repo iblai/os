@@ -57,6 +57,10 @@ on:
 jobs:
   build:
     runs-on: ${{ inputs.runs-on }}
+    # Fail fast instead of hanging: a stalled `docker build` or OCIR push should
+    # time out (~30m) rather than sit until GitHub's 6h default and block the gate.
+    # A timed-out job also leaves a downloadable log; an in-progress hung one does not.
+    timeout-minutes: 30
     env:
       OCIR_REGISTRY: iad.ocir.io
       OCIR_NAMESPACE: idcwyla5j5cr
@@ -148,16 +152,16 @@ jobs:
         env:
           IMAGE_URI: ${{ steps.build-ecr.outputs.image-uri || steps.build-ocir.outputs.image-uri }}
           IMAGE_TAG: ${{ steps.final-tag.outputs.tag }}
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: |
           echo "Building Docker image: $IMAGE_URI"
           echo "Dockerfile: ${{ inputs.dockerfile-path }}"
           echo "Context: ${{ inputs.build-context }}"
 
+          # No SENTRY_AUTH_TOKEN: the secret isn't configured (org or repo), so
+          # the old reference was dead — `[ -n "$SENTRY_AUTH_TOKEN" ]` was always
+          # false and no sourcemap upload ever ran. Dropped it. No-op for the
+          # built app (the token only gates the upload side-effect, not the bundle).
           BUILD_ARGS="--build-arg APP_VERSION=$IMAGE_TAG"
-          if [ -n "$SENTRY_AUTH_TOKEN" ]; then
-            BUILD_ARGS="$BUILD_ARGS --build-arg SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN"
-          fi
 
           docker build -f "${{ inputs.dockerfile-path }}" -t $IMAGE_URI --no-cache $BUILD_ARGS "${{ inputs.build-context }}"
           docker push $IMAGE_URI
