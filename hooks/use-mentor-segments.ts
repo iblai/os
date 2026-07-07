@@ -597,7 +597,7 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
   const isVoiceCallEnabled: boolean =
     // @ts-ignore - show_voice_call exists on API but not typed
     mentorSettings?.show_voice_call ?? true;
-  const { isUserTypeAllowed } = useUserType(mentorSettings);
+  const { isUserTypeAllowed, userType } = useUserType(mentorSettings);
 
   // `isUserTypeAllowed` is a fresh function on every render of `useUserType`.
   // Stash it in a ref so we always read the latest version inside memos
@@ -627,6 +627,7 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
       tenantKey,
       mentorSettings,
       rbacPermissions,
+      userType,
       isMemsearchEnabled,
       isClawEnabled,
       clawConfigExists,

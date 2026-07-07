@@ -1,29 +1,76 @@
 # Changelog
 
+## [0.92.2](https://github.com/iblai/os/compare/v0.92.1...v0.92.2) (2026-07-07)
+
+### Bug Fixes
+
+* **mentor:** hide admin-only settings when an admin previews as a student ([3233caa](https://github.com/iblai/os/commit/3233caa7d7e7395d676532981eb3b3fd3c8c22c3))
+* **mentor:** hide the agent fork action in student mode ([b2dfe48](https://github.com/iblai/os/commit/b2dfe485065d4eae7eddb960ef564ed103bf811a))
+* **mentor:** rebuild the segment list when the effective user type changes ([fde3f7a](https://github.com/iblai/os/commit/fde3f7a585f15a7944873212c3a6b79ce0aeebb1))
+* **tests:** remove "/dm", this is already expected from the env variable ([1d60663](https://github.com/iblai/os/commit/1d606630abfab93fc8b52b11b0df13ac41fd90d7))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 1.20.21 ([26167a5](https://github.com/iblai/os/commit/26167a51098555e36d153d18426c1e7d94238c72))
+
+### Documentation
+
+* **e2e:** record journey 56 in coverage ([22a22da](https://github.com/iblai/os/commit/22a22da5e1807ca57a35ef0ccf21934a64980101))
+
+### Tests
+
+* **e2e:** cover navbar agent-dropdown visibility across user/admin mode ([bf93c4d](https://github.com/iblai/os/commit/bf93c4d241e5fd6c036e9212c108d29c338ecc2e))
+* **mentor:** align useUserType mocks with the new userType return ([cbbc49e](https://github.com/iblai/os/commit/cbbc49e252a766e92cb201ff459a1bdde1da8eb1))
+
+## [0.92.1](https://github.com/iblai/os/compare/v0.92.0...v0.92.1) (2026-07-07)
+
+### Bug Fixes
+
+* **app:** hard-navigate the main window on in-app popup return ([a6f76b2](https://github.com/iblai/os/commit/a6f76b20cd1e8c536b4ae5b0d430aa931bf12e33))
+
+## [0.92.0](https://github.com/iblai/os/compare/v0.91.2...v0.92.0) (2026-07-06)
+
+### Features
+
+* **app:** route open_external_url to an in-app popup by URL pattern ([6f07027](https://github.com/iblai/os/commit/6f07027d28bfba31422845dcccfee63bd85844b8)), closes [#311](https://github.com/iblai/os/issues/311)
+
+## [0.91.2](https://github.com/iblai/os/compare/v0.91.1...v0.91.2) (2026-07-06)
+
+### Bug Fixes
+
+* **app:** register open_external_url command on desktop ([cc1b010](https://github.com/iblai/os/commit/cc1b0106096a57766b44ea2c62c8e82019ca0a15))
+
+## [0.91.1](https://github.com/iblai/os/compare/v0.91.0...v0.91.1) (2026-07-06)
+
+### Chores
+
+- bumped iblai-js version to 1.22.4 ([f2a9c3c](https://github.com/iblai/os/commit/f2a9c3c479555a0144da4303dec637b94bfc5abc))
+- bumped iblai-js version to 1.22.4 > test coverage ([6d28bd4](https://github.com/iblai/os/commit/6d28bd4f80fee0c05ff7c5a98486b6c82cf9c043))
+
 ## [0.91.0](https://github.com/iblai/os/compare/v0.90.4...v0.91.0) (2026-07-06)
 
 ### Features
 
-* gradebook display gated behind env flag ([4dbfc4f](https://github.com/iblai/os/commit/4dbfc4fec558a5a5413e97dbe90c65ab938a3750))
-* gradebook display gated behind env flag > pnpm lock update ([a902f77](https://github.com/iblai/os/commit/a902f772f2efd943ba4ea485de8919f3c14cd59a))
-* gradebook display gated behind env flag > test coverage ([5ce33a2](https://github.com/iblai/os/commit/5ce33a29138a2efc40e1095da437f7d4a908495b))
-* gradebook display gated behind env flag > test coverage ([277f300](https://github.com/iblai/os/commit/277f300921f5aff6687e00456c1dc1fe2241cb16))
-* **mentor:** sync forkable_with_training_data with enable-copies toggle ([60d71f7](https://github.com/iblai/os/commit/60d71f7910f3ee889e22de04e08103aa9e3fb557))
+- gradebook display gated behind env flag ([4dbfc4f](https://github.com/iblai/os/commit/4dbfc4fec558a5a5413e97dbe90c65ab938a3750))
+- gradebook display gated behind env flag > pnpm lock update ([a902f77](https://github.com/iblai/os/commit/a902f772f2efd943ba4ea485de8919f3c14cd59a))
+- gradebook display gated behind env flag > test coverage ([5ce33a2](https://github.com/iblai/os/commit/5ce33a29138a2efc40e1095da437f7d4a908495b))
+- gradebook display gated behind env flag > test coverage ([277f300](https://github.com/iblai/os/commit/277f300921f5aff6687e00456c1dc1fe2241cb16))
+- **mentor:** sync forkable_with_training_data with enable-copies toggle ([60d71f7](https://github.com/iblai/os/commit/60d71f7910f3ee889e22de04e08103aa9e3fb557))
 
 ### Bug Fixes
 
-* **sentry:** skip sourcemap generation when there's no auth token ([c76f5b1](https://github.com/iblai/os/commit/c76f5b158bb98c13504fae23fda79893d581fbda)), closes [298/#303](https://github.com/298/os/issues/303)
+- **sentry:** skip sourcemap generation when there's no auth token ([c76f5b1](https://github.com/iblai/os/commit/c76f5b158bb98c13504fae23fda79893d581fbda)), closes [298/#303](https://github.com/298/os/issues/303)
 
 ### Chores
 
-* normalize CHANGELOG formatting ([cbe4f6e](https://github.com/iblai/os/commit/cbe4f6e08521533ce06c8db9bb9ad3d6f5d33b35))
+- normalize CHANGELOG formatting ([cbe4f6e](https://github.com/iblai/os/commit/cbe4f6e08521533ce06c8db9bb9ad3d6f5d33b35))
 
 ### Tests
 
-* **e2e:** align profile management journey with nested tabs ([2596cd4](https://github.com/iblai/os/commit/2596cd45d19367be71eb333f1678cd4d0cdbde81))
-* **e2e:** match renamed Privacy profile tab in chat-privacy PO ([8a9a75d](https://github.com/iblai/os/commit/8a9a75ddca8868a6d16c28bf283414143cd1edf9))
-* **e2e:** scope profile tab lookups to the profile nav ([4fff5aa](https://github.com/iblai/os/commit/4fff5aa613793e53b4b2e5b58f3b98625e6063c4))
-* **e2e:** scope the schedule-retraining dialog by name ([d0cb1d3](https://github.com/iblai/os/commit/d0cb1d36753bd3c12d1593b13cb17c192785e4eb))
+- **e2e:** align profile management journey with nested tabs ([2596cd4](https://github.com/iblai/os/commit/2596cd45d19367be71eb333f1678cd4d0cdbde81))
+- **e2e:** match renamed Privacy profile tab in chat-privacy PO ([8a9a75d](https://github.com/iblai/os/commit/8a9a75ddca8868a6d16c28bf283414143cd1edf9))
+- **e2e:** scope profile tab lookups to the profile nav ([4fff5aa](https://github.com/iblai/os/commit/4fff5aa613793e53b4b2e5b58f3b98625e6063c4))
+- **e2e:** scope the schedule-retraining dialog by name ([d0cb1d3](https://github.com/iblai/os/commit/d0cb1d36753bd3c12d1593b13cb17c192785e4eb))
 
 ## [0.90.4](https://github.com/iblai/os/compare/v0.90.3...v0.90.4) (2026-07-03)
 

@@ -92,6 +92,7 @@ vi.mock('@/hooks/use-user-type', () => ({
   useUserType: () => ({
     isUserTypeAllowed: (item: { userTypes: string[] }) =>
       mockIsUserTypeAllowed(item),
+    userType: UserType.ADMIN,
   }),
 }));
 

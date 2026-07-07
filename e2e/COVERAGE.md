@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-07-02 | 522 checkpoints (496 covered, 7 pending, 7 not-reproducible in default env, 12 deprecated) | 58 journeys (57 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-07-02 | 503 checkpoints (481 covered, 2 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 58 journeys (57 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -990,51 +990,15 @@ End-to-end onboarding of a brand-new user via the `ECOMMERCE_CHECKOUT_URL` "free
 
 ---
 
-## Journey 56: Mentor LTI Tab (16 checkpoints, 1 pending) — `journeys/56-mentor-lti-tab.spec.ts`
+## Journey 56: Navbar User Mode Dropdown Visibility (4 checkpoints) — `journeys/56-navbar-user-mode-dropdown-visibility.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/lti-tab.tsx`, `hooks/use-mentor-segments.ts`
+**Source files:** `hooks/use-user-type.ts`, `hooks/use-mentor-segments.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`
 
-Covers the LTI top-level tab in the Edit Mentor (Agent) modal, rendered by the SDK's `AgentLtiTab` (`@iblai/iblai-js/web-containers/next`). As of feat/1853 the tab is **always visible to admins** regardless of the `is_lti_accessible` toggle — the `enabledThroughConfig` gate that previously hid the tab when `is_lti_accessible` was `false` was removed from `hooks/use-mentor-segments.ts`. The "Enable LTI launches" toggle (renamed from "Allow LTI launches" for consistency with sibling "Enable …" toggles) still controls whether the backend allows LTI launches but no longer gates the sidebar tab.
+Covers issue #2048 — "Hide Settings In the Dropdown list In User Mode". When an admin flips the navbar User/Admin switch to User (student) mode, the admin-only segments in the "Selected agent" dropdown (Settings, LLM, Prompts, Tools, ...) must disappear, leaving only "New Chat". Flipping back to Admin mode must restore the full list. This is a regression guard for a memoization bug: `hooks/use-mentor-segments.ts`'s `filterContext` `useMemo` did not list `userType` as a dependency, so toggling the switch didn't recompute the segment list and admin items stayed visible in User mode. The fix adds `userType` to the deps array and makes `use-user-type.ts`'s `isUserTypeAllowed` early-return `false` for `UserType.STUDENT` unless a segment's `userTypes` explicitly includes STUDENT (none currently do). The dropdown does not live-update while open, so each checkpoint closes it, toggles the switch, then re-opens it before asserting.
 
-The LTI segment lives under the **Integrations** sidebar category. Tests are parallel-safe via two strategies: a worker-scoped `ltiMentorUrl` fixture (one LTI-enabled mentor per worker, deleted on teardown) shared by read-only and mutation tests; and self-contained tests that create and delete their own mentor in a `finally` block.
-
-Sub-resource tests (Links / Keys / Tools) still require `is_lti_accessible=true` on the backend because auto-enable-on-link-creation (`lti-sdk-01`) is not yet implemented in the SDK.
-
-### Visibility (lti-01, lti-03, lti-04)
-
-- [x] lti-01: Admin sees the LTI tab visible by default on a fresh mentor without enabling the "Enable LTI launches" toggle (`is_lti_accessible=false`) — the `enabledThroughConfig` gate was removed in feat/1853
-- [x] lti-03: Admin disables "Enable LTI launches" in Settings and the LTI tab stays visible (the `is_lti_accessible` gate was removed from `MENTOR_SEGMENTS`)
-- [x] lti-04: Non-admin user does not see the LTI tab in the Edit Mentor modal (LTI segment remains admin-only)
-
-### Tab header + sub-tabs (lti-05)
-
-- [x] lti-05: Admin opens the LTI tab on an LTI-enabled mentor and sees the header and all four sub-tabs (Agent Links, Keys, Tools, Tool Endpoints)
-
-### Links sub-tab (lti-06..lti-08)
-
-- [x] lti-06: Admin opens the LTI Links sub-tab on a fresh mentor and sees the empty state when no links exist
-- [x] lti-07: Admin creates an LTI link and it appears in the links list
-- [x] lti-08: Admin edits (renames) an LTI link and the new name appears in the list while the old name is gone _(self-contained mentor: the backend allows a single LTI link per mentor and there is no delete-link helper, so a second create on the shared worker mentor after lti-07 would fail)_
-
-### Keys sub-tab (lti-10..lti-12)
-
-- [x] lti-10: Admin creates an LTI key and the key detail shows non-empty public key and JWK fields
-- [x] lti-11: Admin renames an LTI key and the new name appears in the list while the old name is gone
-- [x] lti-12: Admin deletes an LTI key and the key is no longer in the list
-
-### Tools sub-tab (lti-13..lti-14)
-
-- [x] lti-13: Admin opens the LTI Tools sub-tab and the platform-wide tools surface renders — the create button plus either the empty state or the existing tools list _(LTI tools are tenant-scoped, not mentor-scoped: a fresh mentor still lists every tool on the tenant, lti-14 residue persists with no delete-tool helper, and parallel workers can create tools at any moment, so a guaranteed-empty state is unreachable)_
-- [x] lti-14: Admin creates an LTI tool with a JWKS URL signing config and it appears in the tools list _(keys/tools are platform-wide and the SDK renders only page 1 of those lists, so the worker fixture reaps stale e2e-named residue >2h old via `e2e/utils/lti-residue.ts` to keep fresh resources on page 1)_ _(the raw-JWKS-JSON variant is intentionally uncovered for now: the SDK ToolModal sent `key_set` as a parsed object while the backend requires a JSON string — fixed on SDK branch feat/web-containers/1853; re-add the checkpoint once mentorai bumps to a release containing it)_
-
-### Tool Endpoints sub-tab (lti-16..lti-18)
-
-- [x] lti-16: Admin opens the Tool Endpoints sub-tab and all four endpoint URLs (redirect URI, login, deep linking, JWKS) are rendered non-empty
-- [x] lti-17: Admin copies the redirect URI endpoint URL and the copy button label flips to "Copied"
-- [x] lti-18: Admin opens the Tool Endpoints sub-tab and every endpoint URL is an absolute `https` URL on the `/lti/` path sharing one origin (built from `NEXT_PUBLIC_LEGACY_LMS_URL`)
-
-### SDK-pending (lti-sdk-01)
-
-- [ ] lti-sdk-01: PENDING (SDK dependency) — When an admin creates the first LTI link, `is_lti_accessible` is auto-enabled via the API without requiring the "Enable LTI launches" toggle to be turned on manually. Not yet implemented: `AgentLtiTab` exposes no post-create callback hook and there are no public LTI data-layer hooks in `@iblai/iblai-js`.
+- [x] nmv-01: Admin (default Admin/instructor mode) sees the full admin segment list in the Selected agent dropdown: New Chat, Settings, LLM, Prompts, Tools
+- [x] nmv-02: Toggling to User mode and re-opening the dropdown collapses the list to exactly New Chat — Settings, LLM, Prompts, Tools, and the Modify/fork footer action are all hidden
+- [x] nmv-03: Regression guard — toggling back to Admin mode and re-opening the dropdown restores the full admin segment list, proving the list recomputes on every toggle instead of staying stale
+- [x] nmv-04: Toggling to User mode a second time collapses the dropdown back down to exactly New Chat, confirming the fix holds across repeated toggles
 
 ---
