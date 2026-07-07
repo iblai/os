@@ -25,7 +25,7 @@ import {
   clickBillingUpgrade,
 } from '@iblai/iblai-js/playwright';
 
-// ─── Journey 56: Ecommerce Credits & Upgrade ─────────────────────────────────
+// ─── Journey 57: Ecommerce Credits & Upgrade ─────────────────────────────────
 //
 // End-to-end lifecycle of a brand-new free-trial user against the "main"
 // tenant, exhausting credits twice and upgrading twice:
@@ -153,7 +153,7 @@ async function expectSubscribeModalAndClose(page: Page): Promise<void> {
   await expect(dialog).not.toBeVisible({ timeout: 10_000 });
 }
 
-test.describe('Journey 56: Ecommerce Credits & Upgrade', () => {
+test.describe('Journey 57: Ecommerce Credits & Upgrade', () => {
   // Signup + two full Stripe checkouts + four agent chats + two credit
   // cleanups — give the whole lifecycle plenty of room.
   test.use({ storageState: { cookies: [], origins: [] } });

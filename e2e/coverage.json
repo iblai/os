@@ -1,14 +1,14 @@
 {
   "version": 2,
-  "lastUpdated": "2026-07-06",
+  "lastUpdated": "2026-07-07",
   "summary": {
-    "totalCheckpoints": 509,
-    "coveredCheckpoints": 487,
+    "totalCheckpoints": 513,
+    "coveredCheckpoints": 491,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 8,
     "percent": 100,
-    "totalJourneys": 58,
-    "activeJourneys": 57
+    "totalJourneys": 59,
+    "activeJourneys": 58
   },
   "journeys": [
     {
@@ -3212,9 +3212,41 @@
       ]
     },
     {
+      "id": "navbar-user-mode-dropdown-visibility",
+      "name": "Navbar User Mode Dropdown Visibility",
+      "spec": "56-navbar-user-mode-dropdown-visibility.spec.ts",
+      "sourceFiles": [
+        "hooks/use-user-type.ts",
+        "hooks/use-mentor-segments.ts",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "nmv-01",
+          "description": "Admin (default Admin/instructor mode) sees the full admin segment list in the Selected agent dropdown: New Chat, Settings, LLM, Prompts, Tools",
+          "status": "covered"
+        },
+        {
+          "id": "nmv-02",
+          "description": "Toggling the navbar User/Admin switch to User mode and re-opening the dropdown collapses the list to exactly New Chat \u2014 Settings, LLM, Prompts, Tools, and the Modify/fork footer action are all hidden (issue #2048)",
+          "status": "covered"
+        },
+        {
+          "id": "nmv-03",
+          "description": "Regression guard: toggling back to Admin mode and re-opening the dropdown restores the full admin segment list \u2014 proves the segment list recomputes on every toggle instead of staying stale (fix: `userType` added to the `filterContext` useMemo deps in hooks/use-mentor-segments.ts)",
+          "status": "covered"
+        },
+        {
+          "id": "nmv-04",
+          "description": "Toggling to User mode a second time collapses the dropdown back down to exactly New Chat, confirming the fix holds across repeated toggles, not just the first one",
+          "status": "covered"
+        }
+      ]
+    },
+    {
       "id": "ecommerce-credits-and-upgrade",
       "name": "Ecommerce Credits & Upgrade",
-      "spec": "56-ecommerce-credits-and-upgrade.spec.ts",
+      "spec": "57-ecommerce-credits-and-upgrade.spec.ts",
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
         "components/modals/modal-container.tsx",

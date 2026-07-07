@@ -357,6 +357,7 @@ export function NavBar() {
   }, [filteredSegments, isSegmentVisible]);
 
   const showForkButton =
+    !userIsStudent &&
     !(isAdmin && tenantKey === config.mainTenantKey()) &&
     mentorSettings?.mentor_visibility ===
       MentorVisibilityEnum.VIEWABLE_BY_ANYONE &&
