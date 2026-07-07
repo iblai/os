@@ -28,6 +28,11 @@ SKIP_COVERAGE_FILES=(
   # SEO logic lives in lib/seo-mentor.ts (unit-tested); the UI is E2E-covered.
   "[tenantKey]/[mentorId]/page.tsx"
   "[tenantKey]/[mentorId]/mentor-page-content.tsx"
+  # Shared-chat pages: server wrappers (SEO in lib/seo-share.ts, unit-tested)
+  # + the short-route client redirect (E2E-covered).
+  "[sessionId]/[tenantKey]/[mentorId]/page.tsx"
+  "[sessionId]/page.tsx"
+  "[sessionId]/share-chat-redirect-content.tsx"
   # Third-party vendored bundle and the chrome extension service worker
   # (uses chrome.* APIs) are not unit-testable.
   "extensions/chrome/background.js"
