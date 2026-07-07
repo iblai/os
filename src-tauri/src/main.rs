@@ -136,7 +136,31 @@ fn open_oauth_in_popup(url: &str, app_handle: &AppHandle, title: &str) -> Result
                 };
 
                 println!("[OAuth Popup] Navigating main window to: {}", target_url);
-                let _ = main_win.eval(&format!("window.location.href = '{}';", target_url));
+                // For app-domain returns (e.g. Stripe checkout completing), force a
+                // hard navigation. Assigning `window.location.href` can be swallowed
+                // by the SPA router (which may restore the previous route), leaving
+                // the main window on the page that opened the popup. The OAuth
+                // callback path keeps using eval, which it already relies on.
+                let navigated = if is_app_return {
+                    match target_url.parse() {
+                        Ok(parsed) => match main_win.navigate(parsed) {
+                            Ok(()) => true,
+                            Err(e) => {
+                                println!("[OAuth Popup] navigate() failed: {}", e);
+                                false
+                            }
+                        },
+                        Err(e) => {
+                            println!("[OAuth Popup] invalid return URL: {}", e);
+                            false
+                        }
+                    }
+                } else {
+                    false
+                };
+                if !navigated {
+                    let _ = main_win.eval(&format!("window.location.href = '{}';", target_url));
+                }
                 let _ = main_win.set_focus();
             }
 
