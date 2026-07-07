@@ -130,9 +130,6 @@ export async function buildMetadata(
 
   const metadata: Metadata = {
     metadataBase: new URL(origin),
-    title: root
-      ? { default: DEFAULT_TITLE, template: `%s | ${SITE_NAME}` }
-      : (title ?? DEFAULT_TITLE),
     description,
     applicationName: SITE_NAME,
     keywords,
@@ -164,6 +161,16 @@ export async function buildMetadata(
       ...(TWITTER_HANDLE ? { site: TWITTER_HANDLE } : {}),
     },
   };
+
+  // Title handling: the root sets the default + template; a page with an
+  // explicit title flows through the `%s | ibl.ai` template. A page with NO
+  // title omits the key entirely so Next inherits the root default (setting
+  // `title: undefined` would instead drop the <title> tag).
+  if (root) {
+    metadata.title = { default: DEFAULT_TITLE, template: `%s | ${SITE_NAME}` };
+  } else if (title) {
+    metadata.title = title;
+  }
 
   if (root) {
     metadata.icons = {

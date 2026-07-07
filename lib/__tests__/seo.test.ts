@@ -102,6 +102,11 @@ describe('buildMetadata', () => {
     });
   });
 
+  it('omits the title when none is given (uses root default, no doubled brand)', async () => {
+    const m = await buildMetadata();
+    expect(m.title).toBeUndefined();
+  });
+
   it('opts in to indexing when index:true', async () => {
     const m = await buildMetadata({ index: true });
     expect(m.robots).toMatchObject({ index: true, follow: true });
