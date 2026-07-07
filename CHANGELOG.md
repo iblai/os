@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.92.3](https://github.com/iblai/os/compare/v0.92.2...v0.92.3) (2026-07-07)
+
+### Bug Fixes
+
+* **app:** foreground main window before navigating on popup return ([f1a8aa5](https://github.com/iblai/os/commit/f1a8aa5f88726b3a68e2235f69a332c5fcaa775b))
+
 ## [0.92.2](https://github.com/iblai/os/compare/v0.92.1...v0.92.2) (2026-07-07)
 
 ### Bug Fixes
