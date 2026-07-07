@@ -8,6 +8,7 @@ import {
   fillLinkName,
   fillToolForm,
   getLinkModal,
+  getToolModal,
   openCreateLinkModal,
   openCreateToolModal,
   openEditLinkModal,
@@ -413,7 +414,11 @@ export class LtiTab {
    * modal in a "Creating…" state past 15s). Gives the round-trip 45s.
    */
   private async submitToolModal(): Promise<void> {
-    const modal = this.dialog.getByTestId(LTI_TEST_IDS.tools.modal);
+    // `getToolModal` resolves via the page (`asPage`), not the Edit Agent
+    // dialog: the tool modal is a Radix dialog rendered in a portal OUTSIDE
+    // the dialog subtree, so scoping to `this.dialog` finds nothing (the
+    // "Create button not found" flake). Mirror `submitLinkModal`.
+    const modal = getToolModal(this.dialog);
     const submit = modal.getByRole('button', { name: /^(Create|Save)$/ });
     await expect(submit).toBeEnabled({ timeout: 10_000 });
     await submit.click({ timeout: 10_000 });
