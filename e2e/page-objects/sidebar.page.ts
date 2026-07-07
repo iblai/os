@@ -378,14 +378,39 @@ export class SidebarPage {
   }
 
   /**
+   * Dismiss any currently-open Radix dropdown/menu by pressing Escape and
+   * wait until no `role="menu"` is left open. The chat-actions three-dot menu
+   * does NOT auto-close on outside state changes, and its content reflects
+   * `canExport` as evaluated when it was opened — so callers that change the
+   * gating state (tenant setting, learner mode) must close and re-open the
+   * menu to read the fresh state. Tolerant of there being no open menu.
+   */
+  async closeAnyOpenMenu(): Promise<void> {
+    const menu = this.page.getByRole('menu');
+    try {
+      await menu.first().waitFor({ state: 'visible', timeout: 500 });
+    } catch {
+      return; // nothing open
+    }
+    await this.page.keyboard.press('Escape');
+    await expect(menu).toHaveCount(0, { timeout: 5_000 });
+  }
+
+  /**
    * Hovers the given Recent/Pinned chat row (revealing its three-dot
    * trigger) and opens the row's dropdown menu (Pin/Unpin, Export, Delete).
    * Returns the open `role="menu"` locator so callers can assert on
    * `role="menuitem"` entries. Prerequisite: `expandChatsSection()`.
+   *
+   * Always opens from a CLOSED state: clicking the trigger toggles the Radix
+   * menu, so a lingering open menu would otherwise be toggled shut (or leave a
+   * stale menu reflecting an outdated `canExport`). We dismiss any open menu
+   * first so the returned menu always reflects current state.
    */
   async openChatActionsMenu(
     text: string,
   ): Promise<import('@playwright/test').Locator> {
+    await this.closeAnyOpenMenu();
     const container = this.getChatRowContainer(text);
     await expect(container).toBeVisible({ timeout: 15_000 });
     // Hover the select button (inside the `.group` wrapper) so the

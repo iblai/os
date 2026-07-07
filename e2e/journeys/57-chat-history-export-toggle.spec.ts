@@ -304,22 +304,36 @@ test.describe.serial('Journey 57: Chat History Export Toggle', () => {
     await setInstructorMode(page, false); // → student
 
     try {
-      // Give the shared RTK Query cache a beat to propagate the metadata
-      // change to the sidebar's `useTenantMetadata` subscriber.
-      await page.waitForTimeout(1_000);
+      // The three-dot menu snapshots `canExport` when it opens and does not
+      // auto-refresh, so re-open it from a closed state each poll iteration
+      // until the metadata change (enable_chat_history_export → false) and the
+      // learner-mode switch have both propagated to the sidebar. Without the
+      // close-and-reopen, a menu opened during propagation keeps showing the
+      // stale (Export-visible) state indefinitely.
+      await expect
+        .poll(
+          async () => {
+            const menu = await sidebarPage.openChatActionsMenu(sentText);
+            return menu.getByRole('menuitem', { name: /^Export$/ }).isVisible();
+          },
+          { timeout: 20_000, intervals: [1_000, 2_000, 3_000] },
+        )
+        .toBe(false);
 
-      const menu = await sidebarPage.openChatActionsMenu(sentText);
+      // Menu is open from the final poll iteration — Pin and Delete must
+      // remain (only Export is gated).
+      const openMenu = page.getByRole('menu');
       await expect(
-        menu.getByRole('menuitem', { name: /^Export$/ }),
-      ).not.toBeVisible({ timeout: 5_000 });
-      await expect(menu.getByRole('menuitem', { name: /^Pin$/ })).toBeVisible({
-        timeout: 5_000,
-      });
-      await expect(
-        menu.getByRole('menuitem', { name: /^Delete$/ }),
+        openMenu.getByRole('menuitem', { name: /^Pin$/ }),
       ).toBeVisible({ timeout: 5_000 });
-      await page.keyboard.press('Escape');
+      await expect(
+        openMenu.getByRole('menuitem', { name: /^Delete$/ }),
+      ).toBeVisible({ timeout: 5_000 });
+      await sidebarPage.closeAnyOpenMenu();
     } finally {
+      // A lingering open dropdown overlay would intercept the restore clicks
+      // below (switch toggle, More options) — close it before touching them.
+      await sidebarPage.closeAnyOpenMenu().catch(() => undefined);
       await setInstructorMode(page, originalInstructorMode).catch(
         () => undefined,
       );
@@ -365,20 +379,30 @@ test.describe.serial('Journey 57: Chat History Export Toggle', () => {
     await setInstructorMode(page, false); // → student
 
     try {
-      await page.waitForTimeout(1_000);
+      // Re-open the menu from a closed state each poll iteration until the
+      // setting-ON + student state has propagated and Export is present.
+      await expect
+        .poll(
+          async () => {
+            const menu = await sidebarPage.openChatActionsMenu(sentText);
+            return menu.getByRole('menuitem', { name: /^Export$/ }).isVisible();
+          },
+          { timeout: 20_000, intervals: [1_000, 2_000, 3_000] },
+        )
+        .toBe(true);
 
-      const menu = await sidebarPage.openChatActionsMenu(sentText);
+      const openMenu = page.getByRole('menu');
       await expect(
-        menu.getByRole('menuitem', { name: /^Export$/ }),
+        openMenu.getByRole('menuitem', { name: /^Pin$/ }),
       ).toBeVisible({ timeout: 5_000 });
-      await expect(menu.getByRole('menuitem', { name: /^Pin$/ })).toBeVisible({
-        timeout: 5_000,
-      });
       await expect(
-        menu.getByRole('menuitem', { name: /^Delete$/ }),
+        openMenu.getByRole('menuitem', { name: /^Delete$/ }),
       ).toBeVisible({ timeout: 5_000 });
-      await page.keyboard.press('Escape');
+      await sidebarPage.closeAnyOpenMenu();
     } finally {
+      // A lingering open dropdown overlay would intercept the restore clicks
+      // below (switch toggle, More options) — close it before touching them.
+      await sidebarPage.closeAnyOpenMenu().catch(() => undefined);
       await setInstructorMode(page, originalInstructorMode).catch(
         () => undefined,
       );
@@ -424,14 +448,23 @@ test.describe.serial('Journey 57: Chat History Export Toggle', () => {
     await setInstructorMode(page, true); // → non-student (admin/instructor)
 
     try {
-      await page.waitForTimeout(1_000);
-
-      const menu = await sidebarPage.openChatActionsMenu(sentText);
-      await expect(
-        menu.getByRole('menuitem', { name: /^Export$/ }),
-      ).toBeVisible({ timeout: 5_000 });
-      await page.keyboard.press('Escape');
+      // Setting OFF but admin/instructor mode → role wins, Export stays.
+      // Re-open from a closed state each iteration so the assertion reads the
+      // menu's current (not stale-open) state.
+      await expect
+        .poll(
+          async () => {
+            const menu = await sidebarPage.openChatActionsMenu(sentText);
+            return menu.getByRole('menuitem', { name: /^Export$/ }).isVisible();
+          },
+          { timeout: 20_000, intervals: [1_000, 2_000, 3_000] },
+        )
+        .toBe(true);
+      await sidebarPage.closeAnyOpenMenu();
     } finally {
+      // A lingering open dropdown overlay would intercept the restore clicks
+      // below (switch toggle, More options) — close it before touching them.
+      await sidebarPage.closeAnyOpenMenu().catch(() => undefined);
       await setInstructorMode(page, originalInstructorMode).catch(
         () => undefined,
       );
