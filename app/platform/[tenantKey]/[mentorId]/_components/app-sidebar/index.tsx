@@ -1149,6 +1149,8 @@ function SidebarChatsSection({
   const { onAfterNav } = useSidebarNavCallback();
   const t = useTranslations('appSidebarIndex');
   const appSessionId = useAppSelector(selectSessionId);
+  const { projectId } = useParams<ProjectPageParams>();
+  const isChatPage = !!(pathname && /\/platform\/[^/]+\/[^/]+$/.test(pathname));
   const userIsStudent = useUserIsStudent();
   const { metadata } = useTenantMetadata({ org: tenantKey });
   const canExport =
@@ -1298,15 +1300,6 @@ function SidebarChatsSection({
     [recentMessages, filterByMentor, pinnedSessionIds],
   );
 
-  // Selecting an existing chat repaints the panel from state: the loader
-  // effect keys on the Redux session id + the localStorage `session_id`
-  // written below — nothing reads a `?session=` query param. So navigate ONLY
-  // when we're not already on this mentor's chat page (e.g. arriving from
-  // Projects / Analytics). When we're already on it — always the case inside
-  // the embed widget — skip the push: re-pushing the URL would strip params
-  // like `?embed=true`, flipping the app out of embed mode and leaking the
-  // full Agents/Projects sidebar (issue #2067). Clicking the already-active
-  // chat is a no-op for state to avoid thrashing the in-flight session.
   const handleSelectRow = (row: ChatRow) => {
     const mentorUniqueId = row.mentor?.unique_id;
     if (!mentorUniqueId || !tenantKey) return;
@@ -1334,9 +1327,12 @@ function SidebarChatsSection({
       }
     }
 
-    const targetPath = `/platform/${tenantKey}/${mentorUniqueId}`;
-    if (pathname !== targetPath) {
-      router.push(targetPath);
+    if (!isChatPage) {
+      if (projectId) {
+        router.push(`/platform/${tenantKey}/projects/${projectId}/${mentorId}`);
+      } else {
+        router.push(`/platform/${tenantKey}/${mentorId}`);
+      }
     }
     onAfterNav?.();
   };

@@ -2450,6 +2450,39 @@ describe('AppSidebar — Chat row label navigation', () => {
       expect.stringContaining('session='),
     );
   });
+
+  it('clicking a chat row inside a project navigates to the project chat page', () => {
+    // On a project route `projectId` is set and the pathname is not a bare
+    // `/platform/<tenant>/<mentor>` chat page, so the projectId branch fires
+    // and keeps the user inside the project context.
+    mockPathname = '/platform/tenant-a/projects/proj-x/mentor-1';
+    mockParams = {
+      tenantKey: 'tenant-a',
+      mentorId: 'mentor-1',
+      projectId: 'proj-x',
+    };
+    mockRecentPages = {
+      results: [
+        {
+          id: 'r-proj',
+          session_id: 'sess-proj',
+          mentor: { unique_id: 'mentor-1' },
+          messages: [
+            { message: { data: { type: 'user', content: 'Project row' } } },
+          ],
+        },
+      ],
+    };
+    mockPinnedPages = { results: [] };
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    const row = screen.getByText('Project row').closest('button');
+    expect(row).not.toBeNull();
+    fireEvent.click(row!);
+    expect(pushMock).toHaveBeenCalledWith(
+      '/platform/tenant-a/projects/proj-x/mentor-1',
+    );
+  });
 });
 
 // =============================================================================
