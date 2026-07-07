@@ -128,42 +128,34 @@ test.describe('Journey 14: Anonymous / Public Access', () => {
   // All tests use unauthenticated context — no storageState
   test.use({ storageState: { cookies: [], origins: [] } });
 
-  // TODO: temporarily parked — failing in CI (anonymous public-mentor chat
-  // interface not reachable in the test env). Restore to a live `test(...)`
-  // gate once the root cause is fixed.
-  test.fixme(
-    'unauthenticated user sees the chat interface on a public mentor page',
-    async ({ page }) => {
-      test.skip(!MENTOR_NEXTJS_HOST, 'Requires MENTOR_NEXTJS_HOST');
-      await goToAnonymousMentor(page);
-      const chatInput = page.getByPlaceholder('Ask anything', { exact: true });
-      await expect(chatInput).toBeVisible({ timeout: 15_000 });
-    },
-  );
+  test('unauthenticated user sees the chat interface on a public mentor page', async ({
+    page,
+  }) => {
+    test.skip(!MENTOR_NEXTJS_HOST, 'Requires MENTOR_NEXTJS_HOST');
+    await goToAnonymousMentor(page);
+    const chatInput = page.getByPlaceholder('Ask anything', { exact: true });
+    await expect(chatInput).toBeVisible({ timeout: 15_000 });
+  });
 
-  // TODO: temporarily parked — failing in CI (anonymous public-mentor chat
-  // interface not reachable in the test env). Restore to a live `test(...)`
-  // gate once the root cause is fixed.
-  test.fixme(
-    'unauthenticated user can chat with a public mentor',
-    async ({ page }) => {
-      test.skip(!MENTOR_NEXTJS_HOST, 'Requires MENTOR_NEXTJS_HOST');
-      await goToAnonymousMentor(page);
-      const chatInput = page.getByPlaceholder('Ask anything', { exact: true });
-      await expect(chatInput).toBeVisible({ timeout: 15_000 });
-      await chatInput.fill('Hello anonymous test');
-      const sendButton = page.getByRole('button', { name: 'Send message' });
-      await expect(sendButton).toBeEnabled({ timeout: 10_000 });
-      await sendButton.click();
-      // Anonymous chat completions go through the LLM and can be slow under
-      // load — the trace shows no chat-completion request inside 60s. Give the
-      // backend a generous ceiling; the assertion still resolves the moment
-      // the response bubble renders.
-      await expect(
-        page.locator('.chat-ai-message-response').first(),
-      ).toBeVisible({ timeout: 120_000 });
-    },
-  );
+  test('unauthenticated user can chat with a public mentor', async ({
+    page,
+  }) => {
+    test.skip(!MENTOR_NEXTJS_HOST, 'Requires MENTOR_NEXTJS_HOST');
+    await goToAnonymousMentor(page);
+    const chatInput = page.getByPlaceholder('Ask anything', { exact: true });
+    await expect(chatInput).toBeVisible({ timeout: 15_000 });
+    await chatInput.fill('Hello anonymous test');
+    const sendButton = page.getByRole('button', { name: 'Send message' });
+    await expect(sendButton).toBeEnabled({ timeout: 10_000 });
+    await sendButton.click();
+    // Anonymous chat completions go through the LLM and can be slow under
+    // load — the trace shows no chat-completion request inside 60s. Give the
+    // backend a generous ceiling; the assertion still resolves the moment
+    // the response bubble renders.
+    await expect(page.locator('.chat-ai-message-response').first()).toBeVisible(
+      { timeout: 120_000 },
+    );
+  });
 
   test('unauthenticated user sees a Log In button on a public mentor page', async ({
     page,
@@ -174,22 +166,19 @@ test.describe('Journey 14: Anonymous / Public Access', () => {
     await expect(loginButton).toBeVisible({ timeout: 15_000 });
   });
 
-  // TODO: temporarily parked — failing in CI (anonymous public-mentor chat
-  // interface not reachable in the test env). Restore to a live `test(...)`
-  // gate once the root cause is fixed.
-  test.fixme(
-    'unauthenticated user does not see the Memory button in the chat input',
-    async ({ page, chatPage }) => {
-      test.skip(!MENTOR_NEXTJS_HOST, 'Requires MENTOR_NEXTJS_HOST');
-      await goToAnonymousMentor(page);
-      // Wait for the chat input to render so the inside-buttons have had a
-      // chance to mount before we assert absence.
-      await expect(
-        page.getByPlaceholder('Ask anything', { exact: true }),
-      ).toBeVisible({ timeout: 15_000 });
-      await expect(chatPage.memoryButton).not.toBeVisible({ timeout: 5_000 });
-    },
-  );
+  test('unauthenticated user does not see the Memory button in the chat input', async ({
+    page,
+    chatPage,
+  }) => {
+    test.skip(!MENTOR_NEXTJS_HOST, 'Requires MENTOR_NEXTJS_HOST');
+    await goToAnonymousMentor(page);
+    // Wait for the chat input to render so the inside-buttons have had a
+    // chance to mount before we assert absence.
+    await expect(
+      page.getByPlaceholder('Ask anything', { exact: true }),
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(chatPage.memoryButton).not.toBeVisible({ timeout: 5_000 });
+  });
 
   test('unauthenticated user clicks Log In and is redirected to auth host', async ({
     page,
