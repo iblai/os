@@ -457,6 +457,9 @@
     "studyMode": "学习模式",
     "deepResearch": "深度研究",
     "memory": "记忆",
+    "computerUse": "电脑操作",
+    "computerUseNeedsLocalModel": "请先开启“本地模型”——电脑操作需要本地 AI 模型。",
+    "computerUseModelTooSmall": "您的本地模型太小，无法用于电脑操作。请在“本地模型”中选择至少 12GB 的模型。",
     "moreOptions": "更多选项"
   },
   "chatInputFormMemoryMenu": {

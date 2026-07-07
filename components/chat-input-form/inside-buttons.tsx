@@ -15,11 +15,34 @@ import {
   PopoverAnchor,
   PopoverContent,
 } from '@/components/ui/popover';
-import { X, BookOpen, Archive, Check, Terminal } from 'lucide-react';
+import { X, BookOpen, Archive, Check, Terminal, Monitor } from 'lucide-react';
+import { toast } from 'sonner';
 import { DeepSearchIcon, CanvasIcon } from '@/components/icons/svg-icons';
 import { TOOLS } from '@iblai/iblai-js/web-utils';
+import {
+  useGhostOs,
+  isSystemControlEnabled,
+  setSystemControlEnabled,
+  isLocalLLMEnabled,
+  getLocalLLMModel,
+  modelSupportsSystemControl,
+} from '@iblai/iblai-js/web-containers';
 import { MemoryButton } from './memory-button';
 import { MemoryMenu } from './memory-menu';
+
+// Computer Use is macOS-only in prod; the env flag bypasses the OS check so the
+// toggle can be exercised on Linux/Windows desktop builds during testing.
+const isMacOS = () => {
+  if (typeof navigator === 'undefined') return false;
+  return /mac/i.test(navigator.userAgent || '');
+};
+const allowNonMacOSComputerUse = () =>
+  process.env.NEXT_PUBLIC_ALLOW_NON_MACOS_COMPUTER_USE_TOGGLE === 'true';
+
+// 12GB floor, matching the SDK default (DEFAULT_SYSTEM_CONTROL_REQUIRED_SIZE_GB)
+// and the Local Models tab's "supported" indicator. modelSupportsSystemControl
+// gates size <= gb (strictly greater), so a model of exactly 12GB is also off.
+const COMPUTER_USE_MIN_MODEL_GB = 12;
 
 interface InsideButtonsProps {
   activeOptions: string[];
@@ -53,6 +76,32 @@ export const InsideButtons = ({
   username,
 }: InsideButtonsProps) => {
   const t = useTranslations('chatInputFormInsideButtons');
+
+  // Computer Use = the Tauri GhostOS assistant. Same calls as the old profile
+  // "Computer Assistant" toggle (useGhostOs install/stop + localStorage pref),
+  // no backend round-trip. Reads the pref on mount; cross-tab sync not polled.
+  const ghostOs = useGhostOs();
+  const [computerUseEnabled, setComputerUseEnabled] = useState(isSystemControlEnabled);
+  const toggleComputerUse = () => {
+    const next = !computerUseEnabled;
+    // Guards only when turning on (mirrors the old profile toggle). The chatbox
+    // has no inline notice space, so remind via toast instead of failing silently.
+    if (next) {
+      if (!isLocalLLMEnabled()) {
+        toast.warning(t('computerUseNeedsLocalModel'));
+        return;
+      }
+      if (!modelSupportsSystemControl(getLocalLLMModel(), COMPUTER_USE_MIN_MODEL_GB)) {
+        toast.warning(t('computerUseModelTooSmall'));
+        return;
+      }
+    }
+    setComputerUseEnabled(next);
+    setSystemControlEnabled(next);
+    if (next) ghostOs.install();
+    else ghostOs.stop();
+  };
+
   const allInsideButtons = [
     {
       name: 'Canvas',
@@ -95,6 +144,14 @@ export const InsideButtons = ({
       // the hidden dropdown, so this `action` lambda is unreachable.
       action: /* istanbul ignore next */ () => onOptionClick(TOOLS.MEMORY),
       isEnabled: memoryEnabled && !embedMode && !!username,
+    },
+    {
+      name: 'Computer Use',
+      label: t('computerUse'),
+      icon: <Monitor className="h-4 w-4" />,
+      isActive: computerUseEnabled,
+      action: toggleComputerUse,
+      isEnabled: ghostOs.isAvailable && (isMacOS() || allowNonMacOSComputerUse()),
     },
   ].filter((item) => item.isEnabled);
 
