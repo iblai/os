@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-07-06 | 508 checkpoints (486 covered, 2 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 59 journeys (58 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-07-07 | 512 checkpoints (490 covered, 2 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 60 journeys (59 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -980,7 +980,20 @@ End-to-end onboarding of a brand-new user via the `ECOMMERCE_CHECKOUT_URL` "free
 
 ---
 
-## Journey 56: Chat History Export Toggle (5 checkpoints) — `journeys/56-chat-history-export-toggle.spec.ts`
+## Journey 56: Navbar User Mode Dropdown Visibility (4 checkpoints) — `journeys/56-navbar-user-mode-dropdown-visibility.spec.ts`
+
+**Source files:** `hooks/use-user-type.ts`, `hooks/use-mentor-segments.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`
+
+Covers issue #2048 — "Hide Settings In the Dropdown list In User Mode". When an admin flips the navbar User/Admin switch to User (student) mode, the admin-only segments in the "Selected agent" dropdown (Settings, LLM, Prompts, Tools, ...) must disappear, leaving only "New Chat". Flipping back to Admin mode must restore the full list. This is a regression guard for a memoization bug: `hooks/use-mentor-segments.ts`'s `filterContext` `useMemo` did not list `userType` as a dependency, so toggling the switch didn't recompute the segment list and admin items stayed visible in User mode. The fix adds `userType` to the deps array and makes `use-user-type.ts`'s `isUserTypeAllowed` early-return `false` for `UserType.STUDENT` unless a segment's `userTypes` explicitly includes STUDENT (none currently do). The dropdown does not live-update while open, so each checkpoint closes it, toggles the switch, then re-opens it before asserting.
+
+- [x] nmv-01: Admin (default Admin/instructor mode) sees the full admin segment list in the Selected agent dropdown: New Chat, Settings, LLM, Prompts, Tools
+- [x] nmv-02: Toggling to User mode and re-opening the dropdown collapses the list to exactly New Chat — Settings, LLM, Prompts, Tools, and the Modify/fork footer action are all hidden
+- [x] nmv-03: Regression guard — toggling back to Admin mode and re-opening the dropdown restores the full admin segment list, proving the list recomputes on every toggle instead of staying stale
+- [x] nmv-04: Toggling to User mode a second time collapses the dropdown back down to exactly New Chat, confirming the fix holds across repeated toggles
+
+---
+
+## Journey 57: Chat History Export Toggle (5 checkpoints) — `journeys/57-chat-history-export-toggle.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
 
@@ -994,7 +1007,7 @@ Covers issue #2068: a new tenant Advanced setting, `enable_chat_history_export` 
 
 ---
 
-## Journey 57: Embed Mode Chat Selection Sidebar Guard (4 checkpoints) — `journeys/57-embed-mode-chat-selection-sidebar-guard.spec.ts`
+## Journey 58: Embed Mode Chat Selection Sidebar Guard (4 checkpoints) — `journeys/58-embed-mode-chat-selection-sidebar-guard.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `hooks/use-embed-mode.ts`
 

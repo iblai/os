@@ -113,9 +113,16 @@ vi.mock('@/features/utils', () => ({
 
 vi.mock('@/hooks/use-user-type', () => ({
   useUserType: () => ({
-    isUserTypeAllowed: (item: { userTypes: string[] }) =>
-      item.userTypes.includes(UserType.ADMIN) ||
-      item.userTypes.includes(UserType.FREE_TRIAL),
+    isUserTypeAllowed: (item: { userTypes: string[] }) => {
+      if (mockUserIsStudent && !item.userTypes.includes(UserType.STUDENT)) {
+        return false;
+      }
+      return (
+        item.userTypes.includes(UserType.ADMIN) ||
+        item.userTypes.includes(UserType.FREE_TRIAL)
+      );
+    },
+    userType: mockUserIsStudent ? UserType.STUDENT : UserType.ADMIN,
   }),
 }));
 
@@ -679,6 +686,92 @@ describe('NavBar', () => {
       expect(dropdownButton).toBeEnabled();
       // Clicking should not throw
       expect(() => fireEvent.click(dropdownButton)).not.toThrow();
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // Student-mode Dropdown Gating (issue #2048)
+  // --------------------------------------------------------------------------
+
+  describe('Student-mode dropdown gating', () => {
+    it('hides admin-settings items in student mode but keeps New Chat', () => {
+      mockUserIsStudent = true;
+
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(screen.getByTestId('cdm-top-action')).toHaveTextContent(
+        'New Chat',
+      );
+      expect(screen.queryByTestId('cdm-item-settings')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('cdm-item-llm')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('cdm-item-analytics'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('shows admin-settings items in admin mode', () => {
+      mockUserIsStudent = false;
+
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(screen.getByTestId('cdm-top-action')).toHaveTextContent(
+        'New Chat',
+      );
+      expect(screen.getByTestId('cdm-item-settings')).toBeInTheDocument();
+    });
+
+    it('hides the fork action in student mode', () => {
+      mockUserIsStudent = true;
+      mockIsAdmin = false;
+      mockMentorSettings = {
+        ...mockMentorSettings,
+        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_ANYONE,
+        platform_key: 'main',
+        forkable: true,
+      };
+
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(screen.queryByTestId('cdm-footer-action')).not.toBeInTheDocument();
+    });
+
+    it('shows the fork action in admin mode when the mentor is forkable', () => {
+      mockUserIsStudent = false;
+      mockIsAdmin = false;
+      mockMentorSettings = {
+        ...mockMentorSettings,
+        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_ANYONE,
+        platform_key: 'main',
+        forkable: true,
+      };
+
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(screen.getByTestId('cdm-footer-action')).toBeInTheDocument();
     });
   });
 

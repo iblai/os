@@ -1,5 +1,5 @@
 /**
- * Journey 56 — Chat History Export Toggle (issue #2068)
+ * Journey 57 — Chat History Export Toggle (issue #2068)
  *
  * A new tenant Advanced setting, `enable_chat_history_export` (org metadata
  * boolean, default ON), gates the per-chat "Export" option in the sidebar
@@ -218,7 +218,7 @@ async function waitForStreamingDone(
 // another's in-flight mutation, causing `setChatHistoryExport` to time out
 // waiting for the aria-checked state it just set. Serial execution avoids
 // the race since only one test ever touches the setting at a time.
-test.describe.serial('Journey 56: Chat History Export Toggle', () => {
+test.describe.serial('Journey 57: Chat History Export Toggle', () => {
   test.setTimeout(180_000);
 
   test.beforeEach(async ({ page }) => {

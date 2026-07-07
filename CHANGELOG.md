@@ -1,5 +1,51 @@
 # Changelog
 
+## [0.92.3](https://github.com/iblai/os/compare/v0.92.2...v0.92.3) (2026-07-07)
+
+### Bug Fixes
+
+- **app:** foreground main window before navigating on popup return ([f1a8aa5](https://github.com/iblai/os/commit/f1a8aa5f88726b3a68e2235f69a332c5fcaa775b))
+
+## [0.92.2](https://github.com/iblai/os/compare/v0.92.1...v0.92.2) (2026-07-07)
+
+### Bug Fixes
+
+- **mentor:** hide admin-only settings when an admin previews as a student ([3233caa](https://github.com/iblai/os/commit/3233caa7d7e7395d676532981eb3b3fd3c8c22c3))
+- **mentor:** hide the agent fork action in student mode ([b2dfe48](https://github.com/iblai/os/commit/b2dfe485065d4eae7eddb960ef564ed103bf811a))
+- **mentor:** rebuild the segment list when the effective user type changes ([fde3f7a](https://github.com/iblai/os/commit/fde3f7a585f15a7944873212c3a6b79ce0aeebb1))
+- **tests:** remove "/dm", this is already expected from the env variable ([1d60663](https://github.com/iblai/os/commit/1d606630abfab93fc8b52b11b0df13ac41fd90d7))
+
+### Chores
+
+- **deps:** bump @iblai/iblai-js to 1.20.21 ([26167a5](https://github.com/iblai/os/commit/26167a51098555e36d153d18426c1e7d94238c72))
+
+### Documentation
+
+- **e2e:** record journey 56 in coverage ([22a22da](https://github.com/iblai/os/commit/22a22da5e1807ca57a35ef0ccf21934a64980101))
+
+### Tests
+
+- **e2e:** cover navbar agent-dropdown visibility across user/admin mode ([bf93c4d](https://github.com/iblai/os/commit/bf93c4d241e5fd6c036e9212c108d29c338ecc2e))
+- **mentor:** align useUserType mocks with the new userType return ([cbbc49e](https://github.com/iblai/os/commit/cbbc49e252a766e92cb201ff459a1bdde1da8eb1))
+
+## [0.92.1](https://github.com/iblai/os/compare/v0.92.0...v0.92.1) (2026-07-07)
+
+### Bug Fixes
+
+- **app:** hard-navigate the main window on in-app popup return ([a6f76b2](https://github.com/iblai/os/commit/a6f76b20cd1e8c536b4ae5b0d430aa931bf12e33))
+
+## [0.92.0](https://github.com/iblai/os/compare/v0.91.2...v0.92.0) (2026-07-06)
+
+### Features
+
+- **app:** route open_external_url to an in-app popup by URL pattern ([6f07027](https://github.com/iblai/os/commit/6f07027d28bfba31422845dcccfee63bd85844b8)), closes [#311](https://github.com/iblai/os/issues/311)
+
+## [0.91.2](https://github.com/iblai/os/compare/v0.91.1...v0.91.2) (2026-07-06)
+
+### Bug Fixes
+
+- **app:** register open_external_url command on desktop ([cc1b010](https://github.com/iblai/os/commit/cc1b0106096a57766b44ea2c62c8e82019ca0a15))
+
 ## [0.91.1](https://github.com/iblai/os/compare/v0.91.0...v0.91.1) (2026-07-06)
 
 ### Chores

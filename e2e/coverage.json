@@ -1,14 +1,14 @@
 {
   "version": 2,
-  "lastUpdated": "2026-07-03",
+  "lastUpdated": "2026-07-07",
   "summary": {
-    "totalCheckpoints": 508,
-    "coveredCheckpoints": 486,
+    "totalCheckpoints": 512,
+    "coveredCheckpoints": 490,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 8,
     "percent": 100,
-    "totalJourneys": 59,
-    "activeJourneys": 58
+    "totalJourneys": 60,
+    "activeJourneys": 59
   },
   "journeys": [
     {
@@ -3212,9 +3212,41 @@
       ]
     },
     {
+      "id": "navbar-user-mode-dropdown-visibility",
+      "name": "Navbar User Mode Dropdown Visibility",
+      "spec": "56-navbar-user-mode-dropdown-visibility.spec.ts",
+      "sourceFiles": [
+        "hooks/use-user-type.ts",
+        "hooks/use-mentor-segments.ts",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "nmv-01",
+          "description": "Admin (default Admin/instructor mode) sees the full admin segment list in the Selected agent dropdown: New Chat, Settings, LLM, Prompts, Tools",
+          "status": "covered"
+        },
+        {
+          "id": "nmv-02",
+          "description": "Toggling the navbar User/Admin switch to User mode and re-opening the dropdown collapses the list to exactly New Chat — Settings, LLM, Prompts, Tools, and the Modify/fork footer action are all hidden (issue #2048)",
+          "status": "covered"
+        },
+        {
+          "id": "nmv-03",
+          "description": "Regression guard: toggling back to Admin mode and re-opening the dropdown restores the full admin segment list — proves the segment list recomputes on every toggle instead of staying stale (fix: `userType` added to the `filterContext` useMemo deps in hooks/use-mentor-segments.ts)",
+          "status": "covered"
+        },
+        {
+          "id": "nmv-04",
+          "description": "Toggling to User mode a second time collapses the dropdown back down to exactly New Chat, confirming the fix holds across repeated toggles, not just the first one",
+          "status": "covered"
+        }
+      ]
+    },
+    {
       "id": "chat-history-export-toggle",
       "name": "Chat History Export Toggle",
-      "spec": "56-chat-history-export-toggle.spec.ts",
+      "spec": "57-chat-history-export-toggle.spec.ts",
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx"
       ],
@@ -3249,7 +3281,7 @@
     {
       "id": "embed-mode-chat-selection-sidebar-guard",
       "name": "Embed Mode Chat Selection Sidebar Guard",
-      "spec": "57-embed-mode-chat-selection-sidebar-guard.spec.ts",
+      "spec": "58-embed-mode-chat-selection-sidebar-guard.spec.ts",
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
         "hooks/use-embed-mode.ts"

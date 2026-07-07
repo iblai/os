@@ -1,5 +1,5 @@
 /**
- * Journey 57 — Embed Mode Chat Selection Sidebar Guard (issue #2067 / LAIA-684)
+ * Journey 58 — Embed Mode Chat Selection Sidebar Guard (issue #2067 / LAIA-684)
  *
  * Regression guard for a bug where selecting a chat from the sidebar history
  * inside the embed widget leaked the FULL sidebar (Agents, Workflows,
@@ -125,7 +125,7 @@ async function assertMinimalEmbedSidebar(
   );
 }
 
-test.describe('Journey 57: Embed Mode Chat Selection Sidebar Guard', () => {
+test.describe('Journey 58: Embed Mode Chat Selection Sidebar Guard', () => {
   test.setTimeout(180_000);
 
   test.beforeEach(async ({ page, createMentorPage }) => {
