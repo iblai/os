@@ -21,7 +21,7 @@ export async function getTenantMetadata(
     async ({ dmUrl, tenantKey }) => {
       const token = localStorage.getItem('dm_token');
       if (!token) throw new Error('dm_token not found in localStorage');
-      const url = `${dmUrl}/dm/api/core/orgs/${tenantKey}/metadata/`;
+      const url = `${dmUrl}/api/core/orgs/${tenantKey}/metadata/`;
       const res = await fetch(url, {
         headers: { Authorization: `Token ${token}` },
       });
@@ -60,7 +60,7 @@ export async function setTenantMetadataFlag(
       const token = localStorage.getItem('dm_token');
       if (!token) throw new Error('dm_token not found in localStorage');
 
-      const baseUrl = `${dmUrl}/dm/api/core/orgs/${tenantKey}/metadata/`;
+      const baseUrl = `${dmUrl}/api/core/orgs/${tenantKey}/metadata/`;
 
       // First read existing metadata so we can merge cleanly.
       const getRes = await fetch(baseUrl, {
