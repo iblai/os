@@ -184,6 +184,19 @@ export async function buildMetadata(
   return metadata;
 }
 
+/**
+ * Metadata for an explore / mentor-directory page. Public and indexable, so
+ * search engines can surface the "browse AI mentors" pages.
+ */
+export async function buildExploreMetadata(path: string): Promise<Metadata> {
+  return buildMetadata({
+    path,
+    index: true,
+    title: 'Explore Mentors',
+    description: `Browse and chat with AI mentors on ${SITE_NAME}.`,
+  });
+}
+
 /** JSON-LD Organization node for the site. */
 export function organizationJsonLd(origin: string) {
   return {

@@ -21,6 +21,7 @@ import {
   getSiteUrl,
   joinUrl,
   buildMetadata,
+  buildExploreMetadata,
   organizationJsonLd,
   websiteJsonLd,
   DISALLOWED_PATHS,
@@ -151,6 +152,21 @@ describe('buildMetadata', () => {
       { url: '/b.png' },
     ]);
     expect((m.twitter as any).images).toEqual(['/a.png', '/b.png']);
+  });
+});
+
+describe('buildExploreMetadata', () => {
+  beforeEach(() => {
+    mockHeaders = { host: 'os.ibl.ai' };
+  });
+
+  it('is indexable with an explore title and canonical', async () => {
+    const m = await buildExploreMetadata('/platform/acme/explore');
+    expect(m.robots).toMatchObject({ index: true, follow: true });
+    expect(m.title).toBe('Explore Mentors');
+    expect((m.alternates as any).canonical).toBe(
+      'https://os.ibl.ai/platform/acme/explore',
+    );
   });
 });
 
