@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-06-22 | 495 checkpoints (473 covered, 2 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 56 journeys (55 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-07-02 | 503 checkpoints (481 covered, 2 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 58 journeys (57 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -964,5 +964,31 @@ Covers the `handlePaste` → `extractFilesFromClipboard` → `processFiles` path
 - [x] pta-02: Pasting plain text under the threshold is not converted into an attachment chip
 - [x] pta-03: Pasting an image file via the clipboard produces an attachment chip and the textarea remains empty
 - [x] pta-04: Pasting an oversized file triggers a sonner validation error toast and no attachment chip is added
+
+---
+
+## Journey 55: Free Credits Checkout Onboarding (4 checkpoints) — `journeys/55-free-credits-checkout-onboarding.spec.ts`
+
+**Source files:** `app/sso-login-complete/page.tsx`, `app/platform/[tenantKey]/[mentorId]/page.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`
+
+End-to-end onboarding of a brand-new user via the `ECOMMERCE_CHECKOUT_URL` "free credits" Stripe checkout. The endpoint 302-redirects to a Stripe-hosted page exposing a single email field (`input#email`) and a Subscribe button (`[data-testid="hosted-payment-submit-button"]` — a $0 subscription, no card required). Submitting `test+<timestamp>@ibleducation.com` provisions a new account and runs the auth SSO redirect chain (`auth.iblai.org/login` → `/login/complete` → `sso-login-complete` → platform), landing authenticated on the mentor SPA. The base URL is dictated by the checkout session's redirect target (production `mentorai.iblai.org`), independent of `MENTOR_NEXTJS_HOST`, so the test follows the redirect rather than re-invoking `navigateToMentorApp`'s fresh `goto`, and asserts the URL _shape_ (each run is assigned a fresh tenant/mentor). The final step clicks "Upgrade Plan" in the credit dropdown, which creates a Stripe checkout session and redirects the same tab to a Stripe-hosted payment page (`store.ibl.ai`) requiring credit-card input — the test stops there without entering a card. Runs in a clean, unauthenticated context. Skips when `ECOMMERCE_CHECKOUT_URL` is unset. Credit-balance assertions reuse the `@iblai/iblai-js/playwright` helpers (`creditBalanceTrigger`, `openCreditBalanceDropdown`, `creditBalancePlanBadge`, `getCreditBalanceRemaining`).
+
+- [x] fcc-01: `ECOMMERCE_CHECKOUT_URL` redirects to the Stripe-hosted checkout page exposing the email field and Subscribe submit button
+- [x] fcc-02: Submitting the email completes checkout and lands authenticated on the mentor SPA at `<base-url>/platform/<platform-key>/<mentor-id>`
+- [x] fcc-03: The credit-balance dropdown shows a positive remaining credit balance and a "Free" plan pill
+- [x] fcc-04: Clicking "Upgrade Plan" in the credit dropdown redirects to a Stripe-hosted checkout page (`store.ibl.ai`) requiring credit-card input (secure Stripe Elements card iframe + pay button)
+
+---
+
+## Journey 56: Navbar User Mode Dropdown Visibility (4 checkpoints) — `journeys/56-navbar-user-mode-dropdown-visibility.spec.ts`
+
+**Source files:** `hooks/use-user-type.ts`, `hooks/use-mentor-segments.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`
+
+Covers issue #2048 — "Hide Settings In the Dropdown list In User Mode". When an admin flips the navbar User/Admin switch to User (student) mode, the admin-only segments in the "Selected agent" dropdown (Settings, LLM, Prompts, Tools, ...) must disappear, leaving only "New Chat". Flipping back to Admin mode must restore the full list. This is a regression guard for a memoization bug: `hooks/use-mentor-segments.ts`'s `filterContext` `useMemo` did not list `userType` as a dependency, so toggling the switch didn't recompute the segment list and admin items stayed visible in User mode. The fix adds `userType` to the deps array and makes `use-user-type.ts`'s `isUserTypeAllowed` early-return `false` for `UserType.STUDENT` unless a segment's `userTypes` explicitly includes STUDENT (none currently do). The dropdown does not live-update while open, so each checkpoint closes it, toggles the switch, then re-opens it before asserting.
+
+- [x] nmv-01: Admin (default Admin/instructor mode) sees the full admin segment list in the Selected agent dropdown: New Chat, Settings, LLM, Prompts, Tools
+- [x] nmv-02: Toggling to User mode and re-opening the dropdown collapses the list to exactly New Chat — Settings, LLM, Prompts, Tools, and the Modify/fork footer action are all hidden
+- [x] nmv-03: Regression guard — toggling back to Admin mode and re-opening the dropdown restores the full admin segment list, proving the list recomputes on every toggle instead of staying stale
+- [x] nmv-04: Toggling to User mode a second time collapses the dropdown back down to exactly New Chat, confirming the fix holds across repeated toggles
 
 ---

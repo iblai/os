@@ -1275,7 +1275,7 @@ describe('SettingsTab', () => {
       expect(screen.getByLabelText('Enable copies')).not.toBeChecked();
     });
 
-    it('submits forkable value when saving', async () => {
+    it('submits forkable value and mirrors it to forkable_with_training_data when disabling copies', async () => {
       render(<SettingsTab />);
 
       const toggle = screen.getByLabelText('Enable copies');
@@ -1289,6 +1289,33 @@ describe('SettingsTab', () => {
           expect.objectContaining({
             formData: expect.objectContaining({
               forkable: false,
+              forkable_with_training_data: false,
+            }),
+          }),
+        );
+      });
+    });
+
+    it('mirrors forkable_with_training_data to true when enabling copies', async () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, forkable: false },
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      const toggle = screen.getByLabelText('Enable copies');
+      fireEvent.click(toggle);
+
+      const saveButton = screen.getByText('Save');
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockEditMentor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            formData: expect.objectContaining({
+              forkable: true,
+              forkable_with_training_data: true,
             }),
           }),
         );
@@ -2041,6 +2068,34 @@ describe('SettingsTab', () => {
 
       expect(
         screen.getByLabelText('Enable dedicated sandbox'),
+      ).not.toBeDisabled();
+    });
+
+    it('disables the Verbose Reasoning toggle when show_reasoning is read-only', () => {
+      rbacState.enabled = true;
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: withFieldPerms({ show_reasoning: { read: true, write: false } }),
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(
+        screen.getByLabelText('Enable verbose reasoning disabled'),
+      ).toBeDisabled();
+    });
+
+    it('keeps the Verbose Reasoning toggle enabled when show_reasoning is writable', () => {
+      rbacState.enabled = true;
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: withFieldPerms({ show_reasoning: { read: true, write: true } }),
+        isLoading: false,
+      });
+
+      render(<SettingsTab />);
+
+      expect(
+        screen.getByLabelText('Enable verbose reasoning disabled'),
       ).not.toBeDisabled();
     });
 

@@ -95,6 +95,7 @@ vi.mock('@/hooks/use-user-type', () => ({
     isUserTypeAllowed: (item: { userTypes: string[] }) =>
       item.userTypes.includes(UserType.ADMIN) ||
       item.userTypes.includes(UserType.FREE_TRIAL),
+    userType: UserType.ADMIN,
   }),
 }));
 

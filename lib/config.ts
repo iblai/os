@@ -50,6 +50,8 @@ const env = {
     process.env.NEXT_PUBLIC_MAXIMUM_CHARACTER_SIZE_TO_COPY,
   NEXT_PUBLIC_ENABLE_SUPPORT_PHONE:
     process.env.NEXT_PUBLIC_ENABLE_SUPPORT_PHONE,
+  NEXT_PUBLIC_ENABLE_GRADEBOOK_TAB:
+    process.env.NEXT_PUBLIC_ENABLE_GRADEBOOK_TAB,
 };
 
 const runtimeEnv = () =>
@@ -163,4 +165,6 @@ export const config = {
     getEnv('NEXT_PUBLIC_MAXIMUM_CHARACTER_SIZE_TO_COPY', '2000'),
   enableSupportPhone: () =>
     getEnv('NEXT_PUBLIC_ENABLE_SUPPORT_PHONE', 'false') === 'true',
+  enableGradebookTab: () =>
+    getEnv('NEXT_PUBLIC_ENABLE_GRADEBOOK_TAB', 'false') === 'true',
 };

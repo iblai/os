@@ -100,11 +100,11 @@ describe('next.config', () => {
     );
   });
 
-  it('should enable production browser source maps', async () => {
+  it('should disable production browser source maps (Sentry uploads then deletes them)', async () => {
     vi.resetModules();
     const config = (await import('../next.config')).default;
 
-    expect(config.productionBrowserSourceMaps).toBe(true);
+    expect(config.productionBrowserSourceMaps).toBe(false);
   });
 
   it('should transpile required packages', async () => {

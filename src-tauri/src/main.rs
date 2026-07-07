@@ -30,6 +30,10 @@ use tauri::{command, AppHandle, Emitter, Listener, Manager, Window};
 use tokio::sync::RwLock;
 
 use tauri::WebviewWindowBuilder;
+use tokio::sync::oneshot;
+// OpenerExt opens URLs in the system browser (non-iOS).
+#[cfg(not(target_os = "ios"))]
+use tauri_plugin_opener::OpenerExt;
 
 // OAuth provider URL patterns that should be opened in a separate auth window
 // Note: login.iblai.app loads in the main window - only OAuth providers need a separate window
@@ -53,9 +57,24 @@ fn is_oauth_url(url: &str) -> bool {
         .any(|pattern| url.contains(pattern))
 }
 
+// (URL substring, popup window title) for flows that, when passed to
+// `open_external_url`, should open in an in-app popup window instead of the
+// system browser. Add entries here for any flow that must stay inside the app
+// (e.g. Stripe checkout, which relies on the app session). Anything not matched
+// here opens in the system browser.
+const IN_APP_URL_PATTERNS: &[(&str, &str)] = &[("stripe.com", "Checkout")];
+
+/// Returns the popup title if `url` should open in an in-app window, else None.
+fn in_app_popup_title(url: &str) -> Option<&'static str> {
+    IN_APP_URL_PATTERNS
+        .iter()
+        .find(|(pattern, _)| url.contains(pattern))
+        .map(|(_, title)| *title)
+}
+
 /// Open OAuth URL in an in-app popup window
 /// The window monitors for callback URLs and closes automatically when auth completes
-fn open_oauth_in_popup(url: &str, app_handle: &AppHandle) -> Result<(), String> {
+fn open_oauth_in_popup(url: &str, app_handle: &AppHandle, title: &str) -> Result<(), String> {
     println!("[ibl.ai] Opening OAuth in popup window: {}", url);
 
     let app_handle_clone = app_handle.clone();
@@ -66,7 +85,7 @@ fn open_oauth_in_popup(url: &str, app_handle: &AppHandle) -> Result<(), String> 
         "oauth-popup",
         tauri::WebviewUrl::External(url.parse().map_err(|e| format!("Invalid URL: {}", e))?),
     )
-    .title("Sign In")
+    .title(title)
     .inner_size(500.0, 700.0)
     .center()
     .focused(true)
@@ -85,8 +104,24 @@ fn open_oauth_in_popup(url: &str, app_handle: &AppHandle) -> Result<(), String> 
         let is_custom_scheme =
             url_str.starts_with("iblai-mentor://") || url_str.starts_with("ai.ibl.mentorai://");
 
-        if is_callback || is_custom_scheme {
-            println!("[OAuth Popup] Auth callback detected: {}", url_str);
+        // Treat a return to the app's own domain (e.g. os.ibl.ai/...) as
+        // completion. In-app flows like Stripe checkout redirect back to the
+        // app when done, so hand off to the main window and close the popup.
+        // Boundary-checked so lookalike hosts (os.ibl.ai.evil.com) don't match.
+        let app_base = get_app_url();
+        let app_base = app_base.trim_end_matches('/');
+        let is_app_return = url_str
+            .strip_prefix(app_base)
+            .map(|rest| {
+                rest.is_empty()
+                    || rest.starts_with('/')
+                    || rest.starts_with('?')
+                    || rest.starts_with('#')
+            })
+            .unwrap_or(false);
+
+        if is_callback || is_custom_scheme || is_app_return {
+            println!("[OAuth Popup] Callback/return detected: {}", url_str);
 
             // Navigate the main window to the callback URL
             if let Some(main_win) = app_handle_clone.get_webview_window("main") {
@@ -101,7 +136,31 @@ fn open_oauth_in_popup(url: &str, app_handle: &AppHandle) -> Result<(), String> 
                 };
 
                 println!("[OAuth Popup] Navigating main window to: {}", target_url);
-                let _ = main_win.eval(&format!("window.location.href = '{}';", target_url));
+                // For app-domain returns (e.g. Stripe checkout completing), force a
+                // hard navigation. Assigning `window.location.href` can be swallowed
+                // by the SPA router (which may restore the previous route), leaving
+                // the main window on the page that opened the popup. The OAuth
+                // callback path keeps using eval, which it already relies on.
+                let navigated = if is_app_return {
+                    match target_url.parse() {
+                        Ok(parsed) => match main_win.navigate(parsed) {
+                            Ok(()) => true,
+                            Err(e) => {
+                                println!("[OAuth Popup] navigate() failed: {}", e);
+                                false
+                            }
+                        },
+                        Err(e) => {
+                            println!("[OAuth Popup] invalid return URL: {}", e);
+                            false
+                        }
+                    }
+                } else {
+                    false
+                };
+                if !navigated {
+                    let _ = main_win.eval(&format!("window.location.href = '{}';", target_url));
+                }
                 let _ = main_win.set_focus();
             }
 
@@ -898,6 +957,22 @@ fn get_os_type() -> String {
 
     #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
     return "unknown".to_string();
+}
+
+/// Whether in-app purchase should be enabled for this build.
+///
+/// Controlled by the `IBL_ALLOW_IN_APP_PURCHASE` environment variable, read at
+/// compile time (injected at build time). Defaults to `false` when unset or not
+/// set to a truthy value (`1`, `true`, `yes`, `on`; case-insensitive).
+#[command]
+fn allow_in_app_purchase() -> bool {
+    match option_env!("IBL_ALLOW_IN_APP_PURCHASE") {
+        Some(value) => matches!(
+            value.trim().to_ascii_lowercase().as_str(),
+            "1" | "true" | "yes" | "on"
+        ),
+        None => false,
+    }
 }
 
 /// Proxy a chat request to Ollama
@@ -1985,6 +2060,39 @@ async fn foundry_chat(
         .ok_or_else(|| "Failed to extract content from Foundry response".to_string())
 }
 
+/// Open a URL requested by the web frontend's `openExternalUrl`.
+///
+/// URLs matching `IN_APP_URL_PATTERNS` (e.g. Stripe checkout) open in an in-app
+/// popup window — matching the SSO login experience — because those flows rely
+/// on the app session. Everything else opens in the system browser.
+///
+/// The in-app popup reuses `open_oauth_in_popup`, which monitors for auth
+/// callbacks and hands the result back to the main window. Because this is an
+/// explicit `invoke` (not a main-window navigation), it never hits the main
+/// window's `on_navigation` interceptor, so it opens the popup itself. Window
+/// creation must run on the main thread.
+#[command]
+async fn open_external_url(app: AppHandle, url: String) -> Result<(), String> {
+    if let Some(title) = in_app_popup_title(&url) {
+        println!("[ibl.ai] Opening URL in in-app window: {}", url);
+        let app_for_main = app.clone();
+        let title = title.to_string();
+        let (tx, rx) = oneshot::channel();
+        app.run_on_main_thread(move || {
+            let _ = tx.send(open_oauth_in_popup(&url, &app_for_main, &title));
+        })
+        .map_err(|e| format!("Failed to schedule in-app window: {}", e))?;
+        return rx
+            .await
+            .unwrap_or_else(|_| Err("Failed to open in-app window".to_string()));
+    }
+
+    println!("[ibl.ai] Opening URL in system browser: {}", url);
+    app.opener()
+        .open_url(&url, None::<&str>)
+        .map_err(|e| format!("Failed to open URL: {}", e))
+}
+
 fn main() {
     // Load .env file if present (for local development and custom builds)
     // First try current directory (dev mode), then try next to the executable (bundled app)
@@ -2334,7 +2442,7 @@ fn main() {
                     // Check if this is an OAuth URL - open in popup window
                     if is_oauth_url(url_str) {
                         println!("[ibl.ai] OAuth URL detected, opening in popup: {}", url_str);
-                        if let Err(e) = open_oauth_in_popup(url_str, &app_handle) {
+                        if let Err(e) = open_oauth_in_popup(url_str, &app_handle, "Sign In") {
                             println!("[ibl.ai] Failed to open OAuth popup: {}", e);
                             return true; // Allow navigation as last resort
                         }
@@ -2628,6 +2736,8 @@ fn main() {
             save_offline_context,
             get_offline_context,
             get_os_type,
+            allow_in_app_purchase,
+            open_external_url,
             ollama_chat,
             ollama_chat_stream,
             oauth::oauth_start,

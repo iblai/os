@@ -5,11 +5,13 @@ import { LanguagePreferenceSync } from '../language-preference-sync';
 
 // --- controllable mock state -------------------------------------------------
 let mockUsername: string | null = 'test-user';
+let mockEdxJwtToken: string | undefined = 'edx-token';
 let mockActiveLocale = 'en';
 let mockUserMetadata: unknown = undefined;
 
 vi.mock('@/hooks/use-user', () => ({
   useUsername: () => mockUsername,
+  useEdxJwtToken: () => ({ edxJwtToken: mockEdxJwtToken }),
 }));
 
 // Override next-intl's useLocale (globally mocked to 'en' in setup) with a
@@ -42,6 +44,7 @@ describe('LanguagePreferenceSync', () => {
   beforeEach(() => {
     cleanup();
     mockUsername = 'test-user';
+    mockEdxJwtToken = 'edx-token';
     mockActiveLocale = 'en';
     mockUserMetadata = undefined;
     mockRefresh.mockReset();
@@ -72,6 +75,16 @@ describe('LanguagePreferenceSync', () => {
     expect(mockUseGetUserMetadataQuery).toHaveBeenCalledWith(
       { params: { username: 'test-user' } },
       { skip: false },
+    );
+  });
+
+  it('skips the metadata query when the edX token is missing', () => {
+    mockEdxJwtToken = undefined;
+    render(<LanguagePreferenceSync />);
+
+    expect(mockUseGetUserMetadataQuery).toHaveBeenCalledWith(
+      { params: { username: 'test-user' } },
+      { skip: true },
     );
   });
 

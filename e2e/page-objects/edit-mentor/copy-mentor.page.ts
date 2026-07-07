@@ -63,6 +63,7 @@ export class CopyMentorPage {
     const isChecked =
       (await this.trainingDataToggle.getAttribute('aria-checked')) === 'true';
     if (isChecked !== enabled) {
+      await expect(this.trainingDataToggle).toBeEnabled({ timeout: 10_000 });
       await this.trainingDataToggle.click();
     }
     await expect(this.trainingDataToggle).toHaveAttribute(

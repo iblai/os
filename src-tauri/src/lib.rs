@@ -1203,6 +1203,22 @@ fn get_os_type() -> String {
     return "unknown".to_string();
 }
 
+/// Whether in-app purchase should be enabled for this build.
+///
+/// Controlled by the `IBL_ALLOW_IN_APP_PURCHASE` environment variable, read at
+/// compile time (injected at build time). Defaults to `false` when unset or not
+/// set to a truthy value (`1`, `true`, `yes`, `on`; case-insensitive).
+#[command]
+fn allow_in_app_purchase() -> bool {
+    match option_env!("IBL_ALLOW_IN_APP_PURCHASE") {
+        Some(value) => matches!(
+            value.trim().to_ascii_lowercase().as_str(),
+            "1" | "true" | "yes" | "on"
+        ),
+        None => false,
+    }
+}
+
 /// Open an external URL in the system's default browser
 /// This is needed for OAuth flows (like Google login) that don't work in WebViews
 #[command]
@@ -2697,6 +2713,7 @@ pub fn run() {
             save_offline_context,
             get_offline_context,
             get_os_type,
+            allow_in_app_purchase,
             open_external_url,
             navigate_to,
             ollama_chat,
@@ -2716,6 +2733,7 @@ pub fn run() {
             cancel_model_download,
             check_network_status,
             get_os_type,
+            allow_in_app_purchase,
             open_external_url,
             navigate_to,
             ollama_chat,

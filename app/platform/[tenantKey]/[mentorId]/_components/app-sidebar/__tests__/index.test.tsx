@@ -32,6 +32,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
+import { UserType } from '@/lib/constants';
 
 // ============================================================================
 // MUTABLE MOCK STATE
@@ -480,6 +481,7 @@ vi.mock('@/hooks/use-user', () => ({
 vi.mock('@/hooks/use-user-type', () => ({
   useUserType: () => ({
     isUserTypeAllowed: (...args: unknown[]) => mockIsUserTypeAllowed(...args),
+    userType: UserType.ADMIN,
   }),
 }));
 
