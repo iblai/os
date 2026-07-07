@@ -13,7 +13,7 @@ vi.mock('@/hooks/user-navigate', () => ({
   }),
 }));
 
-vi.mock('@/components/ui/sidebar', () => ({
+vi.mock('@iblai/iblai-js/web-containers/next', () => ({
   useSidebar: () => ({
     toggleSidebar: mockToggleSidebar,
   }),

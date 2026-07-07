@@ -1,6 +1,9 @@
 'use client';
 
-import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import {
+  SidebarInset,
+  SidebarProvider,
+} from '@iblai/iblai-js/web-containers/next';
 import { ModalContainer } from '@/components/modals/modal-container';
 import { SubscriptionWrapper } from '../[tenantKey]/[mentorId]/_components/subscription-wrapper';
 import { HotKeysWrapper } from '../[tenantKey]/[mentorId]/_components/hot-keys-wrapper';

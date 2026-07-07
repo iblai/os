@@ -66,7 +66,7 @@ import {
   redirectToAuthSpaJoinTenant,
 } from '@/lib/utils';
 import { UserProfile } from './user-profile';
-import { useSidebar } from '@/components/ui/sidebar';
+import { useSidebar } from '@iblai/iblai-js/web-containers/next';
 import { LearnerModeSwitch } from './learner-mode-switch';
 import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 // import { useAdvancedChat } from '@iblai/iblai-js/web-utils';

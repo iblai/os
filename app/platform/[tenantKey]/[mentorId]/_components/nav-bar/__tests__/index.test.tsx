@@ -173,13 +173,8 @@ vi.mock('@/hooks/use-model-download', () => ({
   }),
 }));
 
-vi.mock('@/components/ui/sidebar', () => ({
-  useSidebar: () => ({
-    toggleSidebar: vi.fn(),
-    open: false,
-    isMobile: false,
-  }),
-}));
+// `useSidebar` now comes from the SDK (@iblai/iblai-js/web-containers/next);
+// its stub lives in that module's mock below.
 
 vi.mock('@/lib/eventBus', () => ({
   default: { emit: vi.fn() },
@@ -448,6 +443,11 @@ vi.mock('@iblai/iblai-js/web-containers/next', () => ({
         User Profile Modal <button onClick={props.onClose}>Close</button>
       </div>
     ) : null,
+  useSidebar: () => ({
+    toggleSidebar: vi.fn(),
+    open: false,
+    isMobile: false,
+  }),
 }));
 
 // ============================================================================
@@ -794,7 +794,8 @@ describe('NavBar', () => {
         isMobile: true,
       }));
 
-      vi.doMock('@/components/ui/sidebar', () => ({
+      vi.doMock('@iblai/iblai-js/web-containers/next', () => ({
+        UserProfileModal: () => null,
         useSidebar: useSidebarMock,
       }));
 

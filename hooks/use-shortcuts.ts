@@ -1,5 +1,5 @@
 import { useNavigate } from '@/hooks/user-navigate';
-import { useSidebar } from '@/components/ui/sidebar';
+import { useSidebar } from '@iblai/iblai-js/web-containers/next';
 import { useAppDispatch } from '@/lib/hooks';
 import { shortcutsModalUpdated } from '@/features/navigation/slice';
 

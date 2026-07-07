@@ -133,6 +133,15 @@ let mockCheckRbacPermission: (
 // footer-permission branch (which only runs when RBAC is enabled). Defaults
 // to false to match the previous test behavior.
 let mockEnableRBAC = false;
+// Backing store for `selectRbacPermissions`. The INVARIANT footer now lives
+// in the SDK (PlatformSidebar) and runs the REAL `checkRbacPermission` from
+// @iblai/web-utils against this object (nested shape:
+// `{'/platforms/<key>/': { can_invite: true }}`), so footer-permission tests
+// grant permissions HERE — the app-level `mockCheckRbacPermission` stub only
+// covers the wrapper's own gates (New Chat, studentCanCreateMentors, ...).
+const mockRbacPermissions: { current: Record<string, unknown> } = {
+  current: {},
+};
 
 // Chat session selection (issue #1881). `selectSessionId` returns the active
 // session; the Chats-section row click must repopulate the panel by writing
@@ -442,21 +451,60 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
   selectActiveChatMessages: () => mockActiveChatMessages,
 }));
 
-vi.mock('@iblai/iblai-js/web-containers', () => ({
-  Admin: ({ initialTab }: { initialTab?: string }) => (
-    <div data-testid="sdk-admin-tab" data-initial-tab={initialTab}>
-      Admin SDK Tab
-    </div>
-  ),
-  IntegrationsTab: () => (
-    <div data-testid="sdk-integrations-tab">Integrations SDK Tab</div>
-  ),
-  BillingTab: () => <div data-testid="sdk-billing-tab">Billing SDK Tab</div>,
-  MonetizationTab: () => (
-    <div data-testid="sdk-monetization-tab">Monetization SDK Tab</div>
-  ),
-  AdvancedTab: () => <div data-testid="sdk-advanced-tab">Advanced SDK Tab</div>,
-}));
+// The sidebar shell now lives in the SDK. Keep the REAL PlatformSidebar
+// (it's the rendering surface under test) and the REAL SidebarProvider, but:
+//  - stub `useSidebar` for the WRAPPER's own mobile-close logic (the SDK
+//    shell reads the real provider context internally, driven by the
+//    `defaultOpen` renderSidebar passes), and
+//  - stub `PlatformAccountSheet` so footer tabs don't pull the SDK's real
+//    Admin/Integrations/... components (network-backed) into jsdom. The
+//    stub keeps the old `sdk-*-tab` testid contract + Escape-to-close.
+vi.mock('@iblai/iblai-js/web-containers/next', async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import('@iblai/iblai-js/web-containers/next')
+    >();
+  const TAB_TEST_IDS: Record<string, string> = {
+    management: 'sdk-admin-tab',
+    integrations: 'sdk-integrations-tab',
+    monetization: 'sdk-monetization-tab',
+    advanced: 'sdk-advanced-tab',
+    billing: 'sdk-billing-tab',
+  };
+  const PlatformAccountSheetStub = ({
+    tab,
+    onClose,
+  }: {
+    tab: string | null;
+    onClose: () => void;
+  }) => {
+    React.useEffect(() => {
+      const onKey = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') onClose();
+      };
+      document.addEventListener('keydown', onKey);
+      return () => document.removeEventListener('keydown', onKey);
+    }, [onClose]);
+    if (!tab) return null;
+    return (
+      <div role="dialog" data-testid={TAB_TEST_IDS[tab] ?? `sdk-${tab}-tab`}>
+        {tab} SDK Tab
+      </div>
+    );
+  };
+  return {
+    ...actual,
+    useSidebar: () => ({
+      state: mockSidebarState.state,
+      open: mockSidebarState.open,
+      openMobile: mockSidebarState.openMobile,
+      isMobile: mockSidebarState.isMobile,
+      setOpenMobile: setOpenMobileMock,
+      toggleSidebar: toggleSidebarMock,
+    }),
+    PlatformAccountSheet: PlatformAccountSheetStub,
+  };
+});
 
 vi.mock('@/hooks/user-navigate', () => ({
   useNavigate: () => ({
@@ -507,7 +555,7 @@ vi.mock('@/lib/hooks', async () => {
 });
 
 vi.mock('@/features/rbac/rbac-slice', () => ({
-  selectRbacPermissions: () => ({}),
+  selectRbacPermissions: () => mockRbacPermissions.current,
 }));
 
 vi.mock('@/hoc/withPermissions', () => ({
@@ -572,29 +620,15 @@ vi.mock('@/components/logo', () => ({
   default: () => <div data-testid="app-logo">Logo</div>,
 }));
 
-// useSidebar provides isMobile / state etc. — substitute our state.
-vi.mock('@/components/ui/sidebar', async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import('@/components/ui/sidebar')>();
-  return {
-    ...actual,
-    useSidebar: () => ({
-      state: mockSidebarState.state,
-      open: mockSidebarState.open,
-      openMobile: mockSidebarState.openMobile,
-      isMobile: mockSidebarState.isMobile,
-      setOpenMobile: setOpenMobileMock,
-      toggleSidebar: toggleSidebarMock,
-    }),
-  };
-});
-
 // ============================================================================
 // IMPORTS THAT DEPEND ON MOCKS
 // ============================================================================
 
 import { AppSidebar } from '../index';
-import { SidebarProvider } from '@/components/ui/sidebar';
+// Real provider from the (partially mocked) SDK module — the mock spreads
+// `actual`, so this is the genuine SidebarProvider whose context the real
+// PlatformSidebar reads.
+import { SidebarProvider } from '@iblai/iblai-js/web-containers/next';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
 // ============================================================================
@@ -686,6 +720,7 @@ function resetState() {
   mockIsUserTypeAllowed = () => true;
   mockCheckRbacPermission = () => true;
   mockEnableRBAC = false;
+  mockRbacPermissions.current = {};
   mockSidebarState = {
     state: 'expanded',
     open: true,
@@ -950,15 +985,18 @@ describe('AppSidebar — rendering', () => {
 });
 
 describe('AppSidebar — sidebar rail toggle', () => {
-  it('the toggle button calls the sidebar toggle handler', () => {
+  it('the toggle button collapses the sidebar (label flips to Expand)', () => {
     renderSidebar();
     // The toggle button's aria-label flips between expand/collapse based
-    // on the current open state. Match either.
+    // on the current open state. The REAL provider drives the state now,
+    // so assert the observable flip instead of a stubbed handler.
     const toggle = screen.getByRole('button', {
       name: /^(Expand|Collapse) sidebar$/,
     });
     fireEvent.click(toggle);
-    expect(toggleSidebarMock).toHaveBeenCalled();
+    expect(
+      screen.getByRole('button', { name: 'Expand sidebar' }),
+    ).toBeInTheDocument();
   });
 });
 
@@ -1539,7 +1577,12 @@ describe('AppSidebar — Footer actions', () => {
     mockIsAdmin = false;
     mockUserIsStudent = true;
     mockEnableRBAC = true;
-    // Grant only the Management permission (can_manage_users).
+    // Grant only the Management permission (can_manage_users). The SDK
+    // footer runs the REAL checkRbacPermission against the rbac slice,
+    // so grant it there (nested resource shape).
+    mockRbacPermissions.current = {
+      '/platforms/tenant-a/': { can_manage_users: true },
+    };
     mockCheckRbacPermission = (_perms, resource) =>
       resource.includes('can_manage_users');
     renderSidebar();
@@ -1572,6 +1615,9 @@ describe('AppSidebar — Footer actions', () => {
       is_admin: false,
       is_advertising: false,
       enable_monetization: true,
+    };
+    mockRbacPermissions.current = {
+      '/platforms/tenant-a/': { can_sell_items: true },
     };
     mockCheckRbacPermission = (_perms, resource) =>
       resource.includes('can_sell_items');
@@ -1924,37 +1970,50 @@ describe('AppSidebar — Rail-collapsed mode', () => {
 
   it('clicking a rail-mode section icon expands the sidebar via expandFromRail', () => {
     // Clicking the icon-only button in rail mode triggers
-    // `onCollapsedIconClick={() => expandFromRail(id)}` which in turn
-    // calls toggleSidebar + sets openNavSection. We assert toggleSidebar
-    // ran — covers the arrow functions at lines 2001/2011/2021/2035/2046
-    // and the expandFromRail body at 1906-1907.
+    // `expandFromRail(id)` inside the SDK shell, which toggles the REAL
+    // provider open AND opens the clicked section. Assert both
+    // observable outcomes: the toggle label flips to "Collapse sidebar"
+    // and the Agents section content is revealed.
     renderSidebar();
     fireEvent.click(screen.getAllByRole('button', { name: 'Agents' })[0]);
-    expect(toggleSidebarMock).toHaveBeenCalled();
+    expect(
+      screen.getByRole('button', { name: 'Collapse sidebar' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'New Agent' }),
+    ).toBeInTheDocument();
   });
 
   it('clicking the rail Workflows icon also expands via expandFromRail', () => {
     renderSidebar();
     fireEvent.click(screen.getAllByRole('button', { name: 'Workflows' })[0]);
-    expect(toggleSidebarMock).toHaveBeenCalled();
+    expect(
+      screen.getByRole('button', { name: 'Collapse sidebar' }),
+    ).toBeInTheDocument();
   });
 
   it('clicking the rail Chats icon expands the sidebar', () => {
     renderSidebar();
     fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
-    expect(toggleSidebarMock).toHaveBeenCalled();
+    expect(
+      screen.getByRole('button', { name: 'Collapse sidebar' }),
+    ).toBeInTheDocument();
   });
 
   it('clicking the rail Projects icon expands the sidebar', () => {
     renderSidebar();
     fireEvent.click(screen.getAllByRole('button', { name: 'Projects' })[0]);
-    expect(toggleSidebarMock).toHaveBeenCalled();
+    expect(
+      screen.getByRole('button', { name: 'Collapse sidebar' }),
+    ).toBeInTheDocument();
   });
 
   it('clicking the rail Analytics icon expands the sidebar', () => {
     renderSidebar();
     fireEvent.click(screen.getAllByRole('button', { name: 'Analytics' })[0]);
-    expect(toggleSidebarMock).toHaveBeenCalled();
+    expect(
+      screen.getByRole('button', { name: 'Collapse sidebar' }),
+    ).toBeInTheDocument();
   });
 });
 

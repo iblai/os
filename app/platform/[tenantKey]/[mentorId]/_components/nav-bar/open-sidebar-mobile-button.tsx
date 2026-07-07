@@ -3,7 +3,7 @@
 import { Menu } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { useSidebar } from '@/components/ui/sidebar';
+import { useSidebar } from '@iblai/iblai-js/web-containers/next';
 
 export function OpenSidebarMobileButton() {
   const { toggleSidebar, isMobile } = useSidebar();

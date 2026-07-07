@@ -47,8 +47,8 @@ vi.mock('@/hooks/use-tauri-offline', () => ({
   isOfflineServerOrigin: () => mockIsOfflineServerOrigin,
 }));
 
-// Mock child components
-vi.mock('@/components/ui/sidebar', () => ({
+// Mock child components — SidebarProvider/SidebarInset now come from the SDK
+vi.mock('@iblai/iblai-js/web-containers/next', () => ({
   SidebarProvider: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="sidebar-provider">{children}</div>
   ),

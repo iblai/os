@@ -2,86 +2,25 @@
 
 import { useTranslations } from 'next-intl';
 import * as React from 'react';
-import dynamic from 'next/dynamic';
-import {
-  useParams,
-  usePathname,
-  useRouter,
-  useSearchParams,
-} from 'next/navigation';
+import { useParams, usePathname, useSearchParams } from 'next/navigation';
 import { useDispatch } from 'react-redux';
-import { toast } from 'sonner';
-import {
-  Bell,
-  BookOpen,
-  ChevronDown,
-  ChevronRight,
-  Coins,
-  Download,
-  Folder,
-  FolderPlus,
-  KeyRound,
-  LineChart,
-  Loader2,
-  Mail,
-  MessageSquare,
-  MoreVertical,
-  Pencil,
-  Pin,
-  PinOff,
-  Plus,
-  Settings,
-  SquarePen,
-  Trash2,
-  Users,
-  Workflow,
-  Globe2,
-} from 'lucide-react';
-import { exportMessagesToXlsx } from './export-messages';
-
-import { Sidebar, useSidebar } from '@/components/ui/sidebar';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from '@/components/ui/hover-card';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { Globe2, LineChart, Workflow } from 'lucide-react';
 
 import {
-  chatApiSlice,
-  useAddPinnedMessageMutation,
-  useDeleteMessageMutation,
-  useGetMentorPublicSettingsQuery,
-  useGetPinnedMessagesQuery,
-  useGetRecentMessageQuery,
-  useGetUserProjectsQuery,
-  useUnPinMessageMutation,
-} from '@iblai/iblai-js/data-layer';
-import {
-  chatActions,
-  clearFiles,
-  selectActiveChatMessages,
-  selectNumberOfActiveChatMessages,
-  selectSessionId,
-  selectStreaming,
-} from '@iblai/iblai-js/web-utils';
-import {
-  Admin,
-  IntegrationsTab,
-  BillingTab,
-  MonetizationTab,
-  AdvancedTab,
-} from '@iblai/iblai-js/web-containers';
+  PlatformAccountSheet,
+  PlatformSidebar,
+  useSidebar,
+} from '@iblai/iblai-js/web-containers/next';
+import type {
+  PlatformAccountTab,
+  PlatformSidebarFooterActionId,
+  PlatformSidebarMenu,
+  PlatformSidebarMenuItem,
+  PlatformSidebarSectionConfig,
+} from '@iblai/iblai-js/web-containers/next';
+
+import { useGetMentorPublicSettingsQuery } from '@iblai/iblai-js/data-layer';
+import { chatActions, clearFiles } from '@iblai/iblai-js/web-utils';
 
 import { useNavigate } from '@/hooks/user-navigate';
 import {
@@ -91,89 +30,22 @@ import {
   useUserIsStudent,
 } from '@/hooks/use-user';
 import { useUserType } from '@/hooks/use-user-type';
-import { useAppDispatch, useAppSelector } from '@/lib/hooks';
+import { useAppSelector } from '@/lib/hooks';
 import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
 import { checkRbacPermission } from '@/hoc/withPermissions';
 import { useEmbedMode } from '@/hooks/use-embed-mode';
 import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
-import {
-  cn,
-  getCurrentArtifactTitle,
-  getFirstMessageWithContent,
-  isLoggedIn,
-  redirectToAuthSpa,
-  redirectToAuthSpaJoinTenant,
-} from '@/lib/utils';
+import { isLoggedIn } from '@/lib/utils';
 import { config } from '@/lib/config';
-import { useLocalStorage } from '@/hooks/use-local-storage';
-import {
-  ANONYMOUS_USERNAME,
-  LOCAL_STORAGE_KEYS,
-  UserType,
-} from '@/lib/constants';
+import { ANONYMOUS_USERNAME, UserType } from '@/lib/constants';
 import { TenantKeyMentorIdParams, ProjectPageParams } from '@/lib/types';
-import { getUserEmail, getUserName } from '@/features/utils';
-import Markdown from '@/components/markdown';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { getUserEmail } from '@/features/utils';
 import eventBus, { RemoteEvents } from '@/lib/eventBus';
 import Logo from '@/components/logo';
 
-const CreateProjectModal = dynamic(
-  () =>
-    import('@/components/projects/create-project-modal').then(
-      (mod) => mod.CreateProjectModal,
-    ),
-  { ssr: false },
-);
-
-const RenameProjectModal = dynamic(
-  () =>
-    import('@/components/projects/rename-project-modal').then(
-      (mod) => mod.RenameProjectModal,
-    ),
-  { ssr: false },
-);
-
-const DeleteProjectModal = dynamic(
-  () =>
-    import('@/components/projects/delete-project-modal').then(
-      (mod) => mod.DeleteProjectModal,
-    ),
-  { ssr: false },
-);
-
-const NAV_MUTED = '#5f5f61';
-const FLYOUT_TITLE_COLOR = '#646676';
-const FLYOUT_ITEM_COLOR = '#1f1f20';
-const NAV_ACTIVE_BG_OPEN =
-  'data-[state=open]:bg-[#cfe8fa]/40 data-[state=open]:hover:bg-[#cfe8fa]/50';
-
-type NavIcon = React.ComponentType<{
-  className?: string;
-  style?: React.CSSProperties;
-  strokeWidth?: number;
-}>;
-
-type NavMenuItem = {
-  id: string;
-  label: string;
-  href?: string;
-  exact?: boolean;
-  emptyState?: boolean;
-};
-
-type NavMenuConfig = {
-  id: string;
-  label: string;
-  icon: NavIcon;
-  items: readonly NavMenuItem[];
-};
+import { SidebarChatsSection } from './chats-section';
+import { SidebarProjectsSection } from './projects-section';
+import { redirectToLogin } from './redirect-to-login';
 
 // Per-item permission specs that mirror the OLD `useSidebarNavigation`
 // contentItems / footerItems contract (hooks/user-navigate.ts). Each is
@@ -225,1431 +97,12 @@ const PERMISSION_GATES = {
   },
 } satisfies Record<string, PermissionSpec>;
 
-const DOCUMENTATION_MENU = {
-  id: 'documentation',
-  label: 'Support',
-  icon: BookOpen,
-} as const;
-
-type FooterAction = { id: string; label: string; icon: NavIcon };
-
-const SidebarNavCallbackContext = React.createContext<{
-  onAfterNav?: () => void;
-}>({});
-
-function useSidebarNavCallback() {
-  return React.useContext(SidebarNavCallbackContext);
-}
-
-function SidebarCollapsedLabelFlyout({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactElement;
-}) {
-  return (
-    <HoverCard openDelay={180} closeDelay={120}>
-      <HoverCardTrigger asChild>{children}</HoverCardTrigger>
-      <HoverCardContent
-        side="right"
-        align="start"
-        sideOffset={10}
-        className="z-[200] w-max max-w-[280px] min-w-[120px] rounded-2xl border border-[#e6e6e8] bg-white px-3 py-2.5 shadow-[0_10px_40px_-12px_rgba(15,23,42,0.18)]"
-      >
-        <span
-          className="text-[13px] leading-tight font-medium"
-          style={{ color: FLYOUT_TITLE_COLOR }}
-        >
-          {label}
-        </span>
-      </HoverCardContent>
-    </HoverCard>
-  );
-}
-
-function SidebarNavDivider() {
-  return (
-    <div
-      role="separator"
-      className="my-2.5 h-px w-full shrink-0 bg-[#e9e9ea]"
-      aria-hidden
-    />
-  );
-}
-
-function CollapsibleSubNavItem({
-  id,
-  label,
-  href,
-  exact,
-  emptyState,
-  onItemSelect,
-}: NavMenuItem & {
-  onItemSelect?: (itemId: string) => boolean | void;
-}) {
-  const { onAfterNav } = useSidebarNavCallback();
-  const router = useRouter();
-  const pathname = usePathname();
-  const [isPending, startTransition] = React.useTransition();
-
-  const active = React.useMemo(() => {
-    if (!href || !pathname) return false;
-    if (href === '/') return pathname === '/';
-    const normalizedHref = href.endsWith('/') ? href.slice(0, -1) : href;
-    const normalizedPath = pathname.endsWith('/')
-      ? pathname.slice(0, -1)
-      : pathname;
-    if (exact) return normalizedPath === normalizedHref;
-    return (
-      normalizedPath === normalizedHref ||
-      normalizedPath.startsWith(`${normalizedHref}/`)
-    );
-  }, [href, pathname, exact]);
-
-  return (
-    <button
-      type="button"
-      disabled={isPending || emptyState}
-      aria-busy={isPending}
-      className={cn(
-        'flex w-full min-w-0 cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-left text-[14px] font-normal transition-colors',
-        emptyState
-          ? 'cursor-default text-[#94a3b8] italic hover:bg-transparent'
-          : active
-            ? 'bg-[#eef6fc] text-[#1e40af]'
-            : 'text-[#4a5568] hover:bg-[#f4f4f4]',
-        isPending && 'opacity-70',
-      )}
-      onClick={() => {
-        if (emptyState) return;
-        const result = onItemSelect?.(id);
-        if (result === false) return;
-        if (href) {
-          if (/^https?:\/\//i.test(href)) {
-            window.open(href, '_blank', 'noopener,noreferrer');
-          } else {
-            startTransition(() => {
-              router.push(href);
-            });
-          }
-        }
-        onAfterNav?.();
-      }}
-    >
-      <span className="min-w-0 flex-1 truncate">{label}</span>
-      {isPending && (
-        <Loader2
-          className="size-3.5 shrink-0 animate-spin text-[#7d7e82]"
-          aria-hidden
-        />
-      )}
-    </button>
-  );
-}
-
-function CollapsedNavFlyout({
-  icon: Icon,
-  label,
-  items,
-  onIconClick,
-  onItemSelect,
-}: {
-  icon: NavIcon;
-  label: string;
-  items: readonly NavMenuItem[];
-  onIconClick?: () => void;
-  onItemSelect?: (itemId: string) => boolean | void;
-}) {
-  const router = useRouter();
-  const { onAfterNav } = useSidebarNavCallback();
-  return (
-    <HoverCard openDelay={180} closeDelay={120}>
-      <HoverCardTrigger asChild>
-        <button
-          type="button"
-          onClick={onIconClick}
-          className="text-foreground inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-[8px] transition-colors outline-none hover:bg-[#f0f0f0] focus-visible:ring-2 focus-visible:ring-[#c4c4c8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#fafafa]"
-          aria-label={label}
-        >
-          <Icon
-            className="size-4 shrink-0"
-            style={{ color: NAV_MUTED }}
-            strokeWidth={1.5}
-          />
-        </button>
-      </HoverCardTrigger>
-      <HoverCardContent
-        side="right"
-        align="start"
-        sideOffset={10}
-        className="z-[200] flex max-h-[70vh] w-max max-w-[280px] min-w-[200px] flex-col rounded-2xl border border-[#e6e6e8] bg-white px-3 py-2.5 shadow-[0_10px_40px_-12px_rgba(15,23,42,0.18)]"
-      >
-        <div className="mb-1.5 flex shrink-0 flex-wrap items-center gap-2">
-          <span
-            className="text-[13px] leading-tight font-medium"
-            style={{ color: FLYOUT_TITLE_COLOR }}
-          >
-            {label}
-          </span>
-        </div>
-        <ul className="scrollbar-thin m-0 min-h-0 list-none space-y-0 overflow-y-auto p-0 pr-1">
-          {items.map((item) => (
-            <li key={item.id}>
-              <button
-                type="button"
-                onClick={() => {
-                  if (onItemSelect?.(item.id) === false) return;
-                  if (item.href) router.push(item.href);
-                  onAfterNav?.();
-                }}
-                className={cn(
-                  'flex w-full cursor-pointer rounded-md px-1.5 py-1.5 text-left text-[14px] leading-snug font-medium transition-colors',
-                  item.emptyState
-                    ? 'cursor-default text-[#94a3b8] italic hover:bg-transparent'
-                    : 'hover:bg-[#f4f4f4]',
-                )}
-                style={
-                  item.emptyState ? undefined : { color: FLYOUT_ITEM_COLOR }
-                }
-              >
-                {item.label}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </HoverCardContent>
-    </HoverCard>
-  );
-}
-
-function SidebarNavCollapsibleSection({
-  collapsed,
-  menu,
-  open,
-  onOpenChange,
-  onCollapsedIconClick,
-  onItemSelect,
-}: {
-  collapsed: boolean;
-  menu: NavMenuConfig;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onCollapsedIconClick?: () => void;
-  onItemSelect?: (itemId: string) => boolean | void;
-}) {
-  const Icon = menu.icon;
-
-  if (collapsed) {
-    return (
-      <CollapsedNavFlyout
-        icon={Icon}
-        label={menu.label}
-        items={menu.items}
-        onIconClick={onCollapsedIconClick}
-        onItemSelect={onItemSelect}
-      />
-    );
-  }
-
-  const triggerClassName = cn(
-    'flex h-9 w-full min-w-0 cursor-pointer items-center gap-2 rounded-md px-2 text-left text-[14px] font-normal text-[#5f5f61] outline-none transition-colors hover:bg-[#f4f4f4] focus-visible:ring-2 focus-visible:ring-[#cfe8fa] focus-visible:ring-offset-2 focus-visible:ring-offset-[#fafafa]',
-    NAV_ACTIVE_BG_OPEN,
-  );
-
-  return (
-    <Collapsible open={open} onOpenChange={onOpenChange} className="w-full">
-      <CollapsibleTrigger asChild>
-        <button type="button" className={triggerClassName}>
-          <Icon
-            className="size-4 shrink-0"
-            style={{ color: NAV_MUTED }}
-            strokeWidth={1.5}
-          />
-          <span className="min-w-0 flex-1 truncate">{menu.label}</span>
-          {open ? (
-            <ChevronDown
-              className="size-4 shrink-0 text-[#7d7e82]"
-              aria-hidden
-            />
-          ) : (
-            <ChevronRight
-              className="size-4 shrink-0 text-[#7d7e82]"
-              aria-hidden
-            />
-          )}
-        </button>
-      </CollapsibleTrigger>
-      <CollapsibleContent className="overflow-hidden">
-        <div className="mt-0.5 mr-1 ml-1.5 border-l-2 border-[#e2e8f0] pb-0.5 pl-2.5">
-          <ul className="flex flex-col gap-0.5" role="list">
-            {menu.items.map((item) => (
-              <li key={item.id}>
-                <CollapsibleSubNavItem {...item} onItemSelect={onItemSelect} />
-              </li>
-            ))}
-          </ul>
-        </div>
-      </CollapsibleContent>
-    </Collapsible>
-  );
-}
-
-// Mirrors the original `AuthPopover.handleLogin`: send a not-logged-in
-// (anonymous) user to the auth SPA when they trigger a gated action.
-function redirectToLogin(tenantKey: string | undefined) {
-  if (!tenantKey) {
-    redirectToAuthSpa('/', tenantKey, undefined, true, true);
-    return;
-  }
-  redirectToAuthSpaJoinTenant(tenantKey, undefined, true);
-}
-
-type SdkProject = {
-  id: number | string;
-  name?: string | null;
-  mentors?: Array<{ unique_id?: string | null; name?: string | null }> | null;
-};
-
-function SidebarProjectsSection({
-  collapsed,
-  tenantKey,
-  username,
-  open,
-  onOpenChange,
-  onNavigate,
-  onCollapsedIconClick,
-}: {
-  collapsed: boolean;
-  tenantKey: string;
-  username: string;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onNavigate?: () => void;
-  onCollapsedIconClick?: () => void;
-}) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const { executeWithTrialCheck } = useShowFreeTrialDialog();
-
-  const { data: projectsQueryData } = useGetUserProjectsQuery(
-    {
-      tenantKey,
-      username,
-      params: { limit: 50 },
-    } as never,
-    { skip: !tenantKey || !username },
-  );
-
-  const projects = React.useMemo<SdkProject[]>(() => {
-    return (
-      (projectsQueryData as { results?: SdkProject[] } | undefined)?.results ??
-      []
-    );
-  }, [projectsQueryData]);
-
-  const projectDefaultMentor = React.useMemo<Record<string, string>>(() => {
-    const map: Record<string, string> = {};
-    for (const p of projects) {
-      const first = (p.mentors ?? []).find(
-        (m) => typeof m.unique_id === 'string' && m.unique_id,
-      );
-      if (first?.unique_id) map[String(p.id)] = first.unique_id;
-    }
-    return map;
-  }, [projects]);
-
-  const projectHref = (projectId: string): string | null => {
-    const mentor = projectDefaultMentor[projectId];
-    if (!tenantKey || !mentor) return null;
-    return `/platform/${tenantKey}/projects/${projectId}/${mentor}`;
-  };
-
-  const isProjectActive = (projectId: string): boolean => {
-    if (!pathname || !tenantKey) return false;
-    return pathname.includes(`/projects/${projectId}`);
-  };
-
-  const [createOpen, setCreateOpen] = React.useState(false);
-  const [renameTarget, setRenameTarget] = React.useState<{
-    id: string;
-    name: string;
-  } | null>(null);
-  const [deleteTarget, setDeleteTarget] = React.useState<{
-    id: string;
-    name: string;
-  } | null>(null);
-
-  const t = useTranslations('appSidebarIndex');
-
-  const openProject = (projectId: string) => {
-    const href = projectHref(projectId);
-    if (!href) {
-      toast(t('addAgentToProjectFirst'));
-      return;
-    }
-    router.push(href);
-    onNavigate?.();
-  };
-
-  // Mirrors the original ProjectsSidebarDropdown: an anonymous user sees
-  // the Projects section, but "New Project" routes to the auth SPA login
-  // instead of opening the create modal.
-  const handleCreateClick = () => {
-    if (!isLoggedIn()) {
-      redirectToLogin(tenantKey);
-      return;
-    }
-    executeWithTrialCheck(() => setCreateOpen(true));
-  };
-
-  // Navigates to the dedicated Projects index page
-  // (/platform/<tenant>/projects), mirroring "My Workflows".
-  const openProjectsIndex = () => {
-    if (!tenantKey) return;
-    router.push(`/platform/${tenantKey}/projects`);
-    onNavigate?.();
-  };
-
-  if (collapsed) {
-    return (
-      <>
-        <CollapsedProjectsFlyout
-          projects={projects}
-          isProjectActive={isProjectActive}
-          openProject={openProject}
-          onIconClick={onCollapsedIconClick}
-          onCreateClick={handleCreateClick}
-          onMyProjectsClick={openProjectsIndex}
-        />
-        <ProjectDialogs
-          createOpen={createOpen}
-          setCreateOpen={setCreateOpen}
-          renameTarget={renameTarget}
-          setRenameTarget={setRenameTarget}
-          deleteTarget={deleteTarget}
-          setDeleteTarget={setDeleteTarget}
-        />
-      </>
-    );
-  }
-
-  const triggerClassName = cn(
-    'flex h-9 w-full min-w-0 cursor-pointer items-center gap-2 rounded-md px-2 text-left text-[14px] font-normal text-[#5f5f61] outline-none transition-colors hover:bg-[#f4f4f4] focus-visible:ring-2 focus-visible:ring-[#cfe8fa] focus-visible:ring-offset-2 focus-visible:ring-offset-[#fafafa]',
-    NAV_ACTIVE_BG_OPEN,
-  );
-
-  return (
-    <>
-      <Collapsible open={open} onOpenChange={onOpenChange} className="w-full">
-        <CollapsibleTrigger asChild>
-          <button type="button" className={triggerClassName}>
-            <Folder
-              className="size-4 shrink-0"
-              style={{ color: NAV_MUTED }}
-              strokeWidth={1.5}
-            />
-            <span className="min-w-0 flex-1 truncate">{t('projects')}</span>
-            {open ? (
-              <ChevronDown
-                className="size-4 shrink-0 text-[#7d7e82]"
-                aria-hidden
-              />
-            ) : (
-              <ChevronRight
-                className="size-4 shrink-0 text-[#7d7e82]"
-                aria-hidden
-              />
-            )}
-          </button>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="overflow-hidden">
-          <div className="mt-0.5 mr-1 ml-1.5 border-l-2 border-[#e2e8f0] pb-0.5 pl-2.5">
-            <ul className="flex flex-col gap-0.5" role="list">
-              <li>
-                <button
-                  type="button"
-                  onClick={handleCreateClick}
-                  className="flex w-full min-w-0 cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-left text-[14px] font-normal text-[#4a5568] transition-colors hover:bg-[#f4f4f4]"
-                >
-                  <FolderPlus
-                    className="size-3.5 shrink-0 text-[#7d7e82]"
-                    strokeWidth={1.5}
-                    aria-hidden
-                  />
-                  <span className="min-w-0 flex-1 truncate">
-                    {t('newProject')}
-                  </span>
-                </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  onClick={openProjectsIndex}
-                  className="flex w-full min-w-0 cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-left text-[14px] font-normal text-[#4a5568] transition-colors hover:bg-[#f4f4f4]"
-                >
-                  <Folder
-                    className="size-3.5 shrink-0 text-[#7d7e82]"
-                    strokeWidth={1.5}
-                    aria-hidden
-                  />
-                  <span className="min-w-0 flex-1 truncate">My Projects</span>
-                </button>
-              </li>
-              {projects.length === 0 ? (
-                <li>
-                  <span className="block px-2 py-1.5 text-[13px] text-[#94a3b8] italic">
-                    {t('noProjectsYet')}
-                  </span>
-                </li>
-              ) : (
-                projects.map((p) => {
-                  const id = String(p.id);
-                  const active = isProjectActive(id);
-                  return (
-                    <li key={id} className="group">
-                      <div
-                        className={cn(
-                          'flex w-full min-w-0 items-center gap-2 rounded-md px-2 py-1 text-left text-[14px] font-normal transition-colors',
-                          active
-                            ? 'bg-[#eef6fc] text-[#1e40af]'
-                            : 'text-[#4a5568] hover:bg-[#f4f4f4]',
-                        )}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => openProject(id)}
-                          className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 bg-transparent text-left"
-                          title={p.name ?? t('untitledProject')}
-                        >
-                          <Folder
-                            className="size-3.5 shrink-0 opacity-70"
-                            strokeWidth={1.5}
-                            aria-hidden
-                          />
-                          <span className="min-w-0 flex-1 truncate">
-                            {p.name ?? t('untitledProject')}
-                          </span>
-                        </button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button
-                              type="button"
-                              onClick={(e) => e.stopPropagation()}
-                              className={cn(
-                                'inline-flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-[#7d7e82] transition-opacity hover:bg-[#eef0f3] hover:text-[#1f2937]',
-                                'opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100',
-                              )}
-                              aria-label={t('projectActions')}
-                            >
-                              <MoreVertical
-                                className="size-3.5"
-                                strokeWidth={1.75}
-                                aria-hidden
-                              />
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-44">
-                            <DropdownMenuItem
-                              onSelect={() =>
-                                setRenameTarget({
-                                  id,
-                                  name: p.name ?? '',
-                                })
-                              }
-                              className="gap-2"
-                            >
-                              <Pencil
-                                className="size-3.5 shrink-0"
-                                strokeWidth={1.5}
-                                aria-hidden
-                              />
-                              {t('rename')}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onSelect={() =>
-                                setDeleteTarget({
-                                  id,
-                                  name: p.name ?? '',
-                                })
-                              }
-                              className="gap-2 text-red-600 focus:text-red-700"
-                            >
-                              <Trash2
-                                className="size-3.5 shrink-0"
-                                strokeWidth={1.5}
-                                aria-hidden
-                              />
-                              {t('delete')}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </li>
-                  );
-                })
-              )}
-            </ul>
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
-      <ProjectDialogs
-        createOpen={createOpen}
-        setCreateOpen={setCreateOpen}
-        renameTarget={renameTarget}
-        setRenameTarget={setRenameTarget}
-        deleteTarget={deleteTarget}
-        setDeleteTarget={setDeleteTarget}
-      />
-    </>
-  );
-}
-
-function CollapsedProjectsFlyout({
-  projects,
-  isProjectActive,
-  openProject,
-  onIconClick,
-  onCreateClick,
-  onMyProjectsClick,
-}: {
-  projects: SdkProject[];
-  isProjectActive: (projectId: string) => boolean;
-  openProject: (projectId: string) => void;
-  onIconClick?: () => void;
-  onCreateClick: () => void;
-  onMyProjectsClick: () => void;
-}) {
-  const t = useTranslations('appSidebarIndex');
-  return (
-    <HoverCard openDelay={180} closeDelay={120}>
-      <HoverCardTrigger asChild>
-        <button
-          type="button"
-          onClick={onIconClick}
-          className="text-foreground inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-[8px] transition-colors outline-none hover:bg-[#f0f0f0] focus-visible:ring-2 focus-visible:ring-[#c4c4c8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#fafafa]"
-          aria-label={t('projects')}
-        >
-          <Folder
-            className="size-4 shrink-0"
-            style={{ color: NAV_MUTED }}
-            strokeWidth={1.5}
-          />
-        </button>
-      </HoverCardTrigger>
-      <HoverCardContent
-        side="right"
-        align="start"
-        sideOffset={10}
-        className="z-[200] flex max-h-[70vh] w-max max-w-[300px] min-w-[220px] flex-col rounded-2xl border border-[#e6e6e8] bg-white px-3 py-2.5 shadow-[0_10px_40px_-12px_rgba(15,23,42,0.18)]"
-      >
-        <div className="mb-1.5 flex shrink-0 items-center gap-2">
-          <span
-            className="text-[13px] leading-tight font-medium"
-            style={{ color: FLYOUT_TITLE_COLOR }}
-          >
-            {t('projects')}
-          </span>
-        </div>
-        <ul className="scrollbar-thin m-0 min-h-0 list-none space-y-0 overflow-y-auto p-0 pr-1">
-          <li>
-            <button
-              type="button"
-              onClick={onCreateClick}
-              className="flex w-full cursor-pointer items-center gap-2 rounded-md px-1.5 py-1.5 text-left text-[14px] leading-snug font-medium transition-colors hover:bg-[#f4f4f4]"
-              style={{ color: FLYOUT_ITEM_COLOR }}
-            >
-              <Plus
-                className="size-3.5 shrink-0"
-                strokeWidth={1.5}
-                aria-hidden
-              />
-              {t('newProject')}
-            </button>
-          </li>
-          <li>
-            <button
-              type="button"
-              onClick={onMyProjectsClick}
-              className="flex w-full cursor-pointer items-center gap-2 rounded-md px-1.5 py-1.5 text-left text-[14px] leading-snug font-medium transition-colors hover:bg-[#f4f4f4]"
-              style={{ color: FLYOUT_ITEM_COLOR }}
-            >
-              <Folder
-                className="size-3.5 shrink-0"
-                strokeWidth={1.5}
-                aria-hidden
-              />
-              My Projects
-            </button>
-          </li>
-          {projects.length === 0 ? (
-            <li>
-              <span className="block rounded-md px-1.5 py-1.5 text-[14px] text-[#94a3b8] italic">
-                {t('noProjectsYet')}
-              </span>
-            </li>
-          ) : (
-            projects.map((p) => {
-              const id = String(p.id);
-              const active = isProjectActive(id);
-              return (
-                <li key={id}>
-                  <button
-                    type="button"
-                    onClick={() => openProject(id)}
-                    className={cn(
-                      'flex w-full cursor-pointer items-center gap-2 rounded-md px-1.5 py-1.5 text-left text-[14px] leading-snug font-medium transition-colors hover:bg-[#f4f4f4]',
-                      active && 'bg-[#eef6fc] text-[#1e40af]',
-                    )}
-                    style={active ? undefined : { color: FLYOUT_ITEM_COLOR }}
-                    title={p.name ?? t('untitledProject')}
-                  >
-                    <Folder
-                      className="size-3.5 shrink-0 opacity-70"
-                      strokeWidth={1.5}
-                      aria-hidden
-                    />
-                    <span className="min-w-0 flex-1 truncate">
-                      {p.name ?? t('untitledProject')}
-                    </span>
-                  </button>
-                </li>
-              );
-            })
-          )}
-        </ul>
-      </HoverCardContent>
-    </HoverCard>
-  );
-}
-
-function ProjectDialogs({
-  createOpen,
-  setCreateOpen,
-  renameTarget,
-  setRenameTarget,
-  deleteTarget,
-  setDeleteTarget,
-}: {
-  createOpen: boolean;
-  setCreateOpen: (open: boolean) => void;
-  renameTarget: { id: string; name: string } | null;
-  setRenameTarget: (target: { id: string; name: string } | null) => void;
-  deleteTarget: { id: string; name: string } | null;
-  setDeleteTarget: (target: { id: string; name: string } | null) => void;
-}) {
-  return (
-    <>
-      {createOpen && (
-        <CreateProjectModal
-          isOpen={createOpen}
-          onClose={() => setCreateOpen(false)}
-        />
-      )}
-      {renameTarget && (
-        <RenameProjectModal
-          isOpen={renameTarget !== null}
-          onClose={() => setRenameTarget(null)}
-          projectId={renameTarget.id}
-          currentName={renameTarget.name}
-        />
-      )}
-      {deleteTarget && (
-        <DeleteProjectModal
-          isOpen={deleteTarget !== null}
-          onClose={() => setDeleteTarget(null)}
-          projectId={deleteTarget.id}
-          projectName={deleteTarget.name}
-        />
-      )}
-    </>
-  );
-}
-
-// =============================================================================
-// Chats section — Pinned + Recent with per-row three-dot menu (Pin/Unpin,
-// Export, Delete). Port of the OLD `recent-messages.tsx` + `pinned-messages.tsx`
-// pair onto the new sidebar's visual style. Renders both a rail-mode flyout
-// and an expanded-mode collapsible.
-// =============================================================================
-
-type ChatRow = {
-  session_id: string;
-  mentor?: { unique_id?: string | null; profile_image?: string | null } | null;
-  messages?: unknown;
-};
-
-function chatRowLabel(row: ChatRow, noContentLabel: string): React.ReactNode {
-  const messages = (row.messages as unknown[]) ?? [];
-  const content = getFirstMessageWithContent(messages as never);
-  if (content) {
-    return (
-      <Markdown className="!space-y-0 [&_*]:!my-0 [&_*]:!text-[14px] [&_*]:!leading-snug [&_*]:!font-normal [&_*]:!text-inherit [&_h2]:!border-0">
-        {content}
-      </Markdown>
-    );
-  }
-  const artifactTitle = getCurrentArtifactTitle(messages as never);
-  return artifactTitle || noContentLabel;
-}
-
-function ChatThreeDotMenu({
-  isPinned,
-  isLoading,
-  onPinToggle,
-  onExport,
-  onDelete,
-}: {
-  isPinned: boolean;
-  isLoading: boolean;
-  onPinToggle: () => void;
-  onExport: () => void;
-  onDelete: () => void;
-}) {
-  const t = useTranslations('appSidebarIndex');
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild disabled={isLoading}>
-        <button
-          type="button"
-          onClick={(e) => e.stopPropagation()}
-          disabled={isLoading}
-          // `MoreVertical` matches the per-project three-dot trigger in
-          // `SidebarProjectsSection` so both lists feel consistent. While
-          // an action on THIS row is in flight, the icon is swapped for
-          // a spinner — the user knows exactly which row is processing.
-          className={cn(
-            'inline-flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-[#7d7e82] transition-opacity hover:bg-[#eef0f3] hover:text-[#1f2937] data-[state=open]:opacity-100',
-            isLoading ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
-          )}
-          aria-label={t('chatActions')}
-          aria-busy={isLoading}
-        >
-          {isLoading ? (
-            <Loader2
-              className="size-3.5 animate-spin"
-              strokeWidth={1.75}
-              aria-hidden
-            />
-          ) : (
-            <MoreVertical className="size-3.5" strokeWidth={1.75} aria-hidden />
-          )}
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-40">
-        <DropdownMenuItem className="gap-2" onSelect={onPinToggle}>
-          {isPinned ? (
-            <PinOff
-              className="size-3.5 shrink-0"
-              strokeWidth={1.5}
-              aria-hidden
-            />
-          ) : (
-            <Pin className="size-3.5 shrink-0" strokeWidth={1.5} aria-hidden />
-          )}
-          {isPinned ? t('unpin') : t('pin')}
-        </DropdownMenuItem>
-        <DropdownMenuItem className="gap-2" onSelect={onExport}>
-          <Download
-            className="size-3.5 shrink-0"
-            strokeWidth={1.5}
-            aria-hidden
-          />
-          {t('export')}
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          className="gap-2 text-red-600 focus:text-red-700"
-          onSelect={onDelete}
-        >
-          <Trash2 className="size-3.5 shrink-0" strokeWidth={1.5} aria-hidden />
-          {t('delete')}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-function ChatRowItem({
-  row,
-  active,
-  onSelect,
-  isPinned,
-  isLoading,
-  onPinToggle,
-  onExport,
-  onDelete,
-}: {
-  row: ChatRow;
-  active: boolean;
-  onSelect: () => void;
-  isPinned: boolean;
-  isLoading: boolean;
-  onPinToggle: () => void;
-  onExport: () => void;
-  onDelete: () => void;
-}) {
-  const t = useTranslations('appSidebarIndex');
-  return (
-    <div className="group relative">
-      <button
-        type="button"
-        onClick={onSelect}
-        className={cn(
-          'flex w-full min-w-0 cursor-pointer items-center gap-2 rounded-md px-2 py-2 pr-8 text-left text-[14px] font-normal transition-colors',
-          active
-            ? 'bg-[#eef6fc] text-[#1e40af]'
-            : 'text-[#4a5568] hover:bg-[#f4f4f4]',
-        )}
-      >
-        <span className="line-clamp-1 min-w-0 flex-1 overflow-hidden">
-          {chatRowLabel(row, t('noContent'))}
-        </span>
-      </button>
-      <div className="absolute top-1/2 right-1.5 -translate-y-1/2">
-        <ChatThreeDotMenu
-          isPinned={isPinned}
-          isLoading={isLoading}
-          onPinToggle={onPinToggle}
-          onExport={onExport}
-          onDelete={onDelete}
-        />
-      </div>
-    </div>
-  );
-}
-
-function SidebarChatsSection({
-  collapsed,
-  open,
-  onOpenChange,
-  onCollapsedIconClick,
-  tenantKey,
-  mentorId,
-  username,
-}: {
-  collapsed: boolean;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onCollapsedIconClick?: () => void;
-  tenantKey: string;
-  mentorId: string | undefined;
-  username: string | null;
-}) {
-  const router = useRouter();
-  const dispatch = useAppDispatch();
-  const { onAfterNav } = useSidebarNavCallback();
-  const t = useTranslations('appSidebarIndex');
-  const appSessionId = useAppSelector(selectSessionId);
-  const resolvedUserId = username ?? getUserName();
-  // The message-loader effect in `useAdvancedChat` keys EXCLUSIVELY on
-  // `cachedSessionId[mentorId]` (backed by localStorage `session_id`). Row
-  // clicks must write this value or the panel never repopulates — selecting
-  // an existing chat would otherwise only update the URL (issue #1881).
-  const [cachedSessionId, saveCachedSessionId] = useLocalStorage<
-    Record<string, string>
-  >(
-    LOCAL_STORAGE_KEYS.SESSION_ID,
-    {},
-    /* istanbul ignore next -- @preserve localStorage deserializer */
-    { deserializer: (value) => JSON.parse(value) },
-  );
-
-  const [pinMessage] = useAddPinnedMessageMutation();
-  const [unpinMessage] = useUnPinMessageMutation();
-  const [deleteMessage] = useDeleteMessageMutation();
-
-  // Tracks the row whose pin/unpin/delete is currently in flight, so we
-  // can render a spinner in its three-dot trigger slot — visual feedback
-  // anchored to the exact row the user clicked.
-  const [actingSessionId, setActingSessionId] = React.useState<string | null>(
-    null,
-  );
-
-  // RTK Query's `Recipe<...>` type is too narrow for the SDK-typed
-  // chat queries (it resolves to `InfiniteData<never, never>`). The
-  // actual runtime payload is `{ results: ChatRow[] }`. Cast once via
-  // `unknown` so each call site stays readable.
-  type ChatCacheDraft = { results?: ChatRow[] };
-  const updateChatCache = chatApiSlice.util.updateQueryData as unknown as <
-    K extends 'getRecentMessage' | 'getPinnedMessages',
-  >(
-    endpoint: K,
-    args: object,
-    recipe: (draft: ChatCacheDraft) => void,
-  ) => unknown;
-
-  // Recent — scoped to the current mentor in the cache selector so we
-  // don't paint rows from other agents. `refetch` is invoked after
-  // pin/unpin so the lists reflect server truth (no stale optimistic
-  // state if the server transitions the row in unexpected ways).
-  const { data: recentMessages, refetch: refetchRecent } =
-    useGetRecentMessageQuery(
-      {
-        org: tenantKey,
-        // @ts-ignore — userId is required at the URL path level
-        userId: resolvedUserId,
-      },
-      {
-        skip: !tenantKey || !resolvedUserId,
-        selectFromResult: (state) => ({
-          ...state,
-          data: {
-            ...state.data,
-            results: ((state.data as { results?: ChatRow[] } | undefined)
-              ?.results ?? []) as ChatRow[],
-          },
-        }),
-      },
-    );
-
-  // Pinned — same shape; `sessionId` arg is the cache key the SDK uses
-  // for invalidation, not a row filter.
-  const { data: pinnedMessages, refetch: refetchPinned } =
-    useGetPinnedMessagesQuery(
-      {
-        org: tenantKey,
-        sessionId: appSessionId,
-        // @ts-ignore — userId is required at the URL path level
-        userId: resolvedUserId,
-      },
-      {
-        skip: !tenantKey || !resolvedUserId,
-        selectFromResult: (state) => ({
-          ...state,
-          data: {
-            ...state.data,
-            results: ((state.data as { results?: ChatRow[] } | undefined)
-              ?.results ?? []) as ChatRow[],
-          },
-        }),
-      },
-    );
-
-  const isStreaming = useAppSelector(selectStreaming);
-  const numberOfActiveChatMessages = useAppSelector(
-    selectNumberOfActiveChatMessages,
-  );
-  const activeChatMessages = useAppSelector(selectActiveChatMessages);
-
-  React.useEffect(() => {
-    if (
-      getUserName() &&
-      !isStreaming &&
-      numberOfActiveChatMessages === 2 &&
-      activeChatMessages[1]?.role === 'assistant'
-    ) {
-      refetchRecent();
-    }
-  }, [
-    refetchRecent,
-    isStreaming,
-    numberOfActiveChatMessages,
-    activeChatMessages,
-  ]);
-
-  const filterByMentor = React.useCallback(
-    (list: ChatRow[]) =>
-      list.filter(
-        (r) =>
-          !mentorId || !r.mentor?.unique_id || r.mentor.unique_id === mentorId,
-      ),
-    [mentorId],
-  );
-
-  // SDK types `pinnedMessages` as `PinnedMessageGet[]`, but the API
-  // actually returns `{ results: [...] }`. We rebuilt that shape inside
-  // `selectFromResult`, so the runtime is correct — cast through unknown.
-  const pinned = React.useMemo(
-    () =>
-      filterByMentor(
-        (pinnedMessages as unknown as { results?: ChatRow[] } | undefined)
-          ?.results ?? [],
-      ),
-    [pinnedMessages, filterByMentor],
-  );
-  // Recent must EXCLUDE rows that are also in Pinned — the API returns
-  // every session under recent regardless of pin state, so without this
-  // dedup a pinned chat would appear in both sections (confusing UX
-  // the user explicitly called out). Computing pinned first lets us
-  // filter recent against it.
-  const pinnedSessionIds = React.useMemo(
-    () => new Set(pinned.map((p) => p.session_id)),
-    [pinned],
-  );
-  const recent = React.useMemo(
-    () =>
-      filterByMentor(
-        (recentMessages as unknown as { results?: ChatRow[] } | undefined)
-          ?.results ?? [],
-      ).filter((r) => !pinnedSessionIds.has(r.session_id)),
-    [recentMessages, filterByMentor, pinnedSessionIds],
-  );
-
-  // Helpers shared by both lists ---------------------------------------
-
-  const navHrefFor = (row: ChatRow): string | undefined => {
-    const m = row.mentor?.unique_id;
-    if (!m || !tenantKey) return undefined;
-    return `/platform/${tenantKey}/${m}?session=${encodeURIComponent(
-      String(row.session_id),
-    )}`;
-  };
-
-  // Selecting an existing chat. Navigating (`router.push(?session=...)`) is
-  // NOT enough on its own — nothing reads the query param back into state.
-  // We must also point the chat slice + the cached session id at the picked
-  // session so the loader effect re-fires and repaints the message panel.
-  // Clicking the already-active chat is a no-op for state (we only navigate /
-  // close the flyout) to avoid thrashing the in-flight session.
-  const handleSelectRow = (row: ChatRow) => {
-    const href = navHrefFor(row);
-    if (!href) return;
-
-    if (row.session_id !== appSessionId) {
-      // Different session: tear down any in-flight streaming/typing state and
-      // file context from the previous chat before pointing everything at the
-      // newly selected session.
-      dispatch(clearFiles(undefined));
-      eventBus.emit(RemoteEvents.stopChatGenerating);
-      dispatch(chatActions.resetIsTyping(undefined));
-      dispatch(chatActions.setStreaming(false));
-      dispatch(chatActions.resetCurrentStreamingMessage(undefined));
-      dispatch(chatActions.setActiveTab('chat'));
-      dispatch(chatActions.updateSessionIds(row.session_id));
-      dispatch(chatActions.setShouldStartNewChat(false));
-
-      // The localStorage `session_id` value the loader effect watches. This
-      // is the dependency that triggers getChats() → setNewMessages.
-      if (mentorId) {
-        saveCachedSessionId({
-          ...cachedSessionId,
-          [mentorId]: row.session_id,
-        });
-      }
-    }
-
-    router.push(href);
-    onAfterNav?.();
-  };
-
-  const handlePin = async (row: ChatRow) => {
-    if (!tenantKey || !resolvedUserId) return;
-    setActingSessionId(row.session_id);
-    try {
-      const result = await pinMessage({
-        org: tenantKey,
-        // @ts-ignore — userId is required at the URL path level
-        userId: resolvedUserId,
-        requestBody: { session_id: row.session_id },
-      }).unwrap();
-      // Optimistic patch so the row appears in Pinned immediately. The
-      // `Promise.all` refetch right after is the source of truth — if the
-      // server transforms the row (e.g. adds a title, timestamp) we want
-      // to see those properties on the next render. Recent cache is NOT
-      // mutated here so the UI's `pinnedSessionIds` dedup is the single
-      // signal hiding the row from Recent until it's unpinned.
-      dispatch(
-        updateChatCache(
-          'getPinnedMessages',
-          {
-            org: tenantKey,
-            sessionId: appSessionId,
-            userId: resolvedUserId,
-          },
-          (draft) => {
-            draft.results = draft.results ?? [];
-            draft.results.push((result ?? row) as ChatRow);
-          },
-        ) as never,
-      );
-      await Promise.all([refetchRecent(), refetchPinned()]);
-    } catch (err) {
-      console.error('Failed to pin message: ', err);
-    } finally {
-      setActingSessionId(null);
-    }
-  };
-
-  const handleUnpin = async (row: ChatRow) => {
-    if (!tenantKey || !resolvedUserId) return;
-    setActingSessionId(row.session_id);
-    try {
-      // Same shape as `pinMessage` — `requestBody: { session_id }` is
-      // what the backend's DELETE handler expects. SDK service signature
-      // needs to declare `requestBody: PinnedMessageRequest` for this
-      // to typecheck cleanly (see note below).
-      await unpinMessage({
-        org: tenantKey,
-        // @ts-ignore — userId is required at the URL path level
-        userId: resolvedUserId,
-        // @ts-ignore — requestBody not yet declared on the SDK's
-        // `aiMentorOrgsUsersPinMessageDestroy` service signature.
-        requestBody: { session_id: row.session_id },
-      }).unwrap();
-      // Optimistic: pop out of Pinned. The dedup in `recent` then
-      // re-includes the row on next render. Refetch in parallel so we
-      // converge on server truth without an extra round-trip.
-      dispatch(
-        updateChatCache(
-          'getPinnedMessages',
-          {
-            org: tenantKey,
-            sessionId: appSessionId,
-            userId: resolvedUserId,
-          },
-          (draft) => {
-            draft.results = (draft.results ?? []).filter(
-              (m) => m.session_id !== row.session_id,
-            );
-          },
-        ) as never,
-      );
-      await Promise.all([refetchRecent(), refetchPinned()]);
-    } catch (err) {
-      console.error('Failed to unpin message: ', err);
-    } finally {
-      setActingSessionId(null);
-    }
-  };
-
-  const handleDelete = async (row: ChatRow) => {
-    if (!tenantKey || !resolvedUserId) return;
-    setActingSessionId(row.session_id);
-    try {
-      await deleteMessage({
-        org: tenantKey,
-        // @ts-ignore — userId is required at the URL path level
-        userId: resolvedUserId,
-        sessionId: row.session_id,
-      }).unwrap();
-      dispatch(
-        updateChatCache(
-          'getRecentMessage',
-          { org: tenantKey, userId: resolvedUserId },
-          (draft) => {
-            draft.results = (draft.results ?? []).filter(
-              (m) => m.session_id !== row.session_id,
-            );
-          },
-        ) as never,
-      );
-      dispatch(
-        updateChatCache(
-          'getPinnedMessages',
-          {
-            org: tenantKey,
-            sessionId: appSessionId,
-            userId: resolvedUserId,
-          },
-          (draft) => {
-            draft.results = (draft.results ?? []).filter(
-              (m) => m.session_id !== row.session_id,
-            );
-          },
-        ) as never,
-      );
-      // Active-session safety: clear file context and start a new chat
-      // so the canvas/composer doesn't keep pointing at a deleted session.
-      if (row.session_id === appSessionId) {
-        dispatch(clearFiles(undefined));
-        eventBus.emit(RemoteEvents.newChat);
-        dispatch(chatActions.setShouldStartNewChat(true));
-      }
-    } catch (err) {
-      console.error('Failed to delete message: ', err);
-    } finally {
-      setActingSessionId(null);
-    }
-  };
-
-  const handleExport = (row: ChatRow) => {
-    // Delegate to the shared sibling helper — it uses `write-excel-file`
-    // (already a project dep) and is covered by `export-messages.test.ts`.
-    exportMessagesToXlsx(row.messages ?? []);
-  };
-
-  // Render helpers -----------------------------------------------------
-
-  const renderRow = (row: ChatRow, kind: 'pinned' | 'recent') => (
-    <ChatRowItem
-      key={`${kind}-${row.session_id}`}
-      row={row}
-      active={row.session_id === appSessionId}
-      onSelect={() => handleSelectRow(row)}
-      isPinned={kind === 'pinned'}
-      isLoading={actingSessionId === row.session_id}
-      onPinToggle={() =>
-        kind === 'pinned' ? handleUnpin(row) : handlePin(row)
-      }
-      onExport={() => handleExport(row)}
-      onDelete={() => handleDelete(row)}
-    />
-  );
-
-  if (collapsed) {
-    return (
-      <HoverCard openDelay={180} closeDelay={120}>
-        <HoverCardTrigger asChild>
-          <button
-            type="button"
-            onClick={onCollapsedIconClick}
-            className="text-foreground inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-[8px] transition-colors outline-none hover:bg-[#f0f0f0] focus-visible:ring-2 focus-visible:ring-[#c4c4c8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#fafafa]"
-            aria-label={t('chats')}
-          >
-            <MessageSquare
-              className="size-4 shrink-0"
-              style={{ color: NAV_MUTED }}
-              strokeWidth={1.5}
-            />
-          </button>
-        </HoverCardTrigger>
-        <HoverCardContent
-          side="right"
-          align="start"
-          sideOffset={10}
-          className="z-[200] flex max-h-[70vh] w-max max-w-[320px] min-w-[240px] flex-col rounded-2xl border border-[#e6e6e8] bg-white px-3 py-2.5 shadow-[0_10px_40px_-12px_rgba(15,23,42,0.18)]"
-        >
-          <span
-            className="mb-1.5 shrink-0 text-[13px] leading-tight font-medium"
-            style={{ color: FLYOUT_TITLE_COLOR }}
-          >
-            {t('chats')}
-          </span>
-          <div className="scrollbar-thin min-h-0 overflow-y-auto pr-1">
-            {pinned.length > 0 && (
-              <>
-                <p className="px-1 pb-1 text-[10px] font-semibold tracking-wider text-[#9ca3af] uppercase">
-                  {t('pinned')}
-                </p>
-                {pinned.map((row) => (
-                  <button
-                    key={`flyout-pinned-${row.session_id}`}
-                    type="button"
-                    onClick={() => handleSelectRow(row)}
-                    className="block w-full truncate rounded-md px-1.5 py-1.5 text-left text-[14px] leading-snug font-medium transition-colors hover:bg-[#f4f4f4]"
-                    style={{ color: FLYOUT_ITEM_COLOR }}
-                  >
-                    {chatRowLabel(row, t('noContent'))}
-                  </button>
-                ))}
-              </>
-            )}
-            <p
-              className={cn(
-                'px-1 pb-1 text-[10px] font-semibold tracking-wider text-[#9ca3af] uppercase',
-                pinned.length > 0 && 'pt-2',
-              )}
-            >
-              {t('recent')}
-            </p>
-            {recent.length > 0 ? (
-              recent.map((row) => (
-                <button
-                  key={`flyout-recent-${row.session_id}`}
-                  type="button"
-                  onClick={() => handleSelectRow(row)}
-                  className="block w-full truncate rounded-md px-1.5 py-1.5 text-left text-[14px] leading-snug font-medium transition-colors hover:bg-[#f4f4f4]"
-                  style={{ color: FLYOUT_ITEM_COLOR }}
-                >
-                  {chatRowLabel(row, t('noContent'))}
-                </button>
-              ))
-            ) : (
-              <span className="block rounded-md px-1.5 py-1.5 text-[14px] text-[#94a3b8] italic">
-                {t('noRecentChats')}
-              </span>
-            )}
-          </div>
-        </HoverCardContent>
-      </HoverCard>
-    );
-  }
-
-  const triggerClassName = cn(
-    'flex h-9 w-full min-w-0 cursor-pointer items-center gap-2 rounded-md px-2 text-left text-[14px] font-normal text-[#5f5f61] outline-none transition-colors hover:bg-[#f4f4f4] focus-visible:ring-2 focus-visible:ring-[#cfe8fa] focus-visible:ring-offset-2 focus-visible:ring-offset-[#fafafa]',
-    NAV_ACTIVE_BG_OPEN,
-  );
-
-  return (
-    <Collapsible open={open} onOpenChange={onOpenChange} className="w-full">
-      <CollapsibleTrigger asChild>
-        <button type="button" className={triggerClassName}>
-          <MessageSquare
-            className="size-4 shrink-0"
-            style={{ color: NAV_MUTED }}
-            strokeWidth={1.5}
-          />
-          <span className="min-w-0 flex-1 truncate">{t('chats')}</span>
-          {open ? (
-            <ChevronDown
-              className="size-4 shrink-0 text-[#7d7e82]"
-              aria-hidden
-            />
-          ) : (
-            <ChevronRight
-              className="size-4 shrink-0 text-[#7d7e82]"
-              aria-hidden
-            />
-          )}
-        </button>
-      </CollapsibleTrigger>
-      <CollapsibleContent className="overflow-hidden">
-        <div className="mt-0.5 mr-1 ml-1.5 border-l-2 border-[#e2e8f0] pb-0.5 pl-2.5">
-          {pinned.length > 0 && (
-            <>
-              <p className="px-2 pt-1 pb-0.5 text-[10px] font-semibold tracking-wider text-[#9ca3af] uppercase">
-                {t('pinned')}
-              </p>
-              <ul className="flex flex-col gap-0.5" role="list">
-                {pinned.map((row) => (
-                  <li key={`pinned-${row.session_id}`}>
-                    {renderRow(row, 'pinned')}
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-          <p
-            className={cn(
-              'px-2 pt-1 pb-0.5 text-[10px] font-semibold tracking-wider text-[#9ca3af] uppercase',
-              pinned.length > 0 && 'mt-1',
-            )}
-          >
-            {t('recent')}
-          </p>
-          {recent.length > 0 ? (
-            <ul className="flex flex-col gap-0.5" role="list">
-              {recent.map((row) => (
-                <li key={`recent-${row.session_id}`}>
-                  {renderRow(row, 'recent')}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <span className="block px-2 py-1.5 text-[13px] text-[#94a3b8] italic">
-              {t('noRecentChats')}
-            </span>
-          )}
-        </div>
-      </CollapsibleContent>
-    </Collapsible>
-  );
-}
-
 type SidebarOpenSection =
   | 'workflows'
   | 'chats'
   | 'projects'
   | 'agents'
   | 'analytics';
-
-type AccountTab =
-  | 'organization'
-  | 'management'
-  | 'integrations'
-  | 'monetization'
-  | 'advanced'
-  | 'billing';
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -1691,7 +144,7 @@ export function AppSidebar() {
   const hideSidebar = hideSidebarRaw === '1' || hideSidebarRaw === 'true';
 
   const [accountDialogTab, setAccountDialogTab] =
-    React.useState<AccountTab | null>(null);
+    React.useState<PlatformAccountTab | null>(null);
 
   const {
     openCreateMentorModal,
@@ -1748,11 +201,7 @@ export function AppSidebar() {
   // sidebar.
   const showAnonymousAdminMenu = !isLoggedIn();
 
-  const { state, open, openMobile, setOpenMobile, toggleSidebar, isMobile } =
-    useSidebar();
-
-  const isExpanded = isMobile ? openMobile : open;
-  const railCollapsed = !isMobile && !open;
+  const { isMobile, setOpenMobile } = useSidebar();
 
   const isChatPage =
     (pathname && /\/platform\/[^/]+\/[^/]+$/.test(pathname)) || !!projectId;
@@ -1769,13 +218,6 @@ export function AppSidebar() {
       setOpenNavSection('analytics');
     }
   }, [pathname]);
-
-  const handleNavSectionChange = React.useCallback(
-    (id: SidebarOpenSection) => (open: boolean) => {
-      setOpenNavSection(open ? id : null);
-    },
-    [],
-  );
 
   const startNewChat = React.useCallback(() => {
     dispatch(clearFiles(undefined));
@@ -1871,7 +313,7 @@ export function AppSidebar() {
       : `/platform/${tenantKey}/analytics`;
   }, [tenantKey, mentorId]);
 
-  const analyticsMenu = React.useMemo<NavMenuConfig>(() => {
+  const analyticsMenu = React.useMemo<PlatformSidebarMenu>(() => {
     const base = analyticsBasePath ?? '/analytics';
     return {
       id: 'analytics',
@@ -1923,7 +365,7 @@ export function AppSidebar() {
       // Items carry their own `href`; the row navigates on its own when
       // we return `undefined`. The trial gate runs first and returns
       // `null` when it has blocked the action — in that case we return
-      // `false` so `CollapsibleSubNavItem` swallows the nav and the
+      // `false` so the SDK's sub-nav item swallows the nav and the
       // trial modal opens instead.
       const result = runAdminAction(() => {});
       if (result === null) return false;
@@ -1943,8 +385,8 @@ export function AppSidebar() {
   // `isLiveAdmin` guard, "New Agent" / "My Agents" / Analytics would
   // stay visible after toggling into learner mode — which is the bug
   // the user called out.
-  const agentsMenu: NavMenuConfig = React.useMemo(() => {
-    const items: NavMenuItem[] = [];
+  const agentsMenu: PlatformSidebarMenu = React.useMemo(() => {
+    const items: PlatformSidebarMenuItem[] = [];
     // Embed mode shows a minimal sidebar (New Chat + chat history only),
     // mirroring the pre-rewrite behavior — no Agents section at all.
     if (embedMode)
@@ -1984,7 +426,7 @@ export function AppSidebar() {
     showAnonymousAdminMenu,
   ]);
 
-  const workflowsMenu: NavMenuConfig = React.useMemo(() => {
+  const workflowsMenu: PlatformSidebarMenu = React.useMemo(() => {
     // Hidden entirely in embed mode (minimal sidebar).
     const allowed =
       !embedMode &&
@@ -2069,158 +511,8 @@ export function AppSidebar() {
       `/mentors/${mentorPublicSettings?.mentor_id}/#chat`,
     );
 
-  const footerActions = React.useMemo<FooterAction[]>(() => {
-    const actions: FooterAction[] = [];
-    if (embedMode) return actions;
-
-    // Notifications: gated by its own userTypes — students, free-trial,
-    // and admins ALL see it (anonymous/visiting don't). Not gated on the
-    // admin toggle since regular users have notifications too.
-    if (isUserTypeAllowed(PERMISSION_GATES.notifications)) {
-      actions.push({
-        id: 'footer-notifications',
-        label: t('notifications'),
-        icon: Bell,
-      });
-    }
-
-    // Admin cluster — uses the LIVE admin signal (`!userIsStudent`)
-    // rather than the static `useIsAdmin`, so flipping the navbar
-    // User/Admin toggle hides/shows these in real time. Mirrors the
-    // SDK `Account` component's per-feature gating.
-    //
-    // The platform-level RBAC permission flags are computed up here (not
-    // only inside the `isLiveAdmin` branch) so a GENUINE non-admin who holds
-    // them can also see the corresponding footer item — see the
-    // `!isAdmin && config.enableRBAC()` branch below.
-    const tenantKeyForRbac = currentTenant?.key ?? tenantKey;
-
-    const hasInviteUserPermission = checkRbacPermission(
-      rbacPermissions,
-      `/platforms/${tenantKeyForRbac}/#can_invite`,
-    );
-
-    // Management surfaces a row when ANY of its sub-tab permissions
-    // resolves true — matches the SDK's `hasManagementPermissions`.
-    const hasManagementPermissions =
-      checkRbacPermission(
-        rbacPermissions,
-        `/platforms/${tenantKeyForRbac}/#can_manage_users`,
-      ) ||
-      checkRbacPermission(rbacPermissions, `/groups/#list`) ||
-      checkRbacPermission(rbacPermissions, `/policies/#list`) ||
-      checkRbacPermission(rbacPermissions, `/roles/#list`) ||
-      checkRbacPermission(
-        rbacPermissions,
-        `/usergroups/#list|/platforms/${tenantKeyForRbac}/#can_invite`,
-      ) ||
-      checkRbacPermission(rbacPermissions, `/watchedgroups/#list`);
-
-    const hasMonetizationPermission = checkRbacPermission(
-      rbacPermissions,
-      `/platforms/${tenantKeyForRbac}/#can_sell_items`,
-    );
-    const canMonetize =
-      !!currentTenant?.enable_monetization && hasMonetizationPermission;
-
-    if (isLiveAdmin) {
-      if (
-        hasInviteUserPermission &&
-        isUserTypeAllowed(PERMISSION_GATES.invites)
-      ) {
-        actions.push({ id: 'footer-invites', label: t('invites'), icon: Mail });
-      }
-      if (hasManagementPermissions) {
-        actions.push({
-          id: 'footer-users',
-          label: t('management'),
-          icon: Users,
-        });
-      }
-      actions.push({
-        id: 'footer-api',
-        label: t('integrations'),
-        icon: KeyRound,
-      });
-      if (canMonetize) {
-        actions.push({
-          id: 'footer-monetization',
-          label: t('monetization'),
-          icon: Coins,
-        });
-      }
-      actions.push({
-        id: 'footer-settings',
-        label: t('advanced'),
-        icon: Settings,
-      });
-    } else if (showTrialGatedAdminMenu || showAnonymousAdminMenu) {
-      // Main-tenant non-admins (and anonymous users) get the FULL admin
-      // cluster. We skip the RBAC checks the live-admin branch does because
-      // these users hold none of those permissions — clicking any of these
-      // either opens the upgrade dialog (trial users) or routes to the auth
-      // SPA login (anonymous users), via `handleFooterActionClick` →
-      // `runAdminAction`, instead of the real surface. Checked BEFORE the
-      // permission branch below so a trial/advertising non-admin still gets
-      // the full (trial-gated) cluster rather than only their held permissions.
-      actions.push({ id: 'footer-invites', label: t('invites'), icon: Mail });
-      actions.push({ id: 'footer-users', label: t('management'), icon: Users });
-      actions.push({
-        id: 'footer-api',
-        label: t('integrations'),
-        icon: KeyRound,
-      });
-      actions.push({
-        id: 'footer-monetization',
-        label: t('monetization'),
-        icon: Coins,
-      });
-      actions.push({
-        id: 'footer-settings',
-        label: t('advanced'),
-        icon: Settings,
-      });
-    } else if (!isAdmin && config.enableRBAC()) {
-      // A GENUINE non-admin in an RBAC-enabled tenant sees ONLY the footer
-      // items whose platform permission they actually hold — mirroring the
-      // Analytics permission gate. We MUST guard on `config.enableRBAC()`
-      // because `checkRbacPermission` returns true when RBAC is off, which
-      // would otherwise expose these to every non-admin. `!isAdmin` keeps an
-      // admin-in-learner-mode excluded. Integrations and Advanced have no
-      // dedicated RBAC permission, so they stay admin/trial/anonymous-only.
-      if (hasInviteUserPermission) {
-        actions.push({ id: 'footer-invites', label: t('invites'), icon: Mail });
-      }
-      if (hasManagementPermissions) {
-        actions.push({
-          id: 'footer-users',
-          label: t('management'),
-          icon: Users,
-        });
-      }
-      if (canMonetize) {
-        actions.push({
-          id: 'footer-monetization',
-          label: t('monetization'),
-          icon: Coins,
-        });
-      }
-    }
-    return actions;
-  }, [
-    embedMode,
-    isAdmin,
-    isLiveAdmin,
-    showTrialGatedAdminMenu,
-    showAnonymousAdminMenu,
-    currentTenant,
-    tenantKey,
-    rbacPermissions,
-    isUserTypeAllowed,
-  ]);
-
   const openAccountTab = React.useCallback(
-    (tab: AccountTab) => {
+    (tab: PlatformAccountTab) => {
       const result = runAdminAction(() => {
         setAccountDialogTab(tab);
       });
@@ -2229,27 +521,27 @@ export function AppSidebar() {
     [runAdminAction, onAfterNav],
   );
 
-  const handleFooterActionClick = React.useCallback(
-    (actionId: string) => {
+  const handleFooterAction = React.useCallback(
+    (actionId: PlatformSidebarFooterActionId) => {
       switch (actionId) {
-        case 'footer-notifications':
+        case 'notifications':
           navigateToNotifications();
           onAfterNav();
           return;
-        case 'footer-invites':
+        case 'invites':
           runAdminAction(() => openInviteUserModal());
           onAfterNav();
           return;
-        case 'footer-users':
+        case 'management':
           openAccountTab('management');
           return;
-        case 'footer-api':
+        case 'integrations':
           openAccountTab('integrations');
           return;
-        case 'footer-monetization':
+        case 'monetization':
           openAccountTab('monetization');
           return;
-        case 'footer-settings':
+        case 'advanced':
           openAccountTab('advanced');
           return;
       }
@@ -2263,325 +555,124 @@ export function AppSidebar() {
     ],
   );
 
-  const expandFromRail = React.useCallback(
-    (section: SidebarOpenSection) => {
-      toggleSidebar();
-      setOpenNavSection(section);
-    },
-    [toggleSidebar],
-  );
+  // The VARIABLE part of the sidebar (per-SPA): declarative menus for
+  // Agents / Workflows / Analytics, plus fully custom sections for the
+  // data-driven Chats and Projects lists. The SDK shell renders them in
+  // order and drives the accordion + rail-flyout behavior through the
+  // section context.
+  const sections = React.useMemo<PlatformSidebarSectionConfig[]>(() => {
+    const list: PlatformSidebarSectionConfig[] = [
+      { type: 'menu', menu: agentsMenu, onItemSelect: handleAgentMenuSelect },
+      {
+        type: 'menu',
+        menu: workflowsMenu,
+        onItemSelect: handleWorkflowMenuSelect,
+      },
+    ];
+    if (showChats) {
+      list.push({ type: 'divider', id: 'chats-divider' });
+      list.push({
+        type: 'custom',
+        id: 'chats',
+        render: (ctx) => (
+          <SidebarChatsSection
+            collapsed={ctx.collapsed}
+            open={ctx.open}
+            onOpenChange={ctx.onOpenChange}
+            onCollapsedIconClick={ctx.expandFromRail}
+            tenantKey={tenantKey}
+            mentorId={mentorId}
+            username={username}
+          />
+        ),
+      });
+    }
+    if (projectsAllowed) {
+      list.push({
+        type: 'custom',
+        id: 'projects',
+        render: (ctx) => (
+          <SidebarProjectsSection
+            collapsed={ctx.collapsed}
+            tenantKey={tenantKey}
+            username={username}
+            open={ctx.open}
+            onOpenChange={ctx.onOpenChange}
+            onNavigate={ctx.onAfterNav}
+            onCollapsedIconClick={ctx.expandFromRail}
+          />
+        ),
+      });
+    }
+    if (analyticsAllowed) {
+      list.push({
+        type: 'menu',
+        menu: analyticsMenu,
+        onItemSelect: handleAnalyticsMenuSelect,
+      });
+    }
+    return list;
+  }, [
+    agentsMenu,
+    workflowsMenu,
+    analyticsMenu,
+    handleAgentMenuSelect,
+    handleWorkflowMenuSelect,
+    handleAnalyticsMenuSelect,
+    showChats,
+    projectsAllowed,
+    analyticsAllowed,
+    tenantKey,
+    mentorId,
+    username,
+  ]);
 
   if (hideSidebar) {
     return <></>;
   }
 
   return (
-    <SidebarNavCallbackContext.Provider value={{ onAfterNav }}>
-      <Sidebar
-        collapsible="icon"
-        variant="sidebar"
-        className="flex flex-col border-r border-[#e9e9ea]"
-        sidebarInnerClassName="bg-[#fafafa]"
-      >
-        <aside
-          data-state={state}
-          className={cn(
-            'flex h-full flex-col',
-            railCollapsed ? 'w-[65px]' : 'w-full',
-          )}
-        >
-          {/* Header */}
-          <div
-            className={cn(
-              'shrink-0',
-              railCollapsed
-                ? 'px-2 pt-[18px] pb-[25px]'
-                : 'px-[10px] py-[10px]',
-            )}
-          >
-            <div
-              className={cn(
-                'flex items-center gap-2 font-sans',
-                railCollapsed ? 'justify-center px-0' : 'px-1',
-              )}
-            >
-              {!railCollapsed && (
-                <>
-                  {/* Spacer matching the collapse button's width so the logo
-                      sits at the true horizontal center of the header rather
-                      than being pushed left by the button on the right. */}
-                  <span className="size-7 shrink-0" aria-hidden />
-                  <div className="flex min-w-0 flex-1 items-center justify-center">
-                    <Logo className="h-[51px] max-h-none w-auto max-w-full object-contain" />
-                  </div>
-                </>
-              )}
-              <SidebarCollapsedLabelFlyout
-                label={isExpanded ? t('collapseSidebar') : t('expandSidebar')}
-              >
-                <button
-                  type="button"
-                  onClick={toggleSidebar}
-                  className="inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md font-sans text-[#7d7e82] transition-colors hover:bg-[#f0f0f0]"
-                  aria-label={
-                    isExpanded ? t('collapseSidebar') : t('expandSidebar')
-                  }
-                  aria-expanded={isExpanded}
-                >
-                  <svg
-                    width={20}
-                    height={20}
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="shrink-0"
-                    aria-hidden
-                  >
-                    <path d="M16.5 4A1.5 1.5 0 0 1 18 5.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 2 14.5v-9A1.5 1.5 0 0 1 3.5 4zM7 15h9.5a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5H7zM3.5 5a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5H6V5z" />
-                  </svg>
-                </button>
-              </SidebarCollapsedLabelFlyout>
-            </div>
-          </div>
+    <>
+      <PlatformSidebar
+        logo={
+          <Logo className="h-[51px] max-h-none w-auto max-w-full object-contain" />
+        }
+        primaryAction={
+          newChatAllowed ? { label: t('newChat'), onClick: startNewChat } : null
+        }
+        sections={sections}
+        openSectionId={openNavSection}
+        onOpenSectionChange={(id) =>
+          setOpenNavSection(id as SidebarOpenSection | null)
+        }
+        // Footer — the INVARIANT cluster. Hidden entirely in embed mode
+        // (minimal sidebar: only New Chat + chat history, matching the
+        // pre-rewrite UI). Visibility rules live in the SDK; we feed it
+        // the primitive signals it needs.
+        footer={
+          embedMode
+            ? null
+            : {
+                isAdmin,
+                isLiveAdmin,
+                showTrialGatedAdminMenu,
+                showAnonymousAdminMenu,
+                enableRbac: config.enableRBAC(),
+                rbacPermissions,
+                tenantKey,
+                currentTenant,
+                notificationsAllowed: isUserTypeAllowed(
+                  PERMISSION_GATES.notifications,
+                ),
+                invitesUserTypeAllowed: isUserTypeAllowed(
+                  PERMISSION_GATES.invites,
+                ),
+                onAction: handleFooterAction,
+              }
+        }
+      />
 
-          {/* Body */}
-          {railCollapsed ? (
-            <nav
-              className="flex min-h-0 flex-1 flex-col items-center gap-1 overflow-y-auto px-2 pt-1 pb-2"
-              aria-label={t('mainNavigation')}
-            >
-              {newChatAllowed && (
-                <SidebarCollapsedLabelFlyout label={t('newChat')}>
-                  <button
-                    type="button"
-                    onClick={startNewChat}
-                    className="text-foreground inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-[8px] border border-[#e0e0e2] bg-white transition-colors hover:bg-[#f8f8f9]"
-                    aria-label={t('newChat')}
-                  >
-                    <SquarePen className="size-4 shrink-0" strokeWidth={1.5} />
-                  </button>
-                </SidebarCollapsedLabelFlyout>
-              )}
-
-              {agentsMenu.items.length > 0 && (
-                <SidebarNavCollapsibleSection
-                  collapsed
-                  menu={agentsMenu}
-                  open={openNavSection === 'agents'}
-                  onOpenChange={handleNavSectionChange('agents')}
-                  onItemSelect={handleAgentMenuSelect}
-                  onCollapsedIconClick={() => expandFromRail('agents')}
-                />
-              )}
-              {workflowsMenu.items.length > 0 && (
-                <SidebarNavCollapsibleSection
-                  collapsed
-                  menu={workflowsMenu}
-                  open={openNavSection === 'workflows'}
-                  onOpenChange={handleNavSectionChange('workflows')}
-                  onItemSelect={handleWorkflowMenuSelect}
-                  onCollapsedIconClick={() => expandFromRail('workflows')}
-                />
-              )}
-
-              {showChats && (
-                <>
-                  <SidebarNavDivider />
-
-                  <SidebarChatsSection
-                    collapsed
-                    open={openNavSection === 'chats'}
-                    onOpenChange={handleNavSectionChange('chats')}
-                    onCollapsedIconClick={() => expandFromRail('chats')}
-                    tenantKey={tenantKey}
-                    mentorId={mentorId}
-                    username={username}
-                  />
-                </>
-              )}
-
-              {projectsAllowed && (
-                <SidebarProjectsSection
-                  collapsed
-                  tenantKey={tenantKey}
-                  username={username}
-                  open={openNavSection === 'projects'}
-                  onOpenChange={handleNavSectionChange('projects')}
-                  onNavigate={onAfterNav}
-                  onCollapsedIconClick={() => expandFromRail('projects')}
-                />
-              )}
-
-              {analyticsAllowed && (
-                <SidebarNavCollapsibleSection
-                  collapsed
-                  menu={analyticsMenu}
-                  open={openNavSection === 'analytics'}
-                  onOpenChange={handleNavSectionChange('analytics')}
-                  onItemSelect={handleAnalyticsMenuSelect}
-                  onCollapsedIconClick={() => expandFromRail('analytics')}
-                />
-              )}
-            </nav>
-          ) : (
-            <nav className="min-h-0 flex-1 overflow-y-auto px-2 pt-1 pb-2">
-              <div className="space-y-0.5">
-                {newChatAllowed && (
-                  <div className="px-0 pb-0.5">
-                    <button
-                      type="button"
-                      onClick={startNewChat}
-                      className="inline-flex h-9 w-full cursor-pointer items-center justify-start gap-2 rounded-[8px] border border-[#e0e0e2] bg-white px-2 text-[14px] font-normal text-[#687482] antialiased transition-colors hover:bg-[#f8f8f9] active:bg-[#f2f2f3]"
-                    >
-                      <SquarePen
-                        className="size-4 shrink-0"
-                        strokeWidth={1.5}
-                        aria-hidden
-                      />
-                      <span>{t('newChat')}</span>
-                    </button>
-                  </div>
-                )}
-
-                {agentsMenu.items.length > 0 && (
-                  <SidebarNavCollapsibleSection
-                    collapsed={false}
-                    menu={agentsMenu}
-                    open={openNavSection === 'agents'}
-                    onOpenChange={handleNavSectionChange('agents')}
-                    onItemSelect={handleAgentMenuSelect}
-                  />
-                )}
-                {workflowsMenu.items.length > 0 && (
-                  <SidebarNavCollapsibleSection
-                    collapsed={false}
-                    menu={workflowsMenu}
-                    open={openNavSection === 'workflows'}
-                    onOpenChange={handleNavSectionChange('workflows')}
-                    onItemSelect={handleWorkflowMenuSelect}
-                  />
-                )}
-
-                {showChats && (
-                  <>
-                    <SidebarNavDivider />
-
-                    <SidebarChatsSection
-                      collapsed={false}
-                      open={openNavSection === 'chats'}
-                      onOpenChange={handleNavSectionChange('chats')}
-                      tenantKey={tenantKey}
-                      mentorId={mentorId}
-                      username={username}
-                    />
-                  </>
-                )}
-
-                {projectsAllowed && (
-                  <SidebarProjectsSection
-                    collapsed={false}
-                    tenantKey={tenantKey}
-                    username={username}
-                    open={openNavSection === 'projects'}
-                    onOpenChange={handleNavSectionChange('projects')}
-                    onNavigate={onAfterNav}
-                  />
-                )}
-
-                {analyticsAllowed && (
-                  <SidebarNavCollapsibleSection
-                    collapsed={false}
-                    menu={analyticsMenu}
-                    open={openNavSection === 'analytics'}
-                    onOpenChange={handleNavSectionChange('analytics')}
-                    onItemSelect={handleAnalyticsMenuSelect}
-                  />
-                )}
-              </div>
-            </nav>
-          )}
-
-          {/* Footer — fully hidden in embed mode (minimal sidebar:
-              only New Chat + chat history, matching the pre-rewrite UI). */}
-          {!embedMode &&
-            (railCollapsed ? (
-              <div className="flex shrink-0 flex-col items-center gap-0.5 border-t border-[#e2e8f0] px-2 py-3">
-                {footerActions.map((action) => {
-                  const Icon = action.icon;
-                  return (
-                    <SidebarCollapsedLabelFlyout
-                      key={action.id}
-                      label={action.label}
-                    >
-                      <button
-                        type="button"
-                        className="inline-flex size-10 cursor-pointer items-center justify-center rounded-lg text-[#5f5f61] transition-colors hover:bg-[#f0f0f0]"
-                        aria-label={action.label}
-                        onClick={() => handleFooterActionClick(action.id)}
-                      >
-                        <Icon className="size-4 shrink-0" strokeWidth={1.5} />
-                      </button>
-                    </SidebarCollapsedLabelFlyout>
-                  );
-                })}
-                <SidebarCollapsedLabelFlyout label={t('support')}>
-                  <a
-                    href="https://ibl.ai/docs"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex size-10 items-center justify-center rounded-lg text-[#5f5f61] transition-colors hover:bg-[#f0f0f0]"
-                    aria-label={t('support')}
-                  >
-                    <DOCUMENTATION_MENU.icon
-                      className="size-4 shrink-0"
-                      strokeWidth={1.5}
-                    />
-                  </a>
-                </SidebarCollapsedLabelFlyout>
-              </div>
-            ) : (
-              <div className="shrink-0 space-y-0.5 border-t border-[#e2e8f0] px-2 py-2">
-                {footerActions.map((action) => {
-                  const Icon = action.icon;
-                  return (
-                    <button
-                      key={action.id}
-                      type="button"
-                      className="flex h-9 w-full min-w-0 cursor-pointer items-center gap-2 rounded-md px-2 text-left text-[14px] font-normal text-[#5f5f61] transition-colors hover:bg-[#f4f4f4]"
-                      onClick={() => handleFooterActionClick(action.id)}
-                    >
-                      <Icon
-                        className="size-4 shrink-0"
-                        style={{ color: NAV_MUTED }}
-                        strokeWidth={1.5}
-                      />
-                      <span className="min-w-0 flex-1 truncate">
-                        {action.label}
-                      </span>
-                    </button>
-                  );
-                })}
-                <a
-                  href="https://ibl.ai/docs"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex h-9 w-full min-w-0 items-center gap-2 rounded-md px-2 text-left text-[14px] font-normal text-[#5f5f61] transition-colors hover:bg-[#f4f4f4]"
-                >
-                  <DOCUMENTATION_MENU.icon
-                    className="size-4 shrink-0"
-                    style={{ color: NAV_MUTED }}
-                    strokeWidth={1.5}
-                  />
-                  <span className="min-w-0 flex-1 truncate">
-                    {t('support')}
-                  </span>
-                </a>
-              </div>
-            ))}
-        </aside>
-      </Sidebar>
-
-      <AccountSheet
+      <PlatformAccountSheet
         tab={accountDialogTab}
         onClose={() => setAccountDialogTab(null)}
         tenantKey={tenantKey}
@@ -2595,133 +686,15 @@ export function AppSidebar() {
           // before another opens.
           openInviteUserModal();
         }}
+        mainPlatformKey={config.mainTenantKey()}
+        authUrl={config.authUrl()}
+        currentSpa={config.iblPlatform() || 'mentor'}
+        platformBaseDomain={config.platformBaseDomain()}
       />
 
       {isModalOpen && FreeTrialDialog && (
         <FreeTrialDialog onClose={closeModal} isOpen={isModalOpen} />
       )}
-    </SidebarNavCallbackContext.Provider>
-  );
-}
-
-/**
- * Renders one of the SDK's organization-level tab components in its
- * own dialog — `Admin` (Users), `IntegrationsTab` (API), `BillingTab`,
- * `MonetizationTab`, `AdvancedTab` (Settings). Each footer action opens
- * this dialog with a different `tab`; the body switches the SDK
- * component, so there's no shared tab rail and nothing to hide.
- *
- * `organization` doesn't have a sidebar footer entry today, but it's
- * defined for completeness so adding "Organization" later is a one-line
- * change.
- */
-function AccountSheet({
-  tab,
-  onClose,
-  tenantKey,
-  username,
-  email,
-  onInviteClick,
-}: {
-  tab: AccountTab | null;
-  onClose: () => void;
-  tenantKey: string;
-  username: string;
-  email: string;
-  onInviteClick: () => void;
-}) {
-  const t = useTranslations('appSidebarIndex');
-  const open = tab !== null;
-
-  const accountTabTitles: Record<AccountTab, string> = {
-    organization: t('accountTabOrganization'),
-    management: t('management'),
-    integrations: t('integrations'),
-    monetization: t('monetization'),
-    advanced: t('advanced'),
-    billing: t('accountTabBilling'),
-  };
-
-  const accountTabDescriptions: Record<AccountTab, string> = {
-    organization: t('accountDescOrganization'),
-    management: t('accountDescManagement'),
-    integrations: t('accountDescIntegrations'),
-    monetization: t('accountDescMonetization'),
-    advanced: t('accountDescAdvanced'),
-    billing: t('accountDescBilling'),
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      {/*
-        Dimensions: width matches the SDK's `InviteUserDialog`
-        (`sm:max-w-7xl w-[95vw]`). Height is PINNED to `h-[90vh]`
-        (was `max-h-[90vh]`) so the dialog stays the same size as
-        the user navigates between sub-tabs inside Management
-        (Users → Groups → Roles → Policies) and Integrations. With
-        `max-h`, an empty/short sub-tab made the dialog collapse to
-        fit, then expand back when content loaded — felt jumpy.
-        Pinning the outer height + keeping the inner scroll area
-        (`flex-1 overflow-y-auto`) means the chrome is stable and
-        all the variation happens inside the scroll region.
-      */}
-      <DialogContent className="mx-auto my-auto flex h-[90vh] w-[95vw] max-w-none flex-col justify-between gap-0 rounded-lg p-0 sm:max-w-7xl">
-        <DialogHeader className="flex-shrink-0 border-b border-gray-200 p-4 pt-[30px]">
-          <DialogTitle className="text-lg font-medium text-gray-900 dark:text-gray-100">
-            {tab ? accountTabTitles[tab] : ''}
-          </DialogTitle>
-          <DialogDescription className="text-sm leading-relaxed text-gray-600">
-            {tab ? accountTabDescriptions[tab] : ''}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto p-6">
-          {tab === 'management' && (
-            <Admin
-              tenant={tenantKey}
-              onInviteClick={onInviteClick}
-              // RBAC is off for this entry point — admin users see every
-              // sub-tab. Tenant-level access is already gated by the
-              // sidebar (only admins reach the footer actions).
-              hasUserTabPermission
-              hasGroupsTabPermission
-              hasRolesTabPermission
-              hasPoliciesTabPermission
-              hasTeamsTabPermission
-              hasAlertsTabPermission
-              hasInviteUserPermission
-              hasCreateTeamPermission
-              enableRbac={false}
-              rbacPermissions={{}}
-            />
-          )}
-          {tab === 'integrations' && (
-            <IntegrationsTab tenantKey={tenantKey} username={username} />
-          )}
-          {tab === 'billing' && (
-            <BillingTab
-              tenant={tenantKey}
-              username={username}
-              mainPlatformKey={config.mainTenantKey()}
-              currentUserEmail={email}
-            />
-          )}
-          {tab === 'monetization' && (
-            <MonetizationTab
-              platformKey={tenantKey}
-              authURL={config.authUrl()}
-            />
-          )}
-          {tab === 'advanced' && (
-            <AdvancedTab
-              platformKey={tenantKey}
-              username={username}
-              currentSPA={config.iblPlatform() || 'mentor'}
-              authURL={config.authUrl()}
-              currentPlatformBaseDomain={config.platformBaseDomain()}
-            />
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+    </>
   );
 }
