@@ -126,8 +126,8 @@ describe('buildMentorMetadata', () => {
   it('falls back to a generated title/description when fields are missing', async () => {
     respond({ allow_anonymous: true });
     const m = await buildMentorMetadata('acme', 'g');
-    expect(m.title).toBe('AI Mentor');
-    expect(m.description).toBe('Chat with AI Mentor, an AI mentor on ibl.ai.');
+    expect(m.title).toBe('AI Agent');
+    expect(m.description).toBe('Chat with AI Agent, an AI agent on ibl.ai.');
   });
 });
 

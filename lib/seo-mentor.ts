@@ -102,9 +102,9 @@ export async function buildMentorMetadata(
     return buildMetadata({ path });
   }
 
-  const name = meta.name ?? 'AI Mentor';
+  const name = meta.name ?? 'AI Agent';
   const description =
-    meta.description ?? `Chat with ${name}, an AI mentor on ${SITE_NAME}.`;
+    meta.description ?? `Chat with ${name}, an AI agent on ${SITE_NAME}.`;
 
   return buildMetadata({
     path,
@@ -125,7 +125,7 @@ export async function mentorJsonLd(
   if (!meta?.isPublic) return null;
 
   const origin = await getSiteUrl();
-  const name = meta.name ?? 'AI Mentor';
+  const name = meta.name ?? 'AI Agent';
 
   return {
     '@context': 'https://schema.org',
@@ -134,7 +134,7 @@ export async function mentorJsonLd(
     operatingSystem: 'Web',
     name,
     description:
-      meta.description ?? `Chat with ${name}, an AI mentor on ${SITE_NAME}.`,
+      meta.description ?? `Chat with ${name}, an AI agent on ${SITE_NAME}.`,
     url: joinUrl(origin, `/platform/${org}/${mentor}`),
     image: meta.image ?? joinUrl(origin, DEFAULT_OG_IMAGE),
     provider: { '@type': 'Organization', name: SITE_NAME },

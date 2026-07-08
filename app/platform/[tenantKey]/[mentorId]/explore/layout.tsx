@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 
-import { buildExploreMetadata } from '@/lib/seo';
+import { buildExploreMetadata } from '@/lib/seo-explore';
 
 // Passthrough layout that exists solely to attach indexable SEO metadata to the
 // mentor-scoped explore directory without altering the rendered UI.
@@ -10,7 +10,10 @@ export async function generateMetadata({
   params: Promise<{ tenantKey: string; mentorId: string }>;
 }): Promise<Metadata> {
   const { tenantKey, mentorId } = await params;
-  return buildExploreMetadata(`/platform/${tenantKey}/${mentorId}/explore`);
+  return buildExploreMetadata(
+    `/platform/${tenantKey}/${mentorId}/explore`,
+    tenantKey,
+  );
 }
 
 export default function ExploreLayout({

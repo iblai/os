@@ -26,13 +26,13 @@ export const DEFAULT_TITLE = 'ibl.ai | Agentic OS';
 
 /** Default meta description. Keep under ~160 chars. */
 export const DEFAULT_DESCRIPTION =
-  'ibl.ai is an agentic OS for building, training, and deploying AI mentors and assistants.';
+  'ibl.ai is an agentic OS for building, training, and deploying AI agents and assistants.';
 
 /** Twitter/X handle for `twitter:site` (leave empty to omit). */
 export const TWITTER_HANDLE = '';
 
-/** Default social share image (replace with a dedicated 1200x630 asset). */
-export const DEFAULT_OG_IMAGE = '/iblai-logo.png';
+/** Default social share image, used whenever a page has no specific image. */
+export const DEFAULT_OG_IMAGE = '/og-image.jpeg';
 
 /**
  * Route prefixes that are private/app-only and must never be crawled or
@@ -182,19 +182,6 @@ export async function buildMetadata(
   }
 
   return metadata;
-}
-
-/**
- * Metadata for an explore / mentor-directory page. Public and indexable, so
- * search engines can surface the "browse AI mentors" pages.
- */
-export async function buildExploreMetadata(path: string): Promise<Metadata> {
-  return buildMetadata({
-    path,
-    index: true,
-    title: 'Explore Mentors',
-    description: `Browse and chat with AI mentors on ${SITE_NAME}.`,
-  });
 }
 
 /** JSON-LD Organization node for the site. */

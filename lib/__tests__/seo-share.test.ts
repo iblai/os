@@ -61,7 +61,7 @@ describe('buildSharedChatMetadata', () => {
     const m = await buildSharedChatMetadata('sess-1', 'acme', 'bot-1');
     expect(m.title).toBe('Shared conversation');
     expect(m.description).toBe('A shared conversation on ibl.ai.');
-    expect((m.openGraph as any).images).toEqual([{ url: '/iblai-logo.png' }]);
+    expect((m.openGraph as any).images).toEqual([{ url: '/og-image.jpeg' }]);
   });
 });
 
