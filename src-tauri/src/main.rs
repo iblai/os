@@ -123,17 +123,27 @@ fn open_oauth_in_popup(url: &str, app_handle: &AppHandle, title: &str) -> Result
         if is_callback || is_custom_scheme || is_app_return {
             println!("[OAuth Popup] Callback/return detected: {}", url_str);
 
-            // Navigate the main window to the callback URL
+            let target_url = if is_custom_scheme {
+                // Convert custom scheme to app URL
+                let path = url_str
+                    .replace("iblai-mentor://", "/")
+                    .replace("ai.ibl.mentorai://", "/");
+                format!("{}{}", get_app_url(), path)
+            } else {
+                url_str.to_string()
+            };
+
+            // Close the popup and foreground the main window BEFORE navigating.
+            // A backgrounded WebView (behind the popup) is heavily throttled on
+            // macOS, so navigating it first showed up as a long delay before the
+            // main window actually loaded the return URL.
+            if let Some(oauth_win) = app_handle_clone.get_webview_window("oauth-popup") {
+                println!("[OAuth Popup] Closing popup window");
+                let _ = oauth_win.close();
+            }
+
             if let Some(main_win) = app_handle_clone.get_webview_window("main") {
-                let target_url = if is_custom_scheme {
-                    // Convert custom scheme to app URL
-                    let path = url_str
-                        .replace("iblai-mentor://", "/")
-                        .replace("ai.ibl.mentorai://", "/");
-                    format!("{}{}", get_app_url(), path)
-                } else {
-                    url_str.to_string()
-                };
+                let _ = main_win.set_focus();
 
                 println!("[OAuth Popup] Navigating main window to: {}", target_url);
                 // For app-domain returns (e.g. Stripe checkout completing), force a
@@ -161,13 +171,6 @@ fn open_oauth_in_popup(url: &str, app_handle: &AppHandle, title: &str) -> Result
                 if !navigated {
                     let _ = main_win.eval(&format!("window.location.href = '{}';", target_url));
                 }
-                let _ = main_win.set_focus();
-            }
-
-            // Close the OAuth popup
-            if let Some(oauth_win) = app_handle_clone.get_webview_window("oauth-popup") {
-                println!("[OAuth Popup] Closing popup window");
-                let _ = oauth_win.close();
             }
 
             return false; // Don't navigate the popup

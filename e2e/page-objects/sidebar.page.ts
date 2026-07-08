@@ -347,4 +347,81 @@ export class SidebarPage {
     await firstRow.click();
     return text.trim();
   }
+
+  /**
+   * Returns the `<li>` container for a specific Recent (or Pinned) chat row
+   * whose select-button text contains `text`. The row-select `<button>` and
+   * the "Chat actions" three-dot trigger are DOM SIBLINGS inside this `<li>`
+   * (see `ChatRowItem` in `app-sidebar/index.tsx` — `<div class="group
+   * relative">` wraps a `<button>` for selection and a separate absolutely
+   * positioned `<div>` holding the three-dot menu), so callers needing the
+   * three-dot trigger must scope through this container rather than the
+   * select button itself.
+   */
+  getChatRowContainer(text: string): import('@playwright/test').Locator {
+    return this.getRecentChatsList()
+      .locator('li')
+      .filter({ has: this.page.getByRole('button', { name: text }) });
+  }
+
+  /**
+   * Returns the "Chat actions" three-dot trigger button for a specific
+   * Recent/Pinned chat row. The button is `opacity-0` until the row is
+   * hovered/focused (Tailwind `group-hover`) — Playwright's visibility
+   * check does not consider opacity, but `openChatActionsMenu` hovers the
+   * row first anyway to mirror real user interaction.
+   */
+  getChatActionsButton(text: string): import('@playwright/test').Locator {
+    return this.getChatRowContainer(text).getByRole('button', {
+      name: 'Chat actions',
+    });
+  }
+
+  /**
+   * Dismiss any currently-open Radix dropdown/menu by pressing Escape and
+   * wait until no `role="menu"` is left open. The chat-actions three-dot menu
+   * does NOT auto-close on outside state changes, and its content reflects
+   * `canExport` as evaluated when it was opened — so callers that change the
+   * gating state (tenant setting, learner mode) must close and re-open the
+   * menu to read the fresh state. Tolerant of there being no open menu.
+   */
+  async closeAnyOpenMenu(): Promise<void> {
+    const menu = this.page.getByRole('menu');
+    try {
+      await menu.first().waitFor({ state: 'visible', timeout: 500 });
+    } catch {
+      return; // nothing open
+    }
+    await this.page.keyboard.press('Escape');
+    await expect(menu).toHaveCount(0, { timeout: 5_000 });
+  }
+
+  /**
+   * Hovers the given Recent/Pinned chat row (revealing its three-dot
+   * trigger) and opens the row's dropdown menu (Pin/Unpin, Export, Delete).
+   * Returns the open `role="menu"` locator so callers can assert on
+   * `role="menuitem"` entries. Prerequisite: `expandChatsSection()`.
+   *
+   * Always opens from a CLOSED state: clicking the trigger toggles the Radix
+   * menu, so a lingering open menu would otherwise be toggled shut (or leave a
+   * stale menu reflecting an outdated `canExport`). We dismiss any open menu
+   * first so the returned menu always reflects current state.
+   */
+  async openChatActionsMenu(
+    text: string,
+  ): Promise<import('@playwright/test').Locator> {
+    await this.closeAnyOpenMenu();
+    const container = this.getChatRowContainer(text);
+    await expect(container).toBeVisible({ timeout: 15_000 });
+    // Hover the select button (inside the `.group` wrapper) so the
+    // Tailwind `group-hover:opacity-100` rule on the three-dot trigger
+    // actually engages, same as a real user hovering the row.
+    await container.getByRole('button', { name: text }).hover();
+    const actionsBtn = this.getChatActionsButton(text);
+    await expect(actionsBtn).toBeVisible({ timeout: 5_000 });
+    await actionsBtn.click();
+    const menu = this.page.getByRole('menu');
+    await expect(menu).toBeVisible({ timeout: 5_000 });
+    return menu;
+  }
 }

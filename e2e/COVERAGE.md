@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-07-07 | 526 checkpoints (500 covered, 7 pending/fixme, 7 not-reproducible in default env, 12 deprecated) | 59 journeys (58 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-07-07 | 512 checkpoints (490 covered, 2 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 60 journeys (59 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -1003,51 +1003,29 @@ Covers issue #2048 — "Hide Settings In the Dropdown list In User Mode". When a
 
 ---
 
-## Journey 57: Mentor LTI Tab (16 checkpoints, 1 pending) — `journeys/57-mentor-lti-tab.spec.ts`
+## Journey 57: Chat History Export Toggle (5 checkpoints) — `journeys/57-chat-history-export-toggle.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/lti-tab.tsx`, `hooks/use-mentor-segments.ts`
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
 
-Covers the LTI top-level tab in the Edit Mentor (Agent) modal, rendered by the SDK's `AgentLtiTab` (`@iblai/iblai-js/web-containers/next`). As of feat/1853 the tab is **always visible to admins** regardless of the `is_lti_accessible` toggle — the `enabledThroughConfig` gate that previously hid the tab when `is_lti_accessible` was `false` was removed from `hooks/use-mentor-segments.ts`. The "Enable LTI launches" toggle (renamed from "Allow LTI launches" for consistency with sibling "Enable …" toggles) still controls whether the backend allows LTI launches but no longer gates the sidebar tab.
+Covers issue #2068: a new tenant Advanced setting, `enable_chat_history_export` (org metadata boolean, default ON, rendered by the SDK's generic `AdvancedTab` metadata-switch list, label "Chat History Export"), gates the "Export" item in the sidebar Chats three-dot menu (`aria-label="Chat actions"`) COMBINED with the acting user's role: `canExport = !userIsStudent || metadata?.enable_chat_history_export !== false`. Non-students (admin/instructor) always see Export regardless of the setting; students only see it when the setting is ON or absent. "Student" is toggled via the same admin session using the nav-bar User/Admin `LearnerModeSwitch` (`aria-label` starting with "User mode") — the same technique already used by journey 42's "Non-Admin" describe block — rather than a separately-authenticated account, so the seeded chat stays visible to the acting session. Each test creates its own mentor via `createMentorPage.openAndCreate()` and restores both the tenant setting and the learner-mode toggle in a `finally` block so tests remain order-independent.
 
-The LTI segment lives under the **Integrations** sidebar category. Tests are parallel-safe via two strategies: a worker-scoped `ltiMentorUrl` fixture (one LTI-enabled mentor per worker, deleted on teardown) shared by read-only and mutation tests; and self-contained tests that create and delete their own mentor in a `finally` block.
+- [x] chexp-01: Tenant Advanced tab renders a "Chat History Export" switch, ON by default
+- [x] chexp-02: Toggling the switch OFF persists across closing and reopening the Advanced tab (PATCH org metadata round trip)
+- [x] chexp-03: Setting OFF + student (admin in User/Learner mode) — Export is hidden from the chat row menu; Pin and Delete remain visible
+- [x] chexp-04: Setting ON + student — Export, Pin, and Delete are all visible in the chat row menu
+- [x] chexp-05: Setting OFF + non-student (admin/instructor mode) — Export is still visible (role wins over the tenant setting)
 
-Sub-resource tests (Links / Keys / Tools) still require `is_lti_accessible=true` on the backend because auto-enable-on-link-creation (`lti-sdk-01`) is not yet implemented in the SDK.
+---
 
-### Visibility (lti-01, lti-03, lti-04)
+## Journey 58: Embed Mode Chat Selection Sidebar Guard (4 checkpoints) — `journeys/58-embed-mode-chat-selection-sidebar-guard.spec.ts`
 
-- [x] lti-01: Admin sees the LTI tab visible by default on a fresh mentor without enabling the "Enable LTI launches" toggle (`is_lti_accessible=false`) — the `enabledThroughConfig` gate was removed in feat/1853
-- [x] lti-03: Admin disables "Enable LTI launches" in Settings and the LTI tab stays visible (the `is_lti_accessible` gate was removed from `MENTOR_SEGMENTS`)
-- [x] lti-04: Non-admin user does not see the LTI tab in the Edit Mentor modal (LTI segment remains admin-only)
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `hooks/use-embed-mode.ts`
 
-### Tab header + sub-tabs (lti-05)
+Regression guard for issue #2067 (LAIA-684): selecting a chat from the sidebar history inside the embed widget leaked the full admin sidebar (Agents, Workflows, Projects, Analytics, Management, Notifications, Support) to students. Root cause: `SidebarChatsSection.handleSelectRow` unconditionally called `router.push('/platform/<tenant>/<mentor>?session=<id>')` on every row click; `useEmbedMode` derives embed state purely from the URL, so the push silently stripped `?embed=true` and flipped the app out of embed mode mid-session. The fix (commit 67e74db2) navigates only when the current pathname is not already the mentor's own chat page — always false inside the embed widget — and otherwise selects the session via Redux + the `session_id` localStorage cache, repainting in place with no navigation at all. The test seeds two chats (so the click is a genuine cross-session selection, not a no-op on the already-active row), reloads into embed mode via a real navigation to the mentor's own URL with `?embed=true` appended (mirroring journey 13's `embedUrlFor()` pattern), then opens Chats and clicks the older row — asserting both that the panel repaints with that session's messages and that the URL/sidebar guard holds before and after the click.
 
-- [x] lti-05: Admin opens the LTI tab on an LTI-enabled mentor and sees the header and all four sub-tabs (Agent Links, Keys, Tools, Tool Endpoints)
-
-### Links sub-tab (lti-06..lti-08)
-
-- [x] lti-06: Admin opens the LTI Links sub-tab on a fresh mentor and sees the empty state when no links exist
-- [x] lti-07: Admin creates an LTI link and it appears in the links list
-- [x] lti-08: Admin edits (renames) an LTI link and the new name appears in the list while the old name is gone _(self-contained mentor: the backend allows a single LTI link per mentor and there is no delete-link helper, so a second create on the shared worker mentor after lti-07 would fail)_
-
-### Keys sub-tab (lti-10..lti-12)
-
-- [x] lti-10: Admin creates an LTI key and the key detail shows non-empty public key and JWK fields
-- [x] lti-11: Admin renames an LTI key and the new name appears in the list while the old name is gone
-- [x] lti-12: Admin deletes an LTI key and the key is no longer in the list
-
-### Tools sub-tab (lti-13..lti-14)
-
-- [x] lti-13: Admin opens the LTI Tools sub-tab and the platform-wide tools surface renders — the create button plus either the empty state or the existing tools list _(LTI tools are tenant-scoped, not mentor-scoped: a fresh mentor still lists every tool on the tenant, lti-14 residue persists with no delete-tool helper, and parallel workers can create tools at any moment, so a guaranteed-empty state is unreachable)_
-- [x] lti-14: Admin creates an LTI tool with a JWKS URL signing config and it appears in the tools list _(keys/tools are platform-wide and server-paginated at 10/page; the `LtiTab` page object walks pages to reveal a freshly-created row, and the worker fixture reaps stale e2e-named residue >2h old via `e2e/utils/lti-residue.ts` to keep the lists small)_ _(the raw-JWKS-JSON variant is intentionally uncovered for now: the SDK ToolModal sent `key_set` as a parsed object while the backend requires a JSON string — fixed on SDK branch feat/web-containers/1853; re-add the checkpoint once mentorai bumps to a release containing it)_
-
-### Tool Endpoints sub-tab (lti-16..lti-18)
-
-- [x] lti-16: Admin opens the Tool Endpoints sub-tab and all four endpoint URLs (redirect URI, login, deep linking, JWKS) are rendered non-empty
-- [x] lti-17: Admin copies the redirect URI endpoint URL and the copy button label flips to "Copied"
-- [x] lti-18: Admin opens the Tool Endpoints sub-tab and every endpoint URL is an absolute `https` URL on the `/lti/` path sharing one origin (built from `NEXT_PUBLIC_LEGACY_LMS_URL`)
-
-### SDK-pending (lti-sdk-01)
-
-- [ ] lti-sdk-01: PENDING (SDK dependency) — When an admin creates the first LTI link, `is_lti_accessible` is auto-enabled via the API without requiring the "Enable LTI launches" toggle to be turned on manually. Not yet implemented: `AgentLtiTab` exposes no post-create callback hook and there are no public LTI data-layer hooks in `@iblai/iblai-js`.
+- [x] embchat-01: Embed mode (`?embed=true`) sidebar shows only New Chat and Chats before any chat-history row is clicked (minimal-sidebar baseline)
+- [x] embchat-02: Clicking a chat-history row in embed mode repaints the chat panel with that session's messages without a client-side navigation
+- [x] embchat-03: REGRESSION GUARD — after selecting a chat from history in embed mode, the URL still carries `embed=true` and never gains a `?session=` param (pre-fix: the row click pushed a URL that stripped `embed=true`)
+- [x] embchat-04: REGRESSION GUARD — after selecting a chat from history in embed mode, Agents, Workflows, Projects, Analytics, Management, Notifications, and the Support footer link all remain absent from the sidebar
 
 ---
