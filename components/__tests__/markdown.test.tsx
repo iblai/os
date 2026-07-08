@@ -262,6 +262,35 @@ describe('Markdown Component', () => {
     });
 
     /**
+     * Test block LaTeX where a digit immediately follows the $$ delimiter
+     * Verifies the currency escape no longer corrupts the math delimiters
+     */
+    it('should render block math that opens with a digit as KaTeX', () => {
+      const { container } = render(
+        <Markdown>
+          {
+            '$$0.075 \\text{ L} \\times \\frac{1000 \\text{ mL}}{1 \\text{ L}} = 75 \\text{ mL}$$'
+          }
+        </Markdown>,
+      );
+      expect(container.querySelector('.katex')).toBeTruthy();
+      expect(container.textContent).not.toContain('$$');
+    });
+
+    /**
+     * Test inline LaTeX where a digit immediately follows the $ delimiter
+     * Verifies the currency escape no longer corrupts inline math delimiters
+     */
+    it('should render inline math that opens with a digit as KaTeX', () => {
+      const { container } = render(
+        <Markdown>
+          {'$250 \\text{ mL} \\times \\frac{1 \\text{ L}}{1000 \\text{ mL}}$'}
+        </Markdown>,
+      );
+      expect(container.querySelector('.katex')).toBeTruthy();
+    });
+
+    /**
      * Test currency dollar sign handling
      * Verifies that dollar signs before digits are escaped and rendered as literal $
      */
