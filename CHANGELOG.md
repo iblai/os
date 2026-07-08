@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.93.1](https://github.com/iblai/os/compare/v0.93.0...v0.93.1) (2026-07-08)
+
+### Bug Fixes
+
+* **chat:** preserve LaTeX delimiters in preprocessLaTeX currency escape ([7502422](https://github.com/iblai/os/commit/75024224f69060780e3646ea40375fe891c2ebb7))
+
+### Chores
+
+* normalize CHANGELOG formatting via prettier ([f60d24b](https://github.com/iblai/os/commit/f60d24bd81b32e88f65fa1ecc11de218cf279f91))
+
+### Tests
+
+* **chat:** cover LaTeX delimiter preservation and KaTeX rendering ([3a01172](https://github.com/iblai/os/commit/3a01172acfb5762d6b03f7edca93f70e8dfc4fc2))
+
 ## [0.93.0](https://github.com/iblai/os/compare/v0.92.4...v0.93.0) (2026-07-08)
 
 ### Features
