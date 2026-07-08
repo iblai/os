@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-07-07 | 513 checkpoints (491 covered, 2 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 59 journeys (58 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-07-07 | 522 checkpoints (500 covered, 2 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 61 journeys (60 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -993,7 +993,34 @@ Covers issue #2048 — "Hide Settings In the Dropdown list In User Mode". When a
 
 ---
 
-## Journey 57: Ecommerce Credits & Upgrade (10 checkpoints) — `journeys/57-ecommerce-credits-and-upgrade.spec.ts`
+## Journey 57: Chat History Export Toggle (5 checkpoints) — `journeys/57-chat-history-export-toggle.spec.ts`
+
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
+
+Covers issue #2068: a new tenant Advanced setting, `enable_chat_history_export` (org metadata boolean, default ON, rendered by the SDK's generic `AdvancedTab` metadata-switch list, label "Chat History Export"), gates the "Export" item in the sidebar Chats three-dot menu (`aria-label="Chat actions"`) COMBINED with the acting user's role: `canExport = !userIsStudent || metadata?.enable_chat_history_export !== false`. Non-students (admin/instructor) always see Export regardless of the setting; students only see it when the setting is ON or absent. "Student" is toggled via the same admin session using the nav-bar User/Admin `LearnerModeSwitch` (`aria-label` starting with "User mode") — the same technique already used by journey 42's "Non-Admin" describe block — rather than a separately-authenticated account, so the seeded chat stays visible to the acting session. Each test creates its own mentor via `createMentorPage.openAndCreate()` and restores both the tenant setting and the learner-mode toggle in a `finally` block so tests remain order-independent.
+
+- [x] chexp-01: Tenant Advanced tab renders a "Chat History Export" switch, ON by default
+- [x] chexp-02: Toggling the switch OFF persists across closing and reopening the Advanced tab (PATCH org metadata round trip)
+- [x] chexp-03: Setting OFF + student (admin in User/Learner mode) — Export is hidden from the chat row menu; Pin and Delete remain visible
+- [x] chexp-04: Setting ON + student — Export, Pin, and Delete are all visible in the chat row menu
+- [x] chexp-05: Setting OFF + non-student (admin/instructor mode) — Export is still visible (role wins over the tenant setting)
+
+---
+
+## Journey 58: Embed Mode Chat Selection Sidebar Guard (4 checkpoints) — `journeys/58-embed-mode-chat-selection-sidebar-guard.spec.ts`
+
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `hooks/use-embed-mode.ts`
+
+Regression guard for issue #2067 (LAIA-684): selecting a chat from the sidebar history inside the embed widget leaked the full admin sidebar (Agents, Workflows, Projects, Analytics, Management, Notifications, Support) to students. Root cause: `SidebarChatsSection.handleSelectRow` unconditionally called `router.push('/platform/<tenant>/<mentor>?session=<id>')` on every row click; `useEmbedMode` derives embed state purely from the URL, so the push silently stripped `?embed=true` and flipped the app out of embed mode mid-session. The fix (commit 67e74db2) navigates only when the current pathname is not already the mentor's own chat page — always false inside the embed widget — and otherwise selects the session via Redux + the `session_id` localStorage cache, repainting in place with no navigation at all. The test seeds two chats (so the click is a genuine cross-session selection, not a no-op on the already-active row), reloads into embed mode via a real navigation to the mentor's own URL with `?embed=true` appended (mirroring journey 13's `embedUrlFor()` pattern), then opens Chats and clicks the older row — asserting both that the panel repaints with that session's messages and that the URL/sidebar guard holds before and after the click.
+
+- [x] embchat-01: Embed mode (`?embed=true`) sidebar shows only New Chat and Chats before any chat-history row is clicked (minimal-sidebar baseline)
+- [x] embchat-02: Clicking a chat-history row in embed mode repaints the chat panel with that session's messages without a client-side navigation
+- [x] embchat-03: REGRESSION GUARD — after selecting a chat from history in embed mode, the URL still carries `embed=true` and never gains a `?session=` param (pre-fix: the row click pushed a URL that stripped `embed=true`)
+- [x] embchat-04: REGRESSION GUARD — after selecting a chat from history in embed mode, Agents, Workflows, Projects, Analytics, Management, Notifications, and the Support footer link all remain absent from the sidebar
+
+---
+
+## Journey 59: Ecommerce Credits & Upgrade (10 checkpoints) — `journeys/59-ecommerce-credits-and-upgrade.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/modals/modal-container.tsx`, `hooks/subscription/use-402-error-check.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`
 
