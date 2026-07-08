@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-07-07 | 512 checkpoints (490 covered, 2 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 60 journeys (59 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-07-07 | 522 checkpoints (500 covered, 2 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 61 journeys (60 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -1017,5 +1017,24 @@ Regression guard for issue #2067 (LAIA-684): selecting a chat from the sidebar h
 - [x] embchat-02: Clicking a chat-history row in embed mode repaints the chat panel with that session's messages without a client-side navigation
 - [x] embchat-03: REGRESSION GUARD — after selecting a chat from history in embed mode, the URL still carries `embed=true` and never gains a `?session=` param (pre-fix: the row click pushed a URL that stripped `embed=true`)
 - [x] embchat-04: REGRESSION GUARD — after selecting a chat from history in embed mode, Agents, Workflows, Projects, Analytics, Management, Notifications, and the Support footer link all remain absent from the sidebar
+
+---
+
+## Journey 59: Ecommerce Credits & Upgrade (10 checkpoints) — `journeys/59-ecommerce-credits-and-upgrade.spec.ts`
+
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/modals/modal-container.tsx`, `hooks/subscription/use-402-error-check.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`
+
+Full-lifecycle regression guard for the ecommerce credits/upgrade flow, run as a single serial test with `test.step()` per flow (state — platform id, mentor id, credit balance — carries across the whole run). A brand-new account signs up via the auth service's `/account/create` form and lands on the "main" tenant with a Free-plan trial balance. The credit balance dropdown (`@iblai/iblai-js/playwright` helpers), the profile dropdown (exactly Profile/Help/Log Out), the collapsed sidebar's visible top-level items, and every gated sidebar entry point (`components/modals/modal-container.tsx` renders the shared `UpgradePackageModal` from `@iblai/web-containers`, titled "Subscribe to unlock full features" with an "Upgrade for free" CTA) are all verified. The DM service's admin credit-cleanup endpoint (`${DM_URL}/api/service/credits/cleanup/`, authenticated with the `dm_token` written to localStorage) deterministically drains the balance to 0 rather than waiting on organic credit burn — this is what makes the "zero credits" checkpoints reproducible. On the "main" tenant, zero credits blocks chat submission and shows the same subscribe dialog; clicking "Upgrade for free" redirects to a zero-cost Stripe-hosted checkout (`hosted-payment-submit-button`) whose SSO redirect chain lands back on the app under a REAL (non-"main") platform id with a fresh Free-plan balance. From there, the profile dropdown's "Account" item opens the "User Profile" dialog (`@iblai/web-containers`' `UserProfileDropdown`/account modal), whose Billing tab (`?profileTab=billing`, `hooks/subscription/use-402-error-check.ts` also drives this URL injection on 402 for admins) shows the Plan/Credits sections via the SDK's `billing-plan-section`/`billing-credits-section` test ids. A second credit-cleanup + reload triggers the admin-only 402 path, which auto-opens the Billing tab directly (no subscribe dialog on non-"main" tenants) showing 0 credits. The Billing tab's real "Upgrade" button (`clickBillingUpgrade`) redirects to a real Stripe test-mode checkout; the test fills the `4242 4242 4242 4242` test card with a Uruguay billing country (removes the postal-code field) and submits, landing back on the same platform/mentor URL with the account modal auto-opening on a restored Premium-plan balance, after which chat continues to work. All Stripe-page assertions are written locale-proof (the hosted checkout renders in the browser locale — validated in French) using stable `data-testid`s, element ids, and currency/credit regexes rather than button text. Runs in a clean, unauthenticated context (`browser.newContext()`, no storageState). Skips when `DM_URL` or `ECOMMERCE_CREDIT_CLEANUP_TOKEN` are unset.
+
+- [x] ecu-01: New user signs up via `/account/create` and lands authenticated on `<base-url>/platform/main/<mentor-id>` with the mentor dropdown ready
+- [x] ecu-02: Credit balance dropdown shows a Free plan badge, a positive remaining balance, and an Upgrade Plan button on the main tenant
+- [x] ecu-03: Profile dropdown shows exactly Profile / Help / Log Out on a brand-new free-trial account
+- [x] ecu-04: Every gated sidebar entry (Agents > New Agent/My Agents, Workflows > My Workflows, Projects > My Projects, Analytics > Overview, Invites, Management, Integrations, Monetization, Advanced) opens the shared "Subscribe to unlock full features" dialog with an "Upgrade for free" CTA
+- [x] ecu-05: Zero credits (via the DM service credit-cleanup admin endpoint) blocks chat submission on the main tenant and surfaces the same subscribe dialog instead of an AI response
+- [x] ecu-06: Clicking "Upgrade for free" redirects to a zero-cost Stripe-hosted checkout; submitting it completes the SSO redirect chain onto a real (non-"main") platform id with a fresh Free-plan credit balance and working chat
+- [x] ecu-07: The profile dropdown's Account item opens the User Profile dialog; its Billing tab (`?profileTab=billing`) shows the Free plan, Current badge, Upgrade button, and a positive credit balance
+- [x] ecu-08: Zero credits on the upgraded (non-"main") tenant auto-opens the User Profile dialog on the Billing tab (admin 402 handling injects `?profileTab=billing`) showing 0 credits, instead of the subscribe dialog used on the main tenant
+- [x] ecu-09: The Billing tab's Upgrade button redirects to a real Stripe test-mode checkout; filling the 4242 test card, expiry, CVC, name, and Uruguay billing country completes payment
+- [x] ecu-10: Post-payment, the account modal auto-opens on the Billing tab showing the Premium plan and a Manage Billing button with a restored credit balance; chat continues to work with the new balance
 
 ---
