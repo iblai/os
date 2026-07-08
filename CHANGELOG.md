@@ -1,5 +1,43 @@
 # Changelog
 
+## [0.93.0](https://github.com/iblai/os/compare/v0.92.4...v0.93.0) (2026-07-08)
+
+### Features
+
+* ecommerce playwright full flow coverage with credit cleanup ([ceb5612](https://github.com/iblai/os/commit/ceb56121d056f34faab247af93c612b4aac41a9e))
+* ecommerce playwright full flow coverage with credit cleanup ([b463105](https://github.com/iblai/os/commit/b463105a33b7e5c6cddec87801367f7459e157fa))
+* ecommerce playwright full flow coverage with credit cleanup ([d7d3e67](https://github.com/iblai/os/commit/d7d3e6726d5768d749c685c2a721145ea4a72caa))
+* ecommerce playwright full flow coverage with credit cleanup > misleanding env example fixed ([de30e48](https://github.com/iblai/os/commit/de30e484bcfb78268a7cdf1119552026c20aab07))
+
+## [0.92.4](https://github.com/iblai/os/compare/v0.92.3...v0.92.4) (2026-07-08)
+
+### Bug Fixes
+
+- **sidebar:** hide chat export for students when tenant setting is off ([7854e52](https://github.com/iblai/os/commit/7854e521ebcb438e55d39ba1b615aaa67f5c9cda))
+- **sidebar:** preserve embed mode when selecting a chat from history ([67e74db](https://github.com/iblai/os/commit/67e74db2841c9585b31722885fbf84d37cb61e26)), closes [#2067](https://github.com/iblai/os/issues/2067)
+- **sidebar:** restore pre-rewrite chat-selection page routing ([b06c969](https://github.com/iblai/os/commit/b06c969b4122a872ca59a76dc5683f69868006e3)), closes [#2067](https://github.com/iblai/os/issues/2067)
+- **tests:** skip journey 43 for now ([13e5b89](https://github.com/iblai/os/commit/13e5b891ea5c40b7507199e404c1265788cdcbe2))
+
+### Chores
+
+- **deps:** bump @iblai/iblai-js to 1.22.2 ([0d6248b](https://github.com/iblai/os/commit/0d6248bf558c81d941757c1ebaa37d3f4f19a2a3))
+
+### Documentation
+
+- **e2e:** record journey 56 coverage ([57e0ba0](https://github.com/iblai/os/commit/57e0ba00d0a8b172dbd9f694adc580f0a3875e58))
+
+### Tests
+
+- **e2e:** add journey 56 for chat history export toggle ([78614c6](https://github.com/iblai/os/commit/78614c68bd91edeab3f7261ff8f71f2dc353a263))
+- **e2e:** add journey 57 for embed-mode chat-selection sidebar guard ([ae995a6](https://github.com/iblai/os/commit/ae995a610dc2dcb359f8fbe014618432d564309b))
+- **e2e:** fix flaky Export-gate assertions in journey 57 ([609aac1](https://github.com/iblai/os/commit/609aac1cf6bdb83b83dfbe7bc6f0264f55cc8169))
+
+## [0.92.3](https://github.com/iblai/os/compare/v0.92.2...v0.92.3) (2026-07-07)
+
+### Bug Fixes
+
+- **app:** foreground main window before navigating on popup return ([f1a8aa5](https://github.com/iblai/os/commit/f1a8aa5f88726b3a68e2235f69a332c5fcaa775b))
+
 ## [0.92.2](https://github.com/iblai/os/compare/v0.92.1...v0.92.2) (2026-07-07)
 
 ### Bug Fixes
