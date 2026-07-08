@@ -4,10 +4,10 @@
 
 ### Features
 
-* ecommerce playwright full flow coverage with credit cleanup ([ceb5612](https://github.com/iblai/os/commit/ceb56121d056f34faab247af93c612b4aac41a9e))
-* ecommerce playwright full flow coverage with credit cleanup ([b463105](https://github.com/iblai/os/commit/b463105a33b7e5c6cddec87801367f7459e157fa))
-* ecommerce playwright full flow coverage with credit cleanup ([d7d3e67](https://github.com/iblai/os/commit/d7d3e6726d5768d749c685c2a721145ea4a72caa))
-* ecommerce playwright full flow coverage with credit cleanup > misleanding env example fixed ([de30e48](https://github.com/iblai/os/commit/de30e484bcfb78268a7cdf1119552026c20aab07))
+- ecommerce playwright full flow coverage with credit cleanup ([ceb5612](https://github.com/iblai/os/commit/ceb56121d056f34faab247af93c612b4aac41a9e))
+- ecommerce playwright full flow coverage with credit cleanup ([b463105](https://github.com/iblai/os/commit/b463105a33b7e5c6cddec87801367f7459e157fa))
+- ecommerce playwright full flow coverage with credit cleanup ([d7d3e67](https://github.com/iblai/os/commit/d7d3e6726d5768d749c685c2a721145ea4a72caa))
+- ecommerce playwright full flow coverage with credit cleanup > misleanding env example fixed ([de30e48](https://github.com/iblai/os/commit/de30e484bcfb78268a7cdf1119552026c20aab07))
 
 ## [0.92.4](https://github.com/iblai/os/compare/v0.92.3...v0.92.4) (2026-07-08)
 
