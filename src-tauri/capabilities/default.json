@@ -52,6 +52,12 @@
     "core:webview:allow-create-webview-window",
     "opener:default",
     "shell:allow-open",
+    {
+      "identifier": "shell:allow-spawn",
+      "allow": [{ "name": "ghost", "cmd": "ghost", "args": ["mcp"] }]
+    },
+    "shell:allow-stdin-write",
+    "shell:allow-kill",
     "allow-open-external-url",
     "allow-navigate-to",
     "allow-get-os-type",
