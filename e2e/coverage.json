@@ -2,14 +2,14 @@
   "version": 2,
   "lastUpdated": "2026-07-07",
   "summary": {
-    "totalCheckpoints": 512,
-    "coveredCheckpoints": 490,
+    "totalCheckpoints": 522,
+    "coveredCheckpoints": 500,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 7,
     "pendingCheckpoints": 7,
     "percent": 100,
-    "totalJourneys": 60,
-    "activeJourneys": 59
+    "totalJourneys": 61,
+    "activeJourneys": 60
   },
   "journeys": [
     {
@@ -3346,6 +3346,70 @@
         {
           "id": "embchat-04",
           "description": "REGRESSION GUARD: after selecting a chat from history in embed mode, Agents, Workflows, Projects, Analytics, Management, Notifications, and the Support footer link remain absent from the sidebar — the full admin sidebar must not leak in",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "ecommerce-credits-and-upgrade",
+      "name": "Ecommerce Credits & Upgrade",
+      "spec": "59-ecommerce-credits-and-upgrade.spec.ts",
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
+        "components/modals/modal-container.tsx",
+        "hooks/subscription/use-402-error-check.ts",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "ecu-01",
+          "description": "New user signs up via /account/create and lands authenticated on <base-url>/platform/main/<mentor-id> with the mentor dropdown ready",
+          "status": "covered"
+        },
+        {
+          "id": "ecu-02",
+          "description": "Credit balance dropdown shows a Free plan badge, a positive remaining balance, and an Upgrade Plan button on the main tenant",
+          "status": "covered"
+        },
+        {
+          "id": "ecu-03",
+          "description": "Profile dropdown shows exactly Profile / Help / Log Out on a brand-new free-trial account",
+          "status": "covered"
+        },
+        {
+          "id": "ecu-04",
+          "description": "Every gated sidebar entry (Agents > New Agent/My Agents, Workflows > My Workflows, Projects > My Projects, Analytics > Overview, Invites, Management, Integrations, Monetization, Advanced) opens the shared \"Subscribe to unlock full features\" dialog with an \"Upgrade for free\" CTA",
+          "status": "covered"
+        },
+        {
+          "id": "ecu-05",
+          "description": "Zero credits (via the DM service credit-cleanup admin endpoint) blocks chat submission on the main tenant and surfaces the same subscribe dialog instead of an AI response",
+          "status": "covered"
+        },
+        {
+          "id": "ecu-06",
+          "description": "Clicking \"Upgrade for free\" redirects to a zero-cost Stripe-hosted checkout; submitting it completes the SSO redirect chain onto a real (non-\"main\") platform id with a fresh Free-plan credit balance and working chat",
+          "status": "covered"
+        },
+        {
+          "id": "ecu-07",
+          "description": "The profile dropdown's Account item opens the User Profile dialog; its Billing tab (?profileTab=billing) shows the Free plan, Current badge, Upgrade button, and a positive credit balance",
+          "status": "covered"
+        },
+        {
+          "id": "ecu-08",
+          "description": "Zero credits on the upgraded (non-\"main\") tenant auto-opens the User Profile dialog on the Billing tab (admin 402 handling injects ?profileTab=billing) showing 0 credits, instead of the subscribe dialog used on the main tenant",
+          "status": "covered"
+        },
+        {
+          "id": "ecu-09",
+          "description": "The Billing tab's Upgrade button redirects to a real Stripe test-mode checkout; filling the 4242 test card, expiry, CVC, name, and Uruguay billing country completes payment",
+          "status": "covered"
+        },
+        {
+          "id": "ecu-10",
+          "description": "Post-payment, the account modal auto-opens on the Billing tab showing the Premium plan and a Manage Billing button with a restored credit balance; chat continues to work with the new balance",
           "status": "covered"
         }
       ]
