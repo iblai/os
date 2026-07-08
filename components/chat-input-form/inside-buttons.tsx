@@ -18,7 +18,7 @@ import {
 import { X, BookOpen, Archive, Check, Terminal, Monitor } from 'lucide-react';
 import { toast } from 'sonner';
 import { DeepSearchIcon, CanvasIcon } from '@/components/icons/svg-icons';
-import { TOOLS } from '@iblai/iblai-js/web-utils';
+import { TOOLS, hasRemoteAiConfig } from '@iblai/iblai-js/web-utils';
 import {
   useGhostOs,
   isSystemControlEnabled,
@@ -84,15 +84,20 @@ export const InsideButtons = ({
   const [computerUseEnabled, setComputerUseEnabled] = useState(isSystemControlEnabled);
   const toggleComputerUse = () => {
     const next = !computerUseEnabled;
-    // Guards only when turning on (mirrors the old profile toggle). The chatbox
-    // has no inline notice space, so remind via toast instead of failing silently.
+    // Guard only when turning on. Computer Use runs on EITHER a large local model
+    // or the remote AI (DM OpenAI-compatible endpoint) — allow enabling when
+    // either backend is ready, so a local model is not required. The chatbox has
+    // no inline notice space, so remind via toast instead of failing silently.
     if (next) {
-      if (!isLocalLLMEnabled()) {
-        toast.warning(t('computerUseNeedsLocalModel'));
-        return;
-      }
-      if (!modelSupportsSystemControl(getLocalLLMModel(), COMPUTER_USE_MIN_MODEL_GB)) {
-        toast.warning(t('computerUseModelTooSmall'));
+      const localReady =
+        isLocalLLMEnabled() &&
+        modelSupportsSystemControl(getLocalLLMModel(), COMPUTER_USE_MIN_MODEL_GB);
+      if (!localReady && !hasRemoteAiConfig()) {
+        toast.warning(
+          isLocalLLMEnabled()
+            ? t('computerUseModelTooSmall')
+            : t('computerUseNeedsLocalModel'),
+        );
         return;
       }
     }
@@ -103,6 +108,14 @@ export const InsideButtons = ({
   };
 
   const allInsideButtons = [
+    {
+      name: 'Computer Use',
+      label: t('computerUse'),
+      icon: <Monitor className="h-4 w-4" />,
+      isActive: computerUseEnabled,
+      action: toggleComputerUse,
+      isEnabled: ghostOs.isAvailable && (isMacOS() || allowNonMacOSComputerUse()),
+    },
     {
       name: 'Canvas',
       label: t('canvas'),
@@ -144,14 +157,6 @@ export const InsideButtons = ({
       // the hidden dropdown, so this `action` lambda is unreachable.
       action: /* istanbul ignore next */ () => onOptionClick(TOOLS.MEMORY),
       isEnabled: memoryEnabled && !embedMode && !!username,
-    },
-    {
-      name: 'Computer Use',
-      label: t('computerUse'),
-      icon: <Monitor className="h-4 w-4" />,
-      isActive: computerUseEnabled,
-      action: toggleComputerUse,
-      isEnabled: ghostOs.isAvailable && (isMacOS() || allowNonMacOSComputerUse()),
     },
   ].filter((item) => item.isEnabled);
 
