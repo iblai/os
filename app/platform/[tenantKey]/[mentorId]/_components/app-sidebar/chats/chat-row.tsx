@@ -23,12 +23,14 @@ import { ChatRow, chatRowLabel } from './chat-row-label';
 function ChatThreeDotMenu({
   isPinned,
   isLoading,
+  canExport = true,
   onPinToggle,
   onExport,
   onDelete,
 }: {
   isPinned: boolean;
   isLoading: boolean;
+  canExport?: boolean;
   onPinToggle: () => void;
   onExport: () => void;
   onDelete: () => void;
@@ -76,14 +78,16 @@ function ChatThreeDotMenu({
           )}
           {isPinned ? t('unpin') : t('pin')}
         </DropdownMenuItem>
-        <DropdownMenuItem className="gap-2" onSelect={onExport}>
-          <Download
-            className="size-3.5 shrink-0"
-            strokeWidth={1.5}
-            aria-hidden
-          />
-          {t('export')}
-        </DropdownMenuItem>
+        {canExport && (
+          <DropdownMenuItem className="gap-2" onSelect={onExport}>
+            <Download
+              className="size-3.5 shrink-0"
+              strokeWidth={1.5}
+              aria-hidden
+            />
+            {t('export')}
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem className="gap-2" onSelect={onDelete}>
           <Trash2 className="size-3.5 shrink-0" strokeWidth={1.5} aria-hidden />
           {t('delete')}
@@ -99,6 +103,7 @@ export function ChatRowItem({
   onSelect,
   isPinned,
   isLoading,
+  canExport = true,
   onPinToggle,
   onExport,
   onDelete,
@@ -108,6 +113,7 @@ export function ChatRowItem({
   onSelect: () => void;
   isPinned: boolean;
   isLoading: boolean;
+  canExport?: boolean;
   onPinToggle: () => void;
   onExport: () => void;
   onDelete: () => void;
@@ -133,6 +139,7 @@ export function ChatRowItem({
         <ChatThreeDotMenu
           isPinned={isPinned}
           isLoading={isLoading}
+          canExport={canExport}
           onPinToggle={onPinToggle}
           onExport={onExport}
           onDelete={onDelete}

@@ -47,6 +47,8 @@ vi.mock('next-intl', () => ({
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock }),
+  usePathname: () => '/platform/tenant-a',
+  useParams: () => ({}),
 }));
 
 vi.mock('@/lib/hooks', () => ({
@@ -271,9 +273,7 @@ describe('ChatSearchDialog', () => {
     };
     const { props } = renderDialog();
     fireEvent.click(screen.getByRole('button', { name: 'First chat' }));
-    expect(pushMock).toHaveBeenCalledWith(
-      '/platform/tenant-a/mentor-1?session=sess-1',
-    );
+    expect(pushMock).toHaveBeenCalledWith('/platform/tenant-a/mentor-1');
     expect(props.onOpenChange).toHaveBeenCalledWith(false);
   });
 

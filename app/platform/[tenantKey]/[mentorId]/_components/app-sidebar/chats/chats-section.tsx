@@ -5,8 +5,9 @@ import * as React from 'react';
 import { ChevronDown, ChevronRight, MessageSquare } from 'lucide-react';
 
 import { useAppSelector } from '@/lib/hooks';
-import { selectSessionId } from '@iblai/iblai-js/web-utils';
+import { selectSessionId, useTenantMetadata } from '@iblai/iblai-js/web-utils';
 import { getUserName } from '@/features/utils';
+import { useUserIsStudent } from '@/hooks/use-user';
 import { cn } from '@/lib/utils';
 import {
   Collapsible,
@@ -51,6 +52,10 @@ export function SidebarChatsSection({
   const t = useTranslations('appSidebarIndex');
   const appSessionId = useAppSelector(selectSessionId);
   const resolvedUserId = username ?? getUserName();
+  const userIsStudent = useUserIsStudent();
+  const { metadata } = useTenantMetadata({ org: tenantKey });
+  const canExport =
+    !userIsStudent || metadata?.enable_chat_history_export !== false;
 
   const {
     pinned,
@@ -81,6 +86,7 @@ export function SidebarChatsSection({
       onSelect={() => handleSelectRow(row)}
       isPinned={kind === 'pinned'}
       isLoading={actingSessionId === row.session_id}
+      canExport={canExport}
       onPinToggle={() =>
         kind === 'pinned' ? handleUnpin(row) : handlePin(row)
       }

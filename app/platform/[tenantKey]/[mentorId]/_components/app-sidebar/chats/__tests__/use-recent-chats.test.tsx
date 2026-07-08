@@ -58,6 +58,8 @@ let mockIsFetchingNextPage = false;
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock }),
+  usePathname: () => '/platform/tenant-a',
+  useParams: () => ({}),
 }));
 
 vi.mock('@/lib/hooks', () => ({
@@ -349,9 +351,7 @@ describe('useRecentChats', () => {
       result.current.handleSelectRow(row);
     });
 
-    expect(pushMock).toHaveBeenCalledWith(
-      '/platform/tenant-a/mentor-1?session=new-sess',
-    );
+    expect(pushMock).toHaveBeenCalledWith('/platform/tenant-a/mentor-1');
     // Different session than the active one => state is torn down / repointed.
     expect(dispatchMock).toHaveBeenCalled();
     expect(onAfterNav).toHaveBeenCalled();

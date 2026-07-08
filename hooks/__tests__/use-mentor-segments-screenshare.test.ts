@@ -52,7 +52,10 @@ vi.mock('@/hooks/use-user', () => ({
 }));
 
 vi.mock('@/hooks/use-user-type', () => ({
-  useUserType: () => ({ isUserTypeAllowed: () => true }),
+  useUserType: () => ({
+    isUserTypeAllowed: () => true,
+    userType: UserType.ADMIN,
+  }),
 }));
 
 vi.mock('@/hooks/user-navigate', () => ({

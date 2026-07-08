@@ -493,7 +493,7 @@ describe('SettingsTab', () => {
     it('renders LTI Accessible toggle', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText('Allow LTI launches')).toBeInTheDocument();
+      expect(screen.getByText('Enable LTI launches')).toBeInTheDocument();
     });
 
     it('renders File Attachments toggle', () => {
@@ -627,7 +627,7 @@ describe('SettingsTab', () => {
         screen.getAllByLabelText('More info about chat access'),
       ).toHaveLength(2);
       expect(
-        screen.getByLabelText('More info about allow lti launches'),
+        screen.getByLabelText('More info about enable LTI launches'),
       ).toBeInTheDocument();
       expect(
         screen.getByLabelText('More info about enable file attachments'),
@@ -710,7 +710,7 @@ describe('SettingsTab', () => {
     it('toggles LTI accessible switch', () => {
       render(<SettingsTab />);
 
-      const ltiSwitch = screen.getByLabelText('Allow LTI launches');
+      const ltiSwitch = screen.getByLabelText('Enable LTI launches');
       expect(ltiSwitch).not.toBeChecked();
 
       fireEvent.click(ltiSwitch);
@@ -1511,7 +1511,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('Allow LTI launches')).toBeChecked();
+      expect(screen.getByLabelText('Enable LTI launches')).toBeChecked();
     });
 
     it('reflects show_attachment false in switch', () => {
@@ -1590,7 +1590,7 @@ describe('SettingsTab', () => {
 
       render(<SettingsTab />);
 
-      expect(screen.getByLabelText('Allow LTI launches')).not.toBeChecked();
+      expect(screen.getByLabelText('Enable LTI launches')).not.toBeChecked();
     });
 
     it('reflects enable_multi_query_rag true in switch', () => {
@@ -1680,7 +1680,7 @@ describe('SettingsTab', () => {
       expect(
         screen.getByLabelText('Enable voice recordings'),
       ).toBeInTheDocument();
-      expect(screen.getByLabelText('Allow LTI launches')).toBeInTheDocument();
+      expect(screen.getByLabelText('Enable LTI launches')).toBeInTheDocument();
     });
 
     it('has accessible remove image button', () => {

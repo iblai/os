@@ -13,6 +13,7 @@ import {
   CalendarClock,
   Clock,
   Grid,
+  GraduationCap,
   Key,
   MonitorSmartphone,
   FileWarning,
@@ -404,6 +405,27 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     navCategory: 'integrations',
   },
   {
+    value: MODALS.EDIT_MENTOR.tabs.lti,
+    label: 'LTI',
+    icon: GraduationCap,
+    // Admin-only for now: LTI launch configuration is a platform-admin
+    // concern and the backend doesn't yet expose an RBAC resource or a
+    // permission field for it (mirrors Tasks). The userTypes filter alone
+    // gates visibility — re-add `rbacResource` + `permissionFieldsCheck`
+    // once those land.
+    userTypes: [UserType.ADMIN],
+    permissionFieldsCheck: [],
+    mentorVisibility: [
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+    ],
+    // Always visible to admins — intentionally NOT gated on the "Enable LTI
+    // launches" (`is_lti_accessible`) toggle. LTI access is turned on inline
+    // when the first LTI link is created, so the tab must stay reachable even
+    // while the setting is still off.
+    navCategory: 'integrations',
+  },
+  {
     value: MODALS.EDIT_MENTOR.tabs.embed,
     label: 'Embed',
     icon: MonitorSmartphone,
@@ -575,7 +597,7 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
   const isVoiceCallEnabled: boolean =
     // @ts-ignore - show_voice_call exists on API but not typed
     mentorSettings?.show_voice_call ?? true;
-  const { isUserTypeAllowed } = useUserType(mentorSettings);
+  const { isUserTypeAllowed, userType } = useUserType(mentorSettings);
 
   // `isUserTypeAllowed` is a fresh function on every render of `useUserType`.
   // Stash it in a ref so we always read the latest version inside memos
@@ -605,6 +627,7 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
       tenantKey,
       mentorSettings,
       rbacPermissions,
+      userType,
       isMemsearchEnabled,
       isClawEnabled,
       clawConfigExists,

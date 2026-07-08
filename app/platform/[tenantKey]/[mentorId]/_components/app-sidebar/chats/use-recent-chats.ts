@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useDebounce } from 'use-debounce';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname, useParams } from 'next/navigation';
 
 import {
   chatApiSlice,
@@ -24,6 +24,7 @@ import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { LOCAL_STORAGE_KEYS } from '@/lib/constants';
 import { getUserName } from '@/features/utils';
+import { ProjectPageParams } from '@/lib/types';
 import eventBus, { RemoteEvents } from '@/lib/eventBus';
 import { exportMessagesToXlsx } from '../export-messages';
 
@@ -47,6 +48,9 @@ export function useRecentChats({
   onAfterNav,
 }: UseRecentChatsArgs) {
   const router = useRouter();
+  const pathname = usePathname();
+  const { projectId } = useParams<ProjectPageParams>();
+  const isChatPage = !!(pathname && /\/platform\/[^/]+\/[^/]+$/.test(pathname));
   const dispatch = useAppDispatch();
   // The message-loader effect in `useAdvancedChat` keys EXCLUSIVELY on
   // `cachedSessionId[mentorId]` (backed by localStorage `session_id`). Row
@@ -223,23 +227,19 @@ export function useRecentChats({
 
   // Helpers shared by both lists ---------------------------------------
 
-  const navHrefFor = (row: ChatRow): string | undefined => {
-    const m = row.mentor?.unique_id;
-    if (!m || !tenantKey) return undefined;
-    return `/platform/${tenantKey}/${m}?session=${encodeURIComponent(
-      String(row.session_id),
-    )}`;
-  };
-
-  // Selecting an existing chat. Navigating (`router.push(?session=...)`) is
-  // NOT enough on its own — nothing reads the query param back into state.
-  // We must also point the chat slice + the cached session id at the picked
-  // session so the loader effect re-fires and repaints the message panel.
-  // Clicking the already-active chat is a no-op for state (we only navigate /
-  // close the flyout) to avoid thrashing the in-flight session.
+  // Selecting an existing chat repaints the panel from state: the loader
+  // effect keys on the Redux session id + the localStorage `session_id`
+  // written below — nothing reads a `?session=` query param. So navigate ONLY
+  // when we're not already on this mentor's chat page (e.g. arriving from
+  // Projects / Analytics). When we're already on it — always the case inside
+  // the embed widget — skip the push: re-pushing the URL would strip params
+  // like `?embed=true`, flipping the app out of embed mode and leaking the
+  // full Agents/Projects sidebar (issue #2067). Selecting a chat inside a
+  // project keeps the project context in the route. Clicking the already-
+  // active chat is a no-op for state to avoid thrashing the in-flight session.
   const handleSelectRow = (row: ChatRow) => {
-    const href = navHrefFor(row);
-    if (!href) return;
+    const mentorUniqueId = row.mentor?.unique_id;
+    if (!mentorUniqueId || !tenantKey) return;
 
     if (row.session_id !== appSessionId) {
       // Different session: tear down any in-flight streaming/typing state and
@@ -264,7 +264,13 @@ export function useRecentChats({
       }
     }
 
-    router.push(href);
+    if (!isChatPage) {
+      if (projectId) {
+        router.push(`/platform/${tenantKey}/projects/${projectId}/${mentorId}`);
+      } else {
+        router.push(`/platform/${tenantKey}/${mentorId}`);
+      }
+    }
     onAfterNav?.();
   };
 

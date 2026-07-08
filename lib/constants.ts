@@ -56,6 +56,7 @@ export const MODALS = {
       datasets: 'datasets',
       api: 'api',
       embed: 'embed',
+      lti: 'lti',
       advanced_css: 'advanced_css',
       advanced_js: 'advanced_js',
       sandbox: 'sandbox',
@@ -157,6 +158,8 @@ export const CSS_CLASS_NAMES = {
   },
   APP_LAYOUT: {
     MAIN_CONTENT_AREA: 'chat-main-content-area',
+    GUIDED_SUGGESTED_PROMPTS_CONTAINER:
+      'chat-guided-suggested-prompts-container',
     GUIDED_SUGGESTED_PROMPTS: 'chat-guided-suggested-prompts',
     GUIDED_SUGGESTED_PROMPTS_REFRESH: 'chat-guided-suggested-prompts-refresh',
     WELCOME_CHAT_BUTTON: 'chat-welcome-button',
