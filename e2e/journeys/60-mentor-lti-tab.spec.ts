@@ -1,5 +1,5 @@
 /**
- * Journey 57 — Mentor LTI Tab
+ * Journey 60 — Mentor LTI Tab
  *
  * Covers the LTI top-level tab added to the Edit Mentor (Agent) modal. The tab
  * is rendered by the SDK's `AgentLtiTab` (`@iblai/iblai-js/web-containers/next`)
@@ -220,7 +220,7 @@ async function openLtiTabOnSharedMentor(
 
 // ---------------------------------------------------------------------------
 
-test.describe('Journey 57 — LTI tab visibility', () => {
+test.describe('Journey 60 — LTI tab visibility', () => {
   test.describe.configure({ mode: 'parallel' });
   test.setTimeout(240_000);
 
@@ -340,7 +340,7 @@ test.describe('Journey 57 — LTI tab visibility', () => {
   });
 });
 
-test.describe('Journey 57 — LTI tab sub-resource tests', () => {
+test.describe('Journey 60 — LTI tab sub-resource tests', () => {
   test.describe.configure({ mode: 'parallel' });
   test.setTimeout(240_000);
 
