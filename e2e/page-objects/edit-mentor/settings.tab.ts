@@ -40,6 +40,13 @@ export class SettingsTab {
   /** "Enable file attachments" toggle (Capabilities sub-tab, feat/1902) */
   readonly allowFileAttachmentsToggle: Locator;
   /**
+   * "Enable LTI launches" toggle (`is_lti_accessible`). Lives in the
+   * Capabilities sub-tab → Advanced section. The LTI top-level tab is always
+   * visible to admins regardless of this toggle; flipping it on is required
+   * before the backend allows creating sub-resources (links / keys / tools).
+   */
+  readonly enableLtiLaunchesToggle: Locator;
+  /**
    * "Filter PII from messages" — agent-level toggle for the privacy router
    * (`mentor.enable_privacy_router`). Lives in the Capabilities sub-tab.
    * Previously this lived as the master switch inside the Privacy tab body;
@@ -50,6 +57,19 @@ export class SettingsTab {
    * action select / entity chips / output filter.
    */
   readonly enablePrivacyRouterToggle: Locator;
+
+  /**
+   * Bound to `EditMentorPage.navigateToTab` (see its constructor). The modal
+   * only mounts the active category's segments, so when a preceding call
+   * switched the category (e.g. `LtiTab` activates Integrations), the
+   * Settings sub-tab triggers are not in the DOM. `selectSubTab` uses this
+   * to restore the Settings segment first; it no-ops when already active.
+   */
+  private navigateToTab?: (tabName: string) => Promise<void>;
+
+  bindTabNav(navigateToTab: (tabName: string) => Promise<void>): void {
+    this.navigateToTab = navigateToTab;
+  }
 
   constructor(page: Page, dialog: Locator) {
     this.page = page;
@@ -139,6 +159,13 @@ export class SettingsTab {
     this.allowFileAttachmentsToggle = dialog.getByRole('switch', {
       name: /enable file attachments/i,
     });
+    // Capabilities sub-tab → Advanced. Labelled "Enable LTI launches"
+    // (renamed from "Allow LTI launches" in feat/1853 for consistency with
+    // sibling "Enable …" toggles). Resolved by exact aria-label.
+    this.enableLtiLaunchesToggle = dialog.getByRole('switch', {
+      name: 'Enable LTI launches',
+      exact: true,
+    });
     // Capabilities sub-tab. Labelled "Filter PII from messages" — the only
     // surface that flips `enable_privacy_router` after the SDK removed the
     // in-tab master toggle from the Privacy tab.
@@ -177,6 +204,47 @@ export class SettingsTab {
    * Blocks until the success toast appears so the next
    * `useMentorSegments` re-render sees the updated CallConfiguration.
    */
+  /**
+   * Click the modal footer's Save button and resolve once the "Agent updated
+   * successfully" toast appears. Used only by `setEnableLtiLaunchesAndSave` —
+   * the other Capabilities `…AndSave` helpers keep the plain inline click,
+   * since only the LTI journey precedes its save with a category switch.
+   *
+   * Why this is not a plain `saveButton.click()`: saving invalidates the RTK
+   * Query cache, which remounts the modal body and can detach the footer Save
+   * button *mid-click* — Playwright then throws "element was detached from the
+   * DOM, retrying". Worse, because the LTI journey activates the Integrations
+   * category (to assert tab visibility) before flipping the capability, the
+   * remount can snap the modal back to Integrations, unmounting the Settings
+   * Save button entirely so the click never lands and times out (Journey 56
+   * lti-03 flake).
+   *
+   * Recovery is a single, explicit retry rather than a loop: if the first
+   * click doesn't produce the toast, walk the full modal hierarchy back to
+   * where the toggle was flipped — Configurations category → Settings segment
+   * → Capabilities sub-tab — via `selectSubTab('Capabilities')` (which itself
+   * restores the Configurations/Settings levels before selecting the sub-tab),
+   * then click Save once more and confirm the toast. Timeouts: enabled 10s,
+   * click 10s (so a detached/unmounted button fails fast into the retry
+   * instead of hanging), toast 30s.
+   */
+  private async clickSaveAndAwaitToast(): Promise<void> {
+    const toast = this.page.getByText(/agent updated successfully/i).first();
+    try {
+      await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
+      await this.saveButton.click({ timeout: 10_000 });
+      await expect(toast).toBeVisible({ timeout: 30_000 });
+    } catch {
+      // The save remounted the modal and snapped it off Settings before the
+      // click landed. Restore Configurations → Settings → Capabilities and
+      // click Save again.
+      await this.selectSubTab('Capabilities');
+      await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
+      await this.saveButton.click({ timeout: 10_000 });
+      await expect(toast).toBeVisible({ timeout: 30_000 });
+    }
+  }
+
   async setEnableVideoAndSave(target: boolean): Promise<void> {
     // The toggle lives in the Capabilities sub-tab. Panels are forceMounted
     // but CSS-hidden when inactive, so the switch is in the DOM yet not
@@ -263,6 +331,38 @@ export class SettingsTab {
     ).toBeVisible({ timeout: 30_000 });
   }
 
+  /** Read the current on/off state of the "Enable LTI launches" toggle. */
+  async isEnableLtiLaunchesEnabled(): Promise<boolean> {
+    return this.readSwitchState(this.enableLtiLaunchesToggle);
+  }
+
+  /**
+   * Idempotently set the "Enable LTI launches" toggle to the target state and
+   * click Save. The LTI top-level tab is always visible to admins; this toggle
+   * controls whether the backend actually allows LTI launches (`is_lti_accessible`),
+   * which is required before creating sub-resources (links / keys / tools).
+   *
+   * Resolves after the "Agent updated successfully" toast appears so the
+   * next `useMentorSegments` re-render sees the updated `is_lti_accessible`
+   * value from the invalidated RTK Query cache.
+   */
+  async setEnableLtiLaunchesAndSave(target: boolean): Promise<void> {
+    // Toggle lives in Settings → Capabilities sub-tab.
+    await this.selectSubTab('Capabilities');
+    await expect(this.enableLtiLaunchesToggle).toBeVisible({ timeout: 10_000 });
+    const isOn = await this.isEnableLtiLaunchesEnabled();
+    if (isOn === target) return;
+
+    await this.enableLtiLaunchesToggle.click();
+    await expect(this.enableLtiLaunchesToggle).toHaveAttribute(
+      'aria-checked',
+      String(target),
+      { timeout: 10_000 },
+    );
+
+    await this.clickSaveAndAwaitToast();
+  }
+
   /**
    * Settings is now split into Basic / Discovery / Capabilities sub-tabs.
    * Each interaction below auto-switches to the right sub-tab so callers
@@ -275,6 +375,12 @@ export class SettingsTab {
   async selectSubTab(
     name: 'Basic' | 'Discovery' | 'Capabilities',
   ): Promise<void> {
+    // Restore the Settings segment first — a preceding page-object call may
+    // have switched the modal to another category (LtiTab activates
+    // Integrations), unmounting these sub-tab triggers entirely.
+    if (this.navigateToTab) {
+      await this.navigateToTab('Settings');
+    }
     const tab = this.dialog.getByRole('tab', { name, exact: true });
     await expect(tab).toBeVisible({ timeout: 10_000 });
     const selected = await tab.getAttribute('aria-selected').catch(() => null);
