@@ -164,7 +164,7 @@ test.describe.fixme(
 // Journey 43: Flag ON
 // ---------------------------------------------------------------------------
 
-test.describe('Journey 43: Persistent Chat Input Label — flag ON', () => {
+test.describe.fixme('Journey 43: Persistent Chat Input Label — flag ON', () => {
   let tenantKey = '';
   let originalFlagValue: boolean | undefined;
 

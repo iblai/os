@@ -1,14 +1,14 @@
 {
   "version": 2,
-  "lastUpdated": "2026-07-02",
+  "lastUpdated": "2026-07-07",
   "summary": {
-    "totalCheckpoints": 503,
-    "coveredCheckpoints": 481,
+    "totalCheckpoints": 512,
+    "coveredCheckpoints": 490,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 8,
     "percent": 100,
-    "totalJourneys": 58,
-    "activeJourneys": 57
+    "totalJourneys": 60,
+    "activeJourneys": 59
   },
   "journeys": [
     {
@@ -3239,6 +3239,72 @@
         {
           "id": "nmv-04",
           "description": "Toggling to User mode a second time collapses the dropdown back down to exactly New Chat, confirming the fix holds across repeated toggles, not just the first one",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "chat-history-export-toggle",
+      "name": "Chat History Export Toggle",
+      "spec": "57-chat-history-export-toggle.spec.ts",
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "chexp-01",
+          "description": "Tenant Advanced tab renders a 'Chat History Export' switch, ON by default (SDK-driven org-metadata boolean, enable_chat_history_export)",
+          "status": "covered"
+        },
+        {
+          "id": "chexp-02",
+          "description": "Toggling the 'Chat History Export' switch OFF in the Advanced tab persists across closing and reopening the dialog (PATCH org metadata round trip)",
+          "status": "covered"
+        },
+        {
+          "id": "chexp-03",
+          "description": "With the setting OFF, a student (admin toggled into User/Learner mode) does not see Export in a chat row's three-dot menu, but still sees Pin and Delete",
+          "status": "covered"
+        },
+        {
+          "id": "chexp-04",
+          "description": "With the setting ON, a student (admin toggled into User/Learner mode) sees Export, Pin, and Delete in a chat row's three-dot menu",
+          "status": "covered"
+        },
+        {
+          "id": "chexp-05",
+          "description": "With the setting OFF, a non-student (admin/instructor mode) still sees Export in a chat row's three-dot menu — role wins over the tenant setting",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "embed-mode-chat-selection-sidebar-guard",
+      "name": "Embed Mode Chat Selection Sidebar Guard",
+      "spec": "58-embed-mode-chat-selection-sidebar-guard.spec.ts",
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
+        "hooks/use-embed-mode.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "embchat-01",
+          "description": "Embed mode (?embed=true) sidebar shows only New Chat and Chats before any chat-history row is clicked (minimal-sidebar baseline)",
+          "status": "covered"
+        },
+        {
+          "id": "embchat-02",
+          "description": "Clicking a chat-history row in embed mode repaints the chat panel with that session's messages without a client-side navigation (handleSelectRow skips router.push when already on the mentor's chat page)",
+          "status": "covered"
+        },
+        {
+          "id": "embchat-03",
+          "description": "REGRESSION GUARD (issue #2067 / LAIA-684): after selecting a chat from history in embed mode, the URL still carries embed=true and never gains a ?session= param — on the pre-fix code the row click pushed /platform/<tenant>/<mentor>?session=<id>, stripping embed=true and flipping the app out of embed mode",
+          "status": "covered"
+        },
+        {
+          "id": "embchat-04",
+          "description": "REGRESSION GUARD: after selecting a chat from history in embed mode, Agents, Workflows, Projects, Analytics, Management, Notifications, and the Support footer link remain absent from the sidebar — the full admin sidebar must not leak in",
           "status": "covered"
         }
       ]
