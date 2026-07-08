@@ -56,8 +56,8 @@ export async function fetchMentorPublicMeta(
   try {
     const res = await fetch(url, {
       headers: { Accept: 'application/json' },
-      // Cache briefly; generateMetadata already runs per-request (dynamic).
-      next: { revalidate: 300 },
+      // Never cache — always reflect the mentor's current public settings.
+      cache: 'no-store',
     });
     if (!res.ok) return null;
 

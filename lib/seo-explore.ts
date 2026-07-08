@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 
 import { config } from '@/lib/config';
+import { MENTOR_VISIBILITY_VALUES } from '@/lib/constants';
 import { buildMetadata, SITE_NAME } from '@/lib/seo';
 
 /**
@@ -33,7 +34,7 @@ export async function fetchTenantAgentNames(
   try {
     const res = await fetch(url, {
       headers: { Accept: 'application/json' },
-      next: { revalidate: 300 },
+      cache: 'no-store',
     });
     if (!res.ok) return [];
 
@@ -41,6 +42,14 @@ export async function fetchTenantAgentNames(
     const results = Array.isArray(data?.results) ? data.results : [];
 
     return results
+      .filter(
+        // Defence-in-depth: only surface agents anyone can view, so private /
+        // tenant-restricted agent names never leak into the public meta,
+        // regardless of what the endpoint returns.
+        (item) =>
+          (item as Record<string, unknown>)?.mentor_visibility ===
+          MENTOR_VISIBILITY_VALUES.ANYONE,
+      )
       .map((item) => {
         const m = item as Record<string, unknown>;
         const name = m?.name ?? m?.display_name ?? m?.mentor_name;
