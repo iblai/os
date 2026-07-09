@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.95.0](https://github.com/iblai/os/compare/v0.94.0...v0.95.0) (2026-07-09)
+
+### Features
+
+* **tauri:** lock a build to a single tenant ([8429e32](https://github.com/iblai/os/commit/8429e32c5561a632df979b3c422b6a57e44e2d8d))
+
+### CI
+
+* reuse macOS DMG workflow with versioning and README downloads ([0081075](https://github.com/iblai/os/commit/0081075a8f279bbeda51300b4a40f776ec996f3a))
+
 ## [0.94.0](https://github.com/iblai/os/compare/v0.93.1...v0.94.0) (2026-07-08)
 
 ### Bug Fixes
