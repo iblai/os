@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.95.1](https://github.com/iblai/os/compare/v0.95.0...v0.95.1) (2026-07-09)
+
+### Bug Fixes
+
+* **test:** repair chat-input-form unit suite red on main ([87cf07c](https://github.com/iblai/os/commit/87cf07ccb779548e3e8171c819e20754c981e82d))
+
+### Documentation
+
+* **readme:** document IBL_TENANT & IBL_ALLOW_IN_APP_PURCHASE build flags ([3b486c5](https://github.com/iblai/os/commit/3b486c57bef79b50a244bf5e813c400c3fffc079))
+
 ## [0.95.0](https://github.com/iblai/os/compare/v0.94.0...v0.95.0) (2026-07-09)
 
 ### Features
