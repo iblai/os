@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useTranslations } from 'next-intl';
+import { useSearchParams } from 'next/navigation';
 import { useDebounce } from 'use-debounce';
 import { Search, Loader2 } from 'lucide-react';
 
@@ -36,7 +37,16 @@ interface ExplorePageContentProps {
 
 export function ExplorePageContent({ tenantKey }: ExplorePageContentProps) {
   const t = useTranslations('exploreExplorePageContent');
-  const [searchQuery, setSearchQuery] = React.useState('');
+  // `?q=` seeds the search box — the navbar's global search bar routes
+  // here with the query. The effect below keeps the box in sync when a
+  // new search is submitted while already on the Explore page (same
+  // route, so the component doesn't remount).
+  const searchParams = useSearchParams();
+  const searchParamQuery = searchParams?.get('q') ?? '';
+  const [searchQuery, setSearchQuery] = React.useState(searchParamQuery);
+  React.useEffect(() => {
+    if (searchParamQuery) setSearchQuery(searchParamQuery);
+  }, [searchParamQuery]);
   const [debouncedSearch] = useDebounce(searchQuery, 500);
   const [filters, setFilters] = React.useState<ExplorePageFilters>({
     categories: null,

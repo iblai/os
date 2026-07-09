@@ -1,6 +1,7 @@
 import { test, expect } from '../fixtures/mentor-test';
 import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
+import { safeWaitForURL } from '../utils/navigation';
 import { getCurrentTenantShowPaywall } from '@iblai/iblai-js/playwright';
 
 test.describe('Journey 28: App Overview & Navigation UI — Non-Admin', () => {
@@ -60,6 +61,46 @@ test.describe('Journey 28: App Overview & Navigation UI — Non-Admin', () => {
       .catch(() => false);
     // Vector document button is optional — just verify the page loaded
     expect(typeof visible).toBe('boolean');
+  });
+
+  // ov-13
+  test('non-admin goes to the platform navbar and sees the global search bar', async ({
+    nonadminNavbarPage,
+  }) => {
+    // Invariant SDK chrome (PlatformNavbar) — present for both admin and
+    // non-admin, logged-in and anonymous users, on every non-embed page.
+    await expect(nonadminNavbarPage.searchForm).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(nonadminNavbarPage.searchButton).toBeVisible();
+    await expect(nonadminNavbarPage.searchInput).toBeVisible();
+    await expect(nonadminNavbarPage.searchInput).toHaveAttribute(
+      'type',
+      'search',
+    );
+  });
+
+  // ov-14
+  test('non-admin submits a query in the navbar search bar and lands on the explore page with the search pre-filled', async ({
+    nonadminPage,
+    nonadminNavbarPage,
+    nonadminExplorePage,
+  }) => {
+    const query = 'E2E Global Search';
+
+    await nonadminNavbarPage.submitSearch(query);
+    await safeWaitForURL(nonadminPage, /\/explore(\?.*)?$/, {
+      timeout: 30_000,
+    });
+
+    expect(nonadminPage.url()).toContain(`q=${encodeURIComponent(query)}`);
+    await waitForPageReady(nonadminPage);
+
+    // explore-page-content.tsx seeds its own "Search agents" textbox from
+    // the `?q=` param on mount.
+    await expect(nonadminExplorePage.searchInput).toHaveValue(query, {
+      timeout: 20_000,
+    });
   });
 });
 

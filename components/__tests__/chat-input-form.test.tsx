@@ -45,6 +45,24 @@ const mockUseModelFileUploadCapabilities = vi.hoisted(() => vi.fn());
 const mockCheckRbacPermission = vi.hoisted(() => vi.fn(() => true));
 
 // Mock all dependencies
+// ChatInputForm destructures `useParams()` (mentorId); the real
+// next/navigation returns null outside an app-router context in jsdom.
+vi.mock('next/navigation', () => ({
+  useParams: () => ({ tenantKey: 'tenant-a', mentorId: 'mentor-1' }),
+  usePathname: () => '/platform/tenant-a/mentor-1',
+  useSearchParams: () => new URLSearchParams(),
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+}));
+
+// The chat-privacy signal is network-backed (chatPrivacyApiSlice, whose
+// middleware isn't mounted on the test store) — stub the hook.
+vi.mock('@iblai/iblai-js/web-containers', () => ({
+  useChatPrivacy: () => ({
+    effective: 'enabled',
+    isEffectiveReady: true,
+  }),
+}));
+
 vi.mock('react-responsive', () => ({
   useMediaQuery: vi.fn(() => mockIsTabletOrMobile),
 }));
@@ -334,6 +352,11 @@ const defaultChatSliceState = {
   activeTab: 'default',
   chats: {
     default: [],
+  },
+  // SDK components inside ChatInputForm select the active session via
+  // `sessionIds[activeTab]` (web-utils selectSessionId).
+  sessionIds: {
+    default: 'test-session',
   },
 };
 

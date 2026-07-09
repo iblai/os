@@ -1,12 +1,12 @@
 {
   "version": 2,
-  "lastUpdated": "2026-07-08",
+  "lastUpdated": "2026-07-09",
   "summary": {
-    "totalCheckpoints": 545,
-    "coveredCheckpoints": 519,
+    "totalCheckpoints": 547,
+    "coveredCheckpoints": 520,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 7,
-    "pendingCheckpoints": 7,
+    "pendingCheckpoints": 8,
     "percent": 100,
     "totalJourneys": 62,
     "activeJourneys": 61
@@ -1570,7 +1570,8 @@
         "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
         "components/ui/hover-card.tsx",
         "components/header.tsx",
-        "components/header/profile-button.tsx"
+        "components/header/profile-button.tsx",
+        "app/platform/[tenantKey]/[mentorId]/explore/_components/explore-page-content.tsx"
       ],
       "checkpoints": [
         {
@@ -1632,6 +1633,16 @@
           "id": "ov-12",
           "description": "Admin: nav does not overflow on mobile when credit balance is hidden; LLM name span stays ≤150px",
           "status": "covered"
+        },
+        {
+          "id": "ov-13",
+          "description": "Global navbar search bar (SDK PlatformNavbar, right-hand cluster) is visible for both admin and non-admin users: role=search form containing a type=search input and submit button, both with accessible name 'Search'",
+          "status": "covered"
+        },
+        {
+          "id": "ov-14",
+          "description": "Submitting a query in the navbar search bar navigates to /platform/<tenantKey>/explore?q=<query> and the Explore page's 'Search agents' textbox is pre-filled from the ?q= param (verified passing in isolated local runs against a live server; parked as pending because chained runs in this sandbox hit pre-existing session-expiry/re-auth churn in navigateToMentorApp unrelated to this feature)",
+          "status": "pending"
         }
       ]
     },

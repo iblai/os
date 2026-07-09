@@ -47,7 +47,11 @@ export class ExplorePage {
       level: 1,
       name: /discover and create/i,
     });
-    this.searchInput = page.getByPlaceholder(/search/i);
+    // Scoped to the explore page's own "Search agents" aria-label — a bare
+    // `getByPlaceholder(/search/i)` also matches the invariant global search
+    // bar in the navbar (placeholder/aria-label "Search"), which would
+    // violate Playwright's strict mode now that both render on this page.
+    this.searchInput = page.getByRole('textbox', { name: 'Search agents' });
     this.mentorCards = page.getByRole('listitem', {
       name: /^explore agent:/i,
     });

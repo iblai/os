@@ -3,7 +3,12 @@
 import React from 'react';
 import { useTranslations } from 'next-intl';
 import Image from 'next/image';
-import { useParams, usePathname, useSearchParams } from 'next/navigation';
+import {
+  useParams,
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from 'next/navigation';
 
 import {
   PenSquare,
@@ -32,9 +37,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import {
-  ChatPrivacyToggle,
-  CreditBalance,
-  NotificationDropdown,
+  PlatformNavbar,
+  isPlatformNavbarCreditBalanceVisible,
 } from '@iblai/iblai-js/web-containers';
 import { UserProfileModal } from '@iblai/iblai-js/web-containers/next';
 import { CreateMentorModal } from '@/components/modals/create-mentor-modal';
@@ -61,7 +65,6 @@ import {
   cn,
   getLLMProviderDetails,
   isLoggedIn,
-  isStripeActivated,
   redirectToAuthSpa,
   redirectToAuthSpaJoinTenant,
 } from '@/lib/utils';
@@ -95,7 +98,6 @@ import {
 } from '@/hooks/use-tauri-offline';
 import { isTauriApp } from '@/types/tauri';
 import { useFreeTrial } from '@/hooks/use-free-trial';
-import { Tenant } from '@iblai/iblai-js/web-utils';
 
 /**
  * Nav-only "New Chat" entry. Always shown — it has no permissioned content,
@@ -152,7 +154,6 @@ export function NavBar() {
   // toggle in the navbar immediately hides admin-only chrome like the
   // CreditBalance / Billing icon and the sidebar admin items.
   const isLiveAdmin = isAdmin && !userIsStudent;
-  const canViewCreditCoinComponent = isLiveAdmin || userOnFreeTrial();
   const { executeWithTrialCheck, FreeTrialDialog, closeModal, isModalOpen } =
     useShowFreeTrialDialog();
 
@@ -178,8 +179,6 @@ export function NavBar() {
     mentorSettingsCombinedPublicAndPrivate?.mentorVisibility ===
       MentorVisibilityEnum.VIEWABLE_BY_ANYONE &&
     mentorSettingsCombinedPublicAndPrivate?.allowAnonymous === false;
-
-  const loginButtonLabel = requiresLoginForChat ? t('logIn') : t('logIn');
 
   const handleLoginClick = React.useCallback(() => {
     if (requiresLoginForChat && tenantKey) {
@@ -430,12 +429,42 @@ export function NavBar() {
 
   const visibleToLoggedInUsersOnly = !isAccessingPublicRoute || isLoggedIn();
 
+  // Inputs for the INVARIANT credit-balance visibility formula, which now
+  // lives in the SDK's PlatformNavbar (`stripeEnabled && (show_paywall ||
+  // main tenant) && (live admin || free trial) && logged in`). The exported
+  // predicate below reproduces the exact render decision so layout that
+  // depends on it (the LLM-selector label width) stays in sync.
+  const creditBalanceConfig = {
+    tenantKey,
+    currentTenant,
+    stripeEnabled: config.stripeEnabled() === 'true',
+    isLiveAdmin,
+    userOnFreeTrial: userOnFreeTrial(),
+    mainPlatformKey: config.mainTenantKey(),
+    currentUserEmail: getUserEmail(),
+    username: getUserName(),
+  };
   const creditBalanceComponentIsDisplayed =
     !embedMode &&
-    visibleToLoggedInUsersOnly &&
-    isStripeActivated(currentTenant as Tenant) &&
-    canViewCreditCoinComponent &&
-    isLoggedIn();
+    isPlatformNavbarCreditBalanceVisible(
+      creditBalanceConfig,
+      visibleToLoggedInUsersOnly,
+    );
+
+  const router = useRouter();
+  // The invariant navbar search routes to the Explore page, seeding its
+  // search box via `?q=` (see explore-page-content.tsx).
+  const handleSearchSubmit = React.useCallback(
+    (query: string) => {
+      if (!tenantKey) return;
+      router.push(
+        `/platform/${tenantKey}/explore${
+          query ? `?q=${encodeURIComponent(query)}` : ''
+        }`,
+      );
+    },
+    [router, tenantKey],
+  );
 
   if (hideNavbar) {
     return <></>;
@@ -457,119 +486,117 @@ export function NavBar() {
     );
   }
 
-  return (
+  // VARIABLE left cluster (per-SPA): mobile sidebar toggle, LLM selector,
+  // mentor dropdown. Handed to the SDK shell as the `left` slot.
+  const leftCluster = (
     <>
-      <nav className="z-10 mb-4 flex h-16 items-center border-b border-[#D0E0FF] bg-white pr-4">
-        <div className="flex items-center">
-          {/* Add drawer toggle button for tablet view */}
-          {isMobile && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="ml-4 cursor-pointer"
-                    onClick={toggleSidebar}
-                    aria-label={
-                      openSidebar ? t('closeSidebar') : t('openSidebar')
-                    }
-                    data-testid="(Close|Open) sidebar"
-                  >
-                    <Menu className="h-5 w-5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent className="ibl-tooltip-content" side="right">
-                  {t('toggleSidebar')}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
+      {/* Add drawer toggle button for tablet view */}
+      {isMobile && (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="ml-4 cursor-pointer"
+                onClick={toggleSidebar}
+                aria-label={openSidebar ? t('closeSidebar') : t('openSidebar')}
+                data-testid="(Close|Open) sidebar"
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent className="ibl-tooltip-content" side="right">
+              {t('toggleSidebar')}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
 
-          <div className="flex items-center pl-2 md:pl-4">
-            {isOnChatPage && isAdmin && !userIsStudent && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="flex cursor-pointer items-center gap-1 text-sm font-medium text-[#646464] transition-colors hover:text-[#484848]"
-                    onClick={() =>
-                      !userIsVisiting && setIsProviderSelectionOpen(true)
-                    }
-                    aria-label={t('llmModelSelector')}
-                  >
-                    <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white">
-                      {llmProviderDetails?.logo ? (
-                        <Image
-                          src={llmProviderDetails.logo}
-                          alt={`${selectedMentorCategory} model logo`}
-                          className="h-5 w-5 object-contain"
-                          height={32}
-                          width={32}
-                          loading="lazy"
-                        />
-                      ) : (
-                        <Bot />
-                      )}
-                    </div>
-                    <span
-                      className={cn(
-                        // Hidden below sm; the name is shown in the tooltip.
-                        'hidden max-w-[150px] overflow-hidden text-ellipsis whitespace-nowrap sm:block',
-                        creditBalanceComponentIsDisplayed
-                          ? 'max-w-[100px] md:max-w-[150px]'
-                          : '',
-                      )}
-                    >
-                      {selectedMentorCategory}
-                    </span>
-                    {!userIsStudent && (
-                      <ChevronDown className="h-4 w-4 text-gray-500" />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent className="ibl-tooltip-content" side="bottom">
-                  {selectedMentorCategory ||
-                    (isAdmin ? t('selectModel') : selectedMentorName)}
-                </TooltipContent>
-              </Tooltip>
-            )}
-
-            {!pathname.includes('/explore') &&
-              !isWorkflowsPage &&
-              mentorId &&
-              (isPromptGalleryOrAnalytics ? (
-                <div className="flex items-center gap-1 text-sm font-medium text-[#646464]">
-                  <Avatar className="mr-1 h-5 w-5">
-                    <AvatarImage
-                      src={selectedAnalyticsMentor?.profileImage ?? ''}
-                      alt={selectedAnalyticsMentor?.name ?? ''}
+      <div className="flex items-center pl-2 md:pl-4">
+        {isOnChatPage && isAdmin && !userIsStudent && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                className="flex cursor-pointer items-center gap-1 text-sm font-medium text-[#646464] transition-colors hover:text-[#484848]"
+                onClick={() =>
+                  !userIsVisiting && setIsProviderSelectionOpen(true)
+                }
+                aria-label={t('llmModelSelector')}
+              >
+                <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white">
+                  {llmProviderDetails?.logo ? (
+                    <Image
+                      src={llmProviderDetails.logo}
+                      alt={`${selectedMentorCategory} model logo`}
+                      className="h-5 w-5 object-contain"
+                      height={32}
+                      width={32}
+                      loading="lazy"
                     />
-                    <AvatarFallback>
-                      {selectedAnalyticsMentor?.name?.substring(0, 2)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span>{selectedAnalyticsMentor?.name}</span>
+                  ) : (
+                    <Bot />
+                  )}
                 </div>
-              ) : hasDropdownItems ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    className="flex cursor-pointer items-center gap-2 text-sm font-medium text-[#646464] transition-colors hover:text-[#484848]"
-                    asChild
-                  >
-                    <Button
-                      variant="ghost"
-                      className="flex cursor-pointer items-center gap-1"
-                      aria-label={t('selectedAgentDropdownButton')}
-                    >
-                      <User className="h-4 w-4 text-[#646464]" />
-                      <span className="hidden sm:block">
-                        {selectedMentorName}
-                      </span>
-                      <ChevronDown className="h-4 w-4 text-gray-500" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  {/*
+                <span
+                  className={cn(
+                    // Hidden below sm; the name is shown in the tooltip.
+                    'hidden max-w-[150px] overflow-hidden text-ellipsis whitespace-nowrap sm:block',
+                    creditBalanceComponentIsDisplayed
+                      ? 'max-w-[100px] md:max-w-[150px]'
+                      : '',
+                  )}
+                >
+                  {selectedMentorCategory}
+                </span>
+                {!userIsStudent && (
+                  <ChevronDown className="h-4 w-4 text-gray-500" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent className="ibl-tooltip-content" side="bottom">
+              {selectedMentorCategory ||
+                (isAdmin ? t('selectModel') : selectedMentorName)}
+            </TooltipContent>
+          </Tooltip>
+        )}
+
+        {!pathname.includes('/explore') &&
+          !isWorkflowsPage &&
+          mentorId &&
+          (isPromptGalleryOrAnalytics ? (
+            <div className="flex items-center gap-1 text-sm font-medium text-[#646464]">
+              <Avatar className="mr-1 h-5 w-5">
+                <AvatarImage
+                  src={selectedAnalyticsMentor?.profileImage ?? ''}
+                  alt={selectedAnalyticsMentor?.name ?? ''}
+                />
+                <AvatarFallback>
+                  {selectedAnalyticsMentor?.name?.substring(0, 2)}
+                </AvatarFallback>
+              </Avatar>
+              <span>{selectedAnalyticsMentor?.name}</span>
+            </div>
+          ) : hasDropdownItems ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className="flex cursor-pointer items-center gap-2 text-sm font-medium text-[#646464] transition-colors hover:text-[#484848]"
+                asChild
+              >
+                <Button
+                  variant="ghost"
+                  className="flex cursor-pointer items-center gap-1"
+                  aria-label={t('selectedAgentDropdownButton')}
+                >
+                  <User className="h-4 w-4 text-[#646464]" />
+                  <span className="hidden max-w-[180px] truncate sm:block">
+                    {selectedMentorName}
+                  </span>
+                  <ChevronDown className="h-4 w-4 text-gray-500" />
+                </Button>
+              </DropdownMenuTrigger>
+              {/*
                     Intrinsic width: with the SDK's
                     `grid-template-columns: repeat(N, minmax(11rem, 1fr))`,
                     each visible column claims its 11rem and the popup
@@ -579,111 +606,101 @@ export function NavBar() {
                     + `overflow-y-auto` keep the popup inside small
                     viewports for users with long item lists.
                   */}
-                  <DropdownMenuContent
-                    align="start"
-                    className="max-h-[80vh] w-auto max-w-[90vw] min-w-[260px] overflow-y-auto rounded-md border border-gray-200 bg-white p-2 shadow-lg"
-                  >
-                    <CategorizedDropdownMenu
-                      categories={
-                        MENTOR_SEGMENT_NAV_CATEGORIES as ReadonlyArray<CategoryConfig>
-                      }
-                      items={categorizedDropdownItems}
-                      onItemSelect={handleSegmentClick}
-                      topAction={{
-                        value: NEW_CHAT_NAV_ITEM.value,
-                        label: t('newChat'),
-                        icon: NEW_CHAT_NAV_ITEM.icon,
-                      }}
-                      footerAction={
-                        showForkButton
-                          ? {
-                              value: FORK_ACTION_VALUE,
-                              label: t('modify'),
-                              icon: GitFork,
-                              disabled: isForkingMentor,
-                            }
-                          : undefined
-                      }
-                    />
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <Button
-                  variant="ghost"
-                  className="flex items-center gap-1 text-sm font-medium text-[#646464]"
-                  aria-label={t('selectedAgent')}
-                >
-                  <User className="h-4 w-4 text-[#646464]" />
-                  <span className="hidden sm:block">{selectedMentorName}</span>
-                </Button>
-              ))}
-          </div>
-        </div>
-
-        <div className="ml-auto flex items-center gap-0 xl:gap-6">
-          {visibleToLoggedInUsersOnly && isAdmin && !userIsVisiting && (
-            <div className="hidden items-center gap-2 xl:flex">
-              <span
-                className={cn(
-                  'text-sm',
-                  userIsStudent ? 'font-semibold' : 'text-gray-500',
-                )}
+              <DropdownMenuContent
+                align="start"
+                className="max-h-[80vh] w-auto max-w-[90vw] min-w-[260px] overflow-y-auto rounded-md border border-gray-200 bg-white p-2 shadow-lg"
               >
-                {t('user')}
+                <CategorizedDropdownMenu
+                  categories={
+                    MENTOR_SEGMENT_NAV_CATEGORIES as ReadonlyArray<CategoryConfig>
+                  }
+                  items={categorizedDropdownItems}
+                  onItemSelect={handleSegmentClick}
+                  topAction={{
+                    value: NEW_CHAT_NAV_ITEM.value,
+                    label: t('newChat'),
+                    icon: NEW_CHAT_NAV_ITEM.icon,
+                  }}
+                  footerAction={
+                    showForkButton
+                      ? {
+                          value: FORK_ACTION_VALUE,
+                          label: t('modify'),
+                          icon: GitFork,
+                          disabled: isForkingMentor,
+                        }
+                      : undefined
+                  }
+                />
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button
+              variant="ghost"
+              className="flex items-center gap-1 text-sm font-medium text-[#646464]"
+              aria-label={t('selectedAgent')}
+            >
+              <User className="h-4 w-4 text-[#646464]" />
+              <span className="hidden max-w-[180px] truncate sm:block">
+                {selectedMentorName}
               </span>
-              <LearnerModeSwitch />
-              <span
-                className={cn(
-                  'text-sm',
-                  userIsStudent ? 'text-gray-500' : 'font-semibold',
-                )}
-              >
-                {t('admin')}
-              </span>
-            </div>
-          )}
-          <div className="flex items-center gap-2">
-            {isOnChatPage && visibleToLoggedInUsersOnly && tenantKey && (
-              <ChatPrivacyToggle
-                org={tenantKey}
-                userId={username ?? ''}
-                mentor={mentorId}
-                className="inline-flex max-md:[&>span]:hidden"
-              />
-            )}
-            {creditBalanceComponentIsDisplayed && (
-              <CreditBalance
-                tenant={tenantKey}
-                enabled={true}
-                redirectUrl={window.location.origin}
-                mainPlatformKey={config.mainTenantKey()}
-                currentUserEmail={getUserEmail()}
-                username={getUserName()}
-              />
-            )}
-            {!embedMode && visibleToLoggedInUsersOnly && (
-              <NotificationDropdown
-                org={tenantKey}
-                userId={username ?? ''}
-                isAdmin={isAdmin}
-                onViewNotifications={handleViewNotifications}
-              />
-            )}
-            {visibleToLoggedInUsersOnly && <UserProfile />}
-          </div>
+            </Button>
+          ))}
+      </div>
+    </>
+  );
 
-          {!isLoggedIn() && (
-            <div className="flex gap-x-2">
-              <Button className="ibl-button-primary" onClick={handleLoginClick}>
-                {loginButtonLabel}
-              </Button>
-              <Button onClick={handleLoginClick} variant="outline">
-                {t('signUpForFree')}
-              </Button>
-            </div>
+  // VARIABLE User/Admin mode switcher (per-SPA). The SDK shell owns its
+  // right-side position and the `hidden xl:flex` responsive wrapper.
+  const modeSwitcher =
+    visibleToLoggedInUsersOnly && isAdmin && !userIsVisiting ? (
+      <>
+        <span
+          className={cn(
+            'text-sm',
+            userIsStudent ? 'font-semibold' : 'text-gray-500',
           )}
-        </div>
-      </nav>
+        >
+          {t('user')}
+        </span>
+        <LearnerModeSwitch />
+        <span
+          className={cn(
+            'text-sm',
+            userIsStudent ? 'text-gray-500' : 'font-semibold',
+          )}
+        >
+          {t('admin')}
+        </span>
+      </>
+    ) : undefined;
+
+  return (
+    <>
+      <PlatformNavbar
+        left={leftCluster}
+        modeSwitcher={modeSwitcher}
+        search={{ onSubmit: handleSearchSubmit }}
+        privacyToggle={
+          isOnChatPage && tenantKey
+            ? {
+                org: tenantKey,
+                userId: username ?? '',
+                mentor: mentorId,
+              }
+            : null
+        }
+        creditBalance={creditBalanceConfig}
+        notifications={{
+          org: tenantKey,
+          userId: username ?? '',
+          isAdmin,
+          onViewNotifications: handleViewNotifications,
+        }}
+        profile={<UserProfile />}
+        visibleToLoggedInUsersOnly={visibleToLoggedInUsersOnly}
+        onLoginClick={handleLoginClick}
+      />
 
       {/* MODALS */}
       {isProviderSelectionOpen && (

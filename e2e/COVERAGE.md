@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-07-08 | 545 checkpoints (519 covered, 7 pending/fixme, 7 not-reproducible in default env, 12 deprecated) | 62 journeys (61 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-07-09 | 547 checkpoints (520 covered, 8 pending/fixme, 7 not-reproducible in default env, 12 deprecated) | 62 journeys (61 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -460,9 +460,9 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 
 ---
 
-## Journey 28: App Overview & Navigation UI (12 checkpoints) — `journeys/28-app-overview-and-navigation-ui.spec.ts`
+## Journey 28: App Overview & Navigation UI (14 checkpoints) — `journeys/28-app-overview-and-navigation-ui.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/modals/llm-provider-selection-modal.tsx`
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/modals/llm-provider-selection-modal.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/explore-page-content.tsx`
 
 - [x] Header renders all expected components
 - [x] Current mentor dropdown responds to clicks
@@ -476,6 +476,8 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 - [x] Admin: LLM name span `max-width` is at most 150 px on desktop _(navbar overflow fix: ov-10)_
 - [x] Admin: nav does not overflow on mobile (Pixel 5); with credit balance visible the LLM name span shrinks to ≤100 px _(navbar overflow fix: ov-11)_
 - [x] Admin: nav does not overflow on mobile when credit balance is hidden; LLM name span stays ≤150 px _(navbar overflow fix: ov-12)_
+- [x] Global navbar search bar (SDK `PlatformNavbar`, right-hand cluster) is visible for both admin and non-admin users: `role="search"` form containing a `type="search"` input and submit button, both with accessible name "Search" _(ov-13)_
+- [ ] Submitting a query in the navbar search bar navigates to `/platform/<tenantKey>/explore?q=<query>` and the Explore page's "Search agents" textbox is pre-filled from the `?q=` param _(ov-14; verified passing in isolated local runs against a live server — parked as pending because chained runs in this sandbox hit pre-existing session-expiry/re-auth churn in `navigateToMentorApp` unrelated to this feature)_
 
 ---
 

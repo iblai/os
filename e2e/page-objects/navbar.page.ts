@@ -27,6 +27,17 @@ export class NavbarPage {
    * robust — see journeys/42-suggested-prompts.spec.ts for the precedent.
    */
   readonly userModeSwitch: Locator;
+  /**
+   * The invariant global search bar rendered by the SDK's `PlatformNavbar`
+   * (`role="search"` form, right-hand cluster before the credit balance /
+   * notifications / profile cluster). Present for both logged-in and
+   * anonymous users on all non-embed platform pages.
+   */
+  readonly searchForm: Locator;
+  /** The `<input type="search" aria-label="Search">` inside `searchForm`. */
+  readonly searchInput: Locator;
+  /** The `aria-label="Search"` submit button inside `searchForm`. */
+  readonly searchButton: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -58,6 +69,13 @@ export class NavbarPage {
     this.llmNameSpan = this.llmModelSelectorButton.locator('span').first();
     this.navElement = page.locator('nav').first();
     this.userModeSwitch = page.getByLabel(/user mode/i);
+    this.searchForm = page.getByRole('search');
+    this.searchInput = this.searchForm.getByRole('searchbox', {
+      name: 'Search',
+    });
+    this.searchButton = this.searchForm.getByRole('button', {
+      name: 'Search',
+    });
   }
 
   /** Alias of `openMentorDropdown` — opens the "Selected agent" dropdown. */
@@ -210,5 +228,16 @@ export class NavbarPage {
       if (text) names.push(text);
     }
     return names;
+  }
+
+  /**
+   * Fills the global search bar and submits it by clicking the search icon
+   * button. Submitting navigates to `/platform/<tenantKey>/explore?q=<query>`
+   * (see nav-bar/index.tsx `handleSearchSubmit`).
+   */
+  async submitSearch(query: string): Promise<void> {
+    await expect(this.searchInput).toBeVisible({ timeout: 10_000 });
+    await this.searchInput.fill(query);
+    await this.searchButton.click();
   }
 }

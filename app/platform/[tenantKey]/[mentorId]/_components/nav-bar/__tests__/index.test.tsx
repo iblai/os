@@ -396,50 +396,120 @@ vi.mock('@/components/modals/auth-modal', () => ({
     ) : null,
 }));
 
-let lastCreditBalanceProps: any = null;
-vi.mock('@iblai/iblai-js/web-containers', () => ({
-  // The toggle now ships from the SDK; tests don't exercise its internals,
-  // so a no-render stub is enough — it also blocks the SDK's transitive
-  // axios chain from being pulled into the test's module graph.
-  ChatPrivacyToggle: () => null,
-  NotificationDropdown: () => (
+const lastCreditBalanceProps: { current: any } = { current: null };
+vi.mock('@iblai/iblai-js/web-containers', () => {
+  const NotificationDropdownStub = () => (
     <div data-testid="notification-dropdown">Notifications</div>
-  ),
-  CreditBalance: (props: any) => {
-    lastCreditBalanceProps = props;
+  );
+  const CreditBalanceStub = (props: any) => {
+    lastCreditBalanceProps.current = props;
     return <div data-testid="credit-balance">CreditBalance</div>;
-  },
-  // Stubs for the agent dropdown shell — Radix-style components from the
-  // SDK. Tests don't exercise dropdown internals so plain pass-through
-  // div wrappers + button trigger are enough.
-  DropdownMenu: ({ children }: any) => (
-    <div data-testid="dropdown-menu">{children}</div>
-  ),
-  DropdownMenuTrigger: ({ children, asChild, ...rest }: any) =>
-    asChild ? (
-      children
-    ) : (
-      <button {...rest} data-testid="dropdown-menu-trigger">
-        {children}
-      </button>
-    ),
-  DropdownMenuContent: ({ children }: any) => (
-    <div data-testid="dropdown-menu-content">{children}</div>
-  ),
-  CategorizedDropdownMenu: ({ topAction, items, footerAction }: any) => (
-    <div data-testid="categorized-dropdown-menu">
-      {topAction && <div data-testid="cdm-top-action">{topAction.label}</div>}
-      {items?.map((item: any) => (
-        <div key={item.value} data-testid={`cdm-item-${item.value}`}>
-          {item.label}
-        </div>
-      ))}
-      {footerAction && (
-        <div data-testid="cdm-footer-action">{footerAction.label}</div>
+  };
+  // Mirror of the SDK's invariant credit-balance formula (the real one is
+  // covered by the SDK's own platform-navbar tests). isLoggedIn is true in
+  // this suite (see the '@/lib/utils' mock), so it's inlined here.
+  const creditBalanceVisible = (config: any, visible = true) =>
+    !!config &&
+    visible &&
+    config.stripeEnabled &&
+    (!!config.currentTenant?.show_paywall ||
+      config.currentTenant?.key === config.mainPlatformKey) &&
+    (config.isLiveAdmin || !!config.userOnFreeTrial);
+  // Faithful placement/gating stub of the SDK PlatformNavbar shell: left
+  // slot, mode switcher, search form, then the invariant right cluster
+  // built from the stubbed children above. Behavior parity is asserted in
+  // the SDK's own tests; here we verify the WRAPPER feeds it correctly.
+  const PlatformNavbarStub = ({
+    left,
+    modeSwitcher,
+    search,
+    privacyToggle,
+    creditBalance,
+    notifications,
+    profile,
+    visibleToLoggedInUsersOnly = true,
+  }: any) => (
+    <nav>
+      <div className="flex items-center">{left}</div>
+      {/* Search leads the right cluster, ahead of the User/Admin switcher. */}
+      {search && (
+        <form
+          role="search"
+          onSubmit={(e) => {
+            e.preventDefault();
+            search.onSubmit(
+              (
+                e.currentTarget.elements.namedItem('q') as HTMLInputElement
+              ).value.trim(),
+            );
+          }}
+        >
+          <input name="q" type="search" aria-label="Search" />
+        </form>
       )}
-    </div>
-  ),
-}));
+      {modeSwitcher && (
+        <div className="hidden items-center gap-2 xl:flex">{modeSwitcher}</div>
+      )}
+      {privacyToggle && visibleToLoggedInUsersOnly && (
+        <div data-testid="chat-privacy-toggle" />
+      )}
+      {creditBalanceVisible(creditBalance, visibleToLoggedInUsersOnly) && (
+        <CreditBalanceStub
+          tenant={creditBalance.tenantKey}
+          enabled={true}
+          redirectUrl={creditBalance.redirectUrl ?? window.location.origin}
+          mainPlatformKey={creditBalance.mainPlatformKey}
+          currentUserEmail={creditBalance.currentUserEmail}
+          username={creditBalance.username}
+        />
+      )}
+      {notifications && visibleToLoggedInUsersOnly && (
+        <NotificationDropdownStub />
+      )}
+      {visibleToLoggedInUsersOnly && profile}
+    </nav>
+  );
+  return {
+    PlatformNavbar: PlatformNavbarStub,
+    isPlatformNavbarCreditBalanceVisible: creditBalanceVisible,
+    // The toggle now ships from the SDK; tests don't exercise its internals,
+    // so a no-render stub is enough — it also blocks the SDK's transitive
+    // axios chain from being pulled into the test's module graph.
+    ChatPrivacyToggle: () => null,
+    NotificationDropdown: NotificationDropdownStub,
+    CreditBalance: CreditBalanceStub,
+    // Stubs for the agent dropdown shell — Radix-style components from the
+    // SDK. Tests don't exercise dropdown internals so plain pass-through
+    // div wrappers + button trigger are enough.
+    DropdownMenu: ({ children }: any) => (
+      <div data-testid="dropdown-menu">{children}</div>
+    ),
+    DropdownMenuTrigger: ({ children, asChild, ...rest }: any) =>
+      asChild ? (
+        children
+      ) : (
+        <button {...rest} data-testid="dropdown-menu-trigger">
+          {children}
+        </button>
+      ),
+    DropdownMenuContent: ({ children }: any) => (
+      <div data-testid="dropdown-menu-content">{children}</div>
+    ),
+    CategorizedDropdownMenu: ({ topAction, items, footerAction }: any) => (
+      <div data-testid="categorized-dropdown-menu">
+        {topAction && <div data-testid="cdm-top-action">{topAction.label}</div>}
+        {items?.map((item: any) => (
+          <div key={item.value} data-testid={`cdm-item-${item.value}`}>
+            {item.label}
+          </div>
+        ))}
+        {footerAction && (
+          <div data-testid="cdm-footer-action">{footerAction.label}</div>
+        )}
+      </div>
+    ),
+  };
+});
 
 vi.mock('@iblai/iblai-js/web-containers/next', () => ({
   UserProfileModal: (props: any) =>
@@ -539,7 +609,7 @@ describe('NavBar', () => {
       show_paywall: false,
     };
     mockAllTenants = [{ key: 'test-tenant' }];
-    lastCreditBalanceProps = null;
+    lastCreditBalanceProps.current = null;
     // Suppress console.log during tests
     vi.spyOn(console, 'log').mockImplementation(() => {});
   });
@@ -1458,14 +1528,14 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
       renderNav();
 
       expect(screen.getByTestId('credit-balance')).toBeInTheDocument();
-      expect(lastCreditBalanceProps).toMatchObject({
+      expect(lastCreditBalanceProps.current).toMatchObject({
         tenant: 'tenant123',
         enabled: true,
         mainPlatformKey: 'main',
         currentUserEmail: 'student@example.com',
         username: 'student-user',
       });
-      expect(typeof lastCreditBalanceProps.redirectUrl).toBe('string');
+      expect(typeof lastCreditBalanceProps.current.redirectUrl).toBe('string');
     });
 
     it('renders CreditBalance for free-trial users (non-admin on main with one tenant) when paywall is on', () => {
