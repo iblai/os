@@ -70,6 +70,17 @@ One codebase, six platforms. OS runs natively everywhere your users are — ligh
 
 ---
 
+## Downloads
+
+Signed & notarized macOS builds, newest first. Each row links to the DMG for
+that release; rows are added automatically at release time (see
+`scripts/update-readme-downloads.mjs`).
+
+| Version | Date | Download |
+| ------- | ---- | -------- |
+
+---
+
 ## Screenshots
 
 <div align="center">

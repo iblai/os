@@ -123,6 +123,9 @@ export const TAURI_COMMANDS = {
   GET_OS_TYPE: 'get_os_type',
   // Build-time flag (IBL_ALLOW_IN_APP_PURCHASE env, defaults false) — returns boolean.
   ALLOW_IN_APP_PURCHASE: 'allow_in_app_purchase',
+  // Tenant this Tauri build is locked to (empty = no lock). Injected at build
+  // time via the IBL_TENANT env; different builds can target different tenants.
+  GET_LOCKED_TENANT: 'get_locked_tenant',
   CHECK_FOUNDRY_STATUS: 'check_foundry_local_status',
   START_FOUNDRY_SERVICE: 'start_foundry_local_service',
   LOAD_FOUNDRY_MODEL: 'load_foundry_local_model',
