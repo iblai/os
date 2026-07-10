@@ -78,6 +78,7 @@ that release; rows are added automatically at release time (see
 
 | Version | Date       | Download                                                                                               |
 | ------- | ---------- | ------------------------------------------------------------------------------------------------------ |
+| v0.95.2 | 2026-07-10 | [macOS (Universal)](https://github.com/iblai/os/releases/download/v0.95.2/ibl.ai_0.95.2_universal.dmg) |
 | v0.95.1 | 2026-07-09 | [macOS (Universal)](https://github.com/iblai/os/releases/download/v0.95.1/ibl.ai_0.95.1_universal.dmg) |
 | v0.95.0 | 2026-07-09 | [macOS (Universal)](https://github.com/iblai/os/releases/download/v0.95.0/ibl.ai_0.95.0_universal.dmg) |
 
