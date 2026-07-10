@@ -1,4 +1,7 @@
 import { Page, Locator, expect } from '@playwright/test';
+import { CreateMentorPage } from '../create-mentor.page';
+import { SidebarPage } from '../sidebar.page';
+import { waitForPageReady } from '../../utils/resilient';
 import { SettingsTab } from './settings.tab';
 import { LlmTab } from './llm.tab';
 import { ToolsTab } from './tools.tab';
@@ -103,14 +106,6 @@ export class EditMentorPage {
     this.screenshare = new ScreenShareTab(page, this.dialog);
     this.lti = new LtiTab(page, this.dialog);
     this.copyMentorDialog = new CopyMentorPage(page);
-
-    // The Privacy-tab master switch was removed from the SDK and now lives
-    // only in Settings → Capabilities. Hand the Privacy page-object a
-    // reference to the Settings page-object + this dialog's tab nav so
-    // `privacy.setRouterEnabled(...)` can transparently drive the moved
-    // switch and return focus to the Privacy tab. Bound to a bound method
-    // so the callback retains `this`.
-    this.privacy.bindSettingsTab(this.settings, this.navigateToTab.bind(this));
 
     // The modal only mounts the active category's segments, so the Settings
     // sub-tab triggers (Basic / Discovery / Capabilities) are absent from the
@@ -247,7 +242,43 @@ export class EditMentorPage {
       exact: true,
     });
 
-    await expect(menuTarget).toBeVisible({ timeout: 10_000 });
+    // `navigateToMentorApp` (bare /platform) redirects to the account-wide
+    // most-recently-accessed mentor, which can be one this admin doesn't own
+    // (e.g. a shared/template mentor forked from the main tenant catalog —
+    // see e2e-shared-mentor-isolation). Non-owned mentors only expose
+    // "New Chat" and "Modify" in this dropdown — never "Settings" — so
+    // blindly waiting for "Settings" here would hang forever. Detect that
+    // case with a short wait and, only then, switch onto an editable mentor
+    // before retrying. When "Settings" IS present (the common case) this
+    // adds nothing beyond the same wait the unconditional expect used to do.
+    //
+    // NOTE: an earlier version of this fallback preferred clicking "Modify"
+    // (the dropdown's one-click fork action) before falling back to
+    // CreateMentorPage. That was dropped — live runs showed the fork can
+    // complete server-side (the copy appears under Explore/My Agents)
+    // WITHOUT the page actually navigating, so `safeWaitForURL` waiting on
+    // the redirect timed out at 60s with no fallback. CreateMentorPage's
+    // create flow is the proven, already-widely-used isolation primitive
+    // (journeys 02/09/44/47/54/56/etc.) with a verified navigation
+    // (`createWithName` asserts the URL change itself), so it's used
+    // unconditionally instead of relying on the fork's redirect at all.
+    let hasSettings = false;
+    try {
+      await menuTarget.waitFor({ state: 'visible', timeout: 10_000 });
+      hasSettings = true;
+    } catch {
+      hasSettings = false;
+    }
+
+    if (!hasSettings) {
+      await this.switchToEditableMentor();
+      // The dropdown may have closed (navigation) or re-rendered for the
+      // newly-selected, owned mentor — (re)open it and retry.
+      await expect(dropdown).toBeVisible({ timeout: 30_000 });
+      await dropdown.click();
+      await expect(menuTarget).toBeVisible({ timeout: 10_000 });
+    }
+
     await menuTarget.click();
 
     await expect(this.dialog).toBeVisible({ timeout: 15_000 });
@@ -261,6 +292,53 @@ export class EditMentorPage {
     if (tabName) {
       await this.navigateToTab(tabName);
     }
+  }
+
+  /**
+   * Get off a mentor this admin can't edit and onto one they can.
+   *
+   * Called from `open()` when the "Selected agent" dropdown is open but has
+   * no "Settings" menu item — only mentors this admin owns expose it. A
+   * non-owned mentor (e.g. a public/forkable template mentor from the main
+   * tenant catalog) instead shows only "New Chat" and, for forkable ones, a
+   * "Modify" footer action (see `handleModifyMentor` / `showForkButton` in
+   * `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`).
+   *
+   * Does NOT use "Modify": it's a one-click server-side fork
+   * (`useForkMentorMutation`) that is supposed to redirect to the new copy,
+   * but a live run showed the fork can complete (the copy shows up under
+   * Explore/My Agents) WITHOUT the page navigating — leaving nothing to
+   * `safeWaitForURL` on and hanging for the full timeout. Unconditionally
+   * uses `CreateMentorPage.openAndCreate()` instead: the same isolation
+   * primitive already proven across journeys 02/09/44/47/54/56/etc., whose
+   * `createWithName` step asserts the resulting URL change itself, so there
+   * is no redirect to guess at.
+   *
+   * Assumes the dropdown is currently open on the non-editable mentor's
+   * menu. Leaves the dropdown closed and the page navigated to a fresh,
+   * owned, editable mentor — the caller is responsible for reopening it.
+   */
+  private async switchToEditableMentor(): Promise<void> {
+    // Close the open dropdown first — CreateMentorPage.open() drives the
+    // sidebar's "Agents" / "New Agent" entry points and doesn't expect a
+    // dropdown menu floating on top of them.
+    await this.page.keyboard.press('Escape');
+
+    // CreateMentorPage.open() clicks "Agents" expecting it to expand an
+    // inline collapsible section containing "New Agent" — that only mounts
+    // when the sidebar itself is in its full (non icon-rail) width. A live
+    // run hit a session where the sidebar was already collapsed to the icon
+    // rail (a `<aside>`-level "Expand sidebar" toggle, a different concept
+    // from the "Agents" section's own aria-expanded state), so "New Agent"
+    // never appeared and openAndCreate() timed out. Reuse SidebarPage's
+    // proven `ensureExpanded()` (already used by other page objects for the
+    // same reason) so this is deterministic regardless of leftover sidebar
+    // state on the shared admin storageState.
+    await new SidebarPage(this.page).ensureExpanded();
+
+    await new CreateMentorPage(this.page).openAndCreate();
+    await waitForPageReady(this.page);
+    await this.restoreAppChrome();
   }
 
   /**

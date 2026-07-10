@@ -120,10 +120,12 @@ const test = base.extend<object, LtiWorkerFixtures>({
           const editPage = new EditMentorPage(page);
           // Enable LTI access on the backend so sub-resource tests can create
           // links/keys/tools. The LTI tab itself would be visible without this,
-          // but the sub-resource APIs require is_lti_accessible=true.
-          await editPage.open('Settings');
-          await waitForPageReady(page);
-          await editPage.settings.setEnableLtiLaunchesAndSave(true);
+          // but the sub-resource APIs require is_lti_accessible=true. The
+          // "Enable LTI launches" toggle now lives in-tab (feat/2040 — moved
+          // off Settings → Capabilities into the LTI tab's own
+          // `CapabilityGate`).
+          await editPage.lti.switchToTab();
+          await editPage.lti.setCapabilityEnabled(true);
           await editPage.lti.expectTabVisible();
           await editPage.close();
         }
@@ -162,10 +164,11 @@ const test = base.extend<object, LtiWorkerFixtures>({
 
 /**
  * Create a fresh ephemeral mentor and leave the page on it. When `enableLti`
- * is true, flips "Enable LTI launches" on (Settings → Capabilities) and
- * confirms the LTI tab appears (it would appear anyway — this call just also
- * enables is_lti_accessible for sub-resource operations), then closes the
- * modal.
+ * is true, flips "Enable LTI launches" on via the LTI tab's own in-tab
+ * `CapabilityGate` toggle (feat/2040 — moved off Settings → Capabilities)
+ * and confirms the LTI tab is visible (it would be visible anyway — this
+ * call just also enables is_lti_accessible for sub-resource operations),
+ * then closes the modal.
  */
 async function createTestMentor(
   page: Page,
@@ -180,9 +183,8 @@ async function createTestMentor(
   ).toBeVisible({ timeout: 60_000 });
 
   if (enableLti) {
-    await editMentorPage.open('Settings');
-    await waitForPageReady(page);
-    await editMentorPage.settings.setEnableLtiLaunchesAndSave(true);
+    await editMentorPage.lti.switchToTab();
+    await editMentorPage.lti.setCapabilityEnabled(true);
     await editMentorPage.lti.expectTabVisible();
     await editMentorPage.close();
   }
@@ -264,8 +266,9 @@ test.describe('Journey 60 — LTI tab visibility', () => {
   // ── lti-03: tab remains visible after disabling "Enable LTI launches" ────
 
   // lti-03: Disabling "Enable LTI launches" does NOT hide the LTI tab. The
-  // tab stays mounted so the admin can always reach the configuration surface.
-  test('admin disables Enable LTI launches in Settings and the LTI tab stays visible', async ({
+  // tab stays mounted so the admin can always reach the configuration
+  // surface — only the gated sub-tab content grays.
+  test('admin disables Enable LTI launches in the LTI tab and the tab stays visible', async ({
     page,
     createMentorPage,
     editMentorPage,
@@ -275,14 +278,24 @@ test.describe('Journey 60 — LTI tab visibility', () => {
       enableLti: true,
     });
     try {
-      await editMentorPage.open('Settings');
+      await editMentorPage.lti.switchToTab();
       await waitForPageReady(page);
       // Verify visible while enabled.
       await editMentorPage.lti.expectTabVisible();
-      // Flip the toggle off.
-      await editMentorPage.settings.setEnableLtiLaunchesAndSave(false);
-      // Tab must still be visible after disabling.
+      await expect(editMentorPage.lti.capabilityContent).toHaveAttribute(
+        'data-enabled',
+        'true',
+        { timeout: 10_000 },
+      );
+      // Flip the toggle off — in-tab now (feat/2040).
+      await editMentorPage.lti.setCapabilityEnabled(false);
+      // Tab must still be visible after disabling; content grays instead.
       await editMentorPage.lti.expectTabVisible();
+      await expect(editMentorPage.lti.capabilityContent).toHaveAttribute(
+        'data-enabled',
+        'false',
+        { timeout: 10_000 },
+      );
       await editMentorPage.close();
     } finally {
       await deleteTestMentor(editMentorPage);

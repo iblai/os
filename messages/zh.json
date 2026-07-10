@@ -982,7 +982,12 @@
   },
   "memoryTabIndex": {
     "heading": "记忆",
-    "description": "为您的智能体配置记忆设置。"
+    "description": "为您的智能体配置记忆设置。",
+    "capabilityTitle": "长期记忆",
+    "capabilityDescription": "让该智能体记住过往对话中的有用细节——就像一位可信赖的同事——这样用户就无需重复说明。开启后，可在下方查看并管理它所记住的内容。",
+    "capabilityOffHint": "开启后，该智能体可跨对话记住相关细节。",
+    "toggleSuccess": "记忆设置已更新",
+    "toggleError": "无法更新记忆设置"
   },
   "memoryTabLearnersMemories": {
     "learnerMemoriesHeading": "学习者记忆",
@@ -1748,6 +1753,8 @@
   "tabsPromptsTab": {
     "heading": "提示词",
     "description": "管理和配置您的智能体提示词。",
+    "infoBoxDefault": "提示词决定智能体的响应方式——包括其核心行为、问候语、学习模式和引导步骤。",
+    "infoBoxSandbox": "该智能体运行在专用沙盒中，因此其行为由下方的智能体配置驱动。",
     "systemPromptTitle": "系统提示词",
     "systemPromptInfoAriaLabel": "关于系统提示词的更多信息",
     "systemPromptTooltip": "定义智能体的行为",
@@ -1819,7 +1826,12 @@
   },
   "tabsSandboxTab": {
     "heading": "沙盒",
-    "description": "配置沙盒连接和部署设置。"
+    "description": "配置沙盒连接和部署设置。",
+    "capabilityTitle": "专用沙盒",
+    "capabilityDescription": "为该智能体提供其专属的安全工作空间，使其可以代表您运行代码、工具和技能。开启后，在下方将其连接到实例，即可解锁技能和智能体提示词。",
+    "capabilityOffHint": "开启后可为该智能体提供工作空间并连接到实例。",
+    "toggleSuccess": "沙盒设置已更新",
+    "toggleError": "无法更新沙盒设置"
   },
   "tabsSettingsTab": {
     "settingsHeading": "设置",
@@ -1911,7 +1923,8 @@
   },
   "tabsSkillsTab": {
     "heading": "技能",
-    "description": "管理您的导师的代理技能分配。"
+    "description": "管理您的导师的代理技能分配。",
+    "infoBox": "技能是可复用的能力，创建一次即可分配给任意智能体。创建技能后将其开启，即可赋予该智能体相应能力。"
   },
   "tabsToolsTab": {
     "heading": "工具",

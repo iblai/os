@@ -982,7 +982,12 @@
   },
   "memoryTabIndex": {
     "heading": "Memory",
-    "description": "Configure memory settings for your agent."
+    "description": "Configure memory settings for your agent.",
+    "capabilityTitle": "Long-term memory",
+    "capabilityDescription": "Let this agent remember useful details from past conversations — like a returning colleague — so people don't have to repeat themselves. When on, review and manage what it remembers below.",
+    "capabilityOffHint": "Turn it on to let this agent remember details across conversations.",
+    "toggleSuccess": "Memory setting updated",
+    "toggleError": "Couldn't update memory setting"
   },
   "memoryTabLearnersMemories": {
     "learnerMemoriesHeading": "Learner Memories",
@@ -1748,6 +1753,8 @@
   "tabsPromptsTab": {
     "heading": "Prompts",
     "description": "Manage and configure prompts for your agent.",
+    "infoBoxDefault": "Prompts shape how your agent responds — its core behavior, greeting, study mode, and guided steps.",
+    "infoBoxSandbox": "This agent runs in a dedicated sandbox, so its behavior is driven by the Agent Configuration below.",
     "systemPromptTitle": "System Prompt",
     "systemPromptInfoAriaLabel": "More info about system prompt",
     "systemPromptTooltip": "Define the agent's behavior",
@@ -1819,7 +1826,12 @@
   },
   "tabsSandboxTab": {
     "heading": "Sandbox",
-    "description": "Configure sandbox connection and deployment settings."
+    "description": "Configure sandbox connection and deployment settings.",
+    "capabilityTitle": "Dedicated sandbox",
+    "capabilityDescription": "Give this agent its own secure workspace where it can run code, tools, and skills on your behalf. When on, connect it to an instance below to unlock skills and agent prompts.",
+    "capabilityOffHint": "Turn it on to give this agent a workspace and connect it to an instance.",
+    "toggleSuccess": "Sandbox setting updated",
+    "toggleError": "Couldn't update sandbox setting"
   },
   "tabsSettingsTab": {
     "settingsHeading": "Settings",
@@ -1911,7 +1923,8 @@
   },
   "tabsSkillsTab": {
     "heading": "Skills",
-    "description": "Manage agent skill assignments for your mentor."
+    "description": "Manage agent skill assignments for your mentor.",
+    "infoBox": "Skills are reusable capabilities you build once and assign to any agent. Create a skill, then toggle it on to give this agent that ability."
   },
   "tabsToolsTab": {
     "heading": "Tools",

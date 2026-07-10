@@ -982,7 +982,12 @@
   },
   "memoryTabIndex": {
     "heading": "Memoria",
-    "description": "Configure los ajustes de memoria para su agente."
+    "description": "Configure los ajustes de memoria para su agente.",
+    "capabilityTitle": "Memoria a largo plazo",
+    "capabilityDescription": "Permita que este agente recuerde detalles útiles de conversaciones anteriores — como un colega de confianza — para que las personas no tengan que repetirse. Cuando esté activada, revise y gestione lo que recuerda a continuación.",
+    "capabilityOffHint": "Actívela para que este agente recuerde detalles entre conversaciones.",
+    "toggleSuccess": "Ajuste de memoria actualizado",
+    "toggleError": "No se pudo actualizar el ajuste de memoria"
   },
   "memoryTabLearnersMemories": {
     "learnerMemoriesHeading": "Memorias de los estudiantes",
@@ -1748,6 +1753,8 @@
   "tabsPromptsTab": {
     "heading": "Indicaciones",
     "description": "Gestiona y configura las indicaciones para tu agente.",
+    "infoBoxDefault": "Las indicaciones definen cómo responde tu agente: su comportamiento principal, el saludo, el modo estudio y los pasos guiados.",
+    "infoBoxSandbox": "Este agente se ejecuta en un sandbox dedicado, por lo que su comportamiento se define en la Configuración del agente a continuación.",
     "systemPromptTitle": "Indicación del sistema",
     "systemPromptInfoAriaLabel": "Más información sobre la indicación del sistema",
     "systemPromptTooltip": "Definir el comportamiento del agente",
@@ -1819,7 +1826,12 @@
   },
   "tabsSandboxTab": {
     "heading": "Sandbox",
-    "description": "Configure los ajustes de conexión y despliegue del sandbox."
+    "description": "Configure los ajustes de conexión y despliegue del sandbox.",
+    "capabilityTitle": "Sandbox dedicado",
+    "capabilityDescription": "Dé a este agente su propio espacio de trabajo seguro donde puede ejecutar código, herramientas y habilidades en su nombre. Cuando esté activado, conéctelo a una instancia a continuación para desbloquear las habilidades y las indicaciones del agente.",
+    "capabilityOffHint": "Actívelo para dar a este agente un espacio de trabajo y conectarlo a una instancia.",
+    "toggleSuccess": "Ajuste del sandbox actualizado",
+    "toggleError": "No se pudo actualizar el ajuste del sandbox"
   },
   "tabsSettingsTab": {
     "settingsHeading": "Configuración",
@@ -1911,7 +1923,8 @@
   },
   "tabsSkillsTab": {
     "heading": "Habilidades",
-    "description": "Gestiona las asignaciones de habilidades del agente para tu mentor."
+    "description": "Gestiona las asignaciones de habilidades del agente para tu mentor.",
+    "infoBox": "Las habilidades son capacidades reutilizables que creas una vez y asignas a cualquier agente. Crea una habilidad y actívala para darle esa capacidad a este agente."
   },
   "tabsToolsTab": {
     "heading": "Herramientas",

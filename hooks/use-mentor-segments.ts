@@ -154,7 +154,9 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
-    enabledThroughConfig: (flags) => flags.isClawEnabled,
+    // Always visible. The "Dedicated sandbox" (`enable_claw`) master toggle
+    // now lives inline on the Sandbox tab itself; the tab is where admins turn
+    // the capability on and connect it to an instance.
     navCategory: 'configurations',
   },
   {
@@ -193,11 +195,9 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
-    // Tab is gated by the "Enable voice calls" toggle (`show_voice_call`) in
-    // Settings. Turning voice calls off hides the Voice tab from the sidebar
-    // entirely — it configures voice providers + call settings, which are
-    // meaningless when voice calls are disabled.
-    enabledThroughConfig: (flags) => flags.isVoiceCallEnabled,
+    // Always visible. The "Enable voice calls" (`show_voice_call`) master
+    // toggle now lives inline at the top of the Voice tab; turning it off grays
+    // out the voice/call configuration below instead of hiding the whole tab.
     navCategory: 'configurations',
   },
   {
@@ -210,12 +210,9 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
-    // Tab is gated by the "Enable screen sharing" toggle in
-    // Settings, which writes `enable_video` on the CallConfiguration. The
-    // SDK's <AgentScreenShareTab/> still renders an off-state hint when
-    // `enable_video` is false, but at the host level we hide the tab
-    // entirely so the sidebar stays clean.
-    enabledThroughConfig: (flags) => flags.isScreenshareEnabled,
+    // Always visible. The "Enable screen sharing" (`enable_video`) master
+    // toggle now lives inline at the top of the Screen Share tab; turning it
+    // off grays out the screen-sharing prompts below instead of hiding the tab.
     navCategory: 'configurations',
   },
   {
@@ -246,10 +243,10 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
-    // Skills only makes sense when a sandbox is wired to a Claw instance.
-    // Sandbox tab itself is shown earlier so admins can connect first.
-    enabledThroughConfig: (flags) =>
-      flags.isClawEnabled && flags.clawConfigExists,
+    // Always visible. Skills only work when a sandbox is wired to a Claw
+    // instance, so the SDK's <AgentSkills/> shows a "connect a sandbox"
+    // prompt (grayed state) until one is connected — the tab itself stays
+    // reachable so admins can see what's available.
     navCategory: 'configurations',
   },
   {
@@ -281,7 +278,9 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
-    enabledThroughConfig: (flags) => flags.isPrivacyEnabled,
+    // Always visible. The "PII filtering" (`enable_privacy_router`) master
+    // toggle now lives inline at the top of the Privacy tab; turning it off
+    // grays out the PII rules below instead of hiding the whole tab.
     navCategory: 'configurations',
   },
   {
@@ -351,8 +350,10 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
-    enabledThroughConfig: (flags) =>
-      flags.isMemsearchEnabled && flags.isMemoryComponentEnabled,
+    // Always visible. The "Remember past conversations"
+    // (`enable_memory_component`) master toggle now lives inline at the top of
+    // the Memory tab; turning it off grays out the memory management below
+    // instead of hiding the whole tab.
     navCategory: 'analytics',
   },
   {
