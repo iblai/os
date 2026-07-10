@@ -76,8 +76,8 @@ Signed & notarized macOS builds, newest first. Each row links to the DMG for
 that release; rows are added automatically at release time (see
 `scripts/update-readme-downloads.mjs`).
 
-| Version | Date | Download |
-| ------- | ---- | -------- |
+| Version | Date       | Download                                                                                               |
+| ------- | ---------- | ------------------------------------------------------------------------------------------------------ |
 | v0.95.1 | 2026-07-09 | [macOS (Universal)](https://github.com/iblai/os/releases/download/v0.95.1/ibl.ai_0.95.1_universal.dmg) |
 | v0.95.0 | 2026-07-09 | [macOS (Universal)](https://github.com/iblai/os/releases/download/v0.95.0/ibl.ai_0.95.0_universal.dmg) |
 
