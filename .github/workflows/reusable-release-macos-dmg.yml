@@ -1,0 +1,170 @@
+# Vendored from iblai/iblai-web-ops (.github/workflows/reusable-release-macos-dmg.yml).
+# This repo is public; reusable workflows in private repos cannot be called from
+# public repos ("workflow was not found"), so the workflow lives here and is
+# called via a local path. Contains no secrets — all credentials resolve from
+# this repo/org's Actions secrets at runtime. Keep in sync with the
+# iblai-web-ops copy until that copy is retired.
+name: Reusable Release macOS DMG
+
+# Builds a signed + notarized macOS DMG for a Tauri app (universal binary, one
+# DMG for Intel + Apple Silicon). Two modes, chosen by the caller:
+#
+#   - Release build (release_tag set): attach the DMG to that existing GitHub
+#     Release (e.g. the v<version> release release-it already created).
+#   - Dev build (release_tag empty): just build + upload a CI artifact. Used for
+#     src-tauri changes that didn't bump the version, so they never touch a
+#     released version's assets.
+#
+# The README download table is maintained by the caller repo at release time
+# (e.g. release-it), not here — the release CI can't push to a protected main.
+#
+# App-agnostic: every app-specific value is an input, defaulted to the shared
+# IBL values. Secrets flow in via `secrets: inherit` and resolve from the caller
+# repo/org at runtime — this repo holds none.
+
+on:
+  workflow_call:
+    inputs:
+      node_version:
+        description: 'Node.js version (tauri-action uses it to resolve the package manager)'
+        required: false
+        type: string
+        default: '25.3.0'
+      rust_targets:
+        description: 'Rust targets to install for the universal build'
+        required: false
+        type: string
+        default: 'aarch64-apple-darwin,x86_64-apple-darwin'
+      tauri_args:
+        description: 'Args passed to tauri-action (config overlay, target, bundles)'
+        required: false
+        type: string
+        default: '--config src-tauri/tauri.devid.conf.json --target universal-apple-darwin --bundles app,dmg'
+      apple_signing_identity:
+        description: 'Developer ID Application identity used in the temp signing keychain'
+        required: false
+        type: string
+        default: 'Developer ID Application: Class Generation, LLC (L4FWRM8W5Z)'
+      apple_team_id:
+        description: 'Apple Developer team ID used for signing and notarization'
+        required: false
+        type: string
+        default: 'L4FWRM8W5Z'
+      allow_in_app_purchase:
+        description: 'Compile-time IBL_ALLOW_IN_APP_PURCHASE flag (read via option_env! in Rust)'
+        required: false
+        type: boolean
+        default: false
+      dmg_path:
+        description: 'Glob for the built DMG(s)'
+        required: false
+        type: string
+        default: 'src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg'
+      artifact_name:
+        description: 'Name of the uploaded CI build artifact'
+        required: true
+        type: string
+      release_tag:
+        description: 'If set, attach the DMG to this GitHub Release tag (release build). Empty = build-only dev build.'
+        required: false
+        type: string
+        default: ''
+      release_name:
+        description: 'Title used only if the release tag must be created as a fallback'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: write # upload the DMG asset to the Release
+
+jobs:
+  build-dmg:
+    runs-on: macos-latest # Apple Silicon runner; cross-compiles the x86_64 slice too
+    env:
+      # Not secret — these live in the app's tauri.devid.conf.json / docs too.
+      # tauri-action needs them in the environment to pick the right identity in
+      # the temporary signing keychain and to notarize.
+      APPLE_SIGNING_IDENTITY: ${{ inputs.apple_signing_identity }}
+      APPLE_TEAM_ID: ${{ inputs.apple_team_id }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Node/pnpm are only needed so tauri-action can resolve the project's
+      # package manager; the frontend bundle is prebuilt/remote (frontendDist),
+      # so there's no `next build` here.
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node_version }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ inputs.rust_targets }}
+
+      - name: Cache Rust build
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      # Build + sign + notarize only (no tagName/releaseName => tauri-action does
+      # not create a Release). We attach the DMG ourselves so it lands on the
+      # existing v<version> Release rather than a parallel one.
+      - name: Build, sign & notarize DMG
+        id: tauri
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Enable in-app purchase for release builds when requested. Read at Rust
+          # compile time via option_env!("IBL_ALLOW_IN_APP_PURCHASE").
+          IBL_ALLOW_IN_APP_PURCHASE: ${{ inputs.allow_in_app_purchase }}
+          # --- Code signing (Developer ID Application cert, exported as .p12) ---
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          # --- Notarization (Apple ID + app-specific password) ---
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          # APPLE_SIGNING_IDENTITY / APPLE_TEAM_ID are inherited from job env.
+        with:
+          args: ${{ inputs.tauri_args }}
+
+      # Always keep the DMG as a CI artifact (SHA-named for dev builds).
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.artifact_name }}
+          path: ${{ inputs.dmg_path }}
+          if-no-files-found: error
+
+      # Release builds only: attach the DMG to the version's Release.
+      - name: Attach DMG to release
+        if: ${{ inputs.release_tag != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Pass inputs via env (not interpolated into the script body) to avoid
+          # shell expression injection.
+          DMG_PATH: ${{ inputs.dmg_path }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          RELEASE_NAME: ${{ inputs.release_name }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=($DMG_PATH) # intentional glob expansion of the path pattern
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No DMG found at $DMG_PATH"; exit 1
+          fi
+          # release-it normally created the Release already; create as a fallback.
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" \
+              --title "${RELEASE_NAME:-$RELEASE_TAG}" \
+              --notes "Automated, notarized macOS build."
+          fi
+          gh release upload "$RELEASE_TAG" "${files[@]}" --clobber
+          echo "Attached ${#files[@]} DMG(s) to $RELEASE_TAG"

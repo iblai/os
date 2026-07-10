@@ -131,7 +131,9 @@ export function ChatInputForm({
   isConnecting = false,
 }: ChatInputFormProps) {
   const dispatch = useAppDispatch();
-  const { mentorId } = useParams<TenantKeyMentorIdParams>();
+  // `useParams()` returns null outside an app-router context (e.g. first render
+  // or when rendered in isolation), so read the id defensively.
+  const mentorId = useParams<TenantKeyMentorIdParams>()?.mentorId;
   const mentorSettings = useMentorSettings();
   const showingSharedChat = useAppSelector(selectShowingSharedChat);
 

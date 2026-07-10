@@ -9,6 +9,7 @@ permissions = [
     "allow-navigate-to",
     "allow-get-os-type",
     "allow-allow-in-app-purchase",
+    "allow-get-locked-tenant",
     "allow-install-ollama",
     "allow-stop-ollama",
     "allow-check-ollama-status",
@@ -60,6 +61,12 @@ identifier = "allow-allow-in-app-purchase"
 description = "Enables checking whether in-app purchase is allowed for this build"
 [permission.commands]
 allow = ["allow_in_app_purchase"]
+
+[[permission]]
+identifier = "allow-get-locked-tenant"
+description = "Enables reading the tenant this build is locked to"
+[permission.commands]
+allow = ["get_locked_tenant"]
 
 [[permission]]
 identifier = "allow-install-ollama"
