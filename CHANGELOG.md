@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.95.3](https://github.com/iblai/os/compare/v0.95.2...v0.95.3) (2026-07-10)
+
+### Bug Fixes
+
+* **e2e-test:** fixing privacy chat test to add wait to send next message ([7e5f820](https://github.com/iblai/os/commit/7e5f820987a030d58cd34f652ebef2a38569e29f))
+
 ## [0.95.2](https://github.com/iblai/os/compare/v0.95.1...v0.95.2) (2026-07-10)
 
 ### Bug Fixes
