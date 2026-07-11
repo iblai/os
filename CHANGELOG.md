@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.95.4](https://github.com/iblai/os/compare/v0.95.3...v0.95.4) (2026-07-11)
+
+### CI
+
+* version the macOS/tauri app independently and auto-ship DMGs ([2e79784](https://github.com/iblai/os/commit/2e79784e5e56ed5df2b126571ba3ad4386f58b63))
+
 ## [0.95.3](https://github.com/iblai/os/compare/v0.95.2...v0.95.3) (2026-07-10)
 
 ### Bug Fixes
