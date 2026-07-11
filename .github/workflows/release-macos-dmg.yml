@@ -1,86 +1,33 @@
 name: Release macOS DMG
 
-# Watches src-tauri/ on main and produces a signed + notarized Developer ID DMG
-# (the non-sandboxed variant where System Control / GhostOS works — see
-# docs/macos-builds.md). The build/sign/notarize logic lives in the reusable
-# workflow (vendored from iblai/iblai-web-ops); this file detects release vs dev
-# and drives it. Also runnable on demand via "Run workflow".
+# Builds a signed + notarized Developer ID DMG (universal — Intel + Apple
+# Silicon) and attaches it to the app-v<X> Release. Triggered by the `app-v*`
+# tag that tauri-autoversion.yml pushes when a src-tauri change bumps the tauri
+# version. The build/sign/notarize logic lives in the reusable workflow
+# (vendored from iblai/iblai-web-ops); this file is just the trigger + inputs.
 #
-# Release vs dev:
-#   - A `chore(release):` commit bumps src-tauri/tauri.conf.json (release-it's
-#     after:bump hook keeps it in sync with package.json), so the version
-#     changes. That is treated as a RELEASE: the DMG is attached to the
-#     v<version> Release release-it created, and a row is added to the README
-#     Downloads table.
-#   - Any other src-tauri change (no version bump) is a DEV build: it just
-#     produces a SHA-named CI artifact and never touches a released version.
+# Manual "Run workflow" produces a build-only DMG artifact (no Release).
 on:
   push:
-    branches: [main]
-    paths:
-      - 'src-tauri/**'
-      - '.github/workflows/release-macos-dmg.yml'
-      - '.github/workflows/reusable-release-macos-dmg.yml'
+    tags:
+      - 'app-v*'
   workflow_dispatch:
 
-# Never let two release builds clobber the same GitHub Release at once.
 concurrency:
-  group: release-macos-dmg
+  group: release-macos-dmg-${{ github.ref }}
   cancel-in-progress: false
 
 permissions:
-  contents: write # attach the DMG to the Release and push the README update
+  contents: write # attach the DMG to the Release
 
 jobs:
-  prepare:
-    runs-on: ubuntu-latest
-    outputs:
-      is_release: ${{ steps.info.outputs.is_release }}
-      artifact_name: ${{ steps.info.outputs.artifact_name }}
-      release_tag: ${{ steps.info.outputs.release_tag }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # need the "before" commit to diff the version
-
-      - name: Determine release vs dev build
-        id: info
-        run: |
-          set -euo pipefail
-          VERSION=$(node -p "require('./src-tauri/tauri.conf.json').version")
-
-          # A release build is one where this push changed the tauri.conf.json
-          # version (i.e. a chore(release): bump). Everything else is a dev build.
-          IS_RELEASE=false
-          BEFORE="${{ github.event.before }}"
-          if [ "${{ github.event_name }}" = "push" ] && [ -n "$BEFORE" ] && ! printf '%s' "$BEFORE" | grep -qE '^0+$'; then
-            if git cat-file -e "$BEFORE:src-tauri/tauri.conf.json" 2>/dev/null; then
-              git show "$BEFORE:src-tauri/tauri.conf.json" > /tmp/prev-conf.json
-              PREV=$(node -p "try { require('/tmp/prev-conf.json').version } catch (e) { '' }")
-              if [ -n "$PREV" ] && [ "$PREV" != "$VERSION" ]; then IS_RELEASE=true; fi
-            fi
-          fi
-
-          if [ "$IS_RELEASE" = "true" ]; then
-            echo "is_release=true" >> "$GITHUB_OUTPUT"
-            echo "artifact_name=ibl-ai-macos-dmg" >> "$GITHUB_OUTPUT"
-            echo "release_tag=v$VERSION" >> "$GITHUB_OUTPUT"
-          else
-            echo "is_release=false" >> "$GITHUB_OUTPUT"
-            echo "artifact_name=ibl-ai-macos-dmg-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
-            echo "release_tag=" >> "$GITHUB_OUTPUT"
-          fi
-          echo "version=$VERSION is_release=$IS_RELEASE"
-
   release:
-    needs: prepare
     uses: ./.github/workflows/reusable-release-macos-dmg.yml
     with:
       allow_in_app_purchase: true
-      artifact_name: ${{ needs.prepare.outputs.artifact_name }}
-      release_tag: ${{ needs.prepare.outputs.release_tag }}
-      release_name: 'ibl.ai ${{ needs.prepare.outputs.release_tag }} (macOS)'
+      # Tag push -> attach the DMG to that app-v<X> Release.
+      # Manual dispatch -> build-only artifact (no Release), named by short SHA.
+      release_tag: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+      release_name: ${{ github.ref_type == 'tag' && format('ibl.ai {0} (macOS)', github.ref_name) || '' }}
+      artifact_name: ${{ github.ref_type == 'tag' && format('ibl-ai-macos-dmg-{0}', github.ref_name) || format('ibl-ai-macos-dmg-{0}', github.sha) }}
     secrets: inherit
-    # The README Downloads table is maintained locally by release-it (see
-    # scripts/update-readme-downloads.mjs + .release-it.json), not here — main is
-    # protected, so CI can't push to it.

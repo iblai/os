@@ -70,18 +70,12 @@ One codebase, six platforms. OS runs natively everywhere your users are — ligh
 
 ---
 
-## Downloads
+## Download
 
-Signed & notarized macOS builds, newest first. Each row links to the DMG for
-that release; rows are added automatically at release time (see
-`scripts/update-readme-downloads.mjs`).
+**Latest macOS build:** [ibl.ai v0.95.1 (Universal .dmg)](https://github.com/iblai/os/releases/download/v0.95.1/ibl.ai_0.95.1_universal.dmg) · [all versions](docs/DOWNLOADS.md)
 
-| Version | Date       | Download                                                                                               |
-| ------- | ---------- | ------------------------------------------------------------------------------------------------------ |
-| v0.95.3 | 2026-07-10 | [macOS (Universal)](https://github.com/iblai/os/releases/download/v0.95.3/ibl.ai_0.95.3_universal.dmg) |
-| v0.95.2 | 2026-07-10 | [macOS (Universal)](https://github.com/iblai/os/releases/download/v0.95.2/ibl.ai_0.95.2_universal.dmg) |
-| v0.95.1 | 2026-07-09 | [macOS (Universal)](https://github.com/iblai/os/releases/download/v0.95.1/ibl.ai_0.95.1_universal.dmg) |
-| v0.95.0 | 2026-07-09 | [macOS (Universal)](https://github.com/iblai/os/releases/download/v0.95.0/ibl.ai_0.95.0_universal.dmg) |
+Signed & notarized universal build (Intel + Apple Silicon). Older versions are
+listed in [docs/DOWNLOADS.md](docs/DOWNLOADS.md).
 
 ---
 

@@ -14,8 +14,8 @@ permissions:
 
 jobs:
   release:
-    # Skip release commits to avoid infinite loops
-    if: "!startsWith(github.event.head_commit.message, 'chore(release):')"
+    # Skip our own release commits (loop) and tauri version bumps (separate track)
+    if: "!startsWith(github.event.head_commit.message, 'chore(release):') && !startsWith(github.event.head_commit.message, 'chore(tauri):')"
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
