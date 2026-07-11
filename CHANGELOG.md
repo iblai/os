@@ -1,24 +1,36 @@
 # Changelog
 
+## [0.95.3](https://github.com/iblai/os/compare/v0.95.2...v0.95.3) (2026-07-10)
+
+### Bug Fixes
+
+* **e2e-test:** fixing privacy chat test to add wait to send next message ([7e5f820](https://github.com/iblai/os/commit/7e5f820987a030d58cd34f652ebef2a38569e29f))
+
+## [0.95.2](https://github.com/iblai/os/compare/v0.95.1...v0.95.2) (2026-07-10)
+
+### Bug Fixes
+
+* update checkout ecommerce playwright test to empty browser session ([3d27eca](https://github.com/iblai/os/commit/3d27eca554fc50fb5c37f92443f9c2ea45bf6cdf))
+
 ## [0.95.1](https://github.com/iblai/os/compare/v0.95.0...v0.95.1) (2026-07-09)
 
 ### Bug Fixes
 
-* **test:** repair chat-input-form unit suite red on main ([87cf07c](https://github.com/iblai/os/commit/87cf07ccb779548e3e8171c819e20754c981e82d))
+- **test:** repair chat-input-form unit suite red on main ([87cf07c](https://github.com/iblai/os/commit/87cf07ccb779548e3e8171c819e20754c981e82d))
 
 ### Documentation
 
-* **readme:** document IBL_TENANT & IBL_ALLOW_IN_APP_PURCHASE build flags ([3b486c5](https://github.com/iblai/os/commit/3b486c57bef79b50a244bf5e813c400c3fffc079))
+- **readme:** document IBL_TENANT & IBL_ALLOW_IN_APP_PURCHASE build flags ([3b486c5](https://github.com/iblai/os/commit/3b486c57bef79b50a244bf5e813c400c3fffc079))
 
 ## [0.95.0](https://github.com/iblai/os/compare/v0.94.0...v0.95.0) (2026-07-09)
 
 ### Features
 
-* **tauri:** lock a build to a single tenant ([8429e32](https://github.com/iblai/os/commit/8429e32c5561a632df979b3c422b6a57e44e2d8d))
+- **tauri:** lock a build to a single tenant ([8429e32](https://github.com/iblai/os/commit/8429e32c5561a632df979b3c422b6a57e44e2d8d))
 
 ### CI
 
-* reuse macOS DMG workflow with versioning and README downloads ([0081075](https://github.com/iblai/os/commit/0081075a8f279bbeda51300b4a40f776ec996f3a))
+- reuse macOS DMG workflow with versioning and README downloads ([0081075](https://github.com/iblai/os/commit/0081075a8f279bbeda51300b4a40f776ec996f3a))
 
 ## [0.94.0](https://github.com/iblai/os/compare/v0.93.1...v0.94.0) (2026-07-08)
 
