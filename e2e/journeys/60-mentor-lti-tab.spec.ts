@@ -56,6 +56,14 @@
  * Resource naming: `LtiTab.uniqueName(prefix)` → `prefix-<Date.now()>-<random5>`
  * (the project-approved pattern from `test-data.ts`), so links/keys/tools never
  * collide across parallel workers.
+ *
+ * KEY/TOOL PREFIXES start with `e2e-a-` on purpose: the platform-wide keys and
+ * tools lists are server-paginated at 10 rows/page, ordered by name, and the
+ * DM proxy currently ignores the `page` param (page 2+ is unreachable — see
+ * `revealRow` in lti.tab.ts). `e2e-a-*` sorts before all legacy residue
+ * (`e2e-key-*`, `e2e-tool-*`), so freshly created rows always land on page 1
+ * even when residue pushes the list past one page. The prefixes still match
+ * the reaper's `e2e-[a-z-]+-<ts>-<rand>` pattern (e2e/utils/lti-residue.ts).
  */
 
 import type { Page } from '@playwright/test';
@@ -472,7 +480,7 @@ test.describe('Journey 60 — LTI tab sub-resource tests', () => {
     await openLtiTabOnSharedMentor(page, editMentorPage, ltiMentorUrl!);
     await editMentorPage.lti.switchToSubTab('keys');
 
-    const keyName = LtiTab.uniqueName('e2e-key');
+    const keyName = LtiTab.uniqueName('e2e-a-key');
     try {
       await editMentorPage.lti.createKey(keyName);
       await editMentorPage.lti.expectKeyInList(keyName);
@@ -501,8 +509,8 @@ test.describe('Journey 60 — LTI tab sub-resource tests', () => {
     await openLtiTabOnSharedMentor(page, editMentorPage, ltiMentorUrl!);
     await editMentorPage.lti.switchToSubTab('keys');
 
-    const name = LtiTab.uniqueName('e2e-key-orig');
-    const renamed = LtiTab.uniqueName('e2e-key-renamed');
+    const name = LtiTab.uniqueName('e2e-a-key-orig');
+    const renamed = LtiTab.uniqueName('e2e-a-key-renamed');
     try {
       await editMentorPage.lti.createKey(name);
       await editMentorPage.lti.expectKeyInList(name);
@@ -526,7 +534,7 @@ test.describe('Journey 60 — LTI tab sub-resource tests', () => {
     await openLtiTabOnSharedMentor(page, editMentorPage, ltiMentorUrl!);
     await editMentorPage.lti.switchToSubTab('keys');
 
-    const keyName = LtiTab.uniqueName('e2e-key-delete');
+    const keyName = LtiTab.uniqueName('e2e-a-key-delete');
     let present = false;
     try {
       await editMentorPage.lti.createKey(keyName);
@@ -587,8 +595,8 @@ test.describe('Journey 60 — LTI tab sub-resource tests', () => {
     test.skip(!ltiMentorUrl, 'LTI mentor unavailable on this worker');
     await openLtiTabOnSharedMentor(page, editMentorPage, ltiMentorUrl!);
 
-    const keyName = LtiTab.uniqueName('e2e-tool-key-url');
-    const toolTitle = LtiTab.uniqueName('e2e-tool-url');
+    const keyName = LtiTab.uniqueName('e2e-a-tool-key-url');
+    const toolTitle = LtiTab.uniqueName('e2e-a-tool-url');
     try {
       await editMentorPage.lti.switchToSubTab('keys');
       await editMentorPage.lti.createKey(keyName);
