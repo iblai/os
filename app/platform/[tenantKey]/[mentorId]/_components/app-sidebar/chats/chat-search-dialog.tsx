@@ -74,6 +74,10 @@ export function ChatSearchDialog({
     <button
       type="button"
       onClick={() => handleSelectRow(row)}
+      // Same stable row identity as `ChatRowItem`: the visible label prefers
+      // the asynchronously generated session title, so tests (and anything
+      // else needing a deterministic handle) key on the session id.
+      data-session-id={row.session_id}
       className={ROW_CLASS}
     >
       <MessageCircle

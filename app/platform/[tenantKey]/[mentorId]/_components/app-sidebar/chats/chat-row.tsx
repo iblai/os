@@ -124,6 +124,12 @@ export function ChatRowItem({
       <button
         type="button"
         onClick={onSelect}
+        // Stable machine-readable identity for the row. The visible label
+        // prefers the backend-generated session title (chatRowLabel), which
+        // is produced asynchronously — so the text a user typed can vanish
+        // from the DOM at any moment. E2E tests locate rows via this
+        // attribute instead of the label.
+        data-session-id={row.session_id}
         className={cn(
           'flex w-full min-w-0 cursor-pointer items-center gap-2 rounded-md px-2 py-2 pr-8 text-left text-[14px] font-normal transition-colors',
           active

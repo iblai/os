@@ -301,6 +301,24 @@ export class SidebarPage {
   }
 
   /**
+   * Returns a locator for a specific Recent chat row by its SESSION ID
+   * (`data-session-id` on the row-select button — see `ChatRowItem`).
+   *
+   * Prefer this over `getRecentChatRow(text)` whenever the test knows the
+   * session id (via `chatPage.getCachedSessionId(mentorId)`): the visible
+   * label prefers the backend's asynchronously generated session title, so
+   * a row found by sent-message text can stop matching at any moment once
+   * the title lands.
+   */
+  getRecentChatRowBySession(
+    sessionId: string,
+  ): import('@playwright/test').Locator {
+    return this.getRecentChatsList().locator(
+      `button[data-session-id="${sessionId}"]`,
+    );
+  }
+
+  /**
    * Returns true if a Recent chat row matching `text` is visible within
    * `timeoutMs`. Uses `waitFor` (NOT `isVisible().catch()`) so the timeout
    * is honoured for cases where the row appears after an async refetch.
@@ -312,6 +330,26 @@ export class SidebarPage {
     const row = this.getRecentChatsList().locator('button', { hasText: text });
     try {
       await row.waitFor({ state: 'visible', timeout: timeoutMs });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Returns true if the Recent chat row for `sessionId` is visible within
+   * `timeoutMs`. Title-generation-proof variant of `isRecentChatVisible` —
+   * see `getRecentChatRowBySession`.
+   */
+  async isRecentChatVisibleBySession(
+    sessionId: string,
+    timeoutMs = 15_000,
+  ): Promise<boolean> {
+    try {
+      await this.getRecentChatRowBySession(sessionId).waitFor({
+        state: 'visible',
+        timeout: timeoutMs,
+      });
       return true;
     } catch {
       return false;
@@ -365,6 +403,20 @@ export class SidebarPage {
   }
 
   /**
+   * `getChatRowContainer` keyed by session id instead of label text —
+   * see `getRecentChatRowBySession` for why session id is preferred.
+   */
+  getChatRowContainerBySession(
+    sessionId: string,
+  ): import('@playwright/test').Locator {
+    return this.getRecentChatsList()
+      .locator('li')
+      .filter({
+        has: this.page.locator(`button[data-session-id="${sessionId}"]`),
+      });
+  }
+
+  /**
    * Returns the "Chat actions" three-dot trigger button for a specific
    * Recent/Pinned chat row. The button is `opacity-0` until the row is
    * hovered/focused (Tailwind `group-hover`) — Playwright's visibility
@@ -410,14 +462,38 @@ export class SidebarPage {
   async openChatActionsMenu(
     text: string,
   ): Promise<import('@playwright/test').Locator> {
+    return this.openMenuForRow(
+      this.getChatRowContainer(text),
+      this.getRecentChatRow(text),
+    );
+  }
+
+  /**
+   * `openChatActionsMenu` keyed by session id instead of label text —
+   * see `getRecentChatRowBySession` for why session id is preferred.
+   */
+  async openChatActionsMenuBySession(
+    sessionId: string,
+  ): Promise<import('@playwright/test').Locator> {
+    return this.openMenuForRow(
+      this.getChatRowContainerBySession(sessionId),
+      this.getRecentChatRowBySession(sessionId),
+    );
+  }
+
+  private async openMenuForRow(
+    container: import('@playwright/test').Locator,
+    selectButton: import('@playwright/test').Locator,
+  ): Promise<import('@playwright/test').Locator> {
     await this.closeAnyOpenMenu();
-    const container = this.getChatRowContainer(text);
     await expect(container).toBeVisible({ timeout: 15_000 });
     // Hover the select button (inside the `.group` wrapper) so the
     // Tailwind `group-hover:opacity-100` rule on the three-dot trigger
     // actually engages, same as a real user hovering the row.
-    await container.getByRole('button', { name: text }).hover();
-    const actionsBtn = this.getChatActionsButton(text);
+    await selectButton.hover();
+    const actionsBtn = container.getByRole('button', {
+      name: 'Chat actions',
+    });
     await expect(actionsBtn).toBeVisible({ timeout: 5_000 });
     await actionsBtn.click();
     const menu = this.page.getByRole('menu');
