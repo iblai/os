@@ -798,11 +798,13 @@ Chromium-only. Uses `--use-fake-device-for-media-stream` plus `--use-file-for-fa
 
 ---
 
-## Journey: Chat URL ?prompt= Auto-Injection (5 checkpoints) — `journeys/chat-url-prompt-injection.spec.ts`
+## Journey: Chat URL ?prompt= Auto-Injection (10 checkpoints) — `journeys/chat-url-prompt-injection.spec.ts`
 
 **Source files:** `components/chat/index.tsx`
 
 Covers the feature introduced in [iblai/iblai-platform#1722](https://github.com/iblai/iblai-platform/issues/1722). When a mentor chat page loads with `?prompt=<text>` in the URL, the `useAdvancedChat` hook (from `@iblai/iblai-js`) reads `searchParams.get('prompt')?.trim()` and auto-submits that text as a user message exactly once per mount.
+
+Also covers the prompt sanitization added in [iblai-platform#2164](https://github.com/iblai/iblai-platform/issues/2164): `sanitizePromptParam()` in `lib/utils.ts` strips control chars (preserving `\n`/`\t`), zero-width/invisible chars, and the Unicode Tag block, trims, and caps length at `MAX_PROMPT_PARAM_LENGTH` (4000) before the value is auto-submitted. HTML is intentionally NOT escaped — the render layer already renders user turns as plain React text (no `dangerouslySetInnerHTML`), so an HTML/script-ish payload must render as inert literal text.
 
 **Contracts verified:**
 
@@ -810,12 +812,18 @@ Covers the feature introduced in [iblai/iblai-platform#1722](https://github.com/
 - The dedup guard scans back for the last user message; if content matches the trimmed prompt, the hook no-ops so no second bubble appears.
 - A new session is NOT created on a dedup reload — `localStorage.session_id[mentorId]` is unchanged.
 - `searchParams.get('prompt')` decodes percent-encoded characters natively (`%20` → space).
+- `sanitizePromptParam()` strips invisible/control chars but leaves visible text (including HTML-ish text) untouched; a value that cleans to empty is treated as absent (no auto-submit).
 
 - [x] UPI-01: Fresh session + `?prompt=<text>` — user-message bubble appears automatically, AI responds, `location.search` still contains `prompt=` after response settles
 - [x] UPI-02: Dedup — reloading the same `?prompt=` URL on a cached session produces exactly one user bubble (count === 1) and `localStorage.session_id[mentorId]` is unchanged
 - [x] UPI-03: Cached session + different `?prompt=` — original user/assistant messages remain visible, new prompt text appears as a new user bubble, AI responds again, session id is unchanged
 - [x] UPI-04: No `?prompt=` — welcome state shown, no user-message bubbles appear, idle confirmed over 3 seconds, URL has no `prompt=` param
 - [x] UPI-05: URL-encoded prompt (`%20` → space) — bubble renders decoded text, not percent-encoded form
+- [x] UPI-06: Clean `?prompt=` (no special chars) — sanitization is a no-op, bubble renders text verbatim
+- [x] UPI-07: `?prompt=` with a zero-width space, NUL control char, and Unicode Tag-block char interleaved with visible text — all stripped, bubble text equals exactly the cleaned visible-only string
+- [x] UPI-08: `?prompt=` of whitespace + zero-width chars only (`%20%E2%80%8B%20`) — cleans to empty, `sanitizePromptParam()` returns `undefined`, no auto-submit occurs (welcome state, chat input visible, 0 user bubbles held over a 3s settle)
+- [x] UPI-09: `?prompt=<img src=x onerror=alert(1)>` — renders as inert literal text (bubble `textContent` equals the literal payload); no real `<img>` element is inserted (`'.chat-user-message-query img'` count is 0); no `dialog` event ever fires (`onerror` never executes)
+- [ ] _(deferred to unit tests)_ UPI-10: oversized `?prompt=` (>4000 chars) is truncated to `MAX_PROMPT_PARAM_LENGTH` then re-trimmed — unit-covered in `lib/__tests__/sanitize-prompt-param.test.ts`; not added at the E2E level to avoid flake risk from very long query strings (URL length limits, `page.goto`/render cost)
 
 ---
 
