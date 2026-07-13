@@ -74,6 +74,7 @@ import {
   selectNumberOfActiveChatMessages,
   selectSessionId,
   selectStreaming,
+  useTenantMetadata,
 } from '@iblai/iblai-js/web-utils';
 import {
   Admin,
@@ -996,12 +997,14 @@ function chatRowLabel(row: ChatRow, noContentLabel: string): React.ReactNode {
 function ChatThreeDotMenu({
   isPinned,
   isLoading,
+  canExport = true,
   onPinToggle,
   onExport,
   onDelete,
 }: {
   isPinned: boolean;
   isLoading: boolean;
+  canExport?: boolean;
   onPinToggle: () => void;
   onExport: () => void;
   onDelete: () => void;
@@ -1049,14 +1052,16 @@ function ChatThreeDotMenu({
           )}
           {isPinned ? t('unpin') : t('pin')}
         </DropdownMenuItem>
-        <DropdownMenuItem className="gap-2" onSelect={onExport}>
-          <Download
-            className="size-3.5 shrink-0"
-            strokeWidth={1.5}
-            aria-hidden
-          />
-          {t('export')}
-        </DropdownMenuItem>
+        {canExport && (
+          <DropdownMenuItem className="gap-2" onSelect={onExport}>
+            <Download
+              className="size-3.5 shrink-0"
+              strokeWidth={1.5}
+              aria-hidden
+            />
+            {t('export')}
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem
           className="gap-2 text-red-600 focus:text-red-700"
           onSelect={onDelete}
@@ -1075,6 +1080,7 @@ function ChatRowItem({
   onSelect,
   isPinned,
   isLoading,
+  canExport = true,
   onPinToggle,
   onExport,
   onDelete,
@@ -1084,6 +1090,7 @@ function ChatRowItem({
   onSelect: () => void;
   isPinned: boolean;
   isLoading: boolean;
+  canExport?: boolean;
   onPinToggle: () => void;
   onExport: () => void;
   onDelete: () => void;
@@ -1109,6 +1116,7 @@ function ChatRowItem({
         <ChatThreeDotMenu
           isPinned={isPinned}
           isLoading={isLoading}
+          canExport={canExport}
           onPinToggle={onPinToggle}
           onExport={onExport}
           onDelete={onDelete}
@@ -1136,10 +1144,17 @@ function SidebarChatsSection({
   username: string | null;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const dispatch = useAppDispatch();
   const { onAfterNav } = useSidebarNavCallback();
   const t = useTranslations('appSidebarIndex');
   const appSessionId = useAppSelector(selectSessionId);
+  const { projectId } = useParams<ProjectPageParams>();
+  const isChatPage = !!(pathname && /\/platform\/[^/]+\/[^/]+$/.test(pathname));
+  const userIsStudent = useUserIsStudent();
+  const { metadata } = useTenantMetadata({ org: tenantKey });
+  const canExport =
+    !userIsStudent || metadata?.enable_chat_history_export !== false;
   const resolvedUserId = username ?? getUserName();
   // The message-loader effect in `useAdvancedChat` keys EXCLUSIVELY on
   // `cachedSessionId[mentorId]` (backed by localStorage `session_id`). Row
@@ -1285,25 +1300,9 @@ function SidebarChatsSection({
     [recentMessages, filterByMentor, pinnedSessionIds],
   );
 
-  // Helpers shared by both lists ---------------------------------------
-
-  const navHrefFor = (row: ChatRow): string | undefined => {
-    const m = row.mentor?.unique_id;
-    if (!m || !tenantKey) return undefined;
-    return `/platform/${tenantKey}/${m}?session=${encodeURIComponent(
-      String(row.session_id),
-    )}`;
-  };
-
-  // Selecting an existing chat. Navigating (`router.push(?session=...)`) is
-  // NOT enough on its own — nothing reads the query param back into state.
-  // We must also point the chat slice + the cached session id at the picked
-  // session so the loader effect re-fires and repaints the message panel.
-  // Clicking the already-active chat is a no-op for state (we only navigate /
-  // close the flyout) to avoid thrashing the in-flight session.
   const handleSelectRow = (row: ChatRow) => {
-    const href = navHrefFor(row);
-    if (!href) return;
+    const mentorUniqueId = row.mentor?.unique_id;
+    if (!mentorUniqueId || !tenantKey) return;
 
     if (row.session_id !== appSessionId) {
       // Different session: tear down any in-flight streaming/typing state and
@@ -1328,7 +1327,13 @@ function SidebarChatsSection({
       }
     }
 
-    router.push(href);
+    if (!isChatPage) {
+      if (projectId) {
+        router.push(`/platform/${tenantKey}/projects/${projectId}/${mentorId}`);
+      } else {
+        router.push(`/platform/${tenantKey}/${mentorId}`);
+      }
+    }
     onAfterNav?.();
   };
 
@@ -1478,6 +1483,7 @@ function SidebarChatsSection({
       onSelect={() => handleSelectRow(row)}
       isPinned={kind === 'pinned'}
       isLoading={actingSessionId === row.session_id}
+      canExport={canExport}
       onPinToggle={() =>
         kind === 'pinned' ? handleUnpin(row) : handlePin(row)
       }

@@ -2,19 +2,25 @@ name: Release macOS DMG
 
 # Watches src-tauri/ on main and produces a signed + notarized Developer ID DMG
 # (the non-sandboxed variant where System Control / GhostOS works — see
-# docs/macos-builds.md). Builds a universal binary so one DMG runs on both
-# Intel and Apple Silicon. Also runnable on demand via "Run workflow".
+# docs/macos-builds.md). The build/sign/notarize logic lives in the reusable
+# workflow (vendored from iblai/iblai-web-ops); this file detects release vs dev
+# and drives it. Also runnable on demand via "Run workflow".
 #
-# The app version comes from src-tauri/tauri.conf.json, which release-it keeps
-# in sync via its after:bump hook (see .release-it.json). So a `chore(release):`
-# commit — which bumps tauri.conf.json — trips this same src-tauri path filter
-# and ships a freshly-versioned DMG as the `app-v<version>` Release.
+# Release vs dev:
+#   - A `chore(release):` commit bumps src-tauri/tauri.conf.json (release-it's
+#     after:bump hook keeps it in sync with package.json), so the version
+#     changes. That is treated as a RELEASE: the DMG is attached to the
+#     v<version> Release release-it created, and a row is added to the README
+#     Downloads table.
+#   - Any other src-tauri change (no version bump) is a DEV build: it just
+#     produces a SHA-named CI artifact and never touches a released version.
 on:
   push:
     branches: [main]
     paths:
       - 'src-tauri/**'
       - '.github/workflows/release-macos-dmg.yml'
+      - '.github/workflows/reusable-release-macos-dmg.yml'
   workflow_dispatch:
 
 # Never let two release builds clobber the same GitHub Release at once.
@@ -23,73 +29,58 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write # create / update the GitHub Release and upload the DMG asset
+  contents: write # attach the DMG to the Release and push the README update
 
 jobs:
-  build-dmg:
-    runs-on: macos-latest # Apple Silicon runner; cross-compiles the x86_64 slice too
-    env:
-      # Not secret — these already live in src-tauri/tauri.devid.conf.json and
-      # docs/macos-builds.md. tauri-action needs them in the environment to pick
-      # the right identity in the temporary signing keychain and to notarize.
-      APPLE_SIGNING_IDENTITY: 'Developer ID Application: Class Generation, LLC (L4FWRM8W5Z)'
-      APPLE_TEAM_ID: L4FWRM8W5Z
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      is_release: ${{ steps.info.outputs.is_release }}
+      artifact_name: ${{ steps.info.outputs.artifact_name }}
+      release_tag: ${{ steps.info.outputs.release_tag }}
     steps:
       - uses: actions/checkout@v4
-
-      # Node/pnpm are only needed so tauri-action can resolve the project's
-      # package manager; the frontend itself is the committed static
-      # src-tauri/offline-shell (no `next build` required for the bundle).
-      - name: Setup Node
-        uses: actions/setup-node@v4
         with:
-          node-version: '25.3.0'
+          fetch-depth: 0 # need the "before" commit to diff the version
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
+      - name: Determine release vs dev build
+        id: info
+        run: |
+          set -euo pipefail
+          VERSION=$(node -p "require('./src-tauri/tauri.conf.json').version")
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+          # A release build is one where this push changed the tauri.conf.json
+          # version (i.e. a chore(release): bump). Everything else is a dev build.
+          IS_RELEASE=false
+          BEFORE="${{ github.event.before }}"
+          if [ "${{ github.event_name }}" = "push" ] && [ -n "$BEFORE" ] && ! printf '%s' "$BEFORE" | grep -qE '^0+$'; then
+            if git cat-file -e "$BEFORE:src-tauri/tauri.conf.json" 2>/dev/null; then
+              git show "$BEFORE:src-tauri/tauri.conf.json" > /tmp/prev-conf.json
+              PREV=$(node -p "try { require('/tmp/prev-conf.json').version } catch (e) { '' }")
+              if [ -n "$PREV" ] && [ "$PREV" != "$VERSION" ]; then IS_RELEASE=true; fi
+            fi
+          fi
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-apple-darwin,x86_64-apple-darwin
+          if [ "$IS_RELEASE" = "true" ]; then
+            echo "is_release=true" >> "$GITHUB_OUTPUT"
+            echo "artifact_name=ibl-ai-macos-dmg" >> "$GITHUB_OUTPUT"
+            echo "release_tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_release=false" >> "$GITHUB_OUTPUT"
+            echo "artifact_name=ibl-ai-macos-dmg-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+            echo "release_tag=" >> "$GITHUB_OUTPUT"
+          fi
+          echo "version=$VERSION is_release=$IS_RELEASE"
 
-      - name: Cache Rust build
-        uses: swatinem/rust-cache@v2
-        with:
-          workspaces: src-tauri
-
-      - name: Build, sign, notarize & release DMG
-        id: tauri
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Enable in-app purchase for release builds. Read at Rust compile time
-          # via option_env!("IBL_ALLOW_IN_APP_PURCHASE") (defaults false elsewhere).
-          IBL_ALLOW_IN_APP_PURCHASE: 'true'
-          # --- Code signing (Developer ID Application cert, exported as .p12) ---
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          # --- Notarization (Apple ID + app-specific password) ---
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          # APPLE_SIGNING_IDENTITY / APPLE_TEAM_ID are inherited from job env.
-        with:
-          # Apply the Developer ID overlay, build only the DMG, as a universal
-          # binary. Mirrors `pnpm tauri:build:devid` with the CI target added.
-          args: --config src-tauri/tauri.devid.conf.json --target universal-apple-darwin --bundles app,dmg
-          tagName: app-v__VERSION__ # __VERSION__ is read from tauri.conf.json
-          releaseName: 'ibl.ai __VERSION__ (macOS)'
-          releaseBody: 'Automated, notarized Developer ID macOS build.'
-          releaseDraft: false
-          prerelease: false
-
-      # Keep the DMG available as a build artifact too, independent of the Release.
-      - name: Upload DMG artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ibl-ai-macos-dmg
-          path: src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
-          if-no-files-found: error
+  release:
+    needs: prepare
+    uses: ./.github/workflows/reusable-release-macos-dmg.yml
+    with:
+      allow_in_app_purchase: true
+      artifact_name: ${{ needs.prepare.outputs.artifact_name }}
+      release_tag: ${{ needs.prepare.outputs.release_tag }}
+      release_name: 'ibl.ai ${{ needs.prepare.outputs.release_tag }} (macOS)'
+    secrets: inherit
+    # The README Downloads table is maintained locally by release-it (see
+    # scripts/update-readme-downloads.mjs + .release-it.json), not here — main is
+    # protected, so CI can't push to it.

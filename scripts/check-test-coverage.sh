@@ -15,6 +15,8 @@ SKIP_COVERAGE_FILES=(
   "explore/layout.tsx"
   "notifications/layout.tsx"
   "components/version.tsx"
+  # Null-rendering glue; the logic lives in use-tenant-lock.ts (unit-tested).
+  "components/tenant-lock.tsx"
   "edit-mentor-modal/utils.ts"
   "edit-mentor-modal/tabs/embed-tab.tsx"
   # App-router pages/components are exercised via E2E (see vitest.config.ts

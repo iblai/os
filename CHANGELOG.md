@@ -1,5 +1,134 @@
 # Changelog
 
+## [0.95.0](https://github.com/iblai/os/compare/v0.94.0...v0.95.0) (2026-07-09)
+
+### Features
+
+* **tauri:** lock a build to a single tenant ([8429e32](https://github.com/iblai/os/commit/8429e32c5561a632df979b3c422b6a57e44e2d8d))
+
+### CI
+
+* reuse macOS DMG workflow with versioning and README downloads ([0081075](https://github.com/iblai/os/commit/0081075a8f279bbeda51300b4a40f776ec996f3a))
+
+## [0.94.0](https://github.com/iblai/os/compare/v0.93.1...v0.94.0) (2026-07-08)
+
+### Bug Fixes
+
+- **e2e-test:** fix for the e2e tests for tasks ([2050cb7](https://github.com/iblai/os/commit/2050cb71578a7d4d771431c59a3ff9f46db78cb5))
+- **e2e-test:** more fixes for the e2e tests ([3655577](https://github.com/iblai/os/commit/365557761457aa4a0790b6e5cb3e007b7a40da50))
+- **e2e-tests:** adding fixes for lti tests ([07e9ee1](https://github.com/iblai/os/commit/07e9ee1f77e81aaecc4a6b2315f805a04001a2f7))
+- **e2e-tests:** fixing e2e tests for lti ([b9cc7d7](https://github.com/iblai/os/commit/b9cc7d79d54278b7b754dd641a63cd4a698de6be))
+- **e2e-tests:** fixing e2e tests for task tab and sdk version bump ([681657a](https://github.com/iblai/os/commit/681657a7d8af2e81fb5b979ab6e4eeedff5f45ad))
+- **e2e-tests:** fixing playwright tests for lti ([e6e28b1](https://github.com/iblai/os/commit/e6e28b1db8295cee7e9ab9c1e10aa58f1342037d))
+- **e2e-tests:** fixing test cover for journey 56 to 57 ([0aea5ad](https://github.com/iblai/os/commit/0aea5ad37fcfa90b9160accbc5c699c8cfba3689))
+- **e2e-tests:** journey updates for tests coverage ([34613af](https://github.com/iblai/os/commit/34613af2f311e133d8a7d7afffae848ad5ce4b90))
+- **mentor:** fixing tests for jounery 14 ([09bd905](https://github.com/iblai/os/commit/09bd90556082b234a39db88ab5719a509900502a))
+- **mentor:** fixing tests for jounery 14 ([d8df25e](https://github.com/iblai/os/commit/d8df25ed7f8df7c9aa6169582c828b13b4d72ac2))
+- **mentor:** translation for lti, e2e test and checkpoints fixes ([ffe6993](https://github.com/iblai/os/commit/ffe6993e536b0ffc85855ec4aab3585e92576c0c))
+
+## [0.88.4](https://github.com/iblai/os/compare/v0.93.1...v0.94.0) (2026-07-01)
+
+### Features
+
+- **e2e-tests:** adding e2e tests for lti ([97d6e4e](https://github.com/iblai/os/commit/97d6e4ee30a2bb03616bfa984f094d49ef347f06))
+
+### Bug Fixes
+
+- **e2e-tests:** fixing journey 20 for the nested dialouge multiple elements ([c0eb757](https://github.com/iblai/os/commit/c0eb7570b6f511cc6e8c6e56b4637154bd49ede8))
+- **mentorai:** version bump for iblai-js ([549dd1d](https://github.com/iblai/os/commit/549dd1dcaeb7fd4f9ec6f7c9a56d982045abcf38))
+
+## [0.93.1](https://github.com/iblai/os/compare/v0.93.0...v0.93.1) (2026-07-08)
+
+### Bug Fixes
+
+- **chat:** preserve LaTeX delimiters in preprocessLaTeX currency escape ([7502422](https://github.com/iblai/os/commit/75024224f69060780e3646ea40375fe891c2ebb7))
+
+### Chores
+
+- normalize CHANGELOG formatting via prettier ([f60d24b](https://github.com/iblai/os/commit/f60d24bd81b32e88f65fa1ecc11de218cf279f91))
+
+### Tests
+
+- **chat:** cover LaTeX delimiter preservation and KaTeX rendering ([3a01172](https://github.com/iblai/os/commit/3a01172acfb5762d6b03f7edca93f70e8dfc4fc2))
+
+## [0.93.0](https://github.com/iblai/os/compare/v0.92.4...v0.93.0) (2026-07-08)
+
+### Features
+
+- ecommerce playwright full flow coverage with credit cleanup ([ceb5612](https://github.com/iblai/os/commit/ceb56121d056f34faab247af93c612b4aac41a9e))
+- ecommerce playwright full flow coverage with credit cleanup ([b463105](https://github.com/iblai/os/commit/b463105a33b7e5c6cddec87801367f7459e157fa))
+- ecommerce playwright full flow coverage with credit cleanup ([d7d3e67](https://github.com/iblai/os/commit/d7d3e6726d5768d749c685c2a721145ea4a72caa))
+- ecommerce playwright full flow coverage with credit cleanup > misleanding env example fixed ([de30e48](https://github.com/iblai/os/commit/de30e484bcfb78268a7cdf1119552026c20aab07))
+
+## [0.92.4](https://github.com/iblai/os/compare/v0.92.3...v0.92.4) (2026-07-08)
+
+### Bug Fixes
+
+- **sidebar:** hide chat export for students when tenant setting is off ([7854e52](https://github.com/iblai/os/commit/7854e521ebcb438e55d39ba1b615aaa67f5c9cda))
+- **sidebar:** preserve embed mode when selecting a chat from history ([67e74db](https://github.com/iblai/os/commit/67e74db2841c9585b31722885fbf84d37cb61e26)), closes [#2067](https://github.com/iblai/os/issues/2067)
+- **sidebar:** restore pre-rewrite chat-selection page routing ([b06c969](https://github.com/iblai/os/commit/b06c969b4122a872ca59a76dc5683f69868006e3)), closes [#2067](https://github.com/iblai/os/issues/2067)
+- **tests:** skip journey 43 for now ([13e5b89](https://github.com/iblai/os/commit/13e5b891ea5c40b7507199e404c1265788cdcbe2))
+
+### Chores
+
+- **deps:** bump @iblai/iblai-js to 1.22.2 ([0d6248b](https://github.com/iblai/os/commit/0d6248bf558c81d941757c1ebaa37d3f4f19a2a3))
+
+### Documentation
+
+- **e2e:** record journey 56 coverage ([57e0ba0](https://github.com/iblai/os/commit/57e0ba00d0a8b172dbd9f694adc580f0a3875e58))
+
+### Tests
+
+- **e2e:** add journey 56 for chat history export toggle ([78614c6](https://github.com/iblai/os/commit/78614c68bd91edeab3f7261ff8f71f2dc353a263))
+- **e2e:** add journey 57 for embed-mode chat-selection sidebar guard ([ae995a6](https://github.com/iblai/os/commit/ae995a610dc2dcb359f8fbe014618432d564309b))
+- **e2e:** fix flaky Export-gate assertions in journey 57 ([609aac1](https://github.com/iblai/os/commit/609aac1cf6bdb83b83dfbe7bc6f0264f55cc8169))
+
+## [0.92.3](https://github.com/iblai/os/compare/v0.92.2...v0.92.3) (2026-07-07)
+
+### Bug Fixes
+
+- **app:** foreground main window before navigating on popup return ([f1a8aa5](https://github.com/iblai/os/commit/f1a8aa5f88726b3a68e2235f69a332c5fcaa775b))
+
+## [0.92.2](https://github.com/iblai/os/compare/v0.92.1...v0.92.2) (2026-07-07)
+
+### Bug Fixes
+
+- **mentor:** hide admin-only settings when an admin previews as a student ([3233caa](https://github.com/iblai/os/commit/3233caa7d7e7395d676532981eb3b3fd3c8c22c3))
+- **mentor:** hide the agent fork action in student mode ([b2dfe48](https://github.com/iblai/os/commit/b2dfe485065d4eae7eddb960ef564ed103bf811a))
+- **mentor:** rebuild the segment list when the effective user type changes ([fde3f7a](https://github.com/iblai/os/commit/fde3f7a585f15a7944873212c3a6b79ce0aeebb1))
+- **tests:** remove "/dm", this is already expected from the env variable ([1d60663](https://github.com/iblai/os/commit/1d606630abfab93fc8b52b11b0df13ac41fd90d7))
+
+### Chores
+
+- **deps:** bump @iblai/iblai-js to 1.20.21 ([26167a5](https://github.com/iblai/os/commit/26167a51098555e36d153d18426c1e7d94238c72))
+
+### Documentation
+
+- **e2e:** record journey 56 in coverage ([22a22da](https://github.com/iblai/os/commit/22a22da5e1807ca57a35ef0ccf21934a64980101))
+
+### Tests
+
+- **e2e:** cover navbar agent-dropdown visibility across user/admin mode ([bf93c4d](https://github.com/iblai/os/commit/bf93c4d241e5fd6c036e9212c108d29c338ecc2e))
+- **mentor:** align useUserType mocks with the new userType return ([cbbc49e](https://github.com/iblai/os/commit/cbbc49e252a766e92cb201ff459a1bdde1da8eb1))
+
+## [0.92.1](https://github.com/iblai/os/compare/v0.92.0...v0.92.1) (2026-07-07)
+
+### Bug Fixes
+
+- **app:** hard-navigate the main window on in-app popup return ([a6f76b2](https://github.com/iblai/os/commit/a6f76b20cd1e8c536b4ae5b0d430aa931bf12e33))
+
+## [0.92.0](https://github.com/iblai/os/compare/v0.91.2...v0.92.0) (2026-07-06)
+
+### Features
+
+- **app:** route open_external_url to an in-app popup by URL pattern ([6f07027](https://github.com/iblai/os/commit/6f07027d28bfba31422845dcccfee63bd85844b8)), closes [#311](https://github.com/iblai/os/issues/311)
+
+## [0.91.2](https://github.com/iblai/os/compare/v0.91.1...v0.91.2) (2026-07-06)
+
+### Bug Fixes
+
+- **app:** register open_external_url command on desktop ([cc1b010](https://github.com/iblai/os/commit/cc1b0106096a57766b44ea2c62c8e82019ca0a15))
+
 ## [0.91.1](https://github.com/iblai/os/compare/v0.91.0...v0.91.1) (2026-07-06)
 
 ### Chores
