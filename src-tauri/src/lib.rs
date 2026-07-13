@@ -1219,6 +1219,15 @@ fn allow_in_app_purchase() -> bool {
     }
 }
 
+/// The tenant key this build is locked to, injected at build time via the
+/// `IBL_TENANT` environment variable. Returns an empty string when unset, which
+/// the app treats as "no lock" (normal multi-tenant behaviour). Lets two builds
+/// target different tenants while sharing one application URL.
+#[command]
+fn get_locked_tenant() -> String {
+    option_env!("IBL_TENANT").unwrap_or("").trim().to_string()
+}
+
 /// Open an external URL in the system's default browser
 /// This is needed for OAuth flows (like Google login) that don't work in WebViews
 #[command]
@@ -2714,6 +2723,7 @@ pub fn run() {
             get_offline_context,
             get_os_type,
             allow_in_app_purchase,
+            get_locked_tenant,
             open_external_url,
             navigate_to,
             ollama_chat,
@@ -2734,6 +2744,7 @@ pub fn run() {
             check_network_status,
             get_os_type,
             allow_in_app_purchase,
+            get_locked_tenant,
             open_external_url,
             navigate_to,
             ollama_chat,

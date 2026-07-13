@@ -24,6 +24,7 @@ const mockIsAdmin = vi.fn();
 const mockUsername = vi.fn();
 const mockRbacPermissions = vi.fn();
 const mockIsUserTypeAllowed = vi.fn();
+const mockUserType = vi.fn();
 const mockCheckRbacPermission = vi.fn();
 
 vi.mock('next/navigation', () => ({
@@ -53,6 +54,7 @@ vi.mock('@/hooks/use-user-type', () => ({
   useUserType: () => ({
     isUserTypeAllowed: (segment: { userTypes: string[] }) =>
       mockIsUserTypeAllowed(segment),
+    userType: mockUserType(),
   }),
 }));
 
@@ -116,6 +118,7 @@ const setupDefaults = () => {
   mockIsUserTypeAllowed.mockImplementation((s) =>
     s.userTypes.includes(UserType.ADMIN),
   );
+  mockUserType.mockReturnValue(UserType.ADMIN);
   mockMemsearchEnabled.mockReturnValue(true);
   // Default: a wired claw-config exists, so Skills tab gating only depends on
   // isClawEnabled in most existing tests. Tests that need the unwired state
@@ -140,11 +143,12 @@ describe('useMentorSegments', () => {
     setupDefaults();
   });
 
-  it('returns the canonical 20 mentor segments unfiltered', () => {
+  it('returns the canonical 21 mentor segments unfiltered', () => {
     const { result } = renderHook(() => useMentorSegments());
     expect(result.current.segments).toBe(MENTOR_SEGMENTS);
-    // 17 original + Voice + Screen Share (feat/mentor/1763) + Tasks (feat/mentor/715).
-    expect(MENTOR_SEGMENTS).toHaveLength(20);
+    // 17 original + Voice + Screen Share (feat/mentor/1763) + Tasks
+    // (feat/mentor/715) + LTI.
+    expect(MENTOR_SEGMENTS).toHaveLength(21);
   });
 
   it('places the Sandbox segment right after Settings', () => {
@@ -343,6 +347,57 @@ describe('useMentorSegments', () => {
     });
   });
 
+  describe('LTI segment', () => {
+    it('orders LTI immediately before Embed', () => {
+      const ltiIndex = MENTOR_SEGMENTS.findIndex((s) => s.label === 'LTI');
+      expect(ltiIndex).toBeGreaterThanOrEqual(0);
+      expect(MENTOR_SEGMENTS[ltiIndex + 1]?.label).toBe('Embed');
+    });
+
+    it('is NOT gated on is_lti_accessible (no enabledThroughConfig)', () => {
+      // Unlike Voice/Screen-share, the LTI tab must stay reachable so an admin
+      // can create the first link (which turns LTI access on inline).
+      const ltiSegment = MENTOR_SEGMENTS.find((s) => s.label === 'LTI')!;
+      expect(ltiSegment.enabledThroughConfig).toBeUndefined();
+    });
+
+    it('is visible to admins regardless of the is_lti_accessible value', () => {
+      for (const value of [false, undefined, true]) {
+        mockMentorSettings.mockReturnValue({
+          platform_key: 'custom-tenant',
+          mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+          mentor_id: 42,
+          permissions: { field: {} },
+          is_lti_accessible: value,
+        });
+
+        const { result, unmount } = renderHook(() => useMentorSegments());
+        const labels = result.current.filteredSegments.map((s) => s.label);
+        expect(labels).toContain('LTI');
+        unmount();
+      }
+    });
+
+    it('is hidden from non-admin users', () => {
+      mockMentorSettings.mockReturnValue({
+        platform_key: 'custom-tenant',
+        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+        mentor_id: 42,
+        permissions: { field: {} },
+        is_lti_accessible: true,
+      });
+      mockIsUserTypeAllowed.mockImplementation(
+        (s) =>
+          s.userTypes.includes(UserType.FREE_TRIAL) &&
+          !s.userTypes.includes(UserType.ADMIN),
+      );
+
+      const { result } = renderHook(() => useMentorSegments());
+      const labels = result.current.filteredSegments.map((s) => s.label);
+      expect(labels).not.toContain('LTI');
+    });
+  });
+
   it('exposes isSegmentVisible reflecting the same filter pipeline', () => {
     const { result } = renderHook(() => useMentorSegments());
 
@@ -352,6 +407,35 @@ describe('useMentorSegments', () => {
     mockMemsearchEnabled.mockReturnValue(false);
     const { result: result2 } = renderHook(() => useMentorSegments());
     expect(result2.current.isSegmentVisible(memorySegment)).toBe(false);
+  });
+
+  it('recomputes filteredSegments when userType flips from ADMIN to STUDENT', () => {
+    mockUserType.mockReturnValue(UserType.ADMIN);
+    mockIsUserTypeAllowed.mockImplementation((s) =>
+      s.userTypes.includes(UserType.ADMIN),
+    );
+
+    const { result, rerender } = renderHook(() => useMentorSegments());
+
+    const adminLabels = result.current.filteredSegments.map((s) => s.label);
+    expect(adminLabels).toContain('Access');
+    expect(adminLabels).toContain('Audit');
+
+    // Toggle to student ("User") mode: userType flips and the gate now rejects
+    // any segment that isn't explicitly student-visible. Without `userType` in
+    // the filterContext useMemo deps the memo stays cached (the gate is read
+    // through a ref, so nothing else in the dep list changes) and the admin
+    // segments would remain — this rerender is the regression guard.
+    mockUserType.mockReturnValue(UserType.STUDENT);
+    mockIsUserTypeAllowed.mockImplementation((s) =>
+      s.userTypes.includes(UserType.STUDENT),
+    );
+
+    rerender();
+
+    const studentLabels = result.current.filteredSegments.map((s) => s.label);
+    expect(studentLabels).not.toContain('Access');
+    expect(studentLabels).not.toContain('Audit');
   });
 
   it('filters out segments whose user type the current user lacks', () => {
@@ -365,6 +449,45 @@ describe('useMentorSegments', () => {
     const { result } = renderHook(() => useMentorSegments());
     const labels = result.current.filteredSegments.map((s) => s.label);
     expect(labels).not.toContain('Access');
+  });
+
+  describe('main-tenant visibility edge cases', () => {
+    it('hides every segment from a non-admin on the main tenant', () => {
+      mockIsAdmin.mockReturnValue(false);
+      mockTenantKey.mockReturnValue('main');
+      mockIsUserTypeAllowed.mockReturnValue(true);
+      mockMentorSettings.mockReturnValue({
+        platform_key: 'main',
+        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+        mentor_id: 42,
+        permissions: { field: {} },
+        enable_memory_component: true,
+        enable_privacy_router: true,
+      });
+
+      const { result } = renderHook(() => useMentorSegments());
+
+      expect(result.current.filteredSegments).toHaveLength(0);
+    });
+  });
+
+  describe('nullish input fallbacks', () => {
+    it('resolves without throwing when the username is undefined', () => {
+      mockUsername.mockReturnValue(undefined);
+
+      const { result } = renderHook(() => useMentorSegments());
+
+      expect(Array.isArray(result.current.filteredSegments)).toBe(true);
+    });
+
+    it('treats an undefined enable_memsearch flag as disabled', () => {
+      mockMemsearchEnabled.mockReturnValue(undefined);
+
+      const { result } = renderHook(() => useMentorSegments());
+
+      const labels = result.current.filteredSegments.map((s) => s.label);
+      expect(labels).not.toContain('Memory');
+    });
   });
 
   describe('Audit segment RBAC gating', () => {

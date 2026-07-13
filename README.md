@@ -58,7 +58,7 @@ _[Demo](https://www.youtube.com/playlist?list=PLW0-4yErlU3XQr0UP6cCGwy24LMf7I5vR
 | Platform    | Status                                                                     |
 | ----------- | -------------------------------------------------------------------------- |
 | **Web**     | Production at [os.ibl.ai](https://os.ibl.ai) — works on any modern browser |
-| **macOS**   | Native desktop app — lightweight, fast, system-integrated                  |
+| **macOS**   | Native desktop app — [download the latest build](#download)                |
 | **iOS**     | Native mobile app — available on iPhone and iPad                           |
 | **Android** | Native mobile app — available on phones and tablets                        |
 | **Windows** | Native desktop app                                                         |
@@ -67,6 +67,15 @@ _[Demo](https://www.youtube.com/playlist?list=PLW0-4yErlU3XQr0UP6cCGwy24LMf7I5vR
 </div>
 
 One codebase, six platforms. OS runs natively everywhere your users are — lightweight, fast, with near-native performance.
+
+---
+
+## Download
+
+**Latest macOS build:** [ibl.ai v0.95.1 (Universal .dmg)](https://github.com/iblai/os/releases/download/v0.95.1/ibl.ai_0.95.1_universal.dmg) · [all versions](docs/DOWNLOADS.md)
+
+Signed & notarized universal build (Intel + Apple Silicon). Older versions are
+listed in [docs/DOWNLOADS.md](docs/DOWNLOADS.md).
 
 ---
 
@@ -179,6 +188,28 @@ If you need full backend infrastructure:
 See [docs/development.md](docs/development.md) for native app build instructions.
 
 Full deployment docs: [Docker & Standalone](docs/standalone-deployment.md)
+
+#### Build-Time Configuration
+
+The native (Tauri) app reads two optional build-time flags. Because they're
+baked in at compile time (Rust's `option_env!`), you set them as **environment
+variables in the build shell** before `pnpm exec tauri build` — so the same
+codebase can produce differently-configured builds from the same app URL (e.g.
+one build locked to tenant A, another to tenant B).
+
+| Env var                     | Tauri command                    | Default         | Effect                                                                                                                                                                  |
+| --------------------------- | -------------------------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `IBL_TENANT`                | `get_locked_tenant` → `string`   | `""` (unlocked) | **Tenant lock.** When set, the app forces every user onto this tenant — logging out of any other tenant it finds — and hides the tenant switcher. Empty = multi-tenant. |
+| `IBL_ALLOW_IN_APP_PURCHASE` | `allow_in_app_purchase` → `bool` | `false`         | Enables in-app purchase UI. Truthy values: `1`, `true`, `yes`, `on` (case-insensitive).                                                                                 |
+
+```bash
+# a build locked to the "acme" tenant with in-app purchase enabled
+IBL_TENANT=acme IBL_ALLOW_IN_APP_PURCHASE=true pnpm exec tauri build
+```
+
+In CI, set them as `env` on the build step. `src-tauri/build.rs` declares
+`cargo:rerun-if-env-changed` for both, so cargo recompiles whenever a value
+changes between builds. Leaving them unset yields a standard, unlocked build.
 
 ### Troubleshooting
 

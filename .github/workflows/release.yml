@@ -14,8 +14,8 @@ permissions:
 
 jobs:
   release:
-    # Skip release commits to avoid infinite loops
-    if: "!startsWith(github.event.head_commit.message, 'chore(release):')"
+    # Skip our own release commits (loop) and tauri version bumps (separate track)
+    if: "!startsWith(github.event.head_commit.message, 'chore(release):') && !startsWith(github.event.head_commit.message, 'chore(tauri):')"
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -38,6 +38,14 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Sync to latest main
+        # Rebase onto anything that landed after this run was triggered (e.g. a
+        # racing tauri version bump from tauri-autoversion.yml) so release-it's
+        # push fast-forwards instead of failing non-fast-forward.
+        run: |
+          git fetch origin main
+          git rebase origin/main
 
       - name: Run release-it
         env:

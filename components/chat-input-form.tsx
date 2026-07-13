@@ -3,6 +3,7 @@
 import type React from 'react';
 
 import { useState, useRef, ChangeEvent } from 'react';
+import { useParams } from 'next/navigation';
 import { format } from 'date-fns';
 import { useMediaQuery } from 'react-responsive';
 import { FileText } from 'lucide-react';
@@ -50,6 +51,8 @@ import { useModelFileUploadCapabilities } from '@/hooks/use-model-file-upload-ca
 import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
 import { checkRbacPermission } from '@/hoc/withPermissions';
 import { config } from '@/lib/config';
+import { useChatPrivacy } from '@iblai/iblai-js/web-containers';
+import { TenantKeyMentorIdParams } from '@/lib/types';
 
 // Fallback used when the configured paste-to-attachment threshold is missing
 // or non-numeric, so a misconfigured env value can't make a 0-char threshold
@@ -128,8 +131,22 @@ export function ChatInputForm({
   isConnecting = false,
 }: ChatInputFormProps) {
   const dispatch = useAppDispatch();
+  // `useParams()` returns null outside an app-router context (e.g. first render
+  // or when rendered in isolation), so read the id defensively.
+  const mentorId = useParams<TenantKeyMentorIdParams>()?.mentorId;
   const mentorSettings = useMentorSettings();
   const showingSharedChat = useAppSelector(selectShowingSharedChat);
+
+  // Chat private mode signal — same source the nav-bar ChatPrivacyToggle uses.
+  // When the effective mode is 'disabled' the active session is private, so the
+  // Memory button is hidden (memory is not stored for a private session). Gate
+  // on `isEffectiveReady` so we don't flash-hide before the query resolves.
+  const {
+    effective: chatPrivacyEffective,
+    isEffectiveReady: chatPrivacyReady,
+  } = useChatPrivacy({ org: tenantKey, userId: username, mentor: mentorId });
+  const chatPrivacyActive =
+    chatPrivacyReady && chatPrivacyEffective?.mode === 'disabled';
   const rbacPermissions = useAppSelector(selectRbacPermissions);
   const { metadata: tenantMetadata } = useTenantMetadata({ org: tenantKey });
   const persistentChatInputLabel =
@@ -444,6 +461,7 @@ export function ChatInputForm({
                   promptsIsEnabled={promptsIsEnabled}
                   studyMode={studyMode}
                   memoryEnabled={mentorSettings.data.memoryEnabled}
+                  isPrivate={chatPrivacyActive}
                   tenantKey={tenantKey}
                   username={username}
                 />

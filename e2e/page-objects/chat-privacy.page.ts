@@ -437,7 +437,21 @@ export class ChatPrivacyPage {
   // ── User profile "Private Mode" tab ─────────────────────────────────────
 
   /**
-   * Returns `true` when the "Private Mode" tab is visible in the currently-
+   * Locator for the chat-privacy tab in the UserProfileModal sidebar.
+   *
+   * The tab's user-visible label is "Privacy" (the chat-privacy feature
+   * itself is still called "Private Mode" within the tab's content). We
+   * define the locator locally rather than reuse the SDK's
+   * `isPrivateModeTabVisible` / `CHAT_PRIVACY_LABELS.profileTab.tabName`,
+   * because that config still points at the old "Private Mode" label and
+   * no longer matches the rendered tab.
+   */
+  private profilePrivateModeTab(): Locator {
+    return this.page.getByRole('tab', { name: 'Privacy', exact: true });
+  }
+
+  /**
+   * Returns `true` when the "Privacy" tab is visible in the currently-
    * open UserProfileModal. Returns `false` silently when the tenant gate is
    * off — that is a valid state, not an error.
    */
@@ -452,7 +466,7 @@ export class ChatPrivacyPage {
   }
 
   /**
-   * Switch to the "Private Mode" tab inside the already-open profile modal.
+   * Switch to the "Privacy" tab inside the already-open profile modal.
    * Only call this after confirming `isProfilePrivateModeTabVisible()` is true.
    *
    * Bypasses the SDK helper because its 10 s budget on the tab body is

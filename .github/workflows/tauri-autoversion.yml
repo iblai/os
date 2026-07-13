@@ -1,0 +1,79 @@
+name: Tauri Auto Version
+
+# On every src-tauri change merged to main, bump the independent macOS/Tauri app
+# version (its own `app-v<X>` line, separate from the web app's package.json),
+# record the download, and tag `app-v<X>` — which triggers Release macOS DMG to
+# build + ship the DMG. Mirrors release.yml (web app), using the same GIT_TOKEN
+# PAT to push to protected main.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src-tauri/**'
+
+concurrency:
+  group: release-tauri
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  version:
+    # Skip our own bump commits to avoid an infinite loop.
+    if: "!startsWith(github.event.head_commit.message, 'chore(tauri):')"
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GIT_TOKEN }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '25.3.0'
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      # tauri-bump.mjs uses only Node built-ins, so no install step is needed.
+      - name: Bump tauri version + record download
+        id: bump
+        env:
+          HUSKY: '0'
+        run: |
+          set -euo pipefail
+          VERSION="$(node scripts/tauri-bump.mjs patch)"
+          TAG="app-v$VERSION"
+          # Idempotency: if this version was already released (e.g. a job re-run),
+          # stop before committing. The bump edits are discarded with the runner.
+          if git ls-remote --tags origin "refs/tags/$TAG" | grep -q .; then
+            echo "$TAG already exists on origin — nothing to do"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit, tag & push
+        if: steps.bump.outputs.skip != 'true'
+        env:
+          HUSKY: '0'
+          TAG: ${{ steps.bump.outputs.tag }}
+        run: |
+          set -euo pipefail
+          git add src-tauri/tauri.conf.json docs/DOWNLOADS.md README.md
+          git commit -m "chore(tauri): release $TAG"
+          # Push the commit to main, rebasing if the web release (release.yml)
+          # raced us — they touch disjoint files, so the rebase is clean.
+          n=0
+          until git push origin HEAD:main; do
+            n=$((n + 1))
+            [ "$n" -ge 5 ] && { echo "push to main failed"; exit 1; }
+            git fetch origin main && git rebase origin/main
+          done
+          # Tag the pushed commit. The PAT-pushed tag triggers Release macOS DMG.
+          git tag "$TAG"
+          git push origin "refs/tags/$TAG"

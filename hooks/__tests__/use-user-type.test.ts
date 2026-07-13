@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useUserType } from '../use-user-type';
 import { UserType } from '@/lib/constants';
+import { config } from '@/lib/config';
 
 // Mock user hooks
 const mockUseIsAdmin = vi.fn();
@@ -61,6 +62,7 @@ describe('useUserType', () => {
     mockRbacPermissions.mockReturnValue([]);
     mockCheckRbacPermission.mockReturnValue(false);
     mockRbacPermissionToDisplay.mockReturnValue(false);
+    vi.mocked(config.enableRBAC).mockReturnValue(false);
   });
 
   describe('isUserTypeAllowed', () => {
@@ -154,6 +156,189 @@ describe('useUserType', () => {
 
       expect(isAllowed).toBe(false);
     });
+
+    it('should hide admin-only resources in student mode even when RBAC field permissions would allow', () => {
+      mockUseIsAdmin.mockReturnValue(true);
+      mockUseLearnerMode.mockReturnValue({ isInstructorMode: false });
+      vi.mocked(config.enableRBAC).mockReturnValue(true);
+      mockRbacPermissionToDisplay.mockReturnValue(true);
+      mockCheckRbacPermission.mockReturnValue(true);
+
+      const { result } = renderHook(() => useUserType({ mentor_id: 123 }));
+
+      const isAllowed = result.current.isUserTypeAllowed({
+        userTypes: [UserType.ADMIN],
+        permissionFieldsCheck: ['system_prompt'],
+        rbacResource: (id: number) => `/mentors/${id}/#show_settings`,
+      });
+
+      expect(isAllowed).toBe(false);
+    });
+
+    it('should hide admin-only resources in student mode when RBAC is off', () => {
+      mockUseIsAdmin.mockReturnValue(true);
+      mockUseLearnerMode.mockReturnValue({ isInstructorMode: false });
+      vi.mocked(config.enableRBAC).mockReturnValue(false);
+      mockRbacPermissionToDisplay.mockReturnValue(true);
+
+      const { result } = renderHook(() => useUserType({ mentor_id: 123 }));
+
+      const isAllowed = result.current.isUserTypeAllowed({
+        userTypes: [UserType.ADMIN],
+        permissionFieldsCheck: ['system_prompt'],
+      });
+
+      expect(isAllowed).toBe(false);
+    });
+
+    it('should still allow admin-only resources for an admin in instructor mode with RBAC on', () => {
+      mockUseIsAdmin.mockReturnValue(true);
+      mockUseLearnerMode.mockReturnValue({ isInstructorMode: true });
+      vi.mocked(config.enableRBAC).mockReturnValue(true);
+      mockRbacPermissionToDisplay.mockReturnValue(true);
+      mockCheckRbacPermission.mockReturnValue(true);
+
+      const { result } = renderHook(() => useUserType({ mentor_id: 123 }));
+
+      const isAllowed = result.current.isUserTypeAllowed({
+        userTypes: [UserType.ADMIN],
+        permissionFieldsCheck: ['system_prompt'],
+        rbacResource: (id: number) => `/mentors/${id}/#show_settings`,
+      });
+
+      expect(isAllowed).toBe(true);
+    });
+
+    it('should still allow student-inclusive resources in student mode', () => {
+      mockUseIsAdmin.mockReturnValue(true);
+      mockUseLearnerMode.mockReturnValue({ isInstructorMode: false });
+
+      const { result } = renderHook(() => useUserType());
+
+      const isAllowed = result.current.isUserTypeAllowed({
+        userTypes: [UserType.STUDENT, UserType.ADMIN],
+        permissionFieldsCheck: [],
+      });
+
+      expect(isAllowed).toBe(true);
+    });
+
+    it('should allow via RBAC resource permission when user type is not listed', () => {
+      mockUseIsAdmin.mockReturnValue(true);
+      mockUseLearnerMode.mockReturnValue({ isInstructorMode: true });
+      vi.mocked(config.enableRBAC).mockReturnValue(true);
+      mockCheckRbacPermission.mockReturnValue(true);
+
+      const { result } = renderHook(() => useUserType({ mentor_id: 123 }));
+
+      const isAllowed = result.current.isUserTypeAllowed({
+        userTypes: [UserType.FREE_TRIAL],
+        permissionFieldsCheck: [],
+        rbacResource: (id: number) => `/mentors/${id}/#show_settings`,
+      });
+
+      expect(isAllowed).toBe(true);
+    });
+
+    it('should allow via RBAC field permission when user type is not listed', () => {
+      mockUseIsAdmin.mockReturnValue(true);
+      mockUseLearnerMode.mockReturnValue({ isInstructorMode: true });
+      vi.mocked(config.enableRBAC).mockReturnValue(true);
+      mockCheckRbacPermission.mockReturnValue(false);
+      mockRbacPermissionToDisplay.mockReturnValue(true);
+
+      const { result } = renderHook(() =>
+        useUserType({ mentor_id: 123, permissions: { field: {} } }),
+      );
+
+      const isAllowed = result.current.isUserTypeAllowed({
+        userTypes: [UserType.FREE_TRIAL],
+        permissionFieldsCheck: ['system_prompt'],
+      });
+
+      expect(isAllowed).toBe(true);
+    });
+
+    it('should deny when RBAC is on but neither resource nor field permission matches', () => {
+      mockUseIsAdmin.mockReturnValue(true);
+      mockUseLearnerMode.mockReturnValue({ isInstructorMode: true });
+      vi.mocked(config.enableRBAC).mockReturnValue(true);
+      mockCheckRbacPermission.mockReturnValue(false);
+      mockRbacPermissionToDisplay.mockReturnValue(false);
+
+      const { result } = renderHook(() =>
+        useUserType({ mentor_id: 123, permissions: { field: {} } }),
+      );
+
+      const isAllowed = result.current.isUserTypeAllowed({
+        userTypes: [UserType.FREE_TRIAL],
+        permissionFieldsCheck: ['system_prompt'],
+        rbacResource: (id: number) => `/mentors/${id}/#show_settings`,
+      });
+
+      expect(isAllowed).toBe(false);
+    });
+
+    it('should allow an admin-only resource for a NON-admin user via RBAC resource permission (RBAC enabled)', () => {
+      mockUseIsAdmin.mockReturnValue(false);
+      mockUseUserIsStudent.mockReturnValue(true);
+      mockUseLearnerMode.mockReturnValue({ isInstructorMode: false });
+      vi.mocked(config.enableRBAC).mockReturnValue(true);
+      mockCheckRbacPermission.mockReturnValue(true);
+
+      const { result } = renderHook(() => useUserType({ mentor_id: 123 }));
+
+      const isAllowed = result.current.isUserTypeAllowed({
+        userTypes: [UserType.ADMIN],
+        permissionFieldsCheck: [],
+        rbacResource: (id: number) => `/mentors/${id}/#show_settings`,
+      });
+
+      expect(result.current.userType).toBe(UserType.STUDENT);
+      expect(isAllowed).toBe(true);
+    });
+
+    it('should allow an admin-only resource for a NON-admin user via RBAC field permission (RBAC enabled)', () => {
+      mockUseIsAdmin.mockReturnValue(false);
+      mockUseUserIsStudent.mockReturnValue(true);
+      mockUseLearnerMode.mockReturnValue({ isInstructorMode: false });
+      vi.mocked(config.enableRBAC).mockReturnValue(true);
+      mockCheckRbacPermission.mockReturnValue(false);
+      mockRbacPermissionToDisplay.mockReturnValue(true);
+
+      const { result } = renderHook(() =>
+        useUserType({ mentor_id: 123, permissions: { field: {} } }),
+      );
+
+      const isAllowed = result.current.isUserTypeAllowed({
+        userTypes: [UserType.ADMIN],
+        permissionFieldsCheck: ['system_prompt'],
+      });
+
+      expect(result.current.userType).toBe(UserType.STUDENT);
+      expect(isAllowed).toBe(true);
+    });
+
+    it('should hide an admin-only resource for a NON-admin user when RBAC grants nothing', () => {
+      mockUseIsAdmin.mockReturnValue(false);
+      mockUseUserIsStudent.mockReturnValue(true);
+      mockUseLearnerMode.mockReturnValue({ isInstructorMode: false });
+      vi.mocked(config.enableRBAC).mockReturnValue(true);
+      mockCheckRbacPermission.mockReturnValue(false);
+      mockRbacPermissionToDisplay.mockReturnValue(false);
+
+      const { result } = renderHook(() =>
+        useUserType({ mentor_id: 123, permissions: { field: {} } }),
+      );
+
+      const isAllowed = result.current.isUserTypeAllowed({
+        userTypes: [UserType.ADMIN],
+        permissionFieldsCheck: ['system_prompt'],
+        rbacResource: (id: number) => `/mentors/${id}/#show_settings`,
+      });
+
+      expect(isAllowed).toBe(false);
+    });
   });
 
   describe('user type priority', () => {
@@ -208,6 +393,47 @@ describe('useUserType', () => {
 
       expect(result.current).toHaveProperty('isUserTypeAllowed');
       expect(typeof result.current.isUserTypeAllowed).toBe('function');
+    });
+
+    it('should expose userType resolved from the current state', () => {
+      const { result } = renderHook(() => useUserType());
+
+      expect(result.current).toHaveProperty('userType');
+      expect(result.current.userType).toBe(UserType.ANONYMOUS);
+    });
+
+    it('should return userType ADMIN for an admin in instructor mode', () => {
+      mockUseIsAdmin.mockReturnValue(true);
+      mockUseLearnerMode.mockReturnValue({ isInstructorMode: true });
+
+      const { result } = renderHook(() => useUserType());
+
+      expect(result.current.userType).toBe(UserType.ADMIN);
+    });
+
+    it('should return userType STUDENT for an admin in user (student) mode', () => {
+      mockUseIsAdmin.mockReturnValue(true);
+      mockUseLearnerMode.mockReturnValue({ isInstructorMode: false });
+
+      const { result } = renderHook(() => useUserType());
+
+      expect(result.current.userType).toBe(UserType.STUDENT);
+    });
+
+    it('should return userType VISITING when the user is visiting', () => {
+      mockUseIsVisiting.mockReturnValue(true);
+
+      const { result } = renderHook(() => useUserType());
+
+      expect(result.current.userType).toBe(UserType.VISITING);
+    });
+
+    it('should return userType FREE_TRIAL when the user is on a free trial', () => {
+      mockUseUserIsOnTrial.mockReturnValue(true);
+
+      const { result } = renderHook(() => useUserType());
+
+      expect(result.current.userType).toBe(UserType.FREE_TRIAL);
     });
   });
 });

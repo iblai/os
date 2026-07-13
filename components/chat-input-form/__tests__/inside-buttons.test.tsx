@@ -163,6 +163,60 @@ describe('InsideButtons', () => {
     });
   });
 
+  describe('Memory button private-mode gating', () => {
+    it('renders MemoryButton inline when isPrivate is false (private mode off)', () => {
+      render(
+        <InsideButtons
+          {...defaultProps}
+          memoryEnabled={true}
+          username="testuser"
+          isPrivate={false}
+          containerWidth={1000}
+        />,
+      );
+
+      expect(screen.getByTestId('memory-button')).toBeInTheDocument();
+    });
+
+    it('hides MemoryButton inline when isPrivate is true (private mode active)', () => {
+      render(
+        <InsideButtons
+          {...defaultProps}
+          memoryEnabled={true}
+          username="testuser"
+          isPrivate={true}
+          containerWidth={1000}
+        />,
+      );
+
+      expect(screen.queryByTestId('memory-button')).not.toBeInTheDocument();
+    });
+
+    it('hides Memory from the overflow dropdown when isPrivate is true', async () => {
+      const user = userEvent.setup();
+      render(
+        <InsideButtons
+          {...defaultProps}
+          memoryEnabled={true}
+          username="testuser"
+          isPrivate={true}
+          deepResearch={true}
+          containerWidth={500}
+        />,
+      );
+
+      await user.click(screen.getByText('•••').closest('button')!);
+      await waitFor(() => {
+        expect(screen.getByRole('menu')).toBeInTheDocument();
+      });
+
+      const memoryItem = screen
+        .getAllByRole('menuitem')
+        .find((item) => item.textContent?.includes('Memory'));
+      expect(memoryItem).toBeUndefined();
+    });
+  });
+
   describe('button interactions', () => {
     it('should call onOptionClick with CANVAS when Canvas button is clicked', async () => {
       render(
