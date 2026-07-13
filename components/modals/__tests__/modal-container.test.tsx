@@ -99,6 +99,22 @@ vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
 
+// Controllable auth URL so we can exercise the redirectUrl normalization in
+// ModalContainer without depending on real env config.
+
+let mockAuthUrl = 'https://auth.example.com/';
+
+vi.mock('@/lib/config', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/config')>();
+  return {
+    ...actual,
+    config: {
+      ...actual.config,
+      authUrl: () => mockAuthUrl,
+    },
+  };
+});
+
 // Mock child modals to simple stubs — use absolute (@/) paths
 vi.mock('@/components/modals/settings-modal', () => ({
   SettingsModal: ({
@@ -183,12 +199,19 @@ vi.mock('@iblai/iblai-js/web-containers', async (importOriginal) => {
     UpgradePackageModal: ({
       open,
       onClose,
+      redirectUrl,
     }: {
       open: boolean;
       onClose: () => void;
+      redirectUrl?: string;
     }) =>
       open ? (
-        <div data-testid="pricing-modal" role="dialog" aria-label="Pricing">
+        <div
+          data-testid="pricing-modal"
+          role="dialog"
+          aria-label="Pricing"
+          data-redirect-url={redirectUrl}
+        >
           <button onClick={onClose}>Close Pricing</button>
         </div>
       ) : null,
@@ -302,6 +325,7 @@ describe('ModalContainer', () => {
     cleanup();
     pushMock.mockReset();
     mockSearchParamsRaw = '';
+    mockAuthUrl = 'https://auth.example.com/';
   });
 
   afterEach(() => {
@@ -424,6 +448,55 @@ describe('ModalContainer', () => {
       );
 
       expect(screen.queryByTestId('pricing-modal')).not.toBeInTheDocument();
+    });
+
+    it('passes the auth login URL as redirectUrl when authUrl has a trailing slash', () => {
+      mockAuthUrl = 'https://auth.example.com/';
+      const store = createTestStore({ openPricingModal: true });
+
+      render(
+        <Provider store={store}>
+          <ModalContainer />
+        </Provider>,
+      );
+
+      expect(screen.getByTestId('pricing-modal')).toHaveAttribute(
+        'data-redirect-url',
+        'https://auth.example.com/login',
+      );
+    });
+
+    it('normalizes a missing trailing slash on authUrl when building redirectUrl', () => {
+      mockAuthUrl = 'https://auth.example.com';
+      const store = createTestStore({ openPricingModal: true });
+
+      render(
+        <Provider store={store}>
+          <ModalContainer />
+        </Provider>,
+      );
+
+      // No double slash, and exactly one between origin and `login`.
+      expect(screen.getByTestId('pricing-modal')).toHaveAttribute(
+        'data-redirect-url',
+        'https://auth.example.com/login',
+      );
+    });
+
+    it('does not point redirectUrl at window.location.origin', () => {
+      mockAuthUrl = 'https://auth.example.com/';
+      const store = createTestStore({ openPricingModal: true });
+
+      render(
+        <Provider store={store}>
+          <ModalContainer />
+        </Provider>,
+      );
+
+      expect(screen.getByTestId('pricing-modal')).not.toHaveAttribute(
+        'data-redirect-url',
+        window.location.origin,
+      );
     });
   });
 
