@@ -31,6 +31,7 @@ import {
   redirectToAuthSpa as sdkRedirectToAuthSpa,
   handleTenantSwitch as sdkHandleTenantSwitch,
 } from '@iblai/iblai-js/web-utils/auth';
+import { getLockedTenant } from '@/lib/locked-tenant';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -91,9 +92,14 @@ export async function redirectToAuthSpa(
   saveRedirect = true,
   explicitUserAction = false,
 ) {
+  // On a tenant-locked (Tauri) build, always authenticate into the locked
+  // tenant — this sends anonymous users straight there instead of their default
+  // tenant. Empty on web builds, so the caller's platformKey is used as before.
+  const lockedTenant = await getLockedTenant();
+
   return sdkRedirectToAuthSpa({
     redirectTo,
-    platformKey,
+    platformKey: lockedTenant || platformKey,
     logout,
     saveRedirect,
     forceRedirect: explicitUserAction,
@@ -331,12 +337,36 @@ export function preprocessLaTeX(content: string) {
     (_, tableContent) => processTabularContent(tableContent),
   );
 
+  // Mask math spans before the currency escape so LaTeX delimiters are preserved.
+  const maskOpen = String.fromCharCode(0xe000);
+  const maskClose = String.fromCharCode(0xe001);
+  const mathPlaceholders: string[] = [];
+  const maskMath = (segment: string): string => {
+    const index = mathPlaceholders.length;
+    mathPlaceholders.push(segment);
+    return `${maskOpen}${index}${maskClose}`;
+  };
+
+  processedContent = processedContent.replace(/\$\$[\s\S]*?\$\$/g, (match) =>
+    maskMath(match),
+  );
+  processedContent = processedContent.replace(/\$[^$\n]*?\$/g, (match) =>
+    match.includes('\\') ? maskMath(match) : match,
+  );
+
   // Escape currency dollar signs: if a $ is directly followed by a digit,
   // prepend a backslash so that it is rendered as a literal dollar sign.
   // Replace the regex replacement with one using a lookbehind and a function to ensure the digit group is preserved correctly.
   processedContent = processedContent.replace(
     /(?<!\\)\$(\d)/g,
     (_, digit) => `\\$${digit}`,
+  );
+
+  // Restore masked math spans verbatim.
+  const restoreMathPattern = new RegExp(`${maskOpen}(\\d+)${maskClose}`, 'g');
+  processedContent = processedContent.replace(
+    restoreMathPattern,
+    (_, index) => mathPlaceholders[Number(index)] ?? '',
   );
 
   // Replace block-level LaTeX delimiters \[ \] with $$ $$.

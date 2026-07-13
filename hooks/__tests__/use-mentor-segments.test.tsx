@@ -143,11 +143,12 @@ describe('useMentorSegments', () => {
     setupDefaults();
   });
 
-  it('returns the canonical 20 mentor segments unfiltered', () => {
+  it('returns the canonical 21 mentor segments unfiltered', () => {
     const { result } = renderHook(() => useMentorSegments());
     expect(result.current.segments).toBe(MENTOR_SEGMENTS);
-    // 17 original + Voice + Screen Share (feat/mentor/1763) + Tasks (feat/mentor/715).
-    expect(MENTOR_SEGMENTS).toHaveLength(20);
+    // 17 original + Voice + Screen Share (feat/mentor/1763) + Tasks
+    // (feat/mentor/715) + LTI.
+    expect(MENTOR_SEGMENTS).toHaveLength(21);
   });
 
   it('places the Sandbox segment right after Settings', () => {
@@ -343,6 +344,57 @@ describe('useMentorSegments', () => {
 
       const labels = result.current.filteredSegments.map((s) => s.label);
       expect(labels).toContain('Privacy');
+    });
+  });
+
+  describe('LTI segment', () => {
+    it('orders LTI immediately before Embed', () => {
+      const ltiIndex = MENTOR_SEGMENTS.findIndex((s) => s.label === 'LTI');
+      expect(ltiIndex).toBeGreaterThanOrEqual(0);
+      expect(MENTOR_SEGMENTS[ltiIndex + 1]?.label).toBe('Embed');
+    });
+
+    it('is NOT gated on is_lti_accessible (no enabledThroughConfig)', () => {
+      // Unlike Voice/Screen-share, the LTI tab must stay reachable so an admin
+      // can create the first link (which turns LTI access on inline).
+      const ltiSegment = MENTOR_SEGMENTS.find((s) => s.label === 'LTI')!;
+      expect(ltiSegment.enabledThroughConfig).toBeUndefined();
+    });
+
+    it('is visible to admins regardless of the is_lti_accessible value', () => {
+      for (const value of [false, undefined, true]) {
+        mockMentorSettings.mockReturnValue({
+          platform_key: 'custom-tenant',
+          mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+          mentor_id: 42,
+          permissions: { field: {} },
+          is_lti_accessible: value,
+        });
+
+        const { result, unmount } = renderHook(() => useMentorSegments());
+        const labels = result.current.filteredSegments.map((s) => s.label);
+        expect(labels).toContain('LTI');
+        unmount();
+      }
+    });
+
+    it('is hidden from non-admin users', () => {
+      mockMentorSettings.mockReturnValue({
+        platform_key: 'custom-tenant',
+        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+        mentor_id: 42,
+        permissions: { field: {} },
+        is_lti_accessible: true,
+      });
+      mockIsUserTypeAllowed.mockImplementation(
+        (s) =>
+          s.userTypes.includes(UserType.FREE_TRIAL) &&
+          !s.userTypes.includes(UserType.ADMIN),
+      );
+
+      const { result } = renderHook(() => useMentorSegments());
+      const labels = result.current.filteredSegments.map((s) => s.label);
+      expect(labels).not.toContain('LTI');
     });
   });
 

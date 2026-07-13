@@ -20,6 +20,8 @@ export class ChatPage {
   readonly stopStreamingButton: Locator;
   readonly promptsButton: Locator;
   readonly promptGalleryDialog: Locator;
+  readonly guidedSuggestedPrompts: Locator;
+  readonly guidedSuggestedPromptButtons: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -65,6 +67,14 @@ export class ChatPage {
     this.promptGalleryDialog = page.getByRole('dialog', {
       name: 'Prompt Gallery',
     });
+    // The guided-prompts row renders only when the AI returns prompts. The
+    // container carries a single stable hook (`data-testid`); the individual
+    // prompt buttons share the `chat-guided-suggested-prompts` class, so the
+    // container — not the button class — is the unique selector.
+    this.guidedSuggestedPrompts = page.getByTestId('guided-suggested-prompts');
+    this.guidedSuggestedPromptButtons = this.guidedSuggestedPrompts.locator(
+      '.chat-guided-suggested-prompts',
+    );
   }
 
   async sendMessage(text: string): Promise<void> {
