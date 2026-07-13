@@ -47,9 +47,18 @@ jobs:
         run: |
           set -euo pipefail
           VERSION="$(node scripts/tauri-bump.mjs patch)"
-          echo "tag=app-v$VERSION" >> "$GITHUB_OUTPUT"
+          TAG="app-v$VERSION"
+          # Idempotency: if this version was already released (e.g. a job re-run),
+          # stop before committing. The bump edits are discarded with the runner.
+          if git ls-remote --tags origin "refs/tags/$TAG" | grep -q .; then
+            echo "$TAG already exists on origin — nothing to do"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Commit, tag & push
+        if: steps.bump.outputs.skip != 'true'
         env:
           HUSKY: '0'
           TAG: ${{ steps.bump.outputs.tag }}
