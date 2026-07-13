@@ -156,8 +156,8 @@ describe('ManageCategoriesModal', () => {
       });
     });
     expect(toast.success).toHaveBeenCalledWith('Category created');
-    // Input should reset after success
-    expect(input.value).toBe('');
+    // Input should reset after success (wait for the controlled re-render).
+    await waitFor(() => expect(input.value).toBe(''));
   });
 
   it('does nothing when the new category name is blank', () => {

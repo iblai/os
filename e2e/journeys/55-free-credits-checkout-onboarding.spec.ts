@@ -9,6 +9,7 @@ import {
 } from '@iblai/iblai-js/playwright';
 
 test.describe('Journey 55: Free Credits Checkout Onboarding', () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
   // External multi-hop flow (Stripe → auth SSO → mentor SPA → Stripe) — give it room.
   test.setTimeout(240_000);
 
