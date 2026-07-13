@@ -58,7 +58,7 @@ _[Demo](https://www.youtube.com/playlist?list=PLW0-4yErlU3XQr0UP6cCGwy24LMf7I5vR
 | Platform    | Status                                                                     |
 | ----------- | -------------------------------------------------------------------------- |
 | **Web**     | Production at [os.ibl.ai](https://os.ibl.ai) — works on any modern browser |
-| **macOS**   | Native desktop app — lightweight, fast, system-integrated                  |
+| **macOS**   | Native desktop app — [download the latest build](#download)                |
 | **iOS**     | Native mobile app — available on iPhone and iPad                           |
 | **Android** | Native mobile app — available on phones and tablets                        |
 | **Windows** | Native desktop app                                                         |
