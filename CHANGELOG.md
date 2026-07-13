@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.95.7](https://github.com/iblai/os/compare/v0.95.6...v0.95.7) (2026-07-13)
+
+### CI
+
+* **pr-gate:** run vitest unit tests in the Required PR workflow ([dbea82a](https://github.com/iblai/os/commit/dbea82a2bf35529c6195fb8ab1b631d2b2b09ce4))
+
 ## [0.95.6](https://github.com/iblai/os/compare/v0.95.5...v0.95.6) (2026-07-13)
 
 ### Documentation
