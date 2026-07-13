@@ -54,6 +54,10 @@ export const ModalContainer = () => {
   const state = useSelector((state: RootState) => state);
   const dispatch = useAppDispatch();
 
+  const AUTH_URL = String(config.authUrl()).endsWith('/')
+    ? config.authUrl()
+    : `${config.authUrl()}/`;
+
   const { customAlertDialog } = state.modals;
 
   const { openPricingModal } = state.subscription;
@@ -133,7 +137,7 @@ export const ModalContainer = () => {
         <UpgradePackageModal
           open={openPricingModal}
           onClose={() => dispatch(setOpenPricingModal(false))}
-          redirectUrl={window.location.origin}
+          redirectUrl={`${AUTH_URL}login`}
           mainPlatformKey={config.mainTenantKey()}
           sourcePlatformKey={tenantKey}
           currentUserEmail={getUserEmail()}
