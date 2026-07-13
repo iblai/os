@@ -52,6 +52,7 @@ import {
   isInIframe,
   isLoggedIn,
   redirectToAuthSpa,
+  sanitizePromptParam,
   sendMessageToParentWebsite,
 } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -275,7 +276,7 @@ export function Chat({
   const mentorId = getMentorId() ?? mentorIdParam;
   const searchParams = useSearchParams();
   const isCompactMode = searchParams.get('compact') === 'true';
-  const initialPrompt = searchParams.get('prompt')?.trim() || undefined;
+  const initialPrompt = sanitizePromptParam(searchParams.get('prompt'));
   const isEmbeddedMode = useEmbedMode();
   const { visitingTenant } = useVisitingTenant();
   const dispatch = useAppDispatch();
