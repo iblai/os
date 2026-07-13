@@ -39,6 +39,14 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      - name: Sync to latest main
+        # Rebase onto anything that landed after this run was triggered (e.g. a
+        # racing tauri version bump from tauri-autoversion.yml) so release-it's
+        # push fast-forwards instead of failing non-fast-forward.
+        run: |
+          git fetch origin main
+          git rebase origin/main
+
       - name: Run release-it
         env:
           GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
