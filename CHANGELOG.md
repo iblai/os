@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.95.5](https://github.com/iblai/os/compare/v0.95.4...v0.95.5) (2026-07-13)
+
+### CI
+
+* harden tauri auto-version against release race + re-run double-bump ([5c135c2](https://github.com/iblai/os/commit/5c135c2060b2b03a44efc476f62f5a83a3d97f02)), closes [#2](https://github.com/iblai/os/issues/2) [#3](https://github.com/iblai/os/issues/3)
+
 ## [0.95.4](https://github.com/iblai/os/compare/v0.95.3...v0.95.4) (2026-07-11)
 
 ### CI
