@@ -4,7 +4,7 @@
 
 ### Bug Fixes
 
-* **auth:** require a valid edx_jwt_token for a non-expired session ([53e961f](https://github.com/iblai/os/commit/53e961f7781167148ffb6c8acf963448c3da3ddd))
+- **auth:** require a valid edx_jwt_token for a non-expired session ([53e961f](https://github.com/iblai/os/commit/53e961f7781167148ffb6c8acf963448c3da3ddd))
 
 ## [0.95.7](https://github.com/iblai/os/compare/v0.95.6...v0.95.7) (2026-07-13)
 
