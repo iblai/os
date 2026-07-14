@@ -4,11 +4,11 @@
 
 ### Documentation
 
-* **e2e-agent:** require MentorTracker cleanup for mentor-creating tests ([87e5166](https://github.com/iblai/os/commit/87e5166a89d970b7fbc60c87332c426c4f017ae9))
+- **e2e-agent:** require MentorTracker cleanup for mentor-creating tests ([87e5166](https://github.com/iblai/os/commit/87e5166a89d970b7fbc60c87332c426c4f017ae9))
 
 ### Tests
 
-* **e2e:** clean up agents created during tests to stop DB accumulation ([b29c8e8](https://github.com/iblai/os/commit/b29c8e87e7fcdd5f05607bff8d715c8fab7c1a37))
+- **e2e:** clean up agents created during tests to stop DB accumulation ([b29c8e8](https://github.com/iblai/os/commit/b29c8e87e7fcdd5f05607bff8d715c8fab7c1a37))
 
 ## [0.95.8](https://github.com/iblai/os/compare/v0.95.7...v0.95.8) (2026-07-14)
 
