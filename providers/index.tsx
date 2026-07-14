@@ -277,11 +277,17 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   }
 
   function redirectToMentor(tenantKey: string, mentorId: string) {
+    const targetPath = `/platform/${tenantKey}/${mentorId}`;
+    // The SDK MentorProvider re-invokes this after the initial `/` → mentor
+    // redirect settles. Bail out when we're already on the target mentor,
+    // otherwise the re-invocation re-pushes a bare URL and strips the current
+    // query string (e.g. embed/mode/component params).
+    if (window.location.pathname === targetPath) return;
     let queryParams = '';
     if (window.location.pathname === '/') {
       queryParams = window.location.search;
     }
-    router.push(`/platform/${tenantKey}/${mentorId}${queryParams}`);
+    router.push(`${targetPath}${queryParams}`);
   }
 
   function onLoadMentorsPermissions(

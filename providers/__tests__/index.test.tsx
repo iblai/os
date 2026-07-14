@@ -940,6 +940,25 @@ describe('Providers', () => {
       expect(mockPush).toHaveBeenCalledWith('/platform/t1/m1');
     });
 
+    it('redirectToMentor is a no-op when already on the target mentor (keeps query params)', () => {
+      // Simulates the SDK re-invoking redirectToMentor after the initial
+      // redirect has already landed on the mentor page with its query string.
+      const locationSpy = vi.spyOn(window, 'location', 'get').mockReturnValue({
+        ...window.location,
+        pathname: '/platform/t1/m1',
+        search: '?embed=true&mode=anonymous&component=chat',
+      } as Location);
+      try {
+        renderProviders();
+        const fn = capturedMentorProviderProps.redirectToMentor as Function;
+        fn('t1', 'm1');
+        // No re-navigation — the existing URL (with its query params) is kept.
+        expect(mockPush).not.toHaveBeenCalledWith('/platform/t1/m1');
+      } finally {
+        locationSpy.mockRestore();
+      }
+    });
+
     it('redirectToAuthSpa calls the real function', () => {
       renderProviders();
       const fn = capturedMentorProviderProps.redirectToAuthSpa as Function;
