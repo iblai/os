@@ -42,7 +42,49 @@ export function isSafariBrowser(): boolean {
   return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 }
 
+/**
+ * Reads a JWT's `exp` claim and reports whether it is in the past. A token that
+ * cannot be decoded (or is malformed) is treated as expired; a token with no
+ * `exp` claim is treated as non-expiring (mirrors the axd "no expiry" case).
+ */
+export function isJwtExpired(token: string): boolean {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return true;
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized.padEnd(
+      normalized.length + ((4 - (normalized.length % 4)) % 4),
+      '=',
+    );
+    const claims = JSON.parse(atob(padded)) as { exp?: number };
+    if (typeof claims.exp !== 'number') return false;
+    return claims.exp * 1000 <= Date.now();
+  } catch {
+    return true;
+  }
+}
+
 export function hasNonExpiredAuthToken() {
+  // The edx JWT is stored alongside the axd token at SSO login; a valid session
+  // requires it to be present and unexpired too, so re-auth is triggered when
+  // it is missing or its `exp` has passed.
+  const edxToken = window.localStorage.getItem(
+    LOCAL_STORAGE_KEYS.EDX_TOKEN_KEY,
+  );
+  if (!edxToken) {
+    console.log(
+      '################### [hasNonExpiredAuthToken] edx_jwt_token is not defined',
+      edxToken,
+    );
+    return false;
+  }
+  if (isJwtExpired(edxToken)) {
+    console.log(
+      '################### [hasNonExpiredAuthToken] edx_jwt_token is expired',
+    );
+    return false;
+  }
+
   const token = window.localStorage.getItem(LOCAL_STORAGE_KEYS.AUTH_TOKEN);
   if (!token) {
     console.log(
