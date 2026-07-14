@@ -545,4 +545,139 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
     // Assert: the widget container is now hidden (display:none set by toggleWidget())
     await expect(widgetContainer).not.toBeVisible({ timeout: 10_000 });
   });
+
+  // Issue #2153: toggling/regenerating the Shareable Link switch used to
+  // await syncEmbedSettings() as a side effect, which validates the embed
+  // form's website_url field whenever the mentor is non-anonymous. That
+  // surfaced a spurious "Please specify a valid Website URL" error under the
+  // (unrelated) Website URL field any time an admin merely flipped the
+  // Shareable Link switch or hit regenerate. The fix removes the
+  // syncEmbedSettings() calls from handleShareableTokenToggle and
+  // handleRegenerateToken entirely — the shareable-link mutations and their
+  // success toasts still fire, but no url validation runs.
+  test.describe('Shareable Link toggle does not trigger website URL validation (issue #2153)', () => {
+    // emb-11/12/13: exercised against a freshly created mentor, which is
+    // non-anonymous (allow_anonymous=false) with an empty Website URL by
+    // default — exactly the precondition that used to trigger the bug.
+    test('admin toggles Shareable Link on a non-anonymous mentor with an empty Website URL and sees no validation error', async ({
+      page,
+      createMentorPage,
+      editMentorPage,
+    }) => {
+      // This test creates a fresh mentor (name/description/category fill +
+      // Next + Save, which alone can take 50s+ under a loaded environment's
+      // category-list fetch and post-save redirect), then opens the Edit
+      // dialog and drives it through two levels of tab navigation before
+      // exercising three shareable-link toasts. Extend the timeout so the
+      // full chain has headroom, matching the convention used elsewhere in
+      // this file (see the Optimize Page Context Tokens test above) and in
+      // other create-mentor-then-navigate journeys.
+      test.setTimeout(300_000);
+
+      await createMentorPage.openAndCreate(`Shareable Link E2E ${Date.now()}`);
+
+      await editMentorPage.open('Embed');
+      await waitForPageReady(page);
+      await expect(editMentorPage.embed.shareableLinkToggle).toBeVisible({
+        timeout: 15_000,
+      });
+
+      // Confirm the bug's precondition actually holds: non-anonymous with an
+      // empty Website URL, and no validation error showing yet.
+      await expect(editMentorPage.embed.websiteUrlInput).toBeVisible();
+      await expect(editMentorPage.embed.websiteUrlInput).toHaveValue('');
+      await expect(editMentorPage.embed.websiteUrlError).not.toBeVisible();
+
+      // emb-11: toggling ON must not surface the validation error, and the
+      // shareable-link creation must still succeed (success toast).
+      await editMentorPage.embed.toggleShareableLink();
+      await expect(
+        page.getByText(/created shareable link/i).first(),
+      ).toBeVisible({ timeout: 15_000 });
+      await expect(editMentorPage.embed.shareableLinkToggle).toHaveAttribute(
+        'aria-checked',
+        'true',
+        { timeout: 10_000 },
+      );
+      await expect(editMentorPage.embed.websiteUrlError).not.toBeVisible();
+
+      // emb-12: regenerating the token must not surface the validation error.
+      await editMentorPage.embed.regenerateShareableLink();
+      await expect(
+        page.getByText(/regenerate shareable link/i).first(),
+      ).toBeVisible({ timeout: 15_000 });
+      await expect(editMentorPage.embed.websiteUrlError).not.toBeVisible();
+
+      // emb-13: toggling OFF must not surface the validation error either.
+      await editMentorPage.embed.toggleShareableLink();
+      await expect(
+        page.getByText(/disabled shareable link/i).first(),
+      ).toBeVisible({ timeout: 15_000 });
+      await expect(editMentorPage.embed.shareableLinkToggle).toHaveAttribute(
+        'aria-checked',
+        'false',
+        { timeout: 10_000 },
+      );
+      await expect(editMentorPage.embed.websiteUrlError).not.toBeVisible();
+
+      await editMentorPage.close();
+    });
+
+    // emb-14: contrast case — an anonymous mentor's Embed tab never renders
+    // the Website URL section at all (syncEmbedSettings' url guard only
+    // applies when !allow_anonymous), so toggling Shareable Link ON stays
+    // error-free here too. Pins down that this path was, and remains, safe.
+    test('admin toggles Shareable Link on an anonymous mentor and sees no validation error either', async ({
+      page,
+      createMentorPage,
+      editMentorPage,
+    }) => {
+      // See the sibling test above for why this needs headroom: mentor
+      // creation alone can consume most of the default budget under load,
+      // and this test additionally opens the Settings tab, saves, closes,
+      // and reopens on Embed before exercising the toggle.
+      test.setTimeout(300_000);
+
+      await createMentorPage.openAndCreate(
+        `Shareable Link Anon E2E ${Date.now()}`,
+      );
+
+      await editMentorPage.open('Settings');
+      await waitForPageReady(page);
+      await editMentorPage.settings.setVisibilityAnyone();
+      await editMentorPage.settings.setChatAccessAnyone();
+      const saveBtn = editMentorPage.dialog
+        .getByRole('button', { name: /save/i })
+        .first();
+      await expect(saveBtn).toBeEnabled({ timeout: 5_000 });
+      await saveBtn.click();
+      await expect(
+        page
+          .locator('[data-sonner-toast]', {
+            hasText: /agent updated successfully/i,
+          })
+          .first(),
+      ).toBeVisible({ timeout: 15_000 });
+      await editMentorPage.close();
+
+      await editMentorPage.open('Embed');
+      await waitForPageReady(page);
+      await expect(editMentorPage.embed.shareableLinkToggle).toBeVisible({
+        timeout: 15_000,
+      });
+      // With allow_anonymous=true the Website URL section (and its error
+      // paragraph) is not rendered at all.
+      await expect(editMentorPage.embed.websiteUrlInput).not.toBeVisible();
+
+      await editMentorPage.embed.toggleShareableLink();
+      await expect(
+        page
+          .getByText(/created shareable link|enabled shareable link/i)
+          .first(),
+      ).toBeVisible({ timeout: 15_000 });
+      await expect(editMentorPage.embed.websiteUrlError).not.toBeVisible();
+
+      await editMentorPage.close();
+    });
+  });
 });
