@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.95.12](https://github.com/iblai/os/compare/v0.95.11...v0.95.12) (2026-07-15)
+
+### CI
+
+* **audit:** don't block PRs when npm's audit endpoint is retired (410) ([33d79fe](https://github.com/iblai/os/commit/33d79fe7d8907f703626bb6b6146013f6ae34160)), closes [#339](https://github.com/iblai/os/issues/339)
+
 ## [0.95.11](https://github.com/iblai/os/compare/v0.95.10...v0.95.11) (2026-07-15)
 
 ### Bug Fixes
@@ -18,7 +24,7 @@
 
 ### Tests
 
-* **e2e:** fixme journey-60 LTI key/tool tests blocked on a backend issue ([04b424c](https://github.com/iblai/os/commit/04b424c1ef8eed91372a325e63bd768e559272da))
+- **e2e:** fixme journey-60 LTI key/tool tests blocked on a backend issue ([04b424c](https://github.com/iblai/os/commit/04b424c1ef8eed91372a325e63bd768e559272da))
 
 ## [0.95.9](https://github.com/iblai/os/compare/v0.95.8...v0.95.9) (2026-07-14)
 

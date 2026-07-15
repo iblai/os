@@ -53,7 +53,18 @@ jobs:
         run: |
           set +e
           pnpm audit --audit-level=high | tee audit-report.txt
-          echo "exit_code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+          code="${PIPESTATUS[0]}"
+          # npm has retired the legacy audit endpoint that `pnpm audit` calls, so
+          # it now exits non-zero with a 410 / ERR_PNPM_AUDIT_BAD_RESPONSE. That
+          # is an endpoint outage, not a vulnerability — do not block on it. PR
+          # advisory coverage is still enforced by dependency-review-action
+          # (fail-on-severity: moderate). Real high/critical findings, when the
+          # endpoint responds, still produce a non-zero code and block.
+          if grep -qiE "ERR_PNPM_AUDIT_BAD_RESPONSE|being retired|responded with 410" audit-report.txt; then
+            echo "::warning::pnpm audit endpoint unavailable (npm retired the legacy audit endpoint) — skipping the audit gate this run; dependency-review-action still enforces advisories on PRs."
+            code=0
+          fi
+          echo "exit_code=${code}" >> "$GITHUB_OUTPUT"
 
       - name: Surface report in job summary
         if: always()
