@@ -291,6 +291,54 @@ describe('Markdown Component', () => {
     });
 
     /**
+     * Regression test for issue #2109
+     * Backslash-free inline arithmetic like $3x + 5$ (and block $$...$$) must
+     * render as KaTeX rather than leaking raw $ / $$ delimiters as plain text.
+     */
+    it('should render backslash-free inline and block math from the issue repro', () => {
+      const repro = `No worries at all — that's exactly why we warm up before diving into something new! Let me walk you through it.
+
+In Lesson 1.1.3 you learned that when you *evaluate* an expression, you replace the variable with a number. The expression $3x + 5$ has two parts: the term $3x$ and the constant $5$. When we substitute $x = 4$, we replace the $x$ with $4$.
+
+Here's how it works step by step:
+
+$$3x + 5$$
+
+Replace $x$ with $4$:
+
+$$3(4) + 5$$
+
+Multiply first (multiplication comes before addition):
+
+$$12 + 5$$
+
+Then add:
+
+$$17$$
+
+So $3x + 5 = 17$ when $x = 4$.
+
+The key move is always the same: swap the variable out for the number, then simplify using the order of operations — multiply and divide before you add and subtract.
+
+Now let's make sure that landed. Try this one on your own:
+
+If $x = 3$, what is the value of $2x + 6$?
+
+Show me your steps — write out each one just like I did above. 😊`;
+
+      const { container } = render(<Markdown>{repro}</Markdown>);
+
+      // Inline math ($3x + 5$, $3x$, $5$, ...) and block math ($$...$$, $$17$$)
+      // both produce KaTeX output. The repro has many math spans, so a healthy
+      // count confirms both inline and single-token block math ($$17$$) render.
+      expect(container.querySelector('.katex')).toBeTruthy();
+      expect(container.querySelectorAll('.katex').length).toBeGreaterThan(10);
+      // No raw math delimiters should leak into the visible text.
+      expect(container.textContent).not.toContain('$$');
+      expect(container.textContent).not.toContain('$');
+    });
+
+    /**
      * Test currency dollar sign handling
      * Verifies that dollar signs before digits are escaped and rendered as literal $
      */

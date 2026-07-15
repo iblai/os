@@ -778,6 +778,65 @@ describe('preprocessLaTeX function', () => {
     expect(preprocessLaTeX('I have $5 and $10')).toBe('I have \\$5 and \\$10');
   });
 
+  it('should preserve backslash-free inline arithmetic math (issue #2109)', () => {
+    // These spans have no backslash command, but they are genuine math and
+    // must survive the currency escape so remark-math can parse them.
+    expect(preprocessLaTeX('$3x + 5$')).toBe('$3x + 5$');
+    expect(preprocessLaTeX('$5$')).toBe('$5$');
+    expect(preprocessLaTeX('$3(4) + 5$')).toBe('$3(4) + 5$');
+    expect(preprocessLaTeX('$2x + 6$')).toBe('$2x + 6$');
+    expect(preprocessLaTeX('$3x$')).toBe('$3x$');
+  });
+
+  it('should keep inline math intact while still escaping real currency', () => {
+    const input =
+      'The term $3x$ evaluates. I have $5 and $10 in cash.\n\n$$3x + 5$$';
+    const output = preprocessLaTeX(input);
+    // Math spans come back parseable (not escaped to \$).
+    expect(output).toContain('$3x$');
+    expect(output).toContain('$$3x + 5$$');
+    // The currency false-pair (prose word "and" between the amounts) is escaped.
+    expect(output).toContain('I have \\$5 and \\$10 in cash.');
+  });
+
+  it('should not let a leading currency amount swallow a following math span', () => {
+    // Digit-leading math ("$3x + 5$") sitting on the same line AFTER a currency
+    // amount ("$12"). The rewind scan must escape the currency and still mask
+    // the math span, rather than letting "$12" consume the math opening "$".
+    const line3 =
+      'the kit costs $12, and the formula $3x + 5$ gives the price.';
+    const out3 = preprocessLaTeX(line3);
+    expect(out3).toBe(
+      'the kit costs \\$12, and the formula $3x + 5$ gives the price.',
+    );
+
+    // Backslash math ("$50 \\times x/100$") after currency ("$50") on one line.
+    // Note: a later LaTeX pass unescapes "\\%" -> "%" inside the restored span,
+    // which KaTeX still renders correctly — the point here is that both math
+    // spans survive and only the "$50" currency amount is escaped.
+    const line7 = 'a $50 item at $x\\%$ off saves $50 \\times x/100$ dollars.';
+    const out7 = preprocessLaTeX(line7);
+    expect(out7).toBe(
+      'a \\$50 item at $x%$ off saves $50 \\times x/100$ dollars.',
+    );
+
+    // Currency both before and after a math span still escapes both amounts.
+    const line5 = 'it was $20, dropped to $12, and $x - 8$ is the discount.';
+    const out5 = preprocessLaTeX(line5);
+    expect(out5).toBe(
+      'it was \\$20, dropped to \\$12, and $x - 8$ is the discount.',
+    );
+  });
+
+  it('documents the known price-range limitation ($5-$10 reads as math)', () => {
+    // A bare "$5-$10" has no letters, so the heuristic treats "$5-$" as math
+    // and it renders as "5−". This is the documented trade-off; encode it so a
+    // future change to this behavior is a deliberate decision, not a surprise.
+    expect(preprocessLaTeX('tickets are $5-$10 today')).toBe(
+      'tickets are $5-$10 today',
+    );
+  });
+
   it('should not escape already escaped dollar signs', () => {
     expect(preprocessLaTeX('Already \\$5 escaped')).toBe(
       'Already \\$5 escaped',
