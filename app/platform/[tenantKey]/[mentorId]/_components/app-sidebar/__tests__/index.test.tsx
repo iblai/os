@@ -968,6 +968,31 @@ describe('AppSidebar — rendering', () => {
       screen.getByRole('button', { name: 'New Chat' }),
     ).toBeInTheDocument();
   });
+
+  it('hides Search chats when the user is NOT logged in (outside embed mode too)', () => {
+    // The dialog lists the signed-in user's own recent messages, so unlike
+    // `showChats` it is hidden for an anonymous user in EVERY mode — while
+    // New Chat (which anonymous users may use) stays.
+    mockIsLoggedIn = false;
+    mockUsername = null;
+    renderSidebar();
+
+    expect(
+      screen.queryByRole('button', { name: 'Search chats' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'New Chat' }),
+    ).toBeInTheDocument();
+  });
+
+  it('shows Search chats for a logged-in user', () => {
+    mockIsLoggedIn = true;
+    renderSidebar();
+
+    expect(
+      screen.getByRole('button', { name: 'Search chats' }),
+    ).toBeInTheDocument();
+  });
 });
 
 describe('AppSidebar — sidebar rail toggle', () => {

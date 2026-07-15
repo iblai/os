@@ -1365,6 +1365,11 @@ export function AppSidebar() {
   // mode the Chats section is always available, as before.
   const showChats = !embedMode || isLoggedIn();
 
+  // Search chats reads the *signed-in* user's own recent-messages history,
+  // so it has nothing to show an anonymous visitor — hidden in every mode,
+  // not just embed. Keyed on the same `isLoggedIn()` signal as `showChats`.
+  const showSearchChats = isLoggedIn();
+
   // New Chat mirrors the ORIGINAL `/mentors/{mentor_id}/#chat` gate: an
   // anonymous user bypasses RBAC (shown); a logged-in user must hold chat
   // permission on the opened mentor. No-op when not logged in, when no
@@ -1672,7 +1677,7 @@ export function AppSidebar() {
                 </SidebarCollapsedLabelFlyout>
               )}
 
-              {showChats && (
+              {showSearchChats && (
                 <SidebarCollapsedLabelFlyout label={t('searchChats')}>
                   <button
                     type="button"
@@ -1766,7 +1771,7 @@ export function AppSidebar() {
                   </div>
                 )}
 
-                {showChats && (
+                {showSearchChats && (
                   <div className="px-0 pb-0.5">
                     <button
                       type="button"
@@ -1942,14 +1947,16 @@ export function AppSidebar() {
         <FreeTrialDialog onClose={closeModal} isOpen={isModalOpen} />
       )}
 
-      <ChatSearchDialog
-        open={searchDialogOpen}
-        onOpenChange={setSearchDialogOpen}
-        tenantKey={tenantKey}
-        mentorId={mentorId}
-        username={username}
-        onNewChat={startNewChat}
-      />
+      {showSearchChats && (
+        <ChatSearchDialog
+          open={searchDialogOpen}
+          onOpenChange={setSearchDialogOpen}
+          tenantKey={tenantKey}
+          mentorId={mentorId}
+          username={username}
+          onNewChat={startNewChat}
+        />
+      )}
     </SidebarNavCallbackContext.Provider>
   );
 }
