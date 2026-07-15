@@ -107,7 +107,7 @@ export function ChatSearchDialog({
             placeholder={t('searchChatsPlaceholder')}
             aria-label={t('searchChatsPlaceholder')}
             autoFocus
-            className="w-full bg-transparent text-[16px] leading-6 text-[#1f1f20] outline-none placeholder:text-[#9ca3af]"
+            className="w-full bg-transparent text-[16px] leading-6 text-[#1f1f20] outline-none placeholder:text-[#9ca3af] [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none"
           />
         </div>
 
@@ -146,7 +146,7 @@ export function ChatSearchDialog({
             : null}
 
           {recent.length === 0 && (
-            <span className="block px-3 py-2 text-[13px] text-[#94a3b8] italic">
+            <span className="block px-3 py-6 text-center text-[13px] text-[#94a3b8] italic">
               {t('noRecentChats')}
             </span>
           )}
