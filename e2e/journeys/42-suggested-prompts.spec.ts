@@ -1,9 +1,16 @@
 import { test, expect } from '../fixtures/mentor-test';
-import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
+import {
+  navigateToMentorApp,
+  checkAdminStatus,
+  getPlatformContext,
+} from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
+import { MentorTracker } from '../utils/mentor-cleanup';
 
 test.describe('Journey 42: Suggested Prompts', () => {
   test.setTimeout(200_000);
+
+  const tracker = new MentorTracker();
 
   test.beforeEach(async ({ page, createMentorPage }) => {
     await navigateToMentorApp(page);
@@ -16,6 +23,8 @@ test.describe('Journey 42: Suggested Prompts', () => {
     // Create a fresh mentor for each test so the suggested prompts list
     // starts empty (avoids pagination/page-size pollution from prior runs).
     await createMentorPage.openAndCreate();
+    const { mentorId } = await getPlatformContext(page);
+    tracker.add(mentorId);
   });
 
   // --------------------------------------------------------------------------
@@ -486,5 +495,9 @@ test.describe('Journey 42: Suggested Prompts', () => {
         timeout: 10_000,
       });
     });
+  });
+
+  test.afterAll(async ({ browser }, testInfo) => {
+    await tracker.deleteAll(browser, testInfo);
   });
 });

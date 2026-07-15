@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   cn,
   hasNonExpiredAuthToken,
+  isJwtExpired,
   redirectToAuthSpa,
   getPlatformKey,
   getAuthSpaJoinUrl,
@@ -126,6 +127,16 @@ const localStorageMock = (() => {
   };
 })();
 
+// Builds a minimal (unsigned) JWT with the given `exp` claim (seconds since
+// epoch). Omit `exp` for a token with no expiry claim.
+function makeJwt(exp?: number): string {
+  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const payload = btoa(JSON.stringify(exp === undefined ? {} : { exp }));
+  return `${header}.${payload}.signature`;
+}
+
+const validEdxJwt = () => makeJwt(Math.floor(Date.now() / 1000) + 3600);
+
 describe('cn function', () => {
   it('should combine class names correctly', () => {
     // Basic test
@@ -165,10 +176,34 @@ describe('hasNonExpiredAuthToken function', () => {
 
     // Clear localStorage before each test
     localStorageMock.clear();
+    // A valid session also requires a non-expired edx JWT; seed one so the axd
+    // token assertions below exercise the axd logic (edx tests override this).
+    localStorageMock.setItem(LOCAL_STORAGE_KEYS.EDX_TOKEN_KEY, validEdxJwt());
   });
 
   it('should return true when no token exists', () => {
+    localStorageMock.removeItem(LOCAL_STORAGE_KEYS.AUTH_TOKEN);
     expect(hasNonExpiredAuthToken()).toBe(false);
+  });
+
+  it('should return false when edx_jwt_token is missing', () => {
+    localStorageMock.removeItem(LOCAL_STORAGE_KEYS.EDX_TOKEN_KEY);
+    localStorageMock.setItem(LOCAL_STORAGE_KEYS.AUTH_TOKEN, 'valid-token');
+    expect(hasNonExpiredAuthToken()).toBe(false);
+  });
+
+  it('should return false when edx_jwt_token is expired', () => {
+    localStorageMock.setItem(
+      LOCAL_STORAGE_KEYS.EDX_TOKEN_KEY,
+      makeJwt(Math.floor(Date.now() / 1000) - 3600),
+    );
+    localStorageMock.setItem(LOCAL_STORAGE_KEYS.AUTH_TOKEN, 'valid-token');
+    expect(hasNonExpiredAuthToken()).toBe(false);
+  });
+
+  it('should return true when both the axd and edx tokens are valid', () => {
+    localStorageMock.setItem(LOCAL_STORAGE_KEYS.AUTH_TOKEN, 'valid-token');
+    expect(hasNonExpiredAuthToken()).toBe(true);
   });
 
   it('should return true when token exists but no expiry', () => {
@@ -224,6 +259,32 @@ describe('hasNonExpiredAuthToken function', () => {
 
     // Restore Date.now
     Date.now = realDateNow;
+  });
+});
+
+describe('isJwtExpired function', () => {
+  it('returns false for a token whose exp is in the future', () => {
+    expect(isJwtExpired(makeJwt(Math.floor(Date.now() / 1000) + 3600))).toBe(
+      false,
+    );
+  });
+
+  it('returns true for a token whose exp is in the past', () => {
+    expect(isJwtExpired(makeJwt(Math.floor(Date.now() / 1000) - 3600))).toBe(
+      true,
+    );
+  });
+
+  it('returns false for a token with no exp claim (non-expiring)', () => {
+    expect(isJwtExpired(makeJwt())).toBe(false);
+  });
+
+  it('returns true for a token with no payload segment', () => {
+    expect(isJwtExpired('not-a-jwt')).toBe(true);
+  });
+
+  it('returns true for a token whose payload cannot be decoded', () => {
+    expect(isJwtExpired('header.@not-base64@.sig')).toBe(true);
   });
 });
 

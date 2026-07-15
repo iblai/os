@@ -1,22 +1,62 @@
 # Changelog
 
+## [0.95.10](https://github.com/iblai/os/compare/v0.95.9...v0.95.10) (2026-07-15)
+
+### Tests
+
+- **e2e:** fixme journey-60 LTI key/tool tests blocked on a backend issue ([04b424c](https://github.com/iblai/os/commit/04b424c1ef8eed91372a325e63bd768e559272da))
+
+## [0.95.9](https://github.com/iblai/os/compare/v0.95.8...v0.95.9) (2026-07-14)
+
+### Documentation
+
+- **e2e-agent:** require MentorTracker cleanup for mentor-creating tests ([87e5166](https://github.com/iblai/os/commit/87e5166a89d970b7fbc60c87332c426c4f017ae9))
+
+### Tests
+
+- **e2e:** clean up agents created during tests to stop DB accumulation ([b29c8e8](https://github.com/iblai/os/commit/b29c8e87e7fcdd5f05607bff8d715c8fab7c1a37))
+
+## [0.95.8](https://github.com/iblai/os/compare/v0.95.7...v0.95.8) (2026-07-14)
+
+### Bug Fixes
+
+- **auth:** require a valid edx_jwt_token for a non-expired session ([53e961f](https://github.com/iblai/os/commit/53e961f7781167148ffb6c8acf963448c3da3ddd))
+
+## [0.95.7](https://github.com/iblai/os/compare/v0.95.6...v0.95.7) (2026-07-13)
+
+### CI
+
+- **pr-gate:** run vitest unit tests in the Required PR workflow ([dbea82a](https://github.com/iblai/os/commit/dbea82a2bf35529c6195fb8ab1b631d2b2b09ce4))
+
+## [0.95.6](https://github.com/iblai/os/compare/v0.95.5...v0.95.6) (2026-07-13)
+
+### Documentation
+
+- **readme:** link the macOS row to the latest build download ([238bc6d](https://github.com/iblai/os/commit/238bc6d16346989f0fc1f4a52542918f8c8bbab3)), closes [#download](https://github.com/iblai/os/issues/download)
+
+## [0.95.5](https://github.com/iblai/os/compare/v0.95.4...v0.95.5) (2026-07-13)
+
+### CI
+
+- harden tauri auto-version against release race + re-run double-bump ([5c135c2](https://github.com/iblai/os/commit/5c135c2060b2b03a44efc476f62f5a83a3d97f02)), closes [#2](https://github.com/iblai/os/issues/2) [#3](https://github.com/iblai/os/issues/3)
+
 ## [0.95.4](https://github.com/iblai/os/compare/v0.95.3...v0.95.4) (2026-07-11)
 
 ### CI
 
-* version the macOS/tauri app independently and auto-ship DMGs ([2e79784](https://github.com/iblai/os/commit/2e79784e5e56ed5df2b126571ba3ad4386f58b63))
+- version the macOS/tauri app independently and auto-ship DMGs ([2e79784](https://github.com/iblai/os/commit/2e79784e5e56ed5df2b126571ba3ad4386f58b63))
 
 ## [0.95.3](https://github.com/iblai/os/compare/v0.95.2...v0.95.3) (2026-07-10)
 
 ### Bug Fixes
 
-* **e2e-test:** fixing privacy chat test to add wait to send next message ([7e5f820](https://github.com/iblai/os/commit/7e5f820987a030d58cd34f652ebef2a38569e29f))
+- **e2e-test:** fixing privacy chat test to add wait to send next message ([7e5f820](https://github.com/iblai/os/commit/7e5f820987a030d58cd34f652ebef2a38569e29f))
 
 ## [0.95.2](https://github.com/iblai/os/compare/v0.95.1...v0.95.2) (2026-07-10)
 
 ### Bug Fixes
 
-* update checkout ecommerce playwright test to empty browser session ([3d27eca](https://github.com/iblai/os/commit/3d27eca554fc50fb5c37f92443f9c2ea45bf6cdf))
+- update checkout ecommerce playwright test to empty browser session ([3d27eca](https://github.com/iblai/os/commit/3d27eca554fc50fb5c37f92443f9c2ea45bf6cdf))
 
 ## [0.95.1](https://github.com/iblai/os/compare/v0.95.0...v0.95.1) (2026-07-09)
 
