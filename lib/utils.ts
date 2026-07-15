@@ -392,9 +392,54 @@ export function preprocessLaTeX(content: string) {
   processedContent = processedContent.replace(/\$\$[\s\S]*?\$\$/g, (match) =>
     maskMath(match),
   );
-  processedContent = processedContent.replace(/\$[^$\n]*?\$/g, (match) =>
-    match.includes('\\') ? maskMath(match) : match,
-  );
+  // Mask genuine inline math so the currency escape below leaves it alone.
+  // A `$...$` span "looks like math" when it contains a backslash command or
+  // has no 2+ letter prose word (e.g. "3x + 5", "5", "x = 4"). Currency
+  // false-pairs such as the text between "$5 and $10" contain a word like
+  // "and", so they stay unmasked and get the currency escape as intended.
+  //
+  // The scan runs left-to-right by hand rather than with a single global
+  // regex: when a span is NOT math, we rewind to just after its opening `$`
+  // so the closing `$` stays available to open the following span. Otherwise a
+  // leading currency amount like "$12" would swallow the opening `$` of a real
+  // math span like "$3x + 5$" later on the same line, exposing that math `$`
+  // to the currency escape and breaking it.
+  const isInlineMath = (span: string): boolean => {
+    const inner = span.slice(1, -1);
+    return span.includes('\\') || !/[A-Za-z]{2,}/.test(inner);
+  };
+  let scanned = '';
+  let cursor = 0;
+  while (cursor < processedContent.length) {
+    const open = processedContent.indexOf('$', cursor);
+    if (open === -1) {
+      scanned += processedContent.slice(cursor);
+      break;
+    }
+    // Inline spans never cross a newline, so a closing `$` past the next
+    // newline does not count.
+    const newline = processedContent.indexOf('\n', open + 1);
+    let close = processedContent.indexOf('$', open + 1);
+    if (close !== -1 && newline !== -1 && close > newline) {
+      close = -1;
+    }
+    if (close === -1) {
+      scanned += processedContent.slice(cursor, open + 1);
+      cursor = open + 1;
+      continue;
+    }
+    const span = processedContent.slice(open, close + 1);
+    if (isInlineMath(span)) {
+      scanned += processedContent.slice(cursor, open) + maskMath(span);
+      cursor = close + 1;
+    } else {
+      // Keep the opening `$` literal and rewind past it only, so the closing
+      // `$` can still open the next span.
+      scanned += processedContent.slice(cursor, open + 1);
+      cursor = open + 1;
+    }
+  }
+  processedContent = scanned;
 
   // Escape currency dollar signs: if a $ is directly followed by a digit,
   // prepend a backslash so that it is rendered as a literal dollar sign.
