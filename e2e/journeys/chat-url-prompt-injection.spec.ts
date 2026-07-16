@@ -22,7 +22,11 @@
  * `lib/utils.ts`, consumed at `components/chat/index.tsx:279`):
  *   6. Clean prompt → sanitization is a no-op, text renders verbatim
  *   7. Invisible/control chars interleaved with visible text → stripped, only
- *      visible text renders
+ *      visible text renders. "Invisible" here spans zero-width chars, the
+ *      Unicode Tag block, AND bidirectional controls (Trojan Source /
+ *      CVE-2021-42574) — all removed by `sanitizePromptParam()`. The exact
+ *      per-class stripping is asserted at the unit level; this journey covers
+ *      the end-to-end "only visible text reaches the bubble" contract.
  *   8. Whitespace + zero-width only (empty after cleaning) → no auto-submit
  *   9. HTML/script-ish payload → renders as inert literal text, no real
  *      element is inserted, no script executes
