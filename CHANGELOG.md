@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.95.13](https://github.com/iblai/os/compare/v0.95.12...v0.95.13) (2026-07-16)
+
+### Documentation
+
+* **readme:** link iOS/Android store pages, raise Available On section ([9eef885](https://github.com/iblai/os/commit/9eef885a8d932cfcb9a91655aaf7fbc7e93b0a68))
+
 ## [0.95.12](https://github.com/iblai/os/compare/v0.95.11...v0.95.12) (2026-07-15)
 
 ### CI
