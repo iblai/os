@@ -28,6 +28,13 @@ describe('sanitizePromptParam', () => {
     expect(sanitizePromptParam(input)).toBe('safeprompt');
   });
 
+  it('strips bidirectional control chars (Trojan Source, CVE-2021-42574)', () => {
+    // LRM, RLM, RLO (override), and the FSI/PDI isolates are all invisible and
+    // can visually reorder text to hide the real injected instruction.
+    const input = 'safe\u200E\u200F\u202E\u2066\u2069prompt';
+    expect(sanitizePromptParam(input)).toBe('safeprompt');
+  });
+
   it('strips control characters but preserves newlines and tabs', () => {
     const input = 'line1\x00\x1F\x7F\nline2\tend';
     expect(sanitizePromptParam(input)).toBe('line1\nline2\tend');

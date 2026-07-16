@@ -1851,6 +1851,10 @@ export function sanitizePromptParam(
     .replace(/[​-‍⁠﻿]/g, '')
     // Strip the Unicode Tag block (invisible-instruction injection).
     .replace(/[\u{E0000}-\u{E007F}]/gu, '')
+    // Strip bidirectional control chars (LRM/RLM, embeddings/overrides,
+    // isolates) — the "Trojan Source" (CVE-2021-42574) vector that can
+    // invisibly reorder text to hide or misrepresent the injected prompt.
+    .replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/gu, '')
     .trim()
     // Cap length AFTER cleaning so it reflects real visible content, then
     // re-trim so a mid-word slice never leaves dangling whitespace.
