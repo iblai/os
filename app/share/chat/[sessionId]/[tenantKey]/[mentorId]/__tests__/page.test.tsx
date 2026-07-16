@@ -49,6 +49,12 @@ let mockMentorSettings: {
   mentorUniqueId: 'mentor-1',
 };
 
+// The server page wrapper imports the SEO layer; stub it so importing the route
+// module doesn't require server-only APIs (next/headers).
+vi.mock('@/lib/seo-share', () => ({
+  buildSharedChatMetadata: vi.fn(),
+}));
+
 vi.mock('next/navigation', () => ({
   useParams: () => mockParams,
 }));
