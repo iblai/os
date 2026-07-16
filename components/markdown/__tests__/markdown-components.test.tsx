@@ -325,7 +325,7 @@ describe('Markdown Components', () => {
   describe('li component', () => {
     const Li = components.li!;
 
-    it('should render li with styling', () => {
+    it('should render li with the scroll container inside it', () => {
       const { container } = render(
         <ul>
           <Li node={{} as any}>List item</Li>
@@ -333,7 +333,13 @@ describe('Markdown Components', () => {
       );
       const li = container.querySelector('li');
       expect(li).toBeTruthy();
-      expect(li?.className).toContain('overflow-x-auto');
+      expect(li?.textContent).toBe('List item');
+      // The li must not be a scroll container itself: that clips its own
+      // marker and hides every bullet and number. Wide content still scrolls,
+      // via a wrapper inside the li.
+      expect(li?.className ?? '').not.toContain('overflow');
+      const wrapper = li?.querySelector(':scope > div');
+      expect(wrapper?.className).toContain('overflow-x-auto');
     });
   });
 

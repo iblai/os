@@ -93,6 +93,22 @@ describe('Markdown Component', () => {
     });
 
     /**
+     * A list item that is itself a scroll container clips its own marker, so
+     * every bullet and number disappears. The overflow has to live on a
+     * wrapper inside the <li>, never on the <li>.
+     */
+    it('should not make list items scroll containers (markers stay visible)', () => {
+      const { container } = render(
+        <Markdown>{'1. First item\n2. Second item'}</Markdown>,
+      );
+      for (const li of container.querySelectorAll('li')) {
+        expect(li.className ?? '').not.toMatch(/overflow/);
+        // wide content still gets a scroll container, just inside the li
+        expect(li.querySelector('.overflow-x-auto')).toBeTruthy();
+      }
+    });
+
+    /**
      * Test code block rendering
      * Verifies that code blocks are properly rendered with syntax highlighting
      */
