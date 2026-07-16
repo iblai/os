@@ -74,8 +74,11 @@ One codebase, six platforms. OS runs natively everywhere your users are — ligh
 
 **Latest macOS build:** [ibl.ai v0.95.1 (Universal .dmg)](https://github.com/iblai/os/releases/download/v0.95.1/ibl.ai_0.95.1_universal.dmg) · [all versions](docs/DOWNLOADS.md)
 
-Signed & notarized universal build (Intel + Apple Silicon). Older versions are
-listed in [docs/DOWNLOADS.md](docs/DOWNLOADS.md).
+**Latest Windows build:** _first self-signed build pending — it will appear here after the next `src-tauri` change._ · [all versions](docs/DOWNLOADS.md)
+
+Signed & notarized universal macOS build (Intel + Apple Silicon); self-signed
+Windows installers (Intel x64 + ARM64). Older versions are listed in
+[docs/DOWNLOADS.md](docs/DOWNLOADS.md).
 
 ---
 
