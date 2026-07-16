@@ -343,8 +343,29 @@ export function preprocessLaTeX(content: string) {
     return `\n${processedRows.join('\n')}\n`;
   };
 
+  // Mask code before anything else runs. Code is literal by definition, so no
+  // transformation below may see it: the `` -> " quote rule shreds ```js
+  // fences, and the currency escape leaks a visible \$ into code spans.
+  // Restored verbatim at the very end.
+  const codeOpen = String.fromCharCode(0xe002);
+  const codeClose = String.fromCharCode(0xe003);
+  const codePlaceholders: string[] = [];
+  const maskCode = (segment: string): string => {
+    const index = codePlaceholders.length;
+    codePlaceholders.push(segment);
+    return `${codeOpen}${index}${codeClose}`;
+  };
+  const maskedContent = content
+    // Fenced blocks first: a fence may legally contain single backticks.
+    .replace(/(`{3,})[\s\S]*?\1/g, maskCode)
+    .replace(/(~{3,})[\s\S]*?\1/g, maskCode)
+    // Then inline spans: a code span is a backtick run closed by a run of the
+    // same length around at least one character. Requiring content matters --
+    // an empty match would swallow the ``  that opens a LaTeX ``quote''.
+    .replace(/(`+)((?:(?!\1)[\s\S])+?)\1(?!`)/g, maskCode);
+
   // Process tabular inside \[...\] first (before converting math delimiters)
-  let processedContent = content.replace(
+  let processedContent = maskedContent.replace(
     /\\\[\s*\\begin\{tabular\}\{[^}]*\}([\s\S]*?)\\end\{tabular\}\s*\\\]/g,
     (_, tableContent) => processTabularContent(tableContent),
   );
@@ -601,6 +622,13 @@ export function preprocessLaTeX(content: string) {
 
   // \_ -> _
   processedContent = processedContent.replace(/\\_/g, '_');
+
+  // Restore code last, verbatim, so nothing above has touched its contents.
+  const restoreCodePattern = new RegExp(`${codeOpen}(\\d+)${codeClose}`, 'g');
+  processedContent = processedContent.replace(
+    restoreCodePattern,
+    (_, index) => codePlaceholders[Number(index)] ?? '',
+  );
 
   return processedContent;
 }

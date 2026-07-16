@@ -954,8 +954,18 @@ describe('preprocessLaTeX function', () => {
   });
 
   it('should convert LaTeX quotes', () => {
-    expect(preprocessLaTeX('``quoted``')).toBe('"quoted"');
+    // The LaTeX idiom opens with backticks and closes with apostrophes.
+    expect(preprocessLaTeX("``quoted text''")).toBe('"quoted text"');
     expect(preprocessLaTeX("''quoted''")).toBe('"quoted"');
+  });
+
+  it('should leave a double-backtick code span alone', () => {
+    // ``quoted`` is a CommonMark code span, not a LaTeX quote. Rewriting it to
+    // "quoted" is what shredded every ```fenced``` block, so code wins here.
+    expect(preprocessLaTeX('``quoted``')).toBe('``quoted``');
+    expect(preprocessLaTeX('```js\nconst x = 10;\n```')).toBe(
+      '```js\nconst x = 10;\n```',
+    );
   });
 
   it('should escape LaTeX special characters', () => {

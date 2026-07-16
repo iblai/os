@@ -1,7 +1,16 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import Markdown from '@/components/markdown';
 import { preprocessLaTeX } from '@/lib/utils';
+
+// A fenced block with a language renders the copy button, which reads route
+// params. Without this the syntax-highlighted branch cannot be tested at all.
+vi.mock('next/navigation', () => ({
+  useParams: () => ({ tenantKey: 'test-tenant' }),
+  usePathname: () => '/platform/test-tenant/agent',
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+}));
 
 /**
  * Test suite for the Markdown component
@@ -115,9 +124,50 @@ describe('Markdown Component', () => {
     it('should render code blocks', () => {
       const markdown = '```javascript\nconst x = 10;\n```';
       const { container } = render(<Markdown>{markdown}</Markdown>);
-      // Check for code element
-      const code = container.querySelector('code');
-      expect(code).toBeTruthy();
+      // The whole block must survive as one unit. It used to be shredded into
+      // an inline span by the `` -> " quote rule, which collapsed the newlines
+      // and injected stray quote characters.
+      expect(container.textContent).toContain('const x = 10;');
+      expect(container.textContent).not.toContain('"javascript');
+      expect(container.textContent).not.toContain('```');
+    });
+
+    /**
+     * Fenced code is literal: no LaTeX/currency preprocessing may reach inside
+     * it. A `$5` in a code sample must not pick up an escaping backslash.
+     */
+    it('should not preprocess the contents of a fenced code block', () => {
+      const markdown = '```js\nconst price = "$5";\nconst total = "$10";\n```';
+      const { container } = render(<Markdown>{markdown}</Markdown>);
+      expect(container.textContent).toContain('"$5"');
+      expect(container.textContent).toContain('"$10"');
+      expect(container.textContent).not.toContain('\\$');
+    });
+
+    /**
+     * A plain fence (no language) takes the <pre><code> path.
+     */
+    it('should render a plain fence as a real pre/code block', () => {
+      const { container } = render(
+        <Markdown>{'```\nplain line one\nplain line two\n```'}</Markdown>,
+      );
+      const pre = container.querySelector('pre');
+      expect(pre).toBeTruthy();
+      expect(pre?.querySelector('code')).toBeTruthy();
+      expect(pre?.textContent).toContain('plain line one');
+      expect(pre?.textContent).toContain('plain line two');
+    });
+
+    /**
+     * Inline code is literal too -- `$5` must not gain a backslash.
+     */
+    it('should not preprocess the contents of inline code', () => {
+      const { container } = render(
+        <Markdown>{'Money in code: `$5` and `$x$` stay literal.'}</Markdown>,
+      );
+      expect(container.textContent).toContain('$5');
+      expect(container.textContent).not.toContain('\\$');
+      expect(container.querySelectorAll('code').length).toBe(2);
     });
 
     /**
