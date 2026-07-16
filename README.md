@@ -37,7 +37,7 @@ _[Demo](https://www.youtube.com/playlist?list=PLW0-4yErlU3XQr0UP6cCGwy24LMf7I5vR
 | **macOS**   | Native desktop app — [download the latest build](#download)                                                |
 | **iOS**     | Native mobile app — [download on the App Store](https://apps.apple.com/us/app/ibl-ai/id6504929071)         |
 | **Android** | Native mobile app — [get it on Google Play](https://play.google.com/store/apps/details?id=ai.ibl.mentorai) |
-| **Windows** | Native desktop app                                                                                         |
+| **Windows** | Native desktop app (Intel x64 + ARM64) — [download the latest build](#download)                            |
 | **Linux**   | Native desktop app                                                                                         |
 
 </div>
