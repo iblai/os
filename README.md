@@ -27,6 +27,25 @@ _[Demo](https://www.youtube.com/playlist?list=PLW0-4yErlU3XQr0UP6cCGwy24LMf7I5vR
 
 ---
 
+## Available On
+
+<div align="center">
+
+| Platform    | Status                                                                                                     |
+| ----------- | ---------------------------------------------------------------------------------------------------------- |
+| **Web**     | Production at [os.ibl.ai](https://os.ibl.ai) — works on any modern browser                                 |
+| **macOS**   | Native desktop app — [download the latest build](#download)                                                |
+| **iOS**     | Native mobile app — [download on the App Store](https://apps.apple.com/us/app/ibl-ai/id6504929071)         |
+| **Android** | Native mobile app — [get it on Google Play](https://play.google.com/store/apps/details?id=ai.ibl.mentorai) |
+| **Windows** | Native desktop app                                                                                         |
+| **Linux**   | Native desktop app                                                                                         |
+
+</div>
+
+One codebase, six platforms. OS runs natively everywhere your users are — lightweight, fast, with near-native performance.
+
+---
+
 ## Features
 
 - **AI Agents** — Create custom agents with configurable LLMs, system prompts, tools, and safety filters
@@ -51,31 +70,15 @@ _[Demo](https://www.youtube.com/playlist?list=PLW0-4yErlU3XQr0UP6cCGwy24LMf7I5vR
 
 ---
 
-## Available On
-
-<div align="center">
-
-| Platform    | Status                                                                     |
-| ----------- | -------------------------------------------------------------------------- |
-| **Web**     | Production at [os.ibl.ai](https://os.ibl.ai) — works on any modern browser |
-| **macOS**   | Native desktop app — [download the latest build](#download)                |
-| **iOS**     | Native mobile app — available on iPhone and iPad                           |
-| **Android** | Native mobile app — available on phones and tablets                        |
-| **Windows** | Native desktop app                                                         |
-| **Linux**   | Native desktop app                                                         |
-
-</div>
-
-One codebase, six platforms. OS runs natively everywhere your users are — lightweight, fast, with near-native performance.
-
----
-
 ## Download
 
-**Latest macOS build:** [ibl.ai v0.95.1 (Universal .dmg)](https://github.com/iblai/os/releases/download/v0.95.1/ibl.ai_0.95.1_universal.dmg) · [all versions](docs/DOWNLOADS.md)
+**Latest macOS build:** [ibl.ai app-v0.95.4 (Universal .dmg)](https://github.com/iblai/os/releases/download/app-v0.95.4/ibl.ai_0.95.4_universal.dmg) · [all versions](docs/DOWNLOADS.md)
 
-Signed & notarized universal build (Intel + Apple Silicon). Older versions are
-listed in [docs/DOWNLOADS.md](docs/DOWNLOADS.md).
+**Latest Windows build:** [ibl.ai app-v0.95.4 (x64 .exe)](https://github.com/iblai/os/releases/download/app-v0.95.4/ibl.ai_0.95.4_x64-setup.exe) · [ARM64 .exe](https://github.com/iblai/os/releases/download/app-v0.95.4/ibl.ai_0.95.4_arm64-setup.exe) · [all versions](docs/DOWNLOADS.md)
+
+Signed & notarized universal macOS build (Intel + Apple Silicon); self-signed
+Windows installers (Intel x64 + ARM64). Older versions are listed in
+[docs/DOWNLOADS.md](docs/DOWNLOADS.md).
 
 ---
 

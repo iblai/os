@@ -311,7 +311,11 @@ export function UserProfile() {
       // Configuration
       showProfileTab={true}
       showAccountTab={false}
-      showTenantSwitcher={userIsAdmin && !lockedTenant}
+      showTenantSwitcher={
+        (userIsAdmin ||
+          userTenants.some((t) => t.key !== 'main' && t.key !== tenantKey)) &&
+        !lockedTenant
+      }
       showHelpLink={true}
       showLogoutButton={true}
       showLearnerModeSwitch={userIsAdmin && tenantKey !== 'main'}

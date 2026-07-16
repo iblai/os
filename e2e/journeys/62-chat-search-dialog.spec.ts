@@ -1,5 +1,5 @@
 /**
- * Journey 61 — Chat Search Dialog (issue #2053)
+ * Journey 62 — Chat Search Dialog (issue #2053)
  *
  * Covers the `ChatSearchDialog` opened from the sidebar's "Search chats"
  * entry point (`app-sidebar/index.tsx` — both the expanded text-label
@@ -119,7 +119,7 @@ const TOPIC_KEYWORDS = ['photosynthesis', 'gravity', 'pasta'] as const;
 
 // ─── Suite ───────────────────────────────────────────────────────────────────
 
-test.describe('Journey 61: Chat Search Dialog', () => {
+test.describe('Journey 62: Chat Search Dialog', () => {
   test.setTimeout(300_000);
 
   test.beforeEach(async ({ page, createMentorPage }) => {
