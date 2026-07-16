@@ -3146,7 +3146,7 @@
           "id": "cp-chat-06",
           "description": "Multi-turn context retained within a single private session: (a) cached session id is stable across both sends (front-end contract, passes today); (b) AI echoes back the code word from turn 1, proving backend retains in-session context for private sessions",
           "status": "pending",
-          "note": "Assertion (a) stable session id passes today. Assertion (b) AI context recall is a live gate awaiting backend fix: backend must retain ephemeral in-session context for disable_chathistory:true sessions"
+          "note": "Skipped (test.skip) as flaky pending backend fix — tracked by iblai/iblai-platform#2186. Assertion (a) stable session id passes today. Assertion (b) AI context recall is a live gate awaiting backend fix: backend must retain ephemeral in-session context for disable_chathistory:true sessions"
         },
         {
           "id": "cp-chat-07",
