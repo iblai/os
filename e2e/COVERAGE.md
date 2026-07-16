@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-07-14 | 550 checkpoints (524 covered, 7 pending/fixme, 7 not-reproducible in default env, 12 deprecated) | 63 journeys (62 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-07-16 | 551 checkpoints (525 covered, 7 pending/fixme, 7 not-reproducible in default env, 12 deprecated) | 63 journeys (62 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -741,15 +741,15 @@ The "Dedicated sandbox" (`enable_claw`) master toggle moved off Settings → Cap
 - [x] Admin opens the Sandbox tab and the "Dedicated sandbox" capability toggle (in-tab CapabilityGate) is present
 - [x] Capability toggle is interactable for admins regardless of sandbox connection state (admin intent)
 - [x] Flipping the capability toggle auto-saves instantly (optimistic, no footer Save button) and does not change Sandbox or Skills tab visibility — both tabs are unconditionally mounted
-- [x] Enabling the capability flips `capability-gate-content`'s `data-enabled` to `true`, ungating the SandboxConfig UI; Sandbox tab sits right after Settings
-- [x] Skills tab is always visible; its content reflects the live wired-sandbox state (grayed/disconnected preview when no ClawMentorConfig is wired, full content when connected)
-- [x] Sandbox tab sits right after Settings and Skills tab sits right after Prompts in the dialog tab list, unconditionally
+- [x] Enabling the capability flips `capability-gate-content`'s `data-enabled` to `true`, ungating the SandboxConfig UI; Sandbox leads the Integrations category (feat/2040 moved it off Configurations)
+- [x] Skills tab is always visible AND shows the real skills UI (heading, info box, New Skill action) independent of the sandbox — feat/2040 made the Skills content fully sandbox-independent (no "connect a sandbox" gate)
+- [x] Sandbox leads the Integrations category and Skills follows Prompts in the Configurations category, unconditionally (feat/2040 groups the sidebar into Configurations / Integrations / Runtime)
 - [x] Disabling the capability flips `capability-gate-content`'s `data-enabled` back to `false`, regating the SandboxConfig UI, while Sandbox and Skills tabs remain visible
 - [x] Admin navigates to Sandbox tab and the sandbox config container renders regardless of capability state
 - [x] Admin toggles the capability ON then OFF in one session and `capability-gate-content`'s `data-enabled` flips accordingly both times
 - [x] Admin adds a new sandbox instance via the Add Instance dialog (capability enabled first) and the new row appears in the instance table
 - [x] Admin edits an existing sandbox instance name via the Edit Instance dialog and the updated name is reflected in the table
-- [x] Admin connects a sandbox instance via the dedicated per-row Connect button (no longer a dropdown item): Connected Instance heading appears and Skills tab content reflects the wired state
+- [x] Admin connects a sandbox instance via the dedicated per-row Connect button (no longer a dropdown item): Connected Instance heading appears and the Skills tab renders its (sandbox-independent) skills UI
 - [x] Admin edits an Agent Configuration field in the Prompts tab: edit modal closes and the new value is persisted
 - [x] Admin toggles a skill on then off in the Skills tab and aria-checked flips back to the original state
 - [x] Admin creates a new skill, edits its description, and the updated skill row remains visible; skill is deleted on cleanup

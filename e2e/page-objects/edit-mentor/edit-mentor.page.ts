@@ -32,29 +32,33 @@ import { LtiTab } from './lti.tab';
  */
 const TAB_CATEGORY: Record<
   string,
-  'Configurations' | 'Integrations' | 'Analytics'
+  'Configurations' | 'Integrations' | 'Runtime'
 > = {
+  // Configurations
   Settings: 'Configurations',
-  Sandbox: 'Configurations',
-  Access: 'Configurations',
   LLM: 'Configurations',
+  Voice: 'Configurations',
+  'Screen Share': 'Configurations',
   Prompts: 'Configurations',
   Skills: 'Configurations',
   Safety: 'Configurations',
   Privacy: 'Configurations',
-  Tasks: 'Configurations',
   Disclaimers: 'Configurations',
-  Tools: 'Configurations',
+  // Integrations
+  Sandbox: 'Integrations',
+  Access: 'Integrations',
+  Tools: 'Integrations',
   MCP: 'Integrations',
   Datasets: 'Integrations',
   API: 'Integrations',
-  Embed: 'Integrations',
   LTI: 'Integrations',
-  Voice: 'Configurations',
-  'Screen Share': 'Configurations',
-  Memory: 'Analytics',
-  History: 'Analytics',
-  Audit: 'Analytics',
+  Embed: 'Integrations',
+  // Runtime (renamed from Analytics)
+  Tasks: 'Runtime',
+  Memory: 'Runtime',
+  History: 'Runtime',
+  Audit: 'Runtime',
+  Analytics: 'Runtime',
 };
 
 export class EditMentorPage {
@@ -289,9 +293,33 @@ export class EditMentorPage {
     // navigateToTab's getByRole queries always resolve.
     await this.unhideEditDialog();
 
+    // Wait for the modal to finish hydrating before handing control back.
+    await this.waitForHydrated();
+
     if (tabName) {
       await this.navigateToTab(tabName);
     }
+  }
+
+  /**
+   * Block until the Edit Agent modal has finished loading its segment list.
+   *
+   * The modal renders only a header + spinner (`isLoading`) until BOTH the
+   * per-mentor settings query AND the modal's RBAC prefetch resolve
+   * (see `edit-mentor-modal/index.tsx`). On freshly-created or
+   * rapidly-navigated mentors — exactly what these journeys create in their
+   * `beforeEach` — the mentor context churns while it settles and the RBAC
+   * prefetch can 400 for a not-yet-fully-provisioned mentor, so hydration
+   * routinely takes ~30s+. Waiting on the first real segment tab (a Radix
+   * `TabsTrigger`, uniquely `aria-controls="panel-…"`) means every segment is
+   * mounted before callers (navigateToTab / test bodies) touch the sidebar,
+   * instead of racing the spinner.
+   */
+  private async waitForHydrated(): Promise<void> {
+    await this.dialog
+      .locator('[role="tab"][aria-controls^="panel-"]:visible')
+      .first()
+      .waitFor({ state: 'visible', timeout: 60_000 });
   }
 
   /**
@@ -409,26 +437,40 @@ export class EditMentorPage {
     // yet. Switch to the segment's category first when known.
     const category = TAB_CATEGORY[tabName];
     if (category) {
-      const categoryTab = this.dialog.getByRole('tab', {
-        name: category,
-        exact: true,
-      });
-      // Wait for the category strip to mount — the dialog renders a loading
-      // spinner while mentor-settings + RBAC hydrate; tabs only appear after
-      // both resolve. Without this wait, getAttribute returns null (element
-      // not yet in the a11y tree), causing the unconditional click() below to
-      // timeout while waiting for the element to become interactable.
-      await categoryTab.waitFor({ state: 'visible', timeout: 20_000 });
-      const categoryActive =
-        (await categoryTab.getAttribute('data-state').catch(() => null)) ===
-        'active';
-      if (!categoryActive) {
-        await categoryTab.click();
-        // Wait for Radix to flip `data-state` to active rather than sleeping —
-        // when active, the new category's segments are guaranteed mounted.
-        await expect(categoryTab).toHaveAttribute('data-state', 'active', {
-          timeout: 5_000,
-        });
+      // Scope to the visible category pill. Each pill is rendered twice
+      // (desktop sidebar + compact mobile strip); `:visible` isolates the one
+      // for the active breakpoint so the locator resolves to a single element.
+      const categoryTab = this.dialog
+        .getByRole('tab', { name: category, exact: true })
+        .and(this.dialog.locator(':visible'));
+      // The category strip only renders when MORE THAN ONE category has items
+      // (see `showCategoryStrip` in edit-mentor-modal/index.tsx). When RBAC
+      // leaves a single category, the strip is dropped and every segment sits
+      // in the one visible list already — so treat the category switch as
+      // best-effort: wait a bounded time for the pill, and if it never
+      // appears, fall through to the segment lookup below.
+      const hasStrip = await categoryTab
+        .first()
+        .waitFor({ state: 'visible', timeout: 15_000 })
+        .then(() => true)
+        .catch(() => false);
+      if (hasStrip) {
+        const categoryActive =
+          (await categoryTab
+            .first()
+            .getAttribute('data-state')
+            .catch(() => null)) === 'active';
+        if (!categoryActive) {
+          await categoryTab.first().click();
+          // Wait for the pill to flip `data-state` to active rather than
+          // sleeping — when active, the category's segments are guaranteed
+          // mounted.
+          await expect(categoryTab.first()).toHaveAttribute(
+            'data-state',
+            'active',
+            { timeout: 5_000 },
+          );
+        }
       }
     }
 

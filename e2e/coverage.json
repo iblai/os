@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "lastUpdated": "2026-07-14",
+  "lastUpdated": "2026-07-16",
   "summary": {
-    "totalCheckpoints": 550,
-    "coveredCheckpoints": 524,
+    "totalCheckpoints": 551,
+    "coveredCheckpoints": 525,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 7,
     "pendingCheckpoints": 7,
@@ -2341,17 +2341,17 @@
         },
         {
           "id": "claw-04",
-          "description": "Enabling the capability flips capability-gate-content's data-enabled to \"true\", ungating the SandboxConfig UI; Sandbox tab sits right after Settings",
+          "description": "Enabling the capability flips capability-gate-content's data-enabled to \"true\", ungating the SandboxConfig UI; Sandbox leads the Integrations category (feat/2040 moved it off Configurations)",
           "status": "covered"
         },
         {
           "id": "claw-05",
-          "description": "Skills tab is always visible; its content reflects the live wired-sandbox state (grayed/disconnected preview when no ClawMentorConfig is wired, full content when connected)",
+          "description": "Skills tab is always visible AND shows the real skills UI (heading, info box, New Skill action) independent of the sandbox — feat/2040 made the Skills content fully sandbox-independent (no \"connect a sandbox\" gate)",
           "status": "covered"
         },
         {
           "id": "claw-06",
-          "description": "Sandbox tab sits right after Settings and Skills tab sits right after Prompts in the dialog tab list, unconditionally",
+          "description": "Sandbox leads the Integrations category and Skills follows Prompts in the Configurations category, unconditionally (feat/2040 groups the sidebar into Configurations / Integrations / Runtime)",
           "status": "covered"
         },
         {
@@ -2381,7 +2381,7 @@
         },
         {
           "id": "claw-12",
-          "description": "Admin connects a sandbox instance via the dedicated per-row Connect button (data-testid=\"connect-instance-<id>\" — Connect is no longer a dropdown menu item, it sits next to the separate \"Actions\" three-dot menu): Connected Instance heading appears and Skills tab content reflects the wired state",
+          "description": "Admin connects a sandbox instance via the dedicated per-row Connect button (data-testid=\"connect-instance-<id>\" — Connect is no longer a dropdown menu item, it sits next to the separate \"Actions\" three-dot menu): Connected Instance heading appears and the Skills tab renders its (sandbox-independent) skills UI",
           "status": "covered"
         },
         {
