@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.96.0](https://github.com/iblai/os/compare/v0.95.13...v0.96.0) (2026-07-16)
+
+### Features
+
+* **ci:** self-signed Windows build pipeline (x64 + arm64) ([9a4835a](https://github.com/iblai/os/commit/9a4835a17ed753607eda2fa6fbd750a73c42f14b))
+
+### CI
+
+* harden the self-signed Windows build pipeline (research-backed) ([ae1ad7b](https://github.com/iblai/os/commit/ae1ad7bed000073d8911a8604d16c95896c7cc06))
+
 ## [0.95.13](https://github.com/iblai/os/compare/v0.95.12...v0.95.13) (2026-07-16)
 
 ### Documentation
