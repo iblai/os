@@ -4,21 +4,21 @@
 
 ### CI
 
-* **audit:** don't block PRs when npm's audit endpoint is retired (410) ([33d79fe](https://github.com/iblai/os/commit/33d79fe7d8907f703626bb6b6146013f6ae34160)), closes [#339](https://github.com/iblai/os/issues/339)
+- **audit:** don't block PRs when npm's audit endpoint is retired (410) ([33d79fe](https://github.com/iblai/os/commit/33d79fe7d8907f703626bb6b6146013f6ae34160)), closes [#339](https://github.com/iblai/os/issues/339)
 
 ## [0.95.11](https://github.com/iblai/os/compare/v0.95.10...v0.95.11) (2026-07-15)
 
 ### Bug Fixes
 
-* chat privacy failing playwright test fixed ([51276f8](https://github.com/iblai/os/commit/51276f89f77f5cec9df79a240cb638eb9b0ba1df))
-* **e2e:** stabilize ?prompt= dedup test against mid-stream reloads ([2fd82ea](https://github.com/iblai/os/commit/2fd82ea47ce5f2240dbac865d723d07b78ae39e5))
-* upgrade package modal redirect url upgraded ([7a3f02e](https://github.com/iblai/os/commit/7a3f02e96ecd06829407b2a90002b40722472e61))
-* upgrade package modal redirect url upgraded > test coverage ([babb1dc](https://github.com/iblai/os/commit/babb1dc8791ddca64462a901f4afaa1f63667b83))
+- chat privacy failing playwright test fixed ([51276f8](https://github.com/iblai/os/commit/51276f89f77f5cec9df79a240cb638eb9b0ba1df))
+- **e2e:** stabilize ?prompt= dedup test against mid-stream reloads ([2fd82ea](https://github.com/iblai/os/commit/2fd82ea47ce5f2240dbac865d723d07b78ae39e5))
+- upgrade package modal redirect url upgraded ([7a3f02e](https://github.com/iblai/os/commit/7a3f02e96ecd06829407b2a90002b40722472e61))
+- upgrade package modal redirect url upgraded > test coverage ([babb1dc](https://github.com/iblai/os/commit/babb1dc8791ddca64462a901f4afaa1f63667b83))
 
 ### Chores
 
-* bump iblai-js to 1.22.6 ([d6e8903](https://github.com/iblai/os/commit/d6e8903710f2718c5f15513fb02cfd5c6c66e46a))
-* **deps:** bump @iblai/iblai-js to 1.25.1 ([9c1d8ca](https://github.com/iblai/os/commit/9c1d8caa9500be44498e1de440ee601b43f3a407))
+- bump iblai-js to 1.22.6 ([d6e8903](https://github.com/iblai/os/commit/d6e8903710f2718c5f15513fb02cfd5c6c66e46a))
+- **deps:** bump @iblai/iblai-js to 1.25.1 ([9c1d8ca](https://github.com/iblai/os/commit/9c1d8caa9500be44498e1de440ee601b43f3a407))
 
 ## [0.95.10](https://github.com/iblai/os/compare/v0.95.9...v0.95.10) (2026-07-15)
 
