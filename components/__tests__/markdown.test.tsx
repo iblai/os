@@ -355,6 +355,43 @@ Show me your steps — write out each one just like I did above. 😊`;
     });
 
     /**
+     * Ambiguous delimiters must never reach KaTeX as a parse error.
+     *
+     * remark-math pairs `$` in runs of equal length, so `$a$$b$` is one span
+     * whose content is `a$$b` -- invalid TeX, rendered as a red error box. We
+     * decline to claim spans whose delimiters touch another `$`, so the run
+     * stays literal text instead of turning red.
+     */
+    it('should never render a red KaTeX error for ambiguous delimiters', () => {
+      const ambiguous = [
+        'Consecutive math: $a$$b$ and $x$ $y$',
+        'Double dollar inline: price is $$5 here.',
+        'Triple: $$$5',
+        'Only a dollar sign: $',
+        'Dollar then letter: $abc and $xyz',
+      ];
+      for (const md of ambiguous) {
+        const { container } = render(<Markdown>{md}</Markdown>);
+        expect(container.querySelectorAll('.katex-error')).toHaveLength(0);
+      }
+    });
+
+    /**
+     * The ambiguous run stays literal, while unambiguous neighbours on the
+     * same line still render as math.
+     */
+    it('should keep an ambiguous run literal without harming its neighbours', () => {
+      const { container } = render(
+        <Markdown>{'Consecutive math: $a$$b$ and $x$ $y$'}</Markdown>,
+      );
+      const tex = [...container.querySelectorAll('.katex annotation')].map(
+        (a) => a.textContent,
+      );
+      expect(tex).toEqual(['x', 'y']);
+      expect(container.textContent).toContain('$a$$b$');
+    });
+
+    /**
      * Test currency dollar sign handling
      * Verifies that dollar signs before digits are escaped and rendered as literal $
      */

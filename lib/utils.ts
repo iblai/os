@@ -389,14 +389,27 @@ export function preprocessLaTeX(content: string) {
     return `${maskOpen}${index}${maskClose}`;
   };
 
-  processedContent = processedContent.replace(/\$\$[\s\S]*?\$\$/g, (match) =>
+  // Block math takes one of two shapes: a `$$` fence whose delimiters each sit
+  // on their own line, or `$$...$$` closed on the line it opened. Matching
+  // `$$[\s\S]*?$$` instead lets a stray `$$` in prose pair with another `$$`
+  // lines later and swallow everything between them.
+  processedContent = processedContent.replace(
+    /^[ \t]*\$\$[ \t]*\n[\s\S]*?\n[ \t]*\$\$[ \t]*$/gm,
+    (match) => maskMath(match),
+  );
+  processedContent = processedContent.replace(/\$\$[^\n]*?\$\$/g, (match) =>
     maskMath(match),
   );
   // Mask genuine inline math so the currency escape below leaves it alone.
-  // A `$...$` span "looks like math" when it contains a backslash command or
-  // has no 2+ letter prose word (e.g. "3x + 5", "5", "x = 4"). Currency
-  // false-pairs such as the text between "$5 and $10" contain a word like
-  // "and", so they stay unmasked and get the currency escape as intended.
+  // A `$...$` span counts as math under Pandoc's `tex_math_dollars` rule: the
+  // opening `$` is followed by a non-space, the closing `$` is preceded by a
+  // non-space, and the closing `$` is not followed by a digit. Currency pairs
+  // fail one of the last two tests -- "$5, $10" closes after a space, and
+  // "$5-$10" closes directly before a digit -- so they stay unmasked and get
+  // the currency escape as intended, while "$3x + 5$" and "$x = 4$" pass.
+  //
+  // Only `$` directly followed by a digit is at risk from the escape below, so
+  // declining to mask a span is always safe: remark-math still renders it.
   //
   // The scan runs left-to-right by hand rather than with a single global
   // regex: when a span is NOT math, we rewind to just after its opening `$`
@@ -404,9 +417,23 @@ export function preprocessLaTeX(content: string) {
   // leading currency amount like "$12" would swallow the opening `$` of a real
   // math span like "$3x + 5$" later on the same line, exposing that math `$`
   // to the currency escape and breaking it.
-  const isInlineMath = (span: string): boolean => {
-    const inner = span.slice(1, -1);
-    return span.includes('\\') || !/[A-Za-z]{2,}/.test(inner);
+  const isInlineMath = (open: number, close: number): boolean => {
+    if (close <= open + 1) return false;
+    const beforeOpen = processedContent[open - 1];
+    const afterOpen = processedContent[open + 1];
+    const beforeClose = processedContent[close - 1];
+    const afterClose = processedContent[close + 1];
+    if (!afterOpen || /\s/.test(afterOpen)) return false;
+    if (!beforeClose || /\s/.test(beforeClose)) return false;
+    if (afterClose && /\d/.test(afterClose)) return false;
+    // A delimiter touching another `$` is ambiguous: remark-math pairs `$` in
+    // runs of equal length, so in `$a$$b$` it opens on the first `$`, skips
+    // the `$$` run, and closes on the last one -- one span whose content is
+    // `a$$b`, which KaTeX renders as a red error. Claiming a span here would
+    // disagree with the tokenizer that actually renders it, so decline and let
+    // the escape below make the whole run literal instead.
+    if (beforeOpen === '$' || afterClose === '$') return false;
+    return true;
   };
   let scanned = '';
   let cursor = 0;
@@ -428,8 +455,8 @@ export function preprocessLaTeX(content: string) {
       cursor = open + 1;
       continue;
     }
-    const span = processedContent.slice(open, close + 1);
-    if (isInlineMath(span)) {
+    if (isInlineMath(open, close)) {
+      const span = processedContent.slice(open, close + 1);
       scanned += processedContent.slice(cursor, open) + maskMath(span);
       cursor = close + 1;
     } else {
@@ -441,13 +468,14 @@ export function preprocessLaTeX(content: string) {
   }
   processedContent = scanned;
 
-  // Escape currency dollar signs: if a $ is directly followed by a digit,
-  // prepend a backslash so that it is rendered as a literal dollar sign.
-  // Replace the regex replacement with one using a lookbehind and a function to ensure the digit group is preserved correctly.
-  processedContent = processedContent.replace(
-    /(?<!\\)\$(\d)/g,
-    (_, digit) => `\\$${digit}`,
-  );
+  // Every `$` that survives the scan above is not math, so escape all of them,
+  // not just the ones before a digit. A single unescaped `$` left behind opens
+  // a math span in remark-math that scans forward for a closer, and `\` is not
+  // an escape inside that scan -- so a stray `$` swallows the `$` out of a
+  // later `\$999`, leaving an orphaned backslash on screen. Escaping every
+  // non-math `$` keeps the decision here instead of splitting it with
+  // remark-math.
+  processedContent = processedContent.replace(/(?<!\\)\$/g, () => '\\$');
 
   // Restore masked math spans verbatim.
   const restoreMathPattern = new RegExp(`${maskOpen}(\\d+)${maskClose}`, 'g');

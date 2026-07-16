@@ -828,12 +828,23 @@ describe('preprocessLaTeX function', () => {
     );
   });
 
-  it('documents the known price-range limitation ($5-$10 reads as math)', () => {
-    // A bare "$5-$10" has no letters, so the heuristic treats "$5-$" as math
-    // and it renders as "5−". This is the documented trade-off; encode it so a
-    // future change to this behavior is a deliberate decision, not a surprise.
+  it('keeps price ranges literal regardless of the separator', () => {
+    // A closing `$` directly before a digit is currency, never a math close,
+    // so every amount in a range stays escaped.
     expect(preprocessLaTeX('tickets are $5-$10 today')).toBe(
-      'tickets are $5-$10 today',
+      'tickets are \\$5-\\$10 today',
+    );
+    expect(preprocessLaTeX('seats cost $5 - $10 each')).toBe(
+      'seats cost \\$5 - \\$10 each',
+    );
+    expect(preprocessLaTeX('prices: $5, $10, $15.')).toBe(
+      'prices: \\$5, \\$10, \\$15.',
+    );
+    expect(preprocessLaTeX('bands are $90,000-$120,000 by level')).toBe(
+      'bands are \\$90,000-\\$120,000 by level',
+    );
+    expect(preprocessLaTeX('k. Three amounts: $5-$10-$20')).toBe(
+      'k. Three amounts: \\$5-\\$10-\\$20',
     );
   });
 
