@@ -4,17 +4,17 @@
 
 ### Features
 
-* **ci:** self-signed Windows build pipeline (x64 + arm64) ([9a4835a](https://github.com/iblai/os/commit/9a4835a17ed753607eda2fa6fbd750a73c42f14b))
+- **ci:** self-signed Windows build pipeline (x64 + arm64) ([9a4835a](https://github.com/iblai/os/commit/9a4835a17ed753607eda2fa6fbd750a73c42f14b))
 
 ### CI
 
-* harden the self-signed Windows build pipeline (research-backed) ([ae1ad7b](https://github.com/iblai/os/commit/ae1ad7bed000073d8911a8604d16c95896c7cc06))
+- harden the self-signed Windows build pipeline (research-backed) ([ae1ad7b](https://github.com/iblai/os/commit/ae1ad7bed000073d8911a8604d16c95896c7cc06))
 
 ## [0.95.13](https://github.com/iblai/os/compare/v0.95.12...v0.95.13) (2026-07-16)
 
 ### Documentation
 
-* **readme:** link iOS/Android store pages, raise Available On section ([9eef885](https://github.com/iblai/os/commit/9eef885a8d932cfcb9a91655aaf7fbc7e93b0a68))
+- **readme:** link iOS/Android store pages, raise Available On section ([9eef885](https://github.com/iblai/os/commit/9eef885a8d932cfcb9a91655aaf7fbc7e93b0a68))
 
 ## [0.95.12](https://github.com/iblai/os/compare/v0.95.11...v0.95.12) (2026-07-15)
 
