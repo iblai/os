@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.96.2](https://github.com/iblai/os/compare/v0.96.1...v0.96.2) (2026-07-16)
+
+### Bug Fixes
+
+* **2109:** decide math vs currency with Pandoc's rule ([fa11d98](https://github.com/iblai/os/commit/fa11d988be90cad61d6dcb24840147c5e5cddf5d))
+* **chat:** normalize shared-chat message content to a string ([eadce24](https://github.com/iblai/os/commit/eadce245b5e5032cb1e53111afcc95492d2da44b))
+* **chat:** render inline math sharing a line with currency ([53a3652](https://github.com/iblai/os/commit/53a36521a7d26a0fcf6831678acf4440c24c617c))
+* **markdown:** mask code before LaTeX preprocessing ([26ce73c](https://github.com/iblai/os/commit/26ce73c172d31455f39c4e148bbff84da82e282d))
+* **markdown:** stop list items clipping their own markers ([2d41d13](https://github.com/iblai/os/commit/2d41d138f5555ffaf82836cb98c646fcfc76d719))
+
+### Tests
+
+* **chat:** cover inline math vs currency in preprocessLaTeX rendering ([642fcd6](https://github.com/iblai/os/commit/642fcd6ba3350896602b11aa52ef21891a0480ed))
+* **e2e:** add journey 61 for chat LaTeX/math rendering ([aafb426](https://github.com/iblai/os/commit/aafb426f245360f54785d6d9638786284caa3b2a))
+
 ## [0.96.1](https://github.com/iblai/os/compare/v0.96.0...v0.96.1) (2026-07-16)
 
 ### Chores
