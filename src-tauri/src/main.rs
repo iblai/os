@@ -978,6 +978,15 @@ fn allow_in_app_purchase() -> bool {
     }
 }
 
+/// The tenant key this build is locked to, injected at build time via the
+/// `IBL_TENANT` environment variable. Returns an empty string when unset, which
+/// the app treats as "no lock" (normal multi-tenant behaviour). Lets two builds
+/// target different tenants while sharing one application URL.
+#[command]
+fn get_locked_tenant() -> String {
+    option_env!("IBL_TENANT").unwrap_or("").trim().to_string()
+}
+
 /// Proxy a chat request to Ollama
 /// This is needed because the app runs on HTTPS but local LLMs run on HTTP (localhost)
 /// Browsers block mixed content, so we proxy through Tauri
@@ -2740,6 +2749,7 @@ fn main() {
             get_offline_context,
             get_os_type,
             allow_in_app_purchase,
+            get_locked_tenant,
             open_external_url,
             ollama_chat,
             ollama_chat_stream,

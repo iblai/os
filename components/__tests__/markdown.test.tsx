@@ -1,7 +1,16 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import Markdown from '@/components/markdown';
 import { preprocessLaTeX } from '@/lib/utils';
+
+// A fenced block with a language renders the copy button, which reads route
+// params. Without this the syntax-highlighted branch cannot be tested at all.
+vi.mock('next/navigation', () => ({
+  useParams: () => ({ tenantKey: 'test-tenant' }),
+  usePathname: () => '/platform/test-tenant/agent',
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+}));
 
 /**
  * Test suite for the Markdown component
@@ -93,15 +102,72 @@ describe('Markdown Component', () => {
     });
 
     /**
+     * A list item that is itself a scroll container clips its own marker, so
+     * every bullet and number disappears. The overflow has to live on a
+     * wrapper inside the <li>, never on the <li>.
+     */
+    it('should not make list items scroll containers (markers stay visible)', () => {
+      const { container } = render(
+        <Markdown>{'1. First item\n2. Second item'}</Markdown>,
+      );
+      for (const li of container.querySelectorAll('li')) {
+        expect(li.className ?? '').not.toMatch(/overflow/);
+        // wide content still gets a scroll container, just inside the li
+        expect(li.querySelector('.overflow-x-auto')).toBeTruthy();
+      }
+    });
+
+    /**
      * Test code block rendering
      * Verifies that code blocks are properly rendered with syntax highlighting
      */
     it('should render code blocks', () => {
       const markdown = '```javascript\nconst x = 10;\n```';
       const { container } = render(<Markdown>{markdown}</Markdown>);
-      // Check for code element
-      const code = container.querySelector('code');
-      expect(code).toBeTruthy();
+      // The whole block must survive as one unit. It used to be shredded into
+      // an inline span by the `` -> " quote rule, which collapsed the newlines
+      // and injected stray quote characters.
+      expect(container.textContent).toContain('const x = 10;');
+      expect(container.textContent).not.toContain('"javascript');
+      expect(container.textContent).not.toContain('```');
+    });
+
+    /**
+     * Fenced code is literal: no LaTeX/currency preprocessing may reach inside
+     * it. A `$5` in a code sample must not pick up an escaping backslash.
+     */
+    it('should not preprocess the contents of a fenced code block', () => {
+      const markdown = '```js\nconst price = "$5";\nconst total = "$10";\n```';
+      const { container } = render(<Markdown>{markdown}</Markdown>);
+      expect(container.textContent).toContain('"$5"');
+      expect(container.textContent).toContain('"$10"');
+      expect(container.textContent).not.toContain('\\$');
+    });
+
+    /**
+     * A plain fence (no language) takes the <pre><code> path.
+     */
+    it('should render a plain fence as a real pre/code block', () => {
+      const { container } = render(
+        <Markdown>{'```\nplain line one\nplain line two\n```'}</Markdown>,
+      );
+      const pre = container.querySelector('pre');
+      expect(pre).toBeTruthy();
+      expect(pre?.querySelector('code')).toBeTruthy();
+      expect(pre?.textContent).toContain('plain line one');
+      expect(pre?.textContent).toContain('plain line two');
+    });
+
+    /**
+     * Inline code is literal too -- `$5` must not gain a backslash.
+     */
+    it('should not preprocess the contents of inline code', () => {
+      const { container } = render(
+        <Markdown>{'Money in code: `$5` and `$x$` stay literal.'}</Markdown>,
+      );
+      expect(container.textContent).toContain('$5');
+      expect(container.textContent).not.toContain('\\$');
+      expect(container.querySelectorAll('code').length).toBe(2);
     });
 
     /**
@@ -259,6 +325,120 @@ describe('Markdown Component', () => {
         </Markdown>,
       );
       expect(container.textContent).toContain('∫');
+    });
+
+    /**
+     * Test block LaTeX where a digit immediately follows the $$ delimiter
+     * Verifies the currency escape no longer corrupts the math delimiters
+     */
+    it('should render block math that opens with a digit as KaTeX', () => {
+      const { container } = render(
+        <Markdown>
+          {
+            '$$0.075 \\text{ L} \\times \\frac{1000 \\text{ mL}}{1 \\text{ L}} = 75 \\text{ mL}$$'
+          }
+        </Markdown>,
+      );
+      expect(container.querySelector('.katex')).toBeTruthy();
+      expect(container.textContent).not.toContain('$$');
+    });
+
+    /**
+     * Test inline LaTeX where a digit immediately follows the $ delimiter
+     * Verifies the currency escape no longer corrupts inline math delimiters
+     */
+    it('should render inline math that opens with a digit as KaTeX', () => {
+      const { container } = render(
+        <Markdown>
+          {'$250 \\text{ mL} \\times \\frac{1 \\text{ L}}{1000 \\text{ mL}}$'}
+        </Markdown>,
+      );
+      expect(container.querySelector('.katex')).toBeTruthy();
+    });
+
+    /**
+     * Regression test for issue #2109
+     * Backslash-free inline arithmetic like $3x + 5$ (and block $$...$$) must
+     * render as KaTeX rather than leaking raw $ / $$ delimiters as plain text.
+     */
+    it('should render backslash-free inline and block math from the issue repro', () => {
+      const repro = `No worries at all — that's exactly why we warm up before diving into something new! Let me walk you through it.
+
+In Lesson 1.1.3 you learned that when you *evaluate* an expression, you replace the variable with a number. The expression $3x + 5$ has two parts: the term $3x$ and the constant $5$. When we substitute $x = 4$, we replace the $x$ with $4$.
+
+Here's how it works step by step:
+
+$$3x + 5$$
+
+Replace $x$ with $4$:
+
+$$3(4) + 5$$
+
+Multiply first (multiplication comes before addition):
+
+$$12 + 5$$
+
+Then add:
+
+$$17$$
+
+So $3x + 5 = 17$ when $x = 4$.
+
+The key move is always the same: swap the variable out for the number, then simplify using the order of operations — multiply and divide before you add and subtract.
+
+Now let's make sure that landed. Try this one on your own:
+
+If $x = 3$, what is the value of $2x + 6$?
+
+Show me your steps — write out each one just like I did above. 😊`;
+
+      const { container } = render(<Markdown>{repro}</Markdown>);
+
+      // Inline math ($3x + 5$, $3x$, $5$, ...) and block math ($$...$$, $$17$$)
+      // both produce KaTeX output. The repro has many math spans, so a healthy
+      // count confirms both inline and single-token block math ($$17$$) render.
+      expect(container.querySelector('.katex')).toBeTruthy();
+      expect(container.querySelectorAll('.katex').length).toBeGreaterThan(10);
+      // No raw math delimiters should leak into the visible text.
+      expect(container.textContent).not.toContain('$$');
+      expect(container.textContent).not.toContain('$');
+    });
+
+    /**
+     * Ambiguous delimiters must never reach KaTeX as a parse error.
+     *
+     * remark-math pairs `$` in runs of equal length, so `$a$$b$` is one span
+     * whose content is `a$$b` -- invalid TeX, rendered as a red error box. We
+     * decline to claim spans whose delimiters touch another `$`, so the run
+     * stays literal text instead of turning red.
+     */
+    it('should never render a red KaTeX error for ambiguous delimiters', () => {
+      const ambiguous = [
+        'Consecutive math: $a$$b$ and $x$ $y$',
+        'Double dollar inline: price is $$5 here.',
+        'Triple: $$$5',
+        'Only a dollar sign: $',
+        'Dollar then letter: $abc and $xyz',
+      ];
+      for (const md of ambiguous) {
+        const { container } = render(<Markdown>{md}</Markdown>);
+        expect(container.querySelectorAll('.katex-error')).toHaveLength(0);
+      }
+    });
+
+    /**
+     * The ambiguous run stays literal, while unambiguous neighbours on the
+     * same line still render as math.
+     */
+    it('should keep an ambiguous run literal without harming its neighbours', () => {
+      const { container } = render(
+        <Markdown>{'Consecutive math: $a$$b$ and $x$ $y$'}</Markdown>,
+      );
+      const tex = [...container.querySelectorAll('.katex annotation')].map(
+        (a) => a.textContent,
+      );
+      expect(tex).toEqual(['x', 'y']);
+      expect(container.textContent).toContain('$a$$b$');
     });
 
     /**

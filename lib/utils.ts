@@ -31,6 +31,7 @@ import {
   redirectToAuthSpa as sdkRedirectToAuthSpa,
   handleTenantSwitch as sdkHandleTenantSwitch,
 } from '@iblai/iblai-js/web-utils/auth';
+import { getLockedTenant } from '@/lib/locked-tenant';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -41,7 +42,49 @@ export function isSafariBrowser(): boolean {
   return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 }
 
+/**
+ * Reads a JWT's `exp` claim and reports whether it is in the past. A token that
+ * cannot be decoded (or is malformed) is treated as expired; a token with no
+ * `exp` claim is treated as non-expiring (mirrors the axd "no expiry" case).
+ */
+export function isJwtExpired(token: string): boolean {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return true;
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized.padEnd(
+      normalized.length + ((4 - (normalized.length % 4)) % 4),
+      '=',
+    );
+    const claims = JSON.parse(atob(padded)) as { exp?: number };
+    if (typeof claims.exp !== 'number') return false;
+    return claims.exp * 1000 <= Date.now();
+  } catch {
+    return true;
+  }
+}
+
 export function hasNonExpiredAuthToken() {
+  // The edx JWT is stored alongside the axd token at SSO login; a valid session
+  // requires it to be present and unexpired too, so re-auth is triggered when
+  // it is missing or its `exp` has passed.
+  const edxToken = window.localStorage.getItem(
+    LOCAL_STORAGE_KEYS.EDX_TOKEN_KEY,
+  );
+  if (!edxToken) {
+    console.log(
+      '################### [hasNonExpiredAuthToken] edx_jwt_token is not defined',
+      edxToken,
+    );
+    return false;
+  }
+  if (isJwtExpired(edxToken)) {
+    console.log(
+      '################### [hasNonExpiredAuthToken] edx_jwt_token is expired',
+    );
+    return false;
+  }
+
   const token = window.localStorage.getItem(LOCAL_STORAGE_KEYS.AUTH_TOKEN);
   if (!token) {
     console.log(
@@ -91,9 +134,14 @@ export async function redirectToAuthSpa(
   saveRedirect = true,
   explicitUserAction = false,
 ) {
+  // On a tenant-locked (Tauri) build, always authenticate into the locked
+  // tenant — this sends anonymous users straight there instead of their default
+  // tenant. Empty on web builds, so the caller's platformKey is used as before.
+  const lockedTenant = await getLockedTenant();
+
   return sdkRedirectToAuthSpa({
     redirectTo,
-    platformKey,
+    platformKey: lockedTenant || platformKey,
     logout,
     saveRedirect,
     forceRedirect: explicitUserAction,
@@ -295,8 +343,29 @@ export function preprocessLaTeX(content: string) {
     return `\n${processedRows.join('\n')}\n`;
   };
 
+  // Mask code before anything else runs. Code is literal by definition, so no
+  // transformation below may see it: the `` -> " quote rule shreds ```js
+  // fences, and the currency escape leaks a visible \$ into code spans.
+  // Restored verbatim at the very end.
+  const codeOpen = String.fromCharCode(0xe002);
+  const codeClose = String.fromCharCode(0xe003);
+  const codePlaceholders: string[] = [];
+  const maskCode = (segment: string): string => {
+    const index = codePlaceholders.length;
+    codePlaceholders.push(segment);
+    return `${codeOpen}${index}${codeClose}`;
+  };
+  const maskedContent = content
+    // Fenced blocks first: a fence may legally contain single backticks.
+    .replace(/(`{3,})[\s\S]*?\1/g, maskCode)
+    .replace(/(~{3,})[\s\S]*?\1/g, maskCode)
+    // Then inline spans: a code span is a backtick run closed by a run of the
+    // same length around at least one character. Requiring content matters --
+    // an empty match would swallow the ``  that opens a LaTeX ``quote''.
+    .replace(/(`+)((?:(?!\1)[\s\S])+?)\1(?!`)/g, maskCode);
+
   // Process tabular inside \[...\] first (before converting math delimiters)
-  let processedContent = content.replace(
+  let processedContent = maskedContent.replace(
     /\\\[\s*\\begin\{tabular\}\{[^}]*\}([\s\S]*?)\\end\{tabular\}\s*\\\]/g,
     (_, tableContent) => processTabularContent(tableContent),
   );
@@ -331,12 +400,109 @@ export function preprocessLaTeX(content: string) {
     (_, tableContent) => processTabularContent(tableContent),
   );
 
-  // Escape currency dollar signs: if a $ is directly followed by a digit,
-  // prepend a backslash so that it is rendered as a literal dollar sign.
-  // Replace the regex replacement with one using a lookbehind and a function to ensure the digit group is preserved correctly.
+  // Mask math spans before the currency escape so LaTeX delimiters are preserved.
+  const maskOpen = String.fromCharCode(0xe000);
+  const maskClose = String.fromCharCode(0xe001);
+  const mathPlaceholders: string[] = [];
+  const maskMath = (segment: string): string => {
+    const index = mathPlaceholders.length;
+    mathPlaceholders.push(segment);
+    return `${maskOpen}${index}${maskClose}`;
+  };
+
+  // Block math takes one of two shapes: a `$$` fence whose delimiters each sit
+  // on their own line, or `$$...$$` closed on the line it opened. Matching
+  // `$$[\s\S]*?$$` instead lets a stray `$$` in prose pair with another `$$`
+  // lines later and swallow everything between them.
   processedContent = processedContent.replace(
-    /(?<!\\)\$(\d)/g,
-    (_, digit) => `\\$${digit}`,
+    /^[ \t]*\$\$[ \t]*\n[\s\S]*?\n[ \t]*\$\$[ \t]*$/gm,
+    (match) => maskMath(match),
+  );
+  processedContent = processedContent.replace(/\$\$[^\n]*?\$\$/g, (match) =>
+    maskMath(match),
+  );
+  // Mask genuine inline math so the currency escape below leaves it alone.
+  // A `$...$` span counts as math under Pandoc's `tex_math_dollars` rule: the
+  // opening `$` is followed by a non-space, the closing `$` is preceded by a
+  // non-space, and the closing `$` is not followed by a digit. Currency pairs
+  // fail one of the last two tests -- "$5, $10" closes after a space, and
+  // "$5-$10" closes directly before a digit -- so they stay unmasked and get
+  // the currency escape as intended, while "$3x + 5$" and "$x = 4$" pass.
+  //
+  // Only `$` directly followed by a digit is at risk from the escape below, so
+  // declining to mask a span is always safe: remark-math still renders it.
+  //
+  // The scan runs left-to-right by hand rather than with a single global
+  // regex: when a span is NOT math, we rewind to just after its opening `$`
+  // so the closing `$` stays available to open the following span. Otherwise a
+  // leading currency amount like "$12" would swallow the opening `$` of a real
+  // math span like "$3x + 5$" later on the same line, exposing that math `$`
+  // to the currency escape and breaking it.
+  const isInlineMath = (open: number, close: number): boolean => {
+    if (close <= open + 1) return false;
+    const beforeOpen = processedContent[open - 1];
+    const afterOpen = processedContent[open + 1];
+    const beforeClose = processedContent[close - 1];
+    const afterClose = processedContent[close + 1];
+    if (!afterOpen || /\s/.test(afterOpen)) return false;
+    if (!beforeClose || /\s/.test(beforeClose)) return false;
+    if (afterClose && /\d/.test(afterClose)) return false;
+    // A delimiter touching another `$` is ambiguous: remark-math pairs `$` in
+    // runs of equal length, so in `$a$$b$` it opens on the first `$`, skips
+    // the `$$` run, and closes on the last one -- one span whose content is
+    // `a$$b`, which KaTeX renders as a red error. Claiming a span here would
+    // disagree with the tokenizer that actually renders it, so decline and let
+    // the escape below make the whole run literal instead.
+    if (beforeOpen === '$' || afterClose === '$') return false;
+    return true;
+  };
+  let scanned = '';
+  let cursor = 0;
+  while (cursor < processedContent.length) {
+    const open = processedContent.indexOf('$', cursor);
+    if (open === -1) {
+      scanned += processedContent.slice(cursor);
+      break;
+    }
+    // Inline spans never cross a newline, so a closing `$` past the next
+    // newline does not count.
+    const newline = processedContent.indexOf('\n', open + 1);
+    let close = processedContent.indexOf('$', open + 1);
+    if (close !== -1 && newline !== -1 && close > newline) {
+      close = -1;
+    }
+    if (close === -1) {
+      scanned += processedContent.slice(cursor, open + 1);
+      cursor = open + 1;
+      continue;
+    }
+    if (isInlineMath(open, close)) {
+      const span = processedContent.slice(open, close + 1);
+      scanned += processedContent.slice(cursor, open) + maskMath(span);
+      cursor = close + 1;
+    } else {
+      // Keep the opening `$` literal and rewind past it only, so the closing
+      // `$` can still open the next span.
+      scanned += processedContent.slice(cursor, open + 1);
+      cursor = open + 1;
+    }
+  }
+  processedContent = scanned;
+
+  // Every `$` that survives the scan above is not math, so escape all of them,
+  // not just the ones before a digit. A single unescaped `$` left behind opens
+  // a math span in remark-math that scans forward for a closer, and `\` is not
+  // an escape inside that scan -- so a stray `$` swallows the `$` out of a
+  // later `\$999`, leaving an orphaned backslash on screen. Escaping every
+  // non-math `$` keeps the decision here instead of splitting it with
+  // remark-math.
+  processedContent = processedContent.replace(/(?<!\\)\$/g, () => '\\$');
+
+  // Restore masked math spans verbatim.
+  const restoreMathPattern = new RegExp(`${maskOpen}(\\d+)${maskClose}`, 'g');
+  processedContent = processedContent.replace(
+    restoreMathPattern,
+    (_, index) => mathPlaceholders[Number(index)] ?? '',
   );
 
   // Replace block-level LaTeX delimiters \[ \] with $$ $$.
@@ -456,6 +622,13 @@ export function preprocessLaTeX(content: string) {
 
   // \_ -> _
   processedContent = processedContent.replace(/\\_/g, '_');
+
+  // Restore code last, verbatim, so nothing above has touched its contents.
+  const restoreCodePattern = new RegExp(`${codeOpen}(\\d+)${codeClose}`, 'g');
+  processedContent = processedContent.replace(
+    restoreCodePattern,
+    (_, index) => codePlaceholders[Number(index)] ?? '',
+  );
 
   return processedContent;
 }

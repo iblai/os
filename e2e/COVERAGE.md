@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-07-09 | 546 checkpoints (520 covered, 7 pending/fixme, 7 not-reproducible in default env, 12 deprecated) | 62 journeys (61 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-07-14 | 550 checkpoints (524 covered, 7 pending/fixme, 7 not-reproducible in default env, 12 deprecated) | 63 journeys (62 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -1100,5 +1100,23 @@ Sub-resource tests (Links / Keys / Tools) still require `is_lti_accessible=true`
 ### SDK-pending (lti-sdk-01)
 
 - [ ] lti-sdk-01: PENDING (SDK dependency) — When an admin creates the first LTI link, `is_lti_accessible` is auto-enabled via the API without requiring the "Enable LTI launches" toggle to be turned on manually. Not yet implemented: `AgentLtiTab` exposes no post-create callback hook and there are no public LTI data-layer hooks in `@iblai/iblai-js`.
+
+---
+
+## Journey 61: LaTeX / Math Rendering (5 checkpoints) — `journeys/61-latex-math-rendering.spec.ts`
+
+**Source files:** `lib/utils.ts`, `components/markdown.tsx`
+
+Covers the fix for GitHub issue #2109 ("Improve latex compatibility for rendering chat messages and artifacts"). `preprocessLaTeX` (`lib/utils.ts`) escapes a `$` immediately followed by a digit into `\$` so currency amounts render literally — but that same escape corrupted backslash-free / digit-leading inline math like `$3x + 5$` and `$x = 4$`, and a leading currency amount could swallow the opening `$` of a real math span later on the same line. The fix adds an `isInlineMath` predicate (a `$...$` span is math when it has a backslash command OR no 2+ letter prose word inside it) and a rewind scan (a non-math span only consumes its opening `$`, leaving the closing `$` free to open a later real math span).
+
+**Deterministic seam:** live chat streams over a raw WebSocket (`useChat` in `@iblai/web-utils`), which has no practical Playwright route-mocking seam without reimplementing the wire protocol. Instead this journey drives the public "shared chat" page (`app/share/chat/[sessionId]/[tenantKey]/[mentorId]/page.tsx`), which fetches message history over a plain REST GET (`.../sessions/{sessionId}/shared/`) and renders it through the exact same `ChatMessages` → `AIMessageBubble` → `MessagePreview` → `<Markdown>` component tree as live chat. `ChatPage.mockSharedChatSession` intercepts that GET with `page.route` and injects a FIXED assistant markdown message, so every assertion is against real KaTeX/react-markdown rendering of known-in-advance content — no LLM in the loop, no flakiness from varying model output.
+
+Note: `remark-math` only classifies a `$$...$$` span as block/display math when its delimiters each sit alone on their own line (confirmed by direct probing against this build) — a single-line `$$3x + 5$$` renders as inline `.katex` inside a `<p>`. The block-math checkpoint (latex-02) uses the "own-line fence" form, which is also how LLMs naturally emit standalone equations.
+
+- [x] latex-01: Inline LaTeX math (`$3x + 5$`, `$x = 4$`, `$2x + 6$`, `$3(4) + 5$`) renders as KaTeX with no raw dollar signs or escape backslashes leaking into the visible text
+- [x] latex-02: Block LaTeX math (`$$...$$` on its own fenced lines) renders as KaTeX display blocks (`.katex-display`), including a `\text{}`/`\frac{}` expression
+- [x] latex-03: Currency amounts ("I have $5 and $10, it costs $5, and the total is $3.50.") stay literal text with no KaTeX rendering and no visible escape backslash
+- [x] latex-04: Money then math on the same line ("the kit costs $12, and the formula $3x + 5$ gives the price.") keeps `$12` literal while `$3x + 5$` renders as KaTeX
+- [x] latex-05: Math then money on the same line ("since $2x = 8$, each unit is $8 and the pair is $16.") renders `$2x = 8$`as KaTeX while`$8`and`$16` stay literal
 
 ---

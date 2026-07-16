@@ -1,6 +1,11 @@
 import { test, expect } from '../fixtures/mentor-test';
-import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
+import {
+  navigateToMentorApp,
+  checkAdminStatus,
+  getPlatformContext,
+} from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
+import { MentorTracker } from '../utils/mentor-cleanup';
 
 /**
  * Journey 47 — Mentor Voice Tab.
@@ -44,6 +49,8 @@ import { waitForPageReady } from '../utils/resilient';
 test.describe.configure({ mode: 'serial' });
 
 test.describe('Journey 47: Mentor Voice Tab', () => {
+  const tracker47 = new MentorTracker();
+
   test.beforeEach(async ({ page, editMentorPage, createMentorPage }) => {
     await navigateToMentorApp(page);
     const isAdmin = await checkAdminStatus(page);
@@ -55,6 +62,8 @@ test.describe('Journey 47: Mentor Voice Tab', () => {
     // Create a fresh, dedicated mentor for every test so each show_voice_call
     // mutation runs against a mentor no other test/worker can select.
     await createMentorPage.openAndCreate();
+    const { mentorId } = await getPlatformContext(page);
+    tracker47.add(mentorId);
 
     // Voice is always mounted now — open straight to it.
     await editMentorPage.open('Voice');
@@ -274,5 +283,9 @@ test.describe('Journey 47: Mentor Voice Tab', () => {
     );
 
     await editMentorPage.close();
+  });
+
+  test.afterAll(async ({ browser }, testInfo) => {
+    await tracker47.deleteAll(browser, testInfo);
   });
 });
