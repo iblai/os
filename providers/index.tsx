@@ -239,9 +239,12 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   // check. Match the index path only — the project chat route
   // (/platform/<tenant>/projects/<projectId>/<mentorId>) still needs the mentor check.
   const isProjectsIndexPage = /\/projects\/?$/.test(pathname);
+  // The top-level /apply route renders the application wizard and has no mentor in
+  // its URL, so MentorProvider would otherwise redirect it to a default mentor.
+  const isApplyPage = /^\/apply(\/|$)/.test(pathname);
   // Pages that own their mentor context and must not be redirected away when the
   // URL has no mentorId segment.
-  const skipMentorCheck = isWorkflowPage || isProjectsIndexPage;
+  const skipMentorCheck = isWorkflowPage || isProjectsIndexPage || isApplyPage;
 
   // Use the same offline check (already computed above)
   const isTauriOffline = isTauriOfflineEarly;
