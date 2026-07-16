@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.96.1](https://github.com/iblai/os/compare/v0.96.0...v0.96.1) (2026-07-16)
+
+### Chores
+
+* **deps:** bump serde_with 3.20.0 → 3.21.0 in src-tauri ([5259fe6](https://github.com/iblai/os/commit/5259fe6c05e307f17d0c99c1caaaa25827ea89a2))
+* **tauri:** release app-v0.95.4 ([58b9501](https://github.com/iblai/os/commit/58b950110d01c6ee1089e894687b0658d7a26c92))
+
 ## [0.96.0](https://github.com/iblai/os/compare/v0.95.13...v0.96.0) (2026-07-16)
 
 ### Features
