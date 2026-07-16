@@ -27,6 +27,25 @@ _[Demo](https://www.youtube.com/playlist?list=PLW0-4yErlU3XQr0UP6cCGwy24LMf7I5vR
 
 ---
 
+## Available On
+
+<div align="center">
+
+| Platform    | Status                                                                                                     |
+| ----------- | ---------------------------------------------------------------------------------------------------------- |
+| **Web**     | Production at [os.ibl.ai](https://os.ibl.ai) — works on any modern browser                                 |
+| **macOS**   | Native desktop app — [download the latest build](#download)                                                |
+| **iOS**     | Native mobile app — [download on the App Store](https://apps.apple.com/us/app/ibl-ai/id6504929071)         |
+| **Android** | Native mobile app — [get it on Google Play](https://play.google.com/store/apps/details?id=ai.ibl.mentorai) |
+| **Windows** | Native desktop app                                                                                         |
+| **Linux**   | Native desktop app                                                                                         |
+
+</div>
+
+One codebase, six platforms. OS runs natively everywhere your users are — lightweight, fast, with near-native performance.
+
+---
+
 ## Features
 
 - **AI Agents** — Create custom agents with configurable LLMs, system prompts, tools, and safety filters
@@ -48,25 +67,6 @@ _[Demo](https://www.youtube.com/playlist?list=PLW0-4yErlU3XQr0UP6cCGwy24LMf7I5vR
 - **Custom Domains** — Host agents on your own domain
 - **API Keys** — Programmatic access for integrations and automation
 - **Whitelabeling** — Custom branding, logos, and disclaimers
-
----
-
-## Available On
-
-<div align="center">
-
-| Platform    | Status                                                                     |
-| ----------- | -------------------------------------------------------------------------- |
-| **Web**     | Production at [os.ibl.ai](https://os.ibl.ai) — works on any modern browser |
-| **macOS**   | Native desktop app — [download the latest build](#download)                |
-| **iOS**     | Native mobile app — available on iPhone and iPad                           |
-| **Android** | Native mobile app — available on phones and tablets                        |
-| **Windows** | Native desktop app                                                         |
-| **Linux**   | Native desktop app                                                         |
-
-</div>
-
-One codebase, six platforms. OS runs natively everywhere your users are — lightweight, fast, with near-native performance.
 
 ---
 
