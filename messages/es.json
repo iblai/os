@@ -42,6 +42,7 @@
     "toastCreateError": "No se pudo crear el acceso de rol del agente."
   },
   "accessTabIndex": {
+    "infoBox": "Decide quién puede usar este agente. Compártelo con personas o equipos específicos y controla lo que cada uno puede hacer.",
     "heading": "Control de acceso",
     "headingDescription": "Gestiona qué usuarios pueden ver o editar este agente por rol.",
     "unavailableHeading": "La gestión de acceso no está disponible.",
@@ -605,6 +606,7 @@
     "deleteButton": "Eliminar"
   },
   "datasetsTabIndex": {
+    "infoBox": "Enseña a tu agente con tu propio material. Sube documentos, archivos o enlaces y responderá a partir de ellos, basándose en tu contenido en lugar de adivinar.",
     "heading": "Conjuntos de datos",
     "subheading": "Administre los conjuntos de datos de entrenamiento y las fuentes de conocimiento.",
     "searchPlaceholder": "Buscar conjuntos de datos...",
@@ -650,6 +652,7 @@
     "saveButton": "Guardar"
   },
   "disclaimersTabIndex": {
+    "infoBox": "Muestra la letra pequeña a tus usuarios. Agrega avisos —como «Este es un asistente de IA» o una declaración de cumplimiento— que aparecen en el chat para que las personas sepan qué esperar.",
     "heading": "Avisos",
     "subheading": "Configure los ajustes de aviso para su agente.",
     "userAgreementTitle": "Acuerdo de usuario",
@@ -1537,6 +1540,7 @@
     "deleteError": "Error al eliminar el agente"
   },
   "tabsApiTab": {
+    "infoBox": "Usa este agente desde tus propias aplicaciones. Crea aquí claves de API para llamarlo mediante programación e integrarlo en tu producto o flujo de trabajo.",
     "apiHeading": "API",
     "manageApiKeysDescription": "Administrar claves API e integraciones.",
     "secretKeysListedBelow": "Sus claves API secretas se muestran a continuación. Tenga en cuenta que no volvemos a mostrar sus claves API secretas después de que las genere.",
@@ -1552,10 +1556,12 @@
     "createNew": "Crear nuevo"
   },
   "tabsAuditLogTab": {
+    "infoBox": "Mantén un registro. Consulta el historial de quién cambió qué y cuándo en este agente: útil para solucionar problemas y cumplir con la normativa.",
     "heading": "Auditoría",
     "description": "Vea quién cambió qué y cuándo para este agente."
   },
   "tabsEmbedTab": {
+    "infoBox": "Coloca este agente en tu sitio o aplicación. Copia el fragmento de inserción y ajusta la apariencia y el comportamiento del widget de chat para tus usuarios.",
     "heading": "Insertar",
     "headingDescription": "Configure las opciones de inserción para su agente.",
     "collapseAdvancedCss": "Contraer CSS avanzado",
@@ -1711,6 +1717,7 @@
     "subtitleInputPlaceholder": "Creado con Agentic OS"
   },
   "tabsHistoryTab": {
+    "infoBox": "Revisa las conversaciones pasadas. Observa qué han preguntado las personas y cómo respondió tu agente, para detectar carencias y seguir mejorándolo.",
     "heading": "Historial",
     "subtitle": "Ver y gestionar el historial de conversaciones.",
     "ratingOutOf": "{rating} de 5",
@@ -1743,6 +1750,7 @@
     "selectConversationPrompt": "Seleccione una conversación para ver los detalles."
   },
   "tabsLlmTab": {
+    "infoBox": "Este es el cerebro de tu agente: el modelo de IA que impulsa cada respuesta. Los modelos más grandes razonan mejor las preguntas complejas; los más ligeros son más rápidos y cuestan menos. ¿No estás seguro? El predeterminado es una opción versátil y confiable.",
     "llmUpdatedSuccessfully": "LLM actualizado correctamente",
     "failedToUpdateLlm": "Error al actualizar el LLM",
     "llmConfiguration": "Configuración LLM",
@@ -1753,8 +1761,8 @@
   "tabsPromptsTab": {
     "heading": "Indicaciones",
     "description": "Gestiona y configura las indicaciones para tu agente.",
-    "infoBoxDefault": "Las indicaciones definen cómo responde tu agente: su comportamiento principal, el saludo, el modo estudio y los pasos guiados.",
-    "infoBoxSandbox": "Este agente se ejecuta en un sandbox dedicado, por lo que su comportamiento se define en la Configuración del agente a continuación.",
+    "infoBoxDefault": "Aquí defines cómo habla y se comporta tu agente: su personalidad, su tono y la forma en que guía cada conversación. Solo escríbelo en lenguaje sencillo, como si dieras indicaciones a un nuevo compañero.",
+    "infoBoxSandbox": "Aquí defines cómo habla y se comporta tu agente: su personalidad, su tono y la forma en que guía cada conversación. Como este agente se ejecuta en un sandbox dedicado, ese comportamiento se define en la Configuración del agente a continuación.",
     "systemPromptTitle": "Indicación del sistema",
     "systemPromptInfoAriaLabel": "Más información sobre la indicación del sistema",
     "systemPromptTooltip": "Definir el comportamiento del agente",
@@ -1801,6 +1809,7 @@
     "promptDeleteFailed": "Error al eliminar la indicación"
   },
   "tabsSafetyTab": {
+    "infoBox": "Define las barreras de seguridad que mantienen las conversaciones apropiadas. Decide cómo maneja tu agente los temas delicados o prohibidos y qué dice cuando alguien cruza el límite, para que se mantenga seguro y fiel a tu marca.",
     "safetyTitle": "Seguridad",
     "safetyDescription": "Configurar los ajustes de seguridad y moderación.",
     "viewFlaggedPrompts": "Ver indicaciones marcadas",
@@ -1921,12 +1930,16 @@
     "agentUpdatedSuccess": "Agente actualizado correctamente",
     "agentUpdateError": "Error al actualizar el agente"
   },
+  "tabsMcpTab": {
+    "infoBox": "Conecta tu agente a tus propios sistemas mediante servidores MCP, para que pueda acceder a tus datos y servicios directamente dentro de una conversación."
+  },
   "tabsSkillsTab": {
     "heading": "Habilidades",
     "description": "Gestiona las asignaciones de habilidades del agente para tu mentor.",
     "infoBox": "Las habilidades son capacidades reutilizables que creas una vez y asignas a cualquier agente. Crea una habilidad y actívala para darle esa capacidad a este agente."
   },
   "tabsToolsTab": {
+    "infoBox": "Dale manos a tu agente. Las herramientas le permiten hacer cosas más allá de conversar —buscar información, llamar a una API, activar una acción— para que realmente pueda hacer el trabajo por las personas.",
     "heading": "Herramientas",
     "subheading": "Configure las herramientas e integraciones para su agente.",
     "moreInfoAbout": "Más información sobre {name}",

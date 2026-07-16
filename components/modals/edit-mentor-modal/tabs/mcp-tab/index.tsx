@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { ConnectorManagementContent } from './connector-management-content';
 import { useUsername } from '@/hooks/use-user';
 import { useNavigate } from '@/hooks/user-navigate';
@@ -13,6 +14,7 @@ interface McpTabProps {
 }
 
 export function McpTab({ onSelect }: McpTabProps = {}) {
+  const t = useTranslations('tabsMcpTab');
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
   const username = useUsername();
   const { getMentorId } = useNavigate();
@@ -35,6 +37,12 @@ export function McpTab({ onSelect }: McpTabProps = {}) {
           overflowX: 'hidden',
         }}
       >
+        <div
+          className="mb-4 rounded-md border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600"
+          data-testid="mcp-info-box"
+        >
+          {t('infoBox')}
+        </div>
         <ConnectorManagementContent
           tenantKey={tenantKey}
           username={username ?? ''}

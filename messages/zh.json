@@ -42,6 +42,7 @@
     "toastCreateError": "无法创建智能体角色访问。"
   },
   "accessTabIndex": {
+    "infoBox": "决定谁可以使用该智能体。将其分享给特定的人员或团队，并控制每个人被允许执行的操作。",
     "heading": "访问控制",
     "headingDescription": "按角色管理哪些用户可以查看或编辑此智能体。",
     "unavailableHeading": "访问管理不可用。",
@@ -605,6 +606,7 @@
     "deleteButton": "删除"
   },
   "datasetsTabIndex": {
+    "infoBox": "用您自己的资料训练智能体。上传文档、文件或链接，它就会依据这些内容作答——基于您的内容，而不是凭空猜测。",
     "heading": "数据集",
     "subheading": "管理训练数据集和知识来源。",
     "searchPlaceholder": "搜索数据集...",
@@ -650,6 +652,7 @@
     "saveButton": "保存"
   },
   "disclaimersTabIndex": {
+    "infoBox": "向用户展示必要的声明。添加提示——例如“这是一个 AI 助手”或合规声明——它们会显示在对话中，让用户知道会得到什么。",
     "heading": "免责声明",
     "subheading": "为您的智能体配置免责声明设置。",
     "userAgreementTitle": "用户协议",
@@ -1537,6 +1540,7 @@
     "deleteError": "删除智能体失败"
   },
   "tabsApiTab": {
+    "infoBox": "在您自己的应用中使用该智能体。在此创建 API 密钥，以便通过编程方式调用它，并将其集成到您的产品或工作流程中。",
     "apiHeading": "API",
     "manageApiKeysDescription": "管理 API 密钥和集成。",
     "secretKeysListedBelow": "您的私密 API 密钥列于下方。请注意，生成后我们将不再显示您的私密 API 密钥。",
@@ -1552,10 +1556,12 @@
     "createNew": "新建"
   },
   "tabsAuditLogTab": {
+    "infoBox": "保留操作记录。查看该智能体的变更日志——谁在何时更改了什么——便于排查问题并保持合规。",
     "heading": "审计",
     "description": "查看此代理的更改人、更改内容及更改时间。"
   },
   "tabsEmbedTab": {
+    "infoBox": "将该智能体嵌入您的网站或应用。复制嵌入代码，并调整聊天小组件为用户呈现的外观和行为。",
     "heading": "嵌入",
     "headingDescription": "配置您的智能体的嵌入选项。",
     "collapseAdvancedCss": "收起高级 CSS",
@@ -1711,6 +1717,7 @@
     "subtitleInputPlaceholder": "由 Agentic OS 创建"
   },
   "tabsHistoryTab": {
+    "infoBox": "回顾过往的对话。查看用户提出了哪些问题以及智能体如何回复，从而发现不足并持续改进它。",
     "heading": "历史记录",
     "subtitle": "查看和管理对话历史记录。",
     "ratingOutOf": "{rating} 分（满分 5 分）",
@@ -1743,6 +1750,7 @@
     "selectConversationPrompt": "选择对话以查看详情。"
   },
   "tabsLlmTab": {
+    "infoBox": "这是您智能体的大脑——为每次回复提供动力的 AI 模型。更大的模型在处理复杂问题时推理能力更强；更轻量的模型则更快、成本更低。不确定？默认模型是可靠的全能之选。",
     "llmUpdatedSuccessfully": "LLM 更新成功",
     "failedToUpdateLlm": "LLM 更新失败",
     "llmConfiguration": "LLM 配置",
@@ -1753,8 +1761,8 @@
   "tabsPromptsTab": {
     "heading": "提示词",
     "description": "管理和配置您的智能体提示词。",
-    "infoBoxDefault": "提示词决定智能体的响应方式——包括其核心行为、问候语、学习模式和引导步骤。",
-    "infoBoxSandbox": "该智能体运行在专用沙盒中，因此其行为由下方的智能体配置驱动。",
+    "infoBoxDefault": "在这里设定您的智能体如何交谈和表现——包括其个性、语气以及引导每次对话的方式。用通俗易懂的语言编写即可，就像给新同事做简要说明一样。",
+    "infoBoxSandbox": "在这里设定您的智能体如何交谈和表现——包括其个性、语气以及引导每次对话的方式。由于该智能体运行在专用沙盒中，因此其行为在下方的智能体配置中进行设定。",
     "systemPromptTitle": "系统提示词",
     "systemPromptInfoAriaLabel": "关于系统提示词的更多信息",
     "systemPromptTooltip": "定义智能体的行为",
@@ -1801,6 +1809,7 @@
     "promptDeleteFailed": "提示词删除失败"
   },
   "tabsSafetyTab": {
+    "infoBox": "设定护栏，让对话保持得体。决定您的智能体如何处理有风险或禁止的话题，以及当有人越界时它会如何回应——从而保持安全并契合您的品牌形象。",
     "safetyTitle": "安全",
     "safetyDescription": "配置安全和内容审核设置。",
     "viewFlaggedPrompts": "查看已标记的提示",
@@ -1921,12 +1930,16 @@
     "agentUpdatedSuccess": "智能体更新成功",
     "agentUpdateError": "更新智能体失败"
   },
+  "tabsMcpTab": {
+    "infoBox": "通过 MCP 服务器将您的智能体连接到您自己的系统，让它能够在对话中直接访问您的数据和服务。"
+  },
   "tabsSkillsTab": {
     "heading": "技能",
     "description": "管理您的导师的代理技能分配。",
     "infoBox": "技能是可复用的能力，创建一次即可分配给任意智能体。创建技能后将其开启，即可赋予该智能体相应能力。"
   },
   "tabsToolsTab": {
+    "infoBox": "为您的智能体赋予“双手”。工具让它能够超越单纯的聊天——查找信息、调用 API、触发操作——从而真正为用户完成工作。",
     "heading": "工具",
     "subheading": "为您的智能体配置工具和集成。",
     "moreInfoAbout": "关于 {name} 的更多信息",
