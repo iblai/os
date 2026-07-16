@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-07-07 | 522 checkpoints (500 covered, 2 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 61 journeys (60 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-07-08 | 545 checkpoints (519 covered, 7 pending/fixme, 7 not-reproducible in default env, 12 deprecated) | 62 journeys (61 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -872,7 +872,7 @@ Standalone top-level tab rendered by the SDK's `AgentScreenShareTab` (`@iblai/we
 
 ---
 
-## Journey 50: Chat Privacy (20 checkpoints) — `journeys/50-chat-privacy.spec.ts`
+## Journey 50: Chat Privacy (27 checkpoints) — `journeys/50-chat-privacy.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`
 
@@ -880,7 +880,7 @@ Covers all four user-facing surfaces of the chat-privacy feature and verifies th
 
 The **agent kill switch** tests (cp-agent-03) are the regression anchor for `dispatch(chatPrivacyApiSlice.util.invalidateTags(['ChatPrivacyEffective']))` wiring in `settings-tab.tsx` (feat/mentor/1797): after saving, the header toggle reflects mentor-locked state **without a page refresh**.
 
-**cp-tenant-05** is marked `test.skip` — non-admins cannot reach the tenant Advanced settings (the "More options" menu only shows Profile / Help / Log out), which is the correct UX. This is implicitly covered by journey 03's non-admin dropdown test.
+The **private chat round-trip** tests (cp-chat-\*) cover the end-to-end happy path: enable private mode via the header toggle on a fresh chat, send a message, and confirm the assistant still replies — once as the admin and once as a non-admin (separate browser context). Six additional feature-interaction checkpoints (cp-chat-04 … cp-chat-09) exercise prompts, voice/screen, multi-turn context, file attachments, the memory button, and the AI-bubble share button while private mode is active. cp-chat-08 (memory button) and cp-chat-09 (share button) have their in-repo gates implemented; cp-chat-04/05/06 are **live regression gates** expected to be red until the backend fixes land.
 
 ### Tenant gate (cp-tenant-\*)
 
@@ -888,7 +888,6 @@ The **agent kill switch** tests (cp-agent-03) are the regression anchor for `dis
 - [x] cp-tenant-02: Disabling the tenant gate hides the header Private Mode toggle across the app
 - [x] cp-tenant-03: Enabling the tenant gate shows the header Private Mode toggle
 - [x] cp-tenant-04: Private Mode profile tab visibility tracks the tenant gate: hidden when off, visible when on
-- [ ] cp-tenant-05: Non-admin cannot reach the tenant Advanced settings _(not-reproducible: non-admin More options menu has no platform-name item; test.skipped with explanation in spec)_
 
 ### Agent settings kill switch (cp-agent-\*)
 
@@ -913,6 +912,17 @@ The **agent kill switch** tests (cp-agent-03) are the regression anchor for `dis
 - [x] cp-profile-03: All three radio cards (Normal / Anonymized / Disabled) render after switching to the tab
 - [x] cp-profile-04: Selecting "Disabled" propagates to the header toggle as `data-source="user"` on a fresh unlocked chat _(user-tier precedence)_
 - [x] cp-profile-05: Selecting "Normal" reverts the header toggle to `data-state="off"` on a fresh chat while `data-source` stays `"user"` _(Normal is an explicit user choice; only `mode="disabled"` reads as private)_
+
+### Private chat round-trip (cp-chat-\*)
+
+- [x] cp-chat-01: Admin enables private mode via the header toggle on a fresh chat (`data-state="on"`, `data-source="session"`), sends a message, and still receives an assistant reply; private mode stays on across the round-trip
+- [x] cp-chat-02: Non-admin (separate browser context) enables private mode via the header toggle on a fresh chat, sends a message, and receives an assistant reply; private mode stays on across the round-trip
+- [ ] cp-chat-04: Prompt Gallery (admin-curated, mentor-keyed) still opens and renders cards in private mode; AI guided/suggested prompts row (`chat-guided-suggested-prompts`) is visible after the AI replies _(pending: guided-prompts assertion awaits backend generating prompts for private sessions; Prompt Gallery assertion passes today)_
+- [ ] cp-chat-05: Voice call dialog opens in private mode (empty-chat path, Chromium fake-media) and does NOT show `"Failed to initiate call"` error toast _(pending: backend must mint LiveKit credentials for `disable_chathistory` sessions)_
+- [ ] cp-chat-06: Multi-turn context retained in one private session — cached session id is stable across two sends (passes today); AI echoes back the code word from turn 1 _(pending: backend must retain ephemeral in-session context for private sessions)_
+- [ ] cp-chat-07: File attachment (drag-drop) works in private mode — chip appears, message sends, assistant replies; pins that `selectSessionId` follows the private session id _(pending: expected to pass today; included as regression gate)_
+- [x] cp-chat-08: Memory button is hidden while `data-state="on"` and reappears when private mode is off _(frontend gate implemented — `chat-input-form.tsx` derives `chatPrivacyActive` from `useChatPrivacy` and passes `isPrivate` into `InsideButtons`; unit-tested in `inside-buttons.test.tsx`)_
+- [x] cp-chat-09: "Share this chat" button in the AI message bubble is hidden in private mode (temporary chat — no durable session to share) and visible in normal mode _(frontend gate implemented — `ai-message-bubble.tsx` gates `<AIMessageShare>` on `!chatPrivacyActive`; unit-tested in `ai-message-bubble.test.tsx`)_
 
 ## Journey 51: Prompt Caching Toggle (3 checkpoints) — `journeys/51-prompt-caching-toggle.spec.ts`
 
@@ -1036,5 +1046,54 @@ Full-lifecycle regression guard for the ecommerce credits/upgrade flow, run as a
 - [x] ecu-08: Zero credits on the upgraded (non-"main") tenant auto-opens the User Profile dialog on the Billing tab (admin 402 handling injects `?profileTab=billing`) showing 0 credits, instead of the subscribe dialog used on the main tenant
 - [x] ecu-09: The Billing tab's Upgrade button redirects to a real Stripe test-mode checkout; filling the 4242 test card, expiry, CVC, name, and Uruguay billing country completes payment
 - [x] ecu-10: Post-payment, the account modal auto-opens on the Billing tab showing the Premium plan and a Manage Billing button with a restored credit balance; chat continues to work with the new balance
+
+---
+
+## Journey 60: Mentor LTI Tab (16 checkpoints, 1 pending) — `journeys/60-mentor-lti-tab.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/lti-tab.tsx`, `hooks/use-mentor-segments.ts`
+
+Covers the LTI top-level tab in the Edit Mentor (Agent) modal, rendered by the SDK's `AgentLtiTab` (`@iblai/iblai-js/web-containers/next`). As of feat/1853 the tab is **always visible to admins** regardless of the `is_lti_accessible` toggle — the `enabledThroughConfig` gate that previously hid the tab when `is_lti_accessible` was `false` was removed from `hooks/use-mentor-segments.ts`. The "Enable LTI launches" toggle (renamed from "Allow LTI launches" for consistency with sibling "Enable …" toggles) still controls whether the backend allows LTI launches but no longer gates the sidebar tab.
+
+The LTI segment lives under the **Integrations** sidebar category. Tests are parallel-safe via two strategies: a worker-scoped `ltiMentorUrl` fixture (one LTI-enabled mentor per worker, deleted on teardown) shared by read-only and mutation tests; and self-contained tests that create and delete their own mentor in a `finally` block.
+
+Sub-resource tests (Links / Keys / Tools) still require `is_lti_accessible=true` on the backend because auto-enable-on-link-creation (`lti-sdk-01`) is not yet implemented in the SDK.
+
+### Visibility (lti-01, lti-03, lti-04)
+
+- [x] lti-01: Admin sees the LTI tab visible by default on a fresh mentor without enabling the "Enable LTI launches" toggle (`is_lti_accessible=false`) — the `enabledThroughConfig` gate was removed in feat/1853
+- [x] lti-03: Admin disables "Enable LTI launches" in Settings and the LTI tab stays visible (the `is_lti_accessible` gate was removed from `MENTOR_SEGMENTS`)
+- [x] lti-04: Non-admin user does not see the LTI tab in the Edit Mentor modal (LTI segment remains admin-only)
+
+### Tab header + sub-tabs (lti-05)
+
+- [x] lti-05: Admin opens the LTI tab on an LTI-enabled mentor and sees the header and all four sub-tabs (Agent Links, Keys, Tools, Tool Endpoints)
+
+### Links sub-tab (lti-06..lti-08)
+
+- [x] lti-06: Admin opens the LTI Links sub-tab on a fresh mentor and sees the empty state when no links exist
+- [x] lti-07: Admin creates an LTI link and it appears in the links list
+- [x] lti-08: Admin edits (renames) an LTI link and the new name appears in the list while the old name is gone _(self-contained mentor: the backend allows a single LTI link per mentor and there is no delete-link helper, so a second create on the shared worker mentor after lti-07 would fail)_
+
+### Keys sub-tab (lti-10..lti-12)
+
+- [x] lti-10: Admin creates an LTI key and the key detail shows non-empty public key and JWK fields
+- [x] lti-11: Admin renames an LTI key and the new name appears in the list while the old name is gone
+- [x] lti-12: Admin deletes an LTI key and the key is no longer in the list
+
+### Tools sub-tab (lti-13..lti-14)
+
+- [x] lti-13: Admin opens the LTI Tools sub-tab and the platform-wide tools surface renders — the create button plus either the empty state or the existing tools list _(LTI tools are tenant-scoped, not mentor-scoped: a fresh mentor still lists every tool on the tenant, lti-14 residue persists with no delete-tool helper, and parallel workers can create tools at any moment, so a guaranteed-empty state is unreachable)_
+- [x] lti-14: Admin creates an LTI tool with a JWKS URL signing config and it appears in the tools list _(keys/tools are platform-wide and server-paginated at 10/page; the `LtiTab` page object walks pages to reveal a freshly-created row, and the worker fixture reaps stale e2e-named residue >2h old via `e2e/utils/lti-residue.ts` to keep the lists small)_ _(the raw-JWKS-JSON variant is intentionally uncovered for now: the SDK ToolModal sent `key_set` as a parsed object while the backend requires a JSON string — fixed on SDK branch feat/web-containers/1853; re-add the checkpoint once mentorai bumps to a release containing it)_
+
+### Tool Endpoints sub-tab (lti-16..lti-18)
+
+- [x] lti-16: Admin opens the Tool Endpoints sub-tab and all four endpoint URLs (redirect URI, login, deep linking, JWKS) are rendered non-empty
+- [x] lti-17: Admin copies the redirect URI endpoint URL and the copy button label flips to "Copied"
+- [x] lti-18: Admin opens the Tool Endpoints sub-tab and every endpoint URL is an absolute `https` URL on the `/lti/` path sharing one origin (built from `NEXT_PUBLIC_LEGACY_LMS_URL`)
+
+### SDK-pending (lti-sdk-01)
+
+- [ ] lti-sdk-01: PENDING (SDK dependency) — When an admin creates the first LTI link, `is_lti_accessible` is auto-enabled via the API without requiring the "Enable LTI launches" toggle to be turned on manually. Not yet implemented: `AgentLtiTab` exposes no post-create callback hook and there are no public LTI data-layer hooks in `@iblai/iblai-js`.
 
 ---

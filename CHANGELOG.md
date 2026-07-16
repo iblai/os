@@ -1,13 +1,152 @@
 # Changelog
 
+## [0.95.12](https://github.com/iblai/os/compare/v0.95.11...v0.95.12) (2026-07-15)
+
+### CI
+
+- **audit:** don't block PRs when npm's audit endpoint is retired (410) ([33d79fe](https://github.com/iblai/os/commit/33d79fe7d8907f703626bb6b6146013f6ae34160)), closes [#339](https://github.com/iblai/os/issues/339)
+
+## [0.95.11](https://github.com/iblai/os/compare/v0.95.10...v0.95.11) (2026-07-15)
+
+### Bug Fixes
+
+- chat privacy failing playwright test fixed ([51276f8](https://github.com/iblai/os/commit/51276f89f77f5cec9df79a240cb638eb9b0ba1df))
+- **e2e:** stabilize ?prompt= dedup test against mid-stream reloads ([2fd82ea](https://github.com/iblai/os/commit/2fd82ea47ce5f2240dbac865d723d07b78ae39e5))
+- upgrade package modal redirect url upgraded ([7a3f02e](https://github.com/iblai/os/commit/7a3f02e96ecd06829407b2a90002b40722472e61))
+- upgrade package modal redirect url upgraded > test coverage ([babb1dc](https://github.com/iblai/os/commit/babb1dc8791ddca64462a901f4afaa1f63667b83))
+
+### Chores
+
+- bump iblai-js to 1.22.6 ([d6e8903](https://github.com/iblai/os/commit/d6e8903710f2718c5f15513fb02cfd5c6c66e46a))
+- **deps:** bump @iblai/iblai-js to 1.25.1 ([9c1d8ca](https://github.com/iblai/os/commit/9c1d8caa9500be44498e1de440ee601b43f3a407))
+
+## [0.95.10](https://github.com/iblai/os/compare/v0.95.9...v0.95.10) (2026-07-15)
+
+### Tests
+
+- **e2e:** fixme journey-60 LTI key/tool tests blocked on a backend issue ([04b424c](https://github.com/iblai/os/commit/04b424c1ef8eed91372a325e63bd768e559272da))
+
+## [0.95.9](https://github.com/iblai/os/compare/v0.95.8...v0.95.9) (2026-07-14)
+
+### Documentation
+
+- **e2e-agent:** require MentorTracker cleanup for mentor-creating tests ([87e5166](https://github.com/iblai/os/commit/87e5166a89d970b7fbc60c87332c426c4f017ae9))
+
+### Tests
+
+- **e2e:** clean up agents created during tests to stop DB accumulation ([b29c8e8](https://github.com/iblai/os/commit/b29c8e87e7fcdd5f05607bff8d715c8fab7c1a37))
+
+## [0.95.8](https://github.com/iblai/os/compare/v0.95.7...v0.95.8) (2026-07-14)
+
+### Bug Fixes
+
+- **auth:** require a valid edx_jwt_token for a non-expired session ([53e961f](https://github.com/iblai/os/commit/53e961f7781167148ffb6c8acf963448c3da3ddd))
+
+## [0.95.7](https://github.com/iblai/os/compare/v0.95.6...v0.95.7) (2026-07-13)
+
+### CI
+
+- **pr-gate:** run vitest unit tests in the Required PR workflow ([dbea82a](https://github.com/iblai/os/commit/dbea82a2bf35529c6195fb8ab1b631d2b2b09ce4))
+
+## [0.95.6](https://github.com/iblai/os/compare/v0.95.5...v0.95.6) (2026-07-13)
+
+### Documentation
+
+- **readme:** link the macOS row to the latest build download ([238bc6d](https://github.com/iblai/os/commit/238bc6d16346989f0fc1f4a52542918f8c8bbab3)), closes [#download](https://github.com/iblai/os/issues/download)
+
+## [0.95.5](https://github.com/iblai/os/compare/v0.95.4...v0.95.5) (2026-07-13)
+
+### CI
+
+- harden tauri auto-version against release race + re-run double-bump ([5c135c2](https://github.com/iblai/os/commit/5c135c2060b2b03a44efc476f62f5a83a3d97f02)), closes [#2](https://github.com/iblai/os/issues/2) [#3](https://github.com/iblai/os/issues/3)
+
+## [0.95.4](https://github.com/iblai/os/compare/v0.95.3...v0.95.4) (2026-07-11)
+
+### CI
+
+- version the macOS/tauri app independently and auto-ship DMGs ([2e79784](https://github.com/iblai/os/commit/2e79784e5e56ed5df2b126571ba3ad4386f58b63))
+
+## [0.95.3](https://github.com/iblai/os/compare/v0.95.2...v0.95.3) (2026-07-10)
+
+### Bug Fixes
+
+- **e2e-test:** fixing privacy chat test to add wait to send next message ([7e5f820](https://github.com/iblai/os/commit/7e5f820987a030d58cd34f652ebef2a38569e29f))
+
+## [0.95.2](https://github.com/iblai/os/compare/v0.95.1...v0.95.2) (2026-07-10)
+
+### Bug Fixes
+
+- update checkout ecommerce playwright test to empty browser session ([3d27eca](https://github.com/iblai/os/commit/3d27eca554fc50fb5c37f92443f9c2ea45bf6cdf))
+
+## [0.95.1](https://github.com/iblai/os/compare/v0.95.0...v0.95.1) (2026-07-09)
+
+### Bug Fixes
+
+- **test:** repair chat-input-form unit suite red on main ([87cf07c](https://github.com/iblai/os/commit/87cf07ccb779548e3e8171c819e20754c981e82d))
+
+### Documentation
+
+- **readme:** document IBL_TENANT & IBL_ALLOW_IN_APP_PURCHASE build flags ([3b486c5](https://github.com/iblai/os/commit/3b486c57bef79b50a244bf5e813c400c3fffc079))
+
+## [0.95.0](https://github.com/iblai/os/compare/v0.94.0...v0.95.0) (2026-07-09)
+
+### Features
+
+- **tauri:** lock a build to a single tenant ([8429e32](https://github.com/iblai/os/commit/8429e32c5561a632df979b3c422b6a57e44e2d8d))
+
+### CI
+
+- reuse macOS DMG workflow with versioning and README downloads ([0081075](https://github.com/iblai/os/commit/0081075a8f279bbeda51300b4a40f776ec996f3a))
+
+## [0.94.0](https://github.com/iblai/os/compare/v0.93.1...v0.94.0) (2026-07-08)
+
+### Bug Fixes
+
+- **e2e-test:** fix for the e2e tests for tasks ([2050cb7](https://github.com/iblai/os/commit/2050cb71578a7d4d771431c59a3ff9f46db78cb5))
+- **e2e-test:** more fixes for the e2e tests ([3655577](https://github.com/iblai/os/commit/365557761457aa4a0790b6e5cb3e007b7a40da50))
+- **e2e-tests:** adding fixes for lti tests ([07e9ee1](https://github.com/iblai/os/commit/07e9ee1f77e81aaecc4a6b2315f805a04001a2f7))
+- **e2e-tests:** fixing e2e tests for lti ([b9cc7d7](https://github.com/iblai/os/commit/b9cc7d79d54278b7b754dd641a63cd4a698de6be))
+- **e2e-tests:** fixing e2e tests for task tab and sdk version bump ([681657a](https://github.com/iblai/os/commit/681657a7d8af2e81fb5b979ab6e4eeedff5f45ad))
+- **e2e-tests:** fixing playwright tests for lti ([e6e28b1](https://github.com/iblai/os/commit/e6e28b1db8295cee7e9ab9c1e10aa58f1342037d))
+- **e2e-tests:** fixing test cover for journey 56 to 57 ([0aea5ad](https://github.com/iblai/os/commit/0aea5ad37fcfa90b9160accbc5c699c8cfba3689))
+- **e2e-tests:** journey updates for tests coverage ([34613af](https://github.com/iblai/os/commit/34613af2f311e133d8a7d7afffae848ad5ce4b90))
+- **mentor:** fixing tests for jounery 14 ([09bd905](https://github.com/iblai/os/commit/09bd90556082b234a39db88ab5719a509900502a))
+- **mentor:** fixing tests for jounery 14 ([d8df25e](https://github.com/iblai/os/commit/d8df25ed7f8df7c9aa6169582c828b13b4d72ac2))
+- **mentor:** translation for lti, e2e test and checkpoints fixes ([ffe6993](https://github.com/iblai/os/commit/ffe6993e536b0ffc85855ec4aab3585e92576c0c))
+
+## [0.88.4](https://github.com/iblai/os/compare/v0.93.1...v0.94.0) (2026-07-01)
+
+### Features
+
+- **e2e-tests:** adding e2e tests for lti ([97d6e4e](https://github.com/iblai/os/commit/97d6e4ee30a2bb03616bfa984f094d49ef347f06))
+
+### Bug Fixes
+
+- **e2e-tests:** fixing journey 20 for the nested dialouge multiple elements ([c0eb757](https://github.com/iblai/os/commit/c0eb7570b6f511cc6e8c6e56b4637154bd49ede8))
+- **mentorai:** version bump for iblai-js ([549dd1d](https://github.com/iblai/os/commit/549dd1dcaeb7fd4f9ec6f7c9a56d982045abcf38))
+
+## [0.93.1](https://github.com/iblai/os/compare/v0.93.0...v0.93.1) (2026-07-08)
+
+### Bug Fixes
+
+- **chat:** preserve LaTeX delimiters in preprocessLaTeX currency escape ([7502422](https://github.com/iblai/os/commit/75024224f69060780e3646ea40375fe891c2ebb7))
+
+### Chores
+
+- normalize CHANGELOG formatting via prettier ([f60d24b](https://github.com/iblai/os/commit/f60d24bd81b32e88f65fa1ecc11de218cf279f91))
+
+### Tests
+
+- **chat:** cover LaTeX delimiter preservation and KaTeX rendering ([3a01172](https://github.com/iblai/os/commit/3a01172acfb5762d6b03f7edca93f70e8dfc4fc2))
+
 ## [0.93.0](https://github.com/iblai/os/compare/v0.92.4...v0.93.0) (2026-07-08)
 
 ### Features
 
-* ecommerce playwright full flow coverage with credit cleanup ([ceb5612](https://github.com/iblai/os/commit/ceb56121d056f34faab247af93c612b4aac41a9e))
-* ecommerce playwright full flow coverage with credit cleanup ([b463105](https://github.com/iblai/os/commit/b463105a33b7e5c6cddec87801367f7459e157fa))
-* ecommerce playwright full flow coverage with credit cleanup ([d7d3e67](https://github.com/iblai/os/commit/d7d3e6726d5768d749c685c2a721145ea4a72caa))
-* ecommerce playwright full flow coverage with credit cleanup > misleanding env example fixed ([de30e48](https://github.com/iblai/os/commit/de30e484bcfb78268a7cdf1119552026c20aab07))
+- ecommerce playwright full flow coverage with credit cleanup ([ceb5612](https://github.com/iblai/os/commit/ceb56121d056f34faab247af93c612b4aac41a9e))
+- ecommerce playwright full flow coverage with credit cleanup ([b463105](https://github.com/iblai/os/commit/b463105a33b7e5c6cddec87801367f7459e157fa))
+- ecommerce playwright full flow coverage with credit cleanup ([d7d3e67](https://github.com/iblai/os/commit/d7d3e6726d5768d749c685c2a721145ea4a72caa))
+- ecommerce playwright full flow coverage with credit cleanup > misleanding env example fixed ([de30e48](https://github.com/iblai/os/commit/de30e484bcfb78268a7cdf1119552026c20aab07))
 
 ## [0.92.4](https://github.com/iblai/os/compare/v0.92.3...v0.92.4) (2026-07-08)
 

@@ -63,6 +63,7 @@ import { useIframeHandlers } from '@/lib/handlers';
 import { useIframeMessageHandler } from '@iblai/iblai-js/web-containers';
 import { SentryInit } from '@/components/sentry-init';
 import { LanguagePreferenceSync } from '@/components/language-preference-sync';
+import { TenantLock } from '@/components/tenant-lock';
 import { WebContainersLocaleProvider } from '@/components/web-containers-locale-provider';
 import { MentorTimeTrackingProvider } from '@/hooks/use-mentor-time-tracking';
 import { useSelector } from 'react-redux';
@@ -503,6 +504,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         }
       >
         <LanguagePreferenceSync />
+        <TenantLock />
         <TenantProvider
           skip={isSsoLoginRoute || isVersionRoute || isTauriOffline}
           isIframed={isInIframe()}

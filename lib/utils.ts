@@ -31,6 +31,7 @@ import {
   redirectToAuthSpa as sdkRedirectToAuthSpa,
   handleTenantSwitch as sdkHandleTenantSwitch,
 } from '@iblai/iblai-js/web-utils/auth';
+import { getLockedTenant } from '@/lib/locked-tenant';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -41,7 +42,49 @@ export function isSafariBrowser(): boolean {
   return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 }
 
+/**
+ * Reads a JWT's `exp` claim and reports whether it is in the past. A token that
+ * cannot be decoded (or is malformed) is treated as expired; a token with no
+ * `exp` claim is treated as non-expiring (mirrors the axd "no expiry" case).
+ */
+export function isJwtExpired(token: string): boolean {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return true;
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized.padEnd(
+      normalized.length + ((4 - (normalized.length % 4)) % 4),
+      '=',
+    );
+    const claims = JSON.parse(atob(padded)) as { exp?: number };
+    if (typeof claims.exp !== 'number') return false;
+    return claims.exp * 1000 <= Date.now();
+  } catch {
+    return true;
+  }
+}
+
 export function hasNonExpiredAuthToken() {
+  // The edx JWT is stored alongside the axd token at SSO login; a valid session
+  // requires it to be present and unexpired too, so re-auth is triggered when
+  // it is missing or its `exp` has passed.
+  const edxToken = window.localStorage.getItem(
+    LOCAL_STORAGE_KEYS.EDX_TOKEN_KEY,
+  );
+  if (!edxToken) {
+    console.log(
+      '################### [hasNonExpiredAuthToken] edx_jwt_token is not defined',
+      edxToken,
+    );
+    return false;
+  }
+  if (isJwtExpired(edxToken)) {
+    console.log(
+      '################### [hasNonExpiredAuthToken] edx_jwt_token is expired',
+    );
+    return false;
+  }
+
   const token = window.localStorage.getItem(LOCAL_STORAGE_KEYS.AUTH_TOKEN);
   if (!token) {
     console.log(
@@ -91,9 +134,14 @@ export async function redirectToAuthSpa(
   saveRedirect = true,
   explicitUserAction = false,
 ) {
+  // On a tenant-locked (Tauri) build, always authenticate into the locked
+  // tenant — this sends anonymous users straight there instead of their default
+  // tenant. Empty on web builds, so the caller's platformKey is used as before.
+  const lockedTenant = await getLockedTenant();
+
   return sdkRedirectToAuthSpa({
     redirectTo,
-    platformKey,
+    platformKey: lockedTenant || platformKey,
     logout,
     saveRedirect,
     forceRedirect: explicitUserAction,
@@ -331,12 +379,36 @@ export function preprocessLaTeX(content: string) {
     (_, tableContent) => processTabularContent(tableContent),
   );
 
+  // Mask math spans before the currency escape so LaTeX delimiters are preserved.
+  const maskOpen = String.fromCharCode(0xe000);
+  const maskClose = String.fromCharCode(0xe001);
+  const mathPlaceholders: string[] = [];
+  const maskMath = (segment: string): string => {
+    const index = mathPlaceholders.length;
+    mathPlaceholders.push(segment);
+    return `${maskOpen}${index}${maskClose}`;
+  };
+
+  processedContent = processedContent.replace(/\$\$[\s\S]*?\$\$/g, (match) =>
+    maskMath(match),
+  );
+  processedContent = processedContent.replace(/\$[^$\n]*?\$/g, (match) =>
+    match.includes('\\') ? maskMath(match) : match,
+  );
+
   // Escape currency dollar signs: if a $ is directly followed by a digit,
   // prepend a backslash so that it is rendered as a literal dollar sign.
   // Replace the regex replacement with one using a lookbehind and a function to ensure the digit group is preserved correctly.
   processedContent = processedContent.replace(
     /(?<!\\)\$(\d)/g,
     (_, digit) => `\\$${digit}`,
+  );
+
+  // Restore masked math spans verbatim.
+  const restoreMathPattern = new RegExp(`${maskOpen}(\\d+)${maskClose}`, 'g');
+  processedContent = processedContent.replace(
+    restoreMathPattern,
+    (_, index) => mathPlaceholders[Number(index)] ?? '',
   );
 
   // Replace block-level LaTeX delimiters \[ \] with $$ $$.

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   cn,
   hasNonExpiredAuthToken,
+  isJwtExpired,
   redirectToAuthSpa,
   getPlatformKey,
   getAuthSpaJoinUrl,
@@ -124,6 +125,16 @@ const localStorageMock = (() => {
   };
 })();
 
+// Builds a minimal (unsigned) JWT with the given `exp` claim (seconds since
+// epoch). Omit `exp` for a token with no expiry claim.
+function makeJwt(exp?: number): string {
+  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const payload = btoa(JSON.stringify(exp === undefined ? {} : { exp }));
+  return `${header}.${payload}.signature`;
+}
+
+const validEdxJwt = () => makeJwt(Math.floor(Date.now() / 1000) + 3600);
+
 describe('cn function', () => {
   it('should combine class names correctly', () => {
     // Basic test
@@ -163,10 +174,34 @@ describe('hasNonExpiredAuthToken function', () => {
 
     // Clear localStorage before each test
     localStorageMock.clear();
+    // A valid session also requires a non-expired edx JWT; seed one so the axd
+    // token assertions below exercise the axd logic (edx tests override this).
+    localStorageMock.setItem(LOCAL_STORAGE_KEYS.EDX_TOKEN_KEY, validEdxJwt());
   });
 
   it('should return true when no token exists', () => {
+    localStorageMock.removeItem(LOCAL_STORAGE_KEYS.AUTH_TOKEN);
     expect(hasNonExpiredAuthToken()).toBe(false);
+  });
+
+  it('should return false when edx_jwt_token is missing', () => {
+    localStorageMock.removeItem(LOCAL_STORAGE_KEYS.EDX_TOKEN_KEY);
+    localStorageMock.setItem(LOCAL_STORAGE_KEYS.AUTH_TOKEN, 'valid-token');
+    expect(hasNonExpiredAuthToken()).toBe(false);
+  });
+
+  it('should return false when edx_jwt_token is expired', () => {
+    localStorageMock.setItem(
+      LOCAL_STORAGE_KEYS.EDX_TOKEN_KEY,
+      makeJwt(Math.floor(Date.now() / 1000) - 3600),
+    );
+    localStorageMock.setItem(LOCAL_STORAGE_KEYS.AUTH_TOKEN, 'valid-token');
+    expect(hasNonExpiredAuthToken()).toBe(false);
+  });
+
+  it('should return true when both the axd and edx tokens are valid', () => {
+    localStorageMock.setItem(LOCAL_STORAGE_KEYS.AUTH_TOKEN, 'valid-token');
+    expect(hasNonExpiredAuthToken()).toBe(true);
   });
 
   it('should return true when token exists but no expiry', () => {
@@ -222,6 +257,32 @@ describe('hasNonExpiredAuthToken function', () => {
 
     // Restore Date.now
     Date.now = realDateNow;
+  });
+});
+
+describe('isJwtExpired function', () => {
+  it('returns false for a token whose exp is in the future', () => {
+    expect(isJwtExpired(makeJwt(Math.floor(Date.now() / 1000) + 3600))).toBe(
+      false,
+    );
+  });
+
+  it('returns true for a token whose exp is in the past', () => {
+    expect(isJwtExpired(makeJwt(Math.floor(Date.now() / 1000) - 3600))).toBe(
+      true,
+    );
+  });
+
+  it('returns false for a token with no exp claim (non-expiring)', () => {
+    expect(isJwtExpired(makeJwt())).toBe(false);
+  });
+
+  it('returns true for a token with no payload segment', () => {
+    expect(isJwtExpired('not-a-jwt')).toBe(true);
+  });
+
+  it('returns true for a token whose payload cannot be decoded', () => {
+    expect(isJwtExpired('header.@not-base64@.sig')).toBe(true);
   });
 });
 
@@ -672,6 +733,49 @@ describe('preprocessLaTeX function', () => {
   it('should escape currency dollar signs', () => {
     expect(preprocessLaTeX('Price is $5')).toBe('Price is \\$5');
     expect(preprocessLaTeX('$100 total')).toBe('\\$100 total');
+  });
+
+  it('should not corrupt block math delimiters when digits follow $$', () => {
+    const input =
+      '$$0.075 \\text{ L} \\times \\frac{1000 \\text{ mL}}{1 \\text{ L}} = 75 \\text{ mL}$$';
+    const output = preprocessLaTeX(input);
+    expect(output).toBe(input);
+    expect(output).not.toContain('\\$0');
+    expect(output).not.toContain('\\$7');
+    expect(output).toContain('$$');
+  });
+
+  it('should preserve block math delimiters with a leading space', () => {
+    const input = '$$ 0.075 \\text{ L} = 75 \\text{ mL}$$';
+    const output = preprocessLaTeX(input);
+    expect(output).toBe(input);
+    expect(output).not.toContain('\\$0');
+  });
+
+  it('should not corrupt inline math delimiters when digits follow $', () => {
+    const input =
+      '$250 \\text{ mL} \\times \\frac{1 \\text{ L}}{1000 \\text{ mL}}$';
+    const output = preprocessLaTeX(input);
+    expect(output).toBe(input);
+    expect(output).not.toContain('\\$2');
+  });
+
+  it('should leave backslash-led math untouched', () => {
+    expect(preprocessLaTeX('$\\frac{5}{5} = 1$')).toBe('$\\frac{5}{5} = 1$');
+    expect(preprocessLaTeX('$$\\frac{1 \\text{ L}}{1000 \\text{ mL}}$$')).toBe(
+      '$$\\frac{1 \\text{ L}}{1000 \\text{ mL}}$$',
+    );
+  });
+
+  it('should escape currency but keep an adjacent math block intact', () => {
+    const block =
+      '$$0.075 \\text{ L} \\times \\frac{1000 \\text{ mL}}{1 \\text{ L}} = 75 \\text{ mL}$$';
+    const output = preprocessLaTeX(`It costs $5. Here: ${block}`);
+    expect(output).toBe(`It costs \\$5. Here: ${block}`);
+  });
+
+  it('should treat backslash-free dollar spans as currency', () => {
+    expect(preprocessLaTeX('I have $5 and $10')).toBe('I have \\$5 and \\$10');
   });
 
   it('should not escape already escaped dollar signs', () => {

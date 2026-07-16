@@ -1,14 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-07-07",
+  "lastUpdated": "2026-07-08",
   "summary": {
-    "totalCheckpoints": 522,
-    "coveredCheckpoints": 500,
+    "totalCheckpoints": 545,
+    "coveredCheckpoints": 519,
     "deprecatedCheckpoints": 12,
-    "notReproducibleCheckpoints": 8,
+    "notReproducibleCheckpoints": 7,
+    "pendingCheckpoints": 7,
     "percent": 100,
-    "totalJourneys": 61,
-    "activeJourneys": 60
+    "totalJourneys": 62,
+    "activeJourneys": 61
   },
   "journeys": [
     {
@@ -3020,12 +3021,6 @@
           "status": "covered"
         },
         {
-          "id": "cp-tenant-05",
-          "description": "Non-admin cannot reach the tenant Advanced settings (no platform-name menu item in More options)",
-          "status": "not-reproducible",
-          "note": "Non-admin More options menu does not surface the platform-name item; test.skipped with explanation in spec"
-        },
-        {
           "id": "cp-agent-01",
           "description": "Enable private mode row is visible in Edit Mentor Settings Capabilities sub-tab for admins",
           "status": "covered"
@@ -3099,6 +3094,52 @@
           "id": "cp-profile-05",
           "description": "Selecting Normal reverts the header toggle to data-state=off on a fresh chat while data-source stays user (Normal is an explicit user choice; only mode=disabled reads as private)",
           "status": "covered"
+        },
+        {
+          "id": "cp-chat-01",
+          "description": "Admin enables private mode via the header toggle on a fresh chat (data-state=on, data-source=session), sends a message, and still receives an assistant reply; private mode stays on across the round-trip",
+          "status": "covered"
+        },
+        {
+          "id": "cp-chat-02",
+          "description": "Non-admin (separate browser context) enables private mode via the header toggle on a fresh chat, sends a message, and receives an assistant reply; private mode stays on across the round-trip",
+          "status": "covered"
+        },
+        {
+          "id": "cp-chat-04",
+          "description": "Prompt Gallery (admin-curated, mentor-keyed) still opens and renders cards in private mode; AI guided/suggested prompts row is visible on a fresh private chat after the AI replies",
+          "status": "pending",
+          "note": "Assertion (a) Prompt Gallery passes today. Assertion (b) guided prompts row is a live gate awaiting backend fix: backend must generate guided prompts for disable_chathistory sessions (endpoint: GET .../sessions/{session_id}/guided-prompts/)"
+        },
+        {
+          "id": "cp-chat-05",
+          "description": "Voice call dialog opens in private mode (empty-chat path) and does NOT show 'Failed to initiate call' error toast; Chromium fake-media only",
+          "status": "pending",
+          "note": "Live gate awaiting backend fix: backend must mint LiveKit credentials for disable_chathistory sessions (POST /create-call-credentials/); empty-chat path may already pass since the session IS persisted server-side"
+        },
+        {
+          "id": "cp-chat-06",
+          "description": "Multi-turn context retained within a single private session: (a) cached session id is stable across both sends (front-end contract, passes today); (b) AI echoes back the code word from turn 1, proving backend retains in-session context for private sessions",
+          "status": "pending",
+          "note": "Assertion (a) stable session id passes today. Assertion (b) AI context recall is a live gate awaiting backend fix: backend must retain ephemeral in-session context for disable_chathistory:true sessions"
+        },
+        {
+          "id": "cp-chat-07",
+          "description": "File attachment (drag-drop) works in private mode: attachment chip appears, message sends with attachment, and assistant replies; pins that selectSessionId follows the private session id through the upload path",
+          "status": "pending",
+          "note": "Expected to pass today (analysis: upload path reads selectSessionId which startPrivateChat updates via chatActions.updateSessionIds — byte-identical to normal mode). Included as regression gate."
+        },
+        {
+          "id": "cp-chat-08",
+          "description": "Memory button is hidden while private mode is on (data-state=on) and reappears when private mode is off (frontend gate: chat-input-form.tsx derives chatPrivacyActive from useChatPrivacy and passes isPrivate into InsideButtons, which drops Memory from the inline row and the overflow dropdown)",
+          "status": "covered",
+          "note": "Frontend gate implemented in components/chat-input-form.tsx (useChatPrivacy -> isPrivate prop) + components/chat-input-form/inside-buttons.tsx; deterministic regression coverage in components/chat-input-form/__tests__/inside-buttons.test.tsx ('Memory button private-mode gating')"
+        },
+        {
+          "id": "cp-chat-09",
+          "description": "Share-chat button in the AI message bubble is hidden in private mode (a private session is a temporary, non-persisted chat with no durable session to share); visible in normal mode and gated out while effective mode is disabled",
+          "status": "covered",
+          "note": "Frontend gate implemented in components/chat/ai-message-bubble.tsx (useChatPrivacy -> chatPrivacyActive gates the <AIMessageShare> render alongside !showingSharedChat); deterministic regression coverage in components/chat/__tests__/ai-message-bubble.test.tsx ('chat private mode active' share-button cases)"
         }
       ]
     },
@@ -3370,6 +3411,100 @@
           "id": "ecu-10",
           "description": "Post-payment, the account modal auto-opens on the Billing tab showing the Premium plan and a Manage Billing button with a restored credit balance; chat continues to work with the new balance",
           "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "mentor-lti-tab",
+      "name": "Mentor LTI Tab",
+      "spec": "60-mentor-lti-tab.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/lti-tab.tsx",
+        "hooks/use-mentor-segments.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "lti-01",
+          "description": "Admin sees the LTI tab visible by default on a fresh mentor without enabling the 'Enable LTI launches' toggle (is_lti_accessible=false) — gate removed in feat/1853",
+          "status": "covered"
+        },
+        {
+          "id": "lti-03",
+          "description": "Admin disables 'Enable LTI launches' in Settings and the LTI tab stays visible (the is_lti_accessible gate was removed from MENTOR_SEGMENTS in feat/1853)",
+          "status": "covered"
+        },
+        {
+          "id": "lti-04",
+          "description": "Non-admin user does not see the LTI tab in the Edit Mentor modal (LTI segment remains admin-only)",
+          "status": "covered"
+        },
+        {
+          "id": "lti-05",
+          "description": "Admin opens the LTI tab on an LTI-enabled mentor and sees the header and all four sub-tabs (Agent Links, Keys, Tools, Tool Endpoints)",
+          "status": "covered"
+        },
+        {
+          "id": "lti-06",
+          "description": "Admin opens the LTI Links sub-tab on a fresh mentor and sees the empty state when no links exist",
+          "status": "covered"
+        },
+        {
+          "id": "lti-07",
+          "description": "Admin creates an LTI link and it appears in the links list",
+          "status": "covered"
+        },
+        {
+          "id": "lti-08",
+          "description": "Admin edits (renames) an LTI link and the new name appears in the list while the old name is gone",
+          "status": "covered",
+          "note": "Self-contained mentor: the backend allows a single LTI link per mentor (the create button is not rendered once a link exists) and the SDK has no delete-link helper, so creating a second link on the shared worker mentor after lti-07 would time out"
+        },
+        {
+          "id": "lti-10",
+          "description": "Admin creates an LTI key and the key detail shows non-empty public key and JWK fields",
+          "status": "covered"
+        },
+        {
+          "id": "lti-11",
+          "description": "Admin renames an LTI key and the new name appears in the list while the old name is gone",
+          "status": "covered"
+        },
+        {
+          "id": "lti-12",
+          "description": "Admin deletes an LTI key and the key is no longer in the list",
+          "status": "covered"
+        },
+        {
+          "id": "lti-13",
+          "description": "Admin opens the LTI Tools sub-tab and the platform-wide tools surface renders: the create button plus either the empty state or the existing tools list",
+          "status": "covered",
+          "note": "LTI tools are tenant-scoped (platform-wide), not mentor-scoped: a fresh mentor still lists every tool on the tenant, lti-14 residue persists (no delete-tool helper), and parallel workers can create tools at any moment — a guaranteed-empty state is unreachable"
+        },
+        {
+          "id": "lti-14",
+          "description": "Admin creates an LTI tool with a JWKS URL signing config and it appears in the tools list",
+          "status": "covered",
+          "note": "Keys and tools are platform-wide and the SDK renders only page 1 of their lists (no pagination), so accumulated e2e residue used to push fresh keys off-page and break the in-list assertion; the worker fixture now reaps stale e2e-named tools/keys (>2h) via e2e/utils/lti-residue.ts"
+        },
+        {
+          "id": "lti-16",
+          "description": "Admin opens the Tool Endpoints sub-tab and all four endpoint URLs (redirect URI, login, deep linking, JWKS) are rendered non-empty",
+          "status": "covered"
+        },
+        {
+          "id": "lti-17",
+          "description": "Admin copies the redirect URI endpoint URL and the copy button label flips to 'Copied'",
+          "status": "covered"
+        },
+        {
+          "id": "lti-18",
+          "description": "Admin opens the Tool Endpoints sub-tab and every endpoint URL is an absolute https URL on the /lti/ path sharing one origin (built from NEXT_PUBLIC_LEGACY_LMS_URL)",
+          "status": "covered"
+        },
+        {
+          "id": "lti-sdk-01",
+          "description": "PENDING (SDK dependency): When an admin creates the first LTI link, is_lti_accessible is auto-enabled via the API — not yet implemented; AgentLtiTab exposes no post-create callback hook",
+          "status": "pending"
         }
       ]
     }

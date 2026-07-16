@@ -43,9 +43,12 @@ import {
   updateRbacPermissions,
 } from '@/features/rbac/rbac-slice';
 import { useModelDownload } from '@/hooks/use-model-download';
+import { useLockedTenant } from '@/hooks/use-tenant-lock';
 
 export function UserProfile() {
   const username = useUsername();
+  // Tauri builds pinned to a tenant hide the switcher entirely.
+  const lockedTenant = useLockedTenant();
   const email = getUserEmail();
   const userIsAdmin = useIsAdmin();
   const userIsStudent = useUserIsStudent();
@@ -309,8 +312,9 @@ export function UserProfile() {
       showProfileTab={true}
       showAccountTab={false}
       showTenantSwitcher={
-        userIsAdmin ||
-        userTenants.some((t) => t.key !== 'main' && t.key !== tenantKey)
+        (userIsAdmin ||
+          userTenants.some((t) => t.key !== 'main' && t.key !== tenantKey)) &&
+        !lockedTenant
       }
       showHelpLink={true}
       showLogoutButton={true}
