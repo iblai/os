@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.98.0](https://github.com/iblai/os/compare/v0.97.0...v0.98.0) (2026-07-16)
+
+### Features
+
+* **seo:** add SEO foundation (robots, sitemap, manifest, metadata, JSON-LD) ([e93fc91](https://github.com/iblai/os/commit/e93fc91c2bf28330c28d73606210075a5feb734c))
+* **seo:** index public mentor pages with rich metadata + JSON-LD ([874bfc3](https://github.com/iblai/os/commit/874bfc3546d825474b2802ab1dea44ac44b627f1))
+* **seo:** make the explore mentor-directory pages indexable ([7448aaf](https://github.com/iblai/os/commit/7448aafbf33a213e70174901956ec95713287e29))
+* **seo:** noindex rich OG cards for shared chat pages ([833f7a7](https://github.com/iblai/os/commit/833f7a7e1579b8951c76c329b103ae651121d830))
+* **seo:** say "Agents" not "Mentors", list agents on explore, screenshot OG fallback ([f8f0906](https://github.com/iblai/os/commit/f8f0906e3eb03ba19593b705f8345891a404ec3b))
+
+### Bug Fixes
+
+* **seo:** never cache SEO fetches; list only public agents in explore meta ([e74c82b](https://github.com/iblai/os/commit/e74c82b5fe96c7dd1b184a2a0b3c3114bb4e5026))
+
 ## [0.97.0](https://github.com/iblai/os/compare/v0.96.2...v0.97.0) (2026-07-16)
 
 ### Features
