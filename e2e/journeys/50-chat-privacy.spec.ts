@@ -1355,7 +1355,7 @@ test.describe('Journey 50: Chat Privacy', () => {
       // Give the backend a moment to persist turn 1 into session memory before
       // asking for recall — without this gap the follow-up can race the write
       // and the code word isn't yet retained, causing intermittent failures.
-      await page.waitForTimeout(5_000);
+      await page.waitForTimeout(10_000);
       await chatPage.sendMessage('What was the code word I gave you?');
       await expect(chatPage.userMessages.nth(1)).toBeVisible({
         timeout: 30_000,

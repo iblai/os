@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-07-08",
+  "lastUpdated": "2026-07-14",
   "summary": {
-    "totalCheckpoints": 545,
-    "coveredCheckpoints": 519,
+    "totalCheckpoints": 550,
+    "coveredCheckpoints": 524,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 7,
     "pendingCheckpoints": 7,
     "percent": 100,
-    "totalJourneys": 62,
-    "activeJourneys": 61
+    "totalJourneys": 63,
+    "activeJourneys": 62
   },
   "journeys": [
     {
@@ -3530,6 +3530,39 @@
           "id": "lti-sdk-01",
           "description": "PENDING (SDK dependency): When an admin creates the first LTI link, is_lti_accessible is auto-enabled via the API — not yet implemented; AgentLtiTab exposes no post-create callback hook",
           "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "latex-math-rendering",
+      "name": "LaTeX / Math Rendering",
+      "spec": "61-latex-math-rendering.spec.ts",
+      "sourceFiles": ["lib/utils.ts", "components/markdown.tsx"],
+      "checkpoints": [
+        {
+          "id": "latex-01",
+          "description": "Inline LaTeX math (e.g. $3x + 5$, $x = 4$, $2x + 6$, $3(4) + 5$) renders as KaTeX with no raw dollar signs or escape backslashes leaking into the visible text",
+          "status": "covered"
+        },
+        {
+          "id": "latex-02",
+          "description": "Block LaTeX math ($$...$$ on its own fenced lines) renders as KaTeX display blocks (.katex-display), including a \\text{}/\\frac{} expression",
+          "status": "covered"
+        },
+        {
+          "id": "latex-03",
+          "description": "Currency amounts (e.g. \"I have $5 and $10, it costs $5, and the total is $3.50.\") stay literal text with no KaTeX rendering and no visible escape backslash",
+          "status": "covered"
+        },
+        {
+          "id": "latex-04",
+          "description": "Money then math on the same line (\"the kit costs $12, and the formula $3x + 5$ gives the price.\") keeps $12 literal while $3x + 5$ renders as KaTeX",
+          "status": "covered"
+        },
+        {
+          "id": "latex-05",
+          "description": "Math then money on the same line (\"since $2x = 8$, each unit is $8 and the pair is $16.\") renders $2x = 8$ as KaTeX while $8 and $16 stay literal",
+          "status": "covered"
         }
       ]
     }

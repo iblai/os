@@ -9,6 +9,8 @@ type TransformedMessage = {
   id?: string;
   type?: string;
   role: 'user' | 'assistant';
+  // Always a string once transformed, whatever shape the API sent.
+  content: string;
   visible: boolean;
   artifactVersions?: TransformedArtifactVersion[];
   [key: string]: unknown;
@@ -87,11 +89,42 @@ export function transformArtifactVersions(
   }));
 }
 
+/**
+ * Flattens a message's `content` to the text it actually says.
+ *
+ * Human messages arrive as a plain string, but assistant messages arrive as an
+ * array of content blocks — `[{ type: 'text', text: '…' }]` — and a reply that
+ * used tools carries non-text blocks (`server_tool_use`, tool results) between
+ * the text ones. Everything downstream assumes a string: the Markdown renderer
+ * returns '' for a non-string, and the `content.trim()` checks that gate the
+ * typing indicator throw outright, which takes down the whole shared chat.
+ *
+ * Blocks without text are dropped: they carry tool-call plumbing, not prose.
+ */
+export function normalizeMessageContent(content: unknown): string {
+  if (typeof content === 'string') {
+    return content;
+  }
+  if (!Array.isArray(content)) {
+    return '';
+  }
+  return content
+    .map((block) =>
+      block && typeof block === 'object' && typeof block.text === 'string'
+        ? block.text
+        : '',
+    )
+    .filter(Boolean)
+    .join('\n\n');
+}
+
 export function transformChatMessage(result: any): TransformedMessage {
   const artifactVersions = transformArtifactVersions(result.artifact_versions);
 
   return {
     ...result,
+    // Must come after the spread: the API's raw `content` is what we normalize.
+    content: normalizeMessageContent(result.content),
     role: result.type === 'human' ? 'user' : 'assistant',
     visible: true,
     artifactVersions,

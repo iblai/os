@@ -181,6 +181,13 @@ test.describe('Journey: Chat URL ?prompt= Auto-Injection', () => {
       `prompt-injection dedup: sessionId after first load = ${sessionIdAfterFirst}`,
     );
 
+    // The session and message record are only flushed once streaming finishes
+    // (see TC3 below) — reloading mid-stream creates a brand-new session and
+    // the bubble is lost. Wait for the stop-streaming button to flip back to
+    // send, then settle so the save lands.
+    await chatPage.waitForStreamingComplete();
+    await page.waitForTimeout(2_000);
+
     // Second visit: same URL, session is cached, hook should dedup
     await page.goto(mentorUrl, {
       waitUntil: 'domcontentloaded',
@@ -188,11 +195,16 @@ test.describe('Journey: Chat URL ?prompt= Auto-Injection', () => {
     });
     await waitForPageReady(page);
 
-    // TC2-a: exactly one user bubble for this prompt text (no duplicate)
-    const bubbleCount = await page
-      .locator('.chat-user-message-query', { hasText: promptText })
-      .count();
-    expect(bubbleCount).toBe(1);
+    // TC2-a: exactly one user bubble for this prompt text (no duplicate).
+    // History comes from the sessions endpoint which can be slow, so wait for
+    // the restored bubble to render rather than counting immediately, then
+    // give a would-be duplicate injection a moment to land before counting.
+    const promptBubbles = page.locator('.chat-user-message-query', {
+      hasText: promptText,
+    });
+    await expect(promptBubbles.first()).toBeVisible({ timeout: 90_000 });
+    await page.waitForTimeout(2_000);
+    expect(await promptBubbles.count()).toBe(1);
 
     // TC2-b: session id is unchanged (no new session was created)
     const sessionIdAfterSecond = await page.evaluate(

@@ -1,16 +1,96 @@
 # Changelog
 
+## [0.96.2](https://github.com/iblai/os/compare/v0.96.1...v0.96.2) (2026-07-16)
+
+### Bug Fixes
+
+* **2109:** decide math vs currency with Pandoc's rule ([fa11d98](https://github.com/iblai/os/commit/fa11d988be90cad61d6dcb24840147c5e5cddf5d))
+* **chat:** normalize shared-chat message content to a string ([eadce24](https://github.com/iblai/os/commit/eadce245b5e5032cb1e53111afcc95492d2da44b))
+* **chat:** render inline math sharing a line with currency ([53a3652](https://github.com/iblai/os/commit/53a36521a7d26a0fcf6831678acf4440c24c617c))
+* **markdown:** mask code before LaTeX preprocessing ([26ce73c](https://github.com/iblai/os/commit/26ce73c172d31455f39c4e148bbff84da82e282d))
+* **markdown:** stop list items clipping their own markers ([2d41d13](https://github.com/iblai/os/commit/2d41d138f5555ffaf82836cb98c646fcfc76d719))
+
+### Tests
+
+* **chat:** cover inline math vs currency in preprocessLaTeX rendering ([642fcd6](https://github.com/iblai/os/commit/642fcd6ba3350896602b11aa52ef21891a0480ed))
+* **e2e:** add journey 61 for chat LaTeX/math rendering ([aafb426](https://github.com/iblai/os/commit/aafb426f245360f54785d6d9638786284caa3b2a))
+
+## [0.96.1](https://github.com/iblai/os/compare/v0.96.0...v0.96.1) (2026-07-16)
+
+### Chores
+
+* **deps:** bump serde_with 3.20.0 → 3.21.0 in src-tauri ([5259fe6](https://github.com/iblai/os/commit/5259fe6c05e307f17d0c99c1caaaa25827ea89a2))
+* **tauri:** release app-v0.95.4 ([58b9501](https://github.com/iblai/os/commit/58b950110d01c6ee1089e894687b0658d7a26c92))
+
+## [0.96.0](https://github.com/iblai/os/compare/v0.95.13...v0.96.0) (2026-07-16)
+
+### Features
+
+- **ci:** self-signed Windows build pipeline (x64 + arm64) ([9a4835a](https://github.com/iblai/os/commit/9a4835a17ed753607eda2fa6fbd750a73c42f14b))
+
+### CI
+
+- harden the self-signed Windows build pipeline (research-backed) ([ae1ad7b](https://github.com/iblai/os/commit/ae1ad7bed000073d8911a8604d16c95896c7cc06))
+
+## [0.95.13](https://github.com/iblai/os/compare/v0.95.12...v0.95.13) (2026-07-16)
+
+### Documentation
+
+- **readme:** link iOS/Android store pages, raise Available On section ([9eef885](https://github.com/iblai/os/commit/9eef885a8d932cfcb9a91655aaf7fbc7e93b0a68))
+
+## [0.95.12](https://github.com/iblai/os/compare/v0.95.11...v0.95.12) (2026-07-15)
+
+### CI
+
+- **audit:** don't block PRs when npm's audit endpoint is retired (410) ([33d79fe](https://github.com/iblai/os/commit/33d79fe7d8907f703626bb6b6146013f6ae34160)), closes [#339](https://github.com/iblai/os/issues/339)
+
+## [0.95.11](https://github.com/iblai/os/compare/v0.95.10...v0.95.11) (2026-07-15)
+
+### Bug Fixes
+
+- chat privacy failing playwright test fixed ([51276f8](https://github.com/iblai/os/commit/51276f89f77f5cec9df79a240cb638eb9b0ba1df))
+- **e2e:** stabilize ?prompt= dedup test against mid-stream reloads ([2fd82ea](https://github.com/iblai/os/commit/2fd82ea47ce5f2240dbac865d723d07b78ae39e5))
+- upgrade package modal redirect url upgraded ([7a3f02e](https://github.com/iblai/os/commit/7a3f02e96ecd06829407b2a90002b40722472e61))
+- upgrade package modal redirect url upgraded > test coverage ([babb1dc](https://github.com/iblai/os/commit/babb1dc8791ddca64462a901f4afaa1f63667b83))
+
+### Chores
+
+- bump iblai-js to 1.22.6 ([d6e8903](https://github.com/iblai/os/commit/d6e8903710f2718c5f15513fb02cfd5c6c66e46a))
+- **deps:** bump @iblai/iblai-js to 1.25.1 ([9c1d8ca](https://github.com/iblai/os/commit/9c1d8caa9500be44498e1de440ee601b43f3a407))
+
+## [0.95.10](https://github.com/iblai/os/compare/v0.95.9...v0.95.10) (2026-07-15)
+
+### Tests
+
+- **e2e:** fixme journey-60 LTI key/tool tests blocked on a backend issue ([04b424c](https://github.com/iblai/os/commit/04b424c1ef8eed91372a325e63bd768e559272da))
+
+## [0.95.9](https://github.com/iblai/os/compare/v0.95.8...v0.95.9) (2026-07-14)
+
+### Documentation
+
+- **e2e-agent:** require MentorTracker cleanup for mentor-creating tests ([87e5166](https://github.com/iblai/os/commit/87e5166a89d970b7fbc60c87332c426c4f017ae9))
+
+### Tests
+
+- **e2e:** clean up agents created during tests to stop DB accumulation ([b29c8e8](https://github.com/iblai/os/commit/b29c8e87e7fcdd5f05607bff8d715c8fab7c1a37))
+
+## [0.95.8](https://github.com/iblai/os/compare/v0.95.7...v0.95.8) (2026-07-14)
+
+### Bug Fixes
+
+- **auth:** require a valid edx_jwt_token for a non-expired session ([53e961f](https://github.com/iblai/os/commit/53e961f7781167148ffb6c8acf963448c3da3ddd))
+
 ## [0.95.7](https://github.com/iblai/os/compare/v0.95.6...v0.95.7) (2026-07-13)
 
 ### CI
 
-* **pr-gate:** run vitest unit tests in the Required PR workflow ([dbea82a](https://github.com/iblai/os/commit/dbea82a2bf35529c6195fb8ab1b631d2b2b09ce4))
+- **pr-gate:** run vitest unit tests in the Required PR workflow ([dbea82a](https://github.com/iblai/os/commit/dbea82a2bf35529c6195fb8ab1b631d2b2b09ce4))
 
 ## [0.95.6](https://github.com/iblai/os/compare/v0.95.5...v0.95.6) (2026-07-13)
 
 ### Documentation
 
-* **readme:** link the macOS row to the latest build download ([238bc6d](https://github.com/iblai/os/commit/238bc6d16346989f0fc1f4a52542918f8c8bbab3)), closes [#download](https://github.com/iblai/os/issues/download)
+- **readme:** link the macOS row to the latest build download ([238bc6d](https://github.com/iblai/os/commit/238bc6d16346989f0fc1f4a52542918f8c8bbab3)), closes [#download](https://github.com/iblai/os/issues/download)
 
 ## [0.95.5](https://github.com/iblai/os/compare/v0.95.4...v0.95.5) (2026-07-13)
 

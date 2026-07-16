@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import {
+  normalizeMessageContent,
   transformArtifactVersions,
   transformChatMessage,
   transformChatResults,
@@ -126,6 +127,87 @@ describe('transformArtifactVersions', () => {
       current_version_number: undefined,
       version_count: undefined,
     });
+  });
+});
+
+describe('normalizeMessageContent', () => {
+  it('passes a plain string through unchanged', () => {
+    expect(normalizeMessageContent('I have $5 and $10.')).toBe(
+      'I have $5 and $10.',
+    );
+  });
+
+  it('flattens the array of content blocks the API sends for assistant replies', () => {
+    // Real shape from the shared-session endpoint.
+    expect(
+      normalizeMessageContent([
+        { index: 0, type: 'text', text: 'Evaluate $3x + 5$ at $x = 4$.' },
+      ]),
+    ).toBe('Evaluate $3x + 5$ at $x = 4$.');
+  });
+
+  it('joins multiple text blocks', () => {
+    expect(
+      normalizeMessageContent([
+        { index: 0, type: 'text', text: 'First part.' },
+        { index: 1, type: 'text', text: 'Second part.' },
+      ]),
+    ).toBe('First part.\n\nSecond part.');
+  });
+
+  it('drops non-text blocks from a reply that used tools', () => {
+    // A tool-using reply interleaves tool plumbing between the prose blocks;
+    // none of it has a `text` field and none of it should render.
+    expect(
+      normalizeMessageContent([
+        { index: 0, type: 'text', text: 'Let me draw that.' },
+        {
+          index: 1,
+          type: 'server_tool_use',
+          id: 'srvtoolu_1',
+          name: 'bash_code_execution',
+          input: {},
+          partial_json: '{"command": "python3 plot.py"}',
+        },
+        {
+          index: 2,
+          type: 'bash_code_execution_tool_result',
+          tool_use_id: 'srvtoolu_1',
+          content: { stdout: 'Saved.\n', return_code: 0 },
+        },
+        { index: 3, type: 'text', text: 'There is the picture.' },
+      ]),
+    ).toBe('Let me draw that.\n\nThere is the picture.');
+  });
+
+  it('returns an empty string for missing or unexpected content', () => {
+    expect(normalizeMessageContent(undefined)).toBe('');
+    expect(normalizeMessageContent(null)).toBe('');
+    expect(normalizeMessageContent([])).toBe('');
+    expect(normalizeMessageContent(42)).toBe('');
+    expect(normalizeMessageContent([null, { type: 'text' }])).toBe('');
+  });
+});
+
+describe('transformChatMessage', () => {
+  it('normalizes array content so downstream .trim() cannot throw', () => {
+    // The shared endpoint returns assistant content as blocks. Consumers call
+    // `(message.content ?? '').trim()`, which throws on an array and takes the
+    // whole shared chat down with it.
+    const message = transformChatMessage({
+      type: 'ai',
+      content: [{ index: 0, type: 'text', text: 'Evaluate $3x + 5$.' }],
+    });
+    expect(message.content).toBe('Evaluate $3x + 5$.');
+    expect(() => (message.content ?? '').trim()).not.toThrow();
+  });
+
+  it('leaves human string content alone', () => {
+    const message = transformChatMessage({
+      type: 'human',
+      content: 'What is $3x + 5$ at $x = 4$?',
+    });
+    expect(message.content).toBe('What is $3x + 5$ at $x = 4$?');
   });
 });
 
