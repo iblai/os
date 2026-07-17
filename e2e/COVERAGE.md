@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-06-30 | 499 checkpoints (477 covered, 2 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 57 journeys (56 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-07-18 | 516 checkpoints (494 covered, 2 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 58 journeys (57 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -788,22 +788,29 @@ The spec drives the tab through the semantic Tasks helpers from `@iblai/iblai-js
 
 ---
 
-## Journey 45: Mentor Evaluation Tab (10 checkpoints) — `journeys/45-mentor-evaluation-tab.spec.ts`
+## Journey 45: Mentor Evaluation Tab (17 checkpoints) — `journeys/45-mentor-evaluation-tab.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/evaluation-tab/index.tsx`, `hooks/use-mentor-segments.ts`
 
-Wraps the packaged `AgentEvaluationTab` from `@iblai/web-containers` (v1.6.12+) with `AgentSettingsProvider`, `getLLMProviderDetails`, and `IblPagination`. Tests are tolerant of both populated and empty tenant states because eval datasets are managed in tenant settings, not by this journey.
+Wraps the packaged `AgentEvaluationTab` from `@iblai/iblai-js/web-containers/next` with `AgentSettingsProvider`, `getLLMProviderDetails`, and `IblPagination`. All interactions go through the dedicated eval-tab Playwright helpers exported from `@iblai/iblai-js/playwright` (via the `EvaluationTab` page object — mirrors the `VoiceTab`/`TasksTab` thin-delegation pattern from journeys 47/49). Eval datasets ("benchmarks") are tenant-scoped, so the whole file runs serially against one dedicated mentor (created once in `beforeAll`, mirroring journey 14) and one throwaway benchmark created by EVAL-03. Checkpoints that depend on a run reaching `COMPLETED` (EVAL-11/EVAL-12) read the run's live status and skip gracefully instead of assuming either outcome — the real api.iblai.org backend's completion timing is not deterministic, and no test in this journey asserts that a run completes.
 
-- [x] EVAL-01: Evals tab heading and description render when the modal is opened on the Evals tab
-- [x] EVAL-02: Dataset combobox and "New Evaluation" CTA are both visible
-- [x] EVAL-03: "New Evaluation" CTA is disabled when no dataset is selected (and enabled when one is auto-selected)
-- [x] EVAL-04: Tenants with no eval datasets see the "no datasets" call-to-action instead of the runs table
-- [x] EVAL-05: With a dataset selected the runs table renders all five canonical headers (Evaluation, Status, Initiated by, Created, Actions)
-- [x] EVAL-06: "New Evaluation" modal opens with the dataset readback + name input and cancels cleanly
-- [x] EVAL-07: "New Evaluation" modal can be dismissed via Escape (modal stack hygiene)
-- [x] EVAL-08: Per-run actions menu exposes View results, Evaluate, Export CSV, and Delete entries when runs exist
-- [x] EVAL-09: Open Evals tab has no axe-core accessibility violations on visible dialogs
-- [x] EVAL-10: Admin can navigate away to another tab and back to Evals without errors (wrapper re-mounts cleanly)
+- [x] EVAL-01: Evals tab heading, description, and the info box (`data-testid=evaluation-info-box`) all render when the modal is opened on the Evals tab
+- [x] EVAL-02: Benchmark combobox and both toolbar actions (New Evaluation, Manage benchmarks) render; New Evaluation's disabled/enabled state correctly reflects whether a benchmark is auto-selected
+- [x] EVAL-03: Admin creates a new benchmark via Manage benchmarks and selects it back on the Evals tab toolbar
+- [x] EVAL-04: Admin adds a Q&A pair to a benchmark via Manage benchmarks → View items → Add Q&A (Manual sub-tab)
+- [x] EVAL-05: With a fresh (zero-run) benchmark selected, the runs table renders all five canonical headers (Evaluation, Status, Initiated by, Created, Actions) and the benchmark-specific empty state
+- [x] EVAL-06: New Evaluation dialog shows the benchmark readback and name input, and Cancel dismisses it without creating a run
+- [x] EVAL-07: New Evaluation dialog can be dismissed via Escape without creating a run
+- [x] EVAL-08: Admin starts a new evaluation and it appears in the runs table with a valid status badge
+- [x] EVAL-09: A run's actions menu reflects its live status — Check status/Delete always enabled; View results/New review/Export CSV enabled once completed, otherwise disabled with the `notReadyHint` tooltip
+- [x] EVAL-10: Check status triggers a fresh fetch and surfaces an outcome toast (pending, completed, or failed)
+- [x] EVAL-11: Once a run has completed, admin can open View results and Export CSV _(opportunistic — skips gracefully while the run has not completed yet)_
+- [x] EVAL-12: Once a run has completed, the New review (LLM-judge) dialog keeps Evaluate disabled until criteria and score name are filled _(opportunistic — skips gracefully while the run has not completed yet)_
+- [x] EVAL-13: Admin can cancel a delete confirmation (row stays) and then delete a run for real (row is removed)
+- [x] EVAL-14: Manage benchmarks lists the created benchmark, and searching for its name filters down to it
+- [x] EVAL-15: Evals tab has no axe-core accessibility violations on visible dialogs
+- [x] EVAL-16: Admin can leave the Evals tab and return without errors (wrapper re-mounts cleanly)
+- [x] EVAL-17: Non-admin does not see the Evals tab in the Edit Mentor modal (ADMIN-only segment in `use-mentor-segments.ts`)
 
 ---
 

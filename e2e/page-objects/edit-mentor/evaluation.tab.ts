@@ -1,139 +1,355 @@
 import { Page, Locator, expect } from '@playwright/test';
+import {
+  EVALS_LABELS,
+  isEvaluationTabVisible,
+  switchToEvaluationTab,
+  getBenchmarkCombobox,
+  getBenchmarkComboboxDropdown,
+  getNewEvaluationButton,
+  getManageBenchmarksButton,
+  expectSelectedBenchmark,
+  selectBenchmark,
+  expectNoBenchmarksNotice,
+  getRunRow,
+  expectRunInTable,
+  expectRunNotInTable,
+  expectRunStatus,
+  expectRunsTableEmpty,
+  openRunActionsMenu,
+  openRunResults,
+  openNewReviewForRun,
+  checkRunStatus,
+  exportRunCsv,
+  getStartEvaluationDialog,
+  openStartEvaluationDialog,
+  startEvaluation,
+  cancelStartEvaluation,
+  getDeleteEvaluationDialog,
+  deleteEvaluation,
+  cancelDeleteEvaluation,
+  getLlmJudgeDialog,
+  cancelLlmJudge,
+  getEvaluationDetailDialog,
+  closeEvaluationDetailDialog,
+  openManageBenchmarksDialog,
+  searchBenchmarks,
+  expectBenchmarkListed,
+  getCreateBenchmarkDialog,
+  createBenchmark,
+  getBenchmarkItemsDialog,
+  openBenchmarkItems,
+  expectQaItemListed,
+  getAddItemsDialog,
+  openAddItemsDialog,
+  addQaPairsManually,
+  closeBenchmarkItemsDialog,
+  closeManageBenchmarksDialog,
+  type EvalRunStatus,
+} from '@iblai/iblai-js/playwright';
 
 /**
  * Page object for the "Evals" tab inside the Edit Mentor modal.
  *
- * The tab body is rendered by `AgentEvaluationTab` from
- * `@iblai/web-containers` (v1.6.12+), wrapped locally to inject
- * `AgentSettingsProvider`, `getLLMProviderDetails`, and `IblPagination`.
+ * The tab body is rendered by the packaged `AgentEvaluationTab` from
+ * `@iblai/iblai-js/web-containers/next` (see
+ * `components/modals/edit-mentor-modal/tabs/evaluation-tab/index.tsx`),
+ * wrapped locally with `AgentSettingsProvider` + `IblPagination`. The local
+ * wrapper passes no `labels` override, so the tab renders the SDK's default
+ * `AGENT_EVALUATION_TAB_LABELS` strings verbatim.
  *
- * Locator strategy mirrors the default AGENT_EVALUATION_TAB_LABELS — if
- * the upstream package changes label text we want the tests to fail loudly
- * so we know to refresh the page object.
+ * Every method below thin-delegates to the dedicated eval-tab Playwright
+ * helpers re-exported from `@iblai/iblai-js/playwright` (mirrors the
+ * `VoiceTab` / `TasksTab` page objects) so label or DOM changes upstream are
+ * picked up with a single `@iblai/iblai-js` bump rather than by editing
+ * selectors here. Every helper call is scoped to this tab's parent `dialog`
+ * Locator, never the bare `page` — dialogs spawned from this tab are
+ * resolved by the helpers via a page-level `[aria-label]` attribute query
+ * regardless of the scope passed in (they're Radix portals rendered outside
+ * the Edit Agent dialog subtree), so passing `dialog` here purely supplies
+ * `.page()`; toolbar-level locators (combobox, buttons) genuinely scope to
+ * the dialog subtree.
  */
 export class EvaluationTab {
   readonly page: Page;
   readonly dialog: Locator;
 
-  readonly heading: Locator;
-  readonly description: Locator;
-  readonly datasetCombobox: Locator;
-  readonly newEvaluationButton: Locator;
-  readonly emptyDatasets: Locator;
-  readonly emptyRunsState: Locator;
-  readonly runRows: Locator;
-  readonly tableHeaderEvaluation: Locator;
-  readonly tableHeaderStatus: Locator;
-  readonly tableHeaderInitiatedBy: Locator;
-  readonly tableHeaderCreated: Locator;
-  readonly tableHeaderActions: Locator;
+  /** Default labels shipped with the SDK — handy for exact-text assertions. */
+  static readonly LABELS = EVALS_LABELS;
+
+  /**
+   * `AGENT_EVALUATION_TAB_LABELS.actions.notReadyHint` from the tab's
+   * `labels.ts` ("Available once the evaluation completes") — the native
+   * `title` tooltip on the View results / New review / Export CSV row
+   * actions while a run hasn't completed yet. Not re-exported by the SDK's
+   * `EVALS_LABELS` helper constant (no exported helper asserts on it
+   * directly), so it's hardcoded here against the component source.
+   */
+  static readonly NOT_READY_HINT = 'Available once the evaluation completes';
+
+  /** Canonical runs-table column headers (index.tsx `table.*Column` labels — also not re-exported by `EVALS_LABELS`). */
+  static readonly TABLE_HEADERS = [
+    'EVALUATION',
+    'STATUS',
+    'INITIATED BY',
+    'CREATED',
+    'ACTIONS',
+  ] as const;
 
   constructor(page: Page, dialog: Locator) {
     this.page = page;
     this.dialog = dialog;
-    this.heading = dialog.getByRole('heading', { name: /^evals$/i });
-    this.description = dialog.getByText(
-      /Run this mentor against a dataset and score the responses/i,
-    );
-    this.datasetCombobox = dialog
-      .getByRole('combobox')
-      .or(dialog.getByRole('button', { name: /select a dataset/i }))
-      .first();
-    this.newEvaluationButton = dialog.getByRole('button', {
-      name: /new evaluation/i,
-    });
-    this.emptyDatasets = dialog.getByText(
-      /No datasets yet\. Create one from organization settings/i,
-    );
-    this.emptyRunsState = dialog.getByText(
-      /No evaluations yet for this mentor on dataset/i,
-    );
-    this.runRows = dialog
-      .getByRole('row')
-      .filter({ has: dialog.getByRole('button', { name: /actions for /i }) });
-    this.tableHeaderEvaluation = dialog
-      .getByRole('columnheader', { name: /^evaluation$/i })
-      .or(dialog.getByText(/^EVALUATION$/));
-    this.tableHeaderStatus = dialog
-      .getByRole('columnheader', { name: /^status$/i })
-      .or(dialog.getByText(/^STATUS$/));
-    this.tableHeaderInitiatedBy = dialog
-      .getByRole('columnheader', { name: /^initiated by$/i })
-      .or(dialog.getByText(/^INITIATED BY$/));
-    this.tableHeaderCreated = dialog
-      .getByRole('columnheader', { name: /^created$/i })
-      .or(dialog.getByText(/^CREATED$/));
-    this.tableHeaderActions = dialog
-      .getByRole('columnheader', { name: /^actions$/i })
-      .or(dialog.getByText(/^ACTIONS$/));
+  }
+
+  // ---------------------------------------------------------------------------
+  // Tab navigation
+  // ---------------------------------------------------------------------------
+
+  /** True when the Evals tab is rendered (permission-gated tab guard — ADMIN-only). */
+  isTabVisible(): Promise<boolean> {
+    return isEvaluationTabVisible(this.page);
+  }
+
+  /** Click the Evals tab and wait for the toolbar to be interactive. */
+  switchToTab(): Promise<void> {
+    return switchToEvaluationTab(this.page);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Toolbar: benchmark picker + action buttons
+  // ---------------------------------------------------------------------------
+
+  benchmarkCombobox(): Locator {
+    return getBenchmarkCombobox(this.dialog);
+  }
+
+  benchmarkComboboxDropdown(): Locator {
+    return getBenchmarkComboboxDropdown(this.dialog);
+  }
+
+  newEvaluationButton(): Locator {
+    return getNewEvaluationButton(this.dialog);
+  }
+
+  manageBenchmarksButton(): Locator {
+    return getManageBenchmarksButton(this.dialog);
+  }
+
+  expectSelectedBenchmark(benchmarkName: string): Promise<void> {
+    return expectSelectedBenchmark(this.dialog, benchmarkName);
+  }
+
+  selectBenchmark(
+    benchmarkName: string,
+    opts?: { search?: boolean },
+  ): Promise<void> {
+    return selectBenchmark(this.dialog, benchmarkName, opts);
+  }
+
+  expectNoBenchmarksNotice(): Promise<void> {
+    return expectNoBenchmarksNotice(this.dialog);
+  }
+
+  /** Column header locator — tries the semantic `columnheader` role first, falls back to plain text. */
+  tableHeader(name: string): Locator {
+    return this.dialog
+      .getByRole('columnheader', { name, exact: true })
+      .or(this.dialog.getByText(name, { exact: true }));
+  }
+
+  // ---------------------------------------------------------------------------
+  // Runs table
+  // ---------------------------------------------------------------------------
+
+  runRow(runName: string): Locator {
+    return getRunRow(this.dialog, runName);
+  }
+
+  expectRunInTable(runName: string): Promise<void> {
+    return expectRunInTable(this.dialog, runName);
+  }
+
+  expectRunNotInTable(runName: string): Promise<void> {
+    return expectRunNotInTable(this.dialog, runName);
+  }
+
+  expectRunStatus(runName: string, status: EvalRunStatus): Promise<void> {
+    return expectRunStatus(this.dialog, runName, status);
+  }
+
+  expectRunsTableEmpty(benchmarkName: string): Promise<void> {
+    return expectRunsTableEmpty(this.dialog, benchmarkName);
   }
 
   /**
-   * True when at least one evaluation row is rendered. Returns false on the
-   * empty state or when no dataset is selected yet.
+   * Read a run row's CURRENT status by column position (Status is the 2nd
+   * column). Positional indexing is used instead of a text-based lookup so
+   * callers can safely branch on whichever status is actually showing —
+   * evaluations run against the real backend, so completion timing is not
+   * deterministic and tests must never assume a fixed outcome.
    */
-  async hasRuns(): Promise<boolean> {
-    return this.runRows
-      .first()
-      .isVisible({ timeout: 5_000 })
-      .catch(() => false);
+  async readRunStatus(runName: string): Promise<EvalRunStatus> {
+    const cell = this.runRow(runName).locator('td').nth(1);
+    await expect(cell).toBeVisible({ timeout: 15_000 });
+    const text = (await cell.innerText()).trim();
+    if (
+      text === 'COMPLETED' ||
+      text === 'FAILED' ||
+      text === 'PENDING' ||
+      text === 'IN_PROGRESS'
+    ) {
+      return text;
+    }
+    throw new Error(`Unexpected run status text for "${runName}": "${text}"`);
   }
 
-  /**
-   * True when the "no datasets" call-to-action is rendered (tenant has no
-   * eval datasets defined yet — `AgentEvaluationTab` short-circuits the
-   * table in this branch).
-   */
-  async hasNoDatasetsState(): Promise<boolean> {
-    return this.emptyDatasets.isVisible({ timeout: 3_000 }).catch(() => false);
+  openRunActionsMenu(runName: string): Promise<Locator> {
+    return openRunActionsMenu(this.dialog, runName);
   }
 
-  /**
-   * Open the dataset combobox. The picker uses a Radix popover, so we wait
-   * for the listbox/menu to attach before returning it.
-   */
-  async openDatasetPicker(): Promise<Locator> {
-    await expect(this.datasetCombobox).toBeVisible({ timeout: 10_000 });
-    await this.datasetCombobox.click();
-    const listbox = this.page
-      .getByRole('listbox')
-      .or(this.page.getByRole('menu'))
-      .first();
-    await expect(listbox).toBeVisible({ timeout: 10_000 });
-    return listbox;
+  openRunResults(runName: string): Promise<Locator> {
+    return openRunResults(this.dialog, runName);
   }
 
-  /**
-   * Open the "New Evaluation" modal via the primary CTA. Returns the
-   * dialog locator filtered by its title so callers can scope further
-   * interactions to it.
-   */
-  async openNewEvaluationModal(): Promise<Locator> {
-    await expect(this.newEvaluationButton).toBeEnabled({ timeout: 10_000 });
-    await this.newEvaluationButton.click();
-    const modal = this.page
-      .getByRole('dialog')
-      .filter({ hasText: /new evaluation/i })
-      .last();
-    await expect(modal).toBeVisible({ timeout: 10_000 });
-    return modal;
+  openNewReviewForRun(runName: string): Promise<Locator> {
+    return openNewReviewForRun(this.dialog, runName);
   }
 
-  /**
-   * Open the actions dropdown for a specific run row and return the menu.
-   */
-  async openRunActionsMenu(runName: string): Promise<Locator> {
-    const trigger = this.dialog.getByRole('button', {
-      name: new RegExp(`actions for ${escapeRegex(runName)}`, 'i'),
-    });
-    await expect(trigger).toBeVisible({ timeout: 10_000 });
-    await trigger.click();
-    const menu = this.page.getByRole('menu').first();
-    await expect(menu).toBeVisible({ timeout: 10_000 });
-    return menu;
+  checkRunStatus(runName: string): Promise<'pending' | 'completed' | 'failed'> {
+    return checkRunStatus(this.dialog, runName);
   }
-}
 
-function escapeRegex(input: string): string {
-  return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  exportRunCsv(runName: string): Promise<string> {
+    return exportRunCsv(this.dialog, runName);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Start evaluation dialog
+  // ---------------------------------------------------------------------------
+
+  startEvaluationDialog(): Locator {
+    return getStartEvaluationDialog(this.dialog);
+  }
+
+  openStartEvaluationDialog(): Promise<Locator> {
+    return openStartEvaluationDialog(this.dialog);
+  }
+
+  startEvaluation(opts?: { name?: string }): Promise<void> {
+    return startEvaluation(this.dialog, opts);
+  }
+
+  cancelStartEvaluation(): Promise<void> {
+    return cancelStartEvaluation(this.dialog);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Delete evaluation dialog
+  // ---------------------------------------------------------------------------
+
+  deleteEvaluationDialog(): Locator {
+    return getDeleteEvaluationDialog(this.dialog);
+  }
+
+  deleteEvaluation(runName: string): Promise<void> {
+    return deleteEvaluation(this.dialog, runName);
+  }
+
+  cancelDeleteEvaluation(runName: string): Promise<void> {
+    return cancelDeleteEvaluation(this.dialog, runName);
+  }
+
+  // ---------------------------------------------------------------------------
+  // LLM-judge ("New review" / "Evaluate") dialog
+  // ---------------------------------------------------------------------------
+
+  llmJudgeDialog(): Locator {
+    return getLlmJudgeDialog(this.dialog);
+  }
+
+  cancelLlmJudge(): Promise<void> {
+    return cancelLlmJudge(this.dialog);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Evaluation detail ("View results") dialog
+  // ---------------------------------------------------------------------------
+
+  evaluationDetailDialog(): Locator {
+    return getEvaluationDetailDialog(this.dialog);
+  }
+
+  closeEvaluationDetailDialog(): Promise<void> {
+    return closeEvaluationDetailDialog(this.dialog);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Manage benchmarks (embedded tenant Benchmarks) dialog
+  // ---------------------------------------------------------------------------
+
+  openManageBenchmarksDialog(): Promise<Locator> {
+    return openManageBenchmarksDialog(this.dialog);
+  }
+
+  searchBenchmarks(query: string): Promise<void> {
+    return searchBenchmarks(this.dialog, query);
+  }
+
+  expectBenchmarkListed(benchmarkName: string): Promise<void> {
+    return expectBenchmarkListed(this.dialog, benchmarkName);
+  }
+
+  createBenchmarkDialog(): Locator {
+    return getCreateBenchmarkDialog(this.dialog);
+  }
+
+  createBenchmark(opts: { name: string; description?: string }): Promise<void> {
+    return createBenchmark(this.dialog, opts);
+  }
+
+  closeManageBenchmarksDialog(): Promise<void> {
+    return closeManageBenchmarksDialog(this.dialog);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Benchmark items (Q&A) dialogs
+  // ---------------------------------------------------------------------------
+
+  benchmarkItemsDialog(): Locator {
+    return getBenchmarkItemsDialog(this.dialog);
+  }
+
+  openBenchmarkItems(benchmarkName: string): Promise<Locator> {
+    return openBenchmarkItems(this.dialog, benchmarkName);
+  }
+
+  expectQaItemListed(questionText: string): Promise<void> {
+    return expectQaItemListed(this.dialog, questionText);
+  }
+
+  addItemsDialog(): Locator {
+    return getAddItemsDialog(this.dialog);
+  }
+
+  openAddItemsDialog(): Promise<Locator> {
+    return openAddItemsDialog(this.dialog);
+  }
+
+  addQaPairsManually(
+    pairs: Array<{ question: string; answer?: string }>,
+  ): Promise<void> {
+    return addQaPairsManually(this.dialog, pairs);
+  }
+
+  closeBenchmarkItemsDialog(): Promise<void> {
+    return closeBenchmarkItemsDialog(this.dialog);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Utilities
+  // ---------------------------------------------------------------------------
+
+  /** A benchmark/run name unlikely to collide across parallel workers or retries. */
+  static uniqueName(prefix: string): string {
+    return `${prefix}-${Date.now()}`;
+  }
 }
