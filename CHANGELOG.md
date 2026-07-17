@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.98.1](https://github.com/iblai/os/compare/v0.98.0...v0.98.1) (2026-07-17)
+
+### CI
+
+* update stg1 E2E host IP 32.196.111.179 -> 98.82.66.78 ([5ad2e5b](https://github.com/iblai/os/commit/5ad2e5b2c44f500584f663389b81dcc170f15958))
+
 ## [0.98.0](https://github.com/iblai/os/compare/v0.97.0...v0.98.0) (2026-07-16)
 
 ### Features
