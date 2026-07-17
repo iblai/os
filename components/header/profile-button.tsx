@@ -19,6 +19,7 @@ import { useLockedTenant } from '@/hooks/use-tenant-lock';
 import { useState } from 'react';
 import { useAppSelector } from '@/lib/hooks';
 import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
+import { config } from '@/lib/config';
 import { useTranslations } from 'next-intl';
 
 interface ProfileButtonProps {
@@ -96,6 +97,7 @@ export function ProfileButton({
               onTenantChange={handleTenantSwitch}
               setHideTenantSwitcher={setHideTenantSwitcher}
               rbacPermissions={rbacPermissions}
+              enableRbac={config.enableRBAC()}
             />
           </>
         )}
