@@ -119,7 +119,7 @@
         },
         {
           "id": "ui-03",
-          "description": "Profile dropdown shows exactly 3 items",
+          "description": "Fresh signup (unauthenticated context, real /account/create registration) lands on the main tenant and the profile dropdown shows exactly 3 items: Profile, Help, Log Out",
           "status": "covered"
         },
         {
