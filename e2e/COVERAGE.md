@@ -48,7 +48,7 @@ When adding a new page or modifying an existing user flow:
 
 - [x] Mentor dropdown shows "New chat" item; non-admin sees at most 2 items
 - [x] "My Mentors" button is NOT present in the header (removed in feat-1431); mentor dropdown still shows New Chat item
-- [x] Profile dropdown shows exactly 3 items: Profile, Help, Log out
+- [x] Profile dropdown shows the three core items (Profile, Help, Log Out) plus at most one tenant-switcher row when the user belongs to another non-main tenant (`showTenantSwitcher` in nav-bar/user-profile.tsx)
 - [x] Sidebar admin-only buttons (e.g. New Project) show upgrade/auth dialog for non-admins when visible
 - [x] Non-admin in the main OR an advertising tenant sees full admin sidebar (New Agent, Workflows, Analytics, Invites, Management, Integrations, Monetization, Advanced) and clicking any trial-gated entry opens the upgrade/pricing dialog; gracefully skips when paywall is off
 
@@ -1067,7 +1067,7 @@ Sub-resource tests (Links / Keys / Tools) still require `is_lti_accessible=true`
 ### Visibility (lti-01, lti-03, lti-04)
 
 - [x] lti-01: Admin sees the LTI tab visible by default on a fresh mentor without enabling the "Enable LTI launches" toggle (`is_lti_accessible=false`) — the `enabledThroughConfig` gate was removed in feat/1853
-- [x] lti-03: Admin disables "Enable LTI launches" via the LTI tab's own in-tab capability toggle and the LTI tab stays visible (the `is_lti_accessible` gate was removed from `MENTOR_SEGMENTS`); `capability-gate-content`'s `data-enabled` flips to `false`
+- [x] lti-03: Admin disables "Enable LTI launches" via the LTI tab's own in-tab capability toggle and `capability-gate-content`'s `data-enabled` flips to `false` (the tab is unconditionally mounted for admins — tab visibility is no longer asserted)
 - [x] lti-04: Non-admin user does not see the LTI tab in the Edit Mentor modal (LTI segment remains admin-only)
 
 ### Tab header + sub-tabs (lti-05)

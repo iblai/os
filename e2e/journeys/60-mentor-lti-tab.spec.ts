@@ -183,6 +183,10 @@ async function createTestMentor(
   ).toBeVisible({ timeout: 60_000 });
 
   if (enableLti) {
+    // Open the Edit Agent modal first — the LTI page object drives tabs
+    // INSIDE the dialog and (deliberately) never opens it itself. open()
+    // also blocks until the modal hydrates past its loading spinner.
+    await editMentorPage.open();
     await editMentorPage.lti.switchToTab();
     await editMentorPage.lti.setCapabilityEnabled(true);
     await editMentorPage.lti.expectTabVisible();
@@ -263,12 +267,15 @@ test.describe('Journey 60 — LTI tab visibility', () => {
     }
   });
 
-  // ── lti-03: tab remains visible after disabling "Enable LTI launches" ────
+  // ── lti-03: disabling "Enable LTI launches" regates the tab content ──────
 
-  // lti-03: Disabling "Enable LTI launches" does NOT hide the LTI tab. The
-  // tab stays mounted so the admin can always reach the configuration
-  // surface — only the gated sub-tab content grays.
-  test('admin disables Enable LTI launches in the LTI tab and the tab stays visible', async ({
+  // lti-03: The LTI tab is unconditionally mounted for admins (feat/2040) —
+  // "the tab stays visible after disabling" guards nothing anymore. What
+  // matters is the capability toggle's effect on the GATED CONTENT: flipping
+  // "Enable LTI launches" off must flip `capability-gate-content` back to
+  // `data-enabled="false"` (grayed + inert sub-tabs), mirroring every other
+  // in-tab capability.
+  test('admin disables Enable LTI launches in the LTI tab and the gated content regates', async ({
     page,
     createMentorPage,
     editMentorPage,
@@ -278,19 +285,18 @@ test.describe('Journey 60 — LTI tab visibility', () => {
       enableLti: true,
     });
     try {
+      // createTestMentor closes the modal after enabling LTI — reopen it.
+      await editMentorPage.open();
       await editMentorPage.lti.switchToTab();
       await waitForPageReady(page);
-      // Verify visible while enabled.
-      await editMentorPage.lti.expectTabVisible();
+      // Content is ungated while the capability is on.
       await expect(editMentorPage.lti.capabilityContent).toHaveAttribute(
         'data-enabled',
         'true',
         { timeout: 10_000 },
       );
-      // Flip the toggle off — in-tab now (feat/2040).
+      // Flip the toggle off — in-tab now (feat/2040), auto-saves on click.
       await editMentorPage.lti.setCapabilityEnabled(false);
-      // Tab must still be visible after disabling; content grays instead.
-      await editMentorPage.lti.expectTabVisible();
       await expect(editMentorPage.lti.capabilityContent).toHaveAttribute(
         'data-enabled',
         'false',

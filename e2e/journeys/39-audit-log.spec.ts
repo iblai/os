@@ -100,6 +100,12 @@ test.describe('Journey 39: Audit log (tenant admin)', () => {
 
     // The Edit Mentor modal should open on the Audit tab
     await expect(editMentorPage.dialog).toBeVisible({ timeout: 15_000 });
+
+    // The modal shows only a spinner until settings + RBAC hydrate; no
+    // segment tab exists before that. The deep-link pre-selects Audit, and
+    // its Runtime category auto-activates once the segment list mounts —
+    // wait for hydration before asserting the active state.
+    await editMentorPage.waitForHydrated();
     await expect(
       editMentorPage.dialog.getByRole('tab', { name: 'Audit', exact: true }),
     ).toHaveAttribute('data-state', 'active', { timeout: 10_000 });

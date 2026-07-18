@@ -118,6 +118,13 @@ export class EditMentorPage {
     // dialog's tab nav so `selectSubTab` can restore the Settings segment
     // itself, making its helpers safe regardless of caller order.
     this.settings.bindTabNav(this.navigateToTab.bind(this));
+
+    // Same story for Tasks: the SDK's `switchToTasksTab` helper predates the
+    // category strip and expects the Tasks trigger to be in the DOM already —
+    // but Tasks lives in the Runtime category, which isn't mounted while the
+    // modal sits on its default Configurations view. Binding the tab nav lets
+    // `TasksTab.switchToTab()` activate Runtime first.
+    this.tasks.bindTabNav(this.navigateToTab.bind(this));
   }
 
   /**
@@ -310,16 +317,21 @@ export class EditMentorPage {
    * rapidly-navigated mentors — exactly what these journeys create in their
    * `beforeEach` — the mentor context churns while it settles and the RBAC
    * prefetch can 400 for a not-yet-fully-provisioned mentor, so hydration
-   * routinely takes ~30s+. Waiting on the first real segment tab (a Radix
-   * `TabsTrigger`, uniquely `aria-controls="panel-…"`) means every segment is
-   * mounted before callers (navigateToTab / test bodies) touch the sidebar,
-   * instead of racing the spinner.
+   * routinely takes ~30s+ locally and longer on slower CI workers (a 60s cap
+   * was observed to be exceeded there — hence 90s). Waiting on the first real
+   * segment tab (a Radix `TabsTrigger`, uniquely `aria-controls="panel-…"`)
+   * means every segment is mounted before callers (navigateToTab / test
+   * bodies) touch the sidebar, instead of racing the spinner.
+   *
+   * Public so specs that open the modal through their own path (e.g. the
+   * navbar mentor-dropdown deep-link in journey 39) can wait for the same
+   * signal before asserting on segment tabs.
    */
-  private async waitForHydrated(): Promise<void> {
+  async waitForHydrated(): Promise<void> {
     await this.dialog
       .locator('[role="tab"][aria-controls^="panel-"]:visible')
       .first()
-      .waitFor({ state: 'visible', timeout: 60_000 });
+      .waitFor({ state: 'visible', timeout: 90_000 });
   }
 
   /**
@@ -429,9 +441,44 @@ export class EditMentorPage {
     await this.unhideEditDialog();
 
     await expect(this.dialog).toBeVisible({ timeout: 35_000 });
+
+    // Same hydration story as open(): a sibling mentor picked from the list
+    // has no cached settings/RBAC, so the modal shows its spinner while both
+    // load — callers (journey 06 asserts the full segment sidebar) must not
+    // race it.
+    await this.waitForHydrated();
   }
 
   async navigateToTab(tabName: string): Promise<void> {
+    // The modal re-enters its loading spinner whenever its mentor context
+    // changes with the dialog left open (e.g. Copy Mentor's submit points the
+    // open dialog at the freshly-copied mentor — journey 36), unmounting every
+    // segment tab until settings + RBAC re-hydrate. Wait for hydration at
+    // entry so callers never race the spinner; on an already-hydrated modal
+    // the first segment tab is visible and this returns immediately.
+    //
+    // A single entry-wait is not enough for the context-switch case: right
+    // after the switch there is a pre-spinner window where the OLD mentor's
+    // tabs are still mounted, so the entry-wait passes instantly and the
+    // spinner then swallows the tabs mid-navigation. `attemptNavigate` throws
+    // on that race (its 15s tab-wait outlives the window), so retry once —
+    // by then waitForHydrated genuinely blocks until re-hydration completes.
+    await this.waitForHydrated();
+    try {
+      await this.attemptNavigateToTab(tabName);
+    } catch (firstError) {
+      const spinnerLikelyAppeared =
+        (await this.dialog
+          .locator('[role="tab"][aria-controls^="panel-"]:visible')
+          .count()
+          .catch(() => 0)) === 0;
+      if (!spinnerLikelyAppeared) throw firstError;
+      await this.waitForHydrated();
+      await this.attemptNavigateToTab(tabName);
+    }
+  }
+
+  private async attemptNavigateToTab(tabName: string): Promise<void> {
     // The sidebar now renders only the segments belonging to the active
     // category, so segment triggers outside that category aren't in the DOM
     // yet. Switch to the segment's category first when known.

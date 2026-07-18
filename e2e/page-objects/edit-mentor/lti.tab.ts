@@ -169,6 +169,26 @@ export class LtiTab {
    * API, Embed live there too).
    */
   async activateCategory(): Promise<void> {
+    // The modal renders only a spinner until settings + RBAC hydrate — the
+    // category strip and every segment trigger mount after that, which can
+    // take ~30s+ on freshly-created mentors (mirrors the host page object's
+    // `waitForHydrated`). Wait for the hydration signal (any visible segment
+    // tab) before touching the pill so we never race the spinner.
+    await this.dialog
+      .locator('[role="tab"][aria-controls^="panel-"]:visible')
+      .first()
+      .waitFor({ state: 'visible', timeout: 90_000 });
+
+    // Post-hydration the pill either exists right away or not at all (the
+    // strip is dropped entirely when only one category has items — e.g. a
+    // non-admin's minimal sidebar). Bounded check, then fall through: the
+    // caller's own tab waits decide the outcome.
+    const hasStrip = await this.categoryTab
+      .waitFor({ state: 'visible', timeout: 5_000 })
+      .then(() => true)
+      .catch(() => false);
+    if (!hasStrip) return;
+
     const active =
       (await this.categoryTab.getAttribute('data-state').catch(() => null)) ===
       'active';
