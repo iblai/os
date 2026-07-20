@@ -4,34 +4,34 @@
 
 ### Bug Fixes
 
-* **chat:** add sanitizePromptParam sanitizer and length cap ([24a1984](https://github.com/iblai/os/commit/24a198476d139b9b8e26f4a9e81426509e9bce8f))
-* **chat:** sanitize the ?prompt= deep-link param at chat entry ([053cf84](https://github.com/iblai/os/commit/053cf8469e9c5b5adeb4db3399fbfb2a22495246))
-* **chat:** strip bidirectional control chars in sanitizePromptParam ([a8a757e](https://github.com/iblai/os/commit/a8a757e6f3eb5a5a5ef69f86fceb0de05481d43e))
+- **chat:** add sanitizePromptParam sanitizer and length cap ([24a1984](https://github.com/iblai/os/commit/24a198476d139b9b8e26f4a9e81426509e9bce8f))
+- **chat:** sanitize the ?prompt= deep-link param at chat entry ([053cf84](https://github.com/iblai/os/commit/053cf8469e9c5b5adeb4db3399fbfb2a22495246))
+- **chat:** strip bidirectional control chars in sanitizePromptParam ([a8a757e](https://github.com/iblai/os/commit/a8a757e6f3eb5a5a5ef69f86fceb0de05481d43e))
 
 ### Documentation
 
-* **e2e:** note bidi-control coverage in prompt-injection journey ([133520f](https://github.com/iblai/os/commit/133520f09b1ca14a7dec50936bace64db29e6c1a))
-* **e2e:** record prompt-sanitization coverage ([e16ff8c](https://github.com/iblai/os/commit/e16ff8c687bf756a65728706b319343adf9c4326))
+- **e2e:** note bidi-control coverage in prompt-injection journey ([133520f](https://github.com/iblai/os/commit/133520f09b1ca14a7dec50936bace64db29e6c1a))
+- **e2e:** record prompt-sanitization coverage ([e16ff8c](https://github.com/iblai/os/commit/e16ff8c687bf756a65728706b319343adf9c4326))
 
 ### Styles
 
-* normalize CHANGELOG and docs to prettier after v0.96.2 merge ([61b8294](https://github.com/iblai/os/commit/61b829447173a6ff4049e69082d0d865c8805296))
-* normalize CHANGELOG to prettier after v0.98.1 merge ([5f055c5](https://github.com/iblai/os/commit/5f055c545d07ef228c2c353601f086c119b68100))
+- normalize CHANGELOG and docs to prettier after v0.96.2 merge ([61b8294](https://github.com/iblai/os/commit/61b829447173a6ff4049e69082d0d865c8805296))
+- normalize CHANGELOG to prettier after v0.98.1 merge ([5f055c5](https://github.com/iblai/os/commit/5f055c545d07ef228c2c353601f086c119b68100))
 
 ### Tests
 
-* **chat:** unit-test sanitizePromptParam and sanitized prompt forwarding ([421708d](https://github.com/iblai/os/commit/421708d8bc123075ce6859c3bb4eca1910c1cf08))
-* **e2e:** cover ?prompt= sanitization scenarios ([668c69e](https://github.com/iblai/os/commit/668c69e0bf81780677f3072ce5d677e76ee69adc))
-* **e2e:** make Journey 3 profile-dropdown test use a real new user ([30ab73f](https://github.com/iblai/os/commit/30ab73f4625e98f4314544bfc53f055e53a7f1fe))
-* **e2e:** skip flaky cp-chat-06 private-context test pending [#2186](https://github.com/iblai/os/issues/2186) ([1a806f1](https://github.com/iblai/os/commit/1a806f1bfba522881cee3dfb0932ff2e4e0e794f))
+- **chat:** unit-test sanitizePromptParam and sanitized prompt forwarding ([421708d](https://github.com/iblai/os/commit/421708d8bc123075ce6859c3bb4eca1910c1cf08))
+- **e2e:** cover ?prompt= sanitization scenarios ([668c69e](https://github.com/iblai/os/commit/668c69e0bf81780677f3072ce5d677e76ee69adc))
+- **e2e:** make Journey 3 profile-dropdown test use a real new user ([30ab73f](https://github.com/iblai/os/commit/30ab73f4625e98f4314544bfc53f055e53a7f1fe))
+- **e2e:** skip flaky cp-chat-06 private-context test pending [#2186](https://github.com/iblai/os/issues/2186) ([1a806f1](https://github.com/iblai/os/commit/1a806f1bfba522881cee3dfb0932ff2e4e0e794f))
 
 ## [0.98.2](https://github.com/iblai/os/compare/v0.98.1...v0.98.2) (2026-07-20)
 
 ### Documentation
 
-* **readme:** consistent "Download for X" CTAs with official platform logos ([290e2f4](https://github.com/iblai/os/commit/290e2f476bf3fc866903aacc16afe8d221de0346))
-* **readme:** redesign landing README with download buttons and case studies ([b269084](https://github.com/iblai/os/commit/b269084518b8ff473dc25994fac23face5439697))
-* **readme:** tweak header labels, web-first CTA, trim stats strip ([cb6c544](https://github.com/iblai/os/commit/cb6c5445a9589b07b106ed539ced43e2139c2211))
+- **readme:** consistent "Download for X" CTAs with official platform logos ([290e2f4](https://github.com/iblai/os/commit/290e2f476bf3fc866903aacc16afe8d221de0346))
+- **readme:** redesign landing README with download buttons and case studies ([b269084](https://github.com/iblai/os/commit/b269084518b8ff473dc25994fac23face5439697))
+- **readme:** tweak header labels, web-first CTA, trim stats strip ([cb6c544](https://github.com/iblai/os/commit/cb6c5445a9589b07b106ed539ced43e2139c2211))
 
 ## [0.98.1](https://github.com/iblai/os/compare/v0.98.0...v0.98.1) (2026-07-17)
 
