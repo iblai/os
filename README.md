@@ -8,21 +8,21 @@
 
 Build, deploy, and manage intelligent conversational agents — from prototype to production, in minutes. One codebase. Every platform. Your code, your data, any LLM.
 
-[![Website](https://img.shields.io/badge/Website-ibl.ai-blue)](https://ibl.ai)
-[![Docs](https://img.shields.io/badge/Docs-docs.ibl.ai-green)](https://docs.ibl.ai)
+[![Join](https://img.shields.io/badge/Join-blue)](https://ibl.ai/join)
+[![About](https://img.shields.io/badge/About-ibl.ai-blue)](https://ibl.ai)
+[![Docs](https://img.shields.io/badge/Docs-ibl.ai%2Fdocs-green)](https://ibl.ai/docs)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
-[![Next.js](https://img.shields.io/badge/Next.js-black?logo=next.js&logoColor=white)](https://nextjs.org)
 [![SOC 2 Type II](https://img.shields.io/badge/SOC_2-Type_II-blue)](https://ibl.ai)
 
 <br>
 
 ### ⬇️ Get ibl.ai/os
 
+<a href="https://os.ibl.ai"><img src="https://img.shields.io/badge/Use_it_on_the_Web-2563eb?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Use it on the Web" height="42"></a>
+&nbsp;
 <a href="https://github.com/iblai/os/releases/download/app-v0.95.4/ibl.ai_0.95.4_universal.dmg"><img src="https://img.shields.io/badge/Download_for_macOS-000000?style=for-the-badge&logo=apple&logoColor=white" alt="Download for macOS" height="42"></a>
 &nbsp;
 <a href="https://github.com/iblai/os/releases/download/app-v0.95.4/ibl.ai_0.95.4_x64-setup.exe"><img src="https://img.shields.io/badge/Download_for_Windows-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Download for Windows" height="42"></a>
-&nbsp;
-<a href="https://os.ibl.ai"><img src="https://img.shields.io/badge/Open_the_Web_App-2563eb?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Open the Web App" height="42"></a>
 
 <a href="https://apps.apple.com/us/app/ibl-ai/id6504929071"><img src="https://img.shields.io/badge/Download_on_the-App_Store-000000?style=for-the-badge&logo=apple&logoColor=white" alt="Download on the App Store" height="38"></a>
 &nbsp;
@@ -46,9 +46,7 @@ Build, deploy, and manage intelligent conversational agents — from prototype t
 
 <div align="center">
 
-### **1.6M+ users** &nbsp;·&nbsp; **400+ organizations** &nbsp;·&nbsp; **SOC 2 Type II** &nbsp;·&nbsp; **FERPA compliant**
-
-Universities, enterprises, and governments run on ibl.ai — [read the case studies →](https://ibl.ai/case-studies)
+**SOC 2 Type II** &nbsp;·&nbsp; Universities, enterprises, and governments run on ibl.ai — [read the case studies →](https://ibl.ai/case-studies)
 
 </div>
 
