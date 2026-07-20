@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.98.4](https://github.com/iblai/os/compare/v0.98.3...v0.98.4) (2026-07-20)
+
+### CI
+
+* **e2e:** prune old docker images on stg deploy so the box never fills ([8982753](https://github.com/iblai/os/commit/8982753ec113224dda356a4c79102bcdf08e622b))
+
 ## [0.98.3](https://github.com/iblai/os/compare/v0.98.2...v0.98.3) (2026-07-20)
 
 ### Bug Fixes
