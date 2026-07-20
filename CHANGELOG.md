@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.98.6](https://github.com/iblai/os/compare/v0.98.5...v0.98.6) (2026-07-20)
+
+### Bug Fixes
+
+* **desktop:** round the app icon corners into a native macOS squircle ([5c24c6d](https://github.com/iblai/os/commit/5c24c6d225955b6785522ae37df54b4f481fa1b7))
+
 ## [0.98.5](https://github.com/iblai/os/compare/v0.98.4...v0.98.5) (2026-07-20)
 
 ### Bug Fixes
