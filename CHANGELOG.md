@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.98.2](https://github.com/iblai/os/compare/v0.98.1...v0.98.2) (2026-07-20)
+
+### Documentation
+
+* **readme:** consistent "Download for X" CTAs with official platform logos ([290e2f4](https://github.com/iblai/os/commit/290e2f476bf3fc866903aacc16afe8d221de0346))
+* **readme:** redesign landing README with download buttons and case studies ([b269084](https://github.com/iblai/os/commit/b269084518b8ff473dc25994fac23face5439697))
+* **readme:** tweak header labels, web-first CTA, trim stats strip ([cb6c544](https://github.com/iblai/os/commit/cb6c5445a9589b07b106ed539ced43e2139c2211))
+
+## [0.98.1](https://github.com/iblai/os/compare/v0.98.0...v0.98.1) (2026-07-17)
+
+### CI
+
+* update stg1 E2E host IP 32.196.111.179 -> 98.82.66.78 ([5ad2e5b](https://github.com/iblai/os/commit/5ad2e5b2c44f500584f663389b81dcc170f15958))
+
+## [0.98.0](https://github.com/iblai/os/compare/v0.97.0...v0.98.0) (2026-07-16)
+
+### Features
+
+* **seo:** add SEO foundation (robots, sitemap, manifest, metadata, JSON-LD) ([e93fc91](https://github.com/iblai/os/commit/e93fc91c2bf28330c28d73606210075a5feb734c))
+* **seo:** index public mentor pages with rich metadata + JSON-LD ([874bfc3](https://github.com/iblai/os/commit/874bfc3546d825474b2802ab1dea44ac44b627f1))
+* **seo:** make the explore mentor-directory pages indexable ([7448aaf](https://github.com/iblai/os/commit/7448aafbf33a213e70174901956ec95713287e29))
+* **seo:** noindex rich OG cards for shared chat pages ([833f7a7](https://github.com/iblai/os/commit/833f7a7e1579b8951c76c329b103ae651121d830))
+* **seo:** say "Agents" not "Mentors", list agents on explore, screenshot OG fallback ([f8f0906](https://github.com/iblai/os/commit/f8f0906e3eb03ba19593b705f8345891a404ec3b))
+
+### Bug Fixes
+
+* **seo:** never cache SEO fetches; list only public agents in explore meta ([e74c82b](https://github.com/iblai/os/commit/e74c82b5fe96c7dd1b184a2a0b3c3114bb4e5026))
+
 ## [0.97.0](https://github.com/iblai/os/compare/v0.96.2...v0.97.0) (2026-07-16)
 
 ### Features
