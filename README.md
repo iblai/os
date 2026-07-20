@@ -2,83 +2,135 @@
 
 <a href="https://ibl.ai"><img src="https://ibl.ai/images/iblai-logo.png" alt="ibl.ai" width="300"></a>
 
-# OS
+# ibl.ai/os
 
 **The open-source AI agent platform.**
 
-Build, deploy, and manage intelligent conversational agents — from prototype to production — in minutes.
+Build, deploy, and manage intelligent conversational agents — from prototype to production, in minutes. One codebase. Every platform. Your code, your data, any LLM.
 
 [![Website](https://img.shields.io/badge/Website-ibl.ai-blue)](https://ibl.ai)
 [![Docs](https://img.shields.io/badge/Docs-docs.ibl.ai-green)](https://docs.ibl.ai)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 [![Next.js](https://img.shields.io/badge/Next.js-black?logo=next.js&logoColor=white)](https://nextjs.org)
-[![macOS](https://img.shields.io/badge/macOS-000000?logo=apple&logoColor=white)](https://github.com/iblai/vibe/blob/main/skills/iblai-ops-build/SKILL.md)
-[![iOS](https://img.shields.io/badge/iOS-000000?logo=apple&logoColor=white)](https://github.com/iblai/vibe/blob/main/skills/iblai-ops-build/SKILL.md)
-[![Android](https://img.shields.io/badge/Android-3DDC84?logo=android&logoColor=white)](https://github.com/iblai/vibe/blob/main/skills/iblai-ops-build/SKILL.md)
-[![Surface](https://img.shields.io/badge/Surface-0078D4?logo=microsoft&logoColor=white)](https://github.com/iblai/vibe/blob/main/skills/iblai-ops-build/SKILL.md)
+[![SOC 2 Type II](https://img.shields.io/badge/SOC_2-Type_II-blue)](https://ibl.ai)
 
-[![Demo by Miguel Amigot, CTO at ibl.ai](https://img.youtube.com/vi/5LOAZyTbRQs/maxresdefault.jpg)](https://www.youtube.com/playlist?list=PLW0-4yErlU3XQr0UP6cCGwy24LMf7I5vR)
+<br>
 
-_[Demo](https://www.youtube.com/playlist?list=PLW0-4yErlU3XQr0UP6cCGwy24LMf7I5vR) by Miguel Amigot, CTO at ibl.ai_
+### ⬇️ Get ibl.ai/os
 
-[Features](#features) · [Screenshots](#screenshots) · [Quick Start](#quick-start) · [Deployment](#deployment) · [Troubleshooting](#troubleshooting) · [Testing](#testing) · [Contributing](#contributing)
+<a href="https://github.com/iblai/os/releases/download/app-v0.95.4/ibl.ai_0.95.4_universal.dmg"><img src="https://img.shields.io/badge/Download_for_macOS-000000?style=for-the-badge&logo=apple&logoColor=white" alt="Download for macOS" height="42"></a>
+&nbsp;
+<a href="https://github.com/iblai/os/releases/download/app-v0.95.4/ibl.ai_0.95.4_x64-setup.exe"><img src="https://img.shields.io/badge/Download_for_Windows-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Download for Windows" height="42"></a>
+&nbsp;
+<a href="https://os.ibl.ai"><img src="https://img.shields.io/badge/Open_the_Web_App-2563eb?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Open the Web App" height="42"></a>
+
+<a href="https://apps.apple.com/us/app/ibl-ai/id6504929071"><img src="https://img.shields.io/badge/Download_on_the-App_Store-000000?style=for-the-badge&logo=apple&logoColor=white" alt="Download on the App Store" height="38"></a>
+&nbsp;
+<a href="https://play.google.com/store/apps/details?id=ai.ibl.mentorai"><img src="https://img.shields.io/badge/GET_IT_ON-Google_Play-3DDC84?style=for-the-badge&logo=googleplay&logoColor=white" alt="Get it on Google Play" height="38"></a>
+
+<sub>Windows ARM64 · older builds · Linux → [all downloads](docs/DOWNLOADS.md)</sub>
+
+<br>
+
+[![Watch the demo](https://img.youtube.com/vi/5LOAZyTbRQs/maxresdefault.jpg)](https://www.youtube.com/playlist?list=PLW0-4yErlU3XQr0UP6cCGwy24LMf7I5vR)
+
+**▶︎ [Watch the demo](https://www.youtube.com/playlist?list=PLW0-4yErlU3XQr0UP6cCGwy24LMf7I5vR)** &nbsp;·&nbsp; _by Miguel Amigot, CTO at ibl.ai_
+
+<br>
+
+[Why ibl.ai/os](#why-iblaios) · [Every platform](#every-platform-one-codebase) · [Features](#features) · [Case studies](#case-studies) · [Screenshots](#screenshots) · [Quick Start](#quick-start) · [Deployment](#deployment)
 
 </div>
 
 ---
 
-## Available On
-
 <div align="center">
 
-| Platform    | Status                                                                                                     |
-| ----------- | ---------------------------------------------------------------------------------------------------------- |
-| **Web**     | Production at [os.ibl.ai](https://os.ibl.ai) — works on any modern browser                                 |
-| **macOS**   | Native desktop app — [download the latest build](#download)                                                |
-| **iOS**     | Native mobile app — [download on the App Store](https://apps.apple.com/us/app/ibl-ai/id6504929071)         |
-| **Android** | Native mobile app — [get it on Google Play](https://play.google.com/store/apps/details?id=ai.ibl.mentorai) |
-| **Windows** | Native desktop app                                                                                         |
-| **Linux**   | Native desktop app                                                                                         |
+### **1.6M+ users** &nbsp;·&nbsp; **400+ organizations** &nbsp;·&nbsp; **SOC 2 Type II** &nbsp;·&nbsp; **FERPA compliant**
+
+Universities, enterprises, and governments run on ibl.ai — [read the case studies →](https://ibl.ai/case-studies)
 
 </div>
 
-One codebase, six platforms. OS runs natively everywhere your users are — lightweight, fast, with near-native performance.
+---
+
+## Why ibl.ai/os
+
+|                             |                                                                                                                       |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| 🔓 **Your code, your data** | MIT-licensed and self-hostable. No vendor lock-in — full ownership of the stack and everything that flows through it. |
+| 🧠 **Any LLM, your choice** | Bring OpenAI, Anthropic, Google, Microsoft, Meta, or your own models. Switch providers without rewrites.              |
+| 📱 **Truly everywhere**     | One codebase ships as web, macOS, Windows, Linux, iOS, and Android — with near-native performance.                    |
+| 🏢 **Enterprise-ready**     | Multi-tenancy, SSO, RBAC, Stripe billing, and whitelabeling built in — not bolted on later.                           |
+
+---
+
+## Every platform, one codebase
+
+Most AI apps make you choose a device. ibl.ai/os meets your users wherever they are — the same product, native everywhere.
+
+<div align="center">
+
+| Platform    |     | Status                                                                                                |
+| ----------- | --- | ----------------------------------------------------------------------------------------------------- |
+| **Web**     | 🌐  | Live at **[os.ibl.ai](https://os.ibl.ai)** — any modern browser                                       |
+| **macOS**   | 🍎  | Native app — [download universal .dmg](docs/DOWNLOADS.md) (Intel + Apple Silicon, signed & notarized) |
+| **Windows** | 🪟  | Native app — [download installer](docs/DOWNLOADS.md) (x64 + ARM64)                                    |
+| **iOS**     | 📱  | Native app — [App Store](https://apps.apple.com/us/app/ibl-ai/id6504929071)                           |
+| **Android** | 🤖  | Native app — [Google Play](https://play.google.com/store/apps/details?id=ai.ibl.mentorai)             |
+| **Linux**   | 🐧  | Native app — [build from source](docs/development.md)                                                 |
+
+</div>
 
 ---
 
 ## Features
 
-- **AI Agents** — Create custom agents with configurable LLMs, system prompts, tools, and safety filters
-- **RAG Training** — Upload documents, connect Google Drive, OneDrive, Dropbox, or crawl websites to ground agents in your data
-- **Voice Calls** — Real-time WebRTC voice chat powered by LiveKit
-- **Deep Research** — Extended multi-step reasoning for complex queries
-- **Canvas / Artifacts** — Generate, edit, and version rich documents alongside chat
-- **Screen Sharing** — Share your screen directly inside a chat session
-- **Web Search** — Ground responses with live web results
-- **MCP Servers** — Extend agent capabilities with Model Context Protocol tool servers
-- **Analytics** — Usage dashboards, topic analysis, transcript viewer, and financial reporting
-- **Projects** — Collaborative workspaces to group agents with shared context and goals
-- **Cross-Platform** — Ships as web, desktop (macOS, Windows, Linux), and mobile (iOS, Android)
-- **Multi-tenancy** — Full tenant isolation with per-org configuration, branding, and user management
-- **SSO** — Single Sign-On with configurable identity providers (OAuth, OIDC, SAML)
-- **RBAC** — Granular role-based access control with policies and group-based permissions
-- **Stripe Billing** — Subscription management, free trials, and usage-based pricing
-- **Embed Mode** — Embed agents in any website via iframe with custom styling
-- **Custom Domains** — Host agents on your own domain
-- **API Keys** — Programmatic access for integrations and automation
-- **Whitelabeling** — Custom branding, logos, and disclaimers
+<table>
+<tr>
+<td width="50%" valign="top">
+
+**🤖 Build & customize**
+
+- **AI Agents** — configurable LLMs, system prompts, tools, and safety filters
+- **Projects** — collaborative workspaces with shared context and goals
+- **Canvas / Artifacts** — generate, edit, and version rich documents alongside chat
+- **MCP Servers** — extend agents with Model Context Protocol tool servers
+
+**📚 Ground in your data**
+
+- **RAG Training** — upload docs, connect Google Drive / OneDrive / Dropbox, or crawl sites
+- **Web Search** — ground responses with live web results
+- **Deep Research** — extended multi-step reasoning for complex queries
+
+</td>
+<td width="50%" valign="top">
+
+**🎙️ Rich conversations**
+
+- **Voice Calls** — real-time WebRTC voice chat powered by LiveKit
+- **Screen Sharing** — share your screen directly inside a session
+
+**🏢 Operate & scale**
+
+- **Analytics** — usage dashboards, topic analysis, transcripts, financial reporting
+- **Multi-tenancy** — full tenant isolation, per-org branding & user management
+- **SSO & RBAC** — OAuth / OIDC / SAML with granular role-based access
+- **Stripe Billing** — subscriptions, free trials, usage-based pricing
+- **Embed & API** — iframe embed mode, custom domains, and API keys
+- **Whitelabeling** — custom branding, logos, and disclaimers
+
+</td>
+</tr>
+</table>
 
 ---
 
-## Download
+## Case studies
 
-**Latest macOS build:** [ibl.ai app-v0.95.4 (Universal .dmg)](https://github.com/iblai/os/releases/download/app-v0.95.4/ibl.ai_0.95.4_universal.dmg) · [all versions](docs/DOWNLOADS.md)
+Universities, enterprises, and government agencies build on ibl.ai — deploying agents on their own infrastructure, with their own models, at a fraction of the cost of closed platforms.
 
-**Latest Windows build:** [ibl.ai app-v0.95.4 (x64 .exe)](https://github.com/iblai/os/releases/download/app-v0.95.4/ibl.ai_0.95.4_x64-setup.exe) · [ARM64 .exe](https://github.com/iblai/os/releases/download/app-v0.95.4/ibl.ai_0.95.4_arm64-setup.exe) · [all versions](docs/DOWNLOADS.md)
-
-Signed & notarized universal macOS build (Intel + Apple Silicon); self-signed
-Windows installers (Intel x64 + ARM64). Older versions are listed in
-[docs/DOWNLOADS.md](docs/DOWNLOADS.md).
+**[Read the case studies →](https://ibl.ai/case-studies)**
 
 ---
 
@@ -86,25 +138,22 @@ Windows installers (Intel x64 + ARM64). Older versions are listed in
 
 <div align="center">
 
-<img src="docs/images/agent-config.jpeg" alt="Agent Configuration" width="800">
+<img src="docs/images/agent-config.jpeg" alt="Agent Configuration" width="820">
 
-_Configure agents with LLMs, prompts, safety filters, and explore conversation starters_
+<sub>**Agent configuration** — dial in LLMs, prompts, safety filters, and conversation starters</sub>
 
-<img src="docs/images/agent-settings.jpeg" alt="Agent Settings" width="800">
+<br><br>
 
-_Customize agent identity, description, and appearance_
-
-<img src="docs/images/mcp-connectors.jpeg" alt="MCP Connectors" width="800">
-
-_Connect to external services via Model Context Protocol — GitHub, Notion, Slack, and more_
-
-<img src="docs/images/memory-settings.jpeg" alt="Memory Settings" width="800">
-
-_Manage agent memory with knowledge gaps, learning goals, and user preferences_
-
-<img src="docs/images/agent-discovery.jpeg" alt="Agent Discovery" width="800">
-
-_Control agent visibility, access permissions, and LTI integration_
+<table>
+<tr>
+<td width="50%"><img src="docs/images/agent-settings.jpeg" alt="Agent Settings"><br><sub><b>Agent settings</b> — identity, description, and appearance</sub></td>
+<td width="50%"><img src="docs/images/mcp-connectors.jpeg" alt="MCP Connectors"><br><sub><b>MCP connectors</b> — GitHub, Notion, Slack, and more</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/images/memory-settings.jpeg" alt="Memory Settings"><br><sub><b>Memory</b> — knowledge gaps, learning goals, preferences</sub></td>
+<td width="50%"><img src="docs/images/agent-discovery.jpeg" alt="Agent Discovery"><br><sub><b>Discovery</b> — visibility, access permissions, and LTI</sub></td>
+</tr>
+</table>
 
 </div>
 
@@ -118,7 +167,7 @@ cd os
 pnpm install
 ```
 
-**Using [Claude Code](https://claude.ai/claude-code)?** Run `/setup` — it will walk you through connecting your ibl.ai tenant and configuring `.env.local` automatically.
+**Using [Claude Code](https://claude.ai/claude-code)?** Run `/setup` — it walks you through connecting your ibl.ai tenant and configuring `.env.local` automatically.
 
 **Manual setup:** Copy `.env.example` to `.env.local`, then set `NEXT_PUBLIC_MAIN_TENANT_KEY` to your org key from [login.iblai.app/me](https://login.iblai.app/me).
 
@@ -133,7 +182,7 @@ Open [http://localhost:3000](http://localhost:3000). See the full [Development G
 
 ## Deployment
 
-OS is the frontend for the ibl.ai platform. Choose your path based on your backend setup:
+ibl.ai/os is the frontend for the ibl.ai platform. Choose your path based on your backend setup:
 
 ### Option A: Existing ibl.ai Tenant
 
@@ -184,7 +233,7 @@ If you need full backend infrastructure:
 
    If you already have access to our Docker images, deploy them easily via [iblai/iblai-infra-cli](https://github.com/iblai/iblai-infra-cli).
 
-> **Note**: OS requires the ibl.ai backend platform for authentication, AI agent APIs, and data services. The backend is not included in this repository — visit [ibl.ai](https://ibl.ai) to get started.
+> **Note**: ibl.ai/os requires the ibl.ai backend platform for authentication, AI agent APIs, and data services. The backend is not included in this repository — visit [ibl.ai](https://ibl.ai) to get started.
 
 ### Desktop & Mobile
 
@@ -279,7 +328,7 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 
 ## Resources
 
-- [Documentation](https://docs.ibl.ai)
+- [Documentation](https://ibl.ai/docs)
 - [Development Guide](docs/development.md) — setup, scripts, architecture, configuration
 - [iblai-app-cli](https://github.com/iblai/iblai-app-cli) — CLI for scaffolding ibl.ai apps
 - [@iblai/mcp](https://www.npmjs.com/package/@iblai/mcp) — MCP server for AI-assisted development
@@ -288,6 +337,14 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 
 ---
 
+<div align="center">
+
 ## License
 
 MIT License. See [LICENSE](LICENSE) for details.
+
+<br>
+
+**[ibl.ai](https://ibl.ai)** · Your organization's AI, under your control.
+
+</div>
