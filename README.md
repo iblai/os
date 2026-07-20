@@ -24,9 +24,9 @@ Build, deploy, and manage intelligent conversational agents — from prototype t
 &nbsp;
 <a href="https://github.com/iblai/os/releases/download/app-v0.95.4/ibl.ai_0.95.4_x64-setup.exe"><img src="https://img.shields.io/badge/Download_for_Windows-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Download for Windows" height="42"></a>
 
-<a href="https://apps.apple.com/us/app/ibl-ai/id6504929071"><img src="https://img.shields.io/badge/Download_on_the-App_Store-000000?style=for-the-badge&logo=apple&logoColor=white" alt="Download on the App Store" height="38"></a>
+<a href="https://apps.apple.com/us/app/ibl-ai/id6504929071"><img src="https://img.shields.io/badge/Download_for_iOS-000000?style=for-the-badge&logo=apple&logoColor=white" alt="Download for iOS" height="42"></a>
 &nbsp;
-<a href="https://play.google.com/store/apps/details?id=ai.ibl.mentorai"><img src="https://img.shields.io/badge/GET_IT_ON-Google_Play-3DDC84?style=for-the-badge&logo=googleplay&logoColor=white" alt="Get it on Google Play" height="38"></a>
+<a href="https://play.google.com/store/apps/details?id=ai.ibl.mentorai"><img src="https://img.shields.io/badge/Download_for_Android-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Download for Android" height="42"></a>
 
 <sub>Windows ARM64 · older builds · Linux → [all downloads](docs/DOWNLOADS.md)</sub>
 
