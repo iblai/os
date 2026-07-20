@@ -1,11 +1,11 @@
 {
   "version": 2,
-  "lastUpdated": "2026-07-16",
+  "lastUpdated": "2026-07-21",
   "summary": {
-    "totalCheckpoints": 551,
-    "coveredCheckpoints": 525,
+    "totalCheckpoints": 556,
+    "coveredCheckpoints": 529,
     "deprecatedCheckpoints": 12,
-    "notReproducibleCheckpoints": 7,
+    "notReproducibleCheckpoints": 8,
     "pendingCheckpoints": 7,
     "percent": 100,
     "totalJourneys": 63,
