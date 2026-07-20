@@ -66,6 +66,106 @@ describe('preprocessLaTeX function', () => {
     expect(preprocessLaTeX('$3x$')).toBe('$3x$');
   });
 
+  it('should unwrap dollar-wrapped text styling commands (issue #2109)', () => {
+    // LLMs wrap prose in `$...$` with a text-mode command to mean *formatting*,
+    // not math. These must become Markdown, not KaTeX math, and must not leave
+    // any `$` behind (which would re-open a math span in remark-math).
+    expect(preprocessLaTeX('$\\textbf{Custom AI Agents}$')).toBe(
+      '**Custom AI Agents**',
+    );
+    expect(preprocessLaTeX('$\\text{ibl.ai}$')).toBe('ibl.ai');
+    expect(preprocessLaTeX('$\\textit{RAG Training}$')).toBe('*RAG Training*');
+    expect(preprocessLaTeX('$\\emph{note}$')).toBe('*note*');
+    expect(preprocessLaTeX('$\\texttt{code}$')).toBe('`code`');
+    expect(preprocessLaTeX('$\\underline{underlined}$')).toBe(
+      '<u>underlined</u>',
+    );
+    expect(preprocessLaTeX('$\\textrm{plain}$')).toBe('plain');
+    // Block-delimited styling wrappers unwrap too.
+    expect(preprocessLaTeX('$$\\textbf{Enterprise Management}$$')).toBe(
+      '**Enterprise Management**',
+    );
+    // An escaped ampersand inside a bold wrapper is later unescaped (\& -> &),
+    // so it renders as a literal "&" in Markdown bold.
+    expect(preprocessLaTeX('$\\textbf{Canvas \\& Artifacts}$')).toBe(
+      '**Canvas & Artifacts**',
+    );
+  });
+
+  it('must not let a styling unwrap straddle newlines and eat structure (issue #2109 regression)', () => {
+    // A tutoring reply: inline math on one line, a bold heading, then a block
+    // equation. The styling-unwrap regexes must NOT pair the closing `$` of one
+    // math span with the opening `$` of the next across the blank line -- doing
+    // so swallowed the heading and `$$...$$` delimiters between them.
+    const raw = [
+      '**Given:** Evaluate $3x + 5$ when $x = 4$',
+      '',
+      '**Step 1: Write the original expression**',
+      '$$3x + 5$$',
+      '',
+      '**Step 2: Substitute $x = 4$**',
+      '$$3(4) + 5$$',
+    ].join('\n');
+    const out = preprocessLaTeX(raw);
+    expect(out).toContain('$$3x + 5$$');
+    expect(out).toContain('$$3(4) + 5$$');
+    expect(out).toContain('**Step 1: Write the original expression**');
+    expect(out).not.toContain('\\$'); // no currency-escape corruption
+    // Structure (line count) preserved, not collapsed onto one line.
+    expect(out.split('\n').length).toBeGreaterThanOrEqual(6);
+  });
+
+  it('should unwrap Markdown bold trapped inside dollar delimiters (issue #2109)', () => {
+    // The model emits `$**text**$` (Markdown bold inside `$`), not `\textbf`.
+    // Left alone, KaTeX renders the `**` as literal math stars. These must
+    // become Markdown bold, not math.
+    expect(preprocessLaTeX('$**Custom AI Agents**$')).toBe(
+      '**Custom AI Agents**',
+    );
+    expect(preprocessLaTeX('$$**Enterprise Management**$$')).toBe(
+      '**Enterprise Management**',
+    );
+    expect(preprocessLaTeX('__underscored bold__ outside stays: $__b__$')).toBe(
+      '__underscored bold__ outside stays: __b__',
+    );
+    // In a bullet list, the way a real feature list arrives.
+    expect(preprocessLaTeX('* $**Canvas & Artifacts**$: rich documents.')).toBe(
+      '* **Canvas & Artifacts**: rich documents.',
+    );
+    // Single `*`/`_` are NOT unwrapped -- they are legitimate math.
+    expect(preprocessLaTeX('$a * b$')).toBe('$a * b$');
+    expect(preprocessLaTeX('$x_1 + x_2$')).toBe('$x_1 + x_2$');
+  });
+
+  it('should unwrap styling wrappers in a realistic feature list (issue #2109)', () => {
+    const input =
+      '* $\\textbf{Custom AI Agents}$: Create agents.\n' +
+      '* $\\textbf{Canvas \\& Artifacts}$: Generate documents.';
+    const output = preprocessLaTeX(input);
+    expect(output).toBe(
+      '* **Custom AI Agents**: Create agents.\n' +
+        '* **Canvas & Artifacts**: Generate documents.',
+    );
+    // No stray math delimiters remain to be mis-parsed as KaTeX.
+    expect(output).not.toContain('$');
+  });
+
+  it('should NOT unwrap real math that merely contains a text command (issue #2109)', () => {
+    // The styling unwrap must only fire when the command is the *entire* span.
+    // Genuine math with `\text{...}` inside stays math, untouched.
+    expect(
+      preprocessLaTeX(
+        '$0.075 \\text{ L} \\times \\frac{1000 \\text{ mL}}{1 \\text{ L}} = 75 \\text{ mL}$',
+      ),
+    ).toBe(
+      '$0.075 \\text{ L} \\times \\frac{1000 \\text{ mL}}{1 \\text{ L}} = 75 \\text{ mL}$',
+    );
+    // Currency next to a styling wrapper: the wrapper unwraps, the amount escapes.
+    expect(preprocessLaTeX('The $\\textbf{Pro}$ plan costs $5.')).toBe(
+      'The **Pro** plan costs \\$5.',
+    );
+  });
+
   it('should keep inline math intact while still escaping real currency', () => {
     const input =
       'The term $3x$ evaluates. I have $5 and $10 in cash.\n\n$$3x + 5$$';

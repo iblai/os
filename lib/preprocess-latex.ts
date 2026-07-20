@@ -110,6 +110,56 @@ export function preprocessLaTeX(content: string) {
     (_, tableContent) => processTabularContent(tableContent),
   );
 
+  // LLMs frequently wrap prose in a `$...$` (or `$$...$$`) span using a
+  // text-mode command -- "$\textbf{Custom AI Agents}$", "$\text{ibl.ai}$" -- to
+  // mean *formatting*, not math. Left alone these pass isInlineMath() below
+  // (opening `$` -> non-space, closing `$` <- non-space, no trailing digit), so
+  // they are masked as math and handed to KaTeX, which renders the styled prose
+  // as collapsed math italics. Worse, the `\textbf{...}` -> `**...**` pass
+  // further down then runs *inside* the surviving `$` delimiters, producing
+  // "$**Custom AI Agents**$" whose `**` render as literal `∗∗` (issue #2109).
+  //
+  // Unwrap any span whose entire body is a single text-styling command into its
+  // Markdown equivalent, dropping the `$` delimiters so it renders as normal
+  // prose. The command must be the sole content of the span (only surrounding
+  // whitespace allowed), so genuine math that merely *contains* `\text{...}` --
+  // "$0.075 \text{ L} \times \frac{1000 \text{ mL}}{1 \text{ L}}$" -- never
+  // matches and stays math.
+  const textCommandToMarkdown: Record<string, (inner: string) => string> = {
+    text: (inner) => inner,
+    textrm: (inner) => inner,
+    textsf: (inner) => inner,
+    textnormal: (inner) => inner,
+    textbf: (inner) => `**${inner}**`,
+    textit: (inner) => `*${inner}*`,
+    emph: (inner) => `*${inner}*`,
+    texttt: (inner) => `\`${inner}\``,
+    underline: (inner) => `<u>${inner}</u>`,
+  };
+  // The surrounding whitespace is `[ \t]*`, never `\s*`: these wrappers are
+  // inline, single-line constructs, and allowing newlines lets the `$...$`
+  // straddle a blank line and pair the closing `$` of one span with the opening
+  // `$` of the next -- swallowing the Markdown structure (headings, block math)
+  // in between.
+  processedContent = processedContent.replace(
+    /(\${1,2})[ \t]*\\(text|textrm|textsf|textnormal|textbf|textit|emph|texttt|underline)\{([^{}]*)\}[ \t]*\1/g,
+    (_match: string, _delim: string, command: string, inner: string) =>
+      textCommandToMarkdown[command](inner),
+  );
+
+  // Same class, different disguise: an LLM wraps prose in `$...$` around a
+  // *Markdown* emphasis run rather than a LaTeX command -- "$**Custom AI
+  // Agents**$". isInlineMath() below still sees valid inline math, so KaTeX
+  // renders the `**` as literal math stars (`∗∗CustomAIAgents∗∗`). Unwrap a span
+  // whose entire body is a doubled-marker Markdown run (`**bold**` / `__bold__`)
+  // into the Markdown itself, dropping the `$`. Only doubled markers are safe:
+  // a single `*` or `_` legitimately appears in math (`$a * b$`, `$x_1$`), but
+  // `**`/`__` never do, so this can't swallow a real equation.
+  processedContent = processedContent.replace(
+    /(\${1,2})[ \t]*(\*\*[^*\n]+\*\*|__[^_\n]+__)[ \t]*\1/g,
+    (_match: string, _delim: string, emphasis: string) => emphasis,
+  );
+
   // Mask math spans before the currency escape so LaTeX delimiters are preserved.
   const maskOpen = String.fromCharCode(0xe000);
   const maskClose = String.fromCharCode(0xe001);
