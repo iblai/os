@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import Markdown from '@/components/markdown';
-import { preprocessLaTeX } from '@/lib/utils';
+import { preprocessLaTeX } from '@/lib/preprocess-latex';
 
 // A fenced block with a language renders the copy button, which reads route
 // params. Without this the syntax-highlighted branch cannot be tested at all.
