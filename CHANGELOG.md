@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.98.7](https://github.com/iblai/os/compare/v0.98.6...v0.98.7) (2026-07-20)
+
+### Bug Fixes
+
+* **ci:** make tauri-bump resilient so autoversion always tags a release ([540ecc3](https://github.com/iblai/os/commit/540ecc3baaaa488e403bfdb77b4db16ee19633e0))
+
 ## [0.98.6](https://github.com/iblai/os/compare/v0.98.5...v0.98.6) (2026-07-20)
 
 ### Bug Fixes
