@@ -11,12 +11,14 @@ import {
   useEditMentorMutation,
   useGetMentorSettingsQuery,
 } from '@iblai/iblai-js/data-layer';
+import { LOCAL_MODELS, isTauriApp } from '@iblai/iblai-js/web-containers';
 
 import { Input } from '@/components/ui/input';
 import { useUsername } from '@/hooks/use-user';
 import {
   LLMProvider,
   LLMProviderModal,
+  providerKey,
 } from '@/components/modals/llm-provider-modal';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { toast } from 'sonner';
@@ -71,6 +73,25 @@ export function LLMTab({ showConfigurationHeader = true }: LLMTabProps) {
     isMentorSettingsLoading || isLoadingLLMProviders || isEditingMentor;
 
   const isLoading = isMentorSettingsLoading || isLoadingLLMProviders;
+
+  // Providers that only offer on-device (local) models — surfaced as grid cards
+  // (Tauri desktop only) so their downloadable models are reachable even when the
+  // backend LLM list has no matching cloud provider.
+  const localOnlyProviders = React.useMemo(() => {
+    if (!isTauriApp()) return [] as { key: string; provider: string }[];
+    const cloudKeys = new Set(
+      (llmProviders ?? []).map((p) => providerKey(p.name)),
+    );
+    const seen = new Set<string>();
+    const result: { key: string; provider: string }[] = [];
+    for (const model of LOCAL_MODELS) {
+      const key = providerKey(model.provider);
+      if (cloudKeys.has(key) || seen.has(key)) continue;
+      seen.add(key);
+      result.push({ key, provider: model.provider });
+    }
+    return result;
+  }, [llmProviders]);
 
   async function updateMentorLLM(llmProvider: string, llmName: string) {
     try {
@@ -195,6 +216,41 @@ export function LLMTab({ showConfigurationHeader = true }: LLMTabProps) {
                         </div>
                       );
                     })}
+                  {localOnlyProviders.map((lp) => {
+                    const details = getLLMProviderDetails(lp.provider);
+                    return (
+                      <div
+                        key={`local-${lp.key}`}
+                        className="flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
+                        onClick={() => {
+                          if (isDisabled || disabled) return;
+                          setSelectedLLMProvider({
+                            id: -1,
+                            name: lp.provider,
+                            logo: details.logo,
+                            description: null,
+                            chat_models: [],
+                          });
+                        }}
+                      >
+                        <div className="h-8 w-8 flex-shrink-0">
+                          <Image
+                            src={details.logo}
+                            alt={t('providerLogoAlt', {
+                              providerName: details.name,
+                            })}
+                            className="h-full w-full object-contain"
+                            width={32}
+                            height={32}
+                            loading="lazy"
+                          />
+                        </div>
+                        <span className="text-sm font-medium text-gray-900">
+                          {details.name}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </WithFormPermissions>

@@ -21,6 +21,19 @@ import {
   getLLMProviderDetails,
   Provider,
 } from '@/lib/utils';
+import { useModelDownload } from '@/hooks/use-model-download';
+import {
+  LOCAL_MODELS,
+  type LocalModel,
+  isLocalLLMEnabled,
+  setLocalLLMEnabled,
+  getLocalLLMModel,
+  setLocalLLMModel,
+} from '@iblai/iblai-js/web-containers';
+import {
+  LocalModelRow,
+  type LocalRowStatus,
+} from './llm-provider-modal/local-model-row';
 
 interface LLM {
   llm_name: string;
@@ -55,6 +68,26 @@ interface Props {
   llms: Provider[];
 }
 
+/**
+ * Whether a catalog model id (e.g. "llama3.2") is among the installed Ollama
+ * tags (e.g. "llama3.2:latest"). Inlined from web-containers' `isModelInstalled`
+ * (not re-exported from the package entry). Matches an exact tag or same base.
+ */
+function isModelInstalled(modelId: string, tags?: string[]): boolean {
+  return !!tags?.some((t) => t === modelId || t.startsWith(`${modelId}:`));
+}
+
+// Match a local model's `provider` (e.g. "Mistral AI") to a cloud provider name
+// (e.g. "mistral") tolerantly: strip non-alphanumerics + a couple of aliases.
+const PROVIDER_ALIASES: Record<string, string> = {
+  mistralai: 'mistral',
+  metallama: 'meta',
+};
+export function providerKey(name: string): string {
+  const normalized = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+  return PROVIDER_ALIASES[normalized] ?? normalized;
+}
+
 export function LLMProviderModal({
   isOpen,
   onClose,
@@ -67,14 +100,98 @@ export function LLMProviderModal({
   const t = useTranslations('modalsLlmProviderModal');
   const [searchQuery, setSearchQuery] = React.useState('');
 
+  // On-device model download state (Tauri desktop only; hidden on web).
+  const {
+    isAvailable,
+    state: downloadState,
+    ollamaStatus,
+    startDownload,
+    cancelDownload,
+  } = useModelDownload();
+
+  // Mirror the device-global local selection so picks re-render immediately.
+  const [localSel, setLocalSel] = React.useState(() => ({
+    enabled: isLocalLLMEnabled(),
+    model: getLocalLLMModel(),
+  }));
+
   const filteredLLMs = React.useMemo(() => {
     return llmProvider?.chat_models.filter((llm) =>
       llm.llm_name.toLowerCase().includes(searchQuery.toLowerCase()),
     );
   }, [searchQuery, llmProvider]);
 
+  // Local models belonging to THIS provider (merged into the same list).
+  const localModels = React.useMemo(() => {
+    if (!isAvailable) return [] as LocalModel[];
+    const key = providerKey(llmProvider.name);
+    return LOCAL_MODELS.filter(
+      (m) =>
+        providerKey(m.provider) === key &&
+        m.name.toLowerCase().includes(searchQuery.toLowerCase()),
+    );
+  }, [isAvailable, llmProvider.name, searchQuery]);
+
   const switchLLMAllowed = canSwitchLLm(llmProvider);
   const switchProviderAllowed = canSwitchProvider(llms, llmProvider.name);
+
+  const busyDownloading =
+    downloadState.status === 'downloading' || downloadState.status === 'checking';
+
+  const statusFor = (m: LocalModel): LocalRowStatus => {
+    if (localSel.enabled && localSel.model === m.id) return 'selected';
+    const active = downloadState.activeModel === m.id;
+    if (active && downloadState.status === 'error') return 'error';
+    if (active && busyDownloading)
+      return downloadState.progress > 0 ? 'downloading' : 'starting';
+    if (isModelInstalled(m.id, ollamaStatus?.installed_models)) return 'installed';
+    return 'not-installed';
+  };
+
+  const activateLocal = (m: LocalModel, status: LocalRowStatus) => {
+    switch (status) {
+      case 'not-installed':
+      case 'error':
+        startDownload(m.id);
+        break;
+      case 'starting':
+      case 'downloading':
+        cancelDownload();
+        break;
+      case 'installed':
+        // Use this on-device model — device-global, mutually exclusive with cloud.
+        setLocalLLMModel(m.id);
+        setLocalLLMEnabled(true);
+        setLocalSel({ enabled: true, model: m.id });
+        break;
+      case 'selected':
+        break;
+    }
+  };
+
+  const selectCloud = (llmName: string) => {
+    // Picking a cloud model turns local mode off so routing uses the cloud LLM.
+    if (localSel.enabled) {
+      setLocalLLMEnabled(false);
+      setLocalSel((prev) => ({ ...prev, enabled: false }));
+    }
+    onSelect(llmProvider.name, llmName);
+  };
+
+  // Announce download lifecycle changes once (not every %) for screen readers.
+  const activeLocal = LOCAL_MODELS.find((m) => m.id === downloadState.activeModel);
+  const liveMessage = !activeLocal
+    ? ''
+    : downloadState.status === 'completed'
+      ? `${activeLocal.name} downloaded`
+      : downloadState.status === 'cancelled'
+        ? 'Download cancelled'
+        : downloadState.status === 'error'
+          ? 'Download failed'
+          : downloadState.status === 'checking' ||
+              (downloadState.status === 'downloading' && downloadState.progress === 0)
+            ? `Started downloading ${activeLocal.name}`
+            : '';
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -100,11 +217,16 @@ export function LLMProviderModal({
           />
         </div>
 
+        <div className="sr-only" aria-live="polite" role="status">
+          {liveMessage}
+        </div>
+
         <div className="grid max-h-[60vh] grid-cols-1 gap-4 overflow-y-auto pr-2 sm:grid-cols-2 lg:grid-cols-3">
           {filteredLLMs.map((llm) => {
             const isActive =
               mentorSettings?.llm_name === llm.llm_name &&
-              mentorSettings?.llm_provider === llmProvider.name;
+              mentorSettings?.llm_provider === llmProvider.name &&
+              !localSel.enabled;
 
             const providerDetails = getLLMProviderDetails(
               llmProvider.name,
@@ -122,7 +244,7 @@ export function LLMProviderModal({
                 key={llm.llm_name}
                 disabled={isDisabled}
                 onClick={() => {
-                  onSelect(llmProvider.name, llm.llm_name);
+                  selectCloud(llm.llm_name);
                 }}
                 className={cn(
                   'flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 p-4 transition-colors',
@@ -151,6 +273,26 @@ export function LLMProviderModal({
                   {llm.llm_name}
                 </span>
               </button>
+            );
+          })}
+
+          {/* On-device models for this provider, merged into the same list. */}
+          {localModels.map((m) => {
+            const status = statusFor(m);
+            return (
+              <LocalModelRow
+                key={m.id}
+                name={m.name}
+                size={m.size}
+                logo={getLLMProviderDetails(llmProvider.name, m.name).logo}
+                status={status}
+                progress={
+                  downloadState.activeModel === m.id ? downloadState.progress : 0
+                }
+                disabled={busyDownloading && downloadState.activeModel !== m.id}
+                disabledReason="Another model is downloading"
+                onActivate={() => activateLocal(m, status)}
+              />
             );
           })}
         </div>
