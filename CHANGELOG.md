@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.98.2](https://github.com/iblai/os/compare/v0.98.1...v0.98.2) (2026-07-20)
+
+### Documentation
+
+* **readme:** consistent "Download for X" CTAs with official platform logos ([290e2f4](https://github.com/iblai/os/commit/290e2f476bf3fc866903aacc16afe8d221de0346))
+* **readme:** redesign landing README with download buttons and case studies ([b269084](https://github.com/iblai/os/commit/b269084518b8ff473dc25994fac23face5439697))
+* **readme:** tweak header labels, web-first CTA, trim stats strip ([cb6c544](https://github.com/iblai/os/commit/cb6c5445a9589b07b106ed539ced43e2139c2211))
+
 ## [0.98.1](https://github.com/iblai/os/compare/v0.98.0...v0.98.1) (2026-07-17)
 
 ### CI
