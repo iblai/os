@@ -106,6 +106,11 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   useIframeMessageHandler({
     handlers,
     defaultHandler: (data) => {
+      // The SSO handoff payload can arrive as a JSON string (cross-origin
+      // postMessage) or an already-parsed object — normalize before reading.
+      try {
+        data = JSON.parse(data);
+      } catch {}
       if (data.axd_token) {
         saveUserObjectToLocalStorage(data);
         window.location.reload();
@@ -277,10 +282,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   }
 
   function redirectToMentor(tenantKey: string, mentorId: string) {
-    let queryParams = '';
-    if (window.location.pathname === '/') {
-      queryParams = window.location.search;
-    }
+    const queryParams = window.location.search;
     router.push(`/platform/${tenantKey}/${mentorId}${queryParams}`);
   }
 
