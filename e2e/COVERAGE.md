@@ -48,7 +48,7 @@ When adding a new page or modifying an existing user flow:
 
 - [x] Mentor dropdown shows "New chat" item; non-admin sees at most 2 items
 - [x] "My Mentors" button is NOT present in the header (removed in feat-1431); mentor dropdown still shows New Chat item
-- [x] Profile dropdown shows exactly 3 items: Profile, Help, Log out
+- [x] Fresh signup (unauthenticated context, real `/account/create` registration) lands on the main tenant and the profile dropdown shows exactly 3 items: Profile, Help, Log out
 - [x] Sidebar admin-only buttons (e.g. New Project) show upgrade/auth dialog for non-admins when visible
 - [x] Non-admin in the main OR an advertising tenant sees full admin sidebar (New Agent, Workflows, Analytics, Invites, Management, Integrations, Monetization, Advanced) and clicking any trial-gated entry opens the upgrade/pricing dialog; gracefully skips when paywall is off
 
@@ -798,11 +798,13 @@ Chromium-only. Uses `--use-fake-device-for-media-stream` plus `--use-file-for-fa
 
 ---
 
-## Journey: Chat URL ?prompt= Auto-Injection (5 checkpoints) — `journeys/chat-url-prompt-injection.spec.ts`
+## Journey: Chat URL ?prompt= Auto-Injection (10 checkpoints) — `journeys/chat-url-prompt-injection.spec.ts`
 
 **Source files:** `components/chat/index.tsx`
 
 Covers the feature introduced in [iblai/iblai-platform#1722](https://github.com/iblai/iblai-platform/issues/1722). When a mentor chat page loads with `?prompt=<text>` in the URL, the `useAdvancedChat` hook (from `@iblai/iblai-js`) reads `searchParams.get('prompt')?.trim()` and auto-submits that text as a user message exactly once per mount.
+
+Also covers the prompt sanitization added in [iblai-platform#2164](https://github.com/iblai/iblai-platform/issues/2164): `sanitizePromptParam()` in `lib/utils.ts` strips control chars (preserving `\n`/`\t`), zero-width/invisible chars, and the Unicode Tag block, trims, and caps length at `MAX_PROMPT_PARAM_LENGTH` (4000) before the value is auto-submitted. HTML is intentionally NOT escaped — the render layer already renders user turns as plain React text (no `dangerouslySetInnerHTML`), so an HTML/script-ish payload must render as inert literal text.
 
 **Contracts verified:**
 
@@ -810,12 +812,18 @@ Covers the feature introduced in [iblai/iblai-platform#1722](https://github.com/
 - The dedup guard scans back for the last user message; if content matches the trimmed prompt, the hook no-ops so no second bubble appears.
 - A new session is NOT created on a dedup reload — `localStorage.session_id[mentorId]` is unchanged.
 - `searchParams.get('prompt')` decodes percent-encoded characters natively (`%20` → space).
+- `sanitizePromptParam()` strips invisible/control chars but leaves visible text (including HTML-ish text) untouched; a value that cleans to empty is treated as absent (no auto-submit).
 
 - [x] UPI-01: Fresh session + `?prompt=<text>` — user-message bubble appears automatically, AI responds, `location.search` still contains `prompt=` after response settles
 - [x] UPI-02: Dedup — reloading the same `?prompt=` URL on a cached session produces exactly one user bubble (count === 1) and `localStorage.session_id[mentorId]` is unchanged
 - [x] UPI-03: Cached session + different `?prompt=` — original user/assistant messages remain visible, new prompt text appears as a new user bubble, AI responds again, session id is unchanged
 - [x] UPI-04: No `?prompt=` — welcome state shown, no user-message bubbles appear, idle confirmed over 3 seconds, URL has no `prompt=` param
 - [x] UPI-05: URL-encoded prompt (`%20` → space) — bubble renders decoded text, not percent-encoded form
+- [x] UPI-06: Clean `?prompt=` (no special chars) — sanitization is a no-op, bubble renders text verbatim
+- [x] UPI-07: `?prompt=` with a zero-width space, NUL control char, and Unicode Tag-block char interleaved with visible text — all stripped, bubble text equals exactly the cleaned visible-only string
+- [x] UPI-08: `?prompt=` of whitespace + zero-width chars only (`%20%E2%80%8B%20`) — cleans to empty, `sanitizePromptParam()` returns `undefined`, no auto-submit occurs (welcome state, chat input visible, 0 user bubbles held over a 3s settle)
+- [x] UPI-09: `?prompt=<img src=x onerror=alert(1)>` — renders as inert literal text (bubble `textContent` equals the literal payload); no real `<img>` element is inserted (`'.chat-user-message-query img'` count is 0); no `dialog` event ever fires (`onerror` never executes)
+- [ ] _(deferred to unit tests)_ UPI-10: oversized `?prompt=` (>4000 chars) is truncated to `MAX_PROMPT_PARAM_LENGTH` then re-trimmed — unit-covered in `lib/__tests__/sanitize-prompt-param.test.ts`; not added at the E2E level to avoid flake risk from very long query strings (URL length limits, `page.goto`/render cost)
 
 ---
 
@@ -919,7 +927,7 @@ The **private chat round-trip** tests (cp-chat-\*) cover the end-to-end happy pa
 - [x] cp-chat-02: Non-admin (separate browser context) enables private mode via the header toggle on a fresh chat, sends a message, and receives an assistant reply; private mode stays on across the round-trip
 - [ ] cp-chat-04: Prompt Gallery (admin-curated, mentor-keyed) still opens and renders cards in private mode; AI guided/suggested prompts row (`chat-guided-suggested-prompts`) is visible after the AI replies _(pending: guided-prompts assertion awaits backend generating prompts for private sessions; Prompt Gallery assertion passes today)_
 - [ ] cp-chat-05: Voice call dialog opens in private mode (empty-chat path, Chromium fake-media) and does NOT show `"Failed to initiate call"` error toast _(pending: backend must mint LiveKit credentials for `disable_chathistory` sessions)_
-- [ ] cp-chat-06: Multi-turn context retained in one private session — cached session id is stable across two sends (passes today); AI echoes back the code word from turn 1 _(pending: backend must retain ephemeral in-session context for private sessions)_
+- [ ] cp-chat-06: Multi-turn context retained in one private session — cached session id is stable across two sends (passes today); AI echoes back the code word from turn 1 _(skipped as flaky pending backend fix — tracked by [iblai/iblai-platform#2186](https://github.com/iblai/iblai-platform/issues/2186); backend must retain ephemeral in-session context for private sessions)_
 - [ ] cp-chat-07: File attachment (drag-drop) works in private mode — chip appears, message sends, assistant replies; pins that `selectSessionId` follows the private session id _(pending: expected to pass today; included as regression gate)_
 - [x] cp-chat-08: Memory button is hidden while `data-state="on"` and reappears when private mode is off _(frontend gate implemented — `chat-input-form.tsx` derives `chatPrivacyActive` from `useChatPrivacy` and passes `isPrivate` into `InsideButtons`; unit-tested in `inside-buttons.test.tsx`)_
 - [x] cp-chat-09: "Share this chat" button in the AI message bubble is hidden in private mode (temporary chat — no durable session to share) and visible in normal mode _(frontend gate implemented — `ai-message-bubble.tsx` gates `<AIMessageShare>` on `!chatPrivacyActive`; unit-tested in `ai-message-bubble.test.tsx`)_
@@ -1102,7 +1110,9 @@ Sub-resource tests (Links / Keys / Tools) still require `is_lti_accessible=true`
 
 **Source files:** `lib/utils.ts`, `components/markdown.tsx`
 
-Covers the fix for GitHub issue #2109 ("Improve latex compatibility for rendering chat messages and artifacts"). `preprocessLaTeX` (`lib/utils.ts`) escapes a `$` immediately followed by a digit into `\$` so currency amounts render literally — but that same escape corrupted backslash-free / digit-leading inline math like `$3x + 5$` and `$x = 4$`, and a leading currency amount could swallow the opening `$` of a real math span later on the same line. The fix adds an `isInlineMath` predicate (a `$...$` span is math when it has a backslash command OR no 2+ letter prose word inside it) and a rewind scan (a non-math span only consumes its opening `$`, leaving the closing `$` free to open a later real math span).
+Covers the fix for GitHub issue #2109 ("Improve latex compatibility for rendering chat messages and artifacts"). `preprocessLaTeX` (`lib/utils.ts`) escapes a `$` immediately followed by a digit into `\$` so currency amounts render literally — but that same escape corrupted backslash-free / digit-leading inline math like `$3x + 5$` and `$x = 4$`, and a leading currency amount could swallow the opening `$` of a real math span later on the same line. The fix classifies a `$...$` span as math using Pandoc's `tex_math_dollars` rule (opening `$` followed by a non-space, closing `$` preceded by a non-space, and the closing `$` not followed by a digit — so `$5, $10` and `$5-$10` stay currency while `$3x + 5$` and `$x = 4$` render), applied by an `isInlineMath` predicate plus a left-to-right rewind scan (a non-math span only consumes its opening `$`, leaving the closing `$` free to open a later real math span).
+
+A second class of #2109 breakage: LLMs wrap prose in a `$...$` / `$$...$$` span using a text-mode command — `$\textbf{Custom AI Agents}$`, `$\text{ibl.ai}$` — to mean _formatting_, not math. Under the Pandoc rule those are valid inline math, so KaTeX rendered them as collapsed math italics, and the downstream `\textbf{...}` → `**...**` conversion ran _inside_ the surviving `$` delimiters, producing `$**Custom AI Agents**$` whose `**` showed up as literal `∗∗`. `preprocessLaTeX` now unwraps any span whose entire body is a single text-styling command (`\text`, `\textbf`, `\textit`, `\emph`, `\texttt`, `\underline`, `\textrm`, `\textsf`, `\textnormal`) into its Markdown equivalent, dropping the `$` delimiters, before the math-masking step. Genuine math that merely _contains_ `\text{...}` (e.g. `$0.075 \text{ L} \times \frac{...}{...}$`) is not a single sole-content command and stays math. This class is currently covered by unit tests in `lib/__tests__/utils.test.ts`; a Journey 61 checkpoint for it is pending.
 
 **Deterministic seam:** live chat streams over a raw WebSocket (`useChat` in `@iblai/web-utils`), which has no practical Playwright route-mocking seam without reimplementing the wire protocol. Instead this journey drives the public "shared chat" page (`app/share/chat/[sessionId]/[tenantKey]/[mentorId]/page.tsx`), which fetches message history over a plain REST GET (`.../sessions/{sessionId}/shared/`) and renders it through the exact same `ChatMessages` → `AIMessageBubble` → `MessagePreview` → `<Markdown>` component tree as live chat. `ChatPage.mockSharedChatSession` intercepts that GET with `page.route` and injects a FIXED assistant markdown message, so every assertion is against real KaTeX/react-markdown rendering of known-in-advance content — no LLM in the loop, no flakiness from varying model output.
 

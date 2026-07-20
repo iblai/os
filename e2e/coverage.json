@@ -119,7 +119,7 @@
         },
         {
           "id": "ui-03",
-          "description": "Profile dropdown shows exactly 3 items",
+          "description": "Fresh signup (unauthenticated context, real /account/create registration) lands on the main tenant and the profile dropdown shows exactly 3 items: Profile, Help, Log Out",
           "status": "covered"
         },
         {
@@ -2936,6 +2936,31 @@
           "id": "upi-05",
           "description": "URL-encoded prompt (%20 → space): bubble renders the decoded text (e.g. 'hi there e2e'), not the percent-encoded form",
           "status": "covered"
+        },
+        {
+          "id": "upi-06",
+          "description": "sanitizePromptParam() (iblai-platform#2164): a clean prompt with no special chars passes through unchanged and renders verbatim in the bubble",
+          "status": "covered"
+        },
+        {
+          "id": "upi-07",
+          "description": "sanitizePromptParam() (iblai-platform#2164): zero-width space, NUL control char, and Unicode Tag-block char interleaved with visible text are stripped; bubble text is exactly the cleaned string",
+          "status": "covered"
+        },
+        {
+          "id": "upi-08",
+          "description": "sanitizePromptParam() (iblai-platform#2164): a ?prompt= of whitespace + zero-width chars only cleans to empty, so sanitizePromptParam() returns undefined and no auto-submit occurs (welcome state shown)",
+          "status": "covered"
+        },
+        {
+          "id": "upi-09",
+          "description": "sanitizePromptParam() (iblai-platform#2164): an HTML/script-ish payload (<img src=x onerror=alert(1)>) is NOT escaped by sanitizePromptParam but renders as inert literal text via the render layer's existing plain-text/no-dangerouslySetInnerHTML handling — no real <img> element is inserted and no onerror/dialog ever fires",
+          "status": "covered"
+        },
+        {
+          "id": "upi-10",
+          "description": "sanitizePromptParam() (iblai-platform#2164): oversized ?prompt= (>4000 chars) is truncated to MAX_PROMPT_PARAM_LENGTH then re-trimmed; unit-covered in lib/__tests__/sanitize-prompt-param.test.ts — not e2e-reproducible without flake risk from very long query strings (URL length limits, page.goto/typing cost)",
+          "status": "not-reproducible"
         }
       ]
     },
@@ -3121,7 +3146,7 @@
           "id": "cp-chat-06",
           "description": "Multi-turn context retained within a single private session: (a) cached session id is stable across both sends (front-end contract, passes today); (b) AI echoes back the code word from turn 1, proving backend retains in-session context for private sessions",
           "status": "pending",
-          "note": "Assertion (a) stable session id passes today. Assertion (b) AI context recall is a live gate awaiting backend fix: backend must retain ephemeral in-session context for disable_chathistory:true sessions"
+          "note": "Skipped (test.skip) as flaky pending backend fix — tracked by iblai/iblai-platform#2186. Assertion (a) stable session id passes today. Assertion (b) AI context recall is a live gate awaiting backend fix: backend must retain ephemeral in-session context for disable_chathistory:true sessions"
         },
         {
           "id": "cp-chat-07",
