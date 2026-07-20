@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.98.5](https://github.com/iblai/os/compare/v0.98.4...v0.98.5) (2026-07-20)
+
+### Bug Fixes
+
+* **markdown:** unwrap LLM $…$ styling wrappers so they render as prose ([eccdd25](https://github.com/iblai/os/commit/eccdd25b2ee992666120e0bb3d20e0f945f14db8))
+
+### Refactors
+
+* **markdown:** extract preprocessLaTeX into its own module ([ae17f53](https://github.com/iblai/os/commit/ae17f53b202a1186f4c164cb25cb683b014723f4))
+
+### Styles
+
+* normalize CHANGELOG to prettier ([86c4b61](https://github.com/iblai/os/commit/86c4b61df55d795504ec6207cecce75fb449045e))
+
 ## [0.98.4](https://github.com/iblai/os/compare/v0.98.3...v0.98.4) (2026-07-20)
 
 ### CI
