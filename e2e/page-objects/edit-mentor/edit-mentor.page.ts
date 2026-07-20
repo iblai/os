@@ -328,6 +328,13 @@ export class EditMentorPage {
    * signal before asserting on segment tabs.
    */
   async waitForHydrated(): Promise<void> {
+    // Fail fast with a meaningful signal when the dialog isn't open at all
+    // (a caller drove a tab helper without open()) — otherwise the segment
+    // wait below burns its full 90s on a dialog that will never appear.
+    await expect(
+      this.dialog,
+      'Edit Agent dialog must be open before waiting for hydration — call open() first',
+    ).toBeVisible({ timeout: 15_000 });
     await this.dialog
       .locator('[role="tab"][aria-controls^="panel-"]:visible')
       .first()

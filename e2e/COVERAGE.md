@@ -48,7 +48,7 @@ When adding a new page or modifying an existing user flow:
 
 - [x] Mentor dropdown shows "New chat" item; non-admin sees at most 2 items
 - [x] "My Mentors" button is NOT present in the header (removed in feat-1431); mentor dropdown still shows New Chat item
-- [x] Profile dropdown shows the three core items (Profile, Help, Log Out) plus at most one tenant-switcher row when the user belongs to another non-main tenant (`showTenantSwitcher` in nav-bar/user-profile.tsx)
+- [x] Profile dropdown shows exactly 3 items: Profile, Help, Log out
 - [x] Sidebar admin-only buttons (e.g. New Project) show upgrade/auth dialog for non-admins when visible
 - [x] Non-admin in the main OR an advertising tenant sees full admin sidebar (New Agent, Workflows, Analytics, Invites, Management, Integrations, Monetization, Advanced) and clicking any trial-gated entry opens the upgrade/pricing dialog; gracefully skips when paywall is off
 

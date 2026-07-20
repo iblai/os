@@ -124,6 +124,12 @@ const test = base.extend<object, LtiWorkerFixtures>({
           // "Enable LTI launches" toggle now lives in-tab (feat/2040 — moved
           // off Settings → Capabilities into the LTI tab's own
           // `CapabilityGate`).
+          //
+          // open() first — the LTI page object drives tabs INSIDE the Edit
+          // Agent dialog and never opens it itself; without this the whole
+          // worker fixture (and with it every sub-resource test) dies waiting
+          // for a dialog that was never opened.
+          await editPage.open();
           await editPage.lti.switchToTab();
           await editPage.lti.setCapabilityEnabled(true);
           await editPage.lti.expectTabVisible();
@@ -361,7 +367,13 @@ test.describe('Journey 60 — LTI tab visibility', () => {
 
 test.describe('Journey 60 — LTI tab sub-resource tests', () => {
   test.describe.configure({ mode: 'parallel' });
-  test.setTimeout(240_000);
+  // 420s, not 240s: Playwright bills the `ltiMentorUrl` WORKER-fixture setup
+  // (stale-residue reap + mentor create + Edit Agent open + hydration +
+  // enable-LTI, ~2.5-3 min) to the FIRST test that touches it, and the test
+  // body then pays its own modal open — the Edit Agent modal takes ~30-90s
+  // to hydrate past its spinner (settings + RBAC prefetch churn) on every
+  // open. 240s was observed expiring during the first test's close().
+  test.setTimeout(420_000);
 
   test.beforeEach(async ({ page }) => {
     await navigateToMentorApp(page);

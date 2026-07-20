@@ -119,7 +119,7 @@
         },
         {
           "id": "ui-03",
-          "description": "Profile dropdown shows the three core items (Profile, Help, Log Out) plus at most one tenant-switcher row when the user belongs to another non-main tenant (showTenantSwitcher in nav-bar/user-profile.tsx)",
+          "description": "Profile dropdown shows exactly 3 items",
           "status": "covered"
         },
         {

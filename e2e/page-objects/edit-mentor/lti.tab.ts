@@ -169,6 +169,15 @@ export class LtiTab {
    * API, Embed live there too).
    */
   async activateCategory(): Promise<void> {
+    // Fail fast with a meaningful signal when the dialog isn't open at all
+    // (a caller drove this page object without EditMentorPage.open()) —
+    // otherwise the hydration wait below burns its full 90s on a dialog
+    // that will never appear.
+    await expect(
+      this.dialog,
+      'Edit Agent dialog must be open before using LtiTab — call editMentorPage.open() first',
+    ).toBeVisible({ timeout: 15_000 });
+
     // The modal renders only a spinner until settings + RBAC hydrate — the
     // category strip and every segment trigger mount after that, which can
     // take ~30s+ on freshly-created mentors (mirrors the host page object's
