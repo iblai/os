@@ -4,27 +4,27 @@
 
 ### Bug Fixes
 
-* **desktop:** round the app icon corners into a native macOS squircle ([5c24c6d](https://github.com/iblai/os/commit/5c24c6d225955b6785522ae37df54b4f481fa1b7))
+- **desktop:** round the app icon corners into a native macOS squircle ([5c24c6d](https://github.com/iblai/os/commit/5c24c6d225955b6785522ae37df54b4f481fa1b7))
 
 ## [0.98.5](https://github.com/iblai/os/compare/v0.98.4...v0.98.5) (2026-07-20)
 
 ### Bug Fixes
 
-* **markdown:** unwrap LLM $…$ styling wrappers so they render as prose ([eccdd25](https://github.com/iblai/os/commit/eccdd25b2ee992666120e0bb3d20e0f945f14db8))
+- **markdown:** unwrap LLM $…$ styling wrappers so they render as prose ([eccdd25](https://github.com/iblai/os/commit/eccdd25b2ee992666120e0bb3d20e0f945f14db8))
 
 ### Refactors
 
-* **markdown:** extract preprocessLaTeX into its own module ([ae17f53](https://github.com/iblai/os/commit/ae17f53b202a1186f4c164cb25cb683b014723f4))
+- **markdown:** extract preprocessLaTeX into its own module ([ae17f53](https://github.com/iblai/os/commit/ae17f53b202a1186f4c164cb25cb683b014723f4))
 
 ### Styles
 
-* normalize CHANGELOG to prettier ([86c4b61](https://github.com/iblai/os/commit/86c4b61df55d795504ec6207cecce75fb449045e))
+- normalize CHANGELOG to prettier ([86c4b61](https://github.com/iblai/os/commit/86c4b61df55d795504ec6207cecce75fb449045e))
 
 ## [0.98.4](https://github.com/iblai/os/compare/v0.98.3...v0.98.4) (2026-07-20)
 
 ### CI
 
-* **e2e:** prune old docker images on stg deploy so the box never fills ([8982753](https://github.com/iblai/os/commit/8982753ec113224dda356a4c79102bcdf08e622b))
+- **e2e:** prune old docker images on stg deploy so the box never fills ([8982753](https://github.com/iblai/os/commit/8982753ec113224dda356a4c79102bcdf08e622b))
 
 ## [0.98.3](https://github.com/iblai/os/compare/v0.98.2...v0.98.3) (2026-07-20)
 
