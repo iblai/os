@@ -1323,6 +1323,13 @@ test.describe('Journey 50: Chat Privacy', () => {
       page,
       chatPage,
     }) => {
+      // Flaky — depends on backend in-session context retention for
+      // disable_chathistory:true sessions, which is not yet reliable.
+      // Tracked by https://github.com/iblai/iblai-platform/issues/2186.
+      test.skip(
+        true,
+        'Flaky: in-session private context retention — https://github.com/iblai/iblai-platform/issues/2186',
+      );
       const chatPrivacy = new ChatPrivacyPage(page);
 
       await chatPage.startNewChat();

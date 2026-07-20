@@ -168,6 +168,10 @@ export const CSS_CLASS_NAMES = {
   },
 };
 
+// Caps the length of the auto-submitted `?prompt=` deep-link payload so an
+// attacker-crafted link cannot smuggle an oversized prompt into the chat.
+export const MAX_PROMPT_PARAM_LENGTH = 4000;
+
 export const DROPBOX_EXTENSIONS = [
   '.ppt',
   '.pptx',
