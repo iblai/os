@@ -14,6 +14,7 @@ import hljs from 'highlight.js';
 
 import {
   LOCAL_STORAGE_KEYS,
+  MAX_PROMPT_PARAM_LENGTH,
   QUERY_PARAMS,
   REDIRECT_PATH_LOCAL_STORAGE_KEY,
   URL_PATTERNS,
@@ -1825,4 +1826,40 @@ export function getFirstMessageWithContent(messages: any[]): string {
     if (content) return content;
   }
   return '';
+}
+
+/**
+ * Sanitize the value of the `?prompt=` deep-link query param before it is
+ * auto-submitted as a user chat message.
+ *
+ * The render layer already auto-escapes user turns (plain React text in a
+ * `whitespace-pre-wrap` container — no `dangerouslySetInnerHTML`, no Markdown),
+ * so HTML is NOT escaped here: doing so would corrupt legitimate prompts like
+ * `what does <div> do?` without buying any safety. Instead we defend against the
+ * real risks of an attacker-crafted link: prompt-injection smuggling via
+ * invisible/control characters and oversized auto-submitted payloads.
+ */
+export function sanitizePromptParam(
+  raw: string | null | undefined,
+): string | undefined {
+  if (raw == null) return undefined;
+
+  const cleaned = raw
+    // Strip control chars but preserve newlines (\n) and tabs (\t).
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    // Strip zero-width / invisible characters used to hide instructions.
+    .replace(/[​-‍⁠﻿]/g, '')
+    // Strip the Unicode Tag block (invisible-instruction injection).
+    .replace(/[\u{E0000}-\u{E007F}]/gu, '')
+    // Strip bidirectional control chars (LRM/RLM, embeddings/overrides,
+    // isolates) — the "Trojan Source" (CVE-2021-42574) vector that can
+    // invisibly reorder text to hide or misrepresent the injected prompt.
+    .replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/gu, '')
+    .trim()
+    // Cap length AFTER cleaning so it reflects real visible content, then
+    // re-trim so a mid-word slice never leaves dangling whitespace.
+    .slice(0, MAX_PROMPT_PARAM_LENGTH)
+    .trim();
+
+  return cleaned.length > 0 ? cleaned : undefined;
 }
