@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { useCallback } from 'react';
 
 import { NotificationDropdown } from '@iblai/iblai-js/web-containers';
@@ -15,6 +16,7 @@ import { useCurrentTenant, useIsAdmin, useUsername } from '@/hooks/use-user';
  * URL segments.
  */
 export function ApplyNavbar() {
+    const t = useTranslations('componentsApplyNavbar');
     const router = useRouter();
     const username = useUsername();
     const isAdmin = useIsAdmin();
@@ -43,7 +45,7 @@ export function ApplyNavbar() {
                     <span className="truncate text-base font-semibold text-gray-900 md:text-lg">
                         {orgName}
                     </span>
-                    <span className="shrink-0 text-sm text-gray-500">Application</span>
+                    <span className="shrink-0 text-sm text-gray-500">{t('application')}</span>
                 </div>
 
                 {/* Right: notification bell + profile dropdown */}

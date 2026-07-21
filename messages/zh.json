@@ -515,6 +515,9 @@
     "monthlyRevenue": "月度收入",
     "revenueLabel": "收入"
   },
+  "componentsApplyNavbar": {
+    "application": "申请"
+  },
   "componentsChartWithTooltip": {
     "monthlyPerformance": "月度绩效",
     "valueLabel": "数值"

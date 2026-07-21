@@ -515,6 +515,9 @@
     "monthlyRevenue": "Monthly Revenue",
     "revenueLabel": "Revenue"
   },
+  "componentsApplyNavbar": {
+    "application": "Application"
+  },
   "componentsChartWithTooltip": {
     "monthlyPerformance": "Monthly Performance",
     "valueLabel": "Value"
