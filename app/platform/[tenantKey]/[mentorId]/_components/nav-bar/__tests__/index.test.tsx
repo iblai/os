@@ -1294,7 +1294,10 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
     });
   });
 
-  describe('Config gating (enabledThroughConfig)', () => {
+  describe('Config gating (segments always visible)', () => {
+    // The config gates (enabledThroughConfig) were removed — Memory (and the
+    // other formerly config-gated tabs) are now always visible; their master
+    // toggles live inline on each tab. memsearch no longer affects the list.
     const mentorSettings = {
       platform_key: 'custom-tenant',
       mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
@@ -1302,7 +1305,7 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
       permissions: { field: {} },
     };
 
-    it('hides the Memory tab when memsearch is disabled', () => {
+    it('shows the Memory tab even when memsearch is disabled', () => {
       const result = filterMentorSegments(
         MENTOR_SEGMENTS,
         buildContext({
@@ -1322,7 +1325,7 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
         }),
       );
 
-      expect(result.map((i) => i.label)).not.toContain('Memory');
+      expect(result.map((i) => i.label)).toContain('Memory');
     });
 
     it('shows the Memory tab when memsearch is enabled', () => {
@@ -1348,7 +1351,7 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
       expect(result.map((i) => i.label)).toContain('Memory');
     });
 
-    it('does not affect any other segment when memsearch is disabled', () => {
+    it('produces the same segment list regardless of the memsearch flag', () => {
       const enabled = filterMentorSegments(
         MENTOR_SEGMENTS,
         buildContext({
@@ -1375,8 +1378,7 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
           tenantKey: 'custom-tenant',
           mentorSettings,
           flags: {
-            // memsearch OFF — the assertion below verifies that this is
-            // the *only* difference between enabled and disabled output.
+            // memsearch OFF — no longer changes the output at all.
             isMemsearchEnabled: false,
             isMemoryComponentEnabled: true,
             isClawEnabled: false,
@@ -1388,9 +1390,7 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
         }),
       );
 
-      expect(disabled.map((i) => i.label)).toEqual(
-        enabled.map((i) => i.label).filter((l) => l !== 'Memory'),
-      );
+      expect(disabled.map((i) => i.label)).toEqual(enabled.map((i) => i.label));
     });
   });
 

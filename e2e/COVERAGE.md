@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-07-14 | 556 checkpoints (530 covered, 7 pending/fixme, 7 not-reproducible in default env, 12 deprecated) | 64 journeys (63 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-07-21 | 562 checkpoints (535 covered, 7 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 64 journeys (63 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -109,7 +109,7 @@ When adding a new page or modifying an existing user flow:
 - [x] Admin can edit the system prompt in the Prompts tab
 - [x] Admin can send a message to a newly created mentor and receive a response
 - [x] Admin can delete a mentor from the Settings tab
-- [x] Edit Agent opened from sidebar My Agents shows the full segment sidebar (not just Privacy); admin `canEditMentors` guard unchanged
+- [x] Edit Agent opened from sidebar My Agents renders a working multi-tab segment sidebar (more than the Privacy-only bug signature) and the first available tab activates; Settings+LLM additionally asserted when the picked sibling mentor grants rbacResource access (the first row is arbitrary and may carry partial rights)
 - [ ] _(not-reproducible — RBAC off in default env)_ My Agents list scoped to `created_by=username` for non-admins via `useMentorsWithPagination({ createdBy })`; admin still sees full list — unit-covered in `settings-modal.test.tsx`
 - [ ] _(not-reproducible — RBAC off in default env)_ Student with `/mentors/#create` RBAC permission (`studentCanCreateMentors`) sees New Agent + My Agents in sidebar and can click a row to open Edit Agent dialog — unit-covered
 - [ ] _(not-reproducible — RBAC off in default env)_ Analytics shown to student mentor-creator only when `created_by===username` or holding per-mentor `/mentors/{id}/#view_analytics` permission — unit-covered
@@ -402,14 +402,16 @@ Driven by the shared paywall helpers in `@iblai/iblai-js/playwright`. All tests 
 
 ## Journey 24: Mentor Memory Tab (6 checkpoints) — `journeys/24-mentor-memory-tab.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/memory-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/memory-tab/manage-memories.tsx`, `components/modals/edit-mentor-modal/tabs/memory-tab/learners-memories.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`
+**Source files:** `components/modals/edit-mentor-modal/tabs/memory-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/memory-tab/manage-memories.tsx`, `components/modals/edit-mentor-modal/tabs/memory-tab/learners-memories.tsx`, `components/modals/edit-mentor-modal/capability-gate.tsx`, `hooks/use-mentor-segments.ts`
+
+The "Remember past conversations" (`enable_memory_component`) master toggle moved off Settings → Capabilities into an in-tab `CapabilityGate` at the top of the Memory tab itself (feat/2040). It auto-saves on click via `useEditMentorMutation` (optimistic local state) — no footer Save button involved. The Memory tab itself is now always mounted regardless of the toggle's value.
 
 - [x] CP-24.1: Memory tab is visible in Edit Mentor modal
-- [x] CP-24.2: Memory toggle (Settings tab) can be enabled and disabled (sends enable_memory_component on Save)
+- [x] CP-24.2: In-tab "Remember past conversations" capability toggle can be enabled and disabled (auto-saves `enable_memory_component`, no footer Save button)
 - [x] CP-24.3: Admin completes the full memory CRUD lifecycle in one flow: add a memory, edit its content, then delete it
 - [x] CP-24.4: Admin manages memory categories (create, rename, delete)
-- [x] CP-24.5: Memory button visibility in chat input reflects mentor memory setting (Settings tab toggle)
-- [ ] _(not-reproducible — RBAC off in default env)_ Memory toggle (`enable_memory_component`) is disabled and omitted from the settings PUT payload when the user only has read access — unit-covered in `settings-tab.test.tsx`
+- [x] CP-24.5: Memory button visibility in chat input reflects the Memory tab's in-tab capability toggle
+- [ ] _(not-reproducible — RBAC off in default env)_ Memory capability toggle (`enable_memory_component`) is disabled when the user only has read access — unit-covered in `memory-tab.test.tsx`
 
 ---
 
@@ -732,38 +734,41 @@ Requires `DM_URL` env var. Tests are skipped when `DM_URL` is unset.
 
 ## Journey 44: CLAW Advanced Sandbox (16 checkpoints) — `journeys/44-claw-advanced-sandbox.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx`, `components/modals/edit-mentor-modal/tabs/skills-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `hooks/use-mentor-segments.ts`
+**Source files:** `components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx`, `components/modals/edit-mentor-modal/tabs/skills-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `components/modals/edit-mentor-modal/capability-gate.tsx`, `hooks/use-mentor-segments.ts`
 
-- [x] Admin opens Settings tab and Sandbox toggle is present
-- [x] Sandbox toggle is interactable for admins regardless of claw config state (admin intent)
-- [x] Flipping the toggle without saving does not show Sandbox or Skills tabs (pre-save state)
-- [x] Enabling Sandbox and saving causes Sandbox tab to appear (right after Settings)
-- [x] Skills tab and Agent Configuration section only appear when a ClawMentorConfig is wired (sandbox connected to an instance); otherwise stay hidden even when claw is enabled
-- [x] When wired, Sandbox tab is right after Settings and Skills tab is right after Prompts in the dialog tab list
-- [x] Disabling Sandbox and saving removes Sandbox tab, Skills tab, and Agent Configuration section
-- [x] Admin navigates to Sandbox tab and the sandbox config container renders
-- [x] Admin toggles Sandbox ON then OFF in one session: Sandbox tab appears after enable-save and disappears after disable-save
-- [x] Admin adds a new sandbox instance via the Add Instance dialog and the new row appears in the instance table
+The "Dedicated sandbox" (`enable_claw`) master toggle moved off Settings → Capabilities into an in-tab `CapabilityGate` at the top of the Sandbox tab itself (feat/2040) and auto-saves on click (optimistic local state via `useEditMentorMutation`) — no footer Save button involved for the toggle. Both the Sandbox and Skills top-level tabs are now **always mounted** for admins regardless of `enable_claw` / wired-instance state — `hooks/use-mentor-segments.ts` no longer gates either segment. The gated `SandboxConfig` UI renders inside a grayed + inert `capability-gate-content` wrapper (`data-enabled` mirrors the toggle) while the capability is off; the Skills tab shows a content-level "not connected" preview when no `ClawMentorConfig` is wired, independent of the capability toggle. The instance table's per-row **Connect** action is a dedicated button (`data-testid="connect-instance-<id>"`) next to the "Actions" three-dot menu (Run checks / Edit / Delete) — no longer a dropdown menu item.
+
+- [x] Admin opens the Sandbox tab and the "Dedicated sandbox" capability toggle (in-tab CapabilityGate) is present
+- [x] Capability toggle is interactable for admins regardless of sandbox connection state (admin intent)
+- [x] Flipping the capability toggle auto-saves instantly (optimistic, no footer Save button) and does not change Sandbox or Skills tab visibility — both tabs are unconditionally mounted
+- [x] Enabling the capability flips `capability-gate-content`'s `data-enabled` to `true`, ungating the SandboxConfig UI; Sandbox leads the Integrations category (feat/2040 moved it off Configurations)
+- [x] Skills tab is always visible AND shows the real skills UI (heading, info box, New Skill action) independent of the sandbox — feat/2040 made the Skills content fully sandbox-independent (no "connect a sandbox" gate)
+- [x] Sandbox leads the Integrations category and Skills follows Prompts in the Configurations category, unconditionally (feat/2040 groups the sidebar into Configurations / Integrations / Runtime)
+- [x] Disabling the capability flips `capability-gate-content`'s `data-enabled` back to `false`, regating the SandboxConfig UI, while Sandbox and Skills tabs remain visible
+- [x] Admin navigates to Sandbox tab and the sandbox config container renders regardless of capability state
+- [x] Admin toggles the capability ON then OFF in one session and `capability-gate-content`'s `data-enabled` flips accordingly both times
+- [x] Admin adds a new sandbox instance via the Add Instance dialog (capability enabled first) and the new row appears in the instance table
 - [x] Admin edits an existing sandbox instance name via the Edit Instance dialog and the updated name is reflected in the table
-- [x] Admin connects a sandbox instance: Connected Instance heading appears and Skills tab becomes visible in the dialog tab list
+- [x] Admin connects a sandbox instance via the dedicated per-row Connect button (no longer a dropdown item): Connected Instance heading appears and the Skills tab renders its (sandbox-independent) skills UI
 - [x] Admin edits an Agent Configuration field in the Prompts tab: edit modal closes and the new value is persisted
 - [x] Admin toggles a skill on then off in the Skills tab and aria-checked flips back to the original state
 - [x] Admin creates a new skill, edits its description, and the updated skill row remains visible; skill is deleted on cleanup
-- [ ] _(not-reproducible — RBAC off in default env)_ Advanced Sandbox toggle (`enable_claw`) is disabled and omitted from the settings PUT payload when the user only has read access — unit-covered in `settings-tab.test.tsx`
+- [ ] _(not-reproducible — RBAC off in default env)_ Dedicated sandbox toggle (`enable_claw`) is disabled when the user only has read access — unit-covered in `sandbox-tab.test.tsx`
 
 ---
 
-## Journey 45: Mentor Privacy Tab (7 checkpoints) — `journeys/45-mentor-privacy-tab.spec.ts`
+## Journey 45: Mentor Privacy Tab (8 checkpoints) — `journeys/45-mentor-privacy-tab.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/privacy-tab.tsx`, `components/modals/edit-mentor-modal/tabs/index.ts`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `lib/constants.ts`
 
-The Privacy tab is a thin wrapper around the SDK's `AgentPrivacyTab` (`@iblai/iblai-js/web-containers/next`). The wrapper forwards `tenantKey` / `mentorId` / `username` from URL params + the navigate hook so the SDK's `useGetMentorSettingsQuery` and `useEditMentorJsonMutation` resolve correctly.
+The Privacy tab is a thin wrapper around the SDK's `AgentPrivacyTab` (`@iblai/iblai-js/web-containers/next`). The wrapper forwards `tenantKey` / `mentorId` / `username` from URL params + the navigate hook so the SDK's `useGetMentorSettingsQuery` and `useEditMentorJsonMutation` resolve correctly. The `enable_privacy_router` master toggle moved off Settings → Capabilities into an in-tab `CapabilityGate` (`data-testid="privacy-capability-toggle"`, feat/2040), and the Privacy tab is now always mounted — `hooks/use-mentor-segments.ts` no longer gates the segment. Unlike the app-owned capability tabs, `AgentPrivacyTab` is NOT optimistic — the toggle only flips after the `editMentorJson` + refetch round trip lands. The "When PII is detected" dropdown now lists **Allow** first (`PRIVACY_ACTIONS = ['allow','redact','mask','block']`), then Redact, Mask, Block.
 
-- [x] PR-01: Privacy tab label is visible in the Edit Mentor modal sidebar
+- [x] PR-01: Privacy tab label is visible in the Edit Mentor modal sidebar (always mounted)
 - [x] PR-02: Privacy tab heading and description render correctly
-- [x] PR-03: Privacy tab body tracks `enable_privacy_router` flipped via Settings → Capabilities → "Filter PII from messages" (the in-tab master switch was removed; flipping it now lives only in Capabilities)
-- [x] PR-04: Action dropdown, entity chips, and output-filter switch are hidden when the router is off
-- [x] PR-05: Enabling the router reveals the action, entity chips and output-filter fields
+- [x] PR-03: Privacy tab stays mounted regardless of `enable_privacy_router`; `capability-gate-content`'s `data-enabled` tracks the in-tab "PII filtering" toggle
+- [x] PR-04: The CapabilityGate off-state hint is shown only while the router is off
+- [x] PR-05: Enabling the router keeps the action, entity chips and output-filter fields present and interactive
+- [x] PR-05b: The "When PII is detected" action dropdown lists Allow, Redact, Mask, Block in that order
 - [x] PR-06: Block Message textarea is editable only while the action is Block (tolerates conditional-render or render-and-disable SDK shapes)
 - [x] PR-07: Clicking an entity chip flips its aria-checked state and persists when toggled twice
 
@@ -877,9 +882,9 @@ Covers the two user-facing features added in [iblai-platform#1902](https://githu
 
 The Voice tab is a thin wrapper around the SDK's `AgentVoiceTab` (`@iblai/web-containers/next`). The wrapper forwards `tenantKey` / `mentorId` / `username` from URL params + the navigate hook so the SDK's `useGetMentorSettingsQuery`, `useEditMentorMutation`, and the new `useGet/Create/UpdateCallConfigurationMutation` hooks resolve correctly. Selectors come from the SDK's official Playwright helpers (`@iblai/iblai-js/playwright`) — never patch a selector in the spec; if labels are overridden via the `labels` prop, update the helper imports in the page object.
 
-The Settings tab also surfaces two voice-call toggles (`use_function_calling_for_rag`, `enable_video`) so admins can flip them without leaving the main configuration panel. Save routes those two fields through the same `/call-configurations/` endpoint the SDK's Voice tab uses — POSTing a new config (mode=`realtime`) when none exists, PATCHing otherwise.
+The Settings tab also surfaces the smart-document-retrieval voice-call toggle (`use_function_calling_for_rag`) so admins can flip it without leaving the main configuration panel — save routes it through the same `/call-configurations/` endpoint the SDK's Voice tab uses. The "Enable voice calls" (`show_voice_call`) master toggle moved off Settings → Capabilities into an in-tab `CapabilityGate` at the top of the Voice tab itself (feat/2040) and auto-saves on click (optimistic local state) — no footer Save button involved. The Voice tab is now always mounted — `hooks/use-mentor-segments.ts` no longer gates it — and both sub-tabs render inside a grayed + inert `capability-gate-content` wrapper while the toggle is off. ("Enable screen sharing" moved off Settings too — it now lives on the Screen Share tab's own capability toggle, see journey 48.)
 
-- [x] VO-01: Voice tab label is visible in the Edit Mentor modal sidebar
+- [x] VO-01: Voice tab label is visible in the Edit Mentor modal sidebar (always mounted)
 - [x] VO-02: Voice tab heading renders correctly
 - [x] VO-03: Voice and Voice call sub-tab pills are both visible
 - [x] VO-04: All three provider cards (Browser, OpenAI, Google) render on the Voice sub-tab
@@ -887,10 +892,10 @@ The Settings tab also surfaces two voice-call toggles (`use_function_calling_for
 - [x] VO-06: Selecting the Browser provider hides the voice picker trigger
 - [x] VO-07: Switching to the Voice call sub-tab renders the call configuration form
 - [x] VO-08: Switching between Realtime and Step-by-step call modes keeps the Voice call configuration form rendered (SDK no longer surfaces standalone TTS/STT selects)
-- [x] VO-09: Settings tab surfaces both voice-call toggles
-- [x] VO-10: Flipping a voice-call toggle in Settings and clicking Save persists to the CallConfiguration endpoint and shows the success toast
-- [x] VO-11: Voice tab is hidden from the sidebar when "Enable voice calls" (`show_voice_call`) is turned off in Settings
-- [x] VO-12: Re-enabling "Enable voice calls" brings the Voice tab back into the sidebar after the settings refetch
+- [x] VO-09: Settings tab surfaces the smart-document-retrieval voice-call toggle
+- [x] VO-10: Flipping the smart-document-retrieval voice-call toggle in Settings and clicking Save persists to the CallConfiguration endpoint and shows the success toast
+- [x] VO-11: Voice tab stays visible (always mounted) and its content grays (`data-enabled="false"`) when the in-tab "Enable voice calls" capability toggle is off
+- [x] VO-12: Re-enabling the in-tab "Enable voice calls" capability toggle ungates the Voice tab's sub-tab content
 
 ---
 
@@ -898,11 +903,11 @@ The Settings tab also surfaces two voice-call toggles (`use_function_calling_for
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/screenshare-tab.tsx`, `components/modals/edit-mentor-modal/tabs/index.ts`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `lib/constants.ts`
 
-Standalone top-level tab rendered by the SDK's `AgentScreenShareTab` (`@iblai/web-containers/next`). Edits the two screensharing prompts on the mentor's CallConfiguration. The host gates visibility on `call_configuration.enable_video` — the toggle on the Settings tab. When the toggle is off, the tab is hidden from the sidebar entirely (the SDK still renders its own off-state hint, but at host level the tab itself goes away to keep the sidebar clean). The host renames the SDK's stock "Screen share" label to "Screen Share" via `MENTOR_SEGMENTS`, so the page object resolves the sidebar trigger from the host label directly rather than the SDK's `switchToScreenShareTab` helper.
+Standalone top-level tab rendered by the SDK's `AgentScreenShareTab` (`@iblai/web-containers/next`). Edits the two screensharing prompts on the mentor's CallConfiguration. The "Enable screen sharing" (`enable_video`) master toggle moved off the Settings tab into an in-tab `CapabilityGate` at the top of this tab (feat/2040) and auto-saves on click (optimistic local state) — no footer Save button involved for the toggle (the prompts themselves are still Save-button-driven). The tab is now always mounted — `hooks/use-mentor-segments.ts` no longer gates it on `call_configuration.enable_video` — and the prompt cards render inside a grayed + inert `capability-gate-content` wrapper while the toggle is off. The host renames the SDK's stock "Screen share" label to "Screen Share" via `MENTOR_SEGMENTS`, so the page object resolves the sidebar trigger from the host label directly rather than the SDK's `switchToScreenShareTab` helper.
 
-- [x] SS-01: Screen Share tab is hidden in the sidebar when the Settings "Enable screen sharing" toggle is off
-- [x] SS-02: Flipping the Settings toggle on and saving makes the Screen Share tab appear in the sidebar
-- [x] SS-03: Switching to the Screen Share tab renders the SDK heading and body
+- [x] SS-01: Screen Share tab stays visible (always mounted) and its content grays (`data-enabled="false"`) when the in-tab "Enable screen sharing" capability toggle is off
+- [x] SS-02: Enabling the in-tab capability toggle ungates the screensharing prompt cards and hides the CapabilityGate off-hint
+- [x] SS-03: Switching to the Screen Share tab renders the SDK heading, body and capability toggle regardless of capability state
 
 ---
 
@@ -1087,7 +1092,7 @@ Full-lifecycle regression guard for the ecommerce credits/upgrade flow, run as a
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/lti-tab.tsx`, `hooks/use-mentor-segments.ts`
 
-Covers the LTI top-level tab in the Edit Mentor (Agent) modal, rendered by the SDK's `AgentLtiTab` (`@iblai/iblai-js/web-containers/next`). As of feat/1853 the tab is **always visible to admins** regardless of the `is_lti_accessible` toggle — the `enabledThroughConfig` gate that previously hid the tab when `is_lti_accessible` was `false` was removed from `hooks/use-mentor-segments.ts`. The "Enable LTI launches" toggle (renamed from "Allow LTI launches" for consistency with sibling "Enable …" toggles) still controls whether the backend allows LTI launches but no longer gates the sidebar tab.
+Covers the LTI top-level tab in the Edit Mentor (Agent) modal, rendered by the SDK's `AgentLtiTab` (`@iblai/iblai-js/web-containers/next`). As of feat/1853 the tab is **always visible to admins** regardless of the `is_lti_accessible` toggle — the `enabledThroughConfig` gate that previously hid the tab when `is_lti_accessible` was `false` was removed from `hooks/use-mentor-segments.ts`. The "Enable LTI launches" toggle (renamed from "Allow LTI launches" for consistency with sibling "Enable …" toggles) still controls whether the backend allows LTI launches but no longer gates the sidebar tab. As of feat/2040 the toggle itself also moved — off Settings → Capabilities and into an in-tab `CapabilityGate` at the top of the LTI tab (`data-testid="lti-capability-toggle"`), auto-saving on click (optimistic local state via `useEditMentorMutation`) with no footer Save button involved.
 
 The LTI segment lives under the **Integrations** sidebar category. Tests are parallel-safe via two strategies: a worker-scoped `ltiMentorUrl` fixture (one LTI-enabled mentor per worker, deleted on teardown) shared by read-only and mutation tests; and self-contained tests that create and delete their own mentor in a `finally` block.
 
@@ -1096,7 +1101,7 @@ Sub-resource tests (Links / Keys / Tools) still require `is_lti_accessible=true`
 ### Visibility (lti-01, lti-03, lti-04)
 
 - [x] lti-01: Admin sees the LTI tab visible by default on a fresh mentor without enabling the "Enable LTI launches" toggle (`is_lti_accessible=false`) — the `enabledThroughConfig` gate was removed in feat/1853
-- [x] lti-03: Admin disables "Enable LTI launches" in Settings and the LTI tab stays visible (the `is_lti_accessible` gate was removed from `MENTOR_SEGMENTS`)
+- [x] lti-03: Admin disables "Enable LTI launches" via the LTI tab's own in-tab capability toggle and `capability-gate-content`'s `data-enabled` flips to `false` (the tab is unconditionally mounted for admins — tab visibility is no longer asserted)
 - [x] lti-04: Non-admin user does not see the LTI tab in the Edit Mentor modal (LTI segment remains admin-only)
 
 ### Tab header + sub-tabs (lti-05)

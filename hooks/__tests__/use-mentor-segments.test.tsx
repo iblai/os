@@ -147,12 +147,12 @@ describe('useMentorSegments', () => {
     setupDefaults();
   });
 
-  it('returns the canonical 21 mentor segments unfiltered', () => {
+  it('returns the canonical 22 mentor segments unfiltered', () => {
     const { result } = renderHook(() => useMentorSegments());
     expect(result.current.segments).toBe(MENTOR_SEGMENTS);
     // 17 original + Voice + Screen Share (feat/mentor/1763) + Tasks
-    // (feat/mentor/715) + LTI + Evals (feat/1178).
-    expect(MENTOR_SEGMENTS).toHaveLength(21);
+    // (feat/mentor/715) + LTI + Analytics hub (feat/2040).
+    expect(MENTOR_SEGMENTS).toHaveLength(23);
   });
 
   it('places the Sandbox segment right after Settings', () => {
@@ -169,8 +169,12 @@ describe('useMentorSegments', () => {
     expect(MENTOR_SEGMENTS[promptsIndex + 1]?.label).toBe('Skills');
   });
 
-  describe('isClawEnabled gating', () => {
-    it('hides Sandbox and Skills when enable_claw is false', () => {
+  describe('Sandbox & Skills visibility (always visible for admins)', () => {
+    // The enable_claw / clawConfigExists gates were removed: the Sandbox and
+    // Skills tabs are now always visible to admins. The master toggle lives
+    // inline on the Sandbox tab, and Skills renders a grayed "connect a
+    // sandbox" preview until an instance is wired.
+    it('shows Sandbox and Skills even when enable_claw is false', () => {
       mockMentorSettings.mockReturnValue({
         platform_key: 'custom-tenant',
         mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
@@ -182,11 +186,11 @@ describe('useMentorSegments', () => {
       const { result } = renderHook(() => useMentorSegments());
       const labels = result.current.filteredSegments.map((s) => s.label);
 
-      expect(labels).not.toContain('Sandbox');
-      expect(labels).not.toContain('Skills');
+      expect(labels).toContain('Sandbox');
+      expect(labels).toContain('Skills');
     });
 
-    it('hides Sandbox and Skills when enable_claw is missing', () => {
+    it('shows Sandbox and Skills when enable_claw is missing', () => {
       mockMentorSettings.mockReturnValue({
         platform_key: 'custom-tenant',
         mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
@@ -197,8 +201,8 @@ describe('useMentorSegments', () => {
       const { result } = renderHook(() => useMentorSegments());
       const labels = result.current.filteredSegments.map((s) => s.label);
 
-      expect(labels).not.toContain('Sandbox');
-      expect(labels).not.toContain('Skills');
+      expect(labels).toContain('Sandbox');
+      expect(labels).toContain('Skills');
     });
 
     it('shows Sandbox and Skills when enable_claw is true', () => {
@@ -217,7 +221,7 @@ describe('useMentorSegments', () => {
       expect(labels).toContain('Skills');
     });
 
-    it('hides Sandbox and Skills from non-admin users even when claw is enabled', () => {
+    it('hides Sandbox and Skills from non-admin users (still user-type gated)', () => {
       mockMentorSettings.mockReturnValue({
         platform_key: 'custom-tenant',
         mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
@@ -238,7 +242,11 @@ describe('useMentorSegments', () => {
       expect(labels).not.toContain('Skills');
     });
 
-    it('isSegmentVisible reflects the claw gate for Sandbox', () => {
+    it('isSegmentVisible returns true for Sandbox regardless of enable_claw', () => {
+      const sandboxSegment = MENTOR_SEGMENTS.find(
+        (s) => s.label === 'Sandbox',
+      )!;
+
       mockMentorSettings.mockReturnValue({
         platform_key: 'custom-tenant',
         mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
@@ -246,11 +254,7 @@ describe('useMentorSegments', () => {
         permissions: { field: {} },
         enable_claw: true,
       });
-
       const { result } = renderHook(() => useMentorSegments());
-      const sandboxSegment = MENTOR_SEGMENTS.find(
-        (s) => s.label === 'Sandbox',
-      )!;
       expect(result.current.isSegmentVisible(sandboxSegment)).toBe(true);
 
       mockMentorSettings.mockReturnValue({
@@ -261,7 +265,7 @@ describe('useMentorSegments', () => {
         enable_claw: false,
       });
       const { result: result2 } = renderHook(() => useMentorSegments());
-      expect(result2.current.isSegmentVisible(sandboxSegment)).toBe(false);
+      expect(result2.current.isSegmentVisible(sandboxSegment)).toBe(true);
     });
   });
 
@@ -276,14 +280,15 @@ describe('useMentorSegments', () => {
     expect(labels).toContain('Memory'); // memsearch is enabled
   });
 
-  it('hides the Memory segment when memsearch is disabled', () => {
+  it('shows the Memory segment even when memsearch is disabled (always visible)', () => {
+    // The memsearch / enable_memory_component gates were removed — Memory is
+    // always visible now, with the master toggle inline on the Memory tab.
     mockMemsearchEnabled.mockReturnValue(false);
 
     const { result } = renderHook(() => useMentorSegments());
 
     const labels = result.current.filteredSegments.map((s) => s.label);
-    expect(labels).not.toContain('Memory');
-    // Other segments are unaffected
+    expect(labels).toContain('Memory');
     expect(labels).toContain('Settings');
     expect(labels).toContain('LLM');
   });
@@ -297,7 +302,7 @@ describe('useMentorSegments', () => {
     expect(labels).toContain('Memory');
   });
 
-  it('hides the Memory segment when enable_memory_component is false on the mentor', () => {
+  it('shows the Memory segment even when enable_memory_component is false (always visible)', () => {
     mockMemsearchEnabled.mockReturnValue(true);
     mockMentorSettings.mockReturnValue({
       platform_key: 'custom-tenant',
@@ -310,13 +315,14 @@ describe('useMentorSegments', () => {
     const { result } = renderHook(() => useMentorSegments());
 
     const labels = result.current.filteredSegments.map((s) => s.label);
-    expect(labels).not.toContain('Memory');
-    // Other segments are unaffected by the mentor-level memory gate.
+    expect(labels).toContain('Memory');
     expect(labels).toContain('Settings');
   });
 
   describe('Privacy segment gating', () => {
-    it('hides Privacy when enable_privacy_router is false', () => {
+    it('shows Privacy even when enable_privacy_router is false (always visible)', () => {
+      // The enable_privacy_router gate was removed — Privacy is always visible
+      // now, with the master toggle inline on the Privacy tab.
       mockMentorSettings.mockReturnValue({
         platform_key: 'custom-tenant',
         mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
@@ -329,8 +335,7 @@ describe('useMentorSegments', () => {
       const { result } = renderHook(() => useMentorSegments());
 
       const labels = result.current.filteredSegments.map((s) => s.label);
-      expect(labels).not.toContain('Privacy');
-      // Other segments are unaffected.
+      expect(labels).toContain('Privacy');
       expect(labels).toContain('Settings');
     });
 
@@ -405,12 +410,15 @@ describe('useMentorSegments', () => {
   it('exposes isSegmentVisible reflecting the same filter pipeline', () => {
     const { result } = renderHook(() => useMentorSegments());
 
-    const memorySegment = MENTOR_SEGMENTS.find((s) => s.label === 'Memory')!;
-    expect(result.current.isSegmentVisible(memorySegment)).toBe(true);
+    // Memory is always visible now, so use an RBAC-gated segment (Audit) to
+    // prove isSegmentVisible reflects the pipeline: visible for an admin,
+    // hidden once RBAC denies the resource.
+    const auditSegment = MENTOR_SEGMENTS.find((s) => s.label === 'Audit')!;
+    expect(result.current.isSegmentVisible(auditSegment)).toBe(true);
 
-    mockMemsearchEnabled.mockReturnValue(false);
+    mockCheckRbacPermission.mockReturnValue(false);
     const { result: result2 } = renderHook(() => useMentorSegments());
-    expect(result2.current.isSegmentVisible(memorySegment)).toBe(false);
+    expect(result2.current.isSegmentVisible(auditSegment)).toBe(false);
   });
 
   it('recomputes filteredSegments when userType flips from ADMIN to STUDENT', () => {
@@ -484,13 +492,15 @@ describe('useMentorSegments', () => {
       expect(Array.isArray(result.current.filteredSegments)).toBe(true);
     });
 
-    it('treats an undefined enable_memsearch flag as disabled', () => {
+    it('resolves without throwing when enable_memsearch is undefined', () => {
+      // Memory is no longer gated on memsearch, so it stays visible; this just
+      // guards against the undefined flag breaking the pipeline.
       mockMemsearchEnabled.mockReturnValue(undefined);
 
       const { result } = renderHook(() => useMentorSegments());
 
       const labels = result.current.filteredSegments.map((s) => s.label);
-      expect(labels).not.toContain('Memory');
+      expect(labels).toContain('Memory');
     });
   });
 
@@ -562,10 +572,11 @@ describe('useMentorSegments', () => {
   });
 
   // ==========================================================================
-  // SKILLS GATE — additionally requires claw-config to exist (sandbox wired)
+  // SKILLS — now always visible; the "connect a sandbox" state is handled by
+  // the tab content (grayed preview), not by hiding the segment.
   // ==========================================================================
 
-  describe('Skills tab — clawConfigExists gating', () => {
+  describe('Skills tab — always visible for admins', () => {
     const adminClawEnabledSettings = {
       platform_key: 'custom-tenant',
       mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
@@ -575,7 +586,7 @@ describe('useMentorSegments', () => {
       enable_claw: true,
     };
 
-    it('shows Sandbox but hides Skills when claw is enabled but no config wired', () => {
+    it('shows both Sandbox and Skills when claw is enabled but no config wired', () => {
       mockMentorSettings.mockReturnValue(adminClawEnabledSettings);
       mockClawMentorConfig.mockReturnValue(null); // 404 → null
 
@@ -583,7 +594,7 @@ describe('useMentorSegments', () => {
       const labels = result.current.filteredSegments.map((s) => s.label);
 
       expect(labels).toContain('Sandbox');
-      expect(labels).not.toContain('Skills');
+      expect(labels).toContain('Skills');
     });
 
     it('shows both Sandbox and Skills when claw is enabled AND a config is wired', () => {
@@ -597,19 +608,18 @@ describe('useMentorSegments', () => {
       expect(labels).toContain('Skills');
     });
 
-    it('hides Skills when claw is disabled, regardless of whether a config is wired', () => {
+    it('shows both Sandbox and Skills even when claw is disabled', () => {
       mockMentorSettings.mockReturnValue({
         ...adminClawEnabledSettings,
         enable_claw: false,
       });
-      mockClawMentorConfig.mockReturnValue({ id: 1, enabled: true, server: 7 });
+      mockClawMentorConfig.mockReturnValue(null);
 
       const { result } = renderHook(() => useMentorSegments());
       const labels = result.current.filteredSegments.map((s) => s.label);
 
-      expect(labels).not.toContain('Skills');
-      // Sandbox is also hidden because the master enable_claw is off
-      expect(labels).not.toContain('Sandbox');
+      expect(labels).toContain('Skills');
+      expect(labels).toContain('Sandbox');
     });
   });
 });

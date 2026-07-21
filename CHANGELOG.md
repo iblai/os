@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.100.0](https://github.com/iblai/os/compare/v0.99.0...v0.100.0) (2026-07-21)
+
+### Features
+
+* **mentor:** adding tab updates for agent settings ([9ed1b9a](https://github.com/iblai/os/commit/9ed1b9af748dcc34edc9ff76b2611072cf6594b5))
+* **web-containers:** more fixes for the tabs ([06aad02](https://github.com/iblai/os/commit/06aad02dcccf0a95c2cdd6d65531217803f0f78e))
+
+### Bug Fixes
+
+* **e2e-test:** fixing coverage checkpoints ([0c618ea](https://github.com/iblai/os/commit/0c618eaad7a9b6b5730bcd820bffd1c60156cfab))
+* **e2e-test:** fixing journey 50 and 60 test suit ([12d194c](https://github.com/iblai/os/commit/12d194c78a4cd8b1b1072910eb53304718c260ee))
+* **e2e-tests:** adding fix for the merge conflicts ([3a63977](https://github.com/iblai/os/commit/3a63977d94b2a467b5167ca6848b84ea9a4e451a))
+* **e2e-tests:** adding fixes for the e2e tests ([b7fe0cf](https://github.com/iblai/os/commit/b7fe0cf73cf795ded3de370a461ff22142f3fc43))
+* **e2e-tests:** some more fixes for the tests ([c0c280a](https://github.com/iblai/os/commit/c0c280a1e33b9f7a93e5e8dee87350cafcbf1f4f))
+* **mentor:** fix for the e2e tests ([1fa281a](https://github.com/iblai/os/commit/1fa281a07657a5a1269be29e45d30a484c0fd9e6))
+
 ## [0.99.0](https://github.com/iblai/os/compare/v0.98.7...v0.99.0) (2026-07-21)
 
 ### Features

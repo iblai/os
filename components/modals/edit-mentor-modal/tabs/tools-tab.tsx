@@ -76,6 +76,12 @@ export function ToolsTab() {
           overflowX: 'hidden',
         }}
       >
+        <div
+          className="rounded-md border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600"
+          data-testid="tools-info-box"
+        >
+          {t('infoBox')}
+        </div>
         <WithFormPermissions
           name="mentor_tools"
           // @ts-ignore

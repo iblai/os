@@ -530,6 +530,12 @@ export function EmbedTab() {
             overflowX: 'hidden',
           }}
         >
+          <div
+            className="rounded-md border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600"
+            data-testid="embed-info-box"
+          >
+            {t('infoBox')}
+          </div>
           <form
             onSubmit={(formEvent) => {
               formEvent.preventDefault();

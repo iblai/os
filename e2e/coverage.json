@@ -1,11 +1,11 @@
 {
   "version": 2,
-  "lastUpdated": "2026-07-14",
+  "lastUpdated": "2026-07-21",
   "summary": {
-    "totalCheckpoints": 556,
-    "coveredCheckpoints": 530,
+    "totalCheckpoints": 562,
+    "coveredCheckpoints": 535,
     "deprecatedCheckpoints": 12,
-    "notReproducibleCheckpoints": 7,
+    "notReproducibleCheckpoints": 8,
     "pendingCheckpoints": 7,
     "percent": 100,
     "totalJourneys": 64,
@@ -355,7 +355,7 @@
         },
         {
           "id": "mgmt-11",
-          "description": "Edit Agent opened from sidebar My Agents shows the full segment sidebar (not just Privacy); admin row-click guard (canEditMentors) still passes",
+          "description": "Edit Agent opened from sidebar My Agents renders a working multi-tab segment sidebar (more than the Privacy-only bug signature) and the first available tab activates; Settings+LLM additionally asserted when the picked sibling mentor grants rbacResource access — the first row is arbitrary and may carry partial rights",
           "status": "covered"
         },
         {
@@ -1361,7 +1361,8 @@
         "components/modals/edit-mentor-modal/tabs/memory-tab/index.tsx",
         "components/modals/edit-mentor-modal/tabs/memory-tab/manage-memories.tsx",
         "components/modals/edit-mentor-modal/tabs/memory-tab/learners-memories.tsx",
-        "components/modals/edit-mentor-modal/tabs/settings-tab.tsx"
+        "components/modals/edit-mentor-modal/capability-gate.tsx",
+        "hooks/use-mentor-segments.ts"
       ],
       "checkpoints": [
         {
@@ -1371,7 +1372,7 @@
         },
         {
           "id": "mem-02",
-          "description": "Memory toggle in Settings tab can be enabled and disabled (sends enable_memory_component on Save)",
+          "description": "\"Remember past conversations\" in-tab capability toggle (feat/2040 — moved off Settings → Capabilities into the Memory tab's own CapabilityGate) can be enabled and disabled; auto-saves via useEditMentorMutation (optimistic, no footer Save button)",
           "status": "covered"
         },
         {
@@ -1386,12 +1387,12 @@
         },
         {
           "id": "mem-05",
-          "description": "Memory button visibility in chat input reflects mentor memory setting (Settings tab toggle)",
+          "description": "Memory button visibility in chat input reflects the Memory tab's in-tab capability toggle",
           "status": "covered"
         },
         {
           "id": "mem-06",
-          "description": "Memory toggle (enable_memory_component) is disabled and omitted from the settings PUT payload when the user only has read access to the field (RBAC) — unit-covered in settings-tab.test.tsx; not e2e-reproducible without RBAC field-permission seeding",
+          "description": "Memory capability toggle (enable_memory_component) is disabled when the user only has read access to the field (RBAC) — unit-covered in memory-tab.test.tsx; not e2e-reproducible without RBAC field-permission seeding",
           "status": "not-reproducible"
         }
       ]
@@ -2316,61 +2317,61 @@
       "name": "CLAW Advanced Sandbox",
       "spec": "44-claw-advanced-sandbox.spec.ts",
       "sourceFiles": [
-        "components/modals/edit-mentor-modal/tabs/settings-tab.tsx",
         "components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx",
         "components/modals/edit-mentor-modal/tabs/skills-tab.tsx",
         "components/modals/edit-mentor-modal/tabs/prompts-tab.tsx",
+        "components/modals/edit-mentor-modal/capability-gate.tsx",
         "hooks/use-mentor-segments.ts"
       ],
       "checkpoints": [
         {
           "id": "claw-01",
-          "description": "Admin opens Settings tab and Sandbox toggle is present",
+          "description": "Admin opens the Sandbox tab and the \"Dedicated sandbox\" capability toggle (in-tab CapabilityGate, feat/2040) is present",
           "status": "covered"
         },
         {
           "id": "claw-02",
-          "description": "Sandbox toggle is interactable for admins regardless of claw config state (admin intent)",
+          "description": "Capability toggle is interactable for admins regardless of sandbox connection state (admin intent)",
           "status": "covered"
         },
         {
           "id": "claw-03",
-          "description": "Flipping the toggle without saving does not show Sandbox or Skills tabs (pre-save state)",
+          "description": "Flipping the capability toggle auto-saves instantly (optimistic local state, no footer Save button) and does not change Sandbox or Skills tab visibility — both tabs are now unconditionally mounted for admins",
           "status": "covered"
         },
         {
           "id": "claw-04",
-          "description": "Enabling Sandbox and saving causes Sandbox tab to appear (right after Settings)",
+          "description": "Enabling the capability flips capability-gate-content's data-enabled to \"true\", ungating the SandboxConfig UI; Sandbox leads the Integrations category (feat/2040 moved it off Configurations)",
           "status": "covered"
         },
         {
           "id": "claw-05",
-          "description": "Skills tab and Agent Configuration section only appear when a ClawMentorConfig is wired (sandbox connected to an instance); otherwise stay hidden even when claw is enabled",
+          "description": "Skills tab is always visible AND shows the real skills UI (heading, info box, New Skill action) independent of the sandbox — feat/2040 made the Skills content fully sandbox-independent (no \"connect a sandbox\" gate)",
           "status": "covered"
         },
         {
           "id": "claw-06",
-          "description": "When wired, Sandbox tab is right after Settings and Skills tab is right after Prompts in the dialog tab list",
+          "description": "Sandbox leads the Integrations category and Skills follows Prompts in the Configurations category, unconditionally (feat/2040 groups the sidebar into Configurations / Integrations / Runtime)",
           "status": "covered"
         },
         {
           "id": "claw-07",
-          "description": "Disabling Sandbox and saving removes Sandbox tab, Skills tab, and Agent Configuration section",
+          "description": "Disabling the capability flips capability-gate-content's data-enabled back to \"false\", regating the SandboxConfig UI, while Sandbox and Skills tabs remain visible",
           "status": "covered"
         },
         {
           "id": "claw-08",
-          "description": "Admin navigates to Sandbox tab and the sandbox config container renders",
+          "description": "Admin navigates to Sandbox tab and the sandbox config container renders regardless of capability state (grayed, not unmounted, when off)",
           "status": "covered"
         },
         {
           "id": "claw-09",
-          "description": "Admin toggles Sandbox ON then OFF in one session: Sandbox tab appears after enable-save and disappears after disable-save",
+          "description": "Admin toggles the capability ON then OFF in one session and capability-gate-content's data-enabled flips accordingly both times",
           "status": "covered"
         },
         {
           "id": "claw-10",
-          "description": "Admin adds a new sandbox instance via the Add Instance dialog and the new row appears in the instance table",
+          "description": "Admin adds a new sandbox instance via the Add Instance dialog (capability enabled first — CapabilityGate content requires the toggle on) and the new row appears in the instance table",
           "status": "covered"
         },
         {
@@ -2380,7 +2381,7 @@
         },
         {
           "id": "claw-12",
-          "description": "Admin connects a sandbox instance: Connected Instance heading appears and Skills tab becomes visible in the dialog tab list",
+          "description": "Admin connects a sandbox instance via the dedicated per-row Connect button (data-testid=\"connect-instance-<id>\" — Connect is no longer a dropdown menu item, it sits next to the separate \"Actions\" three-dot menu): Connected Instance heading appears and the Skills tab renders its (sandbox-independent) skills UI",
           "status": "covered"
         },
         {
@@ -2400,7 +2401,7 @@
         },
         {
           "id": "claw-16",
-          "description": "Advanced Sandbox toggle (enable_claw) is disabled and omitted from the settings PUT payload when the user only has read access to the field (RBAC) — unit-covered in settings-tab.test.tsx; not e2e-reproducible without RBAC field-permission seeding",
+          "description": "Dedicated sandbox toggle (enable_claw) is disabled when the user only has read access to the field (RBAC) — unit-covered in sandbox-tab.test.tsx; not e2e-reproducible without RBAC field-permission seeding",
           "status": "not-reproducible"
         }
       ]
@@ -2419,7 +2420,7 @@
       "checkpoints": [
         {
           "id": "pr-01",
-          "description": "Privacy tab label is visible in the Edit Mentor modal sidebar",
+          "description": "Privacy tab label is visible in the Edit Mentor modal sidebar (always mounted — no longer gated on enable_privacy_router)",
           "status": "covered"
         },
         {
@@ -2429,17 +2430,22 @@
         },
         {
           "id": "pr-03",
-          "description": "Privacy tab body tracks `enable_privacy_router` flipped via Settings → Capabilities → 'Filter PII from messages' (the in-tab master switch was removed; flipping it now lives only in Capabilities)",
+          "description": "Privacy tab stays mounted in the sidebar regardless of enable_privacy_router; capability-gate-content's data-enabled attribute tracks the in-tab \"PII filtering\" toggle (feat/2040 — moved off Settings → Capabilities into the Privacy tab's own CapabilityGate)",
           "status": "covered"
         },
         {
           "id": "pr-04",
-          "description": "Action dropdown, entity chips, and output-filter switch are hidden when the router is off",
+          "description": "The CapabilityGate off-state hint is shown only while the router is off",
           "status": "covered"
         },
         {
           "id": "pr-05",
-          "description": "Enabling the router reveals the action, entity chips and output-filter fields",
+          "description": "Enabling the router keeps the action, entity chips and output-filter fields present and interactive",
+          "status": "covered"
+        },
+        {
+          "id": "pr-05b",
+          "description": "The \"When PII is detected\" action dropdown lists Allow, Redact, Mask, Block in that order (PRIVACY_ACTIONS = ['allow','redact','mask','block'] from @iblai/data-layer — Allow is now first)",
           "status": "covered"
         },
         {
@@ -2563,22 +2569,22 @@
         },
         {
           "id": "vo-09",
-          "description": "Settings tab surfaces both voice-call toggles (Enable smart document retrieval, Enable screen sharing)",
+          "description": "Settings tab surfaces the smart-document-retrieval voice-call toggle (\"Enable screen sharing\" moved off Settings onto the Screen Share tab's own capability toggle — see journey 48)",
           "status": "covered"
         },
         {
           "id": "vo-10",
-          "description": "Flipping a voice-call toggle in Settings and clicking Save persists to the CallConfiguration endpoint and surfaces the success toast",
+          "description": "Flipping the smart-document-retrieval voice-call toggle in Settings and clicking Save persists to the CallConfiguration endpoint and surfaces the success toast",
           "status": "covered"
         },
         {
           "id": "VO-11",
-          "description": "Voice tab is hidden from the sidebar when \"Enable voice calls\" (show_voice_call) is off",
+          "description": "Voice tab stays visible (always mounted — no longer gated on show_voice_call) and its content grays (capability-gate-content data-enabled=\"false\") when the in-tab \"Enable voice calls\" capability toggle is off",
           "status": "covered"
         },
         {
           "id": "VO-12",
-          "description": "Re-enabling \"Enable voice calls\" reveals the Voice tab in the sidebar after the settings refetch",
+          "description": "Re-enabling the in-tab \"Enable voice calls\" capability toggle ungates the Voice tab's sub-tab content (data-enabled=\"true\")",
           "status": "covered"
         }
       ]
@@ -2597,17 +2603,17 @@
       "checkpoints": [
         {
           "id": "ss-01",
-          "description": "Screen Share tab is hidden in the sidebar when the Settings 'Enable screen sharing' toggle is off",
+          "description": "Screen Share tab stays visible (always mounted — no longer gated on call_configuration.enable_video) and its content grays (capability-gate-content data-enabled=\"false\") when the in-tab \"Enable screen sharing\" capability toggle is off",
           "status": "covered"
         },
         {
           "id": "ss-02",
-          "description": "Flipping the Settings toggle on and saving makes the Screen Share tab appear in the sidebar",
+          "description": "Enabling the in-tab capability toggle ungates the screensharing prompt cards (data-enabled=\"true\") and hides the CapabilityGate off-hint",
           "status": "covered"
         },
         {
           "id": "ss-03",
-          "description": "Switching to the Screen Share tab renders the SDK heading and body",
+          "description": "Switching to the Screen Share tab renders the SDK heading, body and capability toggle regardless of the capability's on/off state",
           "status": "covered"
         }
       ]
@@ -3551,7 +3557,7 @@
         },
         {
           "id": "lti-03",
-          "description": "Admin disables 'Enable LTI launches' in Settings and the LTI tab stays visible (the is_lti_accessible gate was removed from MENTOR_SEGMENTS in feat/1853)",
+          "description": "Admin disables \"Enable LTI launches\" via the LTI tab's own in-tab capability toggle (feat/2040 — moved off Settings → Capabilities into the LTI tab's own CapabilityGate) and capability-gate-content's data-enabled flips to \"false\" (the tab itself is unconditionally mounted for admins, so tab visibility is no longer asserted)",
           "status": "covered"
         },
         {

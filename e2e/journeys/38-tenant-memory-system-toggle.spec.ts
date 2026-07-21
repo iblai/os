@@ -117,13 +117,14 @@ test.describe('Journey 38: Tenant Memory System toggle', () => {
     // Ensure the mentor itself has memory enabled — the chat Memory button
     // only appears when BOTH the tenant memsearch config and the mentor's
     // enable_memory_component are on (see hooks/use-mentors/use-mentor-settings.ts).
-    // The Memory toggle moved from the Memory tab to the Settings tab (fix/1584).
-    await editMentorPage.open('Settings');
+    // The "Remember past conversations" master toggle now lives in-tab on
+    // the Memory tab itself (feat/2040 — moved off Settings → Capabilities).
+    await editMentorPage.open('Memory');
     await waitForPageReady(page);
     const mentorMemoryWasEnabled =
-      await editMentorPage.settings.isMemoryEnabled();
+      await editMentorPage.memory.isCapabilityEnabled();
     if (!mentorMemoryWasEnabled) {
-      await editMentorPage.settings.setMemoryEnabled(true);
+      await editMentorPage.memory.setCapabilityEnabled(true);
     }
     await editMentorPage.close();
     await page.waitForTimeout(1_000);
@@ -160,11 +161,12 @@ test.describe('Journey 38: Tenant Memory System toggle', () => {
       }
 
       // Restore mentor memory state.
-      // The Memory toggle moved from the Memory tab to the Settings tab (fix/1584).
+      // The "Remember past conversations" master toggle lives in-tab on the
+      // Memory tab itself (feat/2040 — moved off Settings → Capabilities).
       if (!mentorMemoryWasEnabled) {
-        await editMentorPage.open('Settings');
+        await editMentorPage.open('Memory');
         await waitForPageReady(page);
-        await editMentorPage.settings.setMemoryEnabled(false);
+        await editMentorPage.memory.setCapabilityEnabled(false);
         await editMentorPage.close();
       }
     }

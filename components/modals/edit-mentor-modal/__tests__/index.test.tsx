@@ -251,6 +251,7 @@ vi.mock('../tabs', () => ({
     <div data-testid="screenshare-tab">Screen Share Tab</div>
   ),
   LtiTab: () => <div data-testid="lti-tab">LTI Tab</div>,
+  AnalyticsTab: () => <div data-testid="analytics-tab">Analytics Tab</div>,
 }));
 
 vi.mock('../tabs/memory-tab', () => ({
