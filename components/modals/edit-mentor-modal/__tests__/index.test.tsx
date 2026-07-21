@@ -500,6 +500,7 @@ describe('EditMentorModal', () => {
     return {
       value,
       label: value,
+      labelKey: value,
       icon: SettingsIcon,
       userTypes: [UserType.ADMIN, UserType.FREE_TRIAL],
       permissionFieldsCheck: [],
@@ -693,7 +694,6 @@ describe('EditMentorModal', () => {
         }),
         makeSegment(MODALS.EDIT_MENTOR.tabs.llm, {
           navCategory: 'configurations',
-          label: 'LLM Segment',
         }),
       ];
 
@@ -704,8 +704,10 @@ describe('EditMentorModal', () => {
         </Provider>,
       );
 
+      // Labels render translated from the `header` namespace, so the llm
+      // segment shows as "LLM" regardless of the fixture's raw label.
       const llmTriggers = await screen.findAllByRole('tab', {
-        name: 'LLM Segment',
+        name: 'LLM',
       });
       await user.click(llmTriggers[0]);
 
@@ -781,9 +783,10 @@ describe('EditMentorModal', () => {
       // the rendered segment list: Settings (the only configurations
       // segment) must be present.
       await waitFor(() => {
+        // Rendered via the `header` translation namespace — "Settings", not
+        // the raw segment value.
         expect(
-          screen.getAllByRole('tab', { name: MODALS.EDIT_MENTOR.tabs.settings })
-            .length,
+          screen.getAllByRole('tab', { name: 'Settings' }).length,
         ).toBeGreaterThan(0);
       });
     });
