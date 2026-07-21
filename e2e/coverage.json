@@ -2,14 +2,14 @@
   "version": 2,
   "lastUpdated": "2026-07-14",
   "summary": {
-    "totalCheckpoints": 550,
-    "coveredCheckpoints": 524,
+    "totalCheckpoints": 556,
+    "coveredCheckpoints": 530,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 7,
     "pendingCheckpoints": 7,
     "percent": 100,
-    "totalJourneys": 63,
-    "activeJourneys": 62
+    "totalJourneys": 64,
+    "activeJourneys": 63
   },
   "journeys": [
     {
@@ -3562,6 +3562,48 @@
         {
           "id": "latex-05",
           "description": "Math then money on the same line (\"since $2x = 8$, each unit is $8 and the pair is $16.\") renders $2x = 8$ as KaTeX while $8 and $16 stay literal",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "chat-search-dialog",
+      "name": "Chat Search Dialog",
+      "spec": "62-chat-search-dialog.spec.ts",
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/chats/chat-search-dialog.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/chats/use-recent-chats.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "csd-01",
+          "description": "Clicking Search chats in the expanded sidebar opens the dialog with the searchbox focused; pressing Escape closes it",
+          "status": "covered"
+        },
+        {
+          "id": "csd-02",
+          "description": "The dialog lists the mentor's seeded chats grouped under Previous 7 Days, each row showing its first human message as a single line with no embedded newline",
+          "status": "covered"
+        },
+        {
+          "id": "csd-03",
+          "description": "Typing in the searchbox filters the list (server-side, debounced) to only the matching session; clearing the search restores all seeded rows",
+          "status": "covered"
+        },
+        {
+          "id": "csd-04",
+          "description": "Clicking New Chat inside the dialog closes it and starts a fresh, empty chat distinct from the previously-active seeded session",
+          "status": "covered"
+        },
+        {
+          "id": "csd-05",
+          "description": "Selecting a chat result closes the dialog and loads that session's conversation into the chat panel",
+          "status": "covered"
+        },
+        {
+          "id": "csd-06",
+          "description": "Collapsing the sidebar and clicking the Search chats rail icon opens the same dialog",
           "status": "covered"
         }
       ]
