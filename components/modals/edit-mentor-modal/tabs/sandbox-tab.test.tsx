@@ -1,6 +1,13 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup, fireEvent } from '@testing-library/react';
+import {
+  render,
+  screen,
+  cleanup,
+  fireEvent,
+  waitFor,
+} from '@testing-library/react';
+import { toast } from 'sonner';
 
 import { SandboxTab } from './sandbox-tab';
 
@@ -188,6 +195,45 @@ describe('SandboxTab', () => {
           org: 'test-tenant',
           formData: { enable_claw: true },
         }),
+      );
+    });
+
+    it('rolls the toggle back and surfaces the error toast when the PATCH fails', async () => {
+      mockEditMentor.mockReturnValue({
+        unwrap: vi.fn().mockRejectedValue(new Error('network')),
+      });
+      render(<SandboxTab />);
+
+      const toggle = screen.getByTestId('sandbox-capability-toggle');
+      fireEvent.click(toggle);
+      // Optimistic flip happens synchronously…
+      expect(toggle).toBeChecked();
+
+      // …then the rejected unwrap rolls it back and toasts.
+      await waitFor(() => {
+        expect(toggle).not.toBeChecked();
+      });
+      expect(toast.error).toHaveBeenCalled();
+      expect(toast.success).not.toHaveBeenCalled();
+    });
+
+    it('treats a settings payload without enable_claw as off', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({ data: {} });
+
+      render(<SandboxTab />);
+
+      expect(screen.getByTestId('sandbox-capability-toggle')).not.toBeChecked();
+    });
+
+    it('sends an empty userId when no username is available', () => {
+      mockUsername.mockReturnValue(null);
+
+      render(<SandboxTab />);
+
+      fireEvent.click(screen.getByTestId('sandbox-capability-toggle'));
+
+      expect(mockEditMentor).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: '' }),
       );
     });
   });
