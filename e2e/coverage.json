@@ -355,7 +355,7 @@
         },
         {
           "id": "mgmt-11",
-          "description": "Edit Agent opened from sidebar My Agents shows the full segment sidebar (not just Privacy); admin row-click guard (canEditMentors) still passes",
+          "description": "Edit Agent opened from sidebar My Agents renders a working multi-tab segment sidebar (more than the Privacy-only bug signature) and the first available tab activates; Settings+LLM additionally asserted when the picked sibling mentor grants rbacResource access — the first row is arbitrary and may carry partial rights",
           "status": "covered"
         },
         {

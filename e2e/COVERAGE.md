@@ -109,7 +109,7 @@ When adding a new page or modifying an existing user flow:
 - [x] Admin can edit the system prompt in the Prompts tab
 - [x] Admin can send a message to a newly created mentor and receive a response
 - [x] Admin can delete a mentor from the Settings tab
-- [x] Edit Agent opened from sidebar My Agents shows the full segment sidebar (not just Privacy); admin `canEditMentors` guard unchanged
+- [x] Edit Agent opened from sidebar My Agents renders a working multi-tab segment sidebar (more than the Privacy-only bug signature) and the first available tab activates; Settings+LLM additionally asserted when the picked sibling mentor grants rbacResource access (the first row is arbitrary and may carry partial rights)
 - [ ] _(not-reproducible — RBAC off in default env)_ My Agents list scoped to `created_by=username` for non-admins via `useMentorsWithPagination({ createdBy })`; admin still sees full list — unit-covered in `settings-modal.test.tsx`
 - [ ] _(not-reproducible — RBAC off in default env)_ Student with `/mentors/#create` RBAC permission (`studentCanCreateMentors`) sees New Agent + My Agents in sidebar and can click a row to open Edit Agent dialog — unit-covered
 - [ ] _(not-reproducible — RBAC off in default env)_ Analytics shown to student mentor-creator only when `created_by===username` or holding per-mentor `/mentors/{id}/#view_analytics` permission — unit-covered

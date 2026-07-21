@@ -358,6 +358,15 @@ test.describe('Journey 24: Memory in Prompt Box', () => {
     createMentorPage,
     editMentorPage,
   }) => {
+    // Every Edit Agent open blocks on the modal's hydration spinner
+    // (settings + RBAC prefetch churn — ~30-90s per open, see
+    // EditMentorPage.waitForHydrated), and this test opens the modal up to
+    // THREE times (enable memory, disable memory, restore) plus creates a
+    // fresh mentor first. The default 120s budget expired mid-hydration on
+    // the second open (observed on staging). Mirrors journey 50's
+    // cp-agent-02 and journey 60's sub-resource budget.
+    test.setTimeout(420_000);
+
     await navigateToMentorApp(page);
     const isAdmin = await checkAdminStatus(page);
     if (!isAdmin) {
