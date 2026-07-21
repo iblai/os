@@ -34,7 +34,10 @@ overrides:
   fast-uri: '>=3.1.2'
   ip-address: '>=10.1.1'
   brace-expansion: '>=5.0.6'
-  'minimatch@^9>brace-expansion': '2.0.3'
+  # Keep minimatch@9 (glob@10 in the vitest coverage tooling) on the CommonJS 2.x
+  # line — the 5.x major above is incompatible — but at the patched release.
+  # 2.0.3 was vulnerable to GHSA-3jxr-9vmj-r5cp (ReDoS); >=2.1.2 fixes it.
+  'minimatch@^9>brace-expansion': '>=2.1.2 <3'
   postcss: '>=8.5.10'
   ws: '>=8.20.1'
   qs: '>=6.15.2'
