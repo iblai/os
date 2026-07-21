@@ -521,6 +521,9 @@
     "monthlyRevenue": "Ingresos mensuales",
     "revenueLabel": "Ingresos"
   },
+  "componentsApplyNavbar": {
+    "application": "Solicitud"
+  },
   "componentsChartWithTooltip": {
     "monthlyPerformance": "Rendimiento mensual",
     "valueLabel": "Valor"

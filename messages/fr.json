@@ -521,6 +521,9 @@
     "monthlyRevenue": "Revenus mensuels",
     "revenueLabel": "Revenus"
   },
+  "componentsApplyNavbar": {
+    "application": "Candidature"
+  },
   "componentsChartWithTooltip": {
     "monthlyPerformance": "Performance mensuelle",
     "valueLabel": "Valeur"
