@@ -360,6 +360,16 @@ export class LtiTab {
    * text changes on the server refetch) rather than sleeping. The page cap is
    * a runaway guard well above any real residue level; when the row is genuinely
    * absent we return the (hidden) locator so the caller's assertion decides.
+   *
+   * KNOWN BACKEND BUG: the DM LTI proxy ignores the `page`/`page_size` query
+   * params — `?page=2` returns page-1 rows (`previous: null`, upstream `next`
+   * link built without params), so clicking "next" refetches the SAME page
+   * and rows past the first 10 are unreachable. When the page fails to turn
+   * we treat it as the end of the walk (return the row and let the caller's
+   * assertion produce a truthful failure) rather than dying inside the page
+   * object with a bare `not.toHaveText` timeout. The residue reaper
+   * (`e2e/utils/lti-residue.ts`) keeps the lists under one page so tests
+   * normally never need the walk at all.
    */
   private async revealRow(
     sectionTestId: string,
@@ -385,7 +395,15 @@ export class LtiTab {
       const before = await firstRow.textContent().catch(() => null);
       await nextControl.click();
       if (before !== null) {
-        await expect(firstRow).not.toHaveText(before, { timeout: 15_000 });
+        const turned = await expect(firstRow)
+          .not.toHaveText(before, { timeout: 15_000 })
+          .then(
+            () => true,
+            () => false,
+          );
+        // Page didn't turn — the proxy served the same page again (see the
+        // KNOWN BACKEND BUG note above). Further rows are unreachable.
+        if (!turned) return row;
       }
     }
     return row;

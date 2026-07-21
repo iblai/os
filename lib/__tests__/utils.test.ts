@@ -48,6 +48,8 @@ import {
   isStripeActivated,
   getCurrentArtifactTitle,
   getFirstMessageWithContent,
+  getFirstHumanMessageWithContent,
+  getLatestMessageTimestamp,
   isSafariBrowser,
   onAccountDeleted,
 } from '@/lib/utils';
@@ -2788,6 +2790,79 @@ describe('getFirstMessageWithContent function', () => {
       { message: { data: { content: '# Heading\n\nParagraph' } } },
     ];
     expect(getFirstMessageWithContent(messages)).toBe('# Heading\n\nParagraph');
+  });
+});
+
+describe('getFirstHumanMessageWithContent function', () => {
+  it('should return empty string for null/undefined/empty input', () => {
+    expect(getFirstHumanMessageWithContent(null as any)).toBe('');
+    expect(getFirstHumanMessageWithContent(undefined as any)).toBe('');
+    expect(getFirstHumanMessageWithContent([])).toBe('');
+  });
+
+  it('should skip the assistant greeting and return the first human message', () => {
+    const messages = [
+      { is_ai: true, message: { data: { content: 'Hi, how can I help?' } } },
+      { is_human: true, message: { data: { content: 'What is React?' } } },
+      { is_human: true, message: { data: { content: 'And Redux?' } } },
+    ];
+    expect(getFirstHumanMessageWithContent(messages)).toBe('What is React?');
+  });
+
+  it('should detect human messages via message.data.type when is_human is absent', () => {
+    const messages = [
+      { message: { data: { type: 'ai', content: 'Greeting' } } },
+      { message: { data: { type: 'human', content: 'My question' } } },
+    ];
+    expect(getFirstHumanMessageWithContent(messages)).toBe('My question');
+  });
+
+  it('should skip human messages that have no content', () => {
+    const messages = [
+      { is_human: true, message: { data: { content: '' } } },
+      { is_human: true, message: { data: { content: 'Real question' } } },
+    ];
+    expect(getFirstHumanMessageWithContent(messages)).toBe('Real question');
+  });
+
+  it('should return empty string when there is no human message', () => {
+    const messages = [
+      { is_ai: true, message: { data: { content: 'Only assistant' } } },
+    ];
+    expect(getFirstHumanMessageWithContent(messages)).toBe('');
+  });
+});
+
+describe('getLatestMessageTimestamp function', () => {
+  it('should return null for null/undefined/empty input', () => {
+    expect(getLatestMessageTimestamp(null as any)).toBeNull();
+    expect(getLatestMessageTimestamp(undefined as any)).toBeNull();
+    expect(getLatestMessageTimestamp([])).toBeNull();
+  });
+
+  it('should return null when no message has a timestamp', () => {
+    expect(getLatestMessageTimestamp([{ message: {} }, {}])).toBeNull();
+  });
+
+  it('should return the latest inserted_at across messages', () => {
+    const messages = [
+      { inserted_at: '2025-11-19T15:12:49.347417Z' },
+      { inserted_at: '2025-11-19T21:43:09.409656Z' },
+      { inserted_at: '2025-11-19T19:02:27.774918Z' },
+    ];
+    expect(getLatestMessageTimestamp(messages)).toBe(
+      new Date('2025-11-19T21:43:09.409656Z').getTime(),
+    );
+  });
+
+  it('should ignore unparseable timestamps', () => {
+    const messages = [
+      { inserted_at: 'not-a-date' },
+      { inserted_at: '2026-01-02T00:00:00.000Z' },
+    ];
+    expect(getLatestMessageTimestamp(messages)).toBe(
+      new Date('2026-01-02T00:00:00.000Z').getTime(),
+    );
   });
 });
 

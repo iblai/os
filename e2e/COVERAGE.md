@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-07-21 | 556 checkpoints (529 covered, 7 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 63 journeys (62 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-07-14 | 556 checkpoints (530 covered, 7 pending/fixme, 7 not-reproducible in default env, 12 deprecated) | 64 journeys (63 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -1128,5 +1128,20 @@ Note: `remark-math` only classifies a `$$...$$` span as block/display math when 
 - [x] latex-03: Currency amounts ("I have $5 and $10, it costs $5, and the total is $3.50.") stay literal text with no KaTeX rendering and no visible escape backslash
 - [x] latex-04: Money then math on the same line ("the kit costs $12, and the formula $3x + 5$ gives the price.") keeps `$12` literal while `$3x + 5$` renders as KaTeX
 - [x] latex-05: Math then money on the same line ("since $2x = 8$, each unit is $8 and the pair is $16.") renders `$2x = 8$`as KaTeX while`$8`and`$16` stay literal
+
+---
+
+## Journey 62: Chat Search Dialog (6 checkpoints) — `journeys/62-chat-search-dialog.spec.ts`
+
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/chats/chat-search-dialog.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/chats/use-recent-chats.ts`
+
+Covers the `ChatSearchDialog` (issue #2053) opened from the sidebar's "Search chats" entry point — an expanded text-label button and a collapsed "rail" icon-only button, both sharing the accessible name "Search chats". The dialog has a search input header (debounced 300ms into a server-side `search` query param), a "New Chat" row, results grouped by recency (`group-chats-by-recency.ts`), and a load-more spinner driven by an `IntersectionObserver` sentinel. Each test creates its own mentor via `createMentorPage.openAndCreate()` and seeds 3 distinct chat sessions by sending a distinguishing message and starting a new chat between each send. Infinite scroll/pagination and the "Previous 30 Days"/"Older" recency buckets are NOT covered here (not reproducible via real UI sends within a reasonable test budget) — see the spec file's top-of-file comment and the `use-recent-chats`/`groupChatRowsByRecency` unit tests instead.
+
+- [x] csd-01: Clicking "Search chats" in the expanded sidebar opens the dialog with the searchbox focused; pressing Escape closes it
+- [x] csd-02: The dialog lists the mentor's seeded chats grouped under "Previous 7 Days", each row showing its first human message as a single line with no embedded newline
+- [x] csd-03: Typing in the searchbox filters the list (server-side, debounced) to only the matching session; clearing the search restores all seeded rows
+- [x] csd-04: Clicking "New Chat" inside the dialog closes it and starts a fresh, empty chat distinct from the previously-active seeded session
+- [x] csd-05: Selecting a chat result closes the dialog and loads that session's conversation into the chat panel
+- [x] csd-06: Collapsing the sidebar and clicking the "Search chats" rail icon opens the same dialog
 
 ---
