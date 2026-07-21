@@ -45,14 +45,14 @@ async function navigateToMentorAppWithRetry(
     }
     if (!hasErrorBoundary) throw err;
     logger.warn(
-      '[Journey 45] Client-side exception on navigation — retrying once.',
+      '[Journey 63] Client-side exception on navigation — retrying once.',
     );
     await navigateToMentorApp(page, url);
   }
 }
 
 /**
- * Journey 45 — Mentor Evaluation (Evals) Tab.
+ * Journey 63 — Mentor Evaluation (Evals) Tab.
  *
  * The Evals tab is rendered by the packaged `AgentEvaluationTab` from
  * `@iblai/iblai-js/web-containers/next`, wrapped locally with
@@ -100,7 +100,7 @@ async function navigateToMentorAppWithRetry(
 
 test.describe.configure({ mode: 'serial' });
 
-test.describe('Journey 45: Mentor Evaluation Tab', () => {
+test.describe('Journey 63: Mentor Evaluation Tab', () => {
   let mentorId = '';
   let platformKey = '';
   let mentorUrl = '';
@@ -133,7 +133,7 @@ test.describe('Journey 45: Mentor Evaluation Tab', () => {
       const isAdmin = await checkAdminStatus(setupPage);
       if (!isAdmin) {
         logger.warn(
-          '[Journey 45] Setup account is not admin; every Evals test will self-skip.',
+          '[Journey 63] Setup account is not admin; every Evals test will self-skip.',
         );
         return;
       }
@@ -147,7 +147,7 @@ test.describe('Journey 45: Mentor Evaluation Tab', () => {
       platformKey = parsed.platformKey;
       mentorId = parsed.mentorId;
       mentorUrl = `${MENTOR_NEXTJS_HOST}/platform/${platformKey}/${mentorId}`;
-      logger.info(`[Journey 45] Created dedicated eval mentor at ${mentorUrl}`);
+      logger.info(`[Journey 63] Created dedicated eval mentor at ${mentorUrl}`);
     } finally {
       await setupPage.close();
       await setupContext.close();
@@ -188,10 +188,10 @@ test.describe('Journey 45: Mentor Evaluation Tab', () => {
       await editMentorPage.open('Settings');
       await waitForPageReady(cleanupPage);
       await editMentorPage.settings.deleteMentor();
-      logger.info(`[Journey 45] Deleted dedicated eval mentor ${mentorId}`);
+      logger.info(`[Journey 63] Deleted dedicated eval mentor ${mentorId}`);
     } catch (err) {
       logger.warn(
-        `[Journey 45] Failed to clean up eval mentor ${mentorId}: ${err}`,
+        `[Journey 63] Failed to clean up eval mentor ${mentorId}: ${err}`,
       );
     } finally {
       await cleanupPage.close();
@@ -313,7 +313,7 @@ test.describe('Journey 45: Mentor Evaluation Tab', () => {
     await evaluation.openManageBenchmarksDialog();
     await evaluation.createBenchmark({
       name: BENCHMARK_NAME,
-      description: 'Throwaway benchmark created by e2e journey 45.',
+      description: 'Throwaway benchmark created by e2e journey 63.',
     });
     await evaluation.closeManageBenchmarksDialog();
 
@@ -705,7 +705,7 @@ test.describe('Journey 45: Mentor Evaluation Tab', () => {
 // non-admins typically can't even reach the Settings/Modify menu item, so
 // that branch alone already proves the tab is unreachable; the fallback
 // branch below covers any env where a non-admin CAN open the dialog.
-test.describe('Journey 45: Mentor Evaluation Tab — Non-Admin', () => {
+test.describe('Journey 63: Mentor Evaluation Tab — Non-Admin', () => {
   test('non-admin does not see the Evals tab in the Edit Mentor modal', async ({
     nonadminPage,
     nonadminEditMentorPage,

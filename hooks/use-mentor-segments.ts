@@ -405,8 +405,8 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     // Without a navCategory the new categorized layout (modal sidebar +
     // nav-bar dropdown) silently drops this segment — both consumers skip
     // any segment lacking a category. Agent evaluation reports on run
-    // performance, so it belongs in Analytics alongside History/Audit.
-    navCategory: 'analytics',
+    // performance, so it belongs in Runtime alongside History/Audit.
+    navCategory: 'runtime',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.api,

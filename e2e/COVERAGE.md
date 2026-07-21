@@ -793,7 +793,7 @@ The spec drives the tab through the semantic Tasks helpers from `@iblai/iblai-js
 
 ---
 
-## Journey 45: Mentor Evaluation Tab (17 checkpoints) — `journeys/45-mentor-evaluation-tab.spec.ts`
+## Journey 63: Mentor Evaluation Tab (17 checkpoints) — `journeys/63-mentor-evaluation-tab.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/evaluation-tab/index.tsx`, `hooks/use-mentor-segments.ts`
 
