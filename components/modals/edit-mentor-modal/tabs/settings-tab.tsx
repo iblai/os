@@ -29,15 +29,13 @@ import {
   useGetMentorSettingsQuery,
   useGetMentorCategoriesQuery,
   useEditMentorMutation,
-  useGetClawMentorConfigQuery,
-  useUpdateClawMentorConfigMutation,
   useGetCallConfigurationsQuery,
   useCreateCallConfigurationMutation,
   useUpdateCallConfigurationMutation,
   useGetTenantChatPrivacyConfigQuery,
   chatPrivacyApiSlice,
 } from '@iblai/iblai-js/data-layer';
-import { useForm, useStore } from '@tanstack/react-form';
+import { useForm } from '@tanstack/react-form';
 
 import {
   Select,
@@ -155,16 +153,6 @@ export function SettingsTab() {
   );
   const tenantAllowsChatPrivacyControl =
     !!tenantChatPrivacyConfig?.allow_user_chat_privacy_control;
-
-  // Mentor UUID is required for the new mentor-scoped claw-config endpoint.
-  // The route accepts it via `mentor_unique_id`; fall back to `activeMentorId`
-  // (which may already be a UUID when navigating directly).
-  // @ts-ignore mentor_unique_id is on the API response but not the public type
-  const mentorUuid: string | undefined =
-    // @ts-ignore mentor_unique_id is on the API response but not the public type
-    mentor?.mentor_unique_id ?? activeMentorId;
-
-  const [updateClawConfig] = useUpdateClawMentorConfigMutation();
 
   // Voice-call toggles live on CallConfiguration; use the inlined config, else fetch the list.
   // @ts-ignore call_configuration is on the API response but not typed
@@ -299,17 +287,15 @@ export function SettingsTab() {
         values.show_attachment = value.show_attachment;
       }
 
-      if (value.show_voice_call !== undefined) {
-        values.show_voice_call = value.show_voice_call;
-      }
+      // `show_voice_call` is now owned by the Voice tab's inline capability
+      // toggle — Settings no longer writes it (avoids clobbering the tab).
 
       if (value.show_voice_record !== undefined) {
         values.show_voice_record = value.show_voice_record;
       }
 
-      if (value.is_lti_accessible !== undefined) {
-        values.is_lti_accessible = value.is_lti_accessible;
-      }
+      // `is_lti_accessible` is now owned by the LTI tab's inline capability
+      // toggle — Settings no longer writes it (avoids clobbering the tab).
 
       if (value.forkable !== undefined) {
         values.forkable = value.forkable;
@@ -320,24 +306,9 @@ export function SettingsTab() {
         values.show_reasoning = value.show_reasoning;
       }
 
-      if (value.enable_claw !== undefined) {
-        values.enable_claw = value.enable_claw;
-      }
-
-      // Detect whether the Sandbox toggle changed. If it did AND the
-      // mentor is wired to a Claw instance (clawMentorConfig exists), we also
-      // PATCH the claw-config so its `enabled` flag stays in sync with the
-      // mentor-settings intent. When no claw-config exists (404 → null) we
-      // simply skip this — the mentor isn't connected to an instance yet.
-      // @ts-ignore enable_claw exists in API response but not in type
-      const previousEnableClaw: boolean = mentor?.enable_claw ?? false;
-      const enableClawChanged =
-        value.enable_claw !== undefined &&
-        value.enable_claw !== previousEnableClaw;
-      // Only send enable_memory_component if the user actually changed it.
-      if (value.enable_memory_component !== initialMemoryEnabled) {
-        values.enable_memory_component = value.enable_memory_component;
-      }
+      // `enable_claw` (Sandbox) and `enable_memory_component` (Memory) are now
+      // owned by their respective tabs' inline capability toggles — Settings no
+      // longer writes them (avoids clobbering the tab-owned values).
 
       if (value.enable_multi_query_rag !== undefined) {
         values.enable_multi_query_rag = value.enable_multi_query_rag;
@@ -347,9 +318,8 @@ export function SettingsTab() {
         values.enable_prompt_caching = value.enable_prompt_caching;
       }
 
-      if (value.enable_privacy_router !== undefined) {
-        values.enable_privacy_router = value.enable_privacy_router;
-      }
+      // `enable_privacy_router` (Privacy) is now owned by the Privacy tab's
+      // inline capability toggle — Settings no longer writes it.
 
       if (value.disable_chathistory !== undefined) {
         values.disable_chathistory = value.disable_chathistory;
@@ -386,30 +356,18 @@ export function SettingsTab() {
           chatPrivacyApiSlice.util.invalidateTags(['ChatPrivacyEffective']),
         );
 
-        if (enableClawChanged && clawMentorConfig && tenantKey && mentorUuid) {
-          try {
-            await updateClawConfig({
-              org: tenantKey,
-              mentorUniqueId: mentorUuid,
-              enabled: value.enable_claw,
-            }).unwrap();
-          } catch (clawError) {
-            // Don't fail the whole save flow if syncing the claw-config
-            // fails — the mentor-settings update already succeeded. Log
-            // for diagnostics; the next reload will reflect the truth.
-            console.error(JSON.stringify({ tenant: tenantKey, clawError }));
-          }
-        }
+        // `enable_claw` sync to the claw-config is now handled by the Sandbox
+        // tab; Settings no longer touches it.
 
-        // Sync the voice-call toggles to CallConfiguration only when changed
-        // (POST a new config if none exists, else PATCH).
+        // Sync `use_function_calling_for_rag` to CallConfiguration only when
+        // changed (POST a new config if none exists, else PATCH). `enable_video`
+        // (screen sharing) is now owned by the Screen Share tab, so Settings no
+        // longer writes it here.
         const prevFnCalling = existingCallConfig?.use_function_calling_for_rag
           ? true
           : false;
-        const prevEnableVideo = existingCallConfig?.enable_video ? true : false;
         const callConfigChanged =
-          value.use_function_calling_for_rag !== prevFnCalling ||
-          value.enable_video !== prevEnableVideo;
+          value.use_function_calling_for_rag !== prevFnCalling;
 
         if (
           callConfigChanged &&
@@ -426,7 +384,6 @@ export function SettingsTab() {
                 requestBody: {
                   use_function_calling_for_rag:
                     value.use_function_calling_for_rag,
-                  enable_video: value.enable_video,
                 },
               }).unwrap();
             } else {
@@ -439,7 +396,6 @@ export function SettingsTab() {
                   language: 'en',
                   use_function_calling_for_rag:
                     value.use_function_calling_for_rag,
-                  enable_video: value.enable_video,
                 },
               }).unwrap();
             }
@@ -461,25 +417,8 @@ export function SettingsTab() {
     },
   });
 
-  // Fetch the claw-config for this mentor. Returns null when no config exists
-  // (the data-layer normalises 404 → null) — that's how we know the mentor is
-  // not yet wired to a Claw instance. The request only makes sense once the
-  // advanced sandbox is on, so we gate it: skip entirely when the sandbox is
-  // off (otherwise every modal open fires a wasted 404-retry burst). We watch
-  // the LIVE form toggle (not just the saved value) so flipping it on fetches
-  // the config immediately, letting Save sync claw-config in the same click —
-  // even for a mentor that was previously wired but currently disabled.
-  // @ts-ignore - enable_claw exists in API response but not in type
-  const savedEnableClaw: boolean = mentor?.enable_claw ?? false;
-  const liveEnableClaw = useStore(
-    form.store,
-    (state) => (state as any).values.enable_claw,
-  );
-  const isClawEnabled = savedEnableClaw || Boolean(liveEnableClaw);
-  const { data: clawMentorConfig } = useGetClawMentorConfigQuery(
-    { org: tenantKey!, mentorUniqueId: mentorUuid! },
-    { skip: !isClawEnabled || !tenantKey || !mentorUuid },
-  );
+  // The Sandbox tab now owns `enable_claw` and its claw-config sync, so the
+  // Settings tab no longer needs to fetch the claw-config on open.
 
   return (
     <>
@@ -1042,51 +981,8 @@ export function SettingsTab() {
                     )}
                   </WithFormPermissions>
 
-                  <WithFormPermissions
-                    name="enable_memory_component"
-                    // @ts-ignore
-                    permissions={mentor?.permissions?.field}
-                  >
-                    {({ disabled }) => (
-                      <form.Field name="enable_memory_component">
-                        {(field) => (
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-[#646464]">
-                                {t('rememberPastConversationsLabel')}
-                              </span>
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger
-                                    type="button"
-                                    aria-label={t(
-                                      'rememberPastConversationsInfoAriaLabel',
-                                    )}
-                                  >
-                                    <Info className="h-4 w-4 text-gray-400" />
-                                  </TooltipTrigger>
-                                  <TooltipContent className="ibl-tooltip-content">
-                                    <p>
-                                      {t('rememberPastConversationsTooltip')}
-                                    </p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            </div>
-                            <Switch
-                              checked={field.state.value}
-                              onCheckedChange={(checked) =>
-                                field.handleChange(checked)
-                              }
-                              disabled={isDisabled || disabled}
-                              aria-label={t('rememberPastConversationsLabel')}
-                              aria-checked={field.state.value}
-                            />
-                          </div>
-                        )}
-                      </form.Field>
-                    )}
-                  </WithFormPermissions>
+                  {/* "Remember past conversations" (enable_memory_component)
+                      moved to the Memory tab's inline capability toggle. */}
 
                   <WithFormPermissions
                     name="show_reasoning"
@@ -1226,49 +1122,8 @@ export function SettingsTab() {
                   <h4 className="text-xs font-semibold tracking-wide text-gray-500 uppercase">
                     {t('voiceCallsHeading')}
                   </h4>
-                  <WithFormPermissions
-                    name="show_voice_call"
-                    // @ts-ignore
-                    permissions={mentor?.permissions?.field}
-                  >
-                    {({ disabled }) => (
-                      <form.Field name="show_voice_call">
-                        {(field) => (
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-[#646464]">
-                                {t('enableVoiceCallsLabel')}
-                              </span>
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger
-                                    type="button"
-                                    aria-label={t(
-                                      'enableVoiceCallsInfoAriaLabel',
-                                    )}
-                                  >
-                                    <Info className="h-4 w-4 text-gray-400" />
-                                  </TooltipTrigger>
-                                  <TooltipContent className="ibl-tooltip-content">
-                                    <p>{t('enableVoiceCallsTooltip')}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            </div>
-                            <Switch
-                              checked={field.state.value}
-                              onCheckedChange={(checked) =>
-                                field.handleChange(checked)
-                              }
-                              disabled={isDisabled || disabled}
-                              aria-label={t('enableVoiceCallsLabel')}
-                              aria-checked={field.state.value}
-                            />
-                          </div>
-                        )}
-                      </form.Field>
-                    )}
-                  </WithFormPermissions>
+                  {/* "Enable voice calls" (show_voice_call) moved to the Voice
+                      tab's inline capability toggle. */}
 
                   <WithFormPermissions
                     name="show_voice_record"
@@ -1314,45 +1169,8 @@ export function SettingsTab() {
                     )}
                   </WithFormPermissions>
 
-                  <form.Field name="enable_video">
-                    {(field) => (
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-[#646464]">
-                            {t('enableScreenSharingLabel')}
-                          </span>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger
-                                type="button"
-                                aria-label={t(
-                                  'enableScreenSharingInfoAriaLabel',
-                                )}
-                              >
-                                <Info className="h-4 w-4 text-gray-400" />
-                              </TooltipTrigger>
-                              <TooltipContent className="ibl-tooltip-content">
-                                <p>{t('enableScreenSharingTooltip')}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
-                        <Switch
-                          checked={field.state.value}
-                          onCheckedChange={(checked) =>
-                            field.handleChange(checked)
-                          }
-                          disabled={isDisabled}
-                          aria-label={
-                            field.state.value
-                              ? t('screenSharingAriaEnabled')
-                              : t('screenSharingAriaDisabled')
-                          }
-                          data-testid="settings-enable-video-switch"
-                        />
-                      </div>
-                    )}
-                  </form.Field>
+                  {/* "Enable screen sharing" (enable_video) moved to the Screen
+                      Share tab's inline capability toggle. */}
 
                   <form.Field name="use_function_calling_for_rag">
                     {(field) => (
@@ -1398,95 +1216,10 @@ export function SettingsTab() {
                   <h4 className="text-xs font-semibold tracking-wide text-gray-500 uppercase">
                     {t('advancedHeading')}
                   </h4>
-                  <WithFormPermissions
-                    name="enable_claw"
-                    // @ts-ignore
-                    permissions={mentor?.permissions?.field}
-                  >
-                    {({ disabled }) => (
-                      <form.Field name="enable_claw">
-                        {(field) => (
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-[#646464]">
-                                {t('enableDedicatedSandboxLabel')}
-                              </span>
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger
-                                    type="button"
-                                    aria-label={t(
-                                      'enableDedicatedSandboxInfoAriaLabel',
-                                    )}
-                                  >
-                                    <Info className="h-4 w-4 text-gray-400" />
-                                  </TooltipTrigger>
-                                  <TooltipContent className="ibl-tooltip-content">
-                                    <p>{t('enableDedicatedSandboxTooltip')}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            </div>
-                            <Switch
-                              checked={field.state.value}
-                              onCheckedChange={(checked) =>
-                                field.handleChange(checked)
-                              }
-                              disabled={isDisabled || disabled}
-                              aria-label={t('enableDedicatedSandboxLabel')}
-                              aria-checked={field.state.value}
-                            />
-                          </div>
-                        )}
-                      </form.Field>
-                    )}
-                  </WithFormPermissions>
-
-                  <WithFormPermissions
-                    name="enable_privacy_router"
-                    // @ts-ignore - enable_privacy_router not in permissions type yet
-                    permissions={mentor?.permissions?.field}
-                  >
-                    {({ disabled }) => (
-                      <form.Field name="enable_privacy_router">
-                        {(field) => (
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-[#646464]">
-                                Filter PII from messages
-                              </span>
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger
-                                    type="button"
-                                    aria-label="More info about filter PII from messages"
-                                  >
-                                    <Info className="h-4 w-4 text-gray-400" />
-                                  </TooltipTrigger>
-                                  <TooltipContent className="ibl-tooltip-content">
-                                    <p>
-                                      Enable the privacy router. When on, a
-                                      dedicated Privacy tab appears for
-                                      configuring PII detection rules.
-                                    </p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            </div>
-                            <Switch
-                              checked={field.state.value}
-                              onCheckedChange={(checked) =>
-                                field.handleChange(checked)
-                              }
-                              disabled={isDisabled || disabled}
-                              aria-label="Filter PII from messages"
-                              aria-checked={field.state.value}
-                            />
-                          </div>
-                        )}
-                      </form.Field>
-                    )}
-                  </WithFormPermissions>
+                  {/* "Dedicated sandbox" (enable_claw) moved to the Sandbox
+                      tab's inline capability toggle, and "Filter PII from
+                      messages" (enable_privacy_router) moved to the Privacy
+                      tab's inline capability toggle. */}
 
                   {/* Hidden when the tenant disables chat-privacy control — the kill switch is a no-op then. */}
                   {tenantAllowsChatPrivacyControl && (
@@ -1581,47 +1314,8 @@ export function SettingsTab() {
                     )}
                   </WithFormPermissions>
 
-                  <WithFormPermissions
-                    name="is_lti_accessible"
-                    // @ts-ignore
-                    permissions={mentor?.permissions?.field}
-                  >
-                    {({ disabled }) => (
-                      <form.Field name="is_lti_accessible">
-                        {(field) => (
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-[#646464]">
-                                {t('enableLtiLabel')}
-                              </span>
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger
-                                    type="button"
-                                    aria-label={t('enableLtiInfoAriaLabel')}
-                                  >
-                                    <Info className="h-4 w-4 text-gray-400" />
-                                  </TooltipTrigger>
-                                  <TooltipContent className="ibl-tooltip-content">
-                                    <p>{t('enableLtiTooltip')}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            </div>
-                            <Switch
-                              checked={field.state.value}
-                              onCheckedChange={(checked) =>
-                                field.handleChange(checked)
-                              }
-                              disabled={isDisabled || disabled}
-                              aria-label={t('enableLtiLabel')}
-                              aria-checked={field.state.value}
-                            />
-                          </div>
-                        )}
-                      </form.Field>
-                    )}
-                  </WithFormPermissions>
+                  {/* "Enable LTI launches" (is_lti_accessible) moved to the LTI
+                      tab's inline capability toggle. */}
                 </div>
               </div>
             </TabsContent>

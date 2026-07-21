@@ -490,10 +490,10 @@ describe('SettingsTab', () => {
       expect(screen.getByText('Authenticated Users')).toBeInTheDocument();
     });
 
-    it('renders LTI Accessible toggle', () => {
+    it('no longer renders the LTI Accessible toggle (moved to the LTI tab)', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText('Enable LTI launches')).toBeInTheDocument();
+      expect(screen.queryByText('Enable LTI launches')).not.toBeInTheDocument();
     });
 
     it('renders File Attachments toggle', () => {
@@ -502,10 +502,10 @@ describe('SettingsTab', () => {
       expect(screen.getByText('Enable file attachments')).toBeInTheDocument();
     });
 
-    it('renders Voice Calls toggle', () => {
+    it('no longer renders the Voice Calls toggle (moved to the Voice tab)', () => {
       render(<SettingsTab />);
 
-      expect(screen.getByText('Enable voice calls')).toBeInTheDocument();
+      expect(screen.queryByText('Enable voice calls')).not.toBeInTheDocument();
     });
 
     it('renders Voice Recordings toggle', () => {
@@ -627,13 +627,7 @@ describe('SettingsTab', () => {
         screen.getAllByLabelText('More info about chat access'),
       ).toHaveLength(2);
       expect(
-        screen.getByLabelText('More info about enable LTI launches'),
-      ).toBeInTheDocument();
-      expect(
         screen.getByLabelText('More info about enable file attachments'),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByLabelText('More info about enable voice calls'),
       ).toBeInTheDocument();
       expect(
         screen.getByLabelText('More info about enable voice recordings'),
@@ -707,17 +701,6 @@ describe('SettingsTab', () => {
       expect(techOption).toBeInTheDocument();
     });
 
-    it('toggles LTI accessible switch', () => {
-      render(<SettingsTab />);
-
-      const ltiSwitch = screen.getByLabelText('Enable LTI launches');
-      expect(ltiSwitch).not.toBeChecked();
-
-      fireEvent.click(ltiSwitch);
-
-      expect(ltiSwitch).toBeChecked();
-    });
-
     it('toggles file attachments switch', () => {
       render(<SettingsTab />);
 
@@ -727,17 +710,6 @@ describe('SettingsTab', () => {
       fireEvent.click(attachmentSwitch);
 
       expect(attachmentSwitch).not.toBeChecked();
-    });
-
-    it('toggles voice calls switch', () => {
-      render(<SettingsTab />);
-
-      const voiceCallSwitch = screen.getByLabelText('Enable voice calls');
-      expect(voiceCallSwitch).toBeChecked();
-
-      fireEvent.click(voiceCallSwitch);
-
-      expect(voiceCallSwitch).not.toBeChecked();
     });
 
     it('toggles voice recordings switch', () => {
@@ -943,9 +915,7 @@ describe('SettingsTab', () => {
           expect.objectContaining({
             formData: expect.objectContaining({
               show_attachment: true,
-              show_voice_call: true,
               show_voice_record: false,
-              is_lti_accessible: false,
             }),
           }),
         );
@@ -1503,17 +1473,6 @@ describe('SettingsTab', () => {
   // Switch States
   // ==========================================================================
   describe('Switch States', () => {
-    it('reflects is_lti_accessible value in switch', () => {
-      mockGetMentorSettingsQuery.mockReturnValue({
-        data: { ...defaultMentorSettings, is_lti_accessible: true },
-        isLoading: false,
-      });
-
-      render(<SettingsTab />);
-
-      expect(screen.getByLabelText('Enable LTI launches')).toBeChecked();
-    });
-
     it('reflects show_attachment false in switch', () => {
       mockGetMentorSettingsQuery.mockReturnValue({
         data: { ...defaultMentorSettings, show_attachment: false },
@@ -1525,17 +1484,6 @@ describe('SettingsTab', () => {
       expect(
         screen.getByLabelText('Enable file attachments'),
       ).not.toBeChecked();
-    });
-
-    it('reflects show_voice_call false in switch', () => {
-      mockGetMentorSettingsQuery.mockReturnValue({
-        data: { ...defaultMentorSettings, show_voice_call: false },
-        isLoading: false,
-      });
-
-      render(<SettingsTab />);
-
-      expect(screen.getByLabelText('Enable voice calls')).not.toBeChecked();
     });
 
     it('reflects show_voice_record true in switch', () => {
@@ -1560,17 +1508,6 @@ describe('SettingsTab', () => {
       expect(screen.getByLabelText('Enable file attachments')).toBeChecked();
     });
 
-    it('defaults show_voice_call to true when undefined', () => {
-      mockGetMentorSettingsQuery.mockReturnValue({
-        data: { ...defaultMentorSettings, show_voice_call: undefined },
-        isLoading: false,
-      });
-
-      render(<SettingsTab />);
-
-      expect(screen.getByLabelText('Enable voice calls')).toBeChecked();
-    });
-
     it('defaults show_voice_record to true when undefined', () => {
       mockGetMentorSettingsQuery.mockReturnValue({
         data: { ...defaultMentorSettings, show_voice_record: undefined },
@@ -1580,17 +1517,6 @@ describe('SettingsTab', () => {
       render(<SettingsTab />);
 
       expect(screen.getByLabelText('Enable voice recordings')).toBeChecked();
-    });
-
-    it('defaults is_lti_accessible to false when undefined', () => {
-      mockGetMentorSettingsQuery.mockReturnValue({
-        data: { ...defaultMentorSettings, is_lti_accessible: undefined },
-        isLoading: false,
-      });
-
-      render(<SettingsTab />);
-
-      expect(screen.getByLabelText('Enable LTI launches')).not.toBeChecked();
     });
 
     it('reflects enable_multi_query_rag true in switch', () => {
@@ -1676,11 +1602,9 @@ describe('SettingsTab', () => {
       expect(
         screen.getByLabelText('Enable file attachments'),
       ).toBeInTheDocument();
-      expect(screen.getByLabelText('Enable voice calls')).toBeInTheDocument();
       expect(
         screen.getByLabelText('Enable voice recordings'),
       ).toBeInTheDocument();
-      expect(screen.getByLabelText('Enable LTI launches')).toBeInTheDocument();
     });
 
     it('has accessible remove image button', () => {
