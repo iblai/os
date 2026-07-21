@@ -33,6 +33,7 @@ import {
   AuditLogTab,
   VoiceTab,
   ScreenShareTab,
+  LtiTab,
 } from './tabs';
 import { useNavigate } from '@/hooks/user-navigate';
 import { MODALS } from '@/lib/constants';
@@ -83,6 +84,7 @@ export const EDIT_MENTOR_TAB_COMPONENTS: Record<string, ReactNode> = {
   [MODALS.EDIT_MENTOR.tabs.embed]: <EmbedTab />,
   [MODALS.EDIT_MENTOR.tabs.voice]: <VoiceTab />,
   [MODALS.EDIT_MENTOR.tabs.screenshare]: <ScreenShareTab />,
+  [MODALS.EDIT_MENTOR.tabs.lti]: <LtiTab />,
 };
 
 export function EditMentorModal({ isOpen, onClose }: Props) {

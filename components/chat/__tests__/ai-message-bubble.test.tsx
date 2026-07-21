@@ -21,6 +21,26 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
   }),
 }));
 
+// Chat-privacy signal driving the share-button gate. Defaults to a normal
+// (non-private) session so existing tests keep seeing the Share button.
+let mockChatPrivacyMode: 'normal' | 'anonymized' | 'disabled' = 'normal';
+let mockChatPrivacyReady = true;
+
+vi.mock('@iblai/iblai-js/web-containers', () => ({
+  useChatPrivacy: () => ({
+    effective: {
+      mode: mockChatPrivacyMode,
+      source: 'session',
+      is_locked: false,
+    },
+    isEffectiveReady: mockChatPrivacyReady,
+  }),
+}));
+
+vi.mock('@/hooks/use-user', () => ({
+  useUsername: () => 'testuser',
+}));
+
 vi.mock('@/lib/hooks', async () => {
   const actual = await vi.importActual('@/lib/hooks');
   return {
@@ -202,6 +222,8 @@ describe('AIMessageBubble', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     mockShowingSharedChat = false;
+    mockChatPrivacyMode = 'normal';
+    mockChatPrivacyReady = true;
     tenantMetadataReturnValue.metadata = {};
     const { isLoggedIn } = await import('@/lib/utils');
     vi.mocked(isLoggedIn).mockReturnValue(true);
@@ -287,6 +309,27 @@ describe('AIMessageBubble', () => {
       renderWithRedux(<AIMessageBubble {...defaultProps} />, true);
       expect(screen.queryByTestId('ai-message-share')).not.toBeInTheDocument();
       mockShowingSharedChat = false; // Reset for other tests
+    });
+
+    // Private mode is a temporary, non-persisted chat — there is no durable
+    // session to share, so the share button is hidden while it is active.
+    it('should not render share button when chat private mode is active', () => {
+      mockChatPrivacyMode = 'disabled';
+      renderWithRedux(<AIMessageBubble {...defaultProps} />);
+      expect(screen.queryByTestId('ai-message-share')).not.toBeInTheDocument();
+    });
+
+    it('should still render share button while the chat-privacy query is not yet ready (no flash-hide)', () => {
+      mockChatPrivacyMode = 'disabled';
+      mockChatPrivacyReady = false;
+      renderWithRedux(<AIMessageBubble {...defaultProps} />);
+      expect(screen.getByTestId('ai-message-share')).toBeInTheDocument();
+    });
+
+    it('should render share button when private mode is anonymized (only disabled hides it)', () => {
+      mockChatPrivacyMode = 'anonymized';
+      renderWithRedux(<AIMessageBubble {...defaultProps} />);
+      expect(screen.getByTestId('ai-message-share')).toBeInTheDocument();
     });
 
     it('should not render share button when in shared chat (anonymous)', async () => {

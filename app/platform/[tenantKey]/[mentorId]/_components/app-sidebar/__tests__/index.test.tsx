@@ -28,10 +28,17 @@ import {
   afterEach,
   beforeAll,
 } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
+import { UserType } from '@/lib/constants';
 
 // ============================================================================
 // MUTABLE MOCK STATE
@@ -87,6 +94,7 @@ let mockUsername: string | null = 'admin-user';
 let mockIsLoggedIn = true;
 let mockIsAdmin = true;
 let mockUserIsStudent = false;
+let mockTenantMetadata: Record<string, unknown> = {};
 let mockCurrentTenant: any = {
   is_admin: true,
   is_advertising: false,
@@ -148,6 +156,15 @@ let mockIsStreaming = false;
 let mockNumberOfActiveChatMessages = 0;
 let mockActiveChatMessages: Array<{ role?: string }> = [];
 const refetchRecentMock = vi.fn(() => Promise.resolve(undefined));
+const fetchNextPageMock = vi.fn(() => Promise.resolve(undefined));
+// Records the args passed to the recent infinite query so tests can assert
+// the debounced `search` / `mentor` params reached the hook.
+const recentInfiniteArgsMock = vi.fn();
+let mockHasNextPage = false;
+let mockIsFetchingNextPage = false;
+// When set, overrides the single-page wrapping so tests can supply an
+// explicit `{ pages: [...] }` payload spanning multiple pages.
+let mockRecentInfinitePages: any = undefined;
 
 // Data sources
 let mockMentorPublicSettings: any = {
@@ -374,30 +391,28 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
         }
       : { ...state, refetch: () => Promise.resolve(undefined) };
   },
-  useGetRecentMessageQuery: (
-    _args: unknown,
-    options?: { skip?: boolean; selectFromResult?: (state: any) => any },
+  useGetRecentMessagesInfiniteQuery: (
+    args: unknown,
+    options?: { skip?: boolean },
   ) => {
-    if (options?.skip) {
-      const skipped = { data: undefined, isError: false, isLoading: false };
-      return options.selectFromResult
-        ? {
-            ...options.selectFromResult(skipped),
-            refetch: refetchRecentMock,
-          }
-        : { ...skipped, refetch: refetchRecentMock };
-    }
-    const state = {
-      data: mockRecentPages,
+    recentInfiniteArgsMock(args);
+    const common = {
+      refetch: refetchRecentMock,
+      fetchNextPage: fetchNextPageMock,
+      hasNextPage: mockHasNextPage,
+      isFetching: false,
+      isFetchingNextPage: mockIsFetchingNextPage,
       isError: false,
       isLoading: false,
     };
-    return options?.selectFromResult
-      ? {
-          ...options.selectFromResult(state),
-          refetch: refetchRecentMock,
-        }
-      : { ...state, refetch: refetchRecentMock };
+    if (options?.skip) {
+      return { ...common, data: undefined };
+    }
+    const data = mockRecentInfinitePages ?? {
+      pages: [mockRecentPages],
+      pageParams: [1],
+    };
+    return { ...common, data };
   },
   useGetUserProjectsQuery: () => ({
     data: mockProjects,
@@ -439,6 +454,7 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
   selectStreaming: () => mockIsStreaming,
   selectNumberOfActiveChatMessages: () => mockNumberOfActiveChatMessages,
   selectActiveChatMessages: () => mockActiveChatMessages,
+  useTenantMetadata: () => ({ metadata: mockTenantMetadata }),
 }));
 
 vi.mock('@iblai/iblai-js/web-containers', () => ({
@@ -480,6 +496,7 @@ vi.mock('@/hooks/use-user', () => ({
 vi.mock('@/hooks/use-user-type', () => ({
   useUserType: () => ({
     isUserTypeAllowed: (...args: unknown[]) => mockIsUserTypeAllowed(...args),
+    userType: UserType.ADMIN,
   }),
 }));
 
@@ -654,6 +671,11 @@ function resetState() {
   updateQueryDataMock.mockClear();
   saveCachedSessionIdMock.mockReset();
   refetchRecentMock.mockClear();
+  fetchNextPageMock.mockClear();
+  recentInfiniteArgsMock.mockClear();
+  mockHasNextPage = false;
+  mockIsFetchingNextPage = false;
+  mockRecentInfinitePages = undefined;
   mockActiveSessionId = 'sess-active';
   mockCachedSessionId = {};
   mockIsStreaming = false;
@@ -671,6 +693,7 @@ function resetState() {
   mockIsLoggedIn = true;
   mockIsAdmin = true;
   mockUserIsStudent = false;
+  mockTenantMetadata = {};
   mockCurrentTenant = {
     is_admin: true,
     is_advertising: false,
@@ -943,6 +966,31 @@ describe('AppSidebar — rendering', () => {
 
     expect(
       screen.getByRole('button', { name: 'New Chat' }),
+    ).toBeInTheDocument();
+  });
+
+  it('hides Search chats when the user is NOT logged in (outside embed mode too)', () => {
+    // The dialog lists the signed-in user's own recent messages, so unlike
+    // `showChats` it is hidden for an anonymous user in EVERY mode — while
+    // New Chat (which anonymous users may use) stays.
+    mockIsLoggedIn = false;
+    mockUsername = null;
+    renderSidebar();
+
+    expect(
+      screen.queryByRole('button', { name: 'Search chats' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'New Chat' }),
+    ).toBeInTheDocument();
+  });
+
+  it('shows Search chats for a logged-in user', () => {
+    mockIsLoggedIn = true;
+    renderSidebar();
+
+    expect(
+      screen.getByRole('button', { name: 'Search chats' }),
     ).toBeInTheDocument();
   });
 });
@@ -1268,22 +1316,37 @@ describe('AppSidebar — Chats section', () => {
   // cached session id (localStorage `session_id`), so a row click MUST write
   // it AND point the chat slice at the selected session. ---
 
-  it('clicking a recent row navigates AND selects the session (updateSessionIds + cached session id)', () => {
+  it('clicking a recent row selects the session without navigating when already on the chat page', () => {
     mockActiveSessionId = 'sess-recent-1'; // a DIFFERENT row will be clicked
     renderSidebar();
     fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
     fireEvent.click(screen.getByText('Recent message two').closest('button')!);
 
-    // URL push still happens.
-    expect(pushMock).toHaveBeenCalledWith(
-      expect.stringContaining('session=sess-recent-2'),
-    );
+    // Already on this mentor's chat page → no navigation. Pushing the URL here
+    // would strip params like `?embed=true` and leak the full sidebar (#2067).
+    expect(pushMock).not.toHaveBeenCalled();
     // Redux session pointer is updated so the active highlight + dependent
     // queries follow the selection.
     expect(dispatchMock).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'chat/updateSessionIds' }),
     );
     // The cached session id — the loader effect's dependency — is written.
+    expect(saveCachedSessionIdMock).toHaveBeenCalledWith({
+      'mentor-1': 'sess-recent-2',
+    });
+  });
+
+  it('navigates to the mentor chat page (without ?session=) when selecting from another page', () => {
+    mockPathname = '/platform/tenant-a/mentor-1/analytics';
+    mockActiveSessionId = 'sess-recent-1'; // a DIFFERENT row will be clicked
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getByText('Recent message two').closest('button')!);
+
+    // Off the chat page → navigate to it. The session travels via state, not
+    // the URL, so the bare mentor path is pushed (no ?session=), which keeps
+    // chat-page params like `?embed=true` intact once we arrive.
+    expect(pushMock).toHaveBeenCalledWith('/platform/tenant-a/mentor-1');
     expect(saveCachedSessionIdMock).toHaveBeenCalledWith({
       'mentor-1': 'sess-recent-2',
     });
@@ -1304,25 +1367,22 @@ describe('AppSidebar — Chats section', () => {
     renderSidebar();
     fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
     fireEvent.click(screen.getByText('Pinned message one').closest('button')!);
-    expect(pushMock).toHaveBeenCalledWith(
-      expect.stringContaining('session=sess-pinned-1'),
-    );
+    // On the chat page → no navigation, but the session is still selected.
+    expect(pushMock).not.toHaveBeenCalled();
     expect(saveCachedSessionIdMock).toHaveBeenCalledWith({
       'mentor-1': 'sess-pinned-1',
     });
   });
 
-  it('clicking the already-active chat is a no-op for state (still navigates)', () => {
+  it('clicking the already-active chat on the chat page is a complete no-op', () => {
     mockActiveSessionId = 'sess-recent-1';
     renderSidebar();
     fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
     fireEvent.click(screen.getByText('Recent message one').closest('button')!);
 
-    // Navigation/flyout-close still fires.
-    expect(pushMock).toHaveBeenCalledWith(
-      expect.stringContaining('session=sess-recent-1'),
-    );
-    // But no session-selection side effects are dispatched / persisted.
+    // Already-active AND already on the chat page → nothing happens: no
+    // navigation and no session-selection side effects.
+    expect(pushMock).not.toHaveBeenCalled();
     expect(saveCachedSessionIdMock).not.toHaveBeenCalled();
     expect(dispatchMock).not.toHaveBeenCalledWith(
       expect.objectContaining({ type: 'chat/updateSessionIds' }),
@@ -1345,6 +1405,51 @@ describe('AppSidebar — Chats section', () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole('menuitem', { name: /^Delete$/ }),
+    ).toBeInTheDocument();
+  });
+
+  it('hides Export but keeps Pin and Delete for a student when export is disabled', async () => {
+    mockUserIsStudent = true;
+    mockTenantMetadata = { enable_chat_history_export: false };
+    const user = userEvent.setup();
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    const menus = screen.getAllByRole('button', { name: 'Chat actions' });
+    await user.click(menus[1]);
+    expect(
+      await screen.findByRole('menuitem', { name: /^Pin$/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('menuitem', { name: /^Delete$/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('menuitem', { name: /^Export$/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows Export for a student when the export setting is absent (default on)', async () => {
+    mockUserIsStudent = true;
+    mockTenantMetadata = {};
+    const user = userEvent.setup();
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    const menus = screen.getAllByRole('button', { name: 'Chat actions' });
+    await user.click(menus[1]);
+    expect(
+      await screen.findByRole('menuitem', { name: /^Export$/ }),
+    ).toBeInTheDocument();
+  });
+
+  it('shows Export for a non-student even when the export setting is disabled', async () => {
+    mockUserIsStudent = false;
+    mockTenantMetadata = { enable_chat_history_export: false };
+    const user = userEvent.setup();
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    const menus = screen.getAllByRole('button', { name: 'Chat actions' });
+    await user.click(menus[1]);
+    expect(
+      await screen.findByRole('menuitem', { name: /^Export$/ }),
     ).toBeInTheDocument();
   });
 
@@ -2152,6 +2257,215 @@ describe('AppSidebar — chat row label fallbacks', () => {
     // row should render that as its label.
     expect(screen.getByText('Artifact title')).toBeInTheDocument();
   });
+
+  it('prefers the session title over the first human message', () => {
+    mockRecentPages = {
+      results: [
+        {
+          id: 'r-titled',
+          session_id: 'sess-titled',
+          title: 'My titled chat',
+          messages: [
+            {
+              message: {
+                data: { type: 'user', content: 'Recent message one' },
+              },
+            },
+          ],
+        },
+      ],
+    };
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    expect(screen.getByText('My titled chat')).toBeInTheDocument();
+    // The first-human-message text must NOT be used as the label.
+    expect(screen.queryByText('Recent message one')).not.toBeInTheDocument();
+  });
+
+  it('falls back to the first human message when the title is whitespace-only', () => {
+    mockRecentPages = {
+      results: [
+        {
+          id: 'r-blank-title',
+          session_id: 'sess-blank-title',
+          title: '   ',
+          messages: [
+            {
+              message: {
+                data: { type: 'user', content: 'Fallback message text' },
+              },
+            },
+          ],
+        },
+      ],
+    };
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    expect(screen.getByText('Fallback message text')).toBeInTheDocument();
+  });
+});
+
+// =============================================================================
+// Recent chats — infinite-query wiring: mentor/search params, pagination
+// sentinel, and page flattening.
+// =============================================================================
+
+describe('AppSidebar — recent chats infinite query', () => {
+  it('passes the current mentor into the recent-messages query arg', () => {
+    renderSidebar();
+    const lastArgs = recentInfiniteArgsMock.mock.calls.at(-1)?.[0] as {
+      mentor?: string;
+      org?: string;
+    };
+    expect(lastArgs?.mentor).toBe('mentor-1');
+    expect(lastArgs?.org).toBe('tenant-a');
+  });
+
+  it('flattens rows across multiple pages into the recent list', () => {
+    mockRecentInfinitePages = {
+      pages: [
+        {
+          results: [
+            {
+              id: 'p1-a',
+              session_id: 'sess-p1-a',
+              messages: [
+                {
+                  message: { data: { type: 'user', content: 'Page one row' } },
+                },
+              ],
+            },
+          ],
+        },
+        {
+          results: [
+            {
+              id: 'p2-a',
+              session_id: 'sess-p2-a',
+              messages: [
+                {
+                  message: { data: { type: 'user', content: 'Page two row' } },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      pageParams: [1, 2],
+    };
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    expect(screen.getByText('Page one row')).toBeInTheDocument();
+    expect(screen.getByText('Page two row')).toBeInTheDocument();
+  });
+
+  it('opens the search dialog from the Search chats button', () => {
+    renderSidebar();
+    // The search input lives in the dialog, not the sidebar, until opened.
+    expect(
+      screen.queryByPlaceholderText('Search chats'),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Search chats' }));
+    expect(screen.getByPlaceholderText('Search chats')).toBeInTheDocument();
+  });
+
+  it('updates the query arg with the debounced search term', () => {
+    vi.useFakeTimers();
+    try {
+      renderSidebar();
+      fireEvent.click(screen.getByRole('button', { name: 'Search chats' }));
+      const input = screen.getByPlaceholderText('Search chats');
+      fireEvent.change(input, { target: { value: 'invoice' } });
+      // Before the debounce window elapses the arg is still empty.
+      const hasSearchBefore = recentInfiniteArgsMock.mock.calls.some(
+        (c) => (c?.[0] as { search?: string })?.search === 'invoice',
+      );
+      expect(hasSearchBefore).toBe(false);
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+      const hasSearchAfter = recentInfiniteArgsMock.mock.calls.some(
+        (c) => (c?.[0] as { search?: string })?.search === 'invoice',
+      );
+      expect(hasSearchAfter).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('calls fetchNextPage when the sentinel intersects and a next page exists', () => {
+    let ioCallback: ((entries: unknown[]) => void) | null = null;
+    const prevIO = (window as any).IntersectionObserver;
+    (window as any).IntersectionObserver = class {
+      constructor(cb: (entries: unknown[]) => void) {
+        ioCallback = cb;
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+    try {
+      mockHasNextPage = true;
+      renderSidebar();
+      fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+      expect(ioCallback).not.toBeNull();
+      act(() => {
+        ioCallback?.([{ isIntersecting: true }]);
+      });
+      expect(fetchNextPageMock).toHaveBeenCalled();
+    } finally {
+      (window as any).IntersectionObserver = prevIO;
+    }
+  });
+
+  it('does not call fetchNextPage when already fetching the next page', () => {
+    let ioCallback: ((entries: unknown[]) => void) | null = null;
+    const prevIO = (window as any).IntersectionObserver;
+    (window as any).IntersectionObserver = class {
+      constructor(cb: (entries: unknown[]) => void) {
+        ioCallback = cb;
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+    try {
+      mockHasNextPage = true;
+      mockIsFetchingNextPage = true;
+      renderSidebar();
+      fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+      act(() => {
+        ioCallback?.([{ isIntersecting: true }]);
+      });
+      expect(fetchNextPageMock).not.toHaveBeenCalled();
+    } finally {
+      (window as any).IntersectionObserver = prevIO;
+    }
+  });
+
+  it('does not call fetchNextPage when there is no next page', () => {
+    let ioCallback: ((entries: unknown[]) => void) | null = null;
+    const prevIO = (window as any).IntersectionObserver;
+    (window as any).IntersectionObserver = class {
+      constructor(cb: (entries: unknown[]) => void) {
+        ioCallback = cb;
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+    try {
+      mockHasNextPage = false;
+      renderSidebar();
+      fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+      act(() => {
+        ioCallback?.([{ isIntersecting: true }]);
+      });
+      expect(fetchNextPageMock).not.toHaveBeenCalled();
+    } finally {
+      (window as any).IntersectionObserver = prevIO;
+    }
+  });
 });
 
 // =============================================================================
@@ -2355,13 +2669,15 @@ describe('AppSidebar — Project row click behavior', () => {
 // =============================================================================
 
 // =============================================================================
-// Chat row label click — when the row has a usable href (mentor.unique_id +
-// tenantKey), clicking the label area calls router.push. Covers the
-// `if (!href) return; router.push(href)` branch in ChatRowItem.
+// Chat row label click — when the row has a usable mentor + tenantKey and we
+// are NOT already on that mentor's chat page, clicking the label navigates to
+// the bare chat page (session travels via state, not the URL). Covers the
+// `if (pathname !== targetPath) router.push(targetPath)` branch.
 // =============================================================================
 
 describe('AppSidebar — Chat row label navigation', () => {
-  it('clicking a chat row with a usable href pushes the chat URL', () => {
+  it('clicking a chat row from another page navigates to the mentor chat page', () => {
+    mockPathname = '/platform/tenant-a/mentor-1/analytics';
     mockRecentPages = {
       results: [
         {
@@ -2380,8 +2696,43 @@ describe('AppSidebar — Chat row label navigation', () => {
     const row = screen.getByText('Navigable row').closest('button');
     expect(row).not.toBeNull();
     fireEvent.click(row!);
+    expect(pushMock).toHaveBeenCalledWith('/platform/tenant-a/mentor-1');
+    // No ?session= decoration — the session is selected via state.
+    expect(pushMock).not.toHaveBeenCalledWith(
+      expect.stringContaining('session='),
+    );
+  });
+
+  it('clicking a chat row inside a project navigates to the project chat page', () => {
+    // On a project route `projectId` is set and the pathname is not a bare
+    // `/platform/<tenant>/<mentor>` chat page, so the projectId branch fires
+    // and keeps the user inside the project context.
+    mockPathname = '/platform/tenant-a/projects/proj-x/mentor-1';
+    mockParams = {
+      tenantKey: 'tenant-a',
+      mentorId: 'mentor-1',
+      projectId: 'proj-x',
+    };
+    mockRecentPages = {
+      results: [
+        {
+          id: 'r-proj',
+          session_id: 'sess-proj',
+          mentor: { unique_id: 'mentor-1' },
+          messages: [
+            { message: { data: { type: 'user', content: 'Project row' } } },
+          ],
+        },
+      ],
+    };
+    mockPinnedPages = { results: [] };
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    const row = screen.getByText('Project row').closest('button');
+    expect(row).not.toBeNull();
+    fireEvent.click(row!);
     expect(pushMock).toHaveBeenCalledWith(
-      expect.stringContaining('/platform/tenant-a/mentor-1?session=sess-href'),
+      '/platform/tenant-a/projects/proj-x/mentor-1',
     );
   });
 });
@@ -2462,7 +2813,7 @@ describe('AppSidebar — Rail-collapsed chats flyout click', () => {
     };
   });
 
-  it('clicking a pinned row in the flyout pushes the chat URL', async () => {
+  it('clicking a pinned row in the flyout selects the session', async () => {
     mockPinnedPages = {
       results: [
         {
@@ -2483,12 +2834,14 @@ describe('AppSidebar — Rail-collapsed chats flyout click', () => {
     await user.hover(screen.getAllByRole('button', { name: 'Chats' })[0]);
     const row = await screen.findByText('Flyout pin row');
     fireEvent.click(row.closest('button')!);
-    expect(pushMock).toHaveBeenCalledWith(
-      expect.stringContaining('session=sess-flyp'),
+    // On the chat page the flyout row selects the session without navigating.
+    expect(pushMock).not.toHaveBeenCalled();
+    expect(saveCachedSessionIdMock).toHaveBeenCalledWith(
+      expect.objectContaining({ 'mentor-1': 'sess-flyp' }),
     );
   });
 
-  it('clicking a recent row in the flyout pushes the chat URL', async () => {
+  it('clicking a recent row in the flyout selects the session', async () => {
     mockPinnedPages = { results: [] };
     mockRecentPages = {
       results: [
@@ -2509,8 +2862,10 @@ describe('AppSidebar — Rail-collapsed chats flyout click', () => {
     await user.hover(screen.getAllByRole('button', { name: 'Chats' })[0]);
     const row = await screen.findByText('Flyout recent row');
     fireEvent.click(row.closest('button')!);
-    expect(pushMock).toHaveBeenCalledWith(
-      expect.stringContaining('session=sess-flyr'),
+    // On the chat page the flyout row selects the session without navigating.
+    expect(pushMock).not.toHaveBeenCalled();
+    expect(saveCachedSessionIdMock).toHaveBeenCalledWith(
+      expect.objectContaining({ 'mentor-1': 'sess-flyr' }),
     );
   });
 });
@@ -2528,7 +2883,7 @@ describe('AppSidebar — Chat row without href is inert on click', () => {
         {
           id: 'r-no-mentor',
           session_id: 'sess-no-mentor',
-          // no mentor field → navHrefFor returns undefined
+          // no mentor field → handleSelectRow early-returns (no unique_id)
           messages: [
             {
               message: { data: { type: 'user', content: 'No href row' } },

@@ -202,6 +202,17 @@ vi.mock('@iblai/iblai-js/web-utils', async () => {
   };
 });
 
+// The real useChatPrivacy fires chat-privacy selectors/API calls against redux
+// slices this test's minimal store doesn't provide; stub it (the nav-bar tests
+// stub ChatPrivacyToggle for the same reason).
+vi.mock('@iblai/iblai-js/web-containers', async () => {
+  const actual = await vi.importActual('@iblai/iblai-js/web-containers');
+  return {
+    ...actual,
+    useChatPrivacy: () => ({ effective: undefined, isEffectiveReady: false }),
+  };
+});
+
 vi.mock('@/hooks/use-user', () => ({
   useVisitingTenant: vi.fn(() => mockVisitingTenant),
 }));

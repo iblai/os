@@ -57,6 +57,7 @@ export const MODALS = {
       evaluation: 'evaluation',
       api: 'api',
       embed: 'embed',
+      lti: 'lti',
       advanced_css: 'advanced_css',
       advanced_js: 'advanced_js',
       sandbox: 'sandbox',
@@ -158,12 +159,18 @@ export const CSS_CLASS_NAMES = {
   },
   APP_LAYOUT: {
     MAIN_CONTENT_AREA: 'chat-main-content-area',
+    GUIDED_SUGGESTED_PROMPTS_CONTAINER:
+      'chat-guided-suggested-prompts-container',
     GUIDED_SUGGESTED_PROMPTS: 'chat-guided-suggested-prompts',
     GUIDED_SUGGESTED_PROMPTS_REFRESH: 'chat-guided-suggested-prompts-refresh',
     WELCOME_CHAT_BUTTON: 'chat-welcome-button',
     MENTOR_IMAGE_CONTAINER_RING: 'mentor-image-container-ring',
   },
 };
+
+// Caps the length of the auto-submitted `?prompt=` deep-link payload so an
+// attacker-crafted link cannot smuggle an oversized prompt into the chat.
+export const MAX_PROMPT_PARAM_LENGTH = 4000;
 
 export const DROPBOX_EXTENSIONS = [
   '.ppt',

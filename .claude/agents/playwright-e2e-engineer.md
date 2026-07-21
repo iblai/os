@@ -175,6 +175,58 @@ import { logger } from '@iblai/iblai-js/playwright';
 logger.info('TC20: Search value after reopen: ...');
 ```
 
+### Mentor Creation — Always Track & Clean Up (Critical Rule)
+
+**Any test that creates a mentor/agent MUST track it and delete it afterwards.**
+Created mentors are persisted server-side; without cleanup they accumulate in
+the DB on every run (a full 4-browser run can leak hundreds). When you write or
+modify a spec that calls `createMentorPage.openAndCreate()` /
+`CreateMentorPage.createWithName()` (or any other mentor-creation flow), wire in
+cleanup via `MentorTracker` from `e2e/utils/mentor-cleanup.ts`:
+
+```typescript
+import { MentorTracker } from '../utils/mentor-cleanup';
+
+test.describe('...', () => {
+  const tracker = new MentorTracker();
+
+  test.beforeEach(async ({ page, createMentorPage }) => {
+    await createMentorPage.openAndCreate();
+    const { mentorId } = await getPlatformContext(page);
+    tracker.add(mentorId); // register every mentor this suite creates
+  });
+
+  // Delete in afterAll (best-effort, via the DM API), NEVER afterEach —
+  // see the shared-mentor note below.
+  test.afterAll(async ({ browser }, testInfo) => {
+    await tracker.deleteAll(browser, testInfo);
+  });
+});
+```
+
+Rules that keep cleanup from breaking other tests:
+
+- **Track by id/url and delete only what the suite created.** Never delete by a
+  broad name sweep in a spec. `MentorTracker.deleteAll` only removes the exact
+  ids you registered, so seed/default mentors are never touched.
+- **Use `afterAll`, not `afterEach`.** Many suites create one mentor in
+  `beforeAll`/a worker fixture and share it across tests (e.g. journeys 14, 51, 60) — an `afterEach` delete would break siblings mid-suite. `afterAll` (or
+  worker-fixture teardown) is the safe scope. Only use per-test deletion when
+  each test genuinely creates and owns its own mentor.
+- **Never reduce the tenant to zero mentors.** `navigateToMentorApp` depends on
+  a default mentor existing; deleting the last one cascades failures across the
+  whole run. Only ever remove test-created mentors.
+- **Cleanup is best-effort.** `deleteAll` swallows errors so a failed delete
+  never fails the run.
+- **Unique, timestamped names.** Use `generateMentorName()` (`E2E Mentor {ts}`)
+  rather than fixed names, so the global sweeper can reap orphans by age and
+  parallel browsers don't collide.
+
+A `globalTeardown` sweeper (`e2e/utils/mentor-sweeper.ts`) reaps stale
+timestamped `E2E …` mentors (older than 2h) as a safety net for crashed tests —
+but that is a backstop, **not a substitute** for per-suite `afterAll` cleanup.
+Model new specs on journeys 14, 60, and the `afterAll` blocks in journeys 22/42/44/47/52.
+
 ### Cross-Browser Resilience
 
 The test suite runs on Chrome, Firefox, Safari (WebKit), and Edge. Browser-specific handling is built into the utilities — **always use them instead of raw Playwright APIs for navigation and waiting**:
@@ -241,6 +293,7 @@ When investigating flaky tests:
 - Every test should have a clear assertion — no tests that only navigate without verifying outcomes
 - Tests should be independent and can run in any order
 - Clean up any test data created during the journey
+- **Any spec that creates a mentor MUST track it with `MentorTracker` and delete it in `afterAll`** (see "Mentor Creation — Always Track & Clean Up"). Before finishing, confirm every `openAndCreate()`/`createWithName()` call has a corresponding `tracker.add(...)` and the suite drains via `tracker.deleteAll(...)`.
 - Use meaningful error messages in custom assertions
 - Avoid test interdependencies — each spec file should be self-contained
 

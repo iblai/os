@@ -16,6 +16,7 @@ import { PrivacyTab } from './privacy.tab';
 import { TasksTab } from './tasks.tab';
 import { VoiceTab } from './voice.tab';
 import { ScreenShareTab } from './screenshare.tab';
+import { LtiTab } from './lti.tab';
 
 /**
  * Which sidebar category each segment lives in. Mirrors the `navCategory`
@@ -46,6 +47,7 @@ const TAB_CATEGORY: Record<
   Datasets: 'Integrations',
   API: 'Integrations',
   Embed: 'Integrations',
+  LTI: 'Integrations',
   Voice: 'Configurations',
   'Screen Share': 'Configurations',
   Memory: 'Analytics',
@@ -76,6 +78,7 @@ export class EditMentorPage {
   readonly tasks: TasksTab;
   readonly voice: VoiceTab;
   readonly screenshare: ScreenShareTab;
+  readonly lti: LtiTab;
   readonly copyMentorDialog: CopyMentorPage;
 
   constructor(page: Page) {
@@ -102,6 +105,7 @@ export class EditMentorPage {
     this.tasks = new TasksTab(page, this.dialog);
     this.voice = new VoiceTab(page, this.dialog);
     this.screenshare = new ScreenShareTab(page, this.dialog);
+    this.lti = new LtiTab(page, this.dialog);
     this.copyMentorDialog = new CopyMentorPage(page);
 
     // The Privacy-tab master switch was removed from the SDK and now lives
@@ -111,6 +115,14 @@ export class EditMentorPage {
     // switch and return focus to the Privacy tab. Bound to a bound method
     // so the callback retains `this`.
     this.privacy.bindSettingsTab(this.settings, this.navigateToTab.bind(this));
+
+    // The modal only mounts the active category's segments, so the Settings
+    // sub-tab triggers (Basic / Discovery / Capabilities) are absent from the
+    // DOM whenever another category is active (e.g. LtiTab activates
+    // Integrations before every LTI check). Hand the Settings page-object the
+    // dialog's tab nav so `selectSubTab` can restore the Settings segment
+    // itself, making its helpers safe regardless of caller order.
+    this.settings.bindTabNav(this.navigateToTab.bind(this));
   }
 
   /**

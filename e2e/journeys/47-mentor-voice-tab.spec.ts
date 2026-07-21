@@ -1,6 +1,11 @@
 import { test, expect } from '../fixtures/mentor-test';
-import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
+import {
+  navigateToMentorApp,
+  checkAdminStatus,
+  getPlatformContext,
+} from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
+import { MentorTracker } from '../utils/mentor-cleanup';
 
 /**
  * Journey 47 — Mentor Voice Tab.
@@ -35,6 +40,8 @@ import { waitForPageReady } from '../utils/resilient';
 test.describe.configure({ mode: 'serial' });
 
 test.describe('Journey 47: Mentor Voice Tab', () => {
+  const tracker47 = new MentorTracker();
+
   test.beforeEach(async ({ page, editMentorPage, createMentorPage }) => {
     await navigateToMentorApp(page);
     const isAdmin = await checkAdminStatus(page);
@@ -51,6 +58,8 @@ test.describe('Journey 47: Mentor Voice Tab', () => {
     // is present from the start; the defensive fallback below still covers the
     // edge case where it is not. See the file-level serial note above.
     await createMentorPage.openAndCreate();
+    const { mentorId } = await getPlatformContext(page);
+    tracker47.add(mentorId);
 
     // Open the Edit Agent modal to the Settings tab first, not directly to
     // Voice. The Voice tab is admin-gated by the segments hook (userTypes:
@@ -294,5 +303,9 @@ test.describe('Journey 47: Mentor Voice Tab', () => {
     await expect(editMentorPage.voice.tabLink).toBeVisible({ timeout: 15_000 });
 
     await editMentorPage.close();
+  });
+
+  test.afterAll(async ({ browser }, testInfo) => {
+    await tracker47.deleteAll(browser, testInfo);
   });
 });

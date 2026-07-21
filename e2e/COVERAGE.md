@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-07-18 | 516 checkpoints (494 covered, 2 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 58 journeys (57 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-07-14 | 556 checkpoints (530 covered, 7 pending/fixme, 7 not-reproducible in default env, 12 deprecated) | 64 journeys (63 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -48,7 +48,7 @@ When adding a new page or modifying an existing user flow:
 
 - [x] Mentor dropdown shows "New chat" item; non-admin sees at most 2 items
 - [x] "My Mentors" button is NOT present in the header (removed in feat-1431); mentor dropdown still shows New Chat item
-- [x] Profile dropdown shows exactly 3 items: Profile, Help, Log out
+- [x] Fresh signup (unauthenticated context, real `/account/create` registration) lands on the main tenant and the profile dropdown shows exactly 3 items: Profile, Help, Log out
 - [x] Sidebar admin-only buttons (e.g. New Project) show upgrade/auth dialog for non-admins when visible
 - [x] Non-admin in the main OR an advertising tenant sees full admin sidebar (New Agent, Workflows, Analytics, Invites, Management, Integrations, Monetization, Advanced) and clicking any trial-gated entry opens the upgrade/pricing dialog; gracefully skips when paywall is off
 
@@ -824,11 +824,13 @@ Chromium-only. Uses `--use-fake-device-for-media-stream` plus `--use-file-for-fa
 
 ---
 
-## Journey: Chat URL ?prompt= Auto-Injection (5 checkpoints) — `journeys/chat-url-prompt-injection.spec.ts`
+## Journey: Chat URL ?prompt= Auto-Injection (10 checkpoints) — `journeys/chat-url-prompt-injection.spec.ts`
 
 **Source files:** `components/chat/index.tsx`
 
 Covers the feature introduced in [iblai/iblai-platform#1722](https://github.com/iblai/iblai-platform/issues/1722). When a mentor chat page loads with `?prompt=<text>` in the URL, the `useAdvancedChat` hook (from `@iblai/iblai-js`) reads `searchParams.get('prompt')?.trim()` and auto-submits that text as a user message exactly once per mount.
+
+Also covers the prompt sanitization added in [iblai-platform#2164](https://github.com/iblai/iblai-platform/issues/2164): `sanitizePromptParam()` in `lib/utils.ts` strips control chars (preserving `\n`/`\t`), zero-width/invisible chars, and the Unicode Tag block, trims, and caps length at `MAX_PROMPT_PARAM_LENGTH` (4000) before the value is auto-submitted. HTML is intentionally NOT escaped — the render layer already renders user turns as plain React text (no `dangerouslySetInnerHTML`), so an HTML/script-ish payload must render as inert literal text.
 
 **Contracts verified:**
 
@@ -836,12 +838,18 @@ Covers the feature introduced in [iblai/iblai-platform#1722](https://github.com/
 - The dedup guard scans back for the last user message; if content matches the trimmed prompt, the hook no-ops so no second bubble appears.
 - A new session is NOT created on a dedup reload — `localStorage.session_id[mentorId]` is unchanged.
 - `searchParams.get('prompt')` decodes percent-encoded characters natively (`%20` → space).
+- `sanitizePromptParam()` strips invisible/control chars but leaves visible text (including HTML-ish text) untouched; a value that cleans to empty is treated as absent (no auto-submit).
 
 - [x] UPI-01: Fresh session + `?prompt=<text>` — user-message bubble appears automatically, AI responds, `location.search` still contains `prompt=` after response settles
 - [x] UPI-02: Dedup — reloading the same `?prompt=` URL on a cached session produces exactly one user bubble (count === 1) and `localStorage.session_id[mentorId]` is unchanged
 - [x] UPI-03: Cached session + different `?prompt=` — original user/assistant messages remain visible, new prompt text appears as a new user bubble, AI responds again, session id is unchanged
 - [x] UPI-04: No `?prompt=` — welcome state shown, no user-message bubbles appear, idle confirmed over 3 seconds, URL has no `prompt=` param
 - [x] UPI-05: URL-encoded prompt (`%20` → space) — bubble renders decoded text, not percent-encoded form
+- [x] UPI-06: Clean `?prompt=` (no special chars) — sanitization is a no-op, bubble renders text verbatim
+- [x] UPI-07: `?prompt=` with a zero-width space, NUL control char, and Unicode Tag-block char interleaved with visible text — all stripped, bubble text equals exactly the cleaned visible-only string
+- [x] UPI-08: `?prompt=` of whitespace + zero-width chars only (`%20%E2%80%8B%20`) — cleans to empty, `sanitizePromptParam()` returns `undefined`, no auto-submit occurs (welcome state, chat input visible, 0 user bubbles held over a 3s settle)
+- [x] UPI-09: `?prompt=<img src=x onerror=alert(1)>` — renders as inert literal text (bubble `textContent` equals the literal payload); no real `<img>` element is inserted (`'.chat-user-message-query img'` count is 0); no `dialog` event ever fires (`onerror` never executes)
+- [ ] _(deferred to unit tests)_ UPI-10: oversized `?prompt=` (>4000 chars) is truncated to `MAX_PROMPT_PARAM_LENGTH` then re-trimmed — unit-covered in `lib/__tests__/sanitize-prompt-param.test.ts`; not added at the E2E level to avoid flake risk from very long query strings (URL length limits, `page.goto`/render cost)
 
 ---
 
@@ -898,7 +906,7 @@ Standalone top-level tab rendered by the SDK's `AgentScreenShareTab` (`@iblai/we
 
 ---
 
-## Journey 50: Chat Privacy (20 checkpoints) — `journeys/50-chat-privacy.spec.ts`
+## Journey 50: Chat Privacy (27 checkpoints) — `journeys/50-chat-privacy.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`
 
@@ -906,7 +914,7 @@ Covers all four user-facing surfaces of the chat-privacy feature and verifies th
 
 The **agent kill switch** tests (cp-agent-03) are the regression anchor for `dispatch(chatPrivacyApiSlice.util.invalidateTags(['ChatPrivacyEffective']))` wiring in `settings-tab.tsx` (feat/mentor/1797): after saving, the header toggle reflects mentor-locked state **without a page refresh**.
 
-**cp-tenant-05** is marked `test.skip` — non-admins cannot reach the tenant Advanced settings (the "More options" menu only shows Profile / Help / Log out), which is the correct UX. This is implicitly covered by journey 03's non-admin dropdown test.
+The **private chat round-trip** tests (cp-chat-\*) cover the end-to-end happy path: enable private mode via the header toggle on a fresh chat, send a message, and confirm the assistant still replies — once as the admin and once as a non-admin (separate browser context). Six additional feature-interaction checkpoints (cp-chat-04 … cp-chat-09) exercise prompts, voice/screen, multi-turn context, file attachments, the memory button, and the AI-bubble share button while private mode is active. cp-chat-08 (memory button) and cp-chat-09 (share button) have their in-repo gates implemented; cp-chat-04/05/06 are **live regression gates** expected to be red until the backend fixes land.
 
 ### Tenant gate (cp-tenant-\*)
 
@@ -914,7 +922,6 @@ The **agent kill switch** tests (cp-agent-03) are the regression anchor for `dis
 - [x] cp-tenant-02: Disabling the tenant gate hides the header Private Mode toggle across the app
 - [x] cp-tenant-03: Enabling the tenant gate shows the header Private Mode toggle
 - [x] cp-tenant-04: Private Mode profile tab visibility tracks the tenant gate: hidden when off, visible when on
-- [ ] cp-tenant-05: Non-admin cannot reach the tenant Advanced settings _(not-reproducible: non-admin More options menu has no platform-name item; test.skipped with explanation in spec)_
 
 ### Agent settings kill switch (cp-agent-\*)
 
@@ -939,6 +946,17 @@ The **agent kill switch** tests (cp-agent-03) are the regression anchor for `dis
 - [x] cp-profile-03: All three radio cards (Normal / Anonymized / Disabled) render after switching to the tab
 - [x] cp-profile-04: Selecting "Disabled" propagates to the header toggle as `data-source="user"` on a fresh unlocked chat _(user-tier precedence)_
 - [x] cp-profile-05: Selecting "Normal" reverts the header toggle to `data-state="off"` on a fresh chat while `data-source` stays `"user"` _(Normal is an explicit user choice; only `mode="disabled"` reads as private)_
+
+### Private chat round-trip (cp-chat-\*)
+
+- [x] cp-chat-01: Admin enables private mode via the header toggle on a fresh chat (`data-state="on"`, `data-source="session"`), sends a message, and still receives an assistant reply; private mode stays on across the round-trip
+- [x] cp-chat-02: Non-admin (separate browser context) enables private mode via the header toggle on a fresh chat, sends a message, and receives an assistant reply; private mode stays on across the round-trip
+- [ ] cp-chat-04: Prompt Gallery (admin-curated, mentor-keyed) still opens and renders cards in private mode; AI guided/suggested prompts row (`chat-guided-suggested-prompts`) is visible after the AI replies _(pending: guided-prompts assertion awaits backend generating prompts for private sessions; Prompt Gallery assertion passes today)_
+- [ ] cp-chat-05: Voice call dialog opens in private mode (empty-chat path, Chromium fake-media) and does NOT show `"Failed to initiate call"` error toast _(pending: backend must mint LiveKit credentials for `disable_chathistory` sessions)_
+- [ ] cp-chat-06: Multi-turn context retained in one private session — cached session id is stable across two sends (passes today); AI echoes back the code word from turn 1 _(skipped as flaky pending backend fix — tracked by [iblai/iblai-platform#2186](https://github.com/iblai/iblai-platform/issues/2186); backend must retain ephemeral in-session context for private sessions)_
+- [ ] cp-chat-07: File attachment (drag-drop) works in private mode — chip appears, message sends, assistant replies; pins that `selectSessionId` follows the private session id _(pending: expected to pass today; included as regression gate)_
+- [x] cp-chat-08: Memory button is hidden while `data-state="on"` and reappears when private mode is off _(frontend gate implemented — `chat-input-form.tsx` derives `chatPrivacyActive` from `useChatPrivacy` and passes `isPrivate` into `InsideButtons`; unit-tested in `inside-buttons.test.tsx`)_
+- [x] cp-chat-09: "Share this chat" button in the AI message bubble is hidden in private mode (temporary chat — no durable session to share) and visible in normal mode _(frontend gate implemented — `ai-message-bubble.tsx` gates `<AIMessageShare>` on `!chatPrivacyActive`; unit-tested in `ai-message-bubble.test.tsx`)_
 
 ## Journey 51: Prompt Caching Toggle (3 checkpoints) — `journeys/51-prompt-caching-toggle.spec.ts`
 
@@ -1003,5 +1021,148 @@ End-to-end onboarding of a brand-new user via the `ECOMMERCE_CHECKOUT_URL` "free
 - [x] fcc-02: Submitting the email completes checkout and lands authenticated on the mentor SPA at `<base-url>/platform/<platform-key>/<mentor-id>`
 - [x] fcc-03: The credit-balance dropdown shows a positive remaining credit balance and a "Free" plan pill
 - [x] fcc-04: Clicking "Upgrade Plan" in the credit dropdown redirects to a Stripe-hosted checkout page (`store.ibl.ai`) requiring credit-card input (secure Stripe Elements card iframe + pay button)
+
+---
+
+## Journey 56: Navbar User Mode Dropdown Visibility (4 checkpoints) — `journeys/56-navbar-user-mode-dropdown-visibility.spec.ts`
+
+**Source files:** `hooks/use-user-type.ts`, `hooks/use-mentor-segments.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`
+
+Covers issue #2048 — "Hide Settings In the Dropdown list In User Mode". When an admin flips the navbar User/Admin switch to User (student) mode, the admin-only segments in the "Selected agent" dropdown (Settings, LLM, Prompts, Tools, ...) must disappear, leaving only "New Chat". Flipping back to Admin mode must restore the full list. This is a regression guard for a memoization bug: `hooks/use-mentor-segments.ts`'s `filterContext` `useMemo` did not list `userType` as a dependency, so toggling the switch didn't recompute the segment list and admin items stayed visible in User mode. The fix adds `userType` to the deps array and makes `use-user-type.ts`'s `isUserTypeAllowed` early-return `false` for `UserType.STUDENT` unless a segment's `userTypes` explicitly includes STUDENT (none currently do). The dropdown does not live-update while open, so each checkpoint closes it, toggles the switch, then re-opens it before asserting.
+
+- [x] nmv-01: Admin (default Admin/instructor mode) sees the full admin segment list in the Selected agent dropdown: New Chat, Settings, LLM, Prompts, Tools
+- [x] nmv-02: Toggling to User mode and re-opening the dropdown collapses the list to exactly New Chat — Settings, LLM, Prompts, Tools, and the Modify/fork footer action are all hidden
+- [x] nmv-03: Regression guard — toggling back to Admin mode and re-opening the dropdown restores the full admin segment list, proving the list recomputes on every toggle instead of staying stale
+- [x] nmv-04: Toggling to User mode a second time collapses the dropdown back down to exactly New Chat, confirming the fix holds across repeated toggles
+
+---
+
+## Journey 57: Chat History Export Toggle (5 checkpoints) — `journeys/57-chat-history-export-toggle.spec.ts`
+
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
+
+Covers issue #2068: a new tenant Advanced setting, `enable_chat_history_export` (org metadata boolean, default ON, rendered by the SDK's generic `AdvancedTab` metadata-switch list, label "Chat History Export"), gates the "Export" item in the sidebar Chats three-dot menu (`aria-label="Chat actions"`) COMBINED with the acting user's role: `canExport = !userIsStudent || metadata?.enable_chat_history_export !== false`. Non-students (admin/instructor) always see Export regardless of the setting; students only see it when the setting is ON or absent. "Student" is toggled via the same admin session using the nav-bar User/Admin `LearnerModeSwitch` (`aria-label` starting with "User mode") — the same technique already used by journey 42's "Non-Admin" describe block — rather than a separately-authenticated account, so the seeded chat stays visible to the acting session. Each test creates its own mentor via `createMentorPage.openAndCreate()` and restores both the tenant setting and the learner-mode toggle in a `finally` block so tests remain order-independent.
+
+- [x] chexp-01: Tenant Advanced tab renders a "Chat History Export" switch, ON by default
+- [x] chexp-02: Toggling the switch OFF persists across closing and reopening the Advanced tab (PATCH org metadata round trip)
+- [x] chexp-03: Setting OFF + student (admin in User/Learner mode) — Export is hidden from the chat row menu; Pin and Delete remain visible
+- [x] chexp-04: Setting ON + student — Export, Pin, and Delete are all visible in the chat row menu
+- [x] chexp-05: Setting OFF + non-student (admin/instructor mode) — Export is still visible (role wins over the tenant setting)
+
+---
+
+## Journey 58: Embed Mode Chat Selection Sidebar Guard (4 checkpoints) — `journeys/58-embed-mode-chat-selection-sidebar-guard.spec.ts`
+
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `hooks/use-embed-mode.ts`
+
+Regression guard for issue #2067 (LAIA-684): selecting a chat from the sidebar history inside the embed widget leaked the full admin sidebar (Agents, Workflows, Projects, Analytics, Management, Notifications, Support) to students. Root cause: `SidebarChatsSection.handleSelectRow` unconditionally called `router.push('/platform/<tenant>/<mentor>?session=<id>')` on every row click; `useEmbedMode` derives embed state purely from the URL, so the push silently stripped `?embed=true` and flipped the app out of embed mode mid-session. The fix (commit 67e74db2) navigates only when the current pathname is not already the mentor's own chat page — always false inside the embed widget — and otherwise selects the session via Redux + the `session_id` localStorage cache, repainting in place with no navigation at all. The test seeds two chats (so the click is a genuine cross-session selection, not a no-op on the already-active row), reloads into embed mode via a real navigation to the mentor's own URL with `?embed=true` appended (mirroring journey 13's `embedUrlFor()` pattern), then opens Chats and clicks the older row — asserting both that the panel repaints with that session's messages and that the URL/sidebar guard holds before and after the click.
+
+- [x] embchat-01: Embed mode (`?embed=true`) sidebar shows only New Chat and Chats before any chat-history row is clicked (minimal-sidebar baseline)
+- [x] embchat-02: Clicking a chat-history row in embed mode repaints the chat panel with that session's messages without a client-side navigation
+- [x] embchat-03: REGRESSION GUARD — after selecting a chat from history in embed mode, the URL still carries `embed=true` and never gains a `?session=` param (pre-fix: the row click pushed a URL that stripped `embed=true`)
+- [x] embchat-04: REGRESSION GUARD — after selecting a chat from history in embed mode, Agents, Workflows, Projects, Analytics, Management, Notifications, and the Support footer link all remain absent from the sidebar
+
+---
+
+## Journey 59: Ecommerce Credits & Upgrade (10 checkpoints) — `journeys/59-ecommerce-credits-and-upgrade.spec.ts`
+
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/modals/modal-container.tsx`, `hooks/subscription/use-402-error-check.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`
+
+Full-lifecycle regression guard for the ecommerce credits/upgrade flow, run as a single serial test with `test.step()` per flow (state — platform id, mentor id, credit balance — carries across the whole run). A brand-new account signs up via the auth service's `/account/create` form and lands on the "main" tenant with a Free-plan trial balance. The credit balance dropdown (`@iblai/iblai-js/playwright` helpers), the profile dropdown (exactly Profile/Help/Log Out), the collapsed sidebar's visible top-level items, and every gated sidebar entry point (`components/modals/modal-container.tsx` renders the shared `UpgradePackageModal` from `@iblai/web-containers`, titled "Subscribe to unlock full features" with an "Upgrade for free" CTA) are all verified. The DM service's admin credit-cleanup endpoint (`${DM_URL}/api/service/credits/cleanup/`, authenticated with the `dm_token` written to localStorage) deterministically drains the balance to 0 rather than waiting on organic credit burn — this is what makes the "zero credits" checkpoints reproducible. On the "main" tenant, zero credits blocks chat submission and shows the same subscribe dialog; clicking "Upgrade for free" redirects to a zero-cost Stripe-hosted checkout (`hosted-payment-submit-button`) whose SSO redirect chain lands back on the app under a REAL (non-"main") platform id with a fresh Free-plan balance. From there, the profile dropdown's "Account" item opens the "User Profile" dialog (`@iblai/web-containers`' `UserProfileDropdown`/account modal), whose Billing tab (`?profileTab=billing`, `hooks/subscription/use-402-error-check.ts` also drives this URL injection on 402 for admins) shows the Plan/Credits sections via the SDK's `billing-plan-section`/`billing-credits-section` test ids. A second credit-cleanup + reload triggers the admin-only 402 path, which auto-opens the Billing tab directly (no subscribe dialog on non-"main" tenants) showing 0 credits. The Billing tab's real "Upgrade" button (`clickBillingUpgrade`) redirects to a real Stripe test-mode checkout; the test fills the `4242 4242 4242 4242` test card with a Uruguay billing country (removes the postal-code field) and submits, landing back on the same platform/mentor URL with the account modal auto-opening on a restored Premium-plan balance, after which chat continues to work. All Stripe-page assertions are written locale-proof (the hosted checkout renders in the browser locale — validated in French) using stable `data-testid`s, element ids, and currency/credit regexes rather than button text. Runs in a clean, unauthenticated context (`browser.newContext()`, no storageState). Skips when `DM_URL` or `ECOMMERCE_CREDIT_CLEANUP_TOKEN` are unset.
+
+- [x] ecu-01: New user signs up via `/account/create` and lands authenticated on `<base-url>/platform/main/<mentor-id>` with the mentor dropdown ready
+- [x] ecu-02: Credit balance dropdown shows a Free plan badge, a positive remaining balance, and an Upgrade Plan button on the main tenant
+- [x] ecu-03: Profile dropdown shows exactly Profile / Help / Log Out on a brand-new free-trial account
+- [x] ecu-04: Every gated sidebar entry (Agents > New Agent/My Agents, Workflows > My Workflows, Projects > My Projects, Analytics > Overview, Invites, Management, Integrations, Monetization, Advanced) opens the shared "Subscribe to unlock full features" dialog with an "Upgrade for free" CTA
+- [x] ecu-05: Zero credits (via the DM service credit-cleanup admin endpoint) blocks chat submission on the main tenant and surfaces the same subscribe dialog instead of an AI response
+- [x] ecu-06: Clicking "Upgrade for free" redirects to a zero-cost Stripe-hosted checkout; submitting it completes the SSO redirect chain onto a real (non-"main") platform id with a fresh Free-plan credit balance and working chat
+- [x] ecu-07: The profile dropdown's Account item opens the User Profile dialog; its Billing tab (`?profileTab=billing`) shows the Free plan, Current badge, Upgrade button, and a positive credit balance
+- [x] ecu-08: Zero credits on the upgraded (non-"main") tenant auto-opens the User Profile dialog on the Billing tab (admin 402 handling injects `?profileTab=billing`) showing 0 credits, instead of the subscribe dialog used on the main tenant
+- [x] ecu-09: The Billing tab's Upgrade button redirects to a real Stripe test-mode checkout; filling the 4242 test card, expiry, CVC, name, and Uruguay billing country completes payment
+- [x] ecu-10: Post-payment, the account modal auto-opens on the Billing tab showing the Premium plan and a Manage Billing button with a restored credit balance; chat continues to work with the new balance
+
+---
+
+## Journey 60: Mentor LTI Tab (16 checkpoints, 1 pending) — `journeys/60-mentor-lti-tab.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/lti-tab.tsx`, `hooks/use-mentor-segments.ts`
+
+Covers the LTI top-level tab in the Edit Mentor (Agent) modal, rendered by the SDK's `AgentLtiTab` (`@iblai/iblai-js/web-containers/next`). As of feat/1853 the tab is **always visible to admins** regardless of the `is_lti_accessible` toggle — the `enabledThroughConfig` gate that previously hid the tab when `is_lti_accessible` was `false` was removed from `hooks/use-mentor-segments.ts`. The "Enable LTI launches" toggle (renamed from "Allow LTI launches" for consistency with sibling "Enable …" toggles) still controls whether the backend allows LTI launches but no longer gates the sidebar tab.
+
+The LTI segment lives under the **Integrations** sidebar category. Tests are parallel-safe via two strategies: a worker-scoped `ltiMentorUrl` fixture (one LTI-enabled mentor per worker, deleted on teardown) shared by read-only and mutation tests; and self-contained tests that create and delete their own mentor in a `finally` block.
+
+Sub-resource tests (Links / Keys / Tools) still require `is_lti_accessible=true` on the backend because auto-enable-on-link-creation (`lti-sdk-01`) is not yet implemented in the SDK.
+
+### Visibility (lti-01, lti-03, lti-04)
+
+- [x] lti-01: Admin sees the LTI tab visible by default on a fresh mentor without enabling the "Enable LTI launches" toggle (`is_lti_accessible=false`) — the `enabledThroughConfig` gate was removed in feat/1853
+- [x] lti-03: Admin disables "Enable LTI launches" in Settings and the LTI tab stays visible (the `is_lti_accessible` gate was removed from `MENTOR_SEGMENTS`)
+- [x] lti-04: Non-admin user does not see the LTI tab in the Edit Mentor modal (LTI segment remains admin-only)
+
+### Tab header + sub-tabs (lti-05)
+
+- [x] lti-05: Admin opens the LTI tab on an LTI-enabled mentor and sees the header and all four sub-tabs (Agent Links, Keys, Tools, Tool Endpoints)
+
+### Links sub-tab (lti-06..lti-08)
+
+- [x] lti-06: Admin opens the LTI Links sub-tab on a fresh mentor and sees the empty state when no links exist
+- [x] lti-07: Admin creates an LTI link and it appears in the links list
+- [x] lti-08: Admin edits (renames) an LTI link and the new name appears in the list while the old name is gone _(self-contained mentor: the backend allows a single LTI link per mentor and there is no delete-link helper, so a second create on the shared worker mentor after lti-07 would fail)_
+
+### Keys sub-tab (lti-10..lti-12)
+
+- [x] lti-10: Admin creates an LTI key and the key detail shows non-empty public key and JWK fields
+- [x] lti-11: Admin renames an LTI key and the new name appears in the list while the old name is gone
+- [x] lti-12: Admin deletes an LTI key and the key is no longer in the list
+
+### Tools sub-tab (lti-13..lti-14)
+
+- [x] lti-13: Admin opens the LTI Tools sub-tab and the platform-wide tools surface renders — the create button plus either the empty state or the existing tools list _(LTI tools are tenant-scoped, not mentor-scoped: a fresh mentor still lists every tool on the tenant, lti-14 residue persists with no delete-tool helper, and parallel workers can create tools at any moment, so a guaranteed-empty state is unreachable)_
+- [x] lti-14: Admin creates an LTI tool with a JWKS URL signing config and it appears in the tools list _(keys/tools are platform-wide and server-paginated at 10/page; the `LtiTab` page object walks pages to reveal a freshly-created row, and the worker fixture reaps stale e2e-named residue >2h old via `e2e/utils/lti-residue.ts` to keep the lists small)_ _(the raw-JWKS-JSON variant is intentionally uncovered for now: the SDK ToolModal sent `key_set` as a parsed object while the backend requires a JSON string — fixed on SDK branch feat/web-containers/1853; re-add the checkpoint once mentorai bumps to a release containing it)_
+
+### Tool Endpoints sub-tab (lti-16..lti-18)
+
+- [x] lti-16: Admin opens the Tool Endpoints sub-tab and all four endpoint URLs (redirect URI, login, deep linking, JWKS) are rendered non-empty
+- [x] lti-17: Admin copies the redirect URI endpoint URL and the copy button label flips to "Copied"
+- [x] lti-18: Admin opens the Tool Endpoints sub-tab and every endpoint URL is an absolute `https` URL on the `/lti/` path sharing one origin (built from `NEXT_PUBLIC_LEGACY_LMS_URL`)
+
+### SDK-pending (lti-sdk-01)
+
+- [ ] lti-sdk-01: PENDING (SDK dependency) — When an admin creates the first LTI link, `is_lti_accessible` is auto-enabled via the API without requiring the "Enable LTI launches" toggle to be turned on manually. Not yet implemented: `AgentLtiTab` exposes no post-create callback hook and there are no public LTI data-layer hooks in `@iblai/iblai-js`.
+
+---
+
+## Journey 61: LaTeX / Math Rendering (5 checkpoints) — `journeys/61-latex-math-rendering.spec.ts`
+
+**Source files:** `lib/utils.ts`, `components/markdown.tsx`
+
+Covers the fix for GitHub issue #2109 ("Improve latex compatibility for rendering chat messages and artifacts"). `preprocessLaTeX` (`lib/utils.ts`) escapes a `$` immediately followed by a digit into `\$` so currency amounts render literally — but that same escape corrupted backslash-free / digit-leading inline math like `$3x + 5$` and `$x = 4$`, and a leading currency amount could swallow the opening `$` of a real math span later on the same line. The fix classifies a `$...$` span as math using Pandoc's `tex_math_dollars` rule (opening `$` followed by a non-space, closing `$` preceded by a non-space, and the closing `$` not followed by a digit — so `$5, $10` and `$5-$10` stay currency while `$3x + 5$` and `$x = 4$` render), applied by an `isInlineMath` predicate plus a left-to-right rewind scan (a non-math span only consumes its opening `$`, leaving the closing `$` free to open a later real math span).
+
+A second class of #2109 breakage: LLMs wrap prose in a `$...$` / `$$...$$` span using a text-mode command — `$\textbf{Custom AI Agents}$`, `$\text{ibl.ai}$` — to mean _formatting_, not math. Under the Pandoc rule those are valid inline math, so KaTeX rendered them as collapsed math italics, and the downstream `\textbf{...}` → `**...**` conversion ran _inside_ the surviving `$` delimiters, producing `$**Custom AI Agents**$` whose `**` showed up as literal `∗∗`. `preprocessLaTeX` now unwraps any span whose entire body is a single text-styling command (`\text`, `\textbf`, `\textit`, `\emph`, `\texttt`, `\underline`, `\textrm`, `\textsf`, `\textnormal`) into its Markdown equivalent, dropping the `$` delimiters, before the math-masking step. Genuine math that merely _contains_ `\text{...}` (e.g. `$0.075 \text{ L} \times \frac{...}{...}$`) is not a single sole-content command and stays math. This class is currently covered by unit tests in `lib/__tests__/utils.test.ts`; a Journey 61 checkpoint for it is pending.
+
+**Deterministic seam:** live chat streams over a raw WebSocket (`useChat` in `@iblai/web-utils`), which has no practical Playwright route-mocking seam without reimplementing the wire protocol. Instead this journey drives the public "shared chat" page (`app/share/chat/[sessionId]/[tenantKey]/[mentorId]/page.tsx`), which fetches message history over a plain REST GET (`.../sessions/{sessionId}/shared/`) and renders it through the exact same `ChatMessages` → `AIMessageBubble` → `MessagePreview` → `<Markdown>` component tree as live chat. `ChatPage.mockSharedChatSession` intercepts that GET with `page.route` and injects a FIXED assistant markdown message, so every assertion is against real KaTeX/react-markdown rendering of known-in-advance content — no LLM in the loop, no flakiness from varying model output.
+
+Note: `remark-math` only classifies a `$$...$$` span as block/display math when its delimiters each sit alone on their own line (confirmed by direct probing against this build) — a single-line `$$3x + 5$$` renders as inline `.katex` inside a `<p>`. The block-math checkpoint (latex-02) uses the "own-line fence" form, which is also how LLMs naturally emit standalone equations.
+
+- [x] latex-01: Inline LaTeX math (`$3x + 5$`, `$x = 4$`, `$2x + 6$`, `$3(4) + 5$`) renders as KaTeX with no raw dollar signs or escape backslashes leaking into the visible text
+- [x] latex-02: Block LaTeX math (`$$...$$` on its own fenced lines) renders as KaTeX display blocks (`.katex-display`), including a `\text{}`/`\frac{}` expression
+- [x] latex-03: Currency amounts ("I have $5 and $10, it costs $5, and the total is $3.50.") stay literal text with no KaTeX rendering and no visible escape backslash
+- [x] latex-04: Money then math on the same line ("the kit costs $12, and the formula $3x + 5$ gives the price.") keeps `$12` literal while `$3x + 5$` renders as KaTeX
+- [x] latex-05: Math then money on the same line ("since $2x = 8$, each unit is $8 and the pair is $16.") renders `$2x = 8$`as KaTeX while`$8`and`$16` stay literal
+
+---
+
+## Journey 62: Chat Search Dialog (6 checkpoints) — `journeys/62-chat-search-dialog.spec.ts`
+
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/chats/chat-search-dialog.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/chats/use-recent-chats.ts`
+
+Covers the `ChatSearchDialog` (issue #2053) opened from the sidebar's "Search chats" entry point — an expanded text-label button and a collapsed "rail" icon-only button, both sharing the accessible name "Search chats". The dialog has a search input header (debounced 300ms into a server-side `search` query param), a "New Chat" row, results grouped by recency (`group-chats-by-recency.ts`), and a load-more spinner driven by an `IntersectionObserver` sentinel. Each test creates its own mentor via `createMentorPage.openAndCreate()` and seeds 3 distinct chat sessions by sending a distinguishing message and starting a new chat between each send. Infinite scroll/pagination and the "Previous 30 Days"/"Older" recency buckets are NOT covered here (not reproducible via real UI sends within a reasonable test budget) — see the spec file's top-of-file comment and the `use-recent-chats`/`groupChatRowsByRecency` unit tests instead.
+
+- [x] csd-01: Clicking "Search chats" in the expanded sidebar opens the dialog with the searchbox focused; pressing Escape closes it
+- [x] csd-02: The dialog lists the mentor's seeded chats grouped under "Previous 7 Days", each row showing its first human message as a single line with no embedded newline
+- [x] csd-03: Typing in the searchbox filters the list (server-side, debounced) to only the matching session; clearing the search restores all seeded rows
+- [x] csd-04: Clicking "New Chat" inside the dialog closes it and starts a fresh, empty chat distinct from the previously-active seeded session
+- [x] csd-05: Selecting a chat result closes the dialog and loads that session's conversation into the chat panel
+- [x] csd-06: Collapsing the sidebar and clicking the "Search chats" rail icon opens the same dialog
 
 ---

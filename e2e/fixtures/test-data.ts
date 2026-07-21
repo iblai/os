@@ -75,6 +75,11 @@ export const ECOMMERCE_CREDIT_CLEANUP_TOKEN =
   process.env.ECOMMERCE_CREDIT_CLEANUP_TOKEN || '';
 export const ECOMMERCE_CHECKOUT_URL =
   process.env.ECOMMERCE_CHECKOUT_URL || 'http://ibl.ai/join';
+// Password used for the Journey 56 ecommerce signup flow. The auth service
+// silently rejects common passwords like "12345678" (the signup form just
+// stays put with no visible error) so this must be non-trivial.
+export const ECOMMERCE_SIGNUP_PASSWORD =
+  process.env.ECOMMERCE_SIGNUP_PASSWORD || 'bamidelexoxo';
 
 // ── Canvas LMS (Journey 11) ──────────────────────────────────────────────────
 

@@ -46,6 +46,34 @@ jobs:
       - run: echo "run-tests label detected — proceeding"
 
   # ============================================================
+  # UNIT TESTS (vitest)
+  # Runs alongside the E2E jobs so a red unit suite fails this
+  # "Required" workflow and blocks merge. Previously only the local
+  # pre-push hook ran vitest, so unit failures could reach main.
+  # ============================================================
+  unit-tests:
+    needs: gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: package.json
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run unit tests
+        run: pnpm test
+
+  # ============================================================
   # BUILD APP IMAGE
   # ============================================================
   build-app-image:
@@ -93,13 +121,14 @@ jobs:
       browsers: 'chrome'
       workers: '3'
       registry-type: 'ocir'
-      ec2-host: '32.196.111.179'
+      ec2-host: '98.82.66.78'
       runs-on: iblai-stg-runner
       ec2-user: 'ubuntu'
       ec2-commands: >-
         cd /ibl/app/ibl-spa/mentor &&
         sed -i 's|image: .*|image: ${{ needs.build-app-image.outputs.image-uri }}|' docker-compose.yml &&
         docker compose down &&
+        docker image prune -af &&
         docker compose up -d
 
   # ============================================================

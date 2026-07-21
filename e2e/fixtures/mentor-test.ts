@@ -11,6 +11,7 @@ import { ProjectPage } from '../page-objects/project.page';
 import { NotificationsPage } from '../page-objects/notifications.page';
 import { BillingPage } from '../page-objects/billing.page';
 import { CreateMentorPage } from '../page-objects/create-mentor.page';
+import { ChatSearchDialogPage } from '../page-objects/chat-search-dialog.pom';
 
 export type StepFn = (title: string, fn: () => unknown) => Promise<void>;
 
@@ -40,6 +41,7 @@ export const test = base.extend<{
   explorePage: ExplorePage;
   editMentorPage: EditMentorPage;
   createMentorPage: CreateMentorPage;
+  chatSearchDialogPage: ChatSearchDialogPage;
   analyticsPage: AnalyticsPage;
   profilePage: ProfilePage;
   projectPage: ProjectPage;
@@ -53,6 +55,7 @@ export const test = base.extend<{
   nonadminExplorePage: ExplorePage;
   nonadminEditMentorPage: EditMentorPage;
   nonadminCreateMentorPage: CreateMentorPage;
+  nonadminChatSearchDialogPage: ChatSearchDialogPage;
   nonadminAnalyticsPage: AnalyticsPage;
   nonadminProfilePage: ProfilePage;
   nonadminProjectPage: ProjectPage;
@@ -83,6 +86,9 @@ export const test = base.extend<{
   },
   createMentorPage: async ({ page }, use) => {
     await use(new CreateMentorPage(page));
+  },
+  chatSearchDialogPage: async ({ page }, use) => {
+    await use(new ChatSearchDialogPage(page));
   },
   analyticsPage: async ({ page }, use) => {
     await use(new AnalyticsPage(page));
@@ -133,6 +139,9 @@ export const test = base.extend<{
   },
   nonadminCreateMentorPage: async ({ nonadminPage }, use) => {
     await use(new CreateMentorPage(nonadminPage));
+  },
+  nonadminChatSearchDialogPage: async ({ nonadminPage }, use) => {
+    await use(new ChatSearchDialogPage(nonadminPage));
   },
   nonadminAnalyticsPage: async ({ nonadminPage }, use) => {
     await use(new AnalyticsPage(nonadminPage));

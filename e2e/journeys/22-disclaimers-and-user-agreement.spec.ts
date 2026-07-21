@@ -1,7 +1,12 @@
 import { test, expect } from '../fixtures/mentor-test';
-import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
+import {
+  navigateToMentorApp,
+  checkAdminStatus,
+  getPlatformContext,
+} from '../utils/auth';
 import { waitForPageReady, waitForDialogReady } from '../utils/resilient';
 import { safeWaitForURL } from '../utils/navigation';
+import { MentorTracker } from '../utils/mentor-cleanup';
 
 // ─── Journey 22: Disclaimers & User Agreement ─────────────────────────────────
 //
@@ -18,6 +23,8 @@ import { safeWaitForURL } from '../utils/navigation';
 // ─── A. Admin — User Agreement Toggle ────────────────────────────────────────
 
 test.describe('Journey 22-A: Admin — User Agreement Toggle', () => {
+  const trackerA = new MentorTracker();
+
   test.beforeEach(async ({ page, createMentorPage, editMentorPage }) => {
     await navigateToMentorApp(page);
     const isAdmin = await checkAdminStatus(page);
@@ -26,6 +33,8 @@ test.describe('Journey 22-A: Admin — User Agreement Toggle', () => {
       return;
     }
     await createMentorPage.openAndCreate();
+    const { mentorId } = await getPlatformContext(page);
+    trackerA.add(mentorId);
     await editMentorPage.open('Disclaimers');
     await waitForPageReady(page);
   });
@@ -72,11 +81,17 @@ test.describe('Journey 22-A: Admin — User Agreement Toggle', () => {
 
     await editMentorPage.close();
   });
+
+  test.afterAll(async ({ browser }, testInfo) => {
+    await trackerA.deleteAll(browser, testInfo);
+  });
 });
 
 // ─── B. Admin — Edit Content ──────────────────────────────────────────────────
 
 test.describe('Journey 22-B: Admin — Edit Content', () => {
+  const trackerB = new MentorTracker();
+
   test.beforeEach(async ({ page, createMentorPage, editMentorPage }) => {
     await navigateToMentorApp(page);
     const isAdmin = await checkAdminStatus(page);
@@ -85,6 +100,8 @@ test.describe('Journey 22-B: Admin — Edit Content', () => {
       return;
     }
     await createMentorPage.openAndCreate();
+    const { mentorId } = await getPlatformContext(page);
+    trackerB.add(mentorId);
     await editMentorPage.open('Disclaimers');
     await waitForPageReady(page);
   });
@@ -265,11 +282,17 @@ test.describe('Journey 22-B: Admin — Edit Content', () => {
 
     await editMentorPage.close();
   });
+
+  test.afterAll(async ({ browser }, testInfo) => {
+    await trackerB.deleteAll(browser, testInfo);
+  });
 });
 
 // ─── C. Admin — Copy Content ──────────────────────────────────────────────────
 
 test.describe('Journey 22-C: Admin — Copy Content', () => {
+  const trackerC = new MentorTracker();
+
   test.beforeEach(async ({ page, createMentorPage, editMentorPage }) => {
     await navigateToMentorApp(page);
     const isAdmin = await checkAdminStatus(page);
@@ -278,6 +301,8 @@ test.describe('Journey 22-C: Admin — Copy Content', () => {
       return;
     }
     await createMentorPage.openAndCreate();
+    const { mentorId } = await getPlatformContext(page);
+    trackerC.add(mentorId);
     await editMentorPage.open('Disclaimers');
     await waitForPageReady(page);
   });
@@ -347,11 +372,16 @@ test.describe('Journey 22-C: Admin — Copy Content', () => {
 
     await editMentorPage.close();
   });
+
+  test.afterAll(async ({ browser }, testInfo) => {
+    await trackerC.deleteAll(browser, testInfo);
+  });
 });
 
 // ─── D. Non-Admin — Agreement Enforcement ────────────────────────────────────
 
 test.describe('Journey 22-D: Non-Admin — Agreement Enforcement', () => {
+  const trackerD = new MentorTracker();
   // disc-01 / disc-07 / disc-08: The critical E2E enforcement journey.
   // Admin creates a mentor, enables User Agreement + sets visibility to Anyone,
   // then a non-admin navigates directly to the mentor and must accept before chatting.
@@ -371,6 +401,7 @@ test.describe('Journey 22-D: Non-Admin — Agreement Enforcement', () => {
     }
 
     await createMentorPage.openAndCreate();
+    trackerD.add((await getPlatformContext(page)).mentorId);
 
     // Step 2: Enable user agreement
     await editMentorPage.open('Disclaimers');
@@ -481,6 +512,7 @@ test.describe('Journey 22-D: Non-Admin — Agreement Enforcement', () => {
     }
 
     await createMentorPage.openAndCreate();
+    trackerD.add((await getPlatformContext(page)).mentorId);
 
     // Verify user agreement is disabled on the new mentor
     await editMentorPage.open('Disclaimers');
@@ -546,6 +578,7 @@ test.describe('Journey 22-D: Non-Admin — Agreement Enforcement', () => {
     }
 
     await createMentorPage.openAndCreate();
+    trackerD.add((await getPlatformContext(page)).mentorId);
 
     await editMentorPage.open('Disclaimers');
     await waitForPageReady(page);
@@ -635,11 +668,17 @@ test.describe('Journey 22-D: Non-Admin — Agreement Enforcement', () => {
       expect(firstModalVisible || firstErrorVisible).toBe(true);
     }
   });
+
+  test.afterAll(async ({ browser }, testInfo) => {
+    await trackerD.deleteAll(browser, testInfo);
+  });
 });
 
 // ─── E. Tab Layout ────────────────────────────────────────────────────────────
 
 test.describe('Journey 22-E: Tab Layout', () => {
+  const trackerE = new MentorTracker();
+
   test.beforeEach(async ({ page, createMentorPage, editMentorPage }) => {
     await navigateToMentorApp(page);
     const isAdmin = await checkAdminStatus(page);
@@ -648,6 +687,8 @@ test.describe('Journey 22-E: Tab Layout', () => {
       return;
     }
     await createMentorPage.openAndCreate();
+    const { mentorId } = await getPlatformContext(page);
+    trackerE.add(mentorId);
     await editMentorPage.open('Disclaimers');
     await waitForPageReady(page);
   });
@@ -748,5 +789,9 @@ test.describe('Journey 22-E: Tab Layout', () => {
     await expect(uaDialog).toBeHidden({ timeout: 5_000 });
 
     await editMentorPage.close();
+  });
+
+  test.afterAll(async ({ browser }, testInfo) => {
+    await trackerE.deleteAll(browser, testInfo);
   });
 });

@@ -31,8 +31,13 @@
  */
 
 import { test, expect } from '../fixtures/mentor-test';
-import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
+import {
+  navigateToMentorApp,
+  checkAdminStatus,
+  getPlatformContext,
+} from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
+import { MentorTracker } from '../utils/mentor-cleanup';
 import { SandboxTab } from '../page-objects/edit-mentor/sandbox.tab';
 import { SkillsTab } from '../page-objects/edit-mentor/skills.tab';
 import type { Locator } from '@playwright/test';
@@ -92,6 +97,8 @@ async function expectTabHidden(
 test.describe.configure({ mode: 'serial' });
 
 test.describe('Journey 44: CLAW Advanced Sandbox', () => {
+  const tracker44A = new MentorTracker();
+
   test.beforeEach(async ({ page, createMentorPage }) => {
     await navigateToMentorApp(page);
     const isAdmin = await checkAdminStatus(page);
@@ -104,6 +111,8 @@ test.describe('Journey 44: CLAW Advanced Sandbox', () => {
     // against a clean mentor (independent of whatever claw state a prior
     // run or the default mentor was left in).
     await createMentorPage.openAndCreate();
+    const { mentorId } = await getPlatformContext(page);
+    tracker44A.add(mentorId);
   });
 
   // ── TC01: Toggle is present in Settings tab ───────────────────────────────
@@ -474,6 +483,10 @@ test.describe('Journey 44: CLAW Advanced Sandbox', () => {
       await editMentorPage.close();
     }
   });
+
+  test.afterAll(async ({ browser }, testInfo) => {
+    await tracker44A.deleteAll(browser, testInfo);
+  });
 });
 
 // ── TC09: Toggle on/off lifecycle in a single session ────────────────────────
@@ -482,6 +495,8 @@ test.describe('Journey 44: CLAW Advanced Sandbox', () => {
 // Sandbox disappear — all within the same modal session (no reopen).
 
 test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
+  const tracker44B = new MentorTracker();
+
   test.beforeEach(async ({ page, createMentorPage }) => {
     await navigateToMentorApp(page);
     const isAdmin = await checkAdminStatus(page);
@@ -494,6 +509,8 @@ test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
     // against a clean mentor (independent of whatever claw state a prior
     // run or the default mentor was left in).
     await createMentorPage.openAndCreate();
+    const { mentorId } = await getPlatformContext(page);
+    tracker44B.add(mentorId);
   });
 
   test('admin toggles Sandbox ON then OFF and Sandbox tab appears then disappears in the same session', async ({
@@ -1159,6 +1176,10 @@ test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
       }
       await editMentorPage.close();
     }
+  });
+
+  test.afterAll(async ({ browser }, testInfo) => {
+    await tracker44B.deleteAll(browser, testInfo);
   });
 });
 
