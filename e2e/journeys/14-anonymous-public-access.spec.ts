@@ -63,10 +63,11 @@ test.describe('Journey 14: Anonymous / Public Access', () => {
 
       // Enable memory on the mentor so the auth-gate assertion below is
       // meaningful (the Memory button also requires mentor memory to be on).
-      // The Memory toggle moved from the Memory tab to the Settings tab (fix/1584).
-      await editMentorPage.open('Settings');
+      // The "Remember past conversations" master toggle lives in-tab on the
+      // Memory tab itself (feat/2040 — moved off Settings → Capabilities).
+      await editMentorPage.open('Memory');
       await waitForPageReady(setupPage);
-      await editMentorPage.settings.setMemoryEnabled(true);
+      await editMentorPage.memory.setCapabilityEnabled(true);
       await editMentorPage.close();
     } finally {
       await setupPage.close();

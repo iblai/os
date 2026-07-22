@@ -114,7 +114,14 @@ export const components: Components = {
     <ol {...props} className="my-6 ml-6 list-decimal [&>li]:mt-2" />
   ),
 
-  li: ({ node, ...props }) => <li {...props} className="overflow-x-auto" />,
+  // The scroll container has to be inside the <li>: a list item that is itself
+  // a scroll container clips its own marker, which hides every bullet and
+  // number. Wide content (long equations) still scrolls via the wrapper.
+  li: ({ node, children, ...props }) => (
+    <li {...props}>
+      <div className="overflow-x-auto">{children}</div>
+    </li>
+  ),
 
   code: ({ node, ...props }) => {
     const match = /language-(\w+)/.exec(props.className || '');

@@ -1,5 +1,4 @@
 import { Page, Locator, expect } from '@playwright/test';
-import type { SettingsTab } from './settings.tab';
 
 /**
  * Page object for the Privacy tab inside the Edit Mentor modal.
@@ -10,36 +9,43 @@ import type { SettingsTab } from './settings.tab';
  * the SDK. If labels are overridden via the `labels` prop, update the
  * locators in this file to match.
  *
- * The MASTER `enable_privacy_router` switch was removed from the SDK
- * Privacy tab body and now lives only in Settings → Capabilities as the
- * "Filter PII from messages" row. `setRouterEnabled` / `isRouterEnabled`
- * therefore DELEGATE to the SettingsTab page-object below. Additionally,
- * the SDK now filters the Privacy sidebar segment entirely when the router is
- * off — the tab trigger is absent from the sidebar (not an empty body), so
- * `setRouterEnabled(false)` does NOT navigate back to Privacy afterward.
- * `setRouterEnabled(true)` navigates to Privacy and asserts the body rendered.
+ * The `enable_privacy_router` MASTER switch used to live in Settings →
+ * Capabilities ("Filter PII from messages"); it now lives inline at the top
+ * of this tab via the shared `CapabilityGate` component
+ * (`data-testid="privacy-capability-toggle"`). The Privacy tab itself is now
+ * ALWAYS mounted — `hooks/use-mentor-segments.ts` no longer gates the
+ * sidebar segment on `isPrivacyEnabled` — so `setRouterEnabled` never needs
+ * to navigate away/back or assert on the tab trigger appearing/disappearing.
+ * The gated fields (action select, entity chips, output filter) stay in the
+ * DOM and readable when the router is off; they render inside a grayed +
+ * inert `data-testid="capability-gate-content"` wrapper
+ * (`data-enabled="false"`). Interacting with them while off is not a
+ * supported user flow — callers must turn the capability on first.
+ *
+ * Unlike the app-owned tabs (Sandbox / Memory / Voice / Screen Share / LTI),
+ * `AgentPrivacyTab` does NOT mirror the toggle in local optimistic state —
+ * `enabled` is read directly from the `mentorSettings` query result, so the
+ * toggle only visually flips once the `editMentorJson` PUT + refetch round
+ * trip lands. Every setter below accounts for that extra latency.
  */
 export class PrivacyTab {
   readonly page: Page;
   readonly dialog: Locator;
-  /**
-   * Sibling SettingsTab page-object used to drive the moved master switch.
-   * Injected after construction via `bindSettingsTab` so the EditMentorPage
-   * can resolve the cross-tab dependency once, without circular imports at
-   * page-object construction time.
-   */
-  private settingsTab: SettingsTab | null = null;
-  /**
-   * `navigateToTab(name)` from the parent EditMentorPage. Provided after
-   * construction so this tab can return focus to "Privacy" after flipping
-   * the moved switch in Settings → Capabilities.
-   */
-  private navigateToTab: ((name: string) => Promise<void>) | null = null;
 
   /** "Privacy" heading rendered at the top of the tab panel. */
   readonly heading: Locator;
   /** Description line below the heading. */
   readonly description: Locator;
+  /**
+   * "PII filtering" (`enable_privacy_router`) master toggle. Auto-saves on
+   * click via `editMentorJson` — no footer Save button involved. Not
+   * optimistic (see class doc) — waiting on it also waits out the refetch.
+   */
+  readonly capabilityToggle: Locator;
+  /** Wrapper around the gated fields below — `data-enabled` mirrors the toggle. */
+  readonly capabilityContent: Locator;
+  /** Hint shown next to the description while the capability is off. */
+  readonly capabilityOffHint: Locator;
   /** Dropdown trigger for `privacy_action`. */
   readonly actionSelect: Locator;
   /** Textarea for `privacy_response` (only visible when action === "block"). */
@@ -50,9 +56,7 @@ export class PrivacyTab {
   readonly emptyEntitiesHint: Locator;
   /** Toggle for `enable_privacy_output_filter`. */
   readonly outputFilterSwitch: Locator;
-  /** Body container that only renders when `enable_privacy_router` is on.
-   *  Use this to assert the "router on" / "router off" rendering shape
-   *  without depending on the removed master switch. */
+  /** Body container — present regardless of router state (tab is always mounted). */
   readonly body: Locator;
 
   constructor(page: Page, dialog: Locator) {
@@ -64,6 +68,16 @@ export class PrivacyTab {
       /Detect and filter personally identifiable information from chat messages\./i,
     );
     this.body = dialog.getByTestId('privacy-tab-body');
+    this.capabilityToggle = dialog.getByTestId('privacy-capability-toggle');
+    // `:visible` scopes to the currently-active tab's gate — top-level tab
+    // panels can stay force-mounted (CSS-hidden) while inactive, and every
+    // gated tab renders its own `capability-gate-content` wrapper.
+    this.capabilityContent = dialog.locator(
+      '[data-testid="capability-gate-content"]:visible',
+    );
+    this.capabilityOffHint = dialog.locator(
+      '[data-testid="capability-gate-off-hint"]:visible',
+    );
     this.actionSelect = dialog.getByRole('combobox', {
       name: /When PII is detected/i,
     });
@@ -77,167 +91,135 @@ export class PrivacyTab {
     });
   }
 
-  /**
-   * Wire up the cross-tab delegation. EditMentorPage calls this once after
-   * both PrivacyTab and SettingsTab have been constructed so the Privacy
-   * helpers below can drive the moved master switch.
-   */
-  bindSettingsTab(
-    settingsTab: SettingsTab,
-    navigateToTab: (name: string) => Promise<void>,
-  ): void {
-    this.settingsTab = settingsTab;
-    this.navigateToTab = navigateToTab;
-  }
+  // ── Capability gate ───────────────────────────────────────────────────────
 
-  /**
-   * Re-settle onto a mounted Privacy tab, waiting out a transient unmount.
-   *
-   * Every privacy field change auto-saves (the SDK's `updateField` fires an
-   * editMentorJson PUT then `refetchMentorSettings`), and the ENTIRE segment is
-   * gated on `enable_privacy_router` read from that same refreshed
-   * mentor-settings object. The post-save refetch can momentarily return
-   * settings without the flag (read-lag right after the master toggle was
-   * enabled in Settings → Capabilities), which unmounts the whole Privacy
-   * segment — blank body, tab gone from the sidebar — before a later read
-   * remounts it. So after ANY interaction we cannot trust the panel to still be
-   * there: navigate back to Privacy (navigateToTab already waits up to 15s for
-   * the (re)appearing trigger) and confirm the body rendered. One retry covers
-   * a slow remount.
-   */
-  private async gotoPrivacy(): Promise<void> {
-    if (!this.navigateToTab) {
-      throw new Error(
-        'PrivacyTab.gotoPrivacy requires bindSettingsTab() to be called first.',
-      );
-    }
-    let lastError: unknown;
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      try {
-        await this.navigateToTab('Privacy');
-        await expect(this.actionSelect).toBeVisible({ timeout: 5_000 });
-        return;
-      } catch (error) {
-        lastError = error;
-        await this.page.waitForTimeout(1_000);
-      }
-    }
-    throw lastError;
-  }
-
-  /**
-   * Returns true when `enable_privacy_router` is on. Reads the authoritative
-   * value from Settings → Capabilities where the switch now lives.
-   *
-   * NOTE: After this call the focus is on the Settings tab (not Privacy).
-   * The caller is responsible for navigating to the right tab afterward if
-   * needed. We deliberately do NOT navigate back to Privacy here because when
-   * the value is false the Privacy sidebar segment is unmounted entirely, so
-   * a `navigateToTab('Privacy')` would time out.
-   */
+  /** Whether the "PII filtering" (`enable_privacy_router`) toggle is currently on. */
   async isRouterEnabled(): Promise<boolean> {
-    if (this.settingsTab && this.navigateToTab) {
-      // Authoritative read — go to Capabilities where the switch lives.
-      await this.navigateToTab('Settings');
-      const value = await this.settingsTab.isEnablePrivacyRouterEnabled();
-      // Only navigate back to Privacy when the tab will actually be present.
-      if (value) {
-        await this.navigateToTab('Privacy');
-      }
-      return value;
-    }
-    // Fallback: best-effort visual probe on the Privacy tab body.
-    let isVisible = false;
-    try {
-      await this.actionSelect.waitFor({ state: 'visible', timeout: 1_500 });
-      isVisible = true;
-    } catch {
-      isVisible = false;
-    }
-    return isVisible;
+    const attr = await this.capabilityToggle
+      .getAttribute('aria-checked')
+      .catch(() => null);
+    return attr === 'true';
   }
 
   /**
-   * Idempotently set the master `enable_privacy_router` toggle.
+   * Deterministically close the "When PII is detected" action Select's
+   * options listbox if it's currently open. A Radix `<Select>` applies
+   * `pointer-events: none` to everything outside its popover while open, so
+   * any click elsewhere in the dialog (e.g. the capability toggle) doesn't
+   * fail fast — it just retries silently against an unresponsive target for
+   * the caller's full timeout, which looks like an unrelated element is
+   * broken.
    *
-   * Delegates to the Settings → Capabilities "Filter PII from messages"
-   * switch (the SDK removed the in-tab master switch).
+   * Deliberately NEVER presses Escape: two live traces showed it's unsafe
+   * here — first intermittently leaving the listbox open (Escape no-op'd),
+   * then (once Escape became the only close path exercised) reliably
+   * bubbling PAST the Select and closing the parent Edit Agent Dialog too
+   * (8/8 repeat runs closed the whole modal). Either failure mode is worse
+   * than doing nothing. Instead this clicks the Select trigger again — a
+   * Radix `<Select>` trigger toggles its own popover on click and cannot
+   * affect an ancestor Dialog — and falls back to clicking a neutral,
+   * non-interactive area inside the dialog (the tab heading) if that
+   * somehow didn't register. A final assertion confirms the *dialog* is
+   * still open before returning, so a caller who then can't find the
+   * capability toggle gets a clear "the dialog closed unexpectedly" failure
+   * here rather than a confusing "toggle not found" one two calls away.
+   */
+  async closeActionSelect(): Promise<void> {
+    const options = this.page.getByRole('option');
+
+    const isListboxOpen = async (timeout = 500): Promise<boolean> => {
+      try {
+        await options.first().waitFor({ state: 'visible', timeout });
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    if (await isListboxOpen()) {
+      // Attempt 1: click the trigger again to toggle the popover shut.
+      await this.actionSelect.click({ timeout: 3_000 }).catch(() => {});
+      try {
+        await expect(options).toHaveCount(0, { timeout: 3_000 });
+      } catch {
+        // Attempt 2: click a neutral area of the dialog (the tab heading)
+        // to shift focus and dismiss the popover.
+        await this.heading.click({ timeout: 3_000 }).catch(() => {});
+        await expect(options).toHaveCount(0, { timeout: 5_000 });
+      }
+    }
+
+    // Guard: whichever path closed the listbox must not have taken the
+    // whole Edit Agent dialog down with it.
+    await expect(this.dialog).toBeVisible({ timeout: 5_000 });
+  }
+
+  /**
+   * Idempotently set the "PII filtering" master toggle to the target state.
    *
-   * When `enable` is true: saves, navigates to the Privacy tab, and
-   * asserts the action select is visible (tab is now present and populated).
-   *
-   * When `enable` is false: saves, then asserts the Privacy sidebar segment
-   * is ABSENT from the dialog (the SDK filters it out entirely when the
-   * router is off — there is no empty-body state anymore). Does NOT attempt
-   * to navigate back to Privacy because the tab no longer exists in the DOM.
+   * Unlike the optimistic app-owned tabs, `AgentPrivacyTab` derives `enabled`
+   * straight from the mentor-settings query, so the switch only flips after
+   * the `editMentorJson` PUT + refetch round trip lands — the timeout below
+   * is generous to absorb that (mirrors `setEntitySelected`'s existing
+   * server-bound wait).
    */
   async setRouterEnabled(enable: boolean): Promise<void> {
-    if (!this.settingsTab || !this.navigateToTab) {
-      throw new Error(
-        'PrivacyTab.setRouterEnabled requires bindSettingsTab() to be called ' +
-          'first — invoked from EditMentorPage so the helper can drive the ' +
-          'moved master switch in Settings → Capabilities.',
-      );
-    }
-    await this.navigateToTab('Settings');
-    await this.settingsTab.setEnablePrivacyRouterAndSave(enable);
+    await expect(this.capabilityToggle).toBeVisible({ timeout: 10_000 });
+    const isOn = await this.isRouterEnabled();
+    if (isOn === enable) return;
 
-    if (enable) {
-      // The Privacy sidebar segment is gated on `enable_privacy_router`, which
-      // `useMentorSegments` only re-derives after the post-save mentor-settings
-      // refetch lands. `setEnablePrivacyRouterAndSave` resolves on the "Agent
-      // updated successfully" toast — which fires on MUTATION success, BEFORE
-      // that refetch necessarily completes — so the gated tab can take several
-      // seconds to mount. Wait for the tab trigger to appear with a generous
-      // timeout BEFORE navigating: navigateToTab's own 15s waitFor occasionally
-      // lost this race on slow staging, surfacing as a flaky timeout at
-      // edit-mentor.page.ts navigateToTab('Privacy').
-      const privacyTabTrigger = this.dialog
-        .getByRole('tab', { name: 'Privacy', exact: true })
-        .and(this.dialog.locator('[aria-controls^="panel-"]:visible'));
-      await expect(privacyTabTrigger).toBeVisible({ timeout: 30_000 });
-      // Privacy tab is now present — navigate to it and confirm the body rendered.
-      await this.navigateToTab('Privacy');
-      await expect(this.actionSelect).toBeVisible({ timeout: 10_000 });
+    // Defensively dismiss any open action-Select listbox first — an open
+    // Radix Select blocks pointer events on everything outside it (including
+    // this toggle), so a caller that left it open (see `closeActionSelect`
+    // doc) would otherwise hang the click below for the full timeout with a
+    // misleading "toggle unresponsive" signature. Hardens every caller, not
+    // just the one that surfaced this.
+    await this.closeActionSelect();
+
+    await this.capabilityToggle.click();
+    await expect(this.capabilityToggle).toHaveAttribute(
+      'aria-checked',
+      String(enable),
+      { timeout: 20_000 },
+    );
+    await expect(this.capabilityContent).toHaveAttribute(
+      'data-enabled',
+      String(enable),
+      { timeout: 20_000 },
+    );
+  }
+
+  /** Assert whether the CapabilityGate off-state hint is currently shown. */
+  async expectOffHintVisible(visible: boolean): Promise<void> {
+    if (visible) {
+      await expect(this.capabilityOffHint).toBeVisible({ timeout: 10_000 });
     } else {
-      // Privacy sidebar segment is entirely removed when the router is off.
-      // Assert the tab trigger is gone from the sidebar — do NOT navigate to
-      // Privacy (the tab no longer exists and navigateToTab would time out).
-      // Same post-save refetch race as the enable branch above: the segment
-      // only unmounts once `useMentorSegments` re-derives `isPrivacyEnabled`
-      // after the refetch lands (which the toast does not guarantee), so use a
-      // generous timeout here too rather than the tighter 10s that could flake.
-      const privacyTabTrigger = this.dialog
-        .getByRole('tab', { name: 'Privacy', exact: true })
-        .and(this.dialog.locator('[aria-controls^="panel-"]:visible'));
-      await expect(privacyTabTrigger).toHaveCount(0, { timeout: 20_000 });
+      await expect(this.capabilityOffHint).toHaveCount(0, { timeout: 10_000 });
     }
   }
+
+  // ── Gated fields ─────────────────────────────────────────────────────────
 
   /**
    * Opens the Action select and chooses the option matching the visible
-   * label. The SDK names the options "Redact", "Mask", and "Block".
+   * label. The SDK names the options "Allow", "Redact", "Mask", and "Block"
+   * (in that order — `PRIVACY_ACTIONS = ['allow', 'redact', 'mask',
+   * 'block']` from `@iblai/data-layer`; "Allow" is now the FIRST option).
    *
    * The SDK action <Select> is *controlled and server-bound*: its value is
    * `mentorSettings.privacy_action` and picking an option AUTO-SAVES
    * (editMentorJson PUT -> refetchMentorSettings), with no optimistic local
    * update — so the trigger only flips to the new label AFTER the round-trip
-   * lands, and that same refetch can transiently UNMOUNT the whole segment (see
-   * `gotoPrivacy`). The robust shape is therefore: re-settle onto a mounted
-   * Privacy tab, short-circuit if already on target, wait out any in-flight
-   * save (the trigger disables itself while saving), open the listbox, pick the
-   * option ONCE, then re-settle and confirm the server-bound trigger reflects
-   * the new value (which proves the round-trip committed). The whole cycle is
-   * retried so a missed click or a mid-flight remount simply tries again.
+   * lands. Requires the router to already be ON (call `setRouterEnabled(true)`
+   * first) — the select is inert while the capability is off.
    */
-  async selectAction(option: 'Redact' | 'Mask' | 'Block'): Promise<void> {
+  async selectAction(
+    option: 'Allow' | 'Redact' | 'Mask' | 'Block',
+  ): Promise<void> {
     const maxAttempts = 3;
     let lastError: unknown;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
-        // A prior save may have unmounted the segment — re-settle first.
-        await this.gotoPrivacy();
-
         // Settle any in-flight save BEFORE reading the label: the trigger is
         // server-bound and disables itself while saving, so reading a stale OLD
         // label here would skip the short-circuit and double-apply the action.
@@ -265,10 +247,8 @@ export class PrivacyTab {
         await item.hover();
         await item.click();
 
-        // The pick fires editMentorJson + refetch, which can unmount/remount the
-        // whole segment. Re-settle onto Privacy, then confirm the server-bound
+        // The pick fires editMentorJson + refetch — confirm the server-bound
         // trigger reflects the new value (proves the round-trip committed).
-        await this.gotoPrivacy();
         await expect(this.actionSelect).toContainText(option, {
           timeout: 10_000,
         });
@@ -336,16 +316,15 @@ export class PrivacyTab {
   }
 
   /**
-   * Idempotently set an entity chip to selected/unselected.
+   * Idempotently set an entity chip to selected/unselected. Requires the
+   * router to already be ON — the chip is inert while the capability is off.
    *
    * The chip's `aria-checked` is server-bound (`privacy_entities.includes(...)`)
    * and clicking it auto-saves (editMentorJson + refetch), which disables the
-   * chip mid-save and can transiently unmount the whole Privacy segment (see
-   * `gotoPrivacy`). So we poll: re-settle onto Privacy, return if already at the
-   * target, otherwise wait for the chip to be enabled (not mid-save), click
-   * once, re-settle, and confirm the server-bound state flipped. Retried so a
-   * missed click or a mid-flight remount simply tries again. Re-resolve the
-   * chip locator each step so a remount-detached node never sticks.
+   * chip mid-save. So we poll: return if already at the target, otherwise
+   * wait for the chip to be enabled (not mid-save), click once, and confirm
+   * the server-bound state flipped. Retried so a missed click simply tries
+   * again.
    */
   async setEntitySelected(entity: string, target: boolean): Promise<void> {
     const want = target ? 'true' : 'false';
@@ -353,7 +332,6 @@ export class PrivacyTab {
     let lastError: unknown;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
-        await this.gotoPrivacy();
         const chip = this.entityChip(entity);
         await expect(chip).toBeVisible({ timeout: 10_000 });
         // Settle any in-flight save FIRST — the chip is disabled while saving
@@ -367,9 +345,6 @@ export class PrivacyTab {
           return;
         }
         await chip.click();
-        // Auto-save fires; the segment may remount. Re-settle, then confirm the
-        // server-bound state committed (re-resolve the chip after the remount).
-        await this.gotoPrivacy();
         await expect(this.entityChip(entity)).toHaveAttribute(
           'aria-checked',
           want,

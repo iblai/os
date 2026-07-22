@@ -1,12 +1,15 @@
 // spec: e2e/test-plans/tool-call-indicator-and-reasoning-section.md
 
 import { test, expect } from '../fixtures/mentor-test';
-import { navigateToMentorApp } from '../utils/auth';
+import { navigateToMentorApp, getPlatformContext } from '../utils/auth';
+import { MentorTracker } from '../utils/mentor-cleanup';
 
 // Generous timeout for LLM streaming responses
 const STREAMING_TIMEOUT = 120_000;
 
 test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
+  const tracker52 = new MentorTracker();
+
   test.beforeEach(async ({ page }) => {
     await navigateToMentorApp(page);
   });
@@ -20,7 +23,10 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     editMentorPage,
     chatPage,
   }) => {
-    await createMentorPage.openAndCreate('E2E Tool Call Test Mentor');
+    await createMentorPage.openAndCreate(
+      `E2E Tool Call Test Mentor ${Date.now()}`,
+    );
+    tracker52.add((await getPlatformContext(page)).mentorId);
 
     // Enable Web Search via Tools tab
     // Enable verbose reasoning gates the tool-call indicator — enable it first.
@@ -102,7 +108,10 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     editMentorPage,
     chatPage,
   }) => {
-    await createMentorPage.openAndCreate('E2E Tool Call Expand Test Mentor');
+    await createMentorPage.openAndCreate(
+      `E2E Tool Call Expand Test Mentor ${Date.now()}`,
+    );
+    tracker52.add((await getPlatformContext(page)).mentorId);
 
     // Enable verbose reasoning gates the tool-call indicator — enable it first.
     await editMentorPage.open('Settings');
@@ -183,7 +192,10 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     editMentorPage,
     chatPage,
   }) => {
-    await createMentorPage.openAndCreate('E2E Unique Tool Count Mentor');
+    await createMentorPage.openAndCreate(
+      `E2E Unique Tool Count Mentor ${Date.now()}`,
+    );
+    tracker52.add((await getPlatformContext(page)).mentorId);
 
     // Enable verbose reasoning gates the tool-call indicator — enable it first.
     await editMentorPage.open('Settings');
@@ -244,7 +256,8 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     editMentorPage,
     chatPage,
   }) => {
-    await createMentorPage.openAndCreate('E2E No-Tools Mentor');
+    await createMentorPage.openAndCreate(`E2E No-Tools Mentor ${Date.now()}`);
+    tracker52.add((await getPlatformContext(page)).mentorId);
 
     // No Web Search button should be visible
     try {
@@ -286,7 +299,10 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     editMentorPage,
     chatPage,
   }) => {
-    await createMentorPage.openAndCreate('E2E Web Search Not Activated Mentor');
+    await createMentorPage.openAndCreate(
+      `E2E Web Search Not Activated Mentor ${Date.now()}`,
+    );
+    tracker52.add((await getPlatformContext(page)).mentorId);
 
     // Enable verbose reasoning gates the tool-call indicator — enable it first.
     await editMentorPage.open('Settings');
@@ -336,7 +352,10 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     editMentorPage,
     chatPage,
   }) => {
-    await createMentorPage.openAndCreate('E2E Reasoning Test Mentor');
+    await createMentorPage.openAndCreate(
+      `E2E Reasoning Test Mentor ${Date.now()}`,
+    );
+    tracker52.add((await getPlatformContext(page)).mentorId);
 
     // Enable verbose reasoning gates the reasoning section — enable it, then set the
     // LLM to gpt-5 via the LLM tab page object.
@@ -441,7 +460,10 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     editMentorPage,
     chatPage,
   }) => {
-    await createMentorPage.openAndCreate('E2E Non-Reasoning Mentor');
+    await createMentorPage.openAndCreate(
+      `E2E Non-Reasoning Mentor ${Date.now()}`,
+    );
+    tracker52.add((await getPlatformContext(page)).mentorId);
 
     // Enable verbose reasoning so this test verifies the model produces no
     // reasoning tokens, rather than the section being hidden by the toggle.
@@ -492,7 +514,10 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     editMentorPage,
     chatPage,
   }) => {
-    await createMentorPage.openAndCreate('E2E Combined Features Mentor');
+    await createMentorPage.openAndCreate(
+      `E2E Combined Features Mentor ${Date.now()}`,
+    );
+    tracker52.add((await getPlatformContext(page)).mentorId);
 
     // Enable verbose reasoning gates both the reasoning section and the tool-call
     // indicator — enable it first.
@@ -581,7 +606,10 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     editMentorPage,
     chatPage,
   }) => {
-    await createMentorPage.openAndCreate('E2E Verbose Reasoning Off Mentor');
+    await createMentorPage.openAndCreate(
+      `E2E Verbose Reasoning Off Mentor ${Date.now()}`,
+    );
+    tracker52.add((await getPlatformContext(page)).mentorId);
 
     // Explicitly turn enable verbose reasoning OFF (new mentors default it ON), then
     // enable Web Search — the tool genuinely runs yet its indicator must stay
@@ -624,5 +652,9 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     } catch {
       // Expected: indicator is gated off by the enable verbose reasoning toggle
     }
+  });
+
+  test.afterAll(async ({ browser }, testInfo) => {
+    await tracker52.deleteAll(browser, testInfo);
   });
 });

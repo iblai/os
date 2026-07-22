@@ -1,0 +1,35 @@
+name: Release Windows
+
+# Builds self-signed NSIS installers (Intel x64 + ARM64) and attaches them to
+# the app-v<X> Release. Triggered by the same `app-v*` tag that
+# tauri-autoversion.yml pushes when a src-tauri change bumps the tauri version
+# (the macOS DMG build runs off the same tag, in its own pipeline). The
+# build/sign logic lives in the reusable workflow; this file is just the trigger
+# + inputs.
+#
+# Manual "Run workflow" produces build-only installer artifacts (no Release),
+# named by short SHA.
+on:
+  push:
+    tags:
+      - 'app-v*'
+  workflow_dispatch:
+
+concurrency:
+  group: release-windows-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write # attach the installers to the Release
+
+jobs:
+  release:
+    uses: ./.github/workflows/reusable-release-windows.yml
+    with:
+      allow_in_app_purchase: true
+      # Tag push -> attach the installers to that app-v<X> Release.
+      # Manual dispatch -> build-only artifacts (no Release), named by short SHA.
+      release_tag: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+      release_name: ${{ github.ref_type == 'tag' && format('ibl.ai {0} (Windows)', github.ref_name) || '' }}
+      artifact_prefix: ${{ github.ref_type == 'tag' && format('ibl-ai-windows-{0}', github.ref_name) || format('ibl-ai-windows-{0}', github.sha) }}
+    secrets: inherit

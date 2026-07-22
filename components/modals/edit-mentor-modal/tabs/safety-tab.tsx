@@ -130,6 +130,12 @@ export function SafetyTab() {
           overflowX: 'hidden',
         }}
       >
+        <div
+          className="rounded-md border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600"
+          data-testid="safety-info-box"
+        >
+          {t('infoBox')}
+        </div>
         <div className="space-y-6">
           {/* View Flagged Prompts Button */}
           <WithPermissions
