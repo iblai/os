@@ -397,11 +397,32 @@ vi.mock('@/components/modals/auth-modal', () => ({
 }));
 
 let lastCreditBalanceProps: any = null;
+// On-device selection, driven per-test; default OFF so existing tests see the
+// pre-badge nav-bar. One catalog model lets the badge resolve a display name.
+let mockLocalEnabled = false;
+let mockLocalModelId: string | null = null;
 vi.mock('@iblai/iblai-js/web-containers', () => ({
   // The toggle now ships from the SDK; tests don't exercise its internals,
   // so a no-render stub is enough — it also blocks the SDK's transitive
   // axios chain from being pulled into the test's module graph.
   ChatPrivacyToggle: () => null,
+  // On-device model helpers read by `useSelectedLocalModel` (the top-left
+  // badge). Default to local mode OFF so the nav-bar renders exactly as it did
+  // before the badge existed (cloud selector shown, no badge).
+  isLocalLLMEnabled: () => mockLocalEnabled,
+  getLocalLLMModel: () => mockLocalModelId,
+  // The hook reconciles the tool-support cache against the catalog on read.
+  getLocalLLMToolSupport: () => true,
+  setLocalLLMToolSupport: () => {},
+  LOCAL_MODELS: [
+    {
+      name: 'Llama 3.2',
+      provider: 'Meta',
+      id: 'llama3.2',
+      size: '2.0 GB',
+      tool_support: true,
+    },
+  ],
   NotificationDropdown: () => (
     <div data-testid="notification-dropdown">Notifications</div>
   ),
@@ -540,6 +561,8 @@ describe('NavBar', () => {
     };
     mockAllTenants = [{ key: 'test-tenant' }];
     lastCreditBalanceProps = null;
+    mockLocalEnabled = false;
+    mockLocalModelId = null;
     // Suppress console.log during tests
     vi.spyOn(console, 'log').mockImplementation(() => {});
   });
@@ -617,6 +640,51 @@ describe('NavBar', () => {
       );
 
       expect(screen.getByLabelText('LLM Model Selector')).toBeInTheDocument();
+    });
+
+    it('shows the on-device model badge and hides the cloud selector when local mode is on', () => {
+      mockIsAdmin = true;
+      mockUserIsStudent = false;
+      mockPathname = '/platform/tenant123/mentor456';
+      mockLocalEnabled = true;
+      mockLocalModelId = 'llama3.2';
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      const badge = screen.getByTestId('local-model-indicator');
+      expect(badge).toHaveTextContent('Llama 3.2');
+      expect(badge).toHaveTextContent('On-device');
+      // The on-device badge replaces the cloud model selector while local is on.
+      expect(
+        screen.queryByLabelText('LLM Model Selector'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('opens the model picker when the on-device badge is clicked, so an admin can still choose an LLM while local is on', () => {
+      mockIsAdmin = true;
+      mockUserIsStudent = false;
+      mockPathname = '/platform/tenant123/mentor456';
+      mockLocalEnabled = true;
+      mockLocalModelId = 'llama3.2';
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      // Picker is closed until the badge is clicked.
+      expect(
+        screen.queryByTestId('llm-provider-modal'),
+      ).not.toBeInTheDocument();
+      fireEvent.click(screen.getByTestId('local-model-indicator'));
+      expect(screen.getByTestId('llm-provider-modal')).toBeInTheDocument();
     });
 
     it('hides the LLM model selector on the tenant-scoped projects index page', () => {

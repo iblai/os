@@ -27,6 +27,7 @@ import { useNavigate } from '@/hooks/user-navigate';
 import { Spinner } from '@/components/spinner';
 import WithFormPermissions from '@/hoc/withPermissions';
 import { extractErrorMessage } from '@/lib/error';
+import { useSelectedLocalModel } from '@/hooks/use-selected-local-model';
 
 type LLMTabProps = {
   showConfigurationHeader?: boolean;
@@ -92,6 +93,19 @@ export function LLMTab({ showConfigurationHeader = true }: LLMTabProps) {
     }
     return result;
   }, [llmProviders]);
+
+  // The highlighted (selected) provider card must reflect the model chat
+  // actually uses. When on-device mode is on, that's the selected local model's
+  // provider (e.g. Llama 3.2 → Meta) — NOT the mentor's stale cloud
+  // `llm_provider` (which stays e.g. OpenAI). Falls back to the cloud provider
+  // when local mode is off. Reactive so it updates the instant a model is picked.
+  const selectedLocal = useSelectedLocalModel();
+  const activeProviderKey =
+    selectedLocal.isLocal && selectedLocal.model
+      ? providerKey(selectedLocal.model.provider)
+      : mentorSettings?.llm_provider
+        ? providerKey(mentorSettings.llm_provider)
+        : '';
 
   async function updateMentorLLM(llmProvider: string, llmName: string) {
     try {
@@ -184,7 +198,8 @@ export function LLMTab({ showConfigurationHeader = true }: LLMTabProps) {
                             'flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md',
                             {
                               'border-blue-500':
-                                mentorSettings?.llm_provider === model.name,
+                                !!activeProviderKey &&
+                                providerKey(model.name) === activeProviderKey,
                             },
                           )}
                           onClick={() => {
@@ -227,7 +242,10 @@ export function LLMTab({ showConfigurationHeader = true }: LLMTabProps) {
                     return (
                       <div
                         key={`local-${lp.key}`}
-                        className="flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
+                        className={cn(
+                          'flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md',
+                          { 'border-blue-500': lp.key === activeProviderKey },
+                        )}
                         onClick={() => {
                           if (isDisabled || disabled) return;
                           setSelectedLLMProvider({

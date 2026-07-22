@@ -289,7 +289,13 @@ export function useModelDownload() {
 
     try {
       console.log('[useModelDownload] Setting state to checking...');
-      setState((prev) => ({ ...prev, status: 'checking' }));
+      // Never downgrade an in-flight download. checkStatus runs on mount, on a
+      // 2.5s interval, and after each pull — and state is shared across every
+      // useModelDownload instance via localStorage — so an unguarded write here
+      // races a running pull and flips the row back to "Download" (the flash).
+      setState((prev) =>
+        prev.status === 'downloading' ? prev : { ...prev, status: 'checking' },
+      );
 
       // First check if Foundry Local has models available (PREFERRED option)
       // Foundry is prioritized over Ollama due to better performance and efficiency
@@ -464,24 +470,26 @@ export function useModelDownload() {
       setOllamaStatus(status);
 
       if (status.model_installed) {
-        setState((prev) => ({
-          ...prev,
-          status: 'completed',
-          progress: 100,
-          message: 'Model installed',
-        }));
+        setState((prev) =>
+          prev.status === 'downloading'
+            ? prev
+            : {
+                ...prev,
+                status: 'completed',
+                progress: 100,
+                message: 'Model installed',
+              },
+        );
       } else {
-        setState((prev) => ({
-          ...prev,
-          status: 'idle',
-        }));
+        setState((prev) =>
+          prev.status === 'downloading' ? prev : { ...prev, status: 'idle' },
+        );
       }
     } catch (error) {
       console.error('Failed to check status:', error);
-      setState((prev) => ({
-        ...prev,
-        status: 'idle',
-      }));
+      setState((prev) =>
+        prev.status === 'downloading' ? prev : { ...prev, status: 'idle' },
+      );
     }
   }, [isAvailable, invoke, setState]);
 

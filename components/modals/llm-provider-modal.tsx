@@ -29,11 +29,13 @@ import {
   setLocalLLMEnabled,
   getLocalLLMModel,
   setLocalLLMModel,
+  setLocalLLMToolSupport,
 } from '@iblai/iblai-js/web-containers';
 import {
   LocalModelRow,
   type LocalRowStatus,
 } from './llm-provider-modal/local-model-row';
+import { LOCAL_LLM_CHANGED_EVENT } from '@/hooks/use-selected-local-model';
 
 interface LLM {
   llm_name: string;
@@ -116,8 +118,14 @@ export function LLMProviderModal({
   }));
 
   const filteredLLMs = React.useMemo(() => {
-    return llmProvider?.chat_models.filter((llm) =>
-      llm.llm_name.toLowerCase().includes(searchQuery.toLowerCase()),
+    // Guard `chat_models` (not just `llmProvider`): a provider can come back from
+    // the API without a models array, and an undefined `.filter` here throws in
+    // render and unmounts the whole dialog. Coalesce so the `.map` consumer below
+    // always gets an array. (Mirrors the `canSwitchProvider` hardening in utils.)
+    return (
+      llmProvider?.chat_models?.filter((llm) =>
+        llm.llm_name.toLowerCase().includes(searchQuery.toLowerCase()),
+      ) ?? []
     );
   }, [searchQuery, llmProvider]);
 
@@ -162,7 +170,14 @@ export function LLMProviderModal({
         // Use this on-device model — device-global, mutually exclusive with cloud.
         setLocalLLMModel(m.id);
         setLocalLLMEnabled(true);
+        // Persist tool-calling support so local chat routes to the MCP/tool
+        // bridge (:8000). Without this the flag stays at its default (false) and
+        // streaming chat rejects the model with "tool_support=false" even though
+        // the catalog marks it tool-capable.
+        setLocalLLMToolSupport(m.tool_support);
         setLocalSel({ enabled: true, model: m.id });
+        // Notify same-tab listeners (e.g. the nav-bar on-device badge).
+        window.dispatchEvent(new Event(LOCAL_LLM_CHANGED_EVENT));
         break;
       case 'selected':
         break;
@@ -174,6 +189,8 @@ export function LLMProviderModal({
     if (localSel.enabled) {
       setLocalLLMEnabled(false);
       setLocalSel((prev) => ({ ...prev, enabled: false }));
+      // Notify same-tab listeners (e.g. the nav-bar on-device badge).
+      window.dispatchEvent(new Event(LOCAL_LLM_CHANGED_EVENT));
     }
     onSelect(llmProvider.name, llmName);
   };

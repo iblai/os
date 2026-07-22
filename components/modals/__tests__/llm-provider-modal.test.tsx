@@ -108,6 +108,23 @@ describe('LLMProviderModal', () => {
     expect(screen.getByText('gpt-3.5')).toBeInTheDocument();
   });
 
+  it('does not crash when the provider has no chat_models array', () => {
+    // Regression: a provider can come back from the API without `chat_models`.
+    // The unguarded `.filter` used to throw in render and unmount the dialog
+    // (seen when opening Agent settings while a local model was active).
+    const props = {
+      ...baseProps(),
+      llmProvider: {
+        ...buildProvider(),
+        chat_models: undefined,
+      } as unknown as LLMProvider,
+    };
+    expect(() => render(<LLMProviderModal {...props} />)).not.toThrow();
+    // The dialog shell still renders; there are just no cloud model rows.
+    expect(screen.getByText('LLM Selection')).toBeInTheDocument();
+    expect(screen.queryByText('gpt-4')).not.toBeInTheDocument();
+  });
+
   it('disables the active model and enables the non-active one (no grayscale on active)', () => {
     render(<LLMProviderModal {...baseProps()} />);
 
