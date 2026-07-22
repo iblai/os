@@ -193,4 +193,43 @@ describe('MemoryTab', () => {
       );
     });
   });
+
+  describe('Toggle failure & fallbacks', () => {
+    it('rolls the toggle back and surfaces the error toast when the PATCH fails', async () => {
+      mockEditMentor.mockReturnValue({
+        unwrap: vi.fn().mockRejectedValue(new Error('network')),
+      });
+      render(<MemoryTab />);
+
+      const toggle = screen.getByTestId('memory-capability-toggle');
+      fireEvent.click(toggle);
+      // Optimistic flip happens synchronously…
+      expect(toggle).toBeChecked();
+
+      // …then the rejected unwrap rolls it back and toasts.
+      await waitFor(() => {
+        expect(toggle).not.toBeChecked();
+      });
+      expect(toast.error).toHaveBeenCalled();
+      expect(toast.success).not.toHaveBeenCalled();
+    });
+
+    it('treats a settings payload without enable_memory_component as off', () => {
+      setupDefaults({ mentor: {} });
+      render(<MemoryTab />);
+
+      expect(screen.getByTestId('memory-capability-toggle')).not.toBeChecked();
+    });
+
+    it('sends an empty userId when no username is available', () => {
+      setupDefaults({ username: null });
+      render(<MemoryTab />);
+
+      fireEvent.click(screen.getByTestId('memory-capability-toggle'));
+
+      expect(mockEditMentor).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: '' }),
+      );
+    });
+  });
 });
