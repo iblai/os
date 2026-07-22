@@ -42,6 +42,7 @@
     "toastCreateError": "Impossible de créer l’accès de rôle agent."
   },
   "accessTabIndex": {
+    "infoBox": "Décidez qui peut utiliser cet agent. Partagez-le avec des personnes ou des équipes précises, et contrôlez ce que chacune d'elles est autorisée à faire.",
     "heading": "Contrôle d'accès",
     "headingDescription": "Gérez les utilisateurs autorisés à consulter ou modifier cet agent par rôle.",
     "unavailableHeading": "La gestion des accès est indisponible.",
@@ -198,6 +199,12 @@
     "pinned": "Épinglés",
     "recent": "Récents",
     "noRecentChats": "Aucune conversation récente",
+    "searchChats": "Rechercher des chats",
+    "searchChatsPlaceholder": "Rechercher des conversations",
+    "chatsRecencyLast7Days": "7 derniers jours",
+    "chatsRecencyLast30Days": "30 derniers jours",
+    "chatsRecencyOlder": "Plus anciens",
+    "loadingMoreChats": "Chargement d'autres conversations",
     "noContent": "Aucun contenu",
     "chatActions": "Actions de la conversation",
     "unpin": "Désépingler",
@@ -605,6 +612,7 @@
     "deleteButton": "Supprimer"
   },
   "datasetsTabIndex": {
+    "infoBox": "Formez votre agent avec vos propres contenus. Importez des documents, des fichiers ou des liens, et il y puisera ses réponses — en s'appuyant sur votre contenu plutôt qu'en devinant.",
     "heading": "Jeux de données",
     "subheading": "Gérez les jeux de données d'entraînement et les sources de connaissances.",
     "searchPlaceholder": "Rechercher des jeux de données...",
@@ -650,6 +658,7 @@
     "saveButton": "Enregistrer"
   },
   "disclaimersTabIndex": {
+    "infoBox": "Affichez les mentions légales à vos utilisateurs. Ajoutez des avis — comme « Ceci est un assistant IA » ou une déclaration de conformité — qui apparaissent dans la conversation pour que les gens sachent à quoi s'attendre.",
     "heading": "Avertissements",
     "subheading": "Configurez les paramètres d'avertissement pour votre agent.",
     "userAgreementTitle": "Accord utilisateur",
@@ -982,7 +991,12 @@
   },
   "memoryTabIndex": {
     "heading": "Mémoire",
-    "description": "Configurez les paramètres de mémoire pour votre agent."
+    "description": "Configurez les paramètres de mémoire pour votre agent.",
+    "capabilityTitle": "Mémoire à long terme",
+    "capabilityDescription": "Permettez à cet agent de se souvenir des détails utiles des conversations passées — comme un collègue de confiance — pour que les utilisateurs n'aient pas à se répéter. Une fois activé, consultez et gérez ci-dessous ce dont il se souvient.",
+    "capabilityOffHint": "Activez-la pour que cet agent se souvienne des détails d'une conversation à l'autre.",
+    "toggleSuccess": "Paramètre de mémoire mis à jour",
+    "toggleError": "Impossible de mettre à jour le paramètre de mémoire"
   },
   "memoryTabLearnersMemories": {
     "learnerMemoriesHeading": "Mémoires des apprenants",
@@ -1532,6 +1546,7 @@
     "deleteError": "Échec de la suppression de l'agent"
   },
   "tabsApiTab": {
+    "infoBox": "Utilisez cet agent depuis vos propres applications. Créez ici des clés API pour l'appeler par programmation et l'intégrer à votre produit ou à votre flux de travail.",
     "apiHeading": "API",
     "manageApiKeysDescription": "Gérer les clés API et les intégrations.",
     "secretKeysListedBelow": "Vos clés API secrètes sont listées ci-dessous. Veuillez noter que nous n'affichons plus vos clés API secrètes après leur génération.",
@@ -1547,10 +1562,12 @@
     "createNew": "Créer nouveau"
   },
   "tabsAuditLogTab": {
+    "infoBox": "Gardez une trace écrite. Consultez le journal indiquant qui a modifié quoi et quand pour cet agent — pratique pour le dépannage et le respect de la conformité.",
     "heading": "Audit",
     "description": "Consultez qui a modifié quoi et quand pour cet agent."
   },
   "tabsEmbedTab": {
+    "infoBox": "Intégrez cet agent à votre site ou à votre application. Copiez le code d'intégration et ajustez l'apparence et le comportement du widget de chat pour vos utilisateurs.",
     "heading": "Intégration",
     "headingDescription": "Configurez les options d'intégration pour votre agent.",
     "collapseAdvancedCss": "Réduire le CSS avancé",
@@ -1706,6 +1723,7 @@
     "subtitleInputPlaceholder": "Créé avec Agentic OS"
   },
   "tabsHistoryTab": {
+    "infoBox": "Revenez sur les conversations passées. Découvrez ce que les gens ont demandé et comment votre agent a répondu, afin de repérer les lacunes et de continuer à l'améliorer.",
     "heading": "Historique",
     "subtitle": "Consultez et gérez l'historique des conversations.",
     "ratingOutOf": "{rating} sur 5",
@@ -1738,6 +1756,7 @@
     "selectConversationPrompt": "Sélectionnez une conversation pour afficher les détails."
   },
   "tabsLlmTab": {
+    "infoBox": "C'est le cerveau de votre agent — le modèle d'IA qui alimente chaque réponse. Les modèles plus grands raisonnent mieux sur les questions complexes ; les plus légers sont plus rapides et moins coûteux. Pas sûr ? Le modèle par défaut est un excellent choix polyvalent.",
     "llmUpdatedSuccessfully": "LLM mis à jour avec succès",
     "failedToUpdateLlm": "Échec de la mise à jour du LLM",
     "llmConfiguration": "Configuration LLM",
@@ -1748,6 +1767,8 @@
   "tabsPromptsTab": {
     "heading": "Invites",
     "description": "Gérez et configurez les invites pour votre agent.",
+    "infoBoxDefault": "C'est ici que vous définissez la façon dont votre agent parle et se comporte — sa personnalité, son ton et la manière dont il guide chaque conversation. Écrivez simplement en langage clair, comme si vous briefiez un nouveau collègue.",
+    "infoBoxSandbox": "C'est ici que vous définissez la façon dont votre agent parle et se comporte — sa personnalité, son ton et la manière dont il guide chaque conversation. Comme cet agent s'exécute dans un bac à sable dédié, ce comportement se définit dans la configuration de l'agent ci-dessous.",
     "systemPromptTitle": "Invite système",
     "systemPromptInfoAriaLabel": "Plus d'informations sur l'invite système",
     "systemPromptTooltip": "Définir le comportement de l'agent",
@@ -1794,6 +1815,7 @@
     "promptDeleteFailed": "Échec de la suppression de l'invite"
   },
   "tabsSafetyTab": {
+    "infoBox": "Définissez les garde-fous qui maintiennent des conversations appropriées. Décidez comment votre agent gère les sujets risqués ou interdits et ce qu'il répond lorsque quelqu'un dépasse les limites — pour qu'il reste sûr et fidèle à votre marque.",
     "safetyTitle": "Sécurité",
     "safetyDescription": "Configurer les paramètres de sécurité et de modération.",
     "viewFlaggedPrompts": "Voir les invites signalées",
@@ -1819,7 +1841,12 @@
   },
   "tabsSandboxTab": {
     "heading": "Bac à sable",
-    "description": "Configurez les paramètres de connexion et de déploiement du bac à sable."
+    "description": "Configurez les paramètres de connexion et de déploiement du bac à sable.",
+    "capabilityTitle": "Bac à sable dédié",
+    "capabilityDescription": "Offrez à cet agent son propre espace de travail sécurisé où il peut exécuter du code, des outils et des compétences en votre nom. Une fois activé, connectez-le à une instance ci-dessous pour débloquer les compétences et les invites de l'agent.",
+    "capabilityOffHint": "Activez-le pour offrir un espace de travail à cet agent et le connecter à une instance.",
+    "toggleSuccess": "Paramètre du bac à sable mis à jour",
+    "toggleError": "Impossible de mettre à jour le paramètre du bac à sable"
   },
   "tabsSettingsTab": {
     "settingsHeading": "Paramètres",
@@ -1909,11 +1936,16 @@
     "agentUpdatedSuccess": "Agent mis à jour avec succès",
     "agentUpdateError": "Échec de la mise à jour de l'agent"
   },
+  "tabsMcpTab": {
+    "infoBox": "Connectez votre agent à vos propres systèmes via des serveurs MCP, afin qu'il puisse accéder à vos données et services directement au sein d'une conversation."
+  },
   "tabsSkillsTab": {
     "heading": "Compétences",
-    "description": "Gérez les attributions de compétences d'agent pour votre mentor."
+    "description": "Gérez les attributions de compétences d'agent pour votre mentor.",
+    "infoBox": "Les compétences sont des capacités réutilisables que vous créez une fois et attribuez à n'importe quel agent. Créez une compétence, puis activez-la pour donner cette capacité à cet agent."
   },
   "tabsToolsTab": {
+    "infoBox": "Donnez des mains à votre agent. Les outils lui permettent d'aller au-delà de la simple conversation — rechercher une information, appeler une API, déclencher une action — pour qu'il accomplisse réellement des tâches pour les utilisateurs.",
     "heading": "Outils",
     "subheading": "Configurez les outils et les intégrations pour votre agent.",
     "moreInfoAbout": "Plus d'informations sur {name}",

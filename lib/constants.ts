@@ -64,6 +64,7 @@ export const MODALS = {
       audit_log: 'audit_log',
       voice: 'voice',
       screenshare: 'screenshare',
+      analytics: 'analytics',
     },
   },
   ADD_PROMPT: { name: 'add_prompt' },
@@ -166,6 +167,10 @@ export const CSS_CLASS_NAMES = {
     MENTOR_IMAGE_CONTAINER_RING: 'mentor-image-container-ring',
   },
 };
+
+// Caps the length of the auto-submitted `?prompt=` deep-link payload so an
+// attacker-crafted link cannot smuggle an oversized prompt into the chat.
+export const MAX_PROMPT_PARAM_LENGTH = 4000;
 
 export const DROPBOX_EXTENSIONS = [
   '.ppt',

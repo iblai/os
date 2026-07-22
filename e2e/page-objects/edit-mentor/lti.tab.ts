@@ -73,9 +73,69 @@ export class LtiTab {
   /** Sidebar category the LTI segment lives under (see `TAB_CATEGORY`). */
   static readonly CATEGORY = 'Integrations';
 
+  /**
+   * "Enable LTI launches" (`is_lti_accessible`) master toggle. Used to live
+   * in Settings → Capabilities (`setEnableLtiLaunchesAndSave`); it now lives
+   * inline at the top of this tab via the shared `CapabilityGate` component.
+   * The LTI tab itself was already always-visible before this move
+   * (feat/1853); the toggle still controls whether the backend allows
+   * creating sub-resources (links / keys / tools). Toggling auto-saves
+   * (`AgentLtiTab`'s `handleToggleLti` calls `editMentor` directly with
+   * optimistic local state) — no footer Save button involved.
+   */
+  readonly capabilityToggle: Locator;
+  /** Wrapper around the gated sub-tab content — `data-enabled` mirrors the toggle. */
+  readonly capabilityContent: Locator;
+  /** Hint shown next to the description while the capability is off. */
+  readonly capabilityOffHint: Locator;
+
   constructor(page: Page, dialog: Locator) {
     this.page = page;
     this.dialog = dialog;
+    this.capabilityToggle = dialog.getByTestId('lti-capability-toggle');
+    this.capabilityContent = dialog.locator(
+      '[data-testid="capability-gate-content"]:visible',
+    );
+    this.capabilityOffHint = dialog.locator(
+      '[data-testid="capability-gate-off-hint"]:visible',
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Capability gate
+  // ---------------------------------------------------------------------------
+
+  /** Whether the "Enable LTI launches" capability toggle is currently on. */
+  async isCapabilityEnabled(): Promise<boolean> {
+    const attr = await this.capabilityToggle
+      .getAttribute('aria-checked')
+      .catch(() => null);
+    return attr === 'true';
+  }
+
+  /**
+   * Idempotently set the "Enable LTI launches" capability toggle to the
+   * target state. Auto-saves on click (optimistic local state) — no footer
+   * Save button involved. Waits for both the toggle's `aria-checked` and the
+   * gated content's `data-enabled` attribute to reflect the target state.
+   * Assumes the LTI tab is already active (call `switchToTab()` first).
+   */
+  async setCapabilityEnabled(target: boolean): Promise<void> {
+    await expect(this.capabilityToggle).toBeVisible({ timeout: 10_000 });
+    const isOn = await this.isCapabilityEnabled();
+    if (isOn === target) return;
+
+    await this.capabilityToggle.click();
+    await expect(this.capabilityToggle).toHaveAttribute(
+      'aria-checked',
+      String(target),
+      { timeout: 15_000 },
+    );
+    await expect(this.capabilityContent).toHaveAttribute(
+      'data-enabled',
+      String(target),
+      { timeout: 15_000 },
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -109,6 +169,35 @@ export class LtiTab {
    * API, Embed live there too).
    */
   async activateCategory(): Promise<void> {
+    // Fail fast with a meaningful signal when the dialog isn't open at all
+    // (a caller drove this page object without EditMentorPage.open()) —
+    // otherwise the hydration wait below burns its full 90s on a dialog
+    // that will never appear.
+    await expect(
+      this.dialog,
+      'Edit Agent dialog must be open before using LtiTab — call editMentorPage.open() first',
+    ).toBeVisible({ timeout: 15_000 });
+
+    // The modal renders only a spinner until settings + RBAC hydrate — the
+    // category strip and every segment trigger mount after that, which can
+    // take ~30s+ on freshly-created mentors (mirrors the host page object's
+    // `waitForHydrated`). Wait for the hydration signal (any visible segment
+    // tab) before touching the pill so we never race the spinner.
+    await this.dialog
+      .locator('[role="tab"][aria-controls^="panel-"]:visible')
+      .first()
+      .waitFor({ state: 'visible', timeout: 90_000 });
+
+    // Post-hydration the pill either exists right away or not at all (the
+    // strip is dropped entirely when only one category has items — e.g. a
+    // non-admin's minimal sidebar). Bounded check, then fall through: the
+    // caller's own tab waits decide the outcome.
+    const hasStrip = await this.categoryTab
+      .waitFor({ state: 'visible', timeout: 5_000 })
+      .then(() => true)
+      .catch(() => false);
+    if (!hasStrip) return;
+
     const active =
       (await this.categoryTab.getAttribute('data-state').catch(() => null)) ===
       'active';
@@ -271,6 +360,16 @@ export class LtiTab {
    * text changes on the server refetch) rather than sleeping. The page cap is
    * a runaway guard well above any real residue level; when the row is genuinely
    * absent we return the (hidden) locator so the caller's assertion decides.
+   *
+   * KNOWN BACKEND BUG: the DM LTI proxy ignores the `page`/`page_size` query
+   * params — `?page=2` returns page-1 rows (`previous: null`, upstream `next`
+   * link built without params), so clicking "next" refetches the SAME page
+   * and rows past the first 10 are unreachable. When the page fails to turn
+   * we treat it as the end of the walk (return the row and let the caller's
+   * assertion produce a truthful failure) rather than dying inside the page
+   * object with a bare `not.toHaveText` timeout. The residue reaper
+   * (`e2e/utils/lti-residue.ts`) keeps the lists under one page so tests
+   * normally never need the walk at all.
    */
   private async revealRow(
     sectionTestId: string,
@@ -296,7 +395,15 @@ export class LtiTab {
       const before = await firstRow.textContent().catch(() => null);
       await nextControl.click();
       if (before !== null) {
-        await expect(firstRow).not.toHaveText(before, { timeout: 15_000 });
+        const turned = await expect(firstRow)
+          .not.toHaveText(before, { timeout: 15_000 })
+          .then(
+            () => true,
+            () => false,
+          );
+        // Page didn't turn — the proxy served the same page again (see the
+        // KNOWN BACKEND BUG note above). Further rows are unreachable.
+        if (!turned) return row;
       }
     }
     return row;

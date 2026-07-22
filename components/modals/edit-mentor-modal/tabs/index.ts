@@ -18,3 +18,4 @@ export * from './audit-log-tab';
 export * from './voice-tab';
 export * from './screenshare-tab';
 export * from './lti-tab';
+export * from './analytics-tab';

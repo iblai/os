@@ -12,8 +12,10 @@ import { gfmHeadingId } from 'marked-gfm-heading-id';
 import { markedHighlight } from 'marked-highlight';
 import hljs from 'highlight.js';
 
+import { preprocessLaTeX } from './preprocess-latex';
 import {
   LOCAL_STORAGE_KEYS,
+  MAX_PROMPT_PARAM_LENGTH,
   QUERY_PARAMS,
   REDIRECT_PATH_LOCAL_STORAGE_KEY,
   URL_PATTERNS,
@@ -42,7 +44,49 @@ export function isSafariBrowser(): boolean {
   return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 }
 
+/**
+ * Reads a JWT's `exp` claim and reports whether it is in the past. A token that
+ * cannot be decoded (or is malformed) is treated as expired; a token with no
+ * `exp` claim is treated as non-expiring (mirrors the axd "no expiry" case).
+ */
+export function isJwtExpired(token: string): boolean {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return true;
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized.padEnd(
+      normalized.length + ((4 - (normalized.length % 4)) % 4),
+      '=',
+    );
+    const claims = JSON.parse(atob(padded)) as { exp?: number };
+    if (typeof claims.exp !== 'number') return false;
+    return claims.exp * 1000 <= Date.now();
+  } catch {
+    return true;
+  }
+}
+
 export function hasNonExpiredAuthToken() {
+  // The edx JWT is stored alongside the axd token at SSO login; a valid session
+  // requires it to be present and unexpired too, so re-auth is triggered when
+  // it is missing or its `exp` has passed.
+  const edxToken = window.localStorage.getItem(
+    LOCAL_STORAGE_KEYS.EDX_TOKEN_KEY,
+  );
+  if (!edxToken) {
+    console.log(
+      '################### [hasNonExpiredAuthToken] edx_jwt_token is not defined',
+      edxToken,
+    );
+    return false;
+  }
+  if (isJwtExpired(edxToken)) {
+    console.log(
+      '################### [hasNonExpiredAuthToken] edx_jwt_token is expired',
+    );
+    return false;
+  }
+
   const token = window.localStorage.getItem(LOCAL_STORAGE_KEYS.AUTH_TOKEN);
   if (!token) {
     console.log(
@@ -253,241 +297,6 @@ export function getHostFromUrl(url: string) {
   const a = document.createElement('a');
   a.href = url;
   return a.hostname;
-}
-
-export function preprocessLaTeX(content: string) {
-  // Handle non-string inputs
-  if (typeof content !== 'string') {
-    return '';
-  }
-
-  // Helper function to process tabular/array content into markdown table
-  const processTabularContent = (tableContent: string): string => {
-    // Split into rows by \\ (LaTeX row separator)
-    const rows = tableContent
-      .split(/\\\\\s*/)
-      .map((row: string) => row.trim())
-      .filter((row: string) => row && !row.match(/^\\hline\s*$/));
-
-    if (rows.length === 0) return '';
-
-    // Process each row: split by & (column separator) and clean up
-    const processedRows = rows
-      .map((row: string) => {
-        // Remove \hline from the row content
-        let cleanRow = row.replace(/\\hline\s*/g, '').trim();
-        if (!cleanRow) return null;
-
-        // Convert \text{...} to plain text
-        cleanRow = cleanRow.replace(/\\text\{([^}]*)\}/g, '$1');
-
-        // Remove {,} (LaTeX thousands separator formatting)
-        cleanRow = cleanRow.replace(/\{,\}/g, ',');
-
-        // Split by & and trim each cell
-        const cells = cleanRow.split('&').map((cell: string) => cell.trim());
-        return `| ${cells.join(' | ')} |`;
-      })
-      .filter(Boolean);
-
-    if (processedRows.length === 0) return '';
-
-    // Insert header separator after first row
-    const firstRow = processedRows[0] as string;
-    const columnCount = firstRow.split('|').length - 2;
-    const headerSeparator = `|${' --- |'.repeat(columnCount)}`;
-    processedRows.splice(1, 0, headerSeparator);
-
-    return `\n${processedRows.join('\n')}\n`;
-  };
-
-  // Process tabular inside \[...\] first (before converting math delimiters)
-  let processedContent = content.replace(
-    /\\\[\s*\\begin\{tabular\}\{[^}]*\}([\s\S]*?)\\end\{tabular\}\s*\\\]/g,
-    (_, tableContent) => processTabularContent(tableContent),
-  );
-
-  // Process tabular inside $$...$$ as well
-  processedContent = processedContent.replace(
-    /\$\$\s*\\begin\{tabular\}\{[^}]*\}([\s\S]*?)\\end\{tabular\}\s*\$\$/g,
-    (_, tableContent) => processTabularContent(tableContent),
-  );
-
-  // Process standalone tabular (not inside math delimiters)
-  processedContent = processedContent.replace(
-    /\\begin\{tabular\}\{[^}]*\}([\s\S]*?)\\end\{tabular\}/g,
-    (_, tableContent) => processTabularContent(tableContent),
-  );
-
-  // Process array inside \[...\] first
-  processedContent = processedContent.replace(
-    /\\\[\s*\\begin\{array\}\{[^}]*\}([\s\S]*?)\\end\{array\}\s*\\\]/g,
-    (_, tableContent) => processTabularContent(tableContent),
-  );
-
-  // Process array inside $$...$$
-  processedContent = processedContent.replace(
-    /\$\$\s*\\begin\{array\}\{[^}]*\}([\s\S]*?)\\end\{array\}\s*\$\$/g,
-    (_, tableContent) => processTabularContent(tableContent),
-  );
-
-  // Process standalone array
-  processedContent = processedContent.replace(
-    /\\begin\{array\}\{[^}]*\}([\s\S]*?)\\end\{array\}/g,
-    (_, tableContent) => processTabularContent(tableContent),
-  );
-
-  // Mask math spans before the currency escape so LaTeX delimiters are preserved.
-  const maskOpen = String.fromCharCode(0xe000);
-  const maskClose = String.fromCharCode(0xe001);
-  const mathPlaceholders: string[] = [];
-  const maskMath = (segment: string): string => {
-    const index = mathPlaceholders.length;
-    mathPlaceholders.push(segment);
-    return `${maskOpen}${index}${maskClose}`;
-  };
-
-  processedContent = processedContent.replace(/\$\$[\s\S]*?\$\$/g, (match) =>
-    maskMath(match),
-  );
-  processedContent = processedContent.replace(/\$[^$\n]*?\$/g, (match) =>
-    match.includes('\\') ? maskMath(match) : match,
-  );
-
-  // Escape currency dollar signs: if a $ is directly followed by a digit,
-  // prepend a backslash so that it is rendered as a literal dollar sign.
-  // Replace the regex replacement with one using a lookbehind and a function to ensure the digit group is preserved correctly.
-  processedContent = processedContent.replace(
-    /(?<!\\)\$(\d)/g,
-    (_, digit) => `\\$${digit}`,
-  );
-
-  // Restore masked math spans verbatim.
-  const restoreMathPattern = new RegExp(`${maskOpen}(\\d+)${maskClose}`, 'g');
-  processedContent = processedContent.replace(
-    restoreMathPattern,
-    (_, index) => mathPlaceholders[Number(index)] ?? '',
-  );
-
-  // Replace block-level LaTeX delimiters \[ \] with $$ $$.
-  processedContent = processedContent.replace(
-    /\\\[(\s*[\s\S]*?\s*)\\\]/g,
-    (_, equation) => `$$${equation}$$`,
-  );
-
-  // Replace inline LaTeX delimiters \( \) with $ $
-  processedContent = processedContent.replace(
-    /\\\(([\s\S]*?)\\\)/g,
-    (_, equation) => `$${equation}$`,
-  );
-
-  // Convert LaTeX text formatting commands to Markdown
-  // \textbf{text} -> **text**
-  processedContent = processedContent.replace(/\\textbf\{([^}]+)\}/g, '**$1**');
-
-  // \textit{text} -> *text*
-  processedContent = processedContent.replace(/\\textit\{([^}]+)\}/g, '*$1*');
-
-  // \emph{text} -> *text*
-  processedContent = processedContent.replace(/\\emph\{([^}]+)\}/g, '*$1*');
-
-  // \texttt{text} -> `text`
-  processedContent = processedContent.replace(/\\texttt\{([^}]+)\}/g, '`$1`');
-
-  // \underline{text} -> <u>text</u> (requires rehype-raw)
-  processedContent = processedContent.replace(
-    /\\underline\{([^}]+)\}/g,
-    '<u>$1</u>',
-  );
-
-  // Convert LaTeX environments to Markdown/HTML
-  // \begin{itemize} ... \end{itemize} -> convert to unordered list
-  processedContent = processedContent.replace(
-    /\\begin\{itemize\}([\s\S]*?)\\end\{itemize\}/g,
-    (_, items) => {
-      // Convert \item to list items
-      const listItems = items
-        .split(/\\item\s+/)
-        .filter((item: string) => item.trim())
-        .map((item: string) => `- ${item.trim()}`)
-        .join('\n');
-      return `\n${listItems}\n`;
-    },
-  );
-
-  // \begin{enumerate} ... \end{enumerate} -> convert to ordered list
-  processedContent = processedContent.replace(
-    /\\begin\{enumerate\}([\s\S]*?)\\end\{enumerate\}/g,
-    (_, items) => {
-      // Convert \item to numbered list items
-      const listItems = items
-        .split(/\\item\s+/)
-        .filter((item: string) => item.trim())
-        .map((item: string, index: number) => `${index + 1}. ${item.trim()}`)
-        .join('\n');
-      return `\n${listItems}\n`;
-    },
-  );
-
-  // \begin{quote} ... \end{quote} -> convert to blockquote
-  processedContent = processedContent.replace(
-    /\\begin\{quote\}([\s\S]*?)\\end\{quote\}/g,
-    (_, content) => `\n> ${content.trim()}\n`,
-  );
-
-  // \begin{center} ... \end{center} -> convert to centered div
-  processedContent = processedContent.replace(
-    /\\begin\{center\}([\s\S]*?)\\end\{center\}/g,
-    (_, content) =>
-      `\n<div style="text-align: center;">${content.trim()}</div>\n`,
-  );
-
-  // Convert section headings (with optional * for unnumbered variants)
-  // \section{text} or \section*{text} -> ## text
-  processedContent = processedContent.replace(
-    /\\section\*?\{([^}]+)\}/g,
-    '\n## $1\n',
-  );
-
-  // \subsection{text} or \subsection*{text} -> ### text
-  processedContent = processedContent.replace(
-    /\\subsection\*?\{([^}]+)\}/g,
-    '\n### $1\n',
-  );
-
-  // \subsubsection{text} or \subsubsection*{text} -> #### text
-  processedContent = processedContent.replace(
-    /\\subsubsection\*?\{([^}]+)\}/g,
-    '\n#### $1\n',
-  );
-
-  // Handle line breaks
-  // \\ or \newline -> line break
-  processedContent = processedContent.replace(/\\\\|\n\\newline/g, '  \n');
-
-  // Handle verbatim text
-  // \verb|text| -> `text`
-  processedContent = processedContent.replace(/\\verb\|([^|]+)\|/g, '`$1`');
-
-  // Handle quotes
-  // `` and '' -> proper quotes
-  processedContent = processedContent.replace(/``/g, '"');
-  processedContent = processedContent.replace(/''/g, '"');
-
-  // Handle common LaTeX symbols that should remain as-is or convert
-  // \& -> &
-  processedContent = processedContent.replace(/\\&/g, '&');
-
-  // \% -> %
-  processedContent = processedContent.replace(/\\%/g, '%');
-
-  // \# -> #
-  processedContent = processedContent.replace(/\\#/g, '#');
-
-  // \_ -> _
-  processedContent = processedContent.replace(/\\_/g, '_');
-
-  return processedContent;
 }
 
 export const textTruncate = function (
@@ -1682,4 +1491,63 @@ export function getFirstMessageWithContent(messages: any[]): string {
     if (content) return content;
   }
   return '';
+}
+
+export function getFirstHumanMessageWithContent(messages: any[]): string {
+  if (!messages?.length) return '';
+  for (const msg of messages) {
+    const isHuman =
+      msg?.is_human === true || msg?.message?.data?.type === 'human';
+    const content = msg?.message?.data?.content;
+    if (isHuman && content) return content;
+  }
+  return '';
+}
+
+export function getLatestMessageTimestamp(messages: any[]): number | null {
+  if (!messages?.length) return null;
+  let latest: number | null = null;
+  for (const msg of messages) {
+    const raw = msg?.inserted_at;
+    if (!raw) continue;
+    const ms = new Date(raw).getTime();
+    if (!Number.isNaN(ms) && (latest === null || ms > latest)) latest = ms;
+  }
+  return latest;
+}
+
+/**
+ * Sanitize the value of the `?prompt=` deep-link query param before it is
+ * auto-submitted as a user chat message.
+ *
+ * The render layer already auto-escapes user turns (plain React text in a
+ * `whitespace-pre-wrap` container — no `dangerouslySetInnerHTML`, no Markdown),
+ * so HTML is NOT escaped here: doing so would corrupt legitimate prompts like
+ * `what does <div> do?` without buying any safety. Instead we defend against the
+ * real risks of an attacker-crafted link: prompt-injection smuggling via
+ * invisible/control characters and oversized auto-submitted payloads.
+ */
+export function sanitizePromptParam(
+  raw: string | null | undefined,
+): string | undefined {
+  if (raw == null) return undefined;
+
+  const cleaned = raw
+    // Strip control chars but preserve newlines (\n) and tabs (\t).
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    // Strip zero-width / invisible characters used to hide instructions.
+    .replace(/[​-‍⁠﻿]/g, '')
+    // Strip the Unicode Tag block (invisible-instruction injection).
+    .replace(/[\u{E0000}-\u{E007F}]/gu, '')
+    // Strip bidirectional control chars (LRM/RLM, embeddings/overrides,
+    // isolates) — the "Trojan Source" (CVE-2021-42574) vector that can
+    // invisibly reorder text to hide or misrepresent the injected prompt.
+    .replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/gu, '')
+    .trim()
+    // Cap length AFTER cleaning so it reflects real visible content, then
+    // re-trim so a mid-word slice never leaves dangling whitespace.
+    .slice(0, MAX_PROMPT_PARAM_LENGTH)
+    .trim();
+
+  return cleaned.length > 0 ? cleaned : undefined;
 }

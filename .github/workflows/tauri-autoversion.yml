@@ -10,6 +10,10 @@ on:
     branches: [main]
     paths:
       - 'src-tauri/**'
+  # Manual trigger — bump + tag + ship a release on demand, without waiting for a
+  # src-tauri change (e.g. to re-run after a failed auto-version, or to force a
+  # build off the current main).
+  workflow_dispatch:
 
 concurrency:
   group: release-tauri
@@ -20,8 +24,11 @@ permissions:
 
 jobs:
   version:
-    # Skip our own bump commits to avoid an infinite loop.
-    if: "!startsWith(github.event.head_commit.message, 'chore(tauri):')"
+    # Always run on manual dispatch; on push, skip our own bump commits to avoid
+    # an infinite loop (workflow_dispatch has no head_commit).
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      !startsWith(github.event.head_commit.message, 'chore(tauri):')
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
