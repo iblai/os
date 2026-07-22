@@ -15,6 +15,8 @@ SKIP_COVERAGE_FILES=(
   "explore/layout.tsx"
   "notifications/layout.tsx"
   "components/version.tsx"
+  # Null-rendering glue; the logic lives in use-tenant-lock.ts (unit-tested).
+  "components/tenant-lock.tsx"
   "edit-mentor-modal/utils.ts"
   "edit-mentor-modal/tabs/embed-tab.tsx"
   # App-router pages/components are exercised via E2E (see vitest.config.ts
@@ -24,6 +26,15 @@ SKIP_COVERAGE_FILES=(
   "explore/_components/search-section.tsx"
   "job-scout/page.tsx"
   "stripe/callback/[launch_id]/page.tsx"
+  # Public mentor page: server wrapper (thin SEO glue) + its client chat UI.
+  # SEO logic lives in lib/seo-mentor.ts (unit-tested); the UI is E2E-covered.
+  "[tenantKey]/[mentorId]/page.tsx"
+  "[tenantKey]/[mentorId]/mentor-page-content.tsx"
+  # Shared-chat pages: server wrappers (SEO in lib/seo-share.ts, unit-tested)
+  # + the short-route client redirect (E2E-covered).
+  "[sessionId]/[tenantKey]/[mentorId]/page.tsx"
+  "[sessionId]/page.tsx"
+  "[sessionId]/share-chat-redirect-content.tsx"
   # Third-party vendored bundle and the chrome extension service worker
   # (uses chrome.* APIs) are not unit-testable.
   "extensions/chrome/background.js"

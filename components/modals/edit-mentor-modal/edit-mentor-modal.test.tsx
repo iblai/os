@@ -92,6 +92,7 @@ vi.mock('@/hooks/use-user-type', () => ({
   useUserType: () => ({
     isUserTypeAllowed: (item: { userTypes: string[] }) =>
       mockIsUserTypeAllowed(item),
+    userType: UserType.ADMIN,
   }),
 }));
 
@@ -205,6 +206,8 @@ vi.mock('./tabs', () => ({
   HumanSupportTab: () => (
     <div data-testid="human-support-tab">Human Support Tab</div>
   ),
+  LtiTab: () => <div data-testid="lti-tab">LTI Tab</div>,
+  AnalyticsTab: () => <div data-testid="analytics-tab">Analytics Tab</div>,
 }));
 
 vi.mock('./tabs/memory-tab', () => ({
@@ -499,9 +502,11 @@ describe('EditMentorModal', () => {
             `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
           ),
         ).toBeInTheDocument();
+        // Skills is admin-only and lives in the Configuration category (the
+        // default active category), so it renders alongside Settings.
         expect(
           document.getElementById(
-            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.access}`,
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.skills}`,
           ),
         ).toBeInTheDocument();
       });
@@ -612,10 +617,12 @@ describe('EditMentorModal', () => {
       mockCheckRbacPermissionResult = true;
       mockMentorSettings = { ...dms(), permissions: { field: {} } };
       renderM();
+      // Skills has an empty permissionFieldsCheck and lives in the default
+      // Configuration category, so it renders under permissive RBAC.
       await waitFor(() =>
         expect(
           document.getElementById(
-            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.access}`,
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.skills}`,
           ),
         ).toBeInTheDocument(),
       );
@@ -833,25 +840,28 @@ describe('EditMentorModal', () => {
     // mounts the category's segments. Re-mount with cleanup() between
     // groups so each fresh render reflects the new mockGetEditMentorTab.
     const groups: Array<{ tabs: string[] }> = [
+      // Configuration
       {
         tabs: [
           MODALS.EDIT_MENTOR.tabs.settings,
-          MODALS.EDIT_MENTOR.tabs.access,
           MODALS.EDIT_MENTOR.tabs.llm,
           MODALS.EDIT_MENTOR.tabs.prompts,
           MODALS.EDIT_MENTOR.tabs.safety,
           MODALS.EDIT_MENTOR.tabs.disclaimer,
-          MODALS.EDIT_MENTOR.tabs.tools,
         ],
       },
+      // Integrations (Access + Tools moved here in feat/2040)
       {
         tabs: [
           MODALS.EDIT_MENTOR.tabs.mcp,
           MODALS.EDIT_MENTOR.tabs.datasets,
           MODALS.EDIT_MENTOR.tabs.api,
           MODALS.EDIT_MENTOR.tabs.embed,
+          MODALS.EDIT_MENTOR.tabs.access,
+          MODALS.EDIT_MENTOR.tabs.tools,
         ],
       },
+      // Runtime (formerly Analytics)
       {
         tabs: [MODALS.EDIT_MENTOR.tabs.memory, MODALS.EDIT_MENTOR.tabs.history],
       },

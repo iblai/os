@@ -177,6 +177,12 @@ export function HistoryTab() {
       </div>
 
       <div className="scrollbar-hide flex-1 overflow-y-auto p-4">
+        <div
+          className="mb-4 rounded-md border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600"
+          data-testid="history-info-box"
+        >
+          {t('infoBox')}
+        </div>
         <div className="space-y-6">
           {/* Rating and Description Section */}
           {!isMentorSummariesLoading && mentorSummaries && (

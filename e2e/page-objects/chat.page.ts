@@ -20,6 +20,8 @@ export class ChatPage {
   readonly stopStreamingButton: Locator;
   readonly promptsButton: Locator;
   readonly promptGalleryDialog: Locator;
+  readonly guidedSuggestedPrompts: Locator;
+  readonly guidedSuggestedPromptButtons: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -65,6 +67,14 @@ export class ChatPage {
     this.promptGalleryDialog = page.getByRole('dialog', {
       name: 'Prompt Gallery',
     });
+    // The guided-prompts row renders only when the AI returns prompts. The
+    // container carries a single stable hook (`data-testid`); the individual
+    // prompt buttons share the `chat-guided-suggested-prompts` class, so the
+    // container — not the button class — is the unique selector.
+    this.guidedSuggestedPrompts = page.getByTestId('guided-suggested-prompts');
+    this.guidedSuggestedPromptButtons = this.guidedSuggestedPrompts.locator(
+      '.chat-guided-suggested-prompts',
+    );
   }
 
   async sendMessage(text: string): Promise<void> {
@@ -199,6 +209,133 @@ export class ChatPage {
         return null;
       }
     }, mentorId);
+  }
+
+  // ── Deterministic message rendering via the shared-chat REST seam ──────────
+  //
+  // Journey 61 (LaTeX/math rendering) needs a FIXED assistant markdown
+  // response to assert on, without depending on a real (non-deterministic)
+  // LLM reply. Live chat is delivered over a raw WebSocket
+  // (`useChat({ wsUrl, ... })` in `@iblai/web-utils`), which Playwright can
+  // only intercept via `page.routeWebSocket()` — impractical here because it
+  // would require re-implementing the app's whole streaming/artifact wire
+  // protocol.
+  //
+  // Instead we use the public "shared chat" page
+  // (`app/share/chat/[sessionId]/[tenantKey]/[mentorId]/page.tsx`), which
+  // fetches message history over a plain REST GET
+  // (`useGetChatMessagesForSessionQuery` ->
+  // `GET /api/ai-mentor/orgs/{org}/users/{user_id}/sessions/{session_id}/shared/`)
+  // and renders it through `ChatMessages` -> `AIMessageBubble` ->
+  // `MessagePreview` -> `<Markdown>` — the EXACT same component tree (and
+  // `.chat-ai-message-response` / `.chat-user-message-query` classes) as live
+  // chat. Mocking that one GET with `page.route` gives byte-for-byte control
+  // over the rendered markdown while exercising the real renderer.
+  //
+  // Raw message shape (see `hooks/use-shared-chat-messages.ts` ->
+  // `transformChatMessage`): `type: 'human'` becomes role `user`, anything
+  // else (e.g. `'ai'`) becomes role `assistant`. The `content` field is
+  // passed straight through to `<Markdown>`.
+
+  /**
+   * Intercepts the shared-chat-history GET for a synthetic `sessionId` and
+   * fulfills it with a single fixed assistant message containing `content`.
+   * Returns the generated `sessionId` to use with `gotoSharedChat`.
+   */
+  async mockSharedChatSession(
+    tenantKey: string,
+    mentorId: string,
+    content: string,
+  ): Promise<string> {
+    const sessionId = `e2e-latex-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    await this.page.route(
+      `**/api/ai-mentor/orgs/*/users/*/sessions/${sessionId}/shared/**`,
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            count: 1,
+            title: 'E2E LaTeX rendering test',
+            is_shared: true,
+            proactive_prompt: '',
+            mentor_unique_id: mentorId,
+            platform_key: tenantKey,
+            previous: null,
+            next: null,
+            results: [
+              {
+                id: `e2e-msg-${Date.now()}`,
+                type: 'ai',
+                content,
+                timestamp: new Date().toISOString(),
+              },
+            ],
+          }),
+        });
+      },
+    );
+    return sessionId;
+  }
+
+  /**
+   * Navigates to the shared-chat page for `sessionId`/`tenantKey`/`mentorId`.
+   * Pair with `mockSharedChatSession` — the route must be registered first.
+   */
+  async gotoSharedChat(
+    host: string,
+    sessionId: string,
+    tenantKey: string,
+    mentorId: string,
+  ): Promise<void> {
+    await this.page.goto(
+      `${host}/share/chat/${sessionId}/${tenantKey}/${mentorId}`,
+      { waitUntil: 'domcontentloaded', timeout: 60_000 },
+    );
+  }
+
+  /** Returns the most recently rendered AI message bubble. */
+  getLastAiMessage(): Locator {
+    return this.aiMessages.last();
+  }
+
+  /**
+   * Returns the AI message bubble containing `text`, and waits for it to be
+   * visible. Prefer this over `getLastAiMessage()` + a bare visibility check
+   * when the bubble's content is known in advance (e.g. an injected mock
+   * message) — asserting on distinctive rendered text is a stronger,
+   * web-first signal that the real content has mounted than asserting
+   * visibility of a `.chat-ai-message-response` container alone, which
+   * could in principle match a transient/placeholder render first.
+   */
+  async waitForAiMessageWithText(
+    text: string,
+    timeout = 30_000,
+  ): Promise<Locator> {
+    const message = this.aiMessages.filter({ hasText: text });
+    await expect(message).toBeVisible({ timeout });
+    return message;
+  }
+
+  /** Returns all rendered KaTeX nodes (inline + block) within `scope`. */
+  getRenderedMath(scope?: Locator): Locator {
+    return (scope ?? this.page).locator('.katex');
+  }
+
+  /** Returns all rendered KaTeX *block* (display-mode) nodes within `scope`. */
+  getRenderedBlockMath(scope?: Locator): Locator {
+    return (scope ?? this.page).locator('.katex-display');
+  }
+
+  /**
+   * Returns the raw TeX source annotations KaTeX embeds for each rendered
+   * expression (`<annotation encoding="application/x-tex">`) — useful for
+   * asserting *which* expression rendered, not just that something did.
+   */
+  getRenderedMathSource(scope?: Locator): Locator {
+    return (scope ?? this.page).locator(
+      '.katex annotation[encoding="application/x-tex"]',
+    );
   }
 
   /** Deletes the nth prompt (0-indexed) from the Prompt Gallery. */

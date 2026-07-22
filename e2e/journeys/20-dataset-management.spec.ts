@@ -143,9 +143,9 @@ test.describe('Journey 20: Dataset Management', () => {
         .catch(() => false);
       test.skip(!enabled, 'Schedule Retrain button is visible but disabled');
       await scheduleBtn.click();
-      const modal = editMentorPage.page
-        .getByRole('dialog')
-        .filter({ hasText: /retrain/i });
+      const modal = editMentorPage.page.getByRole('dialog', {
+        name: 'Schedule Retraining',
+      });
       await expect(modal).toBeVisible({ timeout: 10_000 });
       await editMentorPage.page.keyboard.press('Escape');
     }

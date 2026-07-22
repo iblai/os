@@ -33,6 +33,8 @@ import {
   VoiceTab,
   ScreenShareTab,
   HumanSupportTab,
+  LtiTab,
+  AnalyticsTab,
 } from './tabs';
 import { useNavigate } from '@/hooks/user-navigate';
 import { MODALS } from '@/lib/constants';
@@ -83,6 +85,8 @@ export const EDIT_MENTOR_TAB_COMPONENTS: Record<string, ReactNode> = {
   [MODALS.EDIT_MENTOR.tabs.embed]: <EmbedTab />,
   [MODALS.EDIT_MENTOR.tabs.voice]: <VoiceTab />,
   [MODALS.EDIT_MENTOR.tabs.screenshare]: <ScreenShareTab />,
+  [MODALS.EDIT_MENTOR.tabs.lti]: <LtiTab />,
+  [MODALS.EDIT_MENTOR.tabs.analytics]: <AnalyticsTab />,
 };
 
 export function EditMentorModal({ isOpen, onClose }: Props) {
@@ -132,6 +136,8 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
               `/mentors/${mentorDbId}/documents/`,
               `/mentors/${mentorDbId}/tools/`,
               `/mentors/${mentorDbId}/prompts/`,
+              `/mentors/${mentorDbId}/#view_analytics`,
+              `/mentors/${mentorDbId}/#view_audit_logs`,
             ],
           },
         }).unwrap();

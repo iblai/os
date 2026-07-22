@@ -3,12 +3,25 @@ import { Page, Locator, expect } from '@playwright/test';
 /**
  * Page object for the Skills tab inside the Edit Mentor dialog.
  *
- * Renders the AgentSkills component from @iblai/iblai-js/web-containers. Gated on
- * both `enable_claw=true` AND a wired ClawMentorConfig (`isSandboxActive`),
- * so the tab may not appear in all envs. When not wired the component
- * renders:
+ * Renders the AgentSkills component from @iblai/iblai-js/web-containers. The
+ * Skills top-level tab is now ALWAYS mounted — `hooks/use-mentor-segments.ts`
+ * no longer gates it on `enable_claw && clawConfigExists`. When no sandbox is
+ * wired, the SDK is expected to show a GRAYED PREVIEW of the real content
+ * (`data-testid="agent-skills-content"`, with a `data-connected` attribute)
+ * plus a disconnected-state hint banner (`data-testid="agent-skills-disconnected-hint"`),
+ * mirroring the `CapabilityGate` pattern used elsewhere in this modal — rather
+ * than just hiding the list behind a plain message.
+ *
+ * NOT independently verified against a live app/backend at the time these
+ * helpers were written — the SDK bundle available in this repo's
+ * node_modules still renders the older plain message:
  *
  *   "Connect a sandbox instance in the Sandbox tab to manage skills."
+ *
+ * `isNotConnected` / the constructor below therefore accept EITHER shape:
+ * the new testids if present, falling back to the old text message. Confirm
+ * against a live run once `@iblai/iblai-js` ships the grayed-preview build
+ * and simplify to the new-only shape.
  *
  * When wired but no platform skills exist:
  *
@@ -28,6 +41,15 @@ export class SkillsTab {
   readonly page: Page;
   readonly dialog: Locator;
 
+  /**
+   * Grayed-preview content wrapper shown when no sandbox is connected
+   * (new shape — see class doc for verification caveat). Has a
+   * `data-connected` attribute mirroring the wired state.
+   */
+  readonly disconnectedContent: Locator;
+  /** Disconnected-state hint banner (new shape). */
+  readonly disconnectedHint: Locator;
+  /** Old plain "connect a sandbox" message — still the fallback shape. */
   readonly notConnectedMessage: Locator;
   readonly noSkillsMessage: Locator;
   readonly newSkillButton: Locator;
@@ -55,6 +77,10 @@ export class SkillsTab {
     this.page = page;
     this.dialog = dialog;
 
+    this.disconnectedContent = dialog.getByTestId('agent-skills-content');
+    this.disconnectedHint = dialog.getByTestId(
+      'agent-skills-disconnected-hint',
+    );
     this.notConnectedMessage = dialog.getByText(
       /connect a sandbox instance in the sandbox tab/i,
     );
@@ -124,7 +150,24 @@ export class SkillsTab {
 
   // ── State detection ──────────────────────────────────────────────────────
 
+  /**
+   * True when the tab is showing the "no sandbox connected" state — either
+   * the new grayed-preview shape (`data-connected="false"` on
+   * `agent-skills-content`, plus the disconnected hint banner) or the older
+   * plain-message shape. See class doc for the verification caveat.
+   */
   async isNotConnected(timeout = 5_000): Promise<boolean> {
+    const newShapeConnected = await this.disconnectedContent
+      .getAttribute('data-connected')
+      .catch(() => null);
+    if (newShapeConnected !== null) {
+      return newShapeConnected === 'false';
+    }
+    const hintVisible = await this.disconnectedHint
+      .waitFor({ state: 'visible', timeout })
+      .then(() => true)
+      .catch(() => false);
+    if (hintVisible) return true;
     return this.notConnectedMessage
       .waitFor({ state: 'visible', timeout })
       .then(() => true)

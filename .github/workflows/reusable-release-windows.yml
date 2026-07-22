@@ -1,0 +1,234 @@
+# Reusable Windows build — self-signed NSIS installers for x64 + arm64.
+#
+# Mirrors reusable-release-macos-dmg.yml for Windows: builds a self-signed NSIS
+# installer per architecture (x86_64 + aarch64, arm64 cross-compiled on the x64
+# runner), uploads each as a CI artifact, and — for release builds — attaches
+# them to the app-v<X> GitHub Release. Two modes, chosen by the caller:
+#
+#   - Release build (release_tag set): attach the installers to that existing
+#     Release (the app-v<X> release the tag created).
+#   - Dev build (release_tag empty): build + upload CI artifacts only.
+#
+# Signing: uses a stored self-signed cert if WINDOWS_CERTIFICATE (base64 .pfx) +
+# WINDOWS_CERTIFICATE_PASSWORD secrets are set (stable publisher); otherwise
+# generates a fresh self-signed code-signing cert in the runner and signs with
+# that (zero setup, but the publisher/thumbprint varies per build). Either way
+# the installer is signed via signtool using the cert's thumbprint, which Tauri
+# picks up from bundle.windows.certificateThumbprint (injected as a config
+# overlay at build time).
+#
+# App-agnostic: app-specific values are inputs, defaulted to the shared IBL
+# values. Secrets flow in via `secrets: inherit`.
+
+name: Reusable Release Windows
+
+on:
+  workflow_call:
+    inputs:
+      node_version:
+        description: 'Node.js version (tauri-action uses it to resolve the package manager)'
+        required: false
+        type: string
+        default: '25.3.0'
+      allow_in_app_purchase:
+        description: 'Compile-time IBL_ALLOW_IN_APP_PURCHASE flag (read via option_env! in Rust)'
+        required: false
+        type: boolean
+        default: false
+      cert_subject:
+        description: 'Subject (CN=...) used for the generated self-signed cert when no stored cert is provided'
+        required: false
+        type: string
+        default: 'CN=IBL.ai, O=IBL.ai'
+      artifact_prefix:
+        description: 'Prefix for the uploaded CI build artifacts (arch is appended)'
+        required: true
+        type: string
+      release_tag:
+        description: 'If set, attach the installers to this GitHub Release tag (release build). Empty = build-only dev build.'
+        required: false
+        type: string
+        default: ''
+      release_name:
+        description: 'Title used only if the release tag must be created as a fallback'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: write # attach the installers to the Release
+
+jobs:
+  build-windows:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            rust_target: x86_64-pc-windows-msvc
+          - arch: arm64
+            rust_target: aarch64-pc-windows-msvc
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Node/pnpm are only needed so tauri-action can resolve the project's
+      # package manager; the frontend bundle is prebuilt/remote (frontendDist),
+      # so there's no `next build` here.
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node_version }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Adds the Rust std for the target. arm64 is cross-compiled from the x64
+      # runner: the GitHub-hosted windows-2022/2025 images already ship the MSVC
+      # ARM64 build tools (VC.Tools.ARM64) + Windows 11 SDK, so no extra VS
+      # component install is needed here. (A self-hosted runner would need
+      # `Microsoft.VisualStudio.Component.VC.Tools.ARM64` installed.)
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_target }}
+
+      - name: Cache Rust build
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: ${{ matrix.arch }}
+
+      # Resolve a code-signing cert into the CurrentUser store and expose its
+      # thumbprint. Prefer a stored self-signed .pfx (stable publisher); fall
+      # back to generating one. Only the thumbprint leaves this step — the cert
+      # material stays in the runner's store.
+      - name: Prepare signing certificate
+        id: cert
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:WINDOWS_CERTIFICATE) {
+            Write-Host 'Using stored WINDOWS_CERTIFICATE (self-signed .pfx from secrets)'
+            $pfxPath = Join-Path $env:RUNNER_TEMP 'signing.pfx'
+            [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE))
+            $pw = ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -Force -AsPlainText
+            $cert = Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation Cert:\CurrentUser\My -Password $pw
+            Remove-Item $pfxPath -Force
+          } else {
+            Write-Host 'No stored certificate — generating a fresh self-signed code-signing cert'
+            $cert = New-SelfSignedCertificate `
+              -Type CodeSigningCert `
+              -Subject '${{ inputs.cert_subject }}' `
+              -CertStoreLocation Cert:\CurrentUser\My `
+              -KeyExportPolicy Exportable `
+              -KeyAlgorithm RSA -KeyLength 2048 `
+              -HashAlgorithm SHA256 `
+              -NotAfter (Get-Date).AddYears(5)
+          }
+          $thumb = $cert.Thumbprint
+          Write-Host "Signing thumbprint: $thumb"
+          "thumbprint=$thumb" >> $env:GITHUB_OUTPUT
+
+      # Tauri signs the app .exe + NSIS installer via signtool when
+      # bundle.windows.certificateThumbprint is set. Inject the resolved
+      # thumbprint into that single field of the ephemeral CI checkout's
+      # tauri.conf.json, leaving every sibling windows setting intact
+      # (digestAlgorithm: sha256, timestampUrl, webviewInstallMode, nsis). An
+      # in-place edit (vs a --config overlay) avoids any dependency on tauri's
+      # config-merge semantics dropping those sibling keys.
+      - name: Inject signing thumbprint into tauri.conf.json
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $conf = 'src-tauri/tauri.conf.json'
+          $thumb = '${{ steps.cert.outputs.thumbprint }}'
+          if ([string]::IsNullOrWhiteSpace($thumb)) { throw 'empty signing thumbprint' }
+          $text = Get-Content $conf -Raw
+          if ($text -notmatch '"certificateThumbprint"\s*:\s*null') {
+            throw 'certificateThumbprint: null not found in tauri.conf.json'
+          }
+          $text = $text -replace '"certificateThumbprint"\s*:\s*null', ('"certificateThumbprint": "' + $thumb + '"')
+          Set-Content -Path $conf -Value $text -NoNewline -Encoding utf8
+          Write-Host "Injected certificateThumbprint $thumb"
+
+      # Build + sign the NSIS installer for this architecture. No tagName =>
+      # tauri-action does not create a Release; we attach the installer ourselves.
+      - name: Build & sign NSIS installer
+        id: tauri
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Enable in-app purchase for release builds when requested. Read at Rust
+          # compile time via option_env!("IBL_ALLOW_IN_APP_PURCHASE").
+          IBL_ALLOW_IN_APP_PURCHASE: ${{ inputs.allow_in_app_purchase }}
+        with:
+          # MSI/WiX doesn't support arm64, so restrict to NSIS (the only Tauri
+          # bundle type that builds for both x64 and arm64). tauri-action reads
+          # the --target back to resolve the per-target bundle path.
+          args: --target ${{ matrix.rust_target }} --bundles nsis
+
+      # Confirm signing actually happened. A self-signed signature is untrusted
+      # (Status won't be "Valid" without the cert in a trusted root), so we only
+      # assert that a signer certificate is present — i.e. signtool ran and
+      # embedded a signature — not that it chains to a trusted root.
+      - name: Verify installer is signed
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = Get-ChildItem "src-tauri/target/${{ matrix.rust_target }}/release/bundle/nsis/*-setup.exe" | Select-Object -First 1
+          if (-not $exe) { throw 'No NSIS installer produced' }
+          $sig = Get-AuthenticodeSignature $exe.FullName
+          Write-Host "Installer: $($exe.Name)"
+          Write-Host "Signature status: $($sig.Status)"
+          Write-Host "Signer: $($sig.SignerCertificate.Subject)"
+          if ($null -eq $sig.SignerCertificate) {
+            throw "Installer is NOT signed (no signer certificate embedded)"
+          }
+          Write-Host 'OK: installer carries an Authenticode signature.'
+
+      # Always keep the installer as a CI artifact (per-arch).
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.artifact_prefix }}-${{ matrix.arch }}
+          path: src-tauri/target/${{ matrix.rust_target }}/release/bundle/nsis/*-setup.exe
+          if-no-files-found: error
+
+      # Release builds only: attach the installer to the version's Release.
+      - name: Attach installer to release
+        if: ${{ inputs.release_tag != '' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Pass inputs via env (not interpolated into the script body) to avoid
+          # shell expression injection.
+          EXE_GLOB: src-tauri/target/${{ matrix.rust_target }}/release/bundle/nsis/*-setup.exe
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          RELEASE_NAME: ${{ inputs.release_name }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=($EXE_GLOB) # intentional glob expansion of the path pattern
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No installer found at $EXE_GLOB"; exit 1
+          fi
+          # The Release normally already exists (created by the tag/release flow);
+          # create as a fallback so a Windows-only run can still publish. The
+          # x64 and arm64 matrix legs run this concurrently, so tolerate a lost
+          # create race (`|| true`) — whichever loses just proceeds to upload.
+          # The two legs upload distinctly-named files (_x64 / _arm64), so
+          # --clobber never pits them against each other.
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" \
+              --title "${RELEASE_NAME:-$RELEASE_TAG}" \
+              --notes "Automated, self-signed Windows build." || true
+          fi
+          gh release upload "$RELEASE_TAG" "${files[@]}" --clobber
+          echo "Attached ${#files[@]} installer(s) to $RELEASE_TAG"

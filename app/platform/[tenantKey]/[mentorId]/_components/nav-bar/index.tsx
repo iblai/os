@@ -130,7 +130,7 @@ export const ANALYTICS_NAV_ITEM: MentorSegment = {
     MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
     MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
   ],
-  navCategory: 'analytics',
+  navCategory: 'runtime',
 };
 
 export function NavBar() {
@@ -207,7 +207,7 @@ export function NavBar() {
 
   const userIsVisiting = useIsVisiting();
 
-  const { filteredSegments, isSegmentVisible } = useMentorSegments();
+  const { filteredSegments } = useMentorSegments();
 
   const llmProviderDetails = getLLMProviderDetails(
     mentorSettingsCombinedPublicAndPrivate?.llmProvider ?? '',
@@ -342,11 +342,11 @@ export function NavBar() {
   // metadata. New Chat is a `topAction` and Modify (fork) is a
   // `footerAction`, both rendered outside the category columns.
   const categorizedDropdownItems = React.useMemo<CategorizedItem[]>(() => {
-    const segments: MentorSegment[] = [
-      ...filteredSegments,
-      ...(isSegmentVisible(ANALYTICS_NAV_ITEM) ? [ANALYTICS_NAV_ITEM] : []),
-    ];
-    return segments
+    // `analytics` is now a canonical segment in `MENTOR_SEGMENTS` (Runtime
+    // category), so `filteredSegments` already includes it — no need to append
+    // the legacy ad-hoc `ANALYTICS_NAV_ITEM`. Clicking it is still routed to
+    // the full-page analytics view in `handleSegmentClick` below.
+    return filteredSegments
       .filter((s) => s.navCategory)
       .map((s) => ({
         value: s.value,
@@ -354,9 +354,10 @@ export function NavBar() {
         icon: s.icon,
         category: s.navCategory,
       }));
-  }, [filteredSegments, isSegmentVisible]);
+  }, [filteredSegments]);
 
   const showForkButton =
+    !userIsStudent &&
     !(isAdmin && tenantKey === config.mainTenantKey()) &&
     mentorSettings?.mentor_visibility ===
       MentorVisibilityEnum.VIEWABLE_BY_ANYONE &&

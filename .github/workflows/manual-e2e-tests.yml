@@ -1,0 +1,90 @@
+# Manually dispatched e2e run against any staging domain (stg1–stg6).
+#
+# Unlike pr-e2e-tests.yml (hardwired to stg1, label-gated, redeploys the PR's
+# app image), this workflow only builds the Playwright image from the selected
+# ref and runs it against the TARGET DOMAIN'S EXISTING APP DEPLOYMENT — no
+# ec2-host is passed, so the app-redeploy job is skipped. Use it to verify
+# e2e-only changes on a different staging tenant, or to re-run a subset of
+# journeys without a PR round-trip:
+#
+#   gh workflow run manual-e2e-tests.yml --ref <branch> \
+#     -f domain-number=2 -f test-files=e2e/journeys/60-mentor-lti-tab.spec.ts
+name: Manual E2E Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      domain-number:
+        description: 'Staging domain number to test against (1-6)'
+        required: true
+        default: '2'
+        type: string
+      test-files:
+        description: 'Comma-separated spec files/filters (empty = full suite)'
+        required: false
+        default: ''
+        type: string
+      browsers:
+        description: 'Comma-separated browsers (chrome,firefox,safari,edge)'
+        required: false
+        default: 'chrome'
+        type: string
+      workers:
+        description: 'Number of Playwright workers'
+        required: false
+        default: '3'
+        type: string
+
+run-name: "Manual E2E — stg${{ inputs.domain-number }} (${{ inputs.browsers }}) ${{ inputs.test-files || 'full suite' }}"
+
+permissions:
+  contents: read
+
+jobs:
+  build-playwright-image:
+    uses: ./.github/workflows/reusable-pr-docker-build.yml
+    secrets: inherit
+    with:
+      dockerfile-path: e2e/Dockerfile
+      build-context: .
+      image-name: ibl-mentor-playwright
+      registry-type: ocir
+      image-tag: manual-${{ github.run_id }}-${{ github.sha }}
+      event-name: workflow_dispatch
+
+  run-tests:
+    needs: [build-playwright-image]
+    uses: ./.github/workflows/reusable-oci-test-runner.yml
+    secrets: inherit
+    with:
+      domain-number: ${{ inputs.domain-number }}
+      app-type: mentor
+      playwright-image: ${{ needs.build-playwright-image.outputs.image-uri }}
+      max-wait: 10800
+      total-shards: 1
+      run-type: main
+      browsers: ${{ inputs.browsers }}
+      workers: ${{ inputs.workers }}
+      test-files: ${{ inputs.test-files }}
+      registry-type: 'ocir'
+      runs-on: iblai-stg-runner
+
+  summary:
+    needs: [build-playwright-image, run-tests]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Results
+        run: |
+          echo "# Manual E2E Test Results — stg${{ inputs.domain-number }}" >> $GITHUB_STEP_SUMMARY
+          echo "| Step | Result |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Build Playwright | ${{ needs.build-playwright-image.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Run Tests (${{ inputs.browsers }}) | ${{ needs.run-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Test files: ${{ inputs.test-files || 'full suite' }}" >> $GITHUB_STEP_SUMMARY
+          echo "Mode: no app redeploy — tests ran against the existing stg${{ inputs.domain-number }} instance." >> $GITHUB_STEP_SUMMARY
+
+      - name: Fail if tests did not pass
+        if: needs.run-tests.result != 'success' && needs.run-tests.result != 'skipped'
+        run: exit 1
