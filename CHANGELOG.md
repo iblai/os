@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.100.1](https://github.com/iblai/os/compare/v0.100.0...v0.100.1) (2026-07-22)
+
+### Bug Fixes
+
+* **mentor:** guard guided-prompts user id in embed mode ([4643817](https://github.com/iblai/os/commit/4643817d7479a014183570931939925ea6b6673a))
+
+### Styles
+
+* normalize prettier formatting drift on main ([1ab36cc](https://github.com/iblai/os/commit/1ab36cc7947de984e5df6c97fddcfff764a98f7c))
+
+### Tests
+
+* **mentor:** cover empty username fallback for guided prompts ([aad4f6c](https://github.com/iblai/os/commit/aad4f6cf0837705cb88731ab9dcadf0d961c49b1))
+
 ## [0.100.0](https://github.com/iblai/os/compare/v0.99.0...v0.100.0) (2026-07-21)
 
 ### Features
