@@ -73,16 +73,27 @@ vi.mock('@/types/tauri', () => ({
   isTauriApp: () => false,
 }));
 
+// The server page wrapper pulls in the SEO layer; stub it so importing the
+// route module (for the `dynamic` export) doesn't require server APIs.
+vi.mock('@/lib/seo-mentor', () => ({
+  buildMentorMetadata: vi.fn(),
+  mentorJsonLd: vi.fn(async () => null),
+}));
+
+vi.mock('@/components/seo/json-ld', () => ({
+  JsonLd: () => null,
+}));
+
 const PageModule = await import('../page');
-const Page = PageModule.default;
+const MentorPageContent = (await import('../mentor-page-content')).default;
 
 describe('main chat page', () => {
   it('should export dynamic config', () => {
     expect(PageModule.dynamic).toBe('force-dynamic');
   });
 
-  it('should render Chat component', () => {
-    const { getByTestId } = render(<Page />);
+  it('renders the Chat UI', () => {
+    const { getByTestId } = render(<MentorPageContent />);
     expect(getByTestId('chat')).toBeInTheDocument();
   });
 });

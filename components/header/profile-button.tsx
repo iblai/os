@@ -15,9 +15,11 @@ import { TenantSwitcher } from '@iblai/iblai-js/web-containers';
 import { useParams } from 'next/navigation';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { useUserTenants } from '@/hooks/use-user';
+import { useLockedTenant } from '@/hooks/use-tenant-lock';
 import { useState } from 'react';
 import { useAppSelector } from '@/lib/hooks';
 import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
+import { config } from '@/lib/config';
 import { useTranslations } from 'next-intl';
 
 interface ProfileButtonProps {
@@ -42,6 +44,8 @@ export function ProfileButton({
   const { tenantKey } = useParams<TenantKeyMentorIdParams>();
   const { userTenants } = useUserTenants();
   const [hideTenantSwitcher, setHideTenantSwitcher] = useState<boolean>(false);
+  // Tauri builds pinned to a tenant hide the switcher entirely.
+  const lockedTenant = useLockedTenant();
   const rbacPermissions = useAppSelector(selectRbacPermissions);
   return (
     <DropdownMenu>
@@ -85,7 +89,7 @@ export function ProfileButton({
             </div>
           </div>
         )}
-        {!hideTenantSwitcher && (
+        {!hideTenantSwitcher && !lockedTenant && (
           <>
             <TenantSwitcher
               currentTenantKey={tenantKey}
@@ -93,6 +97,7 @@ export function ProfileButton({
               onTenantChange={handleTenantSwitch}
               setHideTenantSwitcher={setHideTenantSwitcher}
               rbacPermissions={rbacPermissions}
+              enableRbac={config.enableRBAC()}
             />
           </>
         )}

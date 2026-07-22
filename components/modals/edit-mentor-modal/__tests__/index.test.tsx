@@ -95,6 +95,7 @@ vi.mock('@/hooks/use-user-type', () => ({
     isUserTypeAllowed: (item: { userTypes: string[] }) =>
       item.userTypes.includes(UserType.ADMIN) ||
       item.userTypes.includes(UserType.FREE_TRIAL),
+    userType: UserType.ADMIN,
   }),
 }));
 
@@ -248,6 +249,8 @@ vi.mock('../tabs', () => ({
   ScreenShareTab: () => (
     <div data-testid="screenshare-tab">Screen Share Tab</div>
   ),
+  LtiTab: () => <div data-testid="lti-tab">LTI Tab</div>,
+  AnalyticsTab: () => <div data-testid="analytics-tab">Analytics Tab</div>,
 }));
 
 vi.mock('../tabs/memory-tab', () => ({

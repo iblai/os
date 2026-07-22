@@ -123,17 +123,27 @@ fn open_oauth_in_popup(url: &str, app_handle: &AppHandle, title: &str) -> Result
         if is_callback || is_custom_scheme || is_app_return {
             println!("[OAuth Popup] Callback/return detected: {}", url_str);
 
-            // Navigate the main window to the callback URL
+            let target_url = if is_custom_scheme {
+                // Convert custom scheme to app URL
+                let path = url_str
+                    .replace("iblai-mentor://", "/")
+                    .replace("ai.ibl.mentorai://", "/");
+                format!("{}{}", get_app_url(), path)
+            } else {
+                url_str.to_string()
+            };
+
+            // Close the popup and foreground the main window BEFORE navigating.
+            // A backgrounded WebView (behind the popup) is heavily throttled on
+            // macOS, so navigating it first showed up as a long delay before the
+            // main window actually loaded the return URL.
+            if let Some(oauth_win) = app_handle_clone.get_webview_window("oauth-popup") {
+                println!("[OAuth Popup] Closing popup window");
+                let _ = oauth_win.close();
+            }
+
             if let Some(main_win) = app_handle_clone.get_webview_window("main") {
-                let target_url = if is_custom_scheme {
-                    // Convert custom scheme to app URL
-                    let path = url_str
-                        .replace("iblai-mentor://", "/")
-                        .replace("ai.ibl.mentorai://", "/");
-                    format!("{}{}", get_app_url(), path)
-                } else {
-                    url_str.to_string()
-                };
+                let _ = main_win.set_focus();
 
                 println!("[OAuth Popup] Navigating main window to: {}", target_url);
                 // For app-domain returns (e.g. Stripe checkout completing), force a
@@ -161,13 +171,6 @@ fn open_oauth_in_popup(url: &str, app_handle: &AppHandle, title: &str) -> Result
                 if !navigated {
                     let _ = main_win.eval(&format!("window.location.href = '{}';", target_url));
                 }
-                let _ = main_win.set_focus();
-            }
-
-            // Close the OAuth popup
-            if let Some(oauth_win) = app_handle_clone.get_webview_window("oauth-popup") {
-                println!("[OAuth Popup] Closing popup window");
-                let _ = oauth_win.close();
             }
 
             return false; // Don't navigate the popup
@@ -973,6 +976,15 @@ fn allow_in_app_purchase() -> bool {
         ),
         None => false,
     }
+}
+
+/// The tenant key this build is locked to, injected at build time via the
+/// `IBL_TENANT` environment variable. Returns an empty string when unset, which
+/// the app treats as "no lock" (normal multi-tenant behaviour). Lets two builds
+/// target different tenants while sharing one application URL.
+#[command]
+fn get_locked_tenant() -> String {
+    option_env!("IBL_TENANT").unwrap_or("").trim().to_string()
 }
 
 /// Proxy a chat request to Ollama
@@ -2737,6 +2749,7 @@ fn main() {
             get_offline_context,
             get_os_type,
             allow_in_app_purchase,
+            get_locked_tenant,
             open_external_url,
             ollama_chat,
             ollama_chat_stream,

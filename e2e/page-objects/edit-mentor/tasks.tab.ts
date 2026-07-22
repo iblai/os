@@ -1,4 +1,4 @@
-import { Page, Locator } from '@playwright/test';
+import { expect, Page, Locator } from '@playwright/test';
 import {
   TASKS_LABELS,
   deleteTask,
@@ -32,6 +32,12 @@ export type { TaskRepeat };
  * — so a label change in the SDK is picked up via a single bump of
  * `@iblai/iblai-js` rather than rewriting selectors here.
  *
+ * Sole exception: `scheduleTaskAhead`'s midnight-crossing branch drives the
+ * schedule dialog's desktop calendar directly (the SDK exposes no helper
+ * that can set the date). Its labels still come from `TASKS_LABELS`, but
+ * the day-button and date-heading locators depend on the dialog's DOM
+ * structure — re-verify that branch when bumping the SDK.
+ *
  * The instance scopes every helper to the Edit Mentor `dialog` Locator so
  * that other portaled dialogs in the same page (e.g. an unrelated toast or
  * confirm dialog) cannot match by accident.
@@ -43,6 +49,20 @@ export class TasksTab {
   /** Default labels shipped with the SDK — handy when a test wants to assert
    * the exact heading/description text rather than going through a helper. */
   static readonly LABELS = TASKS_LABELS;
+
+  /**
+   * Category-aware tab navigation injected by `EditMentorPage` (see
+   * `bindTabNav` there). The Tasks segment lives in the modal's Runtime
+   * category, and the sidebar only mounts the ACTIVE category's segment
+   * triggers — so the SDK's `switchToTasksTab` (which predates the category
+   * strip and expects the trigger to already be in the DOM) can't find it
+   * while the modal sits on its default Configurations view.
+   */
+  private navigateToTab?: (tabName: string) => Promise<void>;
+
+  bindTabNav(navigateToTab: (tabName: string) => Promise<void>): void {
+    this.navigateToTab = navigateToTab;
+  }
 
   constructor(page: Page, dialog: Locator) {
     this.page = page;
@@ -58,8 +78,19 @@ export class TasksTab {
     return isTasksTabVisible(this.page);
   }
 
-  /** Click the Tasks tab inside the Edit Mentor modal. */
-  switchToTab(): Promise<void> {
+  /**
+   * Click the Tasks tab inside the Edit Mentor modal.
+   *
+   * Activates the Runtime category first when the tab nav is bound (the
+   * default via `EditMentorPage`'s constructor), then delegates to the SDK
+   * helper — its click on the now-active trigger is a no-op, but its
+   * wait-for-toolbar-ready assertion is still the readiness signal callers
+   * rely on.
+   */
+  async switchToTab(): Promise<void> {
+    if (this.navigateToTab) {
+      await this.navigateToTab('Tasks');
+    }
     return switchToTasksTab(this.page);
   }
 
@@ -149,6 +180,113 @@ export class TasksTab {
     return scheduleTask(this.dialog, opts);
   }
 
+  /**
+   * Schedule a task `minutesAhead` minutes from now (default 120).
+   *
+   * The dialog's date defaults to today, so near midnight every remaining
+   * same-day time is (about to be) in the past and the "Start time must be
+   * in the future" validation keeps the submit button disabled. When the
+   * target instant falls on a later calendar day, this picks that day in
+   * the dialog calendar and fills the form field-by-field (the SDK's
+   * one-shot `scheduleTask` cannot set a date); otherwise it defers to the
+   * SDK helper unchanged.
+   *
+   * `minutesAhead` must stay within [90, 3 days]: the dialog resolves
+   * DST-ambiguous fall-back wall times to the earlier offset (so up to an
+   * hour of margin can vanish once a year), and the calendar path never
+   * navigates months (the target must sit in the initially rendered grid —
+   * current month plus at least 5 next-month spillover days).
+   */
+  async scheduleTaskAhead(opts: {
+    name: string;
+    prompt?: string;
+    minutesAhead?: number;
+    repeat?: TaskRepeat;
+    notifyByEmail?: boolean;
+  }): Promise<void> {
+    const { minutesAhead = 120, ...task } = opts;
+    if (minutesAhead < 90 || minutesAhead > 3 * 24 * 60) {
+      throw new Error(
+        `scheduleTaskAhead: minutesAhead must be within [90, ${3 * 24 * 60}] ` +
+          `(DST fall-back margin / rendered-calendar reach); got ${minutesAhead}`,
+      );
+    }
+    const now = new Date();
+    const target = new Date(now.getTime() + minutesAhead * 60_000);
+    const h = String(target.getHours()).padStart(2, '0');
+    const m = String(target.getMinutes()).padStart(2, '0');
+    const time = `${h}:${m}`;
+
+    if (target.toDateString() === now.toDateString()) {
+      return scheduleTask(this.dialog, { ...task, time });
+    }
+
+    await openScheduleTaskDialog(this.dialog);
+    // Portaled dialog — resolved from the page by its aria-label, exactly
+    // like the SDK's own (non-exported) getScheduleTaskDialog.
+    const dialog = this.page.getByRole('dialog', {
+      name: TASKS_LABELS.scheduleDialog.dialogName,
+    });
+    // The dialog's desktop calendar is a hand-rolled 42-cell grid of plain
+    // buttons whose accessible name is just the day number; past days are
+    // `disabled`. For a next-day target the first enabled exact match is
+    // always the target: any earlier cell with the same number belongs to a
+    // past month (disabled), and when today is the month's last day the
+    // target "1" is the next month's spillover cell, which the grid always
+    // shows.
+    await dialog
+      .getByRole('button', {
+        name: String(target.getDate()),
+        exact: true,
+        disabled: false,
+      })
+      .first()
+      .click();
+    // The form panel's heading echoes the selected date ("July 4, 2026") —
+    // assert the click landed on the right day before filling the form.
+    await expect(
+      dialog.getByRole('heading', {
+        name: target.toLocaleDateString('en-US', {
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric',
+        }),
+        exact: true,
+      }),
+    ).toBeVisible({ timeout: 5_000 });
+    await dialog
+      .getByLabel(TASKS_LABELS.scheduleDialog.taskName)
+      .fill(task.name);
+    if (task.prompt !== undefined) {
+      await dialog
+        .getByLabel(TASKS_LABELS.scheduleDialog.taskPrompt)
+        .fill(task.prompt);
+    }
+    await dialog.getByLabel(TASKS_LABELS.scheduleDialog.time).fill(time);
+    if (task.repeat) {
+      const repeatLabel = {
+        "don't-repeat": TASKS_LABELS.scheduleDialog.dontRepeat,
+        daily: TASKS_LABELS.scheduleDialog.daily,
+        weekly: TASKS_LABELS.scheduleDialog.weekly,
+        monthly: TASKS_LABELS.scheduleDialog.monthly,
+      }[task.repeat];
+      await dialog.getByLabel(TASKS_LABELS.scheduleDialog.repeat).click();
+      // Radix renders the option list in a portal outside the dialog.
+      await this.page.getByRole('option', { name: repeatLabel }).click();
+    }
+    if (task.notifyByEmail) {
+      await dialog
+        .getByLabel(TASKS_LABELS.scheduleDialog.notifyByEmail)
+        .click();
+    }
+    const submit = dialog.getByRole('button', {
+      name: TASKS_LABELS.scheduleDialog.schedule,
+    });
+    await expect(submit).toBeEnabled({ timeout: 5_000 });
+    await submit.click();
+    await expect(dialog).toBeHidden({ timeout: 15_000 });
+  }
+
   // ---------------------------------------------------------------------------
   // Search
   // ---------------------------------------------------------------------------
@@ -216,21 +354,5 @@ export class TasksTab {
     const ts = Date.now();
     const rand = Math.random().toString(36).slice(2, 7);
     return `${prefix}-${ts}-${rand}`;
-  }
-
-  /**
-   * Returns "HH:mm" for `minutesAhead` minutes from now, clamped to today so
-   * the schedule dialog does not reject it as past. When the computed time
-   * would roll over midnight, returns "23:55" instead.
-   */
-  static futureTimeOfDay(minutesAhead = 60): string {
-    const now = new Date();
-    const target = new Date(now.getTime() + minutesAhead * 60 * 1000);
-    if (target.getDate() !== now.getDate()) {
-      return '23:55';
-    }
-    const h = String(target.getHours()).padStart(2, '0');
-    const m = String(target.getMinutes()).padStart(2, '0');
-    return `${h}:${m}`;
   }
 }

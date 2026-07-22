@@ -19563,6 +19563,19 @@ describe('Chat', () => {
 
       expect(await getInitialPromptArg()).toBeUndefined();
     });
+
+    it('forwards the sanitized prompt (strips invisible/control chars)', async () => {
+      const { useSearchParams } = await import('next/navigation');
+      // Zero-width space + zero-width joiner + a control char embedded in an
+      // otherwise legitimate prompt from an attacker-crafted deep link.
+      (useSearchParams as any).mockReturnValue(
+        mockSearchParamsWith({ prompt: 'he​ll‍o\x00 world' }),
+      );
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      expect(await getInitialPromptArg()).toBe('hello world');
+    });
   });
 
   describe('pagination - load older messages on scroll', () => {

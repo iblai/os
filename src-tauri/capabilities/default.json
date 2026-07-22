@@ -62,6 +62,7 @@
     "allow-navigate-to",
     "allow-get-os-type",
     "allow-allow-in-app-purchase",
+    "allow-get-locked-tenant",
     "os:default",
     "allow-check-network-status"
   ]

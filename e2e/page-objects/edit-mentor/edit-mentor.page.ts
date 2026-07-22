@@ -1,4 +1,7 @@
 import { Page, Locator, expect } from '@playwright/test';
+import { CreateMentorPage } from '../create-mentor.page';
+import { SidebarPage } from '../sidebar.page';
+import { waitForPageReady } from '../../utils/resilient';
 import { SettingsTab } from './settings.tab';
 import { LlmTab } from './llm.tab';
 import { ToolsTab } from './tools.tab';
@@ -15,6 +18,7 @@ import { PrivacyTab } from './privacy.tab';
 import { TasksTab } from './tasks.tab';
 import { VoiceTab } from './voice.tab';
 import { ScreenShareTab } from './screenshare.tab';
+import { LtiTab } from './lti.tab';
 
 /**
  * Which sidebar category each segment lives in. Mirrors the `navCategory`
@@ -28,28 +32,33 @@ import { ScreenShareTab } from './screenshare.tab';
  */
 const TAB_CATEGORY: Record<
   string,
-  'Configurations' | 'Integrations' | 'Analytics'
+  'Configurations' | 'Integrations' | 'Runtime'
 > = {
+  // Configurations
   Settings: 'Configurations',
-  Sandbox: 'Configurations',
-  Access: 'Configurations',
   LLM: 'Configurations',
+  Voice: 'Configurations',
+  'Screen Share': 'Configurations',
   Prompts: 'Configurations',
   Skills: 'Configurations',
   Safety: 'Configurations',
   Privacy: 'Configurations',
-  Tasks: 'Configurations',
   Disclaimers: 'Configurations',
-  Tools: 'Configurations',
+  // Integrations
+  Sandbox: 'Integrations',
+  Access: 'Integrations',
+  Tools: 'Integrations',
   MCP: 'Integrations',
   Datasets: 'Integrations',
   API: 'Integrations',
+  LTI: 'Integrations',
   Embed: 'Integrations',
-  Voice: 'Configurations',
-  'Screen Share': 'Configurations',
-  Memory: 'Analytics',
-  History: 'Analytics',
-  Audit: 'Analytics',
+  // Runtime (renamed from Analytics)
+  Tasks: 'Runtime',
+  Memory: 'Runtime',
+  History: 'Runtime',
+  Audit: 'Runtime',
+  Analytics: 'Runtime',
 };
 
 export class EditMentorPage {
@@ -73,6 +82,7 @@ export class EditMentorPage {
   readonly tasks: TasksTab;
   readonly voice: VoiceTab;
   readonly screenshare: ScreenShareTab;
+  readonly lti: LtiTab;
   readonly copyMentorDialog: CopyMentorPage;
 
   constructor(page: Page) {
@@ -98,15 +108,23 @@ export class EditMentorPage {
     this.tasks = new TasksTab(page, this.dialog);
     this.voice = new VoiceTab(page, this.dialog);
     this.screenshare = new ScreenShareTab(page, this.dialog);
+    this.lti = new LtiTab(page, this.dialog);
     this.copyMentorDialog = new CopyMentorPage(page);
 
-    // The Privacy-tab master switch was removed from the SDK and now lives
-    // only in Settings → Capabilities. Hand the Privacy page-object a
-    // reference to the Settings page-object + this dialog's tab nav so
-    // `privacy.setRouterEnabled(...)` can transparently drive the moved
-    // switch and return focus to the Privacy tab. Bound to a bound method
-    // so the callback retains `this`.
-    this.privacy.bindSettingsTab(this.settings, this.navigateToTab.bind(this));
+    // The modal only mounts the active category's segments, so the Settings
+    // sub-tab triggers (Basic / Discovery / Capabilities) are absent from the
+    // DOM whenever another category is active (e.g. LtiTab activates
+    // Integrations before every LTI check). Hand the Settings page-object the
+    // dialog's tab nav so `selectSubTab` can restore the Settings segment
+    // itself, making its helpers safe regardless of caller order.
+    this.settings.bindTabNav(this.navigateToTab.bind(this));
+
+    // Same story for Tasks: the SDK's `switchToTasksTab` helper predates the
+    // category strip and expects the Tasks trigger to be in the DOM already —
+    // but Tasks lives in the Runtime category, which isn't mounted while the
+    // modal sits on its default Configurations view. Binding the tab nav lets
+    // `TasksTab.switchToTab()` activate Runtime first.
+    this.tasks.bindTabNav(this.navigateToTab.bind(this));
   }
 
   /**
@@ -235,7 +253,43 @@ export class EditMentorPage {
       exact: true,
     });
 
-    await expect(menuTarget).toBeVisible({ timeout: 10_000 });
+    // `navigateToMentorApp` (bare /platform) redirects to the account-wide
+    // most-recently-accessed mentor, which can be one this admin doesn't own
+    // (e.g. a shared/template mentor forked from the main tenant catalog —
+    // see e2e-shared-mentor-isolation). Non-owned mentors only expose
+    // "New Chat" and "Modify" in this dropdown — never "Settings" — so
+    // blindly waiting for "Settings" here would hang forever. Detect that
+    // case with a short wait and, only then, switch onto an editable mentor
+    // before retrying. When "Settings" IS present (the common case) this
+    // adds nothing beyond the same wait the unconditional expect used to do.
+    //
+    // NOTE: an earlier version of this fallback preferred clicking "Modify"
+    // (the dropdown's one-click fork action) before falling back to
+    // CreateMentorPage. That was dropped — live runs showed the fork can
+    // complete server-side (the copy appears under Explore/My Agents)
+    // WITHOUT the page actually navigating, so `safeWaitForURL` waiting on
+    // the redirect timed out at 60s with no fallback. CreateMentorPage's
+    // create flow is the proven, already-widely-used isolation primitive
+    // (journeys 02/09/44/47/54/56/etc.) with a verified navigation
+    // (`createWithName` asserts the URL change itself), so it's used
+    // unconditionally instead of relying on the fork's redirect at all.
+    let hasSettings = false;
+    try {
+      await menuTarget.waitFor({ state: 'visible', timeout: 10_000 });
+      hasSettings = true;
+    } catch {
+      hasSettings = false;
+    }
+
+    if (!hasSettings) {
+      await this.switchToEditableMentor();
+      // The dropdown may have closed (navigation) or re-rendered for the
+      // newly-selected, owned mentor — (re)open it and retry.
+      await expect(dropdown).toBeVisible({ timeout: 30_000 });
+      await dropdown.click();
+      await expect(menuTarget).toBeVisible({ timeout: 10_000 });
+    }
+
     await menuTarget.click();
 
     await expect(this.dialog).toBeVisible({ timeout: 15_000 });
@@ -246,9 +300,92 @@ export class EditMentorPage {
     // navigateToTab's getByRole queries always resolve.
     await this.unhideEditDialog();
 
+    // Wait for the modal to finish hydrating before handing control back.
+    await this.waitForHydrated();
+
     if (tabName) {
       await this.navigateToTab(tabName);
     }
+  }
+
+  /**
+   * Block until the Edit Agent modal has finished loading its segment list.
+   *
+   * The modal renders only a header + spinner (`isLoading`) until BOTH the
+   * per-mentor settings query AND the modal's RBAC prefetch resolve
+   * (see `edit-mentor-modal/index.tsx`). On freshly-created or
+   * rapidly-navigated mentors — exactly what these journeys create in their
+   * `beforeEach` — the mentor context churns while it settles and the RBAC
+   * prefetch can 400 for a not-yet-fully-provisioned mentor, so hydration
+   * routinely takes ~30s+ locally and longer on slower CI workers (a 60s cap
+   * was observed to be exceeded there — hence 90s). Waiting on the first real
+   * segment tab (a Radix `TabsTrigger`, uniquely `aria-controls="panel-…"`)
+   * means every segment is mounted before callers (navigateToTab / test
+   * bodies) touch the sidebar, instead of racing the spinner.
+   *
+   * Public so specs that open the modal through their own path (e.g. the
+   * navbar mentor-dropdown deep-link in journey 39) can wait for the same
+   * signal before asserting on segment tabs.
+   */
+  async waitForHydrated(): Promise<void> {
+    // Fail fast with a meaningful signal when the dialog isn't open at all
+    // (a caller drove a tab helper without open()) — otherwise the segment
+    // wait below burns its full 90s on a dialog that will never appear.
+    await expect(
+      this.dialog,
+      'Edit Agent dialog must be open before waiting for hydration — call open() first',
+    ).toBeVisible({ timeout: 15_000 });
+    await this.dialog
+      .locator('[role="tab"][aria-controls^="panel-"]:visible')
+      .first()
+      .waitFor({ state: 'visible', timeout: 90_000 });
+  }
+
+  /**
+   * Get off a mentor this admin can't edit and onto one they can.
+   *
+   * Called from `open()` when the "Selected agent" dropdown is open but has
+   * no "Settings" menu item — only mentors this admin owns expose it. A
+   * non-owned mentor (e.g. a public/forkable template mentor from the main
+   * tenant catalog) instead shows only "New Chat" and, for forkable ones, a
+   * "Modify" footer action (see `handleModifyMentor` / `showForkButton` in
+   * `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`).
+   *
+   * Does NOT use "Modify": it's a one-click server-side fork
+   * (`useForkMentorMutation`) that is supposed to redirect to the new copy,
+   * but a live run showed the fork can complete (the copy shows up under
+   * Explore/My Agents) WITHOUT the page navigating — leaving nothing to
+   * `safeWaitForURL` on and hanging for the full timeout. Unconditionally
+   * uses `CreateMentorPage.openAndCreate()` instead: the same isolation
+   * primitive already proven across journeys 02/09/44/47/54/56/etc., whose
+   * `createWithName` step asserts the resulting URL change itself, so there
+   * is no redirect to guess at.
+   *
+   * Assumes the dropdown is currently open on the non-editable mentor's
+   * menu. Leaves the dropdown closed and the page navigated to a fresh,
+   * owned, editable mentor — the caller is responsible for reopening it.
+   */
+  private async switchToEditableMentor(): Promise<void> {
+    // Close the open dropdown first — CreateMentorPage.open() drives the
+    // sidebar's "Agents" / "New Agent" entry points and doesn't expect a
+    // dropdown menu floating on top of them.
+    await this.page.keyboard.press('Escape');
+
+    // CreateMentorPage.open() clicks "Agents" expecting it to expand an
+    // inline collapsible section containing "New Agent" — that only mounts
+    // when the sidebar itself is in its full (non icon-rail) width. A live
+    // run hit a session where the sidebar was already collapsed to the icon
+    // rail (a `<aside>`-level "Expand sidebar" toggle, a different concept
+    // from the "Agents" section's own aria-expanded state), so "New Agent"
+    // never appeared and openAndCreate() timed out. Reuse SidebarPage's
+    // proven `ensureExpanded()` (already used by other page objects for the
+    // same reason) so this is deterministic regardless of leftover sidebar
+    // state on the shared admin storageState.
+    await new SidebarPage(this.page).ensureExpanded();
+
+    await new CreateMentorPage(this.page).openAndCreate();
+    await waitForPageReady(this.page);
+    await this.restoreAppChrome();
   }
 
   /**
@@ -311,34 +448,83 @@ export class EditMentorPage {
     await this.unhideEditDialog();
 
     await expect(this.dialog).toBeVisible({ timeout: 35_000 });
+
+    // Same hydration story as open(): a sibling mentor picked from the list
+    // has no cached settings/RBAC, so the modal shows its spinner while both
+    // load — callers (journey 06 asserts the full segment sidebar) must not
+    // race it.
+    await this.waitForHydrated();
   }
 
   async navigateToTab(tabName: string): Promise<void> {
+    // The modal re-enters its loading spinner whenever its mentor context
+    // changes with the dialog left open (e.g. Copy Mentor's submit points the
+    // open dialog at the freshly-copied mentor — journey 36), unmounting every
+    // segment tab until settings + RBAC re-hydrate. Wait for hydration at
+    // entry so callers never race the spinner; on an already-hydrated modal
+    // the first segment tab is visible and this returns immediately.
+    //
+    // A single entry-wait is not enough for the context-switch case: right
+    // after the switch there is a pre-spinner window where the OLD mentor's
+    // tabs are still mounted, so the entry-wait passes instantly and the
+    // spinner then swallows the tabs mid-navigation. `attemptNavigate` throws
+    // on that race (its 15s tab-wait outlives the window), so retry once —
+    // by then waitForHydrated genuinely blocks until re-hydration completes.
+    await this.waitForHydrated();
+    try {
+      await this.attemptNavigateToTab(tabName);
+    } catch (firstError) {
+      const spinnerLikelyAppeared =
+        (await this.dialog
+          .locator('[role="tab"][aria-controls^="panel-"]:visible')
+          .count()
+          .catch(() => 0)) === 0;
+      if (!spinnerLikelyAppeared) throw firstError;
+      await this.waitForHydrated();
+      await this.attemptNavigateToTab(tabName);
+    }
+  }
+
+  private async attemptNavigateToTab(tabName: string): Promise<void> {
     // The sidebar now renders only the segments belonging to the active
     // category, so segment triggers outside that category aren't in the DOM
     // yet. Switch to the segment's category first when known.
     const category = TAB_CATEGORY[tabName];
     if (category) {
-      const categoryTab = this.dialog.getByRole('tab', {
-        name: category,
-        exact: true,
-      });
-      // Wait for the category strip to mount — the dialog renders a loading
-      // spinner while mentor-settings + RBAC hydrate; tabs only appear after
-      // both resolve. Without this wait, getAttribute returns null (element
-      // not yet in the a11y tree), causing the unconditional click() below to
-      // timeout while waiting for the element to become interactable.
-      await categoryTab.waitFor({ state: 'visible', timeout: 20_000 });
-      const categoryActive =
-        (await categoryTab.getAttribute('data-state').catch(() => null)) ===
-        'active';
-      if (!categoryActive) {
-        await categoryTab.click();
-        // Wait for Radix to flip `data-state` to active rather than sleeping —
-        // when active, the new category's segments are guaranteed mounted.
-        await expect(categoryTab).toHaveAttribute('data-state', 'active', {
-          timeout: 5_000,
-        });
+      // Scope to the visible category pill. Each pill is rendered twice
+      // (desktop sidebar + compact mobile strip); `:visible` isolates the one
+      // for the active breakpoint so the locator resolves to a single element.
+      const categoryTab = this.dialog
+        .getByRole('tab', { name: category, exact: true })
+        .and(this.dialog.locator(':visible'));
+      // The category strip only renders when MORE THAN ONE category has items
+      // (see `showCategoryStrip` in edit-mentor-modal/index.tsx). When RBAC
+      // leaves a single category, the strip is dropped and every segment sits
+      // in the one visible list already — so treat the category switch as
+      // best-effort: wait a bounded time for the pill, and if it never
+      // appears, fall through to the segment lookup below.
+      const hasStrip = await categoryTab
+        .first()
+        .waitFor({ state: 'visible', timeout: 15_000 })
+        .then(() => true)
+        .catch(() => false);
+      if (hasStrip) {
+        const categoryActive =
+          (await categoryTab
+            .first()
+            .getAttribute('data-state')
+            .catch(() => null)) === 'active';
+        if (!categoryActive) {
+          await categoryTab.first().click();
+          // Wait for the pill to flip `data-state` to active rather than
+          // sleeping — when active, the category's segments are guaranteed
+          // mounted.
+          await expect(categoryTab.first()).toHaveAttribute(
+            'data-state',
+            'active',
+            { timeout: 5_000 },
+          );
+        }
       }
     }
 

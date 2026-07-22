@@ -1,6 +1,7 @@
 import { Page, Locator, expect } from '@playwright/test';
 import {
   billingAutoRechargeSection,
+  billingCreditsSection,
   billingPlanSection,
   getCurrentTenantShowPaywall,
   waitForBillingTabReady,
@@ -18,6 +19,7 @@ export class BillingPage {
 
   readonly accountDialog: Locator;
   readonly billingPlanSection: Locator;
+  readonly creditsSection: Locator;
   readonly autoRechargeSection: Locator;
   readonly autoRechargeModal: Locator;
   readonly addCreditsModal: Locator;
@@ -33,6 +35,7 @@ export class BillingPage {
     this.page = page;
     this.accountDialog = page.getByRole('dialog');
     this.billingPlanSection = billingPlanSection(page);
+    this.creditsSection = billingCreditsSection(page);
     this.autoRechargeSection = billingAutoRechargeSection(page);
     this.autoRechargeModal = page
       .getByRole('dialog')
@@ -62,6 +65,20 @@ export class BillingPage {
   /** True iff the current tenant has `show_paywall=true` in localStorage. */
   async isPaywallEnabled(): Promise<boolean> {
     return getCurrentTenantShowPaywall(this.page);
+  }
+
+  /**
+   * Reads the "<n> Credits" value out of the open Billing tab's Credits
+   * section (`data-testid="billing-credits-section"`). Mirrors the regex
+   * used internally by the SDK's `getCreditBalanceRemaining` helper for the
+   * nav-bar dropdown. Returns null when the section isn't rendered yet or
+   * the text is unparseable.
+   */
+  async getCreditsRemaining(): Promise<number | null> {
+    const text = await this.creditsSection.innerText().catch(() => '');
+    const match = text.match(/([0-9][0-9,]*)\s*Credits/i);
+    if (!match) return null;
+    return parseInt(match[1].replace(/,/g, ''), 10);
   }
 
   /**
