@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { toast } from 'sonner';
 
 import { MemoryTab } from '../index';
 
@@ -155,6 +156,19 @@ describe('MemoryTab', () => {
           formData: { enable_memory_component: true },
         }),
       );
+    });
+
+    it('rolls back the toggle and shows an error toast when the PATCH fails', async () => {
+      mockEditMentor.mockReturnValue({
+        unwrap: vi.fn().mockRejectedValue(new Error('nope')),
+      });
+      render(<MemoryTab />);
+
+      fireEvent.click(screen.getByTestId('memory-capability-toggle'));
+
+      await waitFor(() => expect(toast.error).toHaveBeenCalled());
+      // optimistic check was rolled back to the server value (false)
+      expect(screen.getByTestId('memory-capability-toggle')).not.toBeChecked();
     });
   });
 

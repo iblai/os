@@ -1,6 +1,13 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup, fireEvent } from '@testing-library/react';
+import {
+  render,
+  screen,
+  cleanup,
+  fireEvent,
+  waitFor,
+} from '@testing-library/react';
+import { toast } from 'sonner';
 
 import { SandboxTab } from './sandbox-tab';
 
@@ -189,6 +196,19 @@ describe('SandboxTab', () => {
           formData: { enable_claw: true },
         }),
       );
+    });
+
+    it('rolls back the toggle and shows an error toast when the PATCH fails', async () => {
+      mockEditMentor.mockReturnValue({
+        unwrap: vi.fn().mockRejectedValue(new Error('nope')),
+      });
+      render(<SandboxTab />);
+
+      fireEvent.click(screen.getByTestId('sandbox-capability-toggle'));
+
+      await waitFor(() => expect(toast.error).toHaveBeenCalled());
+      // optimistic check was rolled back to the server value (false)
+      expect(screen.getByTestId('sandbox-capability-toggle')).not.toBeChecked();
     });
   });
 

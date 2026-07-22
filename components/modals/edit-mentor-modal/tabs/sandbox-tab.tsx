@@ -49,6 +49,7 @@ export function SandboxTab() {
         org: tenantKey,
         // @ts-ignore userId is accepted at runtime
         userId: username ?? '',
+        // @ts-ignore enable_claw is accepted at runtime but was dropped from MentorSettingsRequest in @iblai/iblai-js 1.26.x
         formData: { enable_claw: checked },
       }).unwrap();
       toast.success(t('toggleSuccess'));
