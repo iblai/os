@@ -4,20 +4,20 @@
 
 ### Features
 
-* **mentor:** adding evals features ([eb1c3dd](https://github.com/iblai/os/commit/eb1c3dd11f789e16a2580854e46e8e298173f044))
-* **mentor:** adding feature for mentor evaluation ([4b78ca5](https://github.com/iblai/os/commit/4b78ca58e31a4e035ab15d2b14d98f7e82f398be))
+- **mentor:** adding evals features ([eb1c3dd](https://github.com/iblai/os/commit/eb1c3dd11f789e16a2580854e46e8e298173f044))
+- **mentor:** adding feature for mentor evaluation ([4b78ca5](https://github.com/iblai/os/commit/4b78ca58e31a4e035ab15d2b14d98f7e82f398be))
 
 ### Bug Fixes
 
-* **mentor:** adding unit tests coverage ([51f1b13](https://github.com/iblai/os/commit/51f1b137798be01bacbb7df766ceded6e7249ddb))
-* **mentor:** e2e-test changes and the evals listed in the agent settings ([f3c044a](https://github.com/iblai/os/commit/f3c044a7b08cf3dbc3e78dcaeee55783cd41ed24))
-* **mentor:** fixing evals tab to show on agent settings ([76a7ec7](https://github.com/iblai/os/commit/76a7ec754042e847510cc2f80c3d47e8874ce51c))
-* **mentor:** translations for the tabs names in agent settings ([4752c8b](https://github.com/iblai/os/commit/4752c8be47d39e6b39bc0325eaf260a07755fb13))
-* **web-containers:** adding fixes for the evals ([9c3eba5](https://github.com/iblai/os/commit/9c3eba59f496dbf8dc83d55d26e6f1e2948ee710))
+- **mentor:** adding unit tests coverage ([51f1b13](https://github.com/iblai/os/commit/51f1b137798be01bacbb7df766ceded6e7249ddb))
+- **mentor:** e2e-test changes and the evals listed in the agent settings ([f3c044a](https://github.com/iblai/os/commit/f3c044a7b08cf3dbc3e78dcaeee55783cd41ed24))
+- **mentor:** fixing evals tab to show on agent settings ([76a7ec7](https://github.com/iblai/os/commit/76a7ec754042e847510cc2f80c3d47e8874ce51c))
+- **mentor:** translations for the tabs names in agent settings ([4752c8b](https://github.com/iblai/os/commit/4752c8be47d39e6b39bc0325eaf260a07755fb13))
+- **web-containers:** adding fixes for the evals ([9c3eba5](https://github.com/iblai/os/commit/9c3eba59f496dbf8dc83d55d26e6f1e2948ee710))
 
 ### Chores
 
-* **mentor:** version bump for sdk ([779e5d2](https://github.com/iblai/os/commit/779e5d27c64437b54e875744fc76e73cc66d71f3))
+- **mentor:** version bump for sdk ([779e5d2](https://github.com/iblai/os/commit/779e5d27c64437b54e875744fc76e73cc66d71f3))
 
 ## [0.100.1](https://github.com/iblai/os/compare/v0.100.0...v0.100.1) (2026-07-22)
 
