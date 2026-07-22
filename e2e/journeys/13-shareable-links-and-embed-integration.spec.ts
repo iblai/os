@@ -1,10 +1,15 @@
 import type { Page } from '@playwright/test';
 import { test, expect } from '../fixtures/mentor-test';
-import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
+import {
+  navigateToMentorApp,
+  checkAdminStatus,
+  getPlatformContext,
+} from '../utils/auth';
 import { EMBED_URL } from '../fixtures/test-data';
 import { waitForPageReady } from '../utils/resilient';
 import type { EditMentorPage } from '../page-objects/edit-mentor/edit-mentor.page';
 import { logger } from '@iblai/iblai-js/playwright';
+import { MentorTracker } from '../utils/mentor-cleanup';
 
 /** Builds the embed entry URL (the iframe's own src) for a mentor page. */
 function embedUrlFor(mentorUrl: string): string {
@@ -556,6 +561,18 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
   // handleRegenerateToken entirely — the shareable-link mutations and their
   // success toasts still fire, but no url validation runs.
   test.describe('Shareable Link toggle does not trigger website URL validation (issue #2153)', () => {
+    // Each test below creates its own mentor (fresh per test, not shared via
+    // beforeEach), so cleanup is scoped per-suite via afterAll rather than
+    // per-test — see the "Mentor Creation" convention in other journeys
+    // (e.g. journey 22). Names are prefixed "E2E " so the globalTeardown
+    // sweeper (mentor-sweeper.ts) can also reap them as a backstop if the
+    // afterAll delete is ever skipped (e.g. a crashed run).
+    const tracker = new MentorTracker();
+
+    test.afterAll(async ({ browser }, testInfo) => {
+      await tracker.deleteAll(browser, testInfo);
+    });
+
     // emb-11/12/13: exercised against a freshly created mentor, which is
     // non-anonymous (allow_anonymous=false) with an empty Website URL by
     // default — exactly the precondition that used to trigger the bug.
@@ -574,7 +591,9 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
       // other create-mentor-then-navigate journeys.
       test.setTimeout(300_000);
 
-      await createMentorPage.openAndCreate(`Shareable Link E2E ${Date.now()}`);
+      await createMentorPage.openAndCreate(`E2E Shareable Link ${Date.now()}`);
+      const { mentorId } = await getPlatformContext(page);
+      tracker.add(mentorId);
 
       await editMentorPage.open('Embed');
       await waitForPageReady(page);
@@ -639,8 +658,10 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
       test.setTimeout(300_000);
 
       await createMentorPage.openAndCreate(
-        `Shareable Link Anon E2E ${Date.now()}`,
+        `E2E Shareable Link Anon ${Date.now()}`,
       );
+      const { mentorId } = await getPlatformContext(page);
+      tracker.add(mentorId);
 
       await editMentorPage.open('Settings');
       await waitForPageReady(page);
