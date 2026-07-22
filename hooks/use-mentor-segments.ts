@@ -13,6 +13,7 @@ import {
   CalendarClock,
   Clock,
   Grid,
+  FlaskConical,
   GraduationCap,
   Key,
   MonitorSmartphone,
@@ -89,17 +90,27 @@ export type MentorSegmentNavCategory =
  */
 export const MENTOR_SEGMENT_NAV_CATEGORIES: ReadonlyArray<{
   key: MentorSegmentNavCategory;
+  /** English fallback — consumers should render `t(titleKey)` instead. */
   title: string;
+  /** i18n key in the `header` messages namespace. */
+  titleKey: string;
 }> = [
-  { key: 'configurations', title: 'Configurations' },
-  { key: 'integrations', title: 'Integrations' },
-  { key: 'runtime', title: 'Runtime' },
+  {
+    key: 'configurations',
+    title: 'Configurations',
+    titleKey: 'configurations',
+  },
+  { key: 'integrations', title: 'Integrations', titleKey: 'integrations' },
+  { key: 'runtime', title: 'Runtime', titleKey: 'runtime' },
 ];
 
 export type MentorSegment = {
   /** Stable identifier — matches MODALS.EDIT_MENTOR.tabs.* for tab segments */
   value: string;
+  /** English fallback — consumers should render `t(labelKey)` instead. */
   label: string;
+  /** i18n key in the `header` messages namespace (same one header.tsx uses). */
+  labelKey: string;
   icon: LucideIcon;
   userTypes: UserType[];
   rbacResource?: (mentorDbId: number) => string;
@@ -124,6 +135,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
   {
     value: MODALS.EDIT_MENTOR.tabs.settings,
     label: 'Settings',
+    labelKey: 'settings',
     icon: Settings,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/#show_settings`,
@@ -148,6 +160,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
   {
     value: MODALS.EDIT_MENTOR.tabs.sandbox,
     label: 'Sandbox',
+    labelKey: 'sandbox',
     icon: Container,
     userTypes: [UserType.ADMIN],
     permissionFieldsCheck: [],
@@ -163,6 +176,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
   {
     value: MODALS.EDIT_MENTOR.tabs.access,
     label: 'Access',
+    labelKey: 'access',
     icon: UserCog,
     userTypes: [UserType.ADMIN],
     rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/#read_shared_mentor`,
@@ -173,6 +187,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
   {
     value: MODALS.EDIT_MENTOR.tabs.llm,
     label: 'LLM',
+    labelKey: 'llm',
     icon: Brain,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/llms/#list`,
@@ -186,6 +201,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
   {
     value: MODALS.EDIT_MENTOR.tabs.voice,
     label: 'Voice',
+    labelKey: 'voice',
     icon: Volume2,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     // Backend doesn't yet expose voice_provider/openai_voice/google_voice in
@@ -204,6 +220,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
   {
     value: MODALS.EDIT_MENTOR.tabs.screenshare,
     label: 'Screen Share',
+    labelKey: 'screenShare',
     icon: MonitorPlay,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     permissionFieldsCheck: [],
@@ -219,6 +236,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
   {
     value: MODALS.EDIT_MENTOR.tabs.prompts,
     label: 'Prompts',
+    labelKey: 'prompts',
     icon: Terminal,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     rbacResource: (mentorDbId) =>
@@ -237,6 +255,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
   {
     value: MODALS.EDIT_MENTOR.tabs.skills,
     label: 'Skills',
+    labelKey: 'skills',
     icon: Sparkles,
     userTypes: [UserType.ADMIN],
     permissionFieldsCheck: [],
@@ -253,6 +272,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
   {
     value: MODALS.EDIT_MENTOR.tabs.safety,
     label: 'Safety',
+    labelKey: 'safety',
     icon: Shield,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     rbacResource: (mentorDbId) =>
@@ -272,6 +292,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
   {
     value: MODALS.EDIT_MENTOR.tabs.privacy,
     label: 'Privacy',
+    labelKey: 'privacy',
     icon: ShieldCheck,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     permissionFieldsCheck: [],
@@ -287,6 +308,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
   {
     value: MODALS.EDIT_MENTOR.tabs.tasks,
     label: 'Tasks',
+    labelKey: 'tasks',
     icon: CalendarClock,
     // Platform-admin-only until the backend exposes an RBAC resource for
     // periodic agents. No `rbacResource` set — the userTypes filter alone
@@ -302,6 +324,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
   {
     value: MODALS.EDIT_MENTOR.tabs.disclaimer,
     label: 'Disclaimers',
+    labelKey: 'disclaimers',
     icon: FileWarning,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     rbacResource: (mentorDbId) =>
@@ -316,6 +339,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
   {
     value: MODALS.EDIT_MENTOR.tabs.tools,
     label: 'Tools',
+    labelKey: 'tools',
     icon: Wrench,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     rbacResource: (mentorDbId) =>
@@ -330,6 +354,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
   {
     value: MODALS.EDIT_MENTOR.tabs.mcp,
     label: 'MCP',
+    labelKey: 'mcp',
     icon: Plug,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/mcpservers/#list`,
@@ -343,6 +368,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
   {
     value: MODALS.EDIT_MENTOR.tabs.memory,
     label: 'Memory',
+    labelKey: 'memory',
     icon: Archive,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/memory/#list`,
@@ -360,6 +386,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
   {
     value: MODALS.EDIT_MENTOR.tabs.history,
     label: 'History',
+    labelKey: 'history',
     icon: Clock,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/#view_chat_history`,
@@ -373,6 +400,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
   {
     value: MODALS.EDIT_MENTOR.tabs.audit_log,
     label: 'Audit',
+    labelKey: 'audit',
     icon: ScrollText,
     userTypes: [UserType.ADMIN],
     rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/#view_audit_logs`,
@@ -383,6 +411,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
   {
     value: MODALS.EDIT_MENTOR.tabs.datasets,
     label: 'Datasets',
+    labelKey: 'datasets',
     icon: Grid,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/documents/#list`,
@@ -394,8 +423,24 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     navCategory: 'integrations',
   },
   {
+    value: MODALS.EDIT_MENTOR.tabs.evaluation,
+    label: 'Evals',
+    labelKey: 'evals',
+    icon: FlaskConical,
+    userTypes: [UserType.ADMIN],
+    rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/documents/#list`,
+    permissionFieldsCheck: [],
+    mentorVisibility: [MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS],
+    // Without a navCategory the new categorized layout (modal sidebar +
+    // nav-bar dropdown) silently drops this segment — both consumers skip
+    // any segment lacking a category. Agent evaluation reports on run
+    // performance, so it belongs in Runtime alongside History/Audit.
+    navCategory: 'runtime',
+  },
+  {
     value: MODALS.EDIT_MENTOR.tabs.api,
     label: 'API',
+    labelKey: 'api',
     icon: Key,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     rbacResource: () => '/apitokens/#list',
@@ -409,6 +454,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
   {
     value: MODALS.EDIT_MENTOR.tabs.lti,
     label: 'LTI',
+    labelKey: 'lti',
     icon: GraduationCap,
     // Admin-only for now: LTI launch configuration is a platform-admin
     // concern and the backend doesn't yet expose an RBAC resource or a
@@ -430,6 +476,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
   {
     value: MODALS.EDIT_MENTOR.tabs.embed,
     label: 'Embed',
+    labelKey: 'embed',
     icon: MonitorSmartphone,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/#can_use_embed`,
@@ -449,6 +496,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     // replaces the former ad-hoc `ANALYTICS_NAV_ITEM`.
     value: MODALS.EDIT_MENTOR.tabs.analytics,
     label: 'Analytics',
+    labelKey: 'analytics',
     icon: LineChart,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/#view_analytics`,

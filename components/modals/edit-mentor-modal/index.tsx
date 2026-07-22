@@ -24,6 +24,7 @@ import {
   // FlowTab,
   HistoryTab,
   DatasetsTab,
+  EvaluationTab,
   ApiTab,
   EmbedTab,
   AccessTab,
@@ -79,6 +80,7 @@ export const EDIT_MENTOR_TAB_COMPONENTS: Record<string, ReactNode> = {
   [MODALS.EDIT_MENTOR.tabs.history]: <HistoryTab />,
   [MODALS.EDIT_MENTOR.tabs.audit_log]: <AuditLogTab />,
   [MODALS.EDIT_MENTOR.tabs.datasets]: <DatasetsTab />,
+  [MODALS.EDIT_MENTOR.tabs.evaluation]: <EvaluationTab />,
   [MODALS.EDIT_MENTOR.tabs.api]: <ApiTab />,
   [MODALS.EDIT_MENTOR.tabs.embed]: <EmbedTab />,
   [MODALS.EDIT_MENTOR.tabs.voice]: <VoiceTab />,
@@ -89,6 +91,9 @@ export const EDIT_MENTOR_TAB_COMPONENTS: Record<string, ReactNode> = {
 
 export function EditMentorModal({ isOpen, onClose }: Props) {
   const t = useTranslations('editMentorModalIndex');
+  // Segment labels + category titles live in the shared `header` namespace
+  // (same keys header.tsx uses) so both nav surfaces stay in sync.
+  const tHeader = useTranslations('header');
   const { changeModalTab, getEditMentorTab } = useNavigate();
   const {
     filteredSegments,
@@ -386,7 +391,7 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
                                   : 'text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700/50',
                               )}
                             >
-                              {category.title}
+                              {tHeader(category.titleKey)}
                             </button>
                           );
                         })}
@@ -409,7 +414,9 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
                             className="mr-3 h-4 w-4 flex-shrink-0"
                             aria-hidden="true"
                           />
-                          <span className="truncate">{tab.label}</span>
+                          <span className="truncate">
+                            {tHeader(tab.labelKey)}
+                          </span>
                         </TabsTrigger>
                       ))}
                     </TabsList>
@@ -452,7 +459,7 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
                                 : 'text-gray-600 hover:bg-gray-50',
                             )}
                           >
-                            {category.title}
+                            {tHeader(category.titleKey)}
                           </button>
                         );
                       })}
@@ -476,7 +483,7 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
                           className="h-3 w-3 sm:h-4 sm:w-4"
                           aria-hidden="true"
                         />
-                        <span>{tab.label}</span>
+                        <span>{tHeader(tab.labelKey)}</span>
                       </TabsTrigger>
                     ))}
                   </TabsList>
