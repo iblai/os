@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.102.0](https://github.com/iblai/os/compare/v0.101.1...v0.102.0) (2026-07-23)
+
+### Features
+
+* **security:** nonce-based CSP via Next.js middleware ([9cbefa1](https://github.com/iblai/os/commit/9cbefa1de35a4a723550db44c6c2fb3173dc2afa))
+
+### Bug Fixes
+
+* **security:** only emit upgrade-insecure-requests when enforcing ([b6de0ca](https://github.com/iblai/os/commit/b6de0ca46ef51c9c93f27b7efd2a10e37917d688))
+
 ## [0.101.1](https://github.com/iblai/os/compare/v0.101.0...v0.101.1) (2026-07-23)
 
 ### Bug Fixes
