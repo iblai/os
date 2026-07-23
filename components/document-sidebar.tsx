@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
 import { Radio, FileText, ChevronRight } from 'lucide-react';
@@ -111,15 +110,11 @@ export function DocumentSidebar({
                             <Radio className="mt-1 h-4 w-4 text-gray-400" />
                             <div className="min-w-0 flex-1 space-y-1">
                               <div className="flex items-center justify-between">
-                                <Link
-                                  href={doc.source ?? ''}
-                                  target="_blank"
-                                  className="min-w-0"
-                                >
-                                  <span className="text-sm font-semibold break-words text-[#646464] hover:text-blue-600">
+                                <div className="min-w-0">
+                                  <span className="text-sm font-semibold break-words text-[#646464]">
                                     {doc.title}
                                   </span>
-                                </Link>
+                                </div>
                                 <div className="flex items-center gap-2 self-center">
                                   <span className="text-xs text-gray-500">
                                     {doc?.score?.toFixed(2)}
