@@ -108,7 +108,9 @@ function buildCsp(nonce: string): string {
     'form-action': ["'self'", ...IBL_HTTP],
     // NOTE: intentionally NO `frame-ancestors` — the app runs in EMBED mode
     // inside arbitrary customer sites, so framing must not be restricted here.
-    'upgrade-insecure-requests': [],
+    // `upgrade-insecure-requests` is a no-op (and warns) in a report-only
+    // policy, so it's only emitted when enforcing.
+    ...(isEnforce() ? { 'upgrade-insecure-requests': [] } : {}),
   };
 
   const policy = Object.entries(directives)

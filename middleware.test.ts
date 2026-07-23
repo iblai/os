@@ -28,7 +28,9 @@ describe('CSP middleware', () => {
     // Hardening + embed-mode carve-out:
     expect(csp).toContain("object-src 'none'");
     expect(csp).toContain("base-uri 'self'");
-    expect(csp).toContain('upgrade-insecure-requests');
+    // upgrade-insecure-requests is a no-op in report-only (and the browser
+    // warns), so it's omitted unless enforcing.
+    expect(csp).not.toContain('upgrade-insecure-requests');
     expect(csp).not.toContain('frame-ancestors'); // app runs embedded
   });
 
@@ -61,9 +63,10 @@ describe('CSP middleware', () => {
     vi.stubEnv('CSP_MODE', 'enforce');
     const res = middleware(req());
 
-    expect(res.headers.get('Content-Security-Policy')).toContain(
-      "default-src 'self'",
-    );
+    const csp = res.headers.get('Content-Security-Policy');
+    expect(csp).toContain("default-src 'self'");
+    // Only meaningful when enforcing, so it's emitted here.
+    expect(csp).toContain('upgrade-insecure-requests');
     expect(res.headers.get('Content-Security-Policy-Report-Only')).toBeNull();
   });
 
