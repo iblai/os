@@ -75,6 +75,11 @@ export function useModelDownload() {
     useState<boolean>(false);
   const unlistenRefs = useRef<Array<() => void>>([]);
   const hasCheckedStatus = useRef(false);
+  // Last whole-percent we pushed to state, to coalesce the high-frequency Ollama
+  // progress stream (many chunk events/sec) down to one update per visible
+  // percent — otherwise every event setStates across all useModelDownload
+  // instances and fans out via the shared-storage event, freezing the webview.
+  const lastProgressPctRef = useRef<number>(-1);
   // Stable handle to the latest checkStatus so the mount-time event listeners
   // can refresh status (e.g. after a download completes) without re-subscribing.
   const checkStatusRef = useRef<() => void>(() => {});
@@ -116,11 +121,6 @@ export function useModelDownload() {
         const unlistenProgress = await listen<DownloadProgress>(
           TAURI_EVENTS.DOWNLOAD_PROGRESS,
           (payload) => {
-            console.log(
-              '[useModelDownload] Received progress event:',
-              JSON.stringify(payload),
-            );
-
             const newStatus: ModelDownloadState['status'] =
               payload.status === 'completed'
                 ? 'completed'
@@ -130,31 +130,28 @@ export function useModelDownload() {
                     ? 'error'
                     : 'downloading';
 
-            console.log(
-              '[useModelDownload] Setting state - newStatus:',
-              newStatus,
-              'progress:',
-              payload.percentage,
-            );
+            // Coalesce the progress stream: while actively downloading, ignore
+            // events that don't advance the whole-percent shown in the UI. Ollama
+            // emits many chunk events per second and each one would setState
+            // across every mounted instance (fanning out via the shared-storage
+            // event) — unthrottled this froze the webview mid-download. Terminal
+            // and status-changing events (completed/cancelled/error) always pass.
+            const flooredPct = Math.floor(payload.percentage);
+            if (
+              newStatus === 'downloading' &&
+              flooredPct === lastProgressPctRef.current
+            ) {
+              return;
+            }
+            lastProgressPctRef.current = flooredPct;
 
-            setState((prev) => {
-              console.log(
-                '[useModelDownload] setState callback - prev:',
-                JSON.stringify(prev),
-              );
-              const newState: ModelDownloadState = {
-                ...prev,
-                status: newStatus,
-                progress: payload.percentage,
-                message: payload.message,
-                lastUpdated: new Date().toISOString(),
-              };
-              console.log(
-                '[useModelDownload] setState callback - newState:',
-                JSON.stringify(newState),
-              );
-              return newState;
-            });
+            setState((prev) => ({
+              ...prev,
+              status: newStatus,
+              progress: payload.percentage,
+              message: payload.message,
+              lastUpdated: new Date().toISOString(),
+            }));
 
             if (payload.status === 'completed') {
               // Refresh Ollama status so the freshly pulled model shows up in
@@ -258,7 +255,26 @@ export function useModelDownload() {
       // status card stuck "loading". Tauri is the source of truth from here on.
       if (!didResetPersistedState) {
         didResetPersistedState = true;
-        setState(initialModelDownloadState);
+        // Clear stale manager/checking flags left by an interrupted operation —
+        // but PRESERVE a genuinely in-flight download. The Ollama pull continues
+        // server-side across a frontend reload/remount, and its progress events
+        // carry no model id, so wiping `activeModel` here stranded the download:
+        // the bar kept advancing (status/progress restored by events) while
+        // `activeModel` stayed undefined, so the row never matched and showed
+        // "Download" with no progress. Keep status/progress/activeModel when a
+        // download is under way; otherwise reset fully.
+        setState((prev) =>
+          prev.status === 'downloading' && prev.activeModel
+            ? {
+                ...initialModelDownloadState,
+                status: 'downloading',
+                progress: prev.progress,
+                message: prev.message,
+                activeModel: prev.activeModel,
+                lastUpdated: prev.lastUpdated,
+              }
+            : initialModelDownloadState,
+        );
       }
 
       checkStatus();

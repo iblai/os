@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import Image from 'next/image';
 import { Download, X, Check, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -29,64 +28,6 @@ interface LocalModelRowProps {
   disabledReason?: string;
   errorMessage?: string;
   onActivate: () => void;
-}
-
-const RING_SIZE = 32;
-const RING_STROKE = 3;
-
-/**
- * Determinate progress ring drawn around the model logo. The fill transition is
- * gated behind `motion-safe` so it stays static under prefers-reduced-motion.
- */
-function ProgressRing({
-  value,
-  children,
-}: {
-  value: number;
-  children: React.ReactNode;
-}) {
-  const r = (RING_SIZE - RING_STROKE) / 2;
-  const circumference = 2 * Math.PI * r;
-  const clamped = Math.max(0, Math.min(100, value));
-  const offset = circumference - (clamped / 100) * circumference;
-  return (
-    <span
-      className="relative inline-flex items-center justify-center"
-      style={{ width: RING_SIZE, height: RING_SIZE }}
-    >
-      <svg
-        width={RING_SIZE}
-        height={RING_SIZE}
-        viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}
-        className="absolute -rotate-90"
-        aria-hidden="true"
-      >
-        <circle
-          cx={RING_SIZE / 2}
-          cy={RING_SIZE / 2}
-          r={r}
-          fill="none"
-          strokeWidth={RING_STROKE}
-          className="stroke-gray-200"
-        />
-        <circle
-          cx={RING_SIZE / 2}
-          cy={RING_SIZE / 2}
-          r={r}
-          fill="none"
-          strokeWidth={RING_STROKE}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          className="stroke-blue-500 motion-safe:transition-[stroke-dashoffset] motion-safe:duration-300"
-        />
-      </svg>
-      {/* Slightly inset logo so the ring reads clearly around it. */}
-      <span className="relative flex h-6 w-6 items-center justify-center">
-        {children}
-      </span>
-    </span>
-  );
 }
 
 /**
@@ -142,7 +83,10 @@ export function LocalModelRow({
         if (!inert) onActivate();
       }}
       className={cn(
-        'group flex items-center gap-3 rounded-lg border p-4 text-left transition-colors',
+        // `isolate` makes the button its own stacking context so the absolute
+        // progress fill (z-0) layers above the button's background and below the
+        // content (z-10) — without it the fill can render behind the background.
+        'group relative isolate flex items-center gap-3 overflow-hidden rounded-lg border p-4 text-left transition-colors',
         selected
           ? 'cursor-default border-blue-500 bg-blue-50'
           : isBusyDisabled
@@ -150,37 +94,35 @@ export function LocalModelRow({
             : 'cursor-pointer border-gray-200 hover:border-blue-500 hover:bg-blue-50',
       )}
     >
-      {/* Same logo treatment as cloud rows; ringed with progress while downloading. */}
-      <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg">
-        {downloading ? (
-          <ProgressRing value={status === 'starting' ? 0 : progress}>
-            <Image
-              src={logo}
-              alt=""
-              aria-hidden="true"
-              width={24}
-              height={24}
-              className="h-6 w-6 object-contain"
-              loading="lazy"
-            />
-          </ProgressRing>
-        ) : (
-          <Image
-            src={logo}
-            alt=""
-            aria-hidden="true"
-            width={32}
-            height={32}
-            className={cn('h-full w-full object-contain', {
-              grayscale: isBusyDisabled,
-            })}
-            loading="lazy"
-          />
-        )}
+      {/* Download progress: a card-tall, translucent bar filling left→right
+          behind the row content. Static under prefers-reduced-motion. */}
+      {downloading && (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0 left-0 z-0 bg-blue-500/40 motion-safe:transition-[width] motion-safe:duration-300"
+          // Minimum width so the bar is visible the moment a download starts
+          // (progress 0 / "starting"), then tracks real progress.
+          style={{ width: `${status === 'starting' ? 6 : Math.max(pct, 6)}%` }}
+        />
+      )}
+
+      {/* Same logo treatment as cloud rows. */}
+      <span className="relative z-10 flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg">
+        <Image
+          src={logo}
+          alt=""
+          aria-hidden="true"
+          width={32}
+          height={32}
+          className={cn('h-full w-full object-contain', {
+            grayscale: isBusyDisabled,
+          })}
+          loading="lazy"
+        />
       </span>
 
       {/* Name on its own line; on-device · size · action sit on a line below. */}
-      <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+      <span className="relative z-10 flex min-w-0 flex-1 flex-col gap-1.5">
         <span className="truncate text-sm font-medium lowercase text-[#646464]">
           {name}
         </span>

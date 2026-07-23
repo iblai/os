@@ -33,6 +33,16 @@ import {
   setLocalLLMToolSupport,
 } from '@iblai/iblai-js/web-containers';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   LocalModelRow,
   type LocalRowStatus,
 } from './llm-provider-modal/local-model-row';
@@ -72,14 +82,67 @@ interface Props {
 }
 
 /**
- * Whether a catalog model id (e.g. "llama3.2") is among the installed Ollama
- * tags (e.g. "llama3.2:latest"). Inlined from web-containers' `isModelInstalled`
- * (not re-exported from the package entry). Matches an exact tag or same base.
+ * Whether two Ollama model refs name the same model, comparing by base name and
+ * ignoring a trailing `:tag` (so "llama3.2" ≡ "llama3.2:latest", and
+ * "granite4.1:8b" ≡ "granite4.1"). The download state and Ollama's /api/tags may
+ * carry a tag suffix the catalog id doesn't (or vice-versa); an exact `===` then
+ * fails to recognize a row's own in-flight download — the row shows "Download"
+ * with no progress while the pull runs. Base-name matching is safe here because
+ * every catalog model has a unique base (llama3.2, qwen3, mistral, granite4.1,
+ * gpt-oss, gemma4), so it can never light up the wrong row.
  */
-function isModelInstalled(modelId: string, tags?: string[]): boolean {
-  return !!tags?.some((t) => t === modelId || t.startsWith(`${modelId}:`));
+function sameModel(a?: string | null, b?: string | null): boolean {
+  const base = (ref?: string | null) => (ref ?? '').toLowerCase().split(':')[0];
+  const ba = base(a);
+  return ba.length > 0 && ba === base(b);
 }
 
+/**
+ * Whether a catalog model id (e.g. "llama3.2") is among the installed Ollama
+ * tags (e.g. "llama3.2:latest"). Inlined from web-containers' `isModelInstalled`
+ * (not re-exported from the package entry). Matches by base name.
+ */
+function isModelInstalled(modelId: string, tags?: string[]): boolean {
+  return !!tags?.some((t) => sameModel(t, modelId));
+}
+
+const SIZE_UNIT_BYTES: Record<string, number> = {
+  B: 1,
+  KB: 1024,
+  MB: 1024 ** 2,
+  GB: 1024 ** 3,
+  TB: 1024 ** 4,
+};
+
+/** Parse a catalog size like "2.5 GB" to bytes, or null if unrecognized. */
+function parseModelSizeBytes(size: string): number | null {
+  const match = /([\d.]+)\s*(TB|GB|MB|KB|B)/i.exec(size);
+  if (!match) return null;
+  const value = parseFloat(match[1]);
+  if (Number.isNaN(value)) return null;
+  return value * (SIZE_UNIT_BYTES[match[2].toUpperCase()] ?? 1);
+}
+
+// TESTING VALUE (mirrors web-containers): warn when a model exceeds 1% of usable
+// memory so the "too large" prompt is easy to trigger. Raise toward real
+// capacity (e.g. 0.8) once tuned.
+const MODEL_SIZE_WARN_FRACTION = 0.01;
+
+/**
+ * Whether `model` is large enough relative to this machine's memory to warrant a
+ * "might not run" confirmation. Inlined from web-containers' `modelExceedsCapacity`
+ * (not re-exported from the package entry). False when memory or the size is
+ * unknown, so the download simply proceeds rather than blocking on missing data.
+ */
+function modelExceedsCapacity(
+  model: LocalModel,
+  memory: { ram_total: number; vram_total: number } | null | undefined,
+): boolean {
+  const capacity = memory ? Math.max(memory.ram_total, memory.vram_total) : 0;
+  const modelBytes = parseModelSizeBytes(model.size);
+  if (modelBytes == null || capacity <= 0) return false;
+  return modelBytes > capacity * MODEL_SIZE_WARN_FRACTION;
+}
 
 export function LLMProviderModal({
   isOpen,
@@ -98,6 +161,7 @@ export function LLMProviderModal({
     isAvailable,
     state: downloadState,
     ollamaStatus,
+    systemMemory,
     startDownload,
     cancelDownload,
   } = useModelDownload();
@@ -107,6 +171,57 @@ export function LLMProviderModal({
     enabled: isLocalLLMEnabled(),
     model: getLocalLLMModel(),
   }));
+
+  // Model awaiting the "may be too large" confirmation before its download
+  // starts; null when no confirmation is pending.
+  const [pendingModel, setPendingModel] = React.useState<LocalModel | null>(
+    null,
+  );
+
+  // Name of the model currently downloading, shown in an info dialog when the
+  // user clicks a DIFFERENT model (one on-device download at a time). Null when
+  // no such notice is showing.
+  const [busyDownloadName, setBusyDownloadName] = React.useState<string | null>(
+    null,
+  );
+
+  // The last on-device model whose download reported `completed`. Held sticky so
+  // its row shows "installed" straight through the gap between the terminal
+  // `completed` event and the /api/tags refresh landing — otherwise the completed
+  // handler's checkStatus churns downloadState.status (completed → checking →
+  // idle) first and the row flickers back to a "Download" button ("flashes
+  // complete"). Only the latest completion needs bridging; earlier ones are
+  // covered by `ollamaStatus.installed_models` once their refresh has landed.
+  // The model THIS picker asked to download. Modal-local (not the shared, churny
+  // download state) so it survives the hook's once-per-load reset / remounts /
+  // reloads that wipe `downloadState.activeModel` — the pull's progress events
+  // carry no model id, so once `activeModel` is lost nothing restores it and the
+  // row can't recognize its own in-flight download (bar advances, row still says
+  // "Download"). Cleared only on a terminal status, so the reset's transient
+  // `idle` doesn't drop it mid-pull.
+  const [requestedModel, setRequestedModel] = React.useState<string | null>(
+    null,
+  );
+  React.useEffect(() => {
+    if (
+      downloadState.status === 'completed' ||
+      downloadState.status === 'cancelled' ||
+      downloadState.status === 'error'
+    ) {
+      setRequestedModel(null);
+    }
+  }, [downloadState.status]);
+
+  // Which on-device model is downloading right now: prefer this picker's own
+  // request, fall back to the shared state's id when present.
+  const downloadingModel = requestedModel ?? downloadState.activeModel;
+
+  const [lastCompleted, setLastCompleted] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    if (downloadState.status === 'completed' && downloadingModel) {
+      setLastCompleted(downloadingModel);
+    }
+  }, [downloadState.status, downloadingModel]);
 
   const filteredLLMs = React.useMemo(() => {
     // Guard `chat_models` (not just `llmProvider`): a provider can come back from
@@ -134,16 +249,24 @@ export function LLMProviderModal({
   const switchLLMAllowed = canSwitchLLm(llmProvider);
   const switchProviderAllowed = canSwitchProvider(llms, llmProvider.name);
 
-  const busyDownloading =
-    downloadState.status === 'downloading' || downloadState.status === 'checking';
+  // Only an actual pull counts as "busy". A status refresh ('checking') must NOT
+  // — otherwise a stale `activeModel` makes a row flash a progress bar (and, with
+  // the old graying, greyed the others) every time status is re-checked.
+  const busyDownloading = downloadState.status === 'downloading';
 
   const statusFor = (m: LocalModel): LocalRowStatus => {
     if (localSel.enabled && localSel.model === m.id) return 'selected';
-    const active = downloadState.activeModel === m.id;
+    const active = sameModel(downloadingModel, m.id);
     if (active && downloadState.status === 'error') return 'error';
     if (active && busyDownloading)
       return downloadState.progress > 0 ? 'downloading' : 'starting';
-    if (isModelInstalled(m.id, ollamaStatus?.installed_models)) return 'installed';
+    // `lastCompleted` bridges the just-finished → tags-refreshed gap so the row
+    // stays "installed" instead of flickering back to "Download".
+    if (
+      sameModel(lastCompleted, m.id) ||
+      isModelInstalled(m.id, ollamaStatus?.installed_models)
+    )
+      return 'installed';
     return 'not-installed';
   };
 
@@ -180,11 +303,36 @@ export function LLMProviderModal({
     })),
   ].sort((a, b) => a.rank - b.rank);
 
+  // Preserve the "model may be too large" prompt before a download starts. Opens
+  // the confirmation AlertDialog below (layered on top of the picker), rather
+  // than a toast. `modelExceedsCapacity` compares the model's size to this
+  // machine's RAM/VRAM; when memory is unknown it returns false, so the download
+  // simply proceeds rather than blocking on incomplete data.
+  const startLocalDownload = (m: LocalModel) => {
+    if (modelExceedsCapacity(m, systemMemory)) {
+      setPendingModel(m);
+      return;
+    }
+    setRequestedModel(m.id);
+    startDownload(m.id);
+  };
+
   const activateLocal = (m: LocalModel, status: LocalRowStatus) => {
     switch (status) {
       case 'not-installed':
       case 'error':
-        startDownload(m.id);
+        // Only one on-device model downloads at a time. If ANY pull is already
+        // running, don't start another — starting concurrent pulls floods every
+        // useModelDownload instance with progress events and can hang the app.
+        // Block even when the running model is unknown (activeModel wiped); the
+        // user cancels by clicking the downloading row itself. Selecting an
+        // already-installed model is unaffected (it starts no pull).
+        if (busyDownloading && !sameModel(downloadingModel, m.id)) {
+          const dl = LOCAL_MODELS.find((x) => sameModel(x.id, downloadingModel));
+          setBusyDownloadName(dl?.name ?? 'A model');
+          return;
+        }
+        startLocalDownload(m);
         break;
       case 'starting':
       case 'downloading':
@@ -220,7 +368,7 @@ export function LLMProviderModal({
   };
 
   // Announce download lifecycle changes once (not every %) for screen readers.
-  const activeLocal = LOCAL_MODELS.find((m) => m.id === downloadState.activeModel);
+  const activeLocal = LOCAL_MODELS.find((m) => sameModel(m.id, downloadingModel));
   const liveMessage = !activeLocal
     ? ''
     : downloadState.status === 'completed'
@@ -263,10 +411,10 @@ export function LLMProviderModal({
         </div>
 
         <div className="grid max-h-[60vh] grid-cols-1 gap-4 overflow-y-auto pr-2 sm:grid-cols-2 lg:grid-cols-3">
-          {/* Cloud + on-device models in one availability-ranked list:
-              available (usable now) first, unavailable (no credentials / needs
-              download) last. */}
-          {sortedModels.map((item) => {
+            {/* Cloud + on-device models in one availability-ranked list:
+                available (usable now) first, unavailable (no credentials / needs
+                download) last. */}
+            {sortedModels.map((item) => {
             if (item.kind === 'cloud') {
               const llm = item.llm;
               const isActive = isCloudActive(llm);
@@ -329,15 +477,77 @@ export function LLMProviderModal({
                 logo={getLLMProviderDetails(llmProvider.name, m.name).logo}
                 status={status}
                 progress={
-                  downloadState.activeModel === m.id ? downloadState.progress : 0
+                  sameModel(downloadingModel, m.id) ? downloadState.progress : 0
                 }
-                disabled={busyDownloading && downloadState.activeModel !== m.id}
-                disabledReason="Another model is downloading"
                 onActivate={() => activateLocal(m, status)}
               />
             );
           })}
         </div>
+
+        {/* "Model too large" confirmation — a dialog layered on top of the
+            models page (not a toast), so it doesn't dismiss the picker and the
+            confirm actually starts the download. */}
+        <AlertDialog
+          open={!!pendingModel}
+          onOpenChange={(open) => {
+            if (!open) setPendingModel(null);
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                This model may be too large for your system
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {pendingModel?.name} needs about {pendingModel?.size}. It may run
+                very slowly or fail to load on this machine. Download anyway?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setPendingModel(null)}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (pendingModel) {
+                    setRequestedModel(pendingModel.id);
+                    startDownload(pendingModel.id);
+                  }
+                  setPendingModel(null);
+                }}
+              >
+                Download anyway
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* "Another model is downloading" notice — shown when the user clicks a
+            different model while one is pulling (one download at a time). The
+            download is cancelled by clicking the downloading model itself. */}
+        <AlertDialog
+          open={!!busyDownloadName}
+          onOpenChange={(open) => {
+            if (!open) setBusyDownloadName(null);
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>A model is already downloading</AlertDialogTitle>
+              <AlertDialogDescription>
+                {busyDownloadName} is being downloaded. Only one on-device model
+                downloads at a time — wait for it to finish, or click{' '}
+                {busyDownloadName} in the list to cancel it.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogAction onClick={() => setBusyDownloadName(null)}>
+                Got it
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </DialogContent>
     </Dialog>
   );

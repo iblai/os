@@ -26,20 +26,33 @@ let mockSwitchProvider = true;
 // the available-first ordering.
 let mockLocalAvailable = false;
 let mockInstalledModels: string[] = [];
+// Download state + stable action spies, so a test can put a model "downloading"
+// and assert the cancel / "already downloading" notice behavior.
+let mockDownloadState: {
+  status: string;
+  progress: number;
+  activeModel?: string;
+  message: string;
+  logs: unknown[];
+  lastUpdated: string;
+} = {
+  status: 'idle',
+  progress: 0,
+  activeModel: undefined,
+  message: '',
+  logs: [],
+  lastUpdated: '',
+};
+const mockStartDownload = vi.fn();
+const mockCancelDownload = vi.fn();
 vi.mock('@/hooks/use-model-download', () => ({
   useModelDownload: () => ({
     isAvailable: mockLocalAvailable,
-    state: {
-      status: 'idle',
-      progress: 0,
-      activeModel: undefined,
-      message: '',
-      logs: [],
-      lastUpdated: '',
-    },
+    state: mockDownloadState,
     ollamaStatus: { installed_models: mockInstalledModels },
-    startDownload: vi.fn(),
-    cancelDownload: vi.fn(),
+    systemMemory: null,
+    startDownload: mockStartDownload,
+    cancelDownload: mockCancelDownload,
   }),
 }));
 vi.mock('@iblai/iblai-js/web-containers', () => ({
@@ -131,6 +144,16 @@ describe('LLMProviderModal', () => {
     mockSwitchProvider = true;
     mockLocalAvailable = false;
     mockInstalledModels = [];
+    mockDownloadState = {
+      status: 'idle',
+      progress: 0,
+      activeModel: undefined,
+      message: '',
+      logs: [],
+      lastUpdated: '',
+    };
+    mockStartDownload.mockClear();
+    mockCancelDownload.mockClear();
   });
 
   it('does not render content when closed', () => {
@@ -214,6 +237,50 @@ describe('LLMProviderModal', () => {
     ).toBeTruthy();
   });
 
+  it('cancels the download when the downloading model itself is clicked', () => {
+    mockLocalAvailable = true;
+    mockDownloadState = {
+      status: 'downloading',
+      progress: 40,
+      activeModel: 'dl-model', // "Zeta Download" is the one pulling
+      message: '',
+      logs: [],
+      lastUpdated: '',
+    };
+    render(<LLMProviderModal {...baseProps()} />);
+
+    fireEvent.click(screen.getByText('Zeta Download'));
+
+    expect(mockCancelDownload).toHaveBeenCalled();
+    // Clicking the active model cancels it — no "already downloading" notice.
+    expect(
+      screen.queryByText('A model is already downloading'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows an "already downloading" notice when a different model is clicked', () => {
+    mockLocalAvailable = true;
+    mockDownloadState = {
+      status: 'downloading',
+      progress: 40,
+      activeModel: 'dl-model', // "Zeta Download" is pulling
+      message: '',
+      logs: [],
+      lastUpdated: '',
+    };
+    render(<LLMProviderModal {...baseProps()} />);
+
+    // Click a DIFFERENT model ("Alpha Ready") → info dialog, no download action.
+    fireEvent.click(screen.getByText('Alpha Ready'));
+
+    expect(
+      screen.getByText('A model is already downloading'),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/is being downloaded/)).toBeInTheDocument();
+    expect(mockStartDownload).not.toHaveBeenCalled();
+    expect(mockCancelDownload).not.toHaveBeenCalled();
+  });
+
   it('disables the active model and enables the non-active one (no grayscale on active)', () => {
     render(<LLMProviderModal {...baseProps()} />);
 
@@ -282,6 +349,57 @@ describe('LLMProviderModal', () => {
 
     expect(screen.queryByText('gpt-4')).not.toBeInTheDocument();
     expect(screen.queryByText('gpt-3.5')).not.toBeInTheDocument();
+  });
+
+  it('keeps a just-completed download "installed" before the tags refresh lands', () => {
+    // Regression ("downloading a model flashes complete"): the terminal
+    // `completed` event fires checkStatus, which churns downloadState.status
+    // (completed → checking → idle) before /api/tags refreshes, so the row used
+    // to flicker back to a Download button. With installed_models still empty,
+    // the completed model must already read as installed.
+    mockLocalAvailable = true;
+    mockInstalledModels = [];
+    mockDownloadState = {
+      status: 'completed',
+      progress: 100,
+      activeModel: 'dl-model',
+      message: '',
+      logs: [],
+      lastUpdated: '',
+    };
+    render(<LLMProviderModal {...baseProps()} />);
+
+    expect(
+      screen.getByLabelText('Use Zeta Download, on-device model'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByLabelText(/^Download Zeta Download/),
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows progress on the row even when activeModel carries a :tag suffix', () => {
+    // Regression ("download started in Ollama but the row stays 'downloadable'
+    // with no progress"): download state / Ollama tags can carry a tag suffix the
+    // catalog id lacks, so an exact `===` failed to match the row to its own pull.
+    // Base-name matching must still recognize it.
+    mockLocalAvailable = true;
+    mockInstalledModels = [];
+    mockDownloadState = {
+      status: 'downloading',
+      progress: 42,
+      activeModel: 'dl-model:latest',
+      message: '',
+      logs: [],
+      lastUpdated: '',
+    };
+    render(<LLMProviderModal {...baseProps()} />);
+
+    expect(
+      screen.getByLabelText('Cancel download of Zeta Download, 42 percent'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByLabelText(/^Download Zeta Download/),
+    ).not.toBeInTheDocument();
   });
 
   it('calls onClose when the dialog requests to close (Escape)', () => {
