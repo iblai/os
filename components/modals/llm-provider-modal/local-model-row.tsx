@@ -213,12 +213,9 @@ export function LocalModelRow({
               </span>
             </>
           )}
-          {status === 'installed' && (
-            <>
-              <span aria-hidden="true">·</span>
-              <span className="text-gray-400">Use</span>
-            </>
-          )}
+          {/* Installed but not selected: no extra label. The absence of the
+              size + download icon (present only on downloadable rows) signals
+              the model is ready. */}
           {status === 'selected' && (
             <span className="flex items-center gap-1 text-blue-600">
               <Check className="h-4 w-4" aria-hidden="true" />

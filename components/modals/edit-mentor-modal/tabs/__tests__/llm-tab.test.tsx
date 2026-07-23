@@ -88,10 +88,6 @@ vi.mock('@/components/modals/llm-provider-modal', () => ({
       </div>
     ) : null;
   },
-  // Faithful to the real normalizer (lowercase + strip non-alphanumerics); the
-  // tab now calls this unconditionally to compute the highlighted provider.
-  providerKey: (name: string) =>
-    (name ?? '').toLowerCase().replace(/[^a-z0-9]/g, ''),
 }));
 
 // ============================================================================

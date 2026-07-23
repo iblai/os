@@ -18,11 +18,15 @@ import { useUsername } from '@/hooks/use-user';
 import {
   LLMProvider,
   LLMProviderModal,
-  providerKey,
 } from '@/components/modals/llm-provider-modal';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { toast } from 'sonner';
-import { cn, getLLMProviderDetails, Provider } from '@/lib/utils';
+import {
+  cn,
+  getLLMProviderDetails,
+  getProviderName,
+  Provider,
+} from '@/lib/utils';
 import { useNavigate } from '@/hooks/user-navigate';
 import { Spinner } from '@/components/spinner';
 import WithFormPermissions from '@/hoc/withPermissions';
@@ -81,12 +85,12 @@ export function LLMTab({ showConfigurationHeader = true }: LLMTabProps) {
   const localOnlyProviders = React.useMemo(() => {
     if (!isTauriApp()) return [] as { key: string; provider: string }[];
     const cloudKeys = new Set(
-      (llmProviders ?? []).map((p) => providerKey(p.name)),
+      (llmProviders ?? []).map((p) => getProviderName(p.name)),
     );
     const seen = new Set<string>();
     const result: { key: string; provider: string }[] = [];
     for (const model of LOCAL_MODELS) {
-      const key = providerKey(model.provider);
+      const key = getProviderName(model.provider);
       if (cloudKeys.has(key) || seen.has(key)) continue;
       seen.add(key);
       result.push({ key, provider: model.provider });
@@ -102,9 +106,9 @@ export function LLMTab({ showConfigurationHeader = true }: LLMTabProps) {
   const selectedLocal = useSelectedLocalModel();
   const activeProviderKey =
     selectedLocal.isLocal && selectedLocal.model
-      ? providerKey(selectedLocal.model.provider)
+      ? getProviderName(selectedLocal.model.provider)
       : mentorSettings?.llm_provider
-        ? providerKey(mentorSettings.llm_provider)
+        ? getProviderName(mentorSettings.llm_provider)
         : '';
 
   async function updateMentorLLM(llmProvider: string, llmName: string) {
@@ -199,7 +203,7 @@ export function LLMTab({ showConfigurationHeader = true }: LLMTabProps) {
                             {
                               'border-blue-500':
                                 !!activeProviderKey &&
-                                providerKey(model.name) === activeProviderKey,
+                                getProviderName(model.name) === activeProviderKey,
                             },
                           )}
                           onClick={() => {

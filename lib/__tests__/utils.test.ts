@@ -30,6 +30,7 @@ import {
   convertFromBytes,
   formatRelativeDate,
   getLLMProviderDetails,
+  getProviderName,
   sendMessageToParentWebsite,
   isLoggedIn,
   htmlToMarkdown,
@@ -1256,6 +1257,58 @@ describe('getLLMProviderDetails function', () => {
       logo: '/llm-generic-provider.png',
       name: 'unknown-provider',
     });
+  });
+
+  it('resolves local provider labels to real logos (no generic fallback)', () => {
+    // Local model providers (from LOCAL_MODELS) resolve through the canonical
+    // name, so they get proper icons instead of /llm-generic-provider.png.
+    expect(getLLMProviderDetails('Meta')).toEqual({
+      logo: '/llm-llama-provider.jpeg',
+      name: 'Meta',
+    });
+    expect(getLLMProviderDetails('Microsoft')).toEqual({
+      logo: '/llm-microsoft-provider.png',
+      name: 'Microsoft',
+    });
+    expect(getLLMProviderDetails('Alibaba')).toEqual({
+      logo: '/llm-alibaba-provider.png',
+      name: 'Alibaba',
+    });
+    expect(getLLMProviderDetails('IBM')).toEqual({
+      logo: '/llm-ibm-provider.png',
+      name: 'IBM',
+    });
+  });
+});
+
+describe('getProviderName function', () => {
+  it('maps a human label to its canonical backend name (case-insensitive)', () => {
+    expect(getProviderName('Microsoft')).toBe('azure_openai');
+    expect(getProviderName('microsoft')).toBe('azure_openai');
+    expect(getProviderName('Google')).toBe('google');
+    expect(getProviderName('Meta')).toBe('llama');
+    expect(getProviderName('OpenAI')).toBe('openai');
+    expect(getProviderName('Mistral AI')).toBe('mistral');
+    expect(getProviderName('NVIDIA')).toBe('nvidia');
+    expect(getProviderName('DeepSeek')).toBe('deepseek');
+  });
+
+  it('is idempotent on backend keys', () => {
+    expect(getProviderName('azure_openai')).toBe('azure_openai');
+    expect(getProviderName('google')).toBe('google');
+    expect(getProviderName('llama')).toBe('llama');
+  });
+
+  it('folds a backend key and its label onto ONE identity (so cloud + local merge)', () => {
+    expect(getProviderName('azure_openai')).toBe(getProviderName('Microsoft'));
+    expect(getProviderName('llama')).toBe(getProviderName('Meta'));
+    expect(getProviderName('mistral')).toBe(getProviderName('Mistral AI'));
+    expect(getProviderName('nvidia')).toBe(getProviderName('NVIDIA'));
+  });
+
+  it('returns the normalized form for unknown providers', () => {
+    expect(getProviderName('Some-New Provider')).toBe('somenewprovider');
+    expect(getProviderName('')).toBe('');
   });
 });
 

@@ -19,6 +19,7 @@ import {
   canSwitchProvider,
   cn,
   getLLMProviderDetails,
+  getProviderName,
   Provider,
 } from '@/lib/utils';
 import { useModelDownload } from '@/hooks/use-model-download';
@@ -79,16 +80,6 @@ function isModelInstalled(modelId: string, tags?: string[]): boolean {
   return !!tags?.some((t) => t === modelId || t.startsWith(`${modelId}:`));
 }
 
-// Match a local model's `provider` (e.g. "Mistral AI") to a cloud provider name
-// (e.g. "mistral") tolerantly: strip non-alphanumerics + a couple of aliases.
-const PROVIDER_ALIASES: Record<string, string> = {
-  mistralai: 'mistral',
-  metallama: 'meta',
-};
-export function providerKey(name: string): string {
-  const normalized = name.toLowerCase().replace(/[^a-z0-9]/g, '');
-  return PROVIDER_ALIASES[normalized] ?? normalized;
-}
 
 export function LLMProviderModal({
   isOpen,
@@ -132,10 +123,10 @@ export function LLMProviderModal({
   // Local models belonging to THIS provider (merged into the same list).
   const localModels = React.useMemo(() => {
     if (!isAvailable) return [] as LocalModel[];
-    const key = providerKey(llmProvider.name);
+    const key = getProviderName(llmProvider.name);
     return LOCAL_MODELS.filter(
       (m) =>
-        providerKey(m.provider) === key &&
+        getProviderName(m.provider) === key &&
         m.name.toLowerCase().includes(searchQuery.toLowerCase()),
     );
   }, [isAvailable, llmProvider.name, searchQuery]);
@@ -155,6 +146,39 @@ export function LLMProviderModal({
     if (isModelInstalled(m.id, ollamaStatus?.installed_models)) return 'installed';
     return 'not-installed';
   };
+
+  // A cloud model is "in use" when it's the mentor's selected LLM and local mode
+  // is off.
+  const isCloudActive = (llm: LLM): boolean =>
+    mentorSettings?.llm_name === llm.llm_name &&
+    mentorSettings?.llm_provider === llmProvider.name &&
+    !localSel.enabled;
+
+  // Order the WHOLE list — cloud + local — available (usable now) first,
+  // unavailable last, with the in-use model leading. "Available" for a cloud
+  // model means the provider is switchable (has credentials + models); for a
+  // local model it's the install state. So an installed on-device model outranks
+  // cloud models whose provider has no credentials. Ranked by state, not the
+  // transient download status, so rows don't jump mid-pull; a stable sort keeps
+  // the original (catalog) order within each rank.
+  const cloudRank = (llm: LLM): number =>
+    isCloudActive(llm) ? 0 : switchLLMAllowed && switchProviderAllowed ? 1 : 2;
+  const localRank = (m: LocalModel): number => {
+    const s = statusFor(m);
+    return s === 'selected' ? 0 : s === 'installed' ? 1 : 2;
+  };
+  const sortedModels = [
+    ...filteredLLMs.map((llm) => ({
+      kind: 'cloud' as const,
+      llm,
+      rank: cloudRank(llm),
+    })),
+    ...localModels.map((model) => ({
+      kind: 'local' as const,
+      model,
+      rank: localRank(model),
+    })),
+  ].sort((a, b) => a.rank - b.rank);
 
   const activateLocal = (m: LocalModel, status: LocalRowStatus) => {
     switch (status) {
@@ -239,66 +263,67 @@ export function LLMProviderModal({
         </div>
 
         <div className="grid max-h-[60vh] grid-cols-1 gap-4 overflow-y-auto pr-2 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredLLMs.map((llm) => {
-            const isActive =
-              mentorSettings?.llm_name === llm.llm_name &&
-              mentorSettings?.llm_provider === llmProvider.name &&
-              !localSel.enabled;
+          {/* Cloud + on-device models in one availability-ranked list:
+              available (usable now) first, unavailable (no credentials / needs
+              download) last. */}
+          {sortedModels.map((item) => {
+            if (item.kind === 'cloud') {
+              const llm = item.llm;
+              const isActive = isCloudActive(llm);
 
-            const providerDetails = getLLMProviderDetails(
-              llmProvider.name,
-              llm.llm_name,
-            );
+              const providerDetails = getLLMProviderDetails(
+                llmProvider.name,
+                llm.llm_name,
+              );
 
-            const isDisabled =
-              !switchLLMAllowed ||
-              isSelecting ||
-              isActive ||
-              !switchProviderAllowed;
+              const isDisabled =
+                !switchLLMAllowed ||
+                isSelecting ||
+                isActive ||
+                !switchProviderAllowed;
 
-            return (
-              <button
-                key={llm.llm_name}
-                disabled={isDisabled}
-                onClick={() => {
-                  selectCloud(llm.llm_name);
-                }}
-                className={cn(
-                  'flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 p-4 transition-colors',
-                  {
-                    'cursor-not-allowed border-gray-200 bg-white': isDisabled,
-                    'hover:border-blue-500 hover:bg-blue-50': !isDisabled,
-                    'cursor-not-allowed border-blue-500 bg-blue-50': isActive,
-                  },
-                )}
-              >
-                <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg">
-                  <Image
-                    src={providerDetails.logo}
-                    alt={t('providerIconAlt', {
-                      providerName: providerDetails.name,
-                    })}
-                    className={cn('h-full w-full object-contain', {
-                      grayscale: isDisabled && !isActive,
-                    })}
-                    width={32}
-                    height={32}
-                    loading="lazy"
-                  />
-                </span>
-                <span className="text-left text-sm font-medium text-[#646464]">
-                  {llm.llm_name}
-                </span>
-              </button>
-            );
-          })}
+              return (
+                <button
+                  key={`cloud-${llm.llm_name}`}
+                  disabled={isDisabled}
+                  onClick={() => {
+                    selectCloud(llm.llm_name);
+                  }}
+                  className={cn(
+                    'flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 p-4 transition-colors',
+                    {
+                      'cursor-not-allowed border-gray-200 bg-white': isDisabled,
+                      'hover:border-blue-500 hover:bg-blue-50': !isDisabled,
+                      'cursor-not-allowed border-blue-500 bg-blue-50': isActive,
+                    },
+                  )}
+                >
+                  <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg">
+                    <Image
+                      src={providerDetails.logo}
+                      alt={t('providerIconAlt', {
+                        providerName: providerDetails.name,
+                      })}
+                      className={cn('h-full w-full object-contain', {
+                        grayscale: isDisabled && !isActive,
+                      })}
+                      width={32}
+                      height={32}
+                      loading="lazy"
+                    />
+                  </span>
+                  <span className="text-left text-sm font-medium text-[#646464]">
+                    {llm.llm_name}
+                  </span>
+                </button>
+              );
+            }
 
-          {/* On-device models for this provider, merged into the same list. */}
-          {localModels.map((m) => {
+            const m = item.model;
             const status = statusFor(m);
             return (
               <LocalModelRow
-                key={m.id}
+                key={`local-${m.id}`}
                 name={m.name}
                 size={m.size}
                 logo={getLLMProviderDetails(llmProvider.name, m.name).logo}

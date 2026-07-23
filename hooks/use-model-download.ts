@@ -48,7 +48,17 @@ export function useModelDownload() {
     LOCAL_STORAGE_KEY,
     initialModelDownloadState,
   );
-  const [ollamaStatus, setOllamaStatus] = useState<OllamaStatus | null>(null);
+  // Shared across every useModelDownload instance (via localStorage) and kept
+  // across modal opens, so a freshly-mounted instance — e.g. the model picker
+  // opening — immediately sees the installed models instead of starting from
+  // null and reading every model as "not installed" until its own async status
+  // check lands (which is why installed models used to show as downloadable).
+  // Any instance's status check refreshes it for all; not wiped on the
+  // once-per-load reset since a cached "what's installed" is better than null.
+  const [ollamaStatus, setOllamaStatus] = useLocalStorage<OllamaStatus | null>(
+    'ollama_status',
+    null,
+  );
   const [systemMemory, setSystemMemory] = useState<SystemMemory | null>(null);
   const [osType, setOsType] = useState<OsType | null>(null);
   const [isFirstLaunchDismissed, setIsFirstLaunchDismissed] =
@@ -638,28 +648,31 @@ export function useModelDownload() {
       });
 
       toast.success(result);
-      setState((prev) => ({ ...prev, managerInstalling: false }));
-      await checkStatus();
 
-      // A freshly installed Ollama can take a few seconds to start serving (first
-      // launch / app onboarding), and nothing else re-polls — so the Model
-      // Manager would otherwise stay stuck on "Starting…". Re-check in the
-      // background until it reports running (bounded; also stops if Ollama isn't
-      // the active backend, e.g. Foundry).
-      void (async () => {
-        for (let i = 0; i < 20; i++) {
-          try {
-            const s = await invoke<OllamaStatus>(
-              TAURI_COMMANDS.CHECK_OLLAMA_STATUS,
-            );
-            setOllamaStatus(s);
-            if (s.running === true || s.installed !== true) break;
-          } catch {
-            // command not ready yet — keep trying
-          }
-          await new Promise((resolve) => setTimeout(resolve, 1500));
+      // Loading the model status is PART of enabling: keep the loading state on
+      // until Ollama is actually serving, so `installed_models` is populated
+      // before the toggle settles to "enabled". A freshly installed/started
+      // Ollama can take a few seconds to serve (first launch / app onboarding),
+      // so poll (bounded) until it reports running — otherwise the model list
+      // would show already-downloaded models as still downloadable right after
+      // enabling. `managerInstalling` stays true across this so the toggle/Model
+      // Manager card keep showing progress until the status is accurate.
+      await checkStatus();
+      for (let i = 0; i < 20; i++) {
+        try {
+          const s = await invoke<OllamaStatus>(
+            TAURI_COMMANDS.CHECK_OLLAMA_STATUS,
+          );
+          setOllamaStatus(s);
+          // Running → the status (incl. installed_models) is loaded; stop. Also
+          // stop if Ollama reports not installed, to avoid looping forever.
+          if (s.running === true || s.installed !== true) break;
+        } catch {
+          // command not ready yet — keep trying
         }
-      })();
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+      }
+      setState((prev) => ({ ...prev, managerInstalling: false }));
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);

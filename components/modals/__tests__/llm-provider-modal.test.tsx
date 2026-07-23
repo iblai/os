@@ -21,6 +21,51 @@ vi.mock('next/image', () => ({
 // classname joiner (cheap, no side effects) so emitted classes are meaningful.
 let mockSwitchLLm = true;
 let mockSwitchProvider = true;
+// On-device model state — OFF by default so the cloud-only tests are unaffected
+// (localModels is gated on `isAvailable`); one test flips these on to exercise
+// the available-first ordering.
+let mockLocalAvailable = false;
+let mockInstalledModels: string[] = [];
+vi.mock('@/hooks/use-model-download', () => ({
+  useModelDownload: () => ({
+    isAvailable: mockLocalAvailable,
+    state: {
+      status: 'idle',
+      progress: 0,
+      activeModel: undefined,
+      message: '',
+      logs: [],
+      lastUpdated: '',
+    },
+    ollamaStatus: { installed_models: mockInstalledModels },
+    startDownload: vi.fn(),
+    cancelDownload: vi.fn(),
+  }),
+}));
+vi.mock('@iblai/iblai-js/web-containers', () => ({
+  LOCAL_MODELS: [
+    {
+      name: 'Zeta Download',
+      provider: 'OpenAI',
+      id: 'dl-model',
+      size: '3 GB',
+      tool_support: true,
+    },
+    {
+      name: 'Alpha Ready',
+      provider: 'OpenAI',
+      id: 'ready-model',
+      size: '2 GB',
+      tool_support: true,
+    },
+  ],
+  isLocalLLMEnabled: () => false,
+  getLocalLLMModel: () => null,
+  getLocalLLMToolSupport: () => true,
+  setLocalLLMModel: vi.fn(),
+  setLocalLLMEnabled: vi.fn(),
+  setLocalLLMToolSupport: vi.fn(),
+}));
 vi.mock('@/lib/utils', () => ({
   cn: (...args: unknown[]) => {
     const out: string[] = [];
@@ -40,6 +85,8 @@ vi.mock('@/lib/utils', () => ({
     logo: `/logo-${provider}-${name}.png`,
     name: provider,
   }),
+  getProviderName: (name: string) =>
+    (name ?? '').toLowerCase().replace(/[^a-z0-9]/g, ''),
 }));
 
 const buildProvider = (): LLMProvider => ({
@@ -82,6 +129,8 @@ describe('LLMProviderModal', () => {
     vi.clearAllMocks();
     mockSwitchLLm = true;
     mockSwitchProvider = true;
+    mockLocalAvailable = false;
+    mockInstalledModels = [];
   });
 
   it('does not render content when closed', () => {
@@ -123,6 +172,46 @@ describe('LLMProviderModal', () => {
     // The dialog shell still renders; there are just no cloud model rows.
     expect(screen.getByText('LLM Selection')).toBeInTheDocument();
     expect(screen.queryByText('gpt-4')).not.toBeInTheDocument();
+  });
+
+  it('lists available (installed) local models before unavailable (downloadable) ones', () => {
+    // Catalog order is [Zeta Download (not installed), Alpha Ready (installed)];
+    // the merged list must reorder so the ready one comes first.
+    mockLocalAvailable = true;
+    mockInstalledModels = ['ready-model'];
+    render(<LLMProviderModal {...baseProps()} />);
+
+    const ready = screen.getByText('Alpha Ready');
+    const download = screen.getByText('Zeta Download');
+    // "Zeta Download" must FOLLOW "Alpha Ready" in the DOM (installed sorts
+    // first), even though it comes first in the catalog.
+    expect(
+      ready.compareDocumentPosition(download) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('lists an available local model before unavailable cloud models', () => {
+    // The reported case: the provider has no credentials, so its cloud models
+    // are unavailable — an installed on-device model must lead the whole list,
+    // not sit behind the cloud models.
+    mockSwitchLLm = false; // provider not switchable → cloud models unavailable
+    mockLocalAvailable = true;
+    mockInstalledModels = ['ready-model'];
+    render(
+      <LLMProviderModal
+        {...baseProps()}
+        // No cloud model matches the mentor's current one, so none is "in use".
+        mentorSettings={{ llm_name: 'none', llm_provider: 'none' }}
+      />,
+    );
+
+    const ready = screen.getByText('Alpha Ready');
+    const cloud = screen.getByText('gpt-4');
+    // The installed local model precedes the unavailable cloud model.
+    expect(
+      ready.compareDocumentPosition(cloud) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it('disables the active model and enables the non-active one (no grayscale on active)', () => {
