@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.102.2](https://github.com/iblai/os/compare/v0.102.1...v0.102.2) (2026-07-23)
+
+### Bug Fixes
+
+* **mentor:** stop retrieved-document sidebar items from being clickable ([2aa4688](https://github.com/iblai/os/commit/2aa4688ce0400a5f8e41d5df2a711747ac5a373a))
+
+### Styles
+
+* normalize pre-existing prettier drift ([69597a2](https://github.com/iblai/os/commit/69597a2821a3897634b9cefc70edf47cbd7f4eec))
+
 ## [0.102.1](https://github.com/iblai/os/compare/v0.102.0...v0.102.1) (2026-07-23)
 
 ### Bug Fixes
