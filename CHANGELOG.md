@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.102.1](https://github.com/iblai/os/compare/v0.102.0...v0.102.1) (2026-07-23)
+
+### Bug Fixes
+
+* **mentor:** decouple Shareable Link toggle from embed-form validation ([a3e389f](https://github.com/iblai/os/commit/a3e389f3dad3078151c601c967525d6524f94b1e)), closes [#2153](https://github.com/iblai/os/issues/2153)
+
+### Tests
+
+* **e2e:** clean up mentors created by issue [#2153](https://github.com/iblai/os/issues/2153) shareable-link specs ([f024298](https://github.com/iblai/os/commit/f0242983792558d1c07143b784c3be01317a4ead))
+
 ## [0.102.0](https://github.com/iblai/os/compare/v0.101.1...v0.102.0) (2026-07-23)
 
 ### Features
