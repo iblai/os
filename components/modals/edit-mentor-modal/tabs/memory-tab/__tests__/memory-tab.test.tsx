@@ -157,6 +157,19 @@ describe('MemoryTab', () => {
         }),
       );
     });
+
+    it('rolls back the toggle and shows an error toast when the PATCH fails', async () => {
+      mockEditMentor.mockReturnValue({
+        unwrap: vi.fn().mockRejectedValue(new Error('nope')),
+      });
+      render(<MemoryTab />);
+
+      fireEvent.click(screen.getByTestId('memory-capability-toggle'));
+
+      await waitFor(() => expect(toast.error).toHaveBeenCalled());
+      // optimistic check was rolled back to the server value (false)
+      expect(screen.getByTestId('memory-capability-toggle')).not.toBeChecked();
+    });
   });
 
   describe('getMentorId fallback', () => {

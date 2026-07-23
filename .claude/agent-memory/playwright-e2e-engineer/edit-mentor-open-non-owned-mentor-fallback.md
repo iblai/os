@@ -34,9 +34,9 @@ change itself, so there's no ambiguous redirect to wait on.
 
 **The `SidebarPage.ensureExpanded()` call is required, not optional.**
 `CreateMentorPage.open()` clicks the "Agents" sidebar button expecting it to expand an
-*inline collapsible section* containing "New Agent" (uses `aria-expanded` on that button).
+_inline collapsible section_ containing "New Agent" (uses `aria-expanded` on that button).
 That assumption breaks when the whole `<aside>` sidebar is collapsed to its icon-only rail
-— a *different*, outer collapse state, toggled by a "Expand sidebar"/"Collapse sidebar"
+— a _different_, outer collapse state, toggled by a "Expand sidebar"/"Collapse sidebar"
 button on the aside itself. When the rail is collapsed, "New Agent" never mounts and
 `CreateMentorPage.open()` times out on `getByRole('button', { name: 'New Agent' })`. This
 surfaced live because the shared admin storageState this session reused
@@ -61,7 +61,7 @@ forking/creating happens within a single test run (idempotent).
 **Not fully closed:** why the sidebar rail was collapsed in the first place wasn't root
 caused (likely leftover state on the shared storageState/tenant from concurrent test
 activity, not something this fix's own code path causes). If `CreateMentorPage.open()`
-starts failing on "New Agent" visibility in *other* journeys (not just this fallback path),
+starts failing on "New Agent" visibility in _other_ journeys (not just this fallback path),
 consider moving the `ensureExpanded()` call into `CreateMentorPage.open()` itself so all
 ~15 call sites benefit — deliberately not done here to keep the change scoped to the
 reported failure.

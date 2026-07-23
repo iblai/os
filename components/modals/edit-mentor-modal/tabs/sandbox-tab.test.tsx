@@ -198,6 +198,18 @@ describe('SandboxTab', () => {
       );
     });
 
+    it('rolls back the toggle and shows an error toast when the PATCH fails', async () => {
+      mockEditMentor.mockReturnValue({
+        unwrap: vi.fn().mockRejectedValue(new Error('nope')),
+      });
+      render(<SandboxTab />);
+
+      fireEvent.click(screen.getByTestId('sandbox-capability-toggle'));
+
+      await waitFor(() => expect(toast.error).toHaveBeenCalled());
+      // optimistic check was rolled back to the server value (false)
+      expect(screen.getByTestId('sandbox-capability-toggle')).not.toBeChecked();
+    });
     it('rolls the toggle back and surfaces the error toast when the PATCH fails', async () => {
       mockEditMentor.mockReturnValue({
         unwrap: vi.fn().mockRejectedValue(new Error('network')),
