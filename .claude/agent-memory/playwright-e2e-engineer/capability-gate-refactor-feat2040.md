@@ -20,6 +20,7 @@ turning it on).
 
 **How to apply:** When touching any of Sandbox/Voice/Screen Share/Privacy/Memory/LTI e2e
 page objects or journeys again:
+
 - Toggle testids: `sandbox-capability-toggle`, `voice-capability-toggle`,
   `screenshare-capability-toggle`, `privacy-capability-toggle`,
   `memory-capability-toggle`, `lti-capability-toggle` — all on the `dialog` scope.

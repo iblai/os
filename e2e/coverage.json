@@ -2,8 +2,8 @@
   "version": 2,
   "lastUpdated": "2026-07-21",
   "summary": {
-    "totalCheckpoints": 562,
-    "coveredCheckpoints": 535,
+    "totalCheckpoints": 566,
+    "coveredCheckpoints": 539,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 8,
     "pendingCheckpoints": 7,
@@ -716,6 +716,26 @@
           "id": "emb-10",
           "description": "Optimize Page Context Tokens toggle: visible label present, tooltip ('Strips HTML tags from page context') reachable on hover, and the setting flips and persists after submit + modal reopen via GET /settings/ round-trip",
           "status": "pending"
+        },
+        {
+          "id": "emb-11",
+          "description": "Issue #2153: toggling the Shareable Link switch ON for a non-anonymous mentor with an empty Website URL does not surface the 'Please specify a valid Website URL' error and still creates the shareable link (success toast)",
+          "status": "covered"
+        },
+        {
+          "id": "emb-12",
+          "description": "Issue #2153: clicking the regenerate (refresh) icon next to Shareable Link does not surface the Website URL validation error",
+          "status": "covered"
+        },
+        {
+          "id": "emb-13",
+          "description": "Issue #2153: toggling the Shareable Link switch OFF does not surface the Website URL validation error",
+          "status": "covered"
+        },
+        {
+          "id": "emb-14",
+          "description": "Issue #2153 contrast case: toggling Shareable Link ON for an anonymous mentor (Website URL section not rendered at all) remains error-free",
+          "status": "covered"
         }
       ]
     },
@@ -2614,6 +2634,102 @@
         {
           "id": "ss-03",
           "description": "Switching to the Screen Share tab renders the SDK heading, body and capability toggle regardless of the capability's on/off state",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "mentor-evaluation-tab",
+      "name": "Mentor Evaluation Tab",
+      "spec": "63-mentor-evaluation-tab.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/evaluation-tab/index.tsx",
+        "hooks/use-mentor-segments.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "eval-01",
+          "description": "Evals tab heading, description, and the info box (data-testid=evaluation-info-box) all render when the modal is opened on the Evals tab",
+          "status": "covered"
+        },
+        {
+          "id": "eval-02",
+          "description": "Benchmark combobox and both toolbar actions (New Evaluation, Manage benchmarks) render; New Evaluation's disabled/enabled state correctly reflects whether a benchmark is auto-selected",
+          "status": "covered"
+        },
+        {
+          "id": "eval-03",
+          "description": "Admin creates a new benchmark via Manage benchmarks and selects it back on the Evals tab toolbar",
+          "status": "covered"
+        },
+        {
+          "id": "eval-04",
+          "description": "Admin adds a Q&A pair to a benchmark via Manage benchmarks -> View items -> Add Q&A (Manual sub-tab)",
+          "status": "covered"
+        },
+        {
+          "id": "eval-05",
+          "description": "With a fresh (zero-run) benchmark selected, the runs table renders all five canonical headers (Evaluation, Status, Initiated by, Created, Actions) and the benchmark-specific empty state",
+          "status": "covered"
+        },
+        {
+          "id": "eval-06",
+          "description": "New Evaluation dialog shows the benchmark readback and name input, and Cancel dismisses it without creating a run",
+          "status": "covered"
+        },
+        {
+          "id": "eval-07",
+          "description": "New Evaluation dialog can be dismissed via Escape without creating a run",
+          "status": "covered"
+        },
+        {
+          "id": "eval-08",
+          "description": "Admin starts a new evaluation and it appears in the runs table with a valid status badge",
+          "status": "covered"
+        },
+        {
+          "id": "eval-09",
+          "description": "A run's actions menu reflects its live status - Check status/Delete always enabled; View results/New review/Export CSV enabled once completed, otherwise disabled with the notReadyHint tooltip",
+          "status": "covered"
+        },
+        {
+          "id": "eval-10",
+          "description": "Check status triggers a fresh fetch and surfaces an outcome toast (pending, completed, or failed)",
+          "status": "covered"
+        },
+        {
+          "id": "eval-11",
+          "description": "Once a run has completed, admin can open View results and Export CSV (opportunistic checkpoint - skips gracefully while the run has not completed yet)",
+          "status": "covered"
+        },
+        {
+          "id": "eval-12",
+          "description": "Once a run has completed, the New review (LLM-judge) dialog keeps Evaluate disabled until criteria and score name are filled (opportunistic checkpoint - skips gracefully while the run has not completed yet)",
+          "status": "covered"
+        },
+        {
+          "id": "eval-13",
+          "description": "Admin can cancel a delete confirmation (row stays) and then delete a run for real (row is removed)",
+          "status": "covered"
+        },
+        {
+          "id": "eval-14",
+          "description": "Manage benchmarks lists the created benchmark, and searching for its name filters down to it",
+          "status": "covered"
+        },
+        {
+          "id": "eval-15",
+          "description": "Evals tab has no axe-core accessibility violations on visible dialogs",
+          "status": "covered"
+        },
+        {
+          "id": "eval-16",
+          "description": "Admin can navigate away to another tab and back to Evals without errors (wrapper re-mounts cleanly)",
+          "status": "covered"
+        },
+        {
+          "id": "eval-17",
+          "description": "Non-admin does not see the Evals tab in the Edit Mentor modal (ADMIN-only segment in use-mentor-segments.ts)",
           "status": "covered"
         }
       ]
