@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.101.1](https://github.com/iblai/os/compare/v0.101.0...v0.101.1) (2026-07-23)
+
+### Bug Fixes
+
+* **security:** patch 3 high-severity transitive advisories ([9b9a509](https://github.com/iblai/os/commit/9b9a5091d0bd03148a4c13b78f65ba4bfd1e6bf0))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js 1.25.3 → 1.26.7 ([3727180](https://github.com/iblai/os/commit/3727180b18ca25eb715a117f1a55e0082de9b8c0)), closes [#1935](https://github.com/iblai/os/issues/1935)
+
 ## [0.101.0](https://github.com/iblai/os/compare/v0.100.1...v0.101.0) (2026-07-22)
 
 ### Features
