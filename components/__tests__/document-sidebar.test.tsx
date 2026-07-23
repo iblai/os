@@ -12,14 +12,6 @@ vi.mock('next/navigation', () => ({
   useParams: () => ({ tenantKey: 'test-tenant' }),
 }));
 
-vi.mock('next/link', () => ({
-  default: ({ children, href, target, className }: any) => (
-    <a href={href} target={target} className={className}>
-      {children}
-    </a>
-  ),
-}));
-
 vi.mock('@/lib/utils', async () => {
   const actual = await vi.importActual('@/lib/utils');
   return {
@@ -102,13 +94,20 @@ describe('DocumentSidebar', () => {
       expect(screen.getByText('0.85')).toBeInTheDocument();
     });
 
-    it('should render document titles as links with correct href and target', () => {
+    it('should not render document titles as navigating links', () => {
+      const { container } = render(<DocumentSidebar sessionId="session-1" />);
+      // Titles must not be anchors — clicking a data source must not navigate.
+      expect(screen.queryByRole('link')).toBeNull();
+      expect(container.querySelector('a[href]')).toBeNull();
+      // Titles are still visible.
+      expect(screen.getByText('First Document Title')).toBeInTheDocument();
+      expect(screen.getByText('Second Document Title')).toBeInTheDocument();
+    });
+
+    it('should not add a clickability affordance to the title span', () => {
       render(<DocumentSidebar sessionId="session-1" />);
-      const links = screen.getAllByRole('link');
-      expect(links[0]).toHaveAttribute('href', 'https://example.com/doc1');
-      expect(links[0]).toHaveAttribute('target', '_blank');
-      expect(links[1]).toHaveAttribute('href', 'https://example.com/doc2');
-      expect(links[1]).toHaveAttribute('target', '_blank');
+      const titleSpan = screen.getByText('First Document Title');
+      expect(titleSpan).not.toHaveClass('hover:text-blue-600');
     });
 
     it('should render dividers between documents but not after the last one', () => {
@@ -117,10 +116,12 @@ describe('DocumentSidebar', () => {
       expect(dividers).toHaveLength(1);
     });
 
-    it('should render links with min-w-0 class for text overflow handling', () => {
+    it('should keep the min-w-0 wrapper for text overflow handling', () => {
       render(<DocumentSidebar sessionId="session-1" />);
-      const links = screen.getAllByRole('link');
-      expect(links[0]).toHaveClass('min-w-0');
+      const titleWrapper = screen.getByText(
+        'First Document Title',
+      ).parentElement!;
+      expect(titleWrapper).toHaveClass('min-w-0');
     });
 
     it('should render title spans with break-words class', () => {
@@ -145,7 +146,7 @@ describe('DocumentSidebar', () => {
   });
 
   describe('document with missing optional fields', () => {
-    it('should handle document with no source by using empty string as href', () => {
+    it('should render a document with no source without creating a link', () => {
       mockVectorDocuments = [
         {
           type: 'document',
@@ -156,8 +157,8 @@ describe('DocumentSidebar', () => {
         },
       ];
       const { container } = render(<DocumentSidebar sessionId="session-1" />);
-      const link = container.querySelector('a')!;
-      expect(link).toHaveAttribute('href', '');
+      expect(container.querySelector('a')).toBeNull();
+      expect(screen.getByText('No Source Doc')).toBeInTheDocument();
     });
 
     it('should handle document with no score', () => {
