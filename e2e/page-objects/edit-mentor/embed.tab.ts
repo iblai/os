@@ -12,6 +12,9 @@ export class EmbedTab {
   readonly showCatalogueToggle: Locator;
   readonly optimizePageContextToggle: Locator;
   readonly websiteUrlInput: Locator;
+  readonly websiteUrlError: Locator;
+  readonly shareableLinkToggle: Locator;
+  readonly regenerateShareableLinkButton: Locator;
   readonly submitButton: Locator;
   readonly embedCodeDialog: Locator;
 
@@ -50,6 +53,23 @@ export class EmbedTab {
     this.websiteUrlInput = dialog.locator(
       'input[placeholder="https://ibl.ai"]',
     );
+    // Spurious validation error surfaced under the Website URL field (issue
+    // #2153) when it should not run at all in response to shareable-link
+    // actions. The string is a literal (non-translated) constant set by
+    // syncEmbedSettings() in useEmbedTab.ts.
+    this.websiteUrlError = dialog.getByText(
+      'Please specify a valid Website URL',
+      { exact: true },
+    );
+    // aria-label toggles between "...enabled" / "...disabled" (see
+    // shareableLinkEnabled / shareableLinkDisabled i18n keys) — match the
+    // stable shared prefix.
+    this.shareableLinkToggle = dialog.getByRole('switch', {
+      name: /Generate \/ Revoke shareable link/i,
+    });
+    // The regenerate control is an icon-only RefreshCw with no accessible
+    // name; fall back to its lucide CSS class.
+    this.regenerateShareableLinkButton = dialog.locator('.lucide-refresh-cw');
   }
 
   /**
@@ -130,6 +150,52 @@ export class EmbedTab {
         { timeout: 5_000 },
       );
     }
+  }
+
+  /** Returns true when the Shareable Link switch is in the checked/enabled state. */
+  async getShareableLinkState(): Promise<boolean> {
+    await expect(this.shareableLinkToggle).toBeVisible({ timeout: 15_000 });
+    return (
+      (await this.shareableLinkToggle.getAttribute('aria-checked')) === 'true'
+    );
+  }
+
+  /**
+   * Clicks the Shareable Link switch to toggle it. This fires the
+   * create/enable/disable shareable-link mutation directly against the
+   * backend (see handleShareableTokenToggle in embed-tab.tsx) — it does NOT
+   * go through the embed form's submit/save flow.
+   */
+  async toggleShareableLink(): Promise<void> {
+    await expect(this.shareableLinkToggle).toBeVisible({ timeout: 15_000 });
+    await this.shareableLinkToggle.click();
+  }
+
+  /**
+   * Clicks the regenerate (refresh) icon next to the Shareable Link switch.
+   * Fires handleRegenerateToken() directly against the backend.
+   */
+  async regenerateShareableLink(): Promise<void> {
+    await expect(this.regenerateShareableLinkButton).toBeVisible({
+      timeout: 15_000,
+    });
+    await this.regenerateShareableLinkButton.click();
+  }
+
+  /**
+   * Returns true if the "Please specify a valid Website URL" error is
+   * currently rendered under the Website URL field (issue #2153 regression
+   * guard — this must stay false across all shareable-link interactions).
+   */
+  async hasWebsiteUrlValidationError(): Promise<boolean> {
+    let visible = false;
+    try {
+      await this.websiteUrlError.waitFor({ state: 'visible', timeout: 2_000 });
+      visible = true;
+    } catch {
+      visible = false;
+    }
+    return visible;
   }
 
   /** Closes the generated "Embedded Code" dialog if it is showing. */

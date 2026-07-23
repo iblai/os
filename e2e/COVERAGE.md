@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-07-21 | 562 checkpoints (535 covered, 7 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 64 journeys (63 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-07-21 | 566 checkpoints (539 covered, 7 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 64 journeys (63 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -201,7 +201,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 13: Shareable Links & Embed Integration (10 checkpoints) — `journeys/13-shareable-links-and-embed-integration.spec.ts`
+## Journey 13: Shareable Links & Embed Integration (14 checkpoints) — `journeys/13-shareable-links-and-embed-integration.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/embed-tab.tsx`, `components/modals/edit-mentor-modal/hooks/useEmbedTab.ts`, `components/logo.tsx`, `hooks/use-mentors/use-mentor-settings.ts`, `hooks/use-embed-mode.ts`, `components/chat-input-form/voice-call-button.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form/screen-sharing-button.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
 
@@ -215,6 +215,10 @@ When adding a new page or modifying an existing user flow:
 - [x] Embed view sidebar logo is clickable when Show Catalogue is enabled (configured via the embed UI on a fresh mentor, verified at the embed URL)
 - [x] Embed mode renders a minimal sidebar: New Chat present (and Chats when the user is logged in); Agents (New Agent), Workflows, Analytics, Projects, and Support/docs footer link all absent — holds for both expanded and rail-collapsed layouts regardless of user role
 - [ ] Optimize Page Context Tokens toggle: visible label present, tooltip ('Strips HTML tags from page context') reachable on hover, and the setting flips and persists after submit + modal reopen via GET /settings/ round-trip _(parked as `test.fixme` — flaky in CI with shared mentor + slow submit cycle; activate with a dedicated mentor fixture)_
+- [x] Issue #2153: toggling the Shareable Link switch ON for a non-anonymous mentor with an empty Website URL does not surface the "Please specify a valid Website URL" error and still creates the shareable link (success toast)
+- [x] Issue #2153: clicking the regenerate (refresh) icon next to Shareable Link does not surface the Website URL validation error
+- [x] Issue #2153: toggling the Shareable Link switch OFF does not surface the Website URL validation error
+- [x] Issue #2153 contrast case: toggling Shareable Link ON for an anonymous mentor (Website URL section not rendered at all) remains error-free
 
 ---
 

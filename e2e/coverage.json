@@ -2,8 +2,8 @@
   "version": 2,
   "lastUpdated": "2026-07-21",
   "summary": {
-    "totalCheckpoints": 562,
-    "coveredCheckpoints": 535,
+    "totalCheckpoints": 566,
+    "coveredCheckpoints": 539,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 8,
     "pendingCheckpoints": 7,
@@ -716,6 +716,26 @@
           "id": "emb-10",
           "description": "Optimize Page Context Tokens toggle: visible label present, tooltip ('Strips HTML tags from page context') reachable on hover, and the setting flips and persists after submit + modal reopen via GET /settings/ round-trip",
           "status": "pending"
+        },
+        {
+          "id": "emb-11",
+          "description": "Issue #2153: toggling the Shareable Link switch ON for a non-anonymous mentor with an empty Website URL does not surface the 'Please specify a valid Website URL' error and still creates the shareable link (success toast)",
+          "status": "covered"
+        },
+        {
+          "id": "emb-12",
+          "description": "Issue #2153: clicking the regenerate (refresh) icon next to Shareable Link does not surface the Website URL validation error",
+          "status": "covered"
+        },
+        {
+          "id": "emb-13",
+          "description": "Issue #2153: toggling the Shareable Link switch OFF does not surface the Website URL validation error",
+          "status": "covered"
+        },
+        {
+          "id": "emb-14",
+          "description": "Issue #2153 contrast case: toggling Shareable Link ON for an anonymous mentor (Website URL section not rendered at all) remains error-free",
+          "status": "covered"
         }
       ]
     },
