@@ -4,41 +4,41 @@
 
 ### Bug Fixes
 
-* **mentor:** stop retrieved-document sidebar items from being clickable ([2aa4688](https://github.com/iblai/os/commit/2aa4688ce0400a5f8e41d5df2a711747ac5a373a))
+- **mentor:** stop retrieved-document sidebar items from being clickable ([2aa4688](https://github.com/iblai/os/commit/2aa4688ce0400a5f8e41d5df2a711747ac5a373a))
 
 ### Styles
 
-* normalize pre-existing prettier drift ([69597a2](https://github.com/iblai/os/commit/69597a2821a3897634b9cefc70edf47cbd7f4eec))
+- normalize pre-existing prettier drift ([69597a2](https://github.com/iblai/os/commit/69597a2821a3897634b9cefc70edf47cbd7f4eec))
 
 ## [0.102.1](https://github.com/iblai/os/compare/v0.102.0...v0.102.1) (2026-07-23)
 
 ### Bug Fixes
 
-* **mentor:** decouple Shareable Link toggle from embed-form validation ([a3e389f](https://github.com/iblai/os/commit/a3e389f3dad3078151c601c967525d6524f94b1e)), closes [#2153](https://github.com/iblai/os/issues/2153)
+- **mentor:** decouple Shareable Link toggle from embed-form validation ([a3e389f](https://github.com/iblai/os/commit/a3e389f3dad3078151c601c967525d6524f94b1e)), closes [#2153](https://github.com/iblai/os/issues/2153)
 
 ### Tests
 
-* **e2e:** clean up mentors created by issue [#2153](https://github.com/iblai/os/issues/2153) shareable-link specs ([f024298](https://github.com/iblai/os/commit/f0242983792558d1c07143b784c3be01317a4ead))
+- **e2e:** clean up mentors created by issue [#2153](https://github.com/iblai/os/issues/2153) shareable-link specs ([f024298](https://github.com/iblai/os/commit/f0242983792558d1c07143b784c3be01317a4ead))
 
 ## [0.102.0](https://github.com/iblai/os/compare/v0.101.1...v0.102.0) (2026-07-23)
 
 ### Features
 
-* **security:** nonce-based CSP via Next.js middleware ([9cbefa1](https://github.com/iblai/os/commit/9cbefa1de35a4a723550db44c6c2fb3173dc2afa))
+- **security:** nonce-based CSP via Next.js middleware ([9cbefa1](https://github.com/iblai/os/commit/9cbefa1de35a4a723550db44c6c2fb3173dc2afa))
 
 ### Bug Fixes
 
-* **security:** only emit upgrade-insecure-requests when enforcing ([b6de0ca](https://github.com/iblai/os/commit/b6de0ca46ef51c9c93f27b7efd2a10e37917d688))
+- **security:** only emit upgrade-insecure-requests when enforcing ([b6de0ca](https://github.com/iblai/os/commit/b6de0ca46ef51c9c93f27b7efd2a10e37917d688))
 
 ## [0.101.1](https://github.com/iblai/os/compare/v0.101.0...v0.101.1) (2026-07-23)
 
 ### Bug Fixes
 
-* **security:** patch 3 high-severity transitive advisories ([9b9a509](https://github.com/iblai/os/commit/9b9a5091d0bd03148a4c13b78f65ba4bfd1e6bf0))
+- **security:** patch 3 high-severity transitive advisories ([9b9a509](https://github.com/iblai/os/commit/9b9a5091d0bd03148a4c13b78f65ba4bfd1e6bf0))
 
 ### Chores
 
-* **deps:** bump @iblai/iblai-js 1.25.3 → 1.26.7 ([3727180](https://github.com/iblai/os/commit/3727180b18ca25eb715a117f1a55e0082de9b8c0)), closes [#1935](https://github.com/iblai/os/issues/1935)
+- **deps:** bump @iblai/iblai-js 1.25.3 → 1.26.7 ([3727180](https://github.com/iblai/os/commit/3727180b18ca25eb715a117f1a55e0082de9b8c0)), closes [#1935](https://github.com/iblai/os/issues/1935)
 
 ## [0.101.0](https://github.com/iblai/os/compare/v0.100.1...v0.101.0) (2026-07-22)
 

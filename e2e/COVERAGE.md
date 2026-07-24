@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-07-21 | 566 checkpoints (539 covered, 7 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 64 journeys (63 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-07-23 | 586 checkpoints (559 covered, 7 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 66 journeys (65 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -1175,3 +1175,31 @@ Covers the `ChatSearchDialog` (issue #2053) opened from the sidebar's "Search ch
 - [x] csd-06: Collapsing the sidebar and clicking the "Search chats" rail icon opens the same dialog
 
 ---
+
+## Journey 64: Shareable Link RBAC Bypass (3 checkpoints) — `journeys/64-shareable-link-rbac-bypass.spec.ts`
+
+**Source files:** `components/chat-input-form.tsx`
+
+Issue #2155 — a shareable-link `?token=` must bypass the RBAC `#chat` gate once the
+backend has accepted it and returned a session (`hasChatPermission =
+(hasShareableToken && !!sessionId) || <rbac check>`), without regressing the
+no-token denial or letting token _presence alone_ grant free access. Each test
+provisions its own Administrators-only / Authenticated-Users-chat mentor live
+against the running backend (Journey 14's isolation pattern), configured through
+the Embed tab's real "Who Can View? / Who Can Chat?" selects and a real "Generate
+Shareable Link" token — no `page.route` mocking. All three checkpoints were run
+and verified passing against a live `pnpm build && pnpm start` server.
+
+There is deliberately no anonymous-visitor checkpoint: `@iblai/web-utils`'s
+`MentorProvider` only loads the `rbacPermissions` Redux data (what
+`chat-input-form.tsx` reads) when the visitor `isLoggedIn`. For a never-
+authenticated visitor `rbacPermissions` is always `{}`, so the RBAC gate this fix
+touches structurally never applies — verified empirically: an anonymous visitor on
+an Administrators-only mentor got full enabled chat access with **no token at
+all**. An anonymous "token bypass" case would pass identically pre-fix and prove
+nothing about #2155; Journey 14 already covers the anonymous/public-access happy
+path.
+
+- [x] shl-01: Non-admin user denied RBAC #chat permission opens the mentor chat with a VALID shareable-link token — the textarea is enabled (no RBAC denial placeholder), and the user can send a message and receive a response
+- [x] shl-02: Safety-boundary guard — the same non-admin user opens the same mentor chat with an INVALID/never-issued shareable-link token — the backend never creates a session, so the textarea stays disabled exactly as with no token (token presence alone must not unlock chat)
+- [x] shl-03: Regression guard — the same non-admin user opens the same mentor chat with NO token — the textarea stays disabled and the RBAC denial placeholder ("Sorry about that! You don't have permission to chat.") is shown

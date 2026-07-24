@@ -3,7 +3,7 @@
 import type React from 'react';
 
 import { useState, useRef, ChangeEvent } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { format } from 'date-fns';
 import { useMediaQuery } from 'react-responsive';
 import { FileText } from 'lucide-react';
@@ -152,6 +152,8 @@ export function ChatInputForm({
   const persistentChatInputLabel =
     tenantMetadata?.persistent_chat_input_label === true;
 
+  const hasShareableToken = !!useSearchParams().get('token');
+
   // Check if user has chat permission via RBAC
   const mentorDbId = mentorSettings?.data?.mentorDbId;
   const mentorRbacKey = mentorDbId ? `/mentors/${mentorDbId}/` : null;
@@ -159,10 +161,12 @@ export function ChatInputForm({
     ? mentorRbacKey in rbacPermissions
     : false;
   const hasChatPermission =
-    mentorDbId && hasMentorRbacData
+    (hasShareableToken && !!sessionId) ||
+    (mentorDbId && hasMentorRbacData
       ? checkRbacPermission(rbacPermissions, `/mentors/${mentorDbId}/#chat`)
-      : true; // Default to true if mentor ID not available or RBAC data not loaded
+      : true); // Default to true if mentor ID not available or RBAC data not loaded
   const isChatDisabledByRbac = !hasChatPermission;
+  const isSendDisabled = isChatDisabledByRbac || !sessionId;
 
   const {
     FreeTrialDialog,
@@ -238,7 +242,7 @@ export function ChatInputForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Prevent submission when chat is disabled, files are uploading, or session not ready
-    if (isChatDisabledByRbac || hasUploadingFiles || !sessionId) return;
+    if (isSendDisabled || hasUploadingFiles) return;
     onSubmit(inputValue);
     setInputValue('');
     setFileAddedNotification(null);
@@ -422,7 +426,7 @@ export function ChatInputForm({
               isPreviewMode={isPreviewMode}
               textAreaRows={textAreaRows}
               placeholder={
-                isChatDisabledByRbac
+                isChatDisabledByRbac && !hasShareableToken
                   ? "Sorry about that! You don't have permission to chat."
                   : textAreaPlaceholder()
               }
@@ -444,7 +448,7 @@ export function ChatInputForm({
                   onCameraTrigger={() =>
                     executeWithTrialCheck(handleCameraClick)
                   }
-                  disabled={isChatDisabledByRbac || !sessionId}
+                  disabled={isSendDisabled}
                 />
               )}
 
@@ -505,7 +509,7 @@ export function ChatInputForm({
                     isPreviewMode={isPreviewMode}
                     allowAnonymousAccess={isMentorViewableByAnyone}
                     isUploading={hasUploadingFiles}
-                    disabled={isChatDisabledByRbac || !sessionId}
+                    disabled={isSendDisabled}
                     isConnecting={isConnecting}
                   />
                 )}
@@ -524,7 +528,7 @@ export function ChatInputForm({
                 : MENTOR_CHAT_DOCUMENTS_EXTENSIONS.join(',')
             }
             multiple
-            disabled={isChatDisabledByRbac || !sessionId}
+            disabled={isSendDisabled}
           />
 
           <input
@@ -534,7 +538,7 @@ export function ChatInputForm({
             onChange={handleFileInputChange}
             accept="image/*"
             capture="environment"
-            disabled={isChatDisabledByRbac || !sessionId}
+            disabled={isSendDisabled}
           />
         </div>
 
