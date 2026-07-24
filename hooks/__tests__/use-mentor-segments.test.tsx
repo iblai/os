@@ -150,12 +150,13 @@ describe('useMentorSegments', () => {
     setupDefaults();
   });
 
-  it('returns the canonical 23 mentor segments unfiltered', () => {
+  it('returns the canonical 24 mentor segments unfiltered', () => {
     const { result } = renderHook(() => useMentorSegments());
     expect(result.current.segments).toBe(MENTOR_SEGMENTS);
     // 17 original + Voice + Screen Share (feat/mentor/1763) + Tasks
-    // (feat/mentor/715) + LTI + Analytics hub (feat/2040).
-    expect(MENTOR_SEGMENTS).toHaveLength(23);
+    // (feat/mentor/715) + LTI + Analytics hub (feat/2040) + Human Support
+    // (feat/2081) + Evals (feat/1178).
+    expect(MENTOR_SEGMENTS).toHaveLength(24);
   });
 
   it('places the Sandbox segment right after Settings', () => {

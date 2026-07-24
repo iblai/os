@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-07-23 | 586 checkpoints (559 covered, 7 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 66 journeys (65 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-07-25 | 594 checkpoints (567 covered, 7 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 67 journeys (66 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -1203,3 +1203,32 @@ path.
 - [x] shl-01: Non-admin user denied RBAC #chat permission opens the mentor chat with a VALID shareable-link token — the textarea is enabled (no RBAC denial placeholder), and the user can send a message and receive a response
 - [x] shl-02: Safety-boundary guard — the same non-admin user opens the same mentor chat with an INVALID/never-issued shareable-link token — the backend never creates a session, so the textarea stays disabled exactly as with no token (token presence alone must not unlock chat)
 - [x] shl-03: Regression guard — the same non-admin user opens the same mentor chat with NO token — the textarea stays disabled and the RBAC denial placeholder ("Sorry about that! You don't have permission to chat.") is shown
+
+## Journey 65: Mentor Human Support Tab (8 checkpoints) — `journeys/65-mentor-human-support-tab.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/human-support-tab.tsx`, `e2e/page-objects/edit-mentor/human-support.tab.ts`
+
+The Support tab (host sidebar label "Support"; panel value `human_support`,
+Edit Agent → Runtime) is the SDK's `AgentHumanSupportTab` admin ticket inbox.
+Tickets are filed by the AGENT during chat via the human-support tool, so the
+lifecycle checkpoints drive the real chat surface. All DOM access flows
+through the SDK's `human-support-tab-helpers` (`@iblai/iblai-js/playwright`).
+Hard-won sequencing facts encoded in the spec: (1) the chat session snapshots
+the mentor's tool list at session creation, and a page reload RESTORES the
+same session — so the spec starts a NEW chat after enabling the support
+toggle, otherwise the model has no support tool and hallucinates success via
+`write_todos`; (2) the SDK's status-filter-bounce refresh only refetches once
+(RTK Query cache), so the list poll refreshes via full reload + modal
+re-open; (3) the creation prompt forbids canvas/document output — otherwise
+the model streams a canvas artifact and the stop-streaming wait times out.
+Destructive (mentor settings + tickets): file-level serial with a dedicated
+per-test mentor (Journey 47 pattern), tracked and deleted in `afterAll`.
+
+- [x] support-01: Admin opens Edit Agent → Runtime → Support on a fresh dedicated mentor — the tab renders its header and either the ticket list or the "No support tickets found" empty state (render/API contract)
+- [x] support-02: Admin round-trips the status filter through Open / In Progress / Closed / All Statuses — each change re-queries and the pane returns to a stable list-or-empty state
+- [x] support-03: Support availability toggle — enable the human-support tool from the tab's info box and verify it persists (round-trip read after reload); skipped when the tenant tool catalog has no human-support tool
+- [x] support-04: Full agent-chat creation cycle — after enabling the tool and starting a NEW chat session, the admin asks the agent (plain chat, canvas forbidden) to file a ticket with a unique subject; the ticket appears in the Support list with status Open for the same mentor the message was sent to
+- [x] support-05: Opening the created ticket shows the detail pane with non-empty agent-authored description content
+- [x] support-06: Admin sends a reply from the detail-pane composer — the message appears in the ticket's Conversation section
+- [x] support-07: Admin moves the ticket to In Progress via the detail Status select — the list row's status badge updates
+- [x] support-08: Admin closes the ticket — the closed notice replaces the reply composer and the list badge shows Closed

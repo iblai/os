@@ -12,7 +12,7 @@ import {
 } from '@iblai/iblai-js/playwright';
 
 /**
- * Journey 64 — Mentor Human Support Tab.
+ * Journey 65 — Mentor Human Support Tab.
  *
  * The Support tab (host sidebar label "Support"; SDK panel value
  * `human_support`) is rendered by the SDK's `AgentHumanSupportTab`
@@ -59,7 +59,7 @@ import {
 
 test.describe.configure({ mode: 'serial' });
 
-test.describe('Journey 64: Mentor Human Support Tab', () => {
+test.describe('Journey 65: Mentor Human Support Tab', () => {
   const tracker = new MentorTracker();
 
   test.beforeEach(async ({ page, editMentorPage, createMentorPage }) => {

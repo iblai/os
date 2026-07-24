@@ -2,14 +2,14 @@
   "version": 2,
   "lastUpdated": "2026-07-23",
   "summary": {
-    "totalCheckpoints": 586,
-    "coveredCheckpoints": 559,
+    "totalCheckpoints": 594,
+    "coveredCheckpoints": 567,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 8,
     "pendingCheckpoints": 7,
     "percent": 100,
-    "totalJourneys": 66,
-    "activeJourneys": 65
+    "totalJourneys": 67,
+    "activeJourneys": 66
   },
   "journeys": [
     {
@@ -3749,6 +3749,57 @@
         {
           "id": "shl-03",
           "description": "Regression guard: the same non-admin user opens the same mentor chat with NO token — the textarea stays disabled and the RBAC denial placeholder (\"Sorry about that! You don't have permission to chat.\") is shown",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "mentor-human-support-tab",
+      "name": "Mentor Human Support Tab",
+      "spec": "65-mentor-human-support-tab.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/human-support-tab.tsx",
+        "e2e/page-objects/edit-mentor/human-support.tab.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "support-01",
+          "description": "Admin opens Edit Agent → Runtime → Support on a fresh dedicated mentor — the tab renders its header and either the ticket list or the \"No support tickets found\" empty state (render/API contract)",
+          "status": "covered"
+        },
+        {
+          "id": "support-02",
+          "description": "Admin round-trips the status filter through Open / In Progress / Closed / All Statuses — each change re-queries and the pane returns to a stable list-or-empty state",
+          "status": "covered"
+        },
+        {
+          "id": "support-03",
+          "description": "Support availability toggle: enable the human-support tool from the tab's info box and verify it persists (round-trip read after reload); skipped when the tenant tool catalog has no human-support tool",
+          "status": "covered"
+        },
+        {
+          "id": "support-04",
+          "description": "Full agent-chat creation cycle: after enabling the tool and starting a NEW chat session, the admin asks the agent (plain chat, canvas forbidden) to file a ticket with a unique subject — the ticket appears in the Support list with status Open for the same mentor the message was sent to",
+          "status": "covered"
+        },
+        {
+          "id": "support-05",
+          "description": "Opening the created ticket shows the detail pane with non-empty agent-authored description content",
+          "status": "covered"
+        },
+        {
+          "id": "support-06",
+          "description": "Admin sends a reply from the detail-pane composer — the message appears in the ticket's Conversation section",
+          "status": "covered"
+        },
+        {
+          "id": "support-07",
+          "description": "Admin moves the ticket to In Progress via the detail Status select — the list row's status badge updates",
+          "status": "covered"
+        },
+        {
+          "id": "support-08",
+          "description": "Admin closes the ticket — the closed notice replaces the reply composer and the list badge shows Closed",
           "status": "covered"
         }
       ]

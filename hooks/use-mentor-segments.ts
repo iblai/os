@@ -398,6 +398,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
   {
     value: MODALS.EDIT_MENTOR.tabs.human_support,
     label: 'Support',
+    labelKey: 'support',
     icon: Headset,
     // Admin-only ticket inbox (view / reply / close support requests).
     // No `rbacResource` yet — the backend doesn't expose one for support
