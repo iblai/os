@@ -15,7 +15,7 @@ import {
   PopoverAnchor,
   PopoverContent,
 } from '@/components/ui/popover';
-import { X, BookOpen, Archive, Check, Terminal } from 'lucide-react';
+import { X, BookOpen, Archive, Check, Terminal, Code2 } from 'lucide-react';
 import { DeepSearchIcon, CanvasIcon } from '@/components/icons/svg-icons';
 import { TOOLS } from '@iblai/iblai-js/web-utils';
 import { MemoryButton } from './memory-button';
@@ -61,6 +61,34 @@ export const InsideButtons = ({
   username,
 }: InsideButtonsProps) => {
   const t = useTranslations('chatInputFormInsideButtons');
+
+  // Coding Mode (opencode over ACP) — self-contained desktop-only toggle. The SDK
+  // chat transport (use-chat-v2) reads `ibl_coding_mode_enabled` from localStorage.
+  const isTauriApp =
+    typeof window !== 'undefined' && '__TAURI__' in window;
+  const [codingMode, setCodingMode] = useState(
+    () =>
+      typeof window !== 'undefined' &&
+      localStorage.getItem('ibl_coding_mode_enabled') === 'true',
+  );
+  const toggleCodingMode = async () => {
+    const next = !codingMode;
+    setCodingMode(next);
+    localStorage.setItem('ibl_coding_mode_enabled', next ? 'true' : 'false');
+    if (next) {
+      if (!localStorage.getItem('ibl_coding_mode_model')) {
+        localStorage.setItem('ibl_coding_mode_model', 'openai/gpt-4o');
+      }
+      try {
+        // Ensure opencode + config + workspace are ready (best-effort).
+        const { invoke } = await import('@tauri-apps/api/core');
+        await invoke('install_opencode');
+      } catch (e) {
+        console.error('[coding-mode] install_opencode failed', e);
+      }
+    }
+  };
+
   const allInsideButtons = [
     {
       name: 'Canvas',
@@ -77,6 +105,14 @@ export const InsideButtons = ({
       isActive: false,
       action: () => onOpenPromptGallery?.(),
       isEnabled: !embedMode && promptsIsEnabled,
+    },
+    {
+      name: 'Coding Mode',
+      label: 'Coding Mode',
+      icon: <Code2 className="h-4 w-4" />,
+      isActive: codingMode,
+      action: toggleCodingMode,
+      isEnabled: isTauriApp,
     },
     {
       name: 'Study Mode',
