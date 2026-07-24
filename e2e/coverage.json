@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-07-21",
+  "lastUpdated": "2026-07-23",
   "summary": {
-    "totalCheckpoints": 566,
-    "coveredCheckpoints": 539,
+    "totalCheckpoints": 586,
+    "coveredCheckpoints": 559,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 8,
     "pendingCheckpoints": 7,
     "percent": 100,
-    "totalJourneys": 64,
-    "activeJourneys": 63
+    "totalJourneys": 66,
+    "activeJourneys": 65
   },
   "journeys": [
     {
@@ -3726,6 +3726,29 @@
         {
           "id": "csd-06",
           "description": "Collapsing the sidebar and clicking the Search chats rail icon opens the same dialog",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "shareable-link-rbac-bypass",
+      "name": "Shareable Link RBAC Bypass",
+      "spec": "64-shareable-link-rbac-bypass.spec.ts",
+      "sourceFiles": ["components/chat-input-form.tsx"],
+      "checkpoints": [
+        {
+          "id": "shl-01",
+          "description": "Non-admin user denied RBAC #chat permission on an Administrators-only, Authenticated-Users-chat mentor opens the chat with a VALID shareable-link token — the textarea is enabled (no RBAC denial placeholder), and the user can send a message and receive a response (issue #2155)",
+          "status": "covered"
+        },
+        {
+          "id": "shl-02",
+          "description": "Safety-boundary guard: the same non-admin user opens the same mentor chat with an INVALID/never-issued shareable-link token — the backend never creates a session, so the textarea stays disabled exactly as with no token at all (token presence alone must not unlock chat)",
+          "status": "covered"
+        },
+        {
+          "id": "shl-03",
+          "description": "Regression guard: the same non-admin user opens the same mentor chat with NO token — the textarea stays disabled and the RBAC denial placeholder (\"Sorry about that! You don't have permission to chat.\") is shown",
           "status": "covered"
         }
       ]

@@ -17,6 +17,9 @@ export class EmbedTab {
   readonly regenerateShareableLinkButton: Locator;
   readonly submitButton: Locator;
   readonly embedCodeDialog: Locator;
+  readonly shareableLinkUrlBlock: Locator;
+  readonly whoCanViewSelect: Locator;
+  readonly whoCanChatSelect: Locator;
 
   constructor(page: Page, dialog: Locator) {
     this.page = page;
@@ -70,6 +73,23 @@ export class EmbedTab {
     // The regenerate control is an icon-only RefreshCw with no accessible
     // name; fall back to its lucide CSS class.
     this.regenerateShareableLinkButton = dialog.locator('.lucide-refresh-cw');
+    // The generated URL (`{origin}/platform/{tenantKey}/{mentorId}?token=...`)
+    // renders in a CopyCodeBlock <pre>. The tab has other <pre> blocks (main
+    // embed snippet, SSO redirect token), so filter on the querystring shape
+    // rather than relying on DOM order.
+    this.shareableLinkUrlBlock = dialog.locator('pre').filter({
+      hasText: '?token=',
+    });
+    // "Who Can View?" — bound to `mentor_visibility` (tabsEmbedTab.
+    // selectWhoCanViewAriaLabel = "Select who can view").
+    this.whoCanViewSelect = dialog.getByRole('combobox', {
+      name: /select who can view/i,
+    });
+    // "Who Can Chat?" — bound to `allow_anonymous` (tabsEmbedTab.
+    // selectWhoCanChatAriaLabel = "Select who can chat").
+    this.whoCanChatSelect = dialog.getByRole('combobox', {
+      name: /select who can chat/i,
+    });
   }
 
   /**
@@ -235,5 +255,75 @@ export class EmbedTab {
     }
 
     await expect(this.embedCodeDialog).toBeHidden({ timeout: 5_000 });
+  }
+
+  /**
+   * Enables the shareable link if not already on, then waits for the generated
+   * URL block to render. Reuses main-side getShareableLinkState/toggleShareableLink.
+   */
+  async enableShareableLink(): Promise<void> {
+    if (await this.getShareableLinkState()) return;
+    await this.toggleShareableLink();
+    await expect(this.shareableLinkToggle).toHaveAttribute(
+      'aria-checked',
+      'true',
+      { timeout: 20_000 },
+    );
+    await expect(this.shareableLinkUrlBlock).toBeVisible({ timeout: 15_000 });
+  }
+
+  /** Returns the full generated shareable-link URL text. */
+  async getShareableLinkUrl(): Promise<string> {
+    await expect(this.shareableLinkUrlBlock).toBeVisible({ timeout: 15_000 });
+    return (await this.shareableLinkUrlBlock.textContent())?.trim() ?? '';
+  }
+
+  /** Extracts just the `token` query-param value from the generated shareable-link URL. */
+  async getShareableLinkToken(): Promise<string> {
+    const url = await this.getShareableLinkUrl();
+    const match = url.match(/[?&]token=([^&\s]+)/);
+    if (!match) {
+      throw new Error(
+        `Shareable link URL did not contain a token query param: ${url}`,
+      );
+    }
+    return match[1];
+  }
+
+  /** Selects an option in the "Who Can View?" Radix Select (mentor_visibility). */
+  async setWhoCanView(label: string): Promise<void> {
+    await expect(this.whoCanViewSelect).toBeVisible({ timeout: 10_000 });
+    await this.whoCanViewSelect.click();
+    await this.selectRadixOption(label);
+  }
+
+  /** Selects an option in the "Who Can Chat?" Radix Select (allow_anonymous). */
+  async setWhoCanChat(label: string): Promise<void> {
+    await expect(this.whoCanChatSelect).toBeVisible({ timeout: 10_000 });
+    await this.whoCanChatSelect.click();
+    await this.selectRadixOption(label);
+  }
+
+  /** Clicks the open Radix Select popup's option matching `label`. */
+  private async selectRadixOption(label: string): Promise<void> {
+    const opt = this.page.locator('div[role="option"]').filter({
+      hasText: new RegExp(`^${label}$`, 'i'),
+    });
+    let radixVisible = false;
+    try {
+      await opt.first().waitFor({ state: 'visible', timeout: 3_000 });
+      radixVisible = true;
+    } catch {
+      radixVisible = false;
+    }
+    if (radixVisible) {
+      await opt.first().click();
+    } else {
+      const fallback = this.page.getByRole('option', {
+        name: new RegExp(label, 'i'),
+      });
+      await expect(fallback.first()).toBeVisible({ timeout: 5_000 });
+      await fallback.first().click();
+    }
   }
 }
