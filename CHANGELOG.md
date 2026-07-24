@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.102.3](https://github.com/iblai/os/compare/v0.102.2...v0.102.3) (2026-07-24)
+
+### Bug Fixes
+
+* **chat:** let shareable-link sessions bypass the RBAC chat gate ([55501d3](https://github.com/iblai/os/commit/55501d3999643fb5ce590ab80edabf52b3193243))
+
+### Styles
+
+* normalize pre-existing CHANGELOG prettier drift ([2fe046a](https://github.com/iblai/os/commit/2fe046aa522c78d6c25e32cd79018edb0badf735))
+
+### Tests
+
+* **e2e:** add embed access-control and shareable-link page-object helpers ([508bb74](https://github.com/iblai/os/commit/508bb7459a9fab8c0704cbc9257d58874992826e))
+* **e2e:** add journey 64 shareable-link RBAC bypass ([e852557](https://github.com/iblai/os/commit/e852557b3c9d064c2a48d5cebdd589d17194ef4b)), closes [#chat](https://github.com/iblai/os/issues/chat)
+* **e2e:** record journey 64 coverage ([c4e4127](https://github.com/iblai/os/commit/c4e412752c656f04fa2325f4bd23b9c33e1a63e2))
+
 ## [0.102.2](https://github.com/iblai/os/compare/v0.102.1...v0.102.2) (2026-07-23)
 
 ### Bug Fixes
