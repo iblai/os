@@ -136,8 +136,6 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
               `/mentors/${mentorDbId}/documents/`,
               `/mentors/${mentorDbId}/tools/`,
               `/mentors/${mentorDbId}/prompts/`,
-              `/mentors/${mentorDbId}/#view_analytics`,
-              `/mentors/${mentorDbId}/#view_audit_logs`,
             ],
           },
         }).unwrap();

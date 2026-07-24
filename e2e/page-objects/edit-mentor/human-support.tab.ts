@@ -1,164 +1,367 @@
 import { Page, Locator } from '@playwright/test';
-import { AGENT_HUMAN_SUPPORT_TAB_LABELS } from '@iblai/iblai-js/web-containers/next';
+import {
+  SUPPORT_LABELS,
+  getSupportTabTrigger,
+  isSupportTabVisible,
+  switchToSupportTab,
+  getSupportInfoBox,
+  getSupportToggle,
+  isSupportEnabled,
+  setSupportEnabled,
+  enableSupport,
+  disableSupport,
+  getTicketList,
+  getTicketRow,
+  getTicketRowByIndex,
+  expectTicketInList,
+  expectNoTickets,
+  expectTicketStatusInList,
+  getStatusFilter,
+  filterTicketsByStatus,
+  getUserFilter,
+  filterTicketsByUser,
+  clearUserFilter,
+  refreshTickets,
+  waitForTicketInList,
+  getTicketDetail,
+  getTicketDescription,
+  openTicket,
+  expectTicketDescriptionContains,
+  setTicketStatus,
+  expectTicketClosedNotice,
+  getReplyComposer,
+  replyToTicket,
+  expectMessageInConversation,
+  expectNoRepliesYet,
+  createSupportTicketViaChatAndVerify,
+  type SupportTicketStatus,
+} from '@iblai/iblai-js/playwright';
+
+export type { SupportTicketStatus };
 
 /**
- * Page object for the Human Support tab inside the Edit Mentor modal.
+ * Page object for the Human Support tab inside the Edit Mentor (Agent) modal.
  *
  * Rendered by the SDK's `AgentHumanSupportTab`
  * (`@iblai/iblai-js/web-containers/next`), wrapped in `AgentSettingsProvider`
  * by `components/modals/edit-mentor-modal/tabs/human-support-tab.tsx`. The tab
- * is admin-only (userTypes: [UserType.ADMIN]) and lives under the "Analytics"
- * category in the modal sidebar, after History and before Audit.
+ * is admin-only (`userTypes: [UserType.ADMIN]`) and lives under the
+ * **Runtime** sidebar category (`hooks/use-mentor-segments.ts`), alongside
+ * Tasks / Memory / History / Audit. The host sidebar renders the segment's
+ * label as **"Support"** (not "Human Support") — `SUPPORT_LABELS.tabName`
+ * mirrors this; the SDK still calls its own internal export "Support" too, so
+ * host and SDK never disagree on the trigger's accessible name.
  *
- * Because the SDK does not yet export semantic Playwright helpers for this tab
- * (no `@iblai/iblai-js/playwright` equivalents), all locators are derived from
- * `AGENT_HUMAN_SUPPORT_TAB_LABELS` (the SDK-exported label object) and from
- * `data-testid` attributes baked into the SDK component. This keeps the
- * page-object decoupled from CSS class names and positional DOM structure — a
- * label change in the SDK updates `AGENT_HUMAN_SUPPORT_TAB_LABELS` and the
- * page-object picks it up automatically.
+ * All DOM access goes through the semantic helpers exported from
+ * `@iblai/iblai-js/playwright`'s `human-support-tab-helpers` module — resolved
+ * via stable `data-testid` attributes, accessible roles, and aria-labels
+ * emitted by the SDK. Selector changes in the SDK are absorbed by bumping
+ * `@iblai/iblai-js`; no hand-rolled selectors live here beyond the couple of
+ * label-derived locators the SDK doesn't itself export a getter for (heading,
+ * empty-state text) — same convention as `TasksTab`/`VoiceTab`.
  *
- * Selector policy (do not regress):
- *   1. Sidebar tab trigger  → `[role="tab"][aria-controls="panel-human_support"]:visible`
- *      The `aria-controls` id is `panel-${tab.value}` (see
- *      `components/modals/edit-mentor-modal/index.tsx`), and `tab.value` is
- *      `MODALS.EDIT_MENTOR.tabs.human_support === "human_support"`. Filtering
- *      on `:visible` excludes the hidden responsive twin (desktop + compact
- *      sidebar both render the same trigger; only one is visible at a time).
- *   2. Tab header title → `role="heading"` + `AGENT_HUMAN_SUPPORT_TAB_LABELS.header.title`
- *   3. "Search for User" combobox trigger → `role="combobox"` + aria-label
- *   4. Status filter select → `aria-label` from labels.filters.allStatuses i18n key
- *   5. Ticket list region → `data-testid="human-support-ticket-list"` (when tickets exist)
- *   6. Empty state        → `labels.list.noTickets` text (when no tickets)
- *   7. Detail pane region → `data-testid="human-support-ticket-detail"`
- *   8. Detail pane prompt → `labels.detail.selectPrompt` text (nothing selected)
+ * CATEGORY: the modal sidebar only mounts the active category's segment
+ * triggers (see `EditMentorPage.navigateToTab`). Support lives under
+ * **Runtime**, so `switchToTab()` activates that category first via the
+ * `bindTabNav` callback injected by `EditMentorPage` — mirrors `TasksTab`,
+ * which has the identical problem (its SDK helper `switchToTasksTab`
+ * predates the category strip and is category-blind).
+ *
+ * AVAILABILITY TOGGLE: `getSupportToggle`/`isSupportEnabled`/
+ * `setSupportEnabled` resolve the info-box switch that mirrors the
+ * human-support tool's on/off state (the same tool exposed on the Tools tab).
+ * It is HIDDEN when the tenant's tool catalog has no human-support tool —
+ * callers must guard with `hasToggle()` before calling `setEnabled`.
+ *
+ * The instance scopes every helper to the Edit Mentor `dialog` Locator so
+ * other portaled dialogs in the same page (toasts, confirm dialogs, etc.)
+ * cannot interfere with SDK locators.
  */
 export class HumanSupportTab {
   readonly page: Page;
   readonly dialog: Locator;
 
-  /** Default labels exported by the SDK — use for text assertions. */
-  static readonly LABELS = AGENT_HUMAN_SUPPORT_TAB_LABELS;
+  /** Default labels shipped with the SDK — use for text assertions. */
+  static readonly LABELS = SUPPORT_LABELS;
 
   /**
-   * Sidebar tab trigger (host-rendered).
-   *
-   * `:visible` excludes the host's hidden responsive twin — the sidebar is
-   * rendered twice (desktop `#desktop-tab-human_support` + compact
-   * `#tab-human_support`), both owning `aria-controls="panel-human_support"`,
-   * and only the viewport-appropriate one is visible at any given time.
+   * Category-aware tab navigation injected by `EditMentorPage` (see
+   * `bindTabNav` there). The Support segment lives in the modal's Runtime
+   * category, and the sidebar only mounts the ACTIVE category's segment
+   * triggers — so the SDK's `switchToSupportTab` (which predates the
+   * category strip and expects the trigger to already be in the DOM) can't
+   * find it while the modal sits on its default Configurations view.
    */
-  readonly tabLink: Locator;
+  private navigateToTab?: (tabName: string) => Promise<void>;
+
+  bindTabNav(navigateToTab: (tabName: string) => Promise<void>): void {
+    this.navigateToTab = navigateToTab;
+  }
 
   constructor(page: Page, dialog: Locator) {
     this.page = page;
     this.dialog = dialog;
-
-    this.tabLink = dialog.locator(
-      '[role="tab"][aria-controls="panel-human_support"]:visible',
-    );
   }
 
   // ---------------------------------------------------------------------------
   // Navigation
   // ---------------------------------------------------------------------------
 
+  /** True when the Support tab trigger is rendered (admin-only segment guard). */
+  isTabVisible(): Promise<boolean> {
+    return isSupportTabVisible(this.page);
+  }
+
+  /** The host sidebar trigger for the Support segment. */
+  tabLink(): Locator {
+    return getSupportTabTrigger(this.dialog);
+  }
+
   /**
-   * Returns true when the Human Support tab trigger is visible in the sidebar.
-   * Used to assert admin-only visibility and skip non-admin tests gracefully.
+   * Click the Support tab inside the Edit Mentor modal.
+   *
+   * Activates the Runtime category first when the tab nav is bound (the
+   * default via `EditMentorPage`'s constructor), then delegates to the SDK
+   * helper — its click on the now-active trigger is a no-op, but its
+   * wait-for-panel-ready assertion is still the readiness signal callers
+   * rely on.
    */
-  async isTabVisible(): Promise<boolean> {
-    return this.tabLink.isVisible({ timeout: 5_000 }).catch(() => false);
+  async switchToTab(): Promise<void> {
+    if (this.navigateToTab) {
+      await this.navigateToTab(SUPPORT_LABELS.tabName);
+    }
+    await switchToSupportTab(this.page);
   }
 
   // ---------------------------------------------------------------------------
-  // Surface locators
+  // Header (no dedicated SDK getter — built directly from SUPPORT_LABELS,
+  // same convention as TasksTab.heading()/description()).
   // ---------------------------------------------------------------------------
 
-  /**
-   * The "Human Support" heading at the top of the tab panel.
-   * Resolved by `role="heading"` so it never collides with the sidebar `tab`
-   * element that also displays the label "Human Support".
-   */
+  /** The "Support" heading at the top of the tab panel. Resolved by
+   * `role="heading"` so it never collides with the sidebar `tab` element
+   * that shares the same accessible name. */
   heading(): Locator {
     return this.dialog.getByRole('heading', {
-      name: HumanSupportTab.LABELS.header.title,
+      name: SUPPORT_LABELS.header.title,
       exact: true,
     });
   }
 
-  /**
-   * The header description paragraph below the "Human Support" heading.
-   * Matched by a substring of the SDK label text so minor i18n rewording
-   * doesn't break the assertion (use `{ exact: false }`).
-   */
   headerDescription(): Locator {
-    return this.dialog.getByText(HumanSupportTab.LABELS.header.description, {
+    return this.dialog.getByText(SUPPORT_LABELS.header.description, {
       exact: false,
     });
   }
 
-  /**
-   * The "Search for User" combobox trigger (opens the user-search popover).
-   * Resolved by `role="combobox"` + `aria-label` set by the SDK.
-   */
-  userSearchCombobox(): Locator {
-    return this.dialog.getByRole('combobox', {
-      name: HumanSupportTab.LABELS.filters.searchUser,
-      exact: true,
-    });
+  // ---------------------------------------------------------------------------
+  // Availability toggle (info box)
+  // ---------------------------------------------------------------------------
+
+  infoBox(): Locator {
+    return getSupportInfoBox(this.dialog);
+  }
+
+  toggle(): Locator {
+    return getSupportToggle(this.dialog);
   }
 
   /**
-   * The status-filter `<Select>` trigger. The SDK sets
-   * `aria-label={t('tabsHumanSupportTab.filterByStatus')}` on the trigger, but
-   * the i18n key value is "Filter by status" (from the `tabsHumanSupportTab`
-   * namespace, not the same as `AGENT_HUMAN_SUPPORT_TAB_LABELS`). We locate it
-   * by the displayed placeholder text ("All Statuses") which is available via
-   * the SDK labels object and is unique in the panel.
+   * Whether the availability toggle is present at all. Hidden when the
+   * tenant's tool catalog has no human-support tool — callers must check
+   * this before `setEnabled`/`enable`/`disable`, which otherwise hang
+   * waiting for a control that will never render.
    */
-  statusFilterTrigger(): Locator {
-    return this.dialog.getByRole('combobox', {
-      name: HumanSupportTab.LABELS.filters.allStatuses,
-      exact: false,
-    });
+  async hasToggle(): Promise<boolean> {
+    let visible = false;
+    try {
+      await this.toggle().waitFor({ state: 'visible', timeout: 5_000 });
+      visible = true;
+    } catch {
+      visible = false;
+    }
+    return visible;
   }
 
-  /**
-   * The ticket-list region (`data-testid="human-support-ticket-list"`).
-   * Only mounted by the SDK when there are tickets; assert with a short
-   * timeout and fall back to `noTicketsMessage()` in the empty state.
-   */
+  isEnabled(): Promise<boolean> {
+    return isSupportEnabled(this.dialog);
+  }
+
+  setEnabled(enabled: boolean): Promise<void> {
+    return setSupportEnabled(this.dialog, enabled);
+  }
+
+  enable(): Promise<void> {
+    return enableSupport(this.dialog);
+  }
+
+  disable(): Promise<void> {
+    return disableSupport(this.dialog);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Ticket list
+  // ---------------------------------------------------------------------------
+
   ticketList(): Locator {
-    return this.dialog.getByTestId('human-support-ticket-list');
+    return getTicketList(this.dialog);
   }
 
-  /**
-   * The empty-state message rendered when there are no support tickets.
-   * Text matches `AGENT_HUMAN_SUPPORT_TAB_LABELS.list.noTickets`.
-   */
+  /** The empty-state message rendered when there are no support tickets. */
   noTicketsMessage(): Locator {
-    return this.dialog.getByText(HumanSupportTab.LABELS.list.noTickets, {
+    return this.dialog.getByText(SUPPORT_LABELS.list.noTickets, {
       exact: true,
     });
   }
 
+  ticketRow(subject: string | RegExp): Locator {
+    return getTicketRow(this.dialog, subject);
+  }
+
+  ticketRowByIndex(index: number): Locator {
+    return getTicketRowByIndex(this.dialog, index);
+  }
+
+  expectTicketInList(
+    subject: string | RegExp,
+    timeoutMs?: number,
+  ): Promise<void> {
+    return expectTicketInList(this.dialog, subject, timeoutMs);
+  }
+
+  expectNoTickets(): Promise<void> {
+    return expectNoTickets(this.dialog);
+  }
+
+  expectTicketStatusInList(
+    subject: string | RegExp,
+    status: SupportTicketStatus,
+  ): Promise<void> {
+    return expectTicketStatusInList(this.dialog, subject, status);
+  }
+
+  statusFilter(): Locator {
+    return getStatusFilter(this.dialog);
+  }
+
+  filterByStatus(status: SupportTicketStatus | 'all'): Promise<void> {
+    return filterTicketsByStatus(this.dialog, status);
+  }
+
+  userFilter(): Locator {
+    return getUserFilter(this.dialog);
+  }
+
+  filterByUser(search: string, optionText?: string | RegExp): Promise<void> {
+    return filterTicketsByUser(this.dialog, search, optionText);
+  }
+
+  clearUserFilter(): Promise<void> {
+    return clearUserFilter(this.dialog);
+  }
+
+  /** Force the ticket list to re-query (bounces the status filter). */
+  refresh(): Promise<void> {
+    return refreshTickets(this.dialog);
+  }
+
   /**
-   * The detail pane region (`data-testid="human-support-ticket-detail"`).
-   * Rendered on desktop viewports (hidden on mobile). When no ticket is
-   * selected it shows `labels.detail.selectPrompt`.
+   * Wait for a ticket to appear in the list, refreshing between polls.
+   * Agent-created tickets land after the chat tool call completes
+   * server-side, so allow a generous deadline.
    */
+  waitForTicketInList(
+    subject: string | RegExp,
+    opts?: { timeoutMs?: number; refresh?: () => Promise<void> },
+  ): Promise<void> {
+    return waitForTicketInList(this.dialog, subject, opts);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Ticket detail
+  // ---------------------------------------------------------------------------
+
   detailPane(): Locator {
-    return this.dialog.getByTestId('human-support-ticket-detail');
+    return getTicketDetail(this.dialog);
+  }
+
+  /** The "Select a ticket to view details." prompt shown before any ticket
+   * is selected. */
+  detailSelectPrompt(): Locator {
+    return this.dialog.getByText(SUPPORT_LABELS.detail.selectPrompt, {
+      exact: true,
+    });
+  }
+
+  description(): Locator {
+    return getTicketDescription(this.dialog);
+  }
+
+  /** Open a ticket from the list and wait for its detail to render. */
+  openTicket(subject: string | RegExp): Promise<Locator> {
+    return openTicket(this.dialog, subject);
+  }
+
+  expectDescriptionContains(text: string | RegExp): Promise<void> {
+    return expectTicketDescriptionContains(this.dialog, text);
   }
 
   /**
-   * The "Select a ticket to view details." prompt shown in the detail pane
-   * before any ticket is selected.
+   * Change the opened ticket's status via the detail pane's Status select.
+   * Selecting "closed" routes through the dedicated close endpoint and
+   * replaces the composer with the closed notice.
    */
-  detailSelectPrompt(): Locator {
-    return this.dialog.getByText(HumanSupportTab.LABELS.detail.selectPrompt, {
-      exact: true,
-    });
+  setStatus(status: SupportTicketStatus): Promise<void> {
+    return setTicketStatus(this.dialog, status);
+  }
+
+  expectClosedNotice(): Promise<void> {
+    return expectTicketClosedNotice(this.dialog);
+  }
+
+  replyComposer(): Locator {
+    return getReplyComposer(this.dialog);
+  }
+
+  /** Send a reply on the opened ticket; waits for the composer to clear. */
+  reply(message: string): Promise<void> {
+    return replyToTicket(this.dialog, message);
+  }
+
+  expectMessageInConversation(message: string | RegExp): Promise<void> {
+    return expectMessageInConversation(this.dialog, message);
+  }
+
+  expectNoRepliesYet(): Promise<void> {
+    return expectNoRepliesYet(this.dialog);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Chat-driven ticket creation
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Full flow: with support enabled, ask the agent (via the main chat
+   * surface) for a ticket, then verify it shows up in this tab.
+   *
+   * The Edit Agent modal is host-specific to open/close, so the caller
+   * supplies `openEditAgentModal` (and optionally `closeEditAgentModal`,
+   * used to get the modal out of the chat's way before sending). Steps:
+   *
+   *  1. `openEditAgentModal()` → Support tab → ensure the toggle is ON.
+   *  2. `closeEditAgentModal()` (when provided) → chat-request the ticket.
+   *  3. `openEditAgentModal()` → Support tab → wait for the ticket row.
+   *
+   * Returns the dialog locator with the Support tab open and the new ticket
+   * listed, so specs can keep asserting (open it, reply, close it).
+   */
+  createTicketViaChatAndVerify(opts: {
+    subject: string;
+    description?: string;
+    openEditAgentModal: () => Promise<void>;
+    closeEditAgentModal?: () => Promise<void>;
+    listTimeoutMs?: number;
+  }): Promise<Locator> {
+    return createSupportTicketViaChatAndVerify(this.page, opts);
   }
 }

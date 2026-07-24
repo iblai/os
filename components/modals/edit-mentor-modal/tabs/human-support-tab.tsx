@@ -13,11 +13,11 @@ import { TenantKeyMentorIdParams } from '@/lib/types';
 
 export function HumanSupportTab() {
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
-  // const { getMentorId } = useNavigate();
+  const { getMentorId } = useNavigate();
   const username = useUsername();
-  // const activeMentorId = getMentorId() ?? mentorId;
-  console.log('HumanSupportTab', tenantKey, mentorId, username);
-  // if (!tenantKey || !activeMentorId || !username) return null;
+  const activeMentorId = getMentorId() ?? mentorId;
+
+  if (!tenantKey || !activeMentorId || !username) return null;
 
   // AgentHumanSupportTab reads tenant/mentor/username from the nearest
   // AgentSettingsProvider (like AgentTasksTab), so the provider is required
@@ -27,7 +27,7 @@ export function HumanSupportTab() {
   return (
     <AgentSettingsProvider
       tenantKey={tenantKey}
-      mentorId={mentorId}
+      mentorId={activeMentorId}
       username={username}
       enableRBAC={config.enableRBAC()}
     >

@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-07-21",
+  "lastUpdated": "2026-07-24",
   "summary": {
-    "totalCheckpoints": 562,
-    "coveredCheckpoints": 535,
+    "totalCheckpoints": 570,
+    "coveredCheckpoints": 543,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 8,
     "pendingCheckpoints": 7,
     "percent": 100,
-    "totalJourneys": 64,
-    "activeJourneys": 63
+    "totalJourneys": 65,
+    "activeJourneys": 64
   },
   "journeys": [
     {
@@ -3610,6 +3610,57 @@
         {
           "id": "csd-06",
           "description": "Collapsing the sidebar and clicking the Search chats rail icon opens the same dialog",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "mentor-human-support-tab",
+      "name": "Mentor Human Support Tab",
+      "spec": "64-mentor-human-support-tab.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/human-support-tab.tsx",
+        "hooks/use-mentor-segments.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "support-01",
+          "description": "Opening the Human Support tab renders the header plus either the ticket list or the empty state (render/API contract)",
+          "status": "covered"
+        },
+        {
+          "id": "support-02",
+          "description": "The status filter round-trips through Open, In Progress, Closed and back to All Statuses without erroring",
+          "status": "covered"
+        },
+        {
+          "id": "support-03",
+          "description": "Admin enables the human-support availability toggle when the tenant's tool catalog exposes it (guarded — the chat-driven lifecycle skips when the toggle is not rendered)",
+          "status": "covered"
+        },
+        {
+          "id": "support-04",
+          "description": "Admin asks the agent in chat to open a support ticket with a unique subject, and the ticket appears in the Human Support list with Open status",
+          "status": "covered"
+        },
+        {
+          "id": "support-05",
+          "description": "Admin opens the created ticket and its rendered description shows real agent-authored content",
+          "status": "covered"
+        },
+        {
+          "id": "support-06",
+          "description": "Admin replies to the ticket from the detail pane and the reply appears in the conversation",
+          "status": "covered"
+        },
+        {
+          "id": "support-07",
+          "description": "Admin moves the ticket to In Progress and the status badge updates in the ticket list",
+          "status": "covered"
+        },
+        {
+          "id": "support-08",
+          "description": "Admin closes the ticket; the closed notice replaces the reply composer and the list badge reflects Closed",
           "status": "covered"
         }
       ]

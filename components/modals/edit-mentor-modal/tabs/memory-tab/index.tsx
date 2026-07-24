@@ -50,6 +50,7 @@ export function MemoryTab() {
         org: tenantKey,
         // @ts-ignore userId is accepted at runtime
         userId: username ?? '',
+        // @ts-ignore - enable_memory_component exists on API but not typed
         formData: { enable_memory_component: checked },
       }).unwrap();
       toast.success(t('toggleSuccess'));

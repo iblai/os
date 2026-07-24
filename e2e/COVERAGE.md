@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-07-21 | 562 checkpoints (535 covered, 7 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 64 journeys (63 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-07-24 | 570 checkpoints (543 covered, 7 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 65 journeys (64 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -1143,5 +1143,28 @@ Covers the `ChatSearchDialog` (issue #2053) opened from the sidebar's "Search ch
 - [x] csd-04: Clicking "New Chat" inside the dialog closes it and starts a fresh, empty chat distinct from the previously-active seeded session
 - [x] csd-05: Selecting a chat result closes the dialog and loads that session's conversation into the chat panel
 - [x] csd-06: Collapsing the sidebar and clicking the "Search chats" rail icon opens the same dialog
+
+---
+
+## Journey 64: Mentor Human Support Tab (8 checkpoints) — `journeys/64-mentor-human-support-tab.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/human-support-tab.tsx`, `hooks/use-mentor-segments.ts`
+
+Covers the Support tab (host sidebar label "Support"; SDK panel value `human_support`) in the Edit Agent modal — an admin-only support-ticket inbox rendered by the SDK's `AgentHumanSupportTab` (`@iblai/iblai-js/web-containers/next`). It lives under the modal's **Runtime** sidebar category alongside Tasks / Memory / History / Audit. Tickets are filed by the AGENT during chat via a support tool: an admin asks the agent (in the main chat) to open a ticket, the agent runs the tool server-side, and the ticket then appears in this tab's list — a filter bar (user search + status select), a ticket list, and a detail pane (status select, description, conversation, reply composer).
+
+All DOM access flows through `HumanSupportTab` (`e2e/page-objects/edit-mentor/human-support.tab.ts`), refactored to delegate every locator/action to the SDK's new `human-support-tab-helpers` module (`@iblai/iblai-js/playwright`) rather than hand-rolled selectors — the same convention as `LtiTab`/`VoiceTab`/`TasksTab`. The Support segment shares Tasks' category-strip problem (its SDK helper `switchToSupportTab` is category-blind), so `HumanSupportTab.switchToTab()` uses the same `bindTabNav` pattern to activate Runtime first.
+
+**Availability guard:** the info-box toggle that mirrors the human-support tool's on/off state is HIDDEN when the tenant's tool catalog has no human-support tool. The chat-driven lifecycle test checks `hasToggle()` and skips (rather than fails) when it never renders, since the agent has no tool to call in that case.
+
+**Isolation:** this journey mutates mentor settings (the availability toggle) and creates support tickets, so — per house style (journey 47) — it never runs against the shared most-recently-accessed mentor. Every test gets its own freshly-created mentor in `beforeEach`; the file runs `test.describe.configure({ mode: 'serial' })` so no other test/worker can touch it mid-run; created mentors are tracked and deleted in `afterAll` via `MentorTracker`.
+
+- [x] support-01: Opening the Human Support tab renders the header plus either the ticket list or the empty state (render/API contract)
+- [x] support-02: The status filter round-trips through Open, In Progress, Closed and back to All Statuses without erroring
+- [x] support-03: Admin enables the human-support availability toggle when the tenant's tool catalog exposes it _(guarded — the chat-driven lifecycle skips when the toggle is not rendered)_
+- [x] support-04: Admin asks the agent in chat to open a support ticket with a unique, timestamped subject, and the ticket appears in the Human Support list with Open status
+- [x] support-05: Admin opens the created ticket and its rendered description shows real agent-authored content _(non-empty check rather than exact text — the description is LLM output)_
+- [x] support-06: Admin replies to the ticket from the detail pane and the reply appears in the conversation
+- [x] support-07: Admin moves the ticket to In Progress and the status badge updates in the ticket list
+- [x] support-08: Admin closes the ticket; the closed notice replaces the reply composer and the list badge reflects Closed
 
 ---
