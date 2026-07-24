@@ -42,7 +42,34 @@ const remotePatterns = rawPatterns
   .filter(Boolean) as RemotePattern[];
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
-const assetPrefix = basePath ? `${basePath}/` : '';
+
+// ---------------------------------------------------------------------------
+// Immutable, deployment-ID-namespaced static hosting.
+//
+// deploymentId = the release version (matches how images are tagged), so a
+// build's assets live at a stable, human-meaningful path and rollback is just
+// re-deploying the previous image tag against its retained assets.
+//
+// When NEXT_PUBLIC_ASSET_CDN is set (web/server build only — Tauri & offline
+// exports leave it UNSET so their assets stay self-contained relative paths),
+// every /_next/* asset URL is prefixed with the CDN host under
+//   apps/<app>/<version>/
+// so all builds' immutable assets coexist in one shared store and node build
+// skew can no longer cause ChunkLoadError. Unset → existing basePath behavior,
+// i.e. this change is a no-op until the CDN env is provided.
+// ---------------------------------------------------------------------------
+const appName = process.env.NEXT_PUBLIC_APP_NAME || 'os';
+const deploymentId =
+  process.env.DEPLOYMENT_ID ||
+  process.env.APP_VERSION ||
+  process.env.npm_package_version ||
+  'dev';
+const assetCdnBase = process.env.NEXT_PUBLIC_ASSET_CDN?.replace(/\/+$/, '');
+const cdnAssetPrefix = assetCdnBase
+  ? `${assetCdnBase}/apps/${appName}/${deploymentId}`
+  : '';
+
+const assetPrefix = cdnAssetPrefix || (basePath ? `${basePath}/` : '');
 
 const nextConfig: NextConfig = {
   output: 'standalone', // <- this generates .next/standalone
@@ -54,6 +81,14 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: process.cwd(),
   basePath,
   assetPrefix,
+  // Deterministic build ID = release version. Keeps the buildId stable across
+  // rebuilds of a release and lets RSC/Server-Action version checks line up
+  // across a rolling fleet. (The versioned assetPrefix already isolates each
+  // deployment's assets; this is belt-and-suspenders.)
+  generateBuildId: async () => deploymentId,
+  // Assets are cross-origin once served from the CDN — emit crossorigin on the
+  // injected <script>/<link> tags so error reporting + integrity work.
+  crossOrigin: 'anonymous',
   trailingSlash: !!basePath,
   typescript: {
     ignoreBuildErrors: true,
