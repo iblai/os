@@ -49,7 +49,7 @@ export function SandboxTab() {
         org: tenantKey,
         // @ts-ignore userId is accepted at runtime
         userId: username ?? '',
-        // @ts-ignore - enable_claw exists on API but not typed
+        // @ts-ignore enable_claw exists on the API but not in the typed request
         formData: { enable_claw: checked },
       }).unwrap();
       toast.success(t('toggleSuccess'));

@@ -112,7 +112,6 @@ export default defineConfig({
 
         // Config files
         'instrumentation.ts',
-        'middleware.ts',
         'next.config.ts',
         'server-wrapper.js',
         'sentry.*.config.*',

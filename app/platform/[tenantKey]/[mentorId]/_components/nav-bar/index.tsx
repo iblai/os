@@ -122,6 +122,7 @@ export const NEW_CHAT_NAV_ITEM = {
 export const ANALYTICS_NAV_ITEM: MentorSegment = {
   value: 'analytics',
   label: 'Analytics',
+  labelKey: 'analytics',
   icon: LineChart,
   userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
   rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/#view_analytics`,
@@ -135,6 +136,9 @@ export const ANALYTICS_NAV_ITEM: MentorSegment = {
 
 export function NavBar() {
   const t = useTranslations('navBarIndex');
+  // Segment labels + category titles live in the shared `header` namespace
+  // (same keys header.tsx uses) so both nav surfaces stay in sync.
+  const tHeader = useTranslations('header');
   const [openModal, setOpenModal] = React.useState(false);
   const dispatch = useAppDispatch();
   const selectedAnalyticsMentor = useAppSelector(selectSelectedMentor);
@@ -350,11 +354,11 @@ export function NavBar() {
       .filter((s) => s.navCategory)
       .map((s) => ({
         value: s.value,
-        label: s.label,
+        label: tHeader(s.labelKey),
         icon: s.icon,
         category: s.navCategory,
       }));
-  }, [filteredSegments]);
+  }, [filteredSegments, tHeader]);
 
   const showForkButton =
     !userIsStudent &&
@@ -585,7 +589,10 @@ export function NavBar() {
                   >
                     <CategorizedDropdownMenu
                       categories={
-                        MENTOR_SEGMENT_NAV_CATEGORIES as ReadonlyArray<CategoryConfig>
+                        MENTOR_SEGMENT_NAV_CATEGORIES.map((c) => ({
+                          key: c.key,
+                          title: tHeader(c.titleKey),
+                        })) as ReadonlyArray<CategoryConfig>
                       }
                       items={categorizedDropdownItems}
                       onItemSelect={handleSegmentClick}

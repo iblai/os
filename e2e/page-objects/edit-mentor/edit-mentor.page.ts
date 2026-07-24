@@ -8,6 +8,7 @@ import { ToolsTab } from './tools.tab';
 import { PromptsTab } from './prompts.tab';
 import { DisclaimersTab } from './disclaimers.tab';
 import { DatasetsTab } from './datasets.tab';
+import { EvaluationTab } from './evaluation.tab';
 import { HistoryTab } from './history.tab';
 import { MemoryTab } from './memory.tab';
 import { McpTab } from './mcp.tab';
@@ -63,6 +64,7 @@ const TAB_CATEGORY: Record<
   Support: 'Runtime',
   Audit: 'Runtime',
   Analytics: 'Runtime',
+  Evals: 'Runtime',
 };
 
 export class EditMentorPage {
@@ -77,6 +79,7 @@ export class EditMentorPage {
   readonly prompts: PromptsTab;
   readonly disclaimers: DisclaimersTab;
   readonly datasets: DatasetsTab;
+  readonly evaluation: EvaluationTab;
   readonly history: HistoryTab;
   readonly memory: MemoryTab;
   readonly mcp: McpTab;
@@ -104,6 +107,7 @@ export class EditMentorPage {
     this.prompts = new PromptsTab(page, this.dialog);
     this.disclaimers = new DisclaimersTab(page, this.dialog);
     this.datasets = new DatasetsTab(page, this.dialog);
+    this.evaluation = new EvaluationTab(page, this.dialog);
     this.history = new HistoryTab(page, this.dialog);
     this.memory = new MemoryTab(page, this.dialog);
     this.mcp = new McpTab(page, this.dialog);

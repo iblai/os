@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-07-24 | 570 checkpoints (543 covered, 7 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 65 journeys (64 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-07-23 | 586 checkpoints (559 covered, 7 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 66 journeys (65 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -201,7 +201,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 13: Shareable Links & Embed Integration (10 checkpoints) — `journeys/13-shareable-links-and-embed-integration.spec.ts`
+## Journey 13: Shareable Links & Embed Integration (14 checkpoints) — `journeys/13-shareable-links-and-embed-integration.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/embed-tab.tsx`, `components/modals/edit-mentor-modal/hooks/useEmbedTab.ts`, `components/logo.tsx`, `hooks/use-mentors/use-mentor-settings.ts`, `hooks/use-embed-mode.ts`, `components/chat-input-form/voice-call-button.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form/screen-sharing-button.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
 
@@ -215,6 +215,10 @@ When adding a new page or modifying an existing user flow:
 - [x] Embed view sidebar logo is clickable when Show Catalogue is enabled (configured via the embed UI on a fresh mentor, verified at the embed URL)
 - [x] Embed mode renders a minimal sidebar: New Chat present (and Chats when the user is logged in); Agents (New Agent), Workflows, Analytics, Projects, and Support/docs footer link all absent — holds for both expanded and rail-collapsed layouts regardless of user role
 - [ ] Optimize Page Context Tokens toggle: visible label present, tooltip ('Strips HTML tags from page context') reachable on hover, and the setting flips and persists after submit + modal reopen via GET /settings/ round-trip _(parked as `test.fixme` — flaky in CI with shared mentor + slow submit cycle; activate with a dedicated mentor fixture)_
+- [x] Issue #2153: toggling the Shareable Link switch ON for a non-anonymous mentor with an empty Website URL does not surface the "Please specify a valid Website URL" error and still creates the shareable link (success toast)
+- [x] Issue #2153: clicking the regenerate (refresh) icon next to Shareable Link does not surface the Website URL validation error
+- [x] Issue #2153: toggling the Shareable Link switch OFF does not surface the Website URL validation error
+- [x] Issue #2153 contrast case: toggling Shareable Link ON for an anonymous mentor (Website URL section not rendered at all) remains error-free
 
 ---
 
@@ -793,6 +797,32 @@ The spec drives the tab through the semantic Tasks helpers from `@iblai/iblai-js
 
 ---
 
+## Journey 63: Mentor Evaluation Tab (17 checkpoints) — `journeys/63-mentor-evaluation-tab.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/evaluation-tab/index.tsx`, `hooks/use-mentor-segments.ts`
+
+Wraps the packaged `AgentEvaluationTab` from `@iblai/iblai-js/web-containers/next` with `AgentSettingsProvider`, `getLLMProviderDetails`, and `IblPagination`. All interactions go through the dedicated eval-tab Playwright helpers exported from `@iblai/iblai-js/playwright` (via the `EvaluationTab` page object — mirrors the `VoiceTab`/`TasksTab` thin-delegation pattern from journeys 47/49). Eval datasets ("benchmarks") are tenant-scoped, so the whole file runs serially against one dedicated mentor (created once in `beforeAll`, mirroring journey 14) and one throwaway benchmark created by EVAL-03. Checkpoints that depend on a run reaching `COMPLETED` (EVAL-11/EVAL-12) read the run's live status and skip gracefully instead of assuming either outcome — the real api.iblai.org backend's completion timing is not deterministic, and no test in this journey asserts that a run completes.
+
+- [x] EVAL-01: Evals tab heading, description, and the info box (`data-testid=evaluation-info-box`) all render when the modal is opened on the Evals tab
+- [x] EVAL-02: Benchmark combobox and both toolbar actions (New Evaluation, Manage benchmarks) render; New Evaluation's disabled/enabled state correctly reflects whether a benchmark is auto-selected
+- [x] EVAL-03: Admin creates a new benchmark via Manage benchmarks and selects it back on the Evals tab toolbar
+- [x] EVAL-04: Admin adds a Q&A pair to a benchmark via Manage benchmarks → View items → Add Q&A (Manual sub-tab)
+- [x] EVAL-05: With a fresh (zero-run) benchmark selected, the runs table renders all five canonical headers (Evaluation, Status, Initiated by, Created, Actions) and the benchmark-specific empty state
+- [x] EVAL-06: New Evaluation dialog shows the benchmark readback and name input, and Cancel dismisses it without creating a run
+- [x] EVAL-07: New Evaluation dialog can be dismissed via Escape without creating a run
+- [x] EVAL-08: Admin starts a new evaluation and it appears in the runs table with a valid status badge
+- [x] EVAL-09: A run's actions menu reflects its live status — Check status/Delete always enabled; View results/New review/Export CSV enabled once completed, otherwise disabled with the `notReadyHint` tooltip
+- [x] EVAL-10: Check status triggers a fresh fetch and surfaces an outcome toast (pending, completed, or failed)
+- [x] EVAL-11: Once a run has completed, admin can open View results and Export CSV _(opportunistic — skips gracefully while the run has not completed yet)_
+- [x] EVAL-12: Once a run has completed, the New review (LLM-judge) dialog keeps Evaluate disabled until criteria and score name are filled _(opportunistic — skips gracefully while the run has not completed yet)_
+- [x] EVAL-13: Admin can cancel a delete confirmation (row stays) and then delete a run for real (row is removed)
+- [x] EVAL-14: Manage benchmarks lists the created benchmark, and searching for its name filters down to it
+- [x] EVAL-15: Evals tab has no axe-core accessibility violations on visible dialogs
+- [x] EVAL-16: Admin can leave the Evals tab and return without errors (wrapper re-mounts cleanly)
+- [x] EVAL-17: Non-admin does not see the Evals tab in the Edit Mentor modal (ADMIN-only segment in `use-mentor-segments.ts`)
+
+---
+
 ## Journey 9b: Voice-to-Text Dictation (1 checkpoint) — `journeys/09b-voice-to-text.spec.ts`
 
 **Source files:** `hooks/use-voice-chat.ts`, `hooks/use-timer.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form.tsx`
@@ -1146,25 +1176,30 @@ Covers the `ChatSearchDialog` (issue #2053) opened from the sidebar's "Search ch
 
 ---
 
-## Journey 64: Mentor Human Support Tab (8 checkpoints) — `journeys/64-mentor-human-support-tab.spec.ts`
+## Journey 64: Shareable Link RBAC Bypass (3 checkpoints) — `journeys/64-shareable-link-rbac-bypass.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/human-support-tab.tsx`, `hooks/use-mentor-segments.ts`
+**Source files:** `components/chat-input-form.tsx`
 
-Covers the Support tab (host sidebar label "Support"; SDK panel value `human_support`) in the Edit Agent modal — an admin-only support-ticket inbox rendered by the SDK's `AgentHumanSupportTab` (`@iblai/iblai-js/web-containers/next`). It lives under the modal's **Runtime** sidebar category alongside Tasks / Memory / History / Audit. Tickets are filed by the AGENT during chat via a support tool: an admin asks the agent (in the main chat) to open a ticket, the agent runs the tool server-side, and the ticket then appears in this tab's list — a filter bar (user search + status select), a ticket list, and a detail pane (status select, description, conversation, reply composer).
+Issue #2155 — a shareable-link `?token=` must bypass the RBAC `#chat` gate once the
+backend has accepted it and returned a session (`hasChatPermission =
+(hasShareableToken && !!sessionId) || <rbac check>`), without regressing the
+no-token denial or letting token _presence alone_ grant free access. Each test
+provisions its own Administrators-only / Authenticated-Users-chat mentor live
+against the running backend (Journey 14's isolation pattern), configured through
+the Embed tab's real "Who Can View? / Who Can Chat?" selects and a real "Generate
+Shareable Link" token — no `page.route` mocking. All three checkpoints were run
+and verified passing against a live `pnpm build && pnpm start` server.
 
-All DOM access flows through `HumanSupportTab` (`e2e/page-objects/edit-mentor/human-support.tab.ts`), refactored to delegate every locator/action to the SDK's new `human-support-tab-helpers` module (`@iblai/iblai-js/playwright`) rather than hand-rolled selectors — the same convention as `LtiTab`/`VoiceTab`/`TasksTab`. The Support segment shares Tasks' category-strip problem (its SDK helper `switchToSupportTab` is category-blind), so `HumanSupportTab.switchToTab()` uses the same `bindTabNav` pattern to activate Runtime first.
+There is deliberately no anonymous-visitor checkpoint: `@iblai/web-utils`'s
+`MentorProvider` only loads the `rbacPermissions` Redux data (what
+`chat-input-form.tsx` reads) when the visitor `isLoggedIn`. For a never-
+authenticated visitor `rbacPermissions` is always `{}`, so the RBAC gate this fix
+touches structurally never applies — verified empirically: an anonymous visitor on
+an Administrators-only mentor got full enabled chat access with **no token at
+all**. An anonymous "token bypass" case would pass identically pre-fix and prove
+nothing about #2155; Journey 14 already covers the anonymous/public-access happy
+path.
 
-**Availability guard:** the info-box toggle that mirrors the human-support tool's on/off state is HIDDEN when the tenant's tool catalog has no human-support tool. The chat-driven lifecycle test checks `hasToggle()` and skips (rather than fails) when it never renders, since the agent has no tool to call in that case.
-
-**Isolation:** this journey mutates mentor settings (the availability toggle) and creates support tickets, so — per house style (journey 47) — it never runs against the shared most-recently-accessed mentor. Every test gets its own freshly-created mentor in `beforeEach`; the file runs `test.describe.configure({ mode: 'serial' })` so no other test/worker can touch it mid-run; created mentors are tracked and deleted in `afterAll` via `MentorTracker`.
-
-- [x] support-01: Opening the Human Support tab renders the header plus either the ticket list or the empty state (render/API contract)
-- [x] support-02: The status filter round-trips through Open, In Progress, Closed and back to All Statuses without erroring
-- [x] support-03: Admin enables the human-support availability toggle when the tenant's tool catalog exposes it _(guarded — the chat-driven lifecycle skips when the toggle is not rendered)_
-- [x] support-04: Admin asks the agent in chat to open a support ticket with a unique, timestamped subject, and the ticket appears in the Human Support list with Open status
-- [x] support-05: Admin opens the created ticket and its rendered description shows real agent-authored content _(non-empty check rather than exact text — the description is LLM output)_
-- [x] support-06: Admin replies to the ticket from the detail pane and the reply appears in the conversation
-- [x] support-07: Admin moves the ticket to In Progress and the status badge updates in the ticket list
-- [x] support-08: Admin closes the ticket; the closed notice replaces the reply composer and the list badge reflects Closed
-
----
+- [x] shl-01: Non-admin user denied RBAC #chat permission opens the mentor chat with a VALID shareable-link token — the textarea is enabled (no RBAC denial placeholder), and the user can send a message and receive a response
+- [x] shl-02: Safety-boundary guard — the same non-admin user opens the same mentor chat with an INVALID/never-issued shareable-link token — the backend never creates a session, so the textarea stays disabled exactly as with no token (token presence alone must not unlock chat)
+- [x] shl-03: Regression guard — the same non-admin user opens the same mentor chat with NO token — the textarea stays disabled and the RBAC denial placeholder ("Sorry about that! You don't have permission to chat.") is shown
