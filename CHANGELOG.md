@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.102.5](https://github.com/iblai/os/compare/v0.102.4...v0.102.5) (2026-07-25)
+
+### Tests
+
+* **e2e:** deflake journey 62 csd-02 against backend auto-titling ([dce701c](https://github.com/iblai/os/commit/dce701c881163a586c076c873dfb4ff97f1b1ae6))
+
 ## [0.102.4](https://github.com/iblai/os/compare/v0.102.3...v0.102.4) (2026-07-24)
 
 ### Bug Fixes
