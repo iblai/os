@@ -406,8 +406,7 @@ export function NavBar() {
   }, [mentorSettingsCombinedPublicAndPrivate?.mentorUniqueId]);
 
   const pathname = usePathname();
-  const isPromptGalleryOrAnalytics =
-    pathname.includes('/prompt-gallery') || pathname.includes('/analytics');
+  const isPromptGalleryPage = pathname.includes('/prompt-gallery');
   const isWorkflowsPage = /\/workflows\/[^/]+\/?$/.test(pathname);
   // The tenant-scoped Projects index (/platform/<tenant>/projects) is not a chat
   // surface, so chat-only nav controls (e.g. the LLM provider selector) are hidden
@@ -415,8 +414,7 @@ export function NavBar() {
   // still a chat page and keeps them.
   const isProjectsIndexPage = /\/projects\/?$/.test(pathname);
   const isOnChatPage =
-    !pathname.includes('/prompt-gallery') &&
-    !pathname.includes('/analytics') &&
+    !isPromptGalleryPage &&
     !pathname.includes('/explore') &&
     !isWorkflowsPage &&
     !isProjectsIndexPage;
@@ -542,7 +540,7 @@ export function NavBar() {
             {!pathname.includes('/explore') &&
               !isWorkflowsPage &&
               mentorId &&
-              (isPromptGalleryOrAnalytics ? (
+              (isPromptGalleryPage ? (
                 <div className="flex items-center gap-1 text-sm font-medium text-[#646464]">
                   <Avatar className="mr-1 h-5 w-5">
                     <AvatarImage
