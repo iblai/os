@@ -4,13 +4,13 @@
 
 ### Tests
 
-* **e2e:** deflake journey 62 csd-02 against backend auto-titling ([dce701c](https://github.com/iblai/os/commit/dce701c881163a586c076c873dfb4ff97f1b1ae6))
+- **e2e:** deflake journey 62 csd-02 against backend auto-titling ([dce701c](https://github.com/iblai/os/commit/dce701c881163a586c076c873dfb4ff97f1b1ae6))
 
 ## [0.102.4](https://github.com/iblai/os/compare/v0.102.3...v0.102.4) (2026-07-24)
 
 ### Bug Fixes
 
-* **mentor:** adding fix for the RBAC permissions ([5948b7b](https://github.com/iblai/os/commit/5948b7b86189dc54bce06d4468238f6d0ffbec4a))
+- **mentor:** adding fix for the RBAC permissions ([5948b7b](https://github.com/iblai/os/commit/5948b7b86189dc54bce06d4468238f6d0ffbec4a))
 
 ## [0.102.3](https://github.com/iblai/os/compare/v0.102.2...v0.102.3) (2026-07-24)
 
