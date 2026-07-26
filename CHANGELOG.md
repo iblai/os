@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.103.0](https://github.com/iblai/os/compare/v0.102.5...v0.103.0) (2026-07-26)
+
+### Features
+
+* **sidebar:** infinite-scroll pagination for the projects list ([a7302cc](https://github.com/iblai/os/commit/a7302ccc84980d5f1c5c8c66d3ad40163800ed0c))
+
+### Bug Fixes
+
+* **deps:** bump next to 15.5.21 to patch high-severity advisories ([00c0e32](https://github.com/iblai/os/commit/00c0e32e0f8938a26bc6d861fa4eca8935d5dc30))
+
+### Refactors
+
+* **auth:** move the login redirect into a shared @/lib/utils helper ([3c53d61](https://github.com/iblai/os/commit/3c53d619cca2b373d937b1c6175c6cfa1c73c24c))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 1.26.8 ([42b394f](https://github.com/iblai/os/commit/42b394f597867698f354a1554d94f444ebe2c8bf))
+
+### Tests
+
+* **e2e:** isolate the projects journey with a per-test project fixture ([630f5c5](https://github.com/iblai/os/commit/630f5c5321040d3d09b7413c6cb66addbcfad1c9))
+* **e2e:** reap leaked test projects in global teardown ([8e3a01d](https://github.com/iblai/os/commit/8e3a01dbd03c30053410badb350270ef3d731a36))
+
 ## [0.102.5](https://github.com/iblai/os/compare/v0.102.4...v0.102.5) (2026-07-25)
 
 ### Tests
