@@ -1355,7 +1355,22 @@
     "unmute": "取消静音",
     "mute": "静音",
     "closeVoiceChat": "关闭语音聊天",
-    "endCall": "结束通话"
+    "endCall": "结束通话",
+    "muteAgentAudio": "静音智能体音频",
+    "unmuteAgentAudio": "取消静音智能体音频",
+    "muteAgent": "静音智能体",
+    "unmuteAgent": "取消静音智能体",
+    "agentSpeaking": "智能体正在讲话",
+    "agentMuted": "智能体已静音",
+    "callStatus": "通话状态",
+    "micMuted": "麦克风已静音",
+    "listening": "正在聆听…",
+    "callTranscript": "通话文字记录",
+    "transcriptEmpty": "对话开始后，实时文字记录将显示在这里。",
+    "transcriptSpeakerYou": "您",
+    "transcriptSpeakerAgent": "智能体",
+    "transcriptLive": "实时",
+    "jumpToLatest": "跳到最新"
   },
   "modelDownloadModelDownloadStatus": {
     "downloading": "下载中...",

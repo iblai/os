@@ -1355,7 +1355,22 @@
     "unmute": "Unmute",
     "mute": "Mute",
     "closeVoiceChat": "Close voice chat",
-    "endCall": "End Call"
+    "endCall": "End Call",
+    "muteAgentAudio": "Mute agent audio",
+    "unmuteAgentAudio": "Unmute agent audio",
+    "muteAgent": "Mute agent",
+    "unmuteAgent": "Unmute agent",
+    "agentSpeaking": "Agent speaking",
+    "agentMuted": "Agent muted",
+    "callStatus": "Call status",
+    "micMuted": "Mic muted",
+    "listening": "Listening…",
+    "callTranscript": "Call transcript",
+    "transcriptEmpty": "The live transcript will appear here as the conversation starts.",
+    "transcriptSpeakerYou": "You",
+    "transcriptSpeakerAgent": "Agent",
+    "transcriptLive": "Live",
+    "jumpToLatest": "Jump to latest"
   },
   "modelDownloadModelDownloadStatus": {
     "downloading": "Downloading...",

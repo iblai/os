@@ -1355,7 +1355,22 @@
     "unmute": "Réactiver",
     "mute": "Couper",
     "closeVoiceChat": "Fermer le chat vocal",
-    "endCall": "Terminer l'appel"
+    "endCall": "Terminer l'appel",
+    "muteAgentAudio": "Couper l'audio de l'agent",
+    "unmuteAgentAudio": "Réactiver l'audio de l'agent",
+    "muteAgent": "Couper l'agent",
+    "unmuteAgent": "Réactiver l'agent",
+    "agentSpeaking": "L'agent parle",
+    "agentMuted": "Agent coupé",
+    "callStatus": "État de l'appel",
+    "micMuted": "Microphone coupé",
+    "listening": "À l'écoute…",
+    "callTranscript": "Transcription de l'appel",
+    "transcriptEmpty": "La transcription en direct s'affichera ici dès le début de la conversation.",
+    "transcriptSpeakerYou": "Vous",
+    "transcriptSpeakerAgent": "Agent",
+    "transcriptLive": "En direct",
+    "jumpToLatest": "Aller au plus récent"
   },
   "modelDownloadModelDownloadStatus": {
     "downloading": "Téléchargement...",
