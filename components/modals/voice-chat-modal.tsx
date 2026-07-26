@@ -170,7 +170,7 @@ export function VoiceChatModal({
   const shouldAnimate = isConnected;
   // The sound-wave bars belong to the user: they react to the local mic only.
   const isUserVoiceActive = isSpeaking && !isMicMuted;
-  // The violet ring belongs to the mentor: it only shows while the agent is
+  // The ring belongs to the mentor: it only shows while the agent is
   // actually audible. Both can be on at once — real conversations overlap.
   const isMentorVoiceActive = isMentorSpeaking && !isMentorAudioMuted;
 
@@ -234,8 +234,8 @@ export function VoiceChatModal({
           </DialogDescription>
           <div className="flex h-[100vh] w-full flex-col items-center justify-between">
             <div className="flex min-h-0 w-full flex-1 flex-col items-center justify-center px-4 pt-6">
-              {/* Conversation indicator: blue blob = the call and the user's
-                  voice, violet ring = the mentor's voice. */}
+              {/* Conversation indicator: the blob is the call and the user's
+                  voice, the ring is the mentor's voice. */}
               <div
                 data-testid="voice-blob"
                 className="relative mb-6 h-40 w-40 shrink-0 transition-[opacity,filter] duration-300"
@@ -246,9 +246,9 @@ export function VoiceChatModal({
                   filter: isMentorAudioMuted ? 'saturate(0.35)' : undefined,
                 }}
               >
-                {/* Mentor voice ring - deliberately violet so it can never be
-                    mistaken for the user's blue blob, and rendered as its own
-                    layer so it can show at the same time as the user's waves. */}
+                {/* Mentor voice ring - a deeper blue than the blob's own
+                    gradient, and rendered as its own layer so it can show at
+                    the same time as the user's waves. */}
                 {isConnected && isMentorVoiceActive && (
                   <div
                     aria-hidden="true"
@@ -256,13 +256,13 @@ export function VoiceChatModal({
                     className="pointer-events-none absolute -inset-3"
                   >
                     <div
-                      className="absolute inset-0 rounded-full border-2 border-violet-500"
+                      className="absolute inset-0 rounded-full border-2 border-blue-600"
                       style={{
                         animation: 'mentorRingPulse 1.4s ease-in-out infinite',
                       }}
                     ></div>
                     <div
-                      className="absolute inset-0 rounded-full border-2 border-indigo-400"
+                      className="absolute inset-0 rounded-full border-2 border-sky-400"
                       style={{
                         animation: 'mentorRingRipple 1.4s ease-out infinite',
                       }}
@@ -454,10 +454,11 @@ export function VoiceChatModal({
                         >
                           <span
                             className={`mr-1.5 font-semibold ${
-                              // The agent shares the violet of the
-                              // mentor-speaking ring; the user keeps the blue
-                              // of the blob. The pairing is the whole point.
-                              isUser ? 'text-blue-600' : 'text-violet-600'
+                              // The agent shares the deeper blue of the
+                              // mentor-speaking ring; the user keeps the
+                              // lighter blue of the blob. The pairing is the
+                              // whole point.
+                              isUser ? 'text-blue-500' : 'text-blue-700'
                             }`}
                           >
                             {speakerLabel}
@@ -467,7 +468,7 @@ export function VoiceChatModal({
                             <span
                               aria-hidden="true"
                               data-testid="voice-transcript-caret"
-                              className="ml-0.5 inline-block align-baseline font-normal text-violet-500"
+                              className="ml-0.5 inline-block align-baseline font-normal text-blue-600"
                               style={{
                                 animation:
                                   'transcriptCaret 1s ease-in-out infinite',
@@ -503,9 +504,9 @@ export function VoiceChatModal({
                   <span
                     aria-hidden="true"
                     data-testid="voice-transcript-live"
-                    className="absolute top-0 right-2 z-20 flex items-center gap-1 rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-medium text-violet-600"
+                    className="absolute top-0 right-2 z-20 flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700"
                   >
-                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-violet-500" />
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-600" />
                     {t('transcriptLive')}
                   </span>
                 )}

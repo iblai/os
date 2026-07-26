@@ -307,15 +307,15 @@ describe('VoiceChatModal', () => {
       });
     });
 
-    it('shows the violet mentor ring while the agent is speaking', () => {
+    it('shows the mentor ring while the agent is speaking', () => {
       render(<VoiceChatModal {...defaultProps} isMentorSpeaking={true} />);
 
       const ring = screen.getByTestId('mentor-speaking-ring');
       expect(ring).toBeInTheDocument();
-      expect(ring.querySelector('.border-violet-500')).toHaveStyle({
+      expect(ring.querySelector('.border-blue-600')).toHaveStyle({
         animation: 'mentorRingPulse 1.4s ease-in-out infinite',
       });
-      expect(ring.querySelector('.border-indigo-400')).toHaveStyle({
+      expect(ring.querySelector('.border-sky-400')).toHaveStyle({
         animation: 'mentorRingRipple 1.4s ease-out infinite',
       });
     });
@@ -703,10 +703,12 @@ describe('VoiceChatModal', () => {
 
       const label = lines()[0].querySelector('span');
       expect(label).toHaveTextContent('You');
-      expect(label).toHaveClass('text-blue-600');
+      // Lighter than the agent's blue-700, so the two speakers stay
+      // distinguishable within a single blue family.
+      expect(label).toHaveClass('text-blue-500');
     });
 
-    it('labels the agent with the mentor name in the ring violet', () => {
+    it('labels the agent with the mentor name in the ring blue', () => {
       render(
         <VoiceChatModal
           {...defaultProps}
@@ -718,7 +720,7 @@ describe('VoiceChatModal', () => {
       const label = lines()[0].querySelector('span');
       expect(label).toHaveTextContent('Ada');
       // Same family as the mentor-speaking ring, on purpose.
-      expect(label).toHaveClass('text-violet-600');
+      expect(label).toHaveClass('text-blue-700');
     });
 
     it('falls back to the LiveKit participant name when no mentor name is given', () => {
