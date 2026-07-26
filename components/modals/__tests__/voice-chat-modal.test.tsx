@@ -1,15 +1,53 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { VoiceChatModal } from '../voice-chat-modal';
+import type { TranscriptEntry } from '@/hooks/use-livekit-transcription';
+
+function entry(
+  id: string,
+  text: string,
+  speaker: TranscriptEntry['speaker'],
+  isFinal = true,
+  extra: Partial<TranscriptEntry> = {},
+): TranscriptEntry {
+  return { id, text, speaker, isFinal, timestamp: 0, ...extra };
+}
+
+/**
+ * jsdom has no layout, so the scroll container reports 0 for every metric and
+ * ignores `scrollTop` writes. Give the element real own-properties so the
+ * auto-scroll logic can be exercised.
+ */
+function makeScrollable(
+  element: HTMLElement,
+  { scrollHeight = 500, clientHeight = 100, scrollTop = 400 } = {},
+) {
+  Object.defineProperty(element, 'scrollHeight', {
+    value: scrollHeight,
+    configurable: true,
+  });
+  Object.defineProperty(element, 'clientHeight', {
+    value: clientHeight,
+    configurable: true,
+  });
+  Object.defineProperty(element, 'scrollTop', {
+    value: scrollTop,
+    writable: true,
+    configurable: true,
+  });
+}
 
 describe('VoiceChatModal', () => {
   const defaultProps = {
     isOpen: true,
     onClose: vi.fn(),
-    toggleMute: vi.fn(),
-    isMuted: false,
+    toggleMicMute: vi.fn(),
+    isMicMuted: false,
+    toggleMentorAudio: vi.fn(),
+    isMentorAudioMuted: false,
     connectionState: 'connected' as const,
     isSpeaking: false,
+    isMentorSpeaking: false,
   };
 
   beforeEach(() => {
@@ -67,6 +105,48 @@ describe('VoiceChatModal', () => {
 
       expect(screen.getByLabelText('Mute microphone')).toBeDisabled();
     });
+
+    it('disables the agent audio button while connecting', () => {
+      render(<VoiceChatModal {...defaultProps} connectionState="connecting" />);
+
+      expect(screen.getByLabelText('Mute agent audio')).toBeDisabled();
+    });
+
+    it('hides the call status caption while connecting', () => {
+      render(<VoiceChatModal {...defaultProps} connectionState="connecting" />);
+
+      expect(screen.queryByLabelText('Call status')).toBeNull();
+    });
+
+    it('hides the call status caption while requesting permission', () => {
+      render(
+        <VoiceChatModal
+          {...defaultProps}
+          connectionState="requesting-permission"
+        />,
+      );
+
+      expect(screen.queryByLabelText('Call status')).toBeNull();
+    });
+
+    it('shows the loading spinner while connecting', () => {
+      render(<VoiceChatModal {...defaultProps} connectionState="connecting" />);
+
+      expect(document.querySelector('.animate-spin')).toBeInTheDocument();
+    });
+
+    it('does not tint the controls red while connecting', () => {
+      render(<VoiceChatModal {...defaultProps} connectionState="connecting" />);
+
+      // The loading state renders MicOff/VolumeX icons, but that is not a
+      // muted state and must not read as one.
+      expect(screen.getByLabelText('Mute microphone')).not.toHaveClass(
+        'border-red-500',
+      );
+      expect(screen.getByLabelText('Mute agent audio')).not.toHaveClass(
+        'border-red-500',
+      );
+    });
   });
 
   describe('connected state', () => {
@@ -75,7 +155,7 @@ describe('VoiceChatModal', () => {
         <VoiceChatModal
           {...defaultProps}
           connectionState="connected"
-          isMuted={false}
+          isMicMuted={false}
         />,
       );
 
@@ -92,22 +172,31 @@ describe('VoiceChatModal', () => {
 
       expect(screen.getByLabelText('Mute microphone')).toBeEnabled();
     });
+
+    it('enables the agent audio button when connected', () => {
+      render(<VoiceChatModal {...defaultProps} connectionState="connected" />);
+
+      expect(screen.getByLabelText('Mute agent audio')).toBeEnabled();
+    });
   });
 
-  describe('speaking state', () => {
-    it('uses faster pulse animation when speaking', () => {
+  describe('blob animation', () => {
+    const pulsingBg = () => document.querySelector('.bg-blue-100');
+    const waveBars = () =>
+      Array.from(document.querySelectorAll('.transform-gpu'));
+
+    it('uses faster pulse animation when the user is speaking', () => {
       render(
         <VoiceChatModal
           {...defaultProps}
           connectionState="connected"
-          isMuted={false}
+          isMicMuted={false}
           isSpeaking={true}
         />,
       );
 
       // Speaking uses 1.5s pulse (faster than non-speaking 2s)
-      const pulsingBg = document.querySelector('.bg-blue-100');
-      expect(pulsingBg).toHaveStyle({
+      expect(pulsingBg()).toHaveStyle({
         animation: 'randomPulse1 1.5s ease-in-out infinite',
       });
     });
@@ -117,16 +206,195 @@ describe('VoiceChatModal', () => {
         <VoiceChatModal
           {...defaultProps}
           connectionState="connected"
-          isMuted={false}
+          isMicMuted={false}
           isSpeaking={false}
         />,
       );
 
       // Not speaking uses 2s pulse (slower)
-      const pulsingBg = document.querySelector('.bg-blue-100');
-      expect(pulsingBg).toHaveStyle({
+      expect(pulsingBg()).toHaveStyle({
         animation: 'randomPulse1 2s ease-in-out infinite',
       });
+    });
+
+    // Regression: the animation used to be gated on `!isMicMuted`, so muting
+    // your own microphone froze the entire indicator and the call looked dead
+    // even while the agent was talking.
+    it('keeps the blob animating while the mic is muted', () => {
+      render(
+        <VoiceChatModal
+          {...defaultProps}
+          connectionState="connected"
+          isMicMuted={true}
+        />,
+      );
+
+      expect(pulsingBg()).toHaveStyle({
+        animation: 'randomPulse1 2s ease-in-out infinite',
+      });
+      expect(document.querySelector('.from-blue-200')).toHaveStyle({
+        animation: 'randomPulse2 2.5s ease-in-out infinite',
+      });
+    });
+
+    it('keeps the particles animating while the mic is muted', () => {
+      render(
+        <VoiceChatModal
+          {...defaultProps}
+          connectionState="connected"
+          isMicMuted={true}
+        />,
+      );
+
+      const particles = document.querySelectorAll(
+        'div[style*="particlePulse"]',
+      );
+      expect(particles).toHaveLength(10);
+    });
+
+    it('falls back to the idle pulse when not connected', () => {
+      render(
+        <VoiceChatModal {...defaultProps} connectionState="disconnected" />,
+      );
+
+      expect(pulsingBg()).toHaveStyle({
+        animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+      });
+      expect(document.querySelector('.from-blue-200')).toHaveStyle({
+        animation: 'none',
+        opacity: '0.8',
+      });
+    });
+
+    it('animates the sound wave bars when the user is speaking', () => {
+      render(<VoiceChatModal {...defaultProps} isSpeaking={true} />);
+
+      const bars = waveBars();
+      expect(bars).toHaveLength(5);
+      expect(bars[0]).toHaveStyle({ height: '30px', opacity: '1' });
+      expect(bars[0]).toHaveStyle({
+        animation: 'soundWave1 0.8s ease-in-out infinite',
+      });
+    });
+
+    it('flattens and dims the sound wave bars when the mic is muted', () => {
+      render(
+        <VoiceChatModal
+          {...defaultProps}
+          isMicMuted={true}
+          isSpeaking={true}
+        />,
+      );
+
+      const bars = waveBars();
+      expect(bars).toHaveLength(5);
+      bars.forEach((bar) => {
+        expect(bar).toHaveStyle({
+          height: '12px',
+          opacity: '0.35',
+          animation: 'none',
+        });
+      });
+    });
+
+    it('keeps the bars idle-but-live when the mic is on and the user is silent', () => {
+      render(<VoiceChatModal {...defaultProps} isSpeaking={false} />);
+
+      const bars = waveBars();
+      expect(bars[0]).toHaveStyle({ height: '30px', opacity: '0.7' });
+      expect(bars[0]).toHaveStyle({
+        animation: 'soundWave1 1.2s ease-in-out infinite',
+      });
+    });
+
+    it('shows the violet mentor ring while the agent is speaking', () => {
+      render(<VoiceChatModal {...defaultProps} isMentorSpeaking={true} />);
+
+      const ring = screen.getByTestId('mentor-speaking-ring');
+      expect(ring).toBeInTheDocument();
+      expect(ring.querySelector('.border-violet-500')).toHaveStyle({
+        animation: 'mentorRingPulse 1.4s ease-in-out infinite',
+      });
+      expect(ring.querySelector('.border-indigo-400')).toHaveStyle({
+        animation: 'mentorRingRipple 1.4s ease-out infinite',
+      });
+    });
+
+    it('hides the mentor ring when the agent is silent', () => {
+      render(<VoiceChatModal {...defaultProps} isMentorSpeaking={false} />);
+
+      expect(screen.queryByTestId('mentor-speaking-ring')).toBeNull();
+    });
+
+    it('hides the mentor ring when agent audio is muted', () => {
+      render(
+        <VoiceChatModal
+          {...defaultProps}
+          isMentorSpeaking={true}
+          isMentorAudioMuted={true}
+        />,
+      );
+
+      expect(screen.queryByTestId('mentor-speaking-ring')).toBeNull();
+    });
+
+    it('hides the mentor ring when not connected', () => {
+      render(
+        <VoiceChatModal
+          {...defaultProps}
+          connectionState="disconnected"
+          isMentorSpeaking={true}
+        />,
+      );
+
+      expect(screen.queryByTestId('mentor-speaking-ring')).toBeNull();
+    });
+
+    it('shows the mentor ring and the user waves at the same time', () => {
+      render(
+        <VoiceChatModal
+          {...defaultProps}
+          isSpeaking={true}
+          isMentorSpeaking={true}
+        />,
+      );
+
+      // The two parties are separate layers, never mutually exclusive.
+      expect(screen.getByTestId('mentor-speaking-ring')).toBeInTheDocument();
+      expect(waveBars()[0]).toHaveStyle({ opacity: '1' });
+    });
+
+    it('shows the mentor ring even while the user mic is muted', () => {
+      render(
+        <VoiceChatModal
+          {...defaultProps}
+          isMicMuted={true}
+          isMentorSpeaking={true}
+        />,
+      );
+
+      expect(screen.getByTestId('mentor-speaking-ring')).toBeInTheDocument();
+    });
+
+    it('dims the whole blob when agent audio is muted', () => {
+      render(<VoiceChatModal {...defaultProps} isMentorAudioMuted={true} />);
+
+      expect(screen.getByTestId('voice-blob')).toHaveStyle({
+        opacity: '0.45',
+        filter: 'saturate(0.35)',
+      });
+    });
+
+    it('leaves the blob at full strength when agent audio is on', () => {
+      render(<VoiceChatModal {...defaultProps} isMentorAudioMuted={false} />);
+
+      expect(screen.getByTestId('voice-blob')).toHaveStyle({ opacity: '1' });
+    });
+
+    it('does not dim the blob when only the mic is muted', () => {
+      render(<VoiceChatModal {...defaultProps} isMicMuted={true} />);
+
+      expect(screen.getByTestId('voice-blob')).toHaveStyle({ opacity: '1' });
     });
   });
 
@@ -136,7 +404,7 @@ describe('VoiceChatModal', () => {
         <VoiceChatModal
           {...defaultProps}
           connectionState="connected"
-          isMuted={true}
+          isMicMuted={true}
         />,
       );
 
@@ -148,7 +416,7 @@ describe('VoiceChatModal', () => {
         <VoiceChatModal
           {...defaultProps}
           connectionState="connected"
-          isMuted={false}
+          isMicMuted={false}
         />,
       );
 
@@ -160,11 +428,171 @@ describe('VoiceChatModal', () => {
         <VoiceChatModal
           {...defaultProps}
           connectionState="connected"
-          isMuted={true}
+          isMicMuted={true}
         />,
       );
 
       expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+  });
+
+  describe('agent audio control', () => {
+    it('shows the mute label when agent audio is playing', () => {
+      render(<VoiceChatModal {...defaultProps} isMentorAudioMuted={false} />);
+
+      expect(screen.getByLabelText('Mute agent audio')).toBeInTheDocument();
+    });
+
+    it('shows the unmute label when agent audio is muted', () => {
+      render(<VoiceChatModal {...defaultProps} isMentorAudioMuted={true} />);
+
+      expect(screen.getByLabelText('Unmute agent audio')).toBeInTheDocument();
+    });
+
+    it('calls toggleMentorAudio when the agent audio button is clicked', () => {
+      render(<VoiceChatModal {...defaultProps} />);
+
+      fireEvent.click(screen.getByLabelText('Mute agent audio'));
+
+      expect(defaultProps.toggleMentorAudio).toHaveBeenCalledTimes(1);
+      expect(defaultProps.toggleMicMute).not.toHaveBeenCalled();
+    });
+
+    it('leaves the microphone control untouched when agent audio is muted', () => {
+      render(<VoiceChatModal {...defaultProps} isMentorAudioMuted={true} />);
+
+      // Mic is still live even though the agent is silenced.
+      expect(screen.getByLabelText('Mute microphone')).toBeInTheDocument();
+      expect(screen.getByLabelText('Mute microphone')).not.toHaveClass(
+        'border-red-500',
+      );
+    });
+  });
+
+  describe('call status caption', () => {
+    const caption = () => screen.getByLabelText('Call status');
+
+    it('renders a single live region', () => {
+      render(<VoiceChatModal {...defaultProps} />);
+
+      const regions = screen.getAllByRole('status');
+      expect(regions).toHaveLength(1);
+      expect(regions[0]).toHaveAttribute('aria-label', 'Call status');
+    });
+
+    it('shows "Listening…" when connected and nobody is muted or speaking', () => {
+      render(<VoiceChatModal {...defaultProps} />);
+
+      expect(caption()).toHaveTextContent('Listening…');
+    });
+
+    it('shows "Mic muted" when only the mic is muted', () => {
+      render(<VoiceChatModal {...defaultProps} isMicMuted={true} />);
+
+      expect(caption()).toHaveTextContent('Mic muted');
+    });
+
+    it('shows "Agent speaking" when the agent is speaking', () => {
+      render(<VoiceChatModal {...defaultProps} isMentorSpeaking={true} />);
+
+      expect(caption()).toHaveTextContent('Agent speaking');
+    });
+
+    it('shows "Agent muted" when agent audio is muted', () => {
+      render(<VoiceChatModal {...defaultProps} isMentorAudioMuted={true} />);
+
+      expect(caption()).toHaveTextContent('Agent muted');
+    });
+
+    it('prefers "Agent muted" over the agent speaking', () => {
+      render(
+        <VoiceChatModal
+          {...defaultProps}
+          isMentorSpeaking={true}
+          isMentorAudioMuted={true}
+        />,
+      );
+
+      expect(caption()).toHaveTextContent('Agent muted');
+    });
+
+    it('prefers "Agent muted" over the mic being muted', () => {
+      render(
+        <VoiceChatModal
+          {...defaultProps}
+          isMicMuted={true}
+          isMentorAudioMuted={true}
+        />,
+      );
+
+      expect(caption()).toHaveTextContent('Agent muted');
+    });
+
+    it('prefers "Agent speaking" over the mic being muted', () => {
+      render(
+        <VoiceChatModal
+          {...defaultProps}
+          isMicMuted={true}
+          isMentorSpeaking={true}
+        />,
+      );
+
+      expect(caption()).toHaveTextContent('Agent speaking');
+    });
+
+    it('does not report the user speaking - the blob shows that', () => {
+      render(<VoiceChatModal {...defaultProps} isSpeaking={true} />);
+
+      expect(caption()).toHaveTextContent('Listening…');
+    });
+
+    it('no longer renders the removed per-party status rows', () => {
+      render(<VoiceChatModal {...defaultProps} />);
+
+      expect(screen.queryByLabelText('Agent audio status')).toBeNull();
+      expect(screen.queryByLabelText('Microphone status')).toBeNull();
+    });
+  });
+
+  describe('control button muted treatment', () => {
+    it('tints the mic button red when the mic is muted', () => {
+      render(<VoiceChatModal {...defaultProps} isMicMuted={true} />);
+
+      expect(screen.getByLabelText('Unmute microphone')).toHaveClass(
+        'border-red-500',
+      );
+    });
+
+    it('leaves the mic button blue when the mic is live', () => {
+      render(<VoiceChatModal {...defaultProps} isMicMuted={false} />);
+
+      expect(screen.getByLabelText('Mute microphone')).toHaveClass(
+        'border-blue-500',
+      );
+    });
+
+    it('tints the agent audio button red when agent audio is muted', () => {
+      render(<VoiceChatModal {...defaultProps} isMentorAudioMuted={true} />);
+
+      expect(screen.getByLabelText('Unmute agent audio')).toHaveClass(
+        'border-red-500',
+      );
+    });
+
+    it('leaves the agent audio button blue when agent audio is on', () => {
+      render(<VoiceChatModal {...defaultProps} isMentorAudioMuted={false} />);
+
+      expect(screen.getByLabelText('Mute agent audio')).toHaveClass(
+        'border-blue-500',
+      );
+    });
+
+    it('does not tint the mic button when only agent audio is muted', () => {
+      render(<VoiceChatModal {...defaultProps} isMentorAudioMuted={true} />);
+
+      expect(screen.getByLabelText('Mute microphone')).toHaveClass(
+        'border-blue-500',
+      );
     });
   });
 
@@ -179,12 +607,13 @@ describe('VoiceChatModal', () => {
   });
 
   describe('button interactions', () => {
-    it('calls toggleMute when mute button is clicked', () => {
+    it('calls toggleMicMute when mute button is clicked', () => {
       render(<VoiceChatModal {...defaultProps} connectionState="connected" />);
 
       fireEvent.click(screen.getByLabelText('Mute microphone'));
 
-      expect(defaultProps.toggleMute).toHaveBeenCalledTimes(1);
+      expect(defaultProps.toggleMicMute).toHaveBeenCalledTimes(1);
+      expect(defaultProps.toggleMentorAudio).not.toHaveBeenCalled();
     });
 
     it('calls onClose when close button is clicked', () => {
@@ -193,6 +622,377 @@ describe('VoiceChatModal', () => {
       fireEvent.click(screen.getByLabelText('Close voice chat'));
 
       expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('transcript band', () => {
+    const logRegion = () => screen.getByRole('log');
+    const lines = () => screen.queryAllByTestId('voice-transcript-line');
+
+    it('exposes a polite log region with a stable label', () => {
+      render(<VoiceChatModal {...defaultProps} />);
+
+      const region = logRegion();
+      expect(region).toHaveAttribute('aria-label', 'Call transcript');
+      expect(region).toHaveAttribute('aria-live', 'polite');
+      // Only new/changed lines are announced - the accumulated history is
+      // never re-read when the user scrolls.
+      expect(region).toHaveAttribute('aria-relevant', 'additions text');
+      // The scroll region must be reachable without a mouse.
+      expect(region).toHaveAttribute('tabindex', '0');
+    });
+
+    it('does not turn the transcript into a second status region', () => {
+      render(
+        <VoiceChatModal
+          {...defaultProps}
+          transcript={[entry('s1', 'Hello', 'agent')]}
+        />,
+      );
+
+      const statusRegions = screen.getAllByRole('status');
+      expect(statusRegions).toHaveLength(1);
+      expect(statusRegions[0]).toHaveAttribute('aria-label', 'Call status');
+    });
+
+    it('shows a neutral empty state before the first utterance', () => {
+      render(<VoiceChatModal {...defaultProps} />);
+
+      expect(screen.getByTestId('voice-transcript-empty')).toHaveTextContent(
+        'The live transcript will appear here as the conversation starts.',
+      );
+      expect(lines()).toHaveLength(0);
+    });
+
+    it('replaces the empty state once lines arrive', () => {
+      render(
+        <VoiceChatModal
+          {...defaultProps}
+          transcript={[entry('s1', 'Hello there', 'agent')]}
+        />,
+      );
+
+      expect(screen.queryByTestId('voice-transcript-empty')).toBeNull();
+      expect(lines()).toHaveLength(1);
+    });
+
+    it('renders lines oldest first', () => {
+      render(
+        <VoiceChatModal
+          {...defaultProps}
+          transcript={[
+            entry('s1', 'First', 'agent'),
+            entry('s2', 'Second', 'user'),
+          ]}
+        />,
+      );
+
+      expect(lines().map((l) => l.textContent)).toEqual([
+        'AgentFirst',
+        'YouSecond',
+      ]);
+    });
+
+    it('labels the user with "You" in blue', () => {
+      render(
+        <VoiceChatModal
+          {...defaultProps}
+          transcript={[entry('s1', 'My words', 'user')]}
+        />,
+      );
+
+      const label = lines()[0].querySelector('span');
+      expect(label).toHaveTextContent('You');
+      expect(label).toHaveClass('text-blue-600');
+    });
+
+    it('labels the agent with the mentor name in the ring violet', () => {
+      render(
+        <VoiceChatModal
+          {...defaultProps}
+          mentorName="Ada"
+          transcript={[entry('s1', 'Their words', 'agent')]}
+        />,
+      );
+
+      const label = lines()[0].querySelector('span');
+      expect(label).toHaveTextContent('Ada');
+      // Same family as the mentor-speaking ring, on purpose.
+      expect(label).toHaveClass('text-violet-600');
+    });
+
+    it('falls back to the LiveKit participant name when no mentor name is given', () => {
+      render(
+        <VoiceChatModal
+          {...defaultProps}
+          transcript={[
+            entry('s1', 'Their words', 'agent', true, {
+              participantName: 'Agent Seven',
+            }),
+          ]}
+        />,
+      );
+
+      expect(lines()[0].querySelector('span')).toHaveTextContent('Agent Seven');
+    });
+
+    it('falls back to a generic agent label as a last resort', () => {
+      render(
+        <VoiceChatModal
+          {...defaultProps}
+          transcript={[entry('s1', 'Their words', 'agent')]}
+        />,
+      );
+
+      expect(lines()[0].querySelector('span')).toHaveTextContent('Agent');
+    });
+
+    it('never labels a user line with the mentor name', () => {
+      render(
+        <VoiceChatModal
+          {...defaultProps}
+          mentorName="Ada"
+          transcript={[
+            entry('s1', 'My words', 'user', true, {
+              participantName: 'Ada',
+            }),
+          ]}
+        />,
+      );
+
+      expect(lines()[0].querySelector('span')).toHaveTextContent('You');
+    });
+
+    it('gives the newest line full weight and dims the older ones', () => {
+      render(
+        <VoiceChatModal
+          {...defaultProps}
+          transcript={[entry('s1', 'Old', 'agent'), entry('s2', 'New', 'user')]}
+        />,
+      );
+
+      const [older, newest] = lines();
+      expect(older).toHaveAttribute('data-newest', 'false');
+      expect(older).toHaveClass('opacity-60');
+      expect(older).toHaveClass('text-xs');
+      expect(newest).toHaveAttribute('data-newest', 'true');
+      expect(newest).toHaveClass('opacity-100');
+      expect(newest).toHaveClass('text-sm');
+    });
+
+    it('marks an in-progress line with a caret', () => {
+      render(
+        <VoiceChatModal
+          {...defaultProps}
+          transcript={[entry('s1', 'Still talk', 'agent', false)]}
+        />,
+      );
+
+      const caret = screen.getByTestId('voice-transcript-caret');
+      expect(caret).toHaveAttribute('aria-hidden', 'true');
+      expect(caret).toHaveStyle({
+        animation: 'transcriptCaret 1s ease-in-out infinite',
+      });
+      expect(lines()[0]).toHaveAttribute('data-final', 'false');
+    });
+
+    it('settles the caret when the line finalises', () => {
+      const { rerender } = render(
+        <VoiceChatModal
+          {...defaultProps}
+          transcript={[entry('s1', 'Still talk', 'agent', false)]}
+        />,
+      );
+
+      expect(screen.getByTestId('voice-transcript-caret')).toBeInTheDocument();
+
+      rerender(
+        <VoiceChatModal
+          {...defaultProps}
+          transcript={[entry('s1', 'Still talking', 'agent', true)]}
+        />,
+      );
+
+      expect(screen.queryByTestId('voice-transcript-caret')).toBeNull();
+      expect(lines()[0]).toHaveAttribute('data-final', 'true');
+    });
+
+    it('shows a live indicator while words are still arriving', () => {
+      render(<VoiceChatModal {...defaultProps} isTranscriptLive={true} />);
+
+      const indicator = screen.getByTestId('voice-transcript-live');
+      expect(indicator).toHaveTextContent('Live');
+      // The log already announces the words; this is decoration only.
+      expect(indicator).toHaveAttribute('aria-hidden', 'true');
+    });
+
+    it('hides the live indicator when nothing is in progress', () => {
+      render(<VoiceChatModal {...defaultProps} isTranscriptLive={false} />);
+
+      expect(screen.queryByTestId('voice-transcript-live')).toBeNull();
+    });
+
+    it('tags each line with its speaker for styling and selection', () => {
+      render(
+        <VoiceChatModal
+          {...defaultProps}
+          transcript={[
+            entry('s1', 'Mine', 'user'),
+            entry('s2', 'Theirs', 'agent'),
+          ]}
+        />,
+      );
+
+      expect(lines().map((l) => l.getAttribute('data-speaker'))).toEqual([
+        'user',
+        'agent',
+      ]);
+    });
+  });
+
+  describe('transcript auto-scroll', () => {
+    const scrollBox = () => screen.getByTestId('voice-transcript-scroll');
+
+    it('scrolls to the newest line when a line arrives', () => {
+      const { rerender } = render(<VoiceChatModal {...defaultProps} />);
+      makeScrollable(scrollBox(), { scrollTop: 0 });
+
+      rerender(
+        <VoiceChatModal
+          {...defaultProps}
+          transcript={[entry('s1', 'Hello', 'agent')]}
+        />,
+      );
+
+      expect(scrollBox().scrollTop).toBe(500);
+    });
+
+    it('does not offer "jump to latest" while pinned to the bottom', () => {
+      render(
+        <VoiceChatModal
+          {...defaultProps}
+          transcript={[entry('s1', 'Hello', 'agent')]}
+        />,
+      );
+
+      expect(screen.queryByTestId('voice-transcript-jump')).toBeNull();
+    });
+
+    it('pauses auto-scroll and offers a jump affordance when scrolled up', () => {
+      const { rerender } = render(
+        <VoiceChatModal
+          {...defaultProps}
+          transcript={[entry('s1', 'Hello', 'agent')]}
+        />,
+      );
+
+      const box = scrollBox();
+      makeScrollable(box, { scrollTop: 0 });
+      fireEvent.scroll(box);
+
+      expect(screen.getByTestId('voice-transcript-jump')).toHaveTextContent(
+        'Jump to latest',
+      );
+
+      // A new line must not yank the reader back down.
+      rerender(
+        <VoiceChatModal
+          {...defaultProps}
+          transcript={[
+            entry('s1', 'Hello', 'agent'),
+            entry('s2', 'And more', 'agent'),
+          ]}
+        />,
+      );
+
+      expect(scrollBox().scrollTop).toBe(0);
+    });
+
+    it('resumes auto-scroll when the user scrolls back to the bottom', () => {
+      const { rerender } = render(
+        <VoiceChatModal
+          {...defaultProps}
+          transcript={[entry('s1', 'Hello', 'agent')]}
+        />,
+      );
+
+      const box = scrollBox();
+      makeScrollable(box, { scrollTop: 0 });
+      fireEvent.scroll(box);
+      expect(screen.getByTestId('voice-transcript-jump')).toBeInTheDocument();
+
+      // Back within the pin threshold of the bottom (500 - 100 = 400).
+      box.scrollTop = 390;
+      fireEvent.scroll(box);
+
+      expect(screen.queryByTestId('voice-transcript-jump')).toBeNull();
+
+      rerender(
+        <VoiceChatModal
+          {...defaultProps}
+          transcript={[
+            entry('s1', 'Hello', 'agent'),
+            entry('s2', 'And more', 'agent'),
+          ]}
+        />,
+      );
+
+      expect(scrollBox().scrollTop).toBe(500);
+    });
+
+    it('jumps back to the newest line when the affordance is clicked', () => {
+      render(
+        <VoiceChatModal
+          {...defaultProps}
+          transcript={[entry('s1', 'Hello', 'agent')]}
+        />,
+      );
+
+      const box = scrollBox();
+      makeScrollable(box, { scrollTop: 0 });
+      fireEvent.scroll(box);
+
+      fireEvent.click(screen.getByTestId('voice-transcript-jump'));
+
+      expect(scrollBox().scrollTop).toBe(500);
+      expect(screen.queryByTestId('voice-transcript-jump')).toBeNull();
+    });
+
+    it('does not offer the jump affordance with an empty transcript', () => {
+      render(<VoiceChatModal {...defaultProps} />);
+
+      const box = scrollBox();
+      makeScrollable(box, { scrollTop: 0 });
+      fireEvent.scroll(box);
+
+      expect(screen.queryByTestId('voice-transcript-jump')).toBeNull();
+    });
+  });
+
+  describe('layout', () => {
+    it('keeps the blob, the caption and all three controls alongside the band', () => {
+      render(
+        <VoiceChatModal
+          {...defaultProps}
+          transcript={[entry('s1', 'Hello', 'agent')]}
+        />,
+      );
+
+      expect(screen.getByTestId('voice-blob')).toBeInTheDocument();
+      expect(screen.getByLabelText('Call status')).toBeInTheDocument();
+      expect(screen.getByLabelText('Mute microphone')).toBeInTheDocument();
+      expect(screen.getByLabelText('Mute agent audio')).toBeInTheDocument();
+      expect(screen.getByLabelText('Close voice chat')).toBeInTheDocument();
+      expect(screen.getByRole('log')).toBeInTheDocument();
+    });
+
+    it('lets the band flex instead of pushing the controls off-screen', () => {
+      render(<VoiceChatModal {...defaultProps} />);
+
+      const band = screen.getByTestId('voice-transcript');
+      expect(band).toHaveClass('flex-1');
+      expect(band).toHaveClass('min-h-0');
+      expect(screen.getByTestId('voice-blob')).toHaveClass('shrink-0');
     });
   });
 

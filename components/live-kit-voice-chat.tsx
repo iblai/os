@@ -9,6 +9,8 @@ import {
 import { useCreateCallCredentialsMutation } from '@iblai/iblai-js/data-layer';
 import { RoomAudioRenderer, RoomContext } from '@livekit/components-react';
 
+import { useLiveKitTranscription } from '@/hooks/use-livekit-transcription';
+
 import { VoiceChatModal } from './modals/voice-chat-modal';
 
 const VOICE_DEBUG_PREFIX = '[VoiceChat:LiveKit]';
@@ -32,6 +34,8 @@ type Props = {
   username: string;
   onClose: () => void;
   isOpen: boolean;
+  /** Display name of the mentor, used to label its transcript lines. */
+  mentorName?: string;
 };
 
 type ConnectionState =
@@ -69,6 +73,7 @@ export function LiveKitChat({
   username,
   onClose,
   isOpen,
+  mentorName,
 }: Props) {
   const [initiateCall] = useCreateCallCredentialsMutation();
 
@@ -76,12 +81,25 @@ export function LiveKitChat({
     voiceLog('Creating new Room instance');
     return new Room({});
   });
-  const [isMuted, setIsMuted] = React.useState(true);
+  // Outbound audio: whether the user's own microphone is muted.
+  const [isMicMuted, setIsMicMuted] = React.useState(true);
+  // Inbound audio: whether the mentor's voice playback is muted. These are two
+  // unrelated concerns and must never share a single flag — muting your mic
+  // used to silence the mentor as a side effect.
+  const [isMentorAudioMuted, setIsMentorAudioMuted] = React.useState(false);
   const [connectionState, setConnectionState] = React.useState<ConnectionState>(
     'requesting-permission',
   );
   const [isSpeaking, setIsSpeaking] = React.useState(false);
+  const [isMentorSpeaking, setIsMentorSpeaking] = React.useState(false);
   const permissionStreamRef = React.useRef<MediaStream | null>(null);
+
+  // Live captions for the call. A voice-only call is unusable for deaf and
+  // hard-of-hearing users without this, so it is mounted for the whole call
+  // rather than gated behind a toggle.
+  const { entries: transcript, isTranscribing } = useLiveKitTranscription({
+    room,
+  });
 
   function stopPermissionStream() {
     voiceLog('Stopping permission stream', {
@@ -226,7 +244,7 @@ export function LiveKitChat({
             kind: pub.kind,
           })),
         });
-        setIsMuted(false); // Auto-unmute when successfully connected
+        setIsMicMuted(false); // Auto-unmute the mic when successfully connected
         setConnectionState('connected');
         postRoomStatusToOpener('connected', 'voice-call');
       } catch (error) {
@@ -262,10 +280,10 @@ export function LiveKitChat({
     const handleIsSpeakingChanged = (speaking: boolean) => {
       voiceLog('Local participant speaking changed', {
         speaking,
-        isMuted,
-        effectiveSpeaking: speaking && !isMuted,
+        isMicMuted,
+        effectiveSpeaking: speaking && !isMicMuted,
       });
-      setIsSpeaking(speaking && !isMuted);
+      setIsSpeaking(speaking && !isMicMuted);
     };
 
     const handleTrackMuted = () => {
@@ -282,7 +300,7 @@ export function LiveKitChat({
       room.localParticipant.off('isSpeakingChanged', handleIsSpeakingChanged);
       room.localParticipant.off('trackMuted', handleTrackMuted);
     };
-  }, [connectionState, room, isMuted]);
+  }, [connectionState, room, isMicMuted]);
 
   // Listen to room connection state changes from LiveKit
   React.useEffect(() => {
@@ -406,6 +424,8 @@ export function LiveKitChat({
         count: speakers.length,
         speakers: speakers.map((s) => ({ identity: s.identity, sid: s.sid })),
       });
+      // Anything speaking that is not us is the mentor agent.
+      setIsMentorSpeaking(speakers.some((s) => !s.isLocal));
     };
 
     const handleMediaDevicesError = (error: any) => {
@@ -483,15 +503,29 @@ export function LiveKitChat({
     };
   }, []);
 
-  const handleToggleMute = () => {
-    const newMutedState = !isMuted;
-    voiceLog('Toggle mute', {
-      currentMuted: isMuted,
+  // Outbound only: stops publishing the user's microphone. Must not touch
+  // mentor audio playback.
+  const handleToggleMicMute = () => {
+    const newMutedState = !isMicMuted;
+    voiceLog('Toggle microphone mute', {
+      currentMuted: isMicMuted,
       newMuted: newMutedState,
       roomState: room.state,
     });
-    setIsMuted(newMutedState);
+    setIsMicMuted(newMutedState);
     room.localParticipant.setMicrophoneEnabled(!newMutedState);
+  };
+
+  // Inbound only: gates playback of the mentor's voice via RoomAudioRenderer.
+  // Must not touch the microphone.
+  const handleToggleMentorAudio = () => {
+    const newMutedState = !isMentorAudioMuted;
+    voiceLog('Toggle mentor audio mute', {
+      currentMuted: isMentorAudioMuted,
+      newMuted: newMutedState,
+      roomState: room.state,
+    });
+    setIsMentorAudioMuted(newMutedState);
   };
 
   // Periodic room state dump (every 5 seconds while connected)
@@ -547,14 +581,20 @@ export function LiveKitChat({
 
   return (
     <RoomContext.Provider value={room}>
-      <RoomAudioRenderer muted={isMuted} />
+      <RoomAudioRenderer muted={isMentorAudioMuted} />
       <VoiceChatModal
         isOpen={isOpen}
         onClose={onClose}
-        toggleMute={handleToggleMute}
-        isMuted={isMuted}
+        toggleMicMute={handleToggleMicMute}
+        isMicMuted={isMicMuted}
+        toggleMentorAudio={handleToggleMentorAudio}
+        isMentorAudioMuted={isMentorAudioMuted}
         connectionState={connectionState}
         isSpeaking={isSpeaking}
+        isMentorSpeaking={isMentorSpeaking}
+        transcript={transcript}
+        isTranscriptLive={isTranscribing}
+        mentorName={mentorName}
       />
     </RoomContext.Provider>
   );

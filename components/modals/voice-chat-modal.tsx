@@ -1,5 +1,7 @@
 'use client';
 
+import { useCallback, useEffect, useRef, useState } from 'react';
+
 import { useTranslations } from 'next-intl';
 import {
   Dialog,
@@ -7,7 +9,16 @@ import {
   DialogDescription,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Mic, MicOff, X, Loader2 } from 'lucide-react';
+import type { TranscriptEntry } from '@/hooks/use-livekit-transcription';
+import {
+  Mic,
+  MicOff,
+  Volume2,
+  VolumeX,
+  X,
+  Loader2,
+  ArrowDown,
+} from 'lucide-react';
 import {
   Tooltip,
   TooltipTrigger,
@@ -86,37 +97,131 @@ const pulseAnimations = `
     0%, 100% { transform: scale(0.9); opacity: 0.75; }
     50% { transform: scale(1.6); opacity: 0.9; }
   }
+
+  @keyframes mentorRingPulse {
+    0%, 100% { transform: scale(1); opacity: 0.55; }
+    50% { transform: scale(1.04); opacity: 0.95; }
+  }
+
+  @keyframes mentorRingRipple {
+    0% { transform: scale(0.96); opacity: 0.7; }
+    70% { opacity: 0.12; }
+    100% { transform: scale(1.22); opacity: 0; }
+  }
+
+  @keyframes transcriptCaret {
+    0%, 45% { opacity: 1; }
+    50%, 95% { opacity: 0.15; }
+    100% { opacity: 1; }
+  }
 `;
+
+/**
+ * How close to the bottom (px) still counts as "pinned to the newest line".
+ * Anything further up is treated as the user reading back, which suspends
+ * auto-scroll until they return.
+ */
+const AUTO_SCROLL_PIN_THRESHOLD_PX = 24;
 
 interface VoiceChatModalProps {
   isOpen: boolean;
   onClose: () => void;
-  toggleMute: () => void;
-  isMuted: boolean;
+  /** Toggles the user's own microphone (outbound audio). */
+  toggleMicMute: () => void;
+  isMicMuted: boolean;
+  /** Toggles playback of the mentor's voice (inbound audio). */
+  toggleMentorAudio: () => void;
+  isMentorAudioMuted: boolean;
   connectionState: ConnectionState;
+  /** Whether the user is currently speaking. */
   isSpeaking: boolean;
+  /** Whether the mentor agent is currently speaking. */
+  isMentorSpeaking: boolean;
+  /** Accumulated call transcript, oldest first. */
+  transcript?: TranscriptEntry[];
+  /** Whether the newest transcript line is still in progress. */
+  isTranscriptLive?: boolean;
+  /** Display name of the mentor, used to label its transcript lines. */
+  mentorName?: string;
 }
 
 export function VoiceChatModal({
   isOpen,
   onClose,
-  toggleMute,
-  isMuted,
+  toggleMicMute,
+  isMicMuted,
+  toggleMentorAudio,
+  isMentorAudioMuted,
   connectionState,
   isSpeaking,
+  isMentorSpeaking,
+  transcript = [],
+  isTranscriptLive = false,
+  mentorName,
 }: VoiceChatModalProps) {
   const t = useTranslations('modalsVoiceChatModal');
   const isLoading =
     connectionState === 'requesting-permission' ||
     connectionState === 'connecting';
   const isConnected = connectionState === 'connected';
-  const shouldAnimate = isConnected && !isMuted;
+  // The blob is the single indicator for the whole conversation, so it stays
+  // alive for as long as the call is up. Muting your own microphone must never
+  // make the call look dead — that only silences the sound-wave bars below.
+  const shouldAnimate = isConnected;
+  // The sound-wave bars belong to the user: they react to the local mic only.
+  const isUserVoiceActive = isSpeaking && !isMicMuted;
+  // The violet ring belongs to the mentor: it only shows while the agent is
+  // actually audible. Both can be on at once — real conversations overlap.
+  const isMentorVoiceActive = isMentorSpeaking && !isMentorAudioMuted;
 
   const loadingMessage = isLoading
     ? connectionState === 'requesting-permission'
       ? t('requestingMicrophoneAccess')
       : t('connectingToVoiceChat')
     : null;
+
+  // One caption replaces the old pair of status rows. Highest-precedence fact
+  // wins: the agent being silenced is the most surprising state, then who is
+  // talking, then the user's own mic.
+  // --- Transcript auto-scroll -------------------------------------------
+  // The band follows the newest line, but only while the reader is already at
+  // the bottom. Scrolling up to re-read must never be yanked back down.
+  const transcriptScrollRef = useRef<HTMLDivElement | null>(null);
+  const [isPinnedToLatest, setIsPinnedToLatest] = useState(true);
+
+  const scrollToLatest = useCallback(() => {
+    const element = transcriptScrollRef.current;
+    if (!element) return;
+    element.scrollTop = element.scrollHeight;
+  }, []);
+
+  useEffect(() => {
+    if (!isPinnedToLatest) return;
+    scrollToLatest();
+  }, [transcript, isPinnedToLatest, scrollToLatest]);
+
+  const handleTranscriptScroll = useCallback(() => {
+    const element = transcriptScrollRef.current;
+    if (!element) return;
+    const distanceFromBottom =
+      element.scrollHeight - element.scrollTop - element.clientHeight;
+    setIsPinnedToLatest(distanceFromBottom <= AUTO_SCROLL_PIN_THRESHOLD_PX);
+  }, []);
+
+  const handleJumpToLatest = useCallback(() => {
+    setIsPinnedToLatest(true);
+    scrollToLatest();
+  }, [scrollToLatest]);
+
+  const showJumpToLatest = !isPinnedToLatest && transcript.length > 0;
+
+  const callStatusLabel = isMentorAudioMuted
+    ? t('agentMuted')
+    : isMentorSpeaking
+      ? t('agentSpeaking')
+      : isMicMuted
+        ? t('micMuted')
+        : t('listening');
 
   return (
     <>
@@ -128,15 +233,48 @@ export function VoiceChatModal({
             {t('dialogDescription')}
           </DialogDescription>
           <div className="flex h-[100vh] w-full flex-col items-center justify-between">
-            <div className="flex w-full flex-1 flex-col items-center justify-center px-4">
-              {/* Modern Animation with speaking enhancement */}
-              <div className="relative mb-20 h-40 w-40">
-                {/* Pulsing background - enhanced when speaking */}
+            <div className="flex min-h-0 w-full flex-1 flex-col items-center justify-center px-4 pt-6">
+              {/* Conversation indicator: blue blob = the call and the user's
+                  voice, violet ring = the mentor's voice. */}
+              <div
+                data-testid="voice-blob"
+                className="relative mb-6 h-40 w-40 shrink-0 transition-[opacity,filter] duration-300"
+                style={{
+                  // Silencing the agent drains the whole indicator, so a muted
+                  // call never looks like a live one.
+                  opacity: isMentorAudioMuted ? 0.45 : 1,
+                  filter: isMentorAudioMuted ? 'saturate(0.35)' : undefined,
+                }}
+              >
+                {/* Mentor voice ring - deliberately violet so it can never be
+                    mistaken for the user's blue blob, and rendered as its own
+                    layer so it can show at the same time as the user's waves. */}
+                {isConnected && isMentorVoiceActive && (
+                  <div
+                    aria-hidden="true"
+                    data-testid="mentor-speaking-ring"
+                    className="pointer-events-none absolute -inset-3"
+                  >
+                    <div
+                      className="absolute inset-0 rounded-full border-2 border-violet-500"
+                      style={{
+                        animation: 'mentorRingPulse 1.4s ease-in-out infinite',
+                      }}
+                    ></div>
+                    <div
+                      className="absolute inset-0 rounded-full border-2 border-indigo-400"
+                      style={{
+                        animation: 'mentorRingRipple 1.4s ease-out infinite',
+                      }}
+                    ></div>
+                  </div>
+                )}
+                {/* Pulsing background - enhanced when the user is speaking */}
                 <div
                   className="absolute inset-0 rounded-full bg-blue-100"
                   style={{
                     animation: shouldAnimate
-                      ? isSpeaking
+                      ? isUserVoiceActive
                         ? 'randomPulse1 1.5s ease-in-out infinite'
                         : 'randomPulse1 2s ease-in-out infinite'
                       : 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
@@ -146,7 +284,7 @@ export function VoiceChatModal({
                   className="absolute inset-4 rounded-full bg-gradient-to-b from-blue-200 to-blue-400"
                   style={{
                     animation: shouldAnimate
-                      ? isSpeaking
+                      ? isUserVoiceActive
                         ? 'randomPulse2 1.8s ease-in-out infinite'
                         : 'randomPulse2 2.5s ease-in-out infinite'
                       : 'none',
@@ -177,15 +315,17 @@ export function VoiceChatModal({
                               key={i}
                               className="w-1 transform-gpu rounded-full bg-white"
                               style={{
-                                height: shouldAnimate ? '30px' : '12px',
-                                opacity: shouldAnimate
-                                  ? isSpeaking
+                                // The bars are the user's voice: muting the mic
+                                // flattens and dims them, and nothing else.
+                                height: isMicMuted ? '12px' : '30px',
+                                opacity: isMicMuted
+                                  ? 0.35
+                                  : isUserVoiceActive
                                     ? 1
-                                    : 0.7
-                                  : 0.5,
-                                animation: shouldAnimate
-                                  ? `${animName} ${isSpeaking ? 0.8 + i * 0.15 : 1.2 + i * 0.2}s ease-in-out infinite`
-                                  : 'none',
+                                    : 0.7,
+                                animation: isMicMuted
+                                  ? 'none'
+                                  : `${animName} ${isUserVoiceActive ? 0.8 + i * 0.15 : 1.2 + i * 0.2}s ease-in-out infinite`,
                                 transition: 'opacity 0.3s ease',
                               }}
                             ></div>
@@ -222,10 +362,10 @@ export function VoiceChatModal({
                               width: '3px',
                               height: '3px',
                               ...positions[i],
-                              animation: shouldAnimate
-                                ? `${particleAnims[i % 3]} ${isSpeaking ? 1.2 + (i % 4) * 0.3 : 1.8 + (i % 4) * 0.5}s ease-in-out infinite`
-                                : 'none',
-                              opacity: shouldAnimate ? undefined : 0.7,
+                              // Only rendered while connected, so the particles
+                              // always drift; the user's voice just speeds
+                              // them up.
+                              animation: `${particleAnims[i % 3]} ${isUserVoiceActive ? 1.2 + (i % 4) * 0.3 : 1.8 + (i % 4) * 0.5}s ease-in-out infinite`,
                             }}
                           ></div>
                         );
@@ -240,27 +380,164 @@ export function VoiceChatModal({
                   {loadingMessage}
                 </p>
               )}
+
+              {/* Single caption for the call. The blob carries the state
+                  visually; this is the text/screen-reader equivalent. */}
+              {!isLoading && (
+                <p
+                  role="status"
+                  aria-label={t('callStatus')}
+                  className="mt-2 text-center text-sm text-gray-600"
+                >
+                  {callStatusLabel}
+                </p>
+              )}
+
+              {/* Teleprompter band. The caption above is a `role="status"`
+                  (implicitly polite) and this is a polite `role="log"`; both
+                  being polite means assistive tech queues them instead of one
+                  interrupting the other. `aria-relevant="additions text"` keeps
+                  the log from re-reading the accumulated history — only new and
+                  changed lines are announced. */}
+              <div
+                data-testid="voice-transcript"
+                className="relative mt-3 flex min-h-0 w-full max-w-xl flex-1 flex-col"
+              >
+                {/* Receding top edge, so older lines read as fading out of view
+                    rather than being cut off by the scroll box. */}
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-x-0 top-0 z-10 h-8 bg-gradient-to-b from-white to-transparent"
+                />
+                <div
+                  ref={transcriptScrollRef}
+                  onScroll={handleTranscriptScroll}
+                  role="log"
+                  aria-live="polite"
+                  aria-relevant="additions text"
+                  aria-label={t('callTranscript')}
+                  data-testid="voice-transcript-scroll"
+                  // A scrollable region has to be reachable by keyboard, or the
+                  // history is only readable with a mouse (WCAG 2.1.1).
+                  tabIndex={0}
+                  className="h-full min-h-[4.5rem] w-full overflow-y-auto px-2 pt-6 pb-2"
+                >
+                  {transcript.length === 0 ? (
+                    <p
+                      data-testid="voice-transcript-empty"
+                      className="text-center text-xs text-gray-400"
+                    >
+                      {t('transcriptEmpty')}
+                    </p>
+                  ) : (
+                    transcript.map((entry, index) => {
+                      const isNewest = index === transcript.length - 1;
+                      const isUser = entry.speaker === 'user';
+                      const speakerLabel = isUser
+                        ? t('transcriptSpeakerYou')
+                        : mentorName ||
+                          entry.participantName ||
+                          t('transcriptSpeakerAgent');
+
+                      return (
+                        <p
+                          key={entry.id}
+                          data-testid="voice-transcript-line"
+                          data-speaker={entry.speaker}
+                          data-final={entry.isFinal ? 'true' : 'false'}
+                          data-newest={isNewest ? 'true' : 'false'}
+                          className={`mb-1.5 text-left leading-snug transition-all duration-300 ${
+                            isNewest
+                              ? 'text-sm text-gray-900 opacity-100'
+                              : 'text-xs text-gray-500 opacity-60'
+                          }`}
+                        >
+                          <span
+                            className={`mr-1.5 font-semibold ${
+                              // The agent shares the violet of the
+                              // mentor-speaking ring; the user keeps the blue
+                              // of the blob. The pairing is the whole point.
+                              isUser ? 'text-blue-600' : 'text-violet-600'
+                            }`}
+                          >
+                            {speakerLabel}
+                          </span>
+                          <span>{entry.text}</span>
+                          {!entry.isFinal && (
+                            <span
+                              aria-hidden="true"
+                              data-testid="voice-transcript-caret"
+                              className="ml-0.5 inline-block align-baseline font-normal text-violet-500"
+                              style={{
+                                animation:
+                                  'transcriptCaret 1s ease-in-out infinite',
+                              }}
+                            >
+                              ▍
+                            </span>
+                          )}
+                        </p>
+                      );
+                    })
+                  )}
+                </div>
+
+                {showJumpToLatest && (
+                  <button
+                    type="button"
+                    onClick={handleJumpToLatest}
+                    data-testid="voice-transcript-jump"
+                    className="absolute bottom-1 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-full border border-blue-200 bg-white px-3 py-1 text-xs text-blue-600 shadow-sm transition-colors hover:bg-blue-50"
+                  >
+                    <ArrowDown className="h-3 w-3" />
+                    {t('jumpToLatest')}
+                  </button>
+                )}
+
+                {/* Visual-only twin of the in-line caret: says "words are
+                    still arriving" at a glance. The caret carries the same
+                    meaning per line, and the log announces the text itself, so
+                    this is hidden from assistive tech rather than duplicated
+                    into it. */}
+                {isTranscriptLive && (
+                  <span
+                    aria-hidden="true"
+                    data-testid="voice-transcript-live"
+                    className="absolute top-0 right-2 z-20 flex items-center gap-1 rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-medium text-violet-600"
+                  >
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-violet-500" />
+                    {t('transcriptLive')}
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Bottom control buttons */}
-            <div className="mb-8 flex w-full items-center justify-center space-x-6 px-4 py-8">
+            {/* Bottom controls stay a fixed-height row: the transcript band
+                above flexes, so short viewports shrink the band instead of
+                pushing the buttons off-screen. */}
+            <div className="mb-4 flex w-full shrink-0 items-center justify-center space-x-6 px-4 py-6">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    onClick={toggleMute}
+                    onClick={toggleMicMute}
                     disabled={isLoading}
                     size="icon"
                     variant="outline"
-                    className={`h-14 w-14 rounded-full border-blue-500 text-blue-500 transition-all hover:border-blue-600 hover:text-blue-600 ${
+                    className={`h-14 w-14 rounded-full transition-all ${
+                      !isLoading && isMicMuted
+                        ? 'border-red-500 bg-red-50 text-red-600 hover:border-red-600 hover:bg-red-100 hover:text-red-700'
+                        : 'border-blue-500 text-blue-500 hover:border-blue-600 hover:text-blue-600'
+                    } ${
                       isLoading
                         ? 'cursor-not-allowed opacity-50'
                         : 'hover:scale-105 active:scale-95'
                     }`}
                     aria-label={
-                      isMuted ? t('unmuteMicrophone') : t('muteMicrophone')
+                      isMicMuted ? t('unmuteMicrophone') : t('muteMicrophone')
                     }
                   >
-                    {isLoading || isMuted ? (
+                    {isLoading || isMicMuted ? (
                       <MicOff
                         className={`h-5 w-5 ${isLoading ? 'text-blue-500' : ''}`}
                       />
@@ -272,9 +549,49 @@ export function VoiceChatModal({
                 <TooltipContent className="ibl-tooltip-content">
                   {isLoading
                     ? t('connecting')
-                    : isMuted
+                    : isMicMuted
                       ? t('unmute')
                       : t('mute')}
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={toggleMentorAudio}
+                    disabled={isLoading}
+                    size="icon"
+                    variant="outline"
+                    className={`h-14 w-14 rounded-full transition-all ${
+                      !isLoading && isMentorAudioMuted
+                        ? 'border-red-500 bg-red-50 text-red-600 hover:border-red-600 hover:bg-red-100 hover:text-red-700'
+                        : 'border-blue-500 text-blue-500 hover:border-blue-600 hover:text-blue-600'
+                    } ${
+                      isLoading
+                        ? 'cursor-not-allowed opacity-50'
+                        : 'hover:scale-105 active:scale-95'
+                    }`}
+                    aria-label={
+                      isMentorAudioMuted
+                        ? t('unmuteAgentAudio')
+                        : t('muteAgentAudio')
+                    }
+                  >
+                    {isLoading || isMentorAudioMuted ? (
+                      <VolumeX
+                        className={`h-5 w-5 ${isLoading ? 'text-blue-500' : ''}`}
+                      />
+                    ) : (
+                      <Volume2 className="h-5 w-5" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent className="ibl-tooltip-content">
+                  {isLoading
+                    ? t('connecting')
+                    : isMentorAudioMuted
+                      ? t('unmuteAgent')
+                      : t('muteAgent')}
                 </TooltipContent>
               </Tooltip>
 

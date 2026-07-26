@@ -36,6 +36,7 @@ const mockAudioTrackPublications = new Map([
 ]);
 
 const mockLocalParticipant = {
+  identity: 'testuser',
   setMicrophoneEnabled: mockSetMicrophoneEnabled,
   audioTrackPublications: mockAudioTrackPublications,
   on: vi.fn((event: string, handler: (...args: any[]) => void) => {
@@ -44,12 +45,41 @@ const mockLocalParticipant = {
   off: vi.fn(),
 };
 
+// A remote (mentor) participant so the diagnostic dumps that iterate
+// `room.remoteParticipants` are exercised.
+const makeRemoteParticipants = () =>
+  new Map<string, any>([
+    [
+      'p1',
+      {
+        identity: 'mentor-agent',
+        sid: 'p1',
+        isSpeaking: false,
+        audioLevel: 0,
+        isLocal: false,
+        trackPublications: new Map([
+          [
+            't1',
+            {
+              trackSid: 't1',
+              source: 'microphone',
+              kind: 'audio',
+              isMuted: false,
+              isSubscribed: true,
+              isEnabled: true,
+            },
+          ],
+        ]),
+      },
+    ],
+  ]);
+
 vi.mock('livekit-client', () => ({
   Room: vi.fn(() => ({
     connect: mockRoomConnect,
     disconnect: mockRoomDisconnect,
     localParticipant: mockLocalParticipant,
-    remoteParticipants: new Map(),
+    remoteParticipants: makeRemoteParticipants(),
     name: 'test-room',
     state: 'disconnected',
     on: vi.fn((event: string, handler: (...args: any[]) => void) => {
@@ -72,6 +102,7 @@ vi.mock('livekit-client', () => ({
     ActiveSpeakersChanged: 'activeSpeakersChanged',
     MediaDevicesError: 'mediaDevicesError',
     SignalConnected: 'signalConnected',
+    TranscriptionReceived: 'transcriptionReceived',
   },
   ConnectionState: {
     Connected: 'connected',
@@ -173,11 +204,22 @@ describe('LiveKitChat', () => {
         expect.objectContaining({
           isOpen: true,
           onClose: defaultProps.onClose,
-          toggleMute: expect.any(Function),
-          isMuted: expect.any(Boolean),
+          toggleMicMute: expect.any(Function),
+          isMicMuted: expect.any(Boolean),
+          toggleMentorAudio: expect.any(Function),
+          isMentorAudioMuted: expect.any(Boolean),
           connectionState: expect.any(String),
           isSpeaking: false,
+          isMentorSpeaking: false,
         }),
+      );
+    });
+
+    it('should start with mentor audio unmuted', async () => {
+      const { getByTestId } = render(<LiveKitChat {...defaultProps} />);
+      expect(getByTestId('room-audio-renderer')).toHaveAttribute(
+        'data-muted',
+        'false',
       );
     });
   });
@@ -224,14 +266,14 @@ describe('LiveKitChat', () => {
       });
     });
 
-    it('should pass isMuted=false to modal after successful connection', async () => {
+    it('should pass isMicMuted=false to modal after successful connection', async () => {
       render(<LiveKitChat {...defaultProps} />);
       await vi.waitFor(() => {
         const lastCall =
           mockVoiceChatModal.mock.calls[
             mockVoiceChatModal.mock.calls.length - 1
           ][0];
-        expect(lastCall.isMuted).toBe(false);
+        expect(lastCall.isMicMuted).toBe(false);
       });
     });
 
@@ -452,35 +494,132 @@ describe('LiveKitChat', () => {
     });
   });
 
-  describe('mute toggle', () => {
-    it('should toggle mute state when toggleMute is called', async () => {
-      render(<LiveKitChat {...defaultProps} />);
+  describe('mute toggles', () => {
+    const latestModalProps = () =>
+      mockVoiceChatModal.mock.calls[
+        mockVoiceChatModal.mock.calls.length - 1
+      ][0];
 
+    const renderConnected = async () => {
+      const utils = render(<LiveKitChat {...defaultProps} />);
       await vi.waitFor(() => {
-        const lastCall =
-          mockVoiceChatModal.mock.calls[
-            mockVoiceChatModal.mock.calls.length - 1
-          ][0];
-        expect(lastCall.isMuted).toBe(false);
+        expect(latestModalProps().isMicMuted).toBe(false);
       });
+      return utils;
+    };
 
-      // Get the toggleMute function and call it
-      const lastCall =
-        mockVoiceChatModal.mock.calls[
-          mockVoiceChatModal.mock.calls.length - 1
-        ][0];
+    it('should toggle mic mute state when toggleMicMute is called', async () => {
+      await renderConnected();
+
       act(() => {
-        (lastCall.toggleMute as () => void)();
+        (latestModalProps().toggleMicMute as () => void)();
       });
 
       await vi.waitFor(() => {
-        const updatedCall =
-          mockVoiceChatModal.mock.calls[
-            mockVoiceChatModal.mock.calls.length - 1
-          ][0];
-        expect(updatedCall.isMuted).toBe(true);
+        expect(latestModalProps().isMicMuted).toBe(true);
       });
       expect(mockSetMicrophoneEnabled).toHaveBeenCalledWith(false);
+    });
+
+    it('should re-enable the microphone when toggled back on', async () => {
+      await renderConnected();
+
+      act(() => {
+        (latestModalProps().toggleMicMute as () => void)();
+      });
+      await vi.waitFor(() => {
+        expect(latestModalProps().isMicMuted).toBe(true);
+      });
+
+      act(() => {
+        (latestModalProps().toggleMicMute as () => void)();
+      });
+      await vi.waitFor(() => {
+        expect(latestModalProps().isMicMuted).toBe(false);
+      });
+      expect(mockSetMicrophoneEnabled).toHaveBeenLastCalledWith(true);
+    });
+
+    // ── Regression test for the bug this change fixes ──
+    // A single `isMuted` flag used to drive BOTH `setMicrophoneEnabled` and
+    // `<RoomAudioRenderer muted>`, so muting your own mic silently silenced the
+    // mentor too. Muting the mic must leave mentor audio playing.
+    it('should NOT mute mentor audio when the microphone is muted', async () => {
+      const { getByTestId } = await renderConnected();
+
+      expect(getByTestId('room-audio-renderer')).toHaveAttribute(
+        'data-muted',
+        'false',
+      );
+
+      act(() => {
+        (latestModalProps().toggleMicMute as () => void)();
+      });
+
+      await vi.waitFor(() => {
+        expect(latestModalProps().isMicMuted).toBe(true);
+      });
+
+      // The whole point: mentor audio playback is untouched.
+      expect(getByTestId('room-audio-renderer')).toHaveAttribute(
+        'data-muted',
+        'false',
+      );
+      expect(latestModalProps().isMentorAudioMuted).toBe(false);
+    });
+
+    it('should mute mentor audio playback when toggleMentorAudio is called', async () => {
+      const { getByTestId } = await renderConnected();
+
+      act(() => {
+        (latestModalProps().toggleMentorAudio as () => void)();
+      });
+
+      await vi.waitFor(() => {
+        expect(latestModalProps().isMentorAudioMuted).toBe(true);
+      });
+      expect(getByTestId('room-audio-renderer')).toHaveAttribute(
+        'data-muted',
+        'true',
+      );
+    });
+
+    it('should NOT touch the microphone when mentor audio is toggled', async () => {
+      await renderConnected();
+
+      mockSetMicrophoneEnabled.mockClear();
+
+      act(() => {
+        (latestModalProps().toggleMentorAudio as () => void)();
+      });
+
+      await vi.waitFor(() => {
+        expect(latestModalProps().isMentorAudioMuted).toBe(true);
+      });
+      expect(mockSetMicrophoneEnabled).not.toHaveBeenCalled();
+      expect(latestModalProps().isMicMuted).toBe(false);
+    });
+
+    it('should unmute mentor audio when toggled back on', async () => {
+      const { getByTestId } = await renderConnected();
+
+      act(() => {
+        (latestModalProps().toggleMentorAudio as () => void)();
+      });
+      await vi.waitFor(() => {
+        expect(latestModalProps().isMentorAudioMuted).toBe(true);
+      });
+
+      act(() => {
+        (latestModalProps().toggleMentorAudio as () => void)();
+      });
+      await vi.waitFor(() => {
+        expect(latestModalProps().isMentorAudioMuted).toBe(false);
+      });
+      expect(getByTestId('room-audio-renderer')).toHaveAttribute(
+        'data-muted',
+        'false',
+      );
     });
   });
 
@@ -714,6 +853,116 @@ describe('LiveKitChat', () => {
             mockVoiceChatModal.mock.calls.length - 1
           ][0];
         expect(lastCall.isSpeaking).toBe(true);
+      });
+    });
+
+    it('should keep isSpeaking false while the mic is muted', async () => {
+      render(<LiveKitChat {...defaultProps} />);
+
+      await vi.waitFor(() => {
+        const lastCall =
+          mockVoiceChatModal.mock.calls[
+            mockVoiceChatModal.mock.calls.length - 1
+          ][0];
+        expect(lastCall.connectionState).toBe('connected');
+      });
+
+      const beforeMute =
+        mockVoiceChatModal.mock.calls[
+          mockVoiceChatModal.mock.calls.length - 1
+        ][0];
+      act(() => {
+        (beforeMute.toggleMicMute as () => void)();
+      });
+
+      await vi.waitFor(() => {
+        const lastCall =
+          mockVoiceChatModal.mock.calls[
+            mockVoiceChatModal.mock.calls.length - 1
+          ][0];
+        expect(lastCall.isMicMuted).toBe(true);
+      });
+
+      act(() => {
+        participantEventHandlers['isSpeakingChanged']?.(true);
+      });
+
+      const lastCall =
+        mockVoiceChatModal.mock.calls[
+          mockVoiceChatModal.mock.calls.length - 1
+        ][0];
+      expect(lastCall.isSpeaking).toBe(false);
+    });
+
+    it('should set isMentorSpeaking when a remote participant speaks', async () => {
+      render(<LiveKitChat {...defaultProps} />);
+      await vi.waitFor(() => {
+        expect(mockRoomConnect).toHaveBeenCalled();
+      });
+
+      act(() => {
+        roomEventHandlers['activeSpeakersChanged']?.([
+          { identity: 'mentor-agent', sid: 's1', isLocal: false },
+        ]);
+      });
+
+      await vi.waitFor(() => {
+        const lastCall =
+          mockVoiceChatModal.mock.calls[
+            mockVoiceChatModal.mock.calls.length - 1
+          ][0];
+        expect(lastCall.isMentorSpeaking).toBe(true);
+      });
+    });
+
+    it('should not set isMentorSpeaking when only the local participant speaks', async () => {
+      render(<LiveKitChat {...defaultProps} />);
+      await vi.waitFor(() => {
+        expect(mockRoomConnect).toHaveBeenCalled();
+      });
+
+      act(() => {
+        roomEventHandlers['activeSpeakersChanged']?.([
+          { identity: 'testuser', sid: 's0', isLocal: true },
+        ]);
+      });
+
+      const lastCall =
+        mockVoiceChatModal.mock.calls[
+          mockVoiceChatModal.mock.calls.length - 1
+        ][0];
+      expect(lastCall.isMentorSpeaking).toBe(false);
+    });
+
+    it('should clear isMentorSpeaking when the active speaker list empties', async () => {
+      render(<LiveKitChat {...defaultProps} />);
+      await vi.waitFor(() => {
+        expect(mockRoomConnect).toHaveBeenCalled();
+      });
+
+      act(() => {
+        roomEventHandlers['activeSpeakersChanged']?.([
+          { identity: 'mentor-agent', sid: 's1', isLocal: false },
+        ]);
+      });
+      await vi.waitFor(() => {
+        const lastCall =
+          mockVoiceChatModal.mock.calls[
+            mockVoiceChatModal.mock.calls.length - 1
+          ][0];
+        expect(lastCall.isMentorSpeaking).toBe(true);
+      });
+
+      act(() => {
+        roomEventHandlers['activeSpeakersChanged']?.([]);
+      });
+
+      await vi.waitFor(() => {
+        const lastCall =
+          mockVoiceChatModal.mock.calls[
+            mockVoiceChatModal.mock.calls.length - 1
+          ][0];
+        expect(lastCall.isMentorSpeaking).toBe(false);
       });
     });
 
@@ -1000,6 +1249,98 @@ describe('LiveKitChat', () => {
           expect.any(Error),
         );
       });
+    });
+  });
+
+  describe('live transcription', () => {
+    const lastProps = (): any =>
+      mockVoiceChatModal.mock.calls[
+        mockVoiceChatModal.mock.calls.length - 1
+      ][0];
+
+    const emitTranscription = (
+      segments: Record<string, unknown>[],
+      participant?: Record<string, unknown>,
+    ) => {
+      act(() => {
+        roomEventHandlers['transcriptionReceived']?.(segments, participant);
+      });
+    };
+
+    let consoleLogSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      consoleLogSpy.mockRestore();
+    });
+
+    it('subscribes to transcription events for the call', async () => {
+      render(<LiveKitChat {...defaultProps} />);
+
+      await vi.waitFor(() => {
+        expect(roomEventHandlers['transcriptionReceived']).toBeTypeOf(
+          'function',
+        );
+      });
+    });
+
+    it('starts with an empty transcript', () => {
+      render(<LiveKitChat {...defaultProps} />);
+
+      expect(lastProps().transcript).toEqual([]);
+      expect(lastProps().isTranscriptLive).toBe(false);
+    });
+
+    it('forwards the mentor name for transcript labelling', () => {
+      render(<LiveKitChat {...defaultProps} mentorName="Ada" />);
+
+      expect(lastProps().mentorName).toBe('Ada');
+    });
+
+    it('accumulates transcript entries and attributes the speaker', async () => {
+      render(<LiveKitChat {...defaultProps} />);
+      await vi.waitFor(() => {
+        expect(roomEventHandlers['transcriptionReceived']).toBeDefined();
+      });
+
+      emitTranscription([{ id: 's1', text: 'Hello', final: true }], {
+        identity: 'mentor-agent',
+        name: 'Ada',
+      });
+      emitTranscription([{ id: 's2', text: 'Hi back', final: true }], {
+        identity: 'testuser',
+      });
+
+      expect(
+        lastProps().transcript.map((e: { speaker: string; text: string }) => [
+          e.speaker,
+          e.text,
+        ]),
+      ).toEqual([
+        ['agent', 'Hello'],
+        ['user', 'Hi back'],
+      ]);
+    });
+
+    it('reports a partial line as live and settles once it finalises', async () => {
+      render(<LiveKitChat {...defaultProps} />);
+      await vi.waitFor(() => {
+        expect(roomEventHandlers['transcriptionReceived']).toBeDefined();
+      });
+
+      emitTranscription([{ id: 's1', text: 'Hel', final: false }], {
+        identity: 'mentor-agent',
+      });
+      expect(lastProps().isTranscriptLive).toBe(true);
+
+      emitTranscription([{ id: 's1', text: 'Hello', final: true }], {
+        identity: 'mentor-agent',
+      });
+      expect(lastProps().isTranscriptLive).toBe(false);
+      expect(lastProps().transcript).toHaveLength(1);
     });
   });
 });
