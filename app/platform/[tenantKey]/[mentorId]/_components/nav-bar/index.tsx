@@ -54,7 +54,7 @@ import {
 } from '@/hooks/use-user';
 import { getUserEmail, getUserName } from '@/features/utils';
 import { MODALS, UserType } from '@/lib/constants';
-import { TenantKeyMentorIdParams } from '@/lib/types';
+import { ProjectPageParams, TenantKeyMentorIdParams } from '@/lib/types';
 import { AuthModal } from '@/components/modals/auth-modal';
 
 import {
@@ -95,7 +95,7 @@ import {
 } from '@/hooks/use-tauri-offline';
 import { isTauriApp } from '@/types/tauri';
 import { useFreeTrial } from '@/hooks/use-free-trial';
-import { Tenant } from '@iblai/iblai-js/web-utils';
+import { chatActions, Tenant } from '@iblai/iblai-js/web-utils';
 
 /**
  * Nav-only "New Chat" entry. Always shown — it has no permissioned content,
@@ -144,6 +144,7 @@ export function NavBar() {
   const selectedAnalyticsMentor = useAppSelector(selectSelectedMentor);
   const isAccessingPublicRoute = useAccessingPublicRoute();
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
+  const { projectId } = useParams<ProjectPageParams>();
   const username = useUsername();
   const isAdmin = useIsAdmin();
   const userEmail = getUserEmail();
@@ -203,6 +204,7 @@ export function NavBar() {
     closeCreateMentorModal,
     navigateToAnalytics,
     navigateToMentor,
+    navigateToHome,
     getUpdatedModalStack,
     navigateToNotifications,
   } = useNavigate();
@@ -375,9 +377,35 @@ export function NavBar() {
 
   const FORK_ACTION_VALUE = 'fork-mentor';
 
+  const pathname = usePathname();
+  const isPromptGalleryPage = pathname.includes('/prompt-gallery');
+  const isWorkflowsPage = /\/workflows\/[^/]+\/?$/.test(pathname);
+  // The tenant-scoped Projects index (/platform/<tenant>/projects) is not a chat
+  // surface, so chat-only nav controls (e.g. the LLM provider selector) are hidden
+  // there. The project chat route (/platform/<tenant>/projects/<id>/<mentorId>) is
+  // still a chat page and keeps them.
+  const isProjectsIndexPage = /\/projects\/?$/.test(pathname);
+  const isOnChatPage =
+    !isPromptGalleryPage &&
+    !pathname.includes('/explore') &&
+    !isWorkflowsPage &&
+    !isProjectsIndexPage;
+  // Narrower than `isOnChatPage`: whether the chat component (the only
+  // `RemoteEvents.newChat` listener) is actually mounted on this route.
+  // Mirrors `isChatPage` in the sidebar so both "New Chat" affordances agree.
+  const isChatRoute = /\/platform\/[^/]+\/[^/]+$/.test(pathname) || !!projectId;
+
   const handleSegmentClick = (value: string) => {
     if (value === NEW_CHAT_NAV_ITEM.value) {
-      eventBus.emit(RemoteEvents.newChat);
+      // Off a chat route (e.g. /analytics) the `newChat` event has no
+      // listener, so route home first and let the chat slice start the new
+      // session on arrival — same approach as the sidebar's `startNewChat`.
+      if (isChatRoute) {
+        eventBus.emit(RemoteEvents.newChat);
+      } else {
+        navigateToHome();
+        dispatch(chatActions.setShouldStartNewChat(true));
+      }
       return;
     }
     if (value === ANALYTICS_NAV_ITEM.value) {
@@ -404,20 +432,6 @@ export function NavBar() {
       );
     }
   }, [mentorSettingsCombinedPublicAndPrivate?.mentorUniqueId]);
-
-  const pathname = usePathname();
-  const isPromptGalleryPage = pathname.includes('/prompt-gallery');
-  const isWorkflowsPage = /\/workflows\/[^/]+\/?$/.test(pathname);
-  // The tenant-scoped Projects index (/platform/<tenant>/projects) is not a chat
-  // surface, so chat-only nav controls (e.g. the LLM provider selector) are hidden
-  // there. The project chat route (/platform/<tenant>/projects/<id>/<mentorId>) is
-  // still a chat page and keeps them.
-  const isProjectsIndexPage = /\/projects\/?$/.test(pathname);
-  const isOnChatPage =
-    !isPromptGalleryPage &&
-    !pathname.includes('/explore') &&
-    !isWorkflowsPage &&
-    !isProjectsIndexPage;
 
   const handleCloseModal = () => {
     setOpenModal(false);
