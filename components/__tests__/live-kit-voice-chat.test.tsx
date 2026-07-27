@@ -1291,7 +1291,6 @@ describe('LiveKitChat', () => {
       render(<LiveKitChat {...defaultProps} />);
 
       expect(lastProps().transcript).toEqual([]);
-      expect(lastProps().isTranscriptLive).toBe(false);
     });
 
     it('forwards the mentor name for transcript labelling', () => {
@@ -1325,7 +1324,7 @@ describe('LiveKitChat', () => {
       ]);
     });
 
-    it('reports a partial line as live and settles once it finalises', async () => {
+    it('grows a partial line in place until it finalises', async () => {
       render(<LiveKitChat {...defaultProps} />);
       await vi.waitFor(() => {
         expect(roomEventHandlers['transcriptionReceived']).toBeDefined();
@@ -1334,13 +1333,15 @@ describe('LiveKitChat', () => {
       emitTranscription([{ id: 's1', text: 'Hel', final: false }], {
         identity: 'mentor-agent',
       });
-      expect(lastProps().isTranscriptLive).toBe(true);
+      expect(lastProps().transcript).toHaveLength(1);
+      expect(lastProps().transcript[0].isFinal).toBe(false);
 
       emitTranscription([{ id: 's1', text: 'Hello', final: true }], {
         identity: 'mentor-agent',
       });
-      expect(lastProps().isTranscriptLive).toBe(false);
       expect(lastProps().transcript).toHaveLength(1);
+      expect(lastProps().transcript[0].isFinal).toBe(true);
+      expect(lastProps().transcript[0].text).toBe('Hello');
     });
   });
 });

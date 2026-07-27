@@ -1369,8 +1369,8 @@
     "transcriptEmpty": "La transcripción en directo aparecerá aquí cuando comience la conversación.",
     "transcriptSpeakerYou": "Tú",
     "transcriptSpeakerAgent": "Agente",
-    "transcriptLive": "En directo",
-    "jumpToLatest": "Ir a lo más reciente"
+    "showCaptions": "Mostrar subtítulos",
+    "hideCaptions": "Ocultar subtítulos"
   },
   "modelDownloadModelDownloadStatus": {
     "downloading": "Descargando...",

@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { VoiceChatModal } from '../voice-chat-modal';
+import {
+  VoiceChatModal,
+  readCaptionsPreference,
+  writeCaptionsPreference,
+} from '../voice-chat-modal';
 import type { TranscriptEntry } from '@/hooks/use-livekit-transcription';
 
 function entry(
@@ -13,28 +17,11 @@ function entry(
   return { id, text, speaker, isFinal, timestamp: 0, ...extra };
 }
 
-/**
- * jsdom has no layout, so the scroll container reports 0 for every metric and
- * ignores `scrollTop` writes. Give the element real own-properties so the
- * auto-scroll logic can be exercised.
- */
-function makeScrollable(
-  element: HTMLElement,
-  { scrollHeight = 500, clientHeight = 100, scrollTop = 400 } = {},
-) {
-  Object.defineProperty(element, 'scrollHeight', {
-    value: scrollHeight,
-    configurable: true,
-  });
-  Object.defineProperty(element, 'clientHeight', {
-    value: clientHeight,
-    configurable: true,
-  });
-  Object.defineProperty(element, 'scrollTop', {
-    value: scrollTop,
-    writable: true,
-    configurable: true,
-  });
+const CAPTIONS_STORAGE_KEY = 'ibl.voiceChat.captionsEnabled';
+
+/** Persist "captions on" the way a previous call would have. */
+function rememberCaptionsOn() {
+  window.localStorage.setItem(CAPTIONS_STORAGE_KEY, 'true');
 }
 
 describe('VoiceChatModal', () => {
@@ -52,6 +39,8 @@ describe('VoiceChatModal', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.restoreAllMocks();
+    window.localStorage.clear();
   });
 
   describe('accessibility', () => {
@@ -480,6 +469,16 @@ describe('VoiceChatModal', () => {
       expect(regions[0]).toHaveAttribute('aria-label', 'Call status');
     });
 
+    // The orb is the only visible state indicator now, so the caption exists
+    // for assistive tech only. Deleting it outright would have regressed the
+    // accessibility complaint this redesign came from.
+    it('is announced but never drawn', () => {
+      render(<VoiceChatModal {...defaultProps} />);
+
+      expect(caption()).toHaveClass('sr-only');
+      expect(caption()).toBeInTheDocument();
+    });
+
     it('shows "Listening…" when connected and nobody is muted or speaking', () => {
       render(<VoiceChatModal {...defaultProps} />);
 
@@ -625,24 +624,38 @@ describe('VoiceChatModal', () => {
     });
   });
 
-  describe('transcript band', () => {
-    const logRegion = () => screen.getByRole('log');
-    const lines = () => screen.queryAllByTestId('voice-transcript-line');
+  describe('captions toggle', () => {
+    const ccButton = () => screen.getByLabelText('Show captions');
 
-    it('exposes a polite log region with a stable label', () => {
+    it('renders a captions control between agent audio and end call', () => {
       render(<VoiceChatModal {...defaultProps} />);
 
-      const region = logRegion();
-      expect(region).toHaveAttribute('aria-label', 'Call transcript');
-      expect(region).toHaveAttribute('aria-live', 'polite');
-      // Only new/changed lines are announced - the accumulated history is
-      // never re-read when the user scrolls.
-      expect(region).toHaveAttribute('aria-relevant', 'additions text');
-      // The scroll region must be reachable without a mouse.
-      expect(region).toHaveAttribute('tabindex', '0');
+      // Radix contributes its own unlabelled dialog close button; only the
+      // call controls carry aria-labels.
+      const labels = screen
+        .getAllByRole('button')
+        .map((b) => b.getAttribute('aria-label'))
+        .filter(Boolean);
+      expect(labels).toEqual([
+        'Mute microphone',
+        'Mute agent audio',
+        'Show captions',
+        'Close voice chat',
+      ]);
     });
 
-    it('does not turn the transcript into a second status region', () => {
+    it('is styled as a peer of the other two circular controls', () => {
+      render(<VoiceChatModal {...defaultProps} />);
+
+      expect(ccButton()).toHaveClass('h-14', 'w-14', 'rounded-full');
+      expect(screen.getByLabelText('Mute microphone')).toHaveClass(
+        'h-14',
+        'w-14',
+        'rounded-full',
+      );
+    });
+
+    it('starts off, so the default call shows no transcript at all', () => {
       render(
         <VoiceChatModal
           {...defaultProps}
@@ -650,13 +663,192 @@ describe('VoiceChatModal', () => {
         />,
       );
 
+      expect(screen.queryByRole('log')).toBeNull();
+      expect(screen.queryByTestId('voice-transcript')).toBeNull();
+      expect(ccButton()).toHaveAttribute('aria-pressed', 'false');
+    });
+
+    it('reveals the band when switched on and hides it again when switched off', () => {
+      render(
+        <VoiceChatModal
+          {...defaultProps}
+          transcript={[entry('s1', 'Hello', 'agent')]}
+        />,
+      );
+
+      fireEvent.click(ccButton());
+
+      const toggledOn = screen.getByLabelText('Hide captions');
+      expect(toggledOn).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByRole('log')).toBeInTheDocument();
+
+      fireEvent.click(toggledOn);
+
+      expect(screen.queryByRole('log')).toBeNull();
+      expect(ccButton()).toHaveAttribute('aria-pressed', 'false');
+    });
+
+    it('is disabled while connecting, like the other controls', () => {
+      render(<VoiceChatModal {...defaultProps} connectionState="connecting" />);
+
+      expect(ccButton()).toBeDisabled();
+    });
+
+    it('does not tint the captions control while connecting', () => {
+      render(<VoiceChatModal {...defaultProps} connectionState="connecting" />);
+
+      expect(ccButton()).toHaveClass('border-blue-500');
+      expect(ccButton()).not.toHaveClass('bg-blue-50');
+    });
+
+    it('marks the control as active once captions are on', () => {
+      render(<VoiceChatModal {...defaultProps} />);
+
+      fireEvent.click(ccButton());
+
+      expect(screen.getByLabelText('Hide captions')).toHaveClass('bg-blue-50');
+    });
+  });
+
+  describe('captions preference persistence', () => {
+    it('writes the choice to localStorage when turned on', () => {
+      render(<VoiceChatModal {...defaultProps} />);
+
+      fireEvent.click(screen.getByLabelText('Show captions'));
+
+      expect(window.localStorage.getItem(CAPTIONS_STORAGE_KEY)).toBe('true');
+    });
+
+    it('writes the choice to localStorage when turned back off', () => {
+      rememberCaptionsOn();
+      render(<VoiceChatModal {...defaultProps} />);
+
+      fireEvent.click(screen.getByLabelText('Hide captions'));
+
+      expect(window.localStorage.getItem(CAPTIONS_STORAGE_KEY)).toBe('false');
+    });
+
+    it('restores captions on mount when a previous call left them on', () => {
+      rememberCaptionsOn();
+
+      render(
+        <VoiceChatModal
+          {...defaultProps}
+          transcript={[entry('s1', 'Hello', 'agent')]}
+        />,
+      );
+
+      expect(screen.getByRole('log')).toBeInTheDocument();
+      expect(screen.getByLabelText('Hide captions')).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+    });
+
+    it('stays off when the stored value is anything other than "true"', () => {
+      window.localStorage.setItem(CAPTIONS_STORAGE_KEY, 'false');
+
+      render(<VoiceChatModal {...defaultProps} />);
+
+      expect(screen.queryByRole('log')).toBeNull();
+    });
+
+    it('falls back to off when reading storage throws', () => {
+      vi.spyOn(window.localStorage, 'getItem').mockImplementation(() => {
+        throw new Error('SecurityError');
+      });
+
+      render(<VoiceChatModal {...defaultProps} />);
+
+      expect(screen.getByLabelText('Show captions')).toBeInTheDocument();
+      expect(screen.queryByRole('log')).toBeNull();
+    });
+
+    // The modal itself cannot run without a DOM, so the server-render guard is
+    // exercised against the helpers directly.
+    describe('without a window (server render)', () => {
+      /**
+       * `window` is put back before yielding to the event loop: leaving it
+       * undefined across an await lets unrelated async DOM work (Radix's
+       * tooltip positioning) blow up.
+       */
+      function withoutWindow<T>(run: () => T): T {
+        vi.stubGlobal('window', undefined);
+        try {
+          return run();
+        } finally {
+          vi.unstubAllGlobals();
+        }
+      }
+
+      it('reports captions off instead of touching storage', () => {
+        const getItem = vi.spyOn(window.localStorage, 'getItem');
+
+        expect(withoutWindow(() => readCaptionsPreference())).toBe(false);
+        expect(getItem).not.toHaveBeenCalled();
+      });
+
+      it('silently skips writing the preference', () => {
+        const setItem = vi.spyOn(window.localStorage, 'setItem');
+
+        expect(() =>
+          withoutWindow(() => writeCaptionsPreference(true)),
+        ).not.toThrow();
+        expect(setItem).not.toHaveBeenCalled();
+      });
+    });
+
+    it('keeps the toggle working when writing to storage throws', () => {
+      vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
+        throw new Error('QuotaExceededError');
+      });
+
+      render(
+        <VoiceChatModal
+          {...defaultProps}
+          transcript={[entry('s1', 'Hello', 'agent')]}
+        />,
+      );
+
+      fireEvent.click(screen.getByLabelText('Show captions'));
+
+      // The preference is lost for next time, but this call still gets its
+      // captions - a storage failure must never break the modal.
+      expect(screen.getByRole('log')).toBeInTheDocument();
+    });
+  });
+
+  describe('caption band', () => {
+    const lines = () => screen.queryAllByTestId('voice-transcript-line');
+
+    function renderWithCaptions(props: Record<string, unknown> = {}) {
+      rememberCaptionsOn();
+      return render(<VoiceChatModal {...defaultProps} {...props} />);
+    }
+
+    it('exposes a polite log region with a stable label', () => {
+      renderWithCaptions();
+
+      const region = screen.getByRole('log');
+      expect(region).toHaveAttribute('aria-label', 'Call transcript');
+      expect(region).toHaveAttribute('aria-live', 'polite');
+      // Only new/changed lines are announced - the lines still on screen are
+      // never re-read.
+      expect(region).toHaveAttribute('aria-relevant', 'additions text');
+      // Nothing scrolls any more, so there is no keyboard-reachable region.
+      expect(region).not.toHaveAttribute('tabindex');
+    });
+
+    it('does not turn the transcript into a second status region', () => {
+      renderWithCaptions({ transcript: [entry('s1', 'Hello', 'agent')] });
+
       const statusRegions = screen.getAllByRole('status');
       expect(statusRegions).toHaveLength(1);
       expect(statusRegions[0]).toHaveAttribute('aria-label', 'Call status');
     });
 
     it('shows a neutral empty state before the first utterance', () => {
-      render(<VoiceChatModal {...defaultProps} />);
+      renderWithCaptions();
 
       expect(screen.getByTestId('voice-transcript-empty')).toHaveTextContent(
         'The live transcript will appear here as the conversation starts.',
@@ -665,27 +857,19 @@ describe('VoiceChatModal', () => {
     });
 
     it('replaces the empty state once lines arrive', () => {
-      render(
-        <VoiceChatModal
-          {...defaultProps}
-          transcript={[entry('s1', 'Hello there', 'agent')]}
-        />,
-      );
+      renderWithCaptions({ transcript: [entry('s1', 'Hello there', 'agent')] });
 
       expect(screen.queryByTestId('voice-transcript-empty')).toBeNull();
       expect(lines()).toHaveLength(1);
     });
 
     it('renders lines oldest first', () => {
-      render(
-        <VoiceChatModal
-          {...defaultProps}
-          transcript={[
-            entry('s1', 'First', 'agent'),
-            entry('s2', 'Second', 'user'),
-          ]}
-        />,
-      );
+      renderWithCaptions({
+        transcript: [
+          entry('s1', 'First', 'agent'),
+          entry('s2', 'Second', 'user'),
+        ],
+      });
 
       expect(lines().map((l) => l.textContent)).toEqual([
         'AgentFirst',
@@ -693,13 +877,62 @@ describe('VoiceChatModal', () => {
       ]);
     });
 
-    it('labels the user with "You" in blue', () => {
-      render(
-        <VoiceChatModal
-          {...defaultProps}
-          transcript={[entry('s1', 'My words', 'user')]}
-        />,
+    it('shows only the newest three lines', () => {
+      renderWithCaptions({
+        transcript: [
+          entry('s1', 'One', 'agent'),
+          entry('s2', 'Two', 'user'),
+          entry('s3', 'Three', 'agent'),
+          entry('s4', 'Four', 'user'),
+          entry('s5', 'Five', 'agent'),
+        ],
+      });
+
+      // The full history is a post-call artefact; the band is a teleprompter.
+      expect(lines().map((l) => l.textContent)).toEqual([
+        'AgentThree',
+        'YouFour',
+        'AgentFive',
+      ]);
+    });
+
+    it('puts the newest line at the bottom of the three', () => {
+      renderWithCaptions({
+        transcript: [
+          entry('s1', 'One', 'agent'),
+          entry('s2', 'Two', 'user'),
+          entry('s3', 'Three', 'agent'),
+          entry('s4', 'Four', 'user'),
+        ],
+      });
+
+      const rendered = lines();
+      expect(rendered).toHaveLength(3);
+      expect(rendered[rendered.length - 1]).toHaveAttribute(
+        'data-newest',
+        'true',
       );
+      expect(rendered[0]).toHaveAttribute('data-newest', 'false');
+    });
+
+    it('is a fixed-height window that never scrolls', () => {
+      renderWithCaptions({
+        transcript: [
+          entry('s1', 'One', 'agent'),
+          entry('s2', 'Two', 'user'),
+          entry('s3', 'Three', 'agent'),
+        ],
+      });
+
+      const band = screen.getByTestId('voice-transcript');
+      expect(band).toHaveClass('h-[5.25rem]');
+      expect(band).toHaveClass('overflow-hidden');
+      expect(band).toHaveClass('shrink-0');
+      expect(band.className).not.toContain('overflow-y-auto');
+    });
+
+    it('labels the user with "You" in blue', () => {
+      renderWithCaptions({ transcript: [entry('s1', 'My words', 'user')] });
 
       const label = lines()[0].querySelector('span');
       expect(label).toHaveTextContent('You');
@@ -709,13 +942,10 @@ describe('VoiceChatModal', () => {
     });
 
     it('labels the agent with the mentor name in the ring blue', () => {
-      render(
-        <VoiceChatModal
-          {...defaultProps}
-          mentorName="Ada"
-          transcript={[entry('s1', 'Their words', 'agent')]}
-        />,
-      );
+      renderWithCaptions({
+        mentorName: 'Ada',
+        transcript: [entry('s1', 'Their words', 'agent')],
+      });
 
       const label = lines()[0].querySelector('span');
       expect(label).toHaveTextContent('Ada');
@@ -724,71 +954,65 @@ describe('VoiceChatModal', () => {
     });
 
     it('falls back to the LiveKit participant name when no mentor name is given', () => {
-      render(
-        <VoiceChatModal
-          {...defaultProps}
-          transcript={[
-            entry('s1', 'Their words', 'agent', true, {
-              participantName: 'Agent Seven',
-            }),
-          ]}
-        />,
-      );
+      renderWithCaptions({
+        transcript: [
+          entry('s1', 'Their words', 'agent', true, {
+            participantName: 'Agent Seven',
+          }),
+        ],
+      });
 
       expect(lines()[0].querySelector('span')).toHaveTextContent('Agent Seven');
     });
 
     it('falls back to a generic agent label as a last resort', () => {
-      render(
-        <VoiceChatModal
-          {...defaultProps}
-          transcript={[entry('s1', 'Their words', 'agent')]}
-        />,
-      );
+      renderWithCaptions({ transcript: [entry('s1', 'Their words', 'agent')] });
 
       expect(lines()[0].querySelector('span')).toHaveTextContent('Agent');
     });
 
     it('never labels a user line with the mentor name', () => {
-      render(
-        <VoiceChatModal
-          {...defaultProps}
-          mentorName="Ada"
-          transcript={[
-            entry('s1', 'My words', 'user', true, {
-              participantName: 'Ada',
-            }),
-          ]}
-        />,
-      );
+      renderWithCaptions({
+        mentorName: 'Ada',
+        transcript: [
+          entry('s1', 'My words', 'user', true, { participantName: 'Ada' }),
+        ],
+      });
 
       expect(lines()[0].querySelector('span')).toHaveTextContent('You');
     });
 
-    it('gives the newest line full weight and dims the older ones', () => {
-      render(
-        <VoiceChatModal
-          {...defaultProps}
-          transcript={[entry('s1', 'Old', 'agent'), entry('s2', 'New', 'user')]}
-        />,
-      );
+    it('gives the newest line full weight and dims the older ones by age', () => {
+      renderWithCaptions({
+        transcript: [
+          entry('s1', 'Oldest', 'agent'),
+          entry('s2', 'Older', 'user'),
+          entry('s3', 'Newest', 'agent'),
+        ],
+      });
 
-      const [older, newest] = lines();
-      expect(older).toHaveAttribute('data-newest', 'false');
+      const [oldest, older, newest] = lines();
+      expect(oldest).toHaveAttribute('data-age', '2');
+      expect(oldest).toHaveClass('opacity-30');
+      expect(oldest).toHaveClass('text-xs');
+      expect(older).toHaveAttribute('data-age', '1');
       expect(older).toHaveClass('opacity-60');
       expect(older).toHaveClass('text-xs');
+      expect(newest).toHaveAttribute('data-age', '0');
       expect(newest).toHaveAttribute('data-newest', 'true');
       expect(newest).toHaveClass('opacity-100');
       expect(newest).toHaveClass('text-sm');
+      // The older lines are held to one row each so the fade stays legible;
+      // the live line wraps so its tail - and its caret - is never cut off.
+      expect(oldest).toHaveClass('truncate');
+      expect(older).toHaveClass('truncate');
+      expect(newest).not.toHaveClass('truncate');
     });
 
     it('marks an in-progress line with a caret', () => {
-      render(
-        <VoiceChatModal
-          {...defaultProps}
-          transcript={[entry('s1', 'Still talk', 'agent', false)]}
-        />,
-      );
+      renderWithCaptions({
+        transcript: [entry('s1', 'Still talk', 'agent', false)],
+      });
 
       const caret = screen.getByTestId('voice-transcript-caret');
       expect(caret).toHaveAttribute('aria-hidden', 'true');
@@ -799,6 +1023,7 @@ describe('VoiceChatModal', () => {
     });
 
     it('settles the caret when the line finalises', () => {
+      rememberCaptionsOn();
       const { rerender } = render(
         <VoiceChatModal
           {...defaultProps}
@@ -819,160 +1044,33 @@ describe('VoiceChatModal', () => {
       expect(lines()[0]).toHaveAttribute('data-final', 'true');
     });
 
-    it('shows a live indicator while words are still arriving', () => {
-      render(<VoiceChatModal {...defaultProps} isTranscriptLive={true} />);
-
-      const indicator = screen.getByTestId('voice-transcript-live');
-      expect(indicator).toHaveTextContent('Live');
-      // The log already announces the words; this is decoration only.
-      expect(indicator).toHaveAttribute('aria-hidden', 'true');
-    });
-
-    it('hides the live indicator when nothing is in progress', () => {
-      render(<VoiceChatModal {...defaultProps} isTranscriptLive={false} />);
-
-      expect(screen.queryByTestId('voice-transcript-live')).toBeNull();
-    });
-
     it('tags each line with its speaker for styling and selection', () => {
-      render(
-        <VoiceChatModal
-          {...defaultProps}
-          transcript={[
-            entry('s1', 'Mine', 'user'),
-            entry('s2', 'Theirs', 'agent'),
-          ]}
-        />,
-      );
+      renderWithCaptions({
+        transcript: [
+          entry('s1', 'Mine', 'user'),
+          entry('s2', 'Theirs', 'agent'),
+        ],
+      });
 
       expect(lines().map((l) => l.getAttribute('data-speaker'))).toEqual([
         'user',
         'agent',
       ]);
     });
-  });
 
-  describe('transcript auto-scroll', () => {
-    const scrollBox = () => screen.getByTestId('voice-transcript-scroll');
+    it('no longer renders the removed scrollback affordances', () => {
+      renderWithCaptions({
+        transcript: [entry('s1', 'Hello', 'agent')],
+      });
 
-    it('scrolls to the newest line when a line arrives', () => {
-      const { rerender } = render(<VoiceChatModal {...defaultProps} />);
-      makeScrollable(scrollBox(), { scrollTop: 0 });
-
-      rerender(
-        <VoiceChatModal
-          {...defaultProps}
-          transcript={[entry('s1', 'Hello', 'agent')]}
-        />,
-      );
-
-      expect(scrollBox().scrollTop).toBe(500);
-    });
-
-    it('does not offer "jump to latest" while pinned to the bottom', () => {
-      render(
-        <VoiceChatModal
-          {...defaultProps}
-          transcript={[entry('s1', 'Hello', 'agent')]}
-        />,
-      );
-
+      expect(screen.queryByTestId('voice-transcript-scroll')).toBeNull();
       expect(screen.queryByTestId('voice-transcript-jump')).toBeNull();
-    });
-
-    it('pauses auto-scroll and offers a jump affordance when scrolled up', () => {
-      const { rerender } = render(
-        <VoiceChatModal
-          {...defaultProps}
-          transcript={[entry('s1', 'Hello', 'agent')]}
-        />,
-      );
-
-      const box = scrollBox();
-      makeScrollable(box, { scrollTop: 0 });
-      fireEvent.scroll(box);
-
-      expect(screen.getByTestId('voice-transcript-jump')).toHaveTextContent(
-        'Jump to latest',
-      );
-
-      // A new line must not yank the reader back down.
-      rerender(
-        <VoiceChatModal
-          {...defaultProps}
-          transcript={[
-            entry('s1', 'Hello', 'agent'),
-            entry('s2', 'And more', 'agent'),
-          ]}
-        />,
-      );
-
-      expect(scrollBox().scrollTop).toBe(0);
-    });
-
-    it('resumes auto-scroll when the user scrolls back to the bottom', () => {
-      const { rerender } = render(
-        <VoiceChatModal
-          {...defaultProps}
-          transcript={[entry('s1', 'Hello', 'agent')]}
-        />,
-      );
-
-      const box = scrollBox();
-      makeScrollable(box, { scrollTop: 0 });
-      fireEvent.scroll(box);
-      expect(screen.getByTestId('voice-transcript-jump')).toBeInTheDocument();
-
-      // Back within the pin threshold of the bottom (500 - 100 = 400).
-      box.scrollTop = 390;
-      fireEvent.scroll(box);
-
-      expect(screen.queryByTestId('voice-transcript-jump')).toBeNull();
-
-      rerender(
-        <VoiceChatModal
-          {...defaultProps}
-          transcript={[
-            entry('s1', 'Hello', 'agent'),
-            entry('s2', 'And more', 'agent'),
-          ]}
-        />,
-      );
-
-      expect(scrollBox().scrollTop).toBe(500);
-    });
-
-    it('jumps back to the newest line when the affordance is clicked', () => {
-      render(
-        <VoiceChatModal
-          {...defaultProps}
-          transcript={[entry('s1', 'Hello', 'agent')]}
-        />,
-      );
-
-      const box = scrollBox();
-      makeScrollable(box, { scrollTop: 0 });
-      fireEvent.scroll(box);
-
-      fireEvent.click(screen.getByTestId('voice-transcript-jump'));
-
-      expect(scrollBox().scrollTop).toBe(500);
-      expect(screen.queryByTestId('voice-transcript-jump')).toBeNull();
-    });
-
-    it('does not offer the jump affordance with an empty transcript', () => {
-      render(<VoiceChatModal {...defaultProps} />);
-
-      const box = scrollBox();
-      makeScrollable(box, { scrollTop: 0 });
-      fireEvent.scroll(box);
-
-      expect(screen.queryByTestId('voice-transcript-jump')).toBeNull();
+      expect(screen.queryByTestId('voice-transcript-live')).toBeNull();
     });
   });
 
   describe('layout', () => {
-    it('keeps the blob, the caption and all three controls alongside the band', () => {
+    it('keeps the blob and all four controls with captions off', () => {
       render(
         <VoiceChatModal
           {...defaultProps}
@@ -981,20 +1079,22 @@ describe('VoiceChatModal', () => {
       );
 
       expect(screen.getByTestId('voice-blob')).toBeInTheDocument();
-      expect(screen.getByLabelText('Call status')).toBeInTheDocument();
       expect(screen.getByLabelText('Mute microphone')).toBeInTheDocument();
       expect(screen.getByLabelText('Mute agent audio')).toBeInTheDocument();
+      expect(screen.getByLabelText('Show captions')).toBeInTheDocument();
       expect(screen.getByLabelText('Close voice chat')).toBeInTheDocument();
-      expect(screen.getByRole('log')).toBeInTheDocument();
+      // The status text is present for assistive tech but never drawn.
+      expect(screen.getByLabelText('Call status')).toHaveClass('sr-only');
+      // Nothing else competes with the orb.
+      expect(screen.queryByRole('log')).toBeNull();
     });
 
-    it('lets the band flex instead of pushing the controls off-screen', () => {
+    it('keeps the orb from being squeezed by the caption band', () => {
+      rememberCaptionsOn();
       render(<VoiceChatModal {...defaultProps} />);
 
-      const band = screen.getByTestId('voice-transcript');
-      expect(band).toHaveClass('flex-1');
-      expect(band).toHaveClass('min-h-0');
       expect(screen.getByTestId('voice-blob')).toHaveClass('shrink-0');
+      expect(screen.getByTestId('voice-transcript')).toHaveClass('shrink-0');
     });
   });
 

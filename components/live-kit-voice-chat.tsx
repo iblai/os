@@ -94,10 +94,10 @@ export function LiveKitChat({
   const [isMentorSpeaking, setIsMentorSpeaking] = React.useState(false);
   const permissionStreamRef = React.useRef<MediaStream | null>(null);
 
-  // Live captions for the call. A voice-only call is unusable for deaf and
-  // hard-of-hearing users without this, so it is mounted for the whole call
-  // rather than gated behind a toggle.
-  const { entries: transcript, isTranscribing } = useLiveKitTranscription({
+  // Transcription runs for the whole call whether or not captions are showing:
+  // the modal's CC toggle only decides what is drawn, and the accumulated
+  // entries are what the post-call history is built from.
+  const { entries: transcript } = useLiveKitTranscription({
     room,
   });
 
@@ -593,7 +593,6 @@ export function LiveKitChat({
         isSpeaking={isSpeaking}
         isMentorSpeaking={isMentorSpeaking}
         transcript={transcript}
-        isTranscriptLive={isTranscribing}
         mentorName={mentorName}
       />
     </RoomContext.Provider>

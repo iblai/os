@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { useTranslations } from 'next-intl';
 import {
@@ -17,7 +17,8 @@ import {
   VolumeX,
   X,
   Loader2,
-  ArrowDown,
+  Captions,
+  CaptionsOff,
 } from 'lucide-react';
 import {
   Tooltip,
@@ -117,11 +118,48 @@ const pulseAnimations = `
 `;
 
 /**
- * How close to the bottom (px) still counts as "pinned to the newest line".
- * Anything further up is treated as the user reading back, which suspends
- * auto-scroll until they return.
+ * Captions are opt-in and the choice follows the user from call to call, the
+ * way Gemini Live remembers it. A single stringly-typed flag is enough.
  */
-const AUTO_SCROLL_PIN_THRESHOLD_PX = 24;
+const CAPTIONS_PREFERENCE_STORAGE_KEY = 'ibl.voiceChat.captionsEnabled';
+
+/**
+ * Captions are a fixed three-line teleprompter, not a scrollback. Everything
+ * older is the post-call transcript's job.
+ */
+const VISIBLE_CAPTION_LINES = 3;
+
+/**
+ * Storage is a nicety, never a dependency: server rendering has no `window`
+ * and Safari's private mode throws on access. Either way we fall back to the
+ * industry default of captions off.
+ *
+ * Exported so the no-`window` path can be exercised directly — it is
+ * unreachable through a rendered component, which needs a DOM to exist.
+ */
+export function readCaptionsPreference(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return (
+      window.localStorage.getItem(CAPTIONS_PREFERENCE_STORAGE_KEY) === 'true'
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function writeCaptionsPreference(enabled: boolean): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(
+      CAPTIONS_PREFERENCE_STORAGE_KEY,
+      enabled ? 'true' : 'false',
+    );
+  } catch {
+    // A storage failure only costs us the memory of the choice; the toggle
+    // itself keeps working for the rest of this call.
+  }
+}
 
 interface VoiceChatModalProps {
   isOpen: boolean;
@@ -139,8 +177,6 @@ interface VoiceChatModalProps {
   isMentorSpeaking: boolean;
   /** Accumulated call transcript, oldest first. */
   transcript?: TranscriptEntry[];
-  /** Whether the newest transcript line is still in progress. */
-  isTranscriptLive?: boolean;
   /** Display name of the mentor, used to label its transcript lines. */
   mentorName?: string;
 }
@@ -156,7 +192,6 @@ export function VoiceChatModal({
   isSpeaking,
   isMentorSpeaking,
   transcript = [],
-  isTranscriptLive = false,
   mentorName,
 }: VoiceChatModalProps) {
   const t = useTranslations('modalsVoiceChatModal');
@@ -180,41 +215,30 @@ export function VoiceChatModal({
       : t('connectingToVoiceChat')
     : null;
 
-  // One caption replaces the old pair of status rows. Highest-precedence fact
-  // wins: the agent being silenced is the most surprising state, then who is
-  // talking, then the user's own mic.
-  // --- Transcript auto-scroll -------------------------------------------
-  // The band follows the newest line, but only while the reader is already at
-  // the bottom. Scrolling up to re-read must never be yanked back down.
-  const transcriptScrollRef = useRef<HTMLDivElement | null>(null);
-  const [isPinnedToLatest, setIsPinnedToLatest] = useState(true);
-
-  const scrollToLatest = useCallback(() => {
-    const element = transcriptScrollRef.current;
-    if (!element) return;
-    element.scrollTop = element.scrollHeight;
-  }, []);
+  // --- Captions ----------------------------------------------------------
+  // Off by default, like every other voice assistant. The stored preference is
+  // read after mount so the server-rendered markup and the first client render
+  // agree; a one-frame flash of "off" is cheaper than a hydration mismatch.
+  const [areCaptionsVisible, setAreCaptionsVisible] = useState(false);
 
   useEffect(() => {
-    if (!isPinnedToLatest) return;
-    scrollToLatest();
-  }, [transcript, isPinnedToLatest, scrollToLatest]);
-
-  const handleTranscriptScroll = useCallback(() => {
-    const element = transcriptScrollRef.current;
-    if (!element) return;
-    const distanceFromBottom =
-      element.scrollHeight - element.scrollTop - element.clientHeight;
-    setIsPinnedToLatest(distanceFromBottom <= AUTO_SCROLL_PIN_THRESHOLD_PX);
+    setAreCaptionsVisible(readCaptionsPreference());
   }, []);
 
-  const handleJumpToLatest = useCallback(() => {
-    setIsPinnedToLatest(true);
-    scrollToLatest();
-  }, [scrollToLatest]);
+  const toggleCaptions = useCallback(() => {
+    const next = !areCaptionsVisible;
+    setAreCaptionsVisible(next);
+    writeCaptionsPreference(next);
+  }, [areCaptionsVisible]);
 
-  const showJumpToLatest = !isPinnedToLatest && transcript.length > 0;
+  // Only the tail of the conversation is ever on screen. The full transcript
+  // belongs to the chat history once the call ends.
+  const visibleCaptions = transcript.slice(-VISIBLE_CAPTION_LINES);
 
+  // The orb carries the call state for anyone who can see it, so this text
+  // exists purely for assistive tech. Highest-precedence fact wins: the agent
+  // being silenced is the most surprising state, then who is talking, then the
+  // user's own mic.
   const callStatusLabel = isMentorAudioMuted
     ? t('agentMuted')
     : isMentorSpeaking
@@ -381,48 +405,36 @@ export function VoiceChatModal({
                 </p>
               )}
 
-              {/* Single caption for the call. The blob carries the state
-                  visually; this is the text/screen-reader equivalent. */}
+              {/* The blob is now the only visible state indicator. This is its
+                  screen-reader equivalent: same facts, no visual noise. It is
+                  a polite `role="status"` and the caption log below is a polite
+                  `role="log"`, so assistive tech queues them instead of letting
+                  one interrupt the other. */}
               {!isLoading && (
                 <p
                   role="status"
                   aria-label={t('callStatus')}
-                  className="mt-2 text-center text-sm text-gray-600"
+                  className="sr-only"
                 >
                   {callStatusLabel}
                 </p>
               )}
 
-              {/* Teleprompter band. The caption above is a `role="status"`
-                  (implicitly polite) and this is a polite `role="log"`; both
-                  being polite means assistive tech queues them instead of one
-                  interrupting the other. `aria-relevant="additions text"` keeps
-                  the log from re-reading the accumulated history — only new and
-                  changed lines are announced. */}
-              <div
-                data-testid="voice-transcript"
-                className="relative mt-3 flex min-h-0 w-full max-w-xl flex-1 flex-col"
-              >
-                {/* Receding top edge, so older lines read as fading out of view
-                    rather than being cut off by the scroll box. */}
+              {/* Captions: a fixed three-line teleprompter, opt-in, newest at
+                  the bottom. Nothing scrolls — `aria-relevant="additions text"`
+                  keeps the log from re-reading lines that are still on screen.
+                  When captions are off the region is absent entirely, so the
+                  default call is just the orb and the controls. */}
+              {areCaptionsVisible && (
                 <div
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-x-0 top-0 z-10 h-8 bg-gradient-to-b from-white to-transparent"
-                />
-                <div
-                  ref={transcriptScrollRef}
-                  onScroll={handleTranscriptScroll}
+                  data-testid="voice-transcript"
                   role="log"
                   aria-live="polite"
                   aria-relevant="additions text"
                   aria-label={t('callTranscript')}
-                  data-testid="voice-transcript-scroll"
-                  // A scrollable region has to be reachable by keyboard, or the
-                  // history is only readable with a mouse (WCAG 2.1.1).
-                  tabIndex={0}
-                  className="h-full min-h-[4.5rem] w-full overflow-y-auto px-2 pt-6 pb-2"
+                  className="mt-4 flex h-[5.25rem] w-full max-w-xl shrink-0 flex-col justify-end overflow-hidden px-2"
                 >
-                  {transcript.length === 0 ? (
+                  {visibleCaptions.length === 0 ? (
                     <p
                       data-testid="voice-transcript-empty"
                       className="text-center text-xs text-gray-400"
@@ -430,8 +442,11 @@ export function VoiceChatModal({
                       {t('transcriptEmpty')}
                     </p>
                   ) : (
-                    transcript.map((entry, index) => {
-                      const isNewest = index === transcript.length - 1;
+                    visibleCaptions.map((entry, index) => {
+                      // Distance from the bottom of the stack: 0 is the line
+                      // being spoken right now, 2 is on its way out.
+                      const age = visibleCaptions.length - 1 - index;
+                      const isNewest = age === 0;
                       const isUser = entry.speaker === 'user';
                       const speakerLabel = isUser
                         ? t('transcriptSpeakerYou')
@@ -446,10 +461,17 @@ export function VoiceChatModal({
                           data-speaker={entry.speaker}
                           data-final={entry.isFinal ? 'true' : 'false'}
                           data-newest={isNewest ? 'true' : 'false'}
-                          className={`mb-1.5 text-left leading-snug transition-all duration-300 ${
+                          data-age={age}
+                          className={`mb-1 text-left leading-snug transition-all duration-300 ${
                             isNewest
-                              ? 'text-sm text-gray-900 opacity-100'
-                              : 'text-xs text-gray-500 opacity-60'
+                              ? // The live line wraps and sits flush with the
+                                // bottom, so its newest words — and the caret —
+                                // are always the ones on screen; anything that
+                                // no longer fits is clipped off the top.
+                                'text-sm text-gray-900 opacity-100'
+                              : age === 1
+                                ? 'truncate text-xs text-gray-500 opacity-60'
+                                : 'truncate text-xs text-gray-500 opacity-30'
                           }`}
                         >
                           <span
@@ -482,41 +504,12 @@ export function VoiceChatModal({
                     })
                   )}
                 </div>
-
-                {showJumpToLatest && (
-                  <button
-                    type="button"
-                    onClick={handleJumpToLatest}
-                    data-testid="voice-transcript-jump"
-                    className="absolute bottom-1 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-full border border-blue-200 bg-white px-3 py-1 text-xs text-blue-600 shadow-sm transition-colors hover:bg-blue-50"
-                  >
-                    <ArrowDown className="h-3 w-3" />
-                    {t('jumpToLatest')}
-                  </button>
-                )}
-
-                {/* Visual-only twin of the in-line caret: says "words are
-                    still arriving" at a glance. The caret carries the same
-                    meaning per line, and the log announces the text itself, so
-                    this is hidden from assistive tech rather than duplicated
-                    into it. */}
-                {isTranscriptLive && (
-                  <span
-                    aria-hidden="true"
-                    data-testid="voice-transcript-live"
-                    className="absolute top-0 right-2 z-20 flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700"
-                  >
-                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-600" />
-                    {t('transcriptLive')}
-                  </span>
-                )}
-              </div>
+              )}
             </div>
 
-            {/* Bottom control buttons */}
-            {/* Bottom controls stay a fixed-height row: the transcript band
-                above flexes, so short viewports shrink the band instead of
-                pushing the buttons off-screen. */}
+            {/* Bottom controls: mic, agent audio, captions, end call. The row
+                never shrinks — the orb and the caption band share the flexible
+                space above it. */}
             <div className="mb-4 flex w-full shrink-0 items-center justify-center space-x-6 px-4 py-6">
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -593,6 +586,43 @@ export function VoiceChatModal({
                     : isMentorAudioMuted
                       ? t('unmuteAgent')
                       : t('muteAgent')}
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={toggleCaptions}
+                    disabled={isLoading}
+                    size="icon"
+                    variant="outline"
+                    aria-pressed={areCaptionsVisible}
+                    className={`h-14 w-14 rounded-full transition-all ${
+                      !isLoading && areCaptionsVisible
+                        ? 'border-blue-500 bg-blue-50 text-blue-600 hover:border-blue-600 hover:bg-blue-100 hover:text-blue-700'
+                        : 'border-blue-500 text-blue-500 hover:border-blue-600 hover:text-blue-600'
+                    } ${
+                      isLoading
+                        ? 'cursor-not-allowed opacity-50'
+                        : 'hover:scale-105 active:scale-95'
+                    }`}
+                    aria-label={
+                      areCaptionsVisible ? t('hideCaptions') : t('showCaptions')
+                    }
+                  >
+                    {areCaptionsVisible ? (
+                      <Captions className="h-5 w-5" />
+                    ) : (
+                      <CaptionsOff className="h-5 w-5" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent className="ibl-tooltip-content">
+                  {isLoading
+                    ? t('connecting')
+                    : areCaptionsVisible
+                      ? t('hideCaptions')
+                      : t('showCaptions')}
                 </TooltipContent>
               </Tooltip>
 

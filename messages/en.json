@@ -1369,8 +1369,8 @@
     "transcriptEmpty": "The live transcript will appear here as the conversation starts.",
     "transcriptSpeakerYou": "You",
     "transcriptSpeakerAgent": "Agent",
-    "transcriptLive": "Live",
-    "jumpToLatest": "Jump to latest"
+    "showCaptions": "Show captions",
+    "hideCaptions": "Hide captions"
   },
   "modelDownloadModelDownloadStatus": {
     "downloading": "Downloading...",

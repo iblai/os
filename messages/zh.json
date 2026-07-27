@@ -1369,8 +1369,8 @@
     "transcriptEmpty": "对话开始后，实时文字记录将显示在这里。",
     "transcriptSpeakerYou": "您",
     "transcriptSpeakerAgent": "智能体",
-    "transcriptLive": "实时",
-    "jumpToLatest": "跳到最新"
+    "showCaptions": "显示字幕",
+    "hideCaptions": "隐藏字幕"
   },
   "modelDownloadModelDownloadStatus": {
     "downloading": "下载中...",
