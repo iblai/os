@@ -36,6 +36,8 @@ type Props = {
   isOpen: boolean;
   /** Display name of the mentor, used to label its transcript lines. */
   mentorName?: string;
+  /** Mentor avatar, so call captions look like the chat they belong to. */
+  mentorImage?: string;
 };
 
 type ConnectionState =
@@ -74,6 +76,7 @@ export function LiveKitChat({
   onClose,
   isOpen,
   mentorName,
+  mentorImage,
 }: Props) {
   const [initiateCall] = useCreateCallCredentialsMutation();
 
@@ -594,6 +597,7 @@ export function LiveKitChat({
         isMentorSpeaking={isMentorSpeaking}
         transcript={transcript}
         mentorName={mentorName}
+        mentorImage={mentorImage}
       />
     </RoomContext.Provider>
   );

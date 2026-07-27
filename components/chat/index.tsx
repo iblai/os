@@ -2185,8 +2185,10 @@ export function Chat({
           mentorUniqueId={uniqueMentorId}
           sessionId={cachedSessionId?.[mentorId] ?? sessionId}
           username={username ?? ''}
-          // Labels the agent's transcript lines with the mentor's real name.
+          // Labels the agent's transcript lines with the mentor's real name
+          // and face, so call captions match the chat thread behind them.
           mentorName={mentorName}
+          mentorImage={profileImage}
           isOpen={isPhoneCallModalOpen}
           onClose={() => {
             if (window.opener) {

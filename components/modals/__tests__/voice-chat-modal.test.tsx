@@ -1,10 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { act } from 'react';
 import {
   VoiceChatModal,
   readCaptionsPreference,
   writeCaptionsPreference,
-  selectExchangeLines,
+  groupTranscriptTurns,
+  formatCallDuration,
 } from '../voice-chat-modal';
 import type { TranscriptEntry } from '@/hooks/use-livekit-transcription';
 
@@ -38,6 +40,11 @@ const CAPTIONS_STORAGE_KEY = 'ibl.voiceChat.captionsEnabled';
 /** Persist "captions on" the way a previous call would have. */
 function rememberCaptionsOn() {
   window.localStorage.setItem(CAPTIONS_STORAGE_KEY, 'true');
+}
+
+/** Captions are on by default, so turning them off is the stored choice. */
+function rememberCaptionsOff() {
+  window.localStorage.setItem(CAPTIONS_STORAGE_KEY, 'false');
 }
 
 describe('VoiceChatModal', () => {
@@ -117,13 +124,17 @@ describe('VoiceChatModal', () => {
       expect(screen.getByLabelText('Mute agent audio')).toBeDisabled();
     });
 
-    it('hides the call status caption while connecting', () => {
+    it('announces the connection state in the call status region', () => {
       render(<VoiceChatModal {...defaultProps} connectionState="connecting" />);
 
-      expect(screen.queryByLabelText('Call status')).toBeNull();
+      // One status line for the whole call, whatever stage it is at - the
+      // loading message no longer lives in a paragraph of its own.
+      expect(screen.getByLabelText('Call status')).toHaveTextContent(
+        'Connecting to voice chat...',
+      );
     });
 
-    it('hides the call status caption while requesting permission', () => {
+    it('announces the permission prompt in the same region', () => {
       render(
         <VoiceChatModal
           {...defaultProps}
@@ -131,7 +142,15 @@ describe('VoiceChatModal', () => {
         />,
       );
 
-      expect(screen.queryByLabelText('Call status')).toBeNull();
+      expect(screen.getByLabelText('Call status')).toHaveTextContent(
+        'Requesting microphone access...',
+      );
+    });
+
+    it('holds the call clock back until the call is up', () => {
+      render(<VoiceChatModal {...defaultProps} connectionState="connecting" />);
+
+      expect(screen.queryByTestId('voice-call-duration')).toBeNull();
     });
 
     it('shows the loading spinner while connecting', () => {
@@ -185,143 +204,58 @@ describe('VoiceChatModal', () => {
     });
   });
 
-  describe('blob animation', () => {
-    const pulsingBg = () => document.querySelector('.bg-blue-100');
-    const waveBars = () =>
-      Array.from(document.querySelectorAll('.transform-gpu'));
-
-    it('uses faster pulse animation when the user is speaking', () => {
+  describe('call presence', () => {
+    // The indicator is the mentor's own avatar now: their face is the call,
+    // their ring is their voice. The old abstract orb ran nine animations —
+    // ten drifting particles, five sound-wave bars and two competing pulses —
+    // none of which told you anything the status line does not say plainly.
+    it('shows the mentor with their avatar and name', () => {
       render(
         <VoiceChatModal
           {...defaultProps}
-          connectionState="connected"
-          isMicMuted={false}
-          isSpeaking={true}
+          mentorName="Ada"
+          mentorImage="https://cdn.example.com/ada.png"
         />,
       );
 
-      // Speaking uses 1.5s pulse (faster than non-speaking 2s)
-      expect(pulsingBg()).toHaveStyle({
-        animation: 'randomPulse1 1.5s ease-in-out infinite',
+      expect(screen.getByTestId('voice-blob')).toBeInTheDocument();
+      // jsdom never loads the image, so the initials fallback stands in - the
+      // same one the chat shows for a mentor with no picture.
+      expect(screen.getAllByText('AD').length).toBeGreaterThan(0);
+      expect(screen.getByText('Ada')).toBeInTheDocument();
+    });
+
+    it('falls back to a generic name when the mentor has none', () => {
+      render(<VoiceChatModal {...defaultProps} />);
+
+      expect(screen.getAllByText('Agent').length).toBeGreaterThan(0);
+    });
+
+    it('breathes a halo while the line is open', () => {
+      render(<VoiceChatModal {...defaultProps} connectionState="connected" />);
+
+      expect(screen.getByTestId('voice-halo')).toHaveStyle({
+        animation: 'voiceHalo 3.2s ease-in-out infinite',
       });
     });
 
-    it('uses slower pulse animation when not speaking', () => {
-      render(
-        <VoiceChatModal
-          {...defaultProps}
-          connectionState="connected"
-          isMicMuted={false}
-          isSpeaking={false}
-        />,
-      );
-
-      // Not speaking uses 2s pulse (slower)
-      expect(pulsingBg()).toHaveStyle({
-        animation: 'randomPulse1 2s ease-in-out infinite',
-      });
-    });
-
-    // Regression: the animation used to be gated on `!isMicMuted`, so muting
-    // your own microphone froze the entire indicator and the call looked dead
-    // even while the agent was talking.
-    it('keeps the blob animating while the mic is muted', () => {
-      render(
-        <VoiceChatModal
-          {...defaultProps}
-          connectionState="connected"
-          isMicMuted={true}
-        />,
-      );
-
-      expect(pulsingBg()).toHaveStyle({
-        animation: 'randomPulse1 2s ease-in-out infinite',
-      });
-      expect(document.querySelector('.from-blue-200')).toHaveStyle({
-        animation: 'randomPulse2 2.5s ease-in-out infinite',
-      });
-    });
-
-    it('keeps the particles animating while the mic is muted', () => {
-      render(
-        <VoiceChatModal
-          {...defaultProps}
-          connectionState="connected"
-          isMicMuted={true}
-        />,
-      );
-
-      const particles = document.querySelectorAll(
-        'div[style*="particlePulse"]',
-      );
-      expect(particles).toHaveLength(10);
-    });
-
-    it('falls back to the idle pulse when not connected', () => {
+    it('drops the halo when the call is not up', () => {
       render(
         <VoiceChatModal {...defaultProps} connectionState="disconnected" />,
       );
 
-      expect(pulsingBg()).toHaveStyle({
-        animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-      });
-      expect(document.querySelector('.from-blue-200')).toHaveStyle({
-        animation: 'none',
-        opacity: '0.8',
-      });
+      expect(screen.queryByTestId('voice-halo')).toBeNull();
     });
 
-    it('animates the sound wave bars when the user is speaking', () => {
-      render(<VoiceChatModal {...defaultProps} isSpeaking={true} />);
-
-      const bars = waveBars();
-      expect(bars).toHaveLength(5);
-      expect(bars[0]).toHaveStyle({ height: '30px', opacity: '1' });
-      expect(bars[0]).toHaveStyle({
-        animation: 'soundWave1 0.8s ease-in-out infinite',
-      });
-    });
-
-    it('flattens and dims the sound wave bars when the mic is muted', () => {
-      render(
-        <VoiceChatModal
-          {...defaultProps}
-          isMicMuted={true}
-          isSpeaking={true}
-        />,
-      );
-
-      const bars = waveBars();
-      expect(bars).toHaveLength(5);
-      bars.forEach((bar) => {
-        expect(bar).toHaveStyle({
-          height: '12px',
-          opacity: '0.35',
-          animation: 'none',
-        });
-      });
-    });
-
-    it('keeps the bars idle-but-live when the mic is on and the user is silent', () => {
-      render(<VoiceChatModal {...defaultProps} isSpeaking={false} />);
-
-      const bars = waveBars();
-      expect(bars[0]).toHaveStyle({ height: '30px', opacity: '0.7' });
-      expect(bars[0]).toHaveStyle({
-        animation: 'soundWave1 1.2s ease-in-out infinite',
-      });
-    });
-
-    it('shows the mentor ring while the agent is speaking', () => {
+    it('rings the avatar while the agent is speaking', () => {
       render(<VoiceChatModal {...defaultProps} isMentorSpeaking={true} />);
 
       const ring = screen.getByTestId('mentor-speaking-ring');
-      expect(ring).toBeInTheDocument();
-      expect(ring.querySelector('.border-blue-600')).toHaveStyle({
-        animation: 'mentorRingPulse 1.4s ease-in-out infinite',
+      expect(ring.querySelector('.border-blue-500')).toHaveStyle({
+        animation: 'voiceRingPulse 1.4s ease-in-out infinite',
       });
-      expect(ring.querySelector('.border-sky-400')).toHaveStyle({
-        animation: 'mentorRingRipple 1.4s ease-out infinite',
+      expect(ring.querySelector('.border-blue-400')).toHaveStyle({
+        animation: 'voiceRingRipple 1.4s ease-out infinite',
       });
     });
 
@@ -355,20 +289,6 @@ describe('VoiceChatModal', () => {
       expect(screen.queryByTestId('mentor-speaking-ring')).toBeNull();
     });
 
-    it('shows the mentor ring and the user waves at the same time', () => {
-      render(
-        <VoiceChatModal
-          {...defaultProps}
-          isSpeaking={true}
-          isMentorSpeaking={true}
-        />,
-      );
-
-      // The two parties are separate layers, never mutually exclusive.
-      expect(screen.getByTestId('mentor-speaking-ring')).toBeInTheDocument();
-      expect(waveBars()[0]).toHaveStyle({ opacity: '1' });
-    });
-
     it('shows the mentor ring even while the user mic is muted', () => {
       render(
         <VoiceChatModal
@@ -378,25 +298,59 @@ describe('VoiceChatModal', () => {
         />,
       );
 
+      // Regression: the indicator used to be gated on the local mic, so
+      // muting yourself froze it and a live call looked dead.
       expect(screen.getByTestId('mentor-speaking-ring')).toBeInTheDocument();
     });
 
-    it('dims the whole blob when agent audio is muted', () => {
+    it('shows the caller their own voice on their own control', () => {
+      render(<VoiceChatModal {...defaultProps} isSpeaking={true} />);
+
+      // Two speakers, two places: the mentor's voice rings their avatar, the
+      // caller's lights up the microphone they control.
+      expect(screen.getByLabelText('Mute microphone')).toHaveClass(
+        'ring-blue-500/40',
+      );
+    });
+
+    it('leaves the mic control alone while the caller is silent', () => {
+      render(<VoiceChatModal {...defaultProps} isSpeaking={false} />);
+
+      expect(screen.getByLabelText('Mute microphone')).not.toHaveClass(
+        'ring-blue-500/40',
+      );
+    });
+
+    it('does not light the mic control for a muted caller who is speaking', () => {
+      render(
+        <VoiceChatModal
+          {...defaultProps}
+          isSpeaking={true}
+          isMicMuted={true}
+        />,
+      );
+
+      expect(screen.getByLabelText('Unmute microphone')).not.toHaveClass(
+        'ring-blue-500/40',
+      );
+    });
+
+    it('drains the indicator when agent audio is muted', () => {
       render(<VoiceChatModal {...defaultProps} isMentorAudioMuted={true} />);
 
       expect(screen.getByTestId('voice-blob')).toHaveStyle({
-        opacity: '0.45',
+        opacity: '0.5',
         filter: 'saturate(0.35)',
       });
     });
 
-    it('leaves the blob at full strength when agent audio is on', () => {
+    it('leaves the indicator at full strength when agent audio is on', () => {
       render(<VoiceChatModal {...defaultProps} isMentorAudioMuted={false} />);
 
       expect(screen.getByTestId('voice-blob')).toHaveStyle({ opacity: '1' });
     });
 
-    it('does not dim the blob when only the mic is muted', () => {
+    it('does not drain the indicator when only the mic is muted', () => {
       render(<VoiceChatModal {...defaultProps} isMicMuted={true} />);
 
       expect(screen.getByTestId('voice-blob')).toHaveStyle({ opacity: '1' });
@@ -485,14 +439,14 @@ describe('VoiceChatModal', () => {
       expect(regions[0]).toHaveAttribute('aria-label', 'Call status');
     });
 
-    // The orb is the only visible state indicator now, so the caption exists
-    // for assistive tech only. Deleting it outright would have regressed the
-    // accessibility complaint this redesign came from.
-    it('is announced but never drawn', () => {
+    // It used to be `sr-only`: the same facts, announced but never drawn, so
+    // sighted callers had to read the state off an abstract orb. One line,
+    // shown to everyone, is both simpler and less to maintain.
+    it('is shown, not just announced', () => {
       render(<VoiceChatModal {...defaultProps} />);
 
-      expect(caption()).toHaveClass('sr-only');
-      expect(caption()).toBeInTheDocument();
+      expect(caption()).not.toHaveClass('sr-only');
+      expect(caption()).toBeVisible();
     });
 
     it('shows "Listening…" when connected and nobody is muted or speaking', () => {
@@ -570,43 +524,57 @@ describe('VoiceChatModal', () => {
   });
 
   describe('control button muted treatment', () => {
-    it('tints the mic button red when the mic is muted', () => {
+    // Muted is the one state that has to survive a glance, so it borrows the
+    // theme's destructive colour rather than inventing a red of its own.
+    it('tints the mic control when the mic is muted', () => {
       render(<VoiceChatModal {...defaultProps} isMicMuted={true} />);
 
       expect(screen.getByLabelText('Unmute microphone')).toHaveClass(
-        'border-red-500',
+        'text-destructive',
       );
     });
 
-    it('leaves the mic button blue when the mic is live', () => {
+    it('leaves the mic control neutral when the mic is live', () => {
       render(<VoiceChatModal {...defaultProps} isMicMuted={false} />);
 
-      expect(screen.getByLabelText('Mute microphone')).toHaveClass(
-        'border-blue-500',
-      );
+      const mic = screen.getByLabelText('Mute microphone');
+      expect(mic).toHaveClass('text-muted-foreground');
+      expect(mic).not.toHaveClass('text-destructive');
     });
 
-    it('tints the agent audio button red when agent audio is muted', () => {
+    it('tints the agent audio control when agent audio is muted', () => {
       render(<VoiceChatModal {...defaultProps} isMentorAudioMuted={true} />);
 
       expect(screen.getByLabelText('Unmute agent audio')).toHaveClass(
-        'border-red-500',
+        'text-destructive',
       );
     });
 
-    it('leaves the agent audio button blue when agent audio is on', () => {
+    it('leaves the agent audio control neutral when agent audio is on', () => {
       render(<VoiceChatModal {...defaultProps} isMentorAudioMuted={false} />);
 
-      expect(screen.getByLabelText('Mute agent audio')).toHaveClass(
-        'border-blue-500',
+      expect(screen.getByLabelText('Mute agent audio')).not.toHaveClass(
+        'text-destructive',
       );
     });
 
-    it('does not tint the mic button when only agent audio is muted', () => {
+    it('does not tint the mic control when only agent audio is muted', () => {
       render(<VoiceChatModal {...defaultProps} isMentorAudioMuted={true} />);
 
-      expect(screen.getByLabelText('Mute microphone')).toHaveClass(
-        'border-blue-500',
+      expect(screen.getByLabelText('Mute microphone')).not.toHaveClass(
+        'text-destructive',
+      );
+    });
+
+    it('does not tint a disabled control while connecting', () => {
+      render(<VoiceChatModal {...defaultProps} connectionState="connecting" />);
+
+      // The loading state renders the muted icons, but nothing is muted yet.
+      expect(screen.getByLabelText('Mute microphone')).not.toHaveClass(
+        'text-destructive',
+      );
+      expect(screen.getByLabelText('Mute agent audio')).not.toHaveClass(
+        'text-destructive',
       );
     });
   });
@@ -640,8 +608,145 @@ describe('VoiceChatModal', () => {
     });
   });
 
+  describe('call clock', () => {
+    const duration = () => screen.getByTestId('voice-call-duration');
+
+    /** Let the interval fire `seconds` times, with the wall clock moved on. */
+    function advance(seconds: number) {
+      act(() => {
+        vi.advanceTimersByTime(seconds * 1000);
+      });
+    }
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('starts at zero and counts the call up', () => {
+      render(<VoiceChatModal {...defaultProps} connectionState="connected" />);
+
+      expect(duration()).toHaveTextContent('0:00');
+
+      advance(75);
+
+      expect(duration()).toHaveTextContent('1:15');
+    });
+
+    it('appears only once the call is up', () => {
+      const { rerender } = render(
+        <VoiceChatModal {...defaultProps} connectionState="connecting" />,
+      );
+
+      expect(screen.queryByTestId('voice-call-duration')).toBeNull();
+
+      rerender(
+        <VoiceChatModal {...defaultProps} connectionState="connected" />,
+      );
+
+      expect(duration()).toHaveTextContent('0:00');
+    });
+
+    it('restarts rather than carrying a stale number through a reconnect', () => {
+      const { rerender } = render(
+        <VoiceChatModal {...defaultProps} connectionState="connected" />,
+      );
+
+      advance(42);
+      expect(duration()).toHaveTextContent('0:42');
+
+      rerender(
+        <VoiceChatModal {...defaultProps} connectionState="reconnecting" />,
+      );
+      rerender(
+        <VoiceChatModal {...defaultProps} connectionState="connected" />,
+      );
+
+      expect(duration()).toHaveTextContent('0:00');
+    });
+
+    it('stops ticking when the call ends', () => {
+      const { rerender } = render(
+        <VoiceChatModal {...defaultProps} connectionState="connected" />,
+      );
+
+      advance(10);
+      rerender(
+        <VoiceChatModal {...defaultProps} connectionState="disconnected" />,
+      );
+      advance(30);
+
+      // Nothing left running to update a clock nobody is looking at.
+      expect(screen.queryByTestId('voice-call-duration')).toBeNull();
+    });
+  });
+
+  describe('formatCallDuration', () => {
+    it('pads the seconds but not the minutes, the way a phone does', () => {
+      expect(formatCallDuration(0)).toBe('0:00');
+      expect(formatCallDuration(9)).toBe('0:09');
+      expect(formatCallDuration(70)).toBe('1:10');
+      expect(formatCallDuration(600)).toBe('10:00');
+    });
+
+    it('adds an hours field once the call runs past one', () => {
+      expect(formatCallDuration(3600)).toBe('1:00:00');
+      expect(formatCallDuration(3725)).toBe('1:02:05');
+    });
+
+    it('never renders a negative or fractional clock', () => {
+      // Clock skew and a mid-second render should not produce "-0:01" or
+      // "0:07.5" on screen.
+      expect(formatCallDuration(-5)).toBe('0:00');
+      expect(formatCallDuration(7.9)).toBe('0:07');
+    });
+  });
+
+  describe('status dot', () => {
+    const dot = () => screen.getByTestId('voice-status-dot');
+
+    it('is green while the line is simply open', () => {
+      render(<VoiceChatModal {...defaultProps} />);
+
+      expect(dot()).toHaveClass('bg-emerald-500');
+    });
+
+    it('turns blue and pulses while the agent talks', () => {
+      render(<VoiceChatModal {...defaultProps} isMentorSpeaking={true} />);
+
+      expect(dot()).toHaveClass('bg-blue-500');
+      expect(dot()).toHaveClass('animate-pulse');
+    });
+
+    it('warns in the destructive colour whenever something is muted', () => {
+      const { rerender } = render(
+        <VoiceChatModal {...defaultProps} isMicMuted={true} />,
+      );
+
+      expect(dot()).toHaveClass('bg-destructive');
+
+      rerender(<VoiceChatModal {...defaultProps} isMentorAudioMuted={true} />);
+
+      expect(dot()).toHaveClass('bg-destructive');
+    });
+
+    it('gives way to a spinner while connecting', () => {
+      render(<VoiceChatModal {...defaultProps} connectionState="connecting" />);
+
+      expect(screen.queryByTestId('voice-status-dot')).toBeNull();
+      expect(
+        screen.getByLabelText('Call status').querySelector('.animate-spin'),
+      ).toBeInTheDocument();
+    });
+  });
+
   describe('captions toggle', () => {
-    const ccButton = () => screen.getByLabelText('Show captions');
+    // Label-agnostic: the control says "Hide captions" by default now, and
+    // "Show captions" only once the user has turned them off.
+    const ccButton = () => screen.getByRole('button', { name: /captions/i });
 
     it('renders a captions control between agent audio and end call', () => {
       render(<VoiceChatModal {...defaultProps} />);
@@ -655,7 +760,7 @@ describe('VoiceChatModal', () => {
       expect(labels).toEqual([
         'Mute microphone',
         'Mute agent audio',
-        'Show captions',
+        'Hide captions',
         'Close voice chat',
       ]);
     });
@@ -663,28 +768,27 @@ describe('VoiceChatModal', () => {
     it('is styled as a peer of the other two circular controls', () => {
       render(<VoiceChatModal {...defaultProps} />);
 
-      expect(ccButton()).toHaveClass('h-14', 'w-14', 'rounded-full');
+      expect(ccButton()).toHaveClass('size-11', 'rounded-full');
       expect(screen.getByLabelText('Mute microphone')).toHaveClass(
-        'h-14',
-        'w-14',
+        'size-11',
         'rounded-full',
       );
     });
 
-    it('starts off, so the default call shows no transcript at all', () => {
-      render(
-        <VoiceChatModal
-          {...defaultProps}
-          transcript={[entry('s1', 'Hello', 'agent')]}
-        />,
-      );
+    it('sits with the other toggles, apart from the button that hangs up', () => {
+      render(<VoiceChatModal {...defaultProps} />);
 
-      expect(screen.queryByRole('log')).toBeNull();
-      expect(screen.queryByTestId('voice-transcript')).toBeNull();
-      expect(ccButton()).toHaveAttribute('aria-pressed', 'false');
+      // The three toggles share one pill; the only control that leaves the
+      // call is the only one outside it.
+      const pill = screen.getByLabelText('Mute microphone').parentElement;
+      expect(pill).toContainElement(screen.getByLabelText('Mute agent audio'));
+      expect(pill).toContainElement(ccButton());
+      expect(pill).not.toContainElement(
+        screen.getByLabelText('Close voice chat'),
+      );
     });
 
-    it('reveals the band when switched on and hides it again when switched off', () => {
+    it('starts on, so a call is captioned without anyone asking', () => {
       render(
         <VoiceChatModal
           {...defaultProps}
@@ -692,16 +796,29 @@ describe('VoiceChatModal', () => {
         />,
       );
 
-      fireEvent.click(ccButton());
-
-      const toggledOn = screen.getByLabelText('Hide captions');
-      expect(toggledOn).toHaveAttribute('aria-pressed', 'true');
       expect(screen.getByRole('log')).toBeInTheDocument();
+      expect(screen.getByTestId('voice-transcript')).toBeInTheDocument();
+      expect(ccButton()).toHaveAttribute('aria-pressed', 'true');
+    });
 
-      fireEvent.click(toggledOn);
+    it('hides the band when switched off and brings it back when switched on', () => {
+      render(
+        <VoiceChatModal
+          {...defaultProps}
+          transcript={[entry('s1', 'Hello', 'agent')]}
+        />,
+      );
 
+      fireEvent.click(screen.getByLabelText('Hide captions'));
+
+      const toggledOff = screen.getByLabelText('Show captions');
+      expect(toggledOff).toHaveAttribute('aria-pressed', 'false');
       expect(screen.queryByRole('log')).toBeNull();
-      expect(ccButton()).toHaveAttribute('aria-pressed', 'false');
+
+      fireEvent.click(toggledOff);
+
+      expect(screen.getByRole('log')).toBeInTheDocument();
+      expect(ccButton()).toHaveAttribute('aria-pressed', 'true');
     });
 
     it('is disabled while connecting, like the other controls', () => {
@@ -713,21 +830,36 @@ describe('VoiceChatModal', () => {
     it('does not tint the captions control while connecting', () => {
       render(<VoiceChatModal {...defaultProps} connectionState="connecting" />);
 
-      expect(ccButton()).toHaveClass('border-blue-500');
-      expect(ccButton()).not.toHaveClass('bg-blue-50');
+      // Even though captions are on, a disabled control must not read as an
+      // active one.
+      expect(ccButton()).toHaveClass('text-muted-foreground');
+      expect(ccButton()).not.toHaveClass('text-blue-600');
     });
 
-    it('marks the control as active once captions are on', () => {
+    it('marks the control as active while captions are on', () => {
       render(<VoiceChatModal {...defaultProps} />);
+
+      expect(ccButton()).toHaveClass('text-blue-600');
 
       fireEvent.click(ccButton());
 
-      expect(screen.getByLabelText('Hide captions')).toHaveClass('bg-blue-50');
+      expect(screen.getByLabelText('Show captions')).not.toHaveClass(
+        'text-blue-600',
+      );
     });
   });
 
   describe('captions preference persistence', () => {
-    it('writes the choice to localStorage when turned on', () => {
+    it('writes the choice to localStorage when turned off', () => {
+      render(<VoiceChatModal {...defaultProps} />);
+
+      fireEvent.click(screen.getByLabelText('Hide captions'));
+
+      expect(window.localStorage.getItem(CAPTIONS_STORAGE_KEY)).toBe('false');
+    });
+
+    it('writes the choice to localStorage when turned back on', () => {
+      rememberCaptionsOff();
       render(<VoiceChatModal {...defaultProps} />);
 
       fireEvent.click(screen.getByLabelText('Show captions'));
@@ -735,13 +867,21 @@ describe('VoiceChatModal', () => {
       expect(window.localStorage.getItem(CAPTIONS_STORAGE_KEY)).toBe('true');
     });
 
-    it('writes the choice to localStorage when turned back off', () => {
-      rememberCaptionsOn();
-      render(<VoiceChatModal {...defaultProps} />);
+    it('keeps captions off on mount when a previous call turned them off', () => {
+      rememberCaptionsOff();
 
-      fireEvent.click(screen.getByLabelText('Hide captions'));
+      render(
+        <VoiceChatModal
+          {...defaultProps}
+          transcript={[entry('s1', 'Hello', 'agent')]}
+        />,
+      );
 
-      expect(window.localStorage.getItem(CAPTIONS_STORAGE_KEY)).toBe('false');
+      expect(screen.queryByRole('log')).toBeNull();
+      expect(screen.getByLabelText('Show captions')).toHaveAttribute(
+        'aria-pressed',
+        'false',
+      );
     });
 
     it('restores captions on mount when a previous call left them on', () => {
@@ -761,23 +901,25 @@ describe('VoiceChatModal', () => {
       );
     });
 
-    it('stays off when the stored value is anything other than "true"', () => {
-      window.localStorage.setItem(CAPTIONS_STORAGE_KEY, 'false');
+    it('only an explicit "false" turns captions off', () => {
+      // Anything else - a value from a future version, a half-written one -
+      // falls back to the default rather than to silence.
+      window.localStorage.setItem(CAPTIONS_STORAGE_KEY, 'off');
 
       render(<VoiceChatModal {...defaultProps} />);
 
-      expect(screen.queryByRole('log')).toBeNull();
+      expect(screen.getByRole('log')).toBeInTheDocument();
     });
 
-    it('falls back to off when reading storage throws', () => {
+    it('falls back to on when reading storage throws', () => {
       vi.spyOn(window.localStorage, 'getItem').mockImplementation(() => {
         throw new Error('SecurityError');
       });
 
       render(<VoiceChatModal {...defaultProps} />);
 
-      expect(screen.getByLabelText('Show captions')).toBeInTheDocument();
-      expect(screen.queryByRole('log')).toBeNull();
+      expect(screen.getByLabelText('Hide captions')).toBeInTheDocument();
+      expect(screen.getByRole('log')).toBeInTheDocument();
     });
 
     // The modal itself cannot run without a DOM, so the server-render guard is
@@ -797,10 +939,10 @@ describe('VoiceChatModal', () => {
         }
       }
 
-      it('reports captions off instead of touching storage', () => {
+      it('reports the default instead of touching storage', () => {
         const getItem = vi.spyOn(window.localStorage, 'getItem');
 
-        expect(withoutWindow(() => readCaptionsPreference())).toBe(false);
+        expect(withoutWindow(() => readCaptionsPreference())).toBe(true);
         expect(getItem).not.toHaveBeenCalled();
       });
 
@@ -826,16 +968,33 @@ describe('VoiceChatModal', () => {
         />,
       );
 
-      fireEvent.click(screen.getByLabelText('Show captions'));
+      fireEvent.click(screen.getByLabelText('Hide captions'));
 
-      // The preference is lost for next time, but this call still gets its
-      // captions - a storage failure must never break the modal.
-      expect(screen.getByRole('log')).toBeInTheDocument();
+      // The preference is lost for next time, but this call still honours the
+      // click - a storage failure must never break the modal.
+      expect(screen.queryByRole('log')).toBeNull();
+      expect(screen.getByLabelText('Show captions')).toBeInTheDocument();
     });
   });
 
   describe('caption band', () => {
     const lines = () => screen.queryAllByTestId('voice-transcript-line');
+
+    const speakers = () => screen.queryAllByTestId('voice-transcript-speaker');
+
+    // Every turn is a speaker followed by its text, so who-said-what is read
+    // back by pairing the two. Composed from the pair rather than the turn's
+    // own `textContent`, which also picks up the avatar's initials.
+    const spokenExchange = () =>
+      screen.queryAllByTestId('voice-transcript-turn').map((turn) => {
+        const speaker = turn.querySelector(
+          '[data-testid="voice-transcript-speaker"]',
+        );
+        const line = turn.querySelector(
+          '[data-testid="voice-transcript-line"]',
+        );
+        return `${speaker?.textContent ?? ''}${line?.textContent ?? ''}`;
+      });
 
     function renderWithCaptions(props: Record<string, unknown> = {}) {
       rememberCaptionsOn();
@@ -851,8 +1010,11 @@ describe('VoiceChatModal', () => {
       // Only new/changed lines are announced - the lines still on screen are
       // never re-read.
       expect(region).toHaveAttribute('aria-relevant', 'additions text');
-      // Nothing scrolls any more, so there is no keyboard-reachable region.
-      expect(region).not.toHaveAttribute('tabindex');
+      // The band scrolls, so it has to be reachable without a pointer - and
+      // reaching it has to be visible when you get there.
+      expect(region).toHaveAttribute('tabindex', '0');
+      expect(region).toHaveClass('focus-visible:ring-2');
+      expect(region).toHaveClass('focus-visible:ring-ring');
     });
 
     it('does not turn the transcript into a second status region', () => {
@@ -887,13 +1049,10 @@ describe('VoiceChatModal', () => {
         ],
       });
 
-      expect(lines().map((l) => l.textContent)).toEqual([
-        'AgentFirst',
-        'YouSecond',
-      ]);
+      expect(spokenExchange()).toEqual(['AgentFirst', 'YouSecond']);
     });
 
-    it('shows only the exchange: the newest line and the reply it answers', () => {
+    it('keeps the whole conversation, not just the last exchange', () => {
       renderWithCaptions({
         transcript: [
           entry('s1', 'One', 'agent'),
@@ -904,30 +1063,34 @@ describe('VoiceChatModal', () => {
         ],
       });
 
-      // The full history is a post-call artefact; the band is a teleprompter.
-      expect(lines().map((l) => l.textContent)).toEqual([
+      // Trimming to the current exchange meant the call you had just had was
+      // gone the moment it moved on, and you had to take it on trust.
+      expect(spokenExchange()).toEqual([
+        'AgentOne',
+        'YouTwo',
+        'AgentThree',
         'YouFour',
         'AgentFive',
       ]);
     });
 
-    it('keeps the answered turn on screen when the same speaker talks twice', () => {
+    it('folds a turn that arrived in pieces into one bubble', () => {
       renderWithCaptions({
         transcript: [
           entry('s1', 'A question', 'user'),
           entry('s2', 'First half of the reply', 'agent'),
-          entry('s3', 'Second half of the reply', 'agent'),
+          entry('s3', 'second half of the reply', 'agent'),
         ],
       });
 
-      // `slice(-2)` would have shown two agent lines and dropped the question.
-      expect(lines().map((l) => l.textContent)).toEqual([
+      // The recogniser flushes mid-sentence; that is not a message boundary.
+      expect(spokenExchange()).toEqual([
         'YouA question',
-        'AgentSecond half of the reply',
+        'AgentFirst half of the reply second half of the reply',
       ]);
     });
 
-    it('puts the newest line at the bottom of the two', () => {
+    it('puts the newest turn at the bottom', () => {
       renderWithCaptions({
         transcript: [
           entry('s1', 'One', 'agent'),
@@ -938,22 +1101,27 @@ describe('VoiceChatModal', () => {
       });
 
       const rendered = lines();
-      expect(rendered).toHaveLength(2);
-      expect(rendered[1]).toHaveAttribute('data-newest', 'true');
-      expect(rendered[0]).toHaveAttribute('data-newest', 'false');
+      expect(rendered).toHaveLength(4);
+      expect(rendered[3]).toHaveAttribute('data-newest', 'true');
+      rendered
+        .slice(0, 3)
+        .forEach((line) =>
+          expect(line).toHaveAttribute('data-newest', 'false'),
+        );
     });
 
-    it('shows a single line when only one speaker has spoken', () => {
+    it('shows one bubble while a single speaker is still going', () => {
       renderWithCaptions({
         transcript: [entry('s1', 'One', 'agent'), entry('s2', 'Two', 'agent')],
       });
 
       const rendered = lines();
       expect(rendered).toHaveLength(1);
+      expect(rendered[0]).toHaveTextContent('One Two');
       expect(rendered[0]).toHaveAttribute('data-newest', 'true');
     });
 
-    it('is a fixed-height window that never scrolls', () => {
+    it('takes the height the card sets aside for it, and scrolls', () => {
       renderWithCaptions({
         transcript: [
           entry('s1', 'One', 'agent'),
@@ -963,95 +1131,411 @@ describe('VoiceChatModal', () => {
       });
 
       const band = screen.getByTestId('voice-transcript');
-      // Two clamped `text-xs` rows for the answered turn plus three `text-sm`
-      // rows of live text. Sized to the content, not guessed.
-      expect(band).toHaveClass('h-[6rem]');
-      expect(band).toHaveClass('overflow-hidden');
-      expect(band).toHaveClass('shrink-0');
-      expect(band.className).not.toContain('overflow-y-auto');
+      expect(band).toHaveClass('flex-1');
+      expect(band).toHaveClass('min-h-0');
+      expect(band).toHaveClass('overflow-y-auto');
+      // Sideways is still the dialog's business, not the band's.
+      expect(band).toHaveClass('overflow-x-hidden');
     });
 
-    it('gives the live line its own bottom-anchored viewport', () => {
+    it('gives a captioned call a card tall enough to sit with', () => {
+      renderWithCaptions({ transcript: [entry('s1', 'One', 'agent')] });
+
+      const card = screen
+        .getByTestId('voice-transcript')
+        .closest('[role="dialog"] > div');
+      expect(card?.className).toContain('h-[min(46rem,88vh)]');
+    });
+
+    it('lets the card shrink back to its contents when captions are off', () => {
+      rememberCaptionsOff();
+      render(<VoiceChatModal {...defaultProps} />);
+
+      // Nothing to fill a tall card with, so it stops framing empty space.
+      const card = screen
+        .getByTestId('voice-blob')
+        .closest('[role="dialog"] > div');
+      expect(card?.className).not.toContain('h-[min(46rem,88vh)]');
+    });
+
+    it('gives the captions their own surface', () => {
+      renderWithCaptions({ transcript: [entry('s1', 'One', 'agent')] });
+
+      // A tinted panel with a border, so the transcript reads as part of the
+      // card rather than as text floating in it.
+      const panel = screen.getByTestId('voice-transcript').parentElement;
+      expect(panel).toHaveClass('border-t');
+      expect(panel).toHaveClass('bg-muted/40');
+    });
+
+    it('leaves the presence indicator and the controls their own size', () => {
+      renderWithCaptions({ transcript: [entry('s1', 'One', 'agent')] });
+
+      // The band is the only thing that scrolls; if these could shrink, a
+      // long exchange would eat the mentor's avatar instead.
+      expect(screen.getByTestId('voice-blob')).toHaveClass('shrink-0');
+      const controls = screen
+        .getByLabelText('Mute microphone')
+        .closest('div.border-t') as HTMLElement;
+      expect(controls).toHaveClass('shrink-0');
+    });
+
+    it('clips at its edges rather than fading them out', () => {
       renderWithCaptions({
+        transcript: [
+          entry('s1', REAL_AGENT_TURN, 'user'),
+          entry('s2', REAL_AGENT_TURN, 'agent', false),
+        ],
+      });
+
+      // A fade was right when the band was loose rows of text. Against a
+      // message bubble it dissolves the bubble's own background into the
+      // dialog, so the message looks like it is disintegrating instead of
+      // scrolling. A bubble cut off at the edge is what chat threads do.
+      expect(screen.getByTestId('voice-transcript').className).not.toContain(
+        'mask-image',
+      );
+    });
+
+    // A turn longer than the band used to be clipped: the start of a
+    // paragraph-long answer scrolled out of the top of its window and was
+    // simply gone. It is only ever two messages, so the band scrolls instead
+    // and follows the live line by itself. jsdom has no layout engine, so
+    // scroll geometry is stubbed on the element.
+    describe('scrollback', () => {
+      /** Give the band a viewport smaller than its content, as a browser would. */
+      function makeBandScrollable(
+        band: HTMLElement,
+        { scrollHeight = 400, clientHeight = 160 } = {},
+      ) {
+        Object.defineProperty(band, 'scrollHeight', {
+          value: scrollHeight,
+          configurable: true,
+        });
+        Object.defineProperty(band, 'clientHeight', {
+          value: clientHeight,
+          configurable: true,
+        });
+        return band;
+      }
+
+      it('keeps the whole exchange in the DOM, clamping nothing', () => {
+        renderWithCaptions({
+          mentorName: 'Ada',
+          transcript: [
+            entry('s1', REAL_AGENT_TURN, 'user'),
+            entry('s2', REAL_AGENT_TURN, 'agent', false),
+          ],
+        });
+
+        // Both turns, in full: the answered one is no longer capped at two
+        // rows and the live one is no longer capped at three.
+        const [older, newest] = lines();
+        expect(older).toHaveTextContent(REAL_AGENT_TURN.slice(0, 40));
+        expect(older.textContent).toHaveLength(REAL_AGENT_TURN.length);
+        expect(newest.textContent).toContain(REAL_AGENT_TURN.slice(-40));
+        [older, newest].forEach((line) => {
+          expect(line.className).not.toContain('line-clamp');
+          expect(line.className).not.toContain('max-h-');
+        });
+      });
+
+      it('scrolls the live line into view as the turn grows', () => {
+        rememberCaptionsOn();
+        const { rerender } = render(
+          <VoiceChatModal
+            {...defaultProps}
+            transcript={[entry('s1', 'Half a sentence', 'agent', false)]}
+          />,
+        );
+
+        const band = makeBandScrollable(screen.getByTestId('voice-transcript'));
+        band.scrollTop = 0;
+
+        rerender(
+          <VoiceChatModal
+            {...defaultProps}
+            transcript={[
+              entry('s1', `Half a sentence ${REAL_AGENT_TURN}`, 'agent', false),
+            ]}
+          />,
+        );
+
+        expect(band.scrollTop).toBe(band.scrollHeight);
+        expect(band).toHaveAttribute('data-following', 'true');
+      });
+
+      it('keeps its edges clean whether it is following or not', () => {
+        renderWithCaptions({
+          transcript: [entry('s1', REAL_AGENT_TURN, 'agent', false)],
+        });
+
+        const band = makeBandScrollable(screen.getByTestId('voice-transcript'));
+        expect(band.className).not.toContain('mask-image');
+
+        band.scrollTop = 40;
+        fireEvent.scroll(band);
+
+        // Scrolling back must not start dissolving the bubbles either.
+        expect(band.className).not.toContain('mask-image');
+      });
+
+      it('stops following once the reader scrolls up', () => {
+        renderWithCaptions({
+          transcript: [
+            entry('s1', 'A question', 'user'),
+            entry('s2', REAL_AGENT_TURN, 'agent', false),
+          ],
+        });
+
+        const band = makeBandScrollable(screen.getByTestId('voice-transcript'));
+        band.scrollTop = 40;
+        fireEvent.scroll(band);
+
+        expect(band).toHaveAttribute('data-following', 'false');
+      });
+
+      it('leaves a reader who scrolled up where they are', () => {
+        rememberCaptionsOn();
+        const { rerender } = render(
+          <VoiceChatModal
+            {...defaultProps}
+            transcript={[entry('s1', REAL_AGENT_TURN, 'agent', false)]}
+          />,
+        );
+
+        const band = makeBandScrollable(screen.getByTestId('voice-transcript'));
+        band.scrollTop = 40;
+        fireEvent.scroll(band);
+
+        rerender(
+          <VoiceChatModal
+            {...defaultProps}
+            transcript={[
+              entry(
+                's1',
+                `${REAL_AGENT_TURN} and then some more`,
+                'agent',
+                false,
+              ),
+            ]}
+          />,
+        );
+
+        // Yanking the view back to the bottom mid-sentence is the reason
+        // scrollback is worth having at all.
+        expect(band.scrollTop).toBe(40);
+      });
+
+      it('follows again when the reader returns to the bottom', () => {
+        renderWithCaptions({
+          transcript: [entry('s1', REAL_AGENT_TURN, 'agent', false)],
+        });
+
+        const band = makeBandScrollable(screen.getByTestId('voice-transcript'));
+        band.scrollTop = 40;
+        fireEvent.scroll(band);
+        expect(band).toHaveAttribute('data-following', 'false');
+
+        band.scrollTop = band.scrollHeight - band.clientHeight;
+        fireEvent.scroll(band);
+
+        expect(band).toHaveAttribute('data-following', 'true');
+      });
+
+      it('treats a few pixels short of the bottom as still following', () => {
+        renderWithCaptions({
+          transcript: [entry('s1', REAL_AGENT_TURN, 'agent', false)],
+        });
+
+        const band = makeBandScrollable(screen.getByTestId('voice-transcript'));
+        // Sub-pixel layout and momentum scrolling rarely land exactly on zero.
+        band.scrollTop = band.scrollHeight - band.clientHeight - 4;
+        fireEvent.scroll(band);
+
+        expect(band).toHaveAttribute('data-following', 'true');
+      });
+
+      it('re-arms following when the next turn starts', () => {
+        rememberCaptionsOn();
+        const { rerender } = render(
+          <VoiceChatModal
+            {...defaultProps}
+            transcript={[entry('s1', REAL_AGENT_TURN, 'agent', false)]}
+          />,
+        );
+
+        const band = makeBandScrollable(screen.getByTestId('voice-transcript'));
+        band.scrollTop = 40;
+        fireEvent.scroll(band);
+        expect(band).toHaveAttribute('data-following', 'false');
+
+        rerender(
+          <VoiceChatModal
+            {...defaultProps}
+            transcript={[
+              entry('s1', REAL_AGENT_TURN, 'agent'),
+              entry('s2', 'A new question', 'user', false),
+            ]}
+          />,
+        );
+
+        // The band only ever shows the current exchange, so a scroll position
+        // left over from the previous one is stale.
+        expect(band).toHaveAttribute('data-following', 'true');
+        expect(band.scrollTop).toBe(band.scrollHeight);
+      });
+
+      it('sits a short exchange at the bottom, as a chat thread does', () => {
+        renderWithCaptions({
+          transcript: [
+            entry('s1', 'A question', 'user'),
+            entry('s2', 'A reply', 'agent'),
+          ],
+        });
+
+        // An auto margin, not flex alignment: aligning a scroll container's
+        // content puts overflow above the scroll origin, where it cannot be
+        // reached. An auto margin collapses to zero as soon as it overflows.
+        const content = lines()[0].closest(
+          '[data-testid="voice-transcript"] > div',
+        );
+        expect(content).toHaveClass('mt-auto');
+        const band = screen.getByTestId('voice-transcript');
+        expect(band.className).not.toContain('justify-end');
+        expect(band.className).not.toContain('justify-center');
+      });
+
+      it('separates the turns the way the chat thread does', () => {
+        renderWithCaptions({
+          transcript: [
+            entry('s1', 'A question', 'user'),
+            entry('s2', 'A reply', 'agent'),
+          ],
+        });
+
+        // The two halves of the exchange used to sit one row apart with no
+        // gap, which is what made them read as a single mangled paragraph.
+        screen
+          .getAllByTestId('voice-transcript-turn')
+          .forEach((turn) => expect(turn).toHaveClass('mb-4'));
+      });
+    });
+
+    // The band renders the same bubbles as the chat thread the call belongs
+    // to, minus the action toolbar: those actions need a saved message to act
+    // on, and a caption is not one until the call ends.
+    describe('chat-message styling', () => {
+      it('gives the caller a right-aligned blue bubble, as in the chat', () => {
+        renderWithCaptions({ transcript: [entry('s1', 'My words', 'user')] });
+
+        const turn = screen.getByTestId('voice-transcript-turn');
+        expect(turn).toHaveClass('items-end');
+        const bubble = lines()[0];
+        expect(bubble).toHaveClass('rounded-2xl');
+        expect(bubble).toHaveClass('bg-blue-50');
+        expect(bubble).toHaveClass('text-sm');
+      });
+
+      it('names the caller for assistive tech only, as the chat does', () => {
+        renderWithCaptions({ transcript: [entry('s1', 'My words', 'user')] });
+
+        // The chat gives your own bubble no visible name; the log is still
+        // read aloud, where losing who-said-what is not cosmetic.
+        const label = screen.getByTestId('voice-transcript-speaker');
+        expect(label).toHaveTextContent('You');
+        expect(label).toHaveClass('sr-only');
+      });
+
+      it('gives the mentor an avatar, a name and a grey bubble', () => {
+        renderWithCaptions({
+          mentorName: 'Ada',
+          mentorImage: 'https://cdn.example.com/ada.png',
+          transcript: [entry('s1', 'Their words', 'agent')],
+        });
+
+        const label = screen.getByTestId('voice-transcript-speaker');
+        expect(label).toHaveTextContent('Ada');
+        expect(label).toHaveClass('text-gray-900');
+        expect(label.className).not.toContain('sr-only');
+
+        const bubble = lines()[0];
+        expect(bubble).toHaveClass('rounded-2xl');
+        // White on the tinted caption panel, the way the chat's grey bubble
+        // sits on the chat's white page: a raised surface either way.
+        expect(bubble).toHaveClass('bg-white');
+        expect(bubble).toHaveClass('text-sm/6');
+      });
+
+      it('falls back to the mentor initials when there is no avatar', () => {
+        renderWithCaptions({
+          mentorName: 'Ada',
+          transcript: [entry('s1', 'Their words', 'agent')],
+        });
+
+        // jsdom never loads the image, so Radix shows the fallback - which is
+        // exactly what a mentor with no picture gets in the chat too. Two of
+        // them: the call's own avatar and this turn's.
+        expect(screen.getAllByText('AD')).toHaveLength(2);
+      });
+
+      it('carries none of the chat action buttons', () => {
+        renderWithCaptions({
+          mentorName: 'Ada',
+          transcript: [
+            entry('s1', 'A question', 'user'),
+            entry('s2', 'A reply', 'agent'),
+          ],
+        });
+
+        // Copy/rate/share/read-aloud all act on a saved message; a caption has
+        // no server-side identity to act on until the call is over.
+        const labels = screen
+          .getAllByRole('button')
+          .map((button) => button.getAttribute('aria-label'))
+          .filter(Boolean);
+        expect(labels).toEqual([
+          'Mute microphone',
+          'Mute agent audio',
+          'Hide captions',
+          'Close voice chat',
+        ]);
+      });
+    });
+
+    it('gives every turn a speaker row of its own', () => {
+      renderWithCaptions({
+        mentorName: 'Ada',
         transcript: [
           entry('s1', 'A question', 'user'),
           entry('s2', REAL_AGENT_TURN, 'agent', false),
         ],
       });
 
-      // Without this, a paragraph-long agent turn grows until it shoves the
-      // answered turn off the top of the band and the "exchange" is gone.
-      const liveWindow = screen.getByTestId('voice-transcript-live-window');
-      expect(liveWindow).toHaveClass('overflow-hidden');
-      expect(liveWindow).toHaveClass('justify-end');
-      expect(liveWindow).toHaveClass('min-h-0');
-      expect(liveWindow).toContainElement(lines()[1]);
-      // The answered turn sits outside it and is pinned by `shrink-0`.
-      expect(lines()[0]).toHaveClass('shrink-0');
+      // Inline, a label is the first thing to scroll out of view, so a
+      // paragraph-long reply lost its name exactly when it needed one.
+      expect(speakers().map((s) => s.textContent)).toEqual(['You', 'Ada']);
+      expect(speakers().map((s) => s.getAttribute('data-speaker'))).toEqual([
+        'user',
+        'agent',
+      ]);
+      // No label is left inside the text itself.
+      lines().forEach((line) => expect(line.textContent).not.toContain('Ada'));
     });
 
-    // Regression: the live viewport was `flex-1`, so it claimed every spare
-    // pixel of the 6rem band and then its own `justify-end` pushed the text
-    // back down to the bottom of that claim. A short reply therefore floated
-    // ~52px below the line it was answering, and the layout only looked right
-    // when the agent happened to say enough to fill the box. Capping instead
-    // of growing is the whole fix, so it is pinned here rather than left to
-    // be re-discovered on real data a third time.
-    it('caps the live viewport instead of growing it, so no gap opens above', () => {
-      renderWithCaptions({
-        transcript: [
-          entry('s1', 'What can I call you?', 'user'),
-          entry('s2', 'You can call me Guide.', 'agent'),
-        ],
-      });
-
-      const liveWindow = screen.getByTestId('voice-transcript-live-window');
-      // Growing is what created the dead space.
-      expect(liveWindow).not.toHaveClass('flex-1');
-      expect(liveWindow).not.toHaveClass('grow');
-      expect(liveWindow.className).not.toMatch(/(^|\s)(flex-auto|basis-)/);
-      // 6rem band - 2.3125rem reserved for a two-row answered turn. Also
-      // exactly three text-sm/leading-snug rows (3.609375rem).
-      expect(liveWindow).toHaveClass('max-h-[3.6875rem]');
-    });
-
-    it('sits the live line flush with the bottom of the band', () => {
+    it('gives the answered turn the same weight as the live one', () => {
       renderWithCaptions({
         transcript: [
           entry('s1', 'A question', 'user'),
-          entry('s2', 'A short answer.', 'agent'),
+          entry('s2', 'A reply', 'agent'),
         ],
       });
 
-      const [older, newest] = lines();
-      // The gap between the two lines is the answered turn's bottom margin and
-      // nothing else.
-      expect(older).toHaveClass('mb-1');
-      // A margin on the last row of a justify-end box only floats the pair off
-      // the band's edge, and costs the three-row cap its headroom.
-      expect(newest).not.toHaveClass('mb-1');
-    });
-
-    it('labels the user with "You" in blue', () => {
-      renderWithCaptions({ transcript: [entry('s1', 'My words', 'user')] });
-
-      const label = lines()[0].querySelector('span');
-      expect(label).toHaveTextContent('You');
-      // Lighter than the agent's blue-700, so the two speakers stay
-      // distinguishable within a single blue family.
-      expect(label).toHaveClass('text-blue-500');
-    });
-
-    it('labels the agent with the mentor name in the ring blue', () => {
-      renderWithCaptions({
-        mentorName: 'Ada',
-        transcript: [entry('s1', 'Their words', 'agent')],
-      });
-
-      const label = lines()[0].querySelector('span');
-      expect(label).toHaveTextContent('Ada');
-      // Same family as the mentor-speaking ring, on purpose.
-      expect(label).toHaveClass('text-blue-700');
+      // Both are chat messages now; dimming the first half of an exchange was
+      // part of what made the band read as damaged rather than as a thread.
+      [...speakers(), ...lines()].forEach((node) =>
+        expect(node.className).not.toContain('opacity-'),
+      );
     });
 
     it('falls back to the LiveKit participant name when no mentor name is given', () => {
@@ -1063,13 +1547,17 @@ describe('VoiceChatModal', () => {
         ],
       });
 
-      expect(lines()[0].querySelector('span')).toHaveTextContent('Agent Seven');
+      expect(screen.getByTestId('voice-transcript-speaker')).toHaveTextContent(
+        'Agent Seven',
+      );
     });
 
     it('falls back to a generic agent label as a last resort', () => {
       renderWithCaptions({ transcript: [entry('s1', 'Their words', 'agent')] });
 
-      expect(lines()[0].querySelector('span')).toHaveTextContent('Agent');
+      expect(screen.getByTestId('voice-transcript-speaker')).toHaveTextContent(
+        'Agent',
+      );
     });
 
     it('never labels a user line with the mentor name', () => {
@@ -1080,10 +1568,12 @@ describe('VoiceChatModal', () => {
         ],
       });
 
-      expect(lines()[0].querySelector('span')).toHaveTextContent('You');
+      expect(screen.getByTestId('voice-transcript-speaker')).toHaveTextContent(
+        'You',
+      );
     });
 
-    it('gives the newest line full weight and dims the answered turn', () => {
+    it('tags each line with its place in the exchange', () => {
       renderWithCaptions({
         transcript: [
           entry('s1', 'Older', 'user'),
@@ -1093,15 +1583,9 @@ describe('VoiceChatModal', () => {
 
       const [older, newest] = lines();
       expect(older).toHaveAttribute('data-age', '1');
-      expect(older).toHaveClass('opacity-60');
-      expect(older).toHaveClass('text-xs');
+      expect(older).toHaveAttribute('data-newest', 'false');
       expect(newest).toHaveAttribute('data-age', '0');
       expect(newest).toHaveAttribute('data-newest', 'true');
-      expect(newest).toHaveClass('opacity-100');
-      expect(newest).toHaveClass('text-sm');
-      // A single dim level now that there is only one older line - the old
-      // third tier at opacity-30 was the one that read as broken.
-      expect(older).not.toHaveClass('opacity-30');
     });
 
     it('marks an in-progress line with a caret', () => {
@@ -1203,9 +1687,28 @@ describe('VoiceChatModal', () => {
         expect(line.className).not.toContain('whitespace-nowrap');
         expect(line.className).not.toContain('text-nowrap');
       });
-      // The answered turn is bounded by line count instead, which wraps
-      // normally and so has a wrappable intrinsic width.
-      expect(lines()[0]).toHaveClass('line-clamp-2');
+      // Overflow is the band's scrollbar's problem now, and a wrapped line has
+      // a wrappable intrinsic width whatever its length.
+      expect(screen.getByTestId('voice-transcript')).toHaveClass(
+        'overflow-y-auto',
+      );
+    });
+
+    it('keeps the live speaker row wrappable too', () => {
+      renderWithCaptions({
+        mentorName: `Agent ${UNBREAKABLE_URL}`,
+        transcript: [entry('s1', REAL_AGENT_TURN, 'agent')],
+      });
+
+      // A mentor name is user-supplied, so the one-row cap has to come from
+      // `line-clamp`, never from `truncate`'s `white-space: nowrap` - that is
+      // the exact class of bug this band already had once.
+      const label = screen.getByTestId('voice-transcript-speaker');
+      expect(label).toHaveClass('line-clamp-1');
+      expect(label).toHaveClass('break-words');
+      expect(label).toHaveClass('min-w-0');
+      expect(label).not.toHaveClass('truncate');
+      expect(label.className).not.toContain('whitespace-nowrap');
     });
 
     it('lets an unbreakable token wrap instead of pushing the layout wide', () => {
@@ -1228,10 +1731,10 @@ describe('VoiceChatModal', () => {
       });
 
       const band = screen.getByTestId('voice-transcript');
-      // `DialogContent` is `max-w-lg` (32rem). The band used to declare
-      // `max-w-xl` (36rem), a cap wider than its own container could ever
-      // grant - dead at best, misleading at worst.
-      expect(band).toHaveClass('max-w-md');
+      // The band fills the card and no more: it once declared `max-w-xl`
+      // (36rem), a cap wider than its own container could ever grant - dead at
+      // best, misleading at worst.
+      expect(band).toHaveClass('w-full');
       expect(band).not.toHaveClass('max-w-xl');
       expect(band).toHaveClass('min-w-0');
     });
@@ -1266,79 +1769,109 @@ describe('VoiceChatModal', () => {
     });
   });
 
-  describe('selectExchangeLines', () => {
-    const speakers = (entries: TranscriptEntry[]) =>
-      entries.map((e) => `${e.speaker}:${e.text}`);
+  describe('groupTranscriptTurns', () => {
+    const shape = (turns: ReturnType<typeof groupTranscriptTurns>) =>
+      turns.map((turn) => `${turn.speaker}:${turn.text}`);
 
     it('returns nothing for an empty transcript', () => {
-      expect(selectExchangeLines([])).toEqual([]);
+      expect(groupTranscriptTurns([])).toEqual([]);
     });
 
-    it('returns the only entry when one thing has been said', () => {
-      const only = entry('s1', 'Hello', 'user');
-
-      expect(selectExchangeLines([only])).toEqual([only]);
-    });
-
-    it('pairs the newest line with the previous line when speakers alternate', () => {
+    it('keeps alternating turns as they came', () => {
       expect(
-        speakers(
-          selectExchangeLines([
+        shape(
+          groupTranscriptTurns([
             entry('s1', 'One', 'agent'),
             entry('s2', 'Two', 'user'),
             entry('s3', 'Three', 'agent'),
           ]),
         ),
-      ).toEqual(['user:Two', 'agent:Three']);
+      ).toEqual(['agent:One', 'user:Two', 'agent:Three']);
     });
 
-    // The reason this is not `slice(-2)`.
-    it('skips past a repeated speaker to reach the other voice', () => {
+    // The reason grouping exists: LiveKit flushes an utterance in pieces, and
+    // a bubble per piece splits sentences wherever the recogniser paused.
+    it('joins consecutive pieces from one speaker into a single turn', () => {
       expect(
-        speakers(
-          selectExchangeLines([
-            entry('s1', 'Question', 'user'),
+        shape(
+          groupTranscriptTurns([
+            entry('s1', 'A question', 'user'),
             entry('s2', 'Reply part one', 'agent'),
-            entry('s3', 'Reply part two', 'agent'),
+            entry('s3', 'reply part two', 'agent'),
           ]),
         ),
-      ).toEqual(['user:Question', 'agent:Reply part two']);
+      ).toEqual(['user:A question', 'agent:Reply part one reply part two']);
     });
 
-    it('skips past several repeats, not just one', () => {
+    it('joins any number of pieces, not just two', () => {
       expect(
-        speakers(
-          selectExchangeLines([
-            entry('s1', 'Question', 'agent'),
-            entry('s2', 'A', 'user'),
-            entry('s3', 'B', 'user'),
-            entry('s4', 'C', 'user'),
+        shape(
+          groupTranscriptTurns([
+            entry('s1', 'A', 'user'),
+            entry('s2', 'B', 'user'),
+            entry('s3', 'C', 'user'),
           ]),
         ),
-      ).toEqual(['agent:Question', 'user:C']);
+      ).toEqual(['user:A B C']);
     });
 
-    it('returns only the newest line when nobody else has spoken', () => {
-      expect(
-        speakers(
-          selectExchangeLines([
-            entry('s1', 'One', 'agent'),
-            entry('s2', 'Two', 'agent'),
-            entry('s3', 'Three', 'agent'),
-          ]),
-        ),
-      ).toEqual(['agent:Three']);
-    });
-
-    it('puts the newest line last so callers can render top-to-bottom', () => {
-      const newest = entry('s2', 'Newest', 'agent');
-
-      const selected = selectExchangeLines([
-        entry('s1', 'Older', 'user'),
-        newest,
+    it('keeps the id of the first piece so a growing turn stays put', () => {
+      const turns = groupTranscriptTurns([
+        entry('s1', 'Starting', 'agent'),
+        entry('s2', 'and continuing', 'agent'),
       ]);
 
-      expect(selected[selected.length - 1]).toBe(newest);
+      // React keys off this: change it mid-turn and the bubble is torn down
+      // and rebuilt on every flush.
+      expect(turns[0].id).toBe('s1');
+    });
+
+    it('takes its finality from the last piece', () => {
+      const [turn] = groupTranscriptTurns([
+        entry('s1', 'Done', 'agent', true),
+        entry('s2', 'still going', 'agent', false),
+      ]);
+
+      expect(turn.isFinal).toBe(false);
+    });
+
+    it('keeps the first participant name it was given', () => {
+      const [turn] = groupTranscriptTurns([
+        entry('s1', 'Hello', 'agent', true, { participantName: 'Agent Seven' }),
+        entry('s2', 'again', 'agent'),
+      ]);
+
+      expect(turn.participantName).toBe('Agent Seven');
+    });
+
+    it('picks up a participant name that only arrives later', () => {
+      const [turn] = groupTranscriptTurns([
+        entry('s1', 'Hello', 'agent'),
+        entry('s2', 'again', 'agent', true, {
+          participantName: 'Agent Seven',
+        }),
+      ]);
+
+      expect(turn.participantName).toBe('Agent Seven');
+    });
+
+    it('does not leave a gap when a piece arrives empty', () => {
+      const [turn] = groupTranscriptTurns([
+        entry('s1', '', 'agent'),
+        entry('s2', 'Hello', 'agent'),
+      ]);
+
+      expect(turn.text).toBe('Hello');
+    });
+
+    it('leaves the original entries untouched', () => {
+      const first = entry('s1', 'One', 'agent');
+      const second = entry('s2', 'Two', 'agent');
+
+      groupTranscriptTurns([first, second]);
+
+      expect(first.text).toBe('One');
+      expect(second.text).toBe('Two');
     });
   });
 
@@ -1347,26 +1880,26 @@ describe('VoiceChatModal', () => {
       render(<VoiceChatModal {...defaultProps} />);
 
       // Radix opens on focus, which jsdom simulates reliably; hover does not.
-      fireEvent.focus(screen.getByLabelText('Show captions'));
+      fireEvent.focus(screen.getByLabelText('Hide captions'));
 
       const tooltip = await screen.findByRole('tooltip');
       expect(tooltip).toHaveTextContent('Captions');
       // The state-carrying wording stays on the label, where it costs nothing.
-      expect(tooltip).not.toHaveTextContent('Show captions');
-      expect(screen.getByLabelText('Show captions')).toBeInTheDocument();
+      expect(tooltip).not.toHaveTextContent('Hide captions');
+      expect(screen.getByLabelText('Hide captions')).toBeInTheDocument();
     });
 
-    it('keeps the descriptive label when captions are on', () => {
-      rememberCaptionsOn();
+    it('keeps the descriptive label when captions are off', () => {
+      rememberCaptionsOff();
       render(<VoiceChatModal {...defaultProps} />);
 
-      expect(screen.getByLabelText('Hide captions')).toBeInTheDocument();
+      expect(screen.getByLabelText('Show captions')).toBeInTheDocument();
     });
 
     it('keeps the tooltip itself bounded and breakable', async () => {
       render(<VoiceChatModal {...defaultProps} />);
 
-      fireEvent.focus(screen.getByLabelText('Show captions'));
+      fireEvent.focus(screen.getByLabelText('Hide captions'));
 
       // `ibl-tooltip-content` is the repo's shared treatment: max-w-xs plus
       // break-words. jsdom cannot measure the collision offsets, so the
@@ -1379,6 +1912,7 @@ describe('VoiceChatModal', () => {
 
   describe('layout', () => {
     it('keeps the blob and all four controls with captions off', () => {
+      rememberCaptionsOff();
       render(
         <VoiceChatModal
           {...defaultProps}
@@ -1391,8 +1925,8 @@ describe('VoiceChatModal', () => {
       expect(screen.getByLabelText('Mute agent audio')).toBeInTheDocument();
       expect(screen.getByLabelText('Show captions')).toBeInTheDocument();
       expect(screen.getByLabelText('Close voice chat')).toBeInTheDocument();
-      // The status text is present for assistive tech but never drawn.
-      expect(screen.getByLabelText('Call status')).toHaveClass('sr-only');
+      // The status line is shown to everyone now, not just announced.
+      expect(screen.getByLabelText('Call status')).toBeVisible();
       // Nothing else competes with the orb.
       expect(screen.queryByRole('log')).toBeNull();
     });
@@ -1401,8 +1935,13 @@ describe('VoiceChatModal', () => {
       rememberCaptionsOn();
       render(<VoiceChatModal {...defaultProps} />);
 
+      // The band grows into the spare space, but never at the orb's expense:
+      // the orb holds its size and the band scrolls instead.
       expect(screen.getByTestId('voice-blob')).toHaveClass('shrink-0');
-      expect(screen.getByTestId('voice-transcript')).toHaveClass('shrink-0');
+      expect(screen.getByTestId('voice-transcript')).toHaveClass(
+        'overflow-y-auto',
+      );
+      expect(screen.getByTestId('voice-transcript')).toHaveClass('flex-1');
     });
   });
 
