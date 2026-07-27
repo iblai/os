@@ -34,7 +34,7 @@
     "tauri:bump": "node scripts/tauri-bump.mjs"
   },
   "dependencies": {
-    "@iblai/agent-ai": "2.5.2",
+    "@iblai/agent-ai": "2.7.0",
     "@iblai/iblai-api": "4.166.0-ai",
     "@iblai/iblai-js": "1.26.8",
     "@iblai/iblai-web-mentor": "1.3.4",
