@@ -4,6 +4,7 @@ import {
   VoiceChatModal,
   readCaptionsPreference,
   writeCaptionsPreference,
+  selectExchangeLines,
 } from '../voice-chat-modal';
 import type { TranscriptEntry } from '@/hooks/use-livekit-transcription';
 
@@ -16,6 +17,21 @@ function entry(
 ): TranscriptEntry {
   return { id, text, speaker, isFinal, timestamp: 0, ...extra };
 }
+
+/**
+ * A real agent turn as captured from a live call: several hundred characters,
+ * multiple paragraphs, embedded newlines. "Hello world" fixtures are what let
+ * the overflow bug ship — a short line never reproduces it.
+ */
+const REAL_AGENT_TURN = [
+  "Sure! Let's break it down. A rocket's propulsion system works by burning fuel—often a combination of liquid or solid propellants.",
+  "When the fuel burns, it produces hot gases that expand and rush out of the rocket's nozzle at high speed. This creates thrust, which pushes the rocket upward.",
+  'If we compare rockets to airplanes, airplanes rely on wings and atmospheric lift, whereas a rocket carries its own oxidiser and so keeps working in vacuum.',
+].join('\n\n');
+
+/** The other route to the same overflow: one token that cannot be broken. */
+const UNBREAKABLE_URL =
+  'https://example.com/a/very/long/path/that/never/offers/a/single/break/opportunity/anywhere/at/all/reference.html';
 
 const CAPTIONS_STORAGE_KEY = 'ibl.voiceChat.captionsEnabled';
 
@@ -877,7 +893,7 @@ describe('VoiceChatModal', () => {
       ]);
     });
 
-    it('shows only the newest three lines', () => {
+    it('shows only the exchange: the newest line and the reply it answers', () => {
       renderWithCaptions({
         transcript: [
           entry('s1', 'One', 'agent'),
@@ -890,13 +906,28 @@ describe('VoiceChatModal', () => {
 
       // The full history is a post-call artefact; the band is a teleprompter.
       expect(lines().map((l) => l.textContent)).toEqual([
-        'AgentThree',
         'YouFour',
         'AgentFive',
       ]);
     });
 
-    it('puts the newest line at the bottom of the three', () => {
+    it('keeps the answered turn on screen when the same speaker talks twice', () => {
+      renderWithCaptions({
+        transcript: [
+          entry('s1', 'A question', 'user'),
+          entry('s2', 'First half of the reply', 'agent'),
+          entry('s3', 'Second half of the reply', 'agent'),
+        ],
+      });
+
+      // `slice(-2)` would have shown two agent lines and dropped the question.
+      expect(lines().map((l) => l.textContent)).toEqual([
+        'YouA question',
+        'AgentSecond half of the reply',
+      ]);
+    });
+
+    it('puts the newest line at the bottom of the two', () => {
       renderWithCaptions({
         transcript: [
           entry('s1', 'One', 'agent'),
@@ -907,12 +938,19 @@ describe('VoiceChatModal', () => {
       });
 
       const rendered = lines();
-      expect(rendered).toHaveLength(3);
-      expect(rendered[rendered.length - 1]).toHaveAttribute(
-        'data-newest',
-        'true',
-      );
+      expect(rendered).toHaveLength(2);
+      expect(rendered[1]).toHaveAttribute('data-newest', 'true');
       expect(rendered[0]).toHaveAttribute('data-newest', 'false');
+    });
+
+    it('shows a single line when only one speaker has spoken', () => {
+      renderWithCaptions({
+        transcript: [entry('s1', 'One', 'agent'), entry('s2', 'Two', 'agent')],
+      });
+
+      const rendered = lines();
+      expect(rendered).toHaveLength(1);
+      expect(rendered[0]).toHaveAttribute('data-newest', 'true');
     });
 
     it('is a fixed-height window that never scrolls', () => {
@@ -925,10 +963,31 @@ describe('VoiceChatModal', () => {
       });
 
       const band = screen.getByTestId('voice-transcript');
-      expect(band).toHaveClass('h-[5.25rem]');
+      // Two clamped `text-xs` rows for the answered turn plus three `text-sm`
+      // rows of live text. Sized to the content, not guessed.
+      expect(band).toHaveClass('h-[6rem]');
       expect(band).toHaveClass('overflow-hidden');
       expect(band).toHaveClass('shrink-0');
       expect(band.className).not.toContain('overflow-y-auto');
+    });
+
+    it('gives the live line its own bottom-anchored viewport', () => {
+      renderWithCaptions({
+        transcript: [
+          entry('s1', 'A question', 'user'),
+          entry('s2', REAL_AGENT_TURN, 'agent', false),
+        ],
+      });
+
+      // Without this, a paragraph-long agent turn grows until it shoves the
+      // answered turn off the top of the band and the "exchange" is gone.
+      const liveWindow = screen.getByTestId('voice-transcript-live-window');
+      expect(liveWindow).toHaveClass('overflow-hidden');
+      expect(liveWindow).toHaveClass('justify-end');
+      expect(liveWindow).toHaveClass('min-h-0');
+      expect(liveWindow).toContainElement(lines()[1]);
+      // The answered turn sits outside it and is pinned by `shrink-0`.
+      expect(lines()[0]).toHaveClass('shrink-0');
     });
 
     it('labels the user with "You" in blue', () => {
@@ -982,19 +1041,15 @@ describe('VoiceChatModal', () => {
       expect(lines()[0].querySelector('span')).toHaveTextContent('You');
     });
 
-    it('gives the newest line full weight and dims the older ones by age', () => {
+    it('gives the newest line full weight and dims the answered turn', () => {
       renderWithCaptions({
         transcript: [
-          entry('s1', 'Oldest', 'agent'),
-          entry('s2', 'Older', 'user'),
-          entry('s3', 'Newest', 'agent'),
+          entry('s1', 'Older', 'user'),
+          entry('s2', 'Newest', 'agent'),
         ],
       });
 
-      const [oldest, older, newest] = lines();
-      expect(oldest).toHaveAttribute('data-age', '2');
-      expect(oldest).toHaveClass('opacity-30');
-      expect(oldest).toHaveClass('text-xs');
+      const [older, newest] = lines();
       expect(older).toHaveAttribute('data-age', '1');
       expect(older).toHaveClass('opacity-60');
       expect(older).toHaveClass('text-xs');
@@ -1002,11 +1057,9 @@ describe('VoiceChatModal', () => {
       expect(newest).toHaveAttribute('data-newest', 'true');
       expect(newest).toHaveClass('opacity-100');
       expect(newest).toHaveClass('text-sm');
-      // The older lines are held to one row each so the fade stays legible;
-      // the live line wraps so its tail - and its caret - is never cut off.
-      expect(oldest).toHaveClass('truncate');
-      expect(older).toHaveClass('truncate');
-      expect(newest).not.toHaveClass('truncate');
+      // A single dim level now that there is only one older line - the old
+      // third tier at opacity-30 was the one that read as broken.
+      expect(older).not.toHaveClass('opacity-30');
     });
 
     it('marks an in-progress line with a caret', () => {
@@ -1066,6 +1119,219 @@ describe('VoiceChatModal', () => {
       expect(screen.queryByTestId('voice-transcript-scroll')).toBeNull();
       expect(screen.queryByTestId('voice-transcript-jump')).toBeNull();
       expect(screen.queryByTestId('voice-transcript-live')).toBeNull();
+    });
+  });
+
+  // Regression: the captions band used to widen the whole dialog, so text ran
+  // past the modal's edge - but only sometimes, because it depended on how long
+  // the agent's last turn happened to be.
+  //
+  // Cause: `truncate` expands to `white-space: nowrap`, and a nowrap box's
+  // intrinsic minimum width is its entire unwrapped line. `DialogContent` is a
+  // CSS grid and grid items default to `min-width: auto`, so that intrinsic
+  // width propagated all the way up and sized the dialog to the longest line.
+  // A short older line stayed under `max-w-lg` and looked fine; a 500-character
+  // agent paragraph did not. jsdom has no layout engine, so these assert the
+  // constraints rather than measured pixels.
+  describe('horizontal overflow constraints', () => {
+    const lines = () => screen.queryAllByTestId('voice-transcript-line');
+
+    function renderWithCaptions(props: Record<string, unknown> = {}) {
+      rememberCaptionsOn();
+      return render(<VoiceChatModal {...defaultProps} {...props} />);
+    }
+
+    it('never puts a nowrap line in the band, however long the turn', () => {
+      renderWithCaptions({
+        mentorName: 'Agent Taha',
+        transcript: [
+          entry('s1', REAL_AGENT_TURN, 'agent'),
+          entry(
+            's2',
+            'No, not really, but I think that is good enough.',
+            'user',
+          ),
+        ],
+      });
+
+      expect(lines()).toHaveLength(2);
+      lines().forEach((line) => {
+        // `truncate` is the class that carried `white-space: nowrap`.
+        expect(line).not.toHaveClass('truncate');
+        expect(line.className).not.toContain('whitespace-nowrap');
+        expect(line.className).not.toContain('text-nowrap');
+      });
+      // The answered turn is bounded by line count instead, which wraps
+      // normally and so has a wrappable intrinsic width.
+      expect(lines()[0]).toHaveClass('line-clamp-2');
+    });
+
+    it('lets an unbreakable token wrap instead of pushing the layout wide', () => {
+      renderWithCaptions({
+        transcript: [
+          entry('s1', `See ${UNBREAKABLE_URL}`, 'user'),
+          entry('s2', `Mirrored at ${UNBREAKABLE_URL}`, 'agent'),
+        ],
+      });
+
+      lines().forEach((line) => {
+        expect(line).toHaveClass('break-words');
+        expect(line).toHaveClass('min-w-0');
+      });
+    });
+
+    it('caps the band inside the dialog rather than beyond it', () => {
+      renderWithCaptions({
+        transcript: [entry('s1', REAL_AGENT_TURN, 'agent')],
+      });
+
+      const band = screen.getByTestId('voice-transcript');
+      // `DialogContent` is `max-w-lg` (32rem). The band used to declare
+      // `max-w-xl` (36rem), a cap wider than its own container could ever
+      // grant - dead at best, misleading at worst.
+      expect(band).toHaveClass('max-w-md');
+      expect(band).not.toHaveClass('max-w-xl');
+      expect(band).toHaveClass('min-w-0');
+    });
+
+    it('breaks the min-width chain at the dialog grid item', () => {
+      renderWithCaptions({
+        transcript: [entry('s1', REAL_AGENT_TURN, 'agent')],
+      });
+
+      // Walk up from the band to the dialog and require every box on the way
+      // to be allowed to shrink. One missing `min-w-0` restores the bug.
+      const dialog = screen.getByRole('dialog');
+      let node = screen.getByTestId('voice-transcript').parentElement;
+      const chain: HTMLElement[] = [];
+      while (node && node !== dialog) {
+        chain.push(node);
+        node = node.parentElement;
+      }
+
+      expect(chain.length).toBeGreaterThan(0);
+      chain.forEach((box) => expect(box).toHaveClass('min-w-0'));
+    });
+
+    it('collapses newlines rather than honouring them - a caption is not a document', () => {
+      renderWithCaptions({
+        transcript: [entry('s1', REAL_AGENT_TURN, 'agent')],
+      });
+
+      // No `whitespace-pre`/`pre-wrap`: the paragraph breaks in an agent turn
+      // would each cost a row of a five-row band.
+      expect(lines()[0].className).not.toContain('whitespace-pre');
+    });
+  });
+
+  describe('selectExchangeLines', () => {
+    const speakers = (entries: TranscriptEntry[]) =>
+      entries.map((e) => `${e.speaker}:${e.text}`);
+
+    it('returns nothing for an empty transcript', () => {
+      expect(selectExchangeLines([])).toEqual([]);
+    });
+
+    it('returns the only entry when one thing has been said', () => {
+      const only = entry('s1', 'Hello', 'user');
+
+      expect(selectExchangeLines([only])).toEqual([only]);
+    });
+
+    it('pairs the newest line with the previous line when speakers alternate', () => {
+      expect(
+        speakers(
+          selectExchangeLines([
+            entry('s1', 'One', 'agent'),
+            entry('s2', 'Two', 'user'),
+            entry('s3', 'Three', 'agent'),
+          ]),
+        ),
+      ).toEqual(['user:Two', 'agent:Three']);
+    });
+
+    // The reason this is not `slice(-2)`.
+    it('skips past a repeated speaker to reach the other voice', () => {
+      expect(
+        speakers(
+          selectExchangeLines([
+            entry('s1', 'Question', 'user'),
+            entry('s2', 'Reply part one', 'agent'),
+            entry('s3', 'Reply part two', 'agent'),
+          ]),
+        ),
+      ).toEqual(['user:Question', 'agent:Reply part two']);
+    });
+
+    it('skips past several repeats, not just one', () => {
+      expect(
+        speakers(
+          selectExchangeLines([
+            entry('s1', 'Question', 'agent'),
+            entry('s2', 'A', 'user'),
+            entry('s3', 'B', 'user'),
+            entry('s4', 'C', 'user'),
+          ]),
+        ),
+      ).toEqual(['agent:Question', 'user:C']);
+    });
+
+    it('returns only the newest line when nobody else has spoken', () => {
+      expect(
+        speakers(
+          selectExchangeLines([
+            entry('s1', 'One', 'agent'),
+            entry('s2', 'Two', 'agent'),
+            entry('s3', 'Three', 'agent'),
+          ]),
+        ),
+      ).toEqual(['agent:Three']);
+    });
+
+    it('puts the newest line last so callers can render top-to-bottom', () => {
+      const newest = entry('s2', 'Newest', 'agent');
+
+      const selected = selectExchangeLines([
+        entry('s1', 'Older', 'user'),
+        newest,
+      ]);
+
+      expect(selected[selected.length - 1]).toBe(newest);
+    });
+  });
+
+  describe('control tooltips', () => {
+    it('names the captions control in one word, like its neighbours', async () => {
+      render(<VoiceChatModal {...defaultProps} />);
+
+      // Radix opens on focus, which jsdom simulates reliably; hover does not.
+      fireEvent.focus(screen.getByLabelText('Show captions'));
+
+      const tooltip = await screen.findByRole('tooltip');
+      expect(tooltip).toHaveTextContent('Captions');
+      // The state-carrying wording stays on the label, where it costs nothing.
+      expect(tooltip).not.toHaveTextContent('Show captions');
+      expect(screen.getByLabelText('Show captions')).toBeInTheDocument();
+    });
+
+    it('keeps the descriptive label when captions are on', () => {
+      rememberCaptionsOn();
+      render(<VoiceChatModal {...defaultProps} />);
+
+      expect(screen.getByLabelText('Hide captions')).toBeInTheDocument();
+    });
+
+    it('keeps the tooltip itself bounded and breakable', async () => {
+      render(<VoiceChatModal {...defaultProps} />);
+
+      fireEvent.focus(screen.getByLabelText('Show captions'));
+
+      // `ibl-tooltip-content` is the repo's shared treatment: max-w-xs plus
+      // break-words. jsdom cannot measure the collision offsets, so the
+      // assertion is that the row opts into the shared, capped treatment.
+      await screen.findByRole('tooltip');
+      const content = document.querySelector('[data-slot="tooltip-content"]');
+      expect(content).toHaveClass('ibl-tooltip-content');
     });
   });
 

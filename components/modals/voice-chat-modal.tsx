@@ -124,10 +124,37 @@ const pulseAnimations = `
 const CAPTIONS_PREFERENCE_STORAGE_KEY = 'ibl.voiceChat.captionsEnabled';
 
 /**
- * Captions are a fixed three-line teleprompter, not a scrollback. Everything
- * older is the post-call transcript's job.
+ * The captions band shows the current *exchange* — what was asked and what is
+ * being answered — not simply the last two things said.
+ *
+ * This is deliberately not `entries.slice(-2)`. Transcript turns do not
+ * strictly alternate: a user can say two things in a row, and a single agent
+ * reply routinely arrives as several entries. In both cases `slice(-2)`
+ * returns two lines from the same speaker and the other half of the exchange
+ * silently disappears, which is the one thing the band exists to show.
+ * Selecting by speaker keeps the question paired with its answer whatever the
+ * turn order.
+ *
+ * Returns oldest-first so callers can render top-to-bottom with the newest
+ * line last, flush against the bottom of the band.
+ *
+ * Exported so the rule can be unit-tested without a DOM.
  */
-const VISIBLE_CAPTION_LINES = 3;
+export function selectExchangeLines(
+  entries: TranscriptEntry[],
+): TranscriptEntry[] {
+  const newest = entries[entries.length - 1];
+  if (!newest) return [];
+
+  for (let i = entries.length - 2; i >= 0; i -= 1) {
+    if (entries[i].speaker !== newest.speaker) {
+      return [entries[i], newest];
+    }
+  }
+
+  // Only one voice has spoken so far, so there is no exchange to show yet.
+  return [newest];
+}
 
 /**
  * Storage is a nicety, never a dependency: server rendering has no `window`
@@ -231,9 +258,9 @@ export function VoiceChatModal({
     writeCaptionsPreference(next);
   }, [areCaptionsVisible]);
 
-  // Only the tail of the conversation is ever on screen. The full transcript
-  // belongs to the chat history once the call ends.
-  const visibleCaptions = transcript.slice(-VISIBLE_CAPTION_LINES);
+  // Only the current exchange is ever on screen. The full transcript belongs
+  // to the chat history once the call ends.
+  const visibleCaptions = selectExchangeLines(transcript);
 
   // The orb carries the call state for anyone who can see it, so this text
   // exists purely for assistive tech. Highest-precedence fact wins: the agent
@@ -256,8 +283,15 @@ export function VoiceChatModal({
           <DialogDescription className="sr-only">
             {t('dialogDescription')}
           </DialogDescription>
-          <div className="flex h-[100vh] w-full flex-col items-center justify-between">
-            <div className="flex min-h-0 w-full flex-1 flex-col items-center justify-center px-4 pt-6">
+          {/* `min-w-0` is load-bearing, not tidiness. `DialogContent` is a CSS
+              grid and this is its only grid item; grid items default to
+              `min-width: auto`, so they refuse to shrink below the intrinsic
+              minimum width of their content. Any single unwrappable line
+              deeper in the tree would otherwise drag this box — and the
+              visible text — straight past the dialog's `max-w-lg` edge. The
+              same trap repeats for every flex item below, hence the repeats. */}
+          <div className="flex h-[100vh] w-full min-w-0 flex-col items-center justify-between">
+            <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col items-center justify-center px-4 pt-6">
               {/* Conversation indicator: the blob is the call and the user's
                   voice, the ring is the mentor's voice. */}
               <div
@@ -420,11 +454,25 @@ export function VoiceChatModal({
                 </p>
               )}
 
-              {/* Captions: a fixed three-line teleprompter, opt-in, newest at
-                  the bottom. Nothing scrolls — `aria-relevant="additions text"`
-                  keeps the log from re-reading lines that are still on screen.
-                  When captions are off the region is absent entirely, so the
-                  default call is just the orb and the controls. */}
+              {/* Captions: a fixed two-line exchange — the live line plus the
+                  other speaker's last turn — opt-in, newest at the bottom.
+                  Nothing scrolls; `aria-relevant="additions text"` keeps the
+                  log from re-reading lines that are still on screen. When
+                  captions are off the region is absent entirely, so the
+                  default call is just the orb and the controls.
+
+                  Height: real agent turns are paragraphs, not one-liners, so
+                  the band reserves each line a slot instead of letting them
+                  fight. 6rem = the older line's two clamped `text-xs`
+                  /`leading-snug` rows (2 x 1.03125rem + 0.25rem margin =
+                  2.3125rem) plus three `text-sm` rows of live text
+                  (3 x 1.203125rem = 3.609375rem). Nothing arbitrary is left
+                  over.
+
+                  `min-w-0` on the region and on every line is the fix for the
+                  reported overflow: without it the `min-width: auto` chain
+                  running up to `DialogContent`'s grid item sizes the dialog to
+                  the widest unwrappable line. */}
               {areCaptionsVisible && (
                 <div
                   data-testid="voice-transcript"
@@ -432,7 +480,7 @@ export function VoiceChatModal({
                   aria-live="polite"
                   aria-relevant="additions text"
                   aria-label={t('callTranscript')}
-                  className="mt-4 flex h-[5.25rem] w-full max-w-xl shrink-0 flex-col justify-end overflow-hidden px-2"
+                  className="mt-4 flex h-[6rem] w-full max-w-md min-w-0 shrink-0 flex-col justify-end overflow-hidden px-2"
                 >
                   {visibleCaptions.length === 0 ? (
                     <p
@@ -444,7 +492,7 @@ export function VoiceChatModal({
                   ) : (
                     visibleCaptions.map((entry, index) => {
                       // Distance from the bottom of the stack: 0 is the line
-                      // being spoken right now, 2 is on its way out.
+                      // being spoken right now, 1 is the turn it answers.
                       const age = visibleCaptions.length - 1 - index;
                       const isNewest = age === 0;
                       const isUser = entry.speaker === 'user';
@@ -454,7 +502,7 @@ export function VoiceChatModal({
                           entry.participantName ||
                           t('transcriptSpeakerAgent');
 
-                      return (
+                      const line = (
                         <p
                           key={entry.id}
                           data-testid="voice-transcript-line"
@@ -462,16 +510,22 @@ export function VoiceChatModal({
                           data-final={entry.isFinal ? 'true' : 'false'}
                           data-newest={isNewest ? 'true' : 'false'}
                           data-age={age}
-                          className={`mb-1 text-left leading-snug transition-all duration-300 ${
+                          className={`mb-1 min-w-0 text-left leading-snug break-words transition-all duration-300 ${
                             isNewest
-                              ? // The live line wraps and sits flush with the
-                                // bottom, so its newest words — and the caret —
-                                // are always the ones on screen; anything that
-                                // no longer fits is clipped off the top.
+                              ? // The live line wraps freely and sits flush with
+                                // the bottom, so its newest words — and the
+                                // caret — are always the ones on screen; a long
+                                // turn clips off the top of its own viewport.
                                 'text-sm text-gray-900 opacity-100'
-                              : age === 1
-                                ? 'truncate text-xs text-gray-500 opacity-60'
-                                : 'truncate text-xs text-gray-500 opacity-30'
+                              : // The answered turn is clamped by line count,
+                                // never by `truncate`. `truncate`'s
+                                // `white-space: nowrap` gave the line an
+                                // intrinsic width equal to its entire unwrapped
+                                // text, which is what dragged the dialog wide;
+                                // `line-clamp` wraps normally and only limits
+                                // rows, so it cannot do that. Two rows also
+                                // means the line is never a one-word sliver.
+                                'line-clamp-2 shrink-0 text-xs text-gray-500 opacity-60'
                           }`}
                         >
                           <span
@@ -500,6 +554,23 @@ export function VoiceChatModal({
                             </span>
                           )}
                         </p>
+                      );
+
+                      // The live line gets its own bottom-anchored viewport so
+                      // a paragraph-long agent turn clips against this box
+                      // instead of shoving the answered turn off the top of the
+                      // band. That is the difference between "there is more
+                      // above" and "the other half of the exchange vanished".
+                      return isNewest ? (
+                        <div
+                          key={entry.id}
+                          data-testid="voice-transcript-live-window"
+                          className="flex min-h-0 min-w-0 flex-1 flex-col justify-end overflow-hidden"
+                        >
+                          {line}
+                        </div>
+                      ) : (
+                        line
                       );
                     })
                   )}
@@ -540,7 +611,11 @@ export function VoiceChatModal({
                     )}
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent className="ibl-tooltip-content">
+                <TooltipContent
+                  className="ibl-tooltip-content"
+                  sideOffset={8}
+                  collisionPadding={16}
+                >
                   {isLoading
                     ? t('connecting')
                     : isMicMuted
@@ -580,7 +655,11 @@ export function VoiceChatModal({
                     )}
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent className="ibl-tooltip-content">
+                <TooltipContent
+                  className="ibl-tooltip-content"
+                  sideOffset={8}
+                  collisionPadding={16}
+                >
                   {isLoading
                     ? t('connecting')
                     : isMentorAudioMuted
@@ -617,12 +696,15 @@ export function VoiceChatModal({
                     )}
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent className="ibl-tooltip-content">
-                  {isLoading
-                    ? t('connecting')
-                    : areCaptionsVisible
-                      ? t('hideCaptions')
-                      : t('showCaptions')}
+                <TooltipContent
+                  className="ibl-tooltip-content"
+                  sideOffset={8}
+                  collisionPadding={16}
+                >
+                  {/* One word, like "Mute" and "Mute agent" next to it. The
+                      state-carrying wording lives on `aria-label`, where it is
+                      free — the tooltip only has to name the control. */}
+                  {isLoading ? t('connecting') : t('captions')}
                 </TooltipContent>
               </Tooltip>
 
@@ -637,7 +719,11 @@ export function VoiceChatModal({
                     <X className="h-5 w-5" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent className="ibl-tooltip-content">
+                <TooltipContent
+                  className="ibl-tooltip-content"
+                  sideOffset={8}
+                  collisionPadding={16}
+                >
                   {t('endCall')}
                 </TooltipContent>
               </Tooltip>
