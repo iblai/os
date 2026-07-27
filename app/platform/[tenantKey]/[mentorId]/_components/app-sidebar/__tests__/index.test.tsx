@@ -829,7 +829,7 @@ describe('AppSidebar — rendering', () => {
     renderSidebar();
     expect(screen.getByTestId('app-logo')).toBeInTheDocument();
     // Each collapsible section trigger is a button whose accessible
-    // name matches the section title. Agents/Workflows/Chats/Projects/
+    // name matches the section title. Agents/Workflows/Recents/Projects/
     // Analytics + Documentation should all be present for an admin.
     expect(
       screen.getAllByRole('button', { name: 'Agents' }).length,
@@ -838,7 +838,7 @@ describe('AppSidebar — rendering', () => {
       screen.getAllByRole('button', { name: 'Workflows' }).length,
     ).toBeGreaterThan(0);
     expect(
-      screen.getAllByRole('button', { name: 'Chats' }).length,
+      screen.getAllByRole('button', { name: 'Recents' }).length,
     ).toBeGreaterThan(0);
     expect(
       screen.getAllByRole('button', { name: 'Projects' }).length,
@@ -897,19 +897,19 @@ describe('AppSidebar — rendering', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('renders a minimal sidebar in embed mode for a LOGGED-IN user: New Chat + Chats, but no Agents/Workflows/Analytics/Projects', () => {
+  it('renders a minimal sidebar in embed mode for a LOGGED-IN user: New Chat + Recents, but no Agents/Workflows/Analytics/Projects', () => {
     // Default mock state is a logged-in ADMIN (mockUsername set) — without
     // embed gating they would see the full nav. Embed must hide it
     // regardless of role, while keeping New Chat + (logged-in) Chats.
     mockEmbedMode = true;
     renderSidebar();
 
-    // Kept: New Chat (standalone button) + Chats history section.
+    // Kept: New Chat (standalone button) + Recents history section.
     expect(
       screen.getByRole('button', { name: 'New Chat' }),
     ).toBeInTheDocument();
     expect(
-      screen.getAllByRole('button', { name: 'Chats' }).length,
+      screen.getAllByRole('button', { name: 'Recents' }).length,
     ).toBeGreaterThan(0);
 
     // Hidden: every admin/full-app nav section.
@@ -930,8 +930,8 @@ describe('AppSidebar — rendering', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('hides Chats in embed mode when the user is NOT logged in (only New Chat remains)', () => {
-    // Per the embed spec: in embed mode Chats is only shown to a logged-in
+  it('hides Recents in embed mode when the user is NOT logged in (only New Chat remains)', () => {
+    // Per the embed spec: in embed mode Recents is only shown to a logged-in
     // user (keyed on isLoggedIn()/axd_token). An anonymous embed viewer sees
     // just the New Chat button (anonymous bypasses the New Chat RBAC gate).
     mockEmbedMode = true;
@@ -943,7 +943,7 @@ describe('AppSidebar — rendering', () => {
       screen.getByRole('button', { name: 'New Chat' }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: 'Chats' }),
+      screen.queryByRole('button', { name: 'Recents' }),
     ).not.toBeInTheDocument();
   });
 
@@ -969,7 +969,7 @@ describe('AppSidebar — rendering', () => {
     ).toBeInTheDocument();
   });
 
-  it('hides Search chats when the user is NOT logged in (outside embed mode too)', () => {
+  it('hides Search when the user is NOT logged in (outside embed mode too)', () => {
     // The dialog lists the signed-in user's own recent messages, so unlike
     // `showChats` it is hidden for an anonymous user in EVERY mode — while
     // New Chat (which anonymous users may use) stays.
@@ -978,20 +978,18 @@ describe('AppSidebar — rendering', () => {
     renderSidebar();
 
     expect(
-      screen.queryByRole('button', { name: 'Search chats' }),
+      screen.queryByRole('button', { name: 'Search' }),
     ).not.toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'New Chat' }),
     ).toBeInTheDocument();
   });
 
-  it('shows Search chats for a logged-in user', () => {
+  it('shows Search for a logged-in user', () => {
     mockIsLoggedIn = true;
     renderSidebar();
 
-    expect(
-      screen.getByRole('button', { name: 'Search chats' }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Search' })).toBeInTheDocument();
   });
 });
 
@@ -1272,10 +1270,106 @@ describe('AppSidebar — Analytics section', () => {
 describe('AppSidebar — Chats section', () => {
   it('renders pinned and recent chat rows', () => {
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     expect(screen.getByText('Pinned message one')).toBeInTheDocument();
     expect(screen.getByText('Recent message one')).toBeInTheDocument();
     expect(screen.getByText('Recent message two')).toBeInTheDocument();
+  });
+
+  it('sorts pinned rows above recent ones without heading either group', () => {
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
+
+    // The two caps headings are gone; position and the pin carry it now.
+    expect(screen.queryByText('PINNED')).toBeNull();
+    expect(screen.queryByText('RECENT')).toBeNull();
+
+    const pinnedList = screen.getByTestId('pinned-chats-list');
+    const recentList = screen.getByTestId('recent-chats-list');
+    expect(
+      pinnedList.compareDocumentPosition(recentList) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  /** The row container (label button + the trailing pin/menu slot). */
+  const chatRowFor = (label: string) =>
+    screen.getByText(label).closest('[data-testid="chat-row"]') as HTMLElement;
+
+  it('marks a pinned row with a pin, and leaves recent rows unmarked', () => {
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
+
+    const pinnedRow = chatRowFor('Pinned message one');
+    const recentRow = chatRowFor('Recent message one');
+
+    expect(
+      pinnedRow.querySelector('[data-testid="chat-row-pin"]'),
+    ).toBeInTheDocument();
+    expect(recentRow.querySelector('[data-testid="chat-row-pin"]')).toBeNull();
+    // A pin is a picture; screen readers get the word.
+    expect(pinnedRow).toHaveTextContent('Pinned');
+  });
+
+  // Regression: these used the unnamed `group-hover`, and the shared Sidebar
+  // wrapper is a `.group` too - so a pointer anywhere in the sidebar revealed
+  // every row's menu at once (and would have hidden every pin).
+  it('scopes the hover swap to the row under the pointer', () => {
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
+
+    const pinnedRow = chatRowFor('Pinned message one');
+    const pin = pinnedRow.querySelector(
+      '[data-testid="chat-row-pin"]',
+    ) as HTMLElement;
+    const menuButton = pinnedRow.querySelector(
+      'button[aria-label="Chat actions"]',
+    ) as HTMLElement;
+
+    // Both live in the same slot and trade places on hover. jsdom has no
+    // hover, so the handover is asserted as the classes that perform it.
+    expect(pin).toHaveClass('group-hover/chat-row:opacity-0');
+    expect(menuButton).toHaveClass('opacity-0');
+    expect(menuButton).toHaveClass('group-hover/chat-row:opacity-100');
+  });
+
+  it('hides the pin while the row menu is open', async () => {
+    // Radix DropdownMenu fires on pointerdown, so this needs the full
+    // pointer sequence rather than `fireEvent.click`.
+    const user = userEvent.setup();
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
+
+    const pinnedRow = chatRowFor('Pinned message one');
+    expect(
+      pinnedRow.querySelector('[data-testid="chat-row-pin"]'),
+    ).toBeInTheDocument();
+
+    await user.click(
+      pinnedRow.querySelector('button[aria-label="Chat actions"]')!,
+    );
+
+    // The pointer may be anywhere by the time the menu is up, so hover alone
+    // cannot keep the pin from showing through it.
+    await waitFor(() =>
+      expect(
+        pinnedRow.querySelector('[data-testid="chat-row-pin"]'),
+      ).toBeNull(),
+    );
+  });
+
+  it('leaves an unpinned row unmarked until it is hovered', () => {
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
+
+    const recentRow = chatRowFor('Recent message one');
+    const menuButton = recentRow.querySelector(
+      'button[aria-label="Chat actions"]',
+    ) as HTMLElement;
+
+    expect(recentRow.querySelector('[data-testid="chat-row-pin"]')).toBeNull();
+    expect(menuButton).toHaveClass('opacity-0');
+    expect(menuButton).toHaveClass('group-hover/chat-row:opacity-100');
   });
 
   it('does not double-list a pinned session in Recent (dedup)', () => {
@@ -1306,7 +1400,7 @@ describe('AppSidebar — Chats section', () => {
       ],
     };
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     expect(screen.getAllByText('Pinned message one')).toHaveLength(1);
     expect(screen.getByText('Recent only row')).toBeInTheDocument();
   });
@@ -1319,7 +1413,7 @@ describe('AppSidebar — Chats section', () => {
   it('clicking a recent row selects the session without navigating when already on the chat page', () => {
     mockActiveSessionId = 'sess-recent-1'; // a DIFFERENT row will be clicked
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     fireEvent.click(screen.getByText('Recent message two').closest('button')!);
 
     // Already on this mentor's chat page → no navigation. Pushing the URL here
@@ -1340,7 +1434,7 @@ describe('AppSidebar — Chats section', () => {
     mockPathname = '/platform/tenant-a/mentor-1/analytics';
     mockActiveSessionId = 'sess-recent-1'; // a DIFFERENT row will be clicked
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     fireEvent.click(screen.getByText('Recent message two').closest('button')!);
 
     // Off the chat page → navigate to it. The session travels via state, not
@@ -1355,7 +1449,7 @@ describe('AppSidebar — Chats section', () => {
   it('merges the selected session into any existing cached session ids', () => {
     mockCachedSessionId = { 'other-mentor': 'keep-me' };
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     fireEvent.click(screen.getByText('Recent message one').closest('button')!);
     expect(saveCachedSessionIdMock).toHaveBeenCalledWith({
       'other-mentor': 'keep-me',
@@ -1365,7 +1459,7 @@ describe('AppSidebar — Chats section', () => {
 
   it('clicking a pinned row also selects the session', () => {
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     fireEvent.click(screen.getByText('Pinned message one').closest('button')!);
     // On the chat page → no navigation, but the session is still selected.
     expect(pushMock).not.toHaveBeenCalled();
@@ -1377,7 +1471,7 @@ describe('AppSidebar — Chats section', () => {
   it('clicking the already-active chat on the chat page is a complete no-op', () => {
     mockActiveSessionId = 'sess-recent-1';
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     fireEvent.click(screen.getByText('Recent message one').closest('button')!);
 
     // Already-active AND already on the chat page → nothing happens: no
@@ -1394,7 +1488,7 @@ describe('AppSidebar — Chats section', () => {
     // it. userEvent dispatches the full pointer sequence so the menu opens.
     const user = userEvent.setup();
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     const menus = screen.getAllByRole('button', { name: 'Chat actions' });
     await user.click(menus[1]);
     expect(
@@ -1413,7 +1507,7 @@ describe('AppSidebar — Chats section', () => {
     mockTenantMetadata = { enable_chat_history_export: false };
     const user = userEvent.setup();
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     const menus = screen.getAllByRole('button', { name: 'Chat actions' });
     await user.click(menus[1]);
     expect(
@@ -1432,7 +1526,7 @@ describe('AppSidebar — Chats section', () => {
     mockTenantMetadata = {};
     const user = userEvent.setup();
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     const menus = screen.getAllByRole('button', { name: 'Chat actions' });
     await user.click(menus[1]);
     expect(
@@ -1445,7 +1539,7 @@ describe('AppSidebar — Chats section', () => {
     mockTenantMetadata = { enable_chat_history_export: false };
     const user = userEvent.setup();
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     const menus = screen.getAllByRole('button', { name: 'Chat actions' });
     await user.click(menus[1]);
     expect(
@@ -1456,7 +1550,7 @@ describe('AppSidebar — Chats section', () => {
   it("shows Unpin (not Pin) for a pinned row's menu", async () => {
     const user = userEvent.setup();
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     const menus = screen.getAllByRole('button', { name: 'Chat actions' });
     await user.click(menus[0]);
     expect(
@@ -1467,7 +1561,7 @@ describe('AppSidebar — Chats section', () => {
   it('clicking Pin on a recent row calls the pin mutation with the session id', async () => {
     const user = userEvent.setup();
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     const menus = screen.getAllByRole('button', { name: 'Chat actions' });
     await user.click(menus[1]);
     await user.click(await screen.findByRole('menuitem', { name: /^Pin$/ }));
@@ -1479,7 +1573,7 @@ describe('AppSidebar — Chats section', () => {
   it('clicking Unpin on a pinned row calls the unpin mutation', async () => {
     const user = userEvent.setup();
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     const menus = screen.getAllByRole('button', { name: 'Chat actions' });
     await user.click(menus[0]);
     await user.click(await screen.findByRole('menuitem', { name: /^Unpin$/ }));
@@ -1491,7 +1585,7 @@ describe('AppSidebar — Chats section', () => {
   it('clicking Export delegates to exportMessagesToXlsx with the row messages', async () => {
     const user = userEvent.setup();
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     const menus = screen.getAllByRole('button', { name: 'Chat actions' });
     await user.click(menus[1]);
     await user.click(await screen.findByRole('menuitem', { name: /^Export$/ }));
@@ -1505,7 +1599,7 @@ describe('AppSidebar — Chats section', () => {
   it('clicking Delete triggers the delete mutation', async () => {
     const user = userEvent.setup();
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     const menus = screen.getAllByRole('button', { name: 'Chat actions' });
     await user.click(menus[1]);
     await user.click(await screen.findByRole('menuitem', { name: /^Delete$/ }));
@@ -1518,7 +1612,7 @@ describe('AppSidebar — Chats section', () => {
     mockPinnedPages = { results: [] };
     mockRecentPages = { results: [] };
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     // Empty state copy can vary; assert no chat rows render.
     expect(
       screen.queryByRole('button', { name: 'Chat actions' }),
@@ -1750,7 +1844,7 @@ describe('AppSidebar — startNewChat behavior', () => {
     mockPathname = '/platform/tenant-a/mentor-1';
     renderSidebar();
     // The chats section's New Chat button triggers startNewChat.
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     const newChat = screen.queryByRole('button', { name: /new chat/i });
     if (newChat) {
       fireEvent.click(newChat);
@@ -1761,7 +1855,7 @@ describe('AppSidebar — startNewChat behavior', () => {
   it('navigates home when not on the chat page', () => {
     mockPathname = '/platform/tenant-a/mentor-1/analytics';
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     const newChat = screen.queryByRole('button', { name: /new chat/i });
     if (newChat) {
       fireEvent.click(newChat);
@@ -1772,7 +1866,7 @@ describe('AppSidebar — startNewChat behavior', () => {
   it('opens the no-mentor modal when there is no mentor in context', () => {
     mockParams = { tenantKey: 'tenant-a', mentorId: undefined };
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     const newChat = screen.queryByRole('button', { name: /new chat/i });
     if (newChat) {
       fireEvent.click(newChat);
@@ -2008,7 +2102,7 @@ describe('AppSidebar — Rail-collapsed mode', () => {
       screen.getAllByRole('button', { name: 'Agents' }).length,
     ).toBeGreaterThan(0);
     expect(
-      screen.getAllByRole('button', { name: 'Chats' }).length,
+      screen.getAllByRole('button', { name: 'Recents' }).length,
     ).toBeGreaterThan(0);
     expect(
       screen.getAllByRole('button', { name: 'Projects' }).length,
@@ -2044,7 +2138,7 @@ describe('AppSidebar — Rail-collapsed mode', () => {
 
   it('clicking the rail Chats icon expands the sidebar', () => {
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     expect(toggleSidebarMock).toHaveBeenCalled();
   });
 
@@ -2173,7 +2267,7 @@ describe('AppSidebar — Chat mutation error paths', () => {
     }));
     const user = userEvent.setup();
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     const menus = screen.getAllByRole('button', { name: 'Chat actions' });
     await user.click(menus[1]);
     await user.click(await screen.findByRole('menuitem', { name: /^Pin$/ }));
@@ -2195,7 +2289,7 @@ describe('AppSidebar — Chat mutation error paths', () => {
     }));
     const user = userEvent.setup();
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     const menus = screen.getAllByRole('button', { name: 'Chat actions' });
     await user.click(menus[1]);
     await user.click(await screen.findByRole('menuitem', { name: /^Delete$/ }));
@@ -2217,7 +2311,7 @@ describe('AppSidebar — Chat mutation error paths', () => {
     }));
     const user = userEvent.setup();
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     const menus = screen.getAllByRole('button', { name: 'Chat actions' });
     await user.click(menus[0]); // pinned row
     await user.click(await screen.findByRole('menuitem', { name: /^Unpin$/ }));
@@ -2252,7 +2346,7 @@ describe('AppSidebar — chat row label fallbacks', () => {
       ],
     };
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     // Our `getCurrentArtifactTitle` mock returns 'Artifact title' — so the
     // row should render that as its label.
     expect(screen.getByText('Artifact title')).toBeInTheDocument();
@@ -2276,7 +2370,7 @@ describe('AppSidebar — chat row label fallbacks', () => {
       ],
     };
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     expect(screen.getByText('My titled chat')).toBeInTheDocument();
     // The first-human-message text must NOT be used as the label.
     expect(screen.queryByText('Recent message one')).not.toBeInTheDocument();
@@ -2300,7 +2394,7 @@ describe('AppSidebar — chat row label fallbacks', () => {
       ],
     };
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     expect(screen.getByText('Fallback message text')).toBeInTheDocument();
   });
 });
@@ -2354,18 +2448,18 @@ describe('AppSidebar — recent chats infinite query', () => {
       pageParams: [1, 2],
     };
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     expect(screen.getByText('Page one row')).toBeInTheDocument();
     expect(screen.getByText('Page two row')).toBeInTheDocument();
   });
 
-  it('opens the search dialog from the Search chats button', () => {
+  it('opens the search dialog from the Search button', () => {
     renderSidebar();
     // The search input lives in the dialog, not the sidebar, until opened.
     expect(
       screen.queryByPlaceholderText('Search chats'),
     ).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Search chats' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Search' }));
     expect(screen.getByPlaceholderText('Search chats')).toBeInTheDocument();
   });
 
@@ -2373,7 +2467,7 @@ describe('AppSidebar — recent chats infinite query', () => {
     vi.useFakeTimers();
     try {
       renderSidebar();
-      fireEvent.click(screen.getByRole('button', { name: 'Search chats' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Search' }));
       const input = screen.getByPlaceholderText('Search chats');
       fireEvent.change(input, { target: { value: 'invoice' } });
       // Before the debounce window elapses the arg is still empty.
@@ -2407,7 +2501,7 @@ describe('AppSidebar — recent chats infinite query', () => {
     try {
       mockHasNextPage = true;
       renderSidebar();
-      fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+      fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
       expect(ioCallback).not.toBeNull();
       act(() => {
         ioCallback?.([{ isIntersecting: true }]);
@@ -2433,7 +2527,7 @@ describe('AppSidebar — recent chats infinite query', () => {
       mockHasNextPage = true;
       mockIsFetchingNextPage = true;
       renderSidebar();
-      fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+      fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
       act(() => {
         ioCallback?.([{ isIntersecting: true }]);
       });
@@ -2457,7 +2551,7 @@ describe('AppSidebar — recent chats infinite query', () => {
     try {
       mockHasNextPage = false;
       renderSidebar();
-      fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+      fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
       act(() => {
         ioCallback?.([{ isIntersecting: true }]);
       });
@@ -2557,7 +2651,7 @@ describe('AppSidebar — Active-session deletion safety', () => {
     };
     const user = userEvent.setup();
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     const menus = screen.getAllByRole('button', { name: 'Chat actions' });
     await user.click(menus[0]); // the single active row
     await user.click(await screen.findByRole('menuitem', { name: /^Delete$/ }));
@@ -2580,7 +2674,7 @@ describe('AppSidebar — Chat handler skip-path guards', () => {
     mockUsername = null;
     mockUserName = '';
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     expect(
       screen.queryByRole('button', { name: 'Chat actions' }),
     ).not.toBeInTheDocument();
@@ -2692,7 +2786,7 @@ describe('AppSidebar — Chat row label navigation', () => {
     };
     mockPinnedPages = { results: [] };
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     const row = screen.getByText('Navigable row').closest('button');
     expect(row).not.toBeNull();
     fireEvent.click(row!);
@@ -2727,7 +2821,7 @@ describe('AppSidebar — Chat row label navigation', () => {
     };
     mockPinnedPages = { results: [] };
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     const row = screen.getByText('Project row').closest('button');
     expect(row).not.toBeNull();
     fireEvent.click(row!);
@@ -2785,7 +2879,7 @@ describe('AppSidebar — Rail-collapsed chats flyout', () => {
     const user = userEvent.setup();
     renderSidebar();
     // Hover the chats rail icon to open the HoverCard flyout.
-    const chatsIcons = screen.getAllByRole('button', { name: 'Chats' });
+    const chatsIcons = screen.getAllByRole('button', { name: 'Recents' });
     await user.hover(chatsIcons[0]);
     expect(await screen.findByText('Flyout pinned')).toBeInTheDocument();
     expect(screen.getByText('Flyout recent')).toBeInTheDocument();
@@ -2831,7 +2925,7 @@ describe('AppSidebar — Rail-collapsed chats flyout click', () => {
     mockRecentPages = { results: [] };
     const user = userEvent.setup();
     renderSidebar();
-    await user.hover(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    await user.hover(screen.getAllByRole('button', { name: 'Recents' })[0]);
     const row = await screen.findByText('Flyout pin row');
     fireEvent.click(row.closest('button')!);
     // On the chat page the flyout row selects the session without navigating.
@@ -2859,7 +2953,7 @@ describe('AppSidebar — Rail-collapsed chats flyout click', () => {
     };
     const user = userEvent.setup();
     renderSidebar();
-    await user.hover(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    await user.hover(screen.getAllByRole('button', { name: 'Recents' })[0]);
     const row = await screen.findByText('Flyout recent row');
     fireEvent.click(row.closest('button')!);
     // On the chat page the flyout row selects the session without navigating.
@@ -2893,7 +2987,7 @@ describe('AppSidebar — Chat row without href is inert on click', () => {
       ],
     };
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     const row = screen.getByText('No href row').closest('button');
     expect(row).not.toBeNull();
     fireEvent.click(row!);
@@ -3030,7 +3124,7 @@ describe('AppSidebar — Per-mentor row filtering', () => {
       ],
     };
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     expect(screen.queryByText('Other mentor chat')).not.toBeInTheDocument();
     expect(screen.getByText('Current mentor chat')).toBeInTheDocument();
   });

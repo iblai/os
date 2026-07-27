@@ -1,10 +1,10 @@
 /**
  * Journey 62 — Chat Search Dialog (issue #2053)
  *
- * Covers the `ChatSearchDialog` opened from the sidebar's "Search chats"
+ * Covers the `ChatSearchDialog` opened from the sidebar's "Search"
  * entry point (`app-sidebar/index.tsx` — both the expanded text-label
  * button and the collapsed "rail" icon-only button share the accessible
- * name "Search chats"). The dialog itself
+ * name "Search"). The dialog itself
  * (`app-sidebar/chats/chat-search-dialog.tsx`) has a search input header,
  * a "New Chat" row, results grouped by recency
  * (`group-chats-by-recency.ts`), and a load-more spinner driven by
