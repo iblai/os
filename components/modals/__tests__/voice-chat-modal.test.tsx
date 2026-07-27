@@ -990,6 +990,48 @@ describe('VoiceChatModal', () => {
       expect(lines()[0]).toHaveClass('shrink-0');
     });
 
+    // Regression: the live viewport was `flex-1`, so it claimed every spare
+    // pixel of the 6rem band and then its own `justify-end` pushed the text
+    // back down to the bottom of that claim. A short reply therefore floated
+    // ~52px below the line it was answering, and the layout only looked right
+    // when the agent happened to say enough to fill the box. Capping instead
+    // of growing is the whole fix, so it is pinned here rather than left to
+    // be re-discovered on real data a third time.
+    it('caps the live viewport instead of growing it, so no gap opens above', () => {
+      renderWithCaptions({
+        transcript: [
+          entry('s1', 'What can I call you?', 'user'),
+          entry('s2', 'You can call me Guide.', 'agent'),
+        ],
+      });
+
+      const liveWindow = screen.getByTestId('voice-transcript-live-window');
+      // Growing is what created the dead space.
+      expect(liveWindow).not.toHaveClass('flex-1');
+      expect(liveWindow).not.toHaveClass('grow');
+      expect(liveWindow.className).not.toMatch(/(^|\s)(flex-auto|basis-)/);
+      // 6rem band - 2.3125rem reserved for a two-row answered turn. Also
+      // exactly three text-sm/leading-snug rows (3.609375rem).
+      expect(liveWindow).toHaveClass('max-h-[3.6875rem]');
+    });
+
+    it('sits the live line flush with the bottom of the band', () => {
+      renderWithCaptions({
+        transcript: [
+          entry('s1', 'A question', 'user'),
+          entry('s2', 'A short answer.', 'agent'),
+        ],
+      });
+
+      const [older, newest] = lines();
+      // The gap between the two lines is the answered turn's bottom margin and
+      // nothing else.
+      expect(older).toHaveClass('mb-1');
+      // A margin on the last row of a justify-end box only floats the pair off
+      // the band's edge, and costs the three-row cap its headroom.
+      expect(newest).not.toHaveClass('mb-1');
+    });
+
     it('labels the user with "You" in blue', () => {
       renderWithCaptions({ transcript: [entry('s1', 'My words', 'user')] });
 

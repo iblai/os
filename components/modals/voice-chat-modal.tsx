@@ -467,7 +467,17 @@ export function VoiceChatModal({
                   /`leading-snug` rows (2 x 1.03125rem + 0.25rem margin =
                   2.3125rem) plus three `text-sm` rows of live text
                   (3 x 1.203125rem = 3.609375rem). Nothing arbitrary is left
-                  over.
+                  over: 6rem is the shortest band that can show a full
+                  three-row reply without eating into the answered turn, and
+                  the leftover 0.078rem is the only slack in it.
+
+                  Both blocks are sized by their content and stack flush at the
+                  bottom of the band. Nothing grows to fill: an earlier version
+                  gave the live line `flex-1`, which handed it every spare
+                  pixel and then pushed it back down with its own `justify-end`
+                  — opening ~52px of dead air between the two lines whenever
+                  the reply was short. Empty space belongs above the pair, where
+                  it is invisible, not between them.
 
                   `min-w-0` on the region and on every line is the fix for the
                   reported overflow: without it the `min-width: auto` chain
@@ -510,12 +520,16 @@ export function VoiceChatModal({
                           data-final={entry.isFinal ? 'true' : 'false'}
                           data-newest={isNewest ? 'true' : 'false'}
                           data-age={age}
-                          className={`mb-1 min-w-0 text-left leading-snug break-words transition-all duration-300 ${
+                          className={`min-w-0 text-left leading-snug break-words transition-all duration-300 ${
                             isNewest
                               ? // The live line wraps freely and sits flush with
                                 // the bottom, so its newest words — and the
                                 // caret — are always the ones on screen; a long
                                 // turn clips off the top of its own viewport.
+                                // No bottom margin: this is the last row in a
+                                // `justify-end` box, so a margin here would just
+                                // float the whole pair off the band's edge and
+                                // steal the slack the three-row cap depends on.
                                 'text-sm text-gray-900 opacity-100'
                               : // The answered turn is clamped by line count,
                                 // never by `truncate`. `truncate`'s
@@ -525,7 +539,7 @@ export function VoiceChatModal({
                                 // `line-clamp` wraps normally and only limits
                                 // rows, so it cannot do that. Two rows also
                                 // means the line is never a one-word sliver.
-                                'line-clamp-2 shrink-0 text-xs text-gray-500 opacity-60'
+                                'mb-1 line-clamp-2 shrink-0 text-xs text-gray-500 opacity-60'
                           }`}
                         >
                           <span
@@ -561,11 +575,22 @@ export function VoiceChatModal({
                       // instead of shoving the answered turn off the top of the
                       // band. That is the difference between "there is more
                       // above" and "the other half of the exchange vanished".
+                      //
+                      // It is capped, never grown. `max-h-[3.6875rem]` is
+                      // 6rem minus the 2.3125rem the answered turn needs at its
+                      // two-row worst case — i.e. the tallest this box can be
+                      // without starving the line above it. It happens to hold
+                      // exactly three `text-sm`/`leading-snug` rows
+                      // (3.609375rem), so the cap is a whole number of lines
+                      // rather than a ragged half-row. A short reply sizes the
+                      // box to itself and sits directly under the answered
+                      // turn; a long one grows to the cap and then clips
+                      // internally against its own top edge.
                       return isNewest ? (
                         <div
                           key={entry.id}
                           data-testid="voice-transcript-live-window"
-                          className="flex min-h-0 min-w-0 flex-1 flex-col justify-end overflow-hidden"
+                          className="flex max-h-[3.6875rem] min-h-0 min-w-0 flex-col justify-end overflow-hidden"
                         >
                           {line}
                         </div>
