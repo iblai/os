@@ -7,6 +7,7 @@ import {
   getPlatformKey,
   getAuthSpaJoinUrl,
   redirectToAuthSpaJoinTenant,
+  redirectToLogin,
   redirectToMentor,
   redirectToNoMentorsPage,
   redirectToCreateMentor,
@@ -337,6 +338,59 @@ describe('redirectToAuthSpa function', () => {
         forceRedirect: true,
       }),
     );
+  });
+});
+
+describe('redirectToLogin function', () => {
+  let sdkRedirectMock: ReturnType<typeof vi.fn>;
+  let locationHrefSpy: string;
+
+  beforeEach(async () => {
+    const authModule = await import('@iblai/iblai-js/web-utils/auth');
+    sdkRedirectMock = vi.mocked(authModule.redirectToAuthSpa);
+    vi.clearAllMocks();
+    locationHrefSpy = '';
+    Object.defineProperty(window, 'location', {
+      value: {
+        pathname: '/platform/test-tenant/mentor',
+        set href(value: string) {
+          locationHrefSpy = value;
+        },
+        get href() {
+          return (
+            locationHrefSpy || 'https://example.com/platform/test-tenant/mentor'
+          );
+        },
+      },
+      writable: true,
+      configurable: true,
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('joins the tenant when a tenant key is provided', () => {
+    redirectToLogin('my-tenant');
+    expect(locationHrefSpy).toContain(
+      'https://auth.example.com/join?tenant=my-tenant',
+    );
+    expect(sdkRedirectMock).not.toHaveBeenCalled();
+  });
+
+  it('sends the user to the auth SPA root when there is no tenant key', async () => {
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    redirectToLogin();
+    expect(consoleSpy).toHaveBeenCalledWith(
+      '[auth-redirect] Login triggered without a tenant key',
+    );
+    await vi.waitFor(() =>
+      expect(sdkRedirectMock).toHaveBeenCalledWith(
+        expect.objectContaining({ redirectTo: '/', forceRedirect: true }),
+      ),
+    );
+    consoleSpy.mockRestore();
   });
 });
 
