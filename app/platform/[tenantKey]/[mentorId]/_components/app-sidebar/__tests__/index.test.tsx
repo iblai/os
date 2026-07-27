@@ -1358,6 +1358,20 @@ describe('AppSidebar — Chats section', () => {
     );
   });
 
+  it('lines the row slot up with the section chevrons above it', () => {
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
+
+    // Flush with the row's own right edge, so the 24px slot centres on the
+    // same axis as the chevron on the Recents trigger. jsdom cannot measure
+    // it, so this asserts the rule that produces the alignment.
+    const slot = chatRowFor('Pinned message one').querySelector(
+      '.absolute',
+    ) as HTMLElement;
+    expect(slot).toHaveClass('right-0');
+    expect(slot.className).not.toContain('right-1.5');
+  });
+
   it('leaves an unpinned row unmarked until it is hovered', () => {
     renderSidebar();
     fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);

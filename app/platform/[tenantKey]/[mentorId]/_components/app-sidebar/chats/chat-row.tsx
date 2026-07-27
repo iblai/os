@@ -168,7 +168,10 @@ export function ChatRowItem({
           reach for the row, at which point the pin steps aside for the menu
           that can unpin it. An unpinned row's slot stays empty until then,
           so a quiet list stays quiet. */}
-      <div className="absolute top-1/2 right-1.5 -translate-y-1/2">
+      {/* `right-0`, not an inset: flush with the row's own edge, the 24px
+          slot centres on the same axis as the chevron on the Recents trigger
+          above it — the icons down the right-hand side line up. */}
+      <div className="absolute top-1/2 right-0 -translate-y-1/2">
         {showPin && (
           <span
             data-testid="chat-row-pin"
