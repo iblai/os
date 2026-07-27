@@ -10,10 +10,12 @@ import { NextRequest, NextResponse } from 'next/server';
  * have to maintain a per-host script allowlist. Next.js reads the nonce off the
  * `Content-Security-Policy` request header and stamps it onto its own scripts.
  *
- * ── Rollout (important) ──────────────────────────────────────────────────────
- * Defaults to **Report-Only**: a missed directive reports a violation instead of
- * breaking the app. Watch the reports (browser console, or wire `CSP_REPORT_URI`
- * to Sentry), then set `CSP_MODE=enforce` once they're clean.
+ * ── Mode ─────────────────────────────────────────────────────────────────────
+ * **Enforced by default in production** (violations are blocked); **report-only
+ * in development** so `next dev` HMR / eval / the error overlay aren't blocked.
+ * `CSP_MODE` overrides either way: `CSP_MODE=report-only` to observe without
+ * blocking (e.g. to validate a new third-party origin), `CSP_MODE=enforce` to
+ * force enforcement anywhere. Wire `CSP_REPORT_URI` to collect violations.
  *
  * Any static `Content-Security-Policy` header set upstream (e.g. the current
  * Nginx `add_header`) MUST be removed when this ships — a browser intersects
@@ -25,8 +27,16 @@ import { NextRequest, NextResponse } from 'next/server';
 
 // Read at request time (not module load) so the policy tracks the running
 // environment — and so each behaviour is unit-testable without re-importing.
-const isEnforce = () => process.env.CSP_MODE === 'enforce';
 const isDev = () => process.env.NODE_ENV === 'development';
+// Enforce by default, EXCEPT in development (enforcing blocks `next dev`'s HMR
+// websocket, eval-based React Refresh, and the error overlay). `CSP_MODE`
+// explicitly overrides: 'enforce' or 'report-only'.
+const isEnforce = () => {
+  const mode = process.env.CSP_MODE;
+  if (mode === 'enforce') return true;
+  if (mode === 'report-only') return false;
+  return !isDev();
+};
 // Optional violation sink (e.g. a Sentry CSP endpoint). Reports go to the
 // browser console when unset — enough to validate the Report-Only rollout.
 const reportUri = () => process.env.CSP_REPORT_URI;
