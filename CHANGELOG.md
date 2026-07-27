@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.103.2](https://github.com/iblai/os/compare/v0.103.1...v0.103.2) (2026-07-27)
+
+### Refactors
+
+* **edit-mentor:** delete the in-repo settings-tab monolith ([fb77069](https://github.com/iblai/os/commit/fb77069b870f874459cdaf9eb8fa6d2241646736))
+* **edit-mentor:** source the settings tab from the SDK AgentSettingsTab ([97b1ed9](https://github.com/iblai/os/commit/97b1ed9f0736ede7936bc6ed3d2a265a1f7a711a))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 1.27.1 ([089688c](https://github.com/iblai/os/commit/089688c4d153491425651b0e702c92a8a18f11d6))
+* **deps:** raise postcss and brace-expansion overrides past new advisories ([f92a8bd](https://github.com/iblai/os/commit/f92a8bdd940b012024b3e3a050eb8e9ca5be2eed))
+
 ## [0.103.1](https://github.com/iblai/os/compare/v0.103.0...v0.103.1) (2026-07-27)
 
 ### Bug Fixes
