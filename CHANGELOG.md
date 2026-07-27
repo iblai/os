@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.103.0](https://github.com/iblai/os/compare/v0.102.5...v0.103.0) (2026-07-26)
+
+### Features
+
+* **sidebar:** infinite-scroll pagination for the projects list ([a7302cc](https://github.com/iblai/os/commit/a7302ccc84980d5f1c5c8c66d3ad40163800ed0c))
+
+### Bug Fixes
+
+* **deps:** bump next to 15.5.21 to patch high-severity advisories ([00c0e32](https://github.com/iblai/os/commit/00c0e32e0f8938a26bc6d861fa4eca8935d5dc30))
+
+### Refactors
+
+* **auth:** move the login redirect into a shared @/lib/utils helper ([3c53d61](https://github.com/iblai/os/commit/3c53d619cca2b373d937b1c6175c6cfa1c73c24c))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 1.26.8 ([42b394f](https://github.com/iblai/os/commit/42b394f597867698f354a1554d94f444ebe2c8bf))
+
+### Tests
+
+* **e2e:** isolate the projects journey with a per-test project fixture ([630f5c5](https://github.com/iblai/os/commit/630f5c5321040d3d09b7413c6cb66addbcfad1c9))
+* **e2e:** reap leaked test projects in global teardown ([8e3a01d](https://github.com/iblai/os/commit/8e3a01dbd03c30053410badb350270ef3d731a36))
+
+## [0.102.5](https://github.com/iblai/os/compare/v0.102.4...v0.102.5) (2026-07-25)
+
+### Tests
+
+* **e2e:** deflake journey 62 csd-02 against backend auto-titling ([dce701c](https://github.com/iblai/os/commit/dce701c881163a586c076c873dfb4ff97f1b1ae6))
+
 ## [0.102.4](https://github.com/iblai/os/compare/v0.102.3...v0.102.4) (2026-07-24)
 
 ### Bug Fixes
@@ -10,17 +39,17 @@
 
 ### Bug Fixes
 
-* **chat:** let shareable-link sessions bypass the RBAC chat gate ([55501d3](https://github.com/iblai/os/commit/55501d3999643fb5ce590ab80edabf52b3193243))
+- **chat:** let shareable-link sessions bypass the RBAC chat gate ([55501d3](https://github.com/iblai/os/commit/55501d3999643fb5ce590ab80edabf52b3193243))
 
 ### Styles
 
-* normalize pre-existing CHANGELOG prettier drift ([2fe046a](https://github.com/iblai/os/commit/2fe046aa522c78d6c25e32cd79018edb0badf735))
+- normalize pre-existing CHANGELOG prettier drift ([2fe046a](https://github.com/iblai/os/commit/2fe046aa522c78d6c25e32cd79018edb0badf735))
 
 ### Tests
 
-* **e2e:** add embed access-control and shareable-link page-object helpers ([508bb74](https://github.com/iblai/os/commit/508bb7459a9fab8c0704cbc9257d58874992826e))
-* **e2e:** add journey 64 shareable-link RBAC bypass ([e852557](https://github.com/iblai/os/commit/e852557b3c9d064c2a48d5cebdd589d17194ef4b)), closes [#chat](https://github.com/iblai/os/issues/chat)
-* **e2e:** record journey 64 coverage ([c4e4127](https://github.com/iblai/os/commit/c4e412752c656f04fa2325f4bd23b9c33e1a63e2))
+- **e2e:** add embed access-control and shareable-link page-object helpers ([508bb74](https://github.com/iblai/os/commit/508bb7459a9fab8c0704cbc9257d58874992826e))
+- **e2e:** add journey 64 shareable-link RBAC bypass ([e852557](https://github.com/iblai/os/commit/e852557b3c9d064c2a48d5cebdd589d17194ef4b)), closes [#chat](https://github.com/iblai/os/issues/chat)
+- **e2e:** record journey 64 coverage ([c4e4127](https://github.com/iblai/os/commit/c4e412752c656f04fa2325f4bd23b9c33e1a63e2))
 
 ## [0.102.2](https://github.com/iblai/os/compare/v0.102.1...v0.102.2) (2026-07-23)
 

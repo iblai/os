@@ -211,6 +211,19 @@ export function redirectToAuthSpaJoinTenant(
   window.location.href = joinUrl;
 }
 
+/**
+ * Send a not-logged-in user to the auth SPA when they trigger a gated action.
+ * Single source of truth shared by the auth popover and the sidebar.
+ */
+export function redirectToLogin(tenantKey?: string) {
+  if (!tenantKey) {
+    console.log('[auth-redirect] Login triggered without a tenant key');
+    redirectToAuthSpa('/', tenantKey, undefined, true, true);
+    return;
+  }
+  redirectToAuthSpaJoinTenant(tenantKey, undefined, true);
+}
+
 export function getPlatformKey(url: string) {
   const match = url.match(URL_PATTERNS.PLATFORM_KEY);
   return match ? match[1] : null;

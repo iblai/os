@@ -191,6 +191,7 @@
     "projects": "Projects",
     "newProject": "New Project",
     "noProjectsYet": "No projects yet",
+    "loadingMoreProjects": "Loading more projects",
     "untitledProject": "Untitled project",
     "projectActions": "Project actions",
     "rename": "Rename",
