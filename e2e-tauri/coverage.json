@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "lastUpdated": "2026-07-25",
+  "summary": {
+    "totalCheckpoints": 10,
+    "coveredCheckpoints": 7,
+    "pendingCheckpoints": 3,
+    "deprecatedCheckpoints": 0,
+    "notReproducibleCheckpoints": 0,
+    "percent": 100,
+    "totalJourneys": 2,
+    "activeJourneys": 2
+  },
+  "journeys": [
+    {
+      "id": "app-launch-and-shell",
+      "name": "App Launch & Desktop Shell",
+      "spec": "01-app-launch-and-shell.spec.ts",
+      "sourceFiles": [
+        "src-tauri/src/lib.rs",
+        "src-tauri/src/main.rs",
+        "hooks/use-tauri.ts",
+        "types/tauri.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "shell-01",
+          "description": "App binary launches under tauri-driver and a WebDriver session attaches to its WebView",
+          "status": "covered"
+        },
+        {
+          "id": "shell-02",
+          "description": "The WebView renders a <body> element",
+          "status": "covered"
+        },
+        {
+          "id": "shell-03",
+          "description": "The WebView loads a document with a non-empty URL (the platform shell or the offline fallback)",
+          "status": "covered"
+        },
+        {
+          "id": "shell-04",
+          "description": "The document exposes a non-empty title",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "on-device-model-management",
+      "name": "On-device Model Management",
+      "spec": "02-on-device-model-management.spec.ts",
+      "sourceFiles": [
+        "hooks/use-model-download.ts",
+        "components/modals/llm-provider-modal.tsx",
+        "components/modals/llm-provider-modal/local-model-row.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
+        "src-tauri/src/model_manager.rs",
+        "src-tauri/src/lib.rs"
+      ],
+      "checkpoints": [
+        {
+          "id": "odm-01",
+          "description": "The LLM picker merges on-device (local) models with the provider's cloud models in one availability-ranked list",
+          "status": "pending"
+        },
+        {
+          "id": "odm-02",
+          "description": "A not-installed on-device model pulls via the download_model IPC and streams live progress events (real smollm:135m pull against the compiled binary)",
+          "status": "covered"
+        },
+        {
+          "id": "odm-03",
+          "description": "Cancelling an in-flight pull returns promptly and the app keeps answering IPC (the no-freeze regression fix)",
+          "status": "covered"
+        },
+        {
+          "id": "odm-04",
+          "description": "Clicking a different on-device model while one is downloading shows the 'already downloading' notice (one pull at a time)",
+          "status": "pending"
+        },
+        {
+          "id": "odm-05",
+          "description": "A completed pull installs the on-device model (check_ollama_status lists it); the selection UI is covered by odm-06",
+          "status": "covered"
+        },
+        {
+          "id": "odm-06",
+          "description": "The nav-bar on-device badge reflects the selected local model",
+          "status": "pending"
+        }
+      ]
+    }
+  ]
+}
