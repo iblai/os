@@ -191,6 +191,7 @@
     "projects": "项目",
     "newProject": "新建项目",
     "noProjectsYet": "暂无项目",
+    "loadingMoreProjects": "正在加载更多项目",
     "untitledProject": "未命名项目",
     "projectActions": "项目操作",
     "rename": "重命名",

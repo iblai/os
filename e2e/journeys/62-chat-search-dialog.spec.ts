@@ -162,8 +162,7 @@ test.describe('Journey 62: Chat Search Dialog', () => {
     chatPage,
     chatSearchDialogPage,
   }) => {
-    const seeds = await seedThreeChats(page, chatPage);
-    const pastaSeed = seeds[2];
+    await seedThreeChats(page, chatPage);
 
     await chatSearchDialogPage.openFromSidebar();
 
@@ -181,15 +180,20 @@ test.describe('Journey 62: Chat Search Dialog', () => {
     }
 
     // A row renders its label as a single line — no embedded newline. The
-    // freshest (pasta) session has no `startNewChat()` after it, so it is
-    // the one row still virtually guaranteed to show the raw first human
-    // message (not yet auto-retitled), letting us assert it matches the
-    // sent text exactly once whitespace is normalized (chatRowLabel does
-    // `content.replace(/\s+/g, ' ').trim()`).
+    // label is either the raw first human message OR a backend
+    // auto-generated title: `chatRowLabel` prefers `row.title` once the
+    // backend sets it (asynchronously, some time after the first
+    // response), so even the freshest (pasta) session can be retitled by
+    // the time this runs (e.g. "Give me a pasta recipe <ts>" →
+    // "Pasta Recipe Request"). Assert the single-line guarantee — the real
+    // point of this journey — and match on the topic keyword rather than
+    // the full sent sentence, which would race the auto-titler.
     const rowText =
       (await chatSearchDialogPage.rowByText('pasta').textContent()) ?? '';
+    const normalized = rowText.replace(/\s+/g, ' ').trim();
     expect(rowText.includes('\n')).toBe(false);
-    expect(rowText.trim()).toBe(pastaSeed.trim());
+    expect(normalized).not.toBe('');
+    expect(normalized.toLowerCase()).toContain('pasta');
   });
 
   // csd-03: Search filters (server-side, debounced)

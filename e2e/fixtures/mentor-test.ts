@@ -12,8 +12,27 @@ import { NotificationsPage } from '../page-objects/notifications.page';
 import { BillingPage } from '../page-objects/billing.page';
 import { CreateMentorPage } from '../page-objects/create-mentor.page';
 import { ChatSearchDialogPage } from '../page-objects/chat-search-dialog.pom';
+import { generateProjectName } from './test-data';
+import {
+  findProjectIdByName,
+  deleteProjectById,
+  deleteProjectByName,
+} from '../utils/project-cleanup';
 
 export type StepFn = (title: string, fn: () => unknown) => Promise<void>;
+
+/**
+ * A project created fresh for a single test by the `testProject` fixture.
+ * `id` is the numeric project id captured immediately after creation (via
+ * an API lookup by name) — it is used for teardown so that deletion still
+ * works even if the test renames the project. `id` can be `null` if the
+ * lookup failed (e.g. missing auth context); teardown falls back to a
+ * name-based lookup in that case.
+ */
+export interface TestProject {
+  name: string;
+  id: string | null;
+}
 
 /**
  * Extended test fixture providing all mentor app page objects for both
@@ -47,6 +66,23 @@ export const test = base.extend<{
   projectPage: ProjectPage;
   notificationsPage: NotificationsPage;
   billingPage: BillingPage;
+  /**
+   * Creates a uniquely-named project (via the projects index "New Project"
+   * UI flow, matching how a real admin creates one) before the test runs,
+   * and deletes it via the DM API after — regardless of whether the test
+   * passed, failed, or renamed/deleted the project itself (API delete is
+   * idempotent; see utils/project-cleanup.ts).
+   *
+   * Requires the page to already be authenticated and navigated into the
+   * app (i.e. call `navigateToMentorApp` in `beforeEach` first) — the
+   * fixture does not navigate on its own.
+   *
+   * Tests that are specifically exercising the CREATE flow itself should
+   * not use this fixture (it would create a redundant project) — see the
+   * dedicated "creates a new project" test in 26-projects.spec.ts for the
+   * pattern used there instead (manual describe-scoped cleanup).
+   */
+  testProject: TestProject;
   // ── Non-admin page + page objects ──────────────────────────────────────────
   nonadminPage: import('@playwright/test').Page;
   nonadminChatPage: ChatPage;
@@ -104,6 +140,28 @@ export const test = base.extend<{
   },
   billingPage: async ({ page }, use) => {
     await use(new BillingPage(page));
+  },
+  testProject: async ({ page, projectPage }, use) => {
+    const name = generateProjectName();
+    await projectPage.createFromSidebar(name);
+    const id = await findProjectIdByName(page, name);
+
+    await use({ name, id });
+
+    // Teardown — runs even if the test failed or threw, per Playwright
+    // fixture semantics (equivalent to a try/finally around the test body).
+    if (id) {
+      await deleteProjectById(page, id);
+    } else {
+      // Lookup failed at setup time (e.g. transient auth/read-after-write
+      // race) — fall back to a fresh name-based lookup. If the test
+      // renamed the project, this will not find it and cleanup is skipped;
+      // the global janitor pattern used for mentors does not exist for
+      // projects, so a renamed project without a captured id can leak. In
+      // practice `findProjectIdByName` retries 3x at setup, making this
+      // fallback path rare.
+      await deleteProjectByName(page, name);
+    }
   },
 
   // ── Non-admin page (separate browser context with non-admin storageState) ──
