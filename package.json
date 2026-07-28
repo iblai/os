@@ -144,8 +144,7 @@
     "use-debounce": "10.0.4",
     "vaul": "1.1.2",
     "write-excel-file": "4.0.7",
-    "zod": "3.24.2",
-    "brace-expansion": "^5.0.8"
+    "zod": "3.24.2"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.10.2",

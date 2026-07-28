@@ -24,7 +24,14 @@ overrides:
   fast-uri: '>=4.1.1'
   ip-address: '>=10.1.1'
   brace-expansion: '>=5.0.8'
-  minimatch@^9>brace-expansion: 2.1.2
+  # GHSA-mh99-v99m-4gvg is only fixed in brace-expansion >=5.0.8, but 5.x exports
+  # an object ({ expand, EXPANSION_MAX* }) where minimatch@9 does
+  # `import expand from 'brace-expansion'` and CALLS it — so pinning 5.x under
+  # minimatch@9 breaks vitest's coverage chain at runtime. minimatch@10 consumes
+  # the new named export, so lift glob's minimatch instead and let the global
+  # >=5.0.8 floor apply. (glob@10 -> minimatch@9 was the last vulnerable path:
+  # @vitest/coverage-istanbul > test-exclude > glob > minimatch.)
+  glob@10>minimatch: '>=10.2.5'
   postcss: '>=8.5.18'
   ws: '>=8.20.1'
   qs: '>=6.15.2'
