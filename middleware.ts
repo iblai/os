@@ -11,11 +11,16 @@ import { NextRequest, NextResponse } from 'next/server';
  * `Content-Security-Policy` request header and stamps it onto its own scripts.
  *
  * ── Mode ─────────────────────────────────────────────────────────────────────
- * **Enforced by default in production** (violations are blocked); **report-only
- * in development** so `next dev` HMR / eval / the error overlay aren't blocked.
- * `CSP_MODE` overrides either way: `CSP_MODE=report-only` to observe without
- * blocking (e.g. to validate a new third-party origin), `CSP_MODE=enforce` to
- * force enforcement anywhere. Wire `CSP_REPORT_URI` to collect violations.
+ * **Enforced by default** (violations are blocked). Opt out with
+ * `CSP_MODE=report-only` — which local dev sets in `.env.development` so
+ * `next dev`'s HMR / eval / error overlay aren't blocked. Use `report-only`
+ * anywhere to observe without blocking (e.g. to validate a new third-party
+ * origin). Wire `CSP_REPORT_URI` to collect violations.
+ *
+ * NOTE: mode is deliberately NOT keyed off `NODE_ENV`. Next.js inlines
+ * `process.env.NODE_ENV` into the middleware bundle at BUILD time, so an image
+ * built with `NODE_ENV=development` (as some deploy pipelines do) would wrongly
+ * stay report-only in production regardless of the runtime NODE_ENV.
  *
  * Any static `Content-Security-Policy` header set upstream (e.g. the current
  * Nginx `add_header`) MUST be removed when this ships — a browser intersects
@@ -25,17 +30,14 @@ import { NextRequest, NextResponse } from 'next/server';
  * Referrer-Policy) in Nginx; only CSP moves here because only CSP needs the nonce.
  */
 
-// Read at request time (not module load) so the policy tracks the running
-// environment — and so each behaviour is unit-testable without re-importing.
-const isDev = () => process.env.NODE_ENV === 'development';
-// Enforce by default, EXCEPT in development (enforcing blocks `next dev`'s HMR
-// websocket, eval-based React Refresh, and the error overlay). `CSP_MODE`
-// explicitly overrides: 'enforce' or 'report-only'.
+// Read at request time (not module load) so it's unit-testable without
+// re-importing. Enforce unless CSP_MODE is 'report-only'; an unrecognized value
+// fails SAFE to report-only rather than surprise-blocking on a typo.
 const isEnforce = () => {
   const mode = process.env.CSP_MODE;
-  if (mode === 'enforce') return true;
   if (mode === 'report-only') return false;
-  return !isDev();
+  if (mode && mode !== 'enforce') return false; // unrecognized → fail safe
+  return true; // 'enforce' or unset → enforce
 };
 // Optional violation sink (e.g. a Sentry CSP endpoint). Reports go to the
 // browser console when unset — enough to validate the Report-Only rollout.
@@ -81,7 +83,9 @@ function buildCsp(nonce: string): string {
       "'self'",
       `'nonce-${nonce}'`,
       "'strict-dynamic'",
-      ...(isDev() ? ["'unsafe-eval'"] : []), // React Refresh / dev source maps
+      // eval is only needed by `next dev` (React Refresh); allow it in
+      // report-only mode (which is what dev runs), never when enforcing.
+      ...(!isEnforce() ? ["'unsafe-eval'"] : []),
       'https:',
       "'unsafe-inline'",
     ],

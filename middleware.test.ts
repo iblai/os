@@ -22,8 +22,7 @@ function cspOf(res: { headers: Headers }): string | null {
 describe('CSP middleware', () => {
   afterEach(() => vi.unstubAllEnvs());
 
-  it('enforces via Content-Security-Policy by default (production)', () => {
-    vi.stubEnv('NODE_ENV', 'production');
+  it('enforces via Content-Security-Policy by default', () => {
     const res = middleware(req());
 
     expect(res.headers.get('Content-Security-Policy-Report-Only')).toBeNull();
@@ -38,32 +37,34 @@ describe('CSP middleware', () => {
     expect(csp).toContain("object-src 'none'");
     expect(csp).toContain("base-uri 'self'");
     expect(csp).toContain('upgrade-insecure-requests'); // meaningful when enforcing
+    expect(csp).not.toContain("'unsafe-eval'"); // never allowed when enforcing
     expect(csp).not.toContain('frame-ancestors'); // app runs embedded
   });
 
-  it('is report-only in development (so it does not block next dev)', () => {
+  it('does NOT key off NODE_ENV (a dev-built image still enforces)', () => {
+    // Regression guard: Next inlines NODE_ENV into middleware at build time, so
+    // an image built with NODE_ENV=development must not silently report-only.
     vi.stubEnv('NODE_ENV', 'development');
+    const res = middleware(req());
+
+    expect(res.headers.get('Content-Security-Policy')).toContain(
+      "default-src 'self'",
+    );
+    expect(res.headers.get('Content-Security-Policy-Report-Only')).toBeNull();
+  });
+
+  it('CSP_MODE=report-only downgrades to report-only (with unsafe-eval, no upgrade)', () => {
+    vi.stubEnv('CSP_MODE', 'report-only');
     const res = middleware(req());
 
     expect(res.headers.get('Content-Security-Policy')).toBeNull();
     const csp = res.headers.get('Content-Security-Policy-Report-Only');
     expect(csp).toBeTruthy();
-    expect(csp).toContain("'unsafe-eval'"); // React Refresh / dev source maps
-    // no-op (and warns) in report-only, so omitted:
+    expect(csp).toContain("'unsafe-eval'"); // allowed for `next dev` React Refresh
     expect(csp).not.toContain('upgrade-insecure-requests');
   });
 
-  it('CSP_MODE=report-only forces report-only even in production', () => {
-    vi.stubEnv('NODE_ENV', 'production');
-    vi.stubEnv('CSP_MODE', 'report-only');
-    const res = middleware(req());
-
-    expect(res.headers.get('Content-Security-Policy')).toBeNull();
-    expect(res.headers.get('Content-Security-Policy-Report-Only')).toBeTruthy();
-  });
-
-  it('CSP_MODE=enforce forces enforcement in development', () => {
-    vi.stubEnv('NODE_ENV', 'development');
+  it('CSP_MODE=enforce enforces explicitly', () => {
     vi.stubEnv('CSP_MODE', 'enforce');
     const res = middleware(req());
 
@@ -71,6 +72,14 @@ describe('CSP middleware', () => {
       "default-src 'self'",
     );
     expect(res.headers.get('Content-Security-Policy-Report-Only')).toBeNull();
+  });
+
+  it('fails safe to report-only when CSP_MODE is set but unrecognized', () => {
+    vi.stubEnv('CSP_MODE', 'enforced'); // typo — must not surprise-enforce
+    const res = middleware(req());
+
+    expect(res.headers.get('Content-Security-Policy')).toBeNull();
+    expect(res.headers.get('Content-Security-Policy-Report-Only')).toBeTruthy();
   });
 
   it('propagates the nonce to the request headers for Next.js', () => {
