@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.103.2](https://github.com/iblai/os/compare/v0.103.1...v0.103.2) (2026-07-27)
+
+### Refactors
+
+* **edit-mentor:** delete the in-repo settings-tab monolith ([fb77069](https://github.com/iblai/os/commit/fb77069b870f874459cdaf9eb8fa6d2241646736))
+* **edit-mentor:** source the settings tab from the SDK AgentSettingsTab ([97b1ed9](https://github.com/iblai/os/commit/97b1ed9f0736ede7936bc6ed3d2a265a1f7a711a))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 1.27.1 ([089688c](https://github.com/iblai/os/commit/089688c4d153491425651b0e702c92a8a18f11d6))
+* **deps:** raise postcss and brace-expansion overrides past new advisories ([f92a8bd](https://github.com/iblai/os/commit/f92a8bdd940b012024b3e3a050eb8e9ca5be2eed))
+
 ## [0.103.1](https://github.com/iblai/os/compare/v0.103.0...v0.103.1) (2026-07-27)
 
 ### Bug Fixes
@@ -20,36 +32,36 @@
 
 ### Features
 
-* **sidebar:** infinite-scroll pagination for the projects list ([a7302cc](https://github.com/iblai/os/commit/a7302ccc84980d5f1c5c8c66d3ad40163800ed0c))
+- **sidebar:** infinite-scroll pagination for the projects list ([a7302cc](https://github.com/iblai/os/commit/a7302ccc84980d5f1c5c8c66d3ad40163800ed0c))
 
 ### Bug Fixes
 
-* **deps:** bump next to 15.5.21 to patch high-severity advisories ([00c0e32](https://github.com/iblai/os/commit/00c0e32e0f8938a26bc6d861fa4eca8935d5dc30))
+- **deps:** bump next to 15.5.21 to patch high-severity advisories ([00c0e32](https://github.com/iblai/os/commit/00c0e32e0f8938a26bc6d861fa4eca8935d5dc30))
 
 ### Refactors
 
-* **auth:** move the login redirect into a shared @/lib/utils helper ([3c53d61](https://github.com/iblai/os/commit/3c53d619cca2b373d937b1c6175c6cfa1c73c24c))
+- **auth:** move the login redirect into a shared @/lib/utils helper ([3c53d61](https://github.com/iblai/os/commit/3c53d619cca2b373d937b1c6175c6cfa1c73c24c))
 
 ### Chores
 
-* **deps:** bump @iblai/iblai-js to 1.26.8 ([42b394f](https://github.com/iblai/os/commit/42b394f597867698f354a1554d94f444ebe2c8bf))
+- **deps:** bump @iblai/iblai-js to 1.26.8 ([42b394f](https://github.com/iblai/os/commit/42b394f597867698f354a1554d94f444ebe2c8bf))
 
 ### Tests
 
-* **e2e:** isolate the projects journey with a per-test project fixture ([630f5c5](https://github.com/iblai/os/commit/630f5c5321040d3d09b7413c6cb66addbcfad1c9))
-* **e2e:** reap leaked test projects in global teardown ([8e3a01d](https://github.com/iblai/os/commit/8e3a01dbd03c30053410badb350270ef3d731a36))
+- **e2e:** isolate the projects journey with a per-test project fixture ([630f5c5](https://github.com/iblai/os/commit/630f5c5321040d3d09b7413c6cb66addbcfad1c9))
+- **e2e:** reap leaked test projects in global teardown ([8e3a01d](https://github.com/iblai/os/commit/8e3a01dbd03c30053410badb350270ef3d731a36))
 
 ## [0.102.5](https://github.com/iblai/os/compare/v0.102.4...v0.102.5) (2026-07-25)
 
 ### Tests
 
-* **e2e:** deflake journey 62 csd-02 against backend auto-titling ([dce701c](https://github.com/iblai/os/commit/dce701c881163a586c076c873dfb4ff97f1b1ae6))
+- **e2e:** deflake journey 62 csd-02 against backend auto-titling ([dce701c](https://github.com/iblai/os/commit/dce701c881163a586c076c873dfb4ff97f1b1ae6))
 
 ## [0.102.4](https://github.com/iblai/os/compare/v0.102.3...v0.102.4) (2026-07-24)
 
 ### Bug Fixes
 
-* **mentor:** adding fix for the RBAC permissions ([5948b7b](https://github.com/iblai/os/commit/5948b7b86189dc54bce06d4468238f6d0ffbec4a))
+- **mentor:** adding fix for the RBAC permissions ([5948b7b](https://github.com/iblai/os/commit/5948b7b86189dc54bce06d4468238f6d0ffbec4a))
 
 ## [0.102.3](https://github.com/iblai/os/compare/v0.102.2...v0.102.3) (2026-07-24)
 
