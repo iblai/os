@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.104.0](https://github.com/iblai/os/compare/v0.103.2...v0.104.0) (2026-07-28)
+
+### Features
+
+* **iframe:** handle MENTOR:ENABLE_GRADING message from parent ([1b78d94](https://github.com/iblai/os/commit/1b78d94a1f7eab7dbdf774441f63528343c7ece8))
+
 ## [0.103.2](https://github.com/iblai/os/compare/v0.103.1...v0.103.2) (2026-07-27)
 
 ### Refactors
