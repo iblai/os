@@ -194,8 +194,8 @@ export function SettingsTab() {
       description: tCopy('dialogDescription'),
       nameLabel: tCopy('nameLabel'),
       namePlaceholder: tCopy('namePlaceholder'),
-      // OS renders "Copy of {name}"; the SDK concatenates prefix + source name.
-      defaultNamePrefix: tCopy('defaultCopyName', { name: '' }),
+      // Prefix only — the SDK joins it to the source name with its own space.
+      defaultNamePrefix: tCopy('defaultCopyNamePrefix'),
       fallbackName: tCopy('defaultAgentName'),
       destinationLabel: tCopy('destinationLabel'),
       destinationPlaceholder: tCopy('selectTenantPlaceholder'),

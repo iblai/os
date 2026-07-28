@@ -249,8 +249,7 @@ describe('SettingsTab', () => {
       expect(labels.toasts.saveSuccess).toBe('agentUpdatedSuccess');
       expect(labels.deleteModal.title).toBe('title');
       expect(labels.copyModal.title).toBe('dialogTitle');
-      // "Copy of {name}" -> prefix derived from the copy namespace key.
-      expect(labels.copyModal.defaultNamePrefix).toBe('defaultCopyName');
+      expect(labels.copyModal.defaultNamePrefix).toBe('defaultCopyNamePrefix');
 
       // Who-can-view options match MENTOR_VISIBILITY labels.
       expect(labels.fields.whoCanView.options).toEqual({
@@ -287,6 +286,33 @@ describe('SettingsTab', () => {
         'smartDocRetrievalLabel',
       );
       expect(labels.toasts.voiceCallError).toBe('voiceCallSettingsError');
+    });
+  });
+
+  // The SDK builds the copy's default name as `${prefix} ${sourceName}` — it
+  // owns the separator. A prefix that carries its own trailing space (as an
+  // ICU "Copy of {name}" rendered with an empty name did) produces
+  // "Copy of  Agent" on the copied agent, so keep every catalog value bare.
+  describe('Copy-name prefix catalogs', () => {
+    it('stores a bare prefix with no separator or placeholder', async () => {
+      const catalogs = {
+        en: (await import('../../../messages/en.json')).default,
+        es: (await import('../../../messages/es.json')).default,
+        fr: (await import('../../../messages/fr.json')).default,
+        zh: (await import('../../../messages/zh.json')).default,
+      };
+
+      for (const [locale, messages] of Object.entries(catalogs)) {
+        const prefix = (
+          messages as unknown as {
+            settingsTabCopyMentorModal: { defaultCopyNamePrefix: string };
+          }
+        ).settingsTabCopyMentorModal.defaultCopyNamePrefix;
+
+        expect(prefix, locale).toBeTruthy();
+        expect(prefix, locale).toBe(prefix.trim());
+        expect(prefix, locale).not.toContain('{name}');
+      }
     });
   });
 
