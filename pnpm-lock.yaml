@@ -194,6 +194,9 @@ importers:
       '@tiptap/starter-kit':
         specifier: 2.11.7
         version: 2.11.7
+      brace-expansion:
+        specifier: '>=5.0.8'
+        version: 5.0.8
       class-variance-authority:
         specifier: 0.7.1
         version: 0.7.1
