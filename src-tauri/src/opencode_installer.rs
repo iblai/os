@@ -21,11 +21,12 @@ const OPENCODE_VERSION: &str = "1.18.4";
 
 /// The ibl.ai opencode config, installed at
 /// `~/.config/iblai/agents/opencode/opencode.json`. baseURL + auth are injected as
-/// env at spawn time (see opencode_acp.rs).
+/// env at spawn time; the top-level `model` and the provider `models` are filled in
+/// per-session by `apply_opencode_model` from the user's selected LLM — there is no
+/// baked-in default (see opencode_acp.rs).
 const CONFIG_TEMPLATE: &str = r#"{
   "$schema": "https://opencode.ai/config.json",
   "enabled_providers": ["iblai"],
-  "model": "iblai/openai/gpt-5.5",
   "provider": {
     "iblai": {
       "npm": "@ai-sdk/openai-compatible",
@@ -34,9 +35,7 @@ const CONFIG_TEMPLATE: &str = r#"{
         "baseURL": "{env:IBL_BASE_URL}",
         "headers": { "Authorization": "{env:IBL_AUTH_HEADER}" }
       },
-      "models": {
-        "openai/gpt-5.5": { "name": "GPT-5.5 (ibl.ai)" }
-      }
+      "models": {}
     }
   }
 }
@@ -205,12 +204,28 @@ async fn download_and_install(app: &AppHandle) -> Result<(), String> {
         use std::os::unix::fs::PermissionsExt;
         let _ = std::fs::set_permissions(&bin, std::fs::Permissions::from_mode(0o755));
     }
+    #[cfg(target_os = "macos")]
+    {
+        // arm64 macOS SIGKILLs unsigned binaries, and a download can carry the
+        // `com.apple.quarantine` xattr — strip it + ad-hoc sign so opencode can spawn.
+        let _ = create_command("xattr")
+            .args(["-d", "com.apple.quarantine"])
+            .arg(&bin)
+            .output();
+        let _ = create_command("codesign")
+            .args(["--force", "--sign", "-"])
+            .arg(&bin)
+            .output();
+        log(app, "cleared quarantine + ad-hoc signed opencode");
+    }
     log(app, &format!("installed opencode at {}", bin.display()));
     Ok(())
 }
 
-/// Write the ibl.ai opencode config if missing.
-fn ensure_config(app: &AppHandle) -> Result<(), String> {
+/// Write the ibl.ai opencode config if missing. Public so the ACP spawn path can
+/// self-heal a missing config — the config ships embedded in the app (CONFIG_TEMPLATE),
+/// not as a loose file on the user's disk, and is materialized on first use.
+pub fn ensure_opencode_config() -> Result<(), String> {
     let path = config_file();
     if path.exists() {
         return Ok(());
@@ -218,8 +233,16 @@ fn ensure_config(app: &AppHandle) -> Result<(), String> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent).map_err(|e| format!("config dir failed: {e}"))?;
     }
-    std::fs::write(&path, CONFIG_TEMPLATE).map_err(|e| format!("config write failed: {e}"))?;
-    log(app, &format!("wrote opencode config at {}", path.display()));
+    std::fs::write(&path, CONFIG_TEMPLATE).map_err(|e| format!("config write failed: {e}"))
+}
+
+/// `ensure_opencode_config` + a log line on first write.
+fn ensure_config(app: &AppHandle) -> Result<(), String> {
+    let existed = config_file().exists();
+    ensure_opencode_config()?;
+    if !existed {
+        log(app, &format!("wrote opencode config at {}", config_file().display()));
+    }
     Ok(())
 }
 
@@ -249,6 +272,13 @@ pub async fn install_opencode(app: AppHandle) -> Result<String, String> {
     Ok(opencode_version().unwrap_or_else(|| "installed".to_string()))
 }
 
+/// macOS App Sandbox detection — the sandbox exports `APP_SANDBOX_CONTAINER_ID`.
+/// Under the sandbox Code can't spawn the opencode binary (or freely touch the
+/// filesystem), so the UI hides Code and the spawn path refuses when this is true.
+pub fn is_sandboxed() -> bool {
+    cfg!(target_os = "macos") && std::env::var_os("APP_SANDBOX_CONTAINER_ID").is_some()
+}
+
 /// Report opencode readiness for the UI.
 #[command]
 pub async fn check_opencode_status() -> serde_json::Value {
@@ -257,5 +287,6 @@ pub async fn check_opencode_status() -> serde_json::Value {
         "version": opencode_version(),
         "config_ready": config_file().exists(),
         "workspace": crate::opencode_acp::resolve_workspace().to_string_lossy(),
+        "sandboxed": is_sandboxed(),
     })
 }

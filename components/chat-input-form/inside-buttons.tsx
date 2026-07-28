@@ -1,7 +1,7 @@
 'use client';
 
 import type React from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,11 +15,13 @@ import {
   PopoverAnchor,
   PopoverContent,
 } from '@/components/ui/popover';
-import { X, BookOpen, Archive, Check, Terminal, Code2 } from 'lucide-react';
+import { X, BookOpen, Archive, Check, Terminal } from 'lucide-react';
 import { DeepSearchIcon, CanvasIcon } from '@/components/icons/svg-icons';
 import { TOOLS } from '@iblai/iblai-js/web-utils';
 import { MemoryButton } from './memory-button';
+import { CodingModeButton } from './coding-mode-button';
 import { MemoryMenu } from './memory-menu';
+import { isTauriApp } from '@/types/tauri';
 
 interface InsideButtonsProps {
   activeOptions: string[];
@@ -62,32 +64,25 @@ export const InsideButtons = ({
 }: InsideButtonsProps) => {
   const t = useTranslations('chatInputFormInsideButtons');
 
-  // Coding Mode (opencode over ACP) — self-contained desktop-only toggle. The SDK
-  // chat transport (use-chat-v2) reads `ibl_coding_mode_enabled` from localStorage.
-  const isTauriApp =
-    typeof window !== 'undefined' && '__TAURI__' in window;
-  const [codingMode, setCodingMode] = useState(
-    () =>
-      typeof window !== 'undefined' &&
-      localStorage.getItem('ibl_coding_mode_enabled') === 'true',
-  );
-  const toggleCodingMode = async () => {
-    const next = !codingMode;
-    setCodingMode(next);
-    localStorage.setItem('ibl_coding_mode_enabled', next ? 'true' : 'false');
-    if (next) {
-      if (!localStorage.getItem('ibl_coding_mode_model')) {
-        localStorage.setItem('ibl_coding_mode_model', 'openai/gpt-4o');
+  // Code (opencode over ACP) is desktop-only. Detected AFTER mount, never during
+  // render: Tauri injects its globals into the remote origin some time after load, so a
+  // render-time read can latch false forever (and would mismatch prerendered HTML
+  // during hydration). Keeping the gate here also means <CodingModeButton> — which
+  // needs Redux + the mentor route — never mounts in a plain browser.
+  const [inTauri, setInTauri] = useState(false);
+  useEffect(() => {
+    if (isTauriApp()) return setInTauri(true);
+    let tries = 0;
+    const t = setInterval(() => {
+      if (isTauriApp()) {
+        setInTauri(true);
+        clearInterval(t);
+      } else if (++tries > 10) {
+        clearInterval(t);
       }
-      try {
-        // Ensure opencode + config + workspace are ready (best-effort).
-        const { invoke } = await import('@tauri-apps/api/core');
-        await invoke('install_opencode');
-      } catch (e) {
-        console.error('[coding-mode] install_opencode failed', e);
-      }
-    }
-  };
+    }, 500);
+    return () => clearInterval(t);
+  }, []);
 
   const allInsideButtons = [
     {
@@ -105,14 +100,6 @@ export const InsideButtons = ({
       isActive: false,
       action: () => onOpenPromptGallery?.(),
       isEnabled: !embedMode && promptsIsEnabled,
-    },
-    {
-      name: 'Coding Mode',
-      label: 'Coding Mode',
-      icon: <Code2 className="h-4 w-4" />,
-      isActive: codingMode,
-      action: toggleCodingMode,
-      isEnabled: isTauriApp,
     },
     {
       name: 'Study Mode',
@@ -172,6 +159,8 @@ export const InsideButtons = ({
 
   return (
     <div className="relative flex items-center gap-1.5">
+      {/* Coding Mode (desktop-only) — always inline; owns its own folder popover. */}
+      {inTauri && <CodingModeButton />}
       {/* Responsive Inside Buttons */}
       {visibleInsideButtons.map((button) => {
         if (button.name === 'Memory') {

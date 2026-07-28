@@ -34,10 +34,14 @@ use tokio::sync::{oneshot, Mutex};
 /// Full model endpoint: `{API_BASE}/api/ai-mentor/orgs/<tenant>/v1`.
 const DEFAULT_API_BASE: &str = "https://asgi.data.iblai.app";
 
-/// Coalesce assistant-token emits to at most one per this window, to avoid the
-/// webview re-render storm documented in CLAUDE.local.md. `ollama:done` always
-/// carries the final `full_content`, so throttling never drops the final text.
-const TOKEN_EMIT_WINDOW: Duration = Duration::from_millis(40);
+/// Coalesce assistant-token emits to at most one per this window — the buffer that
+/// keeps a fast opencode stream from re-render-storming (and freezing) the webview,
+/// per the pattern in CLAUDE.local.md. `ollama:done` always carries the final
+/// `full_content`, so widening the window never drops the trailing text.
+// ponytail: 200ms = 5 renders/sec — coarse enough to stop the freeze, still reads as
+// live streaming. Lower for snappier text; add a frontend typewriter buffer if a
+// heavy message renderer still janks at this rate.
+const TOKEN_EMIT_WINDOW: Duration = Duration::from_millis(200);
 
 /// Respawn the process with a fresh token when the spawn token is within this many
 /// seconds of expiry (proactive refresh — the frontend passes a fresh dm_token on
@@ -76,6 +80,9 @@ struct Session {
     pending: Arc<Mutex<HashMap<i64, oneshot::Sender<Value>>>>,
     acp_session_id: String,
     spawn_token_exp: Option<i64>,
+    /// The compat model id this process was spawned for (e.g. "openai/gpt-5.5"); a
+    /// change means the mentor's LLM switched → respawn with the new model.
+    requested_model: Option<String>,
     turn: Arc<Mutex<TurnState>>,
 }
 
@@ -109,6 +116,7 @@ impl Session {
 
 /// Write one JSON value as a single ndJSON line to the child's stdin.
 async fn write_line(stdin: &Arc<Mutex<ChildStdin>>, msg: &Value) -> Result<(), String> {
+    eprintln!("[acp→] {msg}");
     let mut line = serde_json::to_string(msg).map_err(|e| e.to_string())?;
     line.push('\n');
     let mut guard = stdin.lock().await;
@@ -300,6 +308,7 @@ async fn reader_loop(
         if line.trim().is_empty() {
             continue;
         }
+        eprintln!("[acp←] {line}");
         let Ok(v) = serde_json::from_str::<Value>(&line) else {
             continue;
         };
@@ -414,22 +423,298 @@ async fn handle_update(app: &AppHandle, v: &Value, turn: &Arc<Mutex<TurnState>>)
     }
 }
 
+/// Which opencode provider block a selected model maps to.
+///
+/// The model string doubles as the routing signal so the SDK wire format doesn't have
+/// to change: `ollama/<id>` and `foundry/<id>` are on-device, anything else is a
+/// cloud ibl.ai compat id that already carries its own prefix (`openai/gpt-5.5`).
+struct ModelSpec {
+    /// opencode provider key: "ollama" | "foundry" | "iblai".
+    provider: &'static str,
+    /// Bare model id as the runtime knows it (routing prefix stripped for local).
+    model: String,
+    /// On-device runtimes need an explicit baseURL and no ibl.ai auth.
+    local: bool,
+}
+
+fn parse_model_spec(model: &str) -> ModelSpec {
+    if let Some(rest) = model.strip_prefix("ollama/") {
+        ModelSpec { provider: "ollama", model: rest.to_string(), local: true }
+    } else if let Some(rest) = model.strip_prefix("foundry/") {
+        ModelSpec { provider: "foundry", model: rest.to_string(), local: true }
+    } else {
+        ModelSpec { provider: "iblai", model: model.to_string(), local: false }
+    }
+}
+
+/// Match model ids ignoring a `:tag` suffix on either side ("qwen3" ≡ "qwen3:latest"),
+/// mirroring the frontend's `sameModel`. Catalog base names are unique, so this can't
+/// select the wrong model.
+fn same_model(a: &str, b: &str) -> bool {
+    a == b || a.split(':').next() == b.split(':').next()
+}
+
+/// Point opencode at a model by patching its config: set the top-level `model`, keep
+/// `enabled_providers` to just the active provider, and reset that provider's `models`
+/// map to only the active model. `base_url` is `Some` for on-device runtimes (an
+/// explicit, unauthenticated endpoint); cloud keeps the `{env:IBL_*}` placeholders that
+/// are injected at spawn.
+///
+// ponytail: patches the single shared config at ~/.config/iblai/agents/opencode —
+// fine for one Code session at a time; give each session its own XDG_CONFIG_HOME if
+// concurrent Code sessions with different models ever matter.
+fn apply_opencode_model(spec: &ModelSpec, base_url: Option<&str>) -> Result<(), String> {
+    // The config ships embedded in the app and is materialized on first use — make
+    // sure it's on disk before we patch it (self-heal if install hasn't run yet).
+    crate::opencode_installer::ensure_opencode_config()?;
+    let path = config_home().join("opencode").join("opencode.json");
+    let text = std::fs::read_to_string(&path)
+        .map_err(|e| format!("opencode config not found ({}): {e}", path.display()))?;
+    let mut cfg: Value =
+        serde_json::from_str(&text).map_err(|e| format!("bad opencode config: {e}"))?;
+
+    let root = cfg
+        .as_object_mut()
+        .ok_or("opencode config is not a JSON object")?;
+    root.insert(
+        "model".to_string(),
+        json!(format!("{}/{}", spec.provider, spec.model)),
+    );
+    // Only the active provider is enabled, so opencode never tries to resolve
+    // credentials for one we're not using this session.
+    root.insert("enabled_providers".to_string(), json!([spec.provider]));
+
+    let providers = root
+        .entry("provider")
+        .or_insert_with(|| json!({}))
+        .as_object_mut()
+        .ok_or("opencode config `provider` is not an object")?;
+    let entry = providers
+        .entry(spec.provider.to_string())
+        .or_insert_with(|| json!({}))
+        .as_object_mut()
+        .ok_or("opencode provider entry is not an object")?;
+
+    // Reset to JUST the active model each spawn (no accumulation across sessions).
+    let mut models = serde_json::Map::new();
+    models.insert(spec.model.clone(), json!({ "name": spec.model }));
+    entry.insert("models".to_string(), Value::Object(models));
+
+    if let Some(url) = base_url {
+        entry.insert("npm".to_string(), json!("@ai-sdk/openai-compatible"));
+        entry.insert(
+            "name".to_string(),
+            json!(if spec.provider == "ollama" { "Ollama (on-device)" } else { "Foundry Local (on-device)" }),
+        );
+        // Local runtimes are unauthenticated; the placeholder key just satisfies
+        // @ai-sdk/openai-compatible, which expects the header to exist.
+        entry.insert(
+            "options".to_string(),
+            json!({ "baseURL": url, "apiKey": "local" }),
+        );
+    }
+
+    let out = serde_json::to_string_pretty(&cfg).map_err(|e| e.to_string())?;
+    std::fs::write(&path, out).map_err(|e| format!("failed writing opencode config: {e}"))
+}
+
+/// Resolve the OpenAI-compatible base URL for an on-device runtime, starting Ollama
+/// if it isn't up yet.
+///
+/// NOTE: this deliberately targets PLAIN Ollama on :11434, NOT the `ollama-mcp-bridge`
+/// on :8000 that `model_manager::chat_base_url` calls "the one and only chat port".
+/// That rule governs the app's own chat path, which needs the bridge to inject MCP
+/// tools. Code must not use it: the bridge speaks the *Ollama* API (`/api/chat`) while
+/// opencode needs *OpenAI*-compatible `/v1/chat/completions`, and opencode ships its own
+/// file/shell tools, so the bridge's injected tools would duplicate them.
+async fn resolve_local_base_url(spec: &ModelSpec) -> Result<String, String> {
+    match spec.provider {
+        "ollama" => {
+            if !crate::model_manager::wait_for_ollama_ready(1).await {
+                crate::model_manager::start_ollama_server()?;
+                if !crate::model_manager::wait_for_ollama_ready(20).await {
+                    return Err("Ollama isn't running and couldn't be started.".to_string());
+                }
+            }
+            Ok(format!(
+                "{}/v1",
+                crate::model_manager::OLLAMA_API_URL.trim_end_matches('/')
+            ))
+        }
+        "foundry" => {
+            let endpoint = crate::foundry_manager::get_foundry_service_endpoint()
+                .ok_or("Foundry Local isn't running — start it and try again.")?;
+            Ok(format!("{}/v1", endpoint.trim_end_matches('/')))
+        }
+        other => Err(format!("unknown on-device runtime: {other}")),
+    }
+}
+
+/// Foundry persists the UI id (e.g. "phi-3-mini-128k_npu") but its OpenAI-compatible
+/// endpoint wants the runtime id (e.g. "phi-3-mini-128k-instruct-qnn-npu:2"). Mirror
+/// the translation `foundry_chat_stream` does in main.rs, or Code sends an id Foundry
+/// doesn't recognise. Falls back to the input when it can't be resolved.
+async fn foundry_runtime_id(model: &str) -> String {
+    if let Ok(status) = crate::foundry_manager::check_foundry_status().await {
+        if let Some(m) = status
+            .models
+            .iter()
+            .find(|m| m.id == model || m.foundry_id == model)
+        {
+            return m.foundry_id.clone();
+        }
+    }
+    model.to_string()
+}
+
+/// Read a model's `capabilities` from Ollama's `/api/tags`. `None` = unknown (model
+/// not installed, or Ollama unreachable).
+async fn ollama_supports_tools(model: &str) -> Option<bool> {
+    let url = format!(
+        "{}/api/tags",
+        crate::model_manager::OLLAMA_API_URL.trim_end_matches('/')
+    );
+    let body: Value = reqwest::get(&url).await.ok()?.json().await.ok()?;
+    let entry = body.get("models")?.as_array()?.iter().find(|m| {
+        m.get("name")
+            .and_then(|n| n.as_str())
+            .map(|n| same_model(n, model))
+            .unwrap_or(false)
+    })?;
+    let caps = entry.get("capabilities")?.as_array()?;
+    Some(caps.iter().any(|c| c.as_str() == Some("tools")))
+}
+
+/// Report whether the selected on-device model can actually drive Code.
+///
+/// opencode is agentic: without tool calling it can't read/write files or run commands,
+/// so it degrades to plain chat and looks broken. Ollama publishes per-model
+/// `capabilities`, so we can refuse up front — the same rule
+/// `model_manager::chat_base_url` already applies to local chat. Foundry Local exposes
+/// no capability metadata, so it reports `null` (unknown) and the UI warns instead of
+/// blocking.
+/// `model` is the app's selected on-device model (`ibl_local_llm_model`, e.g.
+/// "qwen3:latest"). It may carry an explicit `ollama/` or `foundry/` prefix; if not,
+/// the runtime is auto-detected — Ollama when it's up and knows the model, else
+/// Foundry Local. The returned `spec` is the prefixed string to persist as
+/// `ibl_coding_mode_model`, which is what routes the spawn.
+#[command]
+pub async fn check_code_local_model(model: String) -> Value {
+    // Everything here is treated as on-device: `foundry/` picks Foundry, `ollama/`
+    // picks Ollama, and a bare id auto-detects (Ollama when it's up and knows the
+    // model, else Foundry). We never infer "cloud" from a slash — Ollama ids can
+    // contain one, e.g. `hf.co/user/model`.
+    if let Some(rest) = model.strip_prefix("foundry/") {
+        let runtime_id = foundry_runtime_id(rest).await;
+        return foundry_result(
+            &runtime_id,
+            crate::foundry_manager::get_foundry_service_endpoint(),
+        );
+    }
+    let explicit_ollama = model.starts_with("ollama/");
+    let bare = model.strip_prefix("ollama/").unwrap_or(&model).to_string();
+
+    if !crate::model_manager::wait_for_ollama_ready(1).await {
+        if !explicit_ollama {
+            if let Some(endpoint) = crate::foundry_manager::get_foundry_service_endpoint() {
+                return foundry_result(&foundry_runtime_id(&bare).await, Some(endpoint));
+            }
+        }
+        return json!({
+            "runtime": "ollama", "spec": format!("ollama/{bare}"), "model": bare,
+            "endpoint": Value::Null, "running": false, "tools_supported": Value::Null,
+            "reason": "Ollama isn't running."
+        });
+    }
+
+    let tools = ollama_supports_tools(&bare).await;
+    // Unknown to Ollama and the caller didn't insist on it → Foundry may serve it.
+    if tools.is_none() && !explicit_ollama {
+        if let Some(endpoint) = crate::foundry_manager::get_foundry_service_endpoint() {
+            return foundry_result(&bare, Some(endpoint));
+        }
+    }
+    ollama_result(&bare, tools)
+}
+
+fn ollama_result(model: &str, tools: Option<bool>) -> Value {
+    let reason = match tools {
+        Some(true) => String::new(),
+        Some(false) => format!(
+            "{model} doesn't support tool calling, so Code can't edit files or run commands with it."
+        ),
+        None => format!("Couldn't read tool support for {model} from Ollama."),
+    };
+    json!({
+        "runtime": "ollama",
+        "spec": format!("ollama/{model}"),
+        "model": model,
+        "endpoint": crate::model_manager::OLLAMA_API_URL,
+        "running": true,
+        "tools_supported": tools,
+        "reason": reason,
+    })
+}
+
+fn foundry_result(model: &str, endpoint: Option<String>) -> Value {
+    match endpoint {
+        // Foundry Local publishes no per-model capability metadata, so tool support is
+        // unknown — the UI warns instead of blocking (blocking would disable Foundry).
+        Some(endpoint) => json!({
+            "runtime": "foundry", "spec": format!("foundry/{model}"), "model": model,
+            "endpoint": endpoint, "running": true, "tools_supported": Value::Null,
+            "reason": "Foundry Local doesn't report tool-calling support — Code may not be able to edit files with this model."
+        }),
+        None => json!({
+            "runtime": "foundry", "spec": format!("foundry/{model}"), "model": model,
+            "endpoint": Value::Null, "running": false, "tools_supported": Value::Null,
+            "reason": "Foundry Local isn't running."
+        }),
+    }
+}
+
 /// Spawn `opencode acp`, run the ACP handshake, and register the session.
 async fn spawn_session(
     app: &AppHandle,
     tenant: &str,
     token: &str,
+    model: Option<String>,
     api_base: Option<String>,
     workspace: &PathBuf,
 ) -> Result<Arc<Session>, String> {
     ensure_workspace(workspace)?;
 
-    let api_base = api_base.unwrap_or_else(|| DEFAULT_API_BASE.to_string());
-    let base_url = format!("{}/api/ai-mentor/orgs/{}/v1", api_base.trim_end_matches('/'), tenant);
-    let auth_header = format!("Token {token}");
+    // Match opencode's model to the selection — NO default: an absent/empty model
+    // means Code doesn't run, so a broken selection fails loudly instead of silently
+    // falling back to some other model.
+    let chosen_model = match model.as_deref() {
+        Some(m) if !m.is_empty() => m.to_string(),
+        _ => return Err("no model selected for Code".to_string()),
+    };
+    let spec = parse_model_spec(&chosen_model);
+
+    // On-device runtimes get an explicit endpoint baked into the config; cloud keeps
+    // the `{env:IBL_*}` placeholders injected below.
+    let local_base = match spec.local {
+        true => Some(resolve_local_base_url(&spec).await?),
+        false => None,
+    };
+    apply_opencode_model(&spec, local_base.as_deref())?;
+
+    // Never hand the ibl.ai token to an on-device session that has no use for it. The
+    // vars are still set (empty) so the config's `{env:...}` placeholders resolve.
+    let (base_url, auth_header) = if spec.local {
+        (String::new(), String::new())
+    } else {
+        let api_base = api_base.unwrap_or_else(|| DEFAULT_API_BASE.to_string());
+        (
+            format!("{}/api/ai-mentor/orgs/{}/v1", api_base.trim_end_matches('/'), tenant),
+            format!("Token {token}"),
+        )
+    };
 
     let mut cmd = create_command(&opencode_program());
-    cmd.arg("acp")
+    cmd.args(["acp", "--print-logs", "--log-level", "INFO"])
         .current_dir(workspace)
         .env("XDG_CONFIG_HOME", config_home())
         .env("IBL_BASE_URL", &base_url)
@@ -451,7 +736,7 @@ async fn spawn_session(
     tokio::spawn(async move {
         let mut lines = BufReader::new(stderr).lines();
         while let Ok(Some(l)) = lines.next_line().await {
-            eprintln!("[opencode-acp] {l}");
+            eprintln!("[opencode] {l}");
         }
     });
 
@@ -481,6 +766,7 @@ async fn spawn_session(
         pending,
         acp_session_id: String::new(),
         spawn_token_exp: jwt_exp(token),
+        requested_model: model,
         turn,
     };
 
@@ -521,6 +807,7 @@ async fn get_or_spawn(
     session_id: &str,
     tenant: &str,
     token: &str,
+    model: Option<String>,
     api_base: Option<String>,
     workspace: &PathBuf,
 ) -> Result<Arc<Session>, String> {
@@ -531,14 +818,15 @@ async fn get_or_spawn(
                 .spawn_token_exp
                 .map(|exp| exp - now_secs() < TOKEN_REFRESH_SLACK_SECS)
                 .unwrap_or(false);
-            if !expiring {
+            let model_changed = s.requested_model.as_deref() != model.as_deref();
+            if !expiring && !model_changed {
                 return Ok(s.clone());
             }
         }
     }
-    // Missing or token near expiry → (re)spawn with the fresh token.
+    // Missing, token near expiry, or model switched → (re)spawn.
     close_session(session_id).await;
-    let s = spawn_session(app, tenant, token, api_base, workspace).await?;
+    let s = spawn_session(app, tenant, token, model, api_base, workspace).await?;
     registry().lock().await.insert(session_id.to_string(), s.clone());
     Ok(s)
 }
@@ -560,15 +848,34 @@ pub async fn opencode_chat_stream(
     generation_id: String,
     tenant: String,
     token: String,
+    model: Option<String>,
     api_base: Option<String>,
     workspace: Option<String>,
 ) -> Result<(), String> {
+    if crate::opencode_installer::is_sandboxed() {
+        return Err("Code isn't available in the sandboxed Mac App Store build.".to_string());
+    }
     let workspace = workspace.map(PathBuf::from).unwrap_or_else(resolve_workspace);
 
     let prompt_text = last_user_text(&messages)
         .ok_or("no user message to send to opencode")?;
 
-    let session = get_or_spawn(&app, &session_id, &tenant, &token, api_base, &workspace).await?;
+    // An on-device turn can sit silent for minutes the first time: opencode refreshes
+    // the models.dev registry into ~/.cache/opencode/models.json, and the runtime loads
+    // the model into memory. Both are one-off, but the chat would otherwise just hang
+    // with no explanation — emit the hint BEFORE spawning so it lands immediately.
+    if model.as_deref().map(|m| parse_model_spec(m).local).unwrap_or(false) {
+        let _ = app.emit(
+            "opencode:reasoning",
+            json!({
+                "generation_id": generation_id,
+                "delta": "Warming up the on-device model — the first run can take a few minutes while it loads into memory.\n",
+            }),
+        );
+    }
+
+    let session =
+        get_or_spawn(&app, &session_id, &tenant, &token, model, api_base, &workspace).await?;
 
     // Reset per-turn state and snapshot the workspace before the agent runs.
     session.turn.lock().await.reset(generation_id.clone());
@@ -589,8 +896,21 @@ pub async fn opencode_chat_stream(
 
     match res {
         Ok(result) => {
-            let ts = session.turn.lock().await;
-            // Flush any throttled trailing delta via the final full_content.
+            let mut ts = session.turn.lock().await;
+            // Flush the final throttled delta as one last token so the committed
+            // message includes the tail — the last <TOKEN_EMIT_WINDOW of tokens lived
+            // only in `pending_delta` and never shipped. Then signal done.
+            if !ts.pending_delta.is_empty() {
+                let _ = app.emit(
+                    "ollama:token",
+                    json!({
+                        "generation_id": generation_id,
+                        "token": ts.pending_delta,
+                        "full_content": ts.full_content,
+                    }),
+                );
+                ts.pending_delta.clear();
+            }
             let _ = app.emit(
                 "ollama:done",
                 json!({

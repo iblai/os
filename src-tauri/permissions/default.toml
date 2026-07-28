@@ -31,6 +31,7 @@ permissions = [
     "allow-set-opencode-workspace",
     "allow-install-opencode",
     "allow-check-opencode-status",
+    "allow-check-code-local-model",
 ]
 
 [[permission]]
@@ -200,3 +201,9 @@ identifier = "allow-check-opencode-status"
 description = "Enables checking opencode readiness (installed/version/config/workspace)"
 [permission.commands]
 allow = ["check_opencode_status"]
+
+[[permission]]
+identifier = "allow-check-code-local-model"
+description = "Enables checking whether the selected on-device model can drive Code (tool-calling support, runtime reachability)"
+[permission.commands]
+allow = ["check_code_local_model"]

@@ -1,6 +1,12 @@
 // Hide console window on Windows in release builds
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+// Gated exactly like `opencode_acp`, which is its only consumer here: Code uses
+// `get_foundry_service_endpoint` to reach Foundry Local's OpenAI-compatible API.
+// The rest of the module is exercised by the desktop bin (see main.rs).
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+#[allow(dead_code)]
+mod foundry_manager;
 mod ghost_os_manager;
 mod mcp_bridge_installer;
 mod mcp_bridge_manager;
@@ -2061,6 +2067,7 @@ pub fn run() {
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let app_url = get_app_url();
             println!("[ibl.ai] ============================================");
@@ -2739,6 +2746,7 @@ pub fn run() {
             opencode_acp::set_opencode_workspace,
             opencode_installer::install_opencode,
             opencode_installer::check_opencode_status,
+            opencode_acp::check_code_local_model,
         ]);
 
         // Mobile platforms get only basic commands (no offline/cache features)

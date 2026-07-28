@@ -2152,6 +2152,7 @@ fn main() {
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             // Initialize web cache with app data directory
             let app_data_dir = app
@@ -2767,6 +2768,7 @@ fn main() {
             opencode_acp::set_opencode_workspace,
             opencode_installer::install_opencode,
             opencode_installer::check_opencode_status,
+            opencode_acp::check_code_local_model,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri app");
