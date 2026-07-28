@@ -50,8 +50,17 @@ const IBL_HTTP = [
   'https://*.iblai.app',
   'https://*.ibl.ai',
   'https://*.ibl.network', // Sentry (sentry.ibl.network)
+  // Non-`.app` first-party domains used by staging / some environments (e.g.
+  // learn.stg1.iblai.org for the LMS/edX + APIs) — else enforce blocks them.
+  'https://*.iblai.org',
+  'https://*.iblai.tech',
 ];
-const IBL_WS = ['wss://*.iblai.app', 'wss://*.ibl.ai']; // ASGI + LiveKit
+const IBL_WS = [
+  'wss://*.iblai.app',
+  'wss://*.ibl.ai',
+  'wss://*.iblai.org',
+  'wss://*.iblai.tech',
+]; // ASGI + LiveKit
 const GOOGLE = [
   'https://apis.google.com',
   'https://*.googleapis.com',
@@ -65,7 +74,12 @@ function apiBaseOrigin(): string[] {
   if (!apiBase) return [];
   try {
     const { origin, hostname } = new URL(apiBase);
-    if (/(\.iblai\.app|\.ibl\.ai|\.ibl\.network)$/.test(hostname)) return [];
+    if (
+      /(\.iblai\.app|\.ibl\.ai|\.ibl\.network|\.iblai\.org|\.iblai\.tech)$/.test(
+        hostname,
+      )
+    )
+      return [];
     return [origin];
   } catch {
     return [];
