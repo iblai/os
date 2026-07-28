@@ -6,16 +6,6 @@ onlyBuiltDependencies:
   - husky
   - sharp
   - unrs-resolver
-
-# Security version floors. They previously lived in the `pnpm` field of
-# package.json, which pnpm v10 no longer reads — this file is the supported home
-# for them (and for patchedDependencies, below).
-#
-# NOTE: web-containers is now consumed exclusively via @iblai/iblai-js
-# (>=1.20.11), which bundles the i18n-aware build (WebContainersI18nProvider +
-# the re-exported components share a single context). The previous
-# `@iblai/web-containers: file:.yalc/...` override is therefore obsolete and was
-# removed — it broke CI installs since .yalc is gitignored.
 overrides:
   vite: '>=7.3.2'
   basic-ftp: '>=5.2.1'
@@ -27,28 +17,19 @@ overrides:
   hono: '>=4.12.18'
   axios: '>=1.16.0'
   prismjs: '>=1.30.0'
-  # GHSA-c2j3-45gr-mqc4: CUSTOM_ELEMENT_HANDLING bypasses afterSanitizeElements.
   dompurify: '>=3.4.12'
-  # GHSA-9mqv-5hh9-4cgg: unauthenticated memory-leak DoS via aborted WS handshake
-  # (affects 2.0.0–2.0.9; the tree already resolves the 2.x line).
   '@hono/node-server': '>=2.0.10'
   bytes: '>=1.11.1'
   devalue: '>=5.8.1'
   fast-uri: '>=4.1.1'
   ip-address: '>=10.1.1'
-  # GHSA-mh99-v99m-4gvg: DoS via unbounded expansion (OOM crash). Only the 5.x
-  # instances (pulled in via minimatch) were flagged; the scoped 2.x pin below is
-  # kept as-is for minimatch@^9, which requires the ^2 line.
   brace-expansion: '>=5.0.8'
-  'minimatch@^9>brace-expansion': '2.1.2'
+  minimatch@^9>brace-expansion: 2.1.2
   postcss: '>=8.5.18'
   ws: '>=8.20.1'
   qs: '>=6.15.2'
-  uuid: '11.1.1'
+  uuid: 11.1.1
   sharp: '>=0.35.0'
-
-# pnpm v10 no longer reads `pnpm.patchedDependencies` from package.json — it must
-# live here or the google-drive-picker scope patch silently stops applying
-# (see patches/google-drive-picker@1.1.29.patch and its regression test).
+  brace-expansion@<=5.0.7: '>=5.0.8'
 patchedDependencies:
   google-drive-picker@1.1.29: patches/google-drive-picker@1.1.29.patch
