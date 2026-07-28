@@ -27,15 +27,23 @@ overrides:
   hono: '>=4.12.18'
   axios: '>=1.16.0'
   prismjs: '>=1.30.0'
-  dompurify: '>=3.4.11'
-  '@hono/node-server': '>=1.19.13'
+  # GHSA-c2j3-45gr-mqc4: CUSTOM_ELEMENT_HANDLING bypasses afterSanitizeElements.
+  dompurify: '>=3.4.12'
+  # GHSA-9mqv-5hh9-4cgg: unauthenticated memory-leak DoS via aborted WS handshake
+  # (affects 2.0.0–2.0.9; the tree already resolves the 2.x line).
+  '@hono/node-server': '>=2.0.10'
   bytes: '>=1.11.1'
   devalue: '>=5.8.1'
   fast-uri: '>=4.1.1'
   ip-address: '>=10.1.1'
-  brace-expansion: '>=5.0.6'
+  # GHSA-mh99-v99m-4gvg: DoS via unbounded expansion (OOM crash). Only the 5.x
+  # instances (pulled in via minimatch) were flagged; the scoped 2.x pin below is
+  # kept as-is for minimatch@^9, which requires the ^2 line.
+  brace-expansion: '>=5.0.8'
   'minimatch@^9>brace-expansion': '2.1.2'
-  postcss: '>=8.5.10'
+  # GHSA-r28c-9q8g-f849: path traversal in sourceMappingURL auto-loading leaks
+  # arbitrary .map files.
+  postcss: '>=8.5.18'
   ws: '>=8.20.1'
   qs: '>=6.15.2'
   uuid: '11.1.1'
