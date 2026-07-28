@@ -114,6 +114,10 @@ export function useIframeHandlers() {
       );
     },
 
+    'MENTOR:ENABLE_GRADING': (payload: boolean) => {
+      dispatch(chatActions.setEnableGrading(payload));
+    },
+
     'MENTOR:EDX_COURSE_ID': (payload: { edxCourseId: string }) => {
       console.log('EDX Course ID updated:', payload.edxCourseId);
       dispatch(
