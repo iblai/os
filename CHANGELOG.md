@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.104.1](https://github.com/iblai/os/compare/v0.104.0...v0.104.1) (2026-07-28)
+
+### Bug Fixes
+
+* **tauri:** marshal event emits to main thread to end IPC deadlock freeze ([011d170](https://github.com/iblai/os/commit/011d1707cd568ee56ff988cff68d8597050c54a2))
+
+### Chores
+
+* **tauri:** release app-v0.95.6 ([79a02b1](https://github.com/iblai/os/commit/79a02b1c6b918a3b6137d9a9fbe56490b6550a9b))
+
 ## [0.104.0](https://github.com/iblai/os/compare/v0.103.2...v0.104.0) (2026-07-28)
 
 ### Features
