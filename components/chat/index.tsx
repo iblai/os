@@ -1644,13 +1644,17 @@ export function Chat({
         className={cn({
           // Fill available space when the messages section won't render
           // (no messages, or only a single assistant greeting/proactive prompt)
-          'h-full flex-1':
+          'min-h-0 flex-1':
             !isCanvasOpen &&
             (messages.length === 0 ||
               (messages.length === 1 && messages[0]?.role === 'assistant')),
-          // In compact mode, don't add overflow-y-auto here - only the messages container should scroll
-          'scrollbar-none overflow-y-auto':
-            !isAdvancedMode && !isCanvasOpen && !isCompactMode,
+          // Reserve the same scrollbar gutter as the chat input container so
+          // the welcome message stays horizontally aligned with the input.
+          // Advanced mode scrolls inside its own panel, so it only needs the
+          // gutter, never the scroll container.
+          '[scrollbar-gutter:stable]': !isCanvasOpen,
+          'overflow-y-auto': !isAdvancedMode && !isCanvasOpen,
+          'overflow-y-hidden': isAdvancedMode && !isCanvasOpen,
           'min-h-0': isCompactMode, // Allow flex shrinking in compact mode
         })}
         style={isCanvasOpen ? { display: 'none' } : undefined}
