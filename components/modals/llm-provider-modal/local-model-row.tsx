@@ -2,6 +2,8 @@
 
 import Image from 'next/image';
 import { Download, X, Check, RotateCcw } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+
 import { cn } from '@/lib/utils';
 
 /**
@@ -48,6 +50,7 @@ export function LocalModelRow({
   errorMessage,
   onActivate,
 }: LocalModelRowProps) {
+  const t = useTranslations('modalsLlmProviderModal.localModel');
   const selected = status === 'selected';
   const downloading = status === 'downloading' || status === 'starting';
   // A resting row (nothing downloading) can still be disabled when another
@@ -59,17 +62,19 @@ export function LocalModelRow({
   const ariaLabel = (() => {
     switch (status) {
       case 'not-installed':
-        return `Download ${name}, ${size}, on-device model`;
+        return t('ariaDownload', { modelName: name, modelSize: size });
       case 'starting':
-        return `Starting download of ${name}`;
+        return t('ariaStarting', { modelName: name });
       case 'downloading':
-        return `Cancel download of ${name}, ${pct} percent`;
+        return t('ariaDownloading', { modelName: name, percent: pct });
       case 'installed':
-        return `Use ${name}, on-device model`;
+        return t('ariaInstalled', { modelName: name });
       case 'selected':
-        return `Selected ${name}, on-device model, in use`;
+        return t('ariaSelected', { modelName: name });
       case 'error':
-        return `Retry download of ${name}${errorMessage ? `, ${errorMessage}` : ''}`;
+        return errorMessage
+          ? t('ariaErrorWithReason', { modelName: name, reason: errorMessage })
+          : t('ariaError', { modelName: name });
     }
   })();
 
@@ -128,7 +133,7 @@ export function LocalModelRow({
         </span>
         <span className="flex min-w-0 items-center gap-1.5 text-sm text-gray-500">
           <span className="flex-shrink-0 rounded bg-gray-100 px-2 py-0.5 text-sm font-medium text-gray-500">
-            On-device
+            {t('onDevice')}
           </span>
           {status === 'not-installed' && (
             <>
@@ -140,7 +145,7 @@ export function LocalModelRow({
           {status === 'starting' && (
             <>
               <span aria-hidden="true">·</span>
-              <span>Starting…</span>
+              <span>{t('starting')}</span>
             </>
           )}
           {status === 'downloading' && (
@@ -151,7 +156,7 @@ export function LocalModelRow({
               </span>
               <span className="hidden items-center gap-1 text-blue-600 group-hover:flex group-focus-visible:flex">
                 <X className="h-3.5 w-3.5" aria-hidden="true" />
-                Cancel
+                {t('cancel')}
               </span>
             </>
           )}
@@ -161,14 +166,14 @@ export function LocalModelRow({
           {status === 'selected' && (
             <span className="flex items-center gap-1 text-blue-600">
               <Check className="h-4 w-4" aria-hidden="true" />
-              In use
+              {t('inUse')}
             </span>
           )}
           {status === 'error' && (
             <>
               <span aria-hidden="true">·</span>
               <span className="truncate text-red-500">
-                {errorMessage || 'Download failed — retry'}
+                {errorMessage || t('downloadFailedRetry')}
               </span>
               <RotateCcw
                 className="h-4 w-4 flex-shrink-0 text-red-500"

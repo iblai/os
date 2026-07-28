@@ -329,7 +329,7 @@ export function LLMProviderModal({
         // already-installed model is unaffected (it starts no pull).
         if (busyDownloading && !sameModel(downloadingModel, m.id)) {
           const dl = LOCAL_MODELS.find((x) => sameModel(x.id, downloadingModel));
-          setBusyDownloadName(dl?.name ?? 'A model');
+          setBusyDownloadName(dl?.name ?? t('unnamedModel'));
           return;
         }
         startLocalDownload(m);
@@ -372,14 +372,14 @@ export function LLMProviderModal({
   const liveMessage = !activeLocal
     ? ''
     : downloadState.status === 'completed'
-      ? `${activeLocal.name} downloaded`
+      ? t('announceDownloaded', { modelName: activeLocal.name })
       : downloadState.status === 'cancelled'
-        ? 'Download cancelled'
+        ? t('announceCancelled')
         : downloadState.status === 'error'
-          ? 'Download failed'
+          ? t('announceFailed')
           : downloadState.status === 'checking' ||
               (downloadState.status === 'downloading' && downloadState.progress === 0)
-            ? `Started downloading ${activeLocal.name}`
+            ? t('announceStarted', { modelName: activeLocal.name })
             : '';
 
   return (
@@ -496,17 +496,17 @@ export function LLMProviderModal({
         >
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>
-                This model may be too large for your system
-              </AlertDialogTitle>
+              <AlertDialogTitle>{t('tooLargeTitle')}</AlertDialogTitle>
               <AlertDialogDescription>
-                {pendingModel?.name} needs about {pendingModel?.size}. It may run
-                very slowly or fail to load on this machine. Download anyway?
+                {t('tooLargeDescription', {
+                  modelName: pendingModel?.name ?? '',
+                  modelSize: pendingModel?.size ?? '',
+                })}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel onClick={() => setPendingModel(null)}>
-                Cancel
+                {t('cancel')}
               </AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => {
@@ -517,7 +517,7 @@ export function LLMProviderModal({
                   setPendingModel(null);
                 }}
               >
-                Download anyway
+                {t('downloadAnyway')}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -534,16 +534,16 @@ export function LLMProviderModal({
         >
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>A model is already downloading</AlertDialogTitle>
+              <AlertDialogTitle>{t('alreadyDownloadingTitle')}</AlertDialogTitle>
               <AlertDialogDescription>
-                {busyDownloadName} is being downloaded. Only one on-device model
-                downloads at a time — wait for it to finish, or click{' '}
-                {busyDownloadName} in the list to cancel it.
+                {t('alreadyDownloadingDescription', {
+                  modelName: busyDownloadName ?? '',
+                })}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogAction onClick={() => setBusyDownloadName(null)}>
-                Got it
+                {t('gotIt')}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
