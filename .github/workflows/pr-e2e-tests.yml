@@ -28,7 +28,7 @@ run-name: 'PR E2E — mentor #${{ github.event.pull_request.number }} → stg1 (
 
 permissions:
   contents: read
-  pull-requests: write   # the e2e job posts the report link as a PR comment
+  pull-requests: write # the e2e job posts the report link as a PR comment
 
 concurrency:
   group: pr-e2e-${{ github.event.pull_request.number }}
@@ -106,7 +106,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0        # need the base ref to diff changed specs
+          fetch-depth: 0 # need the base ref to diff changed specs
 
       - name: Detect changed spec files
         id: specs
@@ -231,10 +231,10 @@ jobs:
       - name: Publish the result on this PR
         if: always() && steps.dispatch.outputs.run_id != ''
         env:
-          GH_TOKEN:   ${{ secrets.DEPLOY_OPS_DISPATCH_TOKEN }}
+          GH_TOKEN: ${{ secrets.DEPLOY_OPS_DISPATCH_TOKEN }}
           REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RUN_ID:     ${{ steps.dispatch.outputs.run_id }}
-          PR:         ${{ github.event.pull_request.number }}
+          RUN_ID: ${{ steps.dispatch.outputs.run_id }}
+          PR: ${{ github.event.pull_request.number }}
         run: |
           set -uo pipefail
           # The Playwright report on tests.iblai.app IS public, so it is the link that actually helps
