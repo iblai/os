@@ -326,5 +326,10 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Fail if anything did not pass
-        if: needs.e2e.result != 'success' || needs.unit-tests.result != 'success'
+        # Only a real FAILURE should redden this check. `skipped` means the PR was never
+        # labelled `run-tests`, which is the opt-in model working as designed — treating it
+        # as failure would make every unlabelled PR unmergeable once this is a required check.
+        if: |
+          needs.e2e.result == 'failure' || needs.e2e.result == 'cancelled' ||
+          needs.unit-tests.result == 'failure' || needs.unit-tests.result == 'cancelled'
         run: exit 1
