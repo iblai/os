@@ -94,8 +94,9 @@ export function useIframeHandlers() {
         }),
       );
     },
-    'MENTOR:ENABLE_GRADING': (_payload: unknown, data: MessageEvent) => {
-      dispatch(chatActions.setEnableGrading(data));
+    'MENTOR:ENABLE_GRADING': (_payload: unknown, event: MessageEvent) => {
+      const payload = event.data.data;
+      dispatch(chatActions.setEnableGrading(payload));
     },
     // Document filter hanlder
     'MENTOR:DOCUMENTFILTER': (_payload: unknown, event: MessageEvent) => {

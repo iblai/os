@@ -484,8 +484,11 @@ describe('useIframeHandlers', () => {
   describe('MENTOR:ENABLE_GRADING handler', () => {
     it('should dispatch setEnableGrading(true)', () => {
       const { result } = renderHook(() => useIframeHandlers());
+      const mockEvent = {
+        data: { type: 'MENTOR:ENABLE_GRADING', data: true },
+      } as MessageEvent;
 
-      result.current['MENTOR:ENABLE_GRADING'](true);
+      result.current['MENTOR:ENABLE_GRADING'](undefined, mockEvent);
 
       expect(mockDispatchInstance).toHaveBeenCalledWith(
         chatActions.setEnableGrading(true),
@@ -494,8 +497,11 @@ describe('useIframeHandlers', () => {
 
     it('should dispatch setEnableGrading(false)', () => {
       const { result } = renderHook(() => useIframeHandlers());
+      const mockEvent = {
+        data: { type: 'MENTOR:ENABLE_GRADING', data: false },
+      } as MessageEvent;
 
-      result.current['MENTOR:ENABLE_GRADING'](false);
+      result.current['MENTOR:ENABLE_GRADING'](undefined, mockEvent);
 
       expect(mockDispatchInstance).toHaveBeenCalledWith(
         chatActions.setEnableGrading(false),
