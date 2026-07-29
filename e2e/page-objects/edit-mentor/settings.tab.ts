@@ -97,10 +97,12 @@ export class SettingsTab {
       name: /^Enable verbose reasoning /i,
     });
     // Capabilities sub-tab. Visible label "Enhanced document retrieval"
-    // (source: messages/en.json `enhancedDocRetrievalLabel`). Anchored so it
-    // does not also match the sibling "Smart document retrieval" switch.
+    // (source: messages/en.json `enhancedDocRetrievalLabel`); the SDK switch
+    // appends the state, so the aria-label reads "Enhanced document retrieval
+    // enabled" / "... disabled". Anchored at the start so it does not also
+    // match the sibling "Smart document retrieval" switch.
     this.enhanceDocumentRetrievalToggle = dialog.getByRole('switch', {
-      name: /^Enhanced document retrieval$/i,
+      name: /^Enhanced document retrieval\b/i,
     });
     this.enhanceDocumentRetrievalTooltipTrigger = dialog.getByRole('button', {
       name: 'More info about enhanced document retrieval',

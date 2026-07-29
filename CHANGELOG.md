@@ -46,29 +46,29 @@
 
 ### Refactors
 
-* **edit-mentor:** delete the in-repo settings-tab monolith ([fb77069](https://github.com/iblai/os/commit/fb77069b870f874459cdaf9eb8fa6d2241646736))
-* **edit-mentor:** source the settings tab from the SDK AgentSettingsTab ([97b1ed9](https://github.com/iblai/os/commit/97b1ed9f0736ede7936bc6ed3d2a265a1f7a711a))
+- **edit-mentor:** delete the in-repo settings-tab monolith ([fb77069](https://github.com/iblai/os/commit/fb77069b870f874459cdaf9eb8fa6d2241646736))
+- **edit-mentor:** source the settings tab from the SDK AgentSettingsTab ([97b1ed9](https://github.com/iblai/os/commit/97b1ed9f0736ede7936bc6ed3d2a265a1f7a711a))
 
 ### Chores
 
-* **deps:** bump @iblai/iblai-js to 1.27.1 ([089688c](https://github.com/iblai/os/commit/089688c4d153491425651b0e702c92a8a18f11d6))
-* **deps:** raise postcss and brace-expansion overrides past new advisories ([f92a8bd](https://github.com/iblai/os/commit/f92a8bdd940b012024b3e3a050eb8e9ca5be2eed))
+- **deps:** bump @iblai/iblai-js to 1.27.1 ([089688c](https://github.com/iblai/os/commit/089688c4d153491425651b0e702c92a8a18f11d6))
+- **deps:** raise postcss and brace-expansion overrides past new advisories ([f92a8bd](https://github.com/iblai/os/commit/f92a8bdd940b012024b3e3a050eb8e9ca5be2eed))
 
 ## [0.103.1](https://github.com/iblai/os/compare/v0.103.0...v0.103.1) (2026-07-27)
 
 ### Bug Fixes
 
-* **nav-bar:** route New Chat home when off a chat route ([8460ceb](https://github.com/iblai/os/commit/8460ceb60c2a5184f934e3fcabab153c07f5c6c7))
-* **nav-bar:** stop treating /analytics as a prompt-gallery route ([c1dec57](https://github.com/iblai/os/commit/c1dec57c808f7480bc9ef83ee0f0ff657df77a2e))
+- **nav-bar:** route New Chat home when off a chat route ([8460ceb](https://github.com/iblai/os/commit/8460ceb60c2a5184f934e3fcabab153c07f5c6c7))
+- **nav-bar:** stop treating /analytics as a prompt-gallery route ([c1dec57](https://github.com/iblai/os/commit/c1dec57c808f7480bc9ef83ee0f0ff657df77a2e))
 
 ### Documentation
 
-* **e2e:** record journey 65 coverage ([8ad76ef](https://github.com/iblai/os/commit/8ad76ef829142adac5511a3792c6681bd8d10597))
+- **e2e:** record journey 65 coverage ([8ad76ef](https://github.com/iblai/os/commit/8ad76ef829142adac5511a3792c6681bd8d10597))
 
 ### Tests
 
-* **e2e:** add journey 65 analytics navbar parity ([31361b0](https://github.com/iblai/os/commit/31361b069076dcb79768b4d9e7dec8f6e84f3097))
-* **nav-bar:** cover analytics route parity and New Chat routing ([b672bd4](https://github.com/iblai/os/commit/b672bd441c387674ec9f0d75b1e00df830d4fb04))
+- **e2e:** add journey 65 analytics navbar parity ([31361b0](https://github.com/iblai/os/commit/31361b069076dcb79768b4d9e7dec8f6e84f3097))
+- **nav-bar:** cover analytics route parity and New Chat routing ([b672bd4](https://github.com/iblai/os/commit/b672bd441c387674ec9f0d75b1e00df830d4fb04))
 
 ## [0.103.0](https://github.com/iblai/os/compare/v0.102.5...v0.103.0) (2026-07-26)
 
