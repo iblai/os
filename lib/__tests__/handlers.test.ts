@@ -424,7 +424,10 @@ describe('useIframeHandlers', () => {
       const { result } = renderHook(() => useIframeHandlers());
       const documentFilter = { type: 'include', values: ['doc1', 'doc2'] };
       const mockEvent = {
-        data: JSON.stringify(documentFilter),
+        data: {
+          type: 'MENTOR:DOCUMENTFILTER',
+          data: JSON.stringify(documentFilter),
+        },
       } as MessageEvent;
 
       result.current['MENTOR:DOCUMENTFILTER'](undefined, mockEvent);
@@ -436,7 +439,9 @@ describe('useIframeHandlers', () => {
 
     it('should handle invalid JSON and log error', () => {
       const { result } = renderHook(() => useIframeHandlers());
-      const mockEvent = { data: 'invalid-json' } as MessageEvent;
+      const mockEvent = {
+        data: { type: 'MENTOR:DOCUMENTFILTER', data: 'invalid-json' },
+      } as MessageEvent;
 
       expect(() => {
         result.current['MENTOR:DOCUMENTFILTER'](undefined, mockEvent);
@@ -459,7 +464,10 @@ describe('useIframeHandlers', () => {
         metadata: { source: 'external' },
       };
       const mockEvent = {
-        data: JSON.stringify(documentFilter),
+        data: {
+          type: 'MENTOR:DOCUMENTFILTER',
+          data: JSON.stringify(documentFilter),
+        },
       } as MessageEvent;
 
       result.current['MENTOR:DOCUMENTFILTER'](undefined, mockEvent);
@@ -471,7 +479,9 @@ describe('useIframeHandlers', () => {
 
     it('should handle empty object', () => {
       const { result } = renderHook(() => useIframeHandlers());
-      const mockEvent = { data: '{}' } as MessageEvent;
+      const mockEvent = {
+        data: { type: 'MENTOR:DOCUMENTFILTER', data: '{}' },
+      } as MessageEvent;
 
       result.current['MENTOR:DOCUMENTFILTER'](undefined, mockEvent);
 
@@ -512,9 +522,14 @@ describe('useIframeHandlers', () => {
   describe('MENTOR:EDX_USAGE_ID handler', () => {
     it('should log EDX usage ID', () => {
       const { result } = renderHook(() => useIframeHandlers());
-      const payload = { edxUsageId: 'usage-123' };
+      const mockEvent = {
+        data: {
+          type: 'MENTOR:EDX_USAGE_ID',
+          data: { edxUsageId: 'usage-123' },
+        },
+      } as MessageEvent;
 
-      result.current['MENTOR:EDX_USAGE_ID'](payload);
+      result.current['MENTOR:EDX_USAGE_ID'](undefined, mockEvent);
 
       expect(console.log).toHaveBeenCalledWith(
         'EDX Usage ID updated:',
@@ -525,9 +540,12 @@ describe('useIframeHandlers', () => {
     it('should handle different usage ID formats', () => {
       const { result } = renderHook(() => useIframeHandlers());
 
-      result.current['MENTOR:EDX_USAGE_ID']({
-        edxUsageId: 'block-v1:org+course+run',
-      });
+      result.current['MENTOR:EDX_USAGE_ID'](undefined, {
+        data: {
+          type: 'MENTOR:EDX_USAGE_ID',
+          data: { edxUsageId: 'block-v1:org+course+run' },
+        },
+      } as MessageEvent);
 
       expect(console.log).toHaveBeenCalledWith(
         'EDX Usage ID updated:',
@@ -539,9 +557,14 @@ describe('useIframeHandlers', () => {
   describe('MENTOR:EDX_COURSE_ID handler', () => {
     it('should log EDX course ID', () => {
       const { result } = renderHook(() => useIframeHandlers());
-      const payload = { edxCourseId: 'course-123' };
+      const mockEvent = {
+        data: {
+          type: 'MENTOR:EDX_COURSE_ID',
+          data: { edxCourseId: 'course-123' },
+        },
+      } as MessageEvent;
 
-      result.current['MENTOR:EDX_COURSE_ID'](payload);
+      result.current['MENTOR:EDX_COURSE_ID'](undefined, mockEvent);
 
       expect(console.log).toHaveBeenCalledWith(
         'EDX Course ID updated:',
@@ -552,9 +575,12 @@ describe('useIframeHandlers', () => {
     it('should handle different course ID formats', () => {
       const { result } = renderHook(() => useIframeHandlers());
 
-      result.current['MENTOR:EDX_COURSE_ID']({
-        edxCourseId: 'course-v1:org+course+run',
-      });
+      result.current['MENTOR:EDX_COURSE_ID'](undefined, {
+        data: {
+          type: 'MENTOR:EDX_COURSE_ID',
+          data: { edxCourseId: 'course-v1:org+course+run' },
+        },
+      } as MessageEvent);
 
       expect(console.log).toHaveBeenCalledWith(
         'EDX Course ID updated:',
@@ -879,7 +905,12 @@ describe('useIframeHandlers', () => {
       const { result } = renderHook(() => useIframeHandlers());
 
       result.current['MENTOR:THEME_CHANGE']({ theme: 'dark' });
-      result.current['MENTOR:EDX_USAGE_ID']({ edxUsageId: 'usage-123' });
+      result.current['MENTOR:EDX_USAGE_ID'](undefined, {
+        data: {
+          type: 'MENTOR:EDX_USAGE_ID',
+          data: { edxUsageId: 'usage-123' },
+        },
+      } as MessageEvent);
       result.current['MENTOR:ENABLE_CHAT_ACTION_POPUPS']({ enable: true });
 
       expect(mockDispatchInstance).toHaveBeenCalledTimes(3);
@@ -906,8 +937,12 @@ describe('useIframeHandlers', () => {
           data: { css: '.test{}' },
         } as MessageEvent);
         result.current['MENTOR:PROMPT_FOCUS']();
-        result.current['MENTOR:EDX_USAGE_ID']({ edxUsageId: 'id' });
-        result.current['MENTOR:EDX_COURSE_ID']({ edxCourseId: 'id' });
+        result.current['MENTOR:EDX_USAGE_ID'](undefined, {
+          data: { type: 'MENTOR:EDX_USAGE_ID', data: { edxUsageId: 'id' } },
+        } as MessageEvent);
+        result.current['MENTOR:EDX_COURSE_ID'](undefined, {
+          data: { type: 'MENTOR:EDX_COURSE_ID', data: { edxCourseId: 'id' } },
+        } as MessageEvent);
         result.current['MENTOR:METADATA_SAFETY']({ safety_disclaimer: true });
         result.current['MENTOR:IFRAME_CLOSE_BUTTON']({
           enableCloseButton: true,
