@@ -511,9 +511,13 @@ describe('WelcomeChat', () => {
       const { container } = render(<WelcomeChat {...defaultProps} />);
 
       const mainContainer = container.querySelector(
-        '.rounded-lg.p-4.max-w-2xl.mx-auto.h-full',
+        '.rounded-lg.py-4.w-full.mx-auto.h-full',
       );
       expect(mainContainer).toBeInTheDocument();
+      // No horizontal padding: the welcome text must line up edge-to-edge
+      // with the chat input, which sits at the same chatAreaMaxWidth.
+      expect(mainContainer!.className.split(/\s+/)).not.toContain('p-4');
+      expect(mainContainer!.className.split(/\s+/)).not.toContain('px-4');
     });
 
     it('should center content when no guided prompts', () => {
@@ -527,8 +531,7 @@ describe('WelcomeChat', () => {
 
       const { container } = render(<WelcomeChat {...defaultProps} />);
 
-      const mainContainer = container.querySelector('.justify-center');
-      expect(mainContainer).toBeInTheDocument();
+      expect(container.firstElementChild).toHaveClass('justify-center-safe');
     });
 
     it('should not center content when guided prompts exist', () => {
@@ -542,8 +545,107 @@ describe('WelcomeChat', () => {
 
       const { container } = render(<WelcomeChat {...defaultProps} />);
 
-      const mainContainer = container.querySelector('.justify-center');
-      expect(mainContainer).not.toBeInTheDocument();
+      expect(container.firstElementChild).not.toHaveClass(
+        'justify-center-safe',
+      );
+    });
+
+    // Issue #2260 — a welcome message taller than the viewport used to be
+    // unreachable: `justify-center` split the overflow above and below the box
+    // and `scrollTop` cannot go negative, so the first lines stayed off-screen.
+    // Safe alignment falls back to flex-start once the content overflows, so
+    // the scroll container owned by components/chat can reach the first line.
+    describe('long welcome message scrolling (issue #2260)', () => {
+      it('uses safe centering rather than hard centering when there are no prompts', () => {
+        mockUseGetGuidedPromptsQuery.mockReturnValue({
+          data: { ai_prompts: [] },
+          isLoading: false,
+          error: undefined,
+        });
+
+        const { container } = render(<WelcomeChat {...defaultProps} />);
+        const box = container.firstElementChild as HTMLElement;
+
+        expect(box.className).toContain('justify-center-safe');
+        expect(box.className.split(/\s+/)).not.toContain('justify-center');
+      });
+
+      it('does not declare its own scroll container', () => {
+        mockUseGetGuidedPromptsQuery.mockReturnValue({
+          data: { ai_prompts: [] },
+          isLoading: false,
+          error: undefined,
+        });
+
+        const { container } = render(<WelcomeChat {...defaultProps} />);
+        const box = container.firstElementChild as HTMLElement;
+
+        expect(box).not.toHaveClass('overflow-y-auto');
+        expect(box).toHaveClass('h-full');
+      });
+
+      it('top-aligns the avatar and safely centers the header row', () => {
+        mockUseGetGuidedPromptsQuery.mockReturnValue({
+          data: { ai_prompts: [] },
+          isLoading: false,
+          error: undefined,
+        });
+
+        const { container } = render(<WelcomeChat {...defaultProps} />);
+        const headerRow = container.querySelector('.mb-6.flex.gap-4');
+
+        expect(headerRow).toHaveClass('items-start');
+        expect(headerRow).toHaveClass('justify-center-safe');
+        expect(headerRow?.className.split(/\s+/)).not.toContain('items-center');
+      });
+
+      it('keeps the avatar from shrinking beside a long message', () => {
+        mockUseGetGuidedPromptsQuery.mockReturnValue({
+          data: { ai_prompts: [] },
+          isLoading: false,
+          error: undefined,
+        });
+
+        const { container } = render(<WelcomeChat {...defaultProps} />);
+
+        expect(container.querySelector('.h-14.w-14')).toHaveClass('shrink-0');
+      });
+
+      it('renders a very long welcome message inside the box', () => {
+        const longMessage = 'Welcome aboard. '.repeat(2000);
+        mockUseWelcome.mockReturnValue({ welcomeMessage: longMessage });
+        mockUseGetGuidedPromptsQuery.mockReturnValue({
+          data: { ai_prompts: [] },
+          isLoading: false,
+          error: undefined,
+        });
+
+        const { container } = render(<WelcomeChat {...defaultProps} />);
+        const box = container.firstElementChild as HTMLElement;
+
+        expect(box.textContent).toContain('Welcome aboard.');
+        expect(box.textContent!.length).toBeGreaterThan(30000);
+        expect(box).toHaveClass('justify-center-safe');
+      });
+    });
+
+    describe('chat area width (issue #2260)', () => {
+      it('defaults the box width to CHAT_AREA_SIZE.DEFAULT', () => {
+        const { container } = render(<WelcomeChat {...defaultProps} />);
+        const box = container.firstElementChild as HTMLElement;
+
+        expect(box.style.maxWidth).toBe('848px');
+        expect(box.className.split(/\s+/)).not.toContain('max-w-2xl');
+      });
+
+      it('honours an explicit chatAreaMaxWidth', () => {
+        const { container } = render(
+          <WelcomeChat {...defaultProps} chatAreaMaxWidth={1024} />,
+        );
+        const box = container.firstElementChild as HTMLElement;
+
+        expect(box.style.maxWidth).toBe('1024px');
+      });
     });
 
     it('should apply correct avatar ring class', () => {

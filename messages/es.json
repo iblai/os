@@ -1559,7 +1559,7 @@
     "formBeingSubmitted": "El formulario se está enviando"
   },
   "settingsTabCopyMentorModal": {
-    "defaultCopyName": "Copia de {name}",
+    "defaultCopyNamePrefix": "Copia de",
     "defaultAgentName": "Agente",
     "errorMissingContext": "No se puede copiar el agente. Falta contexto.",
     "successCopied": "Agente copiado correctamente. Cambiando al nuevo agente",

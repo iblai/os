@@ -94,6 +94,9 @@ export function useIframeHandlers() {
         }),
       );
     },
+    'MENTOR:ENABLE_GRADING': (_payload: unknown, data: MessageEvent) => {
+      dispatch(chatActions.setEnableGrading(data));
+    },
     // Document filter hanlder
     'MENTOR:DOCUMENTFILTER': (_payload: unknown, event: MessageEvent) => {
       try {
@@ -113,7 +116,6 @@ export function useIframeHandlers() {
         }),
       );
     },
-
     'MENTOR:EDX_COURSE_ID': (payload: { edxCourseId: string }) => {
       console.log('EDX Course ID updated:', payload.edxCourseId);
       dispatch(

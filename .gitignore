@@ -22,6 +22,9 @@ playwright/.auth/
 .env
 .env.*
 !.env.example
+# Shared, non-secret dev defaults loaded only by `next dev` (keeps CSP
+# report-only locally so enforcement doesn't block HMR/eval).
+!.env.development
 
 # keys & certificates
 *.pem

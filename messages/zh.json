@@ -1559,7 +1559,7 @@
     "formBeingSubmitted": "表单正在提交"
   },
   "settingsTabCopyMentorModal": {
-    "defaultCopyName": "{name} 的副本",
+    "defaultCopyNamePrefix": "副本",
     "defaultAgentName": "智能体",
     "errorMissingContext": "无法复制智能体。缺少上下文。",
     "successCopied": "智能体复制成功。正在切换到新智能体",
