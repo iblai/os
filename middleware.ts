@@ -10,10 +10,17 @@ import { NextRequest, NextResponse } from 'next/server';
  * have to maintain a per-host script allowlist. Next.js reads the nonce off the
  * `Content-Security-Policy` request header and stamps it onto its own scripts.
  *
- * ── Rollout (important) ──────────────────────────────────────────────────────
- * Defaults to **Report-Only**: a missed directive reports a violation instead of
- * breaking the app. Watch the reports (browser console, or wire `CSP_REPORT_URI`
- * to Sentry), then set `CSP_MODE=enforce` once they're clean.
+ * ── Mode ─────────────────────────────────────────────────────────────────────
+ * **Enforced by default** (violations are blocked). Opt out with
+ * `CSP_MODE=report-only` — which local dev sets in `.env.development` so
+ * `next dev`'s HMR / eval / error overlay aren't blocked. Use `report-only`
+ * anywhere to observe without blocking (e.g. to validate a new third-party
+ * origin). Wire `CSP_REPORT_URI` to collect violations.
+ *
+ * NOTE: mode is deliberately NOT keyed off `NODE_ENV`. Next.js inlines
+ * `process.env.NODE_ENV` into the middleware bundle at BUILD time, so an image
+ * built with `NODE_ENV=development` (as some deploy pipelines do) would wrongly
+ * stay report-only in production regardless of the runtime NODE_ENV.
  *
  * Any static `Content-Security-Policy` header set upstream (e.g. the current
  * Nginx `add_header`) MUST be removed when this ships — a browser intersects
@@ -23,10 +30,15 @@ import { NextRequest, NextResponse } from 'next/server';
  * Referrer-Policy) in Nginx; only CSP moves here because only CSP needs the nonce.
  */
 
-// Read at request time (not module load) so the policy tracks the running
-// environment — and so each behaviour is unit-testable without re-importing.
-const isEnforce = () => process.env.CSP_MODE === 'enforce';
-const isDev = () => process.env.NODE_ENV === 'development';
+// Read at request time (not module load) so it's unit-testable without
+// re-importing. Enforce unless CSP_MODE is 'report-only'; an unrecognized value
+// fails SAFE to report-only rather than surprise-blocking on a typo.
+const isEnforce = () => {
+  const mode = process.env.CSP_MODE;
+  if (mode === 'report-only') return false;
+  if (mode && mode !== 'enforce') return false; // unrecognized → fail safe
+  return true; // 'enforce' or unset → enforce
+};
 // Optional violation sink (e.g. a Sentry CSP endpoint). Reports go to the
 // browser console when unset — enough to validate the Report-Only rollout.
 const reportUri = () => process.env.CSP_REPORT_URI;
@@ -38,8 +50,17 @@ const IBL_HTTP = [
   'https://*.iblai.app',
   'https://*.ibl.ai',
   'https://*.ibl.network', // Sentry (sentry.ibl.network)
+  // Non-`.app` first-party domains used by staging / some environments (e.g.
+  // learn.stg1.iblai.org for the LMS/edX + APIs) — else enforce blocks them.
+  'https://*.iblai.org',
+  'https://*.iblai.tech',
 ];
-const IBL_WS = ['wss://*.iblai.app', 'wss://*.ibl.ai']; // ASGI + LiveKit
+const IBL_WS = [
+  'wss://*.iblai.app',
+  'wss://*.ibl.ai',
+  'wss://*.iblai.org',
+  'wss://*.iblai.tech',
+]; // ASGI + LiveKit
 const GOOGLE = [
   'https://apis.google.com',
   'https://*.googleapis.com',
@@ -53,7 +74,12 @@ function apiBaseOrigin(): string[] {
   if (!apiBase) return [];
   try {
     const { origin, hostname } = new URL(apiBase);
-    if (/(\.iblai\.app|\.ibl\.ai|\.ibl\.network)$/.test(hostname)) return [];
+    if (
+      /(\.iblai\.app|\.ibl\.ai|\.ibl\.network|\.iblai\.org|\.iblai\.tech)$/.test(
+        hostname,
+      )
+    )
+      return [];
     return [origin];
   } catch {
     return [];
@@ -71,7 +97,9 @@ function buildCsp(nonce: string): string {
       "'self'",
       `'nonce-${nonce}'`,
       "'strict-dynamic'",
-      ...(isDev() ? ["'unsafe-eval'"] : []), // React Refresh / dev source maps
+      // eval is only needed by `next dev` (React Refresh); allow it in
+      // report-only mode (which is what dev runs), never when enforcing.
+      ...(!isEnforce() ? ["'unsafe-eval'"] : []),
       'https:',
       "'unsafe-inline'",
     ],
