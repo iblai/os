@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.106.0](https://github.com/iblai/os/compare/v0.105.1...v0.106.0) (2026-07-29)
+
+### Features
+
+* **ci:** use stg2 as overflow when stg1 is busy ([85a2df1](https://github.com/iblai/os/commit/85a2df1a8300f125339dd150bde3716ab67ebf5f))
+
 ## [0.105.1](https://github.com/iblai/os/compare/v0.105.0...v0.105.1) (2026-07-29)
 
 ### Bug Fixes
