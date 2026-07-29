@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.108.4](https://github.com/iblai/os/compare/v0.108.3...v0.108.4) (2026-07-29)
+
+### Bug Fixes
+
+* **ci:** a skipped e2e is not a failure ([1273923](https://github.com/iblai/os/commit/12739234cd58fd7a2c6bf84b9dbe90188c4b6330))
+* **ci:** queue guard must tell an offline runner from a busy one ([271c105](https://github.com/iblai/os/commit/271c1055734be2b6d1cb93f0eb520d776ace0e03)), closes [os#390](https://github.com/iblai/os/issues/390)
+
 ## [0.108.3](https://github.com/iblai/os/compare/v0.108.2...v0.108.3) (2026-07-29)
 
 ### Bug Fixes
