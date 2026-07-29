@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.105.1](https://github.com/iblai/os/compare/v0.105.0...v0.105.1) (2026-07-29)
+
+### Bug Fixes
+
+* **ci:** run-name claimed 4 browsers when only chrome runs ([1fa58a9](https://github.com/iblai/os/commit/1fa58a9b99fe4c905d892b25cdefb1d739535294))
+
 ## [0.105.0](https://github.com/iblai/os/compare/v0.104.1...v0.105.0) (2026-07-29)
 
 ### Features
