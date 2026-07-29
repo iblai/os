@@ -1,93 +1,99 @@
 # Changelog
 
+## [0.108.1](https://github.com/iblai/os/compare/v0.108.0...v0.108.1) (2026-07-29)
+
+### Bug Fixes
+
+* remove double 'MENTOR:ENABLE_GRADING' in handlers ([c7e36ef](https://github.com/iblai/os/commit/c7e36efadc2787935dbb5c2929eb7afad6b32e05))
+
 ## [0.108.0](https://github.com/iblai/os/compare/v0.107.0...v0.108.0) (2026-07-29)
 
 ### Features
 
-* **security:** enforce CSP by default (report-only in dev) ([f5a08c7](https://github.com/iblai/os/commit/f5a08c77e95c2ad02acb850ae79fa939406e6d29))
+- **security:** enforce CSP by default (report-only in dev) ([f5a08c7](https://github.com/iblai/os/commit/f5a08c77e95c2ad02acb850ae79fa939406e6d29))
 
 ### Bug Fixes
 
-* **security:** allow *.iblai.org / *.iblai.tech in the enforced CSP ([8eb0173](https://github.com/iblai/os/commit/8eb0173e9111353a4ea91d0a558fc6ceb3322a22))
-* **security:** decouple CSP enforce decision from NODE_ENV ([16427cd](https://github.com/iblai/os/commit/16427cdf506d558a91b4897c805ff9ef543837dd))
+- **security:** allow _.iblai.org / _.iblai.tech in the enforced CSP ([8eb0173](https://github.com/iblai/os/commit/8eb0173e9111353a4ea91d0a558fc6ceb3322a22))
+- **security:** decouple CSP enforce decision from NODE_ENV ([16427cd](https://github.com/iblai/os/commit/16427cdf506d558a91b4897c805ff9ef543837dd))
 
 ### Chores
 
-* **ci:** remove Claude from GitHub Actions; require local pre-push review ([9b7fab4](https://github.com/iblai/os/commit/9b7fab47ae4dd31c61cc64e8d6d3e3208dc672b4))
+- **ci:** remove Claude from GitHub Actions; require local pre-push review ([9b7fab4](https://github.com/iblai/os/commit/9b7fab47ae4dd31c61cc64e8d6d3e3208dc672b4))
 
 ### CI
 
-* adopt the central PR e2e pipeline on this branch ([d27f234](https://github.com/iblai/os/commit/d27f234b9128669fe18e582e2e51730cd9cbd14d)), closes [os#380](https://github.com/iblai/os/issues/380) [#372](https://github.com/iblai/os/issues/372)
+- adopt the central PR e2e pipeline on this branch ([d27f234](https://github.com/iblai/os/commit/d27f234b9128669fe18e582e2e51730cd9cbd14d)), closes [os#380](https://github.com/iblai/os/issues/380) [#372](https://github.com/iblai/os/issues/372)
 
 ## [0.107.0](https://github.com/iblai/os/compare/v0.106.1...v0.107.0) (2026-07-29)
 
 ### Features
 
-* **logo:** use ibl.ai logo as header fallback ([5fd0ff4](https://github.com/iblai/os/commit/5fd0ff49f848dfee2d00ee5b6ccba45a5c8a7562))
+- **logo:** use ibl.ai logo as header fallback ([5fd0ff4](https://github.com/iblai/os/commit/5fd0ff49f848dfee2d00ee5b6ccba45a5c8a7562))
 
 ## [0.106.1](https://github.com/iblai/os/compare/v0.106.0...v0.106.1) (2026-07-29)
 
 ### Bug Fixes
 
-* **advanced-chat:** scroll and top-align the advanced welcome message ([96969e4](https://github.com/iblai/os/commit/96969e4c14f6240f0bf8a6beeef4a377996a5008))
-* **chat:** give the welcome screen a reachable scroll container ([b9b5ada](https://github.com/iblai/os/commit/b9b5adab300ee31a1e24129aab0aea1feca792e0))
-* **edit-mentor:** stop doubling the space in a copied agent's name ([cf51e72](https://github.com/iblai/os/commit/cf51e722d0abc38d66264645192b95ce32d42a44))
-* **welcome-chat:** reach the top of a long embed welcome message ([44c85dc](https://github.com/iblai/os/commit/44c85dc6a28edf43156aee9948493a333722dc5b))
+- **advanced-chat:** scroll and top-align the advanced welcome message ([96969e4](https://github.com/iblai/os/commit/96969e4c14f6240f0bf8a6beeef4a377996a5008))
+- **chat:** give the welcome screen a reachable scroll container ([b9b5ada](https://github.com/iblai/os/commit/b9b5adab300ee31a1e24129aab0aea1feca792e0))
+- **edit-mentor:** stop doubling the space in a copied agent's name ([cf51e72](https://github.com/iblai/os/commit/cf51e722d0abc38d66264645192b95ce32d42a44))
+- **welcome-chat:** reach the top of a long embed welcome message ([44c85dc](https://github.com/iblai/os/commit/44c85dc6a28edf43156aee9948493a333722dc5b))
 
 ### Chores
 
-* **format:** apply prettier to CHANGELOG ([ea806d2](https://github.com/iblai/os/commit/ea806d2c38cf1fb250c95ead76dc8dfbed81cdfc))
+- **format:** apply prettier to CHANGELOG ([ea806d2](https://github.com/iblai/os/commit/ea806d2c38cf1fb250c95ead76dc8dfbed81cdfc))
 
 ### Tests
 
-* **chat:** cover long welcome message scrolling and input alignment ([951814a](https://github.com/iblai/os/commit/951814a41f360b75a38d0bcc5768c2c6e1d9cefe))
-* **e2e:** match the SDK's stateful aria-label on the enhanced-RAG switch ([0d0351a](https://github.com/iblai/os/commit/0d0351a5aab95e6d76ebbdd3728fadf80efce4db))
+- **chat:** cover long welcome message scrolling and input alignment ([951814a](https://github.com/iblai/os/commit/951814a41f360b75a38d0bcc5768c2c6e1d9cefe))
+- **e2e:** match the SDK's stateful aria-label on the enhanced-RAG switch ([0d0351a](https://github.com/iblai/os/commit/0d0351a5aab95e6d76ebbdd3728fadf80efce4db))
 
 ### CI
 
-* adopt the central PR e2e pipeline on this branch ([481f70d](https://github.com/iblai/os/commit/481f70d7f10a9abd699378105e475757f40e9045)), closes [os#380](https://github.com/iblai/os/issues/380) [#377](https://github.com/iblai/os/issues/377)
+- adopt the central PR e2e pipeline on this branch ([481f70d](https://github.com/iblai/os/commit/481f70d7f10a9abd699378105e475757f40e9045)), closes [os#380](https://github.com/iblai/os/issues/380) [#377](https://github.com/iblai/os/issues/377)
 
 ## [0.106.0](https://github.com/iblai/os/compare/v0.105.1...v0.106.0) (2026-07-29)
 
 ### Features
 
-* **ci:** use stg2 as overflow when stg1 is busy ([85a2df1](https://github.com/iblai/os/commit/85a2df1a8300f125339dd150bde3716ab67ebf5f))
+- **ci:** use stg2 as overflow when stg1 is busy ([85a2df1](https://github.com/iblai/os/commit/85a2df1a8300f125339dd150bde3716ab67ebf5f))
 
 ## [0.105.1](https://github.com/iblai/os/compare/v0.105.0...v0.105.1) (2026-07-29)
 
 ### Bug Fixes
 
-* **ci:** run-name claimed 4 browsers when only chrome runs ([1fa58a9](https://github.com/iblai/os/commit/1fa58a9b99fe4c905d892b25cdefb1d739535294))
+- **ci:** run-name claimed 4 browsers when only chrome runs ([1fa58a9](https://github.com/iblai/os/commit/1fa58a9b99fe4c905d892b25cdefb1d739535294))
 
 ## [0.105.0](https://github.com/iblai/os/compare/v0.104.1...v0.105.0) (2026-07-29)
 
 ### Features
 
-* **pr-e2e:** stream progress + publish the report link on the PR ([46df649](https://github.com/iblai/os/commit/46df649b55b2d2a3cdbd1856f66589a7d12b4156))
+- **pr-e2e:** stream progress + publish the report link on the PR ([46df649](https://github.com/iblai/os/commit/46df649b55b2d2a3cdbd1856f66589a7d12b4156))
 
 ### Bug Fixes
 
-* **pr-e2e:** pass merge_sha so the suite and app image share one commit ([ff522d2](https://github.com/iblai/os/commit/ff522d2db168a9b99d80c55f674bec5ef9d3f7e6))
+- **pr-e2e:** pass merge_sha so the suite and app image share one commit ([ff522d2](https://github.com/iblai/os/commit/ff522d2db168a9b99d80c55f674bec5ef9d3f7e6))
 
 ### CI
 
-* **e2e:** run PR e2e on the central pipeline instead of OCI container instances ([13f11eb](https://github.com/iblai/os/commit/13f11ebb8f5f1221a23183c2d675a3e8365db07d))
+- **e2e:** run PR e2e on the central pipeline instead of OCI container instances ([13f11eb](https://github.com/iblai/os/commit/13f11ebb8f5f1221a23183c2d675a3e8365db07d))
 
 ## [0.104.1](https://github.com/iblai/os/compare/v0.104.0...v0.104.1) (2026-07-28)
 
 ### Bug Fixes
 
-* **tauri:** marshal event emits to main thread to end IPC deadlock freeze ([011d170](https://github.com/iblai/os/commit/011d1707cd568ee56ff988cff68d8597050c54a2))
+- **tauri:** marshal event emits to main thread to end IPC deadlock freeze ([011d170](https://github.com/iblai/os/commit/011d1707cd568ee56ff988cff68d8597050c54a2))
 
 ### Chores
 
-* **tauri:** release app-v0.95.6 ([79a02b1](https://github.com/iblai/os/commit/79a02b1c6b918a3b6137d9a9fbe56490b6550a9b))
+- **tauri:** release app-v0.95.6 ([79a02b1](https://github.com/iblai/os/commit/79a02b1c6b918a3b6137d9a9fbe56490b6550a9b))
 
 ## [0.104.0](https://github.com/iblai/os/compare/v0.103.2...v0.104.0) (2026-07-28)
 
 ### Features
 
-* **iframe:** handle MENTOR:ENABLE_GRADING message from parent ([1b78d94](https://github.com/iblai/os/commit/1b78d94a1f7eab7dbdf774441f63528343c7ece8))
+- **iframe:** handle MENTOR:ENABLE_GRADING message from parent ([1b78d94](https://github.com/iblai/os/commit/1b78d94a1f7eab7dbdf774441f63528343c7ece8))
 
 ## [0.103.2](https://github.com/iblai/os/compare/v0.103.1...v0.103.2) (2026-07-27)
 
