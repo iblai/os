@@ -94,6 +94,9 @@ export function useIframeHandlers() {
         }),
       );
     },
+    'MENTOR:ENABLE_GRADING': (_payload: unknown, data: MessageEvent) => {
+      dispatch(chatActions.setEnableGrading(data));
+    },
     // Document filter hanlder
     'MENTOR:DOCUMENTFILTER': (_payload: unknown, event: MessageEvent) => {
       try {
@@ -112,6 +115,10 @@ export function useIframeHandlers() {
           metadata: { edxUsageId: payload.edxUsageId },
         }),
       );
+    },
+
+    'MENTOR:ENABLE_GRADING': (payload: boolean) => {
+      dispatch(chatActions.setEnableGrading(payload));
     },
 
     'MENTOR:EDX_COURSE_ID': (payload: { edxCourseId: string }) => {

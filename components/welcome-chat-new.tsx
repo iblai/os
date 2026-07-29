@@ -120,6 +120,7 @@ export function WelcomeChatNew({
           mentorUniqueId={mentorUniqueId}
           isNewSession={isNewSession}
           aiWelcomeMessage={aiWelcomeMessage}
+          chatAreaMaxWidth={chatAreaMaxWidth}
         />
       </div>
     );
@@ -173,7 +174,7 @@ export function WelcomeChatNew({
   }
 
   return (
-    <div className="overflow-y-auto">
+    <div>
       <div className="w-full py-6">
         {/* GitHub Sync Banner */}
         {tenantKey === config.mainTenantKey() &&
