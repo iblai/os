@@ -28,6 +28,7 @@ run-name: 'PR E2E Tests — stg1 (firefox,chrome,safari,edge)'
 
 permissions:
   contents: read
+  pull-requests: write   # the e2e job posts the report link as a PR comment
 
 concurrency:
   group: pr-e2e-${{ github.event.pull_request.number }}
@@ -89,67 +90,182 @@ jobs:
       pr-number: ${{ github.event.pull_request.number }}
 
   # ============================================================
-  # BUILD PLAYWRIGHT IMAGE
+  # E2E — dispatched to the central pipeline (iblai/iblai-deploy-ops)
+  #
+  # Replaces the old OCI container-instance runner. The central pipeline swaps this
+  # PR's SPA image into the target env, builds the Playwright image from THIS PR's
+  # sha, runs the suite, publishes the standard report, then ALWAYS restores the
+  # env's original image. We dispatch (not `uses:`) because a public repo cannot
+  # call a private reusable workflow, and we poll so this job — and therefore the
+  # required check — carries the real e2e result.
   # ============================================================
-  build-playwright-image:
-    needs: gate
-    uses: ./.github/workflows/reusable-pr-docker-build.yml
-    secrets: inherit
-    with:
-      dockerfile-path: e2e/Dockerfile
-      build-context: .
-      image-name: ibl-mentor-playwright
-      registry-type: ocir
-      image-tag: pr-${{ github.event.pull_request.number }}-${{ github.sha }}
-      event-name: pull_request
-      pr-number: ${{ github.event.pull_request.number }}
+  e2e:
+    name: E2E (central pipeline)
+    needs: build-app-image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # need the base ref to diff changed specs
 
-  # ============================================================
-  # RUN PLAYWRIGHT TESTS ON OCI
-  # ============================================================
-  run-tests:
-    needs: [build-app-image, build-playwright-image]
-    uses: ./.github/workflows/reusable-oci-test-runner.yml
-    secrets: inherit
-    with:
-      domain-number: '1'
-      app-type: mentor
-      playwright-image: ${{ needs.build-playwright-image.outputs.image-uri }}
-      max-wait: 10800
-      total-shards: 1
-      run-type: main
-      browsers: 'chrome'
-      workers: '3'
-      registry-type: 'ocir'
-      ec2-host: '98.82.66.78'
-      runs-on: iblai-stg-runner
-      ec2-user: 'ubuntu'
-      ec2-commands: >-
-        cd /ibl/app/ibl-spa/mentor &&
-        sed -i 's|image: .*|image: ${{ needs.build-app-image.outputs.image-uri }}|' docker-compose.yml &&
-        docker compose down &&
-        docker image prune -af &&
-        docker compose up -d
+      - name: Detect changed spec files
+        id: specs
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          CHANGED=$(git diff --name-only "$BASE" "$HEAD" -- 'e2e/**/*.spec.ts' | tr '\n' ' ' | sed 's/ $//')
+          OTHER=$(git diff --name-only "$BASE" "$HEAD" -- . ':(exclude)e2e/**' | head -1)
+          N=$(printf '%s' "$CHANGED" | wc -w | tr -d ' ')
+          # Only spec files touched (and not many) -> run just those for fast feedback.
+          # Any app-source change -> full suite, since behaviour may have moved anywhere.
+          if [ -n "$CHANGED" ] && [ -z "$OTHER" ] && [ "$N" -le 5 ]; then
+            echo "mode=selective" >> "$GITHUB_OUTPUT"; echo "specs=$CHANGED" >> "$GITHUB_OUTPUT"
+            echo "selective: $CHANGED"
+          else
+            echo "mode=full" >> "$GITHUB_OUTPUT"; echo "specs=" >> "$GITHUB_OUTPUT"
+            echo "full suite (changed specs=$N, non-spec changes=${OTHER:-none})"
+          fi
 
+      - name: Dispatch e2e
+        id: dispatch
+        env:
+          GH_TOKEN: ${{ secrets.DEPLOY_OPS_DISPATCH_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          BEFORE=$(gh run list -R iblai/iblai-deploy-ops --workflow=pr-e2e.yml -L 1 --json databaseId --jq '.[0].databaseId // 0')
+          # github.sha on a pull_request IS the merge commit — the same ref actions/checkout used to
+          # build the app image, so the specs and the app code come from one commit.
+          gh workflow run pr-e2e.yml -R iblai/iblai-deploy-ops --ref main \
+            -f source_repo=os \
+            -f pr_number="$PR" \
+            -f merge_sha='${{ github.sha }}' \
+            -f head_sha='${{ github.event.pull_request.head.sha }}' \
+            -f app_image='${{ needs.build-app-image.outputs.image-uri }}' \
+            -f target_env=stg1 \
+            -f mode='${{ steps.specs.outputs.mode }}' \
+            -f specs='${{ steps.specs.outputs.specs }}'
+          for i in $(seq 1 30); do
+            sleep 5
+            ID=$(gh run list -R iblai/iblai-deploy-ops --workflow=pr-e2e.yml -L 1 --json databaseId --jq '.[0].databaseId // 0')
+            if [ "$ID" != "$BEFORE" ] && [ "$ID" != "0" ]; then
+              echo "run_id=$ID" >> "$GITHUB_OUTPUT"
+              echo "dispatched run $ID"; exit 0
+            fi
+          done
+          echo "::error::dispatched but the run never appeared"; exit 1
+
+      - name: Wait for e2e
+        id: wait
+        env:
+          GH_TOKEN: ${{ secrets.DEPLOY_OPS_DISPATCH_TOKEN }}
+          RUN_ID: ${{ steps.dispatch.outputs.run_id }}
+        run: |
+          set -uo pipefail
+          # The central pipeline lives in a PRIVATE repo, so most contributors here cannot open its
+          # Actions log. Mirror every phase transition into THIS log, which is public — otherwise a
+          # developer stares at a spinner for an hour with no idea what is happening.
+          echo "Phases: resolve -> baseline drift check -> sync (only if drifted) -> swap SPA -> e2e -> restore"
+          LAST=""
+          for i in $(seq 1 240); do        # up to 2h: image build + full suite
+            PHASES=$(gh api "repos/iblai/iblai-deploy-ops/actions/runs/${RUN_ID}/jobs" \
+                       --jq '[.jobs[] | "\(.name): \(.conclusion // .status)"] | join("  |  ")' 2>/dev/null || echo "")
+            if [ -n "$PHASES" ] && [ "$PHASES" != "$LAST" ]; then
+              echo "[$(date -u +%H:%M:%SZ)] $PHASES"
+              LAST="$PHASES"
+            fi
+            S=$(gh api "repos/iblai/iblai-deploy-ops/actions/runs/${RUN_ID}" --jq '.status+"|"+(.conclusion//"")' 2>/dev/null)
+            if [ "${S%%|*}" = "completed" ]; then
+              echo "conclusion=${S##*|}" >> "$GITHUB_OUTPUT"
+              echo "e2e finished: ${S##*|}"
+              exit 0
+            fi
+            sleep 30
+          done
+          echo "conclusion=timed_out" >> "$GITHUB_OUTPUT"
+          echo "::error::timed out after 2h waiting for the e2e run"; exit 1
+
+      - name: Publish the result on this PR
+        if: always() && steps.dispatch.outputs.run_id != ''
+        env:
+          GH_TOKEN:   ${{ secrets.DEPLOY_OPS_DISPATCH_TOKEN }}
+          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_ID:     ${{ steps.dispatch.outputs.run_id }}
+          PR:         ${{ github.event.pull_request.number }}
+        run: |
+          set -uo pipefail
+          # The Playwright report on tests.iblai.app IS public, so it is the link that actually helps
+          # a developer here — unlike the private Actions run. Relay it onto the PR itself.
+          gh run download "$RUN_ID" -R iblai/iblai-deploy-ops -n pr-e2e-result -D /tmp/res 2>/dev/null || true
+          python3 - <<'PY' > /tmp/body.md
+          import json, pathlib
+          p = pathlib.Path("/tmp/res/pr-e2e-result.json")
+          d = json.loads(p.read_text()) if p.exists() else {}
+          v    = d.get("verdict") or "unknown"
+          icon = {"success": "OK", "failure": "FAILED", "cancelled": "cancelled"}.get(v, v)
+          rep  = d.get("report_url") or ""
+          rows = [("result", f"**{icon}**")]
+          if d.get("platform"):
+              rows.append(("suite", f'`{d["platform"]}` - mode `{d.get("mode","?")}` - env `{d.get("target_env","?")}`'))
+          if d.get("baseline"):
+              synced = " (env was synced to it first)" if d.get("drifted") == "true" else " (env already on it)"
+              rows.append(("tested against", f'prod release `{d["baseline"]}`{synced}'))
+          for label, key in (("failed", "failed"), ("new failures", "new_failures")):
+              if d.get(key) not in (None, ""):
+                  rows.append((label, f'`{d[key]}`'))
+          out = ["<!-- pr-e2e-report -->", f"### PR E2E - {icon}", ""]
+          if rep:
+              out += [f"**[Full report, traces and screenshots]({rep})**", ""]
+          out += ["| | |", "|---|---|"] + [f"| {k} | {val} |" for k, val in rows]
+          if not rep:
+              out += ["", "_No report link - the run likely failed before the suite started."
+                          " Ask a maintainer to check the central pipeline._"]
+          print("\n".join(out))
+          PY
+          cat /tmp/body.md >> "$GITHUB_STEP_SUMMARY"
+          cat /tmp/body.md
+
+          # Sticky comment: update the existing one so re-runs do not spam the PR.
+          python3 -c "import json;print(json.dumps({'body':open('/tmp/body.md').read()}))" > /tmp/payload.json
+          CID=$(GH_TOKEN="$REPO_TOKEN" gh api "repos/${GITHUB_REPOSITORY}/issues/${PR}/comments" --paginate \
+                  --jq '[.[] | select(.body | startswith("<!-- pr-e2e-report -->"))] | .[-1].id // empty' 2>/dev/null || true)
+          if [ -n "$CID" ]; then
+            GH_TOKEN="$REPO_TOKEN" gh api -X PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/${CID}" \
+              --input /tmp/payload.json >/dev/null && echo "updated PR comment $CID"
+          else
+            GH_TOKEN="$REPO_TOKEN" gh api -X POST "repos/${GITHUB_REPOSITORY}/issues/${PR}/comments" \
+              --input /tmp/payload.json >/dev/null && echo "posted PR comment"
+          fi
+
+      - name: Gate on the e2e result
+        if: always()
+        run: |
+          C="${{ steps.wait.outputs.conclusion }}"
+          echo "e2e conclusion: ${C:-<none>}"
+          [ "$C" = "success" ]
   # ============================================================
   # SUMMARY
   # ============================================================
   summary:
-    needs: [build-app-image, build-playwright-image, run-tests]
+    needs: [build-app-image, unit-tests, e2e]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Results
         run: |
-          echo "# PR E2E Test Results" >> $GITHUB_STEP_SUMMARY
-          echo "| Step | Result |" >> $GITHUB_STEP_SUMMARY
-          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Build App | ${{ needs.build-app-image.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Build Playwright | ${{ needs.build-playwright-image.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Run Tests (firefox,chrome,safari,edge) | ${{ needs.run-tests.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Mode: skip-infra-launch — tests ran against the pre-existing stg1 instance." >> $GITHUB_STEP_SUMMARY
+          {
+            echo "# PR E2E Test Results"
+            echo "| Step | Result |"
+            echo "|------|--------|"
+            echo "| Unit tests (vitest) | ${{ needs.unit-tests.result }} |"
+            echo "| Build App image | ${{ needs.build-app-image.result }} |"
+            echo "| E2E (central pipeline) | ${{ needs.e2e.result }} |"
+            echo ""
+            echo "E2E ran on the central pipeline against **stg1**; the SPA image is restored afterwards."
+          } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Fail if tests did not pass
-        if: needs.run-tests.result != 'success' && needs.run-tests.result != 'skipped'
+      - name: Fail if anything did not pass
+        if: needs.e2e.result != 'success' || needs.unit-tests.result != 'success'
         run: exit 1
