@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.107.0](https://github.com/iblai/os/compare/v0.106.1...v0.107.0) (2026-07-29)
+
+### Features
+
+* **logo:** use ibl.ai logo as header fallback ([5fd0ff4](https://github.com/iblai/os/commit/5fd0ff49f848dfee2d00ee5b6ccba45a5c8a7562))
+
 ## [0.106.1](https://github.com/iblai/os/compare/v0.106.0...v0.106.1) (2026-07-29)
 
 ### Bug Fixes
