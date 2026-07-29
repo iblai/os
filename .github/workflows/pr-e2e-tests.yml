@@ -28,6 +28,7 @@ run-name: 'PR E2E Tests — stg1 (firefox,chrome,safari,edge)'
 
 permissions:
   contents: read
+  pull-requests: write   # the e2e job posts the report link as a PR comment
 
 concurrency:
   group: pr-e2e-${{ github.event.pull_request.number }}
@@ -131,14 +132,15 @@ jobs:
         id: dispatch
         env:
           GH_TOKEN: ${{ secrets.DEPLOY_OPS_DISPATCH_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
           BEFORE=$(gh run list -R iblai/iblai-deploy-ops --workflow=pr-e2e.yml -L 1 --json databaseId --jq '.[0].databaseId // 0')
+          # github.sha on a pull_request IS the merge commit — the same ref actions/checkout used to
+          # build the app image, so the specs and the app code come from one commit.
           gh workflow run pr-e2e.yml -R iblai/iblai-deploy-ops --ref main \
             -f source_repo=os \
-            -f pr_number='${{ github.event.pull_request.number }}' \
-            # github.sha on a pull_request IS the merge commit — the same ref actions/checkout
-            # used to build the app image, so specs and app code come from one commit.
+            -f pr_number="$PR" \
             -f merge_sha='${{ github.sha }}' \
             -f head_sha='${{ github.event.pull_request.head.sha }}' \
             -f app_image='${{ needs.build-app-image.outputs.image-uri }}' \
@@ -150,30 +152,99 @@ jobs:
             ID=$(gh run list -R iblai/iblai-deploy-ops --workflow=pr-e2e.yml -L 1 --json databaseId --jq '.[0].databaseId // 0')
             if [ "$ID" != "$BEFORE" ] && [ "$ID" != "0" ]; then
               echo "run_id=$ID" >> "$GITHUB_OUTPUT"
-              echo "dispatched: https://github.com/iblai/iblai-deploy-ops/actions/runs/$ID"; exit 0
+              echo "dispatched run $ID"; exit 0
             fi
           done
           echo "::error::dispatched but the run never appeared"; exit 1
 
-      - name: Wait for the e2e result
+      - name: Wait for e2e
+        id: wait
         env:
           GH_TOKEN: ${{ secrets.DEPLOY_OPS_DISPATCH_TOKEN }}
           RUN_ID: ${{ steps.dispatch.outputs.run_id }}
         run: |
           set -uo pipefail
-          URL="https://github.com/iblai/iblai-deploy-ops/actions/runs/${RUN_ID}"
+          # The central pipeline lives in a PRIVATE repo, so most contributors here cannot open its
+          # Actions log. Mirror every phase transition into THIS log, which is public — otherwise a
+          # developer stares at a spinner for an hour with no idea what is happening.
+          echo "Phases: resolve -> baseline drift check -> sync (only if drifted) -> swap SPA -> e2e -> restore"
+          LAST=""
           for i in $(seq 1 240); do        # up to 2h: image build + full suite
-            sleep 30
+            PHASES=$(gh api "repos/iblai/iblai-deploy-ops/actions/runs/${RUN_ID}/jobs" \
+                       --jq '[.jobs[] | "\(.name): \(.conclusion // .status)"] | join("  |  ")' 2>/dev/null || echo "")
+            if [ -n "$PHASES" ] && [ "$PHASES" != "$LAST" ]; then
+              echo "[$(date -u +%H:%M:%SZ)] $PHASES"
+              LAST="$PHASES"
+            fi
             S=$(gh api "repos/iblai/iblai-deploy-ops/actions/runs/${RUN_ID}" --jq '.status+"|"+(.conclusion//"")' 2>/dev/null)
             if [ "${S%%|*}" = "completed" ]; then
-              C="${S##*|}"
-              { echo "### E2E → **$C**"; echo ""; echo "[Run details]($URL)"; } >> "$GITHUB_STEP_SUMMARY"
-              echo "e2e finished: $C — $URL"
-              [ "$C" = "success" ] && exit 0 || exit 1
+              echo "conclusion=${S##*|}" >> "$GITHUB_OUTPUT"
+              echo "e2e finished: ${S##*|}"
+              exit 0
             fi
+            sleep 30
           done
-          echo "::error::timed out waiting for $URL"; exit 1
+          echo "conclusion=timed_out" >> "$GITHUB_OUTPUT"
+          echo "::error::timed out after 2h waiting for the e2e run"; exit 1
 
+      - name: Publish the result on this PR
+        if: always() && steps.dispatch.outputs.run_id != ''
+        env:
+          GH_TOKEN:   ${{ secrets.DEPLOY_OPS_DISPATCH_TOKEN }}
+          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_ID:     ${{ steps.dispatch.outputs.run_id }}
+          PR:         ${{ github.event.pull_request.number }}
+        run: |
+          set -uo pipefail
+          # The Playwright report on tests.iblai.app IS public, so it is the link that actually helps
+          # a developer here — unlike the private Actions run. Relay it onto the PR itself.
+          gh run download "$RUN_ID" -R iblai/iblai-deploy-ops -n pr-e2e-result -D /tmp/res 2>/dev/null || true
+          python3 - <<'PY' > /tmp/body.md
+          import json, pathlib
+          p = pathlib.Path("/tmp/res/pr-e2e-result.json")
+          d = json.loads(p.read_text()) if p.exists() else {}
+          v    = d.get("verdict") or "unknown"
+          icon = {"success": "OK", "failure": "FAILED", "cancelled": "cancelled"}.get(v, v)
+          rep  = d.get("report_url") or ""
+          rows = [("result", f"**{icon}**")]
+          if d.get("platform"):
+              rows.append(("suite", f'`{d["platform"]}` - mode `{d.get("mode","?")}` - env `{d.get("target_env","?")}`'))
+          if d.get("baseline"):
+              synced = " (env was synced to it first)" if d.get("drifted") == "true" else " (env already on it)"
+              rows.append(("tested against", f'prod release `{d["baseline"]}`{synced}'))
+          for label, key in (("failed", "failed"), ("new failures", "new_failures")):
+              if d.get(key) not in (None, ""):
+                  rows.append((label, f'`{d[key]}`'))
+          out = ["<!-- pr-e2e-report -->", f"### PR E2E - {icon}", ""]
+          if rep:
+              out += [f"**[Full report, traces and screenshots]({rep})**", ""]
+          out += ["| | |", "|---|---|"] + [f"| {k} | {val} |" for k, val in rows]
+          if not rep:
+              out += ["", "_No report link - the run likely failed before the suite started."
+                          " Ask a maintainer to check the central pipeline._"]
+          print("\n".join(out))
+          PY
+          cat /tmp/body.md >> "$GITHUB_STEP_SUMMARY"
+          cat /tmp/body.md
+
+          # Sticky comment: update the existing one so re-runs do not spam the PR.
+          python3 -c "import json;print(json.dumps({'body':open('/tmp/body.md').read()}))" > /tmp/payload.json
+          CID=$(GH_TOKEN="$REPO_TOKEN" gh api "repos/${GITHUB_REPOSITORY}/issues/${PR}/comments" --paginate \
+                  --jq '[.[] | select(.body | startswith("<!-- pr-e2e-report -->"))] | .[-1].id // empty' 2>/dev/null || true)
+          if [ -n "$CID" ]; then
+            GH_TOKEN="$REPO_TOKEN" gh api -X PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/${CID}" \
+              --input /tmp/payload.json >/dev/null && echo "updated PR comment $CID"
+          else
+            GH_TOKEN="$REPO_TOKEN" gh api -X POST "repos/${GITHUB_REPOSITORY}/issues/${PR}/comments" \
+              --input /tmp/payload.json >/dev/null && echo "posted PR comment"
+          fi
+
+      - name: Gate on the e2e result
+        if: always()
+        run: |
+          C="${{ steps.wait.outputs.conclusion }}"
+          echo "e2e conclusion: ${C:-<none>}"
+          [ "$C" = "success" ]
   # ============================================================
   # SUMMARY
   # ============================================================
