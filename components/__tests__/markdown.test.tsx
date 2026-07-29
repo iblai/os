@@ -118,6 +118,56 @@ describe('Markdown Component', () => {
     });
 
     /**
+     * LLMs indent nested items by 2 spaces even under ordered markers, which
+     * CommonMark parses as three sibling lists (or flattens the child into
+     * the parent, renumbering it). Issue #2109.
+     */
+    it('should nest a 2-space indented bullet under its ordered parent', () => {
+      const { container } = render(
+        <Markdown>{'1. Item\n  - sub\n2. Next'}</Markdown>,
+      );
+      const orderedLists = container.querySelectorAll('ol');
+      expect(orderedLists).toHaveLength(1);
+      const nested = container.querySelector('ol > li ul');
+      expect(nested).toBeTruthy();
+      expect(nested?.textContent).toContain('sub');
+      const topItems = container.querySelectorAll('ol > li');
+      expect(topItems).toHaveLength(2);
+    });
+
+    it('should nest a 2-space indented ordered child instead of flattening it', () => {
+      const { container } = render(
+        <Markdown>{'2. Second\n  1. sub\n3. Third'}</Markdown>,
+      );
+      const outer = container.querySelector('ol');
+      expect(outer?.getAttribute('start')).toBe('2');
+      expect(container.querySelectorAll(':scope ol > li ol')).toHaveLength(1);
+      const nested = container.querySelector('ol > li ol');
+      expect(nested?.textContent).toContain('sub');
+      // The parent keeps exactly two items: "Second" (with the nested list)
+      // and "Third" -- the sub is no longer flattened in between them.
+      expect(container.querySelectorAll('ol > li')).toHaveLength(
+        2 + (nested?.querySelectorAll('li').length ?? 0),
+      );
+    });
+
+    /**
+     * A nested list inherits the top-level my-6 margins unless overridden,
+     * which visually detaches it from its parent item. The nested-selector
+     * overrides collapse that gap only when a list sits inside another list.
+     */
+    it('should tighten nested list margins while keeping top-level margins', () => {
+      const { container } = render(
+        <Markdown>{'1. Item\n   - sub\n2. Next'}</Markdown>,
+      );
+      for (const list of container.querySelectorAll('ul, ol')) {
+        expect(list.className).toContain('my-6');
+        expect(list.className).toContain('[ul_&]:my-1');
+        expect(list.className).toContain('[ol_&]:my-1');
+      }
+    });
+
+    /**
      * Test code block rendering
      * Verifies that code blocks are properly rendered with syntax highlighting
      */
@@ -1291,21 +1341,26 @@ describe('preprocessLaTeX Utility Function', () => {
     });
 
     /**
-     * Test hash escape
+     * `\#` and `\_` are CommonMark escapes the renderer already turns into
+     * literal `#`/`_`. Stripping the backslash promoted them to live syntax:
+     * `\# escaped hash` at line start rendered as a real H1 and `\_word\_`
+     * rendered as italics (issue #2109). They must survive untouched.
      */
-    it('should convert \\# to #', () => {
-      const input = '\\#tag';
-      const output = preprocessLaTeX(input);
-      expect(output).toBe('#tag');
+    it('should keep the markdown escapes \\# and \\_ intact', () => {
+      expect(preprocessLaTeX('\\#tag')).toBe('\\#tag');
+      expect(preprocessLaTeX('var\\_name')).toBe('var\\_name');
     });
 
-    /**
-     * Test underscore escape
-     */
-    it('should convert \\_ to _', () => {
-      const input = 'var\\_name';
-      const output = preprocessLaTeX(input);
-      expect(output).toBe('var_name');
+    it('renders \\# at line start as literal text, not a heading (issue #2109)', () => {
+      const { container } = render(<Markdown>{'\\# escaped hash'}</Markdown>);
+      expect(container.querySelector('h1')).toBeNull();
+      expect(container.textContent).toContain('# escaped hash');
+    });
+
+    it('renders \\_word\\_ as literal underscores, not italics (issue #2109)', () => {
+      const { container } = render(<Markdown>{'\\_word\\_'}</Markdown>);
+      expect(container.querySelector('em')).toBeNull();
+      expect(container.textContent).toContain('_word_');
     });
 
     /**
@@ -1377,5 +1432,165 @@ describe('preprocessLaTeX Utility Function', () => {
 
       expect(output).toBe('**Bold** and *italic* text');
     });
+  });
+});
+
+describe('Markdown Component - issue #2109 robustness', () => {
+  /**
+   * `\\` is the row separator inside KaTeX environments. It must reach the
+   * renderer intact or every matrix/aligned block collapses to a single row.
+   */
+  it('renders a pmatrix with its row separator preserved', () => {
+    const { container } = render(
+      <Markdown>
+        {'$$\\begin{pmatrix}1 & 2 \\\\ 3 & 4\\end{pmatrix}$$'}
+      </Markdown>,
+    );
+    const katex = container.querySelector('.katex');
+    expect(katex).toBeTruthy();
+    // KaTeX renders a parse error as .katex-error when the environment is
+    // malformed; a collapsed matrix would drop the second row entirely.
+    expect(container.querySelector('.katex-error')).toBeNull();
+    expect(katex?.textContent).toContain('3');
+    expect(katex?.textContent).toContain('4');
+  });
+
+  it('renders an aligned block with both rows', () => {
+    const { container } = render(
+      <Markdown>
+        {'$$\\begin{aligned}x &= 1 \\\\ y &= 2\\end{aligned}$$'}
+      </Markdown>,
+    );
+    expect(container.querySelector('.katex-error')).toBeNull();
+    expect(container.textContent).toContain('y');
+  });
+
+  /**
+   * Streaming: the itemize items that have finished streaming render as a
+   * real list instead of raw LaTeX while \end{itemize} is still pending.
+   */
+  it('renders completed items of an unclosed itemize as a list during streaming', () => {
+    const { container } = render(
+      <Markdown>
+        {
+          '\\begin{itemize}\n\\item First point\n\\item Second point\n\\item Third po'
+        }
+      </Markdown>,
+    );
+    const items = container.querySelectorAll('ul li');
+    expect(items.length).toBeGreaterThanOrEqual(2);
+    expect(container.textContent).toContain('First point');
+    expect(container.textContent).toContain('Second point');
+    expect(container.textContent).not.toContain('\\begin{itemize}');
+  });
+
+  it('does not double-bullet itemize items that already carry markdown markers', () => {
+    const { container } = render(
+      <Markdown>
+        {'\\begin{itemize}\n\\item - First\n\\item - Second\n\\end{itemize}'}
+      </Markdown>,
+    );
+    const items = [...container.querySelectorAll('ul li')];
+    expect(items).toHaveLength(2);
+    expect(items[0].textContent?.trim()).toBe('First');
+    expect(items[1].textContent?.trim()).toBe('Second');
+  });
+});
+
+describe('Markdown Component - whole-line $$ display promotion (issue #2109 fix 9)', () => {
+  /**
+   * The original issue payload: adjacent whole-line `$$...$$` lines with no
+   * blank line between them. remark-math sees one paragraph of inline math and
+   * renders a merged left-aligned prose line. Each line must instead become
+   * its own centered display block (GitHub/Overleaf behavior), with the
+   * `\text{...}` step annotations staying display math too.
+   */
+  it('renders the six-line step-by-step payload as six display blocks with no inline math', () => {
+    const steps = [
+      '$$\\text{Step 1: Substitute } x = 4 \\text{ into the expression}$$',
+      '$$3x + 5 = 3(4) + 5$$',
+      '',
+      '$$\\text{Step 2: Multiply first (order of operations)}$$',
+      '$$3(4) + 5 = 12 + 5$$',
+      '',
+      '$$\\text{Step 3: Add}$$',
+      '$$12 + 5 = 17$$',
+    ].join('\n');
+    const { container } = render(<Markdown>{steps}</Markdown>);
+
+    const displays = container.querySelectorAll('.katex-display');
+    expect(displays).toHaveLength(6);
+    // Every KaTeX node is display-level: zero inline math survives.
+    expect(container.querySelectorAll('.katex')).toHaveLength(6);
+    expect(container.querySelector('.katex-error')).toBeNull();
+
+    // Three text-annotation blocks and three equation blocks, in order.
+    const tex = [
+      ...container.querySelectorAll('.katex-display annotation'),
+    ].map((annotation) => annotation.textContent ?? '');
+    expect(tex.filter((t) => t.includes('\\text{Step'))).toHaveLength(3);
+    expect(tex).toContain('3x + 5 = 3(4) + 5');
+    expect(tex).toContain('3(4) + 5 = 12 + 5');
+    expect(tex).toContain('12 + 5 = 17');
+
+    // No raw delimiters leak into the visible text.
+    expect(container.textContent).not.toContain('$$');
+  });
+
+  it('keeps a mid-sentence $$...$$ span inline, with its rows intact', () => {
+    const { container } = render(
+      <Markdown>
+        {
+          'Matrix: $$\\begin{pmatrix}1 & 2 \\\\ 3 & 4\\end{pmatrix}$$ as promised.'
+        }
+      </Markdown>,
+    );
+    expect(container.querySelectorAll('.katex-display')).toHaveLength(0);
+    expect(container.querySelectorAll('.katex')).toHaveLength(1);
+    expect(container.querySelector('.katex-error')).toBeNull();
+    expect(container.textContent).toContain('Matrix:');
+    expect(container.textContent).toContain('as promised.');
+  });
+
+  it('renders a whole-line $$ span inside a list item as display math within the item', () => {
+    const { container } = render(
+      <Markdown>{'- item\n  $$x + y = z$$\n- next'}</Markdown>,
+    );
+    // The list survives: one ul with both items, and the promoted display
+    // block sits inside the first item rather than splitting the list.
+    expect(container.querySelectorAll('ul')).toHaveLength(1);
+    const items = container.querySelectorAll('ul > li');
+    expect(items).toHaveLength(2);
+    expect(items[0].querySelector('.katex-display')).toBeTruthy();
+    expect(items[1].textContent).toContain('next');
+    expect(container.textContent).not.toContain('$$');
+  });
+
+  it('still renders the multi-line fenced form as one display block', () => {
+    const { container } = render(<Markdown>{'$$\nE = mc^2\n$$'}</Markdown>);
+    expect(container.querySelectorAll('.katex-display')).toHaveLength(1);
+    expect(container.querySelectorAll('.katex')).toHaveLength(1);
+  });
+
+  it('renders a whole-line \\[...\\] as a display block', () => {
+    const { container } = render(
+      <Markdown>{'Energy:\n\\[E = mc^2\\]\nDone.'}</Markdown>,
+    );
+    expect(container.querySelectorAll('.katex-display')).toHaveLength(1);
+    expect(container.querySelectorAll('.katex')).toHaveLength(1);
+    expect(container.querySelector('.katex-error')).toBeNull();
+    expect(container.textContent).not.toContain('$$');
+    expect(container.textContent).not.toContain('\\[');
+  });
+
+  it('keeps mid-sentence \\[...\\] and \\(...\\) spans inline', () => {
+    const { container } = render(
+      <Markdown>{'so \\[E = mc^2\\] holds, and \\(a + b\\) too'}</Markdown>,
+    );
+    expect(container.querySelectorAll('.katex-display')).toHaveLength(0);
+    expect(container.querySelectorAll('.katex')).toHaveLength(2);
+    expect(container.querySelector('.katex-error')).toBeNull();
+    expect(container.textContent).toContain('so');
+    expect(container.textContent).toContain('holds');
   });
 });
