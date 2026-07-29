@@ -201,8 +201,17 @@ vi.mock('@/lib/utils', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/utils')>();
   return {
     ...actual,
-    cn: (...args: (string | boolean | undefined)[]) =>
-      args.filter(Boolean).join(' '),
+    cn: (...args: unknown[]) =>
+      args
+        .flatMap((arg) =>
+          arg && typeof arg === 'object'
+            ? Object.entries(arg as Record<string, unknown>)
+                .filter(([, enabled]) => Boolean(enabled))
+                .map(([key]) => key)
+            : arg,
+        )
+        .filter(Boolean)
+        .join(' '),
     isLoggedIn: vi.fn(() => true),
     getAuthSpaJoinUrl: vi.fn(() => 'http://auth.test/join'),
     isInIframe: vi.fn(() => false),
@@ -19299,6 +19308,77 @@ describe('Chat', () => {
     });
   });
 
+  // Issue #2260 — a welcome message taller than the viewport could not be
+  // scrolled back to the top. In compact mode nothing scrolled at all because
+  // `overflow-y-auto` was withheld from the welcome-screen wrapper while the
+  // chat root carries `overflow-hidden`. This wrapper only ever hosts the
+  // welcome screen (the messages view is a sibling), so it must scroll on
+  // every non-advanced, non-canvas surface.
+  describe('welcome screen scroll wrapper (issue #2260)', () => {
+    const setCompact = async (compact: boolean) => {
+      const { useSearchParams } = await import('next/navigation');
+      (useSearchParams as any).mockReturnValue({
+        get: vi.fn((param: string) =>
+          param === 'compact' && compact ? 'true' : null,
+        ),
+      });
+    };
+
+    const getWrapper = (container: HTMLElement) =>
+      container.firstElementChild!.firstElementChild as HTMLElement;
+
+    it('scrolls the welcome screen on the default surface', async () => {
+      await setCompact(false);
+
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
+
+      expect(screen.getByTestId('welcome-chat')).toBeInTheDocument();
+      const wrapper = getWrapper(container);
+      expect(wrapper).toHaveClass('overflow-y-auto');
+      // `flex-1` grows into the space left over by the chat input; `h-full`
+      // claimed 100% of the chat root and pushed the input off-screen.
+      expect(wrapper).toHaveClass('min-h-0');
+      expect(wrapper).toHaveClass('flex-1');
+      expect(wrapper.className.split(/\s+/)).not.toContain('h-full');
+    });
+
+    it('scrolls the welcome screen in compact mode', async () => {
+      await setCompact(true);
+
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
+
+      expect(screen.getByTestId('welcome-chat')).toBeInTheDocument();
+      const wrapper = getWrapper(container);
+      expect(wrapper).toHaveClass('overflow-y-auto');
+      expect(wrapper).toHaveClass('min-h-0');
+    });
+
+    it('keeps the scrollbar visible so long messages advertise the overflow', async () => {
+      await setCompact(false);
+
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
+
+      expect(getWrapper(container)).not.toHaveClass('scrollbar-none');
+    });
+
+    it('leaves scrolling to the advanced chat panel in advanced mode', async () => {
+      await setCompact(false);
+
+      const { container } = renderWithRedux(
+        <Chat mode="advanced" isPreviewMode={false} />,
+      );
+
+      const wrapper = getWrapper(container);
+      expect(wrapper).not.toHaveClass('overflow-y-auto');
+    });
+  });
+
   describe('streaming reasoning and tool call props', () => {
     it('should pass streaming props to ChatMessages', async () => {
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
@@ -19667,7 +19747,7 @@ describe('Chat', () => {
     };
 
     const getScrollContainer = (container: HTMLElement) =>
-      container.querySelector('.overflow-y-auto') as HTMLDivElement;
+      container.querySelector('.flex-1.overflow-y-auto') as HTMLDivElement;
 
     const setScrollMetrics = (
       el: HTMLDivElement,

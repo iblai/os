@@ -221,6 +221,12 @@ let mockProjects: any = {
     },
   ],
 };
+// Records the args passed to the projects query so tests can assert the
+// growing `limit` (infinite scroll bumps it a page at a time).
+const getUserProjectsArgsMock = vi.fn();
+// Drives the projects query's `isFetching` flag so tests can assert the
+// scroll handler is gated while a fetch is in flight.
+let mockProjectsIsFetching = false;
 
 // Mimic RTK Query's updateQueryData: it invokes the recipe with a draft
 // object representing the cached data. We seed the draft with the current
@@ -414,11 +420,23 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
     };
     return { ...common, data };
   },
-  useGetUserProjectsQuery: () => ({
-    data: mockProjects,
-    isError: false,
-    isLoading: false,
-  }),
+  useGetUserProjectsQuery: (args: unknown, options?: { skip?: boolean }) => {
+    getUserProjectsArgsMock(args);
+    if (options?.skip) {
+      return {
+        data: undefined,
+        isFetching: false,
+        isError: false,
+        isLoading: false,
+      };
+    }
+    return {
+      data: mockProjects,
+      isFetching: mockProjectsIsFetching,
+      isError: false,
+      isLoading: false,
+    };
+  },
   useUnPinMessageMutation: () => [unpinMessageMock, { isLoading: false }],
 }));
 
@@ -558,6 +576,15 @@ vi.mock('@/lib/utils', async (importOriginal) => {
     redirectToAuthSpa: (...args: unknown[]) => redirectToAuthSpaMock(...args),
     redirectToAuthSpaJoinTenant: (...args: unknown[]) =>
       redirectToAuthSpaJoinTenantMock(...args),
+    // Mirrors the real redirectToLogin's delegation so the existing
+    // auth-SPA assertions keep working now that it lives in @/lib/utils.
+    redirectToLogin: (tenantKey?: string) => {
+      if (!tenantKey) {
+        redirectToAuthSpaMock('/', tenantKey, undefined, true, true);
+        return;
+      }
+      redirectToAuthSpaJoinTenantMock(tenantKey, undefined, true);
+    },
   };
 });
 
@@ -763,6 +790,8 @@ function resetState() {
       { uuid: 'proj-2', name: 'Beta Project' },
     ],
   };
+  getUserProjectsArgsMock.mockClear();
+  mockProjectsIsFetching = false;
 }
 
 // jsdom doesn't implement pointer-capture / ResizeObserver / IntersectionObserver
@@ -1713,6 +1742,79 @@ describe('AppSidebar — Projects section', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Projects' })[0]);
     expect(
       screen.queryByRole('button', { name: 'Alpha Project' }),
+    ).not.toBeInTheDocument();
+  });
+});
+
+describe('AppSidebar — Projects infinite scroll', () => {
+  // Builds `n` project rows with unique ids/names + a default mentor so each
+  // row is openable, matching the SDK `results` shape.
+  function makeProjects(n: number) {
+    return Array.from({ length: n }, (_, i) => ({
+      id: `proj-${i + 1}`,
+      name: `Project ${i + 1}`,
+      mentors: [{ unique_id: `mentor-${i + 1}` }],
+    }));
+  }
+
+  // The `limit` from the most recent projects-query call — the value the
+  // infinite-scroll handler grows as the user reaches the bottom.
+  function lastProjectsLimit() {
+    const calls = getUserProjectsArgsMock.mock.calls;
+    return (calls[calls.length - 1]?.[0] as any)?.params?.limit;
+  }
+
+  it('requests only the first page (limit 10) on the initial fetch', () => {
+    renderSidebar();
+    expect(lastProjectsLimit()).toBe(10);
+  });
+
+  it('grows the query limit by one page when scrolled to the bottom and more remain', () => {
+    // 10 of 25 loaded → hasMore. jsdom reports 0 for scroll metrics, so any
+    // scroll event lands "at the bottom" and triggers exactly one bump.
+    mockProjects = { count: 25, results: makeProjects(10) };
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Projects' })[0]);
+    expect(lastProjectsLimit()).toBe(10);
+
+    fireEvent.scroll(screen.getByTestId('sidebar-projects-scroll'));
+    expect(lastProjectsLimit()).toBe(20);
+  });
+
+  it('does not grow the limit once every project is loaded (length >= count)', () => {
+    mockProjects = { count: 2, results: makeProjects(2) };
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Projects' })[0]);
+    fireEvent.scroll(screen.getByTestId('sidebar-projects-scroll'));
+    expect(lastProjectsLimit()).toBe(10);
+  });
+
+  it('does not grow the limit while a fetch is already in flight', () => {
+    mockProjects = { count: 25, results: makeProjects(10) };
+    mockProjectsIsFetching = true;
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Projects' })[0]);
+    fireEvent.scroll(screen.getByTestId('sidebar-projects-scroll'));
+    expect(lastProjectsLimit()).toBe(10);
+  });
+
+  it('shows the "loading more" indicator only while fetching with pages remaining', () => {
+    mockProjects = { count: 25, results: makeProjects(10) };
+    mockProjectsIsFetching = true;
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Projects' })[0]);
+    expect(
+      screen.getByRole('status', { name: 'Loading more projects' }),
+    ).toBeInTheDocument();
+  });
+
+  it('hides the "loading more" indicator when not fetching', () => {
+    mockProjects = { count: 25, results: makeProjects(10) };
+    mockProjectsIsFetching = false;
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Projects' })[0]);
+    expect(
+      screen.queryByRole('status', { name: 'Loading more projects' }),
     ).not.toBeInTheDocument();
   });
 });

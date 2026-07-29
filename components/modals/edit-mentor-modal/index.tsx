@@ -13,7 +13,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  SettingsTab,
   LLMTab,
   PromptsTab,
   McpTab,
@@ -38,6 +37,7 @@ import {
 } from './tabs';
 import { useNavigate } from '@/hooks/user-navigate';
 import { MODALS } from '@/lib/constants';
+import { SettingsTab } from './settings-tab';
 import { MemoryTab } from './tabs/memory-tab';
 import { DisclaimersTab } from './tabs/disclaimers-tab';
 import {

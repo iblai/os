@@ -191,6 +191,7 @@
     "projects": "Projets",
     "newProject": "Nouveau projet",
     "noProjectsYet": "Aucun projet pour l'instant",
+    "loadingMoreProjects": "Chargement d'autres projets",
     "untitledProject": "Projet sans titre",
     "projectActions": "Actions du projet",
     "rename": "Renommer",
@@ -1544,7 +1545,7 @@
     "formBeingSubmitted": "Le formulaire est en cours d'envoi"
   },
   "settingsTabCopyMentorModal": {
-    "defaultCopyName": "Copie de {name}",
+    "defaultCopyNamePrefix": "Copie de",
     "defaultAgentName": "Agent",
     "errorMissingContext": "Impossible de copier l'agent. Contexte manquant.",
     "successCopied": "Agent copié avec succès. Passage au nouvel agent",
