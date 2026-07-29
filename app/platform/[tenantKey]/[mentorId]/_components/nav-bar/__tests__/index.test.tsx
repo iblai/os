@@ -605,13 +605,10 @@ describe('NavBar', () => {
         };
         mockAllTenants = [{ key: 'test-tenant' }];
         lastCreditBalanceProps = null;
-<<<<<<< HEAD
         mockLocalEnabled = false;
         mockLocalModelId = null;
-=======
-    emitMock.mockClear();
-    navigateToHomeMock.mockClear();
->>>>>>> f76643de409cfb256112b4a5da33612602ac3ca0
+        emitMock.mockClear();
+        navigateToHomeMock.mockClear();
         // Suppress console.log during tests
         vi.spyOn(console, 'log').mockImplementation(() => { });
     });
