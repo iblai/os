@@ -128,6 +128,47 @@ jobs:
             echo "full suite (changed specs=$N, non-spec changes=${OTHER:-none})"
           fi
 
+      - name: Pick a target environment
+        id: env
+        env:
+          GH_TOKEN: ${{ secrets.DEPLOY_OPS_DISPATCH_TOKEN }}
+        run: |
+          set -uo pipefail
+          # stg1 is PRIMARY; stg2 is OVERFLOW, used only while stg1 is genuinely occupied. That keeps
+          # release validation — which lives on stg2 — undisturbed in the common case, while still
+          # letting two concurrent PRs use both boxes.
+          #
+          # Best-effort on purpose: pr-e2e serialises on `env-mutate-<env>`, so if two PRs race and
+          # both land on stg1 the second simply queues. A wrong guess costs throughput, never
+          # correctness — which is why this does not need org-admin runner labels or a lock.
+          runners() {   # runner names across the last N runs, optionally only in-progress jobs
+            local filter="$1" limit="$2" id
+            for id in $(gh run list -R iblai/iblai-deploy-ops --limit "$limit" \
+                          --json databaseId --jq '.[].databaseId' 2>/dev/null); do
+              gh api "repos/iblai/iblai-deploy-ops/actions/runs/$id/jobs" --jq "$filter" 2>/dev/null
+            done
+          }
+          BUSY=$(runners '.jobs[] | select(.status=="in_progress") | .runner_name // empty' 20)
+          # Only fail over to a runner we have actually seen execute work — an offline box would
+          # otherwise swallow the run into a queue that never drains.
+          SEEN=$(runners '.jobs[].runner_name // empty' 20)
+          # split on whitespace explicitly — relying on unquoted word-splitting is a bash-only
+          # behaviour and silently returns the wrong answer under other shells
+          has() { printf '%s' "$2" | tr -s '[:space:]' '\n' | grep -qx "$1"; }
+
+          # Fail over only when stg2 is genuinely FREE. If both boxes are busy, queue on the
+          # primary: waiting on stg2 would mean sitting behind release validation and then
+          # downgrading that box to the prod tag, forcing validation to redeploy afterwards.
+          if ! has stg1-spa "$BUSY"; then
+            TARGET=stg1; WHY="stg1 free"
+          elif has stg2-spa "$SEEN" && ! has stg2-spa "$BUSY"; then
+            TARGET=stg2; WHY="stg1 busy, stg2 free — failing over"
+          else
+            TARGET=stg1; WHY="stg1 busy, stg2 unavailable or also busy — queueing on stg1"
+          fi
+          echo "target=$TARGET" >> "$GITHUB_OUTPUT"
+          echo "target env: $TARGET ($WHY)"
+
       - name: Dispatch e2e
         id: dispatch
         env:
@@ -144,7 +185,7 @@ jobs:
             -f merge_sha='${{ github.sha }}' \
             -f head_sha='${{ github.event.pull_request.head.sha }}' \
             -f app_image='${{ needs.build-app-image.outputs.image-uri }}' \
-            -f target_env=stg1 \
+            -f target_env='${{ steps.env.outputs.target }}' \
             -f mode='${{ steps.specs.outputs.mode }}' \
             -f specs='${{ steps.specs.outputs.specs }}'
           for i in $(seq 1 30); do
