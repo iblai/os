@@ -1594,3 +1594,124 @@ describe('Markdown Component - whole-line $$ display promotion (issue #2109 fix 
     expect(container.textContent).toContain('holds');
   });
 });
+
+describe('Markdown Component - LaTeX document markup in math costume (issue #2109)', () => {
+  /**
+   * Headings emitted as display math around a bold command must surface as
+   * real Markdown bold -- not as KaTeX output with literal asterisks.
+   */
+  it('renders a \\[\\textbf{...}\\] heading as bold prose, not math', () => {
+    const { container } = render(
+      <Markdown>
+        {'\\[\n\\textbf{React Learning Plan (4-6 Weeks)}\n\\]\nIntro line.'}
+      </Markdown>,
+    );
+    const strong = container.querySelector('strong');
+    expect(strong?.textContent).toBe('React Learning Plan (4-6 Weeks)');
+    expect(container.querySelector('.katex')).toBeNull();
+    expect(container.querySelector('.katex-error')).toBeNull();
+    expect(container.textContent).not.toContain('∗∗');
+    expect(container.textContent).not.toContain('\\textbf');
+  });
+
+  it('renders an inline \\(\\textit{...}\\) wrapper as italics', () => {
+    const { container } = render(
+      <Markdown>{'\\(\\textit{a closing thought}\\) here'}</Markdown>,
+    );
+    expect(container.querySelector('em')?.textContent).toBe(
+      'a closing thought',
+    );
+    expect(container.querySelector('.katex')).toBeNull();
+  });
+
+  /**
+   * Code emitted as an aligned environment of \verb rows must become a real
+   * code block with one line per row -- KaTeX cannot typeset the payload.
+   */
+  it('renders an aligned environment of \\verb rows as a code block', () => {
+    const raw = [
+      'Create the file:',
+      '\\[',
+      '\\begin{aligned}',
+      '&\\verb|import { useState } from "react";|\\\\',
+      '&\\verb|  const [count, setCount] = useState(0);|\\\\',
+      '&\\verb|}|\\\\',
+      '\\end{aligned}',
+      '\\]',
+    ].join('\n');
+    const { container } = render(<Markdown>{raw}</Markdown>);
+    const code = container.querySelector('pre code');
+    expect(code?.textContent).toContain('import { useState } from "react";');
+    expect(code?.textContent).toContain('  const [count, setCount]');
+    // One line per \verb row, not a run-on blob.
+    expect(code?.textContent?.trim().split('\n')).toHaveLength(3);
+    expect(container.querySelector('.katex-error')).toBeNull();
+    expect(container.textContent).not.toContain('\\verb');
+    expect(container.textContent).not.toContain('aligned');
+  });
+
+  it('renders a \\begin{verbatim} block as a code block with dollars intact', () => {
+    const { container } = render(
+      <Markdown>
+        {'Kata:\n\\begin{verbatim}\nconst price = "$5";\n\\end{verbatim}'}
+      </Markdown>,
+    );
+    expect(container.querySelector('pre code')?.textContent).toContain(
+      'const price = "$5";',
+    );
+    expect(container.textContent).not.toContain('verbatim');
+  });
+
+  /**
+   * The carpentry shape: an entire itemize (with a nested sub-list and inline
+   * math) wrapped in \[...\]. Must render as a real list -- bold labels,
+   * italic sub-labels, KaTeX for the math -- with zero raw LaTeX leaking.
+   */
+  it('renders a display-math-wrapped itemize as a real list', () => {
+    const raw = [
+      '\\[',
+      '\\begin{itemize}',
+      '\\item \\textbf{Why:} spatial reasoning.',
+      '\\item \\textbf{Overlap:}',
+      '  \\begin{itemize}',
+      '    \\item \\textit{Tolerances:} wood (\\(\\alpha\\) varies).',
+      '  \\end{itemize}',
+      '\\item \\textbf{Safety:} push sticks.',
+      '\\end{itemize}',
+      '\\]',
+    ].join('\n');
+    const { container } = render(<Markdown>{raw}</Markdown>);
+    const items = container.querySelectorAll('ul li');
+    expect(items.length).toBeGreaterThanOrEqual(4);
+    const strongLabels = [...container.querySelectorAll('li strong')].map(
+      (el) => el.textContent,
+    );
+    expect(strongLabels).toContain('Why:');
+    expect(strongLabels).toContain('Safety:');
+    expect(container.querySelector('li em')?.textContent).toBe('Tolerances:');
+    // \(\alpha\) inside a wrapped list item still renders as math.
+    expect(container.querySelector('.katex')).toBeTruthy();
+    expect(container.querySelector('.katex-error')).toBeNull();
+    expect(container.textContent).not.toContain('\\textbf');
+    expect(container.textContent).not.toContain('\\begin');
+    expect(container.textContent).not.toContain('$$');
+  });
+
+  /**
+   * Conservative guard: a wrapper with prose after the list is NOT unwrapped
+   * (the pass only fires when the environment is the entire body), and real
+   * display math stays math.
+   */
+  it('leaves a wrapper with trailing prose and genuine display math alone', () => {
+    const mixed =
+      '\\[\n\\begin{itemize}\n\\item a\n\\end{itemize}\nplus commentary\n\\]';
+    const { container: c1 } = render(<Markdown>{mixed}</Markdown>);
+    // Not silently converted into a bare list: the commentary is preserved
+    // somewhere in the output rather than dropped.
+    expect(c1.textContent).toContain('plus commentary');
+    const math = '\\[\nE = mc^2\n\\]';
+    const { container: c2 } = render(<Markdown>{math}</Markdown>);
+    expect(c2.querySelector('.katex')).toBeTruthy();
+    expect(c2.querySelector('.katex-error')).toBeNull();
+  });
+});
