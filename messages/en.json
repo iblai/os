@@ -42,6 +42,7 @@
     "toastCreateError": "Unable to create agent role access."
   },
   "accessTabIndex": {
+    "infoBox": "Decide who can use this agent. Share it with specific people or teams, and control what each of them is allowed to do.",
     "heading": "Access control",
     "headingDescription": "Manage which users can view or edit this agent by role.",
     "unavailableHeading": "Access management is unavailable.",
@@ -190,6 +191,7 @@
     "projects": "Projects",
     "newProject": "New Project",
     "noProjectsYet": "No projects yet",
+    "loadingMoreProjects": "Loading more projects",
     "untitledProject": "Untitled project",
     "projectActions": "Project actions",
     "rename": "Rename",
@@ -198,6 +200,12 @@
     "pinned": "Pinned",
     "recent": "Recent",
     "noRecentChats": "No recent chats",
+    "searchChats": "Search chats",
+    "searchChatsPlaceholder": "Search chats",
+    "chatsRecencyLast7Days": "Previous 7 Days",
+    "chatsRecencyLast30Days": "Previous 30 Days",
+    "chatsRecencyOlder": "Older",
+    "loadingMoreChats": "Loading more chats",
     "noContent": "No content",
     "chatActions": "Chat actions",
     "unpin": "Unpin",
@@ -605,6 +613,7 @@
     "deleteButton": "Delete"
   },
   "datasetsTabIndex": {
+    "infoBox": "Teach your agent with your own material. Upload documents, files, or links and it'll answer from them — grounded in your content instead of guessing.",
     "heading": "Datasets",
     "subheading": "Manage training datasets and knowledge sources.",
     "searchPlaceholder": "Search datasets...",
@@ -650,6 +659,7 @@
     "saveButton": "Save"
   },
   "disclaimersTabIndex": {
+    "infoBox": "Show your users the fine print. Add notices — like 'This is an AI assistant' or a compliance statement — that appear in the chat so people know what to expect.",
     "heading": "Disclaimers",
     "subheading": "Configure disclaimer settings for your agent.",
     "userAgreementTitle": "User Agreement",
@@ -793,6 +803,20 @@
     "api": "API",
     "embed": "Embed",
     "analytics": "Analytics",
+    "sandbox": "Sandbox",
+    "access": "Access",
+    "voice": "Voice",
+    "screenShare": "Screen Share",
+    "skills": "Skills",
+    "privacy": "Privacy",
+    "tasks": "Tasks",
+    "disclaimers": "Disclaimers",
+    "memory": "Memory",
+    "evals": "Evals",
+    "lti": "LTI",
+    "configurations": "Configurations",
+    "integrations": "Integrations",
+    "runtime": "Runtime",
     "changeLanguage": "Change language"
   },
   "headerProfileButton": {
@@ -982,7 +1006,12 @@
   },
   "memoryTabIndex": {
     "heading": "Memory",
-    "description": "Configure memory settings for your agent."
+    "description": "Configure memory settings for your agent.",
+    "capabilityTitle": "Long-term memory",
+    "capabilityDescription": "Let this agent remember useful details from past conversations — like a returning colleague — so people don't have to repeat themselves. When on, review and manage what it remembers below.",
+    "capabilityOffHint": "Turn it on to let this agent remember details across conversations.",
+    "toggleSuccess": "Memory setting updated",
+    "toggleError": "Couldn't update memory setting"
   },
   "memoryTabLearnersMemories": {
     "learnerMemoriesHeading": "Learner Memories",
@@ -1501,7 +1530,7 @@
     "formBeingSubmitted": "Form is being submitted"
   },
   "settingsTabCopyMentorModal": {
-    "defaultCopyName": "Copy of {name}",
+    "defaultCopyNamePrefix": "Copy of",
     "defaultAgentName": "Agent",
     "errorMissingContext": "Unable to copy agent. Missing context.",
     "successCopied": "Agent copied successfully. Switching to new agent",
@@ -1532,6 +1561,7 @@
     "deleteError": "Failed to delete agent"
   },
   "tabsApiTab": {
+    "infoBox": "Use this agent from your own apps. Create API keys here to call it programmatically and build it into your product or workflow.",
     "apiHeading": "API",
     "manageApiKeysDescription": "Manage API keys and integrations.",
     "secretKeysListedBelow": "Your secret API keys are listed below. Please note that we do not display your secret API keys again after you generate them.",
@@ -1547,10 +1577,12 @@
     "createNew": "Create New"
   },
   "tabsAuditLogTab": {
+    "infoBox": "Keep a paper trail. Review the log of who changed what and when for this agent — handy for troubleshooting and staying compliant.",
     "heading": "Audit",
     "description": "View who changed what and when for this agent."
   },
   "tabsEmbedTab": {
+    "infoBox": "Put this agent on your site or app. Copy the embed snippet and tweak how the chat widget looks and behaves for your users.",
     "heading": "Embed",
     "headingDescription": "Configure embedding options for your agent.",
     "collapseAdvancedCss": "Collapse Advanced CSS",
@@ -1706,6 +1738,7 @@
     "subtitleInputPlaceholder": "Created with Agentic OS"
   },
   "tabsHistoryTab": {
+    "infoBox": "Look back at past conversations. See what people have been asking and how your agent replied, so you can spot gaps and keep improving it.",
     "heading": "History",
     "subtitle": "View and manage conversation history.",
     "ratingOutOf": "{rating} out of 5",
@@ -1738,6 +1771,7 @@
     "selectConversationPrompt": "Select a conversation to view details."
   },
   "tabsLlmTab": {
+    "infoBox": "This is the brain behind your agent — the AI model that powers every reply. Bigger models reason better on tricky questions; lighter ones are faster and cost less. Not sure? The default is a solid all-rounder.",
     "llmUpdatedSuccessfully": "LLM updated successfully",
     "failedToUpdateLlm": "Failed to update LLM",
     "llmConfiguration": "LLM Configuration",
@@ -1748,6 +1782,8 @@
   "tabsPromptsTab": {
     "heading": "Prompts",
     "description": "Manage and configure prompts for your agent.",
+    "infoBoxDefault": "This is where you shape how your agent talks and behaves — its personality, tone, and the way it guides each conversation. Just write in plain language, like you're briefing a new teammate.",
+    "infoBoxSandbox": "This is where you shape how your agent talks and behaves — its personality, tone, and the way it guides each conversation. Since this agent runs in a dedicated sandbox, that behavior is set in the Agent Configuration below.",
     "systemPromptTitle": "System Prompt",
     "systemPromptInfoAriaLabel": "More info about system prompt",
     "systemPromptTooltip": "Define the agent's behavior",
@@ -1794,6 +1830,7 @@
     "promptDeleteFailed": "Failed to delete prompt"
   },
   "tabsSafetyTab": {
+    "infoBox": "Set the guardrails that keep conversations appropriate. Decide how your agent handles risky or off-limits topics and what it says when someone crosses the line — so it stays safe and on-brand.",
     "safetyTitle": "Safety",
     "safetyDescription": "Configure safety and moderation settings.",
     "viewFlaggedPrompts": "View Flagged Prompts",
@@ -1819,7 +1856,12 @@
   },
   "tabsSandboxTab": {
     "heading": "Sandbox",
-    "description": "Configure sandbox connection and deployment settings."
+    "description": "Configure sandbox connection and deployment settings.",
+    "capabilityTitle": "Dedicated sandbox",
+    "capabilityDescription": "Give this agent its own secure workspace where it can run code, tools, and skills on your behalf. When on, connect it to an instance below to unlock skills and agent prompts.",
+    "capabilityOffHint": "Turn it on to give this agent a workspace and connect it to an instance.",
+    "toggleSuccess": "Sandbox setting updated",
+    "toggleError": "Couldn't update sandbox setting"
   },
   "tabsSettingsTab": {
     "settingsHeading": "Settings",
@@ -1909,11 +1951,16 @@
     "agentUpdatedSuccess": "Agent updated successfully",
     "agentUpdateError": "Failed to update agent"
   },
+  "tabsMcpTab": {
+    "infoBox": "Connect your agent to your own systems through MCP servers, so it can reach your data and services right inside a conversation."
+  },
   "tabsSkillsTab": {
     "heading": "Skills",
-    "description": "Manage agent skill assignments for your mentor."
+    "description": "Manage agent skill assignments for your mentor.",
+    "infoBox": "Skills are reusable capabilities you build once and assign to any agent. Create a skill, then toggle it on to give this agent that ability."
   },
   "tabsToolsTab": {
+    "infoBox": "Give your agent hands. Tools let it do things beyond chatting — look something up, call an API, trigger an action — so it can actually get work done for people.",
     "heading": "Tools",
     "subheading": "Configure tools and integrations for your agent.",
     "moreInfoAbout": "More info about {name}",

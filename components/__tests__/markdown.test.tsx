@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import Markdown from '@/components/markdown';
-import { preprocessLaTeX } from '@/lib/utils';
+import { preprocessLaTeX } from '@/lib/preprocess-latex';
 
 // A fenced block with a language renders the copy button, which reads route
 // params. Without this the syntax-highlighted branch cannot be tested at all.
@@ -402,6 +402,31 @@ Show me your steps — write out each one just like I did above. 😊`;
       // No raw math delimiters should leak into the visible text.
       expect(container.textContent).not.toContain('$$');
       expect(container.textContent).not.toContain('$');
+    });
+
+    it('should render dollar-wrapped text styling commands as Markdown, not KaTeX (issue #2109)', () => {
+      // Real LLM output: feature names wrapped in `$\textbf{...}$` / `$\text{...}$`
+      // to mean *bold*, not math (from the shared-chat repro on the issue).
+      const featureList = `The $\\text{ibl.ai}$ platform offers:
+
+* $\\textbf{Custom AI Agents}$: Create personalized agents.
+* $\\textbf{Canvas \\& Artifacts}$: Generate documents.
+* $\\textbf{Enterprise Management}$: Granular controls.`;
+
+      const { container } = render(<Markdown>{featureList}</Markdown>);
+
+      // The styling wrappers become real bold text, not KaTeX math.
+      const boldText = [...container.querySelectorAll('strong')].map(
+        (el) => el.textContent,
+      );
+      expect(boldText).toContain('Custom AI Agents');
+      expect(boldText).toContain('Canvas & Artifacts');
+      expect(boldText).toContain('Enterprise Management');
+      // No math rendering and no leaked delimiters or trapped `**`.
+      expect(container.querySelector('.katex')).toBeNull();
+      expect(container.textContent).not.toContain('$');
+      expect(container.textContent).not.toContain('**');
+      expect(container.textContent).toContain('The ibl.ai platform offers:');
     });
 
     /**

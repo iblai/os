@@ -84,6 +84,12 @@ export function DatasetsTab({
           overflowX: 'hidden',
         }}
       >
+        <div
+          className="rounded-md border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600"
+          data-testid="datasets-info-box"
+        >
+          {t('infoBox')}
+        </div>
         <div className="space-y-4">
           <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
             <div className="relative w-full sm:w-64">

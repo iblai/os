@@ -120,10 +120,18 @@ const test = base.extend<object, LtiWorkerFixtures>({
           const editPage = new EditMentorPage(page);
           // Enable LTI access on the backend so sub-resource tests can create
           // links/keys/tools. The LTI tab itself would be visible without this,
-          // but the sub-resource APIs require is_lti_accessible=true.
-          await editPage.open('Settings');
-          await waitForPageReady(page);
-          await editPage.settings.setEnableLtiLaunchesAndSave(true);
+          // but the sub-resource APIs require is_lti_accessible=true. The
+          // "Enable LTI launches" toggle now lives in-tab (feat/2040 — moved
+          // off Settings → Capabilities into the LTI tab's own
+          // `CapabilityGate`).
+          //
+          // open() first — the LTI page object drives tabs INSIDE the Edit
+          // Agent dialog and never opens it itself; without this the whole
+          // worker fixture (and with it every sub-resource test) dies waiting
+          // for a dialog that was never opened.
+          await editPage.open();
+          await editPage.lti.switchToTab();
+          await editPage.lti.setCapabilityEnabled(true);
           await editPage.lti.expectTabVisible();
           await editPage.close();
         }
@@ -162,10 +170,11 @@ const test = base.extend<object, LtiWorkerFixtures>({
 
 /**
  * Create a fresh ephemeral mentor and leave the page on it. When `enableLti`
- * is true, flips "Enable LTI launches" on (Settings → Capabilities) and
- * confirms the LTI tab appears (it would appear anyway — this call just also
- * enables is_lti_accessible for sub-resource operations), then closes the
- * modal.
+ * is true, flips "Enable LTI launches" on via the LTI tab's own in-tab
+ * `CapabilityGate` toggle (feat/2040 — moved off Settings → Capabilities)
+ * and confirms the LTI tab is visible (it would be visible anyway — this
+ * call just also enables is_lti_accessible for sub-resource operations),
+ * then closes the modal.
  */
 async function createTestMentor(
   page: Page,
@@ -180,9 +189,12 @@ async function createTestMentor(
   ).toBeVisible({ timeout: 60_000 });
 
   if (enableLti) {
-    await editMentorPage.open('Settings');
-    await waitForPageReady(page);
-    await editMentorPage.settings.setEnableLtiLaunchesAndSave(true);
+    // Open the Edit Agent modal first — the LTI page object drives tabs
+    // INSIDE the dialog and (deliberately) never opens it itself. open()
+    // also blocks until the modal hydrates past its loading spinner.
+    await editMentorPage.open();
+    await editMentorPage.lti.switchToTab();
+    await editMentorPage.lti.setCapabilityEnabled(true);
     await editMentorPage.lti.expectTabVisible();
     await editMentorPage.close();
   }
@@ -261,11 +273,15 @@ test.describe('Journey 60 — LTI tab visibility', () => {
     }
   });
 
-  // ── lti-03: tab remains visible after disabling "Enable LTI launches" ────
+  // ── lti-03: disabling "Enable LTI launches" regates the tab content ──────
 
-  // lti-03: Disabling "Enable LTI launches" does NOT hide the LTI tab. The
-  // tab stays mounted so the admin can always reach the configuration surface.
-  test('admin disables Enable LTI launches in Settings and the LTI tab stays visible', async ({
+  // lti-03: The LTI tab is unconditionally mounted for admins (feat/2040) —
+  // "the tab stays visible after disabling" guards nothing anymore. What
+  // matters is the capability toggle's effect on the GATED CONTENT: flipping
+  // "Enable LTI launches" off must flip `capability-gate-content` back to
+  // `data-enabled="false"` (grayed + inert sub-tabs), mirroring every other
+  // in-tab capability.
+  test('admin disables Enable LTI launches in the LTI tab and the gated content regates', async ({
     page,
     createMentorPage,
     editMentorPage,
@@ -275,14 +291,23 @@ test.describe('Journey 60 — LTI tab visibility', () => {
       enableLti: true,
     });
     try {
-      await editMentorPage.open('Settings');
+      // createTestMentor closes the modal after enabling LTI — reopen it.
+      await editMentorPage.open();
+      await editMentorPage.lti.switchToTab();
       await waitForPageReady(page);
-      // Verify visible while enabled.
-      await editMentorPage.lti.expectTabVisible();
-      // Flip the toggle off.
-      await editMentorPage.settings.setEnableLtiLaunchesAndSave(false);
-      // Tab must still be visible after disabling.
-      await editMentorPage.lti.expectTabVisible();
+      // Content is ungated while the capability is on.
+      await expect(editMentorPage.lti.capabilityContent).toHaveAttribute(
+        'data-enabled',
+        'true',
+        { timeout: 10_000 },
+      );
+      // Flip the toggle off — in-tab now (feat/2040), auto-saves on click.
+      await editMentorPage.lti.setCapabilityEnabled(false);
+      await expect(editMentorPage.lti.capabilityContent).toHaveAttribute(
+        'data-enabled',
+        'false',
+        { timeout: 10_000 },
+      );
       await editMentorPage.close();
     } finally {
       await deleteTestMentor(editMentorPage);
@@ -342,7 +367,13 @@ test.describe('Journey 60 — LTI tab visibility', () => {
 
 test.describe('Journey 60 — LTI tab sub-resource tests', () => {
   test.describe.configure({ mode: 'parallel' });
-  test.setTimeout(240_000);
+  // 420s, not 240s: Playwright bills the `ltiMentorUrl` WORKER-fixture setup
+  // (stale-residue reap + mentor create + Edit Agent open + hydration +
+  // enable-LTI, ~2.5-3 min) to the FIRST test that touches it, and the test
+  // body then pays its own modal open — the Edit Agent modal takes ~30-90s
+  // to hydrate past its spinner (settings + RBAC prefetch churn) on every
+  // open. 240s was observed expiring during the first test's close().
+  test.setTimeout(420_000);
 
   test.beforeEach(async ({ page }) => {
     await navigateToMentorApp(page);

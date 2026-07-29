@@ -8,11 +8,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { config } from '@/lib/config';
-import {
-  isLoggedIn,
-  redirectToAuthSpa,
-  redirectToAuthSpaJoinTenant,
-} from '@/lib/utils';
+import { isLoggedIn, redirectToLogin } from '@/lib/utils';
 import { useCurrentTenant, useVisitingTenant } from '@/hooks/use-user';
 
 type AuthPopoverProps = {
@@ -43,13 +39,7 @@ export function AuthPopover({ children, tenantKey }: AuthPopoverProps) {
   }, [shouldShowAd]);
 
   const handleLogin = useCallback(() => {
-    if (!tenantKey) {
-      console.log('[auth-redirect] Auth popover login without tenant key');
-      redirectToAuthSpa('/', tenantKey, undefined, true, true);
-      return;
-    }
-
-    redirectToAuthSpaJoinTenant(tenantKey, undefined, true);
+    redirectToLogin(tenantKey);
   }, [tenantKey]);
 
   const handleTriggerClick = useCallback(

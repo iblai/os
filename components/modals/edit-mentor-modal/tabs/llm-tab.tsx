@@ -117,6 +117,12 @@ export function LLMTab({ showConfigurationHeader = true }: LLMTabProps) {
           overflowX: 'hidden',
         }}
       >
+        <div
+          className="rounded-md border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600"
+          data-testid="llm-info-box"
+        >
+          {t('infoBox')}
+        </div>
         <div className="space-y-6">
           <div className="relative">
             <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-500" />

@@ -31,14 +31,14 @@ overrides:
   '@hono/node-server': '>=1.19.13'
   bytes: '>=1.11.1'
   devalue: '>=5.8.1'
-  fast-uri: '>=3.1.2'
+  fast-uri: '>=4.1.1'
   ip-address: '>=10.1.1'
-  brace-expansion: '>=5.0.6'
-  'minimatch@^9>brace-expansion': '2.0.3'
-  postcss: '>=8.5.10'
+  brace-expansion: '>=5.0.8'
+  postcss: '>=8.5.18'
   ws: '>=8.20.1'
   qs: '>=6.15.2'
   uuid: '11.1.1'
+  sharp: '>=0.35.0'
 
 # pnpm v10 no longer reads `pnpm.patchedDependencies` from package.json — it must
 # live here or the google-drive-picker scope patch silently stops applying

@@ -28,7 +28,13 @@ import {
   afterEach,
   beforeAll,
 } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
@@ -150,6 +156,15 @@ let mockIsStreaming = false;
 let mockNumberOfActiveChatMessages = 0;
 let mockActiveChatMessages: Array<{ role?: string }> = [];
 const refetchRecentMock = vi.fn(() => Promise.resolve(undefined));
+const fetchNextPageMock = vi.fn(() => Promise.resolve(undefined));
+// Records the args passed to the recent infinite query so tests can assert
+// the debounced `search` / `mentor` params reached the hook.
+const recentInfiniteArgsMock = vi.fn();
+let mockHasNextPage = false;
+let mockIsFetchingNextPage = false;
+// When set, overrides the single-page wrapping so tests can supply an
+// explicit `{ pages: [...] }` payload spanning multiple pages.
+let mockRecentInfinitePages: any = undefined;
 
 // Data sources
 let mockMentorPublicSettings: any = {
@@ -206,6 +221,12 @@ let mockProjects: any = {
     },
   ],
 };
+// Records the args passed to the projects query so tests can assert the
+// growing `limit` (infinite scroll bumps it a page at a time).
+const getUserProjectsArgsMock = vi.fn();
+// Drives the projects query's `isFetching` flag so tests can assert the
+// scroll handler is gated while a fetch is in flight.
+let mockProjectsIsFetching = false;
 
 // Mimic RTK Query's updateQueryData: it invokes the recipe with a draft
 // object representing the cached data. We seed the draft with the current
@@ -376,36 +397,46 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
         }
       : { ...state, refetch: () => Promise.resolve(undefined) };
   },
-  useGetRecentMessageQuery: (
-    _args: unknown,
-    options?: { skip?: boolean; selectFromResult?: (state: any) => any },
+  useGetRecentMessagesInfiniteQuery: (
+    args: unknown,
+    options?: { skip?: boolean },
   ) => {
-    if (options?.skip) {
-      const skipped = { data: undefined, isError: false, isLoading: false };
-      return options.selectFromResult
-        ? {
-            ...options.selectFromResult(skipped),
-            refetch: refetchRecentMock,
-          }
-        : { ...skipped, refetch: refetchRecentMock };
-    }
-    const state = {
-      data: mockRecentPages,
+    recentInfiniteArgsMock(args);
+    const common = {
+      refetch: refetchRecentMock,
+      fetchNextPage: fetchNextPageMock,
+      hasNextPage: mockHasNextPage,
+      isFetching: false,
+      isFetchingNextPage: mockIsFetchingNextPage,
       isError: false,
       isLoading: false,
     };
-    return options?.selectFromResult
-      ? {
-          ...options.selectFromResult(state),
-          refetch: refetchRecentMock,
-        }
-      : { ...state, refetch: refetchRecentMock };
+    if (options?.skip) {
+      return { ...common, data: undefined };
+    }
+    const data = mockRecentInfinitePages ?? {
+      pages: [mockRecentPages],
+      pageParams: [1],
+    };
+    return { ...common, data };
   },
-  useGetUserProjectsQuery: () => ({
-    data: mockProjects,
-    isError: false,
-    isLoading: false,
-  }),
+  useGetUserProjectsQuery: (args: unknown, options?: { skip?: boolean }) => {
+    getUserProjectsArgsMock(args);
+    if (options?.skip) {
+      return {
+        data: undefined,
+        isFetching: false,
+        isError: false,
+        isLoading: false,
+      };
+    }
+    return {
+      data: mockProjects,
+      isFetching: mockProjectsIsFetching,
+      isError: false,
+      isLoading: false,
+    };
+  },
   useUnPinMessageMutation: () => [unpinMessageMock, { isLoading: false }],
 }));
 
@@ -545,6 +576,15 @@ vi.mock('@/lib/utils', async (importOriginal) => {
     redirectToAuthSpa: (...args: unknown[]) => redirectToAuthSpaMock(...args),
     redirectToAuthSpaJoinTenant: (...args: unknown[]) =>
       redirectToAuthSpaJoinTenantMock(...args),
+    // Mirrors the real redirectToLogin's delegation so the existing
+    // auth-SPA assertions keep working now that it lives in @/lib/utils.
+    redirectToLogin: (tenantKey?: string) => {
+      if (!tenantKey) {
+        redirectToAuthSpaMock('/', tenantKey, undefined, true, true);
+        return;
+      }
+      redirectToAuthSpaJoinTenantMock(tenantKey, undefined, true);
+    },
   };
 });
 
@@ -658,6 +698,11 @@ function resetState() {
   updateQueryDataMock.mockClear();
   saveCachedSessionIdMock.mockReset();
   refetchRecentMock.mockClear();
+  fetchNextPageMock.mockClear();
+  recentInfiniteArgsMock.mockClear();
+  mockHasNextPage = false;
+  mockIsFetchingNextPage = false;
+  mockRecentInfinitePages = undefined;
   mockActiveSessionId = 'sess-active';
   mockCachedSessionId = {};
   mockIsStreaming = false;
@@ -745,6 +790,8 @@ function resetState() {
       { uuid: 'proj-2', name: 'Beta Project' },
     ],
   };
+  getUserProjectsArgsMock.mockClear();
+  mockProjectsIsFetching = false;
 }
 
 // jsdom doesn't implement pointer-capture / ResizeObserver / IntersectionObserver
@@ -948,6 +995,31 @@ describe('AppSidebar — rendering', () => {
 
     expect(
       screen.getByRole('button', { name: 'New Chat' }),
+    ).toBeInTheDocument();
+  });
+
+  it('hides Search chats when the user is NOT logged in (outside embed mode too)', () => {
+    // The dialog lists the signed-in user's own recent messages, so unlike
+    // `showChats` it is hidden for an anonymous user in EVERY mode — while
+    // New Chat (which anonymous users may use) stays.
+    mockIsLoggedIn = false;
+    mockUsername = null;
+    renderSidebar();
+
+    expect(
+      screen.queryByRole('button', { name: 'Search chats' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'New Chat' }),
+    ).toBeInTheDocument();
+  });
+
+  it('shows Search chats for a logged-in user', () => {
+    mockIsLoggedIn = true;
+    renderSidebar();
+
+    expect(
+      screen.getByRole('button', { name: 'Search chats' }),
     ).toBeInTheDocument();
   });
 });
@@ -1562,6 +1634,79 @@ describe('AppSidebar — Projects section', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Projects' })[0]);
     expect(
       screen.queryByRole('button', { name: 'Alpha Project' }),
+    ).not.toBeInTheDocument();
+  });
+});
+
+describe('AppSidebar — Projects infinite scroll', () => {
+  // Builds `n` project rows with unique ids/names + a default mentor so each
+  // row is openable, matching the SDK `results` shape.
+  function makeProjects(n: number) {
+    return Array.from({ length: n }, (_, i) => ({
+      id: `proj-${i + 1}`,
+      name: `Project ${i + 1}`,
+      mentors: [{ unique_id: `mentor-${i + 1}` }],
+    }));
+  }
+
+  // The `limit` from the most recent projects-query call — the value the
+  // infinite-scroll handler grows as the user reaches the bottom.
+  function lastProjectsLimit() {
+    const calls = getUserProjectsArgsMock.mock.calls;
+    return (calls[calls.length - 1]?.[0] as any)?.params?.limit;
+  }
+
+  it('requests only the first page (limit 10) on the initial fetch', () => {
+    renderSidebar();
+    expect(lastProjectsLimit()).toBe(10);
+  });
+
+  it('grows the query limit by one page when scrolled to the bottom and more remain', () => {
+    // 10 of 25 loaded → hasMore. jsdom reports 0 for scroll metrics, so any
+    // scroll event lands "at the bottom" and triggers exactly one bump.
+    mockProjects = { count: 25, results: makeProjects(10) };
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Projects' })[0]);
+    expect(lastProjectsLimit()).toBe(10);
+
+    fireEvent.scroll(screen.getByTestId('sidebar-projects-scroll'));
+    expect(lastProjectsLimit()).toBe(20);
+  });
+
+  it('does not grow the limit once every project is loaded (length >= count)', () => {
+    mockProjects = { count: 2, results: makeProjects(2) };
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Projects' })[0]);
+    fireEvent.scroll(screen.getByTestId('sidebar-projects-scroll'));
+    expect(lastProjectsLimit()).toBe(10);
+  });
+
+  it('does not grow the limit while a fetch is already in flight', () => {
+    mockProjects = { count: 25, results: makeProjects(10) };
+    mockProjectsIsFetching = true;
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Projects' })[0]);
+    fireEvent.scroll(screen.getByTestId('sidebar-projects-scroll'));
+    expect(lastProjectsLimit()).toBe(10);
+  });
+
+  it('shows the "loading more" indicator only while fetching with pages remaining', () => {
+    mockProjects = { count: 25, results: makeProjects(10) };
+    mockProjectsIsFetching = true;
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Projects' })[0]);
+    expect(
+      screen.getByRole('status', { name: 'Loading more projects' }),
+    ).toBeInTheDocument();
+  });
+
+  it('hides the "loading more" indicator when not fetching', () => {
+    mockProjects = { count: 25, results: makeProjects(10) };
+    mockProjectsIsFetching = false;
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Projects' })[0]);
+    expect(
+      screen.queryByRole('status', { name: 'Loading more projects' }),
     ).not.toBeInTheDocument();
   });
 });
@@ -2213,6 +2358,215 @@ describe('AppSidebar — chat row label fallbacks', () => {
     // Our `getCurrentArtifactTitle` mock returns 'Artifact title' — so the
     // row should render that as its label.
     expect(screen.getByText('Artifact title')).toBeInTheDocument();
+  });
+
+  it('prefers the session title over the first human message', () => {
+    mockRecentPages = {
+      results: [
+        {
+          id: 'r-titled',
+          session_id: 'sess-titled',
+          title: 'My titled chat',
+          messages: [
+            {
+              message: {
+                data: { type: 'user', content: 'Recent message one' },
+              },
+            },
+          ],
+        },
+      ],
+    };
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    expect(screen.getByText('My titled chat')).toBeInTheDocument();
+    // The first-human-message text must NOT be used as the label.
+    expect(screen.queryByText('Recent message one')).not.toBeInTheDocument();
+  });
+
+  it('falls back to the first human message when the title is whitespace-only', () => {
+    mockRecentPages = {
+      results: [
+        {
+          id: 'r-blank-title',
+          session_id: 'sess-blank-title',
+          title: '   ',
+          messages: [
+            {
+              message: {
+                data: { type: 'user', content: 'Fallback message text' },
+              },
+            },
+          ],
+        },
+      ],
+    };
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    expect(screen.getByText('Fallback message text')).toBeInTheDocument();
+  });
+});
+
+// =============================================================================
+// Recent chats — infinite-query wiring: mentor/search params, pagination
+// sentinel, and page flattening.
+// =============================================================================
+
+describe('AppSidebar — recent chats infinite query', () => {
+  it('passes the current mentor into the recent-messages query arg', () => {
+    renderSidebar();
+    const lastArgs = recentInfiniteArgsMock.mock.calls.at(-1)?.[0] as {
+      mentor?: string;
+      org?: string;
+    };
+    expect(lastArgs?.mentor).toBe('mentor-1');
+    expect(lastArgs?.org).toBe('tenant-a');
+  });
+
+  it('flattens rows across multiple pages into the recent list', () => {
+    mockRecentInfinitePages = {
+      pages: [
+        {
+          results: [
+            {
+              id: 'p1-a',
+              session_id: 'sess-p1-a',
+              messages: [
+                {
+                  message: { data: { type: 'user', content: 'Page one row' } },
+                },
+              ],
+            },
+          ],
+        },
+        {
+          results: [
+            {
+              id: 'p2-a',
+              session_id: 'sess-p2-a',
+              messages: [
+                {
+                  message: { data: { type: 'user', content: 'Page two row' } },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      pageParams: [1, 2],
+    };
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    expect(screen.getByText('Page one row')).toBeInTheDocument();
+    expect(screen.getByText('Page two row')).toBeInTheDocument();
+  });
+
+  it('opens the search dialog from the Search chats button', () => {
+    renderSidebar();
+    // The search input lives in the dialog, not the sidebar, until opened.
+    expect(
+      screen.queryByPlaceholderText('Search chats'),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Search chats' }));
+    expect(screen.getByPlaceholderText('Search chats')).toBeInTheDocument();
+  });
+
+  it('updates the query arg with the debounced search term', () => {
+    vi.useFakeTimers();
+    try {
+      renderSidebar();
+      fireEvent.click(screen.getByRole('button', { name: 'Search chats' }));
+      const input = screen.getByPlaceholderText('Search chats');
+      fireEvent.change(input, { target: { value: 'invoice' } });
+      // Before the debounce window elapses the arg is still empty.
+      const hasSearchBefore = recentInfiniteArgsMock.mock.calls.some(
+        (c) => (c?.[0] as { search?: string })?.search === 'invoice',
+      );
+      expect(hasSearchBefore).toBe(false);
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+      const hasSearchAfter = recentInfiniteArgsMock.mock.calls.some(
+        (c) => (c?.[0] as { search?: string })?.search === 'invoice',
+      );
+      expect(hasSearchAfter).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('calls fetchNextPage when the sentinel intersects and a next page exists', () => {
+    let ioCallback: ((entries: unknown[]) => void) | null = null;
+    const prevIO = (window as any).IntersectionObserver;
+    (window as any).IntersectionObserver = class {
+      constructor(cb: (entries: unknown[]) => void) {
+        ioCallback = cb;
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+    try {
+      mockHasNextPage = true;
+      renderSidebar();
+      fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+      expect(ioCallback).not.toBeNull();
+      act(() => {
+        ioCallback?.([{ isIntersecting: true }]);
+      });
+      expect(fetchNextPageMock).toHaveBeenCalled();
+    } finally {
+      (window as any).IntersectionObserver = prevIO;
+    }
+  });
+
+  it('does not call fetchNextPage when already fetching the next page', () => {
+    let ioCallback: ((entries: unknown[]) => void) | null = null;
+    const prevIO = (window as any).IntersectionObserver;
+    (window as any).IntersectionObserver = class {
+      constructor(cb: (entries: unknown[]) => void) {
+        ioCallback = cb;
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+    try {
+      mockHasNextPage = true;
+      mockIsFetchingNextPage = true;
+      renderSidebar();
+      fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+      act(() => {
+        ioCallback?.([{ isIntersecting: true }]);
+      });
+      expect(fetchNextPageMock).not.toHaveBeenCalled();
+    } finally {
+      (window as any).IntersectionObserver = prevIO;
+    }
+  });
+
+  it('does not call fetchNextPage when there is no next page', () => {
+    let ioCallback: ((entries: unknown[]) => void) | null = null;
+    const prevIO = (window as any).IntersectionObserver;
+    (window as any).IntersectionObserver = class {
+      constructor(cb: (entries: unknown[]) => void) {
+        ioCallback = cb;
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+    try {
+      mockHasNextPage = false;
+      renderSidebar();
+      fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+      act(() => {
+        ioCallback?.([{ isIntersecting: true }]);
+      });
+      expect(fetchNextPageMock).not.toHaveBeenCalled();
+    } finally {
+      (window as any).IntersectionObserver = prevIO;
+    }
   });
 });
 

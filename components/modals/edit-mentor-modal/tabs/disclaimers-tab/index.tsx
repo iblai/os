@@ -227,6 +227,12 @@ export function DisclaimersTab() {
         </div>
       </div>
       <div className="flex-1 space-y-6 overflow-y-auto p-3 lg:p-4">
+        <div
+          className="rounded-md border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600"
+          data-testid="disclaimers-info-box"
+        >
+          {t('infoBox')}
+        </div>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           {/* User Agreement */}
           <WithPermissions
