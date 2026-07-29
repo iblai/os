@@ -134,14 +134,22 @@ jobs:
           GH_TOKEN: ${{ secrets.DEPLOY_OPS_DISPATCH_TOKEN }}
         run: |
           set -uo pipefail
-          # stg1 is PRIMARY; stg2 is OVERFLOW, used only while stg1 is genuinely occupied. That keeps
-          # release validation — which lives on stg2 — undisturbed in the common case, while still
-          # letting two concurrent PRs use both boxes.
+          # stg2 is DISABLED as a PR-e2e target for now — flip ENABLE_STG2 to 1 to restore overflow.
           #
-          # Best-effort on purpose: pr-e2e serialises on `env-mutate-<env>`, so if two PRs race and
-          # both land on stg1 the second simply queues. A wrong guess costs throughput, never
-          # correctness — which is why this does not need org-admin runner labels or a lock.
-          runners() {   # runner names across the last N runs, optionally only in-progress jobs
+          # Why it is off: the picker can only observe whether a runner is currently EXECUTING work.
+          # An OFFLINE runner is indistinguishable from an idle one, so on 2026-07-29 a PR failed over
+          # to stg2 while stg2-spa was down, the job queued for ~2h, and the caller timed out with no
+          # useful diagnosis. Availability cannot be inferred from "not busy" without the org runners
+          # API, which this token deliberately does not have.
+          ENABLE_STG2=0
+
+          if [ "$ENABLE_STG2" != "1" ]; then
+            echo "target=stg1" >> "$GITHUB_OUTPUT"
+            echo "target env: stg1 (stg2 overflow disabled)"
+            exit 0
+          fi
+
+          runners() {
             local filter="$1" limit="$2" id
             for id in $(gh run list -R iblai/iblai-deploy-ops --limit "$limit" \
                           --json databaseId --jq '.[].databaseId' 2>/dev/null); do
@@ -149,16 +157,9 @@ jobs:
             done
           }
           BUSY=$(runners '.jobs[] | select(.status=="in_progress") | .runner_name // empty' 20)
-          # Only fail over to a runner we have actually seen execute work — an offline box would
-          # otherwise swallow the run into a queue that never drains.
           SEEN=$(runners '.jobs[].runner_name // empty' 20)
-          # split on whitespace explicitly — relying on unquoted word-splitting is a bash-only
-          # behaviour and silently returns the wrong answer under other shells
           has() { printf '%s' "$2" | tr -s '[:space:]' '\n' | grep -qx "$1"; }
 
-          # Fail over only when stg2 is genuinely FREE. If both boxes are busy, queue on the
-          # primary: waiting on stg2 would mean sitting behind release validation and then
-          # downgrading that box to the prod tag, forcing validation to redeploy afterwards.
           if ! has stg1-spa "$BUSY"; then
             TARGET=stg1; WHY="stg1 free"
           elif has stg2-spa "$SEEN" && ! has stg2-spa "$BUSY"; then
@@ -168,7 +169,6 @@ jobs:
           fi
           echo "target=$TARGET" >> "$GITHUB_OUTPUT"
           echo "target env: $TARGET ($WHY)"
-
       - name: Dispatch e2e
         id: dispatch
         env:
@@ -209,8 +209,22 @@ jobs:
           # Actions log. Mirror every phase transition into THIS log, which is public — otherwise a
           # developer stares at a spinner for an hour with no idea what is happening.
           echo "Phases: resolve -> baseline drift check -> sync (only if drifted) -> swap SPA -> e2e -> restore"
+          # A dispatched run that never STARTS means the target env's runner is offline — the picker
+          # cannot tell that apart from idle. Without this guard the poll ran the full 2h and reported
+          # a bare "timed_out", which says nothing about the cause. Fail in 15 min with a diagnosis.
+          STARTED=0
           LAST=""
-          for i in $(seq 1 240); do        # up to 2h: image build + full suite
+          for i in $(seq 1 240); do
+            if [ "$STARTED" = "0" ]; then
+              ACTIVE=$(gh api "repos/iblai/iblai-deploy-ops/actions/runs/${RUN_ID}/jobs" \
+                         --jq '[.jobs[] | select(.status != "queued")] | length' 2>/dev/null || echo 0)
+              [ "${ACTIVE:-0}" -gt 0 ] && STARTED=1
+              if [ "$STARTED" = "0" ] && [ "$i" -ge 30 ]; then
+                echo "conclusion=runner_unavailable" >> "$GITHUB_OUTPUT"
+                echo "::error::the central run has been QUEUED for 15 min without starting a single job — the target environment's self-hosted runner is almost certainly offline. https://github.com/iblai/iblai-deploy-ops/actions/runs/${RUN_ID}"
+                exit 1
+              fi
+            fi        # up to 2h: image build + full suite
             PHASES=$(gh api "repos/iblai/iblai-deploy-ops/actions/runs/${RUN_ID}/jobs" \
                        --jq '[.jobs[] | "\(.name): \(.conclusion // .status)"] | join("  |  ")' 2>/dev/null || echo "")
             if [ -n "$PHASES" ] && [ "$PHASES" != "$LAST" ]; then
