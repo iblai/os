@@ -33,16 +33,17 @@ overrides:
   devalue: '>=5.8.1'
   fast-uri: '>=4.1.1'
   ip-address: '>=10.1.1'
-  # brace-expansion is split across majors with incompatible import styles, so a
-  # single global pin can't work (see CVE-2025-5889, ReDoS, patched in each line):
-  #   - minimatch@3 (^1.1.7) and minimatch@9 (^2.0.2, used by glob/test-exclude/
-  #     istanbul coverage) call it as a CJS-callable default -> needs the 2.x line.
-  #   - minimatch@10 (^5.0.5) imports the named `{ expand }` -> needs the 5.x line.
-  # Forcing everything to 5.x breaks minimatch@9 ("default is not a function");
-  # forcing everything to 2.x breaks minimatch@10 ("expand is not a function").
-  # Default to the patched 2.x callable line; scope the patched 5.x to minimatch@10.
-  brace-expansion: '>=2.0.2 <3'
-  minimatch@10>brace-expansion: '>=5.0.8'
+  # brace-expansion GHSA-mh99-v99m-4gvg (DoS/OOM via unbounded expansion) is patched
+  # ONLY in 5.0.8 — there is no patched 1.x/2.x/3.x/4.x. But brace-expansion@5 uses
+  # ESM-style named exports, and the minimatch@9 pulled solely by
+  # @vitest/coverage-istanbul (glob@10 -> test-exclude, a devDependency) imports it
+  # as a CJS default -> "brace_expansion.default is not a function", crashing the
+  # coverage check. So pin brace-expansion to the patched 5.0.8 everywhere and bump
+  # that lone dev-only minimatch@9 to v10, which reads the named export. minimatch@3
+  # (via rollup-plugin-copy inside @iblai/*) is build tooling never executed here, so
+  # its 5.x callable mismatch is inert and left alone.
+  brace-expansion: '>=5.0.8'
+  minimatch@9: '^10'
   postcss: '>=8.5.18'
   ws: '>=8.20.1'
   qs: '>=6.15.2'
