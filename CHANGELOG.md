@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.108.1](https://github.com/iblai/os/compare/v0.108.0...v0.108.1) (2026-07-29)
+
+### Bug Fixes
+
+* remove double 'MENTOR:ENABLE_GRADING' in handlers ([c7e36ef](https://github.com/iblai/os/commit/c7e36efadc2787935dbb5c2929eb7afad6b32e05))
+
 ## [0.108.0](https://github.com/iblai/os/compare/v0.107.0...v0.108.0) (2026-07-29)
 
 ### Features
