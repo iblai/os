@@ -218,9 +218,6 @@ importers:
       google-drive-picker:
         specifier: 1.1.29
         version: 1.1.29(patch_hash=92ab8f635a9354b2f28d3bc2ee517ac82159a2747342bd5da1606ef41ad10f4a)
-      highlight.js:
-        specifier: 11.11.1
-        version: 11.11.1
       html2canvas:
         specifier: 1.4.1
         version: 1.4.1
@@ -254,9 +251,6 @@ importers:
       marked-gfm-heading-id:
         specifier: 4.1.3
         version: 4.1.3(marked@16.4.2)
-      marked-highlight:
-        specifier: 2.2.3
-        version: 2.2.3(marked@16.4.2)
       marked-katex-extension:
         specifier: 5.1.7
         version: 5.1.7(katex@0.16.44)(marked@16.4.2)
@@ -7152,11 +7146,6 @@ packages:
     resolution: {integrity: sha512-aR0i63LmFbuxU/gAgrgz1Ir+8HK6zAIFXMlckeKHpV+qKbYaOP95L4Ux5Gi+sKmCZU5qnN2rdKpvpb7PnUBIWg==}
     peerDependencies:
       marked: '>=13 <18'
-
-  marked-highlight@2.2.3:
-    resolution: {integrity: sha512-FCfZRxW/msZAiasCML4isYpxyQWKEEx44vOgdn5Kloae+Qc3q4XR7WjpKKf8oMLk7JP9ZCRd2vhtclJFdwxlWQ==}
-    peerDependencies:
-      marked: '>=4 <18'
 
   marked-katex-extension@5.1.7:
     resolution: {integrity: sha512-CVFzrqwpXGVaHByqcVvO/JfzW/OMWrAF3pEfNYNIruzBzM64moANSHapCg1qbzEN+NGf5unHwkMfwJIXHzyDAw==}
@@ -16440,10 +16429,6 @@ snapshots:
   marked-gfm-heading-id@4.1.3(marked@16.4.2):
     dependencies:
       github-slugger: 2.0.0
-      marked: 16.4.2
-
-  marked-highlight@2.2.3(marked@16.4.2):
-    dependencies:
       marked: 16.4.2
 
   marked-katex-extension@5.1.7(katex@0.16.44)(marked@16.4.2):
