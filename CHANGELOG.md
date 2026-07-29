@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.108.0](https://github.com/iblai/os/compare/v0.107.0...v0.108.0) (2026-07-29)
+
+### Features
+
+* **security:** enforce CSP by default (report-only in dev) ([f5a08c7](https://github.com/iblai/os/commit/f5a08c77e95c2ad02acb850ae79fa939406e6d29))
+
+### Bug Fixes
+
+* **security:** allow *.iblai.org / *.iblai.tech in the enforced CSP ([8eb0173](https://github.com/iblai/os/commit/8eb0173e9111353a4ea91d0a558fc6ceb3322a22))
+* **security:** decouple CSP enforce decision from NODE_ENV ([16427cd](https://github.com/iblai/os/commit/16427cdf506d558a91b4897c805ff9ef543837dd))
+
+### Chores
+
+* **ci:** remove Claude from GitHub Actions; require local pre-push review ([9b7fab4](https://github.com/iblai/os/commit/9b7fab47ae4dd31c61cc64e8d6d3e3208dc672b4))
+
+### CI
+
+* adopt the central PR e2e pipeline on this branch ([d27f234](https://github.com/iblai/os/commit/d27f234b9128669fe18e582e2e51730cd9cbd14d)), closes [os#380](https://github.com/iblai/os/issues/380) [#372](https://github.com/iblai/os/issues/372)
+
 ## [0.107.0](https://github.com/iblai/os/compare/v0.106.1...v0.107.0) (2026-07-29)
 
 ### Features
