@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.105.0](https://github.com/iblai/os/compare/v0.104.1...v0.105.0) (2026-07-29)
+
+### Features
+
+* **pr-e2e:** stream progress + publish the report link on the PR ([46df649](https://github.com/iblai/os/commit/46df649b55b2d2a3cdbd1856f66589a7d12b4156))
+
+### Bug Fixes
+
+* **pr-e2e:** pass merge_sha so the suite and app image share one commit ([ff522d2](https://github.com/iblai/os/commit/ff522d2db168a9b99d80c55f674bec5ef9d3f7e6))
+
+### CI
+
+* **e2e:** run PR e2e on the central pipeline instead of OCI container instances ([13f11eb](https://github.com/iblai/os/commit/13f11ebb8f5f1221a23183c2d675a3e8365db07d))
+
 ## [0.104.1](https://github.com/iblai/os/compare/v0.104.0...v0.104.1) (2026-07-28)
 
 ### Bug Fixes
