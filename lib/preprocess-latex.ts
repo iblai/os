@@ -157,6 +157,20 @@ export function preprocessLaTeX(content: string) {
     (_, tableContent) => processTabularContent(tableContent),
   );
 
+  // LLMs abuse display math as a block *container*: `\[` around an entire
+  // \begin{itemize}...\end{itemize}. Left alone, the wrapper survives the
+  // list conversion as `$$` around a Markdown list -- the math masking then
+  // hides the block from the \textbf/\textit unwrap, and the rendered result
+  // is one flat prose paragraph with literal `\textbf{...}` and inline `-`
+  // marks. A list is never math, so drop the delimiters and keep the
+  // environment for the itemize/enumerate conversion below. The lazy body
+  // only ends at an \end{env} directly before the closing delimiter, so a
+  // nested same-name environment cannot terminate the match early.
+  processedContent = processedContent.replace(
+    /(?:\\\[|\$\$)\s*(\\begin\{(itemize|enumerate)\}[\s\S]*?\\end\{\2\})\s*(?:\\\]|\$\$)/g,
+    (_match, body: string) => `\n${body}\n`,
+  );
+
   // LLMs write section headings as display math around a lone styling
   // command -- `\[` / `\textbf{Week 1 — React Core}` / `\]`, delimiters on
   // their own lines -- and the same trick inline with `\(...\)`. The

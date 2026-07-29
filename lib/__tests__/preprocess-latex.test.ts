@@ -380,6 +380,37 @@ describe('preprocessLaTeX function', () => {
     expect(result).not.toContain('\\$5');
   });
 
+  it('strips a display-math wrapper around an itemize so it converts to a real list (issue #2109)', () => {
+    const input =
+      '\\[\n\\begin{itemize}\n\\item \\textbf{Why:} spatial reasoning.\n\\item \\textbf{Core skills:} layout and joinery.\n\\end{itemize}\n\\]';
+    const result = preprocessLaTeX(input);
+    expect(result).toContain('- **Why:** spatial reasoning.');
+    expect(result).toContain('- **Core skills:** layout and joinery.');
+    expect(result).not.toContain('$$');
+    expect(result).not.toContain('\\textbf');
+    expect(result).not.toContain('\\begin');
+  });
+
+  it('strips the wrapper even when the list self-nests, keeping inline math intact (issue #2109)', () => {
+    const input =
+      '\\[\n\\begin{itemize}\n\\item \\textbf{Overlap:}\n  \\begin{itemize}\n    \\item \\textit{Tolerances:} wood (\\(\\alpha\\) varies).\n  \\end{itemize}\n\\item \\textbf{Safety:} push sticks.\n\\end{itemize}\n\\]';
+    const result = preprocessLaTeX(input);
+    expect(result).toContain('- **Overlap:**');
+    expect(result).toContain('- *Tolerances:* wood ($\\alpha$ varies).');
+    expect(result).toContain('- **Safety:** push sticks.');
+    expect(result).not.toContain('$$');
+    expect(result).not.toContain('\\begin');
+  });
+
+  it('strips a $$-wrapped enumerate the same way (issue #2109)', () => {
+    const input =
+      '$$\n\\begin{enumerate}\n\\item First step.\n\\item Second step.\n\\end{enumerate}\n$$';
+    const result = preprocessLaTeX(input);
+    expect(result).toContain('1. First step.');
+    expect(result).toContain('2. Second step.');
+    expect(result).not.toContain('$$');
+  });
+
   it('converts \\[-wrapped aligned environments of \\verb rows to a fenced code block (issue #2109)', () => {
     const input =
       'Create Counter.tsx:\n\\[\n\\begin{aligned}\n&\\verb|import { useState } from "react";|\\\\\n&\\verb|  const [count, setCount] = useState(initial);|\\\\\n&\\verb|}|\\\\\n\\end{aligned}\n\\]\nDone.';
