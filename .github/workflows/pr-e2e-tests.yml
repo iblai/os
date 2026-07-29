@@ -137,6 +137,9 @@ jobs:
           gh workflow run pr-e2e.yml -R iblai/iblai-deploy-ops --ref main \
             -f source_repo=os \
             -f pr_number='${{ github.event.pull_request.number }}' \
+            # github.sha on a pull_request IS the merge commit — the same ref actions/checkout
+            # used to build the app image, so specs and app code come from one commit.
+            -f merge_sha='${{ github.sha }}' \
             -f head_sha='${{ github.event.pull_request.head.sha }}' \
             -f app_image='${{ needs.build-app-image.outputs.image-uri }}' \
             -f target_env=stg1 \
