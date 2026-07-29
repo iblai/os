@@ -42,7 +42,11 @@ jobs:
     if: |
       contains(github.event.pull_request.labels.*.name, 'run-tests') &&
       github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: iblai-stg-runner
+    # A label check has no reason to need a self-hosted runner. Depending on one puts a single
+    # point of failure in FRONT of everything else: if that runner is down, gate never starts,
+    # nothing downstream runs, and the e2e queue guard cannot help — it lives inside the e2e
+    # job, which is never reached. stg2-spa going offline this way stalled a PR for 2h.
+    runs-on: ubuntu-latest
     steps:
       - run: echo "run-tests label detected — proceeding"
 
