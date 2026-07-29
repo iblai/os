@@ -4,19 +4,19 @@
 
 ### Bug Fixes
 
-* **ci:** run the e2e gate on a hosted runner ([5458cef](https://github.com/iblai/os/commit/5458ceff61b8fcf90fb47e8cc81c387e69372b79))
+- **ci:** run the e2e gate on a hosted runner ([5458cef](https://github.com/iblai/os/commit/5458ceff61b8fcf90fb47e8cc81c387e69372b79))
 
 ## [0.108.2](https://github.com/iblai/os/compare/v0.108.1...v0.108.2) (2026-07-29)
 
 ### Bug Fixes
 
-* **ci:** pin PR e2e to stg1 and fail fast when the runner is offline ([c1b7fa6](https://github.com/iblai/os/commit/c1b7fa6e8dd4dfea3128d1f1030e1a7b50d9cf2f)), closes [os#361](https://github.com/iblai/os/issues/361)
+- **ci:** pin PR e2e to stg1 and fail fast when the runner is offline ([c1b7fa6](https://github.com/iblai/os/commit/c1b7fa6e8dd4dfea3128d1f1030e1a7b50d9cf2f)), closes [os#361](https://github.com/iblai/os/issues/361)
 
 ## [0.108.1](https://github.com/iblai/os/compare/v0.108.0...v0.108.1) (2026-07-29)
 
 ### Bug Fixes
 
-* remove double 'MENTOR:ENABLE_GRADING' in handlers ([c7e36ef](https://github.com/iblai/os/commit/c7e36efadc2787935dbb5c2929eb7afad6b32e05))
+- remove double 'MENTOR:ENABLE_GRADING' in handlers ([c7e36ef](https://github.com/iblai/os/commit/c7e36efadc2787935dbb5c2929eb7afad6b32e05))
 
 ## [0.108.0](https://github.com/iblai/os/compare/v0.107.0...v0.108.0) (2026-07-29)
 
