@@ -4,36 +4,36 @@
 
 ### Bug Fixes
 
-* **ci:** hide .app suffix in macOS DMG Finder label ([0e21ade](https://github.com/iblai/os/commit/0e21adeb716b9b6c8e07fdcc6de3a378b8881590))
-* **deps:** keep brace-expansion patched at 5.0.8, bump coverage minimatch to v10 ([ba189b3](https://github.com/iblai/os/commit/ba189b34f479e68b8c2aaef3716e0a9f9ce14b2b))
-* **deps:** scope brace-expansion override per minimatch major ([604c845](https://github.com/iblai/os/commit/604c8452065a3ef53cc942f9fde4d805fd721176))
-* **iframe:** read DOCUMENTFILTER and EDX payloads from event.data ([215f180](https://github.com/iblai/os/commit/215f18045c60d3bf289ed6b9c1e94c8399cbf107))
-* **iframe:** read ENABLE_GRADING boolean from event.data ([b249316](https://github.com/iblai/os/commit/b249316609a7ac95062af87d63ed554ed56e9e44))
+- **ci:** hide .app suffix in macOS DMG Finder label ([0e21ade](https://github.com/iblai/os/commit/0e21adeb716b9b6c8e07fdcc6de3a378b8881590))
+- **deps:** keep brace-expansion patched at 5.0.8, bump coverage minimatch to v10 ([ba189b3](https://github.com/iblai/os/commit/ba189b34f479e68b8c2aaef3716e0a9f9ce14b2b))
+- **deps:** scope brace-expansion override per minimatch major ([604c845](https://github.com/iblai/os/commit/604c8452065a3ef53cc942f9fde4d805fd721176))
+- **iframe:** read DOCUMENTFILTER and EDX payloads from event.data ([215f180](https://github.com/iblai/os/commit/215f18045c60d3bf289ed6b9c1e94c8399cbf107))
+- **iframe:** read ENABLE_GRADING boolean from event.data ([b249316](https://github.com/iblai/os/commit/b249316609a7ac95062af87d63ed554ed56e9e44))
 
 ## [0.108.4](https://github.com/iblai/os/compare/v0.108.3...v0.108.4) (2026-07-29)
 
 ### Bug Fixes
 
-* **ci:** a skipped e2e is not a failure ([1273923](https://github.com/iblai/os/commit/12739234cd58fd7a2c6bf84b9dbe90188c4b6330))
-* **ci:** queue guard must tell an offline runner from a busy one ([271c105](https://github.com/iblai/os/commit/271c1055734be2b6d1cb93f0eb520d776ace0e03)), closes [os#390](https://github.com/iblai/os/issues/390)
+- **ci:** a skipped e2e is not a failure ([1273923](https://github.com/iblai/os/commit/12739234cd58fd7a2c6bf84b9dbe90188c4b6330))
+- **ci:** queue guard must tell an offline runner from a busy one ([271c105](https://github.com/iblai/os/commit/271c1055734be2b6d1cb93f0eb520d776ace0e03)), closes [os#390](https://github.com/iblai/os/issues/390)
 
 ## [0.108.3](https://github.com/iblai/os/compare/v0.108.2...v0.108.3) (2026-07-29)
 
 ### Bug Fixes
 
-* **ci:** run the e2e gate on a hosted runner ([5458cef](https://github.com/iblai/os/commit/5458ceff61b8fcf90fb47e8cc81c387e69372b79))
+- **ci:** run the e2e gate on a hosted runner ([5458cef](https://github.com/iblai/os/commit/5458ceff61b8fcf90fb47e8cc81c387e69372b79))
 
 ## [0.108.2](https://github.com/iblai/os/compare/v0.108.1...v0.108.2) (2026-07-29)
 
 ### Bug Fixes
 
-* **ci:** pin PR e2e to stg1 and fail fast when the runner is offline ([c1b7fa6](https://github.com/iblai/os/commit/c1b7fa6e8dd4dfea3128d1f1030e1a7b50d9cf2f)), closes [os#361](https://github.com/iblai/os/issues/361)
+- **ci:** pin PR e2e to stg1 and fail fast when the runner is offline ([c1b7fa6](https://github.com/iblai/os/commit/c1b7fa6e8dd4dfea3128d1f1030e1a7b50d9cf2f)), closes [os#361](https://github.com/iblai/os/issues/361)
 
 ## [0.108.1](https://github.com/iblai/os/compare/v0.108.0...v0.108.1) (2026-07-29)
 
 ### Bug Fixes
 
-* remove double 'MENTOR:ENABLE_GRADING' in handlers ([c7e36ef](https://github.com/iblai/os/commit/c7e36efadc2787935dbb5c2929eb7afad6b32e05))
+- remove double 'MENTOR:ENABLE_GRADING' in handlers ([c7e36ef](https://github.com/iblai/os/commit/c7e36efadc2787935dbb5c2929eb7afad6b32e05))
 
 ## [0.108.0](https://github.com/iblai/os/compare/v0.107.0...v0.108.0) (2026-07-29)
 
