@@ -112,18 +112,14 @@ export function useIframeHandlers() {
     'MENTOR:EDX_USAGE_ID': (_payload: unknown, event: MessageEvent) => {
       const { edxUsageId } = event.data.data;
       console.log('EDX Usage ID updated:', edxUsageId);
-      dispatch(
-        chatActions.setIframeContext({
-          metadata: { edxUsageId },
-        }),
-      );
+      dispatch(chatActions.setMetadata({ edxUsageId }));
     },
     'MENTOR:EDX_COURSE_ID': (_payload: unknown, event: MessageEvent) => {
       const { edxCourseId } = event.data.data;
       console.log('EDX Course ID updated:', edxCourseId);
       dispatch(
-        chatActions.setIframeContext({
-          metadata: { edxCourseId },
+        chatActions.setMetadata({
+          edxCourseId,
         }),
       );
     },
