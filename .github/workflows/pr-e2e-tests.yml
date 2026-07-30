@@ -314,6 +314,20 @@ jobs:
             echo "::notice::QUEUE_EVICTION_COUNT=${EVICTIONS} for this PR"
           fi
           echo "conclusion=${CONCLUSION:-unknown}" >> "$GITHUB_OUTPUT"
+      - name: Cancel the dispatched run if this caller is cancelled
+        # A caller can be superseded (concurrency: pr-e2e-<PR>, cancel-in-progress) or cancelled by
+        # hand — but the central run it dispatched keeps going. That orphan occupies the single env
+        # runner for a full suite, produces a result nobody reads, and deepens the queue for everyone
+        # else. Worse, it can PASS while the PR shows red: os#394 did exactly that (456/0/3 green,
+        # PR reported "unknown"), because the surviving caller was watching a different run.
+        if: cancelled() && steps.dispatch.outputs.run_id != ''
+        env:
+          GH_TOKEN: ${{ secrets.DEPLOY_OPS_DISPATCH_TOKEN }}
+          RUN_ID:   ${{ steps.dispatch.outputs.run_id }}
+        run: |
+          echo "caller cancelled — cancelling central run ${RUN_ID} so it does not orphan"
+          gh run cancel "$RUN_ID" -R iblai/iblai-deploy-ops || true
+
       - name: Publish the result on this PR
         if: always() && steps.dispatch.outputs.run_id != ''
         env:

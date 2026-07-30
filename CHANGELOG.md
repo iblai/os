@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.108.8](https://github.com/iblai/os/compare/v0.108.7...v0.108.8) (2026-07-30)
+
+### Bug Fixes
+
+* **ci:** cancel the dispatched run when the caller is cancelled ([dbc4259](https://github.com/iblai/os/commit/dbc425961e79fcc730a5b4ceb21a82350703be69)), closes [os#394](https://github.com/iblai/os/issues/394)
+
+## [0.108.7](https://github.com/iblai/os/compare/v0.108.6...v0.108.7) (2026-07-30)
+
+### Bug Fixes
+
+* **ci:** make the e2e queue survive three concurrent PRs ([4f27b31](https://github.com/iblai/os/commit/4f27b31c614dc4144198f3c64ef4fbaf582882f5)), closes [os#390](https://github.com/iblai/os/issues/390) [#394](https://github.com/iblai/os/issues/394) [#390](https://github.com/iblai/os/issues/390) [#367](https://github.com/iblai/os/issues/367)
+* **ci:** stagger the dispatch so N waiters do not collide ([aef9cc3](https://github.com/iblai/os/commit/aef9cc3d063402622ce1cc0595b887769046c881))
+
 ## [0.108.6](https://github.com/iblai/os/compare/v0.108.5...v0.108.6) (2026-07-30)
 
 ### Bug Fixes
