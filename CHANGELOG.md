@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.108.6](https://github.com/iblai/os/compare/v0.108.5...v0.108.6) (2026-07-30)
+
+### Bug Fixes
+
+* **ci:** push PR images to ECR instead of OCIR ([a149ca7](https://github.com/iblai/os/commit/a149ca7b8a2dbae76cc14968b1193b5bbe47dc5c))
+
 ## [0.108.5](https://github.com/iblai/os/compare/v0.108.4...v0.108.5) (2026-07-30)
 
 ### Bug Fixes
