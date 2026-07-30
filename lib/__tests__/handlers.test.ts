@@ -15,6 +15,9 @@ const mockSetDocumentFilter = vi.hoisted(() =>
 const mockSetEnableGrading = vi.hoisted(() =>
   vi.fn((value) => ({ type: 'chat/setEnableGrading', payload: value })),
 );
+const mockSetMetadata = vi.hoisted(() =>
+  vi.fn((value) => ({ type: 'chat/setMetadata', payload: value })),
+);
 const mockEnableChatActionsPopup = vi.hoisted(() =>
   vi.fn((value) => ({ type: 'chat/enableChatActionsPopup', payload: value })),
 );
@@ -33,6 +36,7 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
     setIframeContext: mockSetIframeContext,
     setDocumentFilter: mockSetDocumentFilter,
     setEnableGrading: mockSetEnableGrading,
+    setMetadata: mockSetMetadata,
   },
 }));
 
