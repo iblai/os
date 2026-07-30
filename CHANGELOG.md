@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.108.11](https://github.com/iblai/os/compare/v0.108.10...v0.108.11) (2026-07-30)
+
+### Bug Fixes
+
+* **pr-e2e:** make the eviction retry reachable and kill orphaned central runs ([8594bb2](https://github.com/iblai/os/commit/8594bb23084b554ad4b5ef63e0ceb80bee39c22b)), closes [os#367](https://github.com/iblai/os/issues/367) [os#394](https://github.com/iblai/os/issues/394)
+
 ## [0.108.10](https://github.com/iblai/os/compare/v0.108.9...v0.108.10) (2026-07-30)
 
 ### Bug Fixes
