@@ -189,6 +189,33 @@ jobs:
           TARGET="$TARGET_ENV"
           RUNNER="${TARGET}-spa"
           OPS=iblai/iblai-deploy-ops
+          # The central run-name, reproduced exactly, so we can find OUR runs and only ours.
+          MYTITLE="PR e2e — os#${PR} → ${TARGET}"
+
+          # A superseded caller (label removed+re-added, or a new push) leaves the central run it
+          # already dispatched ORPHANED: nothing polls it, its result is discarded, yet it holds the
+          # single env runner for a full ~74-min suite and deepens the queue for everyone else.
+          # Cleanup cannot live in the DYING caller — a cancelled job is the least reliable place to
+          # run anything, and a caller killed before its dispatch step published outputs has no run
+          # id to clean up with. So the SURVIVING caller does it: before claiming a slot, cancel any
+          # still-active central run for this same PR. Only one caller per PR is ever alive
+          # (concurrency: pr-e2e-<PR>, cancel-in-progress), so any other active run for this exact
+          # title is by definition an orphan.
+          cancel_stale_siblings() {
+            local ids id
+            ids=$(MYTITLE="$MYTITLE" gh run list -R "$OPS" --workflow=pr-e2e.yml --limit 40 \
+                    --json databaseId,status,displayTitle \
+                    --jq '[.[] | select((.status=="queued" or .status=="pending" or .status=="in_progress")
+                                        and .displayTitle==env.MYTITLE) | .databaseId] | .[]' 2>/dev/null) || ids=""
+            for id in $ids; do
+              [ "$id" = "${RUN_ID:-}" ] && continue
+              echo "::warning::cancelling orphaned central run ${id} for this PR — superseded by this caller"
+              gh run cancel "$id" -R "$OPS" >/dev/null 2>&1 || true
+            done
+            # Never let this housekeeping abort the step: it runs unguarded under `bash -e`, and a
+            # transient `gh` failure or an empty result must be a no-op, not a dead PR check.
+            return 0
+          }
 
           # GitHub keeps only ONE pending run per concurrency group. A third dispatch CANCELS the
           # previously-pending one before it starts a single job — silently, with no diagnosis on the
@@ -309,11 +336,18 @@ jobs:
 
           RUN_ID=""; CONCLUSION=""; EVICTIONS=0
           for attempt in $(seq 1 10); do
+            cancel_stale_siblings
             stagger_then_claim || { echo "conclusion=no_slot" >> "$GITHUB_OUTPUT"; exit 1; }
             do_dispatch  || { echo "::error::dispatched but the run never appeared"; echo "conclusion=dispatch_failed" >> "$GITHUB_OUTPUT"; exit 1; }
             echo "dispatched run $RUN_ID (attempt $attempt)"
             echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
-            poll_run; rc=$?
+            # `run:` steps execute under `bash -e` (see the job log's "shell: /usr/bin/bash -e {0}"),
+            # and `set -uo pipefail` above does NOT clear errexit. A bare `poll_run; rc=$?` therefore
+            # terminates the whole step the instant poll_run returns non-zero — so the eviction branch
+            # below was unreachable dead code, and every evicted run died as a bare "exit code 2" with
+            # no conclusion, no retry and no report link (os#367, 2026-07-30). Guarding the call keeps
+            # errexit on for everything else while letting the return value reach $rc.
+            rc=0; poll_run || rc=$?
             if [ "$rc" -eq 2 ]; then
               EVICTIONS=$((EVICTIONS + 1))
               # Greppable marker: this is the signal to watch. If evictions become routine the
