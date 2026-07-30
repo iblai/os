@@ -1,11 +1,11 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
-    render,
-    screen,
-    cleanup,
-    fireEvent,
-    waitFor,
+  render,
+  screen,
+  cleanup,
+  fireEvent,
+  waitFor,
 } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
@@ -13,10 +13,10 @@ import { MentorVisibilityEnum } from '@iblai/iblai-api';
 
 import { NavBar, ANALYTICS_NAV_ITEM } from '../index';
 import {
-    filterMentorSegments,
-    MENTOR_SEGMENTS,
-    type MentorSegment,
-    type MentorSegmentFilterContext,
+  filterMentorSegments,
+  MENTOR_SEGMENTS,
+  type MentorSegment,
+  type MentorSegmentFilterContext,
 } from '@/hooks/use-mentor-segments';
 import { modalReducer, type ModalInfo } from '@/features/navigation/slice';
 import { mentorApiSlice } from '@iblai/iblai-js/data-layer';
@@ -45,46 +45,46 @@ let mockUserIsStudent = false;
 let mockIsVisiting = false;
 let mockIsAccessingPublicRoute = false;
 let mockCurrentTenant: any = {
-    key: 'test-tenant',
-    is_admin: true,
-    show_paywall: false,
+  key: 'test-tenant',
+  is_admin: true,
+  show_paywall: false,
 };
 let mockAllTenants: Array<{ key: string }> = [{ key: 'test-tenant' }];
 let mockMentorSettings: any = {
-    mentor: 'Test Mentor',
-    mentor_id: 123,
-    mentor_unique_id: 'mentor456',
-    platform_key: 'tenant123',
-    mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-    permissions: {
-        field: {
-            mentor_name: { read: true, write: true },
-            mentor_description: { read: true, write: true },
-            profile_image: { read: true, write: true },
-            mentor_visibility: { read: true, write: true },
-            metadata: { read: true, write: true },
-            llm_provider: { read: true, write: true },
-            system_prompt: { read: true, write: true },
-            mentor_tools: { read: true, write: true },
-            custom_css: { read: true, write: true },
-            allow_anonymous: { read: true, write: true },
-        },
+  mentor: 'Test Mentor',
+  mentor_id: 123,
+  mentor_unique_id: 'mentor456',
+  platform_key: 'tenant123',
+  mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+  permissions: {
+    field: {
+      mentor_name: { read: true, write: true },
+      mentor_description: { read: true, write: true },
+      profile_image: { read: true, write: true },
+      mentor_visibility: { read: true, write: true },
+      metadata: { read: true, write: true },
+      llm_provider: { read: true, write: true },
+      system_prompt: { read: true, write: true },
+      mentor_tools: { read: true, write: true },
+      custom_css: { read: true, write: true },
+      allow_anonymous: { read: true, write: true },
     },
-    forkable: false,
-    forkable_with_training_data: false,
+  },
+  forkable: false,
+  forkable_with_training_data: false,
 };
 
 vi.mock('next/navigation', () => ({
-    useRouter: () => ({
-        push: pushMock,
-    }),
-    usePathname: () => mockPathname,
-    useParams: () => ({
-        tenantKey: 'tenant123',
-        mentorId: 'mentor456',
-        projectId: mockProjectId,
-    }),
-    useSearchParams: () => new URLSearchParams(mockSearchParamsRaw),
+  useRouter: () => ({
+    push: pushMock,
+  }),
+  usePathname: () => mockPathname,
+  useParams: () => ({
+    tenantKey: 'tenant123',
+    mentorId: 'mentor456',
+    projectId: mockProjectId,
+  }),
+  useSearchParams: () => new URLSearchParams(mockSearchParamsRaw),
 }));
 
 // The nav-bar imports `Tenant` (type-only at runtime) and `chatActions` from
@@ -93,325 +93,325 @@ vi.mock('next/navigation', () => ({
 // graph stays resolvable — `chatActions` only needs to produce a plain
 // action object for the "start a new chat off a chat route" assertion.
 vi.mock('@iblai/iblai-js/web-utils', () => ({
-    chatActions: {
-        setShouldStartNewChat: (payload: boolean) => ({
-            type: 'chat/setShouldStartNewChat',
-            payload,
-        }),
-    },
+  chatActions: {
+    setShouldStartNewChat: (payload: boolean) => ({
+      type: 'chat/setShouldStartNewChat',
+      payload,
+    }),
+  },
 }));
 
 vi.mock('next/image', () => ({
-    default: (props: any) => {
-        return <img {...props} alt={props.alt || ''} />;
-    },
+  default: (props: any) => {
+    return <img {...props} alt={props.alt || ''} />;
+  },
 }));
 
 vi.mock('@/hooks/use-user', () => ({
-    useIsAdmin: () => mockIsAdmin,
-    useIsVisiting: () => mockIsVisiting,
-    useUserIsStudent: () => mockUserIsStudent,
-    useUsername: () => 'testuser',
-    useCurrentTenant: () => ({
-        currentTenant: mockCurrentTenant,
-        saveCurrentTenant: vi.fn(),
-    }),
-    useGetAllTenants: () => mockAllTenants,
+  useIsAdmin: () => mockIsAdmin,
+  useIsVisiting: () => mockIsVisiting,
+  useUserIsStudent: () => mockUserIsStudent,
+  useUsername: () => 'testuser',
+  useCurrentTenant: () => ({
+    currentTenant: mockCurrentTenant,
+    saveCurrentTenant: vi.fn(),
+  }),
+  useGetAllTenants: () => mockAllTenants,
 }));
 
 vi.mock('@/features/utils', () => ({
-    getUserEmail: () => 'student@example.com',
-    getUserName: () => 'student-user',
+  getUserEmail: () => 'student@example.com',
+  getUserName: () => 'student-user',
 }));
 
 vi.mock('@/hooks/use-user-type', () => ({
-    useUserType: () => ({
-        isUserTypeAllowed: (item: { userTypes: string[] }) => {
-            if (mockUserIsStudent && !item.userTypes.includes(UserType.STUDENT)) {
-                return false;
-            }
-            return (
-                item.userTypes.includes(UserType.ADMIN) ||
-                item.userTypes.includes(UserType.FREE_TRIAL)
-            );
-        },
-        userType: mockUserIsStudent ? UserType.STUDENT : UserType.ADMIN,
-    }),
+  useUserType: () => ({
+    isUserTypeAllowed: (item: { userTypes: string[] }) => {
+      if (mockUserIsStudent && !item.userTypes.includes(UserType.STUDENT)) {
+        return false;
+      }
+      return (
+        item.userTypes.includes(UserType.ADMIN) ||
+        item.userTypes.includes(UserType.FREE_TRIAL)
+      );
+    },
+    userType: mockUserIsStudent ? UserType.STUDENT : UserType.ADMIN,
+  }),
 }));
 
 vi.mock('@/hooks/user-user-actions', () => ({
-    useShowFreeTrialDialog: () => ({
-        executeWithTrialCheck: (fn: () => void) => fn(),
-        FreeTrialDialog: null,
-        closeModal: vi.fn(),
-        isModalOpen: false,
-        isNewlyUserOnPreFreeOrAdvertisingMode: () => false,
-    }),
+  useShowFreeTrialDialog: () => ({
+    executeWithTrialCheck: (fn: () => void) => fn(),
+    FreeTrialDialog: null,
+    closeModal: vi.fn(),
+    isModalOpen: false,
+    isNewlyUserOnPreFreeOrAdvertisingMode: () => false,
+  }),
 }));
 
 vi.mock('@/hooks/use-anonymous-mentor', () => ({
-    useAccessingPublicRoute: () => mockIsAccessingPublicRoute,
+  useAccessingPublicRoute: () => mockIsAccessingPublicRoute,
 }));
 
 vi.mock('@/hooks/use-embed-mode', () => ({
-    useEmbedMode: () => false,
+  useEmbedMode: () => false,
 }));
 
 vi.mock('@/hooks/use-tauri-offline', () => ({
-    isTauriOfflineMode: () => false,
-    isOfflineServerOrigin: () => false,
+  isTauriOfflineMode: () => false,
+  isOfflineServerOrigin: () => false,
 }));
 
 vi.mock('@/types/tauri', () => ({
-    isTauriApp: () => false,
+  isTauriApp: () => false,
 }));
 
 vi.mock('@/hooks/use-model-download', () => ({
-    useModelDownload: () => ({
-        isAvailable: false,
-        state: 'idle',
-        ollamaStatus: null,
-        startDownload: vi.fn(),
-        cancelDownload: vi.fn(),
-        installOllama: vi.fn(),
-        installFoundry: vi.fn(),
-        checkStatus: vi.fn(),
-        resetState: vi.fn(),
-        isUsingFoundry: false,
-        foundryModels: [],
-        selectedFoundryModel: null,
-        foundryStatus: null,
-        foundryStatusLoaded: false,
-        onSelectFoundryModel: vi.fn(),
-    }),
+  useModelDownload: () => ({
+    isAvailable: false,
+    state: 'idle',
+    ollamaStatus: null,
+    startDownload: vi.fn(),
+    cancelDownload: vi.fn(),
+    installOllama: vi.fn(),
+    installFoundry: vi.fn(),
+    checkStatus: vi.fn(),
+    resetState: vi.fn(),
+    isUsingFoundry: false,
+    foundryModels: [],
+    selectedFoundryModel: null,
+    foundryStatus: null,
+    foundryStatusLoaded: false,
+    onSelectFoundryModel: vi.fn(),
+  }),
 }));
 
 vi.mock('@/components/ui/sidebar', () => ({
-    useSidebar: () => ({
-        toggleSidebar: vi.fn(),
-        open: false,
-        isMobile: false,
-    }),
+  useSidebar: () => ({
+    toggleSidebar: vi.fn(),
+    open: false,
+    isMobile: false,
+  }),
 }));
 
 const emitMock = vi.fn();
 vi.mock('@/lib/eventBus', () => ({
-    default: {
-        emit: (...args: unknown[]) => emitMock(...args),
-    },
-    RemoteEvents: { newChat: 'newChat' },
+  default: {
+    emit: (...args: unknown[]) => emitMock(...args),
+  },
+  RemoteEvents: { newChat: 'newChat' },
 }));
 
 const navigateToHomeMock = vi.fn();
 vi.mock('@/hooks/user-navigate', () => ({
-    useNavigate: () => ({
-        openEditMentorModal: vi.fn(),
-        showEditMentorModal: false,
-        closeEditMentorModal: vi.fn(),
-        showCreateMentorModal: false,
-        closeCreateMentorModal: vi.fn(),
-        navigateToAnalytics: vi.fn(),
-        navigateToMentor: vi.fn(),
-        navigateToHome: navigateToHomeMock,
-        getUpdatedModalStack: vi.fn(),
-        navigateToNotifications: vi.fn(),
-    }),
+  useNavigate: () => ({
+    openEditMentorModal: vi.fn(),
+    showEditMentorModal: false,
+    closeEditMentorModal: vi.fn(),
+    showCreateMentorModal: false,
+    closeCreateMentorModal: vi.fn(),
+    navigateToAnalytics: vi.fn(),
+    navigateToMentor: vi.fn(),
+    navigateToHome: navigateToHomeMock,
+    getUpdatedModalStack: vi.fn(),
+    navigateToNotifications: vi.fn(),
+  }),
 }));
 
 vi.mock('@iblai/iblai-js/data-layer', async (importOriginal) => {
-    const actual =
-        await importOriginal<typeof import('@iblai/iblai-js/data-layer')>();
-    return {
-        ...actual,
-        useGetMentorSettingsQuery: () => ({
-            data: mockMentorSettings,
-            isLoading: false,
-            isSuccess: true,
-        }),
-        useGetMemsearchStatusQuery: () => ({
-            data: { enable_memsearch: false },
-            isLoading: false,
-            isSuccess: true,
-        }),
-        useForkMentorMutation: () => [vi.fn(), { isLoading: false }],
-        useEditMentorMutation: () => [vi.fn()],
-        // Stub the claw RTK Query hooks — the test's Redux store doesn't
-        // mount the new clawApiSlice middleware, so calling the real hooks
-        // throws "Middleware for RTK-Query API ... has not been added".
-        // useMentorSegments (used by NavBar) calls these.
-        useGetClawMentorConfigQuery: () => ({
-            data: null,
-            isError: false,
-            isLoading: false,
-        }),
-        useUpdateClawMentorConfigMutation: () => [
-            () => Promise.resolve({}),
-            { isLoading: false },
-        ],
-    };
+  const actual =
+    await importOriginal<typeof import('@iblai/iblai-js/data-layer')>();
+  return {
+    ...actual,
+    useGetMentorSettingsQuery: () => ({
+      data: mockMentorSettings,
+      isLoading: false,
+      isSuccess: true,
+    }),
+    useGetMemsearchStatusQuery: () => ({
+      data: { enable_memsearch: false },
+      isLoading: false,
+      isSuccess: true,
+    }),
+    useForkMentorMutation: () => [vi.fn(), { isLoading: false }],
+    useEditMentorMutation: () => [vi.fn()],
+    // Stub the claw RTK Query hooks — the test's Redux store doesn't
+    // mount the new clawApiSlice middleware, so calling the real hooks
+    // throws "Middleware for RTK-Query API ... has not been added".
+    // useMentorSegments (used by NavBar) calls these.
+    useGetClawMentorConfigQuery: () => ({
+      data: null,
+      isError: false,
+      isLoading: false,
+    }),
+    useUpdateClawMentorConfigMutation: () => [
+      () => Promise.resolve({}),
+      { isLoading: false },
+    ],
+  };
 });
 
 vi.mock('@/hooks/use-mentors/use-mentor-settings', () => ({
-    useMentorSettings: () => ({
-        data: {
-            mentorName: 'Test Mentor',
-            mentorSlug: 'test-mentor',
-            profileImage: '/test-image.png',
-            mentorUniqueId: 'mentor456',
-            mentorDbId: 'db-id-999',
-            llmProvider: 'openai',
-            llmName: 'GPT-4',
-            mentorVisibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-            allowAnonymous: false,
-        },
-    }),
+  useMentorSettings: () => ({
+    data: {
+      mentorName: 'Test Mentor',
+      mentorSlug: 'test-mentor',
+      profileImage: '/test-image.png',
+      mentorUniqueId: 'mentor456',
+      mentorDbId: 'db-id-999',
+      llmProvider: 'openai',
+      llmName: 'GPT-4',
+      mentorVisibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      allowAnonymous: false,
+    },
+  }),
 }));
 
 vi.mock('@/lib/config', () => ({
-    config: {
-        mainTenantKey: () => 'main',
-        enableGravatarOnProfilePic: () => 'false',
-        iblPlatform: () => 'mentor',
-        authUrl: () => 'https://auth.example.com',
-        platformBaseDomain: () => 'example.com',
-        defaultSupportPhoneNumber: () => '(571) 293-0242',
-        enableSupportPhone: () => false,
-        iblTemplateMentor: () => 'ai-mentor',
-        environment: () => 'test',
-        lmsUrl: () => 'https://learn.example.com',
-        dmUrl: () => 'https://dm.example.com',
-        axdUrl: () => 'https://axd.example.com',
-        mentorUrl: () => 'https://mentor.example.com',
-        mentorIframeUrl: () => 'https://mentor.example.com',
-        externalPricingPageUrl: () => 'https://pricing.example.com',
-        stripeEnabled: () => 'true',
-        baseWsUrl: () => 'wss://ws.example.com',
-        liveKitServerUrl: () => 'wss://livekit.example.com',
-        mentorSettingsDisclaimer: () => '',
-        iframeFromOldMentor: () => 'false',
-        enableRBAC: () => false,
-        sentryDsn: () => '',
-        helpCenterUrl: () => 'https://help.example.com',
-        supportEmail: () => 'support@example.com',
-        defaultEmbedCssUrl: () => '',
-        appBannerLink: () => '',
-        appBannerLinkText: () => '',
-        appBannerBadge: () => '',
-        appBannerText: () => '',
-        showAppBanner: () => 'false',
-        mentorTrainingMaximumFileSize: () => '60',
-        hideAnalytics: () => 'false',
-        showBaseMentor: () => false,
-        disabedDatasets: () => '',
-        advertisingEnabled: () => false,
-        disabledAnalyticsReports: () => '',
-        iblEnableSpecialLogoWhenIframed: () => 'false',
-    },
+  config: {
+    mainTenantKey: () => 'main',
+    enableGravatarOnProfilePic: () => 'false',
+    iblPlatform: () => 'mentor',
+    authUrl: () => 'https://auth.example.com',
+    platformBaseDomain: () => 'example.com',
+    defaultSupportPhoneNumber: () => '(571) 293-0242',
+    enableSupportPhone: () => false,
+    iblTemplateMentor: () => 'ai-mentor',
+    environment: () => 'test',
+    lmsUrl: () => 'https://learn.example.com',
+    dmUrl: () => 'https://dm.example.com',
+    axdUrl: () => 'https://axd.example.com',
+    mentorUrl: () => 'https://mentor.example.com',
+    mentorIframeUrl: () => 'https://mentor.example.com',
+    externalPricingPageUrl: () => 'https://pricing.example.com',
+    stripeEnabled: () => 'true',
+    baseWsUrl: () => 'wss://ws.example.com',
+    liveKitServerUrl: () => 'wss://livekit.example.com',
+    mentorSettingsDisclaimer: () => '',
+    iframeFromOldMentor: () => 'false',
+    enableRBAC: () => false,
+    sentryDsn: () => '',
+    helpCenterUrl: () => 'https://help.example.com',
+    supportEmail: () => 'support@example.com',
+    defaultEmbedCssUrl: () => '',
+    appBannerLink: () => '',
+    appBannerLinkText: () => '',
+    appBannerBadge: () => '',
+    appBannerText: () => '',
+    showAppBanner: () => 'false',
+    mentorTrainingMaximumFileSize: () => '60',
+    hideAnalytics: () => 'false',
+    showBaseMentor: () => false,
+    disabedDatasets: () => '',
+    advertisingEnabled: () => false,
+    disabledAnalyticsReports: () => '',
+    iblEnableSpecialLogoWhenIframed: () => 'false',
+  },
 }));
 
 vi.mock('@/lib/utils', () => ({
-    cn: (...classes: string[]) => classes.filter(Boolean).join(' '),
-    getLLMProviderDetails: () => ({ logo: '/llm-logo.png', name: 'GPT-4' }),
-    isLoggedIn: () => true,
-    isStripeActivated: (tenant: { show_paywall?: boolean; key?: string }) =>
-        Boolean(tenant?.show_paywall || tenant?.key === 'main'),
-    redirectToAuthSpa: vi.fn(),
-    redirectToAuthSpaJoinTenant: vi.fn(),
+  cn: (...classes: string[]) => classes.filter(Boolean).join(' '),
+  getLLMProviderDetails: () => ({ logo: '/llm-logo.png', name: 'GPT-4' }),
+  isLoggedIn: () => true,
+  isStripeActivated: (tenant: { show_paywall?: boolean; key?: string }) =>
+    Boolean(tenant?.show_paywall || tenant?.key === 'main'),
+  redirectToAuthSpa: vi.fn(),
+  redirectToAuthSpaJoinTenant: vi.fn(),
 }));
 
 vi.mock('@sentry/nextjs', () => ({
-    captureException: vi.fn(),
+  captureException: vi.fn(),
 }));
 
 vi.mock('sonner', () => ({
-    toast: { error: vi.fn(), success: vi.fn() },
+  toast: { error: vi.fn(), success: vi.fn() },
 }));
 
 vi.mock('@/hoc/utils', () => ({
-    rbacPermissionToDisplay: vi.fn(
-        (
-            fields: string[],
-            permissions?: Record<string, { read: boolean; write: boolean }>,
-        ): boolean => {
-            if (!permissions || fields.length === 0) return true;
-            return fields.some((field) => permissions[field]?.read);
-        },
-    ),
+  rbacPermissionToDisplay: vi.fn(
+    (
+      fields: string[],
+      permissions?: Record<string, { read: boolean; write: boolean }>,
+    ): boolean => {
+      if (!permissions || fields.length === 0) return true;
+      return fields.some((field) => permissions[field]?.read);
+    },
+  ),
 }));
 
 vi.mock('@/hoc/withPermissions', () => ({
-    checkRbacPermission: vi.fn(
-        (_permissions: object, _resource: string): boolean => true,
-    ),
+  checkRbacPermission: vi.fn(
+    (_permissions: object, _resource: string): boolean => true,
+  ),
 }));
 
 // Mock child components
 vi.mock('../user-profile', () => ({
-    UserProfile: () => <div data-testid="user-profile">User Profile</div>,
+  UserProfile: () => <div data-testid="user-profile">User Profile</div>,
 }));
 
 vi.mock('../learner-mode-switch', () => ({
-    LearnerModeSwitch: () => (
-        <div data-testid="learner-mode-switch">Learner Mode</div>
-    ),
+  LearnerModeSwitch: () => (
+    <div data-testid="learner-mode-switch">Learner Mode</div>
+  ),
 }));
 
 vi.mock('../embed-nav-bar', () => ({
-    EmbedNavBar: () => <div data-testid="embed-nav-bar">Embed NavBar</div>,
+  EmbedNavBar: () => <div data-testid="embed-nav-bar">Embed NavBar</div>,
 }));
 
 vi.mock('@/components/modals/edit-mentor-modal', () => ({
-    EditMentorModal: ({
-        isOpen,
-        onClose,
-    }: {
-        isOpen: boolean;
-        onClose: () => void;
-    }) =>
-        isOpen ? (
-            <div data-testid="edit-mentor-modal">
-                Edit Mentor <button onClick={onClose}>Close</button>
-            </div>
-        ) : null,
+  EditMentorModal: ({
+    isOpen,
+    onClose,
+  }: {
+    isOpen: boolean;
+    onClose: () => void;
+  }) =>
+    isOpen ? (
+      <div data-testid="edit-mentor-modal">
+        Edit Mentor <button onClick={onClose}>Close</button>
+      </div>
+    ) : null,
 }));
 
 vi.mock('@/components/modals/create-mentor-modal', () => ({
-    CreateMentorModal: ({
-        isOpen,
-        onClose,
-    }: {
-        isOpen: boolean;
-        onClose: () => void;
-    }) =>
-        isOpen ? (
-            <div data-testid="create-mentor-modal">
-                Create Mentor <button onClick={onClose}>Close</button>
-            </div>
-        ) : null,
+  CreateMentorModal: ({
+    isOpen,
+    onClose,
+  }: {
+    isOpen: boolean;
+    onClose: () => void;
+  }) =>
+    isOpen ? (
+      <div data-testid="create-mentor-modal">
+        Create Mentor <button onClick={onClose}>Close</button>
+      </div>
+    ) : null,
 }));
 
 vi.mock('@/components/modals/llm-provider-selection-modal', () => ({
-    LLMProviderSelectionModal: ({
-        isOpen,
-        onClose,
-    }: {
-        isOpen: boolean;
-        onClose: () => void;
-    }) =>
-        isOpen ? (
-            <div data-testid="llm-provider-modal">
-                LLM Provider <button onClick={onClose}>Close</button>
-            </div>
-        ) : null,
+  LLMProviderSelectionModal: ({
+    isOpen,
+    onClose,
+  }: {
+    isOpen: boolean;
+    onClose: () => void;
+  }) =>
+    isOpen ? (
+      <div data-testid="llm-provider-modal">
+        LLM Provider <button onClick={onClose}>Close</button>
+      </div>
+    ) : null,
 }));
 
 vi.mock('@/components/modals/auth-modal', () => ({
-    AuthModal: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) =>
-        isOpen ? (
-            <div data-testid="auth-modal">
-                Auth Modal <button onClick={onClose}>Close</button>
-            </div>
-        ) : null,
+  AuthModal: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) =>
+    isOpen ? (
+      <div data-testid="auth-modal">
+        Auth Modal <button onClick={onClose}>Close</button>
+      </div>
+    ) : null,
 }));
 
 let lastCreditBalanceProps: any = null;
@@ -420,98 +420,98 @@ let lastCreditBalanceProps: any = null;
 let mockLocalEnabled = false;
 let mockLocalModelId: string | null = null;
 vi.mock('@iblai/iblai-js/web-containers', () => ({
-    // The toggle now ships from the SDK; tests don't exercise its internals,
-    // so a marker-only stub is enough — it also blocks the SDK's transitive
-    // axios chain from being pulled into the test's module graph. The marker
-    // lets path-gating tests assert whether the chip is mounted at all.
+  // The toggle now ships from the SDK; tests don't exercise its internals,
+  // so a marker-only stub is enough — it also blocks the SDK's transitive
+  // axios chain from being pulled into the test's module graph. The marker
+  // lets path-gating tests assert whether the chip is mounted at all.
 
-    ChatPrivacyToggle: () => <div data-testid="chat-privacy-toggle" />,
-    // On-device model helpers read by `useSelectedLocalModel` (the top-left
-    // badge). Default to local mode OFF so the nav-bar renders exactly as it did
-    // before the badge existed (cloud selector shown, no badge).
-    isLocalLLMEnabled: () => mockLocalEnabled,
-    getLocalLLMModel: () => mockLocalModelId,
-    // The hook reconciles the tool-support cache against the catalog on read.
-    getLocalLLMToolSupport: () => true,
-    setLocalLLMToolSupport: () => { },
-    LOCAL_MODELS: [
-        {
-            name: 'Llama 3.2',
-            provider: 'Meta',
-            id: 'llama3.2',
-            size: '2.0 GB',
-            tool_support: true,
-        },
-    ],
-    NotificationDropdown: () => (
-        <div data-testid="notification-dropdown">Notifications</div>
-    ),
-    CreditBalance: (props: any) => {
-        lastCreditBalanceProps = props;
-        return <div data-testid="credit-balance">CreditBalance</div>;
+  ChatPrivacyToggle: () => <div data-testid="chat-privacy-toggle" />,
+  // On-device model helpers read by `useSelectedLocalModel` (the top-left
+  // badge). Default to local mode OFF so the nav-bar renders exactly as it did
+  // before the badge existed (cloud selector shown, no badge).
+  isLocalLLMEnabled: () => mockLocalEnabled,
+  getLocalLLMModel: () => mockLocalModelId,
+  // The hook reconciles the tool-support cache against the catalog on read.
+  getLocalLLMToolSupport: () => true,
+  setLocalLLMToolSupport: () => {},
+  LOCAL_MODELS: [
+    {
+      name: 'Llama 3.2',
+      provider: 'Meta',
+      id: 'llama3.2',
+      size: '2.0 GB',
+      tool_support: true,
     },
-    // Stubs for the agent dropdown shell — Radix-style components from the
-    // SDK. Tests don't exercise dropdown internals so plain pass-through
-    // div wrappers + button trigger are enough.
-    DropdownMenu: ({ children }: any) => (
-        <div data-testid="dropdown-menu">{children}</div>
+  ],
+  NotificationDropdown: () => (
+    <div data-testid="notification-dropdown">Notifications</div>
+  ),
+  CreditBalance: (props: any) => {
+    lastCreditBalanceProps = props;
+    return <div data-testid="credit-balance">CreditBalance</div>;
+  },
+  // Stubs for the agent dropdown shell — Radix-style components from the
+  // SDK. Tests don't exercise dropdown internals so plain pass-through
+  // div wrappers + button trigger are enough.
+  DropdownMenu: ({ children }: any) => (
+    <div data-testid="dropdown-menu">{children}</div>
+  ),
+  DropdownMenuTrigger: ({ children, asChild, ...rest }: any) =>
+    asChild ? (
+      children
+    ) : (
+      <button {...rest} data-testid="dropdown-menu-trigger">
+        {children}
+      </button>
     ),
-    DropdownMenuTrigger: ({ children, asChild, ...rest }: any) =>
-        asChild ? (
-            children
-        ) : (
-            <button {...rest} data-testid="dropdown-menu-trigger">
-                {children}
-            </button>
-        ),
-    DropdownMenuContent: ({ children }: any) => (
-        <div data-testid="dropdown-menu-content">{children}</div>
-    ),
-    // Items/actions are rendered as clickable divs wired to `onItemSelect` so
-    // tests can exercise the real `handleSegmentClick` behaviour.
-    CategorizedDropdownMenu: ({
-        topAction,
-        items,
-        footerAction,
-        onItemSelect,
-    }: any) => (
-        <div data-testid="categorized-dropdown-menu">
-            {topAction && (
-                <div
-                    data-testid="cdm-top-action"
-                    onClick={() => onItemSelect?.(topAction.value)}
-                >
-                    {topAction.label}
-                </div>
-            )}
-            {items?.map((item: any) => (
-                <div
-                    key={item.value}
-                    data-testid={`cdm-item-${item.value}`}
-                    onClick={() => onItemSelect?.(item.value)}
-                >
-                    {item.label}
-                </div>
-            ))}
-            {footerAction && (
-                <div
-                    data-testid="cdm-footer-action"
-                    onClick={() => onItemSelect?.(footerAction.value)}
-                >
-                    {footerAction.label}
-                </div>
-            )}
+  DropdownMenuContent: ({ children }: any) => (
+    <div data-testid="dropdown-menu-content">{children}</div>
+  ),
+  // Items/actions are rendered as clickable divs wired to `onItemSelect` so
+  // tests can exercise the real `handleSegmentClick` behaviour.
+  CategorizedDropdownMenu: ({
+    topAction,
+    items,
+    footerAction,
+    onItemSelect,
+  }: any) => (
+    <div data-testid="categorized-dropdown-menu">
+      {topAction && (
+        <div
+          data-testid="cdm-top-action"
+          onClick={() => onItemSelect?.(topAction.value)}
+        >
+          {topAction.label}
         </div>
-    ),
+      )}
+      {items?.map((item: any) => (
+        <div
+          key={item.value}
+          data-testid={`cdm-item-${item.value}`}
+          onClick={() => onItemSelect?.(item.value)}
+        >
+          {item.label}
+        </div>
+      ))}
+      {footerAction && (
+        <div
+          data-testid="cdm-footer-action"
+          onClick={() => onItemSelect?.(footerAction.value)}
+        >
+          {footerAction.label}
+        </div>
+      )}
+    </div>
+  ),
 }));
 
 vi.mock('@iblai/iblai-js/web-containers/next', () => ({
-    UserProfileModal: (props: any) =>
-        props.isOpen ? (
-            <div data-testid="user-profile-modal">
-                User Profile Modal <button onClick={props.onClose}>Close</button>
-            </div>
-        ) : null,
+  UserProfileModal: (props: any) =>
+    props.isOpen ? (
+      <div data-testid="user-profile-modal">
+        User Profile Modal <button onClick={props.onClose}>Close</button>
+      </div>
+    ) : null,
 }));
 
 // ============================================================================
@@ -519,46 +519,46 @@ vi.mock('@iblai/iblai-js/web-containers/next', () => ({
 // ============================================================================
 
 function createTestStore(
-    preloadedStack: ModalInfo[] = [],
-    rbacPermissions: object = {},
+  preloadedStack: ModalInfo[] = [],
+  rbacPermissions: object = {},
 ) {
-    return configureStore({
-        reducer: {
-            modals: modalReducer,
-            rbac: rbacReducer,
-            [mentorApiSlice.reducerPath]: mentorApiSlice.reducer,
-            analytics: (state = { selectedMentor: null }) => state,
+  return configureStore({
+    reducer: {
+      modals: modalReducer,
+      rbac: rbacReducer,
+      [mentorApiSlice.reducerPath]: mentorApiSlice.reducer,
+      analytics: (state = { selectedMentor: null }) => state,
+    },
+    middleware: (getDefaultMiddleware) =>
+      getDefaultMiddleware({
+        serializableCheck: false,
+      }).concat(mentorApiSlice.middleware),
+    preloadedState: {
+      modals: {
+        modalStack: preloadedStack,
+        customAlertDialog: {
+          message: '',
+          validateTrigger: '',
+          cancelTrigger: '',
+          isOpen: false,
+          title: '',
         },
-        middleware: (getDefaultMiddleware) =>
-            getDefaultMiddleware({
-                serializableCheck: false,
-            }).concat(mentorApiSlice.middleware),
-        preloadedState: {
-            modals: {
-                modalStack: preloadedStack,
-                customAlertDialog: {
-                    message: '',
-                    validateTrigger: '',
-                    cancelTrigger: '',
-                    isOpen: false,
-                    title: '',
-                },
-                iframeCloseButton: false,
-                darkMode: false,
-                shortcutsModal: false,
-            },
-            rbac: {
-                rbacPermissions: rbacPermissions,
-            },
-            analytics: {
-                selectedMentor: {
-                    slug: 'test-mentor',
-                    name: 'Test Mentor',
-                    profileImage: '/test-image.png',
-                },
-            },
+        iframeCloseButton: false,
+        darkMode: false,
+        shortcutsModal: false,
+      },
+      rbac: {
+        rbacPermissions: rbacPermissions,
+      },
+      analytics: {
+        selectedMentor: {
+          slug: 'test-mentor',
+          name: 'Test Mentor',
+          profileImage: '/test-image.png',
         },
-    });
+      },
+    },
+  });
 }
 
 // ============================================================================
@@ -566,749 +566,749 @@ function createTestStore(
 // ============================================================================
 
 describe('NavBar', () => {
+  beforeEach(() => {
+    cleanup();
+    pushMock.mockReset();
+    mockSearchParamsRaw = '';
+    mockPathname = '/platform/tenant123/mentor456';
+    mockProjectId = undefined;
+    mockIsAdmin = true;
+    mockUserIsStudent = false;
+    mockIsVisiting = false;
+    mockIsAccessingPublicRoute = false;
+    mockMentorSettings = {
+      mentor: 'Test Mentor',
+      mentor_id: 123,
+      mentor_unique_id: 'mentor456',
+      platform_key: 'tenant123',
+      mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      permissions: {
+        field: {
+          mentor_name: { read: true, write: true },
+          mentor_description: { read: true, write: true },
+          profile_image: { read: true, write: true },
+          mentor_visibility: { read: true, write: true },
+          metadata: { read: true, write: true },
+          llm_provider: { read: true, write: true },
+          system_prompt: { read: true, write: true },
+          mentor_tools: { read: true, write: true },
+          custom_css: { read: true, write: true },
+          allow_anonymous: { read: true, write: true },
+        },
+      },
+      forkable: false,
+    };
+    mockCurrentTenant = {
+      key: 'test-tenant',
+      is_admin: true,
+      show_paywall: false,
+    };
+    mockAllTenants = [{ key: 'test-tenant' }];
+    lastCreditBalanceProps = null;
+    mockLocalEnabled = false;
+    mockLocalModelId = null;
+    emitMock.mockClear();
+    navigateToHomeMock.mockClear();
+    // Suppress console.log during tests
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
+  // --------------------------------------------------------------------------
+  // Basic Rendering Tests
+  // --------------------------------------------------------------------------
+
+  describe('Rendering', () => {
+    it('renders the navigation bar', () => {
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(screen.getByRole('navigation')).toBeInTheDocument();
+    });
+
+    it('renders user profile component when logged in', () => {
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(screen.getByTestId('user-profile')).toBeInTheDocument();
+    });
+
+    it('renders notification dropdown when logged in', () => {
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(screen.getByTestId('notification-dropdown')).toBeInTheDocument();
+    });
+
+    it('renders learner/instructor mode switch for admin users', () => {
+      mockIsAdmin = true;
+      mockIsVisiting = false;
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(screen.getByTestId('learner-mode-switch')).toBeInTheDocument();
+    });
+
+    it('renders LLM model selector button for admin users on chat page', () => {
+      mockIsAdmin = true;
+      mockUserIsStudent = false;
+      mockPathname = '/platform/tenant123/mentor456';
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(screen.getByLabelText('LLM Model Selector')).toBeInTheDocument();
+    });
+
+    it('shows the on-device model badge and hides the cloud selector when local mode is on', () => {
+      mockIsAdmin = true;
+      mockUserIsStudent = false;
+      mockPathname = '/platform/tenant123/mentor456';
+      mockLocalEnabled = true;
+      mockLocalModelId = 'llama3.2';
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      const badge = screen.getByTestId('local-model-indicator');
+      expect(badge).toHaveTextContent('Llama 3.2');
+      expect(badge).toHaveTextContent('On-device');
+      // The on-device badge replaces the cloud model selector while local is on.
+      expect(
+        screen.queryByLabelText('LLM Model Selector'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('opens the model picker when the on-device badge is clicked, so an admin can still choose an LLM while local is on', () => {
+      mockIsAdmin = true;
+      mockUserIsStudent = false;
+      mockPathname = '/platform/tenant123/mentor456';
+      mockLocalEnabled = true;
+      mockLocalModelId = 'llama3.2';
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      // Picker is closed until the badge is clicked.
+      expect(
+        screen.queryByTestId('llm-provider-modal'),
+      ).not.toBeInTheDocument();
+      fireEvent.click(screen.getByTestId('local-model-indicator'));
+      expect(screen.getByTestId('llm-provider-modal')).toBeInTheDocument();
+    });
+
+    it('hides the LLM model selector on the tenant-scoped projects index page', () => {
+      mockIsAdmin = true;
+      mockUserIsStudent = false;
+      mockPathname = '/platform/tenant123/projects';
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(
+        screen.queryByLabelText('LLM Model Selector'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('still shows the LLM model selector on a project chat route', () => {
+      mockIsAdmin = true;
+      mockUserIsStudent = false;
+      mockPathname = '/platform/tenant123/projects/409/mentor456';
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(screen.getByLabelText('LLM Model Selector')).toBeInTheDocument();
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // Mentor Dropdown Tests
+  // --------------------------------------------------------------------------
+
+  describe('Mentor Dropdown', () => {
+    it('renders mentor dropdown button with mentor name', () => {
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(
+        screen.getByLabelText('Selected agent dropdown button'),
+      ).toBeInTheDocument();
+    });
+
+    it('dropdown button is clickable', () => {
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      const dropdownButton = screen.getByLabelText(
+        'Selected agent dropdown button',
+      );
+      expect(dropdownButton).toBeEnabled();
+      // Clicking should not throw
+      expect(() => fireEvent.click(dropdownButton)).not.toThrow();
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // Student-mode Dropdown Gating (issue #2048)
+  // --------------------------------------------------------------------------
+
+  describe('Student-mode dropdown gating', () => {
+    it('hides admin-settings items in student mode but keeps New Chat', () => {
+      mockUserIsStudent = true;
+
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(screen.getByTestId('cdm-top-action')).toHaveTextContent(
+        'New Chat',
+      );
+      expect(screen.queryByTestId('cdm-item-settings')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('cdm-item-llm')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('cdm-item-analytics'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('shows admin-settings items in admin mode', () => {
+      mockUserIsStudent = false;
+
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(screen.getByTestId('cdm-top-action')).toHaveTextContent(
+        'New Chat',
+      );
+      expect(screen.getByTestId('cdm-item-settings')).toBeInTheDocument();
+    });
+
+    it('hides the fork action in student mode', () => {
+      mockUserIsStudent = true;
+      mockIsAdmin = false;
+      mockMentorSettings = {
+        ...mockMentorSettings,
+        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_ANYONE,
+        platform_key: 'main',
+        forkable: true,
+      };
+
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(screen.queryByTestId('cdm-footer-action')).not.toBeInTheDocument();
+    });
+
+    it('shows the fork action in admin mode when the mentor is forkable', () => {
+      mockUserIsStudent = false;
+      mockIsAdmin = false;
+      mockMentorSettings = {
+        ...mockMentorSettings,
+        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_ANYONE,
+        platform_key: 'main',
+        forkable: true,
+      };
+
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(screen.getByTestId('cdm-footer-action')).toBeInTheDocument();
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // Mobile View Tests
+  // --------------------------------------------------------------------------
+
+  describe('Mobile View', () => {
+    it('renders toggle sidebar button in mobile view', () => {
+      vi.mocked(vi.fn()).mockReturnValue({
+        toggleSidebar: vi.fn(),
+        open: false,
+        isMobile: true,
+      });
+
+      // We need to update the mock to return isMobile: true
+      const useSidebarMock = vi.fn(() => ({
+        toggleSidebar: vi.fn(),
+        open: false,
+        isMobile: true,
+      }));
+
+      vi.doMock('@/components/ui/sidebar', () => ({
+        useSidebar: useSidebarMock,
+      }));
+
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      // Test passes if no errors - mobile detection mock would need more complex setup
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // Analytics route parity — issue #2248
+  //
+  // The analytics route used to be special-cased into a stripped-down navbar:
+  // a static Avatar + mentor name (no dropdown), no LLM model selector and no
+  // private-mode chip. It now renders the same chrome as the chat route.
+  // --------------------------------------------------------------------------
+
+  describe('Analytics route parity', () => {
+    const ANALYTICS_PATH = '/platform/tenant123/mentor456/analytics';
+
+    function renderOnAnalytics(store = createTestStore()) {
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+      return store;
+    }
+
     beforeEach(() => {
-        cleanup();
-        pushMock.mockReset();
-        mockSearchParamsRaw = '';
-        mockPathname = '/platform/tenant123/mentor456';
-        mockProjectId = undefined;
-        mockIsAdmin = true;
-        mockUserIsStudent = false;
-        mockIsVisiting = false;
-        mockIsAccessingPublicRoute = false;
-        mockMentorSettings = {
-            mentor: 'Test Mentor',
-            mentor_id: 123,
-            mentor_unique_id: 'mentor456',
-            platform_key: 'tenant123',
-            mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-            permissions: {
-                field: {
-                    mentor_name: { read: true, write: true },
-                    mentor_description: { read: true, write: true },
-                    profile_image: { read: true, write: true },
-                    mentor_visibility: { read: true, write: true },
-                    metadata: { read: true, write: true },
-                    llm_provider: { read: true, write: true },
-                    system_prompt: { read: true, write: true },
-                    mentor_tools: { read: true, write: true },
-                    custom_css: { read: true, write: true },
-                    allow_anonymous: { read: true, write: true },
-                },
-            },
-            forkable: false,
+      mockPathname = ANALYTICS_PATH;
+    });
+
+    it('shows the LLM model selector for an admin user', () => {
+      mockIsAdmin = true;
+      mockUserIsStudent = false;
+
+      renderOnAnalytics();
+
+      expect(screen.getByLabelText('LLM Model Selector')).toBeInTheDocument();
+    });
+
+    it('does not show the LLM model selector for a non-admin user', () => {
+      mockIsAdmin = false;
+
+      renderOnAnalytics();
+
+      expect(
+        screen.queryByLabelText('LLM Model Selector'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('renders the mentor dropdown trigger instead of the static mentor name', () => {
+      renderOnAnalytics();
+
+      expect(
+        screen.getByLabelText('Selected agent dropdown button'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByTestId('categorized-dropdown-menu'),
+      ).toBeInTheDocument();
+    });
+
+    it('shows the route mentor name (from mentor settings) in the dropdown trigger', () => {
+      renderOnAnalytics();
+
+      const trigger = screen.getByLabelText('Selected agent dropdown button');
+      expect(trigger).toHaveTextContent('Test Mentor');
+    });
+
+    it('renders the ChatPrivacyToggle chip', () => {
+      renderOnAnalytics();
+
+      expect(screen.getByTestId('chat-privacy-toggle')).toBeInTheDocument();
+    });
+
+    it('routes home and asks the chat slice to start a new chat instead of emitting newChat', () => {
+      const store = createTestStore();
+      const dispatchSpy = vi.spyOn(store, 'dispatch');
+
+      renderOnAnalytics(store);
+
+      dispatchSpy.mockClear();
+      emitMock.mockClear();
+
+      fireEvent.click(screen.getByTestId('cdm-top-action'));
+
+      expect(navigateToHomeMock).toHaveBeenCalledTimes(1);
+      expect(dispatchSpy).toHaveBeenCalledWith({
+        type: 'chat/setShouldStartNewChat',
+        payload: true,
+      });
+      // The chat component (the only `newChat` listener) is not mounted here,
+      // so emitting the event would silently no-op.
+      expect(emitMock).not.toHaveBeenCalled();
+    });
+
+    it('still emits newChat when already on a chat page', () => {
+      mockPathname = '/platform/tenant123/mentor456';
+
+      renderOnAnalytics();
+
+      fireEvent.click(screen.getByTestId('cdm-top-action'));
+
+      expect(emitMock).toHaveBeenCalledWith('newChat');
+      expect(navigateToHomeMock).not.toHaveBeenCalled();
+    });
+
+    it('still emits newChat on a project chat route', () => {
+      mockPathname = '/platform/tenant123/projects/409/mentor456';
+      mockProjectId = '409';
+
+      renderOnAnalytics();
+
+      fireEvent.click(screen.getByTestId('cdm-top-action'));
+
+      expect(emitMock).toHaveBeenCalledWith('newChat');
+      expect(navigateToHomeMock).not.toHaveBeenCalled();
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // Prompt gallery — regression guard (out of scope for #2248)
+  //
+  // The prompt-gallery route intentionally keeps the stripped-down static
+  // Avatar + mentor-name branch. Only /analytics was converged onto the
+  // regular navbar.
+  // --------------------------------------------------------------------------
+
+  describe('Prompt gallery route (unchanged)', () => {
+    beforeEach(() => {
+      mockPathname = '/platform/tenant123/mentor456/prompt-gallery';
+    });
+
+    it('renders the static mentor name and no dropdown trigger', () => {
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      // Static branch: name comes from the analytics slice's selectedMentor.
+      expect(screen.getByText('Test Mentor')).toBeInTheDocument();
+      expect(
+        screen.queryByLabelText('Selected agent dropdown button'),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('categorized-dropdown-menu'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('keeps the LLM model selector and privacy chip hidden', () => {
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(
+        screen.queryByLabelText('LLM Model Selector'),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('chat-privacy-toggle'),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // Analytics — Selected Mentor Sync
+  //
+  // On mount (and whenever mentorUniqueId changes), the navbar dispatches
+  // setSelectedMentor so the analytics iframe page can read which mentor's
+  // reports to show — including the mentor database id, which is a separate
+  // identifier from mentorUniqueId and is used for data-reports query params.
+  // --------------------------------------------------------------------------
+
+  describe('Selected mentor sync (analytics)', () => {
+    it('dispatches setSelectedMentor including id (mentorDbId) on mount', async () => {
+      const store = configureStore({
+        reducer: {
+          modals: modalReducer,
+          rbac: rbacReducer,
+          [mentorApiSlice.reducerPath]: mentorApiSlice.reducer,
+          analytics: analyticsReducer,
+        },
+        middleware: (getDefaultMiddleware) =>
+          getDefaultMiddleware({ serializableCheck: false }).concat(
+            mentorApiSlice.middleware,
+          ),
+      });
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      await waitFor(() => {
+        const state = store.getState() as unknown as {
+          analytics: { selectedMentor: { id?: string } | null };
         };
-        mockCurrentTenant = {
-            key: 'test-tenant',
-            is_admin: true,
-            show_paywall: false,
-        };
-        mockAllTenants = [{ key: 'test-tenant' }];
-        lastCreditBalanceProps = null;
-        mockLocalEnabled = false;
-        mockLocalModelId = null;
-        emitMock.mockClear();
-        navigateToHomeMock.mockClear();
-        // Suppress console.log during tests
-        vi.spyOn(console, 'log').mockImplementation(() => { });
+        expect(state.analytics.selectedMentor).toEqual({
+          slug: 'test-mentor',
+          name: 'Test Mentor',
+          profileImage: '/test-image.png',
+          id: 'db-id-999',
+        });
+      });
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // My Mentors removal — issue #1431
+  // --------------------------------------------------------------------------
+
+  describe('My Mentors removed from navbar', () => {
+    it('does not render any "My Mentors" or "Explore" trigger in the navbar', () => {
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(screen.queryByText(/^My Mentors$/i)).not.toBeInTheDocument();
+      expect(screen.queryByTestId('my-mentors-modal')).not.toBeInTheDocument();
+      expect(
+        screen.queryByLabelText('Explore mentors'),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByText(/^Explore$/)).not.toBeInTheDocument();
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // Accessibility Tests
+  // --------------------------------------------------------------------------
+
+  describe('Accessibility', () => {
+    it('has accessible navigation landmark', () => {
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(screen.getByRole('navigation')).toBeInTheDocument();
     });
 
-    afterEach(() => {
-        cleanup();
-        vi.restoreAllMocks();
+    it('buttons have accessible labels', () => {
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      const llmButton = screen.getByLabelText('LLM Model Selector');
+      expect(llmButton).toBeInTheDocument();
+
+      const dropdownButton = screen.getByLabelText(
+        'Selected agent dropdown button',
+      );
+      expect(dropdownButton).toBeInTheDocument();
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // hide-navbar Query Param Tests
+  //
+  // The hide-navbar param hides the navbar in both embed and non-embed modes.
+  // Accepted truthy values: "true" and "1".
+  // --------------------------------------------------------------------------
+
+  describe('hide-navbar query param', () => {
+    it('hides navbar when hide-navbar=true', () => {
+      mockSearchParamsRaw = 'hide-navbar=true';
+      const store = createTestStore();
+
+      const { container } = render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('embed-nav-bar')).not.toBeInTheDocument();
+      expect(container.innerHTML).toBe('');
     });
 
-    // --------------------------------------------------------------------------
-    // Basic Rendering Tests
-    // --------------------------------------------------------------------------
+    it('hides navbar when hide-navbar=1', () => {
+      mockSearchParamsRaw = 'hide-navbar=1';
+      const store = createTestStore();
 
-    describe('Rendering', () => {
-        it('renders the navigation bar', () => {
-            const store = createTestStore();
+      const { container } = render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
 
-            render(
-                <Provider store={store}>
-                    <NavBar />
-                </Provider>,
-            );
-
-            expect(screen.getByRole('navigation')).toBeInTheDocument();
-        });
-
-        it('renders user profile component when logged in', () => {
-            const store = createTestStore();
-
-            render(
-                <Provider store={store}>
-                    <NavBar />
-                </Provider>,
-            );
-
-            expect(screen.getByTestId('user-profile')).toBeInTheDocument();
-        });
-
-        it('renders notification dropdown when logged in', () => {
-            const store = createTestStore();
-
-            render(
-                <Provider store={store}>
-                    <NavBar />
-                </Provider>,
-            );
-
-            expect(screen.getByTestId('notification-dropdown')).toBeInTheDocument();
-        });
-
-        it('renders learner/instructor mode switch for admin users', () => {
-            mockIsAdmin = true;
-            mockIsVisiting = false;
-            const store = createTestStore();
-
-            render(
-                <Provider store={store}>
-                    <NavBar />
-                </Provider>,
-            );
-
-            expect(screen.getByTestId('learner-mode-switch')).toBeInTheDocument();
-        });
-
-        it('renders LLM model selector button for admin users on chat page', () => {
-            mockIsAdmin = true;
-            mockUserIsStudent = false;
-            mockPathname = '/platform/tenant123/mentor456';
-            const store = createTestStore();
-
-            render(
-                <Provider store={store}>
-                    <NavBar />
-                </Provider>,
-            );
-
-            expect(screen.getByLabelText('LLM Model Selector')).toBeInTheDocument();
-        });
-
-        it('shows the on-device model badge and hides the cloud selector when local mode is on', () => {
-            mockIsAdmin = true;
-            mockUserIsStudent = false;
-            mockPathname = '/platform/tenant123/mentor456';
-            mockLocalEnabled = true;
-            mockLocalModelId = 'llama3.2';
-            const store = createTestStore();
-
-            render(
-                <Provider store={store}>
-                    <NavBar />
-                </Provider>,
-            );
-
-            const badge = screen.getByTestId('local-model-indicator');
-            expect(badge).toHaveTextContent('Llama 3.2');
-            expect(badge).toHaveTextContent('On-device');
-            // The on-device badge replaces the cloud model selector while local is on.
-            expect(
-                screen.queryByLabelText('LLM Model Selector'),
-            ).not.toBeInTheDocument();
-        });
-
-        it('opens the model picker when the on-device badge is clicked, so an admin can still choose an LLM while local is on', () => {
-            mockIsAdmin = true;
-            mockUserIsStudent = false;
-            mockPathname = '/platform/tenant123/mentor456';
-            mockLocalEnabled = true;
-            mockLocalModelId = 'llama3.2';
-            const store = createTestStore();
-
-            render(
-                <Provider store={store}>
-                    <NavBar />
-                </Provider>,
-            );
-
-            // Picker is closed until the badge is clicked.
-            expect(
-                screen.queryByTestId('llm-provider-modal'),
-            ).not.toBeInTheDocument();
-            fireEvent.click(screen.getByTestId('local-model-indicator'));
-            expect(screen.getByTestId('llm-provider-modal')).toBeInTheDocument();
-        });
-
-        it('hides the LLM model selector on the tenant-scoped projects index page', () => {
-            mockIsAdmin = true;
-            mockUserIsStudent = false;
-            mockPathname = '/platform/tenant123/projects';
-            const store = createTestStore();
-
-            render(
-                <Provider store={store}>
-                    <NavBar />
-                </Provider>,
-            );
-
-            expect(
-                screen.queryByLabelText('LLM Model Selector'),
-            ).not.toBeInTheDocument();
-        });
-
-        it('still shows the LLM model selector on a project chat route', () => {
-            mockIsAdmin = true;
-            mockUserIsStudent = false;
-            mockPathname = '/platform/tenant123/projects/409/mentor456';
-            const store = createTestStore();
-
-            render(
-                <Provider store={store}>
-                    <NavBar />
-                </Provider>,
-            );
-
-            expect(screen.getByLabelText('LLM Model Selector')).toBeInTheDocument();
-        });
+      expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('embed-nav-bar')).not.toBeInTheDocument();
+      expect(container.innerHTML).toBe('');
     });
 
-    // --------------------------------------------------------------------------
-    // Mentor Dropdown Tests
-    // --------------------------------------------------------------------------
+    it('renders normally when hide-navbar=false', () => {
+      mockSearchParamsRaw = 'hide-navbar=false';
+      const store = createTestStore();
 
-    describe('Mentor Dropdown', () => {
-        it('renders mentor dropdown button with mentor name', () => {
-            const store = createTestStore();
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
 
-            render(
-                <Provider store={store}>
-                    <NavBar />
-                </Provider>,
-            );
-
-            expect(
-                screen.getByLabelText('Selected agent dropdown button'),
-            ).toBeInTheDocument();
-        });
-
-        it('dropdown button is clickable', () => {
-            const store = createTestStore();
-
-            render(
-                <Provider store={store}>
-                    <NavBar />
-                </Provider>,
-            );
-
-            const dropdownButton = screen.getByLabelText(
-                'Selected agent dropdown button',
-            );
-            expect(dropdownButton).toBeEnabled();
-            // Clicking should not throw
-            expect(() => fireEvent.click(dropdownButton)).not.toThrow();
-        });
+      expect(screen.getByRole('navigation')).toBeInTheDocument();
     });
 
-    // --------------------------------------------------------------------------
-    // Student-mode Dropdown Gating (issue #2048)
-    // --------------------------------------------------------------------------
+    it('renders normally when hide-navbar=0', () => {
+      mockSearchParamsRaw = 'hide-navbar=0';
+      const store = createTestStore();
 
-    describe('Student-mode dropdown gating', () => {
-        it('hides admin-settings items in student mode but keeps New Chat', () => {
-            mockUserIsStudent = true;
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
 
-            const store = createTestStore();
-
-            render(
-                <Provider store={store}>
-                    <NavBar />
-                </Provider>,
-            );
-
-            expect(screen.getByTestId('cdm-top-action')).toHaveTextContent(
-                'New Chat',
-            );
-            expect(screen.queryByTestId('cdm-item-settings')).not.toBeInTheDocument();
-            expect(screen.queryByTestId('cdm-item-llm')).not.toBeInTheDocument();
-            expect(
-                screen.queryByTestId('cdm-item-analytics'),
-            ).not.toBeInTheDocument();
-        });
-
-        it('shows admin-settings items in admin mode', () => {
-            mockUserIsStudent = false;
-
-            const store = createTestStore();
-
-            render(
-                <Provider store={store}>
-                    <NavBar />
-                </Provider>,
-            );
-
-            expect(screen.getByTestId('cdm-top-action')).toHaveTextContent(
-                'New Chat',
-            );
-            expect(screen.getByTestId('cdm-item-settings')).toBeInTheDocument();
-        });
-
-        it('hides the fork action in student mode', () => {
-            mockUserIsStudent = true;
-            mockIsAdmin = false;
-            mockMentorSettings = {
-                ...mockMentorSettings,
-                mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_ANYONE,
-                platform_key: 'main',
-                forkable: true,
-            };
-
-            const store = createTestStore();
-
-            render(
-                <Provider store={store}>
-                    <NavBar />
-                </Provider>,
-            );
-
-            expect(screen.queryByTestId('cdm-footer-action')).not.toBeInTheDocument();
-        });
-
-        it('shows the fork action in admin mode when the mentor is forkable', () => {
-            mockUserIsStudent = false;
-            mockIsAdmin = false;
-            mockMentorSettings = {
-                ...mockMentorSettings,
-                mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_ANYONE,
-                platform_key: 'main',
-                forkable: true,
-            };
-
-            const store = createTestStore();
-
-            render(
-                <Provider store={store}>
-                    <NavBar />
-                </Provider>,
-            );
-
-            expect(screen.getByTestId('cdm-footer-action')).toBeInTheDocument();
-        });
+      expect(screen.getByRole('navigation')).toBeInTheDocument();
     });
 
-    // --------------------------------------------------------------------------
-    // Mobile View Tests
-    // --------------------------------------------------------------------------
+    it('renders normally when hide-navbar param is absent', () => {
+      mockSearchParamsRaw = '';
+      const store = createTestStore();
 
-    describe('Mobile View', () => {
-        it('renders toggle sidebar button in mobile view', () => {
-            vi.mocked(vi.fn()).mockReturnValue({
-                toggleSidebar: vi.fn(),
-                open: false,
-                isMobile: true,
-            });
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
 
-            // We need to update the mock to return isMobile: true
-            const useSidebarMock = vi.fn(() => ({
-                toggleSidebar: vi.fn(),
-                open: false,
-                isMobile: true,
-            }));
-
-            vi.doMock('@/components/ui/sidebar', () => ({
-                useSidebar: useSidebarMock,
-            }));
-
-            const store = createTestStore();
-
-            render(
-                <Provider store={store}>
-                    <NavBar />
-                </Provider>,
-            );
-
-            // Test passes if no errors - mobile detection mock would need more complex setup
-        });
+      expect(screen.getByRole('navigation')).toBeInTheDocument();
     });
 
-    // --------------------------------------------------------------------------
-    // Analytics route parity — issue #2248
-    //
-    // The analytics route used to be special-cased into a stripped-down navbar:
-    // a static Avatar + mentor name (no dropdown), no LLM model selector and no
-    // private-mode chip. It now renders the same chrome as the chat route.
-    // --------------------------------------------------------------------------
+    it('hides embed navbar when hide-navbar=true in embed mode', async () => {
+      mockSearchParamsRaw = 'hide-navbar=true';
 
-    describe('Analytics route parity', () => {
-        const ANALYTICS_PATH = '/platform/tenant123/mentor456/analytics';
+      vi.resetModules();
+      vi.doMock('@/hooks/use-embed-mode', () => ({
+        useEmbedMode: () => true,
+      }));
 
-        function renderOnAnalytics(store = createTestStore()) {
-            render(
-                <Provider store={store}>
-                    <NavBar />
-                </Provider>,
-            );
-            return store;
-        }
+      const { NavBar: NavBarEmbed } = await import('../index');
+      const store = createTestStore();
 
-        beforeEach(() => {
-            mockPathname = ANALYTICS_PATH;
-        });
+      const { container } = render(
+        <Provider store={store}>
+          <NavBarEmbed />
+        </Provider>,
+      );
 
-        it('shows the LLM model selector for an admin user', () => {
-            mockIsAdmin = true;
-            mockUserIsStudent = false;
-
-            renderOnAnalytics();
-
-            expect(screen.getByLabelText('LLM Model Selector')).toBeInTheDocument();
-        });
-
-        it('does not show the LLM model selector for a non-admin user', () => {
-            mockIsAdmin = false;
-
-            renderOnAnalytics();
-
-            expect(
-                screen.queryByLabelText('LLM Model Selector'),
-            ).not.toBeInTheDocument();
-        });
-
-        it('renders the mentor dropdown trigger instead of the static mentor name', () => {
-            renderOnAnalytics();
-
-            expect(
-                screen.getByLabelText('Selected agent dropdown button'),
-            ).toBeInTheDocument();
-            expect(
-                screen.getByTestId('categorized-dropdown-menu'),
-            ).toBeInTheDocument();
-        });
-
-        it('shows the route mentor name (from mentor settings) in the dropdown trigger', () => {
-            renderOnAnalytics();
-
-            const trigger = screen.getByLabelText('Selected agent dropdown button');
-            expect(trigger).toHaveTextContent('Test Mentor');
-        });
-
-        it('renders the ChatPrivacyToggle chip', () => {
-            renderOnAnalytics();
-
-            expect(screen.getByTestId('chat-privacy-toggle')).toBeInTheDocument();
-        });
-
-        it('routes home and asks the chat slice to start a new chat instead of emitting newChat', () => {
-            const store = createTestStore();
-            const dispatchSpy = vi.spyOn(store, 'dispatch');
-
-            renderOnAnalytics(store);
-
-            dispatchSpy.mockClear();
-            emitMock.mockClear();
-
-            fireEvent.click(screen.getByTestId('cdm-top-action'));
-
-            expect(navigateToHomeMock).toHaveBeenCalledTimes(1);
-            expect(dispatchSpy).toHaveBeenCalledWith({
-                type: 'chat/setShouldStartNewChat',
-                payload: true,
-            });
-            // The chat component (the only `newChat` listener) is not mounted here,
-            // so emitting the event would silently no-op.
-            expect(emitMock).not.toHaveBeenCalled();
-        });
-
-        it('still emits newChat when already on a chat page', () => {
-            mockPathname = '/platform/tenant123/mentor456';
-
-            renderOnAnalytics();
-
-            fireEvent.click(screen.getByTestId('cdm-top-action'));
-
-            expect(emitMock).toHaveBeenCalledWith('newChat');
-            expect(navigateToHomeMock).not.toHaveBeenCalled();
-        });
-
-        it('still emits newChat on a project chat route', () => {
-            mockPathname = '/platform/tenant123/projects/409/mentor456';
-            mockProjectId = '409';
-
-            renderOnAnalytics();
-
-            fireEvent.click(screen.getByTestId('cdm-top-action'));
-
-            expect(emitMock).toHaveBeenCalledWith('newChat');
-            expect(navigateToHomeMock).not.toHaveBeenCalled();
-        });
+      expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('embed-nav-bar')).not.toBeInTheDocument();
+      expect(container.innerHTML).toBe('');
     });
 
-    // --------------------------------------------------------------------------
-    // Prompt gallery — regression guard (out of scope for #2248)
-    //
-    // The prompt-gallery route intentionally keeps the stripped-down static
-    // Avatar + mentor-name branch. Only /analytics was converged onto the
-    // regular navbar.
-    // --------------------------------------------------------------------------
+    it('renders EmbedNavBar in embed mode when hide-navbar is absent', async () => {
+      mockSearchParamsRaw = '';
 
-    describe('Prompt gallery route (unchanged)', () => {
-        beforeEach(() => {
-            mockPathname = '/platform/tenant123/mentor456/prompt-gallery';
-        });
+      vi.resetModules();
+      vi.doMock('@/hooks/use-embed-mode', () => ({
+        useEmbedMode: () => true,
+      }));
 
-        it('renders the static mentor name and no dropdown trigger', () => {
-            const store = createTestStore();
+      const { NavBar: NavBarEmbed } = await import('../index');
+      const store = createTestStore();
 
-            render(
-                <Provider store={store}>
-                    <NavBar />
-                </Provider>,
-            );
+      render(
+        <Provider store={store}>
+          <NavBarEmbed />
+        </Provider>,
+      );
 
-            // Static branch: name comes from the analytics slice's selectedMentor.
-            expect(screen.getByText('Test Mentor')).toBeInTheDocument();
-            expect(
-                screen.queryByLabelText('Selected agent dropdown button'),
-            ).not.toBeInTheDocument();
-            expect(
-                screen.queryByTestId('categorized-dropdown-menu'),
-            ).not.toBeInTheDocument();
-        });
-
-        it('keeps the LLM model selector and privacy chip hidden', () => {
-            const store = createTestStore();
-
-            render(
-                <Provider store={store}>
-                    <NavBar />
-                </Provider>,
-            );
-
-            expect(
-                screen.queryByLabelText('LLM Model Selector'),
-            ).not.toBeInTheDocument();
-            expect(
-                screen.queryByTestId('chat-privacy-toggle'),
-            ).not.toBeInTheDocument();
-        });
+      expect(screen.getByTestId('embed-nav-bar')).toBeInTheDocument();
+      expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
     });
-
-    // --------------------------------------------------------------------------
-    // Analytics — Selected Mentor Sync
-    //
-    // On mount (and whenever mentorUniqueId changes), the navbar dispatches
-    // setSelectedMentor so the analytics iframe page can read which mentor's
-    // reports to show — including the mentor database id, which is a separate
-    // identifier from mentorUniqueId and is used for data-reports query params.
-    // --------------------------------------------------------------------------
-
-    describe('Selected mentor sync (analytics)', () => {
-        it('dispatches setSelectedMentor including id (mentorDbId) on mount', async () => {
-            const store = configureStore({
-                reducer: {
-                    modals: modalReducer,
-                    rbac: rbacReducer,
-                    [mentorApiSlice.reducerPath]: mentorApiSlice.reducer,
-                    analytics: analyticsReducer,
-                },
-                middleware: (getDefaultMiddleware) =>
-                    getDefaultMiddleware({ serializableCheck: false }).concat(
-                        mentorApiSlice.middleware,
-                    ),
-            });
-
-            render(
-                <Provider store={store}>
-                    <NavBar />
-                </Provider>,
-            );
-
-            await waitFor(() => {
-                const state = store.getState() as unknown as {
-                    analytics: { selectedMentor: { id?: string } | null };
-                };
-                expect(state.analytics.selectedMentor).toEqual({
-                    slug: 'test-mentor',
-                    name: 'Test Mentor',
-                    profileImage: '/test-image.png',
-                    id: 'db-id-999',
-                });
-            });
-        });
-    });
-
-    // --------------------------------------------------------------------------
-    // My Mentors removal — issue #1431
-    // --------------------------------------------------------------------------
-
-    describe('My Mentors removed from navbar', () => {
-        it('does not render any "My Mentors" or "Explore" trigger in the navbar', () => {
-            const store = createTestStore();
-
-            render(
-                <Provider store={store}>
-                    <NavBar />
-                </Provider>,
-            );
-
-            expect(screen.queryByText(/^My Mentors$/i)).not.toBeInTheDocument();
-            expect(screen.queryByTestId('my-mentors-modal')).not.toBeInTheDocument();
-            expect(
-                screen.queryByLabelText('Explore mentors'),
-            ).not.toBeInTheDocument();
-            expect(screen.queryByText(/^Explore$/)).not.toBeInTheDocument();
-        });
-    });
-
-    // --------------------------------------------------------------------------
-    // Accessibility Tests
-    // --------------------------------------------------------------------------
-
-    describe('Accessibility', () => {
-        it('has accessible navigation landmark', () => {
-            const store = createTestStore();
-
-            render(
-                <Provider store={store}>
-                    <NavBar />
-                </Provider>,
-            );
-
-            expect(screen.getByRole('navigation')).toBeInTheDocument();
-        });
-
-        it('buttons have accessible labels', () => {
-            const store = createTestStore();
-
-            render(
-                <Provider store={store}>
-                    <NavBar />
-                </Provider>,
-            );
-
-            const llmButton = screen.getByLabelText('LLM Model Selector');
-            expect(llmButton).toBeInTheDocument();
-
-            const dropdownButton = screen.getByLabelText(
-                'Selected agent dropdown button',
-            );
-            expect(dropdownButton).toBeInTheDocument();
-        });
-    });
-
-    // --------------------------------------------------------------------------
-    // hide-navbar Query Param Tests
-    //
-    // The hide-navbar param hides the navbar in both embed and non-embed modes.
-    // Accepted truthy values: "true" and "1".
-    // --------------------------------------------------------------------------
-
-    describe('hide-navbar query param', () => {
-        it('hides navbar when hide-navbar=true', () => {
-            mockSearchParamsRaw = 'hide-navbar=true';
-            const store = createTestStore();
-
-            const { container } = render(
-                <Provider store={store}>
-                    <NavBar />
-                </Provider>,
-            );
-
-            expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
-            expect(screen.queryByTestId('embed-nav-bar')).not.toBeInTheDocument();
-            expect(container.innerHTML).toBe('');
-        });
-
-        it('hides navbar when hide-navbar=1', () => {
-            mockSearchParamsRaw = 'hide-navbar=1';
-            const store = createTestStore();
-
-            const { container } = render(
-                <Provider store={store}>
-                    <NavBar />
-                </Provider>,
-            );
-
-            expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
-            expect(screen.queryByTestId('embed-nav-bar')).not.toBeInTheDocument();
-            expect(container.innerHTML).toBe('');
-        });
-
-        it('renders normally when hide-navbar=false', () => {
-            mockSearchParamsRaw = 'hide-navbar=false';
-            const store = createTestStore();
-
-            render(
-                <Provider store={store}>
-                    <NavBar />
-                </Provider>,
-            );
-
-            expect(screen.getByRole('navigation')).toBeInTheDocument();
-        });
-
-        it('renders normally when hide-navbar=0', () => {
-            mockSearchParamsRaw = 'hide-navbar=0';
-            const store = createTestStore();
-
-            render(
-                <Provider store={store}>
-                    <NavBar />
-                </Provider>,
-            );
-
-            expect(screen.getByRole('navigation')).toBeInTheDocument();
-        });
-
-        it('renders normally when hide-navbar param is absent', () => {
-            mockSearchParamsRaw = '';
-            const store = createTestStore();
-
-            render(
-                <Provider store={store}>
-                    <NavBar />
-                </Provider>,
-            );
-
-            expect(screen.getByRole('navigation')).toBeInTheDocument();
-        });
-
-        it('hides embed navbar when hide-navbar=true in embed mode', async () => {
-            mockSearchParamsRaw = 'hide-navbar=true';
-
-            vi.resetModules();
-            vi.doMock('@/hooks/use-embed-mode', () => ({
-                useEmbedMode: () => true,
-            }));
-
-            const { NavBar: NavBarEmbed } = await import('../index');
-            const store = createTestStore();
-
-            const { container } = render(
-                <Provider store={store}>
-                    <NavBarEmbed />
-                </Provider>,
-            );
-
-            expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
-            expect(screen.queryByTestId('embed-nav-bar')).not.toBeInTheDocument();
-            expect(container.innerHTML).toBe('');
-        });
-
-        it('renders EmbedNavBar in embed mode when hide-navbar is absent', async () => {
-            mockSearchParamsRaw = '';
-
-            vi.resetModules();
-            vi.doMock('@/hooks/use-embed-mode', () => ({
-                useEmbedMode: () => true,
-            }));
-
-            const { NavBar: NavBarEmbed } = await import('../index');
-            const store = createTestStore();
-
-            render(
-                <Provider store={store}>
-                    <NavBarEmbed />
-                </Provider>,
-            );
-
-            expect(screen.getByTestId('embed-nav-bar')).toBeInTheDocument();
-            expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
-        });
-    });
+  });
 });
 
 // ============================================================================
@@ -1329,547 +1329,547 @@ import { rbacPermissionToDisplay } from '@/hoc/utils';
 import { checkRbacPermission } from '@/hoc/withPermissions';
 
 const buildContext = (
-    overrides: Partial<MentorSegmentFilterContext> & {
-        userType: UserType;
-    },
+  overrides: Partial<MentorSegmentFilterContext> & {
+    userType: UserType;
+  },
 ): MentorSegmentFilterContext => ({
-    isAdmin: false,
-    tenantKey: undefined,
-    mentorSettings: undefined,
-    rbacPermissions: {},
-    flags: {
-        isMemsearchEnabled: true,
-        isMemoryComponentEnabled: true,
-        isClawEnabled: false,
-        clawConfigExists: false,
-        isScreenshareEnabled: false,
-        isVoiceCallEnabled: true,
-        isPrivacyEnabled: false,
-    },
-    isUserTypeAllowed: (segment: MentorSegment) =>
-        segment.userTypes.includes(overrides.userType),
-    ...overrides,
+  isAdmin: false,
+  tenantKey: undefined,
+  mentorSettings: undefined,
+  rbacPermissions: {},
+  flags: {
+    isMemsearchEnabled: true,
+    isMemoryComponentEnabled: true,
+    isClawEnabled: false,
+    clawConfigExists: false,
+    isScreenshareEnabled: false,
+    isVoiceCallEnabled: true,
+    isPrivacyEnabled: false,
+  },
+  isUserTypeAllowed: (segment: MentorSegment) =>
+    segment.userTypes.includes(overrides.userType),
+  ...overrides,
 });
 
 const filterAll = (ctx: MentorSegmentFilterContext) => [
-    ...filterMentorSegments(MENTOR_SEGMENTS, ctx),
-    ...filterMentorSegments([ANALYTICS_NAV_ITEM], ctx),
+  ...filterMentorSegments(MENTOR_SEGMENTS, ctx),
+  ...filterMentorSegments([ANALYTICS_NAV_ITEM], ctx),
 ];
 
 describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
-    afterEach(() => {
-        // Restore default mock implementations after tests that override them
-        vi.mocked(rbacPermissionToDisplay).mockImplementation(
-            (
-                fields: string[],
-                permissions?: Record<string, { read: boolean; write: boolean }>,
-            ) => {
-                if (!permissions || fields.length === 0) return true;
-                return fields.some((field) => permissions[field]?.read);
-            },
-        );
-        vi.mocked(checkRbacPermission).mockImplementation(
-            (_permissions: object, _resource: string) => true,
-        );
+  afterEach(() => {
+    // Restore default mock implementations after tests that override them
+    vi.mocked(rbacPermissionToDisplay).mockImplementation(
+      (
+        fields: string[],
+        permissions?: Record<string, { read: boolean; write: boolean }>,
+      ) => {
+        if (!permissions || fields.length === 0) return true;
+        return fields.some((field) => permissions[field]?.read);
+      },
+    );
+    vi.mocked(checkRbacPermission).mockImplementation(
+      (_permissions: object, _resource: string) => true,
+    );
+  });
+
+  describe('Admin on main tenant', () => {
+    it('shows all menu items that pass user type check', () => {
+      const mentorSettings = {
+        platform_key: 'main',
+        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+        mentor_id: 123,
+        permissions: {
+          field: {
+            mentor_name: { read: true, write: true },
+            mentor_description: { read: true, write: true },
+            profile_image: { read: true, write: true },
+            mentor_visibility: { read: true, write: true },
+            metadata: { read: true, write: true },
+            llm_provider: { read: true, write: true },
+            system_prompt: { read: true, write: true },
+            mentor_tools: { read: true, write: true },
+          },
+        },
+      };
+
+      const result = filterAll(
+        buildContext({
+          userType: UserType.ADMIN,
+          isAdmin: true,
+          tenantKey: 'main',
+          mentorSettings,
+        }),
+      );
+
+      const labels = result.map((i) => i.label);
+      expect(labels).toContain('Settings');
+      expect(labels).toContain('Access');
+      expect(labels).toContain('Analytics');
+      expect(labels).toContain('LLM');
+      expect(labels).toContain('Prompts');
+      expect(labels).toContain('Tools');
+    });
+  });
+
+  describe('Non-admin on main tenant', () => {
+    it('filters out admin items', () => {
+      const mentorSettings = {
+        platform_key: 'main',
+        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_ANYONE,
+        mentor_id: 123,
+        permissions: {
+          field: {
+            mentor_name: { read: true, write: true },
+          },
+        },
+      };
+
+      const result = filterAll(
+        buildContext({
+          userType: UserType.STUDENT,
+          isAdmin: false,
+          tenantKey: 'main',
+          mentorSettings,
+        }),
+      );
+
+      // Non-admin on main tenant should not see admin-only items
+      const labels = result.map((i) => i.label);
+      expect(labels).not.toContain('Access');
+      expect(labels).not.toContain('Settings');
+    });
+  });
+
+  describe('User on non-main tenant', () => {
+    it('shows items when mentor is on non-main tenant', () => {
+      const mentorSettings = {
+        platform_key: 'custom-tenant',
+        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+        mentor_id: 123,
+        permissions: {
+          field: {
+            mentor_name: { read: true, write: true },
+          },
+        },
+      };
+
+      const result = filterAll(
+        buildContext({
+          userType: UserType.ADMIN,
+          isAdmin: true,
+          tenantKey: 'custom-tenant',
+          mentorSettings,
+        }),
+      );
+
+      const labels = result.map((i) => i.label);
+      expect(labels).toContain('Settings');
+    });
+  });
+
+  describe('RBAC permission checks', () => {
+    it('filters out items when user lacks field permissions', () => {
+      const mentorSettings = {
+        platform_key: 'custom-tenant',
+        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+        mentor_id: 123,
+        permissions: {
+          field: {
+            // No permissions for Settings-related fields
+          },
+        },
+      };
+
+      // Override the mock to be strict about field permissions
+      vi.mocked(rbacPermissionToDisplay).mockImplementation(
+        (
+          fields: string[],
+          permissions?: Record<string, { read: boolean; write: boolean }>,
+        ) => {
+          if (fields.length === 0) return true;
+          if (!permissions) return false;
+          return fields.some((field) => permissions[field]?.read);
+        },
+      );
+
+      const result = filterAll(
+        buildContext({
+          userType: UserType.ADMIN,
+          isAdmin: true,
+          tenantKey: 'custom-tenant',
+          mentorSettings,
+        }),
+      );
+
+      const labels = result.map((i) => i.label);
+      // Settings should be filtered out because no field permissions
+      expect(labels).not.toContain('Settings');
+      // Access and Analytics have empty permissionFieldsCheck, so they pass
+      expect(labels).toContain('Access');
+      expect(labels).toContain('Analytics');
     });
 
-    describe('Admin on main tenant', () => {
-        it('shows all menu items that pass user type check', () => {
-            const mentorSettings = {
-                platform_key: 'main',
-                mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-                mentor_id: 123,
-                permissions: {
-                    field: {
-                        mentor_name: { read: true, write: true },
-                        mentor_description: { read: true, write: true },
-                        profile_image: { read: true, write: true },
-                        mentor_visibility: { read: true, write: true },
-                        metadata: { read: true, write: true },
-                        llm_provider: { read: true, write: true },
-                        system_prompt: { read: true, write: true },
-                        mentor_tools: { read: true, write: true },
-                    },
-                },
-            };
+    it('filters out items when RBAC resource check fails', () => {
+      const mentorSettings = {
+        platform_key: 'custom-tenant',
+        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+        mentor_id: 123,
+        permissions: {
+          field: {
+            mentor_name: { read: true, write: true },
+          },
+        },
+      };
 
-            const result = filterAll(
-                buildContext({
-                    userType: UserType.ADMIN,
-                    isAdmin: true,
-                    tenantKey: 'main',
-                    mentorSettings,
-                }),
-            );
+      // Override to deny analytics
+      vi.mocked(checkRbacPermission).mockImplementation(
+        (_permissions: object, resource: string) => {
+          if (resource.includes('#view_analytics')) return false;
+          return true;
+        },
+      );
 
-            const labels = result.map((i) => i.label);
-            expect(labels).toContain('Settings');
-            expect(labels).toContain('Access');
-            expect(labels).toContain('Analytics');
-            expect(labels).toContain('LLM');
-            expect(labels).toContain('Prompts');
-            expect(labels).toContain('Tools');
-        });
+      const result = filterAll(
+        buildContext({
+          userType: UserType.ADMIN,
+          isAdmin: true,
+          tenantKey: 'custom-tenant',
+          mentorSettings,
+        }),
+      );
+
+      const labels = result.map((i) => i.label);
+      expect(labels).not.toContain('Analytics');
+      expect(labels).toContain('Settings');
+    });
+  });
+
+  describe('User type filtering', () => {
+    it('filters items based on user type', () => {
+      const mentorSettings = {
+        platform_key: 'custom-tenant',
+        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+        mentor_id: 123,
+      };
+
+      const result = filterAll(
+        buildContext({
+          userType: UserType.FREE_TRIAL,
+          isAdmin: false,
+          tenantKey: 'custom-tenant',
+          mentorSettings,
+        }),
+      );
+
+      const labels = result.map((i) => i.label);
+      // Access requires UserType.ADMIN only
+      expect(labels).not.toContain('Access');
+      // Settings allows FREE_TRIAL
+      expect(labels).toContain('Settings');
+    });
+  });
+
+  describe('Config gating (segments always visible)', () => {
+    // The config gates (enabledThroughConfig) were removed — Memory (and the
+    // other formerly config-gated tabs) are now always visible; their master
+    // toggles live inline on each tab. memsearch no longer affects the list.
+    const mentorSettings = {
+      platform_key: 'custom-tenant',
+      mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      mentor_id: 123,
+      permissions: { field: {} },
+    };
+
+    it('shows the Memory tab even when memsearch is disabled', () => {
+      const result = filterMentorSegments(
+        MENTOR_SEGMENTS,
+        buildContext({
+          userType: UserType.ADMIN,
+          isAdmin: true,
+          tenantKey: 'custom-tenant',
+          mentorSettings,
+          flags: {
+            isMemsearchEnabled: false,
+            isMemoryComponentEnabled: true,
+            isClawEnabled: false,
+            clawConfigExists: false,
+            isScreenshareEnabled: false,
+            isVoiceCallEnabled: true,
+            isPrivacyEnabled: false,
+          },
+        }),
+      );
+
+      expect(result.map((i) => i.label)).toContain('Memory');
     });
 
-    describe('Non-admin on main tenant', () => {
-        it('filters out admin items', () => {
-            const mentorSettings = {
-                platform_key: 'main',
-                mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_ANYONE,
-                mentor_id: 123,
-                permissions: {
-                    field: {
-                        mentor_name: { read: true, write: true },
-                    },
-                },
-            };
+    it('shows the Memory tab when memsearch is enabled', () => {
+      const result = filterMentorSegments(
+        MENTOR_SEGMENTS,
+        buildContext({
+          userType: UserType.ADMIN,
+          isAdmin: true,
+          tenantKey: 'custom-tenant',
+          mentorSettings,
+          flags: {
+            isMemsearchEnabled: true,
+            isMemoryComponentEnabled: true,
+            isClawEnabled: false,
+            clawConfigExists: false,
+            isScreenshareEnabled: false,
+            isVoiceCallEnabled: true,
+            isPrivacyEnabled: false,
+          },
+        }),
+      );
 
-            const result = filterAll(
-                buildContext({
-                    userType: UserType.STUDENT,
-                    isAdmin: false,
-                    tenantKey: 'main',
-                    mentorSettings,
-                }),
-            );
-
-            // Non-admin on main tenant should not see admin-only items
-            const labels = result.map((i) => i.label);
-            expect(labels).not.toContain('Access');
-            expect(labels).not.toContain('Settings');
-        });
+      expect(result.map((i) => i.label)).toContain('Memory');
     });
 
-    describe('User on non-main tenant', () => {
-        it('shows items when mentor is on non-main tenant', () => {
-            const mentorSettings = {
-                platform_key: 'custom-tenant',
-                mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-                mentor_id: 123,
-                permissions: {
-                    field: {
-                        mentor_name: { read: true, write: true },
-                    },
-                },
-            };
+    it('produces the same segment list regardless of the memsearch flag', () => {
+      const enabled = filterMentorSegments(
+        MENTOR_SEGMENTS,
+        buildContext({
+          userType: UserType.ADMIN,
+          isAdmin: true,
+          tenantKey: 'custom-tenant',
+          mentorSettings,
+          flags: {
+            isMemsearchEnabled: true,
+            isMemoryComponentEnabled: true,
+            isClawEnabled: false,
+            clawConfigExists: false,
+            isScreenshareEnabled: false,
+            isVoiceCallEnabled: true,
+            isPrivacyEnabled: false,
+          },
+        }),
+      );
+      const disabled = filterMentorSegments(
+        MENTOR_SEGMENTS,
+        buildContext({
+          userType: UserType.ADMIN,
+          isAdmin: true,
+          tenantKey: 'custom-tenant',
+          mentorSettings,
+          flags: {
+            // memsearch OFF — no longer changes the output at all.
+            isMemsearchEnabled: false,
+            isMemoryComponentEnabled: true,
+            isClawEnabled: false,
+            clawConfigExists: false,
+            isScreenshareEnabled: false,
+            isVoiceCallEnabled: true,
+            isPrivacyEnabled: false,
+          },
+        }),
+      );
 
-            const result = filterAll(
-                buildContext({
-                    userType: UserType.ADMIN,
-                    isAdmin: true,
-                    tenantKey: 'custom-tenant',
-                    mentorSettings,
-                }),
-            );
+      expect(disabled.map((i) => i.label)).toEqual(enabled.map((i) => i.label));
+    });
+  });
 
-            const labels = result.map((i) => i.label);
-            expect(labels).toContain('Settings');
-        });
+  describe('Edge cases', () => {
+    it('handles undefined mentor settings gracefully', () => {
+      const result = filterAll(
+        buildContext({
+          userType: UserType.ADMIN,
+          isAdmin: true,
+          tenantKey: 'tenant123',
+          mentorSettings: undefined,
+        }),
+      );
+
+      // With no mentorSettings, the RBAC resource check fails for every
+      // segment that needs one — which is all of them. Pipeline should
+      // tolerate this without throwing.
+      expect(Array.isArray(result)).toBe(true);
     });
 
-    describe('RBAC permission checks', () => {
-        it('filters out items when user lacks field permissions', () => {
-            const mentorSettings = {
-                platform_key: 'custom-tenant',
-                mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-                mentor_id: 123,
-                permissions: {
-                    field: {
-                        // No permissions for Settings-related fields
-                    },
-                },
-            };
+    it('handles undefined tenant key', () => {
+      const mentorSettings = {
+        platform_key: 'custom-tenant',
+        mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+        mentor_id: 123,
+      };
 
-            // Override the mock to be strict about field permissions
-            vi.mocked(rbacPermissionToDisplay).mockImplementation(
-                (
-                    fields: string[],
-                    permissions?: Record<string, { read: boolean; write: boolean }>,
-                ) => {
-                    if (fields.length === 0) return true;
-                    if (!permissions) return false;
-                    return fields.some((field) => permissions[field]?.read);
-                },
-            );
+      const result = filterAll(
+        buildContext({
+          userType: UserType.ADMIN,
+          isAdmin: true,
+          tenantKey: undefined,
+          mentorSettings,
+        }),
+      );
 
-            const result = filterAll(
-                buildContext({
-                    userType: UserType.ADMIN,
-                    isAdmin: true,
-                    tenantKey: 'custom-tenant',
-                    mentorSettings,
-                }),
-            );
+      // mentorNotOnMainTenant is true (custom-tenant !== 'main'), so the
+      // visibility filter passes.
+      expect(result.length).toBeGreaterThanOrEqual(1);
+    });
+  });
 
-            const labels = result.map((i) => i.label);
-            // Settings should be filtered out because no field permissions
-            expect(labels).not.toContain('Settings');
-            // Access and Analytics have empty permissionFieldsCheck, so they pass
-            expect(labels).toContain('Access');
-            expect(labels).toContain('Analytics');
-        });
+  // --------------------------------------------------------------------------
+  // CreditBalance — paywall + permission gating
+  // --------------------------------------------------------------------------
 
-        it('filters out items when RBAC resource check fails', () => {
-            const mentorSettings = {
-                platform_key: 'custom-tenant',
-                mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-                mentor_id: 123,
-                permissions: {
-                    field: {
-                        mentor_name: { read: true, write: true },
-                    },
-                },
-            };
+  describe('CreditBalance gating', () => {
+    function renderNav() {
+      const store = createTestStore();
+      return render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+    }
 
-            // Override to deny analytics
-            vi.mocked(checkRbacPermission).mockImplementation(
-                (_permissions: object, resource: string) => {
-                    if (resource.includes('#view_analytics')) return false;
-                    return true;
-                },
-            );
+    it('renders CreditBalance when tenant.show_paywall is true and user is admin', () => {
+      mockCurrentTenant = {
+        key: 'paying-tenant',
+        is_admin: true,
+        show_paywall: true,
+      };
+      mockIsAdmin = true;
 
-            const result = filterAll(
-                buildContext({
-                    userType: UserType.ADMIN,
-                    isAdmin: true,
-                    tenantKey: 'custom-tenant',
-                    mentorSettings,
-                }),
-            );
+      renderNav();
 
-            const labels = result.map((i) => i.label);
-            expect(labels).not.toContain('Analytics');
-            expect(labels).toContain('Settings');
-        });
+      expect(screen.getByTestId('credit-balance')).toBeInTheDocument();
+      expect(lastCreditBalanceProps).toMatchObject({
+        tenant: 'tenant123',
+        enabled: true,
+        mainPlatformKey: 'main',
+        currentUserEmail: 'student@example.com',
+        username: 'student-user',
+      });
+      expect(typeof lastCreditBalanceProps.redirectUrl).toBe('string');
     });
 
-    describe('User type filtering', () => {
-        it('filters items based on user type', () => {
-            const mentorSettings = {
-                platform_key: 'custom-tenant',
-                mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-                mentor_id: 123,
-            };
+    it('renders CreditBalance for free-trial users (non-admin on main with one tenant) when paywall is on', () => {
+      mockIsAdmin = false;
+      mockCurrentTenant = {
+        key: 'main',
+        is_admin: false,
+        show_paywall: true,
+      };
+      mockAllTenants = [{ key: 'main' }];
 
-            const result = filterAll(
-                buildContext({
-                    userType: UserType.FREE_TRIAL,
-                    isAdmin: false,
-                    tenantKey: 'custom-tenant',
-                    mentorSettings,
-                }),
-            );
+      renderNav();
 
-            const labels = result.map((i) => i.label);
-            // Access requires UserType.ADMIN only
-            expect(labels).not.toContain('Access');
-            // Settings allows FREE_TRIAL
-            expect(labels).toContain('Settings');
-        });
+      expect(screen.getByTestId('credit-balance')).toBeInTheDocument();
     });
 
-    describe('Config gating (segments always visible)', () => {
-        // The config gates (enabledThroughConfig) were removed — Memory (and the
-        // other formerly config-gated tabs) are now always visible; their master
-        // toggles live inline on each tab. memsearch no longer affects the list.
-        const mentorSettings = {
-            platform_key: 'custom-tenant',
-            mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-            mentor_id: 123,
-            permissions: { field: {} },
-        };
+    it('does NOT render CreditBalance when tenant.show_paywall is false', () => {
+      mockIsAdmin = true;
+      mockCurrentTenant = {
+        key: 'paying-tenant',
+        is_admin: true,
+        show_paywall: false,
+      };
 
-        it('shows the Memory tab even when memsearch is disabled', () => {
-            const result = filterMentorSegments(
-                MENTOR_SEGMENTS,
-                buildContext({
-                    userType: UserType.ADMIN,
-                    isAdmin: true,
-                    tenantKey: 'custom-tenant',
-                    mentorSettings,
-                    flags: {
-                        isMemsearchEnabled: false,
-                        isMemoryComponentEnabled: true,
-                        isClawEnabled: false,
-                        clawConfigExists: false,
-                        isScreenshareEnabled: false,
-                        isVoiceCallEnabled: true,
-                        isPrivacyEnabled: false,
-                    },
-                }),
-            );
+      renderNav();
 
-            expect(result.map((i) => i.label)).toContain('Memory');
-        });
-
-        it('shows the Memory tab when memsearch is enabled', () => {
-            const result = filterMentorSegments(
-                MENTOR_SEGMENTS,
-                buildContext({
-                    userType: UserType.ADMIN,
-                    isAdmin: true,
-                    tenantKey: 'custom-tenant',
-                    mentorSettings,
-                    flags: {
-                        isMemsearchEnabled: true,
-                        isMemoryComponentEnabled: true,
-                        isClawEnabled: false,
-                        clawConfigExists: false,
-                        isScreenshareEnabled: false,
-                        isVoiceCallEnabled: true,
-                        isPrivacyEnabled: false,
-                    },
-                }),
-            );
-
-            expect(result.map((i) => i.label)).toContain('Memory');
-        });
-
-        it('produces the same segment list regardless of the memsearch flag', () => {
-            const enabled = filterMentorSegments(
-                MENTOR_SEGMENTS,
-                buildContext({
-                    userType: UserType.ADMIN,
-                    isAdmin: true,
-                    tenantKey: 'custom-tenant',
-                    mentorSettings,
-                    flags: {
-                        isMemsearchEnabled: true,
-                        isMemoryComponentEnabled: true,
-                        isClawEnabled: false,
-                        clawConfigExists: false,
-                        isScreenshareEnabled: false,
-                        isVoiceCallEnabled: true,
-                        isPrivacyEnabled: false,
-                    },
-                }),
-            );
-            const disabled = filterMentorSegments(
-                MENTOR_SEGMENTS,
-                buildContext({
-                    userType: UserType.ADMIN,
-                    isAdmin: true,
-                    tenantKey: 'custom-tenant',
-                    mentorSettings,
-                    flags: {
-                        // memsearch OFF — no longer changes the output at all.
-                        isMemsearchEnabled: false,
-                        isMemoryComponentEnabled: true,
-                        isClawEnabled: false,
-                        clawConfigExists: false,
-                        isScreenshareEnabled: false,
-                        isVoiceCallEnabled: true,
-                        isPrivacyEnabled: false,
-                    },
-                }),
-            );
-
-            expect(disabled.map((i) => i.label)).toEqual(enabled.map((i) => i.label));
-        });
+      expect(screen.queryByTestId('credit-balance')).not.toBeInTheDocument();
     });
 
-    describe('Edge cases', () => {
-        it('handles undefined mentor settings gracefully', () => {
-            const result = filterAll(
-                buildContext({
-                    userType: UserType.ADMIN,
-                    isAdmin: true,
-                    tenantKey: 'tenant123',
-                    mentorSettings: undefined,
-                }),
-            );
+    it('does NOT render CreditBalance for non-admin users without free-trial eligibility', () => {
+      mockIsAdmin = false;
+      // Non-admin on a non-main tenant → not free trial
+      mockCurrentTenant = {
+        key: 'org-tenant',
+        is_admin: false,
+        show_paywall: true,
+      };
+      mockAllTenants = [{ key: 'org-tenant' }, { key: 'other-tenant' }];
 
-            // With no mentorSettings, the RBAC resource check fails for every
-            // segment that needs one — which is all of them. Pipeline should
-            // tolerate this without throwing.
-            expect(Array.isArray(result)).toBe(true);
-        });
+      renderNav();
 
-        it('handles undefined tenant key', () => {
-            const mentorSettings = {
-                platform_key: 'custom-tenant',
-                mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-                mentor_id: 123,
-            };
+      expect(screen.queryByTestId('credit-balance')).not.toBeInTheDocument();
+    });
+  });
 
-            const result = filterAll(
-                buildContext({
-                    userType: UserType.ADMIN,
-                    isAdmin: true,
-                    tenantKey: undefined,
-                    mentorSettings,
-                }),
-            );
+  // --------------------------------------------------------------------------
+  // LLM name responsive width — fix/nav-bar-header-overflowing-when-llm-name-long
+  //
+  // When CreditBalance is rendered alongside the LLM-name span, the span
+  // shrinks to max-w-[100px] on small screens and stays max-w-[150px] on md+
+  // so the header does not overflow horizontally when the LLM name is long.
+  // When CreditBalance is hidden, no responsive override is applied.
+  // --------------------------------------------------------------------------
 
-            // mentorNotOnMainTenant is true (custom-tenant !== 'main'), so the
-            // visibility filter passes.
-            expect(result.length).toBeGreaterThanOrEqual(1);
-        });
+  describe('LLM name span responsive width vs CreditBalance', () => {
+    function getLlmNameSpan() {
+      const llmButton = screen.getByLabelText('LLM Model Selector');
+      // Span is the element holding the LLM name text ("GPT-4" per mocks)
+      return llmButton.querySelector('span');
+    }
+
+    it('applies the tighter responsive max-width when CreditBalance is displayed', () => {
+      mockCurrentTenant = {
+        key: 'paying-tenant',
+        is_admin: true,
+        show_paywall: true,
+      };
+      mockIsAdmin = true;
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(screen.getByTestId('credit-balance')).toBeInTheDocument();
+
+      const span = getLlmNameSpan();
+      expect(span).not.toBeNull();
+      expect(span!.className).toContain('max-w-[100px]');
+      expect(span!.className).toContain('md:max-w-[150px]');
     });
 
-    // --------------------------------------------------------------------------
-    // CreditBalance — paywall + permission gating
-    // --------------------------------------------------------------------------
+    it('does not apply the responsive override when CreditBalance is hidden', () => {
+      // Stripe disabled on tenant → CreditBalance does not render
+      mockCurrentTenant = {
+        key: 'no-paywall-tenant',
+        is_admin: true,
+        show_paywall: false,
+      };
+      mockIsAdmin = true;
+      const store = createTestStore();
 
-    describe('CreditBalance gating', () => {
-        function renderNav() {
-            const store = createTestStore();
-            return render(
-                <Provider store={store}>
-                    <NavBar />
-                </Provider>,
-            );
-        }
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
 
-        it('renders CreditBalance when tenant.show_paywall is true and user is admin', () => {
-            mockCurrentTenant = {
-                key: 'paying-tenant',
-                is_admin: true,
-                show_paywall: true,
-            };
-            mockIsAdmin = true;
+      expect(screen.queryByTestId('credit-balance')).not.toBeInTheDocument();
 
-            renderNav();
-
-            expect(screen.getByTestId('credit-balance')).toBeInTheDocument();
-            expect(lastCreditBalanceProps).toMatchObject({
-                tenant: 'tenant123',
-                enabled: true,
-                mainPlatformKey: 'main',
-                currentUserEmail: 'student@example.com',
-                username: 'student-user',
-            });
-            expect(typeof lastCreditBalanceProps.redirectUrl).toBe('string');
-        });
-
-        it('renders CreditBalance for free-trial users (non-admin on main with one tenant) when paywall is on', () => {
-            mockIsAdmin = false;
-            mockCurrentTenant = {
-                key: 'main',
-                is_admin: false,
-                show_paywall: true,
-            };
-            mockAllTenants = [{ key: 'main' }];
-
-            renderNav();
-
-            expect(screen.getByTestId('credit-balance')).toBeInTheDocument();
-        });
-
-        it('does NOT render CreditBalance when tenant.show_paywall is false', () => {
-            mockIsAdmin = true;
-            mockCurrentTenant = {
-                key: 'paying-tenant',
-                is_admin: true,
-                show_paywall: false,
-            };
-
-            renderNav();
-
-            expect(screen.queryByTestId('credit-balance')).not.toBeInTheDocument();
-        });
-
-        it('does NOT render CreditBalance for non-admin users without free-trial eligibility', () => {
-            mockIsAdmin = false;
-            // Non-admin on a non-main tenant → not free trial
-            mockCurrentTenant = {
-                key: 'org-tenant',
-                is_admin: false,
-                show_paywall: true,
-            };
-            mockAllTenants = [{ key: 'org-tenant' }, { key: 'other-tenant' }];
-
-            renderNav();
-
-            expect(screen.queryByTestId('credit-balance')).not.toBeInTheDocument();
-        });
+      const span = getLlmNameSpan();
+      expect(span).not.toBeNull();
+      // Base class always present; the conditional override must NOT be added
+      expect(span!.className).toContain('max-w-[150px]');
+      expect(span!.className).not.toContain('max-w-[100px]');
     });
 
-    // --------------------------------------------------------------------------
-    // LLM name responsive width — fix/nav-bar-header-overflowing-when-llm-name-long
-    //
-    // When CreditBalance is rendered alongside the LLM-name span, the span
-    // shrinks to max-w-[100px] on small screens and stays max-w-[150px] on md+
-    // so the header does not overflow horizontally when the LLM name is long.
-    // When CreditBalance is hidden, no responsive override is applied.
-    // --------------------------------------------------------------------------
+    it('hides the LLM name on phones and reveals it from sm up', () => {
+      mockCurrentTenant = {
+        key: 'no-paywall-tenant',
+        is_admin: true,
+        show_paywall: false,
+      };
+      mockIsAdmin = true;
+      const store = createTestStore();
 
-    describe('LLM name span responsive width vs CreditBalance', () => {
-        function getLlmNameSpan() {
-            const llmButton = screen.getByLabelText('LLM Model Selector');
-            // Span is the element holding the LLM name text ("GPT-4" per mocks)
-            return llmButton.querySelector('span');
-        }
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
 
-        it('applies the tighter responsive max-width when CreditBalance is displayed', () => {
-            mockCurrentTenant = {
-                key: 'paying-tenant',
-                is_admin: true,
-                show_paywall: true,
-            };
-            mockIsAdmin = true;
-            const store = createTestStore();
-
-            render(
-                <Provider store={store}>
-                    <NavBar />
-                </Provider>,
-            );
-
-            expect(screen.getByTestId('credit-balance')).toBeInTheDocument();
-
-            const span = getLlmNameSpan();
-            expect(span).not.toBeNull();
-            expect(span!.className).toContain('max-w-[100px]');
-            expect(span!.className).toContain('md:max-w-[150px]');
-        });
-
-        it('does not apply the responsive override when CreditBalance is hidden', () => {
-            // Stripe disabled on tenant → CreditBalance does not render
-            mockCurrentTenant = {
-                key: 'no-paywall-tenant',
-                is_admin: true,
-                show_paywall: false,
-            };
-            mockIsAdmin = true;
-            const store = createTestStore();
-
-            render(
-                <Provider store={store}>
-                    <NavBar />
-                </Provider>,
-            );
-
-            expect(screen.queryByTestId('credit-balance')).not.toBeInTheDocument();
-
-            const span = getLlmNameSpan();
-            expect(span).not.toBeNull();
-            // Base class always present; the conditional override must NOT be added
-            expect(span!.className).toContain('max-w-[150px]');
-            expect(span!.className).not.toContain('max-w-[100px]');
-        });
-
-        it('hides the LLM name on phones and reveals it from sm up', () => {
-            mockCurrentTenant = {
-                key: 'no-paywall-tenant',
-                is_admin: true,
-                show_paywall: false,
-            };
-            mockIsAdmin = true;
-            const store = createTestStore();
-
-            render(
-                <Provider store={store}>
-                    <NavBar />
-                </Provider>,
-            );
-
-            const span = getLlmNameSpan();
-            expect(span).not.toBeNull();
-            expect(span!.className).toContain('hidden');
-            expect(span!.className).toContain('sm:block');
-        });
+      const span = getLlmNameSpan();
+      expect(span).not.toBeNull();
+      expect(span!.className).toContain('hidden');
+      expect(span!.className).toContain('sm:block');
     });
+  });
 });

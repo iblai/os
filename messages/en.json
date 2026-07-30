@@ -465,9 +465,9 @@
     "studyMode": "Study Mode",
     "deepResearch": "Deep Research",
     "memory": "Memory",
-    "computerUse": "Computer Use",
-    "computerUseNeedsLocalModel": "Turn on “Local Models” first — Computer Use needs a local AI model.",
-    "computerUseModelTooSmall": "Your local model is too small for Computer Use. Pick a model of at least 12GB in Local Models.",
+    "cowork": "Cowork",
+    "coworkNeedsLocalModel": "Turn on “Local Models” first — Cowork needs a local AI model.",
+    "coworkModelTooSmall": "Your local model is too small for Cowork. Pick a model of at least 12GB in Local Models.",
     "moreOptions": "More options"
   },
   "chatInputFormMemoryMenu": {

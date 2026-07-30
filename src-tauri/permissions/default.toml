@@ -144,19 +144,19 @@ allow = ["get_mcp_config_path"]
 
 [[permission]]
 identifier = "allow-install-ghost-os"
-description = "Enables installing GhostOS (System Control) via Homebrew"
+description = "Enables installing GhostOS (Cowork) via Homebrew"
 [permission.commands]
 allow = ["install_ghost_os"]
 
 [[permission]]
 identifier = "allow-stop-ghost-os"
-description = "Enables stopping the GhostOS (System Control) processes"
+description = "Enables stopping the GhostOS (Cowork) processes"
 [permission.commands]
 allow = ["stop_ghost_os"]
 
 [[permission]]
 identifier = "allow-check-ghost-os-status"
-description = "Enables checking GhostOS (System Control) status"
+description = "Enables checking GhostOS (Cowork) status"
 [permission.commands]
 allow = ["check_ghost_os_status"]
 

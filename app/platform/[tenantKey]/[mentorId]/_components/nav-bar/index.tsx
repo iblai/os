@@ -256,8 +256,10 @@ export function NavBar() {
   // cloud model would be misleading). Reactive to picks + the master toggle.
   const selectedLocal = useSelectedLocalModel();
   const localModelLogo = selectedLocal.model
-    ? getLLMProviderDetails(selectedLocal.model.provider, selectedLocal.model.name)
-        .logo
+    ? getLLMProviderDetails(
+        selectedLocal.model.provider,
+        selectedLocal.model.name,
+      ).logo
     : '';
   const localModelName =
     selectedLocal.model?.name ?? selectedLocal.modelId ?? '';
@@ -588,53 +590,56 @@ export function NavBar() {
               </Tooltip>
             )}
 
-            {isOnChatPage && isAdmin && !userIsStudent && !selectedLocal.isLocal && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="flex cursor-pointer items-center gap-1 text-sm font-medium text-[#646464] transition-colors hover:text-[#484848]"
-                    onClick={() =>
-                      !userIsVisiting && setIsProviderSelectionOpen(true)
-                    }
-                    aria-label={t('llmModelSelector')}
-                  >
-                    <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white">
-                      {llmProviderDetails?.logo ? (
-                        <Image
-                          src={llmProviderDetails.logo}
-                          alt={`${selectedMentorCategory} model logo`}
-                          className="h-5 w-5 object-contain"
-                          height={32}
-                          width={32}
-                          loading="lazy"
-                        />
-                      ) : (
-                        <Bot />
-                      )}
-                    </div>
-                    <span
-                      className={cn(
-                        // Hidden below sm; the name is shown in the tooltip.
-                        'hidden max-w-[150px] overflow-hidden text-ellipsis whitespace-nowrap sm:block',
-                        creditBalanceComponentIsDisplayed
-                          ? 'max-w-[100px] md:max-w-[150px]'
-                          : '',
-                      )}
+            {isOnChatPage &&
+              isAdmin &&
+              !userIsStudent &&
+              !selectedLocal.isLocal && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="flex cursor-pointer items-center gap-1 text-sm font-medium text-[#646464] transition-colors hover:text-[#484848]"
+                      onClick={() =>
+                        !userIsVisiting && setIsProviderSelectionOpen(true)
+                      }
+                      aria-label={t('llmModelSelector')}
                     >
-                      {selectedMentorCategory}
-                    </span>
-                    {!userIsStudent && (
-                      <ChevronDown className="h-4 w-4 text-gray-500" />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent className="ibl-tooltip-content" side="bottom">
-                  {selectedMentorCategory ||
-                    (isAdmin ? t('selectModel') : selectedMentorName)}
-                </TooltipContent>
-              </Tooltip>
-            )}
+                      <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white">
+                        {llmProviderDetails?.logo ? (
+                          <Image
+                            src={llmProviderDetails.logo}
+                            alt={`${selectedMentorCategory} model logo`}
+                            className="h-5 w-5 object-contain"
+                            height={32}
+                            width={32}
+                            loading="lazy"
+                          />
+                        ) : (
+                          <Bot />
+                        )}
+                      </div>
+                      <span
+                        className={cn(
+                          // Hidden below sm; the name is shown in the tooltip.
+                          'hidden max-w-[150px] overflow-hidden text-ellipsis whitespace-nowrap sm:block',
+                          creditBalanceComponentIsDisplayed
+                            ? 'max-w-[100px] md:max-w-[150px]'
+                            : '',
+                        )}
+                      >
+                        {selectedMentorCategory}
+                      </span>
+                      {!userIsStudent && (
+                        <ChevronDown className="h-4 w-4 text-gray-500" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent className="ibl-tooltip-content" side="bottom">
+                    {selectedMentorCategory ||
+                      (isAdmin ? t('selectModel') : selectedMentorName)}
+                  </TooltipContent>
+                </Tooltip>
+              )}
 
             {!pathname.includes('/explore') &&
               !isWorkflowsPage &&

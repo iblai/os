@@ -465,9 +465,9 @@
     "studyMode": "Modo de estudio",
     "deepResearch": "Investigación profunda",
     "memory": "Memoria",
-    "computerUse": "Uso del Ordenador",
-    "computerUseNeedsLocalModel": "Activa primero «Modelos Locales»: el Uso del Ordenador necesita un modelo de IA local.",
-    "computerUseModelTooSmall": "Tu modelo local es demasiado pequeño para el Uso del Ordenador. Elige un modelo de al menos 12 GB en Modelos Locales.",
+    "cowork": "Cowork",
+    "coworkNeedsLocalModel": "Activa primero «Modelos Locales»: Cowork necesita un modelo de IA local.",
+    "coworkModelTooSmall": "Tu modelo local es demasiado pequeño para Cowork. Elige un modelo de al menos 12 GB en Modelos Locales.",
     "moreOptions": "Más opciones"
   },
   "chatInputFormMemoryMenu": {

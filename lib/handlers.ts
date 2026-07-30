@@ -94,8 +94,12 @@ export function useIframeHandlers() {
         }),
       );
     },
-    'MENTOR:ENABLE_GRADING': (_payload: unknown, data: MessageEvent) => {
-      dispatch(chatActions.setEnableGrading(data));
+    // `useIframeMessageHandler` invokes handlers as `handler(payload, event)`,
+    // so the flag is the FIRST argument. This previously dispatched the second
+    // one — the raw MessageEvent — into `enableGrading`, which the reducer types
+    // as a boolean (PayloadAction<boolean>).
+    'MENTOR:ENABLE_GRADING': (payload: boolean) => {
+      dispatch(chatActions.setEnableGrading(payload));
     },
     // Document filter hanlder
     'MENTOR:DOCUMENTFILTER': (_payload: unknown, event: MessageEvent) => {

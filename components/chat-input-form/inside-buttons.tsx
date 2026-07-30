@@ -21,30 +21,35 @@ import { DeepSearchIcon, CanvasIcon } from '@/components/icons/svg-icons';
 import { TOOLS, hasRemoteAiConfig } from '@iblai/iblai-js/web-utils';
 import {
   useGhostOs,
-  isSystemControlEnabled,
-  setSystemControlEnabled,
+  isCoworkEnabled,
+  setCoworkEnabled,
   isLocalLLMEnabled,
   getLocalLLMModel,
-  modelSupportsSystemControl,
+  modelSupportsCowork,
 } from '@iblai/iblai-js/web-containers';
 import { MemoryButton } from './memory-button';
 import { CodingModeButton } from './coding-mode-button';
 import { MemoryMenu } from './memory-menu';
 import { isTauriApp } from '@/types/tauri';
 
-// Computer Use is macOS-only in prod; the env flag bypasses the OS check so the
+// Cowork is macOS-only in prod; the env flag bypasses the OS check so the
 // toggle can be exercised on Linux/Windows desktop builds during testing.
 const isMacOS = () => {
   if (typeof navigator === 'undefined') return false;
   return /mac/i.test(navigator.userAgent || '');
 };
-const allowNonMacOSComputerUse = () =>
+const allowNonMacOSCowork = () =>
   process.env.NEXT_PUBLIC_ALLOW_NON_MACOS_COMPUTER_USE_TOGGLE === 'true';
 
-// 12GB floor, matching the SDK default (DEFAULT_SYSTEM_CONTROL_REQUIRED_SIZE_GB)
-// and the Local Models tab's "supported" indicator. modelSupportsSystemControl
+// 12GB floor, matching the SDK default (DEFAULT_COWORK_REQUIRED_SIZE_GB)
+// and the Local Models tab's "supported" indicator. modelSupportsCowork
 // gates size <= gb (strictly greater), so a model of exactly 12GB is also off.
-const COMPUTER_USE_MIN_MODEL_GB = 12;
+const COWORK_MIN_MODEL_GB = 12;
+
+// Must match the SDK's key (web-containers cowork-tab). Read directly rather
+// than via isCoworkEnabled() because the default-on pass below needs to tell
+// "never chosen" (null) apart from an explicit "off".
+const COWORK_ENABLED_KEY = 'ibl_cowork_enabled';
 
 interface InsideButtonsProps {
   activeOptions: string[];
@@ -87,32 +92,33 @@ export const InsideButtons = ({
 }: InsideButtonsProps) => {
   const t = useTranslations('chatInputFormInsideButtons');
 
-  // Computer Use = the Tauri GhostOS assistant. Same calls as the old profile
-  // "Computer Assistant" toggle (useGhostOs install/stop + localStorage pref),
-  // no backend round-trip. Reads the pref on mount; cross-tab sync not polled.
+  // Cowork = the Tauri GhostOS assistant (useGhostOs install/stop + localStorage
+  // pref), no backend round-trip. Reads the pref on mount; cross-tab sync not
+  // polled. Local state is `coworkOn` so it doesn't shadow the imported
+  // setCoworkEnabled.
   const ghostOs = useGhostOs();
-  const [computerUseEnabled, setComputerUseEnabled] = useState(isSystemControlEnabled);
-  const toggleComputerUse = () => {
-    const next = !computerUseEnabled;
-    // Guard only when turning on. Computer Use runs on EITHER a large local model
+  const [coworkOn, setCoworkOn] = useState(isCoworkEnabled);
+  const toggleCowork = () => {
+    const next = !coworkOn;
+    // Guard only when turning on. Cowork runs on EITHER a large local model
     // or the remote AI (DM OpenAI-compatible endpoint) — allow enabling when
     // either backend is ready, so a local model is not required. The chatbox has
     // no inline notice space, so remind via toast instead of failing silently.
     if (next) {
       const localReady =
         isLocalLLMEnabled() &&
-        modelSupportsSystemControl(getLocalLLMModel(), COMPUTER_USE_MIN_MODEL_GB);
+        modelSupportsCowork(getLocalLLMModel(), COWORK_MIN_MODEL_GB);
       if (!localReady && !hasRemoteAiConfig()) {
         toast.warning(
           isLocalLLMEnabled()
-            ? t('computerUseModelTooSmall')
-            : t('computerUseNeedsLocalModel'),
+            ? t('coworkModelTooSmall')
+            : t('coworkNeedsLocalModel'),
         );
         return;
       }
     }
-    setComputerUseEnabled(next);
-    setSystemControlEnabled(next);
+    setCoworkOn(next);
+    setCoworkEnabled(next);
     if (next) ghostOs.install();
     else ghostOs.stop();
   };
@@ -137,15 +143,39 @@ export const InsideButtons = ({
     return () => clearInterval(t);
   }, []);
 
+  // Cowork renders inline beside Code (Code left, Cowork right) instead of joining
+  // the responsive list below. Both are desktop-only assistants and read as one
+  // pair, so Cowork must not collapse into the overflow dropdown while Code stays
+  // inline — which is what the <800px breakpoint would otherwise do to it.
+  const coworkButton = {
+    name: 'Cowork',
+    label: t('cowork'),
+    icon: <Monitor className="h-4 w-4" />,
+    isActive: coworkOn,
+    action: toggleCowork,
+    isEnabled: ghostOs.isAvailable && (isMacOS() || allowNonMacOSCowork()),
+  };
+  const coworkAvailable = coworkButton.isEnabled;
+
+  // Default Cowork ON for logged-in desktop users (once), mirroring the Code
+  // default in <CodingModeButton>. Only runs where the toggle is actually
+  // offered, respects an explicit prior choice (an explicit "false" is stored,
+  // so only a *missing* key counts as "never chosen"), and installs GhostOS in
+  // the background so the first turn is ready. No backend guard is needed: the
+  // logged-in check (tenant + dm_token) is exactly what hasRemoteAiConfig()
+  // tests, so a logged-in user always has the remote AI backend available.
+  useEffect(() => {
+    if (!coworkAvailable) return;
+    if (localStorage.getItem(COWORK_ENABLED_KEY) !== null) return;
+    const loggedIn =
+      !!localStorage.getItem('tenant') && !!localStorage.getItem('dm_token');
+    if (!loggedIn) return;
+    setCoworkEnabled(true);
+    setCoworkOn(true);
+    ghostOs.install();
+  }, [coworkAvailable, ghostOs]);
+
   const allInsideButtons = [
-    {
-      name: 'Computer Use',
-      label: t('computerUse'),
-      icon: <Monitor className="h-4 w-4" />,
-      isActive: computerUseEnabled,
-      action: toggleComputerUse,
-      isEnabled: ghostOs.isAvailable && (isMacOS() || allowNonMacOSComputerUse()),
-    },
     {
       name: 'Canvas',
       label: t('canvas'),
@@ -218,10 +248,55 @@ export const InsideButtons = ({
 
   const [hiddenMemoryPopoverOpen, setHiddenMemoryPopoverOpen] = useState(false);
 
+  // Shared pill markup, used by both the fixed Code/Cowork pair and the
+  // responsive list so the two render identically.
+  const renderToolButton = (button: {
+    name: string;
+    label: string;
+    icon: React.ReactNode;
+    isActive: boolean;
+    action: () => void;
+  }) => (
+    <div key={button.name} className="relative">
+      <Button
+        variant="ghost"
+        size="sm"
+        type="button"
+        disabled={disabled}
+        className={`flex h-8 items-center gap-1.5 rounded-lg px-2 text-sm transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 ${
+          button.isActive
+            ? 'border border-[#D0E0FF] bg-[#F5F8FF] text-[#38A1E5]'
+            : 'text-gray-600 hover:border hover:border-[#D0E0FF] hover:bg-[#F5F8FF]'
+        }`}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          button.action();
+        }}
+      >
+        <span className={button.isActive ? 'text-[#38A1E5]' : 'text-gray-600'}>
+          {button.icon}
+        </span>
+        {button.label}
+        {button.isActive && (
+          <X
+            className="ml-1 h-3 w-3 cursor-pointer"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+          />
+        )}
+      </Button>
+    </div>
+  );
+
   return (
     <div className="relative flex items-center gap-1.5">
-      {/* Coding Mode (desktop-only) — always inline; owns its own folder popover. */}
+      {/* Code + Cowork — the desktop assistant pair, Code on the left. Both sit
+          outside the responsive list so they always render side by side. */}
       {inTauri && <CodingModeButton />}
+      {coworkButton.isEnabled && renderToolButton(coworkButton)}
       {/* Responsive Inside Buttons */}
       {visibleInsideButtons.map((button) => {
         if (button.name === 'Memory') {
@@ -234,42 +309,7 @@ export const InsideButtons = ({
           );
         }
 
-        return (
-          <div key={button.name} className="relative">
-            <Button
-              variant="ghost"
-              size="sm"
-              type="button"
-              disabled={disabled}
-              className={`flex h-8 items-center gap-1.5 rounded-lg px-2 text-sm transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 ${
-                button.isActive
-                  ? 'border border-[#D0E0FF] bg-[#F5F8FF] text-[#38A1E5]'
-                  : 'text-gray-600 hover:border hover:border-[#D0E0FF] hover:bg-[#F5F8FF]'
-              }`}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                button.action();
-              }}
-            >
-              <span
-                className={button.isActive ? 'text-[#38A1E5]' : 'text-gray-600'}
-              >
-                {button.icon}
-              </span>
-              {button.label}
-              {button.isActive && (
-                <X
-                  className="ml-1 h-3 w-3 cursor-pointer"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                />
-              )}
-            </Button>
-          </div>
-        );
+        return renderToolButton(button);
       })}
 
       {/* Hidden inside buttons dropdown if needed */}
