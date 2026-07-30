@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.108.9](https://github.com/iblai/os/compare/v0.108.8...v0.108.9) (2026-07-30)
+
+### Bug Fixes
+
+* **iframe:** dispatch EDX metadata via chatActions.setMetadata ([0dbaac0](https://github.com/iblai/os/commit/0dbaac04c3562b9e21385ed9b9c6a629a1eec022))
+* **test:** drop spurious 3rd it.each arg in scrollbar-gutter test ([54fe443](https://github.com/iblai/os/commit/54fe443b5b484d901a318164c6f603fe435019fd)), closes [#2260](https://github.com/iblai/os/issues/2260)
+* **welcome-chat:** match the default welcome message to the chat input width ([05d53d5](https://github.com/iblai/os/commit/05d53d5abc4230af8c627e57ee29dece42ea9825))
+
+### Tests
+
+* **chat:** close the remaining [#2260](https://github.com/iblai/os/issues/2260) coverage gaps ([08d838b](https://github.com/iblai/os/commit/08d838b2d1fc2ea5faee61463a1ce5bd6f0e12c9))
+
+### CI
+
+* adopt the current PR-e2e caller on this branch ([f7ff4e5](https://github.com/iblai/os/commit/f7ff4e55c2979c3cfe7b3c5a0a29d9f045e296f1))
+
 ## [0.108.8](https://github.com/iblai/os/compare/v0.108.7...v0.108.8) (2026-07-30)
 
 ### Bug Fixes
