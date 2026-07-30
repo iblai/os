@@ -230,9 +230,15 @@ jobs:
 
           # Returns: 0 = completed (CONCLUSION set) · 1 = timed out · 2 = EVICTED (retryable)
           poll_run() {
-            local i started=0 strikes=0 any_job=0 last="" phases active busy s
+            local i started=0 strikes=0 any_job=0 exec_ticks=0 last="" phases active busy s
             echo "Phases: resolve -> baseline drift check -> sync (only if drifted) -> swap SPA -> e2e -> restore"
-            for i in $(seq 1 240); do
+            # Two separate budgets. Queue time must NOT count against the execution timeout: with one
+            # serialized runner and ~75-min suites, a PR queued behind one other already exceeds 2h,
+            # and the caller would give up on a perfectly healthy run — then download a result
+            # artifact that does not exist yet and report "unknown". os#367 lost its report exactly
+            # this way (dispatched 17:11, started 18:27, verdict 19:45, caller gave up 19:25).
+            # While QUEUED the liveness guard below is the protection, not the clock.
+            for i in $(seq 1 960); do
               phases=$(gh api "repos/$OPS/actions/runs/${RUN_ID}/jobs" \
                          --jq '[.jobs[] | "\(.name): \(.conclusion // .status)"] | join("  |  ")' 2>/dev/null || echo "")
               if [ -n "$phases" ] && [ "$phases" != "$last" ]; then
@@ -241,7 +247,17 @@ jobs:
               if [ "$started" = "0" ]; then
                 active=$(gh api "repos/$OPS/actions/runs/${RUN_ID}/jobs" \
                            --jq '[.jobs[] | select(.status != "queued")] | length' 2>/dev/null || echo 0)
-                if [ "${active:-0}" -gt 0 ]; then started=1; any_job=1; fi
+                if [ "${active:-0}" -gt 0 ]; then
+                  started=1; any_job=1
+                  echo "[$(date -u +%H:%M:%SZ)] run started executing — 2h execution budget begins now"
+                fi
+              else
+                exec_ticks=$((exec_ticks + 1))
+                if [ "$exec_ticks" -ge 240 ]; then
+                  CONCLUSION=timed_out
+                  echo "::error::the run has been EXECUTING for 2h without finishing. https://github.com/$OPS/actions/runs/${RUN_ID}"
+                  return 1
+                fi
               fi
               if [ "$started" = "0" ]; then
                 # An offline runner never appears executing ANY job anywhere; a merely BUSY one does.
@@ -272,7 +288,7 @@ jobs:
               sleep 30
             done
             CONCLUSION=timed_out
-            echo "::error::timed out after 2h waiting for the e2e run"; return 1
+            echo "::error::gave up after 8h — the run neither started nor finished"; return 1
           }
 
           # Every waiter notices the freed slot within the same poll window and would dispatch in the
@@ -339,7 +355,17 @@ jobs:
           set -uo pipefail
           # The Playwright report on tests.iblai.app IS public, so it is the link that actually helps
           # a developer here — unlike the private Actions run. Relay it onto the PR itself.
-          gh run download "$RUN_ID" -R iblai/iblai-deploy-ops -n pr-e2e-result -D /tmp/res 2>/dev/null || true
+          # Retry briefly: the artifact is uploaded by the central run's LAST job, so a caller that
+          # reaches here early (or races the upload) would otherwise silently render "unknown" and
+          # throw away a perfectly good result — which is exactly how os#367 lost its report link.
+          for a in 1 2 3 4 5 6; do
+            gh run download "$RUN_ID" -R iblai/iblai-deploy-ops -n pr-e2e-result -D /tmp/res 2>/dev/null && break
+            echo "  result artifact not available yet (attempt $a/6) — retrying in 20s"
+            sleep 20
+          done
+          if [ ! -f /tmp/res/pr-e2e-result.json ]; then
+            echo "::warning::could not download pr-e2e-result from run ${RUN_ID} — the comment will lack a report link. https://github.com/iblai/iblai-deploy-ops/actions/runs/${RUN_ID}"
+          fi
           python3 - <<'PY' > /tmp/body.md
           import json, pathlib
           p = pathlib.Path("/tmp/res/pr-e2e-result.json")
