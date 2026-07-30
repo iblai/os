@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.108.10](https://github.com/iblai/os/compare/v0.108.9...v0.108.10) (2026-07-30)
+
+### Bug Fixes
+
+* **ci:** queue time must not count against the execution timeout ([e79488c](https://github.com/iblai/os/commit/e79488c2e5dd93187da2114b839f0608fdb75a6a)), closes [os#367](https://github.com/iblai/os/issues/367)
+
 ## [0.108.9](https://github.com/iblai/os/compare/v0.108.8...v0.108.9) (2026-07-30)
 
 ### Bug Fixes
