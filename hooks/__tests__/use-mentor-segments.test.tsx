@@ -41,6 +41,15 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
   }),
 }));
 
+vi.mock('@iblai/iblai-js/web-utils', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@iblai/iblai-js/web-utils')>();
+  return {
+    ...actual,
+    TOOLS: { ...actual.TOOLS, GRADING: 'grading' as const },
+  };
+});
+
 vi.mock('@/hooks/use-user', () => ({
   useIsAdmin: () => mockIsAdmin(),
   useUsername: () => mockUsername(),
@@ -112,10 +121,10 @@ describe('useMentorSegments', () => {
     setupDefaults();
   });
 
-  it('returns the canonical 13 mentor segments unfiltered', () => {
+  it('returns the canonical 15 mentor segments unfiltered', () => {
     const { result } = renderHook(() => useMentorSegments());
     expect(result.current.segments).toBe(MENTOR_SEGMENTS);
-    expect(MENTOR_SEGMENTS).toHaveLength(14);
+    expect(MENTOR_SEGMENTS).toHaveLength(15);
   });
 
   it('returns the filtered segment list for an admin on a non-main tenant', () => {
@@ -148,6 +157,56 @@ describe('useMentorSegments', () => {
 
     const labels = result.current.filteredSegments.map((s) => s.label);
     expect(labels).toContain('Memory');
+  });
+
+  it('hides the Grading segment when the grading tool is not enabled on the mentor', () => {
+    // Default fixture has no `mentor_tools`, so isGradingEnabled is false.
+    const { result } = renderHook(() => useMentorSegments());
+    const labels = result.current.filteredSegments.map((s) => s.label);
+    expect(labels).not.toContain('Grading');
+  });
+
+  it('shows the Grading segment when the mentor has the grading tool enabled', () => {
+    mockMentorSettings.mockReturnValue({
+      platform_key: 'custom-tenant',
+      mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      mentor_id: 42,
+      permissions: { field: {} },
+      mentor_tools: [{ slug: 'grading' }],
+    });
+
+    const { result } = renderHook(() => useMentorSegments());
+    const labels = result.current.filteredSegments.map((s) => s.label);
+    expect(labels).toContain('Grading');
+  });
+
+  it('treats a non-array mentor_tools value as no grading tool', () => {
+    mockMentorSettings.mockReturnValue({
+      platform_key: 'custom-tenant',
+      mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      mentor_id: 42,
+      permissions: { field: {} },
+      // Defensive: backend response may omit or null this field.
+      mentor_tools: undefined,
+    });
+
+    const { result } = renderHook(() => useMentorSegments());
+    const labels = result.current.filteredSegments.map((s) => s.label);
+    expect(labels).not.toContain('Grading');
+  });
+
+  it('ignores tool entries without the grading slug', () => {
+    mockMentorSettings.mockReturnValue({
+      platform_key: 'custom-tenant',
+      mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      mentor_id: 42,
+      permissions: { field: {} },
+      mentor_tools: [{ slug: 'web-search' }, { slug: 'memory' }],
+    });
+
+    const { result } = renderHook(() => useMentorSegments());
+    const labels = result.current.filteredSegments.map((s) => s.label);
+    expect(labels).not.toContain('Grading');
   });
 
   it('exposes isSegmentVisible reflecting the same filter pipeline', () => {

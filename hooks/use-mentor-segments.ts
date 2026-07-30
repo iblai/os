@@ -17,6 +17,7 @@ import {
   UserCog,
   Archive,
   ScrollText,
+  GraduationCap,
   type LucideIcon,
 } from 'lucide-react';
 import { MentorVisibilityEnum } from '@iblai/iblai-api';
@@ -24,6 +25,7 @@ import {
   useGetMentorSettingsQuery,
   useGetMemsearchStatusQuery,
 } from '@iblai/iblai-js/data-layer';
+import { TOOLS } from '@iblai/iblai-js/web-utils';
 
 import { MODALS, UserType } from '@/lib/constants';
 import { TenantKeyMentorIdParams } from '@/lib/types';
@@ -44,6 +46,7 @@ import { config } from '@/lib/config';
  */
 export type MentorSegmentConfigFlags = {
   isMemsearchEnabled: boolean;
+  isGradingEnabled: boolean;
 };
 
 export type MentorSegment = {
@@ -160,6 +163,18 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
+  },
+  {
+    value: MODALS.EDIT_MENTOR.tabs.grading,
+    label: 'Grading',
+    icon: GraduationCap,
+    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
+    permissionFieldsCheck: [],
+    mentorVisibility: [
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+    ],
+    enabledThroughConfig: (flags) => flags.isGradingEnabled,
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.tools,
@@ -375,6 +390,11 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
   );
 
   const isMemsearchEnabled = memsearchConfig?.enable_memsearch ?? false;
+  const isGradingEnabled = Array.isArray(mentorSettings?.mentor_tools)
+    ? mentorSettings.mentor_tools.some(
+        (tool: { slug?: string }) => tool?.slug === TOOLS.GRADING,
+      )
+    : false;
   const { isUserTypeAllowed } = useUserType(mentorSettings);
 
   // `isUserTypeAllowed` is a fresh function on every render of `useUserType`.
@@ -389,10 +409,17 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
       tenantKey,
       mentorSettings,
       rbacPermissions,
-      flags: { isMemsearchEnabled },
+      flags: { isMemsearchEnabled, isGradingEnabled },
       isUserTypeAllowed: (segment) => isUserTypeAllowedRef.current(segment),
     }),
-    [isAdmin, tenantKey, mentorSettings, rbacPermissions, isMemsearchEnabled],
+    [
+      isAdmin,
+      tenantKey,
+      mentorSettings,
+      rbacPermissions,
+      isMemsearchEnabled,
+      isGradingEnabled,
+    ],
   );
 
   const filteredSegments = useMemo(
