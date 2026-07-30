@@ -275,19 +275,44 @@ jobs:
             echo "::error::timed out after 2h waiting for the e2e run"; return 1
           }
 
-          RUN_ID=""; CONCLUSION=""
-          for attempt in 1 2 3; do
-            wait_for_slot || { echo "conclusion=no_slot" >> "$GITHUB_OUTPUT"; exit 1; }
+          # Every waiter notices the freed slot within the same poll window and would dispatch in the
+          # same instant — a classic check-then-act race. A deterministic per-PR offset spreads them
+          # out; the RE-CHECK after it is what actually closes the window, since the stagger alone
+          # would only move the collision. PR number rather than $RANDOM: unique, stable across
+          # retries, and needs no coordination between callers.
+          stagger_then_claim() {
+            local s
+            wait_for_slot || return 1
+            s=$(( (PR % 12) * 5 ))
+            if [ "$s" -gt 0 ]; then
+              echo "[$(date -u +%H:%M:%SZ)] stagger ${s}s (PR ${PR}) before claiming the slot"
+              sleep "$s"
+            fi
+            wait_for_slot || return 1   # someone may have claimed it while we staggered
+          }
+
+          RUN_ID=""; CONCLUSION=""; EVICTIONS=0
+          for attempt in $(seq 1 10); do
+            stagger_then_claim || { echo "conclusion=no_slot" >> "$GITHUB_OUTPUT"; exit 1; }
             do_dispatch  || { echo "::error::dispatched but the run never appeared"; echo "conclusion=dispatch_failed" >> "$GITHUB_OUTPUT"; exit 1; }
             echo "dispatched run $RUN_ID (attempt $attempt)"
             echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
             poll_run; rc=$?
             if [ "$rc" -eq 2 ]; then
-              echo "::warning::run ${RUN_ID} was cancelled before starting any job — evicted from the concurrency queue by a newer dispatch. Re-dispatching (attempt $attempt of 3)."
+              EVICTIONS=$((EVICTIONS + 1))
+              # Greppable marker: this is the signal to watch. If evictions become routine the
+              # caller-side queue is under-sized and the fix is capacity (a second env) or a real
+              # external FIFO queue — not more retries. See docs/pr-e2e.md.
+              echo "::warning::QUEUE_EVICTION run ${RUN_ID} was cancelled before starting any job — evicted from the concurrency queue by a newer dispatch. Re-dispatching (attempt ${attempt}/10)."
+              sleep $(( (RANDOM % 20) + 5 ))   # jitter so retriers do not re-collide
               continue
             fi
             break
           done
+          echo "evictions=${EVICTIONS}" >> "$GITHUB_OUTPUT"
+          if [ "$EVICTIONS" -gt 0 ]; then
+            echo "::notice::QUEUE_EVICTION_COUNT=${EVICTIONS} for this PR"
+          fi
           echo "conclusion=${CONCLUSION:-unknown}" >> "$GITHUB_OUTPUT"
       - name: Publish the result on this PR
         if: always() && steps.dispatch.outputs.run_id != ''
