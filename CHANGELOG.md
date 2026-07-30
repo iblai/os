@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.108.8](https://github.com/iblai/os/compare/v0.108.7...v0.108.8) (2026-07-30)
+
+### Bug Fixes
+
+* **ci:** cancel the dispatched run when the caller is cancelled ([dbc4259](https://github.com/iblai/os/commit/dbc425961e79fcc730a5b4ceb21a82350703be69)), closes [os#394](https://github.com/iblai/os/issues/394)
+
 ## [0.108.7](https://github.com/iblai/os/compare/v0.108.6...v0.108.7) (2026-07-30)
 
 ### Bug Fixes
