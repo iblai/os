@@ -88,8 +88,13 @@ jobs:
     with:
       dockerfile-path: Dockerfile
       build-context: .
-      image-name: iblai-mentor-spa-pro
-      registry-type: ocir
+      # Same repo as the release images; PR builds are distinguished by the `pr-` tag prefix.
+      image-name: iblai-os-spa
+      # ECR, not OCIR: the OCIR org secrets were removed, which broke every PR build with
+      # "Password required" at docker login. The AWS credentials are already provisioned here
+      # and release images already live in ECR, so this drops a registry dependency rather
+      # than replacing one with another.
+      registry-type: ecr
       event-name: pull_request
       pr-number: ${{ github.event.pull_request.number }}
 
