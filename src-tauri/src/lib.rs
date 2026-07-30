@@ -1,6 +1,7 @@
 // Hide console window on Windows in release builds
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod ghost_mcp_manager;
 mod ghost_os_manager;
 mod mcp_bridge_installer;
 mod mcp_bridge_manager;
@@ -2694,6 +2695,9 @@ pub fn run() {
             ghost_os_manager::install_ghost_os,
             ghost_os_manager::stop_ghost_os,
             ghost_os_manager::check_ghost_os_status,
+            ghost_mcp_manager::ghost_mcp_start,
+            ghost_mcp_manager::ghost_mcp_send,
+            ghost_mcp_manager::ghost_mcp_stop,
             check_disk_space_for_model,
             get_system_memory,
             download_phi3_model,

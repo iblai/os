@@ -3,6 +3,7 @@
 
 mod foundry_installer;
 mod foundry_manager;
+mod ghost_mcp_manager;
 mod ghost_os_manager;
 mod mcp_bridge_installer;
 mod mcp_bridge_manager;
@@ -2479,6 +2480,8 @@ fn main() {
                         || url_str.starts_with("http://127.0.0.1")
                         || url_str.starts_with("https://mentorai.iblai.app")
                         || url_str.starts_with("https://os.ibl.ai")
+
+                        || url_str.starts_with("https://auth.iblai.org")
                         || url_str.starts_with("https://login.iblai.app")
                         || url_str.starts_with("https://base.manager.iblai.app")
                         || url_str.starts_with("https://base.manager.iblai.org")
@@ -2708,6 +2711,9 @@ fn main() {
             ghost_os_manager::install_ghost_os,
             ghost_os_manager::stop_ghost_os,
             ghost_os_manager::check_ghost_os_status,
+            ghost_mcp_manager::ghost_mcp_start,
+            ghost_mcp_manager::ghost_mcp_send,
+            ghost_mcp_manager::ghost_mcp_stop,
             check_foundry_local_status,
             start_foundry_local_service,
             load_foundry_local_model,

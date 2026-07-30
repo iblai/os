@@ -23,6 +23,9 @@ permissions = [
     "allow-install-ghost-os",
     "allow-stop-ghost-os",
     "allow-check-ghost-os-status",
+    "allow-ghost-mcp-start",
+    "allow-ghost-mcp-send",
+    "allow-ghost-mcp-stop",
 ]
 
 [[permission]]
@@ -144,3 +147,21 @@ identifier = "allow-check-ghost-os-status"
 description = "Enables checking GhostOS (System Control) status"
 [permission.commands]
 allow = ["check_ghost_os_status"]
+
+[[permission]]
+identifier = "allow-ghost-mcp-start"
+description = "Enables starting the on-device GhostOS MCP process for Computer Use"
+[permission.commands]
+allow = ["ghost_mcp_start"]
+
+[[permission]]
+identifier = "allow-ghost-mcp-send"
+description = "Enables forwarding a JSON-RPC message to the GhostOS MCP process"
+[permission.commands]
+allow = ["ghost_mcp_send"]
+
+[[permission]]
+identifier = "allow-ghost-mcp-stop"
+description = "Enables stopping the GhostOS MCP process for Computer Use"
+[permission.commands]
+allow = ["ghost_mcp_stop"]
