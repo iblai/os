@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-07-25 | 594 checkpoints (567 covered, 7 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 67 journeys (66 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-07-25 | 592 checkpoints (564 covered, 7 pending/fixme, 9 not-reproducible in default env, 12 deprecated) | 67 journeys (66 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -1204,31 +1204,48 @@ path.
 - [x] shl-02: Safety-boundary guard — the same non-admin user opens the same mentor chat with an INVALID/never-issued shareable-link token — the backend never creates a session, so the textarea stays disabled exactly as with no token (token presence alone must not unlock chat)
 - [x] shl-03: Regression guard — the same non-admin user opens the same mentor chat with NO token — the textarea stays disabled and the RBAC denial placeholder ("Sorry about that! You don't have permission to chat.") is shown
 
-## Journey 65: Mentor Human Support Tab (8 checkpoints) — `journeys/65-mentor-human-support-tab.spec.ts`
+---
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/human-support-tab.tsx`, `e2e/page-objects/edit-mentor/human-support.tab.ts`
+## Journey 65: Analytics Navbar Parity (6 checkpoints) — `journeys/65-analytics-navbar-parity.spec.ts`
 
-The Support tab (host sidebar label "Support"; panel value `human_support`,
-Edit Agent → Runtime) is the SDK's `AgentHumanSupportTab` admin ticket inbox.
-Tickets are filed by the AGENT during chat via the human-support tool, so the
-lifecycle checkpoints drive the real chat surface. All DOM access flows
-through the SDK's `human-support-tab-helpers` (`@iblai/iblai-js/playwright`).
-Hard-won sequencing facts encoded in the spec: (1) the chat session snapshots
-the mentor's tool list at session creation, and a page reload RESTORES the
-same session — so the spec starts a NEW chat after enabling the support
-toggle, otherwise the model has no support tool and hallucinates success via
-`write_todos`; (2) the SDK's status-filter-bounce refresh only refetches once
-(RTK Query cache), so the list poll refreshes via full reload + modal
-re-open; (3) the creation prompt forbids canvas/document output — otherwise
-the model streams a canvas artifact and the stop-streaming wait times out.
-Destructive (mentor settings + tickets): file-level serial with a dedicated
-per-test mentor (Journey 47 pattern), tracked and deleted in `afterAll`.
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`
 
-- [x] support-01: Admin opens Edit Agent → Runtime → Support on a fresh dedicated mentor — the tab renders its header and either the ticket list or the "No support tickets found" empty state (render/API contract)
-- [x] support-02: Admin round-trips the status filter through Open / In Progress / Closed / All Statuses — each change re-queries and the pane returns to a stable list-or-empty state
-- [x] support-03: Support availability toggle — enable the human-support tool from the tab's info box and verify it persists (round-trip read after reload); skipped when the tenant tool catalog has no human-support tool
-- [x] support-04: Full agent-chat creation cycle — after enabling the tool and starting a NEW chat session, the admin asks the agent (plain chat, canvas forbidden) to file a ticket with a unique subject; the ticket appears in the Support list with status Open for the same mentor the message was sent to
-- [x] support-05: Opening the created ticket shows the detail pane with non-empty agent-authored description content
-- [x] support-06: Admin sends a reply from the detail-pane composer — the message appears in the ticket's Conversation section
-- [x] support-07: Admin moves the ticket to In Progress via the detail Status select — the list row's status badge updates
-- [x] support-08: Admin closes the ticket — the closed notice replaces the reply composer and the list badge shows Closed
+Issue #2248 — there is only ONE navbar component (`app/platform/_components/app-layout.tsx`
+renders `<NavBar />` for every `/platform/<tenant>/<mentor>/**` route, including
+`/analytics`). Before the fix, two path predicates in `nav-bar/index.tsx`
+special-cased `/analytics` the same way as `/prompt-gallery`: the mentor name
+rendered as static text instead of the "Selected agent" dropdown trigger, the
+admin-only LLM Model Selector and the Private Mode chip were both hidden, and
+the dropdown's "New Chat" action silently no-op'd (`RemoteEvents.newChat` has
+no listener off the chat route). The fix renames `isPromptGalleryOrAnalytics`
+to `isPromptGalleryPage` (dropping `/analytics`) and stops `isOnChatPage` from
+excluding `/analytics`, giving the analytics route full navbar parity with the
+regular chat page.
+
+Chosen home: a new journey rather than reviving Journey 18
+(`18-analytics-dashboard.spec.ts`, whose four tests are pre-existing `//
+fixme` breakage unrelated to this fix) or extending Journey 56 (scoped
+tightly to the User/Admin dropdown-visibility regression, issue #2048).
+
+`anp-02`'s parity check captures the LLM Model Selector and Private Mode chip
+visibility on the regular chat page first, then asserts the SAME state on
+`/analytics` — this proves parity without the journey mutating the tenant's
+shared chat-privacy gate (which Journey 50 owns) and without a vacuous pass if
+that gate were ever off.
+
+There is deliberately no `/prompt-gallery` regression-guard checkpoint
+(anp-06, `not-reproducible`): it is not a reachable route anywhere in this
+codebase — no `page.tsx` exists for it, and no `Link`/`router.push` in the app
+ever targets it (the prompt gallery is a client-state modal that never
+touches the URL). Verified live: navigating directly to
+`.../prompt-gallery` renders the app's genuine root `not-found.tsx`, and the
+`<nav>` element does not render at all, so `isPromptGalleryPage` never runs
+against real DOM. That predicate is covered at the unit level instead, in
+`nav-bar/__tests__/index.test.tsx`.
+
+- [x] anp-01: Admin on the analytics page sees the mentor dropdown trigger (not static Avatar+name text), and it opens the categorized menu with New Chat and Settings items
+- [x] anp-02: Full navbar parity — LLM Model Selector and Private Mode chip are both visible on `/analytics`, matching the regular chat page baseline captured in the same test
+- [x] anp-03: REGRESSION GUARD — clicking New Chat from the analytics navbar dropdown routes back to the bare chat route (no `/analytics` suffix) and starts a fresh, empty session
+- [x] anp-04: Fix holds on nested analytics routes — `/analytics/users` still shows the mentor dropdown and LLM Model Selector
+- [x] anp-05: Admin flipped to User (student) mode does not see the LLM Model Selector on the analytics page
+- [ ] anp-06 _(not-reproducible)_: `/prompt-gallery` regression guard — no reachable route exists to exercise it E2E; unit-covered in `nav-bar/__tests__/index.test.tsx` instead

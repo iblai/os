@@ -1221,8 +1221,22 @@ describe('WelcomeChatNew', () => {
       const { container } = renderWithRedux(
         <WelcomeChatNew {...defaultProps} />,
       );
-      const defaultContainer = container.querySelector('.overflow-y-auto');
+      const defaultContainer = container.querySelector('.w-full.py-6');
       expect(defaultContainer).toBeInTheDocument();
+    });
+
+    // Issue #2260 — the default-view wrapper never scrolled (clientHeight ===
+    // scrollHeight); its `overflow-y-auto` shadowed the real scroll container
+    // owned by components/chat. Keep it a plain wrapper.
+    it('does not declare its own scroll container in default view (issue #2260)', () => {
+      mockUseEmbedMode.mockReturnValue(false);
+      mockUseParams.mockReturnValue({ projectId: undefined });
+
+      const { container } = renderWithRedux(
+        <WelcomeChatNew {...defaultProps} />,
+      );
+      const root = container.firstElementChild as HTMLElement;
+      expect(root.className).toBe('');
     });
 
     it('should apply inline style for chatAreaMaxWidth', () => {

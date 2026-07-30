@@ -1,4 +1,3 @@
-export * from './settings-tab';
 export * from './llm-tab';
 export * from './prompts-tab';
 export * from './mcp-tab';

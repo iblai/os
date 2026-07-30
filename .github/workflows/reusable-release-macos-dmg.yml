@@ -135,6 +135,73 @@ jobs:
         with:
           args: ${{ inputs.tauri_args }}
 
+      # Keep the product name "ibl.ai" but hide the ".app" suffix in the DMG's
+      # Finder label. Finder does NOT auto-hide ".app" for a dotted name like
+      # "ibl.ai.app" (it does for a clean name like "MentorAI.app") unless the
+      # bundle carries the per-item "extension hidden" FinderInfo bit. Tauri
+      # builds+signs+notarizes+staples the DMG in one shot with no hook between
+      # ".app built" and "DMG built", and codesign REJECTS FinderInfo set on the
+      # bundle *before* signing. So we set the bit *after* Tauri is done, then
+      # re-master the DMG (its layout/background survive `hdiutil convert`) and
+      # re-sign + re-notarize + re-staple it — the edit invalidates the DMG's own
+      # staple, but the inner .app's notarization is unaffected because the bit
+      # lives in the root FinderInfo, which the code signature does not seal.
+      - name: Hide .app extension in DMG Finder label
+        env:
+          # APPLE_SIGNING_IDENTITY / APPLE_TEAM_ID come from the job env.
+          # The temp signing keychain tauri-action set up is still on the search
+          # list here (its cleanup runs as a post-job step), so codesign resolves
+          # the Developer ID identity without extra setup.
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          DMG_PATH: ${{ inputs.dmg_path }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          dmgs=($DMG_PATH) # intentional glob expansion of the path pattern
+          if [ ${#dmgs[@]} -eq 0 ]; then
+            echo "No DMG found at $DMG_PATH"; exit 1
+          fi
+          for dmg in "${dmgs[@]}"; do
+            echo "::group::Re-master $dmg"
+            work="$(mktemp -d)"
+            rw="$work/rw.dmg"
+            mnt="$work/mnt"
+            final="$work/final.dmg"
+            mkdir -p "$mnt"
+
+            # Read-write copy so we can edit the .app inside the image.
+            hdiutil convert "$dmg" -format UDRW -o "$rw"
+            hdiutil attach "$rw" -mountpoint "$mnt" -nobrowse -noverify -noautoopen
+            app="$(/usr/bin/find "$mnt" -maxdepth 1 -name '*.app' -print -quit)"
+            if [ -z "$app" ]; then
+              echo "No .app found inside $dmg"; hdiutil detach "$mnt" || true; exit 1
+            fi
+
+            # Set the "extension hidden" Finder bit (kIsExtensionHidden). SetFile
+            # ships with Xcode, which is present on the macOS runner.
+            /usr/bin/SetFile -a E "$app"
+            hdiutil detach "$mnt"
+
+            # Re-compress to a fresh read-only DMG (preserves the volume's
+            # .DS_Store: window size, background, icon positions).
+            hdiutil convert "$rw" -format UDZO -o "$final"
+
+            # Re-sign, then re-notarize + staple the re-mastered DMG.
+            codesign --force --sign "$APPLE_SIGNING_IDENTITY" "$final"
+            xcrun notarytool submit "$final" \
+              --apple-id "$APPLE_ID" \
+              --password "$APPLE_PASSWORD" \
+              --team-id "$APPLE_TEAM_ID" \
+              --wait
+            xcrun stapler staple "$final"
+
+            mv -f "$final" "$dmg"
+            rm -rf "$work"
+            echo "Re-mastered $dmg — .app suffix now hidden in Finder"
+            echo "::endgroup::"
+          done
+
       # Always keep the DMG as a CI artifact (SHA-named for dev builds).
       - name: Upload DMG artifact
         uses: actions/upload-artifact@v4
