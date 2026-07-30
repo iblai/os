@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.108.5](https://github.com/iblai/os/compare/v0.108.4...v0.108.5) (2026-07-30)
+
+### Bug Fixes
+
+* **ci:** hide .app suffix in macOS DMG Finder label ([0e21ade](https://github.com/iblai/os/commit/0e21adeb716b9b6c8e07fdcc6de3a378b8881590))
+* **deps:** keep brace-expansion patched at 5.0.8, bump coverage minimatch to v10 ([ba189b3](https://github.com/iblai/os/commit/ba189b34f479e68b8c2aaef3716e0a9f9ce14b2b))
+* **deps:** scope brace-expansion override per minimatch major ([604c845](https://github.com/iblai/os/commit/604c8452065a3ef53cc942f9fde4d805fd721176))
+* **iframe:** read DOCUMENTFILTER and EDX payloads from event.data ([215f180](https://github.com/iblai/os/commit/215f18045c60d3bf289ed6b9c1e94c8399cbf107))
+* **iframe:** read ENABLE_GRADING boolean from event.data ([b249316](https://github.com/iblai/os/commit/b249316609a7ac95062af87d63ed554ed56e9e44))
+
 ## [0.108.4](https://github.com/iblai/os/compare/v0.108.3...v0.108.4) (2026-07-29)
 
 ### Bug Fixes
