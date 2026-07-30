@@ -16,10 +16,7 @@ export class SettingsTab {
   readonly advancedJsEditor: Locator;
   readonly allowCopiesToggle: Locator;
   readonly copyMentorButton: Locator;
-  readonly showVoiceCallToggle: Locator;
-  readonly advancedSandboxToggle: Locator;
   readonly chatAccessCombobox: Locator;
-  readonly memoryToggle: Locator;
   readonly verboseReasoningToggle: Locator;
   readonly enhanceDocumentRetrievalToggle: Locator;
   readonly enhanceDocumentRetrievalTooltipTrigger: Locator;
@@ -31,25 +28,21 @@ export class SettingsTab {
    * locator survives label rewrites in the host.
    */
   readonly useFunctionCallingForRagToggle: Locator;
-  /**
-   * Voice-call toggle: persists `enable_video` on the mentor's
-   * CallConfiguration. Flipping this on (and saving) is what makes the
-   * Screen Share top-level tab appear in the modal sidebar.
-   */
-  readonly enableVideoToggle: Locator;
   /** "Enable file attachments" toggle (Capabilities sub-tab, feat/1902) */
   readonly allowFileAttachmentsToggle: Locator;
+
   /**
-   * "Filter PII from messages" — agent-level toggle for the privacy router
-   * (`mentor.enable_privacy_router`). Lives in the Capabilities sub-tab.
-   * Previously this lived as the master switch inside the Privacy tab body;
-   * that switch was removed from the SDK and the master state is now
-   * controlled exclusively from here. Privacy-tab field rendering is gated
-   * on the new value of `enable_privacy_router` so flipping this toggle on
-   * is the precondition for any Privacy-tab assertion that reads the
-   * action select / entity chips / output filter.
+   * Bound to `EditMentorPage.navigateToTab` (see its constructor). The modal
+   * only mounts the active category's segments, so when a preceding call
+   * switched the category (e.g. `LtiTab` activates Integrations), the
+   * Settings sub-tab triggers are not in the DOM. `selectSubTab` uses this
+   * to restore the Settings segment first; it no-ops when already active.
    */
-  readonly enablePrivacyRouterToggle: Locator;
+  private navigateToTab?: (tabName: string) => Promise<void>;
+
+  bindTabNav(navigateToTab: (tabName: string) => Promise<void>): void {
+    this.navigateToTab = navigateToTab;
+  }
 
   constructor(page: Page, dialog: Locator) {
     this.page = page;
@@ -94,20 +87,8 @@ export class SettingsTab {
       name: 'Copy',
       exact: true,
     });
-    // Capabilities sub-tab. Renamed visible label "Enable voice calls".
-    this.showVoiceCallToggle = dialog.getByRole('switch', {
-      name: /enable voice calls/i,
-    });
-    // Capabilities sub-tab. Renamed visible label "Enable dedicated sandbox".
-    this.advancedSandboxToggle = dialog.getByRole('switch', {
-      name: /enable dedicated sandbox/i,
-    });
     this.chatAccessCombobox = dialog.getByRole('combobox', {
       name: 'Select who can chat',
-    });
-    // Capabilities sub-tab. Renamed visible label "Remember past conversations".
-    this.memoryToggle = dialog.getByRole('switch', {
-      name: /remember past conversations/i,
     });
     // Capabilities sub-tab. The "Enable verbose reasoning" toggle (show_reasoning);
     // aria-label is "Enable verbose reasoning enabled" / "Enable verbose reasoning disabled"
@@ -116,10 +97,12 @@ export class SettingsTab {
       name: /^Enable verbose reasoning /i,
     });
     // Capabilities sub-tab. Visible label "Enhanced document retrieval"
-    // (source: messages/en.json `enhancedDocRetrievalLabel`). Anchored so it
-    // does not also match the sibling "Smart document retrieval" switch.
+    // (source: messages/en.json `enhancedDocRetrievalLabel`); the SDK switch
+    // appends the state, so the aria-label reads "Enhanced document retrieval
+    // enabled" / "... disabled". Anchored at the start so it does not also
+    // match the sibling "Smart document retrieval" switch.
     this.enhanceDocumentRetrievalToggle = dialog.getByRole('switch', {
-      name: /^Enhanced document retrieval$/i,
+      name: /^Enhanced document retrieval\b/i,
     });
     this.enhanceDocumentRetrievalTooltipTrigger = dialog.getByRole('button', {
       name: 'More info about enhanced document retrieval',
@@ -134,16 +117,9 @@ export class SettingsTab {
     this.useFunctionCallingForRagToggle = dialog.getByTestId(
       'settings-use-function-calling-for-rag-switch',
     );
-    this.enableVideoToggle = dialog.getByTestId('settings-enable-video-switch');
     // Capabilities sub-tab. Labelled "Enable file attachments" (feat/1902).
     this.allowFileAttachmentsToggle = dialog.getByRole('switch', {
       name: /enable file attachments/i,
-    });
-    // Capabilities sub-tab. Labelled "Filter PII from messages" — the only
-    // surface that flips `enable_privacy_router` after the SDK removed the
-    // in-tab master toggle from the Privacy tab.
-    this.enablePrivacyRouterToggle = dialog.getByRole('switch', {
-      name: /filter PII from messages/i,
     });
   }
 
@@ -161,43 +137,6 @@ export class SettingsTab {
   /** Whether the "Enable smart document retrieval" toggle is currently on. */
   async isUseFunctionCallingForRagEnabled(): Promise<boolean> {
     return this.readSwitchState(this.useFunctionCallingForRagToggle);
-  }
-
-  /** Whether the "Enable screen sharing" toggle is currently on. */
-  async isEnableVideoEnabled(): Promise<boolean> {
-    return this.readSwitchState(this.enableVideoToggle);
-  }
-
-  /**
-   * Idempotently set the "Enable screen sharing" toggle to the
-   * target state and click Save. This is the host-side trigger that
-   * flips `call_configuration.enable_video`, which in turn gates the
-   * Screen Share top-level tab's visibility via `MENTOR_SEGMENTS`.
-   *
-   * Blocks until the success toast appears so the next
-   * `useMentorSegments` re-render sees the updated CallConfiguration.
-   */
-  async setEnableVideoAndSave(target: boolean): Promise<void> {
-    // The toggle lives in the Capabilities sub-tab. Panels are forceMounted
-    // but CSS-hidden when inactive, so the switch is in the DOM yet not
-    // clickable until we switch to that sub-tab.
-    await this.selectSubTab('Capabilities');
-    await expect(this.enableVideoToggle).toBeVisible({ timeout: 10_000 });
-    const isOn = await this.isEnableVideoEnabled();
-    if (isOn === target) return;
-
-    await this.enableVideoToggle.click();
-    await expect(this.enableVideoToggle).toHaveAttribute(
-      'aria-checked',
-      String(target),
-      { timeout: 10_000 },
-    );
-
-    await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
-    await this.saveButton.click();
-    await expect(
-      this.page.getByText(/agent updated successfully/i).first(),
-    ).toBeVisible({ timeout: 30_000 });
   }
 
   /** Idempotently toggle "Enable smart document retrieval" + Save. */
@@ -224,45 +163,6 @@ export class SettingsTab {
     ).toBeVisible({ timeout: 30_000 });
   }
 
-  /** Read the current state of the "Filter PII from messages" switch. */
-  async isEnablePrivacyRouterEnabled(): Promise<boolean> {
-    return this.readSwitchState(this.enablePrivacyRouterToggle);
-  }
-
-  /**
-   * Idempotently flip "Filter PII from messages" + Save. This is the only
-   * surface that mutates `enable_privacy_router` after the SDK removed the
-   * in-Privacy-tab master switch. The Privacy tab's field rendering is
-   * gated on the new value, so the journey-45 PrivacyTab page-object
-   * delegates here for every router flip.
-   *
-   * Resolves after the "Agent updated successfully" toast appears so the
-   * caller can immediately switch back to the Privacy tab and read the
-   * updated render shape — RTK Query has already invalidated the relevant
-   * tags by then.
-   */
-  async setEnablePrivacyRouterAndSave(target: boolean): Promise<void> {
-    await this.selectSubTab('Capabilities');
-    await expect(this.enablePrivacyRouterToggle).toBeVisible({
-      timeout: 10_000,
-    });
-    const isOn = await this.isEnablePrivacyRouterEnabled();
-    if (isOn === target) return;
-
-    await this.enablePrivacyRouterToggle.click();
-    await expect(this.enablePrivacyRouterToggle).toHaveAttribute(
-      'aria-checked',
-      String(target),
-      { timeout: 10_000 },
-    );
-
-    await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
-    await this.saveButton.click();
-    await expect(
-      this.page.getByText(/agent updated successfully/i).first(),
-    ).toBeVisible({ timeout: 30_000 });
-  }
-
   /**
    * Settings is now split into Basic / Discovery / Capabilities sub-tabs.
    * Each interaction below auto-switches to the right sub-tab so callers
@@ -275,6 +175,12 @@ export class SettingsTab {
   async selectSubTab(
     name: 'Basic' | 'Discovery' | 'Capabilities',
   ): Promise<void> {
+    // Restore the Settings segment first — a preceding page-object call may
+    // have switched the modal to another category (LtiTab activates
+    // Integrations), unmounting these sub-tab triggers entirely.
+    if (this.navigateToTab) {
+      await this.navigateToTab('Settings');
+    }
     const tab = this.dialog.getByRole('tab', { name, exact: true });
     await expect(tab).toBeVisible({ timeout: 10_000 });
     const selected = await tab.getAttribute('aria-selected').catch(() => null);
@@ -389,78 +295,6 @@ export class SettingsTab {
     await this.page.waitForTimeout(500);
   }
 
-  async enableVoiceCall(): Promise<void> {
-    await this.selectSubTab('Capabilities');
-    await expect(this.showVoiceCallToggle).toBeVisible({ timeout: 15_000 });
-    const isChecked =
-      (await this.showVoiceCallToggle.getAttribute('aria-checked')) === 'true';
-    if (!isChecked) {
-      await this.showVoiceCallToggle.click();
-      await expect(this.saveButton).toBeEnabled({ timeout: 30_000 });
-      await this.saveButton.click();
-      await this.page.waitForTimeout(5_000);
-    }
-  }
-
-  async disableVoiceCall(): Promise<void> {
-    await this.selectSubTab('Capabilities');
-    await expect(this.showVoiceCallToggle).toBeVisible({ timeout: 10_000 });
-    const isChecked =
-      (await this.showVoiceCallToggle.getAttribute('aria-checked')) === 'true';
-    if (isChecked) {
-      await this.showVoiceCallToggle.click();
-      await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
-      await this.saveButton.click();
-      await this.page.waitForTimeout(2_000);
-    }
-  }
-
-  /**
-   * Returns true if the Memory toggle is currently checked.
-   * The Memory toggle moved from the Memory tab to the Settings tab in fix/1584.
-   * It is a form-driven switch — changes only persist after Save is clicked.
-   */
-  async isMemoryEnabled(): Promise<boolean> {
-    await this.selectSubTab('Capabilities');
-    await expect(this.memoryToggle).toBeVisible({ timeout: 10_000 });
-    return (
-      (await this.memoryToggle
-        .getAttribute('aria-checked')
-        .catch(() => 'false')) === 'true'
-    );
-  }
-
-  /**
-   * Sets the Memory toggle to the desired state and saves the form.
-   * A no-op if the toggle is already in the desired state.
-   *
-   * Design note: Save is called internally (same as enableVoiceCall /
-   * setAllowCopies) so callers don't need to know about the form lifecycle.
-   */
-  async setMemoryEnabled(target: boolean): Promise<void> {
-    await this.selectSubTab('Capabilities');
-    await expect(this.memoryToggle).toBeVisible({ timeout: 10_000 });
-    const isChecked =
-      (await this.memoryToggle.getAttribute('aria-checked')) === 'true';
-    if (isChecked === target) {
-      return;
-    }
-    await this.memoryToggle.click();
-    await expect(this.memoryToggle).toHaveAttribute(
-      'aria-checked',
-      String(target),
-      { timeout: 10_000 },
-    );
-    await expect(this.saveButton).toBeEnabled({ timeout: 10_000 });
-    await this.saveButton.click();
-    await expect(
-      this.page.getByText(/Agent updated successfully/i).first(),
-    ).toBeVisible({ timeout: 30_000 });
-    // Small buffer for RTK Query cache invalidation before the caller
-    // closes or re-opens the dialog.
-    await this.page.waitForTimeout(500);
-  }
-
   /**
    * Returns true when the Enable verbose reasoning toggle is ON (aria-checked="true").
    */
@@ -553,44 +387,6 @@ export class SettingsTab {
       .waitForLoadState('networkidle', { timeout: 15_000 })
       .catch(() => {});
     await this.page.waitForTimeout(1_000);
-  }
-
-  /**
-   * Returns true when the Sandbox toggle is ON (aria-checked="true").
-   */
-  async isAdvancedSandboxEnabled(): Promise<boolean> {
-    await this.selectSubTab('Capabilities');
-    const state = await this.advancedSandboxToggle
-      .getAttribute('aria-checked')
-      .catch(() => 'false');
-    return state === 'true';
-  }
-
-  /**
-   * Sets the Sandbox toggle to the desired state and clicks Save.
-   * Does nothing if the toggle is already in the desired state.
-   *
-   * Waits for the success toast to confirm the save completed before returning,
-   * so callers can immediately assert on the downstream UI changes (Sandbox tab
-   * appearing, Agent Configuration showing, etc.) without race conditions.
-   */
-  async setAdvancedSandbox(desired: boolean): Promise<void> {
-    await this.selectSubTab('Capabilities');
-    await expect(this.advancedSandboxToggle).toBeVisible({ timeout: 10_000 });
-    const current = await this.isAdvancedSandboxEnabled();
-    if (current !== desired) {
-      await this.advancedSandboxToggle.click();
-      await expect(this.advancedSandboxToggle).toHaveAttribute(
-        'aria-checked',
-        desired ? 'true' : 'false',
-        { timeout: 5_000 },
-      );
-    }
-    await expect(this.saveButton).toBeEnabled({ timeout: 5_000 });
-    await this.saveButton.click();
-    await expect(
-      this.page.getByText(/agent updated successfully/i).first(),
-    ).toBeVisible({ timeout: 30_000 });
   }
 
   async isPromptCachingEnabled(): Promise<boolean> {

@@ -105,7 +105,7 @@ const AutoResizeTextarea: React.FC<AutoResizeTextareaProps> = ({
     if (!isTextareaDisabled && !embedMode) {
       textareaRef.current?.focus();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   const handleInputChange = (

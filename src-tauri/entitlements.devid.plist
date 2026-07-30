@@ -7,7 +7,7 @@
 
 	  The App Sandbox is intentionally OMITTED here. macOS blocks a sandboxed
 	  app from controlling OTHER apps via the Accessibility API even when the
-	  user grants permission, so System Control (GhostOS) cannot work under the
+	  user grants permission, so Cowork (GhostOS) cannot work under the
 	  sandbox. This build is therefore distributed outside the Mac App Store.
 
 	  Note: macOS Accessibility itself needs no entitlement — it is a runtime

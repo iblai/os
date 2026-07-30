@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/macOS-schema.json",
   "identifier": "macos-permissions",
-  "description": "macOS Accessibility permission check/request for System Control (GhostOS). The `default` permission set is empty, so the accessibility commands are granted explicitly.",
+  "description": "macOS Accessibility permission check/request for Cowork (GhostOS). The `default` permission set is empty, so the accessibility commands are granted explicitly.",
   "platforms": ["macOS"],
   "windows": ["main"],
   "local": true,

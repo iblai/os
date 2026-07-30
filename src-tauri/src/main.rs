@@ -12,6 +12,10 @@ mod oauth;
 mod offline_server;
 mod ollama_installer;
 mod web_cache;
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod opencode_acp;
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod opencode_installer;
 
 use foundry_installer::{
     download_and_install_foundry, download_foundry_model, get_recommended_models,
@@ -73,6 +77,31 @@ fn in_app_popup_title(url: &str) -> Option<&'static str> {
         .map(|(_, title)| *title)
 }
 
+/// Emit an app-wide event to the frontend WITHOUT racing the main thread's
+/// webview-manager mutex.
+///
+/// Tauri's app-wide `Emitter::emit` locks the webview-manager mutex to fan a
+/// payload out to every webview. Every async `#[command]` here runs on a tokio
+/// worker, so calling `app.emit(...)` directly from one can deadlock against the
+/// main thread locking the SAME mutex to service a webview IPC message
+/// (`AppManager::get_webview`) — the intermittent "Not Responding" freeze
+/// (see `check_ollama_status`, which the UI polls). Marshalling every emit onto
+/// the main thread serializes it with IPC handling, so the two can never contend
+/// the lock across threads. `run_on_main_thread` only posts to the event loop (it
+/// does not block and preserves FIFO order), so it is safe to call from async
+/// code and keeps streamed events (e.g. `ollama:token`) in order.
+fn emit_on_main<S>(app: &AppHandle, event: &'static str, payload: S)
+where
+    S: serde::Serialize + Clone + Send + 'static,
+{
+    let handle = app.clone();
+    if let Err(err) = app.run_on_main_thread(move || {
+        let _ = handle.emit(event, payload);
+    }) {
+        eprintln!("[emit_on_main] could not schedule '{event}' on main thread: {err}");
+    }
+}
+
 /// Open OAuth URL in an in-app popup window
 /// The window monitors for callback URLs and closes automatically when auth completes
 fn open_oauth_in_popup(url: &str, app_handle: &AppHandle, title: &str) -> Result<(), String> {
@@ -124,17 +153,27 @@ fn open_oauth_in_popup(url: &str, app_handle: &AppHandle, title: &str) -> Result
         if is_callback || is_custom_scheme || is_app_return {
             println!("[OAuth Popup] Callback/return detected: {}", url_str);
 
-            // Navigate the main window to the callback URL
+            let target_url = if is_custom_scheme {
+                // Convert custom scheme to app URL
+                let path = url_str
+                    .replace("iblai-mentor://", "/")
+                    .replace("ai.ibl.mentorai://", "/");
+                format!("{}{}", get_app_url(), path)
+            } else {
+                url_str.to_string()
+            };
+
+            // Close the popup and foreground the main window BEFORE navigating.
+            // A backgrounded WebView (behind the popup) is heavily throttled on
+            // macOS, so navigating it first showed up as a long delay before the
+            // main window actually loaded the return URL.
+            if let Some(oauth_win) = app_handle_clone.get_webview_window("oauth-popup") {
+                println!("[OAuth Popup] Closing popup window");
+                let _ = oauth_win.close();
+            }
+
             if let Some(main_win) = app_handle_clone.get_webview_window("main") {
-                let target_url = if is_custom_scheme {
-                    // Convert custom scheme to app URL
-                    let path = url_str
-                        .replace("iblai-mentor://", "/")
-                        .replace("ai.ibl.mentorai://", "/");
-                    format!("{}{}", get_app_url(), path)
-                } else {
-                    url_str.to_string()
-                };
+                let _ = main_win.set_focus();
 
                 println!("[OAuth Popup] Navigating main window to: {}", target_url);
                 // For app-domain returns (e.g. Stripe checkout completing), force a
@@ -162,13 +201,6 @@ fn open_oauth_in_popup(url: &str, app_handle: &AppHandle, title: &str) -> Result
                 if !navigated {
                     let _ = main_win.eval(&format!("window.location.href = '{}';", target_url));
                 }
-                let _ = main_win.set_focus();
-            }
-
-            // Close the OAuth popup
-            if let Some(oauth_win) = app_handle_clone.get_webview_window("oauth-popup") {
-                println!("[OAuth Popup] Closing popup window");
-                let _ = oauth_win.close();
             }
 
             return false; // Don't navigate the popup
@@ -397,7 +429,7 @@ async fn check_ollama_status(app: AppHandle) -> Result<OllamaStatus, String> {
                 model_installed: true, // Pretend model is installed
                 installed_models: Vec::new(), // Foundry path: Ollama model table is hidden
             };
-            let _ = app.emit(EVENT_OLLAMA_STATUS, &status);
+            emit_on_main(&app, EVENT_OLLAMA_STATUS, status.clone());
             return Ok(status);
         }
     }
@@ -444,7 +476,7 @@ async fn check_ollama_status(app: AppHandle) -> Result<OllamaStatus, String> {
     };
 
     // Emit status update event
-    let _ = app.emit(EVENT_OLLAMA_STATUS, &status);
+    emit_on_main(&app, EVENT_OLLAMA_STATUS, status.clone());
 
     Ok(status)
 }
@@ -589,7 +621,7 @@ async fn check_disk_space_for_model(app: AppHandle) -> Result<bool, String> {
                 available_gb, REQUIRED_FREE_SPACE_GB
             ),
         };
-        let _ = app.emit(EVENT_DISK_SPACE_ERROR, &error);
+        emit_on_main(&app, EVENT_DISK_SPACE_ERROR, error);
         return Ok(false);
     }
 
@@ -631,7 +663,8 @@ async fn download_ollama_model(app: AppHandle, model: String) -> Result<(), Stri
     let app_log = Arc::new(app.clone());
 
     // Emit initial log
-    let _ = app.emit(
+    emit_on_main(
+        &app,
         EVENT_INSTALLATION_LOG,
         InstallationLog {
             timestamp: get_timestamp(),
@@ -642,7 +675,8 @@ async fn download_ollama_model(app: AppHandle, model: String) -> Result<(), Stri
 
     // Check if Ollama is running
     if !is_ollama_running().await {
-        let _ = app.emit(
+        emit_on_main(
+            &app,
             EVENT_INSTALLATION_LOG,
             InstallationLog {
                 timestamp: get_timestamp(),
@@ -661,7 +695,8 @@ async fn download_ollama_model(app: AppHandle, model: String) -> Result<(), Stri
             return Err("Could not start Ollama server. Please start Ollama manually.".to_string());
         }
 
-        let _ = app.emit(
+        emit_on_main(
+            &app,
             EVENT_INSTALLATION_LOG,
             InstallationLog {
                 timestamp: get_timestamp(),
@@ -682,13 +717,14 @@ async fn download_ollama_model(app: AppHandle, model: String) -> Result<(), Stri
                 available_gb, REQUIRED_FREE_SPACE_GB
             ),
         };
-        let _ = app.emit(EVENT_DISK_SPACE_ERROR, &error);
+        emit_on_main(&app, EVENT_DISK_SPACE_ERROR, error.clone());
         return Err(error.message);
     }
 
     // Check if already installed
     if is_model_installed(&model).await {
-        let _ = app.emit(
+        emit_on_main(
+            &app,
             EVENT_DOWNLOAD_PROGRESS,
             DownloadProgress {
                 status: "completed".to_string(),
@@ -700,7 +736,8 @@ async fn download_ollama_model(app: AppHandle, model: String) -> Result<(), Stri
             },
         );
 
-        let _ = app.emit(
+        emit_on_main(
+            &app,
             EVENT_INSTALLATION_LOG,
             InstallationLog {
                 timestamp: get_timestamp(),
@@ -716,10 +753,10 @@ async fn download_ollama_model(app: AppHandle, model: String) -> Result<(), Stri
     pull_model(
         &model,
         move |progress| {
-            let _ = app_progress.emit(EVENT_DOWNLOAD_PROGRESS, &progress);
+            emit_on_main(&app_progress, EVENT_DOWNLOAD_PROGRESS, progress);
         },
         move |log| {
-            let _ = app_log.emit(EVENT_INSTALLATION_LOG, &log);
+            emit_on_main(&app_log, EVENT_INSTALLATION_LOG, log);
         },
     )
     .await
@@ -758,7 +795,8 @@ async fn check_network_status() -> Result<bool, String> {
 /// Cancel an ongoing model download
 #[command]
 async fn cancel_model_download(app: AppHandle) -> Result<(), String> {
-    let _ = app.emit(
+    emit_on_main(
+        &app,
         EVENT_INSTALLATION_LOG,
         InstallationLog {
             timestamp: get_timestamp(),
@@ -769,7 +807,8 @@ async fn cancel_model_download(app: AppHandle) -> Result<(), String> {
 
     cancel_download()?;
 
-    let _ = app.emit(
+    emit_on_main(
+        &app,
         EVENT_DOWNLOAD_PROGRESS,
         DownloadProgress {
             status: "cancelled".to_string(),
@@ -976,6 +1015,15 @@ fn allow_in_app_purchase() -> bool {
     }
 }
 
+/// The tenant key this build is locked to, injected at build time via the
+/// `IBL_TENANT` environment variable. Returns an empty string when unset, which
+/// the app treats as "no lock" (normal multi-tenant behaviour). Lets two builds
+/// target different tenants while sharing one application URL.
+#[command]
+fn get_locked_tenant() -> String {
+    option_env!("IBL_TENANT").unwrap_or("").trim().to_string()
+}
+
 /// Proxy a chat request to Ollama
 /// This is needed because the app runs on HTTPS but local LLMs run on HTTP (localhost)
 /// Browsers block mixed content, so we proxy through Tauri
@@ -1136,7 +1184,8 @@ async fn ollama_chat_stream(
                         {
                             full_content.push_str(content);
                             // Emit token event
-                            let _ = app.emit(
+                            emit_on_main(
+                                &app,
                                 "ollama:token",
                                 serde_json::json!({
                                     "generation_id": generation_id,
@@ -1164,7 +1213,8 @@ async fn ollama_chat_stream(
                                 continue;
                             }
                             // No tool calls -> final answer.
-                            let _ = app.emit(
+                            emit_on_main(
+                                &app,
                                 "ollama:done",
                                 serde_json::json!({
                                     "generation_id": generation_id,
@@ -1177,7 +1227,8 @@ async fn ollama_chat_stream(
                 }
             }
             Err(e) => {
-                let _ = app.emit(
+                emit_on_main(
+                    &app,
                     "ollama:error",
                     serde_json::json!({
                         "generation_id": generation_id,
@@ -1190,7 +1241,8 @@ async fn ollama_chat_stream(
     }
 
     // Stream closed without a tool-free `done` — emit done with what we have.
-    let _ = app.emit(
+    emit_on_main(
+        &app,
         "ollama:done",
         serde_json::json!({
             "generation_id": generation_id,
@@ -1910,7 +1962,8 @@ async fn foundry_chat_stream(
                                     full_content.push_str(content);
                                     println!("[FoundryChat] Emitting token: '{}'", content);
                                     // Emit token event
-                                    let _ = app.emit(
+                                    emit_on_main(
+                                        &app,
                                         "ollama:token",
                                         serde_json::json!({
                                             "generation_id": generation_id,
@@ -1937,7 +1990,8 @@ async fn foundry_chat_stream(
             Err(e) => {
                 let err_msg = format!("Stream error: {}", e);
                 println!("[FoundryChat] ERROR: {}", err_msg);
-                let _ = app.emit(
+                emit_on_main(
+                    &app,
                     "ollama:error",
                     serde_json::json!({
                         "generation_id": generation_id,
@@ -1956,7 +2010,8 @@ async fn foundry_chat_stream(
     );
 
     // Emit done event
-    let _ = app.emit(
+    emit_on_main(
+        &app,
         "ollama:done",
         serde_json::json!({
             "generation_id": generation_id,
@@ -2137,6 +2192,7 @@ fn main() {
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             // Initialize web cache with app data directory
             let app_data_dir = app
@@ -2743,12 +2799,21 @@ fn main() {
             get_offline_context,
             get_os_type,
             allow_in_app_purchase,
+            get_locked_tenant,
             open_external_url,
             ollama_chat,
             ollama_chat_stream,
             oauth::oauth_start,
             oauth::oauth_callback,
             oauth::oauth_get_result,
+            opencode_acp::opencode_chat_stream,
+            opencode_acp::opencode_stop,
+            opencode_acp::opencode_close,
+            opencode_acp::get_opencode_workspace,
+            opencode_acp::set_opencode_workspace,
+            opencode_installer::install_opencode,
+            opencode_installer::check_opencode_status,
+            opencode_acp::check_code_local_model,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri app");

@@ -6,16 +6,6 @@ onlyBuiltDependencies:
   - husky
   - sharp
   - unrs-resolver
-
-# Security version floors. They previously lived in the `pnpm` field of
-# package.json, which pnpm v10 no longer reads — this file is the supported home
-# for them (and for patchedDependencies, below).
-#
-# NOTE: web-containers is now consumed exclusively via @iblai/iblai-js
-# (>=1.20.11), which bundles the i18n-aware build (WebContainersI18nProvider +
-# the re-exported components share a single context). The previous
-# `@iblai/web-containers: file:.yalc/...` override is therefore obsolete and was
-# removed — it broke CI installs since .yalc is gitignored.
 overrides:
   vite: '>=7.3.2'
   basic-ftp: '>=5.2.1'
@@ -27,21 +17,33 @@ overrides:
   hono: '>=4.12.18'
   axios: '>=1.16.0'
   prismjs: '>=1.30.0'
-  dompurify: '>=3.4.11'
-  '@hono/node-server': '>=1.19.13'
+  dompurify: '>=3.4.12'
+  '@hono/node-server': '>=2.0.10'
   bytes: '>=1.11.1'
   devalue: '>=5.8.1'
-  fast-uri: '>=3.1.2'
+  fast-uri: '>=4.1.1'
   ip-address: '>=10.1.1'
-  brace-expansion: '>=5.0.6'
-  'minimatch@^9>brace-expansion': '2.0.3'
-  postcss: '>=8.5.10'
+  brace-expansion: '>=5.0.8'
+  # GHSA-mh99-v99m-4gvg is only fixed in brace-expansion >=5.0.8, but 5.x exports
+  # an object ({ expand, EXPANSION_MAX* }) where minimatch@9 does
+  # `import expand from 'brace-expansion'` and CALLS it — so pinning 5.x under
+  # minimatch@9 breaks vitest's coverage chain at runtime. minimatch@10 consumes
+  # the new named export, so lift glob's minimatch instead and let the global
+  # >=5.0.8 floor apply. (glob@10 -> minimatch@9 was the last vulnerable path:
+  # @vitest/coverage-istanbul > test-exclude > glob > minimatch.)
+  glob@10>minimatch: '>=10.2.5'
+  postcss: '>=8.5.18'
   ws: '>=8.20.1'
   qs: '>=6.15.2'
-  uuid: '11.1.1'
-
-# pnpm v10 no longer reads `pnpm.patchedDependencies` from package.json — it must
-# live here or the google-drive-picker scope patch silently stops applying
-# (see patches/google-drive-picker@1.1.29.patch and its regression test).
+  uuid: 11.1.1
+  sharp: '>=0.35.0'
+  brace-expansion@<=5.0.7: '>=5.0.8'
 patchedDependencies:
   google-drive-picker@1.1.29: patches/google-drive-picker@1.1.29.patch
+
+# Local Verdaccio publishes of @iblai/* carry throwaway -acp suffixes newer than the
+# min-release-age floor (.npmrc: min-release-age=7). Exclude them so
+# `pnpm i --registry http://localhost:4873/` can install the freshly published Coding
+# Mode SDK. Local scaffolding — remove before PR.
+minimumReleaseAgeExclude:
+  - '@iblai/*'

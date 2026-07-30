@@ -20,6 +20,7 @@ const testRetries = process.env.TEST_RETRIES
 
 const config = defineConfig({
   testDir: './journeys',
+  globalTeardown: ['./utils/mentor-sweeper', './utils/project-sweeper'],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: testRetries,

@@ -2,10 +2,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   cn,
   hasNonExpiredAuthToken,
+  isJwtExpired,
   redirectToAuthSpa,
   getPlatformKey,
   getAuthSpaJoinUrl,
   redirectToAuthSpaJoinTenant,
+  redirectToLogin,
   redirectToMentor,
   redirectToNoMentorsPage,
   redirectToCreateMentor,
@@ -13,7 +15,6 @@ import {
   storageService,
   LocalStorageService,
   getHostFromUrl,
-  preprocessLaTeX,
   textTruncate,
   mentorIsIframe,
   isJSON,
@@ -30,6 +31,7 @@ import {
   convertFromBytes,
   formatRelativeDate,
   getLLMProviderDetails,
+  getProviderName,
   sendMessageToParentWebsite,
   isLoggedIn,
   htmlToMarkdown,
@@ -48,6 +50,8 @@ import {
   isStripeActivated,
   getCurrentArtifactTitle,
   getFirstMessageWithContent,
+  getFirstHumanMessageWithContent,
+  getLatestMessageTimestamp,
   isSafariBrowser,
   onAccountDeleted,
 } from '@/lib/utils';
@@ -124,6 +128,16 @@ const localStorageMock = (() => {
   };
 })();
 
+// Builds a minimal (unsigned) JWT with the given `exp` claim (seconds since
+// epoch). Omit `exp` for a token with no expiry claim.
+function makeJwt(exp?: number): string {
+  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const payload = btoa(JSON.stringify(exp === undefined ? {} : { exp }));
+  return `${header}.${payload}.signature`;
+}
+
+const validEdxJwt = () => makeJwt(Math.floor(Date.now() / 1000) + 3600);
+
 describe('cn function', () => {
   it('should combine class names correctly', () => {
     // Basic test
@@ -163,10 +177,34 @@ describe('hasNonExpiredAuthToken function', () => {
 
     // Clear localStorage before each test
     localStorageMock.clear();
+    // A valid session also requires a non-expired edx JWT; seed one so the axd
+    // token assertions below exercise the axd logic (edx tests override this).
+    localStorageMock.setItem(LOCAL_STORAGE_KEYS.EDX_TOKEN_KEY, validEdxJwt());
   });
 
   it('should return true when no token exists', () => {
+    localStorageMock.removeItem(LOCAL_STORAGE_KEYS.AUTH_TOKEN);
     expect(hasNonExpiredAuthToken()).toBe(false);
+  });
+
+  it('should return false when edx_jwt_token is missing', () => {
+    localStorageMock.removeItem(LOCAL_STORAGE_KEYS.EDX_TOKEN_KEY);
+    localStorageMock.setItem(LOCAL_STORAGE_KEYS.AUTH_TOKEN, 'valid-token');
+    expect(hasNonExpiredAuthToken()).toBe(false);
+  });
+
+  it('should return false when edx_jwt_token is expired', () => {
+    localStorageMock.setItem(
+      LOCAL_STORAGE_KEYS.EDX_TOKEN_KEY,
+      makeJwt(Math.floor(Date.now() / 1000) - 3600),
+    );
+    localStorageMock.setItem(LOCAL_STORAGE_KEYS.AUTH_TOKEN, 'valid-token');
+    expect(hasNonExpiredAuthToken()).toBe(false);
+  });
+
+  it('should return true when both the axd and edx tokens are valid', () => {
+    localStorageMock.setItem(LOCAL_STORAGE_KEYS.AUTH_TOKEN, 'valid-token');
+    expect(hasNonExpiredAuthToken()).toBe(true);
   });
 
   it('should return true when token exists but no expiry', () => {
@@ -225,6 +263,32 @@ describe('hasNonExpiredAuthToken function', () => {
   });
 });
 
+describe('isJwtExpired function', () => {
+  it('returns false for a token whose exp is in the future', () => {
+    expect(isJwtExpired(makeJwt(Math.floor(Date.now() / 1000) + 3600))).toBe(
+      false,
+    );
+  });
+
+  it('returns true for a token whose exp is in the past', () => {
+    expect(isJwtExpired(makeJwt(Math.floor(Date.now() / 1000) - 3600))).toBe(
+      true,
+    );
+  });
+
+  it('returns false for a token with no exp claim (non-expiring)', () => {
+    expect(isJwtExpired(makeJwt())).toBe(false);
+  });
+
+  it('returns true for a token with no payload segment', () => {
+    expect(isJwtExpired('not-a-jwt')).toBe(true);
+  });
+
+  it('returns true for a token whose payload cannot be decoded', () => {
+    expect(isJwtExpired('header.@not-base64@.sig')).toBe(true);
+  });
+});
+
 describe('redirectToAuthSpa function', () => {
   let sdkRedirectMock: ReturnType<typeof vi.fn>;
 
@@ -274,6 +338,59 @@ describe('redirectToAuthSpa function', () => {
         forceRedirect: true,
       }),
     );
+  });
+});
+
+describe('redirectToLogin function', () => {
+  let sdkRedirectMock: ReturnType<typeof vi.fn>;
+  let locationHrefSpy: string;
+
+  beforeEach(async () => {
+    const authModule = await import('@iblai/iblai-js/web-utils/auth');
+    sdkRedirectMock = vi.mocked(authModule.redirectToAuthSpa);
+    vi.clearAllMocks();
+    locationHrefSpy = '';
+    Object.defineProperty(window, 'location', {
+      value: {
+        pathname: '/platform/test-tenant/mentor',
+        set href(value: string) {
+          locationHrefSpy = value;
+        },
+        get href() {
+          return (
+            locationHrefSpy || 'https://example.com/platform/test-tenant/mentor'
+          );
+        },
+      },
+      writable: true,
+      configurable: true,
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('joins the tenant when a tenant key is provided', () => {
+    redirectToLogin('my-tenant');
+    expect(locationHrefSpy).toContain(
+      'https://auth.example.com/join?tenant=my-tenant',
+    );
+    expect(sdkRedirectMock).not.toHaveBeenCalled();
+  });
+
+  it('sends the user to the auth SPA root when there is no tenant key', async () => {
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    redirectToLogin();
+    expect(consoleSpy).toHaveBeenCalledWith(
+      '[auth-redirect] Login triggered without a tenant key',
+    );
+    await vi.waitFor(() =>
+      expect(sdkRedirectMock).toHaveBeenCalledWith(
+        expect.objectContaining({ redirectTo: '/', forceRedirect: true }),
+      ),
+    );
+    consoleSpy.mockRestore();
   });
 });
 
@@ -659,225 +776,6 @@ describe('getHostFromUrl function', () => {
   it('should handle IP addresses', () => {
     const result = getHostFromUrl('http://192.168.1.1:8080/path');
     expect(result).toBe('192.168.1.1');
-  });
-});
-
-describe('preprocessLaTeX function', () => {
-  it('should return empty string for non-string input', () => {
-    expect(preprocessLaTeX(null as any)).toBe('');
-    expect(preprocessLaTeX(undefined as any)).toBe('');
-    expect(preprocessLaTeX(123 as any)).toBe('');
-  });
-
-  it('should escape currency dollar signs', () => {
-    expect(preprocessLaTeX('Price is $5')).toBe('Price is \\$5');
-    expect(preprocessLaTeX('$100 total')).toBe('\\$100 total');
-  });
-
-  it('should not escape already escaped dollar signs', () => {
-    expect(preprocessLaTeX('Already \\$5 escaped')).toBe(
-      'Already \\$5 escaped',
-    );
-  });
-
-  it('should convert block LaTeX delimiters', () => {
-    expect(preprocessLaTeX('\\[x = 5\\]')).toBe('$$x = 5$$');
-    expect(preprocessLaTeX('\\[ y = 10 \\]')).toBe('$$ y = 10 $$');
-  });
-
-  it('should convert inline LaTeX delimiters', () => {
-    expect(preprocessLaTeX('\\(x = 5\\)')).toBe('$x = 5$');
-    expect(preprocessLaTeX('\\( y = 10 \\)')).toBe('$ y = 10 $');
-  });
-
-  it('should convert textbf to markdown bold', () => {
-    expect(preprocessLaTeX('\\textbf{bold text}')).toBe('**bold text**');
-  });
-
-  it('should convert textit to markdown italic', () => {
-    expect(preprocessLaTeX('\\textit{italic text}')).toBe('*italic text*');
-  });
-
-  it('should convert emph to markdown italic', () => {
-    expect(preprocessLaTeX('\\emph{emphasized}')).toBe('*emphasized*');
-  });
-
-  it('should convert texttt to code', () => {
-    expect(preprocessLaTeX('\\texttt{code}')).toBe('`code`');
-  });
-
-  it('should convert underline to HTML', () => {
-    expect(preprocessLaTeX('\\underline{underlined}')).toBe(
-      '<u>underlined</u>',
-    );
-  });
-
-  it('should convert itemize to unordered list', () => {
-    const input = '\\begin{itemize}\\item First\\item Second\\end{itemize}';
-    const result = preprocessLaTeX(input);
-    expect(result).toContain('- First');
-    expect(result).toContain('- Second');
-  });
-
-  it('should convert enumerate to ordered list', () => {
-    const input = '\\begin{enumerate}\\item First\\item Second\\end{enumerate}';
-    const result = preprocessLaTeX(input);
-    expect(result).toContain('1. First');
-    expect(result).toContain('2. Second');
-  });
-
-  it('should convert quote to blockquote', () => {
-    expect(preprocessLaTeX('\\begin{quote}quoted text\\end{quote}')).toContain(
-      '> quoted text',
-    );
-  });
-
-  it('should convert center to centered div', () => {
-    expect(preprocessLaTeX('\\begin{center}centered\\end{center}')).toContain(
-      '<div style="text-align: center;">centered</div>',
-    );
-  });
-
-  it('should convert section to markdown heading', () => {
-    expect(preprocessLaTeX('\\section{Title}')).toContain('## Title');
-  });
-
-  it('should convert starred section to markdown heading', () => {
-    expect(preprocessLaTeX('\\section*{Heading One}')).toContain(
-      '## Heading One',
-    );
-  });
-
-  it('should convert subsection to markdown heading', () => {
-    expect(preprocessLaTeX('\\subsection{Subtitle}')).toContain('### Subtitle');
-  });
-
-  it('should convert starred subsection to markdown heading', () => {
-    expect(preprocessLaTeX('\\subsection*{Core Evidence}')).toContain(
-      '### Core Evidence',
-    );
-  });
-
-  it('should convert subsubsection to markdown heading', () => {
-    expect(preprocessLaTeX('\\subsubsection{Sub-subtitle}')).toContain(
-      '#### Sub-subtitle',
-    );
-  });
-
-  it('should convert starred subsubsection to markdown heading', () => {
-    expect(preprocessLaTeX('\\subsubsection*{Deep Heading}')).toContain(
-      '#### Deep Heading',
-    );
-  });
-
-  it('should convert line breaks', () => {
-    expect(preprocessLaTeX('line1\\\\line2')).toBe('line1  \nline2');
-    expect(preprocessLaTeX('line1\n\\newlineline2')).toBe('line1  \nline2');
-  });
-
-  it('should convert verb to code', () => {
-    expect(preprocessLaTeX('\\verb|code|')).toBe('`code`');
-  });
-
-  it('should convert LaTeX quotes', () => {
-    expect(preprocessLaTeX('``quoted``')).toBe('"quoted"');
-    expect(preprocessLaTeX("''quoted''")).toBe('"quoted"');
-  });
-
-  it('should escape LaTeX special characters', () => {
-    expect(preprocessLaTeX('\\&')).toBe('&');
-    expect(preprocessLaTeX('\\%')).toBe('%');
-    expect(preprocessLaTeX('\\#')).toBe('#');
-    expect(preprocessLaTeX('\\_')).toBe('_');
-  });
-
-  it('should handle complex LaTeX document', () => {
-    const input =
-      '\\section{Title}\\textbf{Bold} and \\textit{italic}\\\\\\item Test';
-    const result = preprocessLaTeX(input);
-    expect(result).toContain('## Title');
-    expect(result).toContain('**Bold**');
-    expect(result).toContain('*italic*');
-  });
-
-  it('should convert tabular to markdown table', () => {
-    const input =
-      '\\begin{tabular}{|c|c|c|}\\hline Name & Age & City \\\\\\hline Alice & 30 & NYC \\\\\\hline\\end{tabular}';
-    const result = preprocessLaTeX(input);
-    expect(result).toContain('| Name | Age | City |');
-    expect(result).toContain('| --- | --- | --- |');
-    expect(result).toContain('| Alice | 30 | NYC |');
-  });
-
-  it('should convert tabular without hline', () => {
-    const input =
-      '\\begin{tabular}{ccc}Header1 & Header2 & Header3 \\\\Row1 & Row2 & Row3\\end{tabular}';
-    const result = preprocessLaTeX(input);
-    expect(result).toContain('| Header1 | Header2 | Header3 |');
-    expect(result).toContain('| Row1 | Row2 | Row3 |');
-  });
-
-  it('should convert array to markdown table', () => {
-    const input = '\\begin{array}{cc}A & B \\\\C & D\\end{array}';
-    const result = preprocessLaTeX(input);
-    expect(result).toContain('| A | B |');
-    expect(result).toContain('| C | D |');
-  });
-
-  it('should handle empty tabular gracefully', () => {
-    const input = '\\begin{tabular}{|c|}\\end{tabular}';
-    const result = preprocessLaTeX(input);
-    expect(result).toBe('');
-  });
-
-  it('should handle tabular with only hlines', () => {
-    const input = '\\begin{tabular}{|c|}\\hline\\hline\\end{tabular}';
-    const result = preprocessLaTeX(input);
-    expect(result).toBe('');
-  });
-
-  it('should convert tabular inside \\[...\\] math delimiters', () => {
-    const input =
-      '\\[\\begin{tabular}{lcc}A & B & C \\\\D & E & F\\end{tabular}\\]';
-    const result = preprocessLaTeX(input);
-    expect(result).toContain('| A | B | C |');
-    expect(result).toContain('| D | E | F |');
-    expect(result).not.toContain('$$');
-  });
-
-  it('should convert \\text{} to plain text in tables', () => {
-    const input =
-      '\\[\\begin{tabular}{lc}\\text{Disease} & \\text{Count} \\\\\\text{Yes} & 42\\end{tabular}\\]';
-    const result = preprocessLaTeX(input);
-    expect(result).toContain('| Disease | Count |');
-    expect(result).toContain('| Yes | 42 |');
-    expect(result).not.toContain('\\text');
-  });
-
-  it('should convert {,} thousands separator in tables', () => {
-    const input =
-      '\\[\\begin{tabular}{lr}\\text{Cases} & 12{,}500 \\\\\\text{Total} & 100{,}000\\end{tabular}\\]';
-    const result = preprocessLaTeX(input);
-    expect(result).toContain('| Cases | 12,500 |');
-    expect(result).toContain('| Total | 100,000 |');
-    expect(result).not.toContain('{,}');
-  });
-
-  it('should handle real-world epidemiology table', () => {
-    const input = `\\[
-\\begin{tabular}{lccc}
-\\hline
- & \\text{Disease} & \\text{No Disease} & \\text{Total} \\\\
-\\hline
-\\text{Exposed} & 42 & 158 & 200 \\\\
-\\text{Unexposed} & 18 & 182 & 200 \\\\
-\\hline
-\\end{tabular}
-\\]`;
-    const result = preprocessLaTeX(input);
-    expect(result).toContain('| Disease | No Disease | Total |');
-    expect(result).toContain('| Exposed | 42 | 158 | 200 |');
-    expect(result).toContain('| Unexposed | 18 | 182 | 200 |');
   });
 });
 
@@ -1413,6 +1311,58 @@ describe('getLLMProviderDetails function', () => {
       logo: '/llm-generic-provider.png',
       name: 'unknown-provider',
     });
+  });
+
+  it('resolves local provider labels to real logos (no generic fallback)', () => {
+    // Local model providers (from LOCAL_MODELS) resolve through the canonical
+    // name, so they get proper icons instead of /llm-generic-provider.png.
+    expect(getLLMProviderDetails('Meta')).toEqual({
+      logo: '/llm-llama-provider.jpeg',
+      name: 'Meta',
+    });
+    expect(getLLMProviderDetails('Microsoft')).toEqual({
+      logo: '/llm-microsoft-provider.png',
+      name: 'Microsoft',
+    });
+    expect(getLLMProviderDetails('Alibaba')).toEqual({
+      logo: '/llm-alibaba-provider.png',
+      name: 'Alibaba',
+    });
+    expect(getLLMProviderDetails('IBM')).toEqual({
+      logo: '/llm-ibm-provider.png',
+      name: 'IBM',
+    });
+  });
+});
+
+describe('getProviderName function', () => {
+  it('maps a human label to its canonical backend name (case-insensitive)', () => {
+    expect(getProviderName('Microsoft')).toBe('azure_openai');
+    expect(getProviderName('microsoft')).toBe('azure_openai');
+    expect(getProviderName('Google')).toBe('google');
+    expect(getProviderName('Meta')).toBe('llama');
+    expect(getProviderName('OpenAI')).toBe('openai');
+    expect(getProviderName('Mistral AI')).toBe('mistral');
+    expect(getProviderName('NVIDIA')).toBe('nvidia');
+    expect(getProviderName('DeepSeek')).toBe('deepseek');
+  });
+
+  it('is idempotent on backend keys', () => {
+    expect(getProviderName('azure_openai')).toBe('azure_openai');
+    expect(getProviderName('google')).toBe('google');
+    expect(getProviderName('llama')).toBe('llama');
+  });
+
+  it('folds a backend key and its label onto ONE identity (so cloud + local merge)', () => {
+    expect(getProviderName('azure_openai')).toBe(getProviderName('Microsoft'));
+    expect(getProviderName('llama')).toBe(getProviderName('Meta'));
+    expect(getProviderName('mistral')).toBe(getProviderName('Mistral AI'));
+    expect(getProviderName('nvidia')).toBe(getProviderName('NVIDIA'));
+  });
+
+  it('returns the normalized form for unknown providers', () => {
+    expect(getProviderName('Some-New Provider')).toBe('somenewprovider');
+    expect(getProviderName('')).toBe('');
   });
 });
 
@@ -2950,6 +2900,79 @@ describe('getFirstMessageWithContent function', () => {
   });
 });
 
+describe('getFirstHumanMessageWithContent function', () => {
+  it('should return empty string for null/undefined/empty input', () => {
+    expect(getFirstHumanMessageWithContent(null as any)).toBe('');
+    expect(getFirstHumanMessageWithContent(undefined as any)).toBe('');
+    expect(getFirstHumanMessageWithContent([])).toBe('');
+  });
+
+  it('should skip the assistant greeting and return the first human message', () => {
+    const messages = [
+      { is_ai: true, message: { data: { content: 'Hi, how can I help?' } } },
+      { is_human: true, message: { data: { content: 'What is React?' } } },
+      { is_human: true, message: { data: { content: 'And Redux?' } } },
+    ];
+    expect(getFirstHumanMessageWithContent(messages)).toBe('What is React?');
+  });
+
+  it('should detect human messages via message.data.type when is_human is absent', () => {
+    const messages = [
+      { message: { data: { type: 'ai', content: 'Greeting' } } },
+      { message: { data: { type: 'human', content: 'My question' } } },
+    ];
+    expect(getFirstHumanMessageWithContent(messages)).toBe('My question');
+  });
+
+  it('should skip human messages that have no content', () => {
+    const messages = [
+      { is_human: true, message: { data: { content: '' } } },
+      { is_human: true, message: { data: { content: 'Real question' } } },
+    ];
+    expect(getFirstHumanMessageWithContent(messages)).toBe('Real question');
+  });
+
+  it('should return empty string when there is no human message', () => {
+    const messages = [
+      { is_ai: true, message: { data: { content: 'Only assistant' } } },
+    ];
+    expect(getFirstHumanMessageWithContent(messages)).toBe('');
+  });
+});
+
+describe('getLatestMessageTimestamp function', () => {
+  it('should return null for null/undefined/empty input', () => {
+    expect(getLatestMessageTimestamp(null as any)).toBeNull();
+    expect(getLatestMessageTimestamp(undefined as any)).toBeNull();
+    expect(getLatestMessageTimestamp([])).toBeNull();
+  });
+
+  it('should return null when no message has a timestamp', () => {
+    expect(getLatestMessageTimestamp([{ message: {} }, {}])).toBeNull();
+  });
+
+  it('should return the latest inserted_at across messages', () => {
+    const messages = [
+      { inserted_at: '2025-11-19T15:12:49.347417Z' },
+      { inserted_at: '2025-11-19T21:43:09.409656Z' },
+      { inserted_at: '2025-11-19T19:02:27.774918Z' },
+    ];
+    expect(getLatestMessageTimestamp(messages)).toBe(
+      new Date('2025-11-19T21:43:09.409656Z').getTime(),
+    );
+  });
+
+  it('should ignore unparseable timestamps', () => {
+    const messages = [
+      { inserted_at: 'not-a-date' },
+      { inserted_at: '2026-01-02T00:00:00.000Z' },
+    ];
+    expect(getLatestMessageTimestamp(messages)).toBe(
+      new Date('2026-01-02T00:00:00.000Z').getTime(),
+    );
+  });
+});
+
 describe('isSafariBrowser function', () => {
   const originalNavigator = navigator;
 
@@ -3080,45 +3103,6 @@ describe('isLoggedIn function - environment guards', () => {
       configurable: true,
     });
     expect(isLoggedIn()).toBe(false);
-  });
-});
-
-describe('preprocessLaTeX function - tabular and array environments', () => {
-  it('converts tabular wrapped in $$...$$ to a markdown table', () => {
-    const input =
-      '$$\\begin{tabular}{cc}\\hline\nName & Age \\\\\nAlice & 30 \\\\\n\\hline\\end{tabular}$$';
-    const result = preprocessLaTeX(input);
-    expect(result).toContain('| Name | Age |');
-    expect(result).toContain('| --- | --- |');
-    expect(result).toContain('| Alice | 30 |');
-  });
-
-  it('converts standalone tabular blocks to a markdown table', () => {
-    const input = '\\begin{tabular}{cc}\nA & B \\\\\nC & D\\end{tabular}';
-    const result = preprocessLaTeX(input);
-    expect(result).toContain('| A | B |');
-    expect(result).toContain('| C | D |');
-  });
-
-  it('converts array wrapped in \\[...\\] to a markdown table', () => {
-    const input = '\\[\\begin{array}{cc}1 & 2 \\\\ 3 & 4\\end{array}\\]';
-    const result = preprocessLaTeX(input);
-    expect(result).toContain('| 1 | 2 |');
-    expect(result).toContain('| 3 | 4 |');
-  });
-
-  it('converts array wrapped in $$...$$ to a markdown table', () => {
-    const input = '$$\\begin{array}{cc}5 & 6 \\\\ 7 & 8\\end{array}$$';
-    const result = preprocessLaTeX(input);
-    expect(result).toContain('| 5 | 6 |');
-    expect(result).toContain('| 7 | 8 |');
-  });
-
-  it('converts standalone array blocks to a markdown table', () => {
-    const input = '\\begin{array}{cc}9 & 10 \\\\ 11 & 12\\end{array}';
-    const result = preprocessLaTeX(input);
-    expect(result).toContain('| 9 | 10 |');
-    expect(result).toContain('| 11 | 12 |');
   });
 });
 

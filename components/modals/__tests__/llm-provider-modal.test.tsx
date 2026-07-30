@@ -21,6 +21,64 @@ vi.mock('next/image', () => ({
 // classname joiner (cheap, no side effects) so emitted classes are meaningful.
 let mockSwitchLLm = true;
 let mockSwitchProvider = true;
+// On-device model state — OFF by default so the cloud-only tests are unaffected
+// (localModels is gated on `isAvailable`); one test flips these on to exercise
+// the available-first ordering.
+let mockLocalAvailable = false;
+let mockInstalledModels: string[] = [];
+// Download state + stable action spies, so a test can put a model "downloading"
+// and assert the cancel / "already downloading" notice behavior.
+let mockDownloadState: {
+  status: string;
+  progress: number;
+  activeModel?: string;
+  message: string;
+  logs: unknown[];
+  lastUpdated: string;
+} = {
+  status: 'idle',
+  progress: 0,
+  activeModel: undefined,
+  message: '',
+  logs: [],
+  lastUpdated: '',
+};
+const mockStartDownload = vi.fn();
+const mockCancelDownload = vi.fn();
+vi.mock('@/hooks/use-model-download', () => ({
+  useModelDownload: () => ({
+    isAvailable: mockLocalAvailable,
+    state: mockDownloadState,
+    ollamaStatus: { installed_models: mockInstalledModels },
+    systemMemory: null,
+    startDownload: mockStartDownload,
+    cancelDownload: mockCancelDownload,
+  }),
+}));
+vi.mock('@iblai/iblai-js/web-containers', () => ({
+  LOCAL_MODELS: [
+    {
+      name: 'Zeta Download',
+      provider: 'OpenAI',
+      id: 'dl-model',
+      size: '3 GB',
+      tool_support: true,
+    },
+    {
+      name: 'Alpha Ready',
+      provider: 'OpenAI',
+      id: 'ready-model',
+      size: '2 GB',
+      tool_support: true,
+    },
+  ],
+  isLocalLLMEnabled: () => false,
+  getLocalLLMModel: () => null,
+  getLocalLLMToolSupport: () => true,
+  setLocalLLMModel: vi.fn(),
+  setLocalLLMEnabled: vi.fn(),
+  setLocalLLMToolSupport: vi.fn(),
+}));
 vi.mock('@/lib/utils', () => ({
   cn: (...args: unknown[]) => {
     const out: string[] = [];
@@ -40,6 +98,8 @@ vi.mock('@/lib/utils', () => ({
     logo: `/logo-${provider}-${name}.png`,
     name: provider,
   }),
+  getProviderName: (name: string) =>
+    (name ?? '').toLowerCase().replace(/[^a-z0-9]/g, ''),
 }));
 
 const buildProvider = (): LLMProvider => ({
@@ -82,6 +142,18 @@ describe('LLMProviderModal', () => {
     vi.clearAllMocks();
     mockSwitchLLm = true;
     mockSwitchProvider = true;
+    mockLocalAvailable = false;
+    mockInstalledModels = [];
+    mockDownloadState = {
+      status: 'idle',
+      progress: 0,
+      activeModel: undefined,
+      message: '',
+      logs: [],
+      lastUpdated: '',
+    };
+    mockStartDownload.mockClear();
+    mockCancelDownload.mockClear();
   });
 
   it('does not render content when closed', () => {
@@ -106,6 +178,107 @@ describe('LLMProviderModal', () => {
 
     expect(screen.getByText('gpt-4')).toBeInTheDocument();
     expect(screen.getByText('gpt-3.5')).toBeInTheDocument();
+  });
+
+  it('does not crash when the provider has no chat_models array', () => {
+    // Regression: a provider can come back from the API without `chat_models`.
+    // The unguarded `.filter` used to throw in render and unmount the dialog
+    // (seen when opening Agent settings while a local model was active).
+    const props = {
+      ...baseProps(),
+      llmProvider: {
+        ...buildProvider(),
+        chat_models: undefined,
+      } as unknown as LLMProvider,
+    };
+    expect(() => render(<LLMProviderModal {...props} />)).not.toThrow();
+    // The dialog shell still renders; there are just no cloud model rows.
+    expect(screen.getByText('LLM Selection')).toBeInTheDocument();
+    expect(screen.queryByText('gpt-4')).not.toBeInTheDocument();
+  });
+
+  it('lists available (installed) local models before unavailable (downloadable) ones', () => {
+    // Catalog order is [Zeta Download (not installed), Alpha Ready (installed)];
+    // the merged list must reorder so the ready one comes first.
+    mockLocalAvailable = true;
+    mockInstalledModels = ['ready-model'];
+    render(<LLMProviderModal {...baseProps()} />);
+
+    const ready = screen.getByText('Alpha Ready');
+    const download = screen.getByText('Zeta Download');
+    // "Zeta Download" must FOLLOW "Alpha Ready" in the DOM (installed sorts
+    // first), even though it comes first in the catalog.
+    expect(
+      ready.compareDocumentPosition(download) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('lists an available local model before unavailable cloud models', () => {
+    // The reported case: the provider has no credentials, so its cloud models
+    // are unavailable — an installed on-device model must lead the whole list,
+    // not sit behind the cloud models.
+    mockSwitchLLm = false; // provider not switchable → cloud models unavailable
+    mockLocalAvailable = true;
+    mockInstalledModels = ['ready-model'];
+    render(
+      <LLMProviderModal
+        {...baseProps()}
+        // No cloud model matches the mentor's current one, so none is "in use".
+        mentorSettings={{ llm_name: 'none', llm_provider: 'none' }}
+      />,
+    );
+
+    const ready = screen.getByText('Alpha Ready');
+    const cloud = screen.getByText('gpt-4');
+    // The installed local model precedes the unavailable cloud model.
+    expect(
+      ready.compareDocumentPosition(cloud) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('cancels the download when the downloading model itself is clicked', () => {
+    mockLocalAvailable = true;
+    mockDownloadState = {
+      status: 'downloading',
+      progress: 40,
+      activeModel: 'dl-model', // "Zeta Download" is the one pulling
+      message: '',
+      logs: [],
+      lastUpdated: '',
+    };
+    render(<LLMProviderModal {...baseProps()} />);
+
+    fireEvent.click(screen.getByText('Zeta Download'));
+
+    expect(mockCancelDownload).toHaveBeenCalled();
+    // Clicking the active model cancels it — no "already downloading" notice.
+    expect(
+      screen.queryByText('A model is already downloading'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows an "already downloading" notice when a different model is clicked', () => {
+    mockLocalAvailable = true;
+    mockDownloadState = {
+      status: 'downloading',
+      progress: 40,
+      activeModel: 'dl-model', // "Zeta Download" is pulling
+      message: '',
+      logs: [],
+      lastUpdated: '',
+    };
+    render(<LLMProviderModal {...baseProps()} />);
+
+    // Click a DIFFERENT model ("Alpha Ready") → info dialog, no download action.
+    fireEvent.click(screen.getByText('Alpha Ready'));
+
+    expect(
+      screen.getByText('A model is already downloading'),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/is being downloaded/)).toBeInTheDocument();
+    expect(mockStartDownload).not.toHaveBeenCalled();
+    expect(mockCancelDownload).not.toHaveBeenCalled();
   });
 
   it('disables the active model and enables the non-active one (no grayscale on active)', () => {
@@ -176,6 +349,57 @@ describe('LLMProviderModal', () => {
 
     expect(screen.queryByText('gpt-4')).not.toBeInTheDocument();
     expect(screen.queryByText('gpt-3.5')).not.toBeInTheDocument();
+  });
+
+  it('keeps a just-completed download "installed" before the tags refresh lands', () => {
+    // Regression ("downloading a model flashes complete"): the terminal
+    // `completed` event fires checkStatus, which churns downloadState.status
+    // (completed → checking → idle) before /api/tags refreshes, so the row used
+    // to flicker back to a Download button. With installed_models still empty,
+    // the completed model must already read as installed.
+    mockLocalAvailable = true;
+    mockInstalledModels = [];
+    mockDownloadState = {
+      status: 'completed',
+      progress: 100,
+      activeModel: 'dl-model',
+      message: '',
+      logs: [],
+      lastUpdated: '',
+    };
+    render(<LLMProviderModal {...baseProps()} />);
+
+    expect(
+      screen.getByLabelText('Use Zeta Download, on-device model'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByLabelText(/^Download Zeta Download/),
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows progress on the row even when activeModel carries a :tag suffix', () => {
+    // Regression ("download started in Ollama but the row stays 'downloadable'
+    // with no progress"): download state / Ollama tags can carry a tag suffix the
+    // catalog id lacks, so an exact `===` failed to match the row to its own pull.
+    // Base-name matching must still recognize it.
+    mockLocalAvailable = true;
+    mockInstalledModels = [];
+    mockDownloadState = {
+      status: 'downloading',
+      progress: 42,
+      activeModel: 'dl-model:latest',
+      message: '',
+      logs: [],
+      lastUpdated: '',
+    };
+    render(<LLMProviderModal {...baseProps()} />);
+
+    expect(
+      screen.getByLabelText('Cancel download of Zeta Download, 42 percent'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByLabelText(/^Download Zeta Download/),
+    ).not.toBeInTheDocument();
   });
 
   it('calls onClose when the dialog requests to close (Escape)', () => {

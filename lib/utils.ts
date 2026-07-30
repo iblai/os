@@ -12,8 +12,10 @@ import { gfmHeadingId } from 'marked-gfm-heading-id';
 import { markedHighlight } from 'marked-highlight';
 import hljs from 'highlight.js';
 
+import { preprocessLaTeX } from './preprocess-latex';
 import {
   LOCAL_STORAGE_KEYS,
+  MAX_PROMPT_PARAM_LENGTH,
   QUERY_PARAMS,
   REDIRECT_PATH_LOCAL_STORAGE_KEY,
   URL_PATTERNS,
@@ -31,6 +33,7 @@ import {
   redirectToAuthSpa as sdkRedirectToAuthSpa,
   handleTenantSwitch as sdkHandleTenantSwitch,
 } from '@iblai/iblai-js/web-utils/auth';
+import { getLockedTenant } from '@/lib/locked-tenant';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -41,7 +44,49 @@ export function isSafariBrowser(): boolean {
   return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 }
 
+/**
+ * Reads a JWT's `exp` claim and reports whether it is in the past. A token that
+ * cannot be decoded (or is malformed) is treated as expired; a token with no
+ * `exp` claim is treated as non-expiring (mirrors the axd "no expiry" case).
+ */
+export function isJwtExpired(token: string): boolean {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return true;
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized.padEnd(
+      normalized.length + ((4 - (normalized.length % 4)) % 4),
+      '=',
+    );
+    const claims = JSON.parse(atob(padded)) as { exp?: number };
+    if (typeof claims.exp !== 'number') return false;
+    return claims.exp * 1000 <= Date.now();
+  } catch {
+    return true;
+  }
+}
+
 export function hasNonExpiredAuthToken() {
+  // The edx JWT is stored alongside the axd token at SSO login; a valid session
+  // requires it to be present and unexpired too, so re-auth is triggered when
+  // it is missing or its `exp` has passed.
+  const edxToken = window.localStorage.getItem(
+    LOCAL_STORAGE_KEYS.EDX_TOKEN_KEY,
+  );
+  if (!edxToken) {
+    console.log(
+      '################### [hasNonExpiredAuthToken] edx_jwt_token is not defined',
+      edxToken,
+    );
+    return false;
+  }
+  if (isJwtExpired(edxToken)) {
+    console.log(
+      '################### [hasNonExpiredAuthToken] edx_jwt_token is expired',
+    );
+    return false;
+  }
+
   const token = window.localStorage.getItem(LOCAL_STORAGE_KEYS.AUTH_TOKEN);
   if (!token) {
     console.log(
@@ -91,9 +136,14 @@ export async function redirectToAuthSpa(
   saveRedirect = true,
   explicitUserAction = false,
 ) {
+  // On a tenant-locked (Tauri) build, always authenticate into the locked
+  // tenant — this sends anonymous users straight there instead of their default
+  // tenant. Empty on web builds, so the caller's platformKey is used as before.
+  const lockedTenant = await getLockedTenant();
+
   return sdkRedirectToAuthSpa({
     redirectTo,
-    platformKey,
+    platformKey: lockedTenant || platformKey,
     logout,
     saveRedirect,
     forceRedirect: explicitUserAction,
@@ -159,6 +209,19 @@ export function redirectToAuthSpaJoinTenant(
   )}`;
 
   window.location.href = joinUrl;
+}
+
+/**
+ * Send a not-logged-in user to the auth SPA when they trigger a gated action.
+ * Single source of truth shared by the auth popover and the sidebar.
+ */
+export function redirectToLogin(tenantKey?: string) {
+  if (!tenantKey) {
+    console.log('[auth-redirect] Login triggered without a tenant key');
+    redirectToAuthSpa('/', tenantKey, undefined, true, true);
+    return;
+  }
+  redirectToAuthSpaJoinTenant(tenantKey, undefined, true);
 }
 
 export function getPlatformKey(url: string) {
@@ -247,217 +310,6 @@ export function getHostFromUrl(url: string) {
   const a = document.createElement('a');
   a.href = url;
   return a.hostname;
-}
-
-export function preprocessLaTeX(content: string) {
-  // Handle non-string inputs
-  if (typeof content !== 'string') {
-    return '';
-  }
-
-  // Helper function to process tabular/array content into markdown table
-  const processTabularContent = (tableContent: string): string => {
-    // Split into rows by \\ (LaTeX row separator)
-    const rows = tableContent
-      .split(/\\\\\s*/)
-      .map((row: string) => row.trim())
-      .filter((row: string) => row && !row.match(/^\\hline\s*$/));
-
-    if (rows.length === 0) return '';
-
-    // Process each row: split by & (column separator) and clean up
-    const processedRows = rows
-      .map((row: string) => {
-        // Remove \hline from the row content
-        let cleanRow = row.replace(/\\hline\s*/g, '').trim();
-        if (!cleanRow) return null;
-
-        // Convert \text{...} to plain text
-        cleanRow = cleanRow.replace(/\\text\{([^}]*)\}/g, '$1');
-
-        // Remove {,} (LaTeX thousands separator formatting)
-        cleanRow = cleanRow.replace(/\{,\}/g, ',');
-
-        // Split by & and trim each cell
-        const cells = cleanRow.split('&').map((cell: string) => cell.trim());
-        return `| ${cells.join(' | ')} |`;
-      })
-      .filter(Boolean);
-
-    if (processedRows.length === 0) return '';
-
-    // Insert header separator after first row
-    const firstRow = processedRows[0] as string;
-    const columnCount = firstRow.split('|').length - 2;
-    const headerSeparator = `|${' --- |'.repeat(columnCount)}`;
-    processedRows.splice(1, 0, headerSeparator);
-
-    return `\n${processedRows.join('\n')}\n`;
-  };
-
-  // Process tabular inside \[...\] first (before converting math delimiters)
-  let processedContent = content.replace(
-    /\\\[\s*\\begin\{tabular\}\{[^}]*\}([\s\S]*?)\\end\{tabular\}\s*\\\]/g,
-    (_, tableContent) => processTabularContent(tableContent),
-  );
-
-  // Process tabular inside $$...$$ as well
-  processedContent = processedContent.replace(
-    /\$\$\s*\\begin\{tabular\}\{[^}]*\}([\s\S]*?)\\end\{tabular\}\s*\$\$/g,
-    (_, tableContent) => processTabularContent(tableContent),
-  );
-
-  // Process standalone tabular (not inside math delimiters)
-  processedContent = processedContent.replace(
-    /\\begin\{tabular\}\{[^}]*\}([\s\S]*?)\\end\{tabular\}/g,
-    (_, tableContent) => processTabularContent(tableContent),
-  );
-
-  // Process array inside \[...\] first
-  processedContent = processedContent.replace(
-    /\\\[\s*\\begin\{array\}\{[^}]*\}([\s\S]*?)\\end\{array\}\s*\\\]/g,
-    (_, tableContent) => processTabularContent(tableContent),
-  );
-
-  // Process array inside $$...$$
-  processedContent = processedContent.replace(
-    /\$\$\s*\\begin\{array\}\{[^}]*\}([\s\S]*?)\\end\{array\}\s*\$\$/g,
-    (_, tableContent) => processTabularContent(tableContent),
-  );
-
-  // Process standalone array
-  processedContent = processedContent.replace(
-    /\\begin\{array\}\{[^}]*\}([\s\S]*?)\\end\{array\}/g,
-    (_, tableContent) => processTabularContent(tableContent),
-  );
-
-  // Escape currency dollar signs: if a $ is directly followed by a digit,
-  // prepend a backslash so that it is rendered as a literal dollar sign.
-  // Replace the regex replacement with one using a lookbehind and a function to ensure the digit group is preserved correctly.
-  processedContent = processedContent.replace(
-    /(?<!\\)\$(\d)/g,
-    (_, digit) => `\\$${digit}`,
-  );
-
-  // Replace block-level LaTeX delimiters \[ \] with $$ $$.
-  processedContent = processedContent.replace(
-    /\\\[(\s*[\s\S]*?\s*)\\\]/g,
-    (_, equation) => `$$${equation}$$`,
-  );
-
-  // Replace inline LaTeX delimiters \( \) with $ $
-  processedContent = processedContent.replace(
-    /\\\(([\s\S]*?)\\\)/g,
-    (_, equation) => `$${equation}$`,
-  );
-
-  // Convert LaTeX text formatting commands to Markdown
-  // \textbf{text} -> **text**
-  processedContent = processedContent.replace(/\\textbf\{([^}]+)\}/g, '**$1**');
-
-  // \textit{text} -> *text*
-  processedContent = processedContent.replace(/\\textit\{([^}]+)\}/g, '*$1*');
-
-  // \emph{text} -> *text*
-  processedContent = processedContent.replace(/\\emph\{([^}]+)\}/g, '*$1*');
-
-  // \texttt{text} -> `text`
-  processedContent = processedContent.replace(/\\texttt\{([^}]+)\}/g, '`$1`');
-
-  // \underline{text} -> <u>text</u> (requires rehype-raw)
-  processedContent = processedContent.replace(
-    /\\underline\{([^}]+)\}/g,
-    '<u>$1</u>',
-  );
-
-  // Convert LaTeX environments to Markdown/HTML
-  // \begin{itemize} ... \end{itemize} -> convert to unordered list
-  processedContent = processedContent.replace(
-    /\\begin\{itemize\}([\s\S]*?)\\end\{itemize\}/g,
-    (_, items) => {
-      // Convert \item to list items
-      const listItems = items
-        .split(/\\item\s+/)
-        .filter((item: string) => item.trim())
-        .map((item: string) => `- ${item.trim()}`)
-        .join('\n');
-      return `\n${listItems}\n`;
-    },
-  );
-
-  // \begin{enumerate} ... \end{enumerate} -> convert to ordered list
-  processedContent = processedContent.replace(
-    /\\begin\{enumerate\}([\s\S]*?)\\end\{enumerate\}/g,
-    (_, items) => {
-      // Convert \item to numbered list items
-      const listItems = items
-        .split(/\\item\s+/)
-        .filter((item: string) => item.trim())
-        .map((item: string, index: number) => `${index + 1}. ${item.trim()}`)
-        .join('\n');
-      return `\n${listItems}\n`;
-    },
-  );
-
-  // \begin{quote} ... \end{quote} -> convert to blockquote
-  processedContent = processedContent.replace(
-    /\\begin\{quote\}([\s\S]*?)\\end\{quote\}/g,
-    (_, content) => `\n> ${content.trim()}\n`,
-  );
-
-  // \begin{center} ... \end{center} -> convert to centered div
-  processedContent = processedContent.replace(
-    /\\begin\{center\}([\s\S]*?)\\end\{center\}/g,
-    (_, content) =>
-      `\n<div style="text-align: center;">${content.trim()}</div>\n`,
-  );
-
-  // Convert section headings (with optional * for unnumbered variants)
-  // \section{text} or \section*{text} -> ## text
-  processedContent = processedContent.replace(
-    /\\section\*?\{([^}]+)\}/g,
-    '\n## $1\n',
-  );
-
-  // \subsection{text} or \subsection*{text} -> ### text
-  processedContent = processedContent.replace(
-    /\\subsection\*?\{([^}]+)\}/g,
-    '\n### $1\n',
-  );
-
-  // \subsubsection{text} or \subsubsection*{text} -> #### text
-  processedContent = processedContent.replace(
-    /\\subsubsection\*?\{([^}]+)\}/g,
-    '\n#### $1\n',
-  );
-
-  // Handle line breaks
-  // \\ or \newline -> line break
-  processedContent = processedContent.replace(/\\\\|\n\\newline/g, '  \n');
-
-  // Handle verbatim text
-  // \verb|text| -> `text`
-  processedContent = processedContent.replace(/\\verb\|([^|]+)\|/g, '`$1`');
-
-  // Handle quotes
-  // `` and '' -> proper quotes
-  processedContent = processedContent.replace(/``/g, '"');
-  processedContent = processedContent.replace(/''/g, '"');
-
-  // Handle common LaTeX symbols that should remain as-is or convert
-  // \& -> &
-  processedContent = processedContent.replace(/\\&/g, '&');
-
-  // \% -> %
-  processedContent = processedContent.replace(/\\%/g, '%');
-
-  // \# -> #
-  processedContent = processedContent.replace(/\\#/g, '#');
-
-  // \_ -> _
-  processedContent = processedContent.replace(/\\_/g, '_');
-
-  return processedContent;
 }
 
 export const textTruncate = function (
@@ -669,44 +521,85 @@ export function formatRelativeDate(date: string) {
   }
 }
 
+// Canonical provider name for any label — a backend key ("azure_openai"), a
+// human label ("Microsoft"), or a local model's provider ("Meta"). Folds every
+// alias onto one identity so the same provider from different sources compares
+// equal. See getProviderName.
+const PROVIDER_NAME_BY_ALIAS: Record<string, string> = {
+  microsoft: 'azure_openai',
+  azureopenai: 'azure_openai',
+  openai: 'openai',
+  google: 'google',
+  gemini: 'google',
+  meta: 'llama',
+  metallama: 'llama',
+  llama: 'llama',
+  mistral: 'mistral',
+  mistralai: 'mistral',
+  nvidia: 'nvidia',
+  iblchatnvidia: 'nvidia',
+  deepseek: 'deepseek',
+  anthropic: 'anthropic',
+  iblchatanthropic: 'anthropic',
+  claude: 'anthropic',
+  groq: 'groq',
+  perplexity: 'perplexity',
+  xai: 'xai',
+  bedrock: 'bedrock',
+  amazonbedrock: 'bedrock',
+  amazon: 'bedrock',
+  iblchatbedrock: 'bedrock',
+  alibaba: 'alibaba',
+  qwen: 'alibaba',
+  ibm: 'ibm',
+  granite: 'ibm',
+};
+
+/**
+ * Canonical provider name for any label, case- and punctuation-insensitive.
+ * Folds backend keys and human/display labels onto one identity — e.g.
+ * `getProviderName('Microsoft') === 'azure_openai'`,
+ * `getProviderName('Meta') === 'llama'`, `getProviderName('Google') === 'google'`.
+ * Unknown providers return their normalized (lowercased, alphanumeric-only) form.
+ * This is the single source of truth for provider identity (dedup/merge) and
+ * for logo/name resolution via {@link getLLMProviderDetails}.
+ */
+export function getProviderName(llmProvider: string): string {
+  const normalized = (llmProvider ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  return PROVIDER_NAME_BY_ALIAS[normalized] ?? normalized;
+}
+
+// Logo + display name keyed by canonical provider name (see getProviderName).
+const PROVIDER_DETAILS_BY_NAME: Record<string, { logo: string; name: string }> = {
+  groq: { logo: '/llm-groq-provider.png', name: 'Groq' },
+  nvidia: { logo: '/llm-nvidia-provider.webp', name: 'NVIDIA' },
+  azure_openai: { logo: '/llm-microsoft-provider.png', name: 'Microsoft' },
+  openai: { logo: '/llm-openai-provider-2.svg', name: 'OpenAI' },
+  mistral: { logo: '/llm-mistral-provider.jpeg', name: 'Mistral' },
+  google: { logo: '/llm-google-provider.svg', name: 'Google' },
+  llama: { logo: '/llm-llama-provider.jpeg', name: 'Meta' },
+  anthropic: { logo: '/llm-claude-provider.png', name: 'Anthropic' },
+  perplexity: { logo: '/llm-perplexity-provider.webp', name: 'Perplexity' },
+  deepseek: { logo: '/llm-deepseek-provider.png', name: 'DeepSeek' },
+  xai: { logo: '/llm-xai-provider.jpg', name: 'xAI' },
+  bedrock: { logo: '/llm-amazon-provider.png', name: 'Amazon' },
+  alibaba: { logo: '/llm-alibaba-provider.png', name: 'Alibaba' },
+  ibm: { logo: '/llm-ibm-provider.png', name: 'IBM' },
+};
+
 export function getLLMProviderDetails(llmProvider: string, llmName?: string) {
-  switch (llmProvider) {
-    case 'groq':
-      return { logo: '/llm-groq-provider.png', name: 'Groq' };
-    case 'IBLChatNvidia':
-      return { logo: '/llm-nvidia-provider.webp', name: 'NVIDIA' };
-    case 'azure_openai':
-      return { logo: '/llm-microsoft-provider.png', name: 'Microsoft' };
-    case 'openai':
-      if (llmName) return { logo: '/llm-openai-provider.jpg', name: 'OpenAI' };
-      return { logo: '/llm-openai-provider-2.svg', name: 'OpenAI' };
-    case 'mistral':
-      return { logo: '/llm-mistral-provider.jpeg', name: 'Mistral' };
-    case 'google':
-      if (llmName) return { logo: '/llm-gemini-provider.png', name: 'Google' };
-      return { logo: '/llm-google-provider.svg', name: 'Google' };
-    case 'llama':
-      return { logo: '/llm-llama-provider.jpeg', name: 'Meta' };
-    case 'IBLChatAnthropic':
-      return { logo: '/llm-claude-provider.png', name: 'Anthropic' };
-    case 'perplexity':
-      return { logo: '/llm-perplexity-provider.webp', name: 'Perplexity' };
-    case 'deepseek':
-      return { logo: '/llm-deepseek-provider.png', name: 'DeepSeek' };
-    case 'xai':
-      return { logo: '/llm-xai-provider.jpg', name: 'xAI' };
-    case 'anthropic':
-      return { logo: '/llm-claude-provider.png', name: 'Anthropic' };
-    case 'nvidia':
-      return { logo: '/llm-nvidia-provider.webp', name: 'NVIDIA' };
-    case 'bedrock':
-    case 'amazon-bedrock':
-    case 'amazon_bedrock':
-    case 'IBLChatBedrock':
-      return { logo: '/llm-amazon-provider.png', name: 'Amazon' };
-    default:
-      return { logo: '/llm-generic-provider.png', name: llmProvider };
-  }
+  const name = getProviderName(llmProvider);
+  // OpenAI and Google use a model-specific logo when a concrete model is named.
+  if (name === 'openai' && llmName)
+    return { logo: '/llm-openai-provider.jpg', name: 'OpenAI' };
+  if (name === 'google' && llmName)
+    return { logo: '/llm-gemini-provider.png', name: 'Google' };
+  return (
+    PROVIDER_DETAILS_BY_NAME[name] ?? {
+      logo: '/llm-generic-provider.png',
+      name: llmProvider,
+    }
+  );
 }
 
 export function sendMessageToParentWebsite(payload: unknown) {
@@ -1652,4 +1545,63 @@ export function getFirstMessageWithContent(messages: any[]): string {
     if (content) return content;
   }
   return '';
+}
+
+export function getFirstHumanMessageWithContent(messages: any[]): string {
+  if (!messages?.length) return '';
+  for (const msg of messages) {
+    const isHuman =
+      msg?.is_human === true || msg?.message?.data?.type === 'human';
+    const content = msg?.message?.data?.content;
+    if (isHuman && content) return content;
+  }
+  return '';
+}
+
+export function getLatestMessageTimestamp(messages: any[]): number | null {
+  if (!messages?.length) return null;
+  let latest: number | null = null;
+  for (const msg of messages) {
+    const raw = msg?.inserted_at;
+    if (!raw) continue;
+    const ms = new Date(raw).getTime();
+    if (!Number.isNaN(ms) && (latest === null || ms > latest)) latest = ms;
+  }
+  return latest;
+}
+
+/**
+ * Sanitize the value of the `?prompt=` deep-link query param before it is
+ * auto-submitted as a user chat message.
+ *
+ * The render layer already auto-escapes user turns (plain React text in a
+ * `whitespace-pre-wrap` container — no `dangerouslySetInnerHTML`, no Markdown),
+ * so HTML is NOT escaped here: doing so would corrupt legitimate prompts like
+ * `what does <div> do?` without buying any safety. Instead we defend against the
+ * real risks of an attacker-crafted link: prompt-injection smuggling via
+ * invisible/control characters and oversized auto-submitted payloads.
+ */
+export function sanitizePromptParam(
+  raw: string | null | undefined,
+): string | undefined {
+  if (raw == null) return undefined;
+
+  const cleaned = raw
+    // Strip control chars but preserve newlines (\n) and tabs (\t).
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    // Strip zero-width / invisible characters used to hide instructions.
+    .replace(/[​-‍⁠﻿]/g, '')
+    // Strip the Unicode Tag block (invisible-instruction injection).
+    .replace(/[\u{E0000}-\u{E007F}]/gu, '')
+    // Strip bidirectional control chars (LRM/RLM, embeddings/overrides,
+    // isolates) — the "Trojan Source" (CVE-2021-42574) vector that can
+    // invisibly reorder text to hide or misrepresent the injected prompt.
+    .replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/gu, '')
+    .trim()
+    // Cap length AFTER cleaning so it reflects real visible content, then
+    // re-trim so a mid-word slice never leaves dangling whitespace.
+    .slice(0, MAX_PROMPT_PARAM_LENGTH)
+    .trim();
+
+  return cleaned.length > 0 ? cleaned : undefined;
 }

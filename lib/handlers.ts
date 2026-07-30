@@ -94,6 +94,13 @@ export function useIframeHandlers() {
         }),
       );
     },
+    // `useIframeMessageHandler` invokes handlers as `handler(payload, event)`,
+    // so the flag is the FIRST argument. This previously dispatched the second
+    // one — the raw MessageEvent — into `enableGrading`, which the reducer types
+    // as a boolean (PayloadAction<boolean>).
+    'MENTOR:ENABLE_GRADING': (payload: boolean) => {
+      dispatch(chatActions.setEnableGrading(payload));
+    },
     // Document filter hanlder
     'MENTOR:DOCUMENTFILTER': (_payload: unknown, event: MessageEvent) => {
       try {
@@ -113,7 +120,6 @@ export function useIframeHandlers() {
         }),
       );
     },
-
     'MENTOR:EDX_COURSE_ID': (payload: { edxCourseId: string }) => {
       console.log('EDX Course ID updated:', payload.edxCourseId);
       dispatch(

@@ -1,6 +1,13 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import {
+  render,
+  screen,
+  cleanup,
+  fireEvent,
+  waitFor,
+} from '@testing-library/react';
+import { toast } from 'sonner';
 
 import { SandboxTab } from './sandbox-tab';
 
@@ -11,6 +18,9 @@ import { SandboxTab } from './sandbox-tab';
 const mockUseParams = vi.fn();
 const mockGetMentorId = vi.fn();
 const mockSandboxConfig = vi.fn();
+const mockGetMentorSettingsQuery = vi.fn();
+const mockEditMentor = vi.fn();
+const mockUsername = vi.fn();
 
 vi.mock('next/navigation', () => ({
   useParams: () => mockUseParams(),
@@ -20,6 +30,40 @@ vi.mock('@/hooks/user-navigate', () => ({
   useNavigate: () => ({
     getMentorId: mockGetMentorId,
   }),
+}));
+
+vi.mock('@/hooks/use-user', () => ({
+  useUsername: () => mockUsername(),
+}));
+
+// SandboxTab now hydrates `enable_claw` from mentor settings and PATCHes it via
+// the RTK Query hooks. Mock the data-layer barrel so the tab can render its
+// in-tab capability toggle without a real redux store.
+vi.mock('@iblai/iblai-js/data-layer', () => ({
+  useGetMentorSettingsQuery: (...args: unknown[]) =>
+    mockGetMentorSettingsQuery(...args),
+  useEditMentorMutation: () => [mockEditMentor, { isLoading: false }],
+}));
+
+vi.mock('sonner', () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
+// CapabilityGate uses the real `@/components/ui/switch`; flatten it to a plain
+// checkbox so the toggle's checked/disabled state is trivially assertable.
+vi.mock('@/components/ui/switch', () => ({
+  Switch: ({ checked, onCheckedChange, disabled, ...props }: any) => (
+    <input
+      type="checkbox"
+      checked={checked}
+      onChange={(e) => onCheckedChange(e.target.checked)}
+      disabled={disabled}
+      {...props}
+    />
+  ),
 }));
 
 // SandboxTab imports from `@iblai/iblai-js/web-containers` (the unified
@@ -54,6 +98,11 @@ describe('SandboxTab', () => {
       mentorId: 'test-mentor',
     });
     mockGetMentorId.mockReturnValue(null);
+    mockUsername.mockReturnValue('testuser');
+    mockGetMentorSettingsQuery.mockReturnValue({
+      data: { enable_claw: false },
+    });
+    mockEditMentor.mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });
   });
 
   afterEach(() => {
@@ -85,6 +134,119 @@ describe('SandboxTab', () => {
         platformKey: 'test-tenant',
         mentorUniqueId: 'test-mentor',
       });
+    });
+  });
+
+  describe('Capability toggle', () => {
+    it('renders the in-tab dedicated-sandbox capability toggle', () => {
+      render(<SandboxTab />);
+
+      expect(
+        screen.getByTestId('sandbox-capability-toggle'),
+      ).toBeInTheDocument();
+    });
+
+    it('reflects enable_claw=false from mentor settings as unchecked', () => {
+      render(<SandboxTab />);
+
+      expect(screen.getByTestId('sandbox-capability-toggle')).not.toBeChecked();
+    });
+
+    it('reflects enable_claw=true from mentor settings as checked', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { enable_claw: true },
+      });
+
+      render(<SandboxTab />);
+
+      expect(screen.getByTestId('sandbox-capability-toggle')).toBeChecked();
+    });
+
+    it('grays out (but still renders) the SandboxConfig when the capability is off', () => {
+      render(<SandboxTab />);
+
+      const content = screen.getByTestId('capability-gate-content');
+      expect(content).toHaveAttribute('data-enabled', 'false');
+      // Content is inert but present so admins can preview the config.
+      expect(screen.getByTestId('sandbox-config')).toBeInTheDocument();
+    });
+
+    it('marks the content enabled when the capability is on', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { enable_claw: true },
+      });
+
+      render(<SandboxTab />);
+
+      expect(screen.getByTestId('capability-gate-content')).toHaveAttribute(
+        'data-enabled',
+        'true',
+      );
+    });
+
+    it('PATCHes enable_claw via editMentor when the toggle is switched on', () => {
+      render(<SandboxTab />);
+
+      fireEvent.click(screen.getByTestId('sandbox-capability-toggle'));
+
+      expect(mockEditMentor).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mentor: 'test-mentor',
+          org: 'test-tenant',
+          formData: { enable_claw: true },
+        }),
+      );
+    });
+
+    it('rolls back the toggle and shows an error toast when the PATCH fails', async () => {
+      mockEditMentor.mockReturnValue({
+        unwrap: vi.fn().mockRejectedValue(new Error('nope')),
+      });
+      render(<SandboxTab />);
+
+      fireEvent.click(screen.getByTestId('sandbox-capability-toggle'));
+
+      await waitFor(() => expect(toast.error).toHaveBeenCalled());
+      // optimistic check was rolled back to the server value (false)
+      expect(screen.getByTestId('sandbox-capability-toggle')).not.toBeChecked();
+    });
+    it('rolls the toggle back and surfaces the error toast when the PATCH fails', async () => {
+      mockEditMentor.mockReturnValue({
+        unwrap: vi.fn().mockRejectedValue(new Error('network')),
+      });
+      render(<SandboxTab />);
+
+      const toggle = screen.getByTestId('sandbox-capability-toggle');
+      fireEvent.click(toggle);
+      // Optimistic flip happens synchronously…
+      expect(toggle).toBeChecked();
+
+      // …then the rejected unwrap rolls it back and toasts.
+      await waitFor(() => {
+        expect(toggle).not.toBeChecked();
+      });
+      expect(toast.error).toHaveBeenCalled();
+      expect(toast.success).not.toHaveBeenCalled();
+    });
+
+    it('treats a settings payload without enable_claw as off', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({ data: {} });
+
+      render(<SandboxTab />);
+
+      expect(screen.getByTestId('sandbox-capability-toggle')).not.toBeChecked();
+    });
+
+    it('sends an empty userId when no username is available', () => {
+      mockUsername.mockReturnValue(null);
+
+      render(<SandboxTab />);
+
+      fireEvent.click(screen.getByTestId('sandbox-capability-toggle'));
+
+      expect(mockEditMentor).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: '' }),
+      );
     });
   });
 

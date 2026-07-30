@@ -52,7 +52,10 @@ vi.mock('@/hooks/use-user', () => ({
 }));
 
 vi.mock('@/hooks/use-user-type', () => ({
-  useUserType: () => ({ isUserTypeAllowed: () => true }),
+  useUserType: () => ({
+    isUserTypeAllowed: () => true,
+    userType: UserType.ADMIN,
+  }),
 }));
 
 vi.mock('@/hooks/user-navigate', () => ({
@@ -133,12 +136,12 @@ describe('Screen Share mentor segment', () => {
     expect(screenshareSegment).toBeDefined();
     expect(screenshareSegment?.label).toBe('Screen Share');
     expect(screenshareSegment?.value).toBe(MODALS.EDIT_MENTOR.tabs.screenshare);
-    // No host-side RBAC field gating — the SDK renders an off-state hint
-    // when `enable_video` is false and the host gates visibility at the
-    // segment level via `enabledThroughConfig`. See the screenshare-tab
-    // wrapper for the rationale.
+    // No host-side RBAC field gating and no config gate — the Screen Share
+    // tab is always visible; the `enable_video` master toggle now lives
+    // inline on the tab itself, graying the content when off.
     expect(screenshareSegment?.permissionFieldsCheck).toEqual([]);
     expect(screenshareSegment?.rbacResource).toBeUndefined();
+    expect(screenshareSegment?.enabledThroughConfig).toBeUndefined();
     // Visible to the same audiences as the other Voice-related tabs.
     expect(screenshareSegment?.mentorVisibility).toEqual(
       expect.arrayContaining([
@@ -151,15 +154,15 @@ describe('Screen Share mentor segment', () => {
     );
   });
 
-  describe('enabledThroughConfig gating', () => {
-    it('hides the Screen Share tab when isScreenshareEnabled is false', () => {
+  describe('visibility (always visible; toggle lives on the tab)', () => {
+    it('shows the Screen Share tab even when isScreenshareEnabled is false', () => {
       const ctx = buildContext({
         flags: { ...baseFlags, isScreenshareEnabled: false },
       });
       const labels = filterMentorSegments(MENTOR_SEGMENTS, ctx).map(
         (s) => s.label,
       );
-      expect(labels).not.toContain('Screen Share');
+      expect(labels).toContain('Screen Share');
     });
 
     it('shows the Screen Share tab when isScreenshareEnabled is true', () => {
@@ -172,7 +175,7 @@ describe('Screen Share mentor segment', () => {
       expect(labels).toContain('Screen Share');
     });
 
-    it('still hides Screen Share when isScreenshareEnabled is true but the user-type is not allowed', () => {
+    it('still hides Screen Share when the user-type is not allowed', () => {
       const ctx = buildContext({
         flags: { ...baseFlags, isScreenshareEnabled: true },
         isUserTypeAllowed: (segment) =>
@@ -195,26 +198,6 @@ describe('Screen Share mentor segment', () => {
       // any segment whose userTypes includes ADMIN — Screen Share's
       // userTypes does include ADMIN, so it gets filtered out.
       expect(labels).not.toContain('Screen Share');
-    });
-  });
-
-  describe('predicate is evaluated against the live flags', () => {
-    it('the enabledThroughConfig predicate returns false when the flag is false', () => {
-      expect(
-        screenshareSegment?.enabledThroughConfig?.({
-          ...baseFlags,
-          isScreenshareEnabled: false,
-        }),
-      ).toBe(false);
-    });
-
-    it('the enabledThroughConfig predicate returns true when the flag is true', () => {
-      expect(
-        screenshareSegment?.enabledThroughConfig?.({
-          ...baseFlags,
-          isScreenshareEnabled: true,
-        }),
-      ).toBe(true);
     });
   });
 });

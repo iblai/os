@@ -95,6 +95,7 @@ vi.mock('@/hooks/use-user-type', () => ({
     isUserTypeAllowed: (item: { userTypes: string[] }) =>
       item.userTypes.includes(UserType.ADMIN) ||
       item.userTypes.includes(UserType.FREE_TRIAL),
+    userType: UserType.ADMIN,
   }),
 }));
 
@@ -226,8 +227,11 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
 // Mock all tab components. Keep this list in sync with `../tabs/index.ts` —
 // any export the barrel exposes that we leave out here will throw a
 // "No 'X' export is defined on the '../tabs' mock" error during render.
-vi.mock('../tabs', () => ({
+vi.mock('../settings-tab', () => ({
   SettingsTab: () => <div data-testid="settings-tab">Settings Tab</div>,
+}));
+
+vi.mock('../tabs', () => ({
   LLMTab: () => <div data-testid="llm-tab">LLM Tab</div>,
   PromptsTab: () => <div data-testid="prompts-tab">Prompts Tab</div>,
   McpTab: () => <div data-testid="mcp-tab">MCP Tab</div>,
@@ -238,6 +242,7 @@ vi.mock('../tabs', () => ({
   FlowTab: () => <div data-testid="flow-tab">Flow Tab</div>,
   HistoryTab: () => <div data-testid="history-tab">History Tab</div>,
   DatasetsTab: () => <div data-testid="datasets-tab">Datasets Tab</div>,
+  EvaluationTab: () => <div data-testid="evaluation-tab">Evaluation Tab</div>,
   ApiTab: () => <div data-testid="api-tab">API Tab</div>,
   EmbedTab: () => <div data-testid="embed-tab">Embed Tab</div>,
   AccessTab: () => <div data-testid="access-tab">Access Tab</div>,
@@ -248,6 +253,8 @@ vi.mock('../tabs', () => ({
   ScreenShareTab: () => (
     <div data-testid="screenshare-tab">Screen Share Tab</div>
   ),
+  LtiTab: () => <div data-testid="lti-tab">LTI Tab</div>,
+  AnalyticsTab: () => <div data-testid="analytics-tab">Analytics Tab</div>,
 }));
 
 vi.mock('../tabs/memory-tab', () => ({
@@ -496,6 +503,7 @@ describe('EditMentorModal', () => {
     return {
       value,
       label: value,
+      labelKey: value,
       icon: SettingsIcon,
       userTypes: [UserType.ADMIN, UserType.FREE_TRIAL],
       permissionFieldsCheck: [],
@@ -689,7 +697,6 @@ describe('EditMentorModal', () => {
         }),
         makeSegment(MODALS.EDIT_MENTOR.tabs.llm, {
           navCategory: 'configurations',
-          label: 'LLM Segment',
         }),
       ];
 
@@ -700,8 +707,10 @@ describe('EditMentorModal', () => {
         </Provider>,
       );
 
+      // Labels render translated from the `header` namespace, so the llm
+      // segment shows as "LLM" regardless of the fixture's raw label.
       const llmTriggers = await screen.findAllByRole('tab', {
-        name: 'LLM Segment',
+        name: 'LLM',
       });
       await user.click(llmTriggers[0]);
 
@@ -777,9 +786,10 @@ describe('EditMentorModal', () => {
       // the rendered segment list: Settings (the only configurations
       // segment) must be present.
       await waitFor(() => {
+        // Rendered via the `header` translation namespace — "Settings", not
+        // the raw segment value.
         expect(
-          screen.getAllByRole('tab', { name: MODALS.EDIT_MENTOR.tabs.settings })
-            .length,
+          screen.getAllByRole('tab', { name: 'Settings' }).length,
         ).toBeGreaterThan(0);
       });
     });

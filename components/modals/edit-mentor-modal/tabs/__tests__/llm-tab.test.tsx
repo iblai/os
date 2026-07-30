@@ -127,6 +127,9 @@ const mentorSettings = {
 describe('LLMTab', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // The on-device selection lives in localStorage; clear it so a test that
+    // enables local mode can't leak into the (default cloud) tests.
+    localStorage.clear();
     mockIsEditing = false;
     mockUnwrap.mockResolvedValue({});
     mockUseParams.mockReturnValue({
@@ -187,6 +190,19 @@ describe('LLMTab', () => {
     const { container } = render(<LLMTab />);
     // openai card carries the active border-blue-500 class
     expect(container.querySelector('.border-blue-500')).toBeInTheDocument();
+  });
+
+  it('does not highlight the stale cloud provider when an on-device model is active', async () => {
+    // Bug: the tab highlighted the mentor's cloud provider (openai) even though
+    // chat was actually using a local model (Llama 3.2 → Meta). With local mode
+    // on, the openai card — the only provider here matching the cloud setting —
+    // must lose its active border (no cloud card matches the local "meta" key).
+    localStorage.setItem('ibl_local_llm_enabled', 'true');
+    localStorage.setItem('ibl_local_llm_model', 'llama3.2');
+    const { container } = render(<LLMTab />);
+    await waitFor(() => {
+      expect(container.querySelector('.border-blue-500')).not.toBeInTheDocument();
+    });
   });
 
   it('opens the provider modal when a provider card is clicked', async () => {

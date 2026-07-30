@@ -12,6 +12,9 @@ const mockSetIframeContext = vi.hoisted(() =>
 const mockSetDocumentFilter = vi.hoisted(() =>
   vi.fn((value) => ({ type: 'chat/setDocumentFilter', payload: value })),
 );
+const mockSetEnableGrading = vi.hoisted(() =>
+  vi.fn((value) => ({ type: 'chat/setEnableGrading', payload: value })),
+);
 const mockEnableChatActionsPopup = vi.hoisted(() =>
   vi.fn((value) => ({ type: 'chat/enableChatActionsPopup', payload: value })),
 );
@@ -29,6 +32,7 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
   chatActions: {
     setIframeContext: mockSetIframeContext,
     setDocumentFilter: mockSetDocumentFilter,
+    setEnableGrading: mockSetEnableGrading,
   },
 }));
 
@@ -120,6 +124,7 @@ describe('useIframeHandlers', () => {
       expect(result.current).toHaveProperty('MENTOR:MENTOR_PREVIEW');
       expect(result.current).toHaveProperty('MENTOR:ENABLE_CHAT_ACTION_POPUPS');
       expect(result.current).toHaveProperty('MENTOR:CHAT_ACTION_ADD_MESSAGE');
+      expect(result.current).toHaveProperty('MENTOR:ENABLE_GRADING');
     });
 
     it('should have all handlers as functions', () => {
@@ -472,6 +477,28 @@ describe('useIframeHandlers', () => {
 
       expect(mockDispatchInstance).toHaveBeenCalledWith(
         chatActions.setDocumentFilter({}),
+      );
+    });
+  });
+
+  describe('MENTOR:ENABLE_GRADING handler', () => {
+    it('should dispatch setEnableGrading(true)', () => {
+      const { result } = renderHook(() => useIframeHandlers());
+
+      result.current['MENTOR:ENABLE_GRADING'](true);
+
+      expect(mockDispatchInstance).toHaveBeenCalledWith(
+        chatActions.setEnableGrading(true),
+      );
+    });
+
+    it('should dispatch setEnableGrading(false)', () => {
+      const { result } = renderHook(() => useIframeHandlers());
+
+      result.current['MENTOR:ENABLE_GRADING'](false);
+
+      expect(mockDispatchInstance).toHaveBeenCalledWith(
+        chatActions.setEnableGrading(false),
       );
     });
   });

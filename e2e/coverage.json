@@ -1,14 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-06-30",
+  "lastUpdated": "2026-07-25",
   "summary": {
-    "totalCheckpoints": 499,
-    "coveredCheckpoints": 477,
+    "totalCheckpoints": 592,
+    "coveredCheckpoints": 564,
     "deprecatedCheckpoints": 12,
-    "notReproducibleCheckpoints": 8,
+    "notReproducibleCheckpoints": 9,
+    "pendingCheckpoints": 7,
     "percent": 100,
-    "totalJourneys": 57,
-    "activeJourneys": 56
+    "totalJourneys": 67,
+    "activeJourneys": 66
   },
   "journeys": [
     {
@@ -118,7 +119,7 @@
         },
         {
           "id": "ui-03",
-          "description": "Profile dropdown shows exactly 3 items",
+          "description": "Fresh signup (unauthenticated context, real /account/create registration) lands on the main tenant and the profile dropdown shows exactly 3 items: Profile, Help, Log Out",
           "status": "covered"
         },
         {
@@ -354,7 +355,7 @@
         },
         {
           "id": "mgmt-11",
-          "description": "Edit Agent opened from sidebar My Agents shows the full segment sidebar (not just Privacy); admin row-click guard (canEditMentors) still passes",
+          "description": "Edit Agent opened from sidebar My Agents renders a working multi-tab segment sidebar (more than the Privacy-only bug signature) and the first available tab activates; Settings+LLM additionally asserted when the picked sibling mentor grants rbacResource access — the first row is arbitrary and may carry partial rights",
           "status": "covered"
         },
         {
@@ -715,6 +716,26 @@
           "id": "emb-10",
           "description": "Optimize Page Context Tokens toggle: visible label present, tooltip ('Strips HTML tags from page context') reachable on hover, and the setting flips and persists after submit + modal reopen via GET /settings/ round-trip",
           "status": "pending"
+        },
+        {
+          "id": "emb-11",
+          "description": "Issue #2153: toggling the Shareable Link switch ON for a non-anonymous mentor with an empty Website URL does not surface the 'Please specify a valid Website URL' error and still creates the shareable link (success toast)",
+          "status": "covered"
+        },
+        {
+          "id": "emb-12",
+          "description": "Issue #2153: clicking the regenerate (refresh) icon next to Shareable Link does not surface the Website URL validation error",
+          "status": "covered"
+        },
+        {
+          "id": "emb-13",
+          "description": "Issue #2153: toggling the Shareable Link switch OFF does not surface the Website URL validation error",
+          "status": "covered"
+        },
+        {
+          "id": "emb-14",
+          "description": "Issue #2153 contrast case: toggling Shareable Link ON for an anonymous mentor (Website URL section not rendered at all) remains error-free",
+          "status": "covered"
         }
       ]
     },
@@ -1360,7 +1381,8 @@
         "components/modals/edit-mentor-modal/tabs/memory-tab/index.tsx",
         "components/modals/edit-mentor-modal/tabs/memory-tab/manage-memories.tsx",
         "components/modals/edit-mentor-modal/tabs/memory-tab/learners-memories.tsx",
-        "components/modals/edit-mentor-modal/tabs/settings-tab.tsx"
+        "components/modals/edit-mentor-modal/capability-gate.tsx",
+        "hooks/use-mentor-segments.ts"
       ],
       "checkpoints": [
         {
@@ -1370,7 +1392,7 @@
         },
         {
           "id": "mem-02",
-          "description": "Memory toggle in Settings tab can be enabled and disabled (sends enable_memory_component on Save)",
+          "description": "\"Remember past conversations\" in-tab capability toggle (feat/2040 — moved off Settings → Capabilities into the Memory tab's own CapabilityGate) can be enabled and disabled; auto-saves via useEditMentorMutation (optimistic, no footer Save button)",
           "status": "covered"
         },
         {
@@ -1385,12 +1407,12 @@
         },
         {
           "id": "mem-05",
-          "description": "Memory button visibility in chat input reflects mentor memory setting (Settings tab toggle)",
+          "description": "Memory button visibility in chat input reflects the Memory tab's in-tab capability toggle",
           "status": "covered"
         },
         {
           "id": "mem-06",
-          "description": "Memory toggle (enable_memory_component) is disabled and omitted from the settings PUT payload when the user only has read access to the field (RBAC) — unit-covered in settings-tab.test.tsx; not e2e-reproducible without RBAC field-permission seeding",
+          "description": "Memory capability toggle (enable_memory_component) is disabled when the user only has read access to the field (RBAC) — unit-covered in memory-tab.test.tsx; not e2e-reproducible without RBAC field-permission seeding",
           "status": "not-reproducible"
         }
       ]
@@ -2315,61 +2337,61 @@
       "name": "CLAW Advanced Sandbox",
       "spec": "44-claw-advanced-sandbox.spec.ts",
       "sourceFiles": [
-        "components/modals/edit-mentor-modal/tabs/settings-tab.tsx",
         "components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx",
         "components/modals/edit-mentor-modal/tabs/skills-tab.tsx",
         "components/modals/edit-mentor-modal/tabs/prompts-tab.tsx",
+        "components/modals/edit-mentor-modal/capability-gate.tsx",
         "hooks/use-mentor-segments.ts"
       ],
       "checkpoints": [
         {
           "id": "claw-01",
-          "description": "Admin opens Settings tab and Sandbox toggle is present",
+          "description": "Admin opens the Sandbox tab and the \"Dedicated sandbox\" capability toggle (in-tab CapabilityGate, feat/2040) is present",
           "status": "covered"
         },
         {
           "id": "claw-02",
-          "description": "Sandbox toggle is interactable for admins regardless of claw config state (admin intent)",
+          "description": "Capability toggle is interactable for admins regardless of sandbox connection state (admin intent)",
           "status": "covered"
         },
         {
           "id": "claw-03",
-          "description": "Flipping the toggle without saving does not show Sandbox or Skills tabs (pre-save state)",
+          "description": "Flipping the capability toggle auto-saves instantly (optimistic local state, no footer Save button) and does not change Sandbox or Skills tab visibility — both tabs are now unconditionally mounted for admins",
           "status": "covered"
         },
         {
           "id": "claw-04",
-          "description": "Enabling Sandbox and saving causes Sandbox tab to appear (right after Settings)",
+          "description": "Enabling the capability flips capability-gate-content's data-enabled to \"true\", ungating the SandboxConfig UI; Sandbox leads the Integrations category (feat/2040 moved it off Configurations)",
           "status": "covered"
         },
         {
           "id": "claw-05",
-          "description": "Skills tab and Agent Configuration section only appear when a ClawMentorConfig is wired (sandbox connected to an instance); otherwise stay hidden even when claw is enabled",
+          "description": "Skills tab is always visible AND shows the real skills UI (heading, info box, New Skill action) independent of the sandbox — feat/2040 made the Skills content fully sandbox-independent (no \"connect a sandbox\" gate)",
           "status": "covered"
         },
         {
           "id": "claw-06",
-          "description": "When wired, Sandbox tab is right after Settings and Skills tab is right after Prompts in the dialog tab list",
+          "description": "Sandbox leads the Integrations category and Skills follows Prompts in the Configurations category, unconditionally (feat/2040 groups the sidebar into Configurations / Integrations / Runtime)",
           "status": "covered"
         },
         {
           "id": "claw-07",
-          "description": "Disabling Sandbox and saving removes Sandbox tab, Skills tab, and Agent Configuration section",
+          "description": "Disabling the capability flips capability-gate-content's data-enabled back to \"false\", regating the SandboxConfig UI, while Sandbox and Skills tabs remain visible",
           "status": "covered"
         },
         {
           "id": "claw-08",
-          "description": "Admin navigates to Sandbox tab and the sandbox config container renders",
+          "description": "Admin navigates to Sandbox tab and the sandbox config container renders regardless of capability state (grayed, not unmounted, when off)",
           "status": "covered"
         },
         {
           "id": "claw-09",
-          "description": "Admin toggles Sandbox ON then OFF in one session: Sandbox tab appears after enable-save and disappears after disable-save",
+          "description": "Admin toggles the capability ON then OFF in one session and capability-gate-content's data-enabled flips accordingly both times",
           "status": "covered"
         },
         {
           "id": "claw-10",
-          "description": "Admin adds a new sandbox instance via the Add Instance dialog and the new row appears in the instance table",
+          "description": "Admin adds a new sandbox instance via the Add Instance dialog (capability enabled first — CapabilityGate content requires the toggle on) and the new row appears in the instance table",
           "status": "covered"
         },
         {
@@ -2379,7 +2401,7 @@
         },
         {
           "id": "claw-12",
-          "description": "Admin connects a sandbox instance: Connected Instance heading appears and Skills tab becomes visible in the dialog tab list",
+          "description": "Admin connects a sandbox instance via the dedicated per-row Connect button (data-testid=\"connect-instance-<id>\" — Connect is no longer a dropdown menu item, it sits next to the separate \"Actions\" three-dot menu): Connected Instance heading appears and the Skills tab renders its (sandbox-independent) skills UI",
           "status": "covered"
         },
         {
@@ -2399,7 +2421,7 @@
         },
         {
           "id": "claw-16",
-          "description": "Advanced Sandbox toggle (enable_claw) is disabled and omitted from the settings PUT payload when the user only has read access to the field (RBAC) — unit-covered in settings-tab.test.tsx; not e2e-reproducible without RBAC field-permission seeding",
+          "description": "Dedicated sandbox toggle (enable_claw) is disabled when the user only has read access to the field (RBAC) — unit-covered in sandbox-tab.test.tsx; not e2e-reproducible without RBAC field-permission seeding",
           "status": "not-reproducible"
         }
       ]
@@ -2418,7 +2440,7 @@
       "checkpoints": [
         {
           "id": "pr-01",
-          "description": "Privacy tab label is visible in the Edit Mentor modal sidebar",
+          "description": "Privacy tab label is visible in the Edit Mentor modal sidebar (always mounted — no longer gated on enable_privacy_router)",
           "status": "covered"
         },
         {
@@ -2428,17 +2450,22 @@
         },
         {
           "id": "pr-03",
-          "description": "Privacy tab body tracks `enable_privacy_router` flipped via Settings → Capabilities → 'Filter PII from messages' (the in-tab master switch was removed; flipping it now lives only in Capabilities)",
+          "description": "Privacy tab stays mounted in the sidebar regardless of enable_privacy_router; capability-gate-content's data-enabled attribute tracks the in-tab \"PII filtering\" toggle (feat/2040 — moved off Settings → Capabilities into the Privacy tab's own CapabilityGate)",
           "status": "covered"
         },
         {
           "id": "pr-04",
-          "description": "Action dropdown, entity chips, and output-filter switch are hidden when the router is off",
+          "description": "The CapabilityGate off-state hint is shown only while the router is off",
           "status": "covered"
         },
         {
           "id": "pr-05",
-          "description": "Enabling the router reveals the action, entity chips and output-filter fields",
+          "description": "Enabling the router keeps the action, entity chips and output-filter fields present and interactive",
+          "status": "covered"
+        },
+        {
+          "id": "pr-05b",
+          "description": "The \"When PII is detected\" action dropdown lists Allow, Redact, Mask, Block in that order (PRIVACY_ACTIONS = ['allow','redact','mask','block'] from @iblai/data-layer — Allow is now first)",
           "status": "covered"
         },
         {
@@ -2562,22 +2589,22 @@
         },
         {
           "id": "vo-09",
-          "description": "Settings tab surfaces both voice-call toggles (Enable smart document retrieval, Enable screen sharing)",
+          "description": "Settings tab surfaces the smart-document-retrieval voice-call toggle (\"Enable screen sharing\" moved off Settings onto the Screen Share tab's own capability toggle — see journey 48)",
           "status": "covered"
         },
         {
           "id": "vo-10",
-          "description": "Flipping a voice-call toggle in Settings and clicking Save persists to the CallConfiguration endpoint and surfaces the success toast",
+          "description": "Flipping the smart-document-retrieval voice-call toggle in Settings and clicking Save persists to the CallConfiguration endpoint and surfaces the success toast",
           "status": "covered"
         },
         {
           "id": "VO-11",
-          "description": "Voice tab is hidden from the sidebar when \"Enable voice calls\" (show_voice_call) is off",
+          "description": "Voice tab stays visible (always mounted — no longer gated on show_voice_call) and its content grays (capability-gate-content data-enabled=\"false\") when the in-tab \"Enable voice calls\" capability toggle is off",
           "status": "covered"
         },
         {
           "id": "VO-12",
-          "description": "Re-enabling \"Enable voice calls\" reveals the Voice tab in the sidebar after the settings refetch",
+          "description": "Re-enabling the in-tab \"Enable voice calls\" capability toggle ungates the Voice tab's sub-tab content (data-enabled=\"true\")",
           "status": "covered"
         }
       ]
@@ -2596,17 +2623,113 @@
       "checkpoints": [
         {
           "id": "ss-01",
-          "description": "Screen Share tab is hidden in the sidebar when the Settings 'Enable screen sharing' toggle is off",
+          "description": "Screen Share tab stays visible (always mounted — no longer gated on call_configuration.enable_video) and its content grays (capability-gate-content data-enabled=\"false\") when the in-tab \"Enable screen sharing\" capability toggle is off",
           "status": "covered"
         },
         {
           "id": "ss-02",
-          "description": "Flipping the Settings toggle on and saving makes the Screen Share tab appear in the sidebar",
+          "description": "Enabling the in-tab capability toggle ungates the screensharing prompt cards (data-enabled=\"true\") and hides the CapabilityGate off-hint",
           "status": "covered"
         },
         {
           "id": "ss-03",
-          "description": "Switching to the Screen Share tab renders the SDK heading and body",
+          "description": "Switching to the Screen Share tab renders the SDK heading, body and capability toggle regardless of the capability's on/off state",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "mentor-evaluation-tab",
+      "name": "Mentor Evaluation Tab",
+      "spec": "63-mentor-evaluation-tab.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/evaluation-tab/index.tsx",
+        "hooks/use-mentor-segments.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "eval-01",
+          "description": "Evals tab heading, description, and the info box (data-testid=evaluation-info-box) all render when the modal is opened on the Evals tab",
+          "status": "covered"
+        },
+        {
+          "id": "eval-02",
+          "description": "Benchmark combobox and both toolbar actions (New Evaluation, Manage benchmarks) render; New Evaluation's disabled/enabled state correctly reflects whether a benchmark is auto-selected",
+          "status": "covered"
+        },
+        {
+          "id": "eval-03",
+          "description": "Admin creates a new benchmark via Manage benchmarks and selects it back on the Evals tab toolbar",
+          "status": "covered"
+        },
+        {
+          "id": "eval-04",
+          "description": "Admin adds a Q&A pair to a benchmark via Manage benchmarks -> View items -> Add Q&A (Manual sub-tab)",
+          "status": "covered"
+        },
+        {
+          "id": "eval-05",
+          "description": "With a fresh (zero-run) benchmark selected, the runs table renders all five canonical headers (Evaluation, Status, Initiated by, Created, Actions) and the benchmark-specific empty state",
+          "status": "covered"
+        },
+        {
+          "id": "eval-06",
+          "description": "New Evaluation dialog shows the benchmark readback and name input, and Cancel dismisses it without creating a run",
+          "status": "covered"
+        },
+        {
+          "id": "eval-07",
+          "description": "New Evaluation dialog can be dismissed via Escape without creating a run",
+          "status": "covered"
+        },
+        {
+          "id": "eval-08",
+          "description": "Admin starts a new evaluation and it appears in the runs table with a valid status badge",
+          "status": "covered"
+        },
+        {
+          "id": "eval-09",
+          "description": "A run's actions menu reflects its live status - Check status/Delete always enabled; View results/New review/Export CSV enabled once completed, otherwise disabled with the notReadyHint tooltip",
+          "status": "covered"
+        },
+        {
+          "id": "eval-10",
+          "description": "Check status triggers a fresh fetch and surfaces an outcome toast (pending, completed, or failed)",
+          "status": "covered"
+        },
+        {
+          "id": "eval-11",
+          "description": "Once a run has completed, admin can open View results and Export CSV (opportunistic checkpoint - skips gracefully while the run has not completed yet)",
+          "status": "covered"
+        },
+        {
+          "id": "eval-12",
+          "description": "Once a run has completed, the New review (LLM-judge) dialog keeps Evaluate disabled until criteria and score name are filled (opportunistic checkpoint - skips gracefully while the run has not completed yet)",
+          "status": "covered"
+        },
+        {
+          "id": "eval-13",
+          "description": "Admin can cancel a delete confirmation (row stays) and then delete a run for real (row is removed)",
+          "status": "covered"
+        },
+        {
+          "id": "eval-14",
+          "description": "Manage benchmarks lists the created benchmark, and searching for its name filters down to it",
+          "status": "covered"
+        },
+        {
+          "id": "eval-15",
+          "description": "Evals tab has no axe-core accessibility violations on visible dialogs",
+          "status": "covered"
+        },
+        {
+          "id": "eval-16",
+          "description": "Admin can navigate away to another tab and back to Evals without errors (wrapper re-mounts cleanly)",
+          "status": "covered"
+        },
+        {
+          "id": "eval-17",
+          "description": "Non-admin does not see the Evals tab in the Edit Mentor modal (ADMIN-only segment in use-mentor-segments.ts)",
           "status": "covered"
         }
       ]
@@ -2935,6 +3058,31 @@
           "id": "upi-05",
           "description": "URL-encoded prompt (%20 → space): bubble renders the decoded text (e.g. 'hi there e2e'), not the percent-encoded form",
           "status": "covered"
+        },
+        {
+          "id": "upi-06",
+          "description": "sanitizePromptParam() (iblai-platform#2164): a clean prompt with no special chars passes through unchanged and renders verbatim in the bubble",
+          "status": "covered"
+        },
+        {
+          "id": "upi-07",
+          "description": "sanitizePromptParam() (iblai-platform#2164): zero-width space, NUL control char, and Unicode Tag-block char interleaved with visible text are stripped; bubble text is exactly the cleaned string",
+          "status": "covered"
+        },
+        {
+          "id": "upi-08",
+          "description": "sanitizePromptParam() (iblai-platform#2164): a ?prompt= of whitespace + zero-width chars only cleans to empty, so sanitizePromptParam() returns undefined and no auto-submit occurs (welcome state shown)",
+          "status": "covered"
+        },
+        {
+          "id": "upi-09",
+          "description": "sanitizePromptParam() (iblai-platform#2164): an HTML/script-ish payload (<img src=x onerror=alert(1)>) is NOT escaped by sanitizePromptParam but renders as inert literal text via the render layer's existing plain-text/no-dangerouslySetInnerHTML handling — no real <img> element is inserted and no onerror/dialog ever fires",
+          "status": "covered"
+        },
+        {
+          "id": "upi-10",
+          "description": "sanitizePromptParam() (iblai-platform#2164): oversized ?prompt= (>4000 chars) is truncated to MAX_PROMPT_PARAM_LENGTH then re-trimmed; unit-covered in lib/__tests__/sanitize-prompt-param.test.ts — not e2e-reproducible without flake risk from very long query strings (URL length limits, page.goto/typing cost)",
+          "status": "not-reproducible"
         }
       ]
     },
@@ -3020,12 +3168,6 @@
           "status": "covered"
         },
         {
-          "id": "cp-tenant-05",
-          "description": "Non-admin cannot reach the tenant Advanced settings (no platform-name menu item in More options)",
-          "status": "not-reproducible",
-          "note": "Non-admin More options menu does not surface the platform-name item; test.skipped with explanation in spec"
-        },
-        {
           "id": "cp-agent-01",
           "description": "Enable private mode row is visible in Edit Mentor Settings Capabilities sub-tab for admins",
           "status": "covered"
@@ -3099,6 +3241,52 @@
           "id": "cp-profile-05",
           "description": "Selecting Normal reverts the header toggle to data-state=off on a fresh chat while data-source stays user (Normal is an explicit user choice; only mode=disabled reads as private)",
           "status": "covered"
+        },
+        {
+          "id": "cp-chat-01",
+          "description": "Admin enables private mode via the header toggle on a fresh chat (data-state=on, data-source=session), sends a message, and still receives an assistant reply; private mode stays on across the round-trip",
+          "status": "covered"
+        },
+        {
+          "id": "cp-chat-02",
+          "description": "Non-admin (separate browser context) enables private mode via the header toggle on a fresh chat, sends a message, and receives an assistant reply; private mode stays on across the round-trip",
+          "status": "covered"
+        },
+        {
+          "id": "cp-chat-04",
+          "description": "Prompt Gallery (admin-curated, mentor-keyed) still opens and renders cards in private mode; AI guided/suggested prompts row is visible on a fresh private chat after the AI replies",
+          "status": "pending",
+          "note": "Assertion (a) Prompt Gallery passes today. Assertion (b) guided prompts row is a live gate awaiting backend fix: backend must generate guided prompts for disable_chathistory sessions (endpoint: GET .../sessions/{session_id}/guided-prompts/)"
+        },
+        {
+          "id": "cp-chat-05",
+          "description": "Voice call dialog opens in private mode (empty-chat path) and does NOT show 'Failed to initiate call' error toast; Chromium fake-media only",
+          "status": "pending",
+          "note": "Live gate awaiting backend fix: backend must mint LiveKit credentials for disable_chathistory sessions (POST /create-call-credentials/); empty-chat path may already pass since the session IS persisted server-side"
+        },
+        {
+          "id": "cp-chat-06",
+          "description": "Multi-turn context retained within a single private session: (a) cached session id is stable across both sends (front-end contract, passes today); (b) AI echoes back the code word from turn 1, proving backend retains in-session context for private sessions",
+          "status": "pending",
+          "note": "Skipped (test.skip) as flaky pending backend fix — tracked by iblai/iblai-platform#2186. Assertion (a) stable session id passes today. Assertion (b) AI context recall is a live gate awaiting backend fix: backend must retain ephemeral in-session context for disable_chathistory:true sessions"
+        },
+        {
+          "id": "cp-chat-07",
+          "description": "File attachment (drag-drop) works in private mode: attachment chip appears, message sends with attachment, and assistant replies; pins that selectSessionId follows the private session id through the upload path",
+          "status": "pending",
+          "note": "Expected to pass today (analysis: upload path reads selectSessionId which startPrivateChat updates via chatActions.updateSessionIds — byte-identical to normal mode). Included as regression gate."
+        },
+        {
+          "id": "cp-chat-08",
+          "description": "Memory button is hidden while private mode is on (data-state=on) and reappears when private mode is off (frontend gate: chat-input-form.tsx derives chatPrivacyActive from useChatPrivacy and passes isPrivate into InsideButtons, which drops Memory from the inline row and the overflow dropdown)",
+          "status": "covered",
+          "note": "Frontend gate implemented in components/chat-input-form.tsx (useChatPrivacy -> isPrivate prop) + components/chat-input-form/inside-buttons.tsx; deterministic regression coverage in components/chat-input-form/__tests__/inside-buttons.test.tsx ('Memory button private-mode gating')"
+        },
+        {
+          "id": "cp-chat-09",
+          "description": "Share-chat button in the AI message bubble is hidden in private mode (a private session is a temporary, non-persisted chat with no durable session to share); visible in normal mode and gated out while effective mode is disabled",
+          "status": "covered",
+          "note": "Frontend gate implemented in components/chat/ai-message-bubble.tsx (useChatPrivacy -> chatPrivacyActive gates the <AIMessageShare> render alongside !showingSharedChat); deterministic regression coverage in components/chat/__tests__/ai-message-bubble.test.tsx ('chat private mode active' share-button cases)"
         }
       ]
     },
@@ -3208,6 +3396,400 @@
           "id": "fcc-04",
           "description": "Clicking Upgrade Plan in the credit dropdown creates a Stripe checkout session and redirects to a Stripe-hosted page requiring credit-card input (secure Stripe Elements card iframe + pay button)",
           "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "navbar-user-mode-dropdown-visibility",
+      "name": "Navbar User Mode Dropdown Visibility",
+      "spec": "56-navbar-user-mode-dropdown-visibility.spec.ts",
+      "sourceFiles": [
+        "hooks/use-user-type.ts",
+        "hooks/use-mentor-segments.ts",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "nmv-01",
+          "description": "Admin (default Admin/instructor mode) sees the full admin segment list in the Selected agent dropdown: New Chat, Settings, LLM, Prompts, Tools",
+          "status": "covered"
+        },
+        {
+          "id": "nmv-02",
+          "description": "Toggling the navbar User/Admin switch to User mode and re-opening the dropdown collapses the list to exactly New Chat — Settings, LLM, Prompts, Tools, and the Modify/fork footer action are all hidden (issue #2048)",
+          "status": "covered"
+        },
+        {
+          "id": "nmv-03",
+          "description": "Regression guard: toggling back to Admin mode and re-opening the dropdown restores the full admin segment list — proves the segment list recomputes on every toggle instead of staying stale (fix: `userType` added to the `filterContext` useMemo deps in hooks/use-mentor-segments.ts)",
+          "status": "covered"
+        },
+        {
+          "id": "nmv-04",
+          "description": "Toggling to User mode a second time collapses the dropdown back down to exactly New Chat, confirming the fix holds across repeated toggles, not just the first one",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "chat-history-export-toggle",
+      "name": "Chat History Export Toggle",
+      "spec": "57-chat-history-export-toggle.spec.ts",
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "chexp-01",
+          "description": "Tenant Advanced tab renders a 'Chat History Export' switch, ON by default (SDK-driven org-metadata boolean, enable_chat_history_export)",
+          "status": "covered"
+        },
+        {
+          "id": "chexp-02",
+          "description": "Toggling the 'Chat History Export' switch OFF in the Advanced tab persists across closing and reopening the dialog (PATCH org metadata round trip)",
+          "status": "covered"
+        },
+        {
+          "id": "chexp-03",
+          "description": "With the setting OFF, a student (admin toggled into User/Learner mode) does not see Export in a chat row's three-dot menu, but still sees Pin and Delete",
+          "status": "covered"
+        },
+        {
+          "id": "chexp-04",
+          "description": "With the setting ON, a student (admin toggled into User/Learner mode) sees Export, Pin, and Delete in a chat row's three-dot menu",
+          "status": "covered"
+        },
+        {
+          "id": "chexp-05",
+          "description": "With the setting OFF, a non-student (admin/instructor mode) still sees Export in a chat row's three-dot menu — role wins over the tenant setting",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "embed-mode-chat-selection-sidebar-guard",
+      "name": "Embed Mode Chat Selection Sidebar Guard",
+      "spec": "58-embed-mode-chat-selection-sidebar-guard.spec.ts",
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
+        "hooks/use-embed-mode.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "embchat-01",
+          "description": "Embed mode (?embed=true) sidebar shows only New Chat and Chats before any chat-history row is clicked (minimal-sidebar baseline)",
+          "status": "covered"
+        },
+        {
+          "id": "embchat-02",
+          "description": "Clicking a chat-history row in embed mode repaints the chat panel with that session's messages without a client-side navigation (handleSelectRow skips router.push when already on the mentor's chat page)",
+          "status": "covered"
+        },
+        {
+          "id": "embchat-03",
+          "description": "REGRESSION GUARD (issue #2067 / LAIA-684): after selecting a chat from history in embed mode, the URL still carries embed=true and never gains a ?session= param — on the pre-fix code the row click pushed /platform/<tenant>/<mentor>?session=<id>, stripping embed=true and flipping the app out of embed mode",
+          "status": "covered"
+        },
+        {
+          "id": "embchat-04",
+          "description": "REGRESSION GUARD: after selecting a chat from history in embed mode, Agents, Workflows, Projects, Analytics, Management, Notifications, and the Support footer link remain absent from the sidebar — the full admin sidebar must not leak in",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "ecommerce-credits-and-upgrade",
+      "name": "Ecommerce Credits & Upgrade",
+      "spec": "59-ecommerce-credits-and-upgrade.spec.ts",
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
+        "components/modals/modal-container.tsx",
+        "hooks/subscription/use-402-error-check.ts",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "ecu-01",
+          "description": "New user signs up via /account/create and lands authenticated on <base-url>/platform/main/<mentor-id> with the mentor dropdown ready",
+          "status": "covered"
+        },
+        {
+          "id": "ecu-02",
+          "description": "Credit balance dropdown shows a Free plan badge, a positive remaining balance, and an Upgrade Plan button on the main tenant",
+          "status": "covered"
+        },
+        {
+          "id": "ecu-03",
+          "description": "Profile dropdown shows exactly Profile / Help / Log Out on a brand-new free-trial account",
+          "status": "covered"
+        },
+        {
+          "id": "ecu-04",
+          "description": "Every gated sidebar entry (Agents > New Agent/My Agents, Workflows > My Workflows, Projects > My Projects, Analytics > Overview, Invites, Management, Integrations, Monetization, Advanced) opens the shared \"Subscribe to unlock full features\" dialog with an \"Upgrade for free\" CTA",
+          "status": "covered"
+        },
+        {
+          "id": "ecu-05",
+          "description": "Zero credits (via the DM service credit-cleanup admin endpoint) blocks chat submission on the main tenant and surfaces the same subscribe dialog instead of an AI response",
+          "status": "covered"
+        },
+        {
+          "id": "ecu-06",
+          "description": "Clicking \"Upgrade for free\" redirects to a zero-cost Stripe-hosted checkout; submitting it completes the SSO redirect chain onto a real (non-\"main\") platform id with a fresh Free-plan credit balance and working chat",
+          "status": "covered"
+        },
+        {
+          "id": "ecu-07",
+          "description": "The profile dropdown's Account item opens the User Profile dialog; its Billing tab (?profileTab=billing) shows the Free plan, Current badge, Upgrade button, and a positive credit balance",
+          "status": "covered"
+        },
+        {
+          "id": "ecu-08",
+          "description": "Zero credits on the upgraded (non-\"main\") tenant auto-opens the User Profile dialog on the Billing tab (admin 402 handling injects ?profileTab=billing) showing 0 credits, instead of the subscribe dialog used on the main tenant",
+          "status": "covered"
+        },
+        {
+          "id": "ecu-09",
+          "description": "The Billing tab's Upgrade button redirects to a real Stripe test-mode checkout; filling the 4242 test card, expiry, CVC, name, and Uruguay billing country completes payment",
+          "status": "covered"
+        },
+        {
+          "id": "ecu-10",
+          "description": "Post-payment, the account modal auto-opens on the Billing tab showing the Premium plan and a Manage Billing button with a restored credit balance; chat continues to work with the new balance",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "mentor-lti-tab",
+      "name": "Mentor LTI Tab",
+      "spec": "60-mentor-lti-tab.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/lti-tab.tsx",
+        "hooks/use-mentor-segments.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "lti-01",
+          "description": "Admin sees the LTI tab visible by default on a fresh mentor without enabling the 'Enable LTI launches' toggle (is_lti_accessible=false) — gate removed in feat/1853",
+          "status": "covered"
+        },
+        {
+          "id": "lti-03",
+          "description": "Admin disables \"Enable LTI launches\" via the LTI tab's own in-tab capability toggle (feat/2040 — moved off Settings → Capabilities into the LTI tab's own CapabilityGate) and capability-gate-content's data-enabled flips to \"false\" (the tab itself is unconditionally mounted for admins, so tab visibility is no longer asserted)",
+          "status": "covered"
+        },
+        {
+          "id": "lti-04",
+          "description": "Non-admin user does not see the LTI tab in the Edit Mentor modal (LTI segment remains admin-only)",
+          "status": "covered"
+        },
+        {
+          "id": "lti-05",
+          "description": "Admin opens the LTI tab on an LTI-enabled mentor and sees the header and all four sub-tabs (Agent Links, Keys, Tools, Tool Endpoints)",
+          "status": "covered"
+        },
+        {
+          "id": "lti-06",
+          "description": "Admin opens the LTI Links sub-tab on a fresh mentor and sees the empty state when no links exist",
+          "status": "covered"
+        },
+        {
+          "id": "lti-07",
+          "description": "Admin creates an LTI link and it appears in the links list",
+          "status": "covered"
+        },
+        {
+          "id": "lti-08",
+          "description": "Admin edits (renames) an LTI link and the new name appears in the list while the old name is gone",
+          "status": "covered",
+          "note": "Self-contained mentor: the backend allows a single LTI link per mentor (the create button is not rendered once a link exists) and the SDK has no delete-link helper, so creating a second link on the shared worker mentor after lti-07 would time out"
+        },
+        {
+          "id": "lti-10",
+          "description": "Admin creates an LTI key and the key detail shows non-empty public key and JWK fields",
+          "status": "covered"
+        },
+        {
+          "id": "lti-11",
+          "description": "Admin renames an LTI key and the new name appears in the list while the old name is gone",
+          "status": "covered"
+        },
+        {
+          "id": "lti-12",
+          "description": "Admin deletes an LTI key and the key is no longer in the list",
+          "status": "covered"
+        },
+        {
+          "id": "lti-13",
+          "description": "Admin opens the LTI Tools sub-tab and the platform-wide tools surface renders: the create button plus either the empty state or the existing tools list",
+          "status": "covered",
+          "note": "LTI tools are tenant-scoped (platform-wide), not mentor-scoped: a fresh mentor still lists every tool on the tenant, lti-14 residue persists (no delete-tool helper), and parallel workers can create tools at any moment — a guaranteed-empty state is unreachable"
+        },
+        {
+          "id": "lti-14",
+          "description": "Admin creates an LTI tool with a JWKS URL signing config and it appears in the tools list",
+          "status": "covered",
+          "note": "Keys and tools are platform-wide and the SDK renders only page 1 of their lists (no pagination), so accumulated e2e residue used to push fresh keys off-page and break the in-list assertion; the worker fixture now reaps stale e2e-named tools/keys (>2h) via e2e/utils/lti-residue.ts"
+        },
+        {
+          "id": "lti-16",
+          "description": "Admin opens the Tool Endpoints sub-tab and all four endpoint URLs (redirect URI, login, deep linking, JWKS) are rendered non-empty",
+          "status": "covered"
+        },
+        {
+          "id": "lti-17",
+          "description": "Admin copies the redirect URI endpoint URL and the copy button label flips to 'Copied'",
+          "status": "covered"
+        },
+        {
+          "id": "lti-18",
+          "description": "Admin opens the Tool Endpoints sub-tab and every endpoint URL is an absolute https URL on the /lti/ path sharing one origin (built from NEXT_PUBLIC_LEGACY_LMS_URL)",
+          "status": "covered"
+        },
+        {
+          "id": "lti-sdk-01",
+          "description": "PENDING (SDK dependency): When an admin creates the first LTI link, is_lti_accessible is auto-enabled via the API — not yet implemented; AgentLtiTab exposes no post-create callback hook",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "latex-math-rendering",
+      "name": "LaTeX / Math Rendering",
+      "spec": "61-latex-math-rendering.spec.ts",
+      "sourceFiles": ["lib/utils.ts", "components/markdown.tsx"],
+      "checkpoints": [
+        {
+          "id": "latex-01",
+          "description": "Inline LaTeX math (e.g. $3x + 5$, $x = 4$, $2x + 6$, $3(4) + 5$) renders as KaTeX with no raw dollar signs or escape backslashes leaking into the visible text",
+          "status": "covered"
+        },
+        {
+          "id": "latex-02",
+          "description": "Block LaTeX math ($$...$$ on its own fenced lines) renders as KaTeX display blocks (.katex-display), including a \\text{}/\\frac{} expression",
+          "status": "covered"
+        },
+        {
+          "id": "latex-03",
+          "description": "Currency amounts (e.g. \"I have $5 and $10, it costs $5, and the total is $3.50.\") stay literal text with no KaTeX rendering and no visible escape backslash",
+          "status": "covered"
+        },
+        {
+          "id": "latex-04",
+          "description": "Money then math on the same line (\"the kit costs $12, and the formula $3x + 5$ gives the price.\") keeps $12 literal while $3x + 5$ renders as KaTeX",
+          "status": "covered"
+        },
+        {
+          "id": "latex-05",
+          "description": "Math then money on the same line (\"since $2x = 8$, each unit is $8 and the pair is $16.\") renders $2x = 8$ as KaTeX while $8 and $16 stay literal",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "chat-search-dialog",
+      "name": "Chat Search Dialog",
+      "spec": "62-chat-search-dialog.spec.ts",
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/chats/chat-search-dialog.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/chats/use-recent-chats.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "csd-01",
+          "description": "Clicking Search chats in the expanded sidebar opens the dialog with the searchbox focused; pressing Escape closes it",
+          "status": "covered"
+        },
+        {
+          "id": "csd-02",
+          "description": "The dialog lists the mentor's seeded chats grouped under Previous 7 Days, each row showing its first human message as a single line with no embedded newline",
+          "status": "covered"
+        },
+        {
+          "id": "csd-03",
+          "description": "Typing in the searchbox filters the list (server-side, debounced) to only the matching session; clearing the search restores all seeded rows",
+          "status": "covered"
+        },
+        {
+          "id": "csd-04",
+          "description": "Clicking New Chat inside the dialog closes it and starts a fresh, empty chat distinct from the previously-active seeded session",
+          "status": "covered"
+        },
+        {
+          "id": "csd-05",
+          "description": "Selecting a chat result closes the dialog and loads that session's conversation into the chat panel",
+          "status": "covered"
+        },
+        {
+          "id": "csd-06",
+          "description": "Collapsing the sidebar and clicking the Search chats rail icon opens the same dialog",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "shareable-link-rbac-bypass",
+      "name": "Shareable Link RBAC Bypass",
+      "spec": "64-shareable-link-rbac-bypass.spec.ts",
+      "sourceFiles": ["components/chat-input-form.tsx"],
+      "checkpoints": [
+        {
+          "id": "shl-01",
+          "description": "Non-admin user denied RBAC #chat permission on an Administrators-only, Authenticated-Users-chat mentor opens the chat with a VALID shareable-link token — the textarea is enabled (no RBAC denial placeholder), and the user can send a message and receive a response (issue #2155)",
+          "status": "covered"
+        },
+        {
+          "id": "shl-02",
+          "description": "Safety-boundary guard: the same non-admin user opens the same mentor chat with an INVALID/never-issued shareable-link token — the backend never creates a session, so the textarea stays disabled exactly as with no token at all (token presence alone must not unlock chat)",
+          "status": "covered"
+        },
+        {
+          "id": "shl-03",
+          "description": "Regression guard: the same non-admin user opens the same mentor chat with NO token — the textarea stays disabled and the RBAC denial placeholder (\"Sorry about that! You don't have permission to chat.\") is shown",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "analytics-navbar-parity",
+      "name": "Analytics Navbar Parity",
+      "spec": "65-analytics-navbar-parity.spec.ts",
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "anp-01",
+          "description": "Admin on the analytics page sees the mentor dropdown trigger (not static Avatar+name text), and it opens the categorized menu with New Chat and Settings items (issue #2248)",
+          "status": "covered"
+        },
+        {
+          "id": "anp-02",
+          "description": "Full navbar parity: LLM Model Selector and Private Mode chip are both visible on /analytics, matching the regular chat page baseline captured in the same test (isOnChatPage no longer excludes /analytics)",
+          "status": "covered"
+        },
+        {
+          "id": "anp-03",
+          "description": "REGRESSION GUARD: clicking New Chat from the analytics navbar dropdown routes back to the bare chat route (no /analytics suffix) and starts a fresh, empty session — previously a silent no-op since RemoteEvents.newChat has no listener off the chat route",
+          "status": "covered"
+        },
+        {
+          "id": "anp-04",
+          "description": "Fix holds on nested analytics routes: /analytics/users still shows the mentor dropdown and LLM Model Selector",
+          "status": "covered"
+        },
+        {
+          "id": "anp-05",
+          "description": "Admin flipped to User (student) mode does not see the LLM Model Selector on the analytics page (isOnChatPage && isAdmin && !userIsStudent gate)",
+          "status": "covered"
+        },
+        {
+          "id": "anp-06",
+          "description": "/prompt-gallery regression guard could not be built E2E: no page.tsx exists for that route anywhere in the app and no code path (Link/router.push) ever navigates there — it is a client-state modal, not a URL. Direct browser navigation to .../prompt-gallery renders the app's root not-found.tsx with the <nav> element absent entirely, so isPromptGalleryPage never runs against real DOM. Unit-covered instead in nav-bar/__tests__/index.test.tsx.",
+          "status": "not-reproducible"
         }
       ]
     }

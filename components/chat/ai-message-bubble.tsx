@@ -30,6 +30,8 @@ import type { CanvasOpenPayload } from './chat-messages/types';
 import { ReasoningSection } from './reasoning-section';
 import { ToolCallIndicator } from './tool-call-indicator';
 import { config } from '@/lib/config';
+import { useChatPrivacy } from '@iblai/iblai-js/web-containers';
+import { useUsername } from '@/hooks/use-user';
 
 // Check if message has artifact versions
 const hasArtifactVersions = (message?: Message): boolean => {
@@ -92,6 +94,24 @@ export function AIMessageBubble({
 }: AIMessageBubbleProps) {
   const t = useTranslations('chatAiMessageBubble');
   const showingSharedChat = useAppSelector(selectShowingSharedChat);
+
+  // Chat private mode signal — same source as the nav-bar toggle and the
+  // chat-input Memory gate. A private session is a temporary chat that is not
+  // persisted, so the "Share this chat" action is hidden while it is active
+  // (there is no durable session to share). Gate on `isEffectiveReady` so the
+  // button doesn't flash before the effective query resolves.
+  const username = useUsername();
+  const {
+    effective: chatPrivacyEffective,
+    isEffectiveReady: chatPrivacyReady,
+  } = useChatPrivacy({
+    org: tenantKey,
+    userId: username ?? undefined,
+    mentor: mentorId,
+  });
+  const chatPrivacyActive =
+    chatPrivacyReady && chatPrivacyEffective?.mode === 'disabled';
+
   const { metadata: tenantMetadata } = useTenantMetadataHook({
     org: tenantKey,
   });
@@ -204,7 +224,7 @@ export function AIMessageBubble({
                 />
               )}
 
-              {!showingSharedChat && (
+              {!showingSharedChat && !chatPrivacyActive && (
                 <AIMessageShare sessionId={sessionId} tenantKey={tenantKey} />
               )}
 

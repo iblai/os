@@ -364,7 +364,9 @@ fn parse_plain_text_models(stdout: &str, downloaded_models: &std::collections::H
 }
 
 /// Get the actual Foundry service endpoint by running `foundry service status`
-fn get_foundry_service_endpoint() -> Option<String> {
+/// (the port is dynamic). `pub` so Code (opencode over ACP) can point opencode at
+/// Foundry's OpenAI-compatible API at `{endpoint}/v1`.
+pub fn get_foundry_service_endpoint() -> Option<String> {
     let output = create_command("foundry")
         .args(&["service", "status"])
         .output()

@@ -44,9 +44,33 @@ const mockUseMentorSettings = vi.hoisted(() => vi.fn());
 const mockUseModelFileUploadCapabilities = vi.hoisted(() => vi.fn());
 const mockCheckRbacPermission = vi.hoisted(() => vi.fn(() => true));
 
+// Shareable-link token present in the URL (`?token=...`). When set, the RBAC
+// chat gate must be bypassed. Controlled per-test and reset in beforeEach.
+let mockShareableToken: string | null = null;
+
 // Mock all dependencies
 vi.mock('react-responsive', () => ({
   useMediaQuery: vi.fn(() => mockIsTabletOrMobile),
+}));
+
+vi.mock('next/navigation', () => ({
+  // `useParams` previously resolved to null outside a route; keep mentorId
+  // undefined so downstream hooks (e.g. chat privacy) behave as before.
+  useParams: () => ({}),
+  useSearchParams: () =>
+    new URLSearchParams(
+      mockShareableToken ? `token=${mockShareableToken}` : '',
+    ),
+}));
+
+// The component reads chat-privacy state via web-containers' useChatPrivacy,
+// which internally selects from the SDK chat slice that this test's mock store
+// does not provide. Mock it (as sibling tests do) so the component renders.
+vi.mock('@iblai/iblai-js/web-containers', () => ({
+  useChatPrivacy: () => ({
+    effective: { mode: 'enabled', source: 'session', is_locked: false },
+    isEffectiveReady: true,
+  }),
 }));
 
 vi.mock('next/dynamic', () => ({
@@ -139,12 +163,13 @@ vi.mock('@/components/chat/submit-message-button', () => ({
     isPreviewMode,
     isUploading,
     allowAnonymousAccess,
+    disabled,
   }: any) => (
     <button
       data-testid="submit-button"
       data-allow-anon={allowAnonymousAccess ? 'true' : 'false'}
       type="submit"
-      disabled={isPreviewMode || isUploading}
+      disabled={disabled || isPreviewMode || isUploading}
     >
       Submit
     </button>
@@ -199,6 +224,17 @@ vi.mock('@iblai/iblai-js/web-utils', async () => {
       metadata: {},
       metadataLoaded: true,
     }),
+  };
+});
+
+// The real useChatPrivacy fires chat-privacy selectors/API calls against redux
+// slices this test's minimal store doesn't provide; stub it (the nav-bar tests
+// stub ChatPrivacyToggle for the same reason).
+vi.mock('@iblai/iblai-js/web-containers', async () => {
+  const actual = await vi.importActual('@iblai/iblai-js/web-containers');
+  return {
+    ...actual,
+    useChatPrivacy: () => ({ effective: undefined, isEffectiveReady: false }),
   };
 });
 
@@ -425,6 +461,7 @@ describe('ChatInputForm', () => {
     mockCheckRbacPermission.mockReturnValue(true);
     mockExecuteWithTrialCheck.mockImplementation((fn: () => void) => fn());
     mockMaxCharacterSize = '2000';
+    mockShareableToken = null;
   });
 
   const renderWithRedux = (
@@ -1621,6 +1658,110 @@ describe('ChatInputForm', () => {
 
       // uploadFiles should NOT be called
       expect(mockUploadFiles).not.toHaveBeenCalled();
+    });
+
+    it('should bypass the RBAC gate when a shareable-link token is present', () => {
+      mockMentorSettings = {
+        data: {
+          mentorVisibility: 'PRIVATE',
+          disclaimer: null,
+          mentorDbId: 42,
+        },
+      } as any;
+      // RBAC would otherwise deny chat...
+      mockCheckRbacPermission.mockReturnValue(false);
+      // ...but the user arrived via a shareable link (?token=...).
+      mockShareableToken = 'share-abc123';
+
+      renderWithRedux(<ChatInputForm {...defaultProps} />, {
+        rbac: { rbacPermissions: { '/mentors/42/': {} } },
+      });
+
+      const textarea = screen.getByTestId('auto-resize-textarea');
+      // Chat input is enabled and does NOT show the RBAC denial placeholder.
+      // defaultProps.sessionId is truthy ('session-123'), i.e. the backend
+      // accepted the token and created a session — the bypass condition.
+      expect(textarea).not.toBeDisabled();
+      expect(textarea).not.toHaveAttribute(
+        'placeholder',
+        "Sorry about that! You don't have permission to chat.",
+      );
+      // Submit button remains enabled (only disabled by preview/uploading).
+      expect(screen.getByTestId('submit-button')).not.toBeDisabled();
+    });
+
+    it('should keep chat gated (and hide the RBAC denial) when a token is present but no session has been created yet', () => {
+      mockMentorSettings = {
+        data: {
+          mentorVisibility: 'PRIVATE',
+          disclaimer: null,
+          mentorDbId: 42,
+        },
+      } as any;
+      // RBAC denies, and although a token is present the backend has not yet
+      // returned a sessionId (invalid/expired token, or pre-create window).
+      mockCheckRbacPermission.mockReturnValue(false);
+      mockShareableToken = 'share-abc123';
+
+      renderWithRedux(<ChatInputForm {...defaultProps} sessionId="" />, {
+        rbac: { rbacPermissions: { '/mentors/42/': {} } },
+      });
+
+      const textarea = screen.getByTestId('auto-resize-textarea');
+      // Without a created session the token cannot open the input...
+      expect(textarea).toBeDisabled();
+      expect(screen.getByTestId('submit-button')).toBeDisabled();
+      // ...but a share-link visitor must never see the RBAC denial message,
+      // so the placeholder is the normal one, not the denial text.
+      expect(textarea).not.toHaveAttribute(
+        'placeholder',
+        "Sorry about that! You don't have permission to chat.",
+      );
+    });
+
+    it('should allow submission when a shareable-link token bypasses RBAC', () => {
+      mockMentorSettings = {
+        data: {
+          mentorVisibility: 'PRIVATE',
+          disclaimer: null,
+          mentorDbId: 42,
+        },
+      } as any;
+      mockCheckRbacPermission.mockReturnValue(false);
+      mockShareableToken = 'share-abc123';
+
+      renderWithRedux(<ChatInputForm {...defaultProps} />, {
+        chatInput: { textareaInput: 'Hello via shareable link!' },
+        rbac: { rbacPermissions: { '/mentors/42/': {} } },
+      });
+
+      const form = screen.getByTestId('auto-resize-textarea').closest('form');
+      fireEvent.submit(form!);
+
+      expect(mockOnSubmit).toHaveBeenCalledWith('Hello via shareable link!');
+    });
+
+    it('should keep chat enabled when a token is present and RBAC also grants permission', () => {
+      mockMentorSettings = {
+        data: {
+          mentorVisibility: 'PRIVATE',
+          disclaimer: null,
+          mentorDbId: 42,
+        },
+      } as any;
+      mockCheckRbacPermission.mockReturnValue(true);
+      mockShareableToken = 'share-abc123';
+
+      renderWithRedux(<ChatInputForm {...defaultProps} />, {
+        rbac: { rbacPermissions: { '/mentors/42/': {} } },
+      });
+
+      const textarea = screen.getByTestId('auto-resize-textarea');
+      expect(textarea).not.toBeDisabled();
+      expect(textarea).not.toHaveAttribute(
+        'placeholder',
+        "Sorry about that! You don't have permission to chat.",
+      );
     });
   });
 

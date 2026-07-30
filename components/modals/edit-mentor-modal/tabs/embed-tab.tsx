@@ -243,7 +243,6 @@ export function EmbedTab() {
     setFocusEditCustomFloatingBubble,
     updateConfig,
     updateMultipleConfig,
-    syncEmbedSettings,
   } = useEmbedTab();
   const toast = useToast();
   const { data: mentorSettings, isLoading: isLoadingSettings } =
@@ -397,9 +396,6 @@ export function EmbedTab() {
       }).unwrap();
       setShareableToken(createShareableLinkData);
 
-      // Sync embed settings after shareable link creation
-      await syncEmbedSettings();
-
       setIsLoadingShareableLink(false);
       toast.toast({
         description: t('toastRegenerateSuccess'),
@@ -430,9 +426,6 @@ export function EmbedTab() {
           }).unwrap();
           setShareableToken({ ...shareableToken, enabled: true });
 
-          // Sync embed settings after enabling shareable link
-          await syncEmbedSettings();
-
           setIsLoadingShareableLink(false);
           toast.toast({
             description: t('toastEnableSuccess'),
@@ -457,9 +450,6 @@ export function EmbedTab() {
             // @ts-expect-error - userId parameter may not exist in API but is passed from legacy code
             userId: username,
           }).unwrap();
-
-          // Sync embed settings after creating shareable link
-          await syncEmbedSettings();
 
           setIsLoadingShareableLink(false);
           toast.toast({
@@ -490,9 +480,6 @@ export function EmbedTab() {
           },
         }).unwrap();
         setShareableToken({ ...shareableToken, enabled: false });
-
-        // Sync embed settings after disabling shareable link
-        await syncEmbedSettings();
 
         setIsLoadingShareableLink(false);
         toast.toast({
@@ -530,6 +517,12 @@ export function EmbedTab() {
             overflowX: 'hidden',
           }}
         >
+          <div
+            className="rounded-md border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600"
+            data-testid="embed-info-box"
+          >
+            {t('infoBox')}
+          </div>
           <form
             onSubmit={(formEvent) => {
               formEvent.preventDefault();

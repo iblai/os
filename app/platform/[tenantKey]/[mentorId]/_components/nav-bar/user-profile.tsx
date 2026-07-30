@@ -37,9 +37,13 @@ import {
   updateRbacPermissions,
 } from '@/features/rbac/rbac-slice';
 import { useModelDownload } from '@/hooks/use-model-download';
+import { useLockedTenant } from '@/hooks/use-tenant-lock';
+import { LOCAL_LLM_CHANGED_EVENT } from '@/hooks/use-selected-local-model';
 
 export function UserProfile() {
   const username = useUsername();
+  // Tauri builds pinned to a tenant hide the switcher entirely.
+  const lockedTenant = useLockedTenant();
   const email = getUserEmail();
   const userIsAdmin = useIsAdmin();
   const userIsStudent = useUserIsStudent();
@@ -98,6 +102,10 @@ export function UserProfile() {
       if (!open) {
         // Set flag to prevent useEffect from reopening
         isClosingRef.current = true;
+        // This modal (Profile → Advanced) hosts the Local Models master toggle.
+        // Notify the nav-bar on-device badge to re-read so it reverts to the
+        // cloud model indicator when the user disables local models here.
+        window.dispatchEvent(new Event(LOCAL_LLM_CHANGED_EVENT));
         // Clear profileTab from URL when modal closes
         const params = new URLSearchParams(searchParams.toString());
         params.delete('profileTab');
@@ -302,7 +310,11 @@ export function UserProfile() {
       // Configuration
       showProfileTab={true}
       showAccountTab={false}
-      showTenantSwitcher={userIsAdmin}
+      showTenantSwitcher={
+        (userIsAdmin ||
+          userTenants.some((t) => t.key !== 'main' && t.key !== tenantKey)) &&
+        !lockedTenant
+      }
       showHelpLink={true}
       showLogoutButton={true}
       showLearnerModeSwitch={userIsAdmin && tenantKey !== 'main'}

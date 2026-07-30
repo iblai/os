@@ -18,15 +18,20 @@ import { useUsername } from '@/hooks/use-user';
 import {
   LLMProvider,
   LLMProviderModal,
-  providerKey,
 } from '@/components/modals/llm-provider-modal';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { toast } from 'sonner';
-import { cn, getLLMProviderDetails, Provider } from '@/lib/utils';
+import {
+  cn,
+  getLLMProviderDetails,
+  getProviderName,
+  Provider,
+} from '@/lib/utils';
 import { useNavigate } from '@/hooks/user-navigate';
 import { Spinner } from '@/components/spinner';
 import WithFormPermissions from '@/hoc/withPermissions';
 import { extractErrorMessage } from '@/lib/error';
+import { useSelectedLocalModel } from '@/hooks/use-selected-local-model';
 
 type LLMTabProps = {
   showConfigurationHeader?: boolean;
@@ -80,18 +85,31 @@ export function LLMTab({ showConfigurationHeader = true }: LLMTabProps) {
   const localOnlyProviders = React.useMemo(() => {
     if (!isTauriApp()) return [] as { key: string; provider: string }[];
     const cloudKeys = new Set(
-      (llmProviders ?? []).map((p) => providerKey(p.name)),
+      (llmProviders ?? []).map((p) => getProviderName(p.name)),
     );
     const seen = new Set<string>();
     const result: { key: string; provider: string }[] = [];
     for (const model of LOCAL_MODELS) {
-      const key = providerKey(model.provider);
+      const key = getProviderName(model.provider);
       if (cloudKeys.has(key) || seen.has(key)) continue;
       seen.add(key);
       result.push({ key, provider: model.provider });
     }
     return result;
   }, [llmProviders]);
+
+  // The highlighted (selected) provider card must reflect the model chat
+  // actually uses. When on-device mode is on, that's the selected local model's
+  // provider (e.g. Llama 3.2 → Meta) — NOT the mentor's stale cloud
+  // `llm_provider` (which stays e.g. OpenAI). Falls back to the cloud provider
+  // when local mode is off. Reactive so it updates the instant a model is picked.
+  const selectedLocal = useSelectedLocalModel();
+  const activeProviderKey =
+    selectedLocal.isLocal && selectedLocal.model
+      ? getProviderName(selectedLocal.model.provider)
+      : mentorSettings?.llm_provider
+        ? getProviderName(mentorSettings.llm_provider)
+        : '';
 
   async function updateMentorLLM(llmProvider: string, llmName: string) {
     try {
@@ -138,6 +156,12 @@ export function LLMTab({ showConfigurationHeader = true }: LLMTabProps) {
           overflowX: 'hidden',
         }}
       >
+        <div
+          className="rounded-md border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600"
+          data-testid="llm-info-box"
+        >
+          {t('infoBox')}
+        </div>
         <div className="space-y-6">
           <div className="relative">
             <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-500" />
@@ -178,7 +202,8 @@ export function LLMTab({ showConfigurationHeader = true }: LLMTabProps) {
                             'flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md',
                             {
                               'border-blue-500':
-                                mentorSettings?.llm_provider === model.name,
+                                !!activeProviderKey &&
+                                getProviderName(model.name) === activeProviderKey,
                             },
                           )}
                           onClick={() => {
@@ -221,7 +246,10 @@ export function LLMTab({ showConfigurationHeader = true }: LLMTabProps) {
                     return (
                       <div
                         key={`local-${lp.key}`}
-                        className="flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
+                        className={cn(
+                          'flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md',
+                          { 'border-blue-500': lp.key === activeProviderKey },
+                        )}
                         onClick={() => {
                           if (isDisabled || disabled) return;
                           setSelectedLLMProvider({

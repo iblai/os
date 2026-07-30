@@ -9,6 +9,7 @@ permissions = [
     "allow-navigate-to",
     "allow-get-os-type",
     "allow-allow-in-app-purchase",
+    "allow-get-locked-tenant",
     "allow-install-ollama",
     "allow-stop-ollama",
     "allow-check-ollama-status",
@@ -26,6 +27,14 @@ permissions = [
     "allow-ghost-mcp-start",
     "allow-ghost-mcp-send",
     "allow-ghost-mcp-stop",
+    "allow-opencode-chat-stream",
+    "allow-opencode-stop",
+    "allow-opencode-close",
+    "allow-get-opencode-workspace",
+    "allow-set-opencode-workspace",
+    "allow-install-opencode",
+    "allow-check-opencode-status",
+    "allow-check-code-local-model",
 ]
 
 [[permission]]
@@ -63,6 +72,12 @@ identifier = "allow-allow-in-app-purchase"
 description = "Enables checking whether in-app purchase is allowed for this build"
 [permission.commands]
 allow = ["allow_in_app_purchase"]
+
+[[permission]]
+identifier = "allow-get-locked-tenant"
+description = "Enables reading the tenant this build is locked to"
+[permission.commands]
+allow = ["get_locked_tenant"]
 
 [[permission]]
 identifier = "allow-install-ollama"
@@ -132,19 +147,19 @@ allow = ["get_mcp_config_path"]
 
 [[permission]]
 identifier = "allow-install-ghost-os"
-description = "Enables installing GhostOS (System Control) via Homebrew"
+description = "Enables installing GhostOS (Cowork) via Homebrew"
 [permission.commands]
 allow = ["install_ghost_os"]
 
 [[permission]]
 identifier = "allow-stop-ghost-os"
-description = "Enables stopping the GhostOS (System Control) processes"
+description = "Enables stopping the GhostOS (Cowork) processes"
 [permission.commands]
 allow = ["stop_ghost_os"]
 
 [[permission]]
 identifier = "allow-check-ghost-os-status"
-description = "Enables checking GhostOS (System Control) status"
+description = "Enables checking GhostOS (Cowork) status"
 [permission.commands]
 allow = ["check_ghost_os_status"]
 
@@ -165,3 +180,51 @@ identifier = "allow-ghost-mcp-stop"
 description = "Enables stopping the GhostOS MCP process for Computer Use"
 [permission.commands]
 allow = ["ghost_mcp_stop"]
+
+[[permission]]
+identifier = "allow-opencode-chat-stream"
+description = "Enables streaming a Coding Mode turn through opencode over ACP"
+[permission.commands]
+allow = ["opencode_chat_stream"]
+
+[[permission]]
+identifier = "allow-opencode-stop"
+description = "Enables cancelling the active opencode turn (ACP session/cancel)"
+[permission.commands]
+allow = ["opencode_stop"]
+
+[[permission]]
+identifier = "allow-opencode-close"
+description = "Enables killing a chat's opencode process"
+[permission.commands]
+allow = ["opencode_close"]
+
+[[permission]]
+identifier = "allow-get-opencode-workspace"
+description = "Enables reading the Coding Mode workspace path"
+[permission.commands]
+allow = ["get_opencode_workspace"]
+
+[[permission]]
+identifier = "allow-set-opencode-workspace"
+description = "Enables setting the Coding Mode workspace path"
+[permission.commands]
+allow = ["set_opencode_workspace"]
+
+[[permission]]
+identifier = "allow-install-opencode"
+description = "Enables installing opencode + writing its config + preparing the workspace"
+[permission.commands]
+allow = ["install_opencode"]
+
+[[permission]]
+identifier = "allow-check-opencode-status"
+description = "Enables checking opencode readiness (installed/version/config/workspace)"
+[permission.commands]
+allow = ["check_opencode_status"]
+
+[[permission]]
+identifier = "allow-check-code-local-model"
+description = "Enables checking whether the selected on-device model can drive Code (tool-calling support, runtime reachability)"
+[permission.commands]
+allow = ["check_code_local_model"]

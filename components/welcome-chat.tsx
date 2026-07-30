@@ -7,6 +7,7 @@ import {
   useGetGuidedPromptsQuery,
   useGetPromptsSearchQuery,
 } from '@iblai/iblai-js/data-layer';
+import { CHAT_AREA_SIZE } from '@iblai/iblai-js/web-utils';
 import { cn } from '@/lib/utils';
 import { useParams } from 'next/navigation';
 import { useUsername } from '@/hooks/use-user';
@@ -24,6 +25,7 @@ interface Props {
   mentorUniqueId: string;
   isNewSession?: boolean;
   aiWelcomeMessage?: string;
+  chatAreaMaxWidth?: number;
 }
 
 export function WelcomeChat({
@@ -35,6 +37,7 @@ export function WelcomeChat({
   mentorUniqueId,
   isNewSession = true,
   aiWelcomeMessage = '',
+  chatAreaMaxWidth = CHAT_AREA_SIZE.DEFAULT,
 }: Props) {
   const username = useUsername();
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
@@ -84,15 +87,16 @@ export function WelcomeChat({
 
   return (
     <div
-      className={cn('mx-auto flex h-full max-w-2xl flex-col rounded-lg p-4', {
-        'justify-center': !hasPrompts,
+      className={cn('mx-auto flex h-full w-full flex-col rounded-lg py-4', {
+        'justify-center-safe': !hasPrompts,
       })}
+      style={{ maxWidth: `${chatAreaMaxWidth}px` }}
     >
       {hasPrompts ? null : (
-        <div className="mb-6 flex items-center gap-4">
+        <div className="mb-6 flex items-start justify-center-safe gap-4">
           <Avatar
             className={cn(
-              'h-14 w-14 border-2 border-blue-500',
+              'h-14 w-14 shrink-0 border-2 border-blue-500',
               CSS_CLASS_NAMES.APP_LAYOUT.MENTOR_IMAGE_CONTAINER_RING,
             )}
           >

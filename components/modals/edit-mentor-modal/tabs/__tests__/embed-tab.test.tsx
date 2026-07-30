@@ -1143,4 +1143,117 @@ describe('EmbedTab', () => {
     fireEvent.click(toggle);
     expect(handleChange).toHaveBeenCalledWith(true);
   });
+
+  // ==========================================================================
+  // ISSUE #2153: toggling / regenerating a shareable link must NOT run the
+  // embed-settings sync (which validates website_url and shows the spurious
+  // "Please specify a valid Website URL" error).
+  // ==========================================================================
+
+  it('does not run embed-settings sync or website-url validation when enabling a shareable link (non-anonymous, empty website_url)', async () => {
+    mockUseGetShareableLinkQuery.mockReturnValue({
+      data: { token: 'abc', enabled: false },
+    });
+    mockUpdateShareableLink.mockReturnValue({
+      unwrap: vi.fn().mockResolvedValue({}),
+    });
+    renderEmbedTab(
+      {},
+      { ...defaultFormValues, allow_anonymous: false, website_url: '' },
+    );
+
+    const toggle = screen.getByLabelText(/Generate \/ Revoke shareable link/);
+    fireEvent.click(toggle);
+
+    await waitFor(() => {
+      // (b) the shareable-link mutation still runs
+      expect(mockUpdateShareableLink).toHaveBeenCalledWith(
+        expect.objectContaining({ requestBody: { enabled: true } }),
+      );
+    });
+
+    // (c) the embed-settings sync side-effect is NOT triggered by the toggle
+    expect(mockSyncEmbedSettings).not.toHaveBeenCalled();
+    // (a) no spurious website-url validation error surfaces
+    expect(
+      screen.queryByText('Please specify a valid Website URL'),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/valid url/i)).not.toBeInTheDocument();
+  });
+
+  it('does not run embed-settings sync or website-url validation when creating a shareable link on enable (non-anonymous, empty website_url)', async () => {
+    mockUseGetShareableLinkQuery.mockReturnValue({ data: undefined });
+    mockCreateShareableLink.mockReturnValue({
+      unwrap: vi.fn().mockResolvedValue({}),
+    });
+    renderEmbedTab(
+      {},
+      { ...defaultFormValues, allow_anonymous: false, website_url: '' },
+    );
+
+    const toggle = screen.getByLabelText(/Generate \/ Revoke shareable link/);
+    fireEvent.click(toggle);
+
+    await waitFor(() => {
+      expect(mockCreateShareableLink).toHaveBeenCalled();
+    });
+
+    expect(mockSyncEmbedSettings).not.toHaveBeenCalled();
+    expect(
+      screen.queryByText('Please specify a valid Website URL'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('does not run embed-settings sync or website-url validation when disabling a shareable link (non-anonymous, empty website_url)', async () => {
+    mockUseGetShareableLinkQuery.mockReturnValue({
+      data: { token: 'abc', enabled: true },
+    });
+    mockUpdateShareableLink.mockReturnValue({
+      unwrap: vi.fn().mockResolvedValue({}),
+    });
+    renderEmbedTab(
+      {},
+      { ...defaultFormValues, allow_anonymous: false, website_url: '' },
+    );
+
+    const toggle = screen.getByLabelText(/Generate \/ Revoke shareable link/);
+    fireEvent.click(toggle);
+
+    await waitFor(() => {
+      expect(mockUpdateShareableLink).toHaveBeenCalledWith(
+        expect.objectContaining({ requestBody: { enabled: false } }),
+      );
+    });
+
+    expect(mockSyncEmbedSettings).not.toHaveBeenCalled();
+    expect(
+      screen.queryByText('Please specify a valid Website URL'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('does not run embed-settings sync or website-url validation when regenerating a shareable link (non-anonymous, empty website_url)', async () => {
+    mockUseGetShareableLinkQuery.mockReturnValue({
+      data: { token: 'abc', enabled: true },
+    });
+    mockCreateShareableLink.mockReturnValue({
+      unwrap: vi.fn().mockResolvedValue({}),
+    });
+    const { container } = renderEmbedTab(
+      {},
+      { ...defaultFormValues, allow_anonymous: false, website_url: '' },
+    );
+
+    const refresh = container.querySelector('.lucide-refresh-cw');
+    fireEvent.click(refresh as Element);
+
+    await waitFor(() => {
+      // the shareable-link (regenerate) mutation still runs
+      expect(mockCreateShareableLink).toHaveBeenCalled();
+    });
+
+    expect(mockSyncEmbedSettings).not.toHaveBeenCalled();
+    expect(
+      screen.queryByText('Please specify a valid Website URL'),
+    ).not.toBeInTheDocument();
+  });
 });

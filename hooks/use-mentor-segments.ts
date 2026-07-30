@@ -13,6 +13,8 @@ import {
   CalendarClock,
   Clock,
   Grid,
+  FlaskConical,
+  GraduationCap,
   Key,
   MonitorSmartphone,
   FileWarning,
@@ -23,6 +25,7 @@ import {
   ScrollText,
   Volume2,
   MonitorPlay,
+  LineChart,
   type LucideIcon,
 } from 'lucide-react';
 import { MentorVisibilityEnum } from '@iblai/iblai-api';
@@ -79,7 +82,7 @@ export type MentorSegmentConfigFlags = {
 export type MentorSegmentNavCategory =
   | 'configurations'
   | 'integrations'
-  | 'analytics';
+  | 'runtime';
 
 /**
  * Category order + display titles. Drives the left-to-right column order
@@ -87,17 +90,27 @@ export type MentorSegmentNavCategory =
  */
 export const MENTOR_SEGMENT_NAV_CATEGORIES: ReadonlyArray<{
   key: MentorSegmentNavCategory;
+  /** English fallback — consumers should render `t(titleKey)` instead. */
   title: string;
+  /** i18n key in the `header` messages namespace. */
+  titleKey: string;
 }> = [
-  { key: 'configurations', title: 'Configurations' },
-  { key: 'integrations', title: 'Integrations' },
-  { key: 'analytics', title: 'Analytics' },
+  {
+    key: 'configurations',
+    title: 'Configurations',
+    titleKey: 'configurations',
+  },
+  { key: 'integrations', title: 'Integrations', titleKey: 'integrations' },
+  { key: 'runtime', title: 'Runtime', titleKey: 'runtime' },
 ];
 
 export type MentorSegment = {
   /** Stable identifier — matches MODALS.EDIT_MENTOR.tabs.* for tab segments */
   value: string;
+  /** English fallback — consumers should render `t(labelKey)` instead. */
   label: string;
+  /** i18n key in the `header` messages namespace (same one header.tsx uses). */
+  labelKey: string;
   icon: LucideIcon;
   userTypes: UserType[];
   rbacResource?: (mentorDbId: number) => string;
@@ -122,6 +135,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
   {
     value: MODALS.EDIT_MENTOR.tabs.settings,
     label: 'Settings',
+    labelKey: 'settings',
     icon: Settings,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/#show_settings`,
@@ -146,6 +160,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
   {
     value: MODALS.EDIT_MENTOR.tabs.sandbox,
     label: 'Sandbox',
+    labelKey: 'sandbox',
     icon: Container,
     userTypes: [UserType.ADMIN],
     permissionFieldsCheck: [],
@@ -153,22 +168,26 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
-    enabledThroughConfig: (flags) => flags.isClawEnabled,
-    navCategory: 'configurations',
+    // Always visible. The "Dedicated sandbox" (`enable_claw`) master toggle
+    // now lives inline on the Sandbox tab itself; the tab is where admins turn
+    // the capability on and connect it to an instance.
+    navCategory: 'integrations',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.access,
     label: 'Access',
+    labelKey: 'access',
     icon: UserCog,
     userTypes: [UserType.ADMIN],
     rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/#read_shared_mentor`,
     permissionFieldsCheck: [],
     mentorVisibility: [MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS],
-    navCategory: 'configurations',
+    navCategory: 'integrations',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.llm,
     label: 'LLM',
+    labelKey: 'llm',
     icon: Brain,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/llms/#list`,
@@ -182,6 +201,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
   {
     value: MODALS.EDIT_MENTOR.tabs.voice,
     label: 'Voice',
+    labelKey: 'voice',
     icon: Volume2,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     // Backend doesn't yet expose voice_provider/openai_voice/google_voice in
@@ -192,16 +212,15 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
-    // Tab is gated by the "Enable voice calls" toggle (`show_voice_call`) in
-    // Settings. Turning voice calls off hides the Voice tab from the sidebar
-    // entirely — it configures voice providers + call settings, which are
-    // meaningless when voice calls are disabled.
-    enabledThroughConfig: (flags) => flags.isVoiceCallEnabled,
+    // Always visible. The "Enable voice calls" (`show_voice_call`) master
+    // toggle now lives inline at the top of the Voice tab; turning it off grays
+    // out the voice/call configuration below instead of hiding the whole tab.
     navCategory: 'configurations',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.screenshare,
     label: 'Screen Share',
+    labelKey: 'screenShare',
     icon: MonitorPlay,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     permissionFieldsCheck: [],
@@ -209,17 +228,15 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
-    // Tab is gated by the "Enable screen sharing" toggle in
-    // Settings, which writes `enable_video` on the CallConfiguration. The
-    // SDK's <AgentScreenShareTab/> still renders an off-state hint when
-    // `enable_video` is false, but at the host level we hide the tab
-    // entirely so the sidebar stays clean.
-    enabledThroughConfig: (flags) => flags.isScreenshareEnabled,
+    // Always visible. The "Enable screen sharing" (`enable_video`) master
+    // toggle now lives inline at the top of the Screen Share tab; turning it
+    // off grays out the screen-sharing prompts below instead of hiding the tab.
     navCategory: 'configurations',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.prompts,
     label: 'Prompts',
+    labelKey: 'prompts',
     icon: Terminal,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     rbacResource: (mentorDbId) =>
@@ -238,6 +255,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
   {
     value: MODALS.EDIT_MENTOR.tabs.skills,
     label: 'Skills',
+    labelKey: 'skills',
     icon: Sparkles,
     userTypes: [UserType.ADMIN],
     permissionFieldsCheck: [],
@@ -245,15 +263,16 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
-    // Skills only makes sense when a sandbox is wired to a Claw instance.
-    // Sandbox tab itself is shown earlier so admins can connect first.
-    enabledThroughConfig: (flags) =>
-      flags.isClawEnabled && flags.clawConfigExists,
+    // Always visible. Skills only work when a sandbox is wired to a Claw
+    // instance, so the SDK's <AgentSkills/> shows a "connect a sandbox"
+    // prompt (grayed state) until one is connected — the tab itself stays
+    // reachable so admins can see what's available.
     navCategory: 'configurations',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.safety,
     label: 'Safety',
+    labelKey: 'safety',
     icon: Shield,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     rbacResource: (mentorDbId) =>
@@ -273,6 +292,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
   {
     value: MODALS.EDIT_MENTOR.tabs.privacy,
     label: 'Privacy',
+    labelKey: 'privacy',
     icon: ShieldCheck,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     permissionFieldsCheck: [],
@@ -280,12 +300,15 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
-    enabledThroughConfig: (flags) => flags.isPrivacyEnabled,
+    // Always visible. The "PII filtering" (`enable_privacy_router`) master
+    // toggle now lives inline at the top of the Privacy tab; turning it off
+    // grays out the PII rules below instead of hiding the whole tab.
     navCategory: 'configurations',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.tasks,
     label: 'Tasks',
+    labelKey: 'tasks',
     icon: CalendarClock,
     // Platform-admin-only until the backend exposes an RBAC resource for
     // periodic agents. No `rbacResource` set — the userTypes filter alone
@@ -296,11 +319,12 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
-    navCategory: 'configurations',
+    navCategory: 'runtime',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.disclaimer,
     label: 'Disclaimers',
+    labelKey: 'disclaimers',
     icon: FileWarning,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     rbacResource: (mentorDbId) =>
@@ -315,6 +339,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
   {
     value: MODALS.EDIT_MENTOR.tabs.tools,
     label: 'Tools',
+    labelKey: 'tools',
     icon: Wrench,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     rbacResource: (mentorDbId) =>
@@ -324,11 +349,12 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
-    navCategory: 'configurations',
+    navCategory: 'integrations',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.mcp,
     label: 'MCP',
+    labelKey: 'mcp',
     icon: Plug,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/mcpservers/#list`,
@@ -342,6 +368,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
   {
     value: MODALS.EDIT_MENTOR.tabs.memory,
     label: 'Memory',
+    labelKey: 'memory',
     icon: Archive,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/memory/#list`,
@@ -350,13 +377,16 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
-    enabledThroughConfig: (flags) =>
-      flags.isMemsearchEnabled && flags.isMemoryComponentEnabled,
-    navCategory: 'analytics',
+    // Always visible. The "Remember past conversations"
+    // (`enable_memory_component`) master toggle now lives inline at the top of
+    // the Memory tab; turning it off grays out the memory management below
+    // instead of hiding the whole tab.
+    navCategory: 'runtime',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.history,
     label: 'History',
+    labelKey: 'history',
     icon: Clock,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/#view_chat_history`,
@@ -365,21 +395,23 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
-    navCategory: 'analytics',
+    navCategory: 'runtime',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.audit_log,
     label: 'Audit',
+    labelKey: 'audit',
     icon: ScrollText,
     userTypes: [UserType.ADMIN],
     rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/#view_audit_logs`,
     permissionFieldsCheck: [],
     mentorVisibility: [MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS],
-    navCategory: 'analytics',
+    navCategory: 'runtime',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.datasets,
     label: 'Datasets',
+    labelKey: 'datasets',
     icon: Grid,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/documents/#list`,
@@ -391,8 +423,24 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     navCategory: 'integrations',
   },
   {
+    value: MODALS.EDIT_MENTOR.tabs.evaluation,
+    label: 'Evals',
+    labelKey: 'evals',
+    icon: FlaskConical,
+    userTypes: [UserType.ADMIN],
+    rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/documents/#list`,
+    permissionFieldsCheck: [],
+    mentorVisibility: [MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS],
+    // Without a navCategory the new categorized layout (modal sidebar +
+    // nav-bar dropdown) silently drops this segment — both consumers skip
+    // any segment lacking a category. Agent evaluation reports on run
+    // performance, so it belongs in Runtime alongside History/Audit.
+    navCategory: 'runtime',
+  },
+  {
     value: MODALS.EDIT_MENTOR.tabs.api,
     label: 'API',
+    labelKey: 'api',
     icon: Key,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     rbacResource: () => '/apitokens/#list',
@@ -404,8 +452,31 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     navCategory: 'integrations',
   },
   {
+    value: MODALS.EDIT_MENTOR.tabs.lti,
+    label: 'LTI',
+    labelKey: 'lti',
+    icon: GraduationCap,
+    // Admin-only for now: LTI launch configuration is a platform-admin
+    // concern and the backend doesn't yet expose an RBAC resource or a
+    // permission field for it (mirrors Tasks). The userTypes filter alone
+    // gates visibility — re-add `rbacResource` + `permissionFieldsCheck`
+    // once those land.
+    userTypes: [UserType.ADMIN],
+    permissionFieldsCheck: [],
+    mentorVisibility: [
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+    ],
+    // Always visible to admins — intentionally NOT gated on the "Enable LTI
+    // launches" (`is_lti_accessible`) toggle. LTI access is turned on inline
+    // when the first LTI link is created, so the tab must stay reachable even
+    // while the setting is still off.
+    navCategory: 'integrations',
+  },
+  {
     value: MODALS.EDIT_MENTOR.tabs.embed,
     label: 'Embed',
+    labelKey: 'embed',
     icon: MonitorSmartphone,
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/#can_use_embed`,
@@ -415,6 +486,26 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
     navCategory: 'integrations',
+  },
+  {
+    // Analytics "hub" tab. Unlike other tabs it doesn't render dashboards
+    // inside the modal — its content lists the analytics destinations and,
+    // on click, the host navigates to the full-page analytics view. In the
+    // nav-bar dropdown the same value is special-cased to jump straight to
+    // the analytics page (see nav-bar `handleSegmentClick`), so this segment
+    // replaces the former ad-hoc `ANALYTICS_NAV_ITEM`.
+    value: MODALS.EDIT_MENTOR.tabs.analytics,
+    label: 'Analytics',
+    labelKey: 'analytics',
+    icon: LineChart,
+    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
+    rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/#view_analytics`,
+    permissionFieldsCheck: [],
+    mentorVisibility: [
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+    ],
+    navCategory: 'runtime',
   },
 ];
 
@@ -575,7 +666,7 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
   const isVoiceCallEnabled: boolean =
     // @ts-ignore - show_voice_call exists on API but not typed
     mentorSettings?.show_voice_call ?? true;
-  const { isUserTypeAllowed } = useUserType(mentorSettings);
+  const { isUserTypeAllowed, userType } = useUserType(mentorSettings);
 
   // `isUserTypeAllowed` is a fresh function on every render of `useUserType`.
   // Stash it in a ref so we always read the latest version inside memos
@@ -605,6 +696,7 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
       tenantKey,
       mentorSettings,
       rbacPermissions,
+      userType,
       isMemsearchEnabled,
       isClawEnabled,
       clawConfigExists,
