@@ -345,6 +345,9 @@ describe('AdvancedStaticChatBuilder', () => {
       expect(inner).toHaveClass('items-start');
       expect(inner.className).toContain('justify-center-safe');
       expect(inner.className.split(/\s+/)).not.toContain('items-center');
+      // No horizontal padding: the message must line up with the chat input.
+      expect(inner).toHaveClass('py-4');
+      expect(inner.className.split(/\s+/)).not.toContain('p-4');
       expect(inner.textContent!.length).toBeGreaterThan(30000);
 
       expect(container.querySelector('.h-14.w-14')).toHaveClass('shrink-0');

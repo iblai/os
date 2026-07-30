@@ -88,8 +88,13 @@ jobs:
     with:
       dockerfile-path: Dockerfile
       build-context: .
-      image-name: iblai-mentor-spa-pro
-      registry-type: ocir
+      # Same repo as the release images; PR builds are distinguished by the `pr-` tag prefix.
+      image-name: iblai-os-spa
+      # ECR, not OCIR: the OCIR org secrets were removed, which broke every PR build with
+      # "Password required" at docker login. The AWS credentials are already provisioned here
+      # and release images already live in ECR, so this drops a registry dependency rather
+      # than replacing one with another.
+      registry-type: ecr
       event-name: pull_request
       pr-number: ${{ github.event.pull_request.number }}
 
@@ -173,97 +178,171 @@ jobs:
           fi
           echo "target=$TARGET" >> "$GITHUB_OUTPUT"
           echo "target env: $TARGET ($WHY)"
-      - name: Dispatch e2e
+      - name: Dispatch e2e and wait for the result
         id: dispatch
         env:
-          GH_TOKEN: ${{ secrets.DEPLOY_OPS_DISPATCH_TOKEN }}
-          PR: ${{ github.event.pull_request.number }}
-        run: |
-          set -euo pipefail
-          BEFORE=$(gh run list -R iblai/iblai-deploy-ops --workflow=pr-e2e.yml -L 1 --json databaseId --jq '.[0].databaseId // 0')
-          # github.sha on a pull_request IS the merge commit — the same ref actions/checkout used to
-          # build the app image, so the specs and the app code come from one commit.
-          gh workflow run pr-e2e.yml -R iblai/iblai-deploy-ops --ref main \
-            -f source_repo=os \
-            -f pr_number="$PR" \
-            -f merge_sha='${{ github.sha }}' \
-            -f head_sha='${{ github.event.pull_request.head.sha }}' \
-            -f app_image='${{ needs.build-app-image.outputs.image-uri }}' \
-            -f target_env='${{ steps.env.outputs.target }}' \
-            -f mode='${{ steps.specs.outputs.mode }}' \
-            -f specs='${{ steps.specs.outputs.specs }}'
-          for i in $(seq 1 30); do
-            sleep 5
-            ID=$(gh run list -R iblai/iblai-deploy-ops --workflow=pr-e2e.yml -L 1 --json databaseId --jq '.[0].databaseId // 0')
-            if [ "$ID" != "$BEFORE" ] && [ "$ID" != "0" ]; then
-              echo "run_id=$ID" >> "$GITHUB_OUTPUT"
-              echo "dispatched run $ID"; exit 0
-            fi
-          done
-          echo "::error::dispatched but the run never appeared"; exit 1
-
-      - name: Wait for e2e
-        id: wait
-        env:
-          GH_TOKEN: ${{ secrets.DEPLOY_OPS_DISPATCH_TOKEN }}
-          RUN_ID: ${{ steps.dispatch.outputs.run_id }}
+          GH_TOKEN:   ${{ secrets.DEPLOY_OPS_DISPATCH_TOKEN }}
+          PR:         ${{ github.event.pull_request.number }}
           TARGET_ENV: ${{ steps.env.outputs.target }}
         run: |
           set -uo pipefail
-          # The central pipeline lives in a PRIVATE repo, so most contributors here cannot open its
-          # Actions log. Mirror every phase transition into THIS log, which is public — otherwise a
-          # developer stares at a spinner for an hour with no idea what is happening.
-          echo "Phases: resolve -> baseline drift check -> sync (only if drifted) -> swap SPA -> e2e -> restore"
-          # A dispatched run that never STARTS means the target env's runner is offline — the picker
-          # cannot tell that apart from idle. Without this guard the poll ran the full 2h and reported
-          # a bare "timed_out", which says nothing about the cause. Fail in 15 min with a diagnosis.
-          STARTED=0
-          STRIKES=0
-          LAST=""
-          for i in $(seq 1 240); do
-            if [ "$STARTED" = "0" ]; then
-              ACTIVE=$(gh api "repos/iblai/iblai-deploy-ops/actions/runs/${RUN_ID}/jobs" \
-                         --jq '[.jobs[] | select(.status != "queued")] | length' 2>/dev/null || echo 0)
-              [ "${ACTIVE:-0}" -gt 0 ] && STARTED=1
-              if [ "$STARTED" = "0" ]; then
-                # Distinguish OFFLINE from BUSY. Elapsed time alone cannot: with a single serialized
-                # runner and ~84-minute mentor suites, queueing well past 15 min is entirely normal,
-                # and an earlier version of this guard killed healthy runs because of that. An offline
-                # runner, by contrast, never appears executing ANY job anywhere — that is the signal.
-                RUNNER="${TARGET_ENV}-spa"
-                BUSY=$(for rid in $(gh run list -R iblai/iblai-deploy-ops --limit 10 \
-                                      --json databaseId --jq '.[].databaseId' 2>/dev/null); do
-                         gh api "repos/iblai/iblai-deploy-ops/actions/runs/$rid/jobs" \
+          TARGET="$TARGET_ENV"
+          RUNNER="${TARGET}-spa"
+          OPS=iblai/iblai-deploy-ops
+
+          # GitHub keeps only ONE pending run per concurrency group. A third dispatch CANCELS the
+          # previously-pending one before it starts a single job — silently, with no diagnosis on the
+          # PR. Three PRs labelled close together is enough to trigger it, and pinning everything to
+          # stg1 made that routine. So: never dispatch while another run for this env is waiting.
+          wait_for_slot() {
+            local i w
+            for i in $(seq 1 240); do
+              w=$(gh run list -R "$OPS" --workflow=pr-e2e.yml --limit 20 --json status,displayTitle \
+                    --jq "[.[] | select((.status==\"queued\" or .status==\"pending\") and (.displayTitle|contains(\"→ ${TARGET}\")))] | length" 2>/dev/null || echo 0)
+              [ "${w:-0}" -eq 0 ] && return 0
+              [ $(( (i-1) % 10 )) -eq 0 ] && echo "[$(date -u +%H:%M:%SZ)] waiting for a free dispatch slot on ${TARGET} — ${w} run(s) already queued ahead"
+              sleep 30
+            done
+            echo "::error::no free dispatch slot on ${TARGET} after 2h"; return 1
+          }
+
+          do_dispatch() {
+            local before id i
+            before=$(gh run list -R "$OPS" --workflow=pr-e2e.yml -L 1 --json databaseId --jq '.[0].databaseId // 0')
+            # github.sha on a pull_request IS the merge commit — the same ref actions/checkout used to
+            # build the app image, so the specs and the app code come from one commit.
+            gh workflow run pr-e2e.yml -R "$OPS" --ref main \
+              -f source_repo=os \
+              -f pr_number="$PR" \
+              -f merge_sha='${{ github.sha }}' \
+              -f head_sha='${{ github.event.pull_request.head.sha }}' \
+              -f app_image='${{ needs.build-app-image.outputs.image-uri }}' \
+              -f target_env="$TARGET" \
+              -f mode='${{ steps.specs.outputs.mode }}' \
+              -f specs='${{ steps.specs.outputs.specs }}' || return 1
+            for i in $(seq 1 30); do
+              sleep 5
+              id=$(gh run list -R "$OPS" --workflow=pr-e2e.yml -L 1 --json databaseId --jq '.[0].databaseId // 0')
+              if [ "$id" != "$before" ] && [ "$id" != "0" ]; then RUN_ID="$id"; return 0; fi
+            done
+            return 1
+          }
+
+          # Returns: 0 = completed (CONCLUSION set) · 1 = timed out · 2 = EVICTED (retryable)
+          poll_run() {
+            local i started=0 strikes=0 any_job=0 exec_ticks=0 last="" phases active busy s
+            echo "Phases: resolve -> baseline drift check -> sync (only if drifted) -> swap SPA -> e2e -> restore"
+            # Two separate budgets. Queue time must NOT count against the execution timeout: with one
+            # serialized runner and ~75-min suites, a PR queued behind one other already exceeds 2h,
+            # and the caller would give up on a perfectly healthy run — then download a result
+            # artifact that does not exist yet and report "unknown". os#367 lost its report exactly
+            # this way (dispatched 17:11, started 18:27, verdict 19:45, caller gave up 19:25).
+            # While QUEUED the liveness guard below is the protection, not the clock.
+            for i in $(seq 1 960); do
+              phases=$(gh api "repos/$OPS/actions/runs/${RUN_ID}/jobs" \
+                         --jq '[.jobs[] | "\(.name): \(.conclusion // .status)"] | join("  |  ")' 2>/dev/null || echo "")
+              if [ -n "$phases" ] && [ "$phases" != "$last" ]; then
+                echo "[$(date -u +%H:%M:%SZ)] $phases"; last="$phases"
+              fi
+              if [ "$started" = "0" ]; then
+                active=$(gh api "repos/$OPS/actions/runs/${RUN_ID}/jobs" \
+                           --jq '[.jobs[] | select(.status != "queued")] | length' 2>/dev/null || echo 0)
+                if [ "${active:-0}" -gt 0 ]; then
+                  started=1; any_job=1
+                  echo "[$(date -u +%H:%M:%SZ)] run started executing — 2h execution budget begins now"
+                fi
+              else
+                exec_ticks=$((exec_ticks + 1))
+                if [ "$exec_ticks" -ge 240 ]; then
+                  CONCLUSION=timed_out
+                  echo "::error::the run has been EXECUTING for 2h without finishing. https://github.com/$OPS/actions/runs/${RUN_ID}"
+                  return 1
+                fi
+              fi
+              if [ "$started" = "0" ]; then
+                # An offline runner never appears executing ANY job anywhere; a merely BUSY one does.
+                # Elapsed time cannot tell them apart when one serialized runner handles ~74-min suites.
+                busy=$(for rid in $(gh run list -R "$OPS" --limit 10 --json databaseId --jq '.[].databaseId' 2>/dev/null); do
+                         gh api "repos/$OPS/actions/runs/$rid/jobs" \
                            --jq '.jobs[] | select(.status=="in_progress") | .runner_name // empty' 2>/dev/null
                        done | grep -cx "$RUNNER" || true)
-                if [ "${BUSY:-0}" -gt 0 ]; then
-                  STRIKES=0                       # runner is alive, we are simply queued behind work
+                if [ "${busy:-0}" -gt 0 ]; then
+                  strikes=0
                 else
-                  STRIKES=$((STRIKES + 1))        # queued AND nothing running on it
-                  if [ "$STRIKES" -ge 30 ]; then  # 15 min of both, consecutively
-                    echo "conclusion=runner_unavailable" >> "$GITHUB_OUTPUT"
-                    echo "::error::${RUNNER} has been idle for 15 min while this run stayed queued — the runner is offline or not accepting jobs. https://github.com/iblai/iblai-deploy-ops/actions/runs/${RUN_ID}"
-                    exit 1
+                  strikes=$((strikes + 1))
+                  if [ "$strikes" -ge 30 ]; then
+                    CONCLUSION=runner_unavailable
+                    echo "::error::${RUNNER} has been idle for 15 min while this run stayed queued — the runner is offline or not accepting jobs. https://github.com/$OPS/actions/runs/${RUN_ID}"
+                    return 1
                   fi
                 fi
               fi
-            fi        # up to 2h: image build + full suite
-            PHASES=$(gh api "repos/iblai/iblai-deploy-ops/actions/runs/${RUN_ID}/jobs" \
-                       --jq '[.jobs[] | "\(.name): \(.conclusion // .status)"] | join("  |  ")' 2>/dev/null || echo "")
-            if [ -n "$PHASES" ] && [ "$PHASES" != "$LAST" ]; then
-              echo "[$(date -u +%H:%M:%SZ)] $PHASES"
-              LAST="$PHASES"
+              s=$(gh api "repos/$OPS/actions/runs/${RUN_ID}" --jq '.status+"|"+(.conclusion//"")' 2>/dev/null)
+              if [ "${s%%|*}" = "completed" ]; then
+                CONCLUSION="${s##*|}"
+                # Cancelled having never started a job == evicted from the pending slot, not a result.
+                if [ "$CONCLUSION" = "cancelled" ] && [ "$any_job" = "0" ]; then return 2; fi
+                echo "e2e finished: $CONCLUSION"
+                return 0
+              fi
+              sleep 30
+            done
+            CONCLUSION=timed_out
+            echo "::error::gave up after 8h — the run neither started nor finished"; return 1
+          }
+
+          # Every waiter notices the freed slot within the same poll window and would dispatch in the
+          # same instant — a classic check-then-act race. A deterministic per-PR offset spreads them
+          # out; the RE-CHECK after it is what actually closes the window, since the stagger alone
+          # would only move the collision. PR number rather than $RANDOM: unique, stable across
+          # retries, and needs no coordination between callers.
+          stagger_then_claim() {
+            local s
+            wait_for_slot || return 1
+            s=$(( (PR % 12) * 5 ))
+            if [ "$s" -gt 0 ]; then
+              echo "[$(date -u +%H:%M:%SZ)] stagger ${s}s (PR ${PR}) before claiming the slot"
+              sleep "$s"
             fi
-            S=$(gh api "repos/iblai/iblai-deploy-ops/actions/runs/${RUN_ID}" --jq '.status+"|"+(.conclusion//"")' 2>/dev/null)
-            if [ "${S%%|*}" = "completed" ]; then
-              echo "conclusion=${S##*|}" >> "$GITHUB_OUTPUT"
-              echo "e2e finished: ${S##*|}"
-              exit 0
+            wait_for_slot || return 1   # someone may have claimed it while we staggered
+          }
+
+          RUN_ID=""; CONCLUSION=""; EVICTIONS=0
+          for attempt in $(seq 1 10); do
+            stagger_then_claim || { echo "conclusion=no_slot" >> "$GITHUB_OUTPUT"; exit 1; }
+            do_dispatch  || { echo "::error::dispatched but the run never appeared"; echo "conclusion=dispatch_failed" >> "$GITHUB_OUTPUT"; exit 1; }
+            echo "dispatched run $RUN_ID (attempt $attempt)"
+            echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+            poll_run; rc=$?
+            if [ "$rc" -eq 2 ]; then
+              EVICTIONS=$((EVICTIONS + 1))
+              # Greppable marker: this is the signal to watch. If evictions become routine the
+              # caller-side queue is under-sized and the fix is capacity (a second env) or a real
+              # external FIFO queue — not more retries. See docs/pr-e2e.md.
+              echo "::warning::QUEUE_EVICTION run ${RUN_ID} was cancelled before starting any job — evicted from the concurrency queue by a newer dispatch. Re-dispatching (attempt ${attempt}/10)."
+              sleep $(( (RANDOM % 20) + 5 ))   # jitter so retriers do not re-collide
+              continue
             fi
-            sleep 30
+            break
           done
-          echo "conclusion=timed_out" >> "$GITHUB_OUTPUT"
-          echo "::error::timed out after 2h waiting for the e2e run"; exit 1
+          echo "evictions=${EVICTIONS}" >> "$GITHUB_OUTPUT"
+          if [ "$EVICTIONS" -gt 0 ]; then
+            echo "::notice::QUEUE_EVICTION_COUNT=${EVICTIONS} for this PR"
+          fi
+          echo "conclusion=${CONCLUSION:-unknown}" >> "$GITHUB_OUTPUT"
+      - name: Cancel the dispatched run if this caller is cancelled
+        # A caller can be superseded (concurrency: pr-e2e-<PR>, cancel-in-progress) or cancelled by
+        # hand — but the central run it dispatched keeps going. That orphan occupies the single env
+        # runner for a full suite, produces a result nobody reads, and deepens the queue for everyone
+        # else. Worse, it can PASS while the PR shows red: os#394 did exactly that (456/0/3 green,
+        # PR reported "unknown"), because the surviving caller was watching a different run.
+        if: cancelled() && steps.dispatch.outputs.run_id != ''
+        env:
+          GH_TOKEN: ${{ secrets.DEPLOY_OPS_DISPATCH_TOKEN }}
+          RUN_ID:   ${{ steps.dispatch.outputs.run_id }}
+        run: |
+          echo "caller cancelled — cancelling central run ${RUN_ID} so it does not orphan"
+          gh run cancel "$RUN_ID" -R iblai/iblai-deploy-ops || true
 
       - name: Publish the result on this PR
         if: always() && steps.dispatch.outputs.run_id != ''
@@ -276,7 +355,17 @@ jobs:
           set -uo pipefail
           # The Playwright report on tests.iblai.app IS public, so it is the link that actually helps
           # a developer here — unlike the private Actions run. Relay it onto the PR itself.
-          gh run download "$RUN_ID" -R iblai/iblai-deploy-ops -n pr-e2e-result -D /tmp/res 2>/dev/null || true
+          # Retry briefly: the artifact is uploaded by the central run's LAST job, so a caller that
+          # reaches here early (or races the upload) would otherwise silently render "unknown" and
+          # throw away a perfectly good result — which is exactly how os#367 lost its report link.
+          for a in 1 2 3 4 5 6; do
+            gh run download "$RUN_ID" -R iblai/iblai-deploy-ops -n pr-e2e-result -D /tmp/res 2>/dev/null && break
+            echo "  result artifact not available yet (attempt $a/6) — retrying in 20s"
+            sleep 20
+          done
+          if [ ! -f /tmp/res/pr-e2e-result.json ]; then
+            echo "::warning::could not download pr-e2e-result from run ${RUN_ID} — the comment will lack a report link. https://github.com/iblai/iblai-deploy-ops/actions/runs/${RUN_ID}"
+          fi
           python3 - <<'PY' > /tmp/body.md
           import json, pathlib
           p = pathlib.Path("/tmp/res/pr-e2e-result.json")
@@ -320,7 +409,7 @@ jobs:
       - name: Gate on the e2e result
         if: always()
         run: |
-          C="${{ steps.wait.outputs.conclusion }}"
+          C="${{ steps.dispatch.outputs.conclusion }}"
           echo "e2e conclusion: ${C:-<none>}"
           [ "$C" = "success" ]
   # ============================================================
