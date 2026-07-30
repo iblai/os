@@ -207,6 +207,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.DEPLOY_OPS_DISPATCH_TOKEN }}
           RUN_ID: ${{ steps.dispatch.outputs.run_id }}
+          TARGET_ENV: ${{ steps.env.outputs.target }}
         run: |
           set -uo pipefail
           # The central pipeline lives in a PRIVATE repo, so most contributors here cannot open its
@@ -217,16 +218,34 @@ jobs:
           # cannot tell that apart from idle. Without this guard the poll ran the full 2h and reported
           # a bare "timed_out", which says nothing about the cause. Fail in 15 min with a diagnosis.
           STARTED=0
+          STRIKES=0
           LAST=""
           for i in $(seq 1 240); do
             if [ "$STARTED" = "0" ]; then
               ACTIVE=$(gh api "repos/iblai/iblai-deploy-ops/actions/runs/${RUN_ID}/jobs" \
                          --jq '[.jobs[] | select(.status != "queued")] | length' 2>/dev/null || echo 0)
               [ "${ACTIVE:-0}" -gt 0 ] && STARTED=1
-              if [ "$STARTED" = "0" ] && [ "$i" -ge 30 ]; then
-                echo "conclusion=runner_unavailable" >> "$GITHUB_OUTPUT"
-                echo "::error::the central run has been QUEUED for 15 min without starting a single job — the target environment's self-hosted runner is almost certainly offline. https://github.com/iblai/iblai-deploy-ops/actions/runs/${RUN_ID}"
-                exit 1
+              if [ "$STARTED" = "0" ]; then
+                # Distinguish OFFLINE from BUSY. Elapsed time alone cannot: with a single serialized
+                # runner and ~84-minute mentor suites, queueing well past 15 min is entirely normal,
+                # and an earlier version of this guard killed healthy runs because of that. An offline
+                # runner, by contrast, never appears executing ANY job anywhere — that is the signal.
+                RUNNER="${TARGET_ENV}-spa"
+                BUSY=$(for rid in $(gh run list -R iblai/iblai-deploy-ops --limit 10 \
+                                      --json databaseId --jq '.[].databaseId' 2>/dev/null); do
+                         gh api "repos/iblai/iblai-deploy-ops/actions/runs/$rid/jobs" \
+                           --jq '.jobs[] | select(.status=="in_progress") | .runner_name // empty' 2>/dev/null
+                       done | grep -cx "$RUNNER" || true)
+                if [ "${BUSY:-0}" -gt 0 ]; then
+                  STRIKES=0                       # runner is alive, we are simply queued behind work
+                else
+                  STRIKES=$((STRIKES + 1))        # queued AND nothing running on it
+                  if [ "$STRIKES" -ge 30 ]; then  # 15 min of both, consecutively
+                    echo "conclusion=runner_unavailable" >> "$GITHUB_OUTPUT"
+                    echo "::error::${RUNNER} has been idle for 15 min while this run stayed queued — the runner is offline or not accepting jobs. https://github.com/iblai/iblai-deploy-ops/actions/runs/${RUN_ID}"
+                    exit 1
+                  fi
+                fi
               fi
             fi        # up to 2h: image build + full suite
             PHASES=$(gh api "repos/iblai/iblai-deploy-ops/actions/runs/${RUN_ID}/jobs" \
