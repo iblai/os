@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/select';
 import { MemoryTab } from './tabs/memory-tab';
 import { DisclaimersTab } from './tabs/disclaimers-tab';
+import { GradingTab } from './tabs/grading-tab';
 import { useMentorSegments } from '@/hooks/use-mentor-segments';
 
 type Props = {
@@ -55,6 +56,7 @@ export const EDIT_MENTOR_TAB_COMPONENTS: Record<string, ReactNode> = {
   [MODALS.EDIT_MENTOR.tabs.prompts]: <PromptsTab />,
   [MODALS.EDIT_MENTOR.tabs.safety]: <SafetyTab />,
   [MODALS.EDIT_MENTOR.tabs.disclaimer]: <DisclaimersTab />,
+  [MODALS.EDIT_MENTOR.tabs.grading]: <GradingTab />,
   [MODALS.EDIT_MENTOR.tabs.tools]: <ToolsTab />,
   [MODALS.EDIT_MENTOR.tabs.mcp]: <McpTab />,
   [MODALS.EDIT_MENTOR.tabs.memory]: <MemoryTab />,

@@ -67,6 +67,9 @@ function dms() {
     platform_key: 'tenant123',
     mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
     permissions: { field: { ...dfp } },
+    // Enable the Grading tab in the segment filter — useMentorSegments reads
+    // mentor_tools to derive the isGradingEnabled flag.
+    mentor_tools: [{ slug: 'grading' }],
   };
 }
 
@@ -178,6 +181,10 @@ vi.mock('./tabs/disclaimers-tab', () => ({
   DisclaimersTab: () => (
     <div data-testid="disclaimers-tab">Disclaimers Tab</div>
   ),
+}));
+
+vi.mock('./tabs/grading-tab', () => ({
+  GradingTab: () => <div data-testid="grading-tab">Grading Tab</div>,
 }));
 
 vi.mock('@/hoc/utils', () => ({
@@ -666,6 +673,7 @@ describe('EditMentorModal', () => {
       { t: MODALS.EDIT_MENTOR.tabs.prompts, id: 'prompts-tab' },
       { t: MODALS.EDIT_MENTOR.tabs.safety, id: 'safety-tab' },
       { t: MODALS.EDIT_MENTOR.tabs.disclaimer, id: 'disclaimers-tab' },
+      { t: MODALS.EDIT_MENTOR.tabs.grading, id: 'grading-tab' },
       { t: MODALS.EDIT_MENTOR.tabs.tools, id: 'tools-tab' },
       { t: MODALS.EDIT_MENTOR.tabs.mcp, id: 'mcp-tab' },
       { t: MODALS.EDIT_MENTOR.tabs.memory, id: 'memory-tab' },

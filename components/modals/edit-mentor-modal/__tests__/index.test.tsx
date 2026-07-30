@@ -181,6 +181,10 @@ vi.mock('../tabs/disclaimers-tab', () => ({
   ),
 }));
 
+vi.mock('../tabs/grading-tab', () => ({
+  GradingTab: () => <div data-testid="grading-tab">Grading Tab</div>,
+}));
+
 // ============================================================================
 // TEST STORE FACTORY
 // ============================================================================
