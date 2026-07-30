@@ -19344,8 +19344,8 @@ describe('Chat', () => {
     // and reserves 15px, so mx-auto centres it inside a narrower box. Without
     // a matching gutter here the welcome message sat ~8px right of the input.
     it.each([
-      ['default', false, 'advanced' as const],
-      ['compact', true, 'default' as const],
+      ['default', false],
+      ['compact', true],
     ])(
       'reserves the same scrollbar gutter as the chat input (%s)',
       async (_label, compact) => {
