@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-07-23 | 586 checkpoints (559 covered, 7 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 66 journeys (65 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-07-28 | 604 checkpoints (577 covered, 7 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 67 journeys (66 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -886,7 +886,7 @@ Covers the two user-facing features added in [iblai-platform#1902](https://githu
 
 The Voice tab is a thin wrapper around the SDK's `AgentVoiceTab` (`@iblai/web-containers/next`). The wrapper forwards `tenantKey` / `mentorId` / `username` from URL params + the navigate hook so the SDK's `useGetMentorSettingsQuery`, `useEditMentorMutation`, and the new `useGet/Create/UpdateCallConfigurationMutation` hooks resolve correctly. Selectors come from the SDK's official Playwright helpers (`@iblai/iblai-js/playwright`) — never patch a selector in the spec; if labels are overridden via the `labels` prop, update the helper imports in the page object.
 
-The Settings tab also surfaces the smart-document-retrieval voice-call toggle (`use_function_calling_for_rag`) so admins can flip it without leaving the main configuration panel — save routes it through the same `/call-configurations/` endpoint the SDK's Voice tab uses. The "Enable voice calls" (`show_voice_call`) master toggle moved off Settings → Capabilities into an in-tab `CapabilityGate` at the top of the Voice tab itself (feat/2040) and auto-saves on click (optimistic local state) — no footer Save button involved. The Voice tab is now always mounted — `hooks/use-mentor-segments.ts` no longer gates it — and both sub-tabs render inside a grayed + inert `capability-gate-content` wrapper while the toggle is off. ("Enable screen sharing" moved off Settings too — it now lives on the Screen Share tab's own capability toggle, see journey 48.)
+The Settings tab also surfaces the smart-document-retrieval voice-call toggle (`use_function_calling_for_rag`) so admins can flip it without leaving the main configuration panel — save routes it through the same `/call-configurations/` endpoint the SDK's Voice tab uses. The "Enable voice calls" (`show_voice_call`) master toggle moved off Settings → Capabilities into an in-tab `CapabilityGate` at the top of the Voice tab itself (feat/2040) and auto-saves on click (optimistic local state) — no footer Save button involved. The Voice tab is now always mounted — `hooks/use-mentor-segments.ts` no longer gates it — and both sub-tabs render inside a grayed + inert `capability-gate-content` wrapper while the toggle is off. ("Enable screen sharing" moved off Settings too — it now lives on the Screen tab's own capability toggle, see journey 48.)
 
 - [x] VO-01: Voice tab label is visible in the Edit Mentor modal sidebar (always mounted)
 - [x] VO-02: Voice tab heading renders correctly
@@ -903,15 +903,15 @@ The Settings tab also surfaces the smart-document-retrieval voice-call toggle (`
 
 ---
 
-## Journey 48: Mentor Screen Share Tab (3 checkpoints) — `journeys/48-mentor-screenshare-tab.spec.ts`
+## Journey 48: Mentor Screen Tab (3 checkpoints) — `journeys/48-mentor-screenshare-tab.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/screenshare-tab.tsx`, `components/modals/edit-mentor-modal/tabs/index.ts`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `lib/constants.ts`
 
-Standalone top-level tab rendered by the SDK's `AgentScreenShareTab` (`@iblai/web-containers/next`). Edits the two screensharing prompts on the mentor's CallConfiguration. The "Enable screen sharing" (`enable_video`) master toggle moved off the Settings tab into an in-tab `CapabilityGate` at the top of this tab (feat/2040) and auto-saves on click (optimistic local state) — no footer Save button involved for the toggle (the prompts themselves are still Save-button-driven). The tab is now always mounted — `hooks/use-mentor-segments.ts` no longer gates it on `call_configuration.enable_video` — and the prompt cards render inside a grayed + inert `capability-gate-content` wrapper while the toggle is off. The host renames the SDK's stock "Screen share" label to "Screen Share" via `MENTOR_SEGMENTS`, so the page object resolves the sidebar trigger from the host label directly rather than the SDK's `switchToScreenShareTab` helper.
+Standalone top-level tab rendered by the SDK's `AgentScreenShareTab` (`@iblai/web-containers/next`). Edits the two screensharing prompts on the mentor's CallConfiguration. The "Enable screen sharing" (`enable_video`) master toggle moved off the Settings tab into an in-tab `CapabilityGate` at the top of this tab (feat/2040) and auto-saves on click (optimistic local state) — no footer Save button involved for the toggle (the prompts themselves are still Save-button-driven). The tab is now always mounted — `hooks/use-mentor-segments.ts` no longer gates it on `call_configuration.enable_video` — and the prompt cards render inside a grayed + inert `capability-gate-content` wrapper while the toggle is off. The host renames the SDK's stock "Screen share" label to "Screen" via `MENTOR_SEGMENTS` (title only — the tab's body copy still says "screen sharing"), so the page object resolves the sidebar trigger from the host label directly rather than the SDK's `switchToScreenShareTab` helper.
 
-- [x] SS-01: Screen Share tab stays visible (always mounted) and its content grays (`data-enabled="false"`) when the in-tab "Enable screen sharing" capability toggle is off
+- [x] SS-01: Screen tab stays visible (always mounted) and its content grays (`data-enabled="false"`) when the in-tab "Enable screen sharing" capability toggle is off
 - [x] SS-02: Enabling the in-tab capability toggle ungates the screensharing prompt cards and hides the CapabilityGate off-hint
-- [x] SS-03: Switching to the Screen Share tab renders the SDK heading, body and capability toggle regardless of capability state
+- [x] SS-03: Switching to the Screen tab renders the SDK heading, body and capability toggle regardless of capability state
 
 ---
 
@@ -1203,3 +1203,54 @@ path.
 - [x] shl-01: Non-admin user denied RBAC #chat permission opens the mentor chat with a VALID shareable-link token — the textarea is enabled (no RBAC denial placeholder), and the user can send a message and receive a response
 - [x] shl-02: Safety-boundary guard — the same non-admin user opens the same mentor chat with an INVALID/never-issued shareable-link token — the backend never creates a session, so the textarea stays disabled exactly as with no token (token presence alone must not unlock chat)
 - [x] shl-03: Regression guard — the same non-admin user opens the same mentor chat with NO token — the textarea stays disabled and the RBAC denial placeholder ("Sorry about that! You don't have permission to chat.") is shown
+
+---
+
+## Journey 65: Agent Skills (18 checkpoints) — `journeys/65-agent-skills.spec.ts`
+
+**Source files:** `hooks/use-mentor-segments.ts`, `components/modals/edit-mentor-modal/tabs/skills-tab.tsx`, `components/chat-input-form.tsx`, `components/auto-resize-text-area.tsx`
+
+Issue feat/2215 — two independent surfaces:
+
+1. The Edit Mentor "Skills" tab is now gated on mentor type: mounted only when
+   the mentor resolves to "Base Agent" (`resolveIsBaseAgentMentor` in
+   `hooks/use-mentor-segments.ts`, mirroring the SDK's `isBaseAgentMentor` /
+   `BASE_AGENT_TEMPLATE_SLUGS`), failing OPEN when the type can't be
+   determined from the mentor-settings response. `CreateMentorPage`'s UI has
+   no agent-type picker and only ever produces Base Agent mentors, so the
+   gating checkpoints mock the mentor-settings GET for a real, freshly-created
+   mentor. The tab is plainly ADMIN-ONLY via the userTypes filter — no RBAC
+   resource (the agent-skills RBAC contract is unsettled backend-side); the
+   chat `/` picker, by contrast, is available to students too (`route.fetch()` + mutate `mentor_slug`/`template_mentor` +
+   `route.fulfill()` — every other field stays authentic) rather than relying
+   on a non-base-agent mentor that no UI path in this app can create. Journey
+   44 already covers the tab's content/behavior once mounted; this journey
+   covers the mentor-type gate itself.
+2. The chat composer's `/` skill picker (`SlashSkillPicker` /
+   `useSlashSkillPicker` from `@iblai/iblai-js/web-containers`, wired in
+   `components/chat-input-form.tsx` + `components/auto-resize-text-area.tsx`)
+   opens when the composer holds a single `/`-prefixed token and the
+   mentor's effective skills, resolved client-side from skill assignments
+   (`GET .../agents/{uuid}/skills/`) plus the catalog (`GET .../agent-skills/`)
+   are non-empty. These checkpoints mock that endpoint via
+   `ChatPage.mockEffectiveSkills` for full determinism — the composer fetches
+   eagerly on mount, so the mock must be registered before navigation.
+
+- [x] ags-01: Admin sees the Skills tab on a freshly-created (Base Agent) mentor, with the updated tab description ("Reusable playbooks this Base Agent can discover and follow.") and skills-info-box copy describing the `/` picker
+- [x] ags-02: Skills tab is hidden when the mentor resolves to a non-base-agent type (`mentor_slug` is not a base-agent alias and `template_mentor` does not resolve to one either)
+- [x] ags-03: Skills tab stays visible when the mentor type cannot be determined (`template_mentor` is a numeric PK the frontend cannot read a slug from) — the gate fails OPEN rather than hiding the tab
+- [x] slash-01: Mentor with no effective skills — chat composer stays a plain textbox (no combobox role) and typing "/" opens nothing
+- [x] slash-02: Mentor with effective skills — composer textarea gets `role=combobox` wiring and typing "/" opens the slash-skill-picker listing only enabled skills (disabled skills filtered out), showing name/slug/description
+- [x] slash-03: Typing after "/" filters the picker by both skill name and slug as the query narrows; no match closes the picker
+- [x] slash-04: ArrowDown/ArrowUp cycle the active picker option and the composer's `aria-activedescendant` follows the active option's id
+- [x] slash-05: Enter completes the active option IN PLACE — `/<slug> ` lands at the typed token's index and the backdrop layer (`skill-token-highlight`) paints an active-pill background behind it; nothing is submitted
+- [x] slash-06: Clicking a picker option (mousedown) completes that skill's token in place with the same highlight
+- [x] slash-07: Escape dismisses the picker until the slash token is cleared (stays dismissed while the token persists), then a fresh "/" re-arms and reopens it
+- [x] slash-08: Multi-word text starting with "/" (e.g. "/hello world") never opens the picker
+- [x] slash-09: One Backspace at the token's end (or Delete at its start) removes the whole `/slug ` token atomically
+- [x] slash-10: Backspace after plain text deletes characters normally — the highlighted token stays intact
+- [x] slash-11: A mid-sentence token is removed atomically and the seam space collapses ("say /web-research please" → "say please")
+- [x] slash-12: Multiple skill invocations in one message are each highlighted; unknown or disabled slugs never highlight
+- [x] slash-13: Typing "/" while the skills fetches (assignments + catalog) are still in flight shows the "Loading skills…" popover (`slash-skill-loading`, `role=status`), which yields to the picker once the list resolves
+- [x] slash-15: NON-ADMIN — with the realistic student permission shape (assignments 403, catalog-only mentor-private skills) the "/" picker still offers skills; selecting completes the token and the sent invocation message receives a live AI reply
+- [x] slash-14: A "/" token typed after existing text (caret-adjacent, preceded by whitespace) opens the picker; selecting completes the invocation at that index keeping the sentence. A "/" glued inside a word (and/or, URLs) never triggers

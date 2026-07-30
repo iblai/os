@@ -100,13 +100,12 @@ const screenshareSegment = MENTOR_SEGMENTS.find(
 
 const baseFlags = {
   isMemsearchEnabled: false,
-  isClawEnabled: false,
-  clawConfigExists: false,
   isMemoryComponentEnabled: false,
   isScreenshareEnabled: false,
   // Voice calls default on so the Screen Share gating tests aren't perturbed
   // by the separate Voice-tab gate.
   isVoiceCallEnabled: true,
+  isBaseAgent: true,
   isPrivacyEnabled: false,
 };
 
@@ -134,7 +133,7 @@ const buildContext = (
 describe('Screen Share mentor segment', () => {
   it('is registered in MENTOR_SEGMENTS with the canonical label, value, and field-permission shape', () => {
     expect(screenshareSegment).toBeDefined();
-    expect(screenshareSegment?.label).toBe('Screen Share');
+    expect(screenshareSegment?.label).toBe('Screen');
     expect(screenshareSegment?.value).toBe(MODALS.EDIT_MENTOR.tabs.screenshare);
     // No host-side RBAC field gating and no config gate — the Screen Share
     // tab is always visible; the `enable_video` master toggle now lives
@@ -162,7 +161,7 @@ describe('Screen Share mentor segment', () => {
       const labels = filterMentorSegments(MENTOR_SEGMENTS, ctx).map(
         (s) => s.label,
       );
-      expect(labels).toContain('Screen Share');
+      expect(labels).toContain('Screen');
     });
 
     it('shows the Screen Share tab when isScreenshareEnabled is true', () => {
@@ -172,7 +171,7 @@ describe('Screen Share mentor segment', () => {
       const labels = filterMentorSegments(MENTOR_SEGMENTS, ctx).map(
         (s) => s.label,
       );
-      expect(labels).toContain('Screen Share');
+      expect(labels).toContain('Screen');
     });
 
     it('still hides Screen Share when the user-type is not allowed', () => {
@@ -197,7 +196,7 @@ describe('Screen Share mentor segment', () => {
       // FREE_TRIAL would normally see the tab, but our predicate excludes
       // any segment whose userTypes includes ADMIN — Screen Share's
       // userTypes does include ADMIN, so it gets filtered out.
-      expect(labels).not.toContain('Screen Share');
+      expect(labels).not.toContain('Screen');
     });
   });
 });

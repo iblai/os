@@ -43,6 +43,27 @@ const mockFreeTrialDialogState = {
 const mockUseMentorSettings = vi.hoisted(() => vi.fn());
 const mockUseModelFileUploadCapabilities = vi.hoisted(() => vi.fn());
 const mockCheckRbacPermission = vi.hoisted(() => vi.fn(() => true));
+// `/` skill picker sources — skill assignments + catalog, resolved
+// client-side via the real `resolveEffectiveAgentSkills`. Default: no data →
+// picker fully inactive, so the pre-existing tests observe the composer
+// exactly as before.
+const mockUseGetMentorSkillAssignmentsQuery = vi.hoisted(() =>
+  vi.fn((): { data?: unknown; isLoading?: boolean; isError?: boolean } => ({
+    data: undefined,
+  })),
+);
+const mockUseGetAgentSkillsQuery = vi.hoisted(() =>
+  vi.fn((): { data?: unknown; isLoading?: boolean } => ({ data: undefined })),
+);
+
+vi.mock('@iblai/iblai-js/data-layer', async () => {
+  const actual = await vi.importActual('@iblai/iblai-js/data-layer');
+  return {
+    ...actual,
+    useGetMentorSkillAssignmentsQuery: mockUseGetMentorSkillAssignmentsQuery,
+    useGetAgentSkillsQuery: mockUseGetAgentSkillsQuery,
+  };
+});
 
 // Shareable-link token present in the URL (`?token=...`). When set, the RBAC
 // chat gate must be bypassed. Controlled per-test and reset in beforeEach.
@@ -314,19 +335,38 @@ vi.mock('@/components/auto-resize-text-area', () => ({
     onChange,
     onSubmit,
     onPaste,
+    onComposerKeyDown,
     placeholder,
     disabled,
     allowAnonymousAccess,
     allowEmptySubmit,
+    className,
+    role,
+    'aria-expanded': ariaExpanded,
+    'aria-controls': ariaControls,
+    'aria-activedescendant': ariaActiveDescendant,
+    'aria-haspopup': ariaHasPopup,
+    'aria-autocomplete': ariaAutoComplete,
   }: any) => (
     <textarea
       data-testid="auto-resize-textarea"
       data-allow-anon={allowAnonymousAccess ? 'true' : 'false'}
       data-allow-empty={allowEmptySubmit ? 'true' : 'false'}
+      className={className}
+      role={role}
+      aria-expanded={ariaExpanded}
+      aria-controls={ariaControls}
+      aria-activedescendant={ariaActiveDescendant}
+      aria-haspopup={ariaHasPopup}
+      aria-autocomplete={ariaAutoComplete}
       value={value}
       onChange={onChange}
       onPaste={onPaste}
       onKeyDown={(e) => {
+        // Mirror the real AutoResizeTextarea: the composer-level interceptor
+        // (the `/` skill picker) runs first and, when it handles the event,
+        // suppresses the Enter-to-submit behavior.
+        if (onComposerKeyDown?.(e)) return;
         if (e.key === 'Enter' && !e.shiftKey) {
           e.preventDefault();
           onSubmit(e);
@@ -455,6 +495,12 @@ describe('ChatInputForm', () => {
     mockUseModelFileUploadCapabilities.mockImplementation(
       () => mockFileUploadCapabilities,
     );
+    mockUseGetMentorSkillAssignmentsQuery.mockImplementation(() => ({
+      data: undefined,
+    }));
+    mockUseGetAgentSkillsQuery.mockImplementation(() => ({
+      data: undefined,
+    }));
     mockFreeTrialDialogState.FreeTrialDialog = null;
     mockFreeTrialDialogState.isModalOpen = false;
     mockFreeTrialDialogState.executeWithTrialCheck = mockExecuteWithTrialCheck;
@@ -1793,6 +1839,537 @@ describe('ChatInputForm', () => {
         .getByText('Test disclaimer')
         .closest('div.mt-1');
       expect(disclaimerSection).toHaveStyle({ maxWidth: '800px' });
+    });
+  });
+
+  describe('slash skill picker', () => {
+    // Uses the REAL useSlashSkillPicker / SlashSkillPicker from the SDK (the
+    // web-containers mock is importActual-based); only the effective-skills
+    // fetch is stubbed. This exercises the composer-level integration:
+    // open/filter/select/dismiss and the combobox wiring on the textarea.
+    const skills = [
+      {
+        unique_id: 'skill-web',
+        name: 'Web Research',
+        slug: 'web-research',
+        description: 'Research a topic on the open web.',
+        category: 'web',
+        enabled: true,
+      },
+      {
+        unique_id: 'skill-code',
+        name: 'Code Review',
+        slug: 'code-review',
+        description: 'Reviews code for quality.',
+        enabled: true,
+      },
+      {
+        unique_id: 'skill-off',
+        name: 'Disabled Skill',
+        slug: 'disabled-skill',
+        description: 'Should never be offered.',
+        enabled: false,
+      },
+    ];
+
+    // Feeds the two skills endpoints the composer resolves from: an
+    // assignment row per fixture (assignment enabled: true) and a catalog
+    // record carrying the fixture's own `enabled` flag — effective enabled is
+    // the AND of both, so a `enabled: false` fixture ends up not offered.
+    const arrangeSkills = (list = skills) => {
+      mockMentorSettings = {
+        data: {
+          mentorVisibility: 'PRIVATE',
+          disclaimer: null,
+          mentorUniqueId: 'mentor-uuid-1',
+        },
+      } as any;
+      mockUseGetMentorSkillAssignmentsQuery.mockImplementation(() => ({
+        data: list.map((skill, index) => ({
+          id: index + 1,
+          mentor: 'mentor-uuid-1',
+          skill: skill.unique_id,
+          skill_name: skill.name,
+          skill_slug: skill.slug,
+          enabled: true,
+        })),
+      }));
+      mockUseGetAgentSkillsQuery.mockImplementation(() => ({
+        data: list.map((skill) => ({ ...skill, mentor: null })),
+      }));
+    };
+
+    const typeInComposer = (value: string) => {
+      fireEvent.change(screen.getByTestId('auto-resize-textarea'), {
+        target: { value },
+      });
+    };
+
+    it('opens the picker with enabled skills when typing "/"', () => {
+      arrangeSkills();
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+
+      typeInComposer('/');
+
+      const listbox = screen.getByTestId('slash-skill-picker');
+      expect(listbox).toBeInTheDocument();
+      expect(screen.getByText('Web Research')).toBeInTheDocument();
+      expect(screen.getByText('Code Review')).toBeInTheDocument();
+      // Only enabled skills are offered.
+      expect(screen.queryByText('Disabled Skill')).not.toBeInTheDocument();
+      // Options surface the description so skills are distinguishable.
+      expect(
+        screen.getByText('Research a topic on the open web.'),
+      ).toBeInTheDocument();
+    });
+
+    it('filters the list as the user keeps typing (name and slug match)', () => {
+      arrangeSkills();
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+
+      typeInComposer('/web');
+      expect(screen.getByText('Web Research')).toBeInTheDocument();
+      expect(screen.queryByText('Code Review')).not.toBeInTheDocument();
+
+      // Matching on name also works.
+      typeInComposer('/Code');
+      expect(screen.getByText('Code Review')).toBeInTheDocument();
+      expect(screen.queryByText('Web Research')).not.toBeInTheDocument();
+    });
+
+    it('renders nothing on "/" when the mentor has no skills', () => {
+      // Default beforeEach state: query returns undefined (no skills).
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+
+      typeInComposer('/');
+
+      expect(
+        screen.queryByTestId('slash-skill-picker'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('opens the picker for a "/" token typed after existing text', () => {
+      arrangeSkills();
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+
+      typeInComposer('explain this /web');
+
+      expect(screen.getByTestId('slash-skill-picker')).toBeInTheDocument();
+      expect(screen.getByText('Web Research')).toBeInTheDocument();
+    });
+
+    it('completes the invocation at the typed index and keeps the surrounding text', () => {
+      arrangeSkills();
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+      const textarea = screen.getByTestId('auto-resize-textarea');
+
+      typeInComposer('explain this /web');
+      fireEvent.mouseDown(screen.getByText('Web Research'));
+
+      // The token completes in place — text before it is untouched, and the
+      // highlight backdrop marks the token at its index.
+      expect(textarea).toHaveValue('explain this /web-research ');
+      expect(screen.getByTestId('skill-token-highlight')).toHaveTextContent(
+        '/web-research',
+      );
+
+      fireEvent.keyDown(textarea, { key: 'Enter' });
+      expect(mockOnSubmit).toHaveBeenCalledWith('explain this /web-research ');
+    });
+
+    it('completes a caret-adjacent token in the middle of the text in place', () => {
+      arrangeSkills();
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+      const textarea = screen.getByTestId(
+        'auto-resize-textarea',
+      ) as HTMLTextAreaElement;
+
+      // Simulate the caret sitting right after "/web" in "hello /web world"
+      // (index 10) — the picker must open on the caret's token, not the tail.
+      fireEvent.change(textarea, {
+        target: { value: 'hello /web world', selectionStart: 10 },
+      });
+
+      expect(screen.getByTestId('slash-skill-picker')).toBeInTheDocument();
+      fireEvent.mouseDown(screen.getByText('Web Research'));
+
+      expect(textarea).toHaveValue('hello /web-research world');
+      expect(screen.getByTestId('skill-token-highlight')).toHaveTextContent(
+        '/web-research',
+      );
+    });
+
+    it('does not trigger for a "/" inside a word (e.g. and/or, URLs)', () => {
+      arrangeSkills();
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+
+      typeInComposer('and/or');
+      expect(
+        screen.queryByTestId('slash-skill-picker'),
+      ).not.toBeInTheDocument();
+
+      typeInComposer('see https://example.com/web');
+      expect(
+        screen.queryByTestId('slash-skill-picker'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('does not open for plain text that merely starts with "/"', () => {
+      arrangeSkills();
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+
+      // More than a single token → not a slash command.
+      typeInComposer('/web research is neat');
+
+      expect(
+        screen.queryByTestId('slash-skill-picker'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('completes the token in place and highlights it when an option is clicked', () => {
+      arrangeSkills();
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+
+      typeInComposer('/web');
+      fireEvent.mouseDown(screen.getByText('Web Research'));
+
+      const textarea = screen.getByTestId('auto-resize-textarea');
+      expect(textarea).toHaveValue('/web-research ');
+      // Token pill mirrors the ACTIVE inside-button styling (blue text on
+      // #F5F8FF with a #D0E0FF ring)…
+      const highlight = screen.getByTestId('skill-token-highlight');
+      expect(highlight).toHaveTextContent('/web-research');
+      expect(highlight.className).toContain('bg-[#F5F8FF]');
+      expect(highlight.className).toContain('text-[#38A1E5]');
+      expect(highlight.className).toContain('ring-[#D0E0FF]');
+      // …which requires the mirror to render the text: the textarea's own
+      // glyphs go transparent (caret preserved) while a token is present.
+      expect(textarea.className).toContain('text-transparent');
+      expect(
+        screen.queryByTestId('slash-skill-picker'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('supports ArrowDown + Enter to complete the token, without submitting', () => {
+      arrangeSkills();
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+      const textarea = screen.getByTestId('auto-resize-textarea');
+
+      typeInComposer('/');
+      // resolveEffectiveAgentSkills sorts by name — the picker lists
+      // [Code Review, Web Research], so ArrowDown lands on Web Research.
+      fireEvent.keyDown(textarea, { key: 'ArrowDown' });
+      fireEvent.keyDown(textarea, { key: 'Enter' });
+
+      expect(textarea).toHaveValue('/web-research ');
+      expect(screen.getByTestId('skill-token-highlight')).toHaveTextContent(
+        '/web-research',
+      );
+      expect(mockOnSubmit).not.toHaveBeenCalled();
+    });
+
+    it('submits the message with the inline invocation as typed', () => {
+      arrangeSkills();
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+      const textarea = screen.getByTestId('auto-resize-textarea');
+
+      typeInComposer('/web');
+      fireEvent.mouseDown(screen.getByText('Web Research'));
+      typeInComposer('/web-research the history of chess');
+      fireEvent.keyDown(textarea, { key: 'Enter' });
+
+      expect(mockOnSubmit).toHaveBeenCalledWith(
+        '/web-research the history of chess',
+      );
+      expect(textarea).toHaveValue('');
+      expect(
+        screen.queryByTestId('skill-token-highlight'),
+      ).not.toBeInTheDocument();
+    });
+
+    it.each(['Backspace', 'Delete'])(
+      'deletes the whole token in one stroke with %s at its boundary',
+      (key) => {
+        arrangeSkills();
+        renderWithRedux(<ChatInputForm {...defaultProps} />);
+        const textarea = screen.getByTestId(
+          'auto-resize-textarea',
+        ) as HTMLTextAreaElement;
+
+        typeInComposer('/web');
+        fireEvent.mouseDown(screen.getByText('Web Research'));
+        expect(textarea).toHaveValue('/web-research ');
+
+        if (key === 'Backspace') {
+          // Caret at the very end (default after the value swap).
+          textarea.setSelectionRange(14, 14);
+        } else {
+          // Delete works forward from the token's start.
+          textarea.setSelectionRange(0, 0);
+        }
+        fireEvent.keyDown(textarea, { key });
+
+        expect(textarea).toHaveValue('');
+        expect(
+          screen.queryByTestId('skill-token-highlight'),
+        ).not.toBeInTheDocument();
+      },
+    );
+
+    it('removes a mid-sentence token atomically and collapses the seam space', () => {
+      arrangeSkills();
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+      const textarea = screen.getByTestId(
+        'auto-resize-textarea',
+      ) as HTMLTextAreaElement;
+
+      typeInComposer('say /web-research please');
+      // Caret right after the token (index 17).
+      textarea.setSelectionRange(17, 17);
+      fireEvent.keyDown(textarea, { key: 'Backspace' });
+
+      expect(textarea).toHaveValue('say please');
+    });
+
+    it('Backspace after plain text deletes normally (token untouched)', () => {
+      arrangeSkills();
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+      const textarea = screen.getByTestId(
+        'auto-resize-textarea',
+      ) as HTMLTextAreaElement;
+
+      typeInComposer('/web-research hello');
+      textarea.setSelectionRange(19, 19); // caret after "hello"
+      fireEvent.keyDown(textarea, { key: 'Backspace' });
+
+      // The interceptor must NOT handle this stroke — value unchanged in
+      // jsdom (no native editing), proving default behavior was allowed.
+      expect(textarea).toHaveValue('/web-research hello');
+    });
+
+    it('highlights multiple invocations independently', () => {
+      arrangeSkills();
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+
+      typeInComposer('/web-research then /code-review after');
+
+      const highlights = screen.getAllByTestId('skill-token-highlight');
+      expect(highlights).toHaveLength(2);
+      expect(highlights[0]).toHaveTextContent('/web-research');
+      expect(highlights[1]).toHaveTextContent('/code-review');
+    });
+
+    it('does not highlight unknown or disabled slugs', () => {
+      arrangeSkills();
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+
+      typeInComposer('/disabled-skill and /not-a-skill');
+      expect(
+        screen.queryByTestId('skill-token-highlight'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('dismisses on Escape and stays dismissed while the token remains', () => {
+      arrangeSkills();
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+      const textarea = screen.getByTestId('auto-resize-textarea');
+
+      typeInComposer('/');
+      expect(screen.getByTestId('slash-skill-picker')).toBeInTheDocument();
+
+      fireEvent.keyDown(textarea, { key: 'Escape' });
+      expect(
+        screen.queryByTestId('slash-skill-picker'),
+      ).not.toBeInTheDocument();
+
+      // Still dismissed while the user keeps typing the same slash token…
+      typeInComposer('/we');
+      expect(
+        screen.queryByTestId('slash-skill-picker'),
+      ).not.toBeInTheDocument();
+
+      // …and re-arms once the token is cleared.
+      typeInComposer('');
+      typeInComposer('/');
+      expect(screen.getByTestId('slash-skill-picker')).toBeInTheDocument();
+    });
+
+    it('wires the combobox ARIA contract onto the textarea', () => {
+      arrangeSkills();
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+      const textarea = screen.getByTestId('auto-resize-textarea');
+
+      expect(textarea).toHaveAttribute('role', 'combobox');
+      expect(textarea).toHaveAttribute('aria-expanded', 'false');
+      expect(textarea).toHaveAttribute('aria-haspopup', 'listbox');
+
+      typeInComposer('/');
+      expect(textarea).toHaveAttribute('aria-expanded', 'true');
+      const listboxId = screen
+        .getByTestId('slash-skill-picker')
+        .getAttribute('id');
+      expect(textarea).toHaveAttribute('aria-controls', listboxId!);
+      expect(textarea).toHaveAttribute(
+        'aria-activedescendant',
+        `${listboxId}-option-0`,
+      );
+    });
+
+    it('does not add combobox semantics when the mentor has no skills', () => {
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+      const textarea = screen.getByTestId('auto-resize-textarea');
+      expect(textarea).not.toHaveAttribute('role', 'combobox');
+    });
+
+    it('shows a loading popover on "/" while the skill list is still resolving', () => {
+      mockMentorSettings = {
+        data: {
+          mentorVisibility: 'PRIVATE',
+          disclaimer: null,
+          mentorUniqueId: 'mentor-uuid-1',
+        },
+      } as any;
+      mockUseGetMentorSkillAssignmentsQuery.mockImplementation(() => ({
+        data: undefined,
+        isLoading: true,
+      }));
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+
+      typeInComposer('/');
+      expect(screen.getByTestId('slash-skill-loading')).toBeInTheDocument();
+      expect(screen.getByText('Loading skills…')).toBeInTheDocument();
+
+      // Multi-word text starting with "/" is a plain sentence — no popover.
+      typeInComposer('/web research');
+      expect(
+        screen.queryByTestId('slash-skill-loading'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('replaces the loading popover with the picker once skills resolve', () => {
+      arrangeSkills();
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+
+      typeInComposer('/');
+      expect(
+        screen.queryByTestId('slash-skill-loading'),
+      ).not.toBeInTheDocument();
+      expect(screen.getByTestId('slash-skill-picker')).toBeInTheDocument();
+    });
+
+    it('does not show the loading popover when the fetch settled with no skills', () => {
+      // Default beforeEach state: data undefined, isLoading false.
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+      typeInComposer('/');
+      expect(
+        screen.queryByTestId('slash-skill-loading'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('skips the skills fetches when the mentor UUID is unknown', () => {
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+      expect(mockUseGetMentorSkillAssignmentsQuery).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ skip: true }),
+      );
+      expect(mockUseGetAgentSkillsQuery).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ skip: true }),
+      );
+    });
+
+    describe('effective-set resolution (assignments ∪ private skills)', () => {
+      const arrangeResolution = () => {
+        mockMentorSettings = {
+          data: {
+            mentorVisibility: 'PRIVATE',
+            disclaimer: null,
+            mentorUniqueId: 'mentor-uuid-1',
+          },
+        } as any;
+        mockUseGetMentorSkillAssignmentsQuery.mockImplementation(() => ({
+          data: [
+            {
+              id: 7,
+              mentor: 'mentor-uuid-1',
+              skill: 'skill-web',
+              skill_name: 'Web Research',
+              skill_slug: 'web-research',
+              enabled: true,
+            },
+            {
+              id: 8,
+              mentor: 'mentor-uuid-1',
+              skill: 'skill-off',
+              skill_name: 'Disabled Skill',
+              skill_slug: 'disabled-skill',
+              enabled: false,
+            },
+          ],
+        }));
+        mockUseGetAgentSkillsQuery.mockImplementation(() => ({
+          data: [
+            {
+              unique_id: 'skill-web',
+              name: 'Web Research',
+              slug: 'web-research',
+              description: 'Research a topic on the open web.',
+              enabled: true,
+              mentor: null,
+            },
+            {
+              unique_id: 'skill-off',
+              name: 'Disabled Skill',
+              slug: 'disabled-skill',
+              enabled: true,
+              mentor: null,
+            },
+            {
+              unique_id: 'skill-private',
+              name: 'Private Playbook',
+              slug: 'private-playbook',
+              description: 'Only for this mentor.',
+              enabled: true,
+              mentor: 'mentor-uuid-1',
+            },
+          ],
+        }));
+      };
+
+      it('resolves the effective set client-side (assignments ∪ private, enabled-only)', () => {
+        arrangeResolution();
+        renderWithRedux(<ChatInputForm {...defaultProps} />);
+
+        typeInComposer('/');
+
+        expect(screen.getByTestId('slash-skill-picker')).toBeInTheDocument();
+        // Assigned + enabled skill is offered.
+        expect(screen.getByText('Web Research')).toBeInTheDocument();
+        // Mentor-private skill is offered without an assignment row.
+        expect(screen.getByText('Private Playbook')).toBeInTheDocument();
+        // Assignment disabled → effective disabled → not offered.
+        expect(screen.queryByText('Disabled Skill')).not.toBeInTheDocument();
+      });
+
+      it('degrades to catalog-only when the assignments endpoint 403s (students)', () => {
+        arrangeResolution();
+        // Students can't read the platform-admin-only assignments endpoint —
+        // the picker must still work off the student-readable catalog
+        // (mentor-private skills), not go dark.
+        mockUseGetMentorSkillAssignmentsQuery.mockImplementation(() => ({
+          data: undefined,
+          isError: true,
+        }));
+        renderWithRedux(<ChatInputForm {...defaultProps} />);
+
+        typeInComposer('/');
+
+        expect(screen.getByTestId('slash-skill-picker')).toBeInTheDocument();
+        // Mentor-private skill still offered (attached by ownership).
+        expect(screen.getByText('Private Playbook')).toBeInTheDocument();
+        // Assignment-only skills can't be resolved without the endpoint.
+        expect(screen.queryByText('Web Research')).not.toBeInTheDocument();
+      });
     });
   });
 });

@@ -5,7 +5,10 @@
  * the Edit Mentor modal:
  *
  *   Sandbox tab   — "Dedicated sandbox" capability toggle (in-tab)
- *   Tab visibility — Sandbox and Skills tabs are ALWAYS visible to admins
+ *   Tab visibility — Sandbox tab is ALWAYS visible to admins; Skills tab is
+ *                    always visible to admins ON BASE AGENT MENTORS (the
+ *                    only mentor type `CreateMentorPage`'s UI can produce —
+ *                    see the feat/2215 note below)
  *   Prompts tab   — "Agent Configuration" section
  *
  * ── Capability-gate refactor ─────────────────────────────────────────────
@@ -30,15 +33,27 @@
  *
  * The Skills top-level tab was previously gated on
  * `enable_claw && clawConfigExists` (BOTH the capability on AND a wired
- * ClawMentorConfig); it is now ALSO always mounted. feat/2040 went further
- * and made the Skills CONTENT fully independent of the sandbox too — the
- * SDK's `AgentSkills` component always renders the real skills UI (heading,
- * info box, "New Skill" action), never a "connect a sandbox" gate, whether
- * or not a `ClawMentorConfig` is wired.
+ * ClawMentorConfig); it is now unconditionally mounted with respect to the
+ * sandbox. feat/2040 went further and made the Skills CONTENT fully
+ * independent of the sandbox too — the SDK's `AgentSkills` component always
+ * renders the real skills UI (heading, info box, "New Skill" action), never
+ * a "connect a sandbox" gate, whether or not a `ClawMentorConfig` is wired.
  *
  * Because tab visibility is no longer coupled to `enable_claw` at all, this
  * journey no longer waits for tabs to appear/disappear — it asserts the
  * capability toggle's effect on the GATED CONTENT (`data-enabled`) instead.
+ *
+ * feat/2215 (Agent Skills) added an ORTHOGONAL gate on top of the above: the
+ * Skills segment is now also conditioned on `flags.isBaseAgent`
+ * (`hooks/use-mentor-segments.ts` → `resolveIsBaseAgentMentor`) — Agent
+ * Skills only apply to Base Agent mentors. Every mentor this journey creates
+ * goes through `CreateMentorPage`, whose UI has no agent-type picker and
+ * only ever produces Base Agent mentors, so `isBaseAgent` is always true
+ * here and every "Skills tab visible" assertion below is unaffected. The
+ * mentor-type gate itself (hidden for non-base-agent mentors, fails OPEN
+ * when the type can't be determined) is covered separately in journey 65
+ * (`e2e/journeys/65-agent-skills.spec.ts`), which mocks the mentor-settings
+ * response since no UI path here can produce a non-base-agent mentor.
  *
  * Non-admin users must not see the Sandbox or Skills tabs regardless of
  * claw state (those segments remain ADMIN-only in use-mentor-segments.ts —

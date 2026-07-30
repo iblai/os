@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-07-23",
+  "lastUpdated": "2026-07-28",
   "summary": {
-    "totalCheckpoints": 586,
-    "coveredCheckpoints": 559,
+    "totalCheckpoints": 604,
+    "coveredCheckpoints": 577,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 8,
     "pendingCheckpoints": 7,
     "percent": 100,
-    "totalJourneys": 66,
-    "activeJourneys": 65
+    "totalJourneys": 67,
+    "activeJourneys": 66
   },
   "journeys": [
     {
@@ -2589,7 +2589,7 @@
         },
         {
           "id": "vo-09",
-          "description": "Settings tab surfaces the smart-document-retrieval voice-call toggle (\"Enable screen sharing\" moved off Settings onto the Screen Share tab's own capability toggle — see journey 48)",
+          "description": "Settings tab surfaces the smart-document-retrieval voice-call toggle (\"Enable screen sharing\" moved off Settings onto the Screen tab's own capability toggle — see journey 48)",
           "status": "covered"
         },
         {
@@ -2611,7 +2611,7 @@
     },
     {
       "id": "mentor-screenshare-tab",
-      "name": "Mentor Screen Share Tab",
+      "name": "Mentor Screen Tab",
       "spec": "48-mentor-screenshare-tab.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/tabs/screenshare-tab.tsx",
@@ -2623,7 +2623,7 @@
       "checkpoints": [
         {
           "id": "ss-01",
-          "description": "Screen Share tab stays visible (always mounted — no longer gated on call_configuration.enable_video) and its content grays (capability-gate-content data-enabled=\"false\") when the in-tab \"Enable screen sharing\" capability toggle is off",
+          "description": "Screen tab stays visible (always mounted — no longer gated on call_configuration.enable_video) and its content grays (capability-gate-content data-enabled=\"false\") when the in-tab \"Enable screen sharing\" capability toggle is off",
           "status": "covered"
         },
         {
@@ -2633,7 +2633,7 @@
         },
         {
           "id": "ss-03",
-          "description": "Switching to the Screen Share tab renders the SDK heading, body and capability toggle regardless of the capability's on/off state",
+          "description": "Switching to the Screen tab renders the SDK heading, body and capability toggle regardless of the capability's on/off state",
           "status": "covered"
         }
       ]
@@ -3749,6 +3749,109 @@
         {
           "id": "shl-03",
           "description": "Regression guard: the same non-admin user opens the same mentor chat with NO token — the textarea stays disabled and the RBAC denial placeholder (\"Sorry about that! You don't have permission to chat.\") is shown",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "agent-skills",
+      "name": "Agent Skills",
+      "spec": "65-agent-skills.spec.ts",
+      "sourceFiles": [
+        "hooks/use-mentor-segments.ts",
+        "components/modals/edit-mentor-modal/tabs/skills-tab.tsx",
+        "components/chat-input-form.tsx",
+        "components/auto-resize-text-area.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "ags-01",
+          "description": "Admin sees the Skills tab on a freshly-created (Base Agent) mentor, with the updated tab description (\"Reusable playbooks this Base Agent can discover and follow.\") and skills-info-box copy describing the / picker (feat/2215)",
+          "status": "covered"
+        },
+        {
+          "id": "ags-02",
+          "description": "Skills tab is hidden when the mentor resolves to a non-base-agent type (mentor_slug is not one of base-agent/ai-mentor/ai-agent and template_mentor does not resolve to one either) — hooks/use-mentor-segments.ts resolveIsBaseAgentMentor",
+          "status": "covered"
+        },
+        {
+          "id": "ags-03",
+          "description": "Skills tab stays visible when the mentor type cannot be determined (template_mentor is a numeric PK the frontend cannot read a slug from) — the gate fails OPEN rather than hiding the tab",
+          "status": "covered"
+        },
+        {
+          "id": "slash-01",
+          "description": "Mentor with no effective skills: chat composer stays a plain textbox (no combobox role) and typing \"/\" opens nothing",
+          "status": "covered"
+        },
+        {
+          "id": "slash-02",
+          "description": "Mentor with effective skills: composer textarea gets role=combobox wiring and typing \"/\" opens the slash-skill-picker listing only enabled skills (disabled skills filtered out), showing name/slug/description",
+          "status": "covered"
+        },
+        {
+          "id": "slash-03",
+          "description": "Typing after \"/\" filters the picker by both skill name and slug as the query narrows; no match closes the picker",
+          "status": "covered"
+        },
+        {
+          "id": "slash-04",
+          "description": "ArrowDown/ArrowUp cycle the active picker option and the composer's aria-activedescendant follows the active option's id",
+          "status": "covered"
+        },
+        {
+          "id": "slash-05",
+          "description": "Enter completes the active option IN PLACE — \"/<slug> \" lands at the typed token's index in the textarea and the backdrop layer (skill-token-highlight) paints an active-pill background behind it; nothing is submitted",
+          "status": "covered"
+        },
+        {
+          "id": "slash-06",
+          "description": "Clicking a picker option (mousedown) completes that skill's token in place with the same highlight",
+          "status": "covered"
+        },
+        {
+          "id": "slash-07",
+          "description": "Escape dismisses the picker until the slash token is cleared (still-dismissed while the token persists), then a fresh \"/\" re-arms and reopens it",
+          "status": "covered"
+        },
+        {
+          "id": "slash-08",
+          "description": "Multi-word text starting with \"/\" (e.g. \"/hello world\") never opens the picker",
+          "status": "covered"
+        },
+        {
+          "id": "slash-09",
+          "description": "One Backspace at the token's end (or Delete at its start) removes the whole \"/slug \" token atomically",
+          "status": "covered"
+        },
+        {
+          "id": "slash-10",
+          "description": "Backspace after plain text deletes characters normally — the highlighted token stays intact",
+          "status": "covered"
+        },
+        {
+          "id": "slash-11",
+          "description": "A mid-sentence token is removed atomically and the seam space collapses (\"say /web-research please\" → \"say please\")",
+          "status": "covered"
+        },
+        {
+          "id": "slash-12",
+          "description": "Multiple skill invocations in one message are each highlighted; unknown or disabled slugs never highlight",
+          "status": "covered"
+        },
+        {
+          "id": "slash-13",
+          "description": "Typing \"/\" while the skills fetches (assignments + catalog) are still in flight shows the \"Loading skills…\" popover (slash-skill-loading, role=status), which yields to the picker once the list resolves",
+          "status": "covered"
+        },
+        {
+          "id": "slash-14",
+          "description": "A \"/\" token typed after existing text (caret-adjacent, preceded by whitespace) opens the picker; selecting completes the invocation at that index keeping the sentence. A \"/\" glued inside a word (and/or, URLs) never triggers",
+          "status": "covered"
+        },
+        {
+          "id": "slash-15",
+          "description": "NON-ADMIN: with the realistic student permission shape (assignments endpoint 403s, student-readable catalog returns mentor-private skills) the \"/\" picker still offers skills; selecting completes the token and sending the invocation message receives a live AI reply",
           "status": "covered"
         }
       ]

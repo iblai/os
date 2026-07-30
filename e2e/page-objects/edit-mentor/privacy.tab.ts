@@ -22,7 +22,7 @@ import { Page, Locator, expect } from '@playwright/test';
  * (`data-enabled="false"`). Interacting with them while off is not a
  * supported user flow — callers must turn the capability on first.
  *
- * Unlike the app-owned tabs (Sandbox / Memory / Voice / Screen Share / LTI),
+ * Unlike the app-owned tabs (Sandbox / Memory / Voice / Screen / LTI),
  * `AgentPrivacyTab` does NOT mirror the toggle in local optimistic state —
  * `enabled` is read directly from the `mentorSettings` query result, so the
  * toggle only visually flips once the `editMentorJson` PUT + refetch round

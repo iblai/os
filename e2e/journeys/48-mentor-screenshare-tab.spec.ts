@@ -3,10 +3,11 @@ import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
 
 /**
- * Journey 48 — Mentor Screen Share Tab.
+ * Journey 48 — Mentor Screen Tab (screen sharing).
  *
- * The Screen Share top-level tab is rendered by the SDK's
- * `AgentScreenShareTab` (`@iblai/iblai-js/web-containers/next`).
+ * The Screen top-level tab (titled "Screen"; its body copy still says
+ * "screen sharing") is rendered by the SDK's `AgentScreenShareTab`
+ * (`@iblai/iblai-js/web-containers/next`).
  *
  * ── Capability-gate refactor ─────────────────────────────────────────────
  *
@@ -33,7 +34,7 @@ import { waitForPageReady } from '../utils/resilient';
  * No CSS class selectors anywhere — every locator survives style
  * refactors on either side.
  */
-test.describe('Journey 48: Mentor Screen Share Tab', () => {
+test.describe('Journey 48: Mentor Screen Tab', () => {
   test.beforeEach(async ({ page, editMentorPage }) => {
     await navigateToMentorApp(page);
     const isAdmin = await checkAdminStatus(page);
@@ -41,14 +42,14 @@ test.describe('Journey 48: Mentor Screen Share Tab', () => {
       test.skip(true, 'Screen share tab requires admin access');
       return;
     }
-    // Screen Share is always mounted now — open straight to it.
-    await editMentorPage.open('Screen Share');
+    // The Screen tab is always mounted now — open straight to it.
+    await editMentorPage.open('Screen');
     await waitForPageReady(page);
   });
 
-  // SS-01: Screen Share tab stays visible even when "Enable screen sharing"
+  // SS-01: Screen tab stays visible even when "Enable screen sharing"
   // is off — only the gated content grays.
-  test('Screen Share tab stays visible and its content grays when "Enable screen sharing" is off', async ({
+  test('Screen tab stays visible and its content grays when "Enable screen sharing" is off', async ({
     editMentorPage,
   }) => {
     const wasOn = await editMentorPage.screenshare.isCapabilityEnabled();
@@ -96,10 +97,10 @@ test.describe('Journey 48: Mentor Screen Share Tab', () => {
     await editMentorPage.close();
   });
 
-  // SS-03: The Screen Share tab renders the SDK-owned body and heading
+  // SS-03: The Screen tab renders the SDK-owned body and heading
   // regardless of the capability's on/off state (it's grayed, not
   // unmounted, when off).
-  test('admin can switch to the Screen Share tab and sees the SDK body', async ({
+  test('admin can switch to the Screen tab and sees the SDK body', async ({
     editMentorPage,
   }) => {
     await editMentorPage.screenshare.switchTo();

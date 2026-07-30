@@ -1,5 +1,21 @@
 import { Page, Locator, expect } from '@playwright/test';
 
+/**
+ * Minimal shape accepted by `mockEffectiveSkills` — mirrors the SDK's
+ * `EffectiveAgentSkill` (`@iblai/data-layer`'s `skills-utils`/`types`) closely
+ * enough to drive the chat `/` skill picker (`SlashSkillPicker` /
+ * `useSlashSkillPicker` from `@iblai/iblai-js/web-containers`). Only
+ * `enabled: true` skills are ever offered by the picker.
+ */
+export interface EffectiveSkillFixture {
+  unique_id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  category?: string;
+  enabled: boolean;
+}
+
 export class ChatPage {
   readonly page: Page;
 
@@ -22,6 +38,8 @@ export class ChatPage {
   readonly promptGalleryDialog: Locator;
   readonly guidedSuggestedPrompts: Locator;
   readonly guidedSuggestedPromptButtons: Locator;
+  readonly slashSkillPicker: Locator;
+  readonly skillTokenHighlights: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -75,6 +93,16 @@ export class ChatPage {
     this.guidedSuggestedPromptButtons = this.guidedSuggestedPrompts.locator(
       '.chat-guided-suggested-prompts',
     );
+    // `SlashSkillPicker` (SDK, web-containers) renders its listbox with this
+    // fixed testid regardless of the generated `listboxId`.
+    this.slashSkillPicker = page.getByTestId('slash-skill-picker');
+    // In-place invocation highlights (`components/chat-input-form.tsx`).
+    // Selecting a picker option completes the `/<slug> ` token AT the typed
+    // index; a backdrop layer behind the textarea paints a pill background
+    // under each enabled `/skill` token (one element per token). Backspace
+    // at a token's end (or Delete at its start) removes the whole token in
+    // one stroke.
+    this.skillTokenHighlights = page.getByTestId('skill-token-highlight');
   }
 
   async sendMessage(text: string): Promise<void> {
@@ -359,6 +387,145 @@ export class ChatPage {
     await closeButton.click();
     await expect(this.promptGalleryDialog).not.toBeVisible({
       timeout: 10_000,
+    });
+  }
+
+  // ── `/` skill picker (chat composer) ────────────────────────────────────
+  //
+  // `ChatInputForm` resolves the mentor's skill list client-side from TWO
+  // endpoints — skill assignments (`GET .../agents/{uuid}/skills/`) and the
+  // skill catalog (`GET .../agent-skills/`) — combined with the SDK's
+  // `resolveEffectiveAgentSkills`, eagerly on mount, not lazily on the first
+  // `/` keypress. The composer textarea's role flips from the implicit
+  // `textbox` to `combobox` whenever the resolved list is non-empty (see
+  // `components/chat-input-form.tsx`). Two consequences for e2e:
+  //   1. `mockEffectiveSkills` MUST be called before `navigateToMentorApp` /
+  //      any navigation to the chat page — registering the routes after the
+  //      page has already loaded misses the requests that populate the list.
+  //   2. Use `getComposerTextarea()` (an id-based, role-agnostic locator)
+  //      rather than `chatInput` (`getByRole('textbox', ...)`) whenever a
+  //      test might put the composer into its combobox state — `chatInput`
+  //      only resolves while the accessible role is `textbox`.
+  // NOTE: the resolved list is sorted by skill NAME, so the picker's option
+  // order is alphabetical regardless of fixture order.
+
+  /**
+   * Role-agnostic locator for the chat composer's `<textarea>`. Safe to use
+   * whether or not the `/` skill picker's combobox aria wiring is active.
+   */
+  getComposerTextarea(): Locator {
+    return this.page.locator('#chat-input-textarea');
+  }
+
+  /**
+   * Intercepts the two skill-source GETs (assignments + catalog) and
+   * fulfills them from a fixed fixture list, so the `/` skill picker's
+   * contents are deterministic instead of depending on whatever skills (if
+   * any) happen to be assigned server-side. Each fixture becomes an enabled
+   * assignment row plus a catalog record carrying the fixture's own
+   * `enabled` flag (effective enabled is the AND of the two). Must be
+   * registered BEFORE navigating to the chat page — see the class-of-methods
+   * note above.
+   */
+  async mockEffectiveSkills(skills: EffectiveSkillFixture[]): Promise<void> {
+    // Assignments: /agents/{uuid}/skills/ — NOT /agent-skills/ (catalog).
+    await this.page.route(
+      (url) => /\/agents\/[^/]+\/skills\//.test(url.pathname),
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(
+            skills.map((skill, index) => ({
+              id: index + 1,
+              mentor: 'e2e-mentor',
+              skill: skill.unique_id,
+              skill_name: skill.name,
+              skill_slug: skill.slug,
+              enabled: true,
+            })),
+          ),
+        });
+      },
+    );
+    await this.page.route(
+      (url) => url.pathname.includes('/agent-skills/'),
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(
+            skills.map((skill) => ({ ...skill, mentor: null })),
+          ),
+        });
+      },
+    );
+  }
+
+  /**
+   * Mocks the skill sources the way a real NON-ADMIN experiences them: the
+   * assignments endpoint 403s (it is platform-admin-only) and the catalog —
+   * which IS student-readable — returns the fixtures as MENTOR-PRIVATE
+   * skills. The composer treats the 403 as "no assignment rows" and resolves
+   * catalog-only, so private skills still reach the picker.
+   *
+   * The catalog fixtures need the mentor's real UUID in their `mentor`
+   * field for the private-skill resolution to match; it is captured from the
+   * assignments request URL (which always fires first-mount alongside the
+   * catalog request), so the catalog fulfillment awaits that capture.
+   * Must be registered BEFORE navigating, like `mockEffectiveSkills`.
+   */
+  async mockStudentSkills(skills: EffectiveSkillFixture[]): Promise<void> {
+    let resolveMentorUuid!: (uuid: string) => void;
+    const mentorUuid = new Promise<string>((resolve) => {
+      resolveMentorUuid = resolve;
+    });
+    await this.page.route(
+      (url) => /\/agents\/[^/]+\/skills\//.test(url.pathname),
+      async (route) => {
+        const match = /\/agents\/([^/]+)\/skills\//.exec(
+          new URL(route.request().url()).pathname,
+        );
+        if (match) resolveMentorUuid(match[1]);
+        await route.fulfill({
+          status: 403,
+          contentType: 'application/json',
+          body: JSON.stringify({ detail: 'forbidden' }),
+        });
+      },
+    );
+    await this.page.route(
+      (url) => url.pathname.includes('/agent-skills/'),
+      async (route) => {
+        const uuid = await mentorUuid;
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(
+            skills.map((skill) => ({ ...skill, mentor: uuid })),
+          ),
+        });
+      },
+    );
+  }
+
+  /**
+   * The `id` of the slash-picker option currently marked
+   * `aria-selected="true"` (the keyboard/hover-active option). Compare
+   * against the composer's `aria-activedescendant` attribute to verify the
+   * combobox wiring, not just the visual highlight.
+   */
+  async activeSlashSkillOptionId(): Promise<string | null> {
+    return this.slashSkillPicker
+      .locator('[aria-selected="true"]')
+      .first()
+      .getAttribute('id');
+  }
+
+  /** Returns the slash-picker option `<li>` whose text contains `name`. */
+  getSlashSkillOption(name: string): Locator {
+    return this.slashSkillPicker.getByRole('option', {
+      name: new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
     });
   }
 }

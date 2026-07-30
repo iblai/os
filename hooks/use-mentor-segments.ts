@@ -32,7 +32,7 @@ import { MentorVisibilityEnum } from '@iblai/iblai-api';
 import {
   useGetMentorSettingsQuery,
   useGetMemsearchStatusQuery,
-  useGetClawMentorConfigQuery,
+  isBaseAgentMentor,
 } from '@iblai/iblai-js/data-layer';
 
 import { MODALS, UserType } from '@/lib/constants';
@@ -54,9 +54,6 @@ import { config } from '@/lib/config';
  */
 export type MentorSegmentConfigFlags = {
   isMemsearchEnabled: boolean;
-  isClawEnabled: boolean;
-  /** True when a ClawMentorConfig exists for this mentor (sandbox wired to an instance). */
-  clawConfigExists: boolean;
   isMemoryComponentEnabled: boolean;
   /** True when `enable_privacy_router` is on for this mentor. */
   isPrivacyEnabled: boolean;
@@ -72,7 +69,64 @@ export type MentorSegmentConfigFlags = {
    * removes the Voice tab from the sidebar entirely.
    */
   isVoiceCallEnabled: boolean;
+  /**
+   * True when the mentor resolves to the "base-agent" type (its own slug or
+   * its template mentor's slug is one of the base-agent aliases) — the only
+   * mentor type that supports Agent Skills. Gates the Skills tab. Fails OPEN
+   * when the type cannot be determined (see `resolveIsBaseAgentMentor`).
+   */
+  isBaseAgent: boolean;
 };
+
+/**
+ * Best-effort extraction of the template mentor's slug from the untyped
+ * `template_mentor` field on the mentor-settings response. The backend
+ * serializer types it as `any`; handle the plausible shapes (plain slug
+ * string, nested object) and return undefined for anything else (e.g. a
+ * numeric PK), which callers treat as "indeterminate".
+ */
+export function resolveTemplateMentorSlug(
+  templateMentor: unknown,
+): string | undefined {
+  if (typeof templateMentor === 'string') return templateMentor || undefined;
+  if (templateMentor && typeof templateMentor === 'object') {
+    const record = templateMentor as Record<string, unknown>;
+    for (const key of ['slug', 'mentor_slug', 'name', 'template_name']) {
+      const value = record[key];
+      if (typeof value === 'string' && value) return value;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Whether the mentor should be treated as a Base Agent for gating purposes.
+ *
+ * Mirrors the backend `Mentor.get_mentor_type()` check via the SDK's
+ * `isBaseAgentMentor` (own slug or template mentor slug ∈ base-agent
+ * aliases), but fails OPEN — returns true — when the settings response
+ * doesn't let us decide: mentor_slug missing (settings not loaded) or
+ * `template_mentor` present in a shape we can't read a slug from (e.g. a
+ * numeric PK). Hiding the Skills tab from a real base agent would silently
+ * remove the feature, while showing it to a non-base agent only surfaces a
+ * harmless read-only section — so indeterminate cases keep the tab.
+ */
+export function resolveIsBaseAgentMentor(
+  mentorSettings:
+    | { mentor_slug?: string | null; template_mentor?: unknown }
+    | undefined,
+): boolean {
+  const mentorSlug = mentorSettings?.mentor_slug ?? undefined;
+  const templateMentorRaw = mentorSettings?.template_mentor;
+  const templateMentorSlug = resolveTemplateMentorSlug(templateMentorRaw);
+
+  if (isBaseAgentMentor({ mentorSlug, templateMentorSlug })) return true;
+
+  const slugIndeterminate = !mentorSlug;
+  const templateIndeterminate =
+    templateMentorRaw != null && !templateMentorSlug;
+  return slugIndeterminate || templateIndeterminate;
+}
 
 /**
  * Visual grouping shared by the platform NavBar dropdown (3 columns / mobile
@@ -199,41 +253,6 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     navCategory: 'configurations',
   },
   {
-    value: MODALS.EDIT_MENTOR.tabs.voice,
-    label: 'Voice',
-    labelKey: 'voice',
-    icon: Volume2,
-    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-    // Backend doesn't yet expose voice_provider/openai_voice/google_voice in
-    // mentorSettings.permissions.field, nor whitelist /mentors/{id}/#voice_settings.
-    // Re-add `rbacResource` + `permissionFieldsCheck` once those land.
-    permissionFieldsCheck: [],
-    mentorVisibility: [
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
-    ],
-    // Always visible. The "Enable voice calls" (`show_voice_call`) master
-    // toggle now lives inline at the top of the Voice tab; turning it off grays
-    // out the voice/call configuration below instead of hiding the whole tab.
-    navCategory: 'configurations',
-  },
-  {
-    value: MODALS.EDIT_MENTOR.tabs.screenshare,
-    label: 'Screen Share',
-    labelKey: 'screenShare',
-    icon: MonitorPlay,
-    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-    permissionFieldsCheck: [],
-    mentorVisibility: [
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
-    ],
-    // Always visible. The "Enable screen sharing" (`enable_video`) master
-    // toggle now lives inline at the top of the Screen Share tab; turning it
-    // off grays out the screen-sharing prompts below instead of hiding the tab.
-    navCategory: 'configurations',
-  },
-  {
     value: MODALS.EDIT_MENTOR.tabs.prompts,
     label: 'Prompts',
     labelKey: 'prompts',
@@ -258,15 +277,59 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     labelKey: 'skills',
     icon: Sparkles,
     userTypes: [UserType.ADMIN],
+    // Admin-only for now — the userTypes filter alone gates visibility
+    // (mirrors Tasks/Sandbox/Evals). Deliberately NO `rbacResource` until the
+    // agent-skills RBAC contract is settled with the backend (the ActionDefs
+    // register `/platforms/{db_pk}/…` paths the FE has no sanctioned pk
+    // source for).
     permissionFieldsCheck: [],
     mentorVisibility: [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
-    // Always visible. Skills only work when a sandbox is wired to a Claw
-    // instance, so the SDK's <AgentSkills/> shows a "connect a sandbox"
-    // prompt (grayed state) until one is connected — the tab itself stays
-    // reachable so admins can see what's available.
+    // Agent Skills only apply to Base Agent mentors — other agent types
+    // (google-agent, openai-agent, n8n-workflow, …) never read the skills
+    // directory, so the tab is hidden for them. The gate fails open when the
+    // mentor type can't be determined (see `resolveIsBaseAgentMentor`).
+    // Within base agents the tab is always reachable: skills only *run* when
+    // a sandbox is wired, and the SDK's <AgentSkills/> renders a "connect a
+    // sandbox" grayed state until then.
+    enabledThroughConfig: (flags) => flags.isBaseAgent,
+    navCategory: 'configurations',
+  },
+  {
+    value: MODALS.EDIT_MENTOR.tabs.voice,
+    label: 'Voice',
+    labelKey: 'voice',
+    icon: Volume2,
+    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
+    // Backend doesn't yet expose voice_provider/openai_voice/google_voice in
+    // mentorSettings.permissions.field, nor whitelist /mentors/{id}/#voice_settings.
+    // Re-add `rbacResource` + `permissionFieldsCheck` once those land.
+    permissionFieldsCheck: [],
+    mentorVisibility: [
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+    ],
+    // Always visible. The "Enable voice calls" (`show_voice_call`) master
+    // toggle now lives inline at the top of the Voice tab; turning it off grays
+    // out the voice/call configuration below instead of hiding the whole tab.
+    navCategory: 'configurations',
+  },
+  {
+    value: MODALS.EDIT_MENTOR.tabs.privacy,
+    label: 'Privacy',
+    labelKey: 'privacy',
+    icon: ShieldCheck,
+    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
+    permissionFieldsCheck: [],
+    mentorVisibility: [
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+    ],
+    // Always visible. The "PII filtering" (`enable_privacy_router`) master
+    // toggle now lives inline at the top of the Privacy tab; turning it off
+    // grays out the PII rules below instead of hiding the whole tab.
     navCategory: 'configurations',
   },
   {
@@ -287,22 +350,6 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
-    navCategory: 'configurations',
-  },
-  {
-    value: MODALS.EDIT_MENTOR.tabs.privacy,
-    label: 'Privacy',
-    labelKey: 'privacy',
-    icon: ShieldCheck,
-    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-    permissionFieldsCheck: [],
-    mentorVisibility: [
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
-    ],
-    // Always visible. The "PII filtering" (`enable_privacy_router`) master
-    // toggle now lives inline at the top of the Privacy tab; turning it off
-    // grays out the PII rules below instead of hiding the whole tab.
     navCategory: 'configurations',
   },
   {
@@ -334,6 +381,24 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
     ],
+    navCategory: 'configurations',
+  },
+  {
+    value: MODALS.EDIT_MENTOR.tabs.screenshare,
+    // Title is just "Screen" — the tab body's copy still talks about
+    // "screen sharing" (SDK-owned descriptions).
+    label: 'Screen',
+    labelKey: 'screenShare',
+    icon: MonitorPlay,
+    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
+    permissionFieldsCheck: [],
+    mentorVisibility: [
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+    ],
+    // Always visible. The "Enable screen sharing" (`enable_video`) master
+    // toggle now lives inline at the top of the Screen tab; turning it
+    // off grays out the screen-sharing prompts below instead of hiding the tab.
     navCategory: 'configurations',
   },
   {
@@ -427,8 +492,14 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     label: 'Evals',
     labelKey: 'evals',
     icon: FlaskConical,
+    // Strictly admin-only, in BOTH the nav-bar dropdown and the Edit Agent
+    // modal — the userTypes filter alone gates visibility (mirrors
+    // Tasks/Sandbox). Deliberately NO `rbacResource`: `isUserTypeAllowed`
+    // treats an RBAC grant as an alternative to the userTypes check, so any
+    // resource listed here would let non-admins holding that grant see the
+    // tab (an earlier copy-paste of the Datasets resource did exactly that).
+    // Do not add one back without a dedicated evals RBAC action.
     userTypes: [UserType.ADMIN],
-    rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/documents/#list`,
     permissionFieldsCheck: [],
     mentorVisibility: [MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS],
     // Without a navCategory the new categorized layout (modal sidebar +
@@ -626,24 +697,14 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
   );
 
   const isMemsearchEnabled = memsearchConfig?.enable_memsearch ?? false;
-  // @ts-expect-error enable_claw is not yet in the MentorSettingsPublic type
-  const isClawEnabled: boolean = mentorSettings?.enable_claw ?? false;
 
-  // The claw-config endpoint is keyed by the mentor's UUID. Use the value from
-  // mentor settings; fall back to the resolved id (which may already be a UUID
-  // when navigating directly).
-  const mentorUuid: string | undefined =
-    mentorSettings?.mentor_unique_id ?? resolvedMentorId;
-
-  // The data-layer normalises 404 → null, so a non-null result means the
-  // mentor has a wired ClawMentorConfig (sandbox connected to an instance).
-  // Skip the query until we know claw is enabled — there's no point fetching
-  // the config when we'd never gate on it.
-  const { data: clawMentorConfig } = useGetClawMentorConfigQuery(
-    { org: tenantKey!, mentorUniqueId: mentorUuid! },
-    { skip: !isClawEnabled || !tenantKey || !mentorUuid },
-  );
-  const clawConfigExists = !!clawMentorConfig;
+  // NOTE: no ClawMentorConfig fetch here. The Sandbox and Skills tabs stopped
+  // gating on claw state (they're always reachable for their user types, with
+  // any "connect a sandbox" messaging inline in the tab content), so fetching
+  // `.../claw-config/` from this hook — which runs on every page for the
+  // nav-bar — was a wasted request on every chat load. Surfaces that truly
+  // need the config (Sandbox tab's SandboxConfig, Prompts tab) fetch it
+  // themselves while mounted.
 
   const isMemoryComponentEnabled =
     // @ts-ignore - enable_memory_component exists on API but not typed
@@ -666,6 +727,11 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
   const isVoiceCallEnabled: boolean =
     // @ts-ignore - show_voice_call exists on API but not typed
     mentorSettings?.show_voice_call ?? true;
+
+  // Base-agent detection for the Skills tab. `template_mentor` is untyped on
+  // the settings response, so resolution is best-effort and fails open.
+  const isBaseAgent = resolveIsBaseAgentMentor(mentorSettings);
+
   const { isUserTypeAllowed, userType } = useUserType(mentorSettings);
 
   // `isUserTypeAllowed` is a fresh function on every render of `useUserType`.
@@ -683,11 +749,10 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
       flags: {
         isMemsearchEnabled,
         isMemoryComponentEnabled,
-        isClawEnabled,
-        clawConfigExists,
         isPrivacyEnabled,
         isScreenshareEnabled,
         isVoiceCallEnabled,
+        isBaseAgent,
       },
       isUserTypeAllowed: (segment) => isUserTypeAllowedRef.current(segment),
     }),
@@ -698,12 +763,11 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
       rbacPermissions,
       userType,
       isMemsearchEnabled,
-      isClawEnabled,
-      clawConfigExists,
       isMemoryComponentEnabled,
       isPrivacyEnabled,
       isScreenshareEnabled,
       isVoiceCallEnabled,
+      isBaseAgent,
     ],
   );
 

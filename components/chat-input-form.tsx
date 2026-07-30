@@ -2,11 +2,11 @@
 
 import type React from 'react';
 
-import { useState, useRef, ChangeEvent } from 'react';
+import { useState, useRef, useMemo, ChangeEvent } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { format } from 'date-fns';
 import { useMediaQuery } from 'react-responsive';
-import { FileText } from 'lucide-react';
+import { FileText, Loader2 } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '@/lib/hooks';
 import { removeFile } from '@iblai/iblai-js/web-utils';
 import { RootState } from '@/store';
@@ -51,7 +51,16 @@ import { useModelFileUploadCapabilities } from '@/hooks/use-model-file-upload-ca
 import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
 import { checkRbacPermission } from '@/hoc/withPermissions';
 import { config } from '@/lib/config';
-import { useChatPrivacy } from '@iblai/iblai-js/web-containers';
+import {
+  useChatPrivacy,
+  SlashSkillPicker,
+  useSlashSkillPicker,
+} from '@iblai/iblai-js/web-containers';
+import {
+  useGetMentorSkillAssignmentsQuery,
+  useGetAgentSkillsQuery,
+  resolveEffectiveAgentSkills,
+} from '@iblai/iblai-js/data-layer';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 
 // Fallback used when the configured paste-to-attachment threshold is missing
@@ -216,7 +225,236 @@ export function ChatInputForm({
 
   const setInputValue = (input: string) => {
     dispatch(chatInputSliceActions.setTextareaInput(input));
+    // Programmatic writes (prompt gallery, voice, submit-clear, skill splice)
+    // carry no caret info — drop any tracked slash token; the next change
+    // event re-derives it. `handleInputChange` overrides this right after.
+    setSlashContext(null);
   };
+
+  // `/` skill picker (Base Agent mentors) — available to admins AND
+  // students. The mentor's effective skill set is resolved client-side from
+  // two endpoints via the SDK's `resolveEffectiveAgentSkills`, mirroring the
+  // backend's own resolution:
+  //   - skill catalog (`GET .../agent-skills/`): admin- and student-readable;
+  //     supplies the mentor-private skills (attached by ownership).
+  //   - skill assignments (`GET .../agents/{uuid}/skills/`): platform-admin
+  //     only. For students it 403s, which is treated as "no assignment rows"
+  //     rather than an error — the picker still offers the catalog-resolved
+  //     skills instead of going dark.
+  const mentorUniqueId = mentorSettings?.data?.mentorUniqueId;
+  const skillsQuerySkipped = !mentorUniqueId || !tenantKey || !username;
+  const {
+    data: skillAssignments,
+    isLoading: assignmentsLoading,
+    isError: assignmentsError,
+  } = useGetMentorSkillAssignmentsQuery(
+    { org: tenantKey, mentorUniqueId: mentorUniqueId ?? '', limit: 100 },
+    { skip: skillsQuerySkipped },
+  );
+  const { data: skillCatalog, isLoading: catalogLoading } =
+    useGetAgentSkillsQuery(
+      { org: tenantKey, limit: 100 },
+      { skip: skillsQuerySkipped },
+    );
+
+  // True while the skill list is still being resolved. Drives the "loading"
+  // popover so a user who types `/` before the fetches settle sees feedback
+  // instead of nothing. Skipped queries report isLoading false, so this
+  // stays false for anonymous visitors.
+  const slashSkillsLoading = assignmentsLoading || catalogLoading;
+  const slashSkills = useMemo(() => {
+    // The SDK types query data as `list | paginated envelope`; runtime is
+    // normalized to a list, but unwrap defensively either way.
+    const asList = <T,>(data: T[] | { results?: T[] } | undefined): T[] =>
+      Array.isArray(data) ? data : (data?.results ?? []);
+    // Students can't read assignments (403) — degrade to catalog-only.
+    const assignments = assignmentsError ? [] : skillAssignments;
+    if (assignments && skillCatalog && mentorUniqueId) {
+      return resolveEffectiveAgentSkills(
+        asList(skillCatalog),
+        asList(assignments),
+        mentorUniqueId,
+      );
+    }
+    return [];
+  }, [skillAssignments, assignmentsError, skillCatalog, mentorUniqueId]);
+
+  // Slugs eligible for in-place token highlighting and atomic deletion.
+  const skillSlugSet = useMemo(
+    () =>
+      new Set(
+        slashSkills
+          .filter((skill) => skill.enabled !== false)
+          .map((skill) => skill.slug),
+      ),
+    [slashSkills],
+  );
+
+  // The `/`-prefixed token the caret currently sits at, with its position in
+  // the composer text — a slash token counts anywhere in the message as long
+  // as it starts the text or follows whitespace ("explain this /web" ⇒
+  // "/web"), so mid-sentence invocation works, while "and/or" or URLs never
+  // trigger. Updated from change events (the only place the caret is known);
+  // programmatic writes (prompt gallery, voice, submit-clear) reset it via
+  // `setSlashContext(null)` in `setInputValue`.
+  const [slashContext, setSlashContext] = useState<{
+    token: string;
+    start: number;
+    end: number;
+  } | null>(null);
+
+  const updateSlashContext = (text: string, caret: number) => {
+    const beforeCaret = text.slice(0, caret);
+    const match = /(?:^|\s)(\/\S*)$/.exec(beforeCaret);
+    // Only while the caret is at the token's end (rest of text must not
+    // continue the token) — matches how pickers behave in Slack/Notion.
+    const boundaryOk = caret === text.length || /^\s/.test(text.slice(caret));
+    if (match && boundaryOk) {
+      const token = match[1];
+      setSlashContext({ token, start: caret - token.length, end: caret });
+    } else {
+      setSlashContext(null);
+    }
+  };
+
+  const slashPicker = useSlashSkillPicker({
+    // Feed the hook just the caret's slash token: its own state machine only
+    // opens for a value that IS a single `/` token, so this extends the
+    // trigger to any index without forking the SDK logic.
+    inputValue: slashContext?.token ?? '',
+    // The SDK picker finalizes a selection by writing `/${slug} ` into the
+    // composer (both the Enter and the click path funnel through this
+    // setter). Intercept exactly that write and splice the invocation into
+    // the message AT the typed token's position — the token stays where the
+    // user invoked it ("explain /web now" → "explain /web-research now") and
+    // gets the highlight treatment from the backdrop layer below.
+    setInputValue: (value) => {
+      const invocation = /^\/(\S+) $/.exec(value);
+      const skill = invocation
+        ? slashSkills.find((s) => s.slug === invocation[1])
+        : undefined;
+      if (skill && slashContext) {
+        const before = inputValue.slice(0, slashContext.start);
+        const after = inputValue.slice(slashContext.end);
+        // Keep exactly one separator after the token — `after` may already
+        // start with the space the user typed around the invocation point.
+        const separator = after.startsWith(' ') ? '' : ' ';
+        setInputValue(`${before}/${skill.slug}${separator}${after}`);
+        return;
+      }
+      setInputValue(value);
+    },
+    skills: slashSkills,
+  });
+
+  // Atomic token removal: one Backspace with the caret at (or just after)
+  // a highlighted `/skill` token deletes the whole token; Delete does the
+  // same forward from the token's start. Runs after the picker's own key
+  // handling so list navigation keeps priority while the popover is open.
+  const handleComposerKeyDown = (
+    e: React.KeyboardEvent<HTMLTextAreaElement>,
+  ): boolean => {
+    if (slashPicker.handleKeyDown(e)) return true;
+    if (
+      (e.key !== 'Backspace' && e.key !== 'Delete') ||
+      skillSlugSet.size === 0
+    ) {
+      return false;
+    }
+    const el = e.currentTarget;
+    const caret = el.selectionStart ?? inputValue.length;
+    if (caret !== (el.selectionEnd ?? caret)) return false; // real selection → default behavior
+
+    const spliceOut = (from: number, to: number) => {
+      e.preventDefault();
+      let next = inputValue.slice(0, from) + inputValue.slice(to);
+      // Collapse the doubled space left when the token sat mid-sentence.
+      if (next[from - 1] === ' ' && next[from] === ' ') {
+        next = next.slice(0, from) + next.slice(from + 1);
+      }
+      setInputValue(next);
+      // The controlled value swap moves the caret to the end; restore it to
+      // the cut point on the next frame.
+      requestAnimationFrame(() => el.setSelectionRange(from, from));
+    };
+
+    if (e.key === 'Backspace') {
+      // Token (optionally + its trailing space) sitting directly before the
+      // caret, at start-of-text or after whitespace.
+      const match = /(?:^|\s)(\/[\w-]+)( ?)$/.exec(inputValue.slice(0, caret));
+      if (match && skillSlugSet.has(match[1].slice(1))) {
+        spliceOut(caret - match[1].length - match[2].length, caret);
+        return true;
+      }
+    } else {
+      // Delete: token starting exactly at the caret.
+      const boundaryBefore = caret === 0 || /\s/.test(inputValue[caret - 1]);
+      const match = /^(\/[\w-]+)( ?)/.exec(inputValue.slice(caret));
+      if (match && boundaryBefore && skillSlugSet.has(match[1].slice(1))) {
+        spliceOut(caret, caret + match[1].length + match[2].length);
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // Backdrop segments: the composer text with every enabled `/skill` token
+  // wrapped in a pill span styled like the ACTIVE inside-tool buttons (blue
+  // text on #F5F8FF with a #D0E0FF ring). A plain <textarea> cannot color a
+  // substring, so while a token is present the textarea's own text is made
+  // transparent (caret kept) and this mirror layer — identical font,
+  // padding and wrapping — renders ALL the text instead. The pill uses a
+  // ring (box-shadow) rather than a border so it adds no layout width and
+  // the mirror stays perfectly in sync with the textarea's metrics.
+  const skillTokenSegments = useMemo(() => {
+    if (!inputValue || skillSlugSet.size === 0) return null;
+    const segments: React.ReactNode[] = [];
+    const tokenRe = /(^|\s)(\/[\w-]+)/g;
+    let last = 0;
+    let match: RegExpExecArray | null;
+    let found = false;
+    while ((match = tokenRe.exec(inputValue))) {
+      const tokenStart = match.index + match[1].length;
+      const token = match[2];
+      const tokenEnd = tokenStart + token.length;
+      const boundaryAfter =
+        tokenEnd === inputValue.length || /\s/.test(inputValue[tokenEnd]);
+      if (boundaryAfter && skillSlugSet.has(token.slice(1))) {
+        found = true;
+        // Pull the boundary spaces (guaranteed by the token rule) INTO the
+        // pill: they become its horizontal padding without moving a single
+        // glyph, so the pill never crowds or overlaps the neighbouring
+        // words and the mirror stays in perfect sync with the textarea.
+        const pillStart =
+          tokenStart > last && inputValue[tokenStart - 1] === ' '
+            ? tokenStart - 1
+            : tokenStart;
+        const pillEnd = inputValue[tokenEnd] === ' ' ? tokenEnd + 1 : tokenEnd;
+        segments.push(inputValue.slice(last, pillStart));
+        segments.push(
+          <span
+            key={tokenStart}
+            data-testid="skill-token-highlight"
+            className="rounded-md bg-[#F5F8FF] box-decoration-clone py-1 text-[#38A1E5] ring-1 ring-[#D0E0FF] ring-inset"
+          >
+            {inputValue.slice(pillStart, pillEnd)}
+          </span>,
+        );
+        last = pillEnd;
+      }
+    }
+    if (!found) return null;
+    segments.push(inputValue.slice(last));
+    return segments;
+  }, [inputValue, skillSlugSet]);
+
+  const highlightBackdropRef = useRef<HTMLDivElement>(null);
+
+  // Show the loading popover when the user is composing a `/` token but the
+  // skill list hasn't resolved yet. Same token rule as the picker so plain
+  // sentences containing "/" never surface it.
+  const showSlashSkillsLoading =
+    slashSkillsLoading && !slashPicker.open && !!slashContext;
 
   const handleSelectPrompt = (promptText: string) => {
     setInputValue(promptText);
@@ -243,6 +481,9 @@ export function ChatInputForm({
     e.preventDefault();
     // Prevent submission when chat is disabled, files are uploading, or session not ready
     if (isSendDisabled || hasUploadingFiles) return;
+    // Skill invocations travel inline as `/slug` tokens in the text — the
+    // agent discovers skills from its filesystem, so they're prompt hints,
+    // not server-side commands.
     onSubmit(inputValue);
     setInputValue('');
     setFileAddedNotification(null);
@@ -311,6 +552,9 @@ export function ChatInputForm({
   const handleInputChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value;
     setInputValue(text);
+    // Runs after setInputValue (which resets the context) so the freshly
+    // derived token wins within this batch.
+    updateSlashContext(text, e.target.selectionStart ?? text.length);
   };
 
   const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
@@ -377,13 +621,42 @@ export function ChatInputForm({
         ref={containerRef}
         onSubmit={handleSubmit}
         className={cn(
-          'mx-auto mt-4 w-full pb-2',
+          'relative mx-auto mt-4 w-full pb-2',
           CSS_CLASS_NAMES.CHAT.TEXTAREA,
         )}
         style={
           chatAreaMaxWidth ? { maxWidth: `${chatAreaMaxWidth}px` } : undefined
         }
       >
+        {/* Anchored to the form (not the overflow-hidden composer box) so the
+            listbox can extend above the composer without being clipped. */}
+        {slashPicker.open && (
+          <SlashSkillPicker
+            skills={slashPicker.filteredSkills}
+            activeIndex={slashPicker.activeIndex}
+            listboxId={slashPicker.listboxId}
+            onSelect={slashPicker.selectSkill}
+            onActiveIndexChange={slashPicker.setActiveIndex}
+          />
+        )}
+        {showSlashSkillsLoading && (
+          <div
+            className="absolute right-0 bottom-full left-0 z-50 mb-2"
+            data-testid="slash-skill-loading"
+          >
+            <div
+              role="status"
+              aria-live="polite"
+              className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 shadow-lg"
+            >
+              <Loader2
+                className="h-4 w-4 animate-spin text-gray-400"
+                aria-hidden="true"
+              />
+              <span className="text-sm text-gray-500">Loading skills…</span>
+            </div>
+          </div>
+        )}
         <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-[#fbfbfb] pb-3 shadow-xs">
           <FileAttachmentsList
             attachedFiles={attachedFiles}
@@ -410,35 +683,78 @@ export function ChatInputForm({
             >
               Ask anything
             </label>
-            <AutoResizeTextarea
-              id="chat-input-textarea"
-              aria-labelledby="chat-input-label"
-              aria-describedby={
-                mentorSettings?.data?.disclaimer
-                  ? 'chat-input-disclaimer'
-                  : undefined
-              }
-              value={inputValue}
-              onChange={handleInputChange}
-              onPaste={handlePaste}
-              onSubmit={handleSubmit}
-              sessionId={sessionId}
-              isPreviewMode={isPreviewMode}
-              textAreaRows={textAreaRows}
-              placeholder={
-                isChatDisabledByRbac && !hasShareableToken
-                  ? "Sorry about that! You don't have permission to chat."
-                  : textAreaPlaceholder()
-              }
-              disabled={isChatDisabledByRbac || hasUploadingFiles}
-              allowEmptySubmit={attachedFiles.length > 0}
-              allowAnonymousAccess={
-                isMentorViewableByAnyone ||
-                showingSharedChat ||
-                !!userIsVisiting
-              }
-              embedMode={embedMode}
-            />
+            <div className="relative">
+              {/* Highlight backdrop — mirrors the textarea's text metrics
+                  (font, padding, wrapping) and, while a token is present,
+                  renders ALL the text (the textarea's own text goes
+                  transparent below) so `/skill` tokens can be styled like
+                  active tool pills — blue text included, which a textarea
+                  cannot do for a substring. Scroll-synced via onScroll. */}
+              {skillTokenSegments && (
+                <div
+                  ref={highlightBackdropRef}
+                  aria-hidden="true"
+                  data-testid="skill-highlight-backdrop"
+                  className="pointer-events-none absolute inset-0 max-h-32 overflow-hidden px-4 pt-2 pb-1 text-base break-words whitespace-pre-wrap text-gray-900"
+                >
+                  {skillTokenSegments}
+                </div>
+              )}
+              <AutoResizeTextarea
+                id="chat-input-textarea"
+                aria-labelledby="chat-input-label"
+                aria-describedby={
+                  mentorSettings?.data?.disclaimer
+                    ? 'chat-input-disclaimer'
+                    : undefined
+                }
+                {...(slashSkills.length > 0 && {
+                  role: 'combobox',
+                  'aria-expanded': slashPicker.open,
+                  'aria-haspopup': 'listbox' as const,
+                  'aria-controls': slashPicker.open
+                    ? slashPicker.listboxId
+                    : undefined,
+                  'aria-activedescendant': slashPicker.activeOptionId,
+                  'aria-autocomplete': 'list' as const,
+                })}
+                value={inputValue}
+                onChange={handleInputChange}
+                onPaste={handlePaste}
+                onSubmit={handleSubmit}
+                onComposerKeyDown={handleComposerKeyDown}
+                sessionId={sessionId}
+                isPreviewMode={isPreviewMode}
+                textAreaRows={textAreaRows}
+                placeholder={
+                  isChatDisabledByRbac && !hasShareableToken
+                    ? "Sorry about that! You don't have permission to chat."
+                    : textAreaPlaceholder()
+                }
+                disabled={isChatDisabledByRbac || hasUploadingFiles}
+                allowEmptySubmit={attachedFiles.length > 0}
+                allowAnonymousAccess={
+                  isMentorViewableByAnyone ||
+                  showingSharedChat ||
+                  !!userIsVisiting
+                }
+                embedMode={embedMode}
+                // While tokens are highlighted the mirror renders the text;
+                // the textarea only shows the caret and (translucent)
+                // selection so the pill's blue text reads through.
+                className={cn(
+                  'relative',
+                  skillTokenSegments &&
+                    'text-transparent caret-gray-900 selection:bg-blue-500/20',
+                )}
+                onScroll={(e: React.UIEvent<HTMLTextAreaElement>) => {
+                  if (highlightBackdropRef.current) {
+                    highlightBackdropRef.current.scrollTop =
+                      e.currentTarget.scrollTop;
+                  }
+                }}
+              />
+            </div>
             <div className="flex items-center gap-2 px-2">
               {visibleToLoggedInUsersOnly && !compactMode && (
                 <UploadMenu

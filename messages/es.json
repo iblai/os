@@ -806,7 +806,7 @@
     "sandbox": "Sandbox",
     "access": "Acceso",
     "voice": "Voz",
-    "screenShare": "Compartir pantalla",
+    "screenShare": "Pantalla",
     "skills": "Habilidades",
     "privacy": "Privacidad",
     "tasks": "Tareas",
@@ -1956,8 +1956,8 @@
   },
   "tabsSkillsTab": {
     "heading": "Habilidades",
-    "description": "Gestiona las asignaciones de habilidades del agente para tu mentor.",
-    "infoBox": "Las habilidades son capacidades reutilizables que creas una vez y asignas a cualquier agente. Crea una habilidad y actívala para darle esa capacidad a este agente."
+    "description": "Guías reutilizables que este Agente Base puede descubrir y seguir.",
+    "infoBox": "Las Habilidades del Agente son guías reutilizables que puedes adjuntar a un Agente Base: instrucciones escritas (más archivos de referencia opcionales) para una tarea, como investigar un tema en la web o revisar código. El agente lee una habilidad solo cuando es relevante, así que puedes darle muchas capacidades sin sobrecargar cada conversación. En el chat, escribe / para ver las habilidades de este agente y elegir una para iniciarla."
   },
   "tabsToolsTab": {
     "infoBox": "Dale manos a tu agente. Las herramientas le permiten hacer cosas más allá de conversar —buscar información, llamar a una API, activar una acción— para que realmente pueda hacer el trabajo por las personas.",

@@ -4,9 +4,15 @@ import { Page, Locator, expect } from '@playwright/test';
  * Page object for the Skills tab inside the Edit Mentor dialog.
  *
  * Renders the AgentSkills component from @iblai/iblai-js/web-containers. The
- * Skills top-level tab is now ALWAYS mounted — `hooks/use-mentor-segments.ts`
- * no longer gates it on `enable_claw && clawConfigExists`. When no sandbox is
- * wired, the SDK is expected to show a GRAYED PREVIEW of the real content
+ * Skills top-level tab is mounted for admins whenever `hooks/use-mentor-segments.ts`
+ * resolves the current mentor as a "Base Agent" — see
+ * `resolveIsBaseAgentMentor` there and journey 65
+ * (`e2e/journeys/65-agent-skills.spec.ts`), which covers that mentor-type
+ * gate itself (visible for base agents, hidden for other agent types, and
+ * fails OPEN when the type can't be determined). This page object's own
+ * methods below assume the tab IS mounted — callers are responsible for the
+ * gate. Independent of that gate: when no sandbox is wired, the SDK is
+ * expected to show a GRAYED PREVIEW of the real content
  * (`data-testid="agent-skills-content"`, with a `data-connected` attribute)
  * plus a disconnected-state hint banner (`data-testid="agent-skills-disconnected-hint"`),
  * mirroring the `CapabilityGate` pattern used elsewhere in this modal — rather
@@ -53,6 +59,11 @@ export class SkillsTab {
   readonly notConnectedMessage: Locator;
   readonly noSkillsMessage: Locator;
   readonly newSkillButton: Locator;
+  /** `data-testid="skills-info-box"` — the static explainer box above the
+   *  SDK's `<AgentSkills/>` (host-owned copy, `components/modals/edit-mentor-modal/tabs/skills-tab.tsx`). */
+  readonly infoBox: Locator;
+  /** The tab header's description paragraph (host-owned copy, same file). */
+  readonly description: Locator;
 
   // New skill dialog (OverlayModal title="New Skill")
   readonly newSkillDialog: Locator;
@@ -90,6 +101,10 @@ export class SkillsTab {
     this.newSkillButton = dialog
       .getByRole('button', { name: /new skill/i })
       .first();
+    this.infoBox = dialog.getByTestId('skills-info-box');
+    this.description = dialog.getByText(
+      /Reusable playbooks this Base Agent can discover and follow\./i,
+    );
 
     // New Skill OverlayModal — portals to document.body. Match by
     // accessible name (DialogPrimitive.Title="New Skill") because

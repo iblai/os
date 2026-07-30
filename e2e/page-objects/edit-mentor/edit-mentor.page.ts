@@ -18,6 +18,7 @@ import { AccessTab } from './access.tab';
 import { PrivacyTab } from './privacy.tab';
 import { TasksTab } from './tasks.tab';
 import { VoiceTab } from './voice.tab';
+import { SkillsTab } from './skills.tab';
 import { ScreenShareTab } from './screenshare.tab';
 import { LtiTab } from './lti.tab';
 
@@ -38,13 +39,13 @@ const TAB_CATEGORY: Record<
   // Configurations
   Settings: 'Configurations',
   LLM: 'Configurations',
-  Voice: 'Configurations',
-  'Screen Share': 'Configurations',
   Prompts: 'Configurations',
   Skills: 'Configurations',
-  Safety: 'Configurations',
+  Voice: 'Configurations',
   Privacy: 'Configurations',
+  Safety: 'Configurations',
   Disclaimers: 'Configurations',
+  Screen: 'Configurations',
   // Integrations
   Sandbox: 'Integrations',
   Access: 'Integrations',
@@ -86,6 +87,7 @@ export class EditMentorPage {
   readonly voice: VoiceTab;
   readonly screenshare: ScreenShareTab;
   readonly lti: LtiTab;
+  readonly skills: SkillsTab;
   readonly copyMentorDialog: CopyMentorPage;
 
   constructor(page: Page) {
@@ -113,6 +115,7 @@ export class EditMentorPage {
     this.voice = new VoiceTab(page, this.dialog);
     this.screenshare = new ScreenShareTab(page, this.dialog);
     this.lti = new LtiTab(page, this.dialog);
+    this.skills = new SkillsTab(page, this.dialog);
     this.copyMentorDialog = new CopyMentorPage(page);
 
     // The modal only mounts the active category's segments, so the Settings
@@ -535,7 +538,7 @@ export class EditMentorPage {
     // Scope to the host sidebar trigger. The SDK's Voice tab renders its own
     // "Voice" sub-tab pill (also role="tab", same accessible name) inside the
     // panel once it mounts, so a bare getByRole('tab', { name }) match raises a
-    // strict-mode violation for Voice/Screen Share. Every host sidebar trigger
+    // strict-mode violation for Voice/Screen. Every host sidebar trigger
     // uniquely owns `aria-controls="panel-<value>"`; the SDK sub-tabs control a
     // generated `radix-*` id, so filtering on that prefix isolates the sidebar
     // tab without needing to know each segment's value.

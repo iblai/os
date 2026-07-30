@@ -2,7 +2,7 @@ import { Page, Locator, expect } from '@playwright/test';
 import { SCREENSHARE_LABELS } from '@iblai/iblai-js/playwright';
 
 /**
- * Page object for the Screen Share top-level tab inside the Edit Mentor
+ * Page object for the Screen top-level tab (screen sharing) inside the Edit Mentor
  * dialog.
  *
  * Rendered by the SDK's `AgentScreenShareTab`
