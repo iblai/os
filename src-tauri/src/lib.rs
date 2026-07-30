@@ -1,6 +1,12 @@
 // Hide console window on Windows in release builds
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+// Gated exactly like `opencode_acp`, which is its only consumer here: Code uses
+// `get_foundry_service_endpoint` to reach Foundry Local's OpenAI-compatible API.
+// The rest of the module is exercised by the desktop bin (see main.rs).
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+#[allow(dead_code)]
+mod foundry_manager;
 mod ghost_os_manager;
 mod mcp_bridge_installer;
 mod mcp_bridge_manager;
@@ -10,6 +16,10 @@ mod offline_server;
 mod ollama_installer;
 #[cfg(not(any(target_os = "ios", target_os = "android")))]
 mod web_cache;
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod opencode_acp;
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod opencode_installer;
 
 use model_manager::{
     cancel_download, check_disk_space, check_ollama_installed, get_timestamp, is_model_installed,
@@ -2089,6 +2099,7 @@ pub fn run() {
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let app_url = get_app_url();
             println!("[ibl.ai] ============================================");
@@ -2760,6 +2771,14 @@ pub fn run() {
             navigate_to,
             ollama_chat,
             ollama_chat_stream,
+            opencode_acp::opencode_chat_stream,
+            opencode_acp::opencode_stop,
+            opencode_acp::opencode_close,
+            opencode_acp::get_opencode_workspace,
+            opencode_acp::set_opencode_workspace,
+            opencode_installer::install_opencode,
+            opencode_installer::check_opencode_status,
+            opencode_acp::check_code_local_model,
         ]);
 
         // Mobile platforms get only basic commands (no offline/cache features)

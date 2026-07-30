@@ -11,6 +11,10 @@ mod oauth;
 mod offline_server;
 mod ollama_installer;
 mod web_cache;
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod opencode_acp;
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod opencode_installer;
 
 use foundry_installer::{
     download_and_install_foundry, download_foundry_model, get_recommended_models,
@@ -2187,6 +2191,7 @@ fn main() {
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             // Initialize web cache with app data directory
             let app_data_dir = app
@@ -2795,6 +2800,14 @@ fn main() {
             oauth::oauth_start,
             oauth::oauth_callback,
             oauth::oauth_get_result,
+            opencode_acp::opencode_chat_stream,
+            opencode_acp::opencode_stop,
+            opencode_acp::opencode_close,
+            opencode_acp::get_opencode_workspace,
+            opencode_acp::set_opencode_workspace,
+            opencode_installer::install_opencode,
+            opencode_installer::check_opencode_status,
+            opencode_acp::check_code_local_model,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri app");

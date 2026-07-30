@@ -1,7 +1,7 @@
 'use client';
 
 import type React from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import {
@@ -28,7 +28,9 @@ import {
   modelSupportsSystemControl,
 } from '@iblai/iblai-js/web-containers';
 import { MemoryButton } from './memory-button';
+import { CodingModeButton } from './coding-mode-button';
 import { MemoryMenu } from './memory-menu';
+import { isTauriApp } from '@/types/tauri';
 
 // Computer Use is macOS-only in prod; the env flag bypasses the OS check so the
 // toggle can be exercised on Linux/Windows desktop builds during testing.
@@ -115,6 +117,26 @@ export const InsideButtons = ({
     else ghostOs.stop();
   };
 
+  // Code (opencode over ACP) is desktop-only. Detected AFTER mount, never during
+  // render: Tauri injects its globals into the remote origin some time after load, so a
+  // render-time read can latch false forever (and would mismatch prerendered HTML
+  // during hydration). Keeping the gate here also means <CodingModeButton> — which
+  // needs Redux + the mentor route — never mounts in a plain browser.
+  const [inTauri, setInTauri] = useState(false);
+  useEffect(() => {
+    if (isTauriApp()) return setInTauri(true);
+    let tries = 0;
+    const t = setInterval(() => {
+      if (isTauriApp()) {
+        setInTauri(true);
+        clearInterval(t);
+      } else if (++tries > 10) {
+        clearInterval(t);
+      }
+    }, 500);
+    return () => clearInterval(t);
+  }, []);
+
   const allInsideButtons = [
     {
       name: 'Computer Use',
@@ -198,6 +220,8 @@ export const InsideButtons = ({
 
   return (
     <div className="relative flex items-center gap-1.5">
+      {/* Coding Mode (desktop-only) — always inline; owns its own folder popover. */}
+      {inTauri && <CodingModeButton />}
       {/* Responsive Inside Buttons */}
       {visibleInsideButtons.map((button) => {
         if (button.name === 'Memory') {

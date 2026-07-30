@@ -24,6 +24,14 @@ permissions = [
     "allow-install-ghost-os",
     "allow-stop-ghost-os",
     "allow-check-ghost-os-status",
+    "allow-opencode-chat-stream",
+    "allow-opencode-stop",
+    "allow-opencode-close",
+    "allow-get-opencode-workspace",
+    "allow-set-opencode-workspace",
+    "allow-install-opencode",
+    "allow-check-opencode-status",
+    "allow-check-code-local-model",
 ]
 
 [[permission]]
@@ -151,3 +159,51 @@ identifier = "allow-check-ghost-os-status"
 description = "Enables checking GhostOS (System Control) status"
 [permission.commands]
 allow = ["check_ghost_os_status"]
+
+[[permission]]
+identifier = "allow-opencode-chat-stream"
+description = "Enables streaming a Coding Mode turn through opencode over ACP"
+[permission.commands]
+allow = ["opencode_chat_stream"]
+
+[[permission]]
+identifier = "allow-opencode-stop"
+description = "Enables cancelling the active opencode turn (ACP session/cancel)"
+[permission.commands]
+allow = ["opencode_stop"]
+
+[[permission]]
+identifier = "allow-opencode-close"
+description = "Enables killing a chat's opencode process"
+[permission.commands]
+allow = ["opencode_close"]
+
+[[permission]]
+identifier = "allow-get-opencode-workspace"
+description = "Enables reading the Coding Mode workspace path"
+[permission.commands]
+allow = ["get_opencode_workspace"]
+
+[[permission]]
+identifier = "allow-set-opencode-workspace"
+description = "Enables setting the Coding Mode workspace path"
+[permission.commands]
+allow = ["set_opencode_workspace"]
+
+[[permission]]
+identifier = "allow-install-opencode"
+description = "Enables installing opencode + writing its config + preparing the workspace"
+[permission.commands]
+allow = ["install_opencode"]
+
+[[permission]]
+identifier = "allow-check-opencode-status"
+description = "Enables checking opencode readiness (installed/version/config/workspace)"
+[permission.commands]
+allow = ["check_opencode_status"]
+
+[[permission]]
+identifier = "allow-check-code-local-model"
+description = "Enables checking whether the selected on-device model can drive Code (tool-calling support, runtime reachability)"
+[permission.commands]
+allow = ["check_code_local_model"]
