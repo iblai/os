@@ -288,7 +288,7 @@ test.describe('Journey 59: Ecommerce Credits & Upgrade', () => {
           });
           await expect(
             sidebarPage.sidebar.getByRole('button', {
-              name: 'Chats',
+              name: 'Recents',
               exact: true,
             }),
           ).toBeVisible({ timeout: 10_000 });

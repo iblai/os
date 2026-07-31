@@ -1161,19 +1161,6 @@ export function AppSidebar() {
                 </SidebarCollapsedLabelFlyout>
               )}
 
-              {showSearchChats && (
-                <SidebarCollapsedLabelFlyout label={t('searchChats')}>
-                  <button
-                    type="button"
-                    onClick={() => setSearchDialogOpen(true)}
-                    className="text-foreground inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-[8px] transition-colors hover:bg-[#f0f0f0]"
-                    aria-label={t('searchChats')}
-                  >
-                    <Search className="size-4 shrink-0" strokeWidth={1.5} />
-                  </button>
-                </SidebarCollapsedLabelFlyout>
-              )}
-
               {agentsMenu.items.length > 0 && (
                 <SidebarNavCollapsibleSection
                   collapsed
@@ -1195,21 +1182,38 @@ export function AppSidebar() {
                 />
               )}
 
-              {showChats && (
-                <>
-                  <SidebarNavDivider />
+              {/* Search belongs with the chats it searches, so it sits with
+                  them below the divider rather than up with New Chat. */}
+              {(showSearchChats || showChats) && <SidebarNavDivider />}
 
-                  <SidebarChatsSection
-                    collapsed
-                    open={openNavSection === 'chats'}
-                    onOpenChange={handleNavSectionChange('chats')}
-                    onCollapsedIconClick={() => expandFromRail('chats')}
-                    tenantKey={tenantKey}
-                    mentorId={mentorId}
-                    username={username}
-                    onAfterNav={onAfterNav}
-                  />
-                </>
+              {showSearchChats && (
+                <SidebarCollapsedLabelFlyout label={t('searchChats')}>
+                  <button
+                    type="button"
+                    onClick={() => setSearchDialogOpen(true)}
+                    className="inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-[8px] transition-colors outline-none hover:bg-[#f0f0f0] focus-visible:ring-2 focus-visible:ring-[#c4c4c8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#fafafa]"
+                    aria-label={t('searchChats')}
+                  >
+                    <Search
+                      className="size-4 shrink-0"
+                      style={{ color: NAV_MUTED }}
+                      strokeWidth={1.5}
+                    />
+                  </button>
+                </SidebarCollapsedLabelFlyout>
+              )}
+
+              {showChats && (
+                <SidebarChatsSection
+                  collapsed
+                  open={openNavSection === 'chats'}
+                  onOpenChange={handleNavSectionChange('chats')}
+                  onCollapsedIconClick={() => expandFromRail('chats')}
+                  tenantKey={tenantKey}
+                  mentorId={mentorId}
+                  username={username}
+                  onAfterNav={onAfterNav}
+                />
               )}
 
               {projectsAllowed && (
@@ -1255,23 +1259,6 @@ export function AppSidebar() {
                   </div>
                 )}
 
-                {showSearchChats && (
-                  <div className="px-0 pb-0.5">
-                    <button
-                      type="button"
-                      onClick={() => setSearchDialogOpen(true)}
-                      className="inline-flex h-9 w-full cursor-pointer items-center justify-start gap-2 rounded-[8px] px-2 text-[14px] font-normal text-[#687482] antialiased transition-colors hover:bg-[#f4f4f4]"
-                    >
-                      <Search
-                        className="size-4 shrink-0"
-                        strokeWidth={1.5}
-                        aria-hidden
-                      />
-                      <span>{t('searchChats')}</span>
-                    </button>
-                  </div>
-                )}
-
                 {agentsMenu.items.length > 0 && (
                   <SidebarNavCollapsibleSection
                     collapsed={false}
@@ -1291,20 +1278,42 @@ export function AppSidebar() {
                   />
                 )}
 
-                {showChats && (
-                  <>
-                    <SidebarNavDivider />
+                {/* Search belongs with the chats it searches, so it sits with
+                    them below the divider rather than up with New Chat. */}
+                {(showSearchChats || showChats) && <SidebarNavDivider />}
 
-                    <SidebarChatsSection
-                      collapsed={false}
-                      open={openNavSection === 'chats'}
-                      onOpenChange={handleNavSectionChange('chats')}
-                      tenantKey={tenantKey}
-                      mentorId={mentorId}
-                      username={username}
-                      onAfterNav={onAfterNav}
+                {showSearchChats && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchDialogOpen(true)}
+                    // The same row treatment as Agents/Workflows/Recents
+                    // below it — radius, focus ring and all. It used to be
+                    // styled after the New Chat pill it sat under, which is
+                    // no longer where it lives.
+                    className="flex h-9 w-full min-w-0 cursor-pointer items-center gap-2 rounded-md px-2 text-left text-[14px] font-normal text-[#5f5f61] transition-colors outline-none hover:bg-[#f4f4f4] focus-visible:ring-2 focus-visible:ring-[#cfe8fa] focus-visible:ring-offset-2 focus-visible:ring-offset-[#fafafa]"
+                  >
+                    <Search
+                      className="size-4 shrink-0"
+                      style={{ color: NAV_MUTED }}
+                      strokeWidth={1.5}
+                      aria-hidden
                     />
-                  </>
+                    <span className="min-w-0 flex-1 truncate">
+                      {t('searchChats')}
+                    </span>
+                  </button>
+                )}
+
+                {showChats && (
+                  <SidebarChatsSection
+                    collapsed={false}
+                    open={openNavSection === 'chats'}
+                    onOpenChange={handleNavSectionChange('chats')}
+                    tenantKey={tenantKey}
+                    mentorId={mentorId}
+                    username={username}
+                    onAfterNav={onAfterNav}
+                  />
                 )}
 
                 {projectsAllowed && (
