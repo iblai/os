@@ -101,7 +101,6 @@ const screenshareSegment = MENTOR_SEGMENTS.find(
 const baseFlags = {
   isMemsearchEnabled: false,
   isClawEnabled: false,
-  clawConfigExists: false,
   isMemoryComponentEnabled: false,
   isScreenshareEnabled: false,
   // Voice calls default on so the Screen Share gating tests aren't perturbed

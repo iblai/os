@@ -1,5 +1,51 @@
 # Changelog
 
+## [0.110.0](https://github.com/iblai/os/compare/v0.109.0...v0.110.0) (2026-07-31)
+
+### Features
+
+* **sidebar:** call it Recents, group Search with it, mark pins on the row ([62830cf](https://github.com/iblai/os/commit/62830cfc4bdddfd6f44818bd5a2ec7c1c2ad8156))
+* **voice:** add useLiveKitTranscription hook ([b6827c1](https://github.com/iblai/os/commit/b6827c1a6c759bdd91cd334ece13ab1fd1b5ebfc))
+* **voice:** put captions behind a toggle, off by default ([21b63ad](https://github.com/iblai/os/commit/21b63ade91e972429af17a94ce98a1a0bec1a9ef))
+* **voice:** rebuild the call as a card around the mentor ([86f7623](https://github.com/iblai/os/commit/86f7623076e937b42a5994f596b09e27585ef473))
+
+### Bug Fixes
+
+* **chat:** refetch session history when a voice call ends ([f48b902](https://github.com/iblai/os/commit/f48b9021771e9d231fdf4c1c77e2495287c5d0ed))
+* **ci:** harden PR e2e gate + correct brace-expansion override comment ([0e8b39e](https://github.com/iblai/os/commit/0e8b39ec1d439b883e74c23fa405a16b3b8030e0))
+* **voice:** close the gap between the two caption lines ([d9abeb9](https://github.com/iblai/os/commit/d9abeb9ab0eb262d0d7e1589084d6c1dfd8c927c))
+* **voice:** separate mic and mentor audio, show speaker state and transcript ([7430a56](https://github.com/iblai/os/commit/7430a56f17f5b508325982d3583b55d3d077ac09))
+* **voice:** stop long captions widening the call dialog ([131e264](https://github.com/iblai/os/commit/131e264c4b64d0e2000c4b6cb168d46d6cbf9a20))
+
+### Chores
+
+* **i18n:** add voice call status and transcript strings ([7e2c885](https://github.com/iblai/os/commit/7e2c8851b717aa77588187daa64892bf39ab54b9))
+
+### Styles
+
+* apply prettier formatting to CHANGELOG ([66186e7](https://github.com/iblai/os/commit/66186e70253cde54f41a82d747aeabd6d1029d35))
+* **sidebar:** line the row pin/menu slot up with the section chevrons ([9d453b6](https://github.com/iblai/os/commit/9d453b694f31dbbc3ad9753f18fc0623660191cf))
+* **voice:** keep the call indicator in a single blue family ([74f431f](https://github.com/iblai/os/commit/74f431f626fb984c6680607f9821a14ace650a20))
+
+### Tests
+
+* **e2e:** give the ?prompt= journey its own mentor ([9f4aaf9](https://github.com/iblai/os/commit/9f4aaf9e097d5a86d1da7695650c68123d20fb47))
+
+## [0.109.0](https://github.com/iblai/os/compare/v0.108.12...v0.109.0) (2026-07-31)
+
+### Features
+
+* **web-containers:** adding human support ([8791e74](https://github.com/iblai/os/commit/8791e742ecbceb832e9bd08e82fa5e9fadce34ad))
+* **web-containers:** adding human support tab ([1a7124d](https://github.com/iblai/os/commit/1a7124d3d4b83d627292a0f11cbafe9c0dd223eb))
+
+### Bug Fixes
+
+* **mentor:** fixing merge conflicts changes and test updates ([9a42ac3](https://github.com/iblai/os/commit/9a42ac385df6f4de4a57b639f4a5a902db679b1a))
+
+### CI
+
+* adopt the current PR-e2e caller on this branch ([f216d97](https://github.com/iblai/os/commit/f216d978f87919c0044d95c53fd84a336f856b56))
+
 ## [0.108.12](https://github.com/iblai/os/compare/v0.108.11...v0.108.12) (2026-07-31)
 
 ### Chores
