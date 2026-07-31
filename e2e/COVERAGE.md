@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-07-25 | 592 checkpoints (564 covered, 7 pending/fixme, 9 not-reproducible in default env, 12 deprecated) | 67 journeys (66 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-07-31 | 605 checkpoints (576 covered, 7 pending/fixme, 10 not-reproducible in default env, 12 deprecated) | 68 journeys (67 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -1249,3 +1249,31 @@ against real DOM. That predicate is covered at the unit level instead, in
 - [x] anp-04: Fix holds on nested analytics routes — `/analytics/users` still shows the mentor dropdown and LLM Model Selector
 - [x] anp-05: Admin flipped to User (student) mode does not see the LLM Model Selector on the analytics page
 - [ ] anp-06 _(not-reproducible)_: `/prompt-gallery` regression guard — no reachable route exists to exercise it E2E; unit-covered in `nav-bar/__tests__/index.test.tsx` instead
+
+---
+
+## Journey 66: Mentor Grader Tab (13 checkpoints) — `journeys/66-mentor-grader-tab.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/grader-tab.tsx`, `components/modals/edit-mentor-modal/tabs/index.ts`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `lib/constants.ts`
+
+New top-level "Configurations" segment (`grader`) rendered by the SDK's `AgentGraderTab` (`@iblai/iblai-js/web-containers/next`), wrapped locally in `grader-tab.tsx`. Its in-tab "Grading" master toggle (shared `CapabilityGate` component, same pattern as Voice/Screen Share/Memory/Privacy/LTI) attaches/detaches the tenant's "Grading" TOOL on the mentor (`tool_slugs` / `can_use_tools` via `editMentor`) rather than flipping a plain settings field, and is OPTIMISTIC (flips instantly, rolls back on mutation failure). Once on, the gated content splits into two sub-tabs: "Grading setup" (mode selects + instructions, Save-button-driven) and "Rubric" (criteria table with modal-based add/edit/delete behind each row's three-dots menu, plus a running points total); a single misconfigured-warning banner surfaces whichever of "no config yet" / "rubric is empty" applies. Turning the capability off never deletes the saved config or rubric — both survive a disable/re-enable cycle — and the last remaining criterion cannot be deleted (its row menu's Delete item is `aria-disabled` with an explanatory hint) since the backend requires the rubric to keep at least one row.
+
+The SDK's `useGrader` is RBAC-aware (path-style resources `/mentors/{id}/graderconfigurations/#read|action|write`, `/mentors/{id}/gradercriteria/#action|write|delete`), but the backend does not expose those grader permissions yet — so the host currently forces `enableRBAC={false}` on the tab (`grader-tab.tsx`) and gates the segment to platform admins via `userTypes: [ADMIN]` instead (mirroring Tasks / LTI). When the permissions land, the host will re-enable RBAC and gate the segment on `graderconfigurations/#read` (hiding the tab outright for a denied admin), with denied `write`/`action`/`delete` omitting the Save/Add/Edit/Delete affordances rather than erroring — see grd-13.
+
+All interactions go through the `GraderTab` page object, which delegates to the official Grader-tab Playwright helpers exported from `@iblai/iblai-js/playwright` (`GRADER_LABELS`, `isGraderTabVisible`, `switchToGraderSubTab`, `isGradingEnabled`, `setGradingEnabled`, `saveGraderConfig`, `addGraderCriterion`, `editGraderCriterion`, `deleteGraderCriterion`, `expectLastCriterionDeleteDisabled`, `expectGraderMisconfiguredWarning`, `expectGraderTotalPoints`) — mirrors the Voice/Evals tab pattern.
+
+Because the toggle mutates the mentor's attached tools — the same fields Journey 6's "Admin can toggle tools on/off" (mgmt-04) exercises — this journey mirrors Journey 47's Voice tab isolation: the whole file runs serially in one worker and every test gets its own freshly-created, disposable mentor (tracked and deleted via `MentorTracker` in `afterAll`). Checkpoints that require the capability ON attempt the toggle via `GraderTab.tryEnableGrading` and skip gracefully (not a failure) when the tenant's tool catalogue has no "Grading" tool to attach — an environment gap, not an app bug.
+
+- [x] grd-01: Grader tab is visible in the Edit Mentor modal sidebar (Configurations category, always mounted for an admin with standard mentor-owner permissions)
+- [x] grd-02: Grader tab renders heading, description, and tab body without getting stuck on the loading spinner
+- [x] grd-03: Gated content splits into the Grading setup and Rubric sub-tabs — both pills are visible and switching between them renders the matching section (`grader-setup-section` / `grader-criteria-section`)
+- [x] grd-04: On a freshly created mentor, the Grading capability toggle defaults OFF and the gated config/rubric content is grayed (`capability-gate-content` `data-enabled="false"`) with the off-hint shown
+- [x] grd-05: Admin enables the Grading capability toggle and sees the "not set up yet" misconfigured warning (no config saved yet); gracefully skips if the tenant's tool catalogue has no "Grading" tool to attach
+- [x] grd-06: Admin fills in and saves the Grading setup form (instructions required for Save to enable); the misconfigured warning switches from "not set up yet" to "rubric is empty"
+- [x] grd-07: Admin adds a rubric criterion via the Add-criterion modal (name, criteria, points) — it appears in the criteria list, the misconfigured warning clears, and the running total reflects its points
+- [x] grd-08: Admin edits an existing criterion's name and points via the row's three-dots menu → Edit modal, and the row + running total reflect the update
+- [x] grd-09: With two criteria present, admin cancels a delete confirmation modal (row untouched) then deletes a non-last criterion for real via the row menu → confirm modal
+- [x] grd-10: Deleting the last remaining criterion is refused — the row menu's Delete item is `aria-disabled` with an explanatory hint shown, rather than allowing the request to fail
+- [x] grd-11: Disabling then re-enabling the Grading capability preserves the saved config and rubric (no delete endpoint for either — detaching the tool only grays the content)
+- [x] grd-12: Non-admin does not see the Grader tab / cannot reach the Edit Agent Settings menu item at all
+- [ ] grd-13 _(not-reproducible)_: `useGrader`'s fine-grained RBAC gating (denied `graderconfigurations/#read` renders the denied state; denied `write`/`action`/`delete` on config or criteria resources omits the Save/Add/Edit/Delete affordances) — currently doubly unreachable: the backend does not expose the grader permissions yet, so the host forces `enableRBAC={false}` on the tab and gates the segment to admins via `userTypes` instead; once the permissions land it will still need a fixture seeding a restricted RBAC permission object for the e2e admin, which this environment has no fixture for

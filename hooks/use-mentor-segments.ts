@@ -13,6 +13,7 @@ import {
   CalendarClock,
   Clock,
   Grid,
+  ClipboardCheck,
   FlaskConical,
   GraduationCap,
   Key,
@@ -267,6 +268,31 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     // instance, so the SDK's <AgentSkills/> shows a "connect a sandbox"
     // prompt (grayed state) until one is connected — the tab itself stays
     // reachable so admins can see what's available.
+    navCategory: 'configurations',
+  },
+  {
+    value: MODALS.EDIT_MENTOR.tabs.grader,
+    label: 'Grader',
+    labelKey: 'grader',
+    icon: ClipboardCheck,
+    // Platform-admin-only until the backend exposes the grader RBAC
+    // resources (graderconfigurations / gradercriteria). No `rbacResource`
+    // set — the userTypes filter alone gates visibility (mirroring Tasks /
+    // LTI). Once the permissions land, re-add
+    // `rbacResource: (id) => `/mentors/${id}/graderconfigurations/#read``
+    // (the SDK's AgentGraderTab expects the host to hide the tab entirely
+    // when config read is denied) and stop forcing `enableRBAC={false}` in
+    // the GraderTab wrapper.
+    userTypes: [UserType.ADMIN],
+    permissionFieldsCheck: [],
+    mentorVisibility: [
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+    ],
+    // Always visible. The "Grading" capability toggle lives inline at the top
+    // of the Grader tab (it attaches/detaches the Grading tool on the agent);
+    // turning it off grays out the rubric configuration below instead of
+    // hiding the tab, and the rubric is preserved across disable/re-enable.
     navCategory: 'configurations',
   },
   {
