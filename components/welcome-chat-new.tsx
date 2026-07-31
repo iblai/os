@@ -188,7 +188,10 @@ export function WelcomeChatNew({
             </h1>
           </div>
 
-          <div className="mb-6 text-center">
+          <div
+            className="mb-6 w-full text-center"
+            style={{ maxWidth: `${chatAreaMaxWidth}px` }}
+          >
             <WelcomeMessage
               aiWelcomeMessage={aiWelcomeMessage}
               sessionId={sessionId}
@@ -197,6 +200,7 @@ export function WelcomeChatNew({
               mentorUniqueId={mentorUniqueId}
               token={axdToken}
               isNewSession={isNewSession}
+              className="text-lg text-gray-600"
             />
           </div>
 
