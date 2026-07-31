@@ -1,6 +1,6 @@
 # Tauri Desktop E2E Coverage — Journey Checklist
 
-> Last updated: 2026-07-25 | 10 checkpoints (7 covered, 3 pending) | 2 journeys | 100% of reproducible checkpoints covered | Driver: WebdriverIO + tauri-driver
+> Last updated: 2026-08-01 | 20 checkpoints (14 covered, 6 pending) | 3 journeys | 100% of reproducible checkpoints covered | Driver: WebdriverIO + tauri-driver
 
 This is the desktop counterpart to the web `e2e/COVERAGE.md`. It tracks only what
 is exercised by driving the **built desktop binary** through `tauri-driver` (see
@@ -60,3 +60,37 @@ Windows (`msedgedriver`) only — `tauri-driver` has no macOS support.
 - [ ] `odm-04` Starting a second on-device download while one is in flight shows the "already downloading" guard — one pull at a time _(UI pass)_
 - [x] `odm-05` A completed pull installs the on-device model (`check_ollama_status` lists it)
 - [ ] `odm-06` The nav-bar on-device badge reflects the selected local model _(UI pass)_
+
+---
+
+## Journey 3: Code Mode (opencode) (10 checkpoints: 7 covered, 3 pending) — `journeys/03-code-mode.spec.ts`
+
+> **Partly covered.** The installer and per-chat state (code-01…07) run against
+> the REAL compiled binary through the live Tauri IPC bridge (`window.__TAURI__`):
+> a genuine opencode release download, and the real `workspaces.json` map being
+> written. `code-03` is the regression guard for spawning the bare `opencode` name
+> on an augmented `PATH` — without it the installer reports "not installed" right
+> after a successful download and re-downloads forever.
+>
+> The turn-level checkpoints (code-08/09/10) need a **tool-calling** model: the
+> cloud path needs an authenticated tenant, and the on-device path is a multi-GB
+> pull (Journey 2 deliberately uses a 92 MB model that cannot call tools). They are
+> pending stubs (Mocha reports them as **skipped**) and are covered meanwhile by
+> the Rust unit tests (`pick_eviction`, `pick_reapable` in `opencode_acp.rs`) and
+> the Vitest tests (`components/chat/__tests__/code-permission-card.test.tsx`,
+> `components/chat/__tests__/ai-message-bubble.test.tsx`).
+>
+> Requires network access for the opencode download. No Ollama, no credentials.
+
+**Source files:** `src-tauri/src/opencode_acp.rs`, `src-tauri/src/opencode_installer.rs`, `src-tauri/src/opencode_proxy.rs`, `components/chat-input-form/coding-mode-button.tsx`, `components/chat/code-permission-card.tsx`
+
+- [x] `code-01` `check_opencode_status` reports Code readiness (installed / version / config_ready / sandboxed)
+- [x] `code-02` `install_opencode` downloads and installs the pinned opencode release binary (live)
+- [x] `code-03` The freshly installed binary is discoverable on the augmented `PATH` — status reports installed with a version instead of re-downloading forever
+- [x] `code-04` Each chat session id gets its own generated workspace under the app-managed workspaces root
+- [x] `code-05` A chat keeps the same workspace across calls, persisted in `workspaces.json`
+- [x] `code-06` The folder picker repoints ONE chat at an arbitrary path and leaves other chats untouched
+- [x] `code-07` `opencode_close` / `opencode_permission_respond` on an unknown id are graceful no-ops
+- [ ] `code-08` A permission prompt in one chat does not block another chat's turn _(needs a tool-calling model)_
+- [ ] `code-09` The 5-session cap evicts the least-recently-used idle opencode process _(needs a tool-calling model)_
+- [ ] `code-10` The permission prompt renders in the chat that raised it _(needs a tool-calling model)_

@@ -37,6 +37,7 @@
     "allow-ghost-mcp-stop",
     "allow-opencode-chat-stream",
     "allow-opencode-stop",
+    "allow-opencode-permission-respond",
     "allow-opencode-close",
     "allow-get-opencode-workspace",
     "allow-set-opencode-workspace",

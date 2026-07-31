@@ -244,7 +244,8 @@
     "accountDescIntegrations": "Manage your integrations with other services.",
     "accountDescMonetization": "Configure paywalls, pricing, and revenue.",
     "accountDescAdvanced": "Configure advanced organization settings.",
-    "accountDescBilling": "Manage your billing and subscription."
+    "accountDescBilling": "Manage your billing and subscription.",
+    "awaitingPermission": "Waiting for your permission"
   },
   "appSidebarPinnedMessages": {
     "pinned": "Pinned",
@@ -2190,5 +2191,34 @@
     "reject": "Reject",
     "stickyNote": "Sticky Note",
     "changeAgent": "Change agent"
+  },
+  "chatInputFormCodingModeButton": {
+    "code": "Code",
+    "tooltip": "An agentic coding tool for your project folder",
+    "description": "An agentic coding tool that edits files, runs commands, and commits changes in the folder you choose.",
+    "checkingLocalModel": "Checking whether your on-device model can run Code…",
+    "tryToolCapableModel": " Try a tool-capable model such as qwen3, llama3.2 or phi4-mini.",
+    "firstRunSlow": "First run can take a few minutes while the model loads.",
+    "modelUnavailable": "isn’t available for Code — turns will fail. Pick a different model in the top-left.",
+    "workspace": "Workspace",
+    "changeFolder": "Change folder…",
+    "chooseFolderTitle": "Choose your workspace folder"
+  },
+  "chatCodePermissionCard": {
+    "title": "Code needs your permission",
+    "unnamedAction": "An action it didn’t name",
+    "kind": {
+      "read": "read",
+      "write": "write",
+      "exec": "exec",
+      "delete": "delete",
+      "move": "move",
+      "search": "search",
+      "fetch": "fetch",
+      "think": "think",
+      "other": "action"
+    },
+    "allow": "Allow",
+    "deny": "Deny"
   }
 }

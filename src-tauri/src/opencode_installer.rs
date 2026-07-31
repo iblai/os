@@ -24,17 +24,22 @@ const OPENCODE_VERSION: &str = "1.18.4";
 /// env at spawn time; the top-level `model` and the provider `models` are filled in
 /// per-session by `apply_opencode_model` from the user's selected LLM — there is no
 /// baked-in default (see opencode_acp.rs).
+/// `permission: "ask"` is the whole security boundary for Code — nothing else confines
+/// the agent. The bare string is opencode's shorthand for "ask for every operation":
+/// reads and edits, shell, glob/grep/list, fetch, everything. Each ask becomes a card
+/// the user answers. Note this is a floor, not a default: `enforce_permission_policy`
+/// (opencode_acp.rs) rewrites it on every spawn, so editing it here or on disk won't
+/// loosen it. `options` is a placeholder — the endpoint is the loopback proxy (cloud) or
+/// the on-device runtime, filled in per session.
 const CONFIG_TEMPLATE: &str = r#"{
   "$schema": "https://opencode.ai/config.json",
   "enabled_providers": ["iblai"],
+  "permission": "ask",
   "provider": {
     "iblai": {
       "npm": "@ai-sdk/openai-compatible",
       "name": "ibl.ai",
-      "options": {
-        "baseURL": "{env:IBL_BASE_URL}",
-        "headers": { "Authorization": "{env:IBL_AUTH_HEADER}" }
-      },
+      "options": {},
       "models": {}
     }
   }
@@ -75,20 +80,29 @@ fn config_file() -> PathBuf {
         .join(".config/iblai/agents/opencode/opencode.json")
 }
 
-/// Whether opencode (managed binary or PATH) is runnable.
-fn opencode_installed() -> bool {
+/// `opencode --version`, run the same way the ACP spawn does.
+///
+/// The `PATH` override is load-bearing, not cosmetic: `opencode_program()` is the bare
+/// name, and our managed `bin` dir isn't on the app's own PATH. Without it this reports
+/// "not installed" immediately after a successful download, and `install_opencode`
+/// re-downloads forever.
+fn opencode_version_output() -> Option<std::process::Output> {
     create_command(&opencode_program())
         .arg("--version")
+        .env("PATH", crate::opencode_acp::augmented_path())
         .output()
+        .ok()
+}
+
+/// Whether opencode (on PATH, or the copy we downloaded) is runnable.
+fn opencode_installed() -> bool {
+    opencode_version_output()
         .map(|o| o.status.success())
         .unwrap_or(false)
 }
 
 fn opencode_version() -> Option<String> {
-    let out = create_command(&opencode_program())
-        .arg("--version")
-        .output()
-        .ok()?;
+    let out = opencode_version_output()?;
     if !out.status.success() {
         return None;
     }
@@ -222,9 +236,22 @@ async fn download_and_install(app: &AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-/// Write the ibl.ai opencode config if missing. Public so the ACP spawn path can
-/// self-heal a missing config — the config ships embedded in the app (CONFIG_TEMPLATE),
-/// not as a loose file on the user's disk, and is materialized on first use.
+/// Write the ibl.ai opencode config into `config_home` if missing. Public so the ACP
+/// spawn path can materialise a session's own copy — the config ships embedded in the app
+/// (CONFIG_TEMPLATE), not as a loose file on the user's disk.
+pub fn ensure_opencode_config_at(config_home: &Path) -> Result<(), String> {
+    let path = config_home.join("opencode").join("opencode.json");
+    if path.exists() {
+        return Ok(());
+    }
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| format!("config dir failed: {e}"))?;
+    }
+    std::fs::write(&path, CONFIG_TEMPLATE).map_err(|e| format!("config write failed: {e}"))
+}
+
+/// The canonical copy, kept only so `check_opencode_status` can answer "is Code set up at
+/// all". Sessions each get their own under `config_home(session_id)`.
 pub fn ensure_opencode_config() -> Result<(), String> {
     let path = config_file();
     if path.exists() {
@@ -261,14 +288,6 @@ pub async fn install_opencode(app: AppHandle) -> Result<String, String> {
 
     ensure_config(&app)?;
 
-    // Prepare the default (or persisted) workspace as a git repo.
-    let ws = crate::opencode_acp::resolve_workspace();
-    std::fs::create_dir_all(&ws).map_err(|e| format!("workspace create failed: {e}"))?;
-    if !ws.join(".git").exists() {
-        let _ = create_command("git").arg("init").current_dir(&ws).output();
-    }
-    log(&app, &format!("workspace ready at {}", ws.display()));
-
     Ok(opencode_version().unwrap_or_else(|| "installed".to_string()))
 }
 
@@ -286,7 +305,6 @@ pub async fn check_opencode_status() -> serde_json::Value {
         "installed": opencode_installed(),
         "version": opencode_version(),
         "config_ready": config_file().exists(),
-        "workspace": crate::opencode_acp::resolve_workspace().to_string_lossy(),
         "sandboxed": is_sandboxed(),
     })
 }

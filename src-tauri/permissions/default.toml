@@ -29,6 +29,7 @@ permissions = [
     "allow-ghost-mcp-stop",
     "allow-opencode-chat-stream",
     "allow-opencode-stop",
+    "allow-opencode-permission-respond",
     "allow-opencode-close",
     "allow-get-opencode-workspace",
     "allow-set-opencode-workspace",
@@ -192,6 +193,12 @@ identifier = "allow-opencode-stop"
 description = "Enables cancelling the active opencode turn (ACP session/cancel)"
 [permission.commands]
 allow = ["opencode_stop"]
+
+[[permission]]
+identifier = "allow-opencode-permission-respond"
+description = "Enables answering a Code permission prompt (allow/deny a risky tool call)"
+[permission.commands]
+allow = ["opencode_permission_respond"]
 
 [[permission]]
 identifier = "allow-opencode-close"

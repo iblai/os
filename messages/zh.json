@@ -244,7 +244,8 @@
     "accountDescIntegrations": "管理与其他服务的集成。",
     "accountDescMonetization": "配置付费墙、定价和收入。",
     "accountDescAdvanced": "配置组织的高级设置。",
-    "accountDescBilling": "管理您的账单和订阅。"
+    "accountDescBilling": "管理您的账单和订阅。",
+    "awaitingPermission": "等待你的许可"
   },
   "appSidebarPinnedMessages": {
     "pinned": "已置顶",
@@ -2190,5 +2191,34 @@
     "reject": "拒绝",
     "stickyNote": "便利贴",
     "changeAgent": "更换代理"
+  },
+  "chatInputFormCodingModeButton": {
+    "code": "代码",
+    "tooltip": "针对你的项目文件夹的智能体编程工具",
+    "description": "一个智能体编程工具，可在你选择的文件夹中编辑文件、运行命令并提交更改。",
+    "checkingLocalModel": "正在检查你的本地模型是否能运行代码模式…",
+    "tryToolCapableModel": " 请尝试支持工具调用的模型，如 qwen3、llama3.2 或 phi4-mini。",
+    "firstRunSlow": "首次运行时模型加载可能需要几分钟。",
+    "modelUnavailable": "不可用于代码模式 — 对话会失败。请在左上角选择其他模型。",
+    "workspace": "工作区",
+    "changeFolder": "更改文件夹…",
+    "chooseFolderTitle": "选择你的工作文件夹"
+  },
+  "chatCodePermissionCard": {
+    "title": "代码模式需要你的许可",
+    "unnamedAction": "一项未命名的操作",
+    "kind": {
+      "read": "读取",
+      "write": "写入",
+      "exec": "执行",
+      "delete": "删除",
+      "move": "移动",
+      "search": "搜索",
+      "fetch": "获取",
+      "think": "思考",
+      "other": "操作"
+    },
+    "allow": "允许",
+    "deny": "拒绝"
   }
 }

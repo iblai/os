@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Code2, Folder, X } from 'lucide-react';
 import {
   Popover,
@@ -34,7 +35,8 @@ const LOCAL_LLM_ENABLED_KEY = 'ibl_local_llm_enabled';
 function readLocalMode(): boolean {
   if (typeof window === 'undefined') return false;
   return (
-    localStorage.getItem(LOCAL_LLM_ENABLED_KEY) === 'true' || isTauriOfflineMode()
+    localStorage.getItem(LOCAL_LLM_ENABLED_KEY) === 'true' ||
+    isTauriOfflineMode()
   );
 }
 
@@ -91,10 +93,13 @@ async function resolveCodingModel(
 /**
  * Code (agentic coding via opencode/ACP) control — a desktop-only popover with the
  * on/off toggle + workspace folder selector. The SDK chat transport reads
- * `ibl_coding_mode_enabled` / `ibl_coding_mode_model` from localStorage; the
- * workspace is persisted by the Rust `set_opencode_workspace` command.
+ * `ibl_coding_mode_enabled` / `ibl_coding_mode_model` from localStorage.
+ *
+ * The workspace is **per chat**: `sessionId` keys it, the Rust side generates a folder
+ * on first use, and the picker overrides it for this chat only. A chat with no session
+ * id yet has no workspace to show, which is why the commands are skipped below.
  */
-export function CodingModeButton() {
+export function CodingModeButton({ sessionId }: { sessionId?: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const [enabled, setEnabled] = useState(
     () =>
@@ -106,6 +111,8 @@ export function CodingModeButton() {
   const [modelMatched, setModelMatched] = useState(false);
   // null = unknown (status not fetched yet); true = sandboxed MAS build (Code hidden).
   const [sandboxed, setSandboxed] = useState<boolean | null>(null);
+
+  const t = useTranslations('chatInputFormCodingModeButton');
 
   const { data: mentorSettings } = useMentorSettings();
   const llmProvider = mentorSettings?.llmProvider;
@@ -145,8 +152,11 @@ export function CodingModeButton() {
   const blocked = isLocal ? !local || localVerdictBad : false;
 
   const refresh = async () => {
+    if (!sessionId) return;
     try {
-      const ws = await callTauri<string>('get_opencode_workspace');
+      const ws = await callTauri<string>('get_opencode_workspace', {
+        sessionId,
+      });
       setWorkspace(ws || '');
     } catch {
       /* best-effort */
@@ -155,7 +165,7 @@ export function CodingModeButton() {
 
   useEffect(() => {
     if (isOpen) void refresh();
-  }, [isOpen]);
+  }, [isOpen, sessionId]);
 
   // Force Code off whenever it can't run (runtime down, or an on-device model with no
   // tool calling) — the send path (SDK) reads this flag, so clearing it routes back to
@@ -175,7 +185,8 @@ export function CodingModeButton() {
     void (async () => {
       try {
         const res = await callTauri<LocalModelCheck>('check_code_local_model', {
-          model: localModelId || localStorage.getItem(LOCAL_LLM_MODEL_KEY) || '',
+          model:
+            localModelId || localStorage.getItem(LOCAL_LLM_MODEL_KEY) || '',
         });
         if (cancelled || !res) return;
         setLocal(res);
@@ -259,11 +270,12 @@ export function CodingModeButton() {
         directory: true,
         multiple: false,
         defaultPath: workspace || undefined,
-        title: 'Choose your workspace folder',
+        title: t('chooseFolderTitle'),
       });
       const path = typeof selected === 'string' ? selected : null;
-      if (path) {
+      if (path && sessionId) {
         const saved = await callTauri<string>('set_opencode_workspace', {
+          sessionId,
           path,
         });
         setWorkspace(saved || path);
@@ -324,7 +336,7 @@ export function CodingModeButton() {
               <span className={active ? 'text-[#38A1E5]' : 'text-gray-600'}>
                 <Code2 className="h-4 w-4" />
               </span>
-              Code
+              {t('code')}
               {isOpen && (
                 <X
                   className="ml-1 h-3 w-3 cursor-pointer"
@@ -339,7 +351,7 @@ export function CodingModeButton() {
         </TooltipTrigger>
         {!isOpen && (
           <TooltipContent className="ibl-tooltip-content">
-            An agentic coding tool for your project folder
+            {t('tooltip')}
           </TooltipContent>
         )}
       </Tooltip>
@@ -350,7 +362,9 @@ export function CodingModeButton() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Code2 className="h-4 w-4 text-[#38A1E5]" />
-            <span className="text-sm font-medium text-gray-900">Code</span>
+            <span className="text-sm font-medium text-gray-900">
+              {t('code')}
+            </span>
           </div>
           <Switch
             checked={enabled && !blocked}
@@ -358,61 +372,48 @@ export function CodingModeButton() {
             onCheckedChange={toggle}
           />
         </div>
-        <p className="mt-1 text-xs text-gray-500">
-          An agentic coding tool that edits files, runs commands, and commits
-          changes in the folder you choose.
-        </p>
+        <p className="mt-1 text-xs text-gray-500">{t('description')}</p>
 
+        {/* Only the states that need acting on. Which model Code uses is already the
+            mentor LLM shown in the top-left, so repeating it here was noise — but a
+            model that will FAIL every turn still has to say so. */}
         {isLocal && blocked ? (
           <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-700">
-            {local?.reason ||
-              'Checking whether your on-device model can run Code…'}
+            {local?.reason || t('checkingLocalModel')}
             {local?.tools_supported === false && (
-              <> Try a tool-capable model such as qwen3, llama3.2 or phi4-mini.</>
+              <>{t('tryToolCapableModel')}</>
             )}
           </div>
         ) : isLocal ? (
           <div className="mt-2 text-[11px] text-gray-400">
-            Model:{' '}
-            <span className="font-mono text-gray-500">{local?.model}</span>{' '}
-            (on-device)
-            <div className="mt-1">
-              First run can take a few minutes while the model loads.
-            </div>
+            <div>{t('firstRunSlow')}</div>
             {local?.tools_supported === null && local?.reason && (
               <div className="mt-1 text-amber-600">{local.reason}</div>
             )}
           </div>
         ) : resolvedModel && !modelMatched ? (
           <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-700">
-            <span className="font-mono">{resolvedModel}</span> isn’t available
-            for Code — turns will fail. Pick a different model in the top-left.
+            <span className="font-mono">{resolvedModel}</span>{' '}
+            {t('modelUnavailable')}
           </div>
-        ) : (
-          <div className="mt-2 text-[11px] text-gray-400">
-            Model:{' '}
-            <span className="font-mono text-gray-500">
-              {resolvedModel || 'matching your selected LLM…'}
-            </span>
-          </div>
-        )}
+        ) : null}
 
-        <div className="mt-3 rounded-md border border-gray-200 p-2.5">
+        <div className="mt-3 rounded-md border border-gray-200 p-3">
           <div className="flex items-center gap-1.5 text-xs font-medium text-gray-600">
             <Folder className="h-3.5 w-3.5" />
-            Workspace
+            {t('workspace')}
           </div>
-          <div className="mt-1 font-mono text-xs break-all text-gray-800">
+          <div className="mt-2 font-mono text-xs break-all text-gray-800">
             {workspace || '—'}
           </div>
           <Button
             variant="outline"
             size="sm"
             type="button"
-            className="mt-2 h-7 text-xs"
+            className="mt-3 h-7 text-xs"
             onClick={pickFolder}
           >
-            Change folder…
+            {t('changeFolder')}
           </Button>
         </div>
       </PopoverContent>

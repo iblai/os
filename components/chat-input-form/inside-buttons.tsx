@@ -52,6 +52,8 @@ const COWORK_MIN_MODEL_GB = 12;
 const COWORK_ENABLED_KEY = 'ibl_cowork_enabled';
 
 interface InsideButtonsProps {
+  /** The chat this input belongs to. Code keys its per-chat workspace on it. */
+  sessionId?: string;
   activeOptions: string[];
   onOptionClick: (optionName: string) => Promise<void>;
   deepResearch: boolean;
@@ -75,6 +77,7 @@ interface InsideButtonsProps {
 }
 
 export const InsideButtons = ({
+  sessionId,
   activeOptions,
   onOptionClick,
   deepResearch,
@@ -295,7 +298,7 @@ export const InsideButtons = ({
     <div className="relative flex items-center gap-1.5">
       {/* Code + Cowork — the desktop assistant pair, Code on the left. Both sit
           outside the responsive list so they always render side by side. */}
-      {inTauri && <CodingModeButton />}
+      {inTauri && <CodingModeButton sessionId={sessionId} />}
       {coworkButton.isEnabled && renderToolButton(coworkButton)}
       {/* Responsive Inside Buttons */}
       {visibleInsideButtons.map((button) => {

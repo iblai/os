@@ -244,7 +244,8 @@
     "accountDescIntegrations": "Gestiona tus integraciones con otros servicios.",
     "accountDescMonetization": "Configura muros de pago, precios e ingresos.",
     "accountDescAdvanced": "Configura los ajustes avanzados de la organización.",
-    "accountDescBilling": "Gestiona tu facturación y suscripción."
+    "accountDescBilling": "Gestiona tu facturación y suscripción.",
+    "awaitingPermission": "Esperando tu permiso"
   },
   "appSidebarPinnedMessages": {
     "pinned": "Fijado",
@@ -2190,5 +2191,34 @@
     "reject": "Rechazar",
     "stickyNote": "Nota adhesiva",
     "changeAgent": "Cambiar agente"
+  },
+  "chatInputFormCodingModeButton": {
+    "code": "Código",
+    "tooltip": "Una herramienta de programación con agentes para tu carpeta de proyecto",
+    "description": "Una herramienta de programación con agentes que edita archivos, ejecuta comandos y confirma cambios en la carpeta que elijas.",
+    "checkingLocalModel": "Comprobando si tu modelo local puede ejecutar Código…",
+    "tryToolCapableModel": " Prueba un modelo compatible con herramientas como qwen3, llama3.2 o phi4-mini.",
+    "firstRunSlow": "La primera ejecución puede tardar unos minutos mientras se carga el modelo.",
+    "modelUnavailable": "no está disponible para Código: los turnos fallarán. Elige otro modelo arriba a la izquierda.",
+    "workspace": "Espacio de trabajo",
+    "changeFolder": "Cambiar carpeta…",
+    "chooseFolderTitle": "Elige tu carpeta de trabajo"
+  },
+  "chatCodePermissionCard": {
+    "title": "Código necesita tu permiso",
+    "unnamedAction": "Una acción sin nombre",
+    "kind": {
+      "read": "leer",
+      "write": "escribir",
+      "exec": "ejecutar",
+      "delete": "eliminar",
+      "move": "mover",
+      "search": "buscar",
+      "fetch": "obtener",
+      "think": "pensar",
+      "other": "acción"
+    },
+    "allow": "Permitir",
+    "deny": "Denegar"
   }
 }

@@ -21,6 +21,8 @@ mod web_cache;
 mod opencode_acp;
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 mod opencode_installer;
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod opencode_proxy;
 
 use model_manager::{
     cancel_download, check_disk_space, check_ollama_installed, get_timestamp, is_model_installed,
@@ -2777,6 +2779,7 @@ pub fn run() {
             ollama_chat_stream,
             opencode_acp::opencode_chat_stream,
             opencode_acp::opencode_stop,
+            opencode_acp::opencode_permission_respond,
             opencode_acp::opencode_close,
             opencode_acp::get_opencode_workspace,
             opencode_acp::set_opencode_workspace,
