@@ -181,8 +181,8 @@ jobs:
       - name: Dispatch e2e and wait for the result
         id: dispatch
         env:
-          GH_TOKEN:   ${{ secrets.DEPLOY_OPS_DISPATCH_TOKEN }}
-          PR:         ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ secrets.DEPLOY_OPS_DISPATCH_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
           TARGET_ENV: ${{ steps.env.outputs.target }}
         run: |
           set -uo pipefail
@@ -373,7 +373,7 @@ jobs:
         if: cancelled() && steps.dispatch.outputs.run_id != ''
         env:
           GH_TOKEN: ${{ secrets.DEPLOY_OPS_DISPATCH_TOKEN }}
-          RUN_ID:   ${{ steps.dispatch.outputs.run_id }}
+          RUN_ID: ${{ steps.dispatch.outputs.run_id }}
         run: |
           echo "caller cancelled — cancelling central run ${RUN_ID} so it does not orphan"
           gh run cancel "$RUN_ID" -R iblai/iblai-deploy-ops || true
