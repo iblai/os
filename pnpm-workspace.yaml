@@ -50,9 +50,8 @@ overrides:
 patchedDependencies:
   google-drive-picker@1.1.29: patches/google-drive-picker@1.1.29.patch
 
-# Local Verdaccio publishes of @iblai/* carry throwaway -acp suffixes newer than the
-# min-release-age floor (.npmrc: min-release-age=7). Exclude them so
-# `pnpm i --registry http://localhost:4873/` can install the freshly published Coding
-# Mode SDK. Local scaffolding — remove before PR.
+# trust iblai packages
+# 
+# 
 minimumReleaseAgeExclude:
   - '@iblai/*'
