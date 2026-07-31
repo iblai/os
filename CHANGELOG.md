@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.109.0](https://github.com/iblai/os/compare/v0.108.12...v0.109.0) (2026-07-31)
+
+### Features
+
+* **web-containers:** adding human support ([8791e74](https://github.com/iblai/os/commit/8791e742ecbceb832e9bd08e82fa5e9fadce34ad))
+* **web-containers:** adding human support tab ([1a7124d](https://github.com/iblai/os/commit/1a7124d3d4b83d627292a0f11cbafe9c0dd223eb))
+
+### Bug Fixes
+
+* **mentor:** fixing merge conflicts changes and test updates ([9a42ac3](https://github.com/iblai/os/commit/9a42ac385df6f4de4a57b639f4a5a902db679b1a))
+
+### CI
+
+* adopt the current PR-e2e caller on this branch ([f216d97](https://github.com/iblai/os/commit/f216d978f87919c0044d95c53fd84a336f856b56))
+
 ## [0.108.12](https://github.com/iblai/os/compare/v0.108.11...v0.108.12) (2026-07-31)
 
 ### Chores
