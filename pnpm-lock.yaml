@@ -194,6 +194,9 @@ importers:
       '@tiptap/starter-kit':
         specifier: 2.11.7
         version: 2.11.7
+      axios:
+        specifier: '>=1.16.0'
+        version: 1.18.1
       class-variance-authority:
         specifier: 0.7.1
         version: 0.7.1
