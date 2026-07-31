@@ -93,7 +93,8 @@ function tally(coverage) {
     t.pendingCheckpoints -
     t.deprecatedCheckpoints -
     t.notReproducibleCheckpoints;
-  t.percent = denom > 0 ? Math.round((t.coveredCheckpoints / denom) * 100) : 100;
+  t.percent =
+    denom > 0 ? Math.round((t.coveredCheckpoints / denom) * 100) : 100;
   return t;
 }
 
@@ -117,7 +118,9 @@ function main() {
   );
   if (missing.length) {
     for (const j of missing)
-      err(`Journey "${j.name}" references spec "${j.spec}" not found in journeys/`);
+      err(
+        `Journey "${j.name}" references spec "${j.spec}" not found in journeys/`,
+      );
     process.exit(1);
   }
   ok(`All ${coverage.journeys.length} spec files exist in journeys/`);
@@ -141,7 +144,8 @@ function main() {
   const badSources = [];
   for (const j of coverage.journeys)
     for (const src of j.sourceFiles ?? [])
-      if (!existsSync(join(REPO_ROOT, src))) badSources.push({ j: j.name, src });
+      if (!existsSync(join(REPO_ROOT, src)))
+        badSources.push({ j: j.name, src });
   if (badSources.length) {
     for (const { j, src } of badSources)
       warn(`Journey "${j}" lists missing sourceFile: ${src}`);
@@ -169,7 +173,9 @@ function main() {
         exitCode = 1;
       }
       if (computed.totalJourneys < b.totalJourneys) {
-        err(`REGRESSION: journeys ${b.totalJourneys} → ${computed.totalJourneys}`);
+        err(
+          `REGRESSION: journeys ${b.totalJourneys} → ${computed.totalJourneys}`,
+        );
         exitCode = 1;
       }
       if (exitCode === 0) ok('No coverage regression');

@@ -328,7 +328,9 @@ export function LLMProviderModal({
         // user cancels by clicking the downloading row itself. Selecting an
         // already-installed model is unaffected (it starts no pull).
         if (busyDownloading && !sameModel(downloadingModel, m.id)) {
-          const dl = LOCAL_MODELS.find((x) => sameModel(x.id, downloadingModel));
+          const dl = LOCAL_MODELS.find((x) =>
+            sameModel(x.id, downloadingModel),
+          );
           setBusyDownloadName(dl?.name ?? t('unnamedModel'));
           return;
         }
@@ -368,7 +370,9 @@ export function LLMProviderModal({
   };
 
   // Announce download lifecycle changes once (not every %) for screen readers.
-  const activeLocal = LOCAL_MODELS.find((m) => sameModel(m.id, downloadingModel));
+  const activeLocal = LOCAL_MODELS.find((m) =>
+    sameModel(m.id, downloadingModel),
+  );
   const liveMessage = !activeLocal
     ? ''
     : downloadState.status === 'completed'
@@ -378,7 +382,8 @@ export function LLMProviderModal({
         : downloadState.status === 'error'
           ? t('announceFailed')
           : downloadState.status === 'checking' ||
-              (downloadState.status === 'downloading' && downloadState.progress === 0)
+              (downloadState.status === 'downloading' &&
+                downloadState.progress === 0)
             ? t('announceStarted', { modelName: activeLocal.name })
             : '';
 
@@ -411,10 +416,10 @@ export function LLMProviderModal({
         </div>
 
         <div className="grid max-h-[60vh] grid-cols-1 gap-4 overflow-y-auto pr-2 sm:grid-cols-2 lg:grid-cols-3">
-            {/* Cloud + on-device models in one availability-ranked list:
+          {/* Cloud + on-device models in one availability-ranked list:
                 available (usable now) first, unavailable (no credentials / needs
                 download) last. */}
-            {sortedModels.map((item) => {
+          {sortedModels.map((item) => {
             if (item.kind === 'cloud') {
               const llm = item.llm;
               const isActive = isCloudActive(llm);
@@ -534,7 +539,9 @@ export function LLMProviderModal({
         >
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>{t('alreadyDownloadingTitle')}</AlertDialogTitle>
+              <AlertDialogTitle>
+                {t('alreadyDownloadingTitle')}
+              </AlertDialogTitle>
               <AlertDialogDescription>
                 {t('alreadyDownloadingDescription', {
                   modelName: busyDownloadName ?? '',

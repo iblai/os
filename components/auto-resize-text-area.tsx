@@ -105,7 +105,6 @@ const AutoResizeTextarea: React.FC<AutoResizeTextareaProps> = ({
     if (!isTextareaDisabled && !embedMode) {
       textareaRef.current?.focus();
     }
-     
   }, []);
 
   const handleInputChange = (

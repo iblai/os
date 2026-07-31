@@ -201,7 +201,9 @@ describe('LLMTab', () => {
     localStorage.setItem('ibl_local_llm_model', 'llama3.2');
     const { container } = render(<LLMTab />);
     await waitFor(() => {
-      expect(container.querySelector('.border-blue-500')).not.toBeInTheDocument();
+      expect(
+        container.querySelector('.border-blue-500'),
+      ).not.toBeInTheDocument();
     });
   });
 

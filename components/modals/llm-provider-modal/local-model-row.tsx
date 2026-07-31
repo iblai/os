@@ -128,7 +128,7 @@ export function LocalModelRow({
 
       {/* Name on its own line; on-device · size · action sit on a line below. */}
       <span className="relative z-10 flex min-w-0 flex-1 flex-col gap-1.5">
-        <span className="truncate text-sm font-medium lowercase text-[#646464]">
+        <span className="truncate text-sm font-medium text-[#646464] lowercase">
           {name}
         </span>
         <span className="flex min-w-0 items-center gap-1.5 text-sm text-gray-500">

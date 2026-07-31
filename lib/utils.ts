@@ -565,27 +565,30 @@ const PROVIDER_NAME_BY_ALIAS: Record<string, string> = {
  * for logo/name resolution via {@link getLLMProviderDetails}.
  */
 export function getProviderName(llmProvider: string): string {
-  const normalized = (llmProvider ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const normalized = (llmProvider ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
   return PROVIDER_NAME_BY_ALIAS[normalized] ?? normalized;
 }
 
 // Logo + display name keyed by canonical provider name (see getProviderName).
-const PROVIDER_DETAILS_BY_NAME: Record<string, { logo: string; name: string }> = {
-  groq: { logo: '/llm-groq-provider.png', name: 'Groq' },
-  nvidia: { logo: '/llm-nvidia-provider.webp', name: 'NVIDIA' },
-  azure_openai: { logo: '/llm-microsoft-provider.png', name: 'Microsoft' },
-  openai: { logo: '/llm-openai-provider-2.svg', name: 'OpenAI' },
-  mistral: { logo: '/llm-mistral-provider.jpeg', name: 'Mistral' },
-  google: { logo: '/llm-google-provider.svg', name: 'Google' },
-  llama: { logo: '/llm-llama-provider.jpeg', name: 'Meta' },
-  anthropic: { logo: '/llm-claude-provider.png', name: 'Anthropic' },
-  perplexity: { logo: '/llm-perplexity-provider.webp', name: 'Perplexity' },
-  deepseek: { logo: '/llm-deepseek-provider.png', name: 'DeepSeek' },
-  xai: { logo: '/llm-xai-provider.jpg', name: 'xAI' },
-  bedrock: { logo: '/llm-amazon-provider.png', name: 'Amazon' },
-  alibaba: { logo: '/llm-alibaba-provider.png', name: 'Alibaba' },
-  ibm: { logo: '/llm-ibm-provider.png', name: 'IBM' },
-};
+const PROVIDER_DETAILS_BY_NAME: Record<string, { logo: string; name: string }> =
+  {
+    groq: { logo: '/llm-groq-provider.png', name: 'Groq' },
+    nvidia: { logo: '/llm-nvidia-provider.webp', name: 'NVIDIA' },
+    azure_openai: { logo: '/llm-microsoft-provider.png', name: 'Microsoft' },
+    openai: { logo: '/llm-openai-provider-2.svg', name: 'OpenAI' },
+    mistral: { logo: '/llm-mistral-provider.jpeg', name: 'Mistral' },
+    google: { logo: '/llm-google-provider.svg', name: 'Google' },
+    llama: { logo: '/llm-llama-provider.jpeg', name: 'Meta' },
+    anthropic: { logo: '/llm-claude-provider.png', name: 'Anthropic' },
+    perplexity: { logo: '/llm-perplexity-provider.webp', name: 'Perplexity' },
+    deepseek: { logo: '/llm-deepseek-provider.png', name: 'DeepSeek' },
+    xai: { logo: '/llm-xai-provider.jpg', name: 'xAI' },
+    bedrock: { logo: '/llm-amazon-provider.png', name: 'Amazon' },
+    alibaba: { logo: '/llm-alibaba-provider.png', name: 'Alibaba' },
+    ibm: { logo: '/llm-ibm-provider.png', name: 'IBM' },
+  };
 
 export function getLLMProviderDetails(llmProvider: string, llmName?: string) {
   const name = getProviderName(llmProvider);

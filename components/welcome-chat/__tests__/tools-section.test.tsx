@@ -7,7 +7,6 @@ import { ToolsSection } from '../tools-section';
 vi.mock('next/image', () => ({
   __esModule: true,
   default: ({ alt, src }: { alt: string; src: string }) => (
-     
     <img alt={alt} src={src} />
   ),
 }));

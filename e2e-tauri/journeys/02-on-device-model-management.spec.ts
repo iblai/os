@@ -107,7 +107,11 @@ async function pullToCompletion(model: string): Promise<PullResult> {
     const invoke = t?.core?.invoke;
     const listen = t?.event?.listen;
     if (!invoke || !listen) {
-      return { progress: [], done: false, error: 'window.__TAURI__ unavailable' };
+      return {
+        progress: [],
+        done: false,
+        error: 'window.__TAURI__ unavailable',
+      };
     }
     const progress: ProgressEvent[] = [];
     const un = await listen('model:download-progress', (e) => {
@@ -175,8 +179,8 @@ describe('Journey 2: On-device Model Management', () => {
       async () =>
         browser.execute(
           () =>
-            typeof (window as unknown as TauriWindow).__TAURI__?.core?.invoke ===
-            'function',
+            typeof (window as unknown as TauriWindow).__TAURI__?.core
+              ?.invoke === 'function',
         ),
       {
         timeout: 30_000,
@@ -259,9 +263,12 @@ describe('Journey 2: On-device Model Management', () => {
       await loginIfNeeded();
     });
 
-    it('odm-01: the LLM picker merges on-device models with the provider cloud models in one list');
-    it('odm-04: starting a second on-device download while one is in flight shows the "already downloading" guard');
+    it(
+      'odm-01: the LLM picker merges on-device models with the provider cloud models in one list',
+    );
+    it(
+      'odm-04: starting a second on-device download while one is in flight shows the "already downloading" guard',
+    );
     it('odm-06: the nav-bar on-device badge reflects the selected local model');
   });
 });
-

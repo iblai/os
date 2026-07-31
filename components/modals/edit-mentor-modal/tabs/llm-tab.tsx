@@ -203,7 +203,8 @@ export function LLMTab({ showConfigurationHeader = true }: LLMTabProps) {
                             {
                               'border-blue-500':
                                 !!activeProviderKey &&
-                                getProviderName(model.name) === activeProviderKey,
+                                getProviderName(model.name) ===
+                                  activeProviderKey,
                             },
                           )}
                           onClick={() => {
