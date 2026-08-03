@@ -54,6 +54,16 @@ overrides:
   uuid: 11.1.1
   sharp: '>=0.35.0'
   brace-expansion@<=5.0.7: '>=5.0.8'
+  # serialize-javascript GHSA-5c6j-r48x-rmvq (RCE via RegExp.flags/Date, patched
+  # 7.0.3) and GHSA-qj8w-gfj5-8c6v (CPU-exhaustion DoS, patched 7.0.5). Reached by
+  # one path only: e2e-tauri's @wdio/mocha-framework > mocha > serialize-javascript.
+  # There is no upstream bump to wait for — even mocha@11 still declares ^6.0.2 —
+  # so crossing the major here is the only route. Safe: v7 keeps the same CJS
+  # default-export signature and the `unsafe`/`ignoreFunction` options mocha passes,
+  # needs Node >=20 (this repo is on 25), and mocha's only call site is
+  # buffered-worker-pool's serializeOptions, which runs solely under `--parallel` —
+  # a mode the wdio runner never enables.
+  serialize-javascript: '>=7.0.5'
 patchedDependencies:
   google-drive-picker@1.1.29: patches/google-drive-picker@1.1.29.patch
 
