@@ -1,12 +1,12 @@
 //! Install / status / stop for **GhostOS** (https://github.com/ghostwright/ghost-os),
-//! the native macOS system-control tool that backs the "System Control Manager"
-//! card in User Profile → Advanced.
+//! the native macOS device-control tool that backs the "Cowork" card in
+//! User Profile → Advanced.
 //!
 //! GhostOS is distributed via Homebrew, so installation is `brew install` of the
 //! `ghostwright/ghost-os/ghost-os` formula (the tap is implied by the formula
 //! name). We deliberately DO NOT run `ghost setup`: the macOS Accessibility
 //! permission GhostOS needs is requested by the app itself via
-//! `tauri-plugin-macos-permissions` (the System Control card's "Grant Access"
+//! `tauri-plugin-macos-permissions` (the Cowork card's "Grant Access"
 //! button), so the app — not `ghost setup` — owns that flow.
 //!
 //! The command/event names here match the SDK contract (`GHOST_OS_TAURI_COMMANDS`
@@ -40,7 +40,7 @@ const BREW_FORMULA: &str = "ghostwright/ghost-os/ghost-os";
 #[cfg(target_os = "macos")]
 const GHOST_VERSION: &str = "2.2.1";
 
-/// Status reported to the System Control card. Field names match what the SDK
+/// Status reported to the Cowork card. Field names match what the SDK
 /// reads (`installed`, `running`, `installing`, `version`).
 #[derive(Clone, Serialize)]
 pub struct GhostOsStatus {
@@ -242,7 +242,7 @@ pub async fn install_ghost_os(app: AppHandle) -> Result<String, String> {
     #[cfg(not(target_os = "macos"))]
     {
         let _ = app;
-        return Err("System Control (GhostOS) is only available on macOS".to_string());
+        return Err("Cowork (GhostOS) is only available on macOS".to_string());
     }
 
     #[cfg(target_os = "macos")]

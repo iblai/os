@@ -7,7 +7,6 @@ import { ToolsSection } from '../tools-section';
 vi.mock('next/image', () => ({
   __esModule: true,
   default: ({ alt, src }: { alt: string; src: string }) => (
-    // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
     <img alt={alt} src={src} />
   ),
 }));

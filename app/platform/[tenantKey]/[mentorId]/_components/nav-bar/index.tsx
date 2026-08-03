@@ -12,6 +12,7 @@ import {
   Menu,
   User,
   Bot,
+  HardDrive,
   GitFork,
 } from 'lucide-react';
 
@@ -84,6 +85,10 @@ import { config } from '@/lib/config';
 import { MentorVisibilityEnum } from '@iblai/iblai-api';
 import { toast } from 'sonner';
 import { useModelDownload } from '@/hooks/use-model-download';
+import {
+  useSelectedLocalModel,
+  LOCAL_LLM_CHANGED_EVENT,
+} from '@/hooks/use-selected-local-model';
 import {
   useMentorSegments,
   MENTOR_SEGMENT_NAV_CATEGORIES,
@@ -245,6 +250,49 @@ export function NavBar() {
     foundryStatusLoaded,
     onSelectFoundryModel,
   } = useModelDownload();
+
+  // Active on-device (local) model, if any. Shown top-left in place of the cloud
+  // model while local mode is on (chat routes to the local model then, so the
+  // cloud model would be misleading). Reactive to picks + the master toggle.
+  const selectedLocal = useSelectedLocalModel();
+  const localModelLogo = selectedLocal.model
+    ? getLLMProviderDetails(
+        selectedLocal.model.provider,
+        selectedLocal.model.name,
+      ).logo
+    : '';
+  const localModelName =
+    selectedLocal.model?.name ?? selectedLocal.modelId ?? '';
+  // Admins (non-students) can switch the mentor's LLM; for them the on-device
+  // badge doubles as the entry point to the model picker (mirrors the cloud
+  // selector's gate). Others get a plain, non-interactive indicator.
+  const canChooseLlm = isAdmin && !userIsStudent;
+  const localModelBadgeInner = (
+    <>
+      <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white">
+        {localModelLogo ? (
+          <Image
+            src={localModelLogo}
+            alt={`${localModelName} model logo`}
+            className="h-5 w-5 object-contain"
+            height={32}
+            width={32}
+            loading="lazy"
+          />
+        ) : (
+          <HardDrive className="h-4 w-4 text-[#646464]" />
+        )}
+      </div>
+      <span className="hidden max-w-[150px] overflow-hidden text-ellipsis whitespace-nowrap lowercase sm:block">
+        {localModelName}
+      </span>
+      <span className="hidden flex-shrink-0 items-center gap-1 rounded-full bg-[#F5F8FF] px-2 py-0.5 text-[11px] font-medium text-[#38A1E5] md:inline-flex">
+        <HardDrive className="h-3 w-3" aria-hidden="true" />
+        On-device
+      </span>
+      {canChooseLlm && <ChevronDown className="h-4 w-4 text-gray-500" />}
+    </>
+  );
 
   console.log('[NavBar] After useModelDownload:', {
     isLocalLLMAvailable,
@@ -503,53 +551,95 @@ export function NavBar() {
           )}
 
           <div className="flex items-center pl-2 md:pl-4">
-            {isOnChatPage && isAdmin && !userIsStudent && (
+            {/* On-device (local) model indicator. Shown while local mode is on;
+                it replaces the cloud model selector below (hidden via the same
+                `selectedLocal.isLocal` condition). For users who can switch LLMs
+                it is ALSO the entry point to the model picker — click to open it
+                and choose a different model (cloud or local) without first
+                disabling local mode. */}
+            {isOnChatPage && selectedLocal.isLocal && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="flex cursor-pointer items-center gap-1 text-sm font-medium text-[#646464] transition-colors hover:text-[#484848]"
-                    onClick={() =>
-                      !userIsVisiting && setIsProviderSelectionOpen(true)
-                    }
-                    aria-label={t('llmModelSelector')}
-                  >
-                    <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white">
-                      {llmProviderDetails?.logo ? (
-                        <Image
-                          src={llmProviderDetails.logo}
-                          alt={`${selectedMentorCategory} model logo`}
-                          className="h-5 w-5 object-contain"
-                          height={32}
-                          width={32}
-                          loading="lazy"
-                        />
-                      ) : (
-                        <Bot />
-                      )}
-                    </div>
-                    <span
-                      className={cn(
-                        // Hidden below sm; the name is shown in the tooltip.
-                        'hidden max-w-[150px] overflow-hidden text-ellipsis whitespace-nowrap sm:block',
-                        creditBalanceComponentIsDisplayed
-                          ? 'max-w-[100px] md:max-w-[150px]'
-                          : '',
-                      )}
+                  {canChooseLlm ? (
+                    <button
+                      type="button"
+                      className="mr-2 flex cursor-pointer items-center gap-1.5 text-sm font-medium text-[#646464] transition-colors hover:text-[#484848]"
+                      onClick={() =>
+                        !userIsVisiting && setIsProviderSelectionOpen(true)
+                      }
+                      aria-label={`Change model, on-device model in use: ${localModelName}`}
+                      data-testid="local-model-indicator"
                     >
-                      {selectedMentorCategory}
-                    </span>
-                    {!userIsStudent && (
-                      <ChevronDown className="h-4 w-4 text-gray-500" />
-                    )}
-                  </Button>
+                      {localModelBadgeInner}
+                    </button>
+                  ) : (
+                    <div
+                      className="mr-2 flex items-center gap-1.5 text-sm font-medium text-[#646464]"
+                      aria-label={`On-device model in use: ${localModelName}`}
+                      data-testid="local-model-indicator"
+                    >
+                      {localModelBadgeInner}
+                    </div>
+                  )}
                 </TooltipTrigger>
                 <TooltipContent className="ibl-tooltip-content" side="bottom">
-                  {selectedMentorCategory ||
-                    (isAdmin ? t('selectModel') : selectedMentorName)}
+                  {canChooseLlm
+                    ? `On-device: ${localModelName} — click to change model`
+                    : `On-device model in use — ${localModelName}`}
                 </TooltipContent>
               </Tooltip>
             )}
+
+            {isOnChatPage &&
+              isAdmin &&
+              !userIsStudent &&
+              !selectedLocal.isLocal && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="flex cursor-pointer items-center gap-1 text-sm font-medium text-[#646464] transition-colors hover:text-[#484848]"
+                      onClick={() =>
+                        !userIsVisiting && setIsProviderSelectionOpen(true)
+                      }
+                      aria-label={t('llmModelSelector')}
+                    >
+                      <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white">
+                        {llmProviderDetails?.logo ? (
+                          <Image
+                            src={llmProviderDetails.logo}
+                            alt={`${selectedMentorCategory} model logo`}
+                            className="h-5 w-5 object-contain"
+                            height={32}
+                            width={32}
+                            loading="lazy"
+                          />
+                        ) : (
+                          <Bot />
+                        )}
+                      </div>
+                      <span
+                        className={cn(
+                          // Hidden below sm; the name is shown in the tooltip.
+                          'hidden max-w-[150px] overflow-hidden text-ellipsis whitespace-nowrap sm:block',
+                          creditBalanceComponentIsDisplayed
+                            ? 'max-w-[100px] md:max-w-[150px]'
+                            : '',
+                        )}
+                      >
+                        {selectedMentorCategory}
+                      </span>
+                      {!userIsStudent && (
+                        <ChevronDown className="h-4 w-4 text-gray-500" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent className="ibl-tooltip-content" side="bottom">
+                    {selectedMentorCategory ||
+                      (isAdmin ? t('selectModel') : selectedMentorName)}
+                  </TooltipContent>
+                </Tooltip>
+              )}
 
             {!pathname.includes('/explore') &&
               !isWorkflowsPage &&
@@ -720,7 +810,12 @@ export function NavBar() {
       {isUserProfileOpen && (
         <UserProfileModal
           isOpen={isUserProfileOpen}
-          onClose={() => setIsUserProfileOpen(false)}
+          onClose={() => {
+            setIsUserProfileOpen(false);
+            // Profile → Advanced hosts the Local Models master toggle; re-read on
+            // close so the nav-bar on-device badge reflects an enable/disable.
+            window.dispatchEvent(new Event(LOCAL_LLM_CHANGED_EVENT));
+          }}
           params={{
             tenantKey,
             mentorId,

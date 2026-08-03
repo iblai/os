@@ -41,6 +41,18 @@ vi.mock('@/hooks/use-user', () => ({
   useUsername: () => 'testuser',
 }));
 
+// Code's permission prompts live in a module-level store shared with the bubble.
+// Drive it directly rather than through Tauri events.
+const mockPermissionRequests = vi.hoisted(() => ({
+  current: [] as Array<Record<string, unknown>>,
+}));
+vi.mock('../code-permission-card', () => ({
+  useCodePermissionRequests: () => mockPermissionRequests.current,
+  CodePermissionCards: ({ generationId }: { generationId: string }) => (
+    <div data-testid="code-permission-cards">prompt for {generationId}</div>
+  ),
+}));
+
 vi.mock('@/lib/hooks', async () => {
   const actual = await vi.importActual('@/lib/hooks');
   return {
@@ -225,6 +237,7 @@ describe('AIMessageBubble', () => {
     mockChatPrivacyMode = 'normal';
     mockChatPrivacyReady = true;
     tenantMetadataReturnValue.metadata = {};
+    mockPermissionRequests.current = [];
     const { isLoggedIn } = await import('@/lib/utils');
     vi.mocked(isLoggedIn).mockReturnValue(true);
   });
@@ -239,6 +252,60 @@ describe('AIMessageBubble', () => {
       </Provider>,
     );
   };
+
+  describe('Code permission prompts', () => {
+    it('renders them inside the reply bubble while the turn streams', () => {
+      mockPermissionRequests.current = [
+        { request_id: 'perm-1', generation_id: defaultProps.message.id },
+      ];
+      renderWithRedux(
+        <AIMessageBubble {...defaultProps} isCurrentlyStreaming />,
+      );
+      expect(screen.getByTestId('code-permission-cards')).toBeInTheDocument();
+    });
+
+    it('ignores a prompt raised by a different turn', () => {
+      // Chats each run their own opencode process, so another chat can be waiting at
+      // the same time. Its prompt belongs in its own bubble, not this one.
+      mockPermissionRequests.current = [
+        { request_id: 'perm-1', generation_id: 'some-other-turn' },
+      ];
+      renderWithRedux(
+        <AIMessageBubble {...defaultProps} isCurrentlyStreaming />,
+      );
+      expect(
+        screen.queryByTestId('code-permission-cards'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('keeps an otherwise-empty bubble alive so the prompt is visible', () => {
+      // A prompt can be the FIRST thing in a Code turn. Without the bubble staying
+      // mounted the user faces a turn that has silently stalled on a question they
+      // were never shown.
+      mockPermissionRequests.current = [
+        { request_id: 'perm-1', generation_id: defaultProps.message.id },
+      ];
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          content=""
+          message={{ ...defaultProps.message, actions: undefined }}
+          isCurrentlyStreaming
+        />,
+      );
+      expect(screen.getByTestId('code-permission-cards')).toBeInTheDocument();
+    });
+
+    it('does not repeat them on older messages that are not streaming', () => {
+      mockPermissionRequests.current = [
+        { request_id: 'perm-1', generation_id: defaultProps.message.id },
+      ];
+      renderWithRedux(<AIMessageBubble {...defaultProps} />);
+      expect(
+        screen.queryByTestId('code-permission-cards'),
+      ).not.toBeInTheDocument();
+    });
+  });
 
   describe('rendering', () => {
     it('should render without crashing', () => {

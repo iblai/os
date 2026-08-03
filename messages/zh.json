@@ -243,7 +243,8 @@
     "accountDescIntegrations": "管理与其他服务的集成。",
     "accountDescMonetization": "配置付费墙、定价和收入。",
     "accountDescAdvanced": "配置组织的高级设置。",
-    "accountDescBilling": "管理您的账单和订阅。"
+    "accountDescBilling": "管理您的账单和订阅。",
+    "awaitingPermission": "等待你的许可"
   },
   "appSidebarPinnedMessages": {
     "pinned": "已置顶",
@@ -464,6 +465,9 @@
     "studyMode": "学习模式",
     "deepResearch": "深度研究",
     "memory": "记忆",
+    "cowork": "Cowork",
+    "coworkNeedsLocalModel": "请先开启“本地模型”——Cowork 需要本地 AI 模型。",
+    "coworkModelTooSmall": "您的本地模型太小，无法用于 Cowork。请在“本地模型”中选择至少 12GB 的模型。",
     "moreOptions": "更多选项"
   },
   "chatInputFormMemoryMenu": {
@@ -1279,7 +1283,33 @@
     "title": "LLM 选择",
     "subtitle": "从可用提供商中选择您偏好的 LLM，以定制您的体验。",
     "searchPlaceholder": "搜索",
-    "providerIconAlt": "{providerName} 图标"
+    "providerIconAlt": "{providerName} 图标",
+    "tooLargeTitle": "该模型可能对您的系统而言过大",
+    "tooLargeDescription": "{modelName} 约需 {modelSize}。它在此设备上可能运行非常缓慢或无法加载。仍要下载吗？",
+    "cancel": "取消",
+    "downloadAnyway": "仍要下载",
+    "alreadyDownloadingTitle": "已有模型正在下载",
+    "unnamedModel": "某个模型",
+    "alreadyDownloadingDescription": "{modelName} 正在下载。一次只能下载一个设备端模型——请等待其完成，或点击列表中的 {modelName} 以取消下载。",
+    "gotIt": "知道了",
+    "announceDownloaded": "{modelName} 已下载",
+    "announceCancelled": "下载已取消",
+    "announceFailed": "下载失败",
+    "announceStarted": "已开始下载 {modelName}",
+    "localModel": {
+      "onDevice": "设备端",
+      "starting": "正在启动…",
+      "cancel": "取消",
+      "inUse": "使用中",
+      "downloadFailedRetry": "下载失败——重试",
+      "ariaDownload": "下载 {modelName}，{modelSize}，设备端模型",
+      "ariaStarting": "正在开始下载 {modelName}",
+      "ariaDownloading": "取消下载 {modelName}，{percent}%",
+      "ariaInstalled": "使用 {modelName}，设备端模型",
+      "ariaSelected": "已选择 {modelName}，设备端模型，使用中",
+      "ariaError": "重试下载 {modelName}",
+      "ariaErrorWithReason": "重试下载 {modelName}，{reason}"
+    }
   },
   "modalsLlmProviderSelectionModal": {
     "selectProviderDescription": "从列表中选择一个 LLM 提供商",
@@ -2177,5 +2207,34 @@
     "reject": "拒绝",
     "stickyNote": "便利贴",
     "changeAgent": "更换代理"
+  },
+  "chatInputFormCodingModeButton": {
+    "code": "代码",
+    "tooltip": "针对你的项目文件夹的智能体编程工具",
+    "description": "一个智能体编程工具，可在你选择的文件夹中编辑文件、运行命令并提交更改。",
+    "checkingLocalModel": "正在检查你的本地模型是否能运行代码模式…",
+    "tryToolCapableModel": " 请尝试支持工具调用的模型，如 qwen3、llama3.2 或 phi4-mini。",
+    "firstRunSlow": "首次运行时模型加载可能需要几分钟。",
+    "modelUnavailable": "不可用于代码模式 — 对话会失败。请在左上角选择其他模型。",
+    "workspace": "工作区",
+    "changeFolder": "更改文件夹…",
+    "chooseFolderTitle": "选择你的工作文件夹"
+  },
+  "chatCodePermissionCard": {
+    "title": "代码模式需要你的许可",
+    "unnamedAction": "一项未命名的操作",
+    "kind": {
+      "read": "读取",
+      "write": "写入",
+      "exec": "执行",
+      "delete": "删除",
+      "move": "移动",
+      "search": "搜索",
+      "fetch": "获取",
+      "think": "思考",
+      "other": "操作"
+    },
+    "allow": "允许",
+    "deny": "拒绝"
   }
 }

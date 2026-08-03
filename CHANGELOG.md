@@ -4,7 +4,7 @@
 
 ### Bug Fixes
 
-* **csp:** allow S3 presigned media hosts in connect-src ([a5f0bbc](https://github.com/iblai/os/commit/a5f0bbceb6b48691bad95b2b5acecdcbcbcb0915))
+- **csp:** allow S3 presigned media hosts in connect-src ([a5f0bbc](https://github.com/iblai/os/commit/a5f0bbceb6b48691bad95b2b5acecdcbcbcb0915))
 
 ## [0.110.0](https://github.com/iblai/os/compare/v0.109.0...v0.110.0) (2026-07-31)
 
