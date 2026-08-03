@@ -54,7 +54,7 @@ export function ToolCallIndicator({
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen} className="mb-2">
-      <CollapsibleTrigger className="flex cursor-pointer items-center gap-1 pt-1 text-xs text-gray-500 transition-colors hover:text-gray-600">
+      <CollapsibleTrigger className="flex cursor-pointer items-center gap-1 pt-1 text-xs text-gray-600 transition-colors hover:text-gray-800">
         <ChevronRight
           className={cn(
             'h-3 w-3 transition-transform duration-200',
@@ -65,14 +65,14 @@ export function ToolCallIndicator({
         <span>{headerLabel}</span>
         {isStreaming && (
           <span className="inline-flex gap-0.5">
-            <span className="inline-block h-1 w-1 animate-bounce rounded-full bg-gray-500 [animation-delay:0ms]" />
-            <span className="inline-block h-1 w-1 animate-bounce rounded-full bg-gray-500 [animation-delay:150ms]" />
-            <span className="inline-block h-1 w-1 animate-bounce rounded-full bg-gray-500 [animation-delay:300ms]" />
+            <span className="inline-block h-1 w-1 animate-bounce rounded-full bg-gray-600 [animation-delay:0ms]" />
+            <span className="inline-block h-1 w-1 animate-bounce rounded-full bg-gray-600 [animation-delay:150ms]" />
+            <span className="inline-block h-1 w-1 animate-bounce rounded-full bg-gray-600 [animation-delay:300ms]" />
           </span>
         )}
       </CollapsibleTrigger>
       <CollapsibleContent className="pb-2 pl-4">
-        <div className="space-y-2.5 border-l-2 border-gray-200 pt-3 pl-3 text-xs leading-relaxed text-gray-500">
+        <div className="space-y-2.5 border-l-2 border-gray-300 pt-3 pl-3 text-xs leading-relaxed text-gray-600">
           {toolCalls.map((toolCall, index) => {
             const query = getQueryLabel(toolCall);
             const Icon = getToolIcon(toolCall?.name);
@@ -80,18 +80,27 @@ export function ToolCallIndicator({
 
             return (
               <div key={toolCall?.id || index}>
-                <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-300">
-                  <Icon className="h-3 w-3 shrink-0 text-gray-400" />
+                <div className="flex items-center gap-1.5 text-gray-700">
+                  <Icon className="h-3 w-3 shrink-0 text-gray-500" />
                   <span className="font-medium">
                     {getFriendlyToolName(toolCall?.name ?? '')}
                   </span>
                   {isLast && isStreaming && (
-                    <span className="inline-block h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-gray-400" />
+                    <span className="inline-block h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-gray-500" />
                   )}
                 </div>
+                {/* The tool description/query renders through <Markdown>, which
+                    brings its own prose colours — they have to be overridden on
+                    every descendant or the query falls back to a washed-out
+                    grey. gray-600 on the bubble's bg-gray-100 is 6.87:1, well
+                    clear of the 4.5:1 AA floor for this 12px text.
+                    No `dark:` variant here on purpose: the enclosing message
+                    bubble is `bg-gray-100` unconditionally (see
+                    ai-message-bubble.tsx), so a dark-mode override would put
+                    light grey text on a light grey bubble. */}
                 {query && (
-                  <div className="mt-0.5 ml-[18px] text-gray-400 dark:text-gray-500">
-                    <Markdown className="prose prose-xs max-w-none [&_*]:text-xs [&_*]:text-gray-400 dark:[&_*]:text-gray-500 [&_p]:m-0">
+                  <div className="mt-0.5 ml-[18px] text-gray-600">
+                    <Markdown className="prose prose-xs max-w-none [&_*]:text-xs [&_*]:text-gray-600 [&_p]:m-0">
                       {query}
                     </Markdown>
                   </div>
