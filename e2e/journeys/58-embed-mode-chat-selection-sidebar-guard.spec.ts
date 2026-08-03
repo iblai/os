@@ -13,7 +13,7 @@
  * the URL, so losing the param flipped the app out of embed mode mid-session
  * and the full admin sidebar rendered in its place — inside a widget embedded
  * on a third-party site where students should only ever see "New Chat" and
- * "Chats".
+ * "Recents".
  *
  * The fix (commit 67e74db2) navigates ONLY when the current pathname is not
  * already the mentor's own chat page; the session is selected via Redux +
@@ -90,7 +90,7 @@ async function assertMinimalEmbedSidebar(
   await expect(sidebarPage.newChatButton).toBeVisible({ timeout: 15_000 });
 
   const chatsTrigger = sidebarPage.sidebar.getByRole('button', {
-    name: 'Chats',
+    name: 'Recents',
     exact: true,
   });
   await expect(chatsTrigger).toBeVisible({ timeout: 15_000 });

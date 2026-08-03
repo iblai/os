@@ -2189,12 +2189,20 @@ export function Chat({
           mentorUniqueId={uniqueMentorId}
           sessionId={cachedSessionId?.[mentorId] ?? sessionId}
           username={username ?? ''}
+          // Labels the agent's transcript lines with the mentor's real name
+          // and face, so call captions match the chat thread behind them.
+          mentorName={mentorName}
+          mentorImage={profileImage}
           isOpen={isPhoneCallModalOpen}
           onClose={() => {
             if (window.opener) {
               window.close();
             } else {
               setIsPhoneCallModalOpen(false);
+              // The realtime voice conversation is persisted against the same
+              // session_id used by the chat thread, so pull it in on teardown —
+              // this mirrors the screen-sharing handler below.
+              refetchChats();
             }
           }}
         />

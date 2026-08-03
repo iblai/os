@@ -257,7 +257,7 @@ jobs:
 
           # Returns: 0 = completed (CONCLUSION set) · 1 = timed out · 2 = EVICTED (retryable)
           poll_run() {
-            local i started=0 strikes=0 any_job=0 exec_ticks=0 last="" phases active busy s
+            local i started=0 idle_since="" any_job=0 exec_ticks=0 last="" phases active busy s now
             echo "Phases: resolve -> baseline drift check -> sync (only if drifted) -> swap SPA -> e2e -> restore"
             # Two separate budgets. Queue time must NOT count against the execution timeout: with one
             # serialized runner and ~75-min suites, a PR queued behind one other already exceeds 2h,
@@ -272,8 +272,11 @@ jobs:
                 echo "[$(date -u +%H:%M:%SZ)] $phases"; last="$phases"
               fi
               if [ "$started" = "0" ]; then
+                # Count only jobs that have genuinely started executing. `!= "queued"` also
+                # matched transient pre-run states (waiting/pending/requested), which could
+                # latch started before the target runner ever picked up work.
                 active=$(gh api "repos/$OPS/actions/runs/${RUN_ID}/jobs" \
-                           --jq '[.jobs[] | select(.status != "queued")] | length' 2>/dev/null || echo 0)
+                           --jq '[.jobs[] | select(.status == "in_progress" or .status == "completed")] | length' 2>/dev/null || echo 0)
                 if [ "${active:-0}" -gt 0 ]; then
                   started=1; any_job=1
                   echo "[$(date -u +%H:%M:%SZ)] run started executing — 2h execution budget begins now"
@@ -289,15 +292,23 @@ jobs:
               if [ "$started" = "0" ]; then
                 # An offline runner never appears executing ANY job anywhere; a merely BUSY one does.
                 # Elapsed time cannot tell them apart when one serialized runner handles ~74-min suites.
-                busy=$(for rid in $(gh run list -R "$OPS" --limit 10 --json databaseId --jq '.[].databaseId' 2>/dev/null); do
+                # Scan the 20 most recent runs (matches the env picker's window). With --limit 10,
+                # a run legitimately queued behind a long (~84-min) suite whose holder has already
+                # fallen out of the window reads busy=0 and gets killed with a false "offline".
+                busy=$(for rid in $(gh run list -R "$OPS" --limit 20 --json databaseId --jq '.[].databaseId' 2>/dev/null); do
                          gh api "repos/$OPS/actions/runs/$rid/jobs" \
                            --jq '.jobs[] | select(.status=="in_progress") | .runner_name // empty' 2>/dev/null
                        done | grep -cx "$RUNNER" || true)
                 if [ "${busy:-0}" -gt 0 ]; then
-                  strikes=0
+                  idle_since=""                   # runner is alive, we are simply queued behind work
                 else
-                  strikes=$((strikes + 1))
-                  if [ "$strikes" -ge 30 ]; then
+                  # Gate on wall-clock, not iteration count: each poll makes ~20 extra `gh` calls
+                  # (the busy probe above), so a fixed strike count drifts well past its intended
+                  # minutes. Fire only after the runner has been continuously idle-while-queued
+                  # for 15 real minutes.
+                  now=$(date +%s)
+                  [ -z "$idle_since" ] && idle_since="$now"
+                  if [ "$((now - idle_since))" -ge 900 ]; then
                     CONCLUSION=runner_unavailable
                     echo "::error::${RUNNER} has been idle for 15 min while this run stayed queued — the runner is offline or not accepting jobs. https://github.com/$OPS/actions/runs/${RUN_ID}"
                     return 1
@@ -450,7 +461,7 @@ jobs:
   # SUMMARY
   # ============================================================
   summary:
-    needs: [build-app-image, unit-tests, e2e]
+    needs: [gate, build-app-image, unit-tests, e2e]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -471,7 +482,14 @@ jobs:
         # Only a real FAILURE should redden this check. `skipped` means the PR was never
         # labelled `run-tests`, which is the opt-in model working as designed — treating it
         # as failure would make every unlabelled PR unmergeable once this is a required check.
+        # build-app-image and gate are checked explicitly: when either fails, the jobs that
+        # depend on them (e2e needs build-app-image; everything needs gate) resolve to
+        # `skipped` rather than `failure`, so without these lines a broken image build — or a
+        # failed/cancelled gate — would let the required check go green with nothing run.
+        # `skipped` alone still stays green (the opt-in model: PR not labelled `run-tests`).
         if: |
           needs.e2e.result == 'failure' || needs.e2e.result == 'cancelled' ||
-          needs.unit-tests.result == 'failure' || needs.unit-tests.result == 'cancelled'
+          needs.unit-tests.result == 'failure' || needs.unit-tests.result == 'cancelled' ||
+          needs.build-app-image.result == 'failure' || needs.build-app-image.result == 'cancelled' ||
+          needs.gate.result == 'failure' || needs.gate.result == 'cancelled'
         run: exit 1

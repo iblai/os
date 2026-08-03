@@ -67,6 +67,13 @@ const GOOGLE = [
   'https://accounts.google.com',
 ];
 const STRIPE = ['https://js.stripe.com', 'https://api.stripe.com'];
+// S3 presigned URLs for media (e.g. iblai-app-dm-media) — chat file uploads PUT
+// straight to the bucket and downloads GET from it, which the browser treats as
+// fetch/XHR connections, so the bucket host must be in connect-src. Virtual-hosted
+// style; a CSP host wildcard only covers the leading label, so this matches
+// <bucket>.s3.amazonaws.com. Regional endpoints (<bucket>.s3.<region>.amazonaws.com)
+// would need that region added.
+const AWS_S3 = ['https://*.s3.amazonaws.com'];
 
 /** Allow the configured API base origin if it lives outside the ibl wildcards. */
 function apiBaseOrigin(): string[] {
@@ -115,6 +122,7 @@ function buildCsp(nonce: string): string {
       ...IBL_WS,
       ...GOOGLE,
       ...STRIPE,
+      ...AWS_S3,
       ...extra,
     ],
     // Sentry Session Replay creates a compression worker from a blob: URL.

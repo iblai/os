@@ -1,6 +1,6 @@
 {
   "name": "ibl-web-nextjs-mentor-spa",
-  "version": "0.108.12",
+  "version": "0.110.1",
   "private": false,
   "packageManager": "pnpm@10.11.1",
   "engines": {
@@ -94,6 +94,7 @@
     "@tiptap/pm": "2.11.7",
     "@tiptap/react": "2.11.7",
     "@tiptap/starter-kit": "2.11.7",
+    "axios": "1.18.1",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "cmdk": "1.1.1",

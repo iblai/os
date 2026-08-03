@@ -24,14 +24,21 @@ overrides:
   fast-uri: '>=4.1.1'
   ip-address: '>=10.1.1'
   # brace-expansion GHSA-mh99-v99m-4gvg (DoS/OOM via unbounded expansion) is patched
-  # ONLY in 5.0.8 — there is no patched 1.x/2.x/3.x/4.x. But brace-expansion@5 uses
-  # ESM-style named exports, and the minimatch@9 pulled solely by
-  # @vitest/coverage-istanbul (glob@10 -> test-exclude, a devDependency) imports it
-  # as a CJS default -> "brace_expansion.default is not a function", crashing the
-  # coverage check. So pin brace-expansion to the patched 5.0.8 everywhere and bump
-  # that lone dev-only minimatch@9 to v10, which reads the named export. minimatch@3
-  # (via rollup-plugin-copy inside @iblai/*) is build tooling never executed here, so
-  # its 5.x callable mismatch is inert and left alone.
+  # ONLY in 5.0.8 — there is no patched 1.x/2.x/3.x/4.x. But brace-expansion@5 ships
+  # ESM-style named exports, so older minimatch majors that import it as a CJS
+  # callable default crash with "brace_expansion.default is not a function". Two such
+  # consumers exist here:
+  #   - minimatch@9 (glob@10 -> test-exclude -> @vitest/coverage-istanbul): bumped to
+  #     v10 below, which reads the named export. This unbroke the coverage check.
+  #   - minimatch@3 (eslint@9, @eslint/eslintrc, @eslint/config-array + plugins, and
+  #     rollup-plugin-copy's glob@7): NOT bumped. minimatch only touches
+  #     brace-expansion when a pattern contains a `{...}` brace group; no eslint glob
+  #     here uses one, so `pnpm lint` never hits the non-callable path. This is a
+  #     latent hazard, not a fix: if a brace pattern is ever added to eslint.config or
+  #     a lint-time glob, lint will crash with "expand is not a function". The fix then
+  #     is to add `minimatch@3: '^10'` here — but verify eslint@9 + glob@7 tolerate
+  #     minimatch@10 first (untested; minimatch@10 requires Node 20+ and drops legacy
+  #     options). Bumping minimatch@3 blindly is riskier than the latent hazard today.
   brace-expansion: '>=5.0.8'
   # GHSA-mh99-v99m-4gvg is only fixed in brace-expansion >=5.0.8, but 5.x exports
   # an object ({ expand, EXPANSION_MAX* }) where minimatch@9 does
