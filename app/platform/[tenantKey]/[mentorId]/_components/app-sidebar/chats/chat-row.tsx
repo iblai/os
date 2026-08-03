@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import { useTranslations } from 'next-intl';
 import {
   Download,
@@ -24,6 +25,8 @@ function ChatThreeDotMenu({
   isPinned,
   isLoading,
   canExport = true,
+  open,
+  onOpenChange,
   onPinToggle,
   onExport,
   onDelete,
@@ -31,13 +34,15 @@ function ChatThreeDotMenu({
   isPinned: boolean;
   isLoading: boolean;
   canExport?: boolean;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onPinToggle: () => void;
   onExport: () => void;
   onDelete: () => void;
 }) {
   const t = useTranslations('appSidebarIndex');
   return (
-    <DropdownMenu>
+    <DropdownMenu open={open} onOpenChange={onOpenChange}>
       <DropdownMenuTrigger asChild disabled={isLoading}>
         <button
           type="button"
@@ -49,7 +54,13 @@ function ChatThreeDotMenu({
           // a spinner — the user knows exactly which row is processing.
           className={cn(
             'inline-flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-[#7d7e82] transition-opacity hover:bg-[#eef0f3] hover:text-[#1f2937] data-[state=open]:opacity-100',
-            isLoading ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+            // `group-hover/chat-row`, not `group-hover`: the shared Sidebar
+            // wrapper is itself a `.group`, so the unnamed variant matched a
+            // hover anywhere in the sidebar and lit up every row's menu at
+            // once. The name pins the hover to this row.
+            isLoading
+              ? 'opacity-100'
+              : 'opacity-0 group-hover/chat-row:opacity-100',
           )}
           aria-label={t('chatActions')}
           aria-busy={isLoading}
@@ -119,8 +130,14 @@ export function ChatRowItem({
   onDelete: () => void;
 }) {
   const t = useTranslations('appSidebarIndex');
+  const [menuOpen, setMenuOpen] = React.useState(false);
+  // Hover is the CSS half; these are the states hover cannot see. An open
+  // menu or an in-flight action owns the slot outright — by then the pointer
+  // may well be somewhere else entirely.
+  const showPin = isPinned && !menuOpen && !isLoading;
+
   return (
-    <div className="group relative">
+    <div className="group/chat-row relative" data-testid="chat-row">
       <button
         type="button"
         onClick={onSelect}
@@ -137,15 +154,39 @@ export function ChatRowItem({
             : 'text-[#4a5568] hover:bg-[#f4f4f4]',
         )}
       >
+        {/* Pinned rows are marked on the row itself rather than gathered
+            under a "Pinned" heading: they still sort to the top, and the
+            list reads as one list instead of two. The mark itself is drawn
+            in the three-dot slot below; this is the half a screen reader
+            needs, since it cannot see either. */}
+        {isPinned && <span className="sr-only">{t('pinned')}</span>}
         <span className="line-clamp-1 min-w-0 flex-1 overflow-hidden">
           {chatRowLabel(row, t('noContent'))}
         </span>
       </button>
-      <div className="absolute top-1/2 right-1.5 -translate-y-1/2">
+      {/* One slot, two occupants. A pinned row wears its pin until you
+          reach for the row, at which point the pin steps aside for the menu
+          that can unpin it. An unpinned row's slot stays empty until then,
+          so a quiet list stays quiet. */}
+      {/* `right-0`, not an inset: flush with the row's own edge, the 24px
+          slot centres on the same axis as the chevron on the Recents trigger
+          above it — the icons down the right-hand side line up. */}
+      <div className="absolute top-1/2 right-0 -translate-y-1/2">
+        {showPin && (
+          <span
+            data-testid="chat-row-pin"
+            aria-hidden
+            className="pointer-events-none absolute inset-0 flex items-center justify-center text-[#9ca3af] transition-opacity group-hover/chat-row:opacity-0"
+          >
+            <Pin className="size-3.5" strokeWidth={1.75} />
+          </span>
+        )}
         <ChatThreeDotMenu
           isPinned={isPinned}
           isLoading={isLoading}
           canExport={canExport}
+          open={menuOpen}
+          onOpenChange={setMenuOpen}
           onPinToggle={onPinToggle}
           onExport={onExport}
           onDelete={onDelete}

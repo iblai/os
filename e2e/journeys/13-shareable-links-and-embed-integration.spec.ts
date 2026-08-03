@@ -304,18 +304,21 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
     // "New Chat" button
     await expect(sidebarPage.newChatButton).toBeVisible({ timeout: 10_000 });
 
-    // "Chats" collapsible section trigger
+    // "Recents" collapsible section trigger
     const chatsVisible = await sidebarPage.isSectionTriggerVisible(
-      'Chats',
+      'Recents',
       5_000,
     );
     if (!chatsVisible) {
       logger.info(
-        'emb-09: Chats section trigger not visible — may render differently in this env; asserting New Chat only',
+        'emb-09: Recents section trigger not visible — may render differently in this env; asserting New Chat only',
       );
     } else {
       await expect(
-        sidebarPage.sidebar.getByRole('button', { name: 'Chats', exact: true }),
+        sidebarPage.sidebar.getByRole('button', {
+          name: 'Recents',
+          exact: true,
+        }),
       ).toBeVisible();
     }
 

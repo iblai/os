@@ -1,45 +1,144 @@
 # Changelog
 
+## [0.110.1](https://github.com/iblai/os/compare/v0.110.0...v0.110.1) (2026-08-03)
+
+### Bug Fixes
+
+* **csp:** allow S3 presigned media hosts in connect-src ([a5f0bbc](https://github.com/iblai/os/commit/a5f0bbceb6b48691bad95b2b5acecdcbcbcb0915))
+
+## [0.110.0](https://github.com/iblai/os/compare/v0.109.0...v0.110.0) (2026-07-31)
+
+### Features
+
+- **sidebar:** call it Recents, group Search with it, mark pins on the row ([62830cf](https://github.com/iblai/os/commit/62830cfc4bdddfd6f44818bd5a2ec7c1c2ad8156))
+- **voice:** add useLiveKitTranscription hook ([b6827c1](https://github.com/iblai/os/commit/b6827c1a6c759bdd91cd334ece13ab1fd1b5ebfc))
+- **voice:** put captions behind a toggle, off by default ([21b63ad](https://github.com/iblai/os/commit/21b63ade91e972429af17a94ce98a1a0bec1a9ef))
+- **voice:** rebuild the call as a card around the mentor ([86f7623](https://github.com/iblai/os/commit/86f7623076e937b42a5994f596b09e27585ef473))
+
+### Bug Fixes
+
+- **chat:** refetch session history when a voice call ends ([f48b902](https://github.com/iblai/os/commit/f48b9021771e9d231fdf4c1c77e2495287c5d0ed))
+- **ci:** harden PR e2e gate + correct brace-expansion override comment ([0e8b39e](https://github.com/iblai/os/commit/0e8b39ec1d439b883e74c23fa405a16b3b8030e0))
+- **voice:** close the gap between the two caption lines ([d9abeb9](https://github.com/iblai/os/commit/d9abeb9ab0eb262d0d7e1589084d6c1dfd8c927c))
+- **voice:** separate mic and mentor audio, show speaker state and transcript ([7430a56](https://github.com/iblai/os/commit/7430a56f17f5b508325982d3583b55d3d077ac09))
+- **voice:** stop long captions widening the call dialog ([131e264](https://github.com/iblai/os/commit/131e264c4b64d0e2000c4b6cb168d46d6cbf9a20))
+
+### Chores
+
+- **i18n:** add voice call status and transcript strings ([7e2c885](https://github.com/iblai/os/commit/7e2c8851b717aa77588187daa64892bf39ab54b9))
+
+### Styles
+
+- apply prettier formatting to CHANGELOG ([66186e7](https://github.com/iblai/os/commit/66186e70253cde54f41a82d747aeabd6d1029d35))
+- **sidebar:** line the row pin/menu slot up with the section chevrons ([9d453b6](https://github.com/iblai/os/commit/9d453b694f31dbbc3ad9753f18fc0623660191cf))
+- **voice:** keep the call indicator in a single blue family ([74f431f](https://github.com/iblai/os/commit/74f431f626fb984c6680607f9821a14ace650a20))
+
+### Tests
+
+- **e2e:** give the ?prompt= journey its own mentor ([9f4aaf9](https://github.com/iblai/os/commit/9f4aaf9e097d5a86d1da7695650c68123d20fb47))
+
+## [0.109.0](https://github.com/iblai/os/compare/v0.108.12...v0.109.0) (2026-07-31)
+
+### Features
+
+- **web-containers:** adding human support ([8791e74](https://github.com/iblai/os/commit/8791e742ecbceb832e9bd08e82fa5e9fadce34ad))
+- **web-containers:** adding human support tab ([1a7124d](https://github.com/iblai/os/commit/1a7124d3d4b83d627292a0f11cbafe9c0dd223eb))
+
+### Bug Fixes
+
+- **mentor:** fixing merge conflicts changes and test updates ([9a42ac3](https://github.com/iblai/os/commit/9a42ac385df6f4de4a57b639f4a5a902db679b1a))
+
+### CI
+
+- adopt the current PR-e2e caller on this branch ([f216d97](https://github.com/iblai/os/commit/f216d978f87919c0044d95c53fd84a336f856b56))
+
+## [0.108.12](https://github.com/iblai/os/compare/v0.108.11...v0.108.12) (2026-07-31)
+
+### Chores
+
+- **deps:** bump @iblai/iblai-js to 2.2.7 ([462b98f](https://github.com/iblai/os/commit/462b98fa48202ea7dd1e778382815523037014db))
+
+## [0.108.11](https://github.com/iblai/os/compare/v0.108.10...v0.108.11) (2026-07-30)
+
+### Bug Fixes
+
+- **pr-e2e:** make the eviction retry reachable and kill orphaned central runs ([8594bb2](https://github.com/iblai/os/commit/8594bb23084b554ad4b5ef63e0ceb80bee39c22b)), closes [os#367](https://github.com/iblai/os/issues/367) [os#394](https://github.com/iblai/os/issues/394)
+
+## [0.108.10](https://github.com/iblai/os/compare/v0.108.9...v0.108.10) (2026-07-30)
+
+### Bug Fixes
+
+- **ci:** queue time must not count against the execution timeout ([e79488c](https://github.com/iblai/os/commit/e79488c2e5dd93187da2114b839f0608fdb75a6a)), closes [os#367](https://github.com/iblai/os/issues/367)
+
+## [0.108.9](https://github.com/iblai/os/compare/v0.108.8...v0.108.9) (2026-07-30)
+
+### Bug Fixes
+
+- **iframe:** dispatch EDX metadata via chatActions.setMetadata ([0dbaac0](https://github.com/iblai/os/commit/0dbaac04c3562b9e21385ed9b9c6a629a1eec022))
+- **test:** drop spurious 3rd it.each arg in scrollbar-gutter test ([54fe443](https://github.com/iblai/os/commit/54fe443b5b484d901a318164c6f603fe435019fd)), closes [#2260](https://github.com/iblai/os/issues/2260)
+- **welcome-chat:** match the default welcome message to the chat input width ([05d53d5](https://github.com/iblai/os/commit/05d53d5abc4230af8c627e57ee29dece42ea9825))
+
+### Tests
+
+- **chat:** close the remaining [#2260](https://github.com/iblai/os/issues/2260) coverage gaps ([08d838b](https://github.com/iblai/os/commit/08d838b2d1fc2ea5faee61463a1ce5bd6f0e12c9))
+
+### CI
+
+- adopt the current PR-e2e caller on this branch ([f7ff4e5](https://github.com/iblai/os/commit/f7ff4e55c2979c3cfe7b3c5a0a29d9f045e296f1))
+
+## [0.108.8](https://github.com/iblai/os/compare/v0.108.7...v0.108.8) (2026-07-30)
+
+### Bug Fixes
+
+- **ci:** cancel the dispatched run when the caller is cancelled ([dbc4259](https://github.com/iblai/os/commit/dbc425961e79fcc730a5b4ceb21a82350703be69)), closes [os#394](https://github.com/iblai/os/issues/394)
+
+## [0.108.7](https://github.com/iblai/os/compare/v0.108.6...v0.108.7) (2026-07-30)
+
+### Bug Fixes
+
+- **ci:** make the e2e queue survive three concurrent PRs ([4f27b31](https://github.com/iblai/os/commit/4f27b31c614dc4144198f3c64ef4fbaf582882f5)), closes [os#390](https://github.com/iblai/os/issues/390) [#394](https://github.com/iblai/os/issues/394) [#390](https://github.com/iblai/os/issues/390) [#367](https://github.com/iblai/os/issues/367)
+- **ci:** stagger the dispatch so N waiters do not collide ([aef9cc3](https://github.com/iblai/os/commit/aef9cc3d063402622ce1cc0595b887769046c881))
+
 ## [0.108.6](https://github.com/iblai/os/compare/v0.108.5...v0.108.6) (2026-07-30)
 
 ### Bug Fixes
 
-* **ci:** push PR images to ECR instead of OCIR ([a149ca7](https://github.com/iblai/os/commit/a149ca7b8a2dbae76cc14968b1193b5bbe47dc5c))
+- **ci:** push PR images to ECR instead of OCIR ([a149ca7](https://github.com/iblai/os/commit/a149ca7b8a2dbae76cc14968b1193b5bbe47dc5c))
 
 ## [0.108.5](https://github.com/iblai/os/compare/v0.108.4...v0.108.5) (2026-07-30)
 
 ### Bug Fixes
 
-* **ci:** hide .app suffix in macOS DMG Finder label ([0e21ade](https://github.com/iblai/os/commit/0e21adeb716b9b6c8e07fdcc6de3a378b8881590))
-* **deps:** keep brace-expansion patched at 5.0.8, bump coverage minimatch to v10 ([ba189b3](https://github.com/iblai/os/commit/ba189b34f479e68b8c2aaef3716e0a9f9ce14b2b))
-* **deps:** scope brace-expansion override per minimatch major ([604c845](https://github.com/iblai/os/commit/604c8452065a3ef53cc942f9fde4d805fd721176))
-* **iframe:** read DOCUMENTFILTER and EDX payloads from event.data ([215f180](https://github.com/iblai/os/commit/215f18045c60d3bf289ed6b9c1e94c8399cbf107))
-* **iframe:** read ENABLE_GRADING boolean from event.data ([b249316](https://github.com/iblai/os/commit/b249316609a7ac95062af87d63ed554ed56e9e44))
+- **ci:** hide .app suffix in macOS DMG Finder label ([0e21ade](https://github.com/iblai/os/commit/0e21adeb716b9b6c8e07fdcc6de3a378b8881590))
+- **deps:** keep brace-expansion patched at 5.0.8, bump coverage minimatch to v10 ([ba189b3](https://github.com/iblai/os/commit/ba189b34f479e68b8c2aaef3716e0a9f9ce14b2b))
+- **deps:** scope brace-expansion override per minimatch major ([604c845](https://github.com/iblai/os/commit/604c8452065a3ef53cc942f9fde4d805fd721176))
+- **iframe:** read DOCUMENTFILTER and EDX payloads from event.data ([215f180](https://github.com/iblai/os/commit/215f18045c60d3bf289ed6b9c1e94c8399cbf107))
+- **iframe:** read ENABLE_GRADING boolean from event.data ([b249316](https://github.com/iblai/os/commit/b249316609a7ac95062af87d63ed554ed56e9e44))
 
 ## [0.108.4](https://github.com/iblai/os/compare/v0.108.3...v0.108.4) (2026-07-29)
 
 ### Bug Fixes
 
-* **ci:** a skipped e2e is not a failure ([1273923](https://github.com/iblai/os/commit/12739234cd58fd7a2c6bf84b9dbe90188c4b6330))
-* **ci:** queue guard must tell an offline runner from a busy one ([271c105](https://github.com/iblai/os/commit/271c1055734be2b6d1cb93f0eb520d776ace0e03)), closes [os#390](https://github.com/iblai/os/issues/390)
+- **ci:** a skipped e2e is not a failure ([1273923](https://github.com/iblai/os/commit/12739234cd58fd7a2c6bf84b9dbe90188c4b6330))
+- **ci:** queue guard must tell an offline runner from a busy one ([271c105](https://github.com/iblai/os/commit/271c1055734be2b6d1cb93f0eb520d776ace0e03)), closes [os#390](https://github.com/iblai/os/issues/390)
 
 ## [0.108.3](https://github.com/iblai/os/compare/v0.108.2...v0.108.3) (2026-07-29)
 
 ### Bug Fixes
 
-* **ci:** run the e2e gate on a hosted runner ([5458cef](https://github.com/iblai/os/commit/5458ceff61b8fcf90fb47e8cc81c387e69372b79))
+- **ci:** run the e2e gate on a hosted runner ([5458cef](https://github.com/iblai/os/commit/5458ceff61b8fcf90fb47e8cc81c387e69372b79))
 
 ## [0.108.2](https://github.com/iblai/os/compare/v0.108.1...v0.108.2) (2026-07-29)
 
 ### Bug Fixes
 
-* **ci:** pin PR e2e to stg1 and fail fast when the runner is offline ([c1b7fa6](https://github.com/iblai/os/commit/c1b7fa6e8dd4dfea3128d1f1030e1a7b50d9cf2f)), closes [os#361](https://github.com/iblai/os/issues/361)
+- **ci:** pin PR e2e to stg1 and fail fast when the runner is offline ([c1b7fa6](https://github.com/iblai/os/commit/c1b7fa6e8dd4dfea3128d1f1030e1a7b50d9cf2f)), closes [os#361](https://github.com/iblai/os/issues/361)
 
 ## [0.108.1](https://github.com/iblai/os/compare/v0.108.0...v0.108.1) (2026-07-29)
 
 ### Bug Fixes
 
-* remove double 'MENTOR:ENABLE_GRADING' in handlers ([c7e36ef](https://github.com/iblai/os/commit/c7e36efadc2787935dbb5c2929eb7afad6b32e05))
+- remove double 'MENTOR:ENABLE_GRADING' in handlers ([c7e36ef](https://github.com/iblai/os/commit/c7e36efadc2787935dbb5c2929eb7afad6b32e05))
 
 ## [0.108.0](https://github.com/iblai/os/compare/v0.107.0...v0.108.0) (2026-07-29)
 

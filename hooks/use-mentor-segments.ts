@@ -14,6 +14,7 @@ import {
   Clock,
   Grid,
   ClipboardCheck,
+  Headset,
   FlaskConical,
   GraduationCap,
   Key,
@@ -33,7 +34,6 @@ import { MentorVisibilityEnum } from '@iblai/iblai-api';
 import {
   useGetMentorSettingsQuery,
   useGetMemsearchStatusQuery,
-  useGetClawMentorConfigQuery,
 } from '@iblai/iblai-js/data-layer';
 
 import { MODALS, UserType } from '@/lib/constants';
@@ -56,8 +56,6 @@ import { config } from '@/lib/config';
 export type MentorSegmentConfigFlags = {
   isMemsearchEnabled: boolean;
   isClawEnabled: boolean;
-  /** True when a ClawMentorConfig exists for this mentor (sandbox wired to an instance). */
-  clawConfigExists: boolean;
   isMemoryComponentEnabled: boolean;
   /** True when `enable_privacy_router` is on for this mentor. */
   isPrivacyEnabled: boolean;
@@ -424,6 +422,23 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     navCategory: 'runtime',
   },
   {
+    value: MODALS.EDIT_MENTOR.tabs.human_support,
+    label: 'Support',
+    labelKey: 'support',
+    icon: Headset,
+    // Admin-only ticket inbox (view / reply / close support requests).
+    // No `rbacResource` yet — the backend doesn't expose one for support
+    // tickets, so the userTypes filter alone gates visibility (mirroring
+    // Tasks / Sandbox / Access).
+    userTypes: [UserType.ADMIN],
+    permissionFieldsCheck: [],
+    mentorVisibility: [
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+    ],
+    navCategory: 'runtime',
+  },
+  {
     value: MODALS.EDIT_MENTOR.tabs.audit_log,
     label: 'Audit',
     labelKey: 'audit',
@@ -655,21 +670,11 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
   // @ts-expect-error enable_claw is not yet in the MentorSettingsPublic type
   const isClawEnabled: boolean = mentorSettings?.enable_claw ?? false;
 
-  // The claw-config endpoint is keyed by the mentor's UUID. Use the value from
-  // mentor settings; fall back to the resolved id (which may already be a UUID
-  // when navigating directly).
-  const mentorUuid: string | undefined =
-    mentorSettings?.mentor_unique_id ?? resolvedMentorId;
-
-  // The data-layer normalises 404 → null, so a non-null result means the
-  // mentor has a wired ClawMentorConfig (sandbox connected to an instance).
-  // Skip the query until we know claw is enabled — there's no point fetching
-  // the config when we'd never gate on it.
-  const { data: clawMentorConfig } = useGetClawMentorConfigQuery(
-    { org: tenantKey!, mentorUniqueId: mentorUuid! },
-    { skip: !isClawEnabled || !tenantKey || !mentorUuid },
-  );
-  const clawConfigExists = !!clawMentorConfig;
+  // NOTE: no claw-config fetch here. The Sandbox and Skills tabs are always
+  // visible, so nothing in the segment filter needs to know whether a
+  // ClawMentorConfig is wired. The tabs that do care fetch it themselves when
+  // they mount (Sandbox via <SandboxConfig/>, Prompts via its own query) —
+  // fetching it here would fire on every page through the NavBar.
 
   const isMemoryComponentEnabled =
     // @ts-ignore - enable_memory_component exists on API but not typed
@@ -710,7 +715,6 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
         isMemsearchEnabled,
         isMemoryComponentEnabled,
         isClawEnabled,
-        clawConfigExists,
         isPrivacyEnabled,
         isScreenshareEnabled,
         isVoiceCallEnabled,
@@ -725,7 +729,6 @@ export function useMentorSegments(options: UseMentorSegmentsOptions = {}) {
       userType,
       isMemsearchEnabled,
       isClawEnabled,
-      clawConfigExists,
       isMemoryComponentEnabled,
       isPrivacyEnabled,
       isScreenshareEnabled,

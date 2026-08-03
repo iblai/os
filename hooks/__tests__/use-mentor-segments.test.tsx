@@ -20,7 +20,11 @@ import { EDIT_MENTOR_TAB_COMPONENTS } from '@/components/modals/edit-mentor-moda
 
 const mockMentorSettings = vi.fn();
 const mockMemsearchEnabled = vi.fn();
-const mockClawMentorConfig = vi.fn();
+// Call-tracking guard: the segments hook must NOT fetch the claw-config —
+// Sandbox/Skills are always visible, and fetching here would fire on every
+// page through the NavBar. Only the Sandbox/Prompts tab contents (mounted on
+// demand) may query it.
+const mockUseGetClawMentorConfigQuery = vi.fn(() => ({ data: null }));
 const mockGetMentorId = vi.fn();
 const mockTenantKey = vi.fn();
 const mockMentorIdParam = vi.fn();
@@ -46,7 +50,8 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetMemsearchStatusQuery: () => ({
     data: { enable_memsearch: mockMemsearchEnabled() },
   }),
-  useGetClawMentorConfigQuery: () => ({ data: mockClawMentorConfig() }),
+  useGetClawMentorConfigQuery: (...args: unknown[]) =>
+    mockUseGetClawMentorConfigQuery(...(args as [])),
 }));
 
 vi.mock('@/hooks/use-user', () => ({
@@ -105,6 +110,7 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
 vi.mock('@iblai/iblai-js/web-containers/next', () => ({
   AgentPrivacyTab: () => null,
   AgentTasksTab: () => null,
+  AgentHumanSupportTab: () => null,
   AgentSettingsProvider: () => null,
 }));
 
@@ -124,10 +130,7 @@ const setupDefaults = () => {
   );
   mockUserType.mockReturnValue(UserType.ADMIN);
   mockMemsearchEnabled.mockReturnValue(true);
-  // Default: a wired claw-config exists, so Skills tab gating only depends on
-  // isClawEnabled in most existing tests. Tests that need the unwired state
-  // override this in their own arrangement.
-  mockClawMentorConfig.mockReturnValue({ id: 1, enabled: true, server: 7 });
+  mockUseGetClawMentorConfigQuery.mockClear();
   mockMentorSettings.mockReturnValue({
     platform_key: 'custom-tenant',
     mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
@@ -151,8 +154,8 @@ describe('useMentorSegments', () => {
     const { result } = renderHook(() => useMentorSegments());
     expect(result.current.segments).toBe(MENTOR_SEGMENTS);
     // 17 original + Voice + Screen Share (feat/mentor/1763) + Tasks
-    // (feat/mentor/715) + LTI + Analytics hub (feat/2040) + Grader
-    // (feat/2272).
+    // (feat/mentor/715) + LTI + Analytics hub (feat/2040) + Human Support + Grader
+    // (feat/2081) + Evals (feat/1178).
     expect(MENTOR_SEGMENTS).toHaveLength(24);
   });
 
@@ -623,20 +626,8 @@ describe('useMentorSegments', () => {
       enable_claw: true,
     };
 
-    it('shows both Sandbox and Skills when claw is enabled but no config wired', () => {
+    it('shows both Sandbox and Skills when claw is enabled', () => {
       mockMentorSettings.mockReturnValue(adminClawEnabledSettings);
-      mockClawMentorConfig.mockReturnValue(null); // 404 → null
-
-      const { result } = renderHook(() => useMentorSegments());
-      const labels = result.current.filteredSegments.map((s) => s.label);
-
-      expect(labels).toContain('Sandbox');
-      expect(labels).toContain('Skills');
-    });
-
-    it('shows both Sandbox and Skills when claw is enabled AND a config is wired', () => {
-      mockMentorSettings.mockReturnValue(adminClawEnabledSettings);
-      mockClawMentorConfig.mockReturnValue({ id: 1, enabled: true, server: 7 });
 
       const { result } = renderHook(() => useMentorSegments());
       const labels = result.current.filteredSegments.map((s) => s.label);
@@ -650,13 +641,23 @@ describe('useMentorSegments', () => {
         ...adminClawEnabledSettings,
         enable_claw: false,
       });
-      mockClawMentorConfig.mockReturnValue(null);
 
       const { result } = renderHook(() => useMentorSegments());
       const labels = result.current.filteredSegments.map((s) => s.label);
 
       expect(labels).toContain('Skills');
       expect(labels).toContain('Sandbox');
+    });
+
+    it('never fetches the claw-config, even when claw is enabled', () => {
+      // The hook runs on every page via the NavBar; visibility no longer
+      // depends on a wired ClawMentorConfig, so the query must not fire here.
+      // The Sandbox/Prompts tabs fetch it themselves when they mount.
+      mockMentorSettings.mockReturnValue(adminClawEnabledSettings);
+
+      renderHook(() => useMentorSegments());
+
+      expect(mockUseGetClawMentorConfigQuery).not.toHaveBeenCalled();
     });
   });
 });

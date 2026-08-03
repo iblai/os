@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import * as React from 'react';
-import { ChevronDown, ChevronRight, MessageSquare } from 'lucide-react';
+import { ChevronDown, ChevronRight, MessageSquare, Pin } from 'lucide-react';
 
 import { useAppSelector } from '@/lib/hooks';
 import { selectSessionId, useTenantMetadata } from '@iblai/iblai-js/web-utils';
@@ -125,32 +125,31 @@ export function SidebarChatsSection({
             {t('chats')}
           </span>
           <div className="scrollbar-thin min-h-0 overflow-y-auto pr-1">
-            {pinned.length > 0 && (
-              <>
-                <p className="px-1 pb-1 text-[10px] font-semibold tracking-wider text-[#9ca3af] uppercase">
-                  {t('pinned')}
-                </p>
-                {pinned.map((row) => (
-                  <button
-                    key={`flyout-pinned-${row.session_id}`}
-                    type="button"
-                    onClick={() => handleSelectRow(row)}
-                    className="block w-full truncate rounded-md px-1.5 py-1.5 text-left text-[14px] leading-snug font-medium transition-colors hover:bg-[#f4f4f4]"
-                    style={{ color: FLYOUT_ITEM_COLOR }}
-                  >
-                    {chatRowLabel(row, t('noContent'))}
-                  </button>
-                ))}
-              </>
-            )}
-            <p
-              className={cn(
-                'px-1 pb-1 text-[10px] font-semibold tracking-wider text-[#9ca3af] uppercase',
-                pinned.length > 0 && 'pt-2',
-              )}
-            >
-              {t('recent')}
-            </p>
+            {pinned.map((row) => (
+              <button
+                key={`flyout-pinned-${row.session_id}`}
+                type="button"
+                onClick={() => handleSelectRow(row)}
+                className="flex w-full items-center gap-2 rounded-md px-1.5 py-1.5 text-left text-[14px] leading-snug font-medium transition-colors hover:bg-[#f4f4f4]"
+                style={{ color: FLYOUT_ITEM_COLOR }}
+              >
+                <span className="sr-only">{t('pinned')}</span>
+                <span className="min-w-0 flex-1 truncate">
+                  {chatRowLabel(row, t('noContent'))}
+                </span>
+                {/* The flyout has no row menu to make way for, so the pin
+                    simply stays — in the same trailing slot the expanded
+                    list keeps it in. */}
+                <Pin
+                  className="size-3.5 shrink-0 text-[#9ca3af]"
+                  strokeWidth={1.75}
+                  aria-hidden
+                />
+              </button>
+            ))}
+            {/* Pinned first, then recent, and no headings over either: the
+                panel is already called Recents, and a pin on the row says
+                more than a caps label over a group does. */}
             {recent.length > 0 ? (
               recent.map((row) => (
                 <button
@@ -205,29 +204,28 @@ export function SidebarChatsSection({
       <CollapsibleContent className="overflow-hidden">
         <div className="mt-0.5 mr-1 ml-1.5 border-l-2 border-[#e2e8f0] pb-0.5 pl-2.5">
           {pinned.length > 0 && (
-            <>
-              <p className="px-2 pt-1 pb-0.5 text-[10px] font-semibold tracking-wider text-[#9ca3af] uppercase">
-                {t('pinned')}
-              </p>
-              <ul className="flex flex-col gap-0.5" role="list">
-                {pinned.map((row) => (
-                  <li key={`pinned-${row.session_id}`}>
-                    {renderRow(row, 'pinned')}
-                  </li>
-                ))}
-              </ul>
-            </>
+            <ul
+              className="flex flex-col gap-0.5"
+              role="list"
+              data-testid="pinned-chats-list"
+            >
+              {pinned.map((row) => (
+                <li key={`pinned-${row.session_id}`}>
+                  {renderRow(row, 'pinned')}
+                </li>
+              ))}
+            </ul>
           )}
-          <p
-            className={cn(
-              'px-2 pt-1 pb-0.5 text-[10px] font-semibold tracking-wider text-[#9ca3af] uppercase',
-              pinned.length > 0 && 'mt-1',
-            )}
-          >
-            {t('recent')}
-          </p>
+          {/* Neither group is headed any more: pinned rows sort to the top
+              and say so with a pin on the row. The lists carry testids
+              instead, because the headings used to be what the e2e page
+              object located them by. */}
           {recent.length > 0 ? (
-            <ul className="flex flex-col gap-0.5" role="list">
+            <ul
+              className="flex flex-col gap-0.5"
+              role="list"
+              data-testid="recent-chats-list"
+            >
               {recent.map((row) => (
                 <li key={`recent-${row.session_id}`}>
                   {renderRow(row, 'recent')}

@@ -3293,6 +3293,7 @@ describe('Chat', () => {
         enableSafetyDisclaimer: false,
         isPending: false,
         isLoadingChats: false,
+        refetchChats: vi.fn(),
       });
 
       renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
@@ -3309,6 +3310,46 @@ describe('Chat', () => {
 
       await waitFor(() => {
         expect(screen.queryByTestId('live-kit-chat')).not.toBeInTheDocument();
+      });
+    });
+
+    it('should refetch chats when the voice call modal is closed', async () => {
+      const mockRefetchChats = vi.fn();
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      (useAdvancedChat as any).mockReturnValue({
+        changeTab: vi.fn(),
+        activeTab: 'chat',
+        currentStreamingMessage: null,
+        enabledGuidedPrompts: [],
+        isStreaming: false,
+        mentorName: 'Test Mentor',
+        messages: [],
+        profileImage: '/avatar.png',
+        sendMessage: vi.fn(),
+        setMessage: vi.fn(),
+        stopGenerating: vi.fn(),
+        uniqueMentorId: 'unique-mentor-123',
+        sessionId: 'session-123',
+        startNewChat: vi.fn(),
+        enableSafetyDisclaimer: false,
+        isPending: false,
+        isLoadingChats: false,
+        refetchChats: mockRefetchChats,
+      });
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      fireEvent.click(screen.getByTestId('phone-call-btn'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('live-kit-chat')).toBeInTheDocument();
+      });
+
+      mockRefetchChats.mockClear();
+      fireEvent.click(screen.getByText('Close'));
+
+      await waitFor(() => {
+        expect(mockRefetchChats).toHaveBeenCalled();
       });
     });
 
@@ -19335,6 +19376,38 @@ describe('Chat', () => {
 
       const wrapper = getWrapper(container);
       expect(wrapper).not.toHaveClass('overflow-y-auto');
+      // Never a second scroll container in advanced mode — the advanced panel
+      // owns scrolling — but it still needs the gutter for alignment.
+      expect(wrapper).toHaveClass('overflow-y-hidden');
+    });
+
+    // Issue #2260 — the chat input container carries [scrollbar-gutter:stable]
+    // and reserves 15px, so mx-auto centres it inside a narrower box. Without
+    // a matching gutter here the welcome message sat ~8px right of the input.
+    it.each([
+      ['default', false],
+      ['compact', true],
+    ])(
+      'reserves the same scrollbar gutter as the chat input (%s)',
+      async (_label, compact) => {
+        await setCompact(compact);
+
+        const { container } = renderWithRedux(
+          <Chat mode="default" isPreviewMode={false} />,
+        );
+
+        expect(getWrapper(container)).toHaveClass('[scrollbar-gutter:stable]');
+      },
+    );
+
+    it('reserves the scrollbar gutter in advanced mode too', async () => {
+      await setCompact(false);
+
+      const { container } = renderWithRedux(
+        <Chat mode="advanced" isPreviewMode={false} />,
+      );
+
+      expect(getWrapper(container)).toHaveClass('[scrollbar-gutter:stable]');
     });
   });
 

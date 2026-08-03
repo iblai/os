@@ -33,6 +33,7 @@ import {
   AuditLogTab,
   VoiceTab,
   ScreenShareTab,
+  HumanSupportTab,
   LtiTab,
   AnalyticsTab,
 } from './tabs';
@@ -80,6 +81,7 @@ export const EDIT_MENTOR_TAB_COMPONENTS: Record<string, ReactNode> = {
   [MODALS.EDIT_MENTOR.tabs.mcp]: <McpTab />,
   [MODALS.EDIT_MENTOR.tabs.memory]: <MemoryTab />,
   [MODALS.EDIT_MENTOR.tabs.history]: <HistoryTab />,
+  [MODALS.EDIT_MENTOR.tabs.human_support]: <HumanSupportTab />,
   [MODALS.EDIT_MENTOR.tabs.audit_log]: <AuditLogTab />,
   [MODALS.EDIT_MENTOR.tabs.datasets]: <DatasetsTab />,
   [MODALS.EDIT_MENTOR.tabs.evaluation]: <EvaluationTab />,

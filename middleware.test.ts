@@ -113,6 +113,17 @@ describe('CSP middleware', () => {
     expect(cspOf(middleware(req()))).toContain('https://api.example.com');
   });
 
+  it('allows S3 presigned media hosts in connect-src (chat file uploads)', () => {
+    const csp = cspOf(middleware(req())) ?? '';
+    const connectSrc = csp
+      .split(';')
+      .map((d) => d.trim())
+      .find((d) => d.startsWith('connect-src '));
+    // <bucket>.s3.amazonaws.com must match the wildcard so uploads/downloads
+    // to iblai-app-dm-media etc. are not blocked.
+    expect(connectSrc).toContain('https://*.s3.amazonaws.com');
+  });
+
   it('does not duplicate an ibl-domain API base (already wildcarded)', () => {
     vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', 'https://api.iblai.app');
     const csp = cspOf(middleware(req())) ?? '';
