@@ -36,18 +36,17 @@ import { GraderTab } from '../page-objects/edit-mentor/grader.tab';
  * there as such.
  *
  * ── RBAC ────────────────────────────────────────────────────────────────
- * The SDK's `useGrader` is RBAC-aware (it checks path-style resources
- * `/mentors/{id}/graderconfigurations/#read|action|write` and
- * `/mentors/{id}/gradercriteria/#action|write|delete`), but the backend
- * does not expose those grader permissions yet, so the host currently
- * DISABLES the in-tab checks (`<AgentGraderTab enableRBAC={false} />` in
- * `components/modals/edit-mentor-modal/tabs/grader-tab.tsx`) and gates the
- * whole tab to platform admins via the segment's `userTypes` instead
+ * The backend does not expose the grader RBAC permissions yet
+ * (`/mentors/{id}/graderconfigurations/#read|action|write`,
+ * `/mentors/{id}/gradercriteria/#action|write|delete`), so the published
+ * SDK build ships the grader tab without RBAC wiring (its RBAC props were
+ * removed until the permissions land) and the host gates the whole tab to
+ * platform admins via the segment's `userTypes` instead
  * (`hooks/use-mentor-segments.ts`, mirroring Tasks / LTI). When the backend
- * permissions land, the host will re-enable RBAC and gate the segment on
- * `graderconfigurations/#read` — see GRD-13 for what becomes testable then.
- * No checkpoint here drives a denied-permission state, since there's no
- * fixture in this environment to seed one.
+ * permissions land, the SDK re-adds its in-tab checks and the host gates
+ * the segment on `graderconfigurations/#read` — see GRD-13 for what
+ * becomes testable then. No checkpoint here drives a denied-permission
+ * state, since there's no fixture in this environment to seed one.
  *
  * ── Isolation strategy ─────────────────────────────────────────────────────
  * Unlike Privacy (journey 45), which safely shares the account's
@@ -478,18 +477,19 @@ test.describe('Journey 66: Mentor Grader Tab — Non-Admin', () => {
 });
 
 // GRD-13 (documentation checkpoint, not-reproducible in this environment):
-// `useGrader`'s fine-grained RBAC gating — denied `graderconfigurations/#read`
-// renders the tab's own denied empty state; denied `write`/`action`/`delete`
-// on the config or criteria resources omits the Save/Add/Edit/Delete
-// affordances rather than erroring (conditionally rendered, not merely
-// disabled). The backend does not expose the grader permissions yet, so the
-// host currently forces `enableRBAC={false}` on the tab and gates the
-// segment to admins via `userTypes` instead — the RBAC paths are therefore
-// doubly unreachable today: no backend permissions to seed AND the checks
-// are disabled host-side. When the permissions land (host re-enables RBAC
-// and gates the segment on `graderconfigurations/#read`), exercising them
-// will still require a fixture that seeds a restricted RBAC permission
-// object for the e2e admin account, which this environment lacks
-// (consistent with every other RBAC-gated tab in this suite, e.g. journey
-// 24's mem-06, journey 6's mgmt-12/13/14). See `e2e/coverage.json`'s
-// `grd-13` entry (status: not-reproducible) for the tracked record.
+// the grader tab's fine-grained RBAC gating — denied
+// `graderconfigurations/#read` renders the tab's own denied empty state;
+// denied `write`/`action`/`delete` on the config or criteria resources
+// omits the Save/Add/Edit/Delete affordances rather than erroring
+// (conditionally rendered, not merely disabled). The backend does not
+// expose the grader permissions yet, so the published SDK build ships the
+// tab without RBAC wiring and the host gates the segment to admins via
+// `userTypes` instead — the RBAC paths are therefore doubly unreachable
+// today: no backend permissions to seed AND no checks wired in this build.
+// When the permissions land (SDK re-adds its checks, host gates the
+// segment on `graderconfigurations/#read`), exercising them will still
+// require a fixture that seeds a restricted RBAC permission object for the
+// e2e admin account, which this environment lacks (consistent with every
+// other RBAC-gated tab in this suite, e.g. journey 24's mem-06, journey
+// 6's mgmt-12/13/14). See `e2e/coverage.json`'s `grd-13` entry
+// (status: not-reproducible) for the tracked record.

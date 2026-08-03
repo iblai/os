@@ -53,20 +53,19 @@ import {
  * `grader-criterion-delete-confirm`).
  *
  * ── RBAC ────────────────────────────────────────────────────────────────
- * `useGrader` checks path-style resources
+ * The backend does not expose the grader RBAC permissions yet
  * (`/mentors/{mentorDbId}/graderconfigurations/#read|action|write`,
- * `/mentors/{mentorDbId}/gradercriteria/#action|write|delete`): a denied
- * config `read` renders the same `grader-tab-denied` empty state as a
- * server 403 (`isForbidden`); denied `write`/`action`/`delete` on the
- * others simply omit the Save / Add / Edit / Delete affordances entirely
- * (conditionally rendered, not just disabled) rather than erroring. The
- * backend does not expose these grader permissions yet, though, so the host
- * currently forces `enableRBAC={false}` on the tab (all checks pass
- * through) and gates the top-level Grader segment to platform admins via
+ * `/mentors/{mentorDbId}/gradercriteria/#action|write|delete`), so the
+ * published SDK build ships the grader tab without RBAC wiring and the
+ * host gates the top-level Grader segment to platform admins via
  * `userTypes: [ADMIN]` instead (`hooks/use-mentor-segments.ts`, mirroring
- * Tasks / LTI). None of this journey's checkpoints exercise the denied
- * paths — see the `not-reproducible` checkpoint in
- * `66-mentor-grader-tab.spec.ts` for why.
+ * Tasks / LTI). A server 403 on config `read` still renders the
+ * `grader-tab-denied` empty state (`isForbidden`). When the permissions
+ * land, denied `read` renders that same denied state and denied
+ * `write`/`action`/`delete` omit the Save / Add / Edit / Delete
+ * affordances entirely (conditionally rendered, not just disabled). None
+ * of this journey's checkpoints exercise the denied paths — see the
+ * `not-reproducible` checkpoint in `66-mentor-grader-tab.spec.ts` for why.
  *
  * ── Capability toggle ──────────────────────────────────────────────────────
  * The "Grading" master switch (`grader-capability-toggle`) lives inline at
@@ -144,7 +143,7 @@ export class GraderTab {
   readonly capabilityOffHint: Locator;
   /** Spinner shown while mentor settings are still loading — no dedicated helper export. */
   readonly loadingSpinner: Locator;
-  /** Friendly denied empty state (server 403 on config `read`; also a denied `graderconfigurations/#read` once host-side RBAC is re-enabled) — no dedicated helper export. */
+  /** Friendly denied empty state (server 403 on config `read`; also a denied `graderconfigurations/#read` once grader RBAC is wired) — no dedicated helper export. */
   readonly deniedState: Locator;
   /** "Grading is on but ..." warning banner — presence is covered by `expectMisconfiguredWarning`; kept for reading its exact wording. */
   readonly misconfiguredWarning: Locator;

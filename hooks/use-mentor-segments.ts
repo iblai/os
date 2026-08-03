@@ -278,9 +278,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     // set — the userTypes filter alone gates visibility (mirroring Tasks /
     // LTI). Once the permissions land, re-add
     // `rbacResource: (id) => `/mentors/${id}/graderconfigurations/#read``
-    // (the SDK's AgentGraderTab expects the host to hide the tab entirely
-    // when config read is denied) and stop forcing `enableRBAC={false}` in
-    // the GraderTab wrapper.
+    // and add the two grader resources to the EditMentorModal RBAC fetch.
     userTypes: [UserType.ADMIN],
     permissionFieldsCheck: [],
     mentorVisibility: [

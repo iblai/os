@@ -1,10 +1,12 @@
 'use client';
 
 import { useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
 import {
   AgentGraderTab,
   AgentSettingsProvider,
+  type GraderTabLabels,
 } from '@iblai/iblai-js/web-containers/next';
 
 import { useGetMentorSettingsQuery } from '@iblai/iblai-js/data-layer';
@@ -17,6 +19,7 @@ import { config } from '@/lib/config';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 
 export function GraderTab() {
+  const t = useTranslations('tabsGraderTab');
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
   const { getMentorId } = useNavigate();
   const username = useUsername();
@@ -43,6 +46,124 @@ export function GraderTab() {
 
   if (!tenantKey || !activeMentorId || !username) return null;
 
+  // Map the SDK's grader label contract onto the app's next-intl bundles so
+  // all four locales stay in the monolith's messages files (mirrors the
+  // SettingsTab wrapper). `t.raw` is used for the strings the SDK
+  // interpolates itself ({total}) — plain `t()` would treat the braces as
+  // ICU arguments and fail without values.
+  const labels: GraderTabLabels = {
+    header: {
+      title: t('headerTitle'),
+      description: t('headerDescription'),
+    },
+    capability: {
+      title: t('capabilityTitle'),
+      description: t('capabilityDescription'),
+      offHint: t('capabilityOffHint'),
+    },
+    subTabs: {
+      setup: t('subTabSetup'),
+      rubric: t('subTabRubric'),
+    },
+    denied: {
+      title: t('deniedTitle'),
+      description: t('deniedDescription'),
+    },
+    warnings: {
+      noConfig: t('warningNoConfig'),
+      noCriteria: t('warningNoCriteria'),
+    },
+    config: {
+      sectionTitle: t('configSectionTitle'),
+      gradingMode: {
+        label: t('gradingModeLabel'),
+        options: {
+          submission: t('gradingModeOptionSubmission'),
+          conversation: t('gradingModeOptionConversation'),
+        },
+        help: {
+          submission: t('gradingModeHelpSubmission'),
+          conversation: t('gradingModeHelpConversation'),
+        },
+      },
+      feedbackMode: {
+        label: t('feedbackModeLabel'),
+        options: {
+          overall: t('feedbackModeOptionOverall'),
+          perCriteria: t('feedbackModeOptionPerCriteria'),
+          both: t('feedbackModeOptionBoth'),
+        },
+        help: t('feedbackModeHelp'),
+      },
+      instructions: {
+        label: t('instructionsLabel'),
+        placeholder: t('instructionsPlaceholder'),
+        help: t('instructionsHelp'),
+      },
+      saveButton: t('configSaveButton'),
+      savingButton: t('configSavingButton'),
+    },
+    criteria: {
+      sectionTitle: t('criteriaSectionTitle'),
+      description: t('criteriaDescription'),
+      needsConfigHint: t('criteriaNeedsConfigHint'),
+      emptyState: t('criteriaEmptyState'),
+      addButton: t('criteriaAddButton'),
+      columns: {
+        name: t('criteriaColumnName'),
+        criteria: t('criteriaColumnCriteria'),
+        points: t('criteriaColumnPoints'),
+      },
+      actionsAria: (name: string) => t('criteriaActionsAria', { name }),
+      edit: t('criteriaEdit'),
+      delete: t('criteriaDelete'),
+      totalPoints: t.raw('criteriaTotalPoints'),
+      scoreHint: t.raw('criteriaScoreHint'),
+      lastCriterionHint: t('criteriaLastCriterionHint'),
+      modal: {
+        addTitle: t('criterionModalAddTitle'),
+        editTitle: t('criterionModalEditTitle'),
+        name: {
+          label: t('criterionModalNameLabel'),
+          placeholder: t('criterionModalNamePlaceholder'),
+          required: t('criterionModalNameRequired'),
+        },
+        criteria: {
+          label: t('criterionModalCriteriaLabel'),
+          placeholder: t('criterionModalCriteriaPlaceholder'),
+          required: t('criterionModalCriteriaRequired'),
+        },
+        points: {
+          label: t('criterionModalPointsLabel'),
+          placeholder: t('criterionModalPointsPlaceholder'),
+          positive: t('criterionModalPointsPositive'),
+        },
+        save: t('criterionModalSave'),
+        saving: t('criterionModalSaving'),
+        cancel: t('criterionModalCancel'),
+      },
+      deleteModal: {
+        title: t('deleteModalTitle'),
+        confirmationPrefix: t('deleteModalConfirmationPrefix'),
+        confirmationSuffix: t('deleteModalConfirmationSuffix'),
+        cancel: t('deleteModalCancel'),
+        delete: t('deleteModalDelete'),
+        deleting: t('deleteModalDeleting'),
+      },
+    },
+    toasts: {
+      toggleOn: t('toastToggleOn'),
+      toggleOff: t('toastToggleOff'),
+      toggleError: t('toastToggleError'),
+      configSaved: t('toastConfigSaved'),
+      configError: t('toastConfigError'),
+      criterionAdded: t('toastCriterionAdded'),
+      criterionUpdated: t('toastCriterionUpdated'),
+      criterionDeleted: t('toastCriterionDeleted'),
+      criterionError: t('toastCriterionError'),
+    },
+  };
+
   return (
     <AgentSettingsProvider
       tenantKey={tenantKey}
@@ -52,17 +173,7 @@ export function GraderTab() {
       rbacPermissions={rbacPermissions}
       executeGatedAction={executeWithTrialCheck}
     >
-      {/*
-       * The backend does not expose the grader RBAC resources yet
-       * (graderconfigurations / gradercriteria), so the permission tree has
-       * no entries for them and the SDK's in-tab checks would read every
-       * absence as a denial — hiding all affordances and rendering the
-       * denied state for everyone. Force the checks off until the
-       * permissions land; the tab itself is admin-only via its segment
-       * (see hooks/use-mentor-segments.ts), and a server 403 still renders
-       * the SDK's graceful denied state independent of this flag.
-       */}
-      <AgentGraderTab enableRBAC={false} />
+      <AgentGraderTab labels={labels} />
     </AgentSettingsProvider>
   );
 }

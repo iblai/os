@@ -3867,7 +3867,7 @@
         },
         {
           "id": "grd-13",
-          "description": "useGrader's fine-grained RBAC gating (denied graderconfigurations/#read renders the denied state; denied write/action/delete on config or criteria resources omits the Save/Add/Edit/Delete affordances) — currently doubly unreachable: the backend does not expose the grader permissions yet, so the host forces enableRBAC={false} on the tab and gates the segment to admins via userTypes instead. When the permissions land, exercising this will still need a fixture seeding a restricted RBAC permission object for the e2e admin, which this environment has no fixture for",
+          "description": "The grader tab's fine-grained RBAC gating (denied graderconfigurations/#read renders the denied state; denied write/action/delete on config or criteria resources omits the Save/Add/Edit/Delete affordances) — currently doubly unreachable: the backend does not expose the grader permissions yet and the SDK build ships the tab without RBAC wiring, with the host gating the segment to admins via userTypes instead. When the permissions land, exercising this will still need a fixture seeding a restricted RBAC permission object for the e2e admin, which this environment has no fixture for",
           "status": "not-reproducible"
         }
       ]

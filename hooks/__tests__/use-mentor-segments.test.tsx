@@ -156,7 +156,7 @@ describe('useMentorSegments', () => {
     // 17 original + Voice + Screen Share (feat/mentor/1763) + Tasks
     // (feat/mentor/715) + LTI + Analytics hub (feat/2040) + Human Support + Grader
     // (feat/2081) + Evals (feat/1178).
-    expect(MENTOR_SEGMENTS).toHaveLength(24);
+    expect(MENTOR_SEGMENTS).toHaveLength(25);
   });
 
   it('places the Sandbox segment right after Settings', () => {
