@@ -72,7 +72,9 @@ export function ToolCallIndicator({
         )}
       </CollapsibleTrigger>
       <CollapsibleContent className="pb-2 pl-4">
-        <div className="space-y-2.5 border-l-2 border-gray-300 pt-3 pl-3 text-xs leading-relaxed text-gray-600">
+        {/* `pt-2.5` matches `space-y-2.5` so the first tool sits the same
+            distance from the header as the gap between consecutive tools. */}
+        <div className="space-y-2.5 border-l-2 border-gray-300 pt-2.5 pl-3 text-xs leading-relaxed text-gray-600">
           {toolCalls.map((toolCall, index) => {
             const query = getQueryLabel(toolCall);
             const Icon = getToolIcon(toolCall?.name);
