@@ -163,8 +163,10 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
       timeout: 5_000,
     });
 
-    // Expanded content shows the query detail (extracted from tool input)
-    const toolContent = lastAIMessage.locator('div.border-l-2.border-gray-200');
+    // Expanded content shows the query detail (extracted from tool input).
+    // `border-gray-300`, not `-200`: the panel's left rule was darkened so the
+    // tool detail reads clearly against the bubble (see tool-call-indicator.tsx).
+    const toolContent = lastAIMessage.locator('div.border-l-2.border-gray-300');
     await expect(toolContent).toContainText(/f1|race|formula/i, {
       timeout: 5_000,
     });
