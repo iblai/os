@@ -123,30 +123,62 @@ export const components: Components = {
     </li>
   ),
 
+  // Fenced code blocks get ChatGPT/Claude-style chrome: a header bar carrying
+  // the language name and a Copy control, sitting directly on top of the
+  // highlighted body inside one rounded, clipped container.
+  //
+  // The `tomorrow` Prism theme is a dark palette (#2d2d2d body) in both app
+  // themes, so the header is always dark too — #1f1f1f reads as a deliberate
+  // companion shade rather than a light strip clashing with the code. Its
+  // foreground is the theme's own #ccc (10.3:1 against #1f1f1f).
   code: ({ node, ...props }) => {
     const match = /language-(\w+)/.exec(props.className || '');
-    if (match && props.className !== 'language-latex')
+    // `language-latex` deliberately bypasses this path: those blocks are
+    // handed to KaTeX downstream and must stay plain <code>.
+    if (match && props.className !== 'language-latex') {
+      const code = String(props.children).replace(/\n$/, '');
+      // `ref` and `children` come off the <code> element and must NOT be
+      // forwarded: SyntaxHighlighter is a class component whose ref is typed
+      // `Ref<SyntaxHighlighter>` rather than `Ref<HTMLElement>`, and the
+      // children are passed explicitly below as the already-trimmed `code`.
+      const { ref: _ref, children: _children, ...highlighterProps } = props;
       return (
-        <div>
-          <div className="flex">
-            <div className="ml-auto">
-              <CopyButtonIcon
-                text={String(props.children).replace(/\n$/, '')}
-              />
-            </div>
+        <div
+          data-code-block
+          className="my-4 overflow-hidden rounded-lg border border-[#3f3f3f] bg-[#2d2d2d]"
+        >
+          <div className="flex items-center justify-between gap-2 border-b border-[#3f3f3f] bg-[#1f1f1f] py-1 pr-1 pl-3">
+            <span
+              data-testid="code-block-language"
+              className="font-mono text-xs text-[#cccccc] select-none"
+            >
+              {match[1]}
+            </span>
+            <CopyButtonIcon
+              text={code}
+              label="Copy"
+              variant="ghost"
+              data-testid="code-block-copy"
+              className="h-7 gap-1.5 px-2 text-xs text-[#cccccc] hover:bg-white/10 hover:text-white"
+            />
           </div>
           <SyntaxHighlighter
-            className="m-0"
-            // @ts-expect-error - SyntaxHighlighter style prop has complex type compatibility issues
+            {...highlighterProps}
+            // The theme's inline styles carry a `.5em 0` margin and no radius;
+            // drop the margin so the body sits flush under the header bar.
+            className="m-0!"
+            // No `@ts-expect-error` needed here any more: once `ref`/`children`
+            // are stripped above, the props object matches SyntaxHighlighter's
+            // first overload and the `style` prop resolves cleanly.
             style={syntaxHighlighter}
             language={match[1]}
             PreTag="div"
-            {...props}
           >
-            {String(props.children).replace(/\n$/, '')}
+            {code}
           </SyntaxHighlighter>
         </div>
       );
+    }
 
     return (
       <code
@@ -156,8 +188,16 @@ export const components: Components = {
     );
   },
 
+  // react-markdown wraps fenced blocks in <pre>, which would otherwise draw a
+  // light grey padded box around the dark chrome above. Neutralise it only when
+  // it actually contains that chrome — plain <pre> blocks keep their styling.
+  // `!` is required: the chat bubble sets `[&_pre]:bg-gray-200 [&_pre]:p-2`,
+  // which outranks a bare class on the element itself.
   pre: ({ node, ...props }) => (
-    <pre {...props} className={`w-full overflow-x-auto bg-gray-200`} />
+    <pre
+      {...props}
+      className="w-full overflow-x-auto bg-gray-200 has-[[data-code-block]]:m-0! has-[[data-code-block]]:bg-transparent! has-[[data-code-block]]:p-0!"
+    />
   ),
 
   small: ({ node, ...props }) => (
