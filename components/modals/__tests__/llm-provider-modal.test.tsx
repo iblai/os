@@ -1,6 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 
+import {
+  setLocalLLMEnabled,
+  setLocalLLMModel,
+  setLocalLLMToolSupport,
+} from '@iblai/iblai-js/web-containers';
+import { LOCAL_LLM_CHANGED_EVENT } from '@/hooks/use-selected-local-model';
+
 import { LLMProviderModal, type LLMProvider } from '../llm-provider-modal';
 
 // next/image -> plain img so we can read src/alt/className directly.
@@ -45,12 +52,15 @@ let mockDownloadState: {
 };
 const mockStartDownload = vi.fn();
 const mockCancelDownload = vi.fn();
+// Machine capacity behind the "may be too large" confirmation. null = unknown,
+// which must let the download proceed rather than block on missing data.
+let mockSystemMemory: { ram_total: number; vram_total: number } | null = null;
 vi.mock('@/hooks/use-model-download', () => ({
   useModelDownload: () => ({
     isAvailable: mockLocalAvailable,
     state: mockDownloadState,
     ollamaStatus: { installed_models: mockInstalledModels },
-    systemMemory: null,
+    systemMemory: mockSystemMemory,
     startDownload: mockStartDownload,
     cancelDownload: mockCancelDownload,
   }),
@@ -72,13 +82,16 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
       tool_support: true,
     },
   ],
-  isLocalLLMEnabled: () => false,
-  getLocalLLMModel: () => null,
+  isLocalLLMEnabled: () => mockLocalEnabled,
+  getLocalLLMModel: () => mockLocalModelId,
   getLocalLLMToolSupport: () => true,
   setLocalLLMModel: vi.fn(),
   setLocalLLMEnabled: vi.fn(),
   setLocalLLMToolSupport: vi.fn(),
 }));
+// The device-global on-device selection the modal mirrors into local state.
+let mockLocalEnabled = false;
+let mockLocalModelId: string | null = null;
 vi.mock('@/lib/utils', () => ({
   cn: (...args: unknown[]) => {
     const out: string[] = [];
@@ -154,6 +167,9 @@ describe('LLMProviderModal', () => {
     };
     mockStartDownload.mockClear();
     mockCancelDownload.mockClear();
+    mockSystemMemory = null;
+    mockLocalEnabled = false;
+    mockLocalModelId = null;
   });
 
   it('does not render content when closed', () => {
@@ -412,5 +428,182 @@ describe('LLMProviderModal', () => {
     });
 
     expect(props.onClose).toHaveBeenCalled();
+  });
+
+  // ==========================================================================
+  // Starting an on-device download
+  // ==========================================================================
+
+  describe('starting a download', () => {
+    beforeEach(() => {
+      mockLocalAvailable = true;
+    });
+
+    it('starts immediately when the machine has room', () => {
+      // The warn fraction is a deliberately low testing value (1% of capacity),
+      // so "room" for a 3GB model means a very large reported total.
+      mockSystemMemory = {
+        ram_total: 512 * 1024 ** 3,
+        vram_total: 64 * 1024 ** 3,
+      };
+      render(<LLMProviderModal {...baseProps()} />);
+
+      fireEvent.click(screen.getByText('Zeta Download'));
+
+      expect(mockStartDownload).toHaveBeenCalledWith('dl-model');
+      expect(
+        screen.queryByText('This model may be too large for your system'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('starts without confirmation when the machine capacity is unknown', () => {
+      // Missing memory data must not block the download.
+      mockSystemMemory = null;
+      render(<LLMProviderModal {...baseProps()} />);
+
+      fireEvent.click(screen.getByText('Zeta Download'));
+
+      expect(mockStartDownload).toHaveBeenCalledWith('dl-model');
+    });
+
+    it('asks first when the model may be too large for this machine', () => {
+      // Tiny reported capacity, so the 3GB model trips the warn fraction.
+      mockSystemMemory = { ram_total: 1024, vram_total: 512 };
+      render(<LLMProviderModal {...baseProps()} />);
+
+      fireEvent.click(screen.getByText('Zeta Download'));
+
+      expect(
+        screen.getByText('This model may be too large for your system'),
+      ).toBeInTheDocument();
+      expect(screen.getByText(/needs about 3 GB/)).toBeInTheDocument();
+      // Nothing is pulled until the user answers.
+      expect(mockStartDownload).not.toHaveBeenCalled();
+    });
+
+    it('downloads anyway when the warning is confirmed', () => {
+      mockSystemMemory = { ram_total: 1024, vram_total: 512 };
+      render(<LLMProviderModal {...baseProps()} />);
+      fireEvent.click(screen.getByText('Zeta Download'));
+
+      fireEvent.click(screen.getByText('Download anyway'));
+
+      expect(mockStartDownload).toHaveBeenCalledWith('dl-model');
+      expect(
+        screen.queryByText('This model may be too large for your system'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('abandons the download when the warning is cancelled', () => {
+      mockSystemMemory = { ram_total: 1024, vram_total: 512 };
+      render(<LLMProviderModal {...baseProps()} />);
+      fireEvent.click(screen.getByText('Zeta Download'));
+
+      fireEvent.click(screen.getByText('Cancel'));
+
+      expect(mockStartDownload).not.toHaveBeenCalled();
+      expect(
+        screen.queryByText('This model may be too large for your system'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('dismisses the "already downloading" notice', () => {
+      mockDownloadState = {
+        status: 'downloading',
+        progress: 40,
+        activeModel: 'dl-model',
+        message: '',
+        logs: [],
+        lastUpdated: '',
+      };
+      render(<LLMProviderModal {...baseProps()} />);
+      fireEvent.click(screen.getByText('Alpha Ready'));
+      expect(
+        screen.getByText('A model is already downloading'),
+      ).toBeInTheDocument();
+
+      fireEvent.click(screen.getByText('Got it'));
+
+      expect(
+        screen.queryByText('A model is already downloading'),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  // ==========================================================================
+  // Choosing between on-device and cloud
+  // ==========================================================================
+
+  describe('switching between on-device and cloud', () => {
+    it('switches chat to an installed on-device model', () => {
+      mockLocalAvailable = true;
+      mockInstalledModels = ['ready-model'];
+      const dispatched: string[] = [];
+      const listener = (e: Event) => dispatched.push(e.type);
+      window.addEventListener(LOCAL_LLM_CHANGED_EVENT, listener);
+
+      try {
+        render(<LLMProviderModal {...baseProps()} />);
+        fireEvent.click(screen.getByText('Alpha Ready'));
+
+        expect(setLocalLLMModel).toHaveBeenCalledWith('ready-model');
+        expect(setLocalLLMEnabled).toHaveBeenCalledWith(true);
+        // Tool support is persisted too, or local chat rejects a tool-capable
+        // model with tool_support=false.
+        expect(setLocalLLMToolSupport).toHaveBeenCalledWith(true);
+        // Same-tab listeners (the nav-bar badge) need the explicit event.
+        expect(dispatched).toEqual([LOCAL_LLM_CHANGED_EVENT]);
+        // The row now reads as in use.
+        expect(screen.getByText('In use')).toBeInTheDocument();
+      } finally {
+        window.removeEventListener(LOCAL_LLM_CHANGED_EVENT, listener);
+      }
+    });
+
+    it('does nothing when the already-selected on-device model is clicked', () => {
+      mockLocalAvailable = true;
+      mockInstalledModels = ['ready-model'];
+      mockLocalEnabled = true;
+      mockLocalModelId = 'ready-model';
+      render(<LLMProviderModal {...baseProps()} />);
+
+      fireEvent.click(screen.getByText('Alpha Ready'));
+
+      expect(setLocalLLMModel).not.toHaveBeenCalled();
+      expect(mockStartDownload).not.toHaveBeenCalled();
+      expect(mockCancelDownload).not.toHaveBeenCalled();
+    });
+
+    it('turns on-device mode off when a cloud model is picked', () => {
+      mockLocalAvailable = true;
+      mockLocalEnabled = true;
+      mockLocalModelId = 'ready-model';
+      const dispatched: string[] = [];
+      const listener = (e: Event) => dispatched.push(e.type);
+      window.addEventListener(LOCAL_LLM_CHANGED_EVENT, listener);
+
+      try {
+        const props = baseProps();
+        render(<LLMProviderModal {...props} />);
+
+        fireEvent.click(screen.getByText('gpt-3.5').closest('button')!);
+
+        expect(setLocalLLMEnabled).toHaveBeenCalledWith(false);
+        expect(dispatched).toEqual([LOCAL_LLM_CHANGED_EVENT]);
+        expect(props.onSelect).toHaveBeenCalledWith('openai', 'gpt-3.5');
+      } finally {
+        window.removeEventListener(LOCAL_LLM_CHANGED_EVENT, listener);
+      }
+    });
+
+    it('leaves on-device mode alone when it was already off', () => {
+      const props = baseProps();
+      render(<LLMProviderModal {...props} />);
+
+      fireEvent.click(screen.getByText('gpt-3.5').closest('button')!);
+
+      expect(setLocalLLMEnabled).not.toHaveBeenCalled();
+      expect(props.onSelect).toHaveBeenCalledWith('openai', 'gpt-3.5');
+    });
   });
 });
