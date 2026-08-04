@@ -3,6 +3,7 @@
 
 mod foundry_installer;
 mod foundry_manager;
+mod ghost_mcp_manager;
 mod ghost_os_manager;
 mod mcp_bridge_installer;
 mod mcp_bridge_manager;
@@ -11,6 +12,12 @@ mod oauth;
 mod offline_server;
 mod ollama_installer;
 mod web_cache;
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod opencode_acp;
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod opencode_installer;
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod opencode_proxy;
 
 use foundry_installer::{
     download_and_install_foundry, download_foundry_model, get_recommended_models,
@@ -2187,6 +2194,7 @@ fn main() {
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             // Initialize web cache with app data directory
             let app_data_dir = app
@@ -2530,6 +2538,8 @@ fn main() {
                         || url_str.starts_with("http://127.0.0.1")
                         || url_str.starts_with("https://mentorai.iblai.app")
                         || url_str.starts_with("https://os.ibl.ai")
+
+                        || url_str.starts_with("https://auth.iblai.org")
                         || url_str.starts_with("https://login.iblai.app")
                         || url_str.starts_with("https://base.manager.iblai.app")
                         || url_str.starts_with("https://base.manager.iblai.org")
@@ -2759,6 +2769,9 @@ fn main() {
             ghost_os_manager::install_ghost_os,
             ghost_os_manager::stop_ghost_os,
             ghost_os_manager::check_ghost_os_status,
+            ghost_mcp_manager::ghost_mcp_start,
+            ghost_mcp_manager::ghost_mcp_send,
+            ghost_mcp_manager::ghost_mcp_stop,
             check_foundry_local_status,
             start_foundry_local_service,
             load_foundry_local_model,
@@ -2795,6 +2808,15 @@ fn main() {
             oauth::oauth_start,
             oauth::oauth_callback,
             oauth::oauth_get_result,
+            opencode_acp::opencode_chat_stream,
+            opencode_acp::opencode_stop,
+            opencode_acp::opencode_permission_respond,
+            opencode_acp::opencode_close,
+            opencode_acp::get_opencode_workspace,
+            opencode_acp::set_opencode_workspace,
+            opencode_installer::install_opencode,
+            opencode_installer::check_opencode_status,
+            opencode_acp::check_code_local_model,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri app");

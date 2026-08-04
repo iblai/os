@@ -520,44 +520,88 @@ export function formatRelativeDate(date: string) {
   }
 }
 
+// Canonical provider name for any label — a backend key ("azure_openai"), a
+// human label ("Microsoft"), or a local model's provider ("Meta"). Folds every
+// alias onto one identity so the same provider from different sources compares
+// equal. See getProviderName.
+const PROVIDER_NAME_BY_ALIAS: Record<string, string> = {
+  microsoft: 'azure_openai',
+  azureopenai: 'azure_openai',
+  openai: 'openai',
+  google: 'google',
+  gemini: 'google',
+  meta: 'llama',
+  metallama: 'llama',
+  llama: 'llama',
+  mistral: 'mistral',
+  mistralai: 'mistral',
+  nvidia: 'nvidia',
+  iblchatnvidia: 'nvidia',
+  deepseek: 'deepseek',
+  anthropic: 'anthropic',
+  iblchatanthropic: 'anthropic',
+  claude: 'anthropic',
+  groq: 'groq',
+  perplexity: 'perplexity',
+  xai: 'xai',
+  bedrock: 'bedrock',
+  amazonbedrock: 'bedrock',
+  amazon: 'bedrock',
+  iblchatbedrock: 'bedrock',
+  alibaba: 'alibaba',
+  qwen: 'alibaba',
+  ibm: 'ibm',
+  granite: 'ibm',
+};
+
+/**
+ * Canonical provider name for any label, case- and punctuation-insensitive.
+ * Folds backend keys and human/display labels onto one identity — e.g.
+ * `getProviderName('Microsoft') === 'azure_openai'`,
+ * `getProviderName('Meta') === 'llama'`, `getProviderName('Google') === 'google'`.
+ * Unknown providers return their normalized (lowercased, alphanumeric-only) form.
+ * This is the single source of truth for provider identity (dedup/merge) and
+ * for logo/name resolution via {@link getLLMProviderDetails}.
+ */
+export function getProviderName(llmProvider: string): string {
+  const normalized = (llmProvider ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+  return PROVIDER_NAME_BY_ALIAS[normalized] ?? normalized;
+}
+
+// Logo + display name keyed by canonical provider name (see getProviderName).
+const PROVIDER_DETAILS_BY_NAME: Record<string, { logo: string; name: string }> =
+  {
+    groq: { logo: '/llm-groq-provider.png', name: 'Groq' },
+    nvidia: { logo: '/llm-nvidia-provider.webp', name: 'NVIDIA' },
+    azure_openai: { logo: '/llm-microsoft-provider.png', name: 'Microsoft' },
+    openai: { logo: '/llm-openai-provider-2.svg', name: 'OpenAI' },
+    mistral: { logo: '/llm-mistral-provider.jpeg', name: 'Mistral' },
+    google: { logo: '/llm-google-provider.svg', name: 'Google' },
+    llama: { logo: '/llm-llama-provider.jpeg', name: 'Meta' },
+    anthropic: { logo: '/llm-claude-provider.png', name: 'Anthropic' },
+    perplexity: { logo: '/llm-perplexity-provider.webp', name: 'Perplexity' },
+    deepseek: { logo: '/llm-deepseek-provider.png', name: 'DeepSeek' },
+    xai: { logo: '/llm-xai-provider.jpg', name: 'xAI' },
+    bedrock: { logo: '/llm-amazon-provider.png', name: 'Amazon' },
+    alibaba: { logo: '/llm-alibaba-provider.png', name: 'Alibaba' },
+    ibm: { logo: '/llm-ibm-provider.png', name: 'IBM' },
+  };
+
 export function getLLMProviderDetails(llmProvider: string, llmName?: string) {
-  switch (llmProvider) {
-    case 'groq':
-      return { logo: '/llm-groq-provider.png', name: 'Groq' };
-    case 'IBLChatNvidia':
-      return { logo: '/llm-nvidia-provider.webp', name: 'NVIDIA' };
-    case 'azure_openai':
-      return { logo: '/llm-microsoft-provider.png', name: 'Microsoft' };
-    case 'openai':
-      if (llmName) return { logo: '/llm-openai-provider.jpg', name: 'OpenAI' };
-      return { logo: '/llm-openai-provider-2.svg', name: 'OpenAI' };
-    case 'mistral':
-      return { logo: '/llm-mistral-provider.jpeg', name: 'Mistral' };
-    case 'google':
-      if (llmName) return { logo: '/llm-gemini-provider.png', name: 'Google' };
-      return { logo: '/llm-google-provider.svg', name: 'Google' };
-    case 'llama':
-      return { logo: '/llm-llama-provider.jpeg', name: 'Meta' };
-    case 'IBLChatAnthropic':
-      return { logo: '/llm-claude-provider.png', name: 'Anthropic' };
-    case 'perplexity':
-      return { logo: '/llm-perplexity-provider.webp', name: 'Perplexity' };
-    case 'deepseek':
-      return { logo: '/llm-deepseek-provider.png', name: 'DeepSeek' };
-    case 'xai':
-      return { logo: '/llm-xai-provider.jpg', name: 'xAI' };
-    case 'anthropic':
-      return { logo: '/llm-claude-provider.png', name: 'Anthropic' };
-    case 'nvidia':
-      return { logo: '/llm-nvidia-provider.webp', name: 'NVIDIA' };
-    case 'bedrock':
-    case 'amazon-bedrock':
-    case 'amazon_bedrock':
-    case 'IBLChatBedrock':
-      return { logo: '/llm-amazon-provider.png', name: 'Amazon' };
-    default:
-      return { logo: '/llm-generic-provider.png', name: llmProvider };
-  }
+  const name = getProviderName(llmProvider);
+  // OpenAI and Google use a model-specific logo when a concrete model is named.
+  if (name === 'openai' && llmName)
+    return { logo: '/llm-openai-provider.jpg', name: 'OpenAI' };
+  if (name === 'google' && llmName)
+    return { logo: '/llm-gemini-provider.png', name: 'Google' };
+  return (
+    PROVIDER_DETAILS_BY_NAME[name] ?? {
+      logo: '/llm-generic-provider.png',
+      name: llmProvider,
+    }
+  );
 }
 
 export function sendMessageToParentWebsite(payload: unknown) {

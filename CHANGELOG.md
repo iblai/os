@@ -1,56 +1,103 @@
 # Changelog
 
+## [0.111.0](https://github.com/iblai/os/compare/v0.110.1...v0.111.0) (2026-08-03)
+
+### Features
+
+* ACP integration ([cbe8d31](https://github.com/iblai/os/commit/cbe8d31b6c47804028fcd8ded58ac8109afb40db))
+* add ACP implementation ([0bf6639](https://github.com/iblai/os/commit/0bf6639bd7fe52948557cdb544bd8dac3b0583d3))
+* add in-chat computer use toggle ([cbb6f98](https://github.com/iblai/os/commit/cbb6f98b9d39d0478c5da564c7012959d3738865))
+* Computer Use no longer requires a local model ([bfe6dd3](https://github.com/iblai/os/commit/bfe6dd37828c741696b6a895aa56caea99a299b8))
+* cowork mcp updates ([5e7b97b](https://github.com/iblai/os/commit/5e7b97bf1f71f68378964840152b650071fdbfe9))
+* enable remote AI chat + MCP tools for computer use ([796088d](https://github.com/iblai/os/commit/796088dac57913ce45e59c857308dded904c43dc))
+* improve local model handling ([9304e57](https://github.com/iblai/os/commit/9304e57f0bbf9bf975d5f12de56436ba9471c108))
+* **mentor:** on-device models in the LLM picker — canonical provider names/icons, available-first ordering, and accurate install status ([a77df3c](https://github.com/iblai/os/commit/a77df3c366ee920841c393a1448853c5f951ca52))
+* merge in acp support ([27fc2c9](https://github.com/iblai/os/commit/27fc2c92640ac4daec97f29624fbd17a8c0152ff))
+* move local llms to llm tab ([70712e8](https://github.com/iblai/os/commit/70712e87c98ac7781199a8fbe9945f10844d2b16))
+* parallel opencode acp for code mode ([7ed5963](https://github.com/iblai/os/commit/7ed59631f463693f67aee3046136786e53a2e836))
+
+### Bug Fixes
+
+* update tests ([cc09d02](https://github.com/iblai/os/commit/cc09d02dbf08718d59e7e5d188040ec0066e022b))
+
+### Chores
+
+* add translations ([2d5e67d](https://github.com/iblai/os/commit/2d5e67d97a8d838e9443a80fdaa7f52193562280))
+* bump @iblai/iblai-js to 1.22.5-computer-use-1.12 ([d9d3e89](https://github.com/iblai/os/commit/d9d3e8996fd954ac4701f7367de0b9f8719cc4ee))
+* clear `pnpm audit` pacakges ([33e337c](https://github.com/iblai/os/commit/33e337c295e044a840b77df27c736604c9a474a8))
+* exclude tauri e2e tests in unit tests ([791df32](https://github.com/iblai/os/commit/791df32c6b8cec3e4034bff6188877b5ced8d9d4))
+* fix deps ([a3fcee5](https://github.com/iblai/os/commit/a3fcee506639a106491f8bdc7ef4a3d67461262f))
+* fix deps ([a6e4fdf](https://github.com/iblai/os/commit/a6e4fdff34fbd7dfead0565b42376407fb9942d1))
+* fix deps ([7a4a318](https://github.com/iblai/os/commit/7a4a3183e75c4806631f5be87c56e5d8a70817f4))
+* fix deps ([6a0c9f1](https://github.com/iblai/os/commit/6a0c9f16aac7cbfef7ff42875a9e8c905ac64744))
+* **tauri:** release app-v0.95.7 ([66a9d97](https://github.com/iblai/os/commit/66a9d973fc95ed1403516e64ab6b67e31a979c18))
+* update comment for allowing iblai packages ([92c0192](https://github.com/iblai/os/commit/92c0192e1bfc4de3dcef14c28c54199ad103e690))
+* update iblai-js version ([b60c4d6](https://github.com/iblai/os/commit/b60c4d68d610c7fe16578e346719ce7a6282c0a2))
+* update lock files ([e6bcf1b](https://github.com/iblai/os/commit/e6bcf1b7c57c4ed32dbaed724a5de4564ebb57da))
+* update lockfile ([be6422f](https://github.com/iblai/os/commit/be6422f33449e76c02d60de3539d3675a7ef6663))
+* update pnpm lock ([9bf0133](https://github.com/iblai/os/commit/9bf013343a1d3c8bf2cacbc972d7608f2f8e25d2))
+
+### Tests
+
+* add tests to reach 95% coverage ([a0241fe](https://github.com/iblai/os/commit/a0241fe313169eaedfc1631973ac6940302de216))
+
+## [0.110.1](https://github.com/iblai/os/compare/v0.110.0...v0.110.1) (2026-08-03)
+
+### Bug Fixes
+
+- **csp:** allow S3 presigned media hosts in connect-src ([a5f0bbc](https://github.com/iblai/os/commit/a5f0bbceb6b48691bad95b2b5acecdcbcbcb0915))
+
 ## [0.110.0](https://github.com/iblai/os/compare/v0.109.0...v0.110.0) (2026-07-31)
 
 ### Features
 
-* **sidebar:** call it Recents, group Search with it, mark pins on the row ([62830cf](https://github.com/iblai/os/commit/62830cfc4bdddfd6f44818bd5a2ec7c1c2ad8156))
-* **voice:** add useLiveKitTranscription hook ([b6827c1](https://github.com/iblai/os/commit/b6827c1a6c759bdd91cd334ece13ab1fd1b5ebfc))
-* **voice:** put captions behind a toggle, off by default ([21b63ad](https://github.com/iblai/os/commit/21b63ade91e972429af17a94ce98a1a0bec1a9ef))
-* **voice:** rebuild the call as a card around the mentor ([86f7623](https://github.com/iblai/os/commit/86f7623076e937b42a5994f596b09e27585ef473))
+- **sidebar:** call it Recents, group Search with it, mark pins on the row ([62830cf](https://github.com/iblai/os/commit/62830cfc4bdddfd6f44818bd5a2ec7c1c2ad8156))
+- **voice:** add useLiveKitTranscription hook ([b6827c1](https://github.com/iblai/os/commit/b6827c1a6c759bdd91cd334ece13ab1fd1b5ebfc))
+- **voice:** put captions behind a toggle, off by default ([21b63ad](https://github.com/iblai/os/commit/21b63ade91e972429af17a94ce98a1a0bec1a9ef))
+- **voice:** rebuild the call as a card around the mentor ([86f7623](https://github.com/iblai/os/commit/86f7623076e937b42a5994f596b09e27585ef473))
 
 ### Bug Fixes
 
-* **chat:** refetch session history when a voice call ends ([f48b902](https://github.com/iblai/os/commit/f48b9021771e9d231fdf4c1c77e2495287c5d0ed))
-* **ci:** harden PR e2e gate + correct brace-expansion override comment ([0e8b39e](https://github.com/iblai/os/commit/0e8b39ec1d439b883e74c23fa405a16b3b8030e0))
-* **voice:** close the gap between the two caption lines ([d9abeb9](https://github.com/iblai/os/commit/d9abeb9ab0eb262d0d7e1589084d6c1dfd8c927c))
-* **voice:** separate mic and mentor audio, show speaker state and transcript ([7430a56](https://github.com/iblai/os/commit/7430a56f17f5b508325982d3583b55d3d077ac09))
-* **voice:** stop long captions widening the call dialog ([131e264](https://github.com/iblai/os/commit/131e264c4b64d0e2000c4b6cb168d46d6cbf9a20))
+- **chat:** refetch session history when a voice call ends ([f48b902](https://github.com/iblai/os/commit/f48b9021771e9d231fdf4c1c77e2495287c5d0ed))
+- **ci:** harden PR e2e gate + correct brace-expansion override comment ([0e8b39e](https://github.com/iblai/os/commit/0e8b39ec1d439b883e74c23fa405a16b3b8030e0))
+- **voice:** close the gap between the two caption lines ([d9abeb9](https://github.com/iblai/os/commit/d9abeb9ab0eb262d0d7e1589084d6c1dfd8c927c))
+- **voice:** separate mic and mentor audio, show speaker state and transcript ([7430a56](https://github.com/iblai/os/commit/7430a56f17f5b508325982d3583b55d3d077ac09))
+- **voice:** stop long captions widening the call dialog ([131e264](https://github.com/iblai/os/commit/131e264c4b64d0e2000c4b6cb168d46d6cbf9a20))
 
 ### Chores
 
-* **i18n:** add voice call status and transcript strings ([7e2c885](https://github.com/iblai/os/commit/7e2c8851b717aa77588187daa64892bf39ab54b9))
+- **i18n:** add voice call status and transcript strings ([7e2c885](https://github.com/iblai/os/commit/7e2c8851b717aa77588187daa64892bf39ab54b9))
 
 ### Styles
 
-* apply prettier formatting to CHANGELOG ([66186e7](https://github.com/iblai/os/commit/66186e70253cde54f41a82d747aeabd6d1029d35))
-* **sidebar:** line the row pin/menu slot up with the section chevrons ([9d453b6](https://github.com/iblai/os/commit/9d453b694f31dbbc3ad9753f18fc0623660191cf))
-* **voice:** keep the call indicator in a single blue family ([74f431f](https://github.com/iblai/os/commit/74f431f626fb984c6680607f9821a14ace650a20))
+- apply prettier formatting to CHANGELOG ([66186e7](https://github.com/iblai/os/commit/66186e70253cde54f41a82d747aeabd6d1029d35))
+- **sidebar:** line the row pin/menu slot up with the section chevrons ([9d453b6](https://github.com/iblai/os/commit/9d453b694f31dbbc3ad9753f18fc0623660191cf))
+- **voice:** keep the call indicator in a single blue family ([74f431f](https://github.com/iblai/os/commit/74f431f626fb984c6680607f9821a14ace650a20))
 
 ### Tests
 
-* **e2e:** give the ?prompt= journey its own mentor ([9f4aaf9](https://github.com/iblai/os/commit/9f4aaf9e097d5a86d1da7695650c68123d20fb47))
+- **e2e:** give the ?prompt= journey its own mentor ([9f4aaf9](https://github.com/iblai/os/commit/9f4aaf9e097d5a86d1da7695650c68123d20fb47))
 
 ## [0.109.0](https://github.com/iblai/os/compare/v0.108.12...v0.109.0) (2026-07-31)
 
 ### Features
 
-* **web-containers:** adding human support ([8791e74](https://github.com/iblai/os/commit/8791e742ecbceb832e9bd08e82fa5e9fadce34ad))
-* **web-containers:** adding human support tab ([1a7124d](https://github.com/iblai/os/commit/1a7124d3d4b83d627292a0f11cbafe9c0dd223eb))
+- **web-containers:** adding human support ([8791e74](https://github.com/iblai/os/commit/8791e742ecbceb832e9bd08e82fa5e9fadce34ad))
+- **web-containers:** adding human support tab ([1a7124d](https://github.com/iblai/os/commit/1a7124d3d4b83d627292a0f11cbafe9c0dd223eb))
 
 ### Bug Fixes
 
-* **mentor:** fixing merge conflicts changes and test updates ([9a42ac3](https://github.com/iblai/os/commit/9a42ac385df6f4de4a57b639f4a5a902db679b1a))
+- **mentor:** fixing merge conflicts changes and test updates ([9a42ac3](https://github.com/iblai/os/commit/9a42ac385df6f4de4a57b639f4a5a902db679b1a))
 
 ### CI
 
-* adopt the current PR-e2e caller on this branch ([f216d97](https://github.com/iblai/os/commit/f216d978f87919c0044d95c53fd84a336f856b56))
+- adopt the current PR-e2e caller on this branch ([f216d97](https://github.com/iblai/os/commit/f216d978f87919c0044d95c53fd84a336f856b56))
 
 ## [0.108.12](https://github.com/iblai/os/compare/v0.108.11...v0.108.12) (2026-07-31)
 
 ### Chores
 
-* **deps:** bump @iblai/iblai-js to 2.2.7 ([462b98f](https://github.com/iblai/os/commit/462b98fa48202ea7dd1e778382815523037014db))
+- **deps:** bump @iblai/iblai-js to 2.2.7 ([462b98f](https://github.com/iblai/os/commit/462b98fa48202ea7dd1e778382815523037014db))
 
 ## [0.108.11](https://github.com/iblai/os/compare/v0.108.10...v0.108.11) (2026-07-30)
 

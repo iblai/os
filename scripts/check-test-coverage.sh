@@ -79,8 +79,10 @@ for file in ${CHANGED_FILES}; do
   if [[ "${file}" =~ (\.test\.|\.spec\.|\.d\.ts$|__tests__|__mocks__|types?\.ts$|constants?\.ts$|index\.ts$|vitest\.|setup\.ts$) ]]; then
     continue
   fi
-  # Skip non-source directories
-  if [[ "${file}" == e2e/* ]] || [[ "${file}" == scripts/* ]] || [[ "${file}" == public/* ]]; then
+  # Skip non-source directories. `e2e-tauri/` is the WebdriverIO desktop suite:
+  # like `e2e/`, vitest.config.ts excludes it from the test run, so its harness
+  # files can only ever measure 0% here — they are exercised by `pnpm test:tauri`.
+  if [[ "${file}" == e2e/* ]] || [[ "${file}" == e2e-tauri/* ]] || [[ "${file}" == scripts/* ]] || [[ "${file}" == public/* ]]; then
     continue
   fi
   SOURCE_FILES+=("${file}")

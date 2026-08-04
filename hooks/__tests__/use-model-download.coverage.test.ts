@@ -73,6 +73,8 @@ describe('useModelDownload — full coverage', () => {
   let storeState: ModelDownloadState;
   let statusLog: string[];
   let dismissed: boolean;
+  let ollamaStatusStore: { installed?: boolean } | null;
+  let setOllamaStatus: Mock;
   let listeners: Record<string, EventHandler>;
   let unlisten: Mock;
   let consoleLogSpy: ReturnType<typeof vi.spyOn>;
@@ -164,6 +166,15 @@ describe('useModelDownload — full coverage', () => {
       invoke: mockInvoke as never,
       listen: mockListen as never,
     });
+    ollamaStatusStore = null;
+    setOllamaStatus = vi.fn((arg: unknown) => {
+      ollamaStatusStore =
+        typeof arg === 'function'
+          ? (arg as (p: unknown) => { installed?: boolean } | null)(
+              ollamaStatusStore,
+            )
+          : (arg as { installed?: boolean } | null);
+    });
     vi.mocked(useLocalStorageModule.useLocalStorage).mockImplementation(((
       key: string,
       def: unknown,
@@ -172,6 +183,8 @@ describe('useModelDownload — full coverage', () => {
         return [storeState, setState, vi.fn()];
       if (key === 'model_download_prompt_dismissed')
         return [dismissed, setDismissed, vi.fn()];
+      if (key === 'ollama_status')
+        return [ollamaStatusStore, setOllamaStatus, vi.fn()];
       return [def, vi.fn(), vi.fn()];
     }) as never);
   });
@@ -286,7 +299,7 @@ describe('useModelDownload — full coverage', () => {
     });
 
     it('forwards ollama status events to state', async () => {
-      const utils = await renderReady();
+      await renderReady();
 
       act(() => {
         listeners[E.OLLAMA_STATUS]({
@@ -296,9 +309,9 @@ describe('useModelDownload — full coverage', () => {
         });
       });
 
-      await waitFor(() =>
-        expect(utils.result.current.ollamaStatus?.installed).toBe(true),
-      );
+      // ollamaStatus is persisted via useLocalStorage (shared across instances);
+      // the mocked setter writes the store, so assert against that.
+      await waitFor(() => expect(ollamaStatusStore?.installed).toBe(true));
     });
 
     it('logs when listener setup fails', async () => {
