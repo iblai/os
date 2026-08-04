@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.111.2](https://github.com/iblai/os/compare/v0.111.1...v0.111.2) (2026-08-04)
+
+### Chores
+
+* **macos:** rename app ibl.ai -> iblai and drop obsolete DMG step ([599f189](https://github.com/iblai/os/commit/599f18939e767ea5cadefd69abed5630ce67ff9a))
+
 ## [0.111.1](https://github.com/iblai/os/compare/v0.111.0...v0.111.1) (2026-08-04)
 
 ### Bug Fixes
