@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.111.4](https://github.com/iblai/os/compare/v0.111.3...v0.111.4) (2026-08-04)
+
+### Chores
+
+* **tauri:** release app-v0.95.9 ([15d8012](https://github.com/iblai/os/commit/15d8012b78533eedc62df5d167084c08a3b22f65))
+
 ## [0.111.3](https://github.com/iblai/os/compare/v0.111.2...v0.111.3) (2026-08-04)
 
 ### Chores
