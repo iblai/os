@@ -220,17 +220,30 @@ jobs:
           # GitHub keeps only ONE pending run per concurrency group. A third dispatch CANCELS the
           # previously-pending one before it starts a single job — silently, with no diagnosis on the
           # PR. Three PRs labelled close together is enough to trigger it, and pinning everything to
-          # stg1 made that routine. So: never dispatch while another run for this env is waiting.
+          # stg1 made that routine. So: never dispatch while another run is waiting.
+          #
+          # Counts EVERY pending pr-e2e run, deliberately — not just ones whose title mentions this
+          # caller's TARGET. Filtering on the title was a correctness bug: the central `run-name`
+          # renders the env the run will actually use, which an operator override
+          # (`vars.PR_E2E_ENV_OVERRIDE`, added to drain a suspect box) can redirect. On 2026-08-04
+          # every central title read "→ stg2" while every caller searched for "→ stg1", so the count
+          # was permanently 0 — each caller believed the slot was free, all of them dispatched, and
+          # they evicted one another in a live-lock: SIX dispatches for os#405, zero tests executed,
+          # no report, and a red X on the PR that said nothing about the code.
+          #
+          # A caller cannot know the effective env, so it must never depend on inferring one. Being
+          # conservative costs throughput when two envs are genuinely busy with different PRs; it
+          # cannot cost correctness. That is the trade this pipeline already makes for env selection.
           wait_for_slot() {
             local i w
             for i in $(seq 1 240); do
-              w=$(gh run list -R "$OPS" --workflow=pr-e2e.yml --limit 20 --json status,displayTitle \
-                    --jq "[.[] | select((.status==\"queued\" or .status==\"pending\") and (.displayTitle|contains(\"→ ${TARGET}\")))] | length" 2>/dev/null || echo 0)
+              w=$(gh run list -R "$OPS" --workflow=pr-e2e.yml --limit 20 --json status \
+                    --jq '[.[] | select(.status=="queued" or .status=="pending")] | length' 2>/dev/null || echo 0)
               [ "${w:-0}" -eq 0 ] && return 0
-              [ $(( (i-1) % 10 )) -eq 0 ] && echo "[$(date -u +%H:%M:%SZ)] waiting for a free dispatch slot on ${TARGET} — ${w} run(s) already queued ahead"
+              [ $(( (i-1) % 10 )) -eq 0 ] && echo "[$(date -u +%H:%M:%SZ)] waiting for a free dispatch slot — ${w} pr-e2e run(s) already queued ahead"
               sleep 30
             done
-            echo "::error::no free dispatch slot on ${TARGET} after 2h"; return 1
+            echo "::error::no free dispatch slot after 2h"; return 1
           }
 
           do_dispatch() {
