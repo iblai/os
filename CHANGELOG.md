@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.111.6](https://github.com/iblai/os/compare/v0.111.5...v0.111.6) (2026-08-04)
+
+### Bug Fixes
+
+* **e2e:** match Screen Share heading on its post-2.2.10 label ([e23abd9](https://github.com/iblai/os/commit/e23abd903443e6f84f4c6411268246f1b5ef82cf))
+* **security:** raise floors for four high-severity advisories ([3c02a62](https://github.com/iblai/os/commit/3c02a6231a6b6a93b79e4c246530959e988cb94b))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.3.2 ([32b703a](https://github.com/iblai/os/commit/32b703acfeb71245dc31e1fdb093c256821d2826))
+
+### Documentation
+
+* **e2e:** record category combobox coverage ([1be520d](https://github.com/iblai/os/commit/1be520df68e1b5390880ea49a4a332e55517d405))
+
+### Tests
+
+* **e2e:** assert reasoning/tool-call order in the DOM, not by pixel ([753c7a3](https://github.com/iblai/os/commit/753c7a3bf05cd471703f0bb84bdd7f76eacca83b))
+* **e2e:** cover the Edit Agent category combobox ([e57a497](https://github.com/iblai/os/commit/e57a497a09fd0c97b7d523eb7ba6faa6ae6f6856))
+* **e2e:** make EditMentorPage.open() tolerate an already-open dialog ([7f81930](https://github.com/iblai/os/commit/7f81930de63450ad52bc32a4b80353fee26c58dc))
+* **e2e:** match Recent chat rows by session id, not sent text ([d34f14e](https://github.com/iblai/os/commit/d34f14e7f905f9414d28d51e6e173de18bf49fc3))
+
 ## [0.111.5](https://github.com/iblai/os/compare/v0.111.4...v0.111.5) (2026-08-04)
 
 ### Bug Fixes
