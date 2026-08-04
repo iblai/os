@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.111.3](https://github.com/iblai/os/compare/v0.111.2...v0.111.3) (2026-08-04)
+
+### Chores
+
+* **tauri:** release app-v0.95.8 ([e6e6a7f](https://github.com/iblai/os/commit/e6e6a7f284215c22ff9b27da76bb95f9619e36e1))
+
+### Documentation
+
+* **readme:** point macOS/Windows download buttons at app-v0.95.8 ([4824550](https://github.com/iblai/os/commit/482455029e1d1dd000482699034263e7309d1a3f))
+
 ## [0.111.2](https://github.com/iblai/os/compare/v0.111.1...v0.111.2) (2026-08-04)
 
 ### Chores
