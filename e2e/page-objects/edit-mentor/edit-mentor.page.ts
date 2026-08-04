@@ -244,6 +244,28 @@ export class EditMentorPage {
   }
 
   async open(tabName?: string): Promise<void> {
+    // Copy Mentor's submit leaves the Edit Agent dialog open and re-points
+    // it at the freshly-copied mentor via a client-side navigation that
+    // still carries `?modal=edit_mentor` (`handleSuccessfulCopy` in
+    // `edit-mentor-modal/settings-tab.tsx` — see the context-switch comment
+    // on navigateToTab below for the same case). If a caller then calls
+    // open() again expecting a closed dialog, the navbar dropdown click
+    // below hits that still-open dialog's own overlay — Radix's hideOthers
+    // marks a live dialog's own overlay aria-hidden as a side effect of
+    // hiding body siblings (see unhideEditDialog's docstring), so the
+    // overlay is visually `fixed inset-0 z-50` and intercepts the click even
+    // though it's correctly hidden from the a11y tree. Detect an
+    // already-open dialog up front and skip straight to repairing/hydrating/
+    // navigating instead of trying to reopen it.
+    if (await this.isOpen()) {
+      await this.unhideEditDialog();
+      await this.waitForHydrated();
+      if (tabName) {
+        await this.navigateToTab(tabName);
+      }
+      return;
+    }
+
     // Restore any chrome a previous dialog left in a broken state before
     // looking for the nav-bar trigger (see restoreAppChrome).
     await this.restoreAppChrome();

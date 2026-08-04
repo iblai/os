@@ -1,5 +1,20 @@
 import { Page, Locator, expect } from '@playwright/test';
-import { SCREENSHARE_LABELS } from '@iblai/iblai-js/playwright';
+
+/**
+ * Accessible name of the tab panel's own heading.
+ *
+ * Deliberately NOT `SCREENSHARE_LABELS.headerTitle` from
+ * `@iblai/iblai-js/playwright`. Since iblai-js 2.2.10 the component renders
+ * the i18n key `screenshareTabLabels.header.title`, which is "Screen"; that
+ * Playwright helper constant still reads "Screen Share" and was never
+ * resynced (ibl-web-frontend d02760dd renamed the label + i18n copy but left
+ * `screenshare-tab-helpers.ts` alone). Re-importing it re-breaks this locator.
+ *
+ * `exact` is load-bearing: the default substring match also catches the two
+ * prompt-card headings ("Instructions during screen sharing", "What the agent
+ * says when screen sharing starts") → 3 matches → strict-mode failure.
+ */
+const SCREENSHARE_HEADER_TITLE = 'Screen';
 
 /**
  * Page object for the Screen Share top-level tab inside the Edit Mentor
@@ -24,7 +39,9 @@ import { SCREENSHARE_LABELS } from '@iblai/iblai-js/playwright';
  *      `CapabilityGate` hook — the tab-specific `screenshare-disabled-hint`
  *      testid from the pre-CapabilityGate SDK build no longer renders).
  *   5. Save button → `data-testid="screenshare-save-button"`.
- *   6. Heading → `role="heading"` filtered by SDK label (`SCREENSHARE_LABELS.headerTitle`).
+ *   6. Heading → `role="heading"` filtered by the local
+ *      `SCREENSHARE_HEADER_TITLE` constant (see its docstring for why the
+ *      SDK's `SCREENSHARE_LABELS.headerTitle` is not used).
  *
  * Never use class-name selectors or DOM structure positional locators —
  * they all break on the next SDK style refactor.
@@ -68,7 +85,8 @@ export class ScreenShareTab {
     );
     this.body = dialog.getByTestId('screenshare-tab-body');
     this.heading = dialog.getByRole('heading', {
-      name: SCREENSHARE_LABELS.headerTitle,
+      name: SCREENSHARE_HEADER_TITLE,
+      exact: true,
     });
     this.saveButton = dialog.getByTestId('screenshare-save-button');
     this.capabilityToggle = dialog.getByTestId('screenshare-capability-toggle');
