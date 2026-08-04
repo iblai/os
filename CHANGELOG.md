@@ -4,7 +4,7 @@
 
 ### Bug Fixes
 
-* **ci:** import Developer ID cert so DMG re-master can re-sign ([4dc3ce8](https://github.com/iblai/os/commit/4dc3ce82caf4b86939598c0a1a6e033212141cd8))
+- **ci:** import Developer ID cert so DMG re-master can re-sign ([4dc3ce8](https://github.com/iblai/os/commit/4dc3ce82caf4b86939598c0a1a6e033212141cd8))
 
 ## [0.111.0](https://github.com/iblai/os/compare/v0.110.1...v0.111.0) (2026-08-03)
 
