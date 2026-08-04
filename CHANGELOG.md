@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.111.7](https://github.com/iblai/os/compare/v0.111.6...v0.111.7) (2026-08-04)
+
+### Bug Fixes
+
+* avoid blocking the app with opencode extraction ([0c9696a](https://github.com/iblai/os/commit/0c9696afb6b354a088e75e2a31cc9224c681455d))
+
+### Chores
+
+* **tauri:** release app-v0.95.10 ([eeab9a2](https://github.com/iblai/os/commit/eeab9a24fa250cafb4c1c2d85b75e95ff0e0016a))
+
 ## [0.111.6](https://github.com/iblai/os/compare/v0.111.5...v0.111.6) (2026-08-04)
 
 ### Bug Fixes
