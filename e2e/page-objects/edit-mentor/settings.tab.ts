@@ -32,6 +32,23 @@ export class SettingsTab {
   readonly allowFileAttachmentsToggle: Locator;
 
   /**
+   * Basic sub-tab. The Category combobox (iblai-platform#2289 regression
+   * coverage). Trigger's aria-label is a fixed SDK translation
+   * (`tabsSettingsTab.categorySelectAriaLabel`) — it does NOT change with
+   * the OS `labels` override, and stays "Select a category" even once a
+   * value is chosen (only the trigger's visible text changes).
+   */
+  readonly categoryTrigger: Locator;
+  /**
+   * The popover's search box. cmdk's `Command.Input` ALSO reports
+   * `role="combobox"`, so this is disambiguated from `categoryTrigger` by
+   * placeholder text, never by role — do not swap this for a role-based
+   * locator.
+   */
+  readonly categorySearchInput: Locator;
+  readonly categoryEmptyState: Locator;
+
+  /**
    * Bound to `EditMentorPage.navigateToTab` (see its constructor). The modal
    * only mounts the active category's segments, so when a preceding call
    * switched the category (e.g. `LtiTab` activates Integrations), the
@@ -120,6 +137,14 @@ export class SettingsTab {
     // Capabilities sub-tab. Labelled "Enable file attachments" (feat/1902).
     this.allowFileAttachmentsToggle = dialog.getByRole('switch', {
       name: /enable file attachments/i,
+    });
+    this.categoryTrigger = dialog.getByRole('combobox', {
+      name: 'Select a category',
+      exact: true,
+    });
+    this.categorySearchInput = dialog.getByPlaceholder('Search category...');
+    this.categoryEmptyState = dialog.getByText('No Category found.', {
+      exact: true,
     });
   }
 
@@ -484,6 +509,77 @@ export class SettingsTab {
       ).toBeVisible({ timeout: 30_000 });
       await this.page.waitForTimeout(500);
     }
+  }
+
+  /**
+   * Opens the Category combobox (Basic sub-tab).
+   *
+   * Regression coverage for iblai-platform#2289: the popover previously
+   * PAINTED its options while being un-hit-testable — it inherited
+   * `pointer-events: none` from the host Dialog because the SDK ships its
+   * own copy of `@radix-ui/react-dismissable-layer`, and the host's focus
+   * trap stole focus from the search box. Every helper below drives a REAL
+   * click/keystroke through Playwright's actionability checks; callers must
+   * never pass `{ force: true }` to a click on anything this returns — that
+   * would mask exactly the bug this coverage exists to catch.
+   */
+  async openCategoryPopover(): Promise<void> {
+    await this.selectSubTab('Basic');
+    await expect(this.categoryTrigger).toBeVisible({ timeout: 10_000 });
+    await this.categoryTrigger.click();
+    await expect(this.categorySearchInput).toBeVisible({ timeout: 10_000 });
+  }
+
+  /**
+   * Locator for a single Category option by its exact visible name.
+   *
+   * #2289 has two independent fixes: (1) `PopoverContent portalled={false}`
+   * so the popover is hit-testable inside the dialog instead of an inert
+   * body-level portal — landed, and reliable on a plain (never-copied)
+   * mentor; (2) scoring cmdk's search against `category.name` instead of the
+   * numeric id, so typing a name actually filters the list. The bundled SDK
+   * source still shows `CommandItem value={category.id.toString()}`, which
+   * predicts name-search should NOT filter — but empirically (cat-02 in
+   * journeys/07-mentor-settings-tab-unique-id.spec.ts) it does, reliably, on
+   * a plain mentor. Separately, on a COPIED mentor, `editMentorPage.open()`
+   * itself has been observed to time out reopening the Edit Agent dialog
+   * right after the copy redirect — a stale Radix Dialog overlay
+   * (`aria-hidden="true"` but still `fixed inset-0 z-50`, presumably left
+   * behind by the first Edit Agent dialog used to trigger the copy) blocks
+   * the navbar dropdown click for the full 30s actionability timeout, so
+   * this locator (and `openCategoryPopover()` below) is never reached on the
+   * copy in current runs — see the copy-scenario test in
+   * journeys/36-copy-mentor.spec.ts. That looks like the client's originally
+   * reported #2289 scenario still reproducing in that specific flow.
+   */
+  categoryOption(name: string): Locator {
+    return this.dialog.getByRole('option', { name, exact: true });
+  }
+
+  /**
+   * The trailing `Check` icon inside a Category option: `opacity-100` when
+   * that option is the currently-selected value, `opacity-0` otherwise.
+   * cmdk gives options no `aria-selected` for "this is the chosen value"
+   * (only for keyboard/mouse highlight), so the check mark's opacity class
+   * is the only reliable "is this one selected" signal.
+   */
+  categoryOptionCheck(name: string): Locator {
+    return this.categoryOption(name).locator('svg').last();
+  }
+
+  /**
+   * Reads every currently-rendered Category option's visible name. Used so
+   * tests adapt to whatever categories the live tenant actually has
+   * configured instead of hardcoding a name that may not exist.
+   */
+  async getCategoryOptionNames(): Promise<string[]> {
+    const options = this.dialog.getByRole('option');
+    const count = await options.count();
+    const names: string[] = [];
+    for (let i = 0; i < count; i++) {
+      names.push((await options.nth(i).innerText()).trim());
+    }
+    return names;
   }
 
   async deleteMentor(): Promise<void> {
