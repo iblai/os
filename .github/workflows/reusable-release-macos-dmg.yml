@@ -55,6 +55,11 @@ on:
         required: false
         type: boolean
         default: false
+      ibl_tenant:
+        description: 'Compile-time IBL_TENANT tenant lock (read via option_env! in Rust). Empty = normal multi-tenant build. When set, the app is locked to this tenant and published to a per-tenant release (app-v<version>-<tenant>) with the download URL shown in the run summary.'
+        required: false
+        type: string
+        default: ''
       dmg_path:
         description: 'Glob for the built DMG(s)'
         required: false
@@ -125,6 +130,9 @@ jobs:
           # Enable in-app purchase for release builds when requested. Read at Rust
           # compile time via option_env!("IBL_ALLOW_IN_APP_PURCHASE").
           IBL_ALLOW_IN_APP_PURCHASE: ${{ inputs.allow_in_app_purchase }}
+          # Compile-time tenant lock (empty = multi-tenant). Read at Rust compile
+          # time via option_env!("IBL_TENANT") -> the get_locked_tenant command.
+          IBL_TENANT: ${{ inputs.ibl_tenant }}
           # --- Code signing (Developer ID Application cert, exported as .p12) ---
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -231,6 +239,52 @@ jobs:
             echo "Re-mastered $dmg — .app suffix now hidden in Finder"
             echo "::endgroup::"
           done
+
+      # Tenant-locked build: give the DMG a tenant-suffixed name, publish it to a
+      # per-tenant release (app-v<version>-<tenant>) so it has a stable, shareable
+      # download URL, and surface that URL as a badge in the run summary. Only runs
+      # when ibl_tenant is set; a normal build skips this entirely.
+      - name: Publish tenant-locked DMG
+        if: ${{ inputs.ibl_tenant != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DMG_PATH: ${{ inputs.dmg_path }}
+          IBL_TENANT: ${{ inputs.ibl_tenant }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          dmgs=($DMG_PATH) # intentional glob expansion
+          if [ ${#dmgs[@]} -eq 0 ]; then echo "No DMG found at $DMG_PATH"; exit 1; fi
+          src="${dmgs[0]}"
+          base="$(basename "$src")"
+          # ibl.ai_<version>_universal.dmg -> capture <version>
+          ver="$(printf '%s' "$base" | sed -E 's/^ibl\.ai_([0-9][^_]*)_universal\.dmg$/\1/')"
+          if [ "$ver" = "$base" ] || [ -z "$ver" ]; then
+            echo "Could not parse version from '$base'"; exit 1
+          fi
+          dest="$(dirname "$src")/ibl.ai_${ver}_${IBL_TENANT}_universal.dmg"
+          mv -f "$src" "$dest"
+
+          # Shared per-tenant release (the Windows tenant build publishes its
+          # installers to the same tag). Tolerate a create race with those legs.
+          tag="app-v${ver}-${IBL_TENANT}"
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            gh release create "$tag" \
+              --title "ibl.ai app-v${ver} — ${IBL_TENANT} (tenant-locked)" \
+              --notes "Tenant-locked build for \`${IBL_TENANT}\` — opens straight into that tenant with tenant switching hidden." || true
+          fi
+          gh release upload "$tag" "$dest" --clobber
+
+          url="https://github.com/${REPO}/releases/download/${tag}/$(basename "$dest")"
+          echo "Tenant DMG published: $url"
+          {
+            echo "## 🍎 Tenant-locked macOS build — \`${IBL_TENANT}\`"
+            echo ""
+            echo "[![Download for macOS](https://img.shields.io/badge/Download_for_macOS-000000?style=for-the-badge&logo=apple&logoColor=white)](${url})"
+            echo ""
+            echo "Direct link: \`${url}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       # Always keep the DMG as a CI artifact (SHA-named for dev builds).
       - name: Upload DMG artifact
