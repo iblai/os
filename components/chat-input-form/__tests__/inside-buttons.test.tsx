@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { InsideButtons } from '../inside-buttons';
 
@@ -47,6 +53,75 @@ vi.mock('@/lib/config', () => ({
   },
 }));
 
+// ---------------------------------------------------------------------------
+// Desktop assistants: Code (opencode) + Cowork (GhostOS)
+// ---------------------------------------------------------------------------
+
+// The real Code button needs Redux and the mentor route; only the Tauri gate
+// around it belongs to this component.
+vi.mock('../coding-mode-button', () => ({
+  CodingModeButton: ({ sessionId }: { sessionId?: string }) => (
+    <button data-testid="coding-mode-button" data-session-id={sessionId}>
+      Code
+    </button>
+  ),
+}));
+
+let mockIsTauri = false;
+const mockIsTauriApp = vi.fn(() => mockIsTauri);
+vi.mock('@/types/tauri', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/types/tauri')>()),
+  isTauriApp: () => mockIsTauriApp(),
+}));
+
+let mockGhostAvailable = false;
+let mockCoworkOn = false;
+let mockLocalLLMEnabled = false;
+let mockModelSupportsCowork = false;
+const mockGhostInstall = vi.fn();
+const mockGhostStop = vi.fn();
+const mockSetCoworkEnabled = vi.fn();
+vi.mock('@iblai/iblai-js/web-containers', () => ({
+  useGhostOs: () => ({
+    isAvailable: mockGhostAvailable,
+    install: () => mockGhostInstall(),
+    stop: () => mockGhostStop(),
+  }),
+  isCoworkEnabled: () => mockCoworkOn,
+  // The real helper persists to localStorage, and the default-on pass relies on
+  // that write to not fire twice — useGhostOs hands back a fresh object each
+  // render, so its effect re-runs and only the stored key stops it.
+  setCoworkEnabled: (value: boolean) => {
+    localStorage.setItem('ibl_cowork_enabled', String(value));
+    mockSetCoworkEnabled(value);
+  },
+  isLocalLLMEnabled: () => mockLocalLLMEnabled,
+  getLocalLLMModel: () => 'llama3.2',
+  modelSupportsCowork: () => mockModelSupportsCowork,
+}));
+
+let mockHasRemoteAi = false;
+vi.mock('@iblai/iblai-js/web-utils', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@iblai/iblai-js/web-utils')>()),
+  hasRemoteAiConfig: () => mockHasRemoteAi,
+}));
+
+const mockToastWarning = vi.fn();
+vi.mock('sonner', () => ({
+  toast: { warning: (...args: unknown[]) => mockToastWarning(...args) },
+}));
+
+/** jsdom reports a Linux UA; Cowork is gated on macOS. */
+function setUserAgent(ua: string) {
+  Object.defineProperty(navigator, 'userAgent', {
+    value: ua,
+    configurable: true,
+  });
+}
+const MAC_UA =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36';
+const LINUX_UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36';
+
 // Import mocked modules for testing
 import { useIsAdmin, useLearnerMode } from '@/hooks/use-user';
 
@@ -69,6 +144,17 @@ describe('InsideButtons', () => {
     (useLearnerMode as ReturnType<typeof vi.fn>).mockReturnValue({
       isInstructorMode: true,
     });
+    // Browser defaults: neither desktop assistant is offered, so the tool-list
+    // tests below see only the responsive buttons.
+    mockIsTauri = false;
+    mockGhostAvailable = false;
+    mockCoworkOn = false;
+    mockLocalLLMEnabled = false;
+    mockModelSupportsCowork = false;
+    mockHasRemoteAi = false;
+    setUserAgent(LINUX_UA);
+    delete process.env.NEXT_PUBLIC_ALLOW_NON_MACOS_COMPUTER_USE_TOGGLE;
+    localStorage.clear();
   });
 
   describe('rendering', () => {
@@ -957,6 +1043,209 @@ describe('InsideButtons', () => {
 
       // Closing the menu fires onClose → setHiddenMemoryPopoverOpen(false).
       await user.click(screen.getByTestId('memory-menu-close'));
+    });
+  });
+
+  // ==========================================================================
+  // Desktop assistants
+  // ==========================================================================
+
+  describe('Code button (Tauri gate)', () => {
+    it('is absent in a plain browser', () => {
+      render(<InsideButtons {...defaultProps} />);
+      expect(
+        screen.queryByTestId('coding-mode-button'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('renders immediately inside the desktop app and gets the chat id', () => {
+      mockIsTauri = true;
+      render(<InsideButtons {...defaultProps} sessionId="chat-77" />);
+
+      expect(screen.getByTestId('coding-mode-button')).toHaveAttribute(
+        'data-session-id',
+        'chat-77',
+      );
+    });
+
+    it('appears once Tauri injects its globals after mount', () => {
+      // Tauri populates window.__TAURI_INTERNALS__ some time after the remote
+      // origin loads, so a mount-time read can latch false forever.
+      vi.useFakeTimers();
+      try {
+        render(<InsideButtons {...defaultProps} />);
+        expect(
+          screen.queryByTestId('coding-mode-button'),
+        ).not.toBeInTheDocument();
+
+        mockIsTauri = true;
+        act(() => {
+          vi.advanceTimersByTime(500);
+        });
+
+        expect(screen.getByTestId('coding-mode-button')).toBeInTheDocument();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('stops polling after ten attempts in a browser', () => {
+      vi.useFakeTimers();
+      try {
+        render(<InsideButtons {...defaultProps} />);
+        // One read at mount, then one per tick.
+        expect(mockIsTauriApp).toHaveBeenCalledTimes(1);
+
+        act(() => {
+          vi.advanceTimersByTime(500 * 11);
+        });
+        const afterGivingUp = mockIsTauriApp.mock.calls.length;
+        expect(afterGivingUp).toBe(12);
+
+        // The interval is cleared, so further time changes nothing.
+        act(() => {
+          vi.advanceTimersByTime(500 * 10);
+        });
+        expect(mockIsTauriApp).toHaveBeenCalledTimes(afterGivingUp);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+  });
+
+  describe('Cowork button', () => {
+    /** Cowork is offered only where GhostOS can actually run. */
+    const enableCowork = () => {
+      mockGhostAvailable = true;
+      setUserAgent(MAC_UA);
+    };
+
+    it('is absent when GhostOS is unavailable', () => {
+      setUserAgent(MAC_UA);
+      render(<InsideButtons {...defaultProps} />);
+      expect(screen.queryByText('Cowork')).not.toBeInTheDocument();
+    });
+
+    it('is absent on a non-macOS desktop', () => {
+      mockGhostAvailable = true;
+      render(<InsideButtons {...defaultProps} />);
+      expect(screen.queryByText('Cowork')).not.toBeInTheDocument();
+    });
+
+    it('renders on macOS when GhostOS is available', () => {
+      enableCowork();
+      render(<InsideButtons {...defaultProps} />);
+      expect(screen.getByText('Cowork')).toBeInTheDocument();
+    });
+
+    it('renders off macOS when the override flag is set', () => {
+      // The escape hatch that lets the toggle be exercised on Linux/Windows
+      // desktop builds.
+      mockGhostAvailable = true;
+      process.env.NEXT_PUBLIC_ALLOW_NON_MACOS_COMPUTER_USE_TOGGLE = 'true';
+      render(<InsideButtons {...defaultProps} />);
+      expect(screen.getByText('Cowork')).toBeInTheDocument();
+    });
+
+    it('turns on and installs GhostOS when the remote AI backend is configured', () => {
+      enableCowork();
+      mockHasRemoteAi = true;
+      localStorage.setItem('ibl_cowork_enabled', 'false');
+      render(<InsideButtons {...defaultProps} />);
+
+      fireEvent.click(screen.getByText('Cowork'));
+
+      expect(mockSetCoworkEnabled).toHaveBeenCalledWith(true);
+      expect(mockGhostInstall).toHaveBeenCalledTimes(1);
+      expect(mockToastWarning).not.toHaveBeenCalled();
+    });
+
+    it('turns on with a large enough local model and no remote backend', () => {
+      enableCowork();
+      mockLocalLLMEnabled = true;
+      mockModelSupportsCowork = true;
+      localStorage.setItem('ibl_cowork_enabled', 'false');
+      render(<InsideButtons {...defaultProps} />);
+
+      fireEvent.click(screen.getByText('Cowork'));
+
+      expect(mockSetCoworkEnabled).toHaveBeenCalledWith(true);
+      expect(mockGhostInstall).toHaveBeenCalledTimes(1);
+    });
+
+    it('refuses to turn on with no backend at all, and says why', () => {
+      enableCowork();
+      localStorage.setItem('ibl_cowork_enabled', 'false');
+      render(<InsideButtons {...defaultProps} />);
+
+      fireEvent.click(screen.getByText('Cowork'));
+
+      expect(mockToastWarning).toHaveBeenCalledWith(
+        'Turn on “Local Models” first — Cowork needs a local AI model.',
+      );
+      expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
+      expect(mockGhostInstall).not.toHaveBeenCalled();
+    });
+
+    it('names the size problem when a local model is on but too small', () => {
+      enableCowork();
+      mockLocalLLMEnabled = true;
+      mockModelSupportsCowork = false;
+      localStorage.setItem('ibl_cowork_enabled', 'false');
+      render(<InsideButtons {...defaultProps} />);
+
+      fireEvent.click(screen.getByText('Cowork'));
+
+      expect(mockToastWarning).toHaveBeenCalledWith(
+        'Your local model is too small for Cowork. Pick a model of at least 12GB in Local Models.',
+      );
+      expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
+    });
+
+    it('turns off without any backend check', () => {
+      // Switching off must never be blocked by the guard that gates switching on.
+      enableCowork();
+      mockCoworkOn = true;
+      localStorage.setItem('ibl_cowork_enabled', 'true');
+      render(<InsideButtons {...defaultProps} />);
+
+      fireEvent.click(screen.getByText('Cowork'));
+
+      expect(mockSetCoworkEnabled).toHaveBeenCalledWith(false);
+      expect(mockGhostStop).toHaveBeenCalledTimes(1);
+      expect(mockToastWarning).not.toHaveBeenCalled();
+    });
+
+    describe('default-on pass', () => {
+      it('enables Cowork once for a logged-in desktop user who never chose', () => {
+        enableCowork();
+        localStorage.setItem('tenant', 'acme');
+        localStorage.setItem('dm_token', 'token-abc');
+        render(<InsideButtons {...defaultProps} />);
+
+        expect(mockSetCoworkEnabled).toHaveBeenCalledWith(true);
+        expect(mockGhostInstall).toHaveBeenCalledTimes(1);
+      });
+
+      it('respects an explicit earlier "off"', () => {
+        enableCowork();
+        localStorage.setItem('tenant', 'acme');
+        localStorage.setItem('dm_token', 'token-abc');
+        localStorage.setItem('ibl_cowork_enabled', 'false');
+        render(<InsideButtons {...defaultProps} />);
+
+        expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
+        expect(mockGhostInstall).not.toHaveBeenCalled();
+      });
+
+      it('leaves a logged-out user alone', () => {
+        enableCowork();
+        localStorage.setItem('tenant', 'acme');
+        render(<InsideButtons {...defaultProps} />);
+
+        expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
+        expect(mockGhostInstall).not.toHaveBeenCalled();
+      });
     });
   });
 });

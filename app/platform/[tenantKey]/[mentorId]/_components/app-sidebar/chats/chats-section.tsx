@@ -22,6 +22,7 @@ import {
 
 import { ChatRow, chatRowLabel } from './chat-row-label';
 import { ChatRowItem } from './chat-row';
+import { useCodePermissionSessions } from '@/components/chat/code-permission-card';
 import { useRecentChats } from './use-recent-chats';
 
 const NAV_MUTED = '#5f5f61';
@@ -76,6 +77,10 @@ export function SidebarChatsSection({
     onAfterNav,
   });
 
+  // Chats where Code is blocked on an answer. Its prompts render only in the chat that
+  // raised them, so without this a background chat waits unseen until it times out.
+  const awaitingPermission = useCodePermissionSessions();
+
   // Render helpers -----------------------------------------------------
 
   const renderRow = (row: ChatRow, kind: 'pinned' | 'recent') => (
@@ -87,6 +92,7 @@ export function SidebarChatsSection({
       isPinned={kind === 'pinned'}
       isLoading={actingSessionId === row.session_id}
       canExport={canExport}
+      awaitingPermission={awaitingPermission.has(row.session_id)}
       onPinToggle={() =>
         kind === 'pinned' ? handleUnpin(row) : handlePin(row)
       }

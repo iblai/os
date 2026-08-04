@@ -11,6 +11,7 @@ import {
   useEditMentorMutation,
   useGetMentorSettingsQuery,
 } from '@iblai/iblai-js/data-layer';
+import { LOCAL_MODELS, isTauriApp } from '@iblai/iblai-js/web-containers';
 
 import { Input } from '@/components/ui/input';
 import { useUsername } from '@/hooks/use-user';
@@ -20,11 +21,17 @@ import {
 } from '@/components/modals/llm-provider-modal';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { toast } from 'sonner';
-import { cn, getLLMProviderDetails, Provider } from '@/lib/utils';
+import {
+  cn,
+  getLLMProviderDetails,
+  getProviderName,
+  Provider,
+} from '@/lib/utils';
 import { useNavigate } from '@/hooks/user-navigate';
 import { Spinner } from '@/components/spinner';
 import WithFormPermissions from '@/hoc/withPermissions';
 import { extractErrorMessage } from '@/lib/error';
+import { useSelectedLocalModel } from '@/hooks/use-selected-local-model';
 
 type LLMTabProps = {
   showConfigurationHeader?: boolean;
@@ -71,6 +78,38 @@ export function LLMTab({ showConfigurationHeader = true }: LLMTabProps) {
     isMentorSettingsLoading || isLoadingLLMProviders || isEditingMentor;
 
   const isLoading = isMentorSettingsLoading || isLoadingLLMProviders;
+
+  // Providers that only offer on-device (local) models — surfaced as grid cards
+  // (Tauri desktop only) so their downloadable models are reachable even when the
+  // backend LLM list has no matching cloud provider.
+  const localOnlyProviders = React.useMemo(() => {
+    if (!isTauriApp()) return [] as { key: string; provider: string }[];
+    const cloudKeys = new Set(
+      (llmProviders ?? []).map((p) => getProviderName(p.name)),
+    );
+    const seen = new Set<string>();
+    const result: { key: string; provider: string }[] = [];
+    for (const model of LOCAL_MODELS) {
+      const key = getProviderName(model.provider);
+      if (cloudKeys.has(key) || seen.has(key)) continue;
+      seen.add(key);
+      result.push({ key, provider: model.provider });
+    }
+    return result;
+  }, [llmProviders]);
+
+  // The highlighted (selected) provider card must reflect the model chat
+  // actually uses. When on-device mode is on, that's the selected local model's
+  // provider (e.g. Llama 3.2 → Meta) — NOT the mentor's stale cloud
+  // `llm_provider` (which stays e.g. OpenAI). Falls back to the cloud provider
+  // when local mode is off. Reactive so it updates the instant a model is picked.
+  const selectedLocal = useSelectedLocalModel();
+  const activeProviderKey =
+    selectedLocal.isLocal && selectedLocal.model
+      ? getProviderName(selectedLocal.model.provider)
+      : mentorSettings?.llm_provider
+        ? getProviderName(mentorSettings.llm_provider)
+        : '';
 
   async function updateMentorLLM(llmProvider: string, llmName: string) {
     try {
@@ -163,7 +202,9 @@ export function LLMTab({ showConfigurationHeader = true }: LLMTabProps) {
                             'flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md',
                             {
                               'border-blue-500':
-                                mentorSettings?.llm_provider === model.name,
+                                !!activeProviderKey &&
+                                getProviderName(model.name) ===
+                                  activeProviderKey,
                             },
                           )}
                           onClick={() => {
@@ -201,6 +242,44 @@ export function LLMTab({ showConfigurationHeader = true }: LLMTabProps) {
                         </div>
                       );
                     })}
+                  {localOnlyProviders.map((lp) => {
+                    const details = getLLMProviderDetails(lp.provider);
+                    return (
+                      <div
+                        key={`local-${lp.key}`}
+                        className={cn(
+                          'flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md',
+                          { 'border-blue-500': lp.key === activeProviderKey },
+                        )}
+                        onClick={() => {
+                          if (isDisabled || disabled) return;
+                          setSelectedLLMProvider({
+                            id: -1,
+                            name: lp.provider,
+                            logo: details.logo,
+                            description: null,
+                            chat_models: [],
+                          });
+                        }}
+                      >
+                        <div className="h-8 w-8 flex-shrink-0">
+                          <Image
+                            src={details.logo}
+                            alt={t('providerLogoAlt', {
+                              providerName: details.name,
+                            })}
+                            className="h-full w-full object-contain"
+                            width={32}
+                            height={32}
+                            loading="lazy"
+                          />
+                        </div>
+                        <span className="text-sm font-medium text-gray-900">
+                          {details.name}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </WithFormPermissions>

@@ -243,7 +243,8 @@
     "accountDescIntegrations": "Manage your integrations with other services.",
     "accountDescMonetization": "Configure paywalls, pricing, and revenue.",
     "accountDescAdvanced": "Configure advanced organization settings.",
-    "accountDescBilling": "Manage your billing and subscription."
+    "accountDescBilling": "Manage your billing and subscription.",
+    "awaitingPermission": "Waiting for your permission"
   },
   "appSidebarPinnedMessages": {
     "pinned": "Pinned",
@@ -464,6 +465,9 @@
     "studyMode": "Study Mode",
     "deepResearch": "Deep Research",
     "memory": "Memory",
+    "cowork": "Cowork",
+    "coworkNeedsLocalModel": "Turn on “Local Models” first — Cowork needs a local AI model.",
+    "coworkModelTooSmall": "Your local model is too small for Cowork. Pick a model of at least 12GB in Local Models.",
     "moreOptions": "More options"
   },
   "chatInputFormMemoryMenu": {
@@ -1279,7 +1283,33 @@
     "title": "LLM Selection",
     "subtitle": "Choose your preferred LLM from the available provider to tailor your experience.",
     "searchPlaceholder": "Search",
-    "providerIconAlt": "{providerName} icon"
+    "providerIconAlt": "{providerName} icon",
+    "tooLargeTitle": "This model may be too large for your system",
+    "tooLargeDescription": "{modelName} needs about {modelSize}. It may run very slowly or fail to load on this machine. Download anyway?",
+    "cancel": "Cancel",
+    "downloadAnyway": "Download anyway",
+    "alreadyDownloadingTitle": "A model is already downloading",
+    "unnamedModel": "A model",
+    "alreadyDownloadingDescription": "{modelName} is being downloaded. Only one on-device model downloads at a time — wait for it to finish, or click {modelName} in the list to cancel it.",
+    "gotIt": "Got it",
+    "announceDownloaded": "{modelName} downloaded",
+    "announceCancelled": "Download cancelled",
+    "announceFailed": "Download failed",
+    "announceStarted": "Started downloading {modelName}",
+    "localModel": {
+      "onDevice": "On-device",
+      "starting": "Starting…",
+      "cancel": "Cancel",
+      "inUse": "In use",
+      "downloadFailedRetry": "Download failed — retry",
+      "ariaDownload": "Download {modelName}, {modelSize}, on-device model",
+      "ariaStarting": "Starting download of {modelName}",
+      "ariaDownloading": "Cancel download of {modelName}, {percent} percent",
+      "ariaInstalled": "Use {modelName}, on-device model",
+      "ariaSelected": "Selected {modelName}, on-device model, in use",
+      "ariaError": "Retry download of {modelName}",
+      "ariaErrorWithReason": "Retry download of {modelName}, {reason}"
+    }
   },
   "modalsLlmProviderSelectionModal": {
     "selectProviderDescription": "Select an LLM Provider from the list",
@@ -2177,5 +2207,34 @@
     "reject": "Reject",
     "stickyNote": "Sticky Note",
     "changeAgent": "Change agent"
+  },
+  "chatInputFormCodingModeButton": {
+    "code": "Code",
+    "tooltip": "An agentic coding tool for your project folder",
+    "description": "An agentic coding tool that edits files, runs commands, and commits changes in the folder you choose.",
+    "checkingLocalModel": "Checking whether your on-device model can run Code…",
+    "tryToolCapableModel": " Try a tool-capable model such as qwen3, llama3.2 or phi4-mini.",
+    "firstRunSlow": "First run can take a few minutes while the model loads.",
+    "modelUnavailable": "isn’t available for Code — turns will fail. Pick a different model in the top-left.",
+    "workspace": "Workspace",
+    "changeFolder": "Change folder…",
+    "chooseFolderTitle": "Choose your workspace folder"
+  },
+  "chatCodePermissionCard": {
+    "title": "Code needs your permission",
+    "unnamedAction": "An action it didn’t name",
+    "kind": {
+      "read": "read",
+      "write": "write",
+      "exec": "exec",
+      "delete": "delete",
+      "move": "move",
+      "search": "search",
+      "fetch": "fetch",
+      "think": "think",
+      "other": "action"
+    },
+    "allow": "Allow",
+    "deny": "Deny"
   }
 }

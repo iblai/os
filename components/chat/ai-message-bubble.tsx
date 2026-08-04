@@ -29,6 +29,10 @@ import { MessagePreview } from './chat-messages/message-preview';
 import type { CanvasOpenPayload } from './chat-messages/types';
 import { ReasoningSection } from './reasoning-section';
 import { ToolCallIndicator } from './tool-call-indicator';
+import {
+  CodePermissionCards,
+  useCodePermissionRequests,
+} from './code-permission-card';
 import { config } from '@/lib/config';
 import { useChatPrivacy } from '@iblai/iblai-js/web-containers';
 import { useUsername } from '@/hooks/use-user';
@@ -94,6 +98,15 @@ export function AIMessageBubble({
 }: AIMessageBubbleProps) {
   const t = useTranslations('chatAiMessageBubble');
   const showingSharedChat = useAppSelector(selectShowingSharedChat);
+  // Code's permission prompts belong to the turn that raised them. A streaming
+  // assistant message's id IS the generation id (`onStart` seeds it), so matching on it
+  // keeps another chat's prompt out of this bubble — chats now run their own opencode
+  // process and can be waiting concurrently. Shared store, so every bubble reads the
+  // same list through one pair of Tauri listeners.
+  const permissionRequests = useCodePermissionRequests();
+  const hasPermissionPrompts =
+    !!isCurrentlyStreaming &&
+    permissionRequests.some((r) => r.generation_id === message?.id);
 
   // Chat private mode signal — same source as the nav-bar toggle and the
   // chat-input Memory gate. A private session is a temporary chat that is not
@@ -135,6 +148,9 @@ export function AIMessageBubble({
     (content ?? '').trim().length > 0 ||
     hasReasoningToShow ||
     hasToolCallsToShow ||
+    // A permission prompt can be the FIRST thing in a Code turn, before any text.
+    // Without this the bubble renders as null and the turn looks silently stalled.
+    hasPermissionPrompts ||
     !!message?.actions?.length ||
     hasArtifactVersions(message);
 
@@ -180,6 +196,9 @@ export function AIMessageBubble({
                   toolCalls={toolCalls}
                   isCurrentlyStreaming={isCurrentlyStreaming}
                 />
+              )}
+              {hasPermissionPrompts && (
+                <CodePermissionCards generationId={message.id} />
               )}
               <div className="overflow-x-auto text-sm/6 text-gray-800 [&_.katex-display]:overflow-x-auto [&_.katex-display]:overflow-y-hidden [&_code]:rounded [&_code]:bg-gray-200 [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_em]:italic [&_li]:mb-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_pre]:overflow-x-auto [&_pre]:rounded [&_pre]:bg-gray-200 [&_pre]:p-2 [&_strong]:font-bold [&_ul]:list-disc [&_ul]:pl-4">
                 <MessagePreview
