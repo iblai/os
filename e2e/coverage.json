@@ -1,12 +1,12 @@
 {
   "version": 2,
-  "lastUpdated": "2026-07-31",
+  "lastUpdated": "2026-08-05",
   "summary": {
-    "totalCheckpoints": 605,
-    "coveredCheckpoints": 576,
+    "totalCheckpoints": 612,
+    "coveredCheckpoints": 582,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 10,
-    "pendingCheckpoints": 7,
+    "pendingCheckpoints": 8,
     "percent": 100,
     "totalJourneys": 68,
     "activeJourneys": 67
@@ -379,9 +379,7 @@
       "id": "mentor-settings-tab-unique-id",
       "name": "Mentor Settings Tab — Unique ID",
       "spec": "07-mentor-settings-tab-unique-id.spec.ts",
-      "sourceFiles": [
-        "components/modals/edit-mentor-modal/tabs/settings-tab.tsx"
-      ],
+      "sourceFiles": ["components/modals/edit-mentor-modal/settings-tab.tsx"],
       "checkpoints": [
         {
           "id": "uid-01",
@@ -427,6 +425,41 @@
           "id": "uid-09",
           "description": "When RBAC restricts write access, read-only settings fields (e.g. mentor_visibility) are gated in the UI and omitted from the settings PUT payload so the save is not rejected — unit-covered in settings-tab.test.tsx and hoc/utils/__tests__/index.test.ts; not e2e-reproducible without RBAC field-permission seeding",
           "status": "not-reproducible"
+        },
+        {
+          "id": "cat-01",
+          "description": "iblai-platform#2289: clicking a Category option (real click, not forced) updates the trigger label to that category — proves the popover is hit-testable, not just visible",
+          "status": "covered"
+        },
+        {
+          "id": "cat-02",
+          "description": "iblai-platform#2289: typing a substring of a category NAME narrows the option list to matching results. The bundled SDK source still shows CommandItem value={category.id.toString()}, which would predict this fails, but it passes reliably in practice (2/2 full runs) on a plain, never-copied mentor — FIXME: known failing on @iblai/web-containers@1.16.1; cmdk scores the query against CommandItem value, which is still the numeric category id, so typing a name renders \"No Category found.\". Needs value={category.name} in the SDK.",
+          "status": "pending"
+        },
+        {
+          "id": "cat-03",
+          "description": "iblai-platform#2289: typing a non-matching query shows the \"No Category found.\" empty state",
+          "status": "covered"
+        },
+        {
+          "id": "cat-04",
+          "description": "iblai-platform#2289: keystrokes typed into the Category search box land in the input's value — the popover previously swallowed input entirely",
+          "status": "covered"
+        },
+        {
+          "id": "cat-05",
+          "description": "iblai-platform#2289: a selected Category persists after Save + close/reopen — proves the numeric category id (not the name) reached the settings PUT payload and was resolved back to a name",
+          "status": "covered"
+        },
+        {
+          "id": "cat-06",
+          "description": "iblai-platform#2289: reopening the popover after a Save shows the selected option's check mark",
+          "status": "covered"
+        },
+        {
+          "id": "cat-07",
+          "description": "iblai-platform#2289 clipping guard: the Category popover (now rendered inside the dialog's overflow-hidden subtree, portalled={false}) remains interactive at a small (390x640) viewport",
+          "status": "covered"
         }
       ]
     },
@@ -2143,10 +2176,7 @@
       "id": "copy-mentor",
       "name": "Copy Mentor",
       "spec": "36-copy-mentor.spec.ts",
-      "sourceFiles": [
-        "components/modals/edit-mentor-modal/tabs/settings-tab.tsx",
-        "components/modals/edit-mentor-modal/tabs/settings-tab/copy-mentor-modal.tsx"
-      ],
+      "sourceFiles": ["components/modals/edit-mentor-modal/settings-tab.tsx"],
       "checkpoints": [
         {
           "id": "cpm-01",
