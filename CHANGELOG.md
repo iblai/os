@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.111.8](https://github.com/iblai/os/compare/v0.111.7...v0.111.8) (2026-08-04)
+
+### Bug Fixes
+
+* **pr-e2e:** never infer which runner executes the dispatched run ([9dcc8e6](https://github.com/iblai/os/commit/9dcc8e66e3dd12c601a069722e65dd135db89497)), closes [os#407](https://github.com/iblai/os/issues/407) [os#407](https://github.com/iblai/os/issues/407)
+
 ## [0.111.7](https://github.com/iblai/os/compare/v0.111.6...v0.111.7) (2026-08-04)
 
 ### Bug Fixes
