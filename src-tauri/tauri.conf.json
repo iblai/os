@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "iblai",
+  "productName": "ibl.ai",
   "identifier": "ai.ibl.mentorai",
   "version": "0.95.8",
   "build": {
