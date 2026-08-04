@@ -269,7 +269,17 @@ pub async fn cua_driver_start(app: AppHandle) -> Result<(), String> {
 
     let mut cmd = Command::new(cua_driver_program());
     // `--direct` makes this process own its runtime and adopt our TCC identity.
-    cmd.args(["mcp", "--direct"])
+    //
+    // `--grant existing-profile` lets the browser tools attach to the user's
+    // real, logged-in Chromium rather than the isolated throwaway profile they
+    // are otherwise limited to. Without it `browser_prepare` can only launch a
+    // separate browser, so "do this in my browser" cannot see their tabs or
+    // sessions. Note what the grant buys: for the life of this process the agent
+    // can act as the user on every site they are signed into, and the grant is
+    // session-wide rather than per-attachment. Upstream deliberately renders no
+    // consent UI of its own — it expects the embedding app to, via
+    // DriverAuthorizationHost. Until that is wired up this flag IS the consent.
+    cmd.args(["mcp", "--direct", "--grant", "existing-profile"])
         .env("PATH", crate::opencode_acp::augmented_path())
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -308,7 +318,7 @@ pub async fn cua_driver_start(app: AppHandle) -> Result<(), String> {
     });
 
     println!(
-        "[cua-driver] spawned `cua-driver mcp --direct` (pid {:?})",
+        "[cua-driver] spawned `cua-driver mcp --direct --grant existing-profile` (pid {:?})",
         child.id()
     );
     *guard = Some(DriverProc { child, stdin });
