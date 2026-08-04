@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-07-25 | 592 checkpoints (564 covered, 7 pending/fixme, 9 not-reproducible in default env, 12 deprecated) | 67 journeys (66 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-08-04 | 599 checkpoints (570 covered, 8 pending/fixme, 9 not-reproducible in default env, 12 deprecated) | 67 journeys (66 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -116,9 +116,9 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 7: Mentor Settings Tab — Unique ID (9 checkpoints) — `journeys/07-mentor-settings-tab-unique-id.spec.ts`
+## Journey 7: Mentor Settings Tab — Unique ID (16 checkpoints) — `journeys/07-mentor-settings-tab-unique-id.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`
+**Source files:** `components/modals/edit-mentor-modal/settings-tab.tsx`
 
 - [x] Unique ID field is read-only and cannot be edited
 - [x] Copy button for unique ID is visible
@@ -129,6 +129,16 @@ When adding a new page or modifying an existing user flow:
 - [x] Enhanced RAG tooltip contains wording about multiple search queries
 - [x] Enhanced RAG toggle persists ON and OFF across save/reopen cycles
 - [ ] _(not-reproducible — RBAC off in default env)_ Read-only settings fields (e.g. `mentor_visibility`) are gated in the UI and omitted from the settings PUT payload when the user lacks write access — unit-covered in `settings-tab.test.tsx` and `hoc/utils/__tests__/index.test.ts`
+
+**Journey 7B — Category Combobox (`iblai-platform#2289`):** the Basic-tab Category combobox rendered its options but was not hit-testable (inherited `pointer-events:none` from a duplicated `@radix-ui/react-dismissable-layer`). The `PopoverContent portalled={false}` fix landed and is reliable here — all 7 checkpoints below pass (2/2 full runs), including type-to-filter-by-name: the bundled SDK source still shows `CommandItem value={category.id.toString()}` (which would predict name search can't match), but it filters correctly in practice. Not specific to copied mentors — reproduced here on a plain, never-copied mentor, which is why the coverage lives in this journey rather than the copy one. Known gap: selecting an option, reopening the popover and then typing detaches the search input (the in-place content is unmounted by the re-render the selection triggers). That sequence is not covered below and needs a follow-up SDK fix.
+
+- [x] Clicking a Category option (real click, never `{ force: true }`) updates the trigger label to that category
+- [ ] Typing a substring of a category name narrows the list to the matching option _(fixme — known failing on `@iblai/web-containers@1.16.1`: cmdk scores the typed query against `CommandItem value`, which is still `category.id.toString()`, so typing a name renders "No Category found.". This is #2289's second bug, still live. Needs `value={category.name}` in the SDK; remove the `.fixme` when that ships)_
+- [x] Typing a non-matching query shows the "No Category found." empty state
+- [x] Keystrokes typed into the Category search box land in the input's value
+- [x] A selected Category persists after Save + close/reopen (numeric id round-trips to the correct name)
+- [x] Reopening the popover after Save shows the selected option's check mark
+- [x] _(clipping guard)_ The Category popover remains interactive at a small (390x640) viewport
 
 ---
 
@@ -613,9 +623,9 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 
 ---
 
-## Journey 36: Copy Mentor (11 checkpoints) — `journeys/36-copy-mentor.spec.ts`
+## Journey 36: Copy Mentor (13 checkpoints) — `journeys/36-copy-mentor.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab/copy-mentor-modal.tsx`
+**Source files:** `components/modals/edit-mentor-modal/settings-tab.tsx`
 
 - [x] Copies toggle shows Copy button when enabled and hides it when disabled
 - [x] Copy Mentor modal opens with correct defaults (pre-filled name, training data toggle, Cancel/Copy buttons)
