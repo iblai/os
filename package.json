@@ -1,6 +1,6 @@
 {
   "name": "ibl-web-nextjs-mentor-spa",
-  "version": "0.110.1",
+  "version": "0.111.1",
   "private": false,
   "packageManager": "pnpm@10.11.1",
   "engines": {
@@ -31,6 +31,13 @@
     "test:e2e": "mkdir -p playwright/.auth && echo '{\"cookies\":[],\"origins\":[]}' > playwright/.auth/user-chrome.json && echo '{\"cookies\":[],\"origins\":[]}' > playwright/.auth/user-edge.json && echo '{\"cookies\":[],\"origins\":[]}' > playwright/.auth/user-safari.json && echo '{\"cookies\":[],\"origins\":[]}' > playwright/.auth/user-firefox.json && playwright test --config e2e/playwright.config.ts",
     "test:e2e:ui": "playwright test --config e2e/playwright.config.ts --ui",
     "test:e2e:headed": "playwright test --config e2e/playwright.config.ts --headed",
+    "test:tauri": "wdio run e2e-tauri/wdio.conf.ts",
+    "test:tauri:windows": "wdio run e2e-tauri/wdio.conf.ts",
+    "test:tauri:linux": "GDK_BACKEND=x11 WEBKIT_DISABLE_DMABUF_RENDERER=1 WEBKIT_DISABLE_COMPOSITING_MODE=1 xvfb-run -a pnpm test:tauri",
+    "test:tauri:macos": "node -e \"console.error('tauri-driver has no macOS support (WKWebView exposes no WebDriver) — run the desktop e2e on Linux or Windows.'); process.exit(1)\"",
+    "test:tauri:coverage": "node e2e-tauri/scripts/check-journey-coverage.mjs",
+    "test:tauri:auth:save": "node -e \"console.log('Auth state persists in '+ (process.env.TAURI_E2E_DATA_HOME || require('node:path').resolve(require('node:os').homedir(), '.local/share/iblai-os-test')) + ' — nothing to do; it is kept between runs.')\"",
+    "test:tauri:auth:delete": "node -e \"const p=process.env.TAURI_E2E_DATA_HOME || require('node:path').resolve(require('node:os').homedir(), '.local/share/iblai-os-test'); require('node:fs').rmSync(p,{recursive:true,force:true}); console.log('removed '+p)\"",
     "tauri:bump": "node scripts/tauri-bump.mjs"
   },
   "dependencies": {
@@ -70,6 +77,7 @@
     "@sentry/nextjs": "10.62.0",
     "@tanstack/react-form": "1.6.3",
     "@tauri-apps/api": "2.11.0",
+    "@tauri-apps/plugin-dialog": "2.7.2",
     "@tauri-apps/plugin-opener": "2.5.3",
     "@tauri-apps/plugin-os": "2.3.2",
     "@tauri-apps/plugin-shell": "2.3.4",
@@ -159,6 +167,7 @@
     "@testing-library/react": "16.3.0",
     "@testing-library/user-event": "14.6.1",
     "@types/file-saver": "2.0.7",
+    "@types/mocha": "10.0.10",
     "@types/node": "20.17.48",
     "@types/react": "19.1.17",
     "@types/react-dom": "19.2.1",
@@ -167,6 +176,12 @@
     "@vitejs/plugin-react": "5.1.2",
     "@vitest/coverage-istanbul": "3.2.6",
     "@vitest/ui": "3.2.6",
+    "@wdio/cli": "9.30.0",
+    "@wdio/globals": "9.29.1",
+    "@wdio/local-runner": "9.30.0",
+    "@wdio/mocha-framework": "9.30.0",
+    "@wdio/spec-reporter": "9.29.1",
+    "@wdio/types": "9.29.1",
     "autoprefixer": "10.4.27",
     "cross-env": "7.0.3",
     "dotenv": "16.4.7",
@@ -184,11 +199,13 @@
     "release-it": "19.2.4",
     "tailwind-scrollbar": "4.0.2",
     "tailwindcss": "4.2.2",
+    "tsx": "4.23.1",
     "turbo": "2.9.14",
     "typescript": "5.9.3",
     "vite-tsconfig-paths": "5.1.4",
     "vitest": "3.2.6",
-    "vitest-axe": "0.1.0"
+    "vitest-axe": "0.1.0",
+    "webdriverio": "9.30.0"
   },
   "lint-staged": {
     "*.ts?(x)": [

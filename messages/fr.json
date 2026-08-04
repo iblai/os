@@ -243,7 +243,8 @@
     "accountDescIntegrations": "Gérez vos intégrations avec d'autres services.",
     "accountDescMonetization": "Configurez les paywalls, la tarification et les revenus.",
     "accountDescAdvanced": "Configurez les paramètres avancés de l'organisation.",
-    "accountDescBilling": "Gérez votre facturation et votre abonnement."
+    "accountDescBilling": "Gérez votre facturation et votre abonnement.",
+    "awaitingPermission": "En attente de votre autorisation"
   },
   "appSidebarPinnedMessages": {
     "pinned": "Épinglé",
@@ -464,6 +465,9 @@
     "studyMode": "Mode étude",
     "deepResearch": "Recherche approfondie",
     "memory": "Mémoire",
+    "cowork": "Cowork",
+    "coworkNeedsLocalModel": "Activez d’abord « Modèles Locaux » — Cowork nécessite un modèle d’IA local.",
+    "coworkModelTooSmall": "Votre modèle local est trop petit pour Cowork. Choisissez un modèle d’au moins 12 Go dans Modèles Locaux.",
     "moreOptions": "Plus d'options"
   },
   "chatInputFormMemoryMenu": {
@@ -1280,7 +1284,33 @@
     "title": "Sélection LLM",
     "subtitle": "Choisissez votre LLM préféré parmi le fournisseur disponible pour personnaliser votre expérience.",
     "searchPlaceholder": "Rechercher",
-    "providerIconAlt": "icône {providerName}"
+    "providerIconAlt": "icône {providerName}",
+    "tooLargeTitle": "Ce modèle est peut-être trop volumineux pour votre système",
+    "tooLargeDescription": "{modelName} nécessite environ {modelSize}. Il peut être très lent ou ne pas se charger sur cette machine. Télécharger quand même ?",
+    "cancel": "Annuler",
+    "downloadAnyway": "Télécharger quand même",
+    "alreadyDownloadingTitle": "Un modèle est déjà en cours de téléchargement",
+    "unnamedModel": "Un modèle",
+    "alreadyDownloadingDescription": "{modelName} est en cours de téléchargement. Un seul modèle sur l''appareil est téléchargé à la fois : attendez la fin ou cliquez sur {modelName} dans la liste pour l''annuler.",
+    "gotIt": "Compris",
+    "announceDownloaded": "{modelName} téléchargé",
+    "announceCancelled": "Téléchargement annulé",
+    "announceFailed": "Échec du téléchargement",
+    "announceStarted": "Téléchargement de {modelName} démarré",
+    "localModel": {
+      "onDevice": "Sur l''appareil",
+      "starting": "Démarrage…",
+      "cancel": "Annuler",
+      "inUse": "Utilisé",
+      "downloadFailedRetry": "Échec du téléchargement — réessayer",
+      "ariaDownload": "Télécharger {modelName}, {modelSize}, modèle sur l''appareil",
+      "ariaStarting": "Démarrage du téléchargement de {modelName}",
+      "ariaDownloading": "Annuler le téléchargement de {modelName}, {percent} pour cent",
+      "ariaInstalled": "Utiliser {modelName}, modèle sur l''appareil",
+      "ariaSelected": "{modelName} sélectionné, modèle sur l''appareil, utilisé",
+      "ariaError": "Réessayer le téléchargement de {modelName}",
+      "ariaErrorWithReason": "Réessayer le téléchargement de {modelName}, {reason}"
+    }
   },
   "modalsLlmProviderSelectionModal": {
     "selectProviderDescription": "Sélectionnez un fournisseur LLM dans la liste",
@@ -2250,5 +2280,34 @@
     "reject": "Rejeter",
     "stickyNote": "Note autocollante",
     "changeAgent": "Changer d'agent"
+  },
+  "chatInputFormCodingModeButton": {
+    "code": "Code",
+    "tooltip": "Un outil de codage agentique pour votre dossier de projet",
+    "description": "Un outil de codage agentique qui modifie des fichiers, exécute des commandes et valide les changements dans le dossier que vous choisissez.",
+    "checkingLocalModel": "Vérification que votre modèle local peut exécuter Code…",
+    "tryToolCapableModel": " Essayez un modèle compatible avec les outils comme qwen3, llama3.2 ou phi4-mini.",
+    "firstRunSlow": "La première exécution peut prendre quelques minutes pendant le chargement du modèle.",
+    "modelUnavailable": "n’est pas disponible pour Code — les tours échoueront. Choisissez un autre modèle en haut à gauche.",
+    "workspace": "Espace de travail",
+    "changeFolder": "Changer de dossier…",
+    "chooseFolderTitle": "Choisissez votre dossier de travail"
+  },
+  "chatCodePermissionCard": {
+    "title": "Code a besoin de votre autorisation",
+    "unnamedAction": "Une action non nommée",
+    "kind": {
+      "read": "lire",
+      "write": "écrire",
+      "exec": "exécuter",
+      "delete": "supprimer",
+      "move": "déplacer",
+      "search": "chercher",
+      "fetch": "récupérer",
+      "think": "réfléchir",
+      "other": "action"
+    },
+    "allow": "Autoriser",
+    "deny": "Refuser"
   }
 }

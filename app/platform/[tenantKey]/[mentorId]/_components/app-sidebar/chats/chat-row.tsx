@@ -115,6 +115,7 @@ export function ChatRowItem({
   isPinned,
   isLoading,
   canExport = true,
+  awaitingPermission = false,
   onPinToggle,
   onExport,
   onDelete,
@@ -125,6 +126,8 @@ export function ChatRowItem({
   isPinned: boolean;
   isLoading: boolean;
   canExport?: boolean;
+  /** Code is blocked on a permission answer in this chat. */
+  awaitingPermission?: boolean;
   onPinToggle: () => void;
   onExport: () => void;
   onDelete: () => void;
@@ -160,6 +163,19 @@ export function ChatRowItem({
             in the three-dot slot below; this is the half a screen reader
             needs, since it cannot see either. */}
         {isPinned && <span className="sr-only">{t('pinned')}</span>}
+        {/* Code's prompts only render in the chat that raised them, so a background
+            chat would otherwise wait unseen and time out as denied after 180s. This is
+            the only signal telling the user where to look — deliberately in the row's
+            own muted grey rather than an accent colour, so it reads as a hint you can
+            find when you look for it, not an alert competing with the chat title. */}
+        {awaitingPermission && (
+          <span
+            data-testid="chat-awaiting-permission"
+            title={t('awaitingPermission')}
+            aria-label={t('awaitingPermission')}
+            className="size-1.5 shrink-0 rounded-full bg-[#9ca3af]"
+          />
+        )}
         <span className="line-clamp-1 min-w-0 flex-1 overflow-hidden">
           {chatRowLabel(row, t('noContent'))}
         </span>
