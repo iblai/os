@@ -121,7 +121,11 @@ fn resolve_bridge_bin() -> Option<String> {
     if let Some(home) = home_dir() {
         #[cfg(target_os = "windows")]
         {
-            candidates.push(home.join(".local").join("bin").join("ollama-mcp-bridge.exe"));
+            candidates.push(
+                home.join(".local")
+                    .join("bin")
+                    .join("ollama-mcp-bridge.exe"),
+            );
         }
         #[cfg(not(target_os = "windows"))]
         {
@@ -142,7 +146,10 @@ fn resolve_bridge_bin() -> Option<String> {
 fn ensure_config() -> Option<PathBuf> {
     let dir = CONFIG_DIR.get()?;
     if let Err(e) = std::fs::create_dir_all(dir) {
-        println!("[McpBridge] Failed to create config dir {}: {e}", dir.display());
+        println!(
+            "[McpBridge] Failed to create config dir {}: {e}",
+            dir.display()
+        );
         return None;
     }
 
@@ -235,7 +242,12 @@ pub fn start_bridge() {
 fn macos_server_path() -> String {
     let mut parts: Vec<String> = Vec::new();
     if let Some(home) = home_dir() {
-        parts.push(home.join(".local").join("bin").to_string_lossy().into_owned());
+        parts.push(
+            home.join(".local")
+                .join("bin")
+                .to_string_lossy()
+                .into_owned(),
+        );
     }
     parts.push("/opt/homebrew/bin".to_string());
     parts.push("/usr/local/bin".to_string());

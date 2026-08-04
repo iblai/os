@@ -37,6 +37,44 @@ const EVENT_MESSAGE: &str = "cua-driver:message";
 /// Emitted once when the process exits (stdout closed).
 const EVENT_CLOSED: &str = "cua-driver:closed";
 
+/// How much of a JSON-RPC line is echoed to stdout.
+///
+/// Not a style choice: a `screenshot`/capture result carries a base64 image, so
+/// a single message can run to megabytes. Logging those whole would bury the
+/// tool calls you actually want to read and slow the turn down by writing them.
+const LOG_MAX_CHARS: usize = 2000;
+
+/// Truncate on a char boundary. Slicing a `String` at a byte index panics
+/// mid-codepoint, and tool arguments carry arbitrary user text.
+fn truncate_utf8(s: &str, max: usize) -> &str {
+    if s.len() <= max {
+        return s;
+    }
+    let mut end = max;
+    while end > 0 && !s.is_char_boundary(end) {
+        end -= 1;
+    }
+    &s[..end]
+}
+
+/// Echo one JSON-RPC line to stdout. `direction` is `->` (to the driver) or
+/// `<-` (from it), so a turn reads as an interleaved transcript.
+fn log_rpc(direction: &str, line: &str) {
+    let line = line.trim();
+    if line.is_empty() {
+        return;
+    }
+    let shown = truncate_utf8(line, LOG_MAX_CHARS);
+    if shown.len() < line.len() {
+        println!(
+            "[cua-driver {direction}] {shown}… (+{} bytes truncated)",
+            line.len() - shown.len()
+        );
+    } else {
+        println!("[cua-driver {direction}] {shown}");
+    }
+}
+
 /// Bare program name, resolved through the augmented PATH so a system install
 /// wins and our managed copy only fills the gap.
 pub fn cua_driver_program() -> String {
@@ -74,10 +112,16 @@ pub struct DriverSupport {
 
 impl DriverSupport {
     fn yes() -> Self {
-        Self { supported: true, reason: None }
+        Self {
+            supported: true,
+            reason: None,
+        }
     }
     fn no(reason: &str) -> Self {
-        Self { supported: false, reason: Some(reason.to_string()) }
+        Self {
+            supported: false,
+            reason: Some(reason.to_string()),
+        }
     }
 }
 
@@ -231,9 +275,9 @@ pub async fn cua_driver_start(app: AppHandle) -> Result<(), String> {
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
-    let mut child = cmd.spawn().map_err(|e| {
-        format!("Failed to spawn `cua-driver mcp` (is the driver installed?): {e}")
-    })?;
+    let mut child = cmd
+        .spawn()
+        .map_err(|e| format!("Failed to spawn `cua-driver mcp` (is the driver installed?): {e}"))?;
 
     let stdin = child.stdin.take().ok_or("cua-driver: no stdin handle")?;
     let stdout = child.stdout.take().ok_or("cua-driver: no stdout handle")?;
@@ -254,13 +298,19 @@ pub async fn cua_driver_start(app: AppHandle) -> Result<(), String> {
             if line.trim().is_empty() {
                 continue;
             }
+            log_rpc("<-", &line);
             let _ = reader_app.emit(EVENT_MESSAGE, line);
         }
         // stdout closed ⇒ the process is gone; tell the webview so it can drop
         // its cached session and reconnect on the next turn.
+        println!("[cua-driver] process exited (stdout closed)");
         let _ = reader_app.emit(EVENT_CLOSED, ());
     });
 
+    println!(
+        "[cua-driver] spawned `cua-driver mcp --direct` (pid {:?})",
+        child.id()
+    );
     *guard = Some(DriverProc { child, stdin });
     Ok(())
 }
@@ -273,6 +323,7 @@ pub async fn cua_driver_send(line: String) -> Result<(), String> {
         .as_mut()
         .ok_or("cua-driver is not running; call cua_driver_start first")?;
 
+    log_rpc("->", &line);
     proc.stdin
         .write_all(line.as_bytes())
         .map_err(|e| format!("cua-driver stdin write failed: {e}"))?;
@@ -292,6 +343,7 @@ pub async fn cua_driver_send(line: String) -> Result<(), String> {
 pub async fn cua_driver_stop() -> Result<(), String> {
     let mut guard = slot().lock().map_err(|_| "cua-driver lock poisoned")?;
     if let Some(mut proc) = guard.take() {
+        println!("[cua-driver] stopping (pid {:?})", proc.child.id());
         let _ = proc.child.kill();
         let _ = proc.child.wait();
     }
@@ -314,14 +366,20 @@ mod tests {
     #[test]
     fn windows_and_macos_are_supported_wholesale() {
         for os in ["windows", "macos"] {
-            let env = SessionEnv { os: os.to_string(), ..Default::default() };
+            let env = SessionEnv {
+                os: os.to_string(),
+                ..Default::default()
+            };
             assert_eq!(session_support(&env), DriverSupport::yes(), "{os}");
         }
     }
 
     #[test]
     fn an_unknown_os_is_refused() {
-        let env = SessionEnv { os: "freebsd".to_string(), ..Default::default() };
+        let env = SessionEnv {
+            os: "freebsd".to_string(),
+            ..Default::default()
+        };
         assert_eq!(
             session_support(&env).reason.as_deref(),
             Some(reason::UNSUPPORTED_OS)
@@ -343,7 +401,10 @@ mod tests {
     #[test]
     fn sway_is_supported_via_either_signal() {
         assert!(session_support(&linux("wayland", "sway")).supported);
-        let via_sock = SessionEnv { sway: true, ..linux("wayland", "") };
+        let via_sock = SessionEnv {
+            sway: true,
+            ..linux("wayland", "")
+        };
         assert!(session_support(&via_sock).supported);
     }
 
@@ -355,7 +416,10 @@ mod tests {
             Some(reason::GNOME_HELPER_MISSING)
         );
 
-        let with_helper = SessionEnv { gnome_helper: true, ..bare };
+        let with_helper = SessionEnv {
+            gnome_helper: true,
+            ..bare
+        };
         assert!(session_support(&with_helper).supported);
     }
 
@@ -363,7 +427,9 @@ mod tests {
     fn kde_wayland_is_refused_as_unproven() {
         for desktop in ["KDE", "plasma"] {
             assert_eq!(
-                session_support(&linux("wayland", desktop)).reason.as_deref(),
+                session_support(&linux("wayland", desktop))
+                    .reason
+                    .as_deref(),
                 Some(reason::KDE_UNPROVEN),
                 "{desktop}"
             );
@@ -373,9 +439,37 @@ mod tests {
     #[test]
     fn an_unrecognised_wayland_compositor_is_refused() {
         assert_eq!(
-            session_support(&linux("wayland", "Hyprland")).reason.as_deref(),
+            session_support(&linux("wayland", "Hyprland"))
+                .reason
+                .as_deref(),
             Some(reason::UNKNOWN_SESSION)
         );
+    }
+
+    #[test]
+    fn short_rpc_lines_are_logged_whole() {
+        let line = r#"{"jsonrpc":"2.0","method":"tools/call"}"#;
+        assert_eq!(truncate_utf8(line, LOG_MAX_CHARS), line);
+    }
+
+    #[test]
+    fn a_long_capture_result_is_cut_short() {
+        // A screenshot result is base64 and can run to megabytes; logging it
+        // whole would bury the tool calls and slow the turn down.
+        let line = "x".repeat(LOG_MAX_CHARS * 3);
+        assert_eq!(truncate_utf8(&line, LOG_MAX_CHARS).len(), LOG_MAX_CHARS);
+    }
+
+    #[test]
+    fn truncation_never_splits_a_codepoint() {
+        // Tool arguments carry arbitrary user text, and slicing a String at a
+        // byte index mid-codepoint panics — which would take down the send path.
+        for max in 0..12 {
+            let s = "héllo→wörld"; // 2- and 3-byte sequences at shifting offsets
+            let cut = truncate_utf8(s, max);
+            assert!(s.starts_with(cut), "max={max}");
+            assert!(cut.len() <= max, "max={max}");
+        }
     }
 
     #[test]

@@ -2,9 +2,9 @@ use futures_util::StreamExt;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::sync::atomic::{AtomicBool, Ordering};
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 use std::path::Path;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 /// Set when the user cancels an in-flight model download. `pull_model` checks
 /// this each iteration and stops cleanly (emitting a "cancelled" event) instead
@@ -174,8 +174,12 @@ pub fn check_ollama_installed() -> bool {
 
 /// Check if Ollama server is running by pinging the API
 pub async fn is_ollama_running() -> bool {
-    let Ok(resp) = reqwest::get(format!("{}/api/version", OLLAMA_API_URL)).await else { return false };
-    let Ok(json) = resp.json::<Value>().await else { return false };
+    let Ok(resp) = reqwest::get(format!("{}/api/version", OLLAMA_API_URL)).await else {
+        return false;
+    };
+    let Ok(json) = resp.json::<Value>().await else {
+        return false;
+    };
 
     let status = json.get("version").is_some_and(Value::is_string);
 
@@ -411,7 +415,7 @@ pub fn get_system_memory() -> SystemMemory {
         sys.refresh_memory();
         let ram = sys.total_memory();
         let vram = get_vram_total();
-        println!("RAM: {ram}, VRAM: {vram}", );
+        println!("RAM: {ram}, VRAM: {vram}",);
         SystemMemory {
             ram_total: ram,
             vram_total: vram,
@@ -481,7 +485,11 @@ pub async fn list_installed_models() -> Option<Vec<String>> {
                 .into_iter()
                 .filter_map(|m| m.name)
                 .collect();
-            println!("[Ollama] /api/tags ok: {} model(s) {:?}", names.len(), names);
+            println!(
+                "[Ollama] /api/tags ok: {} model(s) {:?}",
+                names.len(),
+                names
+            );
             Some(names)
         }
         Err(e) => {
@@ -543,7 +551,8 @@ where
     // and only reveals a layer's `total` once it starts, but summing across every
     // layer seen so far keeps the bar smooth instead of snapping back to 0% each
     // time a new layer begins.
-    let mut layers: std::collections::HashMap<String, (u64, u64)> = std::collections::HashMap::new();
+    let mut layers: std::collections::HashMap<String, (u64, u64)> =
+        std::collections::HashMap::new();
 
     while let Some(chunk) = stream.next().await {
         // The user requested cancellation — stop cleanly (not as an error).

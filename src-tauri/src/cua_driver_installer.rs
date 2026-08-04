@@ -168,7 +168,9 @@ fn extract(archive: &Path, dir: &Path) -> Result<(), String> {
         c.args(["-xf", &a, "-C", &d]);
         c
     };
-    let out = cmd.output().map_err(|e| format!("extract spawn failed: {e}"))?;
+    let out = cmd
+        .output()
+        .map_err(|e| format!("extract spawn failed: {e}"))?;
     if out.status.success() {
         Ok(())
     } else {
@@ -221,9 +223,8 @@ fn hoist_binary(root: &Path, target: &Path) -> Result<(), String> {
 async fn download_and_install(app: &AppHandle) -> Result<(), String> {
     let version = version();
     let asset = target_asset(&version)?;
-    let base = format!(
-        "https://github.com/{CUA_DRIVER_REPO}/releases/download/cua-driver-rs-v{version}"
-    );
+    let base =
+        format!("https://github.com/{CUA_DRIVER_REPO}/releases/download/cua-driver-rs-v{version}");
 
     let bin_dir = iblai_data_dir().join("bin");
     std::fs::create_dir_all(&bin_dir).map_err(|e| format!("bin dir failed: {e}"))?;
@@ -386,9 +387,16 @@ mod tests {
         // wrong 404s at download time.
         let name = target_asset("0.17.0").expect("this platform is supported");
         assert!(name.starts_with("cua-driver-rs-0.17.0-"), "{name}");
-        let expected_ext = if cfg!(target_os = "windows") { ".zip" } else { ".tar.gz" };
+        let expected_ext = if cfg!(target_os = "windows") {
+            ".zip"
+        } else {
+            ".tar.gz"
+        };
         assert!(name.ends_with(expected_ext), "{name}");
-        assert!(!name.contains("x64."), "arch must be x86_64, not x64: {name}");
+        assert!(
+            !name.contains("x64."),
+            "arch must be x86_64, not x64: {name}"
+        );
     }
 
     #[test]
@@ -409,7 +417,10 @@ mod tests {
 
     #[test]
     fn an_unpublished_asset_has_no_checksum() {
-        assert_eq!(expected_sha256(CHECKSUMS, "cua-driver-rs-9.9.9-linux-arm64.tar.gz"), None);
+        assert_eq!(
+            expected_sha256(CHECKSUMS, "cua-driver-rs-9.9.9-linux-arm64.tar.gz"),
+            None
+        );
     }
 
     #[test]
