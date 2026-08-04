@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.111.5](https://github.com/iblai/os/compare/v0.111.4...v0.111.5) (2026-08-04)
+
+### Bug Fixes
+
+* **pr-e2e:** a run that tested nothing must not erase a run that did ([25e4f75](https://github.com/iblai/os/commit/25e4f751791c3fefd53cd64d0dfbc0a56d1fb01e)), closes [os#405](https://github.com/iblai/os/issues/405) [os#405](https://github.com/iblai/os/issues/405) [#405](https://github.com/iblai/os/issues/405)
+* **pr-e2e:** never lose a report — fix the dispatch live-lock and the summary ([da56673](https://github.com/iblai/os/commit/da56673561c34d8bb558b765555f9bf844806b76)), closes [os#405](https://github.com/iblai/os/issues/405) [os#405](https://github.com/iblai/os/issues/405) [iblai/iblai-deploy-ops#26](https://github.com/iblai/iblai-deploy-ops/issues/26)
+
 ## [0.111.4](https://github.com/iblai/os/compare/v0.111.3...v0.111.4) (2026-08-04)
 
 ### Chores
