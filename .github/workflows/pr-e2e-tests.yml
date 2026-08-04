@@ -303,6 +303,13 @@ jobs:
                 fi
               fi
               if [ "$started" = "0" ]; then
+                # Which runner executes this run is NOT knowable from the env the caller REQUESTED:
+                # an operator override (vars.PR_E2E_ENV_OVERRIDE) can redirect it to the other box.
+                # Matching a guessed "${TARGET}-spa" made a perfectly healthy run on the OTHER runner
+                # look like an offline one and killed it 62 minutes before its suite finished — the
+                # report was written and the PR still said "ask a maintainer" (os#407, 2026-08-04).
+                # Count activity on ANY self-hosted runner instead: if the fleet is executing anything,
+                # we are QUEUED, not orphaned. Correct wherever the run lands, override or not.
                 # An offline runner never appears executing ANY job anywhere; a merely BUSY one does.
                 # Elapsed time cannot tell them apart when one serialized runner handles ~74-min suites.
                 # Scan the 20 most recent runs (matches the env picker's window). With --limit 10,
@@ -311,7 +318,7 @@ jobs:
                 busy=$(for rid in $(gh run list -R "$OPS" --limit 20 --json databaseId --jq '.[].databaseId' 2>/dev/null); do
                          gh api "repos/$OPS/actions/runs/$rid/jobs" \
                            --jq '.jobs[] | select(.status=="in_progress") | .runner_name // empty' 2>/dev/null
-                       done | grep -cx "$RUNNER" || true)
+                       done | grep -cvE '^(GitHub Actions|$)' || true)
                 if [ "${busy:-0}" -gt 0 ]; then
                   idle_since=""                   # runner is alive, we are simply queued behind work
                 else
@@ -321,9 +328,9 @@ jobs:
                   # for 15 real minutes.
                   now=$(date +%s)
                   [ -z "$idle_since" ] && idle_since="$now"
-                  if [ "$((now - idle_since))" -ge 900 ]; then
+                  if [ "$((now - idle_since))" -ge 1800 ]; then
                     CONCLUSION=runner_unavailable
-                    echo "::error::${RUNNER} has been idle for 15 min while this run stayed queued — the runner is offline or not accepting jobs. https://github.com/$OPS/actions/runs/${RUN_ID}"
+                    echo "::error::no self-hosted runner has executed ANY job for 30 min while this run stayed queued — the runner fleet is offline or not accepting jobs. https://github.com/$OPS/actions/runs/${RUN_ID}"
                     return 1
                   fi
                 fi
@@ -458,17 +465,13 @@ jobs:
           out += ["| | |", "|---|---|"] + [f"| {k} | {val} |" for k, val in rows]
 
           if not rep:
-              if v in ("cancelled", "no_slot", "dispatch_failed"):
-                  out += ["", "**No tests ran.** This run was cancelled before the suite started —"
-                              " usually because another PR's run took the shared environment, or a newer"
-                              " commit/label superseded this one."
-                              " **This says nothing about your code.**", "",
-                          "Re-trigger it yourself: **remove the `run-tests` label and add it back**."
-                          " (Avoid *Re-run jobs* — that replays the old merge ref instead of"
-                          " recomputing it against current `main`.)"]
-              else:
-                  out += ["", "_No report link - the run likely failed before the suite started."
-                              " Ask a maintainer to check the central pipeline._"]
+              out += ["", f"**No test report was produced** (result: `{v}`). The run did not finish a"
+                          " suite — usually because another PR's run took the shared environment, a newer"
+                          " commit/label superseded this one, or it was abandoned before completing."
+                          " **This says nothing about your code.**", "",
+                      "Re-trigger it yourself: **remove the `run-tests` label and add it back**."
+                      " (Avoid *Re-run jobs* — that replays the old merge ref instead of"
+                      " recomputing it against current `main`.)"]
               # Preserve the last known-good report so an eviction cannot bury a real result.
               prev = pathlib.Path("/tmp/prev.md").read_text() if pathlib.Path("/tmp/prev.md").exists() else ""
               m = re.search(r"\[Full report, traces and screenshots\]\((https?://[^)]+)\)", prev)
