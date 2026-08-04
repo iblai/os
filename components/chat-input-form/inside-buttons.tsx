@@ -1,7 +1,7 @@
 'use client';
 
 import type React from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import {
@@ -191,8 +191,25 @@ export const InsideButtons = ({
     if (!loggedIn) return;
     setCoworkEnabled(true);
     setCoworkOn(true);
+  }, [coworkAvailable]);
+
+  // The PREFERENCE persists across runs; the install does not. Once the key
+  // above exists, that effect returns before it can install — so a user whose
+  // first install failed (or who enabled Cowork on an earlier run) comes back to
+  // a toggle that reads ON with no driver behind it, and nothing fetches one
+  // until they switch it off and on again. Reconcile the two here instead:
+  // Cowork on + session supported + host says not installed ⇒ install.
+  //
+  // `status.installed === false` specifically, not falsy: `status` is null until
+  // the first check lands, and firing on "unknown" would install on every mount.
+  const ensuredDriverInstall = useRef(false);
+  useEffect(() => {
+    if (ensuredDriverInstall.current) return;
+    if (!coworkAvailable || !coworkOn) return;
+    if (cuaDriver.status?.installed !== false) return;
+    ensuredDriverInstall.current = true;
     cuaDriver.install();
-  }, [coworkAvailable, cuaDriver]);
+  }, [coworkAvailable, coworkOn, cuaDriver]);
 
   const allInsideButtons = [
     {

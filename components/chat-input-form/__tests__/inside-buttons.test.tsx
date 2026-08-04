@@ -77,6 +77,7 @@ vi.mock('@/types/tauri', async (importOriginal) => ({
 let mockDriverAvailable = false;
 let mockDriverSupported = true;
 let mockUnsupportedReason: string | undefined;
+let mockDriverStatus: { installed: boolean; supported: boolean } | null = null;
 let mockCoworkOn = false;
 let mockLocalLLMEnabled = false;
 let mockModelSupportsCowork = false;
@@ -88,6 +89,7 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
     isAvailable: mockDriverAvailable,
     isSupported: mockDriverSupported,
     unsupportedReason: mockUnsupportedReason,
+    status: mockDriverStatus,
     install: () => mockGhostInstall(),
     stop: () => mockGhostStop(),
   }),
@@ -143,6 +145,7 @@ describe('InsideButtons', () => {
     mockDriverAvailable = false;
     mockDriverSupported = true;
     mockUnsupportedReason = undefined;
+    mockDriverStatus = null;
     mockCoworkOn = false;
     mockLocalLLMEnabled = false;
     mockModelSupportsCowork = false;
@@ -1151,6 +1154,52 @@ describe('InsideButtons', () => {
       expect(mockGhostInstall).not.toHaveBeenCalled();
     });
 
+    it('installs the driver when Cowork is already on but nothing is installed', () => {
+      // The bug: the ON preference persists across runs, the install does not.
+      // With the key already set the default-on effect returns before it can
+      // install, so the toggle read ON with no driver behind it and only an
+      // off/on round trip would fetch one.
+      enableCowork();
+      mockCoworkOn = true;
+      mockDriverStatus = { installed: false, supported: true };
+      localStorage.setItem('ibl_cowork_enabled', 'true');
+      render(<InsideButtons {...defaultProps} />);
+
+      expect(mockGhostInstall).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not re-install when the driver is already there', () => {
+      enableCowork();
+      mockCoworkOn = true;
+      mockDriverStatus = { installed: true, supported: true };
+      localStorage.setItem('ibl_cowork_enabled', 'true');
+      render(<InsideButtons {...defaultProps} />);
+
+      expect(mockGhostInstall).not.toHaveBeenCalled();
+    });
+
+    it('does not install before the host has reported status', () => {
+      // `status` is null until the first check lands; treating unknown as
+      // "not installed" would fire an install on every mount.
+      enableCowork();
+      mockCoworkOn = true;
+      mockDriverStatus = null;
+      localStorage.setItem('ibl_cowork_enabled', 'true');
+      render(<InsideButtons {...defaultProps} />);
+
+      expect(mockGhostInstall).not.toHaveBeenCalled();
+    });
+
+    it('does not install when Cowork is explicitly off', () => {
+      enableCowork();
+      mockCoworkOn = false;
+      mockDriverStatus = { installed: false, supported: true };
+      localStorage.setItem('ibl_cowork_enabled', 'false');
+      render(<InsideButtons {...defaultProps} />);
+
+      expect(mockGhostInstall).not.toHaveBeenCalled();
+    });
+
     it('does not default Cowork on for an unsupported session', () => {
       // The default-on pass must respect session support, not just presence.
       enableCowork();
@@ -1235,6 +1284,9 @@ describe('InsideButtons', () => {
     describe('default-on pass', () => {
       it('enables Cowork once for a logged-in desktop user who never chose', () => {
         enableCowork();
+        // Not installed yet, so the reconcile effect below also fetches the
+        // driver — the default-on effect only owns the preference now.
+        mockDriverStatus = { installed: false, supported: true };
         localStorage.setItem('tenant', 'acme');
         localStorage.setItem('dm_token', 'token-abc');
         render(<InsideButtons {...defaultProps} />);
