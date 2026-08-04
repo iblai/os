@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { setLocalLLMToolSupport } from '@iblai/iblai-js/web-containers';
 import { LLMTab } from '../llm-tab';
 
 // ============================================================================
@@ -68,6 +69,49 @@ vi.mock('@/hoc/withPermissions', () => ({
     children({ disabled: mockPermissionsDisabled() }),
 }));
 
+// Desktop detection is the gate on the local-only provider cards; off by default
+// so the cloud tests above see the browser behaviour.
+let mockIsTauri = false;
+// A catalog shaped to exercise every branch of the localOnlyProviders memo:
+// two models sharing a provider (the `seen` dedupe) and one whose provider the
+// backend already lists as a cloud provider (the `cloudKeys` skip). The
+// localStorage helpers keep their real semantics so useSelectedLocalModel —
+// which this tab uses to decide which card is active — still works unmocked.
+vi.mock('@iblai/iblai-js/web-containers', () => ({
+  isTauriApp: () => mockIsTauri,
+  LOCAL_MODELS: [
+    {
+      id: 'llama3.2',
+      name: 'Llama 3.2',
+      provider: 'Meta',
+      size: '2 GB',
+      tool_support: true,
+    },
+    {
+      id: 'llama3.3',
+      name: 'Llama 3.3',
+      provider: 'Meta',
+      size: '4 GB',
+      tool_support: true,
+    },
+    {
+      id: 'gpt-oss',
+      name: 'GPT OSS',
+      provider: 'OpenAI',
+      size: '12 GB',
+      tool_support: true,
+    },
+  ],
+  isLocalLLMEnabled: () =>
+    localStorage.getItem('ibl_local_llm_enabled') === 'true',
+  getLocalLLMModel: () => localStorage.getItem('ibl_local_llm_model'),
+  // Stale cache: the stored flag says the model cannot call tools while the
+  // catalog says it can. useSelectedLocalModel reconciles that on read, and
+  // local streaming chat depends on it — so keep the mismatch real here.
+  getLocalLLMToolSupport: () => false,
+  setLocalLLMToolSupport: vi.fn(),
+}));
+
 // Stub the provider modal so we can assert it opens and forwards selection.
 const mockModalProps = vi.fn();
 vi.mock('@/components/modals/llm-provider-modal', () => ({
@@ -127,7 +171,11 @@ const mentorSettings = {
 describe('LLMTab', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // The on-device selection lives in localStorage; clear it so a test that
+    // enables local mode can't leak into the (default cloud) tests.
+    localStorage.clear();
     mockIsEditing = false;
+    mockIsTauri = false;
     mockUnwrap.mockResolvedValue({});
     mockUseParams.mockReturnValue({
       tenantKey: 'test-tenant',
@@ -187,6 +235,21 @@ describe('LLMTab', () => {
     const { container } = render(<LLMTab />);
     // openai card carries the active border-blue-500 class
     expect(container.querySelector('.border-blue-500')).toBeInTheDocument();
+  });
+
+  it('does not highlight the stale cloud provider when an on-device model is active', async () => {
+    // Bug: the tab highlighted the mentor's cloud provider (openai) even though
+    // chat was actually using a local model (Llama 3.2 → Meta). With local mode
+    // on, the openai card — the only provider here matching the cloud setting —
+    // must lose its active border (no cloud card matches the local "meta" key).
+    localStorage.setItem('ibl_local_llm_enabled', 'true');
+    localStorage.setItem('ibl_local_llm_model', 'llama3.2');
+    const { container } = render(<LLMTab />);
+    await waitFor(() => {
+      expect(
+        container.querySelector('.border-blue-500'),
+      ).not.toBeInTheDocument();
+    });
   });
 
   it('opens the provider modal when a provider card is clicked', async () => {
@@ -319,5 +382,83 @@ describe('LLMTab', () => {
     mockGetLlmsQuery.mockReturnValue({ data: undefined, isLoading: false });
     render(<LLMTab />);
     expect(screen.getByPlaceholderText('Search Providers')).toBeInTheDocument();
+  });
+
+  // --------------------------------------------------------------------------
+  // Local-only provider cards (Tauri desktop)
+  // --------------------------------------------------------------------------
+  describe('local-only providers', () => {
+    it('does not surface them in the browser', () => {
+      // Meta ships only on-device models, so outside the desktop app there is
+      // nothing a user could do with the card.
+      render(<LLMTab />);
+      expect(screen.queryByText('Meta')).not.toBeInTheDocument();
+    });
+
+    it('adds one card per provider the backend list does not already cover', () => {
+      mockIsTauri = true;
+      render(<LLMTab />);
+
+      // Meta has no cloud entry, so it earns a card — once, even though two
+      // catalog models share it.
+      expect(screen.getAllByText('Meta')).toHaveLength(1);
+      // The catalog's OpenAI model must not duplicate the cloud OpenAI card.
+      expect(screen.getAllByText('OpenAI')).toHaveLength(1);
+    });
+
+    it('opens the provider modal when a local-only card is clicked', async () => {
+      mockIsTauri = true;
+      const user = userEvent.setup();
+      render(<LLMTab />);
+
+      await user.click(screen.getByText('Meta'));
+
+      // The card synthesises a provider with an empty chat_models list; the
+      // modal fills it from the on-device catalog.
+      expect(screen.getByTestId('llm-provider-modal')).toBeInTheDocument();
+      expect(mockModalProps).toHaveBeenCalledWith(
+        expect.objectContaining({
+          llmProvider: expect.objectContaining({
+            id: -1,
+            name: 'Meta',
+            chat_models: [],
+          }),
+        }),
+      );
+    });
+
+    it('ignores clicks on a local-only card while an edit is in flight', async () => {
+      mockIsTauri = true;
+      mockIsEditing = true;
+      const user = userEvent.setup();
+      render(<LLMTab />);
+
+      await user.click(screen.getByText('Meta'));
+
+      expect(
+        screen.queryByTestId('llm-provider-modal'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('highlights the local-only card whose model is the active on-device selection', async () => {
+      // The mentor's cloud setting is still openai, but chat is running Llama
+      // 3.2 — so Meta, not OpenAI, is the card that must read as active.
+      mockIsTauri = true;
+      localStorage.setItem('ibl_local_llm_enabled', 'true');
+      localStorage.setItem('ibl_local_llm_model', 'llama3.2');
+      render(<LLMTab />);
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('Meta').closest('div.border-blue-500'),
+        ).not.toBeNull();
+      });
+      expect(
+        screen.getByText('OpenAI').closest('div.border-blue-500'),
+      ).toBeNull();
+      // Reading the selection also repairs the stale tool-support cache, or
+      // local streaming would reject this tool-capable model.
+      expect(setLocalLLMToolSupport).toHaveBeenCalledWith(true);
+    });
   });
 });

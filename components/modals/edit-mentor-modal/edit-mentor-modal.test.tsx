@@ -182,8 +182,14 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
   AgentConfigPrompts: () => null,
 }));
 
-vi.mock('./tabs', () => ({
+// The settings slot now renders the SDK-wired wrapper from its own module
+// (index.tsx no longer imports SettingsTab from ./tabs). Mock the wrapper so
+// the existing settings-tab assertions keep exercising the settings panel.
+vi.mock('./settings-tab', () => ({
   SettingsTab: () => <div data-testid="settings-tab">Settings Tab</div>,
+}));
+
+vi.mock('./tabs', () => ({
   LLMTab: () => <div data-testid="llm-tab">LLM Tab</div>,
   PromptsTab: () => <div data-testid="prompts-tab">Prompts Tab</div>,
   McpTab: () => <div data-testid="mcp-tab">MCP Tab</div>,
@@ -203,6 +209,9 @@ vi.mock('./tabs', () => ({
   VoiceTab: () => <div data-testid="voice-tab">Voice Tab</div>,
   ScreenShareTab: () => (
     <div data-testid="screenshare-tab">Screen Share Tab</div>
+  ),
+  HumanSupportTab: () => (
+    <div data-testid="human-support-tab">Human Support Tab</div>
   ),
   LtiTab: () => <div data-testid="lti-tab">LTI Tab</div>,
   AnalyticsTab: () => <div data-testid="analytics-tab">Analytics Tab</div>,

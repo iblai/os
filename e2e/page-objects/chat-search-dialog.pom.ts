@@ -8,7 +8,7 @@ import { waitForDialogReady } from '../utils/resilient';
  * chats/chat-search-dialog.tsx`, opened from two mutually-exclusive
  * trigger buttons in `app-sidebar/index.tsx` — an icon-only "rail" button
  * (sidebar collapsed) and a text-label button (sidebar expanded). Both
- * share the exact same accessible name ("Search chats"), so a single
+ * share the exact same accessible name ("Search"), so a single
  * locator scoped to the sidebar `<aside>` resolves whichever one is
  * currently rendered.
  */
@@ -34,10 +34,10 @@ export class ChatSearchDialogPage {
     this.sidebar = page.locator('aside').first();
 
     this.searchChatsButton = this.sidebar.getByRole('button', {
-      name: 'Search chats',
+      name: 'Search',
     });
 
-    this.dialog = page.getByRole('dialog', { name: 'Search chats' });
+    this.dialog = page.getByRole('dialog', { name: 'Search' });
     this.searchbox = this.dialog.getByRole('searchbox');
     this.newChatRow = this.dialog.getByRole('button', {
       name: 'New Chat',

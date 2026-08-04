@@ -770,6 +770,7 @@ export function ChatInputForm({
 
               {visibleToLoggedInUsersOnly && !compactMode && (
                 <InsideButtons
+                  sessionId={sessionId}
                   containerWidth={containerWidth}
                   activeOptions={activeTools}
                   onOptionClick={updateSessionTools}

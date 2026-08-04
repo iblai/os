@@ -13,7 +13,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  SettingsTab,
   LLMTab,
   PromptsTab,
   McpTab,
@@ -33,11 +32,13 @@ import {
   AuditLogTab,
   VoiceTab,
   ScreenShareTab,
+  HumanSupportTab,
   LtiTab,
   AnalyticsTab,
 } from './tabs';
 import { useNavigate } from '@/hooks/user-navigate';
 import { MODALS } from '@/lib/constants';
+import { SettingsTab } from './settings-tab';
 import { MemoryTab } from './tabs/memory-tab';
 import { DisclaimersTab } from './tabs/disclaimers-tab';
 import {
@@ -78,6 +79,7 @@ export const EDIT_MENTOR_TAB_COMPONENTS: Record<string, ReactNode> = {
   [MODALS.EDIT_MENTOR.tabs.mcp]: <McpTab />,
   [MODALS.EDIT_MENTOR.tabs.memory]: <MemoryTab />,
   [MODALS.EDIT_MENTOR.tabs.history]: <HistoryTab />,
+  [MODALS.EDIT_MENTOR.tabs.human_support]: <HumanSupportTab />,
   [MODALS.EDIT_MENTOR.tabs.audit_log]: <AuditLogTab />,
   [MODALS.EDIT_MENTOR.tabs.datasets]: <DatasetsTab />,
   [MODALS.EDIT_MENTOR.tabs.evaluation]: <EvaluationTab />,

@@ -12,6 +12,7 @@ import {
   Menu,
   User,
   Bot,
+  HardDrive,
   GitFork,
 } from 'lucide-react';
 
@@ -54,7 +55,7 @@ import {
 } from '@/hooks/use-user';
 import { getUserEmail, getUserName } from '@/features/utils';
 import { MODALS, UserType } from '@/lib/constants';
-import { TenantKeyMentorIdParams } from '@/lib/types';
+import { ProjectPageParams, TenantKeyMentorIdParams } from '@/lib/types';
 import { AuthModal } from '@/components/modals/auth-modal';
 
 import {
@@ -85,6 +86,10 @@ import { MentorVisibilityEnum } from '@iblai/iblai-api';
 import { toast } from 'sonner';
 import { useModelDownload } from '@/hooks/use-model-download';
 import {
+  useSelectedLocalModel,
+  LOCAL_LLM_CHANGED_EVENT,
+} from '@/hooks/use-selected-local-model';
+import {
   useMentorSegments,
   MENTOR_SEGMENT_NAV_CATEGORIES,
   type MentorSegment,
@@ -95,7 +100,7 @@ import {
 } from '@/hooks/use-tauri-offline';
 import { isTauriApp } from '@/types/tauri';
 import { useFreeTrial } from '@/hooks/use-free-trial';
-import { Tenant } from '@iblai/iblai-js/web-utils';
+import { chatActions, Tenant } from '@iblai/iblai-js/web-utils';
 
 /**
  * Nav-only "New Chat" entry. Always shown — it has no permissioned content,
@@ -144,6 +149,7 @@ export function NavBar() {
   const selectedAnalyticsMentor = useAppSelector(selectSelectedMentor);
   const isAccessingPublicRoute = useAccessingPublicRoute();
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
+  const { projectId } = useParams<ProjectPageParams>();
   const username = useUsername();
   const isAdmin = useIsAdmin();
   const userEmail = getUserEmail();
@@ -203,6 +209,7 @@ export function NavBar() {
     closeCreateMentorModal,
     navigateToAnalytics,
     navigateToMentor,
+    navigateToHome,
     getUpdatedModalStack,
     navigateToNotifications,
   } = useNavigate();
@@ -243,6 +250,49 @@ export function NavBar() {
     foundryStatusLoaded,
     onSelectFoundryModel,
   } = useModelDownload();
+
+  // Active on-device (local) model, if any. Shown top-left in place of the cloud
+  // model while local mode is on (chat routes to the local model then, so the
+  // cloud model would be misleading). Reactive to picks + the master toggle.
+  const selectedLocal = useSelectedLocalModel();
+  const localModelLogo = selectedLocal.model
+    ? getLLMProviderDetails(
+        selectedLocal.model.provider,
+        selectedLocal.model.name,
+      ).logo
+    : '';
+  const localModelName =
+    selectedLocal.model?.name ?? selectedLocal.modelId ?? '';
+  // Admins (non-students) can switch the mentor's LLM; for them the on-device
+  // badge doubles as the entry point to the model picker (mirrors the cloud
+  // selector's gate). Others get a plain, non-interactive indicator.
+  const canChooseLlm = isAdmin && !userIsStudent;
+  const localModelBadgeInner = (
+    <>
+      <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white">
+        {localModelLogo ? (
+          <Image
+            src={localModelLogo}
+            alt={`${localModelName} model logo`}
+            className="h-5 w-5 object-contain"
+            height={32}
+            width={32}
+            loading="lazy"
+          />
+        ) : (
+          <HardDrive className="h-4 w-4 text-[#646464]" />
+        )}
+      </div>
+      <span className="hidden max-w-[150px] overflow-hidden text-ellipsis whitespace-nowrap lowercase sm:block">
+        {localModelName}
+      </span>
+      <span className="hidden flex-shrink-0 items-center gap-1 rounded-full bg-[#F5F8FF] px-2 py-0.5 text-[11px] font-medium text-[#38A1E5] md:inline-flex">
+        <HardDrive className="h-3 w-3" aria-hidden="true" />
+        On-device
+      </span>
+      {canChooseLlm && <ChevronDown className="h-4 w-4 text-gray-500" />}
+    </>
+  );
 
   console.log('[NavBar] After useModelDownload:', {
     isLocalLLMAvailable,
@@ -375,9 +425,35 @@ export function NavBar() {
 
   const FORK_ACTION_VALUE = 'fork-mentor';
 
+  const pathname = usePathname();
+  const isPromptGalleryPage = pathname.includes('/prompt-gallery');
+  const isWorkflowsPage = /\/workflows\/[^/]+\/?$/.test(pathname);
+  // The tenant-scoped Projects index (/platform/<tenant>/projects) is not a chat
+  // surface, so chat-only nav controls (e.g. the LLM provider selector) are hidden
+  // there. The project chat route (/platform/<tenant>/projects/<id>/<mentorId>) is
+  // still a chat page and keeps them.
+  const isProjectsIndexPage = /\/projects\/?$/.test(pathname);
+  const isOnChatPage =
+    !isPromptGalleryPage &&
+    !pathname.includes('/explore') &&
+    !isWorkflowsPage &&
+    !isProjectsIndexPage;
+  // Narrower than `isOnChatPage`: whether the chat component (the only
+  // `RemoteEvents.newChat` listener) is actually mounted on this route.
+  // Mirrors `isChatPage` in the sidebar so both "New Chat" affordances agree.
+  const isChatRoute = /\/platform\/[^/]+\/[^/]+$/.test(pathname) || !!projectId;
+
   const handleSegmentClick = (value: string) => {
     if (value === NEW_CHAT_NAV_ITEM.value) {
-      eventBus.emit(RemoteEvents.newChat);
+      // Off a chat route (e.g. /analytics) the `newChat` event has no
+      // listener, so route home first and let the chat slice start the new
+      // session on arrival — same approach as the sidebar's `startNewChat`.
+      if (isChatRoute) {
+        eventBus.emit(RemoteEvents.newChat);
+      } else {
+        navigateToHome();
+        dispatch(chatActions.setShouldStartNewChat(true));
+      }
       return;
     }
     if (value === ANALYTICS_NAV_ITEM.value) {
@@ -404,22 +480,6 @@ export function NavBar() {
       );
     }
   }, [mentorSettingsCombinedPublicAndPrivate?.mentorUniqueId]);
-
-  const pathname = usePathname();
-  const isPromptGalleryOrAnalytics =
-    pathname.includes('/prompt-gallery') || pathname.includes('/analytics');
-  const isWorkflowsPage = /\/workflows\/[^/]+\/?$/.test(pathname);
-  // The tenant-scoped Projects index (/platform/<tenant>/projects) is not a chat
-  // surface, so chat-only nav controls (e.g. the LLM provider selector) are hidden
-  // there. The project chat route (/platform/<tenant>/projects/<id>/<mentorId>) is
-  // still a chat page and keeps them.
-  const isProjectsIndexPage = /\/projects\/?$/.test(pathname);
-  const isOnChatPage =
-    !pathname.includes('/prompt-gallery') &&
-    !pathname.includes('/analytics') &&
-    !pathname.includes('/explore') &&
-    !isWorkflowsPage &&
-    !isProjectsIndexPage;
 
   const handleCloseModal = () => {
     setOpenModal(false);
@@ -491,58 +551,100 @@ export function NavBar() {
           )}
 
           <div className="flex items-center pl-2 md:pl-4">
-            {isOnChatPage && isAdmin && !userIsStudent && (
+            {/* On-device (local) model indicator. Shown while local mode is on;
+                it replaces the cloud model selector below (hidden via the same
+                `selectedLocal.isLocal` condition). For users who can switch LLMs
+                it is ALSO the entry point to the model picker — click to open it
+                and choose a different model (cloud or local) without first
+                disabling local mode. */}
+            {isOnChatPage && selectedLocal.isLocal && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="flex cursor-pointer items-center gap-1 text-sm font-medium text-[#646464] transition-colors hover:text-[#484848]"
-                    onClick={() =>
-                      !userIsVisiting && setIsProviderSelectionOpen(true)
-                    }
-                    aria-label={t('llmModelSelector')}
-                  >
-                    <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white">
-                      {llmProviderDetails?.logo ? (
-                        <Image
-                          src={llmProviderDetails.logo}
-                          alt={`${selectedMentorCategory} model logo`}
-                          className="h-5 w-5 object-contain"
-                          height={32}
-                          width={32}
-                          loading="lazy"
-                        />
-                      ) : (
-                        <Bot />
-                      )}
-                    </div>
-                    <span
-                      className={cn(
-                        // Hidden below sm; the name is shown in the tooltip.
-                        'hidden max-w-[150px] overflow-hidden text-ellipsis whitespace-nowrap sm:block',
-                        creditBalanceComponentIsDisplayed
-                          ? 'max-w-[100px] md:max-w-[150px]'
-                          : '',
-                      )}
+                  {canChooseLlm ? (
+                    <button
+                      type="button"
+                      className="mr-2 flex cursor-pointer items-center gap-1.5 text-sm font-medium text-[#646464] transition-colors hover:text-[#484848]"
+                      onClick={() =>
+                        !userIsVisiting && setIsProviderSelectionOpen(true)
+                      }
+                      aria-label={`Change model, on-device model in use: ${localModelName}`}
+                      data-testid="local-model-indicator"
                     >
-                      {selectedMentorCategory}
-                    </span>
-                    {!userIsStudent && (
-                      <ChevronDown className="h-4 w-4 text-gray-500" />
-                    )}
-                  </Button>
+                      {localModelBadgeInner}
+                    </button>
+                  ) : (
+                    <div
+                      className="mr-2 flex items-center gap-1.5 text-sm font-medium text-[#646464]"
+                      aria-label={`On-device model in use: ${localModelName}`}
+                      data-testid="local-model-indicator"
+                    >
+                      {localModelBadgeInner}
+                    </div>
+                  )}
                 </TooltipTrigger>
                 <TooltipContent className="ibl-tooltip-content" side="bottom">
-                  {selectedMentorCategory ||
-                    (isAdmin ? t('selectModel') : selectedMentorName)}
+                  {canChooseLlm
+                    ? `On-device: ${localModelName} — click to change model`
+                    : `On-device model in use — ${localModelName}`}
                 </TooltipContent>
               </Tooltip>
             )}
 
+            {isOnChatPage &&
+              isAdmin &&
+              !userIsStudent &&
+              !selectedLocal.isLocal && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="flex cursor-pointer items-center gap-1 text-sm font-medium text-[#646464] transition-colors hover:text-[#484848]"
+                      onClick={() =>
+                        !userIsVisiting && setIsProviderSelectionOpen(true)
+                      }
+                      aria-label={t('llmModelSelector')}
+                    >
+                      <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white">
+                        {llmProviderDetails?.logo ? (
+                          <Image
+                            src={llmProviderDetails.logo}
+                            alt={`${selectedMentorCategory} model logo`}
+                            className="h-5 w-5 object-contain"
+                            height={32}
+                            width={32}
+                            loading="lazy"
+                          />
+                        ) : (
+                          <Bot />
+                        )}
+                      </div>
+                      <span
+                        className={cn(
+                          // Hidden below sm; the name is shown in the tooltip.
+                          'hidden max-w-[150px] overflow-hidden text-ellipsis whitespace-nowrap sm:block',
+                          creditBalanceComponentIsDisplayed
+                            ? 'max-w-[100px] md:max-w-[150px]'
+                            : '',
+                        )}
+                      >
+                        {selectedMentorCategory}
+                      </span>
+                      {!userIsStudent && (
+                        <ChevronDown className="h-4 w-4 text-gray-500" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent className="ibl-tooltip-content" side="bottom">
+                    {selectedMentorCategory ||
+                      (isAdmin ? t('selectModel') : selectedMentorName)}
+                  </TooltipContent>
+                </Tooltip>
+              )}
+
             {!pathname.includes('/explore') &&
               !isWorkflowsPage &&
               mentorId &&
-              (isPromptGalleryOrAnalytics ? (
+              (isPromptGalleryPage ? (
                 <div className="flex items-center gap-1 text-sm font-medium text-[#646464]">
                   <Avatar className="mr-1 h-5 w-5">
                     <AvatarImage
@@ -708,7 +810,12 @@ export function NavBar() {
       {isUserProfileOpen && (
         <UserProfileModal
           isOpen={isUserProfileOpen}
-          onClose={() => setIsUserProfileOpen(false)}
+          onClose={() => {
+            setIsUserProfileOpen(false);
+            // Profile → Advanced hosts the Local Models master toggle; re-read on
+            // close so the nav-bar on-device badge reflects an enable/disable.
+            window.dispatchEvent(new Event(LOCAL_LLM_CHANGED_EVENT));
+          }}
           params={{
             tenantKey,
             mentorId,

@@ -39,6 +39,7 @@ global.URL.revokeObjectURL = vi.fn();
 const pushMock = vi.fn();
 let mockSearchParamsRaw = '';
 let mockPathname = '/platform/tenant123/mentor456';
+let mockProjectId: string | undefined = undefined;
 let mockIsAdmin = true;
 let mockUserIsStudent = false;
 let mockIsVisiting = false;
@@ -78,15 +79,27 @@ vi.mock('next/navigation', () => ({
     push: pushMock,
   }),
   usePathname: () => mockPathname,
-  useParams: () => ({ tenantKey: 'tenant123', mentorId: 'mentor456' }),
+  useParams: () => ({
+    tenantKey: 'tenant123',
+    mentorId: 'mentor456',
+    projectId: mockProjectId,
+  }),
   useSearchParams: () => new URLSearchParams(mockSearchParamsRaw),
 }));
 
-// The nav-bar imports `Tenant` (type-only at runtime) from
+// The nav-bar imports `Tenant` (type-only at runtime) and `chatActions` from
 // @iblai/iblai-js/web-utils. Loading that module under the yalc/pnpm
 // linkage fails to resolve `axios`. Stub the module so the import
-// graph stays resolvable.
-vi.mock('@iblai/iblai-js/web-utils', () => ({}));
+// graph stays resolvable — `chatActions` only needs to produce a plain
+// action object for the "start a new chat off a chat route" assertion.
+vi.mock('@iblai/iblai-js/web-utils', () => ({
+  chatActions: {
+    setShouldStartNewChat: (payload: boolean) => ({
+      type: 'chat/setShouldStartNewChat',
+      payload,
+    }),
+  },
+}));
 
 vi.mock('next/image', () => ({
   default: (props: any) => {
@@ -181,11 +194,15 @@ vi.mock('@/components/ui/sidebar', () => ({
   }),
 }));
 
+const emitMock = vi.fn();
 vi.mock('@/lib/eventBus', () => ({
-  default: { emit: vi.fn() },
+  default: {
+    emit: (...args: unknown[]) => emitMock(...args),
+  },
   RemoteEvents: { newChat: 'newChat' },
 }));
 
+const navigateToHomeMock = vi.fn();
 vi.mock('@/hooks/user-navigate', () => ({
   useNavigate: () => ({
     openEditMentorModal: vi.fn(),
@@ -195,6 +212,7 @@ vi.mock('@/hooks/user-navigate', () => ({
     closeCreateMentorModal: vi.fn(),
     navigateToAnalytics: vi.fn(),
     navigateToMentor: vi.fn(),
+    navigateToHome: navigateToHomeMock,
     getUpdatedModalStack: vi.fn(),
     navigateToNotifications: vi.fn(),
   }),
@@ -397,11 +415,34 @@ vi.mock('@/components/modals/auth-modal', () => ({
 }));
 
 let lastCreditBalanceProps: any = null;
+// On-device selection, driven per-test; default OFF so existing tests see the
+// pre-badge nav-bar. One catalog model lets the badge resolve a display name.
+let mockLocalEnabled = false;
+let mockLocalModelId: string | null = null;
 vi.mock('@iblai/iblai-js/web-containers', () => ({
   // The toggle now ships from the SDK; tests don't exercise its internals,
-  // so a no-render stub is enough — it also blocks the SDK's transitive
-  // axios chain from being pulled into the test's module graph.
-  ChatPrivacyToggle: () => null,
+  // so a marker-only stub is enough — it also blocks the SDK's transitive
+  // axios chain from being pulled into the test's module graph. The marker
+  // lets path-gating tests assert whether the chip is mounted at all.
+
+  ChatPrivacyToggle: () => <div data-testid="chat-privacy-toggle" />,
+  // On-device model helpers read by `useSelectedLocalModel` (the top-left
+  // badge). Default to local mode OFF so the nav-bar renders exactly as it did
+  // before the badge existed (cloud selector shown, no badge).
+  isLocalLLMEnabled: () => mockLocalEnabled,
+  getLocalLLMModel: () => mockLocalModelId,
+  // The hook reconciles the tool-support cache against the catalog on read.
+  getLocalLLMToolSupport: () => true,
+  setLocalLLMToolSupport: () => {},
+  LOCAL_MODELS: [
+    {
+      name: 'Llama 3.2',
+      provider: 'Meta',
+      id: 'llama3.2',
+      size: '2.0 GB',
+      tool_support: true,
+    },
+  ],
   NotificationDropdown: () => (
     <div data-testid="notification-dropdown">Notifications</div>
   ),
@@ -426,16 +467,39 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
   DropdownMenuContent: ({ children }: any) => (
     <div data-testid="dropdown-menu-content">{children}</div>
   ),
-  CategorizedDropdownMenu: ({ topAction, items, footerAction }: any) => (
+  // Items/actions are rendered as clickable divs wired to `onItemSelect` so
+  // tests can exercise the real `handleSegmentClick` behaviour.
+  CategorizedDropdownMenu: ({
+    topAction,
+    items,
+    footerAction,
+    onItemSelect,
+  }: any) => (
     <div data-testid="categorized-dropdown-menu">
-      {topAction && <div data-testid="cdm-top-action">{topAction.label}</div>}
+      {topAction && (
+        <div
+          data-testid="cdm-top-action"
+          onClick={() => onItemSelect?.(topAction.value)}
+        >
+          {topAction.label}
+        </div>
+      )}
       {items?.map((item: any) => (
-        <div key={item.value} data-testid={`cdm-item-${item.value}`}>
+        <div
+          key={item.value}
+          data-testid={`cdm-item-${item.value}`}
+          onClick={() => onItemSelect?.(item.value)}
+        >
           {item.label}
         </div>
       ))}
       {footerAction && (
-        <div data-testid="cdm-footer-action">{footerAction.label}</div>
+        <div
+          data-testid="cdm-footer-action"
+          onClick={() => onItemSelect?.(footerAction.value)}
+        >
+          {footerAction.label}
+        </div>
       )}
     </div>
   ),
@@ -507,6 +571,7 @@ describe('NavBar', () => {
     pushMock.mockReset();
     mockSearchParamsRaw = '';
     mockPathname = '/platform/tenant123/mentor456';
+    mockProjectId = undefined;
     mockIsAdmin = true;
     mockUserIsStudent = false;
     mockIsVisiting = false;
@@ -540,6 +605,10 @@ describe('NavBar', () => {
     };
     mockAllTenants = [{ key: 'test-tenant' }];
     lastCreditBalanceProps = null;
+    mockLocalEnabled = false;
+    mockLocalModelId = null;
+    emitMock.mockClear();
+    navigateToHomeMock.mockClear();
     // Suppress console.log during tests
     vi.spyOn(console, 'log').mockImplementation(() => {});
   });
@@ -617,6 +686,51 @@ describe('NavBar', () => {
       );
 
       expect(screen.getByLabelText('LLM Model Selector')).toBeInTheDocument();
+    });
+
+    it('shows the on-device model badge and hides the cloud selector when local mode is on', () => {
+      mockIsAdmin = true;
+      mockUserIsStudent = false;
+      mockPathname = '/platform/tenant123/mentor456';
+      mockLocalEnabled = true;
+      mockLocalModelId = 'llama3.2';
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      const badge = screen.getByTestId('local-model-indicator');
+      expect(badge).toHaveTextContent('Llama 3.2');
+      expect(badge).toHaveTextContent('On-device');
+      // The on-device badge replaces the cloud model selector while local is on.
+      expect(
+        screen.queryByLabelText('LLM Model Selector'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('opens the model picker when the on-device badge is clicked, so an admin can still choose an LLM while local is on', () => {
+      mockIsAdmin = true;
+      mockUserIsStudent = false;
+      mockPathname = '/platform/tenant123/mentor456';
+      mockLocalEnabled = true;
+      mockLocalModelId = 'llama3.2';
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      // Picker is closed until the badge is clicked.
+      expect(
+        screen.queryByTestId('llm-provider-modal'),
+      ).not.toBeInTheDocument();
+      fireEvent.click(screen.getByTestId('local-model-indicator'));
+      expect(screen.getByTestId('llm-provider-modal')).toBeInTheDocument();
     });
 
     it('hides the LLM model selector on the tenant-scoped projects index page', () => {
@@ -807,6 +921,168 @@ describe('NavBar', () => {
       );
 
       // Test passes if no errors - mobile detection mock would need more complex setup
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // Analytics route parity — issue #2248
+  //
+  // The analytics route used to be special-cased into a stripped-down navbar:
+  // a static Avatar + mentor name (no dropdown), no LLM model selector and no
+  // private-mode chip. It now renders the same chrome as the chat route.
+  // --------------------------------------------------------------------------
+
+  describe('Analytics route parity', () => {
+    const ANALYTICS_PATH = '/platform/tenant123/mentor456/analytics';
+
+    function renderOnAnalytics(store = createTestStore()) {
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+      return store;
+    }
+
+    beforeEach(() => {
+      mockPathname = ANALYTICS_PATH;
+    });
+
+    it('shows the LLM model selector for an admin user', () => {
+      mockIsAdmin = true;
+      mockUserIsStudent = false;
+
+      renderOnAnalytics();
+
+      expect(screen.getByLabelText('LLM Model Selector')).toBeInTheDocument();
+    });
+
+    it('does not show the LLM model selector for a non-admin user', () => {
+      mockIsAdmin = false;
+
+      renderOnAnalytics();
+
+      expect(
+        screen.queryByLabelText('LLM Model Selector'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('renders the mentor dropdown trigger instead of the static mentor name', () => {
+      renderOnAnalytics();
+
+      expect(
+        screen.getByLabelText('Selected agent dropdown button'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByTestId('categorized-dropdown-menu'),
+      ).toBeInTheDocument();
+    });
+
+    it('shows the route mentor name (from mentor settings) in the dropdown trigger', () => {
+      renderOnAnalytics();
+
+      const trigger = screen.getByLabelText('Selected agent dropdown button');
+      expect(trigger).toHaveTextContent('Test Mentor');
+    });
+
+    it('renders the ChatPrivacyToggle chip', () => {
+      renderOnAnalytics();
+
+      expect(screen.getByTestId('chat-privacy-toggle')).toBeInTheDocument();
+    });
+
+    it('routes home and asks the chat slice to start a new chat instead of emitting newChat', () => {
+      const store = createTestStore();
+      const dispatchSpy = vi.spyOn(store, 'dispatch');
+
+      renderOnAnalytics(store);
+
+      dispatchSpy.mockClear();
+      emitMock.mockClear();
+
+      fireEvent.click(screen.getByTestId('cdm-top-action'));
+
+      expect(navigateToHomeMock).toHaveBeenCalledTimes(1);
+      expect(dispatchSpy).toHaveBeenCalledWith({
+        type: 'chat/setShouldStartNewChat',
+        payload: true,
+      });
+      // The chat component (the only `newChat` listener) is not mounted here,
+      // so emitting the event would silently no-op.
+      expect(emitMock).not.toHaveBeenCalled();
+    });
+
+    it('still emits newChat when already on a chat page', () => {
+      mockPathname = '/platform/tenant123/mentor456';
+
+      renderOnAnalytics();
+
+      fireEvent.click(screen.getByTestId('cdm-top-action'));
+
+      expect(emitMock).toHaveBeenCalledWith('newChat');
+      expect(navigateToHomeMock).not.toHaveBeenCalled();
+    });
+
+    it('still emits newChat on a project chat route', () => {
+      mockPathname = '/platform/tenant123/projects/409/mentor456';
+      mockProjectId = '409';
+
+      renderOnAnalytics();
+
+      fireEvent.click(screen.getByTestId('cdm-top-action'));
+
+      expect(emitMock).toHaveBeenCalledWith('newChat');
+      expect(navigateToHomeMock).not.toHaveBeenCalled();
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // Prompt gallery — regression guard (out of scope for #2248)
+  //
+  // The prompt-gallery route intentionally keeps the stripped-down static
+  // Avatar + mentor-name branch. Only /analytics was converged onto the
+  // regular navbar.
+  // --------------------------------------------------------------------------
+
+  describe('Prompt gallery route (unchanged)', () => {
+    beforeEach(() => {
+      mockPathname = '/platform/tenant123/mentor456/prompt-gallery';
+    });
+
+    it('renders the static mentor name and no dropdown trigger', () => {
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      // Static branch: name comes from the analytics slice's selectedMentor.
+      expect(screen.getByText('Test Mentor')).toBeInTheDocument();
+      expect(
+        screen.queryByLabelText('Selected agent dropdown button'),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('categorized-dropdown-menu'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('keeps the LLM model selector and privacy chip hidden', () => {
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(
+        screen.queryByLabelText('LLM Model Selector'),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('chat-privacy-toggle'),
+      ).not.toBeInTheDocument();
     });
   });
 

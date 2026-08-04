@@ -20,6 +20,7 @@ import { TasksTab } from './tasks.tab';
 import { VoiceTab } from './voice.tab';
 import { SkillsTab } from './skills.tab';
 import { ScreenShareTab } from './screenshare.tab';
+import { HumanSupportTab } from './human-support.tab';
 import { LtiTab } from './lti.tab';
 
 /**
@@ -59,6 +60,9 @@ const TAB_CATEGORY: Record<
   Tasks: 'Runtime',
   Memory: 'Runtime',
   History: 'Runtime',
+  // Host sidebar label for the human-support segment is "Support" (see
+  // hooks/use-mentor-segments.ts), not "Human Support".
+  Support: 'Runtime',
   Audit: 'Runtime',
   Analytics: 'Runtime',
   Evals: 'Runtime',
@@ -86,6 +90,7 @@ export class EditMentorPage {
   readonly tasks: TasksTab;
   readonly voice: VoiceTab;
   readonly screenshare: ScreenShareTab;
+  readonly humanSupport: HumanSupportTab;
   readonly lti: LtiTab;
   readonly skills: SkillsTab;
   readonly copyMentorDialog: CopyMentorPage;
@@ -114,6 +119,7 @@ export class EditMentorPage {
     this.tasks = new TasksTab(page, this.dialog);
     this.voice = new VoiceTab(page, this.dialog);
     this.screenshare = new ScreenShareTab(page, this.dialog);
+    this.humanSupport = new HumanSupportTab(page, this.dialog);
     this.lti = new LtiTab(page, this.dialog);
     this.skills = new SkillsTab(page, this.dialog);
     this.copyMentorDialog = new CopyMentorPage(page);
@@ -132,6 +138,10 @@ export class EditMentorPage {
     // modal sits on its default Configurations view. Binding the tab nav lets
     // `TasksTab.switchToTab()` activate Runtime first.
     this.tasks.bindTabNav(this.navigateToTab.bind(this));
+
+    // Human Support has the identical problem — it also lives in the Runtime
+    // category and its SDK helper `switchToSupportTab` is category-blind.
+    this.humanSupport.bindTabNav(this.navigateToTab.bind(this));
   }
 
   /**

@@ -1,6 +1,13 @@
 // Hide console window on Windows in release builds
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod ghost_mcp_manager;
+// Gated exactly like `opencode_acp`, which is its only consumer here: Code uses
+// `get_foundry_service_endpoint` to reach Foundry Local's OpenAI-compatible API.
+// The rest of the module is exercised by the desktop bin (see main.rs).
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+#[allow(dead_code)]
+mod foundry_manager;
 mod ghost_os_manager;
 mod mcp_bridge_installer;
 mod mcp_bridge_manager;
@@ -10,6 +17,12 @@ mod offline_server;
 mod ollama_installer;
 #[cfg(not(any(target_os = "ios", target_os = "android")))]
 mod web_cache;
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod opencode_acp;
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod opencode_installer;
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod opencode_proxy;
 
 use model_manager::{
     cancel_download, check_disk_space, check_ollama_installed, get_timestamp, is_model_installed,
@@ -781,6 +794,31 @@ async fn stop_ollama(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+/// Emit an app-wide event to the frontend WITHOUT racing the main thread's
+/// webview-manager mutex.
+///
+/// Tauri's app-wide `Emitter::emit` locks the webview-manager mutex to fan a
+/// payload out to every webview. Every async `#[command]` here runs on a tokio
+/// worker, so calling `app.emit(...)` directly from one can deadlock against the
+/// main thread locking the SAME mutex to service a webview IPC message
+/// (`AppManager::get_webview`) — the intermittent "Not Responding" freeze
+/// (see `check_ollama_status`, which the UI polls). Marshalling every emit onto
+/// the main thread serializes it with IPC handling, so the two can never contend
+/// the lock across threads. `run_on_main_thread` only posts to the event loop (it
+/// does not block and preserves FIFO order), so it is safe to call from async
+/// code and keeps streamed events (e.g. `ollama:token`) in order.
+fn emit_on_main<S>(app: &AppHandle, event: &'static str, payload: S)
+where
+    S: serde::Serialize + Clone + Send + 'static,
+{
+    let handle = app.clone();
+    if let Err(err) = app.run_on_main_thread(move || {
+        let _ = handle.emit(event, payload);
+    }) {
+        eprintln!("[emit_on_main] could not schedule '{event}' on main thread: {err}");
+    }
+}
+
 /// Check Ollama installation and model status
 #[command]
 async fn check_ollama_status(app: AppHandle) -> Result<OllamaStatus, String> {
@@ -812,7 +850,7 @@ async fn check_ollama_status(app: AppHandle) -> Result<OllamaStatus, String> {
     };
 
     // Emit status update event
-    let _ = app.emit(EVENT_OLLAMA_STATUS, &status);
+    emit_on_main(&app, EVENT_OLLAMA_STATUS, status.clone());
 
     Ok(status)
 }
@@ -831,7 +869,7 @@ async fn check_disk_space_for_model(app: AppHandle) -> Result<bool, String> {
                 available_gb, REQUIRED_FREE_SPACE_GB
             ),
         };
-        let _ = app.emit(EVENT_DISK_SPACE_ERROR, &error);
+        emit_on_main(&app, EVENT_DISK_SPACE_ERROR, error);
         return Ok(false);
     }
 
@@ -872,7 +910,8 @@ async fn download_ollama_model(app: AppHandle, model: String) -> Result<(), Stri
     let app_log = Arc::new(app.clone());
 
     // Emit initial log
-    let _ = app.emit(
+    emit_on_main(
+        &app,
         EVENT_INSTALLATION_LOG,
         InstallationLog {
             timestamp: get_timestamp(),
@@ -883,7 +922,8 @@ async fn download_ollama_model(app: AppHandle, model: String) -> Result<(), Stri
 
     // Check if Ollama is running
     if !is_ollama_running().await {
-        let _ = app.emit(
+        emit_on_main(
+            &app,
             EVENT_INSTALLATION_LOG,
             InstallationLog {
                 timestamp: get_timestamp(),
@@ -901,7 +941,8 @@ async fn download_ollama_model(app: AppHandle, model: String) -> Result<(), Stri
             return Err("Could not start Ollama server. Please start Ollama manually.".to_string());
         }
 
-        let _ = app.emit(
+        emit_on_main(
+            &app,
             EVENT_INSTALLATION_LOG,
             InstallationLog {
                 timestamp: get_timestamp(),
@@ -922,13 +963,14 @@ async fn download_ollama_model(app: AppHandle, model: String) -> Result<(), Stri
                 available_gb, REQUIRED_FREE_SPACE_GB
             ),
         };
-        let _ = app.emit(EVENT_DISK_SPACE_ERROR, &error);
+        emit_on_main(&app, EVENT_DISK_SPACE_ERROR, error.clone());
         return Err(error.message);
     }
 
     // Check if already installed
     if is_model_installed(&model).await {
-        let _ = app.emit(
+        emit_on_main(
+            &app,
             EVENT_DOWNLOAD_PROGRESS,
             DownloadProgress {
                 status: "completed".to_string(),
@@ -940,7 +982,8 @@ async fn download_ollama_model(app: AppHandle, model: String) -> Result<(), Stri
             },
         );
 
-        let _ = app.emit(
+        emit_on_main(
+            &app,
             EVENT_INSTALLATION_LOG,
             InstallationLog {
                 timestamp: get_timestamp(),
@@ -956,10 +999,10 @@ async fn download_ollama_model(app: AppHandle, model: String) -> Result<(), Stri
     pull_model(
         &model,
         move |progress| {
-            let _ = app_progress.emit(EVENT_DOWNLOAD_PROGRESS, &progress);
+            emit_on_main(&app_progress, EVENT_DOWNLOAD_PROGRESS, progress);
         },
         move |log| {
-            let _ = app_log.emit(EVENT_INSTALLATION_LOG, &log);
+            emit_on_main(&app_log, EVENT_INSTALLATION_LOG, log);
         },
     )
     .await
@@ -998,7 +1041,8 @@ async fn check_network_status() -> Result<bool, String> {
 /// Cancel an ongoing model download
 #[command]
 async fn cancel_model_download(app: AppHandle) -> Result<(), String> {
-    let _ = app.emit(
+    emit_on_main(
+        &app,
         EVENT_INSTALLATION_LOG,
         InstallationLog {
             timestamp: get_timestamp(),
@@ -1009,7 +1053,8 @@ async fn cancel_model_download(app: AppHandle) -> Result<(), String> {
 
     cancel_download()?;
 
-    let _ = app.emit(
+    emit_on_main(
+        &app,
         EVENT_DOWNLOAD_PROGRESS,
         DownloadProgress {
             status: "cancelled".to_string(),
@@ -1389,7 +1434,7 @@ async fn ollama_chat_stream(
                         if let Some(content) = json.get("message").and_then(|m| m.get("content")).and_then(|c| c.as_str()) {
                             full_content.push_str(content);
                             // Emit token event
-                            let _ = app.emit("ollama:token", serde_json::json!({
+                            emit_on_main(&app, "ollama:token", serde_json::json!({
                                 "generation_id": generation_id,
                                 "token": content,
                                 "full_content": full_content
@@ -1413,7 +1458,7 @@ async fn ollama_chat_stream(
                                 continue;
                             }
                             // No tool calls -> final answer.
-                            let _ = app.emit("ollama:done", serde_json::json!({
+                            emit_on_main(&app, "ollama:done", serde_json::json!({
                                 "generation_id": generation_id,
                                 "full_content": full_content
                             }));
@@ -1423,7 +1468,7 @@ async fn ollama_chat_stream(
                 }
             }
             Err(e) => {
-                let _ = app.emit("ollama:error", serde_json::json!({
+                emit_on_main(&app, "ollama:error", serde_json::json!({
                     "generation_id": generation_id,
                     "error": format!("Stream error: {}", e)
                 }));
@@ -1433,7 +1478,7 @@ async fn ollama_chat_stream(
     }
 
     // Stream closed without a tool-free `done` — emit done with what we have.
-    let _ = app.emit("ollama:done", serde_json::json!({
+    emit_on_main(&app, "ollama:done", serde_json::json!({
         "generation_id": generation_id,
         "full_content": full_content
     }));
@@ -2057,6 +2102,7 @@ pub fn run() {
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let app_url = get_app_url();
             println!("[ibl.ai] ============================================");
@@ -2703,6 +2749,9 @@ pub fn run() {
             ghost_os_manager::install_ghost_os,
             ghost_os_manager::stop_ghost_os,
             ghost_os_manager::check_ghost_os_status,
+            ghost_mcp_manager::ghost_mcp_start,
+            ghost_mcp_manager::ghost_mcp_send,
+            ghost_mcp_manager::ghost_mcp_stop,
             check_disk_space_for_model,
             get_system_memory,
             download_phi3_model,
@@ -2728,6 +2777,15 @@ pub fn run() {
             navigate_to,
             ollama_chat,
             ollama_chat_stream,
+            opencode_acp::opencode_chat_stream,
+            opencode_acp::opencode_stop,
+            opencode_acp::opencode_permission_respond,
+            opencode_acp::opencode_close,
+            opencode_acp::get_opencode_workspace,
+            opencode_acp::set_opencode_workspace,
+            opencode_installer::install_opencode,
+            opencode_installer::check_opencode_status,
+            opencode_acp::check_code_local_model,
         ]);
 
         // Mobile platforms get only basic commands (no offline/cache features)

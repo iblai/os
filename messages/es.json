@@ -196,11 +196,10 @@
     "projectActions": "Acciones del proyecto",
     "rename": "Renombrar",
     "delete": "Eliminar",
-    "chats": "Conversaciones",
+    "chats": "Recientes",
     "pinned": "Fijados",
-    "recent": "Recientes",
     "noRecentChats": "No hay conversaciones recientes",
-    "searchChats": "Buscar chats",
+    "searchChats": "Buscar",
     "searchChatsPlaceholder": "Buscar conversaciones",
     "chatsRecencyLast7Days": "Últimos 7 días",
     "chatsRecencyLast30Days": "Últimos 30 días",
@@ -244,7 +243,8 @@
     "accountDescIntegrations": "Gestiona tus integraciones con otros servicios.",
     "accountDescMonetization": "Configura muros de pago, precios e ingresos.",
     "accountDescAdvanced": "Configura los ajustes avanzados de la organización.",
-    "accountDescBilling": "Gestiona tu facturación y suscripción."
+    "accountDescBilling": "Gestiona tu facturación y suscripción.",
+    "awaitingPermission": "Esperando tu permiso"
   },
   "appSidebarPinnedMessages": {
     "pinned": "Fijado",
@@ -465,6 +465,9 @@
     "studyMode": "Modo de estudio",
     "deepResearch": "Investigación profunda",
     "memory": "Memoria",
+    "cowork": "Cowork",
+    "coworkNeedsLocalModel": "Activa primero «Modelos Locales»: Cowork necesita un modelo de IA local.",
+    "coworkModelTooSmall": "Tu modelo local es demasiado pequeño para Cowork. Elige un modelo de al menos 12 GB en Modelos Locales.",
     "moreOptions": "Más opciones"
   },
   "chatInputFormMemoryMenu": {
@@ -810,6 +813,7 @@
     "skills": "Habilidades",
     "privacy": "Privacidad",
     "tasks": "Tareas",
+    "support": "Soporte",
     "disclaimers": "Avisos legales",
     "memory": "Memoria",
     "evals": "Evaluaciones",
@@ -1279,7 +1283,33 @@
     "title": "Selección de LLM",
     "subtitle": "Elija su LLM preferido del proveedor disponible para personalizar su experiencia.",
     "searchPlaceholder": "Buscar",
-    "providerIconAlt": "ícono de {providerName}"
+    "providerIconAlt": "ícono de {providerName}",
+    "tooLargeTitle": "Este modelo puede ser demasiado grande para su sistema",
+    "tooLargeDescription": "{modelName} necesita aproximadamente {modelSize}. Puede funcionar muy lentamente o no cargarse en este equipo. ¿Descargar de todos modos?",
+    "cancel": "Cancelar",
+    "downloadAnyway": "Descargar de todos modos",
+    "alreadyDownloadingTitle": "Ya se está descargando un modelo",
+    "unnamedModel": "Un modelo",
+    "alreadyDownloadingDescription": "{modelName} se está descargando. Solo se descarga un modelo en el dispositivo a la vez: espere a que termine o haga clic en {modelName} en la lista para cancelarlo.",
+    "gotIt": "Entendido",
+    "announceDownloaded": "{modelName} descargado",
+    "announceCancelled": "Descarga cancelada",
+    "announceFailed": "Error en la descarga",
+    "announceStarted": "Descarga de {modelName} iniciada",
+    "localModel": {
+      "onDevice": "En el dispositivo",
+      "starting": "Iniciando…",
+      "cancel": "Cancelar",
+      "inUse": "En uso",
+      "downloadFailedRetry": "Error en la descarga: reintentar",
+      "ariaDownload": "Descargar {modelName}, {modelSize}, modelo en el dispositivo",
+      "ariaStarting": "Iniciando la descarga de {modelName}",
+      "ariaDownloading": "Cancelar la descarga de {modelName}, {percent} por ciento",
+      "ariaInstalled": "Usar {modelName}, modelo en el dispositivo",
+      "ariaSelected": "{modelName} seleccionado, modelo en el dispositivo, en uso",
+      "ariaError": "Reintentar la descarga de {modelName}",
+      "ariaErrorWithReason": "Reintentar la descarga de {modelName}, {reason}"
+    }
   },
   "modalsLlmProviderSelectionModal": {
     "selectProviderDescription": "Seleccione un proveedor LLM de la lista",
@@ -1356,7 +1386,23 @@
     "unmute": "Activar",
     "mute": "Silenciar",
     "closeVoiceChat": "Cerrar chat de voz",
-    "endCall": "Finalizar llamada"
+    "endCall": "Finalizar llamada",
+    "muteAgentAudio": "Silenciar audio del agente",
+    "unmuteAgentAudio": "Activar audio del agente",
+    "muteAgent": "Silenciar agente",
+    "unmuteAgent": "Activar agente",
+    "agentSpeaking": "Agente hablando",
+    "agentMuted": "Agente silenciado",
+    "callStatus": "Estado de la llamada",
+    "micMuted": "Micrófono silenciado",
+    "listening": "Escuchando…",
+    "callTranscript": "Transcripción de la llamada",
+    "transcriptEmpty": "La transcripción en directo aparecerá aquí cuando comience la conversación.",
+    "transcriptSpeakerYou": "Tú",
+    "transcriptSpeakerAgent": "Agente",
+    "showCaptions": "Mostrar subtítulos",
+    "hideCaptions": "Ocultar subtítulos",
+    "captions": "Subtítulos"
   },
   "modelDownloadModelDownloadStatus": {
     "downloading": "Descargando...",
@@ -1530,7 +1576,7 @@
     "formBeingSubmitted": "El formulario se está enviando"
   },
   "settingsTabCopyMentorModal": {
-    "defaultCopyName": "Copia de {name}",
+    "defaultCopyNamePrefix": "Copia de",
     "defaultAgentName": "Agente",
     "errorMissingContext": "No se puede copiar el agente. Falta contexto.",
     "successCopied": "Agente copiado correctamente. Cambiando al nuevo agente",
@@ -2161,5 +2207,34 @@
     "reject": "Rechazar",
     "stickyNote": "Nota adhesiva",
     "changeAgent": "Cambiar agente"
+  },
+  "chatInputFormCodingModeButton": {
+    "code": "Código",
+    "tooltip": "Una herramienta de programación con agentes para tu carpeta de proyecto",
+    "description": "Una herramienta de programación con agentes que edita archivos, ejecuta comandos y confirma cambios en la carpeta que elijas.",
+    "checkingLocalModel": "Comprobando si tu modelo local puede ejecutar Código…",
+    "tryToolCapableModel": " Prueba un modelo compatible con herramientas como qwen3, llama3.2 o phi4-mini.",
+    "firstRunSlow": "La primera ejecución puede tardar unos minutos mientras se carga el modelo.",
+    "modelUnavailable": "no está disponible para Código: los turnos fallarán. Elige otro modelo arriba a la izquierda.",
+    "workspace": "Espacio de trabajo",
+    "changeFolder": "Cambiar carpeta…",
+    "chooseFolderTitle": "Elige tu carpeta de trabajo"
+  },
+  "chatCodePermissionCard": {
+    "title": "Código necesita tu permiso",
+    "unnamedAction": "Una acción sin nombre",
+    "kind": {
+      "read": "leer",
+      "write": "escribir",
+      "exec": "ejecutar",
+      "delete": "eliminar",
+      "move": "mover",
+      "search": "buscar",
+      "fetch": "obtener",
+      "think": "pensar",
+      "other": "acción"
+    },
+    "allow": "Permitir",
+    "deny": "Denegar"
   }
 }

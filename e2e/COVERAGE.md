@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-07-28 | 604 checkpoints (577 covered, 7 pending/fixme, 8 not-reproducible in default env, 12 deprecated) | 67 journeys (66 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-08-04 | 610 checkpoints (582 covered, 7 pending/fixme, 9 not-reproducible in default env, 12 deprecated) | 68 journeys (67 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -1254,3 +1254,49 @@ Issue feat/2215 — two independent surfaces:
 - [x] slash-13: Typing "/" while the skills fetches (assignments + catalog) are still in flight shows the "Loading skills…" popover (`slash-skill-loading`, `role=status`), which yields to the picker once the list resolves
 - [x] slash-15: NON-ADMIN — with the realistic student permission shape (assignments 403, catalog-only mentor-private skills) the "/" picker still offers skills; selecting completes the token and the sent invocation message receives a live AI reply
 - [x] slash-14: A "/" token typed after existing text (caret-adjacent, preceded by whitespace) opens the picker; selecting completes the invocation at that index keeping the sentence. A "/" glued inside a word (and/or, URLs) never triggers
+
+---
+
+## Journey 65: Analytics Navbar Parity (6 checkpoints) — `journeys/65-analytics-navbar-parity.spec.ts`
+
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`
+
+Issue #2248 — there is only ONE navbar component (`app/platform/_components/app-layout.tsx`
+renders `<NavBar />` for every `/platform/<tenant>/<mentor>/**` route, including
+`/analytics`). Before the fix, two path predicates in `nav-bar/index.tsx`
+special-cased `/analytics` the same way as `/prompt-gallery`: the mentor name
+rendered as static text instead of the "Selected agent" dropdown trigger, the
+admin-only LLM Model Selector and the Private Mode chip were both hidden, and
+the dropdown's "New Chat" action silently no-op'd (`RemoteEvents.newChat` has
+no listener off the chat route). The fix renames `isPromptGalleryOrAnalytics`
+to `isPromptGalleryPage` (dropping `/analytics`) and stops `isOnChatPage` from
+excluding `/analytics`, giving the analytics route full navbar parity with the
+regular chat page.
+
+Chosen home: a new journey rather than reviving Journey 18
+(`18-analytics-dashboard.spec.ts`, whose four tests are pre-existing `//
+fixme` breakage unrelated to this fix) or extending Journey 56 (scoped
+tightly to the User/Admin dropdown-visibility regression, issue #2048).
+
+`anp-02`'s parity check captures the LLM Model Selector and Private Mode chip
+visibility on the regular chat page first, then asserts the SAME state on
+`/analytics` — this proves parity without the journey mutating the tenant's
+shared chat-privacy gate (which Journey 50 owns) and without a vacuous pass if
+that gate were ever off.
+
+There is deliberately no `/prompt-gallery` regression-guard checkpoint
+(anp-06, `not-reproducible`): it is not a reachable route anywhere in this
+codebase — no `page.tsx` exists for it, and no `Link`/`router.push` in the app
+ever targets it (the prompt gallery is a client-state modal that never
+touches the URL). Verified live: navigating directly to
+`.../prompt-gallery` renders the app's genuine root `not-found.tsx`, and the
+`<nav>` element does not render at all, so `isPromptGalleryPage` never runs
+against real DOM. That predicate is covered at the unit level instead, in
+`nav-bar/__tests__/index.test.tsx`.
+
+- [x] anp-01: Admin on the analytics page sees the mentor dropdown trigger (not static Avatar+name text), and it opens the categorized menu with New Chat and Settings items
+- [x] anp-02: Full navbar parity — LLM Model Selector and Private Mode chip are both visible on `/analytics`, matching the regular chat page baseline captured in the same test
+- [x] anp-03: REGRESSION GUARD — clicking New Chat from the analytics navbar dropdown routes back to the bare chat route (no `/analytics` suffix) and starts a fresh, empty session
+- [x] anp-04: Fix holds on nested analytics routes — `/analytics/users` still shows the mentor dropdown and LLM Model Selector
+- [x] anp-05: Admin flipped to User (student) mode does not see the LLM Model Selector on the analytics page
+- [ ] anp-06 _(not-reproducible)_: `/prompt-gallery` regression guard — no reachable route exists to exercise it E2E; unit-covered in `nav-bar/__tests__/index.test.tsx` instead
