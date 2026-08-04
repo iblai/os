@@ -148,10 +148,13 @@ jobs:
       # lives in the root FinderInfo, which the code signature does not seal.
       - name: Hide .app extension in DMG Finder label
         env:
+          # Re-signing the re-mastered DMG needs the Developer ID identity in a
+          # keychain on the search list. tauri-action's temporary signing keychain
+          # is NOT available by this later step (codesign reported "no identity
+          # found"), so we import the cert into our own short-lived keychain below.
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           # APPLE_SIGNING_IDENTITY / APPLE_TEAM_ID come from the job env.
-          # The temp signing keychain tauri-action set up is still on the search
-          # list here (its cleanup runs as a post-job step), so codesign resolves
-          # the Developer ID identity without extra setup.
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           DMG_PATH: ${{ inputs.dmg_path }}
@@ -162,6 +165,31 @@ jobs:
           if [ ${#dmgs[@]} -eq 0 ]; then
             echo "No DMG found at $DMG_PATH"; exit 1
           fi
+
+          # --- Self-contained signing keychain (removed on exit) ---
+          # Import the Developer ID cert so `codesign` can resolve the identity;
+          # keep the runner's existing keychains on the search list too so the
+          # Apple intermediate CA (needed to build the cert chain) stays visible.
+          KEYCHAIN="$RUNNER_TEMP/dmg-resign.keychain-db"
+          KEYCHAIN_PWD="$(openssl rand -base64 24)"
+          CERT_P12="$RUNNER_TEMP/dmg-resign-cert.p12"
+          cleanup() { security delete-keychain "$KEYCHAIN" 2>/dev/null || true; rm -f "$CERT_P12"; }
+          trap cleanup EXIT
+          security create-keychain -p "$KEYCHAIN_PWD" "$KEYCHAIN"
+          # Long auto-lock timeout so the keychain stays unlocked across the
+          # notarytool --wait (which can take several minutes).
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PWD" "$KEYCHAIN"
+          printf '%s' "$APPLE_CERTIFICATE" | base64 --decode > "$CERT_P12"
+          security import "$CERT_P12" -k "$KEYCHAIN" -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -T /usr/bin/codesign
+          # Let codesign use the private key without an interactive prompt.
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s \
+            -k "$KEYCHAIN_PWD" "$KEYCHAIN" >/dev/null
+          # Prepend our keychain to the user search list (existing ones retained).
+          security list-keychains -d user -s "$KEYCHAIN" \
+            $(security list-keychains -d user | tr -d '"')
+
           for dmg in "${dmgs[@]}"; do
             echo "::group::Re-master $dmg"
             work="$(mktemp -d)"
@@ -187,8 +215,10 @@ jobs:
             # .DS_Store: window size, background, icon positions).
             hdiutil convert "$rw" -format UDZO -o "$final"
 
-            # Re-sign, then re-notarize + staple the re-mastered DMG.
-            codesign --force --sign "$APPLE_SIGNING_IDENTITY" "$final"
+            # Re-sign (with a secure timestamp — notarytool rejects submissions
+            # lacking one), then re-notarize + staple the re-mastered DMG.
+            codesign --force --timestamp --keychain "$KEYCHAIN" \
+              --sign "$APPLE_SIGNING_IDENTITY" "$final"
             xcrun notarytool submit "$final" \
               --apple-id "$APPLE_ID" \
               --password "$APPLE_PASSWORD" \

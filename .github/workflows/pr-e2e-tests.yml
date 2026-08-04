@@ -220,17 +220,30 @@ jobs:
           # GitHub keeps only ONE pending run per concurrency group. A third dispatch CANCELS the
           # previously-pending one before it starts a single job — silently, with no diagnosis on the
           # PR. Three PRs labelled close together is enough to trigger it, and pinning everything to
-          # stg1 made that routine. So: never dispatch while another run for this env is waiting.
+          # stg1 made that routine. So: never dispatch while another run is waiting.
+          #
+          # Counts EVERY pending pr-e2e run, deliberately — not just ones whose title mentions this
+          # caller's TARGET. Filtering on the title was a correctness bug: the central `run-name`
+          # renders the env the run will actually use, which an operator override
+          # (`vars.PR_E2E_ENV_OVERRIDE`, added to drain a suspect box) can redirect. On 2026-08-04
+          # every central title read "→ stg2" while every caller searched for "→ stg1", so the count
+          # was permanently 0 — each caller believed the slot was free, all of them dispatched, and
+          # they evicted one another in a live-lock: SIX dispatches for os#405, zero tests executed,
+          # no report, and a red X on the PR that said nothing about the code.
+          #
+          # A caller cannot know the effective env, so it must never depend on inferring one. Being
+          # conservative costs throughput when two envs are genuinely busy with different PRs; it
+          # cannot cost correctness. That is the trade this pipeline already makes for env selection.
           wait_for_slot() {
             local i w
             for i in $(seq 1 240); do
-              w=$(gh run list -R "$OPS" --workflow=pr-e2e.yml --limit 20 --json status,displayTitle \
-                    --jq "[.[] | select((.status==\"queued\" or .status==\"pending\") and (.displayTitle|contains(\"→ ${TARGET}\")))] | length" 2>/dev/null || echo 0)
+              w=$(gh run list -R "$OPS" --workflow=pr-e2e.yml --limit 20 --json status \
+                    --jq '[.[] | select(.status=="queued" or .status=="pending")] | length' 2>/dev/null || echo 0)
               [ "${w:-0}" -eq 0 ] && return 0
-              [ $(( (i-1) % 10 )) -eq 0 ] && echo "[$(date -u +%H:%M:%SZ)] waiting for a free dispatch slot on ${TARGET} — ${w} run(s) already queued ahead"
+              [ $(( (i-1) % 10 )) -eq 0 ] && echo "[$(date -u +%H:%M:%SZ)] waiting for a free dispatch slot — ${w} pr-e2e run(s) already queued ahead"
               sleep 30
             done
-            echo "::error::no free dispatch slot on ${TARGET} after 2h"; return 1
+            echo "::error::no free dispatch slot after 2h"; return 1
           }
 
           do_dispatch() {
@@ -396,6 +409,7 @@ jobs:
           REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RUN_ID: ${{ steps.dispatch.outputs.run_id }}
           PR: ${{ github.event.pull_request.number }}
+          DISPATCH_CONCLUSION: ${{ steps.dispatch.outputs.conclusion }}
         run: |
           set -uo pipefail
           # The Playwright report on tests.iblai.app IS public, so it is the link that actually helps
@@ -411,12 +425,23 @@ jobs:
           if [ ! -f /tmp/res/pr-e2e-result.json ]; then
             echo "::warning::could not download pr-e2e-result from run ${RUN_ID} — the comment will lack a report link. https://github.com/iblai/iblai-deploy-ops/actions/runs/${RUN_ID}"
           fi
+
+          # Carry the PREVIOUS comment forward. A run that produced nothing must never erase a run
+          # that produced something: an evicted dispatch used to overwrite a real verdict with
+          # "unknown", losing the only PR-visible link to a perfectly good report (os#405, 2026-08-04
+          # — a 452/3/6 result vanished behind an eviction that never started a test).
+          GH_TOKEN="$REPO_TOKEN" gh api "repos/${GITHUB_REPOSITORY}/issues/${PR}/comments" --paginate \
+            --jq '[.[] | select(.body | startswith("<!-- pr-e2e-report -->"))] | .[-1].body // empty' \
+            > /tmp/prev.md 2>/dev/null || : > /tmp/prev.md
+
           python3 - <<'PY' > /tmp/body.md
-          import json, pathlib
+          import json, os, pathlib, re
           p = pathlib.Path("/tmp/res/pr-e2e-result.json")
           d = json.loads(p.read_text()) if p.exists() else {}
-          v    = d.get("verdict") or "unknown"
-          icon = {"success": "OK", "failure": "FAILED", "cancelled": "cancelled"}.get(v, v)
+          # The dispatch step already knows how the central run ended. Falling back to "unknown"
+          # threw that away and told the developer to find a maintainer.
+          v    = d.get("verdict") or os.environ.get("DISPATCH_CONCLUSION") or "unknown"
+          icon = {"success": "OK", "failure": "FAILED", "cancelled": "NOT RUN"}.get(v, v)
           rep  = d.get("report_url") or ""
           rows = [("result", f"**{icon}**")]
           if d.get("platform"):
@@ -431,9 +456,25 @@ jobs:
           if rep:
               out += [f"**[Full report, traces and screenshots]({rep})**", ""]
           out += ["| | |", "|---|---|"] + [f"| {k} | {val} |" for k, val in rows]
+
           if not rep:
-              out += ["", "_No report link - the run likely failed before the suite started."
-                          " Ask a maintainer to check the central pipeline._"]
+              if v in ("cancelled", "no_slot", "dispatch_failed"):
+                  out += ["", "**No tests ran.** This run was cancelled before the suite started —"
+                              " usually because another PR's run took the shared environment, or a newer"
+                              " commit/label superseded this one."
+                              " **This says nothing about your code.**", "",
+                          "Re-trigger it yourself: **remove the `run-tests` label and add it back**."
+                          " (Avoid *Re-run jobs* — that replays the old merge ref instead of"
+                          " recomputing it against current `main`.)"]
+              else:
+                  out += ["", "_No report link - the run likely failed before the suite started."
+                              " Ask a maintainer to check the central pipeline._"]
+              # Preserve the last known-good report so an eviction cannot bury a real result.
+              prev = pathlib.Path("/tmp/prev.md").read_text() if pathlib.Path("/tmp/prev.md").exists() else ""
+              m = re.search(r"\[Full report, traces and screenshots\]\((https?://[^)]+)\)", prev)
+              if m:
+                  out += ["", f"Last completed run for this PR: **[report]({m.group(1)})** —"
+                              " still valid unless this PR has changed since."]
           print("\n".join(out))
           PY
           cat /tmp/body.md >> "$GITHUB_STEP_SUMMARY"

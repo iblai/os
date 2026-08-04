@@ -577,15 +577,29 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     });
     await expect(thoughtButton).toBeVisible({ timeout: 15_000 });
 
-    // Verify reasoning appears above tool calls in the DOM. Measured after
-    // streaming on the settled "Thought" button — the label flips from
-    // "Thinking" to "Thought" mid-stream, so measuring the transient "Thinking"
-    // button is racy and its boundingBox can vanish before it is read.
-    const reasoningTriggerBox = await thoughtButton.boundingBox();
-    const toolCallTriggerBox = await toolCallTrigger.boundingBox();
-    if (reasoningTriggerBox && toolCallTriggerBox) {
-      expect(reasoningTriggerBox.y).toBeLessThan(toolCallTriggerBox.y);
-    }
+    // Verify reasoning appears above tool calls in the DOM.
+    //
+    // Asserted on DOM order, NOT on boundingBox().y. Bounding boxes are
+    // viewport-relative and each read is a separate round-trip, so the chat's
+    // autoscroll and the reasoning panel's collapse on the Thinking→Thought
+    // flip can land the two measurements in different scroll frames — which
+    // reported the tool call as "above" the reasoning even though the markup
+    // was correctly ordered. `ai-message-bubble.tsx` renders
+    // <ReasoningSection> then <ToolCallIndicator> as block-level siblings, so
+    // their order among the message's chips is the property worth guarding.
+    const chipLabels = await lastAIMessage
+      .getByRole('button', { name: /thought|used \d+ tools?/i })
+      .allTextContents();
+    const reasoningIndex = chipLabels.findIndex((t) => /thought/i.test(t));
+    const toolCallIndex = chipLabels.findIndex((t) =>
+      /used \d+ tools?/i.test(t),
+    );
+
+    expect(reasoningIndex, 'reasoning chip must be present').toBeGreaterThan(
+      -1,
+    );
+    expect(toolCallIndex, 'tool call chip must be present').toBeGreaterThan(-1);
+    expect(reasoningIndex).toBeLessThan(toolCallIndex);
 
     // Tool call indicator remains without bounce dots (the streaming flag can
     // lag slightly behind the stop button disappearing).
