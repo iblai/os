@@ -468,7 +468,11 @@
     "cowork": "Cowork",
     "coworkNeedsLocalModel": "Turn on “Local Models” first — Cowork needs a local AI model.",
     "coworkModelTooSmall": "Your local model is too small for Cowork. Pick a model of at least 12GB in Local Models.",
-    "moreOptions": "More options"
+    "moreOptions": "More options",
+    "coworkUnsupportedKde": "Cowork isn’t supported on KDE Plasma yet.",
+    "coworkUnsupportedGnomeHelper": "Cowork on GNOME needs the WinRects helper installed, then a session restart.",
+    "coworkUnsupportedOs": "Cowork isn’t supported on this operating system.",
+    "coworkUnsupportedSession": "Cowork isn’t supported on this desktop session."
   },
   "chatInputFormMemoryMenu": {
     "yourMemory": "Your Memory",

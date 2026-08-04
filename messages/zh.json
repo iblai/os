@@ -468,7 +468,11 @@
     "cowork": "Cowork",
     "coworkNeedsLocalModel": "请先开启“本地模型”——Cowork 需要本地 AI 模型。",
     "coworkModelTooSmall": "您的本地模型太小，无法用于 Cowork。请在“本地模型”中选择至少 12GB 的模型。",
-    "moreOptions": "更多选项"
+    "moreOptions": "更多选项",
+    "coworkUnsupportedKde": "Cowork 尚不支持 KDE Plasma。",
+    "coworkUnsupportedGnomeHelper": "在 GNOME 上使用 Cowork 需要安装 WinRects 扩展，然后重启会话。",
+    "coworkUnsupportedOs": "Cowork 不支持此操作系统。",
+    "coworkUnsupportedSession": "Cowork 不支持此桌面会话。"
   },
   "chatInputFormMemoryMenu": {
     "yourMemory": "您的记忆",

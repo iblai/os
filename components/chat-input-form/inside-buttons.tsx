@@ -20,7 +20,7 @@ import { toast } from 'sonner';
 import { DeepSearchIcon, CanvasIcon } from '@/components/icons/svg-icons';
 import { TOOLS, hasRemoteAiConfig } from '@iblai/iblai-js/web-utils';
 import {
-  useGhostOs,
+  useCuaDriver,
   isCoworkEnabled,
   setCoworkEnabled,
   isLocalLLMEnabled,
@@ -31,15 +31,6 @@ import { MemoryButton } from './memory-button';
 import { CodingModeButton } from './coding-mode-button';
 import { MemoryMenu } from './memory-menu';
 import { isTauriApp } from '@/types/tauri';
-
-// Cowork is macOS-only in prod; the env flag bypasses the OS check so the
-// toggle can be exercised on Linux/Windows desktop builds during testing.
-const isMacOS = () => {
-  if (typeof navigator === 'undefined') return false;
-  return /mac/i.test(navigator.userAgent || '');
-};
-const allowNonMacOSCowork = () =>
-  process.env.NEXT_PUBLIC_ALLOW_NON_MACOS_COMPUTER_USE_TOGGLE === 'true';
 
 // 12GB floor, matching the SDK default (DEFAULT_COWORK_REQUIRED_SIZE_GB)
 // and the Local Models tab's "supported" indicator. modelSupportsCowork
@@ -95,11 +86,25 @@ export const InsideButtons = ({
 }: InsideButtonsProps) => {
   const t = useTranslations('chatInputFormInsideButtons');
 
-  // Cowork = the Tauri GhostOS assistant (useGhostOs install/stop + localStorage
-  // pref), no backend round-trip. Reads the pref on mount; cross-tab sync not
+  // The host reports a machine-readable code; never render it raw.
+  const unsupportedCoworkReason = (reason?: string) => {
+    switch (reason) {
+      case 'kde_unproven':
+        return t('coworkUnsupportedKde');
+      case 'gnome_helper_missing':
+        return t('coworkUnsupportedGnomeHelper');
+      case 'unsupported_os':
+        return t('coworkUnsupportedOs');
+      default:
+        return t('coworkUnsupportedSession');
+    }
+  };
+
+  // Cowork = the Tauri Cua Driver assistant (useCuaDriver install/stop +
+  // localStorage pref), no backend round-trip. Reads the pref on mount; cross-tab sync not
   // polled. Local state is `coworkOn` so it doesn't shadow the imported
   // setCoworkEnabled.
-  const ghostOs = useGhostOs();
+  const cuaDriver = useCuaDriver();
   const [coworkOn, setCoworkOn] = useState(isCoworkEnabled);
   const toggleCowork = () => {
     const next = !coworkOn;
@@ -122,8 +127,8 @@ export const InsideButtons = ({
     }
     setCoworkOn(next);
     setCoworkEnabled(next);
-    if (next) ghostOs.install();
-    else ghostOs.stop();
+    if (next) cuaDriver.install();
+    else cuaDriver.stop();
   };
 
   // Code (opencode over ACP) is desktop-only. Detected AFTER mount, never during
@@ -156,15 +161,26 @@ export const InsideButtons = ({
     icon: <Monitor className="h-4 w-4" />,
     isActive: coworkOn,
     action: toggleCowork,
-    isEnabled: ghostOs.isAvailable && (isMacOS() || allowNonMacOSCowork()),
+    // Cowork used to be macOS-only because GhostOS was. The Cua Driver runs on
+    // Windows, macOS and Linux — but not on every Linux session, so an
+    // unsupported one renders the pill DISABLED with the reason rather than
+    // hiding it. The chatbox is Cowork's only surface: hide it and a KDE user is
+    // left with no way to find out why the feature they read about is missing.
+    isEnabled: cuaDriver.isAvailable,
+    disabledReason: cuaDriver.isSupported
+      ? undefined
+      : unsupportedCoworkReason(cuaDriver.unsupportedReason),
   };
-  const coworkAvailable = coworkButton.isEnabled;
+  // Deliberately NOT `coworkButton.isEnabled`: that is now true on any desktop so
+  // the pill can render disabled-with-a-reason. Defaulting Cowork ON must still
+  // require a session the driver can actually drive.
+  const coworkAvailable = cuaDriver.isAvailable && cuaDriver.isSupported;
 
   // Default Cowork ON for logged-in desktop users (once), mirroring the Code
   // default in <CodingModeButton>. Only runs where the toggle is actually
   // offered, respects an explicit prior choice (an explicit "false" is stored,
-  // so only a *missing* key counts as "never chosen"), and installs GhostOS in
-  // the background so the first turn is ready. No backend guard is needed: the
+  // so only a *missing* key counts as "never chosen"), and installs the driver
+  // in the background so the first turn is ready. No backend guard is needed: the
   // logged-in check (tenant + dm_token) is exactly what hasRemoteAiConfig()
   // tests, so a logged-in user always has the remote AI backend available.
   useEffect(() => {
@@ -175,8 +191,8 @@ export const InsideButtons = ({
     if (!loggedIn) return;
     setCoworkEnabled(true);
     setCoworkOn(true);
-    ghostOs.install();
-  }, [coworkAvailable, ghostOs]);
+    cuaDriver.install();
+  }, [coworkAvailable, cuaDriver]);
 
   const allInsideButtons = [
     {
@@ -259,13 +275,16 @@ export const InsideButtons = ({
     icon: React.ReactNode;
     isActive: boolean;
     action: () => void;
+    /** Set when this specific tool can't run here; also the tooltip text. */
+    disabledReason?: string;
   }) => (
     <div key={button.name} className="relative">
       <Button
         variant="ghost"
         size="sm"
         type="button"
-        disabled={disabled}
+        disabled={disabled || !!button.disabledReason}
+        title={button.disabledReason}
         className={`flex h-8 items-center gap-1.5 rounded-lg px-2 text-sm transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 ${
           button.isActive
             ? 'border border-[#D0E0FF] bg-[#F5F8FF] text-[#38A1E5]'

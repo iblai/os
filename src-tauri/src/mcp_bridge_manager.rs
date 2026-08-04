@@ -212,11 +212,10 @@ pub fn start_bridge() {
             .stdout(Stdio::null())
             .stderr(Stdio::null());
 
-        // macOS: the bridge spawns the configured MCP servers (e.g. the `ghost`
-        // helper) and they may spawn sidecars (`ghost-vision`). When the helper is
-        // installed to ~/.local/bin (no-Homebrew fallback) that dir often isn't on
-        // a GUI app's PATH, so prepend the common bins to the bridge's PATH so the
-        // servers and their sidecars resolve.
+        // macOS: the bridge spawns the configured MCP servers and they may spawn
+        // sidecars of their own. A server installed to ~/.local/bin or a Homebrew
+        // prefix often isn't on a GUI app's PATH, so prepend the common bins to
+        // the bridge's PATH so the servers and their sidecars resolve.
         #[cfg(target_os = "macos")]
         {
             cmd.env("PATH", macos_server_path());

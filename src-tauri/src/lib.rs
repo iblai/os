@@ -1,14 +1,14 @@
 // Hide console window on Windows in release builds
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-mod ghost_mcp_manager;
+mod cua_driver_installer;
+mod cua_driver_mcp;
 // Gated exactly like `opencode_acp`, which is its only consumer here: Code uses
 // `get_foundry_service_endpoint` to reach Foundry Local's OpenAI-compatible API.
 // The rest of the module is exercised by the desktop bin (see main.rs).
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 #[allow(dead_code)]
 mod foundry_manager;
-mod ghost_os_manager;
 mod mcp_bridge_installer;
 mod mcp_bridge_manager;
 mod model_manager;
@@ -2746,12 +2746,12 @@ pub fn run() {
             stop_ollama,
             check_ollama_status,
             get_mcp_config_path,
-            ghost_os_manager::install_ghost_os,
-            ghost_os_manager::stop_ghost_os,
-            ghost_os_manager::check_ghost_os_status,
-            ghost_mcp_manager::ghost_mcp_start,
-            ghost_mcp_manager::ghost_mcp_send,
-            ghost_mcp_manager::ghost_mcp_stop,
+            cua_driver_installer::install_cua_driver,
+            cua_driver_installer::check_cua_driver_status,
+            cua_driver_mcp::cua_driver_support,
+            cua_driver_mcp::cua_driver_start,
+            cua_driver_mcp::cua_driver_send,
+            cua_driver_mcp::cua_driver_stop,
             check_disk_space_for_model,
             get_system_memory,
             download_phi3_model,

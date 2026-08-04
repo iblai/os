@@ -3,8 +3,8 @@
 
 mod foundry_installer;
 mod foundry_manager;
-mod ghost_mcp_manager;
-mod ghost_os_manager;
+mod cua_driver_installer;
+mod cua_driver_mcp;
 mod mcp_bridge_installer;
 mod mcp_bridge_manager;
 mod model_manager;
@@ -2766,12 +2766,12 @@ fn main() {
             stop_ollama,
             check_ollama_status,
             get_mcp_config_path,
-            ghost_os_manager::install_ghost_os,
-            ghost_os_manager::stop_ghost_os,
-            ghost_os_manager::check_ghost_os_status,
-            ghost_mcp_manager::ghost_mcp_start,
-            ghost_mcp_manager::ghost_mcp_send,
-            ghost_mcp_manager::ghost_mcp_stop,
+            cua_driver_installer::install_cua_driver,
+            cua_driver_installer::check_cua_driver_status,
+            cua_driver_mcp::cua_driver_support,
+            cua_driver_mcp::cua_driver_start,
+            cua_driver_mcp::cua_driver_send,
+            cua_driver_mcp::cua_driver_stop,
             check_foundry_local_status,
             start_foundry_local_service,
             load_foundry_local_model,

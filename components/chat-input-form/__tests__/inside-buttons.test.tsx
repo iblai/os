@@ -54,7 +54,7 @@ vi.mock('@/lib/config', () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Desktop assistants: Code (opencode) + Cowork (GhostOS)
+// Desktop assistants: Code (opencode) + Cowork (Cua Driver)
 // ---------------------------------------------------------------------------
 
 // The real Code button needs Redux and the mentor route; only the Tauri gate
@@ -74,7 +74,9 @@ vi.mock('@/types/tauri', async (importOriginal) => ({
   isTauriApp: () => mockIsTauriApp(),
 }));
 
-let mockGhostAvailable = false;
+let mockDriverAvailable = false;
+let mockDriverSupported = true;
+let mockUnsupportedReason: string | undefined;
 let mockCoworkOn = false;
 let mockLocalLLMEnabled = false;
 let mockModelSupportsCowork = false;
@@ -82,14 +84,16 @@ const mockGhostInstall = vi.fn();
 const mockGhostStop = vi.fn();
 const mockSetCoworkEnabled = vi.fn();
 vi.mock('@iblai/iblai-js/web-containers', () => ({
-  useGhostOs: () => ({
-    isAvailable: mockGhostAvailable,
+  useCuaDriver: () => ({
+    isAvailable: mockDriverAvailable,
+    isSupported: mockDriverSupported,
+    unsupportedReason: mockUnsupportedReason,
     install: () => mockGhostInstall(),
     stop: () => mockGhostStop(),
   }),
   isCoworkEnabled: () => mockCoworkOn,
   // The real helper persists to localStorage, and the default-on pass relies on
-  // that write to not fire twice — useGhostOs hands back a fresh object each
+  // that write to not fire twice — useCuaDriver hands back a fresh object each
   // render, so its effect re-runs and only the stored key stops it.
   setCoworkEnabled: (value: boolean) => {
     localStorage.setItem('ibl_cowork_enabled', String(value));
@@ -110,17 +114,6 @@ const mockToastWarning = vi.fn();
 vi.mock('sonner', () => ({
   toast: { warning: (...args: unknown[]) => mockToastWarning(...args) },
 }));
-
-/** jsdom reports a Linux UA; Cowork is gated on macOS. */
-function setUserAgent(ua: string) {
-  Object.defineProperty(navigator, 'userAgent', {
-    value: ua,
-    configurable: true,
-  });
-}
-const MAC_UA =
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36';
-const LINUX_UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36';
 
 // Import mocked modules for testing
 import { useIsAdmin, useLearnerMode } from '@/hooks/use-user';
@@ -147,13 +140,13 @@ describe('InsideButtons', () => {
     // Browser defaults: neither desktop assistant is offered, so the tool-list
     // tests below see only the responsive buttons.
     mockIsTauri = false;
-    mockGhostAvailable = false;
+    mockDriverAvailable = false;
+    mockDriverSupported = true;
+    mockUnsupportedReason = undefined;
     mockCoworkOn = false;
     mockLocalLLMEnabled = false;
     mockModelSupportsCowork = false;
     mockHasRemoteAi = false;
-    setUserAgent(LINUX_UA);
-    delete process.env.NEXT_PUBLIC_ALLOW_NON_MACOS_COMPUTER_USE_TOGGLE;
     localStorage.clear();
   });
 
@@ -1114,40 +1107,63 @@ describe('InsideButtons', () => {
   });
 
   describe('Cowork button', () => {
-    /** Cowork is offered only where GhostOS can actually run. */
+    /** Cowork is offered wherever the driver is present. */
     const enableCowork = () => {
-      mockGhostAvailable = true;
-      setUserAgent(MAC_UA);
+      mockDriverAvailable = true;
     };
 
-    it('is absent when GhostOS is unavailable', () => {
-      setUserAgent(MAC_UA);
+    it('is absent outside the desktop app', () => {
       render(<InsideButtons {...defaultProps} />);
       expect(screen.queryByText('Cowork')).not.toBeInTheDocument();
     });
 
-    it('is absent on a non-macOS desktop', () => {
-      mockGhostAvailable = true;
-      render(<InsideButtons {...defaultProps} />);
-      expect(screen.queryByText('Cowork')).not.toBeInTheDocument();
-    });
-
-    it('renders on macOS when GhostOS is available', () => {
+    it('renders on any desktop the driver supports', () => {
+      // Cowork was macOS-only under GhostOS; the Cua Driver runs on Windows,
+      // macOS and Linux, so there is no OS gate left — only session support.
       enableCowork();
       render(<InsideButtons {...defaultProps} />);
-      expect(screen.getByText('Cowork')).toBeInTheDocument();
+      expect(screen.getByText('Cowork').closest('button')).toBeEnabled();
     });
 
-    it('renders off macOS when the override flag is set', () => {
-      // The escape hatch that lets the toggle be exercised on Linux/Windows
-      // desktop builds.
-      mockGhostAvailable = true;
-      process.env.NEXT_PUBLIC_ALLOW_NON_MACOS_COMPUTER_USE_TOGGLE = 'true';
+    it('stays visible but disabled on an unsupported session, and says why', () => {
+      // The chatbox is Cowork's only surface: hiding the pill would leave the
+      // user with no way to discover why the feature is missing.
+      enableCowork();
+      mockDriverSupported = false;
+      mockUnsupportedReason = 'kde_unproven';
       render(<InsideButtons {...defaultProps} />);
-      expect(screen.getByText('Cowork')).toBeInTheDocument();
+
+      const button = screen.getByText('Cowork').closest('button')!;
+      expect(button).toBeDisabled();
+      expect(button.getAttribute('title')).toMatch(/KDE/);
     });
 
-    it('turns on and installs GhostOS when the remote AI backend is configured', () => {
+    it('cannot be toggled on an unsupported session', () => {
+      enableCowork();
+      mockDriverSupported = false;
+      mockUnsupportedReason = 'gnome_helper_missing';
+      mockHasRemoteAi = true;
+      render(<InsideButtons {...defaultProps} />);
+
+      fireEvent.click(screen.getByText('Cowork'));
+
+      expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
+      expect(mockGhostInstall).not.toHaveBeenCalled();
+    });
+
+    it('does not default Cowork on for an unsupported session', () => {
+      // The default-on pass must respect session support, not just presence.
+      enableCowork();
+      mockDriverSupported = false;
+      localStorage.setItem('tenant', 'acme');
+      localStorage.setItem('dm_token', 'token-abc');
+      render(<InsideButtons {...defaultProps} />);
+
+      expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
+      expect(mockGhostInstall).not.toHaveBeenCalled();
+    });
+
+    it('turns on and installs the driver when the remote AI backend is configured', () => {
       enableCowork();
       mockHasRemoteAi = true;
       localStorage.setItem('ibl_cowork_enabled', 'false');
