@@ -42,6 +42,7 @@ export const MODALS = {
     tabs: {
       settings: 'settings',
       llm: 'llm',
+      spend_caps: 'spend_caps',
       prompts: 'prompts',
       mcp: 'mcp',
       tools: 'tools',

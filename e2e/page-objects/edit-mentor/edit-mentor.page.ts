@@ -21,6 +21,7 @@ import { VoiceTab } from './voice.tab';
 import { ScreenShareTab } from './screenshare.tab';
 import { HumanSupportTab } from './human-support.tab';
 import { LtiTab } from './lti.tab';
+import { SpendCapsTab } from './spend-caps.tab';
 
 /**
  * Which sidebar category each segment lives in. Mirrors the `navCategory`
@@ -39,6 +40,8 @@ const TAB_CATEGORY: Record<
   // Configurations
   Settings: 'Configurations',
   LLM: 'Configurations',
+  Billing: 'Configurations',
+  Access: 'Configurations',
   Voice: 'Configurations',
   'Screen Share': 'Configurations',
   Prompts: 'Configurations',
@@ -48,7 +51,6 @@ const TAB_CATEGORY: Record<
   Disclaimers: 'Configurations',
   // Integrations
   Sandbox: 'Integrations',
-  Access: 'Integrations',
   Tools: 'Integrations',
   MCP: 'Integrations',
   Datasets: 'Integrations',
@@ -91,6 +93,7 @@ export class EditMentorPage {
   readonly screenshare: ScreenShareTab;
   readonly humanSupport: HumanSupportTab;
   readonly lti: LtiTab;
+  readonly spendCaps: SpendCapsTab;
   readonly copyMentorDialog: CopyMentorPage;
 
   constructor(page: Page) {
@@ -119,6 +122,7 @@ export class EditMentorPage {
     this.screenshare = new ScreenShareTab(page, this.dialog);
     this.humanSupport = new HumanSupportTab(page, this.dialog);
     this.lti = new LtiTab(page, this.dialog);
+    this.spendCaps = new SpendCapsTab(page, this.dialog);
     this.copyMentorDialog = new CopyMentorPage(page);
 
     // The modal only mounts the active category's segments, so the Settings

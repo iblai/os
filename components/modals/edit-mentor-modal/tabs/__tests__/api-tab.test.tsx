@@ -38,6 +38,16 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetApiKeysQuery: (...args: unknown[]) => mockUseGetApiKeysQuery(...args),
+  // Mirror the real helper: accept a bare array or a paginated envelope and
+  // normalize to { tokens, count } so the component always sees an array.
+  unwrapApiTokenList: (response?: unknown) => {
+    if (Array.isArray(response))
+      return { tokens: response, count: response.length };
+    const results = (response as { results?: unknown[] } | undefined)?.results;
+    return Array.isArray(results)
+      ? { tokens: results, count: results.length }
+      : { tokens: [], count: 0 };
+  },
 }));
 
 vi.mock('@/hooks/user-user-actions', () => ({

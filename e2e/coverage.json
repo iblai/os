@@ -2,14 +2,14 @@
   "version": 2,
   "lastUpdated": "2026-08-03",
   "summary": {
-    "totalCheckpoints": 599,
-    "coveredCheckpoints": 570,
+    "totalCheckpoints": 610,
+    "coveredCheckpoints": 581,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 9,
     "pendingCheckpoints": 9,
     "percent": 100,
-    "totalJourneys": 67,
-    "activeJourneys": 66
+    "totalJourneys": 68,
+    "activeJourneys": 67
   },
   "journeys": [
     {
@@ -3820,6 +3820,74 @@
           "id": "anp-06",
           "description": "/prompt-gallery regression guard could not be built E2E: no page.tsx exists for that route anywhere in the app and no code path (Link/router.push) ever navigates there — it is a client-state modal, not a URL. Direct browser navigation to .../prompt-gallery renders the app's root not-found.tsx with the <nav> element absent entirely, so isPromptGalleryPage never runs against real DOM. Unit-covered instead in nav-bar/__tests__/index.test.tsx.",
           "status": "not-reproducible"
+        }
+      ]
+    },
+    {
+      "id": "mentor-spend-caps-tab",
+      "name": "Mentor Billing (Spend Caps) Tab",
+      "spec": "66-mentor-spend-caps-tab.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/spend-caps-tab.tsx",
+        "components/modals/edit-mentor-modal/index.tsx",
+        "hooks/use-mentor-segments.ts",
+        "lib/constants.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "sc-01",
+          "description": "Admin sees the \"Billing\" tab in the Configurations category, positioned immediately after \"LLM\" (hooks/use-mentor-segments.ts MENTOR_SEGMENTS order)",
+          "status": "covered"
+        },
+        {
+          "id": "sc-02",
+          "description": "Opening the tab renders the header (title + description) and all three sub-tabs (This agent / Per user / Workspace), with \"This agent\" active by default",
+          "status": "covered"
+        },
+        {
+          "id": "sc-03",
+          "description": "Switching between the This agent, Per user, and Workspace sub-tabs updates the active sub-tab state and renders that scope's content",
+          "status": "covered"
+        },
+        {
+          "id": "sc-04",
+          "description": "The agent-cap form lists interval options (Day, Week, Month, Year) and enforcement options (Block requests, Alert only) in that order",
+          "status": "covered"
+        },
+        {
+          "id": "sc-05",
+          "description": "Admin creates an agent spend cap (limit, interval, alert-only enforcement, thresholds, enabled) and the values persist after closing and reopening the tab",
+          "status": "covered"
+        },
+        {
+          "id": "sc-06",
+          "description": "An invalid/zero spend limit shows the \"Enter an amount greater than 0\" validation error and disables Save",
+          "status": "covered"
+        },
+        {
+          "id": "sc-07",
+          "description": "Admin removes the agent spend cap via the confirm modal and the \"no cap configured\" hint reappears",
+          "status": "covered"
+        },
+        {
+          "id": "sc-08",
+          "description": "Admin configures the Workspace (tenant-wide) spend cap with alert-only enforcement, the values persist after reopening the tab, and the cap is removed again in the test's own cleanup so no other journey sharing this tenant inherits it",
+          "status": "covered"
+        },
+        {
+          "id": "sc-09",
+          "description": "The Per-user sub-tab shows the empty state on a fresh mentor, and the Add user cap flow opens a draft form (only once a username is entered) and cancels cleanly",
+          "status": "covered"
+        },
+        {
+          "id": "sc-10",
+          "description": "Admin creates a per-user spend cap, sees it listed with its formatted limit, and deletes it via its own confirm modal",
+          "status": "covered"
+        },
+        {
+          "id": "sc-11",
+          "description": "Non-admin users do not see the Billing tab in the Edit Mentor modal (admin-only segment, no rbacResource — userTypes filter alone gates visibility)",
+          "status": "covered"
         }
       ]
     }

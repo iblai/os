@@ -111,6 +111,7 @@ vi.mock('@iblai/iblai-js/web-containers/next', () => ({
   AgentPrivacyTab: () => null,
   AgentTasksTab: () => null,
   AgentHumanSupportTab: () => null,
+  AgentSpendCapsTab: () => null,
   AgentSettingsProvider: () => null,
 }));
 
@@ -150,13 +151,18 @@ describe('useMentorSegments', () => {
     setupDefaults();
   });
 
-  it('returns the canonical 24 mentor segments unfiltered', () => {
+  it('returns the canonical 25 mentor segments unfiltered', () => {
     const { result } = renderHook(() => useMentorSegments());
     expect(result.current.segments).toBe(MENTOR_SEGMENTS);
     // 17 original + Voice + Screen Share (feat/mentor/1763) + Tasks
     // (feat/mentor/715) + LTI + Analytics hub (feat/2040) + Human Support
-    // (feat/2081) + Evals (feat/1178).
-    expect(MENTOR_SEGMENTS).toHaveLength(24);
+    // (feat/2081) + Evals (feat/1178) + Billing / spend caps (feat/2286).
+    expect(MENTOR_SEGMENTS).toHaveLength(25);
+  });
+
+  it('places the Billing (spend caps) segment right after LLM', () => {
+    const llmIndex = MENTOR_SEGMENTS.findIndex((s) => s.label === 'LLM');
+    expect(MENTOR_SEGMENTS[llmIndex + 1]?.label).toBe('Billing');
   });
 
   it('places the Sandbox segment right after Settings', () => {

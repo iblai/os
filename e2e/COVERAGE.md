@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-08-04 | 599 checkpoints (570 covered, 8 pending/fixme, 9 not-reproducible in default env, 12 deprecated) | 67 journeys (66 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-08-05 | 610 checkpoints (581 covered, 9 pending/fixme, 9 not-reproducible in default env, 12 deprecated) | 68 journeys (67 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -1259,3 +1259,58 @@ against real DOM. That predicate is covered at the unit level instead, in
 - [x] anp-04: Fix holds on nested analytics routes — `/analytics/users` still shows the mentor dropdown and LLM Model Selector
 - [x] anp-05: Admin flipped to User (student) mode does not see the LLM Model Selector on the analytics page
 - [ ] anp-06 _(not-reproducible)_: `/prompt-gallery` regression guard — no reachable route exists to exercise it E2E; unit-covered in `nav-bar/__tests__/index.test.tsx` instead
+
+---
+
+## Journey 66: Mentor Billing (Spend Caps) Tab (11 checkpoints) — `journeys/66-mentor-spend-caps-tab.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/spend-caps-tab.tsx`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `lib/constants.ts`
+
+Covers the new "Billing" (LLM spend caps) top-level tab in the Edit Mentor (Agent) modal
+(`feat/2286`), rendered by the SDK's `AgentSpendCapsTab`
+(`@iblai/iblai-js/web-containers/next`). Unlike the feat/2040 `CapabilityGate`
+tabs (Sandbox/Voice/Screen Share/Privacy/Memory/LTI), Billing has no
+master on/off toggle — it is gated purely by `userTypes: [ADMIN]` in
+`hooks/use-mentor-segments.ts` and is always mounted for admins. It lives in
+the **Configurations** sidebar category, immediately after **LLM** and
+before **Voice**.
+
+The tab has three scopes, each a Radix sub-tab: **This agent** (one cap per
+mentor), **Per user** (a list of per-(mentor, username) caps), and
+**Workspace** (ONE cap for the whole tenant). There is no
+`@iblai/iblai-js/playwright` helper package for spend caps yet, so
+`e2e/page-objects/edit-mentor/spend-caps.tab.ts` hand-rolls every locator off
+the SDK's own stable `data-testid`s, cross-checked directly against the
+compiled `AgentSpendCapsTab`/`SpendCapForm` source.
+
+**RBAC guard:** the backend gates each scope independently and the SDK
+renders a `data-testid="spend-caps-denied"` panel per scope on a 403 instead
+of erroring. Every checkpoint checks `spendCaps.isDenied()` right after the
+scope settles and skips with a reason (not a `test.fixme`) when this
+admin/tenant hasn't been granted that RBAC resource in a given environment —
+mirroring the `hasCanvasEnv` / `HumanSupportTab.hasToggle()` skip-with-reason
+convention used elsewhere in this suite. A 404 (endpoint not yet deployed to
+a given test environment) is NOT guarded against and is expected to fail the
+test loudly — this project prefers red-until-fixed live gates over
+`test.fixme` for app/backend-level blockers.
+
+**Isolation:** every test gets its own freshly-created mentor
+(`MentorTracker`, deleted in `afterAll`), and the whole file runs `serial` so
+no parallel worker interleaves with the one checkpoint (sc-08) that touches
+the tenant-wide Workspace scope. sc-08 always saves with `enforcement: 'Alert
+only'` (never `'Block requests'`) and deletes the cap in a `finally` block
+unconditionally, so a leftover cap can never block chat for another journey
+sharing the tenant, and the tenant is left capless regardless of which
+assertion (if any) failed first.
+
+- [x] sc-01: Admin sees the "Billing" tab in the Configurations category, positioned immediately after "LLM"
+- [x] sc-02: Opening the tab renders the header (title + description) and all three sub-tabs, with "This agent" active by default
+- [x] sc-03: Switching between the This agent, Per user, and Workspace sub-tabs updates the active sub-tab state and renders that scope's content
+- [x] sc-04: The agent-cap form lists interval options (Day, Week, Month, Year) and enforcement options (Block requests, Alert only) in that order
+- [x] sc-05: Admin creates an agent spend cap (limit, interval, alert-only enforcement, thresholds, enabled) and the values persist after closing and reopening the tab
+- [x] sc-06: An invalid/zero spend limit shows the validation error and disables Save
+- [x] sc-07: Admin removes the agent spend cap via the confirm modal and the "no cap configured" hint reappears
+- [x] sc-08: Admin configures the Workspace (tenant-wide) spend cap with alert-only enforcement, the values persist, and the cap is removed again in the test's own cleanup
+- [x] sc-09: The Per-user sub-tab shows the empty state on a fresh mentor, and the Add user cap flow opens a draft form and cancels cleanly
+- [x] sc-10: Admin creates a per-user spend cap, sees it listed, and deletes it via its own confirm modal
+- [x] sc-11: Non-admin users do not see the Billing tab in the Edit Mentor modal
