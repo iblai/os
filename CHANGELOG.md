@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.113.1](https://github.com/iblai/os/compare/v0.113.0...v0.113.1) (2026-08-05)
+
+### Bug Fixes
+
+* **ci:** pr-e2e commands need pull-requests: write to reply ([bf3417c](https://github.com/iblai/os/commit/bf3417c87b6511f6ba3aa395c5aadfec1ba4e6b8))
+
 ## [0.113.0](https://github.com/iblai/os/compare/v0.112.1...v0.113.0) (2026-08-05)
 
 ### Features
