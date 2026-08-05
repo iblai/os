@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.113.0](https://github.com/iblai/os/compare/v0.112.1...v0.113.0) (2026-08-05)
+
+### Features
+
+* **ci:** slash commands for PR e2e — /retest, /status, /report, /cancel ([b7dbbf3](https://github.com/iblai/os/commit/b7dbbf384869722a28d4b0c7ee5ddc90ed3c1781))
+
 ## [0.112.1](https://github.com/iblai/os/compare/v0.112.0...v0.112.1) (2026-08-05)
 
 ### Bug Fixes
