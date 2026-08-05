@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.112.1](https://github.com/iblai/os/compare/v0.112.0...v0.112.1) (2026-08-05)
+
+### Bug Fixes
+
+* **canvas:** preserve code fence newlines and bodies in canvas rendering ([dfc7ce1](https://github.com/iblai/os/commit/dfc7ce1359138bf049507fc713e62e2ee34234aa)), closes [#2109](https://github.com/iblai/os/issues/2109)
+* **chat:** harden LaTeX preprocessing against LLM-emitted edge cases ([e913907](https://github.com/iblai/os/commit/e913907c8575c30a5083d51ca250a3a1cfbb3db0)), closes [#2109](https://github.com/iblai/os/issues/2109)
+* **chat:** nest 2-space indented sublists and tighten nested list margins ([1e2f163](https://github.com/iblai/os/commit/1e2f16304ddf6a1addd575c5eb8ca6660278796c)), closes [#2109](https://github.com/iblai/os/issues/2109)
+* **chat:** scope the default system prompt's LaTeX to math only ([751971e](https://github.com/iblai/os/commit/751971e43e71de6c276731889c9fd879ca28770c)), closes [#2109](https://github.com/iblai/os/issues/2109) [#2109](https://github.com/iblai/os/issues/2109)
+* **chat:** unwrap display-math wrappers around list environments ([54cb609](https://github.com/iblai/os/commit/54cb6092de7dc4a127b6a377fe8f3b282d855983)), closes [#2109](https://github.com/iblai/os/issues/2109)
+* **deps:** repair coverage tooling broken by brace-expansion override ([ce48e28](https://github.com/iblai/os/commit/ce48e2850469815055978cba645e80fcace001cd))
+* **security:** raise floors for four high-severity advisories ([8b5b649](https://github.com/iblai/os/commit/8b5b649b8af16b6b543a9aa3f03a88fe699f8af0))
+
+### Tests
+
+* **chat:** cover math-costume LaTeX fixes at the component level ([316ecb7](https://github.com/iblai/os/commit/316ecb73b89dbec9e57f09b9f681f6f0918f5396)), closes [#2109](https://github.com/iblai/os/issues/2109)
+* **e2e:** wait for mentor settings before asserting embed logo gating ([d8c5ffd](https://github.com/iblai/os/commit/d8c5ffdabd30724a5247dc05ec51a792e4c3e7a9))
+
 ## [0.112.0](https://github.com/iblai/os/compare/v0.111.8...v0.112.0) (2026-08-05)
 
 ### Features
