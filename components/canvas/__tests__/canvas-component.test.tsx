@@ -563,6 +563,23 @@ describe('CanvasComponent', () => {
       expect(screen.getByText('Untitled Artifact')).toBeInTheDocument();
     });
 
+    it('renders dark code blocks with a transparent inner code reset (issue #2109)', () => {
+      render(<CanvasComponent {...defaultProps} />);
+      const styles = Array.from(document.querySelectorAll('style'))
+        .map((s) => s.textContent || '')
+        .join('\n');
+      expect(styles).toContain('.ProseMirror pre code');
+      expect(styles).toMatch(
+        /\.ProseMirror pre code[\s\S]*?background: transparent !important/,
+      );
+      expect(styles).toMatch(
+        /\.ProseMirror pre code[\s\S]*?color: inherit !important/,
+      );
+      expect(styles).toMatch(
+        /\.ProseMirror pre,[\s\S]*?background: #1e1e1e !important/,
+      );
+    });
+
     it('renders the FileText icon in header', () => {
       render(<CanvasComponent {...defaultProps} />);
       const svg = document.querySelector('svg.lucide-file-text');
