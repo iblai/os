@@ -22,8 +22,12 @@ on:
     types: [created]
 
 permissions:
-  issues: write         # labels, comments, reactions
-  pull-requests: read   # fork detection
+  issues: write         # labels and reactions
+  # MUST be write, not read. Commenting on a PULL REQUEST via /issues/{n}/comments needs
+  # pull-requests: write — `issues: write` alone covers real issues only, and the POST comes back
+  # 403 "Resource not accessible by integration". pr-e2e-tests.yml has always had write for the
+  # same reason. Also used for fork detection.
+  pull-requests: write
   actions: write        # /cancel
 
 concurrency:
