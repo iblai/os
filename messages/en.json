@@ -474,7 +474,7 @@
     "coworkUnsupportedOs": "Cowork isn’t supported on this operating system.",
     "coworkUnsupportedSession": "Cowork isn’t supported on this desktop session.",
     "coworkConsentTitle": "Let Cowork use your computer?",
-    "coworkConsentBody": "Cowork lets the assistant read the contents of windows on your screen and act on them for you. What it reads is sent to ibl.ai to work out what to do next. It asks before anything destructive. Continue to give it the Accessibility and Screen Recording access it needs.",
+    "coworkConsentBody": "Cowork lets the assistant read the contents of windows on your screen and act on them for you. That includes your browser, where it can act as you on any site you are signed into. What it reads is sent to ibl.ai to work out what to do next. Continue to give it the Accessibility and Screen Recording access it needs.",
     "coworkConsentCancel": "Cancel",
     "coworkConsentConfirm": "Continue",
     "coworkNeedsAccessibility": "Cowork needs Accessibility access to control your computer. Grant it in System Settings › Privacy & Security › Accessibility, then restart the app and turn Cowork on again.",

@@ -474,7 +474,7 @@
     "coworkUnsupportedOs": "Cowork n’est pas pris en charge sur ce système d’exploitation.",
     "coworkUnsupportedSession": "Cowork n’est pas pris en charge sur cette session de bureau.",
     "coworkConsentTitle": "Autoriser Cowork à utiliser votre ordinateur ?",
-    "coworkConsentBody": "Cowork permet à l’assistant de lire le contenu des fenêtres affichées à votre écran et d’agir à votre place. Ce qu’il lit est envoyé à ibl.ai pour déterminer la suite. Il vous demande votre accord avant toute action destructrice. Continuez pour lui accorder les accès Accessibilité et Enregistrement de l’écran dont il a besoin.",
+    "coworkConsentBody": "Cowork permet à l’assistant de lire le contenu des fenêtres affichées à votre écran et d’agir à votre place. Cela inclut votre navigateur, où il peut agir en votre nom sur tous les sites où vous êtes connecté. Ce qu’il lit est envoyé à ibl.ai pour déterminer la suite. Continuez pour lui accorder les accès Accessibilité et Enregistrement de l’écran dont il a besoin.",
     "coworkConsentCancel": "Annuler",
     "coworkConsentConfirm": "Continuer",
     "coworkNeedsAccessibility": "Cowork a besoin de l’accès Accessibilité pour contrôler votre ordinateur. Accordez-le dans Réglages Système › Confidentialité et sécurité › Accessibilité, puis redémarrez l’app et réactivez Cowork.",
