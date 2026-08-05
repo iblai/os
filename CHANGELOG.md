@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.114.0](https://github.com/iblai/os/compare/v0.113.1...v0.114.0) (2026-08-05)
+
+### Features
+
+* **ci:** pass PR_E2E_LABEL_TOKEN so /retest can actually trigger a run ([b3ea7f3](https://github.com/iblai/os/commit/b3ea7f31a9579cd0a4f56ce21ae54b6ed9a20812))
+
 ## [0.113.1](https://github.com/iblai/os/compare/v0.113.0...v0.113.1) (2026-08-05)
 
 ### Bug Fixes
