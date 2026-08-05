@@ -472,7 +472,13 @@
     "coworkUnsupportedKde": "Cowork 尚不支持 KDE Plasma。",
     "coworkUnsupportedGnomeHelper": "在 GNOME 上使用 Cowork 需要安装 WinRects 扩展，然后重启会话。",
     "coworkUnsupportedOs": "Cowork 不支持此操作系统。",
-    "coworkUnsupportedSession": "Cowork 不支持此桌面会话。"
+    "coworkUnsupportedSession": "Cowork 不支持此桌面会话。",
+    "coworkConsentTitle": "允许 Cowork 使用您的电脑吗？",
+    "coworkConsentBody": "开启 Cowork 后，助手可以读取屏幕上各窗口的内容，并代您进行操作。它读取的内容会发送至 ibl.ai，用于判断下一步该做什么。执行任何破坏性操作前，它都会先征求您的同意。继续即可授予它所需的“辅助功能”和“屏幕录制”权限。",
+    "coworkConsentCancel": "取消",
+    "coworkConsentConfirm": "继续",
+    "coworkNeedsAccessibility": "Cowork 需要“辅助功能”权限才能控制您的电脑。请在“系统设置 › 隐私与安全性 › 辅助功能”中授权，然后重启应用并重新开启 Cowork。",
+    "coworkNeedsScreenRecording": "Cowork 需要“屏幕录制”权限才能读取窗口内容。请在“系统设置 › 隐私与安全性 › 屏幕录制”中授权，然后重启应用并重新开启 Cowork。"
   },
   "chatInputFormMemoryMenu": {
     "yourMemory": "您的记忆",

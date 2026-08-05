@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/macOS-schema.json",
   "identifier": "macos-permissions",
-  "description": "macOS Accessibility permission check/request for Cowork (GhostOS). The `default` permission set is empty, so the accessibility commands are granted explicitly.",
+  "description": "macOS Accessibility + Screen Recording permission check/request for Cowork. The driver needs both: Accessibility to post synthetic input, Screen Recording because get_window_state always captures alongside the accessibility tree. The `default` permission set is empty, so each command is granted explicitly.",
   "platforms": ["macOS"],
   "windows": ["main"],
   "local": true,
@@ -19,6 +19,8 @@
   },
   "permissions": [
     "macos-permissions:allow-check-accessibility-permission",
-    "macos-permissions:allow-request-accessibility-permission"
+    "macos-permissions:allow-request-accessibility-permission",
+    "macos-permissions:allow-check-screen-recording-permission",
+    "macos-permissions:allow-request-screen-recording-permission"
   ]
 }

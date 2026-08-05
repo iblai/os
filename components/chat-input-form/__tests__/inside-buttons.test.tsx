@@ -81,8 +81,14 @@ let mockDriverStatus: { installed: boolean; supported: boolean } | null = null;
 let mockCoworkOn = false;
 let mockLocalLLMEnabled = false;
 let mockModelSupportsCowork = false;
+// What requestDriverPermissions() reports back. `null` is the default because it
+// is what every non-macOS host returns — the grants do not exist there. Only an
+// explicit `false` means "asked and denied".
+let mockAccessibilityGrant: boolean | null = null;
+let mockScreenRecordingGrant: boolean | null = null;
 const mockGhostInstall = vi.fn();
 const mockGhostStop = vi.fn();
+const mockRequestPermissions = vi.fn();
 const mockSetCoworkEnabled = vi.fn();
 vi.mock('@iblai/iblai-js/web-containers', () => ({
   useCuaDriver: () => ({
@@ -92,11 +98,16 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
     status: mockDriverStatus,
     install: () => mockGhostInstall(),
     stop: () => mockGhostStop(),
+    requestDriverPermissions: () => {
+      mockRequestPermissions();
+      return Promise.resolve({
+        accessibility: mockAccessibilityGrant,
+        screenRecording: mockScreenRecordingGrant,
+      });
+    },
   }),
   isCoworkEnabled: () => mockCoworkOn,
-  // The real helper persists to localStorage, and the default-on pass relies on
-  // that write to not fire twice — useCuaDriver hands back a fresh object each
-  // render, so its effect re-runs and only the stored key stops it.
+  // Mirrors the real helper, which persists to localStorage.
   setCoworkEnabled: (value: boolean) => {
     localStorage.setItem('ibl_cowork_enabled', String(value));
     mockSetCoworkEnabled(value);
@@ -149,6 +160,8 @@ describe('InsideButtons', () => {
     mockCoworkOn = false;
     mockLocalLLMEnabled = false;
     mockModelSupportsCowork = false;
+    mockAccessibilityGrant = null;
+    mockScreenRecordingGrant = null;
     mockHasRemoteAi = false;
     localStorage.clear();
   });
@@ -1115,6 +1128,21 @@ describe('InsideButtons', () => {
       mockDriverAvailable = true;
     };
 
+    /**
+     * Switching Cowork on is a two-step flow now: the pill raises a consent
+     * dialog explaining what Cowork will read and where it goes, and only
+     * accepting that asks the OS for anything.
+     */
+    const consentToCowork = async () => {
+      fireEvent.click(screen.getByText('Cowork'));
+      const confirm = await screen.findByRole('button', { name: 'Continue' });
+      // Accepting awaits the permission request, so the state it sets lands a
+      // microtask later — flush it inside act() rather than after the test.
+      await act(async () => {
+        fireEvent.click(confirm);
+      });
+    };
+
     it('is absent outside the desktop app', () => {
       render(<InsideButtons {...defaultProps} />);
       expect(screen.queryByText('Cowork')).not.toBeInTheDocument();
@@ -1152,13 +1180,13 @@ describe('InsideButtons', () => {
 
       expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
       expect(mockGhostInstall).not.toHaveBeenCalled();
+      expect(mockRequestPermissions).not.toHaveBeenCalled();
     });
 
     it('installs the driver when Cowork is already on but nothing is installed', () => {
       // The bug: the ON preference persists across runs, the install does not.
-      // With the key already set the default-on effect returns before it can
-      // install, so the toggle read ON with no driver behind it and only an
-      // off/on round trip would fetch one.
+      // A user whose first install failed came back to a toggle that read ON
+      // with no driver behind it, and only an off/on round trip would fetch one.
       enableCowork();
       mockCoworkOn = true;
       mockDriverStatus = { installed: false, supported: true };
@@ -1166,6 +1194,8 @@ describe('InsideButtons', () => {
       render(<InsideButtons {...defaultProps} />);
 
       expect(mockGhostInstall).toHaveBeenCalledTimes(1);
+      // Reconciling runs unattended at startup, so it must never prompt.
+      expect(mockRequestPermissions).not.toHaveBeenCalled();
     });
 
     it('does not re-install when the driver is already there', () => {
@@ -1212,29 +1242,33 @@ describe('InsideButtons', () => {
       expect(mockGhostInstall).not.toHaveBeenCalled();
     });
 
-    it('turns on and installs the driver when the remote AI backend is configured', () => {
+    it('turns on and installs the driver when the remote AI backend is configured', async () => {
       enableCowork();
       mockHasRemoteAi = true;
       localStorage.setItem('ibl_cowork_enabled', 'false');
       render(<InsideButtons {...defaultProps} />);
 
-      fireEvent.click(screen.getByText('Cowork'));
+      await consentToCowork();
 
-      expect(mockSetCoworkEnabled).toHaveBeenCalledWith(true);
+      await waitFor(() =>
+        expect(mockSetCoworkEnabled).toHaveBeenCalledWith(true),
+      );
       expect(mockGhostInstall).toHaveBeenCalledTimes(1);
       expect(mockToastWarning).not.toHaveBeenCalled();
     });
 
-    it('turns on with a large enough local model and no remote backend', () => {
+    it('turns on with a large enough local model and no remote backend', async () => {
       enableCowork();
       mockLocalLLMEnabled = true;
       mockModelSupportsCowork = true;
       localStorage.setItem('ibl_cowork_enabled', 'false');
       render(<InsideButtons {...defaultProps} />);
 
-      fireEvent.click(screen.getByText('Cowork'));
+      await consentToCowork();
 
-      expect(mockSetCoworkEnabled).toHaveBeenCalledWith(true);
+      await waitFor(() =>
+        expect(mockSetCoworkEnabled).toHaveBeenCalledWith(true),
+      );
       expect(mockGhostInstall).toHaveBeenCalledTimes(1);
     });
 
@@ -1250,6 +1284,10 @@ describe('InsideButtons', () => {
       );
       expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
       expect(mockGhostInstall).not.toHaveBeenCalled();
+      // The backend guard runs FIRST, so a turn about to be refused anyway
+      // never raises a consent dialog or an OS permission prompt.
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+      expect(mockRequestPermissions).not.toHaveBeenCalled();
     });
 
     it('names the size problem when a local model is on but too small', () => {
@@ -1265,9 +1303,10 @@ describe('InsideButtons', () => {
         'Your local model is too small for Cowork. Pick a model of at least 12GB in Local Models.',
       );
       expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
+      expect(mockRequestPermissions).not.toHaveBeenCalled();
     });
 
-    it('turns off without any backend check', () => {
+    it('turns off without any backend check, dialog or prompt', () => {
       // Switching off must never be blocked by the guard that gates switching on.
       enableCowork();
       mockCoworkOn = true;
@@ -1279,40 +1318,158 @@ describe('InsideButtons', () => {
       expect(mockSetCoworkEnabled).toHaveBeenCalledWith(false);
       expect(mockGhostStop).toHaveBeenCalledTimes(1);
       expect(mockToastWarning).not.toHaveBeenCalled();
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+      expect(mockRequestPermissions).not.toHaveBeenCalled();
     });
 
-    describe('default-on pass', () => {
-      it('enables Cowork once for a logged-in desktop user who never chose', () => {
+    describe('opt-in', () => {
+      it('never enables Cowork on mount for a logged-in desktop user', () => {
+        // Cowork used to default itself ON right here. It reads the contents of
+        // the user's windows and sends them off-device, so nothing may switch it
+        // on but an explicit toggle behind the consent dialog.
         enableCowork();
-        // Not installed yet, so the reconcile effect below also fetches the
-        // driver — the default-on effect only owns the preference now.
         mockDriverStatus = { installed: false, supported: true };
         localStorage.setItem('tenant', 'acme');
         localStorage.setItem('dm_token', 'token-abc');
         render(<InsideButtons {...defaultProps} />);
 
-        expect(mockSetCoworkEnabled).toHaveBeenCalledWith(true);
-        expect(mockGhostInstall).toHaveBeenCalledTimes(1);
+        expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
+        expect(mockGhostInstall).not.toHaveBeenCalled();
+        expect(mockRequestPermissions).not.toHaveBeenCalled();
+        expect(screen.getByText('Cowork').closest('button')).not.toHaveClass(
+          'text-[#38A1E5]',
+        );
       });
 
-      it('respects an explicit earlier "off"', () => {
+      it('still comes back on for a user who chose it earlier', () => {
+        // Dropping the default-on pass must not lose a real preference.
         enableCowork();
-        localStorage.setItem('tenant', 'acme');
-        localStorage.setItem('dm_token', 'token-abc');
+        mockCoworkOn = true;
+        mockDriverStatus = { installed: true, supported: true };
+        localStorage.setItem('ibl_cowork_enabled', 'true');
+        render(<InsideButtons {...defaultProps} />);
+
+        expect(screen.getByText('Cowork').closest('button')).toHaveClass(
+          'text-[#38A1E5]',
+        );
+        expect(mockRequestPermissions).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('consent and OS permissions', () => {
+      /** A backend Cowork can actually run on, so the guard lets the turn through. */
+      const readyBackend = () => {
+        enableCowork();
+        mockHasRemoteAi = true;
         localStorage.setItem('ibl_cowork_enabled', 'false');
+      };
+
+      it('explains itself before asking the OS for anything', async () => {
+        readyBackend();
         render(<InsideButtons {...defaultProps} />);
 
+        fireEvent.click(screen.getByText('Cowork'));
+
+        expect(await screen.findByRole('alertdialog')).toHaveTextContent(
+          /sent to ibl\.ai/,
+        );
+        expect(mockRequestPermissions).not.toHaveBeenCalled();
         expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
         expect(mockGhostInstall).not.toHaveBeenCalled();
       });
 
-      it('leaves a logged-out user alone', () => {
-        enableCowork();
-        localStorage.setItem('tenant', 'acme');
+      it('names both grants in the one dialog', async () => {
+        // macOS raises its own alert per TCC service, which we cannot merge —
+        // so our single dialog has to name both before they start arriving.
+        readyBackend();
         render(<InsideButtons {...defaultProps} />);
 
+        fireEvent.click(screen.getByText('Cowork'));
+
+        expect(await screen.findByRole('alertdialog')).toHaveTextContent(
+          /Accessibility and Screen Recording/,
+        );
+      });
+
+      it('leaves Cowork off when the dialog is dismissed', async () => {
+        readyBackend();
+        render(<InsideButtons {...defaultProps} />);
+
+        fireEvent.click(screen.getByText('Cowork'));
+        fireEvent.click(await screen.findByRole('button', { name: 'Cancel' }));
+
+        expect(mockRequestPermissions).not.toHaveBeenCalled();
         expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
         expect(mockGhostInstall).not.toHaveBeenCalled();
+      });
+
+      it('turns on when both grants are held', async () => {
+        readyBackend();
+        mockAccessibilityGrant = true;
+        mockScreenRecordingGrant = true;
+        render(<InsideButtons {...defaultProps} />);
+
+        await consentToCowork();
+
+        await waitFor(() =>
+          expect(mockSetCoworkEnabled).toHaveBeenCalledWith(true),
+        );
+        expect(mockRequestPermissions).toHaveBeenCalledTimes(1);
+        expect(mockGhostInstall).toHaveBeenCalledTimes(1);
+        expect(mockToastWarning).not.toHaveBeenCalled();
+      });
+
+      it('refuses without Accessibility, and says where to grant it', async () => {
+        readyBackend();
+        mockAccessibilityGrant = false;
+        mockScreenRecordingGrant = true;
+        render(<InsideButtons {...defaultProps} />);
+
+        await consentToCowork();
+
+        await waitFor(() => expect(mockToastWarning).toHaveBeenCalledTimes(1));
+        // The restart matters: the grant often does not take effect until the
+        // app relaunches, so the re-check can read false right after granting.
+        expect(mockToastWarning.mock.calls[0][0]).toMatch(
+          /Accessibility.+restart the app/,
+        );
+        expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
+        expect(mockGhostInstall).not.toHaveBeenCalled();
+      });
+
+      it('refuses without Screen Recording, and says where to grant it', async () => {
+        readyBackend();
+        mockAccessibilityGrant = true;
+        mockScreenRecordingGrant = false;
+        render(<InsideButtons {...defaultProps} />);
+
+        await consentToCowork();
+
+        await waitFor(() => expect(mockToastWarning).toHaveBeenCalledTimes(1));
+        expect(mockToastWarning.mock.calls[0][0]).toMatch(
+          /Screen Recording.+restart the app/,
+        );
+        expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
+        expect(mockGhostInstall).not.toHaveBeenCalled();
+      });
+
+      it('turns on where the grants do not exist at all', async () => {
+        // Linux and Windows have no such permissions, so the host reports
+        // `null` — not applicable, not denied. Refusing on a falsy check
+        // instead of `=== false` would make Cowork impossible to switch on
+        // exactly where the driver is proven. This is the guard for that.
+        readyBackend();
+        mockAccessibilityGrant = null;
+        mockScreenRecordingGrant = null;
+        render(<InsideButtons {...defaultProps} />);
+
+        await consentToCowork();
+
+        await waitFor(() =>
+          expect(mockSetCoworkEnabled).toHaveBeenCalledWith(true),
+        );
+        expect(mockGhostInstall).toHaveBeenCalledTimes(1);
+        expect(mockToastWarning).not.toHaveBeenCalled();
       });
     });
   });

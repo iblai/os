@@ -15,6 +15,16 @@ import {
   PopoverAnchor,
   PopoverContent,
 } from '@/components/ui/popover';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { X, BookOpen, Archive, Check, Terminal, Monitor } from 'lucide-react';
 import { toast } from 'sonner';
 import { DeepSearchIcon, CanvasIcon } from '@/components/icons/svg-icons';
@@ -36,11 +46,6 @@ import { isTauriApp } from '@/types/tauri';
 // and the Local Models tab's "supported" indicator. modelSupportsCowork
 // gates size <= gb (strictly greater), so a model of exactly 12GB is also off.
 const COWORK_MIN_MODEL_GB = 12;
-
-// Must match the SDK's key (web-containers cowork-tab). Read directly rather
-// than via isCoworkEnabled() because the default-on pass below needs to tell
-// "never chosen" (null) apart from an explicit "off".
-const COWORK_ENABLED_KEY = 'ibl_cowork_enabled';
 
 interface InsideButtonsProps {
   /** The chat this input belongs to. Code keys its per-chat workspace on it. */
@@ -106,29 +111,61 @@ export const InsideButtons = ({
   // setCoworkEnabled.
   const cuaDriver = useCuaDriver();
   const [coworkOn, setCoworkOn] = useState(isCoworkEnabled);
+  // Switching Cowork ON explains itself first: it is about to read the contents
+  // of the user's windows and send them off-device. Open = awaiting that consent.
+  const [coworkConsentOpen, setCoworkConsentOpen] = useState(false);
+
   const toggleCowork = () => {
-    const next = !coworkOn;
-    // Guard only when turning on. Cowork runs on EITHER a large local model
-    // or the remote AI (DM OpenAI-compatible endpoint) — allow enabling when
-    // either backend is ready, so a local model is not required. The chatbox has
-    // no inline notice space, so remind via toast instead of failing silently.
-    if (next) {
-      const localReady =
-        isLocalLLMEnabled() &&
-        modelSupportsCowork(getLocalLLMModel(), COWORK_MIN_MODEL_GB);
-      if (!localReady && !hasRemoteAiConfig()) {
-        toast.warning(
-          isLocalLLMEnabled()
-            ? t('coworkModelTooSmall')
-            : t('coworkNeedsLocalModel'),
-        );
-        return;
-      }
+    if (coworkOn) {
+      setCoworkOn(false);
+      setCoworkEnabled(false);
+      cuaDriver.stop();
+      return;
     }
-    setCoworkOn(next);
-    setCoworkEnabled(next);
-    if (next) cuaDriver.install();
-    else cuaDriver.stop();
+    // Guard before anything user-visible. Cowork runs on EITHER a large local
+    // model or the remote AI (DM OpenAI-compatible endpoint) — allow enabling
+    // when either backend is ready, so a local model is not required. Running
+    // this first means a turn that is about to be refused never raises a consent
+    // dialog or an OS permission prompt.
+    const localReady =
+      isLocalLLMEnabled() &&
+      modelSupportsCowork(getLocalLLMModel(), COWORK_MIN_MODEL_GB);
+    if (!localReady && !hasRemoteAiConfig()) {
+      toast.warning(
+        isLocalLLMEnabled()
+          ? t('coworkModelTooSmall')
+          : t('coworkNeedsLocalModel'),
+      );
+      return;
+    }
+    setCoworkConsentOpen(true);
+  };
+
+  /**
+   * The user accepted the explanation: ask for the OS grants, and only switch
+   * Cowork on if it actually has them.
+   */
+  const acceptCoworkConsent = async () => {
+    setCoworkConsentOpen(false);
+    const { accessibility, screenRecording } =
+      await cuaDriver.requestDriverPermissions();
+
+    // `=== false` — checked and denied — never falsy. `null` means the host has
+    // no such concept (Linux, Windows), where Cowork works and these grants do
+    // not exist; treating that as denied would make it impossible to switch on
+    // precisely where upstream has proven the driver.
+    if (accessibility === false) {
+      toast.warning(t('coworkNeedsAccessibility'));
+      return;
+    }
+    if (screenRecording === false) {
+      toast.warning(t('coworkNeedsScreenRecording'));
+      return;
+    }
+
+    setCoworkOn(true);
+    setCoworkEnabled(true);
+    cuaDriver.install();
   };
 
   // Code (opencode over ACP) is desktop-only. Detected AFTER mount, never during
@@ -172,33 +209,22 @@ export const InsideButtons = ({
       : unsupportedCoworkReason(cuaDriver.unsupportedReason),
   };
   // Deliberately NOT `coworkButton.isEnabled`: that is now true on any desktop so
-  // the pill can render disabled-with-a-reason. Defaulting Cowork ON must still
-  // require a session the driver can actually drive.
+  // the pill can render disabled-with-a-reason. Fetching a driver unattended
+  // must still require a session the driver can actually drive.
   const coworkAvailable = cuaDriver.isAvailable && cuaDriver.isSupported;
 
-  // Default Cowork ON for logged-in desktop users (once), mirroring the Code
-  // default in <CodingModeButton>. Only runs where the toggle is actually
-  // offered, respects an explicit prior choice (an explicit "false" is stored,
-  // so only a *missing* key counts as "never chosen"), and installs the driver
-  // in the background so the first turn is ready. No backend guard is needed: the
-  // logged-in check (tenant + dm_token) is exactly what hasRemoteAiConfig()
-  // tests, so a logged-in user always has the remote AI backend available.
-  useEffect(() => {
-    if (!coworkAvailable) return;
-    if (localStorage.getItem(COWORK_ENABLED_KEY) !== null) return;
-    const loggedIn =
-      !!localStorage.getItem('tenant') && !!localStorage.getItem('dm_token');
-    if (!loggedIn) return;
-    setCoworkEnabled(true);
-    setCoworkOn(true);
-  }, [coworkAvailable]);
+  // Cowork is deliberately opt-in: it reads the contents of the user's windows
+  // and sends them off-device, and switching it on raises OS permission prompts.
+  // Nothing here enables it — that only happens through `toggleCowork`, behind
+  // the consent dialog. (Code mode still defaults itself on; it asks for no OS
+  // permissions, so it is left as it was.)
 
-  // The PREFERENCE persists across runs; the install does not. Once the key
-  // above exists, that effect returns before it can install — so a user whose
-  // first install failed (or who enabled Cowork on an earlier run) comes back to
-  // a toggle that reads ON with no driver behind it, and nothing fetches one
-  // until they switch it off and on again. Reconcile the two here instead:
-  // Cowork on + session supported + host says not installed ⇒ install.
+  // The PREFERENCE persists across runs; the install does not. A user whose first
+  // install failed comes back to a toggle that reads ON with no driver behind it,
+  // and nothing would fetch one until they switched it off and on again.
+  // Reconcile that here: Cowork on + session supported + host says not installed
+  // ⇒ install. Deliberately install-only — this runs unattended at startup, so it
+  // must never prompt for permissions.
   //
   // `status.installed === false` specifically, not falsy: `status` is null until
   // the first check lands, and firing on "unknown" would install on every mount.
@@ -433,6 +459,26 @@ export const InsideButtons = ({
           </PopoverContent>
         </Popover>
       )}
+
+      {/* Switching Cowork on grants it the run of the machine, so it says what
+          that means before any OS prompt appears. Dismissing leaves Cowork off
+          and asks the system for nothing. */}
+      <AlertDialog open={coworkConsentOpen} onOpenChange={setCoworkConsentOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('coworkConsentTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('coworkConsentBody')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('coworkConsentCancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={acceptCoworkConsent}>
+              {t('coworkConsentConfirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
