@@ -1,0 +1,58 @@
+name: PR e2e commands
+
+# Slash commands for the PR e2e pipeline: /retest, /retest <spec>, /status, /report, /cancel.
+#
+# SECURITY — why this shape is safe on a PUBLIC repo:
+#   1. `issue_comment` runs this workflow from the DEFAULT BRANCH, never from the PR. A fork PR
+#      cannot edit this file to weaken its own checks.
+#   2. Authorization is a repo COLLABORATOR PERMISSION check (write/maintain/admin) inside the
+#      action — NOT `author_association`, which reports MEMBER for org members with no write
+#      access here and would let them occupy a shared test environment.
+#   3. Fork PRs are refused, mirroring the `gate` job in pr-e2e-tests.yml.
+#   4. `permissions` below is the minimum: label + comment + cancel our own runs. No contents
+#      write, no package access.
+#
+# The action NEVER dispatches the pipeline itself — /retest recycles the `run-tests` label and
+# lets the normal `pull_request` path run. That keeps one trigger path to reason about, and it is
+# what refreshes the PR's REQUIRED CHECK; a command that only produced a report would leave the
+# PR unmergeable while looking like it worked.
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  issues: write         # labels and reactions
+  # MUST be write, not read. Commenting on a PULL REQUEST via /issues/{n}/comments needs
+  # pull-requests: write — `issues: write` alone covers real issues only, and the POST comes back
+  # 403 "Resource not accessible by integration". pr-e2e-tests.yml has always had write for the
+  # same reason. Also used for fork detection.
+  pull-requests: write
+  actions: write        # /cancel
+
+concurrency:
+  # Serialize per PR so two rapid commands cannot recycle the label at the same moment.
+  group: pr-e2e-cmd-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  command:
+    # Cheap pre-filter: PR comments that start with a slash. Everything else never starts a job.
+    if: github.event.issue.pull_request && startsWith(github.event.comment.body, '/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: iblai/pr-e2e-action/command@v1
+        with:
+          source_repo:    os
+          pr_number:      ${{ github.event.issue.number }}
+          comment_body:   ${{ github.event.comment.body }}
+          comment_author: ${{ github.event.comment.user.login }}
+          comment_id:     ${{ github.event.comment.id }}
+          repo_token:     ${{ secrets.GITHUB_TOKEN }}
+          dispatch_token: ${{ secrets.DEPLOY_OPS_DISPATCH_TOKEN }}
+          # REQUIRED for /retest. A label set with GITHUB_TOKEN raises NO events (GitHub's loop
+          # prevention), so the recycle succeeds and no test run ever starts — verified on os#381,
+          # where a recycle by github-actions[bot] triggered nothing while the same recycle by a
+          # human did. DEPLOY_OPS_DISPATCH_TOKEN is scoped to iblai-deploy-ops and 403s here, so
+          # this needs its own PAT with Issues + Pull requests write on this repo.
+          label_token: ${{ secrets.PR_E2E_LABEL_TOKEN }}
