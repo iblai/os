@@ -9,10 +9,9 @@ import { remark } from 'remark';
 import { Marked } from 'marked';
 import markedKatex from 'marked-katex-extension';
 import { gfmHeadingId } from 'marked-gfm-heading-id';
-import { markedHighlight } from 'marked-highlight';
-import hljs from 'highlight.js';
 
 import { preprocessLaTeX } from './preprocess-latex';
+import { normalizeListIndentation } from './normalize-list-indentation';
 import {
   LOCAL_STORAGE_KEYS,
   MAX_PROMPT_PARAM_LENGTH,
@@ -761,6 +760,38 @@ export function parsePrompt(prompt: string) {
 function preprocessMarkdownForHtml(markdown: string): string {
   let processed = markdown;
 
+  // Handle ```markdown code blocks - extract content and render as actual markdown
+  // This handles cases where LLM wraps markdown content in code blocks.
+  // Runs before the code mask below on purpose: the unwrapped content IS
+  // markdown and must go through the fixes.
+  processed = processed.replace(
+    /```(?:markdown|md)\s*\n([\s\S]*?)```/gi,
+    (_match, content) => content.trim(),
+  );
+
+  // Every fix below is a whole-document regex, and a code-fence body is
+  // literal text where a `# comment` line or the exact newline layout must
+  // survive byte-for-byte (the list-break fix used to inject blank lines into
+  // fenced code, and the heading fixes merged comment lines). Mask fenced and
+  // inline code first -- including a trailing fence whose closer has not
+  // streamed in yet -- and restore verbatim at the end.
+  const codeOpen = String.fromCharCode(0xe006);
+  const codeClose = String.fromCharCode(0xe007);
+  const codePlaceholders: string[] = [];
+  const maskCode = (segment: string): string => {
+    const index = codePlaceholders.length;
+    codePlaceholders.push(segment);
+    return `${codeOpen}${index}${codeClose}`;
+  };
+  processed = processed
+    .replace(/(`{3,})[\s\S]*?\1/g, maskCode)
+    .replace(/(~{3,})[\s\S]*?\1/g, maskCode)
+    .replace(
+      /(^|\n)([ \t]*(?:`{3,}|~{3,})[\s\S]*)$/,
+      (_match, before: string, fence: string) => before + maskCode(fence),
+    )
+    .replace(/(`+)((?:(?!\1)[\s\S])+?)\1(?!`)/g, maskCode);
+
   // Restore escaped markdown links so they render as actual links
   // Example: "\[Get started\](https://example.com)" -> "[Get started](https://example.com)"
   processed = processed.replace(
@@ -777,13 +808,6 @@ function preprocessMarkdownForHtml(markdown: string): string {
     },
   );
 
-  // Handle ```markdown code blocks - extract content and render as actual markdown
-  // This handles cases where LLM wraps markdown content in code blocks
-  processed = processed.replace(
-    /```(?:markdown|md)\s*\n([\s\S]*?)```/gi,
-    (_match, content) => content.trim(),
-  );
-
   // Fix headings with newlines after # (e.g., "#\nTitle" -> "# Title")
   // This handles cases where LLM outputs malformed heading syntax
   processed = processed.replace(/^(#{1,6})\s*\n+(.+)$/gm, '$1 $2');
@@ -798,6 +822,13 @@ function preprocessMarkdownForHtml(markdown: string): string {
   // Ensure list items have proper line breaks
   // Fix consecutive list items that might be on same line
   processed = processed.replace(/([^\n])(\n)([-*+]|\d+\.)\s/g, '$1\n\n$3 ');
+
+  // Restore code verbatim.
+  const restoreCodePattern = new RegExp(`${codeOpen}(\\d+)${codeClose}`, 'g');
+  processed = processed.replace(
+    restoreCodePattern,
+    (_, index) => codePlaceholders[Number(index)] ?? '',
+  );
 
   return processed;
 }
@@ -1274,14 +1305,8 @@ const configuredMarked = new Marked(
     output: 'htmlAndMathml', // Accessibility-friendly output with MathML fallback
   }),
   gfmHeadingId(),
-  markedHighlight({
-    langPrefix: 'hljs language-',
-    /* istanbul ignore next -- @preserve callback invoked by markedHighlight during code block parsing */
-    highlight(code: string, lang: string, _info: string) {
-      const language = hljs.getLanguage(lang) ? lang : 'plaintext';
-      return hljs.highlight(code, { language }).value;
-    },
-  }),
+  // No highlight extension: TipTap drops newline text nodes between highlight
+  // spans, merging code lines (issue #2109), and no consumer renders the spans.
   {
     gfm: true, // GitHub Flavored Markdown (tables, strikethrough, task lists)
     breaks: false, // Don't convert \n to <br>
@@ -1295,8 +1320,8 @@ export function markdownToHtml(markdownText: string) {
 
   try {
     // Pre-process to fix common markdown issues and convert LaTeX environments
-    const cleanedMarkdown = preprocessLaTeX(
-      preprocessMarkdownForHtml(markdownText),
+    const cleanedMarkdown = normalizeListIndentation(
+      preprocessLaTeX(preprocessMarkdownForHtml(markdownText)),
     );
 
     const result = configuredMarked.parse(cleanedMarkdown);

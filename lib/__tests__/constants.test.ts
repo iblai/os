@@ -107,7 +107,16 @@ describe('mentor constants', () => {
     it('should have all default prompts', () => {
       expect(DEFAULT_PROMPTS.DEFAULT_SYSTEM_PROMPT).toBeTruthy();
       expect(DEFAULT_PROMPTS.DEFAULT_SYSTEM_PROMPT).toContain(
-        'helpful instructor',
+        'helpful assistant',
+      );
+      // LaTeX is scoped to math delimiters only. The old prompt's "Always use
+      // LaTeX formatting for presenting your responses" made models emit
+      // \begin{itemize}/\textbf document markup that KaTeX cannot render
+      // (issue #2109) -- it must never come back.
+      expect(DEFAULT_PROMPTS.DEFAULT_SYSTEM_PROMPT).toContain('$...$');
+      expect(DEFAULT_PROMPTS.DEFAULT_SYSTEM_PROMPT).toContain('$$...$$');
+      expect(DEFAULT_PROMPTS.DEFAULT_SYSTEM_PROMPT).not.toMatch(
+        /LaTeX formatting for presenting/i,
       );
 
       expect(DEFAULT_PROMPTS.DEFAULT_MODERATION_PROMPT).toBeTruthy();

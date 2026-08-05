@@ -102,13 +102,12 @@ test.describe('Journey 61: LaTeX / Math Rendering', () => {
     chatPage,
   }) => {
     // `remark-math` only classifies a `$$...$$` span as BLOCK (display) math
-    // when the delimiters each sit alone on their own line — confirmed by
-    // probing this exact build: a single-line `$$3x + 5$$` renders as
-    // inline `.katex` inside a `<p>` (no `.katex-display`), while the
-    // "own-line fence" form below renders `<span class="katex-display">`
-    // with `display="block"` in the MathML. This is also the form LLMs
-    // naturally emit for standalone equations, so it's the realistic case
-    // for the "block math" checkpoint.
+    // when the delimiters each sit alone on their own line. `preprocessLaTeX`
+    // now expands a whole-line single-line `$$3x + 5$$` into this fenced form
+    // (issue #2109 fix 9), so the fence below is both what LLMs naturally
+    // emit for standalone equations and the canonical shape every whole-line
+    // `$$...$$` is normalized to before rendering — the realistic case for
+    // the "block math" checkpoint.
     const content = [
       '$$',
       '3x + 5',
