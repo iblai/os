@@ -125,6 +125,7 @@ jobs:
           fetch-depth: 0 # need the base ref to diff changed specs
 
       - uses: iblai/pr-e2e-action@v1
+        id: e2e
         with:
           source_repo:    os
           pr_number:      ${{ github.event.pull_request.number }}
@@ -134,6 +135,27 @@ jobs:
           app_image:      ${{ needs.build-app-image.outputs.image-uri }}
           dispatch_token: ${{ secrets.DEPLOY_OPS_DISPATCH_TOKEN }}
           repo_token:     ${{ secrets.GITHUB_TOKEN }}
+
+      # MUST stay here as a JOB step — it cannot live inside the action.
+      # A composite action is TERMINATED when the job is cancelled, so an `if: cancelled()` step
+      # inside it never runs. This job has `cancel-in-progress: true` and a label recycle fires two
+      # events, so the first caller is cancelled on essentially every re-tag. Without this, the
+      # central run it dispatched keeps going: it holds an environment for a full suite, produces a
+      # result nobody reads, and can PASS while the PR shows red (os#394 did exactly that).
+      #
+      # The run id comes from a FILE the action writes at dispatch time, not from
+      # `steps.e2e.outputs.run_id` — a composite action's declared outputs are only published when
+      # it COMPLETES, and by definition it has not completed here.
+      - name: Cancel the dispatched central run if this caller is cancelled
+        if: cancelled()
+        env:
+          GH_TOKEN: ${{ secrets.DEPLOY_OPS_DISPATCH_TOKEN }}
+        run: |
+          F="$RUNNER_TEMP/pr-e2e-run-id"
+          [ -s "$F" ] || { echo "no central run was dispatched — nothing to cancel"; exit 0; }
+          RUN_ID=$(cat "$F")
+          echo "caller cancelled — cancelling central run ${RUN_ID} so it does not orphan"
+          gh run cancel "$RUN_ID" -R iblai/iblai-deploy-ops || true
 
   summary:
     needs: [gate, build-app-image, unit-tests, e2e]
