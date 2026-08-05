@@ -94,10 +94,14 @@ export function useIframeHandlers() {
         }),
       );
     },
+    'MENTOR:ENABLE_GRADING': (_payload: unknown, event: MessageEvent) => {
+      const payload = event.data.data;
+      dispatch(chatActions.setEnableGrading(payload));
+    },
     // Document filter hanlder
     'MENTOR:DOCUMENTFILTER': (_payload: unknown, event: MessageEvent) => {
       try {
-        const documentFilter = JSON.parse(event.data);
+        const documentFilter = JSON.parse(event.data.data);
         dispatch(chatActions.setDocumentFilter(documentFilter));
       } catch (e) {
         console.error('MENTOR:DOCUMENTFILTER ', e);
@@ -105,24 +109,17 @@ export function useIframeHandlers() {
       }
     },
     // EDX integration handlers
-    'MENTOR:EDX_USAGE_ID': (payload: { edxUsageId: string }) => {
-      console.log('EDX Usage ID updated:', payload.edxUsageId);
-      dispatch(
-        chatActions.setIframeContext({
-          metadata: { edxUsageId: payload.edxUsageId },
-        }),
-      );
+    'MENTOR:EDX_USAGE_ID': (_payload: unknown, event: MessageEvent) => {
+      const { edxUsageId } = event.data.data;
+      console.log('EDX Usage ID updated:', edxUsageId);
+      dispatch(chatActions.setMetadata({ edxUsageId }));
     },
-
-    'MENTOR:ENABLE_GRADING': (payload: boolean) => {
-      dispatch(chatActions.setEnableGrading(payload));
-    },
-
-    'MENTOR:EDX_COURSE_ID': (payload: { edxCourseId: string }) => {
-      console.log('EDX Course ID updated:', payload.edxCourseId);
+    'MENTOR:EDX_COURSE_ID': (_payload: unknown, event: MessageEvent) => {
+      const { edxCourseId } = event.data.data;
+      console.log('EDX Course ID updated:', edxCourseId);
       dispatch(
-        chatActions.setIframeContext({
-          metadata: { edxCourseId: payload.edxCourseId },
+        chatActions.setMetadata({
+          edxCourseId,
         }),
       );
     },

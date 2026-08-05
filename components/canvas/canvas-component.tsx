@@ -72,8 +72,6 @@ import { useCanvasVersionNavigation } from '@/hooks/use-canvas-version-navigatio
 
 // Import KaTeX CSS for math rendering
 import 'katex/dist/katex.min.css';
-// Import highlight.js theme for code syntax highlighting
-import 'highlight.js/styles/github.css';
 
 interface CanvasComponentProps {
   title?: string;
@@ -2496,6 +2494,14 @@ export function CanvasComponent({
         .ProseMirror code,
         [contenteditable] code {
           font-family: 'Fira Code', 'Consolas', 'Monaco', monospace !important;
+        }
+        .ProseMirror pre code,
+        [contenteditable] pre code {
+          background: transparent !important;
+          color: inherit !important;
+          padding: 0 !important;
+          border-radius: 0 !important;
+          font-size: inherit !important;
         }
         .ProseMirror :not(pre) > code,
         [contenteditable] :not(pre) > code {

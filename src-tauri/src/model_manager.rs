@@ -729,46 +729,58 @@ where
 /// the Ollama server running afterwards (cancelling a download must not take the
 /// model manager down).
 pub fn cancel_download() -> Result<(), String> {
+    // Setting the flag is instant and is what actually cancels the download:
+    // pull_model polls it every chunk and stops cleanly. Do this synchronously,
+    // then return right away.
     DOWNLOAD_CANCELLED.store(true, Ordering::SeqCst);
 
-    #[cfg(target_os = "linux")]
-    {
-        // Restarting the systemd service via sudo cleanly aborts the pull AND
-        // leaves Ollama running. If sudo isn't available/permitted, kill the
-        // process and start it back up so the manager stays available.
-        let restarted = can_sudo()
-            && create_command("sudo")
-                .args(["systemctl", "restart", "ollama"])
-                .status()
-                .map(|s| s.success())
-                .unwrap_or(false);
-        if !restarted {
+    // Break the in-flight server-side pull in the BACKGROUND. Restarting/killing
+    // Ollama blocks — `systemctl restart ollama` waits for the full service
+    // restart (several seconds mid-pull), and pkill + start_ollama_server block
+    // too. Running it inline stalled the async command's runtime worker while the
+    // frontend awaited the invoke, freezing the app on cancel. This is only a
+    // best-effort measure to break the stream faster; the flag above already
+    // stops the download, so it must never block the command.
+    std::thread::spawn(|| {
+        #[cfg(target_os = "linux")]
+        {
+            // Restarting the systemd service via sudo cleanly aborts the pull AND
+            // leaves Ollama running. If sudo isn't available/permitted, kill the
+            // process and start it back up so the manager stays available.
+            let restarted = can_sudo()
+                && create_command("sudo")
+                    .args(["systemctl", "restart", "ollama"])
+                    .status()
+                    .map(|s| s.success())
+                    .unwrap_or(false);
+            if !restarted {
+                create_command("pkill")
+                    .args(["-TERM", "-f", "ollama"])
+                    .output()
+                    .ok();
+                let _ = start_ollama_server();
+            }
+        }
+
+        #[cfg(target_os = "macos")]
+        {
             create_command("pkill")
                 .args(["-TERM", "-f", "ollama"])
                 .output()
                 .ok();
+            // Bring Ollama back up so the manager stays available after cancel.
             let _ = start_ollama_server();
         }
-    }
 
-    #[cfg(target_os = "macos")]
-    {
-        create_command("pkill")
-            .args(["-TERM", "-f", "ollama"])
-            .output()
-            .ok();
-        // Bring Ollama back up so the manager stays available after cancel.
-        let _ = start_ollama_server();
-    }
-
-    #[cfg(target_os = "windows")]
-    {
-        create_command("taskkill")
-            .args(["/F", "/IM", "ollama.exe"])
-            .output()
-            .ok();
-        let _ = start_ollama_server();
-    }
+        #[cfg(target_os = "windows")]
+        {
+            create_command("taskkill")
+                .args(["/F", "/IM", "ollama.exe"])
+                .output()
+                .ok();
+            let _ = start_ollama_server();
+        }
+    });
 
     Ok(())
 }

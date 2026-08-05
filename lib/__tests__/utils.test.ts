@@ -31,6 +31,7 @@ import {
   convertFromBytes,
   formatRelativeDate,
   getLLMProviderDetails,
+  getProviderName,
   sendMessageToParentWebsite,
   isLoggedIn,
   htmlToMarkdown,
@@ -1311,6 +1312,58 @@ describe('getLLMProviderDetails function', () => {
       name: 'unknown-provider',
     });
   });
+
+  it('resolves local provider labels to real logos (no generic fallback)', () => {
+    // Local model providers (from LOCAL_MODELS) resolve through the canonical
+    // name, so they get proper icons instead of /llm-generic-provider.png.
+    expect(getLLMProviderDetails('Meta')).toEqual({
+      logo: '/llm-llama-provider.jpeg',
+      name: 'Meta',
+    });
+    expect(getLLMProviderDetails('Microsoft')).toEqual({
+      logo: '/llm-microsoft-provider.png',
+      name: 'Microsoft',
+    });
+    expect(getLLMProviderDetails('Alibaba')).toEqual({
+      logo: '/llm-alibaba-provider.png',
+      name: 'Alibaba',
+    });
+    expect(getLLMProviderDetails('IBM')).toEqual({
+      logo: '/llm-ibm-provider.png',
+      name: 'IBM',
+    });
+  });
+});
+
+describe('getProviderName function', () => {
+  it('maps a human label to its canonical backend name (case-insensitive)', () => {
+    expect(getProviderName('Microsoft')).toBe('azure_openai');
+    expect(getProviderName('microsoft')).toBe('azure_openai');
+    expect(getProviderName('Google')).toBe('google');
+    expect(getProviderName('Meta')).toBe('llama');
+    expect(getProviderName('OpenAI')).toBe('openai');
+    expect(getProviderName('Mistral AI')).toBe('mistral');
+    expect(getProviderName('NVIDIA')).toBe('nvidia');
+    expect(getProviderName('DeepSeek')).toBe('deepseek');
+  });
+
+  it('is idempotent on backend keys', () => {
+    expect(getProviderName('azure_openai')).toBe('azure_openai');
+    expect(getProviderName('google')).toBe('google');
+    expect(getProviderName('llama')).toBe('llama');
+  });
+
+  it('folds a backend key and its label onto ONE identity (so cloud + local merge)', () => {
+    expect(getProviderName('azure_openai')).toBe(getProviderName('Microsoft'));
+    expect(getProviderName('llama')).toBe(getProviderName('Meta'));
+    expect(getProviderName('mistral')).toBe(getProviderName('Mistral AI'));
+    expect(getProviderName('nvidia')).toBe(getProviderName('NVIDIA'));
+  });
+
+  it('returns the normalized form for unknown providers', () => {
+    expect(getProviderName('Some-New Provider')).toBe('somenewprovider');
+    expect(getProviderName('')).toBe('');
+  });
 });
 
 describe('sendMessageToParentWebsite function', () => {
@@ -2049,6 +2102,113 @@ describe('markdownToHtml function', () => {
     expect(result).toContain('Title');
   });
 
+  it('must not inject blank lines into a fenced code body (issue #2109)', () => {
+    // The list-break inserter used to run on raw text including fence bodies,
+    // splitting `first line\n- item in code` with an extra blank line.
+    const markdown = [
+      '```text',
+      'first line',
+      '- item in code',
+      '1. numbered in code',
+      '```',
+    ].join('\n');
+    const result = markdownToHtml(markdown);
+    expect(result).toContain('first line\n- item in code\n1. numbered in code');
+    expect(result).not.toContain('first line\n\n- item in code');
+  });
+
+  it('must not merge comment lines inside a python fence (issue #2109)', () => {
+    // The heading-newline fixer treated a bare `#` comment line as a
+    // malformed heading and pulled the next line up onto it.
+    const markdown = [
+      '```python',
+      '# Define custom tools',
+      '',
+      '#',
+      '@tool',
+      'def f(x):',
+      '    return x',
+      '```',
+    ].join('\n');
+    const result = markdownToHtml(markdown);
+    expect(result).not.toContain('# @tool');
+    expect(result).not.toContain('tools@tool');
+    expect(result).toContain('@tool');
+    expect(result).toContain('def');
+  });
+
+  it('must not corrupt an unclosed streaming fence body', () => {
+    const result = markdownToHtml('```python\n# streaming\n- not a list yet');
+    expect(result).toContain('language-python');
+    expect(result).not.toContain('<ul>');
+    expect(result).not.toContain('\n\n- not');
+
+    const midDocument = markdownToHtml(
+      'Intro text\n```python\n# streaming\n- not a list yet',
+    );
+    expect(midDocument).toContain('Intro text');
+    expect(midDocument).toContain('language-python');
+    expect(midDocument).not.toContain('<ul>');
+  });
+
+  it('leaves tilde fence bodies untouched', () => {
+    const result = markdownToHtml('~~~\ntext\n- item in code\n~~~');
+    expect(result).toContain('text\n- item in code');
+    expect(result).not.toContain('<ul>');
+  });
+
+  it('keeps inline code spans away from the markdown fixes', () => {
+    const markdown = 'Use `\\[not a link\\](https://x.dev)` verbatim.';
+    const result = markdownToHtml(markdown);
+    expect(result).toContain('\\[not a link\\](https://x.dev)');
+  });
+
+  it('still unwraps ```markdown fences and fixes their content', () => {
+    const markdown = '```markdown\n# Title\ntext\n1. a\n2. b\n```';
+    const result = markdownToHtml(markdown);
+    expect(result).toContain('<h1');
+    expect(result).toContain('<ol>');
+  });
+
+  it('nests a 2-space indented bullet under its ordered parent (issue #2109)', () => {
+    const result = markdownToHtml('1. Item\n  - sub\n2. Next');
+    expect(result.match(/<ol/g)).toHaveLength(1);
+    expect(result).toContain('<ul>');
+    expect(result.indexOf('<ul>')).toBeGreaterThan(result.indexOf('<li>'));
+    expect(result.indexOf('</ul>')).toBeLessThan(result.lastIndexOf('</ol>'));
+    expect(result).toContain('sub');
+  });
+
+  it('does not flatten a 2-space indented ordered child (issue #2109)', () => {
+    const result = markdownToHtml('2. Second\n  1. sub\n3. Third');
+    // Without normalization marked flattened this into one list of three
+    // items; nested it must produce an inner <ol> inside the outer one.
+    expect(result.match(/<ol/g)).toHaveLength(2);
+    expect(result).toContain('start="2"');
+  });
+
+  it('renders adjacent whole-line $$ lines as separate display blocks (issue #2109 fix 9)', () => {
+    const result = markdownToHtml(
+      '$$\\text{Step 1: Substitute } x = 4 \\text{ into the expression}$$\n$$3x + 5 = 3(4) + 5$$',
+    );
+    // Each whole-line span becomes its own katex display block; nothing is
+    // rendered as inline math and no raw delimiters leak.
+    expect(result.match(/katex-display/g)).toHaveLength(2);
+    expect((result.match(/class="katex"/g) ?? []).length).toBe(2);
+    expect(result).not.toContain('$$');
+  });
+
+  it('renders a whole-line \\[...\\] as a display block (issue #2109 fix 9)', () => {
+    const result = markdownToHtml('Energy:\n\\[E = mc^2\\]\nDone.');
+    expect(result.match(/katex-display/g)).toHaveLength(1);
+    expect(result).not.toContain('$$');
+    expect(result).not.toContain('\\[');
+    // Inline \(...\) stays inline math.
+    const inline = markdownToHtml('the value \\(a + b\\) here');
+    expect(inline).not.toContain('katex-display');
+    expect(inline).toContain('class="katex"');
+  });
+
   it('should handle excessive newlines after headings', () => {
     const markdown = '# Heading\n\n\n\nParagraph';
     const result = markdownToHtml(markdown);
@@ -2114,6 +2274,40 @@ describe('markdownToHtml function', () => {
     const markdown = 'Use `console.log()` to debug';
     const result = markdownToHtml(markdown);
     expect(result).toContain('<code>console.log()</code>');
+  });
+
+  it('emits span-free code blocks with a language class (issue #2109)', () => {
+    const markdown = '```python\nimport os\nprint("hi")\n```';
+    const result = markdownToHtml(markdown);
+    expect(result).toContain('<pre><code class="language-python">');
+    expect(result).not.toContain('<span');
+    expect(result).toContain('import os\nprint(');
+  });
+
+  it('keeps every fence newline intact between keyword lines (issue #2109)', () => {
+    const markdown = [
+      '```python',
+      'import json',
+      'from typing import List, Dict',
+      'from functools import wraps',
+      '',
+      'def log_execution(func):',
+      '    """Decorator to log function execution times and results."""',
+      '    @wraps(func)',
+      '    def wrapper(*args, **kwargs):',
+      '        return func(*args, **kwargs)',
+      '    return wrapper',
+      '',
+      '@log_execution',
+      'def process_data_batch(input_records: List[Dict]) -> List[Dict]:',
+      '    return input_records',
+      '```',
+    ].join('\n');
+    const result = markdownToHtml(markdown);
+    expect(result).toContain('Dict\nfrom functools');
+    expect(result).toContain('@log_execution\ndef process_data_batch');
+    expect(result).not.toContain('Dictfrom');
+    expect(result).not.toContain('log_executiondef');
   });
 
   it('should handle GFM tables', () => {
@@ -2662,6 +2856,29 @@ describe('getCurrentArtifactTitle function', () => {
       },
     ];
     expect(getCurrentArtifactTitle(messages)).toBe('Current Version');
+  });
+
+  it('should treat a missing version_number as 0 when picking the latest', () => {
+    const messages = [
+      {
+        message: { data: { content: '' } },
+        artifact_versions: [
+          { id: 1, title: 'No Number' },
+          { id: 2, title: 'Numbered', version_number: 2 },
+        ],
+      },
+    ];
+    expect(getCurrentArtifactTitle(messages)).toBe('Numbered');
+    const reversed = [
+      {
+        message: { data: { content: '' } },
+        artifact_versions: [
+          { id: 2, title: 'Numbered', version_number: 2 },
+          { id: 1, title: 'No Number' },
+        ],
+      },
+    ];
+    expect(getCurrentArtifactTitle(reversed)).toBe('Numbered');
   });
 
   it('should return the highest version_number title when no is_current flag', () => {

@@ -19,6 +19,39 @@ function embedUrlFor(mentorUrl: string): string {
   return url.toString();
 }
 
+/**
+ * Navigates to a mentor's embed view and resolves once the mentor-settings GET
+ * that carries `show_catalogue` has landed.
+ *
+ * `components/logo.tsx` gates clickability on
+ * `!embedMode || (mentorSettings?.showCatalogue ?? true)` — the `?? true` means
+ * the logo renders as a navigable <button> for as long as settings are still in
+ * flight. Asserting straight after `goto` therefore races the fetch: on a slow
+ * host (dev-mode compilation, cold API) the un-resolved default is read as
+ * "catalogue enabled" and the emb-07 assertion fails against a logo that would
+ * have become non-clickable a moment later.
+ *
+ * Waiting on the response removes the race regardless of host speed. The
+ * authenticated private endpoint (`.../mentors/<id>/settings/`) is the one whose
+ * value wins in `useMentorSettings` (private ?? public ?? true); `-settings/`
+ * variants such as `public-settings/` are deliberately excluded by the leading
+ * slash in the pattern.
+ */
+async function gotoEmbedWithSettingsLoaded(
+  page: Page,
+  mentorUrl: string,
+): Promise<void> {
+  const settingsLoaded = page.waitForResponse(
+    (res) => /\/settings\/?$/.test(new URL(res.url()).pathname) && res.ok(),
+    { timeout: 60_000 },
+  );
+  await page.goto(embedUrlFor(mentorUrl), {
+    waitUntil: 'domcontentloaded',
+    timeout: 30_000,
+  });
+  await settingsLoaded;
+}
+
 /** Configures + persists the embed with a given Show Catalogue value (via UI). */
 async function createEmbedWithShowCatalogue(
   page: Page,
@@ -215,6 +248,10 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
       editMentorPage,
       sidebarPage,
     }) => {
+      // Creates a mentor, saves its visibility, saves the embed, then loads the
+      // embed view — comfortably past the default per-test budget on a cold host.
+      test.slow();
+
       const baseMentorUrl = page.url();
       await createEmbedWithShowCatalogue(
         page,
@@ -223,14 +260,11 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
         false,
       );
 
-      await page.goto(embedUrlFor(baseMentorUrl), {
-        waitUntil: 'domcontentloaded',
-        timeout: 30_000,
-      });
+      await gotoEmbedWithSettingsLoaded(page, baseMentorUrl);
       await sidebarPage.ensureExpanded(40_000);
       await expect(sidebarPage.logoImage).toBeVisible({ timeout: 15_000 });
-      // The logo renders but is not wrapped in a navigable button. toHaveCount(0)
-      // retries past the brief loading window before settings resolve.
+      // Settings have resolved by now, so the logo must NOT be wrapped in a
+      // navigable button — this no longer races the optimistic default.
       await expect(sidebarPage.logoButton).toHaveCount(0, { timeout: 10_000 });
     });
 
@@ -241,6 +275,8 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
       editMentorPage,
       sidebarPage,
     }) => {
+      test.slow();
+
       const baseMentorUrl = page.url();
       await createEmbedWithShowCatalogue(
         page,
@@ -249,10 +285,10 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
         true,
       );
 
-      await page.goto(embedUrlFor(baseMentorUrl), {
-        waitUntil: 'domcontentloaded',
-        timeout: 30_000,
-      });
+      // Also waits for settings here: without it this test passes vacuously,
+      // since the pre-resolution default is exactly the clickable state it
+      // asserts. Waiting makes the pass mean "show_catalogue: true was read".
+      await gotoEmbedWithSettingsLoaded(page, baseMentorUrl);
       await sidebarPage.ensureExpanded(40_000);
       await expect(sidebarPage.logoButton).toBeVisible({ timeout: 15_000 });
     });
@@ -304,18 +340,21 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
     // "New Chat" button
     await expect(sidebarPage.newChatButton).toBeVisible({ timeout: 10_000 });
 
-    // "Chats" collapsible section trigger
+    // "Recents" collapsible section trigger
     const chatsVisible = await sidebarPage.isSectionTriggerVisible(
-      'Chats',
+      'Recents',
       5_000,
     );
     if (!chatsVisible) {
       logger.info(
-        'emb-09: Chats section trigger not visible — may render differently in this env; asserting New Chat only',
+        'emb-09: Recents section trigger not visible — may render differently in this env; asserting New Chat only',
       );
     } else {
       await expect(
-        sidebarPage.sidebar.getByRole('button', { name: 'Chats', exact: true }),
+        sidebarPage.sidebar.getByRole('button', {
+          name: 'Recents',
+          exact: true,
+        }),
       ).toBeVisible();
     }
 

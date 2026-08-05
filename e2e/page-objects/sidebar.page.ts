@@ -140,7 +140,7 @@ export class SidebarPage {
    * Radix Collapsible) rather than a blind click that would toggle.
    */
   async expandSection(
-    name: 'Agents' | 'Workflows' | 'Chats' | 'Projects' | 'Analytics',
+    name: 'Agents' | 'Workflows' | 'Recents' | 'Projects' | 'Analytics',
   ): Promise<void> {
     const trigger = this.sidebar.getByRole('button', { name, exact: true });
     await expect(trigger).toBeVisible({ timeout: 10_000 });
@@ -258,27 +258,24 @@ export class SidebarPage {
   }
 
   /**
-   * Expand the "Chats" collapsible section in the sidebar (no-op if already
+   * Expand the "Recents" collapsible section in the sidebar (no-op if already
    * expanded). Prerequisite for any recent/pinned chat assertions.
    */
   async expandChatsSection(): Promise<void> {
-    await this.expandSection('Chats');
+    await this.expandSection('Recents');
   }
 
   /**
    * Returns the `<ul role="list">` that holds recent chat row buttons inside
-   * the expanded Chats collapsible. Scoped to the sidebar `<aside>` so it
+   * the expanded Recents collapsible. Scoped to the sidebar `<aside>` so it
    * cannot collide with any page-content lists.
    *
-   * The "Recent" heading `<p>` immediately precedes this list. We locate it
-   * via the sibling structure: find the heading text node then locate the
-   * following list. In practice the whole Chats content area is the only
-   * `role="list"` container inside the sidebar that follows a "Recent" heading.
+   * Located by testid: this used to hang off the "Recent" heading that sat
+   * above the list, and that heading is gone - the panel is called Recents,
+   * so a caps label repeating it was noise.
    */
   getRecentChatsList(): import('@playwright/test').Locator {
-    return this.sidebar
-      .locator('p', { hasText: /^recent$/i })
-      .locator('~ ul[role="list"]');
+    return this.sidebar.locator('[data-testid="recent-chats-list"]');
   }
 
   /**

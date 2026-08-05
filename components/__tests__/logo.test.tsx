@@ -220,7 +220,7 @@ describe('Logo', () => {
       mockUseHeader.mockReturnValue({ useSpecialIframeLogo: false });
     });
 
-    it('falls back to /logo.gif on image error', async () => {
+    it('falls back to /iblai-logo.png on image error', async () => {
       render(<Logo />);
       await waitFor(() => {
         expect(screen.getByTestId('logo-image')).toBeInTheDocument();
@@ -229,7 +229,7 @@ describe('Logo', () => {
       await waitFor(() => {
         expect(screen.getByTestId('logo-image')).toHaveAttribute(
           'src',
-          '/logo.gif',
+          '/iblai-logo.png',
         );
       });
     });

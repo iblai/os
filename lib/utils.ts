@@ -9,10 +9,9 @@ import { remark } from 'remark';
 import { Marked } from 'marked';
 import markedKatex from 'marked-katex-extension';
 import { gfmHeadingId } from 'marked-gfm-heading-id';
-import { markedHighlight } from 'marked-highlight';
-import hljs from 'highlight.js';
 
 import { preprocessLaTeX } from './preprocess-latex';
+import { normalizeListIndentation } from './normalize-list-indentation';
 import {
   LOCAL_STORAGE_KEYS,
   MAX_PROMPT_PARAM_LENGTH,
@@ -521,44 +520,88 @@ export function formatRelativeDate(date: string) {
   }
 }
 
+// Canonical provider name for any label — a backend key ("azure_openai"), a
+// human label ("Microsoft"), or a local model's provider ("Meta"). Folds every
+// alias onto one identity so the same provider from different sources compares
+// equal. See getProviderName.
+const PROVIDER_NAME_BY_ALIAS: Record<string, string> = {
+  microsoft: 'azure_openai',
+  azureopenai: 'azure_openai',
+  openai: 'openai',
+  google: 'google',
+  gemini: 'google',
+  meta: 'llama',
+  metallama: 'llama',
+  llama: 'llama',
+  mistral: 'mistral',
+  mistralai: 'mistral',
+  nvidia: 'nvidia',
+  iblchatnvidia: 'nvidia',
+  deepseek: 'deepseek',
+  anthropic: 'anthropic',
+  iblchatanthropic: 'anthropic',
+  claude: 'anthropic',
+  groq: 'groq',
+  perplexity: 'perplexity',
+  xai: 'xai',
+  bedrock: 'bedrock',
+  amazonbedrock: 'bedrock',
+  amazon: 'bedrock',
+  iblchatbedrock: 'bedrock',
+  alibaba: 'alibaba',
+  qwen: 'alibaba',
+  ibm: 'ibm',
+  granite: 'ibm',
+};
+
+/**
+ * Canonical provider name for any label, case- and punctuation-insensitive.
+ * Folds backend keys and human/display labels onto one identity — e.g.
+ * `getProviderName('Microsoft') === 'azure_openai'`,
+ * `getProviderName('Meta') === 'llama'`, `getProviderName('Google') === 'google'`.
+ * Unknown providers return their normalized (lowercased, alphanumeric-only) form.
+ * This is the single source of truth for provider identity (dedup/merge) and
+ * for logo/name resolution via {@link getLLMProviderDetails}.
+ */
+export function getProviderName(llmProvider: string): string {
+  const normalized = (llmProvider ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+  return PROVIDER_NAME_BY_ALIAS[normalized] ?? normalized;
+}
+
+// Logo + display name keyed by canonical provider name (see getProviderName).
+const PROVIDER_DETAILS_BY_NAME: Record<string, { logo: string; name: string }> =
+  {
+    groq: { logo: '/llm-groq-provider.png', name: 'Groq' },
+    nvidia: { logo: '/llm-nvidia-provider.webp', name: 'NVIDIA' },
+    azure_openai: { logo: '/llm-microsoft-provider.png', name: 'Microsoft' },
+    openai: { logo: '/llm-openai-provider-2.svg', name: 'OpenAI' },
+    mistral: { logo: '/llm-mistral-provider.jpeg', name: 'Mistral' },
+    google: { logo: '/llm-google-provider.svg', name: 'Google' },
+    llama: { logo: '/llm-llama-provider.jpeg', name: 'Meta' },
+    anthropic: { logo: '/llm-claude-provider.png', name: 'Anthropic' },
+    perplexity: { logo: '/llm-perplexity-provider.webp', name: 'Perplexity' },
+    deepseek: { logo: '/llm-deepseek-provider.png', name: 'DeepSeek' },
+    xai: { logo: '/llm-xai-provider.jpg', name: 'xAI' },
+    bedrock: { logo: '/llm-amazon-provider.png', name: 'Amazon' },
+    alibaba: { logo: '/llm-alibaba-provider.png', name: 'Alibaba' },
+    ibm: { logo: '/llm-ibm-provider.png', name: 'IBM' },
+  };
+
 export function getLLMProviderDetails(llmProvider: string, llmName?: string) {
-  switch (llmProvider) {
-    case 'groq':
-      return { logo: '/llm-groq-provider.png', name: 'Groq' };
-    case 'IBLChatNvidia':
-      return { logo: '/llm-nvidia-provider.webp', name: 'NVIDIA' };
-    case 'azure_openai':
-      return { logo: '/llm-microsoft-provider.png', name: 'Microsoft' };
-    case 'openai':
-      if (llmName) return { logo: '/llm-openai-provider.jpg', name: 'OpenAI' };
-      return { logo: '/llm-openai-provider-2.svg', name: 'OpenAI' };
-    case 'mistral':
-      return { logo: '/llm-mistral-provider.jpeg', name: 'Mistral' };
-    case 'google':
-      if (llmName) return { logo: '/llm-gemini-provider.png', name: 'Google' };
-      return { logo: '/llm-google-provider.svg', name: 'Google' };
-    case 'llama':
-      return { logo: '/llm-llama-provider.jpeg', name: 'Meta' };
-    case 'IBLChatAnthropic':
-      return { logo: '/llm-claude-provider.png', name: 'Anthropic' };
-    case 'perplexity':
-      return { logo: '/llm-perplexity-provider.webp', name: 'Perplexity' };
-    case 'deepseek':
-      return { logo: '/llm-deepseek-provider.png', name: 'DeepSeek' };
-    case 'xai':
-      return { logo: '/llm-xai-provider.jpg', name: 'xAI' };
-    case 'anthropic':
-      return { logo: '/llm-claude-provider.png', name: 'Anthropic' };
-    case 'nvidia':
-      return { logo: '/llm-nvidia-provider.webp', name: 'NVIDIA' };
-    case 'bedrock':
-    case 'amazon-bedrock':
-    case 'amazon_bedrock':
-    case 'IBLChatBedrock':
-      return { logo: '/llm-amazon-provider.png', name: 'Amazon' };
-    default:
-      return { logo: '/llm-generic-provider.png', name: llmProvider };
-  }
+  const name = getProviderName(llmProvider);
+  // OpenAI and Google use a model-specific logo when a concrete model is named.
+  if (name === 'openai' && llmName)
+    return { logo: '/llm-openai-provider.jpg', name: 'OpenAI' };
+  if (name === 'google' && llmName)
+    return { logo: '/llm-gemini-provider.png', name: 'Google' };
+  return (
+    PROVIDER_DETAILS_BY_NAME[name] ?? {
+      logo: '/llm-generic-provider.png',
+      name: llmProvider,
+    }
+  );
 }
 
 export function sendMessageToParentWebsite(payload: unknown) {
@@ -717,6 +760,38 @@ export function parsePrompt(prompt: string) {
 function preprocessMarkdownForHtml(markdown: string): string {
   let processed = markdown;
 
+  // Handle ```markdown code blocks - extract content and render as actual markdown
+  // This handles cases where LLM wraps markdown content in code blocks.
+  // Runs before the code mask below on purpose: the unwrapped content IS
+  // markdown and must go through the fixes.
+  processed = processed.replace(
+    /```(?:markdown|md)\s*\n([\s\S]*?)```/gi,
+    (_match, content) => content.trim(),
+  );
+
+  // Every fix below is a whole-document regex, and a code-fence body is
+  // literal text where a `# comment` line or the exact newline layout must
+  // survive byte-for-byte (the list-break fix used to inject blank lines into
+  // fenced code, and the heading fixes merged comment lines). Mask fenced and
+  // inline code first -- including a trailing fence whose closer has not
+  // streamed in yet -- and restore verbatim at the end.
+  const codeOpen = String.fromCharCode(0xe006);
+  const codeClose = String.fromCharCode(0xe007);
+  const codePlaceholders: string[] = [];
+  const maskCode = (segment: string): string => {
+    const index = codePlaceholders.length;
+    codePlaceholders.push(segment);
+    return `${codeOpen}${index}${codeClose}`;
+  };
+  processed = processed
+    .replace(/(`{3,})[\s\S]*?\1/g, maskCode)
+    .replace(/(~{3,})[\s\S]*?\1/g, maskCode)
+    .replace(
+      /(^|\n)([ \t]*(?:`{3,}|~{3,})[\s\S]*)$/,
+      (_match, before: string, fence: string) => before + maskCode(fence),
+    )
+    .replace(/(`+)((?:(?!\1)[\s\S])+?)\1(?!`)/g, maskCode);
+
   // Restore escaped markdown links so they render as actual links
   // Example: "\[Get started\](https://example.com)" -> "[Get started](https://example.com)"
   processed = processed.replace(
@@ -733,13 +808,6 @@ function preprocessMarkdownForHtml(markdown: string): string {
     },
   );
 
-  // Handle ```markdown code blocks - extract content and render as actual markdown
-  // This handles cases where LLM wraps markdown content in code blocks
-  processed = processed.replace(
-    /```(?:markdown|md)\s*\n([\s\S]*?)```/gi,
-    (_match, content) => content.trim(),
-  );
-
   // Fix headings with newlines after # (e.g., "#\nTitle" -> "# Title")
   // This handles cases where LLM outputs malformed heading syntax
   processed = processed.replace(/^(#{1,6})\s*\n+(.+)$/gm, '$1 $2');
@@ -754,6 +822,13 @@ function preprocessMarkdownForHtml(markdown: string): string {
   // Ensure list items have proper line breaks
   // Fix consecutive list items that might be on same line
   processed = processed.replace(/([^\n])(\n)([-*+]|\d+\.)\s/g, '$1\n\n$3 ');
+
+  // Restore code verbatim.
+  const restoreCodePattern = new RegExp(`${codeOpen}(\\d+)${codeClose}`, 'g');
+  processed = processed.replace(
+    restoreCodePattern,
+    (_, index) => codePlaceholders[Number(index)] ?? '',
+  );
 
   return processed;
 }
@@ -1230,14 +1305,8 @@ const configuredMarked = new Marked(
     output: 'htmlAndMathml', // Accessibility-friendly output with MathML fallback
   }),
   gfmHeadingId(),
-  markedHighlight({
-    langPrefix: 'hljs language-',
-    /* istanbul ignore next -- @preserve callback invoked by markedHighlight during code block parsing */
-    highlight(code: string, lang: string, _info: string) {
-      const language = hljs.getLanguage(lang) ? lang : 'plaintext';
-      return hljs.highlight(code, { language }).value;
-    },
-  }),
+  // No highlight extension: TipTap drops newline text nodes between highlight
+  // spans, merging code lines (issue #2109), and no consumer renders the spans.
   {
     gfm: true, // GitHub Flavored Markdown (tables, strikethrough, task lists)
     breaks: false, // Don't convert \n to <br>
@@ -1251,8 +1320,8 @@ export function markdownToHtml(markdownText: string) {
 
   try {
     // Pre-process to fix common markdown issues and convert LaTeX environments
-    const cleanedMarkdown = preprocessLaTeX(
-      preprocessMarkdownForHtml(markdownText),
+    const cleanedMarkdown = normalizeListIndentation(
+      preprocessLaTeX(preprocessMarkdownForHtml(markdownText)),
     );
 
     const result = configuredMarked.parse(cleanedMarkdown);

@@ -18,6 +18,12 @@
  *   - localStorage `session_id[mentorId]` stays unchanged on dedup reload
  *   - New session id is NOT created when deduplicating
  *
+ * Mentor ownership: each test creates and owns its mentor (see beforeEach).
+ * This suite used to read the mentor id out of the landing redirect, which
+ * resolves via `recently-accessed-mentors` on the shared test account — under
+ * parallel workers that hands back another spec's throwaway mentor, and that
+ * spec's cleanup then deletes it out from under a long-running test here.
+ *
  * Sanitization scenarios (iblai-platform#2164 — `sanitizePromptParam()` in
  * `lib/utils.ts`, consumed at `components/chat/index.tsx:279`):
  *   6. Clean prompt → sanitization is a no-op, text renders verbatim
@@ -42,6 +48,7 @@ import { navigateToMentorApp, getPlatformContext } from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
 import { MENTOR_NEXTJS_HOST } from '../fixtures/test-data';
 import { logger } from '@iblai/iblai-js/playwright';
+import { MentorTracker } from '../utils/mentor-cleanup';
 
 const SESSION_ID_KEY = 'session_id';
 
@@ -69,18 +76,42 @@ async function clearCachedSession(page: Page, mid: string): Promise<void> {
 }
 
 test.describe('Journey: Chat URL ?prompt= Auto-Injection', () => {
-  test.setTimeout(180_000);
+  // Every test creates its own mentor before driving the ?prompt= flow, on top
+  // of up to two full page loads and two AI round trips (TC3). Creation alone
+  // can take 50s+ while the category list loads under a busy environment, so
+  // give the chain the same headroom other create-mentor-then-navigate
+  // journeys use.
+  test.setTimeout(300_000);
 
-  // Shared platform context resolved once in beforeEach via the admin page
+  // Platform context for the mentor created in beforeEach for the current test
   let tenantKey = '';
   let mentorId = '';
 
-  test.beforeEach(async ({ page }) => {
+  // Mentors are created per test but reaped per suite: deleting inside an
+  // afterEach would race the retry that reuses the same worker. Names are
+  // prefixed "E2E " so the globalTeardown sweeper (mentor-sweeper.ts) reaps
+  // them as a backstop if deleteAll is ever skipped (e.g. a crashed run).
+  const tracker = new MentorTracker();
+
+  test.afterAll(async ({ browser }, testInfo) => {
+    await tracker.deleteAll(browser, testInfo);
+  });
+
+  test.beforeEach(async ({ page, createMentorPage }) => {
     test.skip(!MENTOR_NEXTJS_HOST, 'Requires MENTOR_NEXTJS_HOST');
     await navigateToMentorApp(page);
+
+    // Create a dedicated mentor rather than adopting whatever the landing
+    // redirect picked. That redirect follows `recently-accessed-mentors`, which
+    // on the shared test account surfaces disposable mentors other specs are
+    // still cleaning up — their afterAll delete would 404 this mentor mid-test
+    // and the chat would never mount.
+    await createMentorPage.openAndCreate(`E2E Prompt Injection ${Date.now()}`);
+
     const ctx = await getPlatformContext(page);
     tenantKey = ctx.tenantKey;
     mentorId = ctx.mentorId;
+    tracker.add(mentorId);
     logger.info(`prompt-injection: tenant=${tenantKey} mentor=${mentorId}`);
   });
 
