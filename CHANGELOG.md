@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.112.0](https://github.com/iblai/os/compare/v0.111.8...v0.112.0) (2026-08-05)
+
+### Features
+
+* **pr-e2e:** call iblai/pr-e2e-action@v1 instead of an in-repo copy ([4cc340f](https://github.com/iblai/os/commit/4cc340f886c9747d838228fd1d6de6f066138fc9))
+
+### Bug Fixes
+
+* **pr-e2e:** keep cancellation cleanup as a job step ([59e00de](https://github.com/iblai/os/commit/59e00de60b6ef8eee693af063fba5bc2c531fcee)), closes [os#394](https://github.com/iblai/os/issues/394)
+
 ## [0.111.8](https://github.com/iblai/os/compare/v0.111.7...v0.111.8) (2026-08-04)
 
 ### Bug Fixes
