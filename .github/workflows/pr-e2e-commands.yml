@@ -50,3 +50,9 @@ jobs:
           comment_id:     ${{ github.event.comment.id }}
           repo_token:     ${{ secrets.GITHUB_TOKEN }}
           dispatch_token: ${{ secrets.DEPLOY_OPS_DISPATCH_TOKEN }}
+          # REQUIRED for /retest. A label set with GITHUB_TOKEN raises NO events (GitHub's loop
+          # prevention), so the recycle succeeds and no test run ever starts — verified on os#381,
+          # where a recycle by github-actions[bot] triggered nothing while the same recycle by a
+          # human did. DEPLOY_OPS_DISPATCH_TOKEN is scoped to iblai-deploy-ops and 403s here, so
+          # this needs its own PAT with Issues + Pull requests write on this repo.
+          label_token: ${{ secrets.PR_E2E_LABEL_TOKEN }}
