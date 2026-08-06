@@ -75,10 +75,14 @@ const STRIPE = ['https://js.stripe.com', 'https://api.stripe.com'];
 // would need that region added.
 const AWS_S3 = ['https://*.s3.amazonaws.com'];
 // Customer/partner institution domains served from the institution's own host
-// (SSO / LMS / API endpoints). Add new tenants here.
-const PARTNER_HTTP = [
-  'https://*.syr.edu', // Syracuse University
-];
+// (SSO / LMS / API endpoints). Override via CSP_PARTNER_HOSTS (comma/space-
+// separated); defaults to Syracuse when unset. Read at request time (like
+// isEnforce/reportUri) so it isn't frozen at module load / build time.
+const DEFAULT_PARTNER_HOSTS = ['https://*.syr.edu']; // Syracuse University
+const partnerHosts = () => {
+  const raw = process.env.CSP_PARTNER_HOSTS?.trim();
+  return raw ? raw.split(/[\s,]+/).filter(Boolean) : DEFAULT_PARTNER_HOSTS;
+};
 
 /** Allow the configured API base origin if it lives outside the ibl wildcards. */
 function apiBaseOrigin(): string[] {
@@ -100,6 +104,7 @@ function apiBaseOrigin(): string[] {
 
 function buildCsp(nonce: string): string {
   const extra = apiBaseOrigin();
+  const partners = partnerHosts();
 
   const directives: Record<string, string[]> = {
     'default-src': ["'self'"],
@@ -128,7 +133,7 @@ function buildCsp(nonce: string): string {
       ...GOOGLE,
       ...STRIPE,
       ...AWS_S3,
-      ...PARTNER_HTTP,
+      ...partners,
       ...extra,
     ],
     // Sentry Session Replay creates a compression worker from a blob: URL.
@@ -136,7 +141,7 @@ function buildCsp(nonce: string): string {
     'frame-src': [
       "'self'",
       ...IBL_HTTP,
-      ...PARTNER_HTTP,
+      ...partners,
       'https://accounts.google.com',
       'https://content.googleapis.com',
       'https://docs.google.com',
