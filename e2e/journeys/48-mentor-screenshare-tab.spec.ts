@@ -27,9 +27,11 @@ import { waitForPageReady } from '../utils/resilient';
  *     (`data-testid="screenshare-capability-toggle"`).
  *   • The tab trigger in the sidebar is `[role="tab"][aria-controls="panel-screenshare"]`
  *     (host-rendered, unique).
- *   • The tab body, heading, save button, and off-hint are SDK
- *     `data-testid`s exposed by `iblai-js`'s SCREENSHARE_LABELS helpers and
- *     the shared `CapabilityGate`.
+ *   • The tab body, save button, and off-hint are SDK `data-testid`s exposed
+ *     by `iblai-js` and the shared `CapabilityGate`.
+ *   • The heading is matched on its accessible name — "Screen" since iblai-js
+ *     2.2.10, pinned locally in `screenshare.tab.ts` because the SDK's
+ *     `SCREENSHARE_LABELS.headerTitle` still reports the pre-2.2.10 wording.
  *
  * No CSS class selectors anywhere — every locator survives style
  * refactors on either side.

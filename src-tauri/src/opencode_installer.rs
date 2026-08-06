@@ -145,11 +145,22 @@ fn extract(archive: &Path, dir: &Path) -> Result<(), String> {
         c.args(["-xf", &a, "-C", &d]);
         c
     };
-    let status = cmd.status().map_err(|e| format!("extract spawn failed: {e}"))?;
-    if status.success() {
+    // `output()`, never `status()`. `status()` hands the child the app's own stdio,
+    // and in a GUI-launched build that is a pipe nobody drains — a chatty extractor
+    // (`unzip` prints a line per entry) fills the 64KB buffer and blocks forever, so
+    // the install hangs after "extracting opencode" with no error. `output()` also
+    // nulls stdin, so the child can't stall waiting on input, and it gives us the
+    // extractor's own stderr to report instead of a bare exit code.
+    let out = cmd.output().map_err(|e| format!("extract spawn failed: {e}"))?;
+    if out.status.success() {
         Ok(())
     } else {
-        Err(format!("extract failed (exit {:?})", status.code()))
+        let stderr = String::from_utf8_lossy(&out.stderr);
+        Err(format!(
+            "extract failed (exit {:?}): {}",
+            out.status.code(),
+            stderr.trim()
+        ))
     }
 }
 
@@ -202,7 +213,16 @@ async fn download_and_install(app: &AppHandle) -> Result<(), String> {
     std::fs::write(&archive, &bytes).map_err(|e| format!("archive write failed: {e}"))?;
 
     log(app, "extracting opencode");
-    extract(&archive, &bin_dir)?;
+    // Off the async runtime: extraction is fully blocking and takes seconds on a
+    // ~100MB release. Run inline it pins a tokio worker for the whole time, which
+    // stalls the very IPC channel this command has to reply on — the UI then sees a
+    // hang rather than a slow install.
+    {
+        let (a, d) = (archive.clone(), bin_dir.clone());
+        tokio::task::spawn_blocking(move || extract(&a, &d))
+            .await
+            .map_err(|e| format!("extract task failed: {e}"))??;
+    }
     let _ = std::fs::remove_file(&archive);
 
     let bin = opencode_bin();

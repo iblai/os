@@ -13,16 +13,28 @@ overrides:
   defu: '>=6.1.5'
   lodash-es: '>=4.18.0'
   lodash: '>=4.18.0'
-  undici: '>=6.24.0'
-  hono: '>=4.12.18'
+  # GHSA-4cwx-7wf7-3272 (cross-user information disclosure) affects >=8.0.0 <8.9.0.
+  # Only 8.7.0 resolves here (@wdio/local-runner > webdriver), so lifting the floor
+  # past the 6.x line is safe — nothing depends on a 6.x or 7.x undici.
+  undici: '>=8.9.0'
+  # GHSA-8j4g-w8fx-2239 — ReDoS in the CORS middleware via a crafted
+  # Access-Control-Request-Headers, patched in 4.12.34. Not surfaced by Dependabot;
+  # found by `pnpm audit`. Reached through
+  # @iblai/iblai-js > @iblai/mcp > @modelcontextprotocol/sdk.
+  hono: '>=4.12.34'
   axios: '>=1.16.0'
   prismjs: '>=1.30.0'
   dompurify: '>=3.4.12'
   '@hono/node-server': '>=2.0.10'
   bytes: '>=1.11.1'
   devalue: '>=5.8.1'
-  fast-uri: '>=4.1.1'
-  ip-address: '>=10.1.1'
+  # GHSA-7p8r-x3mc-p8w7 — host confusion via backslash, patched in 4.1.2.
+  # Reached through @commitlint/cli > @commitlint/load.
+  fast-uri: '>=4.1.2'
+  # GHSA-mwp4-54f8-5fhr — Address4 decodes leading-zero octets as decimal, so an
+  # address like 010.0.0.1 parses to an unintended host. Patched in 10.3.1.
+  # Reached through @wdio/cli > @wdio/utils > @puppeteer/browsers > proxy-agent.
+  ip-address: '>=10.3.1'
   # brace-expansion GHSA-mh99-v99m-4gvg (DoS/OOM via unbounded expansion) is patched
   # ONLY in 5.0.8 — there is no patched 1.x/2.x/3.x/4.x. But brace-expansion@5 ships
   # ESM-style named exports, so older minimatch majors that import it as a CJS
@@ -39,7 +51,10 @@ overrides:
   #     is to add `minimatch@3: '^10'` here — but verify eslint@9 + glob@7 tolerate
   #     minimatch@10 first (untested; minimatch@10 requires Node 20+ and drops legacy
   #     options). Bumping minimatch@3 blindly is riskier than the latent hazard today.
-  brace-expansion: '>=5.0.8'
+  # Floor raised 5.0.8 -> 5.0.9 for GHSA-rgw5-rvv9-x895: unbounded intermediate
+  # arrays still allow the DoS that CVE-2026-14257 was meant to stop, so 5.0.8 is
+  # no longer sufficient. Same major, so the minimatch analysis above still holds.
+  brace-expansion: '>=5.0.9'
   # GHSA-mh99-v99m-4gvg is only fixed in brace-expansion >=5.0.8, but 5.x exports
   # an object ({ expand, EXPANSION_MAX* }) where minimatch@9 does
   # `import expand from 'brace-expansion'` and CALLS it — so pinning 5.x under
@@ -48,12 +63,16 @@ overrides:
   # >=5.0.8 floor apply. (glob@10 -> minimatch@9 was the last vulnerable path:
   # @vitest/coverage-istanbul > test-exclude > glob > minimatch.)
   glob@10>minimatch: '>=10.2.5'
-  postcss: '>=8.5.18'
+  # Floor raised 8.5.18 -> 8.5.23 for the incomplete-fix follow-up to
+  # GHSA-6g55-p6wh-862q: an attacker-controlled sourceMappingURL still reads
+  # arbitrary .map files when `from` is unset. package.json declares 8.5.24 to match,
+  # so Dependabot stops flagging the manifest as vulnerable.
+  postcss: '>=8.5.23'
   ws: '>=8.20.1'
   qs: '>=6.15.2'
   uuid: 11.1.1
   sharp: '>=0.35.0'
-  brace-expansion@<=5.0.7: '>=5.0.8'
+  brace-expansion@<=5.0.8: '>=5.0.9'
   # serialize-javascript GHSA-5c6j-r48x-rmvq (RCE via RegExp.flags/Date, patched
   # 7.0.3) and GHSA-qj8w-gfj5-8c6v (CPU-exhaustion DoS, patched 7.0.5). Reached by
   # one path only: e2e-tauri's @wdio/mocha-framework > mocha > serialize-javascript.
