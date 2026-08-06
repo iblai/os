@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.114.2](https://github.com/iblai/os/compare/v0.114.1...v0.114.2) (2026-08-06)
+
+### Bug Fixes
+
+* **chat:** copy to clipboard when an embedder withholds the permission ([334bd3b](https://github.com/iblai/os/commit/334bd3bbc2b8b16aaab98a4343cedf71c1316e40))
+
 ## [0.114.1](https://github.com/iblai/os/compare/v0.114.0...v0.114.1) (2026-08-06)
 
 ### Bug Fixes
