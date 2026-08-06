@@ -4,84 +4,84 @@
 
 ### Features
 
-* **pr-e2e:** call iblai/pr-e2e-action@v1 instead of an in-repo copy ([4cc340f](https://github.com/iblai/os/commit/4cc340f886c9747d838228fd1d6de6f066138fc9))
+- **pr-e2e:** call iblai/pr-e2e-action@v1 instead of an in-repo copy ([4cc340f](https://github.com/iblai/os/commit/4cc340f886c9747d838228fd1d6de6f066138fc9))
 
 ### Bug Fixes
 
-* **pr-e2e:** keep cancellation cleanup as a job step ([59e00de](https://github.com/iblai/os/commit/59e00de60b6ef8eee693af063fba5bc2c531fcee)), closes [os#394](https://github.com/iblai/os/issues/394)
+- **pr-e2e:** keep cancellation cleanup as a job step ([59e00de](https://github.com/iblai/os/commit/59e00de60b6ef8eee693af063fba5bc2c531fcee)), closes [os#394](https://github.com/iblai/os/issues/394)
 
 ## [0.111.8](https://github.com/iblai/os/compare/v0.111.7...v0.111.8) (2026-08-04)
 
 ### Bug Fixes
 
-* **pr-e2e:** never infer which runner executes the dispatched run ([9dcc8e6](https://github.com/iblai/os/commit/9dcc8e66e3dd12c601a069722e65dd135db89497)), closes [os#407](https://github.com/iblai/os/issues/407) [os#407](https://github.com/iblai/os/issues/407)
+- **pr-e2e:** never infer which runner executes the dispatched run ([9dcc8e6](https://github.com/iblai/os/commit/9dcc8e66e3dd12c601a069722e65dd135db89497)), closes [os#407](https://github.com/iblai/os/issues/407) [os#407](https://github.com/iblai/os/issues/407)
 
 ## [0.111.7](https://github.com/iblai/os/compare/v0.111.6...v0.111.7) (2026-08-04)
 
 ### Bug Fixes
 
-* avoid blocking the app with opencode extraction ([0c9696a](https://github.com/iblai/os/commit/0c9696afb6b354a088e75e2a31cc9224c681455d))
+- avoid blocking the app with opencode extraction ([0c9696a](https://github.com/iblai/os/commit/0c9696afb6b354a088e75e2a31cc9224c681455d))
 
 ### Chores
 
-* **tauri:** release app-v0.95.10 ([eeab9a2](https://github.com/iblai/os/commit/eeab9a24fa250cafb4c1c2d85b75e95ff0e0016a))
+- **tauri:** release app-v0.95.10 ([eeab9a2](https://github.com/iblai/os/commit/eeab9a24fa250cafb4c1c2d85b75e95ff0e0016a))
 
 ## [0.111.6](https://github.com/iblai/os/compare/v0.111.5...v0.111.6) (2026-08-04)
 
 ### Bug Fixes
 
-* **e2e:** match Screen Share heading on its post-2.2.10 label ([e23abd9](https://github.com/iblai/os/commit/e23abd903443e6f84f4c6411268246f1b5ef82cf))
-* **security:** raise floors for four high-severity advisories ([3c02a62](https://github.com/iblai/os/commit/3c02a6231a6b6a93b79e4c246530959e988cb94b))
+- **e2e:** match Screen Share heading on its post-2.2.10 label ([e23abd9](https://github.com/iblai/os/commit/e23abd903443e6f84f4c6411268246f1b5ef82cf))
+- **security:** raise floors for four high-severity advisories ([3c02a62](https://github.com/iblai/os/commit/3c02a6231a6b6a93b79e4c246530959e988cb94b))
 
 ### Chores
 
-* **deps:** bump @iblai/iblai-js to 2.3.2 ([32b703a](https://github.com/iblai/os/commit/32b703acfeb71245dc31e1fdb093c256821d2826))
+- **deps:** bump @iblai/iblai-js to 2.3.2 ([32b703a](https://github.com/iblai/os/commit/32b703acfeb71245dc31e1fdb093c256821d2826))
 
 ### Documentation
 
-* **e2e:** record category combobox coverage ([1be520d](https://github.com/iblai/os/commit/1be520df68e1b5390880ea49a4a332e55517d405))
+- **e2e:** record category combobox coverage ([1be520d](https://github.com/iblai/os/commit/1be520df68e1b5390880ea49a4a332e55517d405))
 
 ### Tests
 
-* **e2e:** assert reasoning/tool-call order in the DOM, not by pixel ([753c7a3](https://github.com/iblai/os/commit/753c7a3bf05cd471703f0bb84bdd7f76eacca83b))
-* **e2e:** cover the Edit Agent category combobox ([e57a497](https://github.com/iblai/os/commit/e57a497a09fd0c97b7d523eb7ba6faa6ae6f6856))
-* **e2e:** make EditMentorPage.open() tolerate an already-open dialog ([7f81930](https://github.com/iblai/os/commit/7f81930de63450ad52bc32a4b80353fee26c58dc))
-* **e2e:** match Recent chat rows by session id, not sent text ([d34f14e](https://github.com/iblai/os/commit/d34f14e7f905f9414d28d51e6e173de18bf49fc3))
+- **e2e:** assert reasoning/tool-call order in the DOM, not by pixel ([753c7a3](https://github.com/iblai/os/commit/753c7a3bf05cd471703f0bb84bdd7f76eacca83b))
+- **e2e:** cover the Edit Agent category combobox ([e57a497](https://github.com/iblai/os/commit/e57a497a09fd0c97b7d523eb7ba6faa6ae6f6856))
+- **e2e:** make EditMentorPage.open() tolerate an already-open dialog ([7f81930](https://github.com/iblai/os/commit/7f81930de63450ad52bc32a4b80353fee26c58dc))
+- **e2e:** match Recent chat rows by session id, not sent text ([d34f14e](https://github.com/iblai/os/commit/d34f14e7f905f9414d28d51e6e173de18bf49fc3))
 
 ## [0.111.5](https://github.com/iblai/os/compare/v0.111.4...v0.111.5) (2026-08-04)
 
 ### Bug Fixes
 
-* **pr-e2e:** a run that tested nothing must not erase a run that did ([25e4f75](https://github.com/iblai/os/commit/25e4f751791c3fefd53cd64d0dfbc0a56d1fb01e)), closes [os#405](https://github.com/iblai/os/issues/405) [os#405](https://github.com/iblai/os/issues/405) [#405](https://github.com/iblai/os/issues/405)
-* **pr-e2e:** never lose a report — fix the dispatch live-lock and the summary ([da56673](https://github.com/iblai/os/commit/da56673561c34d8bb558b765555f9bf844806b76)), closes [os#405](https://github.com/iblai/os/issues/405) [os#405](https://github.com/iblai/os/issues/405) [iblai/iblai-deploy-ops#26](https://github.com/iblai/iblai-deploy-ops/issues/26)
+- **pr-e2e:** a run that tested nothing must not erase a run that did ([25e4f75](https://github.com/iblai/os/commit/25e4f751791c3fefd53cd64d0dfbc0a56d1fb01e)), closes [os#405](https://github.com/iblai/os/issues/405) [os#405](https://github.com/iblai/os/issues/405) [#405](https://github.com/iblai/os/issues/405)
+- **pr-e2e:** never lose a report — fix the dispatch live-lock and the summary ([da56673](https://github.com/iblai/os/commit/da56673561c34d8bb558b765555f9bf844806b76)), closes [os#405](https://github.com/iblai/os/issues/405) [os#405](https://github.com/iblai/os/issues/405) [iblai/iblai-deploy-ops#26](https://github.com/iblai/iblai-deploy-ops/issues/26)
 
 ## [0.111.4](https://github.com/iblai/os/compare/v0.111.3...v0.111.4) (2026-08-04)
 
 ### Chores
 
-* **tauri:** release app-v0.95.9 ([15d8012](https://github.com/iblai/os/commit/15d8012b78533eedc62df5d167084c08a3b22f65))
+- **tauri:** release app-v0.95.9 ([15d8012](https://github.com/iblai/os/commit/15d8012b78533eedc62df5d167084c08a3b22f65))
 
 ## [0.111.3](https://github.com/iblai/os/compare/v0.111.2...v0.111.3) (2026-08-04)
 
 ### Chores
 
-* **tauri:** release app-v0.95.8 ([e6e6a7f](https://github.com/iblai/os/commit/e6e6a7f284215c22ff9b27da76bb95f9619e36e1))
+- **tauri:** release app-v0.95.8 ([e6e6a7f](https://github.com/iblai/os/commit/e6e6a7f284215c22ff9b27da76bb95f9619e36e1))
 
 ### Documentation
 
-* **readme:** point macOS/Windows download buttons at app-v0.95.8 ([4824550](https://github.com/iblai/os/commit/482455029e1d1dd000482699034263e7309d1a3f))
+- **readme:** point macOS/Windows download buttons at app-v0.95.8 ([4824550](https://github.com/iblai/os/commit/482455029e1d1dd000482699034263e7309d1a3f))
 
 ## [0.111.2](https://github.com/iblai/os/compare/v0.111.1...v0.111.2) (2026-08-04)
 
 ### Chores
 
-* **macos:** rename app ibl.ai -> iblai and drop obsolete DMG step ([599f189](https://github.com/iblai/os/commit/599f18939e767ea5cadefd69abed5630ce67ff9a))
+- **macos:** rename app ibl.ai -> iblai and drop obsolete DMG step ([599f189](https://github.com/iblai/os/commit/599f18939e767ea5cadefd69abed5630ce67ff9a))
 
 ## [0.111.1](https://github.com/iblai/os/compare/v0.111.0...v0.111.1) (2026-08-04)
 
 ### Bug Fixes
 
-* **ci:** import Developer ID cert so DMG re-master can re-sign ([4dc3ce8](https://github.com/iblai/os/commit/4dc3ce82caf4b86939598c0a1a6e033212141cd8))
+- **ci:** import Developer ID cert so DMG re-master can re-sign ([4dc3ce8](https://github.com/iblai/os/commit/4dc3ce82caf4b86939598c0a1a6e033212141cd8))
 
 ## [0.111.0](https://github.com/iblai/os/compare/v0.110.1...v0.111.0) (2026-08-03)
 
