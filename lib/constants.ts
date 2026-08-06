@@ -62,6 +62,7 @@ export const MODALS = {
       advanced_js: 'advanced_js',
       sandbox: 'sandbox',
       skills: 'skills',
+      grader: 'grader',
       audit_log: 'audit_log',
       voice: 'voice',
       screenshare: 'screenshare',
