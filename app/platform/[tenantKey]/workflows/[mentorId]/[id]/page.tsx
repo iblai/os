@@ -268,11 +268,14 @@ export default function WorkflowDetailPage() {
     [nodeTypesData],
   );
 
+  // Never overwrite an in-progress rename with a cache refetch
+  const syncedNameRef = useRef<string | null>(null);
   useEffect(() => {
-    if (workflow) {
-      setWorkflowName(workflow.name);
-    }
-  }, [workflow]);
+    if (!workflow || isEditingName) return;
+    if (syncedNameRef.current === workflow.name) return;
+    syncedNameRef.current = workflow.name;
+    setWorkflowName(workflow.name);
+  }, [workflow, isEditingName]);
 
   // Track initial workflow data to compare against for auto-save
   const initialWorkflowDataRef = useRef<string | null>(null);
