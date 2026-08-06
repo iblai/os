@@ -1,6 +1,6 @@
 {
   "name": "ibl-web-nextjs-mentor-spa",
-  "version": "0.114.0",
+  "version": "0.116.0",
   "private": false,
   "packageManager": "pnpm@10.11.1",
   "engines": {
@@ -190,7 +190,7 @@
     "husky": "9.1.7",
     "jsdom": "26.1.0",
     "lint-staged": "16.4.0",
-    "postcss": "8.5.10",
+    "postcss": "8.5.24",
     "postcss-loader": "8.2.1",
     "prettier": "3.5.3",
     "prettier-plugin-tailwindcss": "0.6.11",
