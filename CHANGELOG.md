@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.115.0](https://github.com/iblai/os/compare/v0.114.2...v0.115.0) (2026-08-06)
+
+### Features
+
+* **csp:** allow *.syr.edu as a partner host (connect-src, frame-src) ([ee7d1c6](https://github.com/iblai/os/commit/ee7d1c6fabc3cbcf3fc51b6e308b27579799da01))
+
 ## [0.114.2](https://github.com/iblai/os/compare/v0.114.1...v0.114.2) (2026-08-06)
 
 ### Bug Fixes
