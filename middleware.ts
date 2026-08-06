@@ -105,6 +105,12 @@ function apiBaseOrigin(): string[] {
 function buildCsp(nonce: string): string {
   const extra = apiBaseOrigin();
   const partners = partnerHosts();
+  // connect-src also needs the wss:// origin of each https:// partner host —
+  // browsers don't treat an https:// source as covering wss:// to the same host
+  // (e.g. Syracuse's wss://asgi.data.ai.syr.edu needs wss://*.syr.edu).
+  const partnerWs = partners
+    .filter((h) => h.startsWith('https://'))
+    .map((h) => `wss://${h.slice('https://'.length)}`);
 
   const directives: Record<string, string[]> = {
     'default-src': ["'self'"],
@@ -134,6 +140,7 @@ function buildCsp(nonce: string): string {
       ...STRIPE,
       ...AWS_S3,
       ...partners,
+      ...partnerWs,
       ...extra,
     ],
     // Sentry Session Replay creates a compression worker from a blob: URL.
