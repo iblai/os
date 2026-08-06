@@ -3784,9 +3784,49 @@
       ]
     },
     {
+      "id": "analytics-navbar-parity",
+      "name": "Analytics Navbar Parity",
+      "spec": "65-analytics-navbar-parity.spec.ts",
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "anp-01",
+          "description": "Admin on the analytics page sees the mentor dropdown trigger (not static Avatar+name text), and it opens the categorized menu with New Chat and Settings items (issue #2248)",
+          "status": "covered"
+        },
+        {
+          "id": "anp-02",
+          "description": "Full navbar parity: LLM Model Selector and Private Mode chip are both visible on /analytics, matching the regular chat page baseline captured in the same test (isOnChatPage no longer excludes /analytics)",
+          "status": "covered"
+        },
+        {
+          "id": "anp-03",
+          "description": "REGRESSION GUARD: clicking New Chat from the analytics navbar dropdown routes back to the bare chat route (no /analytics suffix) and starts a fresh, empty session — previously a silent no-op since RemoteEvents.newChat has no listener off the chat route",
+          "status": "covered"
+        },
+        {
+          "id": "anp-04",
+          "description": "Fix holds on nested analytics routes: /analytics/users still shows the mentor dropdown and LLM Model Selector",
+          "status": "covered"
+        },
+        {
+          "id": "anp-05",
+          "description": "Admin flipped to User (student) mode does not see the LLM Model Selector on the analytics page (isOnChatPage && isAdmin && !userIsStudent gate)",
+          "status": "covered"
+        },
+        {
+          "id": "anp-06",
+          "description": "/prompt-gallery regression guard could not be built E2E: no page.tsx exists for that route anywhere in the app and no code path (Link/router.push) ever navigates there — it is a client-state modal, not a URL. Direct browser navigation to .../prompt-gallery renders the app's root not-found.tsx with the <nav> element absent entirely, so isPromptGalleryPage never runs against real DOM. Unit-covered instead in nav-bar/__tests__/index.test.tsx.",
+          "status": "not-reproducible"
+        }
+      ]
+    },
+    {
       "id": "agent-skills",
       "name": "Agent Skills",
-      "spec": "65-agent-skills.spec.ts",
+      "spec": "66-agent-skills.spec.ts",
       "sourceFiles": [
         "hooks/use-mentor-segments.ts",
         "components/modals/edit-mentor-modal/tabs/skills-tab.tsx",
@@ -3883,46 +3923,6 @@
           "id": "slash-15",
           "description": "NON-ADMIN: with the realistic student permission shape (assignments endpoint 403s, student-readable catalog returns mentor-private skills) the \"/\" picker still offers skills; selecting completes the token and sending the invocation message receives a live AI reply",
           "status": "covered"
-        }
-      ]
-    },
-    {
-      "id": "analytics-navbar-parity",
-      "name": "Analytics Navbar Parity",
-      "spec": "65-analytics-navbar-parity.spec.ts",
-      "sourceFiles": [
-        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx"
-      ],
-      "checkpoints": [
-        {
-          "id": "anp-01",
-          "description": "Admin on the analytics page sees the mentor dropdown trigger (not static Avatar+name text), and it opens the categorized menu with New Chat and Settings items (issue #2248)",
-          "status": "covered"
-        },
-        {
-          "id": "anp-02",
-          "description": "Full navbar parity: LLM Model Selector and Private Mode chip are both visible on /analytics, matching the regular chat page baseline captured in the same test (isOnChatPage no longer excludes /analytics)",
-          "status": "covered"
-        },
-        {
-          "id": "anp-03",
-          "description": "REGRESSION GUARD: clicking New Chat from the analytics navbar dropdown routes back to the bare chat route (no /analytics suffix) and starts a fresh, empty session — previously a silent no-op since RemoteEvents.newChat has no listener off the chat route",
-          "status": "covered"
-        },
-        {
-          "id": "anp-04",
-          "description": "Fix holds on nested analytics routes: /analytics/users still shows the mentor dropdown and LLM Model Selector",
-          "status": "covered"
-        },
-        {
-          "id": "anp-05",
-          "description": "Admin flipped to User (student) mode does not see the LLM Model Selector on the analytics page (isOnChatPage && isAdmin && !userIsStudent gate)",
-          "status": "covered"
-        },
-        {
-          "id": "anp-06",
-          "description": "/prompt-gallery regression guard could not be built E2E: no page.tsx exists for that route anywhere in the app and no code path (Link/router.push) ever navigates there — it is a client-state modal, not a URL. Direct browser navigation to .../prompt-gallery renders the app's root not-found.tsx with the <nav> element absent entirely, so isPromptGalleryPage never runs against real DOM. Unit-covered instead in nav-bar/__tests__/index.test.tsx.",
-          "status": "not-reproducible"
         }
       ]
     }
