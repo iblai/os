@@ -17,9 +17,11 @@ import { GraderTab } from '../page-objects/edit-mentor/grader.tab';
  * locally in `components/modals/edit-mentor-modal/tabs/grader-tab.tsx`. It
  * exposes an in-tab "Grading" capability toggle (via the shared
  * `CapabilityGate` component, same pattern as Voice / Screen Share / Memory /
- * Privacy / LTI) plus, once enabled, two gated sub-tabs: "Grading setup"
- * (config form) and "Rubric" (criteria table, modal-based add/edit/delete
- * behind each row's three-dots menu).
+ * Privacy / LTI) plus, once enabled, three gated sub-tabs: "Grading Setup"
+ * (config form), "Rubric" (criteria table, modal-based add/edit/delete
+ * behind each row's three-dots menu), and "Results" (grade-results table
+ * with filters and a per-row Override affordance that pushes grade
+ * overrides back to the LMS).
  *
  * All interactions go through the `GraderTab` page object
  * (`e2e/page-objects/edit-mentor/grader.tab.ts`), which delegates to the
@@ -28,25 +30,33 @@ import { GraderTab } from '../page-objects/edit-mentor/grader.tab';
  * `switchToGraderSubTab`, `isGradingEnabled`, `setGradingEnabled`,
  * `saveGraderConfig`, `addGraderCriterion`, `editGraderCriterion`,
  * `deleteGraderCriterion`, `expectLastCriterionDeleteDisabled`,
- * `expectGraderMisconfiguredWarning`, `expectGraderTotalPoints`, etc.) —
- * mirrors the `VoiceTab` / `EvaluationTab` pattern. Only the handful of
- * concerns the helper package doesn't cover (the shared `CapabilityGate`
- * wrapper's `data-enabled`, the sub-tab pills themselves, the cancel-delete
- * path, row lookups by name) stay hand-rolled in the page object, documented
+ * `expectGraderMisconfiguredWarning`, `expectGraderTotalPoints`,
+ * `filterGradeResultsByEmail`, `expectGradeResultRow`, `overrideGradeResult`,
+ * `clearGradeResultOverride`, etc.) — mirrors the `VoiceTab` /
+ * `EvaluationTab` pattern. Only the handful of concerns the helper package
+ * doesn't cover (the shared `CapabilityGate` wrapper's `data-enabled`, the
+ * sub-tab pills themselves, the cancel-delete path, row lookups by name, the
+ * Results empty-state copy) stay hand-rolled in the page object, documented
  * there as such.
  *
  * ── RBAC ────────────────────────────────────────────────────────────────
- * The backend does not expose the grader RBAC permissions yet
- * (`/mentors/{id}/graderconfigurations/#read|action|write`,
- * `/mentors/{id}/gradercriteria/#action|write|delete`), so the published
- * SDK build ships the grader tab without RBAC wiring (its RBAC props were
- * removed until the permissions land) and the host gates the whole tab to
- * platform admins via the segment's `userTypes` instead
- * (`hooks/use-mentor-segments.ts`, mirroring Tasks / LTI). When the backend
- * permissions land, the SDK re-adds its in-tab checks and the host gates
- * the segment on `graderconfigurations/#read` — see GRD-13 for what
- * becomes testable then. No checkpoint here drives a denied-permission
- * state, since there's no fixture in this environment to seed one.
+ * The backend now exposes grader permissions as flat actions on the mentor
+ * resource (`/mentors/{id}/#read_grader_config`, `#write_grader_config`,
+ * `#create_grader_config`, `#view_grader_criteria`, `#create_grader_criteria`,
+ * `#write_grader_criteria`, `#delete_grader_criteria`, `#view_grade_results`,
+ * `#override_grade_results`) — the same `/mentors/{id}/` RBAC entry every
+ * other mentor-scoped check already fetches. `useGrader` checks these with a
+ * graceful fallback (enforcement only kicks in once the RBAC permission tree
+ * actually contains an entry for that mentor); denied `read_grader_config`
+ * renders the tab's own denied empty state, and denied write/create/delete/
+ * override actions omit the matching affordance rather than erroring. The
+ * host additionally gates the whole segment on `read_grader_config`
+ * (`hooks/use-mentor-segments.ts`) with the standard `[FREE_TRIAL, ADMIN]`
+ * `userTypes` set every mainstream Edit Agent tab uses. This repo's e2e
+ * admin account is assumed to hold full permissions on mentors it owns
+ * (consistent with every other RBAC-gated tab in this suite) — no
+ * checkpoint here drives a denied-permission state, since there's no
+ * fixture in this environment to seed one; see GRD-14.
  *
  * ── Isolation strategy ─────────────────────────────────────────────────────
  * Unlike Privacy (journey 45), which safely shares the account's
@@ -98,9 +108,9 @@ test.describe('Journey 66: Mentor Grader Tab', () => {
   });
 
   // GRD-01: Grader tab is visible in the modal sidebar (Configurations
-  // category, always mounted for a platform admin — the segment is
-  // admin-only via userTypes until the backend grader RBAC lands, see the
-  // RBAC note above).
+  // category, always mounted for an admin with standard mentor-owner
+  // permissions — the segment is additionally gated on
+  // read_grader_config, see the RBAC note above).
   test('admin sees the Grader tab label in the sidebar', async ({
     editMentorPage,
   }) => {
@@ -128,10 +138,11 @@ test.describe('Journey 66: Mentor Grader Tab', () => {
     await editMentorPage.close();
   });
 
-  // GRD-03: The gated content splits into two sub-tabs — "Grading setup"
-  // and "Rubric" — both visible, and switching between them renders the
-  // matching section.
-  test('admin sees the Grading setup and Rubric sub-tabs and can switch between them', async ({
+  // GRD-03: The gated content splits into three sub-tabs — "Grading Setup",
+  // "Rubric", and "Results" — all visible, and switching between Grading
+  // setup and Rubric renders the matching section (Results sub-tab is
+  // covered separately in GRD-04, including its empty state).
+  test('admin sees the Grading setup, Rubric, and Results sub-tabs and can switch between them', async ({
     editMentorPage,
   }) => {
     const { grader } = editMentorPage;
@@ -144,6 +155,7 @@ test.describe('Journey 66: Mentor Grader Tab', () => {
     await expect(grader.subTabs).toBeVisible({ timeout: 10_000 });
     await expect(grader.setupSubTab).toBeVisible({ timeout: 5_000 });
     await expect(grader.rubricSubTab).toBeVisible({ timeout: 5_000 });
+    await expect(grader.resultsSubTab).toBeVisible({ timeout: 5_000 });
 
     await grader.switchToSubTab('rubric');
     await expect(
@@ -162,7 +174,27 @@ test.describe('Journey 66: Mentor Grader Tab', () => {
     await editMentorPage.close();
   });
 
-  // GRD-04: A freshly created mentor has no "Grading" tool attached, so the
+  // GRD-04: The Results sub-tab renders its own grade-results table and, on
+  // a mentor with no graded submissions yet, shows the zero-filters empty
+  // state ("No grades yet…"). Doesn't depend on a saved config or rubric —
+  // ResultsSection queries grade results directly, independent of hasConfig.
+  test('admin sees the Results sub-tab and its empty state on a fresh mentor', async ({
+    editMentorPage,
+  }) => {
+    const { grader } = editMentorPage;
+    const enabled = await grader.tryEnableGrading();
+    test.skip(
+      !enabled,
+      'Tenant tool catalogue has no "Grading" tool to attach — the Results sub-tab only renders once Grading is on.',
+    );
+
+    await expect(grader.resultsSubTab).toBeVisible({ timeout: 10_000 });
+    await grader.expectResultsEmpty({ filtered: false });
+
+    await editMentorPage.close();
+  });
+
+  // GRD-05: A freshly created mentor has no "Grading" tool attached, so the
   // capability toggle defaults OFF, the gated content is grayed
   // (data-enabled="false"), and the off-hint is shown.
   test('on a fresh mentor, the Grading capability defaults to OFF and the gated content is grayed', async ({
@@ -179,7 +211,7 @@ test.describe('Journey 66: Mentor Grader Tab', () => {
     await editMentorPage.close();
   });
 
-  // GRD-05: Enabling the toggle flips it on and ungates the content; since
+  // GRD-06: Enabling the toggle flips it on and ungates the content; since
   // neither a config nor any criteria exist yet, the "no config yet"
   // misconfigured warning is shown (not the "no criteria" one — that only
   // appears once a config exists).
@@ -206,7 +238,7 @@ test.describe('Journey 66: Mentor Grader Tab', () => {
     await editMentorPage.close();
   });
 
-  // GRD-06: Filling in and saving the Grading setup form clears the "no
+  // GRD-07: Filling in and saving the Grading setup form clears the "no
   // config" warning and replaces it with the "no criteria" warning (rubric
   // is still empty).
   test('admin saves the grading setup and the warning switches from "no config" to "no criteria"', async ({
@@ -231,7 +263,7 @@ test.describe('Journey 66: Mentor Grader Tab', () => {
     await editMentorPage.close();
   });
 
-  // GRD-07: With a saved config, admin adds a rubric criterion (through the
+  // GRD-08: With a saved config, admin adds a rubric criterion (through the
   // Add-criterion modal) — it appears in the criteria list, the
   // misconfigured warning clears, and the running total reflects its
   // points.
@@ -260,7 +292,7 @@ test.describe('Journey 66: Mentor Grader Tab', () => {
     await editMentorPage.close();
   });
 
-  // GRD-08: Admin edits an existing criterion's name and points via the
+  // GRD-09: Admin edits an existing criterion's name and points via the
   // row's three-dots menu → Edit modal, and the row + running total reflect
   // the update.
   test('admin edits a rubric criterion via the row menu and modal', async ({
@@ -299,7 +331,7 @@ test.describe('Journey 66: Mentor Grader Tab', () => {
     await editMentorPage.close();
   });
 
-  // GRD-09: With two criteria present, deleting one is allowed (not the last
+  // GRD-10: With two criteria present, deleting one is allowed (not the last
   // remaining one) — the row's three-dots menu → Delete opens a confirm
   // modal, and cancelling it leaves the row untouched.
   test('admin cancels a delete confirmation, then deletes a non-last criterion', async ({
@@ -338,7 +370,7 @@ test.describe('Journey 66: Mentor Grader Tab', () => {
     await editMentorPage.close();
   });
 
-  // GRD-10: The backend refuses to delete the LAST remaining criterion — the
+  // GRD-11: The backend refuses to delete the LAST remaining criterion — the
   // row menu's Delete item is disabled (aria-disabled) with an explanatory
   // hint shown, rather than letting the request fail.
   test('deleting the last remaining criterion is refused', async ({
@@ -366,7 +398,7 @@ test.describe('Journey 66: Mentor Grader Tab', () => {
     await editMentorPage.close();
   });
 
-  // GRD-11: Turning the Grading capability OFF grays the content but
+  // GRD-12: Turning the Grading capability OFF grays the content but
   // preserves the saved config and rubric — turning it back ON re-reveals
   // the same criterion untouched (no delete endpoint for either when the
   // tool is detached).
@@ -421,16 +453,16 @@ test.describe('Journey 66: Mentor Grader Tab', () => {
   });
 });
 
-// ── Non-admin: Grader tab must stay unreachable ──────────────────────────
+// GRD-13 — Non-admin: Grader tab must stay unreachable ────────────────────
 //
-// The `grader` segment is platform-admin-only via `userTypes: [ADMIN]`
-// (mirroring Tasks / LTI) until the backend grader RBAC resources land — a
-// plain non-admin (student) account cannot open the "Selected agent"
-// dropdown's Settings/Modify item at all (see journey 06's mgmt-02), so the
-// tab is unreachable in practice. Mirrors journey 47/63's non-admin pattern:
-// the dropdown-menu-item check alone already proves this for the common
-// case; the fallback branch below covers any environment where a non-admin
-// CAN somehow open the dialog.
+// The `grader` segment uses the standard `[FREE_TRIAL, ADMIN]` userTypes set
+// every mainstream Edit Agent tab uses (plus the `read_grader_config` RBAC
+// resource gate) — a plain non-admin (student) account cannot open the
+// "Selected agent" dropdown's Settings/Modify item at all (see journey 06's
+// mgmt-02), so the tab is unreachable in practice. Mirrors journey 47/63's
+// non-admin pattern: the dropdown-menu-item check alone already proves this
+// for the common case; the fallback branch below covers any environment
+// where a non-admin CAN somehow open the dialog.
 test.describe('Journey 66: Mentor Grader Tab — Non-Admin', () => {
   test('non-admin does not see the Grader tab in the Edit Mentor modal', async ({
     nonadminPage,
@@ -476,20 +508,36 @@ test.describe('Journey 66: Mentor Grader Tab — Non-Admin', () => {
   });
 });
 
-// GRD-13 (documentation checkpoint, not-reproducible in this environment):
-// the grader tab's fine-grained RBAC gating — denied
-// `graderconfigurations/#read` renders the tab's own denied empty state;
-// denied `write`/`action`/`delete` on the config or criteria resources
-// omits the Save/Add/Edit/Delete affordances rather than erroring
-// (conditionally rendered, not merely disabled). The backend does not
-// expose the grader permissions yet, so the published SDK build ships the
-// tab without RBAC wiring and the host gates the segment to admins via
-// `userTypes` instead — the RBAC paths are therefore doubly unreachable
-// today: no backend permissions to seed AND no checks wired in this build.
-// When the permissions land (SDK re-adds its checks, host gates the
-// segment on `graderconfigurations/#read`), exercising them will still
-// require a fixture that seeds a restricted RBAC permission object for the
-// e2e admin account, which this environment lacks (consistent with every
-// other RBAC-gated tab in this suite, e.g. journey 24's mem-06, journey
-// 6's mgmt-12/13/14). See `e2e/coverage.json`'s `grd-13` entry
-// (status: not-reproducible) for the tracked record.
+// GRD-14 (documentation checkpoint, not-reproducible in this environment):
+// the grader tab's fine-grained RBAC gating is real — the backend exposes
+// flat actions on the mentor resource (read_grader_config,
+// write_grader_config, create_grader_config, view_grader_criteria,
+// create_grader_criteria, write_grader_criteria, delete_grader_criteria,
+// view_grade_results, override_grade_results) and useGrader checks them via
+// `/mentors/{id}/#<action>` with a graceful fallback (enforcement only
+// kicks in once the RBAC permission tree actually contains an entry for
+// that mentor — otherwise every action stays allowed). Denied
+// read_grader_config (or every view action denied at once) renders the
+// tab's own denied empty state and drops that sub-tab's trigger entirely;
+// denied write/create/delete/override actions omit the matching
+// Save/Add/Edit/Delete/Override affordance rather than erroring
+// (conditionally rendered, not merely disabled). Exercising either path
+// requires seeding a restricted RBAC permission object for the e2e admin
+// account on one of its own mentors, which this environment has no fixture
+// for — every other checkpoint in this file assumes (consistent with every
+// other RBAC-gated tab in this suite, e.g. journey 24's mem-06, journey 6's
+// mgmt-12/13/14) that the e2e admin holds full permissions on mentors it
+// owns. See `e2e/coverage.json`'s `grd-14` entry (status: not-reproducible)
+// for the tracked record.
+
+// GRD-15 (documentation checkpoint, not-reproducible in this environment):
+// the Results sub-tab's grade-override flow (`GraderTab.overrideResult` /
+// `clearResultOverride`, which PATCH a learner's grade override back to the
+// LMS through the grade-results endpoint) requires a real graded submission
+// to already exist. Grading only happens when a learner actually chats with
+// the agent and the agent's own LLM-driven grading run completes against a
+// live LMS-connected runtime — this e2e environment has no fixture to
+// produce a graded submission on demand. GRD-04 already covers the one
+// Results-tab state this environment CAN reliably produce: the empty table
+// on a mentor nothing has graded yet. See `e2e/coverage.json`'s `grd-15`
+// entry (status: not-reproducible) for the tracked record.

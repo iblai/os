@@ -2,10 +2,10 @@
   "version": 2,
   "lastUpdated": "2026-08-05",
   "summary": {
-    "totalCheckpoints": 612,
-    "coveredCheckpoints": 582,
+    "totalCheckpoints": 614,
+    "coveredCheckpoints": 583,
     "deprecatedCheckpoints": 12,
-    "notReproducibleCheckpoints": 10,
+    "notReproducibleCheckpoints": 11,
     "pendingCheckpoints": 8,
     "percent": 100,
     "totalJourneys": 68,
@@ -3847,57 +3847,67 @@
         },
         {
           "id": "grd-03",
-          "description": "Gated content splits into the Grading setup and Rubric sub-tabs — both pills are visible and switching between them renders the matching section (grader-setup-section / grader-criteria-section)",
+          "description": "Gated content splits into the Grading setup, Rubric, and Results sub-tabs — all three pills are visible and switching between Grading setup and Rubric renders the matching section (grader-setup-section / grader-criteria-section)",
           "status": "covered"
         },
         {
           "id": "grd-04",
-          "description": "On a freshly created mentor, the Grading capability toggle defaults OFF and the gated config/rubric content is grayed (capability-gate-content data-enabled=false) with the off-hint shown",
+          "description": "The Results sub-tab renders its own grade-results table and shows the zero-filters empty state (\"No grades yet…\") on a mentor with no graded submissions yet; independent of a saved config or rubric",
           "status": "covered"
         },
         {
           "id": "grd-05",
-          "description": "Admin enables the Grading capability toggle and sees the \"not set up yet\" misconfigured warning (no config saved yet); gracefully skips if the tenant's tool catalogue has no \"Grading\" tool to attach",
+          "description": "On a freshly created mentor, the Grading capability toggle defaults OFF and the gated config/rubric/results content is grayed (capability-gate-content data-enabled=false) with the off-hint shown",
           "status": "covered"
         },
         {
           "id": "grd-06",
-          "description": "Admin fills in and saves the Grading setup form (instructions required for Save to enable); the misconfigured warning switches from \"not set up yet\" to \"rubric is empty\"",
+          "description": "Admin enables the Grading capability toggle and sees the \"not set up yet\" misconfigured warning (no config saved yet); gracefully skips if the tenant's tool catalogue has no \"Grading\" tool to attach",
           "status": "covered"
         },
         {
           "id": "grd-07",
-          "description": "Admin adds a rubric criterion via the Add-criterion modal (name, criteria, points) — it appears in the criteria list, the misconfigured warning clears, and the running total reflects its points",
+          "description": "Admin fills in and saves the Grading setup form (instructions required for Save to enable); the misconfigured warning switches from \"not set up yet\" to \"rubric is empty\"",
           "status": "covered"
         },
         {
           "id": "grd-08",
-          "description": "Admin edits an existing criterion's name and points via the row's three-dots menu -> Edit modal, and the row + running total reflect the update",
+          "description": "Admin adds a rubric criterion via the Add-criterion modal (name, criteria, points) — it appears in the criteria list, the misconfigured warning clears, and the running total reflects its points",
           "status": "covered"
         },
         {
           "id": "grd-09",
-          "description": "With two criteria present, admin cancels a delete confirmation modal (row untouched) then deletes a non-last criterion for real via the row menu -> confirm modal",
+          "description": "Admin edits an existing criterion's name and points via the row's three-dots menu -> Edit modal, and the row + running total reflect the update",
           "status": "covered"
         },
         {
           "id": "grd-10",
-          "description": "Deleting the last remaining criterion is refused — the row menu's Delete item is aria-disabled with an explanatory hint shown, rather than allowing the request to fail",
+          "description": "With two criteria present, admin cancels a delete confirmation modal (row untouched) then deletes a non-last criterion for real via the row menu -> confirm modal",
           "status": "covered"
         },
         {
           "id": "grd-11",
-          "description": "Disabling then re-enabling the Grading capability preserves the saved config and rubric (no delete endpoint for either — detaching the tool only grays the content)",
+          "description": "Deleting the last remaining criterion is refused — the row menu's Delete item is aria-disabled with an explanatory hint shown, rather than allowing the request to fail",
           "status": "covered"
         },
         {
           "id": "grd-12",
-          "description": "Non-admin does not see the Grader tab / cannot reach the Edit Agent Settings menu item at all",
+          "description": "Disabling then re-enabling the Grading capability preserves the saved config and rubric (no delete endpoint for either — detaching the tool only grays the content)",
           "status": "covered"
         },
         {
           "id": "grd-13",
-          "description": "The grader tab's fine-grained RBAC gating (denied graderconfigurations/#read renders the denied state; denied write/action/delete on config or criteria resources omits the Save/Add/Edit/Delete affordances) — currently doubly unreachable: the backend does not expose the grader permissions yet and the SDK build ships the tab without RBAC wiring, with the host gating the segment to admins via userTypes instead. When the permissions land, exercising this will still need a fixture seeding a restricted RBAC permission object for the e2e admin, which this environment has no fixture for",
+          "description": "Non-admin does not see the Grader tab / cannot reach the Edit Agent Settings menu item at all",
+          "status": "covered"
+        },
+        {
+          "id": "grd-14",
+          "description": "The grader tab's fine-grained RBAC gating is real (flat actions on the mentor resource: read_grader_config, write_grader_config, create_grader_config, view_grader_criteria, create_grader_criteria, write_grader_criteria, delete_grader_criteria, view_grade_results, override_grade_results, checked via /mentors/{id}/#<action> with a graceful fallback) — denied read_grader_config hides the tab and shows its denied state; denied write/create/delete/override actions omit the matching affordance. Not e2e-reproducible without seeding a restricted RBAC permission object for the e2e admin account, which this environment has no fixture for",
+          "status": "not-reproducible"
+        },
+        {
+          "id": "grd-15",
+          "description": "The Results sub-tab's grade-override flow (override/clear a learner's grade, which PATCHes back to the LMS) requires a real graded submission produced by a live LMS-connected grading run — not reproducible in this e2e environment, which has no fixture to produce one on demand (grd-04 covers the reachable empty-table state)",
           "status": "not-reproducible"
         }
       ]

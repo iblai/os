@@ -343,13 +343,14 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     label: 'Grader',
     labelKey: 'grader',
     icon: ClipboardCheck,
-    // Platform-admin-only until the backend exposes the grader RBAC
-    // resources (graderconfigurations / gradercriteria). No `rbacResource`
-    // set — the userTypes filter alone gates visibility (mirroring Tasks /
-    // LTI). Once the permissions land, re-add
-    // `rbacResource: (id) => `/mentors/${id}/graderconfigurations/#read``
-    // and add the two grader resources to the EditMentorModal RBAC fetch.
-    userTypes: [UserType.ADMIN],
+    // Grader permissions are flat actions on the mentor resource
+    // (`/mentors/{id}/#read_grader_config`, `#write_grader_config`,
+    // `#create_grader_criteria`, …) — the same `/mentors/{id}/` entry every
+    // RBAC fetch already requests, so no extra resource is needed. The tab
+    // is visible iff config read is granted; the SDK's AgentGraderTab gates
+    // the finer-grained save/add/edit/delete/override affordances itself.
+    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
+    rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/#read_grader_config`,
     permissionFieldsCheck: [],
     mentorVisibility: [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
