@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.117.0](https://github.com/iblai/os/compare/v0.116.0...v0.117.0) (2026-08-06)
+
+### Features
+
+* **csp:** make partner CSP hosts configurable via CSP_PARTNER_HOSTS ([bf1b453](https://github.com/iblai/os/commit/bf1b453011ca0f4934ed61785a1490144f863c2c))
+
+### Bug Fixes
+
+* **csp:** allow wss:// partner origins in connect-src ([a058872](https://github.com/iblai/os/commit/a058872b22e4a2e237fd3351a0075f3b1c736d00))
+
 ## [0.116.0](https://github.com/iblai/os/compare/v0.115.0...v0.116.0) (2026-08-06)
 
 ### Features
