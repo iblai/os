@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.114.1](https://github.com/iblai/os/compare/v0.114.0...v0.114.1) (2026-08-06)
+
+### Bug Fixes
+
+* **workflows:** stop auto-save refetch from discarding an inline rename ([2ccd697](https://github.com/iblai/os/commit/2ccd697ab3481c382b71a1a44ac98ea28b45d29c))
+
+### Chores
+
+* **deps:** raise override floors to clear open Dependabot alerts ([53c2d5f](https://github.com/iblai/os/commit/53c2d5f25244e67c0a29640d578c151e2b94e77b)), closes [#368](https://github.com/iblai/os/issues/368)
+
+### Tests
+
+* **workflows:** cover the rename-vs-refetch race in the workflow editor ([c1015b2](https://github.com/iblai/os/commit/c1015b254186156efc70cf30622ebbac0abe6da4))
+
+### CI
+
+* adopt iblai/pr-e2e-action@v1 for the e2e job ([c777df4](https://github.com/iblai/os/commit/c777df41ef2a0e5ea84c44df1ce15177b31107df))
+
 ## [0.114.0](https://github.com/iblai/os/compare/v0.113.1...v0.114.0) (2026-08-05)
 
 ### Features
