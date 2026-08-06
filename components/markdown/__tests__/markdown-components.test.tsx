@@ -315,6 +315,18 @@ describe('Markdown Components', () => {
       expect(ul).toBeTruthy();
       expect(ul?.className).toContain('list-disc');
     });
+
+    it('should tighten its margins when nested inside another list', () => {
+      const { container } = render(
+        <Ul node={{} as any}>
+          <li>Item</li>
+        </Ul>,
+      );
+      const ul = container.querySelector('ul');
+      expect(ul?.className).toContain('my-6');
+      expect(ul?.className).toContain('[ul_&]:my-1');
+      expect(ul?.className).toContain('[ol_&]:my-1');
+    });
   });
 
   describe('ol component', () => {
@@ -329,6 +341,18 @@ describe('Markdown Components', () => {
       const ol = container.querySelector('ol');
       expect(ol).toBeTruthy();
       expect(ol?.className).toContain('list-decimal');
+    });
+
+    it('should tighten its margins when nested inside another list', () => {
+      const { container } = render(
+        <Ol node={{} as any}>
+          <li>Item</li>
+        </Ol>,
+      );
+      const ol = container.querySelector('ol');
+      expect(ol?.className).toContain('my-6');
+      expect(ol?.className).toContain('[ul_&]:my-1');
+      expect(ol?.className).toContain('[ol_&]:my-1');
     });
   });
 

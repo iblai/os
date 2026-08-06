@@ -106,12 +106,22 @@ export const components: Components = {
     />
   ),
 
+  // A nested list keeps the top-level my-6 unless overridden, which detaches
+  // it from its parent item by 24px on each side. The [ul_&]/[ol_&] variants
+  // win on specificity (.x ul beats .x) and collapse the gap only when the
+  // list sits inside another list.
   ul: ({ node, ...props }) => (
-    <ul {...props} className="my-6 ml-6 list-disc [&>li]:mt-2" />
+    <ul
+      {...props}
+      className="my-6 ml-6 list-disc [&>li]:mt-2 [ol_&]:my-1 [ul_&]:my-1"
+    />
   ),
 
   ol: ({ node, ...props }) => (
-    <ol {...props} className="my-6 ml-6 list-decimal [&>li]:mt-2" />
+    <ol
+      {...props}
+      className="my-6 ml-6 list-decimal [&>li]:mt-2 [ol_&]:my-1 [ul_&]:my-1"
+    />
   ),
 
   // The scroll container has to be inside the <li>: a list item that is itself
