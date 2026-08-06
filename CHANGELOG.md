@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.116.0](https://github.com/iblai/os/compare/v0.115.0...v0.116.0) (2026-08-06)
+
+### Features
+
+* **mentor:** adding grading tab for agent settings ([7bb0a79](https://github.com/iblai/os/commit/7bb0a79438c4270311d4964514298a063b64f1d5))
+
+### Bug Fixes
+
+* **mentor:** adding missing translations for static labels ([f24ba1d](https://github.com/iblai/os/commit/f24ba1d43df32eaa805bb7fead7756833a9c73e2))
+* **mentor:** adding pnpm updates ([735c8f2](https://github.com/iblai/os/commit/735c8f2e4052d1e862f7ef75554dcab965317581))
+* **mentor:** change of position for grading and better test coverage ([0b87cd7](https://github.com/iblai/os/commit/0b87cd7a212823d21df8d017172a0bc986e3a88c))
+
+### CI
+
+* adopt iblai/pr-e2e-action@v1 for the e2e job ([803133f](https://github.com/iblai/os/commit/803133f346e87e9862fced77aa467bd49879a1ca))
+
 ## [0.115.0](https://github.com/iblai/os/compare/v0.114.2...v0.115.0) (2026-08-06)
 
 ### Features
