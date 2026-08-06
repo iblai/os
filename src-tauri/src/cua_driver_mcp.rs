@@ -22,12 +22,14 @@
 
 #![cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 
+use std::collections::HashSet;
 use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
 use std::process::{Child, ChildStdin, Command, Stdio};
 use std::sync::{Mutex, OnceLock};
 
 use serde::Serialize;
+use serde_json::Value;
 use tauri::{command, AppHandle, Emitter};
 
 use crate::opencode_acp::iblai_data_dir;
@@ -225,6 +227,143 @@ pub async fn cua_driver_support() -> Result<DriverSupport, String> {
 }
 
 // ---------------------------------------------------------------------------
+// Screenshot suppression
+// ---------------------------------------------------------------------------
+//
+// The Cowork chat runs over an OpenAI-compatible endpoint whose tool results
+// are text-only — the AI SDK JSON-stringifies anything that is not a string —
+// so an MCP image part never reaches the model as an image. It arrives as
+// ~100k tokens of base64 the model cannot decode, re-sent with every later
+// step of the loop: unreadable AND a context detonation. Until the SDK ships
+// its own suppression, this bridge is where the guarantee lives (and it is
+// worth keeping even then: stripping here means multi-megabyte lines never
+// cross the Tauri event bridge into the webview at all).
+//
+// Two halves, mirroring what the SDK-side fix will do:
+//  - outgoing `tools/call`: force `include_screenshot: false` wherever the
+//    tool's schema offers the flag, so the driver skips the capture entirely;
+//  - incoming results: drop any image part that still appears (the `screenshot`
+//    tool has no opt-out) and say so, or the model re-requests one forever.
+
+/// What replaces a stripped image part. Text, so it survives the ride.
+const SCREENSHOT_OMITTED_NOTE: &str =
+    "[screenshot omitted: this connection cannot carry images — work from the element tree]";
+
+/// Tools whose input schema offers `include_screenshot`, learned from the
+/// driver's own `tools/list` response so the set can never go stale. Injecting
+/// the flag blindly would be rejected — the driver enforces
+/// `additionalProperties: false`.
+static SCREENSHOT_FLAG_TOOLS: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
+
+fn screenshot_flag_tools() -> &'static Mutex<HashSet<String>> {
+    SCREENSHOT_FLAG_TOOLS.get_or_init(|| Mutex::new(HashSet::new()))
+}
+
+/// The flagged-tool names in a `tools/list` response; `None` for any other line.
+fn harvest_screenshot_flag_tools(v: &Value) -> Option<HashSet<String>> {
+    let tools = v.get("result")?.get("tools")?.as_array()?;
+    Some(
+        tools
+            .iter()
+            .filter_map(|tool| {
+                tool.get("inputSchema")?
+                    .get("properties")?
+                    .get("include_screenshot")?;
+                Some(tool.get("name")?.as_str()?.to_string())
+            })
+            .collect(),
+    )
+}
+
+/// Drop image parts from a tool result, appending the omission note. Returns
+/// whether anything changed; lines without a `result.content` array never do.
+fn strip_image_parts(v: &mut Value) -> bool {
+    let Some(content) = v
+        .get_mut("result")
+        .and_then(|r| r.get_mut("content"))
+        .and_then(|c| c.as_array_mut())
+    else {
+        return false;
+    };
+    let before = content.len();
+    content.retain(|part| part.get("type").and_then(Value::as_str) != Some("image"));
+    if content.len() == before {
+        return false;
+    }
+    content.push(serde_json::json!({ "type": "text", "text": SCREENSHOT_OMITTED_NOTE }));
+    true
+}
+
+/// Force `include_screenshot: false` on a `tools/call` to a flagged tool —
+/// over even an explicit `true`: the image could never reach the model, only
+/// bill it. Returns whether anything changed.
+fn force_screenshot_off(v: &mut Value, flagged: &HashSet<String>) -> bool {
+    if v.get("method").and_then(Value::as_str) != Some("tools/call") {
+        return false;
+    }
+    let Some(params) = v.get_mut("params").and_then(Value::as_object_mut) else {
+        return false;
+    };
+    let is_flagged = params
+        .get("name")
+        .and_then(Value::as_str)
+        .is_some_and(|name| flagged.contains(name));
+    if !is_flagged {
+        return false;
+    }
+    match params.get_mut("arguments") {
+        Some(Value::Object(args)) => {
+            args.insert("include_screenshot".to_string(), Value::Bool(false));
+            true
+        }
+        None => {
+            params.insert(
+                "arguments".to_string(),
+                serde_json::json!({ "include_screenshot": false }),
+            );
+            true
+        }
+        // Malformed arguments — leave them for the driver to reject loudly.
+        Some(_) => false,
+    }
+}
+
+/// One driver → webview line: harvest tool schemas, strip images. Non-JSON
+/// lines pass through untouched (the webview's MCP client ignores them), and
+/// an unmodified line is forwarded byte-identical rather than re-serialised.
+fn scrub_driver_line(line: String) -> String {
+    let Ok(mut v) = serde_json::from_str::<Value>(&line) else {
+        return line;
+    };
+    if let Some(flagged) = harvest_screenshot_flag_tools(&v) {
+        if let Ok(mut guard) = screenshot_flag_tools().lock() {
+            *guard = flagged;
+        }
+    }
+    if strip_image_parts(&mut v) {
+        v.to_string()
+    } else {
+        line
+    }
+}
+
+/// One webview → driver line: apply the `include_screenshot` override.
+fn force_screenshot_off_line(line: String) -> String {
+    let Ok(mut v) = serde_json::from_str::<Value>(&line) else {
+        return line;
+    };
+    let Ok(guard) = screenshot_flag_tools().lock() else {
+        return line;
+    };
+    if force_screenshot_off(&mut v, &guard) {
+        drop(guard);
+        v.to_string()
+    } else {
+        line
+    }
+}
+
+// ---------------------------------------------------------------------------
 // The MCP child
 // ---------------------------------------------------------------------------
 
@@ -300,14 +439,17 @@ pub async fn cua_driver_start(app: AppHandle) -> Result<(), String> {
         }
     });
 
-    // Pump stdout → webview. MCP writes one JSON-RPC message per line; forward
-    // each non-empty line verbatim and let the webview's MCP client parse it.
+    // Pump stdout → webview. MCP writes one JSON-RPC message per line; each is
+    // scrubbed (tool schemas harvested, image parts stripped) and forwarded for
+    // the webview's MCP client to parse. Logging after the scrub means the
+    // base64 image bytes never reach stdout either.
     let reader_app = app.clone();
     std::thread::spawn(move || {
         for line in BufReader::new(stdout).lines().map_while(Result::ok) {
             if line.trim().is_empty() {
                 continue;
             }
+            let line = scrub_driver_line(line);
             log_rpc("<-", &line);
             let _ = reader_app.emit(EVENT_MESSAGE, line);
         }
@@ -328,6 +470,7 @@ pub async fn cua_driver_start(app: AppHandle) -> Result<(), String> {
 /// Forward one JSON-RPC message (a single line) to the driver's stdin.
 #[command]
 pub async fn cua_driver_send(line: String) -> Result<(), String> {
+    let line = force_screenshot_off_line(line);
     let mut guard = slot().lock().map_err(|_| "cua-driver lock poisoned")?;
     let proc = guard
         .as_mut()
@@ -487,5 +630,110 @@ mod tests {
         let bin = cua_driver_bin();
         assert!(bin.ends_with(cua_driver_program()));
         assert!(bin.parent().unwrap().ends_with("bin"));
+    }
+
+    // --- screenshot suppression ---
+
+    fn parse(s: &str) -> Value {
+        serde_json::from_str(s).unwrap()
+    }
+
+    #[test]
+    fn tools_list_harvest_finds_only_the_flagged_tools() {
+        let v = parse(
+            r#"{"jsonrpc":"2.0","id":1,"result":{"tools":[
+                {"name":"get_window_state","inputSchema":{"properties":{"pid":{},"include_screenshot":{}}}},
+                {"name":"click","inputSchema":{"properties":{"element_token":{}}}},
+                {"name":"list_apps"}
+            ]}}"#,
+        );
+        let flagged = harvest_screenshot_flag_tools(&v).unwrap();
+        assert!(flagged.contains("get_window_state"));
+        assert!(!flagged.contains("click"));
+        assert!(!flagged.contains("list_apps"));
+    }
+
+    #[test]
+    fn non_tools_list_lines_harvest_nothing() {
+        // A tool RESULT also has `result` — it must not wipe the learned set.
+        assert!(harvest_screenshot_flag_tools(&parse(r#"{"result":{"content":[]}}"#)).is_none());
+        assert!(harvest_screenshot_flag_tools(&parse(r#"{"method":"tools/call"}"#)).is_none());
+    }
+
+    #[test]
+    fn image_parts_are_stripped_and_the_omission_is_noted() {
+        let mut v = parse(
+            r#"{"id":3,"result":{"content":[
+                {"type":"image","data":"iVBORw0KGgo","mimeType":"image/png"},
+                {"type":"text","text":"window_id=1 elements=3"}
+            ]}}"#,
+        );
+        assert!(strip_image_parts(&mut v));
+        let content = v["result"]["content"].as_array().unwrap();
+        assert_eq!(content.len(), 2);
+        assert_eq!(content[0]["text"], "window_id=1 elements=3");
+        assert!(content[1]["text"]
+            .as_str()
+            .unwrap()
+            .contains("screenshot omitted"));
+    }
+
+    #[test]
+    fn an_image_only_result_becomes_just_the_note() {
+        // The `screenshot` tool returns nothing but the image; the note is what
+        // stops the model from re-requesting one forever.
+        let mut v =
+            parse(r#"{"id":4,"result":{"content":[{"type":"image","data":"iVBORw0KGgo"}]}}"#);
+        assert!(strip_image_parts(&mut v));
+        let content = v["result"]["content"].as_array().unwrap();
+        assert_eq!(content.len(), 1);
+        assert_eq!(content[0]["type"], "text");
+    }
+
+    #[test]
+    fn image_free_results_and_requests_pass_through_untouched() {
+        let mut text_only = parse(r#"{"id":5,"result":{"content":[{"type":"text","text":"ok"}]}}"#);
+        assert!(!strip_image_parts(&mut text_only));
+        assert_eq!(text_only["result"]["content"].as_array().unwrap().len(), 1);
+
+        let mut request = parse(r#"{"method":"tools/call","params":{"name":"click"}}"#);
+        assert!(!strip_image_parts(&mut request));
+    }
+
+    #[test]
+    fn calls_to_flagged_tools_get_the_screenshot_forced_off() {
+        // Over even an explicit `true` — the image could never reach the model.
+        let flagged: HashSet<String> = HashSet::from(["get_window_state".to_string()]);
+        let mut v = parse(
+            r#"{"method":"tools/call","params":{"name":"get_window_state",
+                "arguments":{"pid":7,"window_id":42,"include_screenshot":true}}}"#,
+        );
+        assert!(force_screenshot_off(&mut v, &flagged));
+        assert_eq!(v["params"]["arguments"]["include_screenshot"], false);
+        assert_eq!(v["params"]["arguments"]["pid"], 7);
+    }
+
+    #[test]
+    fn a_flagged_call_without_arguments_still_gets_the_flag() {
+        let flagged: HashSet<String> = HashSet::from(["get_window_state".to_string()]);
+        let mut v = parse(r#"{"method":"tools/call","params":{"name":"get_window_state"}}"#);
+        assert!(force_screenshot_off(&mut v, &flagged));
+        assert_eq!(v["params"]["arguments"]["include_screenshot"], false);
+    }
+
+    #[test]
+    fn unflagged_tools_and_other_methods_are_left_alone() {
+        // `click` offers no `include_screenshot`; injecting it would be rejected
+        // by the driver's additionalProperties:false.
+        let flagged: HashSet<String> = HashSet::from(["get_window_state".to_string()]);
+        let mut click =
+            parse(r#"{"method":"tools/call","params":{"name":"click","arguments":{"x":1}}}"#);
+        assert!(!force_screenshot_off(&mut click, &flagged));
+        assert!(click["params"]["arguments"]
+            .get("include_screenshot")
+            .is_none());
+
+        let mut init = parse(r#"{"method":"initialize","params":{}}"#);
+        assert!(!force_screenshot_off(&mut init, &flagged));
     }
 }
