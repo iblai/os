@@ -42,7 +42,7 @@ export function normalizeListIndentation(content: string): string {
     placeholders.push(segment);
     return `${MASK_OPEN}${index}${MASK_CLOSE}`;
   };
-  let masked = content
+  const masked = content
     .replace(/(`{3,})[\s\S]*?\1/g, mask)
     .replace(/(~{3,})[\s\S]*?\1/g, mask)
     .replace(
