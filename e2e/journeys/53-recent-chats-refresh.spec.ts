@@ -40,7 +40,11 @@
  */
 
 import { test, expect } from '../fixtures/mentor-test';
-import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
+import {
+  navigateToMentorApp,
+  checkAdminStatus,
+  getPlatformContext,
+} from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -126,15 +130,25 @@ test.describe('Journey 53: Recent Chats Refresh', () => {
     // updates the RTK Query cache and re-renders the list. We wait up to 20 s
     // for the row to appear (cold-cache refetch + render cycle).
     //
-    // `getRecentChatRow` uses `getByRole('button', { name: sentText })` scoped
-    // inside the Recent list so it can't match anything outside the Chats section.
+    // Identify the row by SESSION ID, not by `sentText`: the row label prefers
+    // the backend's asynchronously generated session title, so the row that
+    // does appear is labelled e.g. "RCR-01 Test Results Discussion" rather than
+    // the message we sent. Matching on sent text only ever passed while title
+    // generation was slower than this poll.
+    const { mentorId } = await getPlatformContext(page);
+    const sessionId = await chatPage.getCachedSessionId(mentorId);
+    expect(sessionId, 'chat session id must be cached after send').toBeTruthy();
+
     await expect
-      .poll(async () => sidebarPage.isRecentChatVisible(sentText, 3_000), {
-        message:
-          'Recent chats list should contain the new chat after streaming ends — this fails on main where refetchRecent() is never called',
-        timeout: 20_000,
-        intervals: [1_000, 2_000, 3_000],
-      })
+      .poll(
+        async () => sidebarPage.isRecentChatVisibleBySession(sessionId!, 3_000),
+        {
+          message:
+            'Recent chats list should contain the new chat after streaming ends — this fails on main where refetchRecent() is never called',
+          timeout: 20_000,
+          intervals: [1_000, 2_000, 3_000],
+        },
+      )
       .toBe(true);
   });
 
@@ -170,12 +184,28 @@ test.describe('Journey 53: Recent Chats Refresh', () => {
     // The section was open the whole time — this asserts the live-update
     // transition (the refetchRecent() effect fires, cache updates, list
     // re-renders with the new row while we are watching).
+    //
+    // Matched by SESSION ID for the same reason as rcr-01: the backend retitles
+    // the row asynchronously (here it lands as "RCR-02 Seed Information
+    // Inquiry"), so `seededText` stops matching once the title arrives. Captured
+    // before Step 5's startNewChat(), which repoints the cached session id.
+    const { mentorId } = await getPlatformContext(page);
+    const seededSessionId = await chatPage.getCachedSessionId(mentorId);
+    expect(
+      seededSessionId,
+      'seeded chat session id must be cached after send',
+    ).toBeTruthy();
+
     await expect
-      .poll(async () => sidebarPage.isRecentChatVisible(seededText, 3_000), {
-        message: 'Seeded chat should appear in Recent after streaming ends',
-        timeout: 20_000,
-        intervals: [1_000, 2_000, 3_000],
-      })
+      .poll(
+        async () =>
+          sidebarPage.isRecentChatVisibleBySession(seededSessionId!, 3_000),
+        {
+          message: 'Seeded chat should appear in Recent after streaming ends',
+          timeout: 20_000,
+          intervals: [1_000, 2_000, 3_000],
+        },
+      )
       .toBe(true);
 
     // ── Step 5: Start a new chat to clear the active session ──────────────────

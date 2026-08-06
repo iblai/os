@@ -1,6 +1,6 @@
 {
   "name": "ibl-web-nextjs-mentor-spa",
-  "version": "0.111.1",
+  "version": "0.114.1",
   "private": false,
   "packageManager": "pnpm@10.11.1",
   "engines": {
@@ -43,7 +43,7 @@
   "dependencies": {
     "@iblai/agent-ai": "2.5.2",
     "@iblai/iblai-api": "4.166.0-ai",
-    "@iblai/iblai-js": "2.2.9",
+    "@iblai/iblai-js": "2.3.2",
     "@iblai/iblai-web-mentor": "1.3.4",
     "@livekit/components-react": "2.8.1",
     "@livekit/components-styles": "1.1.4",
@@ -103,7 +103,6 @@
     "embla-carousel-react": "8.5.1",
     "file-saver": "2.0.5",
     "google-drive-picker": "1.1.29",
-    "highlight.js": "11.11.1",
     "html2canvas": "1.4.1",
     "import-in-the-middle": "1.15.0",
     "input-otp": "1.4.1",
@@ -115,7 +114,6 @@
     "lucide-react": "0.488.0",
     "marked": "16.4.2",
     "marked-gfm-heading-id": "4.1.3",
-    "marked-highlight": "2.2.3",
     "marked-katex-extension": "5.1.7",
     "mitt": "3.0.1",
     "next": "15.5.21",
@@ -193,7 +191,7 @@
     "husky": "9.1.7",
     "jsdom": "26.1.0",
     "lint-staged": "16.4.0",
-    "postcss": "8.5.10",
+    "postcss": "8.5.24",
     "postcss-loader": "8.2.1",
     "prettier": "3.5.3",
     "prettier-plugin-tailwindcss": "0.6.11",
