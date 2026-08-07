@@ -164,9 +164,63 @@ describe('Journey 3: Code Mode (opencode)', () => {
     expect(status.sandboxed).toBe(false);
   });
 
+  /**
+   * Regression for the setup freeze (`opencode_installer.rs` `extract`). The
+   * install once ran its extractor with inherited stdio (`status()`) — in a
+   * GUI-launched build nobody drains that pipe, so a chatty extractor filled it
+   * and the install wedged — and extraction ran inline on a tokio worker,
+   * stalling the very IPC channel every other command answers on. The app
+   * looked frozen, with nothing to say why.
+   *
+   * Sits BEFORE code-02 on purpose: the managed binary is deleted first, so
+   * this install is the journey's one real download+extract and code-02 then
+   * exercises the short-circuit path.
+   */
+  it('code-11: the app keeps answering IPC while opencode installs', async () => {
+    // Force a genuine download+extract — with a runnable binary present the
+    // installer short-circuits and there is nothing in flight to probe.
+    for (const name of ['opencode', 'opencode.exe']) {
+      rmSync(join(DATA_DIR, 'bin', name), { force: true });
+    }
+
+    // Kick the install and leave it running in-page (the model journey's
+    // in-flight idiom) — awaiting it here would serialise the very concurrency
+    // this checkpoint exists to prove.
+    await browser.execute(() => {
+      const invoke = (window as unknown as TauriWindow).__TAURI__?.core?.invoke;
+      if (!invoke) throw new Error('window.__TAURI__.core.invoke unavailable');
+      (window as unknown as Record<string, unknown>).__e2eOpencodeInstall =
+        invoke('install_opencode').then(
+          (value) => ({ ok: true, value }),
+          (err) => ({ ok: false, error: String(err) }),
+        );
+    });
+
+    // While the ~100MB download + extract runs, cheap unrelated IPC must keep
+    // answering fast. Pre-fix these hung until the Mocha timeout.
+    for (let i = 0; i < 3; i++) {
+      const t0 = Date.now();
+      const os = await invokeCmd<string>('get_os_type');
+      expect(Date.now() - t0).toBeLessThan(5000);
+      expect(['windows', 'macos', 'linux']).toContain(os);
+      await browser.pause(1000);
+    }
+
+    // Responsive AND correct — the install must still finish, not be dropped.
+    const done = (await browser.execute(
+      () =>
+        (window as unknown as Record<string, unknown>).__e2eOpencodeInstall as
+          | Promise<unknown>
+          | undefined,
+    )) as { ok: boolean; value?: unknown; error?: string };
+    expect(done.ok).toBe(true);
+    expect(String(done.value).length).toBeGreaterThan(0);
+  });
+
   it('code-02: install_opencode downloads and installs the pinned binary', async () => {
-    // Real GitHub release download into ~/.local/share/iblai/bin. Slow on a cold
-    // machine, instant once present (the installer short-circuits when runnable).
+    // code-11 above already paid for the real download; this exercises the
+    // short-circuit path on a now-runnable binary (instant, still returns the
+    // version).
     const version = await invokeCmd<string>('install_opencode');
     expect(typeof version).toBe('string');
     expect(version.length).toBeGreaterThan(0);

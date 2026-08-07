@@ -331,13 +331,16 @@ fn force_screenshot_off(v: &mut Value, flagged: &HashSet<String>) -> bool {
 /// One driver → webview line: harvest tool schemas, strip images. Non-JSON
 /// lines pass through untouched (the webview's MCP client ignores them), and
 /// an unmodified line is forwarded byte-identical rather than re-serialised.
-fn scrub_driver_line(line: String) -> String {
+///
+/// The learned set is a parameter — production passes the global, tests pass a
+/// local one so parallel `cargo test` never races on shared state.
+fn scrub_driver_line(line: String, flagged: &Mutex<HashSet<String>>) -> String {
     let Ok(mut v) = serde_json::from_str::<Value>(&line) else {
         return line;
     };
-    if let Some(flagged) = harvest_screenshot_flag_tools(&v) {
-        if let Ok(mut guard) = screenshot_flag_tools().lock() {
-            *guard = flagged;
+    if let Some(found) = harvest_screenshot_flag_tools(&v) {
+        if let Ok(mut guard) = flagged.lock() {
+            *guard = found;
         }
     }
     if strip_image_parts(&mut v) {
@@ -348,11 +351,11 @@ fn scrub_driver_line(line: String) -> String {
 }
 
 /// One webview → driver line: apply the `include_screenshot` override.
-fn force_screenshot_off_line(line: String) -> String {
+fn force_screenshot_off_line(line: String, flagged: &Mutex<HashSet<String>>) -> String {
     let Ok(mut v) = serde_json::from_str::<Value>(&line) else {
         return line;
     };
-    let Ok(guard) = screenshot_flag_tools().lock() else {
+    let Ok(guard) = flagged.lock() else {
         return line;
     };
     if force_screenshot_off(&mut v, &guard) {
@@ -366,6 +369,23 @@ fn force_screenshot_off_line(line: String) -> String {
 // ---------------------------------------------------------------------------
 // The MCP child
 // ---------------------------------------------------------------------------
+
+/// Exactly how the driver is spawned; a const so a test pins every flag.
+///
+/// `--direct` makes the process own its runtime and adopt our TCC identity.
+///
+/// `--grant existing-profile` lets the browser tools attach to the user's
+/// real, logged-in Chromium rather than the isolated throwaway profile they
+/// are otherwise limited to. Without it `browser_prepare` can only launch a
+/// separate browser, so "do this in my browser" cannot see their tabs or
+/// sessions. Note what the grant buys: for the life of this process the agent
+/// can act as the user on every site they are signed into, and the grant is
+/// session-wide rather than per-attachment. Upstream deliberately renders no
+/// consent UI of its own — it expects the embedding app to, via
+/// DriverAuthorizationHost. Until that is wired up this flag IS the consent —
+/// and the Cowork consent dialog's browser-access sentence is true because of
+/// it. Neither flag may change silently, in either direction.
+const DRIVER_ARGV: [&str; 4] = ["mcp", "--direct", "--grant", "existing-profile"];
 
 /// The live `cua-driver mcp` child and a handle to its stdin.
 struct DriverProc {
@@ -407,18 +427,7 @@ pub async fn cua_driver_start(app: AppHandle) -> Result<(), String> {
     }
 
     let mut cmd = Command::new(cua_driver_program());
-    // `--direct` makes this process own its runtime and adopt our TCC identity.
-    //
-    // `--grant existing-profile` lets the browser tools attach to the user's
-    // real, logged-in Chromium rather than the isolated throwaway profile they
-    // are otherwise limited to. Without it `browser_prepare` can only launch a
-    // separate browser, so "do this in my browser" cannot see their tabs or
-    // sessions. Note what the grant buys: for the life of this process the agent
-    // can act as the user on every site they are signed into, and the grant is
-    // session-wide rather than per-attachment. Upstream deliberately renders no
-    // consent UI of its own — it expects the embedding app to, via
-    // DriverAuthorizationHost. Until that is wired up this flag IS the consent.
-    cmd.args(["mcp", "--direct", "--grant", "existing-profile"])
+    cmd.args(DRIVER_ARGV)
         .env("PATH", crate::opencode_acp::augmented_path())
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -449,7 +458,7 @@ pub async fn cua_driver_start(app: AppHandle) -> Result<(), String> {
             if line.trim().is_empty() {
                 continue;
             }
-            let line = scrub_driver_line(line);
+            let line = scrub_driver_line(line, screenshot_flag_tools());
             log_rpc("<-", &line);
             let _ = reader_app.emit(EVENT_MESSAGE, line);
         }
@@ -460,7 +469,8 @@ pub async fn cua_driver_start(app: AppHandle) -> Result<(), String> {
     });
 
     println!(
-        "[cua-driver] spawned `cua-driver mcp --direct --grant existing-profile` (pid {:?})",
+        "[cua-driver] spawned `cua-driver {}` (pid {:?})",
+        DRIVER_ARGV.join(" "),
         child.id()
     );
     *guard = Some(DriverProc { child, stdin });
@@ -470,7 +480,7 @@ pub async fn cua_driver_start(app: AppHandle) -> Result<(), String> {
 /// Forward one JSON-RPC message (a single line) to the driver's stdin.
 #[command]
 pub async fn cua_driver_send(line: String) -> Result<(), String> {
-    let line = force_screenshot_off_line(line);
+    let line = force_screenshot_off_line(line, screenshot_flag_tools());
     let mut guard = slot().lock().map_err(|_| "cua-driver lock poisoned")?;
     let proc = guard
         .as_mut()
@@ -735,5 +745,80 @@ mod tests {
 
         let mut init = parse(r#"{"method":"initialize","params":{}}"#);
         assert!(!force_screenshot_off(&mut init, &flagged));
+    }
+
+    #[test]
+    fn the_driver_argv_carries_exactly_the_agreed_flags() {
+        // A tripwire, not a computation: the Cowork consent dialog tells the
+        // user the agent can act as them in their signed-in browser BECAUSE of
+        // `--grant existing-profile`, and TCC attribution depends on `--direct`.
+        // Changing either — adding a grant, dropping one — must arrive here
+        // consciously, together with the consent copy.
+        assert_eq!(
+            DRIVER_ARGV,
+            ["mcp", "--direct", "--grant", "existing-profile"]
+        );
+    }
+
+    // --- the wiring: what a LINE in produces as a LINE out ---
+
+    #[test]
+    fn a_tools_list_teaches_the_flag_for_later_calls() {
+        let flagged = Mutex::new(HashSet::new());
+        let list = r#"{"jsonrpc":"2.0","id":1,"result":{"tools":[{"name":"get_window_state","inputSchema":{"properties":{"pid":{},"include_screenshot":{}}}}]}}"#;
+
+        // The list itself is forwarded byte-identical…
+        assert_eq!(scrub_driver_line(list.to_string(), &flagged), list);
+
+        // …and a later call to the tool it flagged gets the override.
+        let call =
+            r#"{"method":"tools/call","params":{"name":"get_window_state","arguments":{"pid":7}}}"#;
+        let sent = force_screenshot_off_line(call.to_string(), &flagged);
+        let v = parse(&sent);
+        assert_eq!(v["params"]["arguments"]["include_screenshot"], false);
+        assert_eq!(v["params"]["arguments"]["pid"], 7);
+    }
+
+    #[test]
+    fn calls_to_tools_the_list_did_not_flag_pass_through_byte_identical() {
+        let flagged = Mutex::new(HashSet::new());
+        let list = r#"{"id":1,"result":{"tools":[{"name":"click","inputSchema":{"properties":{"element_token":{}}}}]}}"#;
+        scrub_driver_line(list.to_string(), &flagged);
+
+        let call = r#"{"method":"tools/call","params":{"name":"click","arguments":{"x":1}}}"#;
+        assert_eq!(force_screenshot_off_line(call.to_string(), &flagged), call);
+    }
+
+    #[test]
+    fn a_result_line_with_an_image_is_rewritten_and_non_json_passes_through() {
+        let flagged = Mutex::new(HashSet::new());
+        let result = r#"{"id":2,"result":{"content":[{"type":"image","data":"iVBORw0KGgo"}]}}"#;
+        let out = scrub_driver_line(result.to_string(), &flagged);
+        let content = parse(&out)["result"]["content"].clone();
+        let types: Vec<&str> = content
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|p| p["type"].as_str().unwrap())
+            .collect();
+        assert_eq!(types, ["text"]);
+
+        // A stray non-JSON stdout line is forwarded untouched, both directions.
+        let junk = "warming up...".to_string();
+        assert_eq!(scrub_driver_line(junk.clone(), &flagged), junk);
+        assert_eq!(force_screenshot_off_line(junk.clone(), &flagged), junk);
+    }
+
+    #[test]
+    fn a_newer_tools_list_replaces_the_learned_set() {
+        // A respawned driver re-lists its tools; flags learned from the previous
+        // process must not linger and misdirect the override.
+        let flagged = Mutex::new(HashSet::from(["stale_tool".to_string()]));
+        let list = r#"{"id":1,"result":{"tools":[{"name":"fresh_tool","inputSchema":{"properties":{"include_screenshot":{}}}}]}}"#;
+        scrub_driver_line(list.to_string(), &flagged);
+
+        let guard = flagged.lock().unwrap();
+        assert!(guard.contains("fresh_tool"));
+        assert!(!guard.contains("stale_tool"));
     }
 }
