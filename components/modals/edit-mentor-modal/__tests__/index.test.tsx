@@ -260,6 +260,12 @@ vi.mock('../tabs', () => ({
   AnalyticsTab: () => <div data-testid="analytics-tab">Analytics Tab</div>,
 }));
 
+vi.mock('../tabs/datasets-tab/agent-datasets-tab', () => ({
+  AgentDatasetsTabWrapper: () => (
+    <div data-testid="datasets-tab">Datasets Tab</div>
+  ),
+}));
+
 vi.mock('../tabs/memory-tab', () => ({
   MemoryTab: () => <div data-testid="memory-tab">Memory Tab</div>,
 }));
