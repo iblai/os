@@ -22,7 +22,6 @@ import {
   TasksTab,
   // FlowTab,
   HistoryTab,
-  DatasetsTab,
   EvaluationTab,
   ApiTab,
   EmbedTab,
@@ -41,6 +40,11 @@ import { MODALS } from '@/lib/constants';
 import { SettingsTab } from './settings-tab';
 import { MemoryTab } from './tabs/memory-tab';
 import { DisclaimersTab } from './tabs/disclaimers-tab';
+// Datasets renders the SDK `AgentDatasetsTab` via an OS host wrapper (provider
+// + injected pagination/add-resource) instead of the local `DatasetsTab`. The
+// local component stays on disk — it's still used by the workflows
+// node-config-panel — so this import is deliberately the wrapper, not `./tabs`.
+import { AgentDatasetsTabWrapper } from './tabs/datasets-tab/agent-datasets-tab';
 import {
   useMentorSegments,
   MENTOR_SEGMENT_NAV_CATEGORIES,
@@ -81,7 +85,7 @@ export const EDIT_MENTOR_TAB_COMPONENTS: Record<string, ReactNode> = {
   [MODALS.EDIT_MENTOR.tabs.history]: <HistoryTab />,
   [MODALS.EDIT_MENTOR.tabs.human_support]: <HumanSupportTab />,
   [MODALS.EDIT_MENTOR.tabs.audit_log]: <AuditLogTab />,
-  [MODALS.EDIT_MENTOR.tabs.datasets]: <DatasetsTab />,
+  [MODALS.EDIT_MENTOR.tabs.datasets]: <AgentDatasetsTabWrapper />,
   [MODALS.EDIT_MENTOR.tabs.evaluation]: <EvaluationTab />,
   [MODALS.EDIT_MENTOR.tabs.api]: <ApiTab />,
   [MODALS.EDIT_MENTOR.tabs.embed]: <EmbedTab />,
