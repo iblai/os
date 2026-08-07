@@ -1,6 +1,11 @@
 import { test, expect } from '../fixtures/mentor-test';
 import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
+import {
+  MENTOR_NEXTJS_HOST,
+  DATASETS_PAGINATION_TENANT_KEY,
+  DATASETS_PAGINATION_MENTOR_ID,
+} from '../fixtures/test-data';
 import { logger } from '@iblai/iblai-js/playwright';
 import path from 'path';
 
@@ -690,5 +695,238 @@ test.describe('Journey 20: Dataset Management', () => {
         'TC28: Dialog closed after cancellation — page still functional',
       );
     }
+  });
+
+  // ── TC32-35: Datasets tab URL query-string sync ────────────────────────────
+  // The Datasets tab now syncs its search (and, in the pagination describe
+  // below, page) state to `datasetsSearch` / `datasetsPage` URL query params
+  // via the OS host wrapper (agent-datasets-tab.tsx) so state survives
+  // reload/back-forward and is shareable via link. These don't need multi-page
+  // seed data — search-param sync fires regardless of dataset count — so they
+  // run against whatever mentor the standard beforeEach opens.
+
+  test('admin types a datasets search and the debounced datasetsSearch param syncs into the URL', async ({
+    editMentorPage,
+  }) => {
+    expect(editMentorPage.datasets.getUrlParams().search).toBeNull();
+
+    await editMentorPage.datasets.searchAndWaitForUrlSync('tc32-search');
+    expect(editMentorPage.datasets.getUrlParams().search).toBe('tc32-search');
+
+    // Contract point 6: the input is `type="text"`, not `type="search"`, so
+    // the browser renders no native clear (✕) affordance. Cheap to check
+    // while we're here — not worth its own test.
+    await expect(editMentorPage.datasets.searchInput).toHaveAttribute(
+      'type',
+      'text',
+    );
+    logger.info('TC32: datasetsSearch URL param synced from search input');
+  });
+
+  test('admin searches datasets then closes the edit mentor modal and both URL params clear', async ({
+    editMentorPage,
+  }) => {
+    await editMentorPage.datasets.searchAndWaitForUrlSync('tc33-search');
+    expect(editMentorPage.datasets.getUrlParams().search).toBe('tc33-search');
+
+    await editMentorPage.close();
+
+    const params = editMentorPage.datasets.getUrlParams();
+    expect(params.search).toBeNull();
+    expect(params.page).toBeNull();
+    logger.info('TC33: datasetsSearch/datasetsPage cleared on modal close');
+  });
+
+  test('admin searches datasets then switches to another tab and both URL params clear', async ({
+    editMentorPage,
+  }) => {
+    await editMentorPage.datasets.searchAndWaitForUrlSync('tc34-search');
+    expect(editMentorPage.datasets.getUrlParams().search).toBe('tc34-search');
+
+    await editMentorPage.navigateToTab('Settings');
+
+    const params = editMentorPage.datasets.getUrlParams();
+    expect(params.search).toBeNull();
+    expect(params.page).toBeNull();
+    logger.info(
+      'TC34: datasetsSearch/datasetsPage cleared on tab change (Datasets → Settings)',
+    );
+  });
+
+  test('admin searches datasets then reloads the page and the search restores from the URL', async ({
+    page,
+    editMentorPage,
+  }) => {
+    await editMentorPage.datasets.searchAndWaitForUrlSync('tc35-reload-search');
+
+    // The modal stack lives in the URL's `modal` param (see useNavigate's
+    // parseModalStack), so a full reload should reopen the dialog back onto
+    // the Datasets tab, and the wrapper re-derives `search` straight from
+    // `datasetsSearch` on mount — the same contract a shared/deep link would
+    // exercise. This doesn't need the seeded multi-page mentor: search-param
+    // sync and restore fire regardless of how many datasets exist.
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await waitForPageReady(page);
+
+    await expect(editMentorPage.dialog).toBeVisible({ timeout: 20_000 });
+    await editMentorPage.waitForHydrated();
+
+    await expect(editMentorPage.datasets.searchInput).toHaveValue(
+      'tc35-reload-search',
+      { timeout: 10_000 },
+    );
+    expect(editMentorPage.datasets.getUrlParams().search).toBe(
+      'tc35-reload-search',
+    );
+    logger.info('TC35: datasetsSearch restored after a full reload');
+  });
+});
+
+// ── TC36-39: Datasets tab pagination URL sync (seeded multi-page mentor) ────
+//
+// Pagination is fixed at 5 items/page (`useDatasetsWithPagination(5, ...)` in
+// the SDK's AgentDatasetsTab) and `IblPagination` renders nothing when
+// `totalPages <= 1` — so exercising page-push / back-forward / page-reset
+// deterministically needs a mentor with more than 5 datasets. Creating that
+// much data per-test via the upload UI would be slow and flaky, so these run
+// against a pre-seeded mentor (20 datasets, 4 pages) instead — see
+// DATASETS_PAGINATION_TENANT_KEY / DATASETS_PAGINATION_MENTOR_ID in
+// fixtures/test-data.ts. Every test still guards on `hasPagination()` and
+// skips (rather than failing) if the seeded mentor's dataset count ever drops
+// to a single page or the mentor becomes unreachable for the running admin —
+// this keeps the suite honest about the gap instead of asserting on data it
+// can't guarantee.
+const SEEDED_DATASETS_MENTOR_URL = `${MENTOR_NEXTJS_HOST}/platform/${DATASETS_PAGINATION_TENANT_KEY}/${DATASETS_PAGINATION_MENTOR_ID}`;
+
+test.describe('Journey 20: Datasets tab pagination URL sync (seeded mentor)', () => {
+  test.beforeEach(async ({ page, editMentorPage }) => {
+    await navigateToMentorApp(page, SEEDED_DATASETS_MENTOR_URL);
+    const isAdmin = await checkAdminStatus(page);
+    if (!isAdmin) {
+      test.skip(true, 'Dataset management requires admin access');
+      return;
+    }
+    await editMentorPage.open('Datasets');
+    await waitForPageReady(page);
+  });
+
+  test('admin clicks a pagination page number and datasetsPage pushes into the URL', async ({
+    editMentorPage,
+  }) => {
+    const hasPagination = await editMentorPage.datasets.hasPagination();
+    test.skip(
+      !hasPagination,
+      `Seeded mentor (${DATASETS_PAGINATION_MENTOR_ID} in ${DATASETS_PAGINATION_TENANT_KEY}) ` +
+        'does not have enough datasets to paginate — see DATASETS_PAGINATION_MENTOR_ID in test-data.ts',
+    );
+
+    expect(editMentorPage.datasets.getUrlParams().page).toBeNull();
+
+    await editMentorPage.datasets.goToPage(2);
+    expect(editMentorPage.datasets.getUrlParams().page).toBe('2');
+    await expect(editMentorPage.datasets.activePaginationPageLink).toHaveText(
+      '2',
+    );
+
+    logger.info('TC36: datasetsPage URL param pushed by pagination click');
+  });
+
+  test('admin pages forward twice then browser Back/Forward walk the visited pages', async ({
+    page,
+    editMentorPage,
+  }) => {
+    const hasPagination = await editMentorPage.datasets.hasPagination();
+    test.skip(
+      !hasPagination,
+      `Seeded mentor (${DATASETS_PAGINATION_MENTOR_ID} in ${DATASETS_PAGINATION_TENANT_KEY}) ` +
+        'does not have enough datasets to paginate — see DATASETS_PAGINATION_MENTOR_ID in test-data.ts',
+    );
+
+    await editMentorPage.datasets.goToPage(2);
+    await editMentorPage.datasets.goToPage(3);
+    expect(editMentorPage.datasets.getUrlParams().page).toBe('3');
+
+    // Pagination pushes history (router.push), so Back/Forward should walk
+    // through the pages we visited rather than leaving the app.
+    await page.goBack();
+    await expect
+      .poll(() => editMentorPage.datasets.getUrlParams().page, {
+        timeout: 10_000,
+      })
+      .toBe('2');
+
+    await page.goForward();
+    await expect
+      .poll(() => editMentorPage.datasets.getUrlParams().page, {
+        timeout: 10_000,
+      })
+      .toBe('3');
+
+    logger.info('TC37: datasetsPage walked correctly via browser Back/Forward');
+  });
+
+  test('admin searches while on page 3 and datasetsPage is dropped while datasetsSearch is set', async ({
+    editMentorPage,
+  }) => {
+    const hasPagination = await editMentorPage.datasets.hasPagination();
+    test.skip(
+      !hasPagination,
+      `Seeded mentor (${DATASETS_PAGINATION_MENTOR_ID} in ${DATASETS_PAGINATION_TENANT_KEY}) ` +
+        'does not have enough datasets to paginate — see DATASETS_PAGINATION_MENTOR_ID in test-data.ts',
+    );
+
+    await editMentorPage.datasets.goToPage(2);
+    await editMentorPage.datasets.goToPage(3);
+    expect(editMentorPage.datasets.getUrlParams().page).toBe('3');
+
+    // Search is search-controlled and its onSearchChange contract implies a
+    // page reset — the host drops `datasetsPage` in the same navigation
+    // (see AgentDatasetsTabWrapper.handleSearchChange).
+    await editMentorPage.datasets.searchAndWaitForUrlSync('tc37-reset-search');
+
+    const params = editMentorPage.datasets.getUrlParams();
+    expect(params.search).toBe('tc37-reset-search');
+    expect(params.page).toBeNull();
+
+    logger.info(
+      'TC38: datasetsPage dropped and datasetsSearch set after searching from page 3',
+    );
+  });
+
+  test('admin pages forward then reloads and the datasets tab restores the paginated view', async ({
+    page,
+    editMentorPage,
+  }) => {
+    const hasPagination = await editMentorPage.datasets.hasPagination();
+    test.skip(
+      !hasPagination,
+      `Seeded mentor (${DATASETS_PAGINATION_MENTOR_ID} in ${DATASETS_PAGINATION_TENANT_KEY}) ` +
+        'does not have enough datasets to paginate — see DATASETS_PAGINATION_MENTOR_ID in test-data.ts',
+    );
+
+    // Deliberately page-only (no search): setting a search implies a page
+    // reset (see the TC38 contract above), so page and search can never both
+    // be non-default at once — this test isolates the page-only side of the
+    // reload/deep-link contract instead of asserting a state the app can't
+    // produce.
+    await editMentorPage.datasets.goToPage(2);
+
+    // The modal stack itself lives in the URL's `modal` param (see
+    // useNavigate's parseModalStack), so a full reload should reopen the
+    // dialog back onto the Datasets tab, and the wrapper re-derives `page`
+    // straight from `datasetsPage` on mount — the same contract a shared/deep
+    // link would exercise.
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await waitForPageReady(page);
+
+    await expect(editMentorPage.dialog).toBeVisible({ timeout: 20_000 });
+    await editMentorPage.waitForHydrated();
+
+    expect(editMentorPage.datasets.getUrlParams().page).toBe('2');
+    await expect(editMentorPage.datasets.activePaginationPageLink).toHaveText(
+      '2',
+      { timeout: 10_000 },
+    );
+    logger.info('TC39: datasetsPage restored after a full reload');
   });
 });
