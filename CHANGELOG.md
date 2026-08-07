@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.122.0](https://github.com/iblai/os/compare/v0.121.1...v0.122.0) (2026-08-07)
+
+### Features
+
+* **mentor:** adding fix for the screen tab changes ([ef9a325](https://github.com/iblai/os/commit/ef9a325060fc9233d9e7bfd2176bdcb35708919d))
+
+### Bug Fixes
+
+* **mentor:** RBAC for gradding and results coverage for results tab ([7806860](https://github.com/iblai/os/commit/7806860412ce14eba45e1a31dbc4a8cba38210c9))
+
 ## [0.121.1](https://github.com/iblai/os/compare/v0.121.0...v0.121.1) (2026-08-07)
 
 ### Chores
