@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.119.2](https://github.com/iblai/os/compare/v0.119.1...v0.119.2) (2026-08-07)
+
+### Bug Fixes
+
+* **tauri-bump:** keep README download links rename-safe ([7b97ac0](https://github.com/iblai/os/commit/7b97ac050274b67364264df780034ee02d673d21)), closes [#408](https://github.com/iblai/os/issues/408)
+
 ## [0.119.1](https://github.com/iblai/os/compare/v0.119.0...v0.119.1) (2026-08-07)
 
 ### Documentation
