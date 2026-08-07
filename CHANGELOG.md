@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.121.0](https://github.com/iblai/os/compare/v0.120.0...v0.121.0) (2026-08-07)
+
+### Features
+
+* **extension:** side-panel auth, page context, and full-panel layout ([e5ac3de](https://github.com/iblai/os/commit/e5ac3dea4d3185619fd5b95566f567febf91858e))
+
+### Tests
+
+* **coverage:** exclude chrome extension panel.js from per-file coverage ([471ed46](https://github.com/iblai/os/commit/471ed4601df6a466e0d6e679fe65f357591ebd1b))
+
 ## [0.120.0](https://github.com/iblai/os/compare/v0.119.2...v0.120.0) (2026-08-07)
 
 ### Features
