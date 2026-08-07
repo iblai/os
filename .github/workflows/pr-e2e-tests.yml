@@ -127,14 +127,14 @@ jobs:
       - uses: iblai/pr-e2e-action@v1
         id: e2e
         with:
-          source_repo:    os
-          pr_number:      ${{ github.event.pull_request.number }}
-          merge_sha:      ${{ github.sha }}
-          head_sha:       ${{ github.event.pull_request.head.sha }}
-          base_sha:       ${{ github.event.pull_request.base.sha }}
-          app_image:      ${{ needs.build-app-image.outputs.image-uri }}
+          source_repo: os
+          pr_number: ${{ github.event.pull_request.number }}
+          merge_sha: ${{ github.sha }}
+          head_sha: ${{ github.event.pull_request.head.sha }}
+          base_sha: ${{ github.event.pull_request.base.sha }}
+          app_image: ${{ needs.build-app-image.outputs.image-uri }}
           dispatch_token: ${{ secrets.DEPLOY_OPS_DISPATCH_TOKEN }}
-          repo_token:     ${{ secrets.GITHUB_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
 
       # MUST stay here as a JOB step — it cannot live inside the action.
       # A composite action is TERMINATED when the job is cancelled, so an `if: cancelled()` step

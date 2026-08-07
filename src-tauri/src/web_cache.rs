@@ -20,11 +20,7 @@ const CACHE_VERSION: u32 = 2; // Increment this when cache format changes
 // Helper function to log to file
 fn log_to_file(message: &str) {
     let log_path = std::env::temp_dir().join("mentor_offline_server.log");
-    if let Ok(mut file) = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&log_path)
-    {
+    if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(&log_path) {
         let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
         writeln!(file, "[{}] {}", timestamp, message).ok();
     }
@@ -74,21 +70,35 @@ impl WebCache {
     fn load_index(cache_dir: &PathBuf) -> CacheIndex {
         let index_path = cache_dir.join(CACHE_INDEX_FILE);
         if let Ok(data) = fs::read_to_string(&index_path) {
-            log_to_file(&format!("[WebCache] load_index: Read {} bytes from index.json", data.len()));
+            log_to_file(&format!(
+                "[WebCache] load_index: Read {} bytes from index.json",
+                data.len()
+            ));
 
             // Try to parse as raw JSON first to count entries
             if let Ok(raw_json) = serde_json::from_str::<serde_json::Value>(&data) {
                 if let Some(entries_obj) = raw_json.get("entries") {
                     if let Some(entries_map) = entries_obj.as_object() {
-                        log_to_file(&format!("[WebCache] load_index: index.json contains {} entries in raw JSON", entries_map.len()));
+                        log_to_file(&format!(
+                            "[WebCache] load_index: index.json contains {} entries in raw JSON",
+                            entries_map.len()
+                        ));
 
                         // Check for 7427.js specifically
-                        let has_7427 = entries_map.keys().any(|k| k.contains("7427") || k.contains("7247"));
-                        log_to_file(&format!("[WebCache] load_index: index.json contains 7427.js entry: {}", has_7427));
+                        let has_7427 = entries_map
+                            .keys()
+                            .any(|k| k.contains("7427") || k.contains("7247"));
+                        log_to_file(&format!(
+                            "[WebCache] load_index: index.json contains 7427.js entry: {}",
+                            has_7427
+                        ));
                         if has_7427 {
                             for key in entries_map.keys() {
                                 if key.contains("7427") || key.contains("7247") {
-                                    log_to_file(&format!("[WebCache] load_index: Found key: {}", key));
+                                    log_to_file(&format!(
+                                        "[WebCache] load_index: Found key: {}",
+                                        key
+                                    ));
                                 }
                             }
                         }
@@ -97,7 +107,10 @@ impl WebCache {
             }
 
             if let Ok(index) = serde_json::from_str::<CacheIndex>(&data) {
-                log_to_file(&format!("[WebCache] load_index: Deserialized CacheIndex with {} entries", index.entries.len()));
+                log_to_file(&format!(
+                    "[WebCache] load_index: Deserialized CacheIndex with {} entries",
+                    index.entries.len()
+                ));
 
                 // Check if cache version matches - if not, clear the cache
                 if index.version != CACHE_VERSION {
@@ -121,12 +134,21 @@ impl WebCache {
                 }
 
                 // Check if 7427.js is in the deserialized index
-                let has_7427_after = index.entries.keys().any(|k| k.contains("7427") || k.contains("7247"));
-                log_to_file(&format!("[WebCache] load_index: Deserialized index contains 7427.js entry: {}", has_7427_after));
+                let has_7427_after = index
+                    .entries
+                    .keys()
+                    .any(|k| k.contains("7427") || k.contains("7247"));
+                log_to_file(&format!(
+                    "[WebCache] load_index: Deserialized index contains 7427.js entry: {}",
+                    has_7427_after
+                ));
                 if has_7427_after {
                     for key in index.entries.keys() {
                         if key.contains("7427") || key.contains("7247") {
-                            log_to_file(&format!("[WebCache] load_index: Deserialized key: {}", key));
+                            log_to_file(&format!(
+                                "[WebCache] load_index: Deserialized key: {}",
+                                key
+                            ));
                         }
                     }
                 }
@@ -170,7 +192,10 @@ impl WebCache {
 
     pub async fn fetch(&self, url: &str) -> Result<CacheResponse, String> {
         let is_online = self.is_online().await;
-        log_to_file(&format!("[WebCache] fetch called for: {} (is_online: {})", url, is_online));
+        log_to_file(&format!(
+            "[WebCache] fetch called for: {} (is_online: {})",
+            url, is_online
+        ));
 
         if is_online {
             // Try network first
@@ -185,11 +210,17 @@ impl WebCache {
                     return Ok(response);
                 }
                 Err(e) => {
-                    log_to_file(&format!("[WebCache] Network fetch failed: {}, trying cache", e));
+                    log_to_file(&format!(
+                        "[WebCache] Network fetch failed: {}, trying cache",
+                        e
+                    ));
 
                     // CRITICAL: If network fetch fails, we're likely offline
                     // Update the online status to avoid wasting time on future requests
-                    if e.contains("error sending request") || e.contains("dns error") || e.contains("tcp connect") {
+                    if e.contains("error sending request")
+                        || e.contains("dns error")
+                        || e.contains("tcp connect")
+                    {
                         log_to_file("[WebCache] Network error detected, setting offline mode");
                         self.set_online(false).await;
                     }
@@ -329,8 +360,14 @@ impl WebCache {
 
     async fn get_from_cache(&self, url: &str) -> Option<CacheResponse> {
         let index = self.index.read().await;
-        log_to_file(&format!("[WebCache] get_from_cache: Looking for URL: {}", url));
-        log_to_file(&format!("[WebCache] get_from_cache: Index has {} entries", index.entries.len()));
+        log_to_file(&format!(
+            "[WebCache] get_from_cache: Looking for URL: {}",
+            url
+        ));
+        log_to_file(&format!(
+            "[WebCache] get_from_cache: Index has {} entries",
+            index.entries.len()
+        ));
         let entry = index.entries.get(url);
         if entry.is_none() {
             log_to_file("[WebCache] get_from_cache: URL not found in index!");
@@ -345,19 +382,31 @@ impl WebCache {
             .as_secs();
 
         if now - entry.timestamp > CACHE_MAX_AGE_SECS {
-            log_to_file(&format!("[WebCache] get_from_cache: Cache entry expired (age: {} seconds)", now - entry.timestamp));
+            log_to_file(&format!(
+                "[WebCache] get_from_cache: Cache entry expired (age: {} seconds)",
+                now - entry.timestamp
+            ));
             return None;
         }
 
         let body_path = self.cache_dir.join(&entry.body_hash);
-        log_to_file(&format!("[WebCache] get_from_cache: Reading body from: {:?}", body_path));
+        log_to_file(&format!(
+            "[WebCache] get_from_cache: Reading body from: {:?}",
+            body_path
+        ));
         let body = match fs::read(&body_path) {
             Ok(b) => {
-                log_to_file(&format!("[WebCache] get_from_cache: Successfully read {} bytes", b.len()));
+                log_to_file(&format!(
+                    "[WebCache] get_from_cache: Successfully read {} bytes",
+                    b.len()
+                ));
                 b
-            },
+            }
             Err(e) => {
-                log_to_file(&format!("[WebCache] get_from_cache: Failed to read body file: {}", e));
+                log_to_file(&format!(
+                    "[WebCache] get_from_cache: Failed to read body file: {}",
+                    e
+                ));
                 return None;
             }
         };
@@ -542,18 +591,20 @@ impl WebCache {
         let api_endpoints: Vec<String> = cached_api_urls
             .iter()
             .filter(|url| {
-                url.contains("/api/") && (
-                    url.contains("/mentors") ||
-                    url.contains("/users") ||
-                    url.contains("/prompts") ||
-                    url.contains("/messages") ||
-                    url.contains("/settings")
-                )
+                url.contains("/api/")
+                    && (url.contains("/mentors")
+                        || url.contains("/users")
+                        || url.contains("/prompts")
+                        || url.contains("/messages")
+                        || url.contains("/settings"))
             })
             .cloned()
             .collect();
 
-        println!("[WebCache] Found {} API endpoints to scan for images", api_endpoints.len());
+        println!(
+            "[WebCache] Found {} API endpoints to scan for images",
+            api_endpoints.len()
+        );
 
         let mut all_image_urls = Vec::new();
 
@@ -573,7 +624,10 @@ impl WebCache {
             }
         }
 
-        println!("[WebCache] Found {} unique image URLs to cache", all_image_urls.len());
+        println!(
+            "[WebCache] Found {} unique image URLs to cache",
+            all_image_urls.len()
+        );
 
         // Cache each image
         for image_url in all_image_urls {

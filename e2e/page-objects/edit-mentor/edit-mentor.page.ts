@@ -22,6 +22,7 @@ import { SkillsTab } from './skills.tab';
 import { ScreenShareTab } from './screenshare.tab';
 import { HumanSupportTab } from './human-support.tab';
 import { LtiTab } from './lti.tab';
+import { GraderTab } from './grader.tab';
 
 /**
  * Which sidebar category each segment lives in. Mirrors the `navCategory`
@@ -47,6 +48,7 @@ const TAB_CATEGORY: Record<
   Safety: 'Configurations',
   Disclaimers: 'Configurations',
   Screen: 'Configurations',
+  Grader: 'Configurations',
   // Integrations
   Sandbox: 'Integrations',
   Access: 'Integrations',
@@ -93,6 +95,7 @@ export class EditMentorPage {
   readonly humanSupport: HumanSupportTab;
   readonly lti: LtiTab;
   readonly skills: SkillsTab;
+  readonly grader: GraderTab;
   readonly copyMentorDialog: CopyMentorPage;
 
   constructor(page: Page) {
@@ -122,6 +125,7 @@ export class EditMentorPage {
     this.humanSupport = new HumanSupportTab(page, this.dialog);
     this.lti = new LtiTab(page, this.dialog);
     this.skills = new SkillsTab(page, this.dialog);
+    this.grader = new GraderTab(page, this.dialog);
     this.copyMentorDialog = new CopyMentorPage(page);
 
     // The modal only mounts the active category's segments, so the Settings

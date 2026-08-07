@@ -121,7 +121,11 @@ fn resolve_bridge_bin() -> Option<String> {
     if let Some(home) = home_dir() {
         #[cfg(target_os = "windows")]
         {
-            candidates.push(home.join(".local").join("bin").join("ollama-mcp-bridge.exe"));
+            candidates.push(
+                home.join(".local")
+                    .join("bin")
+                    .join("ollama-mcp-bridge.exe"),
+            );
         }
         #[cfg(not(target_os = "windows"))]
         {
@@ -142,7 +146,10 @@ fn resolve_bridge_bin() -> Option<String> {
 fn ensure_config() -> Option<PathBuf> {
     let dir = CONFIG_DIR.get()?;
     if let Err(e) = std::fs::create_dir_all(dir) {
-        println!("[McpBridge] Failed to create config dir {}: {e}", dir.display());
+        println!(
+            "[McpBridge] Failed to create config dir {}: {e}",
+            dir.display()
+        );
         return None;
     }
 
@@ -212,11 +219,10 @@ pub fn start_bridge() {
             .stdout(Stdio::null())
             .stderr(Stdio::null());
 
-        // macOS: the bridge spawns the configured MCP servers (e.g. the `ghost`
-        // helper) and they may spawn sidecars (`ghost-vision`). When the helper is
-        // installed to ~/.local/bin (no-Homebrew fallback) that dir often isn't on
-        // a GUI app's PATH, so prepend the common bins to the bridge's PATH so the
-        // servers and their sidecars resolve.
+        // macOS: the bridge spawns the configured MCP servers and they may spawn
+        // sidecars of their own. A server installed to ~/.local/bin or a Homebrew
+        // prefix often isn't on a GUI app's PATH, so prepend the common bins to
+        // the bridge's PATH so the servers and their sidecars resolve.
         #[cfg(target_os = "macos")]
         {
             cmd.env("PATH", macos_server_path());
@@ -236,7 +242,12 @@ pub fn start_bridge() {
 fn macos_server_path() -> String {
     let mut parts: Vec<String> = Vec::new();
     if let Some(home) = home_dir() {
-        parts.push(home.join(".local").join("bin").to_string_lossy().into_owned());
+        parts.push(
+            home.join(".local")
+                .join("bin")
+                .to_string_lossy()
+                .into_owned(),
+        );
     }
     parts.push("/opt/homebrew/bin".to_string());
     parts.push("/usr/local/bin".to_string());

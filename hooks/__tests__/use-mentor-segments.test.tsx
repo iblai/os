@@ -170,9 +170,9 @@ describe('useMentorSegments', () => {
     const { result } = renderHook(() => useMentorSegments());
     expect(result.current.segments).toBe(MENTOR_SEGMENTS);
     // 17 original + Voice + Screen Share (feat/mentor/1763) + Tasks
-    // (feat/mentor/715) + LTI + Analytics hub (feat/2040) + Human Support
+    // (feat/mentor/715) + LTI + Analytics hub (feat/2040) + Human Support + Grader
     // (feat/2081) + Evals (feat/1178).
-    expect(MENTOR_SEGMENTS).toHaveLength(24);
+    expect(MENTOR_SEGMENTS).toHaveLength(25);
   });
 
   it('places the Sandbox segment right after Settings', () => {
@@ -187,6 +187,13 @@ describe('useMentorSegments', () => {
       (s) => s.label === 'Prompts',
     );
     expect(MENTOR_SEGMENTS[promptsIndex + 1]?.label).toBe('Skills');
+  });
+
+  it('places the Grader segment last in the Configurations category', () => {
+    const configurationLabels = MENTOR_SEGMENTS.filter(
+      (s) => s.navCategory === 'configurations',
+    ).map((s) => s.label);
+    expect(configurationLabels.at(-1)).toBe('Grader');
   });
 
   describe('Sandbox & Skills visibility (always visible for admins)', () => {
@@ -555,6 +562,42 @@ describe('useMentorSegments', () => {
 
       const labels = result.current.filteredSegments.map((s) => s.label);
       expect(labels).toContain('Audit');
+    });
+  });
+
+  describe('Grader segment visibility (admin-only)', () => {
+    it('declares no rbac resource and gates on ADMIN only', () => {
+      // The backend does not expose grader RBAC resources yet, so the
+      // segment is admin-only via userTypes (mirroring Tasks / LTI).
+      // Re-add the rbacResource assertion once the permissions land.
+      const graderSegment = MENTOR_SEGMENTS.find((s) => s.label === 'Grader');
+      expect(graderSegment).toBeDefined();
+      expect(graderSegment!.rbacResource).toBeUndefined();
+      expect(graderSegment!.userTypes).toEqual([UserType.ADMIN]);
+    });
+
+    it('shows the Grader segment for admins', () => {
+      const { result } = renderHook(() => useMentorSegments());
+
+      const labels = result.current.filteredSegments.map((s) => s.label);
+      expect(labels).toContain('Grader');
+    });
+
+    it('hides the Grader segment when the user type filter rejects admin-only segments', () => {
+      mockIsUserTypeAllowed.mockImplementation(
+        (segment: { userTypes: string[] }) =>
+          !(
+            segment.userTypes.length === 1 &&
+            segment.userTypes[0] === UserType.ADMIN
+          ),
+      );
+
+      const { result } = renderHook(() => useMentorSegments());
+
+      const labels = result.current.filteredSegments.map((s) => s.label);
+      expect(labels).not.toContain('Grader');
+      // Non-admin-only segments still pass
+      expect(labels).toContain('Settings');
     });
   });
 

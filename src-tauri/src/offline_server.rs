@@ -19,11 +19,7 @@ use crate::web_cache::WebCache;
 // Helper function to log to file
 fn log_to_file(message: &str) {
     let log_path = std::env::temp_dir().join("mentor_offline_server.log");
-    if let Ok(mut file) = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&log_path)
-    {
+    if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(&log_path) {
         let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
         writeln!(file, "[{}] {}", timestamp, message).ok();
     }
@@ -67,7 +63,10 @@ pub async fn start_offline_server_with_signal(
     println!("[OfflineServer] start_offline_server called");
 
     let app_origin = get_app_origin();
-    println!("[OfflineServer] Using app origin for cache lookups: {}", app_origin);
+    println!(
+        "[OfflineServer] Using app origin for cache lookups: {}",
+        app_origin
+    );
 
     let state = AppState { cache, app_origin };
 
@@ -106,46 +105,57 @@ pub async fn start_offline_server_with_signal(
     if let Err(e) = socket.bind(addr) {
         // Bind failed - check if port is already in use
         if e.kind() == std::io::ErrorKind::AddrInUse {
-                println!("[OfflineServer] Port {} already in use", OFFLINE_SERVER_PORT);
-                // Verify if another instance is actually serving by checking health endpoint
-                println!("[OfflineServer] Checking if existing server is responsive...");
+            println!(
+                "[OfflineServer] Port {} already in use",
+                OFFLINE_SERVER_PORT
+            );
+            // Verify if another instance is actually serving by checking health endpoint
+            println!("[OfflineServer] Checking if existing server is responsive...");
 
-                // Try a few times to check if the existing server is actually working
-                let mut server_working = false;
-                for i in 0..3 {
-                    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-                    if is_server_running().await {
-                        server_working = true;
-                        break;
-                    }
-                    println!("[OfflineServer] Existing server check attempt {} failed", i + 1);
+            // Try a few times to check if the existing server is actually working
+            let mut server_working = false;
+            for i in 0..3 {
+                tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+                if is_server_running().await {
+                    server_working = true;
+                    break;
                 }
+                println!(
+                    "[OfflineServer] Existing server check attempt {} failed",
+                    i + 1
+                );
+            }
 
-                if server_working {
-                    println!("[OfflineServer] Another server instance is running and responsive");
-                    // Signal success since server is available (just not this instance)
-                    if let Some(tx) = ready_tx {
-                        let _ = tx.send(true);
-                    }
-                } else {
-                    println!("[OfflineServer] Port in use but not responsive - attempting to retry bind...");
-                    // Wait a bit longer and retry once
-                    tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
-                    match tokio::net::TcpListener::bind(addr).await {
-                        Ok(l) => {
-                            println!("[OfflineServer] Retry bind successful");
-                            return start_server_and_serve(l, app, ready_tx).await;
-                        }
-                        Err(_) => {
-                            println!("[OfflineServer] Retry bind failed - port conflict");
-                            if let Some(tx) = ready_tx {
-                                let _ = tx.send(false);
-                            }
-                        }
-                    }
+            if server_working {
+                println!("[OfflineServer] Another server instance is running and responsive");
+                // Signal success since server is available (just not this instance)
+                if let Some(tx) = ready_tx {
+                    let _ = tx.send(true);
                 }
             } else {
-            println!("[OfflineServer] Failed to bind to port {}: {}", OFFLINE_SERVER_PORT, e);
+                println!(
+                    "[OfflineServer] Port in use but not responsive - attempting to retry bind..."
+                );
+                // Wait a bit longer and retry once
+                tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+                match tokio::net::TcpListener::bind(addr).await {
+                    Ok(l) => {
+                        println!("[OfflineServer] Retry bind successful");
+                        return start_server_and_serve(l, app, ready_tx).await;
+                    }
+                    Err(_) => {
+                        println!("[OfflineServer] Retry bind failed - port conflict");
+                        if let Some(tx) = ready_tx {
+                            let _ = tx.send(false);
+                        }
+                    }
+                }
+            }
+        } else {
+            println!(
+                "[OfflineServer] Failed to bind to port {}: {}",
+                OFFLINE_SERVER_PORT, e
+            );
             // Signal failure
             if let Some(tx) = ready_tx {
                 let _ = tx.send(false);
@@ -166,7 +176,10 @@ pub async fn start_offline_server_with_signal(
         }
     };
 
-    println!("[OfflineServer] Successfully bound to port {}", OFFLINE_SERVER_PORT);
+    println!(
+        "[OfflineServer] Successfully bound to port {}",
+        OFFLINE_SERVER_PORT
+    );
     start_server_and_serve(listener, app, ready_tx).await
 }
 
@@ -177,7 +190,10 @@ async fn start_server_and_serve(
 ) {
     let addr = listener.local_addr().unwrap();
 
-    println!("[OfflineServer] Server bound, starting to serve on http://{}", addr);
+    println!(
+        "[OfflineServer] Server bound, starting to serve on http://{}",
+        addr
+    );
 
     // Signal that server is ready after successful bind
     if let Some(tx) = ready_tx {
@@ -220,8 +236,12 @@ async fn serve_file(
     let decoded_path = urlencoding::decode(&path).unwrap_or(std::borrow::Cow::Borrowed(&path));
     let decoded_path = decoded_path.as_ref();
 
-    log_to_file(&format!("Request received - URI path: '{}', Axum path param: '{}', decoded: '{}'",
-        req.uri().path(), path, decoded_path));
+    log_to_file(&format!(
+        "Request received - URI path: '{}', Axum path param: '{}', decoded: '{}'",
+        req.uri().path(),
+        path,
+        decoded_path
+    ));
 
     // Handle API routes specially - check cache first, then return mock responses
     if decoded_path.starts_with("api/") {
@@ -265,7 +285,11 @@ async fn serve_file(
             "http://localhost:3000",
         ];
 
-        log_to_file(&format!("Static asset - original_path: '{}', trying {} origins", original_path, possible_origins.len()));
+        log_to_file(&format!(
+            "Static asset - original_path: '{}', trying {} origins",
+            original_path,
+            possible_origins.len()
+        ));
 
         // Try each origin pattern
         for origin in possible_origins {
@@ -276,7 +300,10 @@ async fn serve_file(
             if let Some(cache) = cache_guard.as_ref() {
                 if cache.get_cached(&cache_url).await.is_some() {
                     drop(cache_guard);
-                    log_to_file(&format!("Found static asset in cache with origin: {}", origin));
+                    log_to_file(&format!(
+                        "Found static asset in cache with origin: {}",
+                        origin
+                    ));
                     return serve_cached_url(&state, &cache_url).await;
                 }
             }
@@ -286,7 +313,10 @@ async fn serve_file(
         // If not found in any origin, try with the default app_origin
         // This will return a proper 404 if really not cached
         let cache_url = format!("{}/{}", app_origin, original_path);
-        log_to_file(&format!("Static asset not found in any origin, trying default: {}", cache_url));
+        log_to_file(&format!(
+            "Static asset not found in any origin, trying default: {}",
+            cache_url
+        ));
         serve_cached_url(&state, &cache_url).await
     } else {
         // For page routes (SPA), try to serve the cached HTML for the specific route first
@@ -456,7 +486,10 @@ async fn handle_post_api_offline_with_cache(
     }
 
     // Default POST response for unhandled/uncached endpoints
-    println!("[OfflineServer] No cache or fallback for POST path: /{}", path);
+    println!(
+        "[OfflineServer] No cache or fallback for POST path: /{}",
+        path
+    );
     Response::builder()
         .status(StatusCode::SERVICE_UNAVAILABLE)
         .header(header::CONTENT_TYPE, "application/json")
@@ -480,7 +513,10 @@ async fn handle_api_offline_with_cache(state: &AppState, path: &str) -> Response
         let cache_guard = state.cache.read().await;
         if let Some(cache) = cache_guard.as_ref() {
             let cached_urls = cache.get_cached_urls().await;
-            println!("[OfflineServer] === CACHED API URLs ({} total) ===", cached_urls.len());
+            println!(
+                "[OfflineServer] === CACHED API URLs ({} total) ===",
+                cached_urls.len()
+            );
             for url in &cached_urls {
                 if url.contains("/api/") {
                     println!("[OfflineServer]   {}", url);
@@ -494,7 +530,9 @@ async fn handle_api_offline_with_cache(state: &AppState, path: &str) -> Response
     // Check if path contains 'undefined' and try to find a matching cached response
     // This handles cases where React params aren't available yet
     let search_paths = if path.contains("undefined") {
-        println!("[OfflineServer] Path contains 'undefined', will search for matching cached responses");
+        println!(
+            "[OfflineServer] Path contains 'undefined', will search for matching cached responses"
+        );
         get_corrected_paths(path)
     } else {
         vec![path.to_string()]
@@ -556,7 +594,10 @@ async fn handle_api_offline_with_cache(state: &AppState, path: &str) -> Response
     drop(cache_guard);
 
     // No cache found, return mock response
-    println!("[OfflineServer] No cached API response found, using mock for: /{}", path);
+    println!(
+        "[OfflineServer] No cached API response found, using mock for: /{}",
+        path
+    );
     handle_api_offline(path)
 }
 
@@ -575,7 +616,9 @@ async fn handle_next_image(state: &AppState, query: Option<&str>) -> Response<Bo
             for param in params {
                 if let Some(value) = param.strip_prefix("url=") {
                     // URL-decode the parameter
-                    url_param = Some(urlencoding::decode(value).unwrap_or(std::borrow::Cow::Borrowed(value)));
+                    url_param = Some(
+                        urlencoding::decode(value).unwrap_or(std::borrow::Cow::Borrowed(value)),
+                    );
                     break;
                 }
             }
@@ -650,7 +693,10 @@ async fn handle_next_image(state: &AppState, query: Option<&str>) -> Response<Bo
 
 /// Try to find cached response by matching path pattern, ignoring query parameters
 /// e.g., request for /api/search/prompts/ should match cached https://base.manager.iblai.org/api/search/prompts/?limit=10
-async fn find_cached_by_path_pattern(cache: &WebCache, path: &str) -> Option<crate::web_cache::CacheResponse> {
+async fn find_cached_by_path_pattern(
+    cache: &WebCache,
+    path: &str,
+) -> Option<crate::web_cache::CacheResponse> {
     // Normalize the requested path
     let normalized_request_path = if path.starts_with('/') {
         path.to_string()
@@ -678,7 +724,10 @@ async fn find_cached_by_path_pattern(cache: &WebCache, path: &str) -> Option<cra
                 // Check if paths match (ignoring query params)
                 if cached_path == normalized_request_path {
                     if let Some(response) = cache.get_cached(&cached_url).await {
-                        println!("[OfflineServer] Found cache match by path: {} -> {}", path, cached_url);
+                        println!(
+                            "[OfflineServer] Found cache match by path: {} -> {}",
+                            path, cached_url
+                        );
                         return Some(response);
                     }
                 }
@@ -692,7 +741,10 @@ async fn find_cached_by_path_pattern(cache: &WebCache, path: &str) -> Option<cra
 /// Try to find cached response by fuzzy matching the API path pattern
 /// e.g., if path is api/ai-mentor/orgs/undefined/users/gillis/mentors/undefined/public-settings/
 /// we look for any cached URL that matches /api/ai-mentor/orgs/*/users/*/mentors/*/public-settings/
-async fn fuzzy_match_cache(cache: &WebCache, path: &str) -> Option<crate::web_cache::CacheResponse> {
+async fn fuzzy_match_cache(
+    cache: &WebCache,
+    path: &str,
+) -> Option<crate::web_cache::CacheResponse> {
     // Extract the API pattern from the path
     // Convert path with undefined to a pattern for matching
     // Add leading slash if not present
@@ -701,13 +753,22 @@ async fn fuzzy_match_cache(cache: &WebCache, path: &str) -> Option<crate::web_ca
     } else {
         format!("/{}", path)
     };
-    let pattern_parts: Vec<&str> = normalized_path.split('/').filter(|s| !s.is_empty()).collect();
+    let pattern_parts: Vec<&str> = normalized_path
+        .split('/')
+        .filter(|s| !s.is_empty())
+        .collect();
 
-    println!("[OfflineServer] Fuzzy matching for pattern: {:?}", pattern_parts);
+    println!(
+        "[OfflineServer] Fuzzy matching for pattern: {:?}",
+        pattern_parts
+    );
 
     // Get all cached URLs and try to find one that matches the pattern
     let cached_urls = cache.get_cached_urls().await;
-    println!("[OfflineServer] Checking {} cached URLs for fuzzy match", cached_urls.len());
+    println!(
+        "[OfflineServer] Checking {} cached URLs for fuzzy match",
+        cached_urls.len()
+    );
 
     for cached_url in cached_urls {
         // Only check API URLs
@@ -719,7 +780,8 @@ async fn fuzzy_match_cache(cache: &WebCache, path: &str) -> Option<crate::web_ca
         // URL format: https://base.manager.iblai.app/api/...
         if let Some(api_start) = cached_url.find("/api/") {
             let cached_path = &cached_url[api_start..];
-            let cached_parts: Vec<&str> = cached_path.split('/').filter(|s| !s.is_empty()).collect();
+            let cached_parts: Vec<&str> =
+                cached_path.split('/').filter(|s| !s.is_empty()).collect();
 
             // Check if the pattern matches (same length, same structure)
             if cached_parts.len() == pattern_parts.len() {
@@ -734,7 +796,10 @@ async fn fuzzy_match_cache(cache: &WebCache, path: &str) -> Option<crate::web_ca
                 }
 
                 if matches {
-                    println!("[OfflineServer] Fuzzy match found: {} for pattern: {}", cached_url, path);
+                    println!(
+                        "[OfflineServer] Fuzzy match found: {} for pattern: {}",
+                        cached_url, path
+                    );
                     if let Some(response) = cache.get_cached(&cached_url).await {
                         return Some(response);
                     }
@@ -884,7 +949,10 @@ async fn serve_cached_url(state: &AppState, url: &str) -> Response<Body> {
 
     match cache.fetch(url).await {
         Ok(response) => {
-            log_to_file(&format!("Cache HIT for: {} (status: {})", url, response.status));
+            log_to_file(&format!(
+                "Cache HIT for: {} (status: {})",
+                url, response.status
+            ));
             let content_type = response.content_type.clone();
             let mut body = response.body;
 
@@ -898,7 +966,10 @@ async fn serve_cached_url(state: &AppState, url: &str) -> Response<Body> {
                 // Convert body to string for manipulation
                 if let Ok(mut html) = String::from_utf8(body.clone()) {
                     // Remove any CSP meta tags that might block localStorage
-                    html = html.replace(r#"<meta http-equiv="Content-Security-Policy""#, r#"<meta http-equiv="X-Removed-CSP""#);
+                    html = html.replace(
+                        r#"<meta http-equiv="Content-Security-Policy""#,
+                        r#"<meta http-equiv="X-Removed-CSP""#,
+                    );
 
                     // Inject webpack public path and fetch interceptor at the very start of <head>
                     // This MUST run before any other scripts to ensure webpack initializes correctly
@@ -929,10 +1000,7 @@ async fn serve_cached_url(state: &AppState, url: &str) -> Response<Body> {
 </script>"#;
 
                     // Inject webpack script right after opening <head> tag
-                    html = html.replace(
-                        r#"<head>"#,
-                        &format!(r#"<head>{}"#, webpack_init_script)
-                    );
+                    html = html.replace(r#"<head>"#, &format!(r#"<head>{}"#, webpack_init_script));
 
                     // Rewrite relative URLs in src/href attributes to point to offline server
                     // This is a simple replacement that handles most cases
@@ -942,7 +1010,10 @@ async fn serve_cached_url(state: &AppState, url: &str) -> Response<Body> {
                 }
 
                 builder = builder
-                    .header("Content-Security-Policy", "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;")
+                    .header(
+                        "Content-Security-Policy",
+                        "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;",
+                    )
                     .header("X-Frame-Options", "ALLOWALL")
                     .header("Access-Control-Allow-Credentials", "true");
             }
