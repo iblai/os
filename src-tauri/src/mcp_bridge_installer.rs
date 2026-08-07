@@ -8,12 +8,12 @@
 //! macOS, pacman on Arch, dnf on Fedora) and falling back to the official
 //! Astral install script as a last resort.
 
+#[cfg(target_os = "linux")]
+use crate::model_manager::can_sudo;
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 use std::path::{Path, PathBuf};
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 use std::process::Command;
-#[cfg(target_os = "linux")]
-use crate::model_manager::can_sudo;
 
 /// Create a Command with a hidden console window on Windows.
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
@@ -98,7 +98,8 @@ fn ensure_uv_installed() -> Result<String, String> {
     // macOS — Homebrew.
     #[cfg(target_os = "macos")]
     {
-        if Path::new("/opt/homebrew/bin/brew").exists() || Path::new("/usr/local/bin/brew").exists() {
+        if Path::new("/opt/homebrew/bin/brew").exists() || Path::new("/usr/local/bin/brew").exists()
+        {
             println!("[McpBridge] Installing uv via Homebrew...");
             let _ = create_command("brew").args(["install", "uv"]).status();
             if let Some(uv) = resolve_uv() {
@@ -120,7 +121,9 @@ fn ensure_uv_installed() -> Result<String, String> {
         } else if sudo_ok && Path::new("/usr/bin/dnf").exists() {
             // Fedora / RHEL family
             println!("[McpBridge] Installing uv via dnf...");
-            let _ = create_command("sudo").args(["dnf", "install", "uv", "-y"]).status();
+            let _ = create_command("sudo")
+                .args(["dnf", "install", "uv", "-y"])
+                .status();
         }
         if let Some(uv) = resolve_uv() {
             return Ok(uv);
@@ -137,7 +140,10 @@ fn ensure_uv_installed() -> Result<String, String> {
             .status()
             .map_err(|e| format!("Failed to run uv install script: {e}"))?;
         if !status.success() {
-            return Err(format!("uv install script failed (exit {:?})", status.code()));
+            return Err(format!(
+                "uv install script failed (exit {:?})",
+                status.code()
+            ));
         }
     }
 
@@ -155,7 +161,10 @@ fn ensure_uv_installed() -> Result<String, String> {
             .status()
             .map_err(|e| format!("Failed to run uv install script: {e}"))?;
         if !status.success() {
-            return Err(format!("uv install script failed (exit {:?})", status.code()));
+            return Err(format!(
+                "uv install script failed (exit {:?})",
+                status.code()
+            ));
         }
     }
 

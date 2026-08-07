@@ -151,7 +151,9 @@ fn extract(archive: &Path, dir: &Path) -> Result<(), String> {
     // the install hangs after "extracting opencode" with no error. `output()` also
     // nulls stdin, so the child can't stall waiting on input, and it gives us the
     // extractor's own stderr to report instead of a bare exit code.
-    let out = cmd.output().map_err(|e| format!("extract spawn failed: {e}"))?;
+    let out = cmd
+        .output()
+        .map_err(|e| format!("extract spawn failed: {e}"))?;
     if out.status.success() {
         Ok(())
     } else {
@@ -190,12 +192,11 @@ fn hoist_binary(bin_dir: &Path, target: &Path) -> Result<(), String> {
 
 /// Download + install the pinned opencode binary into `~/.local/share/iblai/bin`.
 async fn download_and_install(app: &AppHandle) -> Result<(), String> {
-    let version = std::env::var("IBL_OPENCODE_VERSION")
-        .unwrap_or_else(|_| OPENCODE_VERSION.to_string());
+    let version =
+        std::env::var("IBL_OPENCODE_VERSION").unwrap_or_else(|_| OPENCODE_VERSION.to_string());
     let (os, arch, ext) = target_asset()?;
     let asset = format!("opencode-{os}-{arch}.{ext}");
-    let url =
-        format!("https://github.com/sst/opencode/releases/download/v{version}/{asset}");
+    let url = format!("https://github.com/sst/opencode/releases/download/v{version}/{asset}");
     log(app, &format!("downloading {asset} (v{version})"));
 
     let bin_dir = iblai_data_dir().join("bin");
@@ -288,7 +289,10 @@ fn ensure_config(app: &AppHandle) -> Result<(), String> {
     let existed = config_file().exists();
     ensure_opencode_config()?;
     if !existed {
-        log(app, &format!("wrote opencode config at {}", config_file().display()));
+        log(
+            app,
+            &format!("wrote opencode config at {}", config_file().display()),
+        );
     }
     Ok(())
 }

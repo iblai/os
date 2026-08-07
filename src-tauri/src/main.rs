@@ -1,35 +1,35 @@
 // Hide console window on Windows in release builds
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod cua_driver_installer;
+mod cua_driver_mcp;
 mod foundry_installer;
 mod foundry_manager;
-mod ghost_mcp_manager;
-mod ghost_os_manager;
 mod mcp_bridge_installer;
 mod mcp_bridge_manager;
 mod model_manager;
 mod oauth;
 mod offline_server;
 mod ollama_installer;
-mod web_cache;
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 mod opencode_acp;
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 mod opencode_installer;
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 mod opencode_proxy;
+mod web_cache;
 
 use foundry_installer::{
     download_and_install_foundry, download_foundry_model, get_recommended_models,
 };
 use foundry_manager::{check_foundry_status, FoundryStatus};
+use mcp_bridge_installer::install_mcp_bridge;
 use model_manager::{
     cancel_download, check_disk_space, check_ollama_installed, get_timestamp, is_model_installed,
     is_ollama_running, list_installed_models, pull_model, start_ollama_server, stop_ollama_server,
     wait_for_ollama_ready, DiskSpaceError, DownloadProgress, InstallationLog, OllamaStatus,
     SystemMemory, REQUIRED_FREE_SPACE_GB,
 };
-use mcp_bridge_installer::install_mcp_bridge;
 use offline_server::{get_server_url, start_offline_server_with_signal};
 use ollama_installer::download_and_install_ollama;
 use std::sync::Arc;
@@ -2189,8 +2189,7 @@ fn main() {
     #[cfg(target_os = "macos")]
     let base = base.plugin(tauri_plugin_macos_permissions::init());
 
-    base
-        .plugin(tauri_plugin_shell::init())
+    base.plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
@@ -2538,7 +2537,6 @@ fn main() {
                         || url_str.starts_with("http://127.0.0.1")
                         || url_str.starts_with("https://mentorai.iblai.app")
                         || url_str.starts_with("https://os.ibl.ai")
-
                         || url_str.starts_with("https://auth.iblai.org")
                         || url_str.starts_with("https://login.iblai.app")
                         || url_str.starts_with("https://base.manager.iblai.app")
@@ -2766,12 +2764,12 @@ fn main() {
             stop_ollama,
             check_ollama_status,
             get_mcp_config_path,
-            ghost_os_manager::install_ghost_os,
-            ghost_os_manager::stop_ghost_os,
-            ghost_os_manager::check_ghost_os_status,
-            ghost_mcp_manager::ghost_mcp_start,
-            ghost_mcp_manager::ghost_mcp_send,
-            ghost_mcp_manager::ghost_mcp_stop,
+            cua_driver_installer::install_cua_driver,
+            cua_driver_installer::check_cua_driver_status,
+            cua_driver_mcp::cua_driver_support,
+            cua_driver_mcp::cua_driver_start,
+            cua_driver_mcp::cua_driver_send,
+            cua_driver_mcp::cua_driver_stop,
             check_foundry_local_status,
             start_foundry_local_service,
             load_foundry_local_model,

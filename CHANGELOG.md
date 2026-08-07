@@ -1,5 +1,68 @@
 # Changelog
 
+## [0.119.2](https://github.com/iblai/os/compare/v0.119.1...v0.119.2) (2026-08-07)
+
+### Bug Fixes
+
+* **tauri-bump:** keep README download links rename-safe ([7b97ac0](https://github.com/iblai/os/commit/7b97ac050274b67364264df780034ee02d673d21)), closes [#408](https://github.com/iblai/os/issues/408)
+
+## [0.119.1](https://github.com/iblai/os/compare/v0.119.0...v0.119.1) (2026-08-07)
+
+### Documentation
+
+* **readme:** fix download buttons to app-v0.95.11 (ibl.ai_ assets) ([959f305](https://github.com/iblai/os/commit/959f3050f797c19927675b14f8ae9408c01ead0d))
+
+## [0.119.0](https://github.com/iblai/os/compare/v0.118.0...v0.119.0) (2026-08-07)
+
+### Features
+
+* **chat:** give fenced code blocks a language + copy header bar ([6e9e709](https://github.com/iblai/os/commit/6e9e709de53e1c930181fe2a8ff570f6e91923f2)), closes [#ccc](https://github.com/iblai/os/issues/ccc)
+* **chat:** let CopyButtonIcon render an optional text label ([b8be247](https://github.com/iblai/os/commit/b8be2474407b32b895abc50f4129452f530f1ca3))
+
+### Bug Fixes
+
+* **chat:** raise tool-call text contrast to meet WCAG AA ([a03acc7](https://github.com/iblai/os/commit/a03acc7b40cd9872848a9ebc02359366603d4031))
+* **e2e:** match the tool-call panel's new border colour ([db12dae](https://github.com/iblai/os/commit/db12dae9230470c6844f0c1ec20d6489fe5aa671))
+
+### Styles
+
+* apply prettier formatting to CHANGELOG ([2272b55](https://github.com/iblai/os/commit/2272b55a176ead93945b0258655cd328b174b586))
+* **chat:** even out the gap above the first collapsible item ([0c5dea5](https://github.com/iblai/os/commit/0c5dea54f1385548e266c5aa0b549156774b688e))
+
+## [0.118.0](https://github.com/iblai/os/compare/v0.117.0...v0.118.0) (2026-08-07)
+
+### Features
+
+* add screen capture support for cowork ([b9c7396](https://github.com/iblai/os/commit/b9c739641a27ddbb58aab3ae39ebe1881bb97f37))
+* new cowork implementation ([dd278dd](https://github.com/iblai/os/commit/dd278dd0ae0a719d0c6294b2cb2a3d2189c39ace))
+
+### Bug Fixes
+
+* avoid blocking the UI with cua driver setup ([789b853](https://github.com/iblai/os/commit/789b853af5e908e583e4a82f75b6879164bda3ac))
+* exclude the non AX tools in cowork. ([2e346df](https://github.com/iblai/os/commit/2e346df8b7b0c8d0424ae169483b7bc80ae195fb))
+* fix lint error ([afb73be](https://github.com/iblai/os/commit/afb73bedd34d7240780e0759527d9cde13423469))
+* fix window state getter ([8b02834](https://github.com/iblai/os/commit/8b0283436653559a2f8b6dce433fed92a93bc9ba))
+* restore get_window_state tool ([d8dea06](https://github.com/iblai/os/commit/d8dea061547a95a2f4d878212a0cdd886643a4b0))
+* restore screen capture tools ([1095b32](https://github.com/iblai/os/commit/1095b32bf4ee800cf61ba121903b548e936bd562))
+* sanitize tool calls ([acb4b00](https://github.com/iblai/os/commit/acb4b002fb707a0443552b01c60d24a5357cc86c))
+
+### Chores
+
+* bump iblai-js version ([8cf997d](https://github.com/iblai/os/commit/8cf997dbd9eb9dc968802531c59d8b39e68c2733))
+* revert to main branch version ([73d88c6](https://github.com/iblai/os/commit/73d88c6441bc6c8d5e455fe0ac48866d9f2a9cf3))
+* **tauri:** release app-v0.95.11 ([9fdf95b](https://github.com/iblai/os/commit/9fdf95bf63900715dd0d3d5e8faf1cb5a7051dbf))
+* update pnpm lock ([34f55fa](https://github.com/iblai/os/commit/34f55facc8067b2a50bcb77f9609dca25dc146c0))
+
+## [0.117.0](https://github.com/iblai/os/compare/v0.116.0...v0.117.0) (2026-08-06)
+
+### Features
+
+* **csp:** make partner CSP hosts configurable via CSP_PARTNER_HOSTS ([bf1b453](https://github.com/iblai/os/commit/bf1b453011ca0f4934ed61785a1490144f863c2c))
+
+### Bug Fixes
+
+* **csp:** allow wss:// partner origins in connect-src ([a058872](https://github.com/iblai/os/commit/a058872b22e4a2e237fd3351a0075f3b1c736d00))
+
 ## [0.116.0](https://github.com/iblai/os/compare/v0.115.0...v0.116.0) (2026-08-06)
 
 ### Features
@@ -26,86 +89,86 @@
 
 ### Bug Fixes
 
-* **chat:** copy to clipboard when an embedder withholds the permission ([334bd3b](https://github.com/iblai/os/commit/334bd3bbc2b8b16aaab98a4343cedf71c1316e40))
+- **chat:** copy to clipboard when an embedder withholds the permission ([334bd3b](https://github.com/iblai/os/commit/334bd3bbc2b8b16aaab98a4343cedf71c1316e40))
 
 ## [0.114.1](https://github.com/iblai/os/compare/v0.114.0...v0.114.1) (2026-08-06)
 
 ### Bug Fixes
 
-* **workflows:** stop auto-save refetch from discarding an inline rename ([2ccd697](https://github.com/iblai/os/commit/2ccd697ab3481c382b71a1a44ac98ea28b45d29c))
+- **workflows:** stop auto-save refetch from discarding an inline rename ([2ccd697](https://github.com/iblai/os/commit/2ccd697ab3481c382b71a1a44ac98ea28b45d29c))
 
 ### Chores
 
-* **deps:** raise override floors to clear open Dependabot alerts ([53c2d5f](https://github.com/iblai/os/commit/53c2d5f25244e67c0a29640d578c151e2b94e77b)), closes [#368](https://github.com/iblai/os/issues/368)
+- **deps:** raise override floors to clear open Dependabot alerts ([53c2d5f](https://github.com/iblai/os/commit/53c2d5f25244e67c0a29640d578c151e2b94e77b)), closes [#368](https://github.com/iblai/os/issues/368)
 
 ### Tests
 
-* **workflows:** cover the rename-vs-refetch race in the workflow editor ([c1015b2](https://github.com/iblai/os/commit/c1015b254186156efc70cf30622ebbac0abe6da4))
+- **workflows:** cover the rename-vs-refetch race in the workflow editor ([c1015b2](https://github.com/iblai/os/commit/c1015b254186156efc70cf30622ebbac0abe6da4))
 
 ### CI
 
-* adopt iblai/pr-e2e-action@v1 for the e2e job ([c777df4](https://github.com/iblai/os/commit/c777df41ef2a0e5ea84c44df1ce15177b31107df))
+- adopt iblai/pr-e2e-action@v1 for the e2e job ([c777df4](https://github.com/iblai/os/commit/c777df41ef2a0e5ea84c44df1ce15177b31107df))
 
 ## [0.114.0](https://github.com/iblai/os/compare/v0.113.1...v0.114.0) (2026-08-05)
 
 ### Features
 
-* **ci:** pass PR_E2E_LABEL_TOKEN so /retest can actually trigger a run ([b3ea7f3](https://github.com/iblai/os/commit/b3ea7f31a9579cd0a4f56ce21ae54b6ed9a20812))
+- **ci:** pass PR_E2E_LABEL_TOKEN so /retest can actually trigger a run ([b3ea7f3](https://github.com/iblai/os/commit/b3ea7f31a9579cd0a4f56ce21ae54b6ed9a20812))
 
 ## [0.113.1](https://github.com/iblai/os/compare/v0.113.0...v0.113.1) (2026-08-05)
 
 ### Bug Fixes
 
-* **ci:** pr-e2e commands need pull-requests: write to reply ([bf3417c](https://github.com/iblai/os/commit/bf3417c87b6511f6ba3aa395c5aadfec1ba4e6b8))
+- **ci:** pr-e2e commands need pull-requests: write to reply ([bf3417c](https://github.com/iblai/os/commit/bf3417c87b6511f6ba3aa395c5aadfec1ba4e6b8))
 
 ## [0.113.0](https://github.com/iblai/os/compare/v0.112.1...v0.113.0) (2026-08-05)
 
 ### Features
 
-* **ci:** slash commands for PR e2e — /retest, /status, /report, /cancel ([b7dbbf3](https://github.com/iblai/os/commit/b7dbbf384869722a28d4b0c7ee5ddc90ed3c1781))
+- **ci:** slash commands for PR e2e — /retest, /status, /report, /cancel ([b7dbbf3](https://github.com/iblai/os/commit/b7dbbf384869722a28d4b0c7ee5ddc90ed3c1781))
 
 ## [0.112.1](https://github.com/iblai/os/compare/v0.112.0...v0.112.1) (2026-08-05)
 
 ### Bug Fixes
 
-* **canvas:** preserve code fence newlines and bodies in canvas rendering ([dfc7ce1](https://github.com/iblai/os/commit/dfc7ce1359138bf049507fc713e62e2ee34234aa)), closes [#2109](https://github.com/iblai/os/issues/2109)
-* **chat:** harden LaTeX preprocessing against LLM-emitted edge cases ([e913907](https://github.com/iblai/os/commit/e913907c8575c30a5083d51ca250a3a1cfbb3db0)), closes [#2109](https://github.com/iblai/os/issues/2109)
-* **chat:** nest 2-space indented sublists and tighten nested list margins ([1e2f163](https://github.com/iblai/os/commit/1e2f16304ddf6a1addd575c5eb8ca6660278796c)), closes [#2109](https://github.com/iblai/os/issues/2109)
-* **chat:** scope the default system prompt's LaTeX to math only ([751971e](https://github.com/iblai/os/commit/751971e43e71de6c276731889c9fd879ca28770c)), closes [#2109](https://github.com/iblai/os/issues/2109) [#2109](https://github.com/iblai/os/issues/2109)
-* **chat:** unwrap display-math wrappers around list environments ([54cb609](https://github.com/iblai/os/commit/54cb6092de7dc4a127b6a377fe8f3b282d855983)), closes [#2109](https://github.com/iblai/os/issues/2109)
-* **deps:** repair coverage tooling broken by brace-expansion override ([ce48e28](https://github.com/iblai/os/commit/ce48e2850469815055978cba645e80fcace001cd))
-* **security:** raise floors for four high-severity advisories ([8b5b649](https://github.com/iblai/os/commit/8b5b649b8af16b6b543a9aa3f03a88fe699f8af0))
+- **canvas:** preserve code fence newlines and bodies in canvas rendering ([dfc7ce1](https://github.com/iblai/os/commit/dfc7ce1359138bf049507fc713e62e2ee34234aa)), closes [#2109](https://github.com/iblai/os/issues/2109)
+- **chat:** harden LaTeX preprocessing against LLM-emitted edge cases ([e913907](https://github.com/iblai/os/commit/e913907c8575c30a5083d51ca250a3a1cfbb3db0)), closes [#2109](https://github.com/iblai/os/issues/2109)
+- **chat:** nest 2-space indented sublists and tighten nested list margins ([1e2f163](https://github.com/iblai/os/commit/1e2f16304ddf6a1addd575c5eb8ca6660278796c)), closes [#2109](https://github.com/iblai/os/issues/2109)
+- **chat:** scope the default system prompt's LaTeX to math only ([751971e](https://github.com/iblai/os/commit/751971e43e71de6c276731889c9fd879ca28770c)), closes [#2109](https://github.com/iblai/os/issues/2109) [#2109](https://github.com/iblai/os/issues/2109)
+- **chat:** unwrap display-math wrappers around list environments ([54cb609](https://github.com/iblai/os/commit/54cb6092de7dc4a127b6a377fe8f3b282d855983)), closes [#2109](https://github.com/iblai/os/issues/2109)
+- **deps:** repair coverage tooling broken by brace-expansion override ([ce48e28](https://github.com/iblai/os/commit/ce48e2850469815055978cba645e80fcace001cd))
+- **security:** raise floors for four high-severity advisories ([8b5b649](https://github.com/iblai/os/commit/8b5b649b8af16b6b543a9aa3f03a88fe699f8af0))
 
 ### Tests
 
-* **chat:** cover math-costume LaTeX fixes at the component level ([316ecb7](https://github.com/iblai/os/commit/316ecb73b89dbec9e57f09b9f681f6f0918f5396)), closes [#2109](https://github.com/iblai/os/issues/2109)
-* **e2e:** wait for mentor settings before asserting embed logo gating ([d8c5ffd](https://github.com/iblai/os/commit/d8c5ffdabd30724a5247dc05ec51a792e4c3e7a9))
+- **chat:** cover math-costume LaTeX fixes at the component level ([316ecb7](https://github.com/iblai/os/commit/316ecb73b89dbec9e57f09b9f681f6f0918f5396)), closes [#2109](https://github.com/iblai/os/issues/2109)
+- **e2e:** wait for mentor settings before asserting embed logo gating ([d8c5ffd](https://github.com/iblai/os/commit/d8c5ffdabd30724a5247dc05ec51a792e4c3e7a9))
 
 ## [0.112.0](https://github.com/iblai/os/compare/v0.111.8...v0.112.0) (2026-08-05)
 
 ### Features
 
-* **pr-e2e:** call iblai/pr-e2e-action@v1 instead of an in-repo copy ([4cc340f](https://github.com/iblai/os/commit/4cc340f886c9747d838228fd1d6de6f066138fc9))
+- **pr-e2e:** call iblai/pr-e2e-action@v1 instead of an in-repo copy ([4cc340f](https://github.com/iblai/os/commit/4cc340f886c9747d838228fd1d6de6f066138fc9))
 
 ### Bug Fixes
 
-* **pr-e2e:** keep cancellation cleanup as a job step ([59e00de](https://github.com/iblai/os/commit/59e00de60b6ef8eee693af063fba5bc2c531fcee)), closes [os#394](https://github.com/iblai/os/issues/394)
+- **pr-e2e:** keep cancellation cleanup as a job step ([59e00de](https://github.com/iblai/os/commit/59e00de60b6ef8eee693af063fba5bc2c531fcee)), closes [os#394](https://github.com/iblai/os/issues/394)
 
 ## [0.111.8](https://github.com/iblai/os/compare/v0.111.7...v0.111.8) (2026-08-04)
 
 ### Bug Fixes
 
-* **pr-e2e:** never infer which runner executes the dispatched run ([9dcc8e6](https://github.com/iblai/os/commit/9dcc8e66e3dd12c601a069722e65dd135db89497)), closes [os#407](https://github.com/iblai/os/issues/407) [os#407](https://github.com/iblai/os/issues/407)
+- **pr-e2e:** never infer which runner executes the dispatched run ([9dcc8e6](https://github.com/iblai/os/commit/9dcc8e66e3dd12c601a069722e65dd135db89497)), closes [os#407](https://github.com/iblai/os/issues/407) [os#407](https://github.com/iblai/os/issues/407)
 
 ## [0.111.7](https://github.com/iblai/os/compare/v0.111.6...v0.111.7) (2026-08-04)
 
 ### Bug Fixes
 
-* avoid blocking the app with opencode extraction ([0c9696a](https://github.com/iblai/os/commit/0c9696afb6b354a088e75e2a31cc9224c681455d))
+- avoid blocking the app with opencode extraction ([0c9696a](https://github.com/iblai/os/commit/0c9696afb6b354a088e75e2a31cc9224c681455d))
 
 ### Chores
 
-* **tauri:** release app-v0.95.10 ([eeab9a2](https://github.com/iblai/os/commit/eeab9a24fa250cafb4c1c2d85b75e95ff0e0016a))
+- **tauri:** release app-v0.95.10 ([eeab9a2](https://github.com/iblai/os/commit/eeab9a24fa250cafb4c1c2d85b75e95ff0e0016a))
 
 ## [0.111.6](https://github.com/iblai/os/compare/v0.111.5...v0.111.6) (2026-08-04)
 
