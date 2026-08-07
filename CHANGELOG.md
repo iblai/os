@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.118.0](https://github.com/iblai/os/compare/v0.117.0...v0.118.0) (2026-08-07)
+
+### Features
+
+* add screen capture support for cowork ([b9c7396](https://github.com/iblai/os/commit/b9c739641a27ddbb58aab3ae39ebe1881bb97f37))
+* new cowork implementation ([dd278dd](https://github.com/iblai/os/commit/dd278dd0ae0a719d0c6294b2cb2a3d2189c39ace))
+
+### Bug Fixes
+
+* avoid blocking the UI with cua driver setup ([789b853](https://github.com/iblai/os/commit/789b853af5e908e583e4a82f75b6879164bda3ac))
+* exclude the non AX tools in cowork. ([2e346df](https://github.com/iblai/os/commit/2e346df8b7b0c8d0424ae169483b7bc80ae195fb))
+* fix lint error ([afb73be](https://github.com/iblai/os/commit/afb73bedd34d7240780e0759527d9cde13423469))
+* fix window state getter ([8b02834](https://github.com/iblai/os/commit/8b0283436653559a2f8b6dce433fed92a93bc9ba))
+* restore get_window_state tool ([d8dea06](https://github.com/iblai/os/commit/d8dea061547a95a2f4d878212a0cdd886643a4b0))
+* restore screen capture tools ([1095b32](https://github.com/iblai/os/commit/1095b32bf4ee800cf61ba121903b548e936bd562))
+* sanitize tool calls ([acb4b00](https://github.com/iblai/os/commit/acb4b002fb707a0443552b01c60d24a5357cc86c))
+
+### Chores
+
+* bump iblai-js version ([8cf997d](https://github.com/iblai/os/commit/8cf997dbd9eb9dc968802531c59d8b39e68c2733))
+* revert to main branch version ([73d88c6](https://github.com/iblai/os/commit/73d88c6441bc6c8d5e455fe0ac48866d9f2a9cf3))
+* **tauri:** release app-v0.95.11 ([9fdf95b](https://github.com/iblai/os/commit/9fdf95bf63900715dd0d3d5e8faf1cb5a7051dbf))
+* update pnpm lock ([34f55fa](https://github.com/iblai/os/commit/34f55facc8067b2a50bcb77f9609dca25dc146c0))
+
 ## [0.117.0](https://github.com/iblai/os/compare/v0.116.0...v0.117.0) (2026-08-06)
 
 ### Features
