@@ -2619,7 +2619,7 @@
         },
         {
           "id": "vo-09",
-          "description": "Settings tab surfaces the smart-document-retrieval voice-call toggle (\"Enable screen sharing\" moved off Settings onto the Screen Share tab's own capability toggle — see journey 48)",
+          "description": "Settings tab surfaces the smart-document-retrieval voice-call toggle (\"Enable screen sharing\" moved off Settings onto the Screen tab's own capability toggle — see journey 48)",
           "status": "covered"
         },
         {
@@ -2641,7 +2641,7 @@
     },
     {
       "id": "mentor-screenshare-tab",
-      "name": "Mentor Screen Share Tab",
+      "name": "Mentor Screen Tab (screen sharing)",
       "spec": "48-mentor-screenshare-tab.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/tabs/screenshare-tab.tsx",
@@ -2653,7 +2653,7 @@
       "checkpoints": [
         {
           "id": "ss-01",
-          "description": "Screen Share tab stays visible (always mounted — no longer gated on call_configuration.enable_video) and its content grays (capability-gate-content data-enabled=\"false\") when the in-tab \"Enable screen sharing\" capability toggle is off",
+          "description": "Screen tab stays visible (always mounted — no longer gated on call_configuration.enable_video) and its content grays (capability-gate-content data-enabled=\"false\") when the in-tab \"Enable screen sharing\" capability toggle is off",
           "status": "covered"
         },
         {
@@ -2663,7 +2663,7 @@
         },
         {
           "id": "ss-03",
-          "description": "Switching to the Screen Share tab renders the SDK heading, body and capability toggle regardless of the capability's on/off state",
+          "description": "Switching to the Screen tab renders the SDK heading, body and capability toggle regardless of the capability's on/off state",
           "status": "covered"
         }
       ]
@@ -3847,12 +3847,12 @@
         },
         {
           "id": "grd-03",
-          "description": "Gated content splits into the Grading setup, Rubric, and Results sub-tabs — all three pills are visible and switching between Grading setup and Rubric renders the matching section (grader-setup-section / grader-criteria-section)",
+          "description": "Gated content exposes the Grading Setup and Rubric sub-tabs — both consistently visible for the e2e admin — and switching between them renders the matching section (grader-setup-section / grader-criteria-section); the Results pill is checked separately in grd-04 since it's RBAC-gated (view_grade_results) and not granted to the e2e admin on the real tenant",
           "status": "covered"
         },
         {
           "id": "grd-04",
-          "description": "The Results sub-tab renders its own grade-results table and shows the zero-filters empty state (\"No grades yet…\") on a mentor with no graded submissions yet; independent of a saved config or rubric",
+          "description": "The Results sub-tab renders its own grade-results table and shows the zero-filters empty state (\"No grades yet…\") on a mentor with no graded submissions yet; independent of a saved config or rubric. Gracefully skips when the Results pill isn't granted — confirmed live that the e2e admin lacks view_grade_results on the real tenant",
           "status": "covered"
         },
         {
@@ -3902,7 +3902,7 @@
         },
         {
           "id": "grd-14",
-          "description": "The grader tab's fine-grained RBAC gating is real (flat actions on the mentor resource: read_grader_config, write_grader_config, create_grader_config, view_grader_criteria, create_grader_criteria, write_grader_criteria, delete_grader_criteria, view_grade_results, override_grade_results, checked via /mentors/{id}/#<action> with a graceful fallback) — denied read_grader_config hides the tab and shows its denied state; denied write/create/delete/override actions omit the matching affordance. Not e2e-reproducible without seeding a restricted RBAC permission object for the e2e admin account, which this environment has no fixture for",
+          "description": "The grader tab's fine-grained RBAC gating is real (flat actions on the mentor resource: read_grader_config, write_grader_config, create_grader_config, view_grader_criteria, create_grader_criteria, write_grader_criteria, delete_grader_criteria, view_grade_results, override_grade_results, checked via /mentors/{id}/#<action> with a graceful fallback) — denied read_grader_config hides the tab and shows its denied state; denied write/create/delete/override actions omit the matching affordance. grd-04 already exercises ONE denied path live (view_grade_results, confirmed denied for the e2e admin). The remaining denied paths (read_grader_config denial, write/create/delete/override denial) are not e2e-reproducible without seeding a restricted RBAC permission object for the e2e admin account, which this environment has no fixture for",
           "status": "not-reproducible"
         },
         {

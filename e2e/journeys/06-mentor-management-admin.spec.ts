@@ -177,7 +177,7 @@ test.describe('Journey 6: Mentor Management — Admin', () => {
   // an arbitrary sibling this admin may hold only partial rights on. The
   // rbacResource-gated tabs (Settings, LLM, Prompts, …) are therefore NOT
   // guaranteed; what IS guaranteed for an admin is the ungated set
-  // (Voice, Screen Share, Skills, Privacy — no `rbacResource` in
+  // (Voice, Screen, Skills, Privacy — no `rbacResource` in
   // `MENTOR_SEGMENTS`). So the regression guard is: the sidebar renders
   // MORE than just Privacy, and whatever tab comes first actually works.
   // When the picked mentor does grant Settings, the original strong

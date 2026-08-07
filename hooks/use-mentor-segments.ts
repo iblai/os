@@ -217,22 +217,6 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     navCategory: 'configurations',
   },
   {
-    value: MODALS.EDIT_MENTOR.tabs.screenshare,
-    label: 'Screen Share',
-    labelKey: 'screenShare',
-    icon: MonitorPlay,
-    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-    permissionFieldsCheck: [],
-    mentorVisibility: [
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
-    ],
-    // Always visible. The "Enable screen sharing" (`enable_video`) master
-    // toggle now lives inline at the top of the Screen Share tab; turning it
-    // off grays out the screen-sharing prompts below instead of hiding the tab.
-    navCategory: 'configurations',
-  },
-  {
     value: MODALS.EDIT_MENTOR.tabs.prompts,
     label: 'Prompts',
     labelKey: 'prompts',
@@ -336,9 +320,9 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     navCategory: 'configurations',
   },
   {
-    // Deliberately the last Configurations segment — Disclaimers is the
-    // last one declared before it, so keep this entry right after
-    // Disclaimers when reordering the array.
+    // Deliberately the second-to-last Configurations segment (only Screen
+    // comes after it) — keep this entry right after Disclaimers when
+    // reordering the array.
     value: MODALS.EDIT_MENTOR.tabs.grader,
     label: 'Grader',
     labelKey: 'grader',
@@ -360,6 +344,23 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     // of the Grader tab (it attaches/detaches the Grading tool on the agent);
     // turning it off grays out the rubric configuration below instead of
     // hiding the tab, and the rubric is preserved across disable/re-enable.
+    navCategory: 'configurations',
+  },
+  {
+    // Deliberately the last Configurations segment — after Grader.
+    value: MODALS.EDIT_MENTOR.tabs.screenshare,
+    label: 'Screen',
+    labelKey: 'screenShare',
+    icon: MonitorPlay,
+    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
+    permissionFieldsCheck: [],
+    mentorVisibility: [
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+    ],
+    // Always visible. The "Enable screen sharing" (`enable_video`) master
+    // toggle now lives inline at the top of the Screen tab; turning it
+    // off grays out the screen-sharing prompts below instead of hiding the tab.
     navCategory: 'configurations',
   },
   {

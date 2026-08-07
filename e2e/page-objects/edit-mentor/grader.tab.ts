@@ -97,17 +97,23 @@ import {
  * (conditionally rendered, not merely disabled). The host additionally
  * gates the whole Grader segment on `/mentors/{id}/#read_grader_config`
  * (`hooks/use-mentor-segments.ts`) — a denied admin never sees the tab at
- * all. This repo's e2e admin account is assumed to hold full permissions on
- * mentors it owns (consistent with every other RBAC-gated tab in this
- * suite) — no checkpoint here exercises the denied paths directly, since
- * there's no fixture in this environment to seed a restricted permission
- * object; see the `not-reproducible` checkpoints in
- * `66-mentor-grader-tab.spec.ts` for the tracked record of that gap.
+ * all. This repo's e2e admin account holds full permissions on mentors it
+ * owns for MOST grader actions, but NOT all of them uniformly — confirmed
+ * live against the real e2e tenant (`conradtesttenant`): `read_grader_config`
+ * and `view_grader_criteria` are granted (Grading Setup / Rubric pills
+ * always render), but `view_grade_results` is NOT (the Results pill never
+ * renders for this account, on every live run observed). Checkpoints that
+ * depend on the Results pill (`isResultsSubTabVisible`) check for it and
+ * skip gracefully rather than assume it — see GRD-04 in
+ * `66-mentor-grader-tab.spec.ts`. The remaining denied-permission paths
+ * (config/criteria write denial, override denial) still have no fixture in
+ * this environment to seed — see the `not-reproducible` checkpoints there
+ * for that narrower, still-open gap.
  *
  * ── Capability toggle ──────────────────────────────────────────────────────
  * The "Grading" master switch (`grader-capability-toggle`) lives inline at
  * the top of the tab via the shared `CapabilityGate` component, exactly like
- * Voice / Screen Share / Memory / Privacy / LTI. It attaches/detaches the
+ * Voice / Screen / Memory / Privacy / LTI. It attaches/detaches the
  * tenant's "Grading" TOOL on the mentor (`editMentor({ tool_slugs,
  * can_use_tools })`) rather than flipping a plain boolean settings field.
  * `setGradingEnabled` is optimistic (per its own doc: "the switch itself
@@ -275,6 +281,24 @@ export class GraderTab {
       GraderTab.UNEXPORTED_LABELS.header.description,
       { exact: true },
     );
+  }
+
+  /**
+   * Whether the Results sub-tab pill is currently rendered. Gated on the
+   * `view_grade_results` RBAC action (see class doc) — CONFIRMED live
+   * against the real e2e tenant that this action is NOT granted to the e2e
+   * admin even though `read_grader_config`/`view_grader_criteria` are (the
+   * Grading Setup and Rubric pills reliably render; Results does not).
+   * Bounded `waitFor` + catch rather than `isVisible` (see this repo's
+   * anti-pattern guidance) so callers get a real wait, not a snapshot.
+   */
+  async isResultsSubTabVisible(): Promise<boolean> {
+    try {
+      await this.resultsSubTab.waitFor({ state: 'visible', timeout: 5_000 });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   // ── Capability gate ───────────────────────────────────────────────────────

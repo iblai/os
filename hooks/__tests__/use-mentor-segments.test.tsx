@@ -173,11 +173,11 @@ describe('useMentorSegments', () => {
     expect(MENTOR_SEGMENTS[promptsIndex + 1]?.label).toBe('Skills');
   });
 
-  it('places the Grader segment last in the Configurations category', () => {
+  it('places Grader then Screen at the end of the Configurations category', () => {
     const configurationLabels = MENTOR_SEGMENTS.filter(
       (s) => s.navCategory === 'configurations',
     ).map((s) => s.label);
-    expect(configurationLabels.at(-1)).toBe('Grader');
+    expect(configurationLabels.slice(-2)).toEqual(['Grader', 'Screen']);
   });
 
   describe('Sandbox & Skills visibility (always visible for admins)', () => {
