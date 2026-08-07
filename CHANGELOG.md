@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.121.1](https://github.com/iblai/os/compare/v0.121.0...v0.121.1) (2026-08-07)
+
+### Chores
+
+* **tauri:** release app-v0.95.12 ([3e8d7e6](https://github.com/iblai/os/commit/3e8d7e64de3e60b982f3ab2e0ae6dde9044da9e2))
+
+### Tests
+
+* **tauri:** add auto tauri gating on changes and tauri tests ([a41b436](https://github.com/iblai/os/commit/a41b4365351eee44a9952a6b25b2bc5f516d96a5))
+
 ## [0.121.0](https://github.com/iblai/os/compare/v0.120.0...v0.121.0) (2026-08-07)
 
 ### Features
