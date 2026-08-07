@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.119.0](https://github.com/iblai/os/compare/v0.118.0...v0.119.0) (2026-08-07)
+
+### Features
+
+* **chat:** give fenced code blocks a language + copy header bar ([6e9e709](https://github.com/iblai/os/commit/6e9e709de53e1c930181fe2a8ff570f6e91923f2)), closes [#ccc](https://github.com/iblai/os/issues/ccc)
+* **chat:** let CopyButtonIcon render an optional text label ([b8be247](https://github.com/iblai/os/commit/b8be2474407b32b895abc50f4129452f530f1ca3))
+
+### Bug Fixes
+
+* **chat:** raise tool-call text contrast to meet WCAG AA ([a03acc7](https://github.com/iblai/os/commit/a03acc7b40cd9872848a9ebc02359366603d4031))
+* **e2e:** match the tool-call panel's new border colour ([db12dae](https://github.com/iblai/os/commit/db12dae9230470c6844f0c1ec20d6489fe5aa671))
+
+### Styles
+
+* apply prettier formatting to CHANGELOG ([2272b55](https://github.com/iblai/os/commit/2272b55a176ead93945b0258655cd328b174b586))
+* **chat:** even out the gap above the first collapsible item ([0c5dea5](https://github.com/iblai/os/commit/0c5dea54f1385548e266c5aa0b549156774b688e))
+
 ## [0.118.0](https://github.com/iblai/os/compare/v0.117.0...v0.118.0) (2026-08-07)
 
 ### Features
