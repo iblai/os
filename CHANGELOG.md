@@ -1,5 +1,52 @@
 # Changelog
 
+## [0.119.1](https://github.com/iblai/os/compare/v0.119.0...v0.119.1) (2026-08-07)
+
+### Documentation
+
+- **readme:** fix download buttons to app-v0.95.11 (ibl.ai\_ assets) ([959f305](https://github.com/iblai/os/commit/959f3050f797c19927675b14f8ae9408c01ead0d))
+
+## [0.119.0](https://github.com/iblai/os/compare/v0.118.0...v0.119.0) (2026-08-07)
+
+### Features
+
+- **chat:** give fenced code blocks a language + copy header bar ([6e9e709](https://github.com/iblai/os/commit/6e9e709de53e1c930181fe2a8ff570f6e91923f2)), closes [#ccc](https://github.com/iblai/os/issues/ccc)
+- **chat:** let CopyButtonIcon render an optional text label ([b8be247](https://github.com/iblai/os/commit/b8be2474407b32b895abc50f4129452f530f1ca3))
+
+### Bug Fixes
+
+- **chat:** raise tool-call text contrast to meet WCAG AA ([a03acc7](https://github.com/iblai/os/commit/a03acc7b40cd9872848a9ebc02359366603d4031))
+- **e2e:** match the tool-call panel's new border colour ([db12dae](https://github.com/iblai/os/commit/db12dae9230470c6844f0c1ec20d6489fe5aa671))
+
+### Styles
+
+- apply prettier formatting to CHANGELOG ([2272b55](https://github.com/iblai/os/commit/2272b55a176ead93945b0258655cd328b174b586))
+- **chat:** even out the gap above the first collapsible item ([0c5dea5](https://github.com/iblai/os/commit/0c5dea54f1385548e266c5aa0b549156774b688e))
+
+## [0.118.0](https://github.com/iblai/os/compare/v0.117.0...v0.118.0) (2026-08-07)
+
+### Features
+
+- add screen capture support for cowork ([b9c7396](https://github.com/iblai/os/commit/b9c739641a27ddbb58aab3ae39ebe1881bb97f37))
+- new cowork implementation ([dd278dd](https://github.com/iblai/os/commit/dd278dd0ae0a719d0c6294b2cb2a3d2189c39ace))
+
+### Bug Fixes
+
+- avoid blocking the UI with cua driver setup ([789b853](https://github.com/iblai/os/commit/789b853af5e908e583e4a82f75b6879164bda3ac))
+- exclude the non AX tools in cowork. ([2e346df](https://github.com/iblai/os/commit/2e346df8b7b0c8d0424ae169483b7bc80ae195fb))
+- fix lint error ([afb73be](https://github.com/iblai/os/commit/afb73bedd34d7240780e0759527d9cde13423469))
+- fix window state getter ([8b02834](https://github.com/iblai/os/commit/8b0283436653559a2f8b6dce433fed92a93bc9ba))
+- restore get_window_state tool ([d8dea06](https://github.com/iblai/os/commit/d8dea061547a95a2f4d878212a0cdd886643a4b0))
+- restore screen capture tools ([1095b32](https://github.com/iblai/os/commit/1095b32bf4ee800cf61ba121903b548e936bd562))
+- sanitize tool calls ([acb4b00](https://github.com/iblai/os/commit/acb4b002fb707a0443552b01c60d24a5357cc86c))
+
+### Chores
+
+- bump iblai-js version ([8cf997d](https://github.com/iblai/os/commit/8cf997dbd9eb9dc968802531c59d8b39e68c2733))
+- revert to main branch version ([73d88c6](https://github.com/iblai/os/commit/73d88c6441bc6c8d5e455fe0ac48866d9f2a9cf3))
+- **tauri:** release app-v0.95.11 ([9fdf95b](https://github.com/iblai/os/commit/9fdf95bf63900715dd0d3d5e8faf1cb5a7051dbf))
+- update pnpm lock ([34f55fa](https://github.com/iblai/os/commit/34f55facc8067b2a50bcb77f9609dca25dc146c0))
+
 ## [0.117.0](https://github.com/iblai/os/compare/v0.116.0...v0.117.0) (2026-08-06)
 
 ### Features
