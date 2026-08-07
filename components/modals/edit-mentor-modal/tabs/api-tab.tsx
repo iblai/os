@@ -14,7 +14,10 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { TenantKeyMentorIdParams } from '@/lib/types';
-import { useGetApiKeysQuery } from '@iblai/iblai-js/data-layer';
+import {
+  useGetApiKeysQuery,
+  unwrapApiTokenList,
+} from '@iblai/iblai-js/data-layer';
 import { CreateApiModal } from './api-tab/create-api-modal';
 import { ApiKey, DeleteApiModal } from './api-tab/delete-api-modal';
 import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
@@ -24,9 +27,13 @@ import { WithPermissions } from '@/hoc/withPermissions';
 export function ApiTab() {
   const t = useTranslations('tabsApiTab');
   const { tenantKey } = useParams<TenantKeyMentorIdParams>();
-  const { data: apiKeys, isLoading: isApiKeysLoading } = useGetApiKeysQuery({
-    platformKey: tenantKey,
-  });
+  const { data: apiKeysResponse, isLoading: isApiKeysLoading } =
+    useGetApiKeysQuery({
+      platformKey: tenantKey,
+    });
+  // The endpoint returns either a bare array or a paginated envelope depending
+  // on the backend version, so normalise before rendering.
+  const { tokens: apiKeys } = unwrapApiTokenList(apiKeysResponse);
 
   const { executeWithTrialCheck, isModalOpen, FreeTrialDialog, closeModal } =
     useShowFreeTrialDialog();

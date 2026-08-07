@@ -73,13 +73,22 @@ vi.mock('@/hoc/withPermissions', () => ({
 // so the cloud tests above see the browser behaviour.
 let mockIsTauri = false;
 // A catalog shaped to exercise every branch of the localOnlyProviders memo:
-// two models sharing a provider (the `seen` dedupe) and one whose provider the
-// backend already lists as a cloud provider (the `cloudKeys` skip). The
-// localStorage helpers keep their real semantics so useSelectedLocalModel —
-// which this tab uses to decide which card is active — still works unmocked.
+// two models sharing a provider (the `seen` dedupe), one whose provider the
+// backend already lists as a cloud provider (the `cloudKeys` skip), and a
+// second local-only provider listed out of alphabetical order so the block's
+// own sort is observable. The localStorage helpers keep their real semantics so
+// useSelectedLocalModel — which this tab uses to decide which card is active —
+// still works unmocked.
 vi.mock('@iblai/iblai-js/web-containers', () => ({
   isTauriApp: () => mockIsTauri,
   LOCAL_MODELS: [
+    {
+      id: 'mistral-7b',
+      name: 'Mistral 7B',
+      provider: 'Mistral',
+      size: '4 GB',
+      tool_support: false,
+    },
     {
       id: 'llama3.2',
       name: 'Llama 3.2',
@@ -163,6 +172,13 @@ const mentorSettings = {
   llm_provider: 'openai',
   permissions: { field: { llm_provider: { read: true, write: true } } },
 };
+
+// Provider cards expose a stable testid plus the raw backend name, so tests (and
+// E2E) can target one without depending on the Tailwind classes.
+const providerCard = (container: HTMLElement, name: string) =>
+  container.querySelector<HTMLElement>(
+    `[data-testid="llm-provider-card"][data-provider="${name}"]`,
+  );
 
 // ============================================================================
 // TESTS
@@ -382,6 +398,305 @@ describe('LLMTab', () => {
     mockGetLlmsQuery.mockReturnValue({ data: undefined, isLoading: false });
     render(<LLMTab />);
     expect(screen.getByPlaceholderText('Search Providers')).toBeInTheDocument();
+  });
+
+  // --------------------------------------------------------------------------
+  // Provider grid ordering
+  // --------------------------------------------------------------------------
+  describe('provider ordering', () => {
+    // Deliberately supplied in raw-key alphabetical order (anthropic, bedrock,
+    // groq, openai) so any assertion below fails if the grid just renders the
+    // API list as-is. Grouping is by canAccessProvider — credentials *and* at
+    // least one chat model — so every fixture carries chat_models and the
+    // credential flags are what decide the group.
+    const someModels = [{ llm_name: 'model-1' }];
+    const mixedProviders = [
+      {
+        id: 1,
+        name: 'anthropic',
+        logo: '',
+        description: '',
+        chat_models: someModels,
+      },
+      {
+        id: 2,
+        name: 'bedrock',
+        logo: '',
+        description: '',
+        chat_models: someModels,
+        // No main_has_credentials at all — still counts as "we have a key".
+        can_use_main_keys: true,
+      },
+      {
+        id: 3,
+        name: 'groq',
+        logo: '',
+        description: '',
+        chat_models: someModels,
+        can_use_main_keys: true,
+        main_has_credentials: false,
+      },
+      {
+        id: 4,
+        name: 'openai',
+        logo: '',
+        description: '',
+        chat_models: someModels,
+        has_credentials: true,
+      },
+    ];
+
+    const renderedProviderNames = (container: HTMLElement) =>
+      Array.from(container.querySelectorAll('.grid > div > span')).map(
+        (el) => el.textContent,
+      );
+
+    it('renders providers we have a key for first, each group alphabetical by display name', () => {
+      mockGetLlmsQuery.mockReturnValue({
+        data: mixedProviders,
+        isLoading: false,
+      });
+
+      const { container } = render(<LLMTab />);
+
+      expect(renderedProviderNames(container)).toEqual([
+        // keyed: bedrock → "Amazon", openai → "OpenAI"
+        'Amazon',
+        'OpenAI',
+        // unkeyed: anthropic → "Anthropic", groq → "Groq"
+        'Anthropic',
+        'Groq',
+      ]);
+    });
+
+    it('keeps the ordering within whatever the search filter leaves', async () => {
+      mockGetLlmsQuery.mockReturnValue({
+        data: mixedProviders,
+        isLoading: false,
+      });
+      const user = userEvent.setup();
+
+      const { container } = render(<LLMTab />);
+      await user.type(screen.getByPlaceholderText('Search Providers'), 'r');
+
+      // "r" matches anthropic, bedrock and groq — Amazon (keyed) still leads.
+      expect(renderedProviderNames(container)).toEqual([
+        'Amazon',
+        'Anthropic',
+        'Groq',
+      ]);
+    });
+
+    it('sorts the local-only block alphabetically after the API providers', () => {
+      mockIsTauri = true;
+      mockGetLlmsQuery.mockReturnValue({
+        data: mixedProviders,
+        isLoading: false,
+      });
+
+      const { container } = render(<LLMTab />);
+
+      // The catalog lists Mistral before Meta; the block sorts them, and the
+      // whole block still follows every API provider card.
+      expect(renderedProviderNames(container)).toEqual([
+        'Amazon',
+        'OpenAI',
+        'Anthropic',
+        'Groq',
+        'Meta',
+        'Mistral',
+      ]);
+    });
+
+    it('demotes a keyed provider that ships no models into the grayed group', () => {
+      // The ordering predicate is the same one the grid grays cards with, so a
+      // provider we hold a key for but which exposes no chat models sorts after
+      // the usable ones *and* renders grayed — the two must never disagree.
+      mockGetLlmsQuery.mockReturnValue({
+        data: [
+          {
+            id: 1,
+            name: 'openai',
+            logo: '',
+            description: '',
+            chat_models: [],
+            has_credentials: true,
+          },
+          {
+            id: 2,
+            name: 'groq',
+            logo: '',
+            description: '',
+            chat_models: someModels,
+            has_credentials: true,
+          },
+        ],
+        isLoading: false,
+      });
+      // Neither card is the mentor's active provider, so nothing is exempt.
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...mentorSettings, llm_provider: 'anthropic' },
+        isLoading: false,
+      });
+
+      const { container } = render(<LLMTab />);
+
+      expect(renderedProviderNames(container)).toEqual(['Groq', 'OpenAI']);
+      expect(providerCard(container, 'openai')).toHaveAttribute(
+        'data-disabled',
+        'true',
+      );
+      expect(providerCard(container, 'groq')).toHaveAttribute(
+        'data-disabled',
+        'false',
+      );
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // Provider-level graying (no accessible models → inactive treatment)
+  // --------------------------------------------------------------------------
+  describe('provider graying', () => {
+    const someModels = [{ llm_name: 'model-1' }];
+
+    const usable = {
+      id: 1,
+      name: 'groq',
+      logo: '',
+      description: '',
+      chat_models: someModels,
+      has_credentials: true,
+    };
+    // Credentials are fine but the provider exposes nothing to switch to, so
+    // every model row in the modal would be disabled.
+    const noModels = {
+      id: 2,
+      name: 'bedrock',
+      logo: '',
+      description: '',
+      chat_models: [],
+      has_credentials: true,
+    };
+    // Models exist but no credential path passes.
+    const noKey = {
+      id: 3,
+      name: 'anthropic',
+      logo: '',
+      description: '',
+      chat_models: someModels,
+      has_credentials: false,
+      can_use_main_keys: false,
+      main_has_credentials: false,
+    };
+
+    const renderGrid = (data: unknown[], llmProvider = 'openai') => {
+      mockGetLlmsQuery.mockReturnValue({ data, isLoading: false });
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...mentorSettings, llm_provider: llmProvider },
+        isLoading: false,
+      });
+      return render(<LLMTab />);
+    };
+
+    it('marks a provider with no reachable models as grayed', () => {
+      const { container } = renderGrid([usable, noModels, noKey]);
+
+      expect(providerCard(container, 'bedrock')).toHaveAttribute(
+        'data-disabled',
+        'true',
+      );
+      expect(providerCard(container, 'anthropic')).toHaveAttribute(
+        'data-disabled',
+        'true',
+      );
+    });
+
+    it('leaves an accessible provider ungrayed', () => {
+      const { container } = renderGrid([usable, noModels, noKey]);
+
+      expect(providerCard(container, 'groq')).toHaveAttribute(
+        'data-disabled',
+        'false',
+      );
+    });
+
+    it('grayscales the logo but keeps every label at full contrast', () => {
+      const { container } = renderGrid([usable, noKey]);
+
+      const grayed = providerCard(container, 'anthropic')!;
+      expect(grayed.querySelector('img')?.className).toContain('grayscale');
+      // The label deliberately stays dark on grayed cards: the tinted card and
+      // faded logo already signal "inactive", and muting the text on top of a
+      // gray background only costs contrast.
+      expect(grayed.querySelector('span')?.className).toContain(
+        'text-gray-900',
+      );
+
+      const ungrayed = providerCard(container, 'groq')!;
+      expect(ungrayed.querySelector('img')?.className).not.toContain(
+        'grayscale',
+      );
+      expect(ungrayed.querySelector('span')?.className).toContain(
+        'text-gray-900',
+      );
+    });
+
+    it('fades and tints grayed cards so black logos still read as inactive', () => {
+      // `grayscale` is a no-op on an already-black mark (OpenAI, xAI), so the
+      // inactive state has to come from opacity + a tinted card instead.
+      const { container } = renderGrid([usable, noKey]);
+
+      const grayed = providerCard(container, 'anthropic')!;
+      expect(grayed.querySelector('img')?.className).toContain('opacity-40');
+      expect(grayed.className).toContain('bg-gray-50');
+
+      const ungrayed = providerCard(container, 'groq')!;
+      expect(ungrayed.querySelector('img')?.className).not.toContain(
+        'opacity-40',
+      );
+      expect(ungrayed.className).not.toContain('bg-gray-50');
+    });
+
+    it('never grays the active provider, even when it has no reachable models', () => {
+      // bedrock is the mentor's current provider; the highlighted card must not
+      // also read as inactive.
+      const { container } = renderGrid([usable, noModels], 'bedrock');
+
+      const active = providerCard(container, 'bedrock')!;
+      expect(active).toHaveAttribute('data-disabled', 'false');
+      expect(active.className).toContain('border-blue-500');
+      expect(active.querySelector('img')?.className).not.toContain('grayscale');
+    });
+
+    it('keeps a grayed card clickable so the modal can explain why', async () => {
+      const user = userEvent.setup();
+      const { container } = renderGrid([noKey]);
+
+      const grayed = providerCard(container, 'anthropic')!;
+      expect(grayed.className).toContain('cursor-pointer');
+      expect(grayed.className).not.toContain('pointer-events-none');
+
+      await user.click(grayed);
+
+      expect(screen.getByTestId('llm-provider-modal')).toBeInTheDocument();
+    });
+
+    it('never grays local-only provider cards — they need no API key', () => {
+      mockIsTauri = true;
+      const { container } = renderGrid([noKey]);
+
+      expect(providerCard(container, 'Meta')).toHaveAttribute(
+        'data-disabled',
+        'false',
+      );
+      expect(providerCard(container, 'Mistral')).toHaveAttribute(
+        'data-disabled',
+        'false',
+      );
+      expect(
+        providerCard(container, 'Meta')?.querySelector('img')?.className,
+      ).not.toContain('grayscale');
+    });
   });
 
   // --------------------------------------------------------------------------
