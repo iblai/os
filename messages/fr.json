@@ -468,7 +468,17 @@
     "cowork": "Cowork",
     "coworkNeedsLocalModel": "Activez d’abord « Modèles Locaux » — Cowork nécessite un modèle d’IA local.",
     "coworkModelTooSmall": "Votre modèle local est trop petit pour Cowork. Choisissez un modèle d’au moins 12 Go dans Modèles Locaux.",
-    "moreOptions": "Plus d'options"
+    "moreOptions": "Plus d'options",
+    "coworkUnsupportedKde": "Cowork n’est pas encore pris en charge sur KDE Plasma.",
+    "coworkUnsupportedGnomeHelper": "Cowork sur GNOME nécessite l’extension WinRects, puis un redémarrage de la session.",
+    "coworkUnsupportedOs": "Cowork n’est pas pris en charge sur ce système d’exploitation.",
+    "coworkUnsupportedSession": "Cowork n’est pas pris en charge sur cette session de bureau.",
+    "coworkConsentTitle": "Autoriser Cowork à utiliser votre ordinateur ?",
+    "coworkConsentBody": "Cowork permet à l’assistant de lire le contenu des fenêtres affichées à votre écran et d’agir à votre place. Cela inclut votre navigateur, où il peut agir en votre nom sur tous les sites où vous êtes connecté. Ce qu’il lit est envoyé à ibl.ai pour déterminer la suite. Continuez pour lui accorder les accès Accessibilité et Enregistrement de l’écran dont il a besoin.",
+    "coworkConsentCancel": "Annuler",
+    "coworkConsentConfirm": "Continuer",
+    "coworkNeedsAccessibility": "Cowork a besoin de l’accès Accessibilité pour contrôler votre ordinateur. Accordez-le dans Réglages Système › Confidentialité et sécurité › Accessibilité, puis redémarrez l’app et réactivez Cowork.",
+    "coworkNeedsScreenRecording": "Cowork a besoin de l’accès Enregistrement de l’écran pour lire vos fenêtres. Accordez-le dans Réglages Système › Confidentialité et sécurité › Enregistrement de l’écran, puis redémarrez l’app et réactivez Cowork."
   },
   "chatInputFormMemoryMenu": {
     "yourMemory": "Votre mémoire",

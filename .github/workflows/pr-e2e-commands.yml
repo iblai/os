@@ -22,13 +22,13 @@ on:
     types: [created]
 
 permissions:
-  issues: write         # labels and reactions
+  issues: write # labels and reactions
   # MUST be write, not read. Commenting on a PULL REQUEST via /issues/{n}/comments needs
   # pull-requests: write — `issues: write` alone covers real issues only, and the POST comes back
   # 403 "Resource not accessible by integration". pr-e2e-tests.yml has always had write for the
   # same reason. Also used for fork detection.
   pull-requests: write
-  actions: write        # /cancel
+  actions: write # /cancel
 
 concurrency:
   # Serialize per PR so two rapid commands cannot recycle the label at the same moment.
@@ -43,12 +43,12 @@ jobs:
     steps:
       - uses: iblai/pr-e2e-action/command@v1
         with:
-          source_repo:    os
-          pr_number:      ${{ github.event.issue.number }}
-          comment_body:   ${{ github.event.comment.body }}
+          source_repo: os
+          pr_number: ${{ github.event.issue.number }}
+          comment_body: ${{ github.event.comment.body }}
           comment_author: ${{ github.event.comment.user.login }}
-          comment_id:     ${{ github.event.comment.id }}
-          repo_token:     ${{ secrets.GITHUB_TOKEN }}
+          comment_id: ${{ github.event.comment.id }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
           dispatch_token: ${{ secrets.DEPLOY_OPS_DISPATCH_TOKEN }}
           # REQUIRED for /retest. A label set with GITHUB_TOKEN raises NO events (GitHub's loop
           # prevention), so the recycle succeeds and no test run ever starts — verified on os#381,

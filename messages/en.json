@@ -468,7 +468,17 @@
     "cowork": "Cowork",
     "coworkNeedsLocalModel": "Turn on “Local Models” first — Cowork needs a local AI model.",
     "coworkModelTooSmall": "Your local model is too small for Cowork. Pick a model of at least 12GB in Local Models.",
-    "moreOptions": "More options"
+    "moreOptions": "More options",
+    "coworkUnsupportedKde": "Cowork isn’t supported on KDE Plasma yet.",
+    "coworkUnsupportedGnomeHelper": "Cowork on GNOME needs the WinRects helper installed, then a session restart.",
+    "coworkUnsupportedOs": "Cowork isn’t supported on this operating system.",
+    "coworkUnsupportedSession": "Cowork isn’t supported on this desktop session.",
+    "coworkConsentTitle": "Let Cowork use your computer?",
+    "coworkConsentBody": "Cowork lets the assistant read the contents of windows on your screen and act on them for you. That includes your browser, where it can act as you on any site you are signed into. What it reads is sent to ibl.ai to work out what to do next. Continue to give it the Accessibility and Screen Recording access it needs.",
+    "coworkConsentCancel": "Cancel",
+    "coworkConsentConfirm": "Continue",
+    "coworkNeedsAccessibility": "Cowork needs Accessibility access to control your computer. Grant it in System Settings › Privacy & Security › Accessibility, then restart the app and turn Cowork on again.",
+    "coworkNeedsScreenRecording": "Cowork needs Screen Recording access to read your windows. Grant it in System Settings › Privacy & Security › Screen Recording, then restart the app and turn Cowork on again."
   },
   "chatInputFormMemoryMenu": {
     "yourMemory": "Your Memory",
