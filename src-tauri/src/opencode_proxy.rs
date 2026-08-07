@@ -54,12 +54,7 @@ fn http() -> &'static reqwest::Client {
 
 /// The OpenAI-compatible paths the model client actually calls. Anything else 404s,
 /// so the proxy isn't a general-purpose authenticated tunnel into the ibl.ai API.
-const ALLOWED_PATHS: [&str; 4] = [
-    "chat/completions",
-    "completions",
-    "models",
-    "embeddings",
-];
+const ALLOWED_PATHS: [&str; 4] = ["chat/completions", "completions", "models", "embeddings"];
 
 /// A throwaway per-session API key. Not a password — just enough that another local
 /// process can't guess its way onto the proxy.
@@ -144,7 +139,10 @@ pub async fn unregister(secret: &str) {
 /// Read the throwaway secret from `Authorization: Bearer <secret>` (what an
 /// OpenAI-compatible client sends for its `apiKey`).
 fn bearer(headers: &HeaderMap) -> Option<String> {
-    let v = headers.get(axum::http::header::AUTHORIZATION)?.to_str().ok()?;
+    let v = headers
+        .get(axum::http::header::AUTHORIZATION)?
+        .to_str()
+        .ok()?;
     v.strip_prefix("Bearer ")
         .or_else(|| v.strip_prefix("bearer "))
         .map(|s| s.trim().to_string())
@@ -178,7 +176,11 @@ async fn forward(req: Request) -> Response {
         return (StatusCode::UNAUTHORIZED, "unknown key").into_response();
     };
 
-    let query = parts.uri.query().map(|q| format!("?{q}")).unwrap_or_default();
+    let query = parts
+        .uri
+        .query()
+        .map(|q| format!("?{q}"))
+        .unwrap_or_default();
     let url = format!("{}/{}{}", base.trim_end_matches('/'), path, query);
 
     // 16 MiB is far above any chat payload and still bounds a runaway body.
@@ -211,7 +213,9 @@ async fn forward(req: Request) -> Response {
         .await
     {
         Ok(r) => r,
-        Err(e) => return (StatusCode::BAD_GATEWAY, format!("upstream failed: {e}")).into_response(),
+        Err(e) => {
+            return (StatusCode::BAD_GATEWAY, format!("upstream failed: {e}")).into_response()
+        }
     };
 
     let status = upstream.status();
@@ -227,7 +231,11 @@ async fn forward(req: Request) -> Response {
     // token by token, exactly as they would from the real endpoint.
     out.body(Body::from_stream(upstream.bytes_stream()))
         .unwrap_or_else(|e| {
-            (StatusCode::BAD_GATEWAY, format!("bad upstream response: {e}")).into_response()
+            (
+                StatusCode::BAD_GATEWAY,
+                format!("bad upstream response: {e}"),
+            )
+                .into_response()
         })
 }
 

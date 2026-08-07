@@ -219,7 +219,13 @@ fn path_key(session_id: &str) -> String {
     use sha2::{Digest, Sha256};
     let safe: String = session_id
         .chars()
-        .map(|c| if c.is_ascii_alphanumeric() || c == '-' || c == '_' { c } else { '_' })
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '-' || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
         .take(24)
         .collect();
     let digest = hex::encode(Sha256::digest(session_id.as_bytes()));
@@ -306,7 +312,8 @@ fn write_workspace_map(map: &serde_json::Map<String, Value>) -> Result<(), Strin
     if let Some(parent) = f.parent() {
         let _ = std::fs::create_dir_all(parent);
     }
-    let out = serde_json::to_string_pretty(&Value::Object(map.clone())).map_err(|e| e.to_string())?;
+    let out =
+        serde_json::to_string_pretty(&Value::Object(map.clone())).map_err(|e| e.to_string())?;
     std::fs::write(&f, out).map_err(|e| format!("failed writing workspace map: {e}"))
 }
 
@@ -317,12 +324,12 @@ fn write_workspace_map(map: &serde_json::Map<String, Value>) -> Result<(), Strin
 /// the proxy's session secret, so this needs no `rand` dependency.
 fn workspace_slug() -> String {
     const ADJECTIVES: [&str; 16] = [
-        "brave", "calm", "clever", "eager", "fuzzy", "gentle", "happy", "keen", "lively",
-        "lucky", "merry", "quiet", "swift", "tidy", "warm", "wise",
+        "brave", "calm", "clever", "eager", "fuzzy", "gentle", "happy", "keen", "lively", "lucky",
+        "merry", "quiet", "swift", "tidy", "warm", "wise",
     ];
     const NOUNS: [&str; 16] = [
-        "otter", "falcon", "maple", "harbor", "lantern", "meadow", "pebble", "quartz",
-        "raven", "river", "sparrow", "summit", "thicket", "willow", "canyon", "cedar",
+        "otter", "falcon", "maple", "harbor", "lantern", "meadow", "pebble", "quartz", "raven",
+        "river", "sparrow", "summit", "thicket", "willow", "canyon", "cedar",
     ];
     let seed = crate::opencode_proxy::new_secret();
     let byte = |i: usize| usize::from_str_radix(&seed[i..i + 2], 16).unwrap_or(0);
@@ -370,10 +377,7 @@ pub async fn get_opencode_workspace(session_id: String) -> Result<String, String
 /// (`@tauri-apps/plugin-dialog`); it can be anywhere on disk and is used as-is, not moved
 /// under the app-managed tree.
 #[command]
-pub async fn set_opencode_workspace(
-    session_id: String,
-    path: String,
-) -> Result<String, String> {
+pub async fn set_opencode_workspace(session_id: String, path: String) -> Result<String, String> {
     let dir = PathBuf::from(&path);
     ensure_workspace(&dir)?;
     let mut map = read_workspace_map();
@@ -489,7 +493,10 @@ async fn handle_permission_request(
     let (tx, rx) = oneshot::channel();
     permissions().lock().await.insert(
         request_id.clone(),
-        PendingPermission { session_id: session_id.to_string(), tx },
+        PendingPermission {
+            session_id: session_id.to_string(),
+            tx,
+        },
     );
 
     let generation_id = turn.lock().await.generation_id.clone();
@@ -591,7 +598,10 @@ async fn handle_update(app: &AppHandle, v: &Value, turn: &Arc<Mutex<TurnState>>)
         Some(u) => u,
         None => return,
     };
-    let kind = update.get("sessionUpdate").and_then(|k| k.as_str()).unwrap_or("");
+    let kind = update
+        .get("sessionUpdate")
+        .and_then(|k| k.as_str())
+        .unwrap_or("");
     let text = update
         .get("content")
         .and_then(|c| c.get("text"))
@@ -654,11 +664,23 @@ struct ModelSpec {
 
 fn parse_model_spec(model: &str) -> ModelSpec {
     if let Some(rest) = model.strip_prefix("ollama/") {
-        ModelSpec { provider: "ollama", model: rest.to_string(), local: true }
+        ModelSpec {
+            provider: "ollama",
+            model: rest.to_string(),
+            local: true,
+        }
     } else if let Some(rest) = model.strip_prefix("foundry/") {
-        ModelSpec { provider: "foundry", model: rest.to_string(), local: true }
+        ModelSpec {
+            provider: "foundry",
+            model: rest.to_string(),
+            local: true,
+        }
     } else {
-        ModelSpec { provider: "iblai", model: model.to_string(), local: false }
+        ModelSpec {
+            provider: "iblai",
+            model: model.to_string(),
+            local: false,
+        }
     }
 }
 
@@ -986,9 +1008,9 @@ async fn spawn_session(
         .stderr(std::process::Stdio::piped())
         .kill_on_drop(true);
 
-    let mut child = cmd.spawn().map_err(|e| {
-        format!("failed to launch `opencode acp` (is opencode installed?): {e}")
-    })?;
+    let mut child = cmd
+        .spawn()
+        .map_err(|e| format!("failed to launch `opencode acp` (is opencode installed?): {e}"))?;
 
     let stdin = Arc::new(Mutex::new(child.stdin.take().ok_or("no stdin")?));
     let stdout = child.stdout.take().ok_or("no stdout")?;
@@ -1094,7 +1116,10 @@ async fn get_or_spawn(
     evict_for_new_session(session_id).await;
     start_reaper();
     let s = spawn_session(app, session_id, tenant, token, model, api_base, workspace).await?;
-    registry().lock().await.insert(session_id.to_string(), s.clone());
+    registry()
+        .lock()
+        .await
+        .insert(session_id.to_string(), s.clone());
     Ok(s)
 }
 
@@ -1182,8 +1207,8 @@ async fn session_states() -> Vec<SessionState> {
 
     let mut out = Vec::with_capacity(sessions.len());
     for (session_id, s) in sessions {
-        let busy = s.active_turns.load(Ordering::SeqCst) > 0
-            || waiting.iter().any(|w| *w == session_id);
+        let busy =
+            s.active_turns.load(Ordering::SeqCst) > 0 || waiting.iter().any(|w| *w == session_id);
         out.push(SessionState {
             idle_for: s.last_used.lock().await.elapsed(),
             session_id,
@@ -1263,14 +1288,17 @@ pub async fn opencode_chat_stream(
         .map(PathBuf::from)
         .unwrap_or_else(|| resolve_workspace(&session_id));
 
-    let prompt_text = last_user_text(&messages)
-        .ok_or("no user message to send to opencode")?;
+    let prompt_text = last_user_text(&messages).ok_or("no user message to send to opencode")?;
 
     // An on-device turn can sit silent for minutes the first time: opencode refreshes
     // the models.dev registry into ~/.cache/opencode/models.json, and the runtime loads
     // the model into memory. Both are one-off, but the chat would otherwise just hang
     // with no explanation — emit the hint BEFORE spawning so it lands immediately.
-    if model.as_deref().map(|m| parse_model_spec(m).local).unwrap_or(false) {
+    if model
+        .as_deref()
+        .map(|m| parse_model_spec(m).local)
+        .unwrap_or(false)
+    {
         let _ = app.emit(
             "opencode:reasoning",
             json!({
@@ -1280,8 +1308,16 @@ pub async fn opencode_chat_stream(
         );
     }
 
-    let session =
-        get_or_spawn(&app, &session_id, &tenant, &token, model, api_base, &workspace).await?;
+    let session = get_or_spawn(
+        &app,
+        &session_id,
+        &tenant,
+        &token,
+        model,
+        api_base,
+        &workspace,
+    )
+    .await?;
     let _turn_guard = TurnGuard::new(session.clone());
 
     session.turn.lock().await.reset(generation_id.clone());
@@ -1428,7 +1464,11 @@ mod tests {
             let key = path_key(hostile);
             assert!(!key.contains('/'), "{hostile} -> {key}");
             assert!(!key.contains(".."), "{hostile} -> {key}");
-            assert_eq!(Path::new(&key).components().count(), 1, "{hostile} -> {key}");
+            assert_eq!(
+                Path::new(&key).components().count(),
+                1,
+                "{hostile} -> {key}"
+            );
         }
     }
 

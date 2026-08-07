@@ -1,11 +1,11 @@
+#[cfg(target_os = "linux")]
+use crate::model_manager::can_sudo;
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 use std::fs;
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 use std::path::Path;
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 use std::process::Command;
-#[cfg(target_os = "linux")]
-use crate::model_manager::can_sudo;
 
 /// Create a Command with hidden console window on Windows
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
@@ -57,7 +57,9 @@ async fn install_macos_dmg() -> bool {
     }
 
     println!("[Ollama] Mounting DMG...");
-    let _ = create_command("hdiutil").args(["attach", dmg_path]).output();
+    let _ = create_command("hdiutil")
+        .args(["attach", dmg_path])
+        .output();
 
     println!("[Ollama] Copying to /Applications...");
     let _ = create_command("cp")
@@ -76,7 +78,6 @@ async fn install_macos_dmg() -> bool {
 /// Downloads and installs Ollama depending on the operating system.
 /// This function is OS-aware and runs installers silently where possible.
 pub async fn download_and_install_ollama() -> Result<(), String> {
-
     // Mobile platforms don't support Ollama installation
     #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
     {
@@ -101,8 +102,7 @@ pub async fn download_and_install_ollama() -> Result<(), String> {
                 .await
                 .map_err(|e| e.to_string())?;
 
-            fs::write(installer_path, bytes)
-                .map_err(|e| e.to_string())?;
+            fs::write(installer_path, bytes).map_err(|e| e.to_string())?;
             println!("[Ollama] Installer download complete");
         } else {
             println!("[Ollama] Using cached installer");
@@ -116,7 +116,10 @@ pub async fn download_and_install_ollama() -> Result<(), String> {
             .map_err(|e| e.to_string())?;
 
         if !status.success() {
-            return Err(format!("Ollama installer failed with exit code: {:?}", status.code()));
+            return Err(format!(
+                "Ollama installer failed with exit code: {:?}",
+                status.code()
+            ));
         }
         println!("[Ollama] Installation complete");
     }
@@ -219,10 +222,7 @@ pub async fn download_and_install_ollama() -> Result<(), String> {
                 .status()
                 .map_err(|e| e.to_string())?;
             if !status.success() {
-                return Err(format!(
-                    "Ollama install failed (exit {:?})",
-                    status.code()
-                ));
+                return Err(format!("Ollama install failed (exit {:?})", status.code()));
             }
         }
     }

@@ -1,6 +1,6 @@
 {
   "name": "ibl-web-nextjs-mentor-spa",
-  "version": "0.114.1",
+  "version": "0.119.0",
   "private": false,
   "packageManager": "pnpm@10.11.1",
   "engines": {
@@ -41,9 +41,8 @@
     "tauri:bump": "node scripts/tauri-bump.mjs"
   },
   "dependencies": {
-    "@iblai/agent-ai": "2.5.2",
     "@iblai/iblai-api": "4.166.0-ai",
-    "@iblai/iblai-js": "2.3.7",
+    "@iblai/iblai-js": "2.3.6",
     "@iblai/iblai-web-mentor": "1.3.4",
     "@livekit/components-react": "2.8.1",
     "@livekit/components-styles": "1.1.4",

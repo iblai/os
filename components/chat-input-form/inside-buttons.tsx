@@ -1,7 +1,7 @@
 'use client';
 
 import type React from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,6 +15,16 @@ import {
   PopoverAnchor,
   PopoverContent,
 } from '@/components/ui/popover';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { X, BookOpen, Archive, Check, Terminal, Monitor } from 'lucide-react';
 import { toast } from 'sonner';
 import { DeepSearchIcon, CanvasIcon } from '@/components/icons/svg-icons';
@@ -32,24 +42,10 @@ import { CodingModeButton } from './coding-mode-button';
 import { MemoryMenu } from './memory-menu';
 import { isTauriApp } from '@/types/tauri';
 
-// Cowork is macOS-only in prod; the env flag bypasses the OS check so the
-// toggle can be exercised on Linux/Windows desktop builds during testing.
-const isMacOS = () => {
-  if (typeof navigator === 'undefined') return false;
-  return /mac/i.test(navigator.userAgent || '');
-};
-const allowNonMacOSCowork = () =>
-  process.env.NEXT_PUBLIC_ALLOW_NON_MACOS_COMPUTER_USE_TOGGLE === 'true';
-
 // 12GB floor, matching the SDK default (DEFAULT_COWORK_REQUIRED_SIZE_GB)
 // and the Local Models tab's "supported" indicator. modelSupportsCowork
 // gates size <= gb (strictly greater), so a model of exactly 12GB is also off.
 const COWORK_MIN_MODEL_GB = 12;
-
-// Must match the SDK's key (web-containers cowork-tab). Read directly rather
-// than via isCoworkEnabled() because the default-on pass below needs to tell
-// "never chosen" (null) apart from an explicit "off".
-const COWORK_ENABLED_KEY = 'ibl_cowork_enabled';
 
 interface InsideButtonsProps {
   /** The chat this input belongs to. Code keys its per-chat workspace on it. */
@@ -95,35 +91,81 @@ export const InsideButtons = ({
 }: InsideButtonsProps) => {
   const t = useTranslations('chatInputFormInsideButtons');
 
-  // Cowork = the Tauri CUA driver (useCuaDriver install/stop + localStorage
-  // pref), no backend round-trip. Reads the pref on mount; cross-tab sync not
+  // The host reports a machine-readable code; never render it raw.
+  const unsupportedCoworkReason = (reason?: string) => {
+    switch (reason) {
+      case 'kde_unproven':
+        return t('coworkUnsupportedKde');
+      case 'gnome_helper_missing':
+        return t('coworkUnsupportedGnomeHelper');
+      case 'unsupported_os':
+        return t('coworkUnsupportedOs');
+      default:
+        return t('coworkUnsupportedSession');
+    }
+  };
+
+  // Cowork = the Tauri Cua Driver assistant (useCuaDriver install/stop +
+  // localStorage pref), no backend round-trip. Reads the pref on mount; cross-tab sync not
   // polled. Local state is `coworkOn` so it doesn't shadow the imported
   // setCoworkEnabled.
   const cuaDriver = useCuaDriver();
   const [coworkOn, setCoworkOn] = useState(isCoworkEnabled);
+  // Switching Cowork ON explains itself first: it is about to read the contents
+  // of the user's windows and send them off-device. Open = awaiting that consent.
+  const [coworkConsentOpen, setCoworkConsentOpen] = useState(false);
+
   const toggleCowork = () => {
-    const next = !coworkOn;
-    // Guard only when turning on. Cowork runs on EITHER a large local model
-    // or the remote AI (DM OpenAI-compatible endpoint) — allow enabling when
-    // either backend is ready, so a local model is not required. The chatbox has
-    // no inline notice space, so remind via toast instead of failing silently.
-    if (next) {
-      const localReady =
-        isLocalLLMEnabled() &&
-        modelSupportsCowork(getLocalLLMModel(), COWORK_MIN_MODEL_GB);
-      if (!localReady && !hasRemoteAiConfig()) {
-        toast.warning(
-          isLocalLLMEnabled()
-            ? t('coworkModelTooSmall')
-            : t('coworkNeedsLocalModel'),
-        );
-        return;
-      }
+    if (coworkOn) {
+      setCoworkOn(false);
+      setCoworkEnabled(false);
+      cuaDriver.stop();
+      return;
     }
-    setCoworkOn(next);
-    setCoworkEnabled(next);
-    if (next) cuaDriver.install();
-    else cuaDriver.stop();
+    // Guard before anything user-visible. Cowork runs on EITHER a large local
+    // model or the remote AI (DM OpenAI-compatible endpoint) — allow enabling
+    // when either backend is ready, so a local model is not required. Running
+    // this first means a turn that is about to be refused never raises a consent
+    // dialog or an OS permission prompt.
+    const localReady =
+      isLocalLLMEnabled() &&
+      modelSupportsCowork(getLocalLLMModel(), COWORK_MIN_MODEL_GB);
+    if (!localReady && !hasRemoteAiConfig()) {
+      toast.warning(
+        isLocalLLMEnabled()
+          ? t('coworkModelTooSmall')
+          : t('coworkNeedsLocalModel'),
+      );
+      return;
+    }
+    setCoworkConsentOpen(true);
+  };
+
+  /**
+   * The user accepted the explanation: ask for the OS grants, and only switch
+   * Cowork on if it actually has them.
+   */
+  const acceptCoworkConsent = async () => {
+    setCoworkConsentOpen(false);
+    const { accessibility, screenRecording } =
+      await cuaDriver.requestDriverPermissions();
+
+    // `=== false` — checked and denied — never falsy. `null` means the host has
+    // no such concept (Linux, Windows), where Cowork works and these grants do
+    // not exist; treating that as denied would make it impossible to switch on
+    // precisely where upstream has proven the driver.
+    if (accessibility === false) {
+      toast.warning(t('coworkNeedsAccessibility'));
+      return;
+    }
+    if (screenRecording === false) {
+      toast.warning(t('coworkNeedsScreenRecording'));
+      return;
+    }
+
+    setCoworkOn(true);
+    setCoworkEnabled(true);
+    cuaDriver.install();
   };
 
   // Code (opencode over ACP) is desktop-only. Detected AFTER mount, never during
@@ -156,27 +198,44 @@ export const InsideButtons = ({
     icon: <Monitor className="h-4 w-4" />,
     isActive: coworkOn,
     action: toggleCowork,
-    isEnabled: cuaDriver.isAvailable && (isMacOS() || allowNonMacOSCowork()),
+    // Cowork used to be macOS-only because GhostOS was. The Cua Driver runs on
+    // Windows, macOS and Linux — but not on every Linux session, so an
+    // unsupported one renders the pill DISABLED with the reason rather than
+    // hiding it. The chatbox is Cowork's only surface: hide it and a KDE user is
+    // left with no way to find out why the feature they read about is missing.
+    isEnabled: cuaDriver.isAvailable,
+    disabledReason: cuaDriver.isSupported
+      ? undefined
+      : unsupportedCoworkReason(cuaDriver.unsupportedReason),
   };
-  const coworkAvailable = coworkButton.isEnabled;
+  // Deliberately NOT `coworkButton.isEnabled`: that is now true on any desktop so
+  // the pill can render disabled-with-a-reason. Fetching a driver unattended
+  // must still require a session the driver can actually drive.
+  const coworkAvailable = cuaDriver.isAvailable && cuaDriver.isSupported;
 
-  // Default Cowork ON for logged-in desktop users (once), mirroring the Code
-  // default in <CodingModeButton>. Only runs where the toggle is actually
-  // offered, respects an explicit prior choice (an explicit "false" is stored,
-  // so only a *missing* key counts as "never chosen"), and installs GhostOS in
-  // the background so the first turn is ready. No backend guard is needed: the
-  // logged-in check (tenant + dm_token) is exactly what hasRemoteAiConfig()
-  // tests, so a logged-in user always has the remote AI backend available.
+  // Cowork is deliberately opt-in: it reads the contents of the user's windows
+  // and sends them off-device, and switching it on raises OS permission prompts.
+  // Nothing here enables it — that only happens through `toggleCowork`, behind
+  // the consent dialog. (Code mode still defaults itself on; it asks for no OS
+  // permissions, so it is left as it was.)
+
+  // The PREFERENCE persists across runs; the install does not. A user whose first
+  // install failed comes back to a toggle that reads ON with no driver behind it,
+  // and nothing would fetch one until they switched it off and on again.
+  // Reconcile that here: Cowork on + session supported + host says not installed
+  // ⇒ install. Deliberately install-only — this runs unattended at startup, so it
+  // must never prompt for permissions.
+  //
+  // `status.installed === false` specifically, not falsy: `status` is null until
+  // the first check lands, and firing on "unknown" would install on every mount.
+  const ensuredDriverInstall = useRef(false);
   useEffect(() => {
-    if (!coworkAvailable) return;
-    if (localStorage.getItem(COWORK_ENABLED_KEY) !== null) return;
-    const loggedIn =
-      !!localStorage.getItem('tenant') && !!localStorage.getItem('dm_token');
-    if (!loggedIn) return;
-    setCoworkEnabled(true);
-    setCoworkOn(true);
+    if (ensuredDriverInstall.current) return;
+    if (!coworkAvailable || !coworkOn) return;
+    if (cuaDriver.status?.installed !== false) return;
+    ensuredDriverInstall.current = true;
     cuaDriver.install();
-  }, [coworkAvailable, cuaDriver]);
+  }, [coworkAvailable, coworkOn, cuaDriver]);
 
   const allInsideButtons = [
     {
@@ -259,13 +318,16 @@ export const InsideButtons = ({
     icon: React.ReactNode;
     isActive: boolean;
     action: () => void;
+    /** Set when this specific tool can't run here; also the tooltip text. */
+    disabledReason?: string;
   }) => (
     <div key={button.name} className="relative">
       <Button
         variant="ghost"
         size="sm"
         type="button"
-        disabled={disabled}
+        disabled={disabled || !!button.disabledReason}
+        title={button.disabledReason}
         className={`flex h-8 items-center gap-1.5 rounded-lg px-2 text-sm transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 ${
           button.isActive
             ? 'border border-[#D0E0FF] bg-[#F5F8FF] text-[#38A1E5]'
@@ -397,6 +459,26 @@ export const InsideButtons = ({
           </PopoverContent>
         </Popover>
       )}
+
+      {/* Switching Cowork on grants it the run of the machine, so it says what
+          that means before any OS prompt appears. Dismissing leaves Cowork off
+          and asks the system for nothing. */}
+      <AlertDialog open={coworkConsentOpen} onOpenChange={setCoworkConsentOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('coworkConsentTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('coworkConsentBody')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('coworkConsentCancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={acceptCoworkConsent}>
+              {t('coworkConsentConfirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
