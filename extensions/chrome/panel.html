@@ -7,28 +7,22 @@
     <title>ibl.ai Agent</title>
   </head>
   <body>
-    <!-- Set tenant + mentor for your agent. -->
+    <!-- Set tenant + mentor for your agent. Sizing lives in panel.css so the
+         component fills the side panel (no fixed width / overlay positioning). -->
     <agent-ai
-      style="
-        position: fixed;
-        top: 0;
-        right: 0;
-        width: 400px;
-        height: 100vh;
-        z-index: 1000;
-      "
-      mentorurl="https://mentorai.iblai.app"
+      mentorurl="https://78a2-3-209-13-28.ngrok-free.app"
       authurl="https://login.iblai.app"
       lmsurl="https://learn.iblai.app"
-      tenant="iblai"
-      mentor="744a3672-0a59-4cc9-ad5a-03ada402a658"
       theme="dark"
       component="chat"
-      redirecttoken="8b2c592b-2ddb-4768-ab3d-29cd2921cc11"
-      iscontextaware
+      authrelyonhost
     ></agent-ai>
 
     <!-- Vendored from @iblai/agent-ai (self-registers <agent-ai>). -->
     <script src="vendor/agent-ai.umd.js"></script>
+    <!-- Host-side auth: obtains the ibl.ai session token via
+         chrome.identity.launchWebAuthFlow and stores it for
+         <agent-ai authrelyonhost>. External file — MV3 forbids inline scripts. -->
+    <script src="panel.js"></script>
   </body>
 </html>

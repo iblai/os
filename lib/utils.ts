@@ -552,6 +552,13 @@ const PROVIDER_NAME_BY_ALIAS: Record<string, string> = {
   qwen: 'alibaba',
   ibm: 'ibm',
   granite: 'ibm',
+  // ibl.ai's own hosted provider. The backend key is `iblai` (NameEnum.IBLAI);
+  // the extra aliases cover the `IBLChat<Vendor>` house spelling and the
+  // dotted/spaced brand forms, which all normalize to one of these.
+  iblai: 'iblai',
+  ibl: 'iblai',
+  iblchatibl: 'iblai',
+  iblchatiblai: 'iblai',
 };
 
 /**
@@ -587,6 +594,7 @@ const PROVIDER_DETAILS_BY_NAME: Record<string, { logo: string; name: string }> =
     bedrock: { logo: '/llm-amazon-provider.png', name: 'Amazon' },
     alibaba: { logo: '/llm-alibaba-provider.png', name: 'Alibaba' },
     ibm: { logo: '/llm-ibm-provider.png', name: 'IBM' },
+    iblai: { logo: '/llm-iblai-provider.png', name: 'ibl.ai' },
   };
 
 export function getLLMProviderDetails(llmProvider: string, llmName?: string) {
@@ -602,6 +610,79 @@ export function getLLMProviderDetails(llmProvider: string, llmName?: string) {
       name: llmProvider,
     }
   );
+}
+
+/**
+ * Compares two raw provider names by the label the user actually sees on the
+ * card — `getLLMProviderDetails(name).name` — not by the backend key. The two
+ * diverge often enough to matter: `bedrock` renders as "Amazon", `azure_openai`
+ * as "Microsoft", `iblai` as "ibl.ai". Comparison is case-insensitive
+ * (`sensitivity: 'base'`) so casing never produces a surprising order.
+ * Unknown providers fall back to their raw name as the display name.
+ */
+export function compareLLMProvidersByDisplayName(a: string, b: string): number {
+  return getLLMProviderDetails(a).name.localeCompare(
+    getLLMProviderDetails(b).name,
+    undefined,
+    { sensitivity: 'base' },
+  );
+}
+
+type LLMCredentialFlags = {
+  has_credentials?: boolean;
+  can_use_main_keys?: boolean;
+  main_has_credentials?: boolean;
+};
+
+export type LLMProviderAccess = LLMCredentialFlags & {
+  chat_models?: unknown[] | null;
+};
+
+/**
+ * Whether the user can reach *any* model of this provider.
+ *
+ * This is exactly the provider-level half of the per-model `isDisabled` rule in
+ * `components/modals/llm-provider-modal.tsx`: a model row there is disabled when
+ * `!canSwitchLLm(provider) || !canSwitchProvider(llms, provider.name)`, and both
+ * of those depend only on the provider — so when either fails, *every* model row
+ * of that provider is disabled. `canSwitchProvider` is just "has at least one
+ * `chat_models` entry", which is checked inline here to keep the helper pure and
+ * free of the surrounding provider list.
+ *
+ * `canSwitchLLm` can return `undefined` (its `can_use_main_keys` branch), hence
+ * the explicit `Boolean(...)`.
+ */
+export function canAccessProvider(provider: LLMProviderAccess): boolean {
+  return (
+    Boolean(canSwitchLLm(provider ?? {})) &&
+    (provider?.chat_models?.length ?? 0) > 0
+  );
+}
+
+/**
+ * Orders LLM provider cards as two alphabetical groups: providers the user can
+ * actually use (see {@link canAccessProvider}) first, then the ones they can't —
+ * each group sorted alphabetically by display name (see
+ * {@link compareLLMProvidersByDisplayName}).
+ *
+ * The grouping predicate is deliberately the same one the grid grays cards with,
+ * so the two always line up: group 1 renders normally, group 2 renders grayed.
+ * Grouping on credentials alone would let a provider that has a key but ships no
+ * chat models sort into the "usable" group while rendering grayed.
+ *
+ * Pure and non-mutating: RTK Query results are frozen, so the input is copied
+ * before sorting. `Array.prototype.sort` is stable, so providers that tie on
+ * both group and display name keep their original relative order.
+ */
+export function sortLLMProvidersByCredentials<
+  T extends LLMProviderAccess & { name: string },
+>(providers: readonly T[]): T[] {
+  return [...providers].sort((a, b) => {
+    const aUsable = canAccessProvider(a);
+    const bUsable = canAccessProvider(b);
+    if (aUsable !== bUsable) return aUsable ? -1 : 1;
+    return compareLLMProvidersByDisplayName(a.name, b.name);
+  });
 }
 
 export function sendMessageToParentWebsite(payload: unknown) {

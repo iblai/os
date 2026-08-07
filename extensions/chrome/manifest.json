@@ -23,9 +23,16 @@
   "side_panel": {
     "default_path": "panel.html"
   },
-  "permissions": ["sidePanel"],
-  "host_permissions": ["https://*.iblai.app/*", "https://*.ibl.ai/*"],
+  "permissions": ["sidePanel", "identity", "scripting", "tabs"],
+  "host_permissions": [
+    "https://*.iblai.app/*",
+    "https://*.ibl.ai/*",
+    "http://localhost:3001/*",
+    "https://*.ngrok-free.app/*",
+    "http://*/*",
+    "https://*/*"
+  ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://*.iblai.app https://*.ibl.ai; frame-src https://*.iblai.app https://*.ibl.ai https://accounts.google.com https://appleid.apple.com; child-src https://*.iblai.app https://*.ibl.ai"
+    "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://*.iblai.app https://*.ibl.ai http://localhost:3001 https://*.ngrok-free.app; frame-src https://*.iblai.app https://*.ibl.ai https://accounts.google.com https://appleid.apple.com http://localhost:3001 https://*.ngrok-free.app; child-src https://*.iblai.app https://*.ibl.ai http://localhost:3001 https://*.ngrok-free.app"
   }
 }

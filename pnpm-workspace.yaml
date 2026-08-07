@@ -13,6 +13,14 @@ overrides:
   defu: '>=6.1.5'
   lodash-es: '>=4.18.0'
   lodash: '>=4.18.0'
+  # GHSA-5p4m-2wfm-xmqj / CVE-2026-59870 — quadratic CPU consumption resolving
+  # !!omap, affecting >=4.0.0 <4.3.1. Surfaced by `pnpm audit`, not Dependabot.
+  # Dev-only here (commitlint > cosmiconfig, eslintrc, mocha), so there is no
+  # production exposure, but the audit gate blocks on high regardless. 4.3.1 is a
+  # patch bump and every consumer already asks for ^4.1.0, so the floor lifts
+  # without crossing a major. Upper bound is deliberate: a bare '>=4.3.1' pulls
+  # 5.x, which every consumer here declares itself incompatible with.
+  js-yaml: '>=4.3.1 <5'
   # GHSA-4cwx-7wf7-3272 (cross-user information disclosure) affects >=8.0.0 <8.9.0.
   # Only 8.7.0 resolves here (@wdio/local-runner > webdriver), so lifting the floor
   # past the 6.x line is safe — nothing depends on a 6.x or 7.x undici.
