@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.119.1](https://github.com/iblai/os/compare/v0.119.0...v0.119.1) (2026-08-07)
+
+### Documentation
+
+* **readme:** fix download buttons to app-v0.95.11 (ibl.ai_ assets) ([959f305](https://github.com/iblai/os/commit/959f3050f797c19927675b14f8ae9408c01ead0d))
+
 ## [0.119.0](https://github.com/iblai/os/compare/v0.118.0...v0.119.0) (2026-08-07)
 
 ### Features
