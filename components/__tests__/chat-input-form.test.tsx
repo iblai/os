@@ -212,6 +212,9 @@ vi.mock('@/components/chat-input-form/inside-buttons', () => ({
     activeOptions,
     onOptionClick,
     onOpenPromptGallery,
+    skills,
+    activeSkillSlugs,
+    onToggleSkill,
   }: any) => (
     <div data-testid="inside-buttons">
       <button onClick={() => onOptionClick('canvas')}>Canvas</button>
@@ -219,6 +222,20 @@ vi.mock('@/components/chat-input-form/inside-buttons', () => ({
         Prompt Gallery
       </button>
       <span data-testid="active-options">{activeOptions?.join(',') || ''}</span>
+      {/* Skills-dropdown wiring surface: one toggle button per passed skill,
+          exposing the armed state the real dropdown would render. */}
+      {skills?.map((skill: any) => (
+        <button
+          key={skill.slug}
+          type="button"
+          data-testid={`toggle-skill-${skill.slug}`}
+          data-armed={activeSkillSlugs?.has(skill.slug) ? 'true' : 'false'}
+          onClick={() => onToggleSkill?.(skill)}
+        >
+          {/* slug, not name — picker tests query options by visible name */}
+          {skill.slug}
+        </button>
+      ))}
     </div>
   ),
 }));
@@ -2157,6 +2174,86 @@ describe('ChatInputForm', () => {
       expect(highlights).toHaveLength(2);
       expect(highlights[0]).toHaveTextContent('/web-research');
       expect(highlights[1]).toHaveTextContent('/code-review');
+    });
+
+    describe('Skills dropdown (inside buttons) — synced with the composer', () => {
+      it('toggling a skill from the dropdown prefixes its token and highlights it', () => {
+        arrangeSkills();
+        renderWithRedux(<ChatInputForm {...defaultProps} />);
+
+        fireEvent.click(screen.getByTestId('toggle-skill-web-research'));
+
+        expect(screen.getByTestId('auto-resize-textarea')).toHaveValue(
+          '/web-research ',
+        );
+        expect(screen.getByTestId('skill-token-highlight')).toHaveTextContent(
+          '/web-research',
+        );
+        // The dropdown reflects the armed state (sync: dropdown → text → dropdown).
+        expect(screen.getByTestId('toggle-skill-web-research')).toHaveAttribute(
+          'data-armed',
+          'true',
+        );
+      });
+
+      it('toggling an armed skill removes its token from the message', () => {
+        arrangeSkills();
+        renderWithRedux(<ChatInputForm {...defaultProps} />);
+        const textarea = screen.getByTestId('auto-resize-textarea');
+
+        fireEvent.click(screen.getByTestId('toggle-skill-web-research'));
+        typeInComposer('/web-research find the trends');
+        fireEvent.click(screen.getByTestId('toggle-skill-web-research'));
+
+        expect(textarea).toHaveValue('find the trends');
+        expect(screen.getByTestId('toggle-skill-web-research')).toHaveAttribute(
+          'data-armed',
+          'false',
+        );
+      });
+
+      it('a token picked via "/" marks the dropdown item as armed (sync: picker → dropdown)', () => {
+        arrangeSkills();
+        renderWithRedux(<ChatInputForm {...defaultProps} />);
+
+        expect(screen.getByTestId('toggle-skill-code-review')).toHaveAttribute(
+          'data-armed',
+          'false',
+        );
+
+        typeInComposer('/code');
+        fireEvent.mouseDown(screen.getByText('Code Review'));
+
+        expect(screen.getByTestId('toggle-skill-code-review')).toHaveAttribute(
+          'data-armed',
+          'true',
+        );
+      });
+
+      it('only enabled skills reach the dropdown', () => {
+        arrangeSkills();
+        renderWithRedux(<ChatInputForm {...defaultProps} />);
+
+        expect(
+          screen.getByTestId('toggle-skill-web-research'),
+        ).toBeInTheDocument();
+        expect(
+          screen.queryByTestId('toggle-skill-disabled-skill'),
+        ).not.toBeInTheDocument();
+      });
+
+      it('toggling preserves existing text (token prefixes, then removal keeps it)', () => {
+        arrangeSkills();
+        renderWithRedux(<ChatInputForm {...defaultProps} />);
+        const textarea = screen.getByTestId('auto-resize-textarea');
+
+        typeInComposer('summarize the doc');
+        fireEvent.click(screen.getByTestId('toggle-skill-code-review'));
+        expect(textarea).toHaveValue('/code-review summarize the doc');
+
+        fireEvent.click(screen.getByTestId('toggle-skill-code-review'));
+        expect(textarea).toHaveValue('summarize the doc');
+      });
     });
 
     it('does not highlight unknown or disabled slugs', () => {

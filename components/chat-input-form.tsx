@@ -60,6 +60,7 @@ import {
   useGetMentorSkillAssignmentsQuery,
   useGetAgentSkillsQuery,
   resolveEffectiveAgentSkills,
+  type EffectiveAgentSkill,
 } from '@iblai/iblai-js/data-layer';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 
@@ -450,6 +451,41 @@ export function ChatInputForm({
 
   const highlightBackdropRef = useRef<HTMLDivElement>(null);
 
+  // Skill slugs currently invoked as `/slug` tokens in the composer —
+  // drives the Skills dropdown's active state/check marks so it always
+  // agrees with what the `/` picker (or plain typing) put in the text.
+  const activeSkillSlugs = useMemo(() => {
+    const slugs = new Set<string>();
+    const tokenRe = /(^|\s)(\/[\w-]+)(?=\s|$)/g;
+    let match: RegExpExecArray | null;
+    while ((match = tokenRe.exec(inputValue))) {
+      const slug = match[2].slice(1);
+      if (skillSlugSet.has(slug)) slugs.add(slug);
+    }
+    return slugs;
+  }, [inputValue, skillSlugSet]);
+
+  // Skills-dropdown toggle: arm the skill by prefixing its `/slug ` token
+  // to the message, or remove every occurrence of the token if it is
+  // already armed. Both paths write the composer text, which is the single
+  // source of truth the picker, highlight and dropdown all derive from.
+  const toggleSkillToken = (skill: EffectiveAgentSkill) => {
+    if (activeSkillSlugs.has(skill.slug)) {
+      const tokenRe = new RegExp(
+        String.raw`(?:^|\s)/${skill.slug.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=\s|$)`,
+        'g',
+      );
+      setInputValue(inputValue.replace(tokenRe, '').replace(/^\s+/, ''));
+    } else {
+      setInputValue(`/${skill.slug} ${inputValue}`);
+    }
+  };
+
+  const enabledSlashSkills = useMemo(
+    () => slashSkills.filter((skill) => skill.enabled !== false),
+    [slashSkills],
+  );
+
   // Show the loading popover when the user is composing a `/` token but the
   // skill list hasn't resolved yet. Same token rule as the picker so plain
   // sentences containing "/" never surface it.
@@ -785,6 +821,9 @@ export function ChatInputForm({
                   isPrivate={chatPrivacyActive}
                   tenantKey={tenantKey}
                   username={username}
+                  skills={enabledSlashSkills}
+                  activeSkillSlugs={activeSkillSlugs}
+                  onToggleSkill={toggleSkillToken}
                 />
               )}
 

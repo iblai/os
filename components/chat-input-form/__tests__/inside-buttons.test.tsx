@@ -1473,4 +1473,91 @@ describe('InsideButtons', () => {
       });
     });
   });
+
+  describe('Skills dropdown', () => {
+    const skills = [
+      {
+        unique_id: 's1',
+        name: 'Web Research',
+        slug: 'web-research',
+        description: 'Research a topic on the open web.',
+        enabled: true,
+      },
+      {
+        unique_id: 's2',
+        name: 'Code Review',
+        slug: 'code-review',
+        enabled: true,
+      },
+    ];
+
+    it('renders the trigger only when the mentor has skills', () => {
+      const { rerender } = render(
+        <InsideButtons
+          {...defaultProps}
+          skills={skills}
+          activeSkillSlugs={new Set()}
+          onToggleSkill={vi.fn()}
+        />,
+      );
+      expect(screen.getByTestId('skills-menu-trigger')).toBeInTheDocument();
+      expect(screen.getByTestId('skills-menu-trigger')).toHaveTextContent(
+        'Skills',
+      );
+
+      rerender(
+        <InsideButtons
+          {...defaultProps}
+          skills={[]}
+          activeSkillSlugs={new Set()}
+          onToggleSkill={vi.fn()}
+        />,
+      );
+      expect(
+        screen.queryByTestId('skills-menu-trigger'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('shows the armed skill name and active-pill styling when a token is in the composer', () => {
+      render(
+        <InsideButtons
+          {...defaultProps}
+          skills={skills}
+          activeSkillSlugs={new Set(['code-review'])}
+          onToggleSkill={vi.fn()}
+        />,
+      );
+      const trigger = screen.getByTestId('skills-menu-trigger');
+      expect(trigger).toHaveTextContent('Code Review');
+      expect(trigger.className).toContain('bg-[#F5F8FF]');
+      expect(trigger.className).toContain('text-[#38A1E5]');
+    });
+
+    it('lists skills with descriptions and calls onToggleSkill on selection', async () => {
+      const onToggleSkill = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <InsideButtons
+          {...defaultProps}
+          skills={skills}
+          activeSkillSlugs={new Set(['web-research'])}
+          onToggleSkill={onToggleSkill}
+        />,
+      );
+
+      await user.click(screen.getByTestId('skills-menu-trigger'));
+
+      const webItem = await screen.findByTestId(
+        'skills-menu-item-web-research',
+      );
+      expect(webItem).toHaveTextContent('Web Research');
+      expect(webItem).toHaveTextContent('Research a topic on the open web.');
+      expect(
+        screen.getByTestId('skills-menu-item-code-review'),
+      ).toBeInTheDocument();
+
+      await user.click(webItem);
+      expect(onToggleSkill).toHaveBeenCalledWith(skills[0]);
+    });
+  });
 });

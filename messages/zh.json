@@ -478,7 +478,8 @@
     "coworkConsentCancel": "取消",
     "coworkConsentConfirm": "继续",
     "coworkNeedsAccessibility": "Cowork 需要“辅助功能”权限才能控制您的电脑。请在“系统设置 › 隐私与安全性 › 辅助功能”中授权，然后重启应用并重新开启 Cowork。",
-    "coworkNeedsScreenRecording": "Cowork 需要“屏幕录制”权限才能读取窗口内容。请在“系统设置 › 隐私与安全性 › 屏幕录制”中授权，然后重启应用并重新开启 Cowork。"
+    "coworkNeedsScreenRecording": "Cowork 需要“屏幕录制”权限才能读取窗口内容。请在“系统设置 › 隐私与安全性 › 屏幕录制”中授权，然后重启应用并重新开启 Cowork。",
+    "skills": "技能"
   },
   "chatInputFormMemoryMenu": {
     "yourMemory": "您的记忆",

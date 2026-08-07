@@ -40,6 +40,13 @@ export class ChatPage {
   readonly guidedSuggestedPromptButtons: Locator;
   readonly slashSkillPicker: Locator;
   readonly skillTokenHighlights: Locator;
+  /**
+   * The Skills dropdown trigger in the inside-buttons row — the discoverable
+   * alternative to typing `/`. Shows the armed skill's name (active pill
+   * styling) whenever a `/slug` token is present in the composer, "Skills"
+   * otherwise. Hidden entirely when the mentor has no skills.
+   */
+  readonly skillsMenuTrigger: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -103,6 +110,7 @@ export class ChatPage {
     // at a token's end (or Delete at its start) removes the whole token in
     // one stroke.
     this.skillTokenHighlights = page.getByTestId('skill-token-highlight');
+    this.skillsMenuTrigger = page.getByTestId('skills-menu-trigger');
   }
 
   async sendMessage(text: string): Promise<void> {
@@ -520,6 +528,11 @@ export class ChatPage {
       .locator('[aria-selected="true"]')
       .first()
       .getAttribute('id');
+  }
+
+  /** Returns the Skills-dropdown item for a skill slug (menu must be open). */
+  getSkillsMenuItem(slug: string): Locator {
+    return this.page.getByTestId(`skills-menu-item-${slug}`);
   }
 
   /** Returns the slash-picker option `<li>` whose text contains `name`. */

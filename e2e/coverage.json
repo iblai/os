@@ -2,8 +2,8 @@
   "version": 2,
   "lastUpdated": "2026-08-06",
   "summary": {
-    "totalCheckpoints": 630,
-    "coveredCheckpoints": 600,
+    "totalCheckpoints": 631,
+    "coveredCheckpoints": 601,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 10,
     "pendingCheckpoints": 8,
@@ -4001,6 +4001,11 @@
         {
           "id": "slash-15",
           "description": "NON-ADMIN: with the realistic student permission shape (assignments endpoint 403s, student-readable catalog returns mentor-private skills) the \"/\" picker still offers skills; selecting completes the token and sending the invocation message receives a live AI reply",
+          "status": "covered"
+        },
+        {
+          "id": "slash-16",
+          "description": "Skills dropdown button (inside-buttons row, next to Canvas) lists the mentor's enabled skills with descriptions; selecting arms the /slug token (highlighted in the composer) and the button shows the armed skill's name; toggling removes it; arming via the \"/\" picker updates the button — both surfaces derive from the composer text so they stay in sync",
           "status": "covered"
         }
       ]

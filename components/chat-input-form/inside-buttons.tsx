@@ -25,7 +25,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { X, BookOpen, Archive, Check, Terminal, Monitor } from 'lucide-react';
+import {
+  X,
+  BookOpen,
+  Archive,
+  Check,
+  Terminal,
+  Monitor,
+  Sparkles,
+} from 'lucide-react';
+import type { EffectiveAgentSkill } from '@iblai/iblai-js/data-layer';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { DeepSearchIcon, CanvasIcon } from '@/components/icons/svg-icons';
 import { TOOLS, hasRemoteAiConfig } from '@iblai/iblai-js/web-utils';
@@ -70,6 +80,20 @@ interface InsideButtonsProps {
   isPrivate?: boolean;
   tenantKey?: string;
   username?: string;
+  /**
+   * The mentor's enabled Agent Skills, for the Skills dropdown — a
+   * discoverable alternative to typing `/` in the composer. Empty/undefined
+   * hides the button entirely (mentor has no skills).
+   */
+  skills?: EffectiveAgentSkill[];
+  /**
+   * Slugs currently invoked as `/slug` tokens in the composer text. Drives
+   * the button's active state and the per-item check marks, so the dropdown
+   * and the `/` picker can never disagree — both derive from the same text.
+   */
+  activeSkillSlugs?: Set<string>;
+  /** Adds the skill's `/slug` token to the composer, or removes it if armed. */
+  onToggleSkill?: (skill: EffectiveAgentSkill) => void;
 }
 
 export const InsideButtons = ({
@@ -88,6 +112,9 @@ export const InsideButtons = ({
   isPrivate = false,
   tenantKey,
   username,
+  skills,
+  activeSkillSlugs,
+  onToggleSkill,
 }: InsideButtonsProps) => {
   const t = useTranslations('chatInputFormInsideButtons');
 
@@ -362,6 +389,69 @@ export const InsideButtons = ({
           outside the responsive list so they always render side by side. */}
       {inTauri && <CodingModeButton sessionId={sessionId} />}
       {coworkButton.isEnabled && renderToolButton(coworkButton)}
+      {/* Skills dropdown — a discoverable alternative to typing `/` in the
+          composer, sitting next to Canvas. Its active state and check marks
+          derive from the SAME composer text the `/` picker writes, so the
+          two ways of invoking a skill are always in sync. Hidden when the
+          mentor has no skills. */}
+      {skills && skills.length > 0 && onToggleSkill && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild disabled={disabled}>
+            <Button
+              variant="ghost"
+              size="sm"
+              type="button"
+              disabled={disabled}
+              data-testid="skills-menu-trigger"
+              className={`flex h-8 items-center gap-1.5 rounded-lg px-2 text-sm transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 ${
+                activeSkillSlugs && activeSkillSlugs.size > 0
+                  ? 'border border-[#D0E0FF] bg-[#F5F8FF] text-[#38A1E5]'
+                  : 'text-gray-600 hover:border hover:border-[#D0E0FF] hover:bg-[#F5F8FF]'
+              }`}
+            >
+              <Sparkles className="h-4 w-4" />
+              {/* Show the armed skill's name so the button mirrors the token
+                  in the composer; falls back to the generic label. */}
+              {(activeSkillSlugs &&
+                activeSkillSlugs.size > 0 &&
+                skills.find((skill) => activeSkillSlugs.has(skill.slug))
+                  ?.name) ||
+                t('skills')}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-72">
+            {skills.map((skill) => {
+              const isArmed = activeSkillSlugs?.has(skill.slug) ?? false;
+              return (
+                <DropdownMenuItem
+                  key={skill.unique_id}
+                  data-testid={`skills-menu-item-${skill.slug}`}
+                  onClick={() => onToggleSkill(skill)}
+                  className="flex items-start gap-2"
+                >
+                  <Check
+                    aria-hidden="true"
+                    className={cn(
+                      'mt-0.5 h-4 w-4 shrink-0 text-[#38A1E5]',
+                      isArmed ? 'opacity-100' : 'opacity-0',
+                    )}
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm text-gray-800">
+                      {skill.name}
+                    </span>
+                    {skill.description && (
+                      <span className="block truncate text-xs text-gray-500">
+                        {skill.description}
+                      </span>
+                    )}
+                  </span>
+                </DropdownMenuItem>
+              );
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
       {/* Responsive Inside Buttons */}
       {visibleInsideButtons.map((button) => {
         if (button.name === 'Memory') {

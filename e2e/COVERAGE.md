@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-08-06 | 630 checkpoints (600 covered, 8 pending/fixme, 10 not-reproducible in default env, 12 deprecated) | 69 journeys (68 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-08-06 | 631 checkpoints (601 covered, 8 pending/fixme, 10 not-reproducible in default env, 12 deprecated) | 69 journeys (68 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -1290,7 +1290,7 @@ Because the toggle mutates the mentor's attached tools — the same fields Journ
 
 ---
 
-## Journey 66: Agent Skills (18 checkpoints) — `journeys/66-agent-skills.spec.ts`
+## Journey 66: Agent Skills (19 checkpoints) — `journeys/66-agent-skills.spec.ts`
 
 **Source files:** `hooks/use-mentor-segments.ts`, `components/modals/edit-mentor-modal/tabs/skills-tab.tsx`, `components/chat-input-form.tsx`, `components/auto-resize-text-area.tsx`
 
@@ -1336,5 +1336,6 @@ Issue feat/2215 — two independent surfaces:
 - [x] slash-11: A mid-sentence token is removed atomically and the seam space collapses ("say /web-research please" → "say please")
 - [x] slash-12: Multiple skill invocations in one message are each highlighted; unknown or disabled slugs never highlight
 - [x] slash-13: Typing "/" while the skills fetches (assignments + catalog) are still in flight shows the "Loading skills…" popover (`slash-skill-loading`, `role=status`), which yields to the picker once the list resolves
+- [x] slash-16: Skills dropdown button (inside-buttons row, next to Canvas) lists enabled skills with descriptions; selecting arms the `/slug` token (highlighted in-place) and the button shows the armed skill's name; toggling removes it; arming via the `/` picker updates the button — both derive from the composer text so they never disagree
 - [x] slash-15: NON-ADMIN — with the realistic student permission shape (assignments 403, catalog-only mentor-private skills) the "/" picker still offers skills; selecting completes the token and the sent invocation message receives a live AI reply
 - [x] slash-14: A "/" token typed after existing text (caret-adjacent, preceded by whitespace) opens the picker; selecting completes the invocation at that index keeping the sentence. A "/" glued inside a word (and/or, URLs) never triggers

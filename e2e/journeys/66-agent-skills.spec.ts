@@ -578,6 +578,53 @@ test.describe('Journey 66: Agent Skills — chat composer slash skill picker', (
     await expect(chatPage.slashSkillPicker).not.toBeVisible();
   });
 
+  // ── slash-16: Skills dropdown button, synced with the `/` picker ─────────
+  //
+  // A discoverable alternative to typing `/`: a Skills button next to Canvas
+  // opens a dropdown of the mentor's enabled skills. Selecting one arms its
+  // `/slug` token (highlighted in the composer); the button shows the armed
+  // skill's name. Both surfaces derive from the composer text, so arming via
+  // the dropdown or via `/` always agree.
+
+  test('Skills dropdown arms/removes tokens and stays in sync with the "/" picker', async ({
+    page,
+    chatPage,
+  }) => {
+    await chatPage.mockEffectiveSkills(SLASH_SKILLS);
+    await navigateToMentorApp(page);
+    await waitForPageReady(page);
+
+    const composer = chatPage.getComposerTextarea();
+    await expect(chatPage.skillsMenuTrigger).toBeVisible({ timeout: 15_000 });
+    await expect(chatPage.skillsMenuTrigger).toContainText('Skills');
+
+    // Arm via the dropdown → token appears highlighted, button shows name.
+    await chatPage.skillsMenuTrigger.click();
+    const webItem = chatPage.getSkillsMenuItem('web-research');
+    await expect(webItem).toBeVisible();
+    await expect(webItem).toContainText('Web Research');
+    await expect(webItem).toContainText('Research a topic on the open web.');
+    // Disabled skills never reach the menu.
+    await expect(chatPage.getSkillsMenuItem('disabled-skill')).toHaveCount(0);
+    await webItem.click();
+
+    await expect(composer).toHaveValue('/web-research ');
+    await expect(chatPage.skillTokenHighlights).toHaveCount(1);
+    await expect(chatPage.skillsMenuTrigger).toContainText('Web Research');
+
+    // Toggle the armed skill off from the dropdown → token removed.
+    await chatPage.skillsMenuTrigger.click();
+    await chatPage.getSkillsMenuItem('web-research').click();
+    await expect(composer).toHaveValue('');
+    await expect(chatPage.skillsMenuTrigger).toContainText('Skills');
+
+    // Sync the other way: arming via the `/` picker updates the button.
+    await composer.fill('/code');
+    await chatPage.getSlashSkillOption('Code Review').click();
+    await expect(composer).toHaveValue('/code-review ');
+    await expect(chatPage.skillsMenuTrigger).toContainText('Code Review');
+  });
+
   // ── slash-15: NON-ADMIN uses the picker and gets an AI reply ─────────────
   //
   // The `/` picker is available to students, not just admins. This runs in

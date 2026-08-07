@@ -478,7 +478,8 @@
     "coworkConsentCancel": "Cancelar",
     "coworkConsentConfirm": "Continuar",
     "coworkNeedsAccessibility": "Cowork necesita acceso de Accesibilidad para controlar tu equipo. Concédelo en Ajustes del Sistema › Privacidad y seguridad › Accesibilidad, reinicia la app y vuelve a activar Cowork.",
-    "coworkNeedsScreenRecording": "Cowork necesita acceso de Grabación de pantalla para leer tus ventanas. Concédelo en Ajustes del Sistema › Privacidad y seguridad › Grabación de pantalla, reinicia la app y vuelve a activar Cowork."
+    "coworkNeedsScreenRecording": "Cowork necesita acceso de Grabación de pantalla para leer tus ventanas. Concédelo en Ajustes del Sistema › Privacidad y seguridad › Grabación de pantalla, reinicia la app y vuelve a activar Cowork.",
+    "skills": "Habilidades"
   },
   "chatInputFormMemoryMenu": {
     "yourMemory": "Tu memoria",

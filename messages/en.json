@@ -478,7 +478,8 @@
     "coworkConsentCancel": "Cancel",
     "coworkConsentConfirm": "Continue",
     "coworkNeedsAccessibility": "Cowork needs Accessibility access to control your computer. Grant it in System Settings › Privacy & Security › Accessibility, then restart the app and turn Cowork on again.",
-    "coworkNeedsScreenRecording": "Cowork needs Screen Recording access to read your windows. Grant it in System Settings › Privacy & Security › Screen Recording, then restart the app and turn Cowork on again."
+    "coworkNeedsScreenRecording": "Cowork needs Screen Recording access to read your windows. Grant it in System Settings › Privacy & Security › Screen Recording, then restart the app and turn Cowork on again.",
+    "skills": "Skills"
   },
   "chatInputFormMemoryMenu": {
     "yourMemory": "Your Memory",
