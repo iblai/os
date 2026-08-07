@@ -82,14 +82,14 @@ const mockGhostInstall = vi.fn();
 const mockGhostStop = vi.fn();
 const mockSetCoworkEnabled = vi.fn();
 vi.mock('@iblai/iblai-js/web-containers', () => ({
-  useGhostOs: () => ({
+  useCuaDriver: () => ({
     isAvailable: mockGhostAvailable,
     install: () => mockGhostInstall(),
     stop: () => mockGhostStop(),
   }),
   isCoworkEnabled: () => mockCoworkOn,
   // The real helper persists to localStorage, and the default-on pass relies on
-  // that write to not fire twice — useGhostOs hands back a fresh object each
+  // that write to not fire twice — useCuaDriver hands back a fresh object each
   // render, so its effect re-runs and only the stored key stops it.
   setCoworkEnabled: (value: boolean) => {
     localStorage.setItem('ibl_cowork_enabled', String(value));

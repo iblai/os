@@ -20,7 +20,7 @@ import { toast } from 'sonner';
 import { DeepSearchIcon, CanvasIcon } from '@/components/icons/svg-icons';
 import { TOOLS, hasRemoteAiConfig } from '@iblai/iblai-js/web-utils';
 import {
-  useGhostOs,
+  useCuaDriver,
   isCoworkEnabled,
   setCoworkEnabled,
   isLocalLLMEnabled,
@@ -95,11 +95,11 @@ export const InsideButtons = ({
 }: InsideButtonsProps) => {
   const t = useTranslations('chatInputFormInsideButtons');
 
-  // Cowork = the Tauri GhostOS assistant (useGhostOs install/stop + localStorage
+  // Cowork = the Tauri CUA driver (useCuaDriver install/stop + localStorage
   // pref), no backend round-trip. Reads the pref on mount; cross-tab sync not
   // polled. Local state is `coworkOn` so it doesn't shadow the imported
   // setCoworkEnabled.
-  const ghostOs = useGhostOs();
+  const cuaDriver = useCuaDriver();
   const [coworkOn, setCoworkOn] = useState(isCoworkEnabled);
   const toggleCowork = () => {
     const next = !coworkOn;
@@ -122,8 +122,8 @@ export const InsideButtons = ({
     }
     setCoworkOn(next);
     setCoworkEnabled(next);
-    if (next) ghostOs.install();
-    else ghostOs.stop();
+    if (next) cuaDriver.install();
+    else cuaDriver.stop();
   };
 
   // Code (opencode over ACP) is desktop-only. Detected AFTER mount, never during
@@ -156,7 +156,7 @@ export const InsideButtons = ({
     icon: <Monitor className="h-4 w-4" />,
     isActive: coworkOn,
     action: toggleCowork,
-    isEnabled: ghostOs.isAvailable && (isMacOS() || allowNonMacOSCowork()),
+    isEnabled: cuaDriver.isAvailable && (isMacOS() || allowNonMacOSCowork()),
   };
   const coworkAvailable = coworkButton.isEnabled;
 
@@ -175,8 +175,8 @@ export const InsideButtons = ({
     if (!loggedIn) return;
     setCoworkEnabled(true);
     setCoworkOn(true);
-    ghostOs.install();
-  }, [coworkAvailable, ghostOs]);
+    cuaDriver.install();
+  }, [coworkAvailable, cuaDriver]);
 
   const allInsideButtons = [
     {
