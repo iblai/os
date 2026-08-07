@@ -445,7 +445,10 @@ export function LLMProviderModal({
                   className={cn(
                     'flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 p-4 transition-colors',
                     {
-                      'cursor-not-allowed border-gray-200 bg-white': isDisabled,
+                      // Matches the provider grid's inactive treatment: tinted
+                      // card, faded logo, full-strength label.
+                      'cursor-not-allowed border-gray-100 bg-gray-50':
+                        isDisabled && !isActive,
                       'hover:border-blue-500 hover:bg-blue-50': !isDisabled,
                       'cursor-not-allowed border-blue-500 bg-blue-50': isActive,
                     },
@@ -458,14 +461,16 @@ export function LLMProviderModal({
                         providerName: providerDetails.name,
                       })}
                       className={cn('h-full w-full object-contain', {
-                        grayscale: isDisabled && !isActive,
+                        // `grayscale` alone is a no-op on already-black marks,
+                        // so fade them as well — same rule as the provider grid.
+                        'opacity-40 grayscale': isDisabled && !isActive,
                       })}
                       width={32}
                       height={32}
                       loading="lazy"
                     />
                   </span>
-                  <span className="text-left text-sm font-medium text-[#646464]">
+                  <span className="text-left text-sm font-medium text-gray-900">
                     {llm.llm_name}
                   </span>
                 </button>
