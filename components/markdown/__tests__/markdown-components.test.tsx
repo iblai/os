@@ -2,11 +2,21 @@ import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import { components } from '../markdown-components';
 
-// Mock CopyButtonIcon component
+// Mock CopyButtonIcon component. It forwards the props the code-block header
+// relies on (`label`, `data-testid`) so those wiring points stay asserted here;
+// the real clipboard behaviour is covered in copy-button-icon.test.tsx.
 vi.mock('@/components/copy-button-icon', () => ({
-  CopyButtonIcon: ({ text }: { text: string }) => (
-    <button data-testid="copy-button" data-text={text}>
-      Copy
+  CopyButtonIcon: ({
+    text,
+    label,
+    ...rest
+  }: {
+    text: string;
+    label?: string;
+    'data-testid'?: string;
+  }) => (
+    <button data-text={text} {...rest}>
+      {label ?? 'Copy'}
     </button>
   ),
 }));
@@ -377,8 +387,60 @@ describe('Markdown Components', () => {
         </Code>,
       );
       // Should have copy button
-      const copyButton = container.querySelector('[data-testid="copy-button"]');
+      const copyButton = container.querySelector(
+        '[data-testid="code-block-copy"]',
+      );
       expect(copyButton).toBeTruthy();
+    });
+
+    it('should render a header bar showing the language name', () => {
+      const { getByTestId } = render(
+        <Code node={{} as any} className="language-python">
+          {'print("hello")'}
+        </Code>,
+      );
+      expect(getByTestId('code-block-language').textContent).toBe('python');
+    });
+
+    it('should put the language label and the copy button in one header, above the highlighted body', () => {
+      const { container, getByTestId } = render(
+        <Code node={{} as any} className="language-python">
+          {'print("hello")'}
+        </Code>,
+      );
+
+      const block = container.querySelector('[data-code-block]');
+      expect(block).toBeTruthy();
+
+      const label = getByTestId('code-block-language');
+      const copy = getByTestId('code-block-copy');
+      // Same header row: the label's parent holds the copy button too.
+      expect(label.parentElement).toBe(copy.parentElement);
+      // ...and that header precedes the highlighted body inside the block.
+      expect(block?.firstElementChild).toBe(label.parentElement);
+      expect(block?.children.length).toBe(2);
+    });
+
+    it('should give the copy control a visible "Copy" text label', () => {
+      const { getByTestId } = render(
+        <Code node={{} as any} className="language-python">
+          {'print("hello")'}
+        </Code>,
+      );
+      expect(getByTestId('code-block-copy').textContent).toBe('Copy');
+    });
+
+    it('should render the header on the dark companion shade of the tomorrow theme body', () => {
+      const { getByTestId } = render(
+        <Code node={{} as any} className="language-python">
+          {'print("hello")'}
+        </Code>,
+      );
+      // Pins the always-dark header: #1f1f1f sits under the #ccc label at
+      // 10.3:1, and against the #2d2d2d highlighter body it reads as a
+      // deliberate companion rather than a light strip.
+      const header = getByTestId('code-block-language').parentElement;
+      expect(header?.className).toContain('bg-[#1f1f1f]');
     });
 
     it('should render inline code when no language is specified', () => {
@@ -389,6 +451,11 @@ describe('Markdown Components', () => {
       expect(code).toBeTruthy();
       expect(code?.className).toContain('font-mono');
       expect(code?.textContent).toBe('inline code');
+      // No code-block chrome for inline code.
+      expect(container.querySelector('[data-code-block]')).toBeNull();
+      expect(
+        container.querySelector('[data-testid="code-block-language"]'),
+      ).toBeNull();
     });
 
     it('should render inline code for language-latex', () => {
@@ -401,6 +468,16 @@ describe('Markdown Components', () => {
       expect(code).toBeTruthy();
       // Should render as inline code, not syntax highlighted
       expect(code?.className).toContain('font-mono');
+      expect(code?.textContent).toBe('\\frac{1}{2}');
+      // latex must bypass the header/highlighter path entirely so KaTeX
+      // downstream still receives raw <code>.
+      expect(container.querySelector('[data-code-block]')).toBeNull();
+      expect(
+        container.querySelector('[data-testid="code-block-language"]'),
+      ).toBeNull();
+      expect(
+        container.querySelector('[data-testid="code-block-copy"]'),
+      ).toBeNull();
     });
 
     it('should strip trailing newline from code content', () => {
@@ -409,8 +486,12 @@ describe('Markdown Components', () => {
           {'print("hello")\n'}
         </Code>,
       );
-      const copyButton = container.querySelector('[data-testid="copy-button"]');
+      const copyButton = container.querySelector(
+        '[data-testid="code-block-copy"]',
+      );
       expect(copyButton?.getAttribute('data-text')).toBe('print("hello")');
+      // The rendered body drops it too, not just the clipboard payload.
+      expect(container.textContent).not.toContain('print("hello")\n');
     });
   });
 
@@ -425,6 +506,24 @@ describe('Markdown Components', () => {
       expect(pre).toBeTruthy();
       expect(pre?.className).toContain('bg-gray-200');
       expect(pre?.className).toContain('overflow-x-auto');
+    });
+
+    it('should drop its own box when it wraps the code-block chrome', () => {
+      const Code = components.code!;
+      const { container } = render(
+        <Pre node={{} as any}>
+          <Code node={{} as any} className="language-python">
+            {'print("hello")'}
+          </Code>
+        </Pre>,
+      );
+      const pre = container.querySelector('pre');
+      // Conditional, not unconditional: only neutralised when the chrome is
+      // actually inside, so plain <pre> blocks keep their grey box.
+      expect(pre?.className).toContain(
+        'has-[[data-code-block]]:bg-transparent!',
+      );
+      expect(pre?.className).toContain('has-[[data-code-block]]:p-0!');
     });
   });
 

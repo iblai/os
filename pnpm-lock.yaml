@@ -40,9 +40,6 @@ importers:
 
   .:
     dependencies:
-      '@iblai/agent-ai':
-        specifier: 2.5.2
-        version: 2.5.2(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@iblai/iblai-api':
         specifier: 4.166.0-ai
         version: 4.166.0-ai
