@@ -1518,6 +1518,25 @@ describe('InsideButtons', () => {
       ).not.toBeInTheDocument();
     });
 
+    it('renders right after Canvas — Canvas stays the first tool pill', () => {
+      render(
+        <InsideButtons
+          {...defaultProps}
+          artifactsEnabled={true}
+          skills={skills}
+          activeSkillSlugs={new Set()}
+          onToggleSkill={vi.fn()}
+        />,
+      );
+      const canvas = screen.getByRole('button', { name: /canvas/i });
+      const skillsTrigger = screen.getByTestId('skills-menu-trigger');
+      // Canvas precedes the Skills trigger in DOM order.
+      expect(
+        canvas.compareDocumentPosition(skillsTrigger) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
     it('shows the armed skill name and active-pill styling when a token is in the composer', () => {
       render(
         <InsideButtons
