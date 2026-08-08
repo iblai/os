@@ -63,7 +63,7 @@ Windows (`msedgedriver`) only — `tauri-driver` has no macOS support.
 
 ---
 
-## Journey 3: Code Mode (opencode) (10 checkpoints: 7 covered, 3 pending) — `journeys/03-code-mode.spec.ts`
+## Journey 3: Code Mode (opencode) (11 checkpoints: 8 covered, 3 pending) — `journeys/03-code-mode.spec.ts`
 
 > **Partly covered.** The installer and per-chat state (code-01…07) run against
 > the REAL compiled binary through the live Tauri IPC bridge (`window.__TAURI__`):
@@ -91,6 +91,7 @@ Windows (`msedgedriver`) only — `tauri-driver` has no macOS support.
 - [x] `code-05` A chat keeps the same workspace across calls, persisted in `workspaces.json`
 - [x] `code-06` The folder picker repoints ONE chat at an arbitrary path and leaves other chats untouched
 - [x] `code-07` `opencode_close` / `opencode_permission_respond` on an unknown id are graceful no-ops
+- [x] `code-11` The app keeps answering IPC while opencode downloads and extracts _(setup-freeze regression)_
 - [ ] `code-08` A permission prompt in one chat does not block another chat's turn _(needs a tool-calling model)_
 - [ ] `code-09` The 5-session cap evicts the least-recently-used idle opencode process _(needs a tool-calling model)_
 - [ ] `code-10` The permission prompt renders in the chat that raised it _(needs a tool-calling model)_

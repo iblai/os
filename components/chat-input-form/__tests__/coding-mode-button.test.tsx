@@ -337,6 +337,37 @@ describe('CodingModeButton', () => {
       expect(openDialog).not.toHaveBeenCalled();
     });
 
+    it('stays interactive while opencode is still installing', async () => {
+      // Regression for the setup freeze: `install_opencode` used to wedge the
+      // app (extraction deadlocked on undrained stdio, and ran pinned to the
+      // IPC thread). The UI must never gate on the install promise — here it
+      // never settles at all, and the popover has to keep working anyway.
+      localStorage.setItem('ibl_coding_mode_enabled', 'false');
+      localStorage.setItem('ibl_coding_mode_folder_chosen', 'true');
+      openDialog.mockResolvedValue('/home/tester/other');
+      invoke.mockImplementation(async (cmd: string) => {
+        if (cmd === 'install_opencode') return new Promise(() => {});
+        if (cmd === 'check_opencode_status') return { sandboxed: false };
+        if (cmd === 'get_opencode_workspace') return '/home/tester/code/demo';
+        return undefined;
+      });
+      renderButton();
+      await openPopover();
+
+      await userEvent.click(await screen.findByRole('switch'));
+
+      await waitFor(() =>
+        expect(localStorage.getItem('ibl_coding_mode_enabled')).toBe('true'),
+      );
+      expect(invoke).toHaveBeenCalledWith('install_opencode', undefined);
+
+      // The install is still pending; the folder picker must still respond.
+      await userEvent.click(
+        await screen.findByRole('button', { name: /Change folder/ }),
+      );
+      await waitFor(() => expect(openDialog).toHaveBeenCalled());
+    });
+
     it('switching off skips the install and folder work entirely', async () => {
       localStorage.setItem('ibl_coding_mode_enabled', 'true');
       localStorage.setItem('ibl_coding_mode_folder_chosen', 'true');

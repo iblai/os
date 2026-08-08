@@ -332,3 +332,76 @@ pub async fn check_opencode_status() -> serde_json::Value {
         "sandboxed": is_sandboxed(),
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A fresh scratch dir per test, removed on drop (best-effort).
+    struct Scratch(PathBuf);
+    impl Scratch {
+        fn new(name: &str) -> Self {
+            let dir = std::env::temp_dir().join(format!(
+                "opencode-installer-test-{}-{name}",
+                std::process::id()
+            ));
+            let _ = std::fs::remove_dir_all(&dir);
+            std::fs::create_dir_all(&dir).unwrap();
+            Scratch(dir)
+        }
+        fn path(&self) -> &Path {
+            &self.0
+        }
+    }
+    impl Drop for Scratch {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+
+    #[test]
+    fn extract_unpacks_a_real_archive() {
+        let s = Scratch::new("ok");
+        let src = s.path().join("src");
+        std::fs::create_dir_all(&src).unwrap();
+        std::fs::write(src.join("opencode"), b"#!/bin/sh\n").unwrap();
+        // The `.tar.gz` name forces the `tar` branch on every platform, so the
+        // test exercises one deterministic code path everywhere.
+        let archive = s.path().join("release.tar.gz");
+        let built = Command::new("tar")
+            .arg("-czf")
+            .arg(&archive)
+            .arg("-C")
+            .arg(&src)
+            .arg("opencode")
+            .status()
+            .expect("tar is present on every supported platform");
+        assert!(built.success());
+        let dest = s.path().join("out");
+        std::fs::create_dir_all(&dest).unwrap();
+
+        extract(&archive, &dest).expect("extract should succeed");
+        assert!(dest.join("opencode").exists());
+    }
+
+    #[test]
+    fn a_failed_extract_reports_the_extractor_s_own_stderr() {
+        // The freeze regression, pinned from its observable side. `extract` once
+        // ran the child with `status()`, which hands it the app's own stdio: in a
+        // GUI-launched build that pipe is drained by nobody, a chatty extractor
+        // fills it and blocks forever, and a failure carried no detail. With
+        // `output()` the pipes are drained and stderr comes back to us — so a
+        // corrupt archive must fail WITH the extractor's own words in the error,
+        // which the old code could never produce.
+        let s = Scratch::new("corrupt");
+        let archive = s.path().join("not-really.tar.gz");
+        std::fs::write(&archive, b"this is not a gzip stream").unwrap();
+        let dest = s.path().join("out");
+        std::fs::create_dir_all(&dest).unwrap();
+
+        let err = extract(&archive, &dest).expect_err("a corrupt archive must fail");
+        assert!(err.contains("extract failed"), "{err}");
+        let lower = err.to_lowercase();
+        assert!(lower.contains("tar") || lower.contains("gzip"), "{err}");
+    }
+}

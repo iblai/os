@@ -6,8 +6,8 @@ import { Page, Locator, expect } from '@playwright/test';
  * Renders the AgentSkills component from @iblai/iblai-js/web-containers. The
  * Skills top-level tab is mounted for admins whenever `hooks/use-mentor-segments.ts`
  * resolves the current mentor as a "Base Agent" — see
- * `resolveIsBaseAgentMentor` there and journey 65
- * (`e2e/journeys/66-agent-skills.spec.ts`), which covers that mentor-type
+ * `resolveIsBaseAgentMentor` there and journey 67
+ * (`e2e/journeys/67-agent-skills.spec.ts`), which covers that mentor-type
  * gate itself (visible for base agents, hidden for other agent types, and
  * fails OPEN when the type can't be determined). This page object's own
  * methods below assume the tab IS mounted — callers are responsible for the

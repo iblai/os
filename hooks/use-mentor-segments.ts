@@ -255,6 +255,25 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     navCategory: 'configurations',
   },
   {
+    value: MODALS.EDIT_MENTOR.tabs.voice,
+    label: 'Voice',
+    labelKey: 'voice',
+    icon: Volume2,
+    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
+    // Backend doesn't yet expose voice_provider/openai_voice/google_voice in
+    // mentorSettings.permissions.field, nor whitelist /mentors/{id}/#voice_settings.
+    // Re-add `rbacResource` + `permissionFieldsCheck` once those land.
+    permissionFieldsCheck: [],
+    mentorVisibility: [
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+    ],
+    // Always visible. The "Enable voice calls" (`show_voice_call`) master
+    // toggle now lives inline at the top of the Voice tab; turning it off grays
+    // out the voice/call configuration below instead of hiding the whole tab.
+    navCategory: 'configurations',
+  },
+  {
     value: MODALS.EDIT_MENTOR.tabs.prompts,
     label: 'Prompts',
     labelKey: 'prompts',
@@ -297,25 +316,6 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     // a sandbox is wired, and the SDK's <AgentSkills/> renders a "connect a
     // sandbox" grayed state until then.
     enabledThroughConfig: (flags) => flags.isBaseAgent,
-    navCategory: 'configurations',
-  },
-  {
-    value: MODALS.EDIT_MENTOR.tabs.voice,
-    label: 'Voice',
-    labelKey: 'voice',
-    icon: Volume2,
-    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-    // Backend doesn't yet expose voice_provider/openai_voice/google_voice in
-    // mentorSettings.permissions.field, nor whitelist /mentors/{id}/#voice_settings.
-    // Re-add `rbacResource` + `permissionFieldsCheck` once those land.
-    permissionFieldsCheck: [],
-    mentorVisibility: [
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
-    ],
-    // Always visible. The "Enable voice calls" (`show_voice_call`) master
-    // toggle now lives inline at the top of the Voice tab; turning it off grays
-    // out the voice/call configuration below instead of hiding the whole tab.
     navCategory: 'configurations',
   },
   {
@@ -386,9 +386,35 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     navCategory: 'configurations',
   },
   {
+    // Deliberately the second-to-last Configurations segment (only Screen
+    // comes after it) — keep this entry right after Disclaimers when
+    // reordering the array.
+    value: MODALS.EDIT_MENTOR.tabs.grader,
+    label: 'Grader',
+    labelKey: 'grader',
+    icon: ClipboardCheck,
+    // Grader permissions are flat actions on the mentor resource
+    // (`/mentors/{id}/#read_grader_config`, `#write_grader_config`,
+    // `#create_grader_criteria`, …) — the same `/mentors/{id}/` entry every
+    // RBAC fetch already requests, so no extra resource is needed. The tab
+    // is visible iff config read is granted; the SDK's AgentGraderTab gates
+    // the finer-grained save/add/edit/delete/override affordances itself.
+    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
+    rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/#read_grader_config`,
+    permissionFieldsCheck: [],
+    mentorVisibility: [
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+    ],
+    // Always visible. The "Grading" capability toggle lives inline at the top
+    // of the Grader tab (it attaches/detaches the Grading tool on the agent);
+    // turning it off grays out the rubric configuration below instead of
+    // hiding the tab, and the rubric is preserved across disable/re-enable.
+    navCategory: 'configurations',
+  },
+  {
+    // Deliberately the last Configurations segment — after Grader.
     value: MODALS.EDIT_MENTOR.tabs.screenshare,
-    // Title is just "Screen" — the tab body's copy still talks about
-    // "screen sharing" (SDK-owned descriptions).
     label: 'Screen',
     labelKey: 'screenShare',
     icon: MonitorPlay,
@@ -401,31 +427,6 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     // Always visible. The "Enable screen sharing" (`enable_video`) master
     // toggle now lives inline at the top of the Screen tab; turning it
     // off grays out the screen-sharing prompts below instead of hiding the tab.
-    navCategory: 'configurations',
-  },
-  {
-    // Deliberately the last Configurations segment — Screen is the last one
-    // declared before it, so keep this entry last when reordering the array.
-    value: MODALS.EDIT_MENTOR.tabs.grader,
-    label: 'Grader',
-    labelKey: 'grader',
-    icon: ClipboardCheck,
-    // Platform-admin-only until the backend exposes the grader RBAC
-    // resources (graderconfigurations / gradercriteria). No `rbacResource`
-    // set — the userTypes filter alone gates visibility (mirroring Tasks /
-    // LTI). Once the permissions land, re-add
-    // `rbacResource: (id) => `/mentors/${id}/graderconfigurations/#read``
-    // and add the two grader resources to the EditMentorModal RBAC fetch.
-    userTypes: [UserType.ADMIN],
-    permissionFieldsCheck: [],
-    mentorVisibility: [
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
-    ],
-    // Always visible. The "Grading" capability toggle lives inline at the top
-    // of the Grader tab (it attaches/detaches the Grading tool on the agent);
-    // turning it off grays out the rubric configuration below instead of
-    // hiding the tab, and the rubric is preserved across disable/re-enable.
     navCategory: 'configurations',
   },
   {

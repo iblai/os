@@ -22,10 +22,14 @@ import {
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { toast } from 'sonner';
 import {
+  canAccessProvider,
   cn,
+  compareLLMProvidersByDisplayName,
   getLLMProviderDetails,
   getProviderName,
+  LLMProviderAccess,
   Provider,
+  sortLLMProvidersByCredentials,
 } from '@/lib/utils';
 import { useNavigate } from '@/hooks/user-navigate';
 import { Spinner } from '@/components/spinner';
@@ -95,8 +99,20 @@ export function LLMTab({ showConfigurationHeader = true }: LLMTabProps) {
       seen.add(key);
       result.push({ key, provider: model.provider });
     }
-    return result;
+    // Alphabetical among themselves; the whole local-only block still renders
+    // after the API providers.
+    return result.sort((a, b) =>
+      compareLLMProvidersByDisplayName(a.provider, b.provider),
+    );
   }, [llmProviders]);
+
+  // Two alphabetical groups: providers we have a usable LLM key for first, then
+  // the ones we don't. Ordering is independent of the search filter below, so
+  // it holds for whatever the filter leaves.
+  const sortedLLMProviders = React.useMemo(
+    () => sortLLMProvidersByCredentials(llmProviders ?? []),
+    [llmProviders],
+  );
 
   // The highlighted (selected) provider card must reflect the model chat
   // actually uses. When on-device mode is on, that's the selected local model's
@@ -186,25 +202,39 @@ export function LLMTab({ showConfigurationHeader = true }: LLMTabProps) {
             >
               {({ disabled }) => (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  {llmProviders
-                    ?.filter((model) =>
+                  {sortedLLMProviders
+                    .filter((model) =>
                       model.name
                         .toLowerCase()
                         .includes(searchQuery.toLowerCase()),
                     )
                     .map((model) => {
                       const providerDetails = getLLMProviderDetails(model.name);
+                      const isActive =
+                        !!activeProviderKey &&
+                        getProviderName(model.name) === activeProviderKey;
+                      // The generated LLM response type doesn't declare the
+                      // credential flags the backend actually sends, so read them
+                      // through the access-shaped view the helper expects.
+                      const isGrayed =
+                        !canAccessProvider(
+                          model as unknown as LLMProviderAccess,
+                        ) && !isActive;
 
                       return (
                         <div
                           key={model.id}
+                          data-testid="llm-provider-card"
+                          data-provider={model.name}
+                          data-disabled={isGrayed ? 'true' : 'false'}
                           className={cn(
                             'flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md',
                             {
-                              'border-blue-500':
-                                !!activeProviderKey &&
-                                getProviderName(model.name) ===
-                                  activeProviderKey,
+                              'border-blue-500': isActive,
+                              // Tint the whole card too: desaturating a logo that
+                              // is already black changes nothing, so the card
+                              // itself has to carry some of the inactive signal.
+                              'border-gray-100 bg-gray-50': isGrayed,
                             },
                           )}
                           onClick={() => {
@@ -230,12 +260,20 @@ export function LLMTab({ showConfigurationHeader = true }: LLMTabProps) {
                               alt={t('providerLogoAlt', {
                                 providerName: providerDetails.name,
                               })}
-                              className="h-full w-full object-contain"
+                              className={cn('h-full w-full object-contain', {
+                                // `grayscale` only desaturates, so already-black
+                                // marks (OpenAI, xAI) looked untouched. Fading is
+                                // what actually reads as inactive at any hue.
+                                'opacity-40 grayscale': isGrayed,
+                              })}
                               width={32}
                               height={32}
                               loading="lazy"
                             />
                           </div>
+                          {/* The tinted card and faded logo already carry the
+                              inactive signal, so the label stays full-strength —
+                              muted text on a gray card loses contrast for no gain. */}
                           <span className="text-sm font-medium text-gray-900">
                             {providerDetails.name}
                           </span>
@@ -247,6 +285,11 @@ export function LLMTab({ showConfigurationHeader = true }: LLMTabProps) {
                     return (
                       <div
                         key={`local-${lp.key}`}
+                        data-testid="llm-provider-card"
+                        data-provider={lp.provider}
+                        // On-device providers need no API key, so they are never
+                        // grayed — there is nothing to be locked out of.
+                        data-disabled="false"
                         className={cn(
                           'flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md',
                           { 'border-blue-500': lp.key === activeProviderKey },

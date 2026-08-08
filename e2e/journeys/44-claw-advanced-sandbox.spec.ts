@@ -51,8 +51,8 @@
  * only ever produces Base Agent mentors, so `isBaseAgent` is always true
  * here and every "Skills tab visible" assertion below is unaffected. The
  * mentor-type gate itself (hidden for non-base-agent mentors, fails OPEN
- * when the type can't be determined) is covered separately in journey 65
- * (`e2e/journeys/66-agent-skills.spec.ts`), which mocks the mentor-settings
+ * when the type can't be determined) is covered separately in journey 67
+ * (`e2e/journeys/67-agent-skills.spec.ts`), which mocks the mentor-settings
  * response since no UI path here can produce a non-base-agent mentor.
  *
  * Non-admin users must not see the Sandbox or Skills tabs regardless of

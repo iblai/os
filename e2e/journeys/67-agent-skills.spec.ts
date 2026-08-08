@@ -1,5 +1,5 @@
 /**
- * Journey 66 — Agent Skills
+ * Journey 67 — Agent Skills
  *
  * Covers the feat/2215 "Agent Skills" frontend surface, which has two parts:
  *
@@ -127,7 +127,7 @@ const SLASH_SKILLS: EffectiveSkillFixture[] = [
 
 // ─── Skills tab gating (admin, mentor type) ───────────────────────────────
 
-test.describe('Journey 66: Agent Skills — Edit Mentor Skills tab gating', () => {
+test.describe('Journey 67: Agent Skills — Edit Mentor Skills tab gating', () => {
   test.describe.configure({ mode: 'parallel' });
 
   // Each gating test creates its OWN mentor and deletes it in afterAll (no
@@ -240,7 +240,7 @@ test.describe('Journey 66: Agent Skills — Edit Mentor Skills tab gating', () =
 
 // ─── Chat composer `/` skill picker ────────────────────────────────────────
 
-test.describe('Journey 66: Agent Skills — chat composer slash skill picker', () => {
+test.describe('Journey 67: Agent Skills — chat composer slash skill picker', () => {
   test.describe.configure({ mode: 'parallel' });
 
   // No shared beforeEach navigation: each test must register its

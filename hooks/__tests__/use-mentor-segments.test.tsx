@@ -189,11 +189,11 @@ describe('useMentorSegments', () => {
     expect(MENTOR_SEGMENTS[promptsIndex + 1]?.label).toBe('Skills');
   });
 
-  it('places the Grader segment last in the Configurations category', () => {
+  it('places Grader then Screen at the end of the Configurations category', () => {
     const configurationLabels = MENTOR_SEGMENTS.filter(
       (s) => s.navCategory === 'configurations',
     ).map((s) => s.label);
-    expect(configurationLabels.at(-1)).toBe('Grader');
+    expect(configurationLabels.slice(-2)).toEqual(['Grader', 'Screen']);
   });
 
   describe('Sandbox & Skills visibility (always visible for admins)', () => {
@@ -565,38 +565,44 @@ describe('useMentorSegments', () => {
     });
   });
 
-  describe('Grader segment visibility (admin-only)', () => {
-    it('declares no rbac resource and gates on ADMIN only', () => {
-      // The backend does not expose grader RBAC resources yet, so the
-      // segment is admin-only via userTypes (mirroring Tasks / LTI).
-      // Re-add the rbacResource assertion once the permissions land.
+  describe('Grader segment RBAC gating', () => {
+    it('declares the read_grader_config rbac action on the Grader segment', () => {
+      // Grader permissions are flat actions on the mentor resource — the
+      // same `/mentors/{id}/` entry every RBAC fetch already requests. The
+      // resource string must stay in lock-step with the backend's
+      // `read_grader_config` action key (and the SDK's own in-tab checks).
       const graderSegment = MENTOR_SEGMENTS.find((s) => s.label === 'Grader');
       expect(graderSegment).toBeDefined();
-      expect(graderSegment!.rbacResource).toBeUndefined();
-      expect(graderSegment!.userTypes).toEqual([UserType.ADMIN]);
+      expect(graderSegment!.rbacResource).toBeDefined();
+      expect(graderSegment!.rbacResource!(42)).toBe(
+        '/mentors/42/#read_grader_config',
+      );
+      expect(graderSegment!.userTypes).toEqual([
+        UserType.FREE_TRIAL,
+        UserType.ADMIN,
+      ]);
     });
 
-    it('shows the Grader segment for admins', () => {
+    it('shows the Grader segment when read_grader_config is granted', () => {
+      mockCheckRbacPermission.mockReturnValue(true);
+
       const { result } = renderHook(() => useMentorSegments());
 
       const labels = result.current.filteredSegments.map((s) => s.label);
       expect(labels).toContain('Grader');
     });
 
-    it('hides the Grader segment when the user type filter rejects admin-only segments', () => {
-      mockIsUserTypeAllowed.mockImplementation(
-        (segment: { userTypes: string[] }) =>
-          !(
-            segment.userTypes.length === 1 &&
-            segment.userTypes[0] === UserType.ADMIN
-          ),
+    it('hides the Grader segment when checkRbacPermission denies read_grader_config', () => {
+      mockCheckRbacPermission.mockImplementation(
+        (_permissions: unknown, resource: string) =>
+          resource !== '/mentors/42/#read_grader_config',
       );
 
       const { result } = renderHook(() => useMentorSegments());
 
       const labels = result.current.filteredSegments.map((s) => s.label);
       expect(labels).not.toContain('Grader');
-      // Non-admin-only segments still pass
+      // Other segments still pass
       expect(labels).toContain('Settings');
     });
   });

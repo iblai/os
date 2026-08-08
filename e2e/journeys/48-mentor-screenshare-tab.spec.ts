@@ -6,13 +6,13 @@ import { waitForPageReady } from '../utils/resilient';
  * Journey 48 — Mentor Screen Tab (screen sharing).
  *
  * The Screen top-level tab (titled "Screen"; its body copy still says
- * "screen sharing") is rendered by the SDK's `AgentScreenShareTab`
- * (`@iblai/iblai-js/web-containers/next`).
+ * "screen sharing") is rendered by the SDK's
+ * `AgentScreenShareTab` (`@iblai/iblai-js/web-containers/next`).
  *
  * ── Capability-gate refactor ─────────────────────────────────────────────
  *
  * The "Enable screen sharing" (`enable_video`) toggle used to live on the
- * Settings tab (`settings-enable-video-switch`) and gate the Screen Share
+ * Settings tab (`settings-enable-video-switch`) and gate the Screen
  * top-level tab's visibility. It now lives inline at the top of the Screen
  * Share tab itself via the shared `CapabilityGate` component
  * (`data-testid="screenshare-capability-toggle"`), and
