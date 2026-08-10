@@ -115,11 +115,10 @@ function installAuthIntoIframe() {
   if (!src.startsWith(mentorUrl)) return; // only rewrite the mentor iframe
 
   authInstalledIntoIframe = true;
-  // Make sure the media features are delegated to the iframe (belt-and-braces —
-  // in case the component's `allow` didn't apply). Must be set before the
-  // navigation below so it applies to the loaded document.
-  iframe.setAttribute('allow', 'microphone; camera; display-capture; autoplay');
-  console.log('[ibl.ai panel] iframe allow =', iframe.getAttribute('allow'));
+  // Leave the iframe's `allow` policy alone: the widget already sets a superset
+  // ("clipboard-read; clipboard-write; microphone *; camera *; midi *;
+  // geolocation *; encrypted-media *; display-capture *"), and overwriting it
+  // here would revoke the features we don't re-list.
   // Return to the EXACT chat URL the component asked for — keep all of its embed
   // params (embed / mode / component / extra-body-classes) untouched so the
   // mentor app renders the same embedded chat view it intended.
@@ -143,10 +142,14 @@ function installAuthIntoIframe() {
 }
 
 // The component mounts its iframe asynchronously; poll until it appears, then
-// rewrite it once.
+// rewrite it once. Give up after ~30s so a failed sign-in or an iframe that
+// never matches doesn't leave the interval running for the panel's lifetime.
+let authInstallAttempts = 0;
 const authInstallTimer = setInterval(() => {
   installAuthIntoIframe();
-  if (authInstalledIntoIframe) clearInterval(authInstallTimer);
+  if (authInstalledIntoIframe || ++authInstallAttempts > 120) {
+    clearInterval(authInstallTimer);
+  }
 }, 250);
 
 // ---- Page context: feed the ACTIVE TAB's content to the mentor iframe --------

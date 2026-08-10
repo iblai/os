@@ -33,11 +33,16 @@ function SsoLoginCompleteContent() {
         // and a prior failed-auth cycle can leave a stale `redirect-to` in that
         // iframe's storage that would otherwise win and drop the embed params
         // (embed / mode / component / extra-body-classes) the panel asked for.
+        //
+        // Only honor an in-app, same-origin path: SsoLogin navigates to
+        // `location.origin + redirectPath`, so an unvalidated value like
+        // `@evil.com` or `//evil.com` would be an open redirect. Require a
+        // single leading slash with no protocol-relative `//` or `/\` authority.
         if (typeof window !== 'undefined') {
           const explicit = new URLSearchParams(window.location.search).get(
             'redirect-path',
           );
-          if (explicit) {
+          if (explicit && /^\/(?![/\\])/.test(explicit)) {
             redirectPath = explicit;
           }
         }
