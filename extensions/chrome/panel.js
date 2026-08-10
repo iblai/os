@@ -54,6 +54,101 @@ async function authenticate() {
   }
 })();
 
+// ---- Install the session INTO the mentor iframe ------------------------------
+// `<agent-ai authrelyonhost>` forwards our tokens to the iframe via postMessage,
+// but that hand-off doesn't survive the side panel's storage-partitioned iframe:
+// the mentor app boots, reads its own EMPTY localStorage, and logs itself out
+// before the posted tokens land (see the `authExpired` loop in the console).
+// Instead we point the iframe at the mentor app's `/sso-login-complete`, which
+// INSTALLS the session into (partitioned) storage on load and then redirects to
+// the chat — the same deterministic path the normal web login uses.
+
+// Reassemble the `data` payload /sso-login-complete expects from the keys
+// panel.js stored after launchWebAuthFlow. Mirrors the web login's direct
+// redirect: tokens + userData + current_tenant {key} only. The full `tenants`
+// array is DELIBERATELY omitted — it's large enough to overflow the request
+// line (HTTP 431), and the app re-fetches it after auth anyway.
+function iblSessionData() {
+  const session = {};
+  for (const key of [
+    'axd_token',
+    'axd_token_expires',
+    'dm_token',
+    'dm_token_expires',
+    'edx_jwt_token',
+    'userData',
+    'tenant',
+    'consented_to_data_collection',
+  ]) {
+    const value = localStorage.getItem(key);
+    if (value != null) session[key] = value;
+  }
+  // Only the current tenant's key (crop off the rest of the object).
+  const currentTenant = localStorage.getItem('current_tenant');
+  if (currentTenant) {
+    try {
+      session.current_tenant = JSON.stringify({
+        key: JSON.parse(currentTenant).key,
+      });
+    } catch {
+      session.current_tenant = currentTenant;
+    }
+  }
+  return session;
+}
+
+let authInstalledIntoIframe = false;
+function installAuthIntoIframe() {
+  if (authInstalledIntoIframe || !isAuthed()) return;
+  const agent = document.querySelector('agent-ai');
+  const mentorUrl = (agent?.getAttribute('mentorurl') || '').replace(
+    /\/+$/,
+    '',
+  );
+  const iframe = mentorIframe();
+  const src = iframe?.getAttribute('src');
+  if (!mentorUrl || !src) return; // widget iframe not mounted yet
+  if (src.includes('/sso-login-complete')) {
+    authInstalledIntoIframe = true; // already routed through the installer
+    return;
+  }
+  if (!src.startsWith(mentorUrl)) return; // only rewrite the mentor iframe
+
+  authInstalledIntoIframe = true;
+  // Make sure the media features are delegated to the iframe (belt-and-braces —
+  // in case the component's `allow` didn't apply). Must be set before the
+  // navigation below so it applies to the loaded document.
+  iframe.setAttribute('allow', 'microphone; camera; display-capture; autoplay');
+  console.log('[ibl.ai panel] iframe allow =', iframe.getAttribute('allow'));
+  // Return to the EXACT chat URL the component asked for — keep all of its embed
+  // params (embed / mode / component / extra-body-classes) untouched so the
+  // mentor app renders the same embedded chat view it intended.
+  //
+  // The param MUST be `redirect-path`: SsoLogin reads the incoming target from
+  // `searchParams.get('redirect-path')` (the `redirect-to` name only addresses
+  // the localStorage fallback key, never the URL). Passing `redirect-to` here
+  // was silently ignored, so the login fell through to defaultRedirectPath '/'
+  // and dropped the embed params.
+  const original = new URL(src);
+  const redirectPath = original.pathname + original.search;
+  const session = iblSessionData();
+  iframe.src =
+    `${mentorUrl}/sso-login-complete` +
+    `?data=${encodeURIComponent(JSON.stringify(session))}` +
+    `&redirect-path=${encodeURIComponent(redirectPath)}` +
+    (session.tenant ? `&tenant=${encodeURIComponent(session.tenant)}` : '');
+  console.log(
+    '[ibl.ai panel] installed session into mentor iframe via /sso-login-complete',
+  );
+}
+
+// The component mounts its iframe asynchronously; poll until it appears, then
+// rewrite it once.
+const authInstallTimer = setInterval(() => {
+  installAuthIntoIframe();
+  if (authInstalledIntoIframe) clearInterval(authInstallTimer);
+}, 250);
+
 // ---- Page context: feed the ACTIVE TAB's content to the mentor iframe --------
 // The side panel runs in its own document, so <agent-ai> can only see panel.html
 // (that's why `iscontextaware` is left OFF — it would otherwise flood the mentor

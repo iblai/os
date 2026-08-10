@@ -4,48 +4,48 @@
 
 ### Features
 
-* **extension:** side-panel auth, page context, and full-panel layout ([e5ac3de](https://github.com/iblai/os/commit/e5ac3dea4d3185619fd5b95566f567febf91858e))
+- **extension:** side-panel auth, page context, and full-panel layout ([e5ac3de](https://github.com/iblai/os/commit/e5ac3dea4d3185619fd5b95566f567febf91858e))
 
 ### Tests
 
-* **coverage:** exclude chrome extension panel.js from per-file coverage ([471ed46](https://github.com/iblai/os/commit/471ed4601df6a466e0d6e679fe65f357591ebd1b))
+- **coverage:** exclude chrome extension panel.js from per-file coverage ([471ed46](https://github.com/iblai/os/commit/471ed4601df6a466e0d6e679fe65f357591ebd1b))
 
 ## [0.120.0](https://github.com/iblai/os/compare/v0.119.2...v0.120.0) (2026-08-07)
 
 ### Features
 
-* **llm:** add the ibl.ai provider and provider ordering helpers ([761fe76](https://github.com/iblai/os/commit/761fe76527d827aa197d3a0447306bc221b690f6))
-* **llm:** order and gray provider cards in the LLM tab ([e6db381](https://github.com/iblai/os/commit/e6db381e81afc5d057c16e63587a60ef0c0c8702))
+- **llm:** add the ibl.ai provider and provider ordering helpers ([761fe76](https://github.com/iblai/os/commit/761fe76527d827aa197d3a0447306bc221b690f6))
+- **llm:** order and gray provider cards in the LLM tab ([e6db381](https://github.com/iblai/os/commit/e6db381e81afc5d057c16e63587a60ef0c0c8702))
 
 ### Bug Fixes
 
-* **api-tab:** normalise the token list through unwrapApiTokenList ([6edabd5](https://github.com/iblai/os/commit/6edabd5178c43f38d2e3ee6dce0614022f1c0d4c))
-* **deps:** bump @iblai/iblai-js 2.3.2 to 2.3.7 ([069b920](https://github.com/iblai/os/commit/069b920d5dabd4cbed08ee9e09fe466b01190ca7))
-* **deps:** raise the js-yaml floor past CVE-2026-59870 ([b160675](https://github.com/iblai/os/commit/b160675dd4da7c050ac01ec323671eff1f554f0b))
+- **api-tab:** normalise the token list through unwrapApiTokenList ([6edabd5](https://github.com/iblai/os/commit/6edabd5178c43f38d2e3ee6dce0614022f1c0d4c))
+- **deps:** bump @iblai/iblai-js 2.3.2 to 2.3.7 ([069b920](https://github.com/iblai/os/commit/069b920d5dabd4cbed08ee9e09fe466b01190ca7))
+- **deps:** raise the js-yaml floor past CVE-2026-59870 ([b160675](https://github.com/iblai/os/commit/b160675dd4da7c050ac01ec323671eff1f554f0b))
 
 ### Refactors
 
-* **chat:** follow the SDK rename of useGhostOs to useCuaDriver ([fa0c403](https://github.com/iblai/os/commit/fa0c403791b0e15fbea0849d6205dd94f9766f6f))
+- **chat:** follow the SDK rename of useGhostOs to useCuaDriver ([fa0c403](https://github.com/iblai/os/commit/fa0c403791b0e15fbea0849d6205dd94f9766f6f))
 
 ### Chores
 
-* **format:** apply prettier to files it had drifted on ([7b19db8](https://github.com/iblai/os/commit/7b19db828053834640c45faa06b8278b3b98d5f2))
+- **format:** apply prettier to files it had drifted on ([7b19db8](https://github.com/iblai/os/commit/7b19db828053834640c45faa06b8278b3b98d5f2))
 
 ### Styles
 
-* **llm:** match model rows to the provider grid inactive state ([2cd4d88](https://github.com/iblai/os/commit/2cd4d887c221921b207c803e73cd82f4d3210607))
+- **llm:** match model rows to the provider grid inactive state ([2cd4d88](https://github.com/iblai/os/commit/2cd4d887c221921b207c803e73cd82f4d3210607))
 
 ## [0.119.2](https://github.com/iblai/os/compare/v0.119.1...v0.119.2) (2026-08-07)
 
 ### Bug Fixes
 
-* **tauri-bump:** keep README download links rename-safe ([7b97ac0](https://github.com/iblai/os/commit/7b97ac050274b67364264df780034ee02d673d21)), closes [#408](https://github.com/iblai/os/issues/408)
+- **tauri-bump:** keep README download links rename-safe ([7b97ac0](https://github.com/iblai/os/commit/7b97ac050274b67364264df780034ee02d673d21)), closes [#408](https://github.com/iblai/os/issues/408)
 
 ## [0.119.1](https://github.com/iblai/os/compare/v0.119.0...v0.119.1) (2026-08-07)
 
 ### Documentation
 
-* **readme:** fix download buttons to app-v0.95.11 (ibl.ai_ assets) ([959f305](https://github.com/iblai/os/commit/959f3050f797c19927675b14f8ae9408c01ead0d))
+- **readme:** fix download buttons to app-v0.95.11 (ibl.ai\_ assets) ([959f305](https://github.com/iblai/os/commit/959f3050f797c19927675b14f8ae9408c01ead0d))
 
 ## [0.119.0](https://github.com/iblai/os/compare/v0.118.0...v0.119.0) (2026-08-07)
 
