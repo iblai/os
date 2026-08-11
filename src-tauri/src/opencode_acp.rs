@@ -984,6 +984,8 @@ async fn spawn_session(
             tenant
         );
         let port = crate::opencode_proxy::ensure_started().await?;
+        // The proxy announces upstream 402s (insufficient credit) to the webview.
+        crate::opencode_proxy::set_app(app);
         let secret = crate::opencode_proxy::new_secret();
         crate::opencode_proxy::register(&secret, upstream, token.to_string()).await;
         (
@@ -1388,6 +1390,14 @@ pub async fn opencode_stop(session_id: String) -> Result<(), String> {
 pub async fn opencode_close(session_id: String) -> Result<(), String> {
     close_session(&session_id).await;
     Ok(())
+}
+
+/// Record the signed-in user's username. The model proxy appends it as
+/// `learner_id=<username>` on every OpenAI-compat request it forwards, so upstream
+/// usage is attributed to the learner.
+#[command]
+pub async fn set_opencode_learner(username: String) {
+    crate::opencode_proxy::set_learner(&username).await;
 }
 
 #[cfg(test)]

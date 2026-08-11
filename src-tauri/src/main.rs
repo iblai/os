@@ -2815,6 +2815,7 @@ fn main() {
             opencode_installer::install_opencode,
             opencode_installer::check_opencode_status,
             opencode_acp::check_code_local_model,
+            opencode_acp::set_opencode_learner,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri app");
