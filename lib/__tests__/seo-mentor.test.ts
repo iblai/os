@@ -21,6 +21,8 @@ import {
   fetchMentorPublicMeta,
   buildMentorMetadata,
   mentorJsonLd,
+  normalizeAcronyms,
+  fetchMentorDisplayName,
 } from '@/lib/seo-mentor';
 
 const fetchMock = vi.fn();
@@ -151,5 +153,58 @@ describe('mentorJsonLd', () => {
       image: 'https://img/x.png',
       provider: { '@type': 'Organization', name: 'ibl.ai' },
     });
+  });
+});
+
+describe('normalizeAcronyms', () => {
+  it('uppercases known acronyms that were naively title-cased', () => {
+    expect(normalizeAcronyms('Hr Agent')).toBe('HR Agent');
+    expect(normalizeAcronyms('It Help Desk Agent')).toBe('IT Help Desk Agent');
+    expect(normalizeAcronyms('Kyc Aml Agent')).toBe('KYC AML Agent');
+  });
+
+  it('leaves already-correct names untouched (idempotent)', () => {
+    expect(normalizeAcronyms('HR Assistant')).toBe('HR Assistant');
+    expect(normalizeAcronyms(normalizeAcronyms('Hr Agent'))).toBe('HR Agent');
+  });
+
+  it('only matches whole words, not acronym substrings', () => {
+    // "Hit" contains "it" but is a distinct word, so it must stay as-is.
+    expect(normalizeAcronyms('Hit List')).toBe('Hit List');
+    expect(normalizeAcronyms('Marketing Agent')).toBe('Marketing Agent');
+  });
+});
+
+describe('buildMentorMetadata — acronym casing (integration)', () => {
+  it('fixes acronym casing in the title of a public agent', async () => {
+    respond({ allow_anonymous: true, mentor_name: 'It Help Desk Agent' });
+    const m = await buildMentorMetadata('acme', 'x');
+    expect(m.title).toBe('IT Help Desk Agent');
+  });
+});
+
+describe('fetchMentorDisplayName', () => {
+  it('returns the acronym-normalized name for a mentor that has one', async () => {
+    respond({ allow_anonymous: true, mentor_name: 'It Help Desk Agent' });
+    expect(await fetchMentorDisplayName('acme', 'x')).toBe(
+      'IT Help Desk Agent',
+    );
+  });
+
+  it('returns the name even for a non-public mentor (h1 is a11y, not indexing)', async () => {
+    respond({ allow_anonymous: false, mentor_name: 'Enrollment' });
+    expect(await fetchMentorDisplayName('highereducation', 'x')).toBe(
+      'Enrollment',
+    );
+  });
+
+  it('returns null when the mentor has no name', async () => {
+    respond({ allow_anonymous: true });
+    expect(await fetchMentorDisplayName('acme', 'x')).toBeNull();
+  });
+
+  it('returns null when the fetch fails', async () => {
+    respond({}, false);
+    expect(await fetchMentorDisplayName('acme', 'x')).toBeNull();
   });
 });
