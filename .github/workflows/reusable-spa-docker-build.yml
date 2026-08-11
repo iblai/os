@@ -96,6 +96,10 @@ jobs:
           VERSION: ${{ inputs.version }}
           IMAGE_NAME: ${{ steps.config.outputs.image_name }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          # Immutable static hosting (opt-in): the versioned CDN base. Empty for
+          # every app except the one with NEXTJS_PUBLIC_ASSET_CDN set, so it's a
+          # no-op elsewhere.
+          ASSET_CDN: ${{ vars.NEXTJS_PUBLIC_ASSET_CDN }}
         run: |
           FULL_URI="$REGISTRY/$IMAGE_NAME:$VERSION"
 
@@ -114,6 +118,15 @@ jobs:
             if [ -n "$SENTRY_AUTH_TOKEN" ]; then
               BUILD_ARGS+=(--build-arg "SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN")
             fi
+          fi
+
+          # When the asset CDN is configured, bake versioned /_next/* URLs
+          # (<cdn>/apps/<app>/<version>/…) into the image; the publish step below
+          # uploads this build's static to the matching S3 path.
+          if [ -n "$ASSET_CDN" ]; then
+            BUILD_ARGS+=(--build-arg "NEXT_PUBLIC_ASSET_CDN=$ASSET_CDN")
+            BUILD_ARGS+=(--build-arg "NEXT_PUBLIC_APP_NAME=${{ inputs.app_name }}")
+            BUILD_ARGS+=(--build-arg "APP_VERSION=$VERSION")
           fi
 
           docker build \
@@ -141,6 +154,50 @@ jobs:
 
           echo "Pushed: $FULL_URI"
           echo "Pushed: $REGISTRY/$IMAGE_NAME:latest"
+
+      # Immutable static hosting: publish this build's /_next/static + public to
+      # s3://<bucket>/apps/<app>/<version>/…, which CloudFront serves at
+      # <NEXTJS_PUBLIC_ASSET_CDN>. Opt-in — runs only when the CDN var is set, so
+      # it's a no-op for apps not using it. Requires the source ref to contain
+      # scripts/upload-static.sh (i.e. after that change is on main).
+      - name: Publish static assets to S3 (immutable, versioned)
+        if: ${{ vars.NEXTJS_PUBLIC_ASSET_CDN != '' }}
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          VERSION: ${{ inputs.version }}
+          IMAGE_NAME: ${{ steps.config.outputs.image_name }}
+          APP_NAME: ${{ inputs.app_name }}
+          NEXT_PUBLIC_ASSET_CDN: ${{ vars.NEXTJS_PUBLIC_ASSET_CDN }}
+          S3_BUCKET: ${{ vars.NEXTJS_S3_BUCKET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.NEXTJS_S3_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.NEXTJS_S3_ACCESS_SECRET }}
+          AWS_REGION: ${{ secrets.NEXTJS_S3_AWS_REGION }}
+          GIT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          FULL_URI="$REGISTRY/$IMAGE_NAME:$VERSION"
+
+          # aws CLI powers `aws s3 sync`; install to $HOME if the runner lacks it
+          # (no sudo).
+          if ! command -v aws >/dev/null 2>&1; then
+            echo "aws CLI not found — installing to \$HOME"
+            curl -sSL https://awscli.amazonaws.com/aws-cli-exe-linux-x86_64.zip -o /tmp/awscliv2.zip
+            unzip -q -o /tmp/awscliv2.zip -d /tmp
+            /tmp/aws/install -i "$HOME/.aws-cli" -b "$HOME/.local/bin" --update
+            export PATH="$HOME/.local/bin:$PATH"
+          fi
+          aws --version
+
+          # Pull this build's static out of the image (no rebuild — assetPrefix
+          # only changes emitted URLs, not the files on disk) and publish it.
+          mkdir -p .next
+          rm -rf .next/static public
+          cid=$(docker create "$FULL_URI")
+          docker cp "$cid:/app/.next/static" .next/static
+          docker cp "$cid:/app/public" public
+          docker rm "$cid"
+
+          bash scripts/upload-static.sh
 
       - name: Build summary
         if: always()

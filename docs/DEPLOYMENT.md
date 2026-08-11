@@ -45,35 +45,37 @@ its own static exactly as before — nothing breaks on merge.
 
 ## What you need to do (infra + CI — manual)
 
-1. **AWS S3** — create bucket `ibl-static` (keep it **private** and reach it via
-   CloudFront OAC; a public-read bucket also works). Create an IAM user/role for
-   CI with `s3:PutObject` + `s3:ListBucket` on the bucket (add `s3:DeleteObject`
-   for the retention job) → access key/secret.
+1. **AWS S3** — create a bucket (**any name** — the scripts read it from
+   `S3_BUCKET`; nothing assumes a particular one). Keep it **private** and reach
+   it via CloudFront OAC (a public-read bucket also works). Create an IAM
+   user/role for CI with `s3:PutObject` + `s3:ListBucket` on the bucket (add
+   `s3:DeleteObject` for the retention job) → access key/secret.
 2. **CloudFront** — distribution with **origin = the S3 bucket** (via an Origin
    Access Control so the bucket stays private), alternate domain
    **`assets.ibl.ai`** + an ACM cert **in us-east-1**. Cache `/_next/static/*`
    forever (the objects already carry `Cache-Control: immutable`); attach a
    **response-headers policy with CORS** (`Access-Control-Allow-Origin`) so
    fonts/workers load cross-origin. Point the `assets.ibl.ai` DNS record at the
-   distribution.
-3. **CI secrets/vars** (build workflow): `NEXT_PUBLIC_ASSET_CDN=https://assets.ibl.ai`,
-   `NEXT_PUBLIC_APP_NAME=os`, `S3_BUCKET`, `AWS_ACCESS_KEY_ID`,
-   `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`. (`S3_ENDPOINT` is only needed for a
-   non-AWS S3-compatible store — leave it unset for native S3.)
-4. **Wire the build + publish** (in `reusable-spa-docker-build.yml` or the caller):
-   - pass `NEXT_PUBLIC_ASSET_CDN` / `NEXT_PUBLIC_APP_NAME` / `APP_VERSION` as
-     `docker build --build-arg`s,
-   - after the image builds, extract the built assets and publish them:
-     ```bash
-     # get .next/static + public out of the built image
-     cid=$(docker create "$IMAGE")
-     docker cp "$cid:/app/.next/static" .next/static
-     docker cp "$cid:/app/public" public
-     docker rm "$cid"
-     VERSION="$APP_VERSION" GIT_SHA="$GITHUB_SHA" bash scripts/upload-static.sh
-     ```
-   - invalidate the CDN for **HTML routes only** (static is immutable — never
-     invalidate `/_next/static`).
+   distribution. **No cache invalidation is ever needed** — this distribution
+   only serves immutable, version-namespaced static; HTML is served by the app
+   nodes, not CloudFront. Verify CloudFront serves keys **1:1** (no origin-path
+   rewrite) so `assets.ibl.ai/apps/os/<v>/…` maps to bucket key `apps/os/<v>/…`.
+3. **CI secrets/vars** (set on the build repo, `iblai/os` → Settings → Secrets
+   and variables → Actions):
+   - **Variables**: `NEXTJS_PUBLIC_ASSET_CDN=https://assets.ibl.ai`,
+     `NEXTJS_S3_BUCKET=<your bucket>`.
+   - **Secrets**: `NEXTJS_S3_ACCESS_KEY`, `NEXTJS_S3_ACCESS_SECRET`,
+     `NEXTJS_S3_AWS_REGION`.
+
+   (`NEXT_PUBLIC_APP_NAME` is taken from the workflow's `app_name` — `os`.
+   `S3_ENDPOINT` is only for a non-AWS S3-compatible store; leave it unset.)
+4. **Build + publish wiring — DONE** in `reusable-spa-docker-build.yml`: when
+   `NEXTJS_PUBLIC_ASSET_CDN` is set it passes the `NEXT_PUBLIC_ASSET_CDN` /
+   `NEXT_PUBLIC_APP_NAME` / `APP_VERSION` build-args, then a **Publish static
+   assets to S3** step extracts `.next/static` + `public` from the built image
+   and runs `scripts/upload-static.sh`. Gated on the variable, so it's a no-op
+   for every other app. (The step installs the aws CLI to `$HOME` if the runner
+   lacks it.) Nothing more to wire — just set the values in step 3.
 5. **Schedule retention**: a workflow running `scripts/prune-static.sh`
    (`DRY_RUN=false`, `KEEP_LAST` ≥ your rollback horizon).
 6. **Switch the rollout** (ops `prod-service-update.sh`): once assets are on the
