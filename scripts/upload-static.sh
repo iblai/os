@@ -11,22 +11,23 @@
 #   s3://<bucket>/apps/<app>/manifest/<version>.json      <- this build's record
 #   s3://<bucket>/apps/<app>/current.json                 <- desired-live pointer
 #
-# The CDN's origin is the bucket, so a browser fetches
-#   <NEXT_PUBLIC_ASSET_CDN>/apps/<app>/<version>/_next/static/...
+# The CDN (CloudFront) origin is the bucket, so a browser fetches
+#   <NEXT_PUBLIC_ASSET_CDN>/apps/<app>/<version>/_next/static/...   (assets.ibl.ai)
 # which mirrors these keys 1:1 (that same prefix is what next.config.ts bakes
 # into every emitted asset URL).
 #
-# OCI Object Storage is addressed through its S3-compatible endpoint, so the
-# plain AWS CLI works — auth is an OCI "Customer Secret Key" (access key/secret).
+# Targets native AWS S3 (auth = an IAM access key/secret with s3:PutObject +
+# s3:ListBucket on the bucket). For an S3-compatible store instead (OCI Object
+# Storage, Cloudflare R2, MinIO), set S3_ENDPOINT to that endpoint and it's
+# passed through as --endpoint-url.
 #
 # Required env:
-#   S3_BUCKET         object storage bucket name (e.g. ibl-static)
-#   S3_ENDPOINT       S3-compat endpoint
-#                     https://<namespace>.compat.objectstorage.<region>.oraclecloud.com
-#   AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY / AWS_REGION   OCI Customer Secret Key
+#   S3_BUCKET         bucket name (e.g. ibl-static)
+#   AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY / AWS_REGION   IAM credentials
 #   VERSION           deployment id = release version (must match the built image)
 #
 # Optional env:
+#   S3_ENDPOINT       only for S3-compatible non-AWS stores; unset = native AWS S3
 #   APP_NAME          default "os"
 #   STATIC_DIR        default ".next/static"
 #   PUBLIC_DIR        default "public"
@@ -38,7 +39,6 @@
 set -euo pipefail
 
 : "${S3_BUCKET:?S3_BUCKET is required}"
-: "${S3_ENDPOINT:?S3_ENDPOINT is required}"
 : "${VERSION:?VERSION (release version / deployment id) is required}"
 
 APP_NAME="${APP_NAME:-os}"
@@ -48,15 +48,19 @@ GIT_SHA="${GIT_SHA:-unknown}"
 IMAGE_TAG="${IMAGE_TAG:-$VERSION}"
 UPDATE_CURRENT="${UPDATE_CURRENT:-true}"
 DRY_RUN="${DRY_RUN:-false}"
-
 BASE="s3://${S3_BUCKET}/apps/${APP_NAME}/${VERSION}"
 IMMUTABLE="public, max-age=31536000, immutable"
 
+# Only non-AWS S3-compatible stores need an explicit endpoint; native AWS S3
+# resolves it from AWS_REGION. (Kept array-free so the empty case is safe under
+# `set -u` on macOS's bash 3.2.)
 aws_s3() {
   if [[ "${DRY_RUN}" == "true" ]]; then
-    echo "DRY_RUN: aws s3 --endpoint-url ${S3_ENDPOINT} $*"
-  else
+    echo "DRY_RUN: aws s3 ${S3_ENDPOINT:+--endpoint-url ${S3_ENDPOINT}} $*"
+  elif [[ -n "${S3_ENDPOINT:-}" ]]; then
     aws s3 --endpoint-url "${S3_ENDPOINT}" "$@"
+  else
+    aws s3 "$@"
   fi
 }
 

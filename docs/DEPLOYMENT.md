@@ -45,19 +45,21 @@ its own static exactly as before — nothing breaks on merge.
 
 ## What you need to do (infra + CI — manual)
 
-1. **OCI Object Storage** — create bucket `ibl-static`, objects public-read (or a
-   PAR), and generate an OCI **Customer Secret Key** (access key/secret) for CI.
-   Its S3-compatible endpoint is
-   `https://<namespace>.compat.objectstorage.<region>.oraclecloud.com`.
-2. **OCI CDN** — distribution with **origin = the bucket**, custom domain e.g.
-   `cdn.ibl.ai`. Cache `/_next/static/*` forever; **inject CORS
-   (`Access-Control-Allow-Origin`) at the edge** (OCI bucket CORS is limited).
-   Verify the CDN honors the object `Cache-Control`; if not, set the immutable
-   policy in the CDN rules. (Cloudflare-in-front-of-the-bucket is the fallback
-   edge if OCI CDN's features fall short.)
-3. **CI secrets/vars** (build workflow): `NEXT_PUBLIC_ASSET_CDN=https://cdn.ibl.ai`,
-   `NEXT_PUBLIC_APP_NAME=os`, `S3_BUCKET`, `S3_ENDPOINT`, `AWS_ACCESS_KEY_ID`,
-   `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`.
+1. **AWS S3** — create bucket `ibl-static` (keep it **private** and reach it via
+   CloudFront OAC; a public-read bucket also works). Create an IAM user/role for
+   CI with `s3:PutObject` + `s3:ListBucket` on the bucket (add `s3:DeleteObject`
+   for the retention job) → access key/secret.
+2. **CloudFront** — distribution with **origin = the S3 bucket** (via an Origin
+   Access Control so the bucket stays private), alternate domain
+   **`assets.ibl.ai`** + an ACM cert **in us-east-1**. Cache `/_next/static/*`
+   forever (the objects already carry `Cache-Control: immutable`); attach a
+   **response-headers policy with CORS** (`Access-Control-Allow-Origin`) so
+   fonts/workers load cross-origin. Point the `assets.ibl.ai` DNS record at the
+   distribution.
+3. **CI secrets/vars** (build workflow): `NEXT_PUBLIC_ASSET_CDN=https://assets.ibl.ai`,
+   `NEXT_PUBLIC_APP_NAME=os`, `S3_BUCKET`, `AWS_ACCESS_KEY_ID`,
+   `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`. (`S3_ENDPOINT` is only needed for a
+   non-AWS S3-compatible store — leave it unset for native S3.)
 4. **Wire the build + publish** (in `reusable-spa-docker-build.yml` or the caller):
    - pass `NEXT_PUBLIC_ASSET_CDN` / `NEXT_PUBLIC_APP_NAME` / `APP_VERSION` as
      `docker build --build-arg`s,

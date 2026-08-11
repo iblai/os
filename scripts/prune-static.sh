@@ -11,8 +11,9 @@
 # The keep window must exceed your rollback horizon: if you might roll back to
 # vX, vX's assets must still be here. Bump KEEP_LAST accordingly.
 #
-# Required env: S3_BUCKET, S3_ENDPOINT, AWS_* (same as upload-static.sh)
+# Required env: S3_BUCKET, AWS_* (same as upload-static.sh)
 # Optional env:
+#   S3_ENDPOINT  only for S3-compatible non-AWS stores; unset = native AWS S3
 #   APP_NAME     default "os"
 #   KEEP_LAST    number of most-recent deployments to retain (default 10)
 #   DRY_RUN      "true" (DEFAULT) prints deletions without performing them;
@@ -21,7 +22,6 @@
 set -euo pipefail
 
 : "${S3_BUCKET:?S3_BUCKET is required}"
-: "${S3_ENDPOINT:?S3_ENDPOINT is required}"
 
 APP_NAME="${APP_NAME:-os}"
 KEEP_LAST="${KEEP_LAST:-10}"
@@ -29,7 +29,15 @@ DRY_RUN="${DRY_RUN:-true}"
 
 MANIFEST_PREFIX="s3://${S3_BUCKET}/apps/${APP_NAME}/manifest/"
 
-aws_s3() { aws s3 --endpoint-url "${S3_ENDPOINT}" "$@"; }
+# S3_ENDPOINT only for non-AWS S3-compatible stores; array-free so the empty
+# case is safe under `set -u` on macOS's bash 3.2.
+aws_s3() {
+  if [[ -n "${S3_ENDPOINT:-}" ]]; then
+    aws s3 --endpoint-url "${S3_ENDPOINT}" "$@"
+  else
+    aws s3 "$@"
+  fi
+}
 
 echo "→ Retention for ${APP_NAME}: keep newest ${KEEP_LAST} + current (dry_run=${DRY_RUN})"
 
