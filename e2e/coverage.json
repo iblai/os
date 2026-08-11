@@ -3930,12 +3930,12 @@
         },
         {
           "id": "ags-04",
-          "description": "Admin toggles a skill on then off (Agent Skills sub-tab, via the SDK's dedicated skills helpers — switchToAgentSkillsSubTab/getSkillRowCount) and aria-checked flips back to the original state; dedicated mentor per test — moved from journey 44, Agent Skills is fully independent of the sandbox",
+          "description": "Admin creates a platform skill, attaches it from the Available Skills sub-tab (addSkillToAgent — the assignment is created ENABLED), and its enable Switch round-trips off/on on the Agent Skills sub-tab (aria-checked, toast-verified via disableSkill/enableSkill); detach + delete on cleanup — dedicated mentor per test, serial",
           "status": "covered"
         },
         {
           "id": "ags-05",
-          "description": "Admin creates a new skill, edits its description, and the updated row remains visible; skill deleted on cleanup — all via the SDK's skills helpers (createSkill/editSkill/deleteSkill); serial (mutations touch the platform-wide skills catalog) — moved from journey 44",
+          "description": "Admin creates a new platform skill, locates it on the server-paged Available Skills sub-tab (paging until found — catalog ordering is not guaranteed), edits its description, and deletes it (row disappears) — all via the SDK's skills helpers (createSkill/editSkill/deleteSkill), serial (mutations touch the platform-wide catalog)",
           "status": "covered"
         },
         {
@@ -4015,7 +4015,7 @@
         },
         {
           "id": "slash-15",
-          "description": "NON-ADMIN: with the assignments endpoint readable (mocked granted state — the composer's only skill source; a 403 degrades to an inactive picker) the \"/\" picker offers skills; selecting completes the token and sending the invocation message receives a live AI reply",
+          "description": "NON-ADMIN: with the assignments endpoint readable (mocked granted state — the composer's only skill source; a 403 degrades to an inactive picker) the \"/\" picker offers skills; selecting completes the token and sending the invocation message receives a live AI reply — skips when the environment denies the non-admin CHAT permission entirely (composer disabled with a \"you don't have permission to chat\" placeholder): the picker rides on top of chat access",
           "status": "covered"
         },
         {

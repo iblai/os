@@ -68,7 +68,12 @@ import { test, expect } from '../fixtures/mentor-test';
 import {
   verifySkillsTabVisible,
   switchToAgentSkillsSubTab,
-  getSkillRowCount,
+  switchToAvailableSkillsSubTab,
+  addSkillToAgent,
+  removeSkillFromAgent,
+  disableSkill,
+  enableSkill,
+  verifySkillVisible,
   createSkill,
   editSkill,
   deleteSkill,
@@ -105,6 +110,62 @@ function getTab(dialog: Locator, name: string): Locator {
 }
 
 /**
+ * Locate a skill row on the "Available Skills" sub-tab, walking the
+ * server-paged catalog (10 per page, ordering NOT guaranteed) page by page
+ * until the row shows. `createSkill` makes a PLATFORM skill, so a freshly
+ * created skill lists here — never on the (default) "Agent Skills" sub-tab
+ * — and on a long-lived tenant it can land on any page.
+ *
+ * Every wait is an element render: clicking Next flips the active page
+ * number (`aria-current="page"`) synchronously, then the new page's rows
+ * (or the platform empty state) replace the old ones — no fixed sleeps.
+ */
+async function locateAvailableSkillRow(
+  page: Page,
+  skillName: string,
+): Promise<Locator> {
+  await switchToAvailableSkillsSubTab(page);
+  const section = page.getByTestId('agent-skills-content');
+  const row = section
+    .getByTestId('available-skill-row')
+    .filter({ hasText: skillName });
+  const nav = section.getByRole('navigation');
+  const nextButton = nav.getByRole('link', { name: 'Go to next page' });
+
+  for (let pageNumber = 1; ; pageNumber++) {
+    if (
+      await row
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
+      return row.first();
+    }
+    // The pagination nav renders nothing on a single page; Next is
+    // aria-disabled on the last one. Either way: no further pages.
+    const nextEnabled =
+      (await nextButton.isVisible().catch(() => false)) &&
+      (await nextButton.getAttribute('aria-disabled')) !== 'true';
+    if (!nextEnabled) break;
+    await nextButton.click();
+    await expect(
+      nav.getByRole('link', { name: String(pageNumber + 1), exact: true }),
+    ).toHaveAttribute('aria-current', 'page', { timeout: 10_000 });
+    await expect(
+      section
+        .getByTestId('available-skill-row')
+        .first()
+        .or(section.getByText(/No skills available for this platform/i)),
+    ).toBeVisible({ timeout: 10_000 });
+  }
+
+  // Retrying final assert — fails with the locator in the message if the
+  // skill genuinely never appeared on any catalog page.
+  await expect(row.first()).toBeVisible({ timeout: 10_000 });
+  return row.first();
+}
+
+/**
  * Intercepts the mentor-settings GET for `mentorId` and fulfills it with the
  * REAL response, mutated to override just `mentor_slug` / `template_mentor`
  * — every other field (name, prompts, tools, etc.) stays authentic so the
@@ -129,6 +190,25 @@ async function mockMentorType(
 }
 
 // ─── Helpers (chat composer slash picker) ─────────────────────────────────
+
+/**
+ * Place the composer caret at an exact index (`'end'` → after the last
+ * character). Keyboard Home/End must NOT be used for this: on macOS
+ * Chromium they scroll without moving the caret (caret movement is Cmd+←/→
+ * there), so e.g. a Home+Delete sequence silently no-ops at the text's end.
+ * `setSelectionRange` is deterministic on every platform.
+ */
+async function placeComposerCaret(
+  composer: Locator,
+  index: number | 'end',
+): Promise<void> {
+  await composer.evaluate((el, at) => {
+    const textarea = el as HTMLTextAreaElement;
+    const caret = at === 'end' ? textarea.value.length : (at as number);
+    textarea.focus();
+    textarea.setSelectionRange(caret, caret);
+  }, index);
+}
 
 const SLASH_SKILLS: EffectiveSkillFixture[] = [
   {
@@ -342,73 +422,116 @@ test.describe('Journey 67: Agent Skills — skills section management', () => {
     await tracker.deleteAll(browser, testInfo);
   });
 
-  // ── ags-04: Toggle a skill on/off ────────────────────────────────────────
+  // ── ags-04: Attach a skill and toggle it off/on ──────────────────────────
+  //
+  // The enable Switch lives on rows of the "Agent Skills" sub-tab — i.e. on
+  // skills ATTACHED to this agent. A dedicated fresh mentor has none, so the
+  // test builds its own fixture through the real UI: create a platform
+  // skill, attach it from the "Available Skills" sub-tab (the assignment is
+  // created ENABLED), then round-trip its Switch on the "Agent Skills"
+  // sub-tab. Detach + delete on cleanup.
 
-  test('admin toggles a skill on then off and aria-checked flips back to the original state', async ({
+  test('admin attaches a skill and its enable switch round-trips off and back on', async ({
     page,
     editMentorPage,
   }) => {
-    // Capture the dialog once; nested lookups resolve from it so a switch
-    // elsewhere on the page can never be matched.
-    const dialog = editMentorPage.dialog;
+    const ts = Date.now();
+    const skillName = `e2e-toggle-skill-${ts}`;
+
+    // The skills section container — captured once; row lookups resolve
+    // from it so a switch elsewhere in the dialog can never be matched.
+    const section = page.getByTestId('agent-skills-content');
+    const agentRow = section
+      .getByTestId('agent-skill-row')
+      .filter({ hasText: skillName });
+
+    let created = false;
+    let attached = false;
 
     try {
-      // Enable toggles live on the "Agent Skills" sub-tab (the agent's own
-      // attached skills).
+      await createSkill(page, {
+        name: skillName,
+        slug: `e2e_toggle_skill_${ts}`,
+        description: `E2E toggle fixture created at ${ts}`,
+        version: '1.0.0',
+        instruction: `Instruction for ${skillName}`,
+      });
+      created = true;
+
+      // The new skill lists on the server-paged catalog sub-tab.
+      await locateAvailableSkillRow(page, skillName);
+      await addSkillToAgent(page, skillName);
+      attached = true;
+
       await switchToAgentSkillsSubTab(page);
+      await verifySkillVisible(page, skillName);
 
-      // Skip if this agent has no skills attached yet.
-      if ((await getSkillRowCount(page)) === 0) {
-        test.skip(
-          true,
-          'No skills attached to this agent — cannot test toggle flow',
-        );
-        return;
-      }
-
-      const firstToggle = dialog.getByRole('switch').first();
-      await expect(firstToggle).toBeVisible({ timeout: 10_000 });
-
-      const initialState =
-        (await firstToggle.getAttribute('aria-checked')) === 'true';
-
-      // Flip ON (or OFF if already ON)
-      await firstToggle.click();
-      await expect(firstToggle).toHaveAttribute(
+      // addSkillToAgent creates the assignment ENABLED.
+      await expect(agentRow.getByRole('switch')).toHaveAttribute(
         'aria-checked',
-        initialState ? 'false' : 'true',
+        'true',
         { timeout: 10_000 },
       );
 
-      // Flip back to the original state
-      await firstToggle.click();
-      await expect(firstToggle).toHaveAttribute(
+      // OFF → ON round trip. The SDK helpers wait on the success toasts;
+      // the retrying aria-checked asserts cover the refetch that follows.
+      await disableSkill(page, skillName);
+      await expect(agentRow.getByRole('switch')).toHaveAttribute(
         'aria-checked',
-        initialState ? 'true' : 'false',
+        'false',
+        { timeout: 10_000 },
+      );
+
+      await enableSkill(page, skillName);
+      await expect(agentRow.getByRole('switch')).toHaveAttribute(
+        'aria-checked',
+        'true',
         { timeout: 10_000 },
       );
     } finally {
+      // Best-effort cleanup: detach from the agent, then delete the
+      // platform skill so reruns never accumulate fixtures.
+      if (attached) {
+        try {
+          await switchToAgentSkillsSubTab(page);
+          await removeSkillFromAgent(page, skillName);
+        } catch {
+          // Best-effort
+        }
+      }
+      if (created) {
+        try {
+          await locateAvailableSkillRow(page, skillName);
+          await deleteSkill(page, skillName);
+        } catch {
+          // Best-effort
+        }
+      }
       await editMentorPage.close();
     }
   });
 
   // ── ags-05: Create → edit → delete a skill ───────────────────────────────
+  //
+  // `createSkill` makes a PLATFORM-level skill: it lists on the "Available
+  // Skills" catalog sub-tab, NOT on the (default) "Agent Skills" sub-tab —
+  // the row must be located there before the edit/delete row menus exist.
 
   test('admin creates a new skill, edits its description, and deletes it', async ({
     page,
     editMentorPage,
   }) => {
-    const dialog = editMentorPage.dialog;
-
     const ts = Date.now();
     const skillName = `e2e-test-skill-${ts}`;
     const skillSlug = `e2e_test_skill_${ts}`;
     const skillDescription = `E2E test skill created at ${ts}`;
     const updatedDescription = `E2E updated description ${ts}`;
 
+    let created = false;
+
     try {
       // ── Create (SDK helper: opens the New Skill dialog, fills the form,
-      // waits for the toast + the row to land) ────────────────────────────
+      // waits for the toast) ───────────────────────────────────────────────
       await createSkill(page, {
         name: skillName,
         slug: skillSlug,
@@ -416,27 +539,31 @@ test.describe('Journey 67: Agent Skills — skills section management', () => {
         version: '1.0.0',
         instruction: `Instruction for ${skillName}`,
       });
+      created = true;
 
-      // ── Edit (SDK helper: opens the Edit Skill dialog, patches the
-      // General fields, saves) ─────────────────────────────────────────────
+      // Find the row on the catalog sub-tab (paging until found — catalog
+      // ordering is not guaranteed).
+      const row = await locateAvailableSkillRow(page, skillName);
+
+      // ── Edit (SDK helper: row menu → Edit Skill dialog → save) ──────────
       await editSkill(page, skillName, { description: updatedDescription });
 
-      // The row survived the edit — resolved from the captured dialog.
-      await expect(dialog.getByText(skillName).first()).toBeVisible({
-        timeout: 10_000,
-      });
+      // The row survived the edit on the catalog sub-tab.
+      await expect(row).toBeVisible({ timeout: 10_000 });
 
-      // Cleanup: delete the skill via its row menu.
+      // ── Delete (SDK helper: row menu → confirm dialog → toast) ──────────
       await deleteSkill(page, skillName);
+      created = false;
+      await expect(row).toBeHidden({ timeout: 10_000 });
     } finally {
-      // Best-effort final cleanup — if the delete above failed, try again.
-      try {
-        const leftover = dialog.getByText(skillName).first();
-        if (await leftover.isVisible().catch(() => false)) {
+      // Best-effort final cleanup — if the flow broke before the delete.
+      if (created) {
+        try {
+          await locateAvailableSkillRow(page, skillName);
           await deleteSkill(page, skillName);
+        } catch {
+          // Best-effort
         }
-      } catch {
-        // Best-effort
       }
       await editMentorPage.close();
     }
@@ -733,7 +860,7 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
     await expect(chatPage.slashSkillPicker).toBeVisible({ timeout: 10_000 });
     await composer.press('Enter');
     await expect(composer).toHaveValue('/code-review ');
-    await composer.press('End');
+    await placeComposerCaret(composer, 'end');
     await composer.press('Backspace');
     await expect(composer).toHaveValue('');
     await expect(chatPage.skillTokenHighlights).toHaveCount(0);
@@ -742,7 +869,7 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
     await composer.fill('/');
     await expect(chatPage.slashSkillPicker).toBeVisible({ timeout: 10_000 });
     await composer.press('Enter');
-    await composer.press('Home');
+    await placeComposerCaret(composer, 0);
     await composer.press('Delete');
     await expect(composer).toHaveValue('');
     await expect(chatPage.skillTokenHighlights).toHaveCount(0);
@@ -762,7 +889,7 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
     await composer.fill('/');
     await expect(chatPage.slashSkillPicker).toBeVisible({ timeout: 10_000 });
     await composer.press('Enter');
-    await composer.press('End');
+    await placeComposerCaret(composer, 'end');
     await composer.pressSequentially('hi');
     await expect(composer).toHaveValue('/code-review hi');
 
@@ -784,9 +911,7 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
     await expect(composer).toBeVisible({ timeout: 15_000 });
     await composer.fill('say /web-research please');
     // Put the caret right after the token (index 17), then one Backspace.
-    await composer.evaluate((el) => {
-      (el as HTMLTextAreaElement).setSelectionRange(17, 17);
-    });
+    await placeComposerCaret(composer, 17);
     await composer.press('Backspace');
 
     await expect(composer).toHaveValue('say please');
@@ -923,6 +1048,13 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
   // selecting a skill and sending, the agent must reply like any other
   // message (live LLM round trip — same pattern as journey 02's non-admin
   // chat checkpoints).
+  //
+  // PRECONDITION: the non-admin user must be allowed to CHAT with the
+  // default mentor at all. Some environments deny that outright — the
+  // composer renders disabled with a "you don't have permission to chat"
+  // placeholder. The `/` picker rides on top of chat permission, so that
+  // state fails the test's precondition, not the feature: skip, mirroring
+  // journey 44's env-precondition skips.
 
   test('non-admin: "/" offers the mentor\'s skills and the sent invocation gets a reply', async ({
     nonadminPage,
@@ -932,6 +1064,25 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
     await navigateToMentorApp(nonadminPage);
 
     const composer = nonadminChatPage.getComposerTextarea();
+    // Wait for the permission state to SETTLE before branching: the
+    // placeholder resolves to either the ready state ("Ask anything") or
+    // the denied state — never assert against the in-between.
+    await expect(composer).toHaveAttribute(
+      'placeholder',
+      /Ask anything|permission to chat/i,
+      { timeout: 15_000 },
+    );
+    if (
+      /permission to chat/i.test(
+        (await composer.getAttribute('placeholder')) ?? '',
+      )
+    ) {
+      test.skip(
+        true,
+        'Non-admin has no chat permission for this mentor in this environment (composer disabled) — the slash-picker flow requires chat access',
+      );
+      return;
+    }
     await expect(composer).toBeVisible({ timeout: 15_000 });
 
     await composer.fill('/web');
@@ -946,7 +1097,7 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
     );
 
     // Continue the message and send it.
-    await composer.press('End');
+    await placeComposerCaret(composer, 'end');
     await composer.pressSequentially('please say hello');
     await composer.press('Enter');
 

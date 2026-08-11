@@ -496,31 +496,48 @@ export class ChatPage {
   }
 
   /**
+   * The menu content, only while GENUINELY open. Radix keeps the content
+   * element mounted (and visible) for a moment after a selection while its
+   * close animation runs, with `data-state="closed"` — a locator that
+   * ignores the state can match that dying instance, "find" its items, and
+   * then interact with a menu that unmounts mid-step. Every item lookup
+   * goes through this state-filtered locator instead.
+   */
+  private openSkillsMenuContent(): Locator {
+    return this.page.locator(
+      '[data-testid="skills-menu-content"][data-state="open"]',
+    );
+  }
+
+  /**
    * Returns the Skills-dropdown item for a skill slug (menu must be open).
-   * Resolved from the menu's content panel — never the page — so nothing
-   * outside the open dropdown can ever match.
+   * Resolved from the OPEN menu content — never the page, never a closing
+   * menu instance — so nothing outside the live dropdown can ever match.
    */
   getSkillsMenuItem(slug: string): Locator {
-    return this.skillsMenuContent.getByTestId(`skills-menu-item-${slug}`);
+    return this.openSkillsMenuContent().getByTestId(`skills-menu-item-${slug}`);
   }
 
   /**
    * Opens the Skills dropdown and waits until its items are actually
    * showing. A plain `skillsMenuTrigger.click()` is flaky right after a
-   * previous selection: Radix is still tearing down the old menu instance
-   * (dismiss listeners / focus return), and a programmatic click landing in
-   * that window toggles or gets swallowed, leaving the menu closed. Retry
-   * clicking until an item is visible.
+   * previous selection, in both directions: Radix is still tearing down the
+   * old menu instance (dismiss listeners / focus return), so a click landing
+   * in that window toggles or gets swallowed — and the dying instance's
+   * items remain visible with `data-state="closed"`, so a state-blind check
+   * can wrongly conclude the menu is already open and skip clicking
+   * entirely. Retry clicking until an item inside a data-state="open"
+   * content is visible.
    */
   async openSkillsMenu(): Promise<void> {
-    const anyItem = this.skillsMenuContent
+    const anyOpenItem = this.openSkillsMenuContent()
       .locator('[data-testid^="skills-menu-item-"]')
       .first();
     await expect(async () => {
-      if (!(await anyItem.isVisible())) {
+      if (!(await anyOpenItem.isVisible())) {
         await this.skillsMenuTrigger.click();
       }
-      await expect(anyItem).toBeVisible({ timeout: 1_000 });
+      await expect(anyOpenItem).toBeVisible({ timeout: 1_000 });
     }).toPass({ timeout: 15_000 });
   }
 
