@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.124.1](https://github.com/iblai/os/compare/v0.124.0...v0.124.1) (2026-08-11)
+
+### Bug Fixes
+
+* **seo:** correctly-cased agent titles + server-rendered h1 ([21c132c](https://github.com/iblai/os/commit/21c132c8b8a981970cba7b2d86737fd8d0e0d7c9)), closes [#401](https://github.com/iblai/os/issues/401)
+
 ## [0.124.0](https://github.com/iblai/os/compare/v0.123.0...v0.124.0) (2026-08-11)
 
 ### Features
