@@ -276,6 +276,8 @@ describe('GraderTab', () => {
       const labels = capturedLabels();
       expect(labels.criteria.totalPoints).toContain('{total}');
       expect(labels.criteria.scoreHint).toContain('{total}');
+      expect(labels.results.overrideModal.pointsHelp).toContain('{total}');
+      expect(labels.results.overrideModal.pointsRange).toContain('{total}');
     });
 
     it('interpolates the criterion name into the actions aria label', () => {
@@ -285,6 +287,27 @@ describe('GraderTab', () => {
       expect(labels.criteria.actionsAria('Clarity')).toBe(
         'Actions for Clarity',
       );
+    });
+
+    it('interpolates the learner email into the override aria label', () => {
+      render(<GraderTab />);
+
+      const labels = capturedLabels();
+      expect(labels.results.overrideButtonAria('learner@example.com')).toBe(
+        'Override grade for learner@example.com',
+      );
+    });
+
+    it('resolves the grade-results section from the catalog', () => {
+      render(<GraderTab />);
+
+      const labels = capturedLabels();
+      expect(labels.subTabs.results).toBeTruthy();
+      expect(labels.results.sectionTitle).toBeTruthy();
+      expect(labels.results.columns.learner).toBeTruthy();
+      expect(labels.results.statusValues.pending).toBeTruthy();
+      expect(labels.results.overrideModal.title).toBeTruthy();
+      expect(labels.results.toasts.overrideSaved).toBeTruthy();
     });
   });
 
@@ -318,6 +341,9 @@ describe('GraderTab', () => {
         expect(tab.criteriaTotalPoints, locale).toContain('{total}');
         expect(tab.criteriaScoreHint, locale).toContain('{total}');
         expect(tab.criteriaActionsAria, locale).toContain('{name}');
+        expect(tab.overrideModalPointsHelp, locale).toContain('{total}');
+        expect(tab.overrideModalPointsRange, locale).toContain('{total}');
+        expect(tab.resultsOverrideButtonAria, locale).toContain('{email}');
       }
     });
   });

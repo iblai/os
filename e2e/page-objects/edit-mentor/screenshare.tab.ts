@@ -17,7 +17,7 @@ import { Page, Locator, expect } from '@playwright/test';
 const SCREENSHARE_HEADER_TITLE = 'Screen';
 
 /**
- * Page object for the Screen Share top-level tab inside the Edit Mentor
+ * Page object for the Screen top-level tab (screen sharing) inside the Edit Mentor
  * dialog.
  *
  * Rendered by the SDK's `AgentScreenShareTab`

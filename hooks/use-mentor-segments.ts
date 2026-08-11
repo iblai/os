@@ -217,22 +217,6 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     navCategory: 'configurations',
   },
   {
-    value: MODALS.EDIT_MENTOR.tabs.screenshare,
-    label: 'Screen Share',
-    labelKey: 'screenShare',
-    icon: MonitorPlay,
-    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
-    permissionFieldsCheck: [],
-    mentorVisibility: [
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
-      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
-    ],
-    // Always visible. The "Enable screen sharing" (`enable_video`) master
-    // toggle now lives inline at the top of the Screen Share tab; turning it
-    // off grays out the screen-sharing prompts below instead of hiding the tab.
-    navCategory: 'configurations',
-  },
-  {
     value: MODALS.EDIT_MENTOR.tabs.prompts,
     label: 'Prompts',
     labelKey: 'prompts',
@@ -336,20 +320,21 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     navCategory: 'configurations',
   },
   {
-    // Deliberately the last Configurations segment — Disclaimers is the
-    // last one declared before it, so keep this entry right after
-    // Disclaimers when reordering the array.
+    // Deliberately the second-to-last Configurations segment (only Screen
+    // comes after it) — keep this entry right after Disclaimers when
+    // reordering the array.
     value: MODALS.EDIT_MENTOR.tabs.grader,
     label: 'Grader',
     labelKey: 'grader',
     icon: ClipboardCheck,
-    // Platform-admin-only until the backend exposes the grader RBAC
-    // resources (graderconfigurations / gradercriteria). No `rbacResource`
-    // set — the userTypes filter alone gates visibility (mirroring Tasks /
-    // LTI). Once the permissions land, re-add
-    // `rbacResource: (id) => `/mentors/${id}/graderconfigurations/#read``
-    // and add the two grader resources to the EditMentorModal RBAC fetch.
-    userTypes: [UserType.ADMIN],
+    // Grader permissions are flat actions on the mentor resource
+    // (`/mentors/{id}/#read_grader_config`, `#write_grader_config`,
+    // `#create_grader_criteria`, …) — the same `/mentors/{id}/` entry every
+    // RBAC fetch already requests, so no extra resource is needed. The tab
+    // is visible iff config read is granted; the SDK's AgentGraderTab gates
+    // the finer-grained save/add/edit/delete/override affordances itself.
+    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
+    rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/#read_grader_config`,
     permissionFieldsCheck: [],
     mentorVisibility: [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
@@ -359,6 +344,23 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     // of the Grader tab (it attaches/detaches the Grading tool on the agent);
     // turning it off grays out the rubric configuration below instead of
     // hiding the tab, and the rubric is preserved across disable/re-enable.
+    navCategory: 'configurations',
+  },
+  {
+    // Deliberately the last Configurations segment — after Grader.
+    value: MODALS.EDIT_MENTOR.tabs.screenshare,
+    label: 'Screen',
+    labelKey: 'screenShare',
+    icon: MonitorPlay,
+    userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
+    permissionFieldsCheck: [],
+    mentorVisibility: [
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+    ],
+    // Always visible. The "Enable screen sharing" (`enable_video`) master
+    // toggle now lives inline at the top of the Screen tab; turning it
+    // off grays out the screen-sharing prompts below instead of hiding the tab.
     navCategory: 'configurations',
   },
   {

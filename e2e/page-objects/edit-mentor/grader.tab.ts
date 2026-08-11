@@ -14,6 +14,10 @@ import {
   expectLastCriterionDeleteDisabled,
   expectGraderMisconfiguredWarning,
   expectGraderTotalPoints,
+  filterGradeResultsByEmail,
+  expectGradeResultRow,
+  overrideGradeResult,
+  clearGradeResultOverride,
   type GraderSubTab,
   type GraderGradingMode,
   type GraderFeedbackMode,
@@ -37,40 +41,79 @@ import {
  * — same pattern as `EvaluationTab`.
  *
  * ── Structure (re-verified against the RBAC-aware rebuild) ────────────────
- * The gated content is split into two sub-tabs — "Grading setup" (config
- * form, `grader-sub-tab-setup` / `grader-setup-section`) and "Rubric"
- * (criteria table, `grader-sub-tab-rubric` / `grader-criteria-section`).
+ * The gated content is split into THREE sub-tabs — "Grading Setup" (config
+ * form, `grader-sub-tab-setup` / `grader-setup-section`), "Rubric" (criteria
+ * table, `grader-sub-tab-rubric` / `grader-criteria-section`), and "Results"
+ * (grade-results table, `grader-sub-tab-results` / `grader-results-section`).
  * `saveGraderConfig` / `addGraderCriterion` / `editGraderCriterion` /
  * `deleteGraderCriterion` / `expectLastCriterionDeleteDisabled` /
- * `expectGraderTotalPoints` all switch to the relevant sub-tab internally
- * before acting — callers don't need to switch first. Criterion add/edit are
- * now modal-based (`grader-criterion-modal` + `grader-criterion-modal-save`,
- * fields "Name"/"Criteria"/"Points" — note the name field is now labelled
- * "Name", not "Criterion"), and each row exposes a three-dots actions menu
- * (`aria-label` from `GRADER_LABELS.menu.actionsAria(name)`) with "Edit" /
- * "Delete" items instead of the old inline edit/delete affordances. Delete
- * goes through its own confirm modal (`grader-criterion-delete-modal` +
- * `grader-criterion-delete-confirm`).
+ * `expectGraderTotalPoints` / `filterGradeResultsByEmail` /
+ * `expectGradeResultRow` / `overrideGradeResult` / `clearGradeResultOverride`
+ * all switch to the relevant sub-tab internally before acting — callers
+ * don't need to switch first. Criterion add/edit are modal-based
+ * (`grader-criterion-modal` + `grader-criterion-modal-save`, fields
+ * "Name"/"Criteria"/"Points" — note the name field is labelled "Name", not
+ * "Criterion"), and each row exposes a three-dots actions menu (`aria-label`
+ * from `GRADER_LABELS.menu.actionsAria(name)`) with "Edit" / "Delete" items.
+ * Delete goes through its own confirm modal (`grader-criterion-delete-modal`
+ * + `grader-criterion-delete-confirm`). The Results sub-tab's per-row
+ * "Override" button (`aria-label` from
+ * `GRADER_LABELS.results.overrideButtonAria(email)`) opens
+ * `grader-override-modal` (fields "Override Points"/"Override Feedback",
+ * `grader-override-save` / `grader-override-clear`), which pushes the
+ * override back to the LMS.
+ *
+ * Re-verified against a subsequent yalc rebuild (Aug 7): `GRADER_LABELS`
+ * display strings moved to Title Case across the board (e.g. "Grading
+ * Setup", "Add Criterion", "Override Points"/"Override Feedback",
+ * grading/feedback mode option labels) — transparent to every method here
+ * since none of them hardcode these display strings, only the stable
+ * `GRADER_LABELS.*` property paths and `data-testid`s (all unchanged). The
+ * Results sub-tab's learner filter was reworked from separate email/
+ * username text inputs into a single "Search for User" combobox picker
+ * (`grader-results-user-filter` trigger, `GRADER_LABELS.results.
+ * searchUsersPlaceholder` search box) — absorbed transparently by
+ * `filterResultsByEmail`/`filterGradeResultsByEmail`, which this page
+ * object only delegates to (never called directly by this journey's
+ * checkpoints today, so nothing here needed updating). All other testids
+ * (sub-tabs, sections, modals, capability toggle/gate) and the hand-pinned
+ * `UNEXPORTED_LABELS` copy below were re-confirmed byte-for-byte unchanged.
  *
  * ── RBAC ────────────────────────────────────────────────────────────────
- * The backend does not expose the grader RBAC permissions yet
- * (`/mentors/{mentorDbId}/graderconfigurations/#read|action|write`,
- * `/mentors/{mentorDbId}/gradercriteria/#action|write|delete`), so the
- * published SDK build ships the grader tab without RBAC wiring and the
- * host gates the top-level Grader segment to platform admins via
- * `userTypes: [ADMIN]` instead (`hooks/use-mentor-segments.ts`, mirroring
- * Tasks / LTI). A server 403 on config `read` still renders the
- * `grader-tab-denied` empty state (`isForbidden`). When the permissions
- * land, denied `read` renders that same denied state and denied
- * `write`/`action`/`delete` omit the Save / Add / Edit / Delete
- * affordances entirely (conditionally rendered, not just disabled). None
- * of this journey's checkpoints exercise the denied paths — see the
- * `not-reproducible` checkpoint in `66-mentor-grader-tab.spec.ts` for why.
+ * The backend now exposes grader permissions as FLAT actions on the mentor
+ * resource (`/mentors/{mentorDbId}/#<action>`, same entry every other
+ * mentor-scoped check uses) — `read_grader_config`, `write_grader_config`,
+ * `create_grader_config`, `view_grader_criteria`, `create_grader_criteria`,
+ * `write_grader_criteria`, `delete_grader_criteria`, `view_grade_results`,
+ * `override_grade_results`. `useGrader` checks these with a graceful
+ * fallback: `allow(action) = !mentorEntry || checkRbacPermission(...)` —
+ * enforcement only kicks in once the RBAC permission tree actually contains
+ * an entry for that mentor; otherwise every action stays allowed and the
+ * server's own 403s remain the source of truth. Denied `read_grader_config`
+ * (or every view action denied at once — `nothingViewable`) renders the
+ * `grader-tab-denied` empty state and drops that sub-tab's trigger entirely;
+ * denied `write`/`create`/`delete`/`override` actions omit the matching
+ * Save/Add/Edit/Delete/Override affordance rather than erroring
+ * (conditionally rendered, not merely disabled). The host additionally
+ * gates the whole Grader segment on `/mentors/{id}/#read_grader_config`
+ * (`hooks/use-mentor-segments.ts`) — a denied admin never sees the tab at
+ * all. This repo's e2e admin account holds full permissions on mentors it
+ * owns for MOST grader actions, but NOT all of them uniformly — confirmed
+ * live against the real e2e tenant (`conradtesttenant`): `read_grader_config`
+ * and `view_grader_criteria` are granted (Grading Setup / Rubric pills
+ * always render), but `view_grade_results` is NOT (the Results pill never
+ * renders for this account, on every live run observed). Checkpoints that
+ * depend on the Results pill (`isResultsSubTabVisible`) check for it and
+ * skip gracefully rather than assume it — see GRD-04 in
+ * `66-mentor-grader-tab.spec.ts`. The remaining denied-permission paths
+ * (config/criteria write denial, override denial) still have no fixture in
+ * this environment to seed — see the `not-reproducible` checkpoints there
+ * for that narrower, still-open gap.
  *
  * ── Capability toggle ──────────────────────────────────────────────────────
  * The "Grading" master switch (`grader-capability-toggle`) lives inline at
  * the top of the tab via the shared `CapabilityGate` component, exactly like
- * Voice / Screen Share / Memory / Privacy / LTI. It attaches/detaches the
+ * Voice / Screen / Memory / Privacy / LTI. It attaches/detaches the
  * tenant's "Grading" TOOL on the mentor (`editMentor({ tool_slugs,
  * can_use_tools })`) rather than flipping a plain boolean settings field.
  * `setGradingEnabled` is optimistic (per its own doc: "the switch itself
@@ -113,7 +156,9 @@ export class GraderTab {
    * the RBAC-aware rebuild: the header description and `toggleError` toast
    * are byte-for-byte unchanged; the two warning strings picked up minor
    * wording tweaks ("...in Grading setup to finish." / "...in the Rubric
-   * tab.") but the regexes below still match either wording.
+   * tab.") but the regexes below still match either wording. The Results
+   * empty-state strings are new in this rebuild — also confirmed against
+   * the same `graderTabLabels.results` object.
    */
   static readonly UNEXPORTED_LABELS = {
     header: {
@@ -126,6 +171,11 @@ export class GraderTab {
     warnings: {
       noConfig: /not set up yet/i,
       noCriteria: /rubric is empty/i,
+    },
+    results: {
+      emptyState:
+        'No grades yet. They will appear here once the agent starts grading.',
+      emptyFiltered: 'No grades match the current filters.',
     },
   } as const;
 
@@ -143,20 +193,22 @@ export class GraderTab {
   readonly capabilityOffHint: Locator;
   /** Spinner shown while mentor settings are still loading — no dedicated helper export. */
   readonly loadingSpinner: Locator;
-  /** Friendly denied empty state (server 403 on config `read`; also a denied `graderconfigurations/#read` once grader RBAC is wired) — no dedicated helper export. */
+  /** Friendly denied empty state (server 403 on config `read`, denied `read_grader_config`, or every view action denied at once) — no dedicated helper export. */
   readonly deniedState: Locator;
   /** "Grading is on but ..." warning banner — presence is covered by `expectMisconfiguredWarning`; kept for reading its exact wording. */
   readonly misconfiguredWarning: Locator;
   /**
-   * The sub-tab segmented control and its two triggers. No dedicated getter
-   * is exported for these (only the `switchToGraderSubTab` action helper
-   * is) — same situation as `VoiceTab`'s `subTabs`/`voiceSubTab`/
-   * `callConfigSubTab`, which are hand-rolled testid locators for the same
-   * reason.
+   * The sub-tab segmented control and its three triggers (a denied RBAC
+   * action drops the corresponding trigger, see class doc). No dedicated
+   * getter is exported for these (only the `switchToGraderSubTab` action
+   * helper is) — same situation as `VoiceTab`'s
+   * `subTabs`/`voiceSubTab`/`callConfigSubTab`, which are hand-rolled
+   * testid locators for the same reason.
    */
   readonly subTabs: Locator;
   readonly setupSubTab: Locator;
   readonly rubricSubTab: Locator;
+  readonly resultsSubTab: Locator;
 
   constructor(page: Page, dialog: Locator) {
     this.page = page;
@@ -176,6 +228,7 @@ export class GraderTab {
     this.subTabs = dialog.getByTestId('grader-sub-tabs');
     this.setupSubTab = dialog.getByTestId('grader-sub-tab-setup');
     this.rubricSubTab = dialog.getByTestId('grader-sub-tab-rubric');
+    this.resultsSubTab = dialog.getByTestId('grader-sub-tab-results');
   }
 
   // ── Tab navigation / body ────────────────────────────────────────────────
@@ -204,7 +257,7 @@ export class GraderTab {
   }
 
   /**
-   * Switch between the "Grading setup" and "Rubric" sub-tabs. Every mutating
+   * Switch between the "Grading Setup" and "Rubric" sub-tabs. Every mutating
    * helper below (`saveConfig`, `addCriterion`, `editCriterion`,
    * `deleteCriterion`, `expectLastCriterionDeleteDisabled`,
    * `expectTotalPoints`) already does this internally — call it directly
@@ -228,6 +281,24 @@ export class GraderTab {
       GraderTab.UNEXPORTED_LABELS.header.description,
       { exact: true },
     );
+  }
+
+  /**
+   * Whether the Results sub-tab pill is currently rendered. Gated on the
+   * `view_grade_results` RBAC action (see class doc) — CONFIRMED live
+   * against the real e2e tenant that this action is NOT granted to the e2e
+   * admin even though `read_grader_config`/`view_grader_criteria` are (the
+   * Grading Setup and Rubric pills reliably render; Results does not).
+   * Bounded `waitFor` + catch rather than `isVisible` (see this repo's
+   * anti-pattern guidance) so callers get a real wait, not a snapshot.
+   */
+  async isResultsSubTabVisible(): Promise<boolean> {
+    try {
+      await this.resultsSubTab.waitFor({ state: 'visible', timeout: 5_000 });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   // ── Capability gate ───────────────────────────────────────────────────────
@@ -273,14 +344,31 @@ export class GraderTab {
     const errorToast = this.page
       .getByText(GraderTab.UNEXPORTED_LABELS.toasts.toggleError)
       .first();
-    const outcome = await Promise.race([
-      successToast
-        .waitFor({ state: 'visible', timeout: 15_000 })
-        .then(() => 'ok' as const),
-      errorToast
-        .waitFor({ state: 'visible', timeout: 15_000 })
-        .then(() => 'error' as const),
-    ]).catch(() => 'timeout' as const);
+
+    // Both waits are raced below, but Promise.race never cancels the loser —
+    // it keeps polling in the background until ITS OWN 15s timeout elapses,
+    // then rejects. A live run caught the fallout directly: on every test
+    // where the toggle succeeds (the common case), `errorWait` is always the
+    // loser, and its rejection ~12s later had no `.catch` anywhere, making it
+    // an unhandled promise rejection in the single long-lived worker process
+    // this whole serial file runs in. That measurably destabilized LATER,
+    // unrelated actions in the same file — e.g. a Save button observed stuck
+    // non-actionable for a full 30s several tests afterward, traced back via
+    // trace.zip timing to line up with one of these unhandled rejections.
+    // Attaching a no-op `.catch` directly to each branch marks it "handled"
+    // for Node's purposes regardless of which one loses the race.
+    const successWait = successToast
+      .waitFor({ state: 'visible', timeout: 15_000 })
+      .then(() => 'ok' as const);
+    const errorWait = errorToast
+      .waitFor({ state: 'visible', timeout: 15_000 })
+      .then(() => 'error' as const);
+    successWait.catch(() => {});
+    errorWait.catch(() => {});
+
+    const outcome = await Promise.race([successWait, errorWait]).catch(
+      () => 'timeout' as const,
+    );
 
     if (outcome !== 'ok') return false;
 
@@ -428,5 +516,56 @@ export class GraderTab {
     await expect(modal).toBeHidden({ timeout: 10_000 });
 
     await expect(row).toBeVisible({ timeout: 5_000 });
+  }
+
+  // ── Results (grade results table) ────────────────────────────────────────
+
+  /** The Results sub-tab's section container. Switches to the sub-tab first (mirrors `criteriaSection` internally). */
+  async resultsSection(): Promise<Locator> {
+    await switchToGraderSubTab(this.page, 'results');
+    return graderTabBody(this.page).getByTestId('grader-results-section');
+  }
+
+  /**
+   * Asserts the Results table's empty state, distinguishing the
+   * zero-filters copy ("No grades yet…") from the filtered-to-zero copy
+   * ("No grades match the current filters…") — neither string is exported
+   * by `GRADER_LABELS`, see `UNEXPORTED_LABELS.results`.
+   */
+  async expectResultsEmpty(opts: { filtered: boolean }): Promise<void> {
+    const section = await this.resultsSection();
+    const text = opts.filtered
+      ? GraderTab.UNEXPORTED_LABELS.results.emptyFiltered
+      : GraderTab.UNEXPORTED_LABELS.results.emptyState;
+    await expect(section.getByText(text, { exact: true })).toBeVisible({
+      timeout: 10_000,
+    });
+  }
+
+  /** Filters the grade-results list by learner email (switches to the Results sub-tab first; debounced, gated on the matching row rendering). */
+  filterResultsByEmail(email: string): Promise<void> {
+    return filterGradeResultsByEmail(this.page, email);
+  }
+
+  /** Asserts a grade-result row for the given learner email is visible (switches to the Results sub-tab first). */
+  expectResultRow(email: string): Promise<void> {
+    return expectGradeResultRow(this.page, email);
+  }
+
+  /**
+   * Overrides a learner's grade via their row's Override button → modal
+   * (switches to the Results sub-tab first). Points are in rubric points (0
+   * to the rubric's total, enforced client-side by the modal).
+   */
+  overrideResult(
+    email: string,
+    values: { points: number; feedback?: string },
+  ): Promise<void> {
+    return overrideGradeResult(this.page, email, values);
+  }
+
+  /** Clears a learner's grade override via the modal, restoring the AI score (switches to the Results sub-tab first). */
+  clearResultOverride(email: string): Promise<void> {
+    return clearGradeResultOverride(this.page, email);
   }
 }

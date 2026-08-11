@@ -96,39 +96,48 @@ try {
 }
 
 // 3) README.md — repoint the macOS + Windows(x64) download links at the new
-// version. Matches any `…/app-v<X>/<product>_<X>_universal.dmg` and
-// `…_x64-setup.exe` occurrence, so it works for the download-button badges AND
-// any inline links, and survives future README redesigns.
+// version. The links are matched by SHAPE — `…/app-v<X>/<anything>_<X>_universal.dmg`
+// and `…_x64-setup.exe` — NOT by the current productName. This is deliberate:
+// a productName rename (ibl.ai → iblai) changes what the *new* link is called,
+// but the README still holds the *old* name; a name-anchored regex would fail
+// to match and silently skip (which is exactly what left the README stale at
+// app-v0.95.8). Matching any product segment repoints whatever is there today
+// to the new `url`/`winX64Url` (which already carry the new productName). Works
+// for the download-button badges AND inline links, and survives renames.
 try {
   const readmeUrl = new URL('../README.md', import.meta.url);
   const readme = readFileSync(readmeUrl, 'utf8');
   const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const base = esc(RELEASES_BASE);
-  const pn = esc(productName);
+  // Any product-name segment: stop at a path/quote/paren/space boundary so the
+  // match doesn't run past the filename into the surrounding markup.
+  const product = `[^/"'\\s)]+`;
   const macRe = new RegExp(
-    `${base}/app-v\\d+\\.\\d+\\.\\d+/${pn}_\\d+\\.\\d+\\.\\d+_universal\\.dmg`,
+    `${base}/app-v\\d+\\.\\d+\\.\\d+/${product}_\\d+\\.\\d+\\.\\d+_universal\\.dmg`,
     'g',
   );
   const winRe = new RegExp(
-    `${base}/app-v\\d+\\.\\d+\\.\\d+/${pn}_\\d+\\.\\d+\\.\\d+_x64-setup\\.exe`,
+    `${base}/app-v\\d+\\.\\d+\\.\\d+/${product}_\\d+\\.\\d+\\.\\d+_x64-setup\\.exe`,
     'g',
   );
   let out = readme.replace(macRe, url);
   if (out === readme) {
+    // `::warning::` surfaces this as a GitHub Actions annotation (not just a
+    // buried log line) so a silent skip like the app-v0.95.8 one gets noticed.
     console.warn(
-      'tauri-bump: macOS download link not found in README.md — skipping',
+      '::warning::tauri-bump: macOS download link not found in README.md — README left stale',
     );
   }
   const afterWin = out.replace(winRe, winX64Url);
   if (afterWin === out) {
     console.warn(
-      'tauri-bump: Windows download link not found in README.md — skipping',
+      '::warning::tauri-bump: Windows download link not found in README.md — README left stale',
     );
   }
   out = afterWin;
   if (out !== readme) writeFileSync(readmeUrl, out);
 } catch (err) {
-  console.warn(`tauri-bump: README update skipped (${err.message})`);
+  console.warn(`::warning::tauri-bump: README update skipped (${err.message})`);
 }
 
 console.log(version);

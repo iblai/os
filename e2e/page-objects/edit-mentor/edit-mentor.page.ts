@@ -41,7 +41,7 @@ const TAB_CATEGORY: Record<
   Settings: 'Configurations',
   LLM: 'Configurations',
   Voice: 'Configurations',
-  'Screen Share': 'Configurations',
+  Screen: 'Configurations',
   Prompts: 'Configurations',
   Skills: 'Configurations',
   Grader: 'Configurations',
@@ -571,7 +571,7 @@ export class EditMentorPage {
     // Scope to the host sidebar trigger. The SDK's Voice tab renders its own
     // "Voice" sub-tab pill (also role="tab", same accessible name) inside the
     // panel once it mounts, so a bare getByRole('tab', { name }) match raises a
-    // strict-mode violation for Voice/Screen Share. Every host sidebar trigger
+    // strict-mode violation for Voice/Screen. Every host sidebar trigger
     // uniquely owns `aria-controls="panel-<value>"`; the SDK sub-tabs control a
     // generated `radix-*` id, so filtering on that prefix isolates the sidebar
     // tab without needing to know each segment's value.

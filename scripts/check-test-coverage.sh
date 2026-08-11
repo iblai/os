@@ -26,6 +26,9 @@ SKIP_COVERAGE_FILES=(
   "explore/_components/search-section.tsx"
   "job-scout/page.tsx"
   "stripe/callback/[launch_id]/page.tsx"
+  # Thin client wrapper around the SDK's <SsoLogin>; the small inline
+  # resolveRedirectPath glue is exercised via the SSO/login E2E flow.
+  "app/sso-login-complete/page.tsx"
   # Public mentor page: server wrapper (thin SEO glue) + its client chat UI.
   # SEO logic lives in lib/seo-mentor.ts (unit-tested); the UI is E2E-covered.
   "[tenantKey]/[mentorId]/page.tsx"
@@ -35,9 +38,11 @@ SKIP_COVERAGE_FILES=(
   "[sessionId]/[tenantKey]/[mentorId]/page.tsx"
   "[sessionId]/page.tsx"
   "[sessionId]/share-chat-redirect-content.tsx"
-  # Third-party vendored bundle and the chrome extension service worker
-  # (uses chrome.* APIs) are not unit-testable.
+  # Third-party vendored bundle and the chrome extension scripts (service
+  # worker + side-panel host: chrome.* APIs, shadow-DOM postMessage glue) are
+  # not unit-testable in the app's vitest/jsdom environment.
   "extensions/chrome/background.js"
+  "extensions/chrome/panel.js"
   "extensions/chrome/vendor/agent-ai.umd.js"
   # i18n/locale runtime glue (server-only request config, cookie helpers).
   "i18n/config.ts"
