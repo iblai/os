@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.122.2](https://github.com/iblai/os/compare/v0.122.1...v0.122.2) (2026-08-11)
+
+### Chores
+
+* clear `pnpm audit` packages ([fdd7553](https://github.com/iblai/os/commit/fdd7553db349b2fb149244120dd6ef3ba79430db))
+* **deps:** bump iblai js sdk version ([af88083](https://github.com/iblai/os/commit/af8808360dc7f42666140888e02c134d629cc43e))
+* update lock file ([571f570](https://github.com/iblai/os/commit/571f570b083c338babff632c5208eb395e8b3e2d))
+
 ## [0.122.1](https://github.com/iblai/os/compare/v0.122.0...v0.122.1) (2026-08-11)
 
 ### Bug Fixes
