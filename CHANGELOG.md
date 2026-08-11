@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.124.0](https://github.com/iblai/os/compare/v0.123.0...v0.124.0) (2026-08-11)
+
+### Features
+
+* **ci:** tenant-locked app builds (IBL_TENANT) with per-tenant releases ([5cccd5c](https://github.com/iblai/os/commit/5cccd5c4227b668c63bf1f54fff82a3956f625e5))
+
+### Chores
+
+* **ci:** remove the non-functional "Hide .app extension" DMG step ([c00406f](https://github.com/iblai/os/commit/c00406fe54e5389e435b9593892cc3bfd1326146))
+
 ## [0.123.0](https://github.com/iblai/os/compare/v0.122.3...v0.123.0) (2026-08-11)
 
 ### Features
