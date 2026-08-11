@@ -23,19 +23,24 @@
  *      `route.fetch()` + mutate + `route.fulfill()` (same pattern as
  *      `journeys/auth.setup.ts` and `ChatPage.mockSharedChatSession`) — every
  *      other field in the response stays authentic, so the rest of the Edit
- *      Mentor modal keeps working normally. Journey 44 already covers the
- *      tab's content/behavior once mounted (always visible for the Base
- *      Agent mentors it creates); this journey covers the mentor-type gate
- *      itself, which journey 44 cannot reach.
+ *      Mentor modal keeps working normally.
  *
- *   2. Chat composer `/` skill picker — `components/chat-input-form.tsx` +
+ *   2. Skills SECTION management — the SDK's `AgentSkills` component
+ *      (sub-tabs, rows, enable toggles, New/Edit/Delete Skill dialogs),
+ *      driven exclusively through the dedicated helpers in
+ *      `@iblai/iblai-js/playwright`. Moved here from journey 44: Agent
+ *      Skills is fully independent of the sandbox (feat/2040 + feat/2215),
+ *      so ALL skills coverage — gating, section management, composer —
+ *      lives in this journey and the sandbox journey carries none.
+ *
+ *   3. Chat composer `/` skill picker — `components/chat-input-form.tsx` +
  *      `components/auto-resize-text-area.tsx`, backed by the SDK's
  *      `SlashSkillPicker` / `useSlashSkillPicker`
  *      (`@iblai/iblai-js/web-containers`). Typing `/` as the start of a
  *      single-token message opens a filterable listbox of the mentor's
- *      enabled effective skills, resolved client-side from skill assignments
- *      (`GET .../agents/{uuid}/skills/`) plus the skill catalog
- *      (`GET .../agent-skills/`). The composer fetches eagerly on
+ *      enabled skills, read from the mentor's skill assignments
+ *      (`GET .../agents/{uuid}/skills/` — the platform-wide catalog is
+ *      deliberately not fetched from chat). The composer fetches eagerly on
  *      mount — not lazily on first keypress — and its accessible role flips
  *      from `textbox` to `combobox` once that list is non-empty. Determinism
  *      here comes from `ChatPage.mockEffectiveSkills`, which fully replaces
@@ -49,18 +54,30 @@
  * (`MentorTracker` + `afterAll`, per house style) and run in `parallel`
  * mode: no test touches another test's mentor, and the mentor-settings
  * mock is scoped to one specific mentor id per test, so there is no shared
- * server-side resource to race (unlike journey 44's sandbox-instance table).
- * Chat composer tests need no mentor isolation at all — see above — and also
- * run in `parallel` mode.
+ * server-side resource to race. Skills SECTION management tests also get a
+ * dedicated mentor per test but run `serial` — create/edit/delete mutate
+ * the PLATFORM-WIDE skills catalog (shared across the tenant), which must
+ * not be raced from parallel workers. Chat composer tests need no mentor
+ * isolation at all — see above — and run in `parallel` mode.
  */
 
 import { test, expect } from '../fixtures/mentor-test';
+// The SDK's dedicated Agent Skills helpers (split out of the sandbox
+// helpers) drive everything inside the skills SECTION; host-owned bits
+// (tab heading/info box) stay on the local SkillsTab page object.
+import {
+  verifySkillsTabVisible,
+  switchToAgentSkillsSubTab,
+  getSkillRowCount,
+  createSkill,
+  editSkill,
+  deleteSkill,
+} from '@iblai/iblai-js/playwright';
 import {
   navigateToMentorApp,
   checkAdminStatus,
   getPlatformContext,
 } from '../utils/auth';
-import { waitForPageReady } from '../utils/resilient';
 import { MentorTracker } from '../utils/mentor-cleanup';
 import type { EffectiveSkillFixture } from '../page-objects/chat.page';
 import type { Locator, Page } from '@playwright/test';
@@ -72,6 +89,19 @@ async function visibleSegmentTabLabels(dialog: Locator): Promise<string[]> {
   return dialog
     .locator('[role="tab"][aria-controls^="panel-"]:visible')
     .allTextContents();
+}
+
+/**
+ * SEGMENT-tab locator by exact label, resolved FROM the dialog (never the
+ * page) so it can only ever match inside the Edit Agent modal. The
+ * `[aria-controls^="panel-"]:visible` intersection excludes the category
+ * pills (which share `role="tab"` but own no `aria-controls`) and each
+ * segment's hidden responsive twin — mirrors journey 44's helper.
+ */
+function getTab(dialog: Locator, name: string): Locator {
+  return dialog
+    .getByRole('tab', { name, exact: true })
+    .and(dialog.locator('[aria-controls^="panel-"]:visible'));
 }
 
 /**
@@ -160,8 +190,12 @@ test.describe('Journey 67: Agent Skills — Edit Mentor Skills tab gating', () =
 
     await editMentorPage.open('Settings');
     await editMentorPage.navigateToTab('Skills');
-    await waitForPageReady(page);
 
+    // Capture the dialog once; every nested lookup below resolves from it
+    // (or from the dialog-scoped SkillsTab locators built on it).
+    const dialog = editMentorPage.dialog;
+
+    // Element-first readiness: the host copy rendering IS the wait.
     await expect(editMentorPage.skills.description).toBeVisible({
       timeout: 10_000,
     });
@@ -171,6 +205,20 @@ test.describe('Journey 67: Agent Skills — Edit Mentor Skills tab gating', () =
     await expect(editMentorPage.skills.infoBox).toContainText(
       /type \/ to see this agent's skills/i,
     );
+    // The SDK skills section (Agent Skills / Available Skills sub-tabs)
+    // mounted below the host copy.
+    await verifySkillsTabVisible(page);
+
+    // Ordering (moved here from journey 44 — the sandbox journey carries no
+    // skills assertions): Skills sits right after Prompts in the
+    // Configurations category. The description assert above proves the
+    // segment list rendered, so this non-retrying label read can't run
+    // against an empty list.
+    const configTabs = await visibleSegmentTabLabels(dialog);
+    const promptsIdx = configTabs.findIndex((t) => /prompts/i.test(t));
+    const skillsIdx = configTabs.findIndex((t) => /skills/i.test(t));
+    expect(promptsIdx).toBeGreaterThanOrEqual(0);
+    expect(skillsIdx).toBe(promptsIdx + 1);
 
     await editMentorPage.close();
   });
@@ -193,13 +241,24 @@ test.describe('Journey 67: Agent Skills — Edit Mentor Skills tab gating', () =
       template_mentor: null,
     });
     await page.reload({ waitUntil: 'domcontentloaded' });
-    await waitForPageReady(page);
+    // Element-first wait: the chat composer rendering proves the app
+    // re-hydrated after the reload — no fixed sleeps, no networkidle.
+    await expect(page.locator('#chat-input-textarea')).toBeVisible({
+      timeout: 30_000,
+    });
 
     await editMentorPage.open('Settings');
-    await waitForPageReady(page);
 
-    const configTabs = await visibleSegmentTabLabels(editMentorPage.dialog);
-    expect(configTabs.some((t) => /skills/i.test(t))).toBe(false);
+    // Capture the dialog once, then resolve everything from it. Prove the
+    // Configurations segment list actually rendered (Prompts is
+    // unconditionally present) BEFORE asserting absence — otherwise a
+    // "no Skills tab" check could pass vacuously against a list that
+    // simply hadn't mounted yet.
+    const dialog = editMentorPage.dialog;
+    await expect(getTab(dialog, 'Prompts')).toBeVisible({ timeout: 15_000 });
+    await expect(
+      dialog.getByRole('tab', { name: 'Skills', exact: true }),
+    ).toHaveCount(0);
 
     await editMentorPage.close();
   });
@@ -224,17 +283,223 @@ test.describe('Journey 67: Agent Skills — Edit Mentor Skills tab gating', () =
       template_mentor: 42,
     });
     await page.reload({ waitUntil: 'domcontentloaded' });
-    await waitForPageReady(page);
+    // Element-first wait — see ags-02.
+    await expect(page.locator('#chat-input-textarea')).toBeVisible({
+      timeout: 30_000,
+    });
 
     await editMentorPage.open('Settings');
     await editMentorPage.navigateToTab('Skills');
-    await waitForPageReady(page);
 
+    // The host copy rendering is the readiness signal.
     await expect(editMentorPage.skills.description).toBeVisible({
       timeout: 10_000,
     });
 
     await editMentorPage.close();
+  });
+});
+
+// ─── Skills section management (SDK AgentSkills component) ────────────────
+//
+// Moved out of journey 44 (feat/2215): Agent Skills is fully independent of
+// the sandbox, so its management flows live here with the rest of the
+// skills coverage. Everything inside the skills SECTION is driven through
+// the SDK's dedicated helpers (`@iblai/iblai-js/playwright`).
+
+test.describe('Journey 67: Agent Skills — skills section management', () => {
+  // Serial ON PURPOSE: create/edit/delete mutate the PLATFORM-WIDE skills
+  // catalog (shared across the whole tenant), so these mutations must not
+  // race each other in parallel workers. The toggle test only touches its
+  // own dedicated mentor's assignments, but keeping the whole describe
+  // serial keeps the isolation story simple.
+  test.describe.configure({ mode: 'serial' });
+
+  const tracker = new MentorTracker();
+
+  test.beforeEach(async ({ page, createMentorPage, editMentorPage }) => {
+    await navigateToMentorApp(page);
+    const isAdmin = await checkAdminStatus(page);
+    if (!isAdmin) {
+      test.skip(true, 'Skills management requires admin access');
+      return;
+    }
+
+    // Dedicated mentor per test — the toggle test mutates mentor-scoped
+    // skill assignments, so never share a mentor across tests.
+    await createMentorPage.openAndCreate();
+    const { mentorId } = await getPlatformContext(page);
+    tracker.add(mentorId);
+
+    await editMentorPage.open('Settings');
+    await editMentorPage.navigateToTab('Skills');
+    // Element-first readiness: the SDK section (with its sub-tabs) having
+    // mounted is the wait — no fixed sleeps, no networkidle.
+    await verifySkillsTabVisible(page);
+  });
+
+  test.afterAll(async ({ browser }, testInfo) => {
+    await tracker.deleteAll(browser, testInfo);
+  });
+
+  // ── ags-04: Toggle a skill on/off ────────────────────────────────────────
+
+  test('admin toggles a skill on then off and aria-checked flips back to the original state', async ({
+    page,
+    editMentorPage,
+  }) => {
+    // Capture the dialog once; nested lookups resolve from it so a switch
+    // elsewhere on the page can never be matched.
+    const dialog = editMentorPage.dialog;
+
+    try {
+      // Enable toggles live on the "Agent Skills" sub-tab (the agent's own
+      // attached skills).
+      await switchToAgentSkillsSubTab(page);
+
+      // Skip if this agent has no skills attached yet.
+      if ((await getSkillRowCount(page)) === 0) {
+        test.skip(
+          true,
+          'No skills attached to this agent — cannot test toggle flow',
+        );
+        return;
+      }
+
+      const firstToggle = dialog.getByRole('switch').first();
+      await expect(firstToggle).toBeVisible({ timeout: 10_000 });
+
+      const initialState =
+        (await firstToggle.getAttribute('aria-checked')) === 'true';
+
+      // Flip ON (or OFF if already ON)
+      await firstToggle.click();
+      await expect(firstToggle).toHaveAttribute(
+        'aria-checked',
+        initialState ? 'false' : 'true',
+        { timeout: 10_000 },
+      );
+
+      // Flip back to the original state
+      await firstToggle.click();
+      await expect(firstToggle).toHaveAttribute(
+        'aria-checked',
+        initialState ? 'true' : 'false',
+        { timeout: 10_000 },
+      );
+    } finally {
+      await editMentorPage.close();
+    }
+  });
+
+  // ── ags-05: Create → edit → delete a skill ───────────────────────────────
+
+  test('admin creates a new skill, edits its description, and deletes it', async ({
+    page,
+    editMentorPage,
+  }) => {
+    const dialog = editMentorPage.dialog;
+
+    const ts = Date.now();
+    const skillName = `e2e-test-skill-${ts}`;
+    const skillSlug = `e2e_test_skill_${ts}`;
+    const skillDescription = `E2E test skill created at ${ts}`;
+    const updatedDescription = `E2E updated description ${ts}`;
+
+    try {
+      // ── Create (SDK helper: opens the New Skill dialog, fills the form,
+      // waits for the toast + the row to land) ────────────────────────────
+      await createSkill(page, {
+        name: skillName,
+        slug: skillSlug,
+        description: skillDescription,
+        version: '1.0.0',
+        instruction: `Instruction for ${skillName}`,
+      });
+
+      // ── Edit (SDK helper: opens the Edit Skill dialog, patches the
+      // General fields, saves) ─────────────────────────────────────────────
+      await editSkill(page, skillName, { description: updatedDescription });
+
+      // The row survived the edit — resolved from the captured dialog.
+      await expect(dialog.getByText(skillName).first()).toBeVisible({
+        timeout: 10_000,
+      });
+
+      // Cleanup: delete the skill via its row menu.
+      await deleteSkill(page, skillName);
+    } finally {
+      // Best-effort final cleanup — if the delete above failed, try again.
+      try {
+        const leftover = dialog.getByText(skillName).first();
+        if (await leftover.isVisible().catch(() => false)) {
+          await deleteSkill(page, skillName);
+        }
+      } catch {
+        // Best-effort
+      }
+      await editMentorPage.close();
+    }
+  });
+});
+
+// ─── Non-admin: Skills tab hidden ──────────────────────────────────────────
+//
+// The Skills segment is ADMIN-only (`userTypes: [UserType.ADMIN]` in
+// `MENTOR_SEGMENTS`) — moved here from journey 44 with the rest of the
+// skills coverage. The composer `/` picker below is intentionally NOT
+// admin-gated; this is only about the Edit Mentor tab.
+
+test.describe('Journey 67: Agent Skills — non-admin gating', () => {
+  test('non-admin does not see the Skills tab in the Edit Mentor modal', async ({
+    nonadminPage,
+    nonadminEditMentorPage,
+  }) => {
+    await navigateToMentorApp(nonadminPage);
+
+    // Non-admin normally cannot open the edit mentor modal at all (the
+    // Settings menu item is hidden from the mentor dropdown). The mentor →
+    // agent rename moved the dropdown button's accessible name; accept
+    // either label so the test is resilient to further renames.
+    const dropdown = nonadminPage.getByRole('button', {
+      name: /^Selected (agent|mentor) dropdown button$/,
+    });
+    await expect(dropdown).toBeVisible({ timeout: 15_000 });
+    await dropdown.click();
+
+    const modifyItem = nonadminPage
+      .getByRole('menuitem', { name: /modify/i })
+      .or(nonadminPage.getByRole('menuitem', { name: /settings/i }).first());
+
+    let menuItemVisible = false;
+    try {
+      await modifyItem.waitFor({ state: 'visible', timeout: 3_000 });
+      menuItemVisible = true;
+    } catch {
+      menuItemVisible = false;
+    }
+
+    if (!menuItemVisible) {
+      // Non-admin cannot open the edit dialog at all — the Skills tab is
+      // definitively not reachable. Test passes.
+      await nonadminPage.keyboard.press('Escape');
+      return;
+    }
+
+    // If (in some env) non-admin can open the dialog, verify the tab is
+    // absent — dialog captured first, nested lookups scoped to it.
+    await modifyItem.click();
+    const dialog = nonadminEditMentorPage.dialog;
+    await expect(dialog).toBeVisible({ timeout: 15_000 });
+
+    await expect(
+      dialog.getByRole('tablist').getByRole('tab', {
+        name: 'Skills',
+        exact: true,
+      }),
+    ).toHaveCount(0, { timeout: 10_000 });
+
+    await nonadminEditMentorPage.close();
   });
 });
 
@@ -256,7 +521,6 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
   }) => {
     await chatPage.mockEffectiveSkills([]);
     await navigateToMentorApp(page);
-    await waitForPageReady(page);
 
     const composer = chatPage.getComposerTextarea();
     await expect(composer).toBeVisible({ timeout: 15_000 });
@@ -276,7 +540,6 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
   }) => {
     await chatPage.mockEffectiveSkills(SLASH_SKILLS);
     await navigateToMentorApp(page);
-    await waitForPageReady(page);
 
     const combobox = page.getByRole('combobox', { name: 'Ask anything' });
     await expect(combobox).toBeVisible({ timeout: 15_000 });
@@ -290,9 +553,11 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
     await expect(chatPage.getSlashSkillOption('Web Research')).toBeVisible();
     await expect(chatPage.getSlashSkillOption('Code Review')).toBeVisible();
     await expect(chatPage.getSlashSkillOption('Disabled Skill')).toHaveCount(0);
+    // Assignment rows carry no descriptions — options are name + slug only
+    // (the platform-wide catalog is deliberately not fetched from chat).
     await expect(
       chatPage.slashSkillPicker.getByText('Research a topic on the open web.'),
-    ).toBeVisible();
+    ).toHaveCount(0);
   });
 
   // ── slash-03: Filtering narrows by name and by slug ──────────────────────
@@ -303,9 +568,9 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
   }) => {
     await chatPage.mockEffectiveSkills(SLASH_SKILLS);
     await navigateToMentorApp(page);
-    await waitForPageReady(page);
 
     const composer = chatPage.getComposerTextarea();
+    await expect(composer).toBeVisible({ timeout: 15_000 });
 
     await composer.fill('/web');
     await expect(chatPage.getSlashSkillOption('Web Research')).toBeVisible();
@@ -329,9 +594,9 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
   }) => {
     await chatPage.mockEffectiveSkills(SLASH_SKILLS);
     await navigateToMentorApp(page);
-    await waitForPageReady(page);
 
     const composer = chatPage.getComposerTextarea();
+    await expect(composer).toBeVisible({ timeout: 15_000 });
     await composer.fill('/');
     await expect(chatPage.slashSkillPicker).toBeVisible({ timeout: 10_000 });
 
@@ -370,9 +635,9 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
   }) => {
     await chatPage.mockEffectiveSkills(SLASH_SKILLS);
     await navigateToMentorApp(page);
-    await waitForPageReady(page);
 
     const composer = chatPage.getComposerTextarea();
+    await expect(composer).toBeVisible({ timeout: 15_000 });
     await composer.fill('/');
     await expect(chatPage.slashSkillPicker).toBeVisible({ timeout: 10_000 });
 
@@ -395,9 +660,9 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
   }) => {
     await chatPage.mockEffectiveSkills(SLASH_SKILLS);
     await navigateToMentorApp(page);
-    await waitForPageReady(page);
 
     const composer = chatPage.getComposerTextarea();
+    await expect(composer).toBeVisible({ timeout: 15_000 });
     await composer.fill('/');
     await expect(chatPage.slashSkillPicker).toBeVisible({ timeout: 10_000 });
 
@@ -416,9 +681,9 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
   }) => {
     await chatPage.mockEffectiveSkills(SLASH_SKILLS);
     await navigateToMentorApp(page);
-    await waitForPageReady(page);
 
     const composer = chatPage.getComposerTextarea();
+    await expect(composer).toBeVisible({ timeout: 15_000 });
     await composer.fill('/');
     await expect(chatPage.slashSkillPicker).toBeVisible({ timeout: 10_000 });
 
@@ -443,9 +708,9 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
   }) => {
     await chatPage.mockEffectiveSkills(SLASH_SKILLS);
     await navigateToMentorApp(page);
-    await waitForPageReady(page);
 
     const composer = chatPage.getComposerTextarea();
+    await expect(composer).toBeVisible({ timeout: 15_000 });
     await composer.fill('/hello world');
     await expect(chatPage.slashSkillPicker).not.toBeVisible();
   });
@@ -458,9 +723,9 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
   }) => {
     await chatPage.mockEffectiveSkills(SLASH_SKILLS);
     await navigateToMentorApp(page);
-    await waitForPageReady(page);
 
     const composer = chatPage.getComposerTextarea();
+    await expect(composer).toBeVisible({ timeout: 15_000 });
 
     // Complete a token, remove it with one Backspace (caret ends up after
     // the trailing space, which the atomic delete swallows too).
@@ -491,9 +756,9 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
   }) => {
     await chatPage.mockEffectiveSkills(SLASH_SKILLS);
     await navigateToMentorApp(page);
-    await waitForPageReady(page);
 
     const composer = chatPage.getComposerTextarea();
+    await expect(composer).toBeVisible({ timeout: 15_000 });
     await composer.fill('/');
     await expect(chatPage.slashSkillPicker).toBeVisible({ timeout: 10_000 });
     await composer.press('Enter');
@@ -514,9 +779,9 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
   }) => {
     await chatPage.mockEffectiveSkills(SLASH_SKILLS);
     await navigateToMentorApp(page);
-    await waitForPageReady(page);
 
     const composer = chatPage.getComposerTextarea();
+    await expect(composer).toBeVisible({ timeout: 15_000 });
     await composer.fill('say /web-research please');
     // Put the caret right after the token (index 17), then one Backspace.
     await composer.evaluate((el) => {
@@ -535,9 +800,9 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
   }) => {
     await chatPage.mockEffectiveSkills(SLASH_SKILLS);
     await navigateToMentorApp(page);
-    await waitForPageReady(page);
 
     const composer = chatPage.getComposerTextarea();
+    await expect(composer).toBeVisible({ timeout: 15_000 });
     await composer.fill('/web-research then /code-review after');
 
     await expect(chatPage.skillTokenHighlights).toHaveCount(2);
@@ -561,9 +826,9 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
   }) => {
     await chatPage.mockEffectiveSkills(SLASH_SKILLS);
     await navigateToMentorApp(page);
-    await waitForPageReady(page);
 
     const composer = chatPage.getComposerTextarea();
+    await expect(composer).toBeVisible({ timeout: 15_000 });
     await composer.fill('explain this /web');
     await expect(chatPage.slashSkillPicker).toBeVisible({ timeout: 10_000 });
 
@@ -592,18 +857,21 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
   }) => {
     await chatPage.mockEffectiveSkills(SLASH_SKILLS);
     await navigateToMentorApp(page);
-    await waitForPageReady(page);
 
     const composer = chatPage.getComposerTextarea();
+    await expect(composer).toBeVisible({ timeout: 15_000 });
     await expect(chatPage.skillsMenuTrigger).toBeVisible({ timeout: 15_000 });
     await expect(chatPage.skillsMenuTrigger).toContainText('Skills');
 
     // Arm via the dropdown → token appears highlighted, button shows name.
-    await chatPage.skillsMenuTrigger.click();
+    await chatPage.openSkillsMenu();
     const webItem = chatPage.getSkillsMenuItem('web-research');
     await expect(webItem).toBeVisible();
     await expect(webItem).toContainText('Web Research');
-    await expect(webItem).toContainText('Research a topic on the open web.');
+    // Name only — descriptions live in the `/` picker, not this menu.
+    await expect(webItem).not.toContainText(
+      'Research a topic on the open web.',
+    );
     // Disabled skills never reach the menu.
     await expect(chatPage.getSkillsMenuItem('disabled-skill')).toHaveCount(0);
     await webItem.click();
@@ -613,7 +881,7 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
     await expect(chatPage.skillsMenuTrigger).toContainText('Web Research');
 
     // Toggle the armed skill off from the dropdown → token removed.
-    await chatPage.skillsMenuTrigger.click();
+    await chatPage.openSkillsMenu();
     await chatPage.getSkillsMenuItem('web-research').click();
     await expect(composer).toHaveValue('');
     await expect(chatPage.skillsMenuTrigger).toContainText('Skills');
@@ -623,25 +891,45 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
     await chatPage.getSlashSkillOption('Code Review').click();
     await expect(composer).toHaveValue('/code-review ');
     await expect(chatPage.skillsMenuTrigger).toContainText('Code Review');
+
+    // Single selection: arming another skill from the dropdown REPLACES the
+    // currently-armed token (its highlight goes with it), inserting at the
+    // caret with context-aware spacing.
+    await chatPage.openSkillsMenu();
+    // Rows show the slash-invocation form next to the name.
+    await expect(chatPage.getSkillsMenuItem('web-research')).toContainText(
+      '/web-research',
+    );
+    await chatPage.getSkillsMenuItem('web-research').click();
+    await expect(composer).toHaveValue('/web-research ');
+    await expect(chatPage.skillTokenHighlights).toHaveCount(1);
+    await expect(chatPage.skillsMenuTrigger).toContainText('Web Research');
+
+    // The active pill carries the same ✕ as other tool pills — clicking it
+    // disarms without opening the menu. (Locator is scoped to the trigger
+    // it lives in, so it can never resolve ambiguously.)
+    await chatPage.skillsMenuClear.click();
+    await expect(composer).toHaveValue('');
+    await expect(chatPage.skillTokenHighlights).toHaveCount(0);
+    await expect(chatPage.skillsMenuTrigger).toContainText('Skills');
   });
 
   // ── slash-15: NON-ADMIN uses the picker and gets an AI reply ─────────────
   //
-  // The `/` picker is available to students, not just admins. This runs in
-  // the non-admin browser context under the REALISTIC student permission
-  // shape (`mockStudentSkills`): the assignments endpoint 403s and only the
-  // student-readable catalog answers, with the fixtures as mentor-private
-  // skills. The invocation is a prompt hint, so after selecting a skill and
-  // sending, the agent must reply like any other message (live LLM round
-  // trip — same pattern as journey 02's non-admin chat checkpoints).
+  // The `/` picker is available to students, not just admins — PROVIDED the
+  // backend lets them read the assignments endpoint (the composer's only
+  // skill source; a 403 degrades to an inactive picker). `mockStudentSkills`
+  // simulates that granted state. The invocation is a prompt hint, so after
+  // selecting a skill and sending, the agent must reply like any other
+  // message (live LLM round trip — same pattern as journey 02's non-admin
+  // chat checkpoints).
 
-  test('non-admin: "/" offers skills despite the admin-only assignments 403, and the sent invocation gets a reply', async ({
+  test('non-admin: "/" offers the mentor\'s skills and the sent invocation gets a reply', async ({
     nonadminPage,
     nonadminChatPage,
   }) => {
     await nonadminChatPage.mockStudentSkills(SLASH_SKILLS);
     await navigateToMentorApp(nonadminPage);
-    await waitForPageReady(nonadminPage);
 
     const composer = nonadminChatPage.getComposerTextarea();
     await expect(composer).toBeVisible({ timeout: 15_000 });
@@ -671,12 +959,13 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
 
   // ── slash-13: Loading popover while the skill list is still resolving ────
   //
-  // The skills fetches (assignments + catalog) fire eagerly on composer
-  // mount. If the user types a `/` token before they settle, a "Loading
-  // skills…" popover (data-testid="slash-skill-loading", role=status)
-  // renders in the picker's anchor position, then yields to the real picker
-  // once the responses land. The routes below HOLD the responses until the
-  // test releases them, making the in-flight window deterministic.
+  // The assignments fetch (the composer's only skill source) fires eagerly
+  // on composer mount. If the user types a `/` token before it settles, a
+  // "Loading skills…" popover (data-testid="slash-skill-loading",
+  // role=status) renders in the picker's anchor position, then yields to
+  // the real picker once the response lands. The route below HOLDS the
+  // response until the test releases it, making the in-flight window
+  // deterministic.
 
   test('typing "/" while skills are still loading shows the loading popover, which yields to the picker', async ({
     page,
@@ -704,20 +993,6 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
         });
       },
     );
-    await page.route(
-      (url) => url.pathname.includes('/agent-skills/'),
-      async (route) => {
-        await gate;
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify(
-            SLASH_SKILLS.map((skill) => ({ ...skill, mentor: null })),
-          ),
-        });
-      },
-    );
-
     await navigateToMentorApp(page);
     const composer = chatPage.getComposerTextarea();
     await expect(composer).toBeVisible({ timeout: 15_000 });

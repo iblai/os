@@ -1544,6 +1544,7 @@ describe('InsideButtons', () => {
           skills={skills}
           activeSkillSlugs={new Set(['code-review'])}
           onToggleSkill={vi.fn()}
+          onClearSkills={vi.fn()}
         />,
       );
       const trigger = screen.getByTestId('skills-menu-trigger');
@@ -1552,7 +1553,85 @@ describe('InsideButtons', () => {
       expect(trigger.className).toContain('text-[#38A1E5]');
     });
 
-    it('lists skills with descriptions and calls onToggleSkill on selection', async () => {
+    it('active pill shows the ✕ (like other tools); clicking it clears without opening the menu', () => {
+      const onClearSkills = vi.fn();
+      render(
+        <InsideButtons
+          {...defaultProps}
+          skills={skills}
+          activeSkillSlugs={new Set(['code-review'])}
+          onToggleSkill={vi.fn()}
+          onClearSkills={onClearSkills}
+        />,
+      );
+
+      const clear = screen.getByTestId('skills-menu-clear');
+      fireEvent.pointerDown(clear);
+      fireEvent.click(clear);
+
+      expect(onClearSkills).toHaveBeenCalledTimes(1);
+      // The menu did not open.
+      expect(
+        screen.queryByTestId('skills-menu-item-code-review'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('scrolling the menu near the bottom requests the next skills page', async () => {
+      const onLoadMoreSkills = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <InsideButtons
+          {...defaultProps}
+          skills={skills}
+          activeSkillSlugs={new Set()}
+          onToggleSkill={vi.fn()}
+          hasMoreSkills
+          onLoadMoreSkills={onLoadMoreSkills}
+        />,
+      );
+
+      await user.click(screen.getByTestId('skills-menu-trigger'));
+      const content = await screen.findByTestId('skills-menu-content');
+      // jsdom reports zero scroll metrics, so any scroll counts as bottom.
+      fireEvent.scroll(content);
+
+      expect(onLoadMoreSkills).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows a spinner row while a later skills page is in flight', async () => {
+      const user = userEvent.setup();
+      render(
+        <InsideButtons
+          {...defaultProps}
+          skills={skills}
+          activeSkillSlugs={new Set()}
+          onToggleSkill={vi.fn()}
+          hasMoreSkills
+          isFetchingMoreSkills
+          onLoadMoreSkills={vi.fn()}
+        />,
+      );
+
+      await user.click(screen.getByTestId('skills-menu-trigger'));
+      expect(
+        await screen.findByTestId('skills-menu-loading-more'),
+      ).toBeInTheDocument();
+    });
+
+    it('idle pill has no ✕', () => {
+      render(
+        <InsideButtons
+          {...defaultProps}
+          skills={skills}
+          activeSkillSlugs={new Set()}
+          onToggleSkill={vi.fn()}
+          onClearSkills={vi.fn()}
+        />,
+      );
+      expect(screen.queryByTestId('skills-menu-clear')).not.toBeInTheDocument();
+    });
+
+    it('lists skills (name + /slug, no description) and calls onToggleSkill on selection', async () => {
       const onToggleSkill = vi.fn();
       const user = userEvent.setup();
       render(
@@ -1570,7 +1649,14 @@ describe('InsideButtons', () => {
         'skills-menu-item-web-research',
       );
       expect(webItem).toHaveTextContent('Web Research');
-      expect(webItem).toHaveTextContent('Research a topic on the open web.');
+      // Rows show the slash-invocation form next to the name (mirrors the
+      // `/` picker) …
+      expect(webItem).toHaveTextContent('/web-research');
+      // … but no descriptions — those stay in the `/` picker, which has
+      // room for them.
+      expect(webItem).not.toHaveTextContent(
+        'Research a topic on the open web.',
+      );
       expect(
         screen.getByTestId('skills-menu-item-code-review'),
       ).toBeInTheDocument();

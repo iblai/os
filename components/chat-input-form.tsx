@@ -2,7 +2,7 @@
 
 import type React from 'react';
 
-import { useState, useRef, useMemo, ChangeEvent } from 'react';
+import { useState, useRef, useMemo, useEffect, ChangeEvent } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { format } from 'date-fns';
 import { useMediaQuery } from 'react-responsive';
@@ -58,9 +58,9 @@ import {
 } from '@iblai/iblai-js/web-containers';
 import {
   useGetMentorSkillAssignmentsQuery,
-  useGetAgentSkillsQuery,
   resolveEffectiveAgentSkills,
   type EffectiveAgentSkill,
+  type MentorSkillAssignment,
 } from '@iblai/iblai-js/data-layer';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 
@@ -68,6 +68,14 @@ import { TenantKeyMentorIdParams } from '@/lib/types';
 // or non-numeric, so a misconfigured env value can't make a 0-char threshold
 // convert every paste into an attachment. Mirrors the config default.
 const DEFAULT_MAX_CHARACTERS_TO_COPY = 2000;
+
+// Skills load lazily, one page per scroll-to-bottom of the picker/dropdown.
+const SKILLS_PAGE_SIZE = 20;
+
+// The SDK types query data as `list | paginated envelope`; runtime is
+// normalized to a list, but unwrap defensively either way.
+const asList = <T,>(data: T[] | { results?: T[] } | undefined): T[] =>
+  Array.isArray(data) ? data : (data?.results ?? []);
 
 const PromptGalleryModal = dynamic(
   () =>
@@ -232,53 +240,95 @@ export function ChatInputForm({
     setSlashContext(null);
   };
 
-  // `/` skill picker (Base Agent mentors) — available to admins AND
-  // students. The mentor's effective skill set is resolved client-side from
-  // two endpoints via the SDK's `resolveEffectiveAgentSkills`, mirroring the
-  // backend's own resolution:
-  //   - skill catalog (`GET .../agent-skills/`): admin- and student-readable;
-  //     supplies the mentor-private skills (attached by ownership).
-  //   - skill assignments (`GET .../agents/{uuid}/skills/`): platform-admin
-  //     only. For students it 403s, which is treated as "no assignment rows"
-  //     rather than an error — the picker still offers the catalog-resolved
-  //     skills instead of going dark.
+  // `/` skill picker (Base Agent mentors). The skill list comes from ONE
+  // endpoint: the mentor's skill assignments
+  // (`GET .../agents/{uuid}/skills/`). The platform catalog
+  // (`GET .../agent-skills/`) is deliberately NOT fetched — it lists every
+  // skill on the platform, not this mentor's. Known trade-offs of
+  // assignments-only until a mentor-scoped skills read exists backend-side:
+  // no mentor-private skills (attached by ownership, absent from assignment
+  // rows), no descriptions in the picker (assignment rows carry only
+  // name/slug/enabled), and users the endpoint 403s for (students today)
+  // get no picker. Errors degrade to an inactive picker.
   const mentorUniqueId = mentorSettings?.data?.mentorUniqueId;
   const skillsQuerySkipped = !mentorUniqueId || !tenantKey || !username;
-  const {
-    data: skillAssignments,
-    isLoading: assignmentsLoading,
-    isError: assignmentsError,
-  } = useGetMentorSkillAssignmentsQuery(
-    { org: tenantKey, mentorUniqueId: mentorUniqueId ?? '', limit: 100 },
-    { skip: skillsQuerySkipped },
-  );
-  const { data: skillCatalog, isLoading: catalogLoading } =
-    useGetAgentSkillsQuery(
-      { org: tenantKey, limit: 100 },
+
+  // Paged fetching, 20 at a time, matching the SDK picker's lazy-load
+  // contract: pages accumulate as the user scrolls the picker/dropdown near
+  // their bottoms. RTK caches each page by its arg, so revisits are free.
+  const [skillsPage, setSkillsPage] = useState(0);
+  const [loadedAssignments, setLoadedAssignments] = useState<
+    MentorSkillAssignment[]
+  >([]);
+  const [hasMoreSkills, setHasMoreSkills] = useState(false);
+
+  // Switching mentors restarts the pagination from the first page.
+  useEffect(() => {
+    setSkillsPage(0);
+    setLoadedAssignments([]);
+    setHasMoreSkills(false);
+  }, [mentorUniqueId]);
+
+  const { data: assignmentsPageData, isFetching: skillsPageFetching } =
+    useGetMentorSkillAssignmentsQuery(
+      {
+        org: tenantKey,
+        mentorUniqueId: mentorUniqueId ?? '',
+        limit: SKILLS_PAGE_SIZE,
+        offset: skillsPage * SKILLS_PAGE_SIZE,
+      },
       { skip: skillsQuerySkipped },
     );
 
-  // True while the skill list is still being resolved. Drives the "loading"
-  // popover so a user who types `/` before the fetches settle sees feedback
-  // instead of nothing. Skipped queries report isLoading false, so this
-  // stays false for anonymous visitors.
-  const slashSkillsLoading = assignmentsLoading || catalogLoading;
+  useEffect(() => {
+    if (!assignmentsPageData) return;
+    const rows = asList(assignmentsPageData);
+    // The paginated envelope's count is authoritative when present; a full
+    // page is the fallback signal that another page may exist.
+    const total = Array.isArray(assignmentsPageData)
+      ? undefined
+      : (assignmentsPageData as { count?: number }).count;
+    setLoadedAssignments((previous) => {
+      const next =
+        skillsPage === 0
+          ? rows
+          : [
+              ...previous.filter(
+                (row) => !rows.some((incoming) => incoming.id === row.id),
+              ),
+              ...rows,
+            ];
+      // Referential stability: bail out when the merged content is
+      // unchanged so an unstable `data` reference can't rerender-loop.
+      const unchanged =
+        next.length === previous.length &&
+        next.every((row, index) => row.id === previous[index]?.id);
+      return unchanged ? previous : next;
+    });
+    setHasMoreSkills(
+      total !== undefined
+        ? (skillsPage + 1) * SKILLS_PAGE_SIZE < total
+        : rows.length === SKILLS_PAGE_SIZE,
+    );
+  }, [assignmentsPageData, skillsPage]);
+
+  const loadMoreSkills = () => {
+    if (hasMoreSkills && !skillsPageFetching) {
+      setSkillsPage((page) => page + 1);
+    }
+  };
+
+  const slashSkillsLoading = skillsPageFetching && skillsPage === 0;
+  const isFetchingMoreSkills = skillsPageFetching && skillsPage > 0;
+
   const slashSkills = useMemo(() => {
-    // The SDK types query data as `list | paginated envelope`; runtime is
-    // normalized to a list, but unwrap defensively either way.
-    const asList = <T,>(data: T[] | { results?: T[] } | undefined): T[] =>
-      Array.isArray(data) ? data : (data?.results ?? []);
-    // Students can't read assignments (403) — degrade to catalog-only.
-    const assignments = assignmentsError ? [] : skillAssignments;
-    if (assignments && skillCatalog && mentorUniqueId) {
-      return resolveEffectiveAgentSkills(
-        asList(skillCatalog),
-        asList(assignments),
-        mentorUniqueId,
-      );
+    if (loadedAssignments.length && mentorUniqueId) {
+      // Empty catalog: the resolver falls back to the assignment rows'
+      // skill_name/skill_slug and the assignment's own enabled flag.
+      return resolveEffectiveAgentSkills([], loadedAssignments, mentorUniqueId);
     }
     return [];
-  }, [skillAssignments, assignmentsError, skillCatalog, mentorUniqueId]);
+  }, [loadedAssignments, mentorUniqueId]);
 
   // Slugs eligible for in-place token highlighting and atomic deletion.
   const skillSlugSet = useMemo(
@@ -356,10 +406,43 @@ export function ChatInputForm({
     e: React.KeyboardEvent<HTMLTextAreaElement>,
   ): boolean => {
     if (slashPicker.handleKeyDown(e)) return true;
+    if (skillSlugSet.size === 0) return false;
+
+    // Plain ←/→ treat a skill token as ONE unit: the caret jumps across the
+    // whole token instead of stepping through its characters, so the pill
+    // behaves like an atomic chip. Modified arrows (shift-select, word/line
+    // jumps) keep their native behavior.
     if (
-      (e.key !== 'Backspace' && e.key !== 'Delete') ||
-      skillSlugSet.size === 0
+      (e.key === 'ArrowLeft' || e.key === 'ArrowRight') &&
+      !e.shiftKey &&
+      !e.altKey &&
+      !e.metaKey &&
+      !e.ctrlKey
     ) {
+      const el = e.currentTarget;
+      const caret = el.selectionStart ?? 0;
+      if (caret !== (el.selectionEnd ?? caret)) return false;
+      const tokenRe = /(^|\s)(\/[\w-]+)(?=\s|$)/g;
+      let match: RegExpExecArray | null;
+      while ((match = tokenRe.exec(inputValue))) {
+        if (!skillSlugSet.has(match[2].slice(1))) continue;
+        const start = match.index + match[1].length;
+        const end = start + match[2].length;
+        if (e.key === 'ArrowLeft' && caret > start && caret <= end) {
+          e.preventDefault();
+          el.setSelectionRange(start, start);
+          return true;
+        }
+        if (e.key === 'ArrowRight' && caret >= start && caret < end) {
+          e.preventDefault();
+          el.setSelectionRange(end, end);
+          return true;
+        }
+      }
+      return false;
+    }
+
+    if (e.key !== 'Backspace' && e.key !== 'Delete') {
       return false;
     }
     const el = e.currentTarget;
@@ -431,12 +514,24 @@ export function ChatInputForm({
             ? tokenStart - 1
             : tokenStart;
         const pillEnd = inputValue[tokenEnd] === ' ' ? tokenEnd + 1 : tokenEnd;
+        // A side with no boundary space (token at the very start/end of the
+        // text) gets real padding, cancelled by an equal negative margin so
+        // no glyph moves. Safe exactly there: the bleed lands in the
+        // textarea's own padding / trailing emptiness, never on characters —
+        // and it matches the ~4px a space-side provides, so both sides of
+        // the pill always read as equal padding.
+        const hasLeadingSpace = pillStart < tokenStart;
+        const hasTrailingSpace = pillEnd > tokenEnd;
         segments.push(inputValue.slice(last, pillStart));
         segments.push(
           <span
             key={tokenStart}
             data-testid="skill-token-highlight"
-            className="rounded-md bg-[#F5F8FF] box-decoration-clone py-1 text-[#38A1E5] ring-1 ring-[#D0E0FF] ring-inset"
+            className={cn(
+              'rounded-md bg-[#F5F8FF] box-decoration-clone py-1 text-[#38A1E5] ring-1 ring-[#D0E0FF] ring-inset',
+              !hasLeadingSpace && '-ml-1 pl-1',
+              !hasTrailingSpace && '-mr-1 pr-1',
+            )}
           >
             {inputValue.slice(pillStart, pillEnd)}
           </span>,
@@ -469,16 +564,92 @@ export function ChatInputForm({
   // to the message, or remove every occurrence of the token if it is
   // already armed. Both paths write the composer text, which is the single
   // source of truth the picker, highlight and dropdown all derive from.
-  const toggleSkillToken = (skill: EffectiveAgentSkill) => {
-    if (activeSkillSlugs.has(skill.slug)) {
+  // Also swallows ONE adjacent separator space (backtracks when the token
+  // sits mid-sentence) so removal never leaves a dangling space behind.
+  const stripSkillToken = (text: string, slug: string): string =>
+    text.replace(
+      new RegExp(
+        String.raw`(?:^|\s)/${slug.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} ?(?=\s|$)`,
+        'g',
+      ),
+      '',
+    );
+
+  /**
+   * Removes every armed `/slug` token from `text` while keeping a caret
+   * position meaningful: offsets the caret left past each removal that
+   * happened before it, so a subsequent insert lands where the user's
+   * cursor actually was.
+   */
+  const stripArmedTokens = (
+    text: string,
+    caret: number,
+  ): { text: string; caret: number } => {
+    let result = text;
+    let pos = caret;
+    for (const armedSlug of activeSkillSlugs) {
       const tokenRe = new RegExp(
-        String.raw`(?:^|\s)/${skill.slug.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=\s|$)`,
+        String.raw`(?:^|\s)/${armedSlug.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} ?(?=\s|$)`,
         'g',
       );
-      setInputValue(inputValue.replace(tokenRe, '').replace(/^\s+/, ''));
-    } else {
-      setInputValue(`/${skill.slug} ${inputValue}`);
+      let match: RegExpExecArray | null;
+      while ((match = tokenRe.exec(result))) {
+        const start = match.index;
+        const length = match[0].length;
+        result = result.slice(0, start) + result.slice(start + length);
+        if (pos > start) pos = Math.max(start, pos - length);
+        tokenRe.lastIndex = start;
+      }
     }
+    const leadingWhitespace = /^\s+/.exec(result)?.[0].length ?? 0;
+    if (leadingWhitespace) {
+      result = result.slice(leadingWhitespace);
+      pos = Math.max(0, pos - leadingWhitespace);
+    }
+    return { text: result, caret: Math.min(pos, result.length) };
+  };
+
+  const toggleSkillToken = (skill: EffectiveAgentSkill) => {
+    if (activeSkillSlugs.has(skill.slug)) {
+      setInputValue(
+        stripSkillToken(inputValue, skill.slug).replace(/^\s+/, ''),
+      );
+      return;
+    }
+    // Arm at the CARET, not at the start of the message. The textarea keeps
+    // its selection while focus moves to the dropdown, so read the caret off
+    // the element; fall back to end-of-text when it isn't mounted. Single
+    // selection: any currently-armed token is stripped first (caret
+    // adjusted), then the token is inserted with a space on exactly the
+    // sides that touch non-whitespace text — never doubled, never missing.
+    const textareaEl = document.getElementById(
+      'chat-input-textarea',
+    ) as HTMLTextAreaElement | null;
+    const rawCaret = textareaEl?.selectionStart ?? inputValue.length;
+    const { text, caret } = stripArmedTokens(inputValue, rawCaret);
+    const before = text.slice(0, caret);
+    const after = text.slice(caret);
+    const leftSeparator = before && !/\s$/.test(before) ? ' ' : '';
+    const rightSeparator = !after || !/^\s/.test(after) ? ' ' : '';
+    const token = `/${skill.slug}`;
+    setInputValue(`${before}${leftSeparator}${token}${rightSeparator}${after}`);
+    const nextCaret =
+      caret + leftSeparator.length + token.length + rightSeparator.length;
+    requestAnimationFrame(() => {
+      textareaEl?.focus();
+      textareaEl?.setSelectionRange(nextCaret, nextCaret);
+    });
+  };
+
+  // The active Skills pill's ✕ — strips every armed `/slug` token (and its
+  // highlight) from the composer in one go, mirroring the other tool pills'
+  // deactivate affordance.
+  const clearSkillTokens = () => {
+    let next = inputValue;
+    for (const armedSlug of activeSkillSlugs) {
+      next = stripSkillToken(next, armedSlug);
+    }
+    setInputValue(next.replace(/^\s+/, ''));
   };
 
   const enabledSlashSkills = useMemo(
@@ -673,6 +844,9 @@ export function ChatInputForm({
             listboxId={slashPicker.listboxId}
             onSelect={slashPicker.selectSkill}
             onActiveIndexChange={slashPicker.setActiveIndex}
+            isFetchingMore={isFetchingMoreSkills}
+            hasMore={hasMoreSkills}
+            onLoadMore={loadMoreSkills}
           />
         )}
         {showSlashSkillsLoading && (
@@ -824,6 +998,10 @@ export function ChatInputForm({
                   skills={enabledSlashSkills}
                   activeSkillSlugs={activeSkillSlugs}
                   onToggleSkill={toggleSkillToken}
+                  onClearSkills={clearSkillTokens}
+                  hasMoreSkills={hasMoreSkills}
+                  isFetchingMoreSkills={isFetchingMoreSkills}
+                  onLoadMoreSkills={loadMoreSkills}
                 />
               )}
 

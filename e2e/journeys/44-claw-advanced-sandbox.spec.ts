@@ -5,10 +5,7 @@
  * the Edit Mentor modal:
  *
  *   Sandbox tab   — "Dedicated sandbox" capability toggle (in-tab)
- *   Tab visibility — Sandbox tab is ALWAYS visible to admins; Skills tab is
- *                    always visible to admins ON BASE AGENT MENTORS (the
- *                    only mentor type `CreateMentorPage`'s UI can produce —
- *                    see the feat/2215 note below)
+ *   Tab visibility — Sandbox tab is ALWAYS visible to admins
  *   Prompts tab   — "Agent Configuration" section
  *
  * ── Capability-gate refactor ─────────────────────────────────────────────
@@ -31,33 +28,19 @@
  * Connect, Edit, Delete) is not a supported flow while `data-enabled="false"`
  * — every mutation test below turns the capability on first.
  *
- * The Skills top-level tab was previously gated on
- * `enable_claw && clawConfigExists` (BOTH the capability on AND a wired
- * ClawMentorConfig); it is now unconditionally mounted with respect to the
- * sandbox. feat/2040 went further and made the Skills CONTENT fully
- * independent of the sandbox too — the SDK's `AgentSkills` component always
- * renders the real skills UI (heading, info box, "New Skill" action), never
- * a "connect a sandbox" gate, whether or not a `ClawMentorConfig` is wired.
- *
  * Because tab visibility is no longer coupled to `enable_claw` at all, this
  * journey no longer waits for tabs to appear/disappear — it asserts the
  * capability toggle's effect on the GATED CONTENT (`data-enabled`) instead.
  *
- * feat/2215 (Agent Skills) added an ORTHOGONAL gate on top of the above: the
- * Skills segment is now also conditioned on `flags.isBaseAgent`
- * (`hooks/use-mentor-segments.ts` → `resolveIsBaseAgentMentor`) — Agent
- * Skills only apply to Base Agent mentors. Every mentor this journey creates
- * goes through `CreateMentorPage`, whose UI has no agent-type picker and
- * only ever produces Base Agent mentors, so `isBaseAgent` is always true
- * here and every "Skills tab visible" assertion below is unaffected. The
- * mentor-type gate itself (hidden for non-base-agent mentors, fails OPEN
- * when the type can't be determined) is covered separately in journey 67
- * (`e2e/journeys/67-agent-skills.spec.ts`), which mocks the mentor-settings
- * response since no UI path here can produce a non-base-agent mentor.
+ * NOTE: Agent Skills is fully INDEPENDENT of the sandbox (feat/2040 +
+ * feat/2215) and is covered exclusively by journey 67
+ * (`e2e/journeys/67-agent-skills.spec.ts`) — the Skills tab, its content,
+ * and its management flows are deliberately not referenced anywhere in this
+ * journey.
  *
- * Non-admin users must not see the Sandbox or Skills tabs regardless of
- * claw state (those segments remain ADMIN-only in use-mentor-segments.ts —
- * unaffected by this refactor).
+ * Non-admin users must not see the Sandbox tab regardless of claw state
+ * (the segment remains ADMIN-only in use-mentor-segments.ts — unaffected by
+ * this refactor).
  */
 
 import { test, expect } from '../fixtures/mentor-test';
@@ -69,7 +52,6 @@ import {
 import { waitForPageReady } from '../utils/resilient';
 import { MentorTracker } from '../utils/mentor-cleanup';
 import { SandboxTab } from '../page-objects/edit-mentor/sandbox.tab';
-import { SkillsTab } from '../page-objects/edit-mentor/skills.tab';
 import type { Locator } from '@playwright/test';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -120,9 +102,9 @@ test.describe('Journey 44: CLAW Advanced Sandbox', () => {
       return;
     }
 
-    // Create a fresh agent for each test so the Sandbox/Skills flows run
-    // against a clean mentor (independent of whatever claw state a prior
-    // run or the default mentor was left in).
+    // Create a fresh agent for each test so the Sandbox flows run against
+    // a clean mentor (independent of whatever claw state a prior run or the
+    // default mentor was left in).
     await createMentorPage.openAndCreate();
     const { mentorId } = await getPlatformContext(page);
     tracker44A.add(mentorId);
@@ -165,17 +147,17 @@ test.describe('Journey 44: CLAW Advanced Sandbox', () => {
     await editMentorPage.close();
   });
 
-  // ── TC03: Toggle auto-saves — Sandbox/Skills tab visibility is unaffected ─
+  // ── TC03: Toggle auto-saves — Sandbox tab visibility is unaffected ───────
   //
   // The toggle used to be a form field that only persisted on the modal's
   // footer Save click, and tab visibility used to depend on that persisted
   // value. Both are gone: the toggle now auto-saves immediately (optimistic
-  // local state + `useEditMentorMutation`), and the Sandbox/Skills tabs are
+  // local state + `useEditMentorMutation`), and the Sandbox tab is
   // unconditionally mounted regardless of the capability's value. This
   // checkpoint asserts both: the toggle flips right away, and tab presence
   // never changes.
 
-  test('flipping the capability toggle auto-saves instantly and does not affect Sandbox or Skills tab visibility', async ({
+  test('flipping the capability toggle auto-saves instantly and does not affect Sandbox tab visibility', async ({
     page,
     editMentorPage,
   }) => {
@@ -200,13 +182,6 @@ test.describe('Journey 44: CLAW Advanced Sandbox', () => {
     // Restore.
     await sandbox.setCapabilityEnabled(wasEnabled);
     await expect(getTab(editMentorPage.dialog, 'Sandbox')).toBeVisible();
-
-    // Skills lives in the Configurations category, so it is never rendered at
-    // the same time as Sandbox. Switch categories to confirm it too is
-    // unconditionally mounted (its visibility never depended on the sandbox
-    // capability either).
-    await editMentorPage.navigateToTab('Skills');
-    await expect(getTab(editMentorPage.dialog, 'Skills')).toBeVisible();
 
     await editMentorPage.close();
   });
@@ -244,66 +219,25 @@ test.describe('Journey 44: CLAW Advanced Sandbox', () => {
     }
   });
 
-  // ── TC05: Skills tab is always visible and shows the skills UI ───────────
-  //
-  // Skills tab visibility no longer depends on `enable_claw` /
-  // `clawConfigExists` at all, AND feat/2040 made the Skills content itself
-  // fully independent of the sandbox: the tab always renders the real skills
-  // UI (heading + info box + "New Skill" action), never a "connect a sandbox"
-  // gate — regardless of whether a `ClawMentorConfig` is wired.
-
-  test('Skills tab is always visible and shows the skills UI independent of the sandbox', async ({
-    page,
-    editMentorPage,
-  }) => {
-    await editMentorPage.navigateToTab('Settings');
-    await waitForPageReady(page);
-    // Skills tab is always mounted for admins — no toggle/save needed.
-    await expect(getTab(editMentorPage.dialog, 'Skills')).toBeVisible({
-      timeout: 10_000,
-    });
-
-    // Verify ordering: Skills sits right after Prompts (both in the
-    // Configurations category, which is active here).
-    const configTabs = await visibleSegmentTabLabels(editMentorPage.dialog);
-    const promptsIdx = configTabs.findIndex((t) => /prompts/i.test(t));
-    const skillsIdx = configTabs.findIndex((t) => /skills/i.test(t));
-    expect(skillsIdx).toBe(promptsIdx + 1);
-
-    await editMentorPage.navigateToTab('Skills');
-    await waitForPageReady(page);
-
-    // The skills UI renders unconditionally now — the "New Skill" action is the
-    // authoritative signal that it mounted (no sandbox connection required).
-    const skills = new SkillsTab(page, editMentorPage.dialog);
-    await expect(skills.newSkillButton).toBeVisible({ timeout: 10_000 });
-
-    await editMentorPage.close();
-  });
-
-  // ── TC06: Tabs sit in their fixed category positions unconditionally ─────
+  // ── TC06: Sandbox sits in its fixed category position unconditionally ────
   //
   // feat/2040 groups the sidebar into Configurations / Integrations / Runtime
   // categories. Sandbox now LEADS the Integrations category (no longer
-  // adjacent to Settings), while Skills still follows Prompts within
-  // Configurations. Only the active category's segment tabs are mounted, so
-  // this checks each category in turn.
+  // adjacent to Settings — Settings lives in Configurations). Only the
+  // active category's segment tabs are mounted, so the Sandbox tab must be
+  // navigated to first.
 
-  test('Sandbox leads the Integrations category and Skills follows Prompts in Configurations, unconditionally', async ({
+  test('Sandbox leads the Integrations category unconditionally', async ({
     page,
     editMentorPage,
   }) => {
-    // Configurations: Skills sits right after Prompts.
-    await editMentorPage.navigateToTab('Settings');
-    await waitForPageReady(page);
-    const configTabs = await visibleSegmentTabLabels(editMentorPage.dialog);
-    const promptsIdx = configTabs.findIndex((t) => /prompts/i.test(t));
-    const skillsIdx = configTabs.findIndex((t) => /skills/i.test(t));
-    expect(skillsIdx).toBe(promptsIdx + 1);
-
-    // Integrations: Sandbox is the first tab.
     await editMentorPage.navigateToTab('Sandbox');
     await waitForPageReady(page);
+    // The active tab itself proves the Integrations segment list rendered
+    // before its labels are read (allTextContents does not auto-retry).
+    await expect(getTab(editMentorPage.dialog, 'Sandbox')).toBeVisible({
+      timeout: 10_000,
+    });
     const integrationTabs = await visibleSegmentTabLabels(
       editMentorPage.dialog,
     );
@@ -314,7 +248,7 @@ test.describe('Journey 44: CLAW Advanced Sandbox', () => {
 
   // ── TC07: Disabling the capability regates the SandboxConfig content ─────
 
-  test('disabling the capability flips capability-gate-content back to data-enabled="false" while both tabs remain visible', async ({
+  test('disabling the capability flips capability-gate-content back to data-enabled="false" while the Sandbox tab remains visible', async ({
     page,
     editMentorPage,
   }) => {
@@ -341,15 +275,7 @@ test.describe('Journey 44: CLAW Advanced Sandbox', () => {
 
       // The Sandbox tab stays mounted regardless of the capability value.
       await expect(getTab(editMentorPage.dialog, 'Sandbox')).toBeVisible();
-
-      // Skills (Configurations category) likewise stays mounted — switch
-      // categories to confirm, since it is never co-visible with Sandbox.
-      await editMentorPage.navigateToTab('Skills');
-      await expect(getTab(editMentorPage.dialog, 'Skills')).toBeVisible();
     } finally {
-      // Restore the capability — navigate back to the Sandbox tab first, as
-      // the Skills assertion above left the Configurations category active.
-      await editMentorPage.navigateToTab('Sandbox');
       await sandbox.setCapabilityEnabled(wasEnabled);
       await editMentorPage.close();
     }
@@ -391,9 +317,9 @@ test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
       return;
     }
 
-    // Create a fresh agent for each test so the Sandbox/Skills flows run
-    // against a clean mentor (independent of whatever claw state a prior
-    // run or the default mentor was left in).
+    // Create a fresh agent for each test so the Sandbox flows run against
+    // a clean mentor (independent of whatever claw state a prior run or the
+    // default mentor was left in).
     await createMentorPage.openAndCreate();
     const { mentorId } = await getPlatformContext(page);
     tracker44B.add(mentorId);
@@ -620,10 +546,9 @@ test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
   // Clicking the row's dedicated Connect button (`connect-instance-<id>`,
   // next to the "Actions" three-dot menu — Connect is no longer a dropdown
   // item) wires the mentor to a Claw instance. After connect the "Connected
-  // Instance" heading must appear, AND the Skills tab content must reflect
-  // the wired state (no longer "not connected").
+  // Instance" heading must appear.
 
-  test('admin connects a sandbox instance via the dedicated Connect button and Connected Instance heading appears and Skills tab reflects the wired state', async ({
+  test('admin connects a sandbox instance via the dedicated Connect button and Connected Instance heading appears', async ({
     page,
     editMentorPage,
   }) => {
@@ -677,15 +602,6 @@ test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
       await expect(sandbox.connectedHeading.first()).toBeVisible({
         timeout: 15_000,
       });
-
-      // Assert: Skills tab content reflects the wired state (no longer
-      // "not connected"). The tab itself was already always visible.
-      await editMentorPage.navigateToTab('Skills');
-      await waitForPageReady(page);
-      const skills = new SkillsTab(page, editMentorPage.dialog);
-      expect(await skills.isNotConnected(10_000)).toBe(false);
-      await editMentorPage.navigateToTab('Sandbox');
-      await waitForPageReady(page);
 
       if (priorConnectedInstance === null) {
         // We connected to an existing healthy instance — disconnect to
@@ -817,227 +733,25 @@ test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
     }
   });
 
-  // ── TC14: Skills tab — Toggle skill on/off ────────────────────────────────
-
-  test('admin toggles a skill on then off and aria-checked flips back to the original state', async ({
-    page,
-    editMentorPage,
-  }) => {
-    // claw-14
-    await editMentorPage.navigateToTab('Sandbox');
-    await waitForPageReady(page);
-
-    const sandbox = new SandboxTab(page, editMentorPage.dialog);
-    const wasEnabled = await sandbox.isCapabilityEnabled();
-
-    // Skills content is gated on a wired sandbox. If env isn't connected,
-    // wire a healthy OpenClaw instance up-front so the content is reachable.
-    let createdConnectionHere = false;
-
-    try {
-      if (!wasEnabled) {
-        await sandbox.setCapabilityEnabled(true);
-      }
-
-      const connected = await sandbox.ensureConnected();
-      if (!connected.instanceName) {
-        test.skip(
-          true,
-          'No connectable OpenClaw instance available — Skills tab requires a wired sandbox',
-        );
-        return;
-      }
-      createdConnectionHere = connected.createdConnection;
-
-      await editMentorPage.navigateToTab('Skills');
-      await waitForPageReady(page);
-
-      const skills = new SkillsTab(page, editMentorPage.dialog);
-
-      // Skip if no platform-level skills exist
-      if (await skills.hasNoSkills()) {
-        test.skip(
-          true,
-          'No platform-level skills exist — cannot test toggle flow',
-        );
-        return;
-      }
-
-      // Pick the first skill toggle in the list
-      const allToggles = editMentorPage.dialog.getByRole('switch');
-      const firstToggle = allToggles.first();
-      await expect(firstToggle).toBeVisible({ timeout: 10_000 });
-
-      const initialState =
-        (await firstToggle.getAttribute('aria-checked')) === 'true';
-
-      // Flip ON (or OFF if already ON)
-      await firstToggle.click();
-      await expect(firstToggle).toHaveAttribute(
-        'aria-checked',
-        initialState ? 'false' : 'true',
-        { timeout: 10_000 },
-      );
-
-      // Flip back to original state
-      await firstToggle.click();
-      await expect(firstToggle).toHaveAttribute(
-        'aria-checked',
-        initialState ? 'true' : 'false',
-        { timeout: 10_000 },
-      );
-    } finally {
-      // If WE wired the sandbox, disconnect to restore not-connected state.
-      if (createdConnectionHere) {
-        try {
-          await editMentorPage.navigateToTab('Sandbox');
-          await waitForPageReady(page);
-          if (await sandbox.isConnected(5_000)) {
-            await sandbox.disconnect();
-          }
-        } catch {
-          // Best-effort
-        }
-      }
-      if (!wasEnabled) {
-        await editMentorPage.navigateToTab('Sandbox');
-        await waitForPageReady(page);
-        await sandbox.setCapabilityEnabled(false);
-      }
-      await editMentorPage.close();
-    }
-  });
-
-  // ── TC15: Skills tab — Create + Edit skill ────────────────────────────────
-
-  test('admin creates a new skill then edits its description and the updated skill row is visible', async ({
-    page,
-    editMentorPage,
-  }) => {
-    // claw-15
-    await editMentorPage.navigateToTab('Sandbox');
-    await waitForPageReady(page);
-
-    const sandbox = new SandboxTab(page, editMentorPage.dialog);
-    const wasEnabled = await sandbox.isCapabilityEnabled();
-
-    const ts = Date.now();
-    const skillName = `e2e-test-skill-${ts}`;
-    const skillSlug = `e2e_test_skill_${ts}`;
-    const skillDescription = `E2E test skill created at ${ts}`;
-    const updatedDescription = `E2E updated description ${ts}`;
-
-    // Skills content is gated on a wired sandbox. If env isn't connected,
-    // wire a healthy OpenClaw instance first; we'll disconnect after the
-    // test if WE were the ones that connected it.
-    let createdConnectionHere = false;
-
-    try {
-      if (!wasEnabled) {
-        await sandbox.setCapabilityEnabled(true);
-      }
-
-      const connected = await sandbox.ensureConnected();
-      if (!connected.instanceName) {
-        test.skip(
-          true,
-          'No connectable OpenClaw instance available — Skills tab requires a wired sandbox',
-        );
-        return;
-      }
-      createdConnectionHere = connected.createdConnection;
-
-      await editMentorPage.navigateToTab('Skills');
-      await waitForPageReady(page);
-
-      const skills = new SkillsTab(page, editMentorPage.dialog);
-
-      // ── Create ─────────────────────────────────────────────────────────
-      await skills.openNewSkillDialog();
-      await skills.fillSkillForm({
-        name: skillName,
-        slug: skillSlug,
-        description: skillDescription,
-        version: '1.0.0',
-        instruction: `Instruction for ${skillName}`,
-      });
-      // submitNewSkill already waits for the dialog close and the new row to
-      // appear in the list.
-      await skills.submitNewSkill(skillName);
-
-      // ── Edit ───────────────────────────────────────────────────────────
-      await skills.openEditSkillDialog(skillName);
-
-      // Update the description field. The bundle renders this as a regular
-      // <input name="skill-description"> so .fill() works directly.
-      await skills.editSkillDescriptionInput.fill(updatedDescription);
-
-      await skills.submitSkillEdit();
-
-      // submitSkillEdit already waits for the dialog close. Verify the row
-      // wasn't accidentally deleted.
-      await expect(skills.getSkillRowByName(skillName)).toBeVisible();
-
-      // Cleanup: delete the skill
-      await skills.deleteSkill(skillName);
-    } finally {
-      // Best-effort final cleanup — if delete above failed, try again
-      try {
-        const skills = new SkillsTab(page, editMentorPage.dialog);
-        const row = skills.getSkillRowByName(skillName);
-        let rowExists = false;
-        try {
-          await row.waitFor({ state: 'visible', timeout: 3_000 });
-          rowExists = true;
-        } catch {
-          rowExists = false;
-        }
-        if (rowExists) {
-          await skills.deleteSkill(skillName);
-        }
-      } catch {
-        // Best-effort
-      }
-      // If WE wired the sandbox, disconnect to restore not-connected state.
-      if (createdConnectionHere) {
-        try {
-          await editMentorPage.navigateToTab('Sandbox');
-          await waitForPageReady(page);
-          if (await sandbox.isConnected(5_000)) {
-            await sandbox.disconnect();
-          }
-        } catch {
-          // Best-effort
-        }
-      }
-      if (!wasEnabled) {
-        await editMentorPage.navigateToTab('Sandbox');
-        await waitForPageReady(page);
-        await sandbox.setCapabilityEnabled(false);
-      }
-      await editMentorPage.close();
-    }
-  });
-
   test.afterAll(async ({ browser }, testInfo) => {
     await tracker44B.deleteAll(browser, testInfo);
   });
 });
 
-// ── Non-admin: Sandbox and Skills tabs invisible regardless of claw state ────
+// ── Non-admin: Sandbox tab invisible regardless of claw state ────────────────
 //
-// Unaffected by the capability-gate refactor — Sandbox and Skills remain
-// ADMIN-only via `userTypes: [UserType.ADMIN]` in `MENTOR_SEGMENTS`.
+// Unaffected by the capability-gate refactor — Sandbox remains ADMIN-only
+// via `userTypes: [UserType.ADMIN]` in `MENTOR_SEGMENTS`.
 
 test.describe('Journey 44: CLAW Advanced Sandbox — Non-Admin', () => {
-  test('non-admin does not see Sandbox or Skills tabs in the Edit Mentor modal', async ({
+  test('non-admin does not see the Sandbox tab in the Edit Mentor modal', async ({
     nonadminPage,
     nonadminEditMentorPage,
   }) => {
     await navigateToMentorApp(nonadminPage);
 
     // Non-admin cannot open the edit mentor modal via the mentor dropdown
-    // (the Settings menu item is hidden). We assert the tabs are absent by
+    // (the Settings menu item is hidden). We assert the tab is absent by
     // checking the mentor dropdown does not expose a Modify / Settings
     // option. The mentor → agent rename moved this button's accessible
     // name to "Selected agent dropdown button"; accept either label so the
@@ -1061,27 +775,23 @@ test.describe('Journey 44: CLAW Advanced Sandbox — Non-Admin', () => {
     }
 
     if (!menuItemVisible) {
-      // Non-admin cannot open the edit dialog — Sandbox / Skills tabs are
+      // Non-admin cannot open the edit dialog — the Sandbox tab is
       // definitively not visible. Test passes.
       await nonadminPage.keyboard.press('Escape');
       return;
     }
 
-    // If (in some env) non-admin can open the dialog, verify tabs are absent
+    // If (in some env) non-admin can open the dialog, verify the tab is
+    // absent — dialog captured first, nested lookups scoped to it.
     await modifyItem.click();
-    await expect(nonadminEditMentorPage.dialog).toBeVisible({
-      timeout: 15_000,
-    });
+    const dialog = nonadminEditMentorPage.dialog;
+    await expect(dialog).toBeVisible({ timeout: 15_000 });
 
     await expect(
-      nonadminEditMentorPage.dialog
-        .getByRole('tablist')
-        .getByRole('tab', { name: 'Sandbox', exact: true }),
-    ).toHaveCount(0, { timeout: 10_000 });
-    await expect(
-      nonadminEditMentorPage.dialog
-        .getByRole('tablist')
-        .getByRole('tab', { name: 'Skills', exact: true }),
+      dialog.getByRole('tablist').getByRole('tab', {
+        name: 'Sandbox',
+        exact: true,
+      }),
     ).toHaveCount(0, { timeout: 10_000 });
 
     await nonadminEditMentorPage.close();

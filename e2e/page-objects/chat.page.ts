@@ -47,6 +47,14 @@ export class ChatPage {
    * otherwise. Hidden entirely when the mentor has no skills.
    */
   readonly skillsMenuTrigger: Locator;
+  /**
+   * The ✕ inside the active skills pill (disarms the token without opening
+   * the menu). Resolved FROM `skillsMenuTrigger` — never the page — so the
+   * testid can only ever match inside the trigger it belongs to.
+   */
+  readonly skillsMenuClear: Locator;
+  /** The Skills dropdown's content panel (Radix portal), when open. */
+  readonly skillsMenuContent: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -111,6 +119,9 @@ export class ChatPage {
     // one stroke.
     this.skillTokenHighlights = page.getByTestId('skill-token-highlight');
     this.skillsMenuTrigger = page.getByTestId('skills-menu-trigger');
+    this.skillsMenuClear =
+      this.skillsMenuTrigger.getByTestId('skills-menu-clear');
+    this.skillsMenuContent = page.getByTestId('skills-menu-content');
   }
 
   async sendMessage(text: string): Promise<void> {
@@ -400,9 +411,10 @@ export class ChatPage {
 
   // ── `/` skill picker (chat composer) ────────────────────────────────────
   //
-  // `ChatInputForm` resolves the mentor's skill list client-side from TWO
-  // endpoints — skill assignments (`GET .../agents/{uuid}/skills/`) and the
-  // skill catalog (`GET .../agent-skills/`) — combined with the SDK's
+  // `ChatInputForm` resolves the mentor's skill list client-side from its
+  // ONLY skill source — the mentor's skill assignments
+  // (`GET .../agents/{uuid}/skills/`; the platform-wide `/agent-skills/`
+  // catalog is deliberately never fetched from chat) — via the SDK's
   // `resolveEffectiveAgentSkills`, eagerly on mount, not lazily on the first
   // `/` keypress. The composer textarea's role flips from the implicit
   // `textbox` to `combobox` whenever the resolved list is non-empty (see
@@ -426,14 +438,15 @@ export class ChatPage {
   }
 
   /**
-   * Intercepts the two skill-source GETs (assignments + catalog) and
-   * fulfills them from a fixed fixture list, so the `/` skill picker's
-   * contents are deterministic instead of depending on whatever skills (if
-   * any) happen to be assigned server-side. Each fixture becomes an enabled
-   * assignment row plus a catalog record carrying the fixture's own
-   * `enabled` flag (effective enabled is the AND of the two). Must be
-   * registered BEFORE navigating to the chat page — see the class-of-methods
-   * note above.
+   * Intercepts the composer's ONLY skill source — the mentor's skill
+   * assignments (`GET .../agents/{uuid}/skills/`) — and fulfills it from a
+   * fixed fixture list, so the `/` skill picker's contents are deterministic
+   * instead of depending on whatever skills (if any) happen to be assigned
+   * server-side. Each fixture becomes an assignment row (name/slug/enabled —
+   * assignment rows carry no descriptions, and the platform-wide
+   * `/agent-skills/` catalog is deliberately never fetched from chat). Must
+   * be registered BEFORE navigating to the chat page — see the
+   * class-of-methods note above.
    */
   async mockEffectiveSkills(skills: EffectiveSkillFixture[]): Promise<void> {
     // Assignments: /agents/{uuid}/skills/ — NOT /agent-skills/ (catalog).
@@ -450,20 +463,8 @@ export class ChatPage {
               skill: skill.unique_id,
               skill_name: skill.name,
               skill_slug: skill.slug,
-              enabled: true,
+              enabled: skill.enabled,
             })),
-          ),
-        });
-      },
-    );
-    await this.page.route(
-      (url) => url.pathname.includes('/agent-skills/'),
-      async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify(
-            skills.map((skill) => ({ ...skill, mentor: null })),
           ),
         });
       },
@@ -471,50 +472,14 @@ export class ChatPage {
   }
 
   /**
-   * Mocks the skill sources the way a real NON-ADMIN experiences them: the
-   * assignments endpoint 403s (it is platform-admin-only) and the catalog —
-   * which IS student-readable — returns the fixtures as MENTOR-PRIVATE
-   * skills. The composer treats the 403 as "no assignment rows" and resolves
-   * catalog-only, so private skills still reach the picker.
-   *
-   * The catalog fixtures need the mentor's real UUID in their `mentor`
-   * field for the private-skill resolution to match; it is captured from the
-   * assignments request URL (which always fires first-mount alongside the
-   * catalog request), so the catalog fulfillment awaits that capture.
-   * Must be registered BEFORE navigating, like `mockEffectiveSkills`.
+   * Same as `mockEffectiveSkills` — kept as a named alias for the non-admin
+   * journey so the intent stays explicit. Students get the picker only if
+   * the backend lets them read the assignments endpoint (today it is
+   * platform-admin-only and 403s for them, which the composer degrades to
+   * an inactive picker); this mock simulates that granted state.
    */
   async mockStudentSkills(skills: EffectiveSkillFixture[]): Promise<void> {
-    let resolveMentorUuid!: (uuid: string) => void;
-    const mentorUuid = new Promise<string>((resolve) => {
-      resolveMentorUuid = resolve;
-    });
-    await this.page.route(
-      (url) => /\/agents\/[^/]+\/skills\//.test(url.pathname),
-      async (route) => {
-        const match = /\/agents\/([^/]+)\/skills\//.exec(
-          new URL(route.request().url()).pathname,
-        );
-        if (match) resolveMentorUuid(match[1]);
-        await route.fulfill({
-          status: 403,
-          contentType: 'application/json',
-          body: JSON.stringify({ detail: 'forbidden' }),
-        });
-      },
-    );
-    await this.page.route(
-      (url) => url.pathname.includes('/agent-skills/'),
-      async (route) => {
-        const uuid = await mentorUuid;
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify(
-            skills.map((skill) => ({ ...skill, mentor: uuid })),
-          ),
-        });
-      },
-    );
+    await this.mockEffectiveSkills(skills);
   }
 
   /**
@@ -530,9 +495,33 @@ export class ChatPage {
       .getAttribute('id');
   }
 
-  /** Returns the Skills-dropdown item for a skill slug (menu must be open). */
+  /**
+   * Returns the Skills-dropdown item for a skill slug (menu must be open).
+   * Resolved from the menu's content panel — never the page — so nothing
+   * outside the open dropdown can ever match.
+   */
   getSkillsMenuItem(slug: string): Locator {
-    return this.page.getByTestId(`skills-menu-item-${slug}`);
+    return this.skillsMenuContent.getByTestId(`skills-menu-item-${slug}`);
+  }
+
+  /**
+   * Opens the Skills dropdown and waits until its items are actually
+   * showing. A plain `skillsMenuTrigger.click()` is flaky right after a
+   * previous selection: Radix is still tearing down the old menu instance
+   * (dismiss listeners / focus return), and a programmatic click landing in
+   * that window toggles or gets swallowed, leaving the menu closed. Retry
+   * clicking until an item is visible.
+   */
+  async openSkillsMenu(): Promise<void> {
+    const anyItem = this.skillsMenuContent
+      .locator('[data-testid^="skills-menu-item-"]')
+      .first();
+    await expect(async () => {
+      if (!(await anyItem.isVisible())) {
+        await this.skillsMenuTrigger.click();
+      }
+      await expect(anyItem).toBeVisible({ timeout: 1_000 });
+    }).toPass({ timeout: 15_000 });
   }
 
   /** Returns the slash-picker option `<li>` whose text contains `name`. */
