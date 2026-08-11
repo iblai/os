@@ -16,7 +16,8 @@ overrides:
   hono: '>=4.12.34'
   axios: '>=1.16.0'
   prismjs: '>=1.30.0'
-  dompurify: '>=3.4.12'
+  dompurify: '>=3.4.13'
+  nanoid: '>=3.3.17 <4'
   '@hono/node-server': '>=2.0.10'
   bytes: '>=1.11.1'
   devalue: '>=5.8.1'
@@ -45,8 +46,8 @@ importers:
         specifier: 4.166.0-ai
         version: 4.166.0-ai
       '@iblai/iblai-js':
-        specifier: 2.3.9
-        version: 2.3.9(92404b4c0117ef26d513e2921df6f1bf)
+        specifier: 2.3.10
+        version: 2.3.10(92404b4c0117ef26d513e2921df6f1bf)
       '@iblai/iblai-web-mentor':
         specifier: 1.3.4
         version: 1.3.4(@babel/core@7.29.7)(@types/babel__core@7.20.5)(rollup@4.62.2)(typescript@5.9.3)
@@ -1075,8 +1076,8 @@ packages:
   '@iblai/iblai-api@4.166.0-ai':
     resolution: {integrity: sha512-dY9Jv+CkXEyTxRsOQFay5YvYe8K2LSQluJJvtssGQV2RbrxPPzONaKfnhcyarDs7Ft35Xqk1fuErjhUwNG3OIg==}
 
-  '@iblai/iblai-js@2.3.9':
-    resolution: {integrity: sha512-GpREsQgPEWeBFQhVybRgj9oj6vRRHGUIsExSEk5J4xsNr7Vhn3Oa4nqAf1fZ55d0QkOH84kmfQROmkavRIB8ig==}
+  '@iblai/iblai-js@2.3.10':
+    resolution: {integrity: sha512-PkRttFM6bJ8wvvnANiZjbuHz8baK7hKYJr+34Y18cDGHfRgyMtom4RxwC990ro48of9IdSxaTVh8YHSAvGWHLg==}
     engines: {node: '>=20.0.0'}
     hasBin: true
     peerDependencies:
@@ -1105,12 +1106,12 @@ packages:
     engines: {node: '>=20.0.0'}
     hasBin: true
 
-  '@iblai/web-containers@1.16.5':
-    resolution: {integrity: sha512-xUxfrR8VSCjZk15YI5j/k1hzNTnnbvsPzvXoL2x1OdYEd/Osaru7uOzpfUhahHuSntSPeb4HbznFtKHN5vgDzg==}
+  '@iblai/web-containers@1.16.6':
+    resolution: {integrity: sha512-+8N/NUYPrS3Ztkemj+BmJ8e6wWYFX5yqCjlvF5qeuL7bDpTjTCZDjZtdEB8NJxh8A2B3wB1d7SyQcrGCLXThLw==}
     engines: {node: 25.3.0}
     peerDependencies:
       '@iblai/agent-ai': 2.8.1
-      '@iblai/data-layer': 1.12.1
+      '@iblai/data-layer': 1.12.3
       '@iblai/iblai-api': 4.166.0-ai
       '@iblai/web-utils': 2.1.11
       '@livekit/components-react': 2.8.1
@@ -6058,8 +6059,8 @@ packages:
     resolution: {integrity: sha512-cgwlv/1iFQiFnU96XXgROh8xTeetsnJiDsTc7TYCLFd9+/WNkIqPTxiM/8pSd8VIrhXGTf1Ny1q1hquVqDJB5w==}
     engines: {node: '>= 4'}
 
-  dompurify@3.4.12:
-    resolution: {integrity: sha512-zQvGet8Z2sWbQhCmfFz/T5QWH2oBmjnqK3qvOjaqaNLrLEF912WamU+ohnTp0TCep/MFVHpdJuCZEdFOdTnEFg==}
+  dompurify@3.4.13:
+    resolution: {integrity: sha512-2vmYIoqjze2d+kakP8S/nS5shfsl587kzwEjcGlTdiksUVgFHnFCsLYDVj/JNqJVOQZGSYBTmuycv0PodwmnMQ==}
 
   domutils@3.2.2:
     resolution: {integrity: sha512-6kZKyUajlDuqlHKVX1w7gyslj9MPIXzIFiz/rGu35uC1wMi+kMhQwGhl4lt9unC9Vb9INnY9Z3/ZA3+FhASLaw==}
@@ -8212,8 +8213,8 @@ packages:
     resolution: {integrity: sha512-WWdIxpyjEn+FhQJQQv9aQAYlHoNVdzIzUySNV1gHUPDSdZJ3yZn7pAAbQcV7B56Mvu881q9FZV+0Vx2xC44VWA==}
     engines: {node: ^18.17.0 || >=20.5.0}
 
-  nanoid@3.3.16:
-    resolution: {integrity: sha512-bzlKTyNJ7+LdGIIwy8ijFpIqEQIvafahV7eYykJ8Cvh42EdJeODoJ6gUJXpQJvej1BddH8OqTXZNE/KfbWAu8Q==}
+  nanoid@3.3.18:
+    resolution: {integrity: sha512-DTg4MJbGMWkfi6VZFdNt2/caMbQy4Ou+Op/hJQvGEWcnVfoA1QA+xzRKAzw9jD6+GVOOeYr/mIcuDSdug6F6+w==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
@@ -11036,12 +11037,12 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  '@iblai/iblai-js@2.3.9(92404b4c0117ef26d513e2921df6f1bf)':
+  '@iblai/iblai-js@2.3.10(92404b4c0117ef26d513e2921df6f1bf)':
     dependencies:
       '@iblai/data-layer': 1.12.3(@reduxjs/toolkit@2.7.0(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0)
       '@iblai/iblai-api': 4.166.0-ai
       '@iblai/mcp': 1.8.10
-      '@iblai/web-containers': 1.16.5(4705ecd502fc104fafdc2a142e0dece0)
+      '@iblai/web-containers': 1.16.6(4705ecd502fc104fafdc2a142e0dece0)
       '@iblai/web-utils': 2.1.11(@iblai/data-layer@1.12.3(@reduxjs/toolkit@2.7.0(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0))(@iblai/iblai-api@4.166.0-ai)(@tauri-apps/api@2.11.0)(@tauri-apps/plugin-os@2.3.2)(@types/react@19.1.17)(next@15.5.21(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.56.0)(@types/node@20.17.48)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(redux@5.0.1)(sonner@2.0.7(react-dom@19.1.0(react@19.1.0))(react@19.1.0))
       '@radix-ui/react-dialog': 1.1.7(@types/react-dom@19.2.1(@types/react@19.1.17))(@types/react@19.1.17)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@reduxjs/toolkit': 2.7.0(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0)
@@ -11092,7 +11093,7 @@ snapshots:
       - '@cfworker/json-schema'
       - supports-color
 
-  '@iblai/web-containers@1.16.5(4705ecd502fc104fafdc2a142e0dece0)':
+  '@iblai/web-containers@1.16.6(4705ecd502fc104fafdc2a142e0dece0)':
     dependencies:
       '@iblai/agent-ai': 2.5.2(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@iblai/data-layer': 1.12.3(@reduxjs/toolkit@2.7.0(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0)
@@ -11142,7 +11143,7 @@ snapshots:
       cmdk: 1.1.1(@types/react-dom@19.2.1(@types/react@19.1.17))(@types/react@19.1.17)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       date-fns: 4.1.0
       dayjs: 1.11.20
-      dompurify: 3.4.12
+      dompurify: 3.4.13
       highlight.js: 11.11.1
       katex: 0.16.44
       lucide-react: 0.528.0(react@19.1.0)
@@ -16147,7 +16148,7 @@ snapshots:
     dependencies:
       domelementtype: 2.3.0
 
-  dompurify@3.4.12:
+  dompurify@3.4.13:
     optionalDependencies:
       '@types/trusted-types': 2.0.7
 
@@ -17997,7 +17998,7 @@ snapshots:
     optionalDependencies:
       canvg: 3.0.11
       core-js: 3.49.0
-      dompurify: 3.4.12
+      dompurify: 3.4.13
       html2canvas: 1.4.1
 
   jsx-ast-utils@3.3.5:
@@ -18838,7 +18839,7 @@ snapshots:
 
   mute-stream@2.0.0: {}
 
-  nanoid@3.3.16: {}
+  nanoid@3.3.18: {}
 
   napi-build-utils@2.0.0:
     optional: true
@@ -19305,7 +19306,7 @@ snapshots:
 
   postcss@8.5.24:
     dependencies:
-      nanoid: 3.3.16
+      nanoid: 3.3.18
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
