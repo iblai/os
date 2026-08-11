@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-08-11 | 623 checkpoints (591 covered, 8 pending/fixme, 11 not-reproducible in default env, 13 deprecated) | 68 journeys (67 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-08-11 | 623 checkpoints (592 covered, 8 pending/fixme, 11 not-reproducible in default env, 12 deprecated) | 68 journeys (67 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -284,15 +284,16 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 18: Analytics Dashboard (5 checkpoints) — `journeys/18-analytics-dashboard.spec.ts`
+## Journey 18: Analytics Dashboard (6 checkpoints) — `journeys/18-analytics-dashboard.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/[mentorId]/analytics/page.tsx`, `app/platform/[tenantKey]/[mentorId]/analytics/users/page.tsx`, `app/platform/[tenantKey]/[mentorId]/analytics/topics/page.tsx`, `app/platform/[tenantKey]/[mentorId]/analytics/transcripts/page.tsx`, `app/platform/[tenantKey]/[mentorId]/analytics/financial/page.tsx`
+**Source files:** `app/platform/[tenantKey]/[mentorId]/analytics/page.tsx`, `app/platform/[tenantKey]/[mentorId]/analytics/users/page.tsx`, `app/platform/[tenantKey]/[mentorId]/analytics/topics/page.tsx`, `app/platform/[tenantKey]/[mentorId]/analytics/transcripts/page.tsx`, `app/platform/[tenantKey]/[mentorId]/analytics/financial/page.tsx`, `app/platform/[tenantKey]/[mentorId]/analytics/memory/page.tsx`
 
 - [x] Overview tab loads with mini-cards (Messages, Active Users, Topics, Conversations), charts, and working time filters
 - [x] Users tab loads with user metric cards and charts (Active Users, Access Times, User Details)
 - [x] Topics tab loads with topic/conversation/message cards and rating/topics charts
 - [x] Transcripts tab loads with average message, cost, and rating cards
 - [x] Financial tab loads with cost cards and charts (per Day, by Provider, by LLM, per User)
+- [x] Memory sub-item in the Analytics sidebar (rendered after Transcripts, gated by the SDK's `getVisibleAnalyticsTabs`) navigates to the memory analytics page
 
 ---
 

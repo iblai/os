@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.122.3](https://github.com/iblai/os/compare/v0.122.2...v0.122.3) (2026-08-11)
+
+### Bug Fixes
+
+- analytics > memory sdk integration + sidebar menu item added with watcher permission filter ([573b04f](https://github.com/iblai/os/commit/573b04f3869d7c20bcdf68d1d8d92aea0d40a307))
+- analytics > memory sdk integration + sidebar menu item added with watcher permission filter ([c3f05a6](https://github.com/iblai/os/commit/c3f05a6286b7fecb5432cc1422af678f94c44463))
+
 ## [0.122.2](https://github.com/iblai/os/compare/v0.122.1...v0.122.2) (2026-08-11)
 
 ### Chores
