@@ -1,71 +1,98 @@
 # Changelog
 
+## [0.122.3](https://github.com/iblai/os/compare/v0.122.2...v0.122.3) (2026-08-11)
+
+### Bug Fixes
+
+* analytics > memory sdk integration + sidebar menu item added with watcher permission filter ([573b04f](https://github.com/iblai/os/commit/573b04f3869d7c20bcdf68d1d8d92aea0d40a307))
+* analytics > memory sdk integration + sidebar menu item added with watcher permission filter ([c3f05a6](https://github.com/iblai/os/commit/c3f05a6286b7fecb5432cc1422af678f94c44463))
+
+## [0.122.2](https://github.com/iblai/os/compare/v0.122.1...v0.122.2) (2026-08-11)
+
+### Chores
+
+* clear `pnpm audit` packages ([fdd7553](https://github.com/iblai/os/commit/fdd7553db349b2fb149244120dd6ef3ba79430db))
+* **deps:** bump iblai js sdk version ([af88083](https://github.com/iblai/os/commit/af8808360dc7f42666140888e02c134d629cc43e))
+* update lock file ([571f570](https://github.com/iblai/os/commit/571f570b083c338babff632c5208eb395e8b3e2d))
+
+## [0.122.1](https://github.com/iblai/os/compare/v0.122.0...v0.122.1) (2026-08-11)
+
+### Bug Fixes
+
+* **chrome-ext:** address review — validate redirect-path, keep widget allow policy ([3897178](https://github.com/iblai/os/commit/38971789bb2c22abea7320299ccc80758f1b5c19))
+* **chrome-ext:** keep embed params through side-panel SSO login ([3062de4](https://github.com/iblai/os/commit/3062de4a7ca2d4ea21fb769aae855714a2005be5))
+* **embed:** preserve embed params across mentor re-resolve ([ab6194d](https://github.com/iblai/os/commit/ab6194d83defb9c81965d001d8ca6798a4c8a882))
+
+### Chores
+
+* **coverage:** exclude sso-login-complete page from unit-coverage gate ([78bc02f](https://github.com/iblai/os/commit/78bc02f201f48628750cad4722c91a8b2ab2689c))
+
 ## [0.122.0](https://github.com/iblai/os/compare/v0.121.1...v0.122.0) (2026-08-07)
 
 ### Features
 
-* **mentor:** adding fix for the screen tab changes ([ef9a325](https://github.com/iblai/os/commit/ef9a325060fc9233d9e7bfd2176bdcb35708919d))
+- **mentor:** adding fix for the screen tab changes ([ef9a325](https://github.com/iblai/os/commit/ef9a325060fc9233d9e7bfd2176bdcb35708919d))
 
 ### Bug Fixes
 
-* **mentor:** RBAC for gradding and results coverage for results tab ([7806860](https://github.com/iblai/os/commit/7806860412ce14eba45e1a31dbc4a8cba38210c9))
+- **mentor:** RBAC for gradding and results coverage for results tab ([7806860](https://github.com/iblai/os/commit/7806860412ce14eba45e1a31dbc4a8cba38210c9))
 
 ## [0.121.1](https://github.com/iblai/os/compare/v0.121.0...v0.121.1) (2026-08-07)
 
 ### Chores
 
-* **tauri:** release app-v0.95.12 ([3e8d7e6](https://github.com/iblai/os/commit/3e8d7e64de3e60b982f3ab2e0ae6dde9044da9e2))
+- **tauri:** release app-v0.95.12 ([3e8d7e6](https://github.com/iblai/os/commit/3e8d7e64de3e60b982f3ab2e0ae6dde9044da9e2))
 
 ### Tests
 
-* **tauri:** add auto tauri gating on changes and tauri tests ([a41b436](https://github.com/iblai/os/commit/a41b4365351eee44a9952a6b25b2bc5f516d96a5))
+- **tauri:** add auto tauri gating on changes and tauri tests ([a41b436](https://github.com/iblai/os/commit/a41b4365351eee44a9952a6b25b2bc5f516d96a5))
 
 ## [0.121.0](https://github.com/iblai/os/compare/v0.120.0...v0.121.0) (2026-08-07)
 
 ### Features
 
-* **extension:** side-panel auth, page context, and full-panel layout ([e5ac3de](https://github.com/iblai/os/commit/e5ac3dea4d3185619fd5b95566f567febf91858e))
+- **extension:** side-panel auth, page context, and full-panel layout ([e5ac3de](https://github.com/iblai/os/commit/e5ac3dea4d3185619fd5b95566f567febf91858e))
 
 ### Tests
 
-* **coverage:** exclude chrome extension panel.js from per-file coverage ([471ed46](https://github.com/iblai/os/commit/471ed4601df6a466e0d6e679fe65f357591ebd1b))
+- **coverage:** exclude chrome extension panel.js from per-file coverage ([471ed46](https://github.com/iblai/os/commit/471ed4601df6a466e0d6e679fe65f357591ebd1b))
 
 ## [0.120.0](https://github.com/iblai/os/compare/v0.119.2...v0.120.0) (2026-08-07)
 
 ### Features
 
-* **llm:** add the ibl.ai provider and provider ordering helpers ([761fe76](https://github.com/iblai/os/commit/761fe76527d827aa197d3a0447306bc221b690f6))
-* **llm:** order and gray provider cards in the LLM tab ([e6db381](https://github.com/iblai/os/commit/e6db381e81afc5d057c16e63587a60ef0c0c8702))
+- **llm:** add the ibl.ai provider and provider ordering helpers ([761fe76](https://github.com/iblai/os/commit/761fe76527d827aa197d3a0447306bc221b690f6))
+- **llm:** order and gray provider cards in the LLM tab ([e6db381](https://github.com/iblai/os/commit/e6db381e81afc5d057c16e63587a60ef0c0c8702))
 
 ### Bug Fixes
 
-* **api-tab:** normalise the token list through unwrapApiTokenList ([6edabd5](https://github.com/iblai/os/commit/6edabd5178c43f38d2e3ee6dce0614022f1c0d4c))
-* **deps:** bump @iblai/iblai-js 2.3.2 to 2.3.7 ([069b920](https://github.com/iblai/os/commit/069b920d5dabd4cbed08ee9e09fe466b01190ca7))
-* **deps:** raise the js-yaml floor past CVE-2026-59870 ([b160675](https://github.com/iblai/os/commit/b160675dd4da7c050ac01ec323671eff1f554f0b))
+- **api-tab:** normalise the token list through unwrapApiTokenList ([6edabd5](https://github.com/iblai/os/commit/6edabd5178c43f38d2e3ee6dce0614022f1c0d4c))
+- **deps:** bump @iblai/iblai-js 2.3.2 to 2.3.7 ([069b920](https://github.com/iblai/os/commit/069b920d5dabd4cbed08ee9e09fe466b01190ca7))
+- **deps:** raise the js-yaml floor past CVE-2026-59870 ([b160675](https://github.com/iblai/os/commit/b160675dd4da7c050ac01ec323671eff1f554f0b))
 
 ### Refactors
 
-* **chat:** follow the SDK rename of useGhostOs to useCuaDriver ([fa0c403](https://github.com/iblai/os/commit/fa0c403791b0e15fbea0849d6205dd94f9766f6f))
+- **chat:** follow the SDK rename of useGhostOs to useCuaDriver ([fa0c403](https://github.com/iblai/os/commit/fa0c403791b0e15fbea0849d6205dd94f9766f6f))
 
 ### Chores
 
-* **format:** apply prettier to files it had drifted on ([7b19db8](https://github.com/iblai/os/commit/7b19db828053834640c45faa06b8278b3b98d5f2))
+- **format:** apply prettier to files it had drifted on ([7b19db8](https://github.com/iblai/os/commit/7b19db828053834640c45faa06b8278b3b98d5f2))
 
 ### Styles
 
-* **llm:** match model rows to the provider grid inactive state ([2cd4d88](https://github.com/iblai/os/commit/2cd4d887c221921b207c803e73cd82f4d3210607))
+- **llm:** match model rows to the provider grid inactive state ([2cd4d88](https://github.com/iblai/os/commit/2cd4d887c221921b207c803e73cd82f4d3210607))
 
 ## [0.119.2](https://github.com/iblai/os/compare/v0.119.1...v0.119.2) (2026-08-07)
 
 ### Bug Fixes
 
-* **tauri-bump:** keep README download links rename-safe ([7b97ac0](https://github.com/iblai/os/commit/7b97ac050274b67364264df780034ee02d673d21)), closes [#408](https://github.com/iblai/os/issues/408)
+- **tauri-bump:** keep README download links rename-safe ([7b97ac0](https://github.com/iblai/os/commit/7b97ac050274b67364264df780034ee02d673d21)), closes [#408](https://github.com/iblai/os/issues/408)
 
 ## [0.119.1](https://github.com/iblai/os/compare/v0.119.0...v0.119.1) (2026-08-07)
 
 ### Documentation
 
-* **readme:** fix download buttons to app-v0.95.11 (ibl.ai_ assets) ([959f305](https://github.com/iblai/os/commit/959f3050f797c19927675b14f8ae9408c01ead0d))
+- **readme:** fix download buttons to app-v0.95.11 (ibl.ai\_ assets) ([959f305](https://github.com/iblai/os/commit/959f3050f797c19927675b14f8ae9408c01ead0d))
 
 ## [0.119.0](https://github.com/iblai/os/compare/v0.118.0...v0.119.0) (2026-08-07)
 

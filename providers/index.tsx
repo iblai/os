@@ -264,12 +264,26 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     saveDmTokenExpires(tokenResponse.dm_token.expires);
   }
 
-  function redirectToNoMentorsPage() {
-    let queryParams = '';
-    if (window.location.pathname === '/') {
-      queryParams = window.location.search;
+  // Preserve the iframe/embed-context params (embed / mode / component /
+  // extra-body-classes) across mentor redirects. They were only forwarded when
+  // landing on '/', but MentorProvider re-resolves the mentor once you're
+  // already on /platform/{tenant}/{mentorId} and calls redirectToMentor again —
+  // there pathname !== '/', so the query was dropped, stripping the embed view.
+  // Carry just those keys from the live URL regardless of the current path (so
+  // we never leak tokens or other one-shot params into the mentor URL).
+  function embedContextQuery() {
+    const current = new URLSearchParams(window.location.search);
+    const preserved = new URLSearchParams();
+    for (const key of ['embed', 'mode', 'component', 'extra-body-classes']) {
+      const value = current.get(key);
+      if (value !== null) preserved.set(key, value);
     }
-    router.push(`/platform/${tenantKey}/explore${queryParams}`);
+    const qs = preserved.toString();
+    return qs ? `?${qs}` : '';
+  }
+
+  function redirectToNoMentorsPage() {
+    router.push(`/platform/${tenantKey}/explore${embedContextQuery()}`);
   }
 
   function redirectToCreateMentor() {
@@ -277,11 +291,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   }
 
   function redirectToMentor(tenantKey: string, mentorId: string) {
-    let queryParams = '';
-    if (window.location.pathname === '/') {
-      queryParams = window.location.search;
-    }
-    router.push(`/platform/${tenantKey}/${mentorId}${queryParams}`);
+    router.push(`/platform/${tenantKey}/${mentorId}${embedContextQuery()}`);
   }
 
   function onLoadMentorsPermissions(
