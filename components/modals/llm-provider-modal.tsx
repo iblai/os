@@ -229,9 +229,16 @@ export function LLMProviderModal({
     // render and unmounts the whole dialog. Coalesce so the `.map` consumer below
     // always gets an array. (Mirrors the `canSwitchProvider` hardening in utils.)
     return (
-      llmProvider?.chat_models?.filter((llm) =>
-        llm.llm_name.toLowerCase().includes(searchQuery.toLowerCase()),
-      ) ?? []
+      llmProvider?.chat_models?.filter((llm) => {
+        const query = searchQuery.toLowerCase();
+        // Match either label: rows are shown by `display_name`, so searching
+        // what you can read has to work, but the raw key stays searchable for
+        // anyone who knows it (e.g. "gpt-4.1" or "amazon.nova").
+        return (
+          llm.llm_name.toLowerCase().includes(query) ||
+          (llm.display_name ?? '').toLowerCase().includes(query)
+        );
+      }) ?? []
     );
   }, [searchQuery, llmProvider]);
 
@@ -470,8 +477,13 @@ export function LLMProviderModal({
                       loading="lazy"
                     />
                   </span>
+                  {/* The API ships a human label per model (`ibl.ai`,
+                      `GPT-4.1`, `Amazon Nova 2 Lite (Bedrock)`); the raw
+                      `llm_name` is the wire key and reads as `iblai` /
+                      `amazon.nova-2-lite-v1:0`. Fall back to the key only when
+                      the backend omits the label. */}
                   <span className="text-left text-sm font-medium text-gray-900">
-                    {llm.llm_name}
+                    {llm.display_name || llm.llm_name}
                   </span>
                 </button>
               );
