@@ -26,6 +26,9 @@ SKIP_COVERAGE_FILES=(
   "explore/_components/search-section.tsx"
   "job-scout/page.tsx"
   "stripe/callback/[launch_id]/page.tsx"
+  # Thin client wrapper around the SDK's <SsoLogin>; the small inline
+  # resolveRedirectPath glue is exercised via the SSO/login E2E flow.
+  "app/sso-login-complete/page.tsx"
   # Public mentor page: server wrapper (thin SEO glue) + its client chat UI.
   # SEO logic lives in lib/seo-mentor.ts (unit-tested); the UI is E2E-covered.
   "[tenantKey]/[mentorId]/page.tsx"
