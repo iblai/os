@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.122.1](https://github.com/iblai/os/compare/v0.122.0...v0.122.1) (2026-08-11)
+
+### Bug Fixes
+
+* **chrome-ext:** address review — validate redirect-path, keep widget allow policy ([3897178](https://github.com/iblai/os/commit/38971789bb2c22abea7320299ccc80758f1b5c19))
+* **chrome-ext:** keep embed params through side-panel SSO login ([3062de4](https://github.com/iblai/os/commit/3062de4a7ca2d4ea21fb769aae855714a2005be5))
+* **embed:** preserve embed params across mentor re-resolve ([ab6194d](https://github.com/iblai/os/commit/ab6194d83defb9c81965d001d8ca6798a4c8a882))
+
+### Chores
+
+* **coverage:** exclude sso-login-complete page from unit-coverage gate ([78bc02f](https://github.com/iblai/os/commit/78bc02f201f48628750cad4722c91a8b2ab2689c))
+
 ## [0.122.0](https://github.com/iblai/os/compare/v0.121.1...v0.122.0) (2026-08-07)
 
 ### Features
