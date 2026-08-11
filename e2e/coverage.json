@@ -951,7 +951,8 @@
         "app/platform/[tenantKey]/[mentorId]/analytics/transcripts/page.tsx",
         "app/platform/[tenantKey]/[mentorId]/analytics/financial/page.tsx",
         "app/platform/[tenantKey]/[mentorId]/analytics/users/page.tsx",
-        "app/platform/[tenantKey]/[mentorId]/analytics/topics/page.tsx"
+        "app/platform/[tenantKey]/[mentorId]/analytics/topics/page.tsx",
+        "app/platform/[tenantKey]/[mentorId]/analytics/memory/page.tsx"
       ],
       "checkpoints": [
         {
@@ -977,6 +978,11 @@
         {
           "id": "anal-05",
           "description": "Financial tab loads with cost cards and charts",
+          "status": "covered"
+        },
+        {
+          "id": "anal-06",
+          "description": "Memory sub-item in the Analytics sidebar (rendered after Transcripts, gated by the SDK's getVisibleAnalyticsTabs) navigates to the memory analytics page",
           "status": "covered"
         }
       ]
