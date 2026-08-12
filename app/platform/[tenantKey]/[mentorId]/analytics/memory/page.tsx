@@ -19,6 +19,10 @@ export default function UsersPage() {
   const selectedMentorId = selectedMentorInfo?.unique_id || mentorId;
 
   return (
-    <AnalyticsMemoryStats tenantKey={tenantKey} mentorId={selectedMentorId} userId={username} />
+    <AnalyticsMemoryStats
+      tenantKey={tenantKey}
+      mentorId={selectedMentorId}
+      userId={username}
+    />
   );
 }

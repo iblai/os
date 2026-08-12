@@ -67,7 +67,9 @@ describe('SkillsTab', () => {
 
       expect(screen.getByText('Skills')).toBeInTheDocument();
       expect(
-        screen.getByText('Manage agent skill assignments for your mentor.'),
+        screen.getByText(
+          'Reusable playbooks this Base Agent can discover and follow.',
+        ),
       ).toBeInTheDocument();
     });
 
