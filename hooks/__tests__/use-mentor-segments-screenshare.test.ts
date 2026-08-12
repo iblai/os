@@ -100,12 +100,12 @@ const screenshareSegment = MENTOR_SEGMENTS.find(
 
 const baseFlags = {
   isMemsearchEnabled: false,
-  isClawEnabled: false,
   isMemoryComponentEnabled: false,
   isScreenshareEnabled: false,
   // Voice calls default on so the Screen tab gating tests aren't perturbed
   // by the separate Voice-tab gate.
   isVoiceCallEnabled: true,
+  isBaseAgent: true,
   isPrivacyEnabled: false,
 };
 

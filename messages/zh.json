@@ -226,6 +226,7 @@
     "analyticsUsers": "用户",
     "analyticsTopics": "主题",
     "analyticsTranscripts": "转录",
+    "analyticsMemory": "记忆",
     "analyticsCosts": "费用",
     "analyticsAudit": "审计",
     "analyticsDataReports": "数据报告",
@@ -478,7 +479,8 @@
     "coworkConsentCancel": "取消",
     "coworkConsentConfirm": "继续",
     "coworkNeedsAccessibility": "Cowork 需要“辅助功能”权限才能控制您的电脑。请在“系统设置 › 隐私与安全性 › 辅助功能”中授权，然后重启应用并重新开启 Cowork。",
-    "coworkNeedsScreenRecording": "Cowork 需要“屏幕录制”权限才能读取窗口内容。请在“系统设置 › 隐私与安全性 › 屏幕录制”中授权，然后重启应用并重新开启 Cowork。"
+    "coworkNeedsScreenRecording": "Cowork 需要“屏幕录制”权限才能读取窗口内容。请在“系统设置 › 隐私与安全性 › 屏幕录制”中授权，然后重启应用并重新开启 Cowork。",
+    "skills": "技能"
   },
   "chatInputFormMemoryMenu": {
     "yourMemory": "您的记忆",
@@ -2127,8 +2129,8 @@
   },
   "tabsSkillsTab": {
     "heading": "技能",
-    "description": "管理您的导师的代理技能分配。",
-    "infoBox": "技能是可复用的能力，创建一次即可分配给任意智能体。创建技能后将其开启，即可赋予该智能体相应能力。"
+    "description": "此基础智能体可发现并遵循的可复用操作手册。",
+    "infoBox": "智能体技能是可附加到基础智能体的可复用操作手册——针对单一任务的书面指令（可附带参考文件），例如在网上调研主题或审查代码。智能体只在相关时才会阅读技能，因此你可以为它添加多种能力而不会让每次对话变得臃肿。在聊天中输入 / 即可查看此智能体的技能并选择一个来启动。"
   },
   "tabsToolsTab": {
     "infoBox": "为您的智能体赋予“双手”。工具让它能够超越单纯的聊天——查找信息、调用 API、触发操作——从而真正为用户完成工作。",

@@ -48,6 +48,8 @@ SKIP_COVERAGE_FILES=(
   "i18n/config.ts"
   "i18n/request.ts"
   "lib/locale-cookie.ts"
+  # Build-time config (Next.js/webpack/Sentry) — not exercised by unit tests.
+  "next.config.ts"
 )
 
 RED='\033[0;31m'

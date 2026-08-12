@@ -202,6 +202,12 @@ const mockGetMentorPublicSettings = vi.fn(() => ({ unwrap: mockUnwrap }));
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   initializeDataLayer: (...args: unknown[]) => mockInitializeDataLayer(...args),
   useLazyGetMentorPublicSettingsQuery: () => [mockGetMentorPublicSettings],
+  // Supplemental agent-skills RBAC fetch (platform-pk-scoped resources).
+  useGetRbacPermissionsMutation: () => [
+    vi.fn(() => ({ unwrap: () => Promise.resolve({}) })),
+  ],
+  // usePlatformId (platform DB pk for platform-scoped rbac paths).
+  useGetPlatformInfoQuery: () => ({ data: undefined }),
   useLazyGetVectorDocumentsQuery: () => [vi.fn(), { data: [] }],
   useLazyGetRecentMessageQuery: () => [vi.fn(), { data: [] }],
   useLazyGetPinnedMessagesQuery: () => [vi.fn(), { data: [] }],

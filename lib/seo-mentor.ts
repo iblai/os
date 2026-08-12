@@ -87,6 +87,52 @@ export async function fetchMentorPublicMeta(
 }
 
 /**
+ * Acronyms that must stay fully uppercase in agent titles/headings. The backend
+ * sometimes stores naively title-cased names (slug "hr-agent" -> "Hr Agent"), so
+ * we correct them for SEO output.
+ */
+const ACRONYMS = new Set([
+  'HR',
+  'IT',
+  'KYC',
+  'AML',
+  'AI',
+  'SIS',
+  'LMS',
+  'CRM',
+  'API',
+  'UI',
+  'UX',
+  'QA',
+  'SEO',
+]);
+
+/**
+ * Uppercase any whole word that matches a known acronym; leave every other word
+ * untouched. Fixes "Hr Agent" -> "HR Agent" and "Kyc Aml Agent" -> "KYC AML
+ * Agent" without disturbing already-correct names ("HR Assistant" stays).
+ * Idempotent.
+ */
+export function normalizeAcronyms(name: string): string {
+  return name.replace(/\p{L}+/gu, (word) =>
+    ACRONYMS.has(word.toUpperCase()) ? word.toUpperCase() : word,
+  );
+}
+
+/**
+ * The public agent's display name (acronyms fixed), or null when unavailable.
+ * Used to server-render an `<h1>` so crawlers and screen readers see the page's
+ * heading even before the client app hydrates.
+ */
+export async function fetchMentorDisplayName(
+  org: string,
+  mentor: string,
+): Promise<string | null> {
+  const meta = await fetchMentorPublicMeta(org, mentor);
+  return meta?.name ? normalizeAcronyms(meta.name) : null;
+}
+
+/**
  * Build the `Metadata` for a mentor page. Public mentors get rich, indexable
  * metadata (name, description, avatar card); everything else stays noindex.
  */
@@ -102,7 +148,7 @@ export async function buildMentorMetadata(
     return buildMetadata({ path });
   }
 
-  const name = meta.name ?? 'AI Agent';
+  const name = normalizeAcronyms(meta.name ?? 'AI Agent');
   const description =
     meta.description ?? `Chat with ${name}, an AI agent on ${SITE_NAME}.`;
 
@@ -125,7 +171,7 @@ export async function mentorJsonLd(
   if (!meta?.isPublic) return null;
 
   const origin = await getSiteUrl();
-  const name = meta.name ?? 'AI Agent';
+  const name = normalizeAcronyms(meta.name ?? 'AI Agent');
 
   return {
     '@context': 'https://schema.org',
