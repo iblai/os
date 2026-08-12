@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.125.0](https://github.com/iblai/os/compare/v0.124.1...v0.125.0) (2026-08-12)
+
+### Features
+
+* **mentor:** adding feat for the skills change for / search ([c213d2b](https://github.com/iblai/os/commit/c213d2b9347c01ed70487b86d997fbe0ccfaab1b))
+
+### Bug Fixes
+
+* **e2e-test:** adding fix for the e2e tests ([02585a3](https://github.com/iblai/os/commit/02585a3a862d6ddae24f05a952d83536742ba75d))
+* **iblai-js:** fixes for agent skills and e2e tests ([b3eb72f](https://github.com/iblai/os/commit/b3eb72f80f02007115fd3b746eaca6f472231c78))
+* **mentor:** adding fix for the skill dropdown next to canvas ([d272fb9](https://github.com/iblai/os/commit/d272fb9a69df8ad2f3811cb91b909f404d670a16))
+* **mentor:** adding skill dropdwon for the skill in chat ([3409134](https://github.com/iblai/os/commit/3409134a7c6651c7d7f3af47239a9bbbe62b79cf))
+* **mentor:** fix for the pnpm lock ([3c69276](https://github.com/iblai/os/commit/3c692763e36ce79b25c66d0f8d73c88931f5c264))
+* **mentor:** fix for the test in agent skills ([cbaafe8](https://github.com/iblai/os/commit/cbaafe8ca40dbb8ff5e97c3e344d4dd64356e51c))
+
 ## [0.124.1](https://github.com/iblai/os/compare/v0.124.0...v0.124.1) (2026-08-11)
 
 ### Bug Fixes
