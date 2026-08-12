@@ -445,6 +445,11 @@ export function LLMProviderModal({
               return (
                 <button
                   key={`cloud-${llm.llm_name}`}
+                  // The wire key, for tests to select on. The visible label is
+                  // display data and is expected to change (that is the point
+                  // of rendering display_name), so matching rows by their text
+                  // couples the suite to backend copy.
+                  data-model={llm.llm_name}
                   disabled={isDisabled}
                   onClick={() => {
                     selectCloud(llm.llm_name);
