@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-08-11 | 615 checkpoints (584 covered, 8 pending/fixme, 11 not-reproducible in default env, 12 deprecated) | 68 journeys (67 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-08-11 | 634 checkpoints (603 covered, 8 pending/fixme, 11 not-reproducible in default env, 12 deprecated) | 69 journeys (68 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -747,27 +747,24 @@ Requires `DM_URL` env var. Tests are skipped when `DM_URL` is unset.
 
 ---
 
-## Journey 44: CLAW Advanced Sandbox (16 checkpoints) — `journeys/44-claw-advanced-sandbox.spec.ts`
+## Journey 44: CLAW Advanced Sandbox (13 checkpoints) — `journeys/44-claw-advanced-sandbox.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx`, `components/modals/edit-mentor-modal/tabs/skills-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `components/modals/edit-mentor-modal/capability-gate.tsx`, `hooks/use-mentor-segments.ts`
+**Source files:** `components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `components/modals/edit-mentor-modal/capability-gate.tsx`, `hooks/use-mentor-segments.ts`
 
-The "Dedicated sandbox" (`enable_claw`) master toggle moved off Settings → Capabilities into an in-tab `CapabilityGate` at the top of the Sandbox tab itself (feat/2040) and auto-saves on click (optimistic local state via `useEditMentorMutation`) — no footer Save button involved for the toggle. Both the Sandbox and Skills top-level tabs are now **always mounted** for admins regardless of `enable_claw` / wired-instance state — `hooks/use-mentor-segments.ts` no longer gates either segment. The gated `SandboxConfig` UI renders inside a grayed + inert `capability-gate-content` wrapper (`data-enabled` mirrors the toggle) while the capability is off; the Skills tab shows a content-level "not connected" preview when no `ClawMentorConfig` is wired, independent of the capability toggle. The instance table's per-row **Connect** action is a dedicated button (`data-testid="connect-instance-<id>"`) next to the "Actions" three-dot menu (Run checks / Edit / Delete) — no longer a dropdown menu item.
+The "Dedicated sandbox" (`enable_claw`) master toggle moved off Settings → Capabilities into an in-tab `CapabilityGate` at the top of the Sandbox tab itself (feat/2040) and auto-saves on click (optimistic local state via `useEditMentorMutation`) — no footer Save button involved for the toggle. The Sandbox top-level tab is now **always mounted** for admins regardless of `enable_claw` / wired-instance state — `hooks/use-mentor-segments.ts` no longer gates the segment. The gated `SandboxConfig` UI renders inside a grayed + inert `capability-gate-content` wrapper (`data-enabled` mirrors the toggle) while the capability is off. The instance table's per-row **Connect** action is a dedicated button (`data-testid="connect-instance-<id>"`) next to the "Actions" three-dot menu (Run checks / Edit / Delete) — no longer a dropdown menu item. Agent Skills is fully independent of the sandbox and is covered **exclusively** by Journey 67 — this journey carries no skills assertions.
 
 - [x] Admin opens the Sandbox tab and the "Dedicated sandbox" capability toggle (in-tab CapabilityGate) is present
 - [x] Capability toggle is interactable for admins regardless of sandbox connection state (admin intent)
-- [x] Flipping the capability toggle auto-saves instantly (optimistic, no footer Save button) and does not change Sandbox or Skills tab visibility — both tabs are unconditionally mounted
+- [x] Flipping the capability toggle auto-saves instantly (optimistic, no footer Save button) and does not change Sandbox tab visibility — the tab is unconditionally mounted
 - [x] Enabling the capability flips `capability-gate-content`'s `data-enabled` to `true`, ungating the SandboxConfig UI; Sandbox leads the Integrations category (feat/2040 moved it off Configurations)
-- [x] Skills tab is always visible AND shows the real skills UI (heading, info box, New Skill action) independent of the sandbox — feat/2040 made the Skills content fully sandbox-independent (no "connect a sandbox" gate)
-- [x] Sandbox leads the Integrations category and Skills follows Prompts in the Configurations category, unconditionally (feat/2040 groups the sidebar into Configurations / Integrations / Runtime)
-- [x] Disabling the capability flips `capability-gate-content`'s `data-enabled` back to `false`, regating the SandboxConfig UI, while Sandbox and Skills tabs remain visible
+- [x] Sandbox leads the Integrations category unconditionally (feat/2040 groups the sidebar into Configurations / Integrations / Runtime)
+- [x] Disabling the capability flips `capability-gate-content`'s `data-enabled` back to `false`, regating the SandboxConfig UI, while the Sandbox tab remains visible
 - [x] Admin navigates to Sandbox tab and the sandbox config container renders regardless of capability state
 - [x] Admin toggles the capability ON then OFF in one session and `capability-gate-content`'s `data-enabled` flips accordingly both times
 - [x] Admin adds a new sandbox instance via the Add Instance dialog (capability enabled first) and the new row appears in the instance table
 - [x] Admin edits an existing sandbox instance name via the Edit Instance dialog and the updated name is reflected in the table
-- [x] Admin connects a sandbox instance via the dedicated per-row Connect button (no longer a dropdown item): Connected Instance heading appears and the Skills tab renders its (sandbox-independent) skills UI
+- [x] Admin connects a sandbox instance via the dedicated per-row Connect button (no longer a dropdown item) and the Connected Instance heading appears
 - [x] Admin edits an Agent Configuration field in the Prompts tab: edit modal closes and the new value is persisted
-- [x] Admin toggles a skill on then off in the Skills tab and aria-checked flips back to the original state
-- [x] Admin creates a new skill, edits its description, and the updated skill row remains visible; skill is deleted on cleanup
 - [ ] _(not-reproducible — RBAC off in default env)_ Dedicated sandbox toggle (`enable_claw`) is disabled when the user only has read access — unit-covered in `sandbox-tab.test.tsx`
 
 ---
@@ -1290,3 +1287,66 @@ Because the toggle mutates the mentor's attached tools — the same fields Journ
 - [x] grd-13: Non-admin does not see the Grader tab / cannot reach the Edit Agent Settings menu item at all
 - [ ] grd-14 _(not-reproducible)_: the grader tab's fine-grained RBAC gating is real (flat actions on the mentor resource, checked via `/mentors/{id}/#<action>` with a graceful fallback) — denied `read_grader_config` hides the tab and shows its denied state; denied write/create/delete/override actions omit the matching affordance. Not e2e-reproducible without seeding a restricted RBAC permission object for the e2e admin account, which this environment has no fixture for
 - [ ] grd-15 _(not-reproducible)_: the Results sub-tab's grade-override flow (override/clear a learner's grade, which PATCHes back to the LMS) requires a real graded submission produced by a live LMS-connected grading run — not reproducible in this e2e environment, which has no fixture to produce one on demand (grd-04 covers the reachable empty-table state)
+
+---
+
+## Journey 67: Agent Skills (22 checkpoints) — `journeys/67-agent-skills.spec.ts`
+
+**Source files:** `hooks/use-mentor-segments.ts`, `components/modals/edit-mentor-modal/tabs/skills-tab.tsx`, `components/chat-input-form.tsx`, `components/auto-resize-text-area.tsx`
+
+Issue feat/2215 — ALL Agent Skills coverage lives here (Agent Skills is fully
+independent of the sandbox, so the sandbox journey carries none). Three
+surfaces:
+
+1. The Edit Mentor "Skills" tab is gated on mentor type: mounted only when
+   the mentor resolves to "Base Agent" (`resolveIsBaseAgentMentor` in
+   `hooks/use-mentor-segments.ts`, mirroring the SDK's `isBaseAgentMentor` /
+   `BASE_AGENT_TEMPLATE_SLUGS`), failing OPEN when the type can't be
+   determined from the mentor-settings response. `CreateMentorPage`'s UI has
+   no agent-type picker and only ever produces Base Agent mentors, so the
+   gating checkpoints mock the mentor-settings GET for a real, freshly-created
+   mentor (`route.fetch()` + mutate `mentor_slug`/`template_mentor` +
+   `route.fulfill()` — every other field stays authentic). The tab is plainly
+   ADMIN-ONLY via the userTypes filter — no RBAC resource (the agent-skills
+   RBAC contract is unsettled backend-side); the chat `/` picker, by
+   contrast, is available to students too.
+2. The skills SECTION (the SDK's `AgentSkills` component: Agent Skills /
+   Available Skills sub-tabs, enable toggles, New/Edit/Delete Skill dialogs)
+   is driven exclusively through the dedicated helpers in
+   `@iblai/iblai-js/playwright` (`verifySkillsTabVisible`,
+   `switchToAgentSkillsSubTab`, `createSkill`, `editSkill`, `deleteSkill`,
+   …). Management checkpoints run SERIAL with a dedicated mentor per test —
+   skill create/edit/delete mutates the platform-wide catalog.
+3. The chat composer's `/` skill picker (`SlashSkillPicker` /
+   `useSlashSkillPicker` from `@iblai/iblai-js/web-containers`, wired in
+   `components/chat-input-form.tsx` + `components/auto-resize-text-area.tsx`)
+   opens when the composer holds a single `/`-prefixed token and the
+   mentor's effective skills — resolved client-side from its ONLY skill
+   source, the skill assignments (`GET .../agents/{uuid}/skills/`; the
+   platform-wide `/agent-skills/` catalog is never fetched from chat) — are
+   non-empty. These checkpoints mock that endpoint via
+   `ChatPage.mockEffectiveSkills` for full determinism — the composer fetches
+   eagerly on mount, so the mock must be registered before navigation.
+
+- [x] ags-01: Admin sees the Skills tab on a freshly-created (Base Agent) mentor, with the updated tab description ("Reusable playbooks this Base Agent can discover and follow.") and skills-info-box copy describing the `/` picker; Skills sits right after Prompts in the Configurations category
+- [x] ags-02: Skills tab is hidden when the mentor resolves to a non-base-agent type (`mentor_slug` is not a base-agent alias and `template_mentor` does not resolve to one either)
+- [x] ags-03: Skills tab stays visible when the mentor type cannot be determined (`template_mentor` is a numeric PK the frontend cannot read a slug from) — the gate fails OPEN rather than hiding the tab
+- [x] ags-04: Admin creates a platform skill, attaches it from the Available Skills sub-tab (`addSkillToAgent` — assignment created ENABLED), and its enable Switch round-trips off/on on the Agent Skills sub-tab (`aria-checked`); detach + delete on cleanup — dedicated mentor per test
+- [x] ags-05: Admin creates a new platform skill, locates it on the server-paged Available Skills sub-tab (paging until found — catalog ordering not guaranteed), edits its description, and deletes it (row disappears) — via the SDK's `createSkill`/`editSkill`/`deleteSkill` helpers, serial (platform-wide catalog)
+- [x] ags-06: NON-ADMIN — the Skills tab is absent from the Edit Mentor modal (the segment is ADMIN-only via userTypes in `MENTOR_SEGMENTS`)
+- [x] slash-01: Mentor with no effective skills — chat composer stays a plain textbox (no combobox role) and typing "/" opens nothing
+- [x] slash-02: Mentor with skills — composer gets `role=combobox` wiring and "/" opens the picker listing only enabled skills as name + slug, no descriptions (assignment rows carry none; the platform-wide agent-skills catalog is never fetched from chat)
+- [x] slash-03: Typing after "/" filters the picker by both skill name and slug as the query narrows; no match closes the picker
+- [x] slash-04: ArrowDown/ArrowUp cycle the active picker option and the composer's `aria-activedescendant` follows the active option's id
+- [x] slash-05: Enter completes the active option IN PLACE — `/<slug> ` lands at the typed token's index and the backdrop layer (`skill-token-highlight`) paints an active-pill background behind it; nothing is submitted
+- [x] slash-06: Clicking a picker option (mousedown) completes that skill's token in place with the same highlight
+- [x] slash-07: Escape dismisses the picker until the slash token is cleared (stays dismissed while the token persists), then a fresh "/" re-arms and reopens it
+- [x] slash-08: Multi-word text starting with "/" (e.g. "/hello world") never opens the picker
+- [x] slash-09: One Backspace at the token's end (or Delete at its start) removes the whole `/slug ` token atomically
+- [x] slash-10: Backspace after plain text deletes characters normally — the highlighted token stays intact
+- [x] slash-11: A mid-sentence token is removed atomically and the seam space collapses ("say /web-research please" → "say please")
+- [x] slash-12: Multiple skill invocations in one message are each highlighted; unknown or disabled slugs never highlight
+- [x] slash-13: Typing "/" while the assignments fetch (the composer's only skill source) is still in flight shows the "Loading skills…" popover (`slash-skill-loading`, `role=status`), which yields to the picker once the list resolves
+- [x] slash-16: Skills dropdown (next to Canvas) lists enabled skills as name + `/slug`; selecting inserts the token AT THE CARET with context-aware spacing; the active pill shows the armed name + the standard ✕ (disarms without opening the menu); toggling removes cleanly; arming another replaces (single selection); `/`-picker arming updates the button — one composer-text source of truth
+- [x] slash-15: NON-ADMIN — with the assignments endpoint readable (mocked granted state; a 403 degrades to an inactive picker) the "/" picker offers skills; selecting completes the token and the sent invocation message receives a live AI reply — skips when the environment denies the non-admin CHAT permission entirely (composer disabled with a "you don't have permission to chat" placeholder): the picker rides on top of chat access
+- [x] slash-14: A "/" token typed after existing text (caret-adjacent, preceded by whitespace) opens the picker; selecting completes the invocation at that index keeping the sentence. A "/" glued inside a word (and/or, URLs) never triggers

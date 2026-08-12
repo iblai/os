@@ -1,5 +1,21 @@
 import { Page, Locator, expect } from '@playwright/test';
 
+/**
+ * Minimal shape accepted by `mockEffectiveSkills` — mirrors the SDK's
+ * `EffectiveAgentSkill` (`@iblai/data-layer`'s `skills-utils`/`types`) closely
+ * enough to drive the chat `/` skill picker (`SlashSkillPicker` /
+ * `useSlashSkillPicker` from `@iblai/iblai-js/web-containers`). Only
+ * `enabled: true` skills are ever offered by the picker.
+ */
+export interface EffectiveSkillFixture {
+  unique_id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  category?: string;
+  enabled: boolean;
+}
+
 export class ChatPage {
   readonly page: Page;
 
@@ -22,6 +38,23 @@ export class ChatPage {
   readonly promptGalleryDialog: Locator;
   readonly guidedSuggestedPrompts: Locator;
   readonly guidedSuggestedPromptButtons: Locator;
+  readonly slashSkillPicker: Locator;
+  readonly skillTokenHighlights: Locator;
+  /**
+   * The Skills dropdown trigger in the inside-buttons row — the discoverable
+   * alternative to typing `/`. Shows the armed skill's name (active pill
+   * styling) whenever a `/slug` token is present in the composer, "Skills"
+   * otherwise. Hidden entirely when the mentor has no skills.
+   */
+  readonly skillsMenuTrigger: Locator;
+  /**
+   * The ✕ inside the active skills pill (disarms the token without opening
+   * the menu). Resolved FROM `skillsMenuTrigger` — never the page — so the
+   * testid can only ever match inside the trigger it belongs to.
+   */
+  readonly skillsMenuClear: Locator;
+  /** The Skills dropdown's content panel (Radix portal), when open. */
+  readonly skillsMenuContent: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -75,6 +108,20 @@ export class ChatPage {
     this.guidedSuggestedPromptButtons = this.guidedSuggestedPrompts.locator(
       '.chat-guided-suggested-prompts',
     );
+    // `SlashSkillPicker` (SDK, web-containers) renders its listbox with this
+    // fixed testid regardless of the generated `listboxId`.
+    this.slashSkillPicker = page.getByTestId('slash-skill-picker');
+    // In-place invocation highlights (`components/chat-input-form.tsx`).
+    // Selecting a picker option completes the `/<slug> ` token AT the typed
+    // index; a backdrop layer behind the textarea paints a pill background
+    // under each enabled `/skill` token (one element per token). Backspace
+    // at a token's end (or Delete at its start) removes the whole token in
+    // one stroke.
+    this.skillTokenHighlights = page.getByTestId('skill-token-highlight');
+    this.skillsMenuTrigger = page.getByTestId('skills-menu-trigger');
+    this.skillsMenuClear =
+      this.skillsMenuTrigger.getByTestId('skills-menu-clear');
+    this.skillsMenuContent = page.getByTestId('skills-menu-content');
   }
 
   async sendMessage(text: string): Promise<void> {
@@ -359,6 +406,145 @@ export class ChatPage {
     await closeButton.click();
     await expect(this.promptGalleryDialog).not.toBeVisible({
       timeout: 10_000,
+    });
+  }
+
+  // ── `/` skill picker (chat composer) ────────────────────────────────────
+  //
+  // `ChatInputForm` resolves the mentor's skill list client-side from its
+  // ONLY skill source — the mentor's skill assignments
+  // (`GET .../agents/{uuid}/skills/`; the platform-wide `/agent-skills/`
+  // catalog is deliberately never fetched from chat) — via the SDK's
+  // `resolveEffectiveAgentSkills`, eagerly on mount, not lazily on the first
+  // `/` keypress. The composer textarea's role flips from the implicit
+  // `textbox` to `combobox` whenever the resolved list is non-empty (see
+  // `components/chat-input-form.tsx`). Two consequences for e2e:
+  //   1. `mockEffectiveSkills` MUST be called before `navigateToMentorApp` /
+  //      any navigation to the chat page — registering the routes after the
+  //      page has already loaded misses the requests that populate the list.
+  //   2. Use `getComposerTextarea()` (an id-based, role-agnostic locator)
+  //      rather than `chatInput` (`getByRole('textbox', ...)`) whenever a
+  //      test might put the composer into its combobox state — `chatInput`
+  //      only resolves while the accessible role is `textbox`.
+  // NOTE: the resolved list is sorted by skill NAME, so the picker's option
+  // order is alphabetical regardless of fixture order.
+
+  /**
+   * Role-agnostic locator for the chat composer's `<textarea>`. Safe to use
+   * whether or not the `/` skill picker's combobox aria wiring is active.
+   */
+  getComposerTextarea(): Locator {
+    return this.page.locator('#chat-input-textarea');
+  }
+
+  /**
+   * Intercepts the composer's ONLY skill source — the mentor's skill
+   * assignments (`GET .../agents/{uuid}/skills/`) — and fulfills it from a
+   * fixed fixture list, so the `/` skill picker's contents are deterministic
+   * instead of depending on whatever skills (if any) happen to be assigned
+   * server-side. Each fixture becomes an assignment row (name/slug/enabled —
+   * assignment rows carry no descriptions, and the platform-wide
+   * `/agent-skills/` catalog is deliberately never fetched from chat). Must
+   * be registered BEFORE navigating to the chat page — see the
+   * class-of-methods note above.
+   */
+  async mockEffectiveSkills(skills: EffectiveSkillFixture[]): Promise<void> {
+    // Assignments: /agents/{uuid}/skills/ — NOT /agent-skills/ (catalog).
+    await this.page.route(
+      (url) => /\/agents\/[^/]+\/skills\//.test(url.pathname),
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(
+            skills.map((skill, index) => ({
+              id: index + 1,
+              mentor: 'e2e-mentor',
+              skill: skill.unique_id,
+              skill_name: skill.name,
+              skill_slug: skill.slug,
+              enabled: skill.enabled,
+            })),
+          ),
+        });
+      },
+    );
+  }
+
+  /**
+   * Same as `mockEffectiveSkills` — kept as a named alias for the non-admin
+   * journey so the intent stays explicit. Students get the picker only if
+   * the backend lets them read the assignments endpoint (today it is
+   * platform-admin-only and 403s for them, which the composer degrades to
+   * an inactive picker); this mock simulates that granted state.
+   */
+  async mockStudentSkills(skills: EffectiveSkillFixture[]): Promise<void> {
+    await this.mockEffectiveSkills(skills);
+  }
+
+  /**
+   * The `id` of the slash-picker option currently marked
+   * `aria-selected="true"` (the keyboard/hover-active option). Compare
+   * against the composer's `aria-activedescendant` attribute to verify the
+   * combobox wiring, not just the visual highlight.
+   */
+  async activeSlashSkillOptionId(): Promise<string | null> {
+    return this.slashSkillPicker
+      .locator('[aria-selected="true"]')
+      .first()
+      .getAttribute('id');
+  }
+
+  /**
+   * The menu content, only while GENUINELY open. Radix keeps the content
+   * element mounted (and visible) for a moment after a selection while its
+   * close animation runs, with `data-state="closed"` — a locator that
+   * ignores the state can match that dying instance, "find" its items, and
+   * then interact with a menu that unmounts mid-step. Every item lookup
+   * goes through this state-filtered locator instead.
+   */
+  private openSkillsMenuContent(): Locator {
+    return this.page.locator(
+      '[data-testid="skills-menu-content"][data-state="open"]',
+    );
+  }
+
+  /**
+   * Returns the Skills-dropdown item for a skill slug (menu must be open).
+   * Resolved from the OPEN menu content — never the page, never a closing
+   * menu instance — so nothing outside the live dropdown can ever match.
+   */
+  getSkillsMenuItem(slug: string): Locator {
+    return this.openSkillsMenuContent().getByTestId(`skills-menu-item-${slug}`);
+  }
+
+  /**
+   * Opens the Skills dropdown and waits until its items are actually
+   * showing. A plain `skillsMenuTrigger.click()` is flaky right after a
+   * previous selection, in both directions: Radix is still tearing down the
+   * old menu instance (dismiss listeners / focus return), so a click landing
+   * in that window toggles or gets swallowed — and the dying instance's
+   * items remain visible with `data-state="closed"`, so a state-blind check
+   * can wrongly conclude the menu is already open and skip clicking
+   * entirely. Retry clicking until an item inside a data-state="open"
+   * content is visible.
+   */
+  async openSkillsMenu(): Promise<void> {
+    const anyOpenItem = this.openSkillsMenuContent()
+      .locator('[data-testid^="skills-menu-item-"]')
+      .first();
+    await expect(async () => {
+      if (!(await anyOpenItem.isVisible())) {
+        await this.skillsMenuTrigger.click();
+      }
+      await expect(anyOpenItem).toBeVisible({ timeout: 1_000 });
+    }).toPass({ timeout: 15_000 });
+  }
+
+  /** Returns the slash-picker option `<li>` whose text contains `name`. */
+  getSlashSkillOption(name: string): Locator {
+    return this.slashSkillPicker.getByRole('option', {
+      name: new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
     });
   }
 }

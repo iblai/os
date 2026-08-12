@@ -1340,9 +1340,9 @@ const buildContext = (
   flags: {
     isMemsearchEnabled: true,
     isMemoryComponentEnabled: true,
-    isClawEnabled: false,
     isScreenshareEnabled: false,
     isVoiceCallEnabled: true,
+    isBaseAgent: true,
     isPrivacyEnabled: false,
   },
   isUserTypeAllowed: (segment: MentorSegment) =>
@@ -1591,9 +1591,9 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
           flags: {
             isMemsearchEnabled: false,
             isMemoryComponentEnabled: true,
-            isClawEnabled: false,
             isScreenshareEnabled: false,
             isVoiceCallEnabled: true,
+            isBaseAgent: true,
             isPrivacyEnabled: false,
           },
         }),
@@ -1613,9 +1613,9 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
           flags: {
             isMemsearchEnabled: true,
             isMemoryComponentEnabled: true,
-            isClawEnabled: false,
             isScreenshareEnabled: false,
             isVoiceCallEnabled: true,
+            isBaseAgent: true,
             isPrivacyEnabled: false,
           },
         }),
@@ -1635,9 +1635,9 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
           flags: {
             isMemsearchEnabled: true,
             isMemoryComponentEnabled: true,
-            isClawEnabled: false,
             isScreenshareEnabled: false,
             isVoiceCallEnabled: true,
+            isBaseAgent: true,
             isPrivacyEnabled: false,
           },
         }),
@@ -1653,9 +1653,9 @@ describe('NavBar - Menu Filtering Logic (filterMentorSegments)', () => {
             // memsearch OFF — no longer changes the output at all.
             isMemsearchEnabled: false,
             isMemoryComponentEnabled: true,
-            isClawEnabled: false,
             isScreenshareEnabled: false,
             isVoiceCallEnabled: true,
+            isBaseAgent: true,
             isPrivacyEnabled: false,
           },
         }),
