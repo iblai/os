@@ -1,4 +1,5 @@
 import { Page, Locator, expect } from '@playwright/test';
+import { isVisibleWithin } from '../../utils/resilient';
 
 export class HistoryTab {
   readonly page: Page;
@@ -31,10 +32,7 @@ export class HistoryTab {
   }
 
   async hasConversations(): Promise<boolean> {
-    return this.conversationRows
-      .first()
-      .isVisible({ timeout: 15_000 })
-      .catch(() => false);
+    return this.conversationRows.isVisibleWithin(first(), 15_000);
   }
 
   async clickFirstRow(): Promise<void> {

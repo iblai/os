@@ -1,4 +1,5 @@
 import { Page, Locator, expect } from '@playwright/test';
+import { isVisibleWithin } from '../../utils/resilient';
 
 export class SettingsTab {
   readonly page: Page;
@@ -230,10 +231,7 @@ export class SettingsTab {
     const opt = this.page.locator('div[role="option"]').filter({
       hasText: new RegExp(`^${label}$`, 'i'),
     });
-    const radixVisible = await opt
-      .first()
-      .isVisible({ timeout: 3_000 })
-      .catch(() => false);
+    const radixVisible = await opt.isVisibleWithin(first(), 3_000);
     if (radixVisible) {
       await opt.first().click();
     } else {
@@ -257,10 +255,7 @@ export class SettingsTab {
     const opt = this.page.locator('div[role="option"]').filter({
       hasText: new RegExp(`^${label}$`, 'i'),
     });
-    const radixVisible = await opt
-      .first()
-      .isVisible({ timeout: 3_000 })
-      .catch(() => false);
+    const radixVisible = await opt.isVisibleWithin(first(), 3_000);
     if (radixVisible) {
       await opt.first().click();
     } else {

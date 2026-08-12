@@ -1,4 +1,5 @@
 import { Page, Locator, expect } from '@playwright/test';
+import { isVisibleWithin } from '../../utils/resilient';
 import {
   LTI_LABELS,
   LTI_TEST_IDS,
@@ -217,10 +218,7 @@ export class LtiTab {
    */
   async isTabVisible(): Promise<boolean> {
     await this.activateCategory();
-    return this.tabTrigger
-      .first()
-      .isVisible({ timeout: 5_000 })
-      .catch(() => false);
+    return this.tabTrigger.isVisibleWithin(first(), 5_000);
   }
 
   /** Assert the LTI tab IS present in the sidebar (Integrations category). */
