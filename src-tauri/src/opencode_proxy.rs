@@ -60,6 +60,8 @@ the dev server in the background (e.g. `pnpm dev`), then open the site in the \
 user's browser — macOS: `open -a \"Google Chrome\" http://localhost:3000` \
 (plain `open <url>` as a fallback), Linux: `xdg-open <url>`, Windows: \
 `start <url>`.
+- Do not run `pnpm build` before the preview — `pnpm typecheck` and `pnpm lint` \
+are enough; the dev server is the preview.
 ";
 
 /// Everything the proxy needs to serve one Code session.
@@ -427,6 +429,10 @@ mod tests {
         assert!(
             text.contains("pnpm dev") && text.contains("open -a"),
             "the show-the-site guidance must survive edits: {text}"
+        );
+        assert!(
+            text.contains("Do not run `pnpm build`") && text.contains("pnpm typecheck"),
+            "the no-build-before-preview rule must survive edits: {text}"
         );
     }
 }
