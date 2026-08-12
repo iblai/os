@@ -1,6 +1,6 @@
 # Tauri Desktop E2E Coverage — Journey Checklist
 
-> Last updated: 2026-08-01 | 20 checkpoints (14 covered, 6 pending) | 3 journeys | 100% of reproducible checkpoints covered | Driver: WebdriverIO + tauri-driver
+> Last updated: 2026-08-13 | 27 checkpoints (18 covered, 9 pending) | 3 journeys | 100% of reproducible checkpoints covered | Driver: WebdriverIO + tauri-driver
 
 This is the desktop counterpart to the web `e2e/COVERAGE.md`. It tracks only what
 is exercised by driving the **built desktop binary** through `tauri-driver` (see
@@ -63,7 +63,7 @@ Windows (`msedgedriver`) only — `tauri-driver` has no macOS support.
 
 ---
 
-## Journey 3: Code Mode (opencode) (11 checkpoints: 8 covered, 3 pending) — `journeys/03-code-mode.spec.ts`
+## Journey 3: Code Mode (opencode) (17 checkpoints: 11 covered, 6 pending) — `journeys/03-code-mode.spec.ts`
 
 > **Partly covered.** The installer and per-chat state (code-01…07) run against
 > the REAL compiled binary through the live Tauri IPC bridge (`window.__TAURI__`):
@@ -80,9 +80,21 @@ Windows (`msedgedriver`) only — `tauri-driver` has no macOS support.
 > the Vitest tests (`components/chat/__tests__/code-permission-card.test.tsx`,
 > `components/chat/__tests__/ai-message-bubble.test.tsx`).
 >
-> Requires network access for the opencode download. No Ollama, no credentials.
+> The Agent Skills checkpoints (code-12/13/16) exercise the real skill staging:
+> `set_opencode_skills` writing SKILL.md packages under the mentor-keyed staging
+> dir (with hostile slugs/filenames confined), the rewrite/clear semantics, and a
+> live `ensure_vibe_skills` tarball fetch. The UI half (code-14, the pill spinner
+> + amber note) needs an authenticated session like odm-01/04/06, and an actual
+> skill invocation (code-15) needs a tool-calling model like code-08..10 — both
+> pending, covered meanwhile by the Vitest suites
+> (`hooks/__tests__/use-opencode-skill-sync.test.tsx`,
+> `components/chat-input-form/__tests__/coding-mode-button.test.tsx`) and the
+> Rust `apply_skills_config` tests.
+>
+> Requires network access for the opencode + vibe downloads. No Ollama, no
+> credentials.
 
-**Source files:** `src-tauri/src/opencode_acp.rs`, `src-tauri/src/opencode_installer.rs`, `src-tauri/src/opencode_proxy.rs`, `components/chat-input-form/coding-mode-button.tsx`, `components/chat/code-permission-card.tsx`
+**Source files:** `src-tauri/src/opencode_acp.rs`, `src-tauri/src/opencode_installer.rs`, `src-tauri/src/opencode_proxy.rs`, `components/chat-input-form/coding-mode-button.tsx`, `components/chat/code-permission-card.tsx`, `hooks/use-opencode-skill-sync.ts`
 
 - [x] `code-01` `check_opencode_status` reports Code readiness (installed / version / config_ready / sandboxed)
 - [x] `code-02` `install_opencode` downloads and installs the pinned opencode release binary (live)
@@ -92,6 +104,12 @@ Windows (`msedgedriver`) only — `tauri-driver` has no macOS support.
 - [x] `code-06` The folder picker repoints ONE chat at an arbitrary path and leaves other chats untouched
 - [x] `code-07` `opencode_close` / `opencode_permission_respond` on an unknown id are graceful no-ops
 - [x] `code-11` The app keeps answering IPC while opencode downloads and extracts _(setup-freeze regression)_
+- [x] `code-12` `set_opencode_skills` materialises a mentor's Agent Skills as SKILL.md packages (frontmatter + text resources), with hostile slugs/filenames confined to the staging dir
+- [x] `code-13` A skills rewrite drops deselected skills, an empty sync clears the tree, and `skills: null` ends a sync without touching it
+- [x] `code-16` `ensure_vibe_skills` installs the shared iblai/vibe skill set into the app data dir (live tarball fetch, daily sha-gated)
 - [ ] `code-08` A permission prompt in one chat does not block another chat's turn _(needs a tool-calling model)_
 - [ ] `code-09` The 5-session cap evicts the least-recently-used idle opencode process _(needs a tool-calling model)_
 - [ ] `code-10` The permission prompt renders in the chat that raised it _(needs a tool-calling model)_
+- [ ] `code-14` The Code pill spins in place of its icon while skills sync; the popover shows the amber note when the sync fails _(needs an authenticated UI session)_
+- [ ] `code-15` A Code turn invokes a synced skill through opencode's native skill tool _(needs a tool-calling model)_
+- [ ] `code-17` New Chat in the sidebar evicts the previous chat's opencode process while Code is on _(needs an authenticated UI session; covered meanwhile by the app-sidebar Vitest eviction cases)_

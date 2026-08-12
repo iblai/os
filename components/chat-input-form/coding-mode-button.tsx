@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Code2, Folder, X } from 'lucide-react';
+import { Code2, Folder, Loader2, X } from 'lucide-react';
 import {
   Popover,
   PopoverContent,
@@ -18,6 +18,7 @@ import { Switch } from '@/components/ui/switch';
 import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
 import { isTauriOfflineMode } from '@/hooks/use-tauri-offline';
 import { config } from '@/lib/config';
+import type { OpencodeSkillSync } from '@/hooks/use-opencode-skill-sync';
 
 const ENABLED_KEY = 'ibl_coding_mode_enabled';
 const MODEL_KEY = 'ibl_coding_mode_model';
@@ -99,7 +100,14 @@ async function resolveCodingModel(
  * on first use, and the picker overrides it for this chat only. A chat with no session
  * id yet has no workspace to show, which is why the commands are skipped below.
  */
-export function CodingModeButton({ sessionId }: { sessionId?: string }) {
+export function CodingModeButton({
+  sessionId,
+  skillSync,
+}: {
+  sessionId?: string;
+  /** Skill sync state from useOpencodeSkillSync (mounted by the composer). */
+  skillSync?: OpencodeSkillSync;
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const [enabled, setEnabled] = useState(
     () =>
@@ -173,6 +181,7 @@ export function CodingModeButton({ sessionId }: { sessionId?: string }) {
   useEffect(() => {
     if (localVerdictBad && localStorage.getItem(ENABLED_KEY) === 'true') {
       localStorage.setItem(ENABLED_KEY, 'false');
+      window.dispatchEvent(new Event('local-storage'));
       setEnabled(false);
     }
   }, [localVerdictBad]);
@@ -251,6 +260,7 @@ export function CodingModeButton({ sessionId }: { sessionId?: string }) {
       !!localStorage.getItem('tenant') && !!localStorage.getItem('dm_token');
     if (!loggedIn) return;
     localStorage.setItem(ENABLED_KEY, 'true');
+    window.dispatchEvent(new Event('local-storage'));
     setEnabled(true);
     if (isLocal && local?.spec) {
       localStorage.setItem(MODEL_KEY, local.spec);
@@ -290,6 +300,9 @@ export function CodingModeButton({ sessionId }: { sessionId?: string }) {
     if (blocked) return; // can't enable Code while a local model is active
     setEnabled(next);
     localStorage.setItem(ENABLED_KEY, next ? 'true' : 'false');
+    // Plain setItem doesn't notify the same tab — fan out on the app's custom
+    // event so the skill-sync hook starts (or idles) the moment Code flips.
+    window.dispatchEvent(new Event('local-storage'));
     if (!next) return;
     // Seed the model with the EXACT current selection (no default) so the send path
     // never substitutes; the resolve effects then flag whether it's actually usable.
@@ -312,6 +325,9 @@ export function CodingModeButton({ sessionId }: { sessionId?: string }) {
   };
 
   const active = enabled || isOpen;
+  // The pill's spinner covers SKILLS loading (mentor sync + vibe fetch), never
+  // the opencode binary install — skills are what the next turn would miss.
+  const skillsLoading = enabled && skillSync?.state === 'syncing';
 
   // Hidden in the sandboxed Mac App Store build, where opencode can't be spawned at
   // all. (Desktop-only gating happens in the parent, which won't mount this outside
@@ -327,6 +343,7 @@ export function CodingModeButton({ sessionId }: { sessionId?: string }) {
               variant="ghost"
               size="sm"
               type="button"
+              aria-busy={skillsLoading}
               className={`flex h-8 items-center gap-1.5 rounded-lg px-2 text-sm transition-all duration-200 ${
                 active
                   ? 'border border-[#D0E0FF] bg-[#F5F8FF] text-[#38A1E5]'
@@ -334,7 +351,14 @@ export function CodingModeButton({ sessionId }: { sessionId?: string }) {
               }`}
             >
               <span className={active ? 'text-[#38A1E5]' : 'text-gray-600'}>
-                <Code2 className="h-4 w-4" />
+                {skillsLoading ? (
+                  <Loader2
+                    data-testid="code-skills-loading"
+                    className="h-4 w-4 animate-spin"
+                  />
+                ) : (
+                  <Code2 className="h-4 w-4" />
+                )}
               </span>
               {t('code')}
               {isOpen && (
@@ -416,6 +440,18 @@ export function CodingModeButton({ sessionId }: { sessionId?: string }) {
             {t('changeFolder')}
           </Button>
         </div>
+
+        {/* Error-only surface: the happy path adds no UI, but a failed skill
+            sync (skills catalog 403s for some users, network, vibe missing
+            with no cache) must not leave the agent silently skill-less. */}
+        {enabled && skillSync?.state === 'error' && (
+          <div
+            data-testid="code-skills-sync"
+            className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-700"
+          >
+            {t('skillsSyncFailed')}
+          </div>
+        )}
       </PopoverContent>
     </Popover>
   );

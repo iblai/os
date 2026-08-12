@@ -2345,7 +2345,8 @@
     "modelUnavailable": "不可用于代码模式 — 对话会失败。请在左上角选择其他模型。",
     "workspace": "工作区",
     "changeFolder": "更改文件夹…",
-    "chooseFolderTitle": "选择你的工作文件夹"
+    "chooseFolderTitle": "选择你的工作文件夹",
+    "skillsSyncFailed": "技能同步失败——代码模式将在没有技能的情况下运行。"
   },
   "chatCodePermissionCard": {
     "title": "代码模式需要你的许可",

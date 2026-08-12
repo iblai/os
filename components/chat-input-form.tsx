@@ -63,6 +63,7 @@ import {
   type MentorSkillAssignment,
 } from '@iblai/iblai-js/data-layer';
 import { TenantKeyMentorIdParams } from '@/lib/types';
+import { useOpencodeSkillSync } from '@/hooks/use-opencode-skill-sync';
 
 // Fallback used when the configured paste-to-attachment threshold is missing
 // or non-numeric, so a misconfigured env value can't make a 0-char threshold
@@ -252,6 +253,11 @@ export function ChatInputForm({
   // get no picker. Errors degrade to an inactive picker.
   const mentorUniqueId = mentorSettings?.data?.mentorUniqueId;
   const skillsQuerySkipped = !mentorUniqueId || !tenantKey || !username;
+
+  // Code mode: keep this mentor's Agent Skills (plus the shared vibe skills)
+  // materialised on disk for the local opencode agent. Idle outside Tauri or
+  // while Code is off; drives the Code pill's spinner and error note.
+  const skillSync = useOpencodeSkillSync({ org: tenantKey, mentorUniqueId });
 
   // Paged fetching, 20 at a time, matching the SDK picker's lazy-load
   // contract: pages accumulate as the user scrolls the picker/dropdown near
@@ -1002,6 +1008,7 @@ export function ChatInputForm({
                   hasMoreSkills={hasMoreSkills}
                   isFetchingMoreSkills={isFetchingMoreSkills}
                   onLoadMoreSkills={loadMoreSkills}
+                  skillSync={skillSync}
                 />
               )}
 

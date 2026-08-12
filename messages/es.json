@@ -2345,7 +2345,8 @@
     "modelUnavailable": "no está disponible para Código: los turnos fallarán. Elige otro modelo arriba a la izquierda.",
     "workspace": "Espacio de trabajo",
     "changeFolder": "Cambiar carpeta…",
-    "chooseFolderTitle": "Elige tu carpeta de trabajo"
+    "chooseFolderTitle": "Elige tu carpeta de trabajo",
+    "skillsSyncFailed": "No se pudieron sincronizar las habilidades: Código funcionará sin ellas."
   },
   "chatCodePermissionCard": {
     "title": "Código necesita tu permiso",

@@ -404,6 +404,253 @@ fn ensure_workspace(dir: &PathBuf) -> Result<(), String> {
     Ok(())
 }
 
+/// One platform Agent Skill, fetched by the frontend (which owns API access and
+/// auth) and materialised here as an opencode SKILL.md package. Binary `asset`
+/// resources are not part of the payload — only text `script`/`reference` files —
+/// and scripts land without an exec bit (the agent can still `sh <file>`).
+#[derive(serde::Deserialize)]
+pub struct SkillResourcePayload {
+    pub filename: String,
+    pub content: String,
+}
+
+#[derive(serde::Deserialize)]
+pub struct SkillPayload {
+    pub slug: String,
+    #[serde(default)]
+    pub description: String,
+    #[serde(default)]
+    pub instruction: String,
+    #[serde(default)]
+    pub resources: Vec<SkillResourcePayload>,
+}
+
+/// Where one mentor's synced Agent Skills live:
+/// `~/.local/share/iblai/skills/mentors/<path_key(mentor)>`.
+///
+/// Keyed by MENTOR, not chat session: skills are mentor-level assignments, and the
+/// first turn of a brand-new chat runs under an SDK-generated ephemeral session key
+/// this app never sees, so a session-keyed dir could never cover it. Outside
+/// `config_home` on purpose: `close_session` deletes that dir on every idle reap,
+/// and skills must survive to the respawn.
+pub fn mentor_skills_dir(mentor_unique_id: &str) -> PathBuf {
+    iblai_data_dir()
+        .join("skills")
+        .join("mentors")
+        .join(path_key(mentor_unique_id))
+}
+
+/// The shared iblai/vibe skills checkout, managed by
+/// [`crate::opencode_installer::ensure_vibe_skills`]. Mentor-independent.
+pub fn vibe_skills_dir() -> PathBuf {
+    iblai_data_dir().join("skills").join("vibe")
+}
+
+/// A server-side skill slug reduced to a safe directory name that also satisfies
+/// opencode's skill-name shape (lowercase, hyphenated). The name in SKILL.md is
+/// this sanitised form, so the `/slug` token the composer inserts matches it.
+fn sanitize_slug(slug: &str) -> String {
+    let mapped: String = slug
+        .to_lowercase()
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() { c } else { '-' })
+        .take(64)
+        .collect();
+    let trimmed = mapped.trim_matches('-');
+    if trimmed.is_empty() {
+        "skill".to_string()
+    } else {
+        trimmed.to_string()
+    }
+}
+
+/// A resource filename reduced to ONE safe path component, or `None` when it can't
+/// name a file at all — or would clobber the SKILL.md manifest we just wrote.
+fn sanitize_filename(name: &str) -> Option<String> {
+    let cleaned: String = name
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-') {
+                c
+            } else {
+                '_'
+            }
+        })
+        .take(128)
+        .collect();
+    if cleaned.is_empty()
+        || cleaned.chars().all(|c| c == '.')
+        || cleaned.eq_ignore_ascii_case("skill.md")
+    {
+        return None;
+    }
+    Some(cleaned)
+}
+
+/// Compose a SKILL.md: YAML frontmatter (name + description) + the instruction body.
+///
+/// The description is embedded as a JSON string — every JSON string is a valid YAML
+/// double-quoted scalar, which keeps arbitrary text (quotes, colons, newlines)
+/// correct without a YAML dependency. An empty description falls back to the name:
+/// opencode drops description-less skills from the model-visible listing entirely.
+fn skill_md(name: &str, description: &str, instruction: &str) -> String {
+    let desc = if description.trim().is_empty() {
+        name
+    } else {
+        description
+    };
+    let quoted = Value::String(desc.to_string()).to_string();
+    format!("---\nname: {name}\ndescription: {quoted}\n---\n\n{instruction}\n")
+}
+
+/// Materialise `skills` under `root`, replacing whatever was there — the full
+/// rewrite is what makes removed assignments disappear. An empty list removes the
+/// tree and does NOT recreate it: an absent dir is the "no skills" signal
+/// `apply_skills_config` reads.
+fn write_skills_tree(root: &Path, skills: &[SkillPayload]) -> Result<usize, String> {
+    let _ = std::fs::remove_dir_all(root);
+    if skills.is_empty() {
+        return Ok(0);
+    }
+    let mut taken: Vec<String> = Vec::new();
+    for skill in skills {
+        let slug = sanitize_slug(&skill.slug);
+        if taken.contains(&slug) {
+            // Two payload slugs collapsing to one dir would silently interleave
+            // their files; first wins.
+            continue;
+        }
+        let dir = root.join(&slug);
+        std::fs::create_dir_all(&dir).map_err(|e| format!("skill dir failed: {e}"))?;
+        std::fs::write(
+            dir.join("SKILL.md"),
+            skill_md(&slug, &skill.description, &skill.instruction),
+        )
+        .map_err(|e| format!("SKILL.md write failed: {e}"))?;
+        for res in &skill.resources {
+            if let Some(name) = sanitize_filename(&res.filename) {
+                std::fs::write(dir.join(name), &res.content)
+                    .map_err(|e| format!("skill resource write failed: {e}"))?;
+            }
+        }
+        taken.push(slug);
+    }
+    Ok(taken.len())
+}
+
+/// Reserved [`skills_syncs`] key for the shared vibe download.
+pub const VIBE_SYNC_KEY: &str = "__vibe__";
+
+/// Longest a spawn holds for an in-flight mentor sync — API pagination, not a
+/// download, so a sync that outlives this is treated as crashed.
+const SKILLS_SYNC_MAX_WAIT: Duration = Duration::from_secs(10);
+
+/// Longest a spawn holds for the vibe download — a real ~28MB tarball on first run.
+const VIBE_SYNC_MAX_WAIT: Duration = Duration::from_secs(120);
+
+/// Skill syncs currently in flight, keyed by `path_key(mentor)` (plus
+/// [`VIBE_SYNC_KEY`]). The spawn path waits on these so a Code session never
+/// snapshots a half-written skills dir — opencode reads skills once per process.
+fn skills_syncs() -> &'static Mutex<HashMap<String, Instant>> {
+    static S: OnceLock<Mutex<HashMap<String, Instant>>> = OnceLock::new();
+    S.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+/// Record an in-flight sync. Public: the vibe installer registers its download
+/// under [`VIBE_SYNC_KEY`] through this too.
+pub async fn begin_skills_sync_entry(key: String) {
+    skills_syncs().lock().await.insert(key, Instant::now());
+}
+
+pub async fn end_skills_sync_entry(key: &str) {
+    skills_syncs().lock().await.remove(key);
+}
+
+/// Wait (bounded) for an in-flight sync under `key`; returns immediately when there
+/// is none. A 150ms poll instead of a Notify: the wait is rare (only while a sync
+/// races a send) and seconds long, and polling has no missed-wakeup edge.
+async fn await_skills_sync(key: &str, max_wait: Duration) {
+    loop {
+        {
+            let mut map = skills_syncs().lock().await;
+            let Some(started) = map.get(key) else { return };
+            if started.elapsed() >= max_wait {
+                // A sync that outlived its budget is dead — it must not gate
+                // every future send.
+                map.remove(key);
+                return;
+            }
+        }
+        tokio::time::sleep(Duration::from_millis(150)).await;
+    }
+}
+
+/// Announce that a mentor-skills sync is starting: new spawns for this mentor hold
+/// until `set_opencode_skills` lands (or the bounded wait expires — a crashed sync
+/// must not gate sends forever).
+#[command]
+pub async fn begin_opencode_skills_sync(mentor_unique_id: String) -> Result<(), String> {
+    begin_skills_sync_entry(path_key(&mentor_unique_id)).await;
+    Ok(())
+}
+
+/// Materialise one mentor's Agent Skills for Code sessions.
+///
+/// `skills: Some(list)` rewrites the staging tree (an empty list clears it);
+/// `None` only ends the in-flight sync WITHOUT touching the tree — the frontend's
+/// error path, where a stale skill set beats a wrongly-emptied one.
+#[command]
+pub async fn set_opencode_skills(
+    mentor_unique_id: String,
+    skills: Option<Vec<SkillPayload>>,
+) -> Result<String, String> {
+    // One writer at a time: concurrent syncs (strict-mode double effects, quick
+    // mentor switches) would race remove_dir_all against a sibling's writes.
+    static WRITE_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    let _guard = WRITE_LOCK.get_or_init(|| Mutex::new(())).lock().await;
+
+    let dir = mentor_skills_dir(&mentor_unique_id);
+    let result = match &skills {
+        Some(list) => write_skills_tree(&dir, list).map(|_| ()),
+        None => Ok(()),
+    };
+    end_skills_sync_entry(&path_key(&mentor_unique_id)).await;
+    result.map(|()| dir.to_string_lossy().to_string())
+}
+
+/// Point opencode at the skill sources that exist for this spawn: the shared vibe
+/// checkout and the mentor's synced Agent Skills. Mentor staging comes LAST —
+/// opencode resolves duplicate skill names last-wins, so an assigned skill
+/// overrides a same-named vibe skill. Neither present → no `skills` key at all,
+/// and a leftover one is dropped (the per-session config persists between spawns).
+///
+/// The ibl.ai guidance does NOT live here: the loopback proxy injects it as a
+/// system message into skills-wired sessions' chat/completions calls (see
+/// `opencode_proxy::inject_system_guidance`).
+fn apply_skills_config(
+    root: &mut serde_json::Map<String, Value>,
+    vibe_dir: &Path,
+    mentor_dir: Option<&Path>,
+) {
+    let mut paths: Vec<String> = Vec::new();
+    if vibe_dir.is_dir() {
+        paths.push(vibe_dir.to_string_lossy().to_string());
+    }
+    if let Some(dir) = mentor_dir {
+        if dir.is_dir() {
+            paths.push(dir.to_string_lossy().to_string());
+        }
+    }
+    // Earlier iterations injected guidance via an `instructions` entry; drop
+    // the key from any persisted per-session config that still carries it.
+    root.remove("instructions");
+    if paths.is_empty() {
+        root.remove("skills");
+    } else {
+        root.insert("skills".to_string(), json!({ "paths": paths }));
+    }
+}
+
 /// Extract the latest user-message text from the frontend `messages` array.
 /// opencode keeps its own conversation state, so we only forward the newest turn.
 fn last_user_text(messages: &[Value]) -> Option<String> {
@@ -731,6 +978,7 @@ fn enforce_permission_policy(root: &mut serde_json::Map<String, Value>) {
 // concurrent Code sessions with different models ever matter.
 fn apply_opencode_model(
     session_id: &str,
+    mentor: Option<&str>,
     spec: &ModelSpec,
     base_url: &str,
     api_key: &str,
@@ -759,6 +1007,9 @@ fn apply_opencode_model(
     // The security boundary — see `enforce_permission_policy`. Re-applied here because
     // this runs on every spawn, immediately before the process starts.
     enforce_permission_policy(root);
+    // Skills the agent discovers at startup — see `apply_skills_config`.
+    let mentor_dir = mentor.map(mentor_skills_dir);
+    apply_skills_config(root, &vibe_skills_dir(), mentor_dir.as_deref());
 
     let providers = root
         .entry("provider")
@@ -945,6 +1196,7 @@ fn foundry_result(model: &str, endpoint: Option<String>) -> Value {
 }
 
 /// Spawn `opencode acp`, run the ACP handshake, and register the session.
+#[allow(clippy::too_many_arguments)]
 async fn spawn_session(
     app: &AppHandle,
     session_id: &str,
@@ -953,8 +1205,32 @@ async fn spawn_session(
     model: Option<String>,
     api_base: Option<String>,
     workspace: &PathBuf,
+    mentor: Option<String>,
+    generation_id: &str,
 ) -> Result<Arc<Session>, String> {
     ensure_workspace(workspace)?;
+
+    // Hold the spawn while skills are still landing on disk — this process will
+    // snapshot its skills exactly once, so racing an in-flight sync would leave the
+    // whole session skill-less. Bounded waits (a crashed sync must not gate sends
+    // forever), and a hint so the pause isn't a silent hang — same pattern as the
+    // local-model warmup note in `opencode_chat_stream`.
+    let mentor_key = mentor.as_deref().map(path_key);
+    let sync_in_flight = {
+        let map = skills_syncs().lock().await;
+        map.contains_key(VIBE_SYNC_KEY)
+            || mentor_key.as_deref().is_some_and(|k| map.contains_key(k))
+    };
+    if sync_in_flight {
+        let _ = app.emit(
+            "opencode:reasoning",
+            json!({ "generation_id": generation_id, "delta": "Preparing skills…\n" }),
+        );
+        await_skills_sync(VIBE_SYNC_KEY, VIBE_SYNC_MAX_WAIT).await;
+        if let Some(key) = mentor_key.as_deref() {
+            await_skills_sync(key, SKILLS_SYNC_MAX_WAIT).await;
+        }
+    }
 
     // Match opencode's model to the selection — NO default: an absent/empty model
     // means Code doesn't run, so a broken selection fails loudly instead of silently
@@ -985,7 +1261,14 @@ async fn spawn_session(
         );
         let port = crate::opencode_proxy::ensure_started().await?;
         let secret = crate::opencode_proxy::new_secret();
-        crate::opencode_proxy::register(&secret, upstream, token.to_string()).await;
+        // Skills wired for this spawn → the proxy injects the ibl.ai guidance
+        // as a system message into this session's chat/completions calls.
+        let skills_wired = vibe_skills_dir().is_dir()
+            || mentor
+                .as_deref()
+                .map(mentor_skills_dir)
+                .is_some_and(|d| d.is_dir());
+        crate::opencode_proxy::register(&secret, upstream, token.to_string(), skills_wired).await;
         (
             format!("http://127.0.0.1:{port}/v1"),
             secret.clone(),
@@ -993,7 +1276,14 @@ async fn spawn_session(
             Some(secret),
         )
     };
-    apply_opencode_model(session_id, &spec, &base_url, &api_key, display_name)?;
+    apply_opencode_model(
+        session_id,
+        mentor.as_deref(),
+        &spec,
+        &base_url,
+        &api_key,
+        display_name,
+    )?;
 
     // A plain child process, at the user's own privilege — the confinement is the
     // permission prompt in `handle_permission_request`, not the kernel. `PATH` carries our
@@ -1092,6 +1382,7 @@ async fn spawn_session(
 /// Token expiry no longer forces a respawn: the proxy holds the credential, so the
 /// fresh dm_token the frontend sends each turn is swapped in place and the session
 /// (and opencode's conversation state) survives.
+#[allow(clippy::too_many_arguments)]
 async fn get_or_spawn(
     app: &AppHandle,
     session_id: &str,
@@ -1100,6 +1391,8 @@ async fn get_or_spawn(
     model: Option<String>,
     api_base: Option<String>,
     workspace: &PathBuf,
+    mentor: Option<String>,
+    generation_id: &str,
 ) -> Result<Arc<Session>, String> {
     let live = { registry().lock().await.get(session_id).cloned() };
     if let Some(s) = live {
@@ -1115,7 +1408,18 @@ async fn get_or_spawn(
     close_session(session_id).await;
     evict_for_new_session(session_id).await;
     start_reaper();
-    let s = spawn_session(app, session_id, tenant, token, model, api_base, workspace).await?;
+    let s = spawn_session(
+        app,
+        session_id,
+        tenant,
+        token,
+        model,
+        api_base,
+        workspace,
+        mentor,
+        generation_id,
+    )
+    .await?;
     registry()
         .lock()
         .await
@@ -1263,13 +1567,16 @@ async fn close_session(session_id: &str) {
         let _ = child.start_kill();
     }
     // The session's opencode config is rewritten on every spawn, so leaving it behind
-    // just accumulates one dead directory per chat the user ever opened.
+    // just accumulates one dead directory per chat the user ever opened. Synced Agent
+    // Skills deliberately live elsewhere (`mentor_skills_dir`) — a reaped session
+    // must find them again on respawn.
     let _ = std::fs::remove_dir_all(config_home(session_id));
 }
 
 /// Stream one Coding-Mode turn through opencode, emitting `ollama:*` +
 /// `opencode:*` events keyed by `generation_id`.
 #[command]
+#[allow(clippy::too_many_arguments)]
 pub async fn opencode_chat_stream(
     app: AppHandle,
     session_id: String,
@@ -1280,6 +1587,9 @@ pub async fn opencode_chat_stream(
     model: Option<String>,
     api_base: Option<String>,
     workspace: Option<String>,
+    // Mentor UUID from the SDK's localStorage bridge — keys the synced Agent
+    // Skills dir. Absent with an older SDK: vibe skills only, no sync wait.
+    mentor: Option<String>,
 ) -> Result<(), String> {
     if crate::opencode_installer::is_sandboxed() {
         return Err("Code isn't available in the sandboxed Mac App Store build.".to_string());
@@ -1316,6 +1626,8 @@ pub async fn opencode_chat_stream(
         model,
         api_base,
         &workspace,
+        mentor,
+        &generation_id,
     )
     .await?;
     let _turn_guard = TurnGuard::new(session.clone());
@@ -1540,5 +1852,221 @@ mod tests {
     fn reaping_spares_a_session_waiting_on_the_user() {
         let states = vec![state("awaiting-permission", 100_000, true)];
         assert!(pick_reapable(&states, Duration::from_secs(900)).is_empty());
+    }
+
+    /// A fresh scratch dir per test, removed on drop (best-effort) — mirrors the
+    /// installer tests' helper.
+    struct Scratch(PathBuf);
+    impl Scratch {
+        fn new(name: &str) -> Self {
+            let dir = std::env::temp_dir()
+                .join(format!("opencode-acp-test-{}-{name}", std::process::id()));
+            let _ = std::fs::remove_dir_all(&dir);
+            std::fs::create_dir_all(&dir).unwrap();
+            Scratch(dir)
+        }
+        fn path(&self) -> &Path {
+            &self.0
+        }
+    }
+    impl Drop for Scratch {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+
+    fn payload(slug: &str, resources: Vec<SkillResourcePayload>) -> SkillPayload {
+        SkillPayload {
+            slug: slug.to_string(),
+            description: format!("{slug} description"),
+            instruction: format!("Use {slug}."),
+            resources,
+        }
+    }
+
+    /// Slugs and filenames come from the backend. Neither may name anything outside
+    /// the skill's own directory.
+    #[test]
+    fn a_hostile_slug_or_filename_cannot_escape_the_skills_dir() {
+        for hostile in ["../../etc/passwd", "a/b/c", "..", "/absolute", "", "a\\b"] {
+            let slug = sanitize_slug(hostile);
+            assert!(!slug.is_empty(), "{hostile:?} -> {slug:?}");
+            assert!(
+                slug.chars()
+                    .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-'),
+                "{hostile:?} -> {slug:?}"
+            );
+            assert_eq!(Path::new(&slug).components().count(), 1);
+        }
+        for (name, expect_none) in [
+            ("", true),
+            (".", true),
+            ("..", true),
+            ("SKILL.md", true),
+            ("skill.MD", true),
+            ("../../etc/passwd", false),
+            ("a/b.py", false),
+            ("..\\up.txt", false),
+        ] {
+            match sanitize_filename(name) {
+                None => assert!(expect_none, "{name:?} should have produced a name"),
+                Some(clean) => {
+                    assert!(!expect_none, "{name:?} should have been rejected");
+                    assert!(!clean.contains('/') && !clean.contains('\\'), "{clean:?}");
+                    assert_eq!(Path::new(&clean).components().count(), 1, "{clean:?}");
+                }
+            }
+        }
+    }
+
+    /// The staging tree is a full rewrite: what's not in this sync no longer exists,
+    /// and an empty sync removes the tree itself (absent dir = "no skills").
+    #[test]
+    fn a_rewrite_removes_deselected_skills() {
+        let s = Scratch::new("rewrite");
+        let root = s.path().join("mentor-a");
+
+        write_skills_tree(&root, &[payload("alpha", vec![]), payload("beta", vec![])]).unwrap();
+        assert!(root.join("alpha/SKILL.md").exists());
+        assert!(root.join("beta/SKILL.md").exists());
+
+        write_skills_tree(&root, &[payload("beta", vec![])]).unwrap();
+        assert!(!root.join("alpha").exists(), "deselected skill must vanish");
+        assert!(root.join("beta/SKILL.md").exists());
+
+        write_skills_tree(&root, &[]).unwrap();
+        assert!(!root.exists(), "an empty sync removes the tree entirely");
+    }
+
+    /// Frontmatter must survive hostile descriptions — quotes, colons, newlines —
+    /// and a missing description falls back to the name (opencode hides
+    /// description-less skills from the model).
+    #[test]
+    fn skill_md_frontmatter_is_well_formed() {
+        let md = skill_md("web-research", "He said: \"hi\"\nand left", "Body text.");
+        assert!(md.starts_with("---\nname: web-research\n"));
+        assert!(
+            md.contains(r#"description: "He said: \"hi\"\nand left""#),
+            "JSON-quoted scalar keeps YAML valid: {md}"
+        );
+        assert!(md.ends_with("---\n\nBody text.\n"));
+
+        let fallback = skill_md("web-research", "   ", "x");
+        assert!(fallback.contains("description: \"web-research\""));
+    }
+
+    /// The config only points at skill dirs that exist, mentor staging last (so an
+    /// assigned skill beats a same-named vibe skill), and stale `skills` /
+    /// `instructions` keys from previous spawns (or the retired file/route
+    /// guidance attempts) are dropped.
+    #[test]
+    fn apply_skills_config_tracks_existing_dirs() {
+        let s = Scratch::new("skills-config");
+        let vibe = s.path().join("vibe");
+        let mentor = s.path().join("mentor");
+        let mut cfg = serde_json::Map::new();
+        // A persisted config from the retired instructions-based approach.
+        cfg.insert("instructions".to_string(), json!(["http://stale"]));
+
+        apply_skills_config(&mut cfg, &vibe, Some(&mentor));
+        assert!(cfg.get("skills").is_none(), "nothing on disk → no key");
+        assert!(
+            cfg.get("instructions").is_none(),
+            "a stale instructions entry is always dropped"
+        );
+
+        std::fs::create_dir_all(&vibe).unwrap();
+        apply_skills_config(&mut cfg, &vibe, Some(&mentor));
+        assert_eq!(
+            cfg["skills"]["paths"],
+            json!([vibe.to_string_lossy()]),
+            "vibe only"
+        );
+
+        std::fs::create_dir_all(&mentor).unwrap();
+        apply_skills_config(&mut cfg, &vibe, Some(&mentor));
+        assert_eq!(
+            cfg["skills"]["paths"],
+            json!([vibe.to_string_lossy(), mentor.to_string_lossy()]),
+            "mentor last: duplicate names resolve last-wins in opencode"
+        );
+
+        apply_skills_config(&mut cfg, &vibe, None);
+        assert_eq!(cfg["skills"]["paths"], json!([vibe.to_string_lossy()]));
+
+        std::fs::remove_dir_all(&vibe).unwrap();
+        apply_skills_config(&mut cfg, &vibe, None);
+        assert!(
+            cfg.get("skills").is_none(),
+            "a leftover key from a previous spawn is removed"
+        );
+    }
+
+    /// A resource that sanitises to the manifest's own name must not clobber it,
+    /// and two slugs collapsing to one directory keep the first skill intact.
+    #[test]
+    fn the_manifest_cannot_be_clobbered_and_duplicate_slugs_first_win() {
+        let s = Scratch::new("clobber");
+        let root = s.path().join("mentor-b");
+
+        let mut evil = payload("alpha", vec![]);
+        evil.resources = vec![
+            SkillResourcePayload {
+                filename: "skill.md".to_string(),
+                content: "not the manifest".to_string(),
+            },
+            SkillResourcePayload {
+                filename: "notes.txt".to_string(),
+                content: "kept".to_string(),
+            },
+        ];
+        let mut second = payload("Alpha!", vec![]);
+        second.description = "the impostor".to_string();
+
+        let written = write_skills_tree(&root, &[evil, second]).unwrap();
+        assert_eq!(written, 1, "Alpha! collapses to alpha → first wins");
+
+        let manifest = std::fs::read_to_string(root.join("alpha/SKILL.md")).unwrap();
+        assert!(
+            manifest.contains("alpha description"),
+            "manifest is ours, not the resource's: {manifest}"
+        );
+        assert_eq!(
+            std::fs::read_to_string(root.join("alpha/notes.txt")).unwrap(),
+            "kept"
+        );
+    }
+
+    /// The spawn-side wait: no entry → immediate; a live entry holds; `end` (what
+    /// `set_opencode_skills` does for `Some` and `None` alike) releases; an entry
+    /// past its budget is treated as crashed and cleaned up.
+    #[tokio::test]
+    async fn a_spawn_waits_only_while_a_sync_is_in_flight() {
+        let key = format!("test-sync-{}", std::process::id());
+
+        // No entry: returns immediately.
+        await_skills_sync(&key, Duration::from_secs(5)).await;
+
+        // Entry present, ended while waiting: released promptly.
+        begin_skills_sync_entry(key.clone()).await;
+        let done = {
+            let key = key.clone();
+            tokio::spawn(async move {
+                tokio::time::sleep(Duration::from_millis(50)).await;
+                end_skills_sync_entry(&key).await;
+            })
+        };
+        let start = Instant::now();
+        await_skills_sync(&key, Duration::from_secs(5)).await;
+        assert!(start.elapsed() < Duration::from_secs(2));
+        done.await.unwrap();
+
+        // Entry past its budget: removed instead of gating future sends.
+        begin_skills_sync_entry(key.clone()).await;
+        await_skills_sync(&key, Duration::ZERO).await;
+        assert!(
+            !skills_syncs().lock().await.contains_key(&key),
+            "an expired entry must be cleaned up"
+        );
     }
 }

@@ -2345,7 +2345,8 @@
     "modelUnavailable": "n’est pas disponible pour Code — les tours échoueront. Choisissez un autre modèle en haut à gauche.",
     "workspace": "Espace de travail",
     "changeFolder": "Changer de dossier…",
-    "chooseFolderTitle": "Choisissez votre dossier de travail"
+    "chooseFolderTitle": "Choisissez votre dossier de travail",
+    "skillsSyncFailed": "Impossible de synchroniser les compétences — Code fonctionnera sans elles."
   },
   "chatCodePermissionCard": {
     "title": "Code a besoin de votre autorisation",

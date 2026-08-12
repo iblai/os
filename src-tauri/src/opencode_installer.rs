@@ -46,6 +46,15 @@ const CONFIG_TEMPLATE: &str = r#"{
 }
 "#;
 
+/// iblai/vibe — the public dev-toolkit skills repo, synced for Coding Mode.
+/// Tarball of the default branch; unauthenticated (public repo).
+const VIBE_TARBALL_URL: &str = "https://github.com/iblai/vibe/archive/refs/heads/main.tar.gz";
+/// Latest-commit probe for the freshness check. Unauthenticated is plenty at
+/// ~1/day; api.github.com rejects requests without a User-Agent.
+const VIBE_COMMITS_URL: &str = "https://api.github.com/repos/iblai/vibe/commits/main";
+/// How often to even look upstream. The sha marker's mtime is the clock.
+const VIBE_REFRESH_INTERVAL: std::time::Duration = std::time::Duration::from_secs(24 * 60 * 60);
+
 fn create_command(program: &str) -> Command {
     let cmd = Command::new(program);
     #[cfg(target_os = "windows")]
@@ -257,6 +266,165 @@ async fn download_and_install(app: &AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+/// `<data>/skills/vibe.sha` — upstream commit sha of the current vibe copy; the
+/// file's mtime doubles as the "last checked" stamp.
+fn vibe_sha_marker() -> PathBuf {
+    crate::opencode_acp::vibe_skills_dir().with_extension("sha")
+}
+
+fn vibe_marker_is_fresh(marker: &Path, max_age: std::time::Duration) -> bool {
+    std::fs::metadata(marker)
+        .and_then(|m| m.modified())
+        .ok()
+        .and_then(|t| t.elapsed().ok())
+        .map(|age| age < max_age)
+        .unwrap_or(false)
+}
+
+/// The `<root>/skills` dir inside an extracted vibe tarball — the tarball root is
+/// `vibe-<branch>/`, so it's located, not assumed.
+fn find_extracted_skills(tmp: &Path) -> Option<PathBuf> {
+    for entry in std::fs::read_dir(tmp).ok()?.flatten() {
+        let cand = entry.path().join("skills");
+        if cand.is_dir() {
+            return Some(cand);
+        }
+    }
+    None
+}
+
+async fn fetch_latest_vibe_sha() -> Option<String> {
+    let resp = reqwest::Client::new()
+        .get(VIBE_COMMITS_URL)
+        .header("User-Agent", "iblai-desktop")
+        .header("Accept", "application/vnd.github+json")
+        .timeout(std::time::Duration::from_secs(10))
+        .send()
+        .await
+        .ok()?
+        .error_for_status()
+        .ok()?;
+    let v: serde_json::Value = resp.json().await.ok()?;
+    Some(v.get("sha")?.as_str()?.to_string())
+}
+
+/// Download the vibe tarball and swap its `skills/` over `dest`. The old copy
+/// survives any failure (extract to temp, rename with a backup).
+async fn download_vibe_skills(app: &AppHandle, dest: &Path) -> Result<(), String> {
+    log(app, "downloading iblai/vibe skills");
+    let bytes = reqwest::get(VIBE_TARBALL_URL)
+        .await
+        .map_err(|e| format!("vibe download failed: {e}"))?
+        .error_for_status()
+        .map_err(|e| format!("vibe download failed (bad status): {e}"))?
+        .bytes()
+        .await
+        .map_err(|e| format!("vibe download read failed: {e}"))?;
+
+    let root = dest.parent().ok_or("vibe dir has no parent")?.to_path_buf();
+    std::fs::create_dir_all(&root).map_err(|e| format!("skills dir failed: {e}"))?;
+    let archive = root.join("vibe-dl.tar.gz");
+    std::fs::write(&archive, &bytes).map_err(|e| format!("vibe archive write failed: {e}"))?;
+
+    let tmp = root.join("vibe.extract-tmp");
+    let _ = std::fs::remove_dir_all(&tmp);
+    std::fs::create_dir_all(&tmp).map_err(|e| e.to_string())?;
+    // Blocking extraction off the async runtime — same reasoning as the opencode
+    // binary install above.
+    {
+        let (a, d) = (archive.clone(), tmp.clone());
+        tokio::task::spawn_blocking(move || extract(&a, &d))
+            .await
+            .map_err(|e| format!("extract task failed: {e}"))??;
+    }
+    let _ = std::fs::remove_file(&archive);
+
+    let skills_src = find_extracted_skills(&tmp).ok_or("no skills/ dir in vibe tarball")?;
+    let backup = root.join("vibe.old");
+    let _ = std::fs::remove_dir_all(&backup);
+    let had_old = dest.exists();
+    if had_old {
+        std::fs::rename(dest, &backup).map_err(|e| format!("vibe backup failed: {e}"))?;
+    }
+    let result = match std::fs::rename(&skills_src, dest) {
+        Ok(()) => {
+            let _ = std::fs::remove_dir_all(&backup);
+            Ok(())
+        }
+        Err(e) => {
+            if had_old {
+                let _ = std::fs::rename(&backup, dest);
+            }
+            Err(format!("vibe swap failed: {e}"))
+        }
+    };
+    let _ = std::fs::remove_dir_all(&tmp);
+    result
+}
+
+/// Sync the iblai/vibe skills for Coding Mode (shared across mentors and sessions).
+///
+/// Standalone from `install_opencode` on purpose: the Code pill's spinner covers
+/// skills, never the binary install. At most one upstream look per
+/// [`VIBE_REFRESH_INTERVAL`]; an actual download registers an in-flight entry so
+/// the spawn path holds instead of snapshotting a half-written dir. Failures keep
+/// the cached copy and never error the command — the caller reads `present`.
+#[command]
+pub async fn ensure_vibe_skills(app: AppHandle) -> Result<serde_json::Value, String> {
+    // One flight at a time: several composers mount the sync hook.
+    static LOCK: std::sync::OnceLock<tokio::sync::Mutex<()>> = std::sync::OnceLock::new();
+    let _guard = LOCK
+        .get_or_init(|| tokio::sync::Mutex::new(()))
+        .lock()
+        .await;
+
+    let dir = crate::opencode_acp::vibe_skills_dir();
+    let marker = vibe_sha_marker();
+    let cached = dir.is_dir();
+
+    if cached && vibe_marker_is_fresh(&marker, VIBE_REFRESH_INTERVAL) {
+        return Ok(json!({ "present": true, "refreshed": false }));
+    }
+
+    let latest = fetch_latest_vibe_sha().await;
+    if cached {
+        match &latest {
+            Some(latest_sha) => {
+                let stored = std::fs::read_to_string(&marker).unwrap_or_default();
+                if stored.trim() == latest_sha.trim() {
+                    // Up to date — restamp the marker so the daily clock resets.
+                    let _ = std::fs::write(&marker, latest_sha);
+                    return Ok(json!({ "present": true, "refreshed": false }));
+                }
+            }
+            None => {
+                // Offline/unreachable with a cache: keep it quietly; the next call
+                // past the interval tries again.
+                log(&app, "vibe skills check unreachable — keeping cached copy");
+                return Ok(json!({ "present": true, "refreshed": false }));
+            }
+        }
+    }
+
+    // Something to fetch: first install, or upstream moved.
+    crate::opencode_acp::begin_skills_sync_entry(crate::opencode_acp::VIBE_SYNC_KEY.to_string())
+        .await;
+    let downloaded = download_vibe_skills(&app, &dir).await;
+    crate::opencode_acp::end_skills_sync_entry(crate::opencode_acp::VIBE_SYNC_KEY).await;
+
+    match downloaded {
+        Ok(()) => {
+            let _ = std::fs::write(&marker, latest.as_deref().unwrap_or("unknown"));
+            log(&app, "vibe skills installed");
+            Ok(json!({ "present": true, "refreshed": true }))
+        }
+        Err(e) => {
+            log(&app, &format!("vibe skills fetch failed: {e}"));
+            Ok(json!({ "present": dir.is_dir(), "refreshed": false }))
+        }
+    }
+}
+
 /// Write the ibl.ai opencode config into `config_home` if missing. Public so the ACP
 /// spawn path can materialise a session's own copy — the config ships embedded in the app
 /// (CONFIG_TEMPLATE), not as a loose file on the user's disk.
@@ -403,5 +571,28 @@ mod tests {
         assert!(err.contains("extract failed"), "{err}");
         let lower = err.to_lowercase();
         assert!(lower.contains("tar") || lower.contains("gzip"), "{err}");
+    }
+
+    /// The vibe tarball's root dir is branch-named (`vibe-main/`), so the skills
+    /// dir inside must be found, never assumed.
+    #[test]
+    fn the_extracted_skills_dir_is_located_not_assumed() {
+        let s = Scratch::new("vibe-locate");
+        assert!(find_extracted_skills(s.path()).is_none());
+        let root = s.path().join("vibe-main");
+        std::fs::create_dir_all(root.join("skills").join("iblai-vibe-auth")).unwrap();
+        assert_eq!(find_extracted_skills(s.path()), Some(root.join("skills")));
+    }
+
+    /// The marker's mtime is the daily clock: fresh short-circuits the upstream
+    /// look, missing (first run) and stale do not.
+    #[test]
+    fn a_fresh_marker_short_circuits_and_a_missing_one_does_not() {
+        let s = Scratch::new("vibe-marker");
+        let marker = s.path().join("vibe.sha");
+        assert!(!vibe_marker_is_fresh(&marker, VIBE_REFRESH_INTERVAL));
+        std::fs::write(&marker, "abc").unwrap();
+        assert!(vibe_marker_is_fresh(&marker, VIBE_REFRESH_INTERVAL));
+        assert!(!vibe_marker_is_fresh(&marker, std::time::Duration::ZERO));
     }
 }
