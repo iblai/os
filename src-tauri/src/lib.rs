@@ -1,36 +1,36 @@
 // Hide console window on Windows in release builds
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-mod ghost_mcp_manager;
+mod cua_driver_installer;
+mod cua_driver_mcp;
 // Gated exactly like `opencode_acp`, which is its only consumer here: Code uses
 // `get_foundry_service_endpoint` to reach Foundry Local's OpenAI-compatible API.
 // The rest of the module is exercised by the desktop bin (see main.rs).
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 #[allow(dead_code)]
 mod foundry_manager;
-mod ghost_os_manager;
 mod mcp_bridge_installer;
 mod mcp_bridge_manager;
 mod model_manager;
 #[cfg(not(any(target_os = "ios", target_os = "android")))]
 mod offline_server;
 mod ollama_installer;
-#[cfg(not(any(target_os = "ios", target_os = "android")))]
-mod web_cache;
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 mod opencode_acp;
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 mod opencode_installer;
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 mod opencode_proxy;
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
+mod web_cache;
 
+use mcp_bridge_installer::install_mcp_bridge;
 use model_manager::{
     cancel_download, check_disk_space, check_ollama_installed, get_timestamp, is_model_installed,
     is_ollama_running, list_installed_models, pull_model, start_ollama_server, stop_ollama_server,
     wait_for_ollama_ready, DiskSpaceError, DownloadProgress, InstallationLog, OllamaStatus,
     SystemMemory, REQUIRED_FREE_SPACE_GB,
 };
-use mcp_bridge_installer::install_mcp_bridge;
 #[cfg(not(any(target_os = "ios", target_os = "android")))]
 use offline_server::{get_server_url, start_offline_server};
 use ollama_installer::download_and_install_ollama;
@@ -39,12 +39,12 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use tauri::{command, AppHandle, Emitter, Manager};
 // Url is used for deep link handling on iOS/Android and ASWebAuthenticationSession callbacks on macOS
+#[cfg(any(target_os = "ios", target_os = "android"))]
+use tauri::Listener;
 #[cfg(any(target_os = "ios", target_os = "android", target_os = "macos"))]
 use tauri::Url;
 #[cfg(any(target_os = "ios", target_os = "android"))]
 use tauri_plugin_deep_link::DeepLinkExt;
-#[cfg(any(target_os = "ios", target_os = "android"))]
-use tauri::Listener;
 #[cfg(not(any(target_os = "ios", target_os = "macos")))]
 use tauri_plugin_shell::ShellExt;
 // OpenerExt is used for all non-iOS platforms (desktop and Android)
@@ -56,9 +56,9 @@ use web_cache::WebCache;
 #[cfg(any(target_os = "ios", target_os = "macos"))]
 use {
     block::ConcreteBlock,
-    objc::{class, msg_send, sel, sel_impl},
-    objc::runtime::{Class, Object, BOOL, YES},
     objc::declare::ClassDecl,
+    objc::runtime::{Class, Object, BOOL, YES},
+    objc::{class, msg_send, sel, sel_impl},
     std::ffi::{CStr, CString},
     std::ptr,
     std::sync::Once,
@@ -67,10 +67,12 @@ use {
 
 // Global web cache instance (desktop only)
 #[cfg(not(any(target_os = "ios", target_os = "android")))]
-static WEB_CACHE: std::sync::OnceLock<Arc<RwLock<Option<web_cache::WebCache>>>> = std::sync::OnceLock::new();
+static WEB_CACHE: std::sync::OnceLock<Arc<RwLock<Option<web_cache::WebCache>>>> =
+    std::sync::OnceLock::new();
 
 // Global storage for last mentor route (persists across origins)
-static LAST_MENTOR_ROUTE: std::sync::OnceLock<Arc<RwLock<Option<String>>>> = std::sync::OnceLock::new();
+static LAST_MENTOR_ROUTE: std::sync::OnceLock<Arc<RwLock<Option<String>>>> =
+    std::sync::OnceLock::new();
 
 #[cfg(any(target_os = "ios", target_os = "android"))]
 static PENDING_DEEP_LINK: std::sync::OnceLock<Mutex<Option<String>>> = std::sync::OnceLock::new();
@@ -145,7 +147,9 @@ const OAUTH_URL_PATTERNS: &[&str] = &[
 ];
 
 fn is_oauth_url(url: &str) -> bool {
-    OAUTH_URL_PATTERNS.iter().any(|pattern| url.contains(pattern))
+    OAUTH_URL_PATTERNS
+        .iter()
+        .any(|pattern| url.contains(pattern))
 }
 
 #[cfg(any(target_os = "ios", target_os = "macos"))]
@@ -202,7 +206,10 @@ unsafe fn get_presentation_window() -> *mut Object {
 
     if window_count > 0 {
         let window: *mut Object = msg_send![windows, objectAtIndex: 0usize];
-        println!("[ibl.ai] Got window for presentation (count: {})", window_count);
+        println!(
+            "[ibl.ai] Got window for presentation (count: {})",
+            window_count
+        );
         window
     } else {
         println!("[ibl.ai] ⚠️  No windows available");
@@ -223,14 +230,19 @@ unsafe fn get_context_provider_class() -> &'static Class {
 
         // Add method: presentationAnchorForWebAuthenticationSession:
         // Signature: - (UIWindow *)presentationAnchorForWebAuthenticationSession:(ASWebAuthenticationSession *)session
-        extern "C" fn presentation_anchor_for_session(_: &Object, _: objc::runtime::Sel, _session: *mut Object) -> *mut Object {
+        extern "C" fn presentation_anchor_for_session(
+            _: &Object,
+            _: objc::runtime::Sel,
+            _session: *mut Object,
+        ) -> *mut Object {
             unsafe { get_presentation_window() }
         }
 
         unsafe {
             decl.add_method(
                 sel!(presentationAnchorForWebAuthenticationSession:),
-                presentation_anchor_for_session as extern "C" fn(&Object, objc::runtime::Sel, *mut Object) -> *mut Object,
+                presentation_anchor_for_session
+                    as extern "C" fn(&Object, objc::runtime::Sel, *mut Object) -> *mut Object,
             );
         }
 
@@ -264,7 +276,10 @@ unsafe fn get_presentation_window_macos() -> *mut Object {
             let window_count: usize = msg_send![windows, count];
             if window_count > 0 {
                 let window: *mut Object = msg_send![windows, objectAtIndex: 0usize];
-                println!("[ibl.ai] Got first window for macOS presentation (count: {})", window_count);
+                println!(
+                    "[ibl.ai] Got first window for macOS presentation (count: {})",
+                    window_count
+                );
                 window
             } else {
                 println!("[ibl.ai] ⚠️  No windows available on macOS");
@@ -287,14 +302,19 @@ unsafe fn get_context_provider_class_macos() -> &'static Class {
 
         // Add method: presentationAnchorForWebAuthenticationSession:
         // Signature: - (NSWindow *)presentationAnchorForWebAuthenticationSession:(ASWebAuthenticationSession *)session
-        extern "C" fn presentation_anchor_for_session(_: &Object, _: objc::runtime::Sel, _session: *mut Object) -> *mut Object {
+        extern "C" fn presentation_anchor_for_session(
+            _: &Object,
+            _: objc::runtime::Sel,
+            _session: *mut Object,
+        ) -> *mut Object {
             unsafe { get_presentation_window_macos() }
         }
 
         unsafe {
             decl.add_method(
                 sel!(presentationAnchorForWebAuthenticationSession:),
-                presentation_anchor_for_session as extern "C" fn(&Object, objc::runtime::Sel, *mut Object) -> *mut Object,
+                presentation_anchor_for_session
+                    as extern "C" fn(&Object, objc::runtime::Sel, *mut Object) -> *mut Object,
             );
         }
 
@@ -308,12 +328,14 @@ unsafe fn get_context_provider_class_macos() -> &'static Class {
 #[cfg(target_os = "macos")]
 #[allow(unexpected_cfgs)]
 fn open_with_auth_session_macos(url: &str, app_handle: &AppHandle) -> Result<(), String> {
-    println!("[ibl.ai] open_with_auth_session_macos called with URL: {}", url);
+    println!(
+        "[ibl.ai] open_with_auth_session_macos called with URL: {}",
+        url
+    );
 
     unsafe {
-        let c_url = CString::new(url).map_err(|_| {
-            "[ibl.ai] ❌ Failed to create CString from URL".to_string()
-        })?;
+        let c_url = CString::new(url)
+            .map_err(|_| "[ibl.ai] ❌ Failed to create CString from URL".to_string())?;
         let ns_string: *mut Object =
             msg_send![class!(NSString), stringWithUTF8String: c_url.as_ptr()];
         if ns_string.is_null() {
@@ -328,14 +350,15 @@ fn open_with_auth_session_macos(url: &str, app_handle: &AppHandle) -> Result<(),
 
         // Create callback URL scheme string - use custom scheme
         let scheme_c = CString::new("iblai-mentor").unwrap();
-        let scheme_ns: *mut Object = msg_send![class!(NSString), stringWithUTF8String: scheme_c.as_ptr()];
+        let scheme_ns: *mut Object =
+            msg_send![class!(NSString), stringWithUTF8String: scheme_c.as_ptr()];
 
         // Try to get ASWebAuthenticationSession class (macOS 10.15+)
         let auth_session_class = match Class::get("ASWebAuthenticationSession") {
             Some(class) => {
                 println!("[ibl.ai] ✓ ASWebAuthenticationSession class found on macOS");
                 class
-            },
+            }
             None => {
                 println!("[ibl.ai] ❌ ASWebAuthenticationSession class NOT found on macOS");
                 return Err("ASWebAuthenticationSession not available".to_string());
@@ -344,8 +367,8 @@ fn open_with_auth_session_macos(url: &str, app_handle: &AppHandle) -> Result<(),
 
         // Create completion block
         let app_handle_clone = app_handle.clone();
-        let block = ConcreteBlock::new(move |callback_url: *mut Object, error: *mut Object| {
-            unsafe {
+        let block = ConcreteBlock::new(
+            move |callback_url: *mut Object, error: *mut Object| unsafe {
                 if !callback_url.is_null() {
                     let url_string_ns: *mut Object = msg_send![callback_url, absoluteString];
                     let url_c_str: *const i8 = msg_send![url_string_ns, UTF8String];
@@ -359,11 +382,14 @@ fn open_with_auth_session_macos(url: &str, app_handle: &AppHandle) -> Result<(),
                     let c_str: *const i8 = msg_send![description, UTF8String];
                     if !c_str.is_null() {
                         let error_str = CStr::from_ptr(c_str);
-                        println!("[ibl.ai] ❌ macOS ASWebAuthenticationSession error: {:?}", error_str);
+                        println!(
+                            "[ibl.ai] ❌ macOS ASWebAuthenticationSession error: {:?}",
+                            error_str
+                        );
                     }
                 }
-            }
-        });
+            },
+        );
         let block = block.copy();
 
         // Create ASWebAuthenticationSession
@@ -376,12 +402,15 @@ fn open_with_auth_session_macos(url: &str, app_handle: &AppHandle) -> Result<(),
         ];
 
         if session.is_null() {
-            return Err("[ibl.ai] ❌ Failed to create ASWebAuthenticationSession on macOS".to_string());
+            return Err(
+                "[ibl.ai] ❌ Failed to create ASWebAuthenticationSession on macOS".to_string(),
+            );
         }
         println!("[ibl.ai] ✓ ASWebAuthenticationSession created successfully on macOS");
 
         // Set prefersEphemeralWebBrowserSession to YES
-        let responds: BOOL = msg_send![session, respondsToSelector: sel!(setPrefersEphemeralWebBrowserSession:)];
+        let responds: BOOL =
+            msg_send![session, respondsToSelector: sel!(setPrefersEphemeralWebBrowserSession:)];
         if responds == YES {
             println!("[ibl.ai] Setting prefersEphemeralWebBrowserSession = YES on macOS");
             let _: () = msg_send![session, setPrefersEphemeralWebBrowserSession: YES];
@@ -391,7 +420,8 @@ fn open_with_auth_session_macos(url: &str, app_handle: &AppHandle) -> Result<(),
         let provider_class = get_context_provider_class_macos();
         let provider: *mut Object = msg_send![provider_class, new];
         if !provider.is_null() {
-            let responds_to_provider: BOOL = msg_send![session, respondsToSelector: sel!(setPresentationContextProvider:)];
+            let responds_to_provider: BOOL =
+                msg_send![session, respondsToSelector: sel!(setPresentationContextProvider:)];
             if responds_to_provider == YES {
                 println!("[ibl.ai] Setting macOS presentation context provider");
                 let _: () = msg_send![session, setPresentationContextProvider: provider];
@@ -415,9 +445,8 @@ fn open_with_auth_session(url: &str, app_handle: &AppHandle) -> Result<(), Strin
     println!("[ibl.ai] open_with_auth_session called with URL: {}", url);
 
     unsafe {
-        let c_url = CString::new(url).map_err(|_| {
-            "[ibl.ai] ❌ Failed to create CString from URL".to_string()
-        })?;
+        let c_url = CString::new(url)
+            .map_err(|_| "[ibl.ai] ❌ Failed to create CString from URL".to_string())?;
         let ns_string: *mut Object =
             msg_send![class!(NSString), stringWithUTF8String: c_url.as_ptr()];
         if ns_string.is_null() {
@@ -432,14 +461,15 @@ fn open_with_auth_session(url: &str, app_handle: &AppHandle) -> Result<(), Strin
 
         // Create callback URL scheme string - use custom scheme
         let scheme_c = CString::new("iblai-mentor").unwrap();
-        let scheme_ns: *mut Object = msg_send![class!(NSString), stringWithUTF8String: scheme_c.as_ptr()];
+        let scheme_ns: *mut Object =
+            msg_send![class!(NSString), stringWithUTF8String: scheme_c.as_ptr()];
 
         // Try to get ASWebAuthenticationSession class (iOS 12+)
         let auth_session_class = match Class::get("ASWebAuthenticationSession") {
             Some(class) => {
                 println!("[ibl.ai] ✓ ASWebAuthenticationSession class found");
                 class
-            },
+            }
             None => {
                 println!("[ibl.ai] ❌ ASWebAuthenticationSession class NOT found, falling back to Safari app");
                 return open_url_via_application(ns_url);
@@ -467,7 +497,10 @@ fn open_with_auth_session(url: &str, app_handle: &AppHandle) -> Result<(), Strin
                     let c_str: *const i8 = msg_send![description, UTF8String];
                     if !c_str.is_null() {
                         let error_str = CStr::from_ptr(c_str);
-                        println!("[ibl.ai] ❌ ASWebAuthenticationSession error: {:?}", error_str);
+                        println!(
+                            "[ibl.ai] ❌ ASWebAuthenticationSession error: {:?}",
+                            error_str
+                        );
                     }
                 }
             }
@@ -490,7 +523,8 @@ fn open_with_auth_session(url: &str, app_handle: &AppHandle) -> Result<(), Strin
         println!("[ibl.ai] ✓ ASWebAuthenticationSession created successfully");
 
         // On iOS 13+, set prefersEphemeralWebBrowserSession to YES
-        let responds: BOOL = msg_send![session, respondsToSelector: sel!(setPrefersEphemeralWebBrowserSession:)];
+        let responds: BOOL =
+            msg_send![session, respondsToSelector: sel!(setPrefersEphemeralWebBrowserSession:)];
         if responds == YES {
             println!("[ibl.ai] Setting prefersEphemeralWebBrowserSession = YES");
             let _: () = msg_send![session, setPrefersEphemeralWebBrowserSession: YES];
@@ -500,7 +534,8 @@ fn open_with_auth_session(url: &str, app_handle: &AppHandle) -> Result<(), Strin
         let provider_class = get_context_provider_class();
         let provider: *mut Object = msg_send![provider_class, new];
         if !provider.is_null() {
-            let responds_to_provider: BOOL = msg_send![session, respondsToSelector: sel!(setPresentationContextProvider:)];
+            let responds_to_provider: BOOL =
+                msg_send![session, respondsToSelector: sel!(setPresentationContextProvider:)];
             if responds_to_provider == YES {
                 println!("[ibl.ai] Setting presentation context provider");
                 let _: () = msg_send![session, setPresentationContextProvider: provider];
@@ -545,7 +580,8 @@ fn open_oauth_url(app: &AppHandle, url: &str) -> Result<(), String> {
         // Run on main thread for UI operations
         app.run_on_main_thread(move || {
             if let Err(err) = open_with_auth_session_macos(&url_for_main, &app_handle) {
-                let error_msg = format!("[ibl.ai] ❌ Failed to open auth session on macOS: {}", err);
+                let error_msg =
+                    format!("[ibl.ai] ❌ Failed to open auth session on macOS: {}", err);
                 println!("{}", error_msg);
             }
         })
@@ -565,7 +601,11 @@ fn open_oauth_url(app: &AppHandle, url: &str) -> Result<(), String> {
 fn show_debug_alert(window: &tauri::WebviewWindow, message: &str) {
     println!("[ibl.ai] {}", message);
 
-    let escaped_msg = message.replace('\\', "\\\\").replace('\'', "\\'").replace('\n', "\\n").replace('"', "\\\"");
+    let escaped_msg = message
+        .replace('\\', "\\\\")
+        .replace('\'', "\\'")
+        .replace('\n', "\\n")
+        .replace('"', "\\\"");
 
     let js = format!(r#"alert('🔗 Deep Link Debug:\n\n{}');"#, escaped_msg);
 
@@ -588,12 +628,18 @@ fn handle_deep_link_url(app_handle: &AppHandle, raw_url: &str) {
     let scheme = parsed.scheme();
     let host = parsed.host_str().unwrap_or("");
     let path = parsed.path();
-    println!("[ibl.ai] Parsed URL - scheme: {}, host: {}, path: {}", scheme, host, path);
+    println!(
+        "[ibl.ai] Parsed URL - scheme: {}, host: {}, path: {}",
+        scheme, host, path
+    );
 
     // Handle both custom URI schemes and Universal Links (https with our domain)
     let is_custom_scheme = scheme == "iblai-mentor" || scheme == "ai.ibl.mentorai";
     let is_universal_link = scheme == "https" && host == "mentorai.iblai.app";
-    println!("[ibl.ai] is_custom_scheme: {}, is_universal_link: {}", is_custom_scheme, is_universal_link);
+    println!(
+        "[ibl.ai] is_custom_scheme: {}, is_universal_link: {}",
+        is_custom_scheme, is_universal_link
+    );
 
     if !is_custom_scheme && !is_universal_link {
         println!("[ibl.ai] URL not a custom scheme or universal link, ignoring");
@@ -613,7 +659,10 @@ fn handle_deep_link_url(app_handle: &AppHandle, raw_url: &str) {
     println!("[ibl.ai] Final path: {}", path);
 
     // Only handle SSO-related paths
-    if !path.starts_with("/sso-login") && !path.starts_with("/mobile-sso-login") && !path.starts_with("/sso-login-complete") {
+    if !path.starts_with("/sso-login")
+        && !path.starts_with("/mobile-sso-login")
+        && !path.starts_with("/sso-login-complete")
+    {
         println!("[ibl.ai] Path does not start with SSO-related paths, ignoring");
         return;
     }
@@ -636,7 +685,7 @@ fn handle_deep_link_url(app_handle: &AppHandle, raw_url: &str) {
             match eval_result {
                 Ok(_) => {
                     println!("[ibl.ai] ✅ Successfully navigated to: {}", target_url);
-                },
+                }
                 Err(e) => {
                     println!("[ibl.ai] ❌ Failed to navigate: {}", e);
                 }
@@ -676,7 +725,10 @@ fn handle_auth_session_callback_macos(app_handle: &AppHandle, raw_url: &str) {
     let scheme = parsed.scheme();
     let host = parsed.host_str().unwrap_or("");
     let path = parsed.path();
-    println!("[ibl.ai] Parsed callback - scheme: {}, host: {}, path: {}", scheme, host, path);
+    println!(
+        "[ibl.ai] Parsed callback - scheme: {}, host: {}, path: {}",
+        scheme, host, path
+    );
 
     // Handle custom URI scheme callbacks (iblai-mentor://...)
     let is_custom_scheme = scheme == "iblai-mentor" || scheme == "ai.ibl.mentorai";
@@ -696,7 +748,10 @@ fn handle_auth_session_callback_macos(app_handle: &AppHandle, raw_url: &str) {
     }
 
     // Only handle SSO-related paths
-    if !final_path.starts_with("/sso-login") && !final_path.starts_with("/mobile-sso-login") && !final_path.starts_with("/sso-login-complete") {
+    if !final_path.starts_with("/sso-login")
+        && !final_path.starts_with("/mobile-sso-login")
+        && !final_path.starts_with("/sso-login-complete")
+    {
         println!("[ibl.ai] Path '{}' not SSO-related, ignoring", final_path);
         return;
     }
@@ -1194,7 +1249,10 @@ const OFFLINE_CONTEXT_FILE: &str = "offline_context.json";
 #[cfg(not(any(target_os = "ios", target_os = "android")))]
 #[command]
 async fn save_offline_context(app: AppHandle, context: String) -> Result<(), String> {
-    println!("[MentorAI] Saving offline context ({} bytes)", context.len());
+    println!(
+        "[MentorAI] Saving offline context ({} bytes)",
+        context.len()
+    );
 
     let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
     let context_file = app_data_dir.join(OFFLINE_CONTEXT_FILE);
@@ -1216,7 +1274,10 @@ async fn get_offline_context(app: AppHandle) -> Option<String> {
 
     match std::fs::read_to_string(&context_file) {
         Ok(context) => {
-            println!("[MentorAI] Loaded offline context ({} bytes)", context.len());
+            println!(
+                "[MentorAI] Loaded offline context ({} bytes)",
+                context.len()
+            );
             Some(context)
         }
         Err(e) => {
@@ -1244,7 +1305,13 @@ fn get_os_type() -> String {
     #[cfg(target_os = "android")]
     return "android".to_string();
 
-    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux", target_os = "ios", target_os = "android")))]
+    #[cfg(not(any(
+        target_os = "windows",
+        target_os = "macos",
+        target_os = "linux",
+        target_os = "ios",
+        target_os = "android"
+    )))]
     return "unknown".to_string();
 }
 
@@ -1300,7 +1367,6 @@ async fn open_external_url(app: AppHandle, url: String) -> Result<(), String> {
             .map_err(|e| format!("Failed to open URL: {}", e))
     }
 }
-
 
 /// Navigate to a specific URL in the webview
 #[command]
@@ -1431,17 +1497,26 @@ async fn ollama_chat_stream(
                         continue;
                     }
                     if let Ok(json) = serde_json::from_str::<serde_json::Value>(line) {
-                        if let Some(content) = json.get("message").and_then(|m| m.get("content")).and_then(|c| c.as_str()) {
+                        if let Some(content) = json
+                            .get("message")
+                            .and_then(|m| m.get("content"))
+                            .and_then(|c| c.as_str())
+                        {
                             full_content.push_str(content);
                             // Emit token event
-                            emit_on_main(&app, "ollama:token", serde_json::json!({
-                                "generation_id": generation_id,
-                                "token": content,
-                                "full_content": full_content
-                            }));
+                            emit_on_main(
+                                &app,
+                                "ollama:token",
+                                serde_json::json!({
+                                    "generation_id": generation_id,
+                                    "token": content,
+                                    "full_content": full_content
+                                }),
+                            );
                         }
                         // The model requested MCP tools this round (bridge only).
-                        if json.get("message")
+                        if json
+                            .get("message")
                             .and_then(|m| m.get("tool_calls"))
                             .and_then(|t| t.as_array())
                             .map(|a| !a.is_empty())
@@ -1458,30 +1533,42 @@ async fn ollama_chat_stream(
                                 continue;
                             }
                             // No tool calls -> final answer.
-                            emit_on_main(&app, "ollama:done", serde_json::json!({
-                                "generation_id": generation_id,
-                                "full_content": full_content
-                            }));
+                            emit_on_main(
+                                &app,
+                                "ollama:done",
+                                serde_json::json!({
+                                    "generation_id": generation_id,
+                                    "full_content": full_content
+                                }),
+                            );
                             return Ok(());
                         }
                     }
                 }
             }
             Err(e) => {
-                emit_on_main(&app, "ollama:error", serde_json::json!({
-                    "generation_id": generation_id,
-                    "error": format!("Stream error: {}", e)
-                }));
+                emit_on_main(
+                    &app,
+                    "ollama:error",
+                    serde_json::json!({
+                        "generation_id": generation_id,
+                        "error": format!("Stream error: {}", e)
+                    }),
+                );
                 return Err(format!("Stream error: {}", e));
             }
         }
     }
 
     // Stream closed without a tool-free `done` — emit done with what we have.
-    emit_on_main(&app, "ollama:done", serde_json::json!({
-        "generation_id": generation_id,
-        "full_content": full_content
-    }));
+    emit_on_main(
+        &app,
+        "ollama:done",
+        serde_json::json!({
+            "generation_id": generation_id,
+            "full_content": full_content
+        }),
+    );
 
     Ok(())
 }
@@ -1552,7 +1639,10 @@ async fn cache_api_response(
         url.clone()
     };
 
-    println!("[MentorAI] Caching {} response for: {} (key: {})", method, url, cache_key);
+    println!(
+        "[MentorAI] Caching {} response for: {} (key: {})",
+        method, url, cache_key
+    );
 
     let cache_lock = get_web_cache().read().await;
     if let Some(cache) = cache_lock.as_ref() {
@@ -1622,7 +1712,10 @@ async fn get_cached_api_response(
         }
     }
 
-    println!("[MentorAI] No cached {} response found for: {}", method, url);
+    println!(
+        "[MentorAI] No cached {} response found for: {}",
+        method, url
+    );
     Ok(None)
 }
 
@@ -2658,9 +2751,10 @@ pub fn run() {
             Ok(())
         });
 
-        // Register the custom URI scheme protocol for offline cache (desktop only)
-        #[cfg(not(any(target_os = "ios", target_os = "android")))]
-        let builder = builder.register_asynchronous_uri_scheme_protocol("mentor", |ctx, request, responder| {
+    // Register the custom URI scheme protocol for offline cache (desktop only)
+    #[cfg(not(any(target_os = "ios", target_os = "android")))]
+    let builder =
+        builder.register_asynchronous_uri_scheme_protocol("mentor", |ctx, request, responder| {
             // Extract the URL path - format: mentor://fetch/<encoded_url>
             let uri = request.uri();
             let path = uri.path();
@@ -2739,76 +2833,77 @@ pub fn run() {
             }
         });
 
-        // Desktop platforms get all commands including offline/cache features
-        #[cfg(not(any(target_os = "ios", target_os = "android")))]
-        let builder = builder.invoke_handler(tauri::generate_handler![
-            install_ollama,
-            stop_ollama,
-            check_ollama_status,
-            get_mcp_config_path,
-            ghost_os_manager::install_ghost_os,
-            ghost_os_manager::stop_ghost_os,
-            ghost_os_manager::check_ghost_os_status,
-            ghost_mcp_manager::ghost_mcp_start,
-            ghost_mcp_manager::ghost_mcp_send,
-            ghost_mcp_manager::ghost_mcp_stop,
-            check_disk_space_for_model,
-            get_system_memory,
-            download_phi3_model,
-            download_model,
-            cancel_model_download,
-            check_network_status,
-            set_cache_online_status,
-            clear_web_cache,
-            get_web_cache_stats,
-            get_offline_server_url,
-            is_offline_server_ready,
-            precache_app,
-            save_last_mentor_route,
-            get_last_mentor_route,
-            cache_api_response,
-            get_cached_api_response,
-            save_offline_context,
-            get_offline_context,
-            get_os_type,
-            allow_in_app_purchase,
-            get_locked_tenant,
-            open_external_url,
-            navigate_to,
-            ollama_chat,
-            ollama_chat_stream,
-            opencode_acp::opencode_chat_stream,
-            opencode_acp::opencode_stop,
-            opencode_acp::opencode_permission_respond,
-            opencode_acp::opencode_close,
-            opencode_acp::get_opencode_workspace,
-            opencode_acp::set_opencode_workspace,
-            opencode_installer::install_opencode,
-            opencode_installer::check_opencode_status,
-            opencode_acp::check_code_local_model,
-        ]);
+    // Desktop platforms get all commands including offline/cache features
+    #[cfg(not(any(target_os = "ios", target_os = "android")))]
+    let builder = builder.invoke_handler(tauri::generate_handler![
+        install_ollama,
+        stop_ollama,
+        check_ollama_status,
+        get_mcp_config_path,
+        cua_driver_installer::install_cua_driver,
+        cua_driver_installer::check_cua_driver_status,
+        cua_driver_mcp::cua_driver_support,
+        cua_driver_mcp::cua_driver_start,
+        cua_driver_mcp::cua_driver_send,
+        cua_driver_mcp::cua_driver_stop,
+        check_disk_space_for_model,
+        get_system_memory,
+        download_phi3_model,
+        download_model,
+        cancel_model_download,
+        check_network_status,
+        set_cache_online_status,
+        clear_web_cache,
+        get_web_cache_stats,
+        get_offline_server_url,
+        is_offline_server_ready,
+        precache_app,
+        save_last_mentor_route,
+        get_last_mentor_route,
+        cache_api_response,
+        get_cached_api_response,
+        save_offline_context,
+        get_offline_context,
+        get_os_type,
+        allow_in_app_purchase,
+        get_locked_tenant,
+        open_external_url,
+        navigate_to,
+        ollama_chat,
+        ollama_chat_stream,
+        opencode_acp::opencode_chat_stream,
+        opencode_acp::opencode_stop,
+        opencode_acp::opencode_permission_respond,
+        opencode_acp::opencode_close,
+        opencode_acp::get_opencode_workspace,
+        opencode_acp::set_opencode_workspace,
+        opencode_installer::install_opencode,
+        opencode_installer::check_opencode_status,
+        opencode_acp::check_code_local_model,
+    ]);
 
-        // Mobile platforms get only basic commands (no offline/cache features)
-        #[cfg(any(target_os = "ios", target_os = "android"))]
-        let builder = builder.invoke_handler(tauri::generate_handler![
-            install_ollama,
-            stop_ollama,
-            check_ollama_status,
-            check_disk_space_for_model,
-            get_system_memory,
-            download_phi3_model,
-            download_model,
-            cancel_model_download,
-            check_network_status,
-            get_os_type,
-            allow_in_app_purchase,
-            get_locked_tenant,
-            open_external_url,
-            navigate_to,
-            ollama_chat,
-            ollama_chat_stream,
-        ]);
+    // Mobile platforms get only basic commands (no offline/cache features)
+    #[cfg(any(target_os = "ios", target_os = "android"))]
+    let builder = builder.invoke_handler(tauri::generate_handler![
+        install_ollama,
+        stop_ollama,
+        check_ollama_status,
+        check_disk_space_for_model,
+        get_system_memory,
+        download_phi3_model,
+        download_model,
+        cancel_model_download,
+        check_network_status,
+        get_os_type,
+        allow_in_app_purchase,
+        get_locked_tenant,
+        open_external_url,
+        navigate_to,
+        ollama_chat,
+        ollama_chat_stream,
+    ]);
 
-        builder.run(tauri::generate_context!())
-            .expect("error while running tauri app");
+    builder
+        .run(tauri::generate_context!())
+        .expect("error while running tauri app");
 }

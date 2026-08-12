@@ -145,11 +145,24 @@ fn extract(archive: &Path, dir: &Path) -> Result<(), String> {
         c.args(["-xf", &a, "-C", &d]);
         c
     };
-    let status = cmd.status().map_err(|e| format!("extract spawn failed: {e}"))?;
-    if status.success() {
+    // `output()`, never `status()`. `status()` hands the child the app's own stdio,
+    // and in a GUI-launched build that is a pipe nobody drains — a chatty extractor
+    // (`unzip` prints a line per entry) fills the 64KB buffer and blocks forever, so
+    // the install hangs after "extracting opencode" with no error. `output()` also
+    // nulls stdin, so the child can't stall waiting on input, and it gives us the
+    // extractor's own stderr to report instead of a bare exit code.
+    let out = cmd
+        .output()
+        .map_err(|e| format!("extract spawn failed: {e}"))?;
+    if out.status.success() {
         Ok(())
     } else {
-        Err(format!("extract failed (exit {:?})", status.code()))
+        let stderr = String::from_utf8_lossy(&out.stderr);
+        Err(format!(
+            "extract failed (exit {:?}): {}",
+            out.status.code(),
+            stderr.trim()
+        ))
     }
 }
 
@@ -179,12 +192,11 @@ fn hoist_binary(bin_dir: &Path, target: &Path) -> Result<(), String> {
 
 /// Download + install the pinned opencode binary into `~/.local/share/iblai/bin`.
 async fn download_and_install(app: &AppHandle) -> Result<(), String> {
-    let version = std::env::var("IBL_OPENCODE_VERSION")
-        .unwrap_or_else(|_| OPENCODE_VERSION.to_string());
+    let version =
+        std::env::var("IBL_OPENCODE_VERSION").unwrap_or_else(|_| OPENCODE_VERSION.to_string());
     let (os, arch, ext) = target_asset()?;
     let asset = format!("opencode-{os}-{arch}.{ext}");
-    let url =
-        format!("https://github.com/sst/opencode/releases/download/v{version}/{asset}");
+    let url = format!("https://github.com/sst/opencode/releases/download/v{version}/{asset}");
     log(app, &format!("downloading {asset} (v{version})"));
 
     let bin_dir = iblai_data_dir().join("bin");
@@ -202,7 +214,16 @@ async fn download_and_install(app: &AppHandle) -> Result<(), String> {
     std::fs::write(&archive, &bytes).map_err(|e| format!("archive write failed: {e}"))?;
 
     log(app, "extracting opencode");
-    extract(&archive, &bin_dir)?;
+    // Off the async runtime: extraction is fully blocking and takes seconds on a
+    // ~100MB release. Run inline it pins a tokio worker for the whole time, which
+    // stalls the very IPC channel this command has to reply on — the UI then sees a
+    // hang rather than a slow install.
+    {
+        let (a, d) = (archive.clone(), bin_dir.clone());
+        tokio::task::spawn_blocking(move || extract(&a, &d))
+            .await
+            .map_err(|e| format!("extract task failed: {e}"))??;
+    }
     let _ = std::fs::remove_file(&archive);
 
     let bin = opencode_bin();
@@ -268,7 +289,10 @@ fn ensure_config(app: &AppHandle) -> Result<(), String> {
     let existed = config_file().exists();
     ensure_opencode_config()?;
     if !existed {
-        log(app, &format!("wrote opencode config at {}", config_file().display()));
+        log(
+            app,
+            &format!("wrote opencode config at {}", config_file().display()),
+        );
     }
     Ok(())
 }
@@ -307,4 +331,77 @@ pub async fn check_opencode_status() -> serde_json::Value {
         "config_ready": config_file().exists(),
         "sandboxed": is_sandboxed(),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A fresh scratch dir per test, removed on drop (best-effort).
+    struct Scratch(PathBuf);
+    impl Scratch {
+        fn new(name: &str) -> Self {
+            let dir = std::env::temp_dir().join(format!(
+                "opencode-installer-test-{}-{name}",
+                std::process::id()
+            ));
+            let _ = std::fs::remove_dir_all(&dir);
+            std::fs::create_dir_all(&dir).unwrap();
+            Scratch(dir)
+        }
+        fn path(&self) -> &Path {
+            &self.0
+        }
+    }
+    impl Drop for Scratch {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+
+    #[test]
+    fn extract_unpacks_a_real_archive() {
+        let s = Scratch::new("ok");
+        let src = s.path().join("src");
+        std::fs::create_dir_all(&src).unwrap();
+        std::fs::write(src.join("opencode"), b"#!/bin/sh\n").unwrap();
+        // The `.tar.gz` name forces the `tar` branch on every platform, so the
+        // test exercises one deterministic code path everywhere.
+        let archive = s.path().join("release.tar.gz");
+        let built = Command::new("tar")
+            .arg("-czf")
+            .arg(&archive)
+            .arg("-C")
+            .arg(&src)
+            .arg("opencode")
+            .status()
+            .expect("tar is present on every supported platform");
+        assert!(built.success());
+        let dest = s.path().join("out");
+        std::fs::create_dir_all(&dest).unwrap();
+
+        extract(&archive, &dest).expect("extract should succeed");
+        assert!(dest.join("opencode").exists());
+    }
+
+    #[test]
+    fn a_failed_extract_reports_the_extractor_s_own_stderr() {
+        // The freeze regression, pinned from its observable side. `extract` once
+        // ran the child with `status()`, which hands it the app's own stdio: in a
+        // GUI-launched build that pipe is drained by nobody, a chatty extractor
+        // fills it and blocks forever, and a failure carried no detail. With
+        // `output()` the pipes are drained and stderr comes back to us — so a
+        // corrupt archive must fail WITH the extractor's own words in the error,
+        // which the old code could never produce.
+        let s = Scratch::new("corrupt");
+        let archive = s.path().join("not-really.tar.gz");
+        std::fs::write(&archive, b"this is not a gzip stream").unwrap();
+        let dest = s.path().join("out");
+        std::fs::create_dir_all(&dest).unwrap();
+
+        let err = extract(&archive, &dest).expect_err("a corrupt archive must fail");
+        assert!(err.contains("extract failed"), "{err}");
+        let lower = err.to_lowercase();
+        assert!(lower.contains("tar") || lower.contains("gzip"), "{err}");
+    }
 }

@@ -1,7 +1,11 @@
 import type { Metadata } from 'next';
 
 import type { TenantKeyMentorIdParams } from '@/lib/types';
-import { buildMentorMetadata, mentorJsonLd } from '@/lib/seo-mentor';
+import {
+  buildMentorMetadata,
+  mentorJsonLd,
+  fetchMentorDisplayName,
+} from '@/lib/seo-mentor';
 import { JsonLd } from '@/components/seo/json-ld';
 
 import MentorPageContent from './mentor-page-content';
@@ -27,12 +31,20 @@ export default async function Page({
   params: Promise<TenantKeyMentorIdParams>;
 }) {
   const { tenantKey, mentorId } = await params;
-  // Deduped with generateMetadata's fetch within the same request.
-  const jsonLd = await mentorJsonLd(tenantKey, mentorId);
+  // Both reuse the same public-settings fetch as generateMetadata (deduped
+  // within the request), so this adds no extra network round-trips.
+  const [jsonLd, agentName] = await Promise.all([
+    mentorJsonLd(tenantKey, mentorId),
+    fetchMentorDisplayName(tenantKey, mentorId),
+  ]);
 
   return (
     <>
       {jsonLd && <JsonLd data={jsonLd} />}
+      {/* Server-rendered page heading for crawlers and screen readers. Visually
+          hidden (sr-only) so the chat UI is unchanged — the SPA draws the visible
+          chrome after it hydrates. */}
+      {agentName && <h1 className="sr-only">{agentName}</h1>}
       <MentorPageContent />
     </>
   );

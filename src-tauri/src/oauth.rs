@@ -1,5 +1,5 @@
-use tauri::command;
 use std::sync::{Arc, Mutex};
+use tauri::command;
 use tauri::AppHandle;
 
 // Global storage for OAuth callback result

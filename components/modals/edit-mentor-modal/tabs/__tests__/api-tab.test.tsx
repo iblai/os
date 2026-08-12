@@ -38,15 +38,17 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetApiKeysQuery: (...args: unknown[]) => mockUseGetApiKeysQuery(...args),
-  // Mirror the real helper: accept a bare array or a paginated envelope and
-  // normalize to { tokens, count } so the component always sees an array.
+  // The endpoint returns either a bare array or a paginated envelope depending
+  // on the backend version, and the real helper normalises both. Mirrored here
+  // rather than importing the SDK so the mock stays self-contained.
   unwrapApiTokenList: (response?: unknown) => {
     if (Array.isArray(response))
       return { tokens: response, count: response.length };
-    const results = (response as { results?: unknown[] } | undefined)?.results;
-    return Array.isArray(results)
-      ? { tokens: results, count: results.length }
-      : { tokens: [], count: 0 };
+    const paginated = response as
+      | { results?: unknown[]; count?: number }
+      | undefined;
+    const tokens = paginated?.results ?? [];
+    return { tokens, count: paginated?.count ?? tokens.length };
   },
 }));
 

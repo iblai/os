@@ -43,7 +43,12 @@ import {
 } from '@/components/ui/hover-card';
 
 import { useGetMentorPublicSettingsQuery } from '@iblai/iblai-js/data-layer';
-import { chatActions, clearFiles } from '@iblai/iblai-js/web-utils';
+import {
+  chatActions,
+  clearFiles,
+  getVisibleAnalyticsTabs,
+  type AnalyticsTab,
+} from '@iblai/iblai-js/web-utils';
 import {
   Admin,
   IntegrationsTab,
@@ -666,50 +671,91 @@ export function AppSidebar() {
 
   const analyticsMenu = React.useMemo<NavMenuConfig>(() => {
     const base = analyticsBasePath ?? '/analytics';
-    return {
-      id: 'analytics',
-      label: t('analytics'),
-      icon: LineChart,
-      items: [
-        {
+    // Each row is tagged with the analytics tab it opens so the list can be
+    // narrowed to what this viewer may actually reach — the same
+    // `getVisibleAnalyticsTabs` contract the skills SPA sidebar uses. A pure
+    // watcher (holds `/watchedgroups/#list` without administering the tenant)
+    // is limited to the watcher subset — here Memory and Data Reports, since
+    // Courses/Programs have no counterpart in this SPA — and everyone else
+    // keeps the full list, exactly as before.
+    const visibleTabs = getVisibleAnalyticsTabs(rbacPermissions, currentTenant);
+    const rows: ReadonlyArray<{ tab: AnalyticsTab; item: NavMenuItem }> = [
+      {
+        tab: '',
+        item: {
           id: 'analytics-overview',
           label: t('analyticsOverview'),
           href: base,
           exact: true,
         },
-        {
+      },
+      {
+        tab: 'users',
+        item: {
           id: 'analytics-users',
           label: t('analyticsUsers'),
           href: `${base}/users`,
         },
-        {
+      },
+      {
+        tab: 'topics',
+        item: {
           id: 'analytics-topics',
           label: t('analyticsTopics'),
           href: `${base}/topics`,
         },
-        {
+      },
+      {
+        tab: 'transcripts',
+        item: {
           id: 'analytics-transcripts',
           label: t('analyticsTranscripts'),
           href: `${base}/transcripts`,
         },
-        {
+      },
+      {
+        tab: 'memory',
+        item: {
+          id: 'analytics-memory',
+          label: t('analyticsMemory'),
+          href: `${base}/memory`,
+        },
+      },
+      {
+        tab: 'financial',
+        item: {
           id: 'analytics-costs',
           label: t('analyticsCosts'),
           href: `${base}/financial`,
         },
-        {
+      },
+      {
+        tab: 'audit',
+        item: {
           id: 'analytics-audit',
           label: t('analyticsAudit'),
           href: `${base}/audit`,
         },
-        {
+      },
+      {
+        tab: 'reports',
+        item: {
           id: 'analytics-reports',
           label: t('analyticsDataReports'),
           href: `${base}/reports`,
         },
-      ],
+      },
+    ];
+
+    return {
+      id: 'analytics',
+      label: t('analytics'),
+      icon: LineChart,
+      items: rows
+        .filter(({ tab }) => visibleTabs.includes(tab))
+        .map(({ item }) => item),
     };
-  }, [analyticsBasePath]);
+  }, [analyticsBasePath, rbacPermissions, currentTenant]);
 
   const handleAnalyticsMenuSelect = React.useCallback(
     (_itemId: string): boolean | void => {

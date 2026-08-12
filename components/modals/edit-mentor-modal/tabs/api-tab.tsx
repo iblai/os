@@ -15,8 +15,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import {
-  unwrapApiTokenList,
   useGetApiKeysQuery,
+  unwrapApiTokenList,
 } from '@iblai/iblai-js/data-layer';
 import { CreateApiModal } from './api-tab/create-api-modal';
 import { ApiKey, DeleteApiModal } from './api-tab/delete-api-modal';
@@ -31,8 +31,8 @@ export function ApiTab() {
     useGetApiKeysQuery({
       platformKey: tenantKey,
     });
-  // The endpoint may answer with a bare array or a paginated envelope
-  // depending on backend version — the data-layer helper normalizes both.
+  // The endpoint returns either a bare array or a paginated envelope depending
+  // on the backend version, so normalise before rendering.
   const { tokens: apiKeys } = unwrapApiTokenList(apiKeysResponse);
 
   const { executeWithTrialCheck, isModalOpen, FreeTrialDialog, closeModal } =

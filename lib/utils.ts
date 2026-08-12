@@ -9,10 +9,9 @@ import { remark } from 'remark';
 import { Marked } from 'marked';
 import markedKatex from 'marked-katex-extension';
 import { gfmHeadingId } from 'marked-gfm-heading-id';
-import { markedHighlight } from 'marked-highlight';
-import hljs from 'highlight.js';
 
 import { preprocessLaTeX } from './preprocess-latex';
+import { normalizeListIndentation } from './normalize-list-indentation';
 import {
   LOCAL_STORAGE_KEYS,
   MAX_PROMPT_PARAM_LENGTH,
@@ -553,6 +552,13 @@ const PROVIDER_NAME_BY_ALIAS: Record<string, string> = {
   qwen: 'alibaba',
   ibm: 'ibm',
   granite: 'ibm',
+  // ibl.ai's own hosted provider. The backend key is `iblai` (NameEnum.IBLAI);
+  // the extra aliases cover the `IBLChat<Vendor>` house spelling and the
+  // dotted/spaced brand forms, which all normalize to one of these.
+  iblai: 'iblai',
+  ibl: 'iblai',
+  iblchatibl: 'iblai',
+  iblchatiblai: 'iblai',
 };
 
 /**
@@ -588,6 +594,7 @@ const PROVIDER_DETAILS_BY_NAME: Record<string, { logo: string; name: string }> =
     bedrock: { logo: '/llm-amazon-provider.png', name: 'Amazon' },
     alibaba: { logo: '/llm-alibaba-provider.png', name: 'Alibaba' },
     ibm: { logo: '/llm-ibm-provider.png', name: 'IBM' },
+    iblai: { logo: '/llm-iblai-provider.png', name: 'ibl.ai' },
   };
 
 export function getLLMProviderDetails(llmProvider: string, llmName?: string) {
@@ -603,6 +610,79 @@ export function getLLMProviderDetails(llmProvider: string, llmName?: string) {
       name: llmProvider,
     }
   );
+}
+
+/**
+ * Compares two raw provider names by the label the user actually sees on the
+ * card — `getLLMProviderDetails(name).name` — not by the backend key. The two
+ * diverge often enough to matter: `bedrock` renders as "Amazon", `azure_openai`
+ * as "Microsoft", `iblai` as "ibl.ai". Comparison is case-insensitive
+ * (`sensitivity: 'base'`) so casing never produces a surprising order.
+ * Unknown providers fall back to their raw name as the display name.
+ */
+export function compareLLMProvidersByDisplayName(a: string, b: string): number {
+  return getLLMProviderDetails(a).name.localeCompare(
+    getLLMProviderDetails(b).name,
+    undefined,
+    { sensitivity: 'base' },
+  );
+}
+
+type LLMCredentialFlags = {
+  has_credentials?: boolean;
+  can_use_main_keys?: boolean;
+  main_has_credentials?: boolean;
+};
+
+export type LLMProviderAccess = LLMCredentialFlags & {
+  chat_models?: unknown[] | null;
+};
+
+/**
+ * Whether the user can reach *any* model of this provider.
+ *
+ * This is exactly the provider-level half of the per-model `isDisabled` rule in
+ * `components/modals/llm-provider-modal.tsx`: a model row there is disabled when
+ * `!canSwitchLLm(provider) || !canSwitchProvider(llms, provider.name)`, and both
+ * of those depend only on the provider — so when either fails, *every* model row
+ * of that provider is disabled. `canSwitchProvider` is just "has at least one
+ * `chat_models` entry", which is checked inline here to keep the helper pure and
+ * free of the surrounding provider list.
+ *
+ * `canSwitchLLm` can return `undefined` (its `can_use_main_keys` branch), hence
+ * the explicit `Boolean(...)`.
+ */
+export function canAccessProvider(provider: LLMProviderAccess): boolean {
+  return (
+    Boolean(canSwitchLLm(provider ?? {})) &&
+    (provider?.chat_models?.length ?? 0) > 0
+  );
+}
+
+/**
+ * Orders LLM provider cards as two alphabetical groups: providers the user can
+ * actually use (see {@link canAccessProvider}) first, then the ones they can't —
+ * each group sorted alphabetically by display name (see
+ * {@link compareLLMProvidersByDisplayName}).
+ *
+ * The grouping predicate is deliberately the same one the grid grays cards with,
+ * so the two always line up: group 1 renders normally, group 2 renders grayed.
+ * Grouping on credentials alone would let a provider that has a key but ships no
+ * chat models sort into the "usable" group while rendering grayed.
+ *
+ * Pure and non-mutating: RTK Query results are frozen, so the input is copied
+ * before sorting. `Array.prototype.sort` is stable, so providers that tie on
+ * both group and display name keep their original relative order.
+ */
+export function sortLLMProvidersByCredentials<
+  T extends LLMProviderAccess & { name: string },
+>(providers: readonly T[]): T[] {
+  return [...providers].sort((a, b) => {
+    const aUsable = canAccessProvider(a);
+    const bUsable = canAccessProvider(b);
+    if (aUsable !== bUsable) return aUsable ? -1 : 1;
+    return compareLLMProvidersByDisplayName(a.name, b.name);
+  });
 }
 
 export function sendMessageToParentWebsite(payload: unknown) {
@@ -761,6 +841,38 @@ export function parsePrompt(prompt: string) {
 function preprocessMarkdownForHtml(markdown: string): string {
   let processed = markdown;
 
+  // Handle ```markdown code blocks - extract content and render as actual markdown
+  // This handles cases where LLM wraps markdown content in code blocks.
+  // Runs before the code mask below on purpose: the unwrapped content IS
+  // markdown and must go through the fixes.
+  processed = processed.replace(
+    /```(?:markdown|md)\s*\n([\s\S]*?)```/gi,
+    (_match, content) => content.trim(),
+  );
+
+  // Every fix below is a whole-document regex, and a code-fence body is
+  // literal text where a `# comment` line or the exact newline layout must
+  // survive byte-for-byte (the list-break fix used to inject blank lines into
+  // fenced code, and the heading fixes merged comment lines). Mask fenced and
+  // inline code first -- including a trailing fence whose closer has not
+  // streamed in yet -- and restore verbatim at the end.
+  const codeOpen = String.fromCharCode(0xe006);
+  const codeClose = String.fromCharCode(0xe007);
+  const codePlaceholders: string[] = [];
+  const maskCode = (segment: string): string => {
+    const index = codePlaceholders.length;
+    codePlaceholders.push(segment);
+    return `${codeOpen}${index}${codeClose}`;
+  };
+  processed = processed
+    .replace(/(`{3,})[\s\S]*?\1/g, maskCode)
+    .replace(/(~{3,})[\s\S]*?\1/g, maskCode)
+    .replace(
+      /(^|\n)([ \t]*(?:`{3,}|~{3,})[\s\S]*)$/,
+      (_match, before: string, fence: string) => before + maskCode(fence),
+    )
+    .replace(/(`+)((?:(?!\1)[\s\S])+?)\1(?!`)/g, maskCode);
+
   // Restore escaped markdown links so they render as actual links
   // Example: "\[Get started\](https://example.com)" -> "[Get started](https://example.com)"
   processed = processed.replace(
@@ -777,13 +889,6 @@ function preprocessMarkdownForHtml(markdown: string): string {
     },
   );
 
-  // Handle ```markdown code blocks - extract content and render as actual markdown
-  // This handles cases where LLM wraps markdown content in code blocks
-  processed = processed.replace(
-    /```(?:markdown|md)\s*\n([\s\S]*?)```/gi,
-    (_match, content) => content.trim(),
-  );
-
   // Fix headings with newlines after # (e.g., "#\nTitle" -> "# Title")
   // This handles cases where LLM outputs malformed heading syntax
   processed = processed.replace(/^(#{1,6})\s*\n+(.+)$/gm, '$1 $2');
@@ -798,6 +903,13 @@ function preprocessMarkdownForHtml(markdown: string): string {
   // Ensure list items have proper line breaks
   // Fix consecutive list items that might be on same line
   processed = processed.replace(/([^\n])(\n)([-*+]|\d+\.)\s/g, '$1\n\n$3 ');
+
+  // Restore code verbatim.
+  const restoreCodePattern = new RegExp(`${codeOpen}(\\d+)${codeClose}`, 'g');
+  processed = processed.replace(
+    restoreCodePattern,
+    (_, index) => codePlaceholders[Number(index)] ?? '',
+  );
 
   return processed;
 }
@@ -1274,14 +1386,8 @@ const configuredMarked = new Marked(
     output: 'htmlAndMathml', // Accessibility-friendly output with MathML fallback
   }),
   gfmHeadingId(),
-  markedHighlight({
-    langPrefix: 'hljs language-',
-    /* istanbul ignore next -- @preserve callback invoked by markedHighlight during code block parsing */
-    highlight(code: string, lang: string, _info: string) {
-      const language = hljs.getLanguage(lang) ? lang : 'plaintext';
-      return hljs.highlight(code, { language }).value;
-    },
-  }),
+  // No highlight extension: TipTap drops newline text nodes between highlight
+  // spans, merging code lines (issue #2109), and no consumer renders the spans.
   {
     gfm: true, // GitHub Flavored Markdown (tables, strikethrough, task lists)
     breaks: false, // Don't convert \n to <br>
@@ -1295,8 +1401,8 @@ export function markdownToHtml(markdownText: string) {
 
   try {
     // Pre-process to fix common markdown issues and convert LaTeX environments
-    const cleanedMarkdown = preprocessLaTeX(
-      preprocessMarkdownForHtml(markdownText),
+    const cleanedMarkdown = normalizeListIndentation(
+      preprocessLaTeX(preprocessMarkdownForHtml(markdownText)),
     );
 
     const result = configuredMarked.parse(cleanedMarkdown);

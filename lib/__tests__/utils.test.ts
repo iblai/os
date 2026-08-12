@@ -54,6 +54,9 @@ import {
   getLatestMessageTimestamp,
   isSafariBrowser,
   onAccountDeleted,
+  canAccessProvider,
+  compareLLMProvidersByDisplayName,
+  sortLLMProvidersByCredentials,
 } from '@/lib/utils';
 import { LOCAL_STORAGE_KEYS, QUERY_PARAMS } from '@/lib/constants';
 import { config } from '@/lib/config';
@@ -1333,6 +1336,40 @@ describe('getLLMProviderDetails function', () => {
       name: 'IBM',
     });
   });
+
+  it.each([
+    'iblai',
+    'IBLAI',
+    'ibl.ai',
+    'ibl_ai',
+    'ibl-ai',
+    'IBL AI',
+    'ibl',
+    'IBLChatIBL',
+    'IBLChatIBLAI',
+  ])('should return ibl.ai details for %s', (provider) => {
+    expect(getLLMProviderDetails(provider)).toEqual({
+      logo: '/llm-iblai-provider.png',
+      name: 'ibl.ai',
+    });
+  });
+
+  it('keeps the ibl.ai logo when a concrete model name is supplied', () => {
+    expect(getLLMProviderDetails('iblai', 'ibl-chat-1')).toEqual({
+      logo: '/llm-iblai-provider.png',
+      name: 'ibl.ai',
+    });
+  });
+
+  it('does not swallow the other ibl-hosted providers into ibl.ai', () => {
+    // Regression guard: the IBLChat<Vendor> providers keep their own logos.
+    expect(getLLMProviderDetails('IBLChatNvidia').name).toBe('NVIDIA');
+    expect(getLLMProviderDetails('IBLChatAnthropic').name).toBe('Anthropic');
+    expect(getLLMProviderDetails('IBLChatBedrock').name).toBe('Amazon');
+    // "ibm"/"granite" sit next to the new "ibl" alias — they must not collide.
+    expect(getLLMProviderDetails('IBM').name).toBe('IBM');
+    expect(getLLMProviderDetails('granite').name).toBe('IBM');
+  });
 });
 
 describe('getProviderName function', () => {
@@ -1363,6 +1400,22 @@ describe('getProviderName function', () => {
   it('returns the normalized form for unknown providers', () => {
     expect(getProviderName('Some-New Provider')).toBe('somenewprovider');
     expect(getProviderName('')).toBe('');
+  });
+
+  it('folds every ibl.ai spelling onto the canonical "iblai" key', () => {
+    for (const alias of [
+      'iblai',
+      'IBLAI',
+      'ibl.ai',
+      'ibl_ai',
+      'ibl-ai',
+      'IBL AI',
+      'ibl',
+      'IBLChatIBL',
+      'IBLChatIBLAI',
+    ]) {
+      expect(getProviderName(alias)).toBe('iblai');
+    }
   });
 });
 
@@ -2102,6 +2155,113 @@ describe('markdownToHtml function', () => {
     expect(result).toContain('Title');
   });
 
+  it('must not inject blank lines into a fenced code body (issue #2109)', () => {
+    // The list-break inserter used to run on raw text including fence bodies,
+    // splitting `first line\n- item in code` with an extra blank line.
+    const markdown = [
+      '```text',
+      'first line',
+      '- item in code',
+      '1. numbered in code',
+      '```',
+    ].join('\n');
+    const result = markdownToHtml(markdown);
+    expect(result).toContain('first line\n- item in code\n1. numbered in code');
+    expect(result).not.toContain('first line\n\n- item in code');
+  });
+
+  it('must not merge comment lines inside a python fence (issue #2109)', () => {
+    // The heading-newline fixer treated a bare `#` comment line as a
+    // malformed heading and pulled the next line up onto it.
+    const markdown = [
+      '```python',
+      '# Define custom tools',
+      '',
+      '#',
+      '@tool',
+      'def f(x):',
+      '    return x',
+      '```',
+    ].join('\n');
+    const result = markdownToHtml(markdown);
+    expect(result).not.toContain('# @tool');
+    expect(result).not.toContain('tools@tool');
+    expect(result).toContain('@tool');
+    expect(result).toContain('def');
+  });
+
+  it('must not corrupt an unclosed streaming fence body', () => {
+    const result = markdownToHtml('```python\n# streaming\n- not a list yet');
+    expect(result).toContain('language-python');
+    expect(result).not.toContain('<ul>');
+    expect(result).not.toContain('\n\n- not');
+
+    const midDocument = markdownToHtml(
+      'Intro text\n```python\n# streaming\n- not a list yet',
+    );
+    expect(midDocument).toContain('Intro text');
+    expect(midDocument).toContain('language-python');
+    expect(midDocument).not.toContain('<ul>');
+  });
+
+  it('leaves tilde fence bodies untouched', () => {
+    const result = markdownToHtml('~~~\ntext\n- item in code\n~~~');
+    expect(result).toContain('text\n- item in code');
+    expect(result).not.toContain('<ul>');
+  });
+
+  it('keeps inline code spans away from the markdown fixes', () => {
+    const markdown = 'Use `\\[not a link\\](https://x.dev)` verbatim.';
+    const result = markdownToHtml(markdown);
+    expect(result).toContain('\\[not a link\\](https://x.dev)');
+  });
+
+  it('still unwraps ```markdown fences and fixes their content', () => {
+    const markdown = '```markdown\n# Title\ntext\n1. a\n2. b\n```';
+    const result = markdownToHtml(markdown);
+    expect(result).toContain('<h1');
+    expect(result).toContain('<ol>');
+  });
+
+  it('nests a 2-space indented bullet under its ordered parent (issue #2109)', () => {
+    const result = markdownToHtml('1. Item\n  - sub\n2. Next');
+    expect(result.match(/<ol/g)).toHaveLength(1);
+    expect(result).toContain('<ul>');
+    expect(result.indexOf('<ul>')).toBeGreaterThan(result.indexOf('<li>'));
+    expect(result.indexOf('</ul>')).toBeLessThan(result.lastIndexOf('</ol>'));
+    expect(result).toContain('sub');
+  });
+
+  it('does not flatten a 2-space indented ordered child (issue #2109)', () => {
+    const result = markdownToHtml('2. Second\n  1. sub\n3. Third');
+    // Without normalization marked flattened this into one list of three
+    // items; nested it must produce an inner <ol> inside the outer one.
+    expect(result.match(/<ol/g)).toHaveLength(2);
+    expect(result).toContain('start="2"');
+  });
+
+  it('renders adjacent whole-line $$ lines as separate display blocks (issue #2109 fix 9)', () => {
+    const result = markdownToHtml(
+      '$$\\text{Step 1: Substitute } x = 4 \\text{ into the expression}$$\n$$3x + 5 = 3(4) + 5$$',
+    );
+    // Each whole-line span becomes its own katex display block; nothing is
+    // rendered as inline math and no raw delimiters leak.
+    expect(result.match(/katex-display/g)).toHaveLength(2);
+    expect((result.match(/class="katex"/g) ?? []).length).toBe(2);
+    expect(result).not.toContain('$$');
+  });
+
+  it('renders a whole-line \\[...\\] as a display block (issue #2109 fix 9)', () => {
+    const result = markdownToHtml('Energy:\n\\[E = mc^2\\]\nDone.');
+    expect(result.match(/katex-display/g)).toHaveLength(1);
+    expect(result).not.toContain('$$');
+    expect(result).not.toContain('\\[');
+    // Inline \(...\) stays inline math.
+    const inline = markdownToHtml('the value \\(a + b\\) here');
+    expect(inline).not.toContain('katex-display');
+    expect(inline).toContain('class="katex"');
+  });
+
   it('should handle excessive newlines after headings', () => {
     const markdown = '# Heading\n\n\n\nParagraph';
     const result = markdownToHtml(markdown);
@@ -2167,6 +2327,40 @@ describe('markdownToHtml function', () => {
     const markdown = 'Use `console.log()` to debug';
     const result = markdownToHtml(markdown);
     expect(result).toContain('<code>console.log()</code>');
+  });
+
+  it('emits span-free code blocks with a language class (issue #2109)', () => {
+    const markdown = '```python\nimport os\nprint("hi")\n```';
+    const result = markdownToHtml(markdown);
+    expect(result).toContain('<pre><code class="language-python">');
+    expect(result).not.toContain('<span');
+    expect(result).toContain('import os\nprint(');
+  });
+
+  it('keeps every fence newline intact between keyword lines (issue #2109)', () => {
+    const markdown = [
+      '```python',
+      'import json',
+      'from typing import List, Dict',
+      'from functools import wraps',
+      '',
+      'def log_execution(func):',
+      '    """Decorator to log function execution times and results."""',
+      '    @wraps(func)',
+      '    def wrapper(*args, **kwargs):',
+      '        return func(*args, **kwargs)',
+      '    return wrapper',
+      '',
+      '@log_execution',
+      'def process_data_batch(input_records: List[Dict]) -> List[Dict]:',
+      '    return input_records',
+      '```',
+    ].join('\n');
+    const result = markdownToHtml(markdown);
+    expect(result).toContain('Dict\nfrom functools');
+    expect(result).toContain('@log_execution\ndef process_data_batch');
+    expect(result).not.toContain('Dictfrom');
+    expect(result).not.toContain('log_executiondef');
   });
 
   it('should handle GFM tables', () => {
@@ -2717,6 +2911,29 @@ describe('getCurrentArtifactTitle function', () => {
     expect(getCurrentArtifactTitle(messages)).toBe('Current Version');
   });
 
+  it('should treat a missing version_number as 0 when picking the latest', () => {
+    const messages = [
+      {
+        message: { data: { content: '' } },
+        artifact_versions: [
+          { id: 1, title: 'No Number' },
+          { id: 2, title: 'Numbered', version_number: 2 },
+        ],
+      },
+    ];
+    expect(getCurrentArtifactTitle(messages)).toBe('Numbered');
+    const reversed = [
+      {
+        message: { data: { content: '' } },
+        artifact_versions: [
+          { id: 2, title: 'Numbered', version_number: 2 },
+          { id: 1, title: 'No Number' },
+        ],
+      },
+    ];
+    expect(getCurrentArtifactTitle(reversed)).toBe('Numbered');
+  });
+
   it('should return the highest version_number title when no is_current flag', () => {
     const messages = [
       {
@@ -3165,5 +3382,296 @@ describe('markdownToHtml function - preprocess paths', () => {
     // href is invalid → preprocessor never produces an <a> tag for it
     expect(html).not.toContain('href="not-a-url"');
     expect(html).not.toContain('<a ');
+  });
+});
+
+describe('compareLLMProvidersByDisplayName function', () => {
+  it('orders by display name, not by the raw backend key', () => {
+    // Raw keys would put `anthropic` first; display names put "Amazon" first.
+    expect(
+      compareLLMProvidersByDisplayName('bedrock', 'anthropic'),
+    ).toBeLessThan(0);
+    expect(
+      compareLLMProvidersByDisplayName('anthropic', 'bedrock'),
+    ).toBeGreaterThan(0);
+  });
+
+  it('compares case-insensitively', () => {
+    // "Groq" vs "ibl.ai" — a case-sensitive sort would put every capitalised
+    // name before the lowercase one.
+    expect(compareLLMProvidersByDisplayName('groq', 'iblai')).toBeLessThan(0);
+    expect(compareLLMProvidersByDisplayName('OPENAI', 'openai')).toBe(0);
+  });
+
+  it('returns 0 for two names resolving to the same display name', () => {
+    expect(compareLLMProvidersByDisplayName('azure_openai', 'Microsoft')).toBe(
+      0,
+    );
+  });
+
+  it('falls back to the raw name for unknown providers', () => {
+    expect(
+      compareLLMProvidersByDisplayName('aardvark-ai', 'openai'),
+    ).toBeLessThan(0);
+    expect(
+      compareLLMProvidersByDisplayName('zeta-labs', 'openai'),
+    ).toBeGreaterThan(0);
+  });
+});
+
+describe('canAccessProvider function', () => {
+  // One model is enough — the helper only cares that the list is non-empty,
+  // which is what `canSwitchProvider` checks per provider in the modal.
+  const models = [{ llm_name: 'gpt-4o' }];
+
+  it('is true when we have our own credentials and the provider ships models', () => {
+    expect(
+      canAccessProvider({ has_credentials: true, chat_models: models }),
+    ).toBe(true);
+  });
+
+  it.each([
+    ['an empty list', [] as unknown[]],
+    ['a null list', null],
+    ['an undefined list', undefined],
+    ['no chat_models key at all', 'omit'],
+  ])(
+    'is false when credentials are fine but the provider has %s',
+    (_label, chatModels) => {
+      const provider =
+        chatModels === 'omit'
+          ? { has_credentials: true }
+          : { has_credentials: true, chat_models: chatModels as unknown[] };
+
+      expect(canAccessProvider(provider)).toBe(false);
+    },
+  );
+
+  it('is false when the provider ships models but no credential path passes', () => {
+    expect(
+      canAccessProvider({
+        has_credentials: false,
+        can_use_main_keys: false,
+        main_has_credentials: false,
+        chat_models: models,
+      }),
+    ).toBe(false);
+  });
+
+  it('is false when the provider carries no credential flags at all', () => {
+    expect(canAccessProvider({ chat_models: models })).toBe(false);
+  });
+
+  it.each([
+    ['can_use_main_keys with main_has_credentials true', true],
+    // An absent `main_has_credentials` means the backend said nothing about the
+    // main keys — canSwitchLLm treats that as available.
+    ['can_use_main_keys with main_has_credentials undefined', undefined],
+  ])('is true for the borrowed-main-keys path: %s', (_label, mainHasCreds) => {
+    expect(
+      canAccessProvider({
+        can_use_main_keys: true,
+        main_has_credentials: mainHasCreds,
+        chat_models: models,
+      }),
+    ).toBe(true);
+  });
+
+  it('is false when the main keys are explicitly reported as having no credentials', () => {
+    expect(
+      canAccessProvider({
+        can_use_main_keys: true,
+        main_has_credentials: false,
+        chat_models: models,
+      }),
+    ).toBe(false);
+  });
+
+  it('returns a strict boolean, never canSwitchLLm’s undefined', () => {
+    // canSwitchLLm returns `undefined` when can_use_main_keys is absent; the
+    // grid uses this value to drive a className, so it must be a real boolean.
+    const result = canAccessProvider({ chat_models: models });
+    expect(typeof result).toBe('boolean');
+    expect(result).toBe(false);
+  });
+});
+
+describe('sortLLMProvidersByCredentials function', () => {
+  // Grouping uses canAccessProvider — credentials *and* at least one chat model —
+  // so every "usable" fixture below needs both.
+  const models = [{ llm_name: 'model-1' }];
+  const keyed = { name: 'openai', has_credentials: true, chat_models: models };
+  const unkeyed = { name: 'anthropic', chat_models: models };
+
+  it('puts every provider the user can use before the ones they cannot', () => {
+    const sorted = sortLLMProvidersByCredentials([
+      { name: 'openai', chat_models: models },
+      { name: 'anthropic', has_credentials: true, chat_models: models },
+      { name: 'groq', chat_models: models },
+      {
+        name: 'bedrock',
+        can_use_main_keys: true,
+        main_has_credentials: true,
+        chat_models: models,
+      },
+    ]);
+
+    expect(sorted.map((p) => p.name)).toEqual([
+      // group 1, alphabetical by display name: "Amazon", "Anthropic"
+      'bedrock',
+      'anthropic',
+      // group 2, alphabetical by display name: "Groq", "OpenAI"
+      'groq',
+      'openai',
+    ]);
+  });
+
+  it('demotes a provider we have a key for when it ships no chat models', () => {
+    // The grouping predicate is the same one the grid grays cards with, so a
+    // keyed-but-empty provider must land in group 2 — otherwise it would sort
+    // as "usable" yet render grayed, which reads as a bug.
+    const sorted = sortLLMProvidersByCredentials([
+      { name: 'openai', has_credentials: true, chat_models: [] },
+      { name: 'groq', has_credentials: true, chat_models: models },
+    ]);
+
+    expect(sorted.map((p) => p.name)).toEqual(['groq', 'openai']);
+  });
+
+  it('sorts alphabetically by display name rather than raw key within a group', () => {
+    const sorted = sortLLMProvidersByCredentials([
+      { name: 'openai', has_credentials: true, chat_models: models },
+      { name: 'azure_openai', has_credentials: true, chat_models: models },
+      { name: 'anthropic', has_credentials: true, chat_models: models },
+      { name: 'bedrock', has_credentials: true, chat_models: models },
+    ]);
+
+    // Raw-key order would be anthropic, azure_openai, bedrock, openai.
+    expect(sorted.map((p) => p.name)).toEqual([
+      'bedrock', // Amazon
+      'anthropic', // Anthropic
+      'azure_openai', // Microsoft
+      'openai', // OpenAI
+    ]);
+  });
+
+  it('compares display names case-insensitively', () => {
+    const sorted = sortLLMProvidersByCredentials([
+      { name: 'iblai' }, // "ibl.ai"
+      { name: 'groq' }, // "Groq"
+      { name: 'azure_openai' }, // "Microsoft"
+    ]);
+
+    expect(sorted.map((p) => p.name)).toEqual([
+      'groq',
+      'iblai',
+      'azure_openai',
+    ]);
+  });
+
+  it.each([
+    ['has_credentials', { has_credentials: true }],
+    [
+      'can_use_main_keys + main_has_credentials',
+      { can_use_main_keys: true, main_has_credentials: true },
+    ],
+    [
+      'can_use_main_keys with main_has_credentials undefined',
+      { can_use_main_keys: true },
+    ],
+  ])('treats %s (with chat models) as usable', (_label, flags) => {
+    const sorted = sortLLMProvidersByCredentials([
+      unkeyed,
+      { name: 'openai', chat_models: models, ...flags },
+    ]);
+
+    expect(sorted[0].name).toBe('openai');
+  });
+
+  it.each([
+    ['no flags at all', {}],
+    [
+      'every flag false',
+      {
+        has_credentials: false,
+        can_use_main_keys: false,
+        main_has_credentials: false,
+      },
+    ],
+    [
+      'can_use_main_keys but main keys explicitly have no credentials',
+      { can_use_main_keys: true, main_has_credentials: false },
+    ],
+  ])('treats %s as unusable', (_label, flags) => {
+    const sorted = sortLLMProvidersByCredentials([
+      { name: 'anthropic', chat_models: models, ...flags },
+      keyed,
+    ]);
+
+    expect(sorted[0].name).toBe('openai');
+  });
+
+  it('does not mutate the input array', () => {
+    const input = [
+      { name: 'openai', chat_models: models },
+      { name: 'anthropic', has_credentials: true, chat_models: models },
+    ];
+    const snapshot = [...input];
+
+    const sorted = sortLLMProvidersByCredentials(input);
+
+    expect(input).toEqual(snapshot);
+    expect(sorted).not.toBe(input);
+    expect(sorted[0]).toBe(input[1]);
+  });
+
+  it('works on a frozen array (RTK Query results are frozen)', () => {
+    const frozen = Object.freeze([
+      { name: 'openai', chat_models: models },
+      { name: 'anthropic', has_credentials: true, chat_models: models },
+    ]);
+
+    expect(() => sortLLMProvidersByCredentials(frozen)).not.toThrow();
+    expect(sortLLMProvidersByCredentials(frozen).map((p) => p.name)).toEqual([
+      'anthropic',
+      'openai',
+    ]);
+  });
+
+  it('handles empty and single-element arrays', () => {
+    expect(sortLLMProvidersByCredentials([])).toEqual([]);
+    expect(sortLLMProvidersByCredentials([keyed])).toEqual([keyed]);
+  });
+
+  it('is stable for providers that tie on group and display name', () => {
+    const first = {
+      name: 'azure_openai',
+      has_credentials: true,
+      chat_models: models,
+    };
+    const second = {
+      name: 'Microsoft',
+      has_credentials: true,
+      chat_models: models,
+    };
+
+    const sorted = sortLLMProvidersByCredentials([first, second]);
+
+    expect(sorted[0]).toBe(first);
+    expect(sorted[1]).toBe(second);
+  });
+
+  it('sorts unknown providers by their raw name alongside known ones', () => {
+    const sorted = sortLLMProvidersByCredentials([
+      { name: 'zeta-labs' },
+      { name: 'openai' },
+      { name: 'aardvark-ai' },
+    ]);
+
+    expect(sorted.map((p) => p.name)).toEqual([
+      'aardvark-ai',
+      'openai', // "OpenAI"
+      'zeta-labs',
+    ]);
   });
 });

@@ -112,395 +112,51 @@ jobs:
     name: E2E (central pipeline)
     needs: build-app-image
     runs-on: ubuntu-latest
+    # The orchestration lives in iblai/pr-e2e-action, NOT here. A `pull_request` event runs
+    # workflows from the PR's MERGE REF, so a workflow copied into this repo is frozen per PR:
+    # a fix reaches no open PR until that PR rebases. On 2026-08-04 a merged fix reached none of
+    # ~27 open PRs. `uses: …@v1` resolves at RUN TIME from the action repo, so fixes land
+    # immediately, everywhere, with no rebase.
+    #
+    # Keep `name:` exactly as-is — it is the required-check name branch protection matches on.
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # need the base ref to diff changed specs
 
-      - name: Detect changed spec files
-        id: specs
-        env:
-          BASE: ${{ github.event.pull_request.base.sha }}
-          HEAD: ${{ github.event.pull_request.head.sha }}
-        run: |
-          set -euo pipefail
-          CHANGED=$(git diff --name-only "$BASE" "$HEAD" -- 'e2e/**/*.spec.ts' | tr '\n' ' ' | sed 's/ $//')
-          OTHER=$(git diff --name-only "$BASE" "$HEAD" -- . ':(exclude)e2e/**' | head -1)
-          N=$(printf '%s' "$CHANGED" | wc -w | tr -d ' ')
-          # Only spec files touched (and not many) -> run just those for fast feedback.
-          # Any app-source change -> full suite, since behaviour may have moved anywhere.
-          if [ -n "$CHANGED" ] && [ -z "$OTHER" ] && [ "$N" -le 5 ]; then
-            echo "mode=selective" >> "$GITHUB_OUTPUT"; echo "specs=$CHANGED" >> "$GITHUB_OUTPUT"
-            echo "selective: $CHANGED"
-          else
-            echo "mode=full" >> "$GITHUB_OUTPUT"; echo "specs=" >> "$GITHUB_OUTPUT"
-            echo "full suite (changed specs=$N, non-spec changes=${OTHER:-none})"
-          fi
+      - uses: iblai/pr-e2e-action@v1
+        id: e2e
+        with:
+          source_repo: os
+          pr_number: ${{ github.event.pull_request.number }}
+          merge_sha: ${{ github.sha }}
+          head_sha: ${{ github.event.pull_request.head.sha }}
+          base_sha: ${{ github.event.pull_request.base.sha }}
+          app_image: ${{ needs.build-app-image.outputs.image-uri }}
+          dispatch_token: ${{ secrets.DEPLOY_OPS_DISPATCH_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Pick a target environment
-        id: env
-        env:
-          GH_TOKEN: ${{ secrets.DEPLOY_OPS_DISPATCH_TOKEN }}
-        run: |
-          set -uo pipefail
-          # stg2 is DISABLED as a PR-e2e target for now — flip ENABLE_STG2 to 1 to restore overflow.
-          #
-          # Why it is off: the picker can only observe whether a runner is currently EXECUTING work.
-          # An OFFLINE runner is indistinguishable from an idle one, so on 2026-07-29 a PR failed over
-          # to stg2 while stg2-spa was down, the job queued for ~2h, and the caller timed out with no
-          # useful diagnosis. Availability cannot be inferred from "not busy" without the org runners
-          # API, which this token deliberately does not have.
-          ENABLE_STG2=0
-
-          if [ "$ENABLE_STG2" != "1" ]; then
-            echo "target=stg1" >> "$GITHUB_OUTPUT"
-            echo "target env: stg1 (stg2 overflow disabled)"
-            exit 0
-          fi
-
-          runners() {
-            local filter="$1" limit="$2" id
-            for id in $(gh run list -R iblai/iblai-deploy-ops --limit "$limit" \
-                          --json databaseId --jq '.[].databaseId' 2>/dev/null); do
-              gh api "repos/iblai/iblai-deploy-ops/actions/runs/$id/jobs" --jq "$filter" 2>/dev/null
-            done
-          }
-          BUSY=$(runners '.jobs[] | select(.status=="in_progress") | .runner_name // empty' 20)
-          SEEN=$(runners '.jobs[].runner_name // empty' 20)
-          has() { printf '%s' "$2" | tr -s '[:space:]' '\n' | grep -qx "$1"; }
-
-          if ! has stg1-spa "$BUSY"; then
-            TARGET=stg1; WHY="stg1 free"
-          elif has stg2-spa "$SEEN" && ! has stg2-spa "$BUSY"; then
-            TARGET=stg2; WHY="stg1 busy, stg2 free — failing over"
-          else
-            TARGET=stg1; WHY="stg1 busy, stg2 unavailable or also busy — queueing on stg1"
-          fi
-          echo "target=$TARGET" >> "$GITHUB_OUTPUT"
-          echo "target env: $TARGET ($WHY)"
-      - name: Dispatch e2e and wait for the result
-        id: dispatch
+      # MUST stay here as a JOB step — it cannot live inside the action.
+      # A composite action is TERMINATED when the job is cancelled, so an `if: cancelled()` step
+      # inside it never runs. This job has `cancel-in-progress: true` and a label recycle fires two
+      # events, so the first caller is cancelled on essentially every re-tag. Without this, the
+      # central run it dispatched keeps going: it holds an environment for a full suite, produces a
+      # result nobody reads, and can PASS while the PR shows red (os#394 did exactly that).
+      #
+      # The run id comes from a FILE the action writes at dispatch time, not from
+      # `steps.e2e.outputs.run_id` — a composite action's declared outputs are only published when
+      # it COMPLETES, and by definition it has not completed here.
+      - name: Cancel the dispatched central run if this caller is cancelled
+        if: cancelled()
         env:
           GH_TOKEN: ${{ secrets.DEPLOY_OPS_DISPATCH_TOKEN }}
-          PR: ${{ github.event.pull_request.number }}
-          TARGET_ENV: ${{ steps.env.outputs.target }}
         run: |
-          set -uo pipefail
-          TARGET="$TARGET_ENV"
-          RUNNER="${TARGET}-spa"
-          OPS=iblai/iblai-deploy-ops
-          # The central run-name, reproduced exactly, so we can find OUR runs and only ours.
-          MYTITLE="PR e2e — os#${PR} → ${TARGET}"
-
-          # A superseded caller (label removed+re-added, or a new push) leaves the central run it
-          # already dispatched ORPHANED: nothing polls it, its result is discarded, yet it holds the
-          # single env runner for a full ~74-min suite and deepens the queue for everyone else.
-          # Cleanup cannot live in the DYING caller — a cancelled job is the least reliable place to
-          # run anything, and a caller killed before its dispatch step published outputs has no run
-          # id to clean up with. So the SURVIVING caller does it: before claiming a slot, cancel any
-          # still-active central run for this same PR. Only one caller per PR is ever alive
-          # (concurrency: pr-e2e-<PR>, cancel-in-progress), so any other active run for this exact
-          # title is by definition an orphan.
-          cancel_stale_siblings() {
-            local ids id
-            ids=$(MYTITLE="$MYTITLE" gh run list -R "$OPS" --workflow=pr-e2e.yml --limit 40 \
-                    --json databaseId,status,displayTitle \
-                    --jq '[.[] | select((.status=="queued" or .status=="pending" or .status=="in_progress")
-                                        and .displayTitle==env.MYTITLE) | .databaseId] | .[]' 2>/dev/null) || ids=""
-            for id in $ids; do
-              [ "$id" = "${RUN_ID:-}" ] && continue
-              echo "::warning::cancelling orphaned central run ${id} for this PR — superseded by this caller"
-              gh run cancel "$id" -R "$OPS" >/dev/null 2>&1 || true
-            done
-            # Never let this housekeeping abort the step: it runs unguarded under `bash -e`, and a
-            # transient `gh` failure or an empty result must be a no-op, not a dead PR check.
-            return 0
-          }
-
-          # GitHub keeps only ONE pending run per concurrency group. A third dispatch CANCELS the
-          # previously-pending one before it starts a single job — silently, with no diagnosis on the
-          # PR. Three PRs labelled close together is enough to trigger it, and pinning everything to
-          # stg1 made that routine. So: never dispatch while another run is waiting.
-          #
-          # Counts EVERY pending pr-e2e run, deliberately — not just ones whose title mentions this
-          # caller's TARGET. Filtering on the title was a correctness bug: the central `run-name`
-          # renders the env the run will actually use, which an operator override
-          # (`vars.PR_E2E_ENV_OVERRIDE`, added to drain a suspect box) can redirect. On 2026-08-04
-          # every central title read "→ stg2" while every caller searched for "→ stg1", so the count
-          # was permanently 0 — each caller believed the slot was free, all of them dispatched, and
-          # they evicted one another in a live-lock: SIX dispatches for os#405, zero tests executed,
-          # no report, and a red X on the PR that said nothing about the code.
-          #
-          # A caller cannot know the effective env, so it must never depend on inferring one. Being
-          # conservative costs throughput when two envs are genuinely busy with different PRs; it
-          # cannot cost correctness. That is the trade this pipeline already makes for env selection.
-          wait_for_slot() {
-            local i w
-            for i in $(seq 1 240); do
-              w=$(gh run list -R "$OPS" --workflow=pr-e2e.yml --limit 20 --json status \
-                    --jq '[.[] | select(.status=="queued" or .status=="pending")] | length' 2>/dev/null || echo 0)
-              [ "${w:-0}" -eq 0 ] && return 0
-              [ $(( (i-1) % 10 )) -eq 0 ] && echo "[$(date -u +%H:%M:%SZ)] waiting for a free dispatch slot — ${w} pr-e2e run(s) already queued ahead"
-              sleep 30
-            done
-            echo "::error::no free dispatch slot after 2h"; return 1
-          }
-
-          do_dispatch() {
-            local before id i
-            before=$(gh run list -R "$OPS" --workflow=pr-e2e.yml -L 1 --json databaseId --jq '.[0].databaseId // 0')
-            # github.sha on a pull_request IS the merge commit — the same ref actions/checkout used to
-            # build the app image, so the specs and the app code come from one commit.
-            gh workflow run pr-e2e.yml -R "$OPS" --ref main \
-              -f source_repo=os \
-              -f pr_number="$PR" \
-              -f merge_sha='${{ github.sha }}' \
-              -f head_sha='${{ github.event.pull_request.head.sha }}' \
-              -f app_image='${{ needs.build-app-image.outputs.image-uri }}' \
-              -f target_env="$TARGET" \
-              -f mode='${{ steps.specs.outputs.mode }}' \
-              -f specs='${{ steps.specs.outputs.specs }}' || return 1
-            for i in $(seq 1 30); do
-              sleep 5
-              id=$(gh run list -R "$OPS" --workflow=pr-e2e.yml -L 1 --json databaseId --jq '.[0].databaseId // 0')
-              if [ "$id" != "$before" ] && [ "$id" != "0" ]; then RUN_ID="$id"; return 0; fi
-            done
-            return 1
-          }
-
-          # Returns: 0 = completed (CONCLUSION set) · 1 = timed out · 2 = EVICTED (retryable)
-          poll_run() {
-            local i started=0 idle_since="" any_job=0 exec_ticks=0 last="" phases active busy s now
-            echo "Phases: resolve -> baseline drift check -> sync (only if drifted) -> swap SPA -> e2e -> restore"
-            # Two separate budgets. Queue time must NOT count against the execution timeout: with one
-            # serialized runner and ~75-min suites, a PR queued behind one other already exceeds 2h,
-            # and the caller would give up on a perfectly healthy run — then download a result
-            # artifact that does not exist yet and report "unknown". os#367 lost its report exactly
-            # this way (dispatched 17:11, started 18:27, verdict 19:45, caller gave up 19:25).
-            # While QUEUED the liveness guard below is the protection, not the clock.
-            for i in $(seq 1 960); do
-              phases=$(gh api "repos/$OPS/actions/runs/${RUN_ID}/jobs" \
-                         --jq '[.jobs[] | "\(.name): \(.conclusion // .status)"] | join("  |  ")' 2>/dev/null || echo "")
-              if [ -n "$phases" ] && [ "$phases" != "$last" ]; then
-                echo "[$(date -u +%H:%M:%SZ)] $phases"; last="$phases"
-              fi
-              if [ "$started" = "0" ]; then
-                # Count only jobs that have genuinely started executing. `!= "queued"` also
-                # matched transient pre-run states (waiting/pending/requested), which could
-                # latch started before the target runner ever picked up work.
-                active=$(gh api "repos/$OPS/actions/runs/${RUN_ID}/jobs" \
-                           --jq '[.jobs[] | select(.status == "in_progress" or .status == "completed")] | length' 2>/dev/null || echo 0)
-                if [ "${active:-0}" -gt 0 ]; then
-                  started=1; any_job=1
-                  echo "[$(date -u +%H:%M:%SZ)] run started executing — 2h execution budget begins now"
-                fi
-              else
-                exec_ticks=$((exec_ticks + 1))
-                if [ "$exec_ticks" -ge 240 ]; then
-                  CONCLUSION=timed_out
-                  echo "::error::the run has been EXECUTING for 2h without finishing. https://github.com/$OPS/actions/runs/${RUN_ID}"
-                  return 1
-                fi
-              fi
-              if [ "$started" = "0" ]; then
-                # An offline runner never appears executing ANY job anywhere; a merely BUSY one does.
-                # Elapsed time cannot tell them apart when one serialized runner handles ~74-min suites.
-                # Scan the 20 most recent runs (matches the env picker's window). With --limit 10,
-                # a run legitimately queued behind a long (~84-min) suite whose holder has already
-                # fallen out of the window reads busy=0 and gets killed with a false "offline".
-                busy=$(for rid in $(gh run list -R "$OPS" --limit 20 --json databaseId --jq '.[].databaseId' 2>/dev/null); do
-                         gh api "repos/$OPS/actions/runs/$rid/jobs" \
-                           --jq '.jobs[] | select(.status=="in_progress") | .runner_name // empty' 2>/dev/null
-                       done | grep -cx "$RUNNER" || true)
-                if [ "${busy:-0}" -gt 0 ]; then
-                  idle_since=""                   # runner is alive, we are simply queued behind work
-                else
-                  # Gate on wall-clock, not iteration count: each poll makes ~20 extra `gh` calls
-                  # (the busy probe above), so a fixed strike count drifts well past its intended
-                  # minutes. Fire only after the runner has been continuously idle-while-queued
-                  # for 15 real minutes.
-                  now=$(date +%s)
-                  [ -z "$idle_since" ] && idle_since="$now"
-                  if [ "$((now - idle_since))" -ge 900 ]; then
-                    CONCLUSION=runner_unavailable
-                    echo "::error::${RUNNER} has been idle for 15 min while this run stayed queued — the runner is offline or not accepting jobs. https://github.com/$OPS/actions/runs/${RUN_ID}"
-                    return 1
-                  fi
-                fi
-              fi
-              s=$(gh api "repos/$OPS/actions/runs/${RUN_ID}" --jq '.status+"|"+(.conclusion//"")' 2>/dev/null)
-              if [ "${s%%|*}" = "completed" ]; then
-                CONCLUSION="${s##*|}"
-                # Cancelled having never started a job == evicted from the pending slot, not a result.
-                if [ "$CONCLUSION" = "cancelled" ] && [ "$any_job" = "0" ]; then return 2; fi
-                echo "e2e finished: $CONCLUSION"
-                return 0
-              fi
-              sleep 30
-            done
-            CONCLUSION=timed_out
-            echo "::error::gave up after 8h — the run neither started nor finished"; return 1
-          }
-
-          # Every waiter notices the freed slot within the same poll window and would dispatch in the
-          # same instant — a classic check-then-act race. A deterministic per-PR offset spreads them
-          # out; the RE-CHECK after it is what actually closes the window, since the stagger alone
-          # would only move the collision. PR number rather than $RANDOM: unique, stable across
-          # retries, and needs no coordination between callers.
-          stagger_then_claim() {
-            local s
-            wait_for_slot || return 1
-            s=$(( (PR % 12) * 5 ))
-            if [ "$s" -gt 0 ]; then
-              echo "[$(date -u +%H:%M:%SZ)] stagger ${s}s (PR ${PR}) before claiming the slot"
-              sleep "$s"
-            fi
-            wait_for_slot || return 1   # someone may have claimed it while we staggered
-          }
-
-          RUN_ID=""; CONCLUSION=""; EVICTIONS=0
-          for attempt in $(seq 1 10); do
-            cancel_stale_siblings
-            stagger_then_claim || { echo "conclusion=no_slot" >> "$GITHUB_OUTPUT"; exit 1; }
-            do_dispatch  || { echo "::error::dispatched but the run never appeared"; echo "conclusion=dispatch_failed" >> "$GITHUB_OUTPUT"; exit 1; }
-            echo "dispatched run $RUN_ID (attempt $attempt)"
-            echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
-            # `run:` steps execute under `bash -e` (see the job log's "shell: /usr/bin/bash -e {0}"),
-            # and `set -uo pipefail` above does NOT clear errexit. A bare `poll_run; rc=$?` therefore
-            # terminates the whole step the instant poll_run returns non-zero — so the eviction branch
-            # below was unreachable dead code, and every evicted run died as a bare "exit code 2" with
-            # no conclusion, no retry and no report link (os#367, 2026-07-30). Guarding the call keeps
-            # errexit on for everything else while letting the return value reach $rc.
-            rc=0; poll_run || rc=$?
-            if [ "$rc" -eq 2 ]; then
-              EVICTIONS=$((EVICTIONS + 1))
-              # Greppable marker: this is the signal to watch. If evictions become routine the
-              # caller-side queue is under-sized and the fix is capacity (a second env) or a real
-              # external FIFO queue — not more retries. See docs/pr-e2e.md.
-              echo "::warning::QUEUE_EVICTION run ${RUN_ID} was cancelled before starting any job — evicted from the concurrency queue by a newer dispatch. Re-dispatching (attempt ${attempt}/10)."
-              sleep $(( (RANDOM % 20) + 5 ))   # jitter so retriers do not re-collide
-              continue
-            fi
-            break
-          done
-          echo "evictions=${EVICTIONS}" >> "$GITHUB_OUTPUT"
-          if [ "$EVICTIONS" -gt 0 ]; then
-            echo "::notice::QUEUE_EVICTION_COUNT=${EVICTIONS} for this PR"
-          fi
-          echo "conclusion=${CONCLUSION:-unknown}" >> "$GITHUB_OUTPUT"
-      - name: Cancel the dispatched run if this caller is cancelled
-        # A caller can be superseded (concurrency: pr-e2e-<PR>, cancel-in-progress) or cancelled by
-        # hand — but the central run it dispatched keeps going. That orphan occupies the single env
-        # runner for a full suite, produces a result nobody reads, and deepens the queue for everyone
-        # else. Worse, it can PASS while the PR shows red: os#394 did exactly that (456/0/3 green,
-        # PR reported "unknown"), because the surviving caller was watching a different run.
-        if: cancelled() && steps.dispatch.outputs.run_id != ''
-        env:
-          GH_TOKEN: ${{ secrets.DEPLOY_OPS_DISPATCH_TOKEN }}
-          RUN_ID: ${{ steps.dispatch.outputs.run_id }}
-        run: |
+          F="$RUNNER_TEMP/pr-e2e-run-id"
+          [ -s "$F" ] || { echo "no central run was dispatched — nothing to cancel"; exit 0; }
+          RUN_ID=$(cat "$F")
           echo "caller cancelled — cancelling central run ${RUN_ID} so it does not orphan"
           gh run cancel "$RUN_ID" -R iblai/iblai-deploy-ops || true
 
-      - name: Publish the result on this PR
-        if: always() && steps.dispatch.outputs.run_id != ''
-        env:
-          GH_TOKEN: ${{ secrets.DEPLOY_OPS_DISPATCH_TOKEN }}
-          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RUN_ID: ${{ steps.dispatch.outputs.run_id }}
-          PR: ${{ github.event.pull_request.number }}
-          DISPATCH_CONCLUSION: ${{ steps.dispatch.outputs.conclusion }}
-        run: |
-          set -uo pipefail
-          # The Playwright report on tests.iblai.app IS public, so it is the link that actually helps
-          # a developer here — unlike the private Actions run. Relay it onto the PR itself.
-          # Retry briefly: the artifact is uploaded by the central run's LAST job, so a caller that
-          # reaches here early (or races the upload) would otherwise silently render "unknown" and
-          # throw away a perfectly good result — which is exactly how os#367 lost its report link.
-          for a in 1 2 3 4 5 6; do
-            gh run download "$RUN_ID" -R iblai/iblai-deploy-ops -n pr-e2e-result -D /tmp/res 2>/dev/null && break
-            echo "  result artifact not available yet (attempt $a/6) — retrying in 20s"
-            sleep 20
-          done
-          if [ ! -f /tmp/res/pr-e2e-result.json ]; then
-            echo "::warning::could not download pr-e2e-result from run ${RUN_ID} — the comment will lack a report link. https://github.com/iblai/iblai-deploy-ops/actions/runs/${RUN_ID}"
-          fi
-
-          # Carry the PREVIOUS comment forward. A run that produced nothing must never erase a run
-          # that produced something: an evicted dispatch used to overwrite a real verdict with
-          # "unknown", losing the only PR-visible link to a perfectly good report (os#405, 2026-08-04
-          # — a 452/3/6 result vanished behind an eviction that never started a test).
-          GH_TOKEN="$REPO_TOKEN" gh api "repos/${GITHUB_REPOSITORY}/issues/${PR}/comments" --paginate \
-            --jq '[.[] | select(.body | startswith("<!-- pr-e2e-report -->"))] | .[-1].body // empty' \
-            > /tmp/prev.md 2>/dev/null || : > /tmp/prev.md
-
-          python3 - <<'PY' > /tmp/body.md
-          import json, os, pathlib, re
-          p = pathlib.Path("/tmp/res/pr-e2e-result.json")
-          d = json.loads(p.read_text()) if p.exists() else {}
-          # The dispatch step already knows how the central run ended. Falling back to "unknown"
-          # threw that away and told the developer to find a maintainer.
-          v    = d.get("verdict") or os.environ.get("DISPATCH_CONCLUSION") or "unknown"
-          icon = {"success": "OK", "failure": "FAILED", "cancelled": "NOT RUN"}.get(v, v)
-          rep  = d.get("report_url") or ""
-          rows = [("result", f"**{icon}**")]
-          if d.get("platform"):
-              rows.append(("suite", f'`{d["platform"]}` - mode `{d.get("mode","?")}` - env `{d.get("target_env","?")}`'))
-          if d.get("baseline"):
-              synced = " (env was synced to it first)" if d.get("drifted") == "true" else " (env already on it)"
-              rows.append(("tested against", f'prod release `{d["baseline"]}`{synced}'))
-          for label, key in (("failed", "failed"), ("new failures", "new_failures")):
-              if d.get(key) not in (None, ""):
-                  rows.append((label, f'`{d[key]}`'))
-          out = ["<!-- pr-e2e-report -->", f"### PR E2E - {icon}", ""]
-          if rep:
-              out += [f"**[Full report, traces and screenshots]({rep})**", ""]
-          out += ["| | |", "|---|---|"] + [f"| {k} | {val} |" for k, val in rows]
-
-          if not rep:
-              if v in ("cancelled", "no_slot", "dispatch_failed"):
-                  out += ["", "**No tests ran.** This run was cancelled before the suite started —"
-                              " usually because another PR's run took the shared environment, or a newer"
-                              " commit/label superseded this one."
-                              " **This says nothing about your code.**", "",
-                          "Re-trigger it yourself: **remove the `run-tests` label and add it back**."
-                          " (Avoid *Re-run jobs* — that replays the old merge ref instead of"
-                          " recomputing it against current `main`.)"]
-              else:
-                  out += ["", "_No report link - the run likely failed before the suite started."
-                              " Ask a maintainer to check the central pipeline._"]
-              # Preserve the last known-good report so an eviction cannot bury a real result.
-              prev = pathlib.Path("/tmp/prev.md").read_text() if pathlib.Path("/tmp/prev.md").exists() else ""
-              m = re.search(r"\[Full report, traces and screenshots\]\((https?://[^)]+)\)", prev)
-              if m:
-                  out += ["", f"Last completed run for this PR: **[report]({m.group(1)})** —"
-                              " still valid unless this PR has changed since."]
-          print("\n".join(out))
-          PY
-          cat /tmp/body.md >> "$GITHUB_STEP_SUMMARY"
-          cat /tmp/body.md
-
-          # Sticky comment: update the existing one so re-runs do not spam the PR.
-          python3 -c "import json;print(json.dumps({'body':open('/tmp/body.md').read()}))" > /tmp/payload.json
-          CID=$(GH_TOKEN="$REPO_TOKEN" gh api "repos/${GITHUB_REPOSITORY}/issues/${PR}/comments" --paginate \
-                  --jq '[.[] | select(.body | startswith("<!-- pr-e2e-report -->"))] | .[-1].id // empty' 2>/dev/null || true)
-          if [ -n "$CID" ]; then
-            GH_TOKEN="$REPO_TOKEN" gh api -X PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/${CID}" \
-              --input /tmp/payload.json >/dev/null && echo "updated PR comment $CID"
-          else
-            GH_TOKEN="$REPO_TOKEN" gh api -X POST "repos/${GITHUB_REPOSITORY}/issues/${PR}/comments" \
-              --input /tmp/payload.json >/dev/null && echo "posted PR comment"
-          fi
-
-      - name: Gate on the e2e result
-        if: always()
-        run: |
-          C="${{ steps.dispatch.outputs.conclusion }}"
-          echo "e2e conclusion: ${C:-<none>}"
-          [ "$C" = "success" ]
-  # ============================================================
-  # SUMMARY
-  # ============================================================
   summary:
     needs: [gate, build-app-image, unit-tests, e2e]
     if: always()

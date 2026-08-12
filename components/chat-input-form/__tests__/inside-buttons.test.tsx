@@ -54,7 +54,7 @@ vi.mock('@/lib/config', () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Desktop assistants: Code (opencode) + Cowork (GhostOS)
+// Desktop assistants: Code (opencode) + Cowork (Cua Driver)
 // ---------------------------------------------------------------------------
 
 // The real Code button needs Redux and the mentor route; only the Tauri gate
@@ -74,23 +74,40 @@ vi.mock('@/types/tauri', async (importOriginal) => ({
   isTauriApp: () => mockIsTauriApp(),
 }));
 
-let mockGhostAvailable = false;
+let mockDriverAvailable = false;
+let mockDriverSupported = true;
+let mockUnsupportedReason: string | undefined;
+let mockDriverStatus: { installed: boolean; supported: boolean } | null = null;
 let mockCoworkOn = false;
 let mockLocalLLMEnabled = false;
 let mockModelSupportsCowork = false;
+// What requestDriverPermissions() reports back. `null` is the default because it
+// is what every non-macOS host returns — the grants do not exist there. Only an
+// explicit `false` means "asked and denied".
+let mockAccessibilityGrant: boolean | null = null;
+let mockScreenRecordingGrant: boolean | null = null;
 const mockGhostInstall = vi.fn();
 const mockGhostStop = vi.fn();
+const mockRequestPermissions = vi.fn();
 const mockSetCoworkEnabled = vi.fn();
 vi.mock('@iblai/iblai-js/web-containers', () => ({
-  useGhostOs: () => ({
-    isAvailable: mockGhostAvailable,
+  useCuaDriver: () => ({
+    isAvailable: mockDriverAvailable,
+    isSupported: mockDriverSupported,
+    unsupportedReason: mockUnsupportedReason,
+    status: mockDriverStatus,
     install: () => mockGhostInstall(),
     stop: () => mockGhostStop(),
+    requestDriverPermissions: () => {
+      mockRequestPermissions();
+      return Promise.resolve({
+        accessibility: mockAccessibilityGrant,
+        screenRecording: mockScreenRecordingGrant,
+      });
+    },
   }),
   isCoworkEnabled: () => mockCoworkOn,
-  // The real helper persists to localStorage, and the default-on pass relies on
-  // that write to not fire twice — useGhostOs hands back a fresh object each
-  // render, so its effect re-runs and only the stored key stops it.
+  // Mirrors the real helper, which persists to localStorage.
   setCoworkEnabled: (value: boolean) => {
     localStorage.setItem('ibl_cowork_enabled', String(value));
     mockSetCoworkEnabled(value);
@@ -110,17 +127,6 @@ const mockToastWarning = vi.fn();
 vi.mock('sonner', () => ({
   toast: { warning: (...args: unknown[]) => mockToastWarning(...args) },
 }));
-
-/** jsdom reports a Linux UA; Cowork is gated on macOS. */
-function setUserAgent(ua: string) {
-  Object.defineProperty(navigator, 'userAgent', {
-    value: ua,
-    configurable: true,
-  });
-}
-const MAC_UA =
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36';
-const LINUX_UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36';
 
 // Import mocked modules for testing
 import { useIsAdmin, useLearnerMode } from '@/hooks/use-user';
@@ -147,13 +153,16 @@ describe('InsideButtons', () => {
     // Browser defaults: neither desktop assistant is offered, so the tool-list
     // tests below see only the responsive buttons.
     mockIsTauri = false;
-    mockGhostAvailable = false;
+    mockDriverAvailable = false;
+    mockDriverSupported = true;
+    mockUnsupportedReason = undefined;
+    mockDriverStatus = null;
     mockCoworkOn = false;
     mockLocalLLMEnabled = false;
     mockModelSupportsCowork = false;
+    mockAccessibilityGrant = null;
+    mockScreenRecordingGrant = null;
     mockHasRemoteAi = false;
-    setUserAgent(LINUX_UA);
-    delete process.env.NEXT_PUBLIC_ALLOW_NON_MACOS_COMPUTER_USE_TOGGLE;
     localStorage.clear();
   });
 
@@ -1114,62 +1123,152 @@ describe('InsideButtons', () => {
   });
 
   describe('Cowork button', () => {
-    /** Cowork is offered only where GhostOS can actually run. */
+    /** Cowork is offered wherever the driver is present. */
     const enableCowork = () => {
-      mockGhostAvailable = true;
-      setUserAgent(MAC_UA);
+      mockDriverAvailable = true;
     };
 
-    it('is absent when GhostOS is unavailable', () => {
-      setUserAgent(MAC_UA);
+    /**
+     * Switching Cowork on is a two-step flow now: the pill raises a consent
+     * dialog explaining what Cowork will read and where it goes, and only
+     * accepting that asks the OS for anything.
+     */
+    const consentToCowork = async () => {
+      fireEvent.click(screen.getByText('Cowork'));
+      const confirm = await screen.findByRole('button', { name: 'Continue' });
+      // Accepting awaits the permission request, so the state it sets lands a
+      // microtask later — flush it inside act() rather than after the test.
+      await act(async () => {
+        fireEvent.click(confirm);
+      });
+    };
+
+    it('is absent outside the desktop app', () => {
       render(<InsideButtons {...defaultProps} />);
       expect(screen.queryByText('Cowork')).not.toBeInTheDocument();
     });
 
-    it('is absent on a non-macOS desktop', () => {
-      mockGhostAvailable = true;
-      render(<InsideButtons {...defaultProps} />);
-      expect(screen.queryByText('Cowork')).not.toBeInTheDocument();
-    });
-
-    it('renders on macOS when GhostOS is available', () => {
+    it('renders on any desktop the driver supports', () => {
+      // Cowork was macOS-only under GhostOS; the Cua Driver runs on Windows,
+      // macOS and Linux, so there is no OS gate left — only session support.
       enableCowork();
       render(<InsideButtons {...defaultProps} />);
-      expect(screen.getByText('Cowork')).toBeInTheDocument();
+      expect(screen.getByText('Cowork').closest('button')).toBeEnabled();
     });
 
-    it('renders off macOS when the override flag is set', () => {
-      // The escape hatch that lets the toggle be exercised on Linux/Windows
-      // desktop builds.
-      mockGhostAvailable = true;
-      process.env.NEXT_PUBLIC_ALLOW_NON_MACOS_COMPUTER_USE_TOGGLE = 'true';
+    it('stays visible but disabled on an unsupported session, and says why', () => {
+      // The chatbox is Cowork's only surface: hiding the pill would leave the
+      // user with no way to discover why the feature is missing.
+      enableCowork();
+      mockDriverSupported = false;
+      mockUnsupportedReason = 'kde_unproven';
       render(<InsideButtons {...defaultProps} />);
-      expect(screen.getByText('Cowork')).toBeInTheDocument();
+
+      const button = screen.getByText('Cowork').closest('button')!;
+      expect(button).toBeDisabled();
+      expect(button.getAttribute('title')).toMatch(/KDE/);
     });
 
-    it('turns on and installs GhostOS when the remote AI backend is configured', () => {
+    it('cannot be toggled on an unsupported session', () => {
+      enableCowork();
+      mockDriverSupported = false;
+      mockUnsupportedReason = 'gnome_helper_missing';
+      mockHasRemoteAi = true;
+      render(<InsideButtons {...defaultProps} />);
+
+      fireEvent.click(screen.getByText('Cowork'));
+
+      expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
+      expect(mockGhostInstall).not.toHaveBeenCalled();
+      expect(mockRequestPermissions).not.toHaveBeenCalled();
+    });
+
+    it('installs the driver when Cowork is already on but nothing is installed', () => {
+      // The bug: the ON preference persists across runs, the install does not.
+      // A user whose first install failed came back to a toggle that read ON
+      // with no driver behind it, and only an off/on round trip would fetch one.
+      enableCowork();
+      mockCoworkOn = true;
+      mockDriverStatus = { installed: false, supported: true };
+      localStorage.setItem('ibl_cowork_enabled', 'true');
+      render(<InsideButtons {...defaultProps} />);
+
+      expect(mockGhostInstall).toHaveBeenCalledTimes(1);
+      // Reconciling runs unattended at startup, so it must never prompt.
+      expect(mockRequestPermissions).not.toHaveBeenCalled();
+    });
+
+    it('does not re-install when the driver is already there', () => {
+      enableCowork();
+      mockCoworkOn = true;
+      mockDriverStatus = { installed: true, supported: true };
+      localStorage.setItem('ibl_cowork_enabled', 'true');
+      render(<InsideButtons {...defaultProps} />);
+
+      expect(mockGhostInstall).not.toHaveBeenCalled();
+    });
+
+    it('does not install before the host has reported status', () => {
+      // `status` is null until the first check lands; treating unknown as
+      // "not installed" would fire an install on every mount.
+      enableCowork();
+      mockCoworkOn = true;
+      mockDriverStatus = null;
+      localStorage.setItem('ibl_cowork_enabled', 'true');
+      render(<InsideButtons {...defaultProps} />);
+
+      expect(mockGhostInstall).not.toHaveBeenCalled();
+    });
+
+    it('does not install when Cowork is explicitly off', () => {
+      enableCowork();
+      mockCoworkOn = false;
+      mockDriverStatus = { installed: false, supported: true };
+      localStorage.setItem('ibl_cowork_enabled', 'false');
+      render(<InsideButtons {...defaultProps} />);
+
+      expect(mockGhostInstall).not.toHaveBeenCalled();
+    });
+
+    it('does not default Cowork on for an unsupported session', () => {
+      // The default-on pass must respect session support, not just presence.
+      enableCowork();
+      mockDriverSupported = false;
+      localStorage.setItem('tenant', 'acme');
+      localStorage.setItem('dm_token', 'token-abc');
+      render(<InsideButtons {...defaultProps} />);
+
+      expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
+      expect(mockGhostInstall).not.toHaveBeenCalled();
+    });
+
+    it('turns on and installs the driver when the remote AI backend is configured', async () => {
       enableCowork();
       mockHasRemoteAi = true;
       localStorage.setItem('ibl_cowork_enabled', 'false');
       render(<InsideButtons {...defaultProps} />);
 
-      fireEvent.click(screen.getByText('Cowork'));
+      await consentToCowork();
 
-      expect(mockSetCoworkEnabled).toHaveBeenCalledWith(true);
+      await waitFor(() =>
+        expect(mockSetCoworkEnabled).toHaveBeenCalledWith(true),
+      );
       expect(mockGhostInstall).toHaveBeenCalledTimes(1);
       expect(mockToastWarning).not.toHaveBeenCalled();
     });
 
-    it('turns on with a large enough local model and no remote backend', () => {
+    it('turns on with a large enough local model and no remote backend', async () => {
       enableCowork();
       mockLocalLLMEnabled = true;
       mockModelSupportsCowork = true;
       localStorage.setItem('ibl_cowork_enabled', 'false');
       render(<InsideButtons {...defaultProps} />);
 
-      fireEvent.click(screen.getByText('Cowork'));
+      await consentToCowork();
 
-      expect(mockSetCoworkEnabled).toHaveBeenCalledWith(true);
+      await waitFor(() =>
+        expect(mockSetCoworkEnabled).toHaveBeenCalledWith(true),
+      );
       expect(mockGhostInstall).toHaveBeenCalledTimes(1);
     });
 
@@ -1185,6 +1284,10 @@ describe('InsideButtons', () => {
       );
       expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
       expect(mockGhostInstall).not.toHaveBeenCalled();
+      // The backend guard runs FIRST, so a turn about to be refused anyway
+      // never raises a consent dialog or an OS permission prompt.
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+      expect(mockRequestPermissions).not.toHaveBeenCalled();
     });
 
     it('names the size problem when a local model is on but too small', () => {
@@ -1200,9 +1303,10 @@ describe('InsideButtons', () => {
         'Your local model is too small for Cowork. Pick a model of at least 12GB in Local Models.',
       );
       expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
+      expect(mockRequestPermissions).not.toHaveBeenCalled();
     });
 
-    it('turns off without any backend check', () => {
+    it('turns off without any backend check, dialog or prompt', () => {
       // Switching off must never be blocked by the guard that gates switching on.
       enableCowork();
       mockCoworkOn = true;
@@ -1214,38 +1318,351 @@ describe('InsideButtons', () => {
       expect(mockSetCoworkEnabled).toHaveBeenCalledWith(false);
       expect(mockGhostStop).toHaveBeenCalledTimes(1);
       expect(mockToastWarning).not.toHaveBeenCalled();
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+      expect(mockRequestPermissions).not.toHaveBeenCalled();
     });
 
-    describe('default-on pass', () => {
-      it('enables Cowork once for a logged-in desktop user who never chose', () => {
+    describe('opt-in', () => {
+      it('never enables Cowork on mount for a logged-in desktop user', () => {
+        // Cowork used to default itself ON right here. It reads the contents of
+        // the user's windows and sends them off-device, so nothing may switch it
+        // on but an explicit toggle behind the consent dialog.
         enableCowork();
+        mockDriverStatus = { installed: false, supported: true };
         localStorage.setItem('tenant', 'acme');
         localStorage.setItem('dm_token', 'token-abc');
         render(<InsideButtons {...defaultProps} />);
 
-        expect(mockSetCoworkEnabled).toHaveBeenCalledWith(true);
-        expect(mockGhostInstall).toHaveBeenCalledTimes(1);
+        expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
+        expect(mockGhostInstall).not.toHaveBeenCalled();
+        expect(mockRequestPermissions).not.toHaveBeenCalled();
+        expect(screen.getByText('Cowork').closest('button')).not.toHaveClass(
+          'text-[#38A1E5]',
+        );
       });
 
-      it('respects an explicit earlier "off"', () => {
+      it('still comes back on for a user who chose it earlier', () => {
+        // Dropping the default-on pass must not lose a real preference.
         enableCowork();
-        localStorage.setItem('tenant', 'acme');
-        localStorage.setItem('dm_token', 'token-abc');
+        mockCoworkOn = true;
+        mockDriverStatus = { installed: true, supported: true };
+        localStorage.setItem('ibl_cowork_enabled', 'true');
+        render(<InsideButtons {...defaultProps} />);
+
+        expect(screen.getByText('Cowork').closest('button')).toHaveClass(
+          'text-[#38A1E5]',
+        );
+        expect(mockRequestPermissions).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('consent and OS permissions', () => {
+      /** A backend Cowork can actually run on, so the guard lets the turn through. */
+      const readyBackend = () => {
+        enableCowork();
+        mockHasRemoteAi = true;
         localStorage.setItem('ibl_cowork_enabled', 'false');
+      };
+
+      it('explains itself before asking the OS for anything', async () => {
+        readyBackend();
         render(<InsideButtons {...defaultProps} />);
 
+        fireEvent.click(screen.getByText('Cowork'));
+
+        expect(await screen.findByRole('alertdialog')).toHaveTextContent(
+          /sent to ibl\.ai/,
+        );
+        expect(mockRequestPermissions).not.toHaveBeenCalled();
         expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
         expect(mockGhostInstall).not.toHaveBeenCalled();
       });
 
-      it('leaves a logged-out user alone', () => {
-        enableCowork();
-        localStorage.setItem('tenant', 'acme');
+      it('names both grants in the one dialog', async () => {
+        // macOS raises its own alert per TCC service, which we cannot merge —
+        // so our single dialog has to name both before they start arriving.
+        readyBackend();
         render(<InsideButtons {...defaultProps} />);
 
+        fireEvent.click(screen.getByText('Cowork'));
+
+        expect(await screen.findByRole('alertdialog')).toHaveTextContent(
+          /Accessibility and Screen Recording/,
+        );
+      });
+
+      it('leaves Cowork off when the dialog is dismissed', async () => {
+        readyBackend();
+        render(<InsideButtons {...defaultProps} />);
+
+        fireEvent.click(screen.getByText('Cowork'));
+        fireEvent.click(await screen.findByRole('button', { name: 'Cancel' }));
+
+        expect(mockRequestPermissions).not.toHaveBeenCalled();
         expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
         expect(mockGhostInstall).not.toHaveBeenCalled();
       });
+
+      it('turns on when both grants are held', async () => {
+        readyBackend();
+        mockAccessibilityGrant = true;
+        mockScreenRecordingGrant = true;
+        render(<InsideButtons {...defaultProps} />);
+
+        await consentToCowork();
+
+        await waitFor(() =>
+          expect(mockSetCoworkEnabled).toHaveBeenCalledWith(true),
+        );
+        expect(mockRequestPermissions).toHaveBeenCalledTimes(1);
+        expect(mockGhostInstall).toHaveBeenCalledTimes(1);
+        expect(mockToastWarning).not.toHaveBeenCalled();
+      });
+
+      it('refuses without Accessibility, and says where to grant it', async () => {
+        readyBackend();
+        mockAccessibilityGrant = false;
+        mockScreenRecordingGrant = true;
+        render(<InsideButtons {...defaultProps} />);
+
+        await consentToCowork();
+
+        await waitFor(() => expect(mockToastWarning).toHaveBeenCalledTimes(1));
+        // The restart matters: the grant often does not take effect until the
+        // app relaunches, so the re-check can read false right after granting.
+        expect(mockToastWarning.mock.calls[0][0]).toMatch(
+          /Accessibility.+restart the app/,
+        );
+        expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
+        expect(mockGhostInstall).not.toHaveBeenCalled();
+      });
+
+      it('refuses without Screen Recording, and says where to grant it', async () => {
+        readyBackend();
+        mockAccessibilityGrant = true;
+        mockScreenRecordingGrant = false;
+        render(<InsideButtons {...defaultProps} />);
+
+        await consentToCowork();
+
+        await waitFor(() => expect(mockToastWarning).toHaveBeenCalledTimes(1));
+        expect(mockToastWarning.mock.calls[0][0]).toMatch(
+          /Screen Recording.+restart the app/,
+        );
+        expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
+        expect(mockGhostInstall).not.toHaveBeenCalled();
+      });
+
+      it('turns on where the grants do not exist at all', async () => {
+        // Linux and Windows have no such permissions, so the host reports
+        // `null` — not applicable, not denied. Refusing on a falsy check
+        // instead of `=== false` would make Cowork impossible to switch on
+        // exactly where the driver is proven. This is the guard for that.
+        readyBackend();
+        mockAccessibilityGrant = null;
+        mockScreenRecordingGrant = null;
+        render(<InsideButtons {...defaultProps} />);
+
+        await consentToCowork();
+
+        await waitFor(() =>
+          expect(mockSetCoworkEnabled).toHaveBeenCalledWith(true),
+        );
+        expect(mockGhostInstall).toHaveBeenCalledTimes(1);
+        expect(mockToastWarning).not.toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe('Skills dropdown', () => {
+    const skills = [
+      {
+        unique_id: 's1',
+        name: 'Web Research',
+        slug: 'web-research',
+        description: 'Research a topic on the open web.',
+        enabled: true,
+      },
+      {
+        unique_id: 's2',
+        name: 'Code Review',
+        slug: 'code-review',
+        enabled: true,
+      },
+    ];
+
+    it('renders the trigger only when the mentor has skills', () => {
+      const { rerender } = render(
+        <InsideButtons
+          {...defaultProps}
+          skills={skills}
+          activeSkillSlugs={new Set()}
+          onToggleSkill={vi.fn()}
+        />,
+      );
+      expect(screen.getByTestId('skills-menu-trigger')).toBeInTheDocument();
+      expect(screen.getByTestId('skills-menu-trigger')).toHaveTextContent(
+        'Skills',
+      );
+
+      rerender(
+        <InsideButtons
+          {...defaultProps}
+          skills={[]}
+          activeSkillSlugs={new Set()}
+          onToggleSkill={vi.fn()}
+        />,
+      );
+      expect(
+        screen.queryByTestId('skills-menu-trigger'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('renders right after Canvas — Canvas stays the first tool pill', () => {
+      render(
+        <InsideButtons
+          {...defaultProps}
+          artifactsEnabled={true}
+          skills={skills}
+          activeSkillSlugs={new Set()}
+          onToggleSkill={vi.fn()}
+        />,
+      );
+      const canvas = screen.getByRole('button', { name: /canvas/i });
+      const skillsTrigger = screen.getByTestId('skills-menu-trigger');
+      // Canvas precedes the Skills trigger in DOM order.
+      expect(
+        canvas.compareDocumentPosition(skillsTrigger) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
+    it('shows the armed skill name and active-pill styling when a token is in the composer', () => {
+      render(
+        <InsideButtons
+          {...defaultProps}
+          skills={skills}
+          activeSkillSlugs={new Set(['code-review'])}
+          onToggleSkill={vi.fn()}
+          onClearSkills={vi.fn()}
+        />,
+      );
+      const trigger = screen.getByTestId('skills-menu-trigger');
+      expect(trigger).toHaveTextContent('Code Review');
+      expect(trigger.className).toContain('bg-[#F5F8FF]');
+      expect(trigger.className).toContain('text-[#38A1E5]');
+    });
+
+    it('active pill shows the ✕ (like other tools); clicking it clears without opening the menu', () => {
+      const onClearSkills = vi.fn();
+      render(
+        <InsideButtons
+          {...defaultProps}
+          skills={skills}
+          activeSkillSlugs={new Set(['code-review'])}
+          onToggleSkill={vi.fn()}
+          onClearSkills={onClearSkills}
+        />,
+      );
+
+      const clear = screen.getByTestId('skills-menu-clear');
+      fireEvent.pointerDown(clear);
+      fireEvent.click(clear);
+
+      expect(onClearSkills).toHaveBeenCalledTimes(1);
+      // The menu did not open.
+      expect(
+        screen.queryByTestId('skills-menu-item-code-review'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('scrolling the menu near the bottom requests the next skills page', async () => {
+      const onLoadMoreSkills = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <InsideButtons
+          {...defaultProps}
+          skills={skills}
+          activeSkillSlugs={new Set()}
+          onToggleSkill={vi.fn()}
+          hasMoreSkills
+          onLoadMoreSkills={onLoadMoreSkills}
+        />,
+      );
+
+      await user.click(screen.getByTestId('skills-menu-trigger'));
+      const content = await screen.findByTestId('skills-menu-content');
+      // jsdom reports zero scroll metrics, so any scroll counts as bottom.
+      fireEvent.scroll(content);
+
+      expect(onLoadMoreSkills).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows a spinner row while a later skills page is in flight', async () => {
+      const user = userEvent.setup();
+      render(
+        <InsideButtons
+          {...defaultProps}
+          skills={skills}
+          activeSkillSlugs={new Set()}
+          onToggleSkill={vi.fn()}
+          hasMoreSkills
+          isFetchingMoreSkills
+          onLoadMoreSkills={vi.fn()}
+        />,
+      );
+
+      await user.click(screen.getByTestId('skills-menu-trigger'));
+      expect(
+        await screen.findByTestId('skills-menu-loading-more'),
+      ).toBeInTheDocument();
+    });
+
+    it('idle pill has no ✕', () => {
+      render(
+        <InsideButtons
+          {...defaultProps}
+          skills={skills}
+          activeSkillSlugs={new Set()}
+          onToggleSkill={vi.fn()}
+          onClearSkills={vi.fn()}
+        />,
+      );
+      expect(screen.queryByTestId('skills-menu-clear')).not.toBeInTheDocument();
+    });
+
+    it('lists skills (name + /slug, no description) and calls onToggleSkill on selection', async () => {
+      const onToggleSkill = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <InsideButtons
+          {...defaultProps}
+          skills={skills}
+          activeSkillSlugs={new Set(['web-research'])}
+          onToggleSkill={onToggleSkill}
+        />,
+      );
+
+      await user.click(screen.getByTestId('skills-menu-trigger'));
+
+      const webItem = await screen.findByTestId(
+        'skills-menu-item-web-research',
+      );
+      expect(webItem).toHaveTextContent('Web Research');
+      // Rows show the slash-invocation form next to the name (mirrors the
+      // `/` picker) …
+      expect(webItem).toHaveTextContent('/web-research');
+      // … but no descriptions — those stay in the `/` picker, which has
+      // room for them.
+      expect(webItem).not.toHaveTextContent(
+        'Research a topic on the open web.',
+      );
+      expect(
+        screen.getByTestId('skills-menu-item-code-review'),
+      ).toBeInTheDocument();
+
+      await user.click(webItem);
+      expect(onToggleSkill).toHaveBeenCalledWith(skills[0]);
     });
   });
 });

@@ -84,24 +84,25 @@
       t && (this.iblData = t), this.attachShadow({ mode: 'open' });
       this.shadowRoot &&
         (this.shadowRoot.innerHTML =
-          '\n    <style>\n        iframe {\n        border: 0px white;\n        height: 100%;\n        width: 100%;\n        border-radius: 0;\n        }\n        #ibl-chat-widget-container {\n            /* border: 1px solid #dfdfdf; */\n            height: 100%;\n            position: relative;\n        }\n        @media screen and (max-width: 768px) {\n        #ibl-chat-widget-container {\n\n        }\n        img.ibl-chat-bubble {\n            right: 20px !important;\n        }\n        }\n        .spinner {\n            border: 3px solid #f3f3f3; /* Light grey */\n            border-top: 3px solid #6cafe1; /* Blue */\n            border-radius: 50%;\n            width: 40px;\n            height: 40px;\n            animation: spin 1s linear infinite;\n            position: absolute;\n            top: 50%;\n            left: 50%;\n            transform: translate(-50%, -50%);\n            display: block; /* Initially hidden */\n        }\n\n        @keyframes spin {\n            0% { transform: rotate(0deg); }\n            100% { transform: rotate(360deg); }\n        }\n\n        #refresh-instruction {\n            display: none;\n            position: absolute;\n            top: 50%;\n            left: 50%;\n            transform: translate(-50%, -50%);\n            text-align: center;\n            font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;\n            color: #333;\n            padding: 20px;\n            max-width: 300px;\n        }\n\n        #refresh-instruction p {\n            margin: 0 0 15px 0;\n            font-size: 14px;\n            line-height: 1.5;\n        }\n\n        #refresh-instruction button {\n            background-color: #6cafe1;\n            color: white;\n            border: none;\n            padding: 10px 20px;\n            border-radius: 5px;\n            cursor: pointer;\n            font-size: 14px;\n        }\n\n        #refresh-instruction button:hover {\n            background-color: #5a9fd4;\n        }\n\n        #screensharing-overlay {\n            display: none;\n            position: absolute;\n            top: 0;\n            left: 0;\n            right: 0;\n            bottom: 0;\n            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\n            z-index: 100;\n            flex-direction: column;\n            align-items: center;\n            justify-content: center;\n            text-align: center;\n            font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;\n            color: white;\n            padding: 20px;\n            box-sizing: border-box;\n        }\n\n        #screensharing-overlay.active {\n            display: flex;\n        }\n\n        #screensharing-overlay .icon {\n            width: 80px;\n            height: 80px;\n            margin-bottom: 20px;\n            background: rgba(255, 255, 255, 0.2);\n            border-radius: 50%;\n            display: flex;\n            align-items: center;\n            justify-content: center;\n        }\n\n        #screensharing-overlay .icon svg {\n            width: 40px;\n            height: 40px;\n            fill: white;\n        }\n\n        #screensharing-overlay h2 {\n            margin: 0 0 10px 0;\n            font-size: 24px;\n            font-weight: 600;\n        }\n\n        #screensharing-overlay p {\n            margin: 0 0 25px 0;\n            font-size: 14px;\n            opacity: 0.9;\n            line-height: 1.5;\n        }\n\n        #screensharing-overlay .pulse-indicator {\n            display: flex;\n            align-items: center;\n            gap: 8px;\n            margin-bottom: 25px;\n            font-size: 14px;\n        }\n\n        #screensharing-overlay .pulse-dot {\n            width: 12px;\n            height: 12px;\n            background-color: #4ade80;\n            border-radius: 50%;\n            animation: pulse 1.5s ease-in-out infinite;\n        }\n\n        @keyframes pulse {\n            0%, 100% { opacity: 1; transform: scale(1); }\n            50% { opacity: 0.5; transform: scale(1.2); }\n        }\n\n        #screensharing-overlay button {\n            background-color: rgba(255, 255, 255, 0.2);\n            color: white;\n            border: 2px solid white;\n            padding: 12px 24px;\n            border-radius: 8px;\n            cursor: pointer;\n            font-size: 14px;\n            font-weight: 500;\n            transition: all 0.2s ease;\n        }\n\n        #screensharing-overlay button:hover {\n            background-color: white;\n            color: #764ba2;\n        }\n\n        /* Audio Status UI */\n        #screensharing-overlay .audio-status-container {\n            display: flex;\n            flex-direction: column;\n            gap: 12px;\n            margin-top: 30px;\n            padding: 16px 24px;\n            background: rgba(0, 0, 0, 0.3);\n            border-radius: 12px;\n            min-width: 260px;\n        }\n\n        #screensharing-overlay .status-row {\n            display: flex;\n            align-items: center;\n            justify-content: space-between;\n            gap: 16px;\n        }\n\n        #screensharing-overlay .status-indicator {\n            display: flex;\n            align-items: center;\n            gap: 8px;\n        }\n\n        #screensharing-overlay .status-dot {\n            width: 10px;\n            height: 10px;\n            border-radius: 50%;\n            background-color: #3b82f6;\n            flex-shrink: 0;\n        }\n\n        #screensharing-overlay .status-dot.speaking {\n            background-color: #22c55e;\n            box-shadow: 0 0 12px 4px rgba(34, 197, 94, 0.6);\n            animation: speakingPulse 1s ease-in-out infinite;\n        }\n\n        #screensharing-overlay .status-dot.muted {\n            background-color: #ef4444;\n        }\n\n        @keyframes speakingPulse {\n            0%, 100% { box-shadow: 0 0 12px 4px rgba(34, 197, 94, 0.6); }\n            50% { box-shadow: 0 0 20px 8px rgba(34, 197, 94, 0.4); }\n        }\n\n        #screensharing-overlay .status-text {\n            font-size: 14px;\n            font-weight: 500;\n            color: white;\n        }\n\n        #screensharing-overlay .status-text.speaking {\n            color: #4ade80;\n        }\n\n        #screensharing-overlay .audio-action-btn {\n            width: 40px;\n            height: 40px;\n            border-radius: 50%;\n            background: rgba(255, 255, 255, 0.15);\n            border: none;\n            display: flex;\n            align-items: center;\n            justify-content: center;\n            cursor: pointer;\n            transition: all 0.2s ease;\n            flex-shrink: 0;\n        }\n\n        #screensharing-overlay .audio-action-btn:hover {\n            background: rgba(255, 255, 255, 0.25);\n        }\n\n        #screensharing-overlay .audio-action-btn.muted {\n            background: rgba(239, 68, 68, 0.2);\n        }\n\n        #screensharing-overlay .audio-action-btn svg {\n            width: 20px;\n            height: 20px;\n            fill: rgba(255, 255, 255, 0.8);\n        }\n\n        #screensharing-overlay .audio-action-btn.muted svg {\n            fill: #ef4444;\n        }\n    </style>\n    <div id="ibl-chat-widget-container">\n        <div class="spinner" id="loading-spinner"></div>\n        <div id="refresh-instruction"></div>\n        <div id="screensharing-overlay">\n            <div class="icon">\n                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">\n                    <path d="M20 3H4c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h3l-1 1v2h12v-2l-1-1h3c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 13H4V5h16v11z"/>\n                </svg>\n            </div>\n            <h2>Screen Sharing Active</h2>\n            <div class="pulse-indicator">\n                <span class="pulse-dot"></span>\n                <span>Your screen is being shared</span>\n            </div>\n            <p>The mentor can now see your screen in the popup window.</p>\n            <button id="stop-screensharing-btn">Stop Screen Sharing</button>\n            <div class="audio-status-container" id="audio-status-container">\n                <div class="status-row">\n                    <div class="status-indicator">\n                        <span class="status-dot" id="mentor-status-dot"></span>\n                        <span class="status-text" id="mentor-status-text">Mentor audio on</span>\n                    </div>\n                    <div class="audio-action-btn" id="mentor-audio-btn">\n                        <svg id="mentor-icon-on" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">\n                            <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>\n                        </svg>\n                        <svg id="mentor-icon-muted" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="display: none;">\n                            <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>\n                        </svg>\n                    </div>\n                </div>\n                <div class="status-row">\n                    <div class="status-indicator">\n                        <span class="status-dot" id="mic-status-dot"></span>\n                        <span class="status-text" id="mic-status-text">Mic on</span>\n                    </div>\n                    <div class="audio-action-btn" id="mic-audio-btn">\n                        <svg id="mic-icon-on" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">\n                            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V20c0 .55.45 1 1 1s1-.45 1-1v-2.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z"/>\n                        </svg>\n                        <svg id="mic-icon-muted" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="display: none;">\n                            <path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.1-5.3-5.1H5c0 3.41 2.72 6.23 6 6.72V20c0 .55.45 1 1 1s1-.45 1-1v-2.28c.91-.13 1.77-.45 2.54-.9L19.73 21 21 19.73 4.27 3z"/>\n                        </svg>\n                    </div>\n                </div>\n            </div>\n        </div>\n        <iframe\n          sandbox="allow-scripts allow-same-origin"\n          allow="clipboard-read; clipboard-write; microphone *; camera *; midi *; geolocation *; encrypted-media *; display-capture *"\n          onload="this.parentNode.querySelector(\'#loading-spinner\').style.display=\'none\';"\n          onloadstart="this.parentNode.querySelector(\'#loading-spinner\').style.display=\'block\';"\n        ></iframe>\n    </div>\n        ');
+          '\n    <style>\n        iframe {\n        border: 0px white;\n        height: 100%;\n        width: 100%;\n        border-radius: 0;\n        }\n        #ibl-chat-widget-container {\n            /* border: 1px solid #dfdfdf; */\n            height: 100%;\n            position: relative;\n        }\n        @media screen and (max-width: 768px) {\n        #ibl-chat-widget-container {\n\n        }\n        img.ibl-chat-bubble {\n            right: 20px !important;\n        }\n        }\n        .spinner {\n            border: 3px solid #f3f3f3; /* Light grey */\n            border-top: 3px solid #6cafe1; /* Blue */\n            border-radius: 50%;\n            width: 40px;\n            height: 40px;\n            animation: spin 1s linear infinite;\n            position: absolute;\n            top: 50%;\n            left: 50%;\n            transform: translate(-50%, -50%);\n            display: block; /* Initially hidden */\n        }\n\n        @keyframes spin {\n            0% { transform: rotate(0deg); }\n            100% { transform: rotate(360deg); }\n        }\n\n        #refresh-instruction {\n            display: none;\n            position: absolute;\n            top: 50%;\n            left: 50%;\n            transform: translate(-50%, -50%);\n            text-align: center;\n            font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;\n            color: #333;\n            padding: 20px;\n            max-width: 300px;\n        }\n\n        #refresh-instruction p {\n            margin: 0 0 15px 0;\n            font-size: 14px;\n            line-height: 1.5;\n        }\n\n        #refresh-instruction button {\n            background-color: #6cafe1;\n            color: white;\n            border: none;\n            padding: 10px 20px;\n            border-radius: 5px;\n            cursor: pointer;\n            font-size: 14px;\n        }\n\n        #refresh-instruction button:hover {\n            background-color: #5a9fd4;\n        }\n\n        #screensharing-overlay {\n            display: none;\n            position: absolute;\n            top: 0;\n            left: 0;\n            right: 0;\n            bottom: 0;\n            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\n            z-index: 100;\n            flex-direction: column;\n            align-items: center;\n            justify-content: center;\n            text-align: center;\n            font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;\n            color: white;\n            padding: 20px;\n            box-sizing: border-box;\n        }\n\n        #screensharing-overlay.active {\n            display: flex;\n        }\n\n        #screensharing-overlay .icon {\n            width: 80px;\n            height: 80px;\n            margin-bottom: 20px;\n            background: rgba(255, 255, 255, 0.2);\n            border-radius: 50%;\n            display: flex;\n            align-items: center;\n            justify-content: center;\n        }\n\n        #screensharing-overlay .icon svg {\n            width: 40px;\n            height: 40px;\n            fill: white;\n        }\n\n        #screensharing-overlay h2 {\n            margin: 0 0 10px 0;\n            font-size: 24px;\n            font-weight: 600;\n        }\n\n        #screensharing-overlay p {\n            margin: 0 0 25px 0;\n            font-size: 14px;\n            opacity: 0.9;\n            line-height: 1.5;\n        }\n\n        #screensharing-overlay .pulse-indicator {\n            display: flex;\n            align-items: center;\n            gap: 8px;\n            margin-bottom: 25px;\n            font-size: 14px;\n        }\n\n        #screensharing-overlay .pulse-dot {\n            width: 12px;\n            height: 12px;\n            background-color: #4ade80;\n            border-radius: 50%;\n            animation: pulse 1.5s ease-in-out infinite;\n        }\n\n        @keyframes pulse {\n            0%, 100% { opacity: 1; transform: scale(1); }\n            50% { opacity: 0.5; transform: scale(1.2); }\n        }\n\n        #screensharing-overlay button {\n            background-color: rgba(255, 255, 255, 0.2);\n            color: white;\n            border: 2px solid white;\n            padding: 12px 24px;\n            border-radius: 8px;\n            cursor: pointer;\n            font-size: 14px;\n            font-weight: 500;\n            transition: all 0.2s ease;\n        }\n\n        #screensharing-overlay button:hover {\n            background-color: white;\n            color: #764ba2;\n        }\n\n        /* Audio Status UI */\n        #screensharing-overlay .audio-status-container {\n            display: flex;\n            flex-direction: column;\n            gap: 12px;\n            margin-top: 30px;\n            padding: 16px 24px;\n            background: rgba(0, 0, 0, 0.3);\n            border-radius: 12px;\n            min-width: 260px;\n        }\n\n        #screensharing-overlay .status-row {\n            display: flex;\n            align-items: center;\n            justify-content: space-between;\n            gap: 16px;\n        }\n\n        #screensharing-overlay .status-indicator {\n            display: flex;\n            align-items: center;\n            gap: 8px;\n        }\n\n        #screensharing-overlay .status-dot {\n            width: 10px;\n            height: 10px;\n            border-radius: 50%;\n            background-color: #3b82f6;\n            flex-shrink: 0;\n        }\n\n        #screensharing-overlay .status-dot.speaking {\n            background-color: #22c55e;\n            box-shadow: 0 0 12px 4px rgba(34, 197, 94, 0.6);\n            animation: speakingPulse 1s ease-in-out infinite;\n        }\n\n        #screensharing-overlay .status-dot.muted {\n            background-color: #ef4444;\n        }\n\n        @keyframes speakingPulse {\n            0%, 100% { box-shadow: 0 0 12px 4px rgba(34, 197, 94, 0.6); }\n            50% { box-shadow: 0 0 20px 8px rgba(34, 197, 94, 0.4); }\n        }\n\n        #screensharing-overlay .status-text {\n            font-size: 14px;\n            font-weight: 500;\n            color: white;\n        }\n\n        #screensharing-overlay .status-text.speaking {\n            color: #4ade80;\n        }\n\n        #screensharing-overlay .audio-action-btn {\n            width: 40px;\n            height: 40px;\n            border-radius: 50%;\n            background: rgba(255, 255, 255, 0.15);\n            border: none;\n            display: flex;\n            align-items: center;\n            justify-content: center;\n            cursor: pointer;\n            transition: all 0.2s ease;\n            flex-shrink: 0;\n        }\n\n        #screensharing-overlay .audio-action-btn:hover {\n            background: rgba(255, 255, 255, 0.25);\n        }\n\n        #screensharing-overlay .audio-action-btn.muted {\n            background: rgba(239, 68, 68, 0.2);\n        }\n\n        #screensharing-overlay .audio-action-btn svg {\n            width: 20px;\n            height: 20px;\n            fill: rgba(255, 255, 255, 0.8);\n        }\n\n        #screensharing-overlay .audio-action-btn.muted svg {\n            fill: #ef4444;\n        }\n    </style>\n    <div id="ibl-chat-widget-container">\n        <div class="spinner" id="loading-spinner"></div>\n        <div id="refresh-instruction"></div>\n        <div id="screensharing-overlay">\n            <div class="icon">\n                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">\n                    <path d="M20 3H4c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h3l-1 1v2h12v-2l-1-1h3c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 13H4V5h16v11z"/>\n                </svg>\n            </div>\n            <h2>Screen Sharing Active</h2>\n            <div class="pulse-indicator">\n                <span class="pulse-dot"></span>\n                <span>Your screen is being shared</span>\n            </div>\n            <p>The mentor can now see your screen in the popup window.</p>\n            <button id="stop-screensharing-btn">Stop Screen Sharing</button>\n            <div class="audio-status-container" id="audio-status-container">\n                <div class="status-row">\n                    <div class="status-indicator">\n                        <span class="status-dot" id="mentor-status-dot"></span>\n                        <span class="status-text" id="mentor-status-text">Mentor audio on</span>\n                    </div>\n                    <div class="audio-action-btn" id="mentor-audio-btn">\n                        <svg id="mentor-icon-on" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">\n                            <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>\n                        </svg>\n                        <svg id="mentor-icon-muted" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="display: none;">\n                            <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>\n                        </svg>\n                    </div>\n                </div>\n                <div class="status-row">\n                    <div class="status-indicator">\n                        <span class="status-dot" id="mic-status-dot"></span>\n                        <span class="status-text" id="mic-status-text">Mic on</span>\n                    </div>\n                    <div class="audio-action-btn" id="mic-audio-btn">\n                        <svg id="mic-icon-on" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">\n                            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V20c0 .55.45 1 1 1s1-.45 1-1v-2.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z"/>\n                        </svg>\n                        <svg id="mic-icon-muted" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="display: none;">\n                            <path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.1-5.3-5.1H5c0 3.41 2.72 6.23 6 6.72V20c0 .55.45 1 1 1s1-.45 1-1v-2.28c.91-.13 1.77-.45 2.54-.9L19.73 21 21 19.73 4.27 3z"/>\n                        </svg>\n                    </div>\n                </div>\n            </div>\n        </div>\n        <iframe\n          sandbox="allow-scripts allow-same-origin allow-forms"\n          allow="clipboard-read; clipboard-write; microphone *; camera *; midi *; geolocation *; encrypted-media *; display-capture *"\n        ></iframe>\n    </div>\n        ');
     }
     async onPostMessage(t) {
-      var e, n;
-      let o = t.data;
-      if ('string' == typeof o)
+      var e, n, o;
+      console.log('################# message event ', t.data);
+      let d = t.data;
+      if ('string' == typeof d)
         try {
-          o = JSON.parse(o);
+          d = JSON.parse(d);
         } catch (t) {
           return;
         }
-      if ('context' === (null == o ? void 0 : o.type)) {
+      if ('context' === (null == d ? void 0 : d.type)) {
         const e = t.origin;
-        this.contextOrigins.includes(e) && (this.iframeContexts[e] = o.data);
+        this.contextOrigins.includes(e) && (this.iframeContexts[e] = d.data);
       }
       if (
-        'MENTOR:CHAT_ACTION_VOICECALL' === (null == o ? void 0 : o.type) ||
-        'MENTOR:CHAT_ACTION_SCREENSHARE' === (null == o ? void 0 : o.type)
+        'MENTOR:CHAT_ACTION_VOICECALL' === (null == d ? void 0 : d.type) ||
+        'MENTOR:CHAT_ACTION_SCREENSHARE' === (null == d ? void 0 : d.type)
       ) {
         const t =
           null === (e = this.shadowRoot) || void 0 === e
@@ -109,10 +110,10 @@
             : e.querySelector('iframe');
         if (t && t.src) {
           let e = '';
-          'MENTOR:CHAT_ACTION_VOICECALL' === (null == o ? void 0 : o.type)
+          'MENTOR:CHAT_ACTION_VOICECALL' === (null == d ? void 0 : d.type)
             ? (e = 'voice-call')
             : 'MENTOR:CHAT_ACTION_SCREENSHARE' ===
-                (null == o ? void 0 : o.type) && (e = 'screen-share');
+                (null == d ? void 0 : d.type) && (e = 'screen-share');
           let n = this.iblData;
           if (!n && this.userObject) {
             const t = {};
@@ -120,67 +121,67 @@
               'tenants' !== e && (t[e] = this.userObject[e]);
             n = JSON.stringify(t);
           }
-          const s = `${t.src}&ibl-data=${n}&chat-action=${e}&session-id=${null == o ? void 0 : o.sessionId}`;
+          const o = `${t.src}&ibl-data=${n}&chat-action=${e}&session-id=${null == d ? void 0 : d.sessionId}`;
           if (this.isInIframe())
             'MENTOR:CHAT_ACTION_SCREENSHARE' ===
-              (null == o ? void 0 : o.type) &&
+              (null == d ? void 0 : d.type) &&
               (this.sentOpenNewWindowForScreenShare = !0),
               window.parent.postMessage(
-                { type: 'ACTION:OPEN_NEW_WINDOW', payload: { url: s } },
+                { type: 'ACTION:OPEN_NEW_WINDOW', payload: { url: o } },
                 '*',
               );
           else {
             'MENTOR:CHAT_ACTION_SCREENSHARE' ===
-              (null == o ? void 0 : o.type) &&
+              (null == d ? void 0 : d.type) &&
               (this.sentOpenNewWindowForScreenShare = !0);
             const t = 375,
               e = 667,
               n = (window.screen.width - t) / 2,
-              i = (window.screen.height - e) / 2,
-              r = `MentorAI_${Date.now()}`,
-              d = window.open(
-                s,
-                r,
-                `width=${t},height=${e},left=${n},top=${i},toolbar=no,location=no,directories=no,status=no,menubar=no,resizable=yes,scrollbars=yes`,
+              s = (window.screen.height - e) / 2,
+              i = `MentorAI_${Date.now()}`,
+              r = window.open(
+                o,
+                i,
+                `width=${t},height=${e},left=${n},top=${s},toolbar=no,location=no,directories=no,status=no,menubar=no,resizable=yes,scrollbars=yes`,
               );
-            d &&
-              (localStorage.setItem(a, r), d.focus(), (this.popupWindow = d));
+            r &&
+              (localStorage.setItem(a, i), r.focus(), (this.popupWindow = r));
           }
         }
       }
       if (
-        ((null == o ? void 0 : o.closeEmbed) &&
-          window.parent.postMessage(JSON.stringify(o), '*'),
-        null == o ? void 0 : o.height)
+        ((null == d ? void 0 : d.closeEmbed) &&
+          window.parent.postMessage(JSON.stringify(d), '*'),
+        null == d ? void 0 : d.height)
       ) {
         const t =
           null === (n = this.shadowRoot) || void 0 === n
             ? void 0
             : n.querySelector('#ibl-chat-widget-container');
-        t && (t.style.height = `${o.height}px`);
+        t && (t.style.height = `${d.height}px`);
       }
       if (
-        ('MENTOR:SCREENSHARING_STARTED' === (null == o ? void 0 : o.type) &&
+        ('MENTOR:SCREENSHARING_STARTED' === (null == d ? void 0 : d.type) &&
           (this.sentOpenNewWindowForScreenShare ||
             'true' === localStorage.getItem(r)) &&
           (localStorage.setItem(r, 'true'), this.showScreenSharingOverlay()),
-        'MENTOR:SCREENSHARING_STOPPED' === (null == o ? void 0 : o.type) &&
+        'MENTOR:SCREENSHARING_STOPPED' === (null == d ? void 0 : d.type) &&
           this.sentOpenNewWindowForScreenShare &&
           this.stopScreenSharing(),
-        'MENTOR:SCREENSHARING_SPEAKING' === (null == o ? void 0 : o.type) &&
-          this.updateMicSpeakingState(o.speaking),
-        'MENTOR:SCREENSHARING_MUTED' === (null == o ? void 0 : o.type) &&
-          this.updateMicMutedState(o.muted),
+        'MENTOR:SCREENSHARING_SPEAKING' === (null == d ? void 0 : d.type) &&
+          this.updateMicSpeakingState(d.speaking),
+        'MENTOR:SCREENSHARING_MUTED' === (null == d ? void 0 : d.type) &&
+          this.updateMicMutedState(d.muted),
         'MENTOR:SCREENSHARING_MENTOR_SPEAKING' ===
-          (null == o ? void 0 : o.type) &&
-          this.updateMentorSpeakingState(o.speaking),
-        'MENTOR:SCREENSHARING_MENTOR_MUTED' === (null == o ? void 0 : o.type) &&
-          this.updateMentorMutedState(o.muted),
-        'MENTOR:FOCUS_PARENT' === (null == o ? void 0 : o.type) &&
+          (null == d ? void 0 : d.type) &&
+          this.updateMentorSpeakingState(d.speaking),
+        'MENTOR:SCREENSHARING_MENTOR_MUTED' === (null == d ? void 0 : d.type) &&
+          this.updateMentorMutedState(d.muted),
+        'MENTOR:FOCUS_PARENT' === (null == d ? void 0 : d.type) &&
           window.focus(),
         !this.isAnonymous)
       ) {
-        if (null == o ? void 0 : o.authExpired)
+        if (null == d ? void 0 : d.authExpired)
           try {
             const t = this.getEdxJwtToken(),
               e = await s(this.lmsUrl, t),
@@ -200,65 +201,77 @@
                 this.sendAuthDataToIframe(this.userObject);
             }
           } catch (t) {
-            console.error('Error fetching user tenants or tokens:', t),
+            console.log('ibl data', this.iblData),
+              console.error('Error fetching user tenants or tokens:', t),
               this.authRelyOnHost
-                ? this.showRefreshInstruction()
-                : this.redirectToAuthSPA();
+                ? localStorage.getItem('axd_token') &&
+                  localStorage.getItem('dm_token') &&
+                  localStorage.getItem('edx_jwt_token')
+                  ? this.sendAuthDataToIframe(JSON.stringify(localStorage))
+                  : this.showRefreshInstruction()
+                : this.iblData
+                  ? this.sendAuthDataToIframe(this.iblData)
+                  : this.redirectToAuthSPA();
           }
-        if ((null == o ? void 0 : o.loaded) && o.auth.userData)
-          try {
-            if (
-              this.edxUserId &&
-              this.edxUserId != JSON.parse(o.auth.userData).user_id.toString()
-            )
-              if (this.iblData) this.sendAuthDataToIframe(this.iblData);
-              else
-                try {
-                  const t = this.getEdxJwtToken(),
-                    e = await s(this.lmsUrl, t),
-                    n = e.find((t) => t.key === this.tenant);
-                  if (n) {
-                    const o = await i(this.lmsUrl, n.key, t);
-                    (this.userObject = {
-                      axd_token: o.axd_token.token,
-                      axd_token_expires: o.axd_token.expires,
-                      userData: JSON.stringify(o.user),
-                      dm_token_expires: o.dm_token.expires,
-                      edx_jwt_token: t,
-                      tenant: n.key,
-                      tenants: JSON.stringify(e),
-                      dm_token: o.dm_token.token,
-                    }),
-                      this.sendAuthDataToIframe(this.userObject);
+        if (null == d ? void 0 : d.loaded)
+          if (null === (o = d.auth) || void 0 === o ? void 0 : o.userData)
+            try {
+              if (
+                this.edxUserId &&
+                this.edxUserId != JSON.parse(d.auth.userData).user_id.toString()
+              )
+                if (this.iblData) this.sendAuthDataToIframe(this.iblData);
+                else
+                  try {
+                    const t = this.getEdxJwtToken(),
+                      e = await s(this.lmsUrl, t),
+                      n = e.find((t) => t.key === this.tenant);
+                    if (n) {
+                      const o = await i(this.lmsUrl, n.key, t);
+                      (this.userObject = {
+                        axd_token: o.axd_token.token,
+                        axd_token_expires: o.axd_token.expires,
+                        userData: JSON.stringify(o.user),
+                        dm_token_expires: o.dm_token.expires,
+                        edx_jwt_token: t,
+                        tenant: n.key,
+                        tenants: JSON.stringify(e),
+                        dm_token: o.dm_token.token,
+                      }),
+                        this.sendAuthDataToIframe(this.userObject);
+                    }
+                  } catch (t) {
+                    this.authRelyOnHost
+                      ? this.showRefreshInstruction()
+                      : this.redirectToAuthSPA();
                   }
-                } catch (t) {
-                  this.authRelyOnHost
-                    ? this.showRefreshInstruction()
-                    : this.redirectToAuthSPA();
-                }
-            else
-              this.userObject = {
-                axd_token: o.auth.axd_token,
-                axd_token_expires: o.auth.axd_token_expires,
-                userData: o.auth.userData,
-                dm_token_expires: o.auth.dm_token_expires,
-                edx_jwt_token: o.auth.edx_jwt_token,
-                tenant: o.auth.tenant,
-                tenants: o.auth.tenants,
-                dm_token: o.auth.dm_token,
-              };
-          } catch (t) {
-            console.error('Error parsing userData from auth:', t);
-          }
+              else
+                this.userObject = {
+                  axd_token: d.auth.axd_token,
+                  axd_token_expires: d.auth.axd_token_expires,
+                  userData: d.auth.userData,
+                  dm_token_expires: d.auth.dm_token_expires,
+                  edx_jwt_token: d.auth.edx_jwt_token,
+                  tenant: d.auth.tenant,
+                  tenants: d.auth.tenants,
+                  dm_token: d.auth.dm_token,
+                };
+            } catch (t) {
+              console.error('Error parsing userData from auth:', t);
+            }
+          else
+            console.log('ibl data', this.iblData),
+              console.log('local storage', localStorage),
+              this.iblData && this.sendAuthDataToIframe(this.iblData);
       }
-      (null == o ? void 0 : o.ready) &&
+      (null == d ? void 0 : d.ready) &&
         ((this.isEmbeddedMentorReady = !0),
         this.iblData
           ? this.sendAuthDataToIframe(this.iblData)
           : this.authRelyOnHost ||
             this.isAnonymous ||
             this.redirectToAuthSPA()),
-        (null == o ? void 0 : o.loaded) &&
+        (null == d ? void 0 : d.loaded) &&
           ((this.isEmbeddedMentorReady = !0),
           this.isContextAware && this.sendHostInfoToIframe(),
           this.theme && this.switchTheme(this.theme),
@@ -279,14 +292,38 @@
               data: { edxCourseId: this.edxCourseId },
             }));
     }
-    connectedCallback() {
-      var t, e, n, o;
+    async connectedCallback() {
+      var t, e, n, o, i;
       if (this.contextSettings) return void this.renderContextSettingsView();
-      if (this.iblData) {
+      if (
+        (window.addEventListener('message', (t) => this.onPostMessage(t)),
+        this.iblData)
+      ) {
         const t = new URL(window.location.href);
         t.searchParams.delete('ibl-data'),
           window.history.replaceState({}, document.title, t);
       }
+      if (
+        !this.iblData &&
+        this.authRelyOnHost &&
+        'undefined' != typeof localStorage &&
+        !localStorage.getItem('tenants') &&
+        localStorage.getItem('axd_token') &&
+        localStorage.getItem('dm_token') &&
+        localStorage.getItem('edx_jwt_token') &&
+        localStorage.getItem('tenant')
+      )
+        try {
+          const e = await s(
+            this.lmsUrl,
+            null !== (t = localStorage.getItem('edx_jwt_token')) && void 0 !== t
+              ? t
+              : void 0,
+          );
+          localStorage.setItem('tenants', JSON.stringify(e));
+        } catch (t) {
+          console.error('Error fetching user tenants from host token:', t);
+        }
       if (
         (!this.iblData &&
           this.authRelyOnHost &&
@@ -309,13 +346,15 @@
         const t = JSON.parse(this.iblData).userData;
         document.cookie = `userData=${t}; domain=${document.domain}; path=/;`;
       }
-      window.addEventListener('message', (t) => this.onPostMessage(t));
-      const s =
-        null === (t = this.shadowRoot) || void 0 === t
+      this.isEmbeddedMentorReady &&
+        this.iblData &&
+        this.sendAuthDataToIframe(this.iblData);
+      const a =
+        null === (e = this.shadowRoot) || void 0 === e
           ? void 0
-          : t.querySelector('iframe');
-      s &&
-        ((s.onloadstart = () => {
+          : e.querySelector('iframe');
+      a &&
+        ((a.onloadstart = () => {
           var t;
           const e =
             null === (t = this.shadowRoot) || void 0 === t
@@ -323,7 +362,7 @@
               : t.querySelector('#loading-spinner');
           e && (e.style.display = 'block');
         }),
-        (s.onload = () => {
+        (a.onload = () => {
           var t;
           const e =
             null === (t = this.shadowRoot) || void 0 === t
@@ -331,28 +370,28 @@
               : t.querySelector('#loading-spinner');
           e && (e.style.display = 'none');
         }));
-      const i =
-        null === (e = this.shadowRoot) || void 0 === e
-          ? void 0
-          : e.querySelector('#stop-screensharing-btn');
-      i &&
-        i.addEventListener('click', () => {
-          this.stopScreenSharing();
-        });
-      const a =
+      const d =
         null === (n = this.shadowRoot) || void 0 === n
           ? void 0
-          : n.querySelector('#mic-audio-btn');
-      a &&
-        a.addEventListener('click', () => {
-          this.toggleMute();
-        });
-      const d =
-        null === (o = this.shadowRoot) || void 0 === o
-          ? void 0
-          : o.querySelector('#mentor-audio-btn');
+          : n.querySelector('#stop-screensharing-btn');
       d &&
         d.addEventListener('click', () => {
+          this.stopScreenSharing();
+        });
+      const l =
+        null === (o = this.shadowRoot) || void 0 === o
+          ? void 0
+          : o.querySelector('#mic-audio-btn');
+      l &&
+        l.addEventListener('click', () => {
+          this.toggleMute();
+        });
+      const c =
+        null === (i = this.shadowRoot) || void 0 === i
+          ? void 0
+          : i.querySelector('#mentor-audio-btn');
+      c &&
+        c.addEventListener('click', () => {
           this.toggleMentorMute();
         });
       if (localStorage.getItem(r))
@@ -560,27 +599,32 @@
           null === (o = this.shadowRoot) || void 0 === o
             ? void 0
             : o.querySelector('iframe');
-        this.shadowRoot &&
-          t &&
-          (t.src = `${this.mentorUrl}/platform/${this.tenant}${((t, e) => {
-            switch (t) {
-              case 'analytics-overview':
-                return `/${e}/analytics`;
-              case 'analytics-users':
-                return `/${e}/analytics/users`;
-              case 'analytics-topics':
-                return `/${e}/analytics/topics`;
-              case 'prompt-gallery':
-                return `/${e}/prompt-gallery`;
-              case 'explore':
-                return '/explore';
-              default:
-                return `/${e}`;
-            }
-          })(
-            this.component,
-            this.mentor,
-          )}/${this.modal ? this.modal : ''}?embed=true&mode=anonymous&extra-body-classes=iframed-externally${this.isAdvanced ? '&chat=advanced' : ''}${this.modal ? '&modal=' + this.modal : ''}${((s = this.component), s ? (['analytics-overview', 'analytics-users', 'analytics-topics', 'prompt-gallery', 'explore'].includes(null != s ? s : '') ? `&hide_side_nav=true&hide_header=true&component=${s}` : 'recent-messages' === s ? `&hide_header=true&component=${s}` : `&component=${s}`) : '')}${this.extraParams ? '&' + this.extraParams : ''}`);
+        if (this.shadowRoot && t) {
+          let e = '/';
+          this.tenant &&
+            ((e += `platform/${this.tenant}`),
+            this.mentor &&
+              (e += `/${((t, e) => {
+                switch (t) {
+                  case 'analytics-overview':
+                    return `/${e}/analytics`;
+                  case 'analytics-users':
+                    return `/${e}/analytics/users`;
+                  case 'analytics-topics':
+                    return `/${e}/analytics/topics`;
+                  case 'prompt-gallery':
+                    return `/${e}/prompt-gallery`;
+                  case 'explore':
+                    return '/explore';
+                  default:
+                    return `/${e}`;
+                }
+              })(
+                this.component,
+                this.mentor,
+              )}/${this.modal ? this.modal : ''}`)),
+            (t.src = `${this.mentorUrl}${e}?embed=true&mode=anonymous&extra-body-classes=iframed-externally${this.isAdvanced ? '&chat=advanced' : ''}${this.modal ? '&modal=' + this.modal : ''}${((s = this.component), s ? (['analytics-overview', 'analytics-users', 'analytics-topics', 'prompt-gallery', 'explore'].includes(null != s ? s : '') ? `&hide_side_nav=true&hide_header=true&component=${s}` : 'recent-messages' === s ? `&hide_header=true&component=${s}` : `&component=${s}`) : '')}${this.extraParams ? '&' + this.extraParams : ''}`);
+        }
       }
       this.isContextAware &&
         ((this.lastUrl = window.location.href),
@@ -941,7 +985,10 @@
         null === (e = this.shadowRoot) || void 0 === e
           ? void 0
           : e.querySelector('#ibl-chat-widget-container iframe');
-      n && n.contentWindow && n.contentWindow.postMessage(t, '*');
+      n &&
+        n.contentWindow &&
+        (console.log('################ sending ibl data to iframe'),
+        n.contentWindow.postMessage(t, '*'));
     }
     isTokenExpired(t) {
       const e = new Date(t);
@@ -961,7 +1008,7 @@
         );
       }
       const n = window.location.pathname + window.location.search;
-      window.location.href = `${this.authUrl}/login?redirect-path=${n}&tenant=${this.tenant}${t ? '&logout=true' : ''}&redirect-token=${this.redirectToken}`;
+      window.location.href = `${this.authUrl}/login?redirect-path=${n}${this.tenant ? `&tenant=${this.tenant}` : ''}${t ? '&logout=true' : ''}${this.redirectToken ? `&redirect-token=${this.redirectToken}` : ''}`;
     }
     toggleWidget() {
       const t = document.getElementById('ibl-chat-widget-container');

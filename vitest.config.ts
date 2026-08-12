@@ -21,6 +21,34 @@ export default defineConfig({
         ).pathname,
       },
       {
+        // The yalc-linked @iblai/web-utils bundle lazy-imports the AI SDK and
+        // the MCP client inside `isTauri()`-guarded paths. Vitest inlines that
+        // bundle, so Vite must be able to resolve these bare specifiers even
+        // though the imports never run under jsdom. Aliasing them to stubs
+        // keeps the SDK's peer deps out of the app's package.json (a root
+        // `ai` dep would also peer-pin @ai-sdk/gateway against the app's zod
+        // and break `next dev` with "Package path ./v4 is not exported").
+        find: /^ai$/,
+        replacement: new URL(
+          './__tests__/mocks/ai-sdk.mock.ts',
+          import.meta.url,
+        ).pathname,
+      },
+      {
+        find: '@ai-sdk/openai-compatible',
+        replacement: new URL(
+          './__tests__/mocks/openai-compatible.mock.ts',
+          import.meta.url,
+        ).pathname,
+      },
+      {
+        find: '@modelcontextprotocol/sdk/client/index.js',
+        replacement: new URL(
+          './__tests__/mocks/mcp-client.mock.ts',
+          import.meta.url,
+        ).pathname,
+      },
+      {
         // Vitest + Node ESM resolution needs explicit extension for this SDK import path
         find: 'next/navigation',
         replacement: 'next/navigation.js',

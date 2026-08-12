@@ -550,6 +550,52 @@ describe('WorkflowDetailPage', () => {
       });
     });
 
+    it('should keep the typed name when the workflow cache refetches mid-edit', async () => {
+      const user = userEvent.setup();
+      const { rerender } = render(<WorkflowDetailPage />);
+
+      await user.click(screen.getByText('Test Workflow'));
+
+      const input = screen.getByDisplayValue('Test Workflow');
+      await user.clear(input);
+      await user.type(input, 'New Name');
+
+      mockUseGetWorkflowQuery.mockReturnValue({
+        data: createMockWorkflow({
+          definition: { nodes: [], edges: [] },
+        }),
+        isLoading: false,
+        error: null,
+      });
+      rerender(<WorkflowDetailPage />);
+
+      expect(screen.getByDisplayValue('New Name')).toBeInTheDocument();
+
+      await user.type(screen.getByDisplayValue('New Name'), '{Enter}');
+
+      await waitFor(() => {
+        expect(mockPatchWorkflow).toHaveBeenCalledWith({
+          org: 'test-tenant',
+          uniqueId: 'workflow-1',
+          data: { name: 'New Name' },
+        });
+      });
+    });
+
+    it('should adopt a renamed workflow coming back from the server', async () => {
+      const { rerender } = render(<WorkflowDetailPage />);
+      expect(screen.getByText('Test Workflow')).toBeInTheDocument();
+
+      mockUseGetWorkflowQuery.mockReturnValue({
+        data: createMockWorkflow({ name: 'Server Name' }),
+        isLoading: false,
+        error: null,
+      });
+      rerender(<WorkflowDetailPage />);
+
+      expect(screen.getByText('Server Name')).toBeInTheDocument();
+    });
+
     it('should show success toast on name update', async () => {
       const user = userEvent.setup();
       const { toast } = await import('sonner');

@@ -9,7 +9,7 @@ import { waitForPageReady } from '../utils/resilient';
 import { MentorTracker } from '../utils/mentor-cleanup';
 
 /**
- * Journey 66 — Mentor Billing (Spend Caps) Tab.
+ * Journey 68 — Mentor Billing (Spend Caps) Tab.
  *
  * Covers the "Billing" (LLM spend caps) top-level tab added to the Edit Mentor (Agent)
  * modal (rendered by the SDK's `AgentSpendCapsTab`,
@@ -99,7 +99,7 @@ async function getCurrentUsername(page: Page): Promise<string> {
   return username;
 }
 
-test.describe('Journey 66: Mentor Billing (Spend Caps) Tab', () => {
+test.describe('Journey 68: Mentor Billing (Spend Caps) Tab', () => {
   const tracker = new MentorTracker();
 
   test.beforeEach(async ({ page, createMentorPage, editMentorPage }) => {

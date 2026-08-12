@@ -18,9 +18,11 @@ import { AccessTab } from './access.tab';
 import { PrivacyTab } from './privacy.tab';
 import { TasksTab } from './tasks.tab';
 import { VoiceTab } from './voice.tab';
+import { SkillsTab } from './skills.tab';
 import { ScreenShareTab } from './screenshare.tab';
 import { HumanSupportTab } from './human-support.tab';
 import { LtiTab } from './lti.tab';
+import { GraderTab } from './grader.tab';
 import { SpendCapsTab } from './spend-caps.tab';
 
 /**
@@ -42,13 +44,14 @@ const TAB_CATEGORY: Record<
   LLM: 'Configurations',
   Billing: 'Configurations',
   Access: 'Configurations',
-  Voice: 'Configurations',
-  'Screen Share': 'Configurations',
   Prompts: 'Configurations',
   Skills: 'Configurations',
-  Safety: 'Configurations',
+  Voice: 'Configurations',
   Privacy: 'Configurations',
+  Safety: 'Configurations',
   Disclaimers: 'Configurations',
+  Screen: 'Configurations',
+  Grader: 'Configurations',
   // Integrations
   Sandbox: 'Integrations',
   Tools: 'Integrations',
@@ -93,6 +96,8 @@ export class EditMentorPage {
   readonly screenshare: ScreenShareTab;
   readonly humanSupport: HumanSupportTab;
   readonly lti: LtiTab;
+  readonly skills: SkillsTab;
+  readonly grader: GraderTab;
   readonly spendCaps: SpendCapsTab;
   readonly copyMentorDialog: CopyMentorPage;
 
@@ -122,6 +127,8 @@ export class EditMentorPage {
     this.screenshare = new ScreenShareTab(page, this.dialog);
     this.humanSupport = new HumanSupportTab(page, this.dialog);
     this.lti = new LtiTab(page, this.dialog);
+    this.skills = new SkillsTab(page, this.dialog);
+    this.grader = new GraderTab(page, this.dialog);
     this.spendCaps = new SpendCapsTab(page, this.dialog);
     this.copyMentorDialog = new CopyMentorPage(page);
 
@@ -571,7 +578,7 @@ export class EditMentorPage {
     // Scope to the host sidebar trigger. The SDK's Voice tab renders its own
     // "Voice" sub-tab pill (also role="tab", same accessible name) inside the
     // panel once it mounts, so a bare getByRole('tab', { name }) match raises a
-    // strict-mode violation for Voice/Screen Share. Every host sidebar trigger
+    // strict-mode violation for Voice/Screen. Every host sidebar trigger
     // uniquely owns `aria-controls="panel-<value>"`; the SDK sub-tabs control a
     // generated `radix-*` id, so filtering on that prefix isolates the sidebar
     // tab without needing to know each segment's value.

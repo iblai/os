@@ -15,6 +15,12 @@ interface AutoResizeTextareaProps
   value: string;
   onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
   onSubmit: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  /**
+   * Pre-submit keydown interceptor (e.g. the `/` skill picker). Return true
+   * when the event was handled — the textarea then skips its own key
+   * handling, so Enter selects a picker option instead of submitting.
+   */
+  onComposerKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => boolean;
   disabled?: boolean;
   placeholder?: string;
   sessionId?: string | null;
@@ -35,6 +41,7 @@ const AutoResizeTextarea: React.FC<AutoResizeTextareaProps> = ({
   value,
   onChange,
   onSubmit,
+  onComposerKeyDown,
   disabled = false,
   placeholder = '',
   sessionId = null,
@@ -118,6 +125,8 @@ const AutoResizeTextarea: React.FC<AutoResizeTextareaProps> = ({
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
     if (isPreviewMode && !allowAnonymousAccess) return;
+
+    if (onComposerKeyDown?.(e)) return;
 
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();

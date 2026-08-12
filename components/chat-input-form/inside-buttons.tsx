@@ -1,7 +1,7 @@
 'use client';
 
 import type React from 'react';
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,12 +15,32 @@ import {
   PopoverAnchor,
   PopoverContent,
 } from '@/components/ui/popover';
-import { X, BookOpen, Archive, Check, Terminal, Monitor } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  X,
+  BookOpen,
+  Archive,
+  Check,
+  Terminal,
+  Monitor,
+  Sparkles,
+  Loader2,
+} from 'lucide-react';
+import type { EffectiveAgentSkill } from '@iblai/iblai-js/data-layer';
 import { toast } from 'sonner';
 import { DeepSearchIcon, CanvasIcon } from '@/components/icons/svg-icons';
 import { TOOLS, hasRemoteAiConfig } from '@iblai/iblai-js/web-utils';
 import {
-  useGhostOs,
+  useCuaDriver,
   isCoworkEnabled,
   setCoworkEnabled,
   isLocalLLMEnabled,
@@ -32,24 +52,10 @@ import { CodingModeButton } from './coding-mode-button';
 import { MemoryMenu } from './memory-menu';
 import { isTauriApp } from '@/types/tauri';
 
-// Cowork is macOS-only in prod; the env flag bypasses the OS check so the
-// toggle can be exercised on Linux/Windows desktop builds during testing.
-const isMacOS = () => {
-  if (typeof navigator === 'undefined') return false;
-  return /mac/i.test(navigator.userAgent || '');
-};
-const allowNonMacOSCowork = () =>
-  process.env.NEXT_PUBLIC_ALLOW_NON_MACOS_COMPUTER_USE_TOGGLE === 'true';
-
 // 12GB floor, matching the SDK default (DEFAULT_COWORK_REQUIRED_SIZE_GB)
 // and the Local Models tab's "supported" indicator. modelSupportsCowork
 // gates size <= gb (strictly greater), so a model of exactly 12GB is also off.
 const COWORK_MIN_MODEL_GB = 12;
-
-// Must match the SDK's key (web-containers cowork-tab). Read directly rather
-// than via isCoworkEnabled() because the default-on pass below needs to tell
-// "never chosen" (null) apart from an explicit "off".
-const COWORK_ENABLED_KEY = 'ibl_cowork_enabled';
 
 interface InsideButtonsProps {
   /** The chat this input belongs to. Code keys its per-chat workspace on it. */
@@ -74,6 +80,28 @@ interface InsideButtonsProps {
   isPrivate?: boolean;
   tenantKey?: string;
   username?: string;
+  /**
+   * The mentor's enabled Agent Skills, for the Skills dropdown — a
+   * discoverable alternative to typing `/` in the composer. Empty/undefined
+   * hides the button entirely (mentor has no skills).
+   */
+  skills?: EffectiveAgentSkill[];
+  /**
+   * Slugs currently invoked as `/slug` tokens in the composer text. Drives
+   * the button's active state and the per-item check marks, so the dropdown
+   * and the `/` picker can never disagree — both derive from the same text.
+   */
+  activeSkillSlugs?: Set<string>;
+  /** Adds the skill's `/slug` token to the composer, or removes it if armed. */
+  onToggleSkill?: (skill: EffectiveAgentSkill) => void;
+  /** Removes every armed skill token — the active pill's ✕ affordance. */
+  onClearSkills?: () => void;
+  /** More skill pages exist server-side (skills load 20 at a time). */
+  hasMoreSkills?: boolean;
+  /** A later skills page is in flight — renders a spinner row. */
+  isFetchingMoreSkills?: boolean;
+  /** Called when the menu is scrolled near its bottom. */
+  onLoadMoreSkills?: () => void;
 }
 
 export const InsideButtons = ({
@@ -92,38 +120,91 @@ export const InsideButtons = ({
   isPrivate = false,
   tenantKey,
   username,
+  skills,
+  activeSkillSlugs,
+  onToggleSkill,
+  onClearSkills,
+  hasMoreSkills = false,
+  isFetchingMoreSkills = false,
+  onLoadMoreSkills,
 }: InsideButtonsProps) => {
   const t = useTranslations('chatInputFormInsideButtons');
 
-  // Cowork = the Tauri GhostOS assistant (useGhostOs install/stop + localStorage
-  // pref), no backend round-trip. Reads the pref on mount; cross-tab sync not
+  // The host reports a machine-readable code; never render it raw.
+  const unsupportedCoworkReason = (reason?: string) => {
+    switch (reason) {
+      case 'kde_unproven':
+        return t('coworkUnsupportedKde');
+      case 'gnome_helper_missing':
+        return t('coworkUnsupportedGnomeHelper');
+      case 'unsupported_os':
+        return t('coworkUnsupportedOs');
+      default:
+        return t('coworkUnsupportedSession');
+    }
+  };
+
+  // Cowork = the Tauri Cua Driver assistant (useCuaDriver install/stop +
+  // localStorage pref), no backend round-trip. Reads the pref on mount; cross-tab sync not
   // polled. Local state is `coworkOn` so it doesn't shadow the imported
   // setCoworkEnabled.
-  const ghostOs = useGhostOs();
+  const cuaDriver = useCuaDriver();
   const [coworkOn, setCoworkOn] = useState(isCoworkEnabled);
+  // Switching Cowork ON explains itself first: it is about to read the contents
+  // of the user's windows and send them off-device. Open = awaiting that consent.
+  const [coworkConsentOpen, setCoworkConsentOpen] = useState(false);
+
   const toggleCowork = () => {
-    const next = !coworkOn;
-    // Guard only when turning on. Cowork runs on EITHER a large local model
-    // or the remote AI (DM OpenAI-compatible endpoint) — allow enabling when
-    // either backend is ready, so a local model is not required. The chatbox has
-    // no inline notice space, so remind via toast instead of failing silently.
-    if (next) {
-      const localReady =
-        isLocalLLMEnabled() &&
-        modelSupportsCowork(getLocalLLMModel(), COWORK_MIN_MODEL_GB);
-      if (!localReady && !hasRemoteAiConfig()) {
-        toast.warning(
-          isLocalLLMEnabled()
-            ? t('coworkModelTooSmall')
-            : t('coworkNeedsLocalModel'),
-        );
-        return;
-      }
+    if (coworkOn) {
+      setCoworkOn(false);
+      setCoworkEnabled(false);
+      cuaDriver.stop();
+      return;
     }
-    setCoworkOn(next);
-    setCoworkEnabled(next);
-    if (next) ghostOs.install();
-    else ghostOs.stop();
+    // Guard before anything user-visible. Cowork runs on EITHER a large local
+    // model or the remote AI (DM OpenAI-compatible endpoint) — allow enabling
+    // when either backend is ready, so a local model is not required. Running
+    // this first means a turn that is about to be refused never raises a consent
+    // dialog or an OS permission prompt.
+    const localReady =
+      isLocalLLMEnabled() &&
+      modelSupportsCowork(getLocalLLMModel(), COWORK_MIN_MODEL_GB);
+    if (!localReady && !hasRemoteAiConfig()) {
+      toast.warning(
+        isLocalLLMEnabled()
+          ? t('coworkModelTooSmall')
+          : t('coworkNeedsLocalModel'),
+      );
+      return;
+    }
+    setCoworkConsentOpen(true);
+  };
+
+  /**
+   * The user accepted the explanation: ask for the OS grants, and only switch
+   * Cowork on if it actually has them.
+   */
+  const acceptCoworkConsent = async () => {
+    setCoworkConsentOpen(false);
+    const { accessibility, screenRecording } =
+      await cuaDriver.requestDriverPermissions();
+
+    // `=== false` — checked and denied — never falsy. `null` means the host has
+    // no such concept (Linux, Windows), where Cowork works and these grants do
+    // not exist; treating that as denied would make it impossible to switch on
+    // precisely where upstream has proven the driver.
+    if (accessibility === false) {
+      toast.warning(t('coworkNeedsAccessibility'));
+      return;
+    }
+    if (screenRecording === false) {
+      toast.warning(t('coworkNeedsScreenRecording'));
+      return;
+    }
+
+    setCoworkOn(true);
+    setCoworkEnabled(true);
+    cuaDriver.install();
   };
 
   // Code (opencode over ACP) is desktop-only. Detected AFTER mount, never during
@@ -156,27 +237,44 @@ export const InsideButtons = ({
     icon: <Monitor className="h-4 w-4" />,
     isActive: coworkOn,
     action: toggleCowork,
-    isEnabled: ghostOs.isAvailable && (isMacOS() || allowNonMacOSCowork()),
+    // Cowork used to be macOS-only because GhostOS was. The Cua Driver runs on
+    // Windows, macOS and Linux — but not on every Linux session, so an
+    // unsupported one renders the pill DISABLED with the reason rather than
+    // hiding it. The chatbox is Cowork's only surface: hide it and a KDE user is
+    // left with no way to find out why the feature they read about is missing.
+    isEnabled: cuaDriver.isAvailable,
+    disabledReason: cuaDriver.isSupported
+      ? undefined
+      : unsupportedCoworkReason(cuaDriver.unsupportedReason),
   };
-  const coworkAvailable = coworkButton.isEnabled;
+  // Deliberately NOT `coworkButton.isEnabled`: that is now true on any desktop so
+  // the pill can render disabled-with-a-reason. Fetching a driver unattended
+  // must still require a session the driver can actually drive.
+  const coworkAvailable = cuaDriver.isAvailable && cuaDriver.isSupported;
 
-  // Default Cowork ON for logged-in desktop users (once), mirroring the Code
-  // default in <CodingModeButton>. Only runs where the toggle is actually
-  // offered, respects an explicit prior choice (an explicit "false" is stored,
-  // so only a *missing* key counts as "never chosen"), and installs GhostOS in
-  // the background so the first turn is ready. No backend guard is needed: the
-  // logged-in check (tenant + dm_token) is exactly what hasRemoteAiConfig()
-  // tests, so a logged-in user always has the remote AI backend available.
+  // Cowork is deliberately opt-in: it reads the contents of the user's windows
+  // and sends them off-device, and switching it on raises OS permission prompts.
+  // Nothing here enables it — that only happens through `toggleCowork`, behind
+  // the consent dialog. (Code mode still defaults itself on; it asks for no OS
+  // permissions, so it is left as it was.)
+
+  // The PREFERENCE persists across runs; the install does not. A user whose first
+  // install failed comes back to a toggle that reads ON with no driver behind it,
+  // and nothing would fetch one until they switched it off and on again.
+  // Reconcile that here: Cowork on + session supported + host says not installed
+  // ⇒ install. Deliberately install-only — this runs unattended at startup, so it
+  // must never prompt for permissions.
+  //
+  // `status.installed === false` specifically, not falsy: `status` is null until
+  // the first check lands, and firing on "unknown" would install on every mount.
+  const ensuredDriverInstall = useRef(false);
   useEffect(() => {
-    if (!coworkAvailable) return;
-    if (localStorage.getItem(COWORK_ENABLED_KEY) !== null) return;
-    const loggedIn =
-      !!localStorage.getItem('tenant') && !!localStorage.getItem('dm_token');
-    if (!loggedIn) return;
-    setCoworkEnabled(true);
-    setCoworkOn(true);
-    ghostOs.install();
-  }, [coworkAvailable, ghostOs]);
+    if (ensuredDriverInstall.current) return;
+    if (!coworkAvailable || !coworkOn) return;
+    if (cuaDriver.status?.installed !== false) return;
+    ensuredDriverInstall.current = true;
+    cuaDriver.install();
+  }, [coworkAvailable, coworkOn, cuaDriver]);
 
   const allInsideButtons = [
     {
@@ -259,13 +357,16 @@ export const InsideButtons = ({
     icon: React.ReactNode;
     isActive: boolean;
     action: () => void;
+    /** Set when this specific tool can't run here; also the tooltip text. */
+    disabledReason?: string;
   }) => (
     <div key={button.name} className="relative">
       <Button
         variant="ghost"
         size="sm"
         type="button"
-        disabled={disabled}
+        disabled={disabled || !!button.disabledReason}
+        title={button.disabledReason}
         className={`flex h-8 items-center gap-1.5 rounded-lg px-2 text-sm transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 ${
           button.isActive
             ? 'border border-[#D0E0FF] bg-[#F5F8FF] text-[#38A1E5]'
@@ -294,13 +395,135 @@ export const InsideButtons = ({
     </div>
   );
 
+  // Skills dropdown — a discoverable alternative to typing `/` in the
+  // composer, rendered right AFTER Canvas (Canvas stays first). Its active
+  // state and check marks derive from the SAME composer text the `/` picker
+  // writes, so the two ways of invoking a skill are always in sync. Hidden
+  // when the mentor has no skills.
+  const skillsMenu =
+    skills && skills.length > 0 && onToggleSkill ? (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild disabled={disabled}>
+          <Button
+            variant="ghost"
+            size="sm"
+            type="button"
+            disabled={disabled}
+            data-testid="skills-menu-trigger"
+            className={`flex h-8 items-center gap-1.5 rounded-lg px-2 text-sm transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 ${
+              activeSkillSlugs && activeSkillSlugs.size > 0
+                ? 'border border-[#D0E0FF] bg-[#F5F8FF] text-[#38A1E5]'
+                : 'text-gray-600 hover:border hover:border-[#D0E0FF] hover:bg-[#F5F8FF]'
+            }`}
+          >
+            <Sparkles className="h-4 w-4" />
+            {/* Show the armed skill's name so the button mirrors the token
+                  in the composer; falls back to the generic label. */}
+            {(activeSkillSlugs &&
+              activeSkillSlugs.size > 0 &&
+              skills.find((skill) => activeSkillSlugs.has(skill.slug))?.name) ||
+              t('skills')}
+            {/* Same ✕ affordance as every other active tool pill — disarms
+                the skill(s) without opening the menu. Radix opens the menu
+                on pointerdown, so that's where propagation must stop. The
+                handlers live on a SPAN, not the svg: the Button's base
+                styles set `[&_svg]:pointer-events-none`, which makes the
+                icon itself event-dead in real browsers. */}
+            {activeSkillSlugs && activeSkillSlugs.size > 0 && onClearSkills && (
+              <span
+                data-testid="skills-menu-clear"
+                role="button"
+                aria-label={t('skills')}
+                className="ml-1 inline-flex cursor-pointer items-center"
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onClearSkills();
+                }}
+              >
+                <X className="h-3 w-3" />
+              </span>
+            )}
+          </Button>
+        </DropdownMenuTrigger>
+        {/* Sizes to its content: min width keeps short name-only lists from
+            looking cramped, the max caps at 18rem OR the viewport (minus a
+            1rem gutter) on small devices, and long skill lists scroll
+            instead of overflowing short screens. */}
+        <DropdownMenuContent
+          align="start"
+          collisionPadding={8}
+          data-testid="skills-menu-content"
+          className="max-h-[min(60vh,20rem)] max-w-[min(18rem,calc(100vw-1rem))] min-w-40 overflow-y-auto"
+          // Lazy loading: skills come 20 per page — scrolling near the
+          // bottom pulls the next page, mirroring the `/` picker.
+          onScroll={(e) => {
+            if (!hasMoreSkills || isFetchingMoreSkills || !onLoadMoreSkills) {
+              return;
+            }
+            const el = e.currentTarget;
+            if (el.scrollTop + el.clientHeight >= el.scrollHeight - 24) {
+              onLoadMoreSkills();
+            }
+          }}
+        >
+          {skills.map((skill) => {
+            const isArmed = activeSkillSlugs?.has(skill.slug) ?? false;
+            return (
+              <DropdownMenuItem
+                key={skill.unique_id}
+                data-testid={`skills-menu-item-${skill.slug}`}
+                onClick={() => onToggleSkill(skill)}
+                className="flex items-start gap-2"
+              >
+                <span className="flex min-w-0 flex-1 items-baseline gap-1.5">
+                  <span className="truncate text-sm text-gray-800">
+                    {skill.name}
+                  </span>
+                  {/* Slash-invocation form, mirroring the `/` picker's rows */}
+                  <span className="shrink-0 text-xs text-gray-400">
+                    /{skill.slug}
+                  </span>
+                </span>
+                {/* Armed marker sits on the RIGHT (same pattern as the •••
+                    overflow menu above) so rows never carry a left indent. */}
+                {isArmed && (
+                  <Check
+                    aria-hidden="true"
+                    className="mt-0.5 h-4 w-4 shrink-0 text-[#38A1E5]"
+                  />
+                )}
+              </DropdownMenuItem>
+            );
+          })}
+          {isFetchingMoreSkills && (
+            <div
+              data-testid="skills-menu-loading-more"
+              className="flex items-center justify-center px-2 py-1.5"
+            >
+              <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+            </div>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    ) : null;
+
+  const canvasIsVisible = visibleInsideButtons.some(
+    (button) => button.name === 'Canvas',
+  );
+
   return (
     <div className="relative flex items-center gap-1.5">
       {/* Code + Cowork — the desktop assistant pair, Code on the left. Both sit
           outside the responsive list so they always render side by side. */}
       {inTauri && <CodingModeButton sessionId={sessionId} />}
       {coworkButton.isEnabled && renderToolButton(coworkButton)}
-      {/* Responsive Inside Buttons */}
+      {/* Responsive Inside Buttons — the Skills dropdown slots in right after
+          Canvas so Canvas stays the first tool pill. */}
       {visibleInsideButtons.map((button) => {
         if (button.name === 'Memory') {
           return (
@@ -312,8 +535,20 @@ export const InsideButtons = ({
           );
         }
 
+        if (button.name === 'Canvas') {
+          return (
+            <Fragment key={button.name}>
+              {renderToolButton(button)}
+              {skillsMenu}
+            </Fragment>
+          );
+        }
+
         return renderToolButton(button);
       })}
+      {/* When Canvas is collapsed into the ••• overflow (mobile/tablet) the
+          Skills dropdown still renders inline here. */}
+      {!canvasIsVisible && skillsMenu}
 
       {/* Hidden inside buttons dropdown if needed */}
       {hiddenInsideButtons.length > 0 && (
@@ -397,6 +632,26 @@ export const InsideButtons = ({
           </PopoverContent>
         </Popover>
       )}
+
+      {/* Switching Cowork on grants it the run of the machine, so it says what
+          that means before any OS prompt appears. Dismissing leaves Cowork off
+          and asks the system for nothing. */}
+      <AlertDialog open={coworkConsentOpen} onOpenChange={setCoworkConsentOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('coworkConsentTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('coworkConsentBody')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('coworkConsentCancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={acceptCoworkConsent}>
+              {t('coworkConsentConfirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

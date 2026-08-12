@@ -52,6 +52,22 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
   }),
   useGetClawMentorConfigQuery: (...args: unknown[]) =>
     mockUseGetClawMentorConfigQuery(...(args as [])),
+  // Inline mirror of the SDK helper (data-layer `skills-utils`). The mock is a
+  // bare factory (no importActual — pulling the real bundle into this suite is
+  // what the surrounding mocks avoid), so re-declare the slug check here.
+  isBaseAgentMentor: ({
+    mentorSlug,
+    templateMentorSlug,
+  }: {
+    mentorSlug?: string | null;
+    templateMentorSlug?: string | null;
+  }) => {
+    const slugs = ['base-agent', 'ai-mentor', 'ai-agent'];
+    return (
+      (!!mentorSlug && slugs.includes(mentorSlug)) ||
+      (!!templateMentorSlug && slugs.includes(templateMentorSlug))
+    );
+  },
 }));
 
 vi.mock('@/hooks/use-user', () => ({
@@ -151,13 +167,13 @@ describe('useMentorSegments', () => {
     setupDefaults();
   });
 
-  it('returns the canonical 25 mentor segments unfiltered', () => {
+  it('returns the canonical 26 mentor segments unfiltered', () => {
     const { result } = renderHook(() => useMentorSegments());
     expect(result.current.segments).toBe(MENTOR_SEGMENTS);
     // 17 original + Voice + Screen Share (feat/mentor/1763) + Tasks
-    // (feat/mentor/715) + LTI + Analytics hub (feat/2040) + Human Support
+    // (feat/mentor/715) + LTI + Analytics hub (feat/2040) + Human Support + Grader
     // (feat/2081) + Evals (feat/1178) + Billing / spend caps (feat/2286).
-    expect(MENTOR_SEGMENTS).toHaveLength(25);
+    expect(MENTOR_SEGMENTS).toHaveLength(26);
   });
 
   it('places the Billing (spend caps) segment right after LLM', () => {
@@ -177,6 +193,13 @@ describe('useMentorSegments', () => {
       (s) => s.label === 'Prompts',
     );
     expect(MENTOR_SEGMENTS[promptsIndex + 1]?.label).toBe('Skills');
+  });
+
+  it('places Grader then Screen at the end of the Configurations category', () => {
+    const configurationLabels = MENTOR_SEGMENTS.filter(
+      (s) => s.navCategory === 'configurations',
+    ).map((s) => s.label);
+    expect(configurationLabels.slice(-2)).toEqual(['Grader', 'Screen']);
   });
 
   describe('Sandbox & Skills visibility (always visible for admins)', () => {
@@ -548,6 +571,48 @@ describe('useMentorSegments', () => {
     });
   });
 
+  describe('Grader segment RBAC gating', () => {
+    it('declares the read_grader_config rbac action on the Grader segment', () => {
+      // Grader permissions are flat actions on the mentor resource — the
+      // same `/mentors/{id}/` entry every RBAC fetch already requests. The
+      // resource string must stay in lock-step with the backend's
+      // `read_grader_config` action key (and the SDK's own in-tab checks).
+      const graderSegment = MENTOR_SEGMENTS.find((s) => s.label === 'Grader');
+      expect(graderSegment).toBeDefined();
+      expect(graderSegment!.rbacResource).toBeDefined();
+      expect(graderSegment!.rbacResource!(42)).toBe(
+        '/mentors/42/#read_grader_config',
+      );
+      expect(graderSegment!.userTypes).toEqual([
+        UserType.FREE_TRIAL,
+        UserType.ADMIN,
+      ]);
+    });
+
+    it('shows the Grader segment when read_grader_config is granted', () => {
+      mockCheckRbacPermission.mockReturnValue(true);
+
+      const { result } = renderHook(() => useMentorSegments());
+
+      const labels = result.current.filteredSegments.map((s) => s.label);
+      expect(labels).toContain('Grader');
+    });
+
+    it('hides the Grader segment when checkRbacPermission denies read_grader_config', () => {
+      mockCheckRbacPermission.mockImplementation(
+        (_permissions: unknown, resource: string) =>
+          resource !== '/mentors/42/#read_grader_config',
+      );
+
+      const { result } = renderHook(() => useMentorSegments());
+
+      const labels = result.current.filteredSegments.map((s) => s.label);
+      expect(labels).not.toContain('Grader');
+      // Other segments still pass
+      expect(labels).toContain('Settings');
+    });
+  });
+
   describe('preferModalMentorId option', () => {
     it('uses the URL mentor id by default (NavBar behavior)', () => {
       mockGetMentorId.mockReturnValue('mentor-from-modal-stack');
@@ -628,6 +693,148 @@ describe('useMentorSegments', () => {
       renderHook(() => useMentorSegments());
 
       expect(mockUseGetClawMentorConfigQuery).not.toHaveBeenCalled();
+    });
+  });
+
+  // ==========================================================================
+  // SKILLS — Base Agent gating. Agent Skills only apply to base-agent
+  // mentors; the tab is hidden for other agent types and fails open when the
+  // type can't be determined from the settings response.
+  // ==========================================================================
+
+  describe('Skills tab — Base Agent gating', () => {
+    const baseSettings = {
+      platform_key: 'custom-tenant',
+      mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      mentor_id: 42,
+      permissions: { field: {} },
+    };
+
+    const skillLabels = () => {
+      const { result } = renderHook(() => useMentorSegments());
+      return result.current.filteredSegments.map((s) => s.label);
+    };
+
+    it.each(['base-agent', 'ai-mentor', 'ai-agent'])(
+      'shows Skills when the mentor slug is the base-agent alias %s',
+      (slug) => {
+        mockMentorSettings.mockReturnValue({
+          ...baseSettings,
+          mentor_slug: slug,
+          template_mentor: null,
+        });
+        expect(skillLabels()).toContain('Skills');
+      },
+    );
+
+    it('shows Skills when the template mentor object resolves to base-agent', () => {
+      mockMentorSettings.mockReturnValue({
+        ...baseSettings,
+        mentor_slug: 'my-custom-helper',
+        template_mentor: { slug: 'base-agent' },
+      });
+      expect(skillLabels()).toContain('Skills');
+    });
+
+    it('shows Skills when the template mentor is a plain base-agent slug string', () => {
+      mockMentorSettings.mockReturnValue({
+        ...baseSettings,
+        mentor_slug: 'my-custom-helper',
+        template_mentor: 'ai-mentor',
+      });
+      expect(skillLabels()).toContain('Skills');
+    });
+
+    it('hides Skills when the template mentor resolves to a non-base type', () => {
+      mockMentorSettings.mockReturnValue({
+        ...baseSettings,
+        mentor_slug: 'my-gemini-helper',
+        template_mentor: { slug: 'google-agent' },
+      });
+      expect(skillLabels()).not.toContain('Skills');
+    });
+
+    it('hides Skills for a template-less mentor with a non-base slug', () => {
+      mockMentorSettings.mockReturnValue({
+        ...baseSettings,
+        mentor_slug: 'openai-agent',
+        template_mentor: null,
+      });
+      expect(skillLabels()).not.toContain('Skills');
+    });
+
+    it('fails open (shows Skills) when template_mentor is an unreadable shape', () => {
+      // e.g. the serializer returns the FK as a numeric PK — we can't tell the
+      // mentor type, and hiding would strip the feature from real base agents.
+      mockMentorSettings.mockReturnValue({
+        ...baseSettings,
+        mentor_slug: 'my-custom-helper',
+        template_mentor: 123,
+      });
+      expect(skillLabels()).toContain('Skills');
+    });
+
+    it('fails open (shows Skills) when mentor_slug is missing entirely', () => {
+      mockMentorSettings.mockReturnValue({ ...baseSettings });
+      expect(skillLabels()).toContain('Skills');
+    });
+
+    it('does not affect the Sandbox tab (skills-only gate)', () => {
+      mockMentorSettings.mockReturnValue({
+        ...baseSettings,
+        mentor_slug: 'my-gemini-helper',
+        template_mentor: { slug: 'google-agent' },
+      });
+      const labels = skillLabels();
+      expect(labels).not.toContain('Skills');
+      expect(labels).toContain('Sandbox');
+    });
+  });
+
+  describe('Skills tab — admin-only, no RBAC gate', () => {
+    it('declares no rbacResource (admin-only via userTypes, like Tasks/Sandbox)', () => {
+      // The agent-skills RBAC contract is unsettled backend-side (ActionDefs
+      // register /platforms/{db_pk}/… paths the FE has no sanctioned pk
+      // source for), so the tab is plainly admin-only for now.
+      const skillsSegment = MENTOR_SEGMENTS.find((s) => s.label === 'Skills')!;
+      expect(skillsSegment.rbacResource).toBeUndefined();
+      expect(skillsSegment.userTypes).toEqual([UserType.ADMIN]);
+    });
+
+    it('stays visible for admins even when RBAC denies everything', () => {
+      mockCheckRbacPermission.mockReturnValue(false);
+
+      const { result } = renderHook(() => useMentorSegments());
+      const labels = result.current.filteredSegments.map((s) => s.label);
+      expect(labels).toContain('Skills');
+    });
+  });
+
+  describe('Evals — strictly admin-only', () => {
+    it('declares no rbacResource (the RBAC escape hatch is closed)', () => {
+      // `isUserTypeAllowed` accepts an RBAC grant as an ALTERNATIVE to the
+      // userTypes check. Evals previously pointed at the same
+      // `/mentors/{id}/documents/#list` resource as Datasets, so a student
+      // with dataset access also saw Evals in the dropdown and the modal.
+      // Admin-only tabs must not carry an rbacResource (Tasks/Sandbox
+      // pattern) — this pins that.
+      const evals = MENTOR_SEGMENTS.find((s) => s.label === 'Evals')!;
+      expect(evals.rbacResource).toBeUndefined();
+      expect(evals.userTypes).toEqual([UserType.ADMIN]);
+      expect(evals.permissionFieldsCheck).toEqual([]);
+    });
+
+    it('is hidden from non-admin user types even with blanket RBAC grants', () => {
+      mockCheckRbacPermission.mockReturnValue(true);
+      mockIsUserTypeAllowed.mockImplementation(
+        (s) =>
+          s.userTypes.includes(UserType.STUDENT) ||
+          s.userTypes.includes(UserType.FREE_TRIAL),
+      );
+
+      const { result } = renderHook(() => useMentorSegments());
+      const labels = result.current.filteredSegments.map((s) => s.label);
+      expect(labels).not.toContain('Evals');
     });
   });
 });

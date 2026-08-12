@@ -479,6 +479,24 @@ describe('CanvasRichTextEditor', () => {
       expect(result.current).toBeDefined();
     });
 
+    it('scopes inline-code chip styling away from code blocks (issue #2109)', async () => {
+      const { useEditor } = await import('@tiptap/react');
+      (useEditor as any).mockClear();
+      renderHook(() =>
+        useCanvasRichTextEditor({
+          value: 'Test content',
+          onChange: vi.fn(),
+        }),
+      );
+      const options = (useEditor as any).mock.calls[0][0];
+      const editorClass = options.editorProps.attributes.class as string;
+      expect(editorClass).toContain('[&_:not(pre)>code]:bg-muted');
+      expect(editorClass).toContain('[&_pre_code]:bg-transparent');
+      expect(editorClass).toContain('[&_pre_code]:p-0');
+      expect(editorClass).not.toContain('[&_code]:bg-muted');
+      expect(editorClass).not.toContain('[&_pre]:bg-muted');
+    });
+
     it('handles markdown value', () => {
       const { result } = renderHook(() =>
         useCanvasRichTextEditor({

@@ -440,7 +440,26 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
   useUnPinMessageMutation: () => [unpinMessageMock, { isLoading: false }],
 }));
 
+// `getVisibleAnalyticsTabs` is stubbed rather than run for real — the SDK owns
+// (and tests) the pure-watcher rule; here we only care that the sidebar honours
+// whatever it returns. Defaults to every tab; override per test to narrow.
+const ALL_ANALYTICS_TABS = [
+  '',
+  'users',
+  'courses',
+  'programs',
+  'topics',
+  'transcripts',
+  'memory',
+  'financial',
+  'audit',
+  'monetization',
+  'reports',
+];
+const mockGetVisibleAnalyticsTabs = vi.hoisted(() => vi.fn());
+
 vi.mock('@iblai/iblai-js/web-utils', () => ({
+  getVisibleAnalyticsTabs: mockGetVisibleAnalyticsTabs,
   chatActions: {
     setShouldStartNewChat: (...a: unknown[]) => ({
       type: 'chat/setShouldStartNewChat',
@@ -708,6 +727,8 @@ function resetState() {
   mockIsStreaming = false;
   mockNumberOfActiveChatMessages = 0;
   mockActiveChatMessages = [];
+  mockGetVisibleAnalyticsTabs.mockReset();
+  mockGetVisibleAnalyticsTabs.mockReturnValue([...ALL_ANALYTICS_TABS]);
 
   mockPathname = '/platform/tenant-a/mentor-1';
   mockSearchParams = new URLSearchParams();
@@ -2361,6 +2382,95 @@ describe('AppSidebar — Analytics sub-item navigation', () => {
     renderSidebar();
     const usersBtn = screen.getByRole('button', { name: 'Users' });
     expect(usersBtn.className).toMatch(/bg-/); // active styling
+  });
+
+  it('renders Memory directly after Transcripts and navigates to the memory analytics page', () => {
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Analytics' })[0]);
+
+    // Order matters — Memory sits between Transcripts and Costs.
+    const transcripts = screen.getByRole('button', { name: 'Transcripts' });
+    const memory = screen.getByRole('button', { name: 'Memory' });
+    const costs = screen.getByRole('button', { name: 'Costs' });
+    expect(
+      transcripts.compareDocumentPosition(memory) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      memory.compareDocumentPosition(costs) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+
+    fireEvent.click(memory);
+    expect(pushMock).toHaveBeenCalledWith(
+      '/platform/tenant-a/mentor-1/analytics/memory',
+    );
+  });
+
+  it('highlights Memory when the URL is the memory analytics page', () => {
+    mockPathname = '/platform/tenant-a/mentor-1/analytics/memory';
+    renderSidebar();
+    expect(screen.getByRole('button', { name: 'Memory' }).className).toMatch(
+      /bg-/,
+    );
+  });
+});
+
+// =============================================================================
+// Analytics tab visibility — the menu is narrowed to the tabs
+// `getVisibleAnalyticsTabs` (SDK) reports for this viewer, mirroring the
+// skills SPA sidebar. The SDK owns the pure-watcher rule; here we assert the
+// sidebar honours whatever it returns.
+// =============================================================================
+
+describe('AppSidebar — Analytics tab visibility (getVisibleAnalyticsTabs)', () => {
+  it('narrows the Analytics menu to the tabs the SDK reports (pure-watcher subset)', () => {
+    // The watcher subset the SDK returns: courses/programs have no counterpart
+    // in this SPA, so a watcher is left with Memory + Data Reports only.
+    mockGetVisibleAnalyticsTabs.mockReturnValue([
+      'courses',
+      'programs',
+      'memory',
+      'reports',
+    ]);
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Analytics' })[0]);
+
+    expect(screen.getByRole('button', { name: 'Memory' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Data Reports' }),
+    ).toBeInTheDocument();
+    for (const hidden of [
+      'Overview',
+      'Users',
+      'Topics',
+      'Transcripts',
+      'Costs',
+      'Audit',
+    ]) {
+      expect(
+        screen.queryByRole('button', { name: hidden }),
+      ).not.toBeInTheDocument();
+    }
+  });
+
+  it('drops Memory when the SDK does not report the memory tab', () => {
+    mockGetVisibleAnalyticsTabs.mockReturnValue(['', 'users', 'reports']);
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Analytics' })[0]);
+
+    expect(
+      screen.queryByRole('button', { name: 'Memory' }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Users' })).toBeInTheDocument();
+  });
+
+  it('passes the RBAC permissions and the current tenant to getVisibleAnalyticsTabs', () => {
+    mockCurrentTenant = { key: 'tenant-a', is_admin: true };
+    renderSidebar();
+    expect(mockGetVisibleAnalyticsTabs).toHaveBeenCalledWith(
+      {},
+      mockCurrentTenant,
+    );
   });
 });
 

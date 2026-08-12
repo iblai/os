@@ -15,6 +15,7 @@ export * from './embed-tab';
 export * from './access-tab';
 export * from './sandbox-tab';
 export * from './skills-tab';
+export * from './grader-tab';
 export * from './audit-log-tab';
 export * from './voice-tab';
 export * from './screenshare-tab';

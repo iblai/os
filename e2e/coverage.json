@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-08-03",
+  "lastUpdated": "2026-08-11",
   "summary": {
-    "totalCheckpoints": 610,
-    "coveredCheckpoints": 581,
+    "totalCheckpoints": 645,
+    "coveredCheckpoints": 614,
     "deprecatedCheckpoints": 12,
-    "notReproducibleCheckpoints": 9,
-    "pendingCheckpoints": 9,
+    "notReproducibleCheckpoints": 11,
+    "pendingCheckpoints": 8,
     "percent": 100,
-    "totalJourneys": 68,
-    "activeJourneys": 67
+    "totalJourneys": 70,
+    "activeJourneys": 69
   },
   "journeys": [
     {
@@ -951,7 +951,8 @@
         "app/platform/[tenantKey]/[mentorId]/analytics/transcripts/page.tsx",
         "app/platform/[tenantKey]/[mentorId]/analytics/financial/page.tsx",
         "app/platform/[tenantKey]/[mentorId]/analytics/users/page.tsx",
-        "app/platform/[tenantKey]/[mentorId]/analytics/topics/page.tsx"
+        "app/platform/[tenantKey]/[mentorId]/analytics/topics/page.tsx",
+        "app/platform/[tenantKey]/[mentorId]/analytics/memory/page.tsx"
       ],
       "checkpoints": [
         {
@@ -977,6 +978,11 @@
         {
           "id": "anal-05",
           "description": "Financial tab loads with cost cards and charts",
+          "status": "covered"
+        },
+        {
+          "id": "anal-06",
+          "description": "Memory sub-item in the Analytics sidebar (rendered after Transcripts, gated by the SDK's getVisibleAnalyticsTabs) navigates to the memory analytics page",
           "status": "covered"
         }
       ]
@@ -2368,7 +2374,6 @@
       "spec": "44-claw-advanced-sandbox.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx",
-        "components/modals/edit-mentor-modal/tabs/skills-tab.tsx",
         "components/modals/edit-mentor-modal/tabs/prompts-tab.tsx",
         "components/modals/edit-mentor-modal/capability-gate.tsx",
         "hooks/use-mentor-segments.ts"
@@ -2386,7 +2391,7 @@
         },
         {
           "id": "claw-03",
-          "description": "Flipping the capability toggle auto-saves instantly (optimistic local state, no footer Save button) and does not change Sandbox or Skills tab visibility — both tabs are now unconditionally mounted for admins",
+          "description": "Flipping the capability toggle auto-saves instantly (optimistic local state, no footer Save button) and does not change Sandbox tab visibility — the tab is unconditionally mounted for admins",
           "status": "covered"
         },
         {
@@ -2395,18 +2400,13 @@
           "status": "covered"
         },
         {
-          "id": "claw-05",
-          "description": "Skills tab is always visible AND shows the real skills UI (heading, info box, New Skill action) independent of the sandbox — feat/2040 made the Skills content fully sandbox-independent (no \"connect a sandbox\" gate)",
-          "status": "covered"
-        },
-        {
           "id": "claw-06",
-          "description": "Sandbox leads the Integrations category and Skills follows Prompts in the Configurations category, unconditionally (feat/2040 groups the sidebar into Configurations / Integrations / Runtime)",
+          "description": "Sandbox leads the Integrations category unconditionally (feat/2040 groups the sidebar into Configurations / Integrations / Runtime and moved Sandbox off Configurations)",
           "status": "covered"
         },
         {
           "id": "claw-07",
-          "description": "Disabling the capability flips capability-gate-content's data-enabled back to \"false\", regating the SandboxConfig UI, while Sandbox and Skills tabs remain visible",
+          "description": "Disabling the capability flips capability-gate-content's data-enabled back to \"false\", regating the SandboxConfig UI, while the Sandbox tab remains visible",
           "status": "covered"
         },
         {
@@ -2431,22 +2431,12 @@
         },
         {
           "id": "claw-12",
-          "description": "Admin connects a sandbox instance via the dedicated per-row Connect button (data-testid=\"connect-instance-<id>\" — Connect is no longer a dropdown menu item, it sits next to the separate \"Actions\" three-dot menu): Connected Instance heading appears and the Skills tab renders its (sandbox-independent) skills UI",
+          "description": "Admin connects a sandbox instance via the dedicated per-row Connect button (data-testid=\"connect-instance-<id>\" — Connect is no longer a dropdown menu item, it sits next to the separate \"Actions\" three-dot menu) and the Connected Instance heading appears",
           "status": "covered"
         },
         {
           "id": "claw-13",
           "description": "Admin edits an Agent Configuration field in the Prompts tab: edit modal closes and the new value is persisted",
-          "status": "covered"
-        },
-        {
-          "id": "claw-14",
-          "description": "Admin toggles a skill on then off in the Skills tab and aria-checked flips back to the original state",
-          "status": "covered"
-        },
-        {
-          "id": "claw-15",
-          "description": "Admin creates a new skill, edits its description, and the updated skill row remains visible; skill is deleted on cleanup",
           "status": "covered"
         },
         {
@@ -2619,7 +2609,7 @@
         },
         {
           "id": "vo-09",
-          "description": "Settings tab surfaces the smart-document-retrieval voice-call toggle (\"Enable screen sharing\" moved off Settings onto the Screen Share tab's own capability toggle — see journey 48)",
+          "description": "Settings tab surfaces the smart-document-retrieval voice-call toggle (\"Enable screen sharing\" moved off Settings onto the Screen tab's own capability toggle — see journey 48)",
           "status": "covered"
         },
         {
@@ -2641,7 +2631,7 @@
     },
     {
       "id": "mentor-screenshare-tab",
-      "name": "Mentor Screen Share Tab",
+      "name": "Mentor Screen Tab (screen sharing)",
       "spec": "48-mentor-screenshare-tab.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/tabs/screenshare-tab.tsx",
@@ -2653,7 +2643,7 @@
       "checkpoints": [
         {
           "id": "ss-01",
-          "description": "Screen Share tab stays visible (always mounted — no longer gated on call_configuration.enable_video) and its content grays (capability-gate-content data-enabled=\"false\") when the in-tab \"Enable screen sharing\" capability toggle is off",
+          "description": "Screen tab stays visible (always mounted — no longer gated on call_configuration.enable_video) and its content grays (capability-gate-content data-enabled=\"false\") when the in-tab \"Enable screen sharing\" capability toggle is off",
           "status": "covered"
         },
         {
@@ -2663,7 +2653,7 @@
         },
         {
           "id": "ss-03",
-          "description": "Switching to the Screen Share tab renders the SDK heading, body and capability toggle regardless of the capability's on/off state",
+          "description": "Switching to the Screen tab renders the SDK heading, body and capability toggle regardless of the capability's on/off state",
           "status": "covered"
         }
       ]
@@ -3824,9 +3814,221 @@
       ]
     },
     {
+      "id": "mentor-grader-tab",
+      "name": "Mentor Grader Tab",
+      "spec": "66-mentor-grader-tab.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/grader-tab.tsx",
+        "components/modals/edit-mentor-modal/tabs/index.ts",
+        "components/modals/edit-mentor-modal/index.tsx",
+        "hooks/use-mentor-segments.ts",
+        "lib/constants.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "grd-01",
+          "description": "Grader tab is visible in the Edit Mentor modal sidebar (Configurations category, always mounted for an admin with standard mentor-owner permissions)",
+          "status": "covered"
+        },
+        {
+          "id": "grd-02",
+          "description": "Grader tab renders heading, description, and tab body without getting stuck on the loading spinner",
+          "status": "covered"
+        },
+        {
+          "id": "grd-03",
+          "description": "Gated content exposes the Grading Setup and Rubric sub-tabs — both consistently visible for the e2e admin — and switching between them renders the matching section (grader-setup-section / grader-criteria-section); the Results pill is checked separately in grd-04 since it's RBAC-gated (view_grade_results) and not granted to the e2e admin on the real tenant",
+          "status": "covered"
+        },
+        {
+          "id": "grd-04",
+          "description": "The Results sub-tab renders its own grade-results table and shows the zero-filters empty state (\"No grades yet…\") on a mentor with no graded submissions yet; independent of a saved config or rubric. Gracefully skips when the Results pill isn't granted — confirmed live that the e2e admin lacks view_grade_results on the real tenant",
+          "status": "covered"
+        },
+        {
+          "id": "grd-05",
+          "description": "On a freshly created mentor, the Grading capability toggle defaults OFF and the gated config/rubric/results content is grayed (capability-gate-content data-enabled=false) with the off-hint shown",
+          "status": "covered"
+        },
+        {
+          "id": "grd-06",
+          "description": "Admin enables the Grading capability toggle and sees the \"not set up yet\" misconfigured warning (no config saved yet); gracefully skips if the tenant's tool catalogue has no \"Grading\" tool to attach",
+          "status": "covered"
+        },
+        {
+          "id": "grd-07",
+          "description": "Admin fills in and saves the Grading setup form (instructions required for Save to enable); the misconfigured warning switches from \"not set up yet\" to \"rubric is empty\"",
+          "status": "covered"
+        },
+        {
+          "id": "grd-08",
+          "description": "Admin adds a rubric criterion via the Add-criterion modal (name, criteria, points) — it appears in the criteria list, the misconfigured warning clears, and the running total reflects its points",
+          "status": "covered"
+        },
+        {
+          "id": "grd-09",
+          "description": "Admin edits an existing criterion's name and points via the row's three-dots menu -> Edit modal, and the row + running total reflect the update",
+          "status": "covered"
+        },
+        {
+          "id": "grd-10",
+          "description": "With two criteria present, admin cancels a delete confirmation modal (row untouched) then deletes a non-last criterion for real via the row menu -> confirm modal",
+          "status": "covered"
+        },
+        {
+          "id": "grd-11",
+          "description": "Deleting the last remaining criterion is refused — the row menu's Delete item is aria-disabled with an explanatory hint shown, rather than allowing the request to fail",
+          "status": "covered"
+        },
+        {
+          "id": "grd-12",
+          "description": "Disabling then re-enabling the Grading capability preserves the saved config and rubric (no delete endpoint for either — detaching the tool only grays the content)",
+          "status": "covered"
+        },
+        {
+          "id": "grd-13",
+          "description": "Non-admin does not see the Grader tab / cannot reach the Edit Agent Settings menu item at all",
+          "status": "covered"
+        },
+        {
+          "id": "grd-14",
+          "description": "The grader tab's fine-grained RBAC gating is real (flat actions on the mentor resource: read_grader_config, write_grader_config, create_grader_config, view_grader_criteria, create_grader_criteria, write_grader_criteria, delete_grader_criteria, view_grade_results, override_grade_results, checked via /mentors/{id}/#<action> with a graceful fallback) — denied read_grader_config hides the tab and shows its denied state; denied write/create/delete/override actions omit the matching affordance. grd-04 already exercises ONE denied path live (view_grade_results, confirmed denied for the e2e admin). The remaining denied paths (read_grader_config denial, write/create/delete/override denial) are not e2e-reproducible without seeding a restricted RBAC permission object for the e2e admin account, which this environment has no fixture for",
+          "status": "not-reproducible"
+        },
+        {
+          "id": "grd-15",
+          "description": "The Results sub-tab's grade-override flow (override/clear a learner's grade, which PATCHes back to the LMS) requires a real graded submission produced by a live LMS-connected grading run — not reproducible in this e2e environment, which has no fixture to produce one on demand (grd-04 covers the reachable empty-table state)",
+          "status": "not-reproducible"
+        }
+      ]
+    },
+    {
+      "id": "agent-skills",
+      "name": "Agent Skills",
+      "spec": "67-agent-skills.spec.ts",
+      "sourceFiles": [
+        "hooks/use-mentor-segments.ts",
+        "components/modals/edit-mentor-modal/tabs/skills-tab.tsx",
+        "components/chat-input-form.tsx",
+        "components/auto-resize-text-area.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "ags-01",
+          "description": "Admin sees the Skills tab on a freshly-created (Base Agent) mentor, with the updated tab description (\"Reusable playbooks this Base Agent can discover and follow.\") and skills-info-box copy describing the / picker (feat/2215); Skills sits right after Prompts in the Configurations category (ordering moved here from journey 44)",
+          "status": "covered"
+        },
+        {
+          "id": "ags-02",
+          "description": "Skills tab is hidden when the mentor resolves to a non-base-agent type (mentor_slug is not one of base-agent/ai-mentor/ai-agent and template_mentor does not resolve to one either) — hooks/use-mentor-segments.ts resolveIsBaseAgentMentor",
+          "status": "covered"
+        },
+        {
+          "id": "ags-03",
+          "description": "Skills tab stays visible when the mentor type cannot be determined (template_mentor is a numeric PK the frontend cannot read a slug from) — the gate fails OPEN rather than hiding the tab",
+          "status": "covered"
+        },
+        {
+          "id": "ags-04",
+          "description": "Admin creates a platform skill, attaches it from the Available Skills sub-tab (addSkillToAgent — the assignment is created ENABLED), and its enable Switch round-trips off/on on the Agent Skills sub-tab (aria-checked, toast-verified via disableSkill/enableSkill); detach + delete on cleanup — dedicated mentor per test, serial",
+          "status": "covered"
+        },
+        {
+          "id": "ags-05",
+          "description": "Admin creates a new platform skill, locates it on the server-paged Available Skills sub-tab (paging until found — catalog ordering is not guaranteed), edits its description, and deletes it (row disappears) — all via the SDK's skills helpers (createSkill/editSkill/deleteSkill), serial (mutations touch the platform-wide catalog)",
+          "status": "covered"
+        },
+        {
+          "id": "ags-06",
+          "description": "NON-ADMIN: the Skills tab is absent from the Edit Mentor modal (the segment is ADMIN-only via userTypes in MENTOR_SEGMENTS) — moved from journey 44",
+          "status": "covered"
+        },
+        {
+          "id": "slash-01",
+          "description": "Mentor with no effective skills: chat composer stays a plain textbox (no combobox role) and typing \"/\" opens nothing",
+          "status": "covered"
+        },
+        {
+          "id": "slash-02",
+          "description": "Mentor with skills: composer textarea gets role=combobox wiring and typing \"/\" opens the slash-skill-picker listing only enabled skills (disabled filtered out) as name + slug — no descriptions (assignment rows carry none; the platform-wide agent-skills catalog is never fetched from chat)",
+          "status": "covered"
+        },
+        {
+          "id": "slash-03",
+          "description": "Typing after \"/\" filters the picker by both skill name and slug as the query narrows; no match closes the picker",
+          "status": "covered"
+        },
+        {
+          "id": "slash-04",
+          "description": "ArrowDown/ArrowUp cycle the active picker option and the composer's aria-activedescendant follows the active option's id",
+          "status": "covered"
+        },
+        {
+          "id": "slash-05",
+          "description": "Enter completes the active option IN PLACE — \"/<slug> \" lands at the typed token's index in the textarea and the backdrop layer (skill-token-highlight) paints an active-pill background behind it; nothing is submitted",
+          "status": "covered"
+        },
+        {
+          "id": "slash-06",
+          "description": "Clicking a picker option (mousedown) completes that skill's token in place with the same highlight",
+          "status": "covered"
+        },
+        {
+          "id": "slash-07",
+          "description": "Escape dismisses the picker until the slash token is cleared (still-dismissed while the token persists), then a fresh \"/\" re-arms and reopens it",
+          "status": "covered"
+        },
+        {
+          "id": "slash-08",
+          "description": "Multi-word text starting with \"/\" (e.g. \"/hello world\") never opens the picker",
+          "status": "covered"
+        },
+        {
+          "id": "slash-09",
+          "description": "One Backspace at the token's end (or Delete at its start) removes the whole \"/slug \" token atomically",
+          "status": "covered"
+        },
+        {
+          "id": "slash-10",
+          "description": "Backspace after plain text deletes characters normally — the highlighted token stays intact",
+          "status": "covered"
+        },
+        {
+          "id": "slash-11",
+          "description": "A mid-sentence token is removed atomically and the seam space collapses (\"say /web-research please\" → \"say please\")",
+          "status": "covered"
+        },
+        {
+          "id": "slash-12",
+          "description": "Multiple skill invocations in one message are each highlighted; unknown or disabled slugs never highlight",
+          "status": "covered"
+        },
+        {
+          "id": "slash-13",
+          "description": "Typing \"/\" while the assignments fetch (the composer's only skill source) is still in flight shows the \"Loading skills…\" popover (slash-skill-loading, role=status), which yields to the picker once the list resolves",
+          "status": "covered"
+        },
+        {
+          "id": "slash-14",
+          "description": "A \"/\" token typed after existing text (caret-adjacent, preceded by whitespace) opens the picker; selecting completes the invocation at that index keeping the sentence. A \"/\" glued inside a word (and/or, URLs) never triggers",
+          "status": "covered"
+        },
+        {
+          "id": "slash-15",
+          "description": "NON-ADMIN: with the assignments endpoint readable (mocked granted state — the composer's only skill source; a 403 degrades to an inactive picker) the \"/\" picker offers skills; selecting completes the token and sending the invocation message receives a live AI reply — skips when the environment denies the non-admin CHAT permission entirely (composer disabled with a \"you don't have permission to chat\" placeholder): the picker rides on top of chat access",
+          "status": "covered"
+        },
+        {
+          "id": "slash-16",
+          "description": "Skills dropdown button (inside-buttons row, next to Canvas) lists the mentor's enabled skills as name + /slug (no descriptions); selecting inserts the /slug token AT THE CARET with context-aware spacing (highlighted in the composer) and the button shows the armed skill's name with the same ✕ affordance as other active tool pills (✕ disarms without opening the menu); toggling removes the token cleanly; arming another skill replaces the current one (single selection); arming via the \"/\" picker updates the button — both surfaces derive from the composer text so they stay in sync",
+          "status": "covered"
+        }
+      ]
+    },
+    {
       "id": "mentor-spend-caps-tab",
       "name": "Mentor Billing (Spend Caps) Tab",
-      "spec": "66-mentor-spend-caps-tab.spec.ts",
+      "spec": "68-mentor-spend-caps-tab.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/tabs/spend-caps-tab.tsx",
         "components/modals/edit-mentor-modal/index.tsx",
