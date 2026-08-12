@@ -41,6 +41,22 @@ describe('CSP middleware', () => {
     expect(csp).not.toContain('frame-ancestors'); // app runs embedded
   });
 
+  it('allows the asset CDN origin in style/font/connect when NEXT_PUBLIC_ASSET_CDN is set', () => {
+    // Static served cross-origin from the CDN (assets.ibl.ai). Accepts a bare
+    // host — assetCdnOrigin() normalizes it to https:// like next.config.ts.
+    vi.stubEnv('NEXT_PUBLIC_ASSET_CDN', 'assets.ibl.ai');
+    const csp = cspOf(middleware(req()))!;
+    // The gap https:/strict-dynamic don't cover: cross-origin CSS + fonts.
+    expect(csp).toMatch(/style-src [^;]*https:\/\/assets\.ibl\.ai/);
+    expect(csp).toMatch(/font-src [^;]*https:\/\/assets\.ibl\.ai/);
+    expect(csp).toMatch(/connect-src [^;]*https:\/\/assets\.ibl\.ai/);
+  });
+
+  it('omits the asset CDN origin from CSP when NEXT_PUBLIC_ASSET_CDN is unset', () => {
+    vi.stubEnv('NEXT_PUBLIC_ASSET_CDN', '');
+    expect(cspOf(middleware(req()))).not.toContain('assets.ibl.ai');
+  });
+
   it('does NOT key off NODE_ENV (a dev-built image still enforces)', () => {
     // Regression guard: Next inlines NODE_ENV into middleware at build time, so
     // an image built with NODE_ENV=development must not silently report-only.

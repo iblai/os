@@ -102,8 +102,29 @@ function apiBaseOrigin(): string[] {
   }
 }
 
+/**
+ * Allow the immutable-static CDN origin (e.g. assets.ibl.ai) when static assets
+ * are served cross-origin from it. Derived from the SAME NEXT_PUBLIC_ASSET_CDN
+ * that next.config.ts bakes into assetPrefix, so the CSP and the emitted asset
+ * URLs can't drift. Accepts a bare host or a full URL; returns [] when unset
+ * (assets served same-origin) so this is a no-op then. script-src/img-src/
+ * media-src already allow it via strict-dynamic / `https:`; the gap this closes
+ * is style-src + font-src (and connect-src for chunk prefetch/fetch).
+ */
+function assetCdnOrigin(): string[] {
+  let cdn = process.env.NEXT_PUBLIC_ASSET_CDN?.trim();
+  if (!cdn) return [];
+  if (!/^https?:\/\//i.test(cdn)) cdn = `https://${cdn}`;
+  try {
+    return [new URL(cdn).origin];
+  } catch {
+    return [];
+  }
+}
+
 function buildCsp(nonce: string): string {
   const extra = apiBaseOrigin();
+  const assetCdn = assetCdnOrigin();
   const partners = partnerHosts();
   // connect-src also needs the wss:// origin of each https:// partner host —
   // browsers don't treat an https:// source as covering wss:// to the same host
@@ -128,9 +149,9 @@ function buildCsp(nonce: string): string {
     ],
     // React `style={{…}}` attributes can't carry a nonce, so inline styles still
     // need 'unsafe-inline'. Tracked to migrate to CSS classes to drop this.
-    'style-src': ["'self'", "'unsafe-inline'"],
+    'style-src': ["'self'", "'unsafe-inline'", ...assetCdn],
     'img-src': ["'self'", 'data:', 'blob:', 'https:'], // avatars/mentor images vary
-    'font-src': ["'self'", 'data:'],
+    'font-src': ["'self'", 'data:', ...assetCdn],
     'media-src': ["'self'", 'data:', 'blob:', 'https:'], // TTS audio / recordings
     'connect-src': [
       "'self'",
@@ -139,6 +160,7 @@ function buildCsp(nonce: string): string {
       ...GOOGLE,
       ...STRIPE,
       ...AWS_S3,
+      ...assetCdn,
       ...partners,
       ...partnerWs,
       ...extra,
