@@ -52,6 +52,9 @@ starter and go ahead.
 - Do NOT remove ibl.ai components — the navbar, profile, notification buttons, \
 chat and the rest stay in place. Always keep the ibl.ai components, whether \
 the project started from vibe-starter or otherwise.
+- When working with vibe-starter and other ibl.ai projects, always copy \
+`.env.example` into `.env.local` (before the first run, so the app boots with \
+its expected configuration).
 - After building or changing a website, show it to the user proactively: start \
 the dev server in the background (e.g. `pnpm dev`), then open the site in the \
 user's browser — macOS: `open -a \"Google Chrome\" http://localhost:3000` \
@@ -416,6 +419,10 @@ mod tests {
         assert!(
             text.contains("Do NOT remove ibl.ai components"),
             "the keep-components rule must survive edits: {text}"
+        );
+        assert!(
+            text.contains(".env.example") && text.contains(".env.local"),
+            "the env-file rule must survive edits: {text}"
         );
         assert!(
             text.contains("pnpm dev") && text.contains("open -a"),
