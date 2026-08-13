@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 const mockUseParams = vi.fn();
 const mockUsePathname = vi.fn();
@@ -144,5 +145,80 @@ describe('AnalyticsLayoutWrapper', () => {
       expect.anything(),
       '/mentors/99/#view_audit_logs',
     );
+  });
+
+  describe('platform analytics switch', () => {
+    const clickSwitch = async () => {
+      const user = userEvent.setup();
+      await user.click(
+        screen.getByRole('button', { name: 'Switch to platform analytics' }),
+      );
+    };
+
+    beforeEach(() => {
+      mockCheckRbacPermission.mockReturnValue(true);
+    });
+
+    it('offers the switch to the tenant-wide section', () => {
+      render(
+        <AnalyticsLayoutWrapper>
+          <div>child</div>
+        </AnalyticsLayoutWrapper>,
+      );
+
+      expect(
+        screen.getByRole('button', { name: 'Switch to platform analytics' }),
+      ).toBeInTheDocument();
+    });
+
+    it('drops the mentor segment when switching from the overview', async () => {
+      const push = vi.fn();
+      mockUseRouter.mockReturnValue({ push });
+
+      render(
+        <AnalyticsLayoutWrapper>
+          <div>child</div>
+        </AnalyticsLayoutWrapper>,
+      );
+      await clickSwitch();
+
+      expect(push).toHaveBeenCalledWith('/platform/test-tenant/analytics');
+    });
+
+    it('carries the open tab across to the tenant-wide section', async () => {
+      const push = vi.fn();
+      mockUseRouter.mockReturnValue({ push });
+      mockUsePathname.mockReturnValue(
+        '/platform/test-tenant/test-mentor/analytics/users',
+      );
+
+      render(
+        <AnalyticsLayoutWrapper>
+          <div>child</div>
+        </AnalyticsLayoutWrapper>,
+      );
+      await clickSwitch();
+
+      expect(push).toHaveBeenCalledWith(
+        '/platform/test-tenant/analytics/users',
+      );
+    });
+
+    it('falls back to the tenant overview for tabs with no tenant-wide route', async () => {
+      const push = vi.fn();
+      mockUseRouter.mockReturnValue({ push });
+      mockUsePathname.mockReturnValue(
+        '/platform/test-tenant/test-mentor/analytics/courses/course-1',
+      );
+
+      render(
+        <AnalyticsLayoutWrapper>
+          <div>child</div>
+        </AnalyticsLayoutWrapper>,
+      );
+      await clickSwitch();
+
+      expect(push).toHaveBeenCalledWith('/platform/test-tenant/analytics');
+    });
   });
 });

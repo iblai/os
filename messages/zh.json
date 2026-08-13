@@ -157,6 +157,10 @@
     "languageFrenchFrance": "法语（法国）",
     "languageSpanish": "西班牙语（Español）"
   },
+  "analyticsScopeSwitch": {
+    "platformAnalytics": "平台分析",
+    "switchToPlatformAnalytics": "切换到平台分析"
+  },
   "apiTabApiKeyModal": {
     "dialogTitle": "API 密钥",
     "dialogDescription": "复制并粘贴 API 密钥。",

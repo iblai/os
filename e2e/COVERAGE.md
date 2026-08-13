@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-08-11 | 634 checkpoints (603 covered, 8 pending/fixme, 11 not-reproducible in default env, 12 deprecated) | 69 journeys (68 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-08-12 | 641 checkpoints (610 covered, 8 pending/fixme, 11 not-reproducible in default env, 12 deprecated) | 70 journeys (69 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -1350,3 +1350,23 @@ surfaces:
 - [x] slash-16: Skills dropdown (next to Canvas) lists enabled skills as name + `/slug`; selecting inserts the token AT THE CARET with context-aware spacing; the active pill shows the armed name + the standard ✕ (disarms without opening the menu); toggling removes cleanly; arming another replaces (single selection); `/`-picker arming updates the button — one composer-text source of truth
 - [x] slash-15: NON-ADMIN — with the assignments endpoint readable (mocked granted state; a 403 degrades to an inactive picker) the "/" picker offers skills; selecting completes the token and the sent invocation message receives a live AI reply — skips when the environment denies the non-admin CHAT permission entirely (composer disabled with a "you don't have permission to chat" placeholder): the picker rides on top of chat access
 - [x] slash-14: A "/" token typed after existing text (caret-adjacent, preceded by whitespace) opens the picker; selecting completes the invocation at that index keeping the sentence. A "/" glued inside a word (and/or, URLs) never triggers
+
+---
+
+## Journey 68: Tenant-wide Analytics (7 checkpoints) — `journeys/68-tenant-analytics.spec.ts`
+
+**Source files:** `app/platform/[tenantKey]/analytics/page.tsx`, `app/platform/[tenantKey]/analytics/users/page.tsx`, `app/platform/[tenantKey]/analytics/topics/page.tsx`, `app/platform/[tenantKey]/analytics/transcripts/page.tsx`, `app/platform/[tenantKey]/analytics/memory/page.tsx`, `app/platform/[tenantKey]/analytics/financial/page.tsx`, `app/platform/[tenantKey]/analytics/audit/page.tsx`, `app/platform/[tenantKey]/analytics/reports/page.tsx`, `app/platform/[tenantKey]/[mentorId]/analytics/_components/analytics-scope-switch.tsx`
+
+The Journey 18 section mounted directly under the tenant — no agent in the URL,
+so the containers report on the whole tenant (they drop the `mentor_unique_id`
+filter when the mentor id is empty). The sidebar already links here whenever no
+agent is selected; the tests deep-link, since the fixtures start on an agent
+route.
+
+- [x] tanl-01: Tenant-wide overview (`/platform/{tenantKey}/analytics`) renders the tab strip inside the platform shell — the sidebar proves the layout supplies the shell itself
+- [x] tanl-02: Clicking a tab from the tenant-wide overview routes to `/platform/{tenantKey}/analytics/{tab}` and never reintroduces an agent id
+- [x] tanl-03: Tenant-wide Users, Topics, Transcripts and Costs tabs are reachable by direct URL
+- [x] tanl-04: Tenant-wide Memory page loads with no agent scope (the tab opens on global / all-agent memories)
+- [x] tanl-05: Tenant-wide Data Reports page loads and shows the Data Reports tab
+- [x] tanl-06: Tenant-wide Audit page loads — with no agent to check `view_audit_logs` against, the API is the authority and the container renders its own no-permission card on a 403
+- [x] tanl-07: Scope switch floated over the agent analytics tab strip (retracted pill, prolongs on hover/focus) jumps to the tenant-wide section on the same tab

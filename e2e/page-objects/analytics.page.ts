@@ -12,6 +12,7 @@ export class AnalyticsPage {
   readonly costsTab: Locator;
   readonly reportsTab: Locator;
   readonly analyticsButton: Locator;
+  readonly platformScopeSwitch: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -29,6 +30,11 @@ export class AnalyticsPage {
     this.transcriptsTab = page.getByRole('tab', { name: /transcripts/i });
     this.costsTab = page.getByRole('tab', { name: /costs/i });
     this.reportsTab = page.getByRole('tab', { name: /reports|data reports/i });
+    // Retracted pill floated over the centre of the tab strip on an agent's
+    // analytics page; its accessible name is the label, not the icon.
+    this.platformScopeSwitch = page.getByRole('button', {
+      name: /switch to platform analytics/i,
+    });
   }
 
   /**
@@ -122,5 +128,43 @@ export class AnalyticsPage {
       (url) => /\/analytics\/reports\/?$/.test(url.href),
       { timeout: 60_000 },
     );
+  }
+
+  /**
+   * Click the scope switch on an agent's analytics page and land on the
+   * tenant-wide section — same tab, one segment shorter.
+   */
+  async switchToPlatformAnalytics(): Promise<void> {
+    await expect(this.platformScopeSwitch).toBeVisible({ timeout: 30_000 });
+    await this.platformScopeSwitch.click();
+    await safeWaitForURL(
+      this.page,
+      (url) => {
+        const parts = url.pathname.split('/').filter(Boolean);
+        // /platform/{tenantKey}/analytics[/{tab}] — no agent segment left.
+        return parts[0] === 'platform' && parts[2] === 'analytics';
+      },
+      { timeout: 60_000 },
+    );
+  }
+
+  /**
+   * Deep-link to the tenant-wide analytics section — `/platform/{tenantKey}/
+   * analytics[/tab]`, with no mentor segment. These routes are only reachable
+   * by URL (or from the sidebar while no agent is selected), so there is no
+   * click-path equivalent of `goto()` here.
+   */
+  async gotoTenantWide(tenantKey: string, tab = ''): Promise<void> {
+    const path = `/platform/${tenantKey}/analytics${tab ? `/${tab}` : ''}`;
+    await this.page.goto(path, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60_000,
+    });
+    await safeWaitForURL(this.page, (url) => url.pathname === path, {
+      timeout: 60_000,
+    });
+    // The tab strip is the one thing `AnalyticsLayout` renders regardless of
+    // how the data queries resolve, so it is the stable "section mounted" cue.
+    await expect(this.overviewTab).toBeVisible({ timeout: 60_000 });
   }
 }

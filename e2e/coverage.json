@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-08-11",
+  "lastUpdated": "2026-08-12",
   "summary": {
-    "totalCheckpoints": 634,
-    "coveredCheckpoints": 603,
+    "totalCheckpoints": 641,
+    "coveredCheckpoints": 610,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 11,
     "pendingCheckpoints": 8,
     "percent": 100,
-    "totalJourneys": 69,
-    "activeJourneys": 68
+    "totalJourneys": 70,
+    "activeJourneys": 69
   },
   "journeys": [
     {
@@ -4021,6 +4021,59 @@
         {
           "id": "slash-16",
           "description": "Skills dropdown button (inside-buttons row, next to Canvas) lists the mentor's enabled skills as name + /slug (no descriptions); selecting inserts the /slug token AT THE CARET with context-aware spacing (highlighted in the composer) and the button shows the armed skill's name with the same ✕ affordance as other active tool pills (✕ disarms without opening the menu); toggling removes the token cleanly; arming another skill replaces the current one (single selection); arming via the \"/\" picker updates the button — both surfaces derive from the composer text so they stay in sync",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "tenant-analytics",
+      "name": "Tenant-wide Analytics",
+      "spec": "68-tenant-analytics.spec.ts",
+      "sourceFiles": [
+        "app/platform/[tenantKey]/analytics/page.tsx",
+        "app/platform/[tenantKey]/analytics/users/page.tsx",
+        "app/platform/[tenantKey]/analytics/topics/page.tsx",
+        "app/platform/[tenantKey]/analytics/transcripts/page.tsx",
+        "app/platform/[tenantKey]/analytics/memory/page.tsx",
+        "app/platform/[tenantKey]/analytics/financial/page.tsx",
+        "app/platform/[tenantKey]/analytics/audit/page.tsx",
+        "app/platform/[tenantKey]/analytics/reports/page.tsx",
+        "app/platform/[tenantKey]/[mentorId]/analytics/_components/analytics-scope-switch.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "tanl-01",
+          "description": "Tenant-wide analytics overview (/platform/{tenantKey}/analytics, no agent segment) renders the tab strip inside the platform shell — the sidebar proves the layout supplies the shell itself",
+          "status": "covered"
+        },
+        {
+          "id": "tanl-02",
+          "description": "Clicking a tab from the tenant-wide overview routes to /platform/{tenantKey}/analytics/{tab} and never reintroduces an agent id",
+          "status": "covered"
+        },
+        {
+          "id": "tanl-03",
+          "description": "Tenant-wide Users, Topics, Transcripts and Costs tabs are reachable by direct URL",
+          "status": "covered"
+        },
+        {
+          "id": "tanl-04",
+          "description": "Tenant-wide Memory page loads with no agent scope (the tab opens on global / all-agent memories)",
+          "status": "covered"
+        },
+        {
+          "id": "tanl-05",
+          "description": "Tenant-wide Data Reports page loads and shows the Data Reports tab",
+          "status": "covered"
+        },
+        {
+          "id": "tanl-06",
+          "description": "Tenant-wide Audit page loads — with no agent to check `view_audit_logs` against, the API is the authority and the container renders its own no-permission card on a 403",
+          "status": "covered"
+        },
+        {
+          "id": "tanl-07",
+          "description": "Scope switch floated over the agent analytics tab strip (retracted pill, prolongs on hover/focus) jumps to the tenant-wide section on the same tab",
           "status": "covered"
         }
       ]
