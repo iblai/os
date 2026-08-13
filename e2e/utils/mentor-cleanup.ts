@@ -125,9 +125,11 @@ export async function deleteMentorById(
     // DM API lives under the `/dm` path on the API base (see config.dmUrl()).
     const url = `${dmBase}/api/ai-mentor/orgs/${encodeURIComponent(tenantKey)}/users/${encodeURIComponent(username)}/${encodeURIComponent(mentorId)}/`;
 
+    // Deliberately short: cleanup runs inside afterAll's 120s budget, and a
+    // DELETE that hangs is far more expensive than one left for the sweeper.
     const res = await page.request.delete(url, {
       headers: { Authorization: `Token ${dmToken}` },
-      timeout: 20_000,
+      timeout: 10_000,
     });
 
     if (res.ok() || res.status() === 404) {
@@ -158,10 +160,26 @@ export class MentorTracker {
     if (mentorId) this.ids.add(mentorId);
   }
 
-  /** Best-effort delete of all tracked mentors using a fresh browser context
-   *  authenticated via the project's storageState. */
-  async deleteAll(browser: Browser, testInfo: TestInfo): Promise<void> {
+  /**
+   * Best-effort delete of all tracked mentors using a fresh browser context
+   * authenticated via the project's storageState.
+   *
+   * Bounded by `budgetMs` (default 60s) because callers run this from
+   * `afterAll`, whose own timeout is 120s. Cleanup previously cost nothing —
+   * it bailed out immediately on a missing env var — so suites with many
+   * tracked mentors never noticed it. Now that it really issues requests, an
+   * unbounded loop of slow DELETEs can exhaust the hook budget and fail the
+   * whole suite (observed on journeys 44/47/66). Leaving a few mentors behind
+   * is strictly better than failing a green run, so this stops at the deadline
+   * and says what it skipped.
+   */
+  async deleteAll(
+    browser: Browser,
+    testInfo: TestInfo,
+    budgetMs = 60_000,
+  ): Promise<void> {
     if (this.ids.size === 0) return;
+    const deadline = Date.now() + budgetMs;
 
     // Derive the browser storageState from the project name, matching how
     // journeys 14 and 60 do it.
@@ -197,7 +215,7 @@ export class MentorTracker {
           // first means the wait below re-settles the page afterwards.
           await tryResolveDmApiBase(page, {
             allowReload: true,
-            timeout: 30_000,
+            timeout: 15_000,
           });
 
           // Wait until dm_token is available in localStorage (set by AuthProvider).
@@ -214,8 +232,28 @@ export class MentorTracker {
         }
       }
 
-      for (const mentorId of this.ids) {
-        await deleteMentorById(page, mentorId);
+      // Deletes are independent, so run them a few at a time rather than
+      // strictly serially — a suite with a dozen tracked mentors would
+      // otherwise spend longer queueing than deleting. Re-check the deadline
+      // between batches so a stalled backend can't run past the hook budget.
+      const pending = [...this.ids];
+      const BATCH = 4;
+      let skipped = 0;
+
+      while (pending.length > 0) {
+        if (Date.now() >= deadline) {
+          skipped = pending.length;
+          break;
+        }
+        const batch = pending.splice(0, BATCH);
+        await Promise.all(batch.map((id) => deleteMentorById(page, id)));
+      }
+
+      if (skipped > 0) {
+        logger.warn(
+          `[MentorTracker] Cleanup budget exhausted — ${skipped} mentor(s) left undeleted. ` +
+            'They will be picked up by the sweeper, if one is configured.',
+        );
       }
       this.ids.clear();
     } catch (err) {
