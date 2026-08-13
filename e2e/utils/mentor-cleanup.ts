@@ -26,11 +26,12 @@
  *    ```
  *
  * API endpoint used:
- *   DELETE {NEXT_PUBLIC_API_BASE_URL}/dm/api/ai-mentor/orgs/{tenantKey}/users/{username}/{mentorId}/
+ *   DELETE {dmBase}/api/ai-mentor/orgs/{tenantKey}/users/{username}/{mentorId}/
  *   Authorization: Token {dm_token}
  *
- * The NEXT_PUBLIC_API_BASE_URL env var is already set in the app's .env.local
- * and is available to Playwright via the dotenv load in playwright.config.ts.
+ * The DM base is resolved at runtime by `dm-api.ts` (env override, else read
+ * off the app's own traffic) — playwright.config.ts loads `e2e/.env*`, not the
+ * app's root `.env`, so NEXT_PUBLIC_API_BASE_URL is usually absent here.
  *
  * WHY API rather than UI:
  *   The UI path (`editMentorPage.settings.deleteMentor()`) requires the page
@@ -54,7 +55,7 @@ import type { Browser, TestInfo } from '@playwright/test';
 import { logger } from '@iblai/iblai-js/playwright';
 import path from 'path';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+import { tryResolveDmApiBase } from './dm-api';
 
 /**
  * Reads auth context from localStorage of an already-navigated page and
@@ -70,9 +71,18 @@ export async function deleteMentorById(
   mentorId: string,
 ): Promise<void> {
   try {
-    if (!API_BASE) {
+    // Resolved from live app traffic when no env override is present. This used
+    // to gate on NEXT_PUBLIC_API_BASE_URL alone, which playwright.config.ts does
+    // not load — so cleanup silently no-opped on every local run and leaked
+    // every mentor the suite created. Reloading is disallowed here: cleanup must
+    // not disturb whatever page state the caller still depends on.
+    const dmBase = await tryResolveDmApiBase(page, {
+      allowReload: false,
+      timeout: 10_000,
+    });
+    if (!dmBase) {
       logger.warn(
-        '[mentor-cleanup] NEXT_PUBLIC_API_BASE_URL is not set — skipping API delete',
+        '[mentor-cleanup] Could not resolve the DM API base (set DM_URL to override) — skipping API delete',
       );
       return;
     }
@@ -113,7 +123,7 @@ export async function deleteMentorById(
     }
 
     // DM API lives under the `/dm` path on the API base (see config.dmUrl()).
-    const url = `${API_BASE}/dm/api/ai-mentor/orgs/${encodeURIComponent(tenantKey)}/users/${encodeURIComponent(username)}/${encodeURIComponent(mentorId)}/`;
+    const url = `${dmBase}/api/ai-mentor/orgs/${encodeURIComponent(tenantKey)}/users/${encodeURIComponent(username)}/${encodeURIComponent(mentorId)}/`;
 
     const res = await page.request.delete(url, {
       headers: { Authorization: `Token ${dmToken}` },
@@ -175,6 +185,21 @@ export class MentorTracker {
             waitUntil: 'domcontentloaded',
             timeout: 60_000,
           });
+
+          // Warm the DM-base cache once on this throwaway page. A reload is
+          // safe here (nothing depends on its state) and guarantees the traffic
+          // to sniff, so the per-mentor deletes below can't no-op just because
+          // the app happened to be idle during their short lookup.
+          //
+          // This runs BEFORE the dm_token wait on purpose: the reload it may
+          // trigger tears down the execution context, and any evaluate racing
+          // that teardown dies with "Execution context was destroyed". Doing it
+          // first means the wait below re-settles the page afterwards.
+          await tryResolveDmApiBase(page, {
+            allowReload: true,
+            timeout: 30_000,
+          });
+
           // Wait until dm_token is available in localStorage (set by AuthProvider).
           await page
             .waitForFunction(() => !!window.localStorage.getItem('dm_token'), {
