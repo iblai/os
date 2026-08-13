@@ -95,21 +95,6 @@ export const hasCanvasEnv = !!(CANVAS_URL && CANVAS_EMAIL && CANVAS_PASSWORD);
 /** Tenant key for the /reports/ page. Auto-derived at runtime if empty. */
 export const PLAYWRIGHT_TENANT_KEY = process.env.PLAYWRIGHT_TENANT_KEY || '';
 
-// ── Datasets pagination fixture (Journey 20) ─────────────────────────────────
-
-/**
- * A mentor pre-seeded with enough datasets (20, at 5/page = 4 pages) to make
- * the Datasets tab's pagination URL-sync assertions deterministic — creating
- * that much data per-test via the UI would be slow and flaky. Defaults to the
- * tenant/mentor seeded for this purpose; override via env if it moves or a
- * different environment needs its own fixture.
- */
-export const DATASETS_PAGINATION_TENANT_KEY =
-  process.env.DATASETS_PAGINATION_TENANT_KEY || 'conradtesttenant';
-export const DATASETS_PAGINATION_MENTOR_ID =
-  process.env.DATASETS_PAGINATION_MENTOR_ID ||
-  'de9c9195-bcd9-4aa4-bba3-e19871240e4e';
-
 // ── Accessibility ────────────────────────────────────────────────────────────
 
 export const WCAG_RANGE = process.env.WCAG_RANGE || '';
