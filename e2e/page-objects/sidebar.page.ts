@@ -1,4 +1,5 @@
 import { Page, Locator, expect } from '@playwright/test';
+import { isVisibleWithin } from '../utils/resilient';
 
 /**
  * Sidebar selectors are scoped to the `<aside>` landmark so that
@@ -186,7 +187,7 @@ export class SidebarPage {
   }
 
   async isVisible(): Promise<boolean> {
-    return this.toggleButton.isVisible({ timeout: 3_000 }).catch(() => false);
+    return isVisibleWithin(this.toggleButton, 3_000);
   }
 
   /**

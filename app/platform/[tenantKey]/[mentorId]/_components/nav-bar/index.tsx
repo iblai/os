@@ -61,6 +61,7 @@ import { AuthModal } from '@/components/modals/auth-modal';
 import {
   cn,
   getLLMProviderDetails,
+  getLLMModelDisplayName,
   isLoggedIn,
   isStripeActivated,
   redirectToAuthSpa,
@@ -387,8 +388,11 @@ export function NavBar() {
 
   const selectedMentorName =
     mentorSettingsCombinedPublicAndPrivate?.mentorName || '';
-  const selectedMentorCategory =
-    mentorSettingsCombinedPublicAndPrivate?.llmName ?? '';
+  // Mentor settings persist the model's wire key, not its label, so map the
+  // keys whose raw form is not presentable (`iblai` -> "ibl.ai").
+  const selectedMentorCategory = getLLMModelDisplayName(
+    mentorSettingsCombinedPublicAndPrivate?.llmName,
+  );
 
   // Map MentorSegment → SDK CategorizedItem. The SDK's
   // `CategorizedDropdownMenu` owns the 3-column / mobile-accordion layout

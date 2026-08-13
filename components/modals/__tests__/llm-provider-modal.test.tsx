@@ -192,8 +192,46 @@ describe('LLMProviderModal', () => {
     ).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Search')).toBeInTheDocument();
 
+    expect(screen.getByText('GPT-4')).toBeInTheDocument();
+    expect(screen.getByText('GPT-3.5')).toBeInTheDocument();
+  });
+
+  it('labels rows with the API display name, not the wire key', () => {
+    // Regression: rows rendered `llm_name`, so ibl.ai's model showed as
+    // "iblai" and Bedrock's as "amazon.nova-2-lite-v1:0". The API ships a
+    // human label per model; the raw key is the identifier, not the label.
+    render(<LLMProviderModal {...baseProps()} />);
+
+    expect(screen.getByText('GPT-4')).toBeInTheDocument();
+    expect(screen.queryByText('gpt-4')).not.toBeInTheDocument();
+  });
+
+  it('falls back to the wire key when the API omits a display name', () => {
+    const provider = buildProvider();
+    // @ts-expect-error - exercising a payload where the label is absent
+    delete provider.chat_models[0].display_name;
+
+    render(<LLMProviderModal {...baseProps()} llmProvider={provider} />);
+
     expect(screen.getByText('gpt-4')).toBeInTheDocument();
-    expect(screen.getByText('gpt-3.5')).toBeInTheDocument();
+  });
+
+  it('searches on the visible label as well as the wire key', () => {
+    render(<LLMProviderModal {...baseProps()} />);
+
+    // Typing what is on screen has to work...
+    fireEvent.change(screen.getByPlaceholderText('Search'), {
+      target: { value: 'GPT-3.5' },
+    });
+    expect(screen.getByText('GPT-3.5')).toBeInTheDocument();
+    expect(screen.queryByText('GPT-4')).not.toBeInTheDocument();
+
+    // ...and so does the raw key, for anyone who knows it.
+    fireEvent.change(screen.getByPlaceholderText('Search'), {
+      target: { value: 'gpt-4' },
+    });
+    expect(screen.getByText('GPT-4')).toBeInTheDocument();
+    expect(screen.queryByText('GPT-3.5')).not.toBeInTheDocument();
   });
 
   it('does not crash when the provider has no chat_models array', () => {
@@ -210,7 +248,7 @@ describe('LLMProviderModal', () => {
     expect(() => render(<LLMProviderModal {...props} />)).not.toThrow();
     // The dialog shell still renders; there are just no cloud model rows.
     expect(screen.getByText('LLM Selection')).toBeInTheDocument();
-    expect(screen.queryByText('gpt-4')).not.toBeInTheDocument();
+    expect(screen.queryByText('GPT-4')).not.toBeInTheDocument();
   });
 
   it('lists available (installed) local models before unavailable (downloadable) ones', () => {
@@ -246,7 +284,7 @@ describe('LLMProviderModal', () => {
     );
 
     const ready = screen.getByText('Alpha Ready');
-    const cloud = screen.getByText('gpt-4');
+    const cloud = screen.getByText('GPT-4');
     // The installed local model precedes the unavailable cloud model.
     expect(
       ready.compareDocumentPosition(cloud) & Node.DOCUMENT_POSITION_FOLLOWING,
@@ -301,14 +339,14 @@ describe('LLMProviderModal', () => {
     render(<LLMProviderModal {...baseProps()} />);
 
     // gpt-4 is the active model (matches mentorSettings) -> disabled + active styling.
-    const activeBtn = screen.getByText('gpt-4').closest('button')!;
+    const activeBtn = screen.getByText('GPT-4').closest('button')!;
     expect(activeBtn).toBeDisabled();
     expect(activeBtn.className).toContain('border-blue-500');
     const activeImg = activeBtn.querySelector('img')!;
     expect(activeImg.className).not.toContain('grayscale');
 
     // gpt-3.5 is selectable.
-    const otherBtn = screen.getByText('gpt-3.5').closest('button')!;
+    const otherBtn = screen.getByText('GPT-3.5').closest('button')!;
     expect(otherBtn).not.toBeDisabled();
   });
 
@@ -316,7 +354,7 @@ describe('LLMProviderModal', () => {
     const props = baseProps();
     render(<LLMProviderModal {...props} />);
 
-    fireEvent.click(screen.getByText('gpt-3.5').closest('button')!);
+    fireEvent.click(screen.getByText('GPT-3.5').closest('button')!);
 
     expect(props.onSelect).toHaveBeenCalledWith('openai', 'gpt-3.5');
   });
@@ -325,7 +363,7 @@ describe('LLMProviderModal', () => {
     mockSwitchLLm = false;
     render(<LLMProviderModal {...baseProps()} />);
 
-    const otherBtn = screen.getByText('gpt-3.5').closest('button')!;
+    const otherBtn = screen.getByText('GPT-3.5').closest('button')!;
     expect(otherBtn).toBeDisabled();
     // Non-active + disabled -> grayscale logo branch.
     expect(otherBtn.querySelector('img')!.className).toContain('grayscale');
@@ -335,14 +373,14 @@ describe('LLMProviderModal', () => {
     mockSwitchProvider = false;
     render(<LLMProviderModal {...baseProps()} />);
 
-    expect(screen.getByText('gpt-3.5').closest('button')!).toBeDisabled();
+    expect(screen.getByText('GPT-3.5').closest('button')!).toBeDisabled();
   });
 
   it('disables the search input and all models while a selection is in flight', () => {
     render(<LLMProviderModal {...baseProps()} isSelecting />);
 
     expect(screen.getByPlaceholderText('Search')).toBeDisabled();
-    expect(screen.getByText('gpt-3.5').closest('button')!).toBeDisabled();
+    expect(screen.getByText('GPT-3.5').closest('button')!).toBeDisabled();
   });
 
   it('filters the model grid by the search query (case-insensitive)', () => {
@@ -352,8 +390,8 @@ describe('LLMProviderModal', () => {
       target: { value: 'GPT-3' },
     });
 
-    expect(screen.getByText('gpt-3.5')).toBeInTheDocument();
-    expect(screen.queryByText('gpt-4')).not.toBeInTheDocument();
+    expect(screen.getByText('GPT-3.5')).toBeInTheDocument();
+    expect(screen.queryByText('GPT-4')).not.toBeInTheDocument();
   });
 
   it('renders no model buttons when the query matches nothing', () => {
@@ -363,8 +401,8 @@ describe('LLMProviderModal', () => {
       target: { value: 'no-such-model' },
     });
 
-    expect(screen.queryByText('gpt-4')).not.toBeInTheDocument();
-    expect(screen.queryByText('gpt-3.5')).not.toBeInTheDocument();
+    expect(screen.queryByText('GPT-4')).not.toBeInTheDocument();
+    expect(screen.queryByText('GPT-3.5')).not.toBeInTheDocument();
   });
 
   it('keeps a just-completed download "installed" before the tags refresh lands', () => {
@@ -586,7 +624,7 @@ describe('LLMProviderModal', () => {
         const props = baseProps();
         render(<LLMProviderModal {...props} />);
 
-        fireEvent.click(screen.getByText('gpt-3.5').closest('button')!);
+        fireEvent.click(screen.getByText('GPT-3.5').closest('button')!);
 
         expect(setLocalLLMEnabled).toHaveBeenCalledWith(false);
         expect(dispatched).toEqual([LOCAL_LLM_CHANGED_EVENT]);
@@ -600,7 +638,7 @@ describe('LLMProviderModal', () => {
       const props = baseProps();
       render(<LLMProviderModal {...props} />);
 
-      fireEvent.click(screen.getByText('gpt-3.5').closest('button')!);
+      fireEvent.click(screen.getByText('GPT-3.5').closest('button')!);
 
       expect(setLocalLLMEnabled).not.toHaveBeenCalled();
       expect(props.onSelect).toHaveBeenCalledWith('openai', 'gpt-3.5');
