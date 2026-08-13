@@ -25,6 +25,13 @@ const DM_API_URL_RE = /^(.*?)\/api\/(?:ai-index|ai-mentor|core)\//;
 /** One resolved base per page — sniffing can cost a reload, so do it once. */
 const dmBaseCache = new WeakMap<Page, string>();
 
+/**
+ * Pages whose lookup already failed. Cached so callers that resolve per item
+ * (cleanup loops) pay the timeout once rather than once per item — that
+ * multiplication is what pushed afterAll hooks past their budget.
+ */
+const dmBaseFailed = new WeakSet<Page>();
+
 /** Env overrides, most explicit first. `DM_URL` already exists in `.env.example`. */
 function baseFromEnv(): string {
   const raw =
@@ -52,6 +59,9 @@ export async function resolveDmApiBase(
 
   const cached = dmBaseCache.get(page);
   if (cached) return cached;
+  if (dmBaseFailed.has(page)) {
+    throw new Error('[dm-api] DM API base lookup already failed for this page');
+  }
 
   const fromEnv = baseFromEnv();
   if (fromEnv) {
@@ -76,6 +86,7 @@ export async function resolveDmApiBase(
 
   const base = await pending;
   if (!base) {
+    dmBaseFailed.add(page);
     throw new Error(
       '[dm-api] Could not determine the DM API base — no /api/ai-index|ai-mentor|core request ' +
         'was observed. Set DM_URL to override.',
