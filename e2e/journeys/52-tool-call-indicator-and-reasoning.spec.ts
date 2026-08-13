@@ -36,10 +36,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     // tenant, so the agent never responds. Pin the LLM to gpt-5, the model
     // confirmed to stream responses (and tool calls) here.
     await editMentorPage.navigateToTab('LLM');
-    await editMentorPage.llm.selectProviderAndModel(
-      'OpenAI',
-      'OpenAI icon gpt-5',
-    );
+    await editMentorPage.llm.selectProviderAndModel('OpenAI', 'gpt-5');
     await editMentorPage.navigateToTab('Tools');
     await editMentorPage.tools.enableTool('Web Search');
     await editMentorPage.close();
@@ -120,10 +117,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     // tenant, so the agent never responds. Pin the LLM to gpt-5, the model
     // confirmed to stream responses (and tool calls) here.
     await editMentorPage.navigateToTab('LLM');
-    await editMentorPage.llm.selectProviderAndModel(
-      'OpenAI',
-      'OpenAI icon gpt-5',
-    );
+    await editMentorPage.llm.selectProviderAndModel('OpenAI', 'gpt-5');
     await editMentorPage.navigateToTab('Tools');
     await editMentorPage.tools.enableTool('Web Search');
     await editMentorPage.close();
@@ -206,10 +200,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     // tenant, so the agent never responds. Pin the LLM to gpt-5, the model
     // confirmed to stream responses (and tool calls) here.
     await editMentorPage.navigateToTab('LLM');
-    await editMentorPage.llm.selectProviderAndModel(
-      'OpenAI',
-      'OpenAI icon gpt-5',
-    );
+    await editMentorPage.llm.selectProviderAndModel('OpenAI', 'gpt-5');
     await editMentorPage.navigateToTab('Tools');
     await editMentorPage.tools.enableTool('Web Search');
     await editMentorPage.close();
@@ -313,10 +304,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     // tenant, so the agent never responds. Pin the LLM to gpt-5, the model
     // confirmed to stream responses (and tool calls) here.
     await editMentorPage.navigateToTab('LLM');
-    await editMentorPage.llm.selectProviderAndModel(
-      'OpenAI',
-      'OpenAI icon gpt-5',
-    );
+    await editMentorPage.llm.selectProviderAndModel('OpenAI', 'gpt-5');
     await editMentorPage.navigateToTab('Tools');
     await editMentorPage.tools.enableTool('Web Search');
     await editMentorPage.close();
@@ -364,10 +352,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     await editMentorPage.open('Settings');
     await editMentorPage.settings.setVerboseReasoning(true);
     await editMentorPage.navigateToTab('LLM');
-    await editMentorPage.llm.selectProviderAndModel(
-      'OpenAI',
-      'OpenAI icon gpt-5',
-    );
+    await editMentorPage.llm.selectProviderAndModel('OpenAI', 'gpt-5');
     await editMentorPage.close();
 
     // Send a question that triggers reasoning
@@ -475,10 +460,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     // assertion checks that no reasoning section appears for a model that emits
     // no reasoning tokens (not merely that the agent failed to respond).
     await editMentorPage.navigateToTab('LLM');
-    await editMentorPage.llm.selectProviderAndModel(
-      'OpenAI',
-      'OpenAI icon gpt-4o',
-    );
+    await editMentorPage.llm.selectProviderAndModel('OpenAI', 'gpt-4o');
     await editMentorPage.close();
 
     await chatPage.sendMessage('Explain the theory of relativity in detail');
@@ -528,10 +510,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
 
     // Set LLM to gpt-5
     await editMentorPage.navigateToTab('LLM');
-    await editMentorPage.llm.selectProviderAndModel(
-      'OpenAI',
-      'OpenAI icon gpt-5',
-    );
+    await editMentorPage.llm.selectProviderAndModel('OpenAI', 'gpt-5');
 
     // Enable Web Search
     await editMentorPage.navigateToTab('Tools');
@@ -637,10 +616,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     );
     // Pin to gpt-5 so the agent actually streams a response (and runs the tool).
     await editMentorPage.navigateToTab('LLM');
-    await editMentorPage.llm.selectProviderAndModel(
-      'OpenAI',
-      'OpenAI icon gpt-5',
-    );
+    await editMentorPage.llm.selectProviderAndModel('OpenAI', 'gpt-5');
     await editMentorPage.navigateToTab('Tools');
     await editMentorPage.tools.enableTool('Web Search');
     await editMentorPage.close();

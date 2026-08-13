@@ -1,5 +1,96 @@
 # Changelog
 
+## [0.126.0](https://github.com/iblai/os/compare/v0.125.2...v0.126.0) (2026-08-13)
+
+### Features
+
+- **llm:** map the ibl.ai model key to its brand spelling ([be167a3](https://github.com/iblai/os/commit/be167a357e909fedbe711fc0ee2c200f16812f1a))
+
+### Bug Fixes
+
+- **llm:** label model rows with the API display name ([2a2af60](https://github.com/iblai/os/commit/2a2af6004810ec45874fec311c500b0ee0cae045))
+- **llm:** show the ibl.ai label in the nav bar and mentors table ([457bf60](https://github.com/iblai/os/commit/457bf602de7ece75ecc4d2595ee8ffa4055721fc))
+
+### Documentation
+
+- **e2e:** record the new LLM tab checkpoints ([5b08a3e](https://github.com/iblai/os/commit/5b08a3eae39942a7104f3f2a2738906899e114f0))
+
+### Tests
+
+- **e2e:** add provider-card accessors to the LLM tab page object ([9eaaeab](https://github.com/iblai/os/commit/9eaaeab91d696ae2bc0aaa503fa4438cec70f853))
+- **e2e:** cover the ibl.ai logo, provider ordering and graying ([269dfca](https://github.com/iblai/os/commit/269dfca2ab91ac1f09824ad77f851c31414ed747)), closes [#2318](https://github.com/iblai/os/issues/2318)
+- **e2e:** select model rows by wire key, not visible label ([e4002ec](https://github.com/iblai/os/commit/e4002ec07db4ac78dcd4caa762f958a2d776cc81))
+
+## [0.125.2](https://github.com/iblai/os/compare/v0.125.1...v0.125.2) (2026-08-13)
+
+### Bug Fixes
+
+- **e2e:** restore the locator receiver dropped by the isVisibleWithin sweep ([cde2b20](https://github.com/iblai/os/commit/cde2b20d896ac5eaf735f7c43f12fe2802c0f300))
+- **e2e:** scope copy-mentor heading lookup to the visible h1 ([d80046e](https://github.com/iblai/os/commit/d80046efc55c0002d3b34d749daaa655c6ff3c0b))
+
+### Chores
+
+- **format:** apply prettier to pre-existing drift ([0688de9](https://github.com/iblai/os/commit/0688de9fd4ec55da8470914a1c93816dde73f3e1))
+
+### Tests
+
+- **e2e:** add isVisibleWithin helper ([86b58d5](https://github.com/iblai/os/commit/86b58d53e7aaef160f051794e7eba453bd325b7d))
+- **e2e:** expand the sidebar before opening the Create Agent flow ([34e2a8e](https://github.com/iblai/os/commit/34e2a8e8f485be9350aa84bbf2d7b421b8ddd1a0))
+- **e2e:** give Edit Agent tab activation a realistic budget ([0af360a](https://github.com/iblai/os/commit/0af360a54a3f3cd97f6a4a5b445c1b91827944f7))
+- **e2e:** use isVisibleWithin for conditional checks in page objects ([8ea41d0](https://github.com/iblai/os/commit/8ea41d0ff99a8b1d1771c11b914da8e80df95883))
+- **e2e:** wait for the mentor URL to settle after landing ([8c42843](https://github.com/iblai/os/commit/8c428433a153ccffa9a614a278675f33651db5ea))
+
+## [0.125.1](https://github.com/iblai/os/compare/v0.125.0...v0.125.1) (2026-08-12)
+
+### Bug Fixes
+
+- **csp:** allow the asset CDN origin in style/font/connect-src ([0ccd436](https://github.com/iblai/os/commit/0ccd436df76341a503b91e63cad532895339890f))
+
+## [0.125.0](https://github.com/iblai/os/compare/v0.124.1...v0.125.0) (2026-08-12)
+
+### Features
+
+- **mentor:** adding feat for the skills change for / search ([c213d2b](https://github.com/iblai/os/commit/c213d2b9347c01ed70487b86d997fbe0ccfaab1b))
+
+### Bug Fixes
+
+- **e2e-test:** adding fix for the e2e tests ([02585a3](https://github.com/iblai/os/commit/02585a3a862d6ddae24f05a952d83536742ba75d))
+- **iblai-js:** fixes for agent skills and e2e tests ([b3eb72f](https://github.com/iblai/os/commit/b3eb72f80f02007115fd3b746eaca6f472231c78))
+- **mentor:** adding fix for the skill dropdown next to canvas ([d272fb9](https://github.com/iblai/os/commit/d272fb9a69df8ad2f3811cb91b909f404d670a16))
+- **mentor:** adding skill dropdwon for the skill in chat ([3409134](https://github.com/iblai/os/commit/3409134a7c6651c7d7f3af47239a9bbbe62b79cf))
+- **mentor:** fix for the pnpm lock ([3c69276](https://github.com/iblai/os/commit/3c692763e36ce79b25c66d0f8d73c88931f5c264))
+- **mentor:** fix for the test in agent skills ([cbaafe8](https://github.com/iblai/os/commit/cbaafe8ca40dbb8ff5e97c3e344d4dd64356e51c))
+
+## [0.124.1](https://github.com/iblai/os/compare/v0.124.0...v0.124.1) (2026-08-11)
+
+### Bug Fixes
+
+- **seo:** correctly-cased agent titles + server-rendered h1 ([21c132c](https://github.com/iblai/os/commit/21c132c8b8a981970cba7b2d86737fd8d0e0d7c9)), closes [#401](https://github.com/iblai/os/issues/401)
+
+## [0.124.0](https://github.com/iblai/os/compare/v0.123.0...v0.124.0) (2026-08-11)
+
+### Features
+
+- **ci:** tenant-locked app builds (IBL_TENANT) with per-tenant releases ([5cccd5c](https://github.com/iblai/os/commit/5cccd5c4227b668c63bf1f54fff82a3956f625e5))
+
+### Chores
+
+- **ci:** remove the non-functional "Hide .app extension" DMG step ([c00406f](https://github.com/iblai/os/commit/c00406fe54e5389e435b9593892cc3bfd1326146))
+
+## [0.123.0](https://github.com/iblai/os/compare/v0.122.3...v0.123.0) (2026-08-11)
+
+### Features
+
+- **deploy:** immutable, deployment-ID-namespaced static hosting (opt-in) ([ee728ec](https://github.com/iblai/os/commit/ee728ec1155d9fe9a586e3fdffe07c0409426624))
+
+### Documentation
+
+- **deploy:** target AWS S3 + CloudFront (assets.ibl.ai) ([eacb176](https://github.com/iblai/os/commit/eacb176d6dba02cb2af1fd08da703d863d6d3137))
+
+### CI
+
+- **deploy:** wire versioned S3 static publish into the SPA docker build ([6700119](https://github.com/iblai/os/commit/670011965411114f6bed7b50f78f18f8e5fd8e06))
+
 ## [0.122.3](https://github.com/iblai/os/compare/v0.122.2...v0.122.3) (2026-08-11)
 
 ### Bug Fixes

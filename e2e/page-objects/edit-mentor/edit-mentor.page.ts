@@ -1,7 +1,7 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { CreateMentorPage } from '../create-mentor.page';
 import { SidebarPage } from '../sidebar.page';
-import { waitForPageReady } from '../../utils/resilient';
+import { waitForPageReady, isVisibleWithin } from '../../utils/resilient';
 import { SettingsTab } from './settings.tab';
 import { LlmTab } from './llm.tab';
 import { ToolsTab } from './tools.tab';
@@ -18,6 +18,7 @@ import { AccessTab } from './access.tab';
 import { PrivacyTab } from './privacy.tab';
 import { TasksTab } from './tasks.tab';
 import { VoiceTab } from './voice.tab';
+import { SkillsTab } from './skills.tab';
 import { ScreenShareTab } from './screenshare.tab';
 import { HumanSupportTab } from './human-support.tab';
 import { LtiTab } from './lti.tab';
@@ -40,14 +41,14 @@ const TAB_CATEGORY: Record<
   // Configurations
   Settings: 'Configurations',
   LLM: 'Configurations',
-  Voice: 'Configurations',
-  Screen: 'Configurations',
   Prompts: 'Configurations',
   Skills: 'Configurations',
-  Grader: 'Configurations',
-  Safety: 'Configurations',
+  Voice: 'Configurations',
   Privacy: 'Configurations',
+  Safety: 'Configurations',
   Disclaimers: 'Configurations',
+  Screen: 'Configurations',
+  Grader: 'Configurations',
   // Integrations
   Sandbox: 'Integrations',
   Access: 'Integrations',
@@ -93,6 +94,7 @@ export class EditMentorPage {
   readonly screenshare: ScreenShareTab;
   readonly humanSupport: HumanSupportTab;
   readonly lti: LtiTab;
+  readonly skills: SkillsTab;
   readonly grader: GraderTab;
   readonly copyMentorDialog: CopyMentorPage;
 
@@ -122,6 +124,7 @@ export class EditMentorPage {
     this.screenshare = new ScreenShareTab(page, this.dialog);
     this.humanSupport = new HumanSupportTab(page, this.dialog);
     this.lti = new LtiTab(page, this.dialog);
+    this.skills = new SkillsTab(page, this.dialog);
     this.grader = new GraderTab(page, this.dialog);
     this.copyMentorDialog = new CopyMentorPage(page);
 
@@ -562,7 +565,7 @@ export class EditMentorPage {
           await expect(categoryTab.first()).toHaveAttribute(
             'data-state',
             'active',
-            { timeout: 5_000 },
+            { timeout: 15_000 },
           );
         }
       }
@@ -596,7 +599,7 @@ export class EditMentorPage {
       // Wait for the tab to register as active; this is more reliable than
       // a fixed sleep across slow/fast machines.
       await expect(tab).toHaveAttribute('data-state', 'active', {
-        timeout: 5_000,
+        timeout: 15_000,
       });
     }
   }
@@ -690,6 +693,6 @@ export class EditMentorPage {
   }
 
   async isOpen(): Promise<boolean> {
-    return this.dialog.isVisible({ timeout: 2_000 }).catch(() => false);
+    return isVisibleWithin(this.dialog, 2_000);
   }
 }

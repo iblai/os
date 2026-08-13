@@ -612,6 +612,28 @@ export function getLLMProviderDetails(llmProvider: string, llmName?: string) {
   );
 }
 
+// Model wire keys whose raw form is not presentable, keyed the same way as
+// PROVIDER_NAME_BY_ALIAS (lowercased, alphanumerics only).
+const MODEL_DISPLAY_NAME_BY_KEY: Record<string, string> = {
+  iblai: 'ibl.ai',
+};
+
+/**
+ * The label to show for a mentor's selected model.
+ *
+ * The LLM picker gets a `display_name` per model straight from the API, but
+ * mentor settings persist only `llm_name` — a wire key — so surfaces that read
+ * from settings (the nav bar badge, the mentors table) have no label to fall
+ * back on and would render `iblai`. Most keys are already presentable
+ * (`gpt-4.1`), so this maps only the ones that are not and passes everything
+ * else through untouched.
+ */
+export function getLLMModelDisplayName(llmName?: string | null): string {
+  const raw = llmName ?? '';
+  const normalized = raw.toLowerCase().replace(/[^a-z0-9]/g, '');
+  return MODEL_DISPLAY_NAME_BY_KEY[normalized] ?? raw;
+}
+
 /**
  * Compares two raw provider names by the label the user actually sees on the
  * card — `getLLMProviderDetails(name).name` — not by the backend key. The two

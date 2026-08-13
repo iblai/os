@@ -1,6 +1,24 @@
 import { Page, Locator, expect } from '@playwright/test';
 
 /**
+ * True when the locator becomes visible within `timeout`.
+ *
+ * Prefer this over `locator.isVisible({ timeout })`: `isVisible()` never waits
+ * (its `timeout` option is a deprecated no-op), so it reads whatever the DOM
+ * holds at that exact instant. A transient app-chrome remount then reads as
+ * "not there" and callers silently skip required setup.
+ */
+export async function isVisibleWithin(
+  locator: Locator,
+  timeout = 5_000,
+): Promise<boolean> {
+  return locator
+    .waitFor({ state: 'visible', timeout })
+    .then(() => true)
+    .catch(() => false);
+}
+
+/**
  * Wait for an element to be attached and visible, with a stability pause.
  */
 export async function waitForElementStable(
