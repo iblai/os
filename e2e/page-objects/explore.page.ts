@@ -1,4 +1,5 @@
 import { Page, Locator, expect } from '@playwright/test';
+import { isVisibleWithin } from '../utils/resilient';
 
 export class ExplorePage {
   readonly page: Page;
@@ -107,9 +108,7 @@ export class ExplorePage {
   async selectOption(optionName: string | RegExp): Promise<void> {
     const option = this.page.getByRole('option', { name: optionName });
     const menuItem = this.page.getByRole('menuitem', { name: optionName });
-    const visible = await option
-      .isVisible({ timeout: 3_000 })
-      .catch(() => false);
+    const visible = await isVisibleWithin(option, 3_000);
     if (visible) {
       await option.click();
     } else {

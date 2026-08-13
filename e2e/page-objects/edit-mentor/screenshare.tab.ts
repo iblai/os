@@ -1,4 +1,5 @@
 import { Page, Locator, expect } from '@playwright/test';
+import { isVisibleWithin } from '../../utils/resilient';
 
 /**
  * Accessible name of the tab panel's own heading.
@@ -99,7 +100,7 @@ export class ScreenShareTab {
   }
 
   async isVisible(): Promise<boolean> {
-    return this.tabLink.isVisible({ timeout: 5_000 }).catch(() => false);
+    return isVisibleWithin(this.tabLink, 5_000);
   }
 
   /**

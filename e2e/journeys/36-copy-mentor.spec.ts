@@ -132,7 +132,7 @@ test.describe('Journey 36: Copy Mentor', () => {
 
     const expectedCopyName = `Copy of ${mentorName}`;
     const mentorHeading = page
-      .locator('h1')
+      .locator('h1:not(.sr-only)')
       .filter({ hasText: new RegExp(expectedCopyName) });
     await expect(mentorHeading).toBeVisible({ timeout: 30_000 });
     logger.info(`Navigated to copied mentor: ${expectedCopyName}`);
@@ -158,7 +158,7 @@ test.describe('Journey 36: Copy Mentor', () => {
     await copyMentorDialog.submitCopy();
 
     const mentorHeading = page
-      .locator('h1')
+      .locator('h1:not(.sr-only)')
       .filter({ hasText: new RegExp(`^${customName}$`) });
     await expect(mentorHeading).toBeVisible({ timeout: 30_000 });
     logger.info(`Navigated to custom-named copy: ${customName}`);
@@ -209,7 +209,7 @@ test.describe('Journey 36: Copy Mentor', () => {
 
     const expectedCopyName = `Copy of ${mentorName}`;
     const mentorHeading = page
-      .locator('h1')
+      .locator('h1:not(.sr-only)')
       .filter({ hasText: new RegExp(expectedCopyName) });
     await expect(mentorHeading).toBeVisible({ timeout: 30_000 });
     logger.info(`Copied mentor without training data: ${expectedCopyName}`);

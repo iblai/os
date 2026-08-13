@@ -22,7 +22,7 @@ import {
   type ChatPrivacyMode,
   type ChatPrivacyToggleState,
 } from '@iblai/iblai-js/playwright';
-import { reliableClick } from '../utils/resilient';
+import { reliableClick, isVisibleWithin } from '../utils/resilient';
 
 /**
  * Page object for the Chat Privacy feature.
@@ -644,9 +644,7 @@ export class ChatPrivacyPage {
     await editMentorPage.open('Settings');
     try {
       await editMentorPage.settings.selectSubTab('Capabilities');
-      const rowPresent = await this.agentPrivacySwitch
-        .isVisible({ timeout: 10_000 })
-        .catch(() => false);
+      const rowPresent = await isVisibleWithin(this.agentPrivacySwitch, 10_000);
       if (!rowPresent) {
         // Row is gated on the tenant gate. Caller should have ensured
         // gate ON first; we log and bail rather than asserting false.
@@ -671,9 +669,7 @@ export class ChatPrivacyPage {
     await editMentorPage.open('Settings');
     try {
       await editMentorPage.settings.selectSubTab('Capabilities');
-      const visible = await this.agentPrivacySwitch
-        .isVisible({ timeout: 10_000 })
-        .catch(() => false);
+      const visible = await isVisibleWithin(this.agentPrivacySwitch, 10_000);
       if (!visible) return null;
       return await this.getAgentPrivacyState();
     } finally {

@@ -1,6 +1,11 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { safeWaitForURL } from '../utils/navigation';
-import { waitForPageReady, reliableClick } from '../utils/resilient';
+import {
+  waitForPageReady,
+  reliableClick,
+  isVisibleWithin,
+} from '../utils/resilient';
+import { SidebarPage } from './sidebar.page';
 
 export class CreateMentorPage {
   readonly page: Page;
@@ -52,11 +57,15 @@ export class CreateMentorPage {
    * Agents first and only then click New Agent.
    */
   async open(): Promise<void> {
+    // "New Agent" only mounts at full sidebar width, and the sidebar starts in
+    // its icon-rail form unless a `sidebar_state=true` cookie is present.
+    await new SidebarPage(this.page).ensureExpanded();
+
     const agentsTrigger = this.page.getByRole('button', {
       name: 'Agents',
       exact: true,
     });
-    if (await agentsTrigger.isVisible({ timeout: 5_000 }).catch(() => false)) {
+    if (await isVisibleWithin(agentsTrigger, 15_000)) {
       const expanded = await agentsTrigger
         .getAttribute('aria-expanded')
         .catch(() => null);
@@ -174,7 +183,7 @@ export class CreateMentorPage {
   }
 
   async isOpen(): Promise<boolean> {
-    return this.dialog.isVisible({ timeout: 2_000 }).catch(() => false);
+    return isVisibleWithin(this.dialog, 2_000);
   }
 
   async close(): Promise<void> {
