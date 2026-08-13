@@ -218,7 +218,7 @@ export class LtiTab {
    */
   async isTabVisible(): Promise<boolean> {
     await this.activateCategory();
-    return this.tabTrigger.isVisibleWithin(first(), 5_000);
+    return isVisibleWithin(this.tabTrigger.first(), 5_000);
   }
 
   /** Assert the LTI tab IS present in the sidebar (Integrations category). */

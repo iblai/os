@@ -32,7 +32,7 @@ export class HistoryTab {
   }
 
   async hasConversations(): Promise<boolean> {
-    return this.conversationRows.isVisibleWithin(first(), 15_000);
+    return isVisibleWithin(this.conversationRows.first(), 15_000);
   }
 
   async clickFirstRow(): Promise<void> {

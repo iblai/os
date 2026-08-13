@@ -231,7 +231,7 @@ export class SettingsTab {
     const opt = this.page.locator('div[role="option"]').filter({
       hasText: new RegExp(`^${label}$`, 'i'),
     });
-    const radixVisible = await opt.isVisibleWithin(first(), 3_000);
+    const radixVisible = await isVisibleWithin(opt.first(), 3_000);
     if (radixVisible) {
       await opt.first().click();
     } else {
@@ -255,7 +255,7 @@ export class SettingsTab {
     const opt = this.page.locator('div[role="option"]').filter({
       hasText: new RegExp(`^${label}$`, 'i'),
     });
-    const radixVisible = await opt.isVisibleWithin(first(), 3_000);
+    const radixVisible = await isVisibleWithin(opt.first(), 3_000);
     if (radixVisible) {
       await opt.first().click();
     } else {

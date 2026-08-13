@@ -575,8 +575,8 @@ export class MemoryTab {
    * Manage Categories modal. Assumes the modal is already open.
    */
   async hasCategory(name: string): Promise<boolean> {
-    return this.categoriesDialog.isVisibleWithin(
-      getByText(name, { exact: true }),
+    return isVisibleWithin(
+      this.categoriesDialog.getByText(name, { exact: true }),
       3_000,
     );
   }
