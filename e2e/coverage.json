@@ -1235,22 +1235,22 @@
         },
         {
           "id": "ds-23",
-          "description": "Clicking a pagination page number pushes datasetsPage into the URL (seeded multi-page mentor)",
+          "description": "Clicking a pagination page number pushes datasetsPage into the URL (self-seeded multi-page mentor)",
           "status": "covered"
         },
         {
           "id": "ds-24",
-          "description": "Browser Back/Forward walk the visited datasetsPage values (seeded multi-page mentor)",
+          "description": "Browser Back/Forward walk the visited datasetsPage values (self-seeded multi-page mentor)",
           "status": "covered"
         },
         {
           "id": "ds-25",
-          "description": "Searching while on a later page drops datasetsPage and sets datasetsSearch (seeded multi-page mentor)",
+          "description": "Searching while on a later page drops datasetsPage and sets datasetsSearch (self-seeded multi-page mentor)",
           "status": "covered"
         },
         {
           "id": "ds-26",
-          "description": "Reloading the page while paginated restores datasetsPage and the active page (seeded multi-page mentor)",
+          "description": "Reloading the page while paginated restores datasetsPage and the active page (self-seeded multi-page mentor)",
           "status": "covered"
         }
       ]
