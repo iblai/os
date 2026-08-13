@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.125.2](https://github.com/iblai/os/compare/v0.125.1...v0.125.2) (2026-08-13)
+
+### Bug Fixes
+
+* **e2e:** restore the locator receiver dropped by the isVisibleWithin sweep ([cde2b20](https://github.com/iblai/os/commit/cde2b20d896ac5eaf735f7c43f12fe2802c0f300))
+* **e2e:** scope copy-mentor heading lookup to the visible h1 ([d80046e](https://github.com/iblai/os/commit/d80046efc55c0002d3b34d749daaa655c6ff3c0b))
+
+### Chores
+
+* **format:** apply prettier to pre-existing drift ([0688de9](https://github.com/iblai/os/commit/0688de9fd4ec55da8470914a1c93816dde73f3e1))
+
+### Tests
+
+* **e2e:** add isVisibleWithin helper ([86b58d5](https://github.com/iblai/os/commit/86b58d53e7aaef160f051794e7eba453bd325b7d))
+* **e2e:** expand the sidebar before opening the Create Agent flow ([34e2a8e](https://github.com/iblai/os/commit/34e2a8e8f485be9350aa84bbf2d7b421b8ddd1a0))
+* **e2e:** give Edit Agent tab activation a realistic budget ([0af360a](https://github.com/iblai/os/commit/0af360a54a3f3cd97f6a4a5b445c1b91827944f7))
+* **e2e:** use isVisibleWithin for conditional checks in page objects ([8ea41d0](https://github.com/iblai/os/commit/8ea41d0ff99a8b1d1771c11b914da8e80df95883))
+* **e2e:** wait for the mentor URL to settle after landing ([8c42843](https://github.com/iblai/os/commit/8c428433a153ccffa9a614a278675f33651db5ea))
+
 ## [0.125.1](https://github.com/iblai/os/compare/v0.125.0...v0.125.1) (2026-08-12)
 
 ### Bug Fixes
