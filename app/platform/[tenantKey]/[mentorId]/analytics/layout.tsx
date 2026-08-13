@@ -85,11 +85,13 @@ export default function AnalyticsLayoutWrapper({
       >
         {children}
       </AnalyticsLayout>
-      {/* Floated over the tab strip's centre line: the strip is a single
+      {/* Floated over the centre of the tab strip: the strip is a single
           justify-between row owned by the SDK, so there is no slot between the
-          tabs and Data Reports to render into. `pointer-events-none` keeps the
-          overlay from swallowing tab clicks either side of the pill. */}
-      <div className="pointer-events-none absolute inset-x-0 top-6 z-10 flex h-9 items-center justify-center px-6">
+          tabs and Data Reports to render into. The negative offset lifts the
+          pill out of the section's own padding box and onto the navbar line.
+          `pointer-events-none` keeps the overlay from swallowing tab clicks
+          either side of the pill. */}
+      <div className="pointer-events-none absolute inset-x-0 -top-[17px] z-10 flex h-9 items-center justify-center px-6">
         <AnalyticsScopeSwitch tab={tenantTab} className="pointer-events-auto" />
       </div>
     </div>
