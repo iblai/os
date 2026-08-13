@@ -178,6 +178,52 @@ describe('AnalyticsLayoutWrapper', () => {
       ).toBeInTheDocument();
     });
 
+    // The pill is floated over the SDK's tab strip, which owns that row. jsdom
+    // does not compute pointer-events, so the invariant is asserted on the
+    // classes: the overlay spans the strip and must stay click-through, with
+    // only the pill itself taking pointer events back. Dropping either half
+    // makes the tabs (or the pill) unclickable. The offset itself is left to
+    // design — it is nudged by eye, and pinning the pixel here would only
+    // create churn.
+    it('floats the switch in a click-through overlay across the tab strip', () => {
+      render(
+        <AnalyticsLayoutWrapper>
+          <div>child</div>
+        </AnalyticsLayoutWrapper>,
+      );
+
+      const button = screen.getByRole('button', {
+        name: 'Switch to platform analytics',
+      });
+      expect(button).toHaveClass('pointer-events-auto');
+
+      const overlay = button.parentElement!;
+      expect(overlay).toHaveClass(
+        'pointer-events-none',
+        'absolute',
+        'inset-x-0',
+        'justify-center',
+      );
+    });
+
+    it('keeps the overlay a sibling of the tab strip, not a child of it', () => {
+      render(
+        <AnalyticsLayoutWrapper>
+          <div>child</div>
+        </AnalyticsLayoutWrapper>,
+      );
+
+      // Nested inside, the SDK layout's own overflow/scroll handling would clip
+      // or scroll the pill away with the tabs.
+      const overlay = screen.getByRole('button', {
+        name: 'Switch to platform analytics',
+      }).parentElement!;
+      expect(screen.getByTestId('analytics-layout')).not.toContainElement(
+        overlay,
+      );
+      expect(overlay.parentElement).toHaveClass('relative');
+    });
+
     // The URL shape belongs to `navigateToPlatformAnalytics` (covered in
     // hooks/__tests__/user-navigate.test.ts); what the layout owns is which tab
     // it hands over.

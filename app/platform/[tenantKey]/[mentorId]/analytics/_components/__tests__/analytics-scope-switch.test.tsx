@@ -27,7 +27,7 @@ describe('AnalyticsScopeSwitch', () => {
     expect(button).toHaveAttribute('title', 'Switch to platform analytics');
     // The label ships in the DOM even while retracted, so the pill can animate
     // open without a re-render and screen readers still reach the text.
-    expect(button).toHaveTextContent('Platform analytics');
+    expect(button).toHaveTextContent('Platform Analytics');
   });
 
   it('asks the navigation hook for the tenant-wide overview when no tab is open', async () => {
@@ -46,5 +46,33 @@ describe('AnalyticsScopeSwitch', () => {
     await user.click(screen.getByRole('button'));
 
     expect(mockNavigateToPlatformAnalytics).toHaveBeenCalledWith('users');
+  });
+
+  it('keeps the icon out of the accessible name', () => {
+    render(<AnalyticsScopeSwitch />);
+
+    const button = screen.getByRole('button');
+    expect(button.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    // Exact match: the icon must not leak into the name the pill announces.
+    expect(
+      screen.getByRole('button', { name: 'Switch to platform analytics' }),
+    ).toBe(button);
+  });
+
+  it('merges the caller className onto the button', () => {
+    // The layout floats the pill inside a `pointer-events-none` overlay and
+    // relies on this to re-enable clicks on the pill itself.
+    render(<AnalyticsScopeSwitch className="pointer-events-auto" />);
+
+    const button = screen.getByRole('button');
+    expect(button).toHaveClass('pointer-events-auto');
+    // …without dropping its own styling.
+    expect(button).toHaveClass('rounded-full');
+  });
+
+  it('does not submit a surrounding form', () => {
+    render(<AnalyticsScopeSwitch />);
+
+    expect(screen.getByRole('button')).toHaveAttribute('type', 'button');
   });
 });
