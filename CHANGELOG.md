@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.126.0](https://github.com/iblai/os/compare/v0.125.2...v0.126.0) (2026-08-13)
+
+### Features
+
+* **llm:** map the ibl.ai model key to its brand spelling ([be167a3](https://github.com/iblai/os/commit/be167a357e909fedbe711fc0ee2c200f16812f1a))
+
+### Bug Fixes
+
+* **llm:** label model rows with the API display name ([2a2af60](https://github.com/iblai/os/commit/2a2af6004810ec45874fec311c500b0ee0cae045))
+* **llm:** show the ibl.ai label in the nav bar and mentors table ([457bf60](https://github.com/iblai/os/commit/457bf602de7ece75ecc4d2595ee8ffa4055721fc))
+
+### Documentation
+
+* **e2e:** record the new LLM tab checkpoints ([5b08a3e](https://github.com/iblai/os/commit/5b08a3eae39942a7104f3f2a2738906899e114f0))
+
+### Tests
+
+* **e2e:** add provider-card accessors to the LLM tab page object ([9eaaeab](https://github.com/iblai/os/commit/9eaaeab91d696ae2bc0aaa503fa4438cec70f853))
+* **e2e:** cover the ibl.ai logo, provider ordering and graying ([269dfca](https://github.com/iblai/os/commit/269dfca2ab91ac1f09824ad77f851c31414ed747)), closes [#2318](https://github.com/iblai/os/issues/2318)
+* **e2e:** select model rows by wire key, not visible label ([e4002ec](https://github.com/iblai/os/commit/e4002ec07db4ac78dcd4caa762f958a2d776cc81))
+
 ## [0.125.2](https://github.com/iblai/os/compare/v0.125.1...v0.125.2) (2026-08-13)
 
 ### Bug Fixes
