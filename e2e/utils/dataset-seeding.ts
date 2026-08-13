@@ -170,7 +170,7 @@ export async function waitForDatasetsReady(
   page: Page,
   mentorId: string,
   minCount: number,
-  timeout = 180_000,
+  { countTimeout = 90_000, trainingTimeout = 120_000 } = {},
 ): Promise<void> {
   const dmBase = await resolveDmApiBase(page);
   const ctx = await readApiContext(page);
@@ -178,35 +178,57 @@ export async function waitForDatasetsReady(
     `${documentsBaseUrl(dmBase, ctx)}/pathways/${encodeURIComponent(mentorId)}/` +
     `?limit=${minCount + 10}&offset=0`;
 
+  const fetchState = async (): Promise<{
+    total: number;
+    pending: number;
+  } | null> => {
+    try {
+      const res = await page.request.get(listUrl, {
+        headers: { Authorization: `Token ${ctx.dmToken}` },
+        timeout: 20_000,
+      });
+      if (!res.ok()) return null;
+      const body = (await res.json()) as {
+        count?: number;
+        results?: { training_status?: string }[];
+      };
+      const results = body.results ?? [];
+      return {
+        total: body.count ?? results.length,
+        pending: results.filter((r) => r.training_status === 'pending').length,
+      };
+    } catch {
+      return null;
+    }
+  };
+
+  // The documents existing at all is non-negotiable — without them there is
+  // nothing to paginate and the test would assert against an empty tab.
   await expect
-    .poll(
-      async () => {
-        try {
-          const res = await page.request.get(listUrl, {
-            headers: { Authorization: `Token ${ctx.dmToken}` },
-            timeout: 20_000,
-          });
-          if (!res.ok()) return false;
-          const body = (await res.json()) as {
-            count?: number;
-            results?: { training_status?: string }[];
-          };
-          const results = body.results ?? [];
-          const total = body.count ?? results.length;
-          const anyPending = results.some(
-            (r) => r.training_status === 'pending',
-          );
-          return total >= minCount && !anyPending;
-        } catch {
-          return false;
-        }
-      },
-      {
-        timeout,
-        message:
-          `Expected mentor ${mentorId} to hold at least ${minCount} datasets with ` +
-          'training settled (no document left pending) after seeding',
-      },
-    )
-    .toBe(true);
+    .poll(async () => (await fetchState())?.total ?? -1, {
+      timeout: countTimeout,
+      message: `Expected mentor ${mentorId} to hold at least ${minCount} seeded datasets`,
+    })
+    .toBeGreaterThanOrEqual(minCount);
+
+  // Training settling is only an optimisation, so it is best-effort. While a
+  // document is pending the tab polls every 2s and re-renders the pagination
+  // with disabled={isDatasetsFetching}, and IblPagination drops onClick while
+  // disabled — so waiting makes clicks land first time. But a loaded backend
+  // can take minutes, and failing the test over it is wrong: the fixture is
+  // present and DatasetsTab.goToPage retries through the disabled window.
+  const deadline = Date.now() + trainingTimeout;
+  let state = await fetchState();
+  while (state && state.pending > 0 && Date.now() < deadline) {
+    await page.waitForTimeout(2_000);
+    state = await fetchState();
+  }
+
+  if (state && state.pending > 0) {
+    logger.warn(
+      `[dataset-seeding] ${state.pending}/${state.total} documents on mentor ${mentorId} are ` +
+        'still training after the wait budget — continuing; pagination clicks will retry ' +
+        'through the disabled window.',
+    );
+  }
 }
