@@ -4,79 +4,79 @@
 
 ### Bug Fixes
 
-* **csp:** allow the asset CDN origin in style/font/connect-src ([0ccd436](https://github.com/iblai/os/commit/0ccd436df76341a503b91e63cad532895339890f))
+- **csp:** allow the asset CDN origin in style/font/connect-src ([0ccd436](https://github.com/iblai/os/commit/0ccd436df76341a503b91e63cad532895339890f))
 
 ## [0.125.0](https://github.com/iblai/os/compare/v0.124.1...v0.125.0) (2026-08-12)
 
 ### Features
 
-* **mentor:** adding feat for the skills change for / search ([c213d2b](https://github.com/iblai/os/commit/c213d2b9347c01ed70487b86d997fbe0ccfaab1b))
+- **mentor:** adding feat for the skills change for / search ([c213d2b](https://github.com/iblai/os/commit/c213d2b9347c01ed70487b86d997fbe0ccfaab1b))
 
 ### Bug Fixes
 
-* **e2e-test:** adding fix for the e2e tests ([02585a3](https://github.com/iblai/os/commit/02585a3a862d6ddae24f05a952d83536742ba75d))
-* **iblai-js:** fixes for agent skills and e2e tests ([b3eb72f](https://github.com/iblai/os/commit/b3eb72f80f02007115fd3b746eaca6f472231c78))
-* **mentor:** adding fix for the skill dropdown next to canvas ([d272fb9](https://github.com/iblai/os/commit/d272fb9a69df8ad2f3811cb91b909f404d670a16))
-* **mentor:** adding skill dropdwon for the skill in chat ([3409134](https://github.com/iblai/os/commit/3409134a7c6651c7d7f3af47239a9bbbe62b79cf))
-* **mentor:** fix for the pnpm lock ([3c69276](https://github.com/iblai/os/commit/3c692763e36ce79b25c66d0f8d73c88931f5c264))
-* **mentor:** fix for the test in agent skills ([cbaafe8](https://github.com/iblai/os/commit/cbaafe8ca40dbb8ff5e97c3e344d4dd64356e51c))
+- **e2e-test:** adding fix for the e2e tests ([02585a3](https://github.com/iblai/os/commit/02585a3a862d6ddae24f05a952d83536742ba75d))
+- **iblai-js:** fixes for agent skills and e2e tests ([b3eb72f](https://github.com/iblai/os/commit/b3eb72f80f02007115fd3b746eaca6f472231c78))
+- **mentor:** adding fix for the skill dropdown next to canvas ([d272fb9](https://github.com/iblai/os/commit/d272fb9a69df8ad2f3811cb91b909f404d670a16))
+- **mentor:** adding skill dropdwon for the skill in chat ([3409134](https://github.com/iblai/os/commit/3409134a7c6651c7d7f3af47239a9bbbe62b79cf))
+- **mentor:** fix for the pnpm lock ([3c69276](https://github.com/iblai/os/commit/3c692763e36ce79b25c66d0f8d73c88931f5c264))
+- **mentor:** fix for the test in agent skills ([cbaafe8](https://github.com/iblai/os/commit/cbaafe8ca40dbb8ff5e97c3e344d4dd64356e51c))
 
 ## [0.124.1](https://github.com/iblai/os/compare/v0.124.0...v0.124.1) (2026-08-11)
 
 ### Bug Fixes
 
-* **seo:** correctly-cased agent titles + server-rendered h1 ([21c132c](https://github.com/iblai/os/commit/21c132c8b8a981970cba7b2d86737fd8d0e0d7c9)), closes [#401](https://github.com/iblai/os/issues/401)
+- **seo:** correctly-cased agent titles + server-rendered h1 ([21c132c](https://github.com/iblai/os/commit/21c132c8b8a981970cba7b2d86737fd8d0e0d7c9)), closes [#401](https://github.com/iblai/os/issues/401)
 
 ## [0.124.0](https://github.com/iblai/os/compare/v0.123.0...v0.124.0) (2026-08-11)
 
 ### Features
 
-* **ci:** tenant-locked app builds (IBL_TENANT) with per-tenant releases ([5cccd5c](https://github.com/iblai/os/commit/5cccd5c4227b668c63bf1f54fff82a3956f625e5))
+- **ci:** tenant-locked app builds (IBL_TENANT) with per-tenant releases ([5cccd5c](https://github.com/iblai/os/commit/5cccd5c4227b668c63bf1f54fff82a3956f625e5))
 
 ### Chores
 
-* **ci:** remove the non-functional "Hide .app extension" DMG step ([c00406f](https://github.com/iblai/os/commit/c00406fe54e5389e435b9593892cc3bfd1326146))
+- **ci:** remove the non-functional "Hide .app extension" DMG step ([c00406f](https://github.com/iblai/os/commit/c00406fe54e5389e435b9593892cc3bfd1326146))
 
 ## [0.123.0](https://github.com/iblai/os/compare/v0.122.3...v0.123.0) (2026-08-11)
 
 ### Features
 
-* **deploy:** immutable, deployment-ID-namespaced static hosting (opt-in) ([ee728ec](https://github.com/iblai/os/commit/ee728ec1155d9fe9a586e3fdffe07c0409426624))
+- **deploy:** immutable, deployment-ID-namespaced static hosting (opt-in) ([ee728ec](https://github.com/iblai/os/commit/ee728ec1155d9fe9a586e3fdffe07c0409426624))
 
 ### Documentation
 
-* **deploy:** target AWS S3 + CloudFront (assets.ibl.ai) ([eacb176](https://github.com/iblai/os/commit/eacb176d6dba02cb2af1fd08da703d863d6d3137))
+- **deploy:** target AWS S3 + CloudFront (assets.ibl.ai) ([eacb176](https://github.com/iblai/os/commit/eacb176d6dba02cb2af1fd08da703d863d6d3137))
 
 ### CI
 
-* **deploy:** wire versioned S3 static publish into the SPA docker build ([6700119](https://github.com/iblai/os/commit/670011965411114f6bed7b50f78f18f8e5fd8e06))
+- **deploy:** wire versioned S3 static publish into the SPA docker build ([6700119](https://github.com/iblai/os/commit/670011965411114f6bed7b50f78f18f8e5fd8e06))
 
 ## [0.122.3](https://github.com/iblai/os/compare/v0.122.2...v0.122.3) (2026-08-11)
 
 ### Bug Fixes
 
-* analytics > memory sdk integration + sidebar menu item added with watcher permission filter ([573b04f](https://github.com/iblai/os/commit/573b04f3869d7c20bcdf68d1d8d92aea0d40a307))
-* analytics > memory sdk integration + sidebar menu item added with watcher permission filter ([c3f05a6](https://github.com/iblai/os/commit/c3f05a6286b7fecb5432cc1422af678f94c44463))
+- analytics > memory sdk integration + sidebar menu item added with watcher permission filter ([573b04f](https://github.com/iblai/os/commit/573b04f3869d7c20bcdf68d1d8d92aea0d40a307))
+- analytics > memory sdk integration + sidebar menu item added with watcher permission filter ([c3f05a6](https://github.com/iblai/os/commit/c3f05a6286b7fecb5432cc1422af678f94c44463))
 
 ## [0.122.2](https://github.com/iblai/os/compare/v0.122.1...v0.122.2) (2026-08-11)
 
 ### Chores
 
-* clear `pnpm audit` packages ([fdd7553](https://github.com/iblai/os/commit/fdd7553db349b2fb149244120dd6ef3ba79430db))
-* **deps:** bump iblai js sdk version ([af88083](https://github.com/iblai/os/commit/af8808360dc7f42666140888e02c134d629cc43e))
-* update lock file ([571f570](https://github.com/iblai/os/commit/571f570b083c338babff632c5208eb395e8b3e2d))
+- clear `pnpm audit` packages ([fdd7553](https://github.com/iblai/os/commit/fdd7553db349b2fb149244120dd6ef3ba79430db))
+- **deps:** bump iblai js sdk version ([af88083](https://github.com/iblai/os/commit/af8808360dc7f42666140888e02c134d629cc43e))
+- update lock file ([571f570](https://github.com/iblai/os/commit/571f570b083c338babff632c5208eb395e8b3e2d))
 
 ## [0.122.1](https://github.com/iblai/os/compare/v0.122.0...v0.122.1) (2026-08-11)
 
 ### Bug Fixes
 
-* **chrome-ext:** address review — validate redirect-path, keep widget allow policy ([3897178](https://github.com/iblai/os/commit/38971789bb2c22abea7320299ccc80758f1b5c19))
-* **chrome-ext:** keep embed params through side-panel SSO login ([3062de4](https://github.com/iblai/os/commit/3062de4a7ca2d4ea21fb769aae855714a2005be5))
-* **embed:** preserve embed params across mentor re-resolve ([ab6194d](https://github.com/iblai/os/commit/ab6194d83defb9c81965d001d8ca6798a4c8a882))
+- **chrome-ext:** address review — validate redirect-path, keep widget allow policy ([3897178](https://github.com/iblai/os/commit/38971789bb2c22abea7320299ccc80758f1b5c19))
+- **chrome-ext:** keep embed params through side-panel SSO login ([3062de4](https://github.com/iblai/os/commit/3062de4a7ca2d4ea21fb769aae855714a2005be5))
+- **embed:** preserve embed params across mentor re-resolve ([ab6194d](https://github.com/iblai/os/commit/ab6194d83defb9c81965d001d8ca6798a4c8a882))
 
 ### Chores
 
-* **coverage:** exclude sso-login-complete page from unit-coverage gate ([78bc02f](https://github.com/iblai/os/commit/78bc02f201f48628750cad4722c91a8b2ab2689c))
+- **coverage:** exclude sso-login-complete page from unit-coverage gate ([78bc02f](https://github.com/iblai/os/commit/78bc02f201f48628750cad4722c91a8b2ab2689c))
 
 ## [0.122.0](https://github.com/iblai/os/compare/v0.121.1...v0.122.0) (2026-08-07)
 
