@@ -834,9 +834,11 @@ test.describe('Journey 20: Datasets tab pagination URL sync (self-seeded mentor)
     datasetsPaginationTracker.add(mentorId);
 
     await seedDatasetsForMentor(page, mentorId, DATASETS_SEED_COUNT);
-    // Open the tab only once the API agrees the documents exist AND have
-    // finished training — a pending document keeps the tab polling every 2s,
-    // which disables the pagination control mid-click. See waitForDatasetsReady.
+    // Open the tab only once the API agrees the documents exist. It also waits
+    // for training to settle where it can — a pending document keeps the tab
+    // polling every 2s, which disables the pagination control mid-click — but
+    // that half is best-effort, so a loaded backend delays rather than fails
+    // the run. DatasetsTab.goToPage retries through the disabled window.
     await waitForDatasetsReady(page, mentorId, DATASETS_SEED_COUNT);
 
     await editMentorPage.open('Datasets');
