@@ -90,11 +90,7 @@ export default function AnalyticsLayoutWrapper({
           tabs and Data Reports to render into. `pointer-events-none` keeps the
           overlay from swallowing tab clicks either side of the pill. */}
       <div className="pointer-events-none absolute inset-x-0 top-6 z-10 flex h-9 items-center justify-center px-6">
-        <AnalyticsScopeSwitch
-          tenantKey={tenantKey}
-          tab={tenantTab}
-          className="pointer-events-auto"
-        />
+        <AnalyticsScopeSwitch tab={tenantTab} className="pointer-events-auto" />
       </div>
     </div>
   );

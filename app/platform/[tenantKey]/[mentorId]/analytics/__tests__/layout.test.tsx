@@ -10,6 +10,7 @@ const mockCheckRbacPermission = vi.fn();
 const mockUseGetMentorPublicSettingsQuery = vi.fn();
 const mockUseUsername = vi.fn();
 const analyticsLayoutSpy = vi.fn();
+const mockNavigateToPlatformAnalytics = vi.fn();
 
 vi.mock('next/navigation', () => ({
   useParams: () => mockUseParams(),
@@ -51,6 +52,12 @@ vi.mock('@/hoc/withPermissions', () => ({
 
 vi.mock('@/hooks/use-user', () => ({
   useUsername: () => mockUseUsername(),
+}));
+
+vi.mock('@/hooks/user-navigate', () => ({
+  useNavigate: () => ({
+    navigateToPlatformAnalytics: mockNavigateToPlatformAnalytics,
+  }),
 }));
 
 const AnalyticsLayoutWrapperModule = await import('../layout');
@@ -171,10 +178,10 @@ describe('AnalyticsLayoutWrapper', () => {
       ).toBeInTheDocument();
     });
 
-    it('drops the mentor segment when switching from the overview', async () => {
-      const push = vi.fn();
-      mockUseRouter.mockReturnValue({ push });
-
+    // The URL shape belongs to `navigateToPlatformAnalytics` (covered in
+    // hooks/__tests__/user-navigate.test.ts); what the layout owns is which tab
+    // it hands over.
+    it('asks for the tenant-wide overview when switching from the overview', async () => {
       render(
         <AnalyticsLayoutWrapper>
           <div>child</div>
@@ -182,12 +189,10 @@ describe('AnalyticsLayoutWrapper', () => {
       );
       await clickSwitch();
 
-      expect(push).toHaveBeenCalledWith('/platform/test-tenant/analytics');
+      expect(mockNavigateToPlatformAnalytics).toHaveBeenCalledWith('');
     });
 
     it('carries the open tab across to the tenant-wide section', async () => {
-      const push = vi.fn();
-      mockUseRouter.mockReturnValue({ push });
       mockUsePathname.mockReturnValue(
         '/platform/test-tenant/test-mentor/analytics/users',
       );
@@ -199,14 +204,10 @@ describe('AnalyticsLayoutWrapper', () => {
       );
       await clickSwitch();
 
-      expect(push).toHaveBeenCalledWith(
-        '/platform/test-tenant/analytics/users',
-      );
+      expect(mockNavigateToPlatformAnalytics).toHaveBeenCalledWith('users');
     });
 
     it('falls back to the tenant overview for tabs with no tenant-wide route', async () => {
-      const push = vi.fn();
-      mockUseRouter.mockReturnValue({ push });
       mockUsePathname.mockReturnValue(
         '/platform/test-tenant/test-mentor/analytics/courses/course-1',
       );
@@ -218,7 +219,7 @@ describe('AnalyticsLayoutWrapper', () => {
       );
       await clickSwitch();
 
-      expect(push).toHaveBeenCalledWith('/platform/test-tenant/analytics');
+      expect(mockNavigateToPlatformAnalytics).toHaveBeenCalledWith('');
     });
   });
 });

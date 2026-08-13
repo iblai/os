@@ -1,9 +1,9 @@
 'use client';
 
 import { Building2 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
+import { useNavigate } from '@/hooks/user-navigate';
 import { cn } from '@/lib/utils';
 
 /**
@@ -16,16 +16,14 @@ import { cn } from '@/lib/utils';
  * a width, so it never needs a hard-coded pixel size per translation.
  */
 export function AnalyticsScopeSwitch({
-  tenantKey,
   tab = '',
   className,
 }: {
-  tenantKey: string;
   /** Analytics tab to stay on, e.g. `users`. Empty for the overview. */
   tab?: string;
   className?: string;
 }) {
-  const router = useRouter();
+  const { navigateToPlatformAnalytics } = useNavigate();
   const t = useTranslations('analyticsScopeSwitch');
 
   const label = t('platformAnalytics');
@@ -34,9 +32,7 @@ export function AnalyticsScopeSwitch({
   return (
     <button
       type="button"
-      onClick={() =>
-        router.push(`/platform/${tenantKey}/analytics${tab ? `/${tab}` : ''}`)
-      }
+      onClick={() => navigateToPlatformAnalytics(tab)}
       aria-label={description}
       title={description}
       className={cn(
