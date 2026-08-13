@@ -1,5 +1,6 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { safeWaitForURL } from '../utils/navigation';
+import { isVisibleWithin } from '../utils/resilient';
 
 export class ProjectPage {
   readonly page: Page;
@@ -253,7 +254,7 @@ export class ProjectPage {
       name: 'Expand sidebar',
       exact: true,
     });
-    if (await expandToggle.isVisible({ timeout: 2_000 }).catch(() => false)) {
+    if (await isVisibleWithin(expandToggle, 2_000)) {
       await expandToggle.click();
     }
 
@@ -362,16 +363,14 @@ export class ProjectPage {
     const renameMenuItem = this.page.getByRole('menuitem', { name: /rename/i });
     await projectText.click({ button: 'right' });
 
-    const ctxVisible = await renameMenuItem
-      .isVisible({ timeout: 3_000 })
-      .catch(() => false);
+    const ctxVisible = await isVisibleWithin(renameMenuItem, 3_000);
 
     if (!ctxVisible) {
       await this.page.keyboard.press('Escape');
       const optionsBtn = this.page
         .locator('button[aria-label*="options"], button[aria-label*="Options"]')
         .first();
-      if (await optionsBtn.isVisible({ timeout: 3_000 }).catch(() => false)) {
+      if (await isVisibleWithin(optionsBtn, 3_000)) {
         await optionsBtn.click();
         await expect(renameMenuItem).toBeVisible({ timeout: 5_000 });
         await renameMenuItem.click();
@@ -396,16 +395,14 @@ export class ProjectPage {
     const deleteMenuItem = this.page.getByRole('menuitem', { name: /delete/i });
     await projectText.click({ button: 'right' });
 
-    const ctxVisible = await deleteMenuItem
-      .isVisible({ timeout: 3_000 })
-      .catch(() => false);
+    const ctxVisible = await isVisibleWithin(deleteMenuItem, 3_000);
 
     if (!ctxVisible) {
       await this.page.keyboard.press('Escape');
       const optionsBtn = this.page
         .locator('button[aria-label*="options"], button[aria-label*="Options"]')
         .first();
-      if (await optionsBtn.isVisible({ timeout: 3_000 }).catch(() => false)) {
+      if (await isVisibleWithin(optionsBtn, 3_000)) {
         await optionsBtn.click();
         await expect(deleteMenuItem).toBeVisible({ timeout: 5_000 });
         await deleteMenuItem.click();
