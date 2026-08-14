@@ -313,6 +313,18 @@ export function useNavigate() {
         );
       }
     },
+    // Tenant-wide analytics — the same section as `navigateToAnalytics` but
+    // never scoped to an agent, so it ignores the mentorId in the URL. Pass a
+    // tab (`users`, `topics`, …) to land on that tab instead of the overview.
+    navigateToPlatformAnalytics: (tab?: string) => {
+      if (tenantKey) {
+        router.push(`/platform/${tenantKey}/analytics${tab ? `/${tab}` : ''}`);
+      } else {
+        console.warn(
+          'Cannot navigate to platform analytics: tenantKey missing from URL params.',
+        );
+      }
+    },
     navigateToMentor: (
       newMentorId: string,
       prependStackParam?: string,

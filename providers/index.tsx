@@ -239,9 +239,18 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   // check. Match the index path only — the project chat route
   // (/platform/<tenant>/projects/<projectId>/<mentorId>) still needs the mentor check.
   const isProjectsIndexPage = /\/projects\/?$/.test(pathname);
+  // Tenant-wide analytics (/platform/<tenant>/analytics[/<tab>]) reports on the
+  // whole tenant, so it deliberately carries no mentor in the URL and would
+  // otherwise be redirected to the default agent's chat page — same trap as the
+  // Projects index. Anchored on the third segment so the per-agent section
+  // (/platform/<tenant>/<mentorId>/analytics) still gets the mentor check.
+  const isTenantAnalyticsPage = /^\/platform\/[^/]+\/analytics(\/|$)/.test(
+    pathname,
+  );
   // Pages that own their mentor context and must not be redirected away when the
   // URL has no mentorId segment.
-  const skipMentorCheck = isWorkflowPage || isProjectsIndexPage;
+  const skipMentorCheck =
+    isWorkflowPage || isProjectsIndexPage || isTenantAnalyticsPage;
 
   // Use the same offline check (already computed above)
   const isTauriOffline = isTauriOfflineEarly;

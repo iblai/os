@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-08-12 | 638 checkpoints (607 covered, 8 pending/fixme, 11 not-reproducible in default env, 12 deprecated) | 69 journeys (68 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-08-14 | 647 checkpoints (616 covered, 8 pending/fixme, 11 not-reproducible in default env, 12 deprecated) | 70 journeys (69 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -275,7 +275,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 17: Notifications (6 checkpoints) — `journeys/17-notifications.spec.ts`
+## Journey 17: Notifications (7 checkpoints) — `journeys/17-notifications.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/notifications/page.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`
 
@@ -285,6 +285,7 @@ When adding a new page or modifying an existing user flow:
 - [x] "Mark all as read" button is visible on the notifications page
 - [x] Alerts tab exposes proactive fields with proper accessible ARIA attributes
 - [x] Alerts tab auto-opens when inbox is empty
+- [x] notif-07: Navbar drops the chat-only chrome (LLM Model Selector, on-device model badge, privacy chip) on the notifications inbox — tenant-scoped, per-agent and single-notification routes alike; an inbox is not a chat surface
 
 ---
 
@@ -1354,3 +1355,24 @@ surfaces:
 - [x] slash-16: Skills dropdown (next to Canvas) lists enabled skills as name + `/slug`; selecting inserts the token AT THE CARET with context-aware spacing; the active pill shows the armed name + the standard ✕ (disarms without opening the menu); toggling removes cleanly; arming another replaces (single selection); `/`-picker arming updates the button — one composer-text source of truth
 - [x] slash-15: NON-ADMIN — with the assignments endpoint readable (mocked granted state; a 403 degrades to an inactive picker) the "/" picker offers skills; selecting completes the token and the sent invocation message receives a live AI reply — skips when the environment denies the non-admin CHAT permission entirely (composer disabled with a "you don't have permission to chat" placeholder): the picker rides on top of chat access
 - [x] slash-14: A "/" token typed after existing text (caret-adjacent, preceded by whitespace) opens the picker; selecting completes the invocation at that index keeping the sentence. A "/" glued inside a word (and/or, URLs) never triggers
+
+---
+
+## Journey 68: Tenant-wide Analytics (8 checkpoints) — `journeys/68-tenant-analytics.spec.ts`
+
+**Source files:** `app/platform/[tenantKey]/analytics/page.tsx`, `app/platform/[tenantKey]/analytics/users/page.tsx`, `app/platform/[tenantKey]/analytics/topics/page.tsx`, `app/platform/[tenantKey]/analytics/transcripts/page.tsx`, `app/platform/[tenantKey]/analytics/memory/page.tsx`, `app/platform/[tenantKey]/analytics/financial/page.tsx`, `app/platform/[tenantKey]/analytics/audit/page.tsx`, `app/platform/[tenantKey]/analytics/reports/page.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
+
+The Journey 18 section mounted directly under the tenant — no agent in the URL,
+so the containers report on the whole tenant (they drop the `mentor_unique_id`
+filter when the mentor id is empty). The sidebar already links here whenever no
+agent is selected; the tests deep-link, since the fixtures start on an agent
+route.
+
+- [x] tanl-01: Tenant-wide overview (`/platform/{tenantKey}/analytics`) renders the tab strip inside the platform shell — the sidebar proves the layout supplies the shell itself
+- [x] tanl-02: Clicking a tab from the tenant-wide overview routes to `/platform/{tenantKey}/analytics/{tab}` and never reintroduces an agent id
+- [x] tanl-03: Tenant-wide Users, Topics, Transcripts and Costs tabs are reachable by direct URL
+- [x] tanl-04: Tenant-wide Memory page loads with no agent scope (the tab opens on global / all-agent memories)
+- [x] tanl-05: Tenant-wide Data Reports page loads and shows the Data Reports tab
+- [x] tanl-06: Tenant-wide Audit page loads — with no agent to check `view_audit_logs` against, the API is the authority and the container renders its own no-permission card on a 403
+- [x] tanl-07: Sidebar Analytics entry opens the tenant-wide section whether or not an agent is in the URL — the per-agent section is reached from the navbar agent dropdown instead
+- [x] tanl-08: Navbar on the tenant-wide section drops the chat-only chrome (LLM Model Selector, agent dropdown, privacy chip) and shows the "Analytics" section title instead; the per-agent analytics page keeps full parity (Journey 65)

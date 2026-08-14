@@ -437,11 +437,26 @@ export function NavBar() {
   // there. The project chat route (/platform/<tenant>/projects/<id>/<mentorId>) is
   // still a chat page and keeps them.
   const isProjectsIndexPage = /\/projects\/?$/.test(pathname);
+  // Tenant-wide analytics (/platform/<tenant>/analytics[/<tab>]) has no agent in
+  // the URL, so the chat-only controls — LLM selector, on-device model badge,
+  // Private Mode chip — would render with nothing to act on. Anchored on the
+  // third segment so the per-agent section (/platform/<tenant>/<mentorId>/
+  // analytics) keeps full navbar parity (issue #2248).
+  const isTenantAnalyticsPage = /^\/platform\/[^/]+\/analytics(\/|$)/.test(
+    pathname,
+  );
+  // Notifications is an inbox, not a chat surface — the same holds whether it
+  // is reached tenant-scoped (/platform/<tenant>/notifications), per-agent
+  // (/platform/<tenant>/<mentorId>/notifications) or on a single
+  // notification's detail route, so all three drop the chat-only controls.
+  const isNotificationsPage = pathname.includes('/notifications');
   const isOnChatPage =
     !isPromptGalleryPage &&
     !pathname.includes('/explore') &&
     !isWorkflowsPage &&
-    !isProjectsIndexPage;
+    !isProjectsIndexPage &&
+    !isTenantAnalyticsPage &&
+    !isNotificationsPage;
   // Narrower than `isOnChatPage`: whether the chat component (the only
   // `RemoteEvents.newChat` listener) is actually mounted on this route.
   // Mirrors `isChatPage` in the sidebar so both "New Chat" affordances agree.
@@ -730,6 +745,15 @@ export function NavBar() {
                   <span className="hidden sm:block">{selectedMentorName}</span>
                 </Button>
               ))}
+
+            {/* Tenant-wide analytics has no agent in the URL, so the agent
+                dropdown above never renders there. The section title stands in
+                for it, naming what the page is reporting on. */}
+            {isTenantAnalyticsPage && (
+              <span className="pl-0 text-md font-semibold text-[#484848] md:pl-[18px]">
+                {tHeader('analytics')}
+              </span>
+            )}
           </div>
         </div>
 

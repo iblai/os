@@ -2359,13 +2359,13 @@ describe('AppSidebar — AccountSheet tabs', () => {
 // =============================================================================
 
 describe('AppSidebar — Analytics sub-item navigation', () => {
-  it('clicking the Users sub-item navigates via router.push', () => {
+  // Analytics opens on the whole platform now: the sidebar drops the agent from
+  // the URL and the navbar's agent picker narrows the section from there.
+  it('clicking the Users sub-item navigates via router.push, dropping the agent', () => {
     renderSidebar();
     fireEvent.click(screen.getAllByRole('button', { name: 'Analytics' })[0]);
     fireEvent.click(screen.getByRole('button', { name: 'Users' }));
-    expect(pushMock).toHaveBeenCalledWith(
-      '/platform/tenant-a/mentor-1/analytics/users',
-    );
+    expect(pushMock).toHaveBeenCalledWith('/platform/tenant-a/analytics/users');
   });
 
   it('clicking Topics navigates to the topics analytics page', () => {
@@ -2373,12 +2373,12 @@ describe('AppSidebar — Analytics sub-item navigation', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Analytics' })[0]);
     fireEvent.click(screen.getByRole('button', { name: 'Topics' }));
     expect(pushMock).toHaveBeenCalledWith(
-      '/platform/tenant-a/mentor-1/analytics/topics',
+      '/platform/tenant-a/analytics/topics',
     );
   });
 
   it('highlights the active Analytics sub-item when the URL matches', () => {
-    mockPathname = '/platform/tenant-a/mentor-1/analytics/users';
+    mockPathname = '/platform/tenant-a/analytics/users';
     renderSidebar();
     const usersBtn = screen.getByRole('button', { name: 'Users' });
     expect(usersBtn.className).toMatch(/bg-/); // active styling
@@ -2402,12 +2402,19 @@ describe('AppSidebar — Analytics sub-item navigation', () => {
 
     fireEvent.click(memory);
     expect(pushMock).toHaveBeenCalledWith(
-      '/platform/tenant-a/mentor-1/analytics/memory',
+      '/platform/tenant-a/analytics/memory',
     );
   });
 
+  it('opens the tenant-wide overview from the Analytics section, even with an agent in the URL', () => {
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Analytics' })[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Overview' }));
+    expect(pushMock).toHaveBeenCalledWith('/platform/tenant-a/analytics');
+  });
+
   it('highlights Memory when the URL is the memory analytics page', () => {
-    mockPathname = '/platform/tenant-a/mentor-1/analytics/memory';
+    mockPathname = '/platform/tenant-a/analytics/memory';
     renderSidebar();
     expect(screen.getByRole('button', { name: 'Memory' }).className).toMatch(
       /bg-/,

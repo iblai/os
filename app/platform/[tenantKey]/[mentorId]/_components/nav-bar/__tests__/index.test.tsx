@@ -40,6 +40,9 @@ const pushMock = vi.fn();
 let mockSearchParamsRaw = '';
 let mockPathname = '/platform/tenant123/mentor456';
 let mockProjectId: string | undefined = undefined;
+// Mentor-less routes (the tenant-wide analytics section, for one) match a route
+// segment tree without `[mentorId]`, so `useParams()` has no mentorId there.
+let mockMentorIdParam: string | undefined = 'mentor456';
 let mockIsAdmin = true;
 let mockUserIsStudent = false;
 let mockIsVisiting = false;
@@ -81,7 +84,7 @@ vi.mock('next/navigation', () => ({
   usePathname: () => mockPathname,
   useParams: () => ({
     tenantKey: 'tenant123',
-    mentorId: 'mentor456',
+    mentorId: mockMentorIdParam,
     projectId: mockProjectId,
   }),
   useSearchParams: () => new URLSearchParams(mockSearchParamsRaw),
@@ -578,6 +581,7 @@ describe('NavBar', () => {
     mockSearchParamsRaw = '';
     mockPathname = '/platform/tenant123/mentor456';
     mockProjectId = undefined;
+    mockMentorIdParam = 'mentor456';
     mockIsAdmin = true;
     mockUserIsStudent = false;
     mockIsVisiting = false;
@@ -770,6 +774,133 @@ describe('NavBar', () => {
 
       expect(screen.getByLabelText('LLM Model Selector')).toBeInTheDocument();
     });
+
+    it('hides the LLM model selector on the tenant-wide analytics section', () => {
+      mockIsAdmin = true;
+      mockUserIsStudent = false;
+      mockPathname = '/platform/tenant123/analytics';
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(
+        screen.queryByLabelText('LLM Model Selector'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('hides the LLM model selector on a tenant-wide analytics tab', () => {
+      mockIsAdmin = true;
+      mockUserIsStudent = false;
+      mockPathname = '/platform/tenant123/analytics/users';
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(
+        screen.queryByLabelText('LLM Model Selector'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('hides the LLM model selector and privacy chip on the per-agent notifications inbox', () => {
+      mockIsAdmin = true;
+      mockUserIsStudent = false;
+      mockPathname = '/platform/tenant123/mentor456/notifications';
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(
+        screen.queryByLabelText('LLM Model Selector'),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('chat-privacy-toggle'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('hides the LLM model selector on the tenant-scoped notifications inbox', () => {
+      mockIsAdmin = true;
+      mockUserIsStudent = false;
+      mockPathname = '/platform/tenant123/notifications';
+      mockMentorIdParam = undefined;
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(
+        screen.queryByLabelText('LLM Model Selector'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('hides the LLM model selector on a single notification detail route', () => {
+      mockIsAdmin = true;
+      mockUserIsStudent = false;
+      mockPathname = '/platform/tenant123/mentor456/notifications/notif-1';
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(
+        screen.queryByLabelText('LLM Model Selector'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('hides the on-device model badge on the notifications inbox', () => {
+      mockIsAdmin = true;
+      mockUserIsStudent = false;
+      mockPathname = '/platform/tenant123/mentor456/notifications';
+      mockLocalEnabled = true;
+      mockLocalModelId = 'llama3.2';
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(
+        screen.queryByTestId('local-model-indicator'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('hides the on-device model badge on the tenant-wide analytics section', () => {
+      mockIsAdmin = true;
+      mockUserIsStudent = false;
+      mockPathname = '/platform/tenant123/analytics';
+      mockLocalEnabled = true;
+      mockLocalModelId = 'llama3.2';
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      expect(
+        screen.queryByTestId('local-model-indicator'),
+      ).not.toBeInTheDocument();
+    });
   });
 
   // --------------------------------------------------------------------------
@@ -954,6 +1085,50 @@ describe('NavBar', () => {
       mockPathname = ANALYTICS_PATH;
     });
 
+    // ── section title ─────────────────────────────────────────────────────
+    // The tenant-wide section has no agent in the URL, so the agent dropdown
+    // never renders there; the title names what the page reports on instead.
+
+    it('shows the Analytics title on the tenant-wide section', () => {
+      mockPathname = '/platform/tenant123/analytics';
+      mockMentorIdParam = undefined;
+
+      renderOnAnalytics();
+
+      expect(
+        screen.getByText('Analytics', { selector: 'span' }),
+      ).toBeInTheDocument();
+    });
+
+    it('shows the Analytics title on a tenant-wide analytics tab', () => {
+      mockPathname = '/platform/tenant123/analytics/users';
+      mockMentorIdParam = undefined;
+
+      renderOnAnalytics();
+
+      expect(
+        screen.getByText('Analytics', { selector: 'span' }),
+      ).toBeInTheDocument();
+    });
+
+    it('does not show the Analytics title on an agent analytics page', () => {
+      renderOnAnalytics();
+
+      expect(
+        screen.queryByText('Analytics', { selector: 'span' }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('does not show the Analytics title on the chat page', () => {
+      mockPathname = '/platform/tenant123/mentor456';
+
+      renderOnAnalytics();
+
+      expect(
+        screen.queryByText('Analytics', { selector: 'span' }),
+      ).not.toBeInTheDocument();
+    });
+
     it('shows the LLM model selector for an admin user', () => {
       mockIsAdmin = true;
       mockUserIsStudent = false;
@@ -995,6 +1170,22 @@ describe('NavBar', () => {
       renderOnAnalytics();
 
       expect(screen.getByTestId('chat-privacy-toggle')).toBeInTheDocument();
+    });
+
+    // …but the tenant-wide section is NOT the same surface: it has no agent in
+    // the URL, so the chat-only chrome has nothing to act on.
+    it('drops the privacy chip and the agent dropdown on the tenant-wide section', () => {
+      mockPathname = '/platform/tenant123/analytics';
+      mockMentorIdParam = undefined;
+
+      renderOnAnalytics();
+
+      expect(
+        screen.queryByTestId('chat-privacy-toggle'),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByLabelText('Selected agent dropdown button'),
+      ).not.toBeInTheDocument();
     });
 
     it('routes home and asks the chat slice to start a new chat instead of emitting newChat', () => {
