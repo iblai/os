@@ -157,10 +157,6 @@
     "languageFrenchFrance": "French (France)",
     "languageSpanish": "Spanish (Español)"
   },
-  "analyticsScopeSwitch": {
-    "platformAnalytics": "Platform Analytics",
-    "switchToPlatformAnalytics": "Switch to platform analytics"
-  },
   "apiTabApiKeyModal": {
     "dialogTitle": "API Key",
     "dialogDescription": "Copy and paste the API key.",

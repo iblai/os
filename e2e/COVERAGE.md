@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-08-12 | 641 checkpoints (610 covered, 8 pending/fixme, 11 not-reproducible in default env, 12 deprecated) | 70 journeys (69 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-08-12 | 643 checkpoints (612 covered, 8 pending/fixme, 11 not-reproducible in default env, 12 deprecated) | 70 journeys (69 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -271,7 +271,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 17: Notifications (6 checkpoints) — `journeys/17-notifications.spec.ts`
+## Journey 17: Notifications (7 checkpoints) — `journeys/17-notifications.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/notifications/page.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`
 
@@ -281,6 +281,7 @@ When adding a new page or modifying an existing user flow:
 - [x] "Mark all as read" button is visible on the notifications page
 - [x] Alerts tab exposes proactive fields with proper accessible ARIA attributes
 - [x] Alerts tab auto-opens when inbox is empty
+- [x] notif-07: Navbar drops the chat-only chrome (LLM Model Selector, on-device model badge, privacy chip) on the notifications inbox — tenant-scoped, per-agent and single-notification routes alike; an inbox is not a chat surface
 
 ---
 
@@ -1353,9 +1354,9 @@ surfaces:
 
 ---
 
-## Journey 68: Tenant-wide Analytics (7 checkpoints) — `journeys/68-tenant-analytics.spec.ts`
+## Journey 68: Tenant-wide Analytics (8 checkpoints) — `journeys/68-tenant-analytics.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/analytics/page.tsx`, `app/platform/[tenantKey]/analytics/users/page.tsx`, `app/platform/[tenantKey]/analytics/topics/page.tsx`, `app/platform/[tenantKey]/analytics/transcripts/page.tsx`, `app/platform/[tenantKey]/analytics/memory/page.tsx`, `app/platform/[tenantKey]/analytics/financial/page.tsx`, `app/platform/[tenantKey]/analytics/audit/page.tsx`, `app/platform/[tenantKey]/analytics/reports/page.tsx`, `app/platform/[tenantKey]/[mentorId]/analytics/_components/analytics-scope-switch.tsx`
+**Source files:** `app/platform/[tenantKey]/analytics/page.tsx`, `app/platform/[tenantKey]/analytics/users/page.tsx`, `app/platform/[tenantKey]/analytics/topics/page.tsx`, `app/platform/[tenantKey]/analytics/transcripts/page.tsx`, `app/platform/[tenantKey]/analytics/memory/page.tsx`, `app/platform/[tenantKey]/analytics/financial/page.tsx`, `app/platform/[tenantKey]/analytics/audit/page.tsx`, `app/platform/[tenantKey]/analytics/reports/page.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
 
 The Journey 18 section mounted directly under the tenant — no agent in the URL,
 so the containers report on the whole tenant (they drop the `mentor_unique_id`
@@ -1369,4 +1370,5 @@ route.
 - [x] tanl-04: Tenant-wide Memory page loads with no agent scope (the tab opens on global / all-agent memories)
 - [x] tanl-05: Tenant-wide Data Reports page loads and shows the Data Reports tab
 - [x] tanl-06: Tenant-wide Audit page loads — with no agent to check `view_audit_logs` against, the API is the authority and the container renders its own no-permission card on a 403
-- [x] tanl-07: Scope switch floated over the agent analytics tab strip (retracted pill, prolongs on hover/focus) jumps to the tenant-wide section on the same tab
+- [x] tanl-07: Sidebar Analytics entry opens the tenant-wide section whether or not an agent is in the URL — the per-agent section is reached from the navbar agent dropdown instead
+- [x] tanl-08: Navbar on the tenant-wide section drops the chat-only chrome (LLM Model Selector, agent dropdown, privacy chip) and shows the "Analytics" section title instead; the per-agent analytics page keeps full parity (Journey 65)

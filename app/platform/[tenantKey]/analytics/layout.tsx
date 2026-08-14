@@ -45,6 +45,8 @@ export default function TenantAnalyticsLayoutWrapper({
         currentPath={pathname}
         basePath={basePath}
         onTabChange={handleTabChange}
+        showPicker={true}
+        tenantKey={tenantKey}
       >
         {children}
       </AnalyticsLayout>

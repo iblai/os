@@ -9,7 +9,10 @@ test.describe('Journey 18: Analytics Dashboard', () => {
       test.skip(true, 'Analytics requires admin access');
       return;
     }
-    await analyticsPage.goto();
+    // The sidebar's Analytics entry now opens the TENANT-WIDE section
+    // (Journey 68); this journey is the per-agent one, reached from the navbar
+    // agent dropdown.
+    await analyticsPage.gotoAgentAnalytics();
   });
 
   // fixme: analytics page navigation/content times out — URL pattern or tab changes

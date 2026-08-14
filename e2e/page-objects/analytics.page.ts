@@ -12,7 +12,6 @@ export class AnalyticsPage {
   readonly costsTab: Locator;
   readonly reportsTab: Locator;
   readonly analyticsButton: Locator;
-  readonly platformScopeSwitch: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -30,11 +29,6 @@ export class AnalyticsPage {
     this.transcriptsTab = page.getByRole('tab', { name: /transcripts/i });
     this.costsTab = page.getByRole('tab', { name: /costs/i });
     this.reportsTab = page.getByRole('tab', { name: /reports|data reports/i });
-    // Retracted pill floated over the centre of the tab strip on an agent's
-    // analytics page; its accessible name is the label, not the icon.
-    this.platformScopeSwitch = page.getByRole('button', {
-      name: /switch to platform analytics/i,
-    });
   }
 
   /**
@@ -56,6 +50,12 @@ export class AnalyticsPage {
     }
   }
 
+  /**
+   * Open analytics from the sidebar. That entry now always lands on the
+   * TENANT-WIDE section (`/platform/{tenantKey}/analytics`) — the navbar's
+   * agent picker narrows it from there. Use `gotoAgentAnalytics()` for the
+   * per-agent section.
+   */
   async goto(): Promise<void> {
     // The sidebar's "Analytics" button is a collapsible-section trigger
     // (Agents/Workflows/Chats/Projects/Analytics all collapse). The
@@ -131,18 +131,28 @@ export class AnalyticsPage {
   }
 
   /**
-   * Click the scope switch on an agent's analytics page and land on the
-   * tenant-wide section — same tab, one segment shorter.
+   * Open the CURRENT agent's analytics from the navbar agent dropdown — the
+   * only click-path to the per-agent section now that the sidebar entry points
+   * at the tenant-wide one.
    */
-  async switchToPlatformAnalytics(): Promise<void> {
-    await expect(this.platformScopeSwitch).toBeVisible({ timeout: 30_000 });
-    await this.platformScopeSwitch.click();
+  async gotoAgentAnalytics(): Promise<void> {
+    const dropdown = this.page.getByRole('button', {
+      name: 'Selected agent dropdown button',
+    });
+    await expect(dropdown).toBeVisible({ timeout: 30_000 });
+    await dropdown.click();
+    const analyticsItem = this.page
+      .getByRole('menuitem', { name: 'Analytics', exact: true })
+      .or(this.page.getByRole('button', { name: 'Analytics', exact: true }))
+      .last();
+    await expect(analyticsItem).toBeVisible({ timeout: 10_000 });
+    await analyticsItem.click();
     await safeWaitForURL(
       this.page,
       (url) => {
         const parts = url.pathname.split('/').filter(Boolean);
-        // /platform/{tenantKey}/analytics[/{tab}] — no agent segment left.
-        return parts[0] === 'platform' && parts[2] === 'analytics';
+        // /platform/{tenantKey}/{mentorId}/analytics — agent segment intact.
+        return parts[0] === 'platform' && parts[3] === 'analytics';
       },
       { timeout: 60_000 },
     );

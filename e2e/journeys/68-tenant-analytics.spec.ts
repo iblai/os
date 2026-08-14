@@ -93,18 +93,39 @@ test.describe('Journey 68: Tenant-wide Analytics', () => {
     ).toBeVisible();
   });
 
-  test('scope switch on an agent analytics page jumps to the tenant-wide section on the same tab', async ({
+  test('the sidebar Analytics entry opens the tenant-wide section, agent in the URL or not', async ({
     analyticsPage,
     page,
   }) => {
     await analyticsPage.goto();
-    await analyticsPage.navigateToTab('users');
-
-    await analyticsPage.switchToPlatformAnalytics();
 
     await expect(page).toHaveURL(
-      new RegExp(`/platform/${tenantKey}/analytics/users/?$`),
+      new RegExp(`/platform/${tenantKey}/analytics/?$`),
     );
+  });
+
+  test('navbar drops the chat-only chrome on the tenant-wide section', async ({
+    page,
+    navbarPage,
+    analyticsPage,
+  }) => {
+    // Journey 65 owns the opposite assertion: on an AGENT's analytics page the
+    // navbar keeps full parity with the chat page. Here there is no agent in
+    // the URL, so the LLM selector and the agent dropdown have nothing to act
+    // on — reading both states in one test keeps the contrast honest.
+    await analyticsPage.gotoAgentAnalytics();
+    await expect(navbarPage.llmModelSelectorButton).toBeVisible({
+      timeout: 15_000,
+    });
+
+    await analyticsPage.gotoTenantWide(tenantKey);
+
+    await expect(navbarPage.llmModelSelectorButton).not.toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(
+      page.getByLabel('Selected agent dropdown button'),
+    ).not.toBeVisible({ timeout: 15_000 });
   });
 
   test('tenant-wide audit page loads and the API decides what the viewer may see', async ({

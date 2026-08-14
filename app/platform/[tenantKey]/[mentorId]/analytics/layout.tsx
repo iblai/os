@@ -10,20 +10,6 @@ import { checkRbacPermission } from '@/hoc/withPermissions';
 import { useUsername } from '@/hooks/use-user';
 import { ANONYMOUS_USERNAME } from '@/lib/constants';
 import { TenantKeyMentorIdParams } from '@/lib/types';
-import { AnalyticsScopeSwitch } from './_components/analytics-scope-switch';
-
-// Tabs that exist under both `/{mentorId}/analytics` and the tenant-wide
-// `/analytics`. Anything else (courses, programs — excluded here, no route
-// behind them) falls back to the tenant overview rather than a 404.
-const SHARED_TABS = [
-  'users',
-  'topics',
-  'transcripts',
-  'memory',
-  'financial',
-  'audit',
-  'reports',
-];
 
 export default function AnalyticsLayoutWrapper({
   children,
@@ -68,32 +54,16 @@ export default function AnalyticsLayoutWrapper({
     excludeTabs.push('audit');
   }
 
-  // Carry the open tab across to the tenant-wide section, so switching scope
-  // doesn't also throw the viewer back to the overview.
-  const currentTab = pathname.startsWith(`${basePath}/`)
-    ? pathname.slice(basePath.length + 1).split('/')[0]
-    : '';
-  const tenantTab = SHARED_TABS.includes(currentTab) ? currentTab : '';
-
+  // The jump to the tenant-wide section lives in the navbar (next to the agent
+  // dropdown), not here — see `_components/nav-bar/analytics-scope-switch`.
   return (
-    <div className="relative flex h-full min-h-0 flex-1 flex-col">
-      <AnalyticsLayout
-        excludeTabs={excludeTabs}
-        currentPath={pathname}
-        basePath={basePath}
-        onTabChange={handleTabChange}
-      >
-        {children}
-      </AnalyticsLayout>
-      {/* Floated over the centre of the tab strip: the strip is a single
-          justify-between row owned by the SDK, so there is no slot between the
-          tabs and Data Reports to render into. The negative offset lifts the
-          pill out of the section's own padding box and onto the navbar line.
-          `pointer-events-none` keeps the overlay from swallowing tab clicks
-          either side of the pill. */}
-      <div className="pointer-events-none absolute inset-x-0 -top-[17px] z-10 flex h-9 items-center justify-center px-6">
-        <AnalyticsScopeSwitch tab={tenantTab} className="pointer-events-auto" />
-      </div>
-    </div>
+    <AnalyticsLayout
+      excludeTabs={excludeTabs}
+      currentPath={pathname}
+      basePath={basePath}
+      onTabChange={handleTabChange}
+    >
+      {children}
+    </AnalyticsLayout>
   );
 }

@@ -2,8 +2,8 @@
   "version": 2,
   "lastUpdated": "2026-08-12",
   "summary": {
-    "totalCheckpoints": 641,
-    "coveredCheckpoints": 610,
+    "totalCheckpoints": 643,
+    "coveredCheckpoints": 612,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 11,
     "pendingCheckpoints": 8,
@@ -907,7 +907,8 @@
         "app/platform/[tenantKey]/[mentorId]/notifications/page.tsx",
         "app/platform/[tenantKey]/[mentorId]/notifications/[notificationId]/page.tsx",
         "app/platform/[tenantKey]/notifications/page.tsx",
-        "app/platform/[tenantKey]/notifications/[notificationId]/page.tsx"
+        "app/platform/[tenantKey]/notifications/[notificationId]/page.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx"
       ],
       "checkpoints": [
         {
@@ -938,6 +939,11 @@
         {
           "id": "notif-06",
           "description": "Alerts tab auto-opens when inbox is empty",
+          "status": "covered"
+        },
+        {
+          "id": "notif-07",
+          "description": "Navbar drops the chat-only chrome (LLM Model Selector, on-device model badge, privacy chip) on the notifications inbox — tenant-scoped, per-agent and single-notification routes alike; an inbox is not a chat surface",
           "status": "covered"
         }
       ]
@@ -4038,7 +4044,8 @@
         "app/platform/[tenantKey]/analytics/financial/page.tsx",
         "app/platform/[tenantKey]/analytics/audit/page.tsx",
         "app/platform/[tenantKey]/analytics/reports/page.tsx",
-        "app/platform/[tenantKey]/[mentorId]/analytics/_components/analytics-scope-switch.tsx"
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx"
       ],
       "checkpoints": [
         {
@@ -4073,7 +4080,12 @@
         },
         {
           "id": "tanl-07",
-          "description": "Scope switch floated over the agent analytics tab strip (retracted pill, prolongs on hover/focus) jumps to the tenant-wide section on the same tab",
+          "description": "Sidebar Analytics entry opens the tenant-wide section whether or not an agent is in the URL — the per-agent section is reached from the navbar agent dropdown instead",
+          "status": "covered"
+        },
+        {
+          "id": "tanl-08",
+          "description": "Navbar on the tenant-wide section drops the chat-only chrome (LLM Model Selector, agent dropdown, privacy chip) and shows the \"Analytics\" section title instead; the per-agent analytics page keeps full parity (Journey 65)",
           "status": "covered"
         }
       ]
