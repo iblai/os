@@ -349,16 +349,16 @@ When adding a new page or modifying an existing user flow:
 - [x] Markdown resource type is available in the Add Resources modal (TC30, issue #1117)
 - [x] Markdown (.md) file can be uploaded and appears in the dataset list (TC31, issue #1117)
 
-**URL query-string sync** — the Datasets tab syncs its page/search state to `datasetsPage`/`datasetsSearch` query params (`agent-datasets-tab.tsx` + `hooks/user-navigate.ts`). Setting a search always implies a page reset, so page and search are never both non-default at once — the reload/deep-link checkpoints test each in isolation rather than a combined state the app can't produce. The pagination checkpoints (TC36–TC39) need more than one page of results (5 items/page) and run against a pre-seeded, env-configurable mentor (`DATASETS_PAGINATION_TENANT_KEY` / `DATASETS_PAGINATION_MENTOR_ID` in `fixtures/test-data.ts`) — each `test.skip`s gracefully if that mentor is unreachable or no longer has enough datasets to paginate, rather than asserting on data the suite can't guarantee.
+**URL query-string sync** — the Datasets tab syncs its page/search state to `datasetsPage`/`datasetsSearch` query params (`agent-datasets-tab.tsx` + `hooks/user-navigate.ts`). Setting a search always implies a page reset, so page and search are never both non-default at once — the reload/deep-link checkpoints test each in isolation rather than a combined state the app can't produce. The pagination checkpoints (TC36–TC39) need more than one page of results (5 items/page), so each one **seeds its own fixture at runtime**: create a mentor, POST 12 tiny documents to the training API (3 pages — TC37 pages forward twice and TC38 searches from page 3), then delete the mentor in `afterAll` via `MentorTracker`. Seeding goes through `utils/dataset-seeding.ts` rather than the Add Resource UI, which costs ~20s per file. Nothing environment-specific is hard-coded: the tenant key, username and `dm_token` are read from `localStorage` at runtime and the mentor is the one the test just created. An earlier revision pointed these tests at a hand-seeded mentor identified by tenant key + id — that only resolved on the environment it was seeded on and sent every other admin to `/error/403`, so the tests timed out on navigation instead of running.
 
 - [x] Typing in the datasets search debounces into the `datasetsSearch` URL query param, using `router.replace` so it doesn't stack history entries (TC32)
 - [x] `datasetsSearch`/`datasetsPage` URL params clear when the edit mentor modal closes (TC33)
 - [x] `datasetsSearch`/`datasetsPage` URL params clear when switching from Datasets to another tab (TC34)
 - [x] Reloading the page after searching restores `datasetsSearch` and the search input from the URL (TC35)
-- [x] Clicking a pagination page number pushes `datasetsPage` into the URL via `router.push` (TC36, seeded multi-page mentor)
-- [x] Browser Back/Forward walk the visited `datasetsPage` values after paging forward twice (TC37, seeded multi-page mentor)
-- [x] Searching while on page 3 drops `datasetsPage` (reset to page 1) and sets `datasetsSearch` (TC38, seeded multi-page mentor)
-- [x] Reloading the page while paginated restores `datasetsPage` and the active pagination link from the URL (TC39, seeded multi-page mentor)
+- [x] Clicking a pagination page number pushes `datasetsPage` into the URL via `router.push` (TC36, self-seeded multi-page mentor)
+- [x] Browser Back/Forward walk the visited `datasetsPage` values after paging forward twice (TC37, self-seeded multi-page mentor)
+- [x] Searching while on page 3 drops `datasetsPage` (reset to page 1) and sets `datasetsSearch` (TC38, self-seeded multi-page mentor)
+- [x] Reloading the page while paginated restores `datasetsPage` and the active pagination link from the URL (TC39, self-seeded multi-page mentor)
 
 ---
 

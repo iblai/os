@@ -128,11 +128,39 @@ export class DatasetsTab {
    * build up history.
    */
   async goToPage(pageNumber: number): Promise<void> {
-    await this.paginationPageLink(pageNumber).click();
+    const link = this.paginationPageLink(pageNumber);
+
+    // The click can be silently dropped. `AgentDatasetsTab` renders the
+    // pagination with `disabled={isDatasetsFetching || isDatasetsLoading}`, and
+    // `IblPagination` returns early from `onClick` while disabled — but the
+    // element stays in the DOM and Playwright still considers it actionable, so
+    // the click "succeeds" and nothing happens. Any refetch opens that window,
+    // and it repeats every 2s while a document is training.
+    //
+    // Retry until the URL reflects the page rather than asserting on a single
+    // attempt. Each attempt waits out a plausible fetch, so a dropped click
+    // costs a retry rather than the test.
+    const attempts = 4;
+    for (let attempt = 1; attempt <= attempts; attempt++) {
+      await link.click();
+      try {
+        await expect
+          .poll(() => this.getUrlParams().page, { timeout: 5_000 })
+          .toBe(String(pageNumber));
+        return;
+      } catch {
+        if (attempt === attempts) break;
+        await this.page.waitForTimeout(1_000);
+      }
+    }
+
+    // Out of retries — report the same way the single-attempt version did.
     await expect
       .poll(() => this.getUrlParams().page, {
-        timeout: 10_000,
-        message: `Expected datasetsPage to become "${pageNumber}" after clicking page ${pageNumber}`,
+        timeout: 5_000,
+        message:
+          `Expected datasetsPage to become "${pageNumber}" after clicking page ` +
+          `${pageNumber} (${attempts} attempts)`,
       })
       .toBe(String(pageNumber));
   }

@@ -1,11 +1,15 @@
 import { test, expect } from '../fixtures/mentor-test';
-import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
-import { waitForPageReady } from '../utils/resilient';
 import {
-  MENTOR_NEXTJS_HOST,
-  DATASETS_PAGINATION_TENANT_KEY,
-  DATASETS_PAGINATION_MENTOR_ID,
-} from '../fixtures/test-data';
+  navigateToMentorApp,
+  checkAdminStatus,
+  getPlatformContext,
+} from '../utils/auth';
+import { waitForPageReady } from '../utils/resilient';
+import { MentorTracker } from '../utils/mentor-cleanup';
+import {
+  seedDatasetsForMentor,
+  waitForDatasetsReady,
+} from '../utils/dataset-seeding';
 import { logger } from '@iblai/iblai-js/playwright';
 import path from 'path';
 
@@ -782,43 +786,78 @@ test.describe('Journey 20: Dataset Management', () => {
   });
 });
 
-// ── TC36-39: Datasets tab pagination URL sync (seeded multi-page mentor) ────
+// ── TC36-39: Datasets tab pagination URL sync (self-seeded mentor) ──────────
 //
 // Pagination is fixed at 5 items/page (`useDatasetsWithPagination(5, ...)` in
 // the SDK's AgentDatasetsTab) and `IblPagination` renders nothing when
 // `totalPages <= 1` — so exercising page-push / back-forward / page-reset
-// deterministically needs a mentor with more than 5 datasets. Creating that
-// much data per-test via the upload UI would be slow and flaky, so these run
-// against a pre-seeded mentor (20 datasets, 4 pages) instead — see
-// DATASETS_PAGINATION_TENANT_KEY / DATASETS_PAGINATION_MENTOR_ID in
-// fixtures/test-data.ts. Every test still guards on `hasPagination()` and
-// skips (rather than failing) if the seeded mentor's dataset count ever drops
-// to a single page or the mentor becomes unreachable for the running admin —
-// this keeps the suite honest about the gap instead of asserting on data it
-// can't guarantee.
-const SEEDED_DATASETS_MENTOR_URL = `${MENTOR_NEXTJS_HOST}/platform/${DATASETS_PAGINATION_TENANT_KEY}/${DATASETS_PAGINATION_MENTOR_ID}`;
+// deterministically needs a mentor with more than 5 datasets.
+//
+// Each test builds that fixture itself: create a mentor, then seed
+// DATASETS_SEED_COUNT documents straight through the training API (one request
+// each, versus ~20s per file through the Add Resource UI). Nothing about the
+// environment is hard-coded — the tenant, username and token all come from
+// localStorage at runtime, and the mentor is the one the test just made. An
+// earlier revision pointed these tests at a hand-seeded mentor identified by
+// tenant key + id; that only worked on the environment it was seeded on and
+// 403'd everywhere else, which is exactly what this avoids. See
+// utils/dataset-seeding.ts.
+// 12 documents at 5/page = 3 pages. Three is the minimum that satisfies every
+// test below: TC37 pages forward twice (1 → 2 → 3) before walking history back,
+// and TC38 searches from page 3. Two pages would make `goToPage(3)` a no-op and
+// the assertions would pass vacuously or hang on a link that never renders.
+const DATASETS_SEED_COUNT = 12;
+const datasetsPaginationTracker = new MentorTracker();
 
-test.describe('Journey 20: Datasets tab pagination URL sync (seeded mentor)', () => {
-  test.beforeEach(async ({ page, editMentorPage }) => {
-    await navigateToMentorApp(page, SEEDED_DATASETS_MENTOR_URL);
+test.describe('Journey 20: Datasets tab pagination URL sync (self-seeded mentor)', () => {
+  test.beforeEach(async ({ page, createMentorPage, editMentorPage }) => {
+    // These tests build their fixture from scratch — navigate, create a mentor,
+    // seed 12 documents, wait for training to settle, then open the modal —
+    // which lands around 110s against a healthy backend. That is inside the
+    // default 120s budget only by luck: measured over five runs, three tripped
+    // `Test timeout of 120000ms exceeded while running "beforeEach" hook`, each
+    // in a different test. The work is inherently slow rather than stuck, so
+    // give the whole test (hooks included) room instead of trimming the fixture.
+    test.setTimeout(240_000);
+
+    await navigateToMentorApp(page);
     const isAdmin = await checkAdminStatus(page);
     if (!isAdmin) {
       test.skip(true, 'Dataset management requires admin access');
       return;
     }
+
+    await createMentorPage.openAndCreate(
+      `E2E Datasets Pagination ${Date.now()}`,
+    );
+    const { mentorId } = await getPlatformContext(page);
+    datasetsPaginationTracker.add(mentorId);
+
+    await seedDatasetsForMentor(page, mentorId, DATASETS_SEED_COUNT);
+    // Open the tab only once the API agrees the documents exist. It also waits
+    // for training to settle where it can — a pending document keeps the tab
+    // polling every 2s, which disables the pagination control mid-click — but
+    // that half is best-effort, so a loaded backend delays rather than fails
+    // the run. DatasetsTab.goToPage retries through the disabled window.
+    await waitForDatasetsReady(page, mentorId, DATASETS_SEED_COUNT);
+
     await editMentorPage.open('Datasets');
     await waitForPageReady(page);
+  });
+
+  test.afterAll(async ({ browser }, testInfo) => {
+    await datasetsPaginationTracker.deleteAll(browser, testInfo);
   });
 
   test('admin clicks a pagination page number and datasetsPage pushes into the URL', async ({
     editMentorPage,
   }) => {
-    const hasPagination = await editMentorPage.datasets.hasPagination();
-    test.skip(
-      !hasPagination,
-      `Seeded mentor (${DATASETS_PAGINATION_MENTOR_ID} in ${DATASETS_PAGINATION_TENANT_KEY}) ` +
-        'does not have enough datasets to paginate — see DATASETS_PAGINATION_MENTOR_ID in test-data.ts',
-    );
+    // beforeEach seeded more than one page of datasets, so the pagination nav
+    // must render. A missing nav is a real regression now, not a data gap —
+    // assert on it rather than skipping past it.
+    await expect(editMentorPage.datasets.paginationNav).toBeVisible({
+      timeout: 15_000,
+    });
 
     expect(editMentorPage.datasets.getUrlParams().page).toBeNull();
 
@@ -835,12 +874,12 @@ test.describe('Journey 20: Datasets tab pagination URL sync (seeded mentor)', ()
     page,
     editMentorPage,
   }) => {
-    const hasPagination = await editMentorPage.datasets.hasPagination();
-    test.skip(
-      !hasPagination,
-      `Seeded mentor (${DATASETS_PAGINATION_MENTOR_ID} in ${DATASETS_PAGINATION_TENANT_KEY}) ` +
-        'does not have enough datasets to paginate — see DATASETS_PAGINATION_MENTOR_ID in test-data.ts',
-    );
+    // beforeEach seeded more than one page of datasets, so the pagination nav
+    // must render. A missing nav is a real regression now, not a data gap —
+    // assert on it rather than skipping past it.
+    await expect(editMentorPage.datasets.paginationNav).toBeVisible({
+      timeout: 15_000,
+    });
 
     await editMentorPage.datasets.goToPage(2);
     await editMentorPage.datasets.goToPage(3);
@@ -868,12 +907,12 @@ test.describe('Journey 20: Datasets tab pagination URL sync (seeded mentor)', ()
   test('admin searches while on page 3 and datasetsPage is dropped while datasetsSearch is set', async ({
     editMentorPage,
   }) => {
-    const hasPagination = await editMentorPage.datasets.hasPagination();
-    test.skip(
-      !hasPagination,
-      `Seeded mentor (${DATASETS_PAGINATION_MENTOR_ID} in ${DATASETS_PAGINATION_TENANT_KEY}) ` +
-        'does not have enough datasets to paginate — see DATASETS_PAGINATION_MENTOR_ID in test-data.ts',
-    );
+    // beforeEach seeded more than one page of datasets, so the pagination nav
+    // must render. A missing nav is a real regression now, not a data gap —
+    // assert on it rather than skipping past it.
+    await expect(editMentorPage.datasets.paginationNav).toBeVisible({
+      timeout: 15_000,
+    });
 
     await editMentorPage.datasets.goToPage(2);
     await editMentorPage.datasets.goToPage(3);
@@ -897,12 +936,12 @@ test.describe('Journey 20: Datasets tab pagination URL sync (seeded mentor)', ()
     page,
     editMentorPage,
   }) => {
-    const hasPagination = await editMentorPage.datasets.hasPagination();
-    test.skip(
-      !hasPagination,
-      `Seeded mentor (${DATASETS_PAGINATION_MENTOR_ID} in ${DATASETS_PAGINATION_TENANT_KEY}) ` +
-        'does not have enough datasets to paginate — see DATASETS_PAGINATION_MENTOR_ID in test-data.ts',
-    );
+    // beforeEach seeded more than one page of datasets, so the pagination nav
+    // must render. A missing nav is a real regression now, not a data gap —
+    // assert on it rather than skipping past it.
+    await expect(editMentorPage.datasets.paginationNav).toBeVisible({
+      timeout: 15_000,
+    });
 
     // Deliberately page-only (no search): setting a search implies a page
     // reset (see the TC38 contract above), so page and search can never both
