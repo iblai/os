@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.127.0](https://github.com/iblai/os/compare/v0.126.0...v0.127.0) (2026-08-17)
+
+### Features
+
+* **chat:** add i18n strings for the agent task list ([45f192a](https://github.com/iblai/os/commit/45f192a3486bb822112b491fb7d3215ec5f5528e))
+* **chat:** add the agent task list component ([b81a4f9](https://github.com/iblai/os/commit/b81a4f98b4ef836ea264b148a7de71471c7eeaba))
+* **chat:** show the agent task list on the assistant turn ([efa12a4](https://github.com/iblai/os/commit/efa12a482591584e66fcad4608343981c79d507f))
+
+### Bug Fixes
+
+* **chat:** keep write_todos out of the generic tool-call card ([02ae328](https://github.com/iblai/os/commit/02ae3289e0ee84b80c4a6f0cb6a224f24fe7d34e))
+
+### Documentation
+
+* **e2e:** record journey 68 in the coverage ledger ([51ee80d](https://github.com/iblai/os/commit/51ee80da68ebacffca259d6359ed6c0bd5c48b38))
+
+### Styles
+
+* apply prettier to the generated changelog ([95575df](https://github.com/iblai/os/commit/95575df7806ebce3d83b6e56e871db3cf01264d9))
+
+### Tests
+
+* **e2e:** add journey 68 covering the agent task list ([1a45e99](https://github.com/iblai/os/commit/1a45e997bf253e12a979bde7774bf9aa779916c8))
+* **e2e:** add write_todos mocking helpers to the chat page object ([3282289](https://github.com/iblai/os/commit/3282289cc1dad534b60bca9c471aeca9339f99e4))
+
 ## [0.126.0](https://github.com/iblai/os/compare/v0.125.2...v0.126.0) (2026-08-13)
 
 ### Features
