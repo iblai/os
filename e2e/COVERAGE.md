@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-08-12 | 638 checkpoints (607 covered, 8 pending/fixme, 11 not-reproducible in default env, 12 deprecated) | 69 journeys (68 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-08-13 | 649 checkpoints (618 covered, 8 pending/fixme, 11 not-reproducible in default env, 12 deprecated) | 70 journeys (69 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -1354,3 +1354,60 @@ surfaces:
 - [x] slash-16: Skills dropdown (next to Canvas) lists enabled skills as name + `/slug`; selecting inserts the token AT THE CARET with context-aware spacing; the active pill shows the armed name + the standard ✕ (disarms without opening the menu); toggling removes cleanly; arming another replaces (single selection); `/`-picker arming updates the button — one composer-text source of truth
 - [x] slash-15: NON-ADMIN — with the assignments endpoint readable (mocked granted state; a 403 degrades to an inactive picker) the "/" picker offers skills; selecting completes the token and the sent invocation message receives a live AI reply — skips when the environment denies the non-admin CHAT permission entirely (composer disabled with a "you don't have permission to chat" placeholder): the picker rides on top of chat access
 - [x] slash-14: A "/" token typed after existing text (caret-adjacent, preceded by whitespace) opens the picker; selecting completes the invocation at that index keeping the sentence. A "/" glued inside a word (and/or, URLs) never triggers
+
+---
+
+## Journey 68: Agent Task List (11 checkpoints) — `journeys/68-agent-todo-list.spec.ts`
+
+**Source files:** `components/chat/agent-todo-list.tsx`, `components/chat/ai-message-bubble.tsx`, `components/chat/tool-call-indicator.tsx`, `app/globals.css`
+
+Issue #2216 — a Base Agent plans multi-step work with the deep-agent `write_todos`
+tool. Every call streams a FULL REPLACEMENT todo list, rendered as a collapsible
+task list (`AgentTodoList`) on the assistant turn, gated on the mentor's
+`show_reasoning` setting (default `false`) — the same gate as the reasoning
+section and the generic tool-call indicator.
+
+Two independent, deterministic seams are used, since neither one alone covers
+the whole feature:
+
+- **REST history seam** (Tier 1, tests 1–4): drives the LIVE, authenticated
+  chat page (not the public shared-chat page — that page never passes
+  `showReasoning`, and its `transformChatMessage` normalizer drops tool calls
+  entirely). Patches the mentor-settings GET (`show_reasoning: true`, via
+  `route.fetch()` so every other field stays real) and mocks the session
+  chat-history GET (`GET /api/ai-mentor/orgs/{org}/users/{user_id}/sessions/{sessionId}/`)
+  to inject a `write_todos` tool call onto a historical AI message. This is
+  the first real fixture-backed validation of the SDK's history-parsing
+  contract (`toolCallFromHistoryEntry` in `@iblai/web-utils`), which accepts
+  two shapes that had no prior fixture in either repo: LangChain
+  (`{id, name, args}`) and OpenAI
+  (`{id, type: 'function', function: {name, arguments}}`), plus a malformed
+  entry that must be dropped without throwing.
+- **`page.routeWebSocket()`** (Tier 2, test 5): mocks the live chat socket
+  (`wss://.../ws/langflow/`) to script a real streaming turn end-to-end —
+  a `generation_id` start frame, two `write_todos` `tool_call`/`tool_call.end`
+  pairs with different ids (proving wholesale replacement, not a merge), and
+  `eos`. This is what a static history fixture cannot cover: the
+  expanded-while-streaming → auto-collapse-on-completion transition, the
+  shimmer on the live in-progress row, and the throttled screen-reader
+  announcer. `page.routeWebSocket` was previously assumed impractical for
+  this app's chat socket (see Journey 61's comment) without knowing the exact
+  frame shapes; those shapes are now confirmed and the mock works.
+
+A lone leading `assistant`-role history message is special-cased by
+`components/chat/index.tsx` as a "welcome message" (rendered via
+`WelcomeChatNew`, never through `AIMessageBubble`) — every Tier 1 history
+fixture therefore includes a preceding human message so the AI message with
+tool calls actually mounts `AgentTodoList`.
+
+- [x] atl-01: The task list renders as a real `<ol>` with one `<li>` per todo; status via `data-status` + a sr-only status word + a distinct icon per status — no visible status text on the row itself
+- [x] atl-02: The panel header shows an "N of M done" progress summary, visible even while the row list underneath is collapsed
+- [x] atl-03: The panel is expanded by default while the turn is streaming, auto-collapses once the turn completes, and clicking the trigger re-expands it (collapsed-by-default also verified for historical/reload-recovered turns)
+- [x] atl-04: A second `write_todos` call within the same streaming turn replaces the list wholesale — never merges or appends onto the previous call's rows
+- [x] atl-05: An unrecognized todo status (e.g. "blocked") renders as pending rather than being dropped
+- [x] atl-06: A turn that never emits `write_todos` shows no affordance at all — no panel, no header, no skeleton
+- [x] atl-07: `write_todos` never appears in the generic "Used N tools" indicator or as its own raw tool card, even with a companion tool call present on the same turn
+- [x] atl-08: The in-progress row's text carries the `.todo-shimmer` left-to-right sweep class
+- [x] atl-09: The sr-only `aria-live` announcer carries only the throttled "Step N of M complete" summary, never any todo row text
+- [x] atl-10: The task list survives a page reload, recovered from chat history
+- [x] atl-11: First fixture-backed validation of the LangChain-shape and OpenAI-shape `write_todos` history parsing, plus a malformed entry dropped without throwing

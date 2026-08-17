@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import Markdown from '@/components/markdown';
-import type { ToolCallInfo } from '@iblai/iblai-js/web-utils';
+import { WRITE_TODOS_TOOL, type ToolCallInfo } from '@iblai/iblai-js/web-utils';
 import { getFriendlyToolName, getQueryLabel } from './tool-call-utils';
 
 interface ToolCallIndicatorProps {
@@ -43,13 +43,19 @@ export function ToolCallIndicator({
 }: ToolCallIndicatorProps) {
   const [isOpen, setIsOpen] = useState(false);
 
-  if (!toolCalls || toolCalls.length === 0) {
+  // `write_todos` has a dedicated renderer (`AgentTodoList`), so it must never
+  // appear as a generic tool card nor be counted in "Used N tools".
+  const visibleToolCalls = (toolCalls ?? []).filter(
+    (tc) => tc?.name !== WRITE_TODOS_TOOL,
+  );
+
+  if (visibleToolCalls.length === 0) {
     return null;
   }
 
   const isStreaming = isCurrentlyStreaming;
 
-  const uniqueToolCount = new Set(toolCalls.map((tc) => tc.name)).size;
+  const uniqueToolCount = new Set(visibleToolCalls.map((tc) => tc.name)).size;
   const headerLabel = `Used ${uniqueToolCount} tool${uniqueToolCount === 1 ? '' : 's'}`;
 
   return (
@@ -75,10 +81,10 @@ export function ToolCallIndicator({
         {/* `pt-2.5` matches `space-y-2.5` so the first tool sits the same
             distance from the header as the gap between consecutive tools. */}
         <div className="space-y-2.5 border-l-2 border-gray-300 pt-2.5 pl-3 text-xs leading-relaxed text-gray-600">
-          {toolCalls.map((toolCall, index) => {
+          {visibleToolCalls.map((toolCall, index) => {
             const query = getQueryLabel(toolCall);
             const Icon = getToolIcon(toolCall?.name);
-            const isLast = index === toolCalls.length - 1;
+            const isLast = index === visibleToolCalls.length - 1;
 
             return (
               <div key={toolCall?.id || index}>
