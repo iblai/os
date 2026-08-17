@@ -43,11 +43,22 @@ vi.mock('@/lib/config', async (importOriginal) => {
   };
 });
 
-function backend(overrides: { sandboxed?: boolean; local?: unknown } = {}) {
+function backend(
+  overrides: {
+    sandboxed?: boolean;
+    supported?: boolean;
+    sandbox_ready?: boolean;
+    local?: unknown;
+  } = {},
+) {
   invoke.mockImplementation(async (cmd: string) => {
     switch (cmd) {
       case 'check_opencode_status':
-        return { sandboxed: overrides.sandboxed ?? false };
+        return {
+          sandboxed: overrides.sandboxed ?? false,
+          supported: overrides.supported ?? true,
+          sandbox_ready: overrides.sandbox_ready ?? true,
+        };
       case 'get_opencode_workspace':
         return '/home/tester/code/demo';
       case 'set_opencode_workspace':
@@ -101,6 +112,27 @@ describe('CodingModeButton', () => {
     backend({ sandboxed: true });
     const { container } = renderButton();
     await waitFor(() => expect(container).toBeEmptyDOMElement());
+  });
+
+  it('hides itself on an unsupported platform (Windows)', async () => {
+    backend({ supported: false });
+    const { container } = renderButton();
+    await waitFor(() => expect(container).toBeEmptyDOMElement());
+  });
+
+  it('disables the switch and explains when bubblewrap is missing', async () => {
+    localStorage.setItem('ibl_coding_mode_enabled', 'true');
+    backend({ sandbox_ready: false });
+    renderButton();
+
+    // A stale enabled flag is force-cleared so sends route back to normal chat.
+    await waitFor(() =>
+      expect(localStorage.getItem('ibl_coding_mode_enabled')).toBe('false'),
+    );
+
+    await openPopover();
+    expect(screen.getByTestId('code-sandbox-missing')).toBeInTheDocument();
+    expect(screen.getByRole('switch')).toBeDisabled();
   });
 
   describe('default on', () => {

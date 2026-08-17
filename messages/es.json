@@ -2346,7 +2346,8 @@
     "workspace": "Espacio de trabajo",
     "changeFolder": "Cambiar carpeta…",
     "chooseFolderTitle": "Elige tu carpeta de trabajo",
-    "skillsSyncFailed": "No se pudieron sincronizar las habilidades: Código funcionará sin ellas."
+    "skillsSyncFailed": "No se pudieron sincronizar las habilidades: Código funcionará sin ellas.",
+    "sandboxMissing": "Código necesita bubblewrap (bwrap). Instálalo con tu gestor de paquetes y vuelve a abrir la aplicación."
   },
   "chatCodePermissionCard": {
     "title": "Código necesita tu permiso",

@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "lastUpdated": "2026-08-13",
+  "lastUpdated": "2026-08-15",
   "summary": {
-    "totalCheckpoints": 27,
+    "totalCheckpoints": 29,
     "coveredCheckpoints": 18,
-    "pendingCheckpoints": 9,
+    "pendingCheckpoints": 11,
     "deprecatedCheckpoints": 0,
     "notReproducibleCheckpoints": 0,
     "percent": 100,
@@ -105,7 +105,7 @@
       "checkpoints": [
         {
           "id": "code-01",
-          "description": "check_opencode_status reports Code readiness (installed / version / config_ready / sandboxed)",
+          "description": "check_opencode_status reports Code readiness (installed / version / config_ready / sandboxed / supported / sandbox_ready)",
           "status": "covered"
         },
         {
@@ -120,7 +120,7 @@
         },
         {
           "id": "code-04",
-          "description": "Each chat session id gets its own generated workspace under the app-managed workspaces root",
+          "description": "A chat with real work keeps its own workspace under the app-managed root; an untouched leftover (just .git) is recycled for the next chat instead of stranding one dir per launch",
           "status": "covered"
         },
         {
@@ -186,6 +186,16 @@
         {
           "id": "code-17",
           "description": "New Chat in the sidebar evicts the previous chat’s opencode process while Code is on",
+          "status": "pending"
+        },
+        {
+          "id": "code-18",
+          "description": "A Code turn’s opencode process runs inside the OS sandbox (bwrap / sandbox-exec) — only the workspace and tool caches writable, ~/.ssh empty",
+          "status": "pending"
+        },
+        {
+          "id": "code-19",
+          "description": "A second New Chat in one app run gets its own fresh workspace, and a chat’s folder follows it from the ephemeral first-turn key to its real session id",
           "status": "pending"
         }
       ]

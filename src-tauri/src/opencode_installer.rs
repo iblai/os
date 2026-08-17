@@ -468,6 +468,9 @@ fn ensure_config(app: &AppHandle) -> Result<(), String> {
 /// Install opencode (if needed), write the config, and prepare the workspace.
 #[command]
 pub async fn install_opencode(app: AppHandle) -> Result<String, String> {
+    if cfg!(target_os = "windows") {
+        return Err("Code isn't available on Windows.".to_string());
+    }
     if !opencode_installed() {
         log(&app, "opencode not found — downloading");
         download_and_install(&app).await?;
@@ -498,6 +501,10 @@ pub async fn check_opencode_status() -> serde_json::Value {
         "version": opencode_version(),
         "config_ready": config_file().exists(),
         "sandboxed": is_sandboxed(),
+        // Platform gates: `supported` hides Code entirely (Windows);
+        // `sandbox_ready` disables it with a hint while Linux lacks bubblewrap.
+        "supported": cfg!(not(target_os = "windows")),
+        "sandbox_ready": crate::opencode_acp::sandbox_ready(),
     })
 }
 

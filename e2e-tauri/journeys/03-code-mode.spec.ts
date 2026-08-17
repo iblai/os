@@ -1,6 +1,7 @@
 /// <reference types="@wdio/globals/types" />
 import {
   existsSync,
+  mkdirSync,
   readdirSync,
   readFileSync,
   rmSync,
@@ -44,12 +45,15 @@ interface OpencodeStatus {
   version: string | null;
   config_ready: boolean;
   sandboxed: boolean;
+  supported: boolean;
+  sandbox_ready: boolean;
 }
 
 /** Session ids used only by this journey, so cleanup can find their leftovers. */
 const SESSION_A = 'e2e-code-a';
 const SESSION_B = 'e2e-code-b';
-const TEST_SESSIONS = [SESSION_A, SESSION_B];
+const SESSION_C = 'e2e-code-c';
+const TEST_SESSIONS = [SESSION_A, SESSION_B, SESSION_C];
 
 /** Mentor id used only by the skills checkpoints below. */
 const MENTOR = 'e2e-code-mentor';
@@ -180,6 +184,10 @@ describe('Journey 3: Code Mode (opencode)', () => {
     expect(typeof status.config_ready).toBe('boolean');
     // The macOS App Sandbox flag: false everywhere tauri-driver can run.
     expect(status.sandboxed).toBe(false);
+    // tauri-driver only runs on Linux/Windows-with-Code-off… in practice Linux,
+    // where Code is supported; bwrap availability depends on the host.
+    expect(status.supported).toBe(true);
+    expect(typeof status.sandbox_ready).toBe('boolean');
   });
 
   /**
@@ -258,20 +266,32 @@ describe('Journey 3: Code Mode (opencode)', () => {
     expect(status.config_ready).toBe(true);
   });
 
-  it('code-04: each chat gets its own generated workspace', async () => {
+  it('code-04: a chat with real work keeps its own workspace; untouched leftovers are recycled', async () => {
     const a = await invokeCmd<string>('get_opencode_workspace', {
       sessionId: SESSION_A,
     });
+    expect(a.startsWith(join(DATA_DIR, 'workspaces'))).toBe(true);
+    expect(existsSync(a)).toBe(true);
+
+    // Real content in A's folder — the next chat must NOT be handed it.
+    writeFileSync(join(a, 'notes.txt'), 'work');
     const b = await invokeCmd<string>('get_opencode_workspace', {
       sessionId: SESSION_B,
     });
+    expect(b).not.toBe(a);
+    expect(b.startsWith(join(DATA_DIR, 'workspaces'))).toBe(true);
+    expect(existsSync(b)).toBe(true);
 
-    expect(a).not.toBe(b);
-    // Both land under the app-managed workspaces root with a generated name.
-    for (const dir of [a, b]) {
-      expect(dir.startsWith(join(DATA_DIR, 'workspaces'))).toBe(true);
-      expect(existsSync(dir)).toBe(true);
-    }
+    // The other half of the rule: an untouched leftover (just `.git`) is
+    // recycled instead of stranding one more folder per app launch. `aaa-`
+    // sorts ahead of every generated adjective slug, so the sort-first
+    // deterministic pick is ours.
+    const leftover = join(DATA_DIR, 'workspaces', 'aaa-e2e-recycle');
+    mkdirSync(join(leftover, '.git'), { recursive: true });
+    const c = await invokeCmd<string>('get_opencode_workspace', {
+      sessionId: SESSION_C,
+    });
+    expect(c).toBe(leftover);
   });
 
   it('code-05: a chat keeps the same workspace across calls', async () => {
@@ -461,6 +481,18 @@ describe('Journey 3: Code Mode (opencode)', () => {
 
     it.skip('code-10: the prompt renders in the chat that raised it', () => {
       /* pending — same harness gap; covered by the Vitest bubble tests */
+    });
+
+    it.skip('code-18: a Code turn runs inside the OS sandbox — only the workspace and tool caches writable, ~/.ssh empty', () => {
+      /* pending — needs a tool-calling model to drive a shell command through
+         opencode; the bwrap argv, SBPL profile and decoy home are covered by
+         the Rust sandbox tests in opencode_acp.rs */
+    });
+
+    it.skip('code-19: a second New Chat gets a fresh workspace, and a chat’s folder follows it from the ephemeral first-turn key to its real session id', () => {
+      /* pending — needs an authenticated UI session (like code-14/17); covered
+         meanwhile by the Rust adopt_prior_mapping tests and the SDK per-chat
+         key vitest cases */
     });
   });
 });

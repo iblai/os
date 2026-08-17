@@ -290,6 +290,342 @@ pub fn augmented_path() -> std::ffi::OsString {
     std::env::join_paths(dirs).unwrap_or_else(|_| std::env::var_os("PATH").unwrap_or_default())
 }
 
+// ---------- OS sandbox for the opencode child ----------
+//
+// Write-allow-list confinement: the child sees the whole filesystem read-only
+// and may WRITE only the enumerated set below — the session workspace, temp,
+// the tool caches, opencode's own state — while credential dirs are hidden
+// with fake read/write (reads see empty, writes land nowhere real). Reads stay
+// open everywhere else (the child must read /usr, node, the managed binary,
+// the skills dirs), and the network stays open (the loopback proxy and npm).
+
+/// Write-allowed dirs, relative to `$HOME`, pre-created when missing
+/// ([`ensure_write_dirs`]) — Code can't function without them. `.cache` is the
+/// umbrella every XDG-caching tool shares (pip, pnpm, corepack, uv,
+/// go-build…); `.local/share/opencode` is opencode's own state.
+const WRITE_DIRS_CORE: &[&str] =
+    &[".cache", ".npm", ".local/share/pnpm", ".local/share/opencode"];
+
+/// macOS extras: the native caches root and the mac pnpm store.
+// The macOS-arm items in this section stay compiled on every unix target so
+// the unit tests can exercise them from Linux — hence the targeted dead_code
+// allows.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+const WRITE_DIRS_CORE_MACOS: &[&str] = &["Library/Caches", "Library/pnpm"];
+
+/// Toolchain dirs, writable only when already present — never created. Using
+/// an installed toolchain works; installing one from scratch inside Code stays
+/// blocked (read-only `$HOME`).
+const WRITE_DIRS_TOOLCHAIN: &[&str] =
+    &[".cargo", ".rustup", "go", ".bun", ".local/share/uv", ".pyenv"];
+
+/// Credential dirs hidden from the child, relative to `$HOME`.
+const SECRET_DIRS: &[&str] = &[
+    ".ssh",
+    ".gnupg",
+    ".aws",
+    ".azure",
+    ".kube",
+    ".docker",
+    ".claude",
+    ".config/gh",
+    ".config/gcloud",
+    ".config/op",
+    ".password-store",
+];
+/// Platform extras: the GNOME keyring store / the macOS keychain files.
+const SECRET_DIRS_LINUX: &[&str] = &[".local/share/keyrings"];
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+const SECRET_DIRS_MACOS: &[&str] = &["Library/Keychains"];
+
+/// Credential files hidden from the child, relative to `$HOME`.
+const SECRET_FILES: &[&str] = &[
+    ".netrc",
+    ".npmrc",
+    ".git-credentials",
+    ".pypirc",
+    ".claude.json",
+    ".cargo/credentials.toml",
+];
+
+/// bwrap argv for the Linux sandbox — everything before the program name.
+///
+/// Order is the policy (later mounts win): the whole root read-only first,
+/// `/dev` and `/proc` restored (shell redirects, `/dev/shm`), the write list
+/// bound read-write over the ro root, and the secret masks stacked last — so a
+/// credential file inside an allowed parent (`~/.cargo/credentials.toml`)
+/// stays masked. A secret dir is masked with an empty tmpfs (reads see empty,
+/// writes go to RAM and vanish); a secret file with `/dev/null`. Masks are
+/// added only for paths that exist — bwrap would otherwise create the mount
+/// point on the real filesystem — and `--bind-try` skips write dirs the host
+/// doesn't have (toolchains are deliberately not pre-created).
+fn bwrap_args(
+    home: &Path,
+    workspace: &Path,
+    config_home: &Path,
+    tmpdir: Option<&Path>,
+) -> Vec<String> {
+    let mut args: Vec<String> = vec![
+        "--ro-bind".into(),
+        "/".into(),
+        "/".into(),
+        "--dev-bind".into(),
+        "/dev".into(),
+        "/dev".into(),
+        "--proc".into(),
+        "/proc".into(),
+    ];
+    let mut rw_targets: Vec<PathBuf> = vec![
+        workspace.to_path_buf(),
+        PathBuf::from("/tmp"),
+        PathBuf::from("/var/tmp"),
+        config_home.to_path_buf(),
+    ];
+    if let Some(t) = tmpdir {
+        if t != Path::new("/tmp") {
+            rw_targets.push(t.to_path_buf());
+        }
+    }
+    for rel in WRITE_DIRS_CORE {
+        rw_targets.push(home.join(rel));
+    }
+    // Toolchains opt in by presence — an absent one stays read-only rather
+    // than being advertised in the argv.
+    for rel in WRITE_DIRS_TOOLCHAIN {
+        let p = home.join(rel);
+        if p.is_dir() {
+            rw_targets.push(p);
+        }
+    }
+    for target in &rw_targets {
+        let p = target.to_string_lossy().into_owned();
+        args.extend(["--bind-try".into(), p.clone(), p]);
+    }
+    for rel in SECRET_DIRS.iter().chain(SECRET_DIRS_LINUX) {
+        let p = home.join(rel);
+        if p.is_dir() {
+            args.extend(["--tmpfs".into(), p.to_string_lossy().into_owned()]);
+        }
+    }
+    for rel in SECRET_FILES {
+        let p = home.join(rel);
+        if p.is_file() {
+            args.extend([
+                "--ro-bind".into(),
+                "/dev/null".into(),
+                p.to_string_lossy().into_owned(),
+            ]);
+        }
+    }
+    // Killing the bwrap monitor (what `start_kill` hits) takes the sandboxed
+    // opencode down with it, and both die if the app does.
+    args.push("--die-with-parent".into());
+    args
+}
+
+/// Pre-create the core write dirs so their rw binds (Linux) and the decoy's
+/// symlinks (macOS) resolve on first use. Toolchain dirs are deliberately
+/// left alone — absent means read-only.
+fn ensure_write_dirs(home: &Path) {
+    for rel in WRITE_DIRS_CORE {
+        let _ = std::fs::create_dir_all(home.join(rel));
+    }
+    #[cfg(target_os = "macos")]
+    for rel in WRITE_DIRS_CORE_MACOS {
+        let _ = std::fs::create_dir_all(home.join(rel));
+    }
+}
+
+/// Quote a path as an SBPL string literal (`\` and `"` escaped).
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+fn sbpl_quote(p: &Path) -> String {
+    let mut out = String::from("\"");
+    for c in p.to_string_lossy().chars() {
+        if c == '"' || c == '\\' {
+            out.push('\\');
+        }
+        out.push(c);
+    }
+    out.push('"');
+    out
+}
+
+/// SBPL profile for `sandbox-exec` on macOS: allow everything, deny ALL
+/// writes, re-allow them for the write list, and deny the real credential
+/// paths outright. Later rules win in SBPL, so the order IS the policy — the
+/// trailing secrets deny keeps `~/.cargo/credentials.toml` blocked inside the
+/// allowed `~/.cargo`.
+///
+/// sandbox-exec can only deny (EPERM) — the fake-empty view comes from the
+/// decoy home ([`build_decoy_home`]); the secret denies are the enforcement
+/// backstop for anything that reaches the real paths anyway (`getpwuid`,
+/// symlink traversal — the kernel checks resolved paths).
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+fn sandbox_profile_macos(home: &Path, workspace: &Path, config_home: &Path) -> String {
+    let mut p = String::from(
+        "(version 1)\n(allow default)\n(deny file-write* (subpath \"/\"))\n(allow file-write*",
+    );
+    // /dev: shell redirects and ttys; the tmp roots cover /tmp, /var/tmp and
+    // the per-user $TMPDIR under /var/folders.
+    for dir in ["/dev", "/private/tmp", "/private/var/tmp", "/private/var/folders"] {
+        p.push_str("\n  (subpath ");
+        p.push_str(&sbpl_quote(Path::new(dir)));
+        p.push(')');
+    }
+    for abs in [workspace, config_home] {
+        p.push_str("\n  (subpath ");
+        p.push_str(&sbpl_quote(abs));
+        p.push(')');
+    }
+    for rel in WRITE_DIRS_CORE
+        .iter()
+        .chain(WRITE_DIRS_CORE_MACOS)
+        .chain(WRITE_DIRS_TOOLCHAIN)
+    {
+        p.push_str("\n  (subpath ");
+        p.push_str(&sbpl_quote(&home.join(rel)));
+        p.push(')');
+    }
+    p.push_str(")\n(deny file*");
+    for rel in SECRET_DIRS.iter().chain(SECRET_DIRS_MACOS) {
+        p.push_str("\n  (subpath ");
+        p.push_str(&sbpl_quote(&home.join(rel)));
+        p.push(')');
+    }
+    for rel in SECRET_FILES {
+        p.push_str("\n  (literal ");
+        p.push_str(&sbpl_quote(&home.join(rel)));
+        p.push(')');
+    }
+    p.push_str(")\n");
+    p
+}
+
+/// Seed the decoy `$HOME` the macOS child runs under.
+///
+/// Every top-level entry of the real home is symlinked into the decoy except
+/// the secret list: a secret dir becomes a real empty writable dir (fake
+/// read/write), a secret file is simply absent, and a parent that contains a
+/// nested secret (`.config`, `.cargo`) is split into a real dir whose children
+/// are linked individually. The decoy lives under `config_home(session)`, so
+/// the existing close-time `remove_dir_all` cleans it up.
+#[cfg(unix)]
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+fn build_decoy_home(real_home: &Path, decoy: &Path) -> Result<(), String> {
+    // Rebuild from scratch on respawn (`remove_dir_all` deletes symlinks,
+    // never their targets).
+    let _ = std::fs::remove_dir_all(decoy);
+    let secret_dirs: Vec<PathBuf> = SECRET_DIRS
+        .iter()
+        .chain(SECRET_DIRS_MACOS)
+        .map(PathBuf::from)
+        .collect();
+    let secret_files: Vec<PathBuf> = SECRET_FILES.iter().map(PathBuf::from).collect();
+    populate_decoy(real_home, decoy, Path::new(""), &secret_dirs, &secret_files)
+}
+
+/// See [`build_decoy_home`]; `rel` is the subdir being populated (`""` at the top).
+#[cfg(unix)]
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+fn populate_decoy(
+    real_home: &Path,
+    decoy_root: &Path,
+    rel: &Path,
+    secret_dirs: &[PathBuf],
+    secret_files: &[PathBuf],
+) -> Result<(), String> {
+    std::fs::create_dir_all(decoy_root.join(rel)).map_err(|e| format!("decoy home: {e}"))?;
+    let real = real_home.join(rel);
+    let entries = std::fs::read_dir(&real).map_err(|e| format!("decoy home: {e}"))?;
+    for entry in entries.flatten() {
+        let child_rel = rel.join(entry.file_name());
+        if secret_dirs.contains(&child_rel) {
+            std::fs::create_dir_all(decoy_root.join(&child_rel))
+                .map_err(|e| format!("decoy home: {e}"))?;
+        } else if secret_files.contains(&child_rel) {
+            // Absent, not empty: tools probe for existence before reading.
+        } else if secret_dirs
+            .iter()
+            .chain(secret_files.iter())
+            .any(|s| s.starts_with(&child_rel) && s != &child_rel)
+        {
+            populate_decoy(real_home, decoy_root, &child_rel, secret_dirs, secret_files)?;
+        } else {
+            std::os::unix::fs::symlink(
+                real.join(entry.file_name()),
+                decoy_root.join(&child_rel),
+            )
+            .map_err(|e| format!("decoy home: {e}"))?;
+        }
+    }
+    Ok(())
+}
+
+/// Whether the executable `name` sits on `path_var` — the bwrap preflight.
+#[cfg(target_os = "linux")]
+fn has_executable(path_var: &std::ffi::OsStr, name: &str) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+    std::env::split_paths(path_var).any(|d| {
+        d.join(name)
+            .metadata()
+            .map(|m| m.is_file() && m.permissions().mode() & 0o111 != 0)
+            .unwrap_or(false)
+    })
+}
+
+/// Is the OS sandbox available? Linux needs bubblewrap on PATH; macOS ships
+/// `sandbox-exec`; Windows never spawns (Code is unsupported there).
+pub fn sandbox_ready() -> bool {
+    #[cfg(target_os = "linux")]
+    return has_executable(&augmented_path(), "bwrap");
+    #[allow(unreachable_code)]
+    true
+}
+
+/// The sandboxed Command for a session's opencode spawn: the wrapper program
+/// plus its sandbox argv, ending with the opencode program name. The caller
+/// layers the ACP args, cwd, env and stdio on top unchanged.
+fn sandboxed_opencode_command(_session_id: &str, workspace: &Path) -> Result<Command, String> {
+    #[cfg(target_os = "linux")]
+    {
+        let home = home_dir().unwrap_or_default();
+        ensure_write_dirs(&home);
+        let tmpdir = std::env::var_os("TMPDIR").map(PathBuf::from);
+        let mut cmd = create_command("bwrap");
+        cmd.args(bwrap_args(
+            &home,
+            workspace,
+            &config_home(_session_id),
+            tmpdir.as_deref(),
+        ));
+        cmd.arg(opencode_program());
+        return Ok(cmd);
+    }
+    #[cfg(target_os = "macos")]
+    {
+        let home = home_dir().unwrap_or_default();
+        ensure_write_dirs(&home);
+        // Named so `echo $HOME` doesn't give the game away.
+        let fake_home = config_home(_session_id).join("code-mode-home");
+        build_decoy_home(&home, &fake_home)?;
+        let mut cmd = create_command("/usr/bin/sandbox-exec");
+        cmd.args([
+            "-p",
+            &sandbox_profile_macos(&home, workspace, &config_home(_session_id)),
+        ]);
+        cmd.arg(opencode_program());
+        // The fake layer: $HOME-respecting tools see the fake home; the SBPL
+        // denies above catch anything that resolves the real one.
+        cmd.env("HOME", fake_home);
+        return Ok(cmd);
+    }
+    #[cfg(target_os = "windows")]
+    {
+        let _ = workspace;
+        Err("Code isn't available on Windows.".to_string())
+    }
+}
+
 /// Chat → workspace folder, persisted as `~/.local/share/iblai/workspaces.json`.
 ///
 /// Replaces the single global `workspace.txt`: every chat now gets its own folder, so a
@@ -341,7 +677,36 @@ fn workspace_slug() -> String {
     )
 }
 
+/// An abandoned generated workspace: nothing in it beyond `.git` (and the
+/// `.DS_Store` Finder litter). These are what a launch whose chat never wrote
+/// anything leaves behind.
+fn is_empty_project(dir: &Path) -> bool {
+    match std::fs::read_dir(dir) {
+        Ok(entries) => entries
+            .flatten()
+            .all(|e| e.file_name() == ".git" || e.file_name() == ".DS_Store"),
+        Err(_) => false,
+    }
+}
+
+/// The first (name-sorted, for determinism) recyclable workspace under `root`.
+fn find_empty_workspace(root: &Path) -> Option<PathBuf> {
+    let mut candidates: Vec<PathBuf> = std::fs::read_dir(root)
+        .ok()?
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.is_dir() && is_empty_project(p))
+        .collect();
+    candidates.sort();
+    candidates.into_iter().next()
+}
+
 /// This chat's workspace, generating and recording one the first time it's asked for.
+///
+/// New chat = new workspace — but an untouched leftover (just `.git`) is
+/// recycled instead of minting another dir on every app start, since sessions
+/// aren't restored across launches and each launch would otherwise strand one
+/// more empty folder. A dir with any real content is never shared.
 pub fn resolve_workspace(session_id: &str) -> PathBuf {
     let mut map = read_workspace_map();
     if let Some(path) = map.get(session_id).and_then(|v| v.as_str()) {
@@ -350,6 +715,11 @@ pub fn resolve_workspace(session_id: &str) -> PathBuf {
         }
     }
     let root = iblai_data_dir().join("workspaces");
+    if let Some(dir) = find_empty_workspace(&root) {
+        map.insert(session_id.to_string(), json!(dir.to_string_lossy()));
+        let _ = write_workspace_map(&map);
+        return dir;
+    }
     // Collisions are astronomically unlikely but cheap to rule out, and a collision would
     // silently hand two chats the same folder.
     let taken: Vec<&str> = map.values().filter_map(|v| v.as_str()).collect();
@@ -365,6 +735,41 @@ pub fn resolve_workspace(session_id: &str) -> PathBuf {
     map.insert(session_id.to_string(), json!(dir.to_string_lossy()));
     let _ = write_workspace_map(&map);
     dir
+}
+
+/// Move the ephemeral first-turn mapping onto the chat's real session id.
+///
+/// A brand-new chat's first turn runs under an SDK-minted `coding-new-*` key;
+/// once the real id exists, the workspace must follow it or the chat splits
+/// across two folders. On a successful adoption the remaining `coding-new-*`
+/// entries are pruned too — those keys are per-app-run and never recur, and
+/// the only live one is the chat being migrated right now. (The pruning must
+/// NOT move into `resolve_workspace`: there it could yank the mapping out from
+/// under a live unsaved chat mid-conversation.)
+fn adopt_prior_mapping(
+    map: &mut serde_json::Map<String, Value>,
+    session_id: &str,
+    prior: &str,
+) -> bool {
+    if map.contains_key(session_id) {
+        return false; // a resumed chat already owns a folder — never overwrite
+    }
+    let Some(dir) = map.remove(prior) else {
+        return false;
+    };
+    map.insert(session_id.to_string(), dir);
+    map.retain(|k, _| !k.starts_with("coding-new-") || k == session_id);
+    true
+}
+
+/// See [`adopt_prior_mapping`]; also reaps the ephemeral key's opencode
+/// process — the same logical chat runs under its real id from here on.
+async fn migrate_new_chat(session_id: &str, prior: &str) {
+    let mut map = read_workspace_map();
+    if adopt_prior_mapping(&mut map, session_id, prior) {
+        let _ = write_workspace_map(&map);
+    }
+    close_session(prior).await;
 }
 
 /// Return this chat's coding workspace path.
@@ -1285,10 +1690,12 @@ async fn spawn_session(
         display_name,
     )?;
 
-    // A plain child process, at the user's own privilege — the confinement is the
-    // permission prompt in `handle_permission_request`, not the kernel. `PATH` carries our
-    // managed `bin` dir so a downloaded opencode is found when the system has none.
-    let mut cmd = create_command(&opencode_program());
+    // Kernel confinement on top of the permission prompt in
+    // `handle_permission_request`: the child spawns inside an OS sandbox — bwrap on
+    // Linux, sandbox-exec + a decoy $HOME on macOS (see the sandbox section near
+    // `bwrap_args`). `PATH` carries our managed `bin` dir so a downloaded opencode is
+    // found when the system has none.
+    let mut cmd = sandboxed_opencode_command(session_id, workspace)?;
     cmd.args(["acp", "--print-logs", "--log-level", "INFO"])
         .current_dir(workspace)
         .env("PATH", augmented_path())
@@ -1298,9 +1705,13 @@ async fn spawn_session(
         .stderr(std::process::Stdio::piped())
         .kill_on_drop(true);
 
-    let mut child = cmd
-        .spawn()
-        .map_err(|e| format!("failed to launch `opencode acp` (is opencode installed?): {e}"))?;
+    let mut child = cmd.spawn().map_err(|e| {
+        if cfg!(target_os = "linux") {
+            format!("failed to launch the sandboxed `opencode acp` (is bubblewrap (bwrap) installed?): {e}")
+        } else {
+            format!("failed to launch `opencode acp` (is opencode installed?): {e}")
+        }
+    })?;
 
     let stdin = Arc::new(Mutex::new(child.stdin.take().ok_or("no stdin")?));
     let stdout = child.stdout.take().ok_or("no stdout")?;
@@ -1590,9 +2001,31 @@ pub async fn opencode_chat_stream(
     // Mentor UUID from the SDK's localStorage bridge — keys the synced Agent
     // Skills dir. Absent with an older SDK: vibe skills only, no sync wait.
     mentor: Option<String>,
+    // The SDK's ephemeral first-turn key for this chat. When it differs from
+    // `session_id`, the chat just gained its real id — migrate the first
+    // turn's workspace (and reap its process) so the chat keeps ONE folder.
+    // Absent with an older SDK: no migration.
+    new_chat_key: Option<String>,
 ) -> Result<(), String> {
     if crate::opencode_installer::is_sandboxed() {
         return Err("Code isn't available in the sandboxed Mac App Store build.".to_string());
+    }
+    if cfg!(target_os = "windows") {
+        return Err("Code isn't available on Windows.".to_string());
+    }
+    // Belt for the UI gate: on Linux the pill is disabled while bwrap is missing,
+    // but a stale flag or an older frontend could still send.
+    if !sandbox_ready() {
+        return Err(
+            "Code needs bubblewrap (bwrap) — install it with your package manager, then reopen the app."
+                .to_string(),
+        );
+    }
+    // BEFORE workspace resolution, so the real id resolves to the migrated dir.
+    if let Some(prior) = new_chat_key.as_deref() {
+        if prior != session_id {
+            migrate_new_chat(&session_id, prior).await;
+        }
     }
     let workspace = workspace
         .map(PathBuf::from)
@@ -1789,6 +2222,247 @@ mod tests {
     fn ids_differing_only_in_stripped_characters_still_differ() {
         assert_ne!(path_key("a/b"), path_key("a:b"));
         assert_eq!(path_key("chat-1"), path_key("chat-1"), "and it is stable");
+    }
+
+    /// The sandbox argv is a write allow-list: the whole root read-only first,
+    /// /dev and /proc restored, only the enumerated dirs bound read-write, and
+    /// the secret masks stacked last — later mounts win in bwrap, so this
+    /// order IS the policy (the masks must beat the rw binds so
+    /// `~/.cargo/credentials.toml` stays blocked inside the allowed `.cargo`).
+    #[test]
+    fn the_bwrap_policy_is_a_write_allow_list() {
+        let scratch =
+            std::env::temp_dir().join(format!("opencode-sbx-bwrap-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&scratch);
+        let home = scratch.join("home");
+        let workspace = scratch.join("ws");
+        let cfg_home = scratch.join("cfg");
+        std::fs::create_dir_all(home.join(".ssh")).unwrap();
+        // An installed toolchain opts in; .bun is deliberately absent.
+        std::fs::create_dir_all(home.join(".cargo")).unwrap();
+        std::fs::write(home.join(".netrc"), "machine x").unwrap();
+
+        let args = bwrap_args(&home, &workspace, &cfg_home, None);
+        let flat = args.join(" ");
+
+        assert_eq!(&args[..3], &["--ro-bind", "/", "/"]);
+        assert!(flat.contains("--dev-bind /dev /dev"));
+        assert!(flat.contains("--proc /proc"));
+
+        let rw = |p: &Path| format!("--bind-try {} {}", p.display(), p.display());
+        assert!(flat.contains(&rw(&workspace)));
+        assert!(flat.contains(&rw(Path::new("/tmp"))));
+        assert!(flat.contains(&rw(&cfg_home)));
+        assert!(flat.contains(&rw(&home.join(".cache"))), "core cache allowed");
+        assert!(
+            flat.contains(&rw(&home.join(".cargo"))),
+            "present toolchain allowed"
+        );
+        assert!(!flat.contains(".bun"), "absent toolchain not advertised");
+
+        // Masks stack AFTER the rw binds and only for existing secrets.
+        let ssh_mask = format!("--tmpfs {}", home.join(".ssh").display());
+        assert!(flat.contains(&ssh_mask));
+        assert!(flat.rfind(&ssh_mask).unwrap() > flat.rfind("--bind-try").unwrap());
+        let netrc = home.join(".netrc");
+        assert!(flat.contains(&format!("--ro-bind /dev/null {}", netrc.display())));
+        assert!(!flat.contains(".aws"), "missing secrets get no mask");
+        assert_eq!(args.last().unwrap(), "--die-with-parent");
+
+        // A custom $TMPDIR is bound too.
+        let with_tmp =
+            bwrap_args(&home, &workspace, &cfg_home, Some(Path::new("/custom/tmp"))).join(" ");
+        assert!(with_tmp.contains("--bind-try /custom/tmp /custom/tmp"));
+
+        let _ = std::fs::remove_dir_all(&scratch);
+    }
+
+    /// The macOS decoy home fakes the credential dirs: real entries stay
+    /// reachable through symlinks, secret dirs exist but are empty and writable
+    /// (writes evaporate with the session), secret files are absent, and a
+    /// parent holding a nested secret is split rather than symlinked wholesale.
+    #[test]
+    #[cfg(unix)]
+    fn the_decoy_home_fakes_secrets_and_links_the_rest() {
+        let scratch =
+            std::env::temp_dir().join(format!("opencode-sbx-decoy-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&scratch);
+        let real = scratch.join("real");
+        let decoy = scratch.join("decoy");
+        std::fs::create_dir_all(real.join(".ssh")).unwrap();
+        std::fs::write(real.join(".ssh/id_ed25519"), "SECRET").unwrap();
+        std::fs::write(real.join(".netrc"), "machine x login y").unwrap();
+        std::fs::write(real.join(".gitconfig"), "[user]\nname = dev").unwrap();
+        std::fs::create_dir_all(real.join(".config/gh")).unwrap();
+        std::fs::write(real.join(".config/gh/hosts.yml"), "oauth_token: t").unwrap();
+        std::fs::create_dir_all(real.join(".config/nvim")).unwrap();
+        std::fs::create_dir_all(real.join("projects")).unwrap();
+
+        build_decoy_home(&real, &decoy).unwrap();
+
+        // Fake .ssh: a real empty dir, writable, host untouched.
+        let ssh = decoy.join(".ssh");
+        assert!(ssh.is_dir() && !ssh.is_symlink());
+        assert_eq!(std::fs::read_dir(&ssh).unwrap().count(), 0);
+        std::fs::write(ssh.join("planted"), "x").unwrap();
+        assert!(!real.join(".ssh/planted").exists());
+
+        // Secret files are absent; ordinary entries are symlinks to the real home.
+        assert!(!decoy.join(".netrc").exists());
+        assert!(decoy.join(".gitconfig").is_symlink());
+        assert!(decoy.join("projects").is_symlink());
+
+        // .config holds a nested secret, so it is split: gh faked, nvim linked.
+        let cfg = decoy.join(".config");
+        assert!(cfg.is_dir() && !cfg.is_symlink());
+        assert!(cfg.join("gh").is_dir() && !cfg.join("gh").is_symlink());
+        assert_eq!(std::fs::read_dir(cfg.join("gh")).unwrap().count(), 0);
+        assert!(cfg.join("nvim").is_symlink());
+
+        let _ = std::fs::remove_dir_all(&scratch);
+    }
+
+    /// The macOS profile is a write allow-list with the secrets denied last:
+    /// default-allow, ALL writes denied, the enumerated dirs re-allowed, and
+    /// the real credential paths hard-denied — later rules win in SBPL, so the
+    /// trailing deny keeps `~/.cargo/credentials.toml` blocked inside the
+    /// allowed `~/.cargo`.
+    #[test]
+    fn the_macos_profile_is_a_write_allow_list_with_secrets_denied_last() {
+        let p = sandbox_profile_macos(
+            Path::new("/Users/dev"),
+            Path::new("/Users/dev/proj"),
+            Path::new("/Users/dev/.config/iblai/agents/sessions/k"),
+        );
+        assert!(p.starts_with(
+            "(version 1)\n(allow default)\n(deny file-write* (subpath \"/\"))"
+        ));
+        assert!(p.contains("(allow file-write*"));
+        assert!(p.contains("(subpath \"/dev\")"));
+        assert!(p.contains("(subpath \"/private/var/folders\")"));
+        assert!(p.contains("(subpath \"/Users/dev/proj\")"));
+        assert!(p.contains("(subpath \"/Users/dev/.config/iblai/agents/sessions/k\")"));
+        assert!(p.contains("(subpath \"/Users/dev/.cache\")"));
+        assert!(p.contains("(subpath \"/Users/dev/Library/Caches\")"));
+        assert!(p.contains("(subpath \"/Users/dev/.cargo\")"));
+        assert!(p.contains("(deny file*"));
+        assert!(p.contains("(subpath \"/Users/dev/.ssh\")"));
+        assert!(p.contains("(subpath \"/Users/dev/Library/Keychains\")"));
+        assert!(p.contains("(literal \"/Users/dev/.netrc\")"));
+        assert!(p.contains("(literal \"/Users/dev/.cargo/credentials.toml\")"));
+        // Later rules win: the secrets deny must come after the write allows.
+        assert!(p.find("(deny file*").unwrap() > p.find("(allow file-write*").unwrap());
+    }
+
+    /// A home path containing SBPL string metacharacters cannot break out of
+    /// its quoted literal.
+    #[test]
+    fn sbpl_paths_with_quotes_stay_quoted() {
+        assert_eq!(
+            sbpl_quote(Path::new(r#"/Users/a"b\c"#)),
+            r#""/Users/a\"b\\c""#
+        );
+    }
+
+    /// bwrap detection wants an executable file on PATH — a missing or
+    /// non-executable bwrap reads as "sandbox not ready" up front instead of
+    /// failing at spawn time.
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn bwrap_detection_requires_an_executable_on_path() {
+        use std::os::unix::fs::PermissionsExt;
+        let scratch =
+            std::env::temp_dir().join(format!("opencode-sbx-path-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&scratch);
+        std::fs::create_dir_all(&scratch).unwrap();
+        let path_var: std::ffi::OsString = scratch.clone().into();
+
+        assert!(!has_executable(&path_var, "bwrap"), "empty dir");
+
+        let bin = scratch.join("bwrap");
+        std::fs::write(&bin, "#!/bin/sh\n").unwrap();
+        std::fs::set_permissions(&bin, std::fs::Permissions::from_mode(0o644)).unwrap();
+        assert!(!has_executable(&path_var, "bwrap"), "not executable");
+
+        std::fs::set_permissions(&bin, std::fs::Permissions::from_mode(0o755)).unwrap();
+        assert!(has_executable(&path_var, "bwrap"));
+
+        let _ = std::fs::remove_dir_all(&scratch);
+    }
+
+    /// Untouched workspaces (nothing beyond `.git`/`.DS_Store`) are
+    /// recyclable; anything with real content is not — a new chat must never
+    /// be handed a folder that already has someone's work in it.
+    #[test]
+    fn only_untouched_workspaces_are_recycled() {
+        let root = std::env::temp_dir().join(format!("opencode-ws-recycle-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let empty = root.join("a-empty");
+        std::fs::create_dir_all(empty.join(".git")).unwrap();
+        std::fs::write(empty.join(".DS_Store"), b"finder litter").unwrap();
+        let dirty = root.join("b-dirty");
+        std::fs::create_dir_all(dirty.join(".git")).unwrap();
+        std::fs::write(dirty.join("notes.txt"), b"work").unwrap();
+        let bare = root.join("c-bare");
+        std::fs::create_dir_all(&bare).unwrap();
+
+        assert!(is_empty_project(&empty), "only .git + .DS_Store is untouched");
+        assert!(!is_empty_project(&dirty), "real content disqualifies");
+        assert!(is_empty_project(&bare), "a bare dir (git init pending) counts");
+        assert!(!is_empty_project(&root.join("missing")));
+
+        // Name-sorted first candidate, deterministically.
+        assert_eq!(find_empty_workspace(&root), Some(empty));
+        assert_eq!(find_empty_workspace(&root.join("missing")), None);
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    /// The first-turn mapping follows the chat onto its real session id, and
+    /// the stale per-run ephemeral keys are pruned with it.
+    #[test]
+    fn the_workspace_follows_a_new_chat_to_its_real_id() {
+        let mut map = serde_json::Map::new();
+        map.insert("coding-new-1".into(), json!("/ws/a"));
+        map.insert("coding-new-0".into(), json!("/ws/old"));
+        map.insert("chat-real".into(), json!("/ws/keep"));
+
+        assert!(adopt_prior_mapping(&mut map, "s-new", "coding-new-1"));
+        assert_eq!(
+            map.get("s-new").and_then(|v| v.as_str()),
+            Some("/ws/a"),
+            "the real id owns the first turn's folder"
+        );
+        assert!(!map.contains_key("coding-new-1"));
+        assert!(
+            !map.contains_key("coding-new-0"),
+            "stale per-run keys are pruned"
+        );
+        assert_eq!(
+            map.get("chat-real").and_then(|v| v.as_str()),
+            Some("/ws/keep"),
+            "real keys are untouched"
+        );
+    }
+
+    /// No adoption when the real id already owns a folder (a resumed chat) or
+    /// when there is nothing to adopt — and a no-op prunes nothing.
+    #[test]
+    fn adoption_never_overwrites_or_fires_blind() {
+        let mut map = serde_json::Map::new();
+        map.insert("s-real".into(), json!("/ws/mine"));
+        map.insert("coding-new-1".into(), json!("/ws/a"));
+
+        assert!(!adopt_prior_mapping(&mut map, "s-real", "coding-new-1"));
+        assert_eq!(
+            map.get("s-real").and_then(|v| v.as_str()),
+            Some("/ws/mine"),
+            "an owned folder is never overwritten"
+        );
+        assert!(map.contains_key("coding-new-1"), "a no-op prunes nothing");
+
+        let mut empty = serde_json::Map::new();
+        assert!(!adopt_prior_mapping(&mut empty, "s", "coding-new-x"));
     }
 
     #[test]

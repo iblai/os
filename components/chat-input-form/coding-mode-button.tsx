@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Code2, Folder, Loader2, X } from 'lucide-react';
+import { Code2, Folder, Info, Loader2, X } from 'lucide-react';
 import {
   Popover,
   PopoverContent,
@@ -117,8 +117,12 @@ export function CodingModeButton({
   const [workspace, setWorkspace] = useState('');
   const [resolvedModel, setResolvedModel] = useState('');
   const [modelMatched, setModelMatched] = useState(false);
-  // null = unknown (status not fetched yet); true = sandboxed MAS build (Code hidden).
+  // null = unknown (status not fetched yet); true = Code can't run here at all —
+  // the sandboxed MAS build or an unsupported platform (Windows) — so it's hidden.
   const [sandboxed, setSandboxed] = useState<boolean | null>(null);
+  // false = this Linux host has no bubblewrap (the child sandbox): Code stays
+  // visible but disabled, with a hint, until bwrap is installed.
+  const [sandboxReady, setSandboxReady] = useState(true);
 
   const t = useTranslations('chatInputFormCodingModeButton');
 
@@ -157,7 +161,8 @@ export function CodingModeButton({
   // Code off on every load in local mode.
   const localVerdictBad =
     isLocal && !!local && (!local.running || local.tools_supported === false);
-  const blocked = isLocal ? !local || localVerdictBad : false;
+  const blocked =
+    !sandboxReady || (isLocal ? !local || localVerdictBad : false);
 
   const refresh = async () => {
     if (!sessionId) return;
@@ -175,16 +180,19 @@ export function CodingModeButton({
     if (isOpen) void refresh();
   }, [isOpen, sessionId]);
 
-  // Force Code off whenever it can't run (runtime down, or an on-device model with no
-  // tool calling) — the send path (SDK) reads this flag, so clearing it routes back to
-  // normal chat instead of failing every turn.
+  // Force Code off whenever it can't run (runtime down, an on-device model with no
+  // tool calling, or a Linux host missing bubblewrap) — the send path (SDK) reads
+  // this flag, so clearing it routes back to normal chat instead of failing every turn.
   useEffect(() => {
-    if (localVerdictBad && localStorage.getItem(ENABLED_KEY) === 'true') {
+    if (
+      (localVerdictBad || !sandboxReady) &&
+      localStorage.getItem(ENABLED_KEY) === 'true'
+    ) {
       localStorage.setItem(ENABLED_KEY, 'false');
       window.dispatchEvent(new Event('local-storage'));
       setEnabled(false);
     }
-  }, [localVerdictBad]);
+  }, [localVerdictBad, sandboxReady]);
 
   // On-device: ask the backend which runtime serves the selected local model and
   // whether it can drive Code. Rust auto-detects Ollama vs Foundry Local.
@@ -231,16 +239,22 @@ export function CodingModeButton({
     };
   }, [isLocal, enabled, isOpen, llmProvider, llmName]);
 
-  // Detect the sandboxed (Mac App Store) build once — Code can't spawn the opencode
-  // binary there, so it's hidden entirely.
+  // Detect environments where Code can't run, once. The sandboxed (Mac App Store)
+  // build and unsupported platforms (Windows) hide it entirely; a Linux host
+  // missing bubblewrap keeps it visible but disabled until bwrap is installed.
+  // Absent fields (an older backend) read as supported/ready.
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       try {
-        const st = await callTauri<{ sandboxed?: boolean }>(
-          'check_opencode_status',
-        );
-        if (!cancelled) setSandboxed(!!st?.sandboxed);
+        const st = await callTauri<{
+          sandboxed?: boolean;
+          supported?: boolean;
+          sandbox_ready?: boolean;
+        }>('check_opencode_status');
+        if (cancelled) return;
+        setSandboxed(!!st?.sandboxed || st?.supported === false);
+        setSandboxReady(st?.sandbox_ready !== false);
       } catch {
         if (!cancelled) setSandboxed(false);
       }
@@ -329,9 +343,9 @@ export function CodingModeButton({
   // the opencode binary install — skills are what the next turn would miss.
   const skillsLoading = enabled && skillSync?.state === 'syncing';
 
-  // Hidden in the sandboxed Mac App Store build, where opencode can't be spawned at
-  // all. (Desktop-only gating happens in the parent, which won't mount this outside
-  // Tauri.)
+  // Hidden where opencode can never be spawned: the sandboxed Mac App Store build
+  // and unsupported platforms (Windows). (Desktop-only gating happens in the parent,
+  // which won't mount this outside Tauri.)
   if (sandboxed) return null;
 
   return (
@@ -400,8 +414,17 @@ export function CodingModeButton({
 
         {/* Only the states that need acting on. Which model Code uses is already the
             mentor LLM shown in the top-left, so repeating it here was noise — but a
-            model that will FAIL every turn still has to say so. */}
-        {isLocal && blocked ? (
+            model that will FAIL every turn still has to say so. A missing bwrap
+            outranks the model states: nothing can spawn until it's installed. */}
+        {!sandboxReady ? (
+          <div
+            data-testid="code-sandbox-missing"
+            className="mt-2 flex items-start gap-1.5 text-[11px] text-gray-400"
+          >
+            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <span>{t('sandboxMissing')}</span>
+          </div>
+        ) : isLocal && blocked ? (
           <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-700">
             {local?.reason || t('checkingLocalModel')}
             {local?.tools_supported === false && (
