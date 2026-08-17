@@ -7,15 +7,6 @@ onlyBuiltDependencies:
   - sharp
   - unrs-resolver
 overrides:
-  # Local yalc development (feat/2286 — LLM spend caps): @iblai/iblai-js is a
-  # pure re-export shim, so without these overrides its own '@iblai/*: *' deps
-  # resolve to the published SDK packages and the yalc-pushed copies in .yalc/
-  # (which carry AgentSpendCapsTab + spendCapsApiSlice) are never reached —
-  # at type-check time NOR at runtime. Remove together with the file:.yalc
-  # refs in package.json when switching back to registry versions.
-  '@iblai/web-containers': 'file:.yalc/@iblai/web-containers'
-  '@iblai/data-layer': 'file:.yalc/@iblai/data-layer'
-  '@iblai/web-utils': 'file:.yalc/@iblai/web-utils'
   vite: '>=7.3.2'
   basic-ftp: '>=5.2.1'
   follow-redirects: '>=1.16.0'

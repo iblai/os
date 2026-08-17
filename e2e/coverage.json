@@ -2,8 +2,8 @@
   "version": 2,
   "lastUpdated": "2026-08-11",
   "summary": {
-    "totalCheckpoints": 650,
-    "coveredCheckpoints": 619,
+    "totalCheckpoints": 654,
+    "coveredCheckpoints": 623,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 11,
     "pendingCheckpoints": 8,
@@ -300,7 +300,10 @@
         "app/create-mentor/page.tsx",
         "components/modals/settings-modal.tsx",
         "hooks/use-mentors.ts",
-        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx"
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
+        "components/modals/edit-mentor-modal/tabs/llm-tab.tsx",
+        "components/modals/llm-provider-modal.tsx",
+        "lib/utils.ts"
       ],
       "checkpoints": [
         {
@@ -372,6 +375,26 @@
           "id": "mgmt-14",
           "description": "Analytics shown to student mentor-creator only for their own mentor (created_by===username) or when holding per-mentor view_analytics permission; unit-covered — requires RBAC env to reproduce in e2e",
           "status": "not-reproducible"
+        },
+        {
+          "id": "mgmt-15",
+          "description": "Issue #2318: LLM tab provider grid renders usable (canAccessProvider) providers before unusable ones, each group alphabetical by display label (data-testid=llm-provider-card, data-disabled) — asserts the ordering invariants rather than a hard-coded provider list",
+          "status": "covered"
+        },
+        {
+          "id": "mgmt-16",
+          "description": "Issue #2318: ibl.ai provider card (data-provider=iblai) shows the ibl.ai logo and label instead of falling through to the generic default (the original bug — a missing map entry rendered a blank/404 logo); skips gracefully if the tenant's LLM list omits ibl.ai",
+          "status": "covered"
+        },
+        {
+          "id": "mgmt-17",
+          "description": "Issue #2318: a grayed (no-credential) provider card stays clickable and opens the LLM Selection model picker; skips gracefully if every provider in the tenant is usable",
+          "status": "covered"
+        },
+        {
+          "id": "mgmt-18",
+          "description": "Issue #2318: LLM Selection model picker rows render a non-blank human-readable label (display_name || llm_name) and searching a substring of that label finds the row",
+          "status": "covered"
         }
       ]
     },

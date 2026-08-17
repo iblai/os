@@ -1,4 +1,5 @@
 import { Page, Locator, expect } from '@playwright/test';
+import { isVisibleWithin } from '../../utils/resilient';
 
 /**
  * Page object for the Privacy tab inside the Edit Mentor modal.
@@ -288,10 +289,10 @@ export class PrivacyTab {
    * checkpoint exists to protect.
    */
   async expectBlockMessageUneditable(timeout = 5_000): Promise<void> {
-    const stillRendered = await this.blockMessageTextarea
-      .first()
-      .isVisible({ timeout })
-      .catch(() => false);
+    const stillRendered = await isVisibleWithin(
+      this.blockMessageTextarea.first(),
+      timeout,
+    );
     if (!stillRendered) {
       // Conditionally-rendered shape — textarea unmounted on non-block actions.
       return;

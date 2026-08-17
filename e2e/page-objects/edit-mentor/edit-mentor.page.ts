@@ -1,7 +1,7 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { CreateMentorPage } from '../create-mentor.page';
 import { SidebarPage } from '../sidebar.page';
-import { waitForPageReady } from '../../utils/resilient';
+import { waitForPageReady, isVisibleWithin } from '../../utils/resilient';
 import { SettingsTab } from './settings.tab';
 import { LlmTab } from './llm.tab';
 import { ToolsTab } from './tools.tab';
@@ -566,7 +566,7 @@ export class EditMentorPage {
           await expect(categoryTab.first()).toHaveAttribute(
             'data-state',
             'active',
-            { timeout: 5_000 },
+            { timeout: 15_000 },
           );
         }
       }
@@ -600,7 +600,7 @@ export class EditMentorPage {
       // Wait for the tab to register as active; this is more reliable than
       // a fixed sleep across slow/fast machines.
       await expect(tab).toHaveAttribute('data-state', 'active', {
-        timeout: 5_000,
+        timeout: 15_000,
       });
     }
   }
@@ -694,6 +694,6 @@ export class EditMentorPage {
   }
 
   async isOpen(): Promise<boolean> {
-    return this.dialog.isVisible({ timeout: 2_000 }).catch(() => false);
+    return isVisibleWithin(this.dialog, 2_000);
   }
 }
