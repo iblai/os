@@ -1,7 +1,7 @@
 'use client';
 
 import type React from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import {
@@ -25,7 +25,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { X, BookOpen, Archive, Check, Terminal, Monitor } from 'lucide-react';
+import {
+  X,
+  BookOpen,
+  Archive,
+  Check,
+  Terminal,
+  Monitor,
+  Sparkles,
+  Loader2,
+} from 'lucide-react';
+import type { EffectiveAgentSkill } from '@iblai/iblai-js/data-layer';
 import { toast } from 'sonner';
 import { DeepSearchIcon, CanvasIcon } from '@/components/icons/svg-icons';
 import { TOOLS, hasRemoteAiConfig } from '@iblai/iblai-js/web-utils';
@@ -70,6 +80,28 @@ interface InsideButtonsProps {
   isPrivate?: boolean;
   tenantKey?: string;
   username?: string;
+  /**
+   * The mentor's enabled Agent Skills, for the Skills dropdown — a
+   * discoverable alternative to typing `/` in the composer. Empty/undefined
+   * hides the button entirely (mentor has no skills).
+   */
+  skills?: EffectiveAgentSkill[];
+  /**
+   * Slugs currently invoked as `/slug` tokens in the composer text. Drives
+   * the button's active state and the per-item check marks, so the dropdown
+   * and the `/` picker can never disagree — both derive from the same text.
+   */
+  activeSkillSlugs?: Set<string>;
+  /** Adds the skill's `/slug` token to the composer, or removes it if armed. */
+  onToggleSkill?: (skill: EffectiveAgentSkill) => void;
+  /** Removes every armed skill token — the active pill's ✕ affordance. */
+  onClearSkills?: () => void;
+  /** More skill pages exist server-side (skills load 20 at a time). */
+  hasMoreSkills?: boolean;
+  /** A later skills page is in flight — renders a spinner row. */
+  isFetchingMoreSkills?: boolean;
+  /** Called when the menu is scrolled near its bottom. */
+  onLoadMoreSkills?: () => void;
 }
 
 export const InsideButtons = ({
@@ -88,6 +120,13 @@ export const InsideButtons = ({
   isPrivate = false,
   tenantKey,
   username,
+  skills,
+  activeSkillSlugs,
+  onToggleSkill,
+  onClearSkills,
+  hasMoreSkills = false,
+  isFetchingMoreSkills = false,
+  onLoadMoreSkills,
 }: InsideButtonsProps) => {
   const t = useTranslations('chatInputFormInsideButtons');
 
@@ -356,13 +395,135 @@ export const InsideButtons = ({
     </div>
   );
 
+  // Skills dropdown — a discoverable alternative to typing `/` in the
+  // composer, rendered right AFTER Canvas (Canvas stays first). Its active
+  // state and check marks derive from the SAME composer text the `/` picker
+  // writes, so the two ways of invoking a skill are always in sync. Hidden
+  // when the mentor has no skills.
+  const skillsMenu =
+    skills && skills.length > 0 && onToggleSkill ? (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild disabled={disabled}>
+          <Button
+            variant="ghost"
+            size="sm"
+            type="button"
+            disabled={disabled}
+            data-testid="skills-menu-trigger"
+            className={`flex h-8 items-center gap-1.5 rounded-lg px-2 text-sm transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 ${
+              activeSkillSlugs && activeSkillSlugs.size > 0
+                ? 'border border-[#D0E0FF] bg-[#F5F8FF] text-[#38A1E5]'
+                : 'text-gray-600 hover:border hover:border-[#D0E0FF] hover:bg-[#F5F8FF]'
+            }`}
+          >
+            <Sparkles className="h-4 w-4" />
+            {/* Show the armed skill's name so the button mirrors the token
+                  in the composer; falls back to the generic label. */}
+            {(activeSkillSlugs &&
+              activeSkillSlugs.size > 0 &&
+              skills.find((skill) => activeSkillSlugs.has(skill.slug))?.name) ||
+              t('skills')}
+            {/* Same ✕ affordance as every other active tool pill — disarms
+                the skill(s) without opening the menu. Radix opens the menu
+                on pointerdown, so that's where propagation must stop. The
+                handlers live on a SPAN, not the svg: the Button's base
+                styles set `[&_svg]:pointer-events-none`, which makes the
+                icon itself event-dead in real browsers. */}
+            {activeSkillSlugs && activeSkillSlugs.size > 0 && onClearSkills && (
+              <span
+                data-testid="skills-menu-clear"
+                role="button"
+                aria-label={t('skills')}
+                className="ml-1 inline-flex cursor-pointer items-center"
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onClearSkills();
+                }}
+              >
+                <X className="h-3 w-3" />
+              </span>
+            )}
+          </Button>
+        </DropdownMenuTrigger>
+        {/* Sizes to its content: min width keeps short name-only lists from
+            looking cramped, the max caps at 18rem OR the viewport (minus a
+            1rem gutter) on small devices, and long skill lists scroll
+            instead of overflowing short screens. */}
+        <DropdownMenuContent
+          align="start"
+          collisionPadding={8}
+          data-testid="skills-menu-content"
+          className="max-h-[min(60vh,20rem)] max-w-[min(18rem,calc(100vw-1rem))] min-w-40 overflow-y-auto"
+          // Lazy loading: skills come 20 per page — scrolling near the
+          // bottom pulls the next page, mirroring the `/` picker.
+          onScroll={(e) => {
+            if (!hasMoreSkills || isFetchingMoreSkills || !onLoadMoreSkills) {
+              return;
+            }
+            const el = e.currentTarget;
+            if (el.scrollTop + el.clientHeight >= el.scrollHeight - 24) {
+              onLoadMoreSkills();
+            }
+          }}
+        >
+          {skills.map((skill) => {
+            const isArmed = activeSkillSlugs?.has(skill.slug) ?? false;
+            return (
+              <DropdownMenuItem
+                key={skill.unique_id}
+                data-testid={`skills-menu-item-${skill.slug}`}
+                onClick={() => onToggleSkill(skill)}
+                className="flex items-start gap-2"
+              >
+                <span className="flex min-w-0 flex-1 items-baseline gap-1.5">
+                  <span className="truncate text-sm text-gray-800">
+                    {skill.name}
+                  </span>
+                  {/* Slash-invocation form, mirroring the `/` picker's rows */}
+                  <span className="shrink-0 text-xs text-gray-400">
+                    /{skill.slug}
+                  </span>
+                </span>
+                {/* Armed marker sits on the RIGHT (same pattern as the •••
+                    overflow menu above) so rows never carry a left indent. */}
+                {isArmed && (
+                  <Check
+                    aria-hidden="true"
+                    className="mt-0.5 h-4 w-4 shrink-0 text-[#38A1E5]"
+                  />
+                )}
+              </DropdownMenuItem>
+            );
+          })}
+          {isFetchingMoreSkills && (
+            <div
+              data-testid="skills-menu-loading-more"
+              className="flex items-center justify-center px-2 py-1.5"
+            >
+              <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+            </div>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    ) : null;
+
+  const canvasIsVisible = visibleInsideButtons.some(
+    (button) => button.name === 'Canvas',
+  );
+
   return (
     <div className="relative flex items-center gap-1.5">
       {/* Code + Cowork — the desktop assistant pair, Code on the left. Both sit
           outside the responsive list so they always render side by side. */}
       {inTauri && <CodingModeButton sessionId={sessionId} />}
       {coworkButton.isEnabled && renderToolButton(coworkButton)}
-      {/* Responsive Inside Buttons */}
+      {/* Responsive Inside Buttons — the Skills dropdown slots in right after
+          Canvas so Canvas stays the first tool pill. */}
       {visibleInsideButtons.map((button) => {
         if (button.name === 'Memory') {
           return (
@@ -374,8 +535,20 @@ export const InsideButtons = ({
           );
         }
 
+        if (button.name === 'Canvas') {
+          return (
+            <Fragment key={button.name}>
+              {renderToolButton(button)}
+              {skillsMenu}
+            </Fragment>
+          );
+        }
+
         return renderToolButton(button);
       })}
+      {/* When Canvas is collapsed into the ••• overflow (mobile/tablet) the
+          Skills dropdown still renders inline here. */}
+      {!canvasIsVisible && skillsMenu}
 
       {/* Hidden inside buttons dropdown if needed */}
       {hiddenInsideButtons.length > 0 && (

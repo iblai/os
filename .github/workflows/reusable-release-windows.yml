@@ -35,6 +35,11 @@ on:
         required: false
         type: boolean
         default: false
+      ibl_tenant:
+        description: 'Compile-time IBL_TENANT tenant lock (read via option_env! in Rust). Empty = normal multi-tenant build. When set, the app is locked to this tenant and its installers are published to a per-tenant release (app-v<version>-<tenant>) with the download URLs shown in the run summary.'
+        required: false
+        type: string
+        default: ''
       cert_subject:
         description: 'Subject (CN=...) used for the generated self-signed cert when no stored cert is provided'
         required: false
@@ -168,6 +173,9 @@ jobs:
           # Enable in-app purchase for release builds when requested. Read at Rust
           # compile time via option_env!("IBL_ALLOW_IN_APP_PURCHASE").
           IBL_ALLOW_IN_APP_PURCHASE: ${{ inputs.allow_in_app_purchase }}
+          # Compile-time tenant lock (empty = multi-tenant). Read at Rust compile
+          # time via option_env!("IBL_TENANT") -> the get_locked_tenant command.
+          IBL_TENANT: ${{ inputs.ibl_tenant }}
         with:
           # MSI/WiX doesn't support arm64, so restrict to NSIS (the only Tauri
           # bundle type that builds for both x64 and arm64). tauri-action reads
@@ -232,3 +240,51 @@ jobs:
           fi
           gh release upload "$RELEASE_TAG" "${files[@]}" --clobber
           echo "Attached ${#files[@]} installer(s) to $RELEASE_TAG"
+
+      # Tenant-locked build: tenant-suffix this arch's installer, publish it to a
+      # per-tenant release (app-v<version>-<tenant>, shared with the other arch and
+      # the macOS DMG), and add its download URL to the run summary. Runs per matrix
+      # arch; only when ibl_tenant is set. A normal build skips this entirely.
+      - name: Publish tenant-locked installer
+        if: ${{ inputs.ibl_tenant != '' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EXE_GLOB: src-tauri/target/${{ matrix.rust_target }}/release/bundle/nsis/*-setup.exe
+          IBL_TENANT: ${{ inputs.ibl_tenant }}
+          ARCH: ${{ matrix.arch }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=($EXE_GLOB) # intentional glob expansion
+          if [ ${#files[@]} -eq 0 ]; then echo "No installer at $EXE_GLOB"; exit 1; fi
+          src="${files[0]}"
+          base="$(basename "$src")"
+          # ibl.ai_<version>_<arch>-setup.exe -> capture <version>
+          ver="$(printf '%s' "$base" | sed -E 's/^ibl\.ai_([0-9][^_]*)_[a-z0-9]+-setup\.exe$/\1/')"
+          if [ "$ver" = "$base" ] || [ -z "$ver" ]; then
+            echo "Could not parse version from '$base'"; exit 1
+          fi
+          dest="$(dirname "$src")/ibl.ai_${ver}_${IBL_TENANT}_${ARCH}-setup.exe"
+          mv -f "$src" "$dest"
+
+          # Shared per-tenant release; both arch legs and the macOS build target the
+          # same tag, so tolerate a lost create race.
+          tag="app-v${ver}-${IBL_TENANT}"
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            gh release create "$tag" \
+              --title "ibl.ai app-v${ver} — ${IBL_TENANT} (tenant-locked)" \
+              --notes "Tenant-locked build for \`${IBL_TENANT}\` — opens straight into that tenant with tenant switching hidden." || true
+          fi
+          gh release upload "$tag" "$dest" --clobber
+
+          url="https://github.com/${REPO}/releases/download/${tag}/$(basename "$dest")"
+          echo "Tenant installer published: $url"
+          {
+            echo "### 🪟 Tenant-locked Windows build (${ARCH}) — \`${IBL_TENANT}\`"
+            echo ""
+            echo "[![Download for Windows ${ARCH}](https://img.shields.io/badge/Download_for_Windows_${ARCH}-0078D4?style=for-the-badge&logo=windows&logoColor=white)](${url})"
+            echo ""
+            echo "Direct link: \`${url}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

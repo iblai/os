@@ -227,3 +227,63 @@ body {
 [data-testid='chat-privacy-toggle'][data-state='on'] > span {
   transition-delay: 0ms;
 }
+
+/*
+ * Left-to-right shimmer for the in-progress row of the agent task list
+ * (`components/chat/agent-todo-list.tsx`). The gradient is clipped to the
+ * glyphs, so the band sweeps across the *text* rather than a block behind it.
+ *
+ * Direction: with `background-size: 200%`, position `100% 0` puts the image's
+ * midpoint (the bright band) at the box's LEFT edge and `0 0` puts it at the
+ * RIGHT edge — so animating 100% -> 0 sweeps left-to-right.
+ *
+ * Both gradient stops stay above the WCAG 1.4.3 4.5:1 floor against their
+ * background (gray-500 is 4.83:1 on white), so the text never dips below the
+ * contrast minimum mid-sweep. Colour is not a status cue here either — the
+ * icon shape carries that.
+ */
+@keyframes todo-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+
+.todo-shimmer {
+  --todo-shimmer-base: var(--color-gray-800);
+  --todo-shimmer-band: var(--color-gray-500);
+  background-image: linear-gradient(
+    90deg,
+    var(--todo-shimmer-base) 0%,
+    var(--todo-shimmer-base) 40%,
+    var(--todo-shimmer-band) 50%,
+    var(--todo-shimmer-base) 60%,
+    var(--todo-shimmer-base) 100%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: todo-shimmer 1.8s linear infinite;
+}
+
+.dark .todo-shimmer {
+  --todo-shimmer-base: var(--color-gray-200);
+  --todo-shimmer-band: var(--color-gray-500);
+}
+
+/*
+ * The sweep loops for as long as the step is running, which is exactly the
+ * indefinite motion WCAG 2.2.2 cautions against. Fall back to flat, solid
+ * text when the user asks for reduced motion.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .todo-shimmer {
+    background-image: none;
+    color: var(--todo-shimmer-base);
+    animation: none;
+  }
+}

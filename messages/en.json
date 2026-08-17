@@ -389,7 +389,13 @@
   },
   "chatAiMessageBubble": {
     "retryScreenReader": "Retry for a new response",
-    "retryTooltip": "Retry"
+    "retryTooltip": "Retry",
+    "agentTodoListTitle": "Task list",
+    "agentTodoStatusCompleted": "Done",
+    "agentTodoStatusInProgress": "In progress",
+    "agentTodoStatusPending": "To do",
+    "agentTodoProgress": "{done} of {total} done",
+    "agentTodoAnnouncement": "Step {done} of {total} complete"
   },
   "chatAiMessageCopy": {
     "copyToClipboard": "Copy to Clipboard",
@@ -479,7 +485,8 @@
     "coworkConsentCancel": "Cancel",
     "coworkConsentConfirm": "Continue",
     "coworkNeedsAccessibility": "Cowork needs Accessibility access to control your computer. Grant it in System Settings › Privacy & Security › Accessibility, then restart the app and turn Cowork on again.",
-    "coworkNeedsScreenRecording": "Cowork needs Screen Recording access to read your windows. Grant it in System Settings › Privacy & Security › Screen Recording, then restart the app and turn Cowork on again."
+    "coworkNeedsScreenRecording": "Cowork needs Screen Recording access to read your windows. Grant it in System Settings › Privacy & Security › Screen Recording, then restart the app and turn Cowork on again.",
+    "skills": "Skills"
   },
   "chatInputFormMemoryMenu": {
     "yourMemory": "Your Memory",
@@ -2128,8 +2135,8 @@
   },
   "tabsSkillsTab": {
     "heading": "Skills",
-    "description": "Manage agent skill assignments for your mentor.",
-    "infoBox": "Skills are reusable capabilities you build once and assign to any agent. Create a skill, then toggle it on to give this agent that ability."
+    "description": "Reusable playbooks this Base Agent can discover and follow.",
+    "infoBox": "Agent Skills are reusable playbooks you can attach to a Base Agent — written instructions (plus optional reference files) for one job, like researching a topic on the web or reviewing code. The agent reads a skill only when it's relevant, so you can give it many capabilities without bloating every conversation. In chat, type / to see this agent's skills and pick one to start it."
   },
   "tabsToolsTab": {
     "infoBox": "Give your agent hands. Tools let it do things beyond chatting — look something up, call an API, trigger an action — so it can actually get work done for people.",

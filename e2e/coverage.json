@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-08-11",
+  "lastUpdated": "2026-08-13",
   "summary": {
-    "totalCheckpoints": 623,
-    "coveredCheckpoints": 592,
+    "totalCheckpoints": 657,
+    "coveredCheckpoints": 626,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 11,
     "pendingCheckpoints": 8,
     "percent": 100,
-    "totalJourneys": 68,
-    "activeJourneys": 67
+    "totalJourneys": 70,
+    "activeJourneys": 69
   },
   "journeys": [
     {
@@ -300,7 +300,10 @@
         "app/create-mentor/page.tsx",
         "components/modals/settings-modal.tsx",
         "hooks/use-mentors.ts",
-        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx"
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
+        "components/modals/edit-mentor-modal/tabs/llm-tab.tsx",
+        "components/modals/llm-provider-modal.tsx",
+        "lib/utils.ts"
       ],
       "checkpoints": [
         {
@@ -372,6 +375,26 @@
           "id": "mgmt-14",
           "description": "Analytics shown to student mentor-creator only for their own mentor (created_by===username) or when holding per-mentor view_analytics permission; unit-covered — requires RBAC env to reproduce in e2e",
           "status": "not-reproducible"
+        },
+        {
+          "id": "mgmt-15",
+          "description": "Issue #2318: LLM tab provider grid renders usable (canAccessProvider) providers before unusable ones, each group alphabetical by display label (data-testid=llm-provider-card, data-disabled) — asserts the ordering invariants rather than a hard-coded provider list",
+          "status": "covered"
+        },
+        {
+          "id": "mgmt-16",
+          "description": "Issue #2318: ibl.ai provider card (data-provider=iblai) shows the ibl.ai logo and label instead of falling through to the generic default (the original bug — a missing map entry rendered a blank/404 logo); skips gracefully if the tenant's LLM list omits ibl.ai",
+          "status": "covered"
+        },
+        {
+          "id": "mgmt-17",
+          "description": "Issue #2318: a grayed (no-credential) provider card stays clickable and opens the LLM Selection model picker; skips gracefully if every provider in the tenant is usable",
+          "status": "covered"
+        },
+        {
+          "id": "mgmt-18",
+          "description": "Issue #2318: LLM Selection model picker rows render a non-blank human-readable label (display_name || llm_name) and searching a substring of that label finds the row",
+          "status": "covered"
         }
       ]
     },
@@ -2417,7 +2440,6 @@
       "spec": "44-claw-advanced-sandbox.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx",
-        "components/modals/edit-mentor-modal/tabs/skills-tab.tsx",
         "components/modals/edit-mentor-modal/tabs/prompts-tab.tsx",
         "components/modals/edit-mentor-modal/capability-gate.tsx",
         "hooks/use-mentor-segments.ts"
@@ -2435,7 +2457,7 @@
         },
         {
           "id": "claw-03",
-          "description": "Flipping the capability toggle auto-saves instantly (optimistic local state, no footer Save button) and does not change Sandbox or Skills tab visibility — both tabs are now unconditionally mounted for admins",
+          "description": "Flipping the capability toggle auto-saves instantly (optimistic local state, no footer Save button) and does not change Sandbox tab visibility — the tab is unconditionally mounted for admins",
           "status": "covered"
         },
         {
@@ -2444,18 +2466,13 @@
           "status": "covered"
         },
         {
-          "id": "claw-05",
-          "description": "Skills tab is always visible AND shows the real skills UI (heading, info box, New Skill action) independent of the sandbox — feat/2040 made the Skills content fully sandbox-independent (no \"connect a sandbox\" gate)",
-          "status": "covered"
-        },
-        {
           "id": "claw-06",
-          "description": "Sandbox leads the Integrations category and Skills follows Prompts in the Configurations category, unconditionally (feat/2040 groups the sidebar into Configurations / Integrations / Runtime)",
+          "description": "Sandbox leads the Integrations category unconditionally (feat/2040 groups the sidebar into Configurations / Integrations / Runtime and moved Sandbox off Configurations)",
           "status": "covered"
         },
         {
           "id": "claw-07",
-          "description": "Disabling the capability flips capability-gate-content's data-enabled back to \"false\", regating the SandboxConfig UI, while Sandbox and Skills tabs remain visible",
+          "description": "Disabling the capability flips capability-gate-content's data-enabled back to \"false\", regating the SandboxConfig UI, while the Sandbox tab remains visible",
           "status": "covered"
         },
         {
@@ -2480,22 +2497,12 @@
         },
         {
           "id": "claw-12",
-          "description": "Admin connects a sandbox instance via the dedicated per-row Connect button (data-testid=\"connect-instance-<id>\" — Connect is no longer a dropdown menu item, it sits next to the separate \"Actions\" three-dot menu): Connected Instance heading appears and the Skills tab renders its (sandbox-independent) skills UI",
+          "description": "Admin connects a sandbox instance via the dedicated per-row Connect button (data-testid=\"connect-instance-<id>\" — Connect is no longer a dropdown menu item, it sits next to the separate \"Actions\" three-dot menu) and the Connected Instance heading appears",
           "status": "covered"
         },
         {
           "id": "claw-13",
           "description": "Admin edits an Agent Configuration field in the Prompts tab: edit modal closes and the new value is persisted",
-          "status": "covered"
-        },
-        {
-          "id": "claw-14",
-          "description": "Admin toggles a skill on then off in the Skills tab and aria-checked flips back to the original state",
-          "status": "covered"
-        },
-        {
-          "id": "claw-15",
-          "description": "Admin creates a new skill, edits its description, and the updated skill row remains visible; skill is deleted on cleanup",
           "status": "covered"
         },
         {
@@ -3958,6 +3965,197 @@
           "id": "grd-15",
           "description": "The Results sub-tab's grade-override flow (override/clear a learner's grade, which PATCHes back to the LMS) requires a real graded submission produced by a live LMS-connected grading run — not reproducible in this e2e environment, which has no fixture to produce one on demand (grd-04 covers the reachable empty-table state)",
           "status": "not-reproducible"
+        }
+      ]
+    },
+    {
+      "id": "agent-skills",
+      "name": "Agent Skills",
+      "spec": "67-agent-skills.spec.ts",
+      "sourceFiles": [
+        "hooks/use-mentor-segments.ts",
+        "components/modals/edit-mentor-modal/tabs/skills-tab.tsx",
+        "components/chat-input-form.tsx",
+        "components/auto-resize-text-area.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "ags-01",
+          "description": "Admin sees the Skills tab on a freshly-created (Base Agent) mentor, with the updated tab description (\"Reusable playbooks this Base Agent can discover and follow.\") and skills-info-box copy describing the / picker (feat/2215); Skills sits right after Prompts in the Configurations category (ordering moved here from journey 44)",
+          "status": "covered"
+        },
+        {
+          "id": "ags-02",
+          "description": "Skills tab is hidden when the mentor resolves to a non-base-agent type (mentor_slug is not one of base-agent/ai-mentor/ai-agent and template_mentor does not resolve to one either) — hooks/use-mentor-segments.ts resolveIsBaseAgentMentor",
+          "status": "covered"
+        },
+        {
+          "id": "ags-03",
+          "description": "Skills tab stays visible when the mentor type cannot be determined (template_mentor is a numeric PK the frontend cannot read a slug from) — the gate fails OPEN rather than hiding the tab",
+          "status": "covered"
+        },
+        {
+          "id": "ags-04",
+          "description": "Admin creates a platform skill, attaches it from the Available Skills sub-tab (addSkillToAgent — the assignment is created ENABLED), and its enable Switch round-trips off/on on the Agent Skills sub-tab (aria-checked, toast-verified via disableSkill/enableSkill); detach + delete on cleanup — dedicated mentor per test, serial",
+          "status": "covered"
+        },
+        {
+          "id": "ags-05",
+          "description": "Admin creates a new platform skill, locates it on the server-paged Available Skills sub-tab (paging until found — catalog ordering is not guaranteed), edits its description, and deletes it (row disappears) — all via the SDK's skills helpers (createSkill/editSkill/deleteSkill), serial (mutations touch the platform-wide catalog)",
+          "status": "covered"
+        },
+        {
+          "id": "ags-06",
+          "description": "NON-ADMIN: the Skills tab is absent from the Edit Mentor modal (the segment is ADMIN-only via userTypes in MENTOR_SEGMENTS) — moved from journey 44",
+          "status": "covered"
+        },
+        {
+          "id": "slash-01",
+          "description": "Mentor with no effective skills: chat composer stays a plain textbox (no combobox role) and typing \"/\" opens nothing",
+          "status": "covered"
+        },
+        {
+          "id": "slash-02",
+          "description": "Mentor with skills: composer textarea gets role=combobox wiring and typing \"/\" opens the slash-skill-picker listing only enabled skills (disabled filtered out) as name + slug — no descriptions (assignment rows carry none; the platform-wide agent-skills catalog is never fetched from chat)",
+          "status": "covered"
+        },
+        {
+          "id": "slash-03",
+          "description": "Typing after \"/\" filters the picker by both skill name and slug as the query narrows; no match closes the picker",
+          "status": "covered"
+        },
+        {
+          "id": "slash-04",
+          "description": "ArrowDown/ArrowUp cycle the active picker option and the composer's aria-activedescendant follows the active option's id",
+          "status": "covered"
+        },
+        {
+          "id": "slash-05",
+          "description": "Enter completes the active option IN PLACE — \"/<slug> \" lands at the typed token's index in the textarea and the backdrop layer (skill-token-highlight) paints an active-pill background behind it; nothing is submitted",
+          "status": "covered"
+        },
+        {
+          "id": "slash-06",
+          "description": "Clicking a picker option (mousedown) completes that skill's token in place with the same highlight",
+          "status": "covered"
+        },
+        {
+          "id": "slash-07",
+          "description": "Escape dismisses the picker until the slash token is cleared (still-dismissed while the token persists), then a fresh \"/\" re-arms and reopens it",
+          "status": "covered"
+        },
+        {
+          "id": "slash-08",
+          "description": "Multi-word text starting with \"/\" (e.g. \"/hello world\") never opens the picker",
+          "status": "covered"
+        },
+        {
+          "id": "slash-09",
+          "description": "One Backspace at the token's end (or Delete at its start) removes the whole \"/slug \" token atomically",
+          "status": "covered"
+        },
+        {
+          "id": "slash-10",
+          "description": "Backspace after plain text deletes characters normally — the highlighted token stays intact",
+          "status": "covered"
+        },
+        {
+          "id": "slash-11",
+          "description": "A mid-sentence token is removed atomically and the seam space collapses (\"say /web-research please\" → \"say please\")",
+          "status": "covered"
+        },
+        {
+          "id": "slash-12",
+          "description": "Multiple skill invocations in one message are each highlighted; unknown or disabled slugs never highlight",
+          "status": "covered"
+        },
+        {
+          "id": "slash-13",
+          "description": "Typing \"/\" while the assignments fetch (the composer's only skill source) is still in flight shows the \"Loading skills…\" popover (slash-skill-loading, role=status), which yields to the picker once the list resolves",
+          "status": "covered"
+        },
+        {
+          "id": "slash-14",
+          "description": "A \"/\" token typed after existing text (caret-adjacent, preceded by whitespace) opens the picker; selecting completes the invocation at that index keeping the sentence. A \"/\" glued inside a word (and/or, URLs) never triggers",
+          "status": "covered"
+        },
+        {
+          "id": "slash-15",
+          "description": "NON-ADMIN: with the assignments endpoint readable (mocked granted state — the composer's only skill source; a 403 degrades to an inactive picker) the \"/\" picker offers skills; selecting completes the token and sending the invocation message receives a live AI reply — skips when the environment denies the non-admin CHAT permission entirely (composer disabled with a \"you don't have permission to chat\" placeholder): the picker rides on top of chat access",
+          "status": "covered"
+        },
+        {
+          "id": "slash-16",
+          "description": "Skills dropdown button (inside-buttons row, next to Canvas) lists the mentor's enabled skills as name + /slug (no descriptions); selecting inserts the /slug token AT THE CARET with context-aware spacing (highlighted in the composer) and the button shows the armed skill's name with the same ✕ affordance as other active tool pills (✕ disarms without opening the menu); toggling removes the token cleanly; arming another skill replaces the current one (single selection); arming via the \"/\" picker updates the button — both surfaces derive from the composer text so they stay in sync",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "agent-todo-list",
+      "name": "Agent Task List",
+      "spec": "68-agent-todo-list.spec.ts",
+      "sourceFiles": [
+        "components/chat/agent-todo-list.tsx",
+        "components/chat/ai-message-bubble.tsx",
+        "components/chat/tool-call-indicator.tsx",
+        "app/globals.css"
+      ],
+      "checkpoints": [
+        {
+          "id": "atl-01",
+          "description": "The task list renders as a real <ol> with one <li> per todo; status communicated via data-status + a sr-only status word + a distinct icon shape per status — no visible status text on the row itself (issue #2216)",
+          "status": "covered"
+        },
+        {
+          "id": "atl-02",
+          "description": "The panel header shows an \"N of M done\" progress summary, visible even while the row list underneath is collapsed",
+          "status": "covered"
+        },
+        {
+          "id": "atl-03",
+          "description": "The panel is expanded by default while the assistant turn is still streaming, auto-collapses once the turn completes, and clicking the trigger re-expands it (collapsed-by-default is also verified for historical/non-streaming turns loaded from chat history)",
+          "status": "covered"
+        },
+        {
+          "id": "atl-04",
+          "description": "A second write_todos call within the same streaming turn replaces the list wholesale — rows are reordered/added/dropped, never merged or appended onto the previous call's rows",
+          "status": "covered"
+        },
+        {
+          "id": "atl-05",
+          "description": "An unrecognized todo status (e.g. \"blocked\") renders as pending rather than being dropped from the list",
+          "status": "covered"
+        },
+        {
+          "id": "atl-06",
+          "description": "A turn that never emits write_todos shows no affordance at all — no panel, no header, no skeleton",
+          "status": "covered"
+        },
+        {
+          "id": "atl-07",
+          "description": "write_todos never appears in the generic \"Used N tools\" indicator or as its own raw tool card, and its todo text never leaks into that indicator's content, even when a companion tool call is present on the same turn",
+          "status": "covered"
+        },
+        {
+          "id": "atl-08",
+          "description": "The in-progress row's text carries the .todo-shimmer left-to-right sweep class",
+          "status": "covered"
+        },
+        {
+          "id": "atl-09",
+          "description": "The sr-only aria-live announcer carries only the throttled \"Step N of M complete\" summary, never any todo row text",
+          "status": "covered"
+        },
+        {
+          "id": "atl-10",
+          "description": "The task list (and its wholesale-replaced content) survives a page reload, recovered from chat history",
+          "status": "covered"
+        },
+        {
+          "id": "atl-11",
+          "description": "First real fixture-backed validation of the SDK's write_todos history-parsing contract (toolCallFromHistoryEntry in @iblai/web-utils): both the LangChain shape ({id, name, args}) and the OpenAI shape ({id, type: 'function', function: {name, arguments}}) are accepted, and a malformed entry (missing name) is dropped without throwing or tripping the ErrorBoundary",
+          "status": "covered"
         }
       ]
     }

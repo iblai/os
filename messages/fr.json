@@ -389,7 +389,13 @@
   },
   "chatAiMessageBubble": {
     "retryScreenReader": "Réessayer pour une nouvelle réponse",
-    "retryTooltip": "Réessayer"
+    "retryTooltip": "Réessayer",
+    "agentTodoListTitle": "Liste des tâches",
+    "agentTodoStatusCompleted": "Terminé",
+    "agentTodoStatusInProgress": "En cours",
+    "agentTodoStatusPending": "À faire",
+    "agentTodoProgress": "{done} sur {total} terminées",
+    "agentTodoAnnouncement": "Étape {done} sur {total} terminée"
   },
   "chatAiMessageCopy": {
     "copyToClipboard": "Copier dans le presse-papiers",
@@ -479,7 +485,8 @@
     "coworkConsentCancel": "Annuler",
     "coworkConsentConfirm": "Continuer",
     "coworkNeedsAccessibility": "Cowork a besoin de l’accès Accessibilité pour contrôler votre ordinateur. Accordez-le dans Réglages Système › Confidentialité et sécurité › Accessibilité, puis redémarrez l’app et réactivez Cowork.",
-    "coworkNeedsScreenRecording": "Cowork a besoin de l’accès Enregistrement de l’écran pour lire vos fenêtres. Accordez-le dans Réglages Système › Confidentialité et sécurité › Enregistrement de l’écran, puis redémarrez l’app et réactivez Cowork."
+    "coworkNeedsScreenRecording": "Cowork a besoin de l’accès Enregistrement de l’écran pour lire vos fenêtres. Accordez-le dans Réglages Système › Confidentialité et sécurité › Enregistrement de l’écran, puis redémarrez l’app et réactivez Cowork.",
+    "skills": "Compétences"
   },
   "chatInputFormMemoryMenu": {
     "yourMemory": "Votre mémoire",
@@ -2128,8 +2135,8 @@
   },
   "tabsSkillsTab": {
     "heading": "Compétences",
-    "description": "Gérez les attributions de compétences d'agent pour votre mentor.",
-    "infoBox": "Les compétences sont des capacités réutilisables que vous créez une fois et attribuez à n'importe quel agent. Créez une compétence, puis activez-la pour donner cette capacité à cet agent."
+    "description": "Guides réutilisables que cet Agent de Base peut découvrir et suivre.",
+    "infoBox": "Les Compétences d'Agent sont des guides réutilisables que vous pouvez attacher à un Agent de Base : des instructions écrites (plus des fichiers de référence facultatifs) pour une tâche, comme rechercher un sujet sur le web ou relire du code. L'agent ne lit une compétence que lorsqu'elle est pertinente, vous pouvez donc lui donner de nombreuses capacités sans alourdir chaque conversation. Dans le chat, tapez / pour voir les compétences de cet agent et en choisir une pour la lancer."
   },
   "tabsToolsTab": {
     "infoBox": "Donnez des mains à votre agent. Les outils lui permettent d'aller au-delà de la simple conversation — rechercher une information, appeler une API, déclencher une action — pour qu'il accomplisse réellement des tâches pour les utilisateurs.",

@@ -61,6 +61,37 @@ export async function navigateToMentorApp(
   await expect(
     page.getByRole('button', { name: 'Selected agent dropdown button' }),
   ).toBeVisible({ timeout: 120_000 });
+
+  await waitForStableMentorUrl(page);
+}
+
+/**
+ * Block until the mentor segment of the URL stops changing.
+ *
+ * MentorProvider re-resolves the mentor after its own auto-redirect, so a
+ * fresh landing can hop between agents for several seconds — and each hop
+ * swaps the whole app tree for the provider's spinner. Returning while that
+ * is still in flight hands callers a page whose chrome is about to unmount.
+ */
+export async function waitForStableMentorUrl(
+  page: Page,
+  { quietMs = 2_000, timeout = 30_000 } = {},
+): Promise<void> {
+  const mentorFromUrl = () => page.url().split('?')[0];
+  const deadline = Date.now() + timeout;
+  let last = mentorFromUrl();
+  let stableSince = Date.now();
+
+  while (Date.now() < deadline) {
+    await page.waitForTimeout(250);
+    const current = mentorFromUrl();
+    if (current !== last) {
+      last = current;
+      stableSince = Date.now();
+      continue;
+    }
+    if (Date.now() - stableSince >= quietMs) return;
+  }
 }
 
 /**

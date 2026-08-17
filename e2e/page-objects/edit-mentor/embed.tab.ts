@@ -1,4 +1,5 @@
 import { Page, Locator, expect } from '@playwright/test';
+import { isVisibleWithin } from '../../utils/resilient';
 
 export class EmbedTab {
   readonly page: Page;
@@ -243,9 +244,7 @@ export class EmbedTab {
       name: 'Close',
       exact: true,
     });
-    const closeBtnVisible = await closeBtn
-      .isVisible({ timeout: 3_000 })
-      .catch(() => false);
+    const closeBtnVisible = await isVisibleWithin(closeBtn, 3_000);
 
     if (closeBtnVisible) {
       await closeBtn.click();
