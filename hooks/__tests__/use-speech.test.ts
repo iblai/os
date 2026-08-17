@@ -195,6 +195,53 @@ describe('useSpeech', () => {
       expect(speak).not.toHaveBeenCalled();
       expect(result.current.isSpeaking).toBe(false);
     });
+
+    it('strips markdown syntax before handing the text to the synthesiser', () => {
+      const { result } = renderHook(() => useSpeech());
+      act(() => {
+        result.current.speak({
+          id: 'md-1',
+          content:
+            '## Setup\n\nInstall **the package** from [the docs](https://example.com).',
+        } as never);
+      });
+
+      expect(createdUtterances).toHaveLength(1);
+      const spoken = createdUtterances[0].text;
+      expect(spoken).toBe('Setup\nInstall the package from the docs.');
+      // The regression this guards: the voice used to read the syntax aloud.
+      expect(spoken).not.toContain('#');
+      expect(spoken).not.toContain('**');
+      expect(spoken).not.toContain('https://');
+      expect(result.current.isSpeaking).toBe(true);
+    });
+
+    it('does not read fenced code blocks aloud', () => {
+      const { result } = renderHook(() => useSpeech());
+      act(() => {
+        result.current.speak({
+          id: 'md-2',
+          content: 'Try this:\n\n```ts\nconst a = 1;\n```\n\nThen restart.',
+        } as never);
+      });
+
+      expect(createdUtterances[0].text).toBe('Try this:\nThen restart.');
+    });
+
+    it('speaks nothing when the message strips down to no prose', () => {
+      const { result } = renderHook(() => useSpeech());
+      act(() => {
+        result.current.speak({
+          id: 'md-3',
+          content: '```ts\nconst a = 1;\n```',
+        } as never);
+      });
+
+      expect(speak).not.toHaveBeenCalled();
+      expect(createdUtterances).toHaveLength(0);
+      expect(result.current.isSpeaking).toBe(false);
+      expect(result.current.currentMessageId).toBeNull();
+    });
   });
 
   describe('speakViaEndpoint (buffered fallback)', () => {
@@ -253,6 +300,65 @@ describe('useSpeech', () => {
       expect(speak).toHaveBeenCalled();
       // An audio element is created up front but never played for non-audio.
       expect(createdAudios[0]?.play).not.toHaveBeenCalled();
+    });
+
+    it('sends only the message id to the endpoint, never the markdown text', async () => {
+      mockFetchOk();
+
+      const { result } = renderHook(() => useSpeech({ tenantKey: 'org-1' }));
+
+      await act(async () => {
+        result.current.speak({
+          id: 'm-id-only',
+          content: '## Heading with **bold**',
+        } as never);
+      });
+
+      await waitFor(() => expect(createdAudios).toHaveLength(1));
+      const [url, init] = (
+        globalThis.fetch as unknown as ReturnType<typeof vi.fn>
+      ).mock.calls[0];
+      expect(url).toContain('/chat-messages/m-id-only/tts');
+      // The backend re-derives the text from the id, so stripping must not
+      // leak into this request: no body, and no text in the URL.
+      expect(url).not.toContain('Heading');
+      expect(init).not.toHaveProperty('body');
+      expect(init.method).toBe('GET');
+    });
+
+    it('strips markdown when the endpoint falls back to browser speech', async () => {
+      mockFetchOk('application/json');
+
+      const { result } = renderHook(() => useSpeech({ tenantKey: 'org-1' }));
+
+      await act(async () => {
+        result.current.speak({
+          id: 'm-fb-md',
+          content: '### Fallback\n\nRead _this_ instead.',
+        } as never);
+      });
+
+      await waitFor(() => expect(createdUtterances).toHaveLength(1));
+      expect(createdUtterances[0].text).toBe('Fallback\nRead this instead.');
+    });
+
+    it('clears the loading state when the fallback message strips to nothing', async () => {
+      mockFetchOk('application/json');
+
+      const { result } = renderHook(() => useSpeech({ tenantKey: 'org-1' }));
+
+      await act(async () => {
+        result.current.speak({
+          id: 'm-fb-empty',
+          content: '![diagram](https://example.com/d.png)',
+        } as never);
+      });
+
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+      expect(speak).not.toHaveBeenCalled();
+      expect(createdUtterances).toHaveLength(0);
+      expect(result.current.isSpeaking).toBe(false);
+      expect(result.current.currentMessageId).toBeNull();
     });
 
     it('defaults the audio type and plays when no content-type is returned', async () => {
@@ -696,6 +802,30 @@ describe('useSpeech', () => {
       expect(speak).toHaveBeenCalled();
       expect(result.current.currentMessageId).toBe('m-t2');
     });
+
+    it('toggle cancels a message that is still loading its audio', async () => {
+      mockUseMentorSettings.mockReturnValue({
+        data: { voiceProvider: 'openai' },
+      });
+      // A request that never settles keeps the hook in its loading state.
+      globalThis.fetch = vi.fn(
+        () => new Promise(() => {}),
+      ) as unknown as typeof fetch;
+
+      const { result } = renderHook(() => useSpeech({ tenantKey: 'org-1' }));
+      await act(async () => {
+        result.current.toggle({ id: 'm-load', content: 'loading' } as never);
+      });
+      expect(result.current.isLoading).toBe(true);
+      expect(result.current.isSpeaking).toBe(false);
+
+      act(() => {
+        result.current.toggle({ id: 'm-load', content: 'loading' } as never);
+      });
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.currentMessageId).toBeNull();
+      expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('cleanup on unmount', () => {
@@ -707,6 +837,56 @@ describe('useSpeech', () => {
       expect(result.current.isSpeaking).toBe(true);
       unmount();
       expect(cancel).toHaveBeenCalled();
+    });
+
+    it('keeps playing when one of several consumers unmounts', () => {
+      const first = renderHook(() => useSpeech());
+      const second = renderHook(() => useSpeech());
+
+      act(() => {
+        first.result.current.speak({
+          id: 'm-shared',
+          content: 'keep going',
+        } as never);
+      });
+      expect(second.result.current.isSpeaking).toBe(true);
+
+      // `speak` itself tears down any previous playback, so only calls made
+      // after this point are attributable to the unmount.
+      cancel.mockClear();
+      first.unmount();
+
+      expect(cancel).not.toHaveBeenCalled();
+      expect(second.result.current.isSpeaking).toBe(true);
+      expect(second.result.current.currentMessageId).toBe('m-shared');
+    });
+  });
+
+  describe('browsers without the Web Speech API', () => {
+    it('resets instead of hanging when the endpoint falls back and speech synthesis is missing', async () => {
+      delete (window as unknown as { speechSynthesis?: unknown })
+        .speechSynthesis;
+      mockUseMentorSettings.mockReturnValue({
+        data: { voiceProvider: 'openai' },
+      });
+      // Non-audio payload -> the endpoint hands off to the browser voice,
+      // which this browser does not have.
+      mockFetchOk('application/json');
+
+      const { result } = renderHook(() => useSpeech({ tenantKey: 'org-1' }));
+
+      await act(async () => {
+        result.current.speak({
+          id: 'm-nospeech',
+          content: '## Nothing can read me',
+        } as never);
+      });
+
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+      expect(createdUtterances).toHaveLength(0);
+      expect(speak).not.toHaveBeenCalled();
+      expect(result.current.isSpeaking).toBe(false);
+      expect(result.current.currentMessageId).toBeNull();
     });
   });
 });
