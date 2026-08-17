@@ -389,7 +389,13 @@
   },
   "chatAiMessageBubble": {
     "retryScreenReader": "重试以获取新的回复",
-    "retryTooltip": "重试"
+    "retryTooltip": "重试",
+    "agentTodoListTitle": "任务清单",
+    "agentTodoStatusCompleted": "已完成",
+    "agentTodoStatusInProgress": "进行中",
+    "agentTodoStatusPending": "待办",
+    "agentTodoProgress": "已完成 {done}/{total}",
+    "agentTodoAnnouncement": "第 {done} 步，共 {total} 步已完成"
   },
   "chatAiMessageCopy": {
     "copyToClipboard": "复制到剪贴板",

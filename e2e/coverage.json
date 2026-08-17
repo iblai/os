@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-08-11",
+  "lastUpdated": "2026-08-13",
   "summary": {
-    "totalCheckpoints": 654,
-    "coveredCheckpoints": 623,
+    "totalCheckpoints": 665,
+    "coveredCheckpoints": 634,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 11,
     "pendingCheckpoints": 8,
     "percent": 100,
-    "totalJourneys": 70,
-    "activeJourneys": 69
+    "totalJourneys": 71,
+    "activeJourneys": 70
   },
   "journeys": [
     {
@@ -4049,9 +4049,77 @@
       ]
     },
     {
+      "id": "agent-todo-list",
+      "name": "Agent Task List",
+      "spec": "68-agent-todo-list.spec.ts",
+      "sourceFiles": [
+        "components/chat/agent-todo-list.tsx",
+        "components/chat/ai-message-bubble.tsx",
+        "components/chat/tool-call-indicator.tsx",
+        "app/globals.css"
+      ],
+      "checkpoints": [
+        {
+          "id": "atl-01",
+          "description": "The task list renders as a real <ol> with one <li> per todo; status communicated via data-status + a sr-only status word + a distinct icon shape per status — no visible status text on the row itself (issue #2216)",
+          "status": "covered"
+        },
+        {
+          "id": "atl-02",
+          "description": "The panel header shows an \"N of M done\" progress summary, visible even while the row list underneath is collapsed",
+          "status": "covered"
+        },
+        {
+          "id": "atl-03",
+          "description": "The panel is expanded by default while the assistant turn is still streaming, auto-collapses once the turn completes, and clicking the trigger re-expands it (collapsed-by-default is also verified for historical/non-streaming turns loaded from chat history)",
+          "status": "covered"
+        },
+        {
+          "id": "atl-04",
+          "description": "A second write_todos call within the same streaming turn replaces the list wholesale — rows are reordered/added/dropped, never merged or appended onto the previous call's rows",
+          "status": "covered"
+        },
+        {
+          "id": "atl-05",
+          "description": "An unrecognized todo status (e.g. \"blocked\") renders as pending rather than being dropped from the list",
+          "status": "covered"
+        },
+        {
+          "id": "atl-06",
+          "description": "A turn that never emits write_todos shows no affordance at all — no panel, no header, no skeleton",
+          "status": "covered"
+        },
+        {
+          "id": "atl-07",
+          "description": "write_todos never appears in the generic \"Used N tools\" indicator or as its own raw tool card, and its todo text never leaks into that indicator's content, even when a companion tool call is present on the same turn",
+          "status": "covered"
+        },
+        {
+          "id": "atl-08",
+          "description": "The in-progress row's text carries the .todo-shimmer left-to-right sweep class",
+          "status": "covered"
+        },
+        {
+          "id": "atl-09",
+          "description": "The sr-only aria-live announcer carries only the throttled \"Step N of M complete\" summary, never any todo row text",
+          "status": "covered"
+        },
+        {
+          "id": "atl-10",
+          "description": "The task list (and its wholesale-replaced content) survives a page reload, recovered from chat history",
+          "status": "covered"
+        },
+        {
+          "id": "atl-11",
+          "description": "First real fixture-backed validation of the SDK's write_todos history-parsing contract (toolCallFromHistoryEntry in @iblai/web-utils): both the LangChain shape ({id, name, args}) and the OpenAI shape ({id, type: 'function', function: {name, arguments}}) are accepted, and a malformed entry (missing name) is dropped without throwing or tripping the ErrorBoundary",
+          "status": "covered"
+        }
+      ]
+    },
+    {
       "id": "mentor-spend-caps-tab",
       "name": "LLM Spend Limits (Billing) — Agent & Tenant Settings",
-      "spec": "68-spend-limits.spec.ts",
+      "spec": "69-spend-limits.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/tabs/spend-caps-tab.tsx",
         "components/modals/edit-mentor-modal/index.tsx",

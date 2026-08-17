@@ -39,7 +39,7 @@ import {
 } from '@iblai/iblai-js/playwright';
 
 /**
- * Journey 68 — LLM Spend Limits ("Billing").
+ * Journey 69 — LLM Spend Limits ("Billing").
  *
  * Covers BOTH surfaces the SDK's spend-limits UI touches, as two
  * clearly-separated `test.describe` blocks in this one file:
@@ -278,7 +278,7 @@ async function createAgentCapViaEditDialog(
 // Block A: Agent settings (Billing tab)
 // ═══════════════════════════════════════════════════════════════════════════
 
-test.describe('Journey 68: Spend Limits — Agent settings (Billing tab)', () => {
+test.describe('Journey 69: Spend Limits — Agent settings (Billing tab)', () => {
   const tracker = new MentorTracker();
 
   test.beforeEach(async ({ page, createMentorPage, editMentorPage }) => {
@@ -632,7 +632,7 @@ test.describe('Journey 68: Spend Limits — Agent settings (Billing tab)', () =>
 // Block B: Tenant settings (Spend Limits + Agent Limits)
 // ═══════════════════════════════════════════════════════════════════════════
 
-test.describe('Journey 68: Spend Limits — Tenant settings (Spend Limits + Agent Limits)', () => {
+test.describe('Journey 69: Spend Limits — Tenant settings (Spend Limits + Agent Limits)', () => {
   // Dedicated, freshly-created, capless mentor PER TEST — every Agent Limits
   // checkpoint below (except `tal-01`, which deliberately borrows an
   // ALREADY-INDEXED mentor from a past run instead — see its own comment)

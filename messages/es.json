@@ -389,7 +389,13 @@
   },
   "chatAiMessageBubble": {
     "retryScreenReader": "Reintentar para obtener una nueva respuesta",
-    "retryTooltip": "Reintentar"
+    "retryTooltip": "Reintentar",
+    "agentTodoListTitle": "Lista de tareas",
+    "agentTodoStatusCompleted": "Hecho",
+    "agentTodoStatusInProgress": "En curso",
+    "agentTodoStatusPending": "Pendiente",
+    "agentTodoProgress": "{done} de {total} completadas",
+    "agentTodoAnnouncement": "Paso {done} de {total} completado"
   },
   "chatAiMessageCopy": {
     "copyToClipboard": "Copiar al portapapeles",
