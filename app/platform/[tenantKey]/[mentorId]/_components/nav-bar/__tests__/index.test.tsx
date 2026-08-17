@@ -312,6 +312,12 @@ vi.mock('@/lib/config', () => ({
 vi.mock('@/lib/utils', () => ({
   cn: (...classes: string[]) => classes.filter(Boolean).join(' '),
   getLLMProviderDetails: () => ({ logo: '/llm-logo.png', name: 'GPT-4' }),
+  // Mirrors the real helper: map the keys that are not presentable, pass the
+  // rest through untouched.
+  getLLMModelDisplayName: (llmName?: string | null) =>
+    (llmName ?? '').toLowerCase().replace(/[^a-z0-9]/g, '') === 'iblai'
+      ? 'ibl.ai'
+      : (llmName ?? ''),
   isLoggedIn: () => true,
   isStripeActivated: (tenant: { show_paywall?: boolean; key?: string }) =>
     Boolean(tenant?.show_paywall || tenant?.key === 'main'),
