@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.128.1](https://github.com/iblai/os/compare/v0.128.0...v0.128.1) (2026-08-18)
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.5.1 ([f28d824](https://github.com/iblai/os/commit/f28d82446e2739cf1a009f21dbe8e157df4378e4))
+
 ## [0.128.0](https://github.com/iblai/os/compare/v0.127.0...v0.128.0) (2026-08-18)
 
 ### Features
