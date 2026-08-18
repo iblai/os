@@ -32,6 +32,8 @@ overrides:
   sharp: '>=0.35.0'
   brace-expansion@<=5.0.8: '>=5.0.9'
   serialize-javascript: '>=7.0.5'
+  deepmerge-ts: '>=8.0.0'
+  '@puppeteer/browsers': '>=3.0.2'
 
 patchedDependencies:
   google-drive-picker@1.1.29:
@@ -438,16 +440,16 @@ importers:
         version: 3.2.6(vitest@3.2.6)
       '@wdio/cli':
         specifier: 9.30.0
-        version: 9.30.0(@types/node@20.17.48)(expect-webdriverio@5.7.0)
+        version: 9.30.0(@types/node@20.17.48)(expect-webdriverio@5.7.0)(yauzl@2.10.0)
       '@wdio/globals':
         specifier: 9.29.1
-        version: 9.29.1(expect-webdriverio@5.7.0)(webdriverio@9.30.0)
+        version: 9.29.1(expect-webdriverio@5.7.0)(webdriverio@9.30.0(yauzl@2.10.0))
       '@wdio/local-runner':
         specifier: 9.30.0
-        version: 9.30.0(@wdio/globals@9.29.1)(webdriverio@9.30.0)
+        version: 9.30.0(@wdio/globals@9.29.1)(webdriverio@9.30.0(yauzl@2.10.0))(yauzl@2.10.0)
       '@wdio/mocha-framework':
         specifier: 9.30.0
-        version: 9.30.0
+        version: 9.30.0(yauzl@2.10.0)
       '@wdio/spec-reporter':
         specifier: 9.29.1
         version: 9.29.1
@@ -525,7 +527,7 @@ importers:
         version: 0.1.0(vitest@3.2.6)
       webdriverio:
         specifier: 9.30.0
-        version: 9.30.0
+        version: 9.30.0(yauzl@2.10.0)
 
 packages:
 
@@ -1809,10 +1811,18 @@ packages:
   '@promptbook/utils@0.69.5':
     resolution: {integrity: sha512-xm5Ti/Hp3o4xHrsK9Yy3MS6KbDxYbq485hDsFvxqaNA7equHLPdo8H8faTitTeb14QCDfLW4iwCxdVYu5sn6YQ==}
 
-  '@puppeteer/browsers@2.13.2':
-    resolution: {integrity: sha512-5EUZSUIc37H6aIXyWO0Z4y8NlF8NnjgmqeQgOGiswAU7pY0HOo16ho4+alIWmSfdZnjqBRawMsP3I5YqLSn6kw==}
-    engines: {node: '>=18'}
+  '@puppeteer/browsers@3.2.1':
+    resolution: {integrity: sha512-KDz+3qDRdBAlRlMjmKyj6dEs33YHTk/xRHEENSXq6TNnhgoU15ruSHtEBeVF6OZ9tBDY55Se4P0nFMNsipzU9A==}
+    engines: {node: '>=22.12.0'}
     hasBin: true
+    peerDependencies:
+      proxy-agent: '>=8.0.1'
+      yauzl: ^2.10.0 || ^3.4.0
+    peerDependenciesMeta:
+      proxy-agent:
+        optional: true
+      yauzl:
+        optional: true
 
   '@radix-ui/number@1.1.0':
     resolution: {integrity: sha512-V3gRzhVNU1ldS5XhAPTom1fOIo4ccrjjJgmE+LI2h/WaFpHmx0MQApT+KZHnx8abG6Avtfcz4WoEciMnpFT3HQ==}
@@ -4679,9 +4689,6 @@ packages:
   '@types/yargs@17.0.35':
     resolution: {integrity: sha512-qUHkeCyQFxMXg79wQfTtfndEC+N9ZZg76HJftDJp+qH2tV7Gj4OJi7l+PiWwJ+pWtW8GwSmqsDj/oymhrTWXjg==}
 
-  '@types/yauzl@2.10.3':
-    resolution: {integrity: sha512-oJoftv0LSuaDZE3Le4DbKX+KS9G36NzOeSap90UIK0yMA/NhKJhqlSGtNDORNRaIbQfzjXDrQa0ytJ6mNRGz/Q==}
-
   '@typescript-eslint/eslint-plugin@8.62.1':
     resolution: {integrity: sha512-4EQM77WgVNxj7OkL/5b/D/xZsw00G577+UriYTC7JF5opcF3T2AuoeY7ueLaZgSVjSgCS6yOAJB5bRGLPSJUzA==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
@@ -5585,6 +5592,10 @@ packages:
     resolution: {integrity: sha512-BSeNnyus75C4//NQ9gQt1/csTXyo/8Sb+afLAkzAptFuMsod9HFokGNudZpi/oQV73hnVK+sR+5PVRMd+Dr7YQ==}
     engines: {node: '>=12'}
 
+  cliui@9.0.1:
+    resolution: {integrity: sha512-k7ndgKhwoQveBL+/1tqGJYNz097I7WOvwbmmU2AR5+magtbjPWQTS1C5vzGkBC8Ym8UWRzfKUzUUqFLypY4Q+w==}
+    engines: {node: '>=20'}
+
   clone@1.0.4:
     resolution: {integrity: sha512-JQHZ2QMW6l3aH/j6xCqQThY/9OH4D/9ls34cgkUBiEeocRTU04tHfKPBsUK1PqZCUQM7GiA0IIXJSuXHI64Kbg==}
     engines: {node: '>=0.8'}
@@ -5962,8 +5973,8 @@ packages:
   deep-is@0.1.4:
     resolution: {integrity: sha512-oIPzksmTg4/MriiaYGO+okXDT7ztn/w3Eptv/+gSIdMdKsJo0u4CfYNFJPy+4SKMuCqGw2wxnA+URMg3t8a/bQ==}
 
-  deepmerge-ts@7.1.5:
-    resolution: {integrity: sha512-HOJkrhaYsweh+W+e74Yn7YStZOilkoPb6fycpwNLKzSPtruFs48nYis0zy5yJz1+ktUhHxoRDJ27RQAWLIJVJw==}
+  deepmerge-ts@8.0.1:
+    resolution: {integrity: sha512-szCXE7YLCvLKR9bFPJcvsezOShdalctSvrgN/LM/QGUEPZQajwjmsMObZ6/DuANT5lxzM/wtO8Feubwdkz8myA==}
     engines: {node: '>=16.0.0'}
 
   default-browser-id@5.0.1:
@@ -6486,11 +6497,6 @@ packages:
   extend@3.0.2:
     resolution: {integrity: sha512-fjquC59cD7CyW6urNXK0FBufkZcoiGG80wTuPujX590cB5Ttln20E2UB4S/WARVqhXffZl2LNgS+gQdPIIim/g==}
 
-  extract-zip@2.0.1:
-    resolution: {integrity: sha512-GDhU9ntwuKyGXdZBUgTIe+vXnWj0fppUEtMDL0+idd5Sta8TGpHssn/eusA9mrPr9qNDym6SxAYZjNvCn/9RBg==}
-    engines: {node: '>= 10.17.0'}
-    hasBin: true
-
   fast-deep-equal@2.0.1:
     resolution: {integrity: sha512-bCK/2Z4zLidyB4ReuIsvALH6w31YfAQDmXMqMx6FyfHqvBxtjC0eRumeSu4Bs3XtXwpyIywtSTrVT99BxY1f9w==}
 
@@ -6732,10 +6738,6 @@ packages:
   get-proto@1.0.1:
     resolution: {integrity: sha512-sTSfBjoXBp89JvIKIefqw7U2CCebsc74kiY6awiGogKtoSGbgjYE/G/+l9sF3MWFPNc9IcoOC4ODfKHfxFmp0g==}
     engines: {node: '>= 0.4'}
-
-  get-stream@5.2.0:
-    resolution: {integrity: sha512-nBF+F1rAZVCu/p7rjzgA+Yb4lfYXrpl7a6VmJrU8wF9I1CKvP/QwPNZHnOlwbTkY6dvtFIzFMSyQXbLoTQPRpA==}
-    engines: {node: '>=8'}
 
   get-stream@6.0.1:
     resolution: {integrity: sha512-ts6Wi+2j3jQjqi70w5AlN8DFnkSwC+MqmxEzdEALB2qXZYV3X/b1CTfgPLGJNMeAWxdPfU8FO1ms3NUfaHCPYg==}
@@ -8197,6 +8199,10 @@ packages:
 
   modern-tar@0.7.7:
     resolution: {integrity: sha512-t9VmxaqrmANnEOBhpSDI6HD192Ge48k8vmWqQQL7hSFEqHEYwZbbsu49+aKLWZeRvFs3j1pMhXOqqF4kPlvjkQ==}
+    engines: {node: '>=18.0.0'}
+
+  modern-tar@0.8.4:
+    resolution: {integrity: sha512-gN54ddmyzEg10orwZ2u4OOv+bjpMWdIl5jIkodK97bMq8QBSL5c0D7YX0lT1Ooz+99S7+PvFbnxzdjgHo1r41g==}
     engines: {node: '>=18.0.0'}
 
   module-details-from-path@1.0.4:
@@ -9724,9 +9730,6 @@ packages:
   tar-fs@2.1.5:
     resolution: {integrity: sha512-OboTd8mmMhZDNPV+UjQcK9yKAatXu2aJ+r1w4im1Otd4M4fl2hwvdoXUxIYHFTHWK/3y3FarBP70v3vwmGlOxw==}
 
-  tar-fs@3.1.3:
-    resolution: {integrity: sha512-/hU4AXnIdZu+Gvl1pk0oI5f5HxWsCJRtY2aFaJdk9VvyL48DWU6iU5WAIPG+wIi1YvWA6eTJvIviP/tMAZZNwQ==}
-
   tar-stream@2.2.0:
     resolution: {integrity: sha512-ujeqbceABgwMZxEJnk2HDY2DlnUZ+9oEcb1KzTVfYHio0UE6dG71n60d8D2I4qNvleWrrXpmjpt7vZeF1LnMZQ==}
     engines: {node: '>=6'}
@@ -10405,6 +10408,10 @@ packages:
     resolution: {integrity: sha512-tVpsJW7DdjecAiFpbIB1e3qxIQsE6NoPc5/eTdrbbIC4h0LVsWhnoa3g+m2HclBIujHzsxZ4VJVA+GUuc2/LBw==}
     engines: {node: '>=12'}
 
+  yargs-parser@22.0.0:
+    resolution: {integrity: sha512-rwu/ClNdSMpkSrUb+d6BRsSkLUq1fmfsY6TOpYzTwvwkg1/NRG85KBy3kq++A8LKQwX6lsu+aWad+2khvuXrqw==}
+    engines: {node: ^20.19.0 || ^22.12.0 || >=23}
+
   yargs-unparser@2.0.0:
     resolution: {integrity: sha512-7pRTIA9Qc1caZ0bZ6RYRGbHJthJWuakf+WmHK0rVeLkNrrGhfoabBNdue6kdINI6r4if7ocq9aD/n7xwKOdzOA==}
     engines: {node: '>=10'}
@@ -10416,6 +10423,10 @@ packages:
   yargs@17.7.3:
     resolution: {integrity: sha512-GZtjxm/J/4TSxuL3FNYjCmLktBTnIw/rVmKSIyKeYAZpmJB2ig9VauCC5xsa82GNKVKDAqpOn3KVzNt0zmrU0g==}
     engines: {node: '>=12'}
+
+  yargs@18.1.0:
+    resolution: {integrity: sha512-2rAgRKu54VsHkqI0/tYkmluGXHD4KW7yZoycuqDQ15QOTnc2VVfy0nN/1eMhnQLO00A+dwtK20xuCnc1YGeUyg==}
+    engines: {node: ^20.19.0 || ^22.12.0 || >=23}
 
   yauzl@2.10.0:
     resolution: {integrity: sha512-p4a9I6X6nu6IhoGmBqAcbJy1mlC4j27vEPZX9F4L4/vZT3Lyq1VkFHw/V/PUcB9Buo+DG3iHkT0x3Qya58zc3g==}
@@ -11823,20 +11834,12 @@ snapshots:
     dependencies:
       spacetrim: 0.11.59
 
-  '@puppeteer/browsers@2.13.2':
+  '@puppeteer/browsers@3.2.1(yauzl@2.10.0)':
     dependencies:
-      debug: 4.4.3(supports-color@8.1.1)
-      extract-zip: 2.0.1
-      progress: 2.0.3
-      proxy-agent: 6.5.0
-      semver: 7.8.5
-      tar-fs: 3.1.3
-      yargs: 17.7.3
-    transitivePeerDependencies:
-      - bare-abort-controller
-      - bare-buffer
-      - react-native-b4a
-      - supports-color
+      modern-tar: 0.8.4
+      yargs: 18.1.0
+    optionalDependencies:
+      yauzl: 2.10.0
 
   '@radix-ui/number@1.1.0': {}
 
@@ -14569,11 +14572,6 @@ snapshots:
     dependencies:
       '@types/yargs-parser': 21.0.3
 
-  '@types/yauzl@2.10.3':
-    dependencies:
-      '@types/node': 20.17.48
-    optional: true
-
   '@typescript-eslint/eslint-plugin@8.62.1(@typescript-eslint/parser@8.62.1(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)':
     dependencies:
       '@eslint-community/regexpp': 4.12.2
@@ -14851,15 +14849,15 @@ snapshots:
       convert-source-map: 2.0.0
       tinyrainbow: 3.1.1
 
-  '@wdio/cli@9.30.0(@types/node@20.17.48)(expect-webdriverio@5.7.0)':
+  '@wdio/cli@9.30.0(@types/node@20.17.48)(expect-webdriverio@5.7.0)(yauzl@2.10.0)':
     dependencies:
       '@vitest/snapshot': 2.1.9
-      '@wdio/config': 9.30.0
-      '@wdio/globals': 9.29.1(expect-webdriverio@5.7.0)(webdriverio@9.30.0)
+      '@wdio/config': 9.30.0(yauzl@2.10.0)
+      '@wdio/globals': 9.29.1(expect-webdriverio@5.7.0)(webdriverio@9.30.0(yauzl@2.10.0))
       '@wdio/logger': 9.29.1
       '@wdio/protocols': 9.30.0
       '@wdio/types': 9.29.1
-      '@wdio/utils': 9.30.0
+      '@wdio/utils': 9.30.0(yauzl@2.10.0)
       async-exit-hook: 2.0.1
       chalk: 5.6.2
       chokidar: 4.0.3
@@ -14871,7 +14869,7 @@ snapshots:
       lodash.union: 4.6.0
       read-pkg-up: 10.1.0
       tsx: 4.23.1
-      webdriverio: 9.30.0
+      webdriverio: 9.30.0(yauzl@2.10.0)
       yargs: 17.7.3
     transitivePeerDependencies:
       - '@types/node'
@@ -14879,25 +14877,26 @@ snapshots:
       - bare-buffer
       - bufferutil
       - expect-webdriverio
+      - proxy-agent
       - puppeteer-core
       - react-native-b4a
       - supports-color
       - utf-8-validate
+      - yauzl
 
-  '@wdio/config@9.30.0':
+  '@wdio/config@9.30.0(yauzl@2.10.0)':
     dependencies:
       '@wdio/logger': 9.29.1
       '@wdio/types': 9.29.1
-      '@wdio/utils': 9.30.0
-      deepmerge-ts: 7.1.5
+      '@wdio/utils': 9.30.0(yauzl@2.10.0)
+      deepmerge-ts: 8.0.1
       glob: 10.5.0
       import-meta-resolve: 4.2.0
       jiti: 2.7.0
     transitivePeerDependencies:
-      - bare-abort-controller
-      - bare-buffer
-      - react-native-b4a
+      - proxy-agent
       - supports-color
+      - yauzl
 
   '@wdio/dot-reporter@9.29.1':
     dependencies:
@@ -14905,32 +14904,31 @@ snapshots:
       '@wdio/types': 9.29.1
       chalk: 5.6.2
 
-  '@wdio/globals@9.29.1(expect-webdriverio@5.7.0)(webdriverio@9.30.0)':
+  '@wdio/globals@9.29.1(expect-webdriverio@5.7.0)(webdriverio@9.30.0(yauzl@2.10.0))':
     dependencies:
-      expect-webdriverio: 5.7.0(@wdio/globals@9.29.1)(@wdio/logger@9.29.1)(webdriverio@9.30.0)
-      webdriverio: 9.30.0
+      expect-webdriverio: 5.7.0(@wdio/globals@9.29.1)(@wdio/logger@9.29.1)(webdriverio@9.30.0(yauzl@2.10.0))
+      webdriverio: 9.30.0(yauzl@2.10.0)
 
-  '@wdio/local-runner@9.30.0(@wdio/globals@9.29.1)(webdriverio@9.30.0)':
+  '@wdio/local-runner@9.30.0(@wdio/globals@9.29.1)(webdriverio@9.30.0(yauzl@2.10.0))(yauzl@2.10.0)':
     dependencies:
       '@types/node': 20.17.48
       '@wdio/logger': 9.29.1
       '@wdio/repl': 9.16.2
-      '@wdio/runner': 9.30.0(expect-webdriverio@5.7.0)(webdriverio@9.30.0)
+      '@wdio/runner': 9.30.0(expect-webdriverio@5.7.0)(webdriverio@9.30.0(yauzl@2.10.0))(yauzl@2.10.0)
       '@wdio/types': 9.29.1
       '@wdio/xvfb': 9.30.0
       exit-hook: 4.0.0
-      expect-webdriverio: 5.7.0(@wdio/globals@9.29.1)(@wdio/logger@9.29.1)(webdriverio@9.30.0)
+      expect-webdriverio: 5.7.0(@wdio/globals@9.29.1)(@wdio/logger@9.29.1)(webdriverio@9.30.0(yauzl@2.10.0))
       split2: 4.2.0
       stream-buffers: 3.0.3
     transitivePeerDependencies:
       - '@wdio/globals'
-      - bare-abort-controller
-      - bare-buffer
       - bufferutil
-      - react-native-b4a
+      - proxy-agent
       - supports-color
       - utf-8-validate
       - webdriverio
+      - yauzl
 
   '@wdio/logger@9.29.1':
     dependencies:
@@ -14940,19 +14938,18 @@ snapshots:
       safe-regex2: 5.1.1
       strip-ansi: 7.2.0
 
-  '@wdio/mocha-framework@9.30.0':
+  '@wdio/mocha-framework@9.30.0(yauzl@2.10.0)':
     dependencies:
       '@types/mocha': 10.0.10
       '@types/node': 20.17.48
       '@wdio/logger': 9.29.1
       '@wdio/types': 9.29.1
-      '@wdio/utils': 9.30.0
+      '@wdio/utils': 9.30.0(yauzl@2.10.0)
       mocha: 10.8.2
     transitivePeerDependencies:
-      - bare-abort-controller
-      - bare-buffer
-      - react-native-b4a
+      - proxy-agent
       - supports-color
+      - yauzl
 
   '@wdio/protocols@9.30.0': {}
 
@@ -14968,26 +14965,25 @@ snapshots:
       diff: 8.0.4
       object-inspect: 1.13.4
 
-  '@wdio/runner@9.30.0(expect-webdriverio@5.7.0)(webdriverio@9.30.0)':
+  '@wdio/runner@9.30.0(expect-webdriverio@5.7.0)(webdriverio@9.30.0(yauzl@2.10.0))(yauzl@2.10.0)':
     dependencies:
       '@types/node': 20.17.48
-      '@wdio/config': 9.30.0
+      '@wdio/config': 9.30.0(yauzl@2.10.0)
       '@wdio/dot-reporter': 9.29.1
-      '@wdio/globals': 9.29.1(expect-webdriverio@5.7.0)(webdriverio@9.30.0)
+      '@wdio/globals': 9.29.1(expect-webdriverio@5.7.0)(webdriverio@9.30.0(yauzl@2.10.0))
       '@wdio/logger': 9.29.1
       '@wdio/types': 9.29.1
-      '@wdio/utils': 9.30.0
-      deepmerge-ts: 7.1.5
-      expect-webdriverio: 5.7.0(@wdio/globals@9.29.1)(@wdio/logger@9.29.1)(webdriverio@9.30.0)
-      webdriver: 9.30.0
-      webdriverio: 9.30.0
+      '@wdio/utils': 9.30.0(yauzl@2.10.0)
+      deepmerge-ts: 8.0.1
+      expect-webdriverio: 5.7.0(@wdio/globals@9.29.1)(@wdio/logger@9.29.1)(webdriverio@9.30.0(yauzl@2.10.0))
+      webdriver: 9.30.0(yauzl@2.10.0)
+      webdriverio: 9.30.0(yauzl@2.10.0)
     transitivePeerDependencies:
-      - bare-abort-controller
-      - bare-buffer
       - bufferutil
-      - react-native-b4a
+      - proxy-agent
       - supports-color
       - utf-8-validate
+      - yauzl
 
   '@wdio/spec-reporter@9.29.1':
     dependencies:
@@ -15001,13 +14997,13 @@ snapshots:
     dependencies:
       '@types/node': 20.17.48
 
-  '@wdio/utils@9.30.0':
+  '@wdio/utils@9.30.0(yauzl@2.10.0)':
     dependencies:
-      '@puppeteer/browsers': 2.13.2
+      '@puppeteer/browsers': 3.2.1(yauzl@2.10.0)
       '@wdio/logger': 9.29.1
       '@wdio/types': 9.29.1
       decamelize: 6.0.1
-      deepmerge-ts: 7.1.5
+      deepmerge-ts: 8.0.1
       edgedriver: 6.3.0
       geckodriver: 6.1.1
       get-port: 7.2.0
@@ -15018,10 +15014,9 @@ snapshots:
       split2: 4.2.0
       wait-port: 1.1.0
     transitivePeerDependencies:
-      - bare-abort-controller
-      - bare-buffer
-      - react-native-b4a
+      - proxy-agent
       - supports-color
+      - yauzl
 
   '@wdio/xvfb@9.30.0':
     dependencies:
@@ -15475,7 +15470,8 @@ snapshots:
       node-releases: 2.0.50
       update-browserslist-db: 1.2.3(browserslist@4.28.5)
 
-  buffer-crc32@0.2.13: {}
+  buffer-crc32@0.2.13:
+    optional: true
 
   buffer-crc32@1.0.0: {}
 
@@ -15698,6 +15694,12 @@ snapshots:
       string-width: 4.2.3
       strip-ansi: 6.0.1
       wrap-ansi: 7.0.0
+
+  cliui@9.0.1:
+    dependencies:
+      string-width: 7.2.0
+      strip-ansi: 7.2.0
+      wrap-ansi: 9.0.2
 
   clone@1.0.4: {}
 
@@ -16059,7 +16061,7 @@ snapshots:
 
   deep-is@0.1.4: {}
 
-  deepmerge-ts@7.1.5: {}
+  deepmerge-ts@8.0.1: {}
 
   default-browser-id@5.0.1: {}
 
@@ -16235,6 +16237,7 @@ snapshots:
   end-of-stream@1.4.5:
     dependencies:
       once: 1.4.0
+    optional: true
 
   enhanced-resolve@5.24.2:
     dependencies:
@@ -16719,15 +16722,15 @@ snapshots:
 
   expect-type@1.4.0: {}
 
-  expect-webdriverio@5.7.0(@wdio/globals@9.29.1)(@wdio/logger@9.29.1)(webdriverio@9.30.0):
+  expect-webdriverio@5.7.0(@wdio/globals@9.29.1)(@wdio/logger@9.29.1)(webdriverio@9.30.0(yauzl@2.10.0)):
     dependencies:
       '@vitest/snapshot': 4.1.10
-      '@wdio/globals': 9.29.1(expect-webdriverio@5.7.0)(webdriverio@9.30.0)
+      '@wdio/globals': 9.29.1(expect-webdriverio@5.7.0)(webdriverio@9.30.0(yauzl@2.10.0))
       '@wdio/logger': 9.29.1
       deep-eql: 5.0.2
       expect: 30.4.1
       jest-matcher-utils: 30.4.1
-      webdriverio: 9.30.0
+      webdriverio: 9.30.0(yauzl@2.10.0)
 
   expect@30.4.1:
     dependencies:
@@ -16779,16 +16782,6 @@ snapshots:
   exsolve@1.1.0: {}
 
   extend@3.0.2: {}
-
-  extract-zip@2.0.1:
-    dependencies:
-      debug: 4.4.3(supports-color@8.1.1)
-      get-stream: 5.2.0
-      yauzl: 2.10.0
-    optionalDependencies:
-      '@types/yauzl': 2.10.3
-    transitivePeerDependencies:
-      - supports-color
 
   fast-deep-equal@2.0.1: {}
 
@@ -16855,6 +16848,7 @@ snapshots:
   fd-slicer@1.1.0:
     dependencies:
       pend: 1.2.0
+    optional: true
 
   fdir@6.5.0(picomatch@4.0.5):
     optionalDependencies:
@@ -17050,10 +17044,6 @@ snapshots:
     dependencies:
       dunder-proto: 1.0.1
       es-object-atoms: 1.1.2
-
-  get-stream@5.2.0:
-    dependencies:
-      pump: 3.0.4
 
   get-stream@6.0.1: {}
 
@@ -18828,6 +18818,8 @@ snapshots:
 
   modern-tar@0.7.7: {}
 
+  modern-tar@0.8.4: {}
+
   module-details-from-path@1.0.4: {}
 
   mrmime@2.0.1: {}
@@ -19251,7 +19243,8 @@ snapshots:
       canvas: 3.2.3
       path2d: 0.2.2
 
-  pend@1.2.0: {}
+  pend@1.2.0:
+    optional: true
 
   perfect-debounce@2.1.0: {}
 
@@ -19510,6 +19503,7 @@ snapshots:
     dependencies:
       end-of-stream: 1.4.5
       once: 1.4.0
+    optional: true
 
   punycode.js@2.3.1: {}
 
@@ -20667,18 +20661,6 @@ snapshots:
       tar-stream: 2.2.0
     optional: true
 
-  tar-fs@3.1.3:
-    dependencies:
-      pump: 3.0.4
-      tar-stream: 3.2.0
-    optionalDependencies:
-      bare-fs: 4.7.3
-      bare-path: 3.0.1
-    transitivePeerDependencies:
-      - bare-abort-controller
-      - bare-buffer
-      - react-native-b4a
-
   tar-stream@2.2.0:
     dependencies:
       bl: 4.1.0
@@ -21237,37 +21219,36 @@ snapshots:
 
   web-streams-polyfill@3.3.3: {}
 
-  webdriver@9.30.0:
+  webdriver@9.30.0(yauzl@2.10.0):
     dependencies:
       '@types/node': 20.17.48
       '@types/ws': 8.18.1
-      '@wdio/config': 9.30.0
+      '@wdio/config': 9.30.0(yauzl@2.10.0)
       '@wdio/logger': 9.29.1
       '@wdio/protocols': 9.30.0
       '@wdio/types': 9.29.1
-      '@wdio/utils': 9.30.0
-      deepmerge-ts: 7.1.5
+      '@wdio/utils': 9.30.0(yauzl@2.10.0)
+      deepmerge-ts: 8.0.1
       https-proxy-agent: 7.0.6
       undici: 8.10.0
       ws: 8.21.0
     transitivePeerDependencies:
-      - bare-abort-controller
-      - bare-buffer
       - bufferutil
-      - react-native-b4a
+      - proxy-agent
       - supports-color
       - utf-8-validate
+      - yauzl
 
-  webdriverio@9.30.0:
+  webdriverio@9.30.0(yauzl@2.10.0):
     dependencies:
       '@types/node': 20.17.48
       '@types/sinonjs__fake-timers': 8.1.5
-      '@wdio/config': 9.30.0
+      '@wdio/config': 9.30.0(yauzl@2.10.0)
       '@wdio/logger': 9.29.1
       '@wdio/protocols': 9.30.0
       '@wdio/repl': 9.16.2
       '@wdio/types': 9.29.1
-      '@wdio/utils': 9.30.0
+      '@wdio/utils': 9.30.0(yauzl@2.10.0)
       archiver: 7.0.1
       aria-query: 5.3.2
       cheerio: 1.2.0
@@ -21284,14 +21265,16 @@ snapshots:
       rgb2hex: 0.2.5
       serialize-error: 12.0.0
       urlpattern-polyfill: 10.1.0
-      webdriver: 9.30.0
+      webdriver: 9.30.0(yauzl@2.10.0)
     transitivePeerDependencies:
       - bare-abort-controller
       - bare-buffer
       - bufferutil
+      - proxy-agent
       - react-native-b4a
       - supports-color
       - utf-8-validate
+      - yauzl
 
   webidl-conversions@3.0.1: {}
 
@@ -21502,6 +21485,8 @@ snapshots:
 
   yargs-parser@21.1.1: {}
 
+  yargs-parser@22.0.0: {}
+
   yargs-unparser@2.0.0:
     dependencies:
       camelcase: 6.3.0
@@ -21529,10 +21514,20 @@ snapshots:
       y18n: 5.0.8
       yargs-parser: 21.1.1
 
+  yargs@18.1.0:
+    dependencies:
+      cliui: 9.0.1
+      escalade: 3.2.0
+      get-caller-file: 2.0.5
+      string-width: 8.2.1
+      y18n: 5.0.8
+      yargs-parser: 22.0.0
+
   yauzl@2.10.0:
     dependencies:
       buffer-crc32: 0.2.13
       fd-slicer: 1.1.0
+    optional: true
 
   yocto-queue@0.1.0: {}
 
