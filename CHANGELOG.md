@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.128.0](https://github.com/iblai/os/compare/v0.127.0...v0.128.0) (2026-08-18)
+
+### Features
+
+* add skill support for code mode ([4bf93d8](https://github.com/iblai/os/commit/4bf93d82e0ec5685932b1bba6e00ac1cbbf5785e))
+* finish sandboxing and skills for code mode and added tests ([082d97c](https://github.com/iblai/os/commit/082d97ce4ad6a9e7d751d4909b09738b98cc1a25))
+
+### Bug Fixes
+
+* simplify code mode testing ([ad24662](https://github.com/iblai/os/commit/ad246623b53106c0df38a55b0f316fefae40b3db))
+* tell the code mode agent to correctly configure .env ([1ecf320](https://github.com/iblai/os/commit/1ecf320dde02a729212198bba5e37b6f40d971a9))
+
+### Chores
+
+* fix `pnpm audit` ([28c8571](https://github.com/iblai/os/commit/28c8571a42dd447bbe69e0d7adb74d672c5a0ea1))
+* **tauri:** release app-v0.95.13 ([25477f2](https://github.com/iblai/os/commit/25477f2af3873ca38c524591a335d4f8c63fa5bb))
+* update deps ([640d613](https://github.com/iblai/os/commit/640d613f908b469fccabc4d971a297626e39fab1))
+
 ## [0.127.0](https://github.com/iblai/os/compare/v0.126.0...v0.127.0) (2026-08-17)
 
 ### Features
