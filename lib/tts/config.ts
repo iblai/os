@@ -23,6 +23,14 @@ export type KokoroDevice = 'webgpu' | 'wasm';
 export type KokoroConfig = {
   /** Hugging Face (or self-hosted, HF-layout) repo id for the ONNX weights. */
   modelId: string;
+  /** Origin the weights are served from, no trailing slash. */
+  modelHost: string;
+  /**
+   * Git ref the weights are pinned to. A commit sha rather than `main`, so a
+   * force-push to the upstream repo cannot swap ~310 MB of executable model
+   * graph under a returning user.
+   */
+  modelRevision: string;
   dtype: KokoroDtype;
   device: KokoroDevice;
   /** One of `kokoro-js`'s 27 voice ids, e.g. `af_heart`. */
@@ -38,6 +46,34 @@ export type KokoroConfig = {
 };
 
 const DEFAULT_MODEL_ID = 'onnx-community/Kokoro-82M-v1.0-ONNX';
+const DEFAULT_MODEL_HOST = 'https://huggingface.co';
+
+/**
+ * `onnx-community/Kokoro-82M-v1.0-ONNX` at the sha this app was verified
+ * against. Bump it deliberately, after re-listening: the repo is a third
+ * party's, `main` moves, and a model graph is code.
+ */
+const DEFAULT_MODEL_REVISION = '1939ad2a8e416c0acfeecc08a694d14ef25f2231';
+
+/**
+ * Mirrors transformers.js's `DEFAULT_DTYPE_SUFFIX_MAPPING`
+ * (`@huggingface/transformers/src/utils/dtypes.js`), restricted to the dtypes
+ * {@link KokoroDtype} allows. Drifting from it means
+ * {@link resolveModelWeightUrl} names a file the loader never asks for.
+ */
+const DTYPE_FILE_SUFFIX: Record<KokoroDtype, string> = {
+  fp32: '',
+  fp16: '_fp16',
+  q8: '_quantized',
+  q4: '_q4',
+  q4f16: '_q4f16',
+};
+
+/**
+ * The `resolve/main` prefix `kokoro-js` and transformers.js emit when nothing
+ * pins them -- the shape {@link pinModelRequestUrl} rewrites.
+ */
+const UNPINNED_URL = /^https:\/\/huggingface\.co\/(.+?)\/resolve\/main\/(.+)$/;
 
 /**
  * The dtype is picked per backend, because onnxruntime-web's WebGPU execution
@@ -127,17 +163,131 @@ function readWasmPaths(): string {
   return base.endsWith('/') ? base : `${base}/`;
 }
 
-export function resolveKokoroConfig(): KokoroConfig {
+/**
+ * Precedence for the voice: what the mentor is configured with, then the
+ * deployment default, then Kokoro's best-graded voice.
+ *
+ * The mentor's value wins over the env var because the env var is a
+ * deployment-wide fallback for mentors that have never had a voice chosen --
+ * letting it override an explicit per-mentor choice would make the picker
+ * silently ineffective.
+ */
+function readVoice(selected?: string | null): string {
+  return (
+    selected?.trim() ||
+    process.env.NEXT_PUBLIC_TTS_KOKORO_VOICE?.trim() ||
+    DEFAULT_VOICE
+  );
+}
+
+/**
+ * Origin the weights come from, normalised to a bare `scheme://host[:port]`.
+ *
+ * Exported because `middleware.ts` derives the CSP `connect-src` entry from it:
+ * repointing this at a self-hosted mirror has to widen the policy in the same
+ * step, or the fetch is blocked and the voice silently never starts.
+ *
+ * A bare host is accepted (and assumed https) because that is the shape people
+ * paste; anything unparseable falls back rather than emitting a URL that would
+ * 404 halfway through a 310 MB download.
+ */
+export function resolveModelHost(): string {
+  const raw = process.env.NEXT_PUBLIC_TTS_KOKORO_MODEL_HOST?.trim();
+  if (!raw) return DEFAULT_MODEL_HOST;
+  const withScheme = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  try {
+    return new URL(withScheme).origin;
+  } catch {
+    return DEFAULT_MODEL_HOST;
+  }
+}
+
+function readModelRevision(): string {
+  return (
+    process.env.NEXT_PUBLIC_TTS_KOKORO_MODEL_REVISION?.trim() ||
+    DEFAULT_MODEL_REVISION
+  );
+}
+
+/** `{host}/{model}/resolve/{revision}`, the prefix every model file hangs off. */
+function modelBaseUrl(config: KokoroConfig): string {
+  return `${config.modelHost}/${config.modelId}/resolve/${config.modelRevision}`;
+}
+
+/**
+ * The one place the weight URL is spelled out.
+ *
+ * Callers that need to know whether the download has already happened -- a
+ * `caches.match` probe against `transformers-cache`, say -- must ask here
+ * rather than rebuild the string, because the dtype-to-filename mapping is
+ * transformers.js's, not ours.
+ */
+export function resolveModelWeightUrl(config: KokoroConfig): string {
+  return `${modelBaseUrl(config)}/onnx/model${DTYPE_FILE_SUFFIX[config.dtype]}.onnx`;
+}
+
+/**
+ * Redirects an unpinned Hugging Face request onto the configured host and
+ * revision, leaving everything else untouched.
+ *
+ * This exists because neither library offers a supported hook. `kokoro-js`
+ * 1.2.1 destructures `from_pretrained`'s options down to `{dtype, device,
+ * progress_callback}` and drops `revision` on the floor, and the `env` it
+ * re-exports proxies only `wasmPaths` -- transformers.js's `remoteHost` /
+ * `remotePathTemplate` are unreachable from an app that (under pnpm) cannot
+ * import `@huggingface/transformers` directly. Rewriting the request is the
+ * only remaining seam, and it is the only one that also covers the voice
+ * tensors, whose URL `kokoro-js` hard-codes to `resolve/main`.
+ */
+export function pinModelRequestUrl(url: string, config: KokoroConfig): string {
+  const match = UNPINNED_URL.exec(url);
+  return match ? `${modelBaseUrl(config)}/${match[2]}` : url;
+}
+
+export function resolveKokoroConfig(
+  selectedVoice?: string | null,
+): KokoroConfig {
   const device = detectDevice();
   return {
     modelId:
       process.env.NEXT_PUBLIC_TTS_KOKORO_MODEL?.trim() || DEFAULT_MODEL_ID,
+    modelHost: resolveModelHost(),
+    modelRevision: readModelRevision(),
     dtype: readDtype(device),
     device,
-    voice: process.env.NEXT_PUBLIC_TTS_KOKORO_VOICE?.trim() || DEFAULT_VOICE,
+    voice: readVoice(selectedVoice),
     speed: readSpeed(),
     wasmPaths: readWasmPaths(),
   };
+}
+
+/**
+ * Where the ibl.ai voice is synthesised. Both halves run the same Kokoro model
+ * and the same voices; the difference is which machine does the arithmetic.
+ *
+ * `auto` is the default and the only mode a deployment normally wants. It
+ * serves the first utterances from the backend -- no download, ~4s to audio --
+ * while the weights come down in the background, and switches to the browser
+ * permanently once they land. Devices that could never run the model well
+ * (iOS, where WebKit kills the tab; anything without a WebGPU adapter, where
+ * the WASM backend generates at ~0.5x realtime) simply stay on the cloud, and
+ * never download anything. The arbitration lives in `lib/tts/iblai-routing.ts`.
+ *
+ * `cloud` and `device` pin one half, for debugging and for testing the path
+ * the arbiter would not have chosen -- `device` is the only way to reach the
+ * WASM backend, which `auto` deliberately never selects.
+ */
+export type IblaiMode = 'auto' | 'cloud' | 'device';
+
+const VALID_IBLAI_MODES: readonly string[] = [
+  'auto',
+  'cloud',
+  'device',
+] as const;
+
+export function resolveIblaiMode(): IblaiMode {
+  const raw = process.env.NEXT_PUBLIC_TTS_IBLAI_MODE?.trim();
+  return raw && VALID_IBLAI_MODES.includes(raw) ? (raw as IblaiMode) : 'auto';
 }
 
 type NavigatorWithGpu = Navigator & {

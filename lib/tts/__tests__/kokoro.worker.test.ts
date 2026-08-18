@@ -65,6 +65,8 @@ const Splitter = hoisted.TextSplitterStream as unknown as Parameters<
   typeof import('../kokoro.worker').chunkText
 >[1];
 
+const baseFetch = globalThis.fetch;
+
 type Posted = { message: KokoroResponse; transfer?: Transferable[] };
 
 let posted: Posted[] = [];
@@ -90,6 +92,8 @@ function audio(length: number, samplingRate = 24000) {
 function config(overrides: Partial<KokoroConfig> = {}): KokoroConfig {
   return {
     modelId: 'onnx-community/Kokoro-82M-v1.0-ONNX',
+    modelHost: 'https://huggingface.co',
+    modelRevision: 'abc123',
     dtype: 'q8',
     device: 'wasm',
     voice: 'af_heart',
@@ -106,6 +110,9 @@ function config(overrides: Partial<KokoroConfig> = {}): KokoroConfig {
  */
 async function loadWorker() {
   vi.resetModules();
+  // The worker wraps the global `fetch` to pin model downloads; without this
+  // the wrappers stack up across reloads.
+  globalThis.fetch = baseFetch;
   posted = [];
   messageListeners = [];
   hoisted.env.wasmPaths = '';
@@ -159,6 +166,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  globalThis.fetch = baseFetch;
 });
 
 describe('splitLongSentence', () => {
@@ -581,6 +589,132 @@ describe('generate', () => {
     });
 
     expect(hoisted.fromPretrained).toHaveBeenCalledTimes(2);
+  });
+
+  // The revision and host are not arguments to `from_pretrained` (see the
+  // request-pinning tests below), so they have to be part of the cache key by
+  // hand or a re-pin would keep serving the previously loaded weights.
+  it('reloads when the pinned revision or host changes', async () => {
+    const worker = await loadWorker();
+
+    await worker.handleRequest({
+      type: 'generate',
+      requestId: 1,
+      text: 'Hello.',
+      config: config(),
+    });
+    await worker.handleRequest({
+      type: 'generate',
+      requestId: 2,
+      text: 'Hello.',
+      config: config({ modelRevision: 'def456' }),
+    });
+    await worker.handleRequest({
+      type: 'generate',
+      requestId: 3,
+      text: 'Hello.',
+      config: config({
+        modelRevision: 'def456',
+        modelHost: 'https://weights.acme.dev',
+      }),
+    });
+
+    expect(hoisted.fromPretrained).toHaveBeenCalledTimes(3);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Model download pinning
+//
+// `kokoro-js` 1.2.1 drops `revision` from `from_pretrained`'s options and
+// re-exports a `env` that proxies only `wasmPaths`, so there is no supported
+// way to move the download off `huggingface.co/.../resolve/main`. The worker
+// rewrites its own `fetch` instead; these cover that it rewrites what it
+// should and nothing else.
+// ---------------------------------------------------------------------------
+
+describe('model download pinning', () => {
+  const UNPINNED =
+    'https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/main/onnx/model_quantized.onnx';
+
+  /** Loads the worker with `fetch` spied on, and returns the spy. */
+  async function loadWorkerWithFetch(overrides: Partial<KokoroConfig> = {}) {
+    const worker = await loadWorker();
+    const fetchSpy = vi.fn(async () => new Response('ok'));
+    globalThis.fetch = fetchSpy as unknown as typeof fetch;
+
+    await worker.handleRequest({
+      type: 'generate',
+      requestId: 1,
+      text: 'Hello.',
+      config: config(overrides),
+    });
+
+    return fetchSpy;
+  }
+
+  it('redirects an unpinned download onto the configured revision', async () => {
+    const fetchSpy = await loadWorkerWithFetch({ modelRevision: 'sha-1' });
+
+    await globalThis.fetch(UNPINNED);
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/sha-1/onnx/model_quantized.onnx',
+      undefined,
+    );
+  });
+
+  it('redirects onto a self-hosted host and repo', async () => {
+    const fetchSpy = await loadWorkerWithFetch({
+      modelHost: 'https://weights.acme.dev',
+      modelId: 'acme/kokoro',
+      modelRevision: 'v2',
+    });
+
+    await globalThis.fetch(UNPINNED);
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'https://weights.acme.dev/acme/kokoro/resolve/v2/onnx/model_quantized.onnx',
+      undefined,
+    );
+  });
+
+  // The onnxruntime binaries are same-origin and the app's own API calls share
+  // this global in tests; neither may be touched.
+  it('passes everything else through untouched', async () => {
+    const fetchSpy = await loadWorkerWithFetch();
+    const init = { method: 'GET' };
+
+    await globalThis.fetch('/ort/ort-wasm-simd-threaded.wasm', init);
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      '/ort/ort-wasm-simd-threaded.wasm',
+      init,
+    );
+  });
+
+  it('accepts a URL object, which transformers.js also passes', async () => {
+    const fetchSpy = await loadWorkerWithFetch({ modelRevision: 'sha-1' });
+
+    await globalThis.fetch(new URL(UNPINNED));
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/sha-1/onnx/model_quantized.onnx',
+      undefined,
+    );
+  });
+
+  it('rewrites a Request rather than dropping it', async () => {
+    const fetchSpy = await loadWorkerWithFetch({ modelRevision: 'sha-1' });
+
+    await globalThis.fetch(new Request(UNPINNED, { headers: { a: 'b' } }));
+
+    const [sent] = fetchSpy.mock.calls.at(-1) as unknown as [Request];
+    expect(sent).toBeInstanceOf(Request);
+    expect(sent.url).toBe(
+      'https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/sha-1/onnx/model_quantized.onnx',
+    );
+    expect(sent.headers.get('a')).toBe('b');
   });
 });
 

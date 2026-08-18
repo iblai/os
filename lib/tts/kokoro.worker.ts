@@ -24,7 +24,7 @@
  *    correctness requirement.
  */
 
-import type { KokoroConfig } from './config';
+import { pinModelRequestUrl, type KokoroConfig } from './config';
 
 /**
  * Phonemes per chunk.
@@ -397,6 +397,43 @@ export function encodeWav(samples: Float32Array, sampleRate: number): Blob {
 let modulePromise: Promise<KokoroModule> | null = null;
 let modelPromise: Promise<KokoroTts> | null = null;
 let modelKey = '';
+/** Definitely assigned before the wrapper below can run; see `pinModelRequests`. */
+let modelSource!: KokoroConfig;
+let fetchPinned = false;
+
+function requestUrlOf(input: RequestInfo | URL): string {
+  if (typeof input === 'string') return input;
+  if (input instanceof URL) return input.href;
+  return input.url;
+}
+
+/**
+ * Routes every model download through the configured host and revision.
+ *
+ * Both libraries hard-code `https://huggingface.co/.../resolve/main/` with no
+ * option to override it from here (see `pinModelRequestUrl`), so the redirect
+ * is applied to the worker's `fetch` instead. Scoped to this worker, which does
+ * nothing but synthesise speech.
+ *
+ * Installed once. A reload leaves the previous wrapper in the chain, which is
+ * harmless: it sees an already-pinned URL, which no longer matches.
+ */
+function pinModelRequests(config: KokoroConfig): void {
+  modelSource = config;
+  if (fetchPinned) return;
+  fetchPinned = true;
+
+  const original = globalThis.fetch.bind(globalThis);
+  globalThis.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = requestUrlOf(input);
+    const pinned = pinModelRequestUrl(url, modelSource);
+    if (pinned === url) return original(input, init);
+    return original(
+      input instanceof Request ? new Request(pinned, input) : pinned,
+      init,
+    );
+  };
+}
 
 /**
  * Loads `kokoro-js` once and points onnxruntime-web at same-origin binaries.
@@ -407,6 +444,7 @@ let modelKey = '';
  * puts the binaries under `public/ort/` so `config.wasmPaths` resolves locally.
  */
 async function loadModule(config: KokoroConfig): Promise<KokoroModule> {
+  pinModelRequests(config);
   modulePromise ??= import('kokoro-js').catch((error) => {
     modulePromise = null;
     throw error;
@@ -425,7 +463,13 @@ async function loadModel(
   kokoro: KokoroModule,
   config: KokoroConfig,
 ): Promise<KokoroTts> {
-  const key = `${config.modelId}|${config.dtype}|${config.device}`;
+  const key = [
+    config.modelHost,
+    config.modelId,
+    config.modelRevision,
+    config.dtype,
+    config.device,
+  ].join('|');
   if (!modelPromise || modelKey !== key) {
     modelKey = key;
     modelPromise = kokoro.KokoroTTS.from_pretrained(config.modelId, {
