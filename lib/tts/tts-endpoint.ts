@@ -48,7 +48,11 @@ export async function loadTtsAudio(
     typeof window !== 'undefined'
       ? window.localStorage.getItem(LOCAL_STORAGE_KEYS.DM_TOKEN_KEY)
       : null;
-  const url = `${config.dmUrl()}/api/ai-mentor/orgs/${org}/users/${userId}/chat-messages/${chatMessageId}/tts`;
+  // The trailing slash is required, not cosmetic. Without it the API answers
+  // 301 to the slashed path, and the redirected request does not survive: it
+  // hangs until the gateway gives up and returns 502 after ~60s, where the
+  // slashed URL answers in 4-6s. Read Aloud simply failed, slowly.
+  const url = `${config.dmUrl()}/api/ai-mentor/orgs/${org}/users/${userId}/chat-messages/${chatMessageId}/tts/`;
   const response = await fetch(url, {
     method: 'GET',
     cache: 'no-cache',
