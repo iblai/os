@@ -43,6 +43,11 @@ const mockFreeTrialDialogState = {
 const mockUseMentorSettings = vi.hoisted(() => vi.fn());
 const mockUseModelFileUploadCapabilities = vi.hoisted(() => vi.fn());
 const mockCheckRbacPermission = vi.hoisted(() => vi.fn(() => true));
+// Code-mode skill sync: the real hook fires Tauri IPC + RTK lazy queries this
+// suite doesn't provide; the composer only mounts it and threads its state.
+const mockUseOpencodeSkillSync = vi.hoisted(() =>
+  vi.fn(() => ({ state: 'idle' as const })),
+);
 // `/` skill picker sources — skill assignments + catalog, resolved
 // client-side via the real `resolveEffectiveAgentSkills`. Default: no data →
 // picker fully inactive, so the pre-existing tests observe the composer
@@ -73,6 +78,10 @@ vi.mock('@iblai/iblai-js/data-layer', async () => {
     useGetAgentSkillsQuery: mockUseGetAgentSkillsQuery,
   };
 });
+
+vi.mock('@/hooks/use-opencode-skill-sync', () => ({
+  useOpencodeSkillSync: mockUseOpencodeSkillSync,
+}));
 
 // Shareable-link token present in the URL (`?token=...`). When set, the RBAC
 // chat gate must be bypassed. Controlled per-test and reset in beforeEach.
@@ -1937,6 +1946,16 @@ describe('ChatInputForm', () => {
         target: { value },
       });
     };
+
+    it('mounts the code-mode skill sync with the mentor identity', () => {
+      arrangeSkills();
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+
+      expect(mockUseOpencodeSkillSync).toHaveBeenCalledWith({
+        org: 'test-tenant',
+        mentorUniqueId: 'mentor-uuid-1',
+      });
+    });
 
     it('opens the picker with enabled skills when typing "/"', () => {
       arrangeSkills();

@@ -47,6 +47,7 @@ import {
   chatActions,
   clearFiles,
   getVisibleAnalyticsTabs,
+  selectSessionId,
   type AnalyticsTab,
 } from '@iblai/iblai-js/web-utils';
 import {
@@ -71,6 +72,7 @@ import { checkRbacPermission } from '@/hoc/withPermissions';
 import { useEmbedMode } from '@/hooks/use-embed-mode';
 import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { cn, isLoggedIn, redirectToLogin } from '@/lib/utils';
+import { isTauriApp } from '@/types/tauri';
 import { config } from '@/lib/config';
 import { ANONYMOUS_USERNAME, UserType } from '@/lib/constants';
 import { TenantKeyMentorIdParams, ProjectPageParams } from '@/lib/types';
@@ -575,7 +577,24 @@ export function AppSidebar() {
     [],
   );
 
+  // The active chat's session id — what Code keys its opencode process on.
+  const appSessionId = useAppSelector(selectSessionId);
+
   const startNewChat = React.useCallback(() => {
+    // Code mode: the chat being left behind keeps a live opencode process
+    // (up to the 15-min idle reap). The user has moved on — evict it now.
+    // Fire-and-forget; a graceful no-op for a chat that never spawned one.
+    if (
+      appSessionId &&
+      isTauriApp() &&
+      localStorage.getItem('ibl_coding_mode_enabled') === 'true'
+    ) {
+      void import('@tauri-apps/api/core')
+        .then(({ invoke }) =>
+          invoke('opencode_close', { sessionId: appSessionId }),
+        )
+        .catch(() => {});
+    }
     dispatch(clearFiles(undefined));
     if (!mentorId) {
       openNoMentorSelectedModal();
@@ -588,6 +607,7 @@ export function AppSidebar() {
     }
     onAfterNav();
   }, [
+    appSessionId,
     dispatch,
     mentorId,
     isChatPage,

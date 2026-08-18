@@ -2812,7 +2812,10 @@ fn main() {
             opencode_acp::opencode_close,
             opencode_acp::get_opencode_workspace,
             opencode_acp::set_opencode_workspace,
+            opencode_acp::set_opencode_skills,
+            opencode_acp::begin_opencode_skills_sync,
             opencode_installer::install_opencode,
+            opencode_installer::ensure_vibe_skills,
             opencode_installer::check_opencode_status,
             opencode_acp::check_code_local_model,
         ])
