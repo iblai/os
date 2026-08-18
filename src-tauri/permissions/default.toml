@@ -33,7 +33,10 @@ permissions = [
     "allow-opencode-close",
     "allow-get-opencode-workspace",
     "allow-set-opencode-workspace",
+    "allow-set-opencode-skills",
+    "allow-begin-opencode-skills-sync",
     "allow-install-opencode",
+    "allow-ensure-vibe-skills",
     "allow-check-opencode-status",
     "allow-check-code-local-model",
 ]
@@ -217,6 +220,24 @@ identifier = "allow-set-opencode-workspace"
 description = "Enables setting the Coding Mode workspace path"
 [permission.commands]
 allow = ["set_opencode_workspace"]
+
+[[permission]]
+identifier = "allow-set-opencode-skills"
+description = "Enables materialising a mentor's Agent Skills for Code sessions"
+[permission.commands]
+allow = ["set_opencode_skills"]
+
+[[permission]]
+identifier = "allow-begin-opencode-skills-sync"
+description = "Enables announcing an in-flight skills sync so Code spawns wait for it"
+[permission.commands]
+allow = ["begin_opencode_skills_sync"]
+
+[[permission]]
+identifier = "allow-ensure-vibe-skills"
+description = "Enables syncing the shared iblai/vibe skills for Code sessions"
+[permission.commands]
+allow = ["ensure_vibe_skills"]
 
 [[permission]]
 identifier = "allow-install-opencode"

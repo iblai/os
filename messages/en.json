@@ -2352,7 +2352,9 @@
     "modelUnavailable": "isn’t available for Code — turns will fail. Pick a different model in the top-left.",
     "workspace": "Workspace",
     "changeFolder": "Change folder…",
-    "chooseFolderTitle": "Choose your workspace folder"
+    "chooseFolderTitle": "Choose your workspace folder",
+    "skillsSyncFailed": "Skills couldn’t be synced — Code will run without them.",
+    "sandboxMissing": "Code needs bubblewrap (bwrap). Install it with your package manager, then reopen the app."
   },
   "chatCodePermissionCard": {
     "title": "Code needs your permission",

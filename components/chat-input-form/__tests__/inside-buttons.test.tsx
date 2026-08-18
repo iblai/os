@@ -60,8 +60,18 @@ vi.mock('@/lib/config', () => ({
 // The real Code button needs Redux and the mentor route; only the Tauri gate
 // around it belongs to this component.
 vi.mock('../coding-mode-button', () => ({
-  CodingModeButton: ({ sessionId }: { sessionId?: string }) => (
-    <button data-testid="coding-mode-button" data-session-id={sessionId}>
+  CodingModeButton: ({
+    sessionId,
+    skillSync,
+  }: {
+    sessionId?: string;
+    skillSync?: { state: string };
+  }) => (
+    <button
+      data-testid="coding-mode-button"
+      data-session-id={sessionId}
+      data-skill-sync={skillSync?.state}
+    >
       Code
     </button>
   ),
@@ -1074,6 +1084,22 @@ describe('InsideButtons', () => {
       expect(screen.getByTestId('coding-mode-button')).toHaveAttribute(
         'data-session-id',
         'chat-77',
+      );
+    });
+
+    it('threads the skill-sync state through to the Code button', () => {
+      mockIsTauri = true;
+      render(
+        <InsideButtons
+          {...defaultProps}
+          sessionId="chat-77"
+          skillSync={{ state: 'error' }}
+        />,
+      );
+
+      expect(screen.getByTestId('coding-mode-button')).toHaveAttribute(
+        'data-skill-sync',
+        'error',
       );
     });
 
