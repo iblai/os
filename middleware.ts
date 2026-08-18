@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { resolveModelHost } from './lib/tts/config';
+
 /**
  * Content-Security-Policy middleware.
  *
@@ -122,9 +124,37 @@ function assetCdnOrigin(): string[] {
   }
 }
 
+/**
+ * Hugging Face answers a weight request with a 302 to a separate CDN origin,
+ * and `connect-src` is re-checked on every hop of a redirect chain, so the
+ * origin the app asks for is not enough on its own. Observed target for
+ * `onnx-community/Kokoro-82M-v1.0-ONNX` in June 2026:
+ * `https://us.aws.cdn.hf.co/xet-bridge-us/…`. The bucket is regional and has
+ * moved between the `hf.co` and `huggingface.co` families before, so both are
+ * allowed rather than the one hostname seen today.
+ */
+const HF_WEIGHT_CDN = ['https://*.hf.co', 'https://*.huggingface.co'];
+
+/**
+ * Allow the on-device TTS weights (`lib/tts/kokoro.worker.ts`) to be fetched.
+ *
+ * Derived from the SAME NEXT_PUBLIC_TTS_KOKORO_MODEL_HOST the worker downloads
+ * from, so pointing a deployment at a self-hosted mirror needs no edit here.
+ * The redirect CDNs are added only for Hugging Face, which is the only host
+ * known to serve the file indirectly.
+ */
+function modelHostOrigins(): string[] {
+  const host = resolveModelHost();
+  const { hostname } = new URL(host);
+  return hostname.endsWith('huggingface.co')
+    ? [host, ...HF_WEIGHT_CDN]
+    : [host];
+}
+
 function buildCsp(nonce: string): string {
   const extra = apiBaseOrigin();
   const assetCdn = assetCdnOrigin();
+  const modelHosts = modelHostOrigins();
   const partners = partnerHosts();
   // connect-src also needs the wss:// origin of each https:// partner host —
   // browsers don't treat an https:// source as covering wss:// to the same host
@@ -161,6 +191,7 @@ function buildCsp(nonce: string): string {
       ...STRIPE,
       ...AWS_S3,
       ...assetCdn,
+      ...modelHosts,
       ...partners,
       ...partnerWs,
       ...extra,

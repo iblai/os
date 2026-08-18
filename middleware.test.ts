@@ -140,6 +140,34 @@ describe('CSP middleware', () => {
     expect(connectSrc).toContain('https://*.s3.amazonaws.com');
   });
 
+  // Without these the on-device TTS weights are blocked and the voice fails
+  // with nothing in the UI to explain it.
+  it('allows the Kokoro weight host and its redirect CDN in connect-src', () => {
+    const csp = cspOf(middleware(req())) ?? '';
+    const connectSrc = csp
+      .split(';')
+      .map((d) => d.trim())
+      .find((d) => d.startsWith('connect-src '));
+
+    expect(connectSrc).toContain('https://huggingface.co');
+    // huggingface.co 302s the weight file to a regional CDN, and connect-src
+    // is re-checked on the redirect target.
+    expect(connectSrc).toContain('https://*.hf.co');
+    expect(connectSrc).toContain('https://*.huggingface.co');
+  });
+
+  it('follows a self-hosted weight host instead of Hugging Face', () => {
+    vi.stubEnv(
+      'NEXT_PUBLIC_TTS_KOKORO_MODEL_HOST',
+      'https://weights.acme.dev/models/',
+    );
+    const csp = cspOf(middleware(req())) ?? '';
+
+    expect(csp).toContain('https://weights.acme.dev');
+    // The HF redirect CDNs are only relevant to Hugging Face, so they go away.
+    expect(csp).not.toContain('hf.co');
+  });
+
   it('does not duplicate an ibl-domain API base (already wildcarded)', () => {
     vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', 'https://api.iblai.app');
     const csp = cspOf(middleware(req())) ?? '';
