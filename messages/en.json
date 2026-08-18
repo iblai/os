@@ -389,7 +389,13 @@
   },
   "chatAiMessageBubble": {
     "retryScreenReader": "Retry for a new response",
-    "retryTooltip": "Retry"
+    "retryTooltip": "Retry",
+    "agentTodoListTitle": "Task list",
+    "agentTodoStatusCompleted": "Done",
+    "agentTodoStatusInProgress": "In progress",
+    "agentTodoStatusPending": "To do",
+    "agentTodoProgress": "{done} of {total} done",
+    "agentTodoAnnouncement": "Step {done} of {total} complete"
   },
   "chatAiMessageCopy": {
     "copyToClipboard": "Copy to Clipboard",
@@ -2345,7 +2351,9 @@
     "modelUnavailable": "isn’t available for Code — turns will fail. Pick a different model in the top-left.",
     "workspace": "Workspace",
     "changeFolder": "Change folder…",
-    "chooseFolderTitle": "Choose your workspace folder"
+    "chooseFolderTitle": "Choose your workspace folder",
+    "skillsSyncFailed": "Skills couldn’t be synced — Code will run without them.",
+    "sandboxMissing": "Code needs bubblewrap (bwrap). Install it with your package manager, then reopen the app."
   },
   "chatCodePermissionCard": {
     "title": "Code needs your permission",

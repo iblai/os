@@ -14,6 +14,8 @@ import { AIMessageCopy } from './ai-message-copy';
 import { AIMessageShare } from './ai-message-share';
 import { AIMessageSpeak } from './ai-message-speak';
 import {
+  WRITE_TODOS_TOOL,
+  extractLatestTodos,
   selectShowingSharedChat,
   useTenantMetadata as useTenantMetadataHook,
   type Message,
@@ -33,6 +35,7 @@ import {
   CodePermissionCards,
   useCodePermissionRequests,
 } from './code-permission-card';
+import { AgentTodoList } from './agent-todo-list';
 import { config } from '@/lib/config';
 import { useChatPrivacy } from '@iblai/iblai-js/web-containers';
 import { useUsername } from '@/hooks/use-user';
@@ -139,11 +142,15 @@ export function AIMessageBubble({
   // bubble has something visible (text, a visible verbose surface, actions, or
   // an artifact preview); the typing indicator covers the interim.
   const hasReasoningToShow = !!(showReasoning && reasoningContent);
+  // `write_todos` calls render as the dedicated task list, not as generic tool
+  // cards, so they must not on their own make the tool-call indicator "visible"
+  // — otherwise a todos-only turn would reserve an empty gray bubble.
   const hasToolCallsToShow = !!(
     showReasoning &&
-    toolCalls &&
-    toolCalls.length > 0
+    toolCalls?.some((toolCall) => toolCall?.name !== WRITE_TODOS_TOOL)
   );
+  const todos = showReasoning ? extractLatestTodos(toolCalls) : undefined;
+  const hasTodosToShow = !!todos?.length;
   const hasVisibleContent =
     (content ?? '').trim().length > 0 ||
     hasReasoningToShow ||
@@ -151,6 +158,7 @@ export function AIMessageBubble({
     // A permission prompt can be the FIRST thing in a Code turn, before any text.
     // Without this the bubble renders as null and the turn looks silently stalled.
     hasPermissionPrompts ||
+    hasTodosToShow ||
     !!message?.actions?.length ||
     hasArtifactVersions(message);
 
@@ -191,9 +199,15 @@ export function AIMessageBubble({
                   isCurrentlyStreaming={isCurrentlyStreaming}
                 />
               )}
-              {showReasoning && toolCalls && toolCalls.length > 0 && (
+              {hasToolCallsToShow && (
                 <ToolCallIndicator
-                  toolCalls={toolCalls}
+                  toolCalls={toolCalls!}
+                  isCurrentlyStreaming={isCurrentlyStreaming}
+                />
+              )}
+              {hasTodosToShow && (
+                <AgentTodoList
+                  todos={todos}
                   isCurrentlyStreaming={isCurrentlyStreaming}
                 />
               )}

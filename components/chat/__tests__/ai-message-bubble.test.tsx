@@ -11,7 +11,19 @@ const tenantMetadataReturnValue: { metadata: Record<string, unknown> } = {
   metadata: {},
 };
 
+// The SDK's todo parser. This suite stubs the whole `web-utils` module (the
+// transitive axios import does not resolve under vitest), so the real
+// `extractLatestTodos` is unavailable here — its own behaviour is covered by
+// the SDK. What matters for this component is what it does with the result.
+let mockLatestTodos: { content: string; status: string }[] | undefined;
+const extractLatestTodosArgs: unknown[] = [];
+
 vi.mock('@iblai/iblai-js/web-utils', () => ({
+  WRITE_TODOS_TOOL: 'write_todos',
+  extractLatestTodos: (toolCalls: unknown) => {
+    extractLatestTodosArgs.push(toolCalls);
+    return mockLatestTodos;
+  },
   selectShowingSharedChat: () => mockShowingSharedChat,
   useTenantMetadata: () => ({
     ...tenantMetadataReturnValue,
@@ -163,6 +175,22 @@ vi.mock('@/components/chat/tool-call-indicator', () => ({
   ),
 }));
 
+vi.mock('@/components/chat/agent-todo-list', () => ({
+  AgentTodoList: ({
+    todos,
+    isCurrentlyStreaming,
+  }: {
+    todos?: unknown[];
+    isCurrentlyStreaming?: boolean;
+  }) => (
+    <div
+      data-testid="agent-todo-list"
+      data-todo-count={todos?.length ?? 0}
+      data-is-currently-streaming={isCurrentlyStreaming ?? false}
+    />
+  ),
+}));
+
 vi.mock('@/lib/utils', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/utils')>();
   return {
@@ -236,6 +264,8 @@ describe('AIMessageBubble', () => {
     mockShowingSharedChat = false;
     mockChatPrivacyMode = 'normal';
     mockChatPrivacyReady = true;
+    mockLatestTodos = undefined;
+    extractLatestTodosArgs.length = 0;
     tenantMetadataReturnValue.metadata = {};
     mockPermissionRequests.current = [];
     const { isLoggedIn } = await import('@/lib/utils');
@@ -903,6 +933,167 @@ describe('AIMessageBubble', () => {
       expect(
         screen.queryByTestId('tool-call-indicator'),
       ).not.toBeInTheDocument();
+    });
+
+    it('should not render ToolCallIndicator when write_todos is the only tool call', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          toolCalls={[{ id: 'td', name: 'write_todos', log: '', result: '' }]}
+        />,
+      );
+      expect(
+        screen.queryByTestId('tool-call-indicator'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('should still render ToolCallIndicator when a non-todo tool call is present', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          toolCalls={[
+            { id: 'td', name: 'write_todos', log: '', result: '' },
+            { id: 'tc1', name: 'web_search_call', log: '', result: '' },
+          ]}
+        />,
+      );
+      expect(screen.getByTestId('tool-call-indicator')).toBeInTheDocument();
+    });
+  });
+
+  describe('agent todo list', () => {
+    const todoToolCalls = [
+      { id: 'td', name: 'write_todos', log: '', result: '' },
+    ];
+    const todos = [
+      { content: 'Read the brief', status: 'completed' },
+      { content: 'Write the summary', status: 'pending' },
+    ];
+
+    it('renders the task list when showReasoning is on and todos exist', () => {
+      mockLatestTodos = todos;
+      renderWithRedux(
+        <AIMessageBubble {...defaultProps} toolCalls={todoToolCalls} />,
+      );
+
+      const list = screen.getByTestId('agent-todo-list');
+      expect(list).toBeInTheDocument();
+      expect(list).toHaveAttribute('data-todo-count', '2');
+    });
+
+    it('passes the turn tool calls to the SDK parser', () => {
+      mockLatestTodos = todos;
+      renderWithRedux(
+        <AIMessageBubble {...defaultProps} toolCalls={todoToolCalls} />,
+      );
+      expect(extractLatestTodosArgs[0]).toEqual(todoToolCalls);
+    });
+
+    it('does not render the task list when showReasoning is off', () => {
+      mockLatestTodos = todos;
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          toolCalls={todoToolCalls}
+          showReasoning={false}
+        />,
+      );
+      expect(screen.queryByTestId('agent-todo-list')).not.toBeInTheDocument();
+    });
+
+    it('does not call the SDK parser at all when showReasoning is off', () => {
+      mockLatestTodos = todos;
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          toolCalls={todoToolCalls}
+          showReasoning={false}
+        />,
+      );
+      expect(extractLatestTodosArgs).toHaveLength(0);
+    });
+
+    it('renders no affordance when the turn has no write_todos call', () => {
+      mockLatestTodos = undefined;
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          toolCalls={[
+            { id: 'tc1', name: 'web_search_call', log: '', result: '' },
+          ]}
+        />,
+      );
+      expect(screen.queryByTestId('agent-todo-list')).not.toBeInTheDocument();
+    });
+
+    it('renders no affordance when the parser returns an empty list', () => {
+      mockLatestTodos = [];
+      renderWithRedux(
+        <AIMessageBubble {...defaultProps} toolCalls={todoToolCalls} />,
+      );
+      expect(screen.queryByTestId('agent-todo-list')).not.toBeInTheDocument();
+    });
+
+    it('passes isCurrentlyStreaming through to the task list', () => {
+      mockLatestTodos = todos;
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          toolCalls={todoToolCalls}
+          isCurrentlyStreaming={true}
+        />,
+      );
+      expect(screen.getByTestId('agent-todo-list')).toHaveAttribute(
+        'data-is-currently-streaming',
+        'true',
+      );
+    });
+
+    it('renders a todos-only turn that has no text yet', () => {
+      // hasVisibleContent must count the todo list, otherwise a turn that
+      // writes its plan before producing any text renders nothing at all.
+      mockLatestTodos = todos;
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          content=""
+          toolCalls={todoToolCalls}
+          isCurrentlyStreaming={true}
+        />,
+      );
+
+      expect(screen.getByTestId('agent-todo-list')).toBeInTheDocument();
+      expect(
+        screen.queryByTestId('tool-call-indicator'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('renders nothing for a todos-only turn while showReasoning is off', () => {
+      mockLatestTodos = todos;
+      const { container } = renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          content=""
+          toolCalls={todoToolCalls}
+          showReasoning={false}
+          isCurrentlyStreaming={true}
+        />,
+      );
+      expect(container).toBeEmptyDOMElement();
+    });
+
+    it('renders nothing when a write_todos call yields no usable todos', () => {
+      // A malformed `write_todos` payload must not reserve an empty gray bubble.
+      mockLatestTodos = undefined;
+      const { container } = renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          content=""
+          toolCalls={todoToolCalls}
+          isCurrentlyStreaming={true}
+        />,
+      );
+      expect(container).toBeEmptyDOMElement();
     });
   });
 });

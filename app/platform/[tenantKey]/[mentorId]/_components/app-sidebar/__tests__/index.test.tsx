@@ -280,6 +280,13 @@ vi.mock('sonner', () => {
   return { toast };
 });
 
+// Only dynamically imported (Code-mode eviction in startNewChat), so the
+// factory runs at call time, well after this const initialises.
+const invokeTauriMock = vi.fn(async (..._args: unknown[]) => undefined);
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: (...args: unknown[]) => invokeTauriMock(...args),
+}));
+
 vi.mock('@/lib/eventBus', () => ({
   default: { emit: (...args: unknown[]) => eventBusEmitMock(...args) },
   RemoteEvents: {
@@ -3400,5 +3407,49 @@ describe('AppSidebar — Recent refetch on first assistant response (#1982)', ()
     mockActiveChatMessages = [{ role: 'user' }, { role: 'assistant' }];
     renderSidebar();
     expect(refetchRecentMock).not.toHaveBeenCalled();
+  });
+});
+
+// =============================================================================
+// Code mode: starting a new chat evicts the chat being left behind — its
+// opencode process would otherwise sit resident until the 15-min idle reap.
+// =============================================================================
+
+describe('AppSidebar — New Chat evicts the old Code process', () => {
+  beforeEach(() => {
+    invokeTauriMock.mockClear();
+    (window as unknown as Record<string, unknown>).__TAURI__ = {};
+  });
+
+  afterEach(() => {
+    delete (window as unknown as Record<string, unknown>).__TAURI__;
+    localStorage.removeItem('ibl_coding_mode_enabled');
+  });
+
+  it('closes the active chat’s opencode process when Code is on', async () => {
+    localStorage.setItem('ibl_coding_mode_enabled', 'true');
+    renderSidebar();
+
+    fireEvent.click(screen.getByRole('button', { name: 'New Chat' }));
+
+    await waitFor(() =>
+      expect(invokeTauriMock).toHaveBeenCalledWith('opencode_close', {
+        sessionId: 'sess-active',
+      }),
+    );
+  });
+
+  it('leaves the process alone when Code is off', async () => {
+    localStorage.setItem('ibl_coding_mode_enabled', 'false');
+    renderSidebar();
+
+    fireEvent.click(screen.getByRole('button', { name: 'New Chat' }));
+
+    // The new-chat flow itself still runs…
+    expect(dispatchMock).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'chat/setShouldStartNewChat' }),
+    );
+    // …but nothing is evicted.
+    expect(invokeTauriMock).not.toHaveBeenCalled();
   });
 });
