@@ -9,8 +9,15 @@ import {
   downgradeToWasm,
   isIosWebKit,
   probeWebGpu,
+  resolveIblaiMode,
   resolveKokoroConfig,
 } from '@/lib/tts/config';
+import {
+  demoteIblaiRoute,
+  peekIblaiRoute,
+  primeIblaiRoute,
+  startIblaiWarmUp,
+} from '@/lib/tts/iblai-routing';
 import {
   cacheKokoroAudio,
   getCachedKokoroAudio,
@@ -89,15 +96,28 @@ export function useSpeech({ mentorId, tenantKey }: Props = {}) {
   const username = useUsername();
   const { data: mentorSettings } = useMentorSettings({ mentorId, tenantKey });
   const voiceProvider = mentorSettings?.voiceProvider;
+  const iblaiVoice = mentorSettings?.iblaiVoice as string | undefined;
 
   const isBrowserSupported =
     typeof window !== 'undefined' && 'speechSynthesis' in window;
-  // `iblai` is the on-device provider: it synthesises in the browser, so unlike
-  // every other non-browser provider it needs neither an identity nor a tenant.
-  const useIblai = voiceProvider === IBLAI_VOICE_PROVIDER;
-  // iOS is excluded outright: every iOS browser is WebKit, and loading the
-  // model there trips WebKit's per-tab memory kill -- a crash-reload loop no
-  // JS can catch. Those users get the system (Siri) voice instead.
+  // `iblai` synthesises either on the backend or in the browser, and which one
+  // is decided per utterance. On the cloud path it is just another server-side
+  // provider, so it takes the same endpoint route as OpenAI and Google and
+  // needs an identity and tenant like they do; only the on-device path can
+  // work without them.
+  const isIblaiProvider = voiceProvider === IBLAI_VOICE_PROVIDER;
+  const iblaiMode = resolveIblaiMode();
+  // `device` pins the on-device path for debugging: it is the only way to
+  // exercise the WASM backend, so it deliberately keeps the cloud out of
+  // reach, including as a fallback.
+  const pinnedOnDevice = isIblaiProvider && iblaiMode === 'device';
+  // Under `auto` both halves stay reachable, which is the whole point: the
+  // cloud serves until the weights are cached, and remains the landing spot
+  // when an on-device utterance fails.
+  const arbitratedIblai = isIblaiProvider && iblaiMode === 'auto';
+  // iOS is excluded from the on-device path outright: every iOS browser is
+  // WebKit, and loading the model there trips WebKit's per-tab memory kill --
+  // a crash-reload loop no JS can catch.
   const isIblaiSupported =
     typeof window !== 'undefined' &&
     typeof window.Worker === 'function' &&
@@ -105,12 +125,14 @@ export function useSpeech({ mentorId, tenantKey }: Props = {}) {
   const useEndpoint = Boolean(
     voiceProvider &&
       voiceProvider !== 'browser' &&
-      !useIblai &&
+      !pinnedOnDevice &&
       username &&
       tenantKey,
   );
   const isSupported =
-    useEndpoint || isBrowserSupported || (useIblai && isIblaiSupported);
+    useEndpoint ||
+    isBrowserSupported ||
+    ((pinnedOnDevice || arbitratedIblai) && isIblaiSupported);
 
   useEffect(() => {
     return () => {
@@ -120,6 +142,15 @@ export function useSpeech({ mentorId, tenantKey }: Props = {}) {
       }
     };
   }, []);
+
+  // Resolving the route means awaiting a WebGPU adapter and a Cache Storage
+  // lookup, neither of which can happen inside the click that needs the
+  // answer. Both are read-only -- nothing is downloaded here -- so the work is
+  // done on mount and the click reads the memo synchronously.
+  useEffect(() => {
+    if (!arbitratedIblai || !isIblaiSupported) return;
+    void primeIblaiRoute(resolveKokoroConfig(iblaiVoice));
+  }, [arbitratedIblai, isIblaiSupported, iblaiVoice]);
 
   const stop = useCallback(() => {
     resetSpeech();
@@ -223,6 +254,35 @@ export function useSpeech({ mentorId, tenantKey }: Props = {}) {
   );
 
   /**
+   * Where a failed on-device utterance lands.
+   *
+   * Under `auto` that is the cloud, not the system voice: the two `iblai`
+   * paths run the same model and the same voices, so the backend is a far
+   * closer substitute than `speechSynthesis`. The route is demoted at the same
+   * time, so the rest of the session stops re-trying a path that just failed.
+   * The system voice remains the floor beneath both.
+   */
+  const fallbackFromDevice = useCallback(
+    (message: Message) => {
+      if (arbitratedIblai) {
+        demoteIblaiRoute(resolveKokoroConfig(iblaiVoice));
+        if (useEndpoint) {
+          void speakViaEndpoint(message);
+          return;
+        }
+      }
+      speakViaBrowser(message);
+    },
+    [
+      arbitratedIblai,
+      iblaiVoice,
+      useEndpoint,
+      speakViaEndpoint,
+      speakViaBrowser,
+    ],
+  );
+
+  /**
    * On-device synthesis: no network call, no audio leaves the browser.
    *
    * Flow: strip markdown -> open the audio graph -> hand the text to the worker
@@ -255,9 +315,17 @@ export function useSpeech({ mentorId, tenantKey }: Props = {}) {
 
       const messageId = String(message.id);
 
-      // Already synthesised this message once: replay the assembled WAV rather
-      // than spending another pass on the CPU.
-      const cachedUrl = getCachedKokoroAudio(messageId);
+      // The presence of `navigator.gpu` is not proof an adapter will be
+      // granted (blocklisted GPUs, denied contexts). Probe before committing:
+      // a refusal downgrades to WASM instead of failing the utterance.
+      let kokoroConfig = resolveKokoroConfig(iblaiVoice);
+      if (kokoroConfig.device === 'webgpu' && !(await probeWebGpu())) {
+        kokoroConfig = downgradeToWasm(kokoroConfig);
+      }
+
+      // Already synthesised this message in this voice: replay the assembled
+      // WAV rather than spending another pass on the CPU.
+      const cachedUrl = getCachedKokoroAudio(messageId, kokoroConfig.voice);
       if (cachedUrl) {
         const audio = new Audio();
         activeAudio = audio;
@@ -283,7 +351,7 @@ export function useSpeech({ mentorId, tenantKey }: Props = {}) {
         player = getKokoroPlayer();
         worker = getKokoroWorker();
       } catch {
-        speakViaBrowser(message);
+        fallbackFromDevice(message);
         return;
       }
 
@@ -295,7 +363,7 @@ export function useSpeech({ mentorId, tenantKey }: Props = {}) {
       // burning a minute of CPU producing audio that is silently discarded.
       const started = await player.start();
       if (!started) {
-        speakViaBrowser(message);
+        fallbackFromDevice(message);
         return;
       }
 
@@ -306,7 +374,7 @@ export function useSpeech({ mentorId, tenantKey }: Props = {}) {
       };
 
       worker.onerror = () => {
-        speakViaBrowser(message);
+        fallbackFromDevice(message);
       };
 
       worker.onmessage = (event: MessageEvent<KokoroResponse>) => {
@@ -325,7 +393,7 @@ export function useSpeech({ mentorId, tenantKey }: Props = {}) {
         }
 
         if (data.type === 'complete') {
-          cacheKokoroAudio(messageId, data.blob);
+          cacheKokoroAudio(messageId, kokoroConfig.voice, data.blob);
           // Not "playback finished" -- the tail is still queued. This is what
           // lets the player know the last chunk it holds really is the last.
           player.markComplete();
@@ -333,17 +401,9 @@ export function useSpeech({ mentorId, tenantKey }: Props = {}) {
         }
 
         if (data.type === 'error') {
-          speakViaBrowser(message);
+          fallbackFromDevice(message);
         }
       };
-
-      // The presence of `navigator.gpu` is not proof an adapter will be
-      // granted (blocklisted GPUs, denied contexts). Probe before committing:
-      // a refusal downgrades to WASM instead of failing the utterance.
-      let kokoroConfig = resolveKokoroConfig();
-      if (kokoroConfig.device === 'webgpu' && !(await probeWebGpu())) {
-        kokoroConfig = downgradeToWasm(kokoroConfig);
-      }
 
       worker.postMessage({
         type: 'generate',
@@ -352,24 +412,41 @@ export function useSpeech({ mentorId, tenantKey }: Props = {}) {
         config: kokoroConfig,
       });
     },
-    [speakViaBrowser],
+    [fallbackFromDevice, iblaiVoice],
   );
 
   const speak = useCallback(
     (message: Message) => {
       if (!message?.content) return;
-      if (useIblai && isIblaiSupported) {
+      if (arbitratedIblai && isIblaiSupported) {
+        const kokoroConfig = resolveKokoroConfig(iblaiVoice);
+        // A route that is still resolving reads as null and takes the cloud.
+        // Waiting for it would cost the click its user gesture and let a
+        // double-click start two utterances; one cloud utterance costs a few
+        // seconds of backend time, once.
+        if (peekIblaiRoute(kokoroConfig) === 'device') {
+          void speakViaIblai(message);
+          return;
+        }
+        // First Read Aloud of an eligible session starts the download. It runs
+        // alongside the cloud playback below and interrupts nothing.
+        void startIblaiWarmUp(kokoroConfig);
+      } else if (pinnedOnDevice && isIblaiSupported) {
         void speakViaIblai(message);
-      } else if (useEndpoint) {
-        void speakViaEndpoint(message);
-      } else {
-        // Also the landing spot for `iblai` on unsupported devices (iOS): the
-        // provider stays configured, the voice degrades to the system one.
-        speakViaBrowser(message);
+        return;
       }
+      if (useEndpoint) {
+        void speakViaEndpoint(message);
+        return;
+      }
+      // Also the landing spot for `iblai` on unsupported devices (iOS): the
+      // provider stays configured, the voice degrades to the system one.
+      speakViaBrowser(message);
     },
     [
-      useIblai,
+      arbitratedIblai,
+      pinnedOnDevice,
+      iblaiVoice,
       isIblaiSupported,
       useEndpoint,
       speakViaIblai,

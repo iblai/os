@@ -64,6 +64,23 @@ vi.mock('@/lib/tts/stream-player', () => ({
   StreamPlayer: players.StreamPlayer,
 }));
 
+// The arbiter itself is covered in lib/tts/__tests__/iblai-routing.test.ts.
+// Here it is a dial, so each branch of the routing decision can be driven
+// without staging Cache Storage.
+const routing = vi.hoisted(() => ({
+  peek: vi.fn<() => 'device' | 'cloud' | null>(() => null),
+  prime: vi.fn(async () => ({ route: 'cloud' as const, warm: true })),
+  warmUp: vi.fn(async () => {}),
+  demote: vi.fn(),
+}));
+
+vi.mock('@/lib/tts/iblai-routing', () => ({
+  peekIblaiRoute: routing.peek,
+  primeIblaiRoute: routing.prime,
+  startIblaiWarmUp: routing.warmUp,
+  demoteIblaiRoute: routing.demote,
+}));
+
 import { useSpeech } from '../use-speech';
 
 // ---------------------------------------------------------------------------
@@ -186,6 +203,10 @@ async function speakIblai(content = 'Hello there.') {
 }
 
 beforeEach(() => {
+  // This suite covers the on-device path specifically. It is no longer the
+  // default -- `iblai` goes to the backend unless a deployment opts out -- so
+  // the mode is pinned here rather than inherited.
+  process.env.NEXT_PUBLIC_TTS_IBLAI_MODE = 'device';
   // `workers` is NOT cleared: useSpeech builds the Worker once per tab and
   // reuses it, so clearing the array would lose the singleton the assertions
   // need. Its recorded traffic is reset instead.
@@ -210,6 +231,11 @@ beforeEach(() => {
     .mockReset()
     .mockReturnValue({ data: { voiceProvider: 'iblai' } });
 
+  routing.peek.mockReset().mockReturnValue(null);
+  routing.prime.mockReset().mockResolvedValue({ route: 'cloud', warm: true });
+  routing.warmUp.mockReset().mockResolvedValue(undefined);
+  routing.demote.mockReset();
+
   synthSpeak.mockReset();
   synthCancel.mockReset();
   (globalThis as unknown as { Worker: unknown }).Worker = FakeWorker;
@@ -232,6 +258,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  delete process.env.NEXT_PUBLIC_TTS_IBLAI_MODE;
   vi.restoreAllMocks();
 });
 
@@ -255,6 +282,29 @@ describe('useSpeech — iblai (on-device) provider', () => {
 
       expect(synthSpeak).toHaveBeenCalled();
       expect(createdUtterances.at(-1)?.text).toBe('No workers here.');
+      expect(workers).toHaveLength(0);
+    });
+
+    // Same constraint as above: the worker is cached for the lifetime of the
+    // tab, so a construction that throws can only be observed before any test
+    // has successfully built one.
+    it('falls back when constructing the worker throws', async () => {
+      (globalThis as unknown as { Worker: unknown }).Worker = function () {
+        throw new Error('SecurityError');
+      };
+
+      const { result } = renderHook(() =>
+        useSpeech({ mentorId: 'm1', tenantKey: 'org-1' }),
+      );
+      await act(async () => {
+        result.current.speak({
+          id: messageId(),
+          content: 'Worker refused to start.',
+        } as never);
+      });
+
+      expect(synthSpeak).toHaveBeenCalled();
+      expect(createdUtterances.at(-1)?.text).toBe('Worker refused to start.');
       expect(workers).toHaveLength(0);
     });
   });
@@ -471,6 +521,47 @@ describe('useSpeech — iblai (on-device) provider', () => {
       expect(createdAudios[0].play).toHaveBeenCalled();
       expect(result.current.isSpeaking).toBe(true);
       expect(result.current.currentMessageId).toBe(id);
+    });
+
+    // The cache key includes the voice: the same message in a different voice
+    // is different audio, and replaying it would silently ignore the change.
+    it('re-synthesises when the mentor voice changed since the cached run', async () => {
+      mockUseMentorSettings.mockReturnValue({
+        data: { voiceProvider: 'iblai', iblaiVoice: 'af_heart' },
+      });
+      const { result, rerender } = renderHook(() =>
+        useSpeech({ mentorId: 'm1', tenantKey: 'org-1' }),
+      );
+      const id = messageId();
+
+      await act(async () => {
+        result.current.speak({ id, content: 'Hello there.' } as never);
+      });
+      const worker = activeWorker();
+      expect(worker.lastGenerate?.config).toMatchObject({ voice: 'af_heart' });
+      act(() => worker.emit(chunk({ index: 0 })));
+      act(() =>
+        worker.emit({
+          type: 'complete',
+          requestId: worker.lastGenerate?.requestId as number,
+          blob: new Blob([new ArrayBuffer(8)], { type: 'audio/wav' }),
+        }),
+      );
+      const before = worker.posted.filter((m) => m.type === 'generate').length;
+
+      act(() => result.current.stop());
+      mockUseMentorSettings.mockReturnValue({
+        data: { voiceProvider: 'iblai', iblaiVoice: 'bm_george' },
+      });
+      rerender();
+      await act(async () => {
+        result.current.speak({ id, content: 'Hello there.' } as never);
+      });
+
+      expect(
+        worker.posted.filter((m) => m.type === 'generate').length,
+      ).toBeGreaterThan(before);
+      expect(worker.lastGenerate?.config).toMatchObject({ voice: 'bm_george' });
     });
 
     it('clears state when the replay ends', async () => {
@@ -710,5 +801,195 @@ describe('useSpeech — device capability gates', () => {
         });
       },
     );
+  });
+});
+
+describe('useSpeech — iblai auto mode', () => {
+  function mockFetchOk() {
+    globalThis.fetch = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      headers: { get: () => 'audio/mpeg' },
+      body: null,
+      blob: async () => new Blob([new ArrayBuffer(8)]),
+    })) as unknown as typeof fetch;
+  }
+
+  function render() {
+    return renderHook(() => useSpeech({ mentorId: 'm1', tenantKey: 'org-1' }));
+  }
+
+  async function speakAuto(content = 'Read this aloud.') {
+    const id = messageId();
+    const { result } = render();
+    await act(async () => {
+      result.current.speak({ id, content } as never);
+    });
+    return { result, id };
+  }
+
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_TTS_IBLAI_MODE = 'auto';
+    window.localStorage.setItem('dm_token', 'tok-123');
+    mockFetchOk();
+  });
+
+  describe('per-utterance routing', () => {
+    // Resolving the route needs an await; the click cannot. A route that has
+    // not resolved yet reads as null and costs one cloud utterance, which is
+    // the cheap half of the trade.
+    it('serves the cloud while the route is still being worked out', async () => {
+      const { result } = await speakAuto();
+
+      await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
+      expect(generateCount()).toBe(0);
+      expect(result.current.currentMessageId).not.toBeNull();
+    });
+
+    it('serves the cloud when the model is not downloaded yet', async () => {
+      routing.peek.mockReturnValue('cloud');
+
+      await speakAuto();
+
+      await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
+      expect(generateCount()).toBe(0);
+    });
+
+    it('serves the device once the weights and voice are cached', async () => {
+      routing.peek.mockReturnValue('device');
+
+      await speakAuto('Local synthesis.');
+
+      expect(generateCount()).toBe(1);
+      expect(activeWorker().lastGenerate?.text).toBe('Local synthesis.');
+      expect(globalThis.fetch).not.toHaveBeenCalled();
+    });
+
+    // Every iOS browser is WebKit, and the model trips its per-tab memory
+    // kill. The provider stays configured; the backend answers instead.
+    it('keeps iOS on the cloud even when the route says device', async () => {
+      routing.peek.mockReturnValue('device');
+      const descriptor = Object.getOwnPropertyDescriptor(
+        navigator,
+        'userAgent',
+      );
+      Object.defineProperty(navigator, 'userAgent', {
+        configurable: true,
+        value: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) CriOS/1',
+      });
+
+      try {
+        await speakAuto();
+        await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
+        expect(generateCount()).toBe(0);
+      } finally {
+        // jsdom serves `userAgent` from the prototype, so there is no own
+        // descriptor to put back -- deleting the override is the restore.
+        if (descriptor) {
+          Object.defineProperty(navigator, 'userAgent', descriptor);
+        } else {
+          Reflect.deleteProperty(navigator, 'userAgent');
+        }
+      }
+    });
+  });
+
+  describe('background warm-up', () => {
+    // A 325 MB download for a user who never presses the button is not a
+    // trade-off, it is a bug.
+    it('downloads nothing until Read Aloud is pressed', () => {
+      render();
+      expect(routing.warmUp).not.toHaveBeenCalled();
+    });
+
+    // The probe is a Cache Storage lookup and a WebGPU adapter request, so it
+    // can run on mount and have an answer ready for the first click.
+    it('resolves the route on mount without downloading', () => {
+      render();
+      expect(routing.prime).toHaveBeenCalled();
+      expect(routing.warmUp).not.toHaveBeenCalled();
+    });
+
+    it('starts the download on the first Read Aloud', async () => {
+      await speakAuto();
+
+      expect(routing.warmUp).toHaveBeenCalledWith(
+        expect.objectContaining({ voice: 'af_heart' }),
+      );
+    });
+
+    it('does not start it when the device is already serving', async () => {
+      routing.peek.mockReturnValue('device');
+
+      await speakAuto();
+
+      expect(routing.warmUp).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('failure ladder', () => {
+    // Both halves run the same model and the same voices, so the backend is a
+    // far closer substitute for a failed on-device utterance than the system
+    // voice is.
+    it('falls back to the cloud, not the system voice, when the worker fails', async () => {
+      routing.peek.mockReturnValue('device');
+      await speakAuto('Model is unreachable.');
+      const worker = activeWorker();
+
+      await act(async () => {
+        worker.emit({
+          type: 'error',
+          requestId: worker.lastGenerate?.requestId as number,
+          message: 'Failed to fetch model',
+        });
+      });
+
+      await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
+      expect(synthSpeak).not.toHaveBeenCalled();
+    });
+
+    it('stops choosing the device after it fails once', async () => {
+      routing.peek.mockReturnValue('device');
+      await speakAuto();
+      const worker = activeWorker();
+
+      await act(async () => {
+        worker.onerror?.(new ErrorEvent('error'));
+      });
+
+      expect(routing.demote).toHaveBeenCalled();
+    });
+
+    it('falls back to the cloud when the audio graph stays suspended', async () => {
+      routing.peek.mockReturnValue('device');
+      players.state.startResolvesTo = false;
+
+      await speakAuto();
+
+      await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
+      expect(synthSpeak).not.toHaveBeenCalled();
+    });
+
+    // The system voice is still the floor: with no identity there is no
+    // endpoint to fall back to.
+    it('falls back to the system voice when there is no cloud to reach', async () => {
+      routing.peek.mockReturnValue('device');
+      mockUseUsername.mockReturnValue(undefined);
+
+      const { result } = renderHook(() => useSpeech({ mentorId: 'm1' }));
+      await act(async () => {
+        result.current.speak({
+          id: messageId(),
+          content: 'No identity here.',
+        } as never);
+      });
+      await act(async () => {
+        activeWorker().onerror?.(new ErrorEvent('error'));
+      });
+
+      expect(synthSpeak).toHaveBeenCalled();
+      expect(createdUtterances.at(-1)?.text).toBe('No identity here.');
+      expect(globalThis.fetch).not.toHaveBeenCalled();
+    });
   });
 });

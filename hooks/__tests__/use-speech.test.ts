@@ -244,6 +244,72 @@ describe('useSpeech', () => {
     });
   });
 
+  describe('iblai provider routing', () => {
+    beforeEach(() => {
+      mockUseMentorSettings.mockReturnValue({
+        data: { voiceProvider: 'iblai', iblaiVoice: 'af_heart' },
+      });
+      window.localStorage.setItem('dm_token', 'tok-123');
+    });
+
+    // The backend runs Kokoro itself, so the first utterance always takes the
+    // same endpoint route as OpenAI and Google -- nothing is downloaded, and
+    // none of the device failures the in-browser path carries apply yet.
+    it('goes to the backend endpoint by default', async () => {
+      mockFetchOk();
+
+      const { result } = renderHook(() => useSpeech({ tenantKey: 'org-1' }));
+      await act(async () => {
+        result.current.speak({ id: 'm-cloud', content: 'read me' } as never);
+      });
+
+      await waitFor(() => expect(createdAudios).toHaveLength(1));
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        'https://dm.test/api/ai-mentor/orgs/org-1/users/alice/chat-messages/m-cloud/tts/',
+        expect.objectContaining({ method: 'GET' }),
+      );
+      await waitFor(() => expect(result.current.isSpeaking).toBe(true));
+    });
+
+    // Without a WebGPU adapter the on-device backend is single-threaded WASM at
+    // ~0.5x realtime, so the arbiter never picks it and never pays for the
+    // weights. Reaching WASM at all takes an explicit mode override.
+    it('downloads no model weights on a machine with no WebGPU', async () => {
+      mockFetchOk();
+
+      const { result } = renderHook(() => useSpeech({ tenantKey: 'org-1' }));
+      await act(async () => {
+        result.current.speak({ id: 'm-no-gpu', content: 'read me' } as never);
+      });
+
+      await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
+      const requested = (
+        globalThis.fetch as ReturnType<typeof vi.fn>
+      ).mock.calls
+        .map(([url]) => String(url))
+        .filter((url) => url.includes('huggingface.co'));
+      expect(requested).toHaveLength(0);
+    });
+
+    it('reports support on the cloud path like any other server-side provider', () => {
+      const { result } = renderHook(() =>
+        useSpeech({ tenantKey: 'org-1', mentorId: 'm1' }),
+      );
+      expect(result.current.isSupported).toBe(true);
+    });
+
+    // Without an identity there is no endpoint to call, so it degrades the
+    // same way the other server-side providers do rather than failing.
+    it('falls back to the browser voice with no tenant', async () => {
+      const { result } = renderHook(() => useSpeech());
+      await act(async () => {
+        result.current.speak({ id: 'm-no-tenant', content: 'spoken' } as never);
+      });
+      expect(speak).toHaveBeenCalledTimes(1);
+      expect(createdUtterances[0].text).toBe('spoken');
+    });
+  });
+
   describe('speakViaEndpoint (buffered fallback)', () => {
     beforeEach(() => {
       mockUseMentorSettings.mockReturnValue({
@@ -263,7 +329,7 @@ describe('useSpeech', () => {
 
       await waitFor(() => expect(createdAudios).toHaveLength(1));
       expect(globalThis.fetch).toHaveBeenCalledWith(
-        'https://dm.test/api/ai-mentor/orgs/org-1/users/alice/chat-messages/m-endpoint/tts',
+        'https://dm.test/api/ai-mentor/orgs/org-1/users/alice/chat-messages/m-endpoint/tts/',
         expect.objectContaining({
           method: 'GET',
           cache: 'no-cache',
@@ -318,7 +384,7 @@ describe('useSpeech', () => {
       const [url, init] = (
         globalThis.fetch as unknown as ReturnType<typeof vi.fn>
       ).mock.calls[0];
-      expect(url).toContain('/chat-messages/m-id-only/tts');
+      expect(url).toContain('/chat-messages/m-id-only/tts/');
       // The backend re-derives the text from the id, so stripping must not
       // leak into this request: no body, and no text in the URL.
       expect(url).not.toContain('Heading');
