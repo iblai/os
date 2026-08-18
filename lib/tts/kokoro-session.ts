@@ -29,7 +29,16 @@ let requestId = 0;
  * than a second full synthesis pass. One entry, because the point is repeating
  * the message in front of you, not building a library.
  */
-let cache: { messageId: string; url: string } | null = null;
+let cache: { key: string; url: string } | null = null;
+
+/**
+ * Keyed on the voice as well as the message: the same message spoken by a
+ * different voice is different audio, and keying on the id alone would replay
+ * the previous voice after the mentor's voice is changed.
+ */
+function cacheKey(messageId: string, voice: string): string {
+  return `${messageId}\u0000${voice}`;
+}
 
 /**
  * Lazily constructs the worker.
@@ -57,14 +66,21 @@ export function nextKokoroRequestId(): number {
   return requestId;
 }
 
-export function cacheKokoroAudio(messageId: string, blob: Blob): void {
+export function cacheKokoroAudio(
+  messageId: string,
+  voice: string,
+  blob: Blob,
+): void {
   if (cache) URL.revokeObjectURL(cache.url);
-  cache = { messageId, url: URL.createObjectURL(blob) };
+  cache = { key: cacheKey(messageId, voice), url: URL.createObjectURL(blob) };
 }
 
-/** The cached object URL for `messageId`, or null on a miss. */
-export function getCachedKokoroAudio(messageId: string): string | null {
-  return cache?.messageId === messageId ? cache.url : null;
+/** The cached object URL for this message *in this voice*, or null on a miss. */
+export function getCachedKokoroAudio(
+  messageId: string,
+  voice: string,
+): string | null {
+  return cache?.key === cacheKey(messageId, voice) ? cache.url : null;
 }
 
 /**
