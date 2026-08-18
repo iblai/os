@@ -48,8 +48,8 @@ importers:
         specifier: 4.166.0-ai
         version: 4.166.0-ai
       '@iblai/iblai-js':
-        specifier: 2.4.5
-        version: 2.4.5(ef14094fac10a722831a935742bc0ec0)
+        specifier: 2.5.1
+        version: 2.5.1(ef14094fac10a722831a935742bc0ec0)
       '@iblai/iblai-web-mentor':
         specifier: 1.3.4
         version: 1.3.4(@babel/core@7.29.7)(@types/babel__core@7.20.5)(rollup@4.62.2)(typescript@5.9.3)
@@ -1078,8 +1078,8 @@ packages:
   '@iblai/iblai-api@4.166.0-ai':
     resolution: {integrity: sha512-dY9Jv+CkXEyTxRsOQFay5YvYe8K2LSQluJJvtssGQV2RbrxPPzONaKfnhcyarDs7Ft35Xqk1fuErjhUwNG3OIg==}
 
-  '@iblai/iblai-js@2.4.5':
-    resolution: {integrity: sha512-Vcc/2siCMN0+1+ZKUSOTRrz9dnEVttfjBoCqBiv4uSyLx7w/FQMiGQGEHWj7YGhOW+9F+9vZxNg5g8D9QbP5PA==}
+  '@iblai/iblai-js@2.5.1':
+    resolution: {integrity: sha512-VRVcJZ237B2UudhmmhUb+4hUum0rhLHgHH+H7gohkr1rpLefFd212J5X4l68SzDtf9kJCdAZYXhM7/hIHHN6TQ==}
     engines: {node: '>=20.0.0'}
     hasBin: true
     peerDependencies:
@@ -1103,13 +1103,13 @@ packages:
   '@iblai/iblai-web-mentor@1.3.4':
     resolution: {integrity: sha512-w0K22cQl/LquXDDnVi7DgiOeuS+iha85poZxuLCtJqvwyCxAMLch1DWN3LbNCxw+YGhrV7BOEENp8s7bZ+7ZGw==}
 
-  '@iblai/mcp@1.9.1':
-    resolution: {integrity: sha512-aQek6ozZWX5wzy7Bi+ISOKwTsa1k1SZfHM+3uBKRPL3rN9kXcVLhDzVw6XMDX17mwM8xb+r1Wck694YQcqdnzw==}
+  '@iblai/mcp@1.10.0':
+    resolution: {integrity: sha512-RHC1JjSjnNbscgH3Fok72yL+5gVj9FNtuQWQWHvJcJvxBNYVNznBPc1+LIndD2Li6wPVG3NN6wrmseb2Lwo41g==}
     engines: {node: '>=20.0.0'}
     hasBin: true
 
-  '@iblai/web-containers@1.17.3':
-    resolution: {integrity: sha512-UHYp5SZOw6e8WlCGN9LibCTEqlmACf368MVEKjEreeuPmcaHmXuh/JBdNp4OkmKTZ+DxQO56mI8y/8rCrABx6g==}
+  '@iblai/web-containers@1.18.1':
+    resolution: {integrity: sha512-X+9q3iG/XNKnjgZU1OGOEajQa4Lmh2TWcaSdTLmn2RORUGX5JoBQXyUhn/DY+plfCJW9bubz3dax+25STP22BQ==}
     engines: {node: 25.3.0}
     peerDependencies:
       '@iblai/agent-ai': 2.8.1
@@ -7451,6 +7451,9 @@ packages:
   jose@6.2.3:
     resolution: {integrity: sha512-YYVDInQKFJfR/xa3ojUTl8c2KoTwiL1R5Wg9YCydwH0x0B9grbzlg5HC7mMjCtUJjbQ/YnGEZIhI5tCgfTb4Hw==}
 
+  jquery@3.7.1:
+    resolution: {integrity: sha512-m4avr8yL8kmFN8psrbFFFmB/If14iN5o9nw/NgnnM+kybDJpRsAynV2BsfpTYrTRysYUdADVD7CkUUizgkpLfg==}
+
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
 
@@ -9689,6 +9692,10 @@ packages:
       babel-plugin-macros:
         optional: true
 
+  summernote@0.9.1:
+    resolution: {integrity: sha512-5Hfuey6+N0XIbk8ZpkGEVDmrkRVRHZWKBhw/072i9/TJLaWUKboB+KOyyd6AzDP2CQs1O6or4zRTU8HY30kt4w==}
+    engines: {node: '>=17.0.0'}
+
   supports-color@7.2.0:
     resolution: {integrity: sha512-qpCAvRl9stuOHveKsn7HncJRvv501qIacKzQlO/+Lwxc9+0q2wLyv4Dfvt80/DPn2pqOBsJdDiogXGR9+OvwRw==}
     engines: {node: '>=8'}
@@ -11045,12 +11052,12 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  '@iblai/iblai-js@2.4.5(ef14094fac10a722831a935742bc0ec0)':
+  '@iblai/iblai-js@2.5.1(ef14094fac10a722831a935742bc0ec0)':
     dependencies:
       '@iblai/data-layer': 1.12.7(@reduxjs/toolkit@2.7.0(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0)
       '@iblai/iblai-api': 4.166.0-ai
-      '@iblai/mcp': 1.9.1
-      '@iblai/web-containers': 1.17.3(82924aed896f1b04aaf594e423d64182)
+      '@iblai/mcp': 1.10.0
+      '@iblai/web-containers': 1.18.1(82924aed896f1b04aaf594e423d64182)
       '@iblai/web-utils': 2.1.16(@iblai/data-layer@1.12.7(@reduxjs/toolkit@2.7.0(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0))(@iblai/iblai-api@4.166.0-ai)(@tauri-apps/api@2.11.0)(@tauri-apps/plugin-os@2.3.2)(@types/react@19.1.17)(next@15.5.21(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.56.0)(@types/node@20.17.48)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(redux@5.0.1)(sonner@2.0.7(react-dom@19.1.0(react@19.1.0))(react@19.1.0))
       '@radix-ui/react-dialog': 1.1.7(@types/react-dom@19.2.1(@types/react@19.1.17))(@types/react@19.1.17)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@reduxjs/toolkit': 2.7.0(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0)
@@ -11093,7 +11100,7 @@ snapshots:
       - supports-color
       - typescript
 
-  '@iblai/mcp@1.9.1':
+  '@iblai/mcp@1.10.0':
     dependencies:
       '@modelcontextprotocol/sdk': 1.27.1(zod@4.3.6)
       zod: 4.3.6
@@ -11101,7 +11108,7 @@ snapshots:
       - '@cfworker/json-schema'
       - supports-color
 
-  '@iblai/web-containers@1.17.3(82924aed896f1b04aaf594e423d64182)':
+  '@iblai/web-containers@1.18.1(82924aed896f1b04aaf594e423d64182)':
     dependencies:
       '@iblai/agent-ai': 2.8.1(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@iblai/data-layer': 1.12.7(@reduxjs/toolkit@2.7.0(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-redux@9.2.0(@types/react@19.1.17)(react@19.1.0)(redux@5.0.1))(react@19.1.0)
@@ -11153,6 +11160,7 @@ snapshots:
       dayjs: 1.11.20
       dompurify: 3.4.13
       highlight.js: 11.11.1
+      jquery: 3.7.1
       katex: 0.16.44
       lucide-react: 0.528.0(react@19.1.0)
       next-themes: 0.4.6(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -11172,6 +11180,7 @@ snapshots:
       remark-html: 16.0.1
       remark-stringify: 11.0.0
       rollup-plugin-copy: 3.5.0
+      summernote: 0.9.1
       tailwind-merge: 3.2.0
       tw-animate-css: 1.2.9
       use-debounce: 10.0.4(react@19.1.0)
@@ -17904,6 +17913,8 @@ snapshots:
 
   jose@6.2.3: {}
 
+  jquery@3.7.1: {}
+
   js-tokens@4.0.0: {}
 
   js-tokens@9.0.1: {}
@@ -20622,6 +20633,8 @@ snapshots:
       react: 19.1.0
     optionalDependencies:
       '@babel/core': 7.29.7
+
+  summernote@0.9.1: {}
 
   supports-color@7.2.0:
     dependencies:
