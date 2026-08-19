@@ -1,5 +1,7 @@
 # Changelog
 
+## [0.128.8](https://github.com/iblai/os/compare/v0.128.7...v0.128.8) (2026-08-19)
+
 ## [0.128.7](https://github.com/iblai/os/compare/v0.128.6...v0.128.7) (2026-08-19)
 
 ## [0.128.6](https://github.com/iblai/os/compare/v0.128.5...v0.128.6) (2026-08-19)
