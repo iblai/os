@@ -41,6 +41,8 @@ const TAB_CATEGORY: Record<
   // Configurations
   Settings: 'Configurations',
   LLM: 'Configurations',
+  Billing: 'Configurations',
+  Access: 'Configurations',
   Prompts: 'Configurations',
   Skills: 'Configurations',
   Voice: 'Configurations',
@@ -51,7 +53,6 @@ const TAB_CATEGORY: Record<
   Grader: 'Configurations',
   // Integrations
   Sandbox: 'Integrations',
-  Access: 'Integrations',
   Tools: 'Integrations',
   MCP: 'Integrations',
   Datasets: 'Integrations',

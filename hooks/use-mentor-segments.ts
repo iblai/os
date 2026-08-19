@@ -28,6 +28,7 @@ import {
   Volume2,
   MonitorPlay,
   LineChart,
+  CircleDollarSign,
   type LucideIcon,
 } from 'lucide-react';
 import { MentorVisibilityEnum } from '@iblai/iblai-api';
@@ -238,7 +239,7 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/#read_shared_mentor`,
     permissionFieldsCheck: [],
     mentorVisibility: [MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS],
-    navCategory: 'integrations',
+    navCategory: 'configurations',
   },
   {
     value: MODALS.EDIT_MENTOR.tabs.llm,
@@ -248,6 +249,25 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
     rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/llms/#list`,
     permissionFieldsCheck: ['llm_provider'],
+    mentorVisibility: [
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
+    ],
+    navCategory: 'configurations',
+  },
+  {
+    value: MODALS.EDIT_MENTOR.tabs.spend_caps,
+    label: 'Billing',
+    labelKey: 'billing',
+    icon: CircleDollarSign,
+    // Admin-only: the tab configures tenant/agent/per-user LLM spend limits
+    // and shows dollar figures. The backend gates each scope with RBAC
+    // (`Ibl.Mentor/SpendCaps/*`) but exposes no frontend-discoverable
+    // resource path yet, so the userTypes filter alone gates visibility
+    // (mirroring Tasks / Support / LTI). The SDK tab renders a friendly
+    // denied state per scope when the backend answers 403.
+    userTypes: [UserType.ADMIN],
+    permissionFieldsCheck: [],
     mentorVisibility: [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,

@@ -105,6 +105,16 @@ overrides:
   # buffered-worker-pool's serializeOptions, which runs solely under `--parallel` —
   # a mode the wdio runner never enables.
   serialize-javascript: '>=7.0.5'
+  # extract-zip GHSA-jmr9-qjv8-65gv (unvalidated symlink path traversal) has NO
+  # patched release — 2.0.1 is the latest ever published and the advisory lists
+  # "patched: <0.0.0". The only remedy is removing it from the tree:
+  # @puppeteer/browsers dropped extract-zip in 3.0 (replaced by modern-tar), so
+  # lift wdio's transitive 2.13.2. Cross-major is safe for our one consumer:
+  # @wdio/utils imports install/canDownload/resolveBuildId/
+  # detectBrowserPlatform/Browser/ChromeReleaseChannel/computeExecutablePath,
+  # all still exported by 3.x (the 3.0 break was the archive/download
+  # internals — exactly where extract-zip lived).
+  '@puppeteer/browsers': '>=3.0.2'
 patchedDependencies:
   google-drive-picker@1.1.29: patches/google-drive-picker@1.1.29.patch
 
