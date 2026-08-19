@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.128.4](https://github.com/iblai/os/compare/v0.128.3...v0.128.4) (2026-08-19)
+
+### Documentation
+
+* add per-surface self-hosting deployment guide; hide Chrome download until store approval ([c549ff8](https://github.com/iblai/os/commit/c549ff8477e119f6d0f41c39db85996a8d2cfc3a))
+
 ## [0.128.3](https://github.com/iblai/os/compare/v0.128.2...v0.128.3) (2026-08-19)
 
 ### Chores
