@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.128.3](https://github.com/iblai/os/compare/v0.128.2...v0.128.3) (2026-08-19)
+
+### Chores
+
+* **chrome-ext:** prepare Chrome Web Store submission ([1ab4027](https://github.com/iblai/os/commit/1ab40272337fd9f2ff952be8ef5033292dd8edb4)), closes [#432](https://github.com/iblai/os/issues/432)
+
 ## [0.128.2](https://github.com/iblai/os/compare/v0.128.1...v0.128.2) (2026-08-19)
 
 ### Bug Fixes
