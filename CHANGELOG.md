@@ -4,21 +4,21 @@
 
 ### Bug Fixes
 
-* **code-mode:** attach learner_id to compat-proxy calls and surface upstream 402 as the credit UX ([8659bb6](https://github.com/iblai/os/commit/8659bb6c61868b7e98751053d308b87e589f2119))
+- **code-mode:** attach learner_id to compat-proxy calls and surface upstream 402 as the credit UX ([8659bb6](https://github.com/iblai/os/commit/8659bb6c61868b7e98751053d308b87e589f2119))
 
 ### Chores
 
-* **tauri:** release app-v0.95.14 ([923121c](https://github.com/iblai/os/commit/923121cdb927f88d5e0620d2141cf6f143c4fdba))
+- **tauri:** release app-v0.95.14 ([923121c](https://github.com/iblai/os/commit/923121cdb927f88d5e0620d2141cf6f143c4fdba))
 
 ### Tests
 
-* fix failed tests ([8a23269](https://github.com/iblai/os/commit/8a2326967d92fc2c8abc931d6547a35a40c2417b))
+- fix failed tests ([8a23269](https://github.com/iblai/os/commit/8a2326967d92fc2c8abc931d6547a35a40c2417b))
 
 ## [0.128.1](https://github.com/iblai/os/compare/v0.128.0...v0.128.1) (2026-08-18)
 
 ### Chores
 
-* **deps:** bump @iblai/iblai-js to 2.5.1 ([f28d824](https://github.com/iblai/os/commit/f28d82446e2739cf1a009f21dbe8e157df4378e4))
+- **deps:** bump @iblai/iblai-js to 2.5.1 ([f28d824](https://github.com/iblai/os/commit/f28d82446e2739cf1a009f21dbe8e157df4378e4))
 
 ## [0.128.0](https://github.com/iblai/os/compare/v0.127.0...v0.128.0) (2026-08-18)
 
