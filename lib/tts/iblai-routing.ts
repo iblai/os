@@ -18,7 +18,12 @@
  * reason to wait; it is a reason to take the cloud for this utterance.
  */
 
-import { isIosWebKit, probeWebGpu, type KokoroConfig } from './config';
+import {
+  isIosWebKit,
+  isMobileDevice,
+  probeWebGpu,
+  type KokoroConfig,
+} from './config';
 import { isModelCached, warmModelCache } from './model-cache';
 
 export type IblaiRoute = 'device' | 'cloud';
@@ -60,6 +65,10 @@ async function decide(config: KokoroConfig): Promise<Decision> {
   // Every iOS browser is WebKit, which kills the tab when the model crosses
   // its per-process memory ceiling. No download changes that.
   if (isIosWebKit()) return CLOUD;
+  // A phone pays 325 MB of often-metered data into a storage quota that evicts
+  // aggressively, to run the model on a GPU slower than the backend answers.
+  // Synchronous, so it lands before the adapter request it would have wasted.
+  if (isMobileDevice()) return CLOUD;
   // Without a WebGPU adapter the only on-device backend left is single-
   // threaded WASM, measured at ~0.5x realtime -- audible gaps mid-sentence.
   // The cloud is the better automatic answer; WASM stays reachable through an

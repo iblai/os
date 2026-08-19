@@ -43,18 +43,27 @@ function grantWebGpu() {
   setNavigatorProp('gpu', { requestAdapter: async () => ({}) });
 }
 
+/** A `navigator.gpu` that records whether the adapter was ever asked for. */
+function spyOnAdapterRequest() {
+  const requestAdapter = vi.fn(async () => ({}));
+  setNavigatorProp('gpu', { requestAdapter });
+  return requestAdapter;
+}
+
 beforeEach(() => {
   resetIblaiRouting();
   mockIsModelCached.mockReset().mockResolvedValue(false);
   mockWarmModelCache.mockReset().mockResolvedValue(true);
   setNavigatorProp('userAgent', 'Mozilla/5.0 (X11; Linux x86_64) Chrome/125');
   setNavigatorProp('maxTouchPoints', 0);
+  setNavigatorProp('userAgentData', { mobile: false });
   grantWebGpu();
 });
 
 afterEach(() => {
   resetIblaiRouting();
   Reflect.deleteProperty(navigator, 'gpu');
+  Reflect.deleteProperty(navigator, 'userAgentData');
   vi.restoreAllMocks();
 });
 
@@ -85,6 +94,40 @@ describe('primeIblaiRoute', () => {
       warm: false,
     });
     expect(mockIsModelCached).not.toHaveBeenCalled();
+  });
+
+  // 325 MB of metered data into an evicting quota, to run on a handset GPU
+  // that generates slower than the backend answers.
+  it('never chooses the device on a phone, and never warms it', async () => {
+    setNavigatorProp('userAgentData', { mobile: true });
+
+    expect(await primeIblaiRoute(BASE)).toEqual({
+      route: 'cloud',
+      warm: false,
+    });
+    expect(mockIsModelCached).not.toHaveBeenCalled();
+  });
+
+  // The gate is synchronous, so it has to land before the adapter request --
+  // asking for one on a device that will never use it is pure waste.
+  it('rules a phone out before asking for a WebGPU adapter', async () => {
+    const requestAdapter = spyOnAdapterRequest();
+    setNavigatorProp('userAgentData', { mobile: true });
+
+    await primeIblaiRoute(BASE);
+
+    expect(requestAdapter).not.toHaveBeenCalled();
+  });
+
+  it('still reaches the device on a desktop with the weights cached', async () => {
+    const requestAdapter = spyOnAdapterRequest();
+    mockIsModelCached.mockResolvedValue(true);
+
+    expect(await primeIblaiRoute(BASE)).toEqual({
+      route: 'device',
+      warm: false,
+    });
+    expect(requestAdapter).toHaveBeenCalled();
   });
 
   // Single-threaded WASM generates at ~0.5x realtime -- audible gaps. The

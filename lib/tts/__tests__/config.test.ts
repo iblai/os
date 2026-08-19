@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   downgradeToWasm,
   isIosWebKit,
+  isMobileDevice,
   pinModelRequestUrl,
   probeWebGpu,
   resolveIblaiMode,
@@ -521,6 +522,91 @@ describe('isIosWebKit', () => {
         value: original,
       });
     }
+  });
+});
+
+describe('isMobileDevice', () => {
+  function setUserAgentData(value: unknown) {
+    Object.defineProperty(navigator, 'userAgentData', {
+      configurable: true,
+      value,
+    });
+  }
+
+  afterEach(() => {
+    Reflect.deleteProperty(navigator, 'userAgentData');
+  });
+
+  it('believes the client hint when the browser ships one', () => {
+    setUserAgentData({ mobile: true });
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0 (X11; Linux x86_64) Chrome/126.0',
+    });
+    expect(isMobileDevice()).toBe(true);
+  });
+
+  // The hint is authoritative in both directions: a desktop Chromium says so
+  // outright, and the user agent never gets a say.
+  it('believes the client hint when it says desktop', () => {
+    setUserAgentData({ mobile: false });
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) Mobile Safari/537.36',
+    });
+    expect(isMobileDevice()).toBe(false);
+  });
+
+  // Firefox and Safari ship no client hints at all.
+  it('falls back to the user agent on a phone browser without hints', () => {
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value:
+        'Mozilla/5.0 (Android 14; Mobile; rv:127.0) Gecko/127.0 Firefox/127.0',
+    });
+    expect(isMobileDevice()).toBe(true);
+  });
+
+  it('falls back to the user agent on a desktop browser without hints', () => {
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1',
+    });
+    expect(isMobileDevice()).toBe(false);
+  });
+
+  // `userAgentData.mobile` is false on a tablet and its user agent omits the
+  // `Mobile` token, so a tablet stays eligible for the on-device path.
+  it('leaves an Android tablet eligible', () => {
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0 (Linux; Android 13; SM-X700) Chrome/126.0 Safari/537',
+    });
+    expect(isMobileDevice()).toBe(false);
+  });
+
+  it('is false without a navigator (server side)', () => {
+    const original = globalThis.navigator;
+    // @ts-expect-error deliberately simulating a non-browser global scope
+    delete globalThis.navigator;
+    try {
+      expect(isMobileDevice()).toBe(false);
+    } finally {
+      Object.defineProperty(globalThis, 'navigator', {
+        configurable: true,
+        value: original,
+      });
+    }
+  });
+
+  it('is false rather than throwing when the lookup itself throws', () => {
+    Object.defineProperty(navigator, 'userAgentData', {
+      configurable: true,
+      get() {
+        throw new Error('blocked');
+      },
+    });
+    expect(isMobileDevice()).toBe(false);
   });
 });
 

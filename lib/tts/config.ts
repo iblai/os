@@ -269,8 +269,9 @@ export function resolveKokoroConfig(
  * serves the first utterances from the backend -- no download, ~4s to audio --
  * while the weights come down in the background, and switches to the browser
  * permanently once they land. Devices that could never run the model well
- * (iOS, where WebKit kills the tab; anything without a WebGPU adapter, where
- * the WASM backend generates at ~0.5x realtime) simply stay on the cloud, and
+ * (iOS, where WebKit kills the tab; phones, where 325 MB is not worth what a
+ * handset GPU does with it; anything without a WebGPU adapter, where the WASM
+ * backend generates at ~0.5x realtime) simply stay on the cloud, and
  * never download anything. The arbitration lives in `lib/tts/iblai-routing.ts`.
  *
  * `cloud` and `device` pin one half, for debugging and for testing the path
@@ -343,4 +344,42 @@ export function isIosWebKit(): boolean {
   if (typeof navigator === 'undefined') return false;
   if (/iPhone|iPad|iPod/.test(navigator.userAgent)) return true;
   return /Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1;
+}
+
+type NavigatorWithUserAgentData = Navigator & {
+  userAgentData?: { mobile?: boolean };
+};
+
+/**
+ * The tokens only a handset emits. `Mobi` is the one Chrome, Firefox and
+ * Safari all append on a phone and all omit on a tablet; the rest cover the
+ * engines that never adopted it.
+ */
+const MOBILE_USER_AGENT = /Mobi|Opera Mini|Windows Phone|BlackBerry/;
+
+/**
+ * True on phones, whatever the browser.
+ *
+ * On-device synthesis is disabled on them: the fp32 weights are ~325 MB pulled
+ * over a connection that is often metered, into a storage quota that evicts
+ * aggressively, to be run on a GPU that generates slower than the backend
+ * answers. The cloud half is the better trade on every count, and unlike a
+ * laptop there is no download that would change the verdict.
+ *
+ * User-Agent Client Hints answer this outright, but only Chromium ships them,
+ * so Firefox and Safari fall back to the user agent string.
+ *
+ * Tablets are deliberately not caught by either signal -- `userAgentData`
+ * reports `mobile: false` for them and their user agent omits `Mobile` -- so
+ * an Android tablet stays eligible for the on-device path.
+ */
+export function isMobileDevice(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  try {
+    const hints = (navigator as NavigatorWithUserAgentData).userAgentData;
+    if (typeof hints?.mobile === 'boolean') return hints.mobile;
+    return MOBILE_USER_AGENT.test(navigator.userAgent);
+  } catch {
+    return false;
+  }
 }
