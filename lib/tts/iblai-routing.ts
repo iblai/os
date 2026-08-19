@@ -19,6 +19,7 @@
  */
 
 import {
+  isAndroidTablet,
   isIosWebKit,
   isMobileDevice,
   probeWebGpu,
@@ -69,6 +70,10 @@ async function decide(config: KokoroConfig): Promise<Decision> {
   // aggressively, to run the model on a GPU slower than the backend answers.
   // Synchronous, so it lands before the adapter request it would have wasted.
   if (isMobileDevice()) return CLOUD;
+  // A tablet buys the same bet on handset-class silicon, and picking out the
+  // few that would win it is not a list worth keeping. iPads are already gone
+  // above; Windows and ChromeOS tablets are desktops and stay eligible.
+  if (isAndroidTablet()) return CLOUD;
   // Without a WebGPU adapter the only on-device backend left is single-
   // threaded WASM, measured at ~0.5x realtime -- audible gaps mid-sentence.
   // The cloud is the better automatic answer; WASM stays reachable through an

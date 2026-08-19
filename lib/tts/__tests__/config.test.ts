@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   downgradeToWasm,
+  isAndroidTablet,
   isIosWebKit,
   isMobileDevice,
   pinModelRequestUrl,
@@ -576,8 +577,8 @@ describe('isMobileDevice', () => {
   });
 
   // `userAgentData.mobile` is false on a tablet and its user agent omits the
-  // `Mobile` token, so a tablet stays eligible for the on-device path.
-  it('leaves an Android tablet eligible', () => {
+  // `Mobile` token, so ruling tablets out is `isAndroidTablet`'s job.
+  it('does not claim an Android tablet is a phone', () => {
     Object.defineProperty(navigator, 'userAgent', {
       configurable: true,
       value: 'Mozilla/5.0 (Linux; Android 13; SM-X700) Chrome/126.0 Safari/537',
@@ -607,6 +608,85 @@ describe('isMobileDevice', () => {
       },
     });
     expect(isMobileDevice()).toBe(false);
+  });
+});
+
+describe('isAndroidTablet', () => {
+  function setUserAgent(value: string) {
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value,
+    });
+  }
+
+  function setUserAgentData(value: unknown) {
+    Object.defineProperty(navigator, 'userAgentData', {
+      configurable: true,
+      value,
+    });
+  }
+
+  afterEach(() => {
+    Reflect.deleteProperty(navigator, 'userAgentData');
+  });
+
+  it('detects Android without the handset flag', () => {
+    setUserAgentData({ platform: 'Android', mobile: false });
+    expect(isAndroidTablet()).toBe(true);
+  });
+
+  it('leaves an Android phone to isMobileDevice', () => {
+    setUserAgentData({ platform: 'Android', mobile: true });
+    expect(isAndroidTablet()).toBe(false);
+  });
+
+  // A Surface or any other touchscreen Windows machine: the hint says the
+  // platform outright, so no touch heuristic gets to guess wrong here.
+  it('leaves a non-Android platform eligible', () => {
+    setUserAgentData({ platform: 'Windows', mobile: false });
+    expect(isAndroidTablet()).toBe(false);
+  });
+
+  // Firefox and Safari ship no client hints at all.
+  it('falls back to the user agent on a tablet browser without hints', () => {
+    setUserAgent('Mozilla/5.0 (Linux; Android 13; SM-X700) Chrome/126.0');
+    expect(isAndroidTablet()).toBe(true);
+  });
+
+  it('falls back to the user agent on a phone browser without hints', () => {
+    setUserAgent(
+      'Mozilla/5.0 (Linux; Android 14; Pixel 8) Mobile Safari/537.36',
+    );
+    expect(isAndroidTablet()).toBe(false);
+  });
+
+  it('falls back to the user agent on a desktop browser without hints', () => {
+    setUserAgent('Mozilla/5.0 (X11; Linux x86_64) Chrome/126.0');
+    expect(isAndroidTablet()).toBe(false);
+  });
+
+  it('is false without a navigator (server side)', () => {
+    const original = globalThis.navigator;
+    // @ts-expect-error deliberately simulating a non-browser global scope
+    delete globalThis.navigator;
+    try {
+      expect(isAndroidTablet()).toBe(false);
+    } finally {
+      Object.defineProperty(globalThis, 'navigator', {
+        configurable: true,
+        value: original,
+      });
+    }
+  });
+
+  it('is false rather than throwing when the lookup itself throws', () => {
+    Object.defineProperty(navigator, 'userAgentData', {
+      configurable: true,
+      get() {
+        throw new Error('blocked');
+      },
+    });
+    expect(isAndroidTablet()).toBe(false);
   });
 });
 

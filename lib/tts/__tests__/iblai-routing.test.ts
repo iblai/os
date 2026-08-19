@@ -119,6 +119,27 @@ describe('primeIblaiRoute', () => {
     expect(requestAdapter).not.toHaveBeenCalled();
   });
 
+  // Same bet on handset-class silicon, minus the guesswork about which
+  // tablets would win it.
+  it('never chooses the device on an Android tablet, and never warms it', async () => {
+    setNavigatorProp('userAgentData', { platform: 'Android', mobile: false });
+
+    expect(await primeIblaiRoute(BASE)).toEqual({
+      route: 'cloud',
+      warm: false,
+    });
+    expect(mockIsModelCached).not.toHaveBeenCalled();
+  });
+
+  it('rules a tablet out before asking for a WebGPU adapter', async () => {
+    const requestAdapter = spyOnAdapterRequest();
+    setNavigatorProp('userAgentData', { platform: 'Android', mobile: false });
+
+    await primeIblaiRoute(BASE);
+
+    expect(requestAdapter).not.toHaveBeenCalled();
+  });
+
   it('still reaches the device on a desktop with the weights cached', async () => {
     const requestAdapter = spyOnAdapterRequest();
     mockIsModelCached.mockResolvedValue(true);

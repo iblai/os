@@ -269,10 +269,11 @@ export function resolveKokoroConfig(
  * serves the first utterances from the backend -- no download, ~4s to audio --
  * while the weights come down in the background, and switches to the browser
  * permanently once they land. Devices that could never run the model well
- * (iOS, where WebKit kills the tab; phones, where 325 MB is not worth what a
- * handset GPU does with it; anything without a WebGPU adapter, where the WASM
- * backend generates at ~0.5x realtime) simply stay on the cloud, and
- * never download anything. The arbitration lives in `lib/tts/iblai-routing.ts`.
+ * (iOS, where WebKit kills the tab; phones and tablets, where 325 MB is not
+ * worth what handset-class silicon does with it; anything without a WebGPU
+ * adapter, where the WASM backend generates at ~0.5x realtime) simply stay on
+ * the cloud, and never download anything. The arbitration lives in
+ * `lib/tts/iblai-routing.ts`.
  *
  * `cloud` and `device` pin one half, for debugging and for testing the path
  * the arbiter would not have chosen -- `device` is the only way to reach the
@@ -347,7 +348,7 @@ export function isIosWebKit(): boolean {
 }
 
 type NavigatorWithUserAgentData = Navigator & {
-  userAgentData?: { mobile?: boolean };
+  userAgentData?: { mobile?: boolean; platform?: string };
 };
 
 /**
@@ -369,9 +370,9 @@ const MOBILE_USER_AGENT = /Mobi|Opera Mini|Windows Phone|BlackBerry/;
  * User-Agent Client Hints answer this outright, but only Chromium ships them,
  * so Firefox and Safari fall back to the user agent string.
  *
- * Tablets are deliberately not caught by either signal -- `userAgentData`
- * reports `mobile: false` for them and their user agent omits `Mobile` -- so
- * an Android tablet stays eligible for the on-device path.
+ * Tablets are caught by neither signal -- `userAgentData` reports
+ * `mobile: false` for them and their user agent omits `Mobile` -- so they are
+ * {@link isAndroidTablet}'s to rule out.
  */
 export function isMobileDevice(): boolean {
   if (typeof navigator === 'undefined') return false;
@@ -379,6 +380,38 @@ export function isMobileDevice(): boolean {
     const hints = (navigator as NavigatorWithUserAgentData).userAgentData;
     if (typeof hints?.mobile === 'boolean') return hints.mobile;
     return MOBILE_USER_AGENT.test(navigator.userAgent);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * True on an Android tablet, which for this purpose means a Fire tablet too.
+ *
+ * They are ruled out for the same reason phones are -- tablet silicon is
+ * handset silicon in a larger case often enough that the 325 MB is a bad bet,
+ * and there is no per-device capability list worth maintaining to find the
+ * exceptions.
+ *
+ * Only Android, deliberately. iPads are already covered by
+ * {@link isIosWebKit}. Windows and ChromeOS tablets run full desktop browsers
+ * on real GPUs, so they stay eligible -- and detecting them would mean
+ * `maxTouchPoints` or a coarse-pointer query, which a touchscreen laptop
+ * answers exactly like a tablet. Sending one of those to the cloud forever is
+ * a worse outcome than the one being avoided, so the Android signal is
+ * required.
+ *
+ * The client hints are exact where they exist; the user agent fallback leans
+ * on Android phones always emitting `Mobile` and tablets never doing so.
+ */
+export function isAndroidTablet(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  try {
+    const hints = (navigator as NavigatorWithUserAgentData).userAgentData;
+    if (typeof hints?.platform === 'string')
+      return hints.platform === 'Android' && hints.mobile === false;
+    const userAgent = navigator.userAgent;
+    return /Android/.test(userAgent) && !/Mobi/.test(userAgent);
   } catch {
     return false;
   }
