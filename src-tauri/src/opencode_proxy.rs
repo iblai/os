@@ -82,6 +82,44 @@ fn sessions() -> &'static Sessions {
     S.get_or_init(|| RwLock::new(HashMap::new()))
 }
 
+/// The signed-in user's username, appended as `learner_id=<username>` to every
+/// forwarded request so upstream attributes the usage to the learner. App-global
+/// rather than per-session — a desktop install has exactly one signed-in user —
+/// and read per request rather than captured at registration, so a login (or user
+/// switch) that lands while a session is alive takes effect on its next call.
+fn learner() -> &'static RwLock<Option<String>> {
+    static L: OnceLock<RwLock<Option<String>>> = OnceLock::new();
+    L.get_or_init(|| RwLock::new(None))
+}
+
+/// Handle for announcing proxy-level events to the webview — today just the 402
+/// insufficient-credit signal. Set once at session spawn; absent in unit tests,
+/// where the emit is simply skipped.
+fn app() -> &'static OnceLock<tauri::AppHandle> {
+    static A: OnceLock<tauri::AppHandle> = OnceLock::new();
+    &A
+}
+
+/// Give the proxy an app handle to emit events through.
+pub fn set_app(handle: &tauri::AppHandle) {
+    let _ = app().set(handle.clone());
+}
+
+/// Set the learner attached to forwarded model calls (empty clears it).
+pub async fn set_learner(username: &str) {
+    let name = username.trim();
+    // Dev-terminal trace of the frontend→backend hop: no line here during a manual
+    // test means the frontend never delivered a learner at all.
+    if cfg!(debug_assertions) {
+        if name.is_empty() {
+            println!("[opencode-proxy] learner cleared (empty username from frontend)");
+        } else {
+            println!("[opencode-proxy] learner set: {name}");
+        }
+    }
+    *learner().write().await = (!name.is_empty()).then(|| name.to_string());
+}
+
 fn http() -> &'static reqwest::Client {
     static C: OnceLock<reqwest::Client> = OnceLock::new();
     // No timeout: a streamed completion legitimately stays open for minutes.
@@ -223,6 +261,45 @@ fn is_skipped(name: &str) -> bool {
     )
 }
 
+/// Build the upstream URL: `{base}/{path}` plus the client's query string, with any
+/// client-supplied `learner_id` stripped and the app-set learner appended. The agent
+/// controls its own query string, so attribution must come from the app — a request
+/// can never pin its usage on someone else.
+fn upstream_url(
+    base: &str,
+    path: &str,
+    query: Option<&str>,
+    learner: Option<&str>,
+) -> Result<url::Url, String> {
+    let joined = match query {
+        Some(q) if !q.is_empty() => format!("{}/{}?{}", base.trim_end_matches('/'), path, q),
+        _ => format!("{}/{}", base.trim_end_matches('/'), path),
+    };
+    let mut url = url::Url::parse(&joined).map_err(|e| format!("bad upstream url: {e}"))?;
+    let spoofed = url.query_pairs().any(|(k, _)| k == "learner_id");
+    if learner.is_some() || spoofed {
+        let kept: Vec<(String, String)> = url
+            .query_pairs()
+            .filter(|(k, _)| k != "learner_id")
+            .map(|(k, v)| (k.into_owned(), v.into_owned()))
+            .collect();
+        let mut pairs = url.query_pairs_mut();
+        pairs.clear();
+        for (k, v) in &kept {
+            pairs.append_pair(k, v);
+        }
+        if let Some(l) = learner {
+            pairs.append_pair("learner_id", l);
+        }
+        drop(pairs);
+        // A stripped-to-nothing query would otherwise leave a dangling `?`.
+        if url.query() == Some("") {
+            url.set_query(None);
+        }
+    }
+    Ok(url)
+}
+
 async fn forward(req: Request) -> Response {
     let (parts, body) = req.into_parts();
 
@@ -243,12 +320,11 @@ async fn forward(req: Request) -> Response {
         return (StatusCode::UNAUTHORIZED, "unknown key").into_response();
     };
 
-    let query = parts
-        .uri
-        .query()
-        .map(|q| format!("?{q}"))
-        .unwrap_or_default();
-    let url = format!("{}/{}{}", base.trim_end_matches('/'), path, query);
+    let learner = learner().read().await.clone();
+    let url = match upstream_url(&base, path, parts.uri.query(), learner.as_deref()) {
+        Ok(u) => u,
+        Err(e) => return (StatusCode::BAD_GATEWAY, e).into_response(),
+    };
 
     // 16 MiB is far above any chat payload and still bounds a runaway body.
     let bytes = match axum::body::to_bytes(body, 16 * 1024 * 1024).await {
@@ -282,8 +358,31 @@ async fn forward(req: Request) -> Response {
         headers.insert(reqwest::header::AUTHORIZATION, v);
     }
 
+    // Request log for `pnpm tauri:dev`: full URL (query params included), redacted
+    // auth, payload. Debug builds only — the payload is the user's chat and the
+    // token prefix is still a credential fragment; neither belongs in release stdout.
+    if cfg!(debug_assertions) {
+        // ponytail: 4 KiB payload preview; raise if the part you're debugging is deeper in.
+        let shown = String::from_utf8_lossy(&bytes[..bytes.len().min(4096)]);
+        let cut = bytes.len().saturating_sub(4096);
+        println!(
+            "[opencode-proxy] {} {}\n  learner: {}\n  authorization: Token {}…({} chars)\n  payload: {}{}",
+            parts.method,
+            url,
+            learner.as_deref().unwrap_or("(none — set_opencode_learner never arrived)"),
+            token.get(..8).unwrap_or(""),
+            token.len(),
+            shown,
+            if cut > 0 {
+                format!(" …(+{cut} bytes)")
+            } else {
+                String::new()
+            },
+        );
+    }
+
     let upstream = match http()
-        .request(parts.method.clone(), &url)
+        .request(parts.method.clone(), url)
         .headers(headers)
         .body(bytes)
         .send()
@@ -296,6 +395,16 @@ async fn forward(req: Request) -> Response {
     };
 
     let status = upstream.status();
+    // Response log, paired with the request log above: an upstream refusal — 402
+    // insufficient credit above all — must be visible in the tauri:dev terminal.
+    if cfg!(debug_assertions) {
+        println!(
+            "[opencode-proxy] ← {} {} {}",
+            status,
+            parts.method,
+            upstream.url()
+        );
+    }
     let mut out = Response::builder().status(status.as_u16());
     for (name, value) in upstream.headers().iter() {
         if !is_skipped(name.as_str()) {
@@ -304,6 +413,27 @@ async fn forward(req: Request) -> Response {
             }
         }
     }
+    // 402 = insufficient credit. The agent still receives the 402 + body verbatim,
+    // but the app is told too: the frontend then shows the same insufficient-balance
+    // UX as normal chat (toast + upgrade dialog) — the agent's own error path would
+    // reduce this to an opaque string, or swallow it entirely.
+    if status == reqwest::StatusCode::PAYMENT_REQUIRED {
+        let bytes = upstream.bytes().await.unwrap_or_default();
+        if let Some(app) = app().get() {
+            use tauri::Emitter;
+            let payload: serde_json::Value =
+                serde_json::from_slice(&bytes).unwrap_or_else(|_| serde_json::json!({}));
+            let _ = app.emit("opencode:payment-required", payload);
+        }
+        return out.body(Body::from(bytes)).unwrap_or_else(|e| {
+            (
+                StatusCode::BAD_GATEWAY,
+                format!("bad upstream response: {e}"),
+            )
+                .into_response()
+        });
+    }
+
     // Streamed, not buffered — completions arrive as SSE and must reach the agent
     // token by token, exactly as they would from the real endpoint.
     out.body(Body::from_stream(upstream.bytes_stream()))
@@ -340,6 +470,132 @@ mod tests {
         assert!(is_skipped("authorization"));
         assert!(is_skipped("host"));
         assert!(!is_skipped("content-type"));
+    }
+
+    const BASE: &str = "https://dm.example/api/ai-mentor/orgs/main/v1";
+
+    #[test]
+    fn the_learner_is_attached_to_forwarded_urls() {
+        let url = upstream_url(BASE, "chat/completions", None, Some("myuser")).unwrap();
+        assert_eq!(
+            url.as_str(),
+            "https://dm.example/api/ai-mentor/orgs/main/v1/chat/completions?learner_id=myuser"
+        );
+    }
+
+    #[test]
+    fn no_learner_leaves_the_url_untouched() {
+        let url = upstream_url(BASE, "models", None, None).unwrap();
+        assert_eq!(
+            url.as_str(),
+            "https://dm.example/api/ai-mentor/orgs/main/v1/models"
+        );
+        let url = upstream_url(BASE, "models", Some("a=1"), None).unwrap();
+        assert_eq!(url.query(), Some("a=1"));
+    }
+
+    #[test]
+    fn the_clients_own_query_params_survive() {
+        let url = upstream_url(BASE, "chat/completions", Some("a=1&b=2"), Some("me")).unwrap();
+        assert_eq!(url.query(), Some("a=1&b=2&learner_id=me"));
+    }
+
+    #[test]
+    fn a_learner_id_spoofed_by_the_agent_is_replaced_with_the_real_one() {
+        let url = upstream_url(
+            BASE,
+            "chat/completions",
+            Some("learner_id=victim&a=1"),
+            Some("me"),
+        )
+        .unwrap();
+        assert_eq!(url.query(), Some("a=1&learner_id=me"));
+    }
+
+    #[test]
+    fn a_spoofed_learner_id_is_stripped_even_before_anyone_signs_in() {
+        let url = upstream_url(BASE, "chat/completions", Some("learner_id=victim"), None).unwrap();
+        assert_eq!(url.query(), None);
+        assert!(!url.as_str().ends_with('?'));
+    }
+
+    #[test]
+    fn learner_names_are_url_encoded_not_interpolated() {
+        let url = upstream_url(BASE, "chat/completions", None, Some("us er&x=y")).unwrap();
+        // One pair, hostile characters escaped — a name can't smuggle extra params.
+        assert_eq!(url.query(), Some("learner_id=us+er%26x%3Dy"));
+    }
+
+    /// The credit gate lives upstream: when the DM answers 402 on
+    /// `chat/completions`, the agent must receive that 402 and its body EXACTLY.
+    /// The proxy swaps auth — it never rewrites outcomes.
+    ///
+    /// NOTE: `ensure_started()` memoizes its port globally, and the server task it
+    /// spawns lives on THIS test's runtime, which dies when the test ends. Keep
+    /// this the only test that talks to the live proxy, or restructure first.
+    #[tokio::test]
+    async fn an_upstream_402_reaches_the_agent_unchanged() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+        const BODY: &str = r#"{"error":"Payment required","status_code":402}"#;
+
+        // Canned upstream: capture the request head, answer 402 + JSON, done.
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let upstream_addr = listener.local_addr().unwrap();
+        let (seen_tx, seen_rx) = tokio::sync::oneshot::channel::<String>();
+        tokio::spawn(async move {
+            let (mut sock, _) = listener.accept().await.unwrap();
+            let mut data = Vec::new();
+            loop {
+                let mut buf = [0u8; 4096];
+                let n = sock.read(&mut buf).await.unwrap();
+                if n == 0 {
+                    break;
+                }
+                data.extend_from_slice(&buf[..n]);
+                // The client sends no body, so the head is the whole request.
+                if data.windows(4).any(|w| w == b"\r\n\r\n") {
+                    break;
+                }
+            }
+            let _ = seen_tx.send(String::from_utf8_lossy(&data).to_string());
+            let resp = format!(
+                "HTTP/1.1 402 Payment Required\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{BODY}",
+                BODY.len()
+            );
+            let _ = sock.write_all(resp.as_bytes()).await;
+        });
+
+        let port = ensure_started().await.unwrap();
+        let secret = new_secret();
+        // No guidance injection: the passthrough must stay byte-verbatim.
+        register(
+            &secret,
+            format!("http://{upstream_addr}/v1"),
+            "real-dm-token".to_string(),
+            false,
+        )
+        .await;
+
+        let resp = reqwest::Client::new()
+            .post(format!("http://127.0.0.1:{port}/v1/chat/completions"))
+            .header("authorization", format!("Bearer {secret}"))
+            .send()
+            .await
+            .unwrap();
+
+        assert_eq!(resp.status().as_u16(), 402, "status must pass through");
+        assert_eq!(resp.text().await.unwrap(), BODY, "body must pass through");
+
+        // The refusal still went out with the REAL token — the swap is
+        // unconditional, not a success-path feature.
+        let seen = seen_rx.await.unwrap().to_lowercase();
+        assert!(
+            seen.contains("authorization: token real-dm-token"),
+            "upstream did not get the swapped token; request was:\n{seen}"
+        );
+
+        unregister(&secret).await;
     }
 
     /// The guidance complements opencode's own system prompt — it must land

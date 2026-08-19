@@ -79,10 +79,18 @@ import {
 } from '@/hooks/use-tauri-offline';
 import { isTauriApp } from '@/types/tauri';
 import { hideInitialLoader } from '@/lib/initial-loader';
+import { useOpencodeLearner } from '@/hooks/use-opencode-learner';
+import { useOpencode402 } from '@/hooks/use-opencode-402';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const { handle402Error } = use402ErrorCheck();
   const [ready, setReady] = useState(false);
+
+  // Desktop only (no-op elsewhere): tell the Rust model proxy who is signed in,
+  // before any chat surface can send a Code turn.
+  useOpencodeLearner();
+  // Desktop only: a Code-turn 402 (insufficient credit) gets normal chat's UX.
+  useOpencode402();
 
   useEffect(() => {
     deleteCookieOnAllDomains('ibl_tenant_switching', window.location.hostname);

@@ -47,6 +47,7 @@
     "allow-ensure-vibe-skills",
     "allow-check-opencode-status",
     "allow-check-code-local-model",
+    "allow-set-opencode-learner",
     "core:webview:allow-internal-toggle-devtools",
     "core:default",
     "core:event:default",

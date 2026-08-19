@@ -1,10 +1,36 @@
 # Changelog
 
+## [0.128.4](https://github.com/iblai/os/compare/v0.128.3...v0.128.4) (2026-08-19)
+
+### Documentation
+
+* add per-surface self-hosting deployment guide; hide Chrome download until store approval ([c549ff8](https://github.com/iblai/os/commit/c549ff8477e119f6d0f41c39db85996a8d2cfc3a))
+
+## [0.128.3](https://github.com/iblai/os/compare/v0.128.2...v0.128.3) (2026-08-19)
+
+### Chores
+
+* **chrome-ext:** prepare Chrome Web Store submission ([1ab4027](https://github.com/iblai/os/commit/1ab40272337fd9f2ff952be8ef5033292dd8edb4)), closes [#432](https://github.com/iblai/os/issues/432)
+
+## [0.128.2](https://github.com/iblai/os/compare/v0.128.1...v0.128.2) (2026-08-19)
+
+### Bug Fixes
+
+- **code-mode:** attach learner_id to compat-proxy calls and surface upstream 402 as the credit UX ([8659bb6](https://github.com/iblai/os/commit/8659bb6c61868b7e98751053d308b87e589f2119))
+
+### Chores
+
+- **tauri:** release app-v0.95.14 ([923121c](https://github.com/iblai/os/commit/923121cdb927f88d5e0620d2141cf6f143c4fdba))
+
+### Tests
+
+- fix failed tests ([8a23269](https://github.com/iblai/os/commit/8a2326967d92fc2c8abc931d6547a35a40c2417b))
+
 ## [0.128.1](https://github.com/iblai/os/compare/v0.128.0...v0.128.1) (2026-08-18)
 
 ### Chores
 
-* **deps:** bump @iblai/iblai-js to 2.5.1 ([f28d824](https://github.com/iblai/os/commit/f28d82446e2739cf1a009f21dbe8e157df4378e4))
+- **deps:** bump @iblai/iblai-js to 2.5.1 ([f28d824](https://github.com/iblai/os/commit/f28d82446e2739cf1a009f21dbe8e157df4378e4))
 
 ## [0.128.0](https://github.com/iblai/os/compare/v0.127.0...v0.128.0) (2026-08-18)
 
