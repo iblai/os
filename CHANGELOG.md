@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.129.0](https://github.com/iblai/os/compare/v0.128.8...v0.129.0) (2026-08-19)
+
+### Features
+
+* **mentor:** adding spend caps for agents ([3836cf8](https://github.com/iblai/os/commit/3836cf8a029cd45f588986c64bf932a198eedf7b))
+
+### Bug Fixes
+
+* **e2e:** adding fix for the privacy tab test ([afbc7ea](https://github.com/iblai/os/commit/afbc7ea39673cebbe4d00b2ce81afc243cdc05b8))
+* **mentor:** adding fix for vulnerabilites ([2541d58](https://github.com/iblai/os/commit/2541d583524e6259b1ee15bdd6a00b52faaea46f))
+* **mentor:** e2e test fixes for billing ([3536a4b](https://github.com/iblai/os/commit/3536a4ba16a5a0747bbc309fb7a8a3666f661afc))
+* **mentor:** fixing conflicts issues ([f64f54f](https://github.com/iblai/os/commit/f64f54f6ea7f05dfe0209e4898398288dafdc455))
+* **mentor:** fixing some mock and config files ([b9fc4c4](https://github.com/iblai/os/commit/b9fc4c44d5a387e974c7c29f96e414dd0218ac1e))
+
 ## [0.128.8](https://github.com/iblai/os/compare/v0.128.7...v0.128.8) (2026-08-19)
 
 ## [0.128.7](https://github.com/iblai/os/compare/v0.128.6...v0.128.7) (2026-08-19)
