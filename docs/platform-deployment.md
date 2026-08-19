@@ -1,6 +1,6 @@
 # Deploying ibl.ai/os against our backend
 
-This guide shows how to ship every surface — **Web, macOS, Windows/Surface, Linux, iOS, Android** (and the Chrome extension) — pointed at **your own** ibl.ai backend instead of the hosted one.
+This guide shows how to ship every surface **Web, macOS, Windows/Surface, Linux, iOS, Android** (and the Chrome extension) — pointed at ibl.ai backend.
 
 > Looking for the web asset-hosting / CDN rollout design instead? See [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
