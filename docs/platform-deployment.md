@@ -51,7 +51,7 @@ pnpm build          # → .next/standalone (self-contained Node server)
 node server-wrapper.js
 ```
 
-Or with Docker (runtime-configurable — no rebuild to change backends):
+Or with Docker (runtime-configurable):
 
 ```bash
 docker build -t iblos .
@@ -124,7 +124,7 @@ make tauri-ios-build
 Self-hoster checklist:
 
 - Set **your** Apple `developmentTeam` in `tauri.conf.json` (`bundle.iOS.developmentTeam`).
-- Point the app at your backend with `TAURI_DEV_URL` — see `get_app_url()` in [`../src-tauri/src/lib.rs`](../src-tauri/src/lib.rs) (defaults to `https://os.ibl.ai`).
+- Point the app at our backend with `TAURI_DEV_URL` — see `get_app_url()` in [`../src-tauri/src/lib.rs`](../src-tauri/src/lib.rs) (defaults to `https://os.ibl.ai`).
 - Update the **deep-link / universal-link hosts** in `tauri.conf.json` (`plugins.deep-link.mobile`) to your domains, and serve an [AASA file](handling-existing-users-aasa.md) at `https://your-domain/.well-known/apple-app-site-association`.
 - **Full setup (Xcode, provisioning, device builds, TestFlight):** [`tauri-ios-setup.md`](tauri-ios-setup.md).
 
@@ -146,7 +146,7 @@ make tauri-android-build-aab   # AAB for the Play Store
 Self-hoster checklist:
 
 - Provide a signing keystore via `src-tauri/gen/android/key.properties` (kept local / out of git).
-- Point at your backend with `TAURI_DEV_URL`; deep-link schemes are re-injected before each build by `scripts/android-add-deep-link-scheme.sh` (idempotent). Update the deep-link **host** in `tauri.conf.json` to your domain and serve `https://your-domain/.well-known/assetlinks.json`.
+- Point at our backend with `TAURI_DEV_URL`; deep-link schemes are re-injected before each build by `scripts/android-add-deep-link-scheme.sh` (idempotent). Update the deep-link **host** in `tauri.conf.json` to your domain and serve `https://your-domain/.well-known/assetlinks.json`.
 - Submit the AAB via the Google Play Console.
 
 > Status: **build-from-source + manual release** — no CI workflow and no dedicated doc yet; the Tauri-mobile flow mirrors iOS ([`tauri-ios-setup.md`](tauri-ios-setup.md)).
@@ -161,7 +161,7 @@ Point `extensions/chrome/panel.html`'s `mentorurl` at your web app, bump `extens
 
 ## Reference: what's automated vs. manual
 
-| Surface        | Point at your backend                            | Build                             | Official release path             |
+| Surface        | Point at our backend                            | Build                             | Official release path             |
 | -------------- | ------------------------------------------------ | --------------------------------- | --------------------------------- |
 | **Web**        | `NEXT_PUBLIC_*` (build **or** runtime `__ENV__`) | `pnpm build` / Docker             | ✅ CI → Docker image              |
 | **macOS**      | `TAURI_DEV_URL` (compile-time)                   | `pnpm tauri:build:devid` / `:mas` | ✅ CI → signed DMG + Release      |
