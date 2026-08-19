@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-08-13",
+  "lastUpdated": "2026-08-20",
   "summary": {
-    "totalCheckpoints": 657,
-    "coveredCheckpoints": 626,
+    "totalCheckpoints": 673,
+    "coveredCheckpoints": 642,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 11,
     "pendingCheckpoints": 8,
     "percent": 100,
-    "totalJourneys": 70,
-    "activeJourneys": 69
+    "totalJourneys": 71,
+    "activeJourneys": 70
   },
   "journeys": [
     {
@@ -4155,6 +4155,100 @@
         {
           "id": "atl-11",
           "description": "First real fixture-backed validation of the SDK's write_todos history-parsing contract (toolCallFromHistoryEntry in @iblai/web-utils): both the LangChain shape ({id, name, args}) and the OpenAI shape ({id, type: 'function', function: {name, arguments}}) are accepted, and a malformed entry (missing name) is dropped without throwing or tripping the ErrorBoundary",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "mentor-spend-caps-tab",
+      "name": "LLM Spend Limits (Billing) — Agent & Tenant Settings",
+      "spec": "69-spend-limits.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/spend-caps-tab.tsx",
+        "components/modals/edit-mentor-modal/index.tsx",
+        "hooks/use-mentor-segments.ts",
+        "lib/constants.ts",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "sc-01",
+          "description": "Admin sees the \"Billing\" tab in the Configurations category, positioned immediately after \"LLM\", and it opens on the \"This Agent\" sub-tab with \"Per User\" also present (AgentSpendCapsTab now has exactly these two sub-tabs — the old \"Workspace\" sub-tab moved to the tenant Billing tab, covered by journey 69)",
+          "status": "covered"
+        },
+        {
+          "id": "sc-02",
+          "description": "Admin creates an agent spend limit (limit, interval, alert-only enforcement, thresholds, enabled) via the SDK's setAgentSpendLimit helper and the values persist after closing and reopening the Billing tab",
+          "status": "covered"
+        },
+        {
+          "id": "sc-03",
+          "description": "An invalid/zero spend limit shows the \"Enter an amount greater than 0\" validation error and disables Save",
+          "status": "covered"
+        },
+        {
+          "id": "sc-04",
+          "description": "Admin removes the agent spend limit via the confirm dialog and the \"no limit configured\" hint reappears",
+          "status": "covered"
+        },
+        {
+          "id": "sc-05",
+          "description": "Admin adds a per-user spend limit through the \"Add User Limit\" modal's EMAIL-based user picker and sees it listed in the per-user table, keyed by username",
+          "status": "covered"
+        },
+        {
+          "id": "sc-06",
+          "description": "Admin edits an existing per-user spend limit via the row's three-dots menu (Edit)",
+          "status": "covered"
+        },
+        {
+          "id": "sc-07",
+          "description": "Admin flips a per-user spend limit's Status toggle off and back on and it saves immediately (datasets-table pattern)",
+          "status": "covered"
+        },
+        {
+          "id": "sc-08",
+          "description": "Admin deletes a per-user spend limit via the row's three-dots menu (Delete) and its row disappears",
+          "status": "covered"
+        },
+        {
+          "id": "sc-09",
+          "description": "Non-admin users do not see the Billing tab in the Edit Mentor modal (admin-only segment, no rbacResource — userTypes filter alone gates visibility)",
+          "status": "covered"
+        },
+        {
+          "id": "twl-01",
+          "description": "The tenant settings Billing tab (same BillingTab journey 21-B already covers for Plan & Credits) exposes a \"Billing sections\" tablist with Plan & Credits (default), Spend Limits, and Agent Limits, and each tab switches to its section",
+          "status": "covered"
+        },
+        {
+          "id": "twl-02",
+          "description": "Admin configures the workspace-wide (tenant) spend limit with alert-only enforcement via setWorkspaceSpendLimit, the presence-level usage stats render, the values persist after reopening the tab, and the limit is removed again in the test's own finally-block cleanup so no other journey sharing this tenant inherits it",
+          "status": "covered"
+        },
+        {
+          "id": "tal-02",
+          "description": "Admin edits the agent spend limit — created via the Edit Agent dialog's Billing tab (no search-index dependency) — through the Agent Limits row's manage popup stacked on the tenant settings dialog (setAgentSpendLimitFromTenantBilling), and the row reflects the updated limit",
+          "status": "covered"
+        },
+        {
+          "id": "tal-03",
+          "description": "Admin flips the agent's Status toggle directly in the Agent Limits table row (saves immediately) off and back on",
+          "status": "covered"
+        },
+        {
+          "id": "tal-04",
+          "description": "Admin adds a per-user spend limit through the Agent Limits manage popup's nested \"Per User\" sub-tab / user-cap modal (addUserSpendLimitFromTenantBilling); reopening the popup confirms the user's row persisted server-side",
+          "status": "covered"
+        },
+        {
+          "id": "tal-05",
+          "description": "Admin deletes the agent spend limit through the manage popup's confirm dialog (local deleteAgentCapAndAwaitResponse helper, network-response-gated); the tenant-wide unfiltered list only holds configured caps, so the row disappears entirely",
+          "status": "covered"
+        },
+        {
+          "id": "tal-01",
+          "description": "Admin filters Agent Limits to an ALREADY-INDEXED mentor (broad query \"E2E Mentor\" against the search-index-backed autocomplete, sampling up to 5 results for the first capless one) — the ONE checkpoint that depends on that index, which lags mentor creation by DAYS on this backend (a known product limitation, not a test bug, reported upstream separately; a freshly-created mentor is never searchable in time, so this borrows a mentor from a past run instead of retrying its own) — sees the \"Set Spend Limit\" empty state, creates that mentor's spend limit (alert-only) from the popup, the row lists it, and the cap is removed again in an unconditional finally-block so the borrowed (shared-tenant) mentor is left exactly as found; if every sampled candidate already has a cap, verifies the filter -> row-visible path on the first one instead (annotated, never a failure)",
           "status": "covered"
         }
       ]

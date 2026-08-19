@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { CodingModeButton } from '../coding-mode-button';
+import type { OpencodeSkillSync } from '@/hooks/use-opencode-skill-sync';
 
 /**
  * Code's on/off control.
@@ -42,11 +43,22 @@ vi.mock('@/lib/config', async (importOriginal) => {
   };
 });
 
-function backend(overrides: { sandboxed?: boolean; local?: unknown } = {}) {
+function backend(
+  overrides: {
+    sandboxed?: boolean;
+    supported?: boolean;
+    sandbox_ready?: boolean;
+    local?: unknown;
+  } = {},
+) {
   invoke.mockImplementation(async (cmd: string) => {
     switch (cmd) {
       case 'check_opencode_status':
-        return { sandboxed: overrides.sandboxed ?? false };
+        return {
+          sandboxed: overrides.sandboxed ?? false,
+          supported: overrides.supported ?? true,
+          sandbox_ready: overrides.sandbox_ready ?? true,
+        };
       case 'get_opencode_workspace':
         return '/home/tester/code/demo';
       case 'set_opencode_workspace':
@@ -61,10 +73,13 @@ function backend(overrides: { sandboxed?: boolean; local?: unknown } = {}) {
 
 const SESSION_ID = 'chat-abc123';
 
-const renderButton = (sessionId: string | undefined = SESSION_ID) =>
+const renderButton = (
+  sessionId: string | undefined = SESSION_ID,
+  skillSync?: OpencodeSkillSync,
+) =>
   render(
     <TooltipProvider>
-      <CodingModeButton sessionId={sessionId} />
+      <CodingModeButton sessionId={sessionId} skillSync={skillSync} />
     </TooltipProvider>,
   );
 
@@ -97,6 +112,27 @@ describe('CodingModeButton', () => {
     backend({ sandboxed: true });
     const { container } = renderButton();
     await waitFor(() => expect(container).toBeEmptyDOMElement());
+  });
+
+  it('hides itself on an unsupported platform (Windows)', async () => {
+    backend({ supported: false });
+    const { container } = renderButton();
+    await waitFor(() => expect(container).toBeEmptyDOMElement());
+  });
+
+  it('disables the switch and explains when bubblewrap is missing', async () => {
+    localStorage.setItem('ibl_coding_mode_enabled', 'true');
+    backend({ sandbox_ready: false });
+    renderButton();
+
+    // A stale enabled flag is force-cleared so sends route back to normal chat.
+    await waitFor(() =>
+      expect(localStorage.getItem('ibl_coding_mode_enabled')).toBe('false'),
+    );
+
+    await openPopover();
+    expect(screen.getByTestId('code-sandbox-missing')).toBeInTheDocument();
+    expect(screen.getByRole('switch')).toBeDisabled();
   });
 
   describe('default on', () => {
@@ -463,5 +499,86 @@ describe('CodingModeButton', () => {
     await waitFor(() =>
       expect(localStorage.getItem('ibl_coding_mode_enabled')).toBeNull(),
     );
+  });
+
+  describe('skills sync surface', () => {
+    // The pill's spinner covers SKILLS loading only (mentor sync + vibe
+    // fetch, via the composer's useOpencodeSkillSync) — never the opencode
+    // binary install, which stays invisible.
+    it('spins in place of the Code icon while skills are syncing', async () => {
+      localStorage.setItem('ibl_coding_mode_enabled', 'true');
+      renderButton(SESSION_ID, { state: 'syncing' });
+
+      expect(await screen.findByTestId('code-skills-loading')).toBeVisible();
+      expect(screen.getByRole('button', { name: /Code/i })).toHaveAttribute(
+        'aria-busy',
+        'true',
+      );
+    });
+
+    it('shows the Code icon again once the sync settles', async () => {
+      localStorage.setItem('ibl_coding_mode_enabled', 'true');
+      renderButton(SESSION_ID, { state: 'synced', count: 3 });
+
+      await screen.findByRole('button', { name: /Code/i });
+      expect(screen.queryByTestId('code-skills-loading')).toBeNull();
+      expect(screen.getByRole('button', { name: /Code/i })).toHaveAttribute(
+        'aria-busy',
+        'false',
+      );
+    });
+
+    it('never spins while Code is off, whatever the sync is doing', async () => {
+      localStorage.setItem('ibl_coding_mode_enabled', 'false');
+      renderButton(SESSION_ID, { state: 'syncing' });
+
+      await screen.findByRole('button', { name: /Code/i });
+      expect(screen.queryByTestId('code-skills-loading')).toBeNull();
+    });
+
+    it('surfaces a failed sync as an amber note in the popover', async () => {
+      localStorage.setItem('ibl_coding_mode_enabled', 'true');
+      renderButton(SESSION_ID, { state: 'error' });
+      await openPopover();
+
+      expect(await screen.findByTestId('code-skills-sync')).toHaveTextContent(
+        /Skills couldn/,
+      );
+    });
+
+    it('adds no popover UI on the happy path (error-only surface)', async () => {
+      localStorage.setItem('ibl_coding_mode_enabled', 'true');
+      renderButton(SESSION_ID, { state: 'synced', count: 3 });
+      await openPopover();
+
+      await screen.findByRole('switch');
+      expect(screen.queryByTestId('code-skills-sync')).toBeNull();
+    });
+
+    it('fans the toggle out on the local-storage event so the sync hook reacts', async () => {
+      localStorage.setItem('ibl_coding_mode_enabled', 'false');
+      localStorage.setItem('ibl_coding_mode_folder_chosen', 'true');
+      const fanOut = vi.fn();
+      window.addEventListener('local-storage', fanOut);
+      try {
+        renderButton();
+        await openPopover();
+
+        await userEvent.click(await screen.findByRole('switch'));
+        await waitFor(() =>
+          expect(localStorage.getItem('ibl_coding_mode_enabled')).toBe('true'),
+        );
+        expect(fanOut).toHaveBeenCalled();
+
+        fanOut.mockClear();
+        await userEvent.click(await screen.findByRole('switch'));
+        await waitFor(() =>
+          expect(localStorage.getItem('ibl_coding_mode_enabled')).toBe('false'),
+        );
+        expect(fanOut).toHaveBeenCalled();
+      } finally {
+        window.removeEventListener('local-storage', fanOut);
+      }
+    });
   });
 });
