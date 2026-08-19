@@ -8,7 +8,7 @@ This guide shows how to ship every surface **Web, macOS, Windows/Surface, Linux,
 
 There is **one** frontend — the Next.js web app. Every native app is a thin **native webview shell that loads that web app**. So there are only two things to configure:
 
-| Layer                                                       | What it is                                                | How you point it at your backend                                        |
+| Layer                                                       | What it is                                                | How you point it at our backend                                        |
 | ----------------------------------------------------------- | --------------------------------------------------------- | ----------------------------------------------------------------------- |
 | **Web app**                                                 | The Next.js SPA (also what you self-host at your domain)  | `NEXT_PUBLIC_*` env vars — build-time **or** runtime (`window.__ENV__`) |
 | **Native shells** (macOS / Windows / Linux / iOS / Android) | Tauri wrappers that load your hosted web app in a webview | `TAURI_DEV_URL` **compile-time** env var → your web app's URL           |
