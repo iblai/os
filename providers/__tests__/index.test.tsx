@@ -211,6 +211,8 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
   useLazyGetVectorDocumentsQuery: () => [vi.fn(), { data: [] }],
   useLazyGetRecentMessageQuery: () => [vi.fn(), { data: [] }],
   useLazyGetPinnedMessagesQuery: () => [vi.fn(), { data: [] }],
+  // Pulled in via useOpencode402 (Code-mode 402 → credit UX at the app root).
+  useLazyGetAccountBillingInfoQuery: () => [vi.fn()],
   useGetMentorSettingsQuery: () => ({ data: null }),
   useGetMentorPublicSettingsQuery: () => ({ data: null }),
   useGetTenantMetadataQuery: () => ({

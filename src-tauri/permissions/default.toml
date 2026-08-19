@@ -39,6 +39,7 @@ permissions = [
     "allow-ensure-vibe-skills",
     "allow-check-opencode-status",
     "allow-check-code-local-model",
+    "allow-set-opencode-learner",
 ]
 
 [[permission]]
@@ -256,3 +257,9 @@ identifier = "allow-check-code-local-model"
 description = "Enables checking whether the selected on-device model can drive Code (tool-calling support, runtime reachability)"
 [permission.commands]
 allow = ["check_code_local_model"]
+
+[[permission]]
+identifier = "allow-set-opencode-learner"
+description = "Enables recording the signed-in username so the model proxy attributes usage via learner_id"
+[permission.commands]
+allow = ["set_opencode_learner"]
