@@ -62,6 +62,11 @@ user's browser — macOS: `open -a \"Google Chrome\" http://localhost:3000` \
 `start <url>`.
 - Do not run `pnpm build` before the preview — `pnpm typecheck` and `pnpm lint` \
 are enough; the dev server is the preview.
+- Deployment and monetization are available on request only: when the user asks \
+to deploy or publish the app, use the iblai-vibe-ops-deploy skill (ibl.ai \
+hosting — no Vercel account or token); when they ask to charge users to enter \
+the app, use the iblai-vibe-monetization-app-paywall skill. Do not suggest \
+either unprompted.
 ";
 
 /// Everything the proxy needs to serve one Code session.
@@ -689,6 +694,12 @@ mod tests {
         assert!(
             text.contains("Do not run `pnpm build`") && text.contains("pnpm typecheck"),
             "the no-build-before-preview rule must survive edits: {text}"
+        );
+        assert!(
+            text.contains("iblai-vibe-ops-deploy")
+                && text.contains("iblai-vibe-monetization-app-paywall")
+                && text.contains("unprompted"),
+            "the deploy/monetization on-request rule must survive edits: {text}"
         );
     }
 }
