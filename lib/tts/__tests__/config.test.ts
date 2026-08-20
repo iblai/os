@@ -13,21 +13,15 @@ import {
   resolveModelWeightUrl,
 } from '../config';
 
-const ENV_KEYS = [
-  'NEXT_PUBLIC_TTS_IBLAI_MODE',
-  'NEXT_PUBLIC_TTS_KOKORO_MODEL',
-  'NEXT_PUBLIC_TTS_KOKORO_MODEL_HOST',
-  'NEXT_PUBLIC_TTS_KOKORO_MODEL_REVISION',
-  'NEXT_PUBLIC_TTS_KOKORO_DTYPE',
-  'NEXT_PUBLIC_TTS_KOKORO_DEVICE',
-  'NEXT_PUBLIC_TTS_KOKORO_VOICE',
-  'NEXT_PUBLIC_TTS_KOKORO_SPEED',
-  'NEXT_PUBLIC_TTS_KOKORO_WASM_PATH',
-  'NEXT_PUBLIC_BASE_PATH',
-] as const;
+// The knobs are read through `lib/config`'s `getEnv`, which prefers
+// `window.__ENV__` over the build-time env -- so overrides go there, the same
+// way lib/__tests__/config.test.ts drives the rest of the app's settings.
+function setEnv(values: Record<string, string>) {
+  window.__ENV__ = { ...window.__ENV__, ...values };
+}
 
 function clearEnv() {
-  for (const key of ENV_KEYS) delete process.env[key];
+  window.__ENV__ = {};
 }
 
 function setGpu(present: boolean) {
@@ -46,6 +40,8 @@ beforeEach(() => {
 afterEach(() => {
   clearEnv();
   setGpu(false);
+  vi.unstubAllEnvs();
+  vi.resetModules();
   vi.restoreAllMocks();
 });
 
@@ -90,7 +86,7 @@ describe('resolveKokoroConfig', () => {
 
     it('still honours an explicit dtype override on WebGPU', () => {
       setGpu(true);
-      process.env.NEXT_PUBLIC_TTS_KOKORO_DTYPE = 'q8';
+      setEnv({ NEXT_PUBLIC_TTS_KOKORO_DTYPE: 'q8' });
       expect(resolveKokoroConfig().dtype).toBe('q8');
     });
   });
@@ -98,7 +94,7 @@ describe('resolveKokoroConfig', () => {
   describe('device override', () => {
     it('pins the backend when configured', () => {
       setGpu(true);
-      process.env.NEXT_PUBLIC_TTS_KOKORO_DEVICE = 'wasm';
+      setEnv({ NEXT_PUBLIC_TTS_KOKORO_DEVICE: 'wasm' });
       const config = resolveKokoroConfig();
       expect(config.device).toBe('wasm');
       // and the dtype follows the forced device, not the detected one
@@ -106,46 +102,53 @@ describe('resolveKokoroConfig', () => {
     });
 
     it('can force WebGPU on a browser that does not advertise it', () => {
-      process.env.NEXT_PUBLIC_TTS_KOKORO_DEVICE = 'webgpu';
+      setEnv({ NEXT_PUBLIC_TTS_KOKORO_DEVICE: 'webgpu' });
       expect(resolveKokoroConfig().device).toBe('webgpu');
     });
 
     it('ignores a value that is not a backend', () => {
       setGpu(true);
-      process.env.NEXT_PUBLIC_TTS_KOKORO_DEVICE = 'cuda';
+      setEnv({ NEXT_PUBLIC_TTS_KOKORO_DEVICE: 'cuda' });
       expect(resolveKokoroConfig().device).toBe('webgpu');
     });
 
     it('ignores a blank override', () => {
-      process.env.NEXT_PUBLIC_TTS_KOKORO_DEVICE = '   ';
+      setEnv({ NEXT_PUBLIC_TTS_KOKORO_DEVICE: '   ' });
+      expect(resolveKokoroConfig().device).toBe('wasm');
+    });
+
+    it('accepts the backend name in any case', () => {
+      setGpu(true);
+      setEnv({ NEXT_PUBLIC_TTS_KOKORO_DEVICE: ' WASM ' });
       expect(resolveKokoroConfig().device).toBe('wasm');
     });
   });
 
   describe('model source', () => {
     it('uses a self-hosted repo id when configured', () => {
-      process.env.NEXT_PUBLIC_TTS_KOKORO_MODEL = '  acme/kokoro-selfhosted  ';
+      setEnv({ NEXT_PUBLIC_TTS_KOKORO_MODEL: '  acme/kokoro-selfhosted  ' });
       expect(resolveKokoroConfig().modelId).toBe('acme/kokoro-selfhosted');
     });
 
     it('ignores a blank override', () => {
-      process.env.NEXT_PUBLIC_TTS_KOKORO_MODEL = '   ';
+      setEnv({ NEXT_PUBLIC_TTS_KOKORO_MODEL: '   ' });
       expect(resolveKokoroConfig().modelId).toBe(
         'onnx-community/Kokoro-82M-v1.0-ONNX',
       );
     });
 
     it('carries the host and revision the worker will download from', () => {
-      process.env.NEXT_PUBLIC_TTS_KOKORO_MODEL_HOST =
-        'https://weights.acme.dev';
-      process.env.NEXT_PUBLIC_TTS_KOKORO_MODEL_REVISION = '  v2  ';
+      setEnv({
+        NEXT_PUBLIC_TTS_KOKORO_MODEL_HOST: 'https://weights.acme.dev',
+        NEXT_PUBLIC_TTS_KOKORO_MODEL_REVISION: '  v2  ',
+      });
       const config = resolveKokoroConfig();
       expect(config.modelHost).toBe('https://weights.acme.dev');
       expect(config.modelRevision).toBe('v2');
     });
 
     it('ignores a blank revision override', () => {
-      process.env.NEXT_PUBLIC_TTS_KOKORO_MODEL_REVISION = '   ';
+      setEnv({ NEXT_PUBLIC_TTS_KOKORO_MODEL_REVISION: '   ' });
       expect(resolveKokoroConfig().modelRevision).toBe(
         '1939ad2a8e416c0acfeecc08a694d14ef25f2231',
       );
@@ -154,29 +157,34 @@ describe('resolveKokoroConfig', () => {
 
   describe('dtype', () => {
     it.each(['fp32', 'fp16', 'q8', 'q4', 'q4f16'])('accepts %s', (dtype) => {
-      process.env.NEXT_PUBLIC_TTS_KOKORO_DTYPE = dtype;
+      setEnv({ NEXT_PUBLIC_TTS_KOKORO_DTYPE: dtype });
       expect(resolveKokoroConfig().dtype).toBe(dtype);
     });
 
     it('rejects a value kokoro-js would not understand', () => {
-      process.env.NEXT_PUBLIC_TTS_KOKORO_DTYPE = 'int3';
+      setEnv({ NEXT_PUBLIC_TTS_KOKORO_DTYPE: 'int3' });
       expect(resolveKokoroConfig().dtype).toBe('q8');
     });
 
     it('rejects a blank value', () => {
-      process.env.NEXT_PUBLIC_TTS_KOKORO_DTYPE = '  ';
+      setEnv({ NEXT_PUBLIC_TTS_KOKORO_DTYPE: '  ' });
       expect(resolveKokoroConfig().dtype).toBe('q8');
+    });
+
+    it('accepts the precision in any case', () => {
+      setEnv({ NEXT_PUBLIC_TTS_KOKORO_DTYPE: 'Q4F16' });
+      expect(resolveKokoroConfig().dtype).toBe('q4f16');
     });
   });
 
   describe('voice', () => {
     it('is overridable', () => {
-      process.env.NEXT_PUBLIC_TTS_KOKORO_VOICE = 'bm_george';
+      setEnv({ NEXT_PUBLIC_TTS_KOKORO_VOICE: 'bm_george' });
       expect(resolveKokoroConfig().voice).toBe('bm_george');
     });
 
     it('ignores a blank override', () => {
-      process.env.NEXT_PUBLIC_TTS_KOKORO_VOICE = '';
+      setEnv({ NEXT_PUBLIC_TTS_KOKORO_VOICE: '' });
       expect(resolveKokoroConfig().voice).toBe('af_heart');
     });
   });
@@ -189,12 +197,12 @@ describe('resolveKokoroConfig', () => {
     // The env var is a deployment-wide fallback for mentors that have never
     // had a voice chosen; letting it win would make the picker ineffective.
     it("prefers the mentor's voice over the deployment default", () => {
-      process.env.NEXT_PUBLIC_TTS_KOKORO_VOICE = 'af_bella';
+      setEnv({ NEXT_PUBLIC_TTS_KOKORO_VOICE: 'af_bella' });
       expect(resolveKokoroConfig('bm_george').voice).toBe('bm_george');
     });
 
     it('falls back to the deployment default when no voice is chosen', () => {
-      process.env.NEXT_PUBLIC_TTS_KOKORO_VOICE = 'af_bella';
+      setEnv({ NEXT_PUBLIC_TTS_KOKORO_VOICE: 'af_bella' });
       expect(resolveKokoroConfig(null).voice).toBe('af_bella');
       expect(resolveKokoroConfig(undefined).voice).toBe('af_bella');
     });
@@ -206,19 +214,19 @@ describe('resolveKokoroConfig', () => {
 
   describe('speed', () => {
     it('is overridable', () => {
-      process.env.NEXT_PUBLIC_TTS_KOKORO_SPEED = '1.25';
+      setEnv({ NEXT_PUBLIC_TTS_KOKORO_SPEED: '1.25' });
       expect(resolveKokoroConfig().speed).toBe(1.25);
     });
 
     it('rejects a non-numeric value', () => {
-      process.env.NEXT_PUBLIC_TTS_KOKORO_SPEED = 'fast';
+      setEnv({ NEXT_PUBLIC_TTS_KOKORO_SPEED: 'fast' });
       expect(resolveKokoroConfig().speed).toBe(1);
     });
 
     it('rejects zero and negatives, which would produce no audio', () => {
-      process.env.NEXT_PUBLIC_TTS_KOKORO_SPEED = '0';
+      setEnv({ NEXT_PUBLIC_TTS_KOKORO_SPEED: '0' });
       expect(resolveKokoroConfig().speed).toBe(1);
-      process.env.NEXT_PUBLIC_TTS_KOKORO_SPEED = '-2';
+      setEnv({ NEXT_PUBLIC_TTS_KOKORO_SPEED: '-2' });
       expect(resolveKokoroConfig().speed).toBe(1);
     });
   });
@@ -227,28 +235,30 @@ describe('resolveKokoroConfig', () => {
     // onnxruntime-web concatenates the file name onto this string, so a missing
     // trailing slash silently produces `/ortort-wasm...` and a 404.
     it('appends the trailing slash onnxruntime-web requires', () => {
-      process.env.NEXT_PUBLIC_TTS_KOKORO_WASM_PATH = '/static/ort';
+      setEnv({ NEXT_PUBLIC_TTS_KOKORO_WASM_PATH: '/static/ort' });
       expect(resolveKokoroConfig().wasmPaths).toBe('/static/ort/');
     });
 
     it('keeps a trailing slash that is already there', () => {
-      process.env.NEXT_PUBLIC_TTS_KOKORO_WASM_PATH = '/static/ort/';
+      setEnv({ NEXT_PUBLIC_TTS_KOKORO_WASM_PATH: '/static/ort/' });
       expect(resolveKokoroConfig().wasmPaths).toBe('/static/ort/');
     });
 
     it('honours the app basePath so the assets stay same-origin', () => {
-      process.env.NEXT_PUBLIC_BASE_PATH = '/mentor';
+      setEnv({ NEXT_PUBLIC_BASE_PATH: '/mentor' });
       expect(resolveKokoroConfig().wasmPaths).toBe('/mentor/ort/');
     });
 
     it('prefers an explicit override over the basePath', () => {
-      process.env.NEXT_PUBLIC_BASE_PATH = '/mentor';
-      process.env.NEXT_PUBLIC_TTS_KOKORO_WASM_PATH = '/elsewhere/ort/';
+      setEnv({
+        NEXT_PUBLIC_BASE_PATH: '/mentor',
+        NEXT_PUBLIC_TTS_KOKORO_WASM_PATH: '/elsewhere/ort/',
+      });
       expect(resolveKokoroConfig().wasmPaths).toBe('/elsewhere/ort/');
     });
 
     it('ignores a blank override', () => {
-      process.env.NEXT_PUBLIC_TTS_KOKORO_WASM_PATH = '  ';
+      setEnv({ NEXT_PUBLIC_TTS_KOKORO_WASM_PATH: '  ' });
       expect(resolveKokoroConfig().wasmPaths).toBe('/ort/');
     });
   });
@@ -276,30 +286,31 @@ describe('resolveModelHost', () => {
   });
 
   it('normalises away a path and a trailing slash', () => {
-    process.env.NEXT_PUBLIC_TTS_KOKORO_MODEL_HOST =
-      'https://weights.acme.dev/models/';
+    setEnv({
+      NEXT_PUBLIC_TTS_KOKORO_MODEL_HOST: 'https://weights.acme.dev/models/',
+    });
     expect(resolveModelHost()).toBe('https://weights.acme.dev');
   });
 
   it('keeps an explicit port', () => {
-    process.env.NEXT_PUBLIC_TTS_KOKORO_MODEL_HOST = 'http://localhost:8080';
+    setEnv({ NEXT_PUBLIC_TTS_KOKORO_MODEL_HOST: 'http://localhost:8080' });
     expect(resolveModelHost()).toBe('http://localhost:8080');
   });
 
   // A bare host is the shape people paste, and the CSP entry is derived from
   // whatever comes back here -- an unparseable origin would drop it silently.
   it('assumes https for a bare host', () => {
-    process.env.NEXT_PUBLIC_TTS_KOKORO_MODEL_HOST = 'weights.acme.dev';
+    setEnv({ NEXT_PUBLIC_TTS_KOKORO_MODEL_HOST: 'weights.acme.dev' });
     expect(resolveModelHost()).toBe('https://weights.acme.dev');
   });
 
   it('falls back rather than return something unparseable', () => {
-    process.env.NEXT_PUBLIC_TTS_KOKORO_MODEL_HOST = 'https://';
+    setEnv({ NEXT_PUBLIC_TTS_KOKORO_MODEL_HOST: 'https://' });
     expect(resolveModelHost()).toBe('https://huggingface.co');
   });
 
   it('ignores a blank override', () => {
-    process.env.NEXT_PUBLIC_TTS_KOKORO_MODEL_HOST = '   ';
+    setEnv({ NEXT_PUBLIC_TTS_KOKORO_MODEL_HOST: '   ' });
     expect(resolveModelHost()).toBe('https://huggingface.co');
   });
 });
@@ -321,16 +332,18 @@ describe('resolveModelWeightUrl', () => {
     ['q4', 'model_q4.onnx'],
     ['q4f16', 'model_q4f16.onnx'],
   ])('maps %s to %s', (dtype, file) => {
-    process.env.NEXT_PUBLIC_TTS_KOKORO_DTYPE = dtype;
+    setEnv({ NEXT_PUBLIC_TTS_KOKORO_DTYPE: dtype });
     expect(resolveModelWeightUrl(resolveKokoroConfig())).toMatch(
       new RegExp(`/onnx/${file.replace('.', '\\.')}$`),
     );
   });
 
   it('follows a self-hosted host, repo and revision', () => {
-    process.env.NEXT_PUBLIC_TTS_KOKORO_MODEL_HOST = 'https://weights.acme.dev';
-    process.env.NEXT_PUBLIC_TTS_KOKORO_MODEL = 'acme/kokoro';
-    process.env.NEXT_PUBLIC_TTS_KOKORO_MODEL_REVISION = 'v2';
+    setEnv({
+      NEXT_PUBLIC_TTS_KOKORO_MODEL_HOST: 'https://weights.acme.dev',
+      NEXT_PUBLIC_TTS_KOKORO_MODEL: 'acme/kokoro',
+      NEXT_PUBLIC_TTS_KOKORO_MODEL_REVISION: 'v2',
+    });
     expect(resolveModelWeightUrl(resolveKokoroConfig())).toBe(
       'https://weights.acme.dev/acme/kokoro/resolve/v2/onnx/model_quantized.onnx',
     );
@@ -365,9 +378,11 @@ describe('pinModelRequestUrl', () => {
   });
 
   it('re-homes the request when the weights are self-hosted', () => {
-    process.env.NEXT_PUBLIC_TTS_KOKORO_MODEL_HOST = 'https://weights.acme.dev';
-    process.env.NEXT_PUBLIC_TTS_KOKORO_MODEL = 'acme/kokoro';
-    process.env.NEXT_PUBLIC_TTS_KOKORO_MODEL_REVISION = 'v2';
+    setEnv({
+      NEXT_PUBLIC_TTS_KOKORO_MODEL_HOST: 'https://weights.acme.dev',
+      NEXT_PUBLIC_TTS_KOKORO_MODEL: 'acme/kokoro',
+      NEXT_PUBLIC_TTS_KOKORO_MODEL_REVISION: 'v2',
+    });
     expect(
       pinModelRequestUrl(
         'https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/main/tokenizer.json',
@@ -452,8 +467,10 @@ describe('downgradeToWasm', () => {
 
   it('keeps everything else, including an explicit dtype override', () => {
     setGpu(true);
-    process.env.NEXT_PUBLIC_TTS_KOKORO_DTYPE = 'q4';
-    process.env.NEXT_PUBLIC_TTS_KOKORO_VOICE = 'bm_george';
+    setEnv({
+      NEXT_PUBLIC_TTS_KOKORO_DTYPE: 'q4',
+      NEXT_PUBLIC_TTS_KOKORO_VOICE: 'bm_george',
+    });
     const config = downgradeToWasm(resolveKokoroConfig());
     expect(config.dtype).toBe('q4');
     expect(config.voice).toBe('bm_george');
@@ -699,23 +716,53 @@ describe('resolveIblaiMode', () => {
   });
 
   it('can be pinned to the backend', () => {
-    process.env.NEXT_PUBLIC_TTS_IBLAI_MODE = 'cloud';
+    setEnv({ NEXT_PUBLIC_TTS_IBLAI_MODE: 'cloud' });
     expect(resolveIblaiMode()).toBe('cloud');
   });
 
   // The only way to reach the WASM backend, which `auto` never selects.
   it('can be pinned to the browser, where no message text leaves the device', () => {
-    process.env.NEXT_PUBLIC_TTS_IBLAI_MODE = 'device';
+    setEnv({ NEXT_PUBLIC_TTS_IBLAI_MODE: 'device' });
     expect(resolveIblaiMode()).toBe('device');
   });
 
   it('falls back to auto on a value that is not a mode', () => {
-    process.env.NEXT_PUBLIC_TTS_IBLAI_MODE = 'onprem';
+    setEnv({ NEXT_PUBLIC_TTS_IBLAI_MODE: 'onprem' });
     expect(resolveIblaiMode()).toBe('auto');
   });
 
   it('ignores a blank override', () => {
-    process.env.NEXT_PUBLIC_TTS_IBLAI_MODE = '   ';
+    setEnv({ NEXT_PUBLIC_TTS_IBLAI_MODE: '   ' });
     expect(resolveIblaiMode()).toBe('auto');
+  });
+
+  it('accepts the mode in any case', () => {
+    setEnv({ NEXT_PUBLIC_TTS_IBLAI_MODE: 'CLOUD' });
+    expect(resolveIblaiMode()).toBe('cloud');
+  });
+});
+
+describe('build-time configuration', () => {
+  // `middleware.ts` calls resolveModelHost server-side, where there is no
+  // `window.__ENV__` to read. The env object `lib/config` builds is captured at
+  // module evaluation, so a build-time value only lands on a fresh import.
+  async function reimport() {
+    vi.resetModules();
+    return import('../config');
+  }
+
+  it('falls back to the build-time env when nothing is injected at runtime', async () => {
+    vi.stubEnv('NEXT_PUBLIC_TTS_KOKORO_MODEL_HOST', 'https://build.acme.dev');
+    const { resolveModelHost: resolve } = await reimport();
+    expect(resolve()).toBe('https://build.acme.dev');
+  });
+
+  // The whole point of the indirection: a deployment can repoint the weights
+  // without a rebuild.
+  it('prefers a runtime override over the build-time value', async () => {
+    vi.stubEnv('NEXT_PUBLIC_TTS_KOKORO_MODEL_HOST', 'https://build.acme.dev');
+    const { resolveModelHost: resolve } = await reimport();
+    setEnv({ NEXT_PUBLIC_TTS_KOKORO_MODEL_HOST: 'https://runtime.acme.dev' });
+    expect(resolve()).toBe('https://runtime.acme.dev');
   });
 });

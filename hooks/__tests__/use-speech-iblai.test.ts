@@ -24,9 +24,15 @@ vi.mock('../use-mentors/use-mentor-settings', () => ({
   useMentorSettings: () => mockUseMentorSettings(),
 }));
 
-vi.mock('@/lib/config', () => ({
-  config: { dmUrl: () => 'https://dm.test' },
-}));
+// Only the API base is stubbed: the real config supplies the TTS knobs, which
+// `lib/tts/config.ts` resolves through it.
+vi.mock('@/lib/config', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/config')>();
+  return {
+    ...actual,
+    config: { ...actual.config, dmUrl: () => 'https://dm.test' },
+  };
+});
 
 vi.mock('@/lib/constants', () => ({
   LOCAL_STORAGE_KEYS: { DM_TOKEN_KEY: 'dm_token' },
@@ -206,7 +212,7 @@ beforeEach(() => {
   // This suite covers the on-device path specifically. It is no longer the
   // default -- `iblai` goes to the backend unless a deployment opts out -- so
   // the mode is pinned here rather than inherited.
-  process.env.NEXT_PUBLIC_TTS_IBLAI_MODE = 'device';
+  window.__ENV__ = { NEXT_PUBLIC_TTS_IBLAI_MODE: 'device' };
   // `workers` is NOT cleared: useSpeech builds the Worker once per tab and
   // reuses it, so clearing the array would lose the singleton the assertions
   // need. Its recorded traffic is reset instead.
@@ -258,7 +264,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  delete process.env.NEXT_PUBLIC_TTS_IBLAI_MODE;
+  window.__ENV__ = {};
   vi.restoreAllMocks();
 });
 
@@ -829,7 +835,7 @@ describe('useSpeech — iblai auto mode', () => {
   }
 
   beforeEach(() => {
-    process.env.NEXT_PUBLIC_TTS_IBLAI_MODE = 'auto';
+    window.__ENV__ = { NEXT_PUBLIC_TTS_IBLAI_MODE: 'auto' };
     window.localStorage.setItem('dm_token', 'tok-123');
     mockFetchOk();
   });

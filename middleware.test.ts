@@ -20,7 +20,10 @@ function cspOf(res: { headers: Headers }): string | null {
 }
 
 describe('CSP middleware', () => {
-  afterEach(() => vi.unstubAllEnvs());
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
 
   it('enforces via Content-Security-Policy by default', () => {
     const res = middleware(req());
@@ -156,12 +159,17 @@ describe('CSP middleware', () => {
     expect(connectSrc).toContain('https://*.huggingface.co');
   });
 
-  it('follows a self-hosted weight host instead of Hugging Face', () => {
+  it('follows a self-hosted weight host instead of Hugging Face', async () => {
     vi.stubEnv(
       'NEXT_PUBLIC_TTS_KOKORO_MODEL_HOST',
       'https://weights.acme.dev/models/',
     );
-    const csp = cspOf(middleware(req())) ?? '';
+    // The NEXT_PUBLIC_* registry in lib/config is captured at module
+    // evaluation, and middleware runs where there is no `window.__ENV__` to
+    // override it -- so the build-time value only lands on a fresh import.
+    vi.resetModules();
+    const { middleware: fresh } = await import('./middleware');
+    const csp = cspOf(fresh(req())) ?? '';
 
     expect(csp).toContain('https://weights.acme.dev');
     // The HF redirect CDNs are only relevant to Hugging Face, so they go away.

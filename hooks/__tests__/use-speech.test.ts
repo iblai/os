@@ -12,9 +12,15 @@ vi.mock('../use-mentors/use-mentor-settings', () => ({
   useMentorSettings: () => mockUseMentorSettings(),
 }));
 
-vi.mock('@/lib/config', () => ({
-  config: { dmUrl: () => 'https://dm.test' },
-}));
+// Only the API base is stubbed: the real config supplies the TTS knobs, which
+// `lib/tts/config.ts` resolves through it.
+vi.mock('@/lib/config', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/config')>();
+  return {
+    ...actual,
+    config: { ...actual.config, dmUrl: () => 'https://dm.test' },
+  };
+});
 
 vi.mock('@/lib/constants', () => ({
   LOCAL_STORAGE_KEYS: { DM_TOKEN_KEY: 'dm_token' },

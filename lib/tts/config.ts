@@ -1,18 +1,22 @@
 /**
  * @file config.ts
- * @input `process.env.NEXT_PUBLIC_*` (inlined at build time) and `navigator`.
+ * @input The `config.*()` accessors in `lib/config.ts` -- so every knob here is
+ *   overridable at runtime through `window.__ENV__`, like the rest of the app,
+ *   rather than needing a rebuild -- and `navigator`.
  * @output A fully-resolved {@link KokoroConfig} describing which model to fetch,
  *   at what precision, on which backend, and where the ONNX Runtime WASM
  *   binaries live.
  * @position Pure-ish resolver on the main thread. `useSpeech` calls it once per
  *   utterance and hands the result to the worker over `postMessage`, so the
- *   worker never has to read `process.env` itself -- which keeps the worker
- *   bundle free of build-time substitution and makes every value here testable.
+ *   worker never resolves configuration itself -- which rules out the worker
+ *   and the page disagreeing, and makes every value here testable.
  *
  * Everything is overridable because production will self-host the weights
  * rather than pull them from the Hugging Face CDN, and the self-hosted repo id
  * is not known at authoring time.
  */
+
+import { config as appConfig } from '@/lib/config';
 
 /** ONNX weight precisions `kokoro-js` accepts. */
 export type KokoroDtype = 'fp32' | 'fp16' | 'q8' | 'q4' | 'q4f16';
@@ -132,7 +136,7 @@ const VALID_DEVICES: readonly string[] = ['webgpu', 'wasm'] as const;
  * `wasm` here.
  */
 function detectDevice(): KokoroDevice {
-  const raw = process.env.NEXT_PUBLIC_TTS_KOKORO_DEVICE?.trim();
+  const raw = appConfig.ttsKokoroDevice().trim().toLowerCase();
   if (raw && VALID_DEVICES.includes(raw)) return raw as KokoroDevice;
 
   return typeof navigator !== 'undefined' && 'gpu' in navigator
@@ -141,14 +145,14 @@ function detectDevice(): KokoroDevice {
 }
 
 function readDtype(device: KokoroDevice): KokoroDtype {
-  const raw = process.env.NEXT_PUBLIC_TTS_KOKORO_DTYPE?.trim();
+  const raw = appConfig.ttsKokoroDtype().trim().toLowerCase();
   return raw && VALID_DTYPES.includes(raw)
     ? (raw as KokoroDtype)
     : DEFAULT_DTYPE_BY_DEVICE[device];
 }
 
 function readSpeed(): number {
-  const parsed = Number(process.env.NEXT_PUBLIC_TTS_KOKORO_SPEED);
+  const parsed = Number(appConfig.ttsKokoroSpeed());
   return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_SPEED;
 }
 
@@ -157,9 +161,8 @@ function readSpeed(): number {
  * this string without inserting one.
  */
 function readWasmPaths(): string {
-  const configured = process.env.NEXT_PUBLIC_TTS_KOKORO_WASM_PATH?.trim();
-  const base =
-    configured || `${process.env.NEXT_PUBLIC_BASE_PATH?.trim() ?? ''}/ort`;
+  const configured = appConfig.ttsKokoroWasmPath().trim();
+  const base = configured || `${appConfig.basePath().trim()}/ort`;
   return base.endsWith('/') ? base : `${base}/`;
 }
 
@@ -173,11 +176,7 @@ function readWasmPaths(): string {
  * silently ineffective.
  */
 function readVoice(selected?: string | null): string {
-  return (
-    selected?.trim() ||
-    process.env.NEXT_PUBLIC_TTS_KOKORO_VOICE?.trim() ||
-    DEFAULT_VOICE
-  );
+  return selected?.trim() || appConfig.ttsKokoroVoice().trim() || DEFAULT_VOICE;
 }
 
 /**
@@ -192,7 +191,7 @@ function readVoice(selected?: string | null): string {
  * 404 halfway through a 310 MB download.
  */
 export function resolveModelHost(): string {
-  const raw = process.env.NEXT_PUBLIC_TTS_KOKORO_MODEL_HOST?.trim();
+  const raw = appConfig.ttsKokoroModelHost().trim();
   if (!raw) return DEFAULT_MODEL_HOST;
   const withScheme = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
   try {
@@ -203,10 +202,7 @@ export function resolveModelHost(): string {
 }
 
 function readModelRevision(): string {
-  return (
-    process.env.NEXT_PUBLIC_TTS_KOKORO_MODEL_REVISION?.trim() ||
-    DEFAULT_MODEL_REVISION
-  );
+  return appConfig.ttsKokoroModelRevision().trim() || DEFAULT_MODEL_REVISION;
 }
 
 /** `{host}/{model}/resolve/{revision}`, the prefix every model file hangs off. */
@@ -249,8 +245,7 @@ export function resolveKokoroConfig(
 ): KokoroConfig {
   const device = detectDevice();
   return {
-    modelId:
-      process.env.NEXT_PUBLIC_TTS_KOKORO_MODEL?.trim() || DEFAULT_MODEL_ID,
+    modelId: appConfig.ttsKokoroModel().trim() || DEFAULT_MODEL_ID,
     modelHost: resolveModelHost(),
     modelRevision: readModelRevision(),
     dtype: readDtype(device),
@@ -288,7 +283,7 @@ const VALID_IBLAI_MODES: readonly string[] = [
 ] as const;
 
 export function resolveIblaiMode(): IblaiMode {
-  const raw = process.env.NEXT_PUBLIC_TTS_IBLAI_MODE?.trim();
+  const raw = appConfig.ttsIblaiMode().trim().toLowerCase();
   return raw && VALID_IBLAI_MODES.includes(raw) ? (raw as IblaiMode) : 'auto';
 }
 
