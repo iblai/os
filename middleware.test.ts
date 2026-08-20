@@ -140,6 +140,19 @@ describe('CSP middleware', () => {
     expect(connectSrc).toContain('https://*.s3.amazonaws.com');
   });
 
+  it('allows the GitHub REST API in connect-src (dataset branch lookup)', () => {
+    const csp = cspOf(middleware(req())) ?? '';
+    const directive = (name: string) =>
+      csp
+        .split(';')
+        .map((d) => d.trim())
+        .find((d) => d.startsWith(`${name} `));
+    // The datasets tab reads /repos/:owner/:repo/branches from the browser.
+    expect(directive('connect-src')).toContain('https://api.github.com');
+    // connect-src only — the API is never framed nor loaded as a script.
+    expect(directive('frame-src')).not.toContain('https://api.github.com');
+  });
+
   it('does not duplicate an ibl-domain API base (already wildcarded)', () => {
     vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', 'https://api.iblai.app');
     const csp = cspOf(middleware(req())) ?? '';
