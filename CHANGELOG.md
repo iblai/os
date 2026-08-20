@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.129.1](https://github.com/iblai/os/compare/v0.129.0...v0.129.1) (2026-08-20)
+
+### Bug Fixes
+
+* **embed:** persist embed-mode params so they survive hard navigations ([3284b09](https://github.com/iblai/os/commit/3284b09bf95bb9374cba8274b489f0afeebb63cc))
+
 ## [0.129.0](https://github.com/iblai/os/compare/v0.128.8...v0.129.0) (2026-08-19)
 
 ### Features
