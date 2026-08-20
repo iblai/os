@@ -52,6 +52,28 @@ describe('CSP middleware', () => {
     expect(csp).toMatch(/connect-src [^;]*https:\/\/assets\.ibl\.ai/);
   });
 
+  it('accepts a full URL for NEXT_PUBLIC_ASSET_CDN, not just a bare host', () => {
+    vi.stubEnv('NEXT_PUBLIC_ASSET_CDN', 'https://cdn.example.com/base');
+    const csp = cspOf(middleware(req())) ?? '';
+    expect(csp).toMatch(/font-src [^;]*https:\/\/cdn\.example\.com/);
+  });
+
+  it('CSP_PARTNER_HOSTS REPLACES the default partner hosts', () => {
+    vi.stubEnv('CSP_PARTNER_HOSTS', 'https://lms.example.edu');
+    const csp = cspOf(middleware(req())) ?? '';
+    expect(csp).toMatch(/connect-src [^;]*https:\/\/lms\.example\.edu/);
+    // Each https:// partner also gets its wss:// twin for ASGI.
+    expect(csp).toMatch(/connect-src [^;]*wss:\/\/lms\.example\.edu/);
+    // Overriding drops the Syracuse default rather than appending to it.
+    expect(csp).not.toContain('syr.edu');
+  });
+
+  it('ignores a malformed asset CDN without throwing', () => {
+    vi.stubEnv('NEXT_PUBLIC_ASSET_CDN', 'not a cdn');
+    expect(() => middleware(req())).not.toThrow();
+    expect(cspOf(middleware(req()))).not.toContain('not a cdn');
+  });
+
   it('omits the asset CDN origin from CSP when NEXT_PUBLIC_ASSET_CDN is unset', () => {
     vi.stubEnv('NEXT_PUBLIC_ASSET_CDN', '');
     expect(cspOf(middleware(req()))).not.toContain('assets.ibl.ai');
