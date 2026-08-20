@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.129.2](https://github.com/iblai/os/compare/v0.129.1...v0.129.2) (2026-08-20)
+
+### Bug Fixes
+
+* **csp:** allow api.github.com in connect-src ([4a945ad](https://github.com/iblai/os/commit/4a945ad15dbb88fe8bdb1cd71a88b9235992120f))
+
+### Styles
+
+* apply prettier to CHANGELOG and deployment doc ([053caa2](https://github.com/iblai/os/commit/053caa25a8c81eae5a9c628e43e6e3a89d16e1b8))
+
+### Tests
+
+* **csp:** cover asset-CDN and partner-host branches ([decfa62](https://github.com/iblai/os/commit/decfa6267340f0c93df89ba36c9578928c2378c1))
+
 ## [0.129.1](https://github.com/iblai/os/compare/v0.129.0...v0.129.1) (2026-08-20)
 
 ### Bug Fixes
