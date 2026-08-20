@@ -8,7 +8,7 @@ This guide shows how to ship every surface **Web, macOS, Windows/Surface, Linux,
 
 There is **one** frontend — the Next.js web app. Every native app is a thin **native webview shell that loads that web app**. So there are only two things to configure:
 
-| Layer                                                       | What it is                                                | How you point it at our backend                                        |
+| Layer                                                       | What it is                                                | How you point it at our backend                                         |
 | ----------------------------------------------------------- | --------------------------------------------------------- | ----------------------------------------------------------------------- |
 | **Web app**                                                 | The Next.js SPA (also what you self-host at your domain)  | `NEXT_PUBLIC_*` env vars — build-time **or** runtime (`window.__ENV__`) |
 | **Native shells** (macOS / Windows / Linux / iOS / Android) | Tauri wrappers that load your hosted web app in a webview | `TAURI_DEV_URL` **compile-time** env var → your web app's URL           |
@@ -27,15 +27,15 @@ So the recipe for every native platform is the same: **deploy the web app at you
 
 Copy [`.env.example`](../.env.example) → `.env` and point the core URLs at our deployment. The ones that matter for "against our backend":
 
-| Variable                                                           | Points at                                            | Example                       |
-| ------------------------------------------------------------------ | ---------------------------------------------------- | ------------------------------|
-| `NEXT_PUBLIC_AUTH_URL`                                             | our login / auth SPA                                 | `https://login.iblai.app`     |
-| `NEXT_PUBLIC_API_BASE_URL`                                         | our API gateway (SDK derives `/lms`, `/dm`, `/axd`)  | `https://api.iblai.app`       |
-| `NEXT_PUBLIC_LEGACY_LMS_URL`                                       | legacy LMS, if separate                              | `https://learn.iblai.app`     |
-| `NEXT_PUBLIC_BASE_WS_URL`                                          | our ASGI / websocket host                            | `wss://asgi.data.iblai.app`   |
-| `NEXT_PUBLIC_IBL_LIVE_KIT_SERVER_URL`                              | our LiveKit server (voice / screen-share)            | `wss://livekit.call.iblai.app`|
-| `NEXT_PUBLIC_MENTOR_URL` / `NEXT_PUBLIC_MENTOR_IFRAME_URL`         | your web app's own URL (embeds / deep-links)         | `https://app.example.com`     |
-| `NEXT_PUBLIC_MAIN_TENANT_KEY` / `NEXT_PUBLIC_PLATFORM_BASE_DOMAIN` | your tenant + domain                                 | `main` / `example.com`        |
+| Variable                                                           | Points at                                           | Example                        |
+| ------------------------------------------------------------------ | --------------------------------------------------- | ------------------------------ |
+| `NEXT_PUBLIC_AUTH_URL`                                             | our login / auth SPA                                | `https://login.iblai.app`      |
+| `NEXT_PUBLIC_API_BASE_URL`                                         | our API gateway (SDK derives `/lms`, `/dm`, `/axd`) | `https://api.iblai.app`        |
+| `NEXT_PUBLIC_LEGACY_LMS_URL`                                       | legacy LMS, if separate                             | `https://learn.iblai.app`      |
+| `NEXT_PUBLIC_BASE_WS_URL`                                          | our ASGI / websocket host                           | `wss://asgi.data.iblai.app`    |
+| `NEXT_PUBLIC_IBL_LIVE_KIT_SERVER_URL`                              | our LiveKit server (voice / screen-share)           | `wss://livekit.call.iblai.app` |
+| `NEXT_PUBLIC_MENTOR_URL` / `NEXT_PUBLIC_MENTOR_IFRAME_URL`         | your web app's own URL (embeds / deep-links)        | `https://app.example.com`      |
+| `NEXT_PUBLIC_MAIN_TENANT_KEY` / `NEXT_PUBLIC_PLATFORM_BASE_DOMAIN` | your tenant + domain                                | `main` / `example.com`         |
 
 See [`.env.example`](../.env.example) for the full list (branding, Stripe, feature flags, etc.).
 
@@ -66,7 +66,7 @@ docker run -p 5000:5000 --env-file .env iblos   # entrypoint.sh injects window._
 
 ## 3. macOS (.dmg direct download + Mac App Store)
 
-Build the web frontend, then the signed app — pointing it at  backend via `TAURI_DEV_URL`:
+Build the web frontend, then the signed app — pointing it at backend via `TAURI_DEV_URL`:
 
 ```bash
 # Direct-download .dmg (Developer ID, notarized):
@@ -161,7 +161,7 @@ Point `extensions/chrome/panel.html`'s `mentorurl` at your web app, bump `extens
 
 ## Reference: what's automated vs. manual
 
-| Surface        | Point at our backend                            | Build                             | Official release path             |
+| Surface        | Point at our backend                             | Build                             | Official release path             |
 | -------------- | ------------------------------------------------ | --------------------------------- | --------------------------------- |
 | **Web**        | `NEXT_PUBLIC_*` (build **or** runtime `__ENV__`) | `pnpm build` / Docker             | ✅ CI → Docker image              |
 | **macOS**      | `TAURI_DEV_URL` (compile-time)                   | `pnpm tauri:build:devid` / `:mas` | ✅ CI → signed DMG + Release      |
