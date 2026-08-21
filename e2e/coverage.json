@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "lastUpdated": "2026-08-11",
+  "lastUpdated": "2026-08-20",
   "summary": {
-    "totalCheckpoints": 638,
-    "coveredCheckpoints": 607,
+    "totalCheckpoints": 641,
+    "coveredCheckpoints": 610,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 11,
     "pendingCheckpoints": 8,
@@ -2649,6 +2649,22 @@
           "id": "VO-12",
           "description": "Re-enabling the in-tab \"Enable voice calls\" capability toggle ungates the Voice tab's sub-tab content (data-enabled=\"true\")",
           "status": "covered"
+        },
+        {
+          "id": "VO-13",
+          "description": "Selecting the OpenAI provider reveals the Voice Instructions prompt card, its character counter, and all three preset chips (warm/calm/energetic); switching to the Browser provider hides the card again",
+          "status": "covered"
+        },
+        {
+          "id": "VO-14",
+          "description": "Applying the \"warm\" Voice Instructions preset chip fills the card with the canned text, the counter shows a non-zero /1000 value, the tab-level Save button enables, and saving surfaces the \"Voice saved\" toast",
+          "status": "covered"
+        },
+        {
+          "id": "VO-15",
+          "description": "Custom Voice Instructions set via the editor, saved, and reloaded after closing and reopening the Edit Agent modal show the persisted value (true round-trip through mentor settings' voice_instructions field, not leftover in-memory form state)",
+          "status": "covered",
+          "note": "An over-cap (>1000 chars) checkpoint is intentionally not covered: typing past the cap requires pressSequentially through the ProseMirror contenteditable one character at a time, which is prohibitively slow in a per-test suite"
         }
       ]
     },
@@ -3640,14 +3656,15 @@
         },
         {
           "id": "lti-07",
-          "description": "Admin creates an LTI link and it appears in the links list",
-          "status": "covered"
+          "description": "Admin creates an LTI link (async_create: true — backend returns 202 and builds an edX course via celery in the background); the row appears immediately with a pending/building status badge, and clicking the header Refresh button (via waitForLinkReady) drives the badge to Ready",
+          "status": "covered",
+          "note": "Link creation is asynchronous — the create modal closes on the 202, not on the build finishing. This checkpoint also covers the header Refresh affordance, since waitForLinkReady clicks it while the build is in flight."
         },
         {
           "id": "lti-08",
           "description": "Admin edits (renames) an LTI link and the new name appears in the list while the old name is gone",
           "status": "covered",
-          "note": "Self-contained mentor: the backend allows a single LTI link per mentor (the create button is not rendered once a link exists) and the SDK has no delete-link helper, so creating a second link on the shared worker mentor after lti-07 would time out"
+          "note": "Self-contained mentor: the backend allows a single LTI link per mentor (the create button is not rendered once a link exists) and the SDK has no delete-link helper, so creating a second link on the shared worker mentor after lti-07 would time out. The rename waits for waitForLinkReady first — the edit pencil only renders once the async-created link's status is Ready (editable = !inProgress && !failed)."
         },
         {
           "id": "lti-10",
@@ -3693,7 +3710,7 @@
         },
         {
           "id": "lti-sdk-01",
-          "description": "PENDING (SDK dependency): When an admin creates the first LTI link, is_lti_accessible is auto-enabled via the API — not yet implemented; AgentLtiTab exposes no post-create callback hook",
+          "description": "PENDING (not UI-testable): When an admin creates the first LTI link, is_lti_accessible is auto-enabled via a best-effort editMentor call after create — now implemented in the SDK, but the LTI tab's CapabilityGate makes the Links create button unreachable through the UI while the capability is off, so the trigger path can't be exercised from a real user flow",
           "status": "pending"
         }
       ]

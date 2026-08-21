@@ -19,16 +19,20 @@ import {
   expectLinkInList,
   expectLinkNotInList,
   expectLinksEmpty,
+  expectLinkStatus,
   expectLtiHeader,
   expectToolsEmpty,
+  getLinksRefreshButton,
   openKeyDetail,
   readEndpointUrl,
   readKeyPublicJwk,
   readKeyPublicKey,
+  refreshLinks,
   renameKey,
   switchToLtiSubTab,
   type LtiEndpoint,
   type LtiKeySetMode,
+  type LtiLinkStatus,
   type LtiSubTab,
   type LtiToolFormData,
 } from '@iblai/iblai-js/playwright';
@@ -312,12 +316,17 @@ export class LtiTab {
   /**
    * Submit the (already-open, already-filled) link modal and wait for it to
    * close. Reimplements the SDK's `submitLinkModal` because that helper caps
-   * the modal-close wait at 15s: the create/rename POST can take longer on
-   * staging (the data layer silently retries transient failures, holding the
-   * modal in its "Creating…" state well past 15s), so the SDK's assertion
-   * flakes even though the mutation ultimately succeeds (Journey 56 lti-07).
+   * the modal-close wait at 15s: on the RENAME path the POST can take longer
+   * on staging (the data layer silently retries transient failures, holding
+   * the modal in its "Saving…" state well past 15s), so the SDK's assertion
+   * flakes even though the mutation ultimately succeeds (Journey 56 lti-07/08).
    * We keep the same click semantics (button enabled → click) but give the
-   * round-trip a generous 45s to complete before failing.
+   * round-trip a generous 45s to complete before failing. On the CREATE path
+   * link creation is now `async_create: true` — the backend answers 202 and
+   * the modal closes immediately (well under 45s); the row then appears with
+   * a pending/building status badge and the actual edX-course build finishes
+   * later in the background (see `waitForLinkReady` below). The 45s budget
+   * is therefore mostly slack that only the rename path ever needs.
    */
   private async submitLinkModal(): Promise<void> {
     const modal = getLinkModal(this.dialog);
@@ -333,6 +342,100 @@ export class LtiTab {
 
   expectLinkNotInList(name: string): Promise<void> {
     return expectLinkNotInList(this.dialog, name);
+  }
+
+  /**
+   * Assert a link row's async-create status badge (`data-testid="lti-link-status"`,
+   * `data-status`) matches `status`. Creation is asynchronous
+   * (`async_create: true`): the row appears immediately with `pending` or
+   * `building` and the backend builds an edX course via celery in the
+   * background — the UI does NOT auto-poll, so the badge only advances when
+   * something calls `refreshLinks()`/`waitForLinkReady()` (or the row is
+   * re-fetched some other way).
+   */
+  expectLinkStatus(name: string, status: LtiLinkStatus): Promise<void> {
+    return expectLinkStatus(this.dialog, name, status);
+  }
+
+  /**
+   * A link row's status badge locator. Prefer `expectLinkStatus` for a single
+   * exact state; use this when the expected state is a SET — e.g. right after
+   * create the badge may already have advanced past `pending` (the celery
+   * build races the assertion), so pin `data-status` with a regex instead.
+   */
+  linkStatusBadge(name: string): Locator {
+    return this.dialog
+      .getByTestId(LtiTab.TEST_IDS.links.row)
+      .filter({ hasText: name })
+      .getByTestId(LtiTab.TEST_IDS.links.status);
+  }
+
+  /**
+   * The header "Refresh" button for the Links list. Rendered ONLY while at
+   * least one link is `pending`/`building` (`hasLinkInProgress`) — absent
+   * once every link is `ready` or `failed`, and absent when there is no link
+   * at all.
+   */
+  get linksRefreshButton(): Locator {
+    return getLinksRefreshButton(this.dialog);
+  }
+
+  /**
+   * Manually re-fetch the links list via the header Refresh button. Only
+   * useful while a build is in flight (see `linksRefreshButton`) — the UI
+   * never polls on its own.
+   */
+  refreshLinks(): Promise<void> {
+    return refreshLinks(this.dialog);
+  }
+
+  /**
+   * Wait for an async link build to finish (status `ready`), clicking the
+   * header Refresh button every ~5s in the meantime — the UI does not
+   * auto-poll. Throws if the build turns `failed`. The build creates an edX
+   * course via celery so the default timeout is a generous 3 minutes;
+   * callers driving this from a fresh worker/mentor setup should give the
+   * surrounding test a longer `test.setTimeout` (setup + build easily clears
+   * the default per-test timeout).
+   *
+   * Reimplements the SDK's `waitForLinkReady` because that helper has a
+   * check-then-click race: it reads the badge's `data-status`, sleeps 5s,
+   * then clicks Refresh unconditionally — but the Refresh button is only
+   * rendered while a build is in flight (`hasLinkInProgress`), so when the
+   * in-flight refetch flips the status to `ready` during the sleep the
+   * button unmounts and the blind click times out (observed as a 30s
+   * `locator.click` TimeoutError on `lti-links-refresh-button`). We keep the
+   * same poll-and-refresh semantics but re-read the badge after each sleep
+   * and only click Refresh while it is actually visible; a vanished button
+   * means the list just refetched, so we simply loop and re-read.
+   *
+   * NOTE: a link's edit pencil is only rendered once `editable = !inProgress
+   * && !failed` — i.e. a link cannot be renamed until this resolves with
+   * `ready`.
+   */
+  async waitForLinkReady(name: string, timeoutMs = 180_000): Promise<void> {
+    const badge = this.linkStatusBadge(name);
+    const deadline = Date.now() + timeoutMs;
+    for (;;) {
+      const status = await badge.getAttribute('data-status').catch(() => null);
+      if (status === 'ready') return;
+      if (status === 'failed') {
+        throw new Error(`LTI link build failed: ${name}`);
+      }
+      if (Date.now() >= deadline) {
+        throw new Error(
+          `Timed out waiting for LTI link to be ready: ${name} (last: ${status})`,
+        );
+      }
+      await this.page.waitForTimeout(5_000);
+      // The refetch triggered by the previous Refresh click may resolve
+      // during the sleep: the badge flips and the button unmounts. Guard the
+      // click on visibility and swallow a click that loses the race — the
+      // top-of-loop re-read decides the real outcome either way.
+      if (await this.linksRefreshButton.isVisible().catch(() => false)) {
+        await this.linksRefreshButton.click({ timeout: 5_000 }).catch(() => {});
+      }
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -599,4 +702,10 @@ export class LtiTab {
 }
 
 // Re-export SDK types so journey specs can import them from this one location.
-export type { LtiSubTab, LtiEndpoint, LtiKeySetMode, LtiToolFormData };
+export type {
+  LtiSubTab,
+  LtiEndpoint,
+  LtiKeySetMode,
+  LtiLinkStatus,
+  LtiToolFormData,
+};

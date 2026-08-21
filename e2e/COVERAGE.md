@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-08-12 | 638 checkpoints (607 covered, 8 pending/fixme, 11 not-reproducible in default env, 12 deprecated) | 69 journeys (68 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-08-20 | 641 checkpoints (610 covered, 8 pending/fixme, 11 not-reproducible in default env, 12 deprecated) | 69 journeys (68 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -892,13 +892,15 @@ Covers the two user-facing features added in [iblai-platform#1902](https://githu
 
 ---
 
-## Journey 47: Mentor Voice Tab (12 checkpoints) — `journeys/47-mentor-voice-tab.spec.ts`
+## Journey 47: Mentor Voice Tab (15 checkpoints) — `journeys/47-mentor-voice-tab.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/voice-tab.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/tabs/index.ts`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `lib/constants.ts`
 
 The Voice tab is a thin wrapper around the SDK's `AgentVoiceTab` (`@iblai/web-containers/next`). The wrapper forwards `tenantKey` / `mentorId` / `username` from URL params + the navigate hook so the SDK's `useGetMentorSettingsQuery`, `useEditMentorMutation`, and the new `useGet/Create/UpdateCallConfigurationMutation` hooks resolve correctly. Selectors come from the SDK's official Playwright helpers (`@iblai/iblai-js/playwright`) — never patch a selector in the spec; if labels are overridden via the `labels` prop, update the helper imports in the page object.
 
 The Settings tab also surfaces the smart-document-retrieval voice-call toggle (`use_function_calling_for_rag`) so admins can flip it without leaving the main configuration panel — save routes it through the same `/call-configurations/` endpoint the SDK's Voice tab uses. The "Enable voice calls" (`show_voice_call`) master toggle moved off Settings → Capabilities into an in-tab `CapabilityGate` at the top of the Voice tab itself (feat/2040) and auto-saves on click (optimistic local state) — no footer Save button involved. The Voice tab is now always mounted — `hooks/use-mentor-segments.ts` no longer gates it — and both sub-tabs render inside a grayed + inert `capability-gate-content` wrapper while the toggle is off. ("Enable screen sharing" moved off Settings too — it now lives on the Screen tab's own capability toggle, see journey 48.)
+
+A "Voice Instructions" prompt card (`data-testid="voice-instructions-card"`) renders below the voice picker whenever the OpenAI or Google provider is selected (never Browser), following the same PromptCard + shared `EditPromptModal` pattern as Prompts / Screen share. Editing it writes local form state only; the tab-level Save button (`voice-save-button`) persists `voice_instructions` (and `voice_provider`) via `editMentor` with a distinct "Voice saved" toast. A `{len}/1000` counter turns red and disables Save past the soft cap — no client-side truncation. The `VoiceTab` page object reimplements the SDK's `setVoiceInstructions` helper rather than delegating to it: that helper resolves the editor/Save button and its final close-check via a scope-free `page.getByRole('dialog')`, but the Edit Agent modal is itself `role="dialog"` in this host, so two dialogs are open at once while the instructions editor is up — the same portal-scoping hazard documented for `LtiTab.submitToolModal`.
 
 - [x] VO-01: Voice tab label is visible in the Edit Mentor modal sidebar (always mounted)
 - [x] VO-02: Voice tab heading renders correctly
@@ -912,6 +914,9 @@ The Settings tab also surfaces the smart-document-retrieval voice-call toggle (`
 - [x] VO-10: Flipping the smart-document-retrieval voice-call toggle in Settings and clicking Save persists to the CallConfiguration endpoint and shows the success toast
 - [x] VO-11: Voice tab stays visible (always mounted) and its content grays (`data-enabled="false"`) when the in-tab "Enable voice calls" capability toggle is off
 - [x] VO-12: Re-enabling the in-tab "Enable voice calls" capability toggle ungates the Voice tab's sub-tab content
+- [x] VO-13: Selecting the OpenAI provider reveals the Voice Instructions card, its character counter, and all three preset chips (warm/calm/energetic); switching to Browser hides the card
+- [x] VO-14: Applying the "warm" Voice Instructions preset fills the card with the canned text, the counter shows a non-zero `/1000` value, the tab-level Save button enables, and saving surfaces the "Voice saved" toast
+- [x] VO-15: Custom Voice Instructions set via the editor, saved, and reloaded after closing and reopening the Edit Agent modal show the persisted value — a true round-trip through mentor settings' `voice_instructions` field, not leftover in-memory form state _(an over-cap >1000-char checkpoint is intentionally not covered — typing past the cap requires `pressSequentially` through the ProseMirror contenteditable one character at a time, prohibitively slow in a per-test suite)_
 
 ---
 
@@ -1112,7 +1117,9 @@ Covers the LTI top-level tab in the Edit Mentor (Agent) modal, rendered by the S
 
 The LTI segment lives under the **Integrations** sidebar category. Tests are parallel-safe via two strategies: a worker-scoped `ltiMentorUrl` fixture (one LTI-enabled mentor per worker, deleted on teardown) shared by read-only and mutation tests; and self-contained tests that create and delete their own mentor in a `finally` block.
 
-Sub-resource tests (Links / Keys / Tools) still require `is_lti_accessible=true` on the backend because auto-enable-on-link-creation (`lti-sdk-01`) is not yet implemented in the SDK.
+Sub-resource tests (Links / Keys / Tools) still require `is_lti_accessible=true` on the backend. Auto-enable-on-link-creation (`lti-sdk-01`) IS implemented in the SDK now (a best-effort `editMentor` call after a successful create), but the LTI tab's `CapabilityGate` makes the sub-tab content `inert`/`pointer-events-none` while the capability is off, so the create button can't be reached through the UI to trigger that side effect in the first place — the fixture still enables the capability explicitly.
+
+LTI link creation is now **asynchronous**: the data layer sends `async_create: true`, the backend answers 202, and the actual edX-course build runs via celery in the background. The create/rename modal closes on the 202; the new row appears with a `pending`/`building` status badge (`data-testid="lti-link-status"`). The UI does not auto-poll — a header Refresh button (`data-testid="lti-links-refresh-button"`) renders only while a build is in flight, and the SDK's `waitForLinkReady` helper (wrapped by `LtiTab.waitForLinkReady`) drives it by clicking Refresh every ~5s until the badge reports `ready` (throws on `failed`). A link's rename pencil only renders once its status is `ready`.
 
 ### Visibility (lti-01, lti-03, lti-04)
 
@@ -1127,8 +1134,8 @@ Sub-resource tests (Links / Keys / Tools) still require `is_lti_accessible=true`
 ### Links sub-tab (lti-06..lti-08)
 
 - [x] lti-06: Admin opens the LTI Links sub-tab on a fresh mentor and sees the empty state when no links exist
-- [x] lti-07: Admin creates an LTI link and it appears in the links list
-- [x] lti-08: Admin edits (renames) an LTI link and the new name appears in the list while the old name is gone _(self-contained mentor: the backend allows a single LTI link per mentor and there is no delete-link helper, so a second create on the shared worker mentor after lti-07 would fail)_
+- [x] lti-07: Admin creates an LTI link (async — 202 + celery-built edX course) and it appears in the links list with a pending/building status badge; clicking the header Refresh button (via `waitForLinkReady`) drives the badge to Ready _(also exercises the Refresh affordance, since `waitForLinkReady` clicks it while the build is in flight)_
+- [x] lti-08: Admin edits (renames) an LTI link and the new name appears in the list while the old name is gone _(self-contained mentor: the backend allows a single LTI link per mentor and there is no delete-link helper, so a second create on the shared worker mentor after lti-07 would fail; the rename waits for `waitForLinkReady` first since the edit pencil only renders once the async-created link's status is Ready)_
 
 ### Keys sub-tab (lti-10..lti-12)
 
@@ -1149,7 +1156,7 @@ Sub-resource tests (Links / Keys / Tools) still require `is_lti_accessible=true`
 
 ### SDK-pending (lti-sdk-01)
 
-- [ ] lti-sdk-01: PENDING (SDK dependency) — When an admin creates the first LTI link, `is_lti_accessible` is auto-enabled via the API without requiring the "Enable LTI launches" toggle to be turned on manually. Not yet implemented: `AgentLtiTab` exposes no post-create callback hook and there are no public LTI data-layer hooks in `@iblai/iblai-js`.
+- [ ] lti-sdk-01: PENDING (not UI-testable) — When an admin creates the first LTI link, `is_lti_accessible` is auto-enabled via a best-effort `editMentor` call after create. This IS implemented in the SDK now, but the LTI tab's `CapabilityGate` makes the Links create button unreachable through the UI while the capability is off, so the trigger path can never be exercised from a real user flow — only from a caller that bypasses the gate (e.g. a direct API create), which is outside this UI journey's scope.
 
 ---
 
