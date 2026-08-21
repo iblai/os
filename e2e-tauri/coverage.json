@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "lastUpdated": "2026-08-15",
+  "lastUpdated": "2026-08-22",
   "summary": {
-    "totalCheckpoints": 29,
+    "totalCheckpoints": 30,
     "coveredCheckpoints": 18,
-    "pendingCheckpoints": 11,
+    "pendingCheckpoints": 12,
     "deprecatedCheckpoints": 0,
     "notReproducibleCheckpoints": 0,
     "percent": 100,
@@ -196,6 +196,11 @@
         {
           "id": "code-19",
           "description": "A second New Chat in one app run gets its own fresh workspace, and a chat’s folder follows it from the ephemeral first-turn key to its real session id",
+          "status": "pending"
+        },
+        {
+          "id": "code-20",
+          "description": "Killing the opencode process mid-turn: the answer continues in the same bubble with no visible interruption (one silent respawn re-sends the prompt), and a second kill in the same turn surfaces ollama:error",
           "status": "pending"
         }
       ]

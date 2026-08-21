@@ -21,6 +21,7 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::OnceLock;
+use std::time::Duration;
 
 use axum::body::Body;
 use axum::extract::Request;
@@ -70,6 +71,9 @@ struct Upstream {
     base: String,
     /// The real DM token — held here, never handed to the agent.
     token: String,
+    /// The platform (tenant) key this session serves — surfaced to the agent
+    /// in the injected guidance so skills know which org they act on.
+    tenant: String,
     /// Whether this session has skills wired — the gate for injecting
     /// [`IBLAI_INSTRUCTIONS`] into its chat/completions calls.
     inject_guidance: bool,
@@ -120,10 +124,32 @@ pub async fn set_learner(username: &str) {
     *learner().write().await = (!name.is_empty()).then(|| name.to_string());
 }
 
+/// The signed-in learner's username, for the child's `IBLAI_USERNAME` env var
+/// at spawn and the identity line in the injected guidance. `None` until a
+/// non-empty username arrives — callers add nothing then.
+pub async fn learner_username() -> Option<String> {
+    learner().read().await.clone()
+}
+
+/// Longest silence tolerated between upstream read operations. Generous — a
+/// model can legitimately think for minutes between SSE chunks — but bounded,
+/// so a wedged upstream fails the turn instead of hanging it forever.
+/// Deliberately a per-read timeout, never a total one: a healthy streamed
+/// completion may stay open far longer than any total budget, and the DM side
+/// heartbeats every ~15s, so this only trips on a genuinely dead path.
+// ponytail: 300s guess; shrink if wedged turns linger, grow if long thinks get cut.
+const UPSTREAM_READ_TIMEOUT: Duration = Duration::from_secs(300);
+
+fn http_client(read_timeout: Duration) -> reqwest::Client {
+    reqwest::Client::builder()
+        .read_timeout(read_timeout)
+        .build()
+        .expect("reqwest client")
+}
+
 fn http() -> &'static reqwest::Client {
     static C: OnceLock<reqwest::Client> = OnceLock::new();
-    // No timeout: a streamed completion legitimately stays open for minutes.
-    C.get_or_init(reqwest::Client::new)
+    C.get_or_init(|| http_client(UPSTREAM_READ_TIMEOUT))
 }
 
 /// The OpenAI-compatible paths the model client actually calls. Anything else 404s,
@@ -157,24 +183,31 @@ pub fn new_secret() -> String {
     hex::encode(h.finalize())
 }
 
-/// Start the proxy on an OS-assigned loopback port (once) and return the port.
+/// Start the proxy on an OS-assigned loopback port and return the port,
+/// re-binding when a previously started server no longer answers — the server
+/// task dies with its runtime (tests) or on a fatal accept error, and a
+/// memoized dead port would wedge every future session until an app restart.
 pub async fn ensure_started() -> Result<u16, String> {
-    static PORT: OnceLock<u16> = OnceLock::new();
-    static START: OnceLock<Mutex<()>> = OnceLock::new();
+    static PORT: Mutex<Option<u16>> = Mutex::const_new(None);
 
-    if let Some(p) = PORT.get() {
-        return Ok(*p);
-    }
-    let _guard = START.get_or_init(|| Mutex::new(())).lock().await;
-    if let Some(p) = PORT.get() {
-        return Ok(*p);
+    // Holding the lock across probe + bind serializes concurrent starts.
+    let mut port = PORT.lock().await;
+    if let Some(p) = *port {
+        // Probe, don't trust: one loopback connect per session spawn.
+        if tokio::net::TcpStream::connect(("127.0.0.1", p))
+            .await
+            .is_ok()
+        {
+            return Ok(p);
+        }
+        eprintln!("[opencode-proxy] server on port {p} is gone — rebinding");
     }
 
     // Port 0 → the OS picks a free ephemeral port. Never a fixed one.
     let listener = tokio::net::TcpListener::bind(SocketAddr::from(([127, 0, 0, 1], 0)))
         .await
         .map_err(|e| format!("model proxy bind failed: {e}"))?;
-    let port = listener
+    let p = listener
         .local_addr()
         .map_err(|e| format!("model proxy addr failed: {e}"))?
         .port();
@@ -185,19 +218,28 @@ pub async fn ensure_started() -> Result<u16, String> {
             eprintln!("[opencode-proxy] server stopped: {e}");
         }
     });
-    let _ = PORT.set(port);
-    Ok(port)
+    *port = Some(p);
+    Ok(p)
 }
 
 /// Register a session's upstream + real token against its throwaway secret.
-/// `inject_guidance` marks a session with skills wired: its chat/completions
-/// calls get [`IBLAI_INSTRUCTIONS`] injected as a system message.
-pub async fn register(secret: &str, base: String, token: String, inject_guidance: bool) {
+/// `tenant` is the platform key the session serves (surfaced in the injected
+/// guidance); `inject_guidance` marks a session with skills wired: its
+/// chat/completions calls get [`IBLAI_INSTRUCTIONS`] injected as a system
+/// message.
+pub async fn register(
+    secret: &str,
+    base: String,
+    token: String,
+    tenant: String,
+    inject_guidance: bool,
+) {
     sessions().write().await.insert(
         secret.to_string(),
         Upstream {
             base,
             token,
+            tenant,
             inject_guidance,
         },
     );
@@ -216,11 +258,38 @@ pub async fn unregister(secret: &str) {
     sessions().write().await.remove(secret);
 }
 
-/// Insert [`IBLAI_INSTRUCTIONS`] as a system message into a chat/completions
-/// body — after the last LEADING system message, so opencode's own system
-/// prompt keeps first position. `None` = forward the body untouched (not
-/// JSON, no `messages` array, or the guidance is somehow already present).
-fn inject_system_guidance(body: &[u8]) -> Option<Vec<u8>> {
+/// The identity bullets appended to the guidance: who is signed in and which
+/// platform the session serves, plus the env vars carrying the same values —
+/// so skills never have to ask (or guess) the username or platform key.
+fn identity_lines(learner: Option<&str>, tenant: Option<&str>) -> String {
+    let mut out = String::new();
+    if let Some(l) = learner {
+        out.push_str(&format!(
+            "- The signed-in platform username is `{l}` (also exported to your \
+shell as the IBLAI_USERNAME environment variable) — use it wherever a skill \
+needs the platform username.\n"
+        ));
+    }
+    if let Some(t) = tenant {
+        out.push_str(&format!(
+            "- The active platform (tenant) key is `{t}` (also exported as the \
+IBLAI_PLATFORM_KEY environment variable) — use it wherever a skill needs the \
+platform key.\n"
+        ));
+    }
+    out
+}
+
+/// Insert [`IBLAI_INSTRUCTIONS`] (plus the caller's [`identity_lines`]) as a
+/// system message into a chat/completions body — after the last LEADING system
+/// message, so opencode's own system prompt keeps first position. `None` =
+/// forward the body untouched (not JSON, no `messages` array, or the guidance
+/// is somehow already present).
+fn inject_system_guidance(
+    body: &[u8],
+    learner: Option<&str>,
+    tenant: Option<&str>,
+) -> Option<Vec<u8>> {
     let mut v: serde_json::Value = serde_json::from_slice(body).ok()?;
     let messages = v.get_mut("messages")?.as_array_mut()?;
     if messages.iter().any(|m| {
@@ -234,9 +303,10 @@ fn inject_system_guidance(body: &[u8]) -> Option<Vec<u8>> {
         .iter()
         .take_while(|m| m.get("role").and_then(|r| r.as_str()) == Some("system"))
         .count();
+    let content = format!("{IBLAI_INSTRUCTIONS}{}", identity_lines(learner, tenant));
     messages.insert(
         at,
-        serde_json::json!({ "role": "system", "content": IBLAI_INSTRUCTIONS }),
+        serde_json::json!({ "role": "system", "content": content }),
     );
     serde_json::to_vec(&v).ok()
 }
@@ -311,12 +381,14 @@ async fn forward(req: Request) -> Response {
     let Some(secret) = bearer(&parts.headers) else {
         return (StatusCode::UNAUTHORIZED, "missing key").into_response();
     };
-    let Some((base, token, inject)) = sessions()
-        .read()
-        .await
-        .get(&secret)
-        .map(|u| (u.base.clone(), u.token.clone(), u.inject_guidance))
-    else {
+    let Some((base, token, tenant, inject)) = sessions().read().await.get(&secret).map(|u| {
+        (
+            u.base.clone(),
+            u.token.clone(),
+            u.tenant.clone(),
+            u.inject_guidance,
+        )
+    }) else {
         return (StatusCode::UNAUTHORIZED, "unknown key").into_response();
     };
 
@@ -333,8 +405,11 @@ async fn forward(req: Request) -> Response {
     };
     // Skills-wired sessions get the ibl.ai guidance injected as a system
     // message, in flight — opencode's own conversation state never sees it.
+    // The identity lines read the app-global learner per request, so a login
+    // that lands mid-session takes effect on the next call.
     let bytes = if inject && path == "chat/completions" {
-        match inject_system_guidance(&bytes) {
+        let tenant_line = (!tenant.is_empty()).then_some(tenant.as_str());
+        match inject_system_guidance(&bytes, learner.as_deref(), tenant_line) {
             Some(patched) => axum::body::Bytes::from(patched),
             None => bytes,
         }
@@ -526,16 +601,25 @@ mod tests {
         assert_eq!(url.query(), Some("learner_id=us+er%26x%3Dy"));
     }
 
+    /// Serializes the tests that talk to the live proxy: `ensure_started()`
+    /// memoizes its port globally and each test's runtime kills the server it
+    /// spawned — the rebind probe recovers from that, but two live tests
+    /// interleaving could still race one another's requests mid-rebind.
+    fn live_proxy_lock() -> std::sync::MutexGuard<'static, ()> {
+        static L: OnceLock<std::sync::Mutex<()>> = OnceLock::new();
+        L.get_or_init(|| std::sync::Mutex::new(()))
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+    }
+
     /// The credit gate lives upstream: when the DM answers 402 on
     /// `chat/completions`, the agent must receive that 402 and its body EXACTLY.
     /// The proxy swaps auth — it never rewrites outcomes.
-    ///
-    /// NOTE: `ensure_started()` memoizes its port globally, and the server task it
-    /// spawns lives on THIS test's runtime, which dies when the test ends. Keep
-    /// this the only test that talks to the live proxy, or restructure first.
     #[tokio::test]
     async fn an_upstream_402_reaches_the_agent_unchanged() {
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+        let _live = live_proxy_lock();
 
         const BODY: &str = r#"{"error":"Payment required","status_code":402}"#;
 
@@ -573,6 +657,7 @@ mod tests {
             &secret,
             format!("http://{upstream_addr}/v1"),
             "real-dm-token".to_string(),
+            "main-tenant".to_string(),
             false,
         )
         .await;
@@ -612,7 +697,7 @@ mod tests {
         })
         .to_string();
 
-        let out = inject_system_guidance(body.as_bytes()).expect("must inject");
+        let out = inject_system_guidance(body.as_bytes(), None, None).expect("must inject");
         let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
         let msgs = v["messages"].as_array().unwrap();
 
@@ -640,7 +725,7 @@ mod tests {
         })
         .to_string();
 
-        let out = inject_system_guidance(body.as_bytes()).unwrap();
+        let out = inject_system_guidance(body.as_bytes(), None, None).unwrap();
         let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
         assert_eq!(v["messages"][0]["role"], "system");
         assert_eq!(v["messages"][1]["role"], "user");
@@ -650,15 +735,142 @@ mod tests {
     /// guidance patch must never break the model call it rides on.
     #[test]
     fn unpatchable_bodies_are_left_untouched() {
-        assert!(inject_system_guidance(b"not json at all").is_none());
-        assert!(inject_system_guidance(br#"{"prompt": "legacy completions"}"#).is_none());
+        assert!(inject_system_guidance(b"not json at all", None, None).is_none());
+        assert!(
+            inject_system_guidance(br#"{"prompt": "legacy completions"}"#, None, None).is_none()
+        );
 
-        // Already carrying the guidance → not doubled.
+        // Already carrying the guidance → not doubled, identity or not.
         let body = serde_json::json!({
             "messages": [{ "role": "system", "content": IBLAI_INSTRUCTIONS }]
         })
         .to_string();
-        assert!(inject_system_guidance(body.as_bytes()).is_none());
+        assert!(inject_system_guidance(body.as_bytes(), None, None).is_none());
+        assert!(inject_system_guidance(body.as_bytes(), Some("codey"), Some("acme")).is_none());
+    }
+
+    /// The agent must be TOLD who it acts for: the identity bullets carry the
+    /// username and platform key plus the env vars that mirror them.
+    #[test]
+    fn identity_lines_land_in_the_guidance() {
+        let body = serde_json::json!({
+            "messages": [{ "role": "user", "content": "deploy this" }]
+        })
+        .to_string();
+
+        let out = inject_system_guidance(body.as_bytes(), Some("codey"), Some("acme")).unwrap();
+        let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
+        let content = v["messages"][0]["content"].as_str().unwrap();
+        assert!(content.contains("username is `codey`"), "{content}");
+        assert!(content.contains("IBLAI_USERNAME"), "{content}");
+        assert!(
+            content.contains("platform (tenant) key is `acme`"),
+            "{content}"
+        );
+        assert!(content.contains("IBLAI_PLATFORM_KEY"), "{content}");
+
+        // No identity known → the guidance is exactly the base text, no stubs.
+        let out = inject_system_guidance(body.as_bytes(), None, None).unwrap();
+        let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
+        assert_eq!(v["messages"][0]["content"], IBLAI_INSTRUCTIONS);
+
+        // Each line stands alone when only one half is known.
+        assert!(identity_lines(Some("codey"), None).contains("IBLAI_USERNAME"));
+        assert!(!identity_lines(Some("codey"), None).contains("IBLAI_PLATFORM_KEY"));
+        assert!(identity_lines(None, Some("acme")).contains("IBLAI_PLATFORM_KEY"));
+        assert_eq!(identity_lines(None, None), "");
+    }
+
+    /// The env-var half of the same contract: what spawn exports as
+    /// `IBLAI_USERNAME` comes from here, and empty input must yield `None` so
+    /// the variable is not set at all rather than set to "".
+    #[tokio::test]
+    async fn the_signed_in_learner_is_exposed_for_the_child_env() {
+        set_learner("codey").await;
+        assert_eq!(learner_username().await.as_deref(), Some("codey"));
+        set_learner("   ").await;
+        assert_eq!(learner_username().await, None);
+    }
+
+    /// The "can't reconnect" half of the lost-connection bug: the old code
+    /// memoized the port forever, so once the server task died (its runtime
+    /// went away, or accept failed fatally) every future session registered
+    /// against a dead port until an app restart. The probe must detect the
+    /// death and rebind.
+    #[tokio::test]
+    async fn ensure_started_rebinds_after_its_server_dies() {
+        let _live = live_proxy_lock();
+
+        // Start the proxy on a runtime that then dies, taking the server with it.
+        let dead_port = std::thread::spawn(|| {
+            let rt = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .unwrap();
+            rt.block_on(ensure_started()).unwrap()
+            // rt drops here → the spawned axum task and its listener die.
+        })
+        .join()
+        .unwrap();
+        assert!(
+            tokio::net::TcpStream::connect(("127.0.0.1", dead_port))
+                .await
+                .is_err(),
+            "precondition: the old server must actually be gone"
+        );
+
+        // Pre-fix: the memoized dead port comes back and this connect fails.
+        let port = ensure_started().await.unwrap();
+        assert!(
+            tokio::net::TcpStream::connect(("127.0.0.1", port))
+                .await
+                .is_ok(),
+            "ensure_started must hand out a port that answers"
+        );
+    }
+
+    /// A wedged upstream must fail the turn, not hang it forever: the client's
+    /// read timeout is per-read (between chunks), so a stream that stops
+    /// mid-body errors out once the silence exceeds the budget.
+    #[tokio::test]
+    async fn a_stalled_upstream_read_times_out_between_chunks() {
+        use futures_util::StreamExt;
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+        // Canned upstream: send headers + a partial body, then hold the socket
+        // open silently forever.
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move {
+            let (mut sock, _) = listener.accept().await.unwrap();
+            let mut buf = [0u8; 4096];
+            let _ = sock.read(&mut buf).await;
+            let _ = sock
+                .write_all(b"HTTP/1.1 200 OK\r\ncontent-length: 100\r\n\r\npartial")
+                .await;
+            tokio::time::sleep(Duration::from_secs(600)).await;
+            drop(sock);
+        });
+
+        let resp = http_client(Duration::from_millis(200))
+            .get(format!("http://{addr}/"))
+            .send()
+            .await
+            .unwrap();
+        let mut stream = resp.bytes_stream();
+
+        let first = stream.next().await.expect("the partial chunk arrives");
+        assert_eq!(first.unwrap().as_ref(), b"partial");
+
+        let second = tokio::time::timeout(Duration::from_secs(5), stream.next())
+            .await
+            .expect("the stalled stream must ERROR, not hang — this hang was the wedged-turn bug");
+        assert!(
+            second
+                .expect("stream must yield an item, not end cleanly")
+                .is_err(),
+            "silence past the read timeout is an error"
+        );
     }
 
     /// The guidance must keep its load-bearing content: skill priority, the

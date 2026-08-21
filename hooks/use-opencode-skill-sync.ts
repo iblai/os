@@ -24,6 +24,13 @@ const MENTOR_KEY = 'ibl_coding_mode_mentor';
 const SYNC_PAGE_SIZE = 100;
 /** Backstop for a server that ignores `limit`: never loop forever. */
 const MAX_PAGES = 50;
+/**
+ * A vibe install that failed (network hiccup at launch, fresh machine behind a
+ * flaky link) retries by itself at these delays — the effect's deps settle
+ * once, so without this a single failure meant no skills for the whole app
+ * run. Bounded: after the last attempt the popover's amber note is the signal.
+ */
+const VIBE_RETRY_DELAYS_MS = [30_000, 120_000, 600_000];
 
 export interface OpencodeSkillSync {
   state: 'idle' | 'syncing' | 'synced' | 'error';
@@ -67,8 +74,10 @@ const asList = <T>(data: T[] | { results?: T[] } | undefined): T[] =>
  *
  * `state: 'syncing'` spans the mentor fetch AND the vibe download — it drives
  * the Code pill's spinner. `state: 'error'` (catalog 403, network, vibe absent
- * with no cache) surfaces as the popover's amber note; on error the staging
- * tree is left untouched — a stale skill set beats a wrongly-emptied one.
+ * with no cache) surfaces as the popover's amber note; a vibe-absent error
+ * additionally self-retries on a bounded backoff and flips to synced when a
+ * later attempt lands. On error the staging tree is left untouched — a stale
+ * skill set beats a wrongly-emptied one.
  */
 export function useOpencodeSkillSync({
   org,
@@ -138,6 +147,23 @@ export function useOpencodeSkillSync({
       if (!cancelled) setSync(next);
     };
 
+    // Bounded self-retry of the VIBE half alone (the mentor skills already
+    // landed by the time this is scheduled; re-running the whole sync would
+    // re-fetch them for nothing). Recovering flips the state to synced.
+    let vibeRetryTimer: ReturnType<typeof setTimeout> | undefined;
+    const retryVibe = (attempt: number, count: number) => {
+      if (cancelled || attempt >= VIBE_RETRY_DELAYS_MS.length) return;
+      vibeRetryTimer = setTimeout(() => {
+        callTauri<{ present?: boolean }>('ensure_vibe_skills')
+          .then((vibe) => {
+            if (cancelled) return;
+            if (vibe?.present === false) retryVibe(attempt + 1, count);
+            else safeSet({ state: 'synced', count });
+          })
+          .catch(() => retryVibe(attempt + 1, count));
+      }, VIBE_RETRY_DELAYS_MS[attempt]);
+    };
+
     void (async () => {
       safeSet({ state: 'syncing' });
       try {
@@ -194,11 +220,12 @@ export function useOpencodeSkillSync({
             skills: [],
           });
           const vibe = await vibePromise;
-          safeSet(
-            vibe?.present === false
-              ? { state: 'error' }
-              : { state: 'synced', count: 0 },
-          );
+          if (vibe?.present === false) {
+            safeSet({ state: 'error' });
+            retryVibe(0, 0);
+          } else {
+            safeSet({ state: 'synced', count: 0 });
+          }
           return;
         }
 
@@ -277,11 +304,12 @@ export function useOpencodeSkillSync({
           skills: payload,
         });
         const vibe = await vibePromise;
-        safeSet(
-          vibe?.present === false
-            ? { state: 'error' }
-            : { state: 'synced', count: payload.length },
-        );
+        if (vibe?.present === false) {
+          safeSet({ state: 'error' });
+          retryVibe(0, payload.length);
+        } else {
+          safeSet({ state: 'synced', count: payload.length });
+        }
       } catch {
         await bail();
       }
@@ -289,6 +317,7 @@ export function useOpencodeSkillSync({
 
     return () => {
       cancelled = true;
+      clearTimeout(vibeRetryTimer);
     };
   }, [inTauri, codeEnabled, org, mentorUniqueId]);
 
