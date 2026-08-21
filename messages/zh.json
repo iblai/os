@@ -389,7 +389,13 @@
   },
   "chatAiMessageBubble": {
     "retryScreenReader": "重试以获取新的回复",
-    "retryTooltip": "重试"
+    "retryTooltip": "重试",
+    "agentTodoListTitle": "任务清单",
+    "agentTodoStatusCompleted": "已完成",
+    "agentTodoStatusInProgress": "进行中",
+    "agentTodoStatusPending": "待办",
+    "agentTodoProgress": "已完成 {done}/{total}",
+    "agentTodoAnnouncement": "第 {done} 步，共 {total} 步已完成"
   },
   "chatAiMessageCopy": {
     "copyToClipboard": "复制到剪贴板",
@@ -807,6 +813,7 @@
     "newChat": "新对话",
     "settings": "设置",
     "llm": "大语言模型",
+    "billing": "账单",
     "prompts": "提示词",
     "tools": "工具",
     "mcp": "MCP",
@@ -2345,7 +2352,9 @@
     "modelUnavailable": "不可用于代码模式 — 对话会失败。请在左上角选择其他模型。",
     "workspace": "工作区",
     "changeFolder": "更改文件夹…",
-    "chooseFolderTitle": "选择你的工作文件夹"
+    "chooseFolderTitle": "选择你的工作文件夹",
+    "skillsSyncFailed": "技能同步失败——代码模式将在没有技能的情况下运行。",
+    "sandboxMissing": "代码模式需要 bubblewrap（bwrap）。请使用系统的包管理器安装后重新打开应用。"
   },
   "chatCodePermissionCard": {
     "title": "代码模式需要你的许可",

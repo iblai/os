@@ -195,6 +195,7 @@ vi.mock('./tabs', () => ({
   McpTab: () => <div data-testid="mcp-tab">MCP Tab</div>,
   ToolsTab: () => <div data-testid="tools-tab">Tools Tab</div>,
   SafetyTab: () => <div data-testid="safety-tab">Safety Tab</div>,
+  SpendCapsTab: () => <div data-testid="spend-caps-tab">Spend Caps Tab</div>,
   PrivacyTab: () => <div data-testid="privacy-tab">Privacy Tab</div>,
   TasksTab: () => <div data-testid="tasks-tab">Tasks Tab</div>,
   HistoryTab: () => <div data-testid="history-tab">History Tab</div>,
@@ -848,24 +849,25 @@ describe('EditMentorModal', () => {
     // mounts the category's segments. Re-mount with cleanup() between
     // groups so each fresh render reflects the new mockGetEditMentorTab.
     const groups: Array<{ tabs: string[] }> = [
-      // Configuration
+      // Configuration (Access moved here from Integrations in feat/2286)
       {
         tabs: [
           MODALS.EDIT_MENTOR.tabs.settings,
+          MODALS.EDIT_MENTOR.tabs.access,
           MODALS.EDIT_MENTOR.tabs.llm,
+          MODALS.EDIT_MENTOR.tabs.spend_caps,
           MODALS.EDIT_MENTOR.tabs.prompts,
           MODALS.EDIT_MENTOR.tabs.safety,
           MODALS.EDIT_MENTOR.tabs.disclaimer,
         ],
       },
-      // Integrations (Access + Tools moved here in feat/2040)
+      // Integrations (Tools moved here in feat/2040)
       {
         tabs: [
           MODALS.EDIT_MENTOR.tabs.mcp,
           MODALS.EDIT_MENTOR.tabs.datasets,
           MODALS.EDIT_MENTOR.tabs.api,
           MODALS.EDIT_MENTOR.tabs.embed,
-          MODALS.EDIT_MENTOR.tabs.access,
           MODALS.EDIT_MENTOR.tabs.tools,
         ],
       },

@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "lastUpdated": "2026-08-01",
+  "lastUpdated": "2026-08-15",
   "summary": {
-    "totalCheckpoints": 21,
-    "coveredCheckpoints": 15,
-    "pendingCheckpoints": 6,
+    "totalCheckpoints": 29,
+    "coveredCheckpoints": 18,
+    "pendingCheckpoints": 11,
     "deprecatedCheckpoints": 0,
     "notReproducibleCheckpoints": 0,
     "percent": 100,
@@ -99,12 +99,13 @@
         "src-tauri/src/opencode_installer.rs",
         "src-tauri/src/opencode_proxy.rs",
         "components/chat-input-form/coding-mode-button.tsx",
-        "components/chat/code-permission-card.tsx"
+        "components/chat/code-permission-card.tsx",
+        "hooks/use-opencode-skill-sync.ts"
       ],
       "checkpoints": [
         {
           "id": "code-01",
-          "description": "check_opencode_status reports Code readiness (installed / version / config_ready / sandboxed)",
+          "description": "check_opencode_status reports Code readiness (installed / version / config_ready / sandboxed / supported / sandbox_ready)",
           "status": "covered"
         },
         {
@@ -114,12 +115,12 @@
         },
         {
           "id": "code-03",
-          "description": "The freshly installed binary is discoverable on the augmented PATH \u2014 status reports installed with a version instead of re-downloading forever",
+          "description": "The freshly installed binary is discoverable on the augmented PATH — status reports installed with a version instead of re-downloading forever",
           "status": "covered"
         },
         {
           "id": "code-04",
-          "description": "Each chat session id gets its own generated workspace under the app-managed workspaces root",
+          "description": "A chat with real work keeps its own workspace under the app-managed root; an untouched leftover (just .git) is recycled for the next chat instead of stranding one dir per launch",
           "status": "covered"
         },
         {
@@ -143,6 +144,21 @@
           "status": "covered"
         },
         {
+          "id": "code-12",
+          "description": "set_opencode_skills materialises a mentor’s Agent Skills as SKILL.md packages (frontmatter + text resources), with hostile slugs/filenames confined to the staging dir",
+          "status": "covered"
+        },
+        {
+          "id": "code-13",
+          "description": "A skills rewrite drops deselected skills, an empty sync clears the tree, and `skills: null` ends a sync without touching it",
+          "status": "covered"
+        },
+        {
+          "id": "code-16",
+          "description": "ensure_vibe_skills installs the shared iblai/vibe skill set into the app data dir (live tarball fetch, daily sha-gated)",
+          "status": "covered"
+        },
+        {
           "id": "code-08",
           "description": "A permission prompt in one chat does not block another chat's turn",
           "status": "pending"
@@ -155,6 +171,31 @@
         {
           "id": "code-10",
           "description": "The permission prompt renders in the chat that raised it",
+          "status": "pending"
+        },
+        {
+          "id": "code-14",
+          "description": "The Code pill spins in place of its icon while skills sync, and the popover shows the amber note when the sync fails",
+          "status": "pending"
+        },
+        {
+          "id": "code-15",
+          "description": "A Code turn invokes a synced skill through opencode’s native skill tool (permission card, then skill content in context)",
+          "status": "pending"
+        },
+        {
+          "id": "code-17",
+          "description": "New Chat in the sidebar evicts the previous chat’s opencode process while Code is on",
+          "status": "pending"
+        },
+        {
+          "id": "code-18",
+          "description": "A Code turn’s opencode process runs inside the OS sandbox (bwrap / sandbox-exec) — only the workspace and tool caches writable, ~/.ssh empty",
+          "status": "pending"
+        },
+        {
+          "id": "code-19",
+          "description": "A second New Chat in one app run gets its own fresh workspace, and a chat’s folder follows it from the ephemeral first-turn key to its real session id",
           "status": "pending"
         }
       ]

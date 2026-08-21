@@ -11,7 +11,7 @@ import { generateMentorName } from '../fixtures/test-data';
 import type { ProfilePage } from '../page-objects/profile.page';
 
 /**
- * Journey 68 — Tenant Memory Admin tab & Profile Memory tab.
+ * Journey 70 — Tenant Memory Admin tab & Profile Memory tab.
  *
  * Covers two SDK-delivered memory surfaces inside the "User Profile" dialog
  * (`UserProfileDropdown` from `@iblai/iblai-js/web-containers/next`, wired
@@ -67,10 +67,10 @@ import type { ProfilePage } from '../page-objects/profile.page';
 test.describe.configure({ mode: 'serial' });
 
 // ---------------------------------------------------------------------------
-// Journey 68A: Tenant Memory admin tab (Global + Agent)
+// Journey 70A: Tenant Memory admin tab (Global + Agent)
 // ---------------------------------------------------------------------------
 
-test.describe('Journey 68A: Tenant Memory admin tab (Global + Agent)', () => {
+test.describe('Journey 70A: Tenant Memory admin tab (Global + Agent)', () => {
   test.beforeEach(async ({ page }) => {
     await navigateToMentorApp(page);
     const isAdmin = await checkAdminStatus(page);
@@ -287,7 +287,7 @@ test.describe('Journey 68A: Tenant Memory admin tab (Global + Agent)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Journey 68B: Profile Memory tab ("My Memories" — personal profile side)
+// Journey 70B: Profile Memory tab ("My Memories" — personal profile side)
 // ---------------------------------------------------------------------------
 
 /**
@@ -312,7 +312,7 @@ async function openProfileMemoryTab(
   }
 }
 
-test.describe('Journey 68B: Profile Memory tab ("My Memories")', () => {
+test.describe('Journey 70B: Profile Memory tab ("My Memories")', () => {
   test.beforeEach(async ({ nonadminPage, nonadminProfilePage }) => {
     await navigateToMentorApp(nonadminPage);
     await waitForPageReady(nonadminPage);

@@ -1,4 +1,4 @@
-import { Page, Locator, expect } from '@playwright/test';
+import { Page, Locator, Route, WebSocketRoute, expect } from '@playwright/test';
 
 /**
  * Minimal shape accepted by `mockEffectiveSkills` — mirrors the SDK's
@@ -546,5 +546,256 @@ export class ChatPage {
     return this.slashSkillPicker.getByRole('option', {
       name: new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
     });
+  }
+
+  // ── Agent task list (write_todos) mocking helpers — Journey 68 ─────────────
+  //
+  // `AgentTodoList` (components/chat/agent-todo-list.tsx) renders only when
+  // `showReasoning` (mentor-settings `show_reasoning`, default `false`) is on
+  // AND the assistant turn's `toolCalls` contains a `write_todos` entry
+  // (`extractLatestTodos` in `@iblai/iblai-js/web-utils`). Two independent
+  // seams are needed to exercise it deterministically:
+  //   - REST: patch the mentor-settings GET(s) to flip `show_reasoning`, and
+  //     mock the session chat-history GET to inject a `write_todos` tool call
+  //     onto a historical AI message (covers reload/history rendering).
+  //   - WebSocket: mock the live chat socket to script `tool_call` /
+  //     `tool_call.end` frames during an active turn (covers streaming
+  //     behaviour: auto-collapse, wholesale replacement, shimmer, announcer).
+
+  /**
+   * Patches the mentor-settings GET(s) so `show_reasoning` reads `true`,
+   * without stubbing the rest of the payload. Uses `route.fetch()` against
+   * the REAL backend and only overwrites the one field, so every other
+   * mentor-settings-derived value (name, avatar, LLM provider, ...) stays
+   * real and the rest of the chat page renders normally.
+   *
+   * Both the admin settings endpoint AND the public-settings endpoint are
+   * patched: `useMentorSettings` reads `effectiveSettings?.show_reasoning ??
+   * effectivePublicSettings?.show_reasoning`, and only the first one is
+   * strictly required for a logged-in admin, but patching both keeps this
+   * helper correct if it's ever reused for a non-admin/public context.
+   */
+  async mockShowReasoning(): Promise<void> {
+    const patchShowReasoning = async (route: Route) => {
+      if (route.request().method() !== 'GET') {
+        await route.continue();
+        return;
+      }
+      const response = await route.fetch();
+      let json: Record<string, unknown>;
+      try {
+        json = await response.json();
+      } catch {
+        await route.continue();
+        return;
+      }
+      json.show_reasoning = true;
+      await route.fulfill({ response, json });
+    };
+
+    await this.page.route(
+      '**/api/ai-mentor/orgs/*/users/*/mentors/*/settings/**',
+      patchShowReasoning,
+    );
+    await this.page.route(
+      '**/api/ai-mentor/orgs/*/users/*/mentors/*/public-settings/**',
+      patchShowReasoning,
+    );
+  }
+
+  /**
+   * Seeds `localStorage.session_id` (the `Record<mentorId, sessionId>` map
+   * read by `components/chat/index.tsx`) via `page.addInitScript`, so the
+   * chat page picks up a caller-chosen `sessionId` for `mentorId` on its very
+   * next navigation — before the app's own JS runs. Pairs with
+   * `mockChatHistoryWithToolCalls`, which must intercept the history GET for
+   * that same `sessionId` before the navigation that triggers the fetch.
+   */
+  async seedCachedSessionId(
+    mentorId: string,
+    sessionId: string,
+  ): Promise<void> {
+    await this.page.addInitScript(
+      ({ mentorId, sessionId }) => {
+        window.localStorage.setItem(
+          'session_id',
+          JSON.stringify({ [mentorId]: sessionId }),
+        );
+      },
+      { mentorId, sessionId },
+    );
+  }
+
+  /**
+   * Intercepts the session chat-history GET
+   * (`GET /api/ai-mentor/orgs/{org}/users/{user_id}/sessions/{sessionId}/`,
+   * `useLazyGetSessionIdQuery` from `@iblai/data-layer`) for `sessionId` and
+   * fulfills it with a synthetic two-message history: a human message
+   * followed by an AI message carrying `aiToolCalls` verbatim as the raw
+   * `tool_calls` array.
+   *
+   * The envelope is DRF-paginated (`{count, next, previous, results}`), and
+   * `normalizeSessionResults` reverses `results` before use, so `results`
+   * here is supplied newest-first: `[ai, human]`.
+   *
+   * A preceding human message is NOT optional: `components/chat/index.tsx`
+   * special-cases a lone leading `assistant`-role message as a "welcome
+   * message" and renders it via `WelcomeChatNew` instead of
+   * `AIMessageBubble`/`ChatMessages` — which would never mount
+   * `AgentTodoList`. Two messages `[human, ai]` sidesteps that path.
+   *
+   * `aiToolCalls` is passed through untouched onto the raw history entry's
+   * `tool_calls` field, so callers can exercise both accepted shapes
+   * (LangChain `{id, name, args}` and OpenAI `{id, type, function}`) and
+   * malformed entries.
+   */
+  async mockChatHistoryWithToolCalls(
+    sessionId: string,
+    aiToolCalls: unknown[],
+    options: { aiContent?: string; humanContent?: string } = {},
+  ): Promise<void> {
+    const aiContent = options.aiContent ?? 'Let me plan this out.';
+    const humanContent = options.humanContent ?? 'Plan a course for me.';
+    const now = Date.now();
+
+    await this.page.route(
+      `**/api/ai-mentor/orgs/*/users/*/sessions/${sessionId}/**`,
+      async (route) => {
+        if (route.request().method() !== 'GET') {
+          await route.continue();
+          return;
+        }
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            count: 2,
+            next: null,
+            previous: null,
+            results: [
+              {
+                id: `e2e-msg-ai-${now}`,
+                type: 'ai',
+                content: aiContent,
+                timestamp: new Date(now).toISOString(),
+                tool_calls: aiToolCalls,
+              },
+              {
+                id: `e2e-msg-human-${now}`,
+                type: 'human',
+                content: humanContent,
+                timestamp: new Date(now - 1000).toISOString(),
+              },
+            ],
+          }),
+        });
+      },
+    );
+  }
+
+  /**
+   * Navigates directly to a mentor's chat page (no `?prompt=`). Pair with
+   * `seedCachedSessionId` + `mockChatHistoryWithToolCalls` /
+   * `mockChatWebSocket`, which must be registered first.
+   */
+  async gotoChat(
+    host: string,
+    tenantKey: string,
+    mentorId: string,
+  ): Promise<void> {
+    await this.page.goto(`${host}/platform/${tenantKey}/${mentorId}`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60_000,
+    });
+  }
+
+  /**
+   * Mocks the live chat WebSocket (`wss://.../ws/langflow/`, opened by
+   * `useChat` in `@iblai/iblai-js/web-utils`) via `page.routeWebSocket`. Must
+   * be registered before navigation, since the socket opens on mount.
+   *
+   * Since `connectToServer()` is never called, Playwright fully mocks the
+   * connection — nothing reaches the real ASGI backend. Returns a small
+   * controller so the calling test can, in order:
+   *   1. trigger a real UI send (`chatPage.sendMessage(...)`),
+   *   2. `await waitForClientMessage()` to observe + assert the outbound
+   *      `{flow, session_id, token, prompt}` payload,
+   *   3. `send(frame)` scripted server frames one at a time, interleaving
+   *      Playwright web-first assertions between them to verify each step
+   *      of the turn as it streams in.
+   *
+   * Frame shapes match `CHAT_MESSAGE_TYPES` / the message handler in
+   * `use-chat-v2.ts` (`@iblai/web-utils`): a bare `{generation_id}` frame
+   * starts a turn, `{type: 'tool_call'|'tool_call.end', value, ...}` frames
+   * carry tool calls (same `id` on both halves of a pair upserts one entry;
+   * a different `id` appends a new one — this is what makes a *second*
+   * `write_todos` pair a wholesale replacement, since `extractLatestTodos`
+   * reads only the last `write_todos`-named entry), and `{eos: true}` ends
+   * the turn.
+   */
+  async mockChatWebSocket(): Promise<{
+    waitForClientMessage: () => Promise<Record<string, unknown>>;
+    send: (frame: Record<string, unknown>) => void;
+  }> {
+    let capturedWs: WebSocketRoute | undefined;
+    let resolveMessage: ((msg: Record<string, unknown>) => void) | undefined;
+    const messagePromise = new Promise<Record<string, unknown>>((resolve) => {
+      resolveMessage = resolve;
+    });
+
+    await this.page.routeWebSocket('**/ws/langflow/**', (ws) => {
+      capturedWs = ws;
+      ws.onMessage((raw) => {
+        try {
+          const parsed = JSON.parse(raw.toString());
+          resolveMessage?.(parsed);
+        } catch {
+          // Non-JSON frame from the page — not expected on this socket,
+          // ignore rather than throw out of the WS event handler.
+        }
+      });
+    });
+
+    return {
+      waitForClientMessage: () => messagePromise,
+      send: (frame: Record<string, unknown>) => {
+        if (!capturedWs) {
+          throw new Error(
+            '[mockChatWebSocket] send() called before the page opened the mocked socket',
+          );
+        }
+        capturedWs.send(JSON.stringify(frame));
+      },
+    };
+  }
+
+  /** Returns the agent task-list panel root within `scope` (default: page). */
+  getAgentTodoList(scope?: Locator): Locator {
+    return (scope ?? this.page).getByTestId('agent-todo-list');
+  }
+
+  /** Returns the collapsible trigger for the agent task-list panel. */
+  getAgentTodoTrigger(scope?: Locator): Locator {
+    return (scope ?? this.page).getByTestId('agent-todo-list-trigger');
+  }
+
+  /** Returns the "N of M done" progress summary node. */
+  getAgentTodoProgress(scope?: Locator): Locator {
+    return (scope ?? this.page).getByTestId('agent-todo-list-progress');
+  }
+
+  /** Returns the `<ol>` wrapping the rendered todo `<li>` rows. */
+  getAgentTodoItemsContainer(scope?: Locator): Locator {
+    return (scope ?? this.page).getByTestId('agent-todo-list-items');
+  }
+
+  /** Returns all rendered `<li data-testid="agent-todo-item">` rows. */
+  getAgentTodoItems(scope?: Locator): Locator {
+    return (scope ?? this.page).getByTestId('agent-todo-item');
+  }
+
+  /** Returns the sr-only `aria-live` announcer node for the task list. */
+  getAgentTodoAnnouncer(scope?: Locator): Locator {
+    return (scope ?? this.page).getByTestId('agent-todo-list-announcer');
   }
 }

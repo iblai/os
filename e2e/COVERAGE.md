@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-08-21 | 650 checkpoints (619 covered, 8 pending/fixme, 11 not-reproducible in default env, 12 deprecated) | 70 journeys (69 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-08-21 | 677 checkpoints (646 covered, 8 pending/fixme, 11 not-reproducible in default env, 12 deprecated) | 72 journeys (71 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -1364,7 +1364,193 @@ surfaces:
 
 ---
 
-## Journey 68: Tenant Memory Admin Tab & Profile Memory Tab (9 checkpoints) — `journeys/68-tenant-memory-admin-and-profile-memory.spec.ts`
+## Journey 68: Agent Task List (11 checkpoints) — `journeys/68-agent-todo-list.spec.ts`
+
+**Source files:** `components/chat/agent-todo-list.tsx`, `components/chat/ai-message-bubble.tsx`, `components/chat/tool-call-indicator.tsx`, `app/globals.css`
+
+Issue #2216 — a Base Agent plans multi-step work with the deep-agent `write_todos`
+tool. Every call streams a FULL REPLACEMENT todo list, rendered as a collapsible
+task list (`AgentTodoList`) on the assistant turn, gated on the mentor's
+`show_reasoning` setting (default `false`) — the same gate as the reasoning
+section and the generic tool-call indicator.
+
+Two independent, deterministic seams are used, since neither one alone covers
+the whole feature:
+
+- **REST history seam** (Tier 1, tests 1–4): drives the LIVE, authenticated
+  chat page (not the public shared-chat page — that page never passes
+  `showReasoning`, and its `transformChatMessage` normalizer drops tool calls
+  entirely). Patches the mentor-settings GET (`show_reasoning: true`, via
+  `route.fetch()` so every other field stays real) and mocks the session
+  chat-history GET (`GET /api/ai-mentor/orgs/{org}/users/{user_id}/sessions/{sessionId}/`)
+  to inject a `write_todos` tool call onto a historical AI message. This is
+  the first real fixture-backed validation of the SDK's history-parsing
+  contract (`toolCallFromHistoryEntry` in `@iblai/web-utils`), which accepts
+  two shapes that had no prior fixture in either repo: LangChain
+  (`{id, name, args}`) and OpenAI
+  (`{id, type: 'function', function: {name, arguments}}`), plus a malformed
+  entry that must be dropped without throwing.
+- **`page.routeWebSocket()`** (Tier 2, test 5): mocks the live chat socket
+  (`wss://.../ws/langflow/`) to script a real streaming turn end-to-end —
+  a `generation_id` start frame, two `write_todos` `tool_call`/`tool_call.end`
+  pairs with different ids (proving wholesale replacement, not a merge), and
+  `eos`. This is what a static history fixture cannot cover: the
+  expanded-while-streaming → auto-collapse-on-completion transition, the
+  shimmer on the live in-progress row, and the throttled screen-reader
+  announcer. `page.routeWebSocket` was previously assumed impractical for
+  this app's chat socket (see Journey 61's comment) without knowing the exact
+  frame shapes; those shapes are now confirmed and the mock works.
+
+A lone leading `assistant`-role history message is special-cased by
+`components/chat/index.tsx` as a "welcome message" (rendered via
+`WelcomeChatNew`, never through `AIMessageBubble`) — every Tier 1 history
+fixture therefore includes a preceding human message so the AI message with
+tool calls actually mounts `AgentTodoList`.
+
+- [x] atl-01: The task list renders as a real `<ol>` with one `<li>` per todo; status via `data-status` + a sr-only status word + a distinct icon per status — no visible status text on the row itself
+- [x] atl-02: The panel header shows an "N of M done" progress summary, visible even while the row list underneath is collapsed
+- [x] atl-03: The panel is expanded by default while the turn is streaming, auto-collapses once the turn completes, and clicking the trigger re-expands it (collapsed-by-default also verified for historical/reload-recovered turns)
+- [x] atl-04: A second `write_todos` call within the same streaming turn replaces the list wholesale — never merges or appends onto the previous call's rows
+- [x] atl-05: An unrecognized todo status (e.g. "blocked") renders as pending rather than being dropped
+- [x] atl-06: A turn that never emits `write_todos` shows no affordance at all — no panel, no header, no skeleton
+- [x] atl-07: `write_todos` never appears in the generic "Used N tools" indicator or as its own raw tool card, even with a companion tool call present on the same turn
+- [x] atl-08: The in-progress row's text carries the `.todo-shimmer` left-to-right sweep class
+- [x] atl-09: The sr-only `aria-live` announcer carries only the throttled "Step N of M complete" summary, never any todo row text
+- [x] atl-10: The task list survives a page reload, recovered from chat history
+- [x] atl-11: First fixture-backed validation of the LangChain-shape and OpenAI-shape `write_todos` history parsing, plus a malformed entry dropped without throwing
+
+## Journey 69: LLM Spend Limits (Billing) — Agent & Tenant Settings (16 checkpoints) — `journeys/69-spend-limits.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/spend-caps-tab.tsx`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `lib/constants.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`
+
+Covers BOTH surfaces the SDK's spend-limits UI touches, as two
+clearly-separated `test.describe` blocks in one file: **Agent settings**
+(the Edit Mentor "Billing" tab) and **Tenant settings** (the tenant Billing
+tab's "Spend Limits" + "Agent Limits" tabs). The whole file runs `serial` —
+the simplest safe arrangement given the tenant block's tenant-wide mutation
+(see its isolation note below); the agent block's tests are independent of
+each other and of the tenant block either way.
+
+**REWRITE (feat/2286):** the prior version of the agent block targeted a
+three-sub-tab UI (This agent / Per user / Workspace) via hand-rolled
+locators (`e2e/page-objects/edit-mentor/spend-caps.tab.ts`, now deleted).
+The current SDK UI drops the "Workspace" sub-tab — the tenant-wide limit
+moved to the tenant block. Every interaction in both blocks is driven
+through the dedicated helpers in `@iblai/iblai-js/playwright` (its "Spend
+limits (Billing) helpers" doc block) rather than hand-rolled locators.
+
+### Agent settings (Billing tab)
+
+Covers the "Billing" (LLM spend limits) top-level tab in the Edit Mentor
+(Agent) modal, rendered by the SDK's `AgentSpendCapsTab`
+(`@iblai/iblai-js/web-containers/next`). Unlike the feat/2040 `CapabilityGate`
+tabs (Sandbox/Voice/Screen Share/Privacy/Memory/LTI), Billing has no master
+on/off toggle — it is gated purely by `userTypes: [ADMIN]` in
+`hooks/use-mentor-segments.ts` and is always mounted for admins. It lives in
+the **Configurations** sidebar category, immediately after **LLM**.
+`AgentSpendCapsTab` has exactly two sub-tabs — **"This Agent"** and
+**"Per User"** — and the per-user flow is a proper **"Add User Limit" modal**
+with an email-based user picker (replacing the old inline
+username-text-input draft card).
+
+**RBAC guard:** the backend gates each scope ("This Agent" / "Per User")
+independently and the SDK renders a `data-testid="spend-caps-denied"` panel
+per scope on a 403 instead of erroring. Every checkpoint races that panel
+against the scope's real content right after switching and skips with a
+reason (not a `test.fixme`) when this admin/tenant hasn't been granted that
+RBAC resource in a given environment — mirroring the `hasCanvasEnv` /
+`HumanSupportTab.hasToggle()` skip-with-reason convention used elsewhere in
+this suite. A 404 (endpoint not yet deployed) is NOT guarded against and is
+expected to fail the test loudly — this project prefers red-until-fixed live
+gates over `test.fixme` for app/backend-level blockers.
+
+**Isolation:** every test gets its own freshly-created mentor
+(`MentorTracker`, deleted in `afterAll`); no test here touches tenant-wide
+state (the Workspace cap moved to the tenant block below).
+
+- [x] sc-01: Admin sees the "Billing" tab in the Configurations category, positioned immediately after "LLM", and it opens on the "This Agent" sub-tab with "Per User" also present
+- [x] sc-02: Admin creates an agent spend limit (limit, interval, alert-only enforcement, thresholds, enabled) via `setAgentSpendLimit` and the values persist after closing and reopening the Billing tab
+- [x] sc-03: An invalid/zero spend limit shows the "Enter an amount greater than 0" validation error and disables Save
+- [x] sc-04: Admin removes the agent spend limit via the confirm dialog and the "no limit configured" hint reappears
+- [x] sc-05: Admin adds a per-user spend limit through the "Add User Limit" modal's EMAIL-based user picker and sees it listed in the per-user table, keyed by username
+- [x] sc-06: Admin edits an existing per-user spend limit via the row's three-dots menu (Edit)
+- [x] sc-07: Admin flips a per-user spend limit's Status toggle off and back on and it saves immediately (datasets-table pattern)
+- [x] sc-08: Admin deletes a per-user spend limit via the row's three-dots menu (Delete) and its row disappears
+- [x] sc-09: Non-admin users do not see the Billing tab in the Edit Mentor modal
+
+### Tenant settings (Spend Limits + Agent Limits)
+
+Covers the two NEW tabs added to the tenant settings "Billing" surface — the
+SAME `BillingTab` component journey 21-B already exercises for Plan &
+Credits (`billingPage.openBillingTab()` / `?profileTab=billing`), now with
+an internal "Billing sections" tablist: **Plan & Credits** (default,
+journey 21's coverage) / **Spend Limits** / **Agent Limits**:
+
+- **Spend Limits** — the tenant-wide (workspace) LLM spend limit,
+  `SpendLimitsSection` inside `BillingTab`. ONE cap for the whole tenant;
+  mutating it affects every mentor and every user.
+- **Agent Limits** — every agent spend cap configured tenant-wide,
+  `AgentLimitsSection` inside `BillingTab`: an autocomplete filter, a direct
+  Status toggle per row, and a "manage" action that opens the SAME
+  agent-scoped Billing editor the agent block above covers
+  (`AgentSpendCapsTab`) in a POPUP stacked on top of the tenant settings
+  dialog.
+
+`AgentLimitsSection`'s table reads `useListAgentSpendCapsQuery` — the
+DB-backed caps list, which (verified in the SDK source) lists every
+configured cap tenant-wide the instant no filter is applied. The
+autocomplete FILTER, by contrast, is backed by a search index
+(`GET /api/search/orgs/{org}/users/{username}/mentors/`) that lags behind
+mentor creation — a known product limitation, not a test bug, reported
+upstream separately. So only ONE checkpoint (`tal-01`) needs the filter at
+all: every other `tal-*` test creates its cap through the Edit Agent
+dialog's Billing tab (the agent block's own proven `setAgentSpendLimit`
+flow, which addresses the mentor directly by id) and then drives the tenant
+Agent Limits table directly via `agentLimitsRow(mentorUniqueId)` and the
+`*FromTenantBilling` composites (`setAgentSpendLimitFromTenantBilling`,
+`addUserSpendLimitFromTenantBilling` — neither touches the filter
+internally). Those composites and `openAgentLimitsManage` internally
+open/close the manage popup and resolve every nested query FROM it — the
+nested-dialog stacking (tenant settings dialog → manage popup → user-cap
+modal → delete confirm) is handled entirely inside the SDK, never via a bare
+page-wide query. Deletes (`sc-04` in the agent block and `tal-05` here) use
+a local `deleteAgentCapAndAwaitResponse` helper instead of the SDK's own
+delete helpers — the SDK's hardcoded internal wait for the "no cap
+configured" hint to reappear intermittently timed out under load even
+though the DELETE itself succeeds (204) and the refetch is correct (404)
+within ~300ms; the local helper gates on the DELETE response directly.
+
+**RBAC guard:** RBAC is enforced at TAB level by the host (an admin without
+the spend-caps grant never sees the Billing tab at all), so there is no
+in-scope denied-panel probing here — a backend 403/404 fails the SDK
+helpers' own waits loudly (red-until-fixed, no skip for app/backend-level
+blockers).
+
+**Isolation:** the whole FILE runs in `default` mode (declaration order, no
+skip-on-failure cascade) and every test is self-contained with its own
+freshly-created mentor (`MentorTracker`, deleted in `afterAll`) — no test
+depends on another's mutation. The workspace Spend Limits cap is
+TENANT-WIDE — `twl-02` ALWAYS saves with `enforcement: 'alert_only'` (never
+`'block'`) and removes it in a `finally` block unconditionally, so a
+leftover cap can only ever surface a near-limit notification, never block a
+chat request for another journey sharing this tenant. `tal-01` — the sole
+filter-dependent checkpoint — is declared LAST in the block so every other
+test's runtime gives the search index maximum time to catch up, though it no
+longer relies on that timing: it searches broadly and samples up to 5
+already-indexed candidates rather than waiting on its own freshly-created
+mentor (see the checkpoint description below for why).
+
+- [x] twl-01: The tenant settings Billing tab exposes a "Billing sections" tablist with Plan & Credits (default), Spend Limits, and Agent Limits, and each tab switches to its section
+- [x] twl-02: Admin configures the workspace-wide (tenant) spend limit with alert-only enforcement via `setWorkspaceSpendLimit`, the presence-level usage stats render, the values persist after reopening the tab, and the limit is removed again in the test's own `finally`-block cleanup so no other journey sharing this tenant inherits it
+- [x] tal-02: Admin edits the agent spend limit — created via the Edit Agent dialog's Billing tab (no search-index dependency) — through the Agent Limits row's manage popup stacked on the tenant settings dialog (`setAgentSpendLimitFromTenantBilling`), and the row reflects the updated limit
+- [x] tal-03: Admin flips the agent's Status toggle directly in the Agent Limits table row (saves immediately) off and back on
+- [x] tal-04: Admin adds a per-user spend limit through the Agent Limits manage popup's nested "Per User" sub-tab / user-cap modal (`addUserSpendLimitFromTenantBilling`); reopening the popup confirms the user's row persisted server-side
+- [x] tal-05: Admin deletes the agent spend limit through the manage popup's confirm dialog (local `deleteAgentCapAndAwaitResponse` helper, network-response-gated — see the isolation note above); the tenant-wide unfiltered list only holds configured caps, so the row disappears entirely
+- [x] tal-01: Admin filters Agent Limits to an ALREADY-INDEXED mentor (broad query "E2E Mentor" against the search-index-backed autocomplete, sampling up to 5 results for the first capless one) — the ONE checkpoint that depends on that index, which lags mentor creation by DAYS on this backend (a known product limitation, not a test bug, reported upstream separately — a freshly-created mentor is never searchable in time, so this borrows a mentor from a past run instead of retrying its own) — sees the "Set Spend Limit" empty state, creates that mentor's spend limit (alert-only) from the popup, the row lists it, and the cap is removed again in an unconditional `finally` block so the borrowed (shared-tenant) mentor is left exactly as found; if every sampled candidate already has a cap, verifies the filter → row-visible path on the first one instead (annotated, never a failure)
+
+---
+
+## Journey 70: Tenant Memory Admin Tab & Profile Memory Tab (9 checkpoints) — `journeys/70-tenant-memory-admin-and-profile-memory.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`
 

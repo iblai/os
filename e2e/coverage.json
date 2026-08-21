@@ -2,14 +2,14 @@
   "version": 2,
   "lastUpdated": "2026-08-21",
   "summary": {
-    "totalCheckpoints": 650,
-    "coveredCheckpoints": 619,
+    "totalCheckpoints": 677,
+    "coveredCheckpoints": 646,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 11,
     "pendingCheckpoints": 8,
     "percent": 100,
-    "totalJourneys": 70,
-    "activeJourneys": 69
+    "totalJourneys": 72,
+    "activeJourneys": 71
   },
   "journeys": [
     {
@@ -4066,9 +4066,171 @@
       ]
     },
     {
+      "id": "agent-todo-list",
+      "name": "Agent Task List",
+      "spec": "68-agent-todo-list.spec.ts",
+      "sourceFiles": [
+        "components/chat/agent-todo-list.tsx",
+        "components/chat/ai-message-bubble.tsx",
+        "components/chat/tool-call-indicator.tsx",
+        "app/globals.css"
+      ],
+      "checkpoints": [
+        {
+          "id": "atl-01",
+          "description": "The task list renders as a real <ol> with one <li> per todo; status communicated via data-status + a sr-only status word + a distinct icon shape per status — no visible status text on the row itself (issue #2216)",
+          "status": "covered"
+        },
+        {
+          "id": "atl-02",
+          "description": "The panel header shows an \"N of M done\" progress summary, visible even while the row list underneath is collapsed",
+          "status": "covered"
+        },
+        {
+          "id": "atl-03",
+          "description": "The panel is expanded by default while the assistant turn is still streaming, auto-collapses once the turn completes, and clicking the trigger re-expands it (collapsed-by-default is also verified for historical/non-streaming turns loaded from chat history)",
+          "status": "covered"
+        },
+        {
+          "id": "atl-04",
+          "description": "A second write_todos call within the same streaming turn replaces the list wholesale — rows are reordered/added/dropped, never merged or appended onto the previous call's rows",
+          "status": "covered"
+        },
+        {
+          "id": "atl-05",
+          "description": "An unrecognized todo status (e.g. \"blocked\") renders as pending rather than being dropped from the list",
+          "status": "covered"
+        },
+        {
+          "id": "atl-06",
+          "description": "A turn that never emits write_todos shows no affordance at all — no panel, no header, no skeleton",
+          "status": "covered"
+        },
+        {
+          "id": "atl-07",
+          "description": "write_todos never appears in the generic \"Used N tools\" indicator or as its own raw tool card, and its todo text never leaks into that indicator's content, even when a companion tool call is present on the same turn",
+          "status": "covered"
+        },
+        {
+          "id": "atl-08",
+          "description": "The in-progress row's text carries the .todo-shimmer left-to-right sweep class",
+          "status": "covered"
+        },
+        {
+          "id": "atl-09",
+          "description": "The sr-only aria-live announcer carries only the throttled \"Step N of M complete\" summary, never any todo row text",
+          "status": "covered"
+        },
+        {
+          "id": "atl-10",
+          "description": "The task list (and its wholesale-replaced content) survives a page reload, recovered from chat history",
+          "status": "covered"
+        },
+        {
+          "id": "atl-11",
+          "description": "First real fixture-backed validation of the SDK's write_todos history-parsing contract (toolCallFromHistoryEntry in @iblai/web-utils): both the LangChain shape ({id, name, args}) and the OpenAI shape ({id, type: 'function', function: {name, arguments}}) are accepted, and a malformed entry (missing name) is dropped without throwing or tripping the ErrorBoundary",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "mentor-spend-caps-tab",
+      "name": "LLM Spend Limits (Billing) — Agent & Tenant Settings",
+      "spec": "69-spend-limits.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/spend-caps-tab.tsx",
+        "components/modals/edit-mentor-modal/index.tsx",
+        "hooks/use-mentor-segments.ts",
+        "lib/constants.ts",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "sc-01",
+          "description": "Admin sees the \"Billing\" tab in the Configurations category, positioned immediately after \"LLM\", and it opens on the \"This Agent\" sub-tab with \"Per User\" also present (AgentSpendCapsTab now has exactly these two sub-tabs — the old \"Workspace\" sub-tab moved to the tenant Billing tab, covered by journey 69)",
+          "status": "covered"
+        },
+        {
+          "id": "sc-02",
+          "description": "Admin creates an agent spend limit (limit, interval, alert-only enforcement, thresholds, enabled) via the SDK's setAgentSpendLimit helper and the values persist after closing and reopening the Billing tab",
+          "status": "covered"
+        },
+        {
+          "id": "sc-03",
+          "description": "An invalid/zero spend limit shows the \"Enter an amount greater than 0\" validation error and disables Save",
+          "status": "covered"
+        },
+        {
+          "id": "sc-04",
+          "description": "Admin removes the agent spend limit via the confirm dialog and the \"no limit configured\" hint reappears",
+          "status": "covered"
+        },
+        {
+          "id": "sc-05",
+          "description": "Admin adds a per-user spend limit through the \"Add User Limit\" modal's EMAIL-based user picker and sees it listed in the per-user table, keyed by username",
+          "status": "covered"
+        },
+        {
+          "id": "sc-06",
+          "description": "Admin edits an existing per-user spend limit via the row's three-dots menu (Edit)",
+          "status": "covered"
+        },
+        {
+          "id": "sc-07",
+          "description": "Admin flips a per-user spend limit's Status toggle off and back on and it saves immediately (datasets-table pattern)",
+          "status": "covered"
+        },
+        {
+          "id": "sc-08",
+          "description": "Admin deletes a per-user spend limit via the row's three-dots menu (Delete) and its row disappears",
+          "status": "covered"
+        },
+        {
+          "id": "sc-09",
+          "description": "Non-admin users do not see the Billing tab in the Edit Mentor modal (admin-only segment, no rbacResource — userTypes filter alone gates visibility)",
+          "status": "covered"
+        },
+        {
+          "id": "twl-01",
+          "description": "The tenant settings Billing tab (same BillingTab journey 21-B already covers for Plan & Credits) exposes a \"Billing sections\" tablist with Plan & Credits (default), Spend Limits, and Agent Limits, and each tab switches to its section",
+          "status": "covered"
+        },
+        {
+          "id": "twl-02",
+          "description": "Admin configures the workspace-wide (tenant) spend limit with alert-only enforcement via setWorkspaceSpendLimit, the presence-level usage stats render, the values persist after reopening the tab, and the limit is removed again in the test's own finally-block cleanup so no other journey sharing this tenant inherits it",
+          "status": "covered"
+        },
+        {
+          "id": "tal-02",
+          "description": "Admin edits the agent spend limit — created via the Edit Agent dialog's Billing tab (no search-index dependency) — through the Agent Limits row's manage popup stacked on the tenant settings dialog (setAgentSpendLimitFromTenantBilling), and the row reflects the updated limit",
+          "status": "covered"
+        },
+        {
+          "id": "tal-03",
+          "description": "Admin flips the agent's Status toggle directly in the Agent Limits table row (saves immediately) off and back on",
+          "status": "covered"
+        },
+        {
+          "id": "tal-04",
+          "description": "Admin adds a per-user spend limit through the Agent Limits manage popup's nested \"Per User\" sub-tab / user-cap modal (addUserSpendLimitFromTenantBilling); reopening the popup confirms the user's row persisted server-side",
+          "status": "covered"
+        },
+        {
+          "id": "tal-05",
+          "description": "Admin deletes the agent spend limit through the manage popup's confirm dialog (local deleteAgentCapAndAwaitResponse helper, network-response-gated); the tenant-wide unfiltered list only holds configured caps, so the row disappears entirely",
+          "status": "covered"
+        },
+        {
+          "id": "tal-01",
+          "description": "Admin filters Agent Limits to an ALREADY-INDEXED mentor (broad query \"E2E Mentor\" against the search-index-backed autocomplete, sampling up to 5 results for the first capless one) — the ONE checkpoint that depends on that index, which lags mentor creation by DAYS on this backend (a known product limitation, not a test bug, reported upstream separately; a freshly-created mentor is never searchable in time, so this borrows a mentor from a past run instead of retrying its own) — sees the \"Set Spend Limit\" empty state, creates that mentor's spend limit (alert-only) from the popup, the row lists it, and the cap is removed again in an unconditional finally-block so the borrowed (shared-tenant) mentor is left exactly as found; if every sampled candidate already has a cap, verifies the filter -> row-visible path on the first one instead (annotated, never a failure)",
+          "status": "covered"
+        }
+      ]
+    },
+    {
       "id": "tenant-memory-admin-and-profile-memory",
       "name": "Tenant Memory Admin Tab & Profile Memory Tab",
-      "spec": "68-tenant-memory-admin-and-profile-memory.spec.ts",
+      "spec": "70-tenant-memory-admin-and-profile-memory.spec.ts",
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx"
       ],
