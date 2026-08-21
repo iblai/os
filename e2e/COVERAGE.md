@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-08-20 | 641 checkpoints (610 covered, 8 pending/fixme, 11 not-reproducible in default env, 12 deprecated) | 69 journeys (68 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-08-21 | 650 checkpoints (619 covered, 8 pending/fixme, 11 not-reproducible in default env, 12 deprecated) | 70 journeys (69 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -1361,3 +1361,31 @@ surfaces:
 - [x] slash-16: Skills dropdown (next to Canvas) lists enabled skills as name + `/slug`; selecting inserts the token AT THE CARET with context-aware spacing; the active pill shows the armed name + the standard ✕ (disarms without opening the menu); toggling removes cleanly; arming another replaces (single selection); `/`-picker arming updates the button — one composer-text source of truth
 - [x] slash-15: NON-ADMIN — with the assignments endpoint readable (mocked granted state; a 403 degrades to an inactive picker) the "/" picker offers skills; selecting completes the token and the sent invocation message receives a live AI reply — skips when the environment denies the non-admin CHAT permission entirely (composer disabled with a "you don't have permission to chat" placeholder): the picker rides on top of chat access
 - [x] slash-14: A "/" token typed after existing text (caret-adjacent, preceded by whitespace) opens the picker; selecting completes the invocation at that index keeping the sentence. A "/" glued inside a word (and/or, URLs) never triggers
+
+---
+
+## Journey 68: Tenant Memory Admin Tab & Profile Memory Tab (9 checkpoints) — `journeys/68-tenant-memory-admin-and-profile-memory.spec.ts`
+
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`
+
+Covers two memory surfaces inside the "User Profile" dialog (`UserProfileDropdown` from `@iblai/iblai-js/web-containers/next`), both delivered by the `@iblai/iblai-js@2.5.5` SDK bump:
+
+- **A. Tenant-settings Memory admin tab** (`MemoryAdminTab`) — a brand-new rail item (`{ id: 'memory', label: 'Memory', icon: Brain }`) reached via More Options → platform name, with NO host wiring at all — it appears purely from the SDK bump. Global sub-tab: a tenant users table with server-side search and a per-user popup hosting their shared memories list plus two memory setting switches. Agent sub-tab: a tenant agents table with an autocomplete filter and a per-agent popup hosting the same `ManageMemories` editor the Edit Agent modal's own Memory tab renders (journey 24, unaffected by this change). All locators flow through `MemoryAdminPage` (`e2e/page-objects/memory-admin.page.ts`), a thin wrapper over the SDK's `memory-admin-helpers`. Its dialog-stacking selector policy (popup Locator returned by the open-popup helpers, all sub-queries pinned to it) is documented in the SDK helpers' own file header and mirrored in the page object.
+- **B. Profile "Memory" tab** (personal side, `MemoryTab`, "My Memories") — pre-existed but had ZERO e2e coverage before this journey. Its row actions changed in this SDK bump: the old hover-delete trash button was replaced by a three-dots menu (Edit + Delete), and "Archive" was renamed to "Delete" (`archiveFirstMemory`/`archiveMemoryByContent` are now `@deprecated` aliases for `deleteFirstMemory`/`deleteMemoryByContent`). Covered via new methods on `ProfilePage` (`e2e/page-objects/profile.page.ts`) wrapping the SDK's `memory-test-helpers` — except `editMemoryByContent`, which the SDK has no helper for (only add/delete are covered): it's hand-rolled using the same stable `data-testid="memory-row"` / `aria-label="Memory actions: {excerpt}"` / dialog-accessible-name hooks the SDK's own delete helper uses, since the profile tab and the tenant-admin popup share the exact same `MemoriesList` component under the hood.
+
+Both surfaces' real content only renders once the tenant's memsearch status resolves as enabled — this journey does not itself drive the tenant-wide "Memory System" toggle (that's journey 38, `38-tenant-memory-system-toggle.spec.ts`); every test here probes availability first and `test.skip`s with a documented reason if the feature isn't resolved as on. The whole file runs `mode: 'serial'` (mirroring journeys 38/47): the Global sub-tab tests target the ADMIN test account's own username via `getLoggedInUsername`, and the profile tests target the NON-ADMIN account's own profile — two different backend users that don't collide with each other, but every worker/browser-project sharing the same storageState means tests within the SAME persona could still race across parallel workers without file-level serial.
+
+### Tenant Memory admin tab (MA-01..MA-06)
+
+- [x] MA-01: Admin sees the new "Memory" rail item in the tenant User Profile settings dialog, and both the Global and Agent sub-tabs render
+- [x] MA-02: Global sub-tab — searching the users table for the logged-in admin's own username finds their row, and opening their memories popup renders
+- [x] MA-03: Global sub-tab popup — full CRUD on a uniquely-named global memory (add ≥10-char content, edit it, delete it), cleaned up best-effort in a `finally` block
+- [x] MA-04: Global sub-tab popup — toggling the auto-capture memory setting switch flips `aria-checked`, and toggling again restores the original state (symmetric flip, independent of starting state)
+- [x] MA-05: Agent sub-tab renders its section and the agents autocomplete filter ("Search Agents…" placeholder)
+- [x] MA-06: Agent sub-tab — filtering to a freshly created, uniquely-named mentor (own tracked mentor via `deleteMentorById`, not the shared default) surfaces its row; opening its memories popup and adding a unique agent memory shows the new content in the popup
+
+### Profile Memory tab (PM-01..PM-03)
+
+- [x] PM-01: Profile "Memory" tab renders its "Memory & Personalization" settings section and "My Memories" list with the Add Memory button
+- [x] PM-02: Toggling the auto-capture memory setting switch flips `aria-checked`, and toggling again restores the original state
+- [x] PM-03: Full CRUD on a unique personal memory via the NEW three-dots menu — add, edit via the three-dots → Edit → Edit Memory dialog (hand-rolled page-object helper, no SDK helper exists for this), and delete via `deleteMemoryByContent` (NOT the deprecated `archiveMemoryByContent` alias) _(the profile Memory tab previously had zero e2e coverage; the three-dots menu replacing hover-delete and the Archive→Delete rename are new SDK behavior verified against `@iblai/iblai-js@2.5.5`)_

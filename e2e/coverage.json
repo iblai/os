@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-08-20",
+  "lastUpdated": "2026-08-21",
   "summary": {
-    "totalCheckpoints": 641,
-    "coveredCheckpoints": 610,
+    "totalCheckpoints": 650,
+    "coveredCheckpoints": 619,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 11,
     "pendingCheckpoints": 8,
     "percent": 100,
-    "totalJourneys": 69,
-    "activeJourneys": 68
+    "totalJourneys": 70,
+    "activeJourneys": 69
   },
   "journeys": [
     {
@@ -4062,6 +4062,62 @@
           "id": "slash-16",
           "description": "Skills dropdown button (inside-buttons row, next to Canvas) lists the mentor's enabled skills as name + /slug (no descriptions); selecting inserts the /slug token AT THE CARET with context-aware spacing (highlighted in the composer) and the button shows the armed skill's name with the same ✕ affordance as other active tool pills (✕ disarms without opening the menu); toggling removes the token cleanly; arming another skill replaces the current one (single selection); arming via the \"/\" picker updates the button — both surfaces derive from the composer text so they stay in sync",
           "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "tenant-memory-admin-and-profile-memory",
+      "name": "Tenant Memory Admin Tab & Profile Memory Tab",
+      "spec": "68-tenant-memory-admin-and-profile-memory.spec.ts",
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "MA-01",
+          "description": "Admin sees the new \"Memory\" rail item in the tenant User Profile settings dialog, and both the Global and Agent sub-tabs render (MemoryAdminTab — no host wiring, picked up purely via the SDK bump)",
+          "status": "covered"
+        },
+        {
+          "id": "MA-02",
+          "description": "Global sub-tab: searching the users table for the logged-in admin's own username finds their row, and opening their memories popup renders",
+          "status": "covered"
+        },
+        {
+          "id": "MA-03",
+          "description": "Global sub-tab popup: full CRUD on a uniquely-named global memory (add ≥10-char content, edit it, delete it), cleaned up best-effort in a finally block",
+          "status": "covered"
+        },
+        {
+          "id": "MA-04",
+          "description": "Global sub-tab popup: toggling the auto-capture memory setting switch flips aria-checked, and toggling again restores the original state (symmetric flip, independent of the account's starting state)",
+          "status": "covered"
+        },
+        {
+          "id": "MA-05",
+          "description": "Agent sub-tab renders its section and the agents autocomplete filter (\"Search Agents…\" placeholder)",
+          "status": "covered"
+        },
+        {
+          "id": "MA-06",
+          "description": "Agent sub-tab: filtering to a freshly created, uniquely-named mentor (own tracked mentor, not the shared default) surfaces its row; opening its memories popup and adding a unique agent memory shows the new content in the popup",
+          "status": "covered"
+        },
+        {
+          "id": "PM-01",
+          "description": "Profile \"Memory\" tab (personal side, MemoryTab) renders its \"Memory & Personalization\" settings section and \"My Memories\" list with the Add Memory button",
+          "status": "covered"
+        },
+        {
+          "id": "PM-02",
+          "description": "Profile Memory tab: toggling the auto-capture memory setting switch flips aria-checked, and toggling again restores the original state",
+          "status": "covered"
+        },
+        {
+          "id": "PM-03",
+          "description": "Profile Memory tab: full CRUD on a unique personal memory via the NEW three-dots menu (Edit + Delete replaced the old hover-delete button) — add, edit via the three-dots → Edit → Edit Memory dialog (hand-rolled page-object helper; no SDK helper exists for this), and delete via deleteMemoryByContent (NOT the deprecated archiveMemoryByContent alias)",
+          "status": "covered",
+          "note": "The profile Memory tab previously had ZERO e2e coverage. The three-dots menu (replacing hover-delete) and Archive→Delete rename are new SDK behavior verified against @iblai/iblai-js@2.5.5."
         }
       ]
     }

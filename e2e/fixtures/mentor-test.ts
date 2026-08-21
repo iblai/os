@@ -10,6 +10,7 @@ import { ProfilePage } from '../page-objects/profile.page';
 import { ProjectPage } from '../page-objects/project.page';
 import { NotificationsPage } from '../page-objects/notifications.page';
 import { BillingPage } from '../page-objects/billing.page';
+import { MemoryAdminPage } from '../page-objects/memory-admin.page';
 import { CreateMentorPage } from '../page-objects/create-mentor.page';
 import { ChatSearchDialogPage } from '../page-objects/chat-search-dialog.pom';
 import { generateProjectName } from './test-data';
@@ -66,6 +67,12 @@ export const test = base.extend<{
   projectPage: ProjectPage;
   notificationsPage: NotificationsPage;
   billingPage: BillingPage;
+  /**
+   * Tenant-settings Memory admin tab (`MemoryAdminTab`), reached from the
+   * "User Profile" dialog's tenant-settings rail — admin-only, so there is
+   * no `nonadminMemoryAdminPage` counterpart.
+   */
+  memoryAdminPage: MemoryAdminPage;
   /**
    * Creates a uniquely-named project (via the projects index "New Project"
    * UI flow, matching how a real admin creates one) before the test runs,
@@ -140,6 +147,9 @@ export const test = base.extend<{
   },
   billingPage: async ({ page }, use) => {
     await use(new BillingPage(page));
+  },
+  memoryAdminPage: async ({ page }, use) => {
+    await use(new MemoryAdminPage(page));
   },
   testProject: async ({ page, projectPage }, use) => {
     const name = generateProjectName();
