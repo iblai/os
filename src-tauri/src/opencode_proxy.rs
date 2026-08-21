@@ -55,13 +55,18 @@ the project started from vibe-starter or otherwise.
 - When working with vibe-starter and other ibl.ai projects, always copy \
 `.env.example` into `.env.local` (before the first run, so the app boots with \
 its expected configuration).
-- After building or changing a website, show it to the user proactively: start \
-the dev server in the background (e.g. `pnpm dev`), then open the site in the \
-user's browser — macOS: `open -a \"Google Chrome\" http://localhost:3000` \
-(plain `open <url>` as a fallback), Linux: `xdg-open <url>`, Windows: \
-`start <url>`.
-- Do not run `pnpm build` before the preview — `pnpm typecheck` and `pnpm lint` \
-are enough; the dev server is the preview.
+- After building or changing a website, publish it and show the user the \
+live site: run `pnpm typecheck` and `pnpm lint`, deploy automatically with \
+the iblai-vibe-ops-deploy skill (no Vercel account or token — do not ask \
+whether to deploy), then open the deployed URL in the user's browser — \
+macOS: `open -a \"Google Chrome\" <url>` (plain `open <url>` as a fallback), \
+Linux: `xdg-open <url>`, Windows: `start <url>`. The deployed URL is how \
+the user sees their site — never show localhost or offer a local dev \
+server. If the deploy fails, report the error verbatim and continue \
+helping.
+- Monetization is optional and on request only: when the user asks to charge \
+users to enter the app (a paywall), use the \
+iblai-vibe-monetization-app-paywall skill. Do not suggest it unprompted.
 ";
 
 /// Everything the proxy needs to serve one Code session.
@@ -663,7 +668,7 @@ mod tests {
 
     /// The guidance must keep its load-bearing content: skill priority, the
     /// vibe-starter default for web apps (without offering an opt-out), never
-    /// stripping ibl.ai components, and showing the site proactively.
+    /// stripping ibl.ai components, and publishing + showing the live site.
     #[test]
     fn the_iblai_guidance_keeps_its_load_bearing_lines() {
         let text = IBLAI_INSTRUCTIONS;
@@ -683,12 +688,23 @@ mod tests {
             "the env-file rule must survive edits: {text}"
         );
         assert!(
-            text.contains("pnpm dev") && text.contains("open -a"),
-            "the show-the-site guidance must survive edits: {text}"
+            text.contains("open -a") && text.contains("deployed URL"),
+            "the show-the-live-site guidance must survive edits: {text}"
         );
         assert!(
-            text.contains("Do not run `pnpm build`") && text.contains("pnpm typecheck"),
-            "the no-build-before-preview rule must survive edits: {text}"
+            text.contains("pnpm typecheck") && text.contains("never show localhost"),
+            "the no-localhost rule must survive edits: {text}"
+        );
+        assert!(
+            text.contains("iblai-vibe-ops-deploy")
+                && text.contains("do not ask whether to deploy"),
+            "the auto-deploy rule must survive edits: {text}"
+        );
+        assert!(
+            text.contains("iblai-vibe-monetization-app-paywall")
+                && text.contains("on request only")
+                && text.contains("unprompted"),
+            "the optional-monetization rule must survive edits: {text}"
         );
     }
 }
