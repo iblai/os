@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-08-21 | 677 checkpoints (646 covered, 8 pending/fixme, 11 not-reproducible in default env, 12 deprecated) | 72 journeys (71 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-08-22 | 683 checkpoints (652 covered, 8 pending/fixme, 11 not-reproducible in default env, 12 deprecated) | 73 journeys (72 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -1575,3 +1575,25 @@ Both surfaces' real content only renders once the tenant's memsearch status reso
 - [x] PM-01: Profile "Memory" tab renders its "Memory & Personalization" settings section and "My Memories" list with the Add Memory button
 - [x] PM-02: Toggling the auto-capture memory setting switch flips `aria-checked`, and toggling again restores the original state
 - [x] PM-03: Full CRUD on a unique personal memory via the NEW three-dots menu — add, edit via the three-dots → Edit → Edit Memory dialog (hand-rolled page-object helper, no SDK helper exists for this), and delete via `deleteMemoryByContent` (NOT the deprecated `archiveMemoryByContent` alias) _(the profile Memory tab previously had zero e2e coverage; the three-dots menu replacing hover-delete and the Archive→Delete rename are new SDK behavior verified against `@iblai/iblai-js@2.5.5`)_
+
+---
+
+## Journey 71: Profile History Tab (6 checkpoints) — `journeys/71-profile-history-tab.spec.ts`
+
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`
+
+Covers the "History" tab inside the "User Profile" dialog — the SDK's `ChatHistoryTab` (`@iblai/iblai-js/web-containers/next`). **This is a plain user-profile feature, not admin-managed** — unlike the "Memory" tab (journey 70), which has BOTH a tenant-admin surface and a personal one, History has only the personal side, and there is NO host enable-flag (no `enableHistoryTab` prop exists) — the tab is unconditional and rides the user-scoped `my-chat-history*` endpoints, so it only ever shows the CURRENT user's own conversations across every agent they've chatted with. Every checkpoint in this journey therefore runs against the regular NON-ADMIN test account, matching journey 70B's precedent for the sibling Memory tab. Two sub-tabs: **Conversations** (filter toolbar — agent autocomplete, date range, sentiment, topic, Export — plus a two-column conversation list + transcript preview with pagination) and **Exports** (a table of previously generated personal chat-history reports with state badges and re-download actions). Confirmed against the SDK bundle: there is NO delete/clear affordance anywhere on this tab — it is view / filter / export only, so no delete/clear checkpoints exist here. All locators flow through new `ProfilePage` methods (`e2e/page-objects/profile.page.ts`) wrapping the SDK's `history-tab-helpers` Playwright bindings, which capture the profile dialog once (tag + filter) and scope every sub-element to it.
+
+Split into two blocks: **71A (structural)** needs no seed data — the tab, its sub-tabs, and the Conversations filter toolbar render identically whether or not the account has any history yet — and runs on the standard `nonadminPage`/`nonadminProfilePage` fixtures. **71B (with seeded data)** runs against the non-admin storage state via a manually-created worker-scoped context (`test.beforeAll`, mirroring journey 60's shared-setup pattern). It captures the account's pre-existing default mentor's name (for the agent-filter checkpoints, which don't need mentor creation to succeed at all) and separately attempts to create its own uniquely-named mentor + send it one chat message, to seed a conversation with a known, stable `data-session-id` for HT-04 — sidestepping both a parallel-worker list-position race and the backend's asynchronous session-title generation (the same hazard journey 53's Recent-chats checkpoints document). "New Agent" is not admin-gated in the app, but CAN be trial/paywall-gated for a non-admin account on some tenants (journey 3's `ui-05` already documents that exact button opening an upgrade dialog instead); if creation fails for any reason, HT-04 skips gracefully rather than the whole block failing or asserting a specific paywall configuration. The seeded mentor (when created) is deleted via the DM API in `afterAll`, which works for whoever created it — no admin requirement.
+
+### Structural (HT-01..HT-03)
+
+- [x] HT-01: User opens the profile "History" tab and the Conversations sub-tab settles into either rendered rows or the "No conversations found" empty state
+- [x] HT-02: Conversations toolbar renders its five filter controls (agent autocomplete "Search Agents", "Pick a Date Range", Filter by Sentiment, Filter by Topic, Export) regardless of data
+- [x] HT-03: Switching to the Exports sub-tab renders its reports table (the SDK's `ReportHistory` renders the `<table>` unconditionally, with a "No exports yet." row when empty)
+
+### With seeded conversation (HT-04..HT-06)
+
+- [x] HT-04: User selects the seeded conversation (matched by its `data-session-id`) and the transcript preview loads with a Download button; downloading it produces a CSV file. Skips gracefully if mentor creation is unavailable to the account in this environment
+- [x] HT-05: User filters Conversations by the account's pre-existing agent's exact name and the list re-settles into rows-or-empty for that agent scope; clearing the agent filter returns the search input
+- [x] HT-06: User exports their personal chat history scoped to an existing agent (Export button) and the report is tracked in the Exports sub-tab

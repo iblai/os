@@ -1,4 +1,5 @@
 import { Page, Locator, expect } from '@playwright/test';
+import type { Download } from '@playwright/test';
 import {
   isMemoryTabVisible,
   switchToMemoryTab,
@@ -12,6 +13,29 @@ import {
   getMemoryCount,
   verifyMemoryExists,
   verifyMemoryNotExists,
+  openHistoryTab,
+  switchHistorySubTab,
+  getConversationList,
+  getConversationPreview,
+  getConversationRows,
+  waitForConversations,
+  selectConversation,
+  downloadConversationCsv,
+  filterHistoryByAgent,
+  clearHistoryAgentFilter,
+  filterHistoryBySentiment,
+  filterHistoryByTopic,
+  startHistoryExport,
+  exportHistoryAndWaitForDownload,
+  getExportsTable,
+  getExportRowsByState,
+  waitForCompletedExportRow,
+  downloadExportedReport,
+  HISTORY_TAB_LABELS,
+} from '@iblai/iblai-js/playwright';
+import type {
+  HistorySubTab,
+  HistorySentiment,
 } from '@iblai/iblai-js/playwright';
 
 export class ProfilePage {
@@ -317,5 +341,197 @@ export class ProfilePage {
     await saveButton.click();
 
     await expect(editDialog).toBeHidden({ timeout: 10_000 });
+  }
+
+  // ---------------------------------------------------------------------------
+  // History tab ("History" — profile-level chat history across every agent)
+  // ---------------------------------------------------------------------------
+  //
+  // Rendered by the SDK's `ChatHistoryTab` (`@iblai/iblai-js/web-containers/next`,
+  // wired inside `UserProfileDropdown`). Unlike the Memory tab there is no
+  // `enableHistoryTab` prop — the tab is unconditional and only renders on the
+  // user's OWN profile (it rides the user-scoped `my-chat-history*`
+  // endpoints). Two sub-tabs: "Conversations" (filter toolbar + two-column
+  // list/preview) and "Exports" (a table of previously generated personal
+  // chat-history reports). All DOM access flows through the SDK's official
+  // Playwright helpers (`@iblai/iblai-js/playwright`,
+  // `history-tab-helpers.d.ts`), which scope every sub-element to a SINGLE
+  // profile-dialog locator captured tag-first (`getByRole('dialog')` +
+  // `.filter(...)`) — see that file's own header for the anti-flake
+  // rationale. There is no delete/clear affordance on this tab (confirmed
+  // against the SDK bundle) — it is view/filter/export only.
+
+  /**
+   * Open the "History" tab (the profile modal must already be open, e.g. via
+   * `open()`) and wait for its Conversations sub-tab to settle into either
+   * rendered rows or the empty state. Returns the scoped dialog locator every
+   * other History method below expects.
+   */
+  openHistoryTab(): Promise<Locator> {
+    return openHistoryTab(this.page);
+  }
+
+  /** Switch between the "Conversations" and "Exports" sub-tabs. */
+  switchHistorySubTab(dialog: Locator, subTab: HistorySubTab): Promise<void> {
+    return switchHistorySubTab(dialog, subTab);
+  }
+
+  /** The Conversations sub-tab's list region (`aria-label="Conversation list"`). */
+  getConversationList(dialog: Locator): Locator {
+    return getConversationList(dialog);
+  }
+
+  /** The Conversations sub-tab's transcript preview region. */
+  getConversationPreview(dialog: Locator): Locator {
+    return getConversationPreview(dialog);
+  }
+
+  /** Every conversation row (each row is a `role="button"`). */
+  getConversationRows(dialog: Locator): Locator {
+    return getConversationRows(dialog);
+  }
+
+  /**
+   * A single conversation row identified by its backend session id — the SDK
+   * component stamps each row with `data-testid="history-conversation-row"`
+   * and `data-session-id={session.id}`. This is the most solid anchor for a
+   * SPECIFIC conversation: matching by list position ("first row") would race
+   * against other parallel workers appending new sessions under the same
+   * shared admin storageState, and matching by title/text races against the
+   * backend's asynchronous session-title generation (same hazard documented
+   * in journey 53's Recent-chats checkpoints).
+   */
+  historyConversationRow(dialog: Locator, sessionId: string): Locator {
+    return dialog.locator(
+      `[data-testid="history-conversation-row"][data-session-id="${sessionId}"]`,
+    );
+  }
+
+  /** Wait for the conversation area to settle: rows rendered, or the empty state. */
+  waitForConversations(dialog: Locator): Promise<void> {
+    return waitForConversations(dialog);
+  }
+
+  /** The "No conversations found" empty-state text (structural — renders regardless of data). */
+  conversationsEmptyState(dialog: Locator): Locator {
+    return dialog.getByText(HISTORY_TAB_LABELS.emptyState, { exact: true });
+  }
+
+  /** The Conversations toolbar's agent autocomplete (placeholder & accessible name "Search Agents"). */
+  historyAgentFilterInput(dialog: Locator): Locator {
+    return dialog.getByPlaceholder(HISTORY_TAB_LABELS.filters.searchAgents);
+  }
+
+  /** The Conversations toolbar's date-range picker trigger button. */
+  historyDateRangeButton(dialog: Locator): Locator {
+    return dialog.getByRole('button', {
+      name: HISTORY_TAB_LABELS.filters.pickDateRange,
+    });
+  }
+
+  /** The Conversations toolbar's sentiment filter select trigger. */
+  historySentimentFilter(dialog: Locator): Locator {
+    return dialog.getByRole('combobox', {
+      name: HISTORY_TAB_LABELS.filters.sentiment,
+    });
+  }
+
+  /** The Conversations toolbar's topic filter select trigger. */
+  historyTopicFilter(dialog: Locator): Locator {
+    return dialog.getByRole('combobox', {
+      name: HISTORY_TAB_LABELS.filters.topic,
+    });
+  }
+
+  /** The Conversations toolbar's Export button. */
+  historyExportButton(dialog: Locator): Locator {
+    return dialog.getByRole('button', {
+      name: HISTORY_TAB_LABELS.filters.export,
+      exact: true,
+    });
+  }
+
+  /** The Exports sub-tab's "No exports yet." empty-state text. */
+  exportsEmptyState(dialog: Locator): Locator {
+    return dialog.getByText(HISTORY_TAB_LABELS.exports.empty, {
+      exact: true,
+    });
+  }
+
+  /**
+   * Click a conversation row (by zero-based `index` or first-row `title`
+   * substring match) and wait for the transcript preview to show its
+   * per-conversation Download button.
+   */
+  selectConversation(
+    dialog: Locator,
+    options?: { index?: number; title?: string },
+  ): Promise<void> {
+    return selectConversation(dialog, options);
+  }
+
+  /** Download the currently previewed conversation as CSV. */
+  downloadConversationCsv(dialog: Locator): Promise<Download> {
+    return downloadConversationCsv(dialog);
+  }
+
+  /** Type into the agent autocomplete and pick the matching agent, collapsing to a selected chip. */
+  filterHistoryByAgent(dialog: Locator, agentName: string): Promise<void> {
+    return filterHistoryByAgent(dialog, agentName);
+  }
+
+  /** Clear the agent filter chip, returning the search input. */
+  clearHistoryAgentFilter(dialog: Locator): Promise<void> {
+    return clearHistoryAgentFilter(dialog);
+  }
+
+  filterHistoryBySentiment(
+    dialog: Locator,
+    sentiment: HistorySentiment | 'All Sentiments',
+  ): Promise<void> {
+    return filterHistoryBySentiment(dialog, sentiment);
+  }
+
+  filterHistoryByTopic(
+    dialog: Locator,
+    topic: string | 'All Topics',
+  ): Promise<void> {
+    return filterHistoryByTopic(dialog, topic);
+  }
+
+  /** Click Export on the Conversations sub-tab (report generates server-side). */
+  startHistoryExport(dialog: Locator): Promise<void> {
+    return startHistoryExport(dialog);
+  }
+
+  /** Full export flow: click Export, wait for the report to finish and the browser download to fire. */
+  exportHistoryAndWaitForDownload(
+    dialog: Locator,
+    options?: { timeout?: number },
+  ): Promise<Download> {
+    return exportHistoryAndWaitForDownload(dialog, options);
+  }
+
+  /** The Exports sub-tab's reports table. */
+  getExportsTable(dialog: Locator): Locator {
+    return getExportsTable(dialog);
+  }
+
+  /** Rows of the Exports table matching a state badge label (e.g. "Completed"). */
+  getExportRowsByState(dialog: Locator, state: string): Locator {
+    return getExportRowsByState(dialog, state);
+  }
+
+  /** Wait until at least one report row reaches the Completed state. */
+  waitForCompletedExportRow(
+    dialog: Locator,
+    options?: { timeout?: number },
+  ): Promise<Locator> {
+    return waitForCompletedExportRow(dialog, options);
+  }
+
+  /** Re-download a completed report from its Exports-table row. */
+  downloadExportedReport(dialog: Locator, row: Locator): Promise<Download> {
+    return downloadExportedReport(dialog, row);
   }
 }

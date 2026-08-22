@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-08-21",
+  "lastUpdated": "2026-08-22",
   "summary": {
-    "totalCheckpoints": 677,
-    "coveredCheckpoints": 646,
+    "totalCheckpoints": 683,
+    "coveredCheckpoints": 652,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 11,
     "pendingCheckpoints": 8,
     "percent": 100,
-    "totalJourneys": 72,
-    "activeJourneys": 71
+    "totalJourneys": 73,
+    "activeJourneys": 72
   },
   "journeys": [
     {
@@ -4280,6 +4280,46 @@
           "description": "Profile Memory tab: full CRUD on a unique personal memory via the NEW three-dots menu (Edit + Delete replaced the old hover-delete button) — add, edit via the three-dots → Edit → Edit Memory dialog (hand-rolled page-object helper; no SDK helper exists for this), and delete via deleteMemoryByContent (NOT the deprecated archiveMemoryByContent alias)",
           "status": "covered",
           "note": "The profile Memory tab previously had ZERO e2e coverage. The three-dots menu (replacing hover-delete) and Archive→Delete rename are new SDK behavior verified against @iblai/iblai-js@2.5.5."
+        }
+      ]
+    },
+    {
+      "id": "profile-history-tab",
+      "name": "Profile History Tab",
+      "spec": "71-profile-history-tab.spec.ts",
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "HT-01",
+          "description": "User opens the profile \"History\" tab (ChatHistoryTab — a plain, non-admin-managed user-profile feature; no host enable-flag, unconditional, only renders on the user's own profile) and the Conversations sub-tab settles into either rendered rows or the \"No conversations found\" empty state",
+          "status": "covered"
+        },
+        {
+          "id": "HT-02",
+          "description": "Conversations sub-tab toolbar renders its five filter controls (agent autocomplete \"Search Agents\", \"Pick a Date Range\", Filter by Sentiment, Filter by Topic, Export) regardless of data",
+          "status": "covered"
+        },
+        {
+          "id": "HT-03",
+          "description": "Switching to the Exports sub-tab renders its reports table (SDK's ReportHistory renders the table unconditionally, with a \"No exports yet.\" row when empty)",
+          "status": "covered"
+        },
+        {
+          "id": "HT-04",
+          "description": "User selects a seeded conversation (own freshly-created mentor + one chat message, matched by its stable data-session-id row attribute) and the transcript preview loads with a Download button; downloading it produces a CSV file. Skips gracefully if mentor creation is unavailable to the account in this environment (e.g. trial/paywall gating)",
+          "status": "covered"
+        },
+        {
+          "id": "HT-05",
+          "description": "User filters Conversations by the account's pre-existing agent's exact name, the list re-settles into rows-or-empty for that agent scope, and clearing the agent filter returns the search input",
+          "status": "covered"
+        },
+        {
+          "id": "HT-06",
+          "description": "User exports their personal chat history scoped to an existing agent (Export button) and the report is tracked in the Exports sub-tab",
+          "status": "covered"
         }
       ]
     }

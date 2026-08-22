@@ -238,6 +238,20 @@ export class MemoryAdminPage {
     return memoryAdminAgentRow(this.page, mentorUniqueId);
   }
 
+  /**
+   * The first row of the (unfiltered) agents table. Row testids embed the
+   * mentor unique_id (`memory-admin-agent-row-<unique_id>`) and the first
+   * cell holds the display name, so a caller can resolve an EXISTING,
+   * already-search-indexed mentor to drive the autocomplete with — see
+   * MA-06's comment for why filtering for a freshly created mentor is
+   * inherently flaky.
+   */
+  firstAgentRow(): Locator {
+    return this.agentSection()
+      .locator('[data-testid^="memory-admin-agent-row-"]')
+      .first();
+  }
+
   /** Filter the agents table via the autocomplete (types the name, picks the matching option). */
   filterAgents(agentName: string): Promise<void> {
     return filterAgentMemories(this.page, agentName);

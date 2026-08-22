@@ -2,12 +2,9 @@ import { test, expect } from '../fixtures/mentor-test';
 import {
   navigateToMentorApp,
   checkAdminStatus,
-  getPlatformContext,
   getLoggedInUsername,
 } from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
-import { deleteMentorById } from '../utils/mentor-cleanup';
-import { generateMentorName } from '../fixtures/test-data';
 import type { ProfilePage } from '../page-objects/profile.page';
 
 /**
@@ -149,8 +146,14 @@ test.describe('Journey 70A: Tenant Memory admin tab (Global + Agent)', () => {
       'Memory admin tab unavailable (memsearch not enabled/resolved on this tenant)',
     );
 
-    const content = `e2e-global-memory-${Date.now()}`;
-    const updated = `${content}-edited`;
+    // DISJOINT strings — neither contains the other. Row lookups filter by
+    // `hasText`/`getByText`, which are SUBSTRING matches, so an `updated`
+    // built as `${content}-edited` would keep matching the "old content"
+    // locator after the edit and make the post-edit toBeHidden assertion
+    // unsatisfiable.
+    const stamp = Date.now();
+    const content = `e2e-global-memory-original-${stamp}`;
+    const updated = `e2e-global-memory-edited-${stamp}`;
 
     const popup = await memoryAdminPage.openUserPopup(username!);
     try {
@@ -234,55 +237,57 @@ test.describe('Journey 70A: Tenant Memory admin tab (Global + Agent)', () => {
     await memoryAdminPage.close(dialog!);
   });
 
-  // MA-06: filter the Agent sub-tab to a freshly created, uniquely-named
-  // mentor (own name + unique_id both known deterministically — more
-  // reliable than depending on the worker's shared default mentor, whose
-  // display name isn't guaranteed known here), open its popup, and add a
-  // unique agent memory. Self-contained: creates and deletes its own mentor
-  // via the DM API (`deleteMentorById`), matching the project's
-  // mentor-tracking rule for a single test that owns exactly one mentor.
-  test('admin filters the Agent sub-tab to a fresh mentor, opens its popup, and adds a unique agent memory', async ({
-    page,
+  // MA-06: filter the Agent sub-tab to an EXISTING mentor resolved from the
+  // agents table's own first row, open its popup, and add a unique agent
+  // memory.
+  //
+  // Deliberately does NOT create a fresh mentor to search for (the previous
+  // design): the agents autocomplete is served by the tenant mentors SEARCH
+  // endpoint, whose index picks up new mentors asynchronously — a
+  // just-created mentor reliably stays unsearchable for minutes (observed
+  // live: six distinct-term retries over ~90s never surfaced it while
+  // weeks-old mentors matched fine), which made the fresh-mentor flow
+  // irreducibly flaky. The table's first row is a mentor the search backend
+  // is guaranteed to already know, and its testid embeds the unique_id the
+  // popup step needs. The added memory is additive-only residue with a
+  // unique content string (the agent popup's `ManageMemories` editor has no
+  // SDK delete helper) and doesn't disturb any other journey.
+  test('admin filters the Agent sub-tab to an existing mentor, opens its popup, and adds a unique agent memory', async ({
     memoryAdminPage,
-    createMentorPage,
   }) => {
-    // Own extended budget: this checkpoint pays a full mentor create AND
-    // delete on top of the tenant-dialog + popup flow — the create alone can
-    // run close to the 120s config default on staging (same rationale as the
-    // mentor-creating checkpoints in journeys 47/60).
-    test.setTimeout(240_000);
-    const mentorName = generateMentorName();
-    await createMentorPage.openAndCreate(mentorName);
-    const { mentorId } = await getPlatformContext(page);
+    const dialog = await memoryAdminPage.tryOpen();
+    test.skip(
+      !dialog,
+      'Memory admin tab unavailable (memsearch not enabled/resolved on this tenant)',
+    );
 
+    await memoryAdminPage.switchToSubTab('agent');
+
+    const firstRow = memoryAdminPage.firstAgentRow();
+    await expect(firstRow).toBeVisible({ timeout: 15_000 });
+    const rowTestId = await firstRow.getAttribute('data-testid');
+    const mentorId = rowTestId!.replace('memory-admin-agent-row-', '');
+    const mentorName = (
+      await firstRow.locator('td').first().innerText()
+    ).trim();
+
+    await memoryAdminPage.filterAgents(mentorName);
+    await expect(memoryAdminPage.agentRow(mentorId)).toBeVisible({
+      timeout: 15_000,
+    });
+
+    const content = `e2e-agent-memory-${Date.now()}`;
+    const popup = await memoryAdminPage.openAgentPopup(mentorId);
     try {
-      const dialog = await memoryAdminPage.tryOpen();
-      test.skip(
-        !dialog,
-        'Memory admin tab unavailable (memsearch not enabled/resolved on this tenant)',
-      );
-
-      await memoryAdminPage.switchToSubTab('agent');
-      await memoryAdminPage.filterAgents(mentorName);
-      await expect(memoryAdminPage.agentRow(mentorId)).toBeVisible({
-        timeout: 15_000,
+      await memoryAdminPage.addAgentMemory(popup, content);
+      await expect(popup.getByText(content)).toBeVisible({
+        timeout: 10_000,
       });
-
-      const content = `e2e-agent-memory-${Date.now()}`;
-      const popup = await memoryAdminPage.openAgentPopup(mentorId);
-      try {
-        await memoryAdminPage.addAgentMemory(popup, content);
-        await expect(popup.getByText(content)).toBeVisible({
-          timeout: 10_000,
-        });
-      } finally {
-        await memoryAdminPage.closeAgentPopup().catch(() => {});
-      }
-
-      await memoryAdminPage.close(dialog!);
     } finally {
-      await deleteMentorById(page, mentorId);
+      await memoryAdminPage.closeAgentPopup().catch(() => {});
     }
+
+    await memoryAdminPage.close(dialog!);
   });
 });
 
@@ -366,8 +371,11 @@ test.describe('Journey 70B: Profile Memory tab ("My Memories")', () => {
       'Profile Memory tab content unavailable (memsearch disabled on this tenant renders a disabled placeholder instead)',
     );
 
-    const content = `e2e-my-memory-${Date.now()}`;
-    const updated = `${content}-edited`;
+    // Disjoint strings — see MA-03: `verifyMemoryNotExists` uses substring
+    // matching, so `updated` must not contain `content`.
+    const stamp = Date.now();
+    const content = `e2e-my-memory-original-${stamp}`;
+    const updated = `e2e-my-memory-edited-${stamp}`;
 
     try {
       await nonadminProfilePage.addMemory(content);
