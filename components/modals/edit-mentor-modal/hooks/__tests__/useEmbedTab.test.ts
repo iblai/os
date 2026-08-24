@@ -96,7 +96,6 @@ describe('useEmbedTab', () => {
   let mockGetUserName: ReturnType<typeof vi.fn>;
   let mockGetEmbedCode: ReturnType<typeof vi.fn>;
   let mockToastError: ReturnType<typeof vi.fn>;
-  let mockToastSuccess: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -105,7 +104,6 @@ describe('useEmbedTab', () => {
     mockGetUserName = vi.mocked(utils.getUserName);
     mockGetEmbedCode = vi.mocked(embedUtils.getEmbedCode);
     mockToastError = vi.mocked(toast.error);
-    mockToastSuccess = vi.mocked(toast.success);
 
     // Create fresh mock functions for mutations
     mockCreateRedirectTokenFn = vi.fn();
@@ -619,94 +617,6 @@ describe('useEmbedTab', () => {
           }),
         }),
       );
-    });
-  });
-
-  describe('handleSaveSettings', () => {
-    it('persists settings via updateMentorSettings and shows a success toast without creating a token or embed code', async () => {
-      mockUpdateMentorSettingsFn.mockResolvedValueOnce({
-        data: { success: true },
-      });
-
-      const { result } = renderHook(() => useEmbedTab());
-
-      // No URL / not anonymous: save must NOT validate the website URL.
-      await act(async () => {
-        result.current.form.setFieldValue('allow_anonymous', false);
-        result.current.form.setFieldValue('website_url', '');
-        result.current.form.setFieldValue('show_catalogue', true);
-      });
-
-      await act(async () => {
-        await result.current.handleSaveSettings();
-      });
-
-      expect(mockUpdateMentorSettingsFn).toHaveBeenCalledWith(
-        expect.objectContaining({
-          mentor: 'test-mentor',
-          org: 'test-tenant',
-          userId: 'test-user',
-          formData: expect.objectContaining({ show_catalogue: true }),
-        }),
-      );
-      expect(mockToastSuccess).toHaveBeenCalledWith('Settings saved');
-      // No URL validation error was set despite the empty website_url.
-      expect(result.current.createTokenError).toBe('');
-      // Save must not create a redirect token, generate embed code, or open the
-      // embed dialog.
-      expect(mockCreateRedirectTokenFn).not.toHaveBeenCalled();
-      expect(mockGetEmbedCode).not.toHaveBeenCalled();
-      expect(result.current.embedCode).toBe('');
-    });
-
-    it('does not show the success toast and surfaces an error toast on failure', async () => {
-      mockUpdateMentorSettingsFn.mockResolvedValueOnce({
-        error: { error: { error: 'Save failed' } },
-      });
-      const consoleSpy = vi
-        .spyOn(console, 'error')
-        .mockImplementation(() => {});
-
-      const { result } = renderHook(() => useEmbedTab());
-
-      await act(async () => {
-        await result.current.handleSaveSettings();
-      });
-
-      expect(mockToastError).toHaveBeenCalledWith('Save failed');
-      expect(mockToastSuccess).not.toHaveBeenCalled();
-      expect(mockCreateRedirectTokenFn).not.toHaveBeenCalled();
-
-      consoleSpy.mockRestore();
-    });
-
-    it('toggles isSavingSettings around the save call', async () => {
-      let resolveSave: (v: unknown) => void = () => {};
-      mockUpdateMentorSettingsFn.mockReturnValueOnce(
-        new Promise((resolve) => {
-          resolveSave = resolve;
-        }),
-      );
-
-      const { result } = renderHook(() => useEmbedTab());
-
-      expect(result.current.isSavingSettings).toBe(false);
-
-      let savePromise: Promise<void>;
-      act(() => {
-        savePromise = result.current.handleSaveSettings();
-      });
-
-      await waitFor(() => {
-        expect(result.current.isSavingSettings).toBe(true);
-      });
-
-      await act(async () => {
-        resolveSave({ data: { success: true } });
-        await savePromise;
-      });
-
-      expect(result.current.isSavingSettings).toBe(false);
     });
   });
 

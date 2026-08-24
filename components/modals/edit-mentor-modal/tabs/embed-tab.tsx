@@ -243,8 +243,6 @@ export function EmbedTab() {
     setFocusEditCustomFloatingBubble,
     updateConfig,
     updateMultipleConfig,
-    handleSaveSettings,
-    isSavingSettings,
   } = useEmbedTab();
   const toast = useToast();
   const { data: mentorSettings, isLoading: isLoadingSettings } =
@@ -2361,20 +2359,10 @@ export function EmbedTab() {
             )}
           </form>
         </div>
-        <div className="flex flex-shrink-0 justify-end gap-2 border-t border-gray-200 bg-white px-3 py-4">
+        <div className="flex flex-shrink-0 justify-end border-t border-gray-200 bg-white px-3 py-4">
           <Button
-            type="button"
-            onClick={() => handleSaveSettings()}
-            className="bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-sm text-white hover:text-white hover:opacity-90"
-            disabled={form.state.isSubmitting || isSavingSettings}
-          >
-            {isSavingSettings ? t('saving') : t('save')}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
             onClick={() => form.handleSubmit()}
-            className="text-sm"
+            className="bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-sm text-white hover:text-white hover:opacity-90"
             disabled={form.state.isSubmitting}
           >
             {form.state.isSubmitting ? t('generatingEmbed') : t('createEmbed')}

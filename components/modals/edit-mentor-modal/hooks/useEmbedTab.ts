@@ -345,22 +345,6 @@ const useEmbedTab = () => {
     return { success: true, redirectToken: redirectTokenResponse?.data?.token };
   };
 
-  // Save button handler: persist settings only — no URL validation, no
-  // redirect token, no embed-code generation, no embed dialog. Shows a success
-  // toast on success; `saveMentorSettings` already toasts/sets error on failure.
-  const [isSavingSettings, setIsSavingSettings] = useState(false);
-  const handleSaveSettings = async (): Promise<void> => {
-    setIsSavingSettings(true);
-    try {
-      const result = await saveMentorSettings();
-      if (result.success) {
-        toast.success('Settings saved');
-      }
-    } finally {
-      setIsSavingSettings(false);
-    }
-  };
-
   const form = useForm({
     defaultValues: {
       ...defaultEmbedFormValues,
@@ -529,8 +513,6 @@ const useEmbedTab = () => {
     updateConfig,
     updateMultipleConfig,
     syncEmbedSettings,
-    handleSaveSettings,
-    isSavingSettings,
   };
 };
 

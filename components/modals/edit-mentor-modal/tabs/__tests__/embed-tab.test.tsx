@@ -40,7 +40,6 @@ const mockSetFocusEditCustomFloatingBubble = vi.fn();
 const mockUpdateConfig = vi.fn();
 const mockUpdateMultipleConfig = vi.fn();
 const mockFormHandleSubmit = vi.fn();
-const mockHandleSaveSettings = vi.fn();
 
 // next/navigation
 vi.mock('next/navigation', () => ({
@@ -336,7 +335,6 @@ function buildUseEmbedTabReturn(overrides: Partial<any> = {}) {
     updateConfig: mockUpdateConfig,
     updateMultipleConfig: mockUpdateMultipleConfig,
     syncEmbedSettings: mockSyncEmbedSettings,
-    handleSaveSettings: mockHandleSaveSettings,
     isSavingSettings: false,
     ...overrides,
   };
@@ -750,28 +748,6 @@ describe('EmbedTab', () => {
     renderEmbedTab();
     fireEvent.click(screen.getByRole('button', { name: 'Create Embed' }));
     expect(mockFormHandleSubmit).toHaveBeenCalled();
-  });
-
-  it('renders both the Save and Create Embed footer buttons', () => {
-    renderEmbedTab();
-    expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Create Embed' }),
-    ).toBeInTheDocument();
-  });
-
-  it('persists settings via the Save button without submitting the form', () => {
-    renderEmbedTab();
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-    expect(mockHandleSaveSettings).toHaveBeenCalled();
-    expect(mockFormHandleSubmit).not.toHaveBeenCalled();
-  });
-
-  it('shows the saving label and disables the Save button while saving', () => {
-    renderEmbedTab({ isSavingSettings: true });
-    const saveBtn = screen.getByRole('button', { name: 'Saving...' });
-    expect(saveBtn).toBeInTheDocument();
-    expect(saveBtn).toBeDisabled();
   });
 
   it('submits the form via the form element onSubmit', () => {
