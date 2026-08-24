@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.130.1](https://github.com/iblai/os/compare/v0.130.0...v0.130.1) (2026-08-24)
+
+### Chores
+
+* **tauri:** release app-v0.95.16 ([bb25012](https://github.com/iblai/os/commit/bb250126d438c7394d2354ab3abb5de90ed39dda))
+
+## [0.130.0](https://github.com/iblai/os/compare/v0.129.2...v0.130.0) (2026-08-21)
+
+### Features
+
+* add stripe and vercel support for code mode ([690e112](https://github.com/iblai/os/commit/690e112a5294e446983adfc540454980ded5014f))
+
+### Bug Fixes
+
+* **code-mode:** enable auto deploy ([e613bfd](https://github.com/iblai/os/commit/e613bfd2f8808c30c3c70f205f9951f0dc83fd03))
+
+### Chores
+
+* **tauri:** release app-v0.95.15 ([f3bcd7b](https://github.com/iblai/os/commit/f3bcd7b899fe5f894b4dc459f4206580850e27ae))
+* update prompt ([9c111ba](https://github.com/iblai/os/commit/9c111ba2e66bac30c5842fdfc77c367a17b9ba07))
+
 ## [0.129.2](https://github.com/iblai/os/compare/v0.129.1...v0.129.2) (2026-08-20)
 
 ### Bug Fixes

@@ -1,6 +1,6 @@
 # Tauri Desktop E2E Coverage — Journey Checklist
 
-> Last updated: 2026-08-15 | 29 checkpoints (18 covered, 11 pending) | 3 journeys | 100% of reproducible checkpoints covered | Driver: WebdriverIO + tauri-driver
+> Last updated: 2026-08-22 | 30 checkpoints (18 covered, 12 pending) | 3 journeys | 100% of reproducible checkpoints covered | Driver: WebdriverIO + tauri-driver
 
 This is the desktop counterpart to the web `e2e/COVERAGE.md`. It tracks only what
 is exercised by driving the **built desktop binary** through `tauri-driver` (see
@@ -63,7 +63,7 @@ Windows (`msedgedriver`) only — `tauri-driver` has no macOS support.
 
 ---
 
-## Journey 3: Code Mode (opencode) (19 checkpoints: 11 covered, 8 pending) — `journeys/03-code-mode.spec.ts`
+## Journey 3: Code Mode (opencode) (20 checkpoints: 11 covered, 9 pending) — `journeys/03-code-mode.spec.ts`
 
 > **Partly covered.** The installer and per-chat state (code-01…07) run against
 > the REAL compiled binary through the live Tauri IPC bridge (`window.__TAURI__`):
@@ -107,7 +107,7 @@ Windows (`msedgedriver`) only — `tauri-driver` has no macOS support.
 - [x] `code-11` The app keeps answering IPC while opencode downloads and extracts _(setup-freeze regression)_
 - [x] `code-12` `set_opencode_skills` materialises a mentor's Agent Skills as SKILL.md packages (frontmatter + text resources), with hostile slugs/filenames confined to the staging dir
 - [x] `code-13` A skills rewrite drops deselected skills, an empty sync clears the tree, and `skills: null` ends a sync without touching it
-- [x] `code-16` `ensure_vibe_skills` installs the shared iblai/vibe skill set into the app data dir (live tarball fetch, daily sha-gated)
+- [x] `code-16` `ensure_vibe_skills` installs the shared iblai/vibe skill set into the app data dir (live tarball fetch of the latest GitHub release, checked on every look — app startup and each Code enable — always latest, never pinned)
 - [ ] `code-08` A permission prompt in one chat does not block another chat's turn _(needs a tool-calling model)_
 - [ ] `code-09` The 5-session cap evicts the least-recently-used idle opencode process _(needs a tool-calling model)_
 - [ ] `code-10` The permission prompt renders in the chat that raised it _(needs a tool-calling model)_
@@ -116,3 +116,4 @@ Windows (`msedgedriver`) only — `tauri-driver` has no macOS support.
 - [ ] `code-17` New Chat in the sidebar evicts the previous chat's opencode process while Code is on _(needs an authenticated UI session; covered meanwhile by the app-sidebar Vitest eviction cases)_
 - [ ] `code-18` A Code turn's opencode process runs inside the OS sandbox (bwrap / sandbox-exec) — only the workspace and tool caches writable, ~/.ssh empty _(needs a tool-calling model; the bwrap argv, SBPL profile and decoy home are covered by the Rust sandbox tests in `opencode_acp.rs`)_
 - [ ] `code-19` A second New Chat in one app run gets its own fresh workspace, and a chat's folder follows it from the ephemeral first-turn key to its real session id _(needs an authenticated UI session; covered meanwhile by the Rust `adopt_prior_mapping` tests and the SDK per-chat key Vitest cases)_
+- [ ] `code-20` Killing the opencode process mid-turn: the answer continues in the same bubble with no visible interruption (one silent respawn re-sends the prompt), and a second kill in the same turn surfaces `ollama:error` _(needs a tool-calling model; covered meanwhile by the Rust crash-retry tests in `opencode_acp.rs` — `should_retry`, `reader_gone`, `closing` — and the proxy rebind/read-timeout tests)_
