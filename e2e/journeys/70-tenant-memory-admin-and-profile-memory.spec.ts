@@ -175,6 +175,34 @@ test.describe('Journey 70A: Tenant Memory admin tab (Global + Agent)', () => {
         timeout: 10_000,
       });
     } finally {
+      // A failed save can leave the Add/Edit dialog open ON TOP of the
+      // popup, where it blocks every cleanup click below (observed live: a
+      // stuck Edit dialog made both deletes and the popup close time out,
+      // stranding residue rows on the shared account). Dismiss it via its
+      // OWN Cancel button — scoped to the dialog, so if the dialog happens
+      // to close on its own in the meantime (e.g. the hung save finally
+      // lands) the click just fails and is swallowed, unlike a global
+      // Escape press which would then hit the popup underneath instead.
+      // Cancel is disabled while a save is still in flight; the click's
+      // own actionability wait absorbs that.
+      const stuckDialog = page
+        .getByRole('dialog', { name: /^(Add|Edit) Memory$/ })
+        .last();
+      // First give an in-flight save a grace window to land and close the
+      // dialog on its own (passes immediately when no dialog is open);
+      // only a dialog still visible after this is treated as stuck.
+      await expect(stuckDialog)
+        .toBeHidden({ timeout: 10_000 })
+        .catch(() => {});
+      if (await stuckDialog.isVisible().catch(() => false)) {
+        await stuckDialog
+          .getByRole('button', { name: 'Cancel', exact: true })
+          .click({ timeout: 10_000 })
+          .catch(() => {});
+        await expect(stuckDialog)
+          .toBeHidden({ timeout: 5_000 })
+          .catch(() => {});
+      }
       // Best-effort cleanup in case an assertion above failed mid-flow.
       await memoryAdminPage.deleteGlobalMemory(popup, updated).catch(() => {});
       await memoryAdminPage.deleteGlobalMemory(popup, content).catch(() => {});

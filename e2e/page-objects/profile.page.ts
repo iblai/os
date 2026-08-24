@@ -480,6 +480,68 @@ export class ProfilePage {
     return filterHistoryByAgent(dialog, agentName);
   }
 
+  /**
+   * Filter History by SOME agent the mentors search index actually knows,
+   * preferring `preferredName`. Returns the selected agent's label.
+   *
+   * The agent autocomplete is served by the search-index-backed mentors
+   * endpoint, and the index lags mentor creation by minutes (the same
+   * product limitation MA-06 in journey 70 documents). `preferredName`
+   * often resolves from the navbar's mentor dropdown — i.e. the account's
+   * MOST RECENTLY ACCESSED mentor, which on the shared e2e account is
+   * routinely a minutes-old, not-yet-indexed mentor another journey just
+   * created. Checkpoints that only need *an* agent selected (filter
+   * round-trip, export tracking) shouldn't fail on that, so this tries the
+   * full preferred name, then its first word, then its first two
+   * characters, and clicks the FIRST option the search returns.
+   */
+  async filterHistoryByAnyIndexedAgent(
+    dialog: Locator,
+    preferredName: string,
+  ): Promise<string> {
+    const input = dialog.getByTestId('history-agent-filter-input');
+    await expect(input).toBeVisible({ timeout: 10_000 });
+
+    const options = dialog
+      .getByTestId('history-agent-filter-results')
+      .getByRole('button');
+
+    const firstWord = preferredName.split(/\s+/)[0] ?? '';
+    const terms = [
+      preferredName,
+      ...(firstWord.length >= 2 && firstWord !== preferredName
+        ? [firstWord]
+        : []),
+      preferredName.slice(0, 2),
+    ];
+
+    let found = false;
+    let lastError: unknown;
+    for (const term of terms) {
+      await input.fill(term);
+      try {
+        await expect(options.first()).toBeVisible({ timeout: 10_000 });
+        found = true;
+        break;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    if (!found) throw lastError;
+
+    // The option button renders the label in its first span (an optional
+    // sublabel follows) — read it before clicking so the caller knows what
+    // got selected.
+    const label = (
+      (await options.first().locator('span').first().innerText()) ?? ''
+    ).trim();
+    await options.first().click();
+    await expect(
+      dialog.getByTestId('history-agent-filter-selected'),
+    ).toBeVisible({ timeout: 10_000 });
+    return label;
+  }
+
   /** Clear the agent filter chip, returning the search input. */
   clearHistoryAgentFilter(dialog: Locator): Promise<void> {
     return clearHistoryAgentFilter(dialog);

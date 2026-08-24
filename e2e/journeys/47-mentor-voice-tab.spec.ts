@@ -410,6 +410,18 @@ test.describe('Journey 47: Mentor Voice Tab', () => {
 
     await editMentorPage.close();
 
+    // Fully release the page before reopening: a reload drops every
+    // client-side cache (RTK Query included), so the reopened tab must load
+    // `voice_provider` / `voice_instructions` from the backend — the actual
+    // persistence contract this checkpoint exists to prove. Without it the
+    // reopen can render PRE-save cached settings: the post-save
+    // invalidation refetch races the backend's read-after-write visibility,
+    // and when the refetch wins it re-caches the stale "browser" provider —
+    // leaving the instructions card unrendered no matter how long the
+    // reopen assertion waits (observed live on staging).
+    await page.reload();
+    await waitForPageReady(page);
+
     // Reopen fresh — the mentor dropdown → Settings/Modify flow, not a
     // resumed dialog — and land back on the Voice tab.
     await editMentorPage.open('Voice');

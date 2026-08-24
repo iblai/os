@@ -190,15 +190,18 @@ test.describe('Journey 71A: Profile History tab — structure', () => {
 
 type SeededHistory = {
   /**
-   * Name of the account's pre-existing default mentor (captured before
-   * attempting to create a fresh one) — used only for the agent-FILTER
-   * checkpoints (HT-05/HT-06). `filterHistoryByAgent` drives the same
-   * search-index-backed agent autocomplete as the tenant Agent Limits filter
-   * (journey 69's `tal-01`), which documents that index lagging mentor
-   * creation as a known product limitation; a brand-new mentor was confirmed
-   * (empirically, against the live backend) to never become searchable
-   * within any reasonable test timeout. An already-existing mentor has no
-   * such lag. Independent of whether fresh mentor creation succeeds below.
+   * Name of the mentor the navbar dropdown showed at seed time (captured
+   * before attempting to create a fresh one) — used only as the PREFERRED
+   * name for the agent-FILTER checkpoints (HT-05/HT-06). The agent
+   * autocomplete is search-index-backed and the index lags mentor creation
+   * by minutes (a known product limitation — journey 69's `tal-01` and
+   * journey 70's MA-06 both document it). NOTE this name is NOT guaranteed
+   * searchable: the dropdown shows the account's most recently ACCESSED
+   * mentor, which on the shared e2e account is often a minutes-old mentor
+   * another journey just created. HT-05/HT-06 therefore go through
+   * `filterHistoryByAnyIndexedAgent`, which prefers this name but falls
+   * back to whatever the index can return. Independent of whether fresh
+   * mentor creation succeeds below.
    */
   existingMentorName: string;
   /**
@@ -337,11 +340,16 @@ test.describe('Journey 71B: Profile History tab — with seeded conversation', (
     await profilePage!.close();
   });
 
-  // HT-05: filtering Conversations by the account's pre-existing (already
-  // indexed) mentor round-trips through the autocomplete into a selected
-  // chip and the list re-settles into rows-or-empty for that agent scope;
-  // clearing the filter returns the search input. Uses `existingMentorName`,
-  // NOT the freshly-created seed mentor — see `SeededHistory`'s doc comment.
+  // HT-05: filtering Conversations by an indexed agent round-trips through
+  // the autocomplete into a selected chip and the list re-settles into
+  // rows-or-empty for that agent scope; clearing the filter returns the
+  // search input. Uses `filterHistoryByAnyIndexedAgent` rather than
+  // demanding `existingMentorName` verbatim: that name comes from the
+  // navbar's mentor dropdown — the account's most recently ACCESSED mentor,
+  // which on the shared e2e account is routinely a minutes-old mentor from
+  // another journey that the mentors search index hasn't picked up yet
+  // (see `SeededHistory`'s doc comment). This checkpoint only needs *an*
+  // agent selected, so it falls back to whatever the index returns.
   test('user filters Conversations by an existing agent and clears the filter', async () => {
     const { existingMentorName } = seeded!;
 
@@ -349,7 +357,10 @@ test.describe('Journey 71B: Profile History tab — with seeded conversation', (
     const dialog = await profilePage!.openHistoryTab();
     await profilePage!.waitForConversations(dialog);
 
-    await profilePage!.filterHistoryByAgent(dialog, existingMentorName);
+    await profilePage!.filterHistoryByAnyIndexedAgent(
+      dialog,
+      existingMentorName,
+    );
     await profilePage!.waitForConversations(dialog);
 
     await profilePage!.clearHistoryAgentFilter(dialog);
@@ -381,7 +392,12 @@ test.describe('Journey 71B: Profile History tab — with seeded conversation', (
     await profilePage!.open();
     const dialog = await profilePage!.openHistoryTab();
     await profilePage!.waitForConversations(dialog);
-    await profilePage!.filterHistoryByAgent(dialog, existingMentorName);
+    // Any indexed agent works — see HT-05's comment on why the preferred
+    // navbar-derived name may not be searchable yet.
+    await profilePage!.filterHistoryByAnyIndexedAgent(
+      dialog,
+      existingMentorName,
+    );
 
     await profilePage!.startHistoryExport(dialog);
 
