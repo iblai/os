@@ -13,6 +13,11 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 # Copy package manifests first (for layer caching)
 COPY package.json .
 COPY pnpm-lock.yaml .
+# pnpm v10 reads `overrides` and `patchedDependencies` from pnpm-workspace.yaml
+# (no longer from the package.json `pnpm` field). Without this file the frozen
+# install fails with ERR_PNPM_LOCKFILE_CONFIG_MISMATCH because the lockfile
+# records overrides the install config can't see.
+COPY pnpm-workspace.yaml .
 # pnpm patchedDependencies reference files under patches/ that must exist at
 # install time (pnpm hashes them), so copy them before install.
 COPY patches ./patches
@@ -28,10 +33,18 @@ ARG NEXT_IMAGE_PATTERNS
 ARG NEXT_PUBLIC_BASE_PATH
 ARG SENTRY_AUTH_TOKEN
 ARG APP_VERSION
+# Immutable static hosting: when NEXT_PUBLIC_ASSET_CDN is passed, /_next/* assets
+# are emitted under <cdn>/apps/<NEXT_PUBLIC_APP_NAME>/<APP_VERSION>/. Unset → the
+# build is unchanged (assets served from the node as before).
+ARG NEXT_PUBLIC_ASSET_CDN
+ARG NEXT_PUBLIC_APP_NAME
 # Make available as environment variables during build
 ENV NEXT_IMAGE_PATTERNS=$NEXT_IMAGE_PATTERNS
 ENV NEXT_PUBLIC_BASE_PATH=$NEXT_PUBLIC_BASE_PATH
 ENV SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN
+ENV NEXT_PUBLIC_ASSET_CDN=$NEXT_PUBLIC_ASSET_CDN
+ENV NEXT_PUBLIC_APP_NAME=$NEXT_PUBLIC_APP_NAME
+ENV APP_VERSION=$APP_VERSION
 
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 

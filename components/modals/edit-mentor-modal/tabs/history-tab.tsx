@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import { format, formatDistanceToNow } from 'date-fns';
 import {
   Calendar,
@@ -79,6 +80,7 @@ interface Conversation {
 }
 
 export function HistoryTab() {
+  const t = useTranslations('tabsHistoryTab');
   const [selectedConversation, setSelectedConversation] =
     React.useState<Conversation | null>(null);
   const [isConversationPreviewModalOpen, setIsConversationPreviewModalOpen] =
@@ -167,14 +169,20 @@ export function HistoryTab() {
     <div className="flex h-full flex-col">
       <div className="flex hidden h-[73px] flex-shrink-0 items-center border-b border-gray-200 bg-white p-4 lg:block">
         <div>
-          <h3 className="mb-1 text-base font-medium text-gray-900">History</h3>
-          <p className="text-xs text-gray-700">
-            View and manage conversation history.
-          </p>
+          <h3 className="mb-1 text-base font-medium text-gray-900">
+            {t('heading')}
+          </h3>
+          <p className="text-xs text-gray-700">{t('subtitle')}</p>
         </div>
       </div>
 
       <div className="scrollbar-hide flex-1 overflow-y-auto p-4">
+        <div
+          className="mb-4 rounded-md border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600"
+          data-testid="history-info-box"
+        >
+          {t('infoBox')}
+        </div>
         <div className="space-y-6">
           {/* Rating and Description Section */}
           {!isMentorSummariesLoading && mentorSummaries && (
@@ -190,7 +198,7 @@ export function HistoryTab() {
                   ))}
                 </div>
                 <span className="font-semibold text-gray-900">
-                  {averageRating.toFixed(1)} out of 5
+                  {t('ratingOutOf', { rating: averageRating.toFixed(1) })}
                 </span>
               </div>
               {/* SUMMARY SECTION */}
@@ -199,7 +207,9 @@ export function HistoryTab() {
                   {mentorSummaries.summary}
                 </p>
               ) : (
-                <p className="text-sm text-gray-600">Summary not available</p>
+                <p className="text-sm text-gray-600">
+                  {t('summaryNotAvailable')}
+                </p>
               )}
             </div>
           )}
@@ -242,22 +252,24 @@ export function HistoryTab() {
                       <Button
                         variant="outline"
                         role="combobox"
-                        aria-label="Search for User"
+                        aria-label={t('searchForUser')}
                         className="w-full justify-between bg-transparent font-normal"
                       >
                         {filters.users
                           ? chatHistoryFilter?.users?.find(
                               (user) => user.username === filters.users,
                             )?.email
-                          : 'Search for User'}
+                          : t('searchForUser')}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-full p-0" align="start">
                       <Command>
-                        <CommandInput placeholder="Search users..." />
+                        <CommandInput
+                          placeholder={t('searchUsersPlaceholder')}
+                        />
                         <CommandList>
-                          <CommandEmpty>No users found.</CommandEmpty>
+                          <CommandEmpty>{t('noUsersFound')}</CommandEmpty>
                           <CommandGroup>
                             <CommandItem
                               value=""
@@ -271,7 +283,7 @@ export function HistoryTab() {
                                   !filters.users ? 'opacity-100' : 'opacity-0',
                                 )}
                               />
-                              All Users
+                              {t('allUsers')}
                             </CommandItem>
                             {chatHistoryFilter?.users?.map((user) => (
                               <CommandItem
@@ -317,7 +329,7 @@ export function HistoryTab() {
                       <Calendar className="h-4 w-4" />
                       {filters.dateRange?.from && filters.dateRange?.to
                         ? `${format(filters.dateRange.from, 'MMM dd')} - ${format(filters.dateRange.to, 'MMM dd')}`
-                        : 'Pick a Date Range'}
+                        : t('pickDateRange')}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -346,15 +358,21 @@ export function HistoryTab() {
                   >
                     <SelectTrigger
                       className="w-40"
-                      aria-label="Filter by sentiment"
+                      aria-label={t('filterBySentiment')}
                     >
-                      <SelectValue placeholder="All Sentiments" />
+                      <SelectValue placeholder={t('allSentiments')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Sentiments</SelectItem>
-                      <SelectItem value="positive">Positive</SelectItem>
-                      <SelectItem value="neutral">Neutral</SelectItem>
-                      <SelectItem value="negative">Negative</SelectItem>
+                      <SelectItem value="all">{t('allSentiments')}</SelectItem>
+                      <SelectItem value="positive">
+                        {t('sentimentPositive')}
+                      </SelectItem>
+                      <SelectItem value="neutral">
+                        {t('sentimentNeutral')}
+                      </SelectItem>
+                      <SelectItem value="negative">
+                        {t('sentimentNegative')}
+                      </SelectItem>
                     </SelectContent>
                   </Select>
 
@@ -369,12 +387,12 @@ export function HistoryTab() {
                   >
                     <SelectTrigger
                       className="w-32"
-                      aria-label="Filter by topic"
+                      aria-label={t('filterByTopic')}
                     >
-                      <SelectValue placeholder="All Topics" />
+                      <SelectValue placeholder={t('allTopics')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Topics</SelectItem>
+                      <SelectItem value="all">{t('allTopics')}</SelectItem>
                       {chatHistoryFilter?.topics?.map((topic) => (
                         <SelectItem key={topic.name} value={topic.name}>
                           {topic.name}
@@ -398,15 +416,21 @@ export function HistoryTab() {
                 >
                   <SelectTrigger
                     className="flex-1"
-                    aria-label="Filter by sentiment"
+                    aria-label={t('filterBySentiment')}
                   >
-                    <SelectValue placeholder="All Sentiments" />
+                    <SelectValue placeholder={t('allSentiments')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Sentiments</SelectItem>
-                    <SelectItem value="positive">Positive</SelectItem>
-                    <SelectItem value="neutral">Neutral</SelectItem>
-                    <SelectItem value="negative">Negative</SelectItem>
+                    <SelectItem value="all">{t('allSentiments')}</SelectItem>
+                    <SelectItem value="positive">
+                      {t('sentimentPositive')}
+                    </SelectItem>
+                    <SelectItem value="neutral">
+                      {t('sentimentNeutral')}
+                    </SelectItem>
+                    <SelectItem value="negative">
+                      {t('sentimentNegative')}
+                    </SelectItem>
                   </SelectContent>
                 </Select>
 
@@ -421,12 +445,12 @@ export function HistoryTab() {
                 >
                   <SelectTrigger
                     className="flex-1"
-                    aria-label="Filter by topic"
+                    aria-label={t('filterByTopic')}
                   >
-                    <SelectValue placeholder="All Topics" />
+                    <SelectValue placeholder={t('allTopics')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Topics</SelectItem>
+                    <SelectItem value="all">{t('allTopics')}</SelectItem>
                     {chatHistoryFilter?.topics?.map((topic) => (
                       <SelectItem key={topic.name} value={topic.name}>
                         {topic.name}
@@ -445,7 +469,7 @@ export function HistoryTab() {
                   className="flex w-full items-center justify-center gap-2 bg-transparent lg:w-auto"
                 >
                   <Download className="h-4 w-4" />
-                  {isExporting ? 'Exporting...' : 'Export'}
+                  {isExporting ? t('exporting') : t('export')}
                 </Button>
               </div>
             </div>
@@ -460,7 +484,9 @@ export function HistoryTab() {
           {/* No conversations found */}
           {chatHistoryLength === 0 && !isChatHistoryLoading && (
             <div className="flex flex-col items-center justify-center">
-              <p className="text-sm text-gray-600">No conversations found</p>
+              <p className="text-sm text-gray-600">
+                {t('noConversationsFound')}
+              </p>
             </div>
           )}
 
@@ -473,7 +499,7 @@ export function HistoryTab() {
                   className="scrollbar-hide max-h-[500px] overflow-hidden overflow-y-auto rounded-md border"
                   tabIndex={0}
                   role="region"
-                  aria-label="Conversation list"
+                  aria-label={t('conversationListAriaLabel')}
                 >
                   {chatHistory?.results?.map((_conversation: unknown) => {
                     //const messages = parseMessages(conversation.messages);
@@ -483,7 +509,7 @@ export function HistoryTab() {
                     const name =
                       conversation.lti_email ||
                       conversation.email ||
-                      'Anonymous';
+                      t('anonymous');
                     const timeAgo = formatDistanceToNow(
                       new Date(conversation.inserted_at),
                       {
@@ -492,10 +518,10 @@ export function HistoryTab() {
                     );
                     const title = firstMessage?.human
                       ? textTruncate(firstMessage.human, 50)
-                      : 'Conversation';
+                      : t('conversationFallbackTitle');
                     const preview = firstMessage?.ai
                       ? textTruncate(firstMessage.ai, 60)
-                      : 'No response available';
+                      : t('noResponseAvailable');
 
                     return (
                       <div
@@ -551,14 +577,14 @@ export function HistoryTab() {
                 className="scrollbar-hide hidden max-h-[500px] flex-col overflow-y-auto rounded-lg border bg-white p-6 shadow-sm md:flex"
                 tabIndex={0}
                 role="region"
-                aria-label="Conversation preview"
+                aria-label={t('conversationPreviewAriaLabel')}
               >
                 {selectedConversation && previewConversationContent ? (
                   <>
                     <div className="mb-4">
                       <h3 className="mb-1 text-base font-semibold text-gray-700">
                         {selectedConversation.messages[0]?.human ||
-                          'Conversation'}
+                          t('conversationFallbackTitle')}
                       </h3>
                       <span className="text-sm text-gray-500">
                         {format(
@@ -588,7 +614,7 @@ export function HistoryTab() {
                               <div className="font-medium text-gray-700">
                                 {selectedConversation.lti_email ||
                                   selectedConversation.email ||
-                                  'Anonymous'}
+                                  t('anonymous')}
                               </div>
                               <p className="mt-1 text-sm whitespace-pre-line text-gray-500">
                                 {message.human}
@@ -599,12 +625,12 @@ export function HistoryTab() {
                           <div className="flex items-start gap-3 border-t border-gray-200 pt-4">
                             <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gray-100">
                               <span className="text-sm font-medium text-gray-600">
-                                AI
+                                {t('aiLabel')}
                               </span>
                             </div>
                             <div className="flex-1">
                               <div className="font-medium text-gray-700">
-                                AI Agent
+                                {t('aiAgent')}
                               </div>
                               <div className="mt-1 text-sm text-gray-500">
                                 <Markdown>{message.ai}</Markdown>
@@ -626,8 +652,8 @@ export function HistoryTab() {
                           >
                             <Brain className="h-4 w-4" />
                             {showConversationMemory
-                              ? 'Hide Conversation Memory'
-                              : 'Show Conversation Memory'}
+                              ? t('hideConversationMemory')
+                              : t('showConversationMemory')}
                           </Button>
 
                           {showConversationMemory && (
@@ -657,7 +683,7 @@ export function HistoryTab() {
                                 </>
                               ) : (
                                 <div className="text-sm text-gray-500">
-                                  No conversation memory available.
+                                  {t('noConversationMemory')}
                                 </div>
                               )}
                             </div>
@@ -668,7 +694,7 @@ export function HistoryTab() {
                   </>
                 ) : (
                   <div className="flex h-full items-center justify-center text-gray-500">
-                    Select a conversation to view details.
+                    {t('selectConversationPrompt')}
                   </div>
                 )}
               </div>
@@ -687,8 +713,8 @@ export function HistoryTab() {
             <DialogTitle className="text-lg font-semibold text-gray-900">
               {previewConversationContent
                 ? previewConversationContent.messages[0]?.human ||
-                  'Conversation'
-                : 'Conversation'}
+                  t('conversationFallbackTitle')
+                : t('conversationFallbackTitle')}
             </DialogTitle>
           </DialogHeader>
           <div className="mx-auto max-w-full overflow-x-hidden">
@@ -720,7 +746,7 @@ export function HistoryTab() {
                         <div className="truncate font-medium text-gray-900">
                           {previewConversationContent.lti_email ||
                             previewConversationContent.email ||
-                            'Anonymous'}
+                            t('anonymous')}
                         </div>
                         <p className="mt-1 text-sm whitespace-pre-line text-gray-900">
                           {message.human}
@@ -731,12 +757,12 @@ export function HistoryTab() {
                     <div className="flex items-start gap-3 border-t border-gray-200 pt-4">
                       <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gray-100">
                         <span className="text-sm font-medium text-gray-600">
-                          AI
+                          {t('aiLabel')}
                         </span>
                       </div>
                       <div className="overflow-x-hidden">
                         <div className="font-medium text-gray-900">
-                          AI Agent
+                          {t('aiAgent')}
                         </div>
                         <div className="mt-1 text-sm text-gray-900">
                           <Markdown>{message.ai}</Markdown>

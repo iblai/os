@@ -56,12 +56,20 @@ import { Spinner } from '@/components/spinner';
 import { useIsPreviewMode } from '@/hooks/use-is-preview-mode';
 import { ANONYMOUS_USERNAME, MENTOR_VISIBILITY_VALUES } from '@/lib/constants';
 import { useEmbedMode } from '@/hooks/use-embed-mode';
+import {
+  embedContextQuery,
+  appendEmbedContext,
+  persistEmbedContextFromUrl,
+} from '@/lib/embed-context';
 import { use402ErrorCheck } from '@/hooks/subscription/use-402-error-check';
 import { SUBSCRIPTION_CREDIT_LIMIT_ERROR_MESSAGE } from '@/hooks/subscription/constants';
 import { customErrorMessages } from '@/lib/error';
 import { useIframeHandlers } from '@/lib/handlers';
 import { useIframeMessageHandler } from '@iblai/iblai-js/web-containers';
 import { SentryInit } from '@/components/sentry-init';
+import { LanguagePreferenceSync } from '@/components/language-preference-sync';
+import { TenantLock } from '@/components/tenant-lock';
+import { WebContainersLocaleProvider } from '@/components/web-containers-locale-provider';
 import { MentorTimeTrackingProvider } from '@/hooks/use-mentor-time-tracking';
 import { useSelector } from 'react-redux';
 import { updateRbacPermissions } from '@/features/rbac/rbac-slice';
@@ -76,10 +84,25 @@ import {
 } from '@/hooks/use-tauri-offline';
 import { isTauriApp } from '@/types/tauri';
 import { hideInitialLoader } from '@/lib/initial-loader';
+import { useOpencodeLearner } from '@/hooks/use-opencode-learner';
+import { useOpencode402 } from '@/hooks/use-opencode-402';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const { handle402Error } = use402ErrorCheck();
   const [ready, setReady] = useState(false);
+
+  // Desktop only (no-op elsewhere): tell the Rust model proxy who is signed in,
+  // before any chat surface can send a Code turn.
+  useOpencodeLearner();
+  // Desktop only: a Code-turn 402 (insufficient credit) gets normal chat's UX.
+  useOpencode402();
+
+  // Mirror the embed-context params into sessionStorage on first load so embed
+  // mode survives later navigations that rebuild the URL without them — notably
+  // the hard `window.location.href` resets below. See lib/embed-context.
+  useEffect(() => {
+    persistEmbedContextFromUrl();
+  }, []);
 
   useEffect(() => {
     deleteCookieOnAllDomains('ibl_tenant_switching', window.location.hostname);
@@ -230,6 +253,15 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   // Workflow pages manage their own mentor context; skip MentorProvider's mentor check
   // to prevent it from redirecting when the URL's mentorId changes during navigation.
   const isWorkflowPage = /\/workflows\//.test(pathname);
+  // The tenant-scoped Projects index (/platform/<tenant>/projects) has no mentor in
+  // the URL, so MentorProvider would otherwise pick a default mentor and redirect to
+  // the chat page. Like workflow pages it manages its own context, so skip the mentor
+  // check. Match the index path only — the project chat route
+  // (/platform/<tenant>/projects/<projectId>/<mentorId>) still needs the mentor check.
+  const isProjectsIndexPage = /\/projects\/?$/.test(pathname);
+  // Pages that own their mentor context and must not be redirected away when the
+  // URL has no mentorId segment.
+  const skipMentorCheck = isWorkflowPage || isProjectsIndexPage;
 
   // Use the same offline check (already computed above)
   const isTauriOffline = isTauriOfflineEarly;
@@ -252,8 +284,14 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     saveDmTokenExpires(tokenResponse.dm_token.expires);
   }
 
+  // `embedContextQuery()` (from lib/embed-context) carries the embed params
+  // across mentor redirects: MentorProvider re-resolves the mentor once you're
+  // already on /platform/{tenant}/{mentorId} and calls redirectToMentor again,
+  // where the query would otherwise be dropped, stripping the embed view. It
+  // reads the live URL first, then the persisted copy, so it works even after a
+  // hard reset has wiped the query.
   function redirectToNoMentorsPage() {
-    router.push(`/platform/${tenantKey}/explore`);
+    router.push(`/platform/${tenantKey}/explore${embedContextQuery()}`);
   }
 
   function redirectToCreateMentor() {
@@ -261,7 +299,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   }
 
   function redirectToMentor(tenantKey: string, mentorId: string) {
-    router.push(`/platform/${tenantKey}/${mentorId}`);
+    router.push(`/platform/${tenantKey}/${mentorId}${embedContextQuery()}`);
   }
 
   function onLoadMentorsPermissions(
@@ -427,7 +465,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     };
 
     return (
-      <>
+      <WebContainersLocaleProvider>
         <SentryInit />
         <MentorTimeTrackingProvider intervalSeconds={30} enabled={false} />
         <AuthContextProvider value={stubAuthContext}>
@@ -438,12 +476,12 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             </AppProvider>
           </TenantContextProvider>
         </AuthContextProvider>
-      </>
+      </WebContainersLocaleProvider>
     );
   }
 
   return (
-    <>
+    <WebContainersLocaleProvider>
       <SentryInit />
       <MentorTimeTrackingProvider intervalSeconds={30} enabled={true} />
 
@@ -483,6 +521,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           )
         }
       >
+        <LanguagePreferenceSync />
+        <TenantLock />
         <TenantProvider
           skip={isSsoLoginRoute || isVersionRoute || isTauriOffline}
           isIframed={isInIframe()}
@@ -554,7 +594,10 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             console.log(
               '[TenantProvider] Tenant mismatch - redirecting to home',
             );
-            window.location.href = '/';
+            // Carry embed params onto '/' so an embedded iframe isn't flipped
+            // back to the full app by this hard reset (sessionStorage also
+            // recovers them on the '/' load; this makes it immediate).
+            window.location.href = appendEmbedContext('/');
           }}
         >
           {useMentorProvider ? (
@@ -578,25 +621,25 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                 // Don't redirect when in Tauri offline mode
                 /* istanbul ignore next -- @preserve Tauri offline guard unreachable: component returns early at L223 */
                 if (isTauriOffline) return;
-                if (isWorkflowPage) return;
+                if (skipMentorCheck) return;
                 if (!embed) redirectToNoMentorsPage();
               }}
               redirectToCreateMentor={() => {
                 // Don't redirect when in Tauri offline mode
                 /* istanbul ignore next -- @preserve Tauri offline guard unreachable: component returns early at L223 */
                 if (isTauriOffline) return;
-                if (isWorkflowPage) return;
+                if (skipMentorCheck) return;
                 redirectToCreateMentor();
               }}
               redirectToMentor={(tKey: string, mId: string) => {
                 // Don't redirect when in Tauri offline mode
                 /* istanbul ignore next -- @preserve Tauri offline guard unreachable: component returns early at L223 */
                 if (isTauriOffline) return;
-                if (isWorkflowPage) return;
+                if (skipMentorCheck) return;
                 redirectToMentor(tKey, mId);
               }}
               onLoadMentorsPermissions={onLoadMentorsPermissions}
-              requestedMentorId={isWorkflowPage ? undefined : mentorId}
+              requestedMentorId={skipMentorCheck ? undefined : mentorId}
               onAuthSuccess={() =>
                 sendMessageToParentWebsite({
                   loaded: true,
@@ -621,7 +664,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                   );
                   return;
                 }
-                if (isWorkflowPage) return;
+                if (skipMentorCheck) return;
                 await handleMentorNotFound();
               }}
               onComplete={() => {
@@ -663,6 +706,6 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           )}
         </TenantProvider>
       </AuthProvider>
-    </>
+    </WebContainersLocaleProvider>
   );
 }

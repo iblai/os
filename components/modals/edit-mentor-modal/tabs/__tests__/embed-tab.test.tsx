@@ -50,7 +50,6 @@ vi.mock('next/navigation', () => ({
 // next/image
 vi.mock('next/image', () => ({
   default: ({ src, alt, onError, onClick, ...props }: any) => (
-    // eslint-disable-next-line @next/next/no-img-element
     <img src={src} alt={alt} onError={onError} onClick={onClick} {...props} />
   ),
 }));
@@ -358,6 +357,7 @@ const defaultFormValues = {
   embed_show_voice_call: false,
   embed_show_voice_record: false,
   generateShareableLink: false,
+  strip_page_content_html: false,
 };
 
 function renderEmbedTab(
@@ -1165,5 +1165,178 @@ describe('EmbedTab', () => {
     const jsInfo = screen.getByLabelText('More info about Advanced JavaScript');
     fireEvent.click(jsInfo);
     expect(cssInfo).toBeInTheDocument();
+  });
+
+  it('renders the "Optimize page context tokens" toggle with its tooltip', () => {
+    renderEmbedTab();
+    expect(
+      screen.getByText('Optimize Page Context Tokens'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Strips HTML tags from page context before it's sent to the model. Cuts token usage; leave on unless you need the raw HTML.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByLabelText('More info about optimizing page context tokens'),
+    ).toBeInTheDocument();
+  });
+
+  it('renders the page-context toggle OFF by default (new mentor)', () => {
+    renderEmbedTab();
+    const toggle = screen.getByLabelText(
+      'Optimize page context tokens disabled',
+    ) as HTMLInputElement;
+    expect(toggle.checked).toBe(false);
+  });
+
+  it('reflects the strip_page_content_html value returned by GET settings', () => {
+    renderEmbedTab({}, { ...defaultFormValues, strip_page_content_html: true });
+    const toggle = screen.getByLabelText(
+      'Optimize page context tokens enabled',
+    ) as HTMLInputElement;
+    expect(toggle.checked).toBe(true);
+  });
+
+  it('invokes the field handler when the page-context toggle is flipped', () => {
+    const handleChange = vi.fn();
+    const customForm: any = {
+      state: { isSubmitting: false, values: defaultFormValues },
+      handleSubmit: mockFormHandleSubmit,
+      Field: ({ name, children }: any) =>
+        children({
+          state: {
+            value: defaultFormValues[name as keyof typeof defaultFormValues],
+            meta: { isDirty: false },
+          },
+          handleChange:
+            name === 'strip_page_content_html' ? handleChange : vi.fn(),
+        }),
+      Subscribe: ({ selector, children }: any) =>
+        children(selector({ values: defaultFormValues })),
+    };
+    mockUseEmbedTab.mockReturnValue(
+      buildUseEmbedTabReturn({ form: customForm }),
+    );
+    render(<EmbedTab />);
+
+    const toggle = screen.getByLabelText(
+      'Optimize page context tokens disabled',
+    );
+    fireEvent.click(toggle);
+    expect(handleChange).toHaveBeenCalledWith(true);
+  });
+
+  // ==========================================================================
+  // ISSUE #2153: toggling / regenerating a shareable link must NOT run the
+  // embed-settings sync (which validates website_url and shows the spurious
+  // "Please specify a valid Website URL" error).
+  // ==========================================================================
+
+  it('does not run embed-settings sync or website-url validation when enabling a shareable link (non-anonymous, empty website_url)', async () => {
+    mockUseGetShareableLinkQuery.mockReturnValue({
+      data: { token: 'abc', enabled: false },
+    });
+    mockUpdateShareableLink.mockReturnValue({
+      unwrap: vi.fn().mockResolvedValue({}),
+    });
+    renderEmbedTab(
+      {},
+      { ...defaultFormValues, allow_anonymous: false, website_url: '' },
+    );
+
+    const toggle = screen.getByLabelText(/Generate \/ Revoke shareable link/);
+    fireEvent.click(toggle);
+
+    await waitFor(() => {
+      // (b) the shareable-link mutation still runs
+      expect(mockUpdateShareableLink).toHaveBeenCalledWith(
+        expect.objectContaining({ requestBody: { enabled: true } }),
+      );
+    });
+
+    // (c) the embed-settings sync side-effect is NOT triggered by the toggle
+    expect(mockSyncEmbedSettings).not.toHaveBeenCalled();
+    // (a) no spurious website-url validation error surfaces
+    expect(
+      screen.queryByText('Please specify a valid Website URL'),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/valid url/i)).not.toBeInTheDocument();
+  });
+
+  it('does not run embed-settings sync or website-url validation when creating a shareable link on enable (non-anonymous, empty website_url)', async () => {
+    mockUseGetShareableLinkQuery.mockReturnValue({ data: undefined });
+    mockCreateShareableLink.mockReturnValue({
+      unwrap: vi.fn().mockResolvedValue({}),
+    });
+    renderEmbedTab(
+      {},
+      { ...defaultFormValues, allow_anonymous: false, website_url: '' },
+    );
+
+    const toggle = screen.getByLabelText(/Generate \/ Revoke shareable link/);
+    fireEvent.click(toggle);
+
+    await waitFor(() => {
+      expect(mockCreateShareableLink).toHaveBeenCalled();
+    });
+
+    expect(mockSyncEmbedSettings).not.toHaveBeenCalled();
+    expect(
+      screen.queryByText('Please specify a valid Website URL'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('does not run embed-settings sync or website-url validation when disabling a shareable link (non-anonymous, empty website_url)', async () => {
+    mockUseGetShareableLinkQuery.mockReturnValue({
+      data: { token: 'abc', enabled: true },
+    });
+    mockUpdateShareableLink.mockReturnValue({
+      unwrap: vi.fn().mockResolvedValue({}),
+    });
+    renderEmbedTab(
+      {},
+      { ...defaultFormValues, allow_anonymous: false, website_url: '' },
+    );
+
+    const toggle = screen.getByLabelText(/Generate \/ Revoke shareable link/);
+    fireEvent.click(toggle);
+
+    await waitFor(() => {
+      expect(mockUpdateShareableLink).toHaveBeenCalledWith(
+        expect.objectContaining({ requestBody: { enabled: false } }),
+      );
+    });
+
+    expect(mockSyncEmbedSettings).not.toHaveBeenCalled();
+    expect(
+      screen.queryByText('Please specify a valid Website URL'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('does not run embed-settings sync or website-url validation when regenerating a shareable link (non-anonymous, empty website_url)', async () => {
+    mockUseGetShareableLinkQuery.mockReturnValue({
+      data: { token: 'abc', enabled: true },
+    });
+    mockCreateShareableLink.mockReturnValue({
+      unwrap: vi.fn().mockResolvedValue({}),
+    });
+    const { container } = renderEmbedTab(
+      {},
+      { ...defaultFormValues, allow_anonymous: false, website_url: '' },
+    );
+
+    const refresh = container.querySelector('.lucide-refresh-cw');
+    fireEvent.click(refresh as Element);
+
+    await waitFor(() => {
+      // the shareable-link (regenerate) mutation still runs
+      expect(mockCreateShareableLink).toHaveBeenCalled();
+    });
+
+    expect(mockSyncEmbedSettings).not.toHaveBeenCalled();
+    expect(
+      screen.queryByText('Please specify a valid Website URL'),
+    ).not.toBeInTheDocument();
   });
 });

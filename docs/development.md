@@ -231,6 +231,7 @@ The app uses **[@iblai/iblai-js](https://www.npmjs.com/package/@iblai/iblai-js)*
 | `NEXT_PUBLIC_DISABLED_DATASETS`                    | No       | Pipe-separated dataset types to hide (e.g. `zip\|courses`)                                           |
 | `NEXT_PUBLIC_DISABLED_ANALYTICS_REPORTS`           | No       | Pipe-separated analytics reports to hide                                                             |
 | `NEXT_PUBLIC_MENTOR_TRAINING_MAXIMUM_FILE_SIZE`    | No       | Max dataset upload size in MB                                                                        |
+| `NEXT_PUBLIC_MAXIMUM_CHARACTER_SIZE_TO_COPY`       | No       | Max pasted characters before text becomes a .txt upload                                              |
 | `NEXT_PUBLIC_SHOW_BASE_MENTOR`                     | No       | Show the base/template mentor in the picker                                                          |
 | `NEXT_PUBLIC_MENTOR_SETTINGS_DISCLAIMER`           | No       | Disclaimer line shown under mentor settings                                                          |
 | `NEXT_PUBLIC_ENABLE_GRAVATAR_ON_PROFILE_PIC`       | No       | Fall back to Gravatar when no profile pic                                                            |

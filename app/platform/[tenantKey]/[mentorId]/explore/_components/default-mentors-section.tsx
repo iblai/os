@@ -2,6 +2,7 @@
 
 import React from 'react';
 
+import { useTranslations } from 'next-intl';
 import { useGetAiSearchMentorsQuery } from '@iblai/iblai-js/data-layer';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/spinner';
@@ -16,6 +17,7 @@ const DEFAULT_MENTORS_LIMIT = 8;
 const CREATE_MENTOR_RBAC_RESOURCE = '/mentors/#create';
 
 export function DefaultMentorsSection() {
+  const t = useTranslations('exploreDefaultMentorsSection');
   const {
     tenantKey,
     debouncedSearch,
@@ -68,24 +70,28 @@ export function DefaultMentorsSection() {
     if (filters.subjects) {
       return {
         title: filters.subjects,
-        subtext: `Explore ${filters.subjects.toLowerCase()} agents and specialized learning assistants.`,
+        subtext: t('subjectSubtext', {
+          subject: filters.subjects.toLowerCase(),
+        }),
       };
     }
     if (filters.categories) {
       return {
         title: filters.categories,
-        subtext: `Explore ${filters.categories.toLowerCase()} agents and specialized learning assistants.`,
+        subtext: t('categorySubtext', {
+          category: filters.categories.toLowerCase(),
+        }),
       };
     }
     if (filters.llm_providers) {
       return {
-        title: `${filters.llm_providers} Agents`,
-        subtext: `Explore agents powered by ${filters.llm_providers}.`,
+        title: t('llmProviderTitle', { provider: filters.llm_providers }),
+        subtext: t('llmProviderSubtext', { provider: filters.llm_providers }),
       };
     }
     return {
-      title: 'All Agents',
-      subtext: 'Explore agents and specialized learning assistants.',
+      title: t('allAgentsTitle'),
+      subtext: t('allAgentsSubtext'),
     };
   };
 
@@ -103,7 +109,7 @@ export function DefaultMentorsSection() {
     return (
       <div role="status" aria-live="polite">
         <Spinner className="h-60" />
-        <span className="sr-only">Loading agents...</span>
+        <span className="sr-only">{t('loadingAgents')}</span>
       </div>
     );
   }
@@ -133,9 +139,9 @@ export function DefaultMentorsSection() {
                 <Button
                   className="rounded-lg bg-gradient-to-r from-[#38A1E5] to-[#7284FF] px-6 py-2 text-white hover:from-[#2E8BD1] hover:to-[#5F6FE8]"
                   onClick={handleCreateMentor}
-                  aria-label="Create new agent"
+                  aria-label={t('createAgentAriaLabel')}
                 >
-                  Create Agent
+                  {t('createAgentButton')}
                 </Button>
               )}
             </>
@@ -149,13 +155,13 @@ export function DefaultMentorsSection() {
             className="grid grid-cols-1 gap-6 md:grid-cols-2"
             data-testid="all-mentors-card-list"
             role="list"
-            aria-label="All agents"
+            aria-label={t('allAgentsListAriaLabel')}
           >
             {allMentorsToShow.map((mentor) => (
               <div
                 key={mentor.id}
                 role="listitem"
-                aria-label={`Explore agent: ${mentor.name}`}
+                aria-label={t('exploreAgentAriaLabel', { name: mentor.name })}
               >
                 <MentorCardWithStar mentor={mentor} />
               </div>
@@ -169,16 +175,16 @@ export function DefaultMentorsSection() {
                   setNumberOfMentors(numberOfMentors + DEFAULT_MENTORS_LIMIT)
                 }
                 disabled={mentorsFetching}
-                aria-label="Load more agents"
+                aria-label={t('loadMoreAriaLabel')}
                 role="button"
               >
                 {mentorsFetching ? (
                   <div className="flex items-center gap-2">
                     <Spinner className="h-4 w-4" aria-hidden="true" />
-                    <span>Loading more</span>
+                    <span>{t('loadingMore')}</span>
                   </div>
                 ) : (
-                  'See more'
+                  t('seeMore')
                 )}
               </Button>
             </div>

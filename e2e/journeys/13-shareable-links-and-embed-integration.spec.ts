@@ -1,10 +1,15 @@
 import type { Page } from '@playwright/test';
 import { test, expect } from '../fixtures/mentor-test';
-import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
+import {
+  navigateToMentorApp,
+  checkAdminStatus,
+  getPlatformContext,
+} from '../utils/auth';
 import { EMBED_URL } from '../fixtures/test-data';
 import { waitForPageReady } from '../utils/resilient';
 import type { EditMentorPage } from '../page-objects/edit-mentor/edit-mentor.page';
 import { logger } from '@iblai/iblai-js/playwright';
+import { MentorTracker } from '../utils/mentor-cleanup';
 
 /** Builds the embed entry URL (the iframe's own src) for a mentor page. */
 function embedUrlFor(mentorUrl: string): string {
@@ -12,6 +17,39 @@ function embedUrlFor(mentorUrl: string): string {
   url.searchParams.set('embed', 'true');
   url.searchParams.set('extra-body-classes', 'iframed-externally');
   return url.toString();
+}
+
+/**
+ * Navigates to a mentor's embed view and resolves once the mentor-settings GET
+ * that carries `show_catalogue` has landed.
+ *
+ * `components/logo.tsx` gates clickability on
+ * `!embedMode || (mentorSettings?.showCatalogue ?? true)` — the `?? true` means
+ * the logo renders as a navigable <button> for as long as settings are still in
+ * flight. Asserting straight after `goto` therefore races the fetch: on a slow
+ * host (dev-mode compilation, cold API) the un-resolved default is read as
+ * "catalogue enabled" and the emb-07 assertion fails against a logo that would
+ * have become non-clickable a moment later.
+ *
+ * Waiting on the response removes the race regardless of host speed. The
+ * authenticated private endpoint (`.../mentors/<id>/settings/`) is the one whose
+ * value wins in `useMentorSettings` (private ?? public ?? true); `-settings/`
+ * variants such as `public-settings/` are deliberately excluded by the leading
+ * slash in the pattern.
+ */
+async function gotoEmbedWithSettingsLoaded(
+  page: Page,
+  mentorUrl: string,
+): Promise<void> {
+  const settingsLoaded = page.waitForResponse(
+    (res) => /\/settings\/?$/.test(new URL(res.url()).pathname) && res.ok(),
+    { timeout: 60_000 },
+  );
+  await page.goto(embedUrlFor(mentorUrl), {
+    waitUntil: 'domcontentloaded',
+    timeout: 30_000,
+  });
+  await settingsLoaded;
 }
 
 /** Configures + persists the embed with a given Show Catalogue value (via UI). */
@@ -210,6 +248,10 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
       editMentorPage,
       sidebarPage,
     }) => {
+      // Creates a mentor, saves its visibility, saves the embed, then loads the
+      // embed view — comfortably past the default per-test budget on a cold host.
+      test.slow();
+
       const baseMentorUrl = page.url();
       await createEmbedWithShowCatalogue(
         page,
@@ -218,14 +260,11 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
         false,
       );
 
-      await page.goto(embedUrlFor(baseMentorUrl), {
-        waitUntil: 'domcontentloaded',
-        timeout: 30_000,
-      });
+      await gotoEmbedWithSettingsLoaded(page, baseMentorUrl);
       await sidebarPage.ensureExpanded(40_000);
       await expect(sidebarPage.logoImage).toBeVisible({ timeout: 15_000 });
-      // The logo renders but is not wrapped in a navigable button. toHaveCount(0)
-      // retries past the brief loading window before settings resolve.
+      // Settings have resolved by now, so the logo must NOT be wrapped in a
+      // navigable button — this no longer races the optimistic default.
       await expect(sidebarPage.logoButton).toHaveCount(0, { timeout: 10_000 });
     });
 
@@ -236,6 +275,8 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
       editMentorPage,
       sidebarPage,
     }) => {
+      test.slow();
+
       const baseMentorUrl = page.url();
       await createEmbedWithShowCatalogue(
         page,
@@ -244,10 +285,10 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
         true,
       );
 
-      await page.goto(embedUrlFor(baseMentorUrl), {
-        waitUntil: 'domcontentloaded',
-        timeout: 30_000,
-      });
+      // Also waits for settings here: without it this test passes vacuously,
+      // since the pre-resolution default is exactly the clickable state it
+      // asserts. Waiting makes the pass mean "show_catalogue: true was read".
+      await gotoEmbedWithSettingsLoaded(page, baseMentorUrl);
       await sidebarPage.ensureExpanded(40_000);
       await expect(sidebarPage.logoButton).toBeVisible({ timeout: 15_000 });
     });
@@ -299,18 +340,21 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
     // "New Chat" button
     await expect(sidebarPage.newChatButton).toBeVisible({ timeout: 10_000 });
 
-    // "Chats" collapsible section trigger
+    // "Recents" collapsible section trigger
     const chatsVisible = await sidebarPage.isSectionTriggerVisible(
-      'Chats',
+      'Recents',
       5_000,
     );
     if (!chatsVisible) {
       logger.info(
-        'emb-09: Chats section trigger not visible — may render differently in this env; asserting New Chat only',
+        'emb-09: Recents section trigger not visible — may render differently in this env; asserting New Chat only',
       );
     } else {
       await expect(
-        sidebarPage.sidebar.getByRole('button', { name: 'Chats', exact: true }),
+        sidebarPage.sidebar.getByRole('button', {
+          name: 'Recents',
+          exact: true,
+        }),
       ).toBeVisible();
     }
 
@@ -359,6 +403,92 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
       'emb-09: embed mode minimal sidebar verified — New Chat present; Agents/Workflows/Analytics/Projects/Support absent',
     );
   });
+
+  // emb-10: Optimize Page Context Tokens toggle — label visible, tooltip
+  // reachable, and the value flips and persists after a submit + modal reopen.
+  // (Off-by-default for a new mentor is asserted by the unit test in
+  // embed-tab.test.tsx; this journey reuses a shared mentor, so it verifies the
+  // persistence round-trip rather than the literal default.)
+  //
+  // Uses the currently loaded mentor. To satisfy the "Create Embed" URL gate
+  // without changing the mentor's visibility (which would disrupt auth redirects
+  // for subsequent tests), a throwaway https://example.com URL is filled into the
+  // Website URL field. The original toggle state is restored at the end.
+  //
+  // fixme: shared-mentor reuse + the slow submit/reopen cycle (300s timeout)
+  //        make this flaky in CI; revisit with a dedicated mentor fixture so it
+  //        can assert default-off and avoid contending on shared state.
+  test.fixme(
+    'embed tab Optimize Page Context Tokens toggle: label, tooltip, and persists when toggled',
+    async ({ page, editMentorPage }) => {
+      // This test exercises a full cycle: open Embed tab → check UI → submit →
+      // close → reopen → verify persistence → cleanup. The cycle takes up to 3
+      // minutes in slow environments, so extend the timeout to avoid false failures.
+      test.setTimeout(300_000);
+
+      // Step 1: open Edit modal → Embed tab.
+      await editMentorPage.open('Embed');
+      await expect(editMentorPage.embed.optimizePageContextToggle).toBeVisible({
+        timeout: 15_000,
+      });
+
+      // Step 2: record the initial state (backend default is false; may already
+      // have been flipped in a previous run — we work with whatever the current
+      // value is and restore it at the end).
+      const initialState =
+        await editMentorPage.embed.getOptimizePageContextState();
+
+      // Step 3: visible label "Optimize Page Context Tokens" is present.
+      await expect(
+        editMentorPage.dialog.getByText('Optimize Page Context Tokens', {
+          exact: true,
+        }),
+      ).toBeVisible({ timeout: 5_000 });
+
+      // Step 4: tooltip trigger is reachable and shows the expected body text.
+      const tooltipTrigger = editMentorPage.dialog.locator(
+        '[aria-label="More info about optimizing page context tokens"]',
+      );
+      await expect(tooltipTrigger).toBeVisible({ timeout: 5_000 });
+      await tooltipTrigger.hover();
+      await expect(
+        page
+          .getByText('Strips HTML tags from page context', { exact: false })
+          .first(),
+      ).toBeVisible({ timeout: 5_000 });
+
+      // Step 5: fill the Website URL field so "Create Embed" can proceed without
+      // the mentor needing to be anonymous (avoids mutating the mentor's visibility
+      // settings which can break auth redirects for subsequent tests).
+      await editMentorPage.embed.fillWebsiteUrl('https://example.com');
+
+      // Toggle to the OPPOSITE of the initial state, then submit to persist.
+      await editMentorPage.embed.setOptimizePageContext(!initialState);
+      await editMentorPage.embed.submit();
+
+      // Step 6: close and reopen the Embed tab — switch must now reflect the
+      // toggled value, proving the setting round-trips via GET /settings/.
+      await editMentorPage.close();
+      // Let the SDK dialog cleanup settle before reopening — the Embedded Code
+      // dialog that appears during submit() can leave stale aria-hidden state on
+      // the page that breaks a11y-tree queries in the immediately following open().
+      await waitForPageReady(page);
+      await editMentorPage.open('Embed');
+      await expect(editMentorPage.embed.optimizePageContextToggle).toBeVisible({
+        timeout: 15_000,
+      });
+      const persistedState =
+        await editMentorPage.embed.getOptimizePageContextState();
+      expect(persistedState).toBe(!initialState);
+
+      // Cleanup: restore the toggle to the original value and submit so the shared
+      // mentor is not permanently modified.
+      await editMentorPage.embed.fillWebsiteUrl('https://example.com');
+      await editMentorPage.embed.setOptimizePageContext(initialState);
+      await editMentorPage.embed.submit();
+      await editMentorPage.close();
+    },
+  );
 
   // WCAG 2.4.3 Focus Order — Escape key inside embed iframe closes the widget (issue #772)
   test('admin opens embedded mentor and pressing Escape inside the iframe closes the widget', async ({
@@ -458,5 +588,156 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
 
     // Assert: the widget container is now hidden (display:none set by toggleWidget())
     await expect(widgetContainer).not.toBeVisible({ timeout: 10_000 });
+  });
+
+  // Issue #2153: toggling/regenerating the Shareable Link switch used to
+  // await syncEmbedSettings() as a side effect, which validates the embed
+  // form's website_url field whenever the mentor is non-anonymous. That
+  // surfaced a spurious "Please specify a valid Website URL" error under the
+  // (unrelated) Website URL field any time an admin merely flipped the
+  // Shareable Link switch or hit regenerate. The fix removes the
+  // syncEmbedSettings() calls from handleShareableTokenToggle and
+  // handleRegenerateToken entirely — the shareable-link mutations and their
+  // success toasts still fire, but no url validation runs.
+  test.describe('Shareable Link toggle does not trigger website URL validation (issue #2153)', () => {
+    // Each test below creates its own mentor (fresh per test, not shared via
+    // beforeEach), so cleanup is scoped per-suite via afterAll rather than
+    // per-test — see the "Mentor Creation" convention in other journeys
+    // (e.g. journey 22). Names are prefixed "E2E " so the globalTeardown
+    // sweeper (mentor-sweeper.ts) can also reap them as a backstop if the
+    // afterAll delete is ever skipped (e.g. a crashed run).
+    const tracker = new MentorTracker();
+
+    test.afterAll(async ({ browser }, testInfo) => {
+      await tracker.deleteAll(browser, testInfo);
+    });
+
+    // emb-11/12/13: exercised against a freshly created mentor, which is
+    // non-anonymous (allow_anonymous=false) with an empty Website URL by
+    // default — exactly the precondition that used to trigger the bug.
+    test('admin toggles Shareable Link on a non-anonymous mentor with an empty Website URL and sees no validation error', async ({
+      page,
+      createMentorPage,
+      editMentorPage,
+    }) => {
+      // This test creates a fresh mentor (name/description/category fill +
+      // Next + Save, which alone can take 50s+ under a loaded environment's
+      // category-list fetch and post-save redirect), then opens the Edit
+      // dialog and drives it through two levels of tab navigation before
+      // exercising three shareable-link toasts. Extend the timeout so the
+      // full chain has headroom, matching the convention used elsewhere in
+      // this file (see the Optimize Page Context Tokens test above) and in
+      // other create-mentor-then-navigate journeys.
+      test.setTimeout(300_000);
+
+      await createMentorPage.openAndCreate(`E2E Shareable Link ${Date.now()}`);
+      const { mentorId } = await getPlatformContext(page);
+      tracker.add(mentorId);
+
+      await editMentorPage.open('Embed');
+      await waitForPageReady(page);
+      await expect(editMentorPage.embed.shareableLinkToggle).toBeVisible({
+        timeout: 15_000,
+      });
+
+      // Confirm the bug's precondition actually holds: non-anonymous with an
+      // empty Website URL, and no validation error showing yet.
+      await expect(editMentorPage.embed.websiteUrlInput).toBeVisible();
+      await expect(editMentorPage.embed.websiteUrlInput).toHaveValue('');
+      await expect(editMentorPage.embed.websiteUrlError).not.toBeVisible();
+
+      // emb-11: toggling ON must not surface the validation error, and the
+      // shareable-link creation must still succeed (success toast).
+      await editMentorPage.embed.toggleShareableLink();
+      await expect(
+        page.getByText(/created shareable link/i).first(),
+      ).toBeVisible({ timeout: 15_000 });
+      await expect(editMentorPage.embed.shareableLinkToggle).toHaveAttribute(
+        'aria-checked',
+        'true',
+        { timeout: 10_000 },
+      );
+      await expect(editMentorPage.embed.websiteUrlError).not.toBeVisible();
+
+      // emb-12: regenerating the token must not surface the validation error.
+      await editMentorPage.embed.regenerateShareableLink();
+      await expect(
+        page.getByText(/regenerate shareable link/i).first(),
+      ).toBeVisible({ timeout: 15_000 });
+      await expect(editMentorPage.embed.websiteUrlError).not.toBeVisible();
+
+      // emb-13: toggling OFF must not surface the validation error either.
+      await editMentorPage.embed.toggleShareableLink();
+      await expect(
+        page.getByText(/disabled shareable link/i).first(),
+      ).toBeVisible({ timeout: 15_000 });
+      await expect(editMentorPage.embed.shareableLinkToggle).toHaveAttribute(
+        'aria-checked',
+        'false',
+        { timeout: 10_000 },
+      );
+      await expect(editMentorPage.embed.websiteUrlError).not.toBeVisible();
+
+      await editMentorPage.close();
+    });
+
+    // emb-14: contrast case — an anonymous mentor's Embed tab never renders
+    // the Website URL section at all (syncEmbedSettings' url guard only
+    // applies when !allow_anonymous), so toggling Shareable Link ON stays
+    // error-free here too. Pins down that this path was, and remains, safe.
+    test('admin toggles Shareable Link on an anonymous mentor and sees no validation error either', async ({
+      page,
+      createMentorPage,
+      editMentorPage,
+    }) => {
+      // See the sibling test above for why this needs headroom: mentor
+      // creation alone can consume most of the default budget under load,
+      // and this test additionally opens the Settings tab, saves, closes,
+      // and reopens on Embed before exercising the toggle.
+      test.setTimeout(300_000);
+
+      await createMentorPage.openAndCreate(
+        `E2E Shareable Link Anon ${Date.now()}`,
+      );
+      const { mentorId } = await getPlatformContext(page);
+      tracker.add(mentorId);
+
+      await editMentorPage.open('Settings');
+      await waitForPageReady(page);
+      await editMentorPage.settings.setVisibilityAnyone();
+      await editMentorPage.settings.setChatAccessAnyone();
+      const saveBtn = editMentorPage.dialog
+        .getByRole('button', { name: /save/i })
+        .first();
+      await expect(saveBtn).toBeEnabled({ timeout: 5_000 });
+      await saveBtn.click();
+      await expect(
+        page
+          .locator('[data-sonner-toast]', {
+            hasText: /agent updated successfully/i,
+          })
+          .first(),
+      ).toBeVisible({ timeout: 15_000 });
+      await editMentorPage.close();
+
+      await editMentorPage.open('Embed');
+      await waitForPageReady(page);
+      await expect(editMentorPage.embed.shareableLinkToggle).toBeVisible({
+        timeout: 15_000,
+      });
+      // With allow_anonymous=true the Website URL section (and its error
+      // paragraph) is not rendered at all.
+      await expect(editMentorPage.embed.websiteUrlInput).not.toBeVisible();
+
+      await editMentorPage.embed.toggleShareableLink();
+      await expect(
+        page
+          .getByText(/created shareable link|enabled shareable link/i)
+          .first(),
+      ).toBeVisible({ timeout: 15_000 });
+      await expect(editMentorPage.embed.websiteUrlError).not.toBeVisible();
+
+      await editMentorPage.close();
+    });
   });
 });

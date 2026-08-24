@@ -308,6 +308,80 @@ describe('AdvancedStaticChatBuilder', () => {
       });
     });
 
+    // Issue #2260 — `items-center` on the inner row clipped a welcome message
+    // taller than the viewport: the overflow was split above and below the
+    // container and the top was unreachable. Safe alignment falls back to
+    // flex-start on overflow so the outer scroll container can reach the top.
+    it('scrolls a long welcome message instead of clipping it (issue #2260)', async () => {
+      mockUseWelcome.mockReturnValue({
+        welcomeMessage: 'Welcome aboard. '.repeat(2000),
+      });
+      mockUseLazyGetPromptsSearchQuery.mockReturnValue([
+        mockTriggerGetPromptsSearch,
+        { isLoading: false },
+      ]);
+      mockUseLazyGetGuidedPromptsQuery.mockReturnValue([
+        mockTriggerGetGuidedPrompts,
+        { isLoading: false },
+      ]);
+
+      const { container } = render(
+        <AdvancedStaticChatBuilder {...defaultProps} />,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('markdown-content')).toBeInTheDocument();
+      });
+
+      const outer = container.querySelector('.overflow-y-auto') as HTMLElement;
+      expect(outer).toHaveClass('flex-1');
+      expect(outer).toHaveClass('min-h-0');
+      expect(outer).toHaveClass('flex-col');
+      expect(outer.className).toContain('justify-center-safe');
+      expect(outer.className.split(/\s+/)).not.toContain('justify-center');
+      expect(outer.className.split(/\s+/)).not.toContain('h-full');
+
+      const inner = outer.firstElementChild as HTMLElement;
+      expect(inner).toHaveClass('items-start');
+      expect(inner.className).toContain('justify-center-safe');
+      expect(inner.className.split(/\s+/)).not.toContain('items-center');
+      // No horizontal padding: the message must line up with the chat input.
+      expect(inner).toHaveClass('py-4');
+      expect(inner.className.split(/\s+/)).not.toContain('p-4');
+      expect(inner.textContent!.length).toBeGreaterThan(30000);
+
+      expect(container.querySelector('.h-14.w-14')).toHaveClass('shrink-0');
+    });
+
+    // Issue #2260 — DefaultTag's root is `flex flex-1 flex-col`, so once the
+    // welcome block became a flex-1 sibling the two split the panel 50/50 and
+    // the message was squeezed into half the height. Neutralise DefaultTag's
+    // growth only while the welcome block is rendered; it still needs flex-1
+    // when prompts are present and the welcome block is absent.
+    it('stops DefaultTag competing for height while the welcome message shows', async () => {
+      mockUseWelcome.mockReturnValue({ welcomeMessage: 'Hello there' });
+      mockUseLazyGetPromptsSearchQuery.mockReturnValue([
+        mockTriggerGetPromptsSearch,
+        { isLoading: false },
+      ]);
+      mockUseLazyGetGuidedPromptsQuery.mockReturnValue([
+        mockTriggerGetGuidedPrompts,
+        { isLoading: false },
+      ]);
+
+      const { container } = render(
+        <AdvancedStaticChatBuilder {...defaultProps} />,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('markdown-content')).toBeInTheDocument();
+      });
+
+      const welcome = container.querySelector('.overflow-y-auto');
+      expect(welcome).toBeInTheDocument();
+      expect(welcome!.nextElementSibling).toHaveClass('shrink-0');
+    });
+
     it('should hide welcome section when prompts are present', async () => {
       mockTriggerGetPromptsSearch.mockResolvedValue({
         data: {

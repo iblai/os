@@ -2,10 +2,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   cn,
   hasNonExpiredAuthToken,
+  isJwtExpired,
   redirectToAuthSpa,
   getPlatformKey,
   getAuthSpaJoinUrl,
   redirectToAuthSpaJoinTenant,
+  redirectToLogin,
   redirectToMentor,
   redirectToNoMentorsPage,
   redirectToCreateMentor,
@@ -13,7 +15,6 @@ import {
   storageService,
   LocalStorageService,
   getHostFromUrl,
-  preprocessLaTeX,
   textTruncate,
   mentorIsIframe,
   isJSON,
@@ -30,6 +31,8 @@ import {
   convertFromBytes,
   formatRelativeDate,
   getLLMProviderDetails,
+  getLLMModelDisplayName,
+  getProviderName,
   sendMessageToParentWebsite,
   isLoggedIn,
   htmlToMarkdown,
@@ -48,8 +51,13 @@ import {
   isStripeActivated,
   getCurrentArtifactTitle,
   getFirstMessageWithContent,
+  getFirstHumanMessageWithContent,
+  getLatestMessageTimestamp,
   isSafariBrowser,
   onAccountDeleted,
+  canAccessProvider,
+  compareLLMProvidersByDisplayName,
+  sortLLMProvidersByCredentials,
 } from '@/lib/utils';
 import { LOCAL_STORAGE_KEYS, QUERY_PARAMS } from '@/lib/constants';
 import { config } from '@/lib/config';
@@ -124,6 +132,16 @@ const localStorageMock = (() => {
   };
 })();
 
+// Builds a minimal (unsigned) JWT with the given `exp` claim (seconds since
+// epoch). Omit `exp` for a token with no expiry claim.
+function makeJwt(exp?: number): string {
+  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const payload = btoa(JSON.stringify(exp === undefined ? {} : { exp }));
+  return `${header}.${payload}.signature`;
+}
+
+const validEdxJwt = () => makeJwt(Math.floor(Date.now() / 1000) + 3600);
+
 describe('cn function', () => {
   it('should combine class names correctly', () => {
     // Basic test
@@ -163,10 +181,34 @@ describe('hasNonExpiredAuthToken function', () => {
 
     // Clear localStorage before each test
     localStorageMock.clear();
+    // A valid session also requires a non-expired edx JWT; seed one so the axd
+    // token assertions below exercise the axd logic (edx tests override this).
+    localStorageMock.setItem(LOCAL_STORAGE_KEYS.EDX_TOKEN_KEY, validEdxJwt());
   });
 
   it('should return true when no token exists', () => {
+    localStorageMock.removeItem(LOCAL_STORAGE_KEYS.AUTH_TOKEN);
     expect(hasNonExpiredAuthToken()).toBe(false);
+  });
+
+  it('should return false when edx_jwt_token is missing', () => {
+    localStorageMock.removeItem(LOCAL_STORAGE_KEYS.EDX_TOKEN_KEY);
+    localStorageMock.setItem(LOCAL_STORAGE_KEYS.AUTH_TOKEN, 'valid-token');
+    expect(hasNonExpiredAuthToken()).toBe(false);
+  });
+
+  it('should return false when edx_jwt_token is expired', () => {
+    localStorageMock.setItem(
+      LOCAL_STORAGE_KEYS.EDX_TOKEN_KEY,
+      makeJwt(Math.floor(Date.now() / 1000) - 3600),
+    );
+    localStorageMock.setItem(LOCAL_STORAGE_KEYS.AUTH_TOKEN, 'valid-token');
+    expect(hasNonExpiredAuthToken()).toBe(false);
+  });
+
+  it('should return true when both the axd and edx tokens are valid', () => {
+    localStorageMock.setItem(LOCAL_STORAGE_KEYS.AUTH_TOKEN, 'valid-token');
+    expect(hasNonExpiredAuthToken()).toBe(true);
   });
 
   it('should return true when token exists but no expiry', () => {
@@ -225,6 +267,32 @@ describe('hasNonExpiredAuthToken function', () => {
   });
 });
 
+describe('isJwtExpired function', () => {
+  it('returns false for a token whose exp is in the future', () => {
+    expect(isJwtExpired(makeJwt(Math.floor(Date.now() / 1000) + 3600))).toBe(
+      false,
+    );
+  });
+
+  it('returns true for a token whose exp is in the past', () => {
+    expect(isJwtExpired(makeJwt(Math.floor(Date.now() / 1000) - 3600))).toBe(
+      true,
+    );
+  });
+
+  it('returns false for a token with no exp claim (non-expiring)', () => {
+    expect(isJwtExpired(makeJwt())).toBe(false);
+  });
+
+  it('returns true for a token with no payload segment', () => {
+    expect(isJwtExpired('not-a-jwt')).toBe(true);
+  });
+
+  it('returns true for a token whose payload cannot be decoded', () => {
+    expect(isJwtExpired('header.@not-base64@.sig')).toBe(true);
+  });
+});
+
 describe('redirectToAuthSpa function', () => {
   let sdkRedirectMock: ReturnType<typeof vi.fn>;
 
@@ -274,6 +342,59 @@ describe('redirectToAuthSpa function', () => {
         forceRedirect: true,
       }),
     );
+  });
+});
+
+describe('redirectToLogin function', () => {
+  let sdkRedirectMock: ReturnType<typeof vi.fn>;
+  let locationHrefSpy: string;
+
+  beforeEach(async () => {
+    const authModule = await import('@iblai/iblai-js/web-utils/auth');
+    sdkRedirectMock = vi.mocked(authModule.redirectToAuthSpa);
+    vi.clearAllMocks();
+    locationHrefSpy = '';
+    Object.defineProperty(window, 'location', {
+      value: {
+        pathname: '/platform/test-tenant/mentor',
+        set href(value: string) {
+          locationHrefSpy = value;
+        },
+        get href() {
+          return (
+            locationHrefSpy || 'https://example.com/platform/test-tenant/mentor'
+          );
+        },
+      },
+      writable: true,
+      configurable: true,
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('joins the tenant when a tenant key is provided', () => {
+    redirectToLogin('my-tenant');
+    expect(locationHrefSpy).toContain(
+      'https://auth.example.com/join?tenant=my-tenant',
+    );
+    expect(sdkRedirectMock).not.toHaveBeenCalled();
+  });
+
+  it('sends the user to the auth SPA root when there is no tenant key', async () => {
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    redirectToLogin();
+    expect(consoleSpy).toHaveBeenCalledWith(
+      '[auth-redirect] Login triggered without a tenant key',
+    );
+    await vi.waitFor(() =>
+      expect(sdkRedirectMock).toHaveBeenCalledWith(
+        expect.objectContaining({ redirectTo: '/', forceRedirect: true }),
+      ),
+    );
+    consoleSpy.mockRestore();
   });
 });
 
@@ -662,225 +783,6 @@ describe('getHostFromUrl function', () => {
   });
 });
 
-describe('preprocessLaTeX function', () => {
-  it('should return empty string for non-string input', () => {
-    expect(preprocessLaTeX(null as any)).toBe('');
-    expect(preprocessLaTeX(undefined as any)).toBe('');
-    expect(preprocessLaTeX(123 as any)).toBe('');
-  });
-
-  it('should escape currency dollar signs', () => {
-    expect(preprocessLaTeX('Price is $5')).toBe('Price is \\$5');
-    expect(preprocessLaTeX('$100 total')).toBe('\\$100 total');
-  });
-
-  it('should not escape already escaped dollar signs', () => {
-    expect(preprocessLaTeX('Already \\$5 escaped')).toBe(
-      'Already \\$5 escaped',
-    );
-  });
-
-  it('should convert block LaTeX delimiters', () => {
-    expect(preprocessLaTeX('\\[x = 5\\]')).toBe('$$x = 5$$');
-    expect(preprocessLaTeX('\\[ y = 10 \\]')).toBe('$$ y = 10 $$');
-  });
-
-  it('should convert inline LaTeX delimiters', () => {
-    expect(preprocessLaTeX('\\(x = 5\\)')).toBe('$x = 5$');
-    expect(preprocessLaTeX('\\( y = 10 \\)')).toBe('$ y = 10 $');
-  });
-
-  it('should convert textbf to markdown bold', () => {
-    expect(preprocessLaTeX('\\textbf{bold text}')).toBe('**bold text**');
-  });
-
-  it('should convert textit to markdown italic', () => {
-    expect(preprocessLaTeX('\\textit{italic text}')).toBe('*italic text*');
-  });
-
-  it('should convert emph to markdown italic', () => {
-    expect(preprocessLaTeX('\\emph{emphasized}')).toBe('*emphasized*');
-  });
-
-  it('should convert texttt to code', () => {
-    expect(preprocessLaTeX('\\texttt{code}')).toBe('`code`');
-  });
-
-  it('should convert underline to HTML', () => {
-    expect(preprocessLaTeX('\\underline{underlined}')).toBe(
-      '<u>underlined</u>',
-    );
-  });
-
-  it('should convert itemize to unordered list', () => {
-    const input = '\\begin{itemize}\\item First\\item Second\\end{itemize}';
-    const result = preprocessLaTeX(input);
-    expect(result).toContain('- First');
-    expect(result).toContain('- Second');
-  });
-
-  it('should convert enumerate to ordered list', () => {
-    const input = '\\begin{enumerate}\\item First\\item Second\\end{enumerate}';
-    const result = preprocessLaTeX(input);
-    expect(result).toContain('1. First');
-    expect(result).toContain('2. Second');
-  });
-
-  it('should convert quote to blockquote', () => {
-    expect(preprocessLaTeX('\\begin{quote}quoted text\\end{quote}')).toContain(
-      '> quoted text',
-    );
-  });
-
-  it('should convert center to centered div', () => {
-    expect(preprocessLaTeX('\\begin{center}centered\\end{center}')).toContain(
-      '<div style="text-align: center;">centered</div>',
-    );
-  });
-
-  it('should convert section to markdown heading', () => {
-    expect(preprocessLaTeX('\\section{Title}')).toContain('## Title');
-  });
-
-  it('should convert starred section to markdown heading', () => {
-    expect(preprocessLaTeX('\\section*{Heading One}')).toContain(
-      '## Heading One',
-    );
-  });
-
-  it('should convert subsection to markdown heading', () => {
-    expect(preprocessLaTeX('\\subsection{Subtitle}')).toContain('### Subtitle');
-  });
-
-  it('should convert starred subsection to markdown heading', () => {
-    expect(preprocessLaTeX('\\subsection*{Core Evidence}')).toContain(
-      '### Core Evidence',
-    );
-  });
-
-  it('should convert subsubsection to markdown heading', () => {
-    expect(preprocessLaTeX('\\subsubsection{Sub-subtitle}')).toContain(
-      '#### Sub-subtitle',
-    );
-  });
-
-  it('should convert starred subsubsection to markdown heading', () => {
-    expect(preprocessLaTeX('\\subsubsection*{Deep Heading}')).toContain(
-      '#### Deep Heading',
-    );
-  });
-
-  it('should convert line breaks', () => {
-    expect(preprocessLaTeX('line1\\\\line2')).toBe('line1  \nline2');
-    expect(preprocessLaTeX('line1\n\\newlineline2')).toBe('line1  \nline2');
-  });
-
-  it('should convert verb to code', () => {
-    expect(preprocessLaTeX('\\verb|code|')).toBe('`code`');
-  });
-
-  it('should convert LaTeX quotes', () => {
-    expect(preprocessLaTeX('``quoted``')).toBe('"quoted"');
-    expect(preprocessLaTeX("''quoted''")).toBe('"quoted"');
-  });
-
-  it('should escape LaTeX special characters', () => {
-    expect(preprocessLaTeX('\\&')).toBe('&');
-    expect(preprocessLaTeX('\\%')).toBe('%');
-    expect(preprocessLaTeX('\\#')).toBe('#');
-    expect(preprocessLaTeX('\\_')).toBe('_');
-  });
-
-  it('should handle complex LaTeX document', () => {
-    const input =
-      '\\section{Title}\\textbf{Bold} and \\textit{italic}\\\\\\item Test';
-    const result = preprocessLaTeX(input);
-    expect(result).toContain('## Title');
-    expect(result).toContain('**Bold**');
-    expect(result).toContain('*italic*');
-  });
-
-  it('should convert tabular to markdown table', () => {
-    const input =
-      '\\begin{tabular}{|c|c|c|}\\hline Name & Age & City \\\\\\hline Alice & 30 & NYC \\\\\\hline\\end{tabular}';
-    const result = preprocessLaTeX(input);
-    expect(result).toContain('| Name | Age | City |');
-    expect(result).toContain('| --- | --- | --- |');
-    expect(result).toContain('| Alice | 30 | NYC |');
-  });
-
-  it('should convert tabular without hline', () => {
-    const input =
-      '\\begin{tabular}{ccc}Header1 & Header2 & Header3 \\\\Row1 & Row2 & Row3\\end{tabular}';
-    const result = preprocessLaTeX(input);
-    expect(result).toContain('| Header1 | Header2 | Header3 |');
-    expect(result).toContain('| Row1 | Row2 | Row3 |');
-  });
-
-  it('should convert array to markdown table', () => {
-    const input = '\\begin{array}{cc}A & B \\\\C & D\\end{array}';
-    const result = preprocessLaTeX(input);
-    expect(result).toContain('| A | B |');
-    expect(result).toContain('| C | D |');
-  });
-
-  it('should handle empty tabular gracefully', () => {
-    const input = '\\begin{tabular}{|c|}\\end{tabular}';
-    const result = preprocessLaTeX(input);
-    expect(result).toBe('');
-  });
-
-  it('should handle tabular with only hlines', () => {
-    const input = '\\begin{tabular}{|c|}\\hline\\hline\\end{tabular}';
-    const result = preprocessLaTeX(input);
-    expect(result).toBe('');
-  });
-
-  it('should convert tabular inside \\[...\\] math delimiters', () => {
-    const input =
-      '\\[\\begin{tabular}{lcc}A & B & C \\\\D & E & F\\end{tabular}\\]';
-    const result = preprocessLaTeX(input);
-    expect(result).toContain('| A | B | C |');
-    expect(result).toContain('| D | E | F |');
-    expect(result).not.toContain('$$');
-  });
-
-  it('should convert \\text{} to plain text in tables', () => {
-    const input =
-      '\\[\\begin{tabular}{lc}\\text{Disease} & \\text{Count} \\\\\\text{Yes} & 42\\end{tabular}\\]';
-    const result = preprocessLaTeX(input);
-    expect(result).toContain('| Disease | Count |');
-    expect(result).toContain('| Yes | 42 |');
-    expect(result).not.toContain('\\text');
-  });
-
-  it('should convert {,} thousands separator in tables', () => {
-    const input =
-      '\\[\\begin{tabular}{lr}\\text{Cases} & 12{,}500 \\\\\\text{Total} & 100{,}000\\end{tabular}\\]';
-    const result = preprocessLaTeX(input);
-    expect(result).toContain('| Cases | 12,500 |');
-    expect(result).toContain('| Total | 100,000 |');
-    expect(result).not.toContain('{,}');
-  });
-
-  it('should handle real-world epidemiology table', () => {
-    const input = `\\[
-\\begin{tabular}{lccc}
-\\hline
- & \\text{Disease} & \\text{No Disease} & \\text{Total} \\\\
-\\hline
-\\text{Exposed} & 42 & 158 & 200 \\\\
-\\text{Unexposed} & 18 & 182 & 200 \\\\
-\\hline
-\\end{tabular}
-\\]`;
-    const result = preprocessLaTeX(input);
-    expect(result).toContain('| Disease | No Disease | Total |');
-    expect(result).toContain('| Exposed | 42 | 158 | 200 |');
-    expect(result).toContain('| Unexposed | 18 | 182 | 200 |');
-  });
-});
-
 describe('textTruncate function', () => {
   it('should truncate long text', () => {
     const longText = 'a'.repeat(100);
@@ -1255,6 +1157,36 @@ describe('formatRelativeDate function', () => {
   });
 });
 
+describe('getLLMModelDisplayName function', () => {
+  it('maps the ibl.ai model key onto its brand spelling', () => {
+    // Mentor settings persist `iblai`; the nav bar badge rendered that raw.
+    expect(getLLMModelDisplayName('iblai')).toBe('ibl.ai');
+  });
+
+  it('accepts the spellings that normalise onto the same key', () => {
+    expect(getLLMModelDisplayName('IBLAI')).toBe('ibl.ai');
+    expect(getLLMModelDisplayName('ibl.ai')).toBe('ibl.ai');
+    expect(getLLMModelDisplayName('ibl-ai')).toBe('ibl.ai');
+  });
+
+  it('passes through keys that are already presentable', () => {
+    // Only unpresentable keys are mapped; everything else is left alone rather
+    // than enumerated, so new models need no code change.
+    expect(getLLMModelDisplayName('gpt-4.1')).toBe('gpt-4.1');
+    expect(getLLMModelDisplayName('claude-opus-4-7')).toBe('claude-opus-4-7');
+    expect(getLLMModelDisplayName('amazon.nova-2-lite-v1:0')).toBe(
+      'amazon.nova-2-lite-v1:0',
+    );
+  });
+
+  it('never returns undefined for a missing model', () => {
+    // The nav bar renders this directly; undefined would print "undefined".
+    expect(getLLMModelDisplayName(undefined)).toBe('');
+    expect(getLLMModelDisplayName(null)).toBe('');
+    expect(getLLMModelDisplayName('')).toBe('');
+  });
+});
+
 describe('getLLMProviderDetails function', () => {
   it('should return Groq details', () => {
     const result = getLLMProviderDetails('groq');
@@ -1413,6 +1345,108 @@ describe('getLLMProviderDetails function', () => {
       logo: '/llm-generic-provider.png',
       name: 'unknown-provider',
     });
+  });
+
+  it('resolves local provider labels to real logos (no generic fallback)', () => {
+    // Local model providers (from LOCAL_MODELS) resolve through the canonical
+    // name, so they get proper icons instead of /llm-generic-provider.png.
+    expect(getLLMProviderDetails('Meta')).toEqual({
+      logo: '/llm-llama-provider.jpeg',
+      name: 'Meta',
+    });
+    expect(getLLMProviderDetails('Microsoft')).toEqual({
+      logo: '/llm-microsoft-provider.png',
+      name: 'Microsoft',
+    });
+    expect(getLLMProviderDetails('Alibaba')).toEqual({
+      logo: '/llm-alibaba-provider.png',
+      name: 'Alibaba',
+    });
+    expect(getLLMProviderDetails('IBM')).toEqual({
+      logo: '/llm-ibm-provider.png',
+      name: 'IBM',
+    });
+  });
+
+  it.each([
+    'iblai',
+    'IBLAI',
+    'ibl.ai',
+    'ibl_ai',
+    'ibl-ai',
+    'IBL AI',
+    'ibl',
+    'IBLChatIBL',
+    'IBLChatIBLAI',
+  ])('should return ibl.ai details for %s', (provider) => {
+    expect(getLLMProviderDetails(provider)).toEqual({
+      logo: '/llm-iblai-provider.png',
+      name: 'ibl.ai',
+    });
+  });
+
+  it('keeps the ibl.ai logo when a concrete model name is supplied', () => {
+    expect(getLLMProviderDetails('iblai', 'ibl-chat-1')).toEqual({
+      logo: '/llm-iblai-provider.png',
+      name: 'ibl.ai',
+    });
+  });
+
+  it('does not swallow the other ibl-hosted providers into ibl.ai', () => {
+    // Regression guard: the IBLChat<Vendor> providers keep their own logos.
+    expect(getLLMProviderDetails('IBLChatNvidia').name).toBe('NVIDIA');
+    expect(getLLMProviderDetails('IBLChatAnthropic').name).toBe('Anthropic');
+    expect(getLLMProviderDetails('IBLChatBedrock').name).toBe('Amazon');
+    // "ibm"/"granite" sit next to the new "ibl" alias — they must not collide.
+    expect(getLLMProviderDetails('IBM').name).toBe('IBM');
+    expect(getLLMProviderDetails('granite').name).toBe('IBM');
+  });
+});
+
+describe('getProviderName function', () => {
+  it('maps a human label to its canonical backend name (case-insensitive)', () => {
+    expect(getProviderName('Microsoft')).toBe('azure_openai');
+    expect(getProviderName('microsoft')).toBe('azure_openai');
+    expect(getProviderName('Google')).toBe('google');
+    expect(getProviderName('Meta')).toBe('llama');
+    expect(getProviderName('OpenAI')).toBe('openai');
+    expect(getProviderName('Mistral AI')).toBe('mistral');
+    expect(getProviderName('NVIDIA')).toBe('nvidia');
+    expect(getProviderName('DeepSeek')).toBe('deepseek');
+  });
+
+  it('is idempotent on backend keys', () => {
+    expect(getProviderName('azure_openai')).toBe('azure_openai');
+    expect(getProviderName('google')).toBe('google');
+    expect(getProviderName('llama')).toBe('llama');
+  });
+
+  it('folds a backend key and its label onto ONE identity (so cloud + local merge)', () => {
+    expect(getProviderName('azure_openai')).toBe(getProviderName('Microsoft'));
+    expect(getProviderName('llama')).toBe(getProviderName('Meta'));
+    expect(getProviderName('mistral')).toBe(getProviderName('Mistral AI'));
+    expect(getProviderName('nvidia')).toBe(getProviderName('NVIDIA'));
+  });
+
+  it('returns the normalized form for unknown providers', () => {
+    expect(getProviderName('Some-New Provider')).toBe('somenewprovider');
+    expect(getProviderName('')).toBe('');
+  });
+
+  it('folds every ibl.ai spelling onto the canonical "iblai" key', () => {
+    for (const alias of [
+      'iblai',
+      'IBLAI',
+      'ibl.ai',
+      'ibl_ai',
+      'ibl-ai',
+      'IBL AI',
+      'ibl',
+      'IBLChatIBL',
+      'IBLChatIBLAI',
+    ]) {
+      expect(getProviderName(alias)).toBe('iblai');
+    }
   });
 });
 
@@ -2152,6 +2186,113 @@ describe('markdownToHtml function', () => {
     expect(result).toContain('Title');
   });
 
+  it('must not inject blank lines into a fenced code body (issue #2109)', () => {
+    // The list-break inserter used to run on raw text including fence bodies,
+    // splitting `first line\n- item in code` with an extra blank line.
+    const markdown = [
+      '```text',
+      'first line',
+      '- item in code',
+      '1. numbered in code',
+      '```',
+    ].join('\n');
+    const result = markdownToHtml(markdown);
+    expect(result).toContain('first line\n- item in code\n1. numbered in code');
+    expect(result).not.toContain('first line\n\n- item in code');
+  });
+
+  it('must not merge comment lines inside a python fence (issue #2109)', () => {
+    // The heading-newline fixer treated a bare `#` comment line as a
+    // malformed heading and pulled the next line up onto it.
+    const markdown = [
+      '```python',
+      '# Define custom tools',
+      '',
+      '#',
+      '@tool',
+      'def f(x):',
+      '    return x',
+      '```',
+    ].join('\n');
+    const result = markdownToHtml(markdown);
+    expect(result).not.toContain('# @tool');
+    expect(result).not.toContain('tools@tool');
+    expect(result).toContain('@tool');
+    expect(result).toContain('def');
+  });
+
+  it('must not corrupt an unclosed streaming fence body', () => {
+    const result = markdownToHtml('```python\n# streaming\n- not a list yet');
+    expect(result).toContain('language-python');
+    expect(result).not.toContain('<ul>');
+    expect(result).not.toContain('\n\n- not');
+
+    const midDocument = markdownToHtml(
+      'Intro text\n```python\n# streaming\n- not a list yet',
+    );
+    expect(midDocument).toContain('Intro text');
+    expect(midDocument).toContain('language-python');
+    expect(midDocument).not.toContain('<ul>');
+  });
+
+  it('leaves tilde fence bodies untouched', () => {
+    const result = markdownToHtml('~~~\ntext\n- item in code\n~~~');
+    expect(result).toContain('text\n- item in code');
+    expect(result).not.toContain('<ul>');
+  });
+
+  it('keeps inline code spans away from the markdown fixes', () => {
+    const markdown = 'Use `\\[not a link\\](https://x.dev)` verbatim.';
+    const result = markdownToHtml(markdown);
+    expect(result).toContain('\\[not a link\\](https://x.dev)');
+  });
+
+  it('still unwraps ```markdown fences and fixes their content', () => {
+    const markdown = '```markdown\n# Title\ntext\n1. a\n2. b\n```';
+    const result = markdownToHtml(markdown);
+    expect(result).toContain('<h1');
+    expect(result).toContain('<ol>');
+  });
+
+  it('nests a 2-space indented bullet under its ordered parent (issue #2109)', () => {
+    const result = markdownToHtml('1. Item\n  - sub\n2. Next');
+    expect(result.match(/<ol/g)).toHaveLength(1);
+    expect(result).toContain('<ul>');
+    expect(result.indexOf('<ul>')).toBeGreaterThan(result.indexOf('<li>'));
+    expect(result.indexOf('</ul>')).toBeLessThan(result.lastIndexOf('</ol>'));
+    expect(result).toContain('sub');
+  });
+
+  it('does not flatten a 2-space indented ordered child (issue #2109)', () => {
+    const result = markdownToHtml('2. Second\n  1. sub\n3. Third');
+    // Without normalization marked flattened this into one list of three
+    // items; nested it must produce an inner <ol> inside the outer one.
+    expect(result.match(/<ol/g)).toHaveLength(2);
+    expect(result).toContain('start="2"');
+  });
+
+  it('renders adjacent whole-line $$ lines as separate display blocks (issue #2109 fix 9)', () => {
+    const result = markdownToHtml(
+      '$$\\text{Step 1: Substitute } x = 4 \\text{ into the expression}$$\n$$3x + 5 = 3(4) + 5$$',
+    );
+    // Each whole-line span becomes its own katex display block; nothing is
+    // rendered as inline math and no raw delimiters leak.
+    expect(result.match(/katex-display/g)).toHaveLength(2);
+    expect((result.match(/class="katex"/g) ?? []).length).toBe(2);
+    expect(result).not.toContain('$$');
+  });
+
+  it('renders a whole-line \\[...\\] as a display block (issue #2109 fix 9)', () => {
+    const result = markdownToHtml('Energy:\n\\[E = mc^2\\]\nDone.');
+    expect(result.match(/katex-display/g)).toHaveLength(1);
+    expect(result).not.toContain('$$');
+    expect(result).not.toContain('\\[');
+    // Inline \(...\) stays inline math.
+    const inline = markdownToHtml('the value \\(a + b\\) here');
+    expect(inline).not.toContain('katex-display');
+    expect(inline).toContain('class="katex"');
+  });
+
   it('should handle excessive newlines after headings', () => {
     const markdown = '# Heading\n\n\n\nParagraph';
     const result = markdownToHtml(markdown);
@@ -2217,6 +2358,40 @@ describe('markdownToHtml function', () => {
     const markdown = 'Use `console.log()` to debug';
     const result = markdownToHtml(markdown);
     expect(result).toContain('<code>console.log()</code>');
+  });
+
+  it('emits span-free code blocks with a language class (issue #2109)', () => {
+    const markdown = '```python\nimport os\nprint("hi")\n```';
+    const result = markdownToHtml(markdown);
+    expect(result).toContain('<pre><code class="language-python">');
+    expect(result).not.toContain('<span');
+    expect(result).toContain('import os\nprint(');
+  });
+
+  it('keeps every fence newline intact between keyword lines (issue #2109)', () => {
+    const markdown = [
+      '```python',
+      'import json',
+      'from typing import List, Dict',
+      'from functools import wraps',
+      '',
+      'def log_execution(func):',
+      '    """Decorator to log function execution times and results."""',
+      '    @wraps(func)',
+      '    def wrapper(*args, **kwargs):',
+      '        return func(*args, **kwargs)',
+      '    return wrapper',
+      '',
+      '@log_execution',
+      'def process_data_batch(input_records: List[Dict]) -> List[Dict]:',
+      '    return input_records',
+      '```',
+    ].join('\n');
+    const result = markdownToHtml(markdown);
+    expect(result).toContain('Dict\nfrom functools');
+    expect(result).toContain('@log_execution\ndef process_data_batch');
+    expect(result).not.toContain('Dictfrom');
+    expect(result).not.toContain('log_executiondef');
   });
 
   it('should handle GFM tables', () => {
@@ -2767,6 +2942,29 @@ describe('getCurrentArtifactTitle function', () => {
     expect(getCurrentArtifactTitle(messages)).toBe('Current Version');
   });
 
+  it('should treat a missing version_number as 0 when picking the latest', () => {
+    const messages = [
+      {
+        message: { data: { content: '' } },
+        artifact_versions: [
+          { id: 1, title: 'No Number' },
+          { id: 2, title: 'Numbered', version_number: 2 },
+        ],
+      },
+    ];
+    expect(getCurrentArtifactTitle(messages)).toBe('Numbered');
+    const reversed = [
+      {
+        message: { data: { content: '' } },
+        artifact_versions: [
+          { id: 2, title: 'Numbered', version_number: 2 },
+          { id: 1, title: 'No Number' },
+        ],
+      },
+    ];
+    expect(getCurrentArtifactTitle(reversed)).toBe('Numbered');
+  });
+
   it('should return the highest version_number title when no is_current flag', () => {
     const messages = [
       {
@@ -2950,6 +3148,79 @@ describe('getFirstMessageWithContent function', () => {
   });
 });
 
+describe('getFirstHumanMessageWithContent function', () => {
+  it('should return empty string for null/undefined/empty input', () => {
+    expect(getFirstHumanMessageWithContent(null as any)).toBe('');
+    expect(getFirstHumanMessageWithContent(undefined as any)).toBe('');
+    expect(getFirstHumanMessageWithContent([])).toBe('');
+  });
+
+  it('should skip the assistant greeting and return the first human message', () => {
+    const messages = [
+      { is_ai: true, message: { data: { content: 'Hi, how can I help?' } } },
+      { is_human: true, message: { data: { content: 'What is React?' } } },
+      { is_human: true, message: { data: { content: 'And Redux?' } } },
+    ];
+    expect(getFirstHumanMessageWithContent(messages)).toBe('What is React?');
+  });
+
+  it('should detect human messages via message.data.type when is_human is absent', () => {
+    const messages = [
+      { message: { data: { type: 'ai', content: 'Greeting' } } },
+      { message: { data: { type: 'human', content: 'My question' } } },
+    ];
+    expect(getFirstHumanMessageWithContent(messages)).toBe('My question');
+  });
+
+  it('should skip human messages that have no content', () => {
+    const messages = [
+      { is_human: true, message: { data: { content: '' } } },
+      { is_human: true, message: { data: { content: 'Real question' } } },
+    ];
+    expect(getFirstHumanMessageWithContent(messages)).toBe('Real question');
+  });
+
+  it('should return empty string when there is no human message', () => {
+    const messages = [
+      { is_ai: true, message: { data: { content: 'Only assistant' } } },
+    ];
+    expect(getFirstHumanMessageWithContent(messages)).toBe('');
+  });
+});
+
+describe('getLatestMessageTimestamp function', () => {
+  it('should return null for null/undefined/empty input', () => {
+    expect(getLatestMessageTimestamp(null as any)).toBeNull();
+    expect(getLatestMessageTimestamp(undefined as any)).toBeNull();
+    expect(getLatestMessageTimestamp([])).toBeNull();
+  });
+
+  it('should return null when no message has a timestamp', () => {
+    expect(getLatestMessageTimestamp([{ message: {} }, {}])).toBeNull();
+  });
+
+  it('should return the latest inserted_at across messages', () => {
+    const messages = [
+      { inserted_at: '2025-11-19T15:12:49.347417Z' },
+      { inserted_at: '2025-11-19T21:43:09.409656Z' },
+      { inserted_at: '2025-11-19T19:02:27.774918Z' },
+    ];
+    expect(getLatestMessageTimestamp(messages)).toBe(
+      new Date('2025-11-19T21:43:09.409656Z').getTime(),
+    );
+  });
+
+  it('should ignore unparseable timestamps', () => {
+    const messages = [
+      { inserted_at: 'not-a-date' },
+      { inserted_at: '2026-01-02T00:00:00.000Z' },
+    ];
+    expect(getLatestMessageTimestamp(messages)).toBe(
+      new Date('2026-01-02T00:00:00.000Z').getTime(),
+    );
+  });
+});
+
 describe('isSafariBrowser function', () => {
   const originalNavigator = navigator;
 
@@ -3083,45 +3354,6 @@ describe('isLoggedIn function - environment guards', () => {
   });
 });
 
-describe('preprocessLaTeX function - tabular and array environments', () => {
-  it('converts tabular wrapped in $$...$$ to a markdown table', () => {
-    const input =
-      '$$\\begin{tabular}{cc}\\hline\nName & Age \\\\\nAlice & 30 \\\\\n\\hline\\end{tabular}$$';
-    const result = preprocessLaTeX(input);
-    expect(result).toContain('| Name | Age |');
-    expect(result).toContain('| --- | --- |');
-    expect(result).toContain('| Alice | 30 |');
-  });
-
-  it('converts standalone tabular blocks to a markdown table', () => {
-    const input = '\\begin{tabular}{cc}\nA & B \\\\\nC & D\\end{tabular}';
-    const result = preprocessLaTeX(input);
-    expect(result).toContain('| A | B |');
-    expect(result).toContain('| C | D |');
-  });
-
-  it('converts array wrapped in \\[...\\] to a markdown table', () => {
-    const input = '\\[\\begin{array}{cc}1 & 2 \\\\ 3 & 4\\end{array}\\]';
-    const result = preprocessLaTeX(input);
-    expect(result).toContain('| 1 | 2 |');
-    expect(result).toContain('| 3 | 4 |');
-  });
-
-  it('converts array wrapped in $$...$$ to a markdown table', () => {
-    const input = '$$\\begin{array}{cc}5 & 6 \\\\ 7 & 8\\end{array}$$';
-    const result = preprocessLaTeX(input);
-    expect(result).toContain('| 5 | 6 |');
-    expect(result).toContain('| 7 | 8 |');
-  });
-
-  it('converts standalone array blocks to a markdown table', () => {
-    const input = '\\begin{array}{cc}9 & 10 \\\\ 11 & 12\\end{array}';
-    const result = preprocessLaTeX(input);
-    expect(result).toContain('| 9 | 10 |');
-    expect(result).toContain('| 11 | 12 |');
-  });
-});
-
 describe('htmlToMarkdown function - KaTeX restoration', () => {
   it('restores inline math from KaTeX annotation spans', () => {
     const html =
@@ -3181,5 +3413,296 @@ describe('markdownToHtml function - preprocess paths', () => {
     // href is invalid → preprocessor never produces an <a> tag for it
     expect(html).not.toContain('href="not-a-url"');
     expect(html).not.toContain('<a ');
+  });
+});
+
+describe('compareLLMProvidersByDisplayName function', () => {
+  it('orders by display name, not by the raw backend key', () => {
+    // Raw keys would put `anthropic` first; display names put "Amazon" first.
+    expect(
+      compareLLMProvidersByDisplayName('bedrock', 'anthropic'),
+    ).toBeLessThan(0);
+    expect(
+      compareLLMProvidersByDisplayName('anthropic', 'bedrock'),
+    ).toBeGreaterThan(0);
+  });
+
+  it('compares case-insensitively', () => {
+    // "Groq" vs "ibl.ai" — a case-sensitive sort would put every capitalised
+    // name before the lowercase one.
+    expect(compareLLMProvidersByDisplayName('groq', 'iblai')).toBeLessThan(0);
+    expect(compareLLMProvidersByDisplayName('OPENAI', 'openai')).toBe(0);
+  });
+
+  it('returns 0 for two names resolving to the same display name', () => {
+    expect(compareLLMProvidersByDisplayName('azure_openai', 'Microsoft')).toBe(
+      0,
+    );
+  });
+
+  it('falls back to the raw name for unknown providers', () => {
+    expect(
+      compareLLMProvidersByDisplayName('aardvark-ai', 'openai'),
+    ).toBeLessThan(0);
+    expect(
+      compareLLMProvidersByDisplayName('zeta-labs', 'openai'),
+    ).toBeGreaterThan(0);
+  });
+});
+
+describe('canAccessProvider function', () => {
+  // One model is enough — the helper only cares that the list is non-empty,
+  // which is what `canSwitchProvider` checks per provider in the modal.
+  const models = [{ llm_name: 'gpt-4o' }];
+
+  it('is true when we have our own credentials and the provider ships models', () => {
+    expect(
+      canAccessProvider({ has_credentials: true, chat_models: models }),
+    ).toBe(true);
+  });
+
+  it.each([
+    ['an empty list', [] as unknown[]],
+    ['a null list', null],
+    ['an undefined list', undefined],
+    ['no chat_models key at all', 'omit'],
+  ])(
+    'is false when credentials are fine but the provider has %s',
+    (_label, chatModels) => {
+      const provider =
+        chatModels === 'omit'
+          ? { has_credentials: true }
+          : { has_credentials: true, chat_models: chatModels as unknown[] };
+
+      expect(canAccessProvider(provider)).toBe(false);
+    },
+  );
+
+  it('is false when the provider ships models but no credential path passes', () => {
+    expect(
+      canAccessProvider({
+        has_credentials: false,
+        can_use_main_keys: false,
+        main_has_credentials: false,
+        chat_models: models,
+      }),
+    ).toBe(false);
+  });
+
+  it('is false when the provider carries no credential flags at all', () => {
+    expect(canAccessProvider({ chat_models: models })).toBe(false);
+  });
+
+  it.each([
+    ['can_use_main_keys with main_has_credentials true', true],
+    // An absent `main_has_credentials` means the backend said nothing about the
+    // main keys — canSwitchLLm treats that as available.
+    ['can_use_main_keys with main_has_credentials undefined', undefined],
+  ])('is true for the borrowed-main-keys path: %s', (_label, mainHasCreds) => {
+    expect(
+      canAccessProvider({
+        can_use_main_keys: true,
+        main_has_credentials: mainHasCreds,
+        chat_models: models,
+      }),
+    ).toBe(true);
+  });
+
+  it('is false when the main keys are explicitly reported as having no credentials', () => {
+    expect(
+      canAccessProvider({
+        can_use_main_keys: true,
+        main_has_credentials: false,
+        chat_models: models,
+      }),
+    ).toBe(false);
+  });
+
+  it('returns a strict boolean, never canSwitchLLm’s undefined', () => {
+    // canSwitchLLm returns `undefined` when can_use_main_keys is absent; the
+    // grid uses this value to drive a className, so it must be a real boolean.
+    const result = canAccessProvider({ chat_models: models });
+    expect(typeof result).toBe('boolean');
+    expect(result).toBe(false);
+  });
+});
+
+describe('sortLLMProvidersByCredentials function', () => {
+  // Grouping uses canAccessProvider — credentials *and* at least one chat model —
+  // so every "usable" fixture below needs both.
+  const models = [{ llm_name: 'model-1' }];
+  const keyed = { name: 'openai', has_credentials: true, chat_models: models };
+  const unkeyed = { name: 'anthropic', chat_models: models };
+
+  it('puts every provider the user can use before the ones they cannot', () => {
+    const sorted = sortLLMProvidersByCredentials([
+      { name: 'openai', chat_models: models },
+      { name: 'anthropic', has_credentials: true, chat_models: models },
+      { name: 'groq', chat_models: models },
+      {
+        name: 'bedrock',
+        can_use_main_keys: true,
+        main_has_credentials: true,
+        chat_models: models,
+      },
+    ]);
+
+    expect(sorted.map((p) => p.name)).toEqual([
+      // group 1, alphabetical by display name: "Amazon", "Anthropic"
+      'bedrock',
+      'anthropic',
+      // group 2, alphabetical by display name: "Groq", "OpenAI"
+      'groq',
+      'openai',
+    ]);
+  });
+
+  it('demotes a provider we have a key for when it ships no chat models', () => {
+    // The grouping predicate is the same one the grid grays cards with, so a
+    // keyed-but-empty provider must land in group 2 — otherwise it would sort
+    // as "usable" yet render grayed, which reads as a bug.
+    const sorted = sortLLMProvidersByCredentials([
+      { name: 'openai', has_credentials: true, chat_models: [] },
+      { name: 'groq', has_credentials: true, chat_models: models },
+    ]);
+
+    expect(sorted.map((p) => p.name)).toEqual(['groq', 'openai']);
+  });
+
+  it('sorts alphabetically by display name rather than raw key within a group', () => {
+    const sorted = sortLLMProvidersByCredentials([
+      { name: 'openai', has_credentials: true, chat_models: models },
+      { name: 'azure_openai', has_credentials: true, chat_models: models },
+      { name: 'anthropic', has_credentials: true, chat_models: models },
+      { name: 'bedrock', has_credentials: true, chat_models: models },
+    ]);
+
+    // Raw-key order would be anthropic, azure_openai, bedrock, openai.
+    expect(sorted.map((p) => p.name)).toEqual([
+      'bedrock', // Amazon
+      'anthropic', // Anthropic
+      'azure_openai', // Microsoft
+      'openai', // OpenAI
+    ]);
+  });
+
+  it('compares display names case-insensitively', () => {
+    const sorted = sortLLMProvidersByCredentials([
+      { name: 'iblai' }, // "ibl.ai"
+      { name: 'groq' }, // "Groq"
+      { name: 'azure_openai' }, // "Microsoft"
+    ]);
+
+    expect(sorted.map((p) => p.name)).toEqual([
+      'groq',
+      'iblai',
+      'azure_openai',
+    ]);
+  });
+
+  it.each([
+    ['has_credentials', { has_credentials: true }],
+    [
+      'can_use_main_keys + main_has_credentials',
+      { can_use_main_keys: true, main_has_credentials: true },
+    ],
+    [
+      'can_use_main_keys with main_has_credentials undefined',
+      { can_use_main_keys: true },
+    ],
+  ])('treats %s (with chat models) as usable', (_label, flags) => {
+    const sorted = sortLLMProvidersByCredentials([
+      unkeyed,
+      { name: 'openai', chat_models: models, ...flags },
+    ]);
+
+    expect(sorted[0].name).toBe('openai');
+  });
+
+  it.each([
+    ['no flags at all', {}],
+    [
+      'every flag false',
+      {
+        has_credentials: false,
+        can_use_main_keys: false,
+        main_has_credentials: false,
+      },
+    ],
+    [
+      'can_use_main_keys but main keys explicitly have no credentials',
+      { can_use_main_keys: true, main_has_credentials: false },
+    ],
+  ])('treats %s as unusable', (_label, flags) => {
+    const sorted = sortLLMProvidersByCredentials([
+      { name: 'anthropic', chat_models: models, ...flags },
+      keyed,
+    ]);
+
+    expect(sorted[0].name).toBe('openai');
+  });
+
+  it('does not mutate the input array', () => {
+    const input = [
+      { name: 'openai', chat_models: models },
+      { name: 'anthropic', has_credentials: true, chat_models: models },
+    ];
+    const snapshot = [...input];
+
+    const sorted = sortLLMProvidersByCredentials(input);
+
+    expect(input).toEqual(snapshot);
+    expect(sorted).not.toBe(input);
+    expect(sorted[0]).toBe(input[1]);
+  });
+
+  it('works on a frozen array (RTK Query results are frozen)', () => {
+    const frozen = Object.freeze([
+      { name: 'openai', chat_models: models },
+      { name: 'anthropic', has_credentials: true, chat_models: models },
+    ]);
+
+    expect(() => sortLLMProvidersByCredentials(frozen)).not.toThrow();
+    expect(sortLLMProvidersByCredentials(frozen).map((p) => p.name)).toEqual([
+      'anthropic',
+      'openai',
+    ]);
+  });
+
+  it('handles empty and single-element arrays', () => {
+    expect(sortLLMProvidersByCredentials([])).toEqual([]);
+    expect(sortLLMProvidersByCredentials([keyed])).toEqual([keyed]);
+  });
+
+  it('is stable for providers that tie on group and display name', () => {
+    const first = {
+      name: 'azure_openai',
+      has_credentials: true,
+      chat_models: models,
+    };
+    const second = {
+      name: 'Microsoft',
+      has_credentials: true,
+      chat_models: models,
+    };
+
+    const sorted = sortLLMProvidersByCredentials([first, second]);
+
+    expect(sorted[0]).toBe(first);
+    expect(sorted[1]).toBe(second);
+  });
+
+  it('sorts unknown providers by their raw name alongside known ones', () => {
+    const sorted = sortLLMProvidersByCredentials([
+      { name: 'zeta-labs' },
+      { name: 'openai' },
+      { name: 'aardvark-ai' },
+    ]);
+
+    expect(sorted.map((p) => p.name)).toEqual([
+      'aardvark-ai',
+      'openai', // "OpenAI"
+      'zeta-labs',
+    ]);
   });
 });

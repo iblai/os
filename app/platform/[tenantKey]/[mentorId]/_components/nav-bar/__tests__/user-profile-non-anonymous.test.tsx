@@ -64,6 +64,8 @@ vi.mock('@/lib/config', () => ({
     authUrl: () => 'https://auth.example.com',
     platformBaseDomain: () => 'example.com',
     defaultSupportPhoneNumber: () => '(571) 293-0242',
+    enableSupportPhone: () => false,
+    enableGradebookTab: () => false,
     enableRBAC: () => false,
     iblTemplateMentor: () => 'default-mentor',
   },
@@ -106,9 +108,18 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
   },
 }));
 
+// A factory mock replaces the WHOLE module, so every enum reached transitively
+// from the nav-bar import graph must be listed here — `PromptVisibilityEnum`
+// (pulled in via the prompt modals) is read at module scope, so omitting it
+// fails the file at import time.
 vi.mock('@iblai/iblai-api', () => ({
   MentorVisibilityEnum: {
     VIEWABLE_BY_ANYONE: 'VIEWABLE_BY_ANYONE',
+  },
+  PromptVisibilityEnum: {
+    VIEWABLE_BY_TENANT_ADMINS: 'viewable_by_tenant_admins',
+    VIEWABLE_BY_TENANT_STUDENTS: 'viewable_by_tenant_students',
+    VIEWABLE_BY_ANYONE: 'viewable_by_anyone',
   },
   UserApp: {},
 }));

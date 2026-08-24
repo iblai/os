@@ -7,6 +7,7 @@ edition = "2021"
 crate-type = ["staticlib", "cdylib", "lib"]
 
 [dependencies]
+tauri-plugin-devtools = "2.0.0"
 tauri = { version = "2", features = ["protocol-asset", "devtools"] }
 tauri-plugin-shell = "2"
 tauri-plugin-deep-link = "2"
@@ -34,6 +35,7 @@ tower-http = { version = "0.6", features = ["cors", "fs"] }
 mime_guess = "2.0"
 base64 = "0.22"
 tauri-plugin-os = "2.3.2"
+tauri-plugin-dialog = "2"
 
 [target.'cfg(target_os = "ios")'.dependencies]
 objc = "0.2"
@@ -42,6 +44,8 @@ block = "0.1"
 [target.'cfg(target_os = "macos")'.dependencies]
 objc = "0.2"
 block = "0.1"
+# Accessibility (and other) macOS system-permission checks/requests.
+tauri-plugin-macos-permissions = "2.3.0"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

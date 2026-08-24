@@ -4,6 +4,7 @@ import useEmbedTab from '../useEmbedTab';
 import * as dataLayer from '@iblai/iblai-js/data-layer';
 import * as utils from '@/features/utils';
 import * as embedUtils from '../../utils';
+import * as userHooks from '@/hooks/use-user';
 import { toast } from 'sonner';
 
 // Mock module factories - these are hoisted, so use vi.fn() directly
@@ -23,6 +24,11 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
       embed_show_voice_record: true,
       show_catalogue: true,
       mentor_unique_id: 'mentor-123',
+    },
+  })),
+  useGetMentorSettingsQuery: vi.fn(() => ({
+    data: {
+      strip_page_content_html: false,
     },
   })),
 }));
@@ -264,6 +270,63 @@ describe('useEmbedTab', () => {
       );
     });
 
+    it('should default strip_page_content_html to false from private settings', () => {
+      const { result } = renderHook(() => useEmbedTab());
+
+      expect(result.current.form.getFieldValue('strip_page_content_html')).toBe(
+        false,
+      );
+    });
+
+    it('should hydrate strip_page_content_html from private settings GET value', () => {
+      vi.mocked(dataLayer.useGetMentorSettingsQuery).mockReturnValueOnce({
+        data: { strip_page_content_html: true },
+      } as any);
+
+      const { result } = renderHook(() => useEmbedTab());
+
+      expect(result.current.form.getFieldValue('strip_page_content_html')).toBe(
+        true,
+      );
+    });
+
+    it('should default strip_page_content_html to false when private settings is undefined', () => {
+      vi.mocked(dataLayer.useGetMentorSettingsQuery).mockReturnValueOnce({
+        data: undefined,
+      } as any);
+
+      const { result } = renderHook(() => useEmbedTab());
+
+      expect(result.current.form.getFieldValue('strip_page_content_html')).toBe(
+        false,
+      );
+    });
+
+    it('should fall back to empty userId / anonymous when username is missing', () => {
+      vi.mocked(userHooks.useUsername).mockReturnValueOnce(
+        '' as unknown as string,
+      );
+
+      const { result } = renderHook(() => useEmbedTab());
+
+      // Still renders a valid form (private settings query is skipped).
+      expect(result.current.form.getFieldValue('strip_page_content_html')).toBe(
+        false,
+      );
+    });
+
+    it('should default strip_page_content_html to false when field missing from private settings', () => {
+      vi.mocked(dataLayer.useGetMentorSettingsQuery).mockReturnValueOnce({
+        data: { custom_css: '' },
+      } as any);
+
+      const { result } = renderHook(() => useEmbedTab());
+
+      expect(result.current.form.getFieldValue('strip_page_content_html')).toBe(
+        false,
+      );
+    });
+
     it('should initialize custom floating bubble config with correct defaults', () => {
       const { result } = renderHook(() => useEmbedTab());
 
@@ -502,6 +565,31 @@ describe('useEmbedTab', () => {
         expect.objectContaining({
           formData: expect.objectContaining({
             show_catalogue: true,
+          }),
+        }),
+      );
+    });
+
+    it('should pass strip_page_content_html through to updateMentorSettings payload', async () => {
+      mockUpdateMentorSettingsFn.mockResolvedValueOnce({
+        data: { success: true },
+      });
+
+      const { result } = renderHook(() => useEmbedTab());
+
+      await act(async () => {
+        result.current.form.setFieldValue('allow_anonymous', true);
+        result.current.form.setFieldValue('strip_page_content_html', true);
+      });
+
+      await act(async () => {
+        await result.current.syncEmbedSettings();
+      });
+
+      expect(mockUpdateMentorSettingsFn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          formData: expect.objectContaining({
+            strip_page_content_html: true,
           }),
         }),
       );

@@ -88,6 +88,24 @@ export class AnalyticsPage {
     });
   }
 
+  async navigateToMemory(): Promise<void> {
+    // Memory has no on-page tab — it is reached through the sidebar's
+    // "Memory" sub-item (rendered right after Transcripts), which
+    // deep-links to `/analytics/memory`.
+    await this.expandSidebarAnalytics();
+    const memoryLink = this.sidebar.getByRole('button', {
+      name: 'Memory',
+      exact: true,
+    });
+    await expect(memoryLink).toBeVisible({ timeout: 10_000 });
+    await memoryLink.click();
+    await safeWaitForURL(
+      this.page,
+      (url) => /\/analytics\/memory\/?$/.test(url.href),
+      { timeout: 60_000 },
+    );
+  }
+
   async navigateToDataReports(): Promise<void> {
     // Sidebar Analytics is a collapsible section now (see `goto()`).
     // Expand it, then click the "Data Reports" sub-item which deep-links

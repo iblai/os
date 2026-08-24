@@ -19,3 +19,23 @@ bash ./scripts/check-test-coverage.sh
 
 echo "Checking E2E journey coverage for changed files..."
 node e2e/scripts/check-journey-coverage.mjs --no-regress
+
+echo "Checking Tauri E2E journey coverage..."
+node e2e-tauri/scripts/check-journey-coverage.mjs --no-regress
+
+# Rust tests run only when Rust changed — web-only pushes stay fast. No gate ran
+# these at all before, so a Rust-only fix could land with zero tests unnoticed.
+if git diff --name-only origin/main...HEAD | grep -q '^src-tauri/.*\.rs$'; then
+  echo "Rust changed — running cargo test..."
+  (cd src-tauri && cargo test --offline --quiet)
+fi
+
+# Claude code review runs locally (moved off GitHub Actions — no Claude in CI).
+# Requires the `claude` CLI to be installed; the push is blocked without it.
+if ! command -v claude >/dev/null 2>&1; then
+  echo "ERROR: 'claude' CLI not found. Install it to run the required pre-push review."
+  echo "       https://docs.claude.com/en/docs/claude-code"
+  exit 1
+fi
+echo "Claude is reviewing your code..."
+claude --print "/code-review"

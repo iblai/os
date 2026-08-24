@@ -89,63 +89,44 @@ test.describe('Journey 9: Voice Chat', () => {
       page,
       editMentorPage,
       chatPage,
+      createMentorPage,
     }) => {
       const isAdmin = await checkAdminStatus(page);
       test.skip(!isAdmin, 'Requires admin access');
-      await editMentorPage.open('Settings');
+      // Isolate this voice-toggle flow onto a fresh, dedicated mentor so it
+      // never mutates the shared default mentor that journey 47 (and this
+      // file's sibling Admin test) also edit in parallel. `show_voice_call` is
+      // persisted server-side per mentor, so editing the shared one races
+      // journey 47's assertions. New mentors default voice ON, so there is
+      // still something to toggle off. Mirrors vc-07 + journey 37.
+      //
+      // The "Enable voice calls" master toggle now lives in-tab on the Voice
+      // tab itself (feat/2040 — moved off Settings → Capabilities) and
+      // auto-saves on click — no footer Save button involved.
+      await createMentorPage.openAndCreate();
+      await editMentorPage.open('Voice');
       await waitForPageReady(page);
-      // Voice calls toggle moved to the Capabilities sub-tab when Settings
-      // was split into Basic / Discovery / Capabilities — switch first.
-      await editMentorPage.settings.selectSubTab('Capabilities');
-      const showVoiceSwitch = editMentorPage.dialog.getByRole('switch', {
-        name: /enable voice calls/i,
-      });
-      const visible = await showVoiceSwitch
+
+      const visible = await editMentorPage.voice.capabilityToggle
         .isVisible({ timeout: 5_000 })
         .catch(() => false);
       if (!visible) {
         await editMentorPage.close();
         return;
       }
-      const wasEnabled =
-        (await showVoiceSwitch.getAttribute('aria-checked')) === 'true';
+      const wasEnabled = await editMentorPage.voice.isCapabilityEnabled();
       if (wasEnabled) {
-        // H3 fix: toggle, SAVE, then close (original used toggleSwitchSaveAndClose)
-        await showVoiceSwitch.click();
-        await expect(showVoiceSwitch).toHaveAttribute('aria-checked', 'false', {
-          timeout: 10_000,
-        });
-        const saveButton = editMentorPage.dialog.getByRole('button', {
-          name: 'Save',
-        });
-        await expect(saveButton).toBeEnabled({ timeout: 10_000 });
-        await saveButton.click();
-        await page.waitForTimeout(3_000);
+        await editMentorPage.voice.setCapabilityEnabled(false);
       }
       await editMentorPage.close();
       await expect(chatPage.voiceCallButton).not.toBeVisible({
         timeout: 10_000,
       });
 
-      // Restore: toggle back ON, save, close
-      await editMentorPage.open('Settings');
+      // Restore: toggle back ON.
+      await editMentorPage.open('Voice');
       await waitForPageReady(page);
-      await editMentorPage.settings.selectSubTab('Capabilities');
-      const switchAgain = editMentorPage.dialog.getByRole('switch', {
-        name: /enable voice calls/i,
-      });
-      if ((await switchAgain.getAttribute('aria-checked')) === 'false') {
-        await switchAgain.click();
-        await expect(switchAgain).toHaveAttribute('aria-checked', 'true', {
-          timeout: 10_000,
-        });
-        const saveButton2 = editMentorPage.dialog.getByRole('button', {
-          name: 'Save',
-        });
-        await expect(saveButton2).toBeEnabled({ timeout: 10_000 });
-        await saveButton2.click();
-        await page.waitForTimeout(3_000);
-      }
+      await editMentorPage.voice.setCapabilityEnabled(true);
       await editMentorPage.close();
     });
 
@@ -153,36 +134,31 @@ test.describe('Journey 9: Voice Chat', () => {
       page,
       editMentorPage,
       chatPage,
+      createMentorPage,
     }) => {
       const isAdmin = await checkAdminStatus(page);
       test.skip(!isAdmin, 'Requires admin access');
-      await editMentorPage.open('Settings');
+      // Isolate onto a fresh, dedicated mentor (see the sibling test above) so
+      // this re-enable flow never touches the shared default mentor that
+      // journey 47 asserts against in parallel.
+      //
+      // The "Enable voice calls" master toggle now lives in-tab on the Voice
+      // tab itself (feat/2040 — moved off Settings → Capabilities) and
+      // auto-saves on click.
+      await createMentorPage.openAndCreate();
+      await editMentorPage.open('Voice');
       await waitForPageReady(page);
-      // Voice calls toggle moved to the Capabilities sub-tab when Settings
-      // was split into Basic / Discovery / Capabilities — switch first.
-      await editMentorPage.settings.selectSubTab('Capabilities');
-      const showVoiceSwitch = editMentorPage.dialog.getByRole('switch', {
-        name: /enable voice calls/i,
-      });
-      const visible = await showVoiceSwitch
+
+      const visible = await editMentorPage.voice.capabilityToggle
         .isVisible({ timeout: 5_000 })
         .catch(() => false);
       if (!visible) {
         await editMentorPage.close();
         return;
       }
-      if ((await showVoiceSwitch.getAttribute('aria-checked')) !== 'true') {
-        // H3 fix: save after toggling
-        await showVoiceSwitch.click();
-        await expect(showVoiceSwitch).toHaveAttribute('aria-checked', 'true', {
-          timeout: 10_000,
-        });
-        const saveButton = editMentorPage.dialog.getByRole('button', {
-          name: 'Save',
-        });
-        await expect(saveButton).toBeEnabled({ timeout: 10_000 });
-        await saveButton.click();
-        await page.waitForTimeout(3_000);
+      const isEnabled = await editMentorPage.voice.isCapabilityEnabled();
+      if (!isEnabled) {
+        await editMentorPage.voice.setCapabilityEnabled(true);
       }
       await editMentorPage.close();
       await expect(chatPage.voiceCallButton).toBeVisible({ timeout: 10_000 });

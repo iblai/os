@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import {
   Dialog,
   DialogContent,
@@ -29,6 +30,7 @@ export function ProjectInstructionsModal({
   onClose,
   onSave,
 }: ProjectInstructionsModalProps) {
+  const t = useTranslations('projectsProjectInstructionsModal');
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
   const username = useUsername();
   const activeMentorId = mentorId;
@@ -59,7 +61,7 @@ export function ProjectInstructionsModal({
           userId: username ?? '',
           formData: { system_prompt: instructions },
         }).unwrap();
-        toast.success('Instructions updated successfully');
+        toast.success(t('saveSuccess'));
       }
 
       // Also call the original onSave callback for backward compatibility
@@ -67,7 +69,7 @@ export function ProjectInstructionsModal({
       onClose();
     } catch (error) {
       console.error(JSON.stringify(error));
-      toast.error('Failed to update instructions');
+      toast.error(t('saveError'));
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     }
   };
@@ -84,12 +86,11 @@ export function ProjectInstructionsModal({
         <div className="border-b border-gray-200 p-6">
           <div className="mb-4 flex items-center justify-between">
             <DialogTitle className="text-xl font-semibold text-gray-900">
-              Instructions
+              {t('title')}
             </DialogTitle>
           </div>
           <DialogDescription className="text-gray-600">
-            You can ask agent to focus on certain topics, or ask it to use a
-            certain tone or format for responses.
+            {t('description')}
           </DialogDescription>
         </div>
 
@@ -98,7 +99,7 @@ export function ProjectInstructionsModal({
           <Textarea
             value={instructions}
             onChange={(e) => setInstructions(e.target.value)}
-            placeholder='e.g. "Reference the latest JavaScript documentation. Keep answers short and focused."'
+            placeholder={t('placeholder')}
             className="min-h-[400px] resize-none rounded-lg border-2 border-gray-200 p-4 text-base placeholder:text-gray-400 focus:border-blue-500 focus:ring-0"
           />
         </div>
@@ -108,17 +109,17 @@ export function ProjectInstructionsModal({
           <Button
             variant="outline"
             onClick={handleCancel}
-            aria-label="Cancel editing instructions"
+            aria-label={t('cancelAriaLabel')}
           >
-            Cancel
+            {t('cancel')}
           </Button>
           <Button
             onClick={handleSave}
             disabled={isEditingMentor || !instructions?.trim()}
             className="ibl-button-primary"
-            aria-label="Save project instructions"
+            aria-label={t('saveAriaLabel')}
           >
-            {isEditingMentor ? 'Saving...' : 'Save'}
+            {isEditingMentor ? t('saving') : t('save')}
           </Button>
         </div>
       </DialogContent>

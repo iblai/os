@@ -2424,6 +2424,9 @@ describe('PromptsTab', () => {
   describe('Agent Configuration (CLAW)', () => {
     const wiredClawConfig = { id: 1, enabled: true, server: 7 };
 
+    // The Agent Configuration section renders ONLY for a fully-wired claw
+    // sandbox mentor (enable_claw on AND an instance connected). Otherwise it
+    // isn't shown at all.
     it('does not render the Agent Configuration section when enable_claw is false', () => {
       mockGetMentorSettingsQuery.mockReturnValue({
         data: { ...defaultMentorSettings, enable_claw: false },
@@ -2448,7 +2451,7 @@ describe('PromptsTab', () => {
       ).not.toBeInTheDocument();
     });
 
-    it('does not render the Agent Configuration section when enable_claw is true but no claw-config exists (sandbox not wired)', () => {
+    it('does not render the Agent Configuration section when enable_claw is true but no instance is wired', () => {
       mockGetMentorSettingsQuery.mockReturnValue({
         data: { ...defaultMentorSettings, enable_claw: true },
         isLoading: false,
@@ -2463,7 +2466,7 @@ describe('PromptsTab', () => {
       ).not.toBeInTheDocument();
     });
 
-    it('renders the Agent Configuration section when enable_claw is true AND claw-config is wired', () => {
+    it('renders the Agent Configuration section when enable_claw is true AND an instance is wired', () => {
       mockGetMentorSettingsQuery.mockReturnValue({
         data: { ...defaultMentorSettings, enable_claw: true },
         isLoading: false,
@@ -2474,17 +2477,6 @@ describe('PromptsTab', () => {
 
       expect(screen.getByText('Agent Configuration')).toBeInTheDocument();
       expect(screen.getByTestId('agent-config-prompts')).toBeInTheDocument();
-    });
-
-    it('passes platformKey and mentorUniqueId to AgentConfigPrompts', () => {
-      mockGetMentorSettingsQuery.mockReturnValue({
-        data: { ...defaultMentorSettings, enable_claw: true },
-        isLoading: false,
-      });
-      mockGetClawMentorConfigQuery.mockReturnValue({ data: wiredClawConfig });
-
-      render(<PromptsTab />);
-
       expect(mockAgentConfigPrompts).toHaveBeenCalledWith({
         platformKey: 'test-tenant',
         mentorUniqueId: 'test-mentor',
@@ -2505,6 +2497,36 @@ describe('PromptsTab', () => {
         platformKey: 'test-tenant',
         mentorUniqueId: 'nav-mentor-xyz',
       });
+    });
+
+    it('hides the System and Study prompts when the claw sandbox is connected', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_claw: true },
+        isLoading: false,
+      });
+      mockGetClawMentorConfigQuery.mockReturnValue({ data: wiredClawConfig });
+
+      render(<PromptsTab />);
+
+      // System / Study don't apply to claw-sandbox mentors.
+      expect(screen.queryByText('System Prompt')).not.toBeInTheDocument();
+      expect(screen.queryByText('Study Prompt')).not.toBeInTheDocument();
+      // Proactive / Guided still render.
+      expect(screen.getByText('Proactive Prompt')).toBeInTheDocument();
+      expect(screen.getByText('Guided Prompt')).toBeInTheDocument();
+    });
+
+    it('keeps the System and Study prompts when claw is enabled but no instance is wired', () => {
+      mockGetMentorSettingsQuery.mockReturnValue({
+        data: { ...defaultMentorSettings, enable_claw: true },
+        isLoading: false,
+      });
+      mockGetClawMentorConfigQuery.mockReturnValue({ data: null });
+
+      render(<PromptsTab />);
+
+      expect(screen.getByText('System Prompt')).toBeInTheDocument();
+      expect(screen.getByText('Study Prompt')).toBeInTheDocument();
     });
 
     it('does not render AgentConfigPrompts when tenantKey is missing', () => {

@@ -21,6 +21,12 @@ Only exception: the user explicitly instructs it in the current message.
 
 See `.claude/skills/safe-push.md` for the full push protocol and how to handle each failure type.
 
+## Bug fixes require regression tests
+
+Every bug fix lands with tests that would have caught the bug: a unit test in the same change (vitest for TS; the touched module's `mod tests` for Rust — pre-push runs `cargo test` when `src-tauri/*.rs` changed), and, when the bug was user-visible, an e2e checkpoint. A fix without a test that fails on the pre-fix code is not done.
+
+See `.claude/skills/e2e-coverage.md` for when and how to add the e2e half.
+
 ## E2E coverage
 
 After any change to user-facing behavior, evaluate whether `e2e/coverage.json` and `e2e/COVERAGE.md` need updating. Coverage must never regress.

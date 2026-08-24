@@ -1,0 +1,45 @@
+name: Release macOS DMG
+
+# Builds a signed + notarized Developer ID DMG (universal — Intel + Apple
+# Silicon) and attaches it to the app-v<X> Release. Triggered by the `app-v*`
+# tag that tauri-autoversion.yml pushes when a src-tauri change bumps the tauri
+# version. The build/sign/notarize logic lives in the reusable workflow
+# (vendored from iblai/iblai-web-ops); this file is just the trigger + inputs.
+#
+# Manual "Run workflow" produces a build-only DMG artifact (no Release), unless
+# `ibl_tenant` is set — then it builds a tenant-locked app and publishes it to a
+# per-tenant release (app-v<version>-<tenant>) with the download URL in the run
+# summary.
+on:
+  push:
+    tags:
+      - 'app-v*'
+  workflow_dispatch:
+    inputs:
+      ibl_tenant:
+        description: 'Tenant key to lock this build to (leave empty for a normal multi-tenant build). Publishes a per-tenant release with a stable download URL shown in the run summary.'
+        required: false
+        type: string
+        default: ''
+
+concurrency:
+  group: release-macos-dmg-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write # attach the DMG to the Release
+
+jobs:
+  release:
+    uses: ./.github/workflows/reusable-release-macos-dmg.yml
+    with:
+      allow_in_app_purchase: true
+      # Empty on tag pushes; set only on a manual tenant-locked dispatch.
+      ibl_tenant: ${{ inputs.ibl_tenant || '' }}
+      # Tag push -> attach the DMG to that app-v<X> Release.
+      # Manual dispatch -> build-only artifact (no Release), named by short SHA.
+      # Manual dispatch WITH ibl_tenant -> per-tenant release (handled downstream).
+      release_tag: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+      release_name: ${{ github.ref_type == 'tag' && format('ibl.ai {0} (macOS)', github.ref_name) || '' }}
+      artifact_name: ${{ github.ref_type == 'tag' && format('ibl-ai-macos-dmg-{0}', github.ref_name) || format('ibl-ai-macos-dmg-{0}', github.sha) }}
+    secrets: inherit

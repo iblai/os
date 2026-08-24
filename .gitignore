@@ -22,6 +22,9 @@ playwright/.auth/
 .env
 .env.*
 !.env.example
+# Shared, non-secret dev defaults loaded only by `next dev` (keeps CSP
+# report-only locally so enforcement doesn't block HMR/eval).
+!.env.development
 
 # keys & certificates
 *.pem
@@ -71,10 +74,12 @@ src-tauri/gen/apple/
 .cache/
 .yalc
 .yalc.lock
+yalc.lock
 
 # signing artifacts (never commit provisioning profiles)
 *.provisionprofile
 src-tauri/embedded.provisionprofile
+src-tauri/gen/schemas
 
 # playwright
 test-results
@@ -83,3 +88,10 @@ e2e/playwright-report
 e2e/test-results.json
 playwright/.auth
 e2e/playwright/.auth
+
+
+# harnesses
+.omo
+.omp
+.pi
+.npmrc.backup

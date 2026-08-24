@@ -34,6 +34,17 @@ export default defineConfig({
           import.meta.url,
         ).pathname,
       },
+      {
+        // `components/advanced-chart-with-tooltip.tsx` imports a not-yet-built
+        // `./detailed-chart-tooltip` placeholder module that does not exist on
+        // disk, so Vite's import-analysis cannot resolve it in tests. Point it
+        // at a test-only stub so the component is renderable under Vitest.
+        find: /^.*\/detailed-chart-tooltip$/,
+        replacement: new URL(
+          './__tests__/mocks/detailed-chart-tooltip.mock.tsx',
+          import.meta.url,
+        ).pathname,
+      },
       // Mock Tauri APIs for testing
     ],
   },
@@ -41,7 +52,20 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./__tests__/vitest.setup.ts'],
     environment: 'jsdom',
-    exclude: [...configDefaults.exclude, 'e2e/**'],
+    // Heavy userEvent/fireEvent interaction tests (e.g. app-sidebar,
+    // connector-management) run close to the 5s default per-test ceiling.
+    // Under cold Vite caches or CPU contention (CI, the pre-push hook) the
+    // extra wall-clock time tips them over and they flake as "timed out in
+    // 5000ms". Raising the budget removes the false negatives without hiding
+    // real failures — assertion errors still fail immediately and genuine
+    // hangs still time out.
+    testTimeout: 15000,
+    hookTimeout: 15000,
+    // `e2e/**` (Playwright) and `e2e-tauri/**` (WebdriverIO, driven by
+    // e2e-tauri/wdio.conf.ts) are end-to-end suites that need a real browser /
+    // a launched Tauri binary. Vitest would otherwise collect their `.spec.ts`
+    // files and fail them for lack of a WebDriver session.
+    exclude: [...configDefaults.exclude, 'e2e/**', 'e2e-tauri/**'],
     server: {
       deps: {
         inline: true,
@@ -60,8 +84,9 @@ export default defineConfig({
         'app/share/**/*.{ts,tsx}',
       ],
       exclude: [
-        // Playwright E2E tests (not unit coverage)
+        // Playwright / WebdriverIO E2E tests (not unit coverage)
         'e2e/**',
+        'e2e-tauri/**',
 
         // Default exclusions
         'node_modules/**',
@@ -92,7 +117,6 @@ export default defineConfig({
 
         // Config files
         'instrumentation.ts',
-        'middleware.ts',
         'next.config.ts',
         'server-wrapper.js',
         'sentry.*.config.*',

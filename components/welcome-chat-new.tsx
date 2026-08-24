@@ -12,7 +12,10 @@ import { WelcomeMessage } from '@/components/welcome-chat/welcome-message';
 import { useAxdToken } from '@/hooks/use-tokens';
 import { ProjectPageParams } from '@/lib/types';
 import { useParams } from 'next/navigation';
-import { ProjectLandingPage } from './projects/project-landing-page';
+import { ProjectLandingPage } from '@iblai/iblai-js/web-containers';
+import { useUserIsStudent } from '@/hooks/use-user';
+import { useNavigate } from '@/hooks/user-navigate';
+import { useAccessingPublicRoute } from '@/hooks/use-anonymous-mentor';
 
 type Props = {
   mentorName: string;
@@ -87,9 +90,12 @@ export function WelcomeChatNew({
   isConnecting = false,
   compactMode = false,
 }: Props) {
-  const { projectId } = useParams<ProjectPageParams>();
+  const { projectId, mentorId } = useParams<ProjectPageParams>();
   const embedMode = useEmbedMode();
   const axdToken = useAxdToken();
+  const userIsStudent = useUserIsStudent();
+  const isPublicRoute = useAccessingPublicRoute();
+  const { navigateToProject } = useNavigate();
 
   const { data: project } = useGetUserProjectDetailsQuery(
     {
@@ -114,6 +120,7 @@ export function WelcomeChatNew({
           mentorUniqueId={mentorUniqueId}
           isNewSession={isNewSession}
           aiWelcomeMessage={aiWelcomeMessage}
+          chatAreaMaxWidth={chatAreaMaxWidth}
         />
       </div>
     );
@@ -151,17 +158,23 @@ export function WelcomeChatNew({
         promptsIsEnabled={promptsIsEnabled}
         isPreviewMode={isPreviewMode}
         setMessage={setMessage}
+        mentorId={mentorId}
         mentorUniqueId={mentorUniqueId}
+        projectId={projectId}
         profileImage={profileImage}
         googleSlidesIsEnabled={googleSlidesIsEnabled}
         googleDocumentIsEnabled={googleDocumentIsEnabled}
         artifactsEnabled={artifactsEnabled}
+        userIsStudent={userIsStudent}
+        isPublicRoute={isPublicRoute}
+        navigateToProject={navigateToProject}
+        showExploreMentors
       />
     );
   }
 
   return (
-    <div className="overflow-y-auto">
+    <div>
       <div className="w-full py-6">
         {/* GitHub Sync Banner */}
         {tenantKey === config.mainTenantKey() &&
@@ -175,7 +188,10 @@ export function WelcomeChatNew({
             </h1>
           </div>
 
-          <div className="mb-6 text-center">
+          <div
+            className="mb-6 w-full text-center"
+            style={{ maxWidth: `${chatAreaMaxWidth}px` }}
+          >
             <WelcomeMessage
               aiWelcomeMessage={aiWelcomeMessage}
               sessionId={sessionId}
@@ -184,6 +200,7 @@ export function WelcomeChatNew({
               mentorUniqueId={mentorUniqueId}
               token={axdToken}
               isNewSession={isNewSession}
+              className="text-lg text-gray-600"
             />
           </div>
 

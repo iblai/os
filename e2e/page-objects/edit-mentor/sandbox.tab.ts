@@ -3,7 +3,7 @@ import { Page, Locator, expect } from '@playwright/test';
 /**
  * Page object for the Sandbox tab inside the Edit Mentor dialog.
  *
- * Renders the SandboxConfig component from @iblai/web-containers. The
+ * Renders the SandboxConfig component from @iblai/iblai-js/web-containers. The
  * component has two distinct states keyed off `mentorConfig`:
  *
  *  - NOT CONNECTED: instance picker (search input + Add Instance + table).
@@ -32,6 +32,21 @@ import { Page, Locator, expect } from '@playwright/test';
 export class SandboxTab {
   readonly page: Page;
   readonly dialog: Locator;
+
+  // ── Capability gate ───────────────────────────────────────────────────────
+  // The "Dedicated sandbox" (`enable_claw`) master toggle used to live in
+  // Settings → Capabilities; it now lives inline at the top of this tab via
+  // the shared `CapabilityGate` component. The toggle auto-saves (no footer
+  // Save button) — `SandboxTab` (app component) calls `useEditMentorMutation`
+  // directly on toggle and shows a toast ("Sandbox setting updated" /
+  // "Couldn't update sandbox setting"). The gated `SandboxConfig` content
+  // below is grayed out + inert (`data-enabled="false"`) while the toggle is
+  // off; interacting with it requires turning the capability on first.
+  readonly capabilityToggle: Locator;
+  /** Wrapper around the gated `SandboxConfig` content — `data-enabled` mirrors the toggle. */
+  readonly capabilityContent: Locator;
+  /** Hint shown next to the description while the capability is off. */
+  readonly capabilityOffHint: Locator;
 
   // ── Not-connected state ──────────────────────────────────────────────────
   readonly searchInput: Locator;
@@ -65,6 +80,18 @@ export class SandboxTab {
   constructor(page: Page, dialog: Locator) {
     this.page = page;
     this.dialog = dialog;
+
+    // Capability gate
+    this.capabilityToggle = dialog.getByTestId('sandbox-capability-toggle');
+    // `:visible` scopes to the currently-active tab's gate — top-level tab
+    // panels can stay force-mounted (CSS-hidden) while inactive, and every
+    // gated tab renders its own `capability-gate-content` wrapper.
+    this.capabilityContent = dialog.locator(
+      '[data-testid="capability-gate-content"]:visible',
+    );
+    this.capabilityOffHint = dialog.locator(
+      '[data-testid="capability-gate-off-hint"]:visible',
+    );
 
     // Not-connected state
     this.searchInput = dialog.getByPlaceholder('Search instances...');
@@ -139,6 +166,41 @@ export class SandboxTab {
     this.pushButton = dialog.getByRole('button', { name: /^push$/i });
   }
 
+  // ── Capability gate ───────────────────────────────────────────────────────
+
+  /** Whether the "Dedicated sandbox" capability toggle is currently on. */
+  async isCapabilityEnabled(): Promise<boolean> {
+    const attr = await this.capabilityToggle
+      .getAttribute('aria-checked')
+      .catch(() => null);
+    return attr === 'true';
+  }
+
+  /**
+   * Idempotently set the "Dedicated sandbox" capability toggle to the target
+   * state. The toggle auto-saves (`useEditMentorMutation` fires directly on
+   * click, optimistic local state) — no footer Save button involved. Waits
+   * for both the toggle's `aria-checked` and the gated content's
+   * `data-enabled` attribute to reflect the target state.
+   */
+  async setCapabilityEnabled(target: boolean): Promise<void> {
+    await expect(this.capabilityToggle).toBeVisible({ timeout: 10_000 });
+    const isOn = await this.isCapabilityEnabled();
+    if (isOn === target) return;
+
+    await this.capabilityToggle.click();
+    await expect(this.capabilityToggle).toHaveAttribute(
+      'aria-checked',
+      String(target),
+      { timeout: 15_000 },
+    );
+    await expect(this.capabilityContent).toHaveAttribute(
+      'data-enabled',
+      String(target),
+      { timeout: 15_000 },
+    );
+  }
+
   // ── State detection ──────────────────────────────────────────────────────
 
   /**
@@ -187,16 +249,27 @@ export class SandboxTab {
   }
 
   /**
-   * Opens the per-row dropdown menu. The SandboxConfig dropdown trigger
-   * uses `aria-label="Actions"` (or "Connecting instance" while a connect
-   * mutation is in flight) — match the leading "Action" prefix.
+   * Opens the per-row three-dot "Actions" dropdown menu (Run checks / Edit /
+   * Delete). Connect is no longer a menu item — it's a dedicated button next
+   * to this trigger (see `getConnectButton` / `clickConnect`).
    */
   async openRowMenu(row: Locator): Promise<void> {
     await row.getByRole('button', { name: /actions/i }).click();
   }
 
   /**
-   * Clicks the Connect item in the open row dropdown and waits for the
+   * Locator for the row's dedicated Connect button
+   * (`data-testid="connect-instance-<id>"`). Resolved by testid PREFIX
+   * (rather than role+name) so it also matches while the button reads
+   * "Connecting…" mid-mutation. Disabled (not clickable) when the instance
+   * is unhealthy — see `findConnectableOpenClawInstance`.
+   */
+  getConnectButton(row: Locator): Locator {
+    return row.locator('[data-testid^="connect-instance-"]');
+  }
+
+  /**
+   * Clicks the row's dedicated Connect button and waits for the
    * connected-state UI to render. We deliberately do NOT wait for the
    * "Instance connected" sonner toast: it auto-dismisses after ~4s and is
    * racy in slower CI runners (it can disappear before Playwright's first
@@ -205,8 +278,7 @@ export class SandboxTab {
    * resolved and RTK cache invalidated.
    */
   async clickConnect(row: Locator): Promise<void> {
-    await this.openRowMenu(row);
-    await this.page.getByRole('menuitem', { name: /^connect$/i }).click();
+    await this.getConnectButton(row).click();
     await expect(this.connectedHeading.first()).toBeVisible({
       timeout: 15_000,
     });
@@ -384,11 +456,11 @@ export class SandboxTab {
 
   /**
    * Walks the instance table and returns the name of the first OpenClaw
-   * instance whose STATUS is *not* "Error" — the SandboxConfig Connect
-   * menu item is dimmed (`opacity-50 cursor-not-allowed`) and its
-   * `onSelect` short-circuits via `e.preventDefault()` when
-   * `isInstanceUnhealthy(status)` is true.
+   * instance whose STATUS is *not* "Error" — the dedicated Connect button
+   * (`data-testid="connect-instance-<id>"`) is `disabled` and wrapped in a
+   * tooltip explaining why when `isInstanceUnhealthy(status)` is true.
    *
+
    * `isInstanceUnhealthy(s)` returns true only when status is set AND not
    * one of HEALTHY_STATUS_VALUES (`active|running|connected|ok|ready`).
    * Null/empty status is treated as connectable; StatusDot renders that as

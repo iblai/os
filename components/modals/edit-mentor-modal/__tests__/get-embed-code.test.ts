@@ -42,6 +42,7 @@ const settings: EmbedFormValues = {
   embed_show_voice_record: true,
   show_catalogue: true,
   starter_prompts: 'guided_prompt',
+  strip_page_content_html: false,
 };
 
 describe('getEmbedCode default bubble image (thumbnail uses dm, not axd)', () => {

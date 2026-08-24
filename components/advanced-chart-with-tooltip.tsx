@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import {
   AreaChart,
   Area,
@@ -23,13 +24,14 @@ const data = [
 ];
 
 export default function AdvancedChartWithTooltip() {
+  const t = useTranslations('componentsAdvancedChartWithTooltip');
   return (
     <div className="h-[400px] w-full rounded-lg border bg-white p-6">
-      <h3 className="mb-4 text-lg font-medium">Monthly Revenue</h3>
+      <h3 className="mb-4 text-lg font-medium">{t('monthlyRevenue')}</h3>
       <ChartContainer
         config={{
           value: {
-            label: 'Revenue',
+            label: t('revenueLabel'),
             color: 'hsl(215, 100%, 60%)',
           },
         }}

@@ -28,10 +28,17 @@ import {
   afterEach,
   beforeAll,
 } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
+import { UserType } from '@/lib/constants';
 
 // ============================================================================
 // MUTABLE MOCK STATE
@@ -87,6 +94,7 @@ let mockUsername: string | null = 'admin-user';
 let mockIsLoggedIn = true;
 let mockIsAdmin = true;
 let mockUserIsStudent = false;
+let mockTenantMetadata: Record<string, unknown> = {};
 let mockCurrentTenant: any = {
   is_admin: true,
   is_advertising: false,
@@ -139,6 +147,24 @@ let mockEnableRBAC = false;
 let mockActiveSessionId = 'sess-active';
 let mockCachedSessionId: Record<string, string> = {};
 const saveCachedSessionIdMock = vi.fn();
+
+// First-response refetch effect (issue #1982). The Chats section refetches
+// Recent once a brand-new chat reaches exactly 2 messages (user + first
+// assistant reply) and streaming has finished, so the new chat appears in
+// the sidebar without a manual refresh. These drive that effect's branches.
+let mockIsStreaming = false;
+let mockNumberOfActiveChatMessages = 0;
+let mockActiveChatMessages: Array<{ role?: string }> = [];
+const refetchRecentMock = vi.fn(() => Promise.resolve(undefined));
+const fetchNextPageMock = vi.fn(() => Promise.resolve(undefined));
+// Records the args passed to the recent infinite query so tests can assert
+// the debounced `search` / `mentor` params reached the hook.
+const recentInfiniteArgsMock = vi.fn();
+let mockHasNextPage = false;
+let mockIsFetchingNextPage = false;
+// When set, overrides the single-page wrapping so tests can supply an
+// explicit `{ pages: [...] }` payload spanning multiple pages.
+let mockRecentInfinitePages: any = undefined;
 
 // Data sources
 let mockMentorPublicSettings: any = {
@@ -195,6 +221,12 @@ let mockProjects: any = {
     },
   ],
 };
+// Records the args passed to the projects query so tests can assert the
+// growing `limit` (infinite scroll bumps it a page at a time).
+const getUserProjectsArgsMock = vi.fn();
+// Drives the projects query's `isFetching` flag so tests can assert the
+// scroll handler is gated while a fetch is in flight.
+let mockProjectsIsFetching = false;
 
 // Mimic RTK Query's updateQueryData: it invokes the recipe with a draft
 // object representing the cached data. We seed the draft with the current
@@ -247,6 +279,13 @@ vi.mock('sonner', () => {
   (toast as any).error = (...args: unknown[]) => toastErrorMock(...args);
   return { toast };
 });
+
+// Only dynamically imported (Code-mode eviction in startNewChat), so the
+// factory runs at call time, well after this const initialises.
+const invokeTauriMock = vi.fn(async (..._args: unknown[]) => undefined);
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: (...args: unknown[]) => invokeTauriMock(...args),
+}));
 
 vi.mock('@/lib/eventBus', () => ({
   default: { emit: (...args: unknown[]) => eventBusEmitMock(...args) },
@@ -365,40 +404,69 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
         }
       : { ...state, refetch: () => Promise.resolve(undefined) };
   },
-  useGetRecentMessageQuery: (
-    _args: unknown,
-    options?: { skip?: boolean; selectFromResult?: (state: any) => any },
+  useGetRecentMessagesInfiniteQuery: (
+    args: unknown,
+    options?: { skip?: boolean },
   ) => {
-    if (options?.skip) {
-      const skipped = { data: undefined, isError: false, isLoading: false };
-      return options.selectFromResult
-        ? {
-            ...options.selectFromResult(skipped),
-            refetch: () => Promise.resolve(undefined),
-          }
-        : { ...skipped, refetch: () => Promise.resolve(undefined) };
-    }
-    const state = {
-      data: mockRecentPages,
+    recentInfiniteArgsMock(args);
+    const common = {
+      refetch: refetchRecentMock,
+      fetchNextPage: fetchNextPageMock,
+      hasNextPage: mockHasNextPage,
+      isFetching: false,
+      isFetchingNextPage: mockIsFetchingNextPage,
       isError: false,
       isLoading: false,
     };
-    return options?.selectFromResult
-      ? {
-          ...options.selectFromResult(state),
-          refetch: () => Promise.resolve(undefined),
-        }
-      : { ...state, refetch: () => Promise.resolve(undefined) };
+    if (options?.skip) {
+      return { ...common, data: undefined };
+    }
+    const data = mockRecentInfinitePages ?? {
+      pages: [mockRecentPages],
+      pageParams: [1],
+    };
+    return { ...common, data };
   },
-  useGetUserProjectsQuery: () => ({
-    data: mockProjects,
-    isError: false,
-    isLoading: false,
-  }),
+  useGetUserProjectsQuery: (args: unknown, options?: { skip?: boolean }) => {
+    getUserProjectsArgsMock(args);
+    if (options?.skip) {
+      return {
+        data: undefined,
+        isFetching: false,
+        isError: false,
+        isLoading: false,
+      };
+    }
+    return {
+      data: mockProjects,
+      isFetching: mockProjectsIsFetching,
+      isError: false,
+      isLoading: false,
+    };
+  },
   useUnPinMessageMutation: () => [unpinMessageMock, { isLoading: false }],
 }));
 
+// `getVisibleAnalyticsTabs` is stubbed rather than run for real — the SDK owns
+// (and tests) the pure-watcher rule; here we only care that the sidebar honours
+// whatever it returns. Defaults to every tab; override per test to narrow.
+const ALL_ANALYTICS_TABS = [
+  '',
+  'users',
+  'courses',
+  'programs',
+  'topics',
+  'transcripts',
+  'memory',
+  'financial',
+  'audit',
+  'monetization',
+  'reports',
+];
+const mockGetVisibleAnalyticsTabs = vi.hoisted(() => vi.fn());
+
 vi.mock('@iblai/iblai-js/web-utils', () => ({
+  getVisibleAnalyticsTabs: mockGetVisibleAnalyticsTabs,
   chatActions: {
     setShouldStartNewChat: (...a: unknown[]) => ({
       type: 'chat/setShouldStartNewChat',
@@ -427,6 +495,10 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
   },
   clearFiles: (...a: unknown[]) => ({ type: 'chat/clearFiles', payload: a }),
   selectSessionId: () => mockActiveSessionId,
+  selectStreaming: () => mockIsStreaming,
+  selectNumberOfActiveChatMessages: () => mockNumberOfActiveChatMessages,
+  selectActiveChatMessages: () => mockActiveChatMessages,
+  useTenantMetadata: () => ({ metadata: mockTenantMetadata }),
 }));
 
 vi.mock('@iblai/iblai-js/web-containers', () => ({
@@ -468,6 +540,7 @@ vi.mock('@/hooks/use-user', () => ({
 vi.mock('@/hooks/use-user-type', () => ({
   useUserType: () => ({
     isUserTypeAllowed: (...args: unknown[]) => mockIsUserTypeAllowed(...args),
+    userType: UserType.ADMIN,
   }),
 }));
 
@@ -529,6 +602,15 @@ vi.mock('@/lib/utils', async (importOriginal) => {
     redirectToAuthSpa: (...args: unknown[]) => redirectToAuthSpaMock(...args),
     redirectToAuthSpaJoinTenant: (...args: unknown[]) =>
       redirectToAuthSpaJoinTenantMock(...args),
+    // Mirrors the real redirectToLogin's delegation so the existing
+    // auth-SPA assertions keep working now that it lives in @/lib/utils.
+    redirectToLogin: (tenantKey?: string) => {
+      if (!tenantKey) {
+        redirectToAuthSpaMock('/', tenantKey, undefined, true, true);
+        return;
+      }
+      redirectToAuthSpaJoinTenantMock(tenantKey, undefined, true);
+    },
   };
 });
 
@@ -641,8 +723,19 @@ function resetState() {
   closeFreeTrialModalMock.mockReset();
   updateQueryDataMock.mockClear();
   saveCachedSessionIdMock.mockReset();
+  refetchRecentMock.mockClear();
+  fetchNextPageMock.mockClear();
+  recentInfiniteArgsMock.mockClear();
+  mockHasNextPage = false;
+  mockIsFetchingNextPage = false;
+  mockRecentInfinitePages = undefined;
   mockActiveSessionId = 'sess-active';
   mockCachedSessionId = {};
+  mockIsStreaming = false;
+  mockNumberOfActiveChatMessages = 0;
+  mockActiveChatMessages = [];
+  mockGetVisibleAnalyticsTabs.mockReset();
+  mockGetVisibleAnalyticsTabs.mockReturnValue([...ALL_ANALYTICS_TABS]);
 
   mockPathname = '/platform/tenant-a/mentor-1';
   mockSearchParams = new URLSearchParams();
@@ -655,6 +748,7 @@ function resetState() {
   mockIsLoggedIn = true;
   mockIsAdmin = true;
   mockUserIsStudent = false;
+  mockTenantMetadata = {};
   mockCurrentTenant = {
     is_admin: true,
     is_advertising: false,
@@ -724,6 +818,8 @@ function resetState() {
       { uuid: 'proj-2', name: 'Beta Project' },
     ],
   };
+  getUserProjectsArgsMock.mockClear();
+  mockProjectsIsFetching = false;
 }
 
 // jsdom doesn't implement pointer-capture / ResizeObserver / IntersectionObserver
@@ -790,7 +886,7 @@ describe('AppSidebar — rendering', () => {
     renderSidebar();
     expect(screen.getByTestId('app-logo')).toBeInTheDocument();
     // Each collapsible section trigger is a button whose accessible
-    // name matches the section title. Agents/Workflows/Chats/Projects/
+    // name matches the section title. Agents/Workflows/Recents/Projects/
     // Analytics + Documentation should all be present for an admin.
     expect(
       screen.getAllByRole('button', { name: 'Agents' }).length,
@@ -799,7 +895,7 @@ describe('AppSidebar — rendering', () => {
       screen.getAllByRole('button', { name: 'Workflows' }).length,
     ).toBeGreaterThan(0);
     expect(
-      screen.getAllByRole('button', { name: 'Chats' }).length,
+      screen.getAllByRole('button', { name: 'Recents' }).length,
     ).toBeGreaterThan(0);
     expect(
       screen.getAllByRole('button', { name: 'Projects' }).length,
@@ -858,19 +954,19 @@ describe('AppSidebar — rendering', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('renders a minimal sidebar in embed mode for a LOGGED-IN user: New Chat + Chats, but no Agents/Workflows/Analytics/Projects', () => {
+  it('renders a minimal sidebar in embed mode for a LOGGED-IN user: New Chat + Recents, but no Agents/Workflows/Analytics/Projects', () => {
     // Default mock state is a logged-in ADMIN (mockUsername set) — without
     // embed gating they would see the full nav. Embed must hide it
     // regardless of role, while keeping New Chat + (logged-in) Chats.
     mockEmbedMode = true;
     renderSidebar();
 
-    // Kept: New Chat (standalone button) + Chats history section.
+    // Kept: New Chat (standalone button) + Recents history section.
     expect(
       screen.getByRole('button', { name: 'New Chat' }),
     ).toBeInTheDocument();
     expect(
-      screen.getAllByRole('button', { name: 'Chats' }).length,
+      screen.getAllByRole('button', { name: 'Recents' }).length,
     ).toBeGreaterThan(0);
 
     // Hidden: every admin/full-app nav section.
@@ -891,8 +987,8 @@ describe('AppSidebar — rendering', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('hides Chats in embed mode when the user is NOT logged in (only New Chat remains)', () => {
-    // Per the embed spec: in embed mode Chats is only shown to a logged-in
+  it('hides Recents in embed mode when the user is NOT logged in (only New Chat remains)', () => {
+    // Per the embed spec: in embed mode Recents is only shown to a logged-in
     // user (keyed on isLoggedIn()/axd_token). An anonymous embed viewer sees
     // just the New Chat button (anonymous bypasses the New Chat RBAC gate).
     mockEmbedMode = true;
@@ -904,7 +1000,7 @@ describe('AppSidebar — rendering', () => {
       screen.getByRole('button', { name: 'New Chat' }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: 'Chats' }),
+      screen.queryByRole('button', { name: 'Recents' }),
     ).not.toBeInTheDocument();
   });
 
@@ -928,6 +1024,29 @@ describe('AppSidebar — rendering', () => {
     expect(
       screen.getByRole('button', { name: 'New Chat' }),
     ).toBeInTheDocument();
+  });
+
+  it('hides Search when the user is NOT logged in (outside embed mode too)', () => {
+    // The dialog lists the signed-in user's own recent messages, so unlike
+    // `showChats` it is hidden for an anonymous user in EVERY mode — while
+    // New Chat (which anonymous users may use) stays.
+    mockIsLoggedIn = false;
+    mockUsername = null;
+    renderSidebar();
+
+    expect(
+      screen.queryByRole('button', { name: 'Search' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'New Chat' }),
+    ).toBeInTheDocument();
+  });
+
+  it('shows Search for a logged-in user', () => {
+    mockIsLoggedIn = true;
+    renderSidebar();
+
+    expect(screen.getByRole('button', { name: 'Search' })).toBeInTheDocument();
   });
 });
 
@@ -1208,10 +1327,120 @@ describe('AppSidebar — Analytics section', () => {
 describe('AppSidebar — Chats section', () => {
   it('renders pinned and recent chat rows', () => {
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     expect(screen.getByText('Pinned message one')).toBeInTheDocument();
     expect(screen.getByText('Recent message one')).toBeInTheDocument();
     expect(screen.getByText('Recent message two')).toBeInTheDocument();
+  });
+
+  it('sorts pinned rows above recent ones without heading either group', () => {
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
+
+    // The two caps headings are gone; position and the pin carry it now.
+    expect(screen.queryByText('PINNED')).toBeNull();
+    expect(screen.queryByText('RECENT')).toBeNull();
+
+    const pinnedList = screen.getByTestId('pinned-chats-list');
+    const recentList = screen.getByTestId('recent-chats-list');
+    expect(
+      pinnedList.compareDocumentPosition(recentList) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  /** The row container (label button + the trailing pin/menu slot). */
+  const chatRowFor = (label: string) =>
+    screen.getByText(label).closest('[data-testid="chat-row"]') as HTMLElement;
+
+  it('marks a pinned row with a pin, and leaves recent rows unmarked', () => {
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
+
+    const pinnedRow = chatRowFor('Pinned message one');
+    const recentRow = chatRowFor('Recent message one');
+
+    expect(
+      pinnedRow.querySelector('[data-testid="chat-row-pin"]'),
+    ).toBeInTheDocument();
+    expect(recentRow.querySelector('[data-testid="chat-row-pin"]')).toBeNull();
+    // A pin is a picture; screen readers get the word.
+    expect(pinnedRow).toHaveTextContent('Pinned');
+  });
+
+  // Regression: these used the unnamed `group-hover`, and the shared Sidebar
+  // wrapper is a `.group` too - so a pointer anywhere in the sidebar revealed
+  // every row's menu at once (and would have hidden every pin).
+  it('scopes the hover swap to the row under the pointer', () => {
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
+
+    const pinnedRow = chatRowFor('Pinned message one');
+    const pin = pinnedRow.querySelector(
+      '[data-testid="chat-row-pin"]',
+    ) as HTMLElement;
+    const menuButton = pinnedRow.querySelector(
+      'button[aria-label="Chat actions"]',
+    ) as HTMLElement;
+
+    // Both live in the same slot and trade places on hover. jsdom has no
+    // hover, so the handover is asserted as the classes that perform it.
+    expect(pin).toHaveClass('group-hover/chat-row:opacity-0');
+    expect(menuButton).toHaveClass('opacity-0');
+    expect(menuButton).toHaveClass('group-hover/chat-row:opacity-100');
+  });
+
+  it('hides the pin while the row menu is open', async () => {
+    // Radix DropdownMenu fires on pointerdown, so this needs the full
+    // pointer sequence rather than `fireEvent.click`.
+    const user = userEvent.setup();
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
+
+    const pinnedRow = chatRowFor('Pinned message one');
+    expect(
+      pinnedRow.querySelector('[data-testid="chat-row-pin"]'),
+    ).toBeInTheDocument();
+
+    await user.click(
+      pinnedRow.querySelector('button[aria-label="Chat actions"]')!,
+    );
+
+    // The pointer may be anywhere by the time the menu is up, so hover alone
+    // cannot keep the pin from showing through it.
+    await waitFor(() =>
+      expect(
+        pinnedRow.querySelector('[data-testid="chat-row-pin"]'),
+      ).toBeNull(),
+    );
+  });
+
+  it('lines the row slot up with the section chevrons above it', () => {
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
+
+    // Flush with the row's own right edge, so the 24px slot centres on the
+    // same axis as the chevron on the Recents trigger. jsdom cannot measure
+    // it, so this asserts the rule that produces the alignment.
+    const slot = chatRowFor('Pinned message one').querySelector(
+      '.absolute',
+    ) as HTMLElement;
+    expect(slot).toHaveClass('right-0');
+    expect(slot.className).not.toContain('right-1.5');
+  });
+
+  it('leaves an unpinned row unmarked until it is hovered', () => {
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
+
+    const recentRow = chatRowFor('Recent message one');
+    const menuButton = recentRow.querySelector(
+      'button[aria-label="Chat actions"]',
+    ) as HTMLElement;
+
+    expect(recentRow.querySelector('[data-testid="chat-row-pin"]')).toBeNull();
+    expect(menuButton).toHaveClass('opacity-0');
+    expect(menuButton).toHaveClass('group-hover/chat-row:opacity-100');
   });
 
   it('does not double-list a pinned session in Recent (dedup)', () => {
@@ -1242,7 +1471,7 @@ describe('AppSidebar — Chats section', () => {
       ],
     };
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     expect(screen.getAllByText('Pinned message one')).toHaveLength(1);
     expect(screen.getByText('Recent only row')).toBeInTheDocument();
   });
@@ -1252,16 +1481,15 @@ describe('AppSidebar — Chats section', () => {
   // cached session id (localStorage `session_id`), so a row click MUST write
   // it AND point the chat slice at the selected session. ---
 
-  it('clicking a recent row navigates AND selects the session (updateSessionIds + cached session id)', () => {
+  it('clicking a recent row selects the session without navigating when already on the chat page', () => {
     mockActiveSessionId = 'sess-recent-1'; // a DIFFERENT row will be clicked
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     fireEvent.click(screen.getByText('Recent message two').closest('button')!);
 
-    // URL push still happens.
-    expect(pushMock).toHaveBeenCalledWith(
-      expect.stringContaining('session=sess-recent-2'),
-    );
+    // Already on this mentor's chat page → no navigation. Pushing the URL here
+    // would strip params like `?embed=true` and leak the full sidebar (#2067).
+    expect(pushMock).not.toHaveBeenCalled();
     // Redux session pointer is updated so the active highlight + dependent
     // queries follow the selection.
     expect(dispatchMock).toHaveBeenCalledWith(
@@ -1273,10 +1501,26 @@ describe('AppSidebar — Chats section', () => {
     });
   });
 
+  it('navigates to the mentor chat page (without ?session=) when selecting from another page', () => {
+    mockPathname = '/platform/tenant-a/mentor-1/analytics';
+    mockActiveSessionId = 'sess-recent-1'; // a DIFFERENT row will be clicked
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
+    fireEvent.click(screen.getByText('Recent message two').closest('button')!);
+
+    // Off the chat page → navigate to it. The session travels via state, not
+    // the URL, so the bare mentor path is pushed (no ?session=), which keeps
+    // chat-page params like `?embed=true` intact once we arrive.
+    expect(pushMock).toHaveBeenCalledWith('/platform/tenant-a/mentor-1');
+    expect(saveCachedSessionIdMock).toHaveBeenCalledWith({
+      'mentor-1': 'sess-recent-2',
+    });
+  });
+
   it('merges the selected session into any existing cached session ids', () => {
     mockCachedSessionId = { 'other-mentor': 'keep-me' };
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     fireEvent.click(screen.getByText('Recent message one').closest('button')!);
     expect(saveCachedSessionIdMock).toHaveBeenCalledWith({
       'other-mentor': 'keep-me',
@@ -1286,27 +1530,24 @@ describe('AppSidebar — Chats section', () => {
 
   it('clicking a pinned row also selects the session', () => {
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     fireEvent.click(screen.getByText('Pinned message one').closest('button')!);
-    expect(pushMock).toHaveBeenCalledWith(
-      expect.stringContaining('session=sess-pinned-1'),
-    );
+    // On the chat page → no navigation, but the session is still selected.
+    expect(pushMock).not.toHaveBeenCalled();
     expect(saveCachedSessionIdMock).toHaveBeenCalledWith({
       'mentor-1': 'sess-pinned-1',
     });
   });
 
-  it('clicking the already-active chat is a no-op for state (still navigates)', () => {
+  it('clicking the already-active chat on the chat page is a complete no-op', () => {
     mockActiveSessionId = 'sess-recent-1';
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     fireEvent.click(screen.getByText('Recent message one').closest('button')!);
 
-    // Navigation/flyout-close still fires.
-    expect(pushMock).toHaveBeenCalledWith(
-      expect.stringContaining('session=sess-recent-1'),
-    );
-    // But no session-selection side effects are dispatched / persisted.
+    // Already-active AND already on the chat page → nothing happens: no
+    // navigation and no session-selection side effects.
+    expect(pushMock).not.toHaveBeenCalled();
     expect(saveCachedSessionIdMock).not.toHaveBeenCalled();
     expect(dispatchMock).not.toHaveBeenCalledWith(
       expect.objectContaining({ type: 'chat/updateSessionIds' }),
@@ -1318,7 +1559,7 @@ describe('AppSidebar — Chats section', () => {
     // it. userEvent dispatches the full pointer sequence so the menu opens.
     const user = userEvent.setup();
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     const menus = screen.getAllByRole('button', { name: 'Chat actions' });
     await user.click(menus[1]);
     expect(
@@ -1332,10 +1573,55 @@ describe('AppSidebar — Chats section', () => {
     ).toBeInTheDocument();
   });
 
+  it('hides Export but keeps Pin and Delete for a student when export is disabled', async () => {
+    mockUserIsStudent = true;
+    mockTenantMetadata = { enable_chat_history_export: false };
+    const user = userEvent.setup();
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
+    const menus = screen.getAllByRole('button', { name: 'Chat actions' });
+    await user.click(menus[1]);
+    expect(
+      await screen.findByRole('menuitem', { name: /^Pin$/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('menuitem', { name: /^Delete$/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('menuitem', { name: /^Export$/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows Export for a student when the export setting is absent (default on)', async () => {
+    mockUserIsStudent = true;
+    mockTenantMetadata = {};
+    const user = userEvent.setup();
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
+    const menus = screen.getAllByRole('button', { name: 'Chat actions' });
+    await user.click(menus[1]);
+    expect(
+      await screen.findByRole('menuitem', { name: /^Export$/ }),
+    ).toBeInTheDocument();
+  });
+
+  it('shows Export for a non-student even when the export setting is disabled', async () => {
+    mockUserIsStudent = false;
+    mockTenantMetadata = { enable_chat_history_export: false };
+    const user = userEvent.setup();
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
+    const menus = screen.getAllByRole('button', { name: 'Chat actions' });
+    await user.click(menus[1]);
+    expect(
+      await screen.findByRole('menuitem', { name: /^Export$/ }),
+    ).toBeInTheDocument();
+  });
+
   it("shows Unpin (not Pin) for a pinned row's menu", async () => {
     const user = userEvent.setup();
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     const menus = screen.getAllByRole('button', { name: 'Chat actions' });
     await user.click(menus[0]);
     expect(
@@ -1346,7 +1632,7 @@ describe('AppSidebar — Chats section', () => {
   it('clicking Pin on a recent row calls the pin mutation with the session id', async () => {
     const user = userEvent.setup();
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     const menus = screen.getAllByRole('button', { name: 'Chat actions' });
     await user.click(menus[1]);
     await user.click(await screen.findByRole('menuitem', { name: /^Pin$/ }));
@@ -1358,7 +1644,7 @@ describe('AppSidebar — Chats section', () => {
   it('clicking Unpin on a pinned row calls the unpin mutation', async () => {
     const user = userEvent.setup();
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     const menus = screen.getAllByRole('button', { name: 'Chat actions' });
     await user.click(menus[0]);
     await user.click(await screen.findByRole('menuitem', { name: /^Unpin$/ }));
@@ -1370,7 +1656,7 @@ describe('AppSidebar — Chats section', () => {
   it('clicking Export delegates to exportMessagesToXlsx with the row messages', async () => {
     const user = userEvent.setup();
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     const menus = screen.getAllByRole('button', { name: 'Chat actions' });
     await user.click(menus[1]);
     await user.click(await screen.findByRole('menuitem', { name: /^Export$/ }));
@@ -1384,7 +1670,7 @@ describe('AppSidebar — Chats section', () => {
   it('clicking Delete triggers the delete mutation', async () => {
     const user = userEvent.setup();
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     const menus = screen.getAllByRole('button', { name: 'Chat actions' });
     await user.click(menus[1]);
     await user.click(await screen.findByRole('menuitem', { name: /^Delete$/ }));
@@ -1397,7 +1683,7 @@ describe('AppSidebar — Chats section', () => {
     mockPinnedPages = { results: [] };
     mockRecentPages = { results: [] };
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     // Empty state copy can vary; assert no chat rows render.
     expect(
       screen.queryByRole('button', { name: 'Chat actions' }),
@@ -1415,6 +1701,13 @@ describe('AppSidebar — Projects section', () => {
     expect(
       screen.getByRole('button', { name: 'Beta Project' }),
     ).toBeInTheDocument();
+  });
+
+  it('clicking "My Projects" navigates to the Projects index page', () => {
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Projects' })[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'My Projects' }));
+    expect(pushMock).toHaveBeenCalledWith('/platform/tenant-a/projects');
   });
 
   it('clicking "New Project" opens (and can close) the Create Project modal', async () => {
@@ -1477,6 +1770,79 @@ describe('AppSidebar — Projects section', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Projects' })[0]);
     expect(
       screen.queryByRole('button', { name: 'Alpha Project' }),
+    ).not.toBeInTheDocument();
+  });
+});
+
+describe('AppSidebar — Projects infinite scroll', () => {
+  // Builds `n` project rows with unique ids/names + a default mentor so each
+  // row is openable, matching the SDK `results` shape.
+  function makeProjects(n: number) {
+    return Array.from({ length: n }, (_, i) => ({
+      id: `proj-${i + 1}`,
+      name: `Project ${i + 1}`,
+      mentors: [{ unique_id: `mentor-${i + 1}` }],
+    }));
+  }
+
+  // The `limit` from the most recent projects-query call — the value the
+  // infinite-scroll handler grows as the user reaches the bottom.
+  function lastProjectsLimit() {
+    const calls = getUserProjectsArgsMock.mock.calls;
+    return (calls[calls.length - 1]?.[0] as any)?.params?.limit;
+  }
+
+  it('requests only the first page (limit 10) on the initial fetch', () => {
+    renderSidebar();
+    expect(lastProjectsLimit()).toBe(10);
+  });
+
+  it('grows the query limit by one page when scrolled to the bottom and more remain', () => {
+    // 10 of 25 loaded → hasMore. jsdom reports 0 for scroll metrics, so any
+    // scroll event lands "at the bottom" and triggers exactly one bump.
+    mockProjects = { count: 25, results: makeProjects(10) };
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Projects' })[0]);
+    expect(lastProjectsLimit()).toBe(10);
+
+    fireEvent.scroll(screen.getByTestId('sidebar-projects-scroll'));
+    expect(lastProjectsLimit()).toBe(20);
+  });
+
+  it('does not grow the limit once every project is loaded (length >= count)', () => {
+    mockProjects = { count: 2, results: makeProjects(2) };
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Projects' })[0]);
+    fireEvent.scroll(screen.getByTestId('sidebar-projects-scroll'));
+    expect(lastProjectsLimit()).toBe(10);
+  });
+
+  it('does not grow the limit while a fetch is already in flight', () => {
+    mockProjects = { count: 25, results: makeProjects(10) };
+    mockProjectsIsFetching = true;
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Projects' })[0]);
+    fireEvent.scroll(screen.getByTestId('sidebar-projects-scroll'));
+    expect(lastProjectsLimit()).toBe(10);
+  });
+
+  it('shows the "loading more" indicator only while fetching with pages remaining', () => {
+    mockProjects = { count: 25, results: makeProjects(10) };
+    mockProjectsIsFetching = true;
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Projects' })[0]);
+    expect(
+      screen.getByRole('status', { name: 'Loading more projects' }),
+    ).toBeInTheDocument();
+  });
+
+  it('hides the "loading more" indicator when not fetching', () => {
+    mockProjects = { count: 25, results: makeProjects(10) };
+    mockProjectsIsFetching = false;
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Projects' })[0]);
+    expect(
+      screen.queryByRole('status', { name: 'Loading more projects' }),
     ).not.toBeInTheDocument();
   });
 });
@@ -1622,7 +1988,7 @@ describe('AppSidebar — startNewChat behavior', () => {
     mockPathname = '/platform/tenant-a/mentor-1';
     renderSidebar();
     // The chats section's New Chat button triggers startNewChat.
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     const newChat = screen.queryByRole('button', { name: /new chat/i });
     if (newChat) {
       fireEvent.click(newChat);
@@ -1633,7 +1999,7 @@ describe('AppSidebar — startNewChat behavior', () => {
   it('navigates home when not on the chat page', () => {
     mockPathname = '/platform/tenant-a/mentor-1/analytics';
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     const newChat = screen.queryByRole('button', { name: /new chat/i });
     if (newChat) {
       fireEvent.click(newChat);
@@ -1644,7 +2010,7 @@ describe('AppSidebar — startNewChat behavior', () => {
   it('opens the no-mentor modal when there is no mentor in context', () => {
     mockParams = { tenantKey: 'tenant-a', mentorId: undefined };
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     const newChat = screen.queryByRole('button', { name: /new chat/i });
     if (newChat) {
       fireEvent.click(newChat);
@@ -1880,7 +2246,7 @@ describe('AppSidebar — Rail-collapsed mode', () => {
       screen.getAllByRole('button', { name: 'Agents' }).length,
     ).toBeGreaterThan(0);
     expect(
-      screen.getAllByRole('button', { name: 'Chats' }).length,
+      screen.getAllByRole('button', { name: 'Recents' }).length,
     ).toBeGreaterThan(0);
     expect(
       screen.getAllByRole('button', { name: 'Projects' }).length,
@@ -1916,7 +2282,7 @@ describe('AppSidebar — Rail-collapsed mode', () => {
 
   it('clicking the rail Chats icon expands the sidebar', () => {
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     expect(toggleSidebarMock).toHaveBeenCalled();
   });
 
@@ -2024,6 +2390,95 @@ describe('AppSidebar — Analytics sub-item navigation', () => {
     const usersBtn = screen.getByRole('button', { name: 'Users' });
     expect(usersBtn.className).toMatch(/bg-/); // active styling
   });
+
+  it('renders Memory directly after Transcripts and navigates to the memory analytics page', () => {
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Analytics' })[0]);
+
+    // Order matters — Memory sits between Transcripts and Costs.
+    const transcripts = screen.getByRole('button', { name: 'Transcripts' });
+    const memory = screen.getByRole('button', { name: 'Memory' });
+    const costs = screen.getByRole('button', { name: 'Costs' });
+    expect(
+      transcripts.compareDocumentPosition(memory) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      memory.compareDocumentPosition(costs) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+
+    fireEvent.click(memory);
+    expect(pushMock).toHaveBeenCalledWith(
+      '/platform/tenant-a/mentor-1/analytics/memory',
+    );
+  });
+
+  it('highlights Memory when the URL is the memory analytics page', () => {
+    mockPathname = '/platform/tenant-a/mentor-1/analytics/memory';
+    renderSidebar();
+    expect(screen.getByRole('button', { name: 'Memory' }).className).toMatch(
+      /bg-/,
+    );
+  });
+});
+
+// =============================================================================
+// Analytics tab visibility — the menu is narrowed to the tabs
+// `getVisibleAnalyticsTabs` (SDK) reports for this viewer, mirroring the
+// skills SPA sidebar. The SDK owns the pure-watcher rule; here we assert the
+// sidebar honours whatever it returns.
+// =============================================================================
+
+describe('AppSidebar — Analytics tab visibility (getVisibleAnalyticsTabs)', () => {
+  it('narrows the Analytics menu to the tabs the SDK reports (pure-watcher subset)', () => {
+    // The watcher subset the SDK returns: courses/programs have no counterpart
+    // in this SPA, so a watcher is left with Memory + Data Reports only.
+    mockGetVisibleAnalyticsTabs.mockReturnValue([
+      'courses',
+      'programs',
+      'memory',
+      'reports',
+    ]);
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Analytics' })[0]);
+
+    expect(screen.getByRole('button', { name: 'Memory' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Data Reports' }),
+    ).toBeInTheDocument();
+    for (const hidden of [
+      'Overview',
+      'Users',
+      'Topics',
+      'Transcripts',
+      'Costs',
+      'Audit',
+    ]) {
+      expect(
+        screen.queryByRole('button', { name: hidden }),
+      ).not.toBeInTheDocument();
+    }
+  });
+
+  it('drops Memory when the SDK does not report the memory tab', () => {
+    mockGetVisibleAnalyticsTabs.mockReturnValue(['', 'users', 'reports']);
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Analytics' })[0]);
+
+    expect(
+      screen.queryByRole('button', { name: 'Memory' }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Users' })).toBeInTheDocument();
+  });
+
+  it('passes the RBAC permissions and the current tenant to getVisibleAnalyticsTabs', () => {
+    mockCurrentTenant = { key: 'tenant-a', is_admin: true };
+    renderSidebar();
+    expect(mockGetVisibleAnalyticsTabs).toHaveBeenCalledWith(
+      {},
+      mockCurrentTenant,
+    );
+  });
 });
 
 // =============================================================================
@@ -2045,7 +2500,7 @@ describe('AppSidebar — Chat mutation error paths', () => {
     }));
     const user = userEvent.setup();
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     const menus = screen.getAllByRole('button', { name: 'Chat actions' });
     await user.click(menus[1]);
     await user.click(await screen.findByRole('menuitem', { name: /^Pin$/ }));
@@ -2067,7 +2522,7 @@ describe('AppSidebar — Chat mutation error paths', () => {
     }));
     const user = userEvent.setup();
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     const menus = screen.getAllByRole('button', { name: 'Chat actions' });
     await user.click(menus[1]);
     await user.click(await screen.findByRole('menuitem', { name: /^Delete$/ }));
@@ -2089,7 +2544,7 @@ describe('AppSidebar — Chat mutation error paths', () => {
     }));
     const user = userEvent.setup();
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     const menus = screen.getAllByRole('button', { name: 'Chat actions' });
     await user.click(menus[0]); // pinned row
     await user.click(await screen.findByRole('menuitem', { name: /^Unpin$/ }));
@@ -2124,10 +2579,219 @@ describe('AppSidebar — chat row label fallbacks', () => {
       ],
     };
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     // Our `getCurrentArtifactTitle` mock returns 'Artifact title' — so the
     // row should render that as its label.
     expect(screen.getByText('Artifact title')).toBeInTheDocument();
+  });
+
+  it('prefers the session title over the first human message', () => {
+    mockRecentPages = {
+      results: [
+        {
+          id: 'r-titled',
+          session_id: 'sess-titled',
+          title: 'My titled chat',
+          messages: [
+            {
+              message: {
+                data: { type: 'user', content: 'Recent message one' },
+              },
+            },
+          ],
+        },
+      ],
+    };
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
+    expect(screen.getByText('My titled chat')).toBeInTheDocument();
+    // The first-human-message text must NOT be used as the label.
+    expect(screen.queryByText('Recent message one')).not.toBeInTheDocument();
+  });
+
+  it('falls back to the first human message when the title is whitespace-only', () => {
+    mockRecentPages = {
+      results: [
+        {
+          id: 'r-blank-title',
+          session_id: 'sess-blank-title',
+          title: '   ',
+          messages: [
+            {
+              message: {
+                data: { type: 'user', content: 'Fallback message text' },
+              },
+            },
+          ],
+        },
+      ],
+    };
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
+    expect(screen.getByText('Fallback message text')).toBeInTheDocument();
+  });
+});
+
+// =============================================================================
+// Recent chats — infinite-query wiring: mentor/search params, pagination
+// sentinel, and page flattening.
+// =============================================================================
+
+describe('AppSidebar — recent chats infinite query', () => {
+  it('passes the current mentor into the recent-messages query arg', () => {
+    renderSidebar();
+    const lastArgs = recentInfiniteArgsMock.mock.calls.at(-1)?.[0] as {
+      mentor?: string;
+      org?: string;
+    };
+    expect(lastArgs?.mentor).toBe('mentor-1');
+    expect(lastArgs?.org).toBe('tenant-a');
+  });
+
+  it('flattens rows across multiple pages into the recent list', () => {
+    mockRecentInfinitePages = {
+      pages: [
+        {
+          results: [
+            {
+              id: 'p1-a',
+              session_id: 'sess-p1-a',
+              messages: [
+                {
+                  message: { data: { type: 'user', content: 'Page one row' } },
+                },
+              ],
+            },
+          ],
+        },
+        {
+          results: [
+            {
+              id: 'p2-a',
+              session_id: 'sess-p2-a',
+              messages: [
+                {
+                  message: { data: { type: 'user', content: 'Page two row' } },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      pageParams: [1, 2],
+    };
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
+    expect(screen.getByText('Page one row')).toBeInTheDocument();
+    expect(screen.getByText('Page two row')).toBeInTheDocument();
+  });
+
+  it('opens the search dialog from the Search button', () => {
+    renderSidebar();
+    // The search input lives in the dialog, not the sidebar, until opened.
+    expect(
+      screen.queryByPlaceholderText('Search chats'),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Search' }));
+    expect(screen.getByPlaceholderText('Search chats')).toBeInTheDocument();
+  });
+
+  it('updates the query arg with the debounced search term', () => {
+    vi.useFakeTimers();
+    try {
+      renderSidebar();
+      fireEvent.click(screen.getByRole('button', { name: 'Search' }));
+      const input = screen.getByPlaceholderText('Search chats');
+      fireEvent.change(input, { target: { value: 'invoice' } });
+      // Before the debounce window elapses the arg is still empty.
+      const hasSearchBefore = recentInfiniteArgsMock.mock.calls.some(
+        (c) => (c?.[0] as { search?: string })?.search === 'invoice',
+      );
+      expect(hasSearchBefore).toBe(false);
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+      const hasSearchAfter = recentInfiniteArgsMock.mock.calls.some(
+        (c) => (c?.[0] as { search?: string })?.search === 'invoice',
+      );
+      expect(hasSearchAfter).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('calls fetchNextPage when the sentinel intersects and a next page exists', () => {
+    let ioCallback: ((entries: unknown[]) => void) | null = null;
+    const prevIO = (window as any).IntersectionObserver;
+    (window as any).IntersectionObserver = class {
+      constructor(cb: (entries: unknown[]) => void) {
+        ioCallback = cb;
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+    try {
+      mockHasNextPage = true;
+      renderSidebar();
+      fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
+      expect(ioCallback).not.toBeNull();
+      act(() => {
+        ioCallback?.([{ isIntersecting: true }]);
+      });
+      expect(fetchNextPageMock).toHaveBeenCalled();
+    } finally {
+      (window as any).IntersectionObserver = prevIO;
+    }
+  });
+
+  it('does not call fetchNextPage when already fetching the next page', () => {
+    let ioCallback: ((entries: unknown[]) => void) | null = null;
+    const prevIO = (window as any).IntersectionObserver;
+    (window as any).IntersectionObserver = class {
+      constructor(cb: (entries: unknown[]) => void) {
+        ioCallback = cb;
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+    try {
+      mockHasNextPage = true;
+      mockIsFetchingNextPage = true;
+      renderSidebar();
+      fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
+      act(() => {
+        ioCallback?.([{ isIntersecting: true }]);
+      });
+      expect(fetchNextPageMock).not.toHaveBeenCalled();
+    } finally {
+      (window as any).IntersectionObserver = prevIO;
+    }
+  });
+
+  it('does not call fetchNextPage when there is no next page', () => {
+    let ioCallback: ((entries: unknown[]) => void) | null = null;
+    const prevIO = (window as any).IntersectionObserver;
+    (window as any).IntersectionObserver = class {
+      constructor(cb: (entries: unknown[]) => void) {
+        ioCallback = cb;
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+    try {
+      mockHasNextPage = false;
+      renderSidebar();
+      fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
+      act(() => {
+        ioCallback?.([{ isIntersecting: true }]);
+      });
+      expect(fetchNextPageMock).not.toHaveBeenCalled();
+    } finally {
+      (window as any).IntersectionObserver = prevIO;
+    }
   });
 });
 
@@ -2220,7 +2884,7 @@ describe('AppSidebar — Active-session deletion safety', () => {
     };
     const user = userEvent.setup();
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     const menus = screen.getAllByRole('button', { name: 'Chat actions' });
     await user.click(menus[0]); // the single active row
     await user.click(await screen.findByRole('menuitem', { name: /^Delete$/ }));
@@ -2243,7 +2907,7 @@ describe('AppSidebar — Chat handler skip-path guards', () => {
     mockUsername = null;
     mockUserName = '';
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     expect(
       screen.queryByRole('button', { name: 'Chat actions' }),
     ).not.toBeInTheDocument();
@@ -2332,13 +2996,15 @@ describe('AppSidebar — Project row click behavior', () => {
 // =============================================================================
 
 // =============================================================================
-// Chat row label click — when the row has a usable href (mentor.unique_id +
-// tenantKey), clicking the label area calls router.push. Covers the
-// `if (!href) return; router.push(href)` branch in ChatRowItem.
+// Chat row label click — when the row has a usable mentor + tenantKey and we
+// are NOT already on that mentor's chat page, clicking the label navigates to
+// the bare chat page (session travels via state, not the URL). Covers the
+// `if (pathname !== targetPath) router.push(targetPath)` branch.
 // =============================================================================
 
 describe('AppSidebar — Chat row label navigation', () => {
-  it('clicking a chat row with a usable href pushes the chat URL', () => {
+  it('clicking a chat row from another page navigates to the mentor chat page', () => {
+    mockPathname = '/platform/tenant-a/mentor-1/analytics';
     mockRecentPages = {
       results: [
         {
@@ -2353,12 +3019,47 @@ describe('AppSidebar — Chat row label navigation', () => {
     };
     mockPinnedPages = { results: [] };
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     const row = screen.getByText('Navigable row').closest('button');
     expect(row).not.toBeNull();
     fireEvent.click(row!);
+    expect(pushMock).toHaveBeenCalledWith('/platform/tenant-a/mentor-1');
+    // No ?session= decoration — the session is selected via state.
+    expect(pushMock).not.toHaveBeenCalledWith(
+      expect.stringContaining('session='),
+    );
+  });
+
+  it('clicking a chat row inside a project navigates to the project chat page', () => {
+    // On a project route `projectId` is set and the pathname is not a bare
+    // `/platform/<tenant>/<mentor>` chat page, so the projectId branch fires
+    // and keeps the user inside the project context.
+    mockPathname = '/platform/tenant-a/projects/proj-x/mentor-1';
+    mockParams = {
+      tenantKey: 'tenant-a',
+      mentorId: 'mentor-1',
+      projectId: 'proj-x',
+    };
+    mockRecentPages = {
+      results: [
+        {
+          id: 'r-proj',
+          session_id: 'sess-proj',
+          mentor: { unique_id: 'mentor-1' },
+          messages: [
+            { message: { data: { type: 'user', content: 'Project row' } } },
+          ],
+        },
+      ],
+    };
+    mockPinnedPages = { results: [] };
+    renderSidebar();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
+    const row = screen.getByText('Project row').closest('button');
+    expect(row).not.toBeNull();
+    fireEvent.click(row!);
     expect(pushMock).toHaveBeenCalledWith(
-      expect.stringContaining('/platform/tenant-a/mentor-1?session=sess-href'),
+      '/platform/tenant-a/projects/proj-x/mentor-1',
     );
   });
 });
@@ -2411,7 +3112,7 @@ describe('AppSidebar — Rail-collapsed chats flyout', () => {
     const user = userEvent.setup();
     renderSidebar();
     // Hover the chats rail icon to open the HoverCard flyout.
-    const chatsIcons = screen.getAllByRole('button', { name: 'Chats' });
+    const chatsIcons = screen.getAllByRole('button', { name: 'Recents' });
     await user.hover(chatsIcons[0]);
     expect(await screen.findByText('Flyout pinned')).toBeInTheDocument();
     expect(screen.getByText('Flyout recent')).toBeInTheDocument();
@@ -2439,7 +3140,7 @@ describe('AppSidebar — Rail-collapsed chats flyout click', () => {
     };
   });
 
-  it('clicking a pinned row in the flyout pushes the chat URL', async () => {
+  it('clicking a pinned row in the flyout selects the session', async () => {
     mockPinnedPages = {
       results: [
         {
@@ -2457,15 +3158,17 @@ describe('AppSidebar — Rail-collapsed chats flyout click', () => {
     mockRecentPages = { results: [] };
     const user = userEvent.setup();
     renderSidebar();
-    await user.hover(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    await user.hover(screen.getAllByRole('button', { name: 'Recents' })[0]);
     const row = await screen.findByText('Flyout pin row');
     fireEvent.click(row.closest('button')!);
-    expect(pushMock).toHaveBeenCalledWith(
-      expect.stringContaining('session=sess-flyp'),
+    // On the chat page the flyout row selects the session without navigating.
+    expect(pushMock).not.toHaveBeenCalled();
+    expect(saveCachedSessionIdMock).toHaveBeenCalledWith(
+      expect.objectContaining({ 'mentor-1': 'sess-flyp' }),
     );
   });
 
-  it('clicking a recent row in the flyout pushes the chat URL', async () => {
+  it('clicking a recent row in the flyout selects the session', async () => {
     mockPinnedPages = { results: [] };
     mockRecentPages = {
       results: [
@@ -2483,11 +3186,13 @@ describe('AppSidebar — Rail-collapsed chats flyout click', () => {
     };
     const user = userEvent.setup();
     renderSidebar();
-    await user.hover(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    await user.hover(screen.getAllByRole('button', { name: 'Recents' })[0]);
     const row = await screen.findByText('Flyout recent row');
     fireEvent.click(row.closest('button')!);
-    expect(pushMock).toHaveBeenCalledWith(
-      expect.stringContaining('session=sess-flyr'),
+    // On the chat page the flyout row selects the session without navigating.
+    expect(pushMock).not.toHaveBeenCalled();
+    expect(saveCachedSessionIdMock).toHaveBeenCalledWith(
+      expect.objectContaining({ 'mentor-1': 'sess-flyr' }),
     );
   });
 });
@@ -2505,7 +3210,7 @@ describe('AppSidebar — Chat row without href is inert on click', () => {
         {
           id: 'r-no-mentor',
           session_id: 'sess-no-mentor',
-          // no mentor field → navHrefFor returns undefined
+          // no mentor field → handleSelectRow early-returns (no unique_id)
           messages: [
             {
               message: { data: { type: 'user', content: 'No href row' } },
@@ -2515,7 +3220,7 @@ describe('AppSidebar — Chat row without href is inert on click', () => {
       ],
     };
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     const row = screen.getByText('No href row').closest('button');
     expect(row).not.toBeNull();
     fireEvent.click(row!);
@@ -2575,6 +3280,17 @@ describe('AppSidebar — Rail-collapsed Projects flyout', () => {
     expect(pushMock).toHaveBeenCalledWith(
       '/platform/tenant-a/projects/flyout-p/mentor-1',
     );
+  });
+
+  it('navigates to the Projects index from the rail flyout "My Projects"', async () => {
+    const user = userEvent.setup();
+    renderSidebar();
+    await user.hover(screen.getAllByRole('button', { name: 'Projects' })[0]);
+    const myProjects = await screen.findByRole('button', {
+      name: 'My Projects',
+    });
+    fireEvent.click(myProjects);
+    expect(pushMock).toHaveBeenCalledWith('/platform/tenant-a/projects');
   });
 
   it('toasts when a rail flyout project has no default mentor', async () => {
@@ -2641,8 +3357,99 @@ describe('AppSidebar — Per-mentor row filtering', () => {
       ],
     };
     renderSidebar();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Chats' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Recents' })[0]);
     expect(screen.queryByText('Other mentor chat')).not.toBeInTheDocument();
     expect(screen.getByText('Current mentor chat')).toBeInTheDocument();
+  });
+});
+
+describe('AppSidebar — Recent refetch on first assistant response (#1982)', () => {
+  it('refetches Recent when signed in, not streaming, exactly 2 messages and msg[1] is assistant', async () => {
+    mockUserName = 'Admin User';
+    mockIsStreaming = false;
+    mockNumberOfActiveChatMessages = 2;
+    mockActiveChatMessages = [{ role: 'user' }, { role: 'assistant' }];
+    renderSidebar();
+    await waitFor(() => expect(refetchRecentMock).toHaveBeenCalled());
+  });
+
+  it('does NOT refetch Recent while streaming', () => {
+    mockUserName = 'Admin User';
+    mockIsStreaming = true;
+    mockNumberOfActiveChatMessages = 2;
+    mockActiveChatMessages = [{ role: 'user' }, { role: 'assistant' }];
+    renderSidebar();
+    expect(refetchRecentMock).not.toHaveBeenCalled();
+  });
+
+  it('does NOT refetch Recent when the message count is not exactly 2', () => {
+    mockUserName = 'Admin User';
+    mockIsStreaming = false;
+    mockNumberOfActiveChatMessages = 1;
+    mockActiveChatMessages = [{ role: 'user' }];
+    renderSidebar();
+    expect(refetchRecentMock).not.toHaveBeenCalled();
+  });
+
+  it('does NOT refetch Recent when the second message is not an assistant message', () => {
+    mockUserName = 'Admin User';
+    mockIsStreaming = false;
+    mockNumberOfActiveChatMessages = 2;
+    mockActiveChatMessages = [{ role: 'user' }, { role: 'user' }];
+    renderSidebar();
+    expect(refetchRecentMock).not.toHaveBeenCalled();
+  });
+
+  it('does NOT refetch Recent for an anonymous user with no username', () => {
+    mockUserName = '';
+    mockIsStreaming = false;
+    mockNumberOfActiveChatMessages = 2;
+    mockActiveChatMessages = [{ role: 'user' }, { role: 'assistant' }];
+    renderSidebar();
+    expect(refetchRecentMock).not.toHaveBeenCalled();
+  });
+});
+
+// =============================================================================
+// Code mode: starting a new chat evicts the chat being left behind — its
+// opencode process would otherwise sit resident until the 15-min idle reap.
+// =============================================================================
+
+describe('AppSidebar — New Chat evicts the old Code process', () => {
+  beforeEach(() => {
+    invokeTauriMock.mockClear();
+    (window as unknown as Record<string, unknown>).__TAURI__ = {};
+  });
+
+  afterEach(() => {
+    delete (window as unknown as Record<string, unknown>).__TAURI__;
+    localStorage.removeItem('ibl_coding_mode_enabled');
+  });
+
+  it('closes the active chat’s opencode process when Code is on', async () => {
+    localStorage.setItem('ibl_coding_mode_enabled', 'true');
+    renderSidebar();
+
+    fireEvent.click(screen.getByRole('button', { name: 'New Chat' }));
+
+    await waitFor(() =>
+      expect(invokeTauriMock).toHaveBeenCalledWith('opencode_close', {
+        sessionId: 'sess-active',
+      }),
+    );
+  });
+
+  it('leaves the process alone when Code is off', async () => {
+    localStorage.setItem('ibl_coding_mode_enabled', 'false');
+    renderSidebar();
+
+    fireEvent.click(screen.getByRole('button', { name: 'New Chat' }));
+
+    // The new-chat flow itself still runs…
+    expect(dispatchMock).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'chat/setShouldStartNewChat' }),
+    );
+    // …but nothing is evicted.
+    expect(invokeTauriMock).not.toHaveBeenCalled();
   });
 });

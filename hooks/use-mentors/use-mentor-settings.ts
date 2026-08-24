@@ -29,15 +29,21 @@ export function useMentorSettings({
   mentorId: mentorIdFromProps,
   tenantKey: tenantKeyFromProps,
 }: Props = {}) {
-  const { tenantKey: tenantKeyFromParams, mentorId: mentorIdFromParams } =
-    useParams<TenantKeyMentorIdParams>();
+  // `useParams()` is null outside a matched route segment, so destructuring it
+  // directly throws ("Cannot destructure property 'tenantKey' of null") and takes down
+  // whatever rendered the caller. Read it defensively — callers already handle a
+  // missing mentorId/tenantKey (the query is skipped below).
+  const params = useParams<TenantKeyMentorIdParams>();
+  const tenantKeyFromParams = params?.tenantKey;
+  const mentorIdFromParams = params?.mentorId;
   const username = useUsername();
   const COMMUNITY_MENTOR_VISIBILITY = MentorVisibilityEnum.VIEWABLE_BY_ANYONE;
   const mentorId = mentorIdFromProps || mentorIdFromParams;
   const tenantKey = tenantKeyFromProps || tenantKeyFromParams;
   const isLoggedIn = Boolean(username);
   const searchParams = useSearchParams();
-  const isAccessingPublicRoute = !!searchParams.get('token');
+  // Null outside a matched route segment, same as `useParams()` above.
+  const isAccessingPublicRoute = !!searchParams?.get('token');
 
   // Check if we're in Tauri offline mode
   const isOffline = isTauriApp() && isTauriOfflineMode();
@@ -283,6 +289,16 @@ export function useMentorSettings({
         effectiveSettings?.voice_provider ??
         // @ts-ignore - voice_provider may not be exposed on the typed settings shape
         effectivePublicSettings?.voice_provider,
+
+      // show_reasoning ("Verbose Reasoning") gates the reasoning steps and tool
+      // call UI in chat. Exists in the API response but not the published type;
+      // defaults to false so the verbose UI stays hidden when unset.
+      showReasoning:
+        (effectiveSettings as { show_reasoning?: boolean } | undefined)
+          ?.show_reasoning ??
+        (effectivePublicSettings as { show_reasoning?: boolean } | undefined)
+          ?.show_reasoning ??
+        false,
     },
   };
 }

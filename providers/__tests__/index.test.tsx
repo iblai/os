@@ -33,6 +33,17 @@ vi.mock('@/lib/hooks', () => ({
 
 vi.mock('react-redux', () => ({
   useSelector: vi.fn(() => false),
+  // RTK Query's reactHooksModule (pulled in transitively via @iblai/data-layer)
+  // reads `useDispatch`, `useSelector`, `useStore` and `batch` from react-redux
+  // at module init and throws if any are undefined. Provide pass-through stubs
+  // so the suite can load; the component under test only consumes useSelector.
+  useDispatch: vi.fn(() => vi.fn()),
+  useStore: vi.fn(() => ({
+    getState: vi.fn(),
+    dispatch: vi.fn(),
+    subscribe: vi.fn(),
+  })),
+  batch: (fn: () => void) => fn(),
 }));
 
 // ── Tauri / offline ─────────────────────────────────────────────────────────
@@ -191,9 +202,17 @@ const mockGetMentorPublicSettings = vi.fn(() => ({ unwrap: mockUnwrap }));
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   initializeDataLayer: (...args: unknown[]) => mockInitializeDataLayer(...args),
   useLazyGetMentorPublicSettingsQuery: () => [mockGetMentorPublicSettings],
+  // Supplemental agent-skills RBAC fetch (platform-pk-scoped resources).
+  useGetRbacPermissionsMutation: () => [
+    vi.fn(() => ({ unwrap: () => Promise.resolve({}) })),
+  ],
+  // usePlatformId (platform DB pk for platform-scoped rbac paths).
+  useGetPlatformInfoQuery: () => ({ data: undefined }),
   useLazyGetVectorDocumentsQuery: () => [vi.fn(), { data: [] }],
   useLazyGetRecentMessageQuery: () => [vi.fn(), { data: [] }],
   useLazyGetPinnedMessagesQuery: () => [vi.fn(), { data: [] }],
+  // Pulled in via useOpencode402 (Code-mode 402 → credit UX at the app root).
+  useLazyGetAccountBillingInfoQuery: () => [vi.fn()],
   useGetMentorSettingsQuery: () => ({ data: null }),
   useGetMentorPublicSettingsQuery: () => ({ data: null }),
   useGetTenantMetadataQuery: () => ({
@@ -364,6 +383,18 @@ vi.mock('@/components/spinner', () => ({
 
 vi.mock('@/components/sentry-init', () => ({
   SentryInit: () => null,
+}));
+
+// Side-effect-only component (syncs language pref via useGetUserMetadataQuery);
+// stub it out so the suite needn't wire up a real RTK store.
+vi.mock('@/components/language-preference-sync', () => ({
+  LanguagePreferenceSync: () => null,
+}));
+
+// Wrapper provider — render children straight through.
+vi.mock('@/components/web-containers-locale-provider', () => ({
+  WebContainersLocaleProvider: ({ children }: { children: React.ReactNode }) =>
+    children,
 }));
 
 vi.mock('@/hooks/use-mentor-time-tracking', () => ({

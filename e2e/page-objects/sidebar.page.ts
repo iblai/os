@@ -1,4 +1,5 @@
 import { Page, Locator, expect } from '@playwright/test';
+import { isVisibleWithin } from '../utils/resilient';
 
 /**
  * Sidebar selectors are scoped to the `<aside>` landmark so that
@@ -77,8 +78,7 @@ export class SidebarPage {
       exact: true,
     });
     this.newChatButton = this.sidebar.getByRole('button', {
-      name: 'New Chat',
-      exact: true,
+      name: /^new chat$/i,
     });
     // "New Project" lives inside the collapsible "Projects" section in
     // the new sidebar — consumers that just need the locator (e.g.
@@ -141,7 +141,7 @@ export class SidebarPage {
    * Radix Collapsible) rather than a blind click that would toggle.
    */
   async expandSection(
-    name: 'Agents' | 'Workflows' | 'Chats' | 'Projects' | 'Analytics',
+    name: 'Agents' | 'Workflows' | 'Recents' | 'Projects' | 'Analytics',
   ): Promise<void> {
     const trigger = this.sidebar.getByRole('button', { name, exact: true });
     await expect(trigger).toBeVisible({ timeout: 10_000 });
@@ -187,7 +187,7 @@ export class SidebarPage {
   }
 
   async isVisible(): Promise<boolean> {
-    return this.toggleButton.isVisible({ timeout: 3_000 }).catch(() => false);
+    return isVisibleWithin(this.toggleButton, 3_000);
   }
 
   /**
@@ -235,14 +235,267 @@ export class SidebarPage {
    * on its clickability.
    */
   async ensureExpanded(timeoutMs = 10_000): Promise<void> {
-    const visible = await this.logoImage
-      .isVisible({ timeout: 3_000 })
-      .catch(() => false);
-    if (visible) return;
+    // Fast path: logo already visible (sidebar expanded and mounted).
+    if (await this.logoImage.isVisible().catch(() => false)) return;
+
     // The embedded layout blocks rendering until mentor settings load, which
-    // can be slow against the embed backend — callers (e.g. the embed Show
-    // Catalogue tests) pass a generous timeout so the sidebar has time to mount.
-    await this.toggle(timeoutMs);
+    // can be slow against the embed backend. Wait for the sidebar chrome
+    // (the toggle control) to mount first — otherwise we'd misread a slow-
+    // mounting sidebar as collapsed and toggle it *shut*, hiding the logo for
+    // good. Callers (e.g. the embed Show Catalogue tests) pass a generous
+    // timeout so the sidebar has time to appear.
+    await expect(this.toggleButton).toBeVisible({ timeout: timeoutMs });
+
+    // Only expand when actually collapsed: the toggle reads "Expand sidebar"
+    // while collapsed and "Collapse sidebar" while expanded.
+    const expandButton = this.sidebar.getByRole('button', {
+      name: /expand sidebar/i,
+    });
+    if (await expandButton.isVisible().catch(() => false)) {
+      await expandButton.click();
+    }
+
     await expect(this.logoImage).toBeVisible({ timeout: timeoutMs });
+  }
+
+  /**
+   * Expand the "Recents" collapsible section in the sidebar (no-op if already
+   * expanded). Prerequisite for any recent/pinned chat assertions.
+   */
+  async expandChatsSection(): Promise<void> {
+    await this.expandSection('Recents');
+  }
+
+  /**
+   * Returns the `<ul role="list">` that holds recent chat row buttons inside
+   * the expanded Recents collapsible. Scoped to the sidebar `<aside>` so it
+   * cannot collide with any page-content lists.
+   *
+   * Located by testid: this used to hang off the "Recent" heading that sat
+   * above the list, and that heading is gone - the panel is called Recents,
+   * so a caps label repeating it was noise.
+   */
+  getRecentChatsList(): import('@playwright/test').Locator {
+    return this.sidebar.locator('[data-testid="recent-chats-list"]');
+  }
+
+  /**
+   * Returns ALL button elements inside the Recent chats list. Each row is a
+   * `<button type="button">` whose text content is the first message in that
+   * chat session (rendered by `chatRowLabel()`).
+   */
+  getRecentChatRows(): import('@playwright/test').Locator {
+    return this.getRecentChatsList().getByRole('button');
+  }
+
+  /**
+   * Returns a locator for a specific Recent chat row whose text contains
+   * `text`. Uses `hasText` rather than exact matching because `chatRowLabel`
+   * renders the first message content which may be truncated or markdown-
+   * wrapped by the time it reaches the DOM.
+   */
+  getRecentChatRow(text: string): import('@playwright/test').Locator {
+    return this.getRecentChatsList().getByRole('button', { name: text });
+  }
+
+  /**
+   * Returns a locator for a specific Recent chat row by its SESSION ID
+   * (`data-session-id` on the row-select button — see `ChatRowItem`).
+   *
+   * Prefer this over `getRecentChatRow(text)` whenever the test knows the
+   * session id (via `chatPage.getCachedSessionId(mentorId)`): the visible
+   * label prefers the backend's asynchronously generated session title, so
+   * a row found by sent-message text can stop matching at any moment once
+   * the title lands.
+   */
+  getRecentChatRowBySession(
+    sessionId: string,
+  ): import('@playwright/test').Locator {
+    return this.getRecentChatsList().locator(
+      `button[data-session-id="${sessionId}"]`,
+    );
+  }
+
+  /**
+   * Returns true if a Recent chat row matching `text` is visible within
+   * `timeoutMs`. Uses `waitFor` (NOT `isVisible().catch()`) so the timeout
+   * is honoured for cases where the row appears after an async refetch.
+   */
+  async isRecentChatVisible(
+    text: string,
+    timeoutMs = 15_000,
+  ): Promise<boolean> {
+    const row = this.getRecentChatsList().locator('button', { hasText: text });
+    try {
+      await row.waitFor({ state: 'visible', timeout: timeoutMs });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Returns true if the Recent chat row for `sessionId` is visible within
+   * `timeoutMs`. Title-generation-proof variant of `isRecentChatVisible` —
+   * see `getRecentChatRowBySession`.
+   */
+  async isRecentChatVisibleBySession(
+    sessionId: string,
+    timeoutMs = 15_000,
+  ): Promise<boolean> {
+    try {
+      await this.getRecentChatRowBySession(sessionId).waitFor({
+        state: 'visible',
+        timeout: timeoutMs,
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Returns true if the "No recent chats" empty-state span is currently
+   * visible inside the Chats section. Uses `waitFor` with a short timeout
+   * so the check fast-fails when the list has items.
+   */
+  async isRecentChatsEmpty(timeoutMs = 5_000): Promise<boolean> {
+    const emptyState = this.sidebar.locator('span', {
+      hasText: /no recent chats/i,
+    });
+    try {
+      await emptyState.waitFor({ state: 'visible', timeout: timeoutMs });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Click the first visible Recent chat row and return its text content so
+   * the caller can assert on it. Prerequisite: `expandChatsSection()` must
+   * have been called first so the Chats collapsible is open.
+   */
+  async clickFirstRecentChat(): Promise<string> {
+    const firstRow = this.getRecentChatRows().first();
+    await expect(firstRow).toBeVisible({ timeout: 10_000 });
+    const text = (await firstRow.textContent()) ?? '';
+    await firstRow.click();
+    return text.trim();
+  }
+
+  /**
+   * Returns the `<li>` container for a specific Recent (or Pinned) chat row
+   * whose select-button text contains `text`. The row-select `<button>` and
+   * the "Chat actions" three-dot trigger are DOM SIBLINGS inside this `<li>`
+   * (see `ChatRowItem` in `app-sidebar/index.tsx` — `<div class="group
+   * relative">` wraps a `<button>` for selection and a separate absolutely
+   * positioned `<div>` holding the three-dot menu), so callers needing the
+   * three-dot trigger must scope through this container rather than the
+   * select button itself.
+   */
+  getChatRowContainer(text: string): import('@playwright/test').Locator {
+    return this.getRecentChatsList()
+      .locator('li')
+      .filter({ has: this.page.getByRole('button', { name: text }) });
+  }
+
+  /**
+   * `getChatRowContainer` keyed by session id instead of label text —
+   * see `getRecentChatRowBySession` for why session id is preferred.
+   */
+  getChatRowContainerBySession(
+    sessionId: string,
+  ): import('@playwright/test').Locator {
+    return this.getRecentChatsList()
+      .locator('li')
+      .filter({
+        has: this.page.locator(`button[data-session-id="${sessionId}"]`),
+      });
+  }
+
+  /**
+   * Returns the "Chat actions" three-dot trigger button for a specific
+   * Recent/Pinned chat row. The button is `opacity-0` until the row is
+   * hovered/focused (Tailwind `group-hover`) — Playwright's visibility
+   * check does not consider opacity, but `openChatActionsMenu` hovers the
+   * row first anyway to mirror real user interaction.
+   */
+  getChatActionsButton(text: string): import('@playwright/test').Locator {
+    return this.getChatRowContainer(text).getByRole('button', {
+      name: 'Chat actions',
+    });
+  }
+
+  /**
+   * Dismiss any currently-open Radix dropdown/menu by pressing Escape and
+   * wait until no `role="menu"` is left open. The chat-actions three-dot menu
+   * does NOT auto-close on outside state changes, and its content reflects
+   * `canExport` as evaluated when it was opened — so callers that change the
+   * gating state (tenant setting, learner mode) must close and re-open the
+   * menu to read the fresh state. Tolerant of there being no open menu.
+   */
+  async closeAnyOpenMenu(): Promise<void> {
+    const menu = this.page.getByRole('menu');
+    try {
+      await menu.first().waitFor({ state: 'visible', timeout: 500 });
+    } catch {
+      return; // nothing open
+    }
+    await this.page.keyboard.press('Escape');
+    await expect(menu).toHaveCount(0, { timeout: 5_000 });
+  }
+
+  /**
+   * Hovers the given Recent/Pinned chat row (revealing its three-dot
+   * trigger) and opens the row's dropdown menu (Pin/Unpin, Export, Delete).
+   * Returns the open `role="menu"` locator so callers can assert on
+   * `role="menuitem"` entries. Prerequisite: `expandChatsSection()`.
+   *
+   * Always opens from a CLOSED state: clicking the trigger toggles the Radix
+   * menu, so a lingering open menu would otherwise be toggled shut (or leave a
+   * stale menu reflecting an outdated `canExport`). We dismiss any open menu
+   * first so the returned menu always reflects current state.
+   */
+  async openChatActionsMenu(
+    text: string,
+  ): Promise<import('@playwright/test').Locator> {
+    return this.openMenuForRow(
+      this.getChatRowContainer(text),
+      this.getRecentChatRow(text),
+    );
+  }
+
+  /**
+   * `openChatActionsMenu` keyed by session id instead of label text —
+   * see `getRecentChatRowBySession` for why session id is preferred.
+   */
+  async openChatActionsMenuBySession(
+    sessionId: string,
+  ): Promise<import('@playwright/test').Locator> {
+    return this.openMenuForRow(
+      this.getChatRowContainerBySession(sessionId),
+      this.getRecentChatRowBySession(sessionId),
+    );
+  }
+
+  private async openMenuForRow(
+    container: import('@playwright/test').Locator,
+    selectButton: import('@playwright/test').Locator,
+  ): Promise<import('@playwright/test').Locator> {
+    await this.closeAnyOpenMenu();
+    await expect(container).toBeVisible({ timeout: 15_000 });
+    // Hover the select button (inside the `.group` wrapper) so the
+    // Tailwind `group-hover:opacity-100` rule on the three-dot trigger
+    // actually engages, same as a real user hovering the row.
+    await selectButton.hover();
+    const actionsBtn = container.getByRole('button', {
+      name: 'Chat actions',
+    });
+    await expect(actionsBtn).toBeVisible({ timeout: 5_000 });
+    await actionsBtn.click();
+    const menu = this.page.getByRole('menu');
+    await expect(menu).toBeVisible({ timeout: 5_000 });
+    return menu;
   }
 }

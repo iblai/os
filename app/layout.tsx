@@ -1,6 +1,8 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Open_Sans } from 'next/font/google';
 import { Suspense } from 'react';
+import { NextIntlClientProvider } from 'next-intl';
+import { getLocale, getMessages } from 'next-intl/server';
 
 import Providers from '@/providers';
 import { Toaster } from '@/components/ui/sonner';
@@ -14,6 +16,8 @@ import ConsoleSetup from '@/lib/logger';
 import { IblDataHandler } from '@/components/ibl-data-handler';
 import { ServiceWorkerProvider } from '@/components/service-worker-provider';
 import { ChunkErrorRecovery } from '@/components/chunk-error-recovery';
+import { buildMetadata, getSiteUrl } from '@/lib/seo';
+import { SiteJsonLd } from '@/components/seo/json-ld';
 
 const openSans = Open_Sans({
   subsets: ['latin'],
@@ -21,21 +25,41 @@ const openSans = Open_Sans({
   variable: '--font-open-sans',
 });
 
-export const metadata: Metadata = {
-  title: 'ibl.ai | Agentic OS',
-  description: 'ibl.ai | Agentic OS',
+export async function generateMetadata(): Promise<Metadata> {
+  // Root defaults: title template, canonical/OG base derived from the request
+  // host, icons, manifest, and noindex-by-default. Public pages opt in to
+  // indexing via buildMetadata({ index: true }) in their own generateMetadata.
+  return buildMetadata({ root: true });
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  themeColor: '#2563EB',
 };
 
-export default function RootLayout({
+// The root layout resolves the active locale from cookies (see i18n/request.ts),
+// which is a dynamic API. Force dynamic rendering app-wide so the build does not
+// try to statically prerender pages — calling cookies() during static
+// generation crashes the page-data collection worker. Cookie-based locale means
+// nothing under this layout can be static anyway.
+export const dynamic = 'force-dynamic';
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getLocale();
+  const messages = await getMessages();
+  const origin = await getSiteUrl();
+
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning>
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.png" />
+        {/* Site-wide structured data (Organization + WebSite). Viewport, icons,
+            and the manifest are emitted by the metadata/viewport exports. */}
+        <SiteJsonLd origin={origin} />
         {/* Inline styles for initial loader - shows immediately for better FCP */}
         <style
           dangerouslySetInnerHTML={{
@@ -88,22 +112,24 @@ export default function RootLayout({
         </div>
         <ConsoleSetup />
         <Script src="/env.js" strategy="afterInteractive" />
-        <StoreProvider>
-          <ChunkErrorRecovery />
-          <ServiceWorkerProvider>
-            <Suspense
-              fallback={
-                <div className="flex h-dvh w-screen items-center justify-center">
-                  <Spinner />
-                </div>
-              }
-            >
-              <IblDataHandler />
-              <Providers>{children}</Providers>
-            </Suspense>
-          </ServiceWorkerProvider>
-        </StoreProvider>
-        <Toaster />
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <StoreProvider>
+            <ChunkErrorRecovery />
+            <ServiceWorkerProvider>
+              <Suspense
+                fallback={
+                  <div className="flex h-dvh w-screen items-center justify-center">
+                    <Spinner />
+                  </div>
+                }
+              >
+                <IblDataHandler />
+                <Providers>{children}</Providers>
+              </Suspense>
+            </ServiceWorkerProvider>
+          </StoreProvider>
+          <Toaster />
+        </NextIntlClientProvider>
       </body>
     </html>
   );

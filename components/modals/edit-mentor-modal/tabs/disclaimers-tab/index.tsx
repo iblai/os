@@ -1,6 +1,7 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
 import { useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
 import { Edit, Info } from 'lucide-react';
 import {
@@ -48,6 +49,7 @@ const EditUserAgreementModal = dynamic(
 );
 
 export function DisclaimersTab() {
+  const t = useTranslations('disclaimersTabIndex');
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
   const username = useUsername();
   const { getMentorId } = useNavigate();
@@ -131,10 +133,10 @@ export function DisclaimersTab() {
         // @ts-ignore disclaimer not in type of MentorSettingsPublic
         formData: { disclaimer: content },
       }).unwrap();
-      toast.success('Agent updated successfully');
+      toast.success(t('agentUpdatedSuccess'));
     } catch (error) {
       console.error(JSON.stringify(error));
-      toast.error('Failed to update agent');
+      toast.error(t('agentUpdatedError'));
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     }
   }
@@ -164,11 +166,11 @@ export function DisclaimersTab() {
         }).unwrap();
       }
 
-      toast.success('User agreement updated successfully');
+      toast.success(t('userAgreementUpdatedSuccess'));
       setIsEditUserAgreementModalOpen(false);
     } catch (error) {
       console.error(JSON.stringify(error));
-      toast.error('Failed to update user agreement');
+      toast.error(t('userAgreementUpdatedError'));
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     }
   }
@@ -203,11 +205,13 @@ export function DisclaimersTab() {
       }
 
       toast.success(
-        `User agreement ${active ? 'enabled' : 'disabled'} successfully`,
+        t('userAgreementToggledSuccess', {
+          status: active ? 'enabled' : 'disabled',
+        }),
       );
     } catch (error) {
       console.error(JSON.stringify(error));
-      toast.error('Failed to update user agreement');
+      toast.error(t('userAgreementUpdatedError'));
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     }
   }
@@ -217,14 +221,18 @@ export function DisclaimersTab() {
       <div className="flex h-[73px] flex-shrink-0 items-center border-b border-gray-200 bg-white p-4 lg:block">
         <div>
           <h3 className="mb-1 text-base font-medium text-gray-900">
-            Disclaimers
+            {t('heading')}
           </h3>
-          <p className="text-xs text-gray-600">
-            Configure disclaimer settings for your agent.
-          </p>
+          <p className="text-xs text-gray-600">{t('subheading')}</p>
         </div>
       </div>
       <div className="flex-1 space-y-6 overflow-y-auto p-3 lg:p-4">
+        <div
+          className="rounded-md border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600"
+          data-testid="disclaimers-info-box"
+        >
+          {t('infoBox')}
+        </div>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           {/* User Agreement */}
           <WithPermissions
@@ -236,22 +244,24 @@ export function DisclaimersTab() {
                   <div className="flex items-center justify-between border-b border-gray-200 p-4">
                     <div className="flex items-center gap-2">
                       <h3 className="text-sm font-medium text-gray-900">
-                        User Agreement
+                        {t('userAgreementTitle')}
                       </h3>
                       <TooltipProvider>
                         <Tooltip>
-                          <TooltipTrigger aria-label="More info about user agreement">
+                          <TooltipTrigger
+                            aria-label={t('userAgreementInfoAriaLabel')}
+                          >
                             <Info className="h-4 w-4 text-gray-400" />
                           </TooltipTrigger>
                           <TooltipContent className="ibl-tooltip-content">
-                            <p>Controls User Agreement</p>
+                            <p>{t('userAgreementTooltip')}</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-gray-600">
-                        {userAgreement.active ? 'Active' : 'Inactive'}
+                        {userAgreement.active ? t('active') : t('inactive')}
                       </span>
                       <Switch
                         checked={userAgreement.active}
@@ -261,7 +271,9 @@ export function DisclaimersTab() {
                             content: userAgreement.content,
                           });
                         }}
-                        aria-label={`User agreement ${userAgreement.active ? 'enabled' : 'disabled'}`}
+                        aria-label={t('userAgreementSwitchAriaLabel', {
+                          status: userAgreement.active ? 'enabled' : 'disabled',
+                        })}
                       />
                     </div>
                   </div>
@@ -272,7 +284,7 @@ export function DisclaimersTab() {
                         className="mb-4 flex-grow overflow-y-auto"
                         tabIndex={0}
                         role="region"
-                        aria-label="User agreement content"
+                        aria-label={t('userAgreementContentAriaLabel')}
                       >
                         <Markdown className="text-sm text-gray-700">
                           {parsePrompt(userAgreement.content ?? '')}
@@ -289,7 +301,7 @@ export function DisclaimersTab() {
                       disabled={isUserAgreementDisabled}
                     >
                       <Edit className="mr-2 h-4 w-4" />
-                      Edit
+                      {t('editButton')}
                     </Button>
                     <CopyButton text={userAgreement.content ?? ''} />
                   </div>
@@ -309,15 +321,15 @@ export function DisclaimersTab() {
                 <div className="flex items-center justify-between border-b border-gray-200 p-4">
                   <div className="flex items-center gap-2">
                     <h3 className="text-sm font-medium text-gray-900">
-                      Advisory
+                      {t('advisoryTitle')}
                     </h3>
                     <TooltipProvider>
                       <Tooltip>
-                        <TooltipTrigger aria-label="More info about Advisory">
+                        <TooltipTrigger aria-label={t('advisoryInfoAriaLabel')}>
                           <Info className="h-4 w-4 text-gray-400" />
                         </TooltipTrigger>
                         <TooltipContent className="ibl-tooltip-content">
-                          <p>Controls Advisory</p>
+                          <p>{t('advisoryTooltip')}</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -353,7 +365,7 @@ export function DisclaimersTab() {
                       className="mb-4 flex-grow overflow-y-auto"
                       tabIndex={0}
                       role="region"
-                      aria-label="Advisory content"
+                      aria-label={t('advisoryContentAriaLabel')}
                     >
                       <Markdown className="text-sm text-gray-700">
                         {/* @ts-ignore disclaimer not in type of MentorSettingsPublic */}
@@ -371,7 +383,7 @@ export function DisclaimersTab() {
                     onClick={() => setIsEditDisclaimerModalOpen(true)}
                   >
                     <Edit className="mr-2 h-4 w-4" />
-                    Edit
+                    {t('editButton')}
                   </Button>
                   <CopyButton
                     // @ts-ignore disclaimer not in type of MentorSettingsPublic
