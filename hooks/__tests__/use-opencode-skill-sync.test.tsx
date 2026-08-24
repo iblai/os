@@ -337,4 +337,63 @@ describe('useOpencodeSkillSync', () => {
       mentorUniqueId: MENTOR,
     });
   });
+
+  it('a failed vibe install retries by itself and recovers', async () => {
+    vi.useFakeTimers();
+    try {
+      // First attempt: absent. Second (the 30s retry): installed.
+      let vibeCalls = 0;
+      invoke.mockImplementation(async (cmd: unknown) => {
+        if (cmd === 'ensure_vibe_skills') {
+          vibeCalls += 1;
+          return { present: vibeCalls >= 2 };
+        }
+        if (cmd === 'set_opencode_skills') return '/staging/dir';
+        return undefined;
+      });
+
+      const { result } = renderSync();
+      await vi.waitFor(() => expect(result.current.state).toBe('error'));
+      expect(vibeCalls).toBe(1);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(30_000);
+      });
+      expect(vibeCalls).toBe(2);
+      expect(result.current).toEqual({ state: 'synced', count: 1 });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('vibe retries stop after the cap — the amber note is the end state', async () => {
+    vi.useFakeTimers();
+    try {
+      let vibeCalls = 0;
+      invoke.mockImplementation(async (cmd: unknown) => {
+        if (cmd === 'ensure_vibe_skills') {
+          vibeCalls += 1;
+          return { present: false };
+        }
+        if (cmd === 'set_opencode_skills') return '/staging/dir';
+        return undefined;
+      });
+
+      const { result } = renderSync();
+      await vi.waitFor(() => expect(result.current.state).toBe('error'));
+
+      // All three backoff steps fire, then nothing more — ever.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(30_000 + 120_000 + 600_000);
+      });
+      expect(vibeCalls).toBe(1 + 3);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(3_600_000);
+      });
+      expect(vibeCalls).toBe(1 + 3);
+      expect(result.current.state).toBe('error');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

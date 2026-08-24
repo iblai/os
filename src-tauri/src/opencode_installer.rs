@@ -47,13 +47,22 @@ const CONFIG_TEMPLATE: &str = r#"{
 "#;
 
 /// iblai/vibe — the public dev-toolkit skills repo, synced for Coding Mode.
-/// Tarball of the default branch; unauthenticated (public repo).
-const VIBE_TARBALL_URL: &str = "https://github.com/iblai/vibe/archive/refs/heads/main.tar.gz";
-/// Latest-commit probe for the freshness check. Unauthenticated is plenty at
-/// ~1/day; api.github.com rejects requests without a User-Agent.
-const VIBE_COMMITS_URL: &str = "https://api.github.com/repos/iblai/vibe/commits/main";
-/// How often to even look upstream. The sha marker's mtime is the clock.
-const VIBE_REFRESH_INTERVAL: std::time::Duration = std::time::Duration::from_secs(24 * 60 * 60);
+/// Every look resolves the LATEST GitHub Release and syncs to it — releases
+/// are what ship (the repo's release workflow cuts one on every landing),
+/// never the moving branch head, and no version is ever pinned here. There is
+/// deliberately NO freshness window: the app resolves latest at every launch
+/// (and on Code enable) and downloads only when the tag moved.
+///
+/// github.com, not api.github.com: this URL's redirect names the tag, the
+/// probe shares the tarball's host (one reachability question), and the
+/// unauthenticated API rate limit never applies.
+const VIBE_LATEST_RELEASE_URL: &str = "https://github.com/iblai/vibe/releases/latest";
+
+/// Source tarball for a release tag — github.com (not the API host), so no
+/// User-Agent requirement, same shape the branch download always had.
+fn vibe_tag_tarball_url(tag: &str) -> String {
+    format!("https://github.com/iblai/vibe/archive/refs/tags/{tag}.tar.gz")
+}
 
 fn create_command(program: &str) -> Command {
     let cmd = Command::new(program);
@@ -266,18 +275,19 @@ async fn download_and_install(app: &AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-/// `<data>/skills/vibe.sha` — upstream commit sha of the current vibe copy; the
-/// file's mtime doubles as the "last checked" stamp.
+/// `<data>/skills/vibe.sha` — release tag of the current vibe copy: a change
+/// detector, never a pin ("did latest move since the last sync?"). Pre-release
+/// copies stored a commit sha here — it matches no tag, so they self-heal with
+/// one re-download.
 fn vibe_sha_marker() -> PathBuf {
     crate::opencode_acp::vibe_skills_dir().with_extension("sha")
 }
 
-fn vibe_marker_is_fresh(marker: &Path, max_age: std::time::Duration) -> bool {
-    std::fs::metadata(marker)
-        .and_then(|m| m.modified())
-        .ok()
-        .and_then(|t| t.elapsed().ok())
-        .map(|age| age < max_age)
+/// "Installed" means a populated dir: an empty `skills/vibe/` (interrupted
+/// swap, manual poking) must read as absent so the next look re-installs.
+fn dir_is_populated(dir: &Path) -> bool {
+    std::fs::read_dir(dir)
+        .map(|mut d| d.next().is_some())
         .unwrap_or(false)
 }
 
@@ -293,26 +303,55 @@ fn find_extracted_skills(tmp: &Path) -> Option<PathBuf> {
     None
 }
 
-async fn fetch_latest_vibe_sha() -> Option<String> {
-    let resp = reqwest::Client::new()
-        .get(VIBE_COMMITS_URL)
+/// The tag a `releases/latest` redirect points at (`…/releases/tag/<tag>`).
+/// A redirect anywhere else — notably plain `/releases` when no release has
+/// ever been published — is `None`: never guess a version.
+fn tag_from_location(location: &str) -> Option<String> {
+    let (_, tag) = location.split_once("/releases/tag/")?;
+    let tag = tag.trim_end_matches('/');
+    (!tag.is_empty() && !tag.contains('/')).then(|| tag.to_string())
+}
+
+/// Resolve the latest release tag from `probe_url` WITHOUT following the
+/// redirect — the `Location` header names the tag.
+async fn resolve_latest_tag(probe_url: &str) -> Option<String> {
+    let resp = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .build()
+        .ok()?
+        .get(probe_url)
         .header("User-Agent", "iblai-desktop")
-        .header("Accept", "application/vnd.github+json")
         .timeout(std::time::Duration::from_secs(10))
         .send()
         .await
-        .ok()?
-        .error_for_status()
         .ok()?;
-    let v: serde_json::Value = resp.json().await.ok()?;
-    Some(v.get("sha")?.as_str()?.to_string())
+    if !resp.status().is_redirection() {
+        return None;
+    }
+    tag_from_location(
+        resp.headers()
+            .get(reqwest::header::LOCATION)?
+            .to_str()
+            .ok()?,
+    )
 }
 
-/// Download the vibe tarball and swap its `skills/` over `dest`. The old copy
-/// survives any failure (extract to temp, rename with a backup).
-async fn download_vibe_skills(app: &AppHandle, dest: &Path) -> Result<(), String> {
+/// Whatever the latest published release is right now — resolved fresh on
+/// every look, never cached beyond the marker's change detection.
+async fn fetch_latest_vibe_tag() -> Option<String> {
+    resolve_latest_tag(VIBE_LATEST_RELEASE_URL).await
+}
+
+/// Download the vibe tarball at `url` and swap its `skills/` over `dest`. The
+/// old copy survives any failure (extract to temp, rename with a backup).
+async fn download_vibe_skills(app: &AppHandle, dest: &Path, url: &str) -> Result<(), String> {
     log(app, "downloading iblai/vibe skills");
-    let bytes = reqwest::get(VIBE_TARBALL_URL)
+    let bytes = reqwest::Client::new()
+        .get(url)
+        // Bounded so a stalled download can't pin the sync lock (and the Code
+        // pill spinner) forever; the archive is a few MB.
+        .timeout(std::time::Duration::from_secs(120))
+        .send()
         .await
         .map_err(|e| format!("vibe download failed: {e}"))?
         .error_for_status()
@@ -365,13 +404,15 @@ async fn download_vibe_skills(app: &AppHandle, dest: &Path) -> Result<(), String
 /// Sync the iblai/vibe skills for Coding Mode (shared across mentors and sessions).
 ///
 /// Standalone from `install_opencode` on purpose: the Code pill's spinner covers
-/// skills, never the binary install. At most one upstream look per
-/// [`VIBE_REFRESH_INTERVAL`]; an actual download registers an in-flight entry so
-/// the spawn path holds instead of snapshotting a half-written dir. Failures keep
-/// the cached copy and never error the command — the caller reads `present`.
+/// skills, never the binary install. NO freshness window: every call (app
+/// startup spawns one, and each Code enable re-invokes) resolves the latest
+/// release and downloads only when the tag moved — always latest, never
+/// pinned. An actual download registers an in-flight entry so the spawn path
+/// holds instead of snapshotting a half-written dir. Failures keep the cached
+/// copy and never error the command — the caller reads `present`.
 #[command]
 pub async fn ensure_vibe_skills(app: AppHandle) -> Result<serde_json::Value, String> {
-    // One flight at a time: several composers mount the sync hook.
+    // One flight at a time: startup plus several composers can all invoke.
     static LOCK: std::sync::OnceLock<tokio::sync::Mutex<()>> = std::sync::OnceLock::new();
     let _guard = LOCK
         .get_or_init(|| tokio::sync::Mutex::new(()))
@@ -380,42 +421,48 @@ pub async fn ensure_vibe_skills(app: AppHandle) -> Result<serde_json::Value, Str
 
     let dir = crate::opencode_acp::vibe_skills_dir();
     let marker = vibe_sha_marker();
-    let cached = dir.is_dir();
+    let cached = dir_is_populated(&dir);
 
-    if cached && vibe_marker_is_fresh(&marker, VIBE_REFRESH_INTERVAL) {
-        return Ok(json!({ "present": true, "refreshed": false }));
-    }
-
-    let latest = fetch_latest_vibe_sha().await;
+    let latest = fetch_latest_vibe_tag().await;
     if cached {
         match &latest {
-            Some(latest_sha) => {
+            Some(latest_tag) => {
                 let stored = std::fs::read_to_string(&marker).unwrap_or_default();
-                if stored.trim() == latest_sha.trim() {
-                    // Up to date — restamp the marker so the daily clock resets.
-                    let _ = std::fs::write(&marker, latest_sha);
+                if stored.trim() == latest_tag.trim() {
+                    // Already on the latest release.
                     return Ok(json!({ "present": true, "refreshed": false }));
                 }
             }
             None => {
-                // Offline/unreachable with a cache: keep it quietly; the next call
-                // past the interval tries again.
+                // Offline/unreachable with a cache: keep it quietly; the next
+                // look (startup or Code enable) tries again.
                 log(&app, "vibe skills check unreachable — keeping cached copy");
                 return Ok(json!({ "present": true, "refreshed": false }));
             }
         }
     }
 
-    // Something to fetch: first install, or upstream moved.
+    // Something to fetch: first install, or upstream cut a new release.
+    let Some(tag) = latest else {
+        // No release info and no cache (the cached case returned above). A
+        // fallback to branch head would silently ship unreleased skills —
+        // don't; the sync hook retries with backoff, and the next launch
+        // tries again at startup.
+        log(
+            &app,
+            "vibe release lookup unreachable — skills not installed yet",
+        );
+        return Ok(json!({ "present": dir_is_populated(&dir), "refreshed": false }));
+    };
     crate::opencode_acp::begin_skills_sync_entry(crate::opencode_acp::VIBE_SYNC_KEY.to_string())
         .await;
-    let downloaded = download_vibe_skills(&app, &dir).await;
+    let downloaded = download_vibe_skills(&app, &dir, &vibe_tag_tarball_url(&tag)).await;
     crate::opencode_acp::end_skills_sync_entry(crate::opencode_acp::VIBE_SYNC_KEY).await;
 
     match downloaded {
         Ok(()) => {
-            let _ = std::fs::write(&marker, latest.as_deref().unwrap_or("unknown"));
-            log(&app, "vibe skills installed");
+            let _ = std::fs::write(&marker, &tag);
+            log(&app, &format!("vibe skills installed ({tag})"));
             Ok(json!({ "present": true, "refreshed": true }))
         }
         Err(e) => {
@@ -586,20 +633,90 @@ mod tests {
     fn the_extracted_skills_dir_is_located_not_assumed() {
         let s = Scratch::new("vibe-locate");
         assert!(find_extracted_skills(s.path()).is_none());
-        let root = s.path().join("vibe-main");
+        // A release-tag archive root (`vibe-<tag>`), not the old `vibe-main`:
+        // the locator must not care what the tag is.
+        let root = s.path().join("vibe-1.18.0");
         std::fs::create_dir_all(root.join("skills").join("iblai-vibe-auth")).unwrap();
         assert_eq!(find_extracted_skills(s.path()), Some(root.join("skills")));
     }
 
-    /// The marker's mtime is the daily clock: fresh short-circuits the upstream
-    /// look, missing (first run) and stale do not.
+    /// "Installed" is a populated dir: missing and empty both mean absent, so
+    /// an interrupted swap can't masquerade as a working skill set.
     #[test]
-    fn a_fresh_marker_short_circuits_and_a_missing_one_does_not() {
-        let s = Scratch::new("vibe-marker");
-        let marker = s.path().join("vibe.sha");
-        assert!(!vibe_marker_is_fresh(&marker, VIBE_REFRESH_INTERVAL));
-        std::fs::write(&marker, "abc").unwrap();
-        assert!(vibe_marker_is_fresh(&marker, VIBE_REFRESH_INTERVAL));
-        assert!(!vibe_marker_is_fresh(&marker, std::time::Duration::ZERO));
+    fn an_empty_or_missing_skills_dir_reads_as_not_installed() {
+        let s = Scratch::new("vibe-populated");
+        let dir = s.path().join("vibe");
+        assert!(!dir_is_populated(&dir), "missing");
+        std::fs::create_dir_all(&dir).unwrap();
+        assert!(!dir_is_populated(&dir), "empty");
+        std::fs::create_dir_all(dir.join("iblai-vibe-auth")).unwrap();
+        assert!(dir_is_populated(&dir), "populated");
+    }
+
+    /// Skills track whatever release is latest — the tag is read out of the
+    /// `releases/latest` redirect every time, never configured.
+    #[test]
+    fn the_release_tag_is_read_from_the_redirect_never_configured() {
+        assert_eq!(
+            tag_from_location("https://github.com/iblai/vibe/releases/tag/v9.9.9").as_deref(),
+            Some("v9.9.9")
+        );
+        assert_eq!(
+            tag_from_location("https://github.com/iblai/vibe/releases/tag/v9.9.9/").as_deref(),
+            Some("v9.9.9"),
+            "a trailing slash is tolerated"
+        );
+        assert_eq!(
+            tag_from_location("https://github.com/iblai/vibe/releases"),
+            None,
+            "no release published → no tag, never a guess"
+        );
+        assert_eq!(tag_from_location("https://github.com/"), None);
+        assert_eq!(
+            tag_from_location("https://x/releases/tag/a/b"),
+            None,
+            "a path after the tag is not a tag"
+        );
+    }
+
+    /// End to end against a canned redirect: the latest tag comes from the
+    /// `Location` header on github.com — no API host, no rate limit. A
+    /// non-redirect answer yields None instead of a guessed version.
+    #[tokio::test]
+    async fn the_latest_tag_comes_from_the_releases_redirect() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move {
+            // First connect: the redirect. Second: a plain 200 (no release).
+            for response in [
+                "HTTP/1.1 302 Found\r\nlocation: https://github.com/iblai/vibe/releases/tag/v9.9.9\r\ncontent-length: 0\r\nconnection: close\r\n\r\n",
+                "HTTP/1.1 200 OK\r\ncontent-length: 0\r\nconnection: close\r\n\r\n",
+            ] {
+                let (mut sock, _) = listener.accept().await.unwrap();
+                let mut buf = [0u8; 4096];
+                let _ = sock.read(&mut buf).await;
+                let _ = sock.write_all(response.as_bytes()).await;
+            }
+        });
+
+        let probe = format!("http://{addr}/releases/latest");
+        assert_eq!(resolve_latest_tag(&probe).await.as_deref(), Some("v9.9.9"));
+        assert_eq!(
+            resolve_latest_tag(&probe).await,
+            None,
+            "a non-redirect answer must not invent a tag"
+        );
+    }
+
+    /// The download URL is the tag's source archive on github.com — not the
+    /// API host (which would demand a User-Agent) and not any branch head.
+    #[test]
+    fn the_tarball_url_is_the_tags_source_archive() {
+        assert_eq!(
+            vibe_tag_tarball_url("v1.18.0"),
+            "https://github.com/iblai/vibe/archive/refs/tags/v1.18.0.tar.gz"
+        );
     }
 }
