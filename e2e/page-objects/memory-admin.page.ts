@@ -12,8 +12,6 @@ import {
   searchMemoryAdminUsers,
   openUserMemoriesPopup,
   closeUserMemoriesPopup,
-  addUserGlobalMemory,
-  editUserGlobalMemory,
   deleteUserGlobalMemory,
   toggleUserMemoryAdminSetting,
   filterAgentMemories,
@@ -203,18 +201,97 @@ export class MemoryAdminPage {
     return memoryRowByContent(popup, content);
   }
 
-  /** Add a global memory for the popup's user (content must be ≥10 characters). */
-  addGlobalMemory(popup: Locator, content: string): Promise<void> {
-    return addUserGlobalMemory(this.page, popup, content);
+  /**
+   * Add a global memory for the popup's user (content must be ≥10
+   * characters).
+   *
+   * Implemented app-side instead of delegating to the SDK's
+   * `addUserGlobalMemory`: global-memory writes re-embed content
+   * server-side, and were observed live (staging) both running well past
+   * the SDK helper's single 15s dialog-close wait and failing transiently
+   * — either way the dialog stays open with only an error toast, and the
+   * SDK helper (as of 2.5.9) has no retry. Until an SDK build ships one,
+   * the save-with-retry lives here. Locators mirror the SDK helper's own
+   * hooks (`data-testid` + dialog accessible names) so the two stay
+   * interchangeable.
+   */
+  async addGlobalMemory(popup: Locator, content: string): Promise<void> {
+    const addButton = popup.getByTestId('user-memories-add');
+    await expect(addButton).toBeVisible({ timeout: 10_000 });
+    await addButton.click();
+
+    const dialog = this.page
+      .getByRole('dialog', { name: 'Add Memory', exact: true })
+      .last();
+    await expect(dialog).toBeVisible({ timeout: 10_000 });
+    await dialog.locator('#memory-content').fill(content);
+    await this.submitMemoryDialog(dialog);
+
+    await expect(this.memoryRow(popup, content)).toBeVisible({
+      timeout: 15_000,
+    });
   }
 
-  /** Edit a global memory found by its current content. */
-  editGlobalMemory(
+  /**
+   * Edit a global memory found by its current content. App-side for the
+   * same reason as `addGlobalMemory` — see its doc comment.
+   */
+  async editGlobalMemory(
     popup: Locator,
     currentContent: string,
     newContent: string,
   ): Promise<void> {
-    return editUserGlobalMemory(this.page, popup, currentContent, newContent);
+    const row = this.memoryRow(popup, currentContent);
+    await expect(row).toBeVisible({ timeout: 10_000 });
+    await row.getByRole('button', { name: /^Memory actions:/ }).click();
+    // The menu portals to <body>; only one dropdown is ever open at once.
+    const editItem = this.page.getByRole('menuitem', {
+      name: 'Edit',
+      exact: true,
+    });
+    await expect(editItem).toBeVisible({ timeout: 10_000 });
+    await editItem.click();
+
+    const dialog = this.page
+      .getByRole('dialog', { name: 'Edit Memory', exact: true })
+      .last();
+    await expect(dialog).toBeVisible({ timeout: 10_000 });
+    await dialog.locator('#edit-memory-content').fill(newContent);
+    await this.submitMemoryDialog(dialog);
+
+    await expect(this.memoryRow(popup, newContent)).toBeVisible({
+      timeout: 15_000,
+    });
+  }
+
+  /**
+   * Click a memory dialog's "Save Memory" button and wait for the dialog
+   * to close, retrying the click on failure. A failed save leaves the
+   * dialog OPEN (error toast only) with the form still filled, so
+   * re-clicking Save is a clean retry; a save that lands late (after a
+   * wait gave up but before the next attempt) is detected by the dialog
+   * having closed on its own. The 30s per-attempt wait absorbs slow
+   * embedding round-trips and the dialog's close animation.
+   */
+  private async submitMemoryDialog(dialog: Locator): Promise<void> {
+    const saveButton = dialog.getByRole('button', {
+      name: 'Save Memory',
+      exact: true,
+    });
+    const maxAttempts = 3;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      if (!(await dialog.isVisible().catch(() => false))) return;
+      // Disabled while a save is in flight; settles on success (close) or
+      // failure (re-enabled for another try).
+      await expect(saveButton).toBeEnabled({ timeout: 10_000 });
+      await saveButton.click();
+      try {
+        await expect(dialog).toBeHidden({ timeout: 30_000 });
+        return;
+      } catch (error) {
+        if (attempt === maxAttempts) throw error;
+      }
+    }
   }
 
   /** Delete a global memory found by its content. */

@@ -1595,5 +1595,5 @@ Split into two blocks: **71A (structural)** needs no seed data — the tab, its 
 ### With seeded conversation (HT-04..HT-06)
 
 - [x] HT-04: User selects the seeded conversation (matched by its `data-session-id`) and the transcript preview loads with a Download button; downloading it produces a CSV file. Skips gracefully if mentor creation is unavailable to the account in this environment
-- [x] HT-05: User filters Conversations by the account's pre-existing agent's exact name and the list re-settles into rows-or-empty for that agent scope; clearing the agent filter returns the search input
-- [x] HT-06: User exports their personal chat history scoped to an existing agent (Export button) and the report is tracked in the Exports sub-tab
+- HT-05 (retired): the "filter Conversations by an agent and clear the filter" checkpoint was removed — the agent autocomplete is backed by the mentors search index, which lags mentor creation by minutes on shared environments, and no variant (exact name, opportunistic pick-any) could be made reliable. The filter toolbar's presence stays covered by HT-01
+- [x] HT-06: User exports their personal chat history from the unfiltered Conversations view (Export button) and the report is tracked in the Exports sub-tab. Skips when the account has no conversations to export

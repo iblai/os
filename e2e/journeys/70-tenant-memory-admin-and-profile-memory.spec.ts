@@ -204,8 +204,21 @@ test.describe('Journey 70A: Tenant Memory admin tab (Global + Agent)', () => {
           .catch(() => {});
       }
       // Best-effort cleanup in case an assertion above failed mid-flow.
-      await memoryAdminPage.deleteGlobalMemory(popup, updated).catch(() => {});
-      await memoryAdminPage.deleteGlobalMemory(popup, content).catch(() => {});
+      // Guarded by an instant `isVisible()` probe: on a PASSING run both
+      // rows are already gone (deleted / renamed away), and an unguarded
+      // delete would burn its full 10s row-lookup wait per row and paint
+      // two caught-but-red expects into the trace of every green run.
+      for (const rowContent of [updated, content]) {
+        const exists = await memoryAdminPage
+          .memoryRow(popup, rowContent)
+          .isVisible()
+          .catch(() => false);
+        if (exists) {
+          await memoryAdminPage
+            .deleteGlobalMemory(popup, rowContent)
+            .catch(() => {});
+        }
+      }
       await memoryAdminPage.closeUserPopup().catch(() => {});
     }
 
