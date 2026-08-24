@@ -40,6 +40,7 @@ const mockSetFocusEditCustomFloatingBubble = vi.fn();
 const mockUpdateConfig = vi.fn();
 const mockUpdateMultipleConfig = vi.fn();
 const mockFormHandleSubmit = vi.fn();
+const mockRemoveCustomImage = vi.fn();
 
 // next/navigation
 vi.mock('next/navigation', () => ({
@@ -335,7 +336,8 @@ function buildUseEmbedTabReturn(overrides: Partial<any> = {}) {
     updateConfig: mockUpdateConfig,
     updateMultipleConfig: mockUpdateMultipleConfig,
     syncEmbedSettings: mockSyncEmbedSettings,
-    isSavingSettings: false,
+    removeCustomImage: mockRemoveCustomImage,
+    isRemovingImage: false,
     ...overrides,
   };
 }
@@ -750,6 +752,15 @@ describe('EmbedTab', () => {
     expect(mockFormHandleSubmit).toHaveBeenCalled();
   });
 
+  it('renders Create Embed as the only footer button', () => {
+    renderEmbedTab();
+    const createEmbed = screen.getByRole('button', { name: 'Create Embed' });
+    expect(createEmbed).toBeInTheDocument();
+    expect(createEmbed.className).toContain('bg-gradient-to-r');
+    const footer = createEmbed.parentElement as HTMLElement;
+    expect(within(footer).getAllByRole('button')).toHaveLength(1);
+  });
+
   it('submits the form via the form element onSubmit', () => {
     const { container } = renderEmbedTab();
     const formEl = container.querySelector('form') as HTMLFormElement;
@@ -857,11 +868,21 @@ describe('EmbedTab', () => {
     expect(mockUpdateConfig).toHaveBeenCalledWith('subtitle', 'Sub');
   });
 
-  it('removes the floating bubble icon image', () => {
+  it('persists the icon image removal instead of only clearing the preview', () => {
     renderEmbedTab({ focusEditCustomFloatingBubble: true });
     const removeBtn = screen.getByRole('button', { name: 'Remove Image' });
+    expect(removeBtn).toBeEnabled();
     fireEvent.click(removeBtn);
-    expect(mockUpdateMultipleConfig).toHaveBeenCalledWith({ image: null });
+    expect(mockRemoveCustomImage).toHaveBeenCalled();
+    expect(mockUpdateMultipleConfig).not.toHaveBeenCalled();
+  });
+
+  it('disables the Remove Image button while the removal is in flight', () => {
+    renderEmbedTab({
+      focusEditCustomFloatingBubble: true,
+      isRemovingImage: true,
+    });
+    expect(screen.getByRole('button', { name: 'Remove Image' })).toBeDisabled();
   });
 
   it('reads an uploaded icon image as a data URL and stores it in config', async () => {

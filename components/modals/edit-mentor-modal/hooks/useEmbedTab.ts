@@ -3,7 +3,9 @@
 import { useGetIntegratedSsoProvidersQuery } from '@/features/auth/api-slice';
 import { getUserName } from '@/features/utils';
 import {
+  mentorApiSlice,
   useCreateRedirectTokenMutation,
+  useEditMentorJsonMutation,
   useEditMentorMutation,
   useGetMentorPublicSettingsQuery,
   useGetMentorSettingsQuery,
@@ -27,6 +29,7 @@ import { useNavigate } from '@/hooks/user-navigate';
 import { config } from '@/lib/config';
 import { useUsername } from '@/hooks/use-user';
 import { ANONYMOUS_USERNAME } from '@/lib/constants';
+import { useAppDispatch } from '@/lib/hooks';
 
 export interface EmbedFormValues {
   custom_css: string;
@@ -138,6 +141,8 @@ const useEmbedTab = () => {
     { isLoading: isCreateTokenLoading, data: redirectTokenData },
   ] = useCreateRedirectTokenMutation();
   const [updateMentorSettings] = useEditMentorMutation();
+  const [editMentorSettingsJson] = useEditMentorJsonMutation();
+  const dispatch = useAppDispatch();
   const defaultFloatingBubbleConfig: CustomFloatingBubbleConfig = {
     image: `${config.dmUrl()}/api/core/orgs/${params.tenantKey}/thumbnail/`,
     //use_icon: false,
@@ -193,12 +198,7 @@ const useEmbedTab = () => {
     });
   };
 
-  // Persist the mentor settings (the multipart PUT). Extracted from
-  // `syncEmbedSettings` so the Save button can reuse it WITHOUT the
-  // website-URL validation, redirect-token creation, embed-code generation, or
-  // embed-code dialog. The payload is identical to what Create Embed sends, so
-  // the icon persistence (custom JSON + image, and the `{}` clear for default
-  // mode) behaves the same regardless of which button triggered it.
+  // Persist the mentor settings (the multipart PUT).
   const saveMentorSettings = async (): Promise<{ success: boolean }> => {
     const value = form.state.values;
 
@@ -343,6 +343,54 @@ const useEmbedTab = () => {
     }
 
     return { success: true, redirectToken: redirectTokenResponse?.data?.token };
+  };
+
+  const [isRemovingImage, setIsRemovingImage] = useState(false);
+  // Independent settings write: it must NOT go through `syncEmbedSettings`,
+  // whose website-URL validation surfaces a spurious error on non-anonymous
+  // mentors with an empty Website URL (#2153). The endpoint only accepts PUT —
+  // PATCH returns 500 — and applies partial updates, so sending just these two
+  // fields leaves the rest of the settings untouched. `embed_icon_selection_data`
+  // must be cleared with `{}`; a JSON `null` is silently ignored by the backend.
+  const removeCustomImage = async (): Promise<void> => {
+    setIsRemovingImage(true);
+    try {
+      const response = await editMentorSettingsJson({
+        mentorId,
+        org: params.tenantKey,
+        userId: getUserName(),
+        requestBody: {
+          embed_custom_image: null,
+          embed_icon_selection_data: {},
+        },
+      });
+
+      if (response?.error) {
+        console.error(
+          `Failed to remove the custom embed image for mentor (${mentorId}) in org (${params.tenantKey})`,
+          response.error,
+        );
+        toast.error(
+          (response.error as any)?.error?.error ??
+            'Failed to remove the custom icon. Please try again',
+        );
+        return;
+      }
+
+      updateMultipleConfig({ image: null });
+      form.setFieldValue('icon_selection', 'default');
+      // `editMentorJson` lives in a sibling slice with no invalidation, so the
+      // cached public settings would re-hydrate the removed image on remount.
+      dispatch(
+        mentorApiSlice.util.invalidateTags([
+          { type: 'mentorSettings', id: mentorId },
+          { type: 'mentorPublicSettings', id: mentorId },
+        ]),
+      );
+      toast.success('Custom icon removed');
+    } finally {
+      setIsRemovingImage(false);
+    }
   };
 
   const form = useForm({
@@ -513,6 +561,8 @@ const useEmbedTab = () => {
     updateConfig,
     updateMultipleConfig,
     syncEmbedSettings,
+    removeCustomImage,
+    isRemovingImage,
   };
 };
 

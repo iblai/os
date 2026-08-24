@@ -14,6 +14,15 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
     { isLoading: false, data: null },
   ]),
   useEditMentorMutation: vi.fn(() => [vi.fn()]),
+  useEditMentorJsonMutation: vi.fn(() => [vi.fn()]),
+  mentorApiSlice: {
+    util: {
+      invalidateTags: (tags: unknown) => ({
+        type: 'invalidateTags',
+        payload: tags,
+      }),
+    },
+  },
   useGetMentorPublicSettingsQuery: vi.fn(() => ({
     data: {
       allow_anonymous: false,
@@ -90,12 +99,19 @@ vi.mock('@/lib/constants', () => ({
   ANONYMOUS_USERNAME: 'anonymous',
 }));
 
+const mockDispatch = vi.fn();
+vi.mock('@/lib/hooks', () => ({
+  useAppDispatch: () => mockDispatch,
+}));
+
 describe('useEmbedTab', () => {
   let mockCreateRedirectTokenFn: ReturnType<typeof vi.fn>;
   let mockUpdateMentorSettingsFn: ReturnType<typeof vi.fn>;
+  let mockEditMentorJsonFn: ReturnType<typeof vi.fn>;
   let mockGetUserName: ReturnType<typeof vi.fn>;
   let mockGetEmbedCode: ReturnType<typeof vi.fn>;
   let mockToastError: ReturnType<typeof vi.fn>;
+  let mockToastSuccess: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -104,10 +120,12 @@ describe('useEmbedTab', () => {
     mockGetUserName = vi.mocked(utils.getUserName);
     mockGetEmbedCode = vi.mocked(embedUtils.getEmbedCode);
     mockToastError = vi.mocked(toast.error);
+    mockToastSuccess = vi.mocked(toast.success);
 
     // Create fresh mock functions for mutations
     mockCreateRedirectTokenFn = vi.fn();
     mockUpdateMentorSettingsFn = vi.fn();
+    mockEditMentorJsonFn = vi.fn();
 
     // Setup data layer mocks
     vi.mocked(dataLayer.useCreateRedirectTokenMutation).mockReturnValue([
@@ -116,6 +134,9 @@ describe('useEmbedTab', () => {
     ]);
     vi.mocked(dataLayer.useEditMentorMutation).mockReturnValue([
       mockUpdateMentorSettingsFn,
+    ] as any);
+    vi.mocked(dataLayer.useEditMentorJsonMutation).mockReturnValue([
+      mockEditMentorJsonFn,
     ] as any);
 
     // Setup default mock return values
@@ -617,6 +638,176 @@ describe('useEmbedTab', () => {
           }),
         }),
       );
+    });
+  });
+
+  describe('removeCustomImage', () => {
+    const previewDataUrl =
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+
+    it('issues a JSON settings write clearing the image and the icon JSON, then resets the local preview and mode', async () => {
+      mockEditMentorJsonFn.mockResolvedValueOnce({ data: { success: true } });
+
+      const { result } = renderHook(() => useEmbedTab());
+
+      await act(async () => {
+        result.current.form.setFieldValue('icon_selection', 'custom');
+        result.current.form.setFieldValue('allow_anonymous', false);
+        result.current.form.setFieldValue('website_url', '');
+        result.current.updateMultipleConfig({ image: previewDataUrl });
+      });
+
+      await act(async () => {
+        await result.current.removeCustomImage();
+      });
+
+      expect(mockEditMentorJsonFn).toHaveBeenCalledWith({
+        mentorId: 'test-mentor',
+        org: 'test-tenant',
+        userId: 'test-user',
+        requestBody: {
+          embed_custom_image: null,
+          embed_icon_selection_data: {},
+        },
+      });
+      expect(result.current.customFloatingBubbleConfig.image).toBeNull();
+      expect(result.current.form.state.values.icon_selection).toBe('default');
+      expect(mockToastSuccess).toHaveBeenCalledWith('Custom icon removed');
+      // The JSON mutation lives in a sibling slice with no invalidation, so the
+      // hook must bust the mentor-settings caches itself.
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: 'invalidateTags',
+        payload: [
+          { type: 'mentorSettings', id: 'test-mentor' },
+          { type: 'mentorPublicSettings', id: 'test-mentor' },
+        ],
+      });
+      // #2153: the removal is an independent write — it must not run the
+      // embed-form sync (multipart save + website-URL validation) or create a
+      // redirect token.
+      expect(mockUpdateMentorSettingsFn).not.toHaveBeenCalled();
+      expect(mockCreateRedirectTokenFn).not.toHaveBeenCalled();
+      expect(result.current.createTokenError).toBe('');
+    });
+
+    it('keeps the local preview and mode intact and toasts the API error on failure', async () => {
+      mockEditMentorJsonFn.mockResolvedValueOnce({
+        error: { error: { error: 'Remove failed' } },
+      });
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+
+      const { result } = renderHook(() => useEmbedTab());
+
+      await act(async () => {
+        result.current.form.setFieldValue('icon_selection', 'custom');
+        result.current.updateMultipleConfig({ image: previewDataUrl });
+      });
+
+      await act(async () => {
+        await result.current.removeCustomImage();
+      });
+
+      expect(mockToastError).toHaveBeenCalledWith('Remove failed');
+      expect(mockToastSuccess).not.toHaveBeenCalled();
+      expect(result.current.customFloatingBubbleConfig.image).toBe(
+        previewDataUrl,
+      );
+      expect(result.current.form.state.values.icon_selection).toBe('custom');
+      expect(mockDispatch).not.toHaveBeenCalled();
+      expect(consoleSpy).toHaveBeenCalled();
+
+      consoleSpy.mockRestore();
+    });
+
+    it('falls back to a generic message when the error has no detail', async () => {
+      mockEditMentorJsonFn.mockResolvedValueOnce({ error: {} });
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+
+      const { result } = renderHook(() => useEmbedTab());
+
+      await act(async () => {
+        await result.current.removeCustomImage();
+      });
+
+      expect(mockToastError).toHaveBeenCalledWith(
+        'Failed to remove the custom icon. Please try again',
+      );
+
+      consoleSpy.mockRestore();
+    });
+
+    it('toggles isRemovingImage around the request', async () => {
+      let resolveRemove: (v: unknown) => void = () => {};
+      mockEditMentorJsonFn.mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveRemove = resolve;
+        }),
+      );
+
+      const { result } = renderHook(() => useEmbedTab());
+
+      expect(result.current.isRemovingImage).toBe(false);
+
+      let removePromise: Promise<void>;
+      act(() => {
+        removePromise = result.current.removeCustomImage();
+      });
+
+      await waitFor(() => {
+        expect(result.current.isRemovingImage).toBe(true);
+      });
+
+      await act(async () => {
+        resolveRemove({ data: { success: true } });
+        await removePromise;
+      });
+
+      expect(result.current.isRemovingImage).toBe(false);
+    });
+
+    it('is backed by a PUT (not PATCH) JSON mentor-settings endpoint', async () => {
+      const actualDataLayer = await vi.importActual<{
+        mentorCustomApiSlice: {
+          enhanceEndpoints: (args: {
+            endpoints: Record<string, (definition: unknown) => void>;
+          }) => unknown;
+        };
+      }>('@iblai/iblai-js/data-layer');
+
+      let definition: { query?: (args: unknown) => Record<string, unknown> } =
+        {};
+      actualDataLayer.mentorCustomApiSlice.enhanceEndpoints({
+        endpoints: {
+          editMentorJson: (def) => {
+            definition = def as typeof definition;
+          },
+        },
+      });
+
+      const request = definition.query?.({
+        mentorId: 'test-mentor',
+        org: 'test-tenant',
+        userId: 'test-user',
+        requestBody: {
+          embed_custom_image: null,
+          embed_icon_selection_data: {},
+        },
+      });
+
+      // The backend rejects PATCH on this endpoint with a 500, so the removal
+      // must go out as a partial-update PUT with a JSON body.
+      expect(request?.method).toBe('PUT');
+      expect(request?.url).toBe(
+        '/api/ai-mentor/orgs/test-tenant/users/test-user/mentors/test-mentor/settings/',
+      );
+      expect(request?.body).toEqual({
+        embed_custom_image: null,
+        embed_icon_selection_data: {},
+      });
     });
   });
 

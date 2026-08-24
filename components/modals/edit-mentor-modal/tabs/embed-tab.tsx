@@ -243,6 +243,8 @@ export function EmbedTab() {
     setFocusEditCustomFloatingBubble,
     updateConfig,
     updateMultipleConfig,
+    removeCustomImage,
+    isRemovingImage,
   } = useEmbedTab();
   const toast = useToast();
   const { data: mentorSettings, isLoading: isLoadingSettings } =
@@ -2231,12 +2233,8 @@ export function EmbedTab() {
                                     type="button"
                                     variant="outline"
                                     size="sm"
-                                    onClick={() =>
-                                      updateMultipleConfig({
-                                        image: null,
-                                        //use_icon: true,
-                                      })
-                                    }
+                                    onClick={() => removeCustomImage()}
+                                    disabled={isRemovingImage}
                                   >
                                     {t('removeImage')}
                                   </Button>
