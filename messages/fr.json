@@ -327,6 +327,14 @@
     "renaming": "Renommage...",
     "save": "Enregistrer"
   },
+  "canvasBinaryCanvas": {
+    "untitledFile": "Fichier sans titre",
+    "export": "Exporter",
+    "loadError": "Impossible de charger ce fichier.",
+    "retry": "Réessayer",
+    "previewUnavailable": "L'aperçu n'est pas disponible pour ce type de fichier.",
+    "download": "Télécharger"
+  },
   "canvasCanvasControls": {
     "lengthLongest": "Le plus long",
     "lengthLonger": "Plus long",
@@ -1922,12 +1930,7 @@
   },
   "tabsSandboxTab": {
     "heading": "Bac à sable",
-    "description": "Configurez les paramètres de connexion et de déploiement du bac à sable.",
-    "capabilityTitle": "Bac à sable dédié",
-    "capabilityDescription": "Offrez à cet agent son propre espace de travail sécurisé où il peut exécuter du code, des outils et des compétences en votre nom. Une fois activé, connectez-le à une instance ci-dessous pour débloquer les compétences et les invites de l'agent.",
-    "capabilityOffHint": "Activez-le pour offrir un espace de travail à cet agent et le connecter à une instance.",
-    "toggleSuccess": "Paramètre du bac à sable mis à jour",
-    "toggleError": "Impossible de mettre à jour le paramètre du bac à sable"
+    "description": "Configurez les paramètres de connexion et de déploiement du bac à sable."
   },
   "tabsGraderTab": {
     "headerTitle": "Évaluateur",

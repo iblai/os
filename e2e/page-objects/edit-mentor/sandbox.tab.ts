@@ -1,19 +1,48 @@
 import { Page, Locator, expect } from '@playwright/test';
+import {
+  verifySandboxKindsVisible,
+  isSandboxKindEnabled,
+  toggleSandboxKind,
+  verifySandboxKindDisabled,
+  type SandboxKind,
+} from '@iblai/iblai-js/playwright';
+
+export type { SandboxKind };
 
 /**
  * Page object for the Sandbox tab inside the Edit Mentor dialog.
  *
- * Renders the SandboxConfig component from @iblai/iblai-js/web-containers. The
- * component has two distinct states keyed off `mentorConfig`:
+ * Renders the SandboxConfig component from @iblai/iblai-js/web-containers
+ * directly — there is no app-level capability gate around it any more. The
+ * component always renders a "Sandbox Type" card with three kind switches
+ * (`sandbox-kind-computational-runtime`, `sandbox-kind-virtual-machine`,
+ * `sandbox-kind-claw`). Computational Runtime and Virtual Machine can both be
+ * on at once; enabling Claw turns both of them off in the same PATCH and
+ * disables their switches while Claw stays on (plus an info-tooltip note
+ * explaining why). The claw connected/not-connected sections (instance
+ * picker / "Connected Instance" panel) render ONLY while the Claw kind is
+ * enabled — they are not merely grayed out when Claw is off, they are absent
+ * from the DOM entirely.
  *
- *  - NOT CONNECTED: instance picker (search input + Add Instance + table).
- *  - CONNECTED: "Connected Instance" panel + Disconnect + config switches.
+ *  - NOT CONNECTED (claw on, no wired instance): instance picker (search
+ *    input + Add Instance + table).
+ *  - CONNECTED (claw on, wired instance): "Connected Instance" panel +
+ *    Disconnect + config switches.
  *
- * The component fires sonner toasts as the externally observable success
- * signal for every mutation. We key off those rather than DOM transitions
- * where possible — they're the contract between the SDK and consumers.
+ * The kind switches wrap the SDK's own Playwright helpers
+ * (`@iblai/iblai-js/playwright` → `claw-sandbox-helpers`) rather than
+ * hand-rolled locators, since the SDK owns that DOM and ships helpers for it.
+ * Specs should go through this page object rather than importing those SDK
+ * helpers directly, consistent with how the rest of this class wraps SDK
+ * behavior for the connected/not-connected sections below.
+ *
+ * The component otherwise fires sonner toasts as the externally observable
+ * success signal for every mutation. We key off those rather than DOM
+ * transitions where possible — they're the contract between the SDK and
+ * consumers.
  *
  * Toasts (from @iblai/iblai-js/web-containers/dist):
+ *   "Sandbox type updated"  — sandbox-kind switch toggle success
  *   "Instance created"      — handleCreateInstance success
  *   "Instance updated"      — EditInstanceDialog save success
  *   "Instance connected"    — handleConnect success
@@ -21,8 +50,11 @@ import { Page, Locator, expect } from '@playwright/test';
  *   "Instance deleted"      — handleDeleteInstance success
  *   "Configuration updated" — auto_push toggle success
  *
- * All locators are scoped to the parent `dialog` Locator so they cannot
- * accidentally match elements outside the Edit Mentor modal.
+ * Most locators are scoped to the parent `dialog` Locator so they cannot
+ * accidentally match elements outside the Edit Mentor modal. The sandbox-kind
+ * switches are the exception — the underlying SDK helpers resolve them via
+ * `page.getByTestId`, unscoped, since only one Edit Mentor dialog is ever
+ * open at a time in these tests.
  *
  * Web-first assertions: methods rely on Playwright's auto-retry and the
  * suite-level expect timeout — no hand-tuned `{ timeout }` values inside
@@ -33,20 +65,13 @@ export class SandboxTab {
   readonly page: Page;
   readonly dialog: Locator;
 
-  // ── Capability gate ───────────────────────────────────────────────────────
-  // The "Dedicated sandbox" (`enable_claw`) master toggle used to live in
-  // Settings → Capabilities; it now lives inline at the top of this tab via
-  // the shared `CapabilityGate` component. The toggle auto-saves (no footer
-  // Save button) — `SandboxTab` (app component) calls `useEditMentorMutation`
-  // directly on toggle and shows a toast ("Sandbox setting updated" /
-  // "Couldn't update sandbox setting"). The gated `SandboxConfig` content
-  // below is grayed out + inert (`data-enabled="false"`) while the toggle is
-  // off; interacting with it requires turning the capability on first.
-  readonly capabilityToggle: Locator;
-  /** Wrapper around the gated `SandboxConfig` content — `data-enabled` mirrors the toggle. */
-  readonly capabilityContent: Locator;
-  /** Hint shown next to the description while the capability is off. */
-  readonly capabilityOffHint: Locator;
+  // ── Sandbox kind selector ────────────────────────────────────────────────
+  // Always rendered (no gate). Computational Runtime and Virtual Machine can
+  // both be on simultaneously; enabling Claw turns both off and disables
+  // their switches for as long as Claw stays on.
+  readonly computationalRuntimeSwitch: Locator;
+  readonly virtualMachineSwitch: Locator;
+  readonly clawSwitch: Locator;
 
   // ── Not-connected state ──────────────────────────────────────────────────
   readonly searchInput: Locator;
@@ -81,17 +106,15 @@ export class SandboxTab {
     this.page = page;
     this.dialog = dialog;
 
-    // Capability gate
-    this.capabilityToggle = dialog.getByTestId('sandbox-capability-toggle');
-    // `:visible` scopes to the currently-active tab's gate — top-level tab
-    // panels can stay force-mounted (CSS-hidden) while inactive, and every
-    // gated tab renders its own `capability-gate-content` wrapper.
-    this.capabilityContent = dialog.locator(
-      '[data-testid="capability-gate-content"]:visible',
+    // Sandbox kind selector — unscoped page-level testids (matching the SDK
+    // helpers), only one Edit Mentor dialog is ever open at a time.
+    this.computationalRuntimeSwitch = page.getByTestId(
+      'sandbox-kind-computational-runtime',
     );
-    this.capabilityOffHint = dialog.locator(
-      '[data-testid="capability-gate-off-hint"]:visible',
+    this.virtualMachineSwitch = page.getByTestId(
+      'sandbox-kind-virtual-machine',
     );
+    this.clawSwitch = page.getByTestId('sandbox-kind-claw');
 
     // Not-connected state
     this.searchInput = dialog.getByPlaceholder('Search instances...');
@@ -166,39 +189,94 @@ export class SandboxTab {
     this.pushButton = dialog.getByRole('button', { name: /^push$/i });
   }
 
-  // ── Capability gate ───────────────────────────────────────────────────────
+  // ── Sandbox kind selector ────────────────────────────────────────────────
+  // Thin wrappers around the SDK's own `claw-sandbox-helpers` Playwright
+  // helpers — the SDK owns this DOM (SandboxConfig from
+  // @iblai/iblai-js/web-containers), so its helpers are the source of truth
+  // for how to interact with it. Specs call through this page object rather
+  // than importing the SDK helpers directly.
 
-  /** Whether the "Dedicated sandbox" capability toggle is currently on. */
-  async isCapabilityEnabled(): Promise<boolean> {
-    const attr = await this.capabilityToggle
-      .getAttribute('aria-checked')
-      .catch(() => null);
-    return attr === 'true';
+  /** Display label used in the SDK's info-tooltip aria-labels, per kind. */
+  private kindLabel(kind: SandboxKind): string {
+    switch (kind) {
+      case 'computational-runtime':
+        return 'Computing Runtime';
+      case 'virtual-machine':
+        return 'Virtual Machine Shell';
+      case 'claw':
+        return 'Claw';
+    }
+  }
+
+  /** Locator for a kind row's switch, by kind. */
+  kindSwitch(kind: SandboxKind): Locator {
+    switch (kind) {
+      case 'computational-runtime':
+        return this.computationalRuntimeSwitch;
+      case 'virtual-machine':
+        return this.virtualMachineSwitch;
+      case 'claw':
+        return this.clawSwitch;
+    }
   }
 
   /**
-   * Idempotently set the "Dedicated sandbox" capability toggle to the target
-   * state. The toggle auto-saves (`useEditMentorMutation` fires directly on
-   * click, optimistic local state) — no footer Save button involved. Waits
-   * for both the toggle's `aria-checked` and the gated content's
-   * `data-enabled` attribute to reflect the target state.
+   * The row's info-icon tooltip trigger (accessible name "More info about
+   * {kind}"). Hovering it reveals the detail tooltip, which also carries the
+   * "kinds disabled by claw" note while Claw is on.
    */
-  async setCapabilityEnabled(target: boolean): Promise<void> {
-    await expect(this.capabilityToggle).toBeVisible({ timeout: 10_000 });
-    const isOn = await this.isCapabilityEnabled();
-    if (isOn === target) return;
+  kindInfoTrigger(kind: SandboxKind): Locator {
+    return this.page.getByRole('button', {
+      name: `More info about ${this.kindLabel(kind)}`,
+    });
+  }
 
-    await this.capabilityToggle.click();
-    await expect(this.capabilityToggle).toHaveAttribute(
-      'aria-checked',
-      String(target),
-      { timeout: 15_000 },
-    );
-    await expect(this.capabilityContent).toHaveAttribute(
-      'data-enabled',
-      String(target),
-      { timeout: 15_000 },
-    );
+  /** Verify all three sandbox-kind switches are visible. */
+  async verifyKindsVisible(): Promise<void> {
+    await verifySandboxKindsVisible(this.page);
+  }
+
+  /** Whether a sandbox-kind switch is currently on. */
+  async isKindEnabled(kind: SandboxKind): Promise<boolean> {
+    return isSandboxKindEnabled(this.page, kind);
+  }
+
+  /**
+   * Toggles a sandbox-kind switch and waits for the "Sandbox type updated"
+   * save toast. Throws if the switch isn't clickable — Computational Runtime
+   * and Virtual Machine are disabled while Claw is enabled.
+   */
+  async toggleKind(kind: SandboxKind): Promise<void> {
+    await toggleSandboxKind(this.page, kind);
+  }
+
+  /**
+   * Idempotently sets a sandbox-kind switch to the target state — mirrors
+   * the old capability toggle's `setCapabilityEnabled` pattern. No-ops if
+   * already at the target state.
+   */
+  async setKindEnabled(kind: SandboxKind, target: boolean): Promise<void> {
+    const isOn = await this.isKindEnabled(kind);
+    if (isOn === target) return;
+    await this.toggleKind(kind);
+  }
+
+  /** Verify a kind switch is disabled (Computational Runtime / Virtual Machine while Claw is on). */
+  async verifyKindDisabled(kind: SandboxKind): Promise<void> {
+    await verifySandboxKindDisabled(this.page, kind);
+  }
+
+  /**
+   * Hovers the kind's info icon and asserts the "kinds disabled by claw"
+   * note is present in the revealed tooltip. Only meaningful for
+   * Computational Runtime / Virtual Machine while Claw is enabled — the
+   * SDK only passes a `disabledNote` in that case.
+   */
+  async verifyKindDisabledHint(kind: SandboxKind): Promise<void> {
+    await this.kindInfoTrigger(kind).hover();
+    await expect(
+      this.page.getByText(/Claw replaces the built-in agent runtimes/i),
+    ).toBeVisible({ timeout: 5_000 });
   }
 
   // ── State detection ──────────────────────────────────────────────────────

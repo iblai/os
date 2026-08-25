@@ -327,6 +327,14 @@
     "renaming": "Renombrando...",
     "save": "Guardar"
   },
+  "canvasBinaryCanvas": {
+    "untitledFile": "Archivo sin título",
+    "export": "Exportar",
+    "loadError": "No se pudo cargar este archivo.",
+    "retry": "Reintentar",
+    "previewUnavailable": "La vista previa no está disponible para este tipo de archivo.",
+    "download": "Descargar"
+  },
   "canvasCanvasControls": {
     "lengthLongest": "El más largo",
     "lengthLonger": "Más largo",
@@ -1922,12 +1930,7 @@
   },
   "tabsSandboxTab": {
     "heading": "Sandbox",
-    "description": "Configure los ajustes de conexión y despliegue del sandbox.",
-    "capabilityTitle": "Sandbox dedicado",
-    "capabilityDescription": "Dé a este agente su propio espacio de trabajo seguro donde puede ejecutar código, herramientas y habilidades en su nombre. Cuando esté activado, conéctelo a una instancia a continuación para desbloquear las habilidades y las indicaciones del agente.",
-    "capabilityOffHint": "Actívelo para dar a este agente un espacio de trabajo y conectarlo a una instancia.",
-    "toggleSuccess": "Ajuste del sandbox actualizado",
-    "toggleError": "No se pudo actualizar el ajuste del sandbox"
+    "description": "Configure los ajustes de conexión y despliegue del sandbox."
   },
   "tabsGraderTab": {
     "headerTitle": "Calificador",

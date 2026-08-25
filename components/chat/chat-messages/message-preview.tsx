@@ -1,9 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useParams } from 'next/navigation';
 import { FileText } from 'lucide-react';
 import Markdown from '@/components/markdown';
 import { CanvasMessagePreview } from './canvas-message-preview';
 import type { CanvasOpenPayload } from './types';
 import type { ArtifactVersion } from '@iblai/iblai-js/web-utils';
+import {
+  canOpenBinaryInCanvas,
+  resolveBinaryMimeType,
+  shouldUseBinaryCanvas,
+} from '@/components/canvas/binary-artifact-utils';
+import { useBinaryArtifactDownload } from '@/hooks/use-binary-artifact-download';
+import { useUsername } from '@/hooks/use-user';
+import type { TenantKeyMentorIdParams } from '@/lib/types';
 
 const CODE_EXTENSIONS = new Set([
   'py',
@@ -32,7 +41,13 @@ const CODE_EXTENSIONS = new Set([
   'sh',
 ]);
 
-const determineToolType = (fileExtension?: string): string => {
+const determineToolType = (
+  fileExtension?: string,
+  isBinary?: boolean,
+): string => {
+  if (isBinary) {
+    return 'binary';
+  }
   if (!fileExtension) {
     return 'canvas';
   }
@@ -98,6 +113,9 @@ export function MessagePreview({
   onOpenCanvas,
   streamingArtifactId,
 }: MessagePreviewProps) {
+  const { tenantKey } = useParams<TenantKeyMentorIdParams>();
+  const username = useUsername();
+  const { downloadBinaryArtifact, isDownloading } = useBinaryArtifactDownload();
   const currentArtifact = useMemo(
     () => getCurrentArtifactVersion(artifactVersions),
     [artifactVersions],
@@ -145,16 +163,36 @@ export function MessagePreview({
   const artifact = selectedVersion.artifact;
   const artifactContent = selectedVersion.content || artifact.content || '';
   const fileExtension = artifact.file_extension || 'md';
-  const toolType = determineToolType(fileExtension);
+  // `is_binary` / `mime_type` are returned by the API but predate the SDK's
+  // ArtifactData type; live-streamed artifacts lack them entirely, so the
+  // extension map inside isBinaryArtifact is the fallback.
+  const { is_binary: rawIsBinary, mime_type: rawMimeType } =
+    artifact as typeof artifact & {
+      is_binary?: boolean;
+      mime_type?: string | null;
+    };
+  const isBinary = shouldUseBinaryCanvas({
+    isBinary: rawIsBinary,
+    mimeType: rawMimeType,
+    fileExtension,
+  });
+  const mimeType = isBinary
+    ? resolveBinaryMimeType(fileExtension, rawMimeType)
+    : undefined;
+  const binaryOpensInCanvas =
+    isBinary && canOpenBinaryInCanvas({ mimeType, fileExtension });
+  const toolType = determineToolType(fileExtension, isBinary);
 
   const payload: CanvasOpenPayload = {
     title: displayTitle || 'Untitled Artifact',
-    content: artifactContent,
+    content: isBinary ? '' : artifactContent,
     toolType,
     artifactId: artifact.id,
     org: undefined, // Will be resolved from context
     userId: artifact.username,
     fileExtension,
+    isBinary,
+    mimeType,
     metadata: {
       sessionId: artifact.session_id || selectedVersion.session_id,
       versionNumber: selectedVersion.version_number,
@@ -164,7 +202,19 @@ export function MessagePreview({
     },
   };
 
-  const previewText = buildSnippet(artifactContent);
+  const previewText = isBinary ? '' : buildSnippet(artifactContent);
+
+  const handleDownload = () => {
+    if (!artifact.id || !tenantKey) return;
+    void downloadBinaryArtifact({
+      artifactId: artifact.id,
+      org: tenantKey,
+      userId: artifact.username || username || '',
+      title: displayTitle || artifact.title,
+      fileExtension,
+      mimeType,
+    });
+  };
 
   const renderArtifactPreview = () => {
     if (selectedVersion.is_current) {
@@ -173,11 +223,15 @@ export function MessagePreview({
       return (
         <CanvasMessagePreview
           title={displayTitle || 'Untitled Artifact'}
-          content={artifactContent}
+          content={isBinary ? '' : artifactContent}
           previewText={previewText}
           payload={payload}
           onOpenCanvas={onOpenCanvas}
           isStreaming={isStreaming}
+          isBinary={isBinary}
+          canOpenInCanvas={!isBinary || binaryOpensInCanvas}
+          onDownload={handleDownload}
+          isDownloading={isDownloading}
         />
       );
     }

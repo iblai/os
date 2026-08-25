@@ -1,4 +1,4 @@
-import { ExternalLink, Loader2 } from 'lucide-react';
+import { Download, ExternalLink, FileArchive, Loader2 } from 'lucide-react';
 
 import { CanvasIcon } from '@/components/icons/svg-icons';
 import { Button } from '@/components/ui/button';
@@ -38,6 +38,10 @@ export const CanvasMessagePreview = ({
   payload,
   onOpenCanvas,
   isStreaming = false,
+  isBinary = false,
+  canOpenInCanvas = true,
+  onDownload,
+  isDownloading = false,
 }: {
   title: string;
   content: string;
@@ -45,6 +49,13 @@ export const CanvasMessagePreview = ({
   payload: CanvasOpenPayload;
   onOpenCanvas?: (payload: CanvasOpenPayload) => void;
   isStreaming?: boolean;
+  /** Binary file artifact (pdf, zip, …). */
+  isBinary?: boolean;
+  /** Whether the side canvas can display this artifact. */
+  canOpenInCanvas?: boolean;
+  /** Download-in-place handler for binaries the canvas cannot display. */
+  onDownload?: () => void;
+  isDownloading?: boolean;
 }) => {
   const handleOpenCanvas = () => {
     if (onOpenCanvas) {
@@ -54,7 +65,16 @@ export const CanvasMessagePreview = ({
     }
   };
 
-  const snippet = buildSnippet(previewText ?? content.replace(/<[^>]+>/g, ' '));
+  // Binary artifacts have no textual content — describe the file instead.
+  const fileExtension = (payload.fileExtension || '').trim();
+  const binaryLabel = fileExtension
+    ? `${fileExtension.toUpperCase()} file`
+    : 'Binary file';
+  const snippet = isBinary
+    ? binaryLabel
+    : buildSnippet(previewText ?? content.replace(/<[^>]+>/g, ' '));
+
+  const showDownloadInstead = isBinary && !canOpenInCanvas;
 
   return (
     <div
@@ -63,7 +83,11 @@ export const CanvasMessagePreview = ({
     >
       <div className="flex items-start gap-3">
         <div className="rounded-lg bg-[#D0E0FF] p-2 text-[#38A1E5]">
-          <CanvasIcon className="h-5 w-5" />
+          {isBinary ? (
+            <FileArchive className="h-5 w-5" />
+          ) : (
+            <CanvasIcon className="h-5 w-5" />
+          )}
         </div>
         <div className="min-w-0 flex-1">
           <Markdown className="mb-1 truncate text-sm font-medium text-gray-900">
@@ -78,16 +102,34 @@ export const CanvasMessagePreview = ({
               <span>Generating...</span>
             </div>
           )}
-          <Button
-            size="sm"
-            variant="outline"
-            className="border-blue-200 bg-transparent text-blue-600 hover:bg-blue-50"
-            onClick={handleOpenCanvas}
-            data-testid="canvas-open-button"
-          >
-            <ExternalLink className="mr-1 h-3 w-3" />
-            Open Canvas
-          </Button>
+          {showDownloadInstead ? (
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-blue-200 bg-transparent text-blue-600 hover:bg-blue-50"
+              onClick={onDownload}
+              disabled={isDownloading || isStreaming}
+              data-testid="canvas-download-button"
+            >
+              {isDownloading ? (
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+              ) : (
+                <Download className="mr-1 h-3 w-3" />
+              )}
+              Download
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-blue-200 bg-transparent text-blue-600 hover:bg-blue-50"
+              onClick={handleOpenCanvas}
+              data-testid="canvas-open-button"
+            >
+              <ExternalLink className="mr-1 h-3 w-3" />
+              Open Canvas
+            </Button>
+          )}
         </div>
       </div>
     </div>

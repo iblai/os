@@ -1,11 +1,11 @@
 {
   "version": 2,
-  "lastUpdated": "2026-08-13",
+  "lastUpdated": "2026-08-25",
   "summary": {
-    "totalCheckpoints": 665,
+    "totalCheckpoints": 668,
     "coveredCheckpoints": 634,
     "deprecatedCheckpoints": 12,
-    "notReproducibleCheckpoints": 11,
+    "notReproducibleCheckpoints": 14,
     "pendingCheckpoints": 8,
     "percent": 100,
     "totalJourneys": 71,
@@ -595,7 +595,15 @@
       "spec": "10-canvas-ai-document-editor.spec.ts",
       "sourceFiles": [
         "components/canvas/canvas-component.tsx",
-        "components/canvas/canvas-controls.tsx"
+        "components/canvas/canvas-controls.tsx",
+        "components/canvas/canvas-view.tsx",
+        "components/canvas/binary-canvas-component.tsx",
+        "components/canvas/binary-artifact-utils.ts",
+        "components/chat/chat-messages/canvas-message-preview.tsx",
+        "components/chat/chat-messages/message-preview.tsx",
+        "components/chat/chat-messages/types.ts",
+        "components/chat/index.tsx",
+        "hooks/use-binary-artifact-download.ts"
       ],
       "checkpoints": [
         {
@@ -652,6 +660,21 @@
           "id": "cvs-11",
           "description": "Follow-up chat message modifies canvas content",
           "status": "covered"
+        },
+        {
+          "id": "cvs-12",
+          "description": "Chat message chip for a binary artifact (pdf, xlsx, zip, …) shows a canvas-displayable-type-aware action: \"Open Canvas\" (data-testid=\"canvas-open-button\") for pdf/image binaries the canvas can render, \"Download\" (data-testid=\"canvas-download-button\") for non-displayable binaries (zip, xlsx, docx, …), which fetches the artifact detail endpoint and saves the original file — unit-covered in canvas-message-preview.test.tsx and message-preview.test.tsx; not e2e-reproducible without a live LLM + sandbox VM producing a real binary artifact mid-conversation (backend serves bytes base64 in binary_content from the detail endpoint only; no deterministic seeding path exists in this suite for chat message/artifact history)",
+          "status": "not-reproducible"
+        },
+        {
+          "id": "cvs-13",
+          "description": "Read-only binary canvas (components/canvas/binary-canvas-component.tsx, data-testid=\"binary-canvas\") renders view + a single Export action only — no formatting toolbar, highlight-to-edit, AI controls, version menu, or rename — previewing pdf (iframe, data-testid=\"binary-canvas-pdf\") and images (data-testid=\"binary-canvas-image\") inline, with a download-only fallback (data-testid=\"binary-canvas-fallback\") for non-previewable types and loading/error/retry states — unit-covered in binary-canvas-component.test.tsx, canvas-view.test.tsx, and binary-artifact-utils.test.ts; not e2e-reproducible without a real binary artifact (same live-LLM/sandbox dependency as cvs-12)",
+          "status": "not-reproducible"
+        },
+        {
+          "id": "cvs-14",
+          "description": "Binary-artifact stream/open orchestration in components/chat/index.tsx: binary artifacts never auto-open the canvas mid-stream; at stream end, displayable binaries (pdf/svg/image) auto-open the binary canvas while non-displayable ones leave the chip's Download action as the only affordance; opening a binary artifact does not pin it to outgoing chat messages as editable artifact context (unlike text/code canvas artifacts). The open/skip decision logic is unit-tested via getBinaryStreamBehavior (components/canvas/__tests__/binary-artifact-utils.test.ts), which the chat stream handlers consume; the handler wiring itself (event listeners, handleOpenCanvas call, no-pin branch) remains untested and is not e2e-reproducible without a real binary artifact — flagged here rather than silently omitted",
+          "status": "not-reproducible"
         }
       ]
     },
@@ -2398,28 +2421,27 @@
       "sourceFiles": [
         "components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx",
         "components/modals/edit-mentor-modal/tabs/prompts-tab.tsx",
-        "components/modals/edit-mentor-modal/capability-gate.tsx",
         "hooks/use-mentor-segments.ts"
       ],
       "checkpoints": [
         {
           "id": "claw-01",
-          "description": "Admin opens the Sandbox tab and the \"Dedicated sandbox\" capability toggle (in-tab CapabilityGate, feat/2040) is present",
+          "description": "Admin opens the Sandbox tab and the three sandbox-kind switches (Computing Runtime / Virtual Machine Shell / Claw) are visible — the app-level CapabilityGate around SandboxConfig is gone; the SDK component (@iblai/iblai-js/web-containers) owns kind selection directly",
           "status": "covered"
         },
         {
           "id": "claw-02",
-          "description": "Capability toggle is interactable for admins regardless of sandbox connection state (admin intent)",
+          "description": "Computational-runtime and virtual-machine switches are interactable for admins while claw is off",
           "status": "covered"
         },
         {
           "id": "claw-03",
-          "description": "Flipping the capability toggle auto-saves instantly (optimistic local state, no footer Save button) and does not change Sandbox tab visibility — the tab is unconditionally mounted for admins",
+          "description": "Toggling computational-runtime and virtual-machine kinds auto-saves instantly (optimistic local state, no footer Save button), both can be enabled simultaneously, and neither affects Sandbox tab visibility — the tab is unconditionally mounted for admins",
           "status": "covered"
         },
         {
           "id": "claw-04",
-          "description": "Enabling the capability flips capability-gate-content's data-enabled to \"true\", ungating the SandboxConfig UI; Sandbox leads the Integrations category (feat/2040 moved it off Configurations)",
+          "description": "Enabling claw turns off and disables the computational-runtime and virtual-machine switches in the same PATCH, and surfaces the \"kinds disabled by claw\" info-tooltip hint; Sandbox leads the Integrations category (feat/2040 moved it off Configurations)",
           "status": "covered"
         },
         {
@@ -2429,22 +2451,22 @@
         },
         {
           "id": "claw-07",
-          "description": "Disabling the capability flips capability-gate-content's data-enabled back to \"false\", regating the SandboxConfig UI, while the Sandbox tab remains visible",
+          "description": "Disabling claw re-enables the computational-runtime and virtual-machine switches while the Sandbox tab remains visible",
           "status": "covered"
         },
         {
           "id": "claw-08",
-          "description": "Admin navigates to Sandbox tab and the sandbox config container renders regardless of capability state (grayed, not unmounted, when off)",
+          "description": "Admin navigates to Sandbox tab: the sandbox-kind card always renders; the claw connected/not-connected instance sections render ONLY while claw is enabled — the SDK unmounts them entirely when claw is off rather than merely graying them out",
           "status": "covered"
         },
         {
           "id": "claw-09",
-          "description": "Admin toggles the capability ON then OFF in one session and capability-gate-content's data-enabled flips accordingly both times",
+          "description": "Admin toggles claw ON then OFF in one session and the claw connected/not-connected instance sections mount and unmount accordingly both times",
           "status": "covered"
         },
         {
           "id": "claw-10",
-          "description": "Admin adds a new sandbox instance via the Add Instance dialog (capability enabled first — CapabilityGate content requires the toggle on) and the new row appears in the instance table",
+          "description": "Admin adds a new sandbox instance via the Add Instance dialog (claw kind enabled first — the instance sections only render while claw is on) and the new row appears in the instance table",
           "status": "covered"
         },
         {
@@ -2464,7 +2486,7 @@
         },
         {
           "id": "claw-16",
-          "description": "Dedicated sandbox toggle (enable_claw) is disabled when the user only has read access to the field (RBAC) — unit-covered in sandbox-tab.test.tsx; not e2e-reproducible without RBAC field-permission seeding",
+          "description": "Claw kind switch (enable_claw) is disabled when the user only has read access to the field (RBAC) — unit-covered in sandbox-tab.test.tsx; not e2e-reproducible without RBAC field-permission seeding",
           "status": "not-reproducible"
         }
       ]

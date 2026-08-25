@@ -346,4 +346,85 @@ describe('CanvasMessagePreview', () => {
       expect(button).toBeInTheDocument();
     });
   });
+
+  describe('binary artifacts', () => {
+    const mockOnDownload = vi.fn();
+
+    const binaryPayload: CanvasOpenPayload = {
+      title: 'archive.zip',
+      content: '',
+      toolType: 'binary',
+      artifactId: 42,
+      fileExtension: 'zip',
+      isBinary: true,
+      mimeType: 'application/zip',
+    };
+
+    const binaryProps = {
+      title: 'archive.zip',
+      content: '',
+      payload: binaryPayload,
+      onOpenCanvas: mockOnOpenCanvas,
+      onDownload: mockOnDownload,
+      isBinary: true,
+    };
+
+    it('shows Download instead of Open Canvas when the canvas cannot display the file', () => {
+      render(<CanvasMessagePreview {...binaryProps} canOpenInCanvas={false} />);
+
+      expect(screen.getByTestId('canvas-download-button')).toBeInTheDocument();
+      expect(screen.getByText('Download')).toBeInTheDocument();
+      expect(
+        screen.queryByTestId('canvas-open-button'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('invokes onDownload — not onOpenCanvas — from the Download button', () => {
+      render(<CanvasMessagePreview {...binaryProps} canOpenInCanvas={false} />);
+
+      fireEvent.click(screen.getByTestId('canvas-download-button'));
+
+      expect(mockOnDownload).toHaveBeenCalled();
+      expect(mockOnOpenCanvas).not.toHaveBeenCalled();
+    });
+
+    it('disables the Download button while a download is in flight', () => {
+      render(
+        <CanvasMessagePreview
+          {...binaryProps}
+          canOpenInCanvas={false}
+          isDownloading
+        />,
+      );
+
+      expect(screen.getByTestId('canvas-download-button')).toBeDisabled();
+    });
+
+    it('keeps Open Canvas for binaries the canvas can display (pdf)', () => {
+      render(
+        <CanvasMessagePreview
+          {...binaryProps}
+          payload={{
+            ...binaryPayload,
+            title: 'report.pdf',
+            fileExtension: 'pdf',
+            mimeType: 'application/pdf',
+          }}
+          title="report.pdf"
+          canOpenInCanvas
+        />,
+      );
+
+      expect(screen.getByTestId('canvas-open-button')).toBeInTheDocument();
+      expect(
+        screen.queryByTestId('canvas-download-button'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('describes the file type instead of a content snippet', () => {
+      render(<CanvasMessagePreview {...binaryProps} canOpenInCanvas={false} />);
+
+      expect(screen.getByText('ZIP file')).toBeInTheDocument();
+    });
+  });
 });

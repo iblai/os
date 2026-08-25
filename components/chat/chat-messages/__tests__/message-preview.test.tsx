@@ -11,6 +11,27 @@ vi.mock('@/components/markdown', () => ({
   ),
 }));
 
+// MessagePreview resolves org/user context and the binary download flow via
+// hooks — stub them so the component renders without app providers.
+const { mockDownloadBinaryArtifact } = vi.hoisted(() => ({
+  mockDownloadBinaryArtifact: vi.fn(),
+}));
+
+vi.mock('next/navigation', () => ({
+  useParams: () => ({ tenantKey: 'test-org', mentorId: 'test-mentor' }),
+}));
+
+vi.mock('@/hooks/use-user', () => ({
+  useUsername: () => 'testuser',
+}));
+
+vi.mock('@/hooks/use-binary-artifact-download', () => ({
+  useBinaryArtifactDownload: () => ({
+    downloadBinaryArtifact: mockDownloadBinaryArtifact,
+    isDownloading: false,
+  }),
+}));
+
 // Mock CanvasMessagePreview component
 vi.mock('../canvas-message-preview', () => ({
   CanvasMessagePreview: ({
@@ -19,21 +40,32 @@ vi.mock('../canvas-message-preview', () => ({
     payload,
     onOpenCanvas,
     isStreaming,
+    isBinary,
+    canOpenInCanvas,
+    onDownload,
   }: {
     title: string;
     content: string;
     payload: CanvasOpenPayload;
     onOpenCanvas?: (payload: CanvasOpenPayload) => void;
     isStreaming?: boolean;
+    isBinary?: boolean;
+    canOpenInCanvas?: boolean;
+    onDownload?: () => void;
   }) => (
     <div data-testid="canvas-message-preview">
       <span data-testid="canvas-title">{title}</span>
       <span data-testid="canvas-streaming">{String(isStreaming)}</span>
+      <span data-testid="canvas-is-binary">{String(isBinary)}</span>
+      <span data-testid="canvas-can-open">{String(canOpenInCanvas)}</span>
       <button
         data-testid="canvas-open-btn"
         onClick={() => onOpenCanvas?.(payload)}
       >
         Open
+      </button>
+      <button data-testid="canvas-download-btn" onClick={() => onDownload?.()}>
+        Download
       </button>
     </div>
   ),
@@ -769,6 +801,146 @@ describe('MessagePreview', () => {
 
       expect(screen.getByText('Some Document')).toBeInTheDocument();
       expect(screen.getByText('Version 3')).toBeInTheDocument();
+    });
+  });
+
+  describe('binary artifacts', () => {
+    const createBinaryVersion = (
+      artifactOverrides: Record<string, unknown> = {},
+    ): ArtifactVersion =>
+      createArtifactVersion({
+        content: '',
+        title: 'report.pdf',
+        artifact: {
+          id: 42,
+          title: 'report.pdf',
+          content: '',
+          file_extension: 'pdf',
+          username: 'artifact-owner',
+          version_count: 1,
+          current_version_number: 1,
+          date_created: new Date().toISOString(),
+          date_updated: new Date().toISOString(),
+          // Runtime-only API fields (predate the SDK type)
+          ...({ is_binary: true, mime_type: 'application/pdf' } as object),
+          ...artifactOverrides,
+        } as ArtifactVersion['artifact'],
+      });
+
+    it('marks a pdf artifact binary and openable in the canvas', () => {
+      render(
+        <MessagePreview
+          content=""
+          artifactVersions={[createBinaryVersion()]}
+          onOpenCanvas={mockOnOpenCanvas}
+        />,
+      );
+
+      expect(screen.getByTestId('canvas-is-binary')).toHaveTextContent('true');
+      expect(screen.getByTestId('canvas-can-open')).toHaveTextContent('true');
+    });
+
+    it('builds a binary open payload with toolType binary, mime type and no content', () => {
+      render(
+        <MessagePreview
+          content=""
+          artifactVersions={[createBinaryVersion()]}
+          onOpenCanvas={mockOnOpenCanvas}
+        />,
+      );
+
+      fireEvent.click(screen.getByTestId('canvas-open-btn'));
+
+      expect(mockOnOpenCanvas).toHaveBeenCalledWith(
+        expect.objectContaining({
+          toolType: 'binary',
+          isBinary: true,
+          mimeType: 'application/pdf',
+          fileExtension: 'pdf',
+          content: '',
+          artifactId: 42,
+        }),
+      );
+    });
+
+    it('marks non-displayable binaries (zip) as not openable in the canvas', () => {
+      render(
+        <MessagePreview
+          content=""
+          artifactVersions={[
+            createBinaryVersion({
+              title: 'archive.zip',
+              file_extension: 'zip',
+              mime_type: 'application/zip',
+            }),
+          ]}
+          onOpenCanvas={mockOnOpenCanvas}
+        />,
+      );
+
+      expect(screen.getByTestId('canvas-is-binary')).toHaveTextContent('true');
+      expect(screen.getByTestId('canvas-can-open')).toHaveTextContent('false');
+    });
+
+    it('falls back to the file extension when is_binary/mime_type are absent (live streaming)', () => {
+      render(
+        <MessagePreview
+          content=""
+          artifactVersions={[
+            createBinaryVersion({
+              title: 'data.xlsx',
+              file_extension: 'xlsx',
+              is_binary: undefined,
+              mime_type: undefined,
+            }),
+          ]}
+          onOpenCanvas={mockOnOpenCanvas}
+        />,
+      );
+
+      expect(screen.getByTestId('canvas-is-binary')).toHaveTextContent('true');
+      expect(screen.getByTestId('canvas-can-open')).toHaveTextContent('false');
+    });
+
+    it('treats regular markdown artifacts as non-binary', () => {
+      render(
+        <MessagePreview
+          content=""
+          artifactVersions={[createArtifactVersion()]}
+          onOpenCanvas={mockOnOpenCanvas}
+        />,
+      );
+
+      expect(screen.getByTestId('canvas-is-binary')).toHaveTextContent('false');
+      expect(screen.getByTestId('canvas-can-open')).toHaveTextContent('true');
+    });
+
+    it('downloads the original file via the binary download hook', () => {
+      render(
+        <MessagePreview
+          content=""
+          artifactVersions={[
+            createBinaryVersion({
+              title: 'archive.zip',
+              file_extension: 'zip',
+              mime_type: 'application/zip',
+            }),
+          ]}
+          onOpenCanvas={mockOnOpenCanvas}
+        />,
+      );
+
+      fireEvent.click(screen.getByTestId('canvas-download-btn'));
+
+      expect(mockDownloadBinaryArtifact).toHaveBeenCalledWith(
+        expect.objectContaining({
+          artifactId: 42,
+          org: 'test-org',
+          userId: 'artifact-owner',
+          fileExtension: 'zip',
+          mimeType: 'application/zip',
+        }),
+      );
     });
   });
 });
