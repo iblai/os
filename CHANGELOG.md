@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.130.4](https://github.com/iblai/os/compare/v0.130.3...v0.130.4) (2026-08-25)
+
+### Bug Fixes
+
+* **embed:** stop the Embed tab preview flipping the app into embed mode ([acf3608](https://github.com/iblai/os/commit/acf36086717002de7734f6f1e074d2614e86f364))
+
+### Refactors
+
+* **embed:** hoist embed query-param names into QUERY_PARAMS ([40bc1dd](https://github.com/iblai/os/commit/40bc1dd00c6a1ceb9d59b0751d4079b334309680))
+
+### Chores
+
+* **format:** normalise CHANGELOG bullets to prettier style ([98df428](https://github.com/iblai/os/commit/98df428e97ab6c41c319227684faca93929c9128))
+
+### Tests
+
+* **e2e:** add journey 70 for the embed-preview embed-mode leak ([9ad9d23](https://github.com/iblai/os/commit/9ad9d238e10dba37ae2ed455dda3658cec8fa6d9))
+* **embed-tab:** define QUERY_PARAMS in the @/lib/constants mock ([c3e3000](https://github.com/iblai/os/commit/c3e3000478e0a929110b704ce44bddbeeb33508d))
+
 ## [0.130.3](https://github.com/iblai/os/compare/v0.130.2...v0.130.3) (2026-08-25)
 
 ### Documentation
