@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-08-18 | 665 checkpoints (634 covered, 8 pending/fixme, 11 not-reproducible in default env, 12 deprecated) | 71 journeys (70 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-08-25 | 677 checkpoints (646 covered, 8 pending/fixme, 11 not-reproducible in default env, 12 deprecated) | 72 journeys (71 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -326,9 +326,9 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 20: Dataset Management (18 checkpoints) — `journeys/20-dataset-management.spec.ts`
+## Journey 20: Dataset Management (26 checkpoints) — `journeys/20-dataset-management.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/datasets-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/dataset-item.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/retrain-schedule-modal.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/train-or-delete-modal.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/resource-types.tsx`, `hooks/use-datasets.ts`
+**Source files:** `components/modals/edit-mentor-modal/tabs/datasets-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/dataset-item.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/retrain-schedule-modal.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/train-or-delete-modal.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/resource-types.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx`, `hooks/use-datasets.ts`, `hooks/user-navigate.ts`, `lib/constants.ts`
 
 - [x] Datasets tab header and description display correctly (TC01)
 - [x] Search input is visible and filters the dataset list (TC02–TC03)
@@ -348,6 +348,17 @@ When adding a new page or modifying an existing user flow:
 - [x] Untrained dataset can be deleted; trained dataset can be untrained then deleted; retraining can be scheduled; file upload cancellation is handled gracefully (TC25–TC28)
 - [x] Markdown resource type is available in the Add Resources modal (TC30, issue #1117)
 - [x] Markdown (.md) file can be uploaded and appears in the dataset list (TC31, issue #1117)
+
+**URL query-string sync** — the Datasets tab syncs its page/search state to `datasetsPage`/`datasetsSearch` query params (`agent-datasets-tab.tsx` + `hooks/user-navigate.ts`). Setting a search always implies a page reset, so page and search are never both non-default at once — the reload/deep-link checkpoints test each in isolation rather than a combined state the app can't produce. The pagination checkpoints (TC36–TC39) need more than one page of results (5 items/page), so each one **seeds its own fixture at runtime**: create a mentor, POST 12 tiny documents to the training API (3 pages — TC37 pages forward twice and TC38 searches from page 3), then delete the mentor in `afterAll` via `MentorTracker`. Seeding goes through `utils/dataset-seeding.ts` rather than the Add Resource UI, which costs ~20s per file. Nothing environment-specific is hard-coded: the tenant key, username and `dm_token` are read from `localStorage` at runtime and the mentor is the one the test just created. An earlier revision pointed these tests at a hand-seeded mentor identified by tenant key + id — that only resolved on the environment it was seeded on and sent every other admin to `/error/403`, so the tests timed out on navigation instead of running.
+
+- [x] Typing in the datasets search debounces into the `datasetsSearch` URL query param, using `router.replace` so it doesn't stack history entries (TC32)
+- [x] `datasetsSearch`/`datasetsPage` URL params clear when the edit mentor modal closes (TC33)
+- [x] `datasetsSearch`/`datasetsPage` URL params clear when switching from Datasets to another tab (TC34)
+- [x] Reloading the page after searching restores `datasetsSearch` and the search input from the URL (TC35)
+- [x] Clicking a pagination page number pushes `datasetsPage` into the URL via `router.push` (TC36, self-seeded multi-page mentor)
+- [x] Browser Back/Forward walk the visited `datasetsPage` values after paging forward twice (TC37, self-seeded multi-page mentor)
+- [x] Searching while on page 3 drops `datasetsPage` (reset to page 1) and sets `datasetsSearch` (TC38, self-seeded multi-page mentor)
+- [x] Reloading the page while paginated restores `datasetsPage` and the active pagination link from the URL (TC39, self-seeded multi-page mentor)
 
 ---
 
@@ -1540,3 +1551,28 @@ mentor (see the checkpoint description below for why).
 - [x] tal-04: Admin adds a per-user spend limit through the Agent Limits manage popup's nested "Per User" sub-tab / user-cap modal (`addUserSpendLimitFromTenantBilling`); reopening the popup confirms the user's row persisted server-side
 - [x] tal-05: Admin deletes the agent spend limit through the manage popup's confirm dialog (local `deleteAgentCapAndAwaitResponse` helper, network-response-gated — see the isolation note above); the tenant-wide unfiltered list only holds configured caps, so the row disappears entirely
 - [x] tal-01: Admin filters Agent Limits to an ALREADY-INDEXED mentor (broad query "E2E Mentor" against the search-index-backed autocomplete, sampling up to 5 results for the first capless one) — the ONE checkpoint that depends on that index, which lags mentor creation by DAYS on this backend (a known product limitation, not a test bug, reported upstream separately — a freshly-created mentor is never searchable in time, so this borrows a mentor from a past run instead of retrying its own) — sees the "Set Spend Limit" empty state, creates that mentor's spend limit (alert-only) from the popup, the row lists it, and the cap is removed again in an unconditional `finally` block so the borrowed (shared-tenant) mentor is left exactly as found; if every sampled candidate already has a cap, verifies the filter → row-visible path on the first one instead (annotated, never a failure)
+
+---
+
+## Journey 70: Embed Tab Preview Must Not Leak Embed Mode Into The App (4 checkpoints) — `journeys/70-embed-preview-must-not-leak-embed-mode.spec.ts`
+
+**Source files:** `lib/embed-context.ts`, `hooks/use-embed-mode.ts`, `providers/index.tsx`, `components/modals/edit-mentor-modal/tabs/embed-tab.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `lib/constants.ts`
+
+The inverse of journey 58. Journey 58 guards that the FULL sidebar never leaks
+into a genuine embed; this one guards that the EMBED shell never leaks into the
+full app. A fix that over-corrects either way breaks the other, so both assert
+through the same `SidebarPage` helpers.
+
+The bug: `sessionStorage` is scoped to the tab, not the browsing context, so
+the Embed tab's same-origin `?embed=true&internalPreview=true` preview iframe
+mirrored `ibl:embed-context` into the HOST tab's store. `useEmbedMode` falls
+back to that stored copy when the URL has no embed param, so after visiting the
+Embed tab the next re-render — clicking "New Chat" — collapsed the whole admin
+app into the 3-icon embed rail on a query-less URL, and stayed that way for the
+lifetime of the tab. Real customer embeds are cross-origin and were never
+affected; only the internal preview could reach our storage.
+
+- [x] epl-01: Opening Edit Agent → Embed mounts the same-origin `?embed=true&internalPreview=true` preview iframe WITHOUT writing `ibl:embed-context` into the host tab's sessionStorage (guard 1: `persistEmbedContextFromUrl` no-ops for the internal preview) — polled, not read once, since the old write happened in an effect several seconds after the tab rendered
+- [x] epl-02: After visiting the Embed tab and closing the dialog, clicking "New Chat" keeps the FULL admin sidebar (Agents, Workflows, Projects, Analytics, Support) instead of collapsing to the embed rail, and does not append `embed=true` to the app URL (a poisoned tab also fed `embedContextQuery()`, writing the corruption into its own navigations)
+- [x] epl-03: The full app survives a reload after the Embed tab was visited — the old bug was sticky for the lifetime of the tab because sessionStorage outlived the navigation
+- [x] epl-04: A top-level (non-iframed) tab ignores an `ibl:embed-context` entry it did not get from its own URL, across both a re-render (New Chat) and a reload (guard 2: `readStoredEmbedContext` requires `isInIframe`) — planted directly, so the read-side guard is covered even if some future same-origin iframe starts writing the key again

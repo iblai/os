@@ -9,13 +9,22 @@
 // the parent (which is why logging out and back in "fixes" it).
 //
 // To make embed mode survive ANY navigation — including hard resets — we mirror
-// the params into `sessionStorage`, which is scoped per browsing context (the
-// iframe), persists across same-origin page loads within that context, and is
-// storage-partitioned so it never leaks into a standalone (first-party) tab.
-// Readers prefer the live URL and fall back to the stored copy.
+// the params into `sessionStorage` and let readers fall back to the stored copy
+// when the live URL has none.
+//
+// `sessionStorage` is scoped to the TAB, not to the browsing context: a
+// same-origin iframe writes into its parent tab's store. A real host embed is
+// cross-origin, so its storage is partitioned away from ours — but the Embed
+// tab's own `internalPreview` iframe is same-origin, and its write would flip
+// the surrounding app into embed mode on the next render. Hence the two guards
+// below: we never persist from the internal preview, and we only trust the
+// stored copy when this document is actually framed (`isInIframe`).
+
+import { QUERY_PARAMS } from '@/lib/constants';
+import { isInIframe } from '@/lib/utils';
 
 export const EMBED_CONTEXT_KEYS = [
-  'embed',
+  QUERY_PARAMS.EMBED,
   'mode',
   'component',
   'extra-body-classes',
@@ -25,10 +34,19 @@ const STORAGE_KEY = 'ibl:embed-context';
 
 type EmbedContext = Record<string, string>;
 
+/** The Embed tab's same-origin preview iframe, which must never persist. */
+function isInternalPreview(): boolean {
+  return (
+    new URLSearchParams(window.location.search).get(
+      QUERY_PARAMS.INTERNAL_PREVIEW,
+    ) === 'true'
+  );
+}
+
 function readUrlEmbedContext(): EmbedContext | null {
   if (typeof window === 'undefined') return null;
   const params = new URLSearchParams(window.location.search);
-  if (params.get('embed') !== 'true') return null;
+  if (params.get(QUERY_PARAMS.EMBED) !== 'true') return null;
   const ctx: EmbedContext = {};
   for (const key of EMBED_CONTEXT_KEYS) {
     const value = params.get(key);
@@ -38,12 +56,12 @@ function readUrlEmbedContext(): EmbedContext | null {
 }
 
 function readStoredEmbedContext(): EmbedContext | null {
-  if (typeof window === 'undefined') return null;
+  if (!isInIframe()) return null;
   try {
     const raw = window.sessionStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as EmbedContext;
-    return parsed?.embed === 'true' ? parsed : null;
+    return parsed?.[QUERY_PARAMS.EMBED] === 'true' ? parsed : null;
   } catch {
     return null;
   }
@@ -55,6 +73,7 @@ function readStoredEmbedContext(): EmbedContext | null {
  * after they've wiped the URL query. No-op when the URL isn't in embed mode.
  */
 export function persistEmbedContextFromUrl(): void {
+  if (typeof window === 'undefined' || isInternalPreview()) return;
   const ctx = readUrlEmbedContext();
   if (!ctx) return;
   try {
