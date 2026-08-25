@@ -25,6 +25,8 @@ export const QUERY_PARAMS = {
   APP: 'app',
   REDIRECT_TO: 'redirect-to',
   TENANT: 'tenant',
+  EMBED: 'embed',
+  INTERNAL_PREVIEW: 'internalPreview',
 };
 
 // URL patterns

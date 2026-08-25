@@ -56,6 +56,11 @@ import { Spinner } from '@/components/spinner';
 import { useIsPreviewMode } from '@/hooks/use-is-preview-mode';
 import { ANONYMOUS_USERNAME, MENTOR_VISIBILITY_VALUES } from '@/lib/constants';
 import { useEmbedMode } from '@/hooks/use-embed-mode';
+import {
+  embedContextQuery,
+  appendEmbedContext,
+  persistEmbedContextFromUrl,
+} from '@/lib/embed-context';
 import { use402ErrorCheck } from '@/hooks/subscription/use-402-error-check';
 import { SUBSCRIPTION_CREDIT_LIMIT_ERROR_MESSAGE } from '@/hooks/subscription/constants';
 import { customErrorMessages } from '@/lib/error';
@@ -91,6 +96,13 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   useOpencodeLearner();
   // Desktop only: a Code-turn 402 (insufficient credit) gets normal chat's UX.
   useOpencode402();
+
+  // Mirror the embed-context params into sessionStorage on first load so embed
+  // mode survives later navigations that rebuild the URL without them — notably
+  // the hard `window.location.href` resets below. See lib/embed-context.
+  useEffect(() => {
+    persistEmbedContextFromUrl();
+  }, []);
 
   useEffect(() => {
     deleteCookieOnAllDomains('ibl_tenant_switching', window.location.hostname);
@@ -272,24 +284,12 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     saveDmTokenExpires(tokenResponse.dm_token.expires);
   }
 
-  // Preserve the iframe/embed-context params (embed / mode / component /
-  // extra-body-classes) across mentor redirects. They were only forwarded when
-  // landing on '/', but MentorProvider re-resolves the mentor once you're
-  // already on /platform/{tenant}/{mentorId} and calls redirectToMentor again —
-  // there pathname !== '/', so the query was dropped, stripping the embed view.
-  // Carry just those keys from the live URL regardless of the current path (so
-  // we never leak tokens or other one-shot params into the mentor URL).
-  function embedContextQuery() {
-    const current = new URLSearchParams(window.location.search);
-    const preserved = new URLSearchParams();
-    for (const key of ['embed', 'mode', 'component', 'extra-body-classes']) {
-      const value = current.get(key);
-      if (value !== null) preserved.set(key, value);
-    }
-    const qs = preserved.toString();
-    return qs ? `?${qs}` : '';
-  }
-
+  // `embedContextQuery()` (from lib/embed-context) carries the embed params
+  // across mentor redirects: MentorProvider re-resolves the mentor once you're
+  // already on /platform/{tenant}/{mentorId} and calls redirectToMentor again,
+  // where the query would otherwise be dropped, stripping the embed view. It
+  // reads the live URL first, then the persisted copy, so it works even after a
+  // hard reset has wiped the query.
   function redirectToNoMentorsPage() {
     router.push(`/platform/${tenantKey}/explore${embedContextQuery()}`);
   }
@@ -594,7 +594,10 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             console.log(
               '[TenantProvider] Tenant mismatch - redirecting to home',
             );
-            window.location.href = '/';
+            // Carry embed params onto '/' so an embedded iframe isn't flipped
+            // back to the full app by this hard reset (sessionStorage also
+            // recovers them on the '/' load; this makes it immediate).
+            window.location.href = appendEmbedContext('/');
           }}
         >
           {useMentorProvider ? (

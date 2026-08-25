@@ -1,5 +1,78 @@
 # Changelog
 
+## [0.130.4](https://github.com/iblai/os/compare/v0.130.3...v0.130.4) (2026-08-25)
+
+### Bug Fixes
+
+- **embed:** stop the Embed tab preview flipping the app into embed mode ([acf3608](https://github.com/iblai/os/commit/acf36086717002de7734f6f1e074d2614e86f364))
+
+### Refactors
+
+- **embed:** hoist embed query-param names into QUERY_PARAMS ([40bc1dd](https://github.com/iblai/os/commit/40bc1dd00c6a1ceb9d59b0751d4079b334309680))
+
+### Chores
+
+- **format:** normalise CHANGELOG bullets to prettier style ([98df428](https://github.com/iblai/os/commit/98df428e97ab6c41c319227684faca93929c9128))
+
+### Tests
+
+- **e2e:** add journey 70 for the embed-preview embed-mode leak ([9ad9d23](https://github.com/iblai/os/commit/9ad9d238e10dba37ae2ed455dda3658cec8fa6d9))
+- **embed-tab:** define QUERY_PARAMS in the @/lib/constants mock ([c3e3000](https://github.com/iblai/os/commit/c3e3000478e0a929110b704ce44bddbeeb33508d))
+
+## [0.130.3](https://github.com/iblai/os/compare/v0.130.2...v0.130.3) (2026-08-25)
+
+### Documentation
+
+- say "agent", not "mentor", in prose ([9de1c5f](https://github.com/iblai/os/commit/9de1c5f4c28e984b8ca526e985ec60a555b63edf))
+- title every page in Title Case ([2634a1b](https://github.com/iblai/os/commit/2634a1b3fb96b5113344380eacb1b135061bec56))
+
+## [0.130.2](https://github.com/iblai/os/compare/v0.130.1...v0.130.2) (2026-08-25)
+
+### Chores
+
+- **deps:** bump @iblai/iblai-js to 2.5.11 ([e406cb4](https://github.com/iblai/os/commit/e406cb4d1aad0df9aa44bb4ea25ec2f9b9aa9471))
+
+## [0.130.1](https://github.com/iblai/os/compare/v0.130.0...v0.130.1) (2026-08-24)
+
+### Chores
+
+- **tauri:** release app-v0.95.16 ([bb25012](https://github.com/iblai/os/commit/bb250126d438c7394d2354ab3abb5de90ed39dda))
+
+## [0.130.0](https://github.com/iblai/os/compare/v0.129.2...v0.130.0) (2026-08-21)
+
+### Features
+
+- add stripe and vercel support for code mode ([690e112](https://github.com/iblai/os/commit/690e112a5294e446983adfc540454980ded5014f))
+
+### Bug Fixes
+
+- **code-mode:** enable auto deploy ([e613bfd](https://github.com/iblai/os/commit/e613bfd2f8808c30c3c70f205f9951f0dc83fd03))
+
+### Chores
+
+- **tauri:** release app-v0.95.15 ([f3bcd7b](https://github.com/iblai/os/commit/f3bcd7b899fe5f894b4dc459f4206580850e27ae))
+- update prompt ([9c111ba](https://github.com/iblai/os/commit/9c111ba2e66bac30c5842fdfc77c367a17b9ba07))
+
+## [0.129.2](https://github.com/iblai/os/compare/v0.129.1...v0.129.2) (2026-08-20)
+
+### Bug Fixes
+
+- **csp:** allow api.github.com in connect-src ([4a945ad](https://github.com/iblai/os/commit/4a945ad15dbb88fe8bdb1cd71a88b9235992120f))
+
+### Styles
+
+- apply prettier to CHANGELOG and deployment doc ([053caa2](https://github.com/iblai/os/commit/053caa25a8c81eae5a9c628e43e6e3a89d16e1b8))
+
+### Tests
+
+- **csp:** cover asset-CDN and partner-host branches ([decfa62](https://github.com/iblai/os/commit/decfa6267340f0c93df89ba36c9578928c2378c1))
+
+## [0.129.1](https://github.com/iblai/os/compare/v0.129.0...v0.129.1) (2026-08-20)
+
+### Bug Fixes
+
+- **embed:** persist embed-mode params so they survive hard navigations ([3284b09](https://github.com/iblai/os/commit/3284b09bf95bb9374cba8274b489f0afeebb63cc))
+
 ## [0.129.0](https://github.com/iblai/os/compare/v0.128.8...v0.129.0) (2026-08-19)
 
 ### Features

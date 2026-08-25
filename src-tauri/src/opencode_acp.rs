@@ -19,7 +19,7 @@
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicI64, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI64, AtomicUsize, Ordering};
 use std::sync::{Arc, OnceLock};
 use std::time::{Duration, Instant};
 
@@ -122,6 +122,12 @@ impl TurnState {
         self.pending_delta.clear();
         self.last_emit = Instant::now();
     }
+
+    /// A turn is streaming — updates arriving with no generation in flight
+    /// (the spawn-time `session/load` history replay) must not reach the UI.
+    fn in_flight(&self) -> bool {
+        !self.generation_id.is_empty()
+    }
 }
 
 /// A live `opencode acp` process + its ACP session.
@@ -144,7 +150,16 @@ struct Session {
     /// is never reaped — so this MUST be decremented on every exit path, including
     /// errors, or the session pins itself alive forever.
     active_turns: AtomicUsize,
+    /// Set by every intentional teardown (close/evict/reap/model-switch) before
+    /// the kill, so the mid-turn crash-retry can tell a close from a crash.
+    closing: AtomicBool,
 }
+
+/// `Session::request`'s error prefixes when the child vanished mid-request
+/// (died before responding, or before the write even landed). The mid-turn
+/// crash-retry keys on these, so they live as consts the check can't drift from.
+const CHILD_GONE: &str = "opencode closed before responding";
+const CHILD_WRITE_FAILED: &str = "failed writing to opencode";
 
 impl Session {
     fn new_id(&self) -> i64 {
@@ -158,9 +173,7 @@ impl Session {
         self.pending.lock().await.insert(id, tx);
         let msg = json!({ "jsonrpc": "2.0", "id": id, "method": method, "params": params });
         write_line(&self.stdin, &msg).await?;
-        let resp = rx
-            .await
-            .map_err(|_| format!("opencode closed before responding to {method}"))?;
+        let resp = rx.await.map_err(|_| format!("{CHILD_GONE} to {method}"))?;
         if let Some(err) = resp.get("error") {
             return Err(format!("opencode error on {method}: {err}"));
         }
@@ -183,7 +196,7 @@ async fn write_line(stdin: &Arc<Mutex<ChildStdin>>, msg: &Value) -> Result<(), S
     guard
         .write_all(line.as_bytes())
         .await
-        .map_err(|e| format!("failed writing to opencode: {e}"))?;
+        .map_err(|e| format!("{CHILD_WRITE_FAILED}: {e}"))?;
     guard.flush().await.map_err(|e| e.to_string())
 }
 
@@ -1243,9 +1256,39 @@ async fn reader_loop(
             handle_update(&app, &v, &turn).await;
         }
     }
+    reader_gone(&session_id, &pending).await;
+}
+
+/// Cleanup after the reader saw child EOF (crash, kill, or intentional close).
+async fn reader_gone(session_id: &str, pending: &Arc<Mutex<HashMap<i64, oneshot::Sender<Value>>>>) {
+    // Identity-checked removal: a respawn may already have replaced this entry
+    // (or close_session already removed it) — never tear down the successor.
+    // The config-dir delete stays behind this gate for the same reason.
+    let removed = {
+        let mut reg = registry().lock().await;
+        match reg.get(session_id) {
+            Some(s) if Arc::ptr_eq(&s.pending, pending) => reg.remove(session_id),
+            _ => None,
+        }
+    };
+    if removed.is_some() {
+        teardown(session_id, removed).await;
+    }
+    // Dropping the senders resolves every in-flight `request()` with
+    // [`CHILD_GONE`] immediately — the turn stops hanging and either retries
+    // on a fresh process (crash) or surfaces through the existing
+    // `ollama:error` arm. This runs on intentional closes too: an evicted
+    // mid-turn session's prompt used to hang exactly this way.
+    pending.lock().await.clear();
 }
 
 async fn handle_update(app: &AppHandle, v: &Value, turn: &Arc<Mutex<TurnState>>) {
+    // No generation in flight → this is the `session/load` history replay at
+    // spawn time (or a stray post-turn notification): drop it, never re-stream
+    // old turns into the UI.
+    if !turn.lock().await.in_flight() {
+        return;
+    }
     let update = match v.get("params").and_then(|p| p.get("update")) {
         Some(u) => u,
         None => return,
@@ -1601,6 +1644,11 @@ fn foundry_result(model: &str, endpoint: Option<String>) -> Value {
 }
 
 /// Spawn `opencode acp`, run the ACP handshake, and register the session.
+///
+/// `resume` carries the previous ACP session id after a mid-turn crash: when
+/// the agent advertises `loadSession`, the fresh process re-loads that session
+/// (conversation context survives); otherwise — or when the load fails — a
+/// fresh `session/new` is created and only the re-sent prompt carries over.
 #[allow(clippy::too_many_arguments)]
 async fn spawn_session(
     app: &AppHandle,
@@ -1612,6 +1660,7 @@ async fn spawn_session(
     workspace: &PathBuf,
     mentor: Option<String>,
     generation_id: &str,
+    resume: Option<String>,
 ) -> Result<Arc<Session>, String> {
     ensure_workspace(workspace)?;
 
@@ -1675,7 +1724,14 @@ async fn spawn_session(
                 .as_deref()
                 .map(mentor_skills_dir)
                 .is_some_and(|d| d.is_dir());
-        crate::opencode_proxy::register(&secret, upstream, token.to_string(), skills_wired).await;
+        crate::opencode_proxy::register(
+            &secret,
+            upstream,
+            token.to_string(),
+            tenant.to_string(),
+            skills_wired,
+        )
+        .await;
         (
             format!("http://127.0.0.1:{port}/v1"),
             secret.clone(),
@@ -1706,6 +1762,16 @@ async fn spawn_session(
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
         .kill_on_drop(true);
+
+    // Attribution/config for the agent's shell — NOT credentials (the DM token
+    // stays in the proxy; the rule is that no secret enters the child env).
+    // The vibe skills read these instead of asking the user who/where they are.
+    if let Some(user) = crate::opencode_proxy::learner_username().await {
+        cmd.env("IBLAI_USERNAME", user);
+    }
+    if !tenant.is_empty() {
+        cmd.env("IBLAI_PLATFORM_KEY", tenant);
+    }
 
     let mut child = cmd.spawn().map_err(|e| {
         if cfg!(target_os = "linux") {
@@ -1758,11 +1824,12 @@ async fn spawn_session(
         turn,
         last_used: Mutex::new(Instant::now()),
         active_turns: AtomicUsize::new(0),
+        closing: AtomicBool::new(false),
     };
 
     // 1) initialize — we advertise NO fs/terminal capabilities so opencode uses its
     //    own built-in file/shell tools directly on the workspace.
-    session
+    let init = session
         .request(
             "initialize",
             json!({
@@ -1772,20 +1839,50 @@ async fn spawn_session(
             }),
         )
         .await?;
+    let can_load = init
+        .get("agentCapabilities")
+        .and_then(|c| c.get("loadSession"))
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
 
-    // 2) session/new with the workspace cwd.
-    let new_res = session
-        .request(
-            "session/new",
-            json!({ "cwd": workspace.to_string_lossy(), "mcpServers": [] }),
-        )
-        .await?;
-    let acp_session_id = new_res
-        .get("sessionId")
-        .and_then(|s| s.as_str())
-        .ok_or("session/new returned no sessionId")?
-        .to_string();
-    session.acp_session_id = acp_session_id;
+    // 2) After a crash, resume the previous ACP session when the agent can —
+    //    opencode persists sessions under its (shared) data dir, which our
+    //    teardown never deletes. The load's history replay streams as
+    //    `session/update` with no turn in flight, so `handle_update` drops it.
+    //    Any failure falls back to a fresh session: context lost, but the
+    //    re-sent prompt still completes.
+    let mut acp_session_id: Option<String> = None;
+    if can_load {
+        if let Some(prev) = resume.as_deref() {
+            if session
+                .request(
+                    "session/load",
+                    json!({ "sessionId": prev, "cwd": workspace.to_string_lossy(), "mcpServers": [] }),
+                )
+                .await
+                .is_ok()
+            {
+                acp_session_id = Some(prev.to_string());
+            }
+        }
+    }
+    // 3) …or session/new with the workspace cwd.
+    session.acp_session_id = match acp_session_id {
+        Some(id) => id,
+        None => {
+            let new_res = session
+                .request(
+                    "session/new",
+                    json!({ "cwd": workspace.to_string_lossy(), "mcpServers": [] }),
+                )
+                .await?;
+            new_res
+                .get("sessionId")
+                .and_then(|s| s.as_str())
+                .ok_or("session/new returned no sessionId")?
+                .to_string()
+        }
+    };
 
     Ok(Arc::new(session))
 }
@@ -1806,10 +1903,13 @@ async fn get_or_spawn(
     workspace: &PathBuf,
     mentor: Option<String>,
     generation_id: &str,
+    resume: Option<String>,
 ) -> Result<Arc<Session>, String> {
     let live = { registry().lock().await.get(session_id).cloned() };
     if let Some(s) = live {
-        if s.requested_model.as_deref() == model.as_deref() {
+        // A dead child can sit here for a beat before its reader's EOF cleanup
+        // lands — never hand it out; fall through to the respawn below.
+        if !child_exited(&s).await && s.requested_model.as_deref() == model.as_deref() {
             *s.last_used.lock().await = Instant::now();
             if let Some(secret) = &s.proxy_secret {
                 crate::opencode_proxy::set_token(secret, token).await;
@@ -1817,7 +1917,7 @@ async fn get_or_spawn(
             return Ok(s);
         }
     }
-    // Missing or the model switched → (re)spawn.
+    // Missing, dead, or the model switched → (re)spawn.
     close_session(session_id).await;
     evict_for_new_session(session_id).await;
     start_reaper();
@@ -1831,6 +1931,7 @@ async fn get_or_spawn(
         workspace,
         mentor,
         generation_id,
+        resume,
     )
     .await?;
     registry()
@@ -1893,6 +1994,12 @@ fn pick_eviction(states: &[SessionState], cap: usize) -> Option<String> {
             .map(|s| s.session_id.clone())
     };
     lru(true).or_else(|| lru(false))
+}
+
+/// Has this session's opencode process already exited? An `Err` from
+/// `try_wait` reads as "alive" — the same answer as before the probe existed.
+async fn child_exited(s: &Session) -> bool {
+    s.child.lock().await.try_wait().is_ok_and(|st| st.is_some())
 }
 
 /// Sessions the reaper should close: idle past the timeout AND doing nothing. A chat
@@ -1969,21 +2076,49 @@ fn start_reaper() {
 }
 
 async fn close_session(session_id: &str) {
+    let s = registry().lock().await.remove(session_id);
+    if let Some(s) = &s {
+        // Intentional teardown (close/evict/reap/model-switch): mark it so the
+        // mid-turn crash-retry never resurrects a session someone chose to end.
+        s.closing.store(true, Ordering::SeqCst);
+    }
+    teardown(session_id, s).await;
+}
+
+/// The teardown half of [`close_session`], for callers that already pulled the
+/// registry entry (or found none): release pending permission cards, drop the
+/// proxy credentials, kill the child, delete the per-session config dir.
+async fn teardown(session_id: &str, s: Option<Arc<Session>>) {
     // Anything waiting on the user can never be answered now — release it so the
     // dying process isn't blocked mid-teardown.
     deny_pending_for(session_id).await;
-    if let Some(s) = registry().lock().await.remove(session_id) {
+    if let Some(s) = s {
         if let Some(secret) = &s.proxy_secret {
             crate::opencode_proxy::unregister(secret).await;
         }
-        let mut child = s.child.lock().await;
-        let _ = child.start_kill();
+        let _ = s.child.lock().await.start_kill();
     }
     // The session's opencode config is rewritten on every spawn, so leaving it behind
     // just accumulates one dead directory per chat the user ever opened. Synced Agent
     // Skills deliberately live elsewhere (`mentor_skills_dir`) — a reaped session
     // must find them again on respawn.
     let _ = std::fs::remove_dir_all(config_home(session_id));
+}
+
+/// Attempts (original + respawns) one prompt gets. 2 = exactly one respawn: a
+/// transient crash (OOM kill, opencode bug, dropped pipe) is fixed by one fresh
+/// process, while a prompt that deterministically kills the child would turn a
+/// higher cap into a crash loop that only delays the inevitable error — and
+/// each `session/new` fallback retry loses more context anyway.
+const PROMPT_ATTEMPTS: usize = 2;
+
+/// Should this failed `session/prompt` be retried on a fresh process? Only a
+/// crash: the child vanished (not a JSON-RPC error from a live one), nobody
+/// intentionally closed the session, and the budget isn't spent.
+fn should_retry(err: &str, closing: bool, attempt: usize) -> bool {
+    attempt < PROMPT_ATTEMPTS
+        && !closing
+        && (err.starts_with(CHILD_GONE) || err.starts_with(CHILD_WRITE_FAILED))
 }
 
 /// Stream one Coding-Mode turn through opencode, emitting `ollama:*` +
@@ -2053,31 +2188,74 @@ pub async fn opencode_chat_stream(
         );
     }
 
-    let session = get_or_spawn(
-        &app,
-        &session_id,
-        &tenant,
-        &token,
-        model,
-        api_base,
-        &workspace,
-        mentor,
-        &generation_id,
-    )
-    .await?;
-    let _turn_guard = TurnGuard::new(session.clone());
-
-    session.turn.lock().await.reset(generation_id.clone());
-
-    let res = session
-        .request(
-            "session/prompt",
-            json!({
-                "sessionId": session.acp_session_id,
-                "prompt": [ { "type": "text", "text": prompt_text } ]
-            }),
+    // One transparent respawn on a mid-turn crash: the prompt is re-sent
+    // verbatim into the same generation, so the user sees the answer continue
+    // rather than an interruption. `should_retry` keeps this to genuine
+    // crashes (never intentional closes or live-child errors) and to
+    // [`PROMPT_ATTEMPTS`] total tries.
+    let mut resume: Option<String> = None;
+    let mut turn_guard = None;
+    let mut attempt = 1;
+    let (session, res) = loop {
+        let session = match get_or_spawn(
+            &app,
+            &session_id,
+            &tenant,
+            &token,
+            model.clone(),
+            api_base.clone(),
+            &workspace,
+            mentor.clone(),
+            &generation_id,
+            resume.take(),
         )
-        .await;
+        .await
+        {
+            Ok(s) => s,
+            Err(e) if attempt > 1 => {
+                // The recovery respawn itself failed — that IS the loud failure.
+                let _ = app.emit(
+                    "ollama:error",
+                    json!({ "generation_id": generation_id, "error": e }),
+                );
+                return Err(e);
+            }
+            // First spawn: keep today's invoke-rejection (a missing binary
+            // stays immediately loud in the UI's own error path).
+            Err(e) => return Err(e),
+        };
+        // Replace (and thereby drop) the previous attempt's guard, if any.
+        drop(turn_guard.take());
+        turn_guard = Some(TurnGuard::new(session.clone()));
+        session.turn.lock().await.reset(generation_id.clone());
+
+        let res = session
+            .request(
+                "session/prompt",
+                json!({
+                    "sessionId": session.acp_session_id,
+                    "prompt": [ { "type": "text", "text": prompt_text } ]
+                }),
+            )
+            .await;
+
+        match &res {
+            Err(e) if should_retry(e, session.closing.load(Ordering::SeqCst), attempt) => {
+                eprintln!(
+                    "[opencode] child died mid-turn ({e}) — respawning silently, attempt {}",
+                    attempt + 1
+                );
+                // Machine event only — the SDK clears the partial stream for
+                // this generation; nothing user-visible marks the seam.
+                let _ = app.emit("ollama:restart", json!({ "generation_id": generation_id }));
+                resume = Some(session.acp_session_id.clone());
+                attempt += 1;
+            }
+            _ => break (session, res),
+        }
+    };
+    // Held to fn end, as before — busy until after the done/error emit.
+    let _turn_guard = turn_guard;
 
     match res {
         Ok(result) => {
@@ -2107,6 +2285,10 @@ pub async fn opencode_chat_stream(
             Ok(())
         }
         Err(e) => {
+            // A JSON-RPC error from a live child, an intentional close, or a
+            // spent retry budget — the crash-retry above already consumed the
+            // recoverable case. A live child keeps its session (conversation
+            // state survives); a dead one was torn down by `reader_gone`.
             let _ = app.emit(
                 "ollama:error",
                 json!({ "generation_id": generation_id, "error": e }),
@@ -2752,5 +2934,204 @@ mod tests {
             !skills_syncs().lock().await.contains_key(&key),
             "an expired entry must be cleaned up"
         );
+    }
+
+    /// Spawns `program` with piped stdio and wraps it in a real `Session`, for
+    /// the crash/close lifecycle tests. A `cat` child self-cleans: dropping the
+    /// Session drops its stdin pipe and cat exits; crashed-path tests kill it
+    /// through `teardown` anyway.
+    #[cfg(unix)]
+    fn test_session(program: &str) -> Arc<Session> {
+        let mut child = Command::new(program)
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .kill_on_drop(true)
+            .spawn()
+            .unwrap();
+        let stdin = Arc::new(Mutex::new(child.stdin.take().unwrap()));
+        Arc::new(Session {
+            child: Mutex::new(child),
+            stdin,
+            next_id: AtomicI64::new(1),
+            pending: Arc::new(Mutex::new(HashMap::new())),
+            acp_session_id: "acp-test".to_string(),
+            requested_model: Some("m".to_string()),
+            proxy_secret: None,
+            turn: Arc::new(Mutex::new(TurnState {
+                generation_id: String::new(),
+                full_content: String::new(),
+                pending_delta: String::new(),
+                last_emit: Instant::now(),
+            })),
+            last_used: Mutex::new(Instant::now()),
+            active_turns: AtomicUsize::new(0),
+            closing: AtomicBool::new(false),
+        })
+    }
+
+    /// The retry decision in one place: crashes retry, everything else stays loud.
+    #[test]
+    fn only_a_crash_on_an_open_session_retries_and_only_within_budget() {
+        let gone = format!("{CHILD_GONE} to session/prompt");
+        let pipe = format!("{CHILD_WRITE_FAILED}: Broken pipe (os error 32)");
+        assert!(should_retry(&gone, false, 1));
+        assert!(
+            should_retry(&pipe, false, 1),
+            "died-before-send is a crash too"
+        );
+        assert!(
+            !should_retry(&gone, true, 1),
+            "an intentional close never resurrects"
+        );
+        assert!(
+            !should_retry("opencode error on session/prompt: boom", false, 1),
+            "a live child's JSON-RPC error is not a crash"
+        );
+        assert!(
+            !should_retry(&gone, false, PROMPT_ATTEMPTS),
+            "budget spent → loud error"
+        );
+    }
+
+    /// THE lost-connection bug: a dead child used to leave `session/prompt`
+    /// hanging forever on a sender nobody would ever fire. `reader_gone` must
+    /// fail it immediately — as the crash shape the retry keys on — and free
+    /// the registry slot so the next spawn isn't blocked by a corpse.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn a_dead_reader_fails_inflight_requests_and_frees_its_session() {
+        let sid = format!("dead-reader-{}", std::process::id());
+        let s = test_session("cat");
+        registry().lock().await.insert(sid.clone(), s.clone());
+
+        let inflight = {
+            let s = s.clone();
+            tokio::spawn(async move { s.request("session/prompt", json!({})).await })
+        };
+        // Wait until the request has parked its sender.
+        while s.pending.lock().await.is_empty() {
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+
+        reader_gone(&sid, &s.pending).await;
+
+        let err = tokio::time::timeout(Duration::from_secs(2), inflight)
+            .await
+            .expect("request must FAIL now, not hang — this hang IS the lost-connection bug")
+            .unwrap()
+            .expect_err("a cleared sender is an error, not a response");
+        assert!(err.starts_with(CHILD_GONE), "{err}");
+        assert!(
+            should_retry(&err, false, 1),
+            "and it is the retryable crash shape"
+        );
+        assert!(
+            !registry().lock().await.contains_key(&sid),
+            "the corpse must leave the registry"
+        );
+    }
+
+    /// The old reader's EOF may land AFTER a respawn replaced the session; its
+    /// cleanup must not tear down (or deregister) the successor.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn reader_cleanup_never_touches_a_replacement_session() {
+        let sid = format!("replaced-{}", std::process::id());
+        let dead = test_session("cat");
+        let replacement = test_session("cat");
+        registry()
+            .lock()
+            .await
+            .insert(sid.clone(), replacement.clone());
+
+        reader_gone(&sid, &dead.pending).await;
+
+        let still = registry().lock().await.get(&sid).cloned();
+        let still = still.expect("the replacement must survive the old reader's cleanup");
+        assert!(Arc::ptr_eq(&still, &replacement));
+        assert!(
+            !child_exited(&replacement).await,
+            "and its child is untouched"
+        );
+        registry().lock().await.remove(&sid);
+    }
+
+    /// `get_or_spawn` must not hand out a session whose process is gone.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn a_session_whose_child_exited_reads_as_dead() {
+        let alive = test_session("cat");
+        assert!(!child_exited(&alive).await);
+
+        let exited = test_session("true");
+        let start = Instant::now();
+        while !child_exited(&exited).await {
+            assert!(start.elapsed() < Duration::from_secs(5), "`true` must exit");
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    }
+
+    /// `closing` is the crash/close discriminator: `close_session` sets it,
+    /// `reader_gone` must not — a model switch, Stop, reap or shutdown must
+    /// never be resurrected by the crash-retry.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn an_intentional_close_is_distinguishable_from_a_crash() {
+        // Crash leg: reader cleanup leaves `closing` false → retry allowed.
+        let sid = format!("crash-leg-{}", std::process::id());
+        let crashed = test_session("cat");
+        registry().lock().await.insert(sid.clone(), crashed.clone());
+        reader_gone(&sid, &crashed.pending).await;
+        assert!(!crashed.closing.load(Ordering::SeqCst));
+
+        // Close leg: an intentional close vetoes any retry.
+        let sid2 = format!("close-leg-{}", std::process::id());
+        let closed = test_session("cat");
+        registry().lock().await.insert(sid2.clone(), closed.clone());
+        close_session(&sid2).await;
+        assert!(closed.closing.load(Ordering::SeqCst));
+        assert!(!should_retry(
+            &format!("{CHILD_GONE} to session/prompt"),
+            true,
+            1
+        ));
+    }
+
+    /// The second crash shape, end to end: the child died before the send.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn writing_to_a_dead_child_reads_as_child_gone() {
+        let s = test_session("cat");
+        s.child.lock().await.start_kill().unwrap();
+        let _ = s.child.lock().await.wait().await;
+        // One write can slip into the pipe buffer instead of EPIPE-ing: a
+        // sibling test fork-exec'ing in parallel briefly holds a dup of the
+        // read end. Keep writing until the kernel reports the pipe broken.
+        let err = tokio::time::timeout(Duration::from_secs(10), async {
+            loop {
+                if let Err(e) = write_line(&s.stdin, &json!({ "probe": true })).await {
+                    break e;
+                }
+            }
+        })
+        .await
+        .expect("a dead child's pipe must eventually report broken");
+        assert!(err.starts_with(CHILD_WRITE_FAILED), "{err}");
+        assert!(should_retry(&err, false, 1));
+    }
+
+    /// The spawn-time `session/load` replay window: no generation in flight →
+    /// updates are dropped; a reset opens the gate.
+    #[test]
+    fn updates_between_turns_are_not_emitted() {
+        let mut ts = TurnState {
+            generation_id: String::new(),
+            full_content: String::new(),
+            pending_delta: String::new(),
+            last_emit: Instant::now(),
+        };
+        assert!(!ts.in_flight(), "fresh spawn: replay must be droppable");
+        ts.reset("g1".to_string());
+        assert!(ts.in_flight());
     }
 }

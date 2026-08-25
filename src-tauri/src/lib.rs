@@ -2239,6 +2239,15 @@ pub fn run() {
             // =====================
             #[cfg(not(any(target_os = "ios", target_os = "android")))]
             {
+                // Vibe skills track the latest GitHub release with no freshness
+                // window — resolve-and-sync in the background on every launch, so
+                // Coding Mode always starts from the newest published set (and a
+                // fresh machine has them before Code is ever enabled).
+                let vibe_handle = app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    let _ = opencode_installer::ensure_vibe_skills(vibe_handle).await;
+                });
+
                 // Initialize web cache with app data directory
                 let app_data_dir = app
                     .path()
