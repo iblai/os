@@ -2,8 +2,8 @@
   "version": 2,
   "lastUpdated": "2026-08-25",
   "summary": {
-    "totalCheckpoints": 669,
-    "coveredCheckpoints": 638,
+    "totalCheckpoints": 677,
+    "coveredCheckpoints": 646,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 11,
     "pendingCheckpoints": 8,
@@ -1117,7 +1117,10 @@
       "spec": "20-dataset-management.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/tabs/datasets-tab/index.tsx",
-        "components/modals/edit-mentor-modal/tabs/datasets-tab/resource-types.tsx"
+        "components/modals/edit-mentor-modal/tabs/datasets-tab/resource-types.tsx",
+        "components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx",
+        "hooks/user-navigate.ts",
+        "lib/constants.ts"
       ],
       "checkpoints": [
         {
@@ -1208,6 +1211,46 @@
         {
           "id": "ds-18",
           "description": "Markdown (.md) file can be uploaded and appears in the dataset list (issue #1117)",
+          "status": "covered"
+        },
+        {
+          "id": "ds-19",
+          "description": "Typing in the datasets search debounces into the datasetsSearch URL query param (router.replace, no history spam)",
+          "status": "covered"
+        },
+        {
+          "id": "ds-20",
+          "description": "datasetsSearch/datasetsPage URL params clear when the edit mentor modal closes",
+          "status": "covered"
+        },
+        {
+          "id": "ds-21",
+          "description": "datasetsSearch/datasetsPage URL params clear when switching from Datasets to another tab",
+          "status": "covered"
+        },
+        {
+          "id": "ds-22",
+          "description": "Reloading the page after searching restores datasetsSearch and the search input from the URL",
+          "status": "covered"
+        },
+        {
+          "id": "ds-23",
+          "description": "Clicking a pagination page number pushes datasetsPage into the URL (self-seeded multi-page mentor)",
+          "status": "covered"
+        },
+        {
+          "id": "ds-24",
+          "description": "Browser Back/Forward walk the visited datasetsPage values (self-seeded multi-page mentor)",
+          "status": "covered"
+        },
+        {
+          "id": "ds-25",
+          "description": "Searching while on a later page drops datasetsPage and sets datasetsSearch (self-seeded multi-page mentor)",
+          "status": "covered"
+        },
+        {
+          "id": "ds-26",
+          "description": "Reloading the page while paginated restores datasetsPage and the active page (self-seeded multi-page mentor)",
           "status": "covered"
         }
       ]
