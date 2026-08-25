@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.130.2](https://github.com/iblai/os/compare/v0.130.1...v0.130.2) (2026-08-25)
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.5.11 ([e406cb4](https://github.com/iblai/os/commit/e406cb4d1aad0df9aa44bb4ea25ec2f9b9aa9471))
+
 ## [0.130.1](https://github.com/iblai/os/compare/v0.130.0...v0.130.1) (2026-08-24)
 
 ### Chores
