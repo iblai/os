@@ -1,4 +1,4 @@
-# Deploying ibl.ai/os against our backend
+# Deploying ibl.ai/os against Our Backend
 
 This guide shows how to ship every surface **Web, macOS, Windows/Surface, Linux, iOS, Android** (and the Chrome extension) — pointed at ibl.ai backend.
 
