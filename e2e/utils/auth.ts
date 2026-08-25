@@ -286,6 +286,32 @@ export async function getPlatformContext(
 }
 
 /**
+ * Reads the currently logged-in user's platform username
+ * (`userData.user_nicename` in localStorage — the same field the app uses as
+ * `userId` in API calls) from an already-navigated, authenticated page.
+ *
+ * Mirrors the auth-context read in `utils/mentor-cleanup.ts` /
+ * `utils/mentor-sweeper.ts` (which read the same field for their own DELETE
+ * calls) rather than assuming `PLAYWRIGHT_USERNAME` from `test-data.ts` is
+ * the platform username — that env var is the login identifier, which some
+ * auth flows treat as an email distinct from the resulting `user_nicename`.
+ *
+ * Returns `null` if `userData` is missing/unparseable (e.g. called before
+ * the app has hydrated auth state).
+ */
+export async function getLoggedInUsername(page: Page): Promise<string | null> {
+  return page.evaluate(() => {
+    try {
+      const raw = window.localStorage.getItem('userData');
+      if (!raw) return null;
+      return JSON.parse(raw)?.user_nicename ?? null;
+    } catch {
+      return null;
+    }
+  });
+}
+
+/**
  * Signs up a brand-new user via the auth service's `/account/create` form
  * and waits until they land on the "main" tenant's platform page with the
  * navbar ready. Modeled on Journey 1's signup test and Journey 59 Flow 0

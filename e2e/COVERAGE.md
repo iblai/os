@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-08-18 | 665 checkpoints (634 covered, 8 pending/fixme, 11 not-reproducible in default env, 12 deprecated) | 71 journeys (70 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-08-22 | 683 checkpoints (652 covered, 8 pending/fixme, 11 not-reproducible in default env, 12 deprecated) | 73 journeys (72 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -892,13 +892,15 @@ Covers the two user-facing features added in [iblai-platform#1902](https://githu
 
 ---
 
-## Journey 47: Mentor Voice Tab (12 checkpoints) — `journeys/47-mentor-voice-tab.spec.ts`
+## Journey 47: Mentor Voice Tab (15 checkpoints) — `journeys/47-mentor-voice-tab.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/voice-tab.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/tabs/index.ts`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `lib/constants.ts`
 
 The Voice tab is a thin wrapper around the SDK's `AgentVoiceTab` (`@iblai/web-containers/next`). The wrapper forwards `tenantKey` / `mentorId` / `username` from URL params + the navigate hook so the SDK's `useGetMentorSettingsQuery`, `useEditMentorMutation`, and the new `useGet/Create/UpdateCallConfigurationMutation` hooks resolve correctly. Selectors come from the SDK's official Playwright helpers (`@iblai/iblai-js/playwright`) — never patch a selector in the spec; if labels are overridden via the `labels` prop, update the helper imports in the page object.
 
 The Settings tab also surfaces the smart-document-retrieval voice-call toggle (`use_function_calling_for_rag`) so admins can flip it without leaving the main configuration panel — save routes it through the same `/call-configurations/` endpoint the SDK's Voice tab uses. The "Enable voice calls" (`show_voice_call`) master toggle moved off Settings → Capabilities into an in-tab `CapabilityGate` at the top of the Voice tab itself (feat/2040) and auto-saves on click (optimistic local state) — no footer Save button involved. The Voice tab is now always mounted — `hooks/use-mentor-segments.ts` no longer gates it — and both sub-tabs render inside a grayed + inert `capability-gate-content` wrapper while the toggle is off. ("Enable screen sharing" moved off Settings too — it now lives on the Screen tab's own capability toggle, see journey 48.)
+
+A "Voice Instructions" prompt card (`data-testid="voice-instructions-card"`) renders below the voice picker whenever the OpenAI or Google provider is selected (never Browser), following the same PromptCard + shared `EditPromptModal` pattern as Prompts / Screen share. Editing it writes local form state only; the tab-level Save button (`voice-save-button`) persists `voice_instructions` (and `voice_provider`) via `editMentor` with a distinct "Voice saved" toast. A `{len}/1000` counter turns red and disables Save past the soft cap — no client-side truncation. The `VoiceTab` page object reimplements the SDK's `setVoiceInstructions` helper rather than delegating to it: that helper resolves the editor/Save button and its final close-check via a scope-free `page.getByRole('dialog')`, but the Edit Agent modal is itself `role="dialog"` in this host, so two dialogs are open at once while the instructions editor is up — the same portal-scoping hazard documented for `LtiTab.submitToolModal`.
 
 - [x] VO-01: Voice tab label is visible in the Edit Mentor modal sidebar (always mounted)
 - [x] VO-02: Voice tab heading renders correctly
@@ -912,6 +914,9 @@ The Settings tab also surfaces the smart-document-retrieval voice-call toggle (`
 - [x] VO-10: Flipping the smart-document-retrieval voice-call toggle in Settings and clicking Save persists to the CallConfiguration endpoint and shows the success toast
 - [x] VO-11: Voice tab stays visible (always mounted) and its content grays (`data-enabled="false"`) when the in-tab "Enable voice calls" capability toggle is off
 - [x] VO-12: Re-enabling the in-tab "Enable voice calls" capability toggle ungates the Voice tab's sub-tab content
+- [x] VO-13: Selecting the OpenAI provider reveals the Voice Instructions card, its character counter, and all three preset chips (warm/calm/energetic); switching to Browser hides the card
+- [x] VO-14: Applying the "warm" Voice Instructions preset fills the card with the canned text, the counter shows a non-zero `/1000` value, the tab-level Save button enables, and saving surfaces the "Voice saved" toast
+- [x] VO-15: Custom Voice Instructions set via the editor, saved, and reloaded after closing and reopening the Edit Agent modal show the persisted value — a true round-trip through mentor settings' `voice_instructions` field, not leftover in-memory form state _(an over-cap >1000-char checkpoint is intentionally not covered — typing past the cap requires `pressSequentially` through the ProseMirror contenteditable one character at a time, prohibitively slow in a per-test suite)_
 
 ---
 
@@ -1112,7 +1117,9 @@ Covers the LTI top-level tab in the Edit Mentor (Agent) modal, rendered by the S
 
 The LTI segment lives under the **Integrations** sidebar category. Tests are parallel-safe via two strategies: a worker-scoped `ltiMentorUrl` fixture (one LTI-enabled mentor per worker, deleted on teardown) shared by read-only and mutation tests; and self-contained tests that create and delete their own mentor in a `finally` block.
 
-Sub-resource tests (Links / Keys / Tools) still require `is_lti_accessible=true` on the backend because auto-enable-on-link-creation (`lti-sdk-01`) is not yet implemented in the SDK.
+Sub-resource tests (Links / Keys / Tools) still require `is_lti_accessible=true` on the backend. Auto-enable-on-link-creation (`lti-sdk-01`) IS implemented in the SDK now (a best-effort `editMentor` call after a successful create), but the LTI tab's `CapabilityGate` makes the sub-tab content `inert`/`pointer-events-none` while the capability is off, so the create button can't be reached through the UI to trigger that side effect in the first place — the fixture still enables the capability explicitly.
+
+LTI link creation is now **asynchronous**: the data layer sends `async_create: true`, the backend answers 202, and the actual edX-course build runs via celery in the background. The create/rename modal closes on the 202; the new row appears with a `pending`/`building` status badge (`data-testid="lti-link-status"`). The UI does not auto-poll — a header Refresh button (`data-testid="lti-links-refresh-button"`) renders only while a build is in flight, and the SDK's `waitForLinkReady` helper (wrapped by `LtiTab.waitForLinkReady`) drives it by clicking Refresh every ~5s until the badge reports `ready` (throws on `failed`). A link's rename pencil only renders once its status is `ready`.
 
 ### Visibility (lti-01, lti-03, lti-04)
 
@@ -1127,8 +1134,8 @@ Sub-resource tests (Links / Keys / Tools) still require `is_lti_accessible=true`
 ### Links sub-tab (lti-06..lti-08)
 
 - [x] lti-06: Admin opens the LTI Links sub-tab on a fresh mentor and sees the empty state when no links exist
-- [x] lti-07: Admin creates an LTI link and it appears in the links list
-- [x] lti-08: Admin edits (renames) an LTI link and the new name appears in the list while the old name is gone _(self-contained mentor: the backend allows a single LTI link per mentor and there is no delete-link helper, so a second create on the shared worker mentor after lti-07 would fail)_
+- [x] lti-07: Admin creates an LTI link (async — 202 + celery-built edX course) and it appears in the links list with a pending/building status badge; clicking the header Refresh button (via `waitForLinkReady`) drives the badge to Ready _(also exercises the Refresh affordance, since `waitForLinkReady` clicks it while the build is in flight)_
+- [x] lti-08: Admin edits (renames) an LTI link and the new name appears in the list while the old name is gone _(self-contained mentor: the backend allows a single LTI link per mentor and there is no delete-link helper, so a second create on the shared worker mentor after lti-07 would fail; the rename waits for `waitForLinkReady` first since the edit pencil only renders once the async-created link's status is Ready)_
 
 ### Keys sub-tab (lti-10..lti-12)
 
@@ -1149,7 +1156,7 @@ Sub-resource tests (Links / Keys / Tools) still require `is_lti_accessible=true`
 
 ### SDK-pending (lti-sdk-01)
 
-- [ ] lti-sdk-01: PENDING (SDK dependency) — When an admin creates the first LTI link, `is_lti_accessible` is auto-enabled via the API without requiring the "Enable LTI launches" toggle to be turned on manually. Not yet implemented: `AgentLtiTab` exposes no post-create callback hook and there are no public LTI data-layer hooks in `@iblai/iblai-js`.
+- [ ] lti-sdk-01: PENDING (not UI-testable) — When an admin creates the first LTI link, `is_lti_accessible` is auto-enabled via a best-effort `editMentor` call after create. This IS implemented in the SDK now, but the LTI tab's `CapabilityGate` makes the Links create button unreachable through the UI while the capability is off, so the trigger path can never be exercised from a real user flow — only from a caller that bypasses the gate (e.g. a direct API create), which is outside this UI journey's scope.
 
 ---
 
@@ -1540,3 +1547,53 @@ mentor (see the checkpoint description below for why).
 - [x] tal-04: Admin adds a per-user spend limit through the Agent Limits manage popup's nested "Per User" sub-tab / user-cap modal (`addUserSpendLimitFromTenantBilling`); reopening the popup confirms the user's row persisted server-side
 - [x] tal-05: Admin deletes the agent spend limit through the manage popup's confirm dialog (local `deleteAgentCapAndAwaitResponse` helper, network-response-gated — see the isolation note above); the tenant-wide unfiltered list only holds configured caps, so the row disappears entirely
 - [x] tal-01: Admin filters Agent Limits to an ALREADY-INDEXED mentor (broad query "E2E Mentor" against the search-index-backed autocomplete, sampling up to 5 results for the first capless one) — the ONE checkpoint that depends on that index, which lags mentor creation by DAYS on this backend (a known product limitation, not a test bug, reported upstream separately — a freshly-created mentor is never searchable in time, so this borrows a mentor from a past run instead of retrying its own) — sees the "Set Spend Limit" empty state, creates that mentor's spend limit (alert-only) from the popup, the row lists it, and the cap is removed again in an unconditional `finally` block so the borrowed (shared-tenant) mentor is left exactly as found; if every sampled candidate already has a cap, verifies the filter → row-visible path on the first one instead (annotated, never a failure)
+
+---
+
+## Journey 70: Tenant Memory Admin Tab & Profile Memory Tab (9 checkpoints) — `journeys/70-tenant-memory-admin-and-profile-memory.spec.ts`
+
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`
+
+Covers two memory surfaces inside the "User Profile" dialog (`UserProfileDropdown` from `@iblai/iblai-js/web-containers/next`), both delivered by the `@iblai/iblai-js@2.5.5` SDK bump:
+
+- **A. Tenant-settings Memory admin tab** (`MemoryAdminTab`) — a brand-new rail item (`{ id: 'memory', label: 'Memory', icon: Brain }`) reached via More Options → platform name, with NO host wiring at all — it appears purely from the SDK bump. Global sub-tab: a tenant users table with server-side search and a per-user popup hosting their shared memories list plus two memory setting switches. Agent sub-tab: a tenant agents table with an autocomplete filter and a per-agent popup hosting the same `ManageMemories` editor the Edit Agent modal's own Memory tab renders (journey 24, unaffected by this change). All locators flow through `MemoryAdminPage` (`e2e/page-objects/memory-admin.page.ts`), a thin wrapper over the SDK's `memory-admin-helpers`. Its dialog-stacking selector policy (popup Locator returned by the open-popup helpers, all sub-queries pinned to it) is documented in the SDK helpers' own file header and mirrored in the page object.
+- **B. Profile "Memory" tab** (personal side, `MemoryTab`, "My Memories") — pre-existed but had ZERO e2e coverage before this journey. Its row actions changed in this SDK bump: the old hover-delete trash button was replaced by a three-dots menu (Edit + Delete), and "Archive" was renamed to "Delete" (`archiveFirstMemory`/`archiveMemoryByContent` are now `@deprecated` aliases for `deleteFirstMemory`/`deleteMemoryByContent`). Covered via new methods on `ProfilePage` (`e2e/page-objects/profile.page.ts`) wrapping the SDK's `memory-test-helpers` — except `editMemoryByContent`, which the SDK has no helper for (only add/delete are covered): it's hand-rolled using the same stable `data-testid="memory-row"` / `aria-label="Memory actions: {excerpt}"` / dialog-accessible-name hooks the SDK's own delete helper uses, since the profile tab and the tenant-admin popup share the exact same `MemoriesList` component under the hood.
+
+Both surfaces' real content only renders once the tenant's memsearch status resolves as enabled — this journey does not itself drive the tenant-wide "Memory System" toggle (that's journey 38, `38-tenant-memory-system-toggle.spec.ts`); every test here probes availability first and `test.skip`s with a documented reason if the feature isn't resolved as on. The whole file runs `mode: 'serial'` (mirroring journeys 38/47): the Global sub-tab tests target the ADMIN test account's own username via `getLoggedInUsername`, and the profile tests target the NON-ADMIN account's own profile — two different backend users that don't collide with each other, but every worker/browser-project sharing the same storageState means tests within the SAME persona could still race across parallel workers without file-level serial.
+
+### Tenant Memory admin tab (MA-01..MA-06)
+
+- [x] MA-01: Admin sees the new "Memory" rail item in the tenant User Profile settings dialog, and both the Global and Agent sub-tabs render
+- [x] MA-02: Global sub-tab — searching the users table for the logged-in admin's own username finds their row, and opening their memories popup renders
+- [x] MA-03: Global sub-tab popup — full CRUD on a uniquely-named global memory (add ≥10-char content, edit it, delete it), cleaned up best-effort in a `finally` block
+- [x] MA-04: Global sub-tab popup — toggling the auto-capture memory setting switch flips `aria-checked`, and toggling again restores the original state (symmetric flip, independent of starting state)
+- [x] MA-05: Agent sub-tab renders its section and the agents autocomplete filter ("Search Agents…" placeholder)
+- [x] MA-06: Agent sub-tab — filtering to a freshly created, uniquely-named mentor (own tracked mentor via `deleteMentorById`, not the shared default) surfaces its row; opening its memories popup and adding a unique agent memory shows the new content in the popup
+
+### Profile Memory tab (PM-01..PM-03)
+
+- [x] PM-01: Profile "Memory" tab renders its "Memory & Personalization" settings section and "My Memories" list with the Add Memory button
+- [x] PM-02: Toggling the auto-capture memory setting switch flips `aria-checked`, and toggling again restores the original state
+- [x] PM-03: Full CRUD on a unique personal memory via the NEW three-dots menu — add, edit via the three-dots → Edit → Edit Memory dialog (hand-rolled page-object helper, no SDK helper exists for this), and delete via `deleteMemoryByContent` (NOT the deprecated `archiveMemoryByContent` alias) _(the profile Memory tab previously had zero e2e coverage; the three-dots menu replacing hover-delete and the Archive→Delete rename are new SDK behavior verified against `@iblai/iblai-js@2.5.5`)_
+
+---
+
+## Journey 71: Profile History Tab (6 checkpoints) — `journeys/71-profile-history-tab.spec.ts`
+
+**Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`
+
+Covers the "History" tab inside the "User Profile" dialog — the SDK's `ChatHistoryTab` (`@iblai/iblai-js/web-containers/next`). **This is a plain user-profile feature, not admin-managed** — unlike the "Memory" tab (journey 70), which has BOTH a tenant-admin surface and a personal one, History has only the personal side, and there is NO host enable-flag (no `enableHistoryTab` prop exists) — the tab is unconditional and rides the user-scoped `my-chat-history*` endpoints, so it only ever shows the CURRENT user's own conversations across every agent they've chatted with. Every checkpoint in this journey therefore runs against the regular NON-ADMIN test account, matching journey 70B's precedent for the sibling Memory tab. Two sub-tabs: **Conversations** (filter toolbar — agent autocomplete, date range, sentiment, topic, Export — plus a two-column conversation list + transcript preview with pagination) and **Exports** (a table of previously generated personal chat-history reports with state badges and re-download actions). Confirmed against the SDK bundle: there is NO delete/clear affordance anywhere on this tab — it is view / filter / export only, so no delete/clear checkpoints exist here. All locators flow through new `ProfilePage` methods (`e2e/page-objects/profile.page.ts`) wrapping the SDK's `history-tab-helpers` Playwright bindings, which capture the profile dialog once (tag + filter) and scope every sub-element to it.
+
+Split into two blocks: **71A (structural)** needs no seed data — the tab, its sub-tabs, and the Conversations filter toolbar render identically whether or not the account has any history yet — and runs on the standard `nonadminPage`/`nonadminProfilePage` fixtures. **71B (with seeded data)** runs against the non-admin storage state via a manually-created worker-scoped context (`test.beforeAll`, mirroring journey 60's shared-setup pattern). It captures the account's pre-existing default mentor's name (for the agent-filter checkpoints, which don't need mentor creation to succeed at all) and separately attempts to create its own uniquely-named mentor + send it one chat message, to seed a conversation with a known, stable `data-session-id` for HT-04 — sidestepping both a parallel-worker list-position race and the backend's asynchronous session-title generation (the same hazard journey 53's Recent-chats checkpoints document). "New Agent" is not admin-gated in the app, but CAN be trial/paywall-gated for a non-admin account on some tenants (journey 3's `ui-05` already documents that exact button opening an upgrade dialog instead); if creation fails for any reason, HT-04 skips gracefully rather than the whole block failing or asserting a specific paywall configuration. The seeded mentor (when created) is deleted via the DM API in `afterAll`, which works for whoever created it — no admin requirement.
+
+### Structural (HT-01..HT-03)
+
+- [x] HT-01: User opens the profile "History" tab and the Conversations sub-tab settles into either rendered rows or the "No conversations found" empty state
+- [x] HT-02: Conversations toolbar renders its five filter controls (agent autocomplete "Search Agents", "Pick a Date Range", Filter by Sentiment, Filter by Topic, Export) regardless of data
+- [x] HT-03: Switching to the Exports sub-tab renders its reports table (the SDK's `ReportHistory` renders the `<table>` unconditionally, with a "No exports yet." row when empty)
+
+### With seeded conversation (HT-04..HT-06)
+
+- [x] HT-04: User selects the seeded conversation (matched by its `data-session-id`) and the transcript preview loads with a Download button; downloading it produces a CSV file. Skips gracefully if mentor creation is unavailable to the account in this environment
+- HT-05 (retired): the "filter Conversations by an agent and clear the filter" checkpoint was removed — the agent autocomplete is backed by the mentors search index, which lags mentor creation by minutes on shared environments, and no variant (exact name, opportunistic pick-any) could be made reliable. The filter toolbar's presence stays covered by HT-01
+- [x] HT-06: User exports their personal chat history from the unfiltered Conversations view (Export button) and the report is tracked in the Exports sub-tab. Skips when the account has no conversations to export

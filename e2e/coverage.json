@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-08-13",
+  "lastUpdated": "2026-08-22",
   "summary": {
-    "totalCheckpoints": 665,
-    "coveredCheckpoints": 634,
+    "totalCheckpoints": 683,
+    "coveredCheckpoints": 652,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 11,
     "pendingCheckpoints": 8,
     "percent": 100,
-    "totalJourneys": 71,
-    "activeJourneys": 70
+    "totalJourneys": 73,
+    "activeJourneys": 72
   },
   "journeys": [
     {
@@ -92,7 +92,7 @@
         },
         {
           "id": "nav-08",
-          "description": "Clicking 'New Chat' once fires exactly ONE create-session POST (issue #1002 regression guard — duplicate eventBus listener caused two POSTs in the old code)",
+          "description": "Clicking 'New Chat' once fires exactly ONE create-session POST (issue #1002 regression guard \u2014 duplicate eventBus listener caused two POSTs in the old code)",
           "status": "pending"
         }
       ]
@@ -217,7 +217,7 @@
     },
     {
       "id": "mentor-discovery-explore-page",
-      "name": "Mentor Discovery — Explore Page",
+      "name": "Mentor Discovery \u2014 Explore Page",
       "spec": "05-mentor-discovery-explore-page.spec.ts",
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/explore/page.tsx",
@@ -293,7 +293,7 @@
     },
     {
       "id": "mentor-management-admin",
-      "name": "Mentor Management — Admin",
+      "name": "Mentor Management \u2014 Admin",
       "spec": "06-mentor-management-admin.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/index.tsx",
@@ -358,32 +358,32 @@
         },
         {
           "id": "mgmt-11",
-          "description": "Edit Agent opened from sidebar My Agents renders a working multi-tab segment sidebar (more than the Privacy-only bug signature) and the first available tab activates; Settings+LLM additionally asserted when the picked sibling mentor grants rbacResource access — the first row is arbitrary and may carry partial rights",
+          "description": "Edit Agent opened from sidebar My Agents renders a working multi-tab segment sidebar (more than the Privacy-only bug signature) and the first available tab activates; Settings+LLM additionally asserted when the picked sibling mentor grants rbacResource access \u2014 the first row is arbitrary and may carry partial rights",
           "status": "covered"
         },
         {
           "id": "mgmt-12",
-          "description": "My Agents list is scoped to created_by=username for non-admins (useMentorsWithPagination); admin sees full list; unit-covered in settings-modal.test.tsx — not e2e-reproducible without RBAC seeding",
+          "description": "My Agents list is scoped to created_by=username for non-admins (useMentorsWithPagination); admin sees full list; unit-covered in settings-modal.test.tsx \u2014 not e2e-reproducible without RBAC seeding",
           "status": "not-reproducible"
         },
         {
           "id": "mgmt-13",
-          "description": "Student with /mentors/#create RBAC permission sees New Agent + My Agents in sidebar and can click agent row to open Edit Agent dialog (studentCanCreateMentors flag); unit-covered — requires RBAC env to reproduce in e2e",
+          "description": "Student with /mentors/#create RBAC permission sees New Agent + My Agents in sidebar and can click agent row to open Edit Agent dialog (studentCanCreateMentors flag); unit-covered \u2014 requires RBAC env to reproduce in e2e",
           "status": "not-reproducible"
         },
         {
           "id": "mgmt-14",
-          "description": "Analytics shown to student mentor-creator only for their own mentor (created_by===username) or when holding per-mentor view_analytics permission; unit-covered — requires RBAC env to reproduce in e2e",
+          "description": "Analytics shown to student mentor-creator only for their own mentor (created_by===username) or when holding per-mentor view_analytics permission; unit-covered \u2014 requires RBAC env to reproduce in e2e",
           "status": "not-reproducible"
         },
         {
           "id": "mgmt-15",
-          "description": "Issue #2318: LLM tab provider grid renders usable (canAccessProvider) providers before unusable ones, each group alphabetical by display label (data-testid=llm-provider-card, data-disabled) — asserts the ordering invariants rather than a hard-coded provider list",
+          "description": "Issue #2318: LLM tab provider grid renders usable (canAccessProvider) providers before unusable ones, each group alphabetical by display label (data-testid=llm-provider-card, data-disabled) \u2014 asserts the ordering invariants rather than a hard-coded provider list",
           "status": "covered"
         },
         {
           "id": "mgmt-16",
-          "description": "Issue #2318: ibl.ai provider card (data-provider=iblai) shows the ibl.ai logo and label instead of falling through to the generic default (the original bug — a missing map entry rendered a blank/404 logo); skips gracefully if the tenant's LLM list omits ibl.ai",
+          "description": "Issue #2318: ibl.ai provider card (data-provider=iblai) shows the ibl.ai logo and label instead of falling through to the generic default (the original bug \u2014 a missing map entry rendered a blank/404 logo); skips gracefully if the tenant's LLM list omits ibl.ai",
           "status": "covered"
         },
         {
@@ -400,9 +400,11 @@
     },
     {
       "id": "mentor-settings-tab-unique-id",
-      "name": "Mentor Settings Tab — Unique ID",
+      "name": "Mentor Settings Tab \u2014 Unique ID",
       "spec": "07-mentor-settings-tab-unique-id.spec.ts",
-      "sourceFiles": ["components/modals/edit-mentor-modal/settings-tab.tsx"],
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/settings-tab.tsx"
+      ],
       "checkpoints": [
         {
           "id": "uid-01",
@@ -446,17 +448,17 @@
         },
         {
           "id": "uid-09",
-          "description": "When RBAC restricts write access, read-only settings fields (e.g. mentor_visibility) are gated in the UI and omitted from the settings PUT payload so the save is not rejected — unit-covered in settings-tab.test.tsx and hoc/utils/__tests__/index.test.ts; not e2e-reproducible without RBAC field-permission seeding",
+          "description": "When RBAC restricts write access, read-only settings fields (e.g. mentor_visibility) are gated in the UI and omitted from the settings PUT payload so the save is not rejected \u2014 unit-covered in settings-tab.test.tsx and hoc/utils/__tests__/index.test.ts; not e2e-reproducible without RBAC field-permission seeding",
           "status": "not-reproducible"
         },
         {
           "id": "cat-01",
-          "description": "iblai-platform#2289: clicking a Category option (real click, not forced) updates the trigger label to that category — proves the popover is hit-testable, not just visible",
+          "description": "iblai-platform#2289: clicking a Category option (real click, not forced) updates the trigger label to that category \u2014 proves the popover is hit-testable, not just visible",
           "status": "covered"
         },
         {
           "id": "cat-02",
-          "description": "iblai-platform#2289: typing a substring of a category NAME narrows the option list to matching results. The bundled SDK source still shows CommandItem value={category.id.toString()}, which would predict this fails, but it passes reliably in practice (2/2 full runs) on a plain, never-copied mentor — FIXME: known failing on @iblai/web-containers@1.16.1; cmdk scores the query against CommandItem value, which is still the numeric category id, so typing a name renders \"No Category found.\". Needs value={category.name} in the SDK.",
+          "description": "iblai-platform#2289: typing a substring of a category NAME narrows the option list to matching results. The bundled SDK source still shows CommandItem value={category.id.toString()}, which would predict this fails, but it passes reliably in practice (2/2 full runs) on a plain, never-copied mentor \u2014 FIXME: known failing on @iblai/web-containers@1.16.1; cmdk scores the query against CommandItem value, which is still the numeric category id, so typing a name renders \"No Category found.\". Needs value={category.name} in the SDK.",
           "status": "pending"
         },
         {
@@ -466,12 +468,12 @@
         },
         {
           "id": "cat-04",
-          "description": "iblai-platform#2289: keystrokes typed into the Category search box land in the input's value — the popover previously swallowed input entirely",
+          "description": "iblai-platform#2289: keystrokes typed into the Category search box land in the input's value \u2014 the popover previously swallowed input entirely",
           "status": "covered"
         },
         {
           "id": "cat-05",
-          "description": "iblai-platform#2289: a selected Category persists after Save + close/reopen — proves the numeric category id (not the name) reached the settings PUT payload and was resolved back to a name",
+          "description": "iblai-platform#2289: a selected Category persists after Save + close/reopen \u2014 proves the numeric category id (not the name) reached the settings PUT payload and was resolved back to a name",
           "status": "covered"
         },
         {
@@ -579,7 +581,7 @@
         },
         {
           "id": "vc-06",
-          "description": "Full voice call with real LiveKit (skipped — requires real infrastructure)",
+          "description": "Full voice call with real LiveKit (skipped \u2014 requires real infrastructure)",
           "status": "covered"
         },
         {
@@ -591,7 +593,7 @@
     },
     {
       "id": "canvas-ai-document-editor",
-      "name": "Canvas — AI Document Editor",
+      "name": "Canvas \u2014 AI Document Editor",
       "spec": "10-canvas-ai-document-editor.spec.ts",
       "sourceFiles": [
         "components/canvas/canvas-component.tsx",
@@ -657,9 +659,11 @@
     },
     {
       "id": "canvas-embed",
-      "name": "Canvas — Embed",
+      "name": "Canvas \u2014 Embed",
       "spec": "11-canvas-embed.spec.ts",
-      "sourceFiles": ["components/modals/edit-mentor-modal/tabs/embed-tab.tsx"],
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/embed-tab.tsx"
+      ],
       "checkpoints": [
         {
           "id": "ce-01",
@@ -765,7 +769,7 @@
         },
         {
           "id": "emb-09",
-          "description": "Embed mode renders a minimal sidebar: New Chat present (and Chats section when the user is logged in); Agents (New Agent), Workflows, Analytics, Projects sections and the Support/docs footer link absent — holds for both expanded and rail-collapsed layouts regardless of user role",
+          "description": "Embed mode renders a minimal sidebar: New Chat present (and Chats section when the user is logged in); Agents (New Agent), Workflows, Analytics, Projects sections and the Support/docs footer link absent \u2014 holds for both expanded and rail-collapsed layouts regardless of user role",
           "status": "covered"
         },
         {
@@ -894,7 +898,9 @@
       "id": "my-mentors-modal",
       "name": "My Mentors Modal",
       "spec": "16-my-mentors-modal.spec.ts",
-      "sourceFiles": ["components/modals/my-mentors-modal.tsx"],
+      "sourceFiles": [
+        "components/modals/my-mentors-modal.tsx"
+      ],
       "status": "deprecated",
       "deprecatedIn": "#1431",
       "deprecatedReason": "Feature removed; agent discovery consolidated to the Explore sidebar. Spec file is a stub.",
@@ -1454,7 +1460,7 @@
         },
         {
           "id": "mem-02",
-          "description": "\"Remember past conversations\" in-tab capability toggle (feat/2040 — moved off Settings → Capabilities into the Memory tab's own CapabilityGate) can be enabled and disabled; auto-saves via useEditMentorMutation (optimistic, no footer Save button)",
+          "description": "\"Remember past conversations\" in-tab capability toggle (feat/2040 \u2014 moved off Settings \u2192 Capabilities into the Memory tab's own CapabilityGate) can be enabled and disabled; auto-saves via useEditMentorMutation (optimistic, no footer Save button)",
           "status": "covered"
         },
         {
@@ -1474,7 +1480,7 @@
         },
         {
           "id": "mem-06",
-          "description": "Memory capability toggle (enable_memory_component) is disabled when the user only has read access to the field (RBAC) — unit-covered in memory-tab.test.tsx; not e2e-reproducible without RBAC field-permission seeding",
+          "description": "Memory capability toggle (enable_memory_component) is disabled when the user only has read access to the field (RBAC) \u2014 unit-covered in memory-tab.test.tsx; not e2e-reproducible without RBAC field-permission seeding",
           "status": "not-reproducible"
         }
       ]
@@ -1615,7 +1621,9 @@
       "id": "user-invitations-and-default-mentor",
       "name": "User Invitations & Default Mentor",
       "spec": "27-user-invitations-and-default-mentor.spec.ts",
-      "sourceFiles": ["components/modals/settings-modal.tsx"],
+      "sourceFiles": [
+        "components/modals/settings-modal.tsx"
+      ],
       "checkpoints": [
         {
           "id": "inv-01",
@@ -1708,19 +1716,19 @@
         },
         {
           "id": "ov-11",
-          "description": "Admin: nav does not overflow on mobile (Pixel 5); with credit balance LLM name span shrinks to ≤100px",
+          "description": "Admin: nav does not overflow on mobile (Pixel 5); with credit balance LLM name span shrinks to \u2264100px",
           "status": "covered"
         },
         {
           "id": "ov-12",
-          "description": "Admin: nav does not overflow on mobile when credit balance is hidden; LLM name span stays ≤150px",
+          "description": "Admin: nav does not overflow on mobile when credit balance is hidden; LLM name span stays \u2264150px",
           "status": "covered"
         }
       ]
     },
     {
       "id": "accessibility-wcag",
-      "name": "Accessibility — WCAG 2.1 AA",
+      "name": "Accessibility \u2014 WCAG 2.1 AA",
       "spec": "29-accessibility-wcag.spec.ts",
       "sourceFiles": [
         "components/accessibility/accessibility-toolbar.tsx",
@@ -1842,12 +1850,12 @@
         },
         {
           "id": "a11y-25",
-          "description": "Press Enter to send — textarea retains focus during streaming; stop button is NOT focused (issue #1904)",
+          "description": "Press Enter to send \u2014 textarea retains focus during streaming; stop button is NOT focused (issue #1904)",
           "status": "covered"
         },
         {
           "id": "a11y-26",
-          "description": "Click Send button — textarea retains focus; onMouseDown preventDefault prevents focus theft (issue #1904)",
+          "description": "Click Send button \u2014 textarea retains focus; onMouseDown preventDefault prevents focus theft (issue #1904)",
           "status": "covered"
         },
         {
@@ -1862,21 +1870,21 @@
         },
         {
           "id": "a11y-21",
-          "description": "Chat composer stays visible at 640 px viewport width when canvas is open — WCAG 1.4.10 Reflow (issue #1596)",
+          "description": "Chat composer stays visible at 640 px viewport width when canvas is open \u2014 WCAG 1.4.10 Reflow (issue #1596)",
           "status": "deprecated",
           "deprecatedIn": "scope-revert/1596",
           "deprecatedReason": "Reflow refactor reverted as out-of-scope; only WCAG 4.1.2 (button aria-labels) is in scope for #1596. Track WCAG 1.4.10 separately."
         },
         {
           "id": "a11y-22",
-          "description": "Exactly one #chat-input-textarea exists in the DOM when canvas is open at 640 px — no duplicate mobile composer (issue #1596)",
+          "description": "Exactly one #chat-input-textarea exists in the DOM when canvas is open at 640 px \u2014 no duplicate mobile composer (issue #1596)",
           "status": "deprecated",
           "deprecatedIn": "scope-revert/1596",
           "deprecatedReason": "Duplicate-composer removal reverted with the reflow refactor; out of scope for #1596."
         },
         {
           "id": "a11y-23",
-          "description": "Skip-link keyboard journey: Tab makes \"Skip to chat input\" link visible, Enter moves focus to #chat-input-textarea — WCAG 2.4.1 (issue #1596)",
+          "description": "Skip-link keyboard journey: Tab makes \"Skip to chat input\" link visible, Enter moves focus to #chat-input-textarea \u2014 WCAG 2.4.1 (issue #1596)",
           "status": "deprecated",
           "deprecatedIn": "scope-revert/1596",
           "deprecatedReason": "Skip-link added by the reflow refactor reverted as out-of-scope; track WCAG 2.4.1 separately."
@@ -1887,7 +1895,9 @@
       "id": "advanced-css-js-customization",
       "name": "Advanced CSS / JS Customization",
       "spec": "30-advanced-css-js-customization.spec.ts",
-      "sourceFiles": ["components/modals/advanced-settings-modal.tsx"],
+      "sourceFiles": [
+        "components/modals/advanced-settings-modal.tsx"
+      ],
       "checkpoints": [
         {
           "id": "css-01",
@@ -1935,7 +1945,9 @@
       "id": "mobile-view",
       "name": "Mobile View",
       "spec": "31-mobile-view.spec.ts",
-      "sourceFiles": ["app/platform/[tenantKey]/[mentorId]/page.tsx"],
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/page.tsx"
+      ],
       "checkpoints": [
         {
           "id": "mob-01",
@@ -2046,7 +2058,9 @@
       "id": "ui-render-console-errors",
       "name": "UI Render Console Errors",
       "spec": "33-ui-render-console-errors.spec.ts",
-      "sourceFiles": ["app/platform/[tenantKey]/[mentorId]/page.tsx"],
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/page.tsx"
+      ],
       "checkpoints": [
         {
           "id": "ui-err-01",
@@ -2205,7 +2219,9 @@
       "id": "copy-mentor",
       "name": "Copy Mentor",
       "spec": "36-copy-mentor.spec.ts",
-      "sourceFiles": ["components/modals/edit-mentor-modal/settings-tab.tsx"],
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/settings-tab.tsx"
+      ],
       "checkpoints": [
         {
           "id": "cpm-01",
@@ -2259,7 +2275,7 @@
         },
         {
           "id": "cpm-11",
-          "description": "Allow Copies toggle (forkable) is disabled and omitted from the settings PUT payload when the user only has read access to the field (RBAC) — unit-covered in settings-tab.test.tsx; not e2e-reproducible without RBAC field-permission seeding",
+          "description": "Allow Copies toggle (forkable) is disabled and omitted from the settings PUT payload when the user only has read access to the field (RBAC) \u2014 unit-covered in settings-tab.test.tsx; not e2e-reproducible without RBAC field-permission seeding",
           "status": "not-reproducible"
         }
       ]
@@ -2316,7 +2332,7 @@
         },
         {
           "id": "tcr-08",
-          "description": "Tool call indicator and reasoning section are gated by the Enable verbose reasoning setting — hidden when the toggle is off, shown when on",
+          "description": "Tool call indicator and reasoning section are gated by the Enable verbose reasoning setting \u2014 hidden when the toggle is off, shown when on",
           "status": "covered"
         }
       ]
@@ -2382,7 +2398,9 @@
       "id": "tenant-memory-system-toggle",
       "name": "Tenant Memory System Toggle",
       "spec": "38-tenant-memory-system-toggle.spec.ts",
-      "sourceFiles": ["components/modals/settings-modal.tsx"],
+      "sourceFiles": [
+        "components/modals/settings-modal.tsx"
+      ],
       "checkpoints": [
         {
           "id": "tms-01",
@@ -2414,7 +2432,7 @@
         },
         {
           "id": "claw-03",
-          "description": "Flipping the capability toggle auto-saves instantly (optimistic local state, no footer Save button) and does not change Sandbox tab visibility — the tab is unconditionally mounted for admins",
+          "description": "Flipping the capability toggle auto-saves instantly (optimistic local state, no footer Save button) and does not change Sandbox tab visibility \u2014 the tab is unconditionally mounted for admins",
           "status": "covered"
         },
         {
@@ -2444,7 +2462,7 @@
         },
         {
           "id": "claw-10",
-          "description": "Admin adds a new sandbox instance via the Add Instance dialog (capability enabled first — CapabilityGate content requires the toggle on) and the new row appears in the instance table",
+          "description": "Admin adds a new sandbox instance via the Add Instance dialog (capability enabled first \u2014 CapabilityGate content requires the toggle on) and the new row appears in the instance table",
           "status": "covered"
         },
         {
@@ -2454,7 +2472,7 @@
         },
         {
           "id": "claw-12",
-          "description": "Admin connects a sandbox instance via the dedicated per-row Connect button (data-testid=\"connect-instance-<id>\" — Connect is no longer a dropdown menu item, it sits next to the separate \"Actions\" three-dot menu) and the Connected Instance heading appears",
+          "description": "Admin connects a sandbox instance via the dedicated per-row Connect button (data-testid=\"connect-instance-<id>\" \u2014 Connect is no longer a dropdown menu item, it sits next to the separate \"Actions\" three-dot menu) and the Connected Instance heading appears",
           "status": "covered"
         },
         {
@@ -2464,7 +2482,7 @@
         },
         {
           "id": "claw-16",
-          "description": "Dedicated sandbox toggle (enable_claw) is disabled when the user only has read access to the field (RBAC) — unit-covered in sandbox-tab.test.tsx; not e2e-reproducible without RBAC field-permission seeding",
+          "description": "Dedicated sandbox toggle (enable_claw) is disabled when the user only has read access to the field (RBAC) \u2014 unit-covered in sandbox-tab.test.tsx; not e2e-reproducible without RBAC field-permission seeding",
           "status": "not-reproducible"
         }
       ]
@@ -2483,7 +2501,7 @@
       "checkpoints": [
         {
           "id": "pr-01",
-          "description": "Privacy tab label is visible in the Edit Mentor modal sidebar (always mounted — no longer gated on enable_privacy_router)",
+          "description": "Privacy tab label is visible in the Edit Mentor modal sidebar (always mounted \u2014 no longer gated on enable_privacy_router)",
           "status": "covered"
         },
         {
@@ -2493,7 +2511,7 @@
         },
         {
           "id": "pr-03",
-          "description": "Privacy tab stays mounted in the sidebar regardless of enable_privacy_router; capability-gate-content's data-enabled attribute tracks the in-tab \"PII filtering\" toggle (feat/2040 — moved off Settings → Capabilities into the Privacy tab's own CapabilityGate)",
+          "description": "Privacy tab stays mounted in the sidebar regardless of enable_privacy_router; capability-gate-content's data-enabled attribute tracks the in-tab \"PII filtering\" toggle (feat/2040 \u2014 moved off Settings \u2192 Capabilities into the Privacy tab's own CapabilityGate)",
           "status": "covered"
         },
         {
@@ -2508,7 +2526,7 @@
         },
         {
           "id": "pr-05b",
-          "description": "The \"When PII is detected\" action dropdown lists Allow, Redact, Mask, Block in that order (PRIVACY_ACTIONS = ['allow','redact','mask','block'] from @iblai/data-layer — Allow is now first)",
+          "description": "The \"When PII is detected\" action dropdown lists Allow, Redact, Mask, Block in that order (PRIVACY_ACTIONS = ['allow','redact','mask','block'] from @iblai/data-layer \u2014 Allow is now first)",
           "status": "covered"
         },
         {
@@ -2567,7 +2585,7 @@
         },
         {
           "id": "ta-07",
-          "description": "Searching the task list — a matching query keeps the task visible, and clearing the search leaves it visible",
+          "description": "Searching the task list \u2014 a matching query keeps the task visible, and clearing the search leaves it visible",
           "status": "covered"
         },
         {
@@ -2632,7 +2650,7 @@
         },
         {
           "id": "vo-09",
-          "description": "Settings tab surfaces the smart-document-retrieval voice-call toggle (\"Enable screen sharing\" moved off Settings onto the Screen tab's own capability toggle — see journey 48)",
+          "description": "Settings tab surfaces the smart-document-retrieval voice-call toggle (\"Enable screen sharing\" moved off Settings onto the Screen tab's own capability toggle \u2014 see journey 48)",
           "status": "covered"
         },
         {
@@ -2642,13 +2660,29 @@
         },
         {
           "id": "VO-11",
-          "description": "Voice tab stays visible (always mounted — no longer gated on show_voice_call) and its content grays (capability-gate-content data-enabled=\"false\") when the in-tab \"Enable voice calls\" capability toggle is off",
+          "description": "Voice tab stays visible (always mounted \u2014 no longer gated on show_voice_call) and its content grays (capability-gate-content data-enabled=\"false\") when the in-tab \"Enable voice calls\" capability toggle is off",
           "status": "covered"
         },
         {
           "id": "VO-12",
           "description": "Re-enabling the in-tab \"Enable voice calls\" capability toggle ungates the Voice tab's sub-tab content (data-enabled=\"true\")",
           "status": "covered"
+        },
+        {
+          "id": "VO-13",
+          "description": "Selecting the OpenAI provider reveals the Voice Instructions prompt card, its character counter, and all three preset chips (warm/calm/energetic); switching to the Browser provider hides the card again",
+          "status": "covered"
+        },
+        {
+          "id": "VO-14",
+          "description": "Applying the \"warm\" Voice Instructions preset chip fills the card with the canned text, the counter shows a non-zero /1000 value, the tab-level Save button enables, and saving surfaces the \"Voice saved\" toast",
+          "status": "covered"
+        },
+        {
+          "id": "VO-15",
+          "description": "Custom Voice Instructions set via the editor, saved, and reloaded after closing and reopening the Edit Agent modal show the persisted value (true round-trip through mentor settings' voice_instructions field, not leftover in-memory form state)",
+          "status": "covered",
+          "note": "An over-cap (>1000 chars) checkpoint is intentionally not covered: typing past the cap requires pressSequentially through the ProseMirror contenteditable one character at a time, which is prohibitively slow in a per-test suite"
         }
       ]
     },
@@ -2666,7 +2700,7 @@
       "checkpoints": [
         {
           "id": "ss-01",
-          "description": "Screen tab stays visible (always mounted — no longer gated on call_configuration.enable_video) and its content grays (capability-gate-content data-enabled=\"false\") when the in-tab \"Enable screen sharing\" capability toggle is off",
+          "description": "Screen tab stays visible (always mounted \u2014 no longer gated on call_configuration.enable_video) and its content grays (capability-gate-content data-enabled=\"false\") when the in-tab \"Enable screen sharing\" capability toggle is off",
           "status": "covered"
         },
         {
@@ -2884,7 +2918,7 @@
         },
         {
           "id": "ac-03",
-          "description": "Access tab shows roles table or empty state — never a blank crash screen",
+          "description": "Access tab shows roles table or empty state \u2014 never a blank crash screen",
           "status": "covered"
         },
         {
@@ -2999,7 +3033,9 @@
       "id": "persistent-chat-input-label",
       "name": "Persistent Chat Input Label (WCAG 3.3.2)",
       "spec": "43-persistent-chat-input-label.spec.ts",
-      "sourceFiles": ["components/chat-input-form.tsx"],
+      "sourceFiles": [
+        "components/chat-input-form.tsx"
+      ],
       "checkpoints": [
         {
           "id": "pcil-01",
@@ -3075,7 +3111,9 @@
       "id": "chat-url-prompt-injection",
       "name": "Chat URL ?prompt= Auto-Injection",
       "spec": "chat-url-prompt-injection.spec.ts",
-      "sourceFiles": ["components/chat/index.tsx"],
+      "sourceFiles": [
+        "components/chat/index.tsx"
+      ],
       "checkpoints": [
         {
           "id": "upi-01",
@@ -3099,7 +3137,7 @@
         },
         {
           "id": "upi-05",
-          "description": "URL-encoded prompt (%20 → space): bubble renders the decoded text (e.g. 'hi there e2e'), not the percent-encoded form",
+          "description": "URL-encoded prompt (%20 \u2192 space): bubble renders the decoded text (e.g. 'hi there e2e'), not the percent-encoded form",
           "status": "covered"
         },
         {
@@ -3119,19 +3157,19 @@
         },
         {
           "id": "upi-09",
-          "description": "sanitizePromptParam() (iblai-platform#2164): an HTML/script-ish payload (<img src=x onerror=alert(1)>) is NOT escaped by sanitizePromptParam but renders as inert literal text via the render layer's existing plain-text/no-dangerouslySetInnerHTML handling — no real <img> element is inserted and no onerror/dialog ever fires",
+          "description": "sanitizePromptParam() (iblai-platform#2164): an HTML/script-ish payload (<img src=x onerror=alert(1)>) is NOT escaped by sanitizePromptParam but renders as inert literal text via the render layer's existing plain-text/no-dangerouslySetInnerHTML handling \u2014 no real <img> element is inserted and no onerror/dialog ever fires",
           "status": "covered"
         },
         {
           "id": "upi-10",
-          "description": "sanitizePromptParam() (iblai-platform#2164): oversized ?prompt= (>4000 chars) is truncated to MAX_PROMPT_PARAM_LENGTH then re-trimmed; unit-covered in lib/__tests__/sanitize-prompt-param.test.ts — not e2e-reproducible without flake risk from very long query strings (URL length limits, page.goto/typing cost)",
+          "description": "sanitizePromptParam() (iblai-platform#2164): oversized ?prompt= (>4000 chars) is truncated to MAX_PROMPT_PARAM_LENGTH then re-trimmed; unit-covered in lib/__tests__/sanitize-prompt-param.test.ts \u2014 not e2e-reproducible without flake risk from very long query strings (URL length limits, page.goto/typing cost)",
           "status": "not-reproducible"
         }
       ]
     },
     {
       "id": "chat-upload-camera-and-image-display",
-      "name": "Chat Upload — Camera Option & Image Display",
+      "name": "Chat Upload \u2014 Camera Option & Image Display",
       "spec": "46-chat-upload-camera-and-image-display.spec.ts",
       "sourceFiles": [
         "components/chat-input-form/upload-menu.tsx",
@@ -3252,7 +3290,7 @@
         },
         {
           "id": "cp-header-05",
-          "description": "Confirming enable-private-mode mid-session locks the session as on (aria-disabled) — session is one-way per spec",
+          "description": "Confirming enable-private-mode mid-session locks the session as on (aria-disabled) \u2014 session is one-way per spec",
           "status": "covered"
         },
         {
@@ -3311,13 +3349,13 @@
           "id": "cp-chat-06",
           "description": "Multi-turn context retained within a single private session: (a) cached session id is stable across both sends (front-end contract, passes today); (b) AI echoes back the code word from turn 1, proving backend retains in-session context for private sessions",
           "status": "pending",
-          "note": "Skipped (test.skip) as flaky pending backend fix — tracked by iblai/iblai-platform#2186. Assertion (a) stable session id passes today. Assertion (b) AI context recall is a live gate awaiting backend fix: backend must retain ephemeral in-session context for disable_chathistory:true sessions"
+          "note": "Skipped (test.skip) as flaky pending backend fix \u2014 tracked by iblai/iblai-platform#2186. Assertion (a) stable session id passes today. Assertion (b) AI context recall is a live gate awaiting backend fix: backend must retain ephemeral in-session context for disable_chathistory:true sessions"
         },
         {
           "id": "cp-chat-07",
           "description": "File attachment (drag-drop) works in private mode: attachment chip appears, message sends with attachment, and assistant replies; pins that selectSessionId follows the private session id through the upload path",
           "status": "pending",
-          "note": "Expected to pass today (analysis: upload path reads selectSessionId which startPrivateChat updates via chatActions.updateSessionIds — byte-identical to normal mode). Included as regression gate."
+          "note": "Expected to pass today (analysis: upload path reads selectSessionId which startPrivateChat updates via chatActions.updateSessionIds \u2014 byte-identical to normal mode). Included as regression gate."
         },
         {
           "id": "cp-chat-08",
@@ -3343,17 +3381,17 @@
       "checkpoints": [
         {
           "id": "pc-01",
-          "description": "Fresh mentor: Settings → Capabilities — \"Enable prompt caching\" switch is visible with aria-checked=false (default off) and tooltip trigger is present",
+          "description": "Fresh mentor: Settings \u2192 Capabilities \u2014 \"Enable prompt caching\" switch is visible with aria-checked=false (default off) and tooltip trigger is present",
           "status": "covered"
         },
         {
           "id": "pc-02",
-          "description": "Toggle ON → Save: switch reflects ON, \"Agent updated successfully\" toast appears, and switch stays ON in the same open dialog after save. Persistence across close/reopen is not asserted (enable_prompt_caching not yet in SDK type).",
+          "description": "Toggle ON \u2192 Save: switch reflects ON, \"Agent updated successfully\" toast appears, and switch stays ON in the same open dialog after save. Persistence across close/reopen is not asserted (enable_prompt_caching not yet in SDK type).",
           "status": "covered"
         },
         {
           "id": "pc-03",
-          "description": "Toggle ON → click OFF → aria-checked=false immediately in UI → Save → success toast (verifies toggle interaction and API round-trip; persistence of false via multipart is a pre-existing backend limitation shared with enable_multi_query_rag)",
+          "description": "Toggle ON \u2192 click OFF \u2192 aria-checked=false immediately in UI \u2192 Save \u2192 success toast (verifies toggle interaction and API round-trip; persistence of false via multipart is a pre-existing backend limitation shared with enable_multi_query_rag)",
           "status": "covered"
         }
       ]
@@ -3368,7 +3406,7 @@
       "checkpoints": [
         {
           "id": "rcr-01",
-          "description": "New chat appears in the sidebar Recent list immediately after the first AI response finishes streaming — no page reload (regression guard for issue #1982: refetchRecent() was orphaned in an unrendered component on main)",
+          "description": "New chat appears in the sidebar Recent list immediately after the first AI response finishes streaming \u2014 no page reload (regression guard for issue #1982: refetchRecent() was orphaned in an unrendered component on main)",
           "status": "covered"
         },
         {
@@ -3459,12 +3497,12 @@
         },
         {
           "id": "nmv-02",
-          "description": "Toggling the navbar User/Admin switch to User mode and re-opening the dropdown collapses the list to exactly New Chat — Settings, LLM, Prompts, Tools, and the Modify/fork footer action are all hidden (issue #2048)",
+          "description": "Toggling the navbar User/Admin switch to User mode and re-opening the dropdown collapses the list to exactly New Chat \u2014 Settings, LLM, Prompts, Tools, and the Modify/fork footer action are all hidden (issue #2048)",
           "status": "covered"
         },
         {
           "id": "nmv-03",
-          "description": "Regression guard: toggling back to Admin mode and re-opening the dropdown restores the full admin segment list — proves the segment list recomputes on every toggle instead of staying stale (fix: `userType` added to the `filterContext` useMemo deps in hooks/use-mentor-segments.ts)",
+          "description": "Regression guard: toggling back to Admin mode and re-opening the dropdown restores the full admin segment list \u2014 proves the segment list recomputes on every toggle instead of staying stale (fix: `userType` added to the `filterContext` useMemo deps in hooks/use-mentor-segments.ts)",
           "status": "covered"
         },
         {
@@ -3504,7 +3542,7 @@
         },
         {
           "id": "chexp-05",
-          "description": "With the setting OFF, a non-student (admin/instructor mode) still sees Export in a chat row's three-dot menu — role wins over the tenant setting",
+          "description": "With the setting OFF, a non-student (admin/instructor mode) still sees Export in a chat row's three-dot menu \u2014 role wins over the tenant setting",
           "status": "covered"
         }
       ]
@@ -3530,12 +3568,12 @@
         },
         {
           "id": "embchat-03",
-          "description": "REGRESSION GUARD (issue #2067 / LAIA-684): after selecting a chat from history in embed mode, the URL still carries embed=true and never gains a ?session= param — on the pre-fix code the row click pushed /platform/<tenant>/<mentor>?session=<id>, stripping embed=true and flipping the app out of embed mode",
+          "description": "REGRESSION GUARD (issue #2067 / LAIA-684): after selecting a chat from history in embed mode, the URL still carries embed=true and never gains a ?session= param \u2014 on the pre-fix code the row click pushed /platform/<tenant>/<mentor>?session=<id>, stripping embed=true and flipping the app out of embed mode",
           "status": "covered"
         },
         {
           "id": "embchat-04",
-          "description": "REGRESSION GUARD: after selecting a chat from history in embed mode, Agents, Workflows, Projects, Analytics, Management, Notifications, and the Support footer link remain absent from the sidebar — the full admin sidebar must not leak in",
+          "description": "REGRESSION GUARD: after selecting a chat from history in embed mode, Agents, Workflows, Projects, Analytics, Management, Notifications, and the Support footer link remain absent from the sidebar \u2014 the full admin sidebar must not leak in",
           "status": "covered"
         }
       ]
@@ -3615,12 +3653,12 @@
       "checkpoints": [
         {
           "id": "lti-01",
-          "description": "Admin sees the LTI tab visible by default on a fresh mentor without enabling the 'Enable LTI launches' toggle (is_lti_accessible=false) — gate removed in feat/1853",
+          "description": "Admin sees the LTI tab visible by default on a fresh mentor without enabling the 'Enable LTI launches' toggle (is_lti_accessible=false) \u2014 gate removed in feat/1853",
           "status": "covered"
         },
         {
           "id": "lti-03",
-          "description": "Admin disables \"Enable LTI launches\" via the LTI tab's own in-tab capability toggle (feat/2040 — moved off Settings → Capabilities into the LTI tab's own CapabilityGate) and capability-gate-content's data-enabled flips to \"false\" (the tab itself is unconditionally mounted for admins, so tab visibility is no longer asserted)",
+          "description": "Admin disables \"Enable LTI launches\" via the LTI tab's own in-tab capability toggle (feat/2040 \u2014 moved off Settings \u2192 Capabilities into the LTI tab's own CapabilityGate) and capability-gate-content's data-enabled flips to \"false\" (the tab itself is unconditionally mounted for admins, so tab visibility is no longer asserted)",
           "status": "covered"
         },
         {
@@ -3640,14 +3678,15 @@
         },
         {
           "id": "lti-07",
-          "description": "Admin creates an LTI link and it appears in the links list",
-          "status": "covered"
+          "description": "Admin creates an LTI link (async_create: true \u2014 backend returns 202 and builds an edX course via celery in the background); the row appears immediately with a pending/building status badge, and clicking the header Refresh button (via waitForLinkReady) drives the badge to Ready",
+          "status": "covered",
+          "note": "Link creation is asynchronous \u2014 the create modal closes on the 202, not on the build finishing. This checkpoint also covers the header Refresh affordance, since waitForLinkReady clicks it while the build is in flight."
         },
         {
           "id": "lti-08",
           "description": "Admin edits (renames) an LTI link and the new name appears in the list while the old name is gone",
           "status": "covered",
-          "note": "Self-contained mentor: the backend allows a single LTI link per mentor (the create button is not rendered once a link exists) and the SDK has no delete-link helper, so creating a second link on the shared worker mentor after lti-07 would time out"
+          "note": "Self-contained mentor: the backend allows a single LTI link per mentor (the create button is not rendered once a link exists) and the SDK has no delete-link helper, so creating a second link on the shared worker mentor after lti-07 would time out. The rename waits for waitForLinkReady first \u2014 the edit pencil only renders once the async-created link's status is Ready (editable = !inProgress && !failed)."
         },
         {
           "id": "lti-10",
@@ -3668,7 +3707,7 @@
           "id": "lti-13",
           "description": "Admin opens the LTI Tools sub-tab and the platform-wide tools surface renders: the create button plus either the empty state or the existing tools list",
           "status": "covered",
-          "note": "LTI tools are tenant-scoped (platform-wide), not mentor-scoped: a fresh mentor still lists every tool on the tenant, lti-14 residue persists (no delete-tool helper), and parallel workers can create tools at any moment — a guaranteed-empty state is unreachable"
+          "note": "LTI tools are tenant-scoped (platform-wide), not mentor-scoped: a fresh mentor still lists every tool on the tenant, lti-14 residue persists (no delete-tool helper), and parallel workers can create tools at any moment \u2014 a guaranteed-empty state is unreachable"
         },
         {
           "id": "lti-14",
@@ -3693,7 +3732,7 @@
         },
         {
           "id": "lti-sdk-01",
-          "description": "PENDING (SDK dependency): When an admin creates the first LTI link, is_lti_accessible is auto-enabled via the API — not yet implemented; AgentLtiTab exposes no post-create callback hook",
+          "description": "PENDING (not UI-testable): When an admin creates the first LTI link, is_lti_accessible is auto-enabled via a best-effort editMentor call after create \u2014 now implemented in the SDK, but the LTI tab's CapabilityGate makes the Links create button unreachable through the UI while the capability is off, so the trigger path can't be exercised from a real user flow",
           "status": "pending"
         }
       ]
@@ -3702,7 +3741,10 @@
       "id": "latex-math-rendering",
       "name": "LaTeX / Math Rendering",
       "spec": "61-latex-math-rendering.spec.ts",
-      "sourceFiles": ["lib/utils.ts", "components/markdown.tsx"],
+      "sourceFiles": [
+        "lib/utils.ts",
+        "components/markdown.tsx"
+      ],
       "checkpoints": [
         {
           "id": "latex-01",
@@ -3777,21 +3819,23 @@
       "id": "shareable-link-rbac-bypass",
       "name": "Shareable Link RBAC Bypass",
       "spec": "64-shareable-link-rbac-bypass.spec.ts",
-      "sourceFiles": ["components/chat-input-form.tsx"],
+      "sourceFiles": [
+        "components/chat-input-form.tsx"
+      ],
       "checkpoints": [
         {
           "id": "shl-01",
-          "description": "Non-admin user denied RBAC #chat permission on an Administrators-only, Authenticated-Users-chat mentor opens the chat with a VALID shareable-link token — the textarea is enabled (no RBAC denial placeholder), and the user can send a message and receive a response (issue #2155)",
+          "description": "Non-admin user denied RBAC #chat permission on an Administrators-only, Authenticated-Users-chat mentor opens the chat with a VALID shareable-link token \u2014 the textarea is enabled (no RBAC denial placeholder), and the user can send a message and receive a response (issue #2155)",
           "status": "covered"
         },
         {
           "id": "shl-02",
-          "description": "Safety-boundary guard: the same non-admin user opens the same mentor chat with an INVALID/never-issued shareable-link token — the backend never creates a session, so the textarea stays disabled exactly as with no token at all (token presence alone must not unlock chat)",
+          "description": "Safety-boundary guard: the same non-admin user opens the same mentor chat with an INVALID/never-issued shareable-link token \u2014 the backend never creates a session, so the textarea stays disabled exactly as with no token at all (token presence alone must not unlock chat)",
           "status": "covered"
         },
         {
           "id": "shl-03",
-          "description": "Regression guard: the same non-admin user opens the same mentor chat with NO token — the textarea stays disabled and the RBAC denial placeholder (\"Sorry about that! You don't have permission to chat.\") is shown",
+          "description": "Regression guard: the same non-admin user opens the same mentor chat with NO token \u2014 the textarea stays disabled and the RBAC denial placeholder (\"Sorry about that! You don't have permission to chat.\") is shown",
           "status": "covered"
         }
       ]
@@ -3816,7 +3860,7 @@
         },
         {
           "id": "anp-03",
-          "description": "REGRESSION GUARD: clicking New Chat from the analytics navbar dropdown routes back to the bare chat route (no /analytics suffix) and starts a fresh, empty session — previously a silent no-op since RemoteEvents.newChat has no listener off the chat route",
+          "description": "REGRESSION GUARD: clicking New Chat from the analytics navbar dropdown routes back to the bare chat route (no /analytics suffix) and starts a fresh, empty session \u2014 previously a silent no-op since RemoteEvents.newChat has no listener off the chat route",
           "status": "covered"
         },
         {
@@ -3831,7 +3875,7 @@
         },
         {
           "id": "anp-06",
-          "description": "/prompt-gallery regression guard could not be built E2E: no page.tsx exists for that route anywhere in the app and no code path (Link/router.push) ever navigates there — it is a client-state modal, not a URL. Direct browser navigation to .../prompt-gallery renders the app's root not-found.tsx with the <nav> element absent entirely, so isPromptGalleryPage never runs against real DOM. Unit-covered instead in nav-bar/__tests__/index.test.tsx.",
+          "description": "/prompt-gallery regression guard could not be built E2E: no page.tsx exists for that route anywhere in the app and no code path (Link/router.push) ever navigates there \u2014 it is a client-state modal, not a URL. Direct browser navigation to .../prompt-gallery renders the app's root not-found.tsx with the <nav> element absent entirely, so isPromptGalleryPage never runs against real DOM. Unit-covered instead in nav-bar/__tests__/index.test.tsx.",
           "status": "not-reproducible"
         }
       ]
@@ -3860,12 +3904,12 @@
         },
         {
           "id": "grd-03",
-          "description": "Gated content exposes the Grading Setup and Rubric sub-tabs — both consistently visible for the e2e admin — and switching between them renders the matching section (grader-setup-section / grader-criteria-section); the Results pill is checked separately in grd-04 since it's RBAC-gated (view_grade_results) and not granted to the e2e admin on the real tenant",
+          "description": "Gated content exposes the Grading Setup and Rubric sub-tabs \u2014 both consistently visible for the e2e admin \u2014 and switching between them renders the matching section (grader-setup-section / grader-criteria-section); the Results pill is checked separately in grd-04 since it's RBAC-gated (view_grade_results) and not granted to the e2e admin on the real tenant",
           "status": "covered"
         },
         {
           "id": "grd-04",
-          "description": "The Results sub-tab renders its own grade-results table and shows the zero-filters empty state (\"No grades yet…\") on a mentor with no graded submissions yet; independent of a saved config or rubric. Gracefully skips when the Results pill isn't granted — confirmed live that the e2e admin lacks view_grade_results on the real tenant",
+          "description": "The Results sub-tab renders its own grade-results table and shows the zero-filters empty state (\"No grades yet\u2026\") on a mentor with no graded submissions yet; independent of a saved config or rubric. Gracefully skips when the Results pill isn't granted \u2014 confirmed live that the e2e admin lacks view_grade_results on the real tenant",
           "status": "covered"
         },
         {
@@ -3885,7 +3929,7 @@
         },
         {
           "id": "grd-08",
-          "description": "Admin adds a rubric criterion via the Add-criterion modal (name, criteria, points) — it appears in the criteria list, the misconfigured warning clears, and the running total reflects its points",
+          "description": "Admin adds a rubric criterion via the Add-criterion modal (name, criteria, points) \u2014 it appears in the criteria list, the misconfigured warning clears, and the running total reflects its points",
           "status": "covered"
         },
         {
@@ -3900,12 +3944,12 @@
         },
         {
           "id": "grd-11",
-          "description": "Deleting the last remaining criterion is refused — the row menu's Delete item is aria-disabled with an explanatory hint shown, rather than allowing the request to fail",
+          "description": "Deleting the last remaining criterion is refused \u2014 the row menu's Delete item is aria-disabled with an explanatory hint shown, rather than allowing the request to fail",
           "status": "covered"
         },
         {
           "id": "grd-12",
-          "description": "Disabling then re-enabling the Grading capability preserves the saved config and rubric (no delete endpoint for either — detaching the tool only grays the content)",
+          "description": "Disabling then re-enabling the Grading capability preserves the saved config and rubric (no delete endpoint for either \u2014 detaching the tool only grays the content)",
           "status": "covered"
         },
         {
@@ -3915,12 +3959,12 @@
         },
         {
           "id": "grd-14",
-          "description": "The grader tab's fine-grained RBAC gating is real (flat actions on the mentor resource: read_grader_config, write_grader_config, create_grader_config, view_grader_criteria, create_grader_criteria, write_grader_criteria, delete_grader_criteria, view_grade_results, override_grade_results, checked via /mentors/{id}/#<action> with a graceful fallback) — denied read_grader_config hides the tab and shows its denied state; denied write/create/delete/override actions omit the matching affordance. grd-04 already exercises ONE denied path live (view_grade_results, confirmed denied for the e2e admin). The remaining denied paths (read_grader_config denial, write/create/delete/override denial) are not e2e-reproducible without seeding a restricted RBAC permission object for the e2e admin account, which this environment has no fixture for",
+          "description": "The grader tab's fine-grained RBAC gating is real (flat actions on the mentor resource: read_grader_config, write_grader_config, create_grader_config, view_grader_criteria, create_grader_criteria, write_grader_criteria, delete_grader_criteria, view_grade_results, override_grade_results, checked via /mentors/{id}/#<action> with a graceful fallback) \u2014 denied read_grader_config hides the tab and shows its denied state; denied write/create/delete/override actions omit the matching affordance. grd-04 already exercises ONE denied path live (view_grade_results, confirmed denied for the e2e admin). The remaining denied paths (read_grader_config denial, write/create/delete/override denial) are not e2e-reproducible without seeding a restricted RBAC permission object for the e2e admin account, which this environment has no fixture for",
           "status": "not-reproducible"
         },
         {
           "id": "grd-15",
-          "description": "The Results sub-tab's grade-override flow (override/clear a learner's grade, which PATCHes back to the LMS) requires a real graded submission produced by a live LMS-connected grading run — not reproducible in this e2e environment, which has no fixture to produce one on demand (grd-04 covers the reachable empty-table state)",
+          "description": "The Results sub-tab's grade-override flow (override/clear a learner's grade, which PATCHes back to the LMS) requires a real graded submission produced by a live LMS-connected grading run \u2014 not reproducible in this e2e environment, which has no fixture to produce one on demand (grd-04 covers the reachable empty-table state)",
           "status": "not-reproducible"
         }
       ]
@@ -3943,27 +3987,27 @@
         },
         {
           "id": "ags-02",
-          "description": "Skills tab is hidden when the mentor resolves to a non-base-agent type (mentor_slug is not one of base-agent/ai-mentor/ai-agent and template_mentor does not resolve to one either) — hooks/use-mentor-segments.ts resolveIsBaseAgentMentor",
+          "description": "Skills tab is hidden when the mentor resolves to a non-base-agent type (mentor_slug is not one of base-agent/ai-mentor/ai-agent and template_mentor does not resolve to one either) \u2014 hooks/use-mentor-segments.ts resolveIsBaseAgentMentor",
           "status": "covered"
         },
         {
           "id": "ags-03",
-          "description": "Skills tab stays visible when the mentor type cannot be determined (template_mentor is a numeric PK the frontend cannot read a slug from) — the gate fails OPEN rather than hiding the tab",
+          "description": "Skills tab stays visible when the mentor type cannot be determined (template_mentor is a numeric PK the frontend cannot read a slug from) \u2014 the gate fails OPEN rather than hiding the tab",
           "status": "covered"
         },
         {
           "id": "ags-04",
-          "description": "Admin creates a platform skill, attaches it from the Available Skills sub-tab (addSkillToAgent — the assignment is created ENABLED), and its enable Switch round-trips off/on on the Agent Skills sub-tab (aria-checked, toast-verified via disableSkill/enableSkill); detach + delete on cleanup — dedicated mentor per test, serial",
+          "description": "Admin creates a platform skill, attaches it from the Available Skills sub-tab (addSkillToAgent \u2014 the assignment is created ENABLED), and its enable Switch round-trips off/on on the Agent Skills sub-tab (aria-checked, toast-verified via disableSkill/enableSkill); detach + delete on cleanup \u2014 dedicated mentor per test, serial",
           "status": "covered"
         },
         {
           "id": "ags-05",
-          "description": "Admin creates a new platform skill, locates it on the server-paged Available Skills sub-tab (paging until found — catalog ordering is not guaranteed), edits its description, and deletes it (row disappears) — all via the SDK's skills helpers (createSkill/editSkill/deleteSkill), serial (mutations touch the platform-wide catalog)",
+          "description": "Admin creates a new platform skill, locates it on the server-paged Available Skills sub-tab (paging until found \u2014 catalog ordering is not guaranteed), edits its description, and deletes it (row disappears) \u2014 all via the SDK's skills helpers (createSkill/editSkill/deleteSkill), serial (mutations touch the platform-wide catalog)",
           "status": "covered"
         },
         {
           "id": "ags-06",
-          "description": "NON-ADMIN: the Skills tab is absent from the Edit Mentor modal (the segment is ADMIN-only via userTypes in MENTOR_SEGMENTS) — moved from journey 44",
+          "description": "NON-ADMIN: the Skills tab is absent from the Edit Mentor modal (the segment is ADMIN-only via userTypes in MENTOR_SEGMENTS) \u2014 moved from journey 44",
           "status": "covered"
         },
         {
@@ -3973,7 +4017,7 @@
         },
         {
           "id": "slash-02",
-          "description": "Mentor with skills: composer textarea gets role=combobox wiring and typing \"/\" opens the slash-skill-picker listing only enabled skills (disabled filtered out) as name + slug — no descriptions (assignment rows carry none; the platform-wide agent-skills catalog is never fetched from chat)",
+          "description": "Mentor with skills: composer textarea gets role=combobox wiring and typing \"/\" opens the slash-skill-picker listing only enabled skills (disabled filtered out) as name + slug \u2014 no descriptions (assignment rows carry none; the platform-wide agent-skills catalog is never fetched from chat)",
           "status": "covered"
         },
         {
@@ -3988,7 +4032,7 @@
         },
         {
           "id": "slash-05",
-          "description": "Enter completes the active option IN PLACE — \"/<slug> \" lands at the typed token's index in the textarea and the backdrop layer (skill-token-highlight) paints an active-pill background behind it; nothing is submitted",
+          "description": "Enter completes the active option IN PLACE \u2014 \"/<slug> \" lands at the typed token's index in the textarea and the backdrop layer (skill-token-highlight) paints an active-pill background behind it; nothing is submitted",
           "status": "covered"
         },
         {
@@ -4013,12 +4057,12 @@
         },
         {
           "id": "slash-10",
-          "description": "Backspace after plain text deletes characters normally — the highlighted token stays intact",
+          "description": "Backspace after plain text deletes characters normally \u2014 the highlighted token stays intact",
           "status": "covered"
         },
         {
           "id": "slash-11",
-          "description": "A mid-sentence token is removed atomically and the seam space collapses (\"say /web-research please\" → \"say please\")",
+          "description": "A mid-sentence token is removed atomically and the seam space collapses (\"say /web-research please\" \u2192 \"say please\")",
           "status": "covered"
         },
         {
@@ -4028,7 +4072,7 @@
         },
         {
           "id": "slash-13",
-          "description": "Typing \"/\" while the assignments fetch (the composer's only skill source) is still in flight shows the \"Loading skills…\" popover (slash-skill-loading, role=status), which yields to the picker once the list resolves",
+          "description": "Typing \"/\" while the assignments fetch (the composer's only skill source) is still in flight shows the \"Loading skills\u2026\" popover (slash-skill-loading, role=status), which yields to the picker once the list resolves",
           "status": "covered"
         },
         {
@@ -4038,12 +4082,12 @@
         },
         {
           "id": "slash-15",
-          "description": "NON-ADMIN: with the assignments endpoint readable (mocked granted state — the composer's only skill source; a 403 degrades to an inactive picker) the \"/\" picker offers skills; selecting completes the token and sending the invocation message receives a live AI reply — skips when the environment denies the non-admin CHAT permission entirely (composer disabled with a \"you don't have permission to chat\" placeholder): the picker rides on top of chat access",
+          "description": "NON-ADMIN: with the assignments endpoint readable (mocked granted state \u2014 the composer's only skill source; a 403 degrades to an inactive picker) the \"/\" picker offers skills; selecting completes the token and sending the invocation message receives a live AI reply \u2014 skips when the environment denies the non-admin CHAT permission entirely (composer disabled with a \"you don't have permission to chat\" placeholder): the picker rides on top of chat access",
           "status": "covered"
         },
         {
           "id": "slash-16",
-          "description": "Skills dropdown button (inside-buttons row, next to Canvas) lists the mentor's enabled skills as name + /slug (no descriptions); selecting inserts the /slug token AT THE CARET with context-aware spacing (highlighted in the composer) and the button shows the armed skill's name with the same ✕ affordance as other active tool pills (✕ disarms without opening the menu); toggling removes the token cleanly; arming another skill replaces the current one (single selection); arming via the \"/\" picker updates the button — both surfaces derive from the composer text so they stay in sync",
+          "description": "Skills dropdown button (inside-buttons row, next to Canvas) lists the mentor's enabled skills as name + /slug (no descriptions); selecting inserts the /slug token AT THE CARET with context-aware spacing (highlighted in the composer) and the button shows the armed skill's name with the same \u2715 affordance as other active tool pills (\u2715 disarms without opening the menu); toggling removes the token cleanly; arming another skill replaces the current one (single selection); arming via the \"/\" picker updates the button \u2014 both surfaces derive from the composer text so they stay in sync",
           "status": "covered"
         }
       ]
@@ -4061,7 +4105,7 @@
       "checkpoints": [
         {
           "id": "atl-01",
-          "description": "The task list renders as a real <ol> with one <li> per todo; status communicated via data-status + a sr-only status word + a distinct icon shape per status — no visible status text on the row itself (issue #2216)",
+          "description": "The task list renders as a real <ol> with one <li> per todo; status communicated via data-status + a sr-only status word + a distinct icon shape per status \u2014 no visible status text on the row itself (issue #2216)",
           "status": "covered"
         },
         {
@@ -4076,7 +4120,7 @@
         },
         {
           "id": "atl-04",
-          "description": "A second write_todos call within the same streaming turn replaces the list wholesale — rows are reordered/added/dropped, never merged or appended onto the previous call's rows",
+          "description": "A second write_todos call within the same streaming turn replaces the list wholesale \u2014 rows are reordered/added/dropped, never merged or appended onto the previous call's rows",
           "status": "covered"
         },
         {
@@ -4086,7 +4130,7 @@
         },
         {
           "id": "atl-06",
-          "description": "A turn that never emits write_todos shows no affordance at all — no panel, no header, no skeleton",
+          "description": "A turn that never emits write_todos shows no affordance at all \u2014 no panel, no header, no skeleton",
           "status": "covered"
         },
         {
@@ -4118,7 +4162,7 @@
     },
     {
       "id": "mentor-spend-caps-tab",
-      "name": "LLM Spend Limits (Billing) — Agent & Tenant Settings",
+      "name": "LLM Spend Limits (Billing) \u2014 Agent & Tenant Settings",
       "spec": "69-spend-limits.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/tabs/spend-caps-tab.tsx",
@@ -4130,7 +4174,7 @@
       "checkpoints": [
         {
           "id": "sc-01",
-          "description": "Admin sees the \"Billing\" tab in the Configurations category, positioned immediately after \"LLM\", and it opens on the \"This Agent\" sub-tab with \"Per User\" also present (AgentSpendCapsTab now has exactly these two sub-tabs — the old \"Workspace\" sub-tab moved to the tenant Billing tab, covered by journey 69)",
+          "description": "Admin sees the \"Billing\" tab in the Configurations category, positioned immediately after \"LLM\", and it opens on the \"This Agent\" sub-tab with \"Per User\" also present (AgentSpendCapsTab now has exactly these two sub-tabs \u2014 the old \"Workspace\" sub-tab moved to the tenant Billing tab, covered by journey 69)",
           "status": "covered"
         },
         {
@@ -4170,7 +4214,7 @@
         },
         {
           "id": "sc-09",
-          "description": "Non-admin users do not see the Billing tab in the Edit Mentor modal (admin-only segment, no rbacResource — userTypes filter alone gates visibility)",
+          "description": "Non-admin users do not see the Billing tab in the Edit Mentor modal (admin-only segment, no rbacResource \u2014 userTypes filter alone gates visibility)",
           "status": "covered"
         },
         {
@@ -4185,7 +4229,7 @@
         },
         {
           "id": "tal-02",
-          "description": "Admin edits the agent spend limit — created via the Edit Agent dialog's Billing tab (no search-index dependency) — through the Agent Limits row's manage popup stacked on the tenant settings dialog (setAgentSpendLimitFromTenantBilling), and the row reflects the updated limit",
+          "description": "Admin edits the agent spend limit \u2014 created via the Edit Agent dialog's Billing tab (no search-index dependency) \u2014 through the Agent Limits row's manage popup stacked on the tenant settings dialog (setAgentSpendLimitFromTenantBilling), and the row reflects the updated limit",
           "status": "covered"
         },
         {
@@ -4205,7 +4249,98 @@
         },
         {
           "id": "tal-01",
-          "description": "Admin filters Agent Limits to an ALREADY-INDEXED mentor (broad query \"E2E Mentor\" against the search-index-backed autocomplete, sampling up to 5 results for the first capless one) — the ONE checkpoint that depends on that index, which lags mentor creation by DAYS on this backend (a known product limitation, not a test bug, reported upstream separately; a freshly-created mentor is never searchable in time, so this borrows a mentor from a past run instead of retrying its own) — sees the \"Set Spend Limit\" empty state, creates that mentor's spend limit (alert-only) from the popup, the row lists it, and the cap is removed again in an unconditional finally-block so the borrowed (shared-tenant) mentor is left exactly as found; if every sampled candidate already has a cap, verifies the filter -> row-visible path on the first one instead (annotated, never a failure)",
+          "description": "Admin filters Agent Limits to an ALREADY-INDEXED mentor (broad query \"E2E Mentor\" against the search-index-backed autocomplete, sampling up to 5 results for the first capless one) \u2014 the ONE checkpoint that depends on that index, which lags mentor creation by DAYS on this backend (a known product limitation, not a test bug, reported upstream separately; a freshly-created mentor is never searchable in time, so this borrows a mentor from a past run instead of retrying its own) \u2014 sees the \"Set Spend Limit\" empty state, creates that mentor's spend limit (alert-only) from the popup, the row lists it, and the cap is removed again in an unconditional finally-block so the borrowed (shared-tenant) mentor is left exactly as found; if every sampled candidate already has a cap, verifies the filter -> row-visible path on the first one instead (annotated, never a failure)",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "tenant-memory-admin-and-profile-memory",
+      "name": "Tenant Memory Admin Tab & Profile Memory Tab",
+      "spec": "70-tenant-memory-admin-and-profile-memory.spec.ts",
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "MA-01",
+          "description": "Admin sees the new \"Memory\" rail item in the tenant User Profile settings dialog, and both the Global and Agent sub-tabs render (MemoryAdminTab \u2014 no host wiring, picked up purely via the SDK bump)",
+          "status": "covered"
+        },
+        {
+          "id": "MA-02",
+          "description": "Global sub-tab: searching the users table for the logged-in admin's own username finds their row, and opening their memories popup renders",
+          "status": "covered"
+        },
+        {
+          "id": "MA-03",
+          "description": "Global sub-tab popup: full CRUD on a uniquely-named global memory (add \u226510-char content, edit it, delete it), cleaned up best-effort in a finally block",
+          "status": "covered"
+        },
+        {
+          "id": "MA-04",
+          "description": "Global sub-tab popup: toggling the auto-capture memory setting switch flips aria-checked, and toggling again restores the original state (symmetric flip, independent of the account's starting state)",
+          "status": "covered"
+        },
+        {
+          "id": "MA-05",
+          "description": "Agent sub-tab renders its section and the agents autocomplete filter (\"Search Agents\u2026\" placeholder)",
+          "status": "covered"
+        },
+        {
+          "id": "MA-06",
+          "description": "Agent sub-tab: filtering to a freshly created, uniquely-named mentor (own tracked mentor, not the shared default) surfaces its row; opening its memories popup and adding a unique agent memory shows the new content in the popup",
+          "status": "covered"
+        },
+        {
+          "id": "PM-01",
+          "description": "Profile \"Memory\" tab (personal side, MemoryTab) renders its \"Memory & Personalization\" settings section and \"My Memories\" list with the Add Memory button",
+          "status": "covered"
+        },
+        {
+          "id": "PM-02",
+          "description": "Profile Memory tab: toggling the auto-capture memory setting switch flips aria-checked, and toggling again restores the original state",
+          "status": "covered"
+        },
+        {
+          "id": "PM-03",
+          "description": "Profile Memory tab: full CRUD on a unique personal memory via the NEW three-dots menu (Edit + Delete replaced the old hover-delete button) \u2014 add, edit via the three-dots \u2192 Edit \u2192 Edit Memory dialog (hand-rolled page-object helper; no SDK helper exists for this), and delete via deleteMemoryByContent (NOT the deprecated archiveMemoryByContent alias)",
+          "status": "covered",
+          "note": "The profile Memory tab previously had ZERO e2e coverage. The three-dots menu (replacing hover-delete) and Archive\u2192Delete rename are new SDK behavior verified against @iblai/iblai-js@2.5.5."
+        }
+      ]
+    },
+    {
+      "id": "profile-history-tab",
+      "name": "Profile History Tab",
+      "spec": "71-profile-history-tab.spec.ts",
+      "sourceFiles": [
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "HT-01",
+          "description": "User opens the profile \"History\" tab (ChatHistoryTab \u2014 a plain, non-admin-managed user-profile feature; no host enable-flag, unconditional, only renders on the user's own profile) and the Conversations sub-tab settles into either rendered rows or the \"No conversations found\" empty state",
+          "status": "covered"
+        },
+        {
+          "id": "HT-02",
+          "description": "Conversations sub-tab toolbar renders its five filter controls (agent autocomplete \"Search Agents\", \"Pick a Date Range\", Filter by Sentiment, Filter by Topic, Export) regardless of data",
+          "status": "covered"
+        },
+        {
+          "id": "HT-03",
+          "description": "Switching to the Exports sub-tab renders its reports table (SDK's ReportHistory renders the table unconditionally, with a \"No exports yet.\" row when empty)",
+          "status": "covered"
+        },
+        {
+          "id": "HT-04",
+          "description": "User selects a seeded conversation (own freshly-created mentor + one chat message, matched by its stable data-session-id row attribute) and the transcript preview loads with a Download button; downloading it produces a CSV file. Skips gracefully if mentor creation is unavailable to the account in this environment (e.g. trial/paywall gating)",
+          "status": "covered"
+        },
+        {
+          "id": "HT-06",
+          "description": "User exports their personal chat history scoped to an existing agent (Export button) and the report is tracked in the Exports sub-tab",
           "status": "covered"
         }
       ]

@@ -18,9 +18,29 @@
  * ── Sub-resource note ────────────────────────────────────────────────────────
  *
  * Sub-resource tests (Links / Keys / Tools) still require `is_lti_accessible=true`
- * on the backend — auto-enable-on-link-creation (lti-sdk-01) is not yet
- * implemented in the SDK. The worker fixture therefore still calls
- * `setEnableLtiLaunchesAndSave(true)` before running sub-resource tests.
+ * on the backend. Auto-enable-on-link-creation IS now implemented in the SDK
+ * (a best-effort `editMentor` call after a successful create when the flag is
+ * off) — but while the capability is off the LTI tab's `CapabilityGate`
+ * content is `inert`/`pointer-events-none`, so the create button itself can't
+ * be reached through the UI in that state. The worker fixture therefore still
+ * enables the capability explicitly (via the in-tab toggle) before running
+ * sub-resource tests, rather than relying on the auto-enable side effect. See
+ * the lti-sdk-01 note at the bottom of this file for why that checkpoint
+ * remains not directly UI-testable.
+ *
+ * ── LTI link creation is asynchronous ───────────────────────────────────────
+ *
+ * Link creation sends `async_create: true`: the backend answers 202 and
+ * builds an edX course via celery in the background. The modal closes
+ * immediately and the new row appears with a status badge
+ * (`data-testid="lti-link-status"`, `data-status` ∈ pending|building|ready|
+ * failed). The UI does NOT auto-poll — a header Refresh button
+ * (`data-testid="lti-links-refresh-button"`) renders only while a build is in
+ * flight, and the SDK's `waitForLinkReady` helper (wrapped by
+ * `LtiTab.waitForLinkReady`) drives it by clicking Refresh every ~5s until the
+ * badge reports `ready` (throws on `failed`). A link's rename pencil is only
+ * rendered once its status is `ready` (`editable = !inProgress && !failed`),
+ * so any rename flow must wait for the build first.
  *
  * ── Parallel-safety & no-skip design ────────────────────────────────────────
  *
@@ -78,10 +98,14 @@ type LtiWorkerFixtures = {
    * tests skip via their own admin guard. Shared by read-only / mutation tests
    * that just need an LTI-enabled mentor.
    *
-   * NOTE: `setEnableLtiLaunchesAndSave(true)` is called here so that the
-   * backend's `is_lti_accessible` flag is set — the LTI tab is always visible
-   * to admins, but creating sub-resources (links / keys / tools) still requires
-   * the flag to be on until the SDK implements auto-enable-on-link-creation.
+   * NOTE: the in-tab "Enable LTI launches" capability toggle
+   * (`editPage.lti.setCapabilityEnabled(true)`) is flipped on here so the
+   * backend's `is_lti_accessible` flag is set before any sub-resource test
+   * runs. The SDK now auto-enables that flag as a best-effort side effect of
+   * a successful link create, but the gated content is `inert` while the
+   * capability is off, so the create button can't be reached through the UI
+   * to trigger that side effect in the first place — enabling the toggle
+   * explicitly stays required.
    */
   ltiMentorUrl: string | null;
 };
@@ -443,11 +467,25 @@ test.describe('Journey 60 — LTI tab sub-resource tests', () => {
   // helper. This must therefore remain the ONLY test that creates a link on
   // the shared worker mentor; any other link-mutating test needs its own
   // self-contained mentor (see lti-08).
+  //
+  // Creation is now ASYNC (`async_create: true`): the modal closes on a 202
+  // and the row appears with a pending/building status badge while the
+  // backend builds an edX course via celery. This checkpoint also covers
+  // that whole async path — asserting the badge appears, then driving it to
+  // `ready` via `waitForLinkReady`, which exercises the header Refresh
+  // button (`linksRefreshButton`) itself: the helper clicks Refresh every
+  // ~5s while the build is in flight, so the refresh affordance is covered
+  // here without a separate test racing a build that may finish quickly.
+  //
+  // Own extended timeout: this pays the worker-fixture setup (~3 min, billed
+  // to whichever test touches `ltiMentorUrl` first) PLUS up to ~3 min for the
+  // celery build — comfortably over the describe block's 420s default.
   test('admin creates an LTI link and it appears in the links list', async ({
     page,
     editMentorPage,
     ltiMentorUrl,
   }) => {
+    test.setTimeout(600_000);
     test.skip(!ltiMentorUrl, 'LTI mentor unavailable on this worker');
     await openLtiTabOnSharedMentor(page, editMentorPage, ltiMentorUrl!);
     await editMentorPage.lti.switchToSubTab('agentLinks');
@@ -455,6 +493,22 @@ test.describe('Journey 60 — LTI tab sub-resource tests', () => {
     const name = LtiTab.uniqueName('e2e-link');
     await editMentorPage.lti.createLink(name);
     await editMentorPage.lti.expectLinkInList(name);
+
+    // Row appears immediately with a status badge — the edX course build runs
+    // in the background. Don't pin a single early state (`pending`): the
+    // build can already have advanced to `building` (or even `ready` on a
+    // fast backend) by the time the row is asserted, so accept any
+    // non-failed state here and let waitForLinkReady drive it to `ready`.
+    await expect(editMentorPage.lti.linkStatusBadge(name)).toHaveAttribute(
+      'data-status',
+      /^(pending|building|ready)$/,
+      { timeout: 10_000 },
+    );
+
+    // Drive the build to completion by clicking the header Refresh button
+    // (the UI never polls on its own).
+    await editMentorPage.lti.waitForLinkReady(name);
+    await editMentorPage.lti.expectLinkStatus(name, 'ready');
 
     await editMentorPage.close();
   });
@@ -464,11 +518,19 @@ test.describe('Journey 60 — LTI tab sub-resource tests', () => {
   // allowed link (created by lti-07 or the fixture's other users), so a
   // second create there times out waiting for a create button that is no
   // longer rendered. A fresh mentor guarantees the create button exists.
+  //
+  // The rename (edit) pencil is only rendered once the link's status is
+  // `ready` (`editable = !inProgress && !failed`), so this test must wait
+  // for the async build to finish before it can open the edit modal at all.
+  //
+  // Own extended timeout: fresh-mentor creation + hydration + the async link
+  // build easily clears the describe block's 420s default.
   test('admin edits (renames) an LTI link and the new name appears in the list', async ({
     page,
     createMentorPage,
     editMentorPage,
   }) => {
+    test.setTimeout(600_000);
     await createTestMentor(page, createMentorPage, editMentorPage, {
       enableLti: true,
     });
@@ -481,6 +543,10 @@ test.describe('Journey 60 — LTI tab sub-resource tests', () => {
       const renamed = LtiTab.uniqueName('e2e-link-renamed');
       await editMentorPage.lti.createLink(name);
       await editMentorPage.lti.expectLinkInList(name);
+
+      // The edit pencil doesn't exist until the async build finishes.
+      await editMentorPage.lti.waitForLinkReady(name);
+
       await editMentorPage.lti.editLink(name, renamed);
       await editMentorPage.lti.expectLinkInList(renamed);
       await editMentorPage.lti.expectLinkNotInList(name);
@@ -720,24 +786,35 @@ test.describe('Journey 60 — LTI tab sub-resource tests', () => {
     await editMentorPage.close();
   });
 
-  // ── lti-sdk-01: auto-enable on link creation (SDK-PENDING) ───────────────
+  // ── lti-sdk-01: auto-enable on link creation (NOT UI-TESTABLE) ────────────
 
   /**
-   * lti-sdk-01 (PENDING — SDK dependency):
+   * lti-sdk-01 (NOT directly UI-testable — capability gate blocks the path):
    *
    * When an admin creates the first LTI link, `is_lti_accessible` should be
    * automatically set to `true` via the API so the admin does not need to
    * manually enable the "Enable LTI launches" toggle first.
    *
-   * This is NOT implemented: the SDK's `AgentLtiTab` exposes no callback hook
-   * for post-create side effects, and there are no public LTI data-layer hooks
-   * available from `@iblai/iblai-js`. The feature must be added to the SDK.
+   * This IS now implemented in the SDK: `AgentLtiTab` makes a best-effort
+   * `editMentor` call to flip `is_lti_accessible` on after a successful link
+   * create, if it was off. The catch is the trigger itself is unreachable
+   * through the UI in the state this checkpoint wants to exercise — while the
+   * capability is off, the LTI tab's `CapabilityGate` wraps the sub-tab
+   * content (links/keys/tools/endpoints) in `data-enabled="false"` and
+   * `inert`/`pointer-events-none`, so the Links "Create" button can't be
+   * clicked to begin with. There is no supported way to submit the create
+   * form while the toggle reads off, so the auto-enable side effect can never
+   * be triggered from a real user flow — it only matters for callers that
+   * bypass the gate (e.g. a direct API create), which is outside this UI
+   * journey's scope.
    *
-   * Until then: tests that require is_lti_accessible=true call
-   * `setEnableLtiLaunchesAndSave(true)` explicitly (see the `ltiMentorUrl`
-   * worker fixture and `createTestMentor` with `enableLti: true`).
+   * Every sub-resource test therefore still enables the capability
+   * explicitly via the in-tab toggle before creating anything (see the
+   * `ltiMentorUrl` worker fixture and `createTestMentor` with
+   * `enableLti: true`) rather than relying on auto-enable.
    *
-   * DO NOT uncomment this test until the SDK ships the auto-enable callback.
+   * DO NOT uncomment this test — there is no UI path that exercises the
+   * auto-enable side effect with the capability starting off.
    */
   // test('admin creates the first LTI link and is_lti_accessible is auto-enabled', ...)
 });

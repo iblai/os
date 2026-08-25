@@ -33,6 +33,23 @@ import { MentorTracker } from '../utils/mentor-cleanup';
  * `hooks/use-mentor-segments.ts` no longer gates the Voice segment at all —
  * the tab is ALWAYS mounted. Both sub-tabs render inside a grayed + inert
  * `data-testid="capability-gate-content"` wrapper while the toggle is off.
+ *
+ * ── Voice Instructions ────────────────────────────────────────────────────
+ *
+ * A "Voice Instructions" prompt card (`data-testid="voice-instructions-card"`)
+ * renders below the voice picker whenever the OpenAI or Google provider is
+ * selected — never for Browser. It follows the same PromptCard + shared
+ * `EditPromptModal` pattern as Prompts / Screen share: an "Edit Voice
+ * Instructions" button opens the rich-text editor, and saving IT only writes
+ * local form state — the Voice sub-tab's own Save button
+ * (`data-testid="voice-save-button"`, `VoiceTab.saveVoiceSettings()`) is what
+ * persists `voice_instructions` (and `voice_provider`) to mentor settings via
+ * `editMentor`, with a "Voice saved" success toast. A `{len}/1000` counter
+ * (`data-testid="voice-instructions-counter"`) turns red over the 1000-char
+ * soft cap and disables that Save button — no truncation happens client-side.
+ * See `VoiceTab.setVoiceInstructions` for why the page object reimplements
+ * the SDK's helper of the same name instead of delegating to it (a
+ * dialog-scoping hazard where the Edit Agent modal is itself `role="dialog"`).
  */
 
 // Run the WHOLE file serially in a single worker AND give every test its own
@@ -284,6 +301,149 @@ test.describe('Journey 47: Mentor Voice Tab', () => {
 
     await editMentorPage.close();
   });
+
+  // VO-13: The Voice Instructions card (+ its char counter and all three
+  // preset chips) is gated purely by which provider is currently selected —
+  // local form state, no save required to observe it. OpenAI/Google reveal
+  // it; Browser hides it again.
+  test('selecting the OpenAI provider reveals the Voice Instructions card and preset chips', async ({
+    editMentorPage,
+  }) => {
+    await editMentorPage.voice.switchToVoiceSubTab();
+
+    await editMentorPage.voice.selectProvider('openai');
+    await editMentorPage.voice.expectProviderSelected('openai');
+
+    await expect(editMentorPage.voice.voiceInstructionsCard).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(editMentorPage.voice.voiceInstructionsCounter).toBeVisible({
+      timeout: 5_000,
+    });
+    for (const preset of ['warm', 'calm', 'energetic'] as const) {
+      await expect(
+        editMentorPage.voice.voiceInstructionsPresetChip(preset),
+      ).toBeVisible({ timeout: 5_000 });
+    }
+
+    // Switching back to Browser hides the card (and everything inside it).
+    await editMentorPage.voice.selectProvider('browser');
+    await editMentorPage.voice.expectProviderSelected('browser');
+    await expect(editMentorPage.voice.voiceInstructionsCard).not.toBeVisible({
+      timeout: 5_000,
+    });
+
+    await editMentorPage.close();
+  });
+
+  // VO-14: Applying a preset chip fills the card with canned copy, the
+  // counter reflects the new non-zero length, and the tab-level Save button
+  // enables (the form is now dirty). Saving persists it and surfaces the
+  // "Voice saved" toast (`labels.toasts.voiceSaved` — distinct from the
+  // generic "Agent updated successfully" toast used by the Settings tab's
+  // own save handler).
+  //
+  // Preset text comes straight from `AGENT_VOICE_TAB_LABELS.mentorVoice
+  // .instructions.presets.warm.text` in the SDK bundle
+  // (.yalc/@iblai/web-containers/dist/next/index.esm.js):
+  //   "Speak slowly in a warm, encouraging tone, like a patient tutor."
+  // We assert on the distinctive trailing phrase "like a patient tutor"
+  // rather than the whole sentence, so a copy tweak elsewhere in the string
+  // doesn't break this checkpoint.
+  test('applying the "warm" Voice Instructions preset fills the card and saves', async ({
+    editMentorPage,
+  }) => {
+    await editMentorPage.voice.switchToVoiceSubTab();
+    await editMentorPage.voice.selectProvider('openai');
+    await expect(editMentorPage.voice.voiceInstructionsCard).toBeVisible({
+      timeout: 10_000,
+    });
+
+    await editMentorPage.voice.applyVoiceInstructionsPreset('warm');
+    await editMentorPage.voice.expectVoiceInstructionsValue(
+      'like a patient tutor',
+    );
+    await expect(editMentorPage.voice.voiceInstructionsCounter).toHaveText(
+      /^[1-9]\d*\/1000$/,
+      { timeout: 5_000 },
+    );
+
+    const saveButton = editMentorPage.dialog.getByTestId('voice-save-button');
+    await expect(saveButton).toBeEnabled({ timeout: 10_000 });
+
+    await editMentorPage.voice.saveVoiceSettings();
+    await expect(
+      editMentorPage.page.getByText(/voice saved/i).first(),
+    ).toBeVisible({ timeout: 15_000 });
+
+    await editMentorPage.close();
+  });
+
+  // VO-15: The true persistence round-trip. Set custom instructions via the
+  // page object's editor flow, save, close the Edit Agent modal entirely,
+  // then reopen it fresh to the Voice tab and confirm the value loads from
+  // mentor settings rather than surviving as leftover in-memory form state.
+  //
+  // No need to re-select the OpenAI provider on reopen: `handleSaveVoice`
+  // always sends `voice_provider` alongside `voice_instructions`, so the
+  // save in this test already persisted `voice_provider: 'openai'` — the
+  // card renders on its own once the tab remounts with the saved settings.
+  test('custom Voice Instructions persist across a modal close and reopen', async ({
+    page,
+    editMentorPage,
+  }) => {
+    const uniqueText = `e2e-voice-instr-${Date.now()}`;
+
+    await editMentorPage.voice.switchToVoiceSubTab();
+    await editMentorPage.voice.selectProvider('openai');
+    await expect(editMentorPage.voice.voiceInstructionsCard).toBeVisible({
+      timeout: 10_000,
+    });
+
+    await editMentorPage.voice.setVoiceInstructions(uniqueText);
+    await editMentorPage.voice.expectVoiceInstructionsValue(uniqueText);
+
+    await editMentorPage.voice.saveVoiceSettings();
+    await expect(
+      editMentorPage.page.getByText(/voice saved/i).first(),
+    ).toBeVisible({ timeout: 15_000 });
+
+    await editMentorPage.close();
+
+    // Fully release the page before reopening: a reload drops every
+    // client-side cache (RTK Query included), so the reopened tab must load
+    // `voice_provider` / `voice_instructions` from the backend — the actual
+    // persistence contract this checkpoint exists to prove. Without it the
+    // reopen can render PRE-save cached settings: the post-save
+    // invalidation refetch races the backend's read-after-write visibility,
+    // and when the refetch wins it re-caches the stale "browser" provider —
+    // leaving the instructions card unrendered no matter how long the
+    // reopen assertion waits (observed live on staging).
+    await page.reload();
+    await waitForPageReady(page);
+
+    // Reopen fresh — the mentor dropdown → Settings/Modify flow, not a
+    // resumed dialog — and land back on the Voice tab.
+    await editMentorPage.open('Voice');
+    await waitForPageReady(page);
+    await editMentorPage.voice.switchToVoiceSubTab();
+
+    await expect(editMentorPage.voice.voiceInstructionsCard).toBeVisible({
+      timeout: 15_000,
+    });
+    await editMentorPage.voice.expectVoiceInstructionsValue(uniqueText);
+
+    await editMentorPage.close();
+  });
+
+  // NOTE: an over-cap (>1000 chars) checkpoint is intentionally NOT covered
+  // here. Typing past the cap through the real editor requires
+  // `pressSequentially` one character at a time (no paste/fill shortcut for
+  // the ProseMirror contenteditable used by the shared prompt editor), which
+  // is prohibitively slow for 1000+ characters in a per-test suite. The
+  // over-cap behavior (counter turns red, tab-level Save disables, no
+  // client-side truncation) is documented but left to manual/SDK-level
+  // verification.
 
   test.afterAll(async ({ browser }, testInfo) => {
     await tracker47.deleteAll(browser, testInfo);
