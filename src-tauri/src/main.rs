@@ -2195,6 +2195,15 @@ fn main() {
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
+            // Vibe skills track the latest GitHub release with no freshness
+            // window — resolve-and-sync in the background on every launch, so
+            // Coding Mode always starts from the newest published set (and a
+            // fresh machine has them before Code is ever enabled).
+            let vibe_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                let _ = opencode_installer::ensure_vibe_skills(vibe_handle).await;
+            });
+
             // Initialize web cache with app data directory
             let app_data_dir = app
                 .path()
@@ -2812,9 +2821,13 @@ fn main() {
             opencode_acp::opencode_close,
             opencode_acp::get_opencode_workspace,
             opencode_acp::set_opencode_workspace,
+            opencode_acp::set_opencode_skills,
+            opencode_acp::begin_opencode_skills_sync,
             opencode_installer::install_opencode,
+            opencode_installer::ensure_vibe_skills,
             opencode_installer::check_opencode_status,
             opencode_acp::check_code_local_model,
+            opencode_acp::set_opencode_learner,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri app");

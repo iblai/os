@@ -1,5 +1,12 @@
 /// <reference types="@wdio/globals/types" />
-import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -38,12 +45,20 @@ interface OpencodeStatus {
   version: string | null;
   config_ready: boolean;
   sandboxed: boolean;
+  supported: boolean;
+  sandbox_ready: boolean;
 }
 
 /** Session ids used only by this journey, so cleanup can find their leftovers. */
 const SESSION_A = 'e2e-code-a';
 const SESSION_B = 'e2e-code-b';
-const TEST_SESSIONS = [SESSION_A, SESSION_B];
+const SESSION_C = 'e2e-code-c';
+const TEST_SESSIONS = [SESSION_A, SESSION_B, SESSION_C];
+
+/** Mentor id used only by the skills checkpoints below. */
+const MENTOR = 'e2e-code-mentor';
+/** Mentor staging dirs the skills checkpoints created, removed in after(). */
+const stagingDirs: string[] = [];
 
 const DATA_DIR = resolve(
   process.env.XDG_DATA_HOME ?? join(homedir(), '.local/share'),
@@ -153,6 +168,13 @@ describe('Journey 3: Code Mode (opencode)', () => {
 
   after(() => {
     cleanupWorkspaces();
+    // The vibe dir is a shared cache (like the managed opencode binary) and is
+    // left in place; only this journey's mentor staging is ours to delete.
+    for (const dir of stagingDirs) {
+      if (dir.startsWith(join(DATA_DIR, 'skills', 'mentors'))) {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    }
   });
 
   it('code-01: check_opencode_status reports Code readiness', async () => {
@@ -162,6 +184,10 @@ describe('Journey 3: Code Mode (opencode)', () => {
     expect(typeof status.config_ready).toBe('boolean');
     // The macOS App Sandbox flag: false everywhere tauri-driver can run.
     expect(status.sandboxed).toBe(false);
+    // tauri-driver only runs on Linux/Windows-with-Code-off… in practice Linux,
+    // where Code is supported; bwrap availability depends on the host.
+    expect(status.supported).toBe(true);
+    expect(typeof status.sandbox_ready).toBe('boolean');
   });
 
   /**
@@ -240,20 +266,32 @@ describe('Journey 3: Code Mode (opencode)', () => {
     expect(status.config_ready).toBe(true);
   });
 
-  it('code-04: each chat gets its own generated workspace', async () => {
+  it('code-04: a chat with real work keeps its own workspace; untouched leftovers are recycled', async () => {
     const a = await invokeCmd<string>('get_opencode_workspace', {
       sessionId: SESSION_A,
     });
+    expect(a.startsWith(join(DATA_DIR, 'workspaces'))).toBe(true);
+    expect(existsSync(a)).toBe(true);
+
+    // Real content in A's folder — the next chat must NOT be handed it.
+    writeFileSync(join(a, 'notes.txt'), 'work');
     const b = await invokeCmd<string>('get_opencode_workspace', {
       sessionId: SESSION_B,
     });
+    expect(b).not.toBe(a);
+    expect(b.startsWith(join(DATA_DIR, 'workspaces'))).toBe(true);
+    expect(existsSync(b)).toBe(true);
 
-    expect(a).not.toBe(b);
-    // Both land under the app-managed workspaces root with a generated name.
-    for (const dir of [a, b]) {
-      expect(dir.startsWith(join(DATA_DIR, 'workspaces'))).toBe(true);
-      expect(existsSync(dir)).toBe(true);
-    }
+    // The other half of the rule: an untouched leftover (just `.git`) is
+    // recycled instead of stranding one more folder per app launch. `aaa-`
+    // sorts ahead of every generated adjective slug, so the sort-first
+    // deterministic pick is ours.
+    const leftover = join(DATA_DIR, 'workspaces', 'aaa-e2e-recycle');
+    mkdirSync(join(leftover, '.git'), { recursive: true });
+    const c = await invokeCmd<string>('get_opencode_workspace', {
+      sessionId: SESSION_C,
+    });
+    expect(c).toBe(leftover);
   });
 
   it('code-05: a chat keeps the same workspace across calls', async () => {
@@ -317,6 +355,121 @@ describe('Journey 3: Code Mode (opencode)', () => {
     ).toBeNull();
   });
 
+  describe('Agent Skills staging (Code mode skills)', () => {
+    it('code-12: set_opencode_skills materialises SKILL.md packages for a mentor', async () => {
+      const staging = await invokeCmd<string>('set_opencode_skills', {
+        mentorUniqueId: MENTOR,
+        skills: [
+          {
+            slug: 'web-research',
+            description: 'Find things on the web',
+            instruction: 'Do research.',
+            resources: [
+              { filename: 'run.py', content: 'print(1)' },
+              // A hostile filename must stay a single component inside the dir.
+              { filename: '../escape.txt', content: 'confined' },
+            ],
+          },
+          // A hostile slug must sanitise into the staging dir, never out of it.
+          { slug: '../Evil Slug!', description: 'hostile', instruction: 'x' },
+        ],
+      });
+      stagingDirs.push(staging);
+
+      expect(staging.startsWith(join(DATA_DIR, 'skills', 'mentors'))).toBe(
+        true,
+      );
+      const manifest = readFileSync(
+        join(staging, 'web-research', 'SKILL.md'),
+        'utf8',
+      );
+      expect(manifest).toContain('name: web-research');
+      expect(manifest).toContain('description: "Find things on the web"');
+      expect(manifest).toContain('Do research.');
+      expect(
+        readFileSync(join(staging, 'web-research', 'run.py'), 'utf8'),
+      ).toBe('print(1)');
+      // '../escape.txt' → '.._escape.txt', inside the skill dir.
+      expect(
+        readFileSync(join(staging, 'web-research', '.._escape.txt'), 'utf8'),
+      ).toBe('confined');
+      // The hostile slug landed as a sanitised sibling — and nothing else did.
+      expect(existsSync(join(staging, 'evil-slug', 'SKILL.md'))).toBe(true);
+      expect(readdirSync(staging).sort()).toEqual([
+        'evil-slug',
+        'web-research',
+      ]);
+    });
+
+    it('code-13: a rewrite drops deselected skills and an empty sync clears the tree', async () => {
+      const staging = await invokeCmd<string>('set_opencode_skills', {
+        mentorUniqueId: MENTOR,
+        skills: [
+          { slug: 'alpha', description: 'a', instruction: 'A.' },
+          { slug: 'beta', description: 'b', instruction: 'B.' },
+        ],
+      });
+      stagingDirs.push(staging);
+      expect(existsSync(join(staging, 'alpha', 'SKILL.md'))).toBe(true);
+
+      await invokeCmd<string>('set_opencode_skills', {
+        mentorUniqueId: MENTOR,
+        skills: [{ slug: 'beta', description: 'b', instruction: 'B.' }],
+      });
+      expect(existsSync(join(staging, 'alpha'))).toBe(false);
+      expect(existsSync(join(staging, 'beta', 'SKILL.md'))).toBe(true);
+
+      // An empty sync removes the tree — an absent dir is the "no skills"
+      // signal the spawn's config writer reads.
+      await invokeCmd<string>('set_opencode_skills', {
+        mentorUniqueId: MENTOR,
+        skills: [],
+      });
+      expect(existsSync(staging)).toBe(false);
+
+      // `skills: null` ends a sync WITHOUT touching the tree (the error path).
+      await invokeCmd<string>('begin_opencode_skills_sync', {
+        mentorUniqueId: MENTOR,
+      });
+      await invokeCmd<string>('set_opencode_skills', {
+        mentorUniqueId: MENTOR,
+        skills: null,
+      });
+      expect(existsSync(staging)).toBe(false);
+    });
+
+    it('code-16: ensure_vibe_skills installs the shared vibe skill set', async () => {
+      // A real tarball fetch (~28MB) — same network assumption as the opencode
+      // binary download above. The dir is a shared cache and is left in place.
+      const res = await invokeCmd<{ present: boolean; refreshed: boolean }>(
+        'ensure_vibe_skills',
+      );
+
+      expect(res.present).toBe(true);
+      const vibeDir = join(DATA_DIR, 'skills', 'vibe');
+      const packages = readdirSync(vibeDir).filter((entry) =>
+        existsSync(join(vibeDir, entry, 'SKILL.md')),
+      );
+      expect(packages.length).toBeGreaterThan(0);
+    });
+
+    it.skip('code-14: the Code pill spins while skills sync and the popover shows the amber note on failure', () => {
+      /* pending — needs an authenticated UI session (like odm-01/04/06);
+         covered meanwhile by the coding-mode-button + skill-sync Vitest suites */
+    });
+
+    it.skip('code-15: a Code turn invokes a synced skill through opencode’s skill tool', () => {
+      /* pending — needs a tool-calling model, the same harness gap as
+         code-08..10; the staging → opencode.json wiring is covered by the Rust
+         apply_skills_config tests */
+    });
+
+    it.skip('code-17: New Chat in the sidebar evicts the previous chat’s opencode process while Code is on', () => {
+      /* pending — needs an authenticated UI session (like code-14); covered
+         meanwhile by the app-sidebar Vitest eviction cases */
+    });
+  });
+
   describe('turn-level behaviour (needs a tool-calling model)', () => {
     it.skip('code-08: a permission prompt in one chat does not block another chat', () => {
       /* pending — needs an authenticated tenant or a multi-GB local model */
@@ -328,6 +481,18 @@ describe('Journey 3: Code Mode (opencode)', () => {
 
     it.skip('code-10: the prompt renders in the chat that raised it', () => {
       /* pending — same harness gap; covered by the Vitest bubble tests */
+    });
+
+    it.skip('code-18: a Code turn runs inside the OS sandbox — only the workspace and tool caches writable, ~/.ssh empty', () => {
+      /* pending — needs a tool-calling model to drive a shell command through
+         opencode; the bwrap argv, SBPL profile and decoy home are covered by
+         the Rust sandbox tests in opencode_acp.rs */
+    });
+
+    it.skip('code-19: a second New Chat gets a fresh workspace, and a chat’s folder follows it from the ephemeral first-turn key to its real session id', () => {
+      /* pending — needs an authenticated UI session (like code-14/17); covered
+         meanwhile by the Rust adopt_prior_mapping tests and the SDK per-chat
+         key vitest cases */
     });
   });
 });

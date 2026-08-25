@@ -19,7 +19,7 @@
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicI64, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI64, AtomicUsize, Ordering};
 use std::sync::{Arc, OnceLock};
 use std::time::{Duration, Instant};
 
@@ -122,6 +122,12 @@ impl TurnState {
         self.pending_delta.clear();
         self.last_emit = Instant::now();
     }
+
+    /// A turn is streaming — updates arriving with no generation in flight
+    /// (the spawn-time `session/load` history replay) must not reach the UI.
+    fn in_flight(&self) -> bool {
+        !self.generation_id.is_empty()
+    }
 }
 
 /// A live `opencode acp` process + its ACP session.
@@ -144,7 +150,16 @@ struct Session {
     /// is never reaped — so this MUST be decremented on every exit path, including
     /// errors, or the session pins itself alive forever.
     active_turns: AtomicUsize,
+    /// Set by every intentional teardown (close/evict/reap/model-switch) before
+    /// the kill, so the mid-turn crash-retry can tell a close from a crash.
+    closing: AtomicBool,
 }
+
+/// `Session::request`'s error prefixes when the child vanished mid-request
+/// (died before responding, or before the write even landed). The mid-turn
+/// crash-retry keys on these, so they live as consts the check can't drift from.
+const CHILD_GONE: &str = "opencode closed before responding";
+const CHILD_WRITE_FAILED: &str = "failed writing to opencode";
 
 impl Session {
     fn new_id(&self) -> i64 {
@@ -158,9 +173,7 @@ impl Session {
         self.pending.lock().await.insert(id, tx);
         let msg = json!({ "jsonrpc": "2.0", "id": id, "method": method, "params": params });
         write_line(&self.stdin, &msg).await?;
-        let resp = rx
-            .await
-            .map_err(|_| format!("opencode closed before responding to {method}"))?;
+        let resp = rx.await.map_err(|_| format!("{CHILD_GONE} to {method}"))?;
         if let Some(err) = resp.get("error") {
             return Err(format!("opencode error on {method}: {err}"));
         }
@@ -183,7 +196,7 @@ async fn write_line(stdin: &Arc<Mutex<ChildStdin>>, msg: &Value) -> Result<(), S
     guard
         .write_all(line.as_bytes())
         .await
-        .map_err(|e| format!("failed writing to opencode: {e}"))?;
+        .map_err(|e| format!("{CHILD_WRITE_FAILED}: {e}"))?;
     guard.flush().await.map_err(|e| e.to_string())
 }
 
@@ -290,6 +303,342 @@ pub fn augmented_path() -> std::ffi::OsString {
     std::env::join_paths(dirs).unwrap_or_else(|_| std::env::var_os("PATH").unwrap_or_default())
 }
 
+// ---------- OS sandbox for the opencode child ----------
+//
+// Write-allow-list confinement: the child sees the whole filesystem read-only
+// and may WRITE only the enumerated set below — the session workspace, temp,
+// the tool caches, opencode's own state — while credential dirs are hidden
+// with fake read/write (reads see empty, writes land nowhere real). Reads stay
+// open everywhere else (the child must read /usr, node, the managed binary,
+// the skills dirs), and the network stays open (the loopback proxy and npm).
+
+/// Write-allowed dirs, relative to `$HOME`, pre-created when missing
+/// ([`ensure_write_dirs`]) — Code can't function without them. `.cache` is the
+/// umbrella every XDG-caching tool shares (pip, pnpm, corepack, uv,
+/// go-build…); `.local/share/opencode` is opencode's own state.
+const WRITE_DIRS_CORE: &[&str] =
+    &[".cache", ".npm", ".local/share/pnpm", ".local/share/opencode"];
+
+/// macOS extras: the native caches root and the mac pnpm store.
+// The macOS-arm items in this section stay compiled on every unix target so
+// the unit tests can exercise them from Linux — hence the targeted dead_code
+// allows.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+const WRITE_DIRS_CORE_MACOS: &[&str] = &["Library/Caches", "Library/pnpm"];
+
+/// Toolchain dirs, writable only when already present — never created. Using
+/// an installed toolchain works; installing one from scratch inside Code stays
+/// blocked (read-only `$HOME`).
+const WRITE_DIRS_TOOLCHAIN: &[&str] =
+    &[".cargo", ".rustup", "go", ".bun", ".local/share/uv", ".pyenv"];
+
+/// Credential dirs hidden from the child, relative to `$HOME`.
+const SECRET_DIRS: &[&str] = &[
+    ".ssh",
+    ".gnupg",
+    ".aws",
+    ".azure",
+    ".kube",
+    ".docker",
+    ".claude",
+    ".config/gh",
+    ".config/gcloud",
+    ".config/op",
+    ".password-store",
+];
+/// Platform extras: the GNOME keyring store / the macOS keychain files.
+const SECRET_DIRS_LINUX: &[&str] = &[".local/share/keyrings"];
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+const SECRET_DIRS_MACOS: &[&str] = &["Library/Keychains"];
+
+/// Credential files hidden from the child, relative to `$HOME`.
+const SECRET_FILES: &[&str] = &[
+    ".netrc",
+    ".npmrc",
+    ".git-credentials",
+    ".pypirc",
+    ".claude.json",
+    ".cargo/credentials.toml",
+];
+
+/// bwrap argv for the Linux sandbox — everything before the program name.
+///
+/// Order is the policy (later mounts win): the whole root read-only first,
+/// `/dev` and `/proc` restored (shell redirects, `/dev/shm`), the write list
+/// bound read-write over the ro root, and the secret masks stacked last — so a
+/// credential file inside an allowed parent (`~/.cargo/credentials.toml`)
+/// stays masked. A secret dir is masked with an empty tmpfs (reads see empty,
+/// writes go to RAM and vanish); a secret file with `/dev/null`. Masks are
+/// added only for paths that exist — bwrap would otherwise create the mount
+/// point on the real filesystem — and `--bind-try` skips write dirs the host
+/// doesn't have (toolchains are deliberately not pre-created).
+fn bwrap_args(
+    home: &Path,
+    workspace: &Path,
+    config_home: &Path,
+    tmpdir: Option<&Path>,
+) -> Vec<String> {
+    let mut args: Vec<String> = vec![
+        "--ro-bind".into(),
+        "/".into(),
+        "/".into(),
+        "--dev-bind".into(),
+        "/dev".into(),
+        "/dev".into(),
+        "--proc".into(),
+        "/proc".into(),
+    ];
+    let mut rw_targets: Vec<PathBuf> = vec![
+        workspace.to_path_buf(),
+        PathBuf::from("/tmp"),
+        PathBuf::from("/var/tmp"),
+        config_home.to_path_buf(),
+    ];
+    if let Some(t) = tmpdir {
+        if t != Path::new("/tmp") {
+            rw_targets.push(t.to_path_buf());
+        }
+    }
+    for rel in WRITE_DIRS_CORE {
+        rw_targets.push(home.join(rel));
+    }
+    // Toolchains opt in by presence — an absent one stays read-only rather
+    // than being advertised in the argv.
+    for rel in WRITE_DIRS_TOOLCHAIN {
+        let p = home.join(rel);
+        if p.is_dir() {
+            rw_targets.push(p);
+        }
+    }
+    for target in &rw_targets {
+        let p = target.to_string_lossy().into_owned();
+        args.extend(["--bind-try".into(), p.clone(), p]);
+    }
+    for rel in SECRET_DIRS.iter().chain(SECRET_DIRS_LINUX) {
+        let p = home.join(rel);
+        if p.is_dir() {
+            args.extend(["--tmpfs".into(), p.to_string_lossy().into_owned()]);
+        }
+    }
+    for rel in SECRET_FILES {
+        let p = home.join(rel);
+        if p.is_file() {
+            args.extend([
+                "--ro-bind".into(),
+                "/dev/null".into(),
+                p.to_string_lossy().into_owned(),
+            ]);
+        }
+    }
+    // Killing the bwrap monitor (what `start_kill` hits) takes the sandboxed
+    // opencode down with it, and both die if the app does.
+    args.push("--die-with-parent".into());
+    args
+}
+
+/// Pre-create the core write dirs so their rw binds (Linux) and the decoy's
+/// symlinks (macOS) resolve on first use. Toolchain dirs are deliberately
+/// left alone — absent means read-only.
+fn ensure_write_dirs(home: &Path) {
+    for rel in WRITE_DIRS_CORE {
+        let _ = std::fs::create_dir_all(home.join(rel));
+    }
+    #[cfg(target_os = "macos")]
+    for rel in WRITE_DIRS_CORE_MACOS {
+        let _ = std::fs::create_dir_all(home.join(rel));
+    }
+}
+
+/// Quote a path as an SBPL string literal (`\` and `"` escaped).
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+fn sbpl_quote(p: &Path) -> String {
+    let mut out = String::from("\"");
+    for c in p.to_string_lossy().chars() {
+        if c == '"' || c == '\\' {
+            out.push('\\');
+        }
+        out.push(c);
+    }
+    out.push('"');
+    out
+}
+
+/// SBPL profile for `sandbox-exec` on macOS: allow everything, deny ALL
+/// writes, re-allow them for the write list, and deny the real credential
+/// paths outright. Later rules win in SBPL, so the order IS the policy — the
+/// trailing secrets deny keeps `~/.cargo/credentials.toml` blocked inside the
+/// allowed `~/.cargo`.
+///
+/// sandbox-exec can only deny (EPERM) — the fake-empty view comes from the
+/// decoy home ([`build_decoy_home`]); the secret denies are the enforcement
+/// backstop for anything that reaches the real paths anyway (`getpwuid`,
+/// symlink traversal — the kernel checks resolved paths).
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+fn sandbox_profile_macos(home: &Path, workspace: &Path, config_home: &Path) -> String {
+    let mut p = String::from(
+        "(version 1)\n(allow default)\n(deny file-write* (subpath \"/\"))\n(allow file-write*",
+    );
+    // /dev: shell redirects and ttys; the tmp roots cover /tmp, /var/tmp and
+    // the per-user $TMPDIR under /var/folders.
+    for dir in ["/dev", "/private/tmp", "/private/var/tmp", "/private/var/folders"] {
+        p.push_str("\n  (subpath ");
+        p.push_str(&sbpl_quote(Path::new(dir)));
+        p.push(')');
+    }
+    for abs in [workspace, config_home] {
+        p.push_str("\n  (subpath ");
+        p.push_str(&sbpl_quote(abs));
+        p.push(')');
+    }
+    for rel in WRITE_DIRS_CORE
+        .iter()
+        .chain(WRITE_DIRS_CORE_MACOS)
+        .chain(WRITE_DIRS_TOOLCHAIN)
+    {
+        p.push_str("\n  (subpath ");
+        p.push_str(&sbpl_quote(&home.join(rel)));
+        p.push(')');
+    }
+    p.push_str(")\n(deny file*");
+    for rel in SECRET_DIRS.iter().chain(SECRET_DIRS_MACOS) {
+        p.push_str("\n  (subpath ");
+        p.push_str(&sbpl_quote(&home.join(rel)));
+        p.push(')');
+    }
+    for rel in SECRET_FILES {
+        p.push_str("\n  (literal ");
+        p.push_str(&sbpl_quote(&home.join(rel)));
+        p.push(')');
+    }
+    p.push_str(")\n");
+    p
+}
+
+/// Seed the decoy `$HOME` the macOS child runs under.
+///
+/// Every top-level entry of the real home is symlinked into the decoy except
+/// the secret list: a secret dir becomes a real empty writable dir (fake
+/// read/write), a secret file is simply absent, and a parent that contains a
+/// nested secret (`.config`, `.cargo`) is split into a real dir whose children
+/// are linked individually. The decoy lives under `config_home(session)`, so
+/// the existing close-time `remove_dir_all` cleans it up.
+#[cfg(unix)]
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+fn build_decoy_home(real_home: &Path, decoy: &Path) -> Result<(), String> {
+    // Rebuild from scratch on respawn (`remove_dir_all` deletes symlinks,
+    // never their targets).
+    let _ = std::fs::remove_dir_all(decoy);
+    let secret_dirs: Vec<PathBuf> = SECRET_DIRS
+        .iter()
+        .chain(SECRET_DIRS_MACOS)
+        .map(PathBuf::from)
+        .collect();
+    let secret_files: Vec<PathBuf> = SECRET_FILES.iter().map(PathBuf::from).collect();
+    populate_decoy(real_home, decoy, Path::new(""), &secret_dirs, &secret_files)
+}
+
+/// See [`build_decoy_home`]; `rel` is the subdir being populated (`""` at the top).
+#[cfg(unix)]
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+fn populate_decoy(
+    real_home: &Path,
+    decoy_root: &Path,
+    rel: &Path,
+    secret_dirs: &[PathBuf],
+    secret_files: &[PathBuf],
+) -> Result<(), String> {
+    std::fs::create_dir_all(decoy_root.join(rel)).map_err(|e| format!("decoy home: {e}"))?;
+    let real = real_home.join(rel);
+    let entries = std::fs::read_dir(&real).map_err(|e| format!("decoy home: {e}"))?;
+    for entry in entries.flatten() {
+        let child_rel = rel.join(entry.file_name());
+        if secret_dirs.contains(&child_rel) {
+            std::fs::create_dir_all(decoy_root.join(&child_rel))
+                .map_err(|e| format!("decoy home: {e}"))?;
+        } else if secret_files.contains(&child_rel) {
+            // Absent, not empty: tools probe for existence before reading.
+        } else if secret_dirs
+            .iter()
+            .chain(secret_files.iter())
+            .any(|s| s.starts_with(&child_rel) && s != &child_rel)
+        {
+            populate_decoy(real_home, decoy_root, &child_rel, secret_dirs, secret_files)?;
+        } else {
+            std::os::unix::fs::symlink(
+                real.join(entry.file_name()),
+                decoy_root.join(&child_rel),
+            )
+            .map_err(|e| format!("decoy home: {e}"))?;
+        }
+    }
+    Ok(())
+}
+
+/// Whether the executable `name` sits on `path_var` — the bwrap preflight.
+#[cfg(target_os = "linux")]
+fn has_executable(path_var: &std::ffi::OsStr, name: &str) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+    std::env::split_paths(path_var).any(|d| {
+        d.join(name)
+            .metadata()
+            .map(|m| m.is_file() && m.permissions().mode() & 0o111 != 0)
+            .unwrap_or(false)
+    })
+}
+
+/// Is the OS sandbox available? Linux needs bubblewrap on PATH; macOS ships
+/// `sandbox-exec`; Windows never spawns (Code is unsupported there).
+pub fn sandbox_ready() -> bool {
+    #[cfg(target_os = "linux")]
+    return has_executable(&augmented_path(), "bwrap");
+    #[allow(unreachable_code)]
+    true
+}
+
+/// The sandboxed Command for a session's opencode spawn: the wrapper program
+/// plus its sandbox argv, ending with the opencode program name. The caller
+/// layers the ACP args, cwd, env and stdio on top unchanged.
+fn sandboxed_opencode_command(_session_id: &str, workspace: &Path) -> Result<Command, String> {
+    #[cfg(target_os = "linux")]
+    {
+        let home = home_dir().unwrap_or_default();
+        ensure_write_dirs(&home);
+        let tmpdir = std::env::var_os("TMPDIR").map(PathBuf::from);
+        let mut cmd = create_command("bwrap");
+        cmd.args(bwrap_args(
+            &home,
+            workspace,
+            &config_home(_session_id),
+            tmpdir.as_deref(),
+        ));
+        cmd.arg(opencode_program());
+        return Ok(cmd);
+    }
+    #[cfg(target_os = "macos")]
+    {
+        let home = home_dir().unwrap_or_default();
+        ensure_write_dirs(&home);
+        // Named so `echo $HOME` doesn't give the game away.
+        let fake_home = config_home(_session_id).join("code-mode-home");
+        build_decoy_home(&home, &fake_home)?;
+        let mut cmd = create_command("/usr/bin/sandbox-exec");
+        cmd.args([
+            "-p",
+            &sandbox_profile_macos(&home, workspace, &config_home(_session_id)),
+        ]);
+        cmd.arg(opencode_program());
+        // The fake layer: $HOME-respecting tools see the fake home; the SBPL
+        // denies above catch anything that resolves the real one.
+        cmd.env("HOME", fake_home);
+        return Ok(cmd);
+    }
+    #[cfg(target_os = "windows")]
+    {
+        let _ = workspace;
+        Err("Code isn't available on Windows.".to_string())
+    }
+}
+
 /// Chat → workspace folder, persisted as `~/.local/share/iblai/workspaces.json`.
 ///
 /// Replaces the single global `workspace.txt`: every chat now gets its own folder, so a
@@ -341,7 +690,36 @@ fn workspace_slug() -> String {
     )
 }
 
+/// An abandoned generated workspace: nothing in it beyond `.git` (and the
+/// `.DS_Store` Finder litter). These are what a launch whose chat never wrote
+/// anything leaves behind.
+fn is_empty_project(dir: &Path) -> bool {
+    match std::fs::read_dir(dir) {
+        Ok(entries) => entries
+            .flatten()
+            .all(|e| e.file_name() == ".git" || e.file_name() == ".DS_Store"),
+        Err(_) => false,
+    }
+}
+
+/// The first (name-sorted, for determinism) recyclable workspace under `root`.
+fn find_empty_workspace(root: &Path) -> Option<PathBuf> {
+    let mut candidates: Vec<PathBuf> = std::fs::read_dir(root)
+        .ok()?
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.is_dir() && is_empty_project(p))
+        .collect();
+    candidates.sort();
+    candidates.into_iter().next()
+}
+
 /// This chat's workspace, generating and recording one the first time it's asked for.
+///
+/// New chat = new workspace — but an untouched leftover (just `.git`) is
+/// recycled instead of minting another dir on every app start, since sessions
+/// aren't restored across launches and each launch would otherwise strand one
+/// more empty folder. A dir with any real content is never shared.
 pub fn resolve_workspace(session_id: &str) -> PathBuf {
     let mut map = read_workspace_map();
     if let Some(path) = map.get(session_id).and_then(|v| v.as_str()) {
@@ -350,6 +728,11 @@ pub fn resolve_workspace(session_id: &str) -> PathBuf {
         }
     }
     let root = iblai_data_dir().join("workspaces");
+    if let Some(dir) = find_empty_workspace(&root) {
+        map.insert(session_id.to_string(), json!(dir.to_string_lossy()));
+        let _ = write_workspace_map(&map);
+        return dir;
+    }
     // Collisions are astronomically unlikely but cheap to rule out, and a collision would
     // silently hand two chats the same folder.
     let taken: Vec<&str> = map.values().filter_map(|v| v.as_str()).collect();
@@ -365,6 +748,41 @@ pub fn resolve_workspace(session_id: &str) -> PathBuf {
     map.insert(session_id.to_string(), json!(dir.to_string_lossy()));
     let _ = write_workspace_map(&map);
     dir
+}
+
+/// Move the ephemeral first-turn mapping onto the chat's real session id.
+///
+/// A brand-new chat's first turn runs under an SDK-minted `coding-new-*` key;
+/// once the real id exists, the workspace must follow it or the chat splits
+/// across two folders. On a successful adoption the remaining `coding-new-*`
+/// entries are pruned too — those keys are per-app-run and never recur, and
+/// the only live one is the chat being migrated right now. (The pruning must
+/// NOT move into `resolve_workspace`: there it could yank the mapping out from
+/// under a live unsaved chat mid-conversation.)
+fn adopt_prior_mapping(
+    map: &mut serde_json::Map<String, Value>,
+    session_id: &str,
+    prior: &str,
+) -> bool {
+    if map.contains_key(session_id) {
+        return false; // a resumed chat already owns a folder — never overwrite
+    }
+    let Some(dir) = map.remove(prior) else {
+        return false;
+    };
+    map.insert(session_id.to_string(), dir);
+    map.retain(|k, _| !k.starts_with("coding-new-") || k == session_id);
+    true
+}
+
+/// See [`adopt_prior_mapping`]; also reaps the ephemeral key's opencode
+/// process — the same logical chat runs under its real id from here on.
+async fn migrate_new_chat(session_id: &str, prior: &str) {
+    let mut map = read_workspace_map();
+    if adopt_prior_mapping(&mut map, session_id, prior) {
+        let _ = write_workspace_map(&map);
+    }
+    close_session(prior).await;
 }
 
 /// Return this chat's coding workspace path.
@@ -402,6 +820,253 @@ fn ensure_workspace(dir: &PathBuf) -> Result<(), String> {
             .output();
     }
     Ok(())
+}
+
+/// One platform Agent Skill, fetched by the frontend (which owns API access and
+/// auth) and materialised here as an opencode SKILL.md package. Binary `asset`
+/// resources are not part of the payload — only text `script`/`reference` files —
+/// and scripts land without an exec bit (the agent can still `sh <file>`).
+#[derive(serde::Deserialize)]
+pub struct SkillResourcePayload {
+    pub filename: String,
+    pub content: String,
+}
+
+#[derive(serde::Deserialize)]
+pub struct SkillPayload {
+    pub slug: String,
+    #[serde(default)]
+    pub description: String,
+    #[serde(default)]
+    pub instruction: String,
+    #[serde(default)]
+    pub resources: Vec<SkillResourcePayload>,
+}
+
+/// Where one mentor's synced Agent Skills live:
+/// `~/.local/share/iblai/skills/mentors/<path_key(mentor)>`.
+///
+/// Keyed by MENTOR, not chat session: skills are mentor-level assignments, and the
+/// first turn of a brand-new chat runs under an SDK-generated ephemeral session key
+/// this app never sees, so a session-keyed dir could never cover it. Outside
+/// `config_home` on purpose: `close_session` deletes that dir on every idle reap,
+/// and skills must survive to the respawn.
+pub fn mentor_skills_dir(mentor_unique_id: &str) -> PathBuf {
+    iblai_data_dir()
+        .join("skills")
+        .join("mentors")
+        .join(path_key(mentor_unique_id))
+}
+
+/// The shared iblai/vibe skills checkout, managed by
+/// [`crate::opencode_installer::ensure_vibe_skills`]. Mentor-independent.
+pub fn vibe_skills_dir() -> PathBuf {
+    iblai_data_dir().join("skills").join("vibe")
+}
+
+/// A server-side skill slug reduced to a safe directory name that also satisfies
+/// opencode's skill-name shape (lowercase, hyphenated). The name in SKILL.md is
+/// this sanitised form, so the `/slug` token the composer inserts matches it.
+fn sanitize_slug(slug: &str) -> String {
+    let mapped: String = slug
+        .to_lowercase()
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() { c } else { '-' })
+        .take(64)
+        .collect();
+    let trimmed = mapped.trim_matches('-');
+    if trimmed.is_empty() {
+        "skill".to_string()
+    } else {
+        trimmed.to_string()
+    }
+}
+
+/// A resource filename reduced to ONE safe path component, or `None` when it can't
+/// name a file at all — or would clobber the SKILL.md manifest we just wrote.
+fn sanitize_filename(name: &str) -> Option<String> {
+    let cleaned: String = name
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-') {
+                c
+            } else {
+                '_'
+            }
+        })
+        .take(128)
+        .collect();
+    if cleaned.is_empty()
+        || cleaned.chars().all(|c| c == '.')
+        || cleaned.eq_ignore_ascii_case("skill.md")
+    {
+        return None;
+    }
+    Some(cleaned)
+}
+
+/// Compose a SKILL.md: YAML frontmatter (name + description) + the instruction body.
+///
+/// The description is embedded as a JSON string — every JSON string is a valid YAML
+/// double-quoted scalar, which keeps arbitrary text (quotes, colons, newlines)
+/// correct without a YAML dependency. An empty description falls back to the name:
+/// opencode drops description-less skills from the model-visible listing entirely.
+fn skill_md(name: &str, description: &str, instruction: &str) -> String {
+    let desc = if description.trim().is_empty() {
+        name
+    } else {
+        description
+    };
+    let quoted = Value::String(desc.to_string()).to_string();
+    format!("---\nname: {name}\ndescription: {quoted}\n---\n\n{instruction}\n")
+}
+
+/// Materialise `skills` under `root`, replacing whatever was there — the full
+/// rewrite is what makes removed assignments disappear. An empty list removes the
+/// tree and does NOT recreate it: an absent dir is the "no skills" signal
+/// `apply_skills_config` reads.
+fn write_skills_tree(root: &Path, skills: &[SkillPayload]) -> Result<usize, String> {
+    let _ = std::fs::remove_dir_all(root);
+    if skills.is_empty() {
+        return Ok(0);
+    }
+    let mut taken: Vec<String> = Vec::new();
+    for skill in skills {
+        let slug = sanitize_slug(&skill.slug);
+        if taken.contains(&slug) {
+            // Two payload slugs collapsing to one dir would silently interleave
+            // their files; first wins.
+            continue;
+        }
+        let dir = root.join(&slug);
+        std::fs::create_dir_all(&dir).map_err(|e| format!("skill dir failed: {e}"))?;
+        std::fs::write(
+            dir.join("SKILL.md"),
+            skill_md(&slug, &skill.description, &skill.instruction),
+        )
+        .map_err(|e| format!("SKILL.md write failed: {e}"))?;
+        for res in &skill.resources {
+            if let Some(name) = sanitize_filename(&res.filename) {
+                std::fs::write(dir.join(name), &res.content)
+                    .map_err(|e| format!("skill resource write failed: {e}"))?;
+            }
+        }
+        taken.push(slug);
+    }
+    Ok(taken.len())
+}
+
+/// Reserved [`skills_syncs`] key for the shared vibe download.
+pub const VIBE_SYNC_KEY: &str = "__vibe__";
+
+/// Longest a spawn holds for an in-flight mentor sync — API pagination, not a
+/// download, so a sync that outlives this is treated as crashed.
+const SKILLS_SYNC_MAX_WAIT: Duration = Duration::from_secs(10);
+
+/// Longest a spawn holds for the vibe download — a real ~28MB tarball on first run.
+const VIBE_SYNC_MAX_WAIT: Duration = Duration::from_secs(120);
+
+/// Skill syncs currently in flight, keyed by `path_key(mentor)` (plus
+/// [`VIBE_SYNC_KEY`]). The spawn path waits on these so a Code session never
+/// snapshots a half-written skills dir — opencode reads skills once per process.
+fn skills_syncs() -> &'static Mutex<HashMap<String, Instant>> {
+    static S: OnceLock<Mutex<HashMap<String, Instant>>> = OnceLock::new();
+    S.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+/// Record an in-flight sync. Public: the vibe installer registers its download
+/// under [`VIBE_SYNC_KEY`] through this too.
+pub async fn begin_skills_sync_entry(key: String) {
+    skills_syncs().lock().await.insert(key, Instant::now());
+}
+
+pub async fn end_skills_sync_entry(key: &str) {
+    skills_syncs().lock().await.remove(key);
+}
+
+/// Wait (bounded) for an in-flight sync under `key`; returns immediately when there
+/// is none. A 150ms poll instead of a Notify: the wait is rare (only while a sync
+/// races a send) and seconds long, and polling has no missed-wakeup edge.
+async fn await_skills_sync(key: &str, max_wait: Duration) {
+    loop {
+        {
+            let mut map = skills_syncs().lock().await;
+            let Some(started) = map.get(key) else { return };
+            if started.elapsed() >= max_wait {
+                // A sync that outlived its budget is dead — it must not gate
+                // every future send.
+                map.remove(key);
+                return;
+            }
+        }
+        tokio::time::sleep(Duration::from_millis(150)).await;
+    }
+}
+
+/// Announce that a mentor-skills sync is starting: new spawns for this mentor hold
+/// until `set_opencode_skills` lands (or the bounded wait expires — a crashed sync
+/// must not gate sends forever).
+#[command]
+pub async fn begin_opencode_skills_sync(mentor_unique_id: String) -> Result<(), String> {
+    begin_skills_sync_entry(path_key(&mentor_unique_id)).await;
+    Ok(())
+}
+
+/// Materialise one mentor's Agent Skills for Code sessions.
+///
+/// `skills: Some(list)` rewrites the staging tree (an empty list clears it);
+/// `None` only ends the in-flight sync WITHOUT touching the tree — the frontend's
+/// error path, where a stale skill set beats a wrongly-emptied one.
+#[command]
+pub async fn set_opencode_skills(
+    mentor_unique_id: String,
+    skills: Option<Vec<SkillPayload>>,
+) -> Result<String, String> {
+    // One writer at a time: concurrent syncs (strict-mode double effects, quick
+    // mentor switches) would race remove_dir_all against a sibling's writes.
+    static WRITE_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    let _guard = WRITE_LOCK.get_or_init(|| Mutex::new(())).lock().await;
+
+    let dir = mentor_skills_dir(&mentor_unique_id);
+    let result = match &skills {
+        Some(list) => write_skills_tree(&dir, list).map(|_| ()),
+        None => Ok(()),
+    };
+    end_skills_sync_entry(&path_key(&mentor_unique_id)).await;
+    result.map(|()| dir.to_string_lossy().to_string())
+}
+
+/// Point opencode at the skill sources that exist for this spawn: the shared vibe
+/// checkout and the mentor's synced Agent Skills. Mentor staging comes LAST —
+/// opencode resolves duplicate skill names last-wins, so an assigned skill
+/// overrides a same-named vibe skill. Neither present → no `skills` key at all,
+/// and a leftover one is dropped (the per-session config persists between spawns).
+///
+/// The ibl.ai guidance does NOT live here: the loopback proxy injects it as a
+/// system message into skills-wired sessions' chat/completions calls (see
+/// `opencode_proxy::inject_system_guidance`).
+fn apply_skills_config(
+    root: &mut serde_json::Map<String, Value>,
+    vibe_dir: &Path,
+    mentor_dir: Option<&Path>,
+) {
+    let mut paths: Vec<String> = Vec::new();
+    if vibe_dir.is_dir() {
+        paths.push(vibe_dir.to_string_lossy().to_string());
+    }
+    if let Some(dir) = mentor_dir {
+        if dir.is_dir() {
+            paths.push(dir.to_string_lossy().to_string());
+        }
+    }
+    // Earlier iterations injected guidance via an `instructions` entry; drop
+    // the key from any persisted per-session config that still carries it.
+    root.remove("instructions");
+    if paths.is_empty() {
+        root.remove("skills");
+    } else {
+        root.insert("skills".to_string(), json!({ "paths": paths }));
+    }
 }
 
 /// Extract the latest user-message text from the frontend `messages` array.
@@ -591,9 +1256,39 @@ async fn reader_loop(
             handle_update(&app, &v, &turn).await;
         }
     }
+    reader_gone(&session_id, &pending).await;
+}
+
+/// Cleanup after the reader saw child EOF (crash, kill, or intentional close).
+async fn reader_gone(session_id: &str, pending: &Arc<Mutex<HashMap<i64, oneshot::Sender<Value>>>>) {
+    // Identity-checked removal: a respawn may already have replaced this entry
+    // (or close_session already removed it) — never tear down the successor.
+    // The config-dir delete stays behind this gate for the same reason.
+    let removed = {
+        let mut reg = registry().lock().await;
+        match reg.get(session_id) {
+            Some(s) if Arc::ptr_eq(&s.pending, pending) => reg.remove(session_id),
+            _ => None,
+        }
+    };
+    if removed.is_some() {
+        teardown(session_id, removed).await;
+    }
+    // Dropping the senders resolves every in-flight `request()` with
+    // [`CHILD_GONE`] immediately — the turn stops hanging and either retries
+    // on a fresh process (crash) or surfaces through the existing
+    // `ollama:error` arm. This runs on intentional closes too: an evicted
+    // mid-turn session's prompt used to hang exactly this way.
+    pending.lock().await.clear();
 }
 
 async fn handle_update(app: &AppHandle, v: &Value, turn: &Arc<Mutex<TurnState>>) {
+    // No generation in flight → this is the `session/load` history replay at
+    // spawn time (or a stray post-turn notification): drop it, never re-stream
+    // old turns into the UI.
+    if !turn.lock().await.in_flight() {
+        return;
+    }
     let update = match v.get("params").and_then(|p| p.get("update")) {
         Some(u) => u,
         None => return,
@@ -731,6 +1426,7 @@ fn enforce_permission_policy(root: &mut serde_json::Map<String, Value>) {
 // concurrent Code sessions with different models ever matter.
 fn apply_opencode_model(
     session_id: &str,
+    mentor: Option<&str>,
     spec: &ModelSpec,
     base_url: &str,
     api_key: &str,
@@ -759,6 +1455,9 @@ fn apply_opencode_model(
     // The security boundary — see `enforce_permission_policy`. Re-applied here because
     // this runs on every spawn, immediately before the process starts.
     enforce_permission_policy(root);
+    // Skills the agent discovers at startup — see `apply_skills_config`.
+    let mentor_dir = mentor.map(mentor_skills_dir);
+    apply_skills_config(root, &vibe_skills_dir(), mentor_dir.as_deref());
 
     let providers = root
         .entry("provider")
@@ -945,6 +1644,12 @@ fn foundry_result(model: &str, endpoint: Option<String>) -> Value {
 }
 
 /// Spawn `opencode acp`, run the ACP handshake, and register the session.
+///
+/// `resume` carries the previous ACP session id after a mid-turn crash: when
+/// the agent advertises `loadSession`, the fresh process re-loads that session
+/// (conversation context survives); otherwise — or when the load fails — a
+/// fresh `session/new` is created and only the re-sent prompt carries over.
+#[allow(clippy::too_many_arguments)]
 async fn spawn_session(
     app: &AppHandle,
     session_id: &str,
@@ -953,8 +1658,33 @@ async fn spawn_session(
     model: Option<String>,
     api_base: Option<String>,
     workspace: &PathBuf,
+    mentor: Option<String>,
+    generation_id: &str,
+    resume: Option<String>,
 ) -> Result<Arc<Session>, String> {
     ensure_workspace(workspace)?;
+
+    // Hold the spawn while skills are still landing on disk — this process will
+    // snapshot its skills exactly once, so racing an in-flight sync would leave the
+    // whole session skill-less. Bounded waits (a crashed sync must not gate sends
+    // forever), and a hint so the pause isn't a silent hang — same pattern as the
+    // local-model warmup note in `opencode_chat_stream`.
+    let mentor_key = mentor.as_deref().map(path_key);
+    let sync_in_flight = {
+        let map = skills_syncs().lock().await;
+        map.contains_key(VIBE_SYNC_KEY)
+            || mentor_key.as_deref().is_some_and(|k| map.contains_key(k))
+    };
+    if sync_in_flight {
+        let _ = app.emit(
+            "opencode:reasoning",
+            json!({ "generation_id": generation_id, "delta": "Preparing skills…\n" }),
+        );
+        await_skills_sync(VIBE_SYNC_KEY, VIBE_SYNC_MAX_WAIT).await;
+        if let Some(key) = mentor_key.as_deref() {
+            await_skills_sync(key, SKILLS_SYNC_MAX_WAIT).await;
+        }
+    }
 
     // Match opencode's model to the selection — NO default: an absent/empty model
     // means Code doesn't run, so a broken selection fails loudly instead of silently
@@ -984,8 +1714,24 @@ async fn spawn_session(
             tenant
         );
         let port = crate::opencode_proxy::ensure_started().await?;
+        // The proxy announces upstream 402s (insufficient credit) to the webview.
+        crate::opencode_proxy::set_app(app);
         let secret = crate::opencode_proxy::new_secret();
-        crate::opencode_proxy::register(&secret, upstream, token.to_string()).await;
+        // Skills wired for this spawn → the proxy injects the ibl.ai guidance
+        // as a system message into this session's chat/completions calls.
+        let skills_wired = vibe_skills_dir().is_dir()
+            || mentor
+                .as_deref()
+                .map(mentor_skills_dir)
+                .is_some_and(|d| d.is_dir());
+        crate::opencode_proxy::register(
+            &secret,
+            upstream,
+            token.to_string(),
+            tenant.to_string(),
+            skills_wired,
+        )
+        .await;
         (
             format!("http://127.0.0.1:{port}/v1"),
             secret.clone(),
@@ -993,12 +1739,21 @@ async fn spawn_session(
             Some(secret),
         )
     };
-    apply_opencode_model(session_id, &spec, &base_url, &api_key, display_name)?;
+    apply_opencode_model(
+        session_id,
+        mentor.as_deref(),
+        &spec,
+        &base_url,
+        &api_key,
+        display_name,
+    )?;
 
-    // A plain child process, at the user's own privilege — the confinement is the
-    // permission prompt in `handle_permission_request`, not the kernel. `PATH` carries our
-    // managed `bin` dir so a downloaded opencode is found when the system has none.
-    let mut cmd = create_command(&opencode_program());
+    // Kernel confinement on top of the permission prompt in
+    // `handle_permission_request`: the child spawns inside an OS sandbox — bwrap on
+    // Linux, sandbox-exec + a decoy $HOME on macOS (see the sandbox section near
+    // `bwrap_args`). `PATH` carries our managed `bin` dir so a downloaded opencode is
+    // found when the system has none.
+    let mut cmd = sandboxed_opencode_command(session_id, workspace)?;
     cmd.args(["acp", "--print-logs", "--log-level", "INFO"])
         .current_dir(workspace)
         .env("PATH", augmented_path())
@@ -1008,9 +1763,23 @@ async fn spawn_session(
         .stderr(std::process::Stdio::piped())
         .kill_on_drop(true);
 
-    let mut child = cmd
-        .spawn()
-        .map_err(|e| format!("failed to launch `opencode acp` (is opencode installed?): {e}"))?;
+    // Attribution/config for the agent's shell — NOT credentials (the DM token
+    // stays in the proxy; the rule is that no secret enters the child env).
+    // The vibe skills read these instead of asking the user who/where they are.
+    if let Some(user) = crate::opencode_proxy::learner_username().await {
+        cmd.env("IBLAI_USERNAME", user);
+    }
+    if !tenant.is_empty() {
+        cmd.env("IBLAI_PLATFORM_KEY", tenant);
+    }
+
+    let mut child = cmd.spawn().map_err(|e| {
+        if cfg!(target_os = "linux") {
+            format!("failed to launch the sandboxed `opencode acp` (is bubblewrap (bwrap) installed?): {e}")
+        } else {
+            format!("failed to launch `opencode acp` (is opencode installed?): {e}")
+        }
+    })?;
 
     let stdin = Arc::new(Mutex::new(child.stdin.take().ok_or("no stdin")?));
     let stdout = child.stdout.take().ok_or("no stdout")?;
@@ -1055,11 +1824,12 @@ async fn spawn_session(
         turn,
         last_used: Mutex::new(Instant::now()),
         active_turns: AtomicUsize::new(0),
+        closing: AtomicBool::new(false),
     };
 
     // 1) initialize — we advertise NO fs/terminal capabilities so opencode uses its
     //    own built-in file/shell tools directly on the workspace.
-    session
+    let init = session
         .request(
             "initialize",
             json!({
@@ -1069,20 +1839,50 @@ async fn spawn_session(
             }),
         )
         .await?;
+    let can_load = init
+        .get("agentCapabilities")
+        .and_then(|c| c.get("loadSession"))
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
 
-    // 2) session/new with the workspace cwd.
-    let new_res = session
-        .request(
-            "session/new",
-            json!({ "cwd": workspace.to_string_lossy(), "mcpServers": [] }),
-        )
-        .await?;
-    let acp_session_id = new_res
-        .get("sessionId")
-        .and_then(|s| s.as_str())
-        .ok_or("session/new returned no sessionId")?
-        .to_string();
-    session.acp_session_id = acp_session_id;
+    // 2) After a crash, resume the previous ACP session when the agent can —
+    //    opencode persists sessions under its (shared) data dir, which our
+    //    teardown never deletes. The load's history replay streams as
+    //    `session/update` with no turn in flight, so `handle_update` drops it.
+    //    Any failure falls back to a fresh session: context lost, but the
+    //    re-sent prompt still completes.
+    let mut acp_session_id: Option<String> = None;
+    if can_load {
+        if let Some(prev) = resume.as_deref() {
+            if session
+                .request(
+                    "session/load",
+                    json!({ "sessionId": prev, "cwd": workspace.to_string_lossy(), "mcpServers": [] }),
+                )
+                .await
+                .is_ok()
+            {
+                acp_session_id = Some(prev.to_string());
+            }
+        }
+    }
+    // 3) …or session/new with the workspace cwd.
+    session.acp_session_id = match acp_session_id {
+        Some(id) => id,
+        None => {
+            let new_res = session
+                .request(
+                    "session/new",
+                    json!({ "cwd": workspace.to_string_lossy(), "mcpServers": [] }),
+                )
+                .await?;
+            new_res
+                .get("sessionId")
+                .and_then(|s| s.as_str())
+                .ok_or("session/new returned no sessionId")?
+                .to_string()
+        }
+    };
 
     Ok(Arc::new(session))
 }
@@ -1092,6 +1892,7 @@ async fn spawn_session(
 /// Token expiry no longer forces a respawn: the proxy holds the credential, so the
 /// fresh dm_token the frontend sends each turn is swapped in place and the session
 /// (and opencode's conversation state) survives.
+#[allow(clippy::too_many_arguments)]
 async fn get_or_spawn(
     app: &AppHandle,
     session_id: &str,
@@ -1100,10 +1901,15 @@ async fn get_or_spawn(
     model: Option<String>,
     api_base: Option<String>,
     workspace: &PathBuf,
+    mentor: Option<String>,
+    generation_id: &str,
+    resume: Option<String>,
 ) -> Result<Arc<Session>, String> {
     let live = { registry().lock().await.get(session_id).cloned() };
     if let Some(s) = live {
-        if s.requested_model.as_deref() == model.as_deref() {
+        // A dead child can sit here for a beat before its reader's EOF cleanup
+        // lands — never hand it out; fall through to the respawn below.
+        if !child_exited(&s).await && s.requested_model.as_deref() == model.as_deref() {
             *s.last_used.lock().await = Instant::now();
             if let Some(secret) = &s.proxy_secret {
                 crate::opencode_proxy::set_token(secret, token).await;
@@ -1111,11 +1917,23 @@ async fn get_or_spawn(
             return Ok(s);
         }
     }
-    // Missing or the model switched → (re)spawn.
+    // Missing, dead, or the model switched → (re)spawn.
     close_session(session_id).await;
     evict_for_new_session(session_id).await;
     start_reaper();
-    let s = spawn_session(app, session_id, tenant, token, model, api_base, workspace).await?;
+    let s = spawn_session(
+        app,
+        session_id,
+        tenant,
+        token,
+        model,
+        api_base,
+        workspace,
+        mentor,
+        generation_id,
+        resume,
+    )
+    .await?;
     registry()
         .lock()
         .await
@@ -1176,6 +1994,12 @@ fn pick_eviction(states: &[SessionState], cap: usize) -> Option<String> {
             .map(|s| s.session_id.clone())
     };
     lru(true).or_else(|| lru(false))
+}
+
+/// Has this session's opencode process already exited? An `Err` from
+/// `try_wait` reads as "alive" — the same answer as before the probe existed.
+async fn child_exited(s: &Session) -> bool {
+    s.child.lock().await.try_wait().is_ok_and(|st| st.is_some())
 }
 
 /// Sessions the reaper should close: idle past the timeout AND doing nothing. A chat
@@ -1252,24 +2076,55 @@ fn start_reaper() {
 }
 
 async fn close_session(session_id: &str) {
+    let s = registry().lock().await.remove(session_id);
+    if let Some(s) = &s {
+        // Intentional teardown (close/evict/reap/model-switch): mark it so the
+        // mid-turn crash-retry never resurrects a session someone chose to end.
+        s.closing.store(true, Ordering::SeqCst);
+    }
+    teardown(session_id, s).await;
+}
+
+/// The teardown half of [`close_session`], for callers that already pulled the
+/// registry entry (or found none): release pending permission cards, drop the
+/// proxy credentials, kill the child, delete the per-session config dir.
+async fn teardown(session_id: &str, s: Option<Arc<Session>>) {
     // Anything waiting on the user can never be answered now — release it so the
     // dying process isn't blocked mid-teardown.
     deny_pending_for(session_id).await;
-    if let Some(s) = registry().lock().await.remove(session_id) {
+    if let Some(s) = s {
         if let Some(secret) = &s.proxy_secret {
             crate::opencode_proxy::unregister(secret).await;
         }
-        let mut child = s.child.lock().await;
-        let _ = child.start_kill();
+        let _ = s.child.lock().await.start_kill();
     }
     // The session's opencode config is rewritten on every spawn, so leaving it behind
-    // just accumulates one dead directory per chat the user ever opened.
+    // just accumulates one dead directory per chat the user ever opened. Synced Agent
+    // Skills deliberately live elsewhere (`mentor_skills_dir`) — a reaped session
+    // must find them again on respawn.
     let _ = std::fs::remove_dir_all(config_home(session_id));
+}
+
+/// Attempts (original + respawns) one prompt gets. 2 = exactly one respawn: a
+/// transient crash (OOM kill, opencode bug, dropped pipe) is fixed by one fresh
+/// process, while a prompt that deterministically kills the child would turn a
+/// higher cap into a crash loop that only delays the inevitable error — and
+/// each `session/new` fallback retry loses more context anyway.
+const PROMPT_ATTEMPTS: usize = 2;
+
+/// Should this failed `session/prompt` be retried on a fresh process? Only a
+/// crash: the child vanished (not a JSON-RPC error from a live one), nobody
+/// intentionally closed the session, and the budget isn't spent.
+fn should_retry(err: &str, closing: bool, attempt: usize) -> bool {
+    attempt < PROMPT_ATTEMPTS
+        && !closing
+        && (err.starts_with(CHILD_GONE) || err.starts_with(CHILD_WRITE_FAILED))
 }
 
 /// Stream one Coding-Mode turn through opencode, emitting `ollama:*` +
 /// `opencode:*` events keyed by `generation_id`.
 #[command]
+#[allow(clippy::too_many_arguments)]
 pub async fn opencode_chat_stream(
     app: AppHandle,
     session_id: String,
@@ -1280,9 +2135,34 @@ pub async fn opencode_chat_stream(
     model: Option<String>,
     api_base: Option<String>,
     workspace: Option<String>,
+    // Mentor UUID from the SDK's localStorage bridge — keys the synced Agent
+    // Skills dir. Absent with an older SDK: vibe skills only, no sync wait.
+    mentor: Option<String>,
+    // The SDK's ephemeral first-turn key for this chat. When it differs from
+    // `session_id`, the chat just gained its real id — migrate the first
+    // turn's workspace (and reap its process) so the chat keeps ONE folder.
+    // Absent with an older SDK: no migration.
+    new_chat_key: Option<String>,
 ) -> Result<(), String> {
     if crate::opencode_installer::is_sandboxed() {
         return Err("Code isn't available in the sandboxed Mac App Store build.".to_string());
+    }
+    if cfg!(target_os = "windows") {
+        return Err("Code isn't available on Windows.".to_string());
+    }
+    // Belt for the UI gate: on Linux the pill is disabled while bwrap is missing,
+    // but a stale flag or an older frontend could still send.
+    if !sandbox_ready() {
+        return Err(
+            "Code needs bubblewrap (bwrap) — install it with your package manager, then reopen the app."
+                .to_string(),
+        );
+    }
+    // BEFORE workspace resolution, so the real id resolves to the migrated dir.
+    if let Some(prior) = new_chat_key.as_deref() {
+        if prior != session_id {
+            migrate_new_chat(&session_id, prior).await;
+        }
     }
     let workspace = workspace
         .map(PathBuf::from)
@@ -1308,29 +2188,74 @@ pub async fn opencode_chat_stream(
         );
     }
 
-    let session = get_or_spawn(
-        &app,
-        &session_id,
-        &tenant,
-        &token,
-        model,
-        api_base,
-        &workspace,
-    )
-    .await?;
-    let _turn_guard = TurnGuard::new(session.clone());
-
-    session.turn.lock().await.reset(generation_id.clone());
-
-    let res = session
-        .request(
-            "session/prompt",
-            json!({
-                "sessionId": session.acp_session_id,
-                "prompt": [ { "type": "text", "text": prompt_text } ]
-            }),
+    // One transparent respawn on a mid-turn crash: the prompt is re-sent
+    // verbatim into the same generation, so the user sees the answer continue
+    // rather than an interruption. `should_retry` keeps this to genuine
+    // crashes (never intentional closes or live-child errors) and to
+    // [`PROMPT_ATTEMPTS`] total tries.
+    let mut resume: Option<String> = None;
+    let mut turn_guard = None;
+    let mut attempt = 1;
+    let (session, res) = loop {
+        let session = match get_or_spawn(
+            &app,
+            &session_id,
+            &tenant,
+            &token,
+            model.clone(),
+            api_base.clone(),
+            &workspace,
+            mentor.clone(),
+            &generation_id,
+            resume.take(),
         )
-        .await;
+        .await
+        {
+            Ok(s) => s,
+            Err(e) if attempt > 1 => {
+                // The recovery respawn itself failed — that IS the loud failure.
+                let _ = app.emit(
+                    "ollama:error",
+                    json!({ "generation_id": generation_id, "error": e }),
+                );
+                return Err(e);
+            }
+            // First spawn: keep today's invoke-rejection (a missing binary
+            // stays immediately loud in the UI's own error path).
+            Err(e) => return Err(e),
+        };
+        // Replace (and thereby drop) the previous attempt's guard, if any.
+        drop(turn_guard.take());
+        turn_guard = Some(TurnGuard::new(session.clone()));
+        session.turn.lock().await.reset(generation_id.clone());
+
+        let res = session
+            .request(
+                "session/prompt",
+                json!({
+                    "sessionId": session.acp_session_id,
+                    "prompt": [ { "type": "text", "text": prompt_text } ]
+                }),
+            )
+            .await;
+
+        match &res {
+            Err(e) if should_retry(e, session.closing.load(Ordering::SeqCst), attempt) => {
+                eprintln!(
+                    "[opencode] child died mid-turn ({e}) — respawning silently, attempt {}",
+                    attempt + 1
+                );
+                // Machine event only — the SDK clears the partial stream for
+                // this generation; nothing user-visible marks the seam.
+                let _ = app.emit("ollama:restart", json!({ "generation_id": generation_id }));
+                resume = Some(session.acp_session_id.clone());
+                attempt += 1;
+            }
+            _ => break (session, res),
+        }
+    };
+    // Held to fn end, as before — busy until after the done/error emit.
+    let _turn_guard = turn_guard;
 
     match res {
         Ok(result) => {
@@ -1360,6 +2285,10 @@ pub async fn opencode_chat_stream(
             Ok(())
         }
         Err(e) => {
+            // A JSON-RPC error from a live child, an intentional close, or a
+            // spent retry budget — the crash-retry above already consumed the
+            // recoverable case. A live child keeps its session (conversation
+            // state survives); a dead one was torn down by `reader_gone`.
             let _ = app.emit(
                 "ollama:error",
                 json!({ "generation_id": generation_id, "error": e }),
@@ -1388,6 +2317,14 @@ pub async fn opencode_stop(session_id: String) -> Result<(), String> {
 pub async fn opencode_close(session_id: String) -> Result<(), String> {
     close_session(&session_id).await;
     Ok(())
+}
+
+/// Record the signed-in user's username. The model proxy appends it as
+/// `learner_id=<username>` on every OpenAI-compat request it forwards, so upstream
+/// usage is attributed to the learner.
+#[command]
+pub async fn set_opencode_learner(username: String) {
+    crate::opencode_proxy::set_learner(&username).await;
 }
 
 #[cfg(test)]
@@ -1479,6 +2416,247 @@ mod tests {
         assert_eq!(path_key("chat-1"), path_key("chat-1"), "and it is stable");
     }
 
+    /// The sandbox argv is a write allow-list: the whole root read-only first,
+    /// /dev and /proc restored, only the enumerated dirs bound read-write, and
+    /// the secret masks stacked last — later mounts win in bwrap, so this
+    /// order IS the policy (the masks must beat the rw binds so
+    /// `~/.cargo/credentials.toml` stays blocked inside the allowed `.cargo`).
+    #[test]
+    fn the_bwrap_policy_is_a_write_allow_list() {
+        let scratch =
+            std::env::temp_dir().join(format!("opencode-sbx-bwrap-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&scratch);
+        let home = scratch.join("home");
+        let workspace = scratch.join("ws");
+        let cfg_home = scratch.join("cfg");
+        std::fs::create_dir_all(home.join(".ssh")).unwrap();
+        // An installed toolchain opts in; .bun is deliberately absent.
+        std::fs::create_dir_all(home.join(".cargo")).unwrap();
+        std::fs::write(home.join(".netrc"), "machine x").unwrap();
+
+        let args = bwrap_args(&home, &workspace, &cfg_home, None);
+        let flat = args.join(" ");
+
+        assert_eq!(&args[..3], &["--ro-bind", "/", "/"]);
+        assert!(flat.contains("--dev-bind /dev /dev"));
+        assert!(flat.contains("--proc /proc"));
+
+        let rw = |p: &Path| format!("--bind-try {} {}", p.display(), p.display());
+        assert!(flat.contains(&rw(&workspace)));
+        assert!(flat.contains(&rw(Path::new("/tmp"))));
+        assert!(flat.contains(&rw(&cfg_home)));
+        assert!(flat.contains(&rw(&home.join(".cache"))), "core cache allowed");
+        assert!(
+            flat.contains(&rw(&home.join(".cargo"))),
+            "present toolchain allowed"
+        );
+        assert!(!flat.contains(".bun"), "absent toolchain not advertised");
+
+        // Masks stack AFTER the rw binds and only for existing secrets.
+        let ssh_mask = format!("--tmpfs {}", home.join(".ssh").display());
+        assert!(flat.contains(&ssh_mask));
+        assert!(flat.rfind(&ssh_mask).unwrap() > flat.rfind("--bind-try").unwrap());
+        let netrc = home.join(".netrc");
+        assert!(flat.contains(&format!("--ro-bind /dev/null {}", netrc.display())));
+        assert!(!flat.contains(".aws"), "missing secrets get no mask");
+        assert_eq!(args.last().unwrap(), "--die-with-parent");
+
+        // A custom $TMPDIR is bound too.
+        let with_tmp =
+            bwrap_args(&home, &workspace, &cfg_home, Some(Path::new("/custom/tmp"))).join(" ");
+        assert!(with_tmp.contains("--bind-try /custom/tmp /custom/tmp"));
+
+        let _ = std::fs::remove_dir_all(&scratch);
+    }
+
+    /// The macOS decoy home fakes the credential dirs: real entries stay
+    /// reachable through symlinks, secret dirs exist but are empty and writable
+    /// (writes evaporate with the session), secret files are absent, and a
+    /// parent holding a nested secret is split rather than symlinked wholesale.
+    #[test]
+    #[cfg(unix)]
+    fn the_decoy_home_fakes_secrets_and_links_the_rest() {
+        let scratch =
+            std::env::temp_dir().join(format!("opencode-sbx-decoy-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&scratch);
+        let real = scratch.join("real");
+        let decoy = scratch.join("decoy");
+        std::fs::create_dir_all(real.join(".ssh")).unwrap();
+        std::fs::write(real.join(".ssh/id_ed25519"), "SECRET").unwrap();
+        std::fs::write(real.join(".netrc"), "machine x login y").unwrap();
+        std::fs::write(real.join(".gitconfig"), "[user]\nname = dev").unwrap();
+        std::fs::create_dir_all(real.join(".config/gh")).unwrap();
+        std::fs::write(real.join(".config/gh/hosts.yml"), "oauth_token: t").unwrap();
+        std::fs::create_dir_all(real.join(".config/nvim")).unwrap();
+        std::fs::create_dir_all(real.join("projects")).unwrap();
+
+        build_decoy_home(&real, &decoy).unwrap();
+
+        // Fake .ssh: a real empty dir, writable, host untouched.
+        let ssh = decoy.join(".ssh");
+        assert!(ssh.is_dir() && !ssh.is_symlink());
+        assert_eq!(std::fs::read_dir(&ssh).unwrap().count(), 0);
+        std::fs::write(ssh.join("planted"), "x").unwrap();
+        assert!(!real.join(".ssh/planted").exists());
+
+        // Secret files are absent; ordinary entries are symlinks to the real home.
+        assert!(!decoy.join(".netrc").exists());
+        assert!(decoy.join(".gitconfig").is_symlink());
+        assert!(decoy.join("projects").is_symlink());
+
+        // .config holds a nested secret, so it is split: gh faked, nvim linked.
+        let cfg = decoy.join(".config");
+        assert!(cfg.is_dir() && !cfg.is_symlink());
+        assert!(cfg.join("gh").is_dir() && !cfg.join("gh").is_symlink());
+        assert_eq!(std::fs::read_dir(cfg.join("gh")).unwrap().count(), 0);
+        assert!(cfg.join("nvim").is_symlink());
+
+        let _ = std::fs::remove_dir_all(&scratch);
+    }
+
+    /// The macOS profile is a write allow-list with the secrets denied last:
+    /// default-allow, ALL writes denied, the enumerated dirs re-allowed, and
+    /// the real credential paths hard-denied — later rules win in SBPL, so the
+    /// trailing deny keeps `~/.cargo/credentials.toml` blocked inside the
+    /// allowed `~/.cargo`.
+    #[test]
+    fn the_macos_profile_is_a_write_allow_list_with_secrets_denied_last() {
+        let p = sandbox_profile_macos(
+            Path::new("/Users/dev"),
+            Path::new("/Users/dev/proj"),
+            Path::new("/Users/dev/.config/iblai/agents/sessions/k"),
+        );
+        assert!(p.starts_with(
+            "(version 1)\n(allow default)\n(deny file-write* (subpath \"/\"))"
+        ));
+        assert!(p.contains("(allow file-write*"));
+        assert!(p.contains("(subpath \"/dev\")"));
+        assert!(p.contains("(subpath \"/private/var/folders\")"));
+        assert!(p.contains("(subpath \"/Users/dev/proj\")"));
+        assert!(p.contains("(subpath \"/Users/dev/.config/iblai/agents/sessions/k\")"));
+        assert!(p.contains("(subpath \"/Users/dev/.cache\")"));
+        assert!(p.contains("(subpath \"/Users/dev/Library/Caches\")"));
+        assert!(p.contains("(subpath \"/Users/dev/.cargo\")"));
+        assert!(p.contains("(deny file*"));
+        assert!(p.contains("(subpath \"/Users/dev/.ssh\")"));
+        assert!(p.contains("(subpath \"/Users/dev/Library/Keychains\")"));
+        assert!(p.contains("(literal \"/Users/dev/.netrc\")"));
+        assert!(p.contains("(literal \"/Users/dev/.cargo/credentials.toml\")"));
+        // Later rules win: the secrets deny must come after the write allows.
+        assert!(p.find("(deny file*").unwrap() > p.find("(allow file-write*").unwrap());
+    }
+
+    /// A home path containing SBPL string metacharacters cannot break out of
+    /// its quoted literal.
+    #[test]
+    fn sbpl_paths_with_quotes_stay_quoted() {
+        assert_eq!(
+            sbpl_quote(Path::new(r#"/Users/a"b\c"#)),
+            r#""/Users/a\"b\\c""#
+        );
+    }
+
+    /// bwrap detection wants an executable file on PATH — a missing or
+    /// non-executable bwrap reads as "sandbox not ready" up front instead of
+    /// failing at spawn time.
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn bwrap_detection_requires_an_executable_on_path() {
+        use std::os::unix::fs::PermissionsExt;
+        let scratch =
+            std::env::temp_dir().join(format!("opencode-sbx-path-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&scratch);
+        std::fs::create_dir_all(&scratch).unwrap();
+        let path_var: std::ffi::OsString = scratch.clone().into();
+
+        assert!(!has_executable(&path_var, "bwrap"), "empty dir");
+
+        let bin = scratch.join("bwrap");
+        std::fs::write(&bin, "#!/bin/sh\n").unwrap();
+        std::fs::set_permissions(&bin, std::fs::Permissions::from_mode(0o644)).unwrap();
+        assert!(!has_executable(&path_var, "bwrap"), "not executable");
+
+        std::fs::set_permissions(&bin, std::fs::Permissions::from_mode(0o755)).unwrap();
+        assert!(has_executable(&path_var, "bwrap"));
+
+        let _ = std::fs::remove_dir_all(&scratch);
+    }
+
+    /// Untouched workspaces (nothing beyond `.git`/`.DS_Store`) are
+    /// recyclable; anything with real content is not — a new chat must never
+    /// be handed a folder that already has someone's work in it.
+    #[test]
+    fn only_untouched_workspaces_are_recycled() {
+        let root = std::env::temp_dir().join(format!("opencode-ws-recycle-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let empty = root.join("a-empty");
+        std::fs::create_dir_all(empty.join(".git")).unwrap();
+        std::fs::write(empty.join(".DS_Store"), b"finder litter").unwrap();
+        let dirty = root.join("b-dirty");
+        std::fs::create_dir_all(dirty.join(".git")).unwrap();
+        std::fs::write(dirty.join("notes.txt"), b"work").unwrap();
+        let bare = root.join("c-bare");
+        std::fs::create_dir_all(&bare).unwrap();
+
+        assert!(is_empty_project(&empty), "only .git + .DS_Store is untouched");
+        assert!(!is_empty_project(&dirty), "real content disqualifies");
+        assert!(is_empty_project(&bare), "a bare dir (git init pending) counts");
+        assert!(!is_empty_project(&root.join("missing")));
+
+        // Name-sorted first candidate, deterministically.
+        assert_eq!(find_empty_workspace(&root), Some(empty));
+        assert_eq!(find_empty_workspace(&root.join("missing")), None);
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    /// The first-turn mapping follows the chat onto its real session id, and
+    /// the stale per-run ephemeral keys are pruned with it.
+    #[test]
+    fn the_workspace_follows_a_new_chat_to_its_real_id() {
+        let mut map = serde_json::Map::new();
+        map.insert("coding-new-1".into(), json!("/ws/a"));
+        map.insert("coding-new-0".into(), json!("/ws/old"));
+        map.insert("chat-real".into(), json!("/ws/keep"));
+
+        assert!(adopt_prior_mapping(&mut map, "s-new", "coding-new-1"));
+        assert_eq!(
+            map.get("s-new").and_then(|v| v.as_str()),
+            Some("/ws/a"),
+            "the real id owns the first turn's folder"
+        );
+        assert!(!map.contains_key("coding-new-1"));
+        assert!(
+            !map.contains_key("coding-new-0"),
+            "stale per-run keys are pruned"
+        );
+        assert_eq!(
+            map.get("chat-real").and_then(|v| v.as_str()),
+            Some("/ws/keep"),
+            "real keys are untouched"
+        );
+    }
+
+    /// No adoption when the real id already owns a folder (a resumed chat) or
+    /// when there is nothing to adopt — and a no-op prunes nothing.
+    #[test]
+    fn adoption_never_overwrites_or_fires_blind() {
+        let mut map = serde_json::Map::new();
+        map.insert("s-real".into(), json!("/ws/mine"));
+        map.insert("coding-new-1".into(), json!("/ws/a"));
+
+        assert!(!adopt_prior_mapping(&mut map, "s-real", "coding-new-1"));
+        assert_eq!(
+            map.get("s-real").and_then(|v| v.as_str()),
+            Some("/ws/mine"),
+            "an owned folder is never overwritten"
+        );
+        assert!(map.contains_key("coding-new-1"), "a no-op prunes nothing");
+
+        let mut empty = serde_json::Map::new();
+        assert!(!adopt_prior_mapping(&mut empty, "s", "coding-new-x"));
+    }
+
     #[test]
     fn workspace_slugs_are_readable_and_unique() {
         let a = workspace_slug();
@@ -1540,5 +2718,420 @@ mod tests {
     fn reaping_spares_a_session_waiting_on_the_user() {
         let states = vec![state("awaiting-permission", 100_000, true)];
         assert!(pick_reapable(&states, Duration::from_secs(900)).is_empty());
+    }
+
+    /// A fresh scratch dir per test, removed on drop (best-effort) — mirrors the
+    /// installer tests' helper.
+    struct Scratch(PathBuf);
+    impl Scratch {
+        fn new(name: &str) -> Self {
+            let dir = std::env::temp_dir()
+                .join(format!("opencode-acp-test-{}-{name}", std::process::id()));
+            let _ = std::fs::remove_dir_all(&dir);
+            std::fs::create_dir_all(&dir).unwrap();
+            Scratch(dir)
+        }
+        fn path(&self) -> &Path {
+            &self.0
+        }
+    }
+    impl Drop for Scratch {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+
+    fn payload(slug: &str, resources: Vec<SkillResourcePayload>) -> SkillPayload {
+        SkillPayload {
+            slug: slug.to_string(),
+            description: format!("{slug} description"),
+            instruction: format!("Use {slug}."),
+            resources,
+        }
+    }
+
+    /// Slugs and filenames come from the backend. Neither may name anything outside
+    /// the skill's own directory.
+    #[test]
+    fn a_hostile_slug_or_filename_cannot_escape_the_skills_dir() {
+        for hostile in ["../../etc/passwd", "a/b/c", "..", "/absolute", "", "a\\b"] {
+            let slug = sanitize_slug(hostile);
+            assert!(!slug.is_empty(), "{hostile:?} -> {slug:?}");
+            assert!(
+                slug.chars()
+                    .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-'),
+                "{hostile:?} -> {slug:?}"
+            );
+            assert_eq!(Path::new(&slug).components().count(), 1);
+        }
+        for (name, expect_none) in [
+            ("", true),
+            (".", true),
+            ("..", true),
+            ("SKILL.md", true),
+            ("skill.MD", true),
+            ("../../etc/passwd", false),
+            ("a/b.py", false),
+            ("..\\up.txt", false),
+        ] {
+            match sanitize_filename(name) {
+                None => assert!(expect_none, "{name:?} should have produced a name"),
+                Some(clean) => {
+                    assert!(!expect_none, "{name:?} should have been rejected");
+                    assert!(!clean.contains('/') && !clean.contains('\\'), "{clean:?}");
+                    assert_eq!(Path::new(&clean).components().count(), 1, "{clean:?}");
+                }
+            }
+        }
+    }
+
+    /// The staging tree is a full rewrite: what's not in this sync no longer exists,
+    /// and an empty sync removes the tree itself (absent dir = "no skills").
+    #[test]
+    fn a_rewrite_removes_deselected_skills() {
+        let s = Scratch::new("rewrite");
+        let root = s.path().join("mentor-a");
+
+        write_skills_tree(&root, &[payload("alpha", vec![]), payload("beta", vec![])]).unwrap();
+        assert!(root.join("alpha/SKILL.md").exists());
+        assert!(root.join("beta/SKILL.md").exists());
+
+        write_skills_tree(&root, &[payload("beta", vec![])]).unwrap();
+        assert!(!root.join("alpha").exists(), "deselected skill must vanish");
+        assert!(root.join("beta/SKILL.md").exists());
+
+        write_skills_tree(&root, &[]).unwrap();
+        assert!(!root.exists(), "an empty sync removes the tree entirely");
+    }
+
+    /// Frontmatter must survive hostile descriptions — quotes, colons, newlines —
+    /// and a missing description falls back to the name (opencode hides
+    /// description-less skills from the model).
+    #[test]
+    fn skill_md_frontmatter_is_well_formed() {
+        let md = skill_md("web-research", "He said: \"hi\"\nand left", "Body text.");
+        assert!(md.starts_with("---\nname: web-research\n"));
+        assert!(
+            md.contains(r#"description: "He said: \"hi\"\nand left""#),
+            "JSON-quoted scalar keeps YAML valid: {md}"
+        );
+        assert!(md.ends_with("---\n\nBody text.\n"));
+
+        let fallback = skill_md("web-research", "   ", "x");
+        assert!(fallback.contains("description: \"web-research\""));
+    }
+
+    /// The config only points at skill dirs that exist, mentor staging last (so an
+    /// assigned skill beats a same-named vibe skill), and stale `skills` /
+    /// `instructions` keys from previous spawns (or the retired file/route
+    /// guidance attempts) are dropped.
+    #[test]
+    fn apply_skills_config_tracks_existing_dirs() {
+        let s = Scratch::new("skills-config");
+        let vibe = s.path().join("vibe");
+        let mentor = s.path().join("mentor");
+        let mut cfg = serde_json::Map::new();
+        // A persisted config from the retired instructions-based approach.
+        cfg.insert("instructions".to_string(), json!(["http://stale"]));
+
+        apply_skills_config(&mut cfg, &vibe, Some(&mentor));
+        assert!(cfg.get("skills").is_none(), "nothing on disk → no key");
+        assert!(
+            cfg.get("instructions").is_none(),
+            "a stale instructions entry is always dropped"
+        );
+
+        std::fs::create_dir_all(&vibe).unwrap();
+        apply_skills_config(&mut cfg, &vibe, Some(&mentor));
+        assert_eq!(
+            cfg["skills"]["paths"],
+            json!([vibe.to_string_lossy()]),
+            "vibe only"
+        );
+
+        std::fs::create_dir_all(&mentor).unwrap();
+        apply_skills_config(&mut cfg, &vibe, Some(&mentor));
+        assert_eq!(
+            cfg["skills"]["paths"],
+            json!([vibe.to_string_lossy(), mentor.to_string_lossy()]),
+            "mentor last: duplicate names resolve last-wins in opencode"
+        );
+
+        apply_skills_config(&mut cfg, &vibe, None);
+        assert_eq!(cfg["skills"]["paths"], json!([vibe.to_string_lossy()]));
+
+        std::fs::remove_dir_all(&vibe).unwrap();
+        apply_skills_config(&mut cfg, &vibe, None);
+        assert!(
+            cfg.get("skills").is_none(),
+            "a leftover key from a previous spawn is removed"
+        );
+    }
+
+    /// A resource that sanitises to the manifest's own name must not clobber it,
+    /// and two slugs collapsing to one directory keep the first skill intact.
+    #[test]
+    fn the_manifest_cannot_be_clobbered_and_duplicate_slugs_first_win() {
+        let s = Scratch::new("clobber");
+        let root = s.path().join("mentor-b");
+
+        let mut evil = payload("alpha", vec![]);
+        evil.resources = vec![
+            SkillResourcePayload {
+                filename: "skill.md".to_string(),
+                content: "not the manifest".to_string(),
+            },
+            SkillResourcePayload {
+                filename: "notes.txt".to_string(),
+                content: "kept".to_string(),
+            },
+        ];
+        let mut second = payload("Alpha!", vec![]);
+        second.description = "the impostor".to_string();
+
+        let written = write_skills_tree(&root, &[evil, second]).unwrap();
+        assert_eq!(written, 1, "Alpha! collapses to alpha → first wins");
+
+        let manifest = std::fs::read_to_string(root.join("alpha/SKILL.md")).unwrap();
+        assert!(
+            manifest.contains("alpha description"),
+            "manifest is ours, not the resource's: {manifest}"
+        );
+        assert_eq!(
+            std::fs::read_to_string(root.join("alpha/notes.txt")).unwrap(),
+            "kept"
+        );
+    }
+
+    /// The spawn-side wait: no entry → immediate; a live entry holds; `end` (what
+    /// `set_opencode_skills` does for `Some` and `None` alike) releases; an entry
+    /// past its budget is treated as crashed and cleaned up.
+    #[tokio::test]
+    async fn a_spawn_waits_only_while_a_sync_is_in_flight() {
+        let key = format!("test-sync-{}", std::process::id());
+
+        // No entry: returns immediately.
+        await_skills_sync(&key, Duration::from_secs(5)).await;
+
+        // Entry present, ended while waiting: released promptly.
+        begin_skills_sync_entry(key.clone()).await;
+        let done = {
+            let key = key.clone();
+            tokio::spawn(async move {
+                tokio::time::sleep(Duration::from_millis(50)).await;
+                end_skills_sync_entry(&key).await;
+            })
+        };
+        let start = Instant::now();
+        await_skills_sync(&key, Duration::from_secs(5)).await;
+        assert!(start.elapsed() < Duration::from_secs(2));
+        done.await.unwrap();
+
+        // Entry past its budget: removed instead of gating future sends.
+        begin_skills_sync_entry(key.clone()).await;
+        await_skills_sync(&key, Duration::ZERO).await;
+        assert!(
+            !skills_syncs().lock().await.contains_key(&key),
+            "an expired entry must be cleaned up"
+        );
+    }
+
+    /// Spawns `program` with piped stdio and wraps it in a real `Session`, for
+    /// the crash/close lifecycle tests. A `cat` child self-cleans: dropping the
+    /// Session drops its stdin pipe and cat exits; crashed-path tests kill it
+    /// through `teardown` anyway.
+    #[cfg(unix)]
+    fn test_session(program: &str) -> Arc<Session> {
+        let mut child = Command::new(program)
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .kill_on_drop(true)
+            .spawn()
+            .unwrap();
+        let stdin = Arc::new(Mutex::new(child.stdin.take().unwrap()));
+        Arc::new(Session {
+            child: Mutex::new(child),
+            stdin,
+            next_id: AtomicI64::new(1),
+            pending: Arc::new(Mutex::new(HashMap::new())),
+            acp_session_id: "acp-test".to_string(),
+            requested_model: Some("m".to_string()),
+            proxy_secret: None,
+            turn: Arc::new(Mutex::new(TurnState {
+                generation_id: String::new(),
+                full_content: String::new(),
+                pending_delta: String::new(),
+                last_emit: Instant::now(),
+            })),
+            last_used: Mutex::new(Instant::now()),
+            active_turns: AtomicUsize::new(0),
+            closing: AtomicBool::new(false),
+        })
+    }
+
+    /// The retry decision in one place: crashes retry, everything else stays loud.
+    #[test]
+    fn only_a_crash_on_an_open_session_retries_and_only_within_budget() {
+        let gone = format!("{CHILD_GONE} to session/prompt");
+        let pipe = format!("{CHILD_WRITE_FAILED}: Broken pipe (os error 32)");
+        assert!(should_retry(&gone, false, 1));
+        assert!(
+            should_retry(&pipe, false, 1),
+            "died-before-send is a crash too"
+        );
+        assert!(
+            !should_retry(&gone, true, 1),
+            "an intentional close never resurrects"
+        );
+        assert!(
+            !should_retry("opencode error on session/prompt: boom", false, 1),
+            "a live child's JSON-RPC error is not a crash"
+        );
+        assert!(
+            !should_retry(&gone, false, PROMPT_ATTEMPTS),
+            "budget spent → loud error"
+        );
+    }
+
+    /// THE lost-connection bug: a dead child used to leave `session/prompt`
+    /// hanging forever on a sender nobody would ever fire. `reader_gone` must
+    /// fail it immediately — as the crash shape the retry keys on — and free
+    /// the registry slot so the next spawn isn't blocked by a corpse.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn a_dead_reader_fails_inflight_requests_and_frees_its_session() {
+        let sid = format!("dead-reader-{}", std::process::id());
+        let s = test_session("cat");
+        registry().lock().await.insert(sid.clone(), s.clone());
+
+        let inflight = {
+            let s = s.clone();
+            tokio::spawn(async move { s.request("session/prompt", json!({})).await })
+        };
+        // Wait until the request has parked its sender.
+        while s.pending.lock().await.is_empty() {
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+
+        reader_gone(&sid, &s.pending).await;
+
+        let err = tokio::time::timeout(Duration::from_secs(2), inflight)
+            .await
+            .expect("request must FAIL now, not hang — this hang IS the lost-connection bug")
+            .unwrap()
+            .expect_err("a cleared sender is an error, not a response");
+        assert!(err.starts_with(CHILD_GONE), "{err}");
+        assert!(
+            should_retry(&err, false, 1),
+            "and it is the retryable crash shape"
+        );
+        assert!(
+            !registry().lock().await.contains_key(&sid),
+            "the corpse must leave the registry"
+        );
+    }
+
+    /// The old reader's EOF may land AFTER a respawn replaced the session; its
+    /// cleanup must not tear down (or deregister) the successor.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn reader_cleanup_never_touches_a_replacement_session() {
+        let sid = format!("replaced-{}", std::process::id());
+        let dead = test_session("cat");
+        let replacement = test_session("cat");
+        registry()
+            .lock()
+            .await
+            .insert(sid.clone(), replacement.clone());
+
+        reader_gone(&sid, &dead.pending).await;
+
+        let still = registry().lock().await.get(&sid).cloned();
+        let still = still.expect("the replacement must survive the old reader's cleanup");
+        assert!(Arc::ptr_eq(&still, &replacement));
+        assert!(
+            !child_exited(&replacement).await,
+            "and its child is untouched"
+        );
+        registry().lock().await.remove(&sid);
+    }
+
+    /// `get_or_spawn` must not hand out a session whose process is gone.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn a_session_whose_child_exited_reads_as_dead() {
+        let alive = test_session("cat");
+        assert!(!child_exited(&alive).await);
+
+        let exited = test_session("true");
+        let start = Instant::now();
+        while !child_exited(&exited).await {
+            assert!(start.elapsed() < Duration::from_secs(5), "`true` must exit");
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    }
+
+    /// `closing` is the crash/close discriminator: `close_session` sets it,
+    /// `reader_gone` must not — a model switch, Stop, reap or shutdown must
+    /// never be resurrected by the crash-retry.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn an_intentional_close_is_distinguishable_from_a_crash() {
+        // Crash leg: reader cleanup leaves `closing` false → retry allowed.
+        let sid = format!("crash-leg-{}", std::process::id());
+        let crashed = test_session("cat");
+        registry().lock().await.insert(sid.clone(), crashed.clone());
+        reader_gone(&sid, &crashed.pending).await;
+        assert!(!crashed.closing.load(Ordering::SeqCst));
+
+        // Close leg: an intentional close vetoes any retry.
+        let sid2 = format!("close-leg-{}", std::process::id());
+        let closed = test_session("cat");
+        registry().lock().await.insert(sid2.clone(), closed.clone());
+        close_session(&sid2).await;
+        assert!(closed.closing.load(Ordering::SeqCst));
+        assert!(!should_retry(
+            &format!("{CHILD_GONE} to session/prompt"),
+            true,
+            1
+        ));
+    }
+
+    /// The second crash shape, end to end: the child died before the send.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn writing_to_a_dead_child_reads_as_child_gone() {
+        let s = test_session("cat");
+        s.child.lock().await.start_kill().unwrap();
+        let _ = s.child.lock().await.wait().await;
+        // One write can slip into the pipe buffer instead of EPIPE-ing: a
+        // sibling test fork-exec'ing in parallel briefly holds a dup of the
+        // read end. Keep writing until the kernel reports the pipe broken.
+        let err = tokio::time::timeout(Duration::from_secs(10), async {
+            loop {
+                if let Err(e) = write_line(&s.stdin, &json!({ "probe": true })).await {
+                    break e;
+                }
+            }
+        })
+        .await
+        .expect("a dead child's pipe must eventually report broken");
+        assert!(err.starts_with(CHILD_WRITE_FAILED), "{err}");
+        assert!(should_retry(&err, false, 1));
+    }
+
+    /// The spawn-time `session/load` replay window: no generation in flight →
+    /// updates are dropped; a reset opens the gate.
+    #[test]
+    fn updates_between_turns_are_not_emitted() {
+        let mut ts = TurnState {
+            generation_id: String::new(),
+            full_content: String::new(),
+            pending_delta: String::new(),
+            last_emit: Instant::now(),
+        };
+        assert!(!ts.in_flight(), "fresh spawn: replay must be droppable");
+        ts.reset("g1".to_string());
+        assert!(ts.in_flight());
     }
 }

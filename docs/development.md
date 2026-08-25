@@ -120,8 +120,8 @@ pnpm test:e2e:headed   # run in a visible browser
 os/
 ├── app/                        # Next.js App Router
 │   ├── platform/               # Main authenticated routes
-│   │   └── [tenantKey]/        # Multi-tenant routing (mentor pages nest below)
-│   ├── create-mentor/          # Mentor creation wizard
+│   │   └── [tenantKey]/        # Multi-tenant routing (agent pages nest below)
+│   ├── create-mentor/          # Agent creation wizard
 │   ├── share/                  # Public shared chats
 │   ├── reports/                # Analytics report export
 │   ├── provider-association/   # Stripe / OAuth provider linking
@@ -143,9 +143,9 @@ os/
 │   ├── canvas/                 # Document canvas (artifacts)
 │   ├── header/                 # Top app bar
 │   ├── sidebar/                # Nav + project switcher
-│   ├── mentors/                # Mentor cards, lists, picker
+│   ├── mentors/                # Agent cards, lists, picker
 │   ├── modals/                 # All modal dialogs
-│   │   └── edit-mentor-modal/  # Mentor settings (LLM, datasets, access, …)
+│   │   └── edit-mentor-modal/  # Agent settings (LLM, datasets, access, …)
 │   ├── projects/               # Project management
 │   ├── welcome-chat/           # Landing / welcome screen
 │   ├── workflows/              # Workflow builder UI
@@ -160,7 +160,7 @@ os/
 │   ├── auth/                   # Auth slice
 │   ├── chat/                   # Chat state machine
 │   ├── chat-input/             # Input model
-│   ├── mentors/                # Mentor CRUD
+│   ├── mentors/                # Agent CRUD
 │   ├── messages/               # Message normalization
 │   ├── navigation/             # Sidebar + route state
 │   ├── provider-association/   # Stripe / OAuth flow
@@ -172,7 +172,7 @@ os/
 │
 ├── hooks/                      # 151 custom React hooks
 │   ├── use-voice-chat.ts       # LiveKit voice integration
-│   ├── use-mentors.ts          # Mentor CRUD operations
+│   ├── use-mentors.ts          # Agent CRUD operations
 │   ├── use-history.ts          # Chat history management
 │   ├── use-datasets.ts         # Training data management
 │   ├── subscription/           # Subscription hooks
@@ -221,7 +221,7 @@ The app uses **[@iblai/iblai-js](https://www.npmjs.com/package/@iblai/iblai-js)*
 | `NEXT_PUBLIC_IBL_LIVE_KIT_SERVER_URL`              | Yes      | LiveKit voice server URL                                                                             |
 | `NEXT_PUBLIC_MENTOR_URL`                           | Yes      | This app's public URL                                                                                |
 | `NEXT_PUBLIC_IBL_PLATFORM`                         | Yes      | Platform type (`mentor`)                                                                             |
-| `NEXT_PUBLIC_IBL_TEMPLATE_MENTOR`                  | Yes      | Default mentor template slug                                                                         |
+| `NEXT_PUBLIC_IBL_TEMPLATE_MENTOR`                  | Yes      | Default agent template slug                                                                          |
 | `NEXT_PUBLIC_STRIPE_ENABLED`                       | No       | Enable Stripe billing (`true`/`false`)                                                               |
 | `NEXT_PUBLIC_IBL_ALLOW_FREE_TRIAL_BANNER`          | No       | Show free trial banner                                                                               |
 | `NEXT_PUBLIC_ENABLE_ADVERTISING`                   | No       | Enable advertising features                                                                          |
@@ -232,12 +232,12 @@ The app uses **[@iblai/iblai-js](https://www.npmjs.com/package/@iblai/iblai-js)*
 | `NEXT_PUBLIC_DISABLED_ANALYTICS_REPORTS`           | No       | Pipe-separated analytics reports to hide                                                             |
 | `NEXT_PUBLIC_MENTOR_TRAINING_MAXIMUM_FILE_SIZE`    | No       | Max dataset upload size in MB                                                                        |
 | `NEXT_PUBLIC_MAXIMUM_CHARACTER_SIZE_TO_COPY`       | No       | Max pasted characters before text becomes a .txt upload                                              |
-| `NEXT_PUBLIC_SHOW_BASE_MENTOR`                     | No       | Show the base/template mentor in the picker                                                          |
-| `NEXT_PUBLIC_MENTOR_SETTINGS_DISCLAIMER`           | No       | Disclaimer line shown under mentor settings                                                          |
+| `NEXT_PUBLIC_SHOW_BASE_MENTOR`                     | No       | Show the base/template agent in the picker                                                           |
+| `NEXT_PUBLIC_MENTOR_SETTINGS_DISCLAIMER`           | No       | Disclaimer line shown under agent settings                                                           |
 | `NEXT_PUBLIC_ENABLE_GRAVATAR_ON_PROFILE_PIC`       | No       | Fall back to Gravatar when no profile pic                                                            |
 | `NEXT_PUBLIC_DEFAULT_EMBED_CSS_URL`                | No       | CSS injected into iframe embeds                                                                      |
 | `NEXT_PUBLIC_IBL_ENABLE_SPECIAL_LOGO_WHEN_IFRAMED` | No       | Swap the logo when running inside an iframe                                                          |
-| `NEXT_PUBLIC_IFRAME_FROM_OLD_MENTOR`               | No       | Legacy mentor URL allowed to iframe this app                                                         |
+| `NEXT_PUBLIC_IFRAME_FROM_OLD_MENTOR`               | No       | Legacy agent URL allowed to iframe this app                                                          |
 | `NEXT_PUBLIC_HELP_CENTER_URL`                      | No       | Help center link in the UI                                                                           |
 | `NEXT_PUBLIC_SUPPORT_EMAIL`                        | No       | Support email shown in dialogs                                                                       |
 | `NEXT_PUBLIC_APP_BANNER_TEXT`                      | No       | Top app banner copy                                                                                  |
