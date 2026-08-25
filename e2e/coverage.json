@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-08-13",
+  "lastUpdated": "2026-08-25",
   "summary": {
-    "totalCheckpoints": 665,
-    "coveredCheckpoints": 634,
+    "totalCheckpoints": 669,
+    "coveredCheckpoints": 638,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 11,
     "pendingCheckpoints": 8,
     "percent": 100,
-    "totalJourneys": 71,
-    "activeJourneys": 70
+    "totalJourneys": 72,
+    "activeJourneys": 71
   },
   "journeys": [
     {
@@ -4206,6 +4206,42 @@
         {
           "id": "tal-01",
           "description": "Admin filters Agent Limits to an ALREADY-INDEXED mentor (broad query \"E2E Mentor\" against the search-index-backed autocomplete, sampling up to 5 results for the first capless one) — the ONE checkpoint that depends on that index, which lags mentor creation by DAYS on this backend (a known product limitation, not a test bug, reported upstream separately; a freshly-created mentor is never searchable in time, so this borrows a mentor from a past run instead of retrying its own) — sees the \"Set Spend Limit\" empty state, creates that mentor's spend limit (alert-only) from the popup, the row lists it, and the cap is removed again in an unconditional finally-block so the borrowed (shared-tenant) mentor is left exactly as found; if every sampled candidate already has a cap, verifies the filter -> row-visible path on the first one instead (annotated, never a failure)",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "embed-preview-embed-mode-leak",
+      "name": "Embed Tab Preview Must Not Leak Embed Mode Into The App",
+      "spec": "70-embed-preview-must-not-leak-embed-mode.spec.ts",
+      "sourceFiles": [
+        "lib/embed-context.ts",
+        "hooks/use-embed-mode.ts",
+        "providers/index.tsx",
+        "components/modals/edit-mentor-modal/tabs/embed-tab.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
+        "lib/constants.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "epl-01",
+          "description": "Opening Edit Agent → Embed mounts the same-origin `?embed=true&internalPreview=true` preview iframe WITHOUT writing `ibl:embed-context` into the host tab's sessionStorage (guard 1: persistEmbedContextFromUrl no-ops for the internal preview)",
+          "status": "covered"
+        },
+        {
+          "id": "epl-02",
+          "description": "After visiting the Embed tab and closing the dialog, clicking \"New Chat\" keeps the FULL admin sidebar (Agents, Workflows, Projects, Analytics, Support) instead of collapsing to the 3-icon embed rail, and does not append `embed=true` to the app URL",
+          "status": "covered"
+        },
+        {
+          "id": "epl-03",
+          "description": "The full app survives a reload after the Embed tab was visited — the old bug was sticky for the lifetime of the tab because sessionStorage outlived the navigation",
+          "status": "covered"
+        },
+        {
+          "id": "epl-04",
+          "description": "A top-level (non-iframed) tab ignores an `ibl:embed-context` entry it did not get from its own URL, across both a re-render (New Chat) and a reload (guard 2: readStoredEmbedContext requires isInIframe)",
           "status": "covered"
         }
       ]
