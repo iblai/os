@@ -29,13 +29,12 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
 import { useChatMode } from '@/hooks/use-chat-mode';
+import { useHelpCenter } from '@/hooks/use-help-center';
 import { useUsername } from '@/hooks/use-user';
 import { cn, isLoggedIn } from '@/lib/utils';
-import { config } from '@/lib/config';
-import { useTenantMetadata } from '@iblai/iblai-js/web-utils';
-import { addProtocolToUrl } from '@iblai/iblai-js/web-utils';
 import { chatActions, clearFiles } from '@iblai/iblai-js/web-utils';
 import { useAppDispatch } from '@/lib/hooks';
 import eventBus, { RemoteEvents } from '@/lib/eventBus';
@@ -76,9 +75,7 @@ export function EmbedNavBar({
     !pathname?.includes('/explore') &&
     !isWorkflowsPage;
 
-  const { metadata } = useTenantMetadata({
-    org: tenantKey,
-  });
+  const { helpCenterUrl, supportEmail, showHelp } = useHelpCenter(tenantKey);
 
   const visibleToLoggedInUsersOnly = !isAnonymousMentor || isLoggedIn();
 
@@ -109,18 +106,13 @@ export function EmbedNavBar({
   }, [isPreviewMode]);
 
   const helpItems = [
-    ...(metadata?.show_help !== false
+    ...(showHelp
       ? [
           {
             labelKey: 'help' as const,
             icon: BadgeHelp,
             onClick: () => {
-              window.open(
-                addProtocolToUrl(
-                  metadata?.help_center_url || config.helpCenterUrl(),
-                ),
-                '_blank',
-              );
+              window.open(helpCenterUrl, '_blank');
             },
           },
         ]
@@ -129,32 +121,9 @@ export function EmbedNavBar({
       labelKey: 'support' as const,
       icon: ShieldQuestion,
       onClick: () => {
-        window.open(
-          `mailto:${metadata?.support_email || config.supportEmail()}`,
-          '_blank',
-        );
+        window.open(`mailto:${supportEmail}`, '_blank');
       },
     },
-  ];
-
-  const advancedChatSettings = [
-    ...(username
-      ? [
-          {
-            labelKey: username ?? '',
-            icon: CircleUser,
-            onClick: () => {},
-          },
-        ]
-      : []),
-    /* {
-      labelKey: 'theme mode',
-      icon: currentTheme === 'light' ? Moon : Sun,
-      onClick: () => {
-        setCurrentTheme(currentTheme === 'light' ? 'dark' : 'light');
-      },
-    }, */
-    ...helpItems,
   ];
 
   return (
@@ -235,7 +204,7 @@ export function EmbedNavBar({
                     className="h-10"
                     key={item.labelKey}
                     onClick={() => {
-                      // if (isPreviewMode) return;
+                      if (isPreviewMode) return;
                       item.onClick();
                     }}
                   >
@@ -254,16 +223,19 @@ export function EmbedNavBar({
                   className="rounded-full"
                   aria-label={t('openSettingsMenu')}
                   aria-haspopup="menu"
-                  onClick={() => {
-                    if (isPreviewMode) return;
-                  }}
                 >
                   <Settings className="h-5 w-5" />
                   <span className="sr-only">{t('settingsMenu')}</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
-                {advancedChatSettings.map((item) => (
+                {username && (
+                  <DropdownMenuLabel className="flex items-center gap-2 font-normal">
+                    <CircleUser className="h-7 w-7" />
+                    {username}
+                  </DropdownMenuLabel>
+                )}
+                {helpItems.map((item) => (
                   <DropdownMenuItem
                     key={item.labelKey}
                     onClick={() => {
@@ -272,9 +244,7 @@ export function EmbedNavBar({
                     }}
                   >
                     <item.icon className="h-7 w-7" />
-                    {item.labelKey === 'help' || item.labelKey === 'support'
-                      ? t(item.labelKey)
-                      : item.labelKey}
+                    {t(item.labelKey)}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>

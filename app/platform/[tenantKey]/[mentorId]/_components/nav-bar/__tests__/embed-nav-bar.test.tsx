@@ -51,6 +51,7 @@ vi.mock('@/lib/config', () => ({
   config: {
     helpCenterUrl: () => 'https://help.example.com',
     supportEmail: () => 'support@example.com',
+    documentationUrl: () => 'https://docs.example.com',
     iblTemplateMentor: () => 'ai-mentor',
   },
 }));
