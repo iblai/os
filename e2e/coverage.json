@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-08-13",
+  "lastUpdated": "2026-08-25",
   "summary": {
-    "totalCheckpoints": 665,
-    "coveredCheckpoints": 634,
+    "totalCheckpoints": 677,
+    "coveredCheckpoints": 646,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 11,
     "pendingCheckpoints": 8,
     "percent": 100,
-    "totalJourneys": 71,
-    "activeJourneys": 70
+    "totalJourneys": 72,
+    "activeJourneys": 71
   },
   "journeys": [
     {
@@ -1117,7 +1117,10 @@
       "spec": "20-dataset-management.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/tabs/datasets-tab/index.tsx",
-        "components/modals/edit-mentor-modal/tabs/datasets-tab/resource-types.tsx"
+        "components/modals/edit-mentor-modal/tabs/datasets-tab/resource-types.tsx",
+        "components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx",
+        "hooks/user-navigate.ts",
+        "lib/constants.ts"
       ],
       "checkpoints": [
         {
@@ -1208,6 +1211,46 @@
         {
           "id": "ds-18",
           "description": "Markdown (.md) file can be uploaded and appears in the dataset list (issue #1117)",
+          "status": "covered"
+        },
+        {
+          "id": "ds-19",
+          "description": "Typing in the datasets search debounces into the datasetsSearch URL query param (router.replace, no history spam)",
+          "status": "covered"
+        },
+        {
+          "id": "ds-20",
+          "description": "datasetsSearch/datasetsPage URL params clear when the edit mentor modal closes",
+          "status": "covered"
+        },
+        {
+          "id": "ds-21",
+          "description": "datasetsSearch/datasetsPage URL params clear when switching from Datasets to another tab",
+          "status": "covered"
+        },
+        {
+          "id": "ds-22",
+          "description": "Reloading the page after searching restores datasetsSearch and the search input from the URL",
+          "status": "covered"
+        },
+        {
+          "id": "ds-23",
+          "description": "Clicking a pagination page number pushes datasetsPage into the URL (self-seeded multi-page mentor)",
+          "status": "covered"
+        },
+        {
+          "id": "ds-24",
+          "description": "Browser Back/Forward walk the visited datasetsPage values (self-seeded multi-page mentor)",
+          "status": "covered"
+        },
+        {
+          "id": "ds-25",
+          "description": "Searching while on a later page drops datasetsPage and sets datasetsSearch (self-seeded multi-page mentor)",
+          "status": "covered"
+        },
+        {
+          "id": "ds-26",
+          "description": "Reloading the page while paginated restores datasetsPage and the active page (self-seeded multi-page mentor)",
           "status": "covered"
         }
       ]
@@ -4206,6 +4249,42 @@
         {
           "id": "tal-01",
           "description": "Admin filters Agent Limits to an ALREADY-INDEXED mentor (broad query \"E2E Mentor\" against the search-index-backed autocomplete, sampling up to 5 results for the first capless one) — the ONE checkpoint that depends on that index, which lags mentor creation by DAYS on this backend (a known product limitation, not a test bug, reported upstream separately; a freshly-created mentor is never searchable in time, so this borrows a mentor from a past run instead of retrying its own) — sees the \"Set Spend Limit\" empty state, creates that mentor's spend limit (alert-only) from the popup, the row lists it, and the cap is removed again in an unconditional finally-block so the borrowed (shared-tenant) mentor is left exactly as found; if every sampled candidate already has a cap, verifies the filter -> row-visible path on the first one instead (annotated, never a failure)",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "embed-preview-embed-mode-leak",
+      "name": "Embed Tab Preview Must Not Leak Embed Mode Into The App",
+      "spec": "70-embed-preview-must-not-leak-embed-mode.spec.ts",
+      "sourceFiles": [
+        "lib/embed-context.ts",
+        "hooks/use-embed-mode.ts",
+        "providers/index.tsx",
+        "components/modals/edit-mentor-modal/tabs/embed-tab.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
+        "lib/constants.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "epl-01",
+          "description": "Opening Edit Agent → Embed mounts the same-origin `?embed=true&internalPreview=true` preview iframe WITHOUT writing `ibl:embed-context` into the host tab's sessionStorage (guard 1: persistEmbedContextFromUrl no-ops for the internal preview)",
+          "status": "covered"
+        },
+        {
+          "id": "epl-02",
+          "description": "After visiting the Embed tab and closing the dialog, clicking \"New Chat\" keeps the FULL admin sidebar (Agents, Workflows, Projects, Analytics, Support) instead of collapsing to the 3-icon embed rail, and does not append `embed=true` to the app URL",
+          "status": "covered"
+        },
+        {
+          "id": "epl-03",
+          "description": "The full app survives a reload after the Embed tab was visited — the old bug was sticky for the lifetime of the tab because sessionStorage outlived the navigation",
+          "status": "covered"
+        },
+        {
+          "id": "epl-04",
+          "description": "A top-level (non-iframed) tab ignores an `ibl:embed-context` entry it did not get from its own URL, across both a re-render (New Chat) and a reload (guard 2: readStoredEmbedContext requires isInIframe)",
           "status": "covered"
         }
       ]

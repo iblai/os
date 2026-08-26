@@ -401,6 +401,10 @@ vi.mock('@/lib/utils', () => ({
   cn: (...args: any[]) => args.filter(Boolean).join(' '),
 }));
 
+// Hand-listed (not importOriginal): the real module evaluates
+// `config.iblTemplateMentor()` at import time, which isn't wired up here. Keep
+// every export embed-tab.tsx reads defined — QUERY_PARAMS is used in the
+// preview-iframe src.
 vi.mock('@/lib/constants', () => ({
   MENTOR_VISIBILITY: [
     { label: 'Administrators', value: 'viewable_by_tenant_admins' },
@@ -411,6 +415,13 @@ vi.mock('@/lib/constants', () => ({
     ADMINISTRATORS: 'viewable_by_tenant_admins',
     STUDENTS: 'viewable_by_tenant_students',
     ANYONE: 'viewable_by_anyone',
+  },
+  QUERY_PARAMS: {
+    APP: 'app',
+    REDIRECT_TO: 'redirect-to',
+    TENANT: 'tenant',
+    EMBED: 'embed',
+    INTERNAL_PREVIEW: 'internalPreview',
   },
 }));
 

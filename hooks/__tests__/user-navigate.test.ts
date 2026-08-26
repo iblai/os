@@ -109,6 +109,10 @@ vi.mock('@/lib/constants', () => ({
     ADD_RESOURCE: { name: 'add_resource' },
     NO_MENTOR_SELECTED: { name: 'no_mentor_selected' },
   },
+  DATASETS_TAB_URL_PARAMS: {
+    page: 'datasetsPage',
+    search: 'datasetsSearch',
+  },
   UserType: {
     STUDENT: 'student',
     FREE_TRIAL: 'free_trial',
