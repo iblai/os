@@ -14,6 +14,13 @@
 //! **Residual risk, stated plainly:** the agent can still *use* the proxy for the life
 //! of the session, so it could burn model quota. What it can no longer do is steal a
 //! credential that works elsewhere or later.
+//!
+//! One credential IS handed to the child, deliberately: a platform API key this
+//! module mints on its behalf ([`platform_api_key`], exported as
+//! `IBLAI_API_KEY`). That is a scoped, week-long, revocable key for one tenant,
+//! and without it every skill that touches the platform has to ask the user for
+//! a token most of them are not allowed to create. The DM token — durable,
+//! portable, the user's own — still never leaves this module.
 
 #![cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 
@@ -68,6 +75,31 @@ helping.
 - Monetization is optional and on request only: when the user asks to charge \
 users to enter the app (a paywall), use the \
 iblai-vibe-monetization-app-paywall skill. Do not suggest it unprompted.
+- Keep your visible replies terse and outcome-focused. Process narration — \
+which file you are about to move, which directory you are checking, which API \
+you are probing, what you are retrying — belongs in your reasoning or nowhere, \
+never in the reply text. Open a turn with one short acknowledgement, then \
+report only what the user actually cares about (\"Deployed at <url>\", \"Fixed \
+the failing test\"), not a step-by-step account of how you got there.
+- A platform API key is minted for you automatically and exported as the \
+IBLAI_API_KEY environment variable. Use it wherever a skill or API call needs a \
+platform API key, and NEVER ask the user for a platform API key or token — this \
+supersedes any skill instruction that says to ask for one. If IBLAI_API_KEY is \
+absent, the signed-in user is not a platform admin and cannot mint one: say so \
+plainly and continue with what does work, rather than asking them for a key.
+- Never ask the user for a Stripe API key or secret, and never put raw Stripe \
+credentials in code, env files, or the chat. All Stripe work goes through the \
+ibl.ai Stripe proxy at \
+`/api/ai-mentor/orgs/<org>/users/<user_id>/providers/stripe/payments/...`, \
+authenticated with `Authorization: Api-Token $IBLAI_API_KEY`. If the proxy \
+reports that no Stripe credential is configured for the platform, tell the user \
+to connect Stripe in their ibl.ai platform settings — do not collect keys in \
+chat.
+- Before deploying, run the iblai-vibe-ops-deploy skill's deployment-hash \
+check and skip the deploy when nothing has changed since the last one, \
+reporting the existing live URL instead. Deploys cost the user credits and \
+minutes, so redeploying identical content is waste — the skill carries the \
+mechanics.
 ";
 
 /// Everything the proxy needs to serve one Code session.
@@ -114,8 +146,31 @@ pub fn set_app(handle: &tauri::AppHandle) {
     let _ = app().set(handle.clone());
 }
 
-/// Set the learner attached to forwarded model calls (empty clears it).
-pub async fn set_learner(username: &str) {
+/// The signed-in user's email, surfaced to the agent in the injected guidance
+/// alongside the username. App-global for the same reason as [`learner`].
+fn learner_email() -> &'static RwLock<Option<String>> {
+    static E: OnceLock<RwLock<Option<String>>> = OnceLock::new();
+    E.get_or_init(|| RwLock::new(None))
+}
+
+/// The DM manager host (e.g. `https://api.iblai.app/dm`).
+///
+/// Not derivable here: the only base this module otherwise sees is the ASGI
+/// host that serves streaming completions, which does not serve `/api/core`.
+/// The frontend owns the real value (`config.dmUrl()`) and hands it over on the
+/// same call that sets the learner.
+fn dm_base() -> &'static RwLock<Option<String>> {
+    static B: OnceLock<RwLock<Option<String>>> = OnceLock::new();
+    B.get_or_init(|| RwLock::new(None))
+}
+
+/// Fallback DM host for a build whose frontend hasn't sent one yet. Correct for
+/// ibl.ai's own SaaS; a self-hosted tenant needs the frontend value, and minting
+/// fails loudly rather than silently targeting the wrong host.
+const DEFAULT_DM_BASE: &str = "https://base.manager.iblai.app";
+
+/// Set the identity attached to forwarded model calls (empty username clears it).
+pub async fn set_learner(username: &str, email: &str, dm_base_url: &str) {
     let name = username.trim();
     // Dev-terminal trace of the frontend→backend hop: no line here during a manual
     // test means the frontend never delivered a learner at all.
@@ -127,6 +182,12 @@ pub async fn set_learner(username: &str) {
         }
     }
     *learner().write().await = (!name.is_empty()).then(|| name.to_string());
+    let email = email.trim();
+    *learner_email().write().await = (!email.is_empty()).then(|| email.to_string());
+    let base = dm_base_url.trim().trim_end_matches('/');
+    if !base.is_empty() {
+        *dm_base().write().await = Some(base.to_string());
+    }
 }
 
 /// The signed-in learner's username, for the child's `IBLAI_USERNAME` env var
@@ -134,6 +195,149 @@ pub async fn set_learner(username: &str) {
 /// non-empty username arrives — callers add nothing then.
 pub async fn learner_username() -> Option<String> {
     learner().read().await.clone()
+}
+
+/// The signed-in user's email, for the identity line in the injected guidance.
+pub async fn learner_email_address() -> Option<String> {
+    learner_email().read().await.clone()
+}
+
+/// The DM manager host to call for non-model endpoints.
+async fn dm_base_url() -> String {
+    dm_base()
+        .read()
+        .await
+        .clone()
+        .unwrap_or_else(|| DEFAULT_DM_BASE.to_string())
+}
+
+/// Minted platform API keys, per tenant: `(key, minted_at)`.
+///
+/// One mint at a time behind the lock. Two concurrent mints would each hit the
+/// duplicate-name path and the second one's DELETE would revoke the key the
+/// first just handed out.
+fn platform_keys() -> &'static Mutex<HashMap<String, (String, std::time::Instant)>> {
+    static K: OnceLock<Mutex<HashMap<String, (String, std::time::Instant)>>> = OnceLock::new();
+    K.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+/// Lifetime requested for a minted key, in DM's `[DD] HH:MM:SS` duration form.
+/// Short enough that a leaked key expires on its own, long enough that a normal
+/// working session never re-mints.
+const PLATFORM_KEY_EXPIRES_IN: &str = "7 00:00:00";
+
+/// Re-mint a day before the key expires, so a long-lived app process never
+/// hands a child a credential that dies mid-task.
+const PLATFORM_KEY_REFRESH: Duration = Duration::from_secs(6 * 24 * 60 * 60);
+
+/// How long a DM call may take before it's treated as unreachable. Deliberately
+/// short: this runs on the spawn path, and a wedged DM must not stall Code.
+const DM_CALL_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// A stable per-device name for this app's platform API key.
+///
+/// Key names are unique per platform, so a fixed name would collide between two
+/// of the user's machines and each would keep revoking the other's key. The id
+/// is generated once and kept beside the app's other data.
+fn device_key_name() -> String {
+    let path = crate::opencode_acp::iblai_data_dir().join("device-id");
+    if let Ok(existing) = std::fs::read_to_string(&path) {
+        let id = existing.trim().to_string();
+        if !id.is_empty() {
+            return format!("os-code-{id}");
+        }
+    }
+    let id = new_secret()[..8].to_string();
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    let _ = std::fs::write(&path, &id);
+    format!("os-code-{id}")
+}
+
+/// POST/DELETE helper returning `(status, body)`, or an error when DM is unreachable.
+async fn dm_call(req: reqwest::RequestBuilder) -> Result<(u16, String), String> {
+    let resp = tokio::time::timeout(DM_CALL_TIMEOUT, req.send())
+        .await
+        .map_err(|_| "timed out".to_string())?
+        .map_err(|e| e.to_string())?;
+    let status = resp.status().as_u16();
+    let body = resp.text().await.unwrap_or_default();
+    Ok((status, body))
+}
+
+/// Mint one platform API key, replacing a same-named key left by an earlier run.
+///
+/// `Ok(None)` means the signed-in user simply isn't allowed to mint one (DM
+/// restricts this to platform admins) — an expected outcome for a learner, not
+/// an error worth failing a spawn over.
+async fn mint_platform_key(base: &str, token: &str, name: &str) -> Result<Option<String>, String> {
+    let url = format!("{base}/api/core/platform/api-tokens/");
+    let auth = format!("Token {token}");
+    let body = serde_json::json!({
+        "name": name,
+        "expires_in": PLATFORM_KEY_EXPIRES_IN,
+        "mode": "owner",
+    });
+    let post = || http().post(&url).header("Authorization", &auth).json(&body);
+
+    let (mut status, mut text) = dm_call(post()).await?;
+    if status == 400 {
+        // A key of this name already exists — from an earlier run on this
+        // device. Its raw value was shown exactly once and is gone, so the only
+        // way forward is to delete it and mint again. (DM's detail route has no
+        // trailing slash.)
+        let del = format!("{base}/api/core/platform/api-tokens/{name}");
+        let _ = dm_call(http().delete(&del).header("Authorization", &auth)).await;
+        (status, text) = dm_call(post()).await?;
+    }
+    match status {
+        200 | 201 => serde_json::from_str::<serde_json::Value>(&text)
+            .ok()
+            .and_then(|v| v.get("key").and_then(|k| k.as_str()).map(str::to_string))
+            .map(Some)
+            .ok_or_else(|| "mint response carried no key".to_string()),
+        401 | 403 => Ok(None),
+        other => Err(format!("HTTP {other}: {}", text.chars().take(200).collect::<String>())),
+    }
+}
+
+/// A platform API key for this tenant, minted on demand and cached.
+///
+/// Handed to the agent as `IBLAI_API_KEY` so skills can act on the platform
+/// without the user being asked for a credential they usually can't even
+/// create. `None` when the user isn't a platform admin or DM is unreachable —
+/// callers carry on without the variable rather than failing the turn.
+pub async fn platform_api_key(tenant: &str, token: &str) -> Option<String> {
+    if tenant.is_empty() || token.is_empty() {
+        return None;
+    }
+    let mut cache = platform_keys().lock().await;
+    if let Some((key, minted)) = cache.get(tenant) {
+        if minted.elapsed() < PLATFORM_KEY_REFRESH {
+            return Some(key.clone());
+        }
+    }
+    let base = dm_base_url().await;
+    let name = device_key_name();
+    match mint_platform_key(&base, token, &name).await {
+        Ok(Some(key)) => {
+            cache.insert(tenant.to_string(), (key.clone(), std::time::Instant::now()));
+            Some(key)
+        }
+        // Not cached as a negative: admin rights can be granted while the app
+        // runs, and the cost of retrying is one request per spawn.
+        Ok(None) => {
+            eprintln!(
+                "[opencode-proxy] IBLAI_API_KEY not minted: {tenant} user is not a platform admin"
+            );
+            None
+        }
+        Err(e) => {
+            eprintln!("[opencode-proxy] IBLAI_API_KEY not minted ({base}): {e}");
+            None
+        }
+    }
 }
 
 /// Longest silence tolerated between upstream read operations. Generous — a
@@ -266,13 +470,19 @@ pub async fn unregister(secret: &str) {
 /// The identity bullets appended to the guidance: who is signed in and which
 /// platform the session serves, plus the env vars carrying the same values —
 /// so skills never have to ask (or guess) the username or platform key.
-fn identity_lines(learner: Option<&str>, tenant: Option<&str>) -> String {
+fn identity_lines(learner: Option<&str>, tenant: Option<&str>, email: Option<&str>) -> String {
     let mut out = String::new();
     if let Some(l) = learner {
         out.push_str(&format!(
             "- The signed-in platform username is `{l}` (also exported to your \
 shell as the IBLAI_USERNAME environment variable) — use it wherever a skill \
 needs the platform username.\n"
+        ));
+    }
+    if let Some(e) = email {
+        out.push_str(&format!(
+            "- The signed-in user's email address is `{e}` — use it wherever a \
+skill or app needs the user's email, and never ask them for it.\n"
         ));
     }
     if let Some(t) = tenant {
@@ -294,6 +504,7 @@ fn inject_system_guidance(
     body: &[u8],
     learner: Option<&str>,
     tenant: Option<&str>,
+    email: Option<&str>,
 ) -> Option<Vec<u8>> {
     let mut v: serde_json::Value = serde_json::from_slice(body).ok()?;
     let messages = v.get_mut("messages")?.as_array_mut()?;
@@ -308,7 +519,10 @@ fn inject_system_guidance(
         .iter()
         .take_while(|m| m.get("role").and_then(|r| r.as_str()) == Some("system"))
         .count();
-    let content = format!("{IBLAI_INSTRUCTIONS}{}", identity_lines(learner, tenant));
+    let content = format!(
+        "{IBLAI_INSTRUCTIONS}{}",
+        identity_lines(learner, tenant, email)
+    );
     messages.insert(
         at,
         serde_json::json!({ "role": "system", "content": content }),
@@ -414,7 +628,8 @@ async fn forward(req: Request) -> Response {
     // that lands mid-session takes effect on the next call.
     let bytes = if inject && path == "chat/completions" {
         let tenant_line = (!tenant.is_empty()).then_some(tenant.as_str());
-        match inject_system_guidance(&bytes, learner.as_deref(), tenant_line) {
+        let email = learner_email_address().await;
+        match inject_system_guidance(&bytes, learner.as_deref(), tenant_line, email.as_deref()) {
             Some(patched) => axum::body::Bytes::from(patched),
             None => bytes,
         }
@@ -702,7 +917,7 @@ mod tests {
         })
         .to_string();
 
-        let out = inject_system_guidance(body.as_bytes(), None, None).expect("must inject");
+        let out = inject_system_guidance(body.as_bytes(), None, None, None).expect("must inject");
         let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
         let msgs = v["messages"].as_array().unwrap();
 
@@ -730,7 +945,7 @@ mod tests {
         })
         .to_string();
 
-        let out = inject_system_guidance(body.as_bytes(), None, None).unwrap();
+        let out = inject_system_guidance(body.as_bytes(), None, None, None).unwrap();
         let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
         assert_eq!(v["messages"][0]["role"], "system");
         assert_eq!(v["messages"][1]["role"], "user");
@@ -740,9 +955,9 @@ mod tests {
     /// guidance patch must never break the model call it rides on.
     #[test]
     fn unpatchable_bodies_are_left_untouched() {
-        assert!(inject_system_guidance(b"not json at all", None, None).is_none());
+        assert!(inject_system_guidance(b"not json at all", None, None, None).is_none());
         assert!(
-            inject_system_guidance(br#"{"prompt": "legacy completions"}"#, None, None).is_none()
+            inject_system_guidance(br#"{"prompt": "legacy completions"}"#, None, None, None).is_none()
         );
 
         // Already carrying the guidance → not doubled, identity or not.
@@ -750,8 +965,8 @@ mod tests {
             "messages": [{ "role": "system", "content": IBLAI_INSTRUCTIONS }]
         })
         .to_string();
-        assert!(inject_system_guidance(body.as_bytes(), None, None).is_none());
-        assert!(inject_system_guidance(body.as_bytes(), Some("codey"), Some("acme")).is_none());
+        assert!(inject_system_guidance(body.as_bytes(), None, None, None).is_none());
+        assert!(inject_system_guidance(body.as_bytes(), Some("codey"), Some("acme"), None).is_none());
     }
 
     /// The agent must be TOLD who it acts for: the identity bullets carry the
@@ -763,7 +978,13 @@ mod tests {
         })
         .to_string();
 
-        let out = inject_system_guidance(body.as_bytes(), Some("codey"), Some("acme")).unwrap();
+        let out = inject_system_guidance(
+            body.as_bytes(),
+            Some("codey"),
+            Some("acme"),
+            Some("codey@example.com"),
+        )
+        .unwrap();
         let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
         let content = v["messages"][0]["content"].as_str().unwrap();
         assert!(content.contains("username is `codey`"), "{content}");
@@ -773,17 +994,22 @@ mod tests {
             "{content}"
         );
         assert!(content.contains("IBLAI_PLATFORM_KEY"), "{content}");
+        assert!(
+            content.contains("email address is `codey@example.com`"),
+            "{content}"
+        );
 
         // No identity known → the guidance is exactly the base text, no stubs.
-        let out = inject_system_guidance(body.as_bytes(), None, None).unwrap();
+        let out = inject_system_guidance(body.as_bytes(), None, None, None).unwrap();
         let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
         assert_eq!(v["messages"][0]["content"], IBLAI_INSTRUCTIONS);
 
-        // Each line stands alone when only one half is known.
-        assert!(identity_lines(Some("codey"), None).contains("IBLAI_USERNAME"));
-        assert!(!identity_lines(Some("codey"), None).contains("IBLAI_PLATFORM_KEY"));
-        assert!(identity_lines(None, Some("acme")).contains("IBLAI_PLATFORM_KEY"));
-        assert_eq!(identity_lines(None, None), "");
+        // Each line stands alone when only one part of the identity is known.
+        assert!(identity_lines(Some("codey"), None, None).contains("IBLAI_USERNAME"));
+        assert!(!identity_lines(Some("codey"), None, None).contains("IBLAI_PLATFORM_KEY"));
+        assert!(identity_lines(None, Some("acme"), None).contains("IBLAI_PLATFORM_KEY"));
+        assert!(identity_lines(None, None, Some("a@b.c")).contains("email address is `a@b.c`"));
+        assert_eq!(identity_lines(None, None, None), "");
     }
 
     /// The env-var half of the same contract: what spawn exports as
@@ -791,10 +1017,156 @@ mod tests {
     /// the variable is not set at all rather than set to "".
     #[tokio::test]
     async fn the_signed_in_learner_is_exposed_for_the_child_env() {
-        set_learner("codey").await;
+        set_learner("codey", "codey@example.com", "https://dm.example/dm").await;
         assert_eq!(learner_username().await.as_deref(), Some("codey"));
-        set_learner("   ").await;
+        assert_eq!(
+            learner_email_address().await.as_deref(),
+            Some("codey@example.com")
+        );
+        set_learner("   ", "  ", "").await;
         assert_eq!(learner_username().await, None);
+        assert_eq!(learner_email_address().await, None);
+        // An empty base must not erase a good one — a later call that only
+        // carries a username would otherwise strand minting on the default host.
+        assert_eq!(dm_base_url().await, "https://dm.example/dm");
+    }
+
+    /// The DM host is only knowable from the frontend, but minting must still
+    /// aim somewhere sane before it arrives.
+    #[tokio::test]
+    async fn the_dm_base_falls_back_and_loses_its_trailing_slash() {
+        set_learner("codey", "", "https://api.iblai.app/dm/").await;
+        assert_eq!(dm_base_url().await, "https://api.iblai.app/dm");
+        assert!(DEFAULT_DM_BASE.starts_with("https://"));
+    }
+
+    /// Naming the key after the device keeps two of the user's machines from
+    /// revoking each other's key — DM key names are unique per platform.
+    #[test]
+    fn the_device_key_name_is_stable_and_prefixed() {
+        let first = device_key_name();
+        assert!(first.starts_with("os-code-"), "{first}");
+        assert_eq!(first, device_key_name());
+    }
+
+    /// A canned DM that answers `responses` in order, recording each request as
+    /// `(method, path, body)`.
+    ///
+    /// Real HTTP over loopback rather than a mocked client, so what gets
+    /// asserted is the request this module actually builds — including the
+    /// detail route's missing trailing slash, which DM is strict about.
+    #[allow(clippy::type_complexity)]
+    async fn canned_dm(
+        responses: Vec<(u16, String)>,
+    ) -> (
+        std::net::SocketAddr,
+        std::sync::Arc<Mutex<Vec<(String, String, String)>>>,
+    ) {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let seen = std::sync::Arc::new(Mutex::new(Vec::new()));
+        let log = seen.clone();
+
+        tokio::spawn(async move {
+            for (status, body) in responses {
+                let Ok((mut sock, _)) = listener.accept().await else {
+                    return;
+                };
+                let mut data = Vec::new();
+                let mut split = None;
+                while split.is_none() {
+                    let mut buf = [0u8; 4096];
+                    match sock.read(&mut buf).await {
+                        Ok(0) | Err(_) => break,
+                        Ok(n) => data.extend_from_slice(&buf[..n]),
+                    }
+                    split = data.windows(4).position(|w| w == b"\r\n\r\n");
+                }
+                let Some(head_end) = split else { continue };
+                let head = String::from_utf8_lossy(&data[..head_end]).to_string();
+                let content_len = head
+                    .lines()
+                    .find(|l| l.to_ascii_lowercase().starts_with("content-length:"))
+                    .and_then(|l| l.split(':').nth(1)?.trim().parse::<usize>().ok())
+                    .unwrap_or(0);
+                while data.len() < head_end + 4 + content_len {
+                    let mut buf = [0u8; 4096];
+                    match sock.read(&mut buf).await {
+                        Ok(0) | Err(_) => break,
+                        Ok(n) => data.extend_from_slice(&buf[..n]),
+                    }
+                }
+                let mut start = head.split_whitespace();
+                let method = start.next().unwrap_or_default().to_string();
+                let path = start.next().unwrap_or_default().to_string();
+                let payload = String::from_utf8_lossy(&data[(head_end + 4).min(data.len())..])
+                    .trim_end_matches('\0')
+                    .to_string();
+                log.lock().await.push((method, path, payload));
+
+                let resp = format!(
+                    "HTTP/1.1 {status} X\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{body}",
+                    body.len()
+                );
+                let _ = sock.write_all(resp.as_bytes()).await;
+            }
+        });
+        (addr, seen)
+    }
+
+    /// A learner who can't mint (DM allows platform admins only) must not fail
+    /// the spawn — the agent is told to say so instead of asking for a key.
+    #[tokio::test]
+    async fn a_non_admin_gets_no_key_and_no_error() {
+        // Same lock as the proxy-lifecycle tests: this binds an ephemeral port,
+        // and the OS will happily hand back the one `ensure_started_rebinds…`
+        // just freed — which would make its "the old server is gone"
+        // precondition fail for reasons that have nothing to do with it.
+        let _live = live_proxy_lock();
+        let (addr, _seen) = canned_dm(vec![(403, r#"{"detail":"forbidden"}"#.to_string())]).await;
+        let base = format!("http://{addr}");
+        assert_eq!(
+            mint_platform_key(&base, "dm-token", "os-code-test").await,
+            Ok(None)
+        );
+    }
+
+    /// A key of this name survives from an earlier run and its raw value is
+    /// gone forever, so the duplicate must be deleted and re-minted.
+    #[tokio::test]
+    async fn a_duplicate_key_name_is_deleted_and_reminted() {
+        let _live = live_proxy_lock(); // see the note in the 403 test above
+        let (addr, requests) = canned_dm(vec![
+            (
+                400,
+                r#"{"name":["A key with this name already exists"]}"#.to_string(),
+            ),
+            (204, String::new()),
+            (201, r#"{"key":"minted-key","name":"os-code-test"}"#.to_string()),
+        ])
+        .await;
+        let base = format!("http://{addr}");
+        let key = mint_platform_key(&base, "dm-token", "os-code-test")
+            .await
+            .unwrap();
+        assert_eq!(key.as_deref(), Some("minted-key"));
+
+        let seen = requests.lock().await.clone();
+        assert_eq!(seen.len(), 3, "post, delete, post: {seen:?}");
+        assert_eq!(seen[0].0, "POST");
+        assert_eq!(seen[1].0, "DELETE");
+        assert_eq!(
+            seen[1].1, "/api/core/platform/api-tokens/os-code-test",
+            "the detail route takes no trailing slash"
+        );
+        assert_eq!(seen[2].0, "POST");
+        assert!(
+            seen[2].2.contains("\"mode\":\"owner\""),
+            "the mint asks for an owner-mode key: {}",
+            seen[2].2
+        );
     }
 
     /// The "can't reconnect" half of the lost-connection bug: the old code
@@ -817,12 +1189,17 @@ mod tests {
         })
         .join()
         .unwrap();
-        assert!(
-            tokio::net::TcpStream::connect(("127.0.0.1", dead_port))
-                .await
-                .is_err(),
-            "precondition: the old server must actually be gone"
-        );
+        // Precondition, not an assertion: the kernel is free to hand that just
+        // released ephemeral port to the next listener that asks — several
+        // tests here bind one — and when it does, "the old server is gone"
+        // becomes unprovable rather than false. Bail out instead of failing;
+        // the rebind path below is exercised on every run that keeps the port.
+        if tokio::net::TcpStream::connect(("127.0.0.1", dead_port))
+            .await
+            .is_ok()
+        {
+            return;
+        }
 
         // Pre-fix: the memoized dead port comes back and this connect fails.
         let port = ensure_started().await.unwrap();
@@ -917,6 +1294,25 @@ mod tests {
                 && text.contains("on request only")
                 && text.contains("unprompted"),
             "the optional-monetization rule must survive edits: {text}"
+        );
+        assert!(
+            text.contains("outcome-focused") && text.contains("never in the reply text"),
+            "the terse-output rule must survive edits: {text}"
+        );
+        assert!(
+            text.contains("IBLAI_API_KEY")
+                && text.contains("NEVER ask the user for a platform API key"),
+            "the auto-minted-key rule must survive edits: {text}"
+        );
+        assert!(
+            text.contains("providers/stripe/payments")
+                && text.contains("Never ask the user for a Stripe")
+                && text.contains("platform settings"),
+            "the no-Stripe-keys-in-chat rule must survive edits: {text}"
+        );
+        assert!(
+            text.contains("deployment-hash") && text.contains("skip the deploy"),
+            "the deploy-dedupe rule must survive edits: {text}"
         );
     }
 }

@@ -453,6 +453,91 @@ describe('Journey 3: Code Mode (opencode)', () => {
       expect(packages.length).toBeGreaterThan(0);
     });
 
+    it('code-21: the approval mode round-trips through settings.json and rejects anything else', async () => {
+      const settings = join(DATA_DIR, 'settings.json');
+      const before = existsSync(settings)
+        ? readFileSync(settings, 'utf8')
+        : null;
+
+      await invokeCmd<null>('set_opencode_permission_mode', { mode: 'auto' });
+      expect(await invokeCmd<string>('get_opencode_permission_mode')).toBe(
+        'auto',
+      );
+      // Persisted, not just held in memory — a cold start must not silently
+      // drop back to asking (or, worse, to approving).
+      expect(JSON.parse(readFileSync(settings, 'utf8')).permission_mode).toBe(
+        'auto',
+      );
+
+      await invokeCmd<null>('set_opencode_permission_mode', { mode: 'manual' });
+      expect(await invokeCmd<string>('get_opencode_permission_mode')).toBe(
+        'manual',
+      );
+
+      // An unknown mode is refused rather than defaulting: silently picking a
+      // security posture on a typo is the failure worth preventing.
+      await expect(
+        invokeCmd('set_opencode_permission_mode', { mode: 'yolo' }),
+      ).rejects.toThrow();
+      expect(await invokeCmd<string>('get_opencode_permission_mode')).toBe(
+        'manual',
+      );
+
+      if (before !== null) writeFileSync(settings, before);
+    });
+
+    it('code-22: a mentor keeps one workspace, and New workspace mints a fresh one without deleting the old', async () => {
+      const mentorArgs = {
+        sessionId: 'e2e-ws-1',
+        tenant: 'e2e',
+        mentor: MENTOR,
+      };
+
+      const first = await invokeCmd<string>(
+        'get_opencode_workspace',
+        mentorArgs,
+      );
+      expect(first).toContain('workspaces');
+      // Same mentor, another chat: the work has to still be there.
+      expect(
+        await invokeCmd<string>('get_opencode_workspace', {
+          ...mentorArgs,
+          sessionId: 'e2e-ws-2',
+        }),
+      ).toBe(first);
+      // A different mentor must not inherit it.
+      expect(
+        await invokeCmd<string>('get_opencode_workspace', {
+          ...mentorArgs,
+          mentor: `${MENTOR}-other`,
+        }),
+      ).not.toBe(first);
+
+      const fresh = await invokeCmd<string>(
+        'new_opencode_workspace',
+        mentorArgs,
+      );
+      expect(fresh).not.toBe(first);
+      expect(existsSync(fresh)).toBe(true);
+      // The previous folder survives: switching is meant to be undoable.
+      expect(existsSync(first)).toBe(true);
+      expect(
+        await invokeCmd<string>('get_opencode_workspace', mentorArgs),
+      ).toBe(fresh);
+    });
+
+    it.skip('code-23: the Code popover asks for an approval mode on first use and stores the answer against the signed-in user', () => {
+      /* pending — needs an authenticated UI session (like code-14) to render
+         the popover and reach the user-metadata endpoint; covered meanwhile by
+         the coding-mode-button Vitest cases */
+    });
+
+    it.skip('code-24: the popover offers New workspace and a platform-named Open folder button', () => {
+      /* pending — same authenticated-UI gap; the labels and disabled states are
+         covered by the coding-mode-button Vitest cases, and clicking Open
+         folder would spawn a real file manager */
+    });
+
     it.skip('code-14: the Code pill spins while skills sync and the popover shows the amber note on failure', () => {
       /* pending — needs an authenticated UI session (like odm-01/04/06);
          covered meanwhile by the coding-mode-button + skill-sync Vitest suites */

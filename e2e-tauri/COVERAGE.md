@@ -1,6 +1,6 @@
 # Tauri Desktop E2E Coverage — Journey Checklist
 
-> Last updated: 2026-08-22 | 30 checkpoints (18 covered, 12 pending) | 3 journeys | 100% of reproducible checkpoints covered | Driver: WebdriverIO + tauri-driver
+> Last updated: 2026-08-27 | 34 checkpoints (20 covered, 14 pending) | 3 journeys | 100% of reproducible checkpoints covered | Driver: WebdriverIO + tauri-driver
 
 This is the desktop counterpart to the web `e2e/COVERAGE.md`. It tracks only what
 is exercised by driving the **built desktop binary** through `tauri-driver` (see
@@ -63,7 +63,7 @@ Windows (`msedgedriver`) only — `tauri-driver` has no macOS support.
 
 ---
 
-## Journey 3: Code Mode (opencode) (20 checkpoints: 11 covered, 9 pending) — `journeys/03-code-mode.spec.ts`
+## Journey 3: Code Mode (opencode) (24 checkpoints: 13 covered, 11 pending) — `journeys/03-code-mode.spec.ts`
 
 > **Partly covered.** The installer and per-chat state (code-01…07) run against
 > the REAL compiled binary through the live Tauri IPC bridge (`window.__TAURI__`):
@@ -117,3 +117,7 @@ Windows (`msedgedriver`) only — `tauri-driver` has no macOS support.
 - [ ] `code-18` A Code turn's opencode process runs inside the OS sandbox (bwrap / sandbox-exec) — only the workspace and tool caches writable, ~/.ssh empty _(needs a tool-calling model; the bwrap argv, SBPL profile and decoy home are covered by the Rust sandbox tests in `opencode_acp.rs`)_
 - [ ] `code-19` A second New Chat in one app run gets its own fresh workspace, and a chat's folder follows it from the ephemeral first-turn key to its real session id _(needs an authenticated UI session; covered meanwhile by the Rust `adopt_prior_mapping` tests and the SDK per-chat key Vitest cases)_
 - [ ] `code-20` Killing the opencode process mid-turn: the answer continues in the same bubble with no visible interruption (one silent respawn re-sends the prompt), and a second kill in the same turn surfaces `ollama:error` _(needs a tool-calling model; covered meanwhile by the Rust crash-retry tests in `opencode_acp.rs` — `should_retry`, `reader_gone`, `closing` — and the proxy rebind/read-timeout tests)_
+- [x] `code-21` The Code approval mode (manual/auto) round-trips through `settings.json`, survives a restart, and an unknown mode is refused rather than defaulting
+- [x] `code-22` A mentor keeps one workspace across chats while another mentor gets its own, and New workspace mints a fresh folder without deleting the previous one
+- [ ] `code-23` The Code popover asks for an approval mode on first use and stores the answer against the signed-in user, so it follows them to another machine _(needs an authenticated UI session; covered meanwhile by the coding-mode-button Vitest cases)_
+- [ ] `code-24` The Code popover offers New workspace and a platform-named Open folder button (Finder / Explorer / folder) _(needs an authenticated UI session, and clicking Open folder would spawn a real file manager; labels and disabled states covered by the coding-mode-button Vitest cases)_

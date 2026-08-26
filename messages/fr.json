@@ -2354,7 +2354,19 @@
     "changeFolder": "Changer de dossier…",
     "chooseFolderTitle": "Choisissez votre dossier de travail",
     "skillsSyncFailed": "Impossible de synchroniser les compétences — Code fonctionnera sans elles.",
-    "sandboxMissing": "Code nécessite bubblewrap (bwrap). Installez-le avec votre gestionnaire de paquets, puis rouvrez l’application."
+    "sandboxMissing": "Code nécessite bubblewrap (bwrap). Installez-le avec votre gestionnaire de paquets, puis rouvrez l’application.",
+    "permissionModeLabel": "Approbations",
+    "permissionModeManual": "Me demander",
+    "permissionModeAuto": "Automatique",
+    "permissionModeAutoHint": "Code modifie des fichiers et exécute des commandes sans demander. À utiliser uniquement dans des dossiers de confiance.",
+    "newWorkspace": "Nouvel espace de travail",
+    "openInFinder": "Ouvrir dans le Finder",
+    "openInExplorer": "Ouvrir dans l’Explorateur",
+    "openFolder": "Ouvrir le dossier",
+    "permissionDialogTitle": "Comment Code doit-il demander votre accord ?",
+    "permissionDialogDescription": "Code peut modifier des fichiers et exécuter des commandes dans votre espace de travail. Choisissez s’il doit vous consulter d’abord ; vous pourrez le changer plus tard dans le panneau Code.",
+    "permissionDialogManualAction": "Me demander à chaque fois",
+    "permissionDialogAutoAction": "Approuver automatiquement"
   },
   "chatCodePermissionCard": {
     "title": "Code a besoin de votre autorisation",
