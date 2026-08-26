@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-08-25 | 677 checkpoints (646 covered, 8 pending/fixme, 11 not-reproducible in default env, 12 deprecated) | 72 journeys (71 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-08-26 | 682 checkpoints (651 covered, 8 pending/fixme, 11 not-reproducible in default env, 12 deprecated) | 73 journeys (72 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -1576,3 +1576,51 @@ affected; only the internal preview could reach our storage.
 - [x] epl-02: After visiting the Embed tab and closing the dialog, clicking "New Chat" keeps the FULL admin sidebar (Agents, Workflows, Projects, Analytics, Support) instead of collapsing to the embed rail, and does not append `embed=true` to the app URL (a poisoned tab also fed `embedContextQuery()`, writing the corruption into its own navigations)
 - [x] epl-03: The full app survives a reload after the Embed tab was visited — the old bug was sticky for the lifetime of the tab because sessionStorage outlived the navigation
 - [x] epl-04: A top-level (non-iframed) tab ignores an `ibl:embed-context` entry it did not get from its own URL, across both a re-render (New Chat) and a reload (guard 2: `readStoredEmbedContext` requires `isInIframe`) — planted directly, so the read-side guard is covered even if some future same-origin iframe starts writing the key again
+
+## Journey 71: On-device TTS Provider Routing (5 checkpoints) — `journeys/71-tts-provider-routing.spec.ts`
+
+**Source files:** `lib/tts/iblai-routing.ts`, `lib/tts/model-cache.ts`, `lib/tts/config.ts`, `lib/tts/tts-endpoint.ts`, `lib/tts/kokoro-session.ts`, `hooks/use-speech.ts`, `components/chat/ai-message-speak.tsx`
+
+Covers `lib/tts/iblai-routing.ts`'s `decide()` arbiter for the `iblai` voice
+provider (issue #2341): per-utterance it picks between the cloud `/tts/`
+endpoint and the on-device WebGPU Kokoro model, warms the on-device cache in
+the background after the first cloud read, and never lets a phone/tablet/iOS
+device attempt the download at all.
+
+**Why a pre-provisioned mentor, not a fresh one:** the installed
+`@iblai/iblai-js` SDK's Voice tab (`voice-tab-helpers.d.ts`) only exposes
+`browser | openai | google` provider cards — `iblai` is not selectable
+through the Edit Mentor UI in this SDK version. Tests target tenant
+`conradtesttenant`, mentor "Kokoro Voice Test"
+(`710a0110-75b7-4f3a-8f89-b70b712438a2`), already saved server-side with
+`voice_provider: iblai`. No mentor is created, so there is nothing for
+`MentorTracker` to clean up.
+
+**Never downloads the real ~310 MB model:** every request to the model host
+(`NEXT_PUBLIC_TTS_KOKORO_MODEL_HOST`, default `huggingface.co`, plus its
+`us.aws.cdn.hf.co` redirect target) is intercepted and either aborted or
+fulfilled with a few fake bytes. The "warm cache → device" checkpoint also
+stubs `navigator.gpu` (so the arbiter's WebGPU probe succeeds regardless of
+this runner's real GPU support) and `window.Worker` (this app's only `new
+Worker(...)` call site is `lib/tts/kokoro-session.ts`, so replacing it
+globally is safe) — the fake worker answers a `generate` message with one
+silent PCM chunk and an empty completion, so the on-device path finishes
+through `StreamPlayer` without ever needing the real ONNX runtime. Loading
+the real model with fake bytes would throw deep inside onnxruntime-web and
+fall back to the cloud, which would make "device chosen, zero further cloud
+calls" depend on a race against that failure instead of testing the routing
+decision itself.
+
+**Isolation:** the whole file runs in `describe.serial` — reproduced live,
+running with `--workers=1` passed 9/9 across repeats, but the default
+parallel workers intermittently left "Read Aloud" never toggling after a
+real click. All tests share the one pre-provisioned mentor/account with no
+per-test mentor to isolate on, so concurrent workers were racing the same
+account's chat/TTS activity, not exercising a bug in the routing logic
+under test.
+
+- [x] ttsr-01: Loading a mentor configured with the `iblai` (Kokoro) voice provider makes zero requests to the Kokoro model host before any Read Aloud interaction — `primeIblaiRoute`'s mount-time WebGPU probe and Cache Storage lookup are read-only
+- [x] ttsr-02: With a cold on-device cache, clicking Read Aloud serves the message through the cloud `/tts/` endpoint (the button toggles to "Stop Reading Aloud") and still makes zero requests to the model host
+- [x] ttsr-03: The cold-cache read's background warm-up (`startIblaiWarmUp`) fetches the model weights and voice tensor pinned to the exact `NEXT_PUBLIC_TTS_KOKORO_MODEL_REVISION` sha, never the library's default `resolve/main` — verified via intercepted (fake-byte-fulfilled) requests to the model host
+- [x] ttsr-04: Once both Cache Storage entries (`transformers-cache`, `kokoro-voices`) the warm-up writes are populated, re-reading the same message aloud is served on-device (`peekIblaiRoute` flips to `device` in the same tab, no reload) with no additional call to the cloud `/tts/` endpoint
+- [x] ttsr-05: On an emulated mobile device (`navigator.userAgentData.mobile`/UA stub), Read Aloud always serves through the cloud `/tts/` endpoint and never contacts the Kokoro model host
