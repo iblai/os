@@ -67,25 +67,29 @@ class LocalStorageMock implements Storage {
   }
 }
 
-Object.defineProperty(window, 'localStorage', {
-  value: new LocalStorageMock(),
-  writable: true,
-});
+// Guarded so specs that opt out of jsdom with `@vitest-environment node`
+// still load this file: none of the below exists in a bare Node realm.
+if (typeof window !== 'undefined') {
+  Object.defineProperty(window, 'localStorage', {
+    value: new LocalStorageMock(),
+    writable: true,
+  });
 
-// Mock pointer capture methods required by Radix UI in jsdom
-if (typeof Element.prototype.hasPointerCapture === 'undefined') {
-  Element.prototype.hasPointerCapture = () => false;
-}
-if (typeof Element.prototype.setPointerCapture === 'undefined') {
-  Element.prototype.setPointerCapture = () => {};
-}
-if (typeof Element.prototype.releasePointerCapture === 'undefined') {
-  Element.prototype.releasePointerCapture = () => {};
-}
+  // Mock pointer capture methods required by Radix UI in jsdom
+  if (typeof Element.prototype.hasPointerCapture === 'undefined') {
+    Element.prototype.hasPointerCapture = () => false;
+  }
+  if (typeof Element.prototype.setPointerCapture === 'undefined') {
+    Element.prototype.setPointerCapture = () => {};
+  }
+  if (typeof Element.prototype.releasePointerCapture === 'undefined') {
+    Element.prototype.releasePointerCapture = () => {};
+  }
 
-// Mock scrollIntoView
-if (typeof Element.prototype.scrollIntoView === 'undefined') {
-  Element.prototype.scrollIntoView = () => {};
+  // Mock scrollIntoView
+  if (typeof Element.prototype.scrollIntoView === 'undefined') {
+    Element.prototype.scrollIntoView = () => {};
+  }
 }
 
 // Mock ResizeObserver

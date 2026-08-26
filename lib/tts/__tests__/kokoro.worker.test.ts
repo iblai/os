@@ -1,3 +1,13 @@
+// @vitest-environment node
+//
+// A worker's global scope is `self`, not `window`. jsdom approximated that
+// well enough until Node 25: undici's Request brand-checks `init.signal` with
+// an internal symbol jsdom's AbortSignal does not carry, so `new Request(url,
+// request)` -- the copy-with-a-new-URL idiom pinModelRequests relies on --
+// throws there while working in a real worker. The node environment keeps that
+// idiom coherent and models the worker scope more honestly; the three globals a
+// worker has and Node lacks are shimmed below.
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { KokoroConfig } from '../config';
@@ -11,6 +21,14 @@ import type { KokoroResponse } from '../kokoro.worker';
 // the text is cut up, how cancellation interleaves with the generate loop, and
 // what lands on the wire.
 // ---------------------------------------------------------------------------
+
+for (const key of ['self', 'postMessage', 'addEventListener'] as const) {
+  Object.defineProperty(globalThis, key, {
+    configurable: true,
+    writable: true,
+    value: key === 'self' ? globalThis : () => {},
+  });
+}
 
 const hoisted = vi.hoisted(() => {
   /** Mirrors kokoro-js's splitter closely enough: sentence-final punctuation. */
@@ -130,14 +148,8 @@ async function loadWorker() {
   return import('../kokoro.worker');
 }
 
-/** jsdom's Blob has no `arrayBuffer()`, so read it the long way round. */
 function readBlob(blob: Blob): Promise<ArrayBuffer> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as ArrayBuffer);
-    reader.onerror = () => reject(reader.error);
-    reader.readAsArrayBuffer(blob);
-  });
+  return blob.arrayBuffer();
 }
 
 function messages(type: KokoroResponse['type']) {
@@ -145,7 +157,7 @@ function messages(type: KokoroResponse['type']) {
 }
 
 beforeEach(() => {
-  Object.defineProperty(window, 'postMessage', {
+  Object.defineProperty(globalThis, 'postMessage', {
     configurable: true,
     writable: true,
     value: (message: KokoroResponse, transfer?: Transferable[]) => {
@@ -153,15 +165,15 @@ beforeEach(() => {
     },
   });
   // Capture the module-scope listener registration instead of letting it pile
-  // up on the jsdom window across reloads.
-  vi.spyOn(window, 'addEventListener').mockImplementation(((
+  // up on the worker scope across reloads.
+  vi.spyOn(globalThis, 'addEventListener').mockImplementation(((
     type: string,
     listener: EventListenerOrEventListenerObject,
   ) => {
     if (type === 'message') {
       messageListeners.push(listener as (event: MessageEvent) => void);
     }
-  }) as typeof window.addEventListener);
+  }) as typeof globalThis.addEventListener);
 });
 
 afterEach(() => {
