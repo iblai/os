@@ -32,6 +32,7 @@ import {
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
 import { useChatMode } from '@/hooks/use-chat-mode';
+import { useShowCloseButton } from '@/hooks/use-show-close-button';
 import { useHelpCenter } from '@/hooks/use-help-center';
 import { useUsername } from '@/hooks/use-user';
 import { cn, isLoggedIn } from '@/lib/utils';
@@ -66,6 +67,7 @@ export function EmbedNavBar({
   const isPreviewMode = useIsPreviewMode();
   const isIframed = useIsIframed();
   const chatMode = useChatMode();
+  const showCloseButton = useShowCloseButton();
   const dispatch = useAppDispatch();
   const pathname = usePathname();
   const isWorkflowsPage = /\/workflows\/[^/]+\/?$/.test(pathname ?? '');
@@ -90,7 +92,7 @@ export function EmbedNavBar({
   }
 
   useEffect(() => {
-    if (isPreviewMode) return;
+    if (isPreviewMode || !showCloseButton) return;
 
     function handleEscapeKey(event: KeyboardEvent) {
       if (event.key !== 'Escape') return;
@@ -103,7 +105,7 @@ export function EmbedNavBar({
     return () => {
       document.removeEventListener('keydown', handleEscapeKey);
     };
-  }, [isPreviewMode]);
+  }, [isPreviewMode, showCloseButton]);
 
   const helpItems = [
     ...(showHelp
@@ -251,7 +253,7 @@ export function EmbedNavBar({
             </DropdownMenu>
           )}
 
-          {isIframed && (
+          {isIframed && showCloseButton && (
             <Button
               variant="ghost"
               size="icon"
