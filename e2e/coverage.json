@@ -2,8 +2,8 @@
   "version": 2,
   "lastUpdated": "2026-08-25",
   "summary": {
-    "totalCheckpoints": 677,
-    "coveredCheckpoints": 646,
+    "totalCheckpoints": 684,
+    "coveredCheckpoints": 653,
     "deprecatedCheckpoints": 12,
     "notReproducibleCheckpoints": 11,
     "pendingCheckpoints": 8,
@@ -4285,6 +4285,54 @@
         {
           "id": "epl-04",
           "description": "A top-level (non-iframed) tab ignores an `ibl:embed-context` entry it did not get from its own URL, across both a re-render (New Chat) and a reload (guard 2: readStoredEmbedContext requires isInIframe)",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "sidebar-support-link-and-help-center",
+      "name": "Sidebar Support Link & Help Center Resolution (#uat-9)",
+      "spec": "71-sidebar-support-link-and-help-center.spec.ts",
+      "sourceFiles": [
+        "hooks/use-help-center.ts",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx",
+        "lib/config.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "shc-01",
+          "description": "Admin sees the resolved documentation URL (default https://ibl.ai/docs, no tenant override) as the sidebar footer Support link's href in the EXPANDED layout",
+          "status": "covered"
+        },
+        {
+          "id": "shc-02",
+          "description": "Same default resolution holds for the RAIL-COLLAPSED sidebar layout (SidebarCollapsedLabelFlyout, aria-label=\"Support\")",
+          "status": "covered"
+        },
+        {
+          "id": "shc-03",
+          "description": "A tenant documentation_url override WITH a scheme is used verbatim as the sidebar Support link's href",
+          "status": "covered"
+        },
+        {
+          "id": "shc-04",
+          "description": "A tenant documentation_url override WITHOUT a scheme is prefixed with https:// by addProtocolToUrl before being used as the href",
+          "status": "covered"
+        },
+        {
+          "id": "shc-05",
+          "description": "Tenant show_help:false hides the sidebar Support link in BOTH the expanded and rail-collapsed layouts; removing the override brings the link back in both layouts",
+          "status": "covered"
+        },
+        {
+          "id": "shc-06",
+          "description": "The nav-bar \"More options -> Help\" dropdown item resolves from tenant support_url when present (this tenant's baseline: support_url=\"ibl.ai/support\", scheme-less, prefixed by addProtocolToUrl)",
+          "status": "covered"
+        },
+        {
+          "id": "shc-07",
+          "description": "The nav-bar \"More options -> Help\" dropdown item falls back to tenant help_center_url when support_url is absent",
           "status": "covered"
         }
       ]

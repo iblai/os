@@ -83,6 +83,11 @@ export async function setTenantMetadataFlag(
           Authorization: `Token ${token}`,
           'Content-Type': 'application/json',
         },
+        // `JSON.stringify` drops keys whose value is `undefined`, so passing
+        // `value: undefined` REMOVES `flag` from tenant metadata entirely
+        // rather than writing a literal null/empty value — used by restore
+        // paths that need to put a key back to "absent" (see
+        // `restoreTenantMetadata` below for the whole-blob equivalent).
         body: JSON.stringify({ metadata: updated }),
       });
       if (!patchRes.ok) {
@@ -92,5 +97,53 @@ export async function setTenantMetadataFlag(
       }
     },
     { dmUrl, tenantKey, flag, value },
+  );
+}
+
+/**
+ * Overwrite the tenant's ENTIRE metadata blob in a single request — the
+ * atomic counterpart to `setTenantMetadataFlag`'s read-merge-write. Use this
+ * for restoring a full snapshot captured via `getTenantMetadata` (e.g. in a
+ * suite's `afterAll`), so the tenant is put back EXACTLY as found — including
+ * removing any keys the suite added that were absent in the snapshot — in
+ * one round trip rather than N sequential per-key patches.
+ *
+ * `metadata` should be the COMPLETE object as previously read by
+ * `getTenantMetadata` (or an equivalent snapshot), not a partial patch — the
+ * DM API's metadata field is replaced wholesale by whatever is sent here.
+ */
+export async function restoreTenantMetadata(
+  page: Page,
+  tenantKey: string,
+  metadata: Record<string, unknown>,
+): Promise<void> {
+  const dmUrl = DM_URL;
+  if (!dmUrl) {
+    throw new Error(
+      'DM_URL env var is not set — cannot call tenant metadata API',
+    );
+  }
+
+  await page.evaluate(
+    async ({ dmUrl, tenantKey, metadata }) => {
+      const token = localStorage.getItem('dm_token');
+      if (!token) throw new Error('dm_token not found in localStorage');
+
+      const baseUrl = `${dmUrl}/api/core/orgs/${tenantKey}/metadata/`;
+      const patchRes = await fetch(baseUrl, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Token ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ metadata }),
+      });
+      if (!patchRes.ok) {
+        throw new Error(
+          `PATCH ${baseUrl} → ${patchRes.status} ${patchRes.statusText}`,
+        );
+      }
+    },
+    { dmUrl, tenantKey, metadata },
   );
 }

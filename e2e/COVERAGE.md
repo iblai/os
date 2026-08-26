@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-08-25 | 677 checkpoints (646 covered, 8 pending/fixme, 11 not-reproducible in default env, 12 deprecated) | 72 journeys (71 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-08-26 | 684 checkpoints (653 covered, 8 pending/fixme, 11 not-reproducible in default env, 12 deprecated) | 73 journeys (72 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -1576,3 +1576,49 @@ affected; only the internal preview could reach our storage.
 - [x] epl-02: After visiting the Embed tab and closing the dialog, clicking "New Chat" keeps the FULL admin sidebar (Agents, Workflows, Projects, Analytics, Support) instead of collapsing to the embed rail, and does not append `embed=true` to the app URL (a poisoned tab also fed `embedContextQuery()`, writing the corruption into its own navigations)
 - [x] epl-03: The full app survives a reload after the Embed tab was visited — the old bug was sticky for the lifetime of the tab because sessionStorage outlived the navigation
 - [x] epl-04: A top-level (non-iframed) tab ignores an `ibl:embed-context` entry it did not get from its own URL, across both a re-render (New Chat) and a reload (guard 2: `readStoredEmbedContext` requires `isInIframe`) — planted directly, so the read-side guard is covered even if some future same-origin iframe starts writing the key again
+
+## Journey 71: Sidebar Support Link & Help Center Resolution (#uat-9) (7 checkpoints) — `journeys/71-sidebar-support-link-and-help-center.spec.ts`
+
+**Source files:** `hooks/use-help-center.ts`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`, `lib/config.ts`
+
+UAT bug: the sidebar footer's "Support" link and the nav-bar "More options →
+Help" menu item were hardcoded to `https://ibl.ai/docs` regardless of tenant
+configuration. `hooks/use-help-center.ts` now resolves both destinations from
+tenant metadata (`documentation_url`, `support_url`, `help_center_url`,
+`show_help`), each passed through `addProtocolToUrl` so a scheme-less tenant
+value is prefixed with `https://`. The label stayed "Support" — only the
+href and show/hide behavior changed.
+
+Root cause of the original bug: the e2e helper guarding this surface
+(`SidebarPage.isSupportLinkVisible`) only ever asserted VISIBILITY, never the
+link's DESTINATION, so a hardcoded wrong-domain href passed CI unnoticed for
+months. `SidebarPage.getSupportLinkHref()` (added alongside this journey)
+closes that gap — every checkpoint below asserts on the resolved
+href/URL, not just presence.
+
+**Isolation:** every test in this file mutates the SAME org-scoped tenant
+metadata on the shared `conradtesttenant` backend via `setTenantMetadataFlag`
+(`e2e/utils/tenant-metadata.ts`, a read-merge-PATCH helper that always
+re-fetches the current blob before merging, so it never wipes keys this
+suite didn't touch). The whole file runs `describe.serial` — the same class
+of shared-tenant race this project already hit with the chat-privacy gate
+(journey 50). Restoration is belt-and-braces: `beforeAll` captures the FULL
+tenant metadata blob once before anything mutates; every mutating test
+undoes its own change in `try/finally`; `afterAll` (runs even on failure)
+does one atomic full-blob PATCH back to the captured original via
+`restoreTenantMetadata`, then re-fetches and asserts every
+support/help-center-related key (`support_url`, `help_center_url`,
+`documentation_url`, `show_help`, `support_email`) matches what was
+captured — proving the tenant was left exactly as found. There is no UI path
+to these tenant-metadata keys in this app (the SDK's `UserProfileDropdown`
+is mounted with `showAccountTab={false}`), so all mutation goes through the
+DM API directly; every test self-skips when the `DM_URL` env var is absent
+(matching journey 43's established convention).
+
+- [x] shc-01: Admin sees the resolved documentation URL (default `https://ibl.ai/docs`, no tenant override) as the sidebar footer Support link's href in the EXPANDED layout
+- [x] shc-02: Same default resolution holds for the RAIL-COLLAPSED sidebar layout (`SidebarCollapsedLabelFlyout`, `aria-label="Support"`)
+- [x] shc-03: A tenant `documentation_url` override WITH a scheme is used verbatim as the sidebar Support link's href
+- [x] shc-04: A tenant `documentation_url` override WITHOUT a scheme is prefixed with `https://` by `addProtocolToUrl` before being used as the href
+- [x] shc-05: Tenant `show_help: false` hides the sidebar Support link in BOTH the expanded and rail-collapsed layouts; removing the override brings the link back in both layouts
+- [x] shc-06: The nav-bar "More options → Help" dropdown item resolves from tenant `support_url` when present (this tenant's baseline: `support_url="ibl.ai/support"`, scheme-less, prefixed by `addProtocolToUrl`)
+- [x] shc-07: The nav-bar "More options → Help" dropdown item falls back to tenant `help_center_url` when `support_url` is absent

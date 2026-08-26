@@ -213,9 +213,18 @@ export class SidebarPage {
   }
 
   /**
-   * Returns true if the Support / docs link (ibl.ai/docs) is present in the
-   * sidebar footer. Uses `waitFor` with a short timeout so the check fast-
-   * fails when the footer is correctly hidden in embed mode.
+   * Returns true if the Support link is present in the sidebar footer. Uses
+   * `waitFor` with a short timeout so the check fast-fails when the footer
+   * is correctly hidden in embed mode.
+   *
+   * The label stayed "Support" (#uat-9 kept it as-is), but its `href` is no
+   * longer a hardcoded `https://ibl.ai/docs` — it now resolves from tenant
+   * metadata via `useHelpCenter()` (`documentation_url` override, falling
+   * back to `config.documentationUrl()`, default `https://ibl.ai/docs`). See
+   * `getSupportLinkHref()` below for asserting the actual destination — this
+   * visibility-only check was the root cause of the UAT bug: it never
+   * verified WHERE the link pointed, so a wrong hardcoded domain passed CI
+   * for months.
    */
   async isSupportLinkVisible(timeoutMs = 3_000): Promise<boolean> {
     // The link renders as an <a> with visible text "Support" (expanded) or
@@ -227,6 +236,23 @@ export class SidebarPage {
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Returns the resolved `href` of the sidebar footer "Support" link, or
+   * `null` if it is not visible within `timeoutMs`. Use this (not just
+   * `isSupportLinkVisible`) whenever a test needs to assert WHERE the link
+   * points — the whole point of the #uat-9 fix was that the previous helper
+   * only ever asserted visibility, never destination.
+   */
+  async getSupportLinkHref(timeoutMs = 3_000): Promise<string | null> {
+    const link = this.sidebar.getByRole('link', { name: /support/i });
+    try {
+      await link.waitFor({ state: 'visible', timeout: timeoutMs });
+    } catch {
+      return null;
+    }
+    return link.getAttribute('href');
   }
 
   /**
@@ -256,6 +282,36 @@ export class SidebarPage {
     }
 
     await expect(this.logoImage).toBeVisible({ timeout: timeoutMs });
+  }
+
+  /**
+   * Collapses the sidebar into rail (icon-only) mode if currently expanded.
+   * Counterpart to `ensureExpanded()` — used by tests that need to assert
+   * against the rail-collapsed footer variant (e.g. the Support link's
+   * `SidebarCollapsedLabelFlyout` rendering, which uses `aria-label` instead
+   * of visible text).
+   */
+  async ensureCollapsed(timeoutMs = 10_000): Promise<void> {
+    await expect(this.toggleButton).toBeVisible({ timeout: timeoutMs });
+
+    // Only collapse when actually expanded: the toggle reads "Collapse
+    // sidebar" while expanded and "Expand sidebar" while collapsed.
+    const collapseButton = this.sidebar.getByRole('button', {
+      name: /collapse sidebar/i,
+    });
+    let alreadyCollapsed = false;
+    try {
+      await collapseButton.waitFor({ state: 'visible', timeout: 1_000 });
+    } catch {
+      alreadyCollapsed = true;
+    }
+    if (!alreadyCollapsed) {
+      await collapseButton.click();
+    }
+
+    await expect(
+      this.sidebar.getByRole('button', { name: /expand sidebar/i }),
+    ).toBeVisible({ timeout: timeoutMs });
   }
 
   /**
