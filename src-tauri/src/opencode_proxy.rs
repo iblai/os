@@ -87,6 +87,14 @@ platform API key, and NEVER ask the user for a platform API key or token — thi
 supersedes any skill instruction that says to ask for one. If IBLAI_API_KEY is \
 absent, the signed-in user is not a platform admin and cannot mint one: say so \
 plainly and continue with what does work, rather than asking them for a key.
+- When software you are BUILDING needs raw LLM access, IBLAI_API_KEY doubles as \
+a standard OpenAI api key: point any OpenAI client at \
+`https://asgi.data.<domain>/api/ai-mentor/orgs/<org>/v1` with \
+`Authorization: Bearer $IBLAI_API_KEY` (chat completions and `GET /models`), \
+keep it server-side, and never ask the user for an OpenAI or Anthropic key. \
+This is for the software you build, never for your own model calls — your own \
+inference already runs through the session's metered, learner-attributed proxy, \
+and going around it is not allowed.
 - Never ask the user for a Stripe API key or secret, and never put raw Stripe \
 credentials in code, env files, or the chat. All Stripe work goes through the \
 ibl.ai Stripe proxy at \
@@ -1303,6 +1311,11 @@ mod tests {
             text.contains("IBLAI_API_KEY")
                 && text.contains("NEVER ask the user for a platform API key"),
             "the auto-minted-key rule must survive edits: {text}"
+        );
+        assert!(
+            text.contains("standard OpenAI api key")
+                && text.contains("never for your own model calls"),
+            "the v1-key-for-built-apps-not-own-inference rule must survive edits: {text}"
         );
         assert!(
             text.contains("providers/stripe/payments")
