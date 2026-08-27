@@ -22,11 +22,13 @@ const {
   offlineMode,
   platformMetadata,
   saveMetadata,
+  toastError,
   userOS,
 } = vi.hoisted(() => ({
   invoke: vi.fn(),
   openDialog: vi.fn(),
   openPath: vi.fn(),
+  toastError: vi.fn(),
   mentorSettings: { current: { llmProvider: 'openai', llmName: 'gpt-4o' } },
   offlineMode: { current: false },
   // The DM-backed copy of the approval mode; `undefined` data = still loading.
@@ -43,6 +45,10 @@ vi.mock('@tauri-apps/plugin-dialog', () => ({
 }));
 vi.mock('@tauri-apps/plugin-opener', () => ({
   openPath: (...args: unknown[]) => openPath(...args),
+}));
+vi.mock('sonner', () => ({
+  toast: { error: (...args: unknown[]) => toastError(...args) },
+  Toaster: () => null,
 }));
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   useGetUserPlatformMetadataQuery: () => ({ data: platformMetadata.current }),
@@ -639,6 +645,68 @@ describe('CodingModeButton', () => {
       );
 
       expect(openPath).toHaveBeenCalledWith('/home/tester/code/demo');
+    });
+
+    // The button shipped broken once because the opener capability carried no
+    // path scope: every openPath call rejected ("Not allowed to open path …")
+    // and the catch swallowed it — a click that silently did nothing. The
+    // denial must now be visible.
+    it('surfaces an open-folder denial instead of failing silently', async () => {
+      const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+      userOS.current = 'macOS';
+      openPath.mockRejectedValue(
+        new Error('Not allowed to open path /home/tester/code/demo'),
+      );
+      renderButton();
+      await openPopover();
+
+      await userEvent.click(
+        await screen.findByRole('button', { name: /Open in Finder/ }),
+      );
+
+      await waitFor(() =>
+        expect(toastError).toHaveBeenCalledWith('Couldn’t open the folder'),
+      );
+      err.mockRestore();
+    });
+
+    it('surfaces a failed folder pick', async () => {
+      const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+      openDialog.mockRejectedValue(new Error('dialog exploded'));
+      renderButton();
+      await openPopover();
+
+      await userEvent.click(
+        await screen.findByRole('button', { name: /Change folder/ }),
+      );
+
+      await waitFor(() =>
+        expect(toastError).toHaveBeenCalledWith('Couldn’t choose a folder'),
+      );
+      err.mockRestore();
+    });
+
+    it('surfaces a failed new-workspace mint', async () => {
+      const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+      backend();
+      const base = invoke.getMockImplementation()!;
+      invoke.mockImplementation(async (cmd: string, args?: unknown) => {
+        if (cmd === 'new_opencode_workspace') throw new Error('mint failed');
+        return base(cmd, args);
+      });
+      renderButton();
+      await openPopover();
+
+      await userEvent.click(
+        await screen.findByRole('button', { name: /New workspace/ }),
+      );
+
+      await waitFor(() =>
+        expect(toastError).toHaveBeenCalledWith(
+          'Couldn’t create a new workspace',
+        ),
+      );
+      err.mockRestore();
     });
 
     it('names the file manager after the platform', async () => {

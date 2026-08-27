@@ -58,6 +58,8 @@ Thumbs.db
 src-tauri/target/
 src-tauri/gen/android/
 src-tauri/gen/apple/
+src-tauri/.env.*
+!src-tauri/.env.example
 
 # Turbo
 .turbo/

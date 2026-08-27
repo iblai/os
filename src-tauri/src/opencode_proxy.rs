@@ -89,7 +89,8 @@ absent, the signed-in user is not a platform admin and cannot mint one: say so \
 plainly and continue with what does work, rather than asking them for a key.
 - When software you are BUILDING needs raw LLM access, IBLAI_API_KEY doubles as \
 a standard OpenAI api key: point any OpenAI client at \
-`https://asgi.data.<domain>/api/ai-mentor/orgs/<org>/v1` with \
+`https://asgi.data.<domain>/api/ai-mentor/orgs/<org>/v1` (`<domain>` is the \
+platform base domain given in the identity lines below) with \
 `Authorization: Bearer $IBLAI_API_KEY` (chat completions and `GET /models`), \
 keep it server-side, and never ask the user for an OpenAI or Anthropic key. \
 This is for the software you build, never for your own model calls — your own \
@@ -98,7 +99,7 @@ and going around it is not allowed.
 - Never ask the user for a Stripe API key or secret, and never put raw Stripe \
 credentials in code, env files, or the chat. All Stripe work goes through the \
 ibl.ai Stripe proxy at \
-`/api/ai-mentor/orgs/<org>/users/<user_id>/providers/stripe/payments/...`, \
+`https://api.<domain>/dm/api/ai-mentor/orgs/<org>/users/<user_id>/providers/stripe/payments/...`, \
 authenticated with `Authorization: Api-Token $IBLAI_API_KEY`. If the proxy \
 reports that no Stripe credential is configured for the platform, tell the user \
 to connect Stripe in their ibl.ai platform settings — do not collect keys in \
@@ -177,8 +178,33 @@ fn dm_base() -> &'static RwLock<Option<String>> {
 /// fails loudly rather than silently targeting the wrong host.
 const DEFAULT_DM_BASE: &str = "https://base.manager.iblai.app";
 
+/// The platform's base domain — `iblai.app` (production), or whatever a dev
+/// deployment specifies (e.g. `iblai.org`). The ONE value everything else
+/// derives from: the agent's identity bullet tells it to write this as
+/// `DOMAIN` in `iblai.env` (the vibe skills compose every API host from it),
+/// and spawn composes the default streaming upstream `https://asgi.data.<d>`.
+fn platform_domain() -> &'static RwLock<Option<String>> {
+    static D: OnceLock<RwLock<Option<String>>> = OnceLock::new();
+    D.get_or_init(|| RwLock::new(None))
+}
+
+/// The deployment's auth SPA URL (`NEXT_PUBLIC_AUTH_URL`) — the one platform
+/// host NOT derivable from the base domain (`login.iblai.app` on production,
+/// `auth.iblai.org` on the dev platform). Absent → the hardcoded production
+/// default rules.
+fn auth_url() -> &'static RwLock<Option<String>> {
+    static A: OnceLock<RwLock<Option<String>>> = OnceLock::new();
+    A.get_or_init(|| RwLock::new(None))
+}
+
 /// Set the identity attached to forwarded model calls (empty username clears it).
-pub async fn set_learner(username: &str, email: &str, dm_base_url: &str) {
+pub async fn set_learner(
+    username: &str,
+    email: &str,
+    dm_base_url: &str,
+    base_domain: &str,
+    auth_url_value: &str,
+) {
     let name = username.trim();
     // Dev-terminal trace of the frontend→backend hop: no line here during a manual
     // test means the frontend never delivered a learner at all.
@@ -195,6 +221,16 @@ pub async fn set_learner(username: &str, email: &str, dm_base_url: &str) {
     let base = dm_base_url.trim().trim_end_matches('/');
     if !base.is_empty() {
         *dm_base().write().await = Some(base.to_string());
+    }
+    // Same empty-does-not-erase rule as dm_base: a later call carrying only a
+    // username must not strand the session on the default domain.
+    let domain = base_domain.trim();
+    if !domain.is_empty() {
+        *platform_domain().write().await = Some(domain.to_string());
+    }
+    let auth = auth_url_value.trim().trim_end_matches('/');
+    if !auth.is_empty() {
+        *auth_url().write().await = Some(auth.to_string());
     }
 }
 
@@ -217,6 +253,66 @@ async fn dm_base_url() -> String {
         .await
         .clone()
         .unwrap_or_else(|| DEFAULT_DM_BASE.to_string())
+}
+
+/// Find `key` in `KEY=VALUE` text (`#` comments, blank lines OK). Pure so the
+/// parsing is testable without touching the real data dir.
+fn env_file_lookup(text: &str, key: &str) -> Option<String> {
+    text.lines()
+        .map(str::trim)
+        .filter(|l| !l.starts_with('#'))
+        .filter_map(|l| l.split_once('='))
+        .find(|(k, _)| k.trim() == key)
+        .map(|(_, v)| v.trim().to_string())
+        .filter(|v| !v.is_empty())
+}
+
+/// Development-time override files: `src-tauri/.env.local`, then
+/// `src-tauri/.env.production` (keys documented in the committed
+/// `.env.example`, which itself is never loaded — the defaults are hardcoded).
+/// Located via `CARGO_MANIFEST_DIR`, so they exist only on a dev checkout;
+/// installed builds skip straight to the hardcoded defaults, which is the
+/// point — the dev platform (e.g. iblai.org) is a development-time target.
+/// Read per use — it's a dev knob, not a hot path.
+fn local_env(key: &str) -> Option<String> {
+    let manifest = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let candidates = [manifest.join(".env.local"), manifest.join(".env.production")];
+    candidates
+        .iter()
+        .find_map(|p| env_file_lookup(&std::fs::read_to_string(p).ok()?, key))
+}
+
+/// Resolution order shared by both getters: local dev override → the
+/// frontend-delivered holder → the caller's default. Pure so precedence is
+/// testable without process-global env vars.
+fn resolve_setting(local: Option<String>, held: Option<String>) -> Option<String> {
+    local.or(held)
+}
+
+/// The hardcoded production defaults, in force until a `src-tauri/.env.local`
+/// or `.env.production` (or the signed-in frontend) says otherwise.
+const DEFAULT_PLATFORM_DOMAIN: &str = "iblai.app";
+const DEFAULT_AUTH_URL: &str = "https://login.iblai.app";
+
+/// The platform base domain: `src-tauri/.env.local`/`.env.production`
+/// (`IBLAI_PLATFORM_DOMAIN`) → frontend value → hardcoded `iblai.app`.
+pub async fn platform_base_domain() -> String {
+    resolve_setting(
+        local_env("IBLAI_PLATFORM_DOMAIN"),
+        platform_domain().read().await.clone(),
+    )
+    .unwrap_or_else(|| DEFAULT_PLATFORM_DOMAIN.to_string())
+}
+
+/// The auth SPA URL: `src-tauri/.env.local`/`.env.production`
+/// (`IBLAI_AUTH_URL`) → frontend value → hardcoded production
+/// `login.iblai.app`. Always resolves, so the agent is always told where
+/// sign-in lives.
+pub async fn auth_url_value() -> String {
+    resolve_setting(local_env("IBLAI_AUTH_URL"), auth_url().read().await.clone())
+        .unwrap_or_else(|| DEFAULT_AUTH_URL.to_string())
+        .trim_end_matches('/')
+        .to_string()
 }
 
 /// Minted platform API keys, per tenant: `(key, minted_at)`.
@@ -478,7 +574,13 @@ pub async fn unregister(secret: &str) {
 /// The identity bullets appended to the guidance: who is signed in and which
 /// platform the session serves, plus the env vars carrying the same values —
 /// so skills never have to ask (or guess) the username or platform key.
-fn identity_lines(learner: Option<&str>, tenant: Option<&str>, email: Option<&str>) -> String {
+fn identity_lines(
+    learner: Option<&str>,
+    tenant: Option<&str>,
+    email: Option<&str>,
+    base_domain: Option<&str>,
+    auth: Option<&str>,
+) -> String {
     let mut out = String::new();
     if let Some(l) = learner {
         out.push_str(&format!(
@@ -500,6 +602,20 @@ IBLAI_PLATFORM_KEY environment variable) — use it wherever a skill needs the \
 platform key.\n"
         ));
     }
+    if let Some(d) = base_domain {
+        out.push_str(&format!(
+            "- The platform's base domain is `{d}` — when you create or update \
+`iblai.env`, set `DOMAIN={d}`, and wherever guidance or skills mention \
+`<domain>`, use `{d}`.\n"
+        ));
+    }
+    if let Some(a) = auth {
+        out.push_str(&format!(
+            "- The platform's sign-in (auth SPA) URL is `{a}` — use it for \
+`NEXT_PUBLIC_AUTH_URL` in apps you build, and never derive an auth host from \
+the domain.\n"
+        ));
+    }
     out
 }
 
@@ -513,6 +629,8 @@ fn inject_system_guidance(
     learner: Option<&str>,
     tenant: Option<&str>,
     email: Option<&str>,
+    base_domain: Option<&str>,
+    auth: Option<&str>,
 ) -> Option<Vec<u8>> {
     let mut v: serde_json::Value = serde_json::from_slice(body).ok()?;
     let messages = v.get_mut("messages")?.as_array_mut()?;
@@ -529,7 +647,7 @@ fn inject_system_guidance(
         .count();
     let content = format!(
         "{IBLAI_INSTRUCTIONS}{}",
-        identity_lines(learner, tenant, email)
+        identity_lines(learner, tenant, email, base_domain, auth)
     );
     messages.insert(
         at,
@@ -637,7 +755,20 @@ async fn forward(req: Request) -> Response {
     let bytes = if inject && path == "chat/completions" {
         let tenant_line = (!tenant.is_empty()).then_some(tenant.as_str());
         let email = learner_email_address().await;
-        match inject_system_guidance(&bytes, learner.as_deref(), tenant_line, email.as_deref()) {
+        // The ONE domain everything derives from and the auth SPA URL (the
+        // sole non-derivable host) — both resolved, so both bullets are always
+        // present: production values unless a dev override or the signed-in
+        // frontend says otherwise.
+        let domain = platform_base_domain().await;
+        let auth = auth_url_value().await;
+        match inject_system_guidance(
+            &bytes,
+            learner.as_deref(),
+            tenant_line,
+            email.as_deref(),
+            Some(domain.as_str()),
+            Some(auth.as_str()),
+        ) {
             Some(patched) => axum::body::Bytes::from(patched),
             None => bytes,
         }
@@ -840,6 +971,16 @@ mod tests {
             .unwrap_or_else(|e| e.into_inner())
     }
 
+    /// Serializes the tests that write the process-global learner/dm_base/
+    /// domain/auth holders — run in parallel they interleave set-then-assert
+    /// sequences on the same statics and flake.
+    fn learner_state_lock() -> std::sync::MutexGuard<'static, ()> {
+        static L: OnceLock<std::sync::Mutex<()>> = OnceLock::new();
+        L.get_or_init(|| std::sync::Mutex::new(()))
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+    }
+
     /// The credit gate lives upstream: when the DM answers 402 on
     /// `chat/completions`, the agent must receive that 402 and its body EXACTLY.
     /// The proxy swaps auth — it never rewrites outcomes.
@@ -925,7 +1066,8 @@ mod tests {
         })
         .to_string();
 
-        let out = inject_system_guidance(body.as_bytes(), None, None, None).expect("must inject");
+        let out = inject_system_guidance(body.as_bytes(), None, None, None, None, None)
+            .expect("must inject");
         let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
         let msgs = v["messages"].as_array().unwrap();
 
@@ -953,7 +1095,7 @@ mod tests {
         })
         .to_string();
 
-        let out = inject_system_guidance(body.as_bytes(), None, None, None).unwrap();
+        let out = inject_system_guidance(body.as_bytes(), None, None, None, None, None).unwrap();
         let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
         assert_eq!(v["messages"][0]["role"], "system");
         assert_eq!(v["messages"][1]["role"], "user");
@@ -963,18 +1105,32 @@ mod tests {
     /// guidance patch must never break the model call it rides on.
     #[test]
     fn unpatchable_bodies_are_left_untouched() {
-        assert!(inject_system_guidance(b"not json at all", None, None, None).is_none());
-        assert!(
-            inject_system_guidance(br#"{"prompt": "legacy completions"}"#, None, None, None).is_none()
-        );
+        assert!(inject_system_guidance(b"not json at all", None, None, None, None, None).is_none());
+        assert!(inject_system_guidance(
+            br#"{"prompt": "legacy completions"}"#,
+            None,
+            None,
+            None,
+            None,
+            None
+        )
+        .is_none());
 
         // Already carrying the guidance → not doubled, identity or not.
         let body = serde_json::json!({
             "messages": [{ "role": "system", "content": IBLAI_INSTRUCTIONS }]
         })
         .to_string();
-        assert!(inject_system_guidance(body.as_bytes(), None, None, None).is_none());
-        assert!(inject_system_guidance(body.as_bytes(), Some("codey"), Some("acme"), None).is_none());
+        assert!(inject_system_guidance(body.as_bytes(), None, None, None, None, None).is_none());
+        assert!(inject_system_guidance(
+            body.as_bytes(),
+            Some("codey"),
+            Some("acme"),
+            None,
+            Some("iblai.org"),
+            None
+        )
+        .is_none());
     }
 
     /// The agent must be TOLD who it acts for: the identity bullets carry the
@@ -991,6 +1147,8 @@ mod tests {
             Some("codey"),
             Some("acme"),
             Some("codey@example.com"),
+            Some("iblai.org"),
+            Some("https://auth.iblai.org"),
         )
         .unwrap();
         let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
@@ -1006,18 +1164,33 @@ mod tests {
             content.contains("email address is `codey@example.com`"),
             "{content}"
         );
+        // The ONE domain the agent derives everything from, and the sole
+        // non-derivable host beside it.
+        assert!(content.contains("base domain is `iblai.org`"), "{content}");
+        assert!(content.contains("DOMAIN=iblai.org"), "{content}");
+        assert!(
+            content.contains("auth SPA) URL is `https://auth.iblai.org`"),
+            "{content}"
+        );
+        assert!(content.contains("NEXT_PUBLIC_AUTH_URL"), "{content}");
 
         // No identity known → the guidance is exactly the base text, no stubs.
-        let out = inject_system_guidance(body.as_bytes(), None, None, None).unwrap();
+        let out = inject_system_guidance(body.as_bytes(), None, None, None, None, None).unwrap();
         let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
         assert_eq!(v["messages"][0]["content"], IBLAI_INSTRUCTIONS);
 
         // Each line stands alone when only one part of the identity is known.
-        assert!(identity_lines(Some("codey"), None, None).contains("IBLAI_USERNAME"));
-        assert!(!identity_lines(Some("codey"), None, None).contains("IBLAI_PLATFORM_KEY"));
-        assert!(identity_lines(None, Some("acme"), None).contains("IBLAI_PLATFORM_KEY"));
-        assert!(identity_lines(None, None, Some("a@b.c")).contains("email address is `a@b.c`"));
-        assert_eq!(identity_lines(None, None, None), "");
+        assert!(identity_lines(Some("codey"), None, None, None, None).contains("IBLAI_USERNAME"));
+        assert!(
+            !identity_lines(Some("codey"), None, None, None, None).contains("IBLAI_PLATFORM_KEY")
+        );
+        assert!(identity_lines(None, Some("acme"), None, None, None).contains("IBLAI_PLATFORM_KEY"));
+        assert!(identity_lines(None, None, Some("a@b.c"), None, None)
+            .contains("email address is `a@b.c`"));
+        let domain_only = identity_lines(None, None, None, Some("iblai.app"), None);
+        assert!(domain_only.contains("DOMAIN=iblai.app"), "{domain_only}");
+        assert!(!domain_only.contains("auth SPA"), "{domain_only}");
+        assert_eq!(identity_lines(None, None, None, None, None), "");
     }
 
     /// The env-var half of the same contract: what spawn exports as
@@ -1025,27 +1198,87 @@ mod tests {
     /// the variable is not set at all rather than set to "".
     #[tokio::test]
     async fn the_signed_in_learner_is_exposed_for_the_child_env() {
-        set_learner("codey", "codey@example.com", "https://dm.example/dm").await;
+        let _state = learner_state_lock();
+        set_learner(
+            "codey",
+            "codey@example.com",
+            "https://dm.example/dm",
+            " iblai.org ",
+            "https://auth.iblai.org/",
+        )
+        .await;
         assert_eq!(learner_username().await.as_deref(), Some("codey"));
         assert_eq!(
             learner_email_address().await.as_deref(),
             Some("codey@example.com")
         );
-        set_learner("   ", "  ", "").await;
+        // Trimmed on the way in; the auth URL also loses its trailing slash.
+        // (Asserted on the holders, not the resolved getters, so a dev
+        // machine's IBLAI_* override env cannot flake this test.)
+        assert_eq!(
+            platform_domain().read().await.as_deref(),
+            Some("iblai.org")
+        );
+        assert_eq!(
+            auth_url().read().await.as_deref(),
+            Some("https://auth.iblai.org")
+        );
+        set_learner("   ", "  ", "", "", "").await;
         assert_eq!(learner_username().await, None);
         assert_eq!(learner_email_address().await, None);
         // An empty base must not erase a good one — a later call that only
         // carries a username would otherwise strand minting on the default host.
+        // Same rule for the domain and auth URL.
         assert_eq!(dm_base_url().await, "https://dm.example/dm");
+        assert_eq!(
+            platform_domain().read().await.as_deref(),
+            Some("iblai.org")
+        );
+        assert_eq!(
+            auth_url().read().await.as_deref(),
+            Some("https://auth.iblai.org")
+        );
     }
 
     /// The DM host is only knowable from the frontend, but minting must still
     /// aim somewhere sane before it arrives.
     #[tokio::test]
     async fn the_dm_base_falls_back_and_loses_its_trailing_slash() {
-        set_learner("codey", "", "https://api.iblai.app/dm/").await;
+        let _state = learner_state_lock();
+        set_learner("codey", "", "https://api.iblai.app/dm/", "", "").await;
         assert_eq!(dm_base_url().await, "https://api.iblai.app/dm");
         assert!(DEFAULT_DM_BASE.starts_with("https://"));
+    }
+
+    /// The dev-override chain is pure precedence plus a tiny KEY=VALUE parser —
+    /// tested without touching the process env or the real data dir.
+    #[test]
+    fn the_dev_override_outranks_the_frontend_and_the_default_holds() {
+        assert_eq!(
+            resolve_setting(Some("iblai.org".into()), Some("iblai.app".into())).as_deref(),
+            Some("iblai.org")
+        );
+        assert_eq!(
+            resolve_setting(None, Some("iblai.app".into())).as_deref(),
+            Some("iblai.app")
+        );
+        // Nothing anywhere → the caller's default rules (`iblai.app` for the
+        // domain, `None` — say nothing — for the auth URL).
+        assert_eq!(resolve_setting(None, None), None);
+
+        let file = "# dev overrides\nIBLAI_PLATFORM_DOMAIN = iblai.org\nIBLAI_AUTH_URL=\n";
+        assert_eq!(
+            env_file_lookup(file, "IBLAI_PLATFORM_DOMAIN").as_deref(),
+            Some("iblai.org")
+        );
+        assert_eq!(env_file_lookup(file, "IBLAI_AUTH_URL"), None, "empty value = unset");
+        assert_eq!(env_file_lookup(file, "MISSING"), None);
+        assert_eq!(env_file_lookup("# IBLAI_PLATFORM_DOMAIN=x\n", "IBLAI_PLATFORM_DOMAIN"), None);
+
+        // The hardcoded production defaults — in force until a
+        // src-tauri/.env.local or .env.production overrides them.
+        assert_eq!(DEFAULT_PLATFORM_DOMAIN, "iblai.app");
+        assert_eq!(DEFAULT_AUTH_URL, "https://login.iblai.app");
     }
 
     /// Naming the key after the device keeps two of the user's machines from
@@ -1318,7 +1551,12 @@ mod tests {
             "the v1-key-for-built-apps-not-own-inference rule must survive edits: {text}"
         );
         assert!(
+            text.contains("platform base domain given in the identity lines"),
+            "the one-domain resolution note must survive edits: {text}"
+        );
+        assert!(
             text.contains("providers/stripe/payments")
+                && text.contains("https://api.<domain>/dm")
                 && text.contains("Never ask the user for a Stripe")
                 && text.contains("platform settings"),
             "the no-Stripe-keys-in-chat rule must survive edits: {text}"

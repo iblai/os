@@ -26,6 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
@@ -427,6 +428,7 @@ export function CodingModeButton({
       }
     } catch (e) {
       console.error('[coding-mode] folder pick failed', e);
+      toast.error(t('pickFolderFailed'));
     }
   };
 
@@ -449,6 +451,7 @@ export function CodingModeButton({
       }
     } catch (e) {
       console.error('[coding-mode] new workspace failed', e);
+      toast.error(t('newWorkspaceFailed'));
     }
   };
 
@@ -459,7 +462,10 @@ export function CodingModeButton({
       const { openPath } = await import('@tauri-apps/plugin-opener');
       await openPath(workspace);
     } catch (e) {
+      // A denial here is a capability-scope problem (see the pinned entry in
+      // src-tauri/capabilities/default.json) — surface it, don't shrug.
       console.error('[coding-mode] could not open workspace', e);
+      toast.error(t('openFolderFailed'));
     }
   };
 

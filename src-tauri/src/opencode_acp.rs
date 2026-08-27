@@ -29,10 +29,14 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{Child, ChildStdin, Command};
 use tokio::sync::{oneshot, Mutex};
 
-/// Default ibl.ai ASGI streaming host — the OpenAI-compatible chat/completions
-/// stream is served HERE, not the `api.iblai.app/dm` gateway (which 500s on chat).
-/// Full model endpoint: `{API_BASE}/api/ai-mentor/orgs/<tenant>/v1`.
-const DEFAULT_API_BASE: &str = "https://asgi.data.iblai.app";
+/// The ASGI streaming host, composed from the platform base domain — the
+/// OpenAI-compatible chat/completions stream is served HERE, not the
+/// `api.<domain>/dm` gateway (which 500s on chat). Full model endpoint:
+/// `{default_api_base(..)}/api/ai-mentor/orgs/<tenant>/v1`. With the default
+/// domain this is exactly the historical `https://asgi.data.iblai.app`.
+fn default_api_base(platform_domain: &str) -> String {
+    format!("https://asgi.data.{platform_domain}")
+}
 
 /// Coalesce assistant-token emits to at most one per this window — the buffer that
 /// keeps a fast opencode stream from re-render-storming (and freezing) the webview,
@@ -2093,7 +2097,13 @@ async fn spawn_session(
         };
         (url, "local".to_string(), name, None)
     } else {
-        let api_base = api_base.unwrap_or_else(|| DEFAULT_API_BASE.to_string());
+        // Per-request `api_base` (future SDK plumbing) outranks; otherwise the
+        // host is composed from the one platform base domain the frontend (or
+        // a local dev override) delivered — `iblai.app` by default.
+        let api_base = match api_base.filter(|b| !b.trim().is_empty()) {
+            Some(b) => b,
+            None => default_api_base(&crate::opencode_proxy::platform_base_domain().await),
+        };
         let upstream = format!(
             "{}/api/ai-mentor/orgs/{}/v1",
             api_base.trim_end_matches('/'),
@@ -2715,24 +2725,33 @@ pub async fn opencode_close(session_id: String) -> Result<(), String> {
     Ok(())
 }
 
-/// Record who is signed in and where the DM API lives.
+/// Record who is signed in and where the platform lives.
 ///
 /// The model proxy appends the username as `learner_id=<username>` on every
 /// OpenAI-compat request it forwards, so upstream usage is attributed to the
 /// learner, and surfaces the email to the agent so skills never ask for it.
 /// `dm_base` is the manager host (`config.dmUrl()`): the backend only ever sees
 /// the streaming-completions host otherwise, which doesn't serve `/api/core`.
-/// Both extras are optional so an older frontend keeps working.
+/// `platform_domain` is the ONE value code mode derives its hosts from
+/// (`iblai.app` unless a dev deployment says otherwise): it reaches the agent
+/// as an identity bullet (→ `iblai.env`'s `DOMAIN`) and composes the default
+/// streaming upstream `https://asgi.data.<domain>`. `auth_url` is the sole
+/// non-derivable host (`NEXT_PUBLIC_AUTH_URL`), surfaced only when set.
+/// All extras are optional so an older frontend keeps working.
 #[command]
 pub async fn set_opencode_learner(
     username: String,
     email: Option<String>,
     dm_base: Option<String>,
+    platform_domain: Option<String>,
+    auth_url: Option<String>,
 ) {
     crate::opencode_proxy::set_learner(
         &username,
         email.as_deref().unwrap_or_default(),
         dm_base.as_deref().unwrap_or_default(),
+        platform_domain.as_deref().unwrap_or_default(),
+        auth_url.as_deref().unwrap_or_default(),
     )
     .await;
 }
@@ -3100,6 +3119,45 @@ mod tests {
         assert!(
             a.chars().all(|c| c.is_ascii_alphanumeric() || c == '-'),
             "must be usable as a folder name: {a}"
+        );
+    }
+
+    /// The Open-folder button broke once because this capability was a bare
+    /// string: `"opener:allow-open-path"` enables the command but carries NO
+    /// path scope, so `open_path` denied every path ("Not allowed to open
+    /// path …"). Independently, unix glob `**` refuses to cross a `.`-leading
+    /// component unless the opener plugin's `requireLiteralLeadingDot` is
+    /// false — and the default workspaces live under `~/.local/share/…`.
+    /// Pin both halves of the fix.
+    #[test]
+    fn the_open_path_capability_keeps_a_home_covering_scope() {
+        let manifest = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+        let caps: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(manifest.join("capabilities/default.json")).unwrap(),
+        )
+        .unwrap();
+        let entry = caps["permissions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|p| p["identifier"] == "opener:allow-open-path")
+            .expect("opener:allow-open-path must be a scoped object, not a bare string");
+        let allow = entry["allow"].as_array().expect("must carry an allow scope");
+        assert!(
+            allow
+                .iter()
+                .any(|e| e["path"].as_str().is_some_and(|p| p.starts_with("$HOME"))),
+            "the scope must cover $HOME so workspace folders can open: {allow:?}"
+        );
+
+        let conf: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(manifest.join("tauri.conf.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            conf["plugins"]["opener"]["requireLiteralLeadingDot"],
+            serde_json::Value::Bool(false),
+            "without this, $HOME/** cannot match ~/.local/share/iblai/workspaces"
         );
     }
 

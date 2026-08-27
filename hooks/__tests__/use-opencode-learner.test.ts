@@ -11,11 +11,12 @@ import { useOpencodeLearner } from '../use-opencode-learner';
  * desktop app.
  */
 
-const { invoke, inTauri, username, email } = vi.hoisted(() => ({
+const { invoke, inTauri, username, email, authUrlEnv } = vi.hoisted(() => ({
   invoke: vi.fn(),
   inTauri: { current: true },
   username: { current: null as string | null },
   email: { current: null as string | null },
+  authUrlEnv: { current: 'https://auth.test' },
 }));
 
 vi.mock('@tauri-apps/api/core', () => ({
@@ -34,7 +35,15 @@ vi.mock('@/lib/config', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/config')>();
   return {
     ...actual,
-    config: { ...actual.config, dmUrl: () => 'https://dm.test/dm' },
+    // Raw env read: '' when the deployment sets nothing (the backend then
+    // says nothing about auth and its iblai.app defaults rule).
+    getEnv: (key: string) =>
+      key === 'NEXT_PUBLIC_AUTH_URL' ? authUrlEnv.current : '',
+    config: {
+      ...actual.config,
+      dmUrl: () => 'https://dm.test/dm',
+      platformBaseDomain: () => 'test.domain',
+    },
   };
 });
 
@@ -45,6 +54,7 @@ describe('useOpencodeLearner', () => {
     inTauri.current = true;
     username.current = null;
     email.current = null;
+    authUrlEnv.current = 'https://auth.test';
   });
 
   it('tells the backend who is signed in, and how to reach DM', async () => {
@@ -59,6 +69,10 @@ describe('useOpencodeLearner', () => {
         // The backend only ever sees the completions host otherwise, which
         // does not serve the API that mints the agent's platform key.
         dmBase: 'https://dm.test/dm',
+        // The ONE domain code mode derives its hosts from, and the sole
+        // non-derivable host beside it.
+        platformDomain: 'test.domain',
+        authUrl: 'https://auth.test',
       }),
     );
   });
@@ -73,6 +87,8 @@ describe('useOpencodeLearner', () => {
         username: '',
         email: '',
         dmBase: 'https://dm.test/dm',
+        platformDomain: 'test.domain',
+        authUrl: 'https://auth.test',
       }),
     );
   });
@@ -86,7 +102,24 @@ describe('useOpencodeLearner', () => {
         username: 'myuser',
         email: '',
         dmBase: 'https://dm.test/dm',
+        platformDomain: 'test.domain',
+        authUrl: 'https://auth.test',
       }),
+    );
+  });
+
+  it('sends an empty auth URL when the deployment sets none', async () => {
+    // Raw passthrough: unset env must arrive as '', not a guessed host — the
+    // backend treats '' as "say nothing, iblai.app defaults rule".
+    authUrlEnv.current = '';
+    username.current = 'myuser';
+    renderHook(() => useOpencodeLearner());
+
+    await waitFor(() =>
+      expect(invoke).toHaveBeenCalledWith(
+        'set_opencode_learner',
+        expect.objectContaining({ authUrl: '' }),
+      ),
     );
   });
 

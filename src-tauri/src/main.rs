@@ -126,7 +126,8 @@ fn open_oauth_in_popup(url: &str, app_handle: &AppHandle, title: &str) -> Result
         println!("[OAuth Popup] Navigation to: {}", url_str);
 
         // Check if this is a callback URL (auth completed)
-        let is_callback = url_str.contains("login.iblai.app")
+        let is_callback = (url_str.contains("login.iblai.app")
+            || url_str.contains("auth.iblai.org"))
             && (url_str.contains("/callback")
                 || url_str.contains("code=")
                 || url_str.contains("token=")
