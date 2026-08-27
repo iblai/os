@@ -85,6 +85,7 @@ import {
   getTenantMetadata,
   setTenantMetadataFlag,
   restoreTenantMetadata,
+  isMetadataValueEquivalent,
 } from '../utils/tenant-metadata';
 import { DM_URL } from '../fixtures/test-data';
 
@@ -170,20 +171,34 @@ test.describe.serial('Journey 71: Sidebar Support Link & Help Center', () => {
 
       // Belt-and-braces: every mutating test already undoes its own
       // change, this is the journey-level safety net for anything that
-      // crashed before reaching its own restore. Single atomic PATCH of
-      // the ENTIRE captured blob — never a partial write of just the
-      // keys this journey touched.
-      await restoreTenantMetadata(page, tenantKey, originalMetadata);
+      // crashed before reaching its own restore. The DM metadata endpoint
+      // MERGES on both PATCH and PUT (verified directly against the live
+      // API — there is no delete operation, not even via `null`), so this
+      // only ever writes the exact keys this journey could have touched —
+      // never a whole-blob PATCH, which would risk stomping a concurrent
+      // journey's legitimate change to a key that happens to also appear
+      // in this journey's stale snapshot.
+      await restoreTenantMetadata(
+        page,
+        tenantKey,
+        SUPPORT_RELATED_KEYS,
+        originalMetadata,
+      );
 
       // Prove the restore actually worked: re-fetch and compare every
       // support/help-center-related key against what was captured before
-      // this journey touched anything.
+      // this journey touched anything. Compared for BEHAVIORAL equivalence,
+      // not raw identity — absent and `''` are the same thing to the app,
+      // as are absent and `show_help: true` (see `isMetadataValueEquivalent`).
+      // This still catches a genuine leak: `show_help: false` surviving, or
+      // a stray `docs.e2e-...example` value remaining, are NOT equivalent
+      // to their originals and will fail this assertion.
       const restored = await getTenantMetadata(page, tenantKey);
       for (const key of SUPPORT_RELATED_KEYS) {
         expect(
-          restored[key],
-          `tenant metadata key "${key}" must match its pre-suite value after restore (restore verification)`,
-        ).toEqual(originalMetadata![key]);
+          isMetadataValueEquivalent(key, restored[key], originalMetadata![key]),
+          `tenant metadata key "${key}" must be behaviorally equivalent to its pre-suite value after restore (restore verification) — got ${JSON.stringify(restored[key])}, expected equivalent of ${JSON.stringify(originalMetadata![key])}`,
+        ).toBe(true);
       }
     } finally {
       await context.close().catch(() => undefined);
@@ -215,15 +230,13 @@ test.describe.serial('Journey 71: Sidebar Support Link & Help Center', () => {
     page,
     sidebarPage,
   }) => {
-    // Idempotent precondition: no documentation_url / show_help override
-    // — matches the BASELINE tenant state (both absent).
-    await setTenantMetadataFlag(
-      page,
-      tenantKey,
-      'documentation_url',
-      undefined,
-    );
-    await setTenantMetadataFlag(page, tenantKey, 'show_help', undefined);
+    // Idempotent precondition: neutral documentation_url / show_help —
+    // BEHAVIORALLY equivalent to "absent" (the DM API merges and can never
+    // actually remove a key — see tenant-metadata.ts — so `undefined` here
+    // would be a no-op and leave a leaked value from an earlier test/run in
+    // place; write the explicit neutral value instead).
+    await setTenantMetadataFlag(page, tenantKey, 'documentation_url', '');
+    await setTenantMetadataFlag(page, tenantKey, 'show_help', true);
     await navigateToMentorApp(page);
     await waitForPageReady(page);
 
@@ -272,11 +285,12 @@ test.describe.serial('Journey 71: Sidebar Support Link & Help Center', () => {
         `https://${TEST_DOC_URL_NO_SCHEME}`,
       );
     } finally {
+      // Neutral restore, not `undefined` — see the note above.
       await setTenantMetadataFlag(
         page,
         tenantKey,
         'documentation_url',
-        undefined,
+        '',
       ).catch(() => undefined);
     }
   });
@@ -298,12 +312,10 @@ test.describe.serial('Journey 71: Sidebar Support Link & Help Center', () => {
       await sidebarPage.ensureCollapsed(20_000);
       expect(await sidebarPage.isSupportLinkVisible(5_000)).toBe(false);
     } finally {
-      await setTenantMetadataFlag(
-        page,
-        tenantKey,
-        'show_help',
-        undefined,
-      ).catch(() => undefined);
+      // Neutral restore, not `undefined` — see the note above shc-01/02.
+      await setTenantMetadataFlag(page, tenantKey, 'show_help', true).catch(
+        () => undefined,
+      );
     }
 
     // Restoring (removing the override) brings the link back — assert
@@ -353,7 +365,13 @@ test.describe.serial('Journey 71: Sidebar Support Link & Help Center', () => {
     navbarPage,
   }) => {
     try {
-      await setTenantMetadataFlag(page, tenantKey, 'support_url', undefined);
+      // Must be an explicit neutral value, not `undefined` — the API
+      // merges and can't remove a key, so `undefined` would leave
+      // `support_url` at whatever shc-06 just set it to, which (being
+      // truthy) would always win over `help_center_url` in the app's
+      // `support_url || help_center_url` fallback chain and mask this
+      // checkpoint entirely.
+      await setTenantMetadataFlag(page, tenantKey, 'support_url', '');
       await setTenantMetadataFlag(
         page,
         tenantKey,
@@ -366,12 +384,41 @@ test.describe.serial('Journey 71: Sidebar Support Link & Help Center', () => {
       await navbarPage.openProfileDropdown();
       await expect(navbarPage.helpItem).toBeVisible({ timeout: 10_000 });
 
-      const [newPage] = await Promise.all([
-        page.context().waitForEvent('page', { timeout: 10_000 }),
-        navbarPage.helpItem.click(),
-      ]);
-      expect(newPage.url()).toBe(`https://${TEST_HELP_CENTER_URL_NO_SCHEME}`);
-      await newPage.close();
+      // `TEST_HELP_CENTER_URL_NO_SCHEME` is a fictional domain (it will
+      // never resolve via real DNS) — unlike shc-06's BASELINE_SUPPORT_URL,
+      // which is a real, always-resolvable domain. Without a route stub the
+      // opened tab hits a real DNS failure and its URL becomes Chrome's own
+      // `chrome-error://chromewebdata/` page before this assertion ever
+      // runs a chance to see the intended destination. Stubbing only this
+      // synthetic host — not any part of the app under test — lets the
+      // checkpoint verify the RESOLVED destination without depending on an
+      // external, made-up domain actually existing.
+      const fakeHelpCenterOrigin = `https://${TEST_HELP_CENTER_URL_NO_SCHEME}`;
+      await page.context().route(`${fakeHelpCenterOrigin}/**`, (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'text/html',
+          body: '<html><body>e2e stub</body></html>',
+        }),
+      );
+
+      let newPage;
+      try {
+        [newPage] = await Promise.all([
+          page.context().waitForEvent('page', { timeout: 10_000 }),
+          navbarPage.helpItem.click(),
+        ]);
+        await newPage
+          .waitForLoadState('load', { timeout: 10_000 })
+          .catch(() => undefined);
+        // Browsers normalize a bare-host navigation to include a trailing
+        // `/` once loaded, so compare with that stripped rather than
+        // demanding an exact string match.
+        expect(newPage.url().replace(/\/$/, '')).toBe(fakeHelpCenterOrigin);
+        await newPage.close();
+      } finally {
+        await page.context().unroute(`${fakeHelpCenterOrigin}/**`);
+      }
     } finally {
       await setTenantMetadataFlag(
         page,
@@ -379,12 +426,9 @@ test.describe.serial('Journey 71: Sidebar Support Link & Help Center', () => {
         'support_url',
         BASELINE_SUPPORT_URL,
       ).catch(() => undefined);
-      await setTenantMetadataFlag(
-        page,
-        tenantKey,
-        'help_center_url',
-        undefined,
-      ).catch(() => undefined);
+      await setTenantMetadataFlag(page, tenantKey, 'help_center_url', '').catch(
+        () => undefined,
+      );
     }
   });
 });
