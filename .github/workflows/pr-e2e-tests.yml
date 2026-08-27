@@ -4,25 +4,14 @@ on:
   pull_request:
     branches: [main]
     types: [labeled, unlabeled, synchronize]
-    paths:
-      - 'app/**'
-      - 'components/**'
-      - 'hooks/**'
-      - 'lib/**'
-      - 'store/**'
-      - 'styles/**'
-      - 'public/**'
-      - 'e2e/**'
-      - 'src-tauri/**'
-      - '__tests__/**'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'next.config.*'
-      - 'tsconfig*.json'
-      - 'tailwind.config.*'
-      - 'postcss.config.*'
-      - 'vitest.config.*'
-      - 'playwright.config.*'
+    # NO `paths:` filter — deliberately. `pr-gate.yml` posts the required
+    # `PR Validation` status as *pending* whenever the run-tests label is present,
+    # then resolves it from this workflow's `workflow_run` completion. A paths
+    # filter here makes the two disagree: a labelled PR touching no listed path
+    # never starts this workflow, so `workflow_run` never fires and the required
+    # status stays pending forever with no way to clear it (os#462 sat blocked on
+    # `providers/index.tsx`, which no pattern matched). The label is already the
+    # deliberate opt-in; a second, narrower gate here only creates that deadlock.
 
 run-name: 'PR E2E — mentor #${{ github.event.pull_request.number }} → stg1 (chrome)'
 
