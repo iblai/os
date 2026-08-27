@@ -327,6 +327,14 @@
     "renaming": "Renaming...",
     "save": "Save"
   },
+  "canvasBinaryCanvas": {
+    "untitledFile": "Untitled file",
+    "export": "Export",
+    "loadError": "Couldn't load this file.",
+    "retry": "Retry",
+    "previewUnavailable": "We can't preview this kind of file just yet — but it's ready to go. Hit Export to save it to your device.",
+    "previewFailed": "This file can't be previewed — it appears to be invalid or corrupted. You can still export it."
+  },
   "canvasCanvasControls": {
     "lengthLongest": "Longest",
     "lengthLonger": "Longer",
@@ -1922,12 +1930,7 @@
   },
   "tabsSandboxTab": {
     "heading": "Sandbox",
-    "description": "Configure sandbox connection and deployment settings.",
-    "capabilityTitle": "Dedicated sandbox",
-    "capabilityDescription": "Give this agent its own secure workspace where it can run code, tools, and skills on your behalf. When on, connect it to an instance below to unlock skills and agent prompts.",
-    "capabilityOffHint": "Turn it on to give this agent a workspace and connect it to an instance.",
-    "toggleSuccess": "Sandbox setting updated",
-    "toggleError": "Couldn't update sandbox setting"
+    "description": "Configure sandbox connection and deployment settings."
   },
   "tabsGraderTab": {
     "headerTitle": "Grader",

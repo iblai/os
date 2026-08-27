@@ -2,17 +2,19 @@
 
 import React, { useEffect, useRef } from 'react';
 import { CanvasComponent } from '@/components/canvas/canvas-component';
+import { BinaryCanvasComponent } from '@/components/canvas/binary-canvas-component';
 // import { CodeCanvasComponent } from '@/components/canvas/code-canvas-component';
 
 interface CanvasViewProps {
   onClose: () => void;
   canvasTitle?: string;
   canvasContent?: string;
-  canvasType: 'document' | 'code';
+  canvasType: 'document' | 'code' | 'binary';
   artifactId?: number;
   org?: string;
   userId?: string;
   fileExtension?: string;
+  mimeType?: string;
   metadata?: Record<string, unknown>;
   sessionId?: string;
   tenantKey?: string;
@@ -31,7 +33,8 @@ export function CanvasView({
   artifactId,
   org,
   userId,
-  // fileExtension,
+  fileExtension,
+  mimeType,
   metadata,
   sessionId,
   tenantKey,
@@ -68,6 +71,23 @@ export function CanvasView({
     const componentKey = artifactId
       ? `${canvasType}-${artifactId}-${refreshKeyRef.current}`
       : `${canvasType}-${refreshKeyRef.current || Date.now()}`;
+
+    // Binary artifacts (pdf, images, …) get the read-only viewer: no rich
+    // text editing, no highlight-to-edit, no toolbar — just view + export.
+    if (canvasType === 'binary') {
+      return (
+        <BinaryCanvasComponent
+          key={componentKey}
+          title={canvasTitle}
+          onClose={onClose}
+          artifactId={artifactId}
+          org={org}
+          userId={userId}
+          fileExtension={fileExtension}
+          mimeType={mimeType}
+        />
+      );
+    }
 
     // if (canvasType === 'code') {
     //   return (

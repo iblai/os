@@ -175,6 +175,18 @@ describe('CSP middleware', () => {
     expect(directive('frame-src')).not.toContain('https://api.github.com');
   });
 
+  it('allows blob: in frame-src (binary-artifact PDF preview iframe)', () => {
+    const csp = cspOf(middleware(req())) ?? '';
+    const frameSrc = csp
+      .split(';')
+      .map((d) => d.trim())
+      .find((d) => d.startsWith('frame-src '));
+    // The binary canvas renders PDFs via <iframe src="blob:...">; without
+    // blob: here the enforced CSP blocks the viewer ("This content is
+    // blocked") even though exporting the same blob works.
+    expect(frameSrc).toContain('blob:');
+  });
+
   it('does not duplicate an ibl-domain API base (already wildcarded)', () => {
     vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', 'https://api.iblai.app');
     const csp = cspOf(middleware(req())) ?? '';

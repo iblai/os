@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.132.0](https://github.com/iblai/os/compare/v0.131.0...v0.132.0) (2026-08-27)
+
+### Features
+
+- **mentor:** adding sandbox and canvas upgrades ([1f9373d](https://github.com/iblai/os/commit/1f9373dcb8a7627868c4d45b4d93deffd8c62774))
+
+### Bug Fixes
+
+- **mentorai:** adding test for artifacts ([9ec855e](https://github.com/iblai/os/commit/9ec855efeed21b32291a57915e1baa62aa60467d))
+
 ## [0.131.0](https://github.com/iblai/os/compare/v0.130.4...v0.131.0) (2026-08-25)
 
 ### Features
