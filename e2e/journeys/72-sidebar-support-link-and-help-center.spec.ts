@@ -1,5 +1,5 @@
 /**
- * Journey 71 — Sidebar Support Link & Help Center Resolution (#uat-9)
+ * Journey 72 — Sidebar Support Link & Help Center Resolution (#uat-9)
  *
  * UAT bug: the sidebar footer's "Support" link (and the nav-bar "More
  * options → Help" menu item) were hardcoded to `https://ibl.ai/docs`
@@ -122,7 +122,7 @@ const SUPPORT_RELATED_KEYS = [
 
 // ─── Suite ───────────────────────────────────────────────────────────────
 
-test.describe.serial('Journey 71: Sidebar Support Link & Help Center', () => {
+test.describe.serial('Journey 72: Sidebar Support Link & Help Center', () => {
   test.setTimeout(180_000);
 
   let tenantKey = '';

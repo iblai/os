@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-08-26 | 684 checkpoints (653 covered, 8 pending/fixme, 11 not-reproducible in default env, 12 deprecated) | 73 journeys (72 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-08-28 | 690 checkpoints (655 covered, 8 pending/fixme, 15 not-reproducible in default env, 12 deprecated) | 74 journeys (73 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -176,9 +176,11 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 10: Canvas — AI Document Editor (11 checkpoints) — `journeys/10-canvas-ai-document-editor.spec.ts`
+## Journey 10: Canvas — AI Document Editor (15 checkpoints; 2 not-reproducible) — `journeys/10-canvas-ai-document-editor.spec.ts`
 
-**Source files:** `components/canvas/canvas-component.tsx`, `components/canvas/canvas-rich-text-editor.tsx`, `components/canvas/canvas-view.tsx`, `components/canvas/canvas-controls.tsx`, `components/canvas/canvas-export-handlers.tsx`, `hooks/use-canvas-aware-send.ts`, `hooks/use-canvas-version-navigation.tsx`
+**Source files:** `components/canvas/canvas-component.tsx`, `components/canvas/canvas-rich-text-editor.tsx`, `components/canvas/canvas-view.tsx`, `components/canvas/canvas-controls.tsx`, `components/canvas/canvas-export-handlers.tsx`, `components/canvas/binary-canvas-component.tsx`, `components/canvas/binary-artifact-utils.ts`, `components/chat/chat-messages/canvas-message-preview.tsx`, `components/chat/chat-messages/message-preview.tsx`, `components/chat/chat-messages/types.ts`, `components/chat/index.tsx`, `hooks/use-canvas-aware-send.ts`, `hooks/use-canvas-version-navigation.tsx`
+
+Binary artifacts (pdf, xlsx, zip, …) are a read-only variant of the canvas artifact: the backend marks them with `is_binary`/`mime_type` and serves the bytes base64-encoded in `binary_content` from the artifact DETAIL endpoint only. The chat message chip always shows "Open Canvas" (disabled with a tooltip while the binary is still generating) — there is no separate "Download" chip variant; the binary canvas (`binary-canvas-component.tsx`) is view + a single header Export — no editing, formatting toolbar, AI controls, version menu, or rename — previews pdf/images/svg inline, shows friendly no-preview / malformed-file messages for everything else, and is never pinned to outgoing chat messages the way the text/code canvas is. **Journey 71** (`71-vm-sandbox-txt-file-canvas.spec.ts`) exercises the VM-sandbox file-sharing pipeline end-to-end against a live LLM — deliberately with a **.txt** file (reliable to produce in the VM with plain shell tooling), which is a TEXT artifact: it verifies the chip + text-canvas path and that text/binary routing picks the text path. The binary-specific surfaces (binary chip gating, pdf/image preview, non-previewable fallback, malformed-file preview-error, stream-end binary auto-open/takeover, no-pin behavior) stay unit-only (`binary-artifact-utils.test.ts`, `binary-canvas-component.test.tsx`, `canvas-view.test.tsx`, `canvas-message-preview.test.tsx`, `message-preview.test.tsx`) since no journey makes a live agent produce a real binary artifact.
 
 - [x] Canvas mode can be enabled and disabled via the toggle button
 - [x] AI can generate a business report document in the canvas
@@ -191,6 +193,10 @@ When adding a new page or modifying an existing user flow:
 - [x] Export dropdown shows PDF and Markdown options and triggers download
 - [x] Canvas panel can be closed; artifact card remains in chat and reopens canvas
 - [x] Follow-up chat message referencing canvas modifies the document content
+- [ ] _(not-reproducible)_ Chat message chip always offers "Open Canvas" for binaries (never "Download"), disabled with a 'hang tight' tooltip while generating — unit-covered in `canvas-message-preview.test.tsx` / `message-preview.test.tsx`; Journey 71 shares a .txt (text) file, so no journey produces a real binary artifact
+- [ ] _(not-reproducible)_ Read-only binary canvas renders the pdf preview with no editing affordances, and never the malformed-file preview-error state for a well-formed file — unit-covered in `binary-canvas-component.test.tsx` / `canvas-view.test.tsx` / `binary-artifact-utils.test.ts`; same live-binary dependency
+- [ ] _(not-reproducible)_ Binary-artifact stream/open orchestration in `components/chat/index.tsx`: no mid-stream auto-open, every binary type (displayable or not) auto-opens at stream end when no canvas is open — taking over a text canvas that opened mid-stream for the same artifact (binary content wins, extension re-resolved from the filename-style title) — and never pinned to outgoing messages; unit-only via `getBinaryStreamBehavior` / `resolveEffectiveFileExtension` in `binary-artifact-utils.test.ts`. Journey 71 exercises the TEXT stream path (chip + text-canvas auto-open) live
+- [ ] _(not-reproducible)_ Binary canvas preview paths beyond pdf: image/svg inline preview, the non-previewable-type fallback message, the malformed-file preview-error state, and loading/error/retry — unit-covered in `binary-canvas-component.test.tsx` / `canvas-view.test.tsx` / `binary-artifact-utils.test.ts`
 
 ---
 
@@ -764,23 +770,23 @@ Requires `DM_URL` env var. Tests are skipped when `DM_URL` is unset.
 
 ## Journey 44: CLAW Advanced Sandbox (13 checkpoints) — `journeys/44-claw-advanced-sandbox.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `components/modals/edit-mentor-modal/capability-gate.tsx`, `hooks/use-mentor-segments.ts`
+**Source files:** `components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `hooks/use-mentor-segments.ts`
 
-The "Dedicated sandbox" (`enable_claw`) master toggle moved off Settings → Capabilities into an in-tab `CapabilityGate` at the top of the Sandbox tab itself (feat/2040) and auto-saves on click (optimistic local state via `useEditMentorMutation`) — no footer Save button involved for the toggle. The Sandbox top-level tab is now **always mounted** for admins regardless of `enable_claw` / wired-instance state — `hooks/use-mentor-segments.ts` no longer gates the segment. The gated `SandboxConfig` UI renders inside a grayed + inert `capability-gate-content` wrapper (`data-enabled` mirrors the toggle) while the capability is off. The instance table's per-row **Connect** action is a dedicated button (`data-testid="connect-instance-<id>"`) next to the "Actions" three-dot menu (Run checks / Edit / Delete) — no longer a dropdown menu item. Agent Skills is fully independent of the sandbox and is covered **exclusively** by Journey 67 — this journey carries no skills assertions.
+The Sandbox tab used to wrap the SDK's `SandboxConfig` component in an app-level `CapabilityGate` around a single "Dedicated sandbox" (`enable_claw`) master toggle. That gate is gone — the tab now renders only a header and `SandboxConfig` (from `@iblai/iblai-js/web-containers`) directly, and the SDK component owns kind selection itself. `SandboxConfig` always renders a "Sandbox Type" card with three switches (`sandbox-kind-computational-runtime`, `sandbox-kind-virtual-machine`, `sandbox-kind-claw`). The three kinds are **mutually exclusive AND AT LEAST ONE IS ALWAYS ACTIVE** — "Only one sandbox type can be enabled at a time" per the card's own subheading: kinds change ONLY by selecting a different kind, which atomically deactivates whichever kind was previously active in the same PATCH. There is no "disable" operation — toggling the currently-active kind's own switch off (leaving none active) is not a supported flow, so this journey never asserts an all-off state. No kind switch ever gets a persistent disabled state — each is only briefly disabled while its own save is in flight, regardless of which kind is active. The claw connected/not-connected sections (instance table, connect, auto-push, push config) render **only** while Claw is enabled — not merely grayed out, absent from the DOM entirely. The Sandbox top-level tab remains **always mounted** for admins regardless of any kind's state — `hooks/use-mentor-segments.ts` doesn't gate the segment (unaffected by this SDK rewrite, predates it from feat/2040). The instance table's per-row **Connect** action is a dedicated button (`data-testid="connect-instance-<id>"`) next to the "Actions" three-dot menu (Run checks / Edit / Delete) — no longer a dropdown menu item. Agent Skills is fully independent of the sandbox and is covered **exclusively** by Journey 67 — this journey carries no skills assertions.
 
-- [x] Admin opens the Sandbox tab and the "Dedicated sandbox" capability toggle (in-tab CapabilityGate) is present
-- [x] Capability toggle is interactable for admins regardless of sandbox connection state (admin intent)
-- [x] Flipping the capability toggle auto-saves instantly (optimistic, no footer Save button) and does not change Sandbox tab visibility — the tab is unconditionally mounted
-- [x] Enabling the capability flips `capability-gate-content`'s `data-enabled` to `true`, ungating the SandboxConfig UI; Sandbox leads the Integrations category (feat/2040 moved it off Configurations)
+- [x] Admin opens the Sandbox tab and the three sandbox-kind switches (Computing Runtime / Virtual Machine Shell / Claw) are visible
+- [x] Computational-runtime and virtual-machine switches are interactable for admins while claw is off
+- [x] Selecting a sandbox kind auto-saves instantly; the three kinds are mutually exclusive and at least one is always active, so selecting one kind turns off whichever kind was previously active (no "disable" operation), and selection never affects Sandbox tab visibility — the tab is unconditionally mounted
+- [x] Selecting claw turns off whichever kind (computational-runtime or virtual-machine) was previously active in the same PATCH (mutual exclusivity); Sandbox leads the Integrations category (feat/2040 moved it off Configurations)
 - [x] Sandbox leads the Integrations category unconditionally (feat/2040 groups the sidebar into Configurations / Integrations / Runtime)
-- [x] Disabling the capability flips `capability-gate-content`'s `data-enabled` back to `false`, regating the SandboxConfig UI, while the Sandbox tab remains visible
-- [x] Admin navigates to Sandbox tab and the sandbox config container renders regardless of capability state
-- [x] Admin toggles the capability ON then OFF in one session and `capability-gate-content`'s `data-enabled` flips accordingly both times
-- [x] Admin adds a new sandbox instance via the Add Instance dialog (capability enabled first) and the new row appears in the instance table
+- [x] Switching to computational-runtime while claw is active deactivates claw and hides its instance section, leaving computational-runtime as the sole active kind — never an all-off state — while all three switches remain interactable and the Sandbox tab stays visible
+- [x] Admin navigates to Sandbox tab: the sandbox-kind card always renders; the claw connected/not-connected instance sections render only while claw is enabled
+- [x] Admin selects claw then switches away from it (to the mentor's original kind) in one session, and the claw connected/not-connected instance sections mount and unmount accordingly both times
+- [x] Admin adds a new sandbox instance via the Add Instance dialog (claw kind selected first) and the new row appears in the instance table
 - [x] Admin edits an existing sandbox instance name via the Edit Instance dialog and the updated name is reflected in the table
 - [x] Admin connects a sandbox instance via the dedicated per-row Connect button (no longer a dropdown item) and the Connected Instance heading appears
 - [x] Admin edits an Agent Configuration field in the Prompts tab: edit modal closes and the new value is persisted
-- [ ] _(not-reproducible — RBAC off in default env)_ Dedicated sandbox toggle (`enable_claw`) is disabled when the user only has read access — unit-covered in `sandbox-tab.test.tsx`
+- [ ] _(not-reproducible — RBAC off in default env)_ Claw kind switch (`enable_claw`) is disabled when the user only has read access — unit-covered in `sandbox-tab.test.tsx`
 
 ---
 
@@ -1577,7 +1583,20 @@ affected; only the internal preview could reach our storage.
 - [x] epl-03: The full app survives a reload after the Embed tab was visited — the old bug was sticky for the lifetime of the tab because sessionStorage outlived the navigation
 - [x] epl-04: A top-level (non-iframed) tab ignores an `ibl:embed-context` entry it did not get from its own URL, across both a re-render (New Chat) and a reload (guard 2: `readStoredEmbedContext` requires `isInIframe`) — planted directly, so the read-side guard is covered even if some future same-origin iframe starts writing the key again
 
-## Journey 71: Sidebar Support Link & Help Center Resolution (#uat-9) (7 checkpoints) — `journeys/71-sidebar-support-link-and-help-center.spec.ts`
+---
+
+## Journey 71: VM Sandbox File Artifact — Canvas Preview (2 checkpoints) — `journeys/71-vm-sandbox-txt-file-canvas.spec.ts`
+
+**Source files:** `components/canvas/binary-canvas-component.tsx`, `components/canvas/binary-artifact-utils.ts`, `components/canvas/canvas-view.tsx`, `components/chat/chat-messages/canvas-message-preview.tsx`, `components/chat/chat-messages/message-preview.tsx`, `components/chat/index.tsx`, `components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx`
+
+LIVE-LLM coverage of the VM-sandbox file-sharing pipeline that Journey 10 (Canvas) and Journey 44 (CLAW Advanced Sandbox) can only reach at the unit-test / settings-toggle level. On a dedicated per-test mentor (selecting a sandbox kind is a destructive settings mutation — never run against the shared admin mentor, per the project's shared-mentor-isolation convention), this journey selects the "Virtual Machine Shell" sandbox kind via `SandboxTab.selectKind('virtual-machine')` (mutually exclusive with the other two kinds, and at least one kind is always active — see Journey 44), asks the agent over a real chat turn to create and share **hello.txt** with a known marker line, and verifies the agent replies with the file: the chat chip appears and the canvas shows the file's content. A .txt file was chosen deliberately over a binary format (pdf/xlsx) — the VM produces it reliably with plain shell tooling, so the journey verifies the sandbox→share_files→artifact pipeline without gambling on the LLM assembling valid binary bytes; since .txt is a TEXT artifact, the expected surface is the text canvas and the binary canvas is asserted absent (text/binary routing). The whole file runs in `test.describe.configure({ mode: 'serial' })` and uses `MentorTracker` + `afterAll` to delete its mentor, mirroring Journey 44's pattern. `test.slow()` accounts for VM boot + real generation time; the chip wait carries a multi-minute budget while unrelated assertions keep normal timeouts.
+
+The binary-artifact surfaces themselves (binary chip gating, pdf/image preview, fallback and preview-error panels, binary stream orchestration) remain unit-covered only — see Journey 10's `cvs-12`/`cvs-13`/`cvs-14`/`cvs-15` for the exact gap wording.
+
+- [x] vmc-01: Admin selects the Virtual Machine Shell sandbox kind on a dedicated mentor and asks the agent (live LLM) to create and share hello.txt with a known marker line (.txt chosen over pdf/xlsx so the VM produces it reliably with shell tooling); the agent replies with the file as an artifact and the chat chip (`canvas-message-preview`) appears with Open Canvas
+- [x] vmc-02: The canvas shows the shared file's content — the .txt artifact takes the TEXT canvas path (tolerant of auto-open at stream start vs. clicking `canvas-open-button`): the editable editor renders containing the marker line, and the binary canvas (`binary-canvas`) is asserted absent (text/binary routing picks the text path for text files)
+
+## Journey 72: Sidebar Support Link & Help Center Resolution (#uat-9) (7 checkpoints) — `journeys/72-sidebar-support-link-and-help-center.spec.ts`
 
 **Source files:** `hooks/use-help-center.ts`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`, `lib/config.ts`
 

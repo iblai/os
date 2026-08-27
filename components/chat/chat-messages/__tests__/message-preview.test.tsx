@@ -19,16 +19,19 @@ vi.mock('../canvas-message-preview', () => ({
     payload,
     onOpenCanvas,
     isStreaming,
+    isBinary,
   }: {
     title: string;
     content: string;
     payload: CanvasOpenPayload;
     onOpenCanvas?: (payload: CanvasOpenPayload) => void;
     isStreaming?: boolean;
+    isBinary?: boolean;
   }) => (
     <div data-testid="canvas-message-preview">
       <span data-testid="canvas-title">{title}</span>
       <span data-testid="canvas-streaming">{String(isStreaming)}</span>
+      <span data-testid="canvas-is-binary">{String(isBinary)}</span>
       <button
         data-testid="canvas-open-btn"
         onClick={() => onOpenCanvas?.(payload)}
@@ -769,6 +772,173 @@ describe('MessagePreview', () => {
 
       expect(screen.getByText('Some Document')).toBeInTheDocument();
       expect(screen.getByText('Version 3')).toBeInTheDocument();
+    });
+  });
+
+  describe('binary artifacts', () => {
+    const createBinaryVersion = (
+      artifactOverrides: Record<string, unknown> = {},
+    ): ArtifactVersion =>
+      createArtifactVersion({
+        content: '',
+        title: 'report.pdf',
+        artifact: {
+          id: 42,
+          title: 'report.pdf',
+          content: '',
+          file_extension: 'pdf',
+          username: 'artifact-owner',
+          version_count: 1,
+          current_version_number: 1,
+          date_created: new Date().toISOString(),
+          date_updated: new Date().toISOString(),
+          // Runtime-only API fields (predate the SDK type)
+          ...({ is_binary: true, mime_type: 'application/pdf' } as object),
+          ...artifactOverrides,
+        } as ArtifactVersion['artifact'],
+      });
+
+    it('marks a pdf artifact binary', () => {
+      render(
+        <MessagePreview
+          content=""
+          artifactVersions={[createBinaryVersion()]}
+          onOpenCanvas={mockOnOpenCanvas}
+        />,
+      );
+
+      expect(screen.getByTestId('canvas-is-binary')).toHaveTextContent('true');
+    });
+
+    it('builds a binary open payload with toolType binary, mime type and no content', () => {
+      render(
+        <MessagePreview
+          content=""
+          artifactVersions={[createBinaryVersion()]}
+          onOpenCanvas={mockOnOpenCanvas}
+        />,
+      );
+
+      fireEvent.click(screen.getByTestId('canvas-open-btn'));
+
+      expect(mockOnOpenCanvas).toHaveBeenCalledWith(
+        expect.objectContaining({
+          toolType: 'binary',
+          isBinary: true,
+          mimeType: 'application/pdf',
+          fileExtension: 'pdf',
+          content: '',
+          artifactId: 42,
+        }),
+      );
+    });
+
+    it('marks non-displayable binaries (zip) as binary too — the canvas shows its no-preview message', () => {
+      render(
+        <MessagePreview
+          content=""
+          artifactVersions={[
+            createBinaryVersion({
+              title: 'archive.zip',
+              file_extension: 'zip',
+              mime_type: 'application/zip',
+            }),
+          ]}
+          onOpenCanvas={mockOnOpenCanvas}
+        />,
+      );
+
+      expect(screen.getByTestId('canvas-is-binary')).toHaveTextContent('true');
+    });
+
+    it('builds an open payload with toolType binary for zip artifacts', () => {
+      render(
+        <MessagePreview
+          content=""
+          artifactVersions={[
+            createBinaryVersion({
+              title: 'archive.zip',
+              file_extension: 'zip',
+              mime_type: 'application/zip',
+            }),
+          ]}
+          onOpenCanvas={mockOnOpenCanvas}
+        />,
+      );
+
+      fireEvent.click(screen.getByTestId('canvas-open-btn'));
+
+      expect(mockOnOpenCanvas).toHaveBeenCalledWith(
+        expect.objectContaining({
+          toolType: 'binary',
+          isBinary: true,
+          mimeType: 'application/zip',
+          fileExtension: 'zip',
+        }),
+      );
+    });
+
+    it('prioritizes the binary file when the stream left a txt placeholder extension but the title is a filename', () => {
+      // During live streaming the synthesized version can carry
+      // file_extension "txt" while the artifact is really "report.pdf" —
+      // binary content must win over the streamed text rendering.
+      render(
+        <MessagePreview
+          content=""
+          artifactVersions={[
+            createBinaryVersion({
+              title: 'report.pdf',
+              file_extension: 'txt',
+              is_binary: undefined,
+              mime_type: undefined,
+            }),
+          ]}
+          onOpenCanvas={mockOnOpenCanvas}
+        />,
+      );
+
+      expect(screen.getByTestId('canvas-is-binary')).toHaveTextContent('true');
+
+      fireEvent.click(screen.getByTestId('canvas-open-btn'));
+      expect(mockOnOpenCanvas).toHaveBeenCalledWith(
+        expect.objectContaining({
+          toolType: 'binary',
+          isBinary: true,
+          fileExtension: 'pdf',
+          mimeType: 'application/pdf',
+        }),
+      );
+    });
+
+    it('falls back to the file extension when is_binary/mime_type are absent (live streaming)', () => {
+      render(
+        <MessagePreview
+          content=""
+          artifactVersions={[
+            createBinaryVersion({
+              title: 'data.xlsx',
+              file_extension: 'xlsx',
+              is_binary: undefined,
+              mime_type: undefined,
+            }),
+          ]}
+          onOpenCanvas={mockOnOpenCanvas}
+        />,
+      );
+
+      expect(screen.getByTestId('canvas-is-binary')).toHaveTextContent('true');
+    });
+
+    it('treats regular markdown artifacts as non-binary', () => {
+      render(
+        <MessagePreview
+          content=""
+          artifactVersions={[createArtifactVersion()]}
+          onOpenCanvas={mockOnOpenCanvas}
+        />,
+      );
+
+      expect(screen.getByTestId('canvas-is-binary')).toHaveTextContent('false');
     });
   });
 });
