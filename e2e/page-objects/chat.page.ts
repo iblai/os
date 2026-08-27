@@ -24,6 +24,14 @@ export class ChatPage {
   readonly newChatButton: Locator;
   readonly userMessages: Locator;
   readonly aiMessages: Locator;
+  /**
+   * The composer's "Canvas" tool chip (inside-buttons row). Artifacts are
+   * only produced for a session while this tool is active — without it the
+   * agent's reply never becomes an artifact chip/canvas, so specs that
+   * expect artifacts MUST call `enableCanvasTool()` before sending. The chip
+   * has no aria-pressed; its active state is styling-only (active background
+   * class `bg-[#F5F8FF]`).
+   */
   readonly canvasToggle: Locator;
   /**
    * The chat chip rendered for ANY canvas artifact (text/code or binary) —
@@ -917,5 +925,33 @@ export class ChatPage {
       await this.canvasOpenButton.first().click();
       await expect(this.binaryCanvas).toBeVisible({ timeout: 15_000 });
     }
+  }
+
+  /**
+   * Whether the composer's Canvas tool chip is currently active (artifacts
+   * enabled for outgoing messages). The chip carries no aria-pressed — its
+   * active state is styling-only, so this reads the active background class
+   * (`bg-[#F5F8FF]`, rendered literally by Tailwind's arbitrary-value
+   * syntax).
+   */
+  async isCanvasToolActive(): Promise<boolean> {
+    const cls = (await this.canvasToggle.first().getAttribute('class')) ?? '';
+    return cls.includes('bg-[#F5F8FF]');
+  }
+
+  /**
+   * Idempotently enables the composer's Canvas tool. The artifact pipeline
+   * is inert without it — the agent's reply never becomes an artifact
+   * chip/canvas — so any spec that expects artifacts must call this BEFORE
+   * `sendMessage()`. Some environments/mentors default the tool on, hence
+   * the state check instead of a blind (toggling) click.
+   */
+  async enableCanvasTool(): Promise<void> {
+    await expect(this.canvasToggle.first()).toBeVisible({ timeout: 30_000 });
+    if (await this.isCanvasToolActive()) return;
+    await this.canvasToggle.first().click();
+    await expect(this.canvasToggle.first()).toHaveClass(/bg-\[#F5F8FF\]/, {
+      timeout: 10_000,
+    });
   }
 }

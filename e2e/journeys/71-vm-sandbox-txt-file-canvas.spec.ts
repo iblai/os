@@ -98,6 +98,13 @@ test.describe('Journey 71: VM Sandbox File Artifact — Canvas Preview', () => {
     test.slow();
 
     try {
+      // The artifact pipeline is inert unless the composer's Canvas tool is
+      // active for the session — without it the agent's reply never becomes
+      // an artifact chip, and the 4-minute chip wait below times out (seen
+      // on stg2, where a fresh mentor starts with the tool off; some envs
+      // default it on, which is why enableCanvasTool is idempotent).
+      await chatPage.enableCanvasTool();
+
       await chatPage.sendMessage(
         `Create a plain text file named hello.txt whose content is exactly the line '${FILE_MARKER}', and share the file with me.`,
       );
