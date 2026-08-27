@@ -860,7 +860,7 @@ export class ChatPage {
     return (scope ?? this.page).getByTestId('agent-todo-list-announcer');
   }
 
-  // ── Binary artifact chip → binary canvas (Journey 70) ───────────────────────
+  // ── Binary artifact chip → binary canvas (Journey 71) ───────────────────────
   //
   // Binary artifacts (pdf, zip, xlsx, …) are produced by an agent with a
   // sandbox VM (or claw) enabled — see `SandboxTab` — and rendered via

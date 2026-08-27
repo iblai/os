@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-08-26",
+  "lastUpdated": "2026-08-27",
   "summary": {
-    "totalCheckpoints": 671,
-    "coveredCheckpoints": 638,
+    "totalCheckpoints": 683,
+    "coveredCheckpoints": 648,
     "deprecatedCheckpoints": 12,
-    "notReproducibleCheckpoints": 13,
+    "notReproducibleCheckpoints": 15,
     "pendingCheckpoints": 8,
     "percent": 100,
-    "totalJourneys": 72,
-    "activeJourneys": 71
+    "totalJourneys": 73,
+    "activeJourneys": 72
   },
   "journeys": [
     {
@@ -662,22 +662,22 @@
         },
         {
           "id": "cvs-12",
-          "description": "Chat message chip for a binary artifact (pdf, xlsx, zip, …) always shows \"Open Canvas\" (data-testid=\"canvas-open-button\") with a file-type label instead of a content snippet — there is no separate \"Download\" chip variant; while the binary is still streaming the button is disabled with a 'hang tight' tooltip (wrapper data-testid=\"canvas-binary-generating\") so a half-written file can't be opened — unit-covered in canvas-message-preview.test.tsx and message-preview.test.tsx; not e2e-reproducible: Journey 70 deliberately shares a .txt file (a TEXT artifact — reliable to generate in the VM with plain shell tooling), so no journey produces a real binary artifact mid-conversation and no mock/fixture in this suite can seed one",
+          "description": "Chat message chip for a binary artifact (pdf, xlsx, zip, …) always shows \"Open Canvas\" (data-testid=\"canvas-open-button\") with a file-type label instead of a content snippet — there is no separate \"Download\" chip variant; while the binary is still streaming the button is disabled with a 'hang tight' tooltip (wrapper data-testid=\"canvas-binary-generating\") so a half-written file can't be opened — unit-covered in canvas-message-preview.test.tsx and message-preview.test.tsx; not e2e-reproducible: Journey 71 deliberately shares a .txt file (a TEXT artifact — reliable to generate in the VM with plain shell tooling), so no journey produces a real binary artifact mid-conversation and no mock/fixture in this suite can seed one",
           "status": "not-reproducible"
         },
         {
           "id": "cvs-13",
-          "description": "Read-only binary canvas (components/canvas/binary-canvas-component.tsx, data-testid=\"binary-canvas\") renders view + a single header Export action only — no formatting toolbar, highlight-to-edit, AI controls, version menu, or rename — previewing pdf inline (iframe, data-testid=\"binary-canvas-pdf\", blob: src) and never the malformed-file preview-error state (data-testid=\"binary-canvas-preview-error\") for a well-formed file — unit-covered in binary-canvas-component.test.tsx, canvas-view.test.tsx, and binary-artifact-utils.test.ts; not e2e-reproducible: Journey 70 shares a .txt (text) file, so the binary canvas is never reached by any journey (same live-binary dependency as cvs-12)",
+          "description": "Read-only binary canvas (components/canvas/binary-canvas-component.tsx, data-testid=\"binary-canvas\") renders view + a single header Export action only — no formatting toolbar, highlight-to-edit, AI controls, version menu, or rename — previewing pdf inline (iframe, data-testid=\"binary-canvas-pdf\", blob: src) and never the malformed-file preview-error state (data-testid=\"binary-canvas-preview-error\") for a well-formed file — unit-covered in binary-canvas-component.test.tsx, canvas-view.test.tsx, and binary-artifact-utils.test.ts; not e2e-reproducible: Journey 71 shares a .txt (text) file, so the binary canvas is never reached by any journey (same live-binary dependency as cvs-12)",
           "status": "not-reproducible"
         },
         {
           "id": "cvs-14",
-          "description": "Binary-artifact stream/open orchestration in components/chat/index.tsx: binary artifacts never auto-open the canvas mid-stream (openCanvasOnStreamStart is false for every binary kind); at stream end, ANY binary artifact — displayable (pdf/svg/image) or not (zip/xlsx/docx/…) — auto-opens the binary canvas when no canvas is open — and TAKES OVER the text canvas when it opened mid-stream for the same artifact (a stream-start `txt` placeholder extension can hide that the artifact is a file; binary content always wins, with the extension re-resolved from the filename-style title via resolveEffectiveFileExtension) — while never hijacking a canvas showing a different artifact; non-displayable types land on the fallback \"no preview yet\" panel rather than a separate Download-only affordance (there is no Download action anywhere in this flow — see cvs-12); opening a binary artifact does not pin it to outgoing chat messages as editable artifact context (unlike text/code canvas artifacts, the `newCanvasState.type !== 'binary'` guard, which also clears a stale pin left by a mid-stream text open of the same artifact). The open/skip decision logic is unit-tested via getBinaryStreamBehavior and resolveEffectiveFileExtension (components/canvas/__tests__/binary-artifact-utils.test.ts); Journey 70 (`70-vm-sandbox-txt-file-canvas.spec.ts`) exercises the TEXT-artifact stream path live (chip + text-canvas auto-open for a VM-shared .txt file) but not the binary branches. Not e2e-reproducible: every binary-specific branch (stream-end binary auto-open, text-canvas takeover, no-pin behavior, handler wiring) — none has a deterministic way to seed the precondition without a real binary artifact mid-conversation",
+          "description": "Binary-artifact stream/open orchestration in components/chat/index.tsx: binary artifacts never auto-open the canvas mid-stream (openCanvasOnStreamStart is false for every binary kind); at stream end, ANY binary artifact — displayable (pdf/svg/image) or not (zip/xlsx/docx/…) — auto-opens the binary canvas when no canvas is open — and TAKES OVER the text canvas when it opened mid-stream for the same artifact (a stream-start `txt` placeholder extension can hide that the artifact is a file; binary content always wins, with the extension re-resolved from the filename-style title via resolveEffectiveFileExtension) — while never hijacking a canvas showing a different artifact; non-displayable types land on the fallback \"no preview yet\" panel rather than a separate Download-only affordance (there is no Download action anywhere in this flow — see cvs-12); opening a binary artifact does not pin it to outgoing chat messages as editable artifact context (unlike text/code canvas artifacts, the `newCanvasState.type !== 'binary'` guard, which also clears a stale pin left by a mid-stream text open of the same artifact). The open/skip decision logic is unit-tested via getBinaryStreamBehavior and resolveEffectiveFileExtension (components/canvas/__tests__/binary-artifact-utils.test.ts); Journey 71 (`71-vm-sandbox-txt-file-canvas.spec.ts`) exercises the TEXT-artifact stream path live (chip + text-canvas auto-open for a VM-shared .txt file) but not the binary branches. Not e2e-reproducible: every binary-specific branch (stream-end binary auto-open, text-canvas takeover, no-pin behavior, handler wiring) — none has a deterministic way to seed the precondition without a real binary artifact mid-conversation",
           "status": "not-reproducible"
         },
         {
           "id": "cvs-15",
-          "description": "Binary canvas preview paths beyond pdf: image/svg inline preview (data-testid=\"binary-canvas-image\"), the non-previewable-type fallback message for zip/xlsx/docx/… (data-testid=\"binary-canvas-fallback\"), the preview-error state for a malformed file (data-testid=\"binary-canvas-preview-error\", invalid SVG XML / non-PDF bytes / image decode failure), and the loading/error/retry states — unit-covered in binary-canvas-component.test.tsx, canvas-view.test.tsx, and binary-artifact-utils.test.ts; not e2e-reproducible because there is no deterministic way to make a live agent produce these specific shapes (Journey 70 only exercises the well-formed pdf path)",
+          "description": "Binary canvas preview paths beyond pdf: image/svg inline preview (data-testid=\"binary-canvas-image\"), the non-previewable-type fallback message for zip/xlsx/docx/… (data-testid=\"binary-canvas-fallback\"), the preview-error state for a malformed file (data-testid=\"binary-canvas-preview-error\", invalid SVG XML / non-PDF bytes / image decode failure), and the loading/error/retry states — unit-covered in binary-canvas-component.test.tsx, canvas-view.test.tsx, and binary-artifact-utils.test.ts; not e2e-reproducible because there is no deterministic way to make a live agent produce these specific shapes (Journey 71 shares a .txt file, which takes the text-canvas path and never reaches the binary canvas at all)",
           "status": "not-reproducible"
         }
       ]
@@ -1144,7 +1144,10 @@
       "spec": "20-dataset-management.spec.ts",
       "sourceFiles": [
         "components/modals/edit-mentor-modal/tabs/datasets-tab/index.tsx",
-        "components/modals/edit-mentor-modal/tabs/datasets-tab/resource-types.tsx"
+        "components/modals/edit-mentor-modal/tabs/datasets-tab/resource-types.tsx",
+        "components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx",
+        "hooks/user-navigate.ts",
+        "lib/constants.ts"
       ],
       "checkpoints": [
         {
@@ -1235,6 +1238,46 @@
         {
           "id": "ds-18",
           "description": "Markdown (.md) file can be uploaded and appears in the dataset list (issue #1117)",
+          "status": "covered"
+        },
+        {
+          "id": "ds-19",
+          "description": "Typing in the datasets search debounces into the datasetsSearch URL query param (router.replace, no history spam)",
+          "status": "covered"
+        },
+        {
+          "id": "ds-20",
+          "description": "datasetsSearch/datasetsPage URL params clear when the edit mentor modal closes",
+          "status": "covered"
+        },
+        {
+          "id": "ds-21",
+          "description": "datasetsSearch/datasetsPage URL params clear when switching from Datasets to another tab",
+          "status": "covered"
+        },
+        {
+          "id": "ds-22",
+          "description": "Reloading the page after searching restores datasetsSearch and the search input from the URL",
+          "status": "covered"
+        },
+        {
+          "id": "ds-23",
+          "description": "Clicking a pagination page number pushes datasetsPage into the URL (self-seeded multi-page mentor)",
+          "status": "covered"
+        },
+        {
+          "id": "ds-24",
+          "description": "Browser Back/Forward walk the visited datasetsPage values (self-seeded multi-page mentor)",
+          "status": "covered"
+        },
+        {
+          "id": "ds-25",
+          "description": "Searching while on a later page drops datasetsPage and sets datasetsSearch (self-seeded multi-page mentor)",
+          "status": "covered"
+        },
+        {
+          "id": "ds-26",
+          "description": "Reloading the page while paginated restores datasetsPage and the active page (self-seeded multi-page mentor)",
           "status": "covered"
         }
       ]
@@ -4237,9 +4280,45 @@
       ]
     },
     {
+      "id": "embed-preview-embed-mode-leak",
+      "name": "Embed Tab Preview Must Not Leak Embed Mode Into The App",
+      "spec": "70-embed-preview-must-not-leak-embed-mode.spec.ts",
+      "sourceFiles": [
+        "lib/embed-context.ts",
+        "hooks/use-embed-mode.ts",
+        "providers/index.tsx",
+        "components/modals/edit-mentor-modal/tabs/embed-tab.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
+        "lib/constants.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "epl-01",
+          "description": "Opening Edit Agent → Embed mounts the same-origin `?embed=true&internalPreview=true` preview iframe WITHOUT writing `ibl:embed-context` into the host tab's sessionStorage (guard 1: persistEmbedContextFromUrl no-ops for the internal preview)",
+          "status": "covered"
+        },
+        {
+          "id": "epl-02",
+          "description": "After visiting the Embed tab and closing the dialog, clicking \"New Chat\" keeps the FULL admin sidebar (Agents, Workflows, Projects, Analytics, Support) instead of collapsing to the 3-icon embed rail, and does not append `embed=true` to the app URL",
+          "status": "covered"
+        },
+        {
+          "id": "epl-03",
+          "description": "The full app survives a reload after the Embed tab was visited — the old bug was sticky for the lifetime of the tab because sessionStorage outlived the navigation",
+          "status": "covered"
+        },
+        {
+          "id": "epl-04",
+          "description": "A top-level (non-iframed) tab ignores an `ibl:embed-context` entry it did not get from its own URL, across both a re-render (New Chat) and a reload (guard 2: readStoredEmbedContext requires isInIframe)",
+          "status": "covered"
+        }
+      ]
+    },
+    {
       "id": "vm-sandbox-txt-file-canvas",
       "name": "VM Sandbox File Artifact — Canvas Preview",
-      "spec": "70-vm-sandbox-txt-file-canvas.spec.ts",
+      "spec": "71-vm-sandbox-txt-file-canvas.spec.ts",
       "sourceFiles": [
         "components/canvas/binary-canvas-component.tsx",
         "components/canvas/binary-artifact-utils.ts",

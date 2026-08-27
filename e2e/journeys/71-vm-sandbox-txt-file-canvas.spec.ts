@@ -1,5 +1,5 @@
 /**
- * Journey 70: VM Sandbox File Artifact — Canvas Preview
+ * Journey 71: VM Sandbox File Artifact — Canvas Preview
  *
  * End-to-end, LIVE-LLM coverage of the VM-sandbox file-sharing pipeline that
  * journey 44 (CLAW Advanced Sandbox) exercises only at the settings-toggle
@@ -56,7 +56,7 @@ const FILE_MARKER = 'Hello from the sandbox VM';
 
 test.describe.configure({ mode: 'serial' });
 
-test.describe('Journey 70: VM Sandbox File Artifact — Canvas Preview', () => {
+test.describe('Journey 71: VM Sandbox File Artifact — Canvas Preview', () => {
   const tracker = new MentorTracker();
 
   test.beforeEach(async ({ page, createMentorPage, editMentorPage }) => {

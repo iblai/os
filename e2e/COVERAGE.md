@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-08-27 | 671 checkpoints (636 covered, 8 pending/fixme, 15 not-reproducible in default env, 12 deprecated) | 72 journeys (71 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-08-27 | 683 checkpoints (648 covered, 8 pending/fixme, 15 not-reproducible in default env, 12 deprecated) | 73 journeys (72 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -180,7 +180,7 @@ When adding a new page or modifying an existing user flow:
 
 **Source files:** `components/canvas/canvas-component.tsx`, `components/canvas/canvas-rich-text-editor.tsx`, `components/canvas/canvas-view.tsx`, `components/canvas/canvas-controls.tsx`, `components/canvas/canvas-export-handlers.tsx`, `components/canvas/binary-canvas-component.tsx`, `components/canvas/binary-artifact-utils.ts`, `components/chat/chat-messages/canvas-message-preview.tsx`, `components/chat/chat-messages/message-preview.tsx`, `components/chat/chat-messages/types.ts`, `components/chat/index.tsx`, `hooks/use-canvas-aware-send.ts`, `hooks/use-canvas-version-navigation.tsx`
 
-Binary artifacts (pdf, xlsx, zip, …) are a read-only variant of the canvas artifact: the backend marks them with `is_binary`/`mime_type` and serves the bytes base64-encoded in `binary_content` from the artifact DETAIL endpoint only. The chat message chip always shows "Open Canvas" (disabled with a tooltip while the binary is still generating) — there is no separate "Download" chip variant; the binary canvas (`binary-canvas-component.tsx`) is view + a single header Export — no editing, formatting toolbar, AI controls, version menu, or rename — previews pdf/images/svg inline, shows friendly no-preview / malformed-file messages for everything else, and is never pinned to outgoing chat messages the way the text/code canvas is. **Journey 70** (`70-vm-sandbox-txt-file-canvas.spec.ts`) exercises the VM-sandbox file-sharing pipeline end-to-end against a live LLM — deliberately with a **.txt** file (reliable to produce in the VM with plain shell tooling), which is a TEXT artifact: it verifies the chip + text-canvas path and that text/binary routing picks the text path. The binary-specific surfaces (binary chip gating, pdf/image preview, non-previewable fallback, malformed-file preview-error, stream-end binary auto-open/takeover, no-pin behavior) stay unit-only (`binary-artifact-utils.test.ts`, `binary-canvas-component.test.tsx`, `canvas-view.test.tsx`, `canvas-message-preview.test.tsx`, `message-preview.test.tsx`) since no journey makes a live agent produce a real binary artifact.
+Binary artifacts (pdf, xlsx, zip, …) are a read-only variant of the canvas artifact: the backend marks them with `is_binary`/`mime_type` and serves the bytes base64-encoded in `binary_content` from the artifact DETAIL endpoint only. The chat message chip always shows "Open Canvas" (disabled with a tooltip while the binary is still generating) — there is no separate "Download" chip variant; the binary canvas (`binary-canvas-component.tsx`) is view + a single header Export — no editing, formatting toolbar, AI controls, version menu, or rename — previews pdf/images/svg inline, shows friendly no-preview / malformed-file messages for everything else, and is never pinned to outgoing chat messages the way the text/code canvas is. **Journey 71** (`71-vm-sandbox-txt-file-canvas.spec.ts`) exercises the VM-sandbox file-sharing pipeline end-to-end against a live LLM — deliberately with a **.txt** file (reliable to produce in the VM with plain shell tooling), which is a TEXT artifact: it verifies the chip + text-canvas path and that text/binary routing picks the text path. The binary-specific surfaces (binary chip gating, pdf/image preview, non-previewable fallback, malformed-file preview-error, stream-end binary auto-open/takeover, no-pin behavior) stay unit-only (`binary-artifact-utils.test.ts`, `binary-canvas-component.test.tsx`, `canvas-view.test.tsx`, `canvas-message-preview.test.tsx`, `message-preview.test.tsx`) since no journey makes a live agent produce a real binary artifact.
 
 - [x] Canvas mode can be enabled and disabled via the toggle button
 - [x] AI can generate a business report document in the canvas
@@ -193,9 +193,9 @@ Binary artifacts (pdf, xlsx, zip, …) are a read-only variant of the canvas art
 - [x] Export dropdown shows PDF and Markdown options and triggers download
 - [x] Canvas panel can be closed; artifact card remains in chat and reopens canvas
 - [x] Follow-up chat message referencing canvas modifies the document content
-- [ ] _(not-reproducible)_ Chat message chip always offers "Open Canvas" for binaries (never "Download"), disabled with a 'hang tight' tooltip while generating — unit-covered in `canvas-message-preview.test.tsx` / `message-preview.test.tsx`; Journey 70 shares a .txt (text) file, so no journey produces a real binary artifact
+- [ ] _(not-reproducible)_ Chat message chip always offers "Open Canvas" for binaries (never "Download"), disabled with a 'hang tight' tooltip while generating — unit-covered in `canvas-message-preview.test.tsx` / `message-preview.test.tsx`; Journey 71 shares a .txt (text) file, so no journey produces a real binary artifact
 - [ ] _(not-reproducible)_ Read-only binary canvas renders the pdf preview with no editing affordances, and never the malformed-file preview-error state for a well-formed file — unit-covered in `binary-canvas-component.test.tsx` / `canvas-view.test.tsx` / `binary-artifact-utils.test.ts`; same live-binary dependency
-- [ ] _(not-reproducible)_ Binary-artifact stream/open orchestration in `components/chat/index.tsx`: no mid-stream auto-open, every binary type (displayable or not) auto-opens at stream end when no canvas is open — taking over a text canvas that opened mid-stream for the same artifact (binary content wins, extension re-resolved from the filename-style title) — and never pinned to outgoing messages; unit-only via `getBinaryStreamBehavior` / `resolveEffectiveFileExtension` in `binary-artifact-utils.test.ts`. Journey 70 exercises the TEXT stream path (chip + text-canvas auto-open) live
+- [ ] _(not-reproducible)_ Binary-artifact stream/open orchestration in `components/chat/index.tsx`: no mid-stream auto-open, every binary type (displayable or not) auto-opens at stream end when no canvas is open — taking over a text canvas that opened mid-stream for the same artifact (binary content wins, extension re-resolved from the filename-style title) — and never pinned to outgoing messages; unit-only via `getBinaryStreamBehavior` / `resolveEffectiveFileExtension` in `binary-artifact-utils.test.ts`. Journey 71 exercises the TEXT stream path (chip + text-canvas auto-open) live
 - [ ] _(not-reproducible)_ Binary canvas preview paths beyond pdf: image/svg inline preview, the non-previewable-type fallback message, the malformed-file preview-error state, and loading/error/retry — unit-covered in `binary-canvas-component.test.tsx` / `canvas-view.test.tsx` / `binary-artifact-utils.test.ts`
 
 ---
@@ -332,9 +332,9 @@ Binary artifacts (pdf, xlsx, zip, …) are a read-only variant of the canvas art
 
 ---
 
-## Journey 20: Dataset Management (18 checkpoints) — `journeys/20-dataset-management.spec.ts`
+## Journey 20: Dataset Management (26 checkpoints) — `journeys/20-dataset-management.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/datasets-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/dataset-item.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/retrain-schedule-modal.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/train-or-delete-modal.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/resource-types.tsx`, `hooks/use-datasets.ts`
+**Source files:** `components/modals/edit-mentor-modal/tabs/datasets-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/dataset-item.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/retrain-schedule-modal.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/train-or-delete-modal.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/resource-types.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx`, `hooks/use-datasets.ts`, `hooks/user-navigate.ts`, `lib/constants.ts`
 
 - [x] Datasets tab header and description display correctly (TC01)
 - [x] Search input is visible and filters the dataset list (TC02–TC03)
@@ -354,6 +354,17 @@ Binary artifacts (pdf, xlsx, zip, …) are a read-only variant of the canvas art
 - [x] Untrained dataset can be deleted; trained dataset can be untrained then deleted; retraining can be scheduled; file upload cancellation is handled gracefully (TC25–TC28)
 - [x] Markdown resource type is available in the Add Resources modal (TC30, issue #1117)
 - [x] Markdown (.md) file can be uploaded and appears in the dataset list (TC31, issue #1117)
+
+**URL query-string sync** — the Datasets tab syncs its page/search state to `datasetsPage`/`datasetsSearch` query params (`agent-datasets-tab.tsx` + `hooks/user-navigate.ts`). Setting a search always implies a page reset, so page and search are never both non-default at once — the reload/deep-link checkpoints test each in isolation rather than a combined state the app can't produce. The pagination checkpoints (TC36–TC39) need more than one page of results (5 items/page), so each one **seeds its own fixture at runtime**: create a mentor, POST 12 tiny documents to the training API (3 pages — TC37 pages forward twice and TC38 searches from page 3), then delete the mentor in `afterAll` via `MentorTracker`. Seeding goes through `utils/dataset-seeding.ts` rather than the Add Resource UI, which costs ~20s per file. Nothing environment-specific is hard-coded: the tenant key, username and `dm_token` are read from `localStorage` at runtime and the mentor is the one the test just created. An earlier revision pointed these tests at a hand-seeded mentor identified by tenant key + id — that only resolved on the environment it was seeded on and sent every other admin to `/error/403`, so the tests timed out on navigation instead of running.
+
+- [x] Typing in the datasets search debounces into the `datasetsSearch` URL query param, using `router.replace` so it doesn't stack history entries (TC32)
+- [x] `datasetsSearch`/`datasetsPage` URL params clear when the edit mentor modal closes (TC33)
+- [x] `datasetsSearch`/`datasetsPage` URL params clear when switching from Datasets to another tab (TC34)
+- [x] Reloading the page after searching restores `datasetsSearch` and the search input from the URL (TC35)
+- [x] Clicking a pagination page number pushes `datasetsPage` into the URL via `router.push` (TC36, self-seeded multi-page mentor)
+- [x] Browser Back/Forward walk the visited `datasetsPage` values after paging forward twice (TC37, self-seeded multi-page mentor)
+- [x] Searching while on page 3 drops `datasetsPage` (reset to page 1) and sets `datasetsSearch` (TC38, self-seeded multi-page mentor)
+- [x] Reloading the page while paginated restores `datasetsPage` and the active pagination link from the URL (TC39, self-seeded multi-page mentor)
 
 ---
 
@@ -1549,13 +1560,38 @@ mentor (see the checkpoint description below for why).
 
 ---
 
-## Journey 70: VM Sandbox File Artifact — Canvas Preview (2 checkpoints) — `journeys/70-vm-sandbox-txt-file-canvas.spec.ts`
+## Journey 70: Embed Tab Preview Must Not Leak Embed Mode Into The App (4 checkpoints) — `journeys/70-embed-preview-must-not-leak-embed-mode.spec.ts`
+
+**Source files:** `lib/embed-context.ts`, `hooks/use-embed-mode.ts`, `providers/index.tsx`, `components/modals/edit-mentor-modal/tabs/embed-tab.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `lib/constants.ts`
+
+The inverse of journey 58. Journey 58 guards that the FULL sidebar never leaks
+into a genuine embed; this one guards that the EMBED shell never leaks into the
+full app. A fix that over-corrects either way breaks the other, so both assert
+through the same `SidebarPage` helpers.
+
+The bug: `sessionStorage` is scoped to the tab, not the browsing context, so
+the Embed tab's same-origin `?embed=true&internalPreview=true` preview iframe
+mirrored `ibl:embed-context` into the HOST tab's store. `useEmbedMode` falls
+back to that stored copy when the URL has no embed param, so after visiting the
+Embed tab the next re-render — clicking "New Chat" — collapsed the whole admin
+app into the 3-icon embed rail on a query-less URL, and stayed that way for the
+lifetime of the tab. Real customer embeds are cross-origin and were never
+affected; only the internal preview could reach our storage.
+
+- [x] epl-01: Opening Edit Agent → Embed mounts the same-origin `?embed=true&internalPreview=true` preview iframe WITHOUT writing `ibl:embed-context` into the host tab's sessionStorage (guard 1: `persistEmbedContextFromUrl` no-ops for the internal preview) — polled, not read once, since the old write happened in an effect several seconds after the tab rendered
+- [x] epl-02: After visiting the Embed tab and closing the dialog, clicking "New Chat" keeps the FULL admin sidebar (Agents, Workflows, Projects, Analytics, Support) instead of collapsing to the embed rail, and does not append `embed=true` to the app URL (a poisoned tab also fed `embedContextQuery()`, writing the corruption into its own navigations)
+- [x] epl-03: The full app survives a reload after the Embed tab was visited — the old bug was sticky for the lifetime of the tab because sessionStorage outlived the navigation
+- [x] epl-04: A top-level (non-iframed) tab ignores an `ibl:embed-context` entry it did not get from its own URL, across both a re-render (New Chat) and a reload (guard 2: `readStoredEmbedContext` requires `isInIframe`) — planted directly, so the read-side guard is covered even if some future same-origin iframe starts writing the key again
+
+---
+
+## Journey 71: VM Sandbox File Artifact — Canvas Preview (2 checkpoints) — `journeys/71-vm-sandbox-txt-file-canvas.spec.ts`
 
 **Source files:** `components/canvas/binary-canvas-component.tsx`, `components/canvas/binary-artifact-utils.ts`, `components/canvas/canvas-view.tsx`, `components/chat/chat-messages/canvas-message-preview.tsx`, `components/chat/chat-messages/message-preview.tsx`, `components/chat/index.tsx`, `components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx`
 
-LIVE-LLM coverage of the binary-artifact pipeline that Journey 10 (Canvas) and Journey 44 (CLAW Advanced Sandbox) can only reach at the unit-test / settings-toggle level. On a dedicated per-test mentor (selecting a sandbox kind is a destructive settings mutation — never run against the shared admin mentor, per the project's shared-mentor-isolation convention), this journey selects the "Virtual Machine Shell" sandbox kind via `SandboxTab.selectKind('virtual-machine')` (mutually exclusive with the other two kinds, and at least one kind is always active — see Journey 44), asks the agent over a real chat turn to generate and share a one-page PDF, and verifies the resulting chat chip and read-only binary canvas. The whole file runs in `test.describe.configure({ mode: 'serial' })` and uses `MentorTracker` + `afterAll` to delete its mentor, mirroring Journey 44's pattern. `test.slow()` accounts for VM boot + real generation time; the chip/generation wait itself carries a 2–4 minute budget while unrelated assertions keep normal timeouts.
+LIVE-LLM coverage of the VM-sandbox file-sharing pipeline that Journey 10 (Canvas) and Journey 44 (CLAW Advanced Sandbox) can only reach at the unit-test / settings-toggle level. On a dedicated per-test mentor (selecting a sandbox kind is a destructive settings mutation — never run against the shared admin mentor, per the project's shared-mentor-isolation convention), this journey selects the "Virtual Machine Shell" sandbox kind via `SandboxTab.selectKind('virtual-machine')` (mutually exclusive with the other two kinds, and at least one kind is always active — see Journey 44), asks the agent over a real chat turn to create and share **hello.txt** with a known marker line, and verifies the agent replies with the file: the chat chip appears and the canvas shows the file's content. A .txt file was chosen deliberately over a binary format (pdf/xlsx) — the VM produces it reliably with plain shell tooling, so the journey verifies the sandbox→share_files→artifact pipeline without gambling on the LLM assembling valid binary bytes; since .txt is a TEXT artifact, the expected surface is the text canvas and the binary canvas is asserted absent (text/binary routing). The whole file runs in `test.describe.configure({ mode: 'serial' })` and uses `MentorTracker` + `afterAll` to delete its mentor, mirroring Journey 44's pattern. `test.slow()` accounts for VM boot + real generation time; the chip wait carries a multi-minute budget while unrelated assertions keep normal timeouts.
 
-This journey is what flips `cvs-12`/`cvs-13` (Journey 10) from `not-reproducible` to `covered` — see that journey's entry for the exact wording and for what remains a genuine gap (`cvs-14`, `cvs-15`: the non-pdf preview paths and a couple of orchestration branches this journey doesn't exercise).
+The binary-artifact surfaces themselves (binary chip gating, pdf/image preview, fallback and preview-error panels, binary stream orchestration) remain unit-covered only — see Journey 10's `cvs-12`/`cvs-13`/`cvs-14`/`cvs-15` for the exact gap wording.
 
 - [x] vmc-01: Admin selects the Virtual Machine Shell sandbox kind on a dedicated mentor and asks the agent (live LLM) to create and share hello.txt with a known marker line (.txt chosen over pdf/xlsx so the VM produces it reliably with shell tooling); the agent replies with the file as an artifact and the chat chip (`canvas-message-preview`) appears with Open Canvas
 - [x] vmc-02: The canvas shows the shared file's content — the .txt artifact takes the TEXT canvas path (tolerant of auto-open at stream start vs. clicking `canvas-open-button`): the editable editor renders containing the marker line, and the binary canvas (`binary-canvas`) is asserted absent (text/binary routing picks the text path for text files)
