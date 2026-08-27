@@ -66,16 +66,6 @@ const BINARY_EXTENSION_MIME_TYPES: Record<string, string> = {
   mov: 'video/quicktime',
 };
 
-/**
- * Mime types the side canvas can actually display: PDFs via the browser's
- * embedded viewer, images via an `<img>` preview. Text formats (txt, md,
- * svg, …) never reach this path — they arrive as text artifacts and open in
- * the regular editable canvas. Formats browsers cannot render natively
- * (docx, xlsx, zip, …) get the Download flow instead.
- */
-const isCanvasRenderableMimeType = (mime: string): boolean =>
-  mime === 'application/pdf' || mime.startsWith('image/');
-
 const normalizeExtension = (fileExtension?: string | null): string =>
   (fileExtension ?? '').trim().toLowerCase().replace(/^\./, '');
 
@@ -105,18 +95,6 @@ export const isBinaryArtifact = (info: {
   return normalizeExtension(info.fileExtension) in BINARY_EXTENSION_MIME_TYPES;
 };
 
-/**
- * Whether a binary artifact can be shown in the side canvas ("Open Canvas")
- * rather than only exported ("Download").
- */
-export const canOpenBinaryInCanvas = (info: {
-  mimeType?: string | null;
-  fileExtension?: string | null;
-}): boolean => {
-  const mime = resolveBinaryMimeType(info.fileExtension, info.mimeType);
-  return mime !== undefined && isCanvasRenderableMimeType(mime);
-};
-
 /** Whether a mime type should render as an image preview in the canvas. */
 export const isImageMimeType = (mimeType?: string | null): boolean =>
   Boolean(mimeType && mimeType.trim().toLowerCase().startsWith('image/'));
@@ -135,13 +113,37 @@ export const shouldUseBinaryCanvas = (info: {
   normalizeExtension(info.fileExtension) === 'svg' || isBinaryArtifact(info);
 
 /**
+ * Best-effort file extension for an artifact, preferring the explicit
+ * `file_extension` but falling back to the title's filename suffix when the
+ * extension is missing or a placeholder. The WS parser defaults a missing
+ * `file_extension` to "txt" on stream events, while the backend titles
+ * binary artifacts by filename ("report.pdf") — so when the extension is
+ * absent/"txt" but the title ends in a known binary extension, the title
+ * wins. A genuine text artifact is never misclassified by this: only
+ * known-binary suffixes override.
+ */
+export const resolveEffectiveFileExtension = (
+  fileExtension?: string | null,
+  title?: string | null,
+): string | undefined => {
+  const ext = normalizeExtension(fileExtension);
+  if (ext && ext !== 'txt') return ext;
+  const titleExt = (title ?? '')
+    .trim()
+    .toLowerCase()
+    .match(/\.([a-z0-9]+)$/)?.[1];
+  if (titleExt && titleExt in BINARY_EXTENSION_MIME_TYPES) return titleExt;
+  return ext || undefined;
+};
+
+/**
  * Streaming behavior for a new artifact, keyed off the only field the stream
  * events carry (file_extension). Text artifacts open the canvas at stream
  * start and stream into it; binary/viewer artifacts have nothing to stream
  * into the editor (their file exists only on the detail endpoint once the
- * version is finalized), so they open — if displayable at all — at stream
- * end. Non-displayable binaries (zip, xlsx, …) never open the canvas; the
- * chat chip offers Download instead.
+ * version is finalized), so they open at stream end instead. Types the
+ * canvas can't render (zip, xlsx, …) still open — the binary canvas shows a
+ * friendly no-preview message with the Export action.
  */
 export const getBinaryStreamBehavior = (
   fileExtension?: string | null,
@@ -154,8 +156,7 @@ export const getBinaryStreamBehavior = (
   return {
     isBinary,
     openCanvasOnStreamStart: !isBinary,
-    openCanvasOnStreamEnd:
-      !isBinary || canOpenBinaryInCanvas({ fileExtension }),
+    openCanvasOnStreamEnd: true,
   };
 };
 
@@ -191,6 +192,59 @@ export const artifactFileToBlob = (
       extension,
       mimeType,
     };
+  }
+  return null;
+};
+
+/** Read a blob as text (Blob.prototype.text is missing in some environments). */
+const readBlobText = (blob: Blob): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(blob);
+  });
+
+/**
+ * Best-effort check that a file the canvas is about to preview is actually
+ * displayable. LLM-generated files can be malformed (e.g. an SVG using the
+ * HTML-only `&nbsp;` entity, which is invalid XML) — without this the viewer
+ * shows the browser's raw parse error or a broken-image glyph. Returns null
+ * when the file looks previewable; a reason string otherwise. Formats we
+ * can't cheaply validate (raster images, …) return null and rely on the
+ * viewer's own error signal (`<img onError>`).
+ */
+export const getPreviewIssue = async (
+  blob: Blob,
+  mimeType: string,
+): Promise<'malformed-svg' | 'malformed-pdf' | null> => {
+  if (mimeType === 'image/svg+xml') {
+    if (typeof DOMParser === 'undefined') return null;
+    let text: string;
+    try {
+      text = await readBlobText(blob);
+    } catch {
+      // Unreadable blob — let the viewer's own error signal handle it.
+      return null;
+    }
+    try {
+      const doc = new DOMParser().parseFromString(text, 'image/svg+xml');
+      const hasParserError = doc.getElementsByTagName('parsererror').length > 0;
+      const hasSvgRoot = doc.documentElement?.nodeName.toLowerCase() === 'svg';
+      return hasParserError || !hasSvgRoot ? 'malformed-svg' : null;
+    } catch {
+      // Some DOM implementations throw on invalid XML instead of returning
+      // a parsererror document — that's still a malformed file.
+      return 'malformed-svg';
+    }
+  }
+  if (mimeType === 'application/pdf') {
+    try {
+      const head = await readBlobText(blob.slice(0, 5));
+      return head === '%PDF-' ? null : 'malformed-pdf';
+    } catch {
+      return null;
+    }
   }
   return null;
 };

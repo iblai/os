@@ -332,8 +332,8 @@
     "export": "导出",
     "loadError": "无法加载此文件。",
     "retry": "重试",
-    "previewUnavailable": "此文件类型不支持预览。",
-    "download": "下载"
+    "previewUnavailable": "暂时无法预览此类型的文件，但文件已准备就绪——点击「导出」即可保存到你的设备。",
+    "previewFailed": "无法预览此文件——文件可能无效或已损坏。你仍然可以导出它。"
   },
   "canvasCanvasControls": {
     "lengthLongest": "最长",

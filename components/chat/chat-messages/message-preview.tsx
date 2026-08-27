@@ -1,18 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'next/navigation';
 import { FileText } from 'lucide-react';
 import Markdown from '@/components/markdown';
 import { CanvasMessagePreview } from './canvas-message-preview';
 import type { CanvasOpenPayload } from './types';
 import type { ArtifactVersion } from '@iblai/iblai-js/web-utils';
 import {
-  canOpenBinaryInCanvas,
   resolveBinaryMimeType,
+  resolveEffectiveFileExtension,
   shouldUseBinaryCanvas,
 } from '@/components/canvas/binary-artifact-utils';
-import { useBinaryArtifactDownload } from '@/hooks/use-binary-artifact-download';
-import { useUsername } from '@/hooks/use-user';
-import type { TenantKeyMentorIdParams } from '@/lib/types';
 
 const CODE_EXTENSIONS = new Set([
   'py',
@@ -113,9 +109,6 @@ export function MessagePreview({
   onOpenCanvas,
   streamingArtifactId,
 }: MessagePreviewProps) {
-  const { tenantKey } = useParams<TenantKeyMentorIdParams>();
-  const username = useUsername();
-  const { downloadBinaryArtifact, isDownloading } = useBinaryArtifactDownload();
   const currentArtifact = useMemo(
     () => getCurrentArtifactVersion(artifactVersions),
     [artifactVersions],
@@ -162,7 +155,17 @@ export function MessagePreview({
 
   const artifact = selectedVersion.artifact;
   const artifactContent = selectedVersion.content || artifact.content || '';
-  const fileExtension = artifact.file_extension || 'md';
+  // Versions synthesized during live streaming can carry a "txt"/missing
+  // placeholder extension while the artifact is really a file titled by
+  // filename ("report.pdf") — resolve against the title so binary content
+  // gets priority over any streamed text rendering.
+  const fileExtension =
+    resolveEffectiveFileExtension(
+      artifact.file_extension,
+      artifact.title || selectedVersion.title,
+    ) ??
+    artifact.file_extension ??
+    'md';
   // `is_binary` / `mime_type` are returned by the API but predate the SDK's
   // ArtifactData type; live-streamed artifacts lack them entirely, so the
   // extension map inside isBinaryArtifact is the fallback.
@@ -179,8 +182,6 @@ export function MessagePreview({
   const mimeType = isBinary
     ? resolveBinaryMimeType(fileExtension, rawMimeType)
     : undefined;
-  const binaryOpensInCanvas =
-    isBinary && canOpenBinaryInCanvas({ mimeType, fileExtension });
   const toolType = determineToolType(fileExtension, isBinary);
 
   const payload: CanvasOpenPayload = {
@@ -204,18 +205,6 @@ export function MessagePreview({
 
   const previewText = isBinary ? '' : buildSnippet(artifactContent);
 
-  const handleDownload = () => {
-    if (!artifact.id || !tenantKey) return;
-    void downloadBinaryArtifact({
-      artifactId: artifact.id,
-      org: tenantKey,
-      userId: artifact.username || username || '',
-      title: displayTitle || artifact.title,
-      fileExtension,
-      mimeType,
-    });
-  };
-
   const renderArtifactPreview = () => {
     if (selectedVersion.is_current) {
       const isStreaming =
@@ -229,9 +218,6 @@ export function MessagePreview({
           onOpenCanvas={onOpenCanvas}
           isStreaming={isStreaming}
           isBinary={isBinary}
-          canOpenInCanvas={!isBinary || binaryOpensInCanvas}
-          onDownload={handleDownload}
-          isDownloading={isDownloading}
         />
       );
     }

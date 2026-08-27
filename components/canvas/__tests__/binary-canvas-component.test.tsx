@@ -136,6 +136,84 @@ describe('BinaryCanvasComponent', () => {
     expect((blob as Blob).type).toBe('image/svg+xml');
   });
 
+  it('shows a graceful preview error for malformed svg (LLM &nbsp; output) instead of a broken render', async () => {
+    mockFetchArtifact.mockReturnValue({
+      unwrap: () =>
+        Promise.resolve({
+          id: 42,
+          title: 'linear_plot.svg',
+          file_extension: 'svg',
+          is_binary: false,
+          binary_content: null,
+          content:
+            '<svg xmlns="http://www.w3.org/2000/svg"><text>a&nbsp;b</text></svg>',
+        }),
+    });
+
+    render(
+      <BinaryCanvasComponent {...requiredProps} title="linear_plot.svg" />,
+    );
+
+    expect(
+      await screen.findByTestId('binary-canvas-preview-error'),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId('binary-canvas-image')).not.toBeInTheDocument();
+    // No duplicate button in the panel — the header Export stays enabled and
+    // still saves the original file.
+    expect(
+      screen.queryByTestId('binary-canvas-download'),
+    ).not.toBeInTheDocument();
+    const exportButton = screen.getByTestId('binary-canvas-export');
+    expect(exportButton).toBeEnabled();
+    fireEvent.click(exportButton);
+    expect(mockDownloadBlob).toHaveBeenCalledWith(
+      expect.any(Blob),
+      'linear_plot.svg',
+    );
+  });
+
+  it('shows the preview error for pdf payloads without the %PDF header', async () => {
+    mockFetchArtifact.mockReturnValue({
+      unwrap: () =>
+        Promise.resolve({
+          ...pdfArtifact,
+          binary_content: btoa('<html>not a pdf</html>'),
+        }),
+    });
+
+    render(<BinaryCanvasComponent {...requiredProps} title="report.pdf" />);
+
+    expect(
+      await screen.findByTestId('binary-canvas-preview-error'),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId('binary-canvas-pdf')).not.toBeInTheDocument();
+  });
+
+  it('falls back to the preview error when an image fails to render', async () => {
+    mockFetchArtifact.mockReturnValue({
+      unwrap: () =>
+        Promise.resolve({
+          ...pdfArtifact,
+          title: 'chart.png',
+          file_extension: 'png',
+          mime_type: 'image/png',
+          binary_content: btoa('not-really-a-png'),
+        }),
+    });
+
+    render(<BinaryCanvasComponent {...requiredProps} title="chart.png" />);
+
+    // png bytes can't be validated upfront — the <img> error signal is the
+    // detection path.
+    const img = await screen.findByTestId('binary-canvas-image');
+    fireEvent.error(img);
+
+    expect(
+      await screen.findByTestId('binary-canvas-preview-error'),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId('binary-canvas-image')).not.toBeInTheDocument();
+  });
+
   it('shows the download fallback for non-displayable binaries', async () => {
     mockFetchArtifact.mockReturnValue({
       unwrap: () =>
@@ -152,8 +230,12 @@ describe('BinaryCanvasComponent', () => {
     expect(
       await screen.findByTestId('binary-canvas-fallback'),
     ).toBeInTheDocument();
+    // The panel carries no button of its own — export lives in the header.
+    expect(
+      screen.queryByTestId('binary-canvas-download'),
+    ).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByTestId('binary-canvas-download'));
+    fireEvent.click(screen.getByTestId('binary-canvas-export'));
     expect(mockDownloadBlob).toHaveBeenCalledWith(
       expect.any(Blob),
       'archive.zip',

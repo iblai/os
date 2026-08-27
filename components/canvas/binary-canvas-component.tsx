@@ -10,6 +10,7 @@ import { downloadBlob } from '@/components/canvas/canvas-export-handlers';
 import {
   artifactFileToBlob,
   buildBinaryFilename,
+  getPreviewIssue,
   isImageMimeType,
   resolveBinaryMimeType,
   type ArtifactWithBinaryFields,
@@ -55,6 +56,9 @@ export function BinaryCanvasComponent({
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>(
     'loading',
   );
+  // The file arrived but can't be displayed (malformed LLM output, render
+  // failure) — export still works, so this is softer than loadState 'error'.
+  const [previewFailed, setPreviewFailed] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
@@ -66,6 +70,7 @@ export function BinaryCanvasComponent({
         return;
       }
       setLoadState('loading');
+      setPreviewFailed(false);
       try {
         const artifact = (await fetchArtifact({
           id: artifactId,
@@ -80,6 +85,11 @@ export function BinaryCanvasComponent({
         if (!file) {
           throw new Error('Artifact has no displayable content');
         }
+        // Malformed LLM output (invalid SVG XML, non-PDF bytes, …) must show
+        // a clear message instead of the browser's raw parse error.
+        const issue = await getPreviewIssue(file.blob, file.mimeType);
+        if (cancelled) return;
+        setPreviewFailed(issue !== null);
         setBlob(file.blob);
         setResolvedTitle(artifact.title || title);
         setResolvedExtension(file.extension);
@@ -196,7 +206,7 @@ export function BinaryCanvasComponent({
           </div>
         )}
 
-        {loadState === 'ready' && blobUrl && canPreview && isPdf && (
+        {loadState === 'ready' && !previewFailed && blobUrl && isPdf && (
           <iframe
             src={blobUrl}
             title={displayTitle}
@@ -205,36 +215,38 @@ export function BinaryCanvasComponent({
           />
         )}
 
-        {loadState === 'ready' && blobUrl && canPreview && isImage && (
+        {loadState === 'ready' && !previewFailed && blobUrl && isImage && (
           <div className="flex flex-1 items-center justify-center overflow-auto p-4">
             <img
               src={blobUrl}
               alt={displayTitle}
               className="max-h-full max-w-full object-contain"
               data-testid="binary-canvas-image"
+              onError={() => setPreviewFailed(true)}
             />
           </div>
         )}
 
-        {loadState === 'ready' && !canPreview && (
-          /* Defensive: the chat chip offers Download instead of opening the
-             canvas for these, but keep a usable fallback if we get here. */
+        {loadState === 'ready' && (previewFailed || !canPreview) && (
+          /* Two ways here: the file itself is malformed / failed to render
+             (previewFailed), or this type has no in-canvas viewer at all
+             (defensive — the chat chip offers Download for those instead of
+             opening the canvas). Either way the original file still
+             downloads fine. */
           <div
             className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center"
-            data-testid="binary-canvas-fallback"
+            data-testid={
+              previewFailed
+                ? 'binary-canvas-preview-error'
+                : 'binary-canvas-fallback'
+            }
           >
             <FileArchive className="h-10 w-10 text-gray-400" />
-            <p className="text-sm text-gray-600">{t('previewUnavailable')}</p>
-            <Button
-              variant="outline"
-              size="sm"
-              className="border-blue-200 text-blue-600"
-              onClick={handleExport}
-              data-testid="binary-canvas-download"
-            >
-              <Download className="mr-1 h-3.5 w-3.5" />
-              {t('download')}
-            </Button>
+            <p className="text-sm text-gray-600">
+              {previewFailed ? t('previewFailed') : t('previewUnavailable')}
+            </p>
+            {/* No button here — the header's Export button already saves the
+                original file, and it stays enabled in this state. */}
           </div>
         )}
       </div>

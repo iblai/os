@@ -174,6 +174,10 @@ function buildCsp(nonce: string): string {
     'worker-src': ["'self'", 'blob:'],
     'frame-src': [
       "'self'",
+      // The binary-artifact canvas previews PDFs in an <iframe> whose src is
+      // a same-origin blob: URL built from artifact bytes; without this the
+      // browser blocks the viewer ("This content is blocked").
+      'blob:',
       ...IBL_HTTP,
       ...partners,
       'https://accounts.google.com',

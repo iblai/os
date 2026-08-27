@@ -332,8 +332,8 @@
     "export": "Export",
     "loadError": "Couldn't load this file.",
     "retry": "Retry",
-    "previewUnavailable": "Preview isn't available for this file type.",
-    "download": "Download"
+    "previewUnavailable": "We can't preview this kind of file just yet — but it's ready to go. Hit Export to save it to your device.",
+    "previewFailed": "This file can't be previewed — it appears to be invalid or corrupted. You can still export it."
   },
   "canvasCanvasControls": {
     "lengthLongest": "Longest",

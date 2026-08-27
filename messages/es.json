@@ -332,8 +332,8 @@
     "export": "Exportar",
     "loadError": "No se pudo cargar este archivo.",
     "retry": "Reintentar",
-    "previewUnavailable": "La vista previa no está disponible para este tipo de archivo.",
-    "download": "Descargar"
+    "previewUnavailable": "Todavía no podemos previsualizar este tipo de archivo, pero está listo. Pulsa Exportar para guardarlo en tu dispositivo.",
+    "previewFailed": "No se puede previsualizar este archivo: parece no ser válido o estar dañado. Aún puedes exportarlo."
   },
   "canvasCanvasControls": {
     "lengthLongest": "El más largo",

@@ -348,8 +348,6 @@ describe('CanvasMessagePreview', () => {
   });
 
   describe('binary artifacts', () => {
-    const mockOnDownload = vi.fn();
-
     const binaryPayload: CanvasOpenPayload = {
       title: 'archive.zip',
       content: '',
@@ -365,66 +363,61 @@ describe('CanvasMessagePreview', () => {
       content: '',
       payload: binaryPayload,
       onOpenCanvas: mockOnOpenCanvas,
-      onDownload: mockOnDownload,
       isBinary: true,
     };
 
-    it('shows Download instead of Open Canvas when the canvas cannot display the file', () => {
-      render(<CanvasMessagePreview {...binaryProps} canOpenInCanvas={false} />);
+    it('shows Open Canvas for EVERY binary type — non-displayable ones get the no-preview message inside the canvas', () => {
+      render(<CanvasMessagePreview {...binaryProps} />);
 
-      expect(screen.getByTestId('canvas-download-button')).toBeInTheDocument();
-      expect(screen.getByText('Download')).toBeInTheDocument();
-      expect(
-        screen.queryByTestId('canvas-open-button'),
-      ).not.toBeInTheDocument();
-    });
+      const openButton = screen.getByTestId('canvas-open-button');
+      expect(openButton).toBeInTheDocument();
 
-    it('invokes onDownload — not onOpenCanvas — from the Download button', () => {
-      render(<CanvasMessagePreview {...binaryProps} canOpenInCanvas={false} />);
-
-      fireEvent.click(screen.getByTestId('canvas-download-button'));
-
-      expect(mockOnDownload).toHaveBeenCalled();
-      expect(mockOnOpenCanvas).not.toHaveBeenCalled();
-    });
-
-    it('disables the Download button while a download is in flight', () => {
-      render(
-        <CanvasMessagePreview
-          {...binaryProps}
-          canOpenInCanvas={false}
-          isDownloading
-        />,
-      );
-
-      expect(screen.getByTestId('canvas-download-button')).toBeDisabled();
-    });
-
-    it('keeps Open Canvas for binaries the canvas can display (pdf)', () => {
-      render(
-        <CanvasMessagePreview
-          {...binaryProps}
-          payload={{
-            ...binaryPayload,
-            title: 'report.pdf',
-            fileExtension: 'pdf',
-            mimeType: 'application/pdf',
-          }}
-          title="report.pdf"
-          canOpenInCanvas
-        />,
-      );
-
-      expect(screen.getByTestId('canvas-open-button')).toBeInTheDocument();
-      expect(
-        screen.queryByTestId('canvas-download-button'),
-      ).not.toBeInTheDocument();
+      fireEvent.click(openButton);
+      expect(mockOnOpenCanvas).toHaveBeenCalledWith(binaryPayload);
     });
 
     it('describes the file type instead of a content snippet', () => {
-      render(<CanvasMessagePreview {...binaryProps} canOpenInCanvas={false} />);
+      render(<CanvasMessagePreview {...binaryProps} />);
 
       expect(screen.getByText('ZIP file')).toBeInTheDocument();
+    });
+
+    it('disables Open Canvas while a binary file is still generating, with a tooltip', () => {
+      render(<CanvasMessagePreview {...binaryProps} isStreaming />);
+
+      const openButton = screen.getByTestId('canvas-open-button');
+      expect(openButton).toBeDisabled();
+      // Tooltip wrapper present so the disabled button still explains itself.
+      expect(
+        screen.getByTestId('canvas-binary-generating'),
+      ).toBeInTheDocument();
+
+      fireEvent.click(openButton);
+      expect(mockOnOpenCanvas).not.toHaveBeenCalled();
+    });
+
+    it('keeps Open Canvas clickable for streaming TEXT artifacts (they stream into the canvas)', () => {
+      render(
+        <CanvasMessagePreview
+          title="Notes"
+          content="Some markdown"
+          payload={{
+            title: 'Notes',
+            content: 'Some markdown',
+            toolType: 'canvas',
+            artifactId: 7,
+            fileExtension: 'md',
+          }}
+          onOpenCanvas={mockOnOpenCanvas}
+          isStreaming
+        />,
+      );
+
+      const openButton = screen.getByTestId('canvas-open-button');
+      expect(openButton).toBeEnabled();
+      expect(
+        screen.queryByTestId('canvas-binary-generating'),
+      ).not.toBeInTheDocument();
     });
   });
 });

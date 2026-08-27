@@ -83,6 +83,7 @@ import type { CanvasOpenPayload } from './chat-messages/types';
 import {
   getBinaryStreamBehavior,
   resolveBinaryMimeType,
+  resolveEffectiveFileExtension,
   shouldUseBinaryCanvas,
 } from '@/components/canvas/binary-artifact-utils';
 import { useNavigate } from '@/hooks/user-navigate';
@@ -894,6 +895,14 @@ export function Chat({
         title: resolvedTitle,
         file_extension: payload.fileExtension || 'txt',
       });
+    } else if (newCanvasState.type === 'binary') {
+      // The same artifact may have been pinned moments earlier by a
+      // mid-stream text-canvas open (before it was known to be a file) —
+      // clear any stale pin so the view/export-only artifact never rides
+      // along on outgoing messages as editable context.
+      setCurrentCanvasArtifact((current) =>
+        current && current.artifactId === payload.artifactId ? null : current,
+      );
     }
 
     // Always force refresh when opening a canvas to ensure it loads correctly
@@ -1311,7 +1320,17 @@ export function Chat({
         // Binary artifacts (pdf, zip, svg, …) have nothing to stream into
         // the text editor and their file only exists on the detail endpoint
         // once the version is finalized — defer canvas opening to stream end.
-        if (!getBinaryStreamBehavior(fileExtension).openCanvasOnStreamStart) {
+        // The stream event's file_extension can be a "txt" placeholder while
+        // the artifact is really a file (the backend titles those by
+        // filename, e.g. "report.pdf"), so resolve against the title too —
+        // otherwise the text canvas opens mid-stream for a binary file.
+        const effectiveExtension = resolveEffectiveFileExtension(
+          fileExtension,
+          title,
+        );
+        if (
+          !getBinaryStreamBehavior(effectiveExtension).openCanvasOnStreamStart
+        ) {
           return;
         }
 
@@ -1362,13 +1381,28 @@ export function Chat({
         setStreamingArtifactId(undefined);
       }
 
-      // If canvas is not open yet (fallback case), open it now with the final content
-      if (!isUpdate && artifactId && !isCanvasOpen) {
-        const { isBinary, openCanvasOnStreamEnd } =
-          getBinaryStreamBehavior(fileExtension);
-        // Binary files the canvas cannot display (zip, xlsx, …) never open
-        // the canvas — the chat preview offers Download instead.
-        if (!openCanvasOnStreamEnd) {
+      if (!isUpdate && artifactId) {
+        // Every artifact opens at stream end — types the canvas can't render
+        // (zip, xlsx, …) get the binary canvas's no-preview message with the
+        // Export action. Resolve the extension against the title too: stream
+        // events can carry a "txt" placeholder for what is really a file.
+        const effectiveExtension = resolveEffectiveFileExtension(
+          fileExtension,
+          title,
+        );
+        const { isBinary } = getBinaryStreamBehavior(effectiveExtension);
+
+        // Binary content always wins over any streamed text rendering: if
+        // the text canvas opened mid-stream for THIS artifact (the stream
+        // start couldn't yet tell it was a file), switch it to the binary
+        // viewer now. Never hijack a canvas showing a different artifact.
+        const sameArtifactOpenAsText =
+          isCanvasOpen &&
+          canvasState.artifactId === Number(artifactId) &&
+          canvasState.type !== 'binary';
+        const shouldOpen =
+          !isCanvasOpen || (isBinary && sameArtifactOpenAsText);
+        if (!shouldOpen) {
           return;
         }
 
@@ -1383,9 +1417,11 @@ export function Chat({
           artifactId: Number(artifactId),
           org: tenantKey,
           userId: username ?? undefined,
-          fileExtension: fileExtension,
+          fileExtension: effectiveExtension ?? fileExtension,
           isBinary,
-          mimeType: isBinary ? resolveBinaryMimeType(fileExtension) : undefined,
+          mimeType: isBinary
+            ? resolveBinaryMimeType(effectiveExtension)
+            : undefined,
           metadata: {
             sessionId: artifactSessionId || sessionId,
             versionNumber,

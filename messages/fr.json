@@ -332,8 +332,8 @@
     "export": "Exporter",
     "loadError": "Impossible de charger ce fichier.",
     "retry": "Réessayer",
-    "previewUnavailable": "L'aperçu n'est pas disponible pour ce type de fichier.",
-    "download": "Télécharger"
+    "previewUnavailable": "Nous ne pouvons pas encore afficher un aperçu de ce type de fichier, mais il est prêt. Cliquez sur Exporter pour l'enregistrer sur votre appareil.",
+    "previewFailed": "Impossible d'afficher l'aperçu de ce fichier — il semble non valide ou corrompu. Vous pouvez tout de même l'exporter."
   },
   "canvasCanvasControls": {
     "lengthLongest": "Le plus long",

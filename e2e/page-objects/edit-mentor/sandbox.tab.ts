@@ -2,8 +2,8 @@ import { Page, Locator, expect } from '@playwright/test';
 import {
   verifySandboxKindsVisible,
   isSandboxKindEnabled,
-  toggleSandboxKind,
-  verifySandboxKindDisabled,
+  verifyClawSectionVisible,
+  verifyClawSectionHidden,
   type SandboxKind,
 } from '@iblai/iblai-js/playwright';
 
@@ -16,13 +16,23 @@ export type { SandboxKind };
  * directly — there is no app-level capability gate around it any more. The
  * component always renders a "Sandbox Type" card with three kind switches
  * (`sandbox-kind-computational-runtime`, `sandbox-kind-virtual-machine`,
- * `sandbox-kind-claw`). Computational Runtime and Virtual Machine can both be
- * on at once; enabling Claw turns both of them off in the same PATCH and
- * disables their switches while Claw stays on (plus an info-tooltip note
- * explaining why). The claw connected/not-connected sections (instance
- * picker / "Connected Instance" panel) render ONLY while the Claw kind is
- * enabled — they are not merely grayed out when Claw is off, they are absent
- * from the DOM entirely.
+ * `sandbox-kind-claw`). The three kinds are MUTUALLY EXCLUSIVE and AT LEAST
+ * ONE IS ALWAYS ACTIVE — "Only one sandbox type can be enabled at a time"
+ * per the card's own subheading: kinds change ONLY by selecting a different
+ * kind, which atomically deactivates whichever kind was previously active in
+ * the same PATCH. There is no "disable" operation — toggling the
+ * currently-active kind's own switch off (leaving none active) is not a
+ * supported flow, so specs should never assert an all-off state; use
+ * `selectKind()`, never a boolean on/off toggle, to change which kind is
+ * active. (An older SDK build briefly supported an all-off state — that
+ * contract is gone; don't trust stray "leaves none enabled" wording in
+ * vendored docstrings over this.) Nothing gets a persistent `disabled`
+ * state — each switch is only briefly disabled while its own save is in
+ * flight (`isSavingSandboxKind`), never because of which kind is active.
+ * The claw connected/not-connected sections (instance picker / "Connected
+ * Instance" panel) render ONLY while the Claw kind is enabled — they are
+ * not merely grayed out when Claw is off, they are absent from the DOM
+ * entirely.
  *
  *  - NOT CONNECTED (claw on, no wired instance): instance picker (search
  *    input + Add Instance + table).
@@ -66,9 +76,9 @@ export class SandboxTab {
   readonly dialog: Locator;
 
   // ── Sandbox kind selector ────────────────────────────────────────────────
-  // Always rendered (no gate). Computational Runtime and Virtual Machine can
-  // both be on simultaneously; enabling Claw turns both off and disables
-  // their switches for as long as Claw stays on.
+  // Always rendered (no gate). Mutually exclusive AND at least one kind is
+  // always active: selecting one kind turns off whichever kind was
+  // previously active. There is no "disable" operation.
   readonly computationalRuntimeSwitch: Locator;
   readonly virtualMachineSwitch: Locator;
   readonly clawSwitch: Locator;
@@ -222,8 +232,9 @@ export class SandboxTab {
 
   /**
    * The row's info-icon tooltip trigger (accessible name "More info about
-   * {kind}"). Hovering it reveals the detail tooltip, which also carries the
-   * "kinds disabled by claw" note while Claw is on.
+   * {kind}"). Hovering it reveals the kind's detail-tooltip copy (what the
+   * kind does) — there is no "disabled by claw" style note any more, since
+   * no kind ever gets a persistent disabled state.
    */
   kindInfoTrigger(kind: SandboxKind): Locator {
     return this.page.getByRole('button', {
@@ -242,41 +253,110 @@ export class SandboxTab {
   }
 
   /**
-   * Toggles a sandbox-kind switch and waits for the "Sandbox type updated"
-   * save toast. Throws if the switch isn't clickable — Computational Runtime
-   * and Virtual Machine are disabled while Claw is enabled.
+   * Toggles a sandbox-kind switch. Only meaningful when `kind` is currently
+   * OFF: selecting it atomically activates it and deactivates whichever kind
+   * was previously active (mutual exclusivity). At least one kind is ALWAYS
+   * active — there is no supported way to turn the currently-active kind
+   * off without selecting a different one, so callers should never invoke
+   * this on the kind that's already active (that's an unsupported "disable"
+   * flow, not a toggle-to-off). Prefer `selectKind()`, which enforces this.
+   *
+   * Implemented locally rather than via the SDK's `toggleSandboxKind`: that
+   * helper waits for the switch's aria-checked flip FIRST and only then for
+   * the "Sandbox type updated" toast — but sonner toasts auto-dismiss after
+   * ~4s, so whenever the state assertion retries for longer than that the
+   * toast is already gone and the helper fails on an interaction that
+   * actually succeeded. Deterministic completion signals used instead: the
+   * mentor-settings PATCH response resolving OK, then the switch holding the
+   * target aria-checked state (a rejected PATCH rolls the optimistic flip
+   * back, so the state assertion would catch a real failure).
    */
   async toggleKind(kind: SandboxKind): Promise<void> {
-    await toggleSandboxKind(this.page, kind);
+    const kindSwitch = this.kindSwitch(kind);
+    await expect(kindSwitch).toBeVisible({ timeout: 10_000 });
+    await expect(kindSwitch).toBeEnabled({ timeout: 10_000 });
+    const target = (await kindSwitch.getAttribute('aria-checked')) !== 'true';
+
+    // Register the response wait BEFORE clicking so the save can't win the
+    // race. The mentor-settings update is a PUT to .../mentors/{id}/settings/
+    // (aiMentorOrgsUsersMentorsSettingsUpdate); accept PATCH too in case the
+    // API client ever switches to a partial update.
+    const saveDone = this.page.waitForResponse(
+      (resp) => {
+        const method = resp.request().method();
+        return (
+          (method === 'PUT' || method === 'PATCH') &&
+          resp.url().includes('/api/ai-mentor/') &&
+          resp.url().includes('/settings/')
+        );
+      },
+      { timeout: 20_000 },
+    );
+    await kindSwitch.click();
+    const response = await saveDone;
+    if (!response.ok()) {
+      throw new Error(
+        `Sandbox-kind save failed with ${response.status()} for ${kind}`,
+      );
+    }
+    await expect(kindSwitch).toHaveAttribute('aria-checked', String(target), {
+      timeout: 10_000,
+    });
   }
 
   /**
-   * Idempotently sets a sandbox-kind switch to the target state — mirrors
-   * the old capability toggle's `setCapabilityEnabled` pattern. No-ops if
-   * already at the target state.
+   * Idempotently makes `kind` the active sandbox kind. No-ops if `kind` is
+   * already active. At least one kind is always active on a mentor — kinds
+   * change ONLY by selecting a different one (mutual exclusivity turns the
+   * previously-active kind off atomically, in the same request); there is
+   * no "disable" operation, so this can never leave all three off. This is
+   * the primary API specs should use to change sandbox kind — prefer it
+   * over calling `toggleKind` directly.
    */
-  async setKindEnabled(kind: SandboxKind, target: boolean): Promise<void> {
+  async selectKind(kind: SandboxKind): Promise<void> {
     const isOn = await this.isKindEnabled(kind);
-    if (isOn === target) return;
+    if (isOn) return;
     await this.toggleKind(kind);
   }
 
-  /** Verify a kind switch is disabled (Computational Runtime / Virtual Machine while Claw is on). */
-  async verifyKindDisabled(kind: SandboxKind): Promise<void> {
-    await verifySandboxKindDisabled(this.page, kind);
+  /**
+   * Returns whichever sandbox kind is currently active. At least one kind
+   * is always active, so this never legitimately returns nothing — callers
+   * that need to restore a mentor's original kind after a test-local
+   * `selectKind()` should record this beforehand, then `selectKind()` back
+   * to it afterwards, rather than assuming a fresh mentor starts with any
+   * particular kind (or with none at all).
+   */
+  async getActiveKind(): Promise<SandboxKind> {
+    const kinds: SandboxKind[] = [
+      'computational-runtime',
+      'virtual-machine',
+      'claw',
+    ];
+    for (const kind of kinds) {
+      if (await this.isKindEnabled(kind)) return kind;
+    }
+    // Defensive fallback — unreachable given the "always one active"
+    // invariant, but avoids a hard crash if that invariant is ever
+    // violated in a given env.
+    return 'computational-runtime';
   }
 
   /**
-   * Hovers the kind's info icon and asserts the "kinds disabled by claw"
-   * note is present in the revealed tooltip. Only meaningful for
-   * Computational Runtime / Virtual Machine while Claw is enabled — the
-   * SDK only passes a `disabledNote` in that case.
+   * Verify the Claw instance section (not-connected instance table or the
+   * connected-instance card) renders below the kind selector. Only true
+   * while the Claw kind is enabled.
    */
-  async verifyKindDisabledHint(kind: SandboxKind): Promise<void> {
-    await this.kindInfoTrigger(kind).hover();
-    await expect(
-      this.page.getByText(/Claw replaces the built-in agent runtimes/i),
-    ).toBeVisible({ timeout: 5_000 });
+  async verifyClawInstanceSectionVisible(): Promise<void> {
+    await verifyClawSectionVisible(this.page);
+  }
+
+  /**
+   * Verify the Claw instance section is absent — the state while Claw is
+   * not the selected kind.
+   */
+  async verifyClawInstanceSectionHidden(): Promise<void> {
+    await verifyClawSectionHidden(this.page);
   }
 
   // ── State detection ──────────────────────────────────────────────────────

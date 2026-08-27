@@ -19,13 +19,18 @@
  *
  * `SandboxConfig` always renders a "Sandbox Type" card with three switches
  * (`sandbox-kind-computational-runtime`, `sandbox-kind-virtual-machine`,
- * `sandbox-kind-claw`). Computational Runtime and Virtual Machine can both be
- * on at once. Enabling Claw turns both of the others off in the same PATCH
- * and disables their switches for as long as Claw stays on (with an
- * info-tooltip note explaining why). The claw connected/not-connected
- * sections (instance table, connect, auto-push, push config) render ONLY
- * while Claw is enabled — not merely grayed out, absent from the DOM
- * entirely.
+ * `sandbox-kind-claw`). The three kinds are MUTUALLY EXCLUSIVE and AT LEAST
+ * ONE IS ALWAYS ACTIVE — "Only one sandbox type can be enabled at a time"
+ * per the card's own subheading. Kinds change ONLY by selecting a different
+ * kind, which atomically deactivates whichever kind was previously active in
+ * the same PATCH; there is no "disable" operation, and toggling the
+ * currently-active kind's own switch to turn it off (leaving none active) is
+ * not a supported flow — this journey never asserts an all-off state. No
+ * kind switch ever gets a persistent `disabled` state — each is only briefly
+ * disabled while its own save is in flight, regardless of which kind is
+ * active. The claw connected/not-connected sections (instance table,
+ * connect, auto-push, push config) render ONLY while Claw is enabled — not
+ * merely grayed out, absent from the DOM entirely.
  *
  * `hooks/use-mentor-segments.ts` does not gate the Sandbox segment's
  * visibility on any of these flags — the tab is ALWAYS mounted for admins,
@@ -145,9 +150,10 @@ test.describe('Journey 44: CLAW Advanced Sandbox', () => {
     await waitForPageReady(page);
 
     const sandbox = new SandboxTab(page, editMentorPage.dialog);
-    // A freshly-created mentor starts with claw off, but be explicit — the
-    // other two switches are only enabled while claw is off.
-    await sandbox.setKindEnabled('claw', false);
+    // Don't assume a fresh mentor defaults to any particular kind (at least
+    // one is always active) — explicitly select Computational Runtime so
+    // Claw is definitely not the active kind.
+    await sandbox.selectKind('computational-runtime');
     await expect(sandbox.computationalRuntimeSwitch).toBeEnabled({
       timeout: 10_000,
     });
@@ -157,13 +163,14 @@ test.describe('Journey 44: CLAW Advanced Sandbox', () => {
     await editMentorPage.close();
   });
 
-  // ── TC03: Toggling auto-saves and both non-claw kinds can be on together ─
+  // ── TC03: Toggling auto-saves and kinds are mutually exclusive ───────────
   //
   // Each switch PATCHes immediately (optimistic local state) — there is no
   // footer Save button involved. The Sandbox tab is unconditionally mounted
   // regardless of any kind's value, so toggling never affects its presence.
+  // Enabling one kind turns off whichever kind was previously active.
 
-  test('toggling computational-runtime and virtual-machine kinds auto-saves instantly, both can be on together, and Sandbox tab visibility is unaffected', async ({
+  test('toggling a sandbox kind auto-saves instantly, turns off the previously-active kind, and Sandbox tab visibility is unaffected', async ({
     page,
     editMentorPage,
   }) => {
@@ -173,28 +180,28 @@ test.describe('Journey 44: CLAW Advanced Sandbox', () => {
     const sandbox = new SandboxTab(page, editMentorPage.dialog);
     await expect(getTab(editMentorPage.dialog, 'Sandbox')).toBeVisible();
 
-    // Clean starting point.
-    await sandbox.setKindEnabled('claw', false);
-    await sandbox.setKindEnabled('computational-runtime', false);
-    await sandbox.setKindEnabled('virtual-machine', false);
-
-    await sandbox.setKindEnabled('computational-runtime', true);
+    // Clean starting point: select Computational Runtime as the active kind.
+    // Don't assume a fresh mentor defaults to any particular kind (at least
+    // one is always active) — pin down which one before observing a
+    // transition.
+    await sandbox.selectKind('computational-runtime');
     expect(await sandbox.isKindEnabled('computational-runtime')).toBe(true);
     expect(await sandbox.isKindEnabled('virtual-machine')).toBe(false);
 
-    // Virtual Machine can be enabled on top — the two are independent.
-    await sandbox.setKindEnabled('virtual-machine', true);
-    expect(await sandbox.isKindEnabled('computational-runtime')).toBe(true);
+    // Enabling Virtual Machine turns Computational Runtime back off — the
+    // kinds are mutually exclusive, not independent toggles.
+    await sandbox.toggleKind('virtual-machine');
     expect(await sandbox.isKindEnabled('virtual-machine')).toBe(true);
+    expect(await sandbox.isKindEnabled('computational-runtime')).toBe(false);
 
     await expect(getTab(editMentorPage.dialog, 'Sandbox')).toBeVisible();
 
     await editMentorPage.close();
   });
 
-  // ── TC04: Enabling Claw turns off + disables the other two kinds ─────────
+  // ── TC04: Enabling Claw turns off whichever kind was previously active ───
 
-  test('enabling claw turns off and disables computational-runtime and virtual-machine, and surfaces the "kinds disabled by claw" hint', async ({
+  test('enabling claw turns off the previously-active kind (mutual exclusivity)', async ({
     page,
     editMentorPage,
   }) => {
@@ -204,19 +211,20 @@ test.describe('Journey 44: CLAW Advanced Sandbox', () => {
     const sandbox = new SandboxTab(page, editMentorPage.dialog);
 
     try {
-      // Start with both non-claw kinds on so enabling claw's effect is
-      // observable (off → on transition, not just "already off").
-      await sandbox.setKindEnabled('claw', false);
-      await sandbox.setKindEnabled('computational-runtime', true);
-      await sandbox.setKindEnabled('virtual-machine', true);
+      // Start with Computational Runtime active so enabling claw's effect is
+      // observable (on → off transition, not just "already off").
+      await sandbox.selectKind('computational-runtime');
+      expect(await sandbox.isKindEnabled('computational-runtime')).toBe(true);
 
-      await sandbox.setKindEnabled('claw', true);
+      await sandbox.toggleKind('claw');
 
+      expect(await sandbox.isKindEnabled('claw')).toBe(true);
       expect(await sandbox.isKindEnabled('computational-runtime')).toBe(false);
       expect(await sandbox.isKindEnabled('virtual-machine')).toBe(false);
-      await sandbox.verifyKindDisabled('computational-runtime');
-      await sandbox.verifyKindDisabled('virtual-machine');
-      await sandbox.verifyKindDisabledHint('computational-runtime');
+      // Nothing gets a persistent disabled state any more — Computational
+      // Runtime is off, but still clickable (only briefly disabled while a
+      // save is in flight).
+      await expect(sandbox.computationalRuntimeSwitch).toBeEnabled();
 
       // Verify ordering while we're here: Sandbox leads the Integrations
       // category (feat/2040 moved it off Configurations, so it is no longer
@@ -226,7 +234,9 @@ test.describe('Journey 44: CLAW Advanced Sandbox', () => {
       );
       expect(integrationTabs.findIndex((t) => /sandbox/i.test(t))).toBe(0);
     } finally {
-      await sandbox.setKindEnabled('claw', false);
+      // Switch away from claw (no "disable" operation exists) — cheap
+      // hygiene even though this mentor is deleted in afterAll regardless.
+      await sandbox.selectKind('computational-runtime');
       await editMentorPage.close();
     }
   });
@@ -258,9 +268,15 @@ test.describe('Journey 44: CLAW Advanced Sandbox', () => {
     await editMentorPage.close();
   });
 
-  // ── TC07: Disabling Claw re-enables the other two kind switches ──────────
+  // ── TC07: Switching away from Claw deactivates it (mutual exclusivity) ───
+  //
+  // There is no "disable" operation — kinds change ONLY by selecting a
+  // different one. Selecting Computational Runtime while Claw is active
+  // deactivates Claw atomically (same PATCH) and hides its instance section;
+  // Computational Runtime becomes the sole active kind. Never assert an
+  // all-off state — at least one kind is always active.
 
-  test('disabling claw re-enables computational-runtime and virtual-machine switches while the Sandbox tab remains visible', async ({
+  test('switching to computational-runtime while claw is active deactivates claw and hides its instance section', async ({
     page,
     editMentorPage,
   }) => {
@@ -269,23 +285,31 @@ test.describe('Journey 44: CLAW Advanced Sandbox', () => {
 
     const sandbox = new SandboxTab(page, editMentorPage.dialog);
 
-    try {
-      await sandbox.setKindEnabled('claw', true);
-      await sandbox.verifyKindDisabled('computational-runtime');
-      await sandbox.verifyKindDisabled('virtual-machine');
+    // Start from a known claw-active state (mutual exclusivity, TC04).
+    await sandbox.selectKind('claw');
+    expect(await sandbox.isKindEnabled('claw')).toBe(true);
+    await sandbox.verifyClawInstanceSectionVisible();
 
-      await sandbox.setKindEnabled('claw', false);
-      await expect(sandbox.computationalRuntimeSwitch).toBeEnabled({
-        timeout: 10_000,
-      });
-      await expect(sandbox.virtualMachineSwitch).toBeEnabled();
+    await sandbox.selectKind('computational-runtime');
 
-      // The Sandbox tab stays mounted regardless of any kind's value.
-      await expect(getTab(editMentorPage.dialog, 'Sandbox')).toBeVisible();
-    } finally {
-      await sandbox.setKindEnabled('claw', false);
-      await editMentorPage.close();
-    }
+    // Claw is deactivated, its instance section is gone, and Computational
+    // Runtime is now the single active kind.
+    expect(await sandbox.isKindEnabled('claw')).toBe(false);
+    expect(await sandbox.isKindEnabled('computational-runtime')).toBe(true);
+    expect(await sandbox.isKindEnabled('virtual-machine')).toBe(false);
+    await sandbox.verifyClawInstanceSectionHidden();
+
+    // All three switches remain clickable — nothing is left disabled.
+    await expect(sandbox.computationalRuntimeSwitch).toBeEnabled({
+      timeout: 10_000,
+    });
+    await expect(sandbox.virtualMachineSwitch).toBeEnabled();
+    await expect(sandbox.clawSwitch).toBeEnabled();
+
+    // The Sandbox tab stays mounted regardless of any kind's value.
+    await expect(getTab(editMentorPage.dialog, 'Sandbox')).toBeVisible();
+
+    await editMentorPage.close();
   });
 
   // ── TC08: Claw instance sections render only while claw is enabled ───────
@@ -305,34 +329,21 @@ test.describe('Journey 44: CLAW Advanced Sandbox', () => {
     const sandbox = new SandboxTab(page, editMentorPage.dialog);
 
     try {
-      await sandbox.setKindEnabled('claw', false);
+      await sandbox.selectKind('computational-runtime');
       await sandbox.verifyKindsVisible();
       // No claw instance section (instance picker or connected panel) while
-      // claw is off.
-      await expect(sandbox.addInstanceButton).toBeHidden();
-      await expect(sandbox.connectedHeading).toBeHidden();
+      // claw is not the active kind.
+      await sandbox.verifyClawInstanceSectionHidden();
 
-      await sandbox.setKindEnabled('claw', true);
-      // With claw on, either the not-connected instance picker or the
+      await sandbox.selectKind('claw');
+      // With claw active, either the not-connected instance picker or the
       // connected panel must render — which one depends on the env's claw
       // wiring for this brand-new mentor (always not-connected in practice,
       // but tolerate either since instances are platform-wide state).
-      let notConnectedVisible = false;
-      try {
-        await sandbox.addInstanceButton.waitFor({
-          state: 'visible',
-          timeout: 10_000,
-        });
-        notConnectedVisible = true;
-      } catch {
-        notConnectedVisible = false;
-      }
-      const connectedVisible = notConnectedVisible
-        ? false
-        : await sandbox.isConnected(5_000);
-      expect(notConnectedVisible || connectedVisible).toBe(true);
+      await sandbox.verifyClawInstanceSectionVisible();
     } finally {
-      await sandbox.setKindEnabled('claw', false);
+      // Switch away from claw (no "disable" operation exists).
+      await sandbox.selectKind('computational-runtime');
       await editMentorPage.close();
     }
   });
@@ -367,7 +378,7 @@ test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
     await editMentorPage.open('Settings');
   });
 
-  test('admin toggles claw ON then OFF and the claw instance sections mount/unmount both times', async ({
+  test('admin switches to claw and away from it, and the claw instance sections mount/unmount both times', async ({
     page,
     editMentorPage,
   }) => {
@@ -376,34 +387,24 @@ test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
     await waitForPageReady(page);
 
     const sandbox = new SandboxTab(page, editMentorPage.dialog);
-    const originalState = await sandbox.isKindEnabled('claw');
+    // Don't assume a fresh mentor has any particular kind (or none at all)
+    // active — read the actual state so it can be restored afterwards.
+    const originalKind = await sandbox.getActiveKind();
 
     try {
-      // ── Phase 1: enable → claw instance section mounts ───────────────────
-      await sandbox.setKindEnabled('claw', true);
-      let notConnectedVisible = false;
-      try {
-        await sandbox.addInstanceButton.waitFor({
-          state: 'visible',
-          timeout: 10_000,
-        });
-        notConnectedVisible = true;
-      } catch {
-        notConnectedVisible = false;
-      }
-      const connectedVisible = notConnectedVisible
-        ? false
-        : await sandbox.isConnected(5_000);
-      expect(notConnectedVisible || connectedVisible).toBe(true);
+      // ── Phase 1: select claw → claw instance section mounts ──────────────
+      await sandbox.selectKind('claw');
+      await sandbox.verifyClawInstanceSectionVisible();
 
-      // ── Phase 2: disable → claw instance section unmounts ────────────────
-      await sandbox.setKindEnabled('claw', false);
-      await expect(sandbox.addInstanceButton).toBeHidden();
-      await expect(sandbox.connectedHeading).toBeHidden();
+      // ── Phase 2: switch away from claw → claw instance section unmounts ──
+      const awayKind =
+        originalKind === 'claw' ? 'computational-runtime' : originalKind;
+      await sandbox.selectKind(awayKind);
+      await sandbox.verifyClawInstanceSectionHidden();
     } finally {
-      // Restore original state
-      if (originalState !== (await sandbox.isKindEnabled('claw'))) {
-        await sandbox.setKindEnabled('claw', originalState);
+      // Restore the original active kind.
+      if ((await sandbox.getActiveKind()) !== originalKind) {
+        await sandbox.selectKind(originalKind);
       }
       await editMentorPage.close();
     }
@@ -420,17 +421,19 @@ test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
     await waitForPageReady(page);
 
     const sandbox = new SandboxTab(page, editMentorPage.dialog);
-    const wasEnabled = await sandbox.isKindEnabled('claw');
+    // Don't assume a fresh mentor has any particular kind active — read the
+    // actual state so it can be restored afterwards.
+    const originalKind = await sandbox.getActiveKind();
 
-    // Add Instance UI only renders while the claw kind is on — the SDK
+    // Add Instance UI only renders while claw is the active kind — the SDK
     // unmounts the instance sections entirely otherwise. If env has a wired
     // sandbox we capture the instance name, disconnect to reach the picker,
     // then reconnect at the end to restore the env.
     let priorConnectedInstance: string | null = null;
 
     try {
-      if (!wasEnabled) {
-        await sandbox.setKindEnabled('claw', true);
+      if (originalKind !== 'claw') {
+        await sandbox.selectKind('claw');
       }
 
       if (await sandbox.isConnected()) {
@@ -475,8 +478,8 @@ test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
           // Best-effort — env may be left disconnected if reconnect fails
         }
       }
-      if (!wasEnabled) {
-        await sandbox.setKindEnabled('claw', false);
+      if (originalKind !== 'claw') {
+        await sandbox.selectKind(originalKind);
       }
       await editMentorPage.close();
     }
@@ -502,7 +505,7 @@ test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
     await waitForPageReady(page);
 
     const sandbox = new SandboxTab(page, editMentorPage.dialog);
-    const wasEnabled = await sandbox.isKindEnabled('claw');
+    const originalKind = await sandbox.getActiveKind();
 
     const ts = Date.now();
     const fakeToken = `e2e-fake-token-${ts}`;
@@ -512,8 +515,8 @@ test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
     let priorConnectedInstance: string | null = null;
 
     try {
-      if (!wasEnabled) {
-        await sandbox.setKindEnabled('claw', true);
+      if (originalKind !== 'claw') {
+        await sandbox.selectKind('claw');
       }
 
       // Edit Instance UI is only in the not-connected state. If env has a
@@ -578,8 +581,8 @@ test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
           // Best-effort — env may be left disconnected if reconnect fails
         }
       }
-      if (!wasEnabled) {
-        await sandbox.setKindEnabled('claw', false);
+      if (originalKind !== 'claw') {
+        await sandbox.selectKind(originalKind);
       }
       await editMentorPage.close();
     }
@@ -601,13 +604,13 @@ test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
     await waitForPageReady(page);
 
     const sandbox = new SandboxTab(page, editMentorPage.dialog);
-    const wasEnabled = await sandbox.isKindEnabled('claw');
+    const originalKind = await sandbox.getActiveKind();
 
     let priorConnectedInstance: string | null = null;
 
     try {
-      if (!wasEnabled) {
-        await sandbox.setKindEnabled('claw', true);
+      if (originalKind !== 'claw') {
+        await sandbox.selectKind('claw');
       }
 
       // The Connect flow asserts the NOT-connected → connected transition.
@@ -667,8 +670,8 @@ test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
       } catch {
         // Best-effort — env may be left in not-connected state if reconnect fails
       }
-      if (!wasEnabled) {
-        await sandbox.setKindEnabled('claw', false);
+      if (originalKind !== 'claw') {
+        await sandbox.selectKind(originalKind);
       }
       await editMentorPage.close();
     }
@@ -685,7 +688,7 @@ test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
     await waitForPageReady(page);
 
     const sandbox = new SandboxTab(page, editMentorPage.dialog);
-    const wasEnabled = await sandbox.isKindEnabled('claw');
+    const originalKind = await sandbox.getActiveKind();
 
     // Agent Configuration is gated on a wired sandbox. If env isn't
     // already connected, attempt to wire a healthy OpenClaw instance so
@@ -694,8 +697,8 @@ test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
     let createdConnectionHere = false;
 
     try {
-      if (!wasEnabled) {
-        await sandbox.setKindEnabled('claw', true);
+      if (originalKind !== 'claw') {
+        await sandbox.selectKind('claw');
       }
 
       const connected = await sandbox.ensureConnected();
@@ -768,10 +771,10 @@ test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
           // Best-effort
         }
       }
-      if (!wasEnabled) {
+      if (originalKind !== 'claw') {
         await editMentorPage.navigateToTab('Sandbox');
         await waitForPageReady(page);
-        await sandbox.setKindEnabled('claw', false);
+        await sandbox.selectKind(originalKind);
       }
       await editMentorPage.close();
     }

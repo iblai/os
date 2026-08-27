@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-08-25",
+  "lastUpdated": "2026-08-26",
   "summary": {
-    "totalCheckpoints": 668,
-    "coveredCheckpoints": 634,
+    "totalCheckpoints": 671,
+    "coveredCheckpoints": 638,
     "deprecatedCheckpoints": 12,
-    "notReproducibleCheckpoints": 14,
+    "notReproducibleCheckpoints": 13,
     "pendingCheckpoints": 8,
     "percent": 100,
-    "totalJourneys": 71,
-    "activeJourneys": 70
+    "totalJourneys": 72,
+    "activeJourneys": 71
   },
   "journeys": [
     {
@@ -602,8 +602,7 @@
         "components/chat/chat-messages/canvas-message-preview.tsx",
         "components/chat/chat-messages/message-preview.tsx",
         "components/chat/chat-messages/types.ts",
-        "components/chat/index.tsx",
-        "hooks/use-binary-artifact-download.ts"
+        "components/chat/index.tsx"
       ],
       "checkpoints": [
         {
@@ -663,17 +662,22 @@
         },
         {
           "id": "cvs-12",
-          "description": "Chat message chip for a binary artifact (pdf, xlsx, zip, …) shows a canvas-displayable-type-aware action: \"Open Canvas\" (data-testid=\"canvas-open-button\") for pdf/image binaries the canvas can render, \"Download\" (data-testid=\"canvas-download-button\") for non-displayable binaries (zip, xlsx, docx, …), which fetches the artifact detail endpoint and saves the original file — unit-covered in canvas-message-preview.test.tsx and message-preview.test.tsx; not e2e-reproducible without a live LLM + sandbox VM producing a real binary artifact mid-conversation (backend serves bytes base64 in binary_content from the detail endpoint only; no deterministic seeding path exists in this suite for chat message/artifact history)",
+          "description": "Chat message chip for a binary artifact (pdf, xlsx, zip, …) always shows \"Open Canvas\" (data-testid=\"canvas-open-button\") with a file-type label instead of a content snippet — there is no separate \"Download\" chip variant; while the binary is still streaming the button is disabled with a 'hang tight' tooltip (wrapper data-testid=\"canvas-binary-generating\") so a half-written file can't be opened — unit-covered in canvas-message-preview.test.tsx and message-preview.test.tsx; not e2e-reproducible: Journey 70 deliberately shares a .txt file (a TEXT artifact — reliable to generate in the VM with plain shell tooling), so no journey produces a real binary artifact mid-conversation and no mock/fixture in this suite can seed one",
           "status": "not-reproducible"
         },
         {
           "id": "cvs-13",
-          "description": "Read-only binary canvas (components/canvas/binary-canvas-component.tsx, data-testid=\"binary-canvas\") renders view + a single Export action only — no formatting toolbar, highlight-to-edit, AI controls, version menu, or rename — previewing pdf (iframe, data-testid=\"binary-canvas-pdf\") and images (data-testid=\"binary-canvas-image\") inline, with a download-only fallback (data-testid=\"binary-canvas-fallback\") for non-previewable types and loading/error/retry states — unit-covered in binary-canvas-component.test.tsx, canvas-view.test.tsx, and binary-artifact-utils.test.ts; not e2e-reproducible without a real binary artifact (same live-LLM/sandbox dependency as cvs-12)",
+          "description": "Read-only binary canvas (components/canvas/binary-canvas-component.tsx, data-testid=\"binary-canvas\") renders view + a single header Export action only — no formatting toolbar, highlight-to-edit, AI controls, version menu, or rename — previewing pdf inline (iframe, data-testid=\"binary-canvas-pdf\", blob: src) and never the malformed-file preview-error state (data-testid=\"binary-canvas-preview-error\") for a well-formed file — unit-covered in binary-canvas-component.test.tsx, canvas-view.test.tsx, and binary-artifact-utils.test.ts; not e2e-reproducible: Journey 70 shares a .txt (text) file, so the binary canvas is never reached by any journey (same live-binary dependency as cvs-12)",
           "status": "not-reproducible"
         },
         {
           "id": "cvs-14",
-          "description": "Binary-artifact stream/open orchestration in components/chat/index.tsx: binary artifacts never auto-open the canvas mid-stream; at stream end, displayable binaries (pdf/svg/image) auto-open the binary canvas while non-displayable ones leave the chip's Download action as the only affordance; opening a binary artifact does not pin it to outgoing chat messages as editable artifact context (unlike text/code canvas artifacts). The open/skip decision logic is unit-tested via getBinaryStreamBehavior (components/canvas/__tests__/binary-artifact-utils.test.ts), which the chat stream handlers consume; the handler wiring itself (event listeners, handleOpenCanvas call, no-pin branch) remains untested and is not e2e-reproducible without a real binary artifact — flagged here rather than silently omitted",
+          "description": "Binary-artifact stream/open orchestration in components/chat/index.tsx: binary artifacts never auto-open the canvas mid-stream (openCanvasOnStreamStart is false for every binary kind); at stream end, ANY binary artifact — displayable (pdf/svg/image) or not (zip/xlsx/docx/…) — auto-opens the binary canvas when no canvas is open — and TAKES OVER the text canvas when it opened mid-stream for the same artifact (a stream-start `txt` placeholder extension can hide that the artifact is a file; binary content always wins, with the extension re-resolved from the filename-style title via resolveEffectiveFileExtension) — while never hijacking a canvas showing a different artifact; non-displayable types land on the fallback \"no preview yet\" panel rather than a separate Download-only affordance (there is no Download action anywhere in this flow — see cvs-12); opening a binary artifact does not pin it to outgoing chat messages as editable artifact context (unlike text/code canvas artifacts, the `newCanvasState.type !== 'binary'` guard, which also clears a stale pin left by a mid-stream text open of the same artifact). The open/skip decision logic is unit-tested via getBinaryStreamBehavior and resolveEffectiveFileExtension (components/canvas/__tests__/binary-artifact-utils.test.ts); Journey 70 (`70-vm-sandbox-txt-file-canvas.spec.ts`) exercises the TEXT-artifact stream path live (chip + text-canvas auto-open for a VM-shared .txt file) but not the binary branches. Not e2e-reproducible: every binary-specific branch (stream-end binary auto-open, text-canvas takeover, no-pin behavior, handler wiring) — none has a deterministic way to seed the precondition without a real binary artifact mid-conversation",
+          "status": "not-reproducible"
+        },
+        {
+          "id": "cvs-15",
+          "description": "Binary canvas preview paths beyond pdf: image/svg inline preview (data-testid=\"binary-canvas-image\"), the non-previewable-type fallback message for zip/xlsx/docx/… (data-testid=\"binary-canvas-fallback\"), the preview-error state for a malformed file (data-testid=\"binary-canvas-preview-error\", invalid SVG XML / non-PDF bytes / image decode failure), and the loading/error/retry states — unit-covered in binary-canvas-component.test.tsx, canvas-view.test.tsx, and binary-artifact-utils.test.ts; not e2e-reproducible because there is no deterministic way to make a live agent produce these specific shapes (Journey 70 only exercises the well-formed pdf path)",
           "status": "not-reproducible"
         }
       ]
@@ -2436,12 +2440,12 @@
         },
         {
           "id": "claw-03",
-          "description": "Toggling computational-runtime and virtual-machine kinds auto-saves instantly (optimistic local state, no footer Save button), both can be enabled simultaneously, and neither affects Sandbox tab visibility — the tab is unconditionally mounted for admins",
+          "description": "Selecting a sandbox kind auto-saves instantly (optimistic local state, no footer Save button); the three kinds are MUTUALLY EXCLUSIVE and AT LEAST ONE IS ALWAYS ACTIVE — \"Only one sandbox type can be enabled at a time\" — so selecting one kind turns off whichever kind was previously active (there is no \"disable\" operation), and selection never affects Sandbox tab visibility (unconditionally mounted for admins)",
           "status": "covered"
         },
         {
           "id": "claw-04",
-          "description": "Enabling claw turns off and disables the computational-runtime and virtual-machine switches in the same PATCH, and surfaces the \"kinds disabled by claw\" info-tooltip hint; Sandbox leads the Integrations category (feat/2040 moved it off Configurations)",
+          "description": "Selecting claw turns off whichever kind (computational-runtime or virtual-machine) was previously active in the same PATCH (mutual exclusivity); no kind switch ever gets a persistent disabled state — each is only briefly disabled while its own save is in flight; Sandbox leads the Integrations category (feat/2040 moved it off Configurations)",
           "status": "covered"
         },
         {
@@ -2451,7 +2455,7 @@
         },
         {
           "id": "claw-07",
-          "description": "Disabling claw re-enables the computational-runtime and virtual-machine switches while the Sandbox tab remains visible",
+          "description": "Switching to computational-runtime while claw is active deactivates claw atomically (mutual exclusivity) and hides its instance section, leaving computational-runtime as the sole active kind — at least one kind is always active, so this never asserts an all-off state; all three switches remain interactable and the Sandbox tab stays visible",
           "status": "covered"
         },
         {
@@ -2461,7 +2465,7 @@
         },
         {
           "id": "claw-09",
-          "description": "Admin toggles claw ON then OFF in one session and the claw connected/not-connected instance sections mount and unmount accordingly both times",
+          "description": "Admin selects claw then switches away from it (to the mentor's original kind) in one session, and the claw connected/not-connected instance sections mount and unmount accordingly both times",
           "status": "covered"
         },
         {
@@ -4228,6 +4232,32 @@
         {
           "id": "tal-01",
           "description": "Admin filters Agent Limits to an ALREADY-INDEXED mentor (broad query \"E2E Mentor\" against the search-index-backed autocomplete, sampling up to 5 results for the first capless one) — the ONE checkpoint that depends on that index, which lags mentor creation by DAYS on this backend (a known product limitation, not a test bug, reported upstream separately; a freshly-created mentor is never searchable in time, so this borrows a mentor from a past run instead of retrying its own) — sees the \"Set Spend Limit\" empty state, creates that mentor's spend limit (alert-only) from the popup, the row lists it, and the cap is removed again in an unconditional finally-block so the borrowed (shared-tenant) mentor is left exactly as found; if every sampled candidate already has a cap, verifies the filter -> row-visible path on the first one instead (annotated, never a failure)",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "vm-sandbox-txt-file-canvas",
+      "name": "VM Sandbox File Artifact — Canvas Preview",
+      "spec": "70-vm-sandbox-txt-file-canvas.spec.ts",
+      "sourceFiles": [
+        "components/canvas/binary-canvas-component.tsx",
+        "components/canvas/binary-artifact-utils.ts",
+        "components/canvas/canvas-view.tsx",
+        "components/chat/chat-messages/canvas-message-preview.tsx",
+        "components/chat/chat-messages/message-preview.tsx",
+        "components/chat/index.tsx",
+        "components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "vmc-01",
+          "description": "Admin selects the Virtual Machine Shell sandbox kind on a dedicated mentor (mutually exclusive with the other kinds, at least one always active — see Journey 44) and asks the agent, over a real live-LLM chat turn, to create and share a plain-text file (hello.txt with a known marker line — chosen over pdf/xlsx so the VM produces it reliably with shell tooling, no libraries to install); the agent's reply carries the file as an artifact and the chat chip (CanvasMessagePreview, data-testid=\"canvas-message-preview\") appears with its Open Canvas action",
+          "status": "covered"
+        },
+        {
+          "id": "vmc-02",
+          "description": "The canvas shows the shared file's actual content: a .txt artifact takes the TEXT canvas path (is_binary: false, content streamed in the artifact events — tolerant of the app auto-opening the canvas at stream start vs. having to click canvas-open-button), the editable rich-text editor renders containing the file's marker line, and the read-only binary canvas (data-testid=\"binary-canvas\") is asserted absent — verifying text/binary routing picks the text path for text files",
           "status": "covered"
         }
       ]

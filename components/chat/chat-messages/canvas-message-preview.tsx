@@ -1,7 +1,12 @@
-import { Download, ExternalLink, FileArchive, Loader2 } from 'lucide-react';
+import { ExternalLink, FileArchive, Loader2 } from 'lucide-react';
 
 import { CanvasIcon } from '@/components/icons/svg-icons';
 import { Button } from '@/components/ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import type { CanvasOpenPayload } from './types';
 import { markdownToHtml, isHtml } from '@/lib/utils';
 import Markdown from '@/components/markdown';
@@ -39,9 +44,6 @@ export const CanvasMessagePreview = ({
   onOpenCanvas,
   isStreaming = false,
   isBinary = false,
-  canOpenInCanvas = true,
-  onDownload,
-  isDownloading = false,
 }: {
   title: string;
   content: string;
@@ -49,13 +51,8 @@ export const CanvasMessagePreview = ({
   payload: CanvasOpenPayload;
   onOpenCanvas?: (payload: CanvasOpenPayload) => void;
   isStreaming?: boolean;
-  /** Binary file artifact (pdf, zip, …). */
+  /** Binary file artifact (pdf, zip, …) — opens the read-only binary canvas. */
   isBinary?: boolean;
-  /** Whether the side canvas can display this artifact. */
-  canOpenInCanvas?: boolean;
-  /** Download-in-place handler for binaries the canvas cannot display. */
-  onDownload?: () => void;
-  isDownloading?: boolean;
 }) => {
   const handleOpenCanvas = () => {
     if (onOpenCanvas) {
@@ -73,8 +70,6 @@ export const CanvasMessagePreview = ({
   const snippet = isBinary
     ? binaryLabel
     : buildSnippet(previewText ?? content.replace(/<[^>]+>/g, ' '));
-
-  const showDownloadInstead = isBinary && !canOpenInCanvas;
 
   return (
     <div
@@ -102,34 +97,47 @@ export const CanvasMessagePreview = ({
               <span>Generating...</span>
             </div>
           )}
-          {showDownloadInstead ? (
-            <Button
-              size="sm"
-              variant="outline"
-              className="border-blue-200 bg-transparent text-blue-600 hover:bg-blue-50"
-              onClick={onDownload}
-              disabled={isDownloading || isStreaming}
-              data-testid="canvas-download-button"
-            >
-              {isDownloading ? (
-                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-              ) : (
-                <Download className="mr-1 h-3 w-3" />
-              )}
-              Download
-            </Button>
-          ) : (
-            <Button
-              size="sm"
-              variant="outline"
-              className="border-blue-200 bg-transparent text-blue-600 hover:bg-blue-50"
-              onClick={handleOpenCanvas}
-              data-testid="canvas-open-button"
-            >
-              <ExternalLink className="mr-1 h-3 w-3" />
-              Open Canvas
-            </Button>
-          )}
+          {(() => {
+            // A binary file is only usable once fully generated — opening it
+            // mid-stream would show a truncated, corrupted file. Text
+            // artifacts stream into the canvas live, so they stay clickable
+            // while generating.
+            const generating = isBinary && isStreaming;
+
+            const actionButton = (
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-blue-200 bg-transparent text-blue-600 hover:bg-blue-50"
+                onClick={handleOpenCanvas}
+                disabled={generating}
+                data-testid="canvas-open-button"
+              >
+                <ExternalLink className="mr-1 h-3 w-3" />
+                Open Canvas
+              </Button>
+            );
+
+            if (!generating) return actionButton;
+
+            return (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  {/* Disabled buttons swallow pointer events — the span keeps
+                      the tooltip working. */}
+                  <span
+                    className="inline-block"
+                    data-testid="canvas-binary-generating"
+                  >
+                    {actionButton}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="ibl-tooltip-content max-w-[240px]">
+                  Hang tight — your file will be ready to open in a moment.
+                </TooltipContent>
+              </Tooltip>
+            );
+          })()}
         </div>
       </div>
     </div>

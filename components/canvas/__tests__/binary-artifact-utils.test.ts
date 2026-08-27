@@ -3,8 +3,9 @@ import {
   artifactFileToBlob,
   base64ToBlob,
   getBinaryStreamBehavior,
+  getPreviewIssue,
+  resolveEffectiveFileExtension,
   buildBinaryFilename,
-  canOpenBinaryInCanvas,
   isBinaryArtifact,
   isImageMimeType,
   resolveBinaryMimeType,
@@ -67,29 +68,6 @@ describe('isBinaryArtifact', () => {
   });
 });
 
-describe('canOpenBinaryInCanvas', () => {
-  it('allows pdf', () => {
-    expect(canOpenBinaryInCanvas({ fileExtension: 'pdf' })).toBe(true);
-    expect(canOpenBinaryInCanvas({ mimeType: 'application/pdf' })).toBe(true);
-  });
-
-  it('allows images', () => {
-    expect(canOpenBinaryInCanvas({ fileExtension: 'png' })).toBe(true);
-    expect(canOpenBinaryInCanvas({ mimeType: 'image/jpeg' })).toBe(true);
-  });
-
-  it('rejects archives, office docs and unknowns', () => {
-    expect(canOpenBinaryInCanvas({ fileExtension: 'zip' })).toBe(false);
-    expect(canOpenBinaryInCanvas({ fileExtension: 'xlsx' })).toBe(false);
-    expect(canOpenBinaryInCanvas({ fileExtension: 'docx' })).toBe(false);
-    expect(canOpenBinaryInCanvas({})).toBe(false);
-  });
-
-  it('allows svg (rendered as an image)', () => {
-    expect(canOpenBinaryInCanvas({ fileExtension: 'svg' })).toBe(true);
-  });
-});
-
 describe('shouldUseBinaryCanvas', () => {
   it('routes svg to the binary canvas even though the API marks it text', () => {
     // svg streams as a text artifact (is_binary: false) — raw XML must not
@@ -109,6 +87,29 @@ describe('shouldUseBinaryCanvas', () => {
   });
 });
 
+describe('resolveEffectiveFileExtension', () => {
+  it('prefers an explicit, non-placeholder extension', () => {
+    expect(resolveEffectiveFileExtension('pdf', 'weird-title.zip')).toBe('pdf');
+    expect(resolveEffectiveFileExtension('md', 'report.pdf')).toBe('md');
+  });
+
+  it('falls back to a known binary suffix in the title when the extension is missing or the txt placeholder', () => {
+    // The WS parser defaults a missing file_extension to "txt" on stream
+    // events, while binary artifacts are titled by filename.
+    expect(resolveEffectiveFileExtension('txt', 'report.pdf')).toBe('pdf');
+    expect(resolveEffectiveFileExtension(undefined, 'archive.zip')).toBe('zip');
+    expect(resolveEffectiveFileExtension('', 'linear_plot.svg')).toBe('svg');
+  });
+
+  it('never lets a non-binary title suffix override', () => {
+    expect(resolveEffectiveFileExtension('txt', 'notes.readme')).toBe('txt');
+    expect(resolveEffectiveFileExtension('txt', 'My Essay')).toBe('txt');
+    expect(
+      resolveEffectiveFileExtension(undefined, 'My Essay'),
+    ).toBeUndefined();
+  });
+});
+
 describe('getBinaryStreamBehavior', () => {
   it('text artifacts open at stream start and stream into the editor', () => {
     expect(getBinaryStreamBehavior('md')).toEqual({
@@ -118,22 +119,12 @@ describe('getBinaryStreamBehavior', () => {
     });
   });
 
-  it('displayable binaries (pdf, svg, images) open only at stream end', () => {
-    for (const ext of ['pdf', 'svg', 'png']) {
+  it('binaries open only at stream end — including types the canvas cannot render, which show its no-preview message', () => {
+    for (const ext of ['pdf', 'svg', 'png', 'zip', 'xlsx', 'docx']) {
       expect(getBinaryStreamBehavior(ext)).toEqual({
         isBinary: true,
         openCanvasOnStreamStart: false,
         openCanvasOnStreamEnd: true,
-      });
-    }
-  });
-
-  it('non-displayable binaries (zip, xlsx) never open the canvas', () => {
-    for (const ext of ['zip', 'xlsx', 'docx']) {
-      expect(getBinaryStreamBehavior(ext)).toEqual({
-        isBinary: true,
-        openCanvasOnStreamStart: false,
-        openCanvasOnStreamEnd: false,
       });
     }
   });
@@ -143,6 +134,53 @@ describe('getBinaryStreamBehavior', () => {
       true,
     );
     expect(getBinaryStreamBehavior('txt').openCanvasOnStreamStart).toBe(true);
+  });
+});
+
+describe('getPreviewIssue', () => {
+  const svgBlob = (text: string) => new Blob([text], { type: 'image/svg+xml' });
+
+  it('accepts well-formed svg', async () => {
+    const blob = svgBlob('<svg xmlns="http://www.w3.org/2000/svg"></svg>');
+    expect(await getPreviewIssue(blob, 'image/svg+xml')).toBeNull();
+  });
+
+  it('flags svg with HTML-only entities (the &nbsp; LLM failure mode)', async () => {
+    // &nbsp; is not a defined XML entity — browsers refuse to render this.
+    const blob = svgBlob(
+      '<svg xmlns="http://www.w3.org/2000/svg"><text>a&nbsp;b</text></svg>',
+    );
+    expect(await getPreviewIssue(blob, 'image/svg+xml')).toBe('malformed-svg');
+  });
+
+  it('flags svg with unclosed tags', async () => {
+    const blob = svgBlob('<svg xmlns="http://www.w3.org/2000/svg"><rect>');
+    expect(await getPreviewIssue(blob, 'image/svg+xml')).toBe('malformed-svg');
+  });
+
+  it('flags non-svg content served as svg', async () => {
+    const blob = svgBlob('<html><body>not an svg</body></html>');
+    expect(await getPreviewIssue(blob, 'image/svg+xml')).toBe('malformed-svg');
+  });
+
+  it('accepts pdf bytes with the %PDF magic header', async () => {
+    const blob = new Blob(['%PDF-1.4 rest'], { type: 'application/pdf' });
+    expect(await getPreviewIssue(blob, 'application/pdf')).toBeNull();
+  });
+
+  it('flags pdf payloads without the magic header', async () => {
+    const blob = new Blob(['<html>error page</html>'], {
+      type: 'application/pdf',
+    });
+    expect(await getPreviewIssue(blob, 'application/pdf')).toBe(
+      'malformed-pdf',
+    );
+  });
+
+  it('passes formats it cannot validate (raster images, archives)', async () => {
+    const blob = new Blob(['whatever'], { type: 'image/png' });
+    expect(await getPreviewIssue(blob, 'image/png')).toBeNull();
+    expect(await getPreviewIssue(blob, 'application/zip')).toBeNull();
   });
 });
 
