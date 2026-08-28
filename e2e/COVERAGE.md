@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-08-28 | 690 checkpoints (655 covered, 8 pending/fixme, 15 not-reproducible in default env, 12 deprecated) | 74 journeys (73 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-08-28 | 690 checkpoints (651 covered, 8 pending/fixme, 15 not-reproducible in default env, 16 deprecated) | 74 journeys (73 active, 16 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -1596,7 +1596,7 @@ The binary-artifact surfaces themselves (binary chip gating, pdf/image preview, 
 - [x] vmc-01: Admin selects the Virtual Machine Shell sandbox kind on a dedicated mentor and asks the agent (live LLM) to create and share hello.txt with a known marker line (.txt chosen over pdf/xlsx so the VM produces it reliably with shell tooling); the agent replies with the file as an artifact and the chat chip (`canvas-message-preview`) appears with Open Canvas
 - [x] vmc-02: The canvas shows the shared file's content — the .txt artifact takes the TEXT canvas path (tolerant of auto-open at stream start vs. clicking `canvas-open-button`): the editable editor renders containing the marker line, and the binary canvas (`binary-canvas`) is asserted absent (text/binary routing picks the text path for text files)
 
-## Journey 72: Sidebar Support Link & Help Center Resolution (#uat-9) (7 checkpoints) — `journeys/72-sidebar-support-link-and-help-center.spec.ts`
+## Journey 72: Sidebar Support Link & Help Center Resolution (#uat-9) (7 checkpoints; 4 deprecated) — `journeys/72-sidebar-support-link-and-help-center.spec.ts`
 
 **Source files:** `hooks/use-help-center.ts`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`, `lib/config.ts`
 
@@ -1612,32 +1612,43 @@ Root cause of the original bug: the e2e helper guarding this surface
 (`SidebarPage.isSupportLinkVisible`) only ever asserted VISIBILITY, never the
 link's DESTINATION, so a hardcoded wrong-domain href passed CI unnoticed for
 months. `SidebarPage.getSupportLinkHref()` (added alongside this journey)
-closes that gap — every checkpoint below asserts on the resolved
-href/URL, not just presence.
+closes that gap.
 
-**Isolation:** every test in this file mutates the SAME org-scoped tenant
-metadata on the shared `conradtesttenant` backend via `setTenantMetadataFlag`
-(`e2e/utils/tenant-metadata.ts`, a read-merge-PATCH helper that always
-re-fetches the current blob before merging, so it never wipes keys this
-suite didn't touch). The whole file runs `describe.serial` — the same class
-of shared-tenant race this project already hit with the chat-privacy gate
-(journey 50). Restoration is belt-and-braces: `beforeAll` captures the FULL
-tenant metadata blob once before anything mutates; every mutating test
-undoes its own change in `try/finally`; `afterAll` (runs even on failure)
-does one atomic full-blob PATCH back to the captured original via
-`restoreTenantMetadata`, then re-fetches and asserts every
-support/help-center-related key (`support_url`, `help_center_url`,
-`documentation_url`, `show_help`, `support_email`) matches what was
-captured — proving the tenant was left exactly as found. There is no UI path
-to these tenant-metadata keys in this app (the SDK's `UserProfileDropdown`
-is mounted with `showAccountTab={false}`), so all mutation goes through the
-DM API directly; every test self-skips when the `DM_URL` env var is absent
-(matching journey 43's established convention).
+**READ-ONLY by design (redesigned in #uat-9):** this journey used to mutate
+the SAME org-scoped tenant metadata on the shared live `conradtesttenant`
+backend, guarded by `describe.serial` + a captured "original" snapshot
+restored in `afterAll`. That was not actually safe: `describe.serial` only
+serialises tests inside this one file (other journeys in other parallel
+workers, and other PRs' CI jobs, hit the same live tenant concurrently), and
+`afterAll` never runs on a killed process. A crashed run left
+`show_help: false` PERMANENTLY on the live tenant, and the next run's
+`beforeAll` captured that `false` as "original" and restored it forever —
+silently breaking an unrelated team's PR (os-222). No in-suite cleanup can
+fix a cross-job race; only not writing does. Every checkpoint now fetches
+tenant metadata via a plain GET (`getTenantMetadata`,
+`e2e/utils/tenant-metadata.ts`), computes the SAME expected value the
+app/SDK would compute from that exact reading, and asserts the live UI
+matches it — there is no shared mutable state left to race. The
+tenant-override PRECEDENCE logic previously proven by mutating the live
+tenant (`documentation_url` with/without a scheme, `show_help` gating in
+both layouts, `help_center_url` fallback) needed no live tenant at all — it
+is pure prop-in/render-out logic already covered with zero gap by
+`hooks/__tests__/use-help-center.test.ts` and
+`app-sidebar/__tests__/index.test.tsx` (the "AppSidebar — Support footer
+link" describe block and its rail-mode counterpart); those four checkpoints
+are marked `deprecated` below (checkpoint count preserved, not deleted —
+same pattern as journeys 15/16). There IS a UI path to these keys (clicking
+the tenant-name row in `⋯ More options` opens the SDK's Organization tab,
+verified directly in `@iblai/iblai-js@2.7.0`'s `TenantSwitcher.handleTenantClick`
+— gated on tenant-management RBAC, not on `showAccountTab`), but reading via
+the API is faster and equally trustworthy for a read-only assertion. Every
+test self-skips when the `DM_URL` env var is absent (matching journey 43's
+established convention).
 
-- [x] shc-01: Admin sees the resolved documentation URL (default `https://ibl.ai/docs`, no tenant override) as the sidebar footer Support link's href in the EXPANDED layout
-- [x] shc-02: Same default resolution holds for the RAIL-COLLAPSED sidebar layout (`SidebarCollapsedLabelFlyout`, `aria-label="Support"`)
-- [x] shc-03: A tenant `documentation_url` override WITH a scheme is used verbatim as the sidebar Support link's href
-- [x] shc-04: A tenant `documentation_url` override WITHOUT a scheme is prefixed with `https://` by `addProtocolToUrl` before being used as the href
-- [x] shc-05: Tenant `show_help: false` hides the sidebar Support link in BOTH the expanded and rail-collapsed layouts; removing the override brings the link back in both layouts
-- [x] shc-06: The nav-bar "More options → Help" dropdown item resolves from tenant `support_url` when present (this tenant's baseline: `support_url="ibl.ai/support"`, scheme-less, prefixed by `addProtocolToUrl`)
-- [x] shc-07: The nav-bar "More options → Help" dropdown item falls back to tenant `help_center_url` when `support_url` is absent
+- [x] shc-01: READ-ONLY — sidebar footer Support link's href in the EXPANDED layout matches `documentation_url || default` computed from a live GET of tenant metadata, or the link is absent when `show_help` is false
+- [x] shc-02: Same live-resolution check for the RAIL-COLLAPSED sidebar layout (`SidebarCollapsedLabelFlyout`, `aria-label="Support"`)
+- [x] ~~shc-03: A tenant `documentation_url` override WITH a scheme is used verbatim as the sidebar Support link's href~~ _(deprecated in #uat-9 — covered by hooks/**tests**/use-help-center.test.ts + app-sidebar/**tests**/index.test.tsx)_
+- [x] ~~shc-04: A tenant `documentation_url` override WITHOUT a scheme is prefixed with `https://` by `addProtocolToUrl`~~ _(deprecated in #uat-9 — same unit coverage as shc-03)_
+- [x] ~~shc-05: Tenant `show_help: false` hides the sidebar Support link in BOTH expanded and rail-collapsed layouts; removing the override brings it back~~ _(deprecated in #uat-9 — covered by app-sidebar/**tests**/index.test.tsx in both layouts)_
+- [x] shc-06: READ-ONLY — the nav-bar "More options → Help" dropdown item resolves `support_url || help_center_url || default` computed from a live GET of tenant metadata, or is absent when `show_help` is false
+- [x] ~~shc-07: The nav-bar "More options → Help" dropdown item falls back to tenant `help_center_url` when `support_url` is absent~~ _(deprecated in #uat-9 — same precedence chain proven by hooks/**tests**/use-help-center.test.ts; shc-06 still verifies the support_url-present path live)_

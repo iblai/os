@@ -3,8 +3,8 @@
   "lastUpdated": "2026-08-27",
   "summary": {
     "totalCheckpoints": 690,
-    "coveredCheckpoints": 655,
-    "deprecatedCheckpoints": 12,
+    "coveredCheckpoints": 651,
+    "deprecatedCheckpoints": 16,
     "notReproducibleCheckpoints": 15,
     "pendingCheckpoints": 8,
     "percent": 100,
@@ -4354,38 +4354,46 @@
       "checkpoints": [
         {
           "id": "shc-01",
-          "description": "Admin sees the resolved documentation URL (default https://ibl.ai/docs, no tenant override) as the sidebar footer Support link's href in the EXPANDED layout",
+          "description": "READ-ONLY: sidebar footer Support link's href in the EXPANDED layout matches the resolution formula (documentation_url || default) computed from a live GET of tenant metadata, or the link is absent when show_help is false",
           "status": "covered"
         },
         {
           "id": "shc-02",
-          "description": "Same default resolution holds for the RAIL-COLLAPSED sidebar layout (SidebarCollapsedLabelFlyout, aria-label=\"Support\")",
+          "description": "Same live-resolution check holds for the RAIL-COLLAPSED sidebar layout (SidebarCollapsedLabelFlyout, aria-label=\"Support\")",
           "status": "covered"
         },
         {
           "id": "shc-03",
           "description": "A tenant documentation_url override WITH a scheme is used verbatim as the sidebar Support link's href",
-          "status": "covered"
+          "status": "deprecated",
+          "deprecatedIn": "#uat-9",
+          "deprecatedReason": "Journey 72 redesigned to be read-only against the shared live tenant (crash/race risk to org-scoped metadata — see #uat-9 incident). This precedence branch needs no live tenant to prove and is fully covered by hooks/__tests__/use-help-center.test.ts and app-sidebar/__tests__/index.test.tsx (\"AppSidebar — Support footer link\")."
         },
         {
           "id": "shc-04",
           "description": "A tenant documentation_url override WITHOUT a scheme is prefixed with https:// by addProtocolToUrl before being used as the href",
-          "status": "covered"
+          "status": "deprecated",
+          "deprecatedIn": "#uat-9",
+          "deprecatedReason": "Journey 72 redesigned to be read-only against the shared live tenant (crash/race risk to org-scoped metadata — see #uat-9 incident). This precedence branch needs no live tenant to prove and is fully covered by hooks/__tests__/use-help-center.test.ts and app-sidebar/__tests__/index.test.tsx (\"AppSidebar — Support footer link\")."
         },
         {
           "id": "shc-05",
           "description": "Tenant show_help:false hides the sidebar Support link in BOTH the expanded and rail-collapsed layouts; removing the override brings the link back in both layouts",
-          "status": "covered"
+          "status": "deprecated",
+          "deprecatedIn": "#uat-9",
+          "deprecatedReason": "Journey 72 redesigned to be read-only against the shared live tenant (crash/race risk to org-scoped metadata — see #uat-9 incident). This gating logic needs no live tenant to prove and is fully covered by app-sidebar/__tests__/index.test.tsx in both expanded and rail-mode describe blocks."
         },
         {
           "id": "shc-06",
-          "description": "The nav-bar \"More options -> Help\" dropdown item resolves from tenant support_url when present (this tenant's baseline: support_url=\"ibl.ai/support\", scheme-less, prefixed by addProtocolToUrl)",
+          "description": "READ-ONLY: the nav-bar \"More options -> Help\" dropdown item resolves the URL computed from a live GET of tenant metadata (support_url || help_center_url || default), or is absent when show_help is false",
           "status": "covered"
         },
         {
           "id": "shc-07",
           "description": "The nav-bar \"More options -> Help\" dropdown item falls back to tenant help_center_url when support_url is absent",
-          "status": "covered"
+          "status": "deprecated",
+          "deprecatedIn": "#uat-9",
+          "deprecatedReason": "Journey 72 redesigned to be read-only against the shared live tenant (crash/race risk to org-scoped metadata — see #uat-9 incident). This is the same support_url||help_center_url||default precedence chain proven by hooks/__tests__/use-help-center.test.ts; shc-06 still verifies the support_url-present path live."
         }
       ]
     }
