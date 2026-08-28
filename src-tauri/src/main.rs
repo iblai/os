@@ -2153,6 +2153,15 @@ async fn open_external_url(app: AppHandle, url: String) -> Result<(), String> {
 }
 
 fn main() {
+    // Dev-checkout overrides first: src-tauri/.env.local, then .env.production.
+    // The path is compile-time CARGO_MANIFEST_DIR, so installed builds have
+    // neither and skip straight on. Loaded before anything reads env; dotenvy
+    // never overrides already-set vars, so shell env > .env.local >
+    // .env.production > .env. Keys documented in src-tauri/.env.example.
+    for f in [".env.local", ".env.production"] {
+        let _ = dotenvy::from_path(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(f));
+    }
+
     // Load .env file if present (for local development and custom builds)
     // First try current directory (dev mode), then try next to the executable (bundled app)
     if dotenvy::dotenv().is_err() {
@@ -2196,6 +2205,13 @@ fn main() {
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
+            // Keep the managed opencode on the pinned version — a pin bump would
+            // otherwise never reach a machine that already has a runnable copy.
+            let opencode_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                opencode_installer::ensure_opencode_current(opencode_handle).await;
+            });
+
             // Vibe skills track the latest GitHub release with no freshness
             // window — resolve-and-sync in the background on every launch, so
             // Coding Mode always starts from the newest published set (and a
@@ -2832,6 +2848,7 @@ fn main() {
             opencode_installer::check_opencode_status,
             opencode_acp::check_code_local_model,
             opencode_acp::set_opencode_learner,
+            opencode_acp::ensure_opencode_platform_key,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri app");

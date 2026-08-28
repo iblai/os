@@ -2,9 +2,9 @@
   "version": 1,
   "lastUpdated": "2026-08-27",
   "summary": {
-    "totalCheckpoints": 34,
+    "totalCheckpoints": 36,
     "coveredCheckpoints": 20,
-    "pendingCheckpoints": 14,
+    "pendingCheckpoints": 16,
     "deprecatedCheckpoints": 0,
     "notReproducibleCheckpoints": 0,
     "percent": 100,
@@ -212,7 +212,7 @@
         },
         {
           "id": "code-22",
-          "description": "A mentor keeps one workspace across chats while another mentor gets its own, and New workspace mints a fresh folder without deleting the previous one",
+          "description": "A mentor keeps one workspace across chats while another mentor gets its own, and New Workspace mints a fresh folder without deleting the previous one",
           "status": "covered"
         },
         {
@@ -222,7 +222,17 @@
         },
         {
           "id": "code-24",
-          "description": "The Code popover offers New workspace and a platform-named Open folder button (Finder / Explorer / folder)",
+          "description": "The Code popover offers New Workspace and a platform-named Open Folder button (Finder / Explorer / the probed Linux file manager)",
+          "status": "pending"
+        },
+        {
+          "id": "code-25",
+          "description": "A between-turn opencode death (crash, idle reap, LRU eviction) is invisible: the next turn session/loads the same conversation back, and when a load isn't possible the frontend's transcript is resent so the agent continues; a mid-turn death keeps the input busy — the Stop button stays Stop and no suggested prompts appear while the backend silently respawns",
+          "status": "pending"
+        },
+        {
+          "id": "code-26",
+          "description": "A managed opencode older than the pinned version is re-downloaded at boot; a user's own PATH copy is never replaced",
           "status": "pending"
         }
       ]

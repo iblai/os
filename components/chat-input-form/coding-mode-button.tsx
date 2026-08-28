@@ -159,6 +159,9 @@ export function CodingModeButton({
   // false = this Linux host has no bubblewrap (the child sandbox): Code stays
   // visible but disabled, with a hint, until bwrap is installed.
   const [sandboxReady, setSandboxReady] = useState(true);
+  // Linux: name of the app that actually opens folders (the inode/directory
+  // default, probed by the backend); null → generic "Open Folder" label.
+  const [fileManager, setFileManager] = useState<string | null>(null);
   // undefined = not read yet, null = never chosen (→ first-run dialog).
   const [permissionMode, setPermissionMode] = useState<
     PermissionMode | null | undefined
@@ -370,10 +373,12 @@ export function CodingModeButton({
           sandboxed?: boolean;
           supported?: boolean;
           sandbox_ready?: boolean;
+          file_manager?: string | null;
         }>('check_opencode_status');
         if (cancelled) return;
         setSandboxed(!!st?.sandboxed || st?.supported === false);
         setSandboxReady(st?.sandbox_ready !== false);
+        setFileManager(st?.file_manager ?? null);
       } catch {
         if (!cancelled) setSandboxed(false);
       }
@@ -400,8 +405,10 @@ export function CodingModeButton({
     } else if (!isLocal && llmProvider && llmName) {
       localStorage.setItem(MODEL_KEY, `${llmProvider}/${llmName}`);
     }
-    // Prep opencode in the background so the first turn is ready (best-effort).
+    // Prep opencode in the background so the first turn is ready (best-effort),
+    // and mint the platform key now rather than at first spawn.
     callTauri('install_opencode').catch(() => {});
+    prewarmPlatformKey();
   }, [sandboxed, blocked, isLocal, local?.spec, llmProvider, llmName]);
 
   // Native folder picker → persist via set_opencode_workspace (which mkdir -p's +
@@ -469,6 +476,19 @@ export function CodingModeButton({
     }
   };
 
+  // Mint (or reuse from settings.json) the platform API key the moment Code is
+  // on — a child's env is fixed at spawn, so a key minted only at first-turn
+  // time was routinely missing from the very session that needed it.
+  // Best-effort: a learner who can't mint simply proceeds without it.
+  const prewarmPlatformKey = () => {
+    const tenant = localStorage.getItem('tenant');
+    const token = localStorage.getItem('dm_token');
+    if (!tenant || !token) return;
+    callTauri('ensure_opencode_platform_key', { tenant, token }).catch((e) =>
+      console.error('[coding-mode] platform key prewarm failed', e),
+    );
+  };
+
   const openFolderLabel = () => {
     switch (typeof navigator === 'undefined' ? '' : getUserOS()) {
       case 'macOS':
@@ -476,7 +496,11 @@ export function CodingModeButton({
       case 'Windows':
         return t('openInExplorer');
       default:
-        return t('openFolder');
+        // Linux: name the probed inode/directory handler — that's what will
+        // actually open. No default handler known → the generic label.
+        return fileManager
+          ? t('openInApp', { app: fileManager })
+          : t('openFolder');
     }
   };
 
@@ -500,7 +524,9 @@ export function CodingModeButton({
     if (!localStorage.getItem(FOLDER_CHOSEN_KEY)) {
       await pickFolder();
     }
-    // Prep the coding agent (download + config + git-init the workspace), best-effort.
+    // Prep the coding agent (download + config + git-init the workspace), best-effort,
+    // and mint the platform key now rather than at first spawn.
+    prewarmPlatformKey();
     try {
       await callTauri('install_opencode');
     } catch (e) {
@@ -700,35 +726,37 @@ export function CodingModeButton({
             <div className="mt-2 font-mono text-xs break-all text-gray-800">
               {workspace || '—'}
             </div>
-            <div className="mt-3 flex flex-wrap gap-2">
+            {/* Stacked full-width so all three stay the same size in every
+              locale — the es/fr labels don't fit equal columns in one row. */}
+            <div className="mt-3 flex flex-col gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 type="button"
-                className="h-7 text-xs"
-                onClick={pickFolder}
-              >
-                {t('changeFolder')}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                type="button"
-                className="h-7 text-xs"
-                disabled={!sessionId}
-                onClick={startNewWorkspace}
-              >
-                {t('newWorkspace')}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                type="button"
-                className="h-7 text-xs"
+                className="h-7 w-full text-xs"
                 disabled={!workspace}
                 onClick={openWorkspace}
               >
                 {openFolderLabel()}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                type="button"
+                className="h-7 w-full text-xs"
+                onClick={pickFolder}
+              >
+                {t('selectWorkspace')}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                type="button"
+                className="h-7 w-full text-xs"
+                disabled={!sessionId}
+                onClick={startNewWorkspace}
+              >
+                {t('newWorkspace')}
               </Button>
             </div>
           </div>

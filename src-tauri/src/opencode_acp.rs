@@ -69,6 +69,46 @@ fn registry() -> &'static Registry {
     REG.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
+/// ACP session ids that outlive their processes: chat session id → the opencode
+/// session to `session/load` on the next spawn. Entries deliberately survive every
+/// teardown (crash, reaper, eviction, the chat-switch `opencode_close`) — opencode's
+/// own store under `~/.local/share/opencode` keeps the conversation, and this map is
+/// the key back into it, so a "random disconnect" no longer costs the agent its
+/// memory. Only "New workspace" forgets; the new-chat migration re-keys.
+// ponytail: in-memory, so an app restart loses the ids — the transcript resend in
+// `opencode_chat_stream` covers that; persist alongside the workspace map if
+// load-fidelity across restarts ever matters.
+fn resume_ids() -> &'static Mutex<HashMap<String, String>> {
+    static IDS: OnceLock<Mutex<HashMap<String, String>>> = OnceLock::new();
+    IDS.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+async fn remember_resume(session_id: &str, acp_id: &str) {
+    if !acp_id.is_empty() {
+        resume_ids()
+            .lock()
+            .await
+            .insert(session_id.to_string(), acp_id.to_string());
+    }
+}
+
+async fn resume_for(session_id: &str) -> Option<String> {
+    resume_ids().lock().await.get(session_id).cloned()
+}
+
+/// Re-key a resume id when a brand-new chat's ephemeral key gains its real id —
+/// without this the first turn's context is lost at the migration boundary.
+async fn adopt_resume(session_id: &str, prior: &str) {
+    let mut map = resume_ids().lock().await;
+    if let Some(id) = map.remove(prior) {
+        map.insert(session_id.to_string(), id);
+    }
+}
+
+async fn forget_resume(session_id: &str) {
+    resume_ids().lock().await.remove(session_id);
+}
+
 /// A permission request shown to the user and waiting on their answer.
 struct PendingPermission {
     /// Chat session it belongs to, so Stop can resolve just that chat's cards.
@@ -225,6 +265,11 @@ struct Session {
     /// Set by every intentional teardown (close/evict/reap/model-switch) before
     /// the kill, so the mid-turn crash-retry can tell a close from a crash.
     closing: AtomicBool,
+    /// True until the first prompt on a session whose ACP session came from
+    /// `session/new` — opencode has no conversation memory yet, so that first
+    /// turn checks-and-clears this to decide whether to prepend the frontend's
+    /// transcript. A successful `session/load` never sets it.
+    context_fresh: AtomicBool,
 }
 
 /// `Session::request`'s error prefixes when the child vanished mid-request
@@ -444,8 +489,12 @@ pub fn augmented_path() -> std::ffi::OsString {
 /// ([`ensure_write_dirs`]) — Code can't function without them. `.cache` is the
 /// umbrella every XDG-caching tool shares (pip, pnpm, corepack, uv,
 /// go-build…); `.local/share/opencode` is opencode's own state.
-const WRITE_DIRS_CORE: &[&str] =
-    &[".cache", ".npm", ".local/share/pnpm", ".local/share/opencode"];
+const WRITE_DIRS_CORE: &[&str] = &[
+    ".cache",
+    ".npm",
+    ".local/share/pnpm",
+    ".local/share/opencode",
+];
 
 /// macOS extras: the native caches root and the mac pnpm store.
 // The macOS-arm items in this section stay compiled on every unix target so
@@ -651,7 +700,12 @@ fn sandbox_profile_macos(home: &Path, workspace: &Path, config_home: &Path) -> S
     );
     // /dev: shell redirects and ttys; the tmp roots cover /tmp, /var/tmp and
     // the per-user $TMPDIR under /var/folders.
-    for dir in ["/dev", "/private/tmp", "/private/var/tmp", "/private/var/folders"] {
+    for dir in [
+        "/dev",
+        "/private/tmp",
+        "/private/var/tmp",
+        "/private/var/folders",
+    ] {
         p.push_str("\n  (subpath ");
         p.push_str(&sbpl_quote(Path::new(dir)));
         p.push(')');
@@ -736,11 +790,8 @@ fn populate_decoy(
         {
             populate_decoy(real_home, decoy_root, &child_rel, secret_dirs, secret_files)?;
         } else {
-            std::os::unix::fs::symlink(
-                real.join(entry.file_name()),
-                decoy_root.join(&child_rel),
-            )
-            .map_err(|e| format!("decoy home: {e}"))?;
+            std::os::unix::fs::symlink(real.join(entry.file_name()), decoy_root.join(&child_rel))
+                .map_err(|e| format!("decoy home: {e}"))?;
         }
     }
     Ok(())
@@ -851,7 +902,9 @@ fn settings_file() -> PathBuf {
     iblai_data_dir().join("settings.json")
 }
 
-fn read_settings() -> serde_json::Map<String, Value> {
+// pub(crate): the model proxy persists its minted platform API key here too
+// (same read-modify-write-the-whole-object discipline keeps owners apart).
+pub(crate) fn read_settings() -> serde_json::Map<String, Value> {
     std::fs::read_to_string(settings_file())
         .ok()
         .and_then(|s| serde_json::from_str::<Value>(&s).ok())
@@ -859,7 +912,7 @@ fn read_settings() -> serde_json::Map<String, Value> {
         .unwrap_or_default()
 }
 
-fn write_settings(map: &serde_json::Map<String, Value>) -> Result<(), String> {
+pub(crate) fn write_settings(map: &serde_json::Map<String, Value>) -> Result<(), String> {
     let f = settings_file();
     if let Some(parent) = f.parent() {
         let _ = std::fs::create_dir_all(parent);
@@ -1112,6 +1165,9 @@ async fn migrate_new_chat(session_id: &str, prior: &str) {
     if adopt_prior_mapping(&mut map, session_id, prior) {
         let _ = write_workspace_map(&map);
     }
+    // The conversation follows the chat too: the reaped process's ACP session
+    // re-keys onto the real id, so the next turn `session/load`s it back.
+    adopt_resume(session_id, prior).await;
     close_session(prior).await;
 }
 
@@ -1176,6 +1232,9 @@ pub async fn new_opencode_workspace(
         }
     }
     close_session(&session_id).await;
+    // A fresh workspace is the one intentional fresh start — don't resurrect the
+    // old folder's conversation into it on the next spawn.
+    forget_resume(&session_id).await;
     Ok(dir.to_string_lossy().to_string())
 }
 
@@ -1466,6 +1525,45 @@ fn last_user_text(messages: &[Value]) -> Option<String> {
         }
     }
     None
+}
+
+/// The prompt for a turn that landed on a fresh ACP session (`session/new`) even
+/// though the chat has prior turns: opencode's conversation memory is gone (load
+/// failed, `loadSession` unsupported, or the app restarted), so prepend the
+/// frontend's transcript. With no prior messages — a genuinely new chat, or an
+/// older SDK that only sends the latest message — this is `latest` unchanged.
+fn prompt_with_history(messages: &[Value], latest: &str) -> String {
+    let mut lines: Vec<String> = Vec::new();
+    for m in messages {
+        let role = m.get("role").and_then(|r| r.as_str()).unwrap_or("");
+        if role != "user" && role != "assistant" {
+            continue;
+        }
+        let text = match m.get("content") {
+            Some(Value::String(s)) => s.clone(),
+            Some(Value::Array(parts)) => parts
+                .iter()
+                .filter_map(|p| p.get("text").and_then(|t| t.as_str()))
+                .collect::<Vec<_>>()
+                .join(""),
+            _ => String::new(),
+        };
+        if !text.is_empty() {
+            lines.push(format!("{role}: {text}"));
+        }
+    }
+    // The messages array ends with the latest user message — history is
+    // everything before it, so drop that trailing duplicate.
+    if lines.last().map(String::as_str) == Some(format!("user: {latest}").as_str()) {
+        lines.pop();
+    }
+    if lines.is_empty() {
+        return latest.to_string();
+    }
+    format!(
+        "<conversation-history>\nThe coding agent restarted and lost its conversation memory. This is the conversation so far, replayed for context only — do not redo completed actions.\n\n{}\n</conversation-history>\n\n{latest}",
+        lines.join("\n")
+    )
 }
 
 /// Pick the option id of the first option whose ACP `kind` starts with `prefix`
@@ -1803,6 +1901,33 @@ fn enforce_permission_policy(root: &mut serde_json::Map<String, Value>) {
     }
 }
 
+/// The system prompt Code's agent runs under, replacing opencode's built-in
+/// model-variant prompts (`agent.build.prompt` wins over `SystemPrompt.provider`
+/// in opencode's `llm/request.ts`, and the config merge applies it to the
+/// built-in `build` agent). A fork of opencode's `session/prompt/gpt.txt` at the
+/// pinned [`crate::opencode_installer::OPENCODE_VERSION`], with its narration
+/// protocol (progress updates, pre-edit notes, "explain what you are doing and
+/// why") replaced by a result-or-blocker contract. Re-diff against upstream
+/// whenever the version pin bumps.
+const OPENCODE_BUILD_PROMPT: &str = include_str!("opencode_build_prompt.txt");
+
+/// Force [`OPENCODE_BUILD_PROMPT`] onto the `build` agent and pin it as the
+/// default agent, so every ACP session runs under the result-only contract no
+/// matter which model family it uses (opencode otherwise picks a per-model
+/// prompt variant, several of which mandate step-by-step progress narration).
+/// Enforced on every spawn like [`enforce_permission_policy`]; any other keys
+/// on the entry are left alone.
+fn enforce_build_prompt(root: &mut serde_json::Map<String, Value>) {
+    root.insert("default_agent".to_string(), json!("build"));
+    let agents = root.entry("agent").or_insert_with(|| json!({}));
+    if let Some(obj) = agents.as_object_mut() {
+        let build = obj.entry("build").or_insert_with(|| json!({}));
+        if let Some(b) = build.as_object_mut() {
+            b.insert("prompt".to_string(), json!(OPENCODE_BUILD_PROMPT));
+        }
+    }
+}
+
 /// Point opencode at a model by patching its config: set the top-level `model`, keep
 /// `enabled_providers` to just the active provider, and reset that provider's `models`
 /// map to only the active model.
@@ -1845,6 +1970,8 @@ fn apply_opencode_model(
     // The security boundary — see `enforce_permission_policy`. Re-applied here because
     // this runs on every spawn, immediately before the process starts.
     enforce_permission_policy(root);
+    // The result-only system prompt — see `enforce_build_prompt`.
+    enforce_build_prompt(root);
     // Skills the agent discovers at startup — see `apply_skills_config`.
     let mentor_dir = mentor.map(mentor_skills_dir);
     apply_skills_config(root, &vibe_skills_dir(), mentor_dir.as_deref());
@@ -2175,8 +2302,11 @@ async fn spawn_session(
     // leaves the proxy — that one would be a portable master credential.
     // Absent (learner, not a platform admin) → skip the var; the injected
     // guidance tells the agent to say so rather than ask for a key.
-    if let Some(key) = crate::opencode_proxy::platform_api_key(tenant, token).await {
+    if let Some((key, expires_at)) = crate::opencode_proxy::platform_api_key(tenant, token).await {
         cmd.env("IBLAI_API_KEY", key);
+        // Unix seconds — lets the agent (and apps it builds) reason about when
+        // the credential dies instead of hitting a surprise 401.
+        cmd.env("IBLAI_API_KEY_EXPIRES_AT", expires_at.to_string());
     }
 
     let mut child = cmd.spawn().map_err(|e| {
@@ -2231,6 +2361,7 @@ async fn spawn_session(
         last_used: Mutex::new(Instant::now()),
         active_turns: AtomicUsize::new(0),
         closing: AtomicBool::new(false),
+        context_fresh: AtomicBool::new(false),
     };
 
     // 1) initialize — we advertise NO fs/terminal capabilities so opencode uses its
@@ -2273,6 +2404,7 @@ async fn spawn_session(
         }
     }
     // 3) …or session/new with the workspace cwd.
+    let loaded = acp_session_id.is_some();
     session.acp_session_id = match acp_session_id {
         Some(id) => id,
         None => {
@@ -2289,6 +2421,11 @@ async fn spawn_session(
                 .to_string()
         }
     };
+    // A brand-new ACP session has no conversation memory — the first prompt on it
+    // may need the frontend's transcript prepended.
+    session.context_fresh.store(!loaded, Ordering::SeqCst);
+    // The id outlives this process: a later spawn for the same chat loads it back.
+    remember_resume(session_id, &session.acp_session_id).await;
 
     Ok(Arc::new(session))
 }
@@ -2514,8 +2651,9 @@ async fn teardown(session_id: &str, s: Option<Arc<Session>>) {
 /// Attempts (original + respawns) one prompt gets. 2 = exactly one respawn: a
 /// transient crash (OOM kill, opencode bug, dropped pipe) is fixed by one fresh
 /// process, while a prompt that deterministically kills the child would turn a
-/// higher cap into a crash loop that only delays the inevitable error — and
-/// each `session/new` fallback retry loses more context anyway.
+/// higher cap into a crash loop that only delays the inevitable error — and a
+/// `session/new` fallback retry keeps only the resent transcript, not the
+/// agent's full state, so more retries also degrade context.
 const PROMPT_ATTEMPTS: usize = 2;
 
 /// Should this failed `session/prompt` be retried on a fresh process? Only a
@@ -2599,7 +2737,11 @@ pub async fn opencode_chat_stream(
     // rather than an interruption. `should_retry` keeps this to genuine
     // crashes (never intentional closes or live-child errors) and to
     // [`PROMPT_ATTEMPTS`] total tries.
-    let mut resume: Option<String> = None;
+    //
+    // Seeded from the chat's remembered ACP session id, so a BETWEEN-turn death
+    // (crash, idle reaper, LRU eviction, chat-switch close) also reconnects: the
+    // respawn `session/load`s the prior conversation instead of starting amnesiac.
+    let mut resume: Option<String> = resume_for(&session_id).await;
     let mut turn_guard = None;
     let mut attempt = 1;
     let (session, res) = loop {
@@ -2635,12 +2777,20 @@ pub async fn opencode_chat_stream(
         turn_guard = Some(TurnGuard::new(session.clone()));
         session.turn.lock().await.reset(generation_id.clone());
 
+        // First prompt on a memory-less ACP session (`session/new` ran): resend
+        // the conversation so the agent continues instead of starting over.
+        let text = if session.context_fresh.swap(false, Ordering::SeqCst) {
+            prompt_with_history(&messages, &prompt_text)
+        } else {
+            prompt_text.clone()
+        };
+
         let res = session
             .request(
                 "session/prompt",
                 json!({
                     "sessionId": session.acp_session_id,
-                    "prompt": [ { "type": "text", "text": prompt_text } ]
+                    "prompt": [ { "type": "text", "text": text } ]
                 }),
             )
             .await;
@@ -2756,6 +2906,18 @@ pub async fn set_opencode_learner(
     .await;
 }
 
+/// Mint-and-persist the platform API key NOW (no-op when `settings.json`
+/// already holds a fresh one). The frontend calls this the moment Code is on
+/// and a signed-in tenant/token exist — a child's env is fixed at spawn, so a
+/// key minted only lazily at spawn time was routinely "not there yet" for the
+/// session that needed it. Returns whether a key is available.
+#[command]
+pub async fn ensure_opencode_platform_key(tenant: String, token: String) -> Result<bool, String> {
+    Ok(crate::opencode_proxy::platform_api_key(&tenant, &token)
+        .await
+        .is_some())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2812,6 +2974,75 @@ mod tests {
         let mut cfg = serde_json::Map::new();
         enforce_permission_policy(&mut cfg);
         assert_eq!(cfg.get("permission").unwrap(), &json!("ask"));
+    }
+
+    /// Every spawn pins the build agent's prompt (replacing opencode's per-model
+    /// variants) and the default agent, whatever the config started with; the
+    /// entry's other keys and sibling agents stay untouched.
+    #[test]
+    fn every_session_runs_the_result_only_build_prompt() {
+        let mut cfg: serde_json::Map<String, Value> = serde_json::from_str(
+            r#"{
+              "agent": {
+                "build": { "model": "x", "prompt": "stale override" },
+                "plan": { "model": "y" }
+              }
+            }"#,
+        )
+        .unwrap();
+
+        enforce_build_prompt(&mut cfg);
+
+        assert_eq!(cfg.get("default_agent").unwrap(), &json!("build"));
+        let agents = cfg.get("agent").unwrap();
+        assert_eq!(
+            agents["build"]["prompt"],
+            json!(OPENCODE_BUILD_PROMPT),
+            "a drifted prompt is overwritten every spawn"
+        );
+        assert_eq!(agents["build"]["model"], "x", "the rest of the agent stays");
+        assert!(
+            agents["plan"].get("prompt").is_none(),
+            "only the build agent's prompt is ours to own"
+        );
+
+        // A config with no `agent` block at all still gets the override.
+        let mut bare = serde_json::Map::new();
+        enforce_build_prompt(&mut bare);
+        assert_eq!(
+            bare["agent"]["build"]["prompt"],
+            json!(OPENCODE_BUILD_PROMPT)
+        );
+    }
+
+    /// The prompt replaces opencode's gpt.txt variant (forked at the pinned
+    /// opencode version) — its point is the result-or-blocker contract, so the
+    /// contract lines must survive edits and the narration protocol they
+    /// replaced must not creep back on a re-diff.
+    #[test]
+    fn the_build_prompt_keeps_its_result_only_contract() {
+        let text = OPENCODE_BUILD_PROMPT;
+        assert!(text.starts_with("You are OpenCode"), "{text}");
+        assert!(text.contains("You communicate in results"), "{text}");
+        assert!(
+            text.contains("Only use `commentary` when you hit a genuine blocker"),
+            "{text}"
+        );
+        assert!(text.contains("at most three short sentences"), "{text}");
+        assert!(
+            text.contains("Between tool calls, emit no text"),
+            "the no-inter-tool-narration rule must survive edits: {text}"
+        );
+        for narration in [
+            "keeping the user clearly informed",
+            "Before editing files, send an update",
+            "explain what you are doing and why",
+        ] {
+            assert!(
+                !text.contains(narration),
+                "the replaced narration protocol is back: {narration}"
+            );
+        }
     }
 
     fn state(id: &str, idle_secs: u64, busy: bool) -> SessionState {
@@ -2878,7 +3109,10 @@ mod tests {
         assert!(flat.contains(&rw(&workspace)));
         assert!(flat.contains(&rw(Path::new("/tmp"))));
         assert!(flat.contains(&rw(&cfg_home)));
-        assert!(flat.contains(&rw(&home.join(".cache"))), "core cache allowed");
+        assert!(
+            flat.contains(&rw(&home.join(".cache"))),
+            "core cache allowed"
+        );
         assert!(
             flat.contains(&rw(&home.join(".cargo"))),
             "present toolchain allowed"
@@ -2979,9 +3213,7 @@ mod tests {
             Path::new("/Users/dev/proj"),
             Path::new("/Users/dev/.config/iblai/agents/sessions/k"),
         );
-        assert!(p.starts_with(
-            "(version 1)\n(allow default)\n(deny file-write* (subpath \"/\"))"
-        ));
+        assert!(p.starts_with("(version 1)\n(allow default)\n(deny file-write* (subpath \"/\"))"));
         assert!(p.contains("(allow file-write*"));
         assert!(p.contains("(subpath \"/dev\")"));
         assert!(p.contains("(subpath \"/private/var/folders\")"));
@@ -3051,9 +3283,15 @@ mod tests {
         let bare = root.join("c-bare");
         std::fs::create_dir_all(&bare).unwrap();
 
-        assert!(is_empty_project(&empty), "only .git + .DS_Store is untouched");
+        assert!(
+            is_empty_project(&empty),
+            "only .git + .DS_Store is untouched"
+        );
         assert!(!is_empty_project(&dirty), "real content disqualifies");
-        assert!(is_empty_project(&bare), "a bare dir (git init pending) counts");
+        assert!(
+            is_empty_project(&bare),
+            "a bare dir (git init pending) counts"
+        );
         assert!(!is_empty_project(&root.join("missing")));
 
         // Name-sorted first candidate, deterministically.
@@ -3142,7 +3380,9 @@ mod tests {
             .iter()
             .find(|p| p["identifier"] == "opener:allow-open-path")
             .expect("opener:allow-open-path must be a scoped object, not a bare string");
-        let allow = entry["allow"].as_array().expect("must carry an allow scope");
+        let allow = entry["allow"]
+            .as_array()
+            .expect("must carry an allow scope");
         assert!(
             allow
                 .iter()
@@ -3159,6 +3399,14 @@ mod tests {
             serde_json::Value::Bool(false),
             "without this, $HOME/** cannot match ~/.local/share/iblai/workspaces"
         );
+
+        // .env.example is the only documentation of the dotenv keys the entry
+        // points load (src-tauri/.env.local / .env.production) — keep the two
+        // app-URL vars named there.
+        let example = std::fs::read_to_string(manifest.join(".env.example")).unwrap();
+        for key in ["TAURI_APP_URL", "TAURI_DEV_URL"] {
+            assert!(example.contains(key), ".env.example must document {key}");
+        }
     }
 
     /// The word pools are what keep two mentors' folders from colliding by
@@ -3166,10 +3414,7 @@ mod tests {
     /// shrinks the space.
     #[test]
     fn the_slug_word_pools_are_unique_and_folder_safe() {
-        for (label, words) in [
-            ("adjectives", SLUG_ADJECTIVES),
-            ("nouns", SLUG_NOUNS),
-        ] {
+        for (label, words) in [("adjectives", SLUG_ADJECTIVES), ("nouns", SLUG_NOUNS)] {
             assert_eq!(words.len(), 48, "{label} pool size");
             let unique: std::collections::HashSet<_> = words.iter().collect();
             assert_eq!(unique.len(), words.len(), "{label} must not repeat a word");
@@ -3677,6 +3922,7 @@ mod tests {
             last_used: Mutex::new(Instant::now()),
             active_turns: AtomicUsize::new(0),
             closing: AtomicBool::new(false),
+            context_fresh: AtomicBool::new(false),
         })
     }
 
@@ -3714,6 +3960,7 @@ mod tests {
         let sid = format!("dead-reader-{}", std::process::id());
         let s = test_session("cat");
         registry().lock().await.insert(sid.clone(), s.clone());
+        remember_resume(&sid, "acp-survives-teardown").await;
 
         let inflight = {
             let s = s.clone();
@@ -3740,6 +3987,12 @@ mod tests {
             !registry().lock().await.contains_key(&sid),
             "the corpse must leave the registry"
         );
+        assert_eq!(
+            resume_for(&sid).await.as_deref(),
+            Some("acp-survives-teardown"),
+            "…but the resume id must survive it — that key is how the next spawn reconnects"
+        );
+        forget_resume(&sid).await;
     }
 
     /// The old reader's EOF may land AFTER a respawn replaced the session; its
@@ -3780,6 +4033,67 @@ mod tests {
             assert!(start.elapsed() < Duration::from_secs(5), "`true` must exit");
             tokio::time::sleep(Duration::from_millis(10)).await;
         }
+    }
+
+    /// A disconnect must not cost the chat its conversation: the resume id
+    /// outlives the process, follows the new-chat migration, and only "New
+    /// workspace" forgets it. Unique keys per run, so no serialization needed.
+    #[tokio::test]
+    async fn a_resume_id_outlives_its_process_and_follows_the_chat() {
+        let a = format!("resume-a-{}", std::process::id());
+        let real = format!("resume-real-{}", std::process::id());
+
+        remember_resume(&a, "acp-1").await;
+        assert_eq!(resume_for(&a).await.as_deref(), Some("acp-1"));
+
+        // New-chat migration: the ephemeral first-turn key gains its real id.
+        adopt_resume(&real, &a).await;
+        assert_eq!(resume_for(&a).await, None, "prior key is re-keyed away");
+        assert_eq!(resume_for(&real).await.as_deref(), Some("acp-1"));
+
+        // "New workspace" is the one intentional fresh start.
+        forget_resume(&real).await;
+        assert_eq!(resume_for(&real).await, None);
+
+        // An empty ACP id is never worth remembering.
+        remember_resume(&a, "").await;
+        assert_eq!(resume_for(&a).await, None);
+    }
+
+    /// The transcript fallback: a fresh ACP session gets the prior conversation
+    /// prepended; with no history the prompt is byte-identical to before.
+    #[test]
+    fn the_transcript_is_prepended_only_when_there_is_history() {
+        // Older SDK / first turn: only the latest message → unchanged.
+        let only_latest = vec![json!({ "role": "user", "content": "do the thing" })];
+        assert_eq!(
+            prompt_with_history(&only_latest, "do the thing"),
+            "do the thing"
+        );
+        assert_eq!(prompt_with_history(&[], "do the thing"), "do the thing");
+
+        // A real transcript: prior turns in order, roles labelled, the trailing
+        // duplicate of the latest message dropped, non-chat roles skipped.
+        let messages = vec![
+            json!({ "role": "system", "content": "routing goo" }),
+            json!({ "role": "user", "content": "build me a page" }),
+            json!({ "role": "assistant", "content": [ { "type": "text", "text": "done — index.html" } ] }),
+            json!({ "role": "user", "content": "now style it" }),
+        ];
+        let p = prompt_with_history(&messages, "now style it");
+        assert!(p.starts_with("<conversation-history>"), "{p}");
+        assert!(p.contains("user: build me a page"));
+        assert!(p.contains("assistant: done — index.html"));
+        assert!(!p.contains("routing goo"), "non-chat roles stay out");
+        assert!(
+            p.ends_with("</conversation-history>\n\nnow style it"),
+            "{p}"
+        );
+        assert_eq!(
+            p.matches("now style it").count(),
+            1,
+            "the latest message appears exactly once"
+        );
     }
 
     /// `closing` is the crash/close discriminator: `close_session` sets it,

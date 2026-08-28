@@ -80,6 +80,8 @@ function backend(
     supported?: boolean;
     sandbox_ready?: boolean;
     local?: unknown;
+    /** Linux: probed name of the inode/directory handler; null = unknown. */
+    fileManager?: string | null;
     /** The locally cached approval mode; null = never chosen. */
     permissionMode?: string | null;
   } = {},
@@ -91,6 +93,7 @@ function backend(
           sandboxed: overrides.sandboxed ?? false,
           supported: overrides.supported ?? true,
           sandbox_ready: overrides.sandbox_ready ?? true,
+          file_manager: overrides.fileManager ?? null,
         };
       case 'get_opencode_workspace':
         return '/home/tester/code/demo';
@@ -192,6 +195,14 @@ describe('CodingModeButton', () => {
       );
       await waitFor(() =>
         expect(invoke).toHaveBeenCalledWith('install_opencode', undefined),
+      );
+      // The platform key is minted the moment Code is on — a child's env is
+      // fixed at spawn, so first-turn minting was routinely too late.
+      await waitFor(() =>
+        expect(invoke).toHaveBeenCalledWith('ensure_opencode_platform_key', {
+          tenant: 'acme',
+          token: 'jwt-test-token',
+        }),
       );
     });
 
@@ -356,7 +367,7 @@ describe('CodingModeButton', () => {
       await openPopover();
 
       await userEvent.click(
-        await screen.findByRole('button', { name: /Change folder/ }),
+        await screen.findByRole('button', { name: /Select Workspace/ }),
       );
 
       await waitFor(() =>
@@ -376,7 +387,7 @@ describe('CodingModeButton', () => {
       await openPopover();
 
       await userEvent.click(
-        await screen.findByRole('button', { name: /Change folder/ }),
+        await screen.findByRole('button', { name: /Select Workspace/ }),
       );
 
       expect(invoke).not.toHaveBeenCalledWith(
@@ -389,6 +400,8 @@ describe('CodingModeButton', () => {
   describe('toggling', () => {
     it('forces a deliberate folder choice the first time Code is switched on', async () => {
       localStorage.setItem('ibl_coding_mode_enabled', 'false');
+      localStorage.setItem('tenant', 'acme');
+      localStorage.setItem('dm_token', 'jwt-test-token');
       openDialog.mockResolvedValue('/home/tester/other');
       renderButton();
       await openPopover();
@@ -399,6 +412,13 @@ describe('CodingModeButton', () => {
       expect(localStorage.getItem('ibl_coding_mode_enabled')).toBe('true');
       await waitFor(() =>
         expect(invoke).toHaveBeenCalledWith('install_opencode', undefined),
+      );
+      // Switching Code on also mints the platform key right away.
+      await waitFor(() =>
+        expect(invoke).toHaveBeenCalledWith('ensure_opencode_platform_key', {
+          tenant: 'acme',
+          token: 'jwt-test-token',
+        }),
       );
     });
 
@@ -444,7 +464,7 @@ describe('CodingModeButton', () => {
 
       // The install is still pending; the folder picker must still respond.
       await userEvent.click(
-        await screen.findByRole('button', { name: /Change folder/ }),
+        await screen.findByRole('button', { name: /Select Workspace/ }),
       );
       await waitFor(() => expect(openDialog).toHaveBeenCalled());
     });
@@ -493,7 +513,7 @@ describe('CodingModeButton', () => {
       await openPopover();
 
       await userEvent.click(
-        await screen.findByRole('button', { name: /Change folder/ }),
+        await screen.findByRole('button', { name: /Select Workspace/ }),
       );
 
       await waitFor(() => expect(err).toHaveBeenCalled());
@@ -565,11 +585,11 @@ describe('CodingModeButton', () => {
       renderButton();
       await openPopover();
 
-      await screen.findByRole('radio', { name: /Ask me/ });
+      await screen.findByRole('radio', { name: /Ask Me/ });
       expect(
         screen.queryByTestId('code-permission-mode-dialog'),
       ).not.toBeInTheDocument();
-      expect(screen.getByRole('radio', { name: /Ask me/ })).toBeChecked();
+      expect(screen.getByRole('radio', { name: /Ask Me/ })).toBeChecked();
     });
 
     it('lets DM override a stale local copy and re-applies it to the backend', async () => {
@@ -620,7 +640,7 @@ describe('CodingModeButton', () => {
       expect(await screen.findByText('/home/tester/code/demo')).toBeVisible();
 
       await userEvent.click(
-        await screen.findByRole('button', { name: /New workspace/ }),
+        await screen.findByRole('button', { name: /New Workspace/ }),
       );
 
       expect(invoke).toHaveBeenCalledWith('new_opencode_workspace', {
@@ -677,7 +697,7 @@ describe('CodingModeButton', () => {
       await openPopover();
 
       await userEvent.click(
-        await screen.findByRole('button', { name: /Change folder/ }),
+        await screen.findByRole('button', { name: /Select Workspace/ }),
       );
 
       await waitFor(() =>
@@ -698,7 +718,7 @@ describe('CodingModeButton', () => {
       await openPopover();
 
       await userEvent.click(
-        await screen.findByRole('button', { name: /New workspace/ }),
+        await screen.findByRole('button', { name: /New Workspace/ }),
       );
 
       await waitFor(() =>
@@ -718,6 +738,26 @@ describe('CodingModeButton', () => {
       ).toBeInTheDocument();
     });
 
+    it('names the probed Linux file manager — that is what will actually open', async () => {
+      userOS.current = 'Linux';
+      backend({ fileManager: 'Dolphin' });
+      renderButton();
+      await openPopover();
+      expect(
+        await screen.findByRole('button', { name: /Open in Dolphin/ }),
+      ).toBeInTheDocument();
+    });
+
+    it('falls back to the generic label when no Linux handler is known', async () => {
+      userOS.current = 'Linux';
+      backend({ fileManager: null });
+      renderButton();
+      await openPopover();
+      expect(
+        await screen.findByRole('button', { name: /Open Folder/ }),
+      ).toBeInTheDocument();
+    });
+
     it('cannot open or replace a workspace before the chat has one', async () => {
       // Rendered directly: passing `undefined` through renderButton would hit
       // its default parameter and silently supply a session id.
@@ -729,10 +769,10 @@ describe('CodingModeButton', () => {
       await openPopover();
 
       expect(
-        await screen.findByRole('button', { name: /Open folder/ }),
+        await screen.findByRole('button', { name: /Open Folder/ }),
       ).toBeDisabled();
       expect(
-        screen.getByRole('button', { name: /New workspace/ }),
+        screen.getByRole('button', { name: /New Workspace/ }),
       ).toBeDisabled();
     });
   });

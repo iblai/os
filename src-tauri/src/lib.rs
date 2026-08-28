@@ -83,16 +83,16 @@ const LAST_ROUTE_FILE: &str = "last_mentor_route.txt";
 
 // App URL - configurable via TAURI_DEV_URL env variable (compile-time for mobile, runtime for desktop)
 fn get_app_url() -> String {
-    // For mobile: check compile-time env var (set during build)
-    // For desktop: check runtime env var
-    if let Some(url) = option_env!("TAURI_DEV_URL") {
-        return url.to_string();
-    }
-
-    // Desktop: also check runtime environment variable
+    // Desktop: runtime env first (includes src-tauri/.env.local via the early
+    // dotenv load) — a value baked in at compile time must not shadow it.
     #[cfg(not(any(target_os = "ios", target_os = "android")))]
     if let Ok(url) = std::env::var("TAURI_DEV_URL") {
         return url;
+    }
+
+    // Mobile: compile-time env var (set during build)
+    if let Some(url) = option_env!("TAURI_DEV_URL") {
+        return url.to_string();
     }
 
     // Mobile platforms: .org for debug, .app for release
@@ -2162,6 +2162,15 @@ const URL_MONITOR_SCRIPT_OFFLINE: &str = r#"
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Dev-checkout overrides first: src-tauri/.env.local, then .env.production.
+    // The path is compile-time CARGO_MANIFEST_DIR, so installed builds have
+    // neither and skip straight on. Loaded before anything reads env; dotenvy
+    // never overrides already-set vars, so shell env > .env.local >
+    // .env.production > .env. Keys documented in src-tauri/.env.example.
+    for f in [".env.local", ".env.production"] {
+        let _ = dotenvy::from_path(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(f));
+    }
+
     // Load .env file if present (for local development and custom builds)
     // First try current directory (dev mode), then try next to the executable (bundled app)
     if dotenvy::dotenv().is_err() {
@@ -2239,6 +2248,13 @@ pub fn run() {
             // =====================
             #[cfg(not(any(target_os = "ios", target_os = "android")))]
             {
+                // Keep the managed opencode on the pinned version — a pin bump would
+                // otherwise never reach a machine that already has a runnable copy.
+                let opencode_handle = app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    opencode_installer::ensure_opencode_current(opencode_handle).await;
+                });
+
                 // Vibe skills track the latest GitHub release with no freshness
                 // window — resolve-and-sync in the background on every launch, so
                 // Coding Mode always starts from the newest published set (and a
@@ -2896,6 +2912,7 @@ pub fn run() {
         opencode_installer::check_opencode_status,
         opencode_acp::check_code_local_model,
         opencode_acp::set_opencode_learner,
+        opencode_acp::ensure_opencode_platform_key,
     ]);
 
     // Mobile platforms get only basic commands (no offline/cache features)

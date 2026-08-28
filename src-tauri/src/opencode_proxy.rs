@@ -46,17 +46,30 @@ use tokio::sync::{Mutex, RwLock};
 const IBLAI_INSTRUCTIONS: &str = "\
 # ibl.ai guidance
 
+- Keep your visible replies terse and outcome-focused — HARD CAP: three \
+short sentences per reply, aim for one. Say the result of what the user \
+asked (\"Deployed at <url>\", \"Fixed the failing test\") or the one \
+obstacle blocking you and what you need — nothing else. Process narration, \
+plan restatements, step-by-step or file-by-file accounts, headings, bullet \
+lists and code blocks belong in your reasoning or nowhere, never in the \
+reply text. Emit no text between tool calls — no \"I will now…\", no \"X is \
+done, next I will…\" — call the next tool directly. Exceed the cap only when \
+the user explicitly asks for detail (an explanation, a report, a walkthrough).
 - Whenever an available skill covers the task at hand — especially the \
 iblai-vibe-* skills — you MUST invoke that skill (via the skill tool) before \
 improvising the same work by hand.
-- When the user asks to build a website or web app, assume they want to opt in \
-to the ibl.ai ecosystem unless they say otherwise: do NOT hand-roll files from \
-scratch — load the iblai-vibe-ops-init skill first (it clones the vibe-starter \
-scaffold) and wire ibl.ai auth, profile, navbar, chat and analytics through \
-the matching iblai-vibe-* skills.
-- Never ask whether the user wants the ibl.ai ecosystem or a plain HTML/vanilla \
-setup — do not offer that choice at all. Use the ibl.ai stack and the vibe \
-starter and go ahead.
+- When the user asks to build a website or web app, first ask ONE short \
+question: whether to start from our default template, recommending it (\"it's \
+the fastest and most reliable way to get started\"). In everything you say to \
+the user, call it \"our default template\" — never the internal name \
+\"vibe-starter\". If they accept (or clearly already want it), load the \
+iblai-vibe-ops-init skill (it scaffolds the template) and wire ibl.ai auth, \
+profile, navbar, chat and analytics through the matching iblai-vibe-* skills \
+— do NOT hand-roll the scaffold. If they decline, build what they ask for and \
+still wire the ibl.ai pieces through the iblai-vibe-* skills.
+- That template question is the only stack question you ask: never offer a \
+menu of frameworks or an ibl.ai-vs-vanilla choice beyond it, and once it is \
+answered do not ask again in that project.
 - Do NOT remove ibl.ai components — the navbar, profile, notification buttons, \
 chat and the rest stay in place. Always keep the ibl.ai components, whether \
 the project started from vibe-starter or otherwise.
@@ -66,7 +79,9 @@ its expected configuration).
 - After building or changing a website, publish it and show the user the \
 live site: run `pnpm typecheck` and `pnpm lint`, deploy automatically with \
 the iblai-vibe-ops-deploy skill (no Vercel account or token — do not ask \
-whether to deploy), then open the deployed URL in the user's browser — \
+whether to deploy; the skill's status script does the deploy polling, one \
+bounded check every ~10 s — never improvise status commands or extra \
+\"is it pushed?\" checks), then open the deployed URL in the user's browser — \
 macOS: `open -a \"Google Chrome\" <url>` (plain `open <url>` as a fallback), \
 Linux: `xdg-open <url>`, Windows: `start <url>`. The deployed URL is how \
 the user sees their site — never show localhost or offer a local dev \
@@ -75,18 +90,20 @@ helping.
 - Monetization is optional and on request only: when the user asks to charge \
 users to enter the app (a paywall), use the \
 iblai-vibe-monetization-app-paywall skill. Do not suggest it unprompted.
-- Keep your visible replies terse and outcome-focused. Process narration — \
-which file you are about to move, which directory you are checking, which API \
-you are probing, what you are retrying — belongs in your reasoning or nowhere, \
-never in the reply text. Open a turn with one short acknowledgement, then \
-report only what the user actually cares about (\"Deployed at <url>\", \"Fixed \
-the failing test\"), not a step-by-step account of how you got there.
 - A platform API key is minted for you automatically and exported as the \
 IBLAI_API_KEY environment variable. Use it wherever a skill or API call needs a \
 platform API key, and NEVER ask the user for a platform API key or token — this \
 supersedes any skill instruction that says to ask for one. If IBLAI_API_KEY is \
 absent, the signed-in user is not a platform admin and cannot mint one: say so \
 plainly and continue with what does work, rather than asking them for a key.
+- When you write `iblai.env` or any `.env*` file, write the RESOLVED value of \
+IBLAI_API_KEY — env files never expand variables, so a literal \
+`${IBLAI_API_KEY}`, `$IBLAI_API_KEY` or `${TOKEN}` line ships no key (`TOKEN` \
+is not even exported — only the IBLAI_* variables are). Let your shell expand \
+it while writing, e.g. `printf 'TOKEN=%s\\n' \"$IBLAI_API_KEY\" >> iblai.env`, \
+then verify without printing it: \
+`grep -qF -- \"$IBLAI_API_KEY\" iblai.env && echo TOKEN-ok`. The same rule \
+applies to every env line (`PLATFORM`, `DOMAIN`, `NEXT_PUBLIC_*` values).
 - When software you are BUILDING needs raw LLM access, IBLAI_API_KEY doubles as \
 a standard OpenAI api key: point any OpenAI client at \
 `https://asgi.data.<domain>/api/ai-mentor/orgs/<org>/v1` (`<domain>` is the \
@@ -276,7 +293,10 @@ fn env_file_lookup(text: &str, key: &str) -> Option<String> {
 /// Read per use — it's a dev knob, not a hot path.
 fn local_env(key: &str) -> Option<String> {
     let manifest = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
-    let candidates = [manifest.join(".env.local"), manifest.join(".env.production")];
+    let candidates = [
+        manifest.join(".env.local"),
+        manifest.join(".env.production"),
+    ];
     candidates
         .iter()
         .find_map(|p| env_file_lookup(&std::fs::read_to_string(p).ok()?, key))
@@ -315,48 +335,133 @@ pub async fn auth_url_value() -> String {
         .to_string()
 }
 
-/// Minted platform API keys, per tenant: `(key, minted_at)`.
-///
-/// One mint at a time behind the lock. Two concurrent mints would each hit the
-/// duplicate-name path and the second one's DELETE would revoke the key the
-/// first just handed out.
-fn platform_keys() -> &'static Mutex<HashMap<String, (String, std::time::Instant)>> {
-    static K: OnceLock<Mutex<HashMap<String, (String, std::time::Instant)>>> = OnceLock::new();
-    K.get_or_init(|| Mutex::new(HashMap::new()))
+/// One mint at a time. Two concurrent mints would each hit the duplicate-name
+/// path and the second one's DELETE would revoke the key the first just handed
+/// out.
+fn mint_lock() -> &'static Mutex<()> {
+    static L: OnceLock<Mutex<()>> = OnceLock::new();
+    L.get_or_init(|| Mutex::new(()))
 }
 
 /// Lifetime requested for a minted key, in DM's `[DD] HH:MM:SS` duration form.
 /// Short enough that a leaked key expires on its own, long enough that a normal
-/// working session never re-mints.
-const PLATFORM_KEY_EXPIRES_IN: &str = "7 00:00:00";
+/// working stretch never re-mints. Must agree with [`PLATFORM_KEY_LIFETIME`] —
+/// a test pins the two together.
+const PLATFORM_KEY_EXPIRES_IN: &str = "3 00:00:00";
 
-/// Re-mint a day before the key expires, so a long-lived app process never
+/// [`PLATFORM_KEY_EXPIRES_IN`] as a duration, for computing the `expires_at`
+/// recorded in settings.json (computed locally — it's what we requested, and a
+/// day of renewal margin swallows any clock skew).
+const PLATFORM_KEY_LIFETIME: Duration = Duration::from_secs(3 * 24 * 60 * 60);
+
+/// Re-mint this long before the key expires, so a long-lived install never
 /// hands a child a credential that dies mid-task.
-const PLATFORM_KEY_REFRESH: Duration = Duration::from_secs(6 * 24 * 60 * 60);
+const PLATFORM_KEY_RENEW_MARGIN: Duration = Duration::from_secs(24 * 60 * 60);
+
+/// Settings key holding `{ "<dm base>|<tenant>": { "key", "expires_at" } }`
+/// (`expires_at` in unix seconds).
+///
+/// Persisted (in `settings.json`, beside the approval mode) because DM shows a
+/// key's raw value exactly once: an in-memory cache would lose it on every app
+/// restart and force the delete-and-remint dance each run — which strands the
+/// device on platforms that refuse the DELETE. Slotted per (base, tenant) so
+/// switching between platforms mid-development never serves a foreign key. No
+/// new exposure: the same key already enters the child env and is written into
+/// the workspace's `iblai.env` by the ops-init skill.
+const SETTINGS_PLATFORM_KEYS: &str = "platform_api_keys";
+
+fn platform_key_slot(base: &str, tenant: &str) -> String {
+    format!("{base}|{tenant}")
+}
+
+fn unix_now() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::SystemTime::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
+}
+
+/// The stored `(key, expires_at)` for (base, tenant), while it still has more
+/// than the renewal margin left. Pure over the settings map so the freshness
+/// rule is testable. Entries without `expires_at` (an older build's format)
+/// read as absent — one harmless re-mint.
+fn stored_platform_key(
+    settings: &serde_json::Map<String, serde_json::Value>,
+    base: &str,
+    tenant: &str,
+    now_secs: u64,
+) -> Option<(String, u64)> {
+    let entry = settings
+        .get(SETTINGS_PLATFORM_KEYS)?
+        .get(platform_key_slot(base, tenant))?;
+    let expires_at = entry.get("expires_at")?.as_u64()?;
+    if now_secs.saturating_add(PLATFORM_KEY_RENEW_MARGIN.as_secs()) >= expires_at {
+        return None;
+    }
+    entry
+        .get("key")?
+        .as_str()
+        .map(str::to_string)
+        .filter(|k| !k.is_empty())
+        .map(|k| (k, expires_at))
+}
+
+/// Record a freshly minted key in its slot, leaving every other settings owner
+/// (and every other slot) untouched.
+fn record_platform_key(
+    settings: &mut serde_json::Map<String, serde_json::Value>,
+    base: &str,
+    tenant: &str,
+    key: &str,
+    expires_at: u64,
+) {
+    let slots = settings
+        .entry(SETTINGS_PLATFORM_KEYS)
+        .or_insert_with(|| serde_json::json!({}));
+    if let Some(obj) = slots.as_object_mut() {
+        obj.insert(
+            platform_key_slot(base, tenant),
+            serde_json::json!({ "key": key, "expires_at": expires_at }),
+        );
+    }
+}
 
 /// How long a DM call may take before it's treated as unreachable. Deliberately
 /// short: this runs on the spawn path, and a wedged DM must not stall Code.
 const DM_CALL_TIMEOUT: Duration = Duration::from_secs(10);
 
-/// A stable per-device name for this app's platform API key.
-///
-/// Key names are unique per platform, so a fixed name would collide between two
-/// of the user's machines and each would keep revoking the other's key. The id
-/// is generated once and kept beside the app's other data.
-fn device_key_name() -> String {
-    let path = crate::opencode_acp::iblai_data_dir().join("device-id");
-    if let Ok(existing) = std::fs::read_to_string(&path) {
-        let id = existing.trim().to_string();
-        if !id.is_empty() {
-            return format!("os-code-{id}");
+/// A stable per-device id, generated once and kept beside the app's other
+/// data — the `<machine-code>` part of a key name. Resolved once per process:
+/// the id names this device and must not shift mid-run, and the uncached read
+/// raced the tests that repoint `XDG_DATA_HOME` (the data dir never moves at
+/// runtime in the app itself).
+fn device_id() -> String {
+    static ID: OnceLock<String> = OnceLock::new();
+    ID.get_or_init(|| {
+        let path = crate::opencode_acp::iblai_data_dir().join("device-id");
+        if let Ok(existing) = std::fs::read_to_string(&path) {
+            let id = existing.trim().to_string();
+            if !id.is_empty() {
+                return id;
+            }
         }
-    }
-    let id = new_secret()[..8].to_string();
-    if let Some(parent) = path.parent() {
-        let _ = std::fs::create_dir_all(parent);
-    }
-    let _ = std::fs::write(&path, &id);
-    format!("os-code-{id}")
+        let id = new_secret()[..8].to_string();
+        if let Some(parent) = path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        let _ = std::fs::write(&path, &id);
+        id
+    })
+    .clone()
+}
+
+/// The name for one mint: `<app>-<machine-code>-<suffix>`, the suffix fresh per
+/// call. DM key names are unique per platform, and a reused name means the mint
+/// only works if DM lets us DELETE the stale one first — a dance the dev DM's
+/// RBAC refused. A never-before-seen name cannot collide; superseded keys just
+/// age out on their own ([`PLATFORM_KEY_EXPIRES_IN`]).
+fn mint_key_name() -> String {
+    format!("os-code-{}-{}", device_id(), &new_secret()[..8])
 }
 
 /// POST/DELETE helper returning `(status, body)`, or an error when DM is unreachable.
@@ -370,70 +475,84 @@ async fn dm_call(req: reqwest::RequestBuilder) -> Result<(u16, String), String> 
     Ok((status, body))
 }
 
-/// Mint one platform API key, replacing a same-named key left by an earlier run.
+/// First 200 chars of a response body, for error lines.
+fn snippet(text: &str) -> String {
+    text.chars().take(200).collect()
+}
+
+/// Mint one platform API key under `name` (a fresh, never-reused name from
+/// [`mint_key_name`], so a duplicate collision cannot happen).
 ///
 /// `Ok(None)` means the signed-in user simply isn't allowed to mint one (DM
-/// restricts this to platform admins) — an expected outcome for a learner, not
-/// an error worth failing a spawn over.
+/// restricts this to platform admins, 403) — an expected outcome for a learner,
+/// not an error worth failing a spawn over. A 401 is different: the DM didn't
+/// recognise the token at all, which is never "not an admin".
 async fn mint_platform_key(base: &str, token: &str, name: &str) -> Result<Option<String>, String> {
     let url = format!("{base}/api/core/platform/api-tokens/");
     let auth = format!("Token {token}");
-    let body = serde_json::json!({
-        "name": name,
-        "expires_in": PLATFORM_KEY_EXPIRES_IN,
-        "mode": "owner",
-    });
-    let post = || http().post(&url).header("Authorization", &auth).json(&body);
-
-    let (mut status, mut text) = dm_call(post()).await?;
-    if status == 400 {
-        // A key of this name already exists — from an earlier run on this
-        // device. Its raw value was shown exactly once and is gone, so the only
-        // way forward is to delete it and mint again. (DM's detail route has no
-        // trailing slash.)
-        let del = format!("{base}/api/core/platform/api-tokens/{name}");
-        let _ = dm_call(http().delete(&del).header("Authorization", &auth)).await;
-        (status, text) = dm_call(post()).await?;
-    }
+    // `mode` is deliberately NOT sent: DM defaults it to "owner", and naming it
+    // explicitly opts the request into DM's privileged-field RBAC gate — which
+    // 403s admins who lack the field-level grant on `mode`.
+    let (status, text) = dm_call(http().post(&url).header("Authorization", &auth).json(
+        &serde_json::json!({
+            "name": name,
+            "expires_in": PLATFORM_KEY_EXPIRES_IN,
+        }),
+    ))
+    .await?;
     match status {
         200 | 201 => serde_json::from_str::<serde_json::Value>(&text)
             .ok()
             .and_then(|v| v.get("key").and_then(|k| k.as_str()).map(str::to_string))
             .map(Some)
-            .ok_or_else(|| "mint response carried no key".to_string()),
-        401 | 403 => Ok(None),
-        other => Err(format!("HTTP {other}: {}", text.chars().take(200).collect::<String>())),
+            .ok_or_else(|| format!("mint response carried no key: {}", snippet(&text))),
+        403 => Ok(None),
+        401 => Err(format!(
+            "token rejected (401) by {url} — signed into a different platform domain?"
+        )),
+        other => Err(format!("HTTP {other}: {}", snippet(&text))),
     }
 }
 
-/// A platform API key for this tenant, minted on demand and cached.
+/// A platform API key for this tenant with its expiry (unix secs), minted on
+/// demand and persisted in `settings.json` — DM shows the raw value exactly
+/// once, so it must outlive the app process or every restart re-mints.
 ///
 /// Handed to the agent as `IBLAI_API_KEY` so skills can act on the platform
 /// without the user being asked for a credential they usually can't even
 /// create. `None` when the user isn't a platform admin or DM is unreachable —
 /// callers carry on without the variable rather than failing the turn.
-pub async fn platform_api_key(tenant: &str, token: &str) -> Option<String> {
+pub async fn platform_api_key(tenant: &str, token: &str) -> Option<(String, u64)> {
     if tenant.is_empty() || token.is_empty() {
+        eprintln!("[opencode-proxy] IBLAI_API_KEY skipped: no signed-in tenant/token yet");
         return None;
     }
-    let mut cache = platform_keys().lock().await;
-    if let Some((key, minted)) = cache.get(tenant) {
-        if minted.elapsed() < PLATFORM_KEY_REFRESH {
-            return Some(key.clone());
-        }
-    }
     let base = dm_base_url().await;
-    let name = device_key_name();
+    let _one_at_a_time = mint_lock().lock().await;
+    let now = unix_now();
+    if let Some(hit) =
+        stored_platform_key(&crate::opencode_acp::read_settings(), &base, tenant, now)
+    {
+        return Some(hit);
+    }
+    let name = mint_key_name();
     match mint_platform_key(&base, token, &name).await {
         Ok(Some(key)) => {
-            cache.insert(tenant.to_string(), (key.clone(), std::time::Instant::now()));
-            Some(key)
+            let expires_at = now.saturating_add(PLATFORM_KEY_LIFETIME.as_secs());
+            let mut settings = crate::opencode_acp::read_settings();
+            record_platform_key(&mut settings, &base, tenant, &key, expires_at);
+            if let Err(e) = crate::opencode_acp::write_settings(&settings) {
+                // The key still works for this run; only its persistence failed.
+                eprintln!("[opencode-proxy] could not persist IBLAI_API_KEY: {e}");
+            }
+            eprintln!("[opencode-proxy] IBLAI_API_KEY minted for {tenant} at {base}");
+            Some((key, expires_at))
         }
-        // Not cached as a negative: admin rights can be granted while the app
+        // Not stored as a negative: admin rights can be granted while the app
         // runs, and the cost of retrying is one request per spawn.
         Ok(None) => {
             eprintln!(
-                "[opencode-proxy] IBLAI_API_KEY not minted: {tenant} user is not a platform admin"
+                "[opencode-proxy] IBLAI_API_KEY not minted: {base} refused (403) — {tenant} user is not a platform admin"
             );
             None
         }
@@ -1215,10 +1334,7 @@ mod tests {
         // Trimmed on the way in; the auth URL also loses its trailing slash.
         // (Asserted on the holders, not the resolved getters, so a dev
         // machine's IBLAI_* override env cannot flake this test.)
-        assert_eq!(
-            platform_domain().read().await.as_deref(),
-            Some("iblai.org")
-        );
+        assert_eq!(platform_domain().read().await.as_deref(), Some("iblai.org"));
         assert_eq!(
             auth_url().read().await.as_deref(),
             Some("https://auth.iblai.org")
@@ -1230,10 +1346,7 @@ mod tests {
         // carries a username would otherwise strand minting on the default host.
         // Same rule for the domain and auth URL.
         assert_eq!(dm_base_url().await, "https://dm.example/dm");
-        assert_eq!(
-            platform_domain().read().await.as_deref(),
-            Some("iblai.org")
-        );
+        assert_eq!(platform_domain().read().await.as_deref(), Some("iblai.org"));
         assert_eq!(
             auth_url().read().await.as_deref(),
             Some("https://auth.iblai.org")
@@ -1271,9 +1384,16 @@ mod tests {
             env_file_lookup(file, "IBLAI_PLATFORM_DOMAIN").as_deref(),
             Some("iblai.org")
         );
-        assert_eq!(env_file_lookup(file, "IBLAI_AUTH_URL"), None, "empty value = unset");
+        assert_eq!(
+            env_file_lookup(file, "IBLAI_AUTH_URL"),
+            None,
+            "empty value = unset"
+        );
         assert_eq!(env_file_lookup(file, "MISSING"), None);
-        assert_eq!(env_file_lookup("# IBLAI_PLATFORM_DOMAIN=x\n", "IBLAI_PLATFORM_DOMAIN"), None);
+        assert_eq!(
+            env_file_lookup("# IBLAI_PLATFORM_DOMAIN=x\n", "IBLAI_PLATFORM_DOMAIN"),
+            None
+        );
 
         // The hardcoded production defaults — in force until a
         // src-tauri/.env.local or .env.production overrides them.
@@ -1281,13 +1401,22 @@ mod tests {
         assert_eq!(DEFAULT_AUTH_URL, "https://login.iblai.app");
     }
 
-    /// Naming the key after the device keeps two of the user's machines from
-    /// revoking each other's key — DM key names are unique per platform.
+    /// `<app>-<machine-code>-<suffix>`: the machine code is stable (it names
+    /// this device on the platform), the suffix is fresh per mint (a reused
+    /// name can collide with a stranded key and the mint then depends on a
+    /// DELETE the platform may refuse).
     #[test]
-    fn the_device_key_name_is_stable_and_prefixed() {
-        let first = device_key_name();
-        assert!(first.starts_with("os-code-"), "{first}");
-        assert_eq!(first, device_key_name());
+    fn the_key_name_keeps_its_device_stem_and_varies_its_suffix() {
+        let id = device_id();
+        assert!(!id.is_empty());
+        assert_eq!(id, device_id(), "the machine code is minted once");
+
+        let first = mint_key_name();
+        let second = mint_key_name();
+        for name in [&first, &second] {
+            assert!(name.starts_with(&format!("os-code-{id}-")), "{name}");
+        }
+        assert_ne!(first, second, "every mint gets a never-before-seen name");
     }
 
     /// A canned DM that answers `responses` in order, recording each request as
@@ -1374,39 +1503,175 @@ mod tests {
         );
     }
 
-    /// A key of this name survives from an earlier run and its raw value is
-    /// gone forever, so the duplicate must be deleted and re-minted.
+    /// Every mint POSTs once under a never-before-seen name — no duplicate
+    /// branch, no DELETE for the platform to refuse. This is what makes the
+    /// mint independent of any stranded key from an earlier build.
     #[tokio::test]
-    async fn a_duplicate_key_name_is_deleted_and_reminted() {
+    async fn every_mint_asks_once_under_a_fresh_name() {
         let _live = live_proxy_lock(); // see the note in the 403 test above
         let (addr, requests) = canned_dm(vec![
-            (
-                400,
-                r#"{"name":["A key with this name already exists"]}"#.to_string(),
-            ),
-            (204, String::new()),
-            (201, r#"{"key":"minted-key","name":"os-code-test"}"#.to_string()),
+            (201, r#"{"key":"minted-1"}"#.to_string()),
+            (201, r#"{"key":"minted-2"}"#.to_string()),
         ])
         .await;
         let base = format!("http://{addr}");
-        let key = mint_platform_key(&base, "dm-token", "os-code-test")
-            .await
-            .unwrap();
-        assert_eq!(key.as_deref(), Some("minted-key"));
+        let stem = format!("os-code-{}-", device_id());
+
+        for expected in ["minted-1", "minted-2"] {
+            let key = mint_platform_key(&base, "dm-token", &mint_key_name())
+                .await
+                .unwrap();
+            assert_eq!(key.as_deref(), Some(expected));
+        }
 
         let seen = requests.lock().await.clone();
-        assert_eq!(seen.len(), 3, "post, delete, post: {seen:?}");
-        assert_eq!(seen[0].0, "POST");
-        assert_eq!(seen[1].0, "DELETE");
-        assert_eq!(
-            seen[1].1, "/api/core/platform/api-tokens/os-code-test",
-            "the detail route takes no trailing slash"
-        );
-        assert_eq!(seen[2].0, "POST");
+        assert_eq!(seen.len(), 2, "one POST per mint, nothing else: {seen:?}");
+        for req in &seen {
+            assert_eq!(req.0, "POST");
+            assert!(
+                req.2.contains(&format!("\"name\":\"{stem}")),
+                "the name keeps the <app>-<machine-code>- stem: {}",
+                req.2
+            );
+            assert!(
+                !req.2.contains("\"mode\""),
+                "the mint must NOT send `mode` — DM defaults it to owner, and \
+                 naming it opts into the privileged-field RBAC gate: {}",
+                req.2
+            );
+            assert!(
+                req.2.contains(PLATFORM_KEY_EXPIRES_IN),
+                "the mint asks for the pinned lifetime: {}",
+                req.2
+            );
+        }
+        assert_ne!(seen[0].2, seen[1].2, "the suffix differs per mint");
+    }
+
+    /// A 401 is an auth failure — the DM didn't recognise the token (usually a
+    /// platform-domain mismatch) — and must surface as an error, never be
+    /// mislabelled as "not a platform admin".
+    #[tokio::test]
+    async fn a_rejected_token_is_an_auth_failure_not_a_missing_admin() {
+        let _live = live_proxy_lock(); // see the note in the 403 test above
+        let (addr, _seen) =
+            canned_dm(vec![(401, r#"{"detail":"invalid token"}"#.to_string())]).await;
+        let base = format!("http://{addr}");
+        let err = mint_platform_key(&base, "dm-token", "os-code-test")
+            .await
+            .expect_err("401 is an error, not Ok(None)");
+        assert!(err.contains("401"), "{err}");
+        assert!(err.contains(&base), "names the DM it called: {err}");
+    }
+
+    /// With unique names a 400 can only be a genuine validation error — it
+    /// must surface loudly with the body, never trigger recovery machinery.
+    #[tokio::test]
+    async fn a_validation_error_surfaces_with_the_dm_body() {
+        let _live = live_proxy_lock(); // see the note in the 403 test above
+        let (addr, requests) = canned_dm(vec![(
+            400,
+            r#"{"expires_in":["bad duration"]}"#.to_string(),
+        )])
+        .await;
+        let base = format!("http://{addr}");
+        let err = mint_platform_key(&base, "dm-token", &mint_key_name())
+            .await
+            .expect_err("a 400 is an error now, not a duplicate to recover from");
+        assert!(err.contains("400"), "{err}");
         assert!(
-            seen[2].2.contains("\"mode\":\"owner\""),
-            "the mint asks for an owner-mode key: {}",
-            seen[2].2
+            err.contains("bad duration"),
+            "carries DM's own words: {err}"
+        );
+        assert_eq!(requests.lock().await.len(), 1, "and nothing was retried");
+    }
+
+    /// The persisted key is reused until the renewal margin before its
+    /// recorded expiry, and slots are strictly per (DM base, tenant) —
+    /// switching platforms mid-development must never serve a key minted
+    /// against the other DM.
+    #[test]
+    fn the_persisted_key_is_reused_until_it_nears_expiry() {
+        let mut settings = serde_json::Map::new();
+        let now = 1_000_000u64;
+        let expires = now + PLATFORM_KEY_LIFETIME.as_secs();
+        let margin = PLATFORM_KEY_RENEW_MARGIN.as_secs();
+        assert_eq!(
+            stored_platform_key(&settings, "https://dm.a", "acme", now),
+            None
+        );
+
+        record_platform_key(&mut settings, "https://dm.a", "acme", "key-a", expires);
+        assert_eq!(
+            stored_platform_key(&settings, "https://dm.a", "acme", now),
+            Some(("key-a".to_string(), expires)),
+            "the expiry rides along for the child env"
+        );
+        assert_eq!(
+            stored_platform_key(&settings, "https://dm.a", "acme", expires - margin - 1)
+                .map(|(k, _)| k)
+                .as_deref(),
+            Some("key-a"),
+            "still fresh just inside the margin"
+        );
+        assert_eq!(
+            stored_platform_key(&settings, "https://dm.a", "acme", expires - margin),
+            None,
+            "re-mints once the renewal margin is reached"
+        );
+
+        // Foreign slots never borrow this key.
+        assert_eq!(
+            stored_platform_key(&settings, "https://dm.b", "acme", now),
+            None
+        );
+        assert_eq!(
+            stored_platform_key(&settings, "https://dm.a", "other", now),
+            None
+        );
+
+        // A second slot and foreign settings owners coexist untouched.
+        settings.insert("permission_mode".into(), serde_json::json!("auto"));
+        record_platform_key(&mut settings, "https://dm.b", "acme", "key-b", expires);
+        assert_eq!(
+            stored_platform_key(&settings, "https://dm.a", "acme", now)
+                .map(|(k, _)| k)
+                .as_deref(),
+            Some("key-a")
+        );
+        assert_eq!(
+            stored_platform_key(&settings, "https://dm.b", "acme", now)
+                .map(|(k, _)| k)
+                .as_deref(),
+            Some("key-b")
+        );
+        assert_eq!(settings["permission_mode"], serde_json::json!("auto"));
+
+        // An older build's entry (minted_at, no expires_at) reads as absent —
+        // one harmless re-mint, never a wrong freshness guess.
+        settings[SETTINGS_PLATFORM_KEYS]["https://dm.c|acme"] =
+            serde_json::json!({ "key": "old-key", "minted_at": now });
+        assert_eq!(
+            stored_platform_key(&settings, "https://dm.c", "acme", now),
+            None
+        );
+    }
+
+    /// The duration string DM receives and the locally computed `expires_at`
+    /// must describe the same lifetime, or the recorded expiry lies.
+    #[test]
+    fn the_requested_and_recorded_key_lifetimes_agree() {
+        let days: u64 = PLATFORM_KEY_EXPIRES_IN
+            .split_whitespace()
+            .next()
+            .unwrap()
+            .parse()
+            .expect("PLATFORM_KEY_EXPIRES_IN starts with a day count");
+        assert_eq!(PLATFORM_KEY_EXPIRES_IN.ends_with("00:00:00"), true);
+        assert_eq!(days * 24 * 60 * 60, PLATFORM_KEY_LIFETIME.as_secs());
+        assert!(
+            PLATFORM_KEY_RENEW_MARGIN < PLATFORM_KEY_LIFETIME,
+            "a margin >= lifetime would re-mint on every call"
         );
     }
 
@@ -1497,8 +1762,9 @@ mod tests {
     }
 
     /// The guidance must keep its load-bearing content: skill priority, the
-    /// vibe-starter default for web apps (without offering an opt-out), never
-    /// stripping ibl.ai components, and publishing + showing the live site.
+    /// recommended default-template question for web apps (user-facing name
+    /// only, never "vibe-starter"), never stripping ibl.ai components, and
+    /// publishing + showing the live site.
     #[test]
     fn the_iblai_guidance_keeps_its_load_bearing_lines() {
         let text = IBLAI_INSTRUCTIONS;
@@ -1506,8 +1772,10 @@ mod tests {
         assert!(text.contains("iblai-vibe-ops-init"), "{text}");
         assert!(text.contains("website or web app"), "{text}");
         assert!(
-            text.contains("Never ask") && text.contains("go ahead"),
-            "the no-choice rule must survive edits: {text}"
+            text.contains("our default template")
+                && text.contains("fastest and most reliable")
+                && text.contains("never the internal name"),
+            "the ask-about-the-default-template rule must survive edits: {text}"
         );
         assert!(
             text.contains("Do NOT remove ibl.ai components"),
@@ -1527,7 +1795,8 @@ mod tests {
         );
         assert!(
             text.contains("iblai-vibe-ops-deploy")
-                && text.contains("do not ask whether to deploy"),
+                && text.contains("do not ask whether to deploy")
+                && text.contains("never improvise status commands"),
             "the auto-deploy rule must survive edits: {text}"
         );
         assert!(
@@ -1537,13 +1806,24 @@ mod tests {
             "the optional-monetization rule must survive edits: {text}"
         );
         assert!(
-            text.contains("outcome-focused") && text.contains("never in the reply text"),
-            "the terse-output rule must survive edits: {text}"
+            text.contains("outcome-focused")
+                && text.contains("HARD CAP: three short sentences")
+                && text.contains("the one obstacle blocking")
+                && text.contains("never in the reply text")
+                && text.contains("Emit no text between tool calls")
+                && text.contains("explicitly asks for detail"),
+            "the result-or-obstacle-only rule must survive edits: {text}"
         );
         assert!(
             text.contains("IBLAI_API_KEY")
                 && text.contains("NEVER ask the user for a platform API key"),
             "the auto-minted-key rule must survive edits: {text}"
+        );
+        assert!(
+            text.contains("never expand")
+                && text.contains("printf 'TOKEN=%s")
+                && text.contains("grep -qF"),
+            "the resolved-env-value rule must survive edits: {text}"
         );
         assert!(
             text.contains("standard OpenAI api key")

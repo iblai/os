@@ -486,7 +486,7 @@ describe('Journey 3: Code Mode (opencode)', () => {
       if (before !== null) writeFileSync(settings, before);
     });
 
-    it('code-22: a mentor keeps one workspace, and New workspace mints a fresh one without deleting the old', async () => {
+    it('code-22: a mentor keeps one workspace, and New Workspace mints a fresh one without deleting the old', async () => {
       const mentorArgs = {
         sessionId: 'e2e-ws-1',
         tenant: 'e2e',
@@ -532,10 +532,24 @@ describe('Journey 3: Code Mode (opencode)', () => {
          the coding-mode-button Vitest cases */
     });
 
-    it.skip('code-24: the popover offers New workspace and a platform-named Open folder button', () => {
+    it.skip('code-24: the popover offers New Workspace and a platform-named Open Folder button', () => {
       /* pending — same authenticated-UI gap; the labels and disabled states are
          covered by the coding-mode-button Vitest cases, and clicking Open
          folder would spawn a real file manager */
+    });
+
+    it.skip('code-25: a between-turn opencode death is invisible — the next turn loads the conversation back', () => {
+      /* pending — needs an authenticated chat driving real opencode turns to
+         kill between; covered meanwhile by the Rust resume-map tests
+         (a_resume_id_outlives_its_process_and_follows_the_chat,
+         the_transcript_is_prepended_only_when_there_is_history) and the SDK
+         transcript/restart Vitest cases */
+    });
+
+    it.skip('code-26: a managed opencode older than the pin is re-downloaded at boot, and a PATH copy is never touched', () => {
+      /* pending — the upgrade path downloads a ~100MB release, too heavy for
+         the harness; the decision is covered by the Rust
+         only_a_present_and_outdated_managed_copy_wants_an_upgrade test */
     });
 
     it.skip('code-14: the Code pill spins while skills sync and the popover shows the amber note on failure', () => {

@@ -97,3 +97,4 @@ e2e/playwright/.auth
 .omp
 .pi
 .npmrc.backup
+CLAUDE.local.md

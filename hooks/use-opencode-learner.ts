@@ -42,6 +42,20 @@ export function useOpencodeLearner() {
           platformDomain: config.platformBaseDomain(),
           authUrl: getEnv('NEXT_PUBLIC_AUTH_URL'),
         });
+        // Code already on for this signed-in user? Mint (or reuse from
+        // settings.json) the platform API key NOW — a child's env is fixed at
+        // spawn, so a key minted only at first-turn time was routinely missing
+        // from the very session that needed it. Best-effort by design.
+        if (
+          username &&
+          localStorage.getItem('ibl_coding_mode_enabled') === 'true'
+        ) {
+          const tenant = localStorage.getItem('tenant');
+          const token = localStorage.getItem('dm_token');
+          if (tenant && token) {
+            await invoke('ensure_opencode_platform_key', { tenant, token });
+          }
+        }
       } catch (e) {
         console.error('[opencode] failed to set learner', e);
       }

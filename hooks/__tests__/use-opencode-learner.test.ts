@@ -55,6 +55,7 @@ describe('useOpencodeLearner', () => {
     username.current = null;
     email.current = null;
     authUrlEnv.current = 'https://auth.test';
+    localStorage.clear();
   });
 
   it('tells the backend who is signed in, and how to reach DM', async () => {
@@ -141,6 +142,72 @@ describe('useOpencodeLearner', () => {
         'set_opencode_learner',
         expect.objectContaining({ username: 'second' }),
       ),
+    );
+  });
+
+  it('prewarms the platform key when Code is already on for a signed-in user', async () => {
+    // A child's env is fixed at spawn — the key must exist in settings.json
+    // BEFORE the first session, not be minted lazily by it.
+    username.current = 'myuser';
+    localStorage.setItem('ibl_coding_mode_enabled', 'true');
+    localStorage.setItem('tenant', 'acme');
+    localStorage.setItem('dm_token', 'tok-123');
+    renderHook(() => useOpencodeLearner());
+
+    await waitFor(() =>
+      expect(invoke).toHaveBeenCalledWith('ensure_opencode_platform_key', {
+        tenant: 'acme',
+        token: 'tok-123',
+      }),
+    );
+  });
+
+  it.each([
+    [
+      'Code is off',
+      () => {
+        localStorage.setItem('tenant', 'acme');
+        localStorage.setItem('dm_token', 'tok-123');
+      },
+    ],
+    [
+      'the tenant/token are missing',
+      () => {
+        localStorage.setItem('ibl_coding_mode_enabled', 'true');
+      },
+    ],
+  ])('does not prewarm the key when %s', async (_case, seed) => {
+    username.current = 'myuser';
+    seed();
+    renderHook(() => useOpencodeLearner());
+
+    await waitFor(() =>
+      expect(invoke).toHaveBeenCalledWith(
+        'set_opencode_learner',
+        expect.anything(),
+      ),
+    );
+    expect(invoke).not.toHaveBeenCalledWith(
+      'ensure_opencode_platform_key',
+      expect.anything(),
+    );
+  });
+
+  it('does not prewarm the key while signed out, even with Code on', async () => {
+    localStorage.setItem('ibl_coding_mode_enabled', 'true');
+    localStorage.setItem('tenant', 'acme');
+    localStorage.setItem('dm_token', 'tok-123');
+    renderHook(() => useOpencodeLearner());
+
+    await waitFor(() =>
+      expect(invoke).toHaveBeenCalledWith(
+        'set_opencode_learner',
+        expect.objectContaining({ username: '' }),
+      ),
+    );
+    expect(invoke).not.toHaveBeenCalledWith(
+      'ensure_opencode_platform_key',
+      expect.anything(),
     );
   });
 
