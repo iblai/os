@@ -25,6 +25,13 @@ import { isTauriApp } from '@/types/tauri';
 import { isTauriOfflineMode } from '@/lib/tauri-api-cache';
 import { isOfflineServerOrigin } from '@/hooks/use-tauri-offline';
 import type { Tenant } from '@iblai/iblai-js/web-utils';
+import {
+  getAuthItem,
+  setAuthItem,
+  removeAuthItem,
+  clearPerTabSession,
+  isPerTabAuthEnabled,
+} from '@iblai/iblai-js/web-utils';
 // NOTE: clearCurrentTenantCookie is imported dynamically inside handleTenantSwitch
 // (not statically) — the main web-utils entry pulls in React providers, which
 // would break this module when it's loaded in a React Server Component.
@@ -69,9 +76,7 @@ export function hasNonExpiredAuthToken() {
   // The edx JWT is stored alongside the axd token at SSO login; a valid session
   // requires it to be present and unexpired too, so re-auth is triggered when
   // it is missing or its `exp` has passed.
-  const edxToken = window.localStorage.getItem(
-    LOCAL_STORAGE_KEYS.EDX_TOKEN_KEY,
-  );
+  const edxToken = getAuthItem(LOCAL_STORAGE_KEYS.EDX_TOKEN_KEY);
   if (!edxToken) {
     console.log(
       '################### [hasNonExpiredAuthToken] edx_jwt_token is not defined',
@@ -86,7 +91,7 @@ export function hasNonExpiredAuthToken() {
     return false;
   }
 
-  const token = window.localStorage.getItem(LOCAL_STORAGE_KEYS.AUTH_TOKEN);
+  const token = getAuthItem(LOCAL_STORAGE_KEYS.AUTH_TOKEN);
   if (!token) {
     console.log(
       '################### [hasNonExpiredAuthToken] axd token is not defined',
@@ -95,9 +100,7 @@ export function hasNonExpiredAuthToken() {
     return false;
   }
 
-  const tokenExpiry = window.localStorage.getItem(
-    LOCAL_STORAGE_KEYS.TOKEN_EXPIRY,
-  );
+  const tokenExpiry = getAuthItem(LOCAL_STORAGE_KEYS.TOKEN_EXPIRY);
   if (!tokenExpiry) {
     console.log(
       '################### [hasNonExpiredAuthToken] axd token expiry is not defined',
@@ -293,15 +296,15 @@ export class LocalStorageService implements StorageService {
   }
 
   async getItem<T>(key: string): Promise<T | null> {
-    return window.localStorage.getItem(key) as T;
+    return getAuthItem(key) as T;
   }
 
   async setItem<T>(key: string, item: T): Promise<void> {
-    window.localStorage.setItem(key, item as unknown as string);
+    setAuthItem(key, item as unknown as string);
   }
 
   async removeItem(key: string): Promise<void> {
-    window.localStorage.removeItem(key);
+    removeAuthItem(key);
   }
 }
 
@@ -423,12 +426,21 @@ export const handleLogout = (
   redirectUrl = window.location.origin,
   callback?: () => void,
 ) => {
-  const tenant = window.localStorage.getItem('tenant');
+  const perTab = isPerTabAuthEnabled();
+  const tenant = perTab
+    ? getAuthItem('tenant')
+    : window.localStorage.getItem('tenant');
   console.log('[handleLogout] clearing localstorage');
-  window.localStorage.clear();
-  window.localStorage.setItem('tenant', tenant ?? '');
-
-  clearCookies();
+  if (perTab) {
+    // Per-tab logout: clear only this tab's session (+ its own seed); other
+    // tenant tabs and their most-recent seed are untouched, and cross-SPA
+    // cookie propagation is intentionally skipped.
+    clearPerTabSession(tenant ? { clearSeedIfTenant: tenant } : undefined);
+  } else {
+    window.localStorage.clear();
+    window.localStorage.setItem('tenant', tenant ?? '');
+    clearCookies();
+  }
   callback?.();
 
   if (!isInIframe()) {
@@ -725,7 +737,7 @@ export function isLoggedIn() {
     typeof localStorage?.getItem !== 'function'
   )
     return false;
-  return !!localStorage.getItem('axd_token');
+  return !!getAuthItem('axd_token');
 }
 
 export function htmlToMarkdown(htmlText: string) {
@@ -1529,7 +1541,12 @@ function syncAuthDataToCookies(userObject: Record<string, any>): void {
 
 export function saveUserObjectToLocalStorage(userObject: object) {
   console.log('[saveUserObjectToLocalStorage] clearing local storage');
-  localStorage.clear();
+  // The host→iframe auth handoff (authrelyonhost) installs a full session here.
+  // Under the per-tab flag this becomes this tab's sessionStorage session +
+  // localStorage seed; with the flag off it is exactly today's localStorage.
+  const perTab = isPerTabAuthEnabled();
+  if (perTab) clearPerTabSession();
+  else localStorage.clear();
   for (const [key, value] of Object.entries(userObject)) {
     let toStore = value;
     if (typeof value === 'string') {
@@ -1542,7 +1559,8 @@ export function saveUserObjectToLocalStorage(userObject: object) {
         // Not a JSON string, store as is
       }
     }
-    localStorage.setItem(key, String(toStore));
+    if (perTab) setAuthItem(key, String(toStore));
+    else localStorage.setItem(key, String(toStore));
     window.dispatchEvent(new StorageEvent('local-storage', { key }));
   }
 

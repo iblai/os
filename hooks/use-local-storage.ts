@@ -4,6 +4,11 @@ import type { Dispatch, SetStateAction } from 'react';
 
 import { useEventCallback } from '@/hooks/use-event-callback';
 import { useEventListener } from '@/hooks/use-event-listener';
+import {
+  getAuthItem,
+  setAuthItem,
+  removeAuthItem,
+} from '@iblai/iblai-js/web-utils';
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
@@ -81,7 +86,7 @@ export function useLocalStorage<T>(
     }
 
     try {
-      const raw = window.localStorage.getItem(key);
+      const raw = getAuthItem(key);
       return raw ? deserializer(raw) : initialValueToUse;
     } catch (error) {
       console.warn(`Error reading localStorage key "${key}":`, error);
@@ -112,8 +117,8 @@ export function useLocalStorage<T>(
       // Allow value to be a function so we have the same API as useState
       const newValue = value instanceof Function ? value(readValue()) : value;
 
-      // Save to local storage
-      window.localStorage.setItem(key, serializer(newValue));
+      // Save to storage (per-tab session + seed under the flag)
+      setAuthItem(key, serializer(newValue));
 
       // Save state
       setStoredValue(newValue);
@@ -137,8 +142,8 @@ export function useLocalStorage<T>(
     const defaultValue =
       initialValue instanceof Function ? initialValue() : initialValue;
 
-    // Remove the key from local storage
-    window.localStorage.removeItem(key);
+    // Remove the key from storage (both stores under the flag)
+    removeAuthItem(key);
 
     // Save state with default value
     setStoredValue(defaultValue);

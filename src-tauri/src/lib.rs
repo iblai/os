@@ -1906,7 +1906,7 @@ const URL_MONITOR_SCRIPT_ONLINE: &str = r#"
 
             var context = {};
             for (var i = 0; i < keysToSave.length; i++) {
-                var value = localStorage.getItem(keysToSave[i]);
+                var value = (sessionStorage.getItem(keysToSave[i]) || localStorage.getItem(keysToSave[i]));
                 if (value) {
                     context[keysToSave[i]] = value;
                 }
@@ -1916,7 +1916,7 @@ const URL_MONITOR_SCRIPT_ONLINE: &str = r#"
             for (var j = 0; j < localStorage.length; j++) {
                 var key = localStorage.key(j);
                 if (key && (key.indexOf('ibl') !== -1 || key.indexOf('token') !== -1 || key.indexOf('user') !== -1)) {
-                    context[key] = localStorage.getItem(key);
+                    context[key] = (sessionStorage.getItem(key) || localStorage.getItem(key));
                 }
             }
 
@@ -2062,10 +2062,11 @@ const URL_MONITOR_SCRIPT_OFFLINE: &str = r#"
                         // Restore all saved localStorage keys
                         for (var key in context) {
                             if (context.hasOwnProperty(key)) {
-                                var existingValue = localStorage.getItem(key);
+                                var existingValue = (sessionStorage.getItem(key) || localStorage.getItem(key));
                                 // Only restore if the value doesn't exist or is different
                                 if (!existingValue || existingValue !== context[key]) {
                                     localStorage.setItem(key, context[key]);
+                                    sessionStorage.setItem(key, context[key]);
                                     restoredCount++;
                                     console.log('[OfflineMode] Restored localStorage key:', key);
                                 }

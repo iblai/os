@@ -8,7 +8,7 @@ import { useLocalStorage } from '@/hooks/use-local-storage';
 import { userSliceActions } from '@/features/users/slice';
 import { usePathname } from 'next/navigation';
 import { initCustomAlertDialog } from '@/features/navigation/slice';
-import { Tenant } from '@iblai/iblai-js/web-utils';
+import { Tenant, getAuthItem } from '@iblai/iblai-js/web-utils';
 import { isStripeActivated } from '@/lib/utils';
 
 export function useUserData() {
@@ -27,9 +27,7 @@ export function useUserData() {
       return null;
     }
     try {
-      return JSON.parse(
-        localStorage.getItem(LOCAL_STORAGE_KEYS.USER_DATA) || '',
-      );
+      return JSON.parse(getAuthItem(LOCAL_STORAGE_KEYS.USER_DATA) || '');
     } catch (error) {
       return null;
     }

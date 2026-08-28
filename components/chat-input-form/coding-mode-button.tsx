@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Code2, Folder, Info, Loader2, X } from 'lucide-react';
+import { getAuthItem } from '@iblai/iblai-js/web-utils';
 import {
   Popover,
   PopoverContent,
@@ -78,8 +79,8 @@ async function resolveCodingModel(
 ): Promise<{ model: string; matched: boolean }> {
   const model = `${provider}/${name}`;
   try {
-    const tenant = localStorage.getItem('tenant') || '';
-    const token = localStorage.getItem('dm_token') || '';
+    const tenant = getAuthItem('tenant') || '';
+    const token = getAuthItem('dm_token') || '';
     if (!tenant || !token) return { model, matched: false };
     const res = await fetch(
       `${config.dmUrl()}/api/ai-mentor/orgs/${tenant}/v1/models`,
