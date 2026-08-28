@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { LLMTab } from './edit-mentor-modal/tabs';
+import { LLMTab } from './edit-mentor-modal/llm-tab';
 
 type Props = {
   isOpen: boolean;
