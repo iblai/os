@@ -443,14 +443,6 @@ export type Provider = {
   chat_models: unknown[];
 };
 
-export function canSwitchProvider(providers: Provider[], name: string) {
-  const provider = providers.find((provider) => provider.name === name);
-  return !!provider?.chat_models && provider.chat_models.length > 0;
-}
-
-// Cross-tab tenant switching now lives in the SDK
-// (@iblai/iblai-js/web-utils). This thin wrapper injects mentorai's config;
-// all coordination (TTL lock + BroadcastChannel) is handled in the SDK.
 export const handleTenantSwitch = async (
   tenant: string,
   saveRedirect = false,
@@ -471,22 +463,6 @@ export const handleTenantSwitch = async (
     redirectUrl,
     broadcast: broadcastTenantSwitching,
   });
-};
-
-export const canSwitchLLm = (llm: {
-  has_credentials?: boolean;
-  can_use_main_keys?: boolean;
-  main_has_credentials?: boolean;
-}) => {
-  if (llm?.has_credentials) {
-    return true;
-  }
-
-  return (
-    llm?.can_use_main_keys &&
-    (llm?.main_has_credentials === true ||
-      llm?.main_has_credentials === undefined)
-  );
 };
 
 export function convertFromBytes(bytes: number) {
@@ -660,79 +636,6 @@ export function getLLMModelDisplayName(llmName?: string | null): string {
   }
 
   return MODEL_DISPLAY_NAME_BY_KEY[normalized] ?? raw;
-}
-
-/**
- * Compares two raw provider names by the label the user actually sees on the
- * card — `getLLMProviderDetails(name).name` — not by the backend key. The two
- * diverge often enough to matter: `bedrock` renders as "Amazon", `azure_openai`
- * as "Microsoft", `iblai` as "ibl.ai". Comparison is case-insensitive
- * (`sensitivity: 'base'`) so casing never produces a surprising order.
- * Unknown providers fall back to their raw name as the display name.
- */
-export function compareLLMProvidersByDisplayName(a: string, b: string): number {
-  return getLLMProviderDetails(a).name.localeCompare(
-    getLLMProviderDetails(b).name,
-    undefined,
-    { sensitivity: 'base' },
-  );
-}
-
-type LLMCredentialFlags = {
-  has_credentials?: boolean;
-  can_use_main_keys?: boolean;
-  main_has_credentials?: boolean;
-};
-
-export type LLMProviderAccess = LLMCredentialFlags & {
-  chat_models?: unknown[] | null;
-};
-
-/**
- * Whether the user can reach *any* model of this provider.
- *
- * This is exactly the provider-level half of the per-model `isDisabled` rule in
- * `components/modals/llm-provider-modal.tsx`: a model row there is disabled when
- * `!canSwitchLLm(provider) || !canSwitchProvider(llms, provider.name)`, and both
- * of those depend only on the provider — so when either fails, *every* model row
- * of that provider is disabled. `canSwitchProvider` is just "has at least one
- * `chat_models` entry", which is checked inline here to keep the helper pure and
- * free of the surrounding provider list.
- *
- * `canSwitchLLm` can return `undefined` (its `can_use_main_keys` branch), hence
- * the explicit `Boolean(...)`.
- */
-export function canAccessProvider(provider: LLMProviderAccess): boolean {
-  return (
-    Boolean(canSwitchLLm(provider ?? {})) &&
-    (provider?.chat_models?.length ?? 0) > 0
-  );
-}
-
-/**
- * Orders LLM provider cards as two alphabetical groups: providers the user can
- * actually use (see {@link canAccessProvider}) first, then the ones they can't —
- * each group sorted alphabetically by display name (see
- * {@link compareLLMProvidersByDisplayName}).
- *
- * The grouping predicate is deliberately the same one the grid grays cards with,
- * so the two always line up: group 1 renders normally, group 2 renders grayed.
- * Grouping on credentials alone would let a provider that has a key but ships no
- * chat models sort into the "usable" group while rendering grayed.
- *
- * Pure and non-mutating: RTK Query results are frozen, so the input is copied
- * before sorting. `Array.prototype.sort` is stable, so providers that tie on
- * both group and display name keep their original relative order.
- */
-export function sortLLMProvidersByCredentials<
-  T extends LLMProviderAccess & { name: string },
->(providers: readonly T[]): T[] {
-  return [...providers].sort((a, b) => {
-    const aUsable = canAccessProvider(a);
-    const bUsable = canAccessProvider(b);
-    if (aUsable !== bUsable) return aUsable ? -1 : 1;
-    return compareLLMProvidersByDisplayName(a.name, b.name);
-  });
 }
 
 export function sendMessageToParentWebsite(payload: unknown) {

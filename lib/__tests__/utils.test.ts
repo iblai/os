@@ -25,9 +25,7 @@ import {
   getParentDomain,
   clearCookies,
   handleLogout,
-  canSwitchProvider,
   handleTenantSwitch,
-  canSwitchLLm,
   convertFromBytes,
   formatRelativeDate,
   getLLMProviderDetails,
@@ -55,9 +53,6 @@ import {
   getLatestMessageTimestamp,
   isSafariBrowser,
   onAccountDeleted,
-  canAccessProvider,
-  compareLLMProvidersByDisplayName,
-  sortLLMProvidersByCredentials,
 } from '@/lib/utils';
 import { LOCAL_STORAGE_KEYS, QUERY_PARAMS } from '@/lib/constants';
 import { config } from '@/lib/config';
@@ -1015,77 +1010,6 @@ describe('clearCookies function', () => {
   });
 });
 
-describe('canSwitchProvider function', () => {
-  it('should return true when provider has chat models', () => {
-    const providers = [
-      { name: 'openai', chat_models: ['gpt-4', 'gpt-3.5'] },
-      { name: 'anthropic', chat_models: ['claude'] },
-    ];
-    expect(canSwitchProvider(providers, 'openai')).toBe(true);
-  });
-
-  it('should return false when provider has no chat models', () => {
-    const providers = [{ name: 'openai', chat_models: [] }];
-    expect(canSwitchProvider(providers, 'openai')).toBe(false);
-  });
-
-  it('should return false when provider is not found', () => {
-    const providers = [{ name: 'openai', chat_models: ['gpt-4'] }];
-    expect(canSwitchProvider(providers, 'nonexistent')).toBe(false);
-  });
-
-  it('should return false when chat_models is undefined', () => {
-    const providers = [{ name: 'openai', chat_models: undefined as any }];
-    expect(canSwitchProvider(providers, 'openai')).toBe(false);
-  });
-});
-
-describe('canSwitchLLm function', () => {
-  it('should return true when llm has credentials', () => {
-    expect(canSwitchLLm({ has_credentials: true })).toBe(true);
-  });
-
-  it('should return true when can use main keys and main has credentials', () => {
-    expect(
-      canSwitchLLm({
-        has_credentials: false,
-        can_use_main_keys: true,
-        main_has_credentials: true,
-      }),
-    ).toBe(true);
-  });
-
-  it('should return true when can use main keys and main_has_credentials is undefined', () => {
-    expect(
-      canSwitchLLm({
-        has_credentials: false,
-        can_use_main_keys: true,
-        main_has_credentials: undefined,
-      }),
-    ).toBe(true);
-  });
-
-  it('should return false when cannot use main keys', () => {
-    expect(
-      canSwitchLLm({
-        has_credentials: false,
-        can_use_main_keys: false,
-        main_has_credentials: true,
-      }),
-    ).toBe(false);
-  });
-
-  it('should return false when main has no credentials', () => {
-    expect(
-      canSwitchLLm({
-        has_credentials: false,
-        can_use_main_keys: true,
-        main_has_credentials: false,
-      }),
-    ).toBe(false);
-  });
-});
-
 describe('convertFromBytes function', () => {
   it('should return 0 B for 0 bytes', () => {
     expect(convertFromBytes(0)).toEqual({ value: 0, unit: 'B' });
@@ -1158,6 +1082,17 @@ describe('formatRelativeDate function', () => {
 });
 
 describe('getLLMModelDisplayName function', () => {
+  it('maps the ibl.ai model key onto its brand spelling', () => {
+    // Mentor settings persist `iblai`; the nav bar badge rendered that raw.
+    expect(getLLMModelDisplayName('iblai')).toBe('ibl.ai');
+  });
+
+  it('accepts the spellings that normalise onto the same key', () => {
+    expect(getLLMModelDisplayName('IBLAI')).toBe('ibl.ai');
+    expect(getLLMModelDisplayName('ibl.ai')).toBe('ibl.ai');
+    expect(getLLMModelDisplayName('ibl-ai')).toBe('ibl.ai');
+  });
+
   it('keeps the variant when the key names one', () => {
     // The picker labels these `ibl.ai Pro` / `ibl.ai Fast` from the API's
     // display_name; settings persist only the wire key, so the badge has to
@@ -3423,296 +3358,5 @@ describe('markdownToHtml function - preprocess paths', () => {
     // href is invalid → preprocessor never produces an <a> tag for it
     expect(html).not.toContain('href="not-a-url"');
     expect(html).not.toContain('<a ');
-  });
-});
-
-describe('compareLLMProvidersByDisplayName function', () => {
-  it('orders by display name, not by the raw backend key', () => {
-    // Raw keys would put `anthropic` first; display names put "Amazon" first.
-    expect(
-      compareLLMProvidersByDisplayName('bedrock', 'anthropic'),
-    ).toBeLessThan(0);
-    expect(
-      compareLLMProvidersByDisplayName('anthropic', 'bedrock'),
-    ).toBeGreaterThan(0);
-  });
-
-  it('compares case-insensitively', () => {
-    // "Groq" vs "ibl.ai" — a case-sensitive sort would put every capitalised
-    // name before the lowercase one.
-    expect(compareLLMProvidersByDisplayName('groq', 'iblai')).toBeLessThan(0);
-    expect(compareLLMProvidersByDisplayName('OPENAI', 'openai')).toBe(0);
-  });
-
-  it('returns 0 for two names resolving to the same display name', () => {
-    expect(compareLLMProvidersByDisplayName('azure_openai', 'Microsoft')).toBe(
-      0,
-    );
-  });
-
-  it('falls back to the raw name for unknown providers', () => {
-    expect(
-      compareLLMProvidersByDisplayName('aardvark-ai', 'openai'),
-    ).toBeLessThan(0);
-    expect(
-      compareLLMProvidersByDisplayName('zeta-labs', 'openai'),
-    ).toBeGreaterThan(0);
-  });
-});
-
-describe('canAccessProvider function', () => {
-  // One model is enough — the helper only cares that the list is non-empty,
-  // which is what `canSwitchProvider` checks per provider in the modal.
-  const models = [{ llm_name: 'gpt-4o' }];
-
-  it('is true when we have our own credentials and the provider ships models', () => {
-    expect(
-      canAccessProvider({ has_credentials: true, chat_models: models }),
-    ).toBe(true);
-  });
-
-  it.each([
-    ['an empty list', [] as unknown[]],
-    ['a null list', null],
-    ['an undefined list', undefined],
-    ['no chat_models key at all', 'omit'],
-  ])(
-    'is false when credentials are fine but the provider has %s',
-    (_label, chatModels) => {
-      const provider =
-        chatModels === 'omit'
-          ? { has_credentials: true }
-          : { has_credentials: true, chat_models: chatModels as unknown[] };
-
-      expect(canAccessProvider(provider)).toBe(false);
-    },
-  );
-
-  it('is false when the provider ships models but no credential path passes', () => {
-    expect(
-      canAccessProvider({
-        has_credentials: false,
-        can_use_main_keys: false,
-        main_has_credentials: false,
-        chat_models: models,
-      }),
-    ).toBe(false);
-  });
-
-  it('is false when the provider carries no credential flags at all', () => {
-    expect(canAccessProvider({ chat_models: models })).toBe(false);
-  });
-
-  it.each([
-    ['can_use_main_keys with main_has_credentials true', true],
-    // An absent `main_has_credentials` means the backend said nothing about the
-    // main keys — canSwitchLLm treats that as available.
-    ['can_use_main_keys with main_has_credentials undefined', undefined],
-  ])('is true for the borrowed-main-keys path: %s', (_label, mainHasCreds) => {
-    expect(
-      canAccessProvider({
-        can_use_main_keys: true,
-        main_has_credentials: mainHasCreds,
-        chat_models: models,
-      }),
-    ).toBe(true);
-  });
-
-  it('is false when the main keys are explicitly reported as having no credentials', () => {
-    expect(
-      canAccessProvider({
-        can_use_main_keys: true,
-        main_has_credentials: false,
-        chat_models: models,
-      }),
-    ).toBe(false);
-  });
-
-  it('returns a strict boolean, never canSwitchLLm’s undefined', () => {
-    // canSwitchLLm returns `undefined` when can_use_main_keys is absent; the
-    // grid uses this value to drive a className, so it must be a real boolean.
-    const result = canAccessProvider({ chat_models: models });
-    expect(typeof result).toBe('boolean');
-    expect(result).toBe(false);
-  });
-});
-
-describe('sortLLMProvidersByCredentials function', () => {
-  // Grouping uses canAccessProvider — credentials *and* at least one chat model —
-  // so every "usable" fixture below needs both.
-  const models = [{ llm_name: 'model-1' }];
-  const keyed = { name: 'openai', has_credentials: true, chat_models: models };
-  const unkeyed = { name: 'anthropic', chat_models: models };
-
-  it('puts every provider the user can use before the ones they cannot', () => {
-    const sorted = sortLLMProvidersByCredentials([
-      { name: 'openai', chat_models: models },
-      { name: 'anthropic', has_credentials: true, chat_models: models },
-      { name: 'groq', chat_models: models },
-      {
-        name: 'bedrock',
-        can_use_main_keys: true,
-        main_has_credentials: true,
-        chat_models: models,
-      },
-    ]);
-
-    expect(sorted.map((p) => p.name)).toEqual([
-      // group 1, alphabetical by display name: "Amazon", "Anthropic"
-      'bedrock',
-      'anthropic',
-      // group 2, alphabetical by display name: "Groq", "OpenAI"
-      'groq',
-      'openai',
-    ]);
-  });
-
-  it('demotes a provider we have a key for when it ships no chat models', () => {
-    // The grouping predicate is the same one the grid grays cards with, so a
-    // keyed-but-empty provider must land in group 2 — otherwise it would sort
-    // as "usable" yet render grayed, which reads as a bug.
-    const sorted = sortLLMProvidersByCredentials([
-      { name: 'openai', has_credentials: true, chat_models: [] },
-      { name: 'groq', has_credentials: true, chat_models: models },
-    ]);
-
-    expect(sorted.map((p) => p.name)).toEqual(['groq', 'openai']);
-  });
-
-  it('sorts alphabetically by display name rather than raw key within a group', () => {
-    const sorted = sortLLMProvidersByCredentials([
-      { name: 'openai', has_credentials: true, chat_models: models },
-      { name: 'azure_openai', has_credentials: true, chat_models: models },
-      { name: 'anthropic', has_credentials: true, chat_models: models },
-      { name: 'bedrock', has_credentials: true, chat_models: models },
-    ]);
-
-    // Raw-key order would be anthropic, azure_openai, bedrock, openai.
-    expect(sorted.map((p) => p.name)).toEqual([
-      'bedrock', // Amazon
-      'anthropic', // Anthropic
-      'azure_openai', // Microsoft
-      'openai', // OpenAI
-    ]);
-  });
-
-  it('compares display names case-insensitively', () => {
-    const sorted = sortLLMProvidersByCredentials([
-      { name: 'iblai' }, // "ibl.ai"
-      { name: 'groq' }, // "Groq"
-      { name: 'azure_openai' }, // "Microsoft"
-    ]);
-
-    expect(sorted.map((p) => p.name)).toEqual([
-      'groq',
-      'iblai',
-      'azure_openai',
-    ]);
-  });
-
-  it.each([
-    ['has_credentials', { has_credentials: true }],
-    [
-      'can_use_main_keys + main_has_credentials',
-      { can_use_main_keys: true, main_has_credentials: true },
-    ],
-    [
-      'can_use_main_keys with main_has_credentials undefined',
-      { can_use_main_keys: true },
-    ],
-  ])('treats %s (with chat models) as usable', (_label, flags) => {
-    const sorted = sortLLMProvidersByCredentials([
-      unkeyed,
-      { name: 'openai', chat_models: models, ...flags },
-    ]);
-
-    expect(sorted[0].name).toBe('openai');
-  });
-
-  it.each([
-    ['no flags at all', {}],
-    [
-      'every flag false',
-      {
-        has_credentials: false,
-        can_use_main_keys: false,
-        main_has_credentials: false,
-      },
-    ],
-    [
-      'can_use_main_keys but main keys explicitly have no credentials',
-      { can_use_main_keys: true, main_has_credentials: false },
-    ],
-  ])('treats %s as unusable', (_label, flags) => {
-    const sorted = sortLLMProvidersByCredentials([
-      { name: 'anthropic', chat_models: models, ...flags },
-      keyed,
-    ]);
-
-    expect(sorted[0].name).toBe('openai');
-  });
-
-  it('does not mutate the input array', () => {
-    const input = [
-      { name: 'openai', chat_models: models },
-      { name: 'anthropic', has_credentials: true, chat_models: models },
-    ];
-    const snapshot = [...input];
-
-    const sorted = sortLLMProvidersByCredentials(input);
-
-    expect(input).toEqual(snapshot);
-    expect(sorted).not.toBe(input);
-    expect(sorted[0]).toBe(input[1]);
-  });
-
-  it('works on a frozen array (RTK Query results are frozen)', () => {
-    const frozen = Object.freeze([
-      { name: 'openai', chat_models: models },
-      { name: 'anthropic', has_credentials: true, chat_models: models },
-    ]);
-
-    expect(() => sortLLMProvidersByCredentials(frozen)).not.toThrow();
-    expect(sortLLMProvidersByCredentials(frozen).map((p) => p.name)).toEqual([
-      'anthropic',
-      'openai',
-    ]);
-  });
-
-  it('handles empty and single-element arrays', () => {
-    expect(sortLLMProvidersByCredentials([])).toEqual([]);
-    expect(sortLLMProvidersByCredentials([keyed])).toEqual([keyed]);
-  });
-
-  it('is stable for providers that tie on group and display name', () => {
-    const first = {
-      name: 'azure_openai',
-      has_credentials: true,
-      chat_models: models,
-    };
-    const second = {
-      name: 'Microsoft',
-      has_credentials: true,
-      chat_models: models,
-    };
-
-    const sorted = sortLLMProvidersByCredentials([first, second]);
-
-    expect(sorted[0]).toBe(first);
-    expect(sorted[1]).toBe(second);
-  });
-
-  it('sorts unknown providers by their raw name alongside known ones', () => {
-    const sorted = sortLLMProvidersByCredentials([
-      { name: 'zeta-labs' },
-      { name: 'openai' },
-      { name: 'aardvark-ai' },
-    ]);
-
-    expect(sorted.map((p) => p.name)).toEqual([
-      'aardvark-ai',
-      'openai', // "OpenAI"
-      'zeta-labs',
-    ]);
   });
 });
