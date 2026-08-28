@@ -4,43 +4,43 @@
 
 ### Features
 
-* **mentor:** adding sandbox and canvas upgrades ([1f9373d](https://github.com/iblai/os/commit/1f9373dcb8a7627868c4d45b4d93deffd8c62774))
+- **mentor:** adding sandbox and canvas upgrades ([1f9373d](https://github.com/iblai/os/commit/1f9373dcb8a7627868c4d45b4d93deffd8c62774))
 
 ### Bug Fixes
 
-* **mentorai:** adding test for artifacts ([9ec855e](https://github.com/iblai/os/commit/9ec855efeed21b32291a57915e1baa62aa60467d))
+- **mentorai:** adding test for artifacts ([9ec855e](https://github.com/iblai/os/commit/9ec855efeed21b32291a57915e1baa62aa60467d))
 
 ## [0.131.0](https://github.com/iblai/os/compare/v0.130.4...v0.131.0) (2026-08-25)
 
 ### Features
 
-* **datasets:** render SDK AgentDatasetsTab via OS host wrapper ([d16975e](https://github.com/iblai/os/commit/d16975e388ee2567ea37eb20cfa1e3aeacd2192c))
-* **navigate:** add replace option and datasets URL param cleanup ([36ca9b1](https://github.com/iblai/os/commit/36ca9b1dddd873d805f2130d814cc23425daa1f2))
+- **datasets:** render SDK AgentDatasetsTab via OS host wrapper ([d16975e](https://github.com/iblai/os/commit/d16975e388ee2567ea37eb20cfa1e3aeacd2192c))
+- **navigate:** add replace option and datasets URL param cleanup ([36ca9b1](https://github.com/iblai/os/commit/36ca9b1dddd873d805f2130d814cc23425daa1f2))
 
 ### Bug Fixes
 
-* **e2e:** bound mentor cleanup to a time budget ([d0f351f](https://github.com/iblai/os/commit/d0f351fbbadcc20b14062b2564dff22fac652467))
-* **e2e:** cache failed DM API base lookups ([3043c1d](https://github.com/iblai/os/commit/3043c1d423734e2968ae024322c57e616719743b))
-* **e2e:** make the training wait best-effort ([c80a4ab](https://github.com/iblai/os/commit/c80a4ab919d28fbde2d84c92ae2ca6da3a8e29fa))
-* **e2e:** retry pagination clicks through the disabled window ([84bd38c](https://github.com/iblai/os/commit/84bd38c49d991fc53b7b2d2a7645dc31bd842f00))
-* **e2e:** stop mentor cleanup silently no-opping ([c1ad4f5](https://github.com/iblai/os/commit/c1ad4f5093bc6353cadf63197f8e3d2a64a9b17a))
+- **e2e:** bound mentor cleanup to a time budget ([d0f351f](https://github.com/iblai/os/commit/d0f351fbbadcc20b14062b2564dff22fac652467))
+- **e2e:** cache failed DM API base lookups ([3043c1d](https://github.com/iblai/os/commit/3043c1d423734e2968ae024322c57e616719743b))
+- **e2e:** make the training wait best-effort ([c80a4ab](https://github.com/iblai/os/commit/c80a4ab919d28fbde2d84c92ae2ca6da3a8e29fa))
+- **e2e:** retry pagination clicks through the disabled window ([84bd38c](https://github.com/iblai/os/commit/84bd38c49d991fc53b7b2d2a7645dc31bd842f00))
+- **e2e:** stop mentor cleanup silently no-opping ([c1ad4f5](https://github.com/iblai/os/commit/c1ad4f5093bc6353cadf63197f8e3d2a64a9b17a))
 
 ### Chores
 
-* **format:** normalize prettier drift in generated changelog, docs and workflow ([9438df8](https://github.com/iblai/os/commit/9438df83df40abf4869c5c7f4c9821c909b0ea70))
+- **format:** normalize prettier drift in generated changelog, docs and workflow ([9438df8](https://github.com/iblai/os/commit/9438df83df40abf4869c5c7f4c9821c909b0ea70))
 
 ### Documentation
 
-* **e2e:** describe the self-seeded datasets pagination fixture ([0f4ecf4](https://github.com/iblai/os/commit/0f4ecf447b0d20330b50cbe11f764d46208bdb8d))
+- **e2e:** describe the self-seeded datasets pagination fixture ([0f4ecf4](https://github.com/iblai/os/commit/0f4ecf447b0d20330b50cbe11f764d46208bdb8d))
 
 ### Tests
 
-* **e2e:** add API-based dataset seeding helpers ([e212396](https://github.com/iblai/os/commit/e2123968a4b8fa745089ce22f301dbd8fc89c024))
-* **e2e:** cover datasets tab URL query-string sync ([0646075](https://github.com/iblai/os/commit/06460754db3b21614b6fa91c91589a54b6dbbf57))
-* **e2e:** resolve the DM API base at runtime ([c0d588d](https://github.com/iblai/os/commit/c0d588ddaa1beec8e5d740651540ecbe0ab8a766))
-* **e2e:** self-seed the datasets pagination fixture ([4cac365](https://github.com/iblai/os/commit/4cac3651d7acbb6bc2cd09153df0c725410334a9))
-* **edit-mentor:** mock AgentDatasetsTabWrapper in modal tests ([1eb1513](https://github.com/iblai/os/commit/1eb1513a09e272c058ecfd11dd28920f55c0ee9a))
-* **navigate:** add DATASETS_TAB_URL_PARAMS to constants mock ([2665296](https://github.com/iblai/os/commit/2665296c3a93151c38119d169205c1290e362341))
+- **e2e:** add API-based dataset seeding helpers ([e212396](https://github.com/iblai/os/commit/e2123968a4b8fa745089ce22f301dbd8fc89c024))
+- **e2e:** cover datasets tab URL query-string sync ([0646075](https://github.com/iblai/os/commit/06460754db3b21614b6fa91c91589a54b6dbbf57))
+- **e2e:** resolve the DM API base at runtime ([c0d588d](https://github.com/iblai/os/commit/c0d588ddaa1beec8e5d740651540ecbe0ab8a766))
+- **e2e:** self-seed the datasets pagination fixture ([4cac365](https://github.com/iblai/os/commit/4cac3651d7acbb6bc2cd09153df0c725410334a9))
+- **edit-mentor:** mock AgentDatasetsTabWrapper in modal tests ([1eb1513](https://github.com/iblai/os/commit/1eb1513a09e272c058ecfd11dd28920f55c0ee9a))
+- **navigate:** add DATASETS_TAB_URL_PARAMS to constants mock ([2665296](https://github.com/iblai/os/commit/2665296c3a93151c38119d169205c1290e362341))
 
 ## [0.130.4](https://github.com/iblai/os/compare/v0.130.3...v0.130.4) (2026-08-25)
 

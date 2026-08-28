@@ -676,7 +676,10 @@ export function ChatInputForm({
 
   const { handleMicrophoneBtnClick, processing, recording, time } =
     useVoiceChat({
-      sendMessage: handleSelectPrompt,
+      onTranscript: (text) =>
+        setInputValue(
+          inputValue.trim() ? `${inputValue.trim()} ${text}` : text,
+        ),
     });
 
   // Get attached files from Redux store with a fallback for when the state is not yet available
