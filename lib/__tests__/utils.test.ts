@@ -1158,15 +1158,25 @@ describe('formatRelativeDate function', () => {
 });
 
 describe('getLLMModelDisplayName function', () => {
-  it('maps the ibl.ai model key onto its brand spelling', () => {
-    // Mentor settings persist `iblai`; the nav bar badge rendered that raw.
-    expect(getLLMModelDisplayName('iblai')).toBe('ibl.ai');
+  it('keeps the variant when the key names one', () => {
+    // The picker labels these `ibl.ai Pro` / `ibl.ai Fast` from the API's
+    // display_name; settings persist only the wire key, so the badge has to
+    // rebuild the same label or the two surfaces disagree.
+    expect(getLLMModelDisplayName('iblai-pro')).toBe('ibl.ai Pro');
+    expect(getLLMModelDisplayName('iblai-fast')).toBe('ibl.ai Fast');
+    expect(getLLMModelDisplayName('IBLAI-FAST')).toBe('ibl.ai Fast');
+    expect(getLLMModelDisplayName('ibl-ai-pro')).toBe('ibl.ai Pro');
+    expect(getLLMModelDisplayName('IBL AI Pro')).toBe('ibl.ai Pro');
   });
 
-  it('accepts the spellings that normalise onto the same key', () => {
-    expect(getLLMModelDisplayName('IBLAI')).toBe('ibl.ai');
-    expect(getLLMModelDisplayName('ibl.ai')).toBe('ibl.ai');
+  it('renders the bare brand when the key has no variant', () => {
+    expect(getLLMModelDisplayName('ibl')).toBe('ibl.ai');
     expect(getLLMModelDisplayName('ibl-ai')).toBe('ibl.ai');
+  });
+
+  it('does not rewrite unrelated names that merely contain `ibl`', () => {
+    expect(getLLMModelDisplayName('flexible-model')).toBe('flexible-model');
+    expect(getLLMModelDisplayName('convertible')).toBe('convertible');
   });
 
   it('passes through keys that are already presentable', () => {
