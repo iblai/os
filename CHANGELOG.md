@@ -4,7 +4,7 @@
 
 ### Bug Fixes
 
-* **ci:** remove the paths filter that deadlocks the required PR Validation check ([9bbb9b0](https://github.com/iblai/os/commit/9bbb9b030810a4783ee02b843ff6fe9e03170e77)), closes [os#462](https://github.com/iblai/os/issues/462)
+- **ci:** remove the paths filter that deadlocks the required PR Validation check ([9bbb9b0](https://github.com/iblai/os/commit/9bbb9b030810a4783ee02b843ff6fe9e03170e77)), closes [os#462](https://github.com/iblai/os/issues/462)
 
 ## [0.132.0](https://github.com/iblai/os/compare/v0.131.0...v0.132.0) (2026-08-27)
 
