@@ -85,6 +85,25 @@ test.describe('Journey 71: VM Sandbox File Artifact — Canvas Preview', () => {
     await sandbox.selectKind('virtual-machine');
     expect(await sandbox.isKindEnabled('virtual-machine')).toBe(true);
     await editMentorPage.close();
+
+    // Re-open the tab and read the switch again. The first assertion above
+    // only proves the OPTIMISTIC state: the SDK's SandboxConfig keeps its
+    // local flag override after a successful-looking save, so a backend
+    // that accepts the settings PUT but ignores/normalizes the sandbox-kind
+    // flags (they ride on a `@ts-expect-error` body the API types predate)
+    // still shows VM on + a success toast. A fresh mount clears the
+    // override and renders the SERVER truth — if that says Computing
+    // Runtime, fail here with a clear message instead of a 4-minute chip
+    // timeout downstream.
+    await editMentorPage.open('Settings');
+    await editMentorPage.navigateToTab('Sandbox');
+    await waitForPageReady(page);
+    const sandboxRecheck = new SandboxTab(page, editMentorPage.dialog);
+    expect(
+      await sandboxRecheck.isKindEnabled('virtual-machine'),
+      'Virtual Machine Shell did not persist server-side: the backend accepted the settings save but kept/restored a different sandbox kind — check that this deployment supports the sandbox-kind fields (enable_virtual_machine) on the mentor-settings endpoint',
+    ).toBe(true);
+    await editMentorPage.close();
   });
 
   test('admin enables the VM sandbox kind, asks the agent for a txt file, and the canvas shows its content', async ({

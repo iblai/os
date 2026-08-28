@@ -1122,6 +1122,10 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
     page,
     chatPage,
   }) => {
+    // The held fetch below only ever fires for users granted
+    // `view_skill_assignments` — grant it explicitly so the test doesn't
+    // depend on the environment's grant rollout.
+    await chatPage.grantSkillAssignmentsRead();
     let releaseSkills!: () => void;
     const gate = new Promise<void>((resolve) => (releaseSkills = resolve));
     await page.route(

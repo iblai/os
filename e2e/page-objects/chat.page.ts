@@ -517,7 +517,51 @@ export class ChatPage {
    * be registered BEFORE navigating to the chat page — see the
    * class-of-methods note above.
    */
+  /**
+   * Intercepts the RBAC permissions-check POST and fulfills it with the
+   * REAL response, mutated so every requested mentor-scoped resource
+   * (`/mentors/{id}/`) carries `view_skill_assignments: true`. The
+   * composer's skills fetch is gated on that grant — without it the
+   * request never fires — so mocking the skills endpoint alone no longer
+   * simulates the granted state. Keys the tests hermetic w.r.t. the
+   * backend's grant rollout; must be registered before the mentor page
+   * load that runs the permission check.
+   */
+  async grantSkillAssignmentsRead(): Promise<void> {
+    await this.page.route(
+      (url) => url.pathname.includes('/api/core/rbac/permissions/check'),
+      async (route) => {
+        const response = await route.fetch();
+        let json: Record<string, unknown>;
+        try {
+          json = await response.json();
+        } catch {
+          await route.fulfill({ response });
+          return;
+        }
+        // The POST body lists the resources being checked — grant the read
+        // on each mentor-scoped one, adding the entry when the real
+        // response omitted it (a user with no grants at all).
+        const requested: string[] =
+          route.request().postDataJSON()?.resources ?? [];
+        for (const resource of requested) {
+          if (/^\/mentors\/[^/]+\/$/.test(resource)) {
+            const entry = json[resource];
+            json[resource] = {
+              ...(entry && typeof entry === 'object' ? entry : {}),
+              view_skill_assignments: true,
+            };
+          }
+        }
+        await route.fulfill({ response, json });
+      },
+    );
+  }
+
   async mockEffectiveSkills(skills: EffectiveSkillFixture[]): Promise<void> {
+    // The fetch only fires for users granted `view_skill_assignments` —
+    // grant it alongside the payload mock so the mock actually gets hit.
+    await this.grantSkillAssignmentsRead();
     // Assignments: /agents/{uuid}/skills/ — NOT /agent-skills/ (catalog).
     await this.page.route(
       (url) => /\/agents\/[^/]+\/skills\//.test(url.pathname),
@@ -542,10 +586,11 @@ export class ChatPage {
 
   /**
    * Same as `mockEffectiveSkills` — kept as a named alias for the non-admin
-   * journey so the intent stays explicit. Students get the picker only if
-   * the backend lets them read the assignments endpoint (today it is
-   * platform-admin-only and 403s for them, which the composer degrades to
-   * an inactive picker); this mock simulates that granted state.
+   * journey so the intent stays explicit. Students get the picker only when
+   * the mentor permission check grants them `view_skill_assignments` (the
+   * composer never even fetches without it, since the endpoint 403s); this
+   * mock simulates that granted state end to end — the grant via
+   * `grantSkillAssignmentsRead`, the skill list via the endpoint mock.
    */
   async mockStudentSkills(skills: EffectiveSkillFixture[]): Promise<void> {
     await this.mockEffectiveSkills(skills);
