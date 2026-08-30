@@ -47,8 +47,7 @@
  *      menu item.
  *
  * So this journey NEVER writes tenant metadata. Every checkpoint below
- * fetches the tenant's metadata via `getTenantMetadata` (a plain
- * authenticated GET, `e2e/utils/tenant-metadata.ts`), computes the SAME
+ * observes the tenant's real metadata (see below), computes the SAME
  * expected value the app/SDK would compute from that exact reading, and
  * asserts the live UI matches it — whatever the tenant's metadata happens
  * to be right now. There is nothing to restore, no shared mutable state, no
@@ -56,6 +55,34 @@
  * concurrently, or a third party editing it mid-run, can never break this
  * suite, because it never asserts against a fixed expectation, only against
  * "does the UI match what the API says right now."
+ *
+ * ── Zero-configuration: observe the app's OWN traffic, not the DM API ────
+ *
+ * This journey used to call the DM API directly (`GET
+ * /api/core/orgs/<org>/metadata/` with a `dm_token`, via
+ * `e2e/utils/tenant-metadata.ts`'s `getTenantMetadata`), gated on `DM_URL`
+ * being set — an env var exported only in CI, never in
+ * `e2e/.env.local`. That meant this journey silently SKIPPED on every
+ * environment except CI: a green run that tested nothing, and worse than
+ * failing, because nothing ever pointed at the missing configuration.
+ *
+ * The app itself already fetches this exact endpoint on every load —
+ * `providers/index.tsx`'s top-level `Providers` component calls the SDK's
+ * `useTenantMetadata({ org: tenantKeyParams })` (`@iblai/web-utils` →
+ * `@iblai/data-layer`'s `useGetTenantMetadataQuery` →
+ * `CoreService.coreOrgsMetadataRetrieve`, `GET
+ * /api/core/orgs/<org>/metadata/`), which wraps the whole app tree, so it
+ * fires on every authenticated render. This journey now OBSERVES that
+ * response instead of issuing its own
+ * authenticated request — see
+ * `e2e/utils/tenant-metadata-observed.ts`'s
+ * `navigateAndObserveTenantMetadata`, which arms a `page.waitForResponse`
+ * listener BEFORE `navigateToMentorApp` starts navigating (so it cannot
+ * miss an early/cached response — see that file for the full race
+ * analysis). This needs no `DM_URL`, no API credentials, and no
+ * per-environment setup — it uses traffic the app already makes on any
+ * environment, unconditionally. If the response genuinely cannot be
+ * observed, the journey FAILS loudly; it never skips.
  *
  * ── What moved to unit tests instead ───────────────────────────────────
  *
@@ -86,35 +113,13 @@
  *
  * shc-01/02/06 remain as REAL, READ-ONLY E2E — proving the actual live
  * wiring (app hook → sidebar component → SDK dropdown → tenant API) still
- * works end-to-end, which no unit test can substitute for.
- *
- * Requires the `DM_URL` env var (the DM API base, e.g.
- * `https://api.iblai.org/dm`) to read the tenant-metadata endpoint. There
- * IS a UI path to these keys — verified directly in the installed SDK
- * source (`@iblai/iblai-js@2.7.0`'s `TenantSwitcher.handleTenantClick`):
- * clicking the tenant-name row in the nav-bar's `⋯ More options` menu (for
- * an admin/manager of the CURRENT tenant) calls `setOpenAccount('organization')`,
- * opening the SDK's account modal on its Organization tab, where Support
- * URL / Help Center URL / Documentation URL are all editable. That path is
- * gated on tenant-management RBAC permissions, not on `showAccountTab`
- * (`showAccountTab={false}` in `user-profile.tsx` only hides the SEPARATE
- * "Account" dropdown item — a different code path). Driving that dialog for
- * a read-only assertion would be slower and more failure-prone than a
- * direct GET for no added confidence, so this journey still reads via the
- * API — but the API is not the ONLY path, which the previous version of
- * this comment incorrectly claimed. Every test self-skips when `DM_URL` is
- * absent, matching the established convention in journey 43.
+ * works end-to-end, which no unit test can substitute for. They run on
+ * ANY environment with zero configuration.
  */
 
 import { test, expect } from '../fixtures/mentor-test';
-import {
-  navigateToMentorApp,
-  checkAdminStatus,
-  getPlatformContext,
-} from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
-import { getTenantMetadata } from '../utils/tenant-metadata';
-import { DM_URL } from '../fixtures/test-data';
+import { navigateAndObserveTenantMetadata } from '../utils/tenant-metadata-observed';
 
 // ─── Constants ────────────────────────────────────────────────────────────
 
@@ -143,33 +148,21 @@ function addProtocolToUrl(url: string): string {
 // ─── Suite ───────────────────────────────────────────────────────────────
 //
 // No shared mutable state, so no `describe.serial` — every test only ever
-// GETs tenant metadata and computes its own expectation from that same
-// reading. Fully parallel-safe.
+// observes the app's own tenant-metadata response and computes its own
+// expectation from that same reading. Fully parallel-safe, and requires no
+// env var: each test performs its own navigation + observation, so there is
+// nothing to set up in `beforeEach`.
 
 test.describe('Journey 72: Sidebar Support Link & Help Center', () => {
-  test.beforeEach(async ({ page }) => {
-    test.skip(
-      !DM_URL,
-      'DM_URL env var is required to read tenant-metadata-backed sidebar/help-center resolution',
-    );
-
-    await navigateToMentorApp(page);
-    const isAdmin = await checkAdminStatus(page);
-    if (!isAdmin) {
-      test.skip(true, 'Requires admin access to read tenant metadata');
-      return;
-    }
-    await waitForPageReady(page);
-  });
-
   // ── shc-01/02: sidebar Support link resolves the LIVE documentation_url ─
 
   test('shc-01/02: sidebar Support link resolves the live tenant documentation_url (or hides when show_help is false) in both expanded and rail-collapsed layouts', async ({
     page,
     sidebarPage,
   }) => {
-    const { tenantKey } = await getPlatformContext(page);
-    const metadata = await getTenantMetadata(page, tenantKey);
+    const metadata = await navigateAndObserveTenantMetadata(page);
+    await waitForPageReady(page);
+
     const showHelp = metadata.show_help !== false;
     const expectedHref = addProtocolToUrl(
       (metadata.documentation_url as string) || DEFAULT_DOCUMENTATION_URL,
@@ -196,8 +189,9 @@ test.describe('Journey 72: Sidebar Support Link & Help Center', () => {
     page,
     navbarPage,
   }) => {
-    const { tenantKey } = await getPlatformContext(page);
-    const metadata = await getTenantMetadata(page, tenantKey);
+    const metadata = await navigateAndObserveTenantMetadata(page);
+    await waitForPageReady(page);
+
     const showHelp = metadata.show_help !== false;
     const expectedHelpUrl = addProtocolToUrl(
       (metadata.support_url as string) ||
