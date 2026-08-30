@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-08-28 | 690 checkpoints (651 covered, 8 pending/fixme, 15 not-reproducible in default env, 16 deprecated) | 74 journeys (73 active, 16 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-08-29 | 690 checkpoints (651 covered, 8 pending/fixme, 15 not-reproducible in default env, 16 deprecated) | 74 journeys (73 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -36,7 +36,7 @@ When adding a new page or modifying an existing user flow:
 - [x] Newly created user can navigate to the Explore page via sidebar
 - [x] Newly created user can log out via the profile dropdown
 - [x] Sidebar can be toggled open and closed
-- [x] Help button opens the docs link in a new tab
+- [x] Help button opens the docs/help link in a new tab when the tenant's own metadata (observed from the app's own org-metadata GET, no `DM_URL` required) shows `show_help !== false`; the menu item is correctly absent when a tenant explicitly sets `show_help: false` (#uat-9)
 - [x] Suggested prompts authored with Markdown render via the Markdown component (issue #1179, fixme until a seeded mentor fixture is available)
 - [ ] NAV-08: Clicking "New Chat" once fires exactly ONE create-session POST (issue #1002 regression guard — parked as `test.fixme`; activate after verifying against the live backend)
 
@@ -1579,7 +1579,7 @@ lifetime of the tab. Real customer embeds are cross-origin and were never
 affected; only the internal preview could reach our storage.
 
 - [x] epl-01: Opening Edit Agent → Embed mounts the same-origin `?embed=true&internalPreview=true` preview iframe WITHOUT writing `ibl:embed-context` into the host tab's sessionStorage (guard 1: `persistEmbedContextFromUrl` no-ops for the internal preview) — polled, not read once, since the old write happened in an effect several seconds after the tab rendered
-- [x] epl-02: After visiting the Embed tab and closing the dialog, clicking "New Chat" keeps the FULL admin sidebar (Agents, Workflows, Projects, Analytics, Support) instead of collapsing to the embed rail, and does not append `embed=true` to the app URL (a poisoned tab also fed `embedContextQuery()`, writing the corruption into its own navigations)
+- [x] epl-02: After visiting the Embed tab and closing the dialog, clicking "New Chat" keeps the FULL admin sidebar (Agents, Workflows, Projects, Analytics, and Support at whichever visibility the tenant's own `show_help` metadata dictates, observed live and NOT hardcoded — #uat-9) instead of collapsing to the embed rail, and does not append `embed=true` to the app URL (a poisoned tab also fed `embedContextQuery()`, writing the corruption into its own navigations)
 - [x] epl-03: The full app survives a reload after the Embed tab was visited — the old bug was sticky for the lifetime of the tab because sessionStorage outlived the navigation
 - [x] epl-04: A top-level (non-iframed) tab ignores an `ibl:embed-context` entry it did not get from its own URL, across both a re-render (New Chat) and a reload (guard 2: `readStoredEmbedContext` requires `isInIframe`) — planted directly, so the read-side guard is covered even if some future same-origin iframe starts writing the key again
 
@@ -1624,11 +1624,15 @@ workers, and other PRs' CI jobs, hit the same live tenant concurrently), and
 `show_help: false` PERMANENTLY on the live tenant, and the next run's
 `beforeAll` captured that `false` as "original" and restored it forever —
 silently breaking an unrelated team's PR (os-222). No in-suite cleanup can
-fix a cross-job race; only not writing does. Every checkpoint now fetches
-tenant metadata via a plain GET (`getTenantMetadata`,
-`e2e/utils/tenant-metadata.ts`), computes the SAME expected value the
-app/SDK would compute from that exact reading, and asserts the live UI
-matches it — there is no shared mutable state left to race. The
+fix a cross-job race; only not writing does. Every checkpoint now OBSERVES
+the org-metadata GET the app itself already fires on every authenticated
+load (`providers/index.tsx`'s `Providers` calls the SDK's
+`useTenantMetadata({ org: tenantKeyParams })`, which resolves to `GET
+/api/core/orgs/<org>/metadata/`) via
+`navigateAndObserveTenantMetadata` (`e2e/utils/tenant-metadata-observed.ts`),
+computes the SAME expected value the app/SDK would compute from that exact
+reading, and asserts the live UI matches it — there is no shared mutable
+state left to race, and no DM API call of the journey's own. The
 tenant-override PRECEDENCE logic previously proven by mutating the live
 tenant (`documentation_url` with/without a scheme, `show_help` gating in
 both layouts, `help_center_url` fallback) needed no live tenant at all — it
@@ -1637,13 +1641,17 @@ is pure prop-in/render-out logic already covered with zero gap by
 `app-sidebar/__tests__/index.test.tsx` (the "AppSidebar — Support footer
 link" describe block and its rail-mode counterpart); those four checkpoints
 are marked `deprecated` below (checkpoint count preserved, not deleted —
-same pattern as journeys 15/16). There IS a UI path to these keys (clicking
-the tenant-name row in `⋯ More options` opens the SDK's Organization tab,
-verified directly in `@iblai/iblai-js@2.7.0`'s `TenantSwitcher.handleTenantClick`
-— gated on tenant-management RBAC, not on `showAccountTab`), but reading via
-the API is faster and equally trustworthy for a read-only assertion. Every
-test self-skips when the `DM_URL` env var is absent (matching journey 43's
-established convention).
+same pattern as journeys 15/16).
+
+**Zero-configuration (fixed in #uat-9):** this journey used to call the DM
+API directly (`getTenantMetadata`, `e2e/utils/tenant-metadata.ts`) gated on
+the `DM_URL` env var, which is exported only in CI and never in
+`e2e/.env.local` — so every checkpoint silently SKIPPED on any local or
+non-CI environment, a green run that tested nothing. It now observes traffic
+the app makes unconditionally on any environment, so it needs no `DM_URL`,
+no DM API credentials, and no per-environment setup — and it never skips: if
+the org-metadata response cannot be observed, the checkpoint FAILS loudly
+instead.
 
 - [x] shc-01: READ-ONLY — sidebar footer Support link's href in the EXPANDED layout matches `documentation_url || default` computed from a live GET of tenant metadata, or the link is absent when `show_help` is false
 - [x] shc-02: Same live-resolution check for the RAIL-COLLAPSED sidebar layout (`SidebarCollapsedLabelFlyout`, `aria-label="Support"`)

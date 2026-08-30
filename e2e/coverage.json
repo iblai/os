@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "lastUpdated": "2026-08-27",
+  "lastUpdated": "2026-08-29",
   "summary": {
     "totalCheckpoints": 690,
     "coveredCheckpoints": 651,
@@ -82,7 +82,7 @@
         },
         {
           "id": "nav-06",
-          "description": "Help button opens the docs link in a new tab",
+          "description": "Help button opens the docs/help link in a new tab when the tenant's own metadata (observed from the app's own org-metadata GET, no DM_URL required) shows show_help !== false; the menu item is correctly absent when a tenant explicitly sets show_help: false (#uat-9)",
           "status": "covered"
         },
         {
@@ -4300,7 +4300,7 @@
         },
         {
           "id": "epl-02",
-          "description": "After visiting the Embed tab and closing the dialog, clicking \"New Chat\" keeps the FULL admin sidebar (Agents, Workflows, Projects, Analytics, Support) instead of collapsing to the 3-icon embed rail, and does not append `embed=true` to the app URL",
+          "description": "After visiting the Embed tab and closing the dialog, clicking \"New Chat\" keeps the FULL admin sidebar (Agents, Workflows, Projects, Analytics, and Support at whichever visibility the tenant's own show_help metadata dictates, observed live and NOT hardcoded — #uat-9) instead of collapsing to the 3-icon embed rail, and does not append `embed=true` to the app URL",
           "status": "covered"
         },
         {
