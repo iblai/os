@@ -1734,13 +1734,21 @@ const URL_MONITOR_SCRIPT_OFFLINE: &str = r#"
                         // Restore all saved localStorage keys
                         for (var key in context) {
                             if (context.hasOwnProperty(key)) {
-                                var existingValue = (sessionStorage.getItem(key) || localStorage.getItem(key));
-                                // Only restore if the value doesn't exist or is different
-                                if (!existingValue || existingValue !== context[key]) {
-                                    localStorage.setItem(key, context[key]);
-                                    sessionStorage.setItem(key, context[key]);
+                                // Check each store independently: the localStorage seed
+                                // may already match while this tab's sessionStorage
+                                // source-of-truth is still empty (or vice versa), so a
+                                // combined guard would skip the store that needs writing.
+                                var localMissing = localStorage.getItem(key) !== context[key];
+                                var sessionMissing = sessionStorage.getItem(key) !== context[key];
+                                if (localMissing || sessionMissing) {
+                                    if (localMissing) {
+                                        localStorage.setItem(key, context[key]);
+                                    }
+                                    if (sessionMissing) {
+                                        sessionStorage.setItem(key, context[key]);
+                                    }
                                     restoredCount++;
-                                    console.log('[OfflineMode] Restored localStorage key:', key);
+                                    console.log('[OfflineMode] Restored key:', key);
                                 }
                             }
                         }
