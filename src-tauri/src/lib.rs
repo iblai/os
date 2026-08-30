@@ -2062,17 +2062,18 @@ const URL_MONITOR_SCRIPT_OFFLINE: &str = r#"
                         // Restore all saved localStorage keys
                         for (var key in context) {
                             if (context.hasOwnProperty(key)) {
-                                // Check each store independently: the localStorage seed
-                                // may already match while this tab's sessionStorage
-                                // source-of-truth is still empty (or vice versa), so a
-                                // combined guard would skip the store that needs writing.
-                                var localMissing = localStorage.getItem(key) !== context[key];
-                                var sessionMissing = sessionStorage.getItem(key) !== context[key];
-                                if (localMissing || sessionMissing) {
-                                    if (localMissing) {
+                                // Fill only empty stores, each independently. The
+                                // localStorage seed may already hold the key while this
+                                // tab's sessionStorage source-of-truth is empty (or vice
+                                // versa) — restore the missing one without clobbering a
+                                // live value the running tab already set.
+                                var localHas = localStorage.getItem(key) !== null;
+                                var sessionHas = sessionStorage.getItem(key) !== null;
+                                if (!localHas || !sessionHas) {
+                                    if (!localHas) {
                                         localStorage.setItem(key, context[key]);
                                     }
-                                    if (sessionMissing) {
+                                    if (!sessionHas) {
                                         sessionStorage.setItem(key, context[key]);
                                     }
                                     restoredCount++;
