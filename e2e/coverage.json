@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-08-28",
+  "lastUpdated": "2026-08-31",
   "summary": {
-    "totalCheckpoints": 685,
-    "coveredCheckpoints": 650,
-    "deprecatedCheckpoints": 12,
+    "totalCheckpoints": 692,
+    "coveredCheckpoints": 653,
+    "deprecatedCheckpoints": 16,
     "notReproducibleCheckpoints": 15,
     "pendingCheckpoints": 8,
     "percent": 100,
-    "totalJourneys": 73,
-    "activeJourneys": 72
+    "totalJourneys": 74,
+    "activeJourneys": 73
   },
   "journeys": [
     {
@@ -82,7 +82,7 @@
         },
         {
           "id": "nav-06",
-          "description": "Help button opens the docs link in a new tab",
+          "description": "Help button opens the docs/help link in a new tab when the tenant's own metadata (observed from the app's own org-metadata GET, no DM_URL required) shows show_help !== false; the menu item is correctly absent when a tenant explicitly sets show_help: false (#uat-9)",
           "status": "covered"
         },
         {
@@ -301,8 +301,8 @@
         "components/modals/settings-modal.tsx",
         "hooks/use-mentors.ts",
         "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
-        "components/modals/edit-mentor-modal/tabs/llm-tab.tsx",
-        "components/modals/llm-provider-modal.tsx",
+        "components/modals/edit-mentor-modal/llm-tab.tsx",
+        "hooks/use-llm-display-name.ts",
         "lib/utils.ts",
         "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx"
       ],
@@ -2383,7 +2383,7 @@
         },
         {
           "id": "tcr-05",
-          "description": "Reasoning section shows Thinking with bounce dots during streaming and auto-collapses to Thought after",
+          "description": "Reasoning section renders for a reasoning model and auto-collapses to Thought after streaming",
           "status": "covered"
         },
         {
@@ -4312,7 +4312,7 @@
         },
         {
           "id": "epl-02",
-          "description": "After visiting the Embed tab and closing the dialog, clicking \"New Chat\" keeps the FULL admin sidebar (Agents, Workflows, Projects, Analytics, Support) instead of collapsing to the 3-icon embed rail, and does not append `embed=true` to the app URL",
+          "description": "After visiting the Embed tab and closing the dialog, clicking \"New Chat\" keeps the FULL admin sidebar (Agents, Workflows, Projects, Analytics, and Support at whichever visibility the tenant's own show_help metadata dictates, observed live and NOT hardcoded — #uat-9) instead of collapsing to the 3-icon embed rail, and does not append `embed=true` to the app URL",
           "status": "covered"
         },
         {
@@ -4350,6 +4350,62 @@
           "id": "vmc-02",
           "description": "The canvas shows the shared file's actual content: a .txt artifact takes the TEXT canvas path (is_binary: false, content streamed in the artifact events — tolerant of the app auto-opening the canvas at stream start vs. having to click canvas-open-button), the editable rich-text editor renders containing the file's marker line, and the read-only binary canvas (data-testid=\"binary-canvas\") is asserted absent — verifying text/binary routing picks the text path for text files",
           "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "sidebar-support-link-and-help-center",
+      "name": "Sidebar Support Link & Help Center Resolution (#uat-9)",
+      "spec": "72-sidebar-support-link-and-help-center.spec.ts",
+      "sourceFiles": [
+        "hooks/use-help-center.ts",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx",
+        "lib/config.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "shc-01",
+          "description": "READ-ONLY: sidebar footer Support link's href in the EXPANDED layout matches the resolution formula (documentation_url || default) computed from a live GET of tenant metadata, or the link is absent when show_help is false",
+          "status": "covered"
+        },
+        {
+          "id": "shc-02",
+          "description": "Same live-resolution check holds for the RAIL-COLLAPSED sidebar layout (SidebarCollapsedLabelFlyout, aria-label=\"Support\")",
+          "status": "covered"
+        },
+        {
+          "id": "shc-03",
+          "description": "A tenant documentation_url override WITH a scheme is used verbatim as the sidebar Support link's href",
+          "status": "deprecated",
+          "deprecatedIn": "#uat-9",
+          "deprecatedReason": "Journey 72 redesigned to be read-only against the shared live tenant (crash/race risk to org-scoped metadata — see #uat-9 incident). This precedence branch needs no live tenant to prove and is fully covered by hooks/__tests__/use-help-center.test.ts and app-sidebar/__tests__/index.test.tsx (\"AppSidebar — Support footer link\")."
+        },
+        {
+          "id": "shc-04",
+          "description": "A tenant documentation_url override WITHOUT a scheme is prefixed with https:// by addProtocolToUrl before being used as the href",
+          "status": "deprecated",
+          "deprecatedIn": "#uat-9",
+          "deprecatedReason": "Journey 72 redesigned to be read-only against the shared live tenant (crash/race risk to org-scoped metadata — see #uat-9 incident). This precedence branch needs no live tenant to prove and is fully covered by hooks/__tests__/use-help-center.test.ts and app-sidebar/__tests__/index.test.tsx (\"AppSidebar — Support footer link\")."
+        },
+        {
+          "id": "shc-05",
+          "description": "Tenant show_help:false hides the sidebar Support link in BOTH the expanded and rail-collapsed layouts; removing the override brings the link back in both layouts",
+          "status": "deprecated",
+          "deprecatedIn": "#uat-9",
+          "deprecatedReason": "Journey 72 redesigned to be read-only against the shared live tenant (crash/race risk to org-scoped metadata — see #uat-9 incident). This gating logic needs no live tenant to prove and is fully covered by app-sidebar/__tests__/index.test.tsx in both expanded and rail-mode describe blocks."
+        },
+        {
+          "id": "shc-06",
+          "description": "READ-ONLY: the nav-bar \"More options -> Help\" dropdown item resolves the URL computed from a live GET of tenant metadata (support_url || help_center_url || default), or is absent when show_help is false",
+          "status": "covered"
+        },
+        {
+          "id": "shc-07",
+          "description": "The nav-bar \"More options -> Help\" dropdown item falls back to tenant help_center_url when support_url is absent",
+          "status": "deprecated",
+          "deprecatedIn": "#uat-9",
+          "deprecatedReason": "Journey 72 redesigned to be read-only against the shared live tenant (crash/race risk to org-scoped metadata — see #uat-9 incident). This is the same support_url||help_center_url||default precedence chain proven by hooks/__tests__/use-help-center.test.ts; shc-06 still verifies the support_url-present path live."
         }
       ]
     }

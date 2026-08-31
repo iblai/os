@@ -102,16 +102,6 @@ vi.mock('next/navigation', () => ({
     ),
 }));
 
-// The component reads chat-privacy state via web-containers' useChatPrivacy,
-// which internally selects from the SDK chat slice that this test's mock store
-// does not provide. Mock it (as sibling tests do) so the component renders.
-vi.mock('@iblai/iblai-js/web-containers', () => ({
-  useChatPrivacy: () => ({
-    effective: { mode: 'enabled', source: 'session', is_locked: false },
-    isEffectiveReady: true,
-  }),
-}));
-
 vi.mock('next/dynamic', () => ({
   default: (importer: () => Promise<any>) => {
     void importer().catch(() => {});
@@ -295,7 +285,9 @@ vi.mock('@iblai/iblai-js/web-utils', async () => {
 
 // The real useChatPrivacy fires chat-privacy selectors/API calls against redux
 // slices this test's minimal store doesn't provide; stub it (the nav-bar tests
-// stub ChatPrivacyToggle for the same reason).
+// stub ChatPrivacyToggle for the same reason). Spread the real module: a bare
+// factory drops every other export, and which of two registrations for the same
+// path wins is not deterministic across environments.
 vi.mock('@iblai/iblai-js/web-containers', async () => {
   const actual = await vi.importActual('@iblai/iblai-js/web-containers');
   return {

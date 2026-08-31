@@ -1,5 +1,40 @@
 # Changelog
 
+## [0.133.0](https://github.com/iblai/os/compare/v0.132.1...v0.133.0) (2026-08-31)
+
+### Features
+
+- **config:** expose a configurable documentation URL ([19dda4c](https://github.com/iblai/os/commit/19dda4c35f3d51db8b57fcc90f38816548716255))
+- **embed:** carry show-close-button through the embed context ([85d998e](https://github.com/iblai/os/commit/85d998ed86be12f8a57af9a792241ceebb731f2c))
+- **hooks:** add useHelpCenter to resolve help and documentation destinations ([4f97c84](https://github.com/iblai/os/commit/4f97c84feb1e897fa7040c6b02c5d20b532a0684))
+- **hooks:** add useShowCloseButton to gate the embed close control ([8fe47a6](https://github.com/iblai/os/commit/8fe47a65675b6661d74c484e25c201ad5b6079e6))
+
+### Bug Fixes
+
+- **e2e:** correct journey totals in coverage.json summary ([59b5430](https://github.com/iblai/os/commit/59b54302df207b05ba04154d94e56073ed5cf817))
+- **e2e:** read notification tab state from the panel, not the trigger ([c02da17](https://github.com/iblai/os/commit/c02da1769b519e26822afaba7d284fc1cf2b0a3b))
+- **e2e:** restore tenant metadata to absent-equivalent values ([8f56a81](https://github.com/iblai/os/commit/8f56a812998db43afc39e2ad543061f30e54ec4e))
+- **e2e:** stop journey 52 racing the reasoning stream's transient labels ([34037cb](https://github.com/iblai/os/commit/34037cb57be8d67e31382d77d50cacffccabaaf5))
+- **e2e:** stop journeys 02 and 70 assuming the help control is visible ([a5d21d4](https://github.com/iblai/os/commit/a5d21d42f2824b93ea5146f6a1716ab8a5c21f71))
+- **embed-nav-bar:** hide the close control unless the host opts in ([9decd81](https://github.com/iblai/os/commit/9decd81210f2e240ce1bda3acda9a026cb4b1441))
+- **embed-nav-bar:** share help resolution and drop inert controls ([952d536](https://github.com/iblai/os/commit/952d536a29571c28a35e32a9b0ad7d8f1284303c))
+- **free-trial-dialog:** resolve the support email from tenant settings ([49dca40](https://github.com/iblai/os/commit/49dca4085e91d7612bed8a0e35a6966429cd4cec))
+- **sidebar:** resolve the support link instead of hardcoding it ([24b0917](https://github.com/iblai/os/commit/24b091774fbac1eda63f5a58ec08f84791aa4ef2))
+- **test:** remove duplicate web-containers mock in chat-input-form ([377bfcb](https://github.com/iblai/os/commit/377bfcbaefa9009abb94967d770d80857f7f5cce))
+
+### Refactors
+
+- **e2e:** make journey 72 read-only against the shared tenant ([a31668c](https://github.com/iblai/os/commit/a31668c01c1a3810300af24a19bb86d0b30fe880))
+
+### Chores
+
+- **deps:** bump @iblai/iblai-js to 2.6.1 ([49d100b](https://github.com/iblai/os/commit/49d100b2ad2135b3f52c6345b2f238391627accf))
+
+### Tests
+
+- **e2e:** cover support link and help centre resolution ([6fe7c7a](https://github.com/iblai/os/commit/6fe7c7a25b880cd6deec3ca09be3c5de1f5e268a))
+- **e2e:** read tenant config from the app's own traffic in journey 72 ([7d10d5b](https://github.com/iblai/os/commit/7d10d5b9557c55861792bc4bddab2405227a9b67))
+
 ## [0.132.1](https://github.com/iblai/os/compare/v0.132.0...v0.132.1) (2026-08-27)
 
 ### Bug Fixes
