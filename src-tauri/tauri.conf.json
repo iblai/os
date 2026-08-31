@@ -73,6 +73,9 @@
     "shell": {
       "open": true
     },
+    "opener": {
+      "requireLiteralLeadingDot": false
+    },
     "deep-link": {
       "mobile": [
         { "host": "mentorai.iblai.app", "pathPrefix": ["/"] },
