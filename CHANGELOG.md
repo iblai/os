@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.134.1](https://github.com/iblai/os/compare/v0.134.0...v0.134.1) (2026-08-31)
+
+### Bug Fixes
+
+- **e2e-test:** fixing flaky test for sandbox canvas ([896a8c0](https://github.com/iblai/os/commit/896a8c0b23b0d82ca31604d72a98afe841c82e91))
+- **e2e:** fix for the e2e test for skills rbac ([758711d](https://github.com/iblai/os/commit/758711d99bb5a411f60fd9509813e81396151b5d))
+- **mentor:** adding rbac for skills and test fixes ([0699128](https://github.com/iblai/os/commit/06991284912bee6a9da04c0107a41480a2f7c478))
+
 ## [0.134.0](https://github.com/iblai/os/compare/v0.133.0...v0.134.0) (2026-08-31)
 
 ### Features

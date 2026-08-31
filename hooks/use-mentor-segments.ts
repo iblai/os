@@ -318,11 +318,13 @@ export const MENTOR_SEGMENTS: MentorSegment[] = [
     labelKey: 'skills',
     icon: Sparkles,
     userTypes: [UserType.ADMIN],
-    // Admin-only for now — the userTypes filter alone gates visibility
-    // (mirrors Tasks/Sandbox/Evals). Deliberately NO `rbacResource` until the
-    // agent-skills RBAC contract is settled with the backend (the ActionDefs
-    // register `/platforms/{db_pk}/…` paths the FE has no sanctioned pk
-    // source for).
+    // Admin-only — the userTypes filter alone gates visibility (mirrors
+    // Tasks/Sandbox/Evals). Deliberately NO `rbacResource`: `isUserTypeAllowed`
+    // treats a satisfied grant as an ALTERNATIVE to the userTypes check, so
+    // listing `view_skill_assignments` here would surface this admin tab to
+    // students who hold that grant purely for the chat `/` skill picker.
+    // The skill-assignment grants (view/create/write/delete) are instead
+    // enforced inside the SDK's <AgentSkills/> via its `mentorDbId` prop.
     permissionFieldsCheck: [],
     mentorVisibility: [
       MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
