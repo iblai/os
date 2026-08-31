@@ -42,11 +42,18 @@ import { formatRoleName, getErrorMessage } from './shared';
 type RoleAccessPanelProps = {
   policy: MentorAccessPolicy;
   onAccessUpdated: () => Promise<void>;
+  /**
+   * Whether the viewer holds `/mentors/{dbId}/#share_mentor`. When false the
+   * panel is read-only: assigned users and groups still render, but every
+   * control that would mutate the policy is hidden.
+   */
+  canShare: boolean;
 };
 
 export function RoleAccessPanel({
   policy,
   onAccessUpdated,
+  canShare,
 }: RoleAccessPanelProps) {
   const t = useTranslations('accessTabUpdateAccess');
   const { mentorId, tenantKey } = useParams<TenantKeyMentorIdParams>();
@@ -542,28 +549,30 @@ export function RoleAccessPanel({
             className="group inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1 text-sm text-gray-700 shadow-sm transition hover:bg-gray-50"
           >
             <span className="font-medium">{user.email || user.username}</span>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              className="h-6 w-6 text-gray-500 hover:text-red-600"
-              onClick={() => handleRemoveUser(user)}
-              disabled={pendingUserId !== null}
-            >
-              {isPending(user.id, 'remove') ? (
-                <Loader2
-                  className="h-3.5 w-3.5 animate-spin"
-                  aria-hidden="true"
-                />
-              ) : (
-                <X className="h-3.5 w-3.5" aria-hidden="true" />
-              )}
-              <span className="sr-only">
-                {t('removeUserSrOnly', {
-                  name: user.username ?? `user ${user.id}`,
-                })}
-              </span>
-            </Button>
+            {canShare && (
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="h-6 w-6 text-gray-500 hover:text-red-600"
+                onClick={() => handleRemoveUser(user)}
+                disabled={pendingUserId !== null}
+              >
+                {isPending(user.id, 'remove') ? (
+                  <Loader2
+                    className="h-3.5 w-3.5 animate-spin"
+                    aria-hidden="true"
+                  />
+                ) : (
+                  <X className="h-3.5 w-3.5" aria-hidden="true" />
+                )}
+                <span className="sr-only">
+                  {t('removeUserSrOnly', {
+                    name: user.username ?? `user ${user.id}`,
+                  })}
+                </span>
+              </Button>
+            )}
           </div>
         ))}
       </div>
@@ -580,218 +589,222 @@ export function RoleAccessPanel({
         <div className="mt-3">{renderAssignedUsers()}</div>
       </div>
 
-      <div>
-        <div className="mt-3 space-y-1.5">
-          {hasUsersPermission ? (
-            <>
-              <Label htmlFor="user-search">{t('addUsersLabel')}</Label>
-              <div
-                ref={containerRef}
-                className="relative"
-                onBlur={handleContainerBlur}
-              >
-                <Input
-                  id="user-search"
-                  value={searchTerm}
-                  onChange={handleSearchChange}
-                  onFocus={handleSearchFocus}
-                  onKeyDown={handleKeyDown}
-                  placeholder={t('userSearchPlaceholder')}
-                  autoComplete="off"
-                  role="combobox"
-                  aria-autocomplete="list"
-                  aria-controls="user-search-listbox"
-                  aria-expanded={showUserSearchResults}
-                  aria-activedescendant={
-                    highlightedIndex >= 0
-                      ? `user-option-${availableUsers[highlightedIndex]?.id}`
-                      : undefined
-                  }
-                />
-                {showUserSearchResults && (
-                  <div
-                    ref={listboxRef}
-                    id="user-search-listbox"
-                    role="listbox"
-                    aria-label={t('availableUsersAriaLabel')}
-                    className="absolute top-full right-0 left-0 z-50 mt-1 max-h-64 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg"
-                  >
-                    {searchTerm.trim().length < 2 ? (
-                      <div
-                        className="px-3 py-2 text-sm text-gray-600"
-                        role="status"
-                      >
-                        {t('typeAtLeastTwoChars')}
-                      </div>
-                    ) : isLoadingUsers ||
-                      isFetchingUsers ||
-                      searchTerm.trim() !== debouncedSearch.trim() ? (
-                      <div
-                        className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600"
-                        role="status"
-                      >
-                        <Loader2
-                          className="h-3.5 w-3.5 animate-spin"
-                          aria-hidden="true"
-                        />
-                        {t('searchingUsers')}
-                      </div>
-                    ) : availableUsers.length > 0 ? (
-                      availableUsers.map((user, index) => (
-                        <button
-                          key={user.id}
-                          id={`user-option-${user.id}`}
-                          type="button"
-                          role="option"
-                          aria-selected={highlightedIndex === index}
-                          className={`flex w-full flex-col items-start gap-1 px-3 py-2 text-left disabled:opacity-50 ${
-                            highlightedIndex === index
-                              ? 'bg-gray-100'
-                              : 'hover:bg-gray-50'
-                          }`}
-                          onClick={() => handleAddUser(user)}
-                          disabled={pendingUserId !== null}
-                        >
-                          <span className="text-sm font-medium text-gray-900">
-                            {user.name || user.email}
-                          </span>
-                          {user.name && (
-                            <span className="text-xs text-gray-600">
-                              {user.username}
-                              {user.username && user.email ? ' • ' : ''}
-                              {user.email}
-                            </span>
-                          )}
-                          {isPending(user.id, 'add') && (
-                            <span className="inline-flex items-center gap-1 text-xs text-blue-600">
-                              <Loader2
-                                className="h-3 w-3 animate-spin"
-                                aria-hidden="true"
-                              />
-                              {t('adding')}
-                            </span>
-                          )}
-                        </button>
-                      ))
-                    ) : (
-                      <div
-                        className="px-3 py-2 text-sm text-gray-600"
-                        role="status"
-                      >
-                        {t('noMatchingUsersFound')}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-              <p className="text-xs text-gray-500">{t('userSearchHint')}</p>
-            </>
-          ) : (
-            <>
-              <Label htmlFor="manual-user-input">{t('addByLabel')}</Label>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Select
-                    value={manualInputType}
-                    onValueChange={(value) =>
-                      setManualInputType(value as 'username' | 'email')
-                    }
-                  >
-                    <SelectTrigger
-                      className="w-[130px]"
-                      aria-label={t('selectInputTypeAriaLabel')}
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="email">{t('emailOption')}</SelectItem>
-                      <SelectItem value="username">
-                        {t('usernameOption')}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
+      {canShare && (
+        <div>
+          <div className="mt-3 space-y-1.5">
+            {hasUsersPermission ? (
+              <>
+                <Label htmlFor="user-search">{t('addUsersLabel')}</Label>
+                <div
+                  ref={containerRef}
+                  className="relative"
+                  onBlur={handleContainerBlur}
+                >
                   <Input
-                    id="manual-user-input"
-                    value={manualInputValue}
-                    onChange={(e) => setManualInputValue(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleStageManualEntry();
-                      }
-                    }}
-                    placeholder={
-                      manualInputType === 'email'
-                        ? t('emailPlaceholder')
-                        : t('usernamePlaceholder')
-                    }
+                    id="user-search"
+                    value={searchTerm}
+                    onChange={handleSearchChange}
+                    onFocus={handleSearchFocus}
+                    onKeyDown={handleKeyDown}
+                    placeholder={t('userSearchPlaceholder')}
                     autoComplete="off"
-                    className="flex-1"
+                    role="combobox"
+                    aria-autocomplete="list"
+                    aria-controls="user-search-listbox"
+                    aria-expanded={showUserSearchResults}
+                    aria-activedescendant={
+                      highlightedIndex >= 0
+                        ? `user-option-${availableUsers[highlightedIndex]?.id}`
+                        : undefined
+                    }
                   />
+                  {showUserSearchResults && (
+                    <div
+                      ref={listboxRef}
+                      id="user-search-listbox"
+                      role="listbox"
+                      aria-label={t('availableUsersAriaLabel')}
+                      className="absolute top-full right-0 left-0 z-50 mt-1 max-h-64 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg"
+                    >
+                      {searchTerm.trim().length < 2 ? (
+                        <div
+                          className="px-3 py-2 text-sm text-gray-600"
+                          role="status"
+                        >
+                          {t('typeAtLeastTwoChars')}
+                        </div>
+                      ) : isLoadingUsers ||
+                        isFetchingUsers ||
+                        searchTerm.trim() !== debouncedSearch.trim() ? (
+                        <div
+                          className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600"
+                          role="status"
+                        >
+                          <Loader2
+                            className="h-3.5 w-3.5 animate-spin"
+                            aria-hidden="true"
+                          />
+                          {t('searchingUsers')}
+                        </div>
+                      ) : availableUsers.length > 0 ? (
+                        availableUsers.map((user, index) => (
+                          <button
+                            key={user.id}
+                            id={`user-option-${user.id}`}
+                            type="button"
+                            role="option"
+                            aria-selected={highlightedIndex === index}
+                            className={`flex w-full flex-col items-start gap-1 px-3 py-2 text-left disabled:opacity-50 ${
+                              highlightedIndex === index
+                                ? 'bg-gray-100'
+                                : 'hover:bg-gray-50'
+                            }`}
+                            onClick={() => handleAddUser(user)}
+                            disabled={pendingUserId !== null}
+                          >
+                            <span className="text-sm font-medium text-gray-900">
+                              {user.name || user.email}
+                            </span>
+                            {user.name && (
+                              <span className="text-xs text-gray-600">
+                                {user.username}
+                                {user.username && user.email ? ' • ' : ''}
+                                {user.email}
+                              </span>
+                            )}
+                            {isPending(user.id, 'add') && (
+                              <span className="inline-flex items-center gap-1 text-xs text-blue-600">
+                                <Loader2
+                                  className="h-3 w-3 animate-spin"
+                                  aria-hidden="true"
+                                />
+                                {t('adding')}
+                              </span>
+                            )}
+                          </button>
+                        ))
+                      ) : (
+                        <div
+                          className="px-3 py-2 text-sm text-gray-600"
+                          role="status"
+                        >
+                          {t('noMatchingUsersFound')}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500">{t('userSearchHint')}</p>
+              </>
+            ) : (
+              <>
+                <Label htmlFor="manual-user-input">{t('addByLabel')}</Label>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={manualInputType}
+                      onValueChange={(value) =>
+                        setManualInputType(value as 'username' | 'email')
+                      }
+                    >
+                      <SelectTrigger
+                        className="w-[130px]"
+                        aria-label={t('selectInputTypeAriaLabel')}
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="email">
+                          {t('emailOption')}
+                        </SelectItem>
+                        <SelectItem value="username">
+                          {t('usernameOption')}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      id="manual-user-input"
+                      value={manualInputValue}
+                      onChange={(e) => setManualInputValue(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleStageManualEntry();
+                        }
+                      }}
+                      placeholder={
+                        manualInputType === 'email'
+                          ? t('emailPlaceholder')
+                          : t('usernamePlaceholder')
+                      }
+                      autoComplete="off"
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      onClick={handleStageManualEntry}
+                      disabled={!manualInputValue.trim()}
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9 shrink-0"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span className="sr-only">{t('addEntrySrOnly')}</span>
+                    </Button>
+                  </div>
+                  {manualEntries.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {manualEntries.map((entry) => (
+                        <div
+                          key={entry}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1 text-sm text-gray-700 shadow-sm"
+                        >
+                          <span>{entry}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveManualEntry(entry)}
+                            className="text-gray-400 hover:text-red-600"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                            <span className="sr-only">
+                              {t('removeEntrySrOnly', { entry })}
+                            </span>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   <Button
                     type="button"
-                    onClick={handleStageManualEntry}
-                    disabled={!manualInputValue.trim()}
-                    variant="outline"
-                    size="icon"
-                    className="h-9 w-9 shrink-0"
+                    onClick={handleManualAdd}
+                    disabled={
+                      isAddingManual ||
+                      (manualEntries.length === 0 && !manualInputValue.trim())
+                    }
+                    className="bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90"
+                    size="sm"
                   >
-                    <Plus className="h-4 w-4" />
-                    <span className="sr-only">{t('addEntrySrOnly')}</span>
+                    {isAddingManual ? (
+                      <span className="inline-flex items-center gap-2">
+                        <Loader2
+                          className="h-4 w-4 animate-spin"
+                          aria-hidden="true"
+                        />
+                        {t('adding')}
+                      </span>
+                    ) : (
+                      t('addUsersButton', { count: manualEntries.length })
+                    )}
                   </Button>
                 </div>
-                {manualEntries.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {manualEntries.map((entry) => (
-                      <div
-                        key={entry}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1 text-sm text-gray-700 shadow-sm"
-                      >
-                        <span>{entry}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveManualEntry(entry)}
-                          className="text-gray-400 hover:text-red-600"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                          <span className="sr-only">
-                            {t('removeEntrySrOnly', { entry })}
-                          </span>
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <Button
-                  type="button"
-                  onClick={handleManualAdd}
-                  disabled={
-                    isAddingManual ||
-                    (manualEntries.length === 0 && !manualInputValue.trim())
-                  }
-                  className="bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90"
-                  size="sm"
-                >
-                  {isAddingManual ? (
-                    <span className="inline-flex items-center gap-2">
-                      <Loader2
-                        className="h-4 w-4 animate-spin"
-                        aria-hidden="true"
-                      />
-                      {t('adding')}
-                    </span>
-                  ) : (
-                    t('addUsersButton', { count: manualEntries.length })
-                  )}
-                </Button>
-              </div>
-              <p className="text-xs text-gray-500">
-                {t('manualAddHint', { inputType: manualInputType })}
-              </p>
-            </>
-          )}
+                <p className="text-xs text-gray-500">
+                  {t('manualAddHint', { inputType: manualInputType })}
+                </p>
+              </>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {hasGroupsPermission && (
         <>
@@ -817,28 +830,30 @@ export function RoleAccessPanel({
                       <span className="font-medium">
                         {group.name || group.unique_id}
                       </span>
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        className="h-6 w-6 text-gray-500 hover:text-red-600"
-                        onClick={() => handleRemoveGroup(group)}
-                        disabled={pendingGroupId !== null}
-                      >
-                        {isGroupPending(group.id, 'remove') ? (
-                          <Loader2
-                            className="h-3.5 w-3.5 animate-spin"
-                            aria-hidden="true"
-                          />
-                        ) : (
-                          <X className="h-3.5 w-3.5" aria-hidden="true" />
-                        )}
-                        <span className="sr-only">
-                          {t('removeGroupSrOnly', {
-                            name: group.name ?? `group ${group.id}`,
-                          })}
-                        </span>
-                      </Button>
+                      {canShare && (
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          className="h-6 w-6 text-gray-500 hover:text-red-600"
+                          onClick={() => handleRemoveGroup(group)}
+                          disabled={pendingGroupId !== null}
+                        >
+                          {isGroupPending(group.id, 'remove') ? (
+                            <Loader2
+                              className="h-3.5 w-3.5 animate-spin"
+                              aria-hidden="true"
+                            />
+                          ) : (
+                            <X className="h-3.5 w-3.5" aria-hidden="true" />
+                          )}
+                          <span className="sr-only">
+                            {t('removeGroupSrOnly', {
+                              name: group.name ?? `group ${group.id}`,
+                            })}
+                          </span>
+                        </Button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -846,81 +861,84 @@ export function RoleAccessPanel({
             </div>
           </div>
 
-          <div>
-            <div className="mt-3 space-y-1.5">
-              <Label htmlFor="group-search">{t('addGroupsLabel')}</Label>
-              <div className="relative">
-                <Input
-                  id="group-search"
-                  value={groupSearchTerm}
-                  onChange={handleGroupSearchChange}
-                  onFocus={handleGroupSearchFocus}
-                  onBlur={handleGroupSearchBlur}
-                  placeholder={t('groupSearchPlaceholder')}
-                  autoComplete="off"
-                  aria-autocomplete="list"
-                  aria-expanded={showGroupSearchResults}
-                />
-                {showGroupSearchResults && (
-                  <div className="absolute top-full right-0 left-0 z-50 mt-1 max-h-64 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg">
-                    {groupSearchTerm.trim().length < 2 ? (
-                      <div
-                        className="px-3 py-2 text-sm text-gray-600"
-                        role="status"
-                      >
-                        {t('typeAtLeastTwoChars')}
-                      </div>
-                    ) : isLoadingGroups ||
-                      isFetchingGroups ||
-                      groupSearchTerm.trim() !== debouncedGroupSearch.trim() ? (
-                      <div
-                        className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600"
-                        role="status"
-                      >
-                        <Loader2
-                          className="h-3.5 w-3.5 animate-spin"
-                          aria-hidden="true"
-                        />
-                        {t('searchingGroups')}
-                      </div>
-                    ) : availableGroupOptions.length > 0 ? (
-                      availableGroupOptions.map((group) => (
-                        <button
-                          key={group.id}
-                          type="button"
-                          className="flex w-full items-start gap-1 px-3 py-2 text-left hover:bg-gray-50"
-                          onMouseDown={(event) => event.preventDefault()}
-                          onClick={() => handleAddGroup(group)}
-                          disabled={pendingGroupId !== null}
+          {canShare && (
+            <div>
+              <div className="mt-3 space-y-1.5">
+                <Label htmlFor="group-search">{t('addGroupsLabel')}</Label>
+                <div className="relative">
+                  <Input
+                    id="group-search"
+                    value={groupSearchTerm}
+                    onChange={handleGroupSearchChange}
+                    onFocus={handleGroupSearchFocus}
+                    onBlur={handleGroupSearchBlur}
+                    placeholder={t('groupSearchPlaceholder')}
+                    autoComplete="off"
+                    aria-autocomplete="list"
+                    aria-expanded={showGroupSearchResults}
+                  />
+                  {showGroupSearchResults && (
+                    <div className="absolute top-full right-0 left-0 z-50 mt-1 max-h-64 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg">
+                      {groupSearchTerm.trim().length < 2 ? (
+                        <div
+                          className="px-3 py-2 text-sm text-gray-600"
+                          role="status"
                         >
-                          <span className="text-sm font-medium text-gray-900">
-                            {group.name}
-                          </span>
-                          {isGroupPending(group.id, 'add') && (
-                            <span className="inline-flex items-center gap-1 text-xs text-blue-600">
-                              <Loader2
-                                className="h-3 w-3 animate-spin"
-                                aria-hidden="true"
-                              />
-                              {t('adding')}
+                          {t('typeAtLeastTwoChars')}
+                        </div>
+                      ) : isLoadingGroups ||
+                        isFetchingGroups ||
+                        groupSearchTerm.trim() !==
+                          debouncedGroupSearch.trim() ? (
+                        <div
+                          className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600"
+                          role="status"
+                        >
+                          <Loader2
+                            className="h-3.5 w-3.5 animate-spin"
+                            aria-hidden="true"
+                          />
+                          {t('searchingGroups')}
+                        </div>
+                      ) : availableGroupOptions.length > 0 ? (
+                        availableGroupOptions.map((group) => (
+                          <button
+                            key={group.id}
+                            type="button"
+                            className="flex w-full items-start gap-1 px-3 py-2 text-left hover:bg-gray-50"
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => handleAddGroup(group)}
+                            disabled={pendingGroupId !== null}
+                          >
+                            <span className="text-sm font-medium text-gray-900">
+                              {group.name}
                             </span>
-                          )}
-                        </button>
-                      ))
-                    ) : (
-                      <div
-                        className="px-3 py-2 text-sm text-gray-600"
-                        role="status"
-                      >
-                        {t('noMatchingGroupsFound')}
-                      </div>
-                    )}
-                  </div>
-                )}
+                            {isGroupPending(group.id, 'add') && (
+                              <span className="inline-flex items-center gap-1 text-xs text-blue-600">
+                                <Loader2
+                                  className="h-3 w-3 animate-spin"
+                                  aria-hidden="true"
+                                />
+                                {t('adding')}
+                              </span>
+                            )}
+                          </button>
+                        ))
+                      ) : (
+                        <div
+                          className="px-3 py-2 text-sm text-gray-600"
+                          role="status"
+                        >
+                          {t('noMatchingGroupsFound')}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500">{t('groupSearchHint')}</p>
               </div>
-              <p className="text-xs text-gray-500">{t('groupSearchHint')}</p>
             </div>
-          </div>
+          )}
         </>
       )}
     </div>
