@@ -80,6 +80,12 @@ import { useParams, useSearchParams } from 'next/navigation';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { ChatMessages } from './chat-messages';
 import type { CanvasOpenPayload } from './chat-messages/types';
+import {
+  getBinaryStreamBehavior,
+  resolveBinaryMimeType,
+  resolveEffectiveFileExtension,
+  shouldUseBinaryCanvas,
+} from '@/components/canvas/binary-artifact-utils';
 import { useNavigate } from '@/hooks/user-navigate';
 import { AdvancedStaticChatBuilder } from '../advanced-chat/advanced-chat-builder';
 import eventBus, { RemoteEvents } from '@/lib/eventBus';
@@ -196,11 +202,12 @@ type Props = {
 type CanvasState = {
   title: string;
   content: string;
-  type: 'document' | 'code';
+  type: 'document' | 'code' | 'binary';
   artifactId?: number;
   org?: string;
   userId?: string;
   fileExtension?: string;
+  mimeType?: string;
   metadata?: Record<string, unknown>;
 };
 
@@ -783,7 +790,17 @@ export function Chat({
 
   const resolveCanvasType = (
     payload: CanvasOpenPayload,
-  ): 'document' | 'code' => {
+  ): 'document' | 'code' | 'binary' => {
+    if (
+      payload.toolType === 'binary' ||
+      shouldUseBinaryCanvas({
+        isBinary: payload.isBinary,
+        mimeType: payload.mimeType,
+        fileExtension: payload.fileExtension,
+      })
+    ) {
+      return 'binary';
+    }
     if (payload.toolType === 'code') {
       return 'code';
     }
@@ -854,6 +871,7 @@ export function Chat({
       org: resolvedOrg,
       userId: resolvedUserId,
       fileExtension: payload.fileExtension,
+      mimeType: payload.mimeType,
       metadata: payload.metadata,
     };
 
@@ -869,12 +887,22 @@ export function Chat({
 
     // If we have an artifactId in the payload, also update currentCanvasArtifact
     // This ensures executeSubmit can use it even if canvas-active event hasn't fired yet
-    if (payload.artifactId) {
+    // Binary artifacts are excluded: they are view/export-only, so they must
+    // not be pinned to outgoing messages as an editable artifact context.
+    if (payload.artifactId && newCanvasState.type !== 'binary') {
       setCurrentCanvasArtifact({
         artifactId: payload.artifactId,
         title: resolvedTitle,
         file_extension: payload.fileExtension || 'txt',
       });
+    } else if (newCanvasState.type === 'binary') {
+      // The same artifact may have been pinned moments earlier by a
+      // mid-stream text-canvas open (before it was known to be a file) —
+      // clear any stale pin so the view/export-only artifact never rides
+      // along on outgoing messages as editable context.
+      setCurrentCanvasArtifact((current) =>
+        current && current.artifactId === payload.artifactId ? null : current,
+      );
     }
 
     // Always force refresh when opening a canvas to ensure it loads correctly
@@ -1289,6 +1317,23 @@ export function Chat({
         const artifactIdNum = Number(artifactId);
         setStreamingArtifactId(artifactIdNum); // Track streaming artifact
 
+        // Binary artifacts (pdf, zip, svg, …) have nothing to stream into
+        // the text editor and their file only exists on the detail endpoint
+        // once the version is finalized — defer canvas opening to stream end.
+        // The stream event's file_extension can be a "txt" placeholder while
+        // the artifact is really a file (the backend titles those by
+        // filename, e.g. "report.pdf"), so resolve against the title too —
+        // otherwise the text canvas opens mid-stream for a binary file.
+        const effectiveExtension = resolveEffectiveFileExtension(
+          fileExtension,
+          title,
+        );
+        if (
+          !getBinaryStreamBehavior(effectiveExtension).openCanvasOnStreamStart
+        ) {
+          return;
+        }
+
         const newArtifactPayload: CanvasOpenPayload = {
           title: title || t('untitledArtifact'),
           content: '', // Start with empty content, will be streamed
@@ -1336,18 +1381,47 @@ export function Chat({
         setStreamingArtifactId(undefined);
       }
 
-      // If canvas is not open yet (fallback case), open it now with the final content
-      if (!isUpdate && artifactId && !isCanvasOpen) {
+      if (!isUpdate && artifactId) {
+        // Every artifact opens at stream end — types the canvas can't render
+        // (zip, xlsx, …) get the binary canvas's no-preview message with the
+        // Export action. Resolve the extension against the title too: stream
+        // events can carry a "txt" placeholder for what is really a file.
+        const effectiveExtension = resolveEffectiveFileExtension(
+          fileExtension,
+          title,
+        );
+        const { isBinary } = getBinaryStreamBehavior(effectiveExtension);
+
+        // Binary content always wins over any streamed text rendering: if
+        // the text canvas opened mid-stream for THIS artifact (the stream
+        // start couldn't yet tell it was a file), switch it to the binary
+        // viewer now. Never hijack a canvas showing a different artifact.
+        const sameArtifactOpenAsText =
+          isCanvasOpen &&
+          canvasState.artifactId === Number(artifactId) &&
+          canvasState.type !== 'binary';
+        const shouldOpen =
+          !isCanvasOpen || (isBinary && sameArtifactOpenAsText);
+        if (!shouldOpen) {
+          return;
+        }
+
         const newArtifactPayload: CanvasOpenPayload = {
           title: title || t('untitledArtifact'),
-          content: content || '',
-          toolType: CODE_FILE_EXTENSIONS.has(fileExtension?.toLowerCase() || '')
-            ? 'code'
-            : 'canvas',
+          content: isBinary ? '' : content || '',
+          toolType: isBinary
+            ? 'binary'
+            : CODE_FILE_EXTENSIONS.has(fileExtension?.toLowerCase() || '')
+              ? 'code'
+              : 'canvas',
           artifactId: Number(artifactId),
           org: tenantKey,
           userId: username ?? undefined,
-          fileExtension: fileExtension,
+          fileExtension: effectiveExtension ?? fileExtension,
+          isBinary,
+          mimeType: isBinary
+            ? resolveBinaryMimeType(effectiveExtension)
+            : undefined,
           metadata: {
             sessionId: artifactSessionId || sessionId,
             versionNumber,
@@ -1975,6 +2049,7 @@ export function Chat({
               org={canvasState.org}
               userId={canvasState.userId}
               fileExtension={canvasState.fileExtension}
+              mimeType={canvasState.mimeType}
               metadata={canvasState.metadata}
               sessionId={sessionId}
               tenantKey={tenantKey}

@@ -25,6 +25,53 @@ export class ChatPage {
   readonly userMessages: Locator;
   readonly aiMessages: Locator;
   readonly canvasToggle: Locator;
+  /**
+   * The chat chip rendered for ANY canvas artifact (text/code or binary) —
+   * `CanvasMessagePreview`, `data-testid="canvas-message-preview"`. For
+   * binary artifacts (pdf, xlsx, zip, …) it always shows "Open Canvas" with
+   * a file-type label instead of a content snippet — there is no separate
+   * "Download" chip variant.
+   */
+  readonly canvasMessagePreview: Locator;
+  /** The chip's action button — always "Open Canvas", never "Download". */
+  readonly canvasOpenButton: Locator;
+  /**
+   * Wraps `canvasOpenButton` (and disables it, with a "hang tight" tooltip)
+   * while a binary artifact is still streaming — a half-written file can't
+   * be opened. Absent once generation finishes; also absent entirely for
+   * non-binary (text/code) canvas artifacts, which stay clickable while
+   * streaming.
+   */
+  readonly canvasBinaryGenerating: Locator;
+  /**
+   * The read-only binary canvas (`BinaryCanvasComponent`,
+   * `data-testid="binary-canvas"`) — renders for pdf/image/svg artifacts
+   * (and a friendly fallback for non-previewable types like zip/xlsx). Opens
+   * automatically at stream end for ANY binary artifact (not just
+   * previewable ones) if no canvas is already open — see
+   * `openBinaryCanvas()`.
+   */
+  readonly binaryCanvas: Locator;
+  /** The pdf `<iframe>` inside the binary canvas — `src` is a `blob:` URL. */
+  readonly binaryCanvasPdf: Locator;
+  /** The image `<img>` inside the binary canvas (image/svg artifacts). */
+  readonly binaryCanvasImage: Locator;
+  /** The binary canvas's single header action — downloads the raw bytes. */
+  readonly binaryCanvasExport: Locator;
+  /**
+   * Shown INSTEAD of the pdf/image preview when the file loaded but is
+   * malformed (invalid SVG XML, non-PDF bytes, image decode failure). A
+   * positive assertion on `binaryCanvasPdf`/`binaryCanvasImage` should never
+   * be substituted with "this didn't appear" — assert this is absent too.
+   */
+  readonly binaryCanvasPreviewError: Locator;
+  /**
+   * The editable TEXT canvas's rich-text surface (TipTap contenteditable /
+   * ProseMirror) — the path taken by text artifacts (`is_binary: false`),
+   * including .txt files shared from the sandbox VM. Same locator strategy
+   * as journey 10.
+   */
+  readonly canvasEditor: Locator;
   readonly memoryButton: Locator;
   readonly createMentorDialog: Locator;
   readonly loginBanner: Locator;
@@ -67,6 +114,20 @@ export class ChatPage {
     this.userMessages = page.locator('.chat-user-message-query');
     this.aiMessages = page.locator('.chat-ai-message-response');
     this.canvasToggle = page.getByRole('button', { name: /canvas/i });
+    this.canvasMessagePreview = page.getByTestId('canvas-message-preview');
+    this.canvasOpenButton = page.getByTestId('canvas-open-button');
+    this.canvasBinaryGenerating = page.getByTestId('canvas-binary-generating');
+    this.binaryCanvas = page.getByTestId('binary-canvas');
+    this.binaryCanvasPdf = page.getByTestId('binary-canvas-pdf');
+    this.binaryCanvasImage = page.getByTestId('binary-canvas-image');
+    this.binaryCanvasExport = page.getByTestId('binary-canvas-export');
+    this.binaryCanvasPreviewError = page.getByTestId(
+      'binary-canvas-preview-error',
+    );
+    this.canvasEditor = page
+      .locator('[contenteditable="true"]')
+      .or(page.locator('.ProseMirror'))
+      .first();
     // Exact name — NOT /memory/i. The chat-privacy toggle's aria-label is
     // "Turn on Private Mode. This chat won't be saved to history or used for
     // memory.", so a loose /memory/i match also resolves the (always-present,
@@ -797,5 +858,64 @@ export class ChatPage {
   /** Returns the sr-only `aria-live` announcer node for the task list. */
   getAgentTodoAnnouncer(scope?: Locator): Locator {
     return (scope ?? this.page).getByTestId('agent-todo-list-announcer');
+  }
+
+  // ── Binary artifact chip → binary canvas (Journey 71) ───────────────────────
+  //
+  // Binary artifacts (pdf, zip, xlsx, …) are produced by an agent with a
+  // sandbox VM (or claw) enabled — see `SandboxTab` — and rendered via
+  // `CanvasMessagePreview` (the chat chip) + `BinaryCanvasComponent` (the
+  // read-only canvas). Unlike the rich-text canvas, opening never streams
+  // live; the chip's button stays disabled until the file is fully written.
+
+  /**
+   * Waits for the most recent binary-artifact chat chip to appear and for it
+   * to finish generating (the `canvas-binary-generating` wrapper clears and
+   * `canvas-open-button` becomes enabled). Does NOT click anything — pair
+   * with `openBinaryCanvas()`. VM boot + file generation against a live LLM
+   * is slow, so the default timeouts here are generous; callers on a faster
+   * env can tighten them.
+   */
+  async waitForBinaryArtifactChipReady(opts?: {
+    /** Timeout for the chip itself to appear (artifact-stream-start). */
+    chipTimeout?: number;
+    /** Timeout for the generating wrapper to clear (artifact-stream-end). */
+    generatingTimeout?: number;
+  }): Promise<void> {
+    const { chipTimeout = 120_000, generatingTimeout = 180_000 } = opts ?? {};
+    await expect(this.canvasMessagePreview.first()).toBeVisible({
+      timeout: chipTimeout,
+    });
+    await expect(this.canvasBinaryGenerating).toHaveCount(0, {
+      timeout: generatingTimeout,
+    });
+    await expect(this.canvasOpenButton.first()).toBeEnabled({
+      timeout: 15_000,
+    });
+  }
+
+  /**
+   * Opens the binary canvas for the most recently generated binary artifact.
+   * Tolerant of the app's own auto-open-at-stream-end behavior: binary
+   * artifacts open the canvas automatically once generation finishes AS LONG
+   * AS no other canvas is already open (`components/chat/index.tsx`'s
+   * `handleArtifactStreamEnd`). Rather than assume either outcome, this
+   * probes for `binaryCanvas` already being visible first (a short `waitFor`
+   * — never `isVisible().catch()`) and only clicks `canvas-open-button` when
+   * it isn't. Call `waitForBinaryArtifactChipReady()` first so the button is
+   * actually clickable in the fallback branch.
+   */
+  async openBinaryCanvas(): Promise<void> {
+    let alreadyOpen = false;
+    try {
+      await this.binaryCanvas.waitFor({ state: 'visible', timeout: 5_000 });
+      alreadyOpen = true;
+    } catch {
+      alreadyOpen = false;
+    }
+    if (!alreadyOpen) {
+      await this.canvasOpenButton.first().click();
+      await expect(this.binaryCanvas).toBeVisible({ timeout: 15_000 });
+    }
   }
 }

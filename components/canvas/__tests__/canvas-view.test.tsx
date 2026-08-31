@@ -23,6 +23,21 @@ vi.mock('../canvas-component', () => ({
   ),
 }));
 
+// Mock the read-only binary canvas (it fetches artifact bytes via RTK Query)
+vi.mock('../binary-canvas-component', () => ({
+  BinaryCanvasComponent: (props: any) => (
+    <div
+      data-testid="binary-canvas-component"
+      data-title={props.title}
+      data-artifact-id={props.artifactId}
+      data-file-extension={props.fileExtension}
+      data-mime-type={props.mimeType}
+    >
+      <button onClick={props.onClose}>Close Binary</button>
+    </div>
+  ),
+}));
+
 // ============================================================================
 // TESTS
 // ============================================================================
@@ -95,6 +110,45 @@ describe('CanvasView', () => {
   // ==========================================================================
   // Code Canvas (Note: CodeCanvasComponent is currently disabled, uses CanvasComponent)
   // ==========================================================================
+
+  describe('Binary Canvas', () => {
+    it('renders BinaryCanvasComponent for binary type — not the rich-text canvas', () => {
+      render(
+        <CanvasView
+          {...defaultProps}
+          canvasType="binary"
+          fileExtension="pdf"
+          mimeType="application/pdf"
+        />,
+      );
+
+      const binary = screen.getByTestId('binary-canvas-component');
+      expect(binary).toBeInTheDocument();
+      expect(binary).toHaveAttribute('data-file-extension', 'pdf');
+      expect(binary).toHaveAttribute('data-mime-type', 'application/pdf');
+      expect(screen.queryByTestId('canvas-component')).not.toBeInTheDocument();
+    });
+
+    it('passes title, artifactId and onClose to BinaryCanvasComponent', () => {
+      const onClose = vi.fn();
+      render(
+        <CanvasView
+          {...defaultProps}
+          canvasType="binary"
+          canvasTitle="report.pdf"
+          artifactId={99}
+          onClose={onClose}
+        />,
+      );
+
+      const binary = screen.getByTestId('binary-canvas-component');
+      expect(binary).toHaveAttribute('data-title', 'report.pdf');
+      expect(binary).toHaveAttribute('data-artifact-id', '99');
+
+      screen.getByText('Close Binary').click();
+      expect(onClose).toHaveBeenCalled();
+    });
+  });
 
   describe('Code Canvas', () => {
     // Note: CodeCanvasComponent is disabled in the implementation,

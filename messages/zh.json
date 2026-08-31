@@ -327,6 +327,14 @@
     "renaming": "重命名中...",
     "save": "保存"
   },
+  "canvasBinaryCanvas": {
+    "untitledFile": "未命名文件",
+    "export": "导出",
+    "loadError": "无法加载此文件。",
+    "retry": "重试",
+    "previewUnavailable": "暂时无法预览此类型的文件，但文件已准备就绪——点击「导出」即可保存到你的设备。",
+    "previewFailed": "无法预览此文件——文件可能无效或已损坏。你仍然可以导出它。"
+  },
   "canvasCanvasControls": {
     "lengthLongest": "最长",
     "lengthLonger": "更长",
@@ -1922,12 +1930,7 @@
   },
   "tabsSandboxTab": {
     "heading": "沙盒",
-    "description": "配置沙盒连接和部署设置。",
-    "capabilityTitle": "专用沙盒",
-    "capabilityDescription": "为该智能体提供其专属的安全工作空间，使其可以代表您运行代码、工具和技能。开启后，在下方将其连接到实例，即可解锁技能和智能体提示词。",
-    "capabilityOffHint": "开启后可为该智能体提供工作空间并连接到实例。",
-    "toggleSuccess": "沙盒设置已更新",
-    "toggleError": "无法更新沙盒设置"
+    "description": "配置沙盒连接和部署设置。"
   },
   "tabsGraderTab": {
     "headerTitle": "评分器",
