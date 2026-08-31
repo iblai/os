@@ -499,6 +499,22 @@ describe('config', () => {
       });
     });
 
+    describe('documentationUrl', () => {
+      it('should have a default fallback when not set', () => {
+        (global.window as any).__ENV__ = {};
+        const result = config.documentationUrl();
+        expect(result).toBe('https://ibl.ai/docs');
+      });
+
+      it('should use window.__ENV__ value over the fallback', () => {
+        (global.window as any).__ENV__ = {
+          NEXT_PUBLIC_DOCUMENTATION_URL: 'https://docs.partner.io',
+        };
+        const result = config.documentationUrl();
+        expect(result).toBe('https://docs.partner.io');
+      });
+    });
+
     describe('defaultSupportPhoneNumber', () => {
       it('should return default support phone number', () => {
         const result = config.defaultSupportPhoneNumber();

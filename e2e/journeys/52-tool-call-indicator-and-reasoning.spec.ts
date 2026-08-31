@@ -336,7 +336,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
   // ────────────────────────────────────────────────────────────────
   // Test 2.1 - 2.3: Reasoning Section with gpt-5 Model
   // ────────────────────────────────────────────────────────────────
-  test('Reasoning Section Shows Thinking with Bounce Dots and Auto-Collapses After Streaming', async ({
+  test('Reasoning Section Renders and Auto-Collapses to Thought After Streaming', async ({
     page,
     createMentorPage,
     editMentorPage,
@@ -364,18 +364,16 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
       30_000,
     );
 
-    // During streaming: "Thinking" label with bounce dots
-    const thinkingButton = chatPage.aiMessages
+    // Match either label. "Thinking" holds only while the reasoning phase is
+    // still streaming, and that window can close before the first poll — so
+    // pinning to it raced the model rather than testing the app. What this
+    // journey uniquely proves is that gpt-5's reasoning deltas reach the DOM at
+    // all; the Thinking/Thought and bounce-dot rendering is covered off props by
+    // components/chat/__tests__/reasoning-section.test.tsx.
+    const reasoningChip = chatPage.aiMessages
       .last()
-      .getByRole('button', { name: /thinking/i });
-    await expect(thinkingButton).toBeVisible({ timeout: 30_000 });
-
-    const bounceDotsContainer = chatPage.aiMessages
-      .last()
-      .locator('span.inline-flex.gap-0\\.5');
-    await expect(bounceDotsContainer).toBeVisible({ timeout: 10_000 });
-    const bounceDots = bounceDotsContainer.locator('span.animate-bounce');
-    await expect(bounceDots).toHaveCount(3, { timeout: 5_000 });
+      .getByRole('button', { name: /thinking|thought/i });
+    await expect(reasoningChip).toBeVisible({ timeout: 30_000 });
 
     // Wait for streaming to complete
     await chatPage.waitForStreamingComplete(STREAMING_TIMEOUT);
@@ -387,15 +385,10 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     await expect(thoughtButton).toBeVisible({ timeout: 15_000 });
 
     // Bounce dots are gone
-    try {
-      await bounceDotsContainer.waitFor({ state: 'hidden', timeout: 5_000 });
-    } catch {
-      const remainingDots = chatPage.aiMessages
-        .last()
-        .locator('span.animate-bounce');
-      const dotCount = await remainingDots.count();
-      expect(dotCount).toBe(0);
-    }
+    const bounceDots = chatPage.aiMessages
+      .last()
+      .locator('span.animate-bounce');
+    await expect(bounceDots).toHaveCount(0, { timeout: 5_000 });
 
     // Reasoning section is collapsed
     const reasoningContent = chatPage.aiMessages
@@ -534,11 +527,12 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
 
     const lastAIMessage = chatPage.aiMessages.last();
 
-    // Check reasoning section appears (Thinking)
-    const thinkingButton = lastAIMessage.getByRole('button', {
-      name: /thinking/i,
+    // Match either label — see the reasoning-section test above for why this is
+    // not pinned to "Thinking".
+    const reasoningChip = lastAIMessage.getByRole('button', {
+      name: /thinking|thought/i,
     });
-    await expect(thinkingButton).toBeVisible({ timeout: 30_000 });
+    await expect(reasoningChip).toBeVisible({ timeout: 30_000 });
 
     // Check tool call indicator appears. The tool call follows the reasoning
     // phase, so allow longer than the reasoning section's own appearance.
