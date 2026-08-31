@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "lastUpdated": "2026-08-29",
+  "lastUpdated": "2026-08-31",
   "summary": {
-    "totalCheckpoints": 690,
-    "coveredCheckpoints": 651,
+    "totalCheckpoints": 693,
+    "coveredCheckpoints": 654,
     "deprecatedCheckpoints": 16,
     "notReproducibleCheckpoints": 15,
     "pendingCheckpoints": 8,
@@ -743,6 +743,7 @@
       "sourceFiles": [
         "components/modals/edit-mentor-modal/tabs/embed-tab.tsx",
         "components/modals/edit-mentor-modal/hooks/useEmbedTab.ts",
+        "components/modals/edit-mentor-modal/utils.ts",
         "components/logo.tsx",
         "hooks/use-mentors/use-mentor-settings.ts",
         "hooks/use-embed-mode.ts",
@@ -818,6 +819,21 @@
         {
           "id": "emb-14",
           "description": "Issue #2153 contrast case: toggling Shareable Link ON for an anonymous mentor (Website URL section not rendered at all) remains error-free",
+          "status": "covered"
+        },
+        {
+          "id": "emb-15",
+          "description": "Issue #789: a custom embed icon (Icon Selection = Custom, uploaded via the Icon Editor's Content tab) persists after a full page reload as a real uploaded URL, not the local data: preview",
+          "status": "covered"
+        },
+        {
+          "id": "emb-16",
+          "description": "Issue #789: \"Remove Image\" persists immediately (own PUT, independent of Create Embed) with a \"Custom icon removed\" toast, Icon Selection reverting to Default, and the removal surviving a reload (guards the RTK cache invalidation behind the fix)",
+          "status": "covered"
+        },
+        {
+          "id": "emb-17",
+          "description": "Embed tab footer contains only the \"Create Embed\" button (the standalone footer Save button was removed); Advanced CSS / Advanced JavaScript panels elsewhere in the tab keep their own working Save buttons",
           "status": "covered"
         }
       ]
@@ -4007,7 +4023,7 @@
       "checkpoints": [
         {
           "id": "ags-01",
-          "description": "Admin sees the Skills tab on a freshly-created (Base Agent) mentor, with the updated tab description (\"Reusable playbooks this Base Agent can discover and follow.\") and skills-info-box copy describing the / picker (feat/2215); Skills sits right after Prompts in the Configurations category (ordering moved here from journey 44)",
+          "description": "Admin sees the Skills tab on a freshly-created (Base Agent) mentor, with the updated tab description (\"Reusable playbooks this Base Agent can discover and follow.\") and skills-info-box copy describing the / picker (feat/2215); Skills sits right after Prompts in the Configurations category (ordering moved here from journey 44) — full RBAC grant set forced via SkillsTab.grantAllSkillAssignmentPerms so the both-sub-tabs assert is rollout-independent",
           "status": "covered"
         },
         {
@@ -4033,6 +4049,11 @@
         {
           "id": "ags-06",
           "description": "NON-ADMIN: the Skills tab is absent from the Edit Mentor modal (the segment is ADMIN-only via userTypes in MENTOR_SEGMENTS) — moved from journey 44",
+          "status": "covered"
+        },
+        {
+          "id": "ags-07",
+          "description": "View-only RBAC (view_skill_assignments granted, create/write/delete denied via the permission-check mock SkillsTab.mockSkillAssignmentGrants): the Agent Skills sub-tab renders with its empty state while the Available Skills sub-tab and New Skill button are absent from the DOM",
           "status": "covered"
         },
         {
@@ -4331,7 +4352,7 @@
       "checkpoints": [
         {
           "id": "vmc-01",
-          "description": "Admin selects the Virtual Machine Shell sandbox kind on a dedicated mentor (mutually exclusive with the other kinds, at least one always active — see Journey 44) and asks the agent, over a real live-LLM chat turn, to create and share a plain-text file (hello.txt with a known marker line — chosen over pdf/xlsx so the VM produces it reliably with shell tooling, no libraries to install); the agent's reply carries the file as an artifact and the chat chip (CanvasMessagePreview, data-testid=\"canvas-message-preview\") appears with its Open Canvas action",
+          "description": "Admin selects the Virtual Machine Shell sandbox kind on a dedicated mentor (mutually exclusive with the other kinds, at least one always active — see Journey 44) enables the composer’s Canvas tool (idempotently — the artifact pipeline is inert without it, and some envs default it off) and asks the agent, over a real live-LLM chat turn, to create and share a plain-text file (hello.txt with a known marker line — chosen over pdf/xlsx so the VM produces it reliably with shell tooling, no libraries to install); the agent's reply carries the file as an artifact and the chat chip (CanvasMessagePreview, data-testid=\"canvas-message-preview\") appears with its Open Canvas action",
           "status": "covered"
         },
         {
