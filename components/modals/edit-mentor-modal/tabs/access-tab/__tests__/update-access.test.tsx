@@ -121,6 +121,7 @@ describe('RoleAccessPanel', () => {
   const defaultProps = {
     policy: defaultPolicy,
     onAccessUpdated: vi.fn().mockResolvedValue(undefined),
+    canShare: true,
   };
 
   beforeEach(() => {
@@ -1439,6 +1440,267 @@ describe('RoleAccessPanel', () => {
       fireEvent.focus(groupSearch);
       await waitFor(() => {
         expect(screen.getByText('Engineering')).toBeInTheDocument();
+      });
+    });
+  });
+
+  // Regression cover for iblai-platform#2018: a viewer without
+  // `/mentors/{id}/#share_mentor` could still see (and click) every mutating
+  // control on this panel.
+  //
+  // The user-facing guarantee is "you can still SEE everything, you just can't
+  // CHANGE anything", so every case below asserts BOTH halves: the assigned
+  // users/groups are positively present (a test must not pass merely because
+  // the whole panel vanished) and the mutating surface is *exhaustively*
+  // absent.
+  describe('read-only mode (canShare: false)', () => {
+    const policyWithGroups = {
+      ...defaultPolicy,
+      groups: [
+        { id: 20, name: 'Sales', unique_id: 'sales' },
+        { id: 21, name: 'Support', unique_id: 'support' },
+      ],
+    } as typeof defaultPolicy;
+
+    /**
+     * The panel derives two independent flags from the permission tree:
+     * `/users/#list` picks the directory-search variant of the add block over
+     * the manual "Add by" variant, and `/groups/#list` mounts the entire
+     * groups section. They render *different DOM*, so each read-only assertion
+     * has to be proven in every combination.
+     */
+    const grant = ({ users, groups }: { users: boolean; groups: boolean }) => {
+      mockCheckRbacPermission.mockImplementation((..._args: unknown[]) => {
+        const resource = _args[1] as string;
+        if (resource === '/users/#list') return users;
+        if (resource === '/groups/#list') return groups;
+        return true;
+      });
+    };
+
+    /** Every "remove this assignment" affordance is labelled `Remove {name}`. */
+    const removeButtons = () =>
+      screen.queryAllByRole('button', { name: /^Remove\s/i });
+
+    /** Everything on the panel that can mutate the policy. */
+    const expectNoMutatingControls = () => {
+      // per-user and per-group remove-X — assert the COUNT, not one element,
+      // so an extra un-gated chip cannot slip through.
+      expect(removeButtons()).toHaveLength(0);
+      // directory-search variant of the add-users block
+      expect(screen.queryByLabelText('Add users')).not.toBeInTheDocument();
+      expect(screen.queryByText('Add users')).not.toBeInTheDocument();
+      expect(
+        screen.queryByPlaceholderText('Search by name, username, or email'),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+      // manual-entry variant: the "Add by" Select, its input, the "+" stage
+      // button and the "Add"/"Add N users" submit
+      expect(screen.queryByText('Add by')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Add by')).not.toBeInTheDocument();
+      expect(
+        screen.queryByLabelText('Select input type'),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByPlaceholderText('user@example.com'),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByPlaceholderText('username')).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: 'Add entry' }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /^Add( \d+ users?| 1 user)?$/i }),
+      ).not.toBeInTheDocument();
+      // group add block
+      expect(screen.queryByText('Add groups')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Add groups')).not.toBeInTheDocument();
+      expect(
+        screen.queryByPlaceholderText('Search groups by name'),
+      ).not.toBeInTheDocument();
+      // and, belt-and-braces, nothing left that submits anything
+      expect(screen.queryAllByRole('button', { name: /^Add/i })).toHaveLength(
+        0,
+      );
+    };
+
+    /** The read-only content that must survive regardless of canShare. */
+    const expectAssignedListsStillVisible = ({
+      groups,
+    }: {
+      groups: boolean;
+    }) => {
+      expect(screen.getByText('Assigned users')).toBeInTheDocument();
+      expect(
+        screen.getByText('Remove users who should no longer have this role.'),
+      ).toBeInTheDocument();
+      expect(screen.getByText('user1@example.com')).toBeInTheDocument();
+      expect(screen.getByText('user2@example.com')).toBeInTheDocument();
+
+      if (groups) {
+        expect(screen.getByText('Assigned groups')).toBeInTheDocument();
+        expect(screen.getByText('Sales')).toBeInTheDocument();
+        expect(screen.getByText('Support')).toBeInTheDocument();
+      } else {
+        expect(screen.queryByText('Assigned groups')).not.toBeInTheDocument();
+      }
+    };
+
+    const matrix = [
+      { label: 'search mode, groups granted', users: true, groups: true },
+      { label: 'search mode, groups denied', users: true, groups: false },
+      {
+        label: 'manual-entry mode, groups granted',
+        users: false,
+        groups: true,
+      },
+      {
+        label: 'manual-entry mode, groups denied',
+        users: false,
+        groups: false,
+      },
+    ];
+
+    it.each(matrix)(
+      'in $label it renders the assignments and zero mutating controls',
+      ({ users, groups }) => {
+        grant({ users, groups });
+
+        render(
+          <RoleAccessPanel
+            {...defaultProps}
+            policy={policyWithGroups}
+            canShare={false}
+          />,
+        );
+
+        expectAssignedListsStillVisible({ groups });
+        expectNoMutatingControls();
+      },
+    );
+
+    it.each(matrix)(
+      'in $label the converse holds — canShare: true renders the controls again',
+      ({ users, groups }) => {
+        grant({ users, groups });
+
+        render(<RoleAccessPanel {...defaultProps} policy={policyWithGroups} />);
+
+        // Same read-only content…
+        expectAssignedListsStillVisible({ groups });
+
+        // …plus one remove-X per assigned user (+ per group when the groups
+        // section is mounted). This is what makes the read-only assertions
+        // above meaningful: if the gate ever inverts, these fail.
+        expect(removeButtons()).toHaveLength(groups ? 4 : 2);
+
+        if (users) {
+          expect(
+            screen.getByPlaceholderText('Search by name, username, or email'),
+          ).toBeInTheDocument();
+          expect(screen.getByLabelText('Add users')).toBeInTheDocument();
+        } else {
+          expect(screen.getByLabelText('Add by')).toBeInTheDocument();
+          expect(
+            screen.getByLabelText('Select input type'),
+          ).toBeInTheDocument();
+          expect(
+            screen.getByPlaceholderText('user@example.com'),
+          ).toBeInTheDocument();
+          expect(
+            screen.getByRole('button', { name: 'Add entry' }),
+          ).toBeInTheDocument();
+          expect(
+            screen.getByRole('button', {
+              name: /^Add( \d+ users?| 1 user)?$/i,
+            }),
+          ).toBeInTheDocument();
+        }
+
+        if (groups) {
+          expect(screen.getByLabelText('Add groups')).toBeInTheDocument();
+          expect(
+            screen.getByPlaceholderText('Search groups by name'),
+          ).toBeInTheDocument();
+        } else {
+          expect(
+            screen.queryByPlaceholderText('Search groups by name'),
+          ).not.toBeInTheDocument();
+        }
+      },
+    );
+
+    it('still shows the empty-state copy (not a blank panel) when nothing is assigned', () => {
+      grant({ users: true, groups: true });
+
+      render(
+        <RoleAccessPanel
+          {...defaultProps}
+          policy={{ ...defaultPolicy, users: [], groups: [] }}
+          canShare={false}
+        />,
+      );
+
+      expect(
+        screen.getByText('No users have this role yet.'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText('No groups have this role yet.'),
+      ).toBeInTheDocument();
+      expectNoMutatingControls();
+    });
+
+    it('falls back to username when an assigned user has no email', () => {
+      grant({ users: true, groups: false });
+
+      render(
+        <RoleAccessPanel
+          {...defaultProps}
+          policy={{
+            ...defaultPolicy,
+            users: [{ id: 9, username: 'nomail', email: '' }],
+          }}
+          canShare={false}
+        />,
+      );
+
+      expect(screen.getByText('nomail')).toBeInTheDocument();
+      expect(removeButtons()).toHaveLength(0);
+    });
+
+    it('falls back to unique_id when an assigned group has no name', () => {
+      grant({ users: true, groups: true });
+
+      render(
+        <RoleAccessPanel
+          {...defaultProps}
+          policy={{
+            ...defaultPolicy,
+            groups: [{ id: 30, name: '', unique_id: 'grp-30' }],
+          }}
+          canShare={false}
+        />,
+      );
+
+      expect(screen.getByText('grp-30')).toBeInTheDocument();
+      expect(removeButtons()).toHaveLength(0);
+    });
+
+    it('never fires an access mutation from a read-only panel', async () => {
+      grant({ users: true, groups: true });
+
+      render(
+        <RoleAccessPanel
+          {...defaultProps}
+          policy={policyWithGroups}
+          canShare={false}
+        />,
+      );
+
+      // There is simply nothing to click.
+      expect(removeButtons()).toHaveLength(0);
+      await waitFor(() => {
+        expect(mockUpdateMentorAccess).not.toHaveBeenCalled();
       });
     });
   });
