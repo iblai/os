@@ -1330,17 +1330,32 @@ surfaces:
    no agent-type picker and only ever produces Base Agent mentors, so the
    gating checkpoints mock the mentor-settings GET for a real, freshly-created
    mentor (`route.fetch()` + mutate `mentor_slug`/`template_mentor` +
-   `route.fulfill()` — every other field stays authentic). The tab is plainly
-   ADMIN-ONLY via the userTypes filter — no RBAC resource (the agent-skills
-   RBAC contract is unsettled backend-side); the chat `/` picker, by
-   contrast, is available to students too.
+   `route.fulfill()` — every other field stays authentic). The tab SEGMENT is
+   plainly ADMIN-ONLY via the userTypes filter — no RBAC resource on the
+   segment itself; the chat `/` picker, by contrast, is available to
+   students too.
 2. The skills SECTION (the SDK's `AgentSkills` component: Agent Skills /
    Available Skills sub-tabs, enable toggles, New/Edit/Delete Skill dialogs)
    is driven exclusively through the dedicated helpers in
    `@iblai/iblai-js/playwright` (`verifySkillsTabVisible`,
    `switchToAgentSkillsSubTab`, `createSkill`, `editSkill`, `deleteSkill`,
    …). Management checkpoints run SERIAL with a dedicated mentor per test —
-   skill create/edit/delete mutates the platform-wide catalog.
+   skill create/edit/delete mutates the platform-wide catalog. The section
+   is RBAC-GATED per grant against the mentor permission check
+   (`/mentors/{dbId}/` — the host passes `mentorDbId` from mentor-settings):
+   `view_skill_assignments` gates the assignment fetches,
+   `create_skill_assignment` the whole Available Skills sub-tab + New Skill
+   button, `write_skill_assignment` the enable Switch,
+   `delete_skill_assignment` the row Remove button. Because the backend's
+   grant rollout is environment/profile-dependent, every checkpoint that
+   asserts the FULL admin view (ags-01, ags-04, ags-05) first forces all
+   four grants via `SkillsTab.mockSkillAssignmentGrants` (permission-check
+   response mutated in place, mirroring `ChatPage.grantSkillAssignmentsRead`;
+   registered before the modal opens since the modal fires the check on
+   open) — and ags-07 forces the deny side the same way. Per-grant ROW
+   affordances (Switch disabled without write, Remove hidden without delete)
+   are covered by the SDK's own `agent-skills.test.tsx` unit suite, not
+   duplicated here.
 3. The chat composer's `/` skill picker (`SlashSkillPicker` /
    `useSlashSkillPicker` from `@iblai/iblai-js/web-containers`, wired in
    `components/chat-input-form.tsx` + `components/auto-resize-text-area.tsx`)
@@ -1352,12 +1367,13 @@ surfaces:
    `ChatPage.mockEffectiveSkills` for full determinism — the composer fetches
    eagerly on mount, so the mock must be registered before navigation.
 
-- [x] ags-01: Admin sees the Skills tab on a freshly-created (Base Agent) mentor, with the updated tab description ("Reusable playbooks this Base Agent can discover and follow.") and skills-info-box copy describing the `/` picker; Skills sits right after Prompts in the Configurations category
+- [x] ags-01: Admin sees the Skills tab on a freshly-created (Base Agent) mentor, with the updated tab description ("Reusable playbooks this Base Agent can discover and follow.") and skills-info-box copy describing the `/` picker; Skills sits right after Prompts in the Configurations category — full RBAC grant set forced via `SkillsTab.grantAllSkillAssignmentPerms` so the both-sub-tabs assert is rollout-independent
 - [x] ags-02: Skills tab is hidden when the mentor resolves to a non-base-agent type (`mentor_slug` is not a base-agent alias and `template_mentor` does not resolve to one either)
 - [x] ags-03: Skills tab stays visible when the mentor type cannot be determined (`template_mentor` is a numeric PK the frontend cannot read a slug from) — the gate fails OPEN rather than hiding the tab
 - [x] ags-04: Admin creates a platform skill, attaches it from the Available Skills sub-tab (`addSkillToAgent` — assignment created ENABLED), and its enable Switch round-trips off/on on the Agent Skills sub-tab (`aria-checked`); detach + delete on cleanup — dedicated mentor per test
 - [x] ags-05: Admin creates a new platform skill, locates it on the server-paged Available Skills sub-tab (paging until found — catalog ordering not guaranteed), edits its description, and deletes it (row disappears) — via the SDK's `createSkill`/`editSkill`/`deleteSkill` helpers, serial (platform-wide catalog)
 - [x] ags-06: NON-ADMIN — the Skills tab is absent from the Edit Mentor modal (the segment is ADMIN-only via userTypes in `MENTOR_SEGMENTS`)
+- [x] ags-07: View-only RBAC (`view_skill_assignments` granted, create/write/delete denied via the same permission-check mock) — the Agent Skills sub-tab renders with its empty state, while the Available Skills sub-tab and the New Skill button are absent from the DOM
 - [x] slash-01: Mentor with no effective skills — chat composer stays a plain textbox (no combobox role) and typing "/" opens nothing
 - [x] slash-02: Mentor with skills — composer gets `role=combobox` wiring and "/" opens the picker listing only enabled skills as name + slug, no descriptions (assignment rows carry none; the platform-wide agent-skills catalog is never fetched from chat)
 - [x] slash-03: Typing after "/" filters the picker by both skill name and slug as the query narrows; no match closes the picker
@@ -1596,7 +1612,7 @@ LIVE-LLM coverage of the VM-sandbox file-sharing pipeline that Journey 10 (Canva
 
 The binary-artifact surfaces themselves (binary chip gating, pdf/image preview, fallback and preview-error panels, binary stream orchestration) remain unit-covered only — see Journey 10's `cvs-12`/`cvs-13`/`cvs-14`/`cvs-15` for the exact gap wording.
 
-- [x] vmc-01: Admin selects the Virtual Machine Shell sandbox kind on a dedicated mentor and asks the agent (live LLM) to create and share hello.txt with a known marker line (.txt chosen over pdf/xlsx so the VM produces it reliably with shell tooling); the agent replies with the file as an artifact and the chat chip (`canvas-message-preview`) appears with Open Canvas
+- [x] vmc-01: Admin selects the Virtual Machine Shell sandbox kind on a dedicated mentor, enables the composer's Canvas tool (the artifact pipeline is inert without it), and asks the agent (live LLM) to create and share hello.txt with a known marker line (.txt chosen over pdf/xlsx so the VM produces it reliably with shell tooling); the agent replies with the file as an artifact and the chat chip (`canvas-message-preview`) appears with Open Canvas
 - [x] vmc-02: The canvas shows the shared file's content — the .txt artifact takes the TEXT canvas path (tolerant of auto-open at stream start vs. clicking `canvas-open-button`): the editable editor renders containing the marker line, and the binary canvas (`binary-canvas`) is asserted absent (text/binary routing picks the text path for text files)
 
 ## Journey 72: Sidebar Support Link & Help Center Resolution (#uat-9) (7 checkpoints; 4 deprecated) — `journeys/72-sidebar-support-link-and-help-center.spec.ts`
