@@ -689,7 +689,7 @@ export class ChatPage {
    * strictly required for a logged-in admin, but patching both keeps this
    * helper correct if it's ever reused for a non-admin/public context.
    */
-  async mockShowReasoning(): Promise<void> {
+  async mockShowReasoning(enabled = true): Promise<void> {
     const patchShowReasoning = async (route: Route) => {
       if (route.request().method() !== 'GET') {
         await route.continue();
@@ -703,7 +703,7 @@ export class ChatPage {
         await route.continue();
         return;
       }
-      json.show_reasoning = true;
+      json.show_reasoning = enabled;
       await route.fulfill({ response, json });
     };
 
@@ -998,5 +998,68 @@ export class ChatPage {
     await expect(this.canvasToggle.first()).toHaveClass(/bg-\[#F5F8FF\]/, {
       timeout: 10_000,
     });
+  }
+
+  // ── Persistent "agent is working" indicator — Journey 69 (issue #2217) ─────
+  //
+  // `WorkingIndicator` (components/chat/working-indicator.tsx) is the
+  // shimmering `role="status"` line that replaces the old placeholder which
+  // used to vanish the moment any token rendered. It is driven by the SDK's
+  // `ChatPhase` (`@iblai/iblai-js/web-utils`) and is mounted in two places
+  // that are mutually exclusive by design (never both at once): standalone,
+  // inside `AIWorkingMessage` (`data-testid="chat-working-message"`) before
+  // the streaming bubble has anything to show, and embedded at the foot of
+  // the real streaming bubble (`AIMessageBubble`) once it does. Both wrap the
+  // SAME `data-testid="chat-working-indicator"` element, so
+  // `getWorkingIndicator(scope)` finds it regardless of which frame currently
+  // owns it — pass the relevant frame (`getWorkingMessage()` or
+  // `getLastAiMessage()`) as `scope` to disambiguate.
+
+  /** Returns the standalone pre-token placeholder frame (whole turn, not just the indicator). */
+  getWorkingMessage(): Locator {
+    return this.page.getByTestId('chat-working-message');
+  }
+
+  /**
+   * Returns the shimmering status line itself, within `scope` (default:
+   * whole page). Renders nothing (`toHaveCount(0)`, not merely hidden) once
+   * the component decides there is nothing to add — see the class-level note
+   * above for the two frames this can be embedded in.
+   */
+  getWorkingIndicator(scope?: Locator): Locator {
+    return (scope ?? this.page).getByTestId('chat-working-indicator');
+  }
+
+  /**
+   * Returns the reasoning disclosure row's trigger, within `scope`. Its
+   * label is ALWAYS "Thought" (never "Thinking" — that word belongs solely
+   * to the shimmer), streaming or not; liveness is conveyed only by the
+   * bouncing dots appearing/disappearing next to it (see `getBounceDots`).
+   */
+  getReasoningTrigger(scope?: Locator): Locator {
+    return (scope ?? this.page).getByRole('button', {
+      name: 'Thought',
+      exact: true,
+    });
+  }
+
+  /** Returns the generic tool-call disclosure row's trigger, within `scope`. */
+  getToolCallTrigger(scope?: Locator): Locator {
+    return (scope ?? this.page).getByRole('button', {
+      name: /^Used \d+ tools?$/i,
+    });
+  }
+
+  /**
+   * Returns the bouncing-dot indicators within `scope` — rendered by
+   * `ReasoningSection`/`ToolCallIndicator` only while `isActive` (i.e. only
+   * one of them should ever be live at once; see working-indicator.tsx's
+   * "exactly one element conveys progress" invariant), and additionally
+   * exposed by `WorkingIndicator`'s shimmer treatment being independent of
+   * this — the shimmer has no dots of its own, only the two disclosure rows
+   * do.
+   */
+  getBounceDots(scope?: Locator): Locator {
+    return (scope ?? this.page).locator('span.animate-bounce');
   }
 }
