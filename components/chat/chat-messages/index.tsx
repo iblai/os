@@ -6,6 +6,7 @@ import React from 'react';
 import { formatRelativeDate } from '@/lib/utils';
 import {
   Message as BaseMessage,
+  type ChatPhase,
   type ToolCallInfo,
 } from '@iblai/iblai-js/web-utils';
 import { AIMessageBubble } from '@/components/chat/ai-message-bubble';
@@ -40,9 +41,14 @@ type Props = {
   isStreaming?: boolean;
   streamingReasoningContent?: string;
   streamingToolCalls?: ToolCallInfo[];
-  isReasoning?: boolean;
   showReasoning?: boolean;
   currentStreamingMessageId?: string;
+  /**
+   * Phase of the in-flight turn, already derived by the chat container.
+   * `undefined` between turns. Forwarded to the streaming bubble only, so the
+   * working line renders once, inside the message it belongs to.
+   */
+  workingPhase?: ChatPhase;
   handleHighlightMessage: (messageId: number) => void;
   handleSubmit: (content: string) => void;
   onReply?: (message: Message) => void;
@@ -64,9 +70,9 @@ export function ChatMessages({
   isStreaming = false,
   streamingReasoningContent,
   streamingToolCalls,
-  isReasoning,
   showReasoning,
   currentStreamingMessageId,
+  workingPhase,
 }: Props) {
   const [previewImage, setPreviewImage] = React.useState<string | null>(null);
   const { speak, stop } = useSpeech({ mentorId, tenantKey });
@@ -166,17 +172,22 @@ export function ChatMessages({
                   ? streamingToolCalls
                   : message.toolCalls
               }
-              isReasoning={
-                message.id === currentStreamingMessageId ? isReasoning : false
-              }
               showReasoning={showReasoning}
               // Only "currently streaming" while a stream is actually active.
               // currentStreamingMessageId keeps pointing at the last assistant
               // message after the stream ends, so without the isStreaming gate
-              // the tool-call indicator's bounce dots never stop and the action
-              // toolbar stays hidden once the response completes.
+              // the action toolbar would stay hidden once the response
+              // completes.
               isCurrentlyStreaming={
                 isStreaming && message.id === currentStreamingMessageId
+              }
+              // Only the message actually being streamed carries the working
+              // line; every other bubble gets `undefined` so a turn can never
+              // shimmer in two places.
+              workingPhase={
+                isStreaming && message.id === currentStreamingMessageId
+                  ? workingPhase
+                  : undefined
               }
             />
           </div>
