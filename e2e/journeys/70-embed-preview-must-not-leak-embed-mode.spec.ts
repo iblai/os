@@ -49,8 +49,9 @@
  */
 
 import { test, expect } from '../fixtures/mentor-test';
-import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
+import { checkAdminStatus } from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
+import { navigateAndObserveTenantMetadata } from '../utils/tenant-metadata-observed';
 
 /** The sessionStorage key the embed context is mirrored into. */
 const EMBED_CONTEXT_KEY = 'ibl:embed-context';
@@ -59,10 +60,29 @@ const EMBED_CONTEXT_KEY = 'ibl:embed-context';
  * Asserts the FULL admin app chrome is present: the sections that embed mode
  * strips must all still be there. This is the assertion that failed before the
  * fix — every one of these disappeared once the tab was poisoned.
+ *
+ * The 4 section triggers (Agents/Workflows/Projects/Analytics) are the
+ * primary embed-leak signal: they are unconditional, full-app-only chrome
+ * that has nothing to do with tenant config, so they catch a leak in either
+ * direction regardless of the tenant under test.
+ *
+ * The Support link, by contrast, is gated by the tenant's OWN
+ * `show_help` metadata (`hooks/use-help-center.ts`: `showHelp =
+ * metadata.show_help !== false`) — a pristine tenant shows it, but a
+ * tenant that explicitly sets `show_help: false` never renders it, even in
+ * the correct, un-leaked full app. Hardcoding `true` here made this journey
+ * depend on ambient tenant configuration it has no business assuming (see
+ * #uat-9). `expectedShowHelp` is derived from the SAME tenant-metadata
+ * response the app itself fetches on load (`navigateAndObserveTenantMetadata`
+ * in `beforeEach`), so this asserts the CORRECT visibility for whatever the
+ * tenant under test is actually configured to do — still catching a leak
+ * for any tenant where the control is expected to be visible, without
+ * requiring one specific config to be seeded.
  */
 async function assertFullAppSidebar(
   sidebarPage: import('../page-objects/sidebar.page').SidebarPage,
   context: string,
+  expectedShowHelp: boolean,
 ): Promise<void> {
   await expect(sidebarPage.newChatButton).toBeVisible({ timeout: 15_000 });
 
@@ -75,10 +95,17 @@ async function assertFullAppSidebar(
   }
 
   const supportVisible = await sidebarPage.isSupportLinkVisible(10_000);
-  expect(
-    supportVisible,
-    `Support link must still be PRESENT in the full app (${context})`,
-  ).toBe(true);
+  if (expectedShowHelp) {
+    expect(
+      supportVisible,
+      `Support link must still be PRESENT in the full app (${context}) — tenant metadata shows show_help !== false`,
+    ).toBe(true);
+  } else {
+    expect(
+      supportVisible,
+      `Support link must remain ABSENT in the full app (${context}) — tenant metadata has show_help: false, so this is the CORRECT full-app state, not a leak`,
+    ).toBe(false);
+  }
 }
 
 /** Reads the mirrored embed context out of the HOST tab's sessionStorage. */
@@ -94,8 +121,14 @@ async function readEmbedContext(
 test.describe('Journey 70: Embed preview must not leak embed mode', () => {
   test.setTimeout(180_000);
 
+  // Set fresh in `beforeEach` for every test — see `assertFullAppSidebar`
+  // for why this is derived from the live tenant rather than hardcoded.
+  let expectedShowHelp = true;
+
   test.beforeEach(async ({ page, createMentorPage }) => {
-    await navigateToMentorApp(page);
+    const metadata = await navigateAndObserveTenantMetadata(page);
+    expectedShowHelp = metadata.show_help !== false;
+
     const isAdmin = await checkAdminStatus(page);
     if (!isAdmin) {
       test.skip(true, 'Requires admin access to create a mentor');
@@ -114,7 +147,11 @@ test.describe('Journey 70: Embed preview must not leak embed mode', () => {
     editMentorPage,
   }) => {
     // ── Step 1: baseline — the full app, and a clean store ───────────────────
-    await assertFullAppSidebar(sidebarPage, 'before opening the Embed tab');
+    await assertFullAppSidebar(
+      sidebarPage,
+      'before opening the Embed tab',
+      expectedShowHelp,
+    );
     expect(
       await readEmbedContext(page),
       'embed context must not be set before the Embed tab is opened',
@@ -153,7 +190,11 @@ test.describe('Journey 70: Embed preview must not leak embed mode', () => {
     await sidebarPage.newChatButton.click();
 
     // ── Step 5: the regression assertion ────────────────────────────────────
-    await assertFullAppSidebar(sidebarPage, 'after clicking New Chat');
+    await assertFullAppSidebar(
+      sidebarPage,
+      'after clicking New Chat',
+      expectedShowHelp,
+    );
 
     // The URL must still be a plain mentor URL — a poisoned tab also fed
     // `embedContextQuery()`, which appended `?embed=true` to the app's own
@@ -166,14 +207,18 @@ test.describe('Journey 70: Embed preview must not leak embed mode', () => {
     // ── Step 6: and it must not come back after a reload ────────────────────
     await page.reload();
     await waitForPageReady(page);
-    await assertFullAppSidebar(sidebarPage, 'after reload');
+    await assertFullAppSidebar(sidebarPage, 'after reload', expectedShowHelp);
   });
 
   test('a top-level tab ignores a stored embed context it did not get from its own URL', async ({
     page,
     sidebarPage,
   }) => {
-    await assertFullAppSidebar(sidebarPage, 'before planting the stored copy');
+    await assertFullAppSidebar(
+      sidebarPage,
+      'before planting the stored copy',
+      expectedShowHelp,
+    );
 
     // Plant exactly what the preview iframe used to write. This models any
     // same-origin iframe writing the key — the read-side guard must hold
@@ -196,6 +241,7 @@ test.describe('Journey 70: Embed preview must not leak embed mode', () => {
     await assertFullAppSidebar(
       sidebarPage,
       'after New Chat with a planted stored copy',
+      expectedShowHelp,
     );
 
     // A reload re-reads the store from scratch — the guard must hold there too.
@@ -204,6 +250,7 @@ test.describe('Journey 70: Embed preview must not leak embed mode', () => {
     await assertFullAppSidebar(
       sidebarPage,
       'after reload with a planted stored copy',
+      expectedShowHelp,
     );
   });
 });
