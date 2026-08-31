@@ -28,103 +28,94 @@ describe('ReasoningSection', () => {
   });
 
   it('returns null when reasoningContent is empty', () => {
-    const { container } = render(
-      <ReasoningSection reasoningContent="" isReasoning={false} />,
-    );
+    const { container } = render(<ReasoningSection reasoningContent="" />);
     expect(container.innerHTML).toBe('');
   });
 
   it('renders reasoning content via Markdown when open', () => {
-    render(
-      <ReasoningSection
-        reasoningContent="Let me think about this..."
-        isReasoning={false}
-      />,
-    );
+    render(<ReasoningSection reasoningContent="Let me think about this..." />);
     // Starts collapsed — click to open
     fireEvent.click(screen.getByText('Thought'));
     expect(screen.getByText('Let me think about this...')).toBeInTheDocument();
   });
 
   describe('label text', () => {
-    it('shows "Thinking" when actively reasoning', () => {
-      render(
-        <ReasoningSection
-          reasoningContent="working..."
-          isReasoning={true}
-          isCurrentlyStreaming={true}
-        />,
-      );
-      expect(screen.getByText('Thinking')).toBeInTheDocument();
+    it('always shows the static record label "Thought"', () => {
+      render(<ReasoningSection reasoningContent="I figured it out" />);
+      expect(screen.getByText('Thought')).toBeInTheDocument();
     });
 
-    it('shows "Thought" when reasoning is complete', () => {
-      render(
-        <ReasoningSection
-          reasoningContent="I figured it out"
-          isReasoning={false}
-        />,
-      );
+    // The shimmering WorkingIndicator at the foot of the bubble owns the word
+    // "Thinking" now; this trigger must never duplicate it.
+    it('never shows "Thinking"', () => {
+      render(<ReasoningSection reasoningContent="working..." />);
+      expect(screen.queryByText('Thinking')).not.toBeInTheDocument();
+    });
+
+    it('keeps the wording static even while the row is the live phase', () => {
+      // The dots carry the liveness, never the copy.
+      render(<ReasoningSection reasoningContent="working..." isActive />);
       expect(screen.getByText('Thought')).toBeInTheDocument();
+      expect(screen.queryByText('Thinking')).not.toBeInTheDocument();
     });
   });
 
-  describe('bounce animation dots', () => {
-    it('shows dots when reasoning and streaming', () => {
+  describe('liveness dots', () => {
+    it('renders no animation for a finished record', () => {
       const { container } = render(
-        <ReasoningSection
-          reasoningContent="working..."
-          isReasoning={true}
-          isCurrentlyStreaming={true}
-        />,
+        <ReasoningSection reasoningContent="working..." />,
       );
+      expect(
+        container.querySelector('.animate-bounce'),
+      ).not.toBeInTheDocument();
+      expect(container.querySelector('[class*="animate-"]')).toBeNull();
+    });
+
+    it('renders no animation when isActive is explicitly false', () => {
+      const { container } = render(
+        <ReasoningSection reasoningContent="test" isActive={false} />,
+      );
+      expect(container.querySelector('[class*="animate-"]')).toBeNull();
+    });
+
+    it('renders three staggered bouncing dots while active', () => {
+      const { container } = render(
+        <ReasoningSection reasoningContent="working..." isActive />,
+      );
+
       const dots = container.querySelectorAll('.animate-bounce');
       expect(dots).toHaveLength(3);
+      expect(dots[0].className).toContain('[animation-delay:0ms]');
+      expect(dots[1].className).toContain('[animation-delay:150ms]');
+      expect(dots[2].className).toContain('[animation-delay:300ms]');
     });
 
-    it('hides dots when not reasoning', () => {
+    it('freezes the dots for users who prefer reduced motion', () => {
       const { container } = render(
-        <ReasoningSection
-          reasoningContent="done"
-          isReasoning={false}
-          isCurrentlyStreaming={true}
-        />,
+        <ReasoningSection reasoningContent="working..." isActive />,
       );
-      expect(
-        container.querySelector('.animate-bounce'),
-      ).not.toBeInTheDocument();
+
+      container.querySelectorAll('.animate-bounce').forEach((dot) => {
+        expect(dot.className).toContain('motion-reduce:animate-none');
+      });
     });
 
-    it('hides dots when not streaming', () => {
+    it('hides the decorative dots from assistive tech', () => {
+      // The polite live region on the working line is what announces progress.
       const { container } = render(
-        <ReasoningSection
-          reasoningContent="done"
-          isReasoning={true}
-          isCurrentlyStreaming={false}
-        />,
+        <ReasoningSection reasoningContent="working..." isActive />,
       );
-      expect(
-        container.querySelector('.animate-bounce'),
-      ).not.toBeInTheDocument();
-    });
 
-    it('defaults isCurrentlyStreaming to false', () => {
-      const { container } = render(
-        <ReasoningSection reasoningContent="test" isReasoning={true} />,
-      );
       expect(
-        container.querySelector('.animate-bounce'),
-      ).not.toBeInTheDocument();
+        container.querySelector('[aria-hidden="true"] .animate-bounce'),
+      ).toBeInTheDocument();
     });
   });
 
   describe('thought-process delimiter splitting', () => {
     it('renders two separate step blocks for content with **** and no literal **** in DOM', () => {
       const { container } = render(
-        <ReasoningSection
-          reasoningContent="Preparing first lesson greeting****Planning first lesson content"
-          isReasoning={false}
-        />,
+        <ReasoningSection reasoningContent="Preparing first lesson greeting****Planning first lesson content" />,
       );
       fireEvent.click(screen.getByText('Thought'));
 
@@ -141,7 +132,6 @@ describe('ReasoningSection', () => {
           reasoningContent={
             "**Assessing Portugal's World Cup match timing\n\nRequesting tournament clarification\n\nPreparing clarifying question with LaTeX**"
           }
-          isReasoning={false}
         />,
       );
       fireEvent.click(screen.getByText('Thought'));
@@ -162,10 +152,7 @@ describe('ReasoningSection', () => {
 
     it('filters mixed asterisk and blank-line delimiters into clean steps', () => {
       const { container } = render(
-        <ReasoningSection
-          reasoningContent={'a****\n****b**\n\n  **c'}
-          isReasoning={false}
-        />,
+        <ReasoningSection reasoningContent={'a****\n****b**\n\n  **c'} />,
       );
       fireEvent.click(screen.getByText('Thought'));
 
@@ -179,10 +166,7 @@ describe('ReasoningSection', () => {
 
     it('renders a bold-wrapped single step with asterisks stripped', () => {
       const { container } = render(
-        <ReasoningSection
-          reasoningContent="**Just thinking**"
-          isReasoning={false}
-        />,
+        <ReasoningSection reasoningContent="**Just thinking**" />,
       );
       fireEvent.click(screen.getByText('Thought'));
 
@@ -194,7 +178,7 @@ describe('ReasoningSection', () => {
 
     it('falls back to raw content when nothing parseable remains', () => {
       const { container } = render(
-        <ReasoningSection reasoningContent="****" isReasoning={false} />,
+        <ReasoningSection reasoningContent="****" />,
       );
       fireEvent.click(screen.getByText('Thought'));
 
@@ -205,10 +189,7 @@ describe('ReasoningSection', () => {
 
     it('renders content without **** unchanged as a single block', () => {
       const { container } = render(
-        <ReasoningSection
-          reasoningContent="Just a normal reasoning blob"
-          isReasoning={false}
-        />,
+        <ReasoningSection reasoningContent="Just a normal reasoning blob" />,
       );
       fireEvent.click(screen.getByText('Thought'));
 
@@ -220,12 +201,7 @@ describe('ReasoningSection', () => {
 
   describe('toggle behavior', () => {
     it('toggles open/closed on click', () => {
-      render(
-        <ReasoningSection
-          reasoningContent="Some reasoning"
-          isReasoning={false}
-        />,
-      );
+      render(<ReasoningSection reasoningContent="Some reasoning" />);
       const trigger = screen.getByText('Thought');
 
       // Click to open
@@ -238,21 +214,14 @@ describe('ReasoningSection', () => {
   });
 
   describe('collapsed by default', () => {
-    it('starts collapsed even during streaming', () => {
-      render(
-        <ReasoningSection
-          reasoningContent="thinking..."
-          isReasoning={true}
-          isCurrentlyStreaming={true}
-        />,
-      );
-      expect(screen.getByText('Thinking')).toBeInTheDocument();
+    it('starts collapsed, with the reasoning body hidden', () => {
+      render(<ReasoningSection reasoningContent="thinking..." />);
+      expect(screen.getByText('Thought')).toBeInTheDocument();
+      expect(screen.queryByTestId('markdown')).not.toBeInTheDocument();
     });
 
     it('can be manually opened by clicking', () => {
-      render(
-        <ReasoningSection reasoningContent="reasoning" isReasoning={false} />,
-      );
+      render(<ReasoningSection reasoningContent="reasoning" />);
 
       // Manually reopen
       fireEvent.click(screen.getByText('Thought'));
