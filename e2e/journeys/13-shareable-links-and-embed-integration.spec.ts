@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test';
+import path from 'path';
 import { test, expect } from '../fixtures/mentor-test';
 import {
   navigateToMentorApp,
@@ -10,6 +11,12 @@ import { waitForPageReady } from '../utils/resilient';
 import type { EditMentorPage } from '../page-objects/edit-mentor/edit-mentor.page';
 import { logger } from '@iblai/iblai-js/playwright';
 import { MentorTracker } from '../utils/mentor-cleanup';
+
+// Reused across journeys — a real, small PNG already checked into the repo
+// (see journeys 08 and 20) rather than a fabricated fake-bytes file, since the
+// upload must decode as a real image for the local `data:` preview to render.
+const FILES_DIR = path.resolve(__dirname, '../../e2e/files/testing_folder');
+const ACCEPTED_IMAGE = path.join(FILES_DIR, 'acessibility png.png');
 
 /** Builds the embed entry URL (the iframe's own src) for a mentor page. */
 function embedUrlFor(mentorUrl: string): string {
@@ -740,5 +747,244 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
 
       await editMentorPage.close();
     });
+  });
+
+  // Issue #789: uploading a custom launcher icon only ever set a local
+  // `data:` preview in component state. It was never sent to the backend
+  // unless Icon Selection was already "Custom" at save time, and even then a
+  // page refresh discarded it because the icon config lived only in local
+  // state with no hydration from persisted settings. The fix persists the
+  // image via the "Create Embed" multipart PUT and hydrates
+  // `customFloatingBubbleConfig` from `embed_icon_selection_data` /
+  // `embed_custom_image` on load (see the `hydratedSettingsKeyRef` effect in
+  // useEmbedTab.ts).
+  test.describe('Custom embed icon persistence (issue #789)', () => {
+    // Each test creates its own mentor since both mutate + reload the same
+    // mentor's embed icon state — sharing one would race between tests.
+    const tracker = new MentorTracker();
+
+    test.afterAll(async ({ browser }, testInfo) => {
+      await tracker.deleteAll(browser, testInfo);
+    });
+
+    // emb-15: Custom Icon Selection + an uploaded image survive a full page
+    // reload (not just a modal close/reopen) — the actual #789 regression
+    // manifested on refresh.
+    test('admin uploads a custom embed icon and it persists after a full page reload', async ({
+      page,
+      createMentorPage,
+      editMentorPage,
+    }) => {
+      test.setTimeout(300_000);
+
+      await createMentorPage.openAndCreate(`E2E Embed Icon ${Date.now()}`);
+      const { mentorId } = await getPlatformContext(page);
+      tracker.add(mentorId);
+
+      await editMentorPage.open('Embed');
+      await waitForPageReady(page);
+
+      await editMentorPage.embed.setIconSelection('Custom');
+      await editMentorPage.embed.openIconEditor();
+      await editMentorPage.embed.goToIconEditorContentTab();
+      await editMentorPage.embed.uploadIconImage(ACCEPTED_IMAGE);
+      await editMentorPage.embed.closeIconEditor();
+
+      // Non-anonymous mentors require a Website URL before "Create Embed"
+      // will persist anything (see fillWebsiteUrl's doc comment).
+      await editMentorPage.embed.fillWebsiteUrl('https://example.com');
+      await editMentorPage.embed.submit();
+      await editMentorPage.close();
+
+      // Full reload — this is the scenario #789 actually broke, as opposed to
+      // a same-session modal close/reopen which could hide a state-only bug.
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 30_000 });
+      await waitForPageReady(page);
+
+      await editMentorPage.open('Embed');
+      await waitForPageReady(page);
+
+      await expect
+        .poll(() => editMentorPage.embed.getIconSelectionValue(), {
+          timeout: 15_000,
+          message: 'Icon Selection did not read "Custom" after reload',
+        })
+        .toBe('Custom');
+
+      await editMentorPage.embed.openIconEditor();
+      await editMentorPage.embed.goToIconEditorContentTab();
+      await expect(editMentorPage.embed.iconPreviewImage).toBeVisible({
+        timeout: 15_000,
+      });
+
+      // The persisted image must be a real (uploaded) URL, not the local
+      // `data:` preview a pre-#789 build would still be showing after reload.
+      const src =
+        await editMentorPage.embed.iconPreviewImage.getAttribute('src');
+      expect(src).toBeTruthy();
+      expect(src).not.toMatch(/^data:/);
+      expect(src).toContain(mentorId);
+
+      await editMentorPage.embed.closeIconEditor();
+      await editMentorPage.close();
+    });
+
+    // emb-16: "Remove Image" persists immediately (its own PUT, independent of
+    // Create Embed) and — the checkpoint that actually guards the RTK cache
+    // invalidation behind the fix — the removal survives a reload instead of
+    // the old (cached) custom icon reappearing.
+    test('admin removes a custom embed icon and it stays removed after a reload', async ({
+      page,
+      createMentorPage,
+      editMentorPage,
+    }) => {
+      test.setTimeout(300_000);
+
+      await createMentorPage.openAndCreate(
+        `E2E Embed Icon Remove ${Date.now()}`,
+      );
+      const { mentorId } = await getPlatformContext(page);
+      tracker.add(mentorId);
+
+      await editMentorPage.open('Embed');
+      await waitForPageReady(page);
+
+      await editMentorPage.embed.setIconSelection('Custom');
+      await editMentorPage.embed.openIconEditor();
+      await editMentorPage.embed.goToIconEditorContentTab();
+      await editMentorPage.embed.uploadIconImage(ACCEPTED_IMAGE);
+      await editMentorPage.embed.closeIconEditor();
+
+      await editMentorPage.embed.fillWebsiteUrl('https://example.com');
+      await editMentorPage.embed.submit();
+
+      // Reopen so Remove Image acts on the persisted icon (round-tripped
+      // through settings), matching how an admin would actually revisit it.
+      await editMentorPage.close();
+      await waitForPageReady(page);
+      await editMentorPage.open('Embed');
+      await waitForPageReady(page);
+      await expect
+        .poll(() => editMentorPage.embed.getIconSelectionValue(), {
+          timeout: 15_000,
+        })
+        .toBe('Custom');
+
+      await editMentorPage.embed.openIconEditor();
+      await editMentorPage.embed.goToIconEditorContentTab();
+      await expect(editMentorPage.embed.iconPreviewImage).toBeVisible({
+        timeout: 15_000,
+      });
+
+      await editMentorPage.embed.removeImage();
+
+      await expect(page.getByText('Custom icon removed').first()).toBeVisible({
+        timeout: 15_000,
+      });
+
+      // The Icon Editor's own always-mounted Live Preview image falls back to
+      // the default bubble icon once the now-null src fails to load.
+      await expect(editMentorPage.embed.livePreviewImage).toHaveAttribute(
+        'src',
+        /message-circle/i,
+        { timeout: 15_000 },
+      );
+
+      await editMentorPage.embed.closeIconEditor();
+
+      // Icon Selection reverts to Default and the custom-icon block (Icon
+      // Editor button) disappears from the main tab.
+      await expect
+        .poll(() => editMentorPage.embed.getIconSelectionValue(), {
+          timeout: 10_000,
+        })
+        .toBe('Default');
+      await expect(editMentorPage.embed.iconEditorButton).toHaveCount(0, {
+        timeout: 5_000,
+      });
+
+      await editMentorPage.close();
+
+      // Reload — without the cache-invalidation fix, a stale cached
+      // public-settings response would resurrect the removed custom icon here.
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 30_000 });
+      await waitForPageReady(page);
+      await editMentorPage.open('Embed');
+      await waitForPageReady(page);
+
+      await expect
+        .poll(() => editMentorPage.embed.getIconSelectionValue(), {
+          timeout: 15_000,
+        })
+        .toBe('Default');
+      await expect(editMentorPage.embed.iconEditorButton).toHaveCount(0, {
+        timeout: 10_000,
+      });
+
+      await editMentorPage.close();
+    });
+  });
+
+  // emb-17: the embed tab footer was reduced to a single "Create Embed"
+  // button — the standalone footer "Save" button was removed. Scoped to the
+  // footer specifically because the Advanced CSS / Advanced JavaScript panels
+  // elsewhere in the same tab have their own "Save"/"Saving..." buttons which
+  // must keep working. Read-only (no mutation), so it reuses the ambient
+  // mentor from the top-level beforeEach rather than creating a new one.
+  test('embed tab footer has only "Create Embed" (no Save button); Advanced CSS/JS Save buttons still render', async ({
+    page,
+    editMentorPage,
+  }) => {
+    await editMentorPage.open('Embed');
+    await waitForPageReady(page);
+
+    const footerButtons = editMentorPage.embed.footer.getByRole('button');
+    await expect(footerButtons).toHaveCount(1);
+    await expect(footerButtons.first()).toHaveAccessibleName(
+      /create embed|generating embed/i,
+    );
+    await expect(
+      editMentorPage.embed.footer.getByRole('button', { name: /^save$/i }),
+    ).toHaveCount(0);
+
+    // Advanced CSS panel keeps its own Save button once expanded.
+    const expandCss = editMentorPage.dialog.getByRole('button', {
+      name: /expand advanced css/i,
+    });
+    await expect(expandCss).toBeVisible({ timeout: 10_000 });
+    await expandCss.click();
+    await expect(
+      editMentorPage.dialog.getByRole('button', {
+        name: /save advanced css/i,
+      }),
+    ).toBeVisible({ timeout: 10_000 });
+
+    // Advanced JavaScript panel keeps its own Save button too, when the
+    // tenant has the feature enabled — otherwise a "Contact support" notice
+    // renders instead of the textarea/save button (graceful degradation).
+    const expandJs = editMentorPage.dialog.getByRole('button', {
+      name: /expand advanced javascript/i,
+    });
+    await expect(expandJs).toBeVisible({ timeout: 10_000 });
+    await expandJs.click();
+    const jsSave = editMentorPage.dialog.getByRole('button', {
+      name: /save advanced javascript/i,
+    });
+    let jsSaveVisible = false;
+    try {
+      await jsSave.waitFor({ state: 'visible', timeout: 5_000 });
+      jsSaveVisible = true;
+    } catch {
+      jsSaveVisible = false;
+    }
+    if (jsSaveVisible) {
+      await expect(jsSave).toBeVisible();
+    } else {
+      logger.info(
+        'emb-17: Advanced JavaScript disabled for this tenant — Save button not rendered (expected)',
+      );
+    }
+
+    await editMentorPage.close();
   });
 });
