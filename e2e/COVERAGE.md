@@ -1018,7 +1018,7 @@ Covers the "Enable prompt caching" toggle added to the Capabilities sub-tab of t
 - [x] Tool call pill is expandable and shows query detail
 - [x] Web Search button is not visible when tool is disabled on mentor
 - [x] Tool call indicator does not appear when Web Search is enabled but not activated in session
-- [x] Reasoning section shows "Thinking" with bounce dots during streaming and auto-collapses to "Thought" after
+- [x] Reasoning section renders for a reasoning model and auto-collapses to Thought after streaming
 - [x] Reasoning section does not appear for non-reasoning model
 - [x] Tool call indicator and reasoning section both render in correct order in same message
 - [x] Tool call indicator and reasoning section are gated by the Enable verbose reasoning setting — hidden when the toggle is off, shown when on

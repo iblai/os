@@ -2371,7 +2371,7 @@
         },
         {
           "id": "tcr-05",
-          "description": "Reasoning section shows Thinking with bounce dots during streaming and auto-collapses to Thought after",
+          "description": "Reasoning section renders for a reasoning model and auto-collapses to Thought after streaming",
           "status": "covered"
         },
         {
