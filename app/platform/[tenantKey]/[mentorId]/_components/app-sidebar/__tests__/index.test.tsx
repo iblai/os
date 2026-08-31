@@ -499,6 +499,8 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
   selectNumberOfActiveChatMessages: () => mockNumberOfActiveChatMessages,
   selectActiveChatMessages: () => mockActiveChatMessages,
   useTenantMetadata: () => ({ metadata: mockTenantMetadata }),
+  addProtocolToUrl: (url: string) =>
+    /^https?:\/\//.test(url) ? url : `https://${url}`,
 }));
 
 vi.mock('@iblai/iblai-js/web-containers', () => ({
@@ -621,6 +623,7 @@ vi.mock('@/lib/config', () => ({
     mainTenantKey: () => 'main',
     helpCenterUrl: () => 'https://help.example.com',
     supportEmail: () => 'support@example.com',
+    documentationUrl: () => 'https://docs.example.com',
     authUrl: () => 'https://auth.example.com',
     platformBaseDomain: () => 'example.com',
     hideAnalytics: () => 'false',
@@ -887,7 +890,7 @@ describe('AppSidebar — rendering', () => {
     expect(screen.getByTestId('app-logo')).toBeInTheDocument();
     // Each collapsible section trigger is a button whose accessible
     // name matches the section title. Agents/Workflows/Recents/Projects/
-    // Analytics + Documentation should all be present for an admin.
+    // Analytics + Support should all be present for an admin.
     expect(
       screen.getAllByRole('button', { name: 'Agents' }).length,
     ).toBeGreaterThan(0);
@@ -1951,16 +1954,61 @@ describe('AppSidebar — Footer actions', () => {
   });
 });
 
-describe('AppSidebar — Documentation / Support menu', () => {
-  it('exposes a Support link to the docs in expanded mode', () => {
-    // The documentation entry is rendered as a plain anchor (external
-    // link to ibl.ai/docs) — its accessible name is "Support".
+describe('AppSidebar — Support footer link', () => {
+  function findLink(label: string) {
+    return screen
+      .queryAllByRole('link')
+      .find((el) => el.textContent?.trim() === label);
+  }
+
+  it('renders exactly one footer link in expanded mode', () => {
     renderSidebar();
-    const supportLink = screen
-      .getAllByRole('link')
-      .find((el) => el.textContent?.includes('Support'));
-    expect(supportLink).toBeDefined();
-    expect(supportLink?.getAttribute('href')).toMatch(/ibl\.ai\/docs/);
+    const footerLinks = screen
+      .queryAllByRole('link')
+      .filter((el) =>
+        ['Documentation', 'Support', 'Help Center', 'Call / Text'].includes(
+          el.textContent?.trim() ?? '',
+        ),
+      );
+    expect(footerLinks).toHaveLength(1);
+    expect(footerLinks[0].textContent?.trim()).toBe('Support');
+  });
+
+  it('falls back to the configured documentation URL', () => {
+    renderSidebar();
+    expect(findLink('Support')?.getAttribute('href')).toBe(
+      'https://docs.example.com',
+    );
+  });
+
+  it('honors the tenant documentation_url override', () => {
+    mockTenantMetadata = { documentation_url: 'docs.acme.edu' };
+    renderSidebar();
+    expect(findLink('Support')?.getAttribute('href')).toBe(
+      'https://docs.acme.edu',
+    );
+  });
+
+  it('does not resolve its href from help_center_url', () => {
+    mockTenantMetadata = { help_center_url: 'help.acme.edu' };
+    renderSidebar();
+    expect(findLink('Support')?.getAttribute('href')).toBe(
+      'https://docs.example.com',
+    );
+  });
+
+  it('is hidden when the tenant sets show_help to false', () => {
+    mockTenantMetadata = { show_help: false };
+    renderSidebar();
+    expect(findLink('Support')).toBeUndefined();
+  });
+
+  it('adds no other footer links alongside Support', () => {
+    renderSidebar();
+    expect(findLink('Support')).toBeDefined();
+    expect(findLink('Documentation')).toBeUndefined();
+    expect(findLink('Help Center')).toBeUndefined();
+    expect(findLink('Call / Text')).toBeUndefined();
   });
 });
 
@@ -2253,14 +2301,42 @@ describe('AppSidebar — Rail-collapsed mode', () => {
     ).toBeGreaterThan(0);
   });
 
-  it('renders the Support documentation icon link in rail mode', () => {
+  function findRailLink(label: string) {
+    return screen
+      .queryAllByRole('link')
+      .find((el) => el.getAttribute('aria-label') === label);
+  }
+
+  it('renders the Support icon link in rail mode', () => {
     renderSidebar();
-    // The documentation entry becomes an icon-only link inside a
-    // SidebarCollapsedLabelFlyout; the link still has aria-label "Support".
-    const supportLink = screen
-      .getAllByRole('link')
-      .find((el) => el.getAttribute('aria-label') === 'Support');
-    expect(supportLink).toBeDefined();
+    const documentationLink = findRailLink('Support');
+    expect(documentationLink).toBeDefined();
+    expect(documentationLink?.getAttribute('href')).toBe(
+      'https://docs.example.com',
+    );
+    expect(documentationLink?.getAttribute('target')).toBe('_blank');
+  });
+
+  it('honors the tenant documentation_url override in rail mode', () => {
+    mockTenantMetadata = { documentation_url: 'docs.acme.edu' };
+    renderSidebar();
+    expect(findRailLink('Support')?.getAttribute('href')).toBe(
+      'https://docs.acme.edu',
+    );
+  });
+
+  it('hides the rail Documentation link when show_help is false', () => {
+    mockTenantMetadata = { show_help: false };
+    renderSidebar();
+    expect(findRailLink('Support')).toBeUndefined();
+  });
+
+  it('adds no other rail footer links', () => {
+    renderSidebar();
+    expect(findRailLink('Support')).toBeDefined();
+    expect(findRailLink('Documentation')).toBeUndefined();
+    expect(findRailLink('Help Center')).toBeUndefined();
+    expect(findRailLink('Call / Text')).toBeUndefined();
   });
 
   it('clicking a rail-mode section icon expands the sidebar via expandFromRail', () => {
@@ -3230,13 +3306,11 @@ describe('AppSidebar — Chat row without href is inert on click', () => {
 
 describe('AppSidebar — Sub-item edge branches', () => {
   it('opens external URL items in a new tab (window.open)', () => {
-    // The Support documentation entry uses an external href; it renders
-    // as an `<a target="_blank">`. We verify the rel/target attributes.
     renderSidebar();
     const links = screen.getAllByRole('link');
-    const support = links.find((el) => el.textContent?.includes('Support'));
-    expect(support?.getAttribute('target')).toBe('_blank');
-    expect(support?.getAttribute('rel')).toBe('noopener noreferrer');
+    const supportLink = links.find((el) => el.textContent?.includes('Support'));
+    expect(supportLink?.getAttribute('target')).toBe('_blank');
+    expect(supportLink?.getAttribute('rel')).toBe('noopener noreferrer');
   });
 });
 
