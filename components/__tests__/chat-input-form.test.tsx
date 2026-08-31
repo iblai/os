@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import {
   render,
   screen,
@@ -2665,6 +2665,63 @@ describe('ChatInputForm', () => {
         expect.anything(),
         expect.objectContaining({ skip: true }),
       );
+    });
+
+    describe('view_skill_assignments RBAC gate', () => {
+      // The endpoint 403s for users without the grant, so the fetch itself
+      // must stay off — not merely degrade — until the mentor's permission
+      // check has granted `view_skill_assignments`.
+      const arrangeMentor = () => {
+        mockMentorSettings = {
+          data: {
+            mentorVisibility: 'PRIVATE',
+            disclaimer: null,
+            mentorUniqueId: 'mentor-uuid-1',
+            mentorDbId: 42,
+          },
+        } as any;
+      };
+
+      it('fetches once the permission check grants view_skill_assignments', () => {
+        arrangeMentor();
+        mockCheckRbacPermission.mockReturnValue(true);
+        renderWithRedux(<ChatInputForm {...defaultProps} />, {
+          rbac: { rbacPermissions: { '/mentors/42/': {} } },
+        });
+        expect(mockCheckRbacPermission).toHaveBeenCalledWith(
+          { '/mentors/42/': {} },
+          '/mentors/42/#view_skill_assignments',
+        );
+        expect(mockUseGetMentorSkillAssignmentsQuery).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({ skip: false }),
+        );
+      });
+
+      it('never fetches when the permission check denies view_skill_assignments', () => {
+        arrangeMentor();
+        (mockCheckRbacPermission as unknown as Mock).mockImplementation(
+          (_perms: unknown, resource: string) =>
+            !resource.includes('#view_skill_assignments'),
+        );
+        renderWithRedux(<ChatInputForm {...defaultProps} />, {
+          rbac: { rbacPermissions: { '/mentors/42/': {} } },
+        });
+        expect(mockUseGetMentorSkillAssignmentsQuery).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({ skip: true }),
+        );
+      });
+
+      it('never fetches before the mentor permission data has loaded', () => {
+        arrangeMentor();
+        mockCheckRbacPermission.mockReturnValue(true); // would allow if consulted
+        renderWithRedux(<ChatInputForm {...defaultProps} />); // empty rbac store
+        expect(mockUseGetMentorSkillAssignmentsQuery).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({ skip: true }),
+        );
+      });
     });
 
     it('never queries the platform-wide agent-skills catalog', () => {
