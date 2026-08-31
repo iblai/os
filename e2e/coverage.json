@@ -4007,7 +4007,7 @@
       "checkpoints": [
         {
           "id": "ags-01",
-          "description": "Admin sees the Skills tab on a freshly-created (Base Agent) mentor, with the updated tab description (\"Reusable playbooks this Base Agent can discover and follow.\") and skills-info-box copy describing the / picker (feat/2215); Skills sits right after Prompts in the Configurations category (ordering moved here from journey 44)",
+          "description": "Admin sees the Skills tab on a freshly-created (Base Agent) mentor, with the updated tab description (\"Reusable playbooks this Base Agent can discover and follow.\") and skills-info-box copy describing the / picker (feat/2215); Skills sits right after Prompts in the Configurations category (ordering moved here from journey 44) — full RBAC grant set forced via SkillsTab.grantAllSkillAssignmentPerms so the both-sub-tabs assert is rollout-independent",
           "status": "covered"
         },
         {
@@ -4033,6 +4033,11 @@
         {
           "id": "ags-06",
           "description": "NON-ADMIN: the Skills tab is absent from the Edit Mentor modal (the segment is ADMIN-only via userTypes in MENTOR_SEGMENTS) — moved from journey 44",
+          "status": "covered"
+        },
+        {
+          "id": "ags-07",
+          "description": "View-only RBAC (view_skill_assignments granted, create/write/delete denied via the permission-check mock SkillsTab.mockSkillAssignmentGrants): the Agent Skills sub-tab renders with its empty state while the Available Skills sub-tab and New Skill button are absent from the DOM",
           "status": "covered"
         },
         {
