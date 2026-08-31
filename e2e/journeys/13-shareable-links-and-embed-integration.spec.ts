@@ -402,7 +402,8 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
     );
     expect(projectsVisible).toBe(false);
 
-    // Support / docs link (ibl.ai/docs) — entire footer hidden in embed mode
+    // Support link (href resolves to the documentation URL, default
+    // https://ibl.ai/docs) — entire footer hidden in embed mode
     const supportVisible = await sidebarPage.isSupportLinkVisible(3_000);
     expect(supportVisible).toBe(false);
 
