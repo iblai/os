@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 
 import { useAppDispatch } from './hooks';
+import { getAuthItem, setAuthItem } from '@/lib/auth-storage';
 import {
   darkModeUpdated,
   // iframeCloseButtonEnabled,
@@ -46,15 +47,15 @@ export function useIframeHandlers() {
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     }
     Object.entries(tokenData).forEach(([key, value]) => {
-      localStorage.setItem(key, value as string);
+      setAuthItem(key, value as string);
     });
 
-    if (!localStorage.getItem('current_tenant')) {
-      const tenants = JSON.parse(localStorage.getItem('tenants') || '[]');
-      const tenant = localStorage.getItem('tenant');
+    if (!getAuthItem('current_tenant')) {
+      const tenants = JSON.parse(getAuthItem('tenants') || '[]');
+      const tenant = getAuthItem('tenant');
       const selectedTenant = tenants.find((t: any) => t.key === tenant);
-      localStorage.setItem('current_tenant', JSON.stringify(selectedTenant));
-      localStorage.setItem('tenants', JSON.stringify(tenants));
+      setAuthItem('current_tenant', JSON.stringify(selectedTenant));
+      setAuthItem('tenants', JSON.stringify(tenants));
     }
     window.location.reload();
   };

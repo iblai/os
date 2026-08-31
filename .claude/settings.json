@@ -1,4 +1,16 @@
 {
+  "permissions": {
+    "allow": [
+      "Read(//Users/macbookpro/ibl-projects/spa-app/frontend/**)",
+      "Bash(pnpm prettier *)",
+      "Bash(PORT=3000 pnpm start)",
+      "Bash(xargs -r kill)",
+      "Bash(xargs -r kill -9)",
+      "Bash(node -p \"require\\('./packages/web-containers/package.json'\\).dependencies['@iblai/web-utils'] || 'not a dep'\")",
+      "Bash(/usr/local/bin/gh pr create --repo iblai/iblai-web-frontend --base main --head feat/web-utils/per-tab-auth --title 'feat\\(auth\\): per-tab auth sessions \\(sessionStorage source of truth, flag-gated\\)' --body ' *)",
+      "Bash(node -p \"require\\('./package.json'\\).dependencies['@iblai/iblai-js']\")"
+    ]
+  },
   "hooks": {
     "PostToolUse": [
       {
@@ -12,15 +24,6 @@
           }
         ]
       }
-    ]
-  },
-  "permissions": {
-    "allow": [
-      "Read(//Users/macbookpro/ibl-projects/spa-app/frontend/**)",
-      "Bash(pnpm prettier *)",
-      "Bash(PORT=3000 pnpm start)",
-      "Bash(xargs -r kill)",
-      "Bash(xargs -r kill -9)"
     ]
   }
 }

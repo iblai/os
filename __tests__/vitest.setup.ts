@@ -72,6 +72,24 @@ Object.defineProperty(window, 'localStorage', {
   writable: true,
 });
 
+// Per-tab authStorage passthrough for `vi.mock('@iblai/iblai-js/web-utils')`
+// factories. mentorai now imports getAuthItem/setAuthItem/removeAuthItem/
+// clearPerTabSession/isPerTabAuthEnabled from the SDK; the many hand-listed
+// web-utils mocks would otherwise throw "No <fn> export is defined on the mock"
+// wherever that code runs. This object reproduces the flag-OFF behavior
+// (plain localStorage passthrough). Factories spread it first, so any explicit
+// per-test override still wins. Exposed as a runtime global because a hoisted
+// vi.mock factory cannot reference a module-level import.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(globalThis as any).__iblAuthStorageMock = {
+  getAuthItem: (key: string) => window.localStorage.getItem(key),
+  setAuthItem: (key: string, value: string) =>
+    window.localStorage.setItem(key, value),
+  removeAuthItem: (key: string) => window.localStorage.removeItem(key),
+  clearPerTabSession: () => {},
+  isPerTabAuthEnabled: () => false,
+};
+
 // Mock pointer capture methods required by Radix UI in jsdom
 if (typeof Element.prototype.hasPointerCapture === 'undefined') {
   Element.prototype.hasPointerCapture = () => false;
