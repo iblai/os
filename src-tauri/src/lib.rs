@@ -2003,6 +2003,9 @@ const URL_MONITOR_SCRIPT_ONLINE: &str = r#"
 
 /// JavaScript for offline mode - intercepts fetch calls and routes API calls through offline server
 /// CRITICAL: This script must restore localStorage context BEFORE the app initializes
+///
+/// `__OFFLINE_SERVER_URL__` is substituted by [`url_monitor_script_offline`] —
+/// the offline server's port is allocated at startup, so it cannot be baked in.
 const URL_MONITOR_SCRIPT_OFFLINE: &str = r#"
 (function() {
     // Only run once per page
@@ -2013,7 +2016,7 @@ const URL_MONITOR_SCRIPT_OFFLINE: &str = r#"
     window.__TAURI_OFFLINE_MODE__ = true;
     localStorage.setItem('tauri_offline_mode', 'true');
 
-    var OFFLINE_SERVER = 'http://127.0.0.1:3456';
+    var OFFLINE_SERVER = '__OFFLINE_SERVER_URL__';
 
     // Override __ENV__ to route API calls through our offline server
     window.__ENV__ = window.__ENV__ || {};
@@ -2159,6 +2162,13 @@ const URL_MONITOR_SCRIPT_OFFLINE: &str = r#"
     console.log('[OfflineMode] Initialization complete');
 })();
 "#;
+
+/// [`URL_MONITOR_SCRIPT_OFFLINE`] with the offline server's real URL patched in.
+/// Twin of `main.rs::url_monitor_script_offline`; both entry points must resolve
+/// the port at window-creation time rather than bake one in.
+fn url_monitor_script_offline() -> String {
+    URL_MONITOR_SCRIPT_OFFLINE.replace("__OFFLINE_SERVER_URL__", &offline_server::get_server_url())
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -2347,9 +2357,14 @@ pub fn run() {
                             .filter(|r| !r.is_empty())
                     });
 
+                    // The offline server's port is allocated at startup (3457
+                    // when free, any free port otherwise) — read it rather than
+                    // hardcoding, which is how this twin drifted onto a 3456
+                    // the server never bound.
+                    let base = offline_server::get_server_url();
                     let offline_url = match route {
-                        Some(r) => format!("http://127.0.0.1:3456{}", r),
-                        None => "http://127.0.0.1:3456".to_string(),
+                        Some(r) => format!("{}{}", base, r),
+                        None => base,
                     };
                     println!("[MentorAI] Using offline URL: {}", offline_url);
                     tauri::WebviewUrl::External(offline_url.parse().unwrap())
@@ -2359,9 +2374,9 @@ pub fn run() {
 
                 // Create main window with appropriate URL monitoring script
                 let init_script = if is_online {
-                    URL_MONITOR_SCRIPT_ONLINE
+                    URL_MONITOR_SCRIPT_ONLINE.to_string()
                 } else {
-                    URL_MONITOR_SCRIPT_OFFLINE
+                    url_monitor_script_offline()
                 };
 
                 let _window = tauri::WebviewWindowBuilder::new(

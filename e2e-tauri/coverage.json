@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "lastUpdated": "2026-08-27",
+  "lastUpdated": "2026-08-29",
   "summary": {
-    "totalCheckpoints": 36,
+    "totalCheckpoints": 37,
     "coveredCheckpoints": 20,
-    "pendingCheckpoints": 16,
+    "pendingCheckpoints": 17,
     "deprecatedCheckpoints": 0,
     "notReproducibleCheckpoints": 0,
     "percent": 100,
@@ -55,7 +55,9 @@
         "components/modals/llm-provider-modal/local-model-row.tsx",
         "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
         "src-tauri/src/model_manager.rs",
-        "src-tauri/src/lib.rs"
+        "src-tauri/src/lib.rs",
+        "src-tauri/src/mcp_bridge_manager.rs",
+        "src-tauri/src/offline_server.rs"
       ],
       "checkpoints": [
         {
@@ -86,6 +88,11 @@
         {
           "id": "odm-06",
           "description": "The nav-bar on-device badge reflects the selected local model",
+          "status": "pending"
+        },
+        {
+          "id": "odm-07",
+          "description": "Busy default ports at launch degrade to allocated ones: the MCP bridge and the offline server each bind a free port (preferring 8000/3457) and every consumer follows — local chat still streams, the offline cache still serves",
           "status": "pending"
         }
       ]

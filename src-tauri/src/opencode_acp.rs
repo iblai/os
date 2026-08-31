@@ -2009,7 +2009,8 @@ fn apply_opencode_model(
 /// if it isn't up yet.
 ///
 /// NOTE: this deliberately targets PLAIN Ollama on :11434, NOT the `ollama-mcp-bridge`
-/// on :8000 that `model_manager::chat_base_url` calls "the one and only chat port".
+/// (whose port is allocated at start) that `model_manager::chat_base_url` calls
+/// "the one and only chat port".
 /// That rule governs the app's own chat path, which needs the bridge to inject MCP
 /// tools. Code must not use it: the bridge speaks the *Ollama* API (`/api/chat`) while
 /// opencode needs *OpenAI*-compatible `/v1/chat/completions`, and opencode ships its own

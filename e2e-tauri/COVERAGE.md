@@ -1,6 +1,6 @@
 # Tauri Desktop E2E Coverage — Journey Checklist
 
-> Last updated: 2026-08-28 | 36 checkpoints (20 covered, 16 pending) | 3 journeys | 100% of reproducible checkpoints covered | Driver: WebdriverIO + tauri-driver
+> Last updated: 2026-08-29 | 37 checkpoints (20 covered, 17 pending) | 3 journeys | 100% of reproducible checkpoints covered | Driver: WebdriverIO + tauri-driver
 
 This is the desktop counterpart to the web `e2e/COVERAGE.md`. It tracks only what
 is exercised by driving the **built desktop binary** through `tauri-driver` (see
@@ -39,7 +39,7 @@ Windows (`msedgedriver`) only — `tauri-driver` has no macOS support.
 
 ---
 
-## Journey 2: On-device Model Management (6 checkpoints: 3 covered, 3 pending) — `journeys/02-on-device-model-management.spec.ts`
+## Journey 2: On-device Model Management (7 checkpoints: 3 covered, 4 pending) — `journeys/02-on-device-model-management.spec.ts`
 
 > **Partly covered.** The download mechanics (odm-02/03/05) run against the REAL
 > compiled binary through the live Tauri IPC bridge (`window.__TAURI__`), pulling
@@ -60,6 +60,7 @@ Windows (`msedgedriver`) only — `tauri-driver` has no macOS support.
 - [ ] `odm-04` Starting a second on-device download while one is in flight shows the "already downloading" guard — one pull at a time _(UI pass)_
 - [x] `odm-05` A completed pull installs the on-device model (`check_ollama_status` lists it)
 - [ ] `odm-06` The nav-bar on-device badge reflects the selected local model _(UI pass)_
+- [ ] `odm-07` Busy default ports at launch degrade to allocated ones: the MCP bridge and the offline server each bind a free port (preferring 8000/3457) and every consumer follows — local chat still streams, the offline cache still serves _(needs a journey that pre-occupies the ports before launching the binary; covered meanwhile by the `pick_port`/`bind_with_fallback`/`chat_base_url` Rust tests in `mcp_bridge_manager.rs`, `offline_server.rs` and `model_manager.rs`)_
 
 ---
 
