@@ -3,7 +3,7 @@
 import { useCallback, useEffect } from 'react';
 import { useLazyGetAccountBillingInfoQuery } from '@iblai/iblai-js/data-layer';
 import type { Error402MessageData } from '@iblai/iblai-js/web-utils';
-import { getAuthItem } from '@iblai/iblai-js/web-utils';
+import { getAuthItem } from '@/lib/auth-storage';
 import { use402ErrorCheck } from '@/hooks/subscription/use-402-error-check';
 import { isTauriApp } from '@/types/tauri';
 

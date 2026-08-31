@@ -4,11 +4,7 @@ import type { Dispatch, SetStateAction } from 'react';
 
 import { useEventCallback } from '@/hooks/use-event-callback';
 import { useEventListener } from '@/hooks/use-event-listener';
-import {
-  getAuthItem,
-  setAuthItem,
-  removeAuthItem,
-} from '@iblai/iblai-js/web-utils';
+import { getAuthItem, setAuthItem, removeAuthItem } from '@/lib/auth-storage';
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/consistent-type-definitions

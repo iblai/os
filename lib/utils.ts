@@ -31,7 +31,7 @@ import {
   removeAuthItem,
   clearPerTabSession,
   isPerTabAuthEnabled,
-} from '@iblai/iblai-js/web-utils';
+} from '@/lib/auth-storage';
 // NOTE: clearCurrentTenantCookie is imported dynamically inside handleTenantSwitch
 // (not statically) — the main web-utils entry pulls in React providers, which
 // would break this module when it's loaded in a React Server Component.

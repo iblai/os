@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Code2, Folder, Info, Loader2, X } from 'lucide-react';
-import { getAuthItem } from '@iblai/iblai-js/web-utils';
+import { getAuthItem } from '@/lib/auth-storage';
 import {
   Popover,
   PopoverContent,

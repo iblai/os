@@ -9,7 +9,7 @@ import type {
 import { config } from '@/lib/config';
 import { SERVICES } from './constants';
 import { LOCAL_STORAGE_KEYS } from '../lib/constants';
-import { getAuthItem } from '@iblai/iblai-js/web-utils';
+import { getAuthItem } from '@/lib/auth-storage';
 
 export interface CustomQueryArgs extends Omit<FetchArgs, 'url'> {
   url: string;

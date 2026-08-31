@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 
 import { useAppDispatch } from './hooks';
-import { getAuthItem, setAuthItem } from '@iblai/iblai-js/web-utils';
+import { getAuthItem, setAuthItem } from '@/lib/auth-storage';
 import {
   darkModeUpdated,
   // iframeCloseButtonEnabled,

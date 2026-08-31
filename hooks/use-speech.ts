@@ -6,7 +6,7 @@ import type { Message } from '@iblai/iblai-js/web-utils';
 
 import { config } from '@/lib/config';
 import { LOCAL_STORAGE_KEYS } from '@/lib/constants';
-import { getAuthItem } from '@iblai/iblai-js/web-utils';
+import { getAuthItem } from '@/lib/auth-storage';
 import { useUsername } from '@/providers/use-user';
 import { useMentorSettings } from './use-mentors/use-mentor-settings';
 
