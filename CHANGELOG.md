@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.134.0](https://github.com/iblai/os/compare/v0.133.0...v0.134.0) (2026-08-31)
+
+### Features
+
+* **mentor:** add a save-only button to the embed tab ([6e1f049](https://github.com/iblai/os/commit/6e1f049305085c3c599866fba7dd78623d109157))
+
+### Bug Fixes
+
+* **mentor:** fetch embed bubble thumbnail from dm endpoint, not axd ([e897829](https://github.com/iblai/os/commit/e89782953ea0925a1b03928c74fd7712656f9202))
+* **mentor:** persist custom embed launcher icon across refresh ([61a014b](https://github.com/iblai/os/commit/61a014b7288f98c582e09ba973ca780144e9d0e7))
+* **mentor:** persist removal of the custom embed icon ([394011f](https://github.com/iblai/os/commit/394011fd98e455eb5a6e68efac00e51d1d38379a))
+
+### Reverts
+
+* **embed:** remove save button from embed tab ([4638a28](https://github.com/iblai/os/commit/4638a2816e960fbbbc636866e6669761db6da5b7))
+
+### Tests
+
+* **e2e:** cover embed custom icon persistence and removal ([6b66dd6](https://github.com/iblai/os/commit/6b66dd6bfafc54f2e204cf2c5f3bde314d273b39)), closes [#789](https://github.com/iblai/os/issues/789)
+* **mentor:** cover embed icon persistence, thumbnail, and save button ([8ab1cc1](https://github.com/iblai/os/commit/8ab1cc1e438bf2f0798bc094bf7d1d2f385c9ca3))
+
 ## [0.133.0](https://github.com/iblai/os/compare/v0.132.1...v0.133.0) (2026-08-31)
 
 ### Features
