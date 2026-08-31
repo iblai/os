@@ -24,6 +24,7 @@ const env = {
   NEXT_PUBLIC_IBL_SENTRY_DSN: process.env.NEXT_PUBLIC_IBL_SENTRY_DSN,
   NEXT_PUBLIC_HELP_CENTER_URL: process.env.NEXT_PUBLIC_HELP_CENTER_URL,
   NEXT_PUBLIC_SUPPORT_EMAIL: process.env.NEXT_PUBLIC_SUPPORT_EMAIL,
+  NEXT_PUBLIC_DOCUMENTATION_URL: process.env.NEXT_PUBLIC_DOCUMENTATION_URL,
   NEXT_PUBLIC_ENABLE_GRAVATAR_ON_PROFILE_PIC:
     process.env.NEXT_PUBLIC_ENABLE_GRAVATAR_ON_PROFILE_PIC,
   NEXT_PUBLIC_DEFAULT_EMBED_CSS_URL:
@@ -129,9 +130,11 @@ export const config = {
       'https://f953ef66c4e0d5bda480069132dc9aee@sentry.ibl.network/33',
     ),
   helpCenterUrl: () =>
-    getEnv('NEXT_PUBLIC_HELP_CENTER_URL', 'https://docs.ibl.ai'),
+    getEnv('NEXT_PUBLIC_HELP_CENTER_URL', 'https://ibl.ai/support'),
   supportEmail: () =>
     getEnv('NEXT_PUBLIC_SUPPORT_EMAIL', 'support@iblai.zendesk.com'),
+  documentationUrl: () =>
+    getEnv('NEXT_PUBLIC_DOCUMENTATION_URL', 'https://ibl.ai/docs'),
   enableGravatarOnProfilePic: () =>
     getEnv('NEXT_PUBLIC_ENABLE_GRAVATAR_ON_PROFILE_PIC', 'true'),
   defaultEmbedCssUrl: () => getEnv('NEXT_PUBLIC_DEFAULT_EMBED_CSS_URL', ''),
