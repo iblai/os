@@ -2,8 +2,8 @@
   "version": 2,
   "lastUpdated": "2026-08-31",
   "summary": {
-    "totalCheckpoints": 692,
-    "coveredCheckpoints": 653,
+    "totalCheckpoints": 695,
+    "coveredCheckpoints": 656,
     "deprecatedCheckpoints": 16,
     "notReproducibleCheckpoints": 15,
     "pendingCheckpoints": 8,
@@ -749,6 +749,7 @@
       "sourceFiles": [
         "components/modals/edit-mentor-modal/tabs/embed-tab.tsx",
         "components/modals/edit-mentor-modal/hooks/useEmbedTab.ts",
+        "components/modals/edit-mentor-modal/utils.ts",
         "components/logo.tsx",
         "hooks/use-mentors/use-mentor-settings.ts",
         "hooks/use-embed-mode.ts",
@@ -824,6 +825,21 @@
         {
           "id": "emb-14",
           "description": "Issue #2153 contrast case: toggling Shareable Link ON for an anonymous mentor (Website URL section not rendered at all) remains error-free",
+          "status": "covered"
+        },
+        {
+          "id": "emb-15",
+          "description": "Issue #789: a custom embed icon (Icon Selection = Custom, uploaded via the Icon Editor's Content tab) persists after a full page reload as a real uploaded URL, not the local data: preview",
+          "status": "covered"
+        },
+        {
+          "id": "emb-16",
+          "description": "Issue #789: \"Remove Image\" persists immediately (own PUT, independent of Create Embed) with a \"Custom icon removed\" toast, Icon Selection reverting to Default, and the removal surviving a reload (guards the RTK cache invalidation behind the fix)",
+          "status": "covered"
+        },
+        {
+          "id": "emb-17",
+          "description": "Embed tab footer contains only the \"Create Embed\" button (the standalone footer Save button was removed); Advanced CSS / Advanced JavaScript panels elsewhere in the tab keep their own working Save buttons",
           "status": "covered"
         }
       ]
