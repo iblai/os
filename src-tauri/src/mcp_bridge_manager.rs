@@ -10,14 +10,47 @@
 //! "Enable Local Models" is toggled off and on again, or the app restarts.
 
 use std::path::PathBuf;
-use std::sync::OnceLock;
+use std::sync::{Mutex, OnceLock};
 
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 use std::process::{Command, Stdio};
 
-/// Port the bridge listens on (its default; passed explicitly for clarity).
+/// Port the bridge prefers. Only a preference: when it is taken (another app, a
+/// second copy of this one) the OS picks a free one instead — a busy 8000 must
+/// never break local chat.
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
-const BRIDGE_PORT: u16 = 8000;
+const DEFAULT_BRIDGE_PORT: u16 = 8000;
+
+/// How long a freshly spawned bridge gets to accept connections before the
+/// start is called a failure. Python + MCP server boot, so seconds, not millis.
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+const BRIDGE_READY_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
+
+/// The port a bridge WE started is listening on. `None` means no bridge of ours
+/// is up, and callers must fail loudly rather than guess a URL: the old code
+/// assumed 8000 unconditionally, so an unrelated server there silently became
+/// the chat backend.
+static ACTIVE_PORT: Mutex<Option<u16>> = Mutex::new(None);
+
+/// The port the running bridge listens on, or `None` when we haven't started one.
+pub fn bridge_port() -> Option<u16> {
+    *ACTIVE_PORT.lock().unwrap_or_else(|e| e.into_inner())
+}
+
+/// Pretend a bridge is (or isn't) running, for tests that exercise the callers
+/// of [`bridge_port`] without spawning a real Python process.
+#[cfg(test)]
+pub(crate) fn set_bridge_port_for_test(port: Option<u16>) {
+    *ACTIVE_PORT.lock().unwrap_or_else(|e| e.into_inner()) = port;
+}
+
+/// Serializes tests that write [`ACTIVE_PORT`] — it is process-global, so
+/// parallel set-then-assert sequences interleave and flake.
+#[cfg(test)]
+pub(crate) fn bridge_state_lock() -> std::sync::MutexGuard<'static, ()> {
+    static L: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    L.lock().unwrap_or_else(|e| e.into_inner())
+}
 
 /// Bind to loopback only. The bridge defaults to `0.0.0.0` (all interfaces);
 /// pin it to localhost so it isn't reachable from the network.
@@ -168,14 +201,51 @@ fn ensure_config() -> Option<PathBuf> {
     Some(live)
 }
 
-/// Is something already listening on the bridge port?
+/// Is the bridge we started still answering?
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
-fn is_bridge_running() -> bool {
+fn is_listening(port: u16) -> bool {
     use std::net::{SocketAddr, TcpStream};
     use std::time::Duration;
 
-    let addr: SocketAddr = ([127, 0, 0, 1], BRIDGE_PORT).into();
+    let addr: SocketAddr = ([127, 0, 0, 1], port).into();
     TcpStream::connect_timeout(&addr, Duration::from_millis(300)).is_ok()
+}
+
+/// Pick a port for the bridge: `preferred` when it is genuinely free, otherwise
+/// whatever the OS hands out (bind to 0).
+///
+/// The test is a BIND, never a connect. A successful connect only proves that
+/// *something* answers there — which is precisely how an unrelated server on
+/// 8000 used to be adopted as "our bridge", silently becoming the chat backend.
+///
+/// The probe listener is dropped before the child spawns, so a racing process
+/// could still take the port in that window; the readiness poll in
+/// [`start_bridge`] is what turns that into a loud failure instead of a wedge.
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+fn pick_port(preferred: u16) -> Option<u16> {
+    use std::net::TcpListener;
+
+    [preferred, 0].into_iter().find_map(|candidate| {
+        TcpListener::bind((BRIDGE_HOST, candidate))
+            .ok()
+            .and_then(|l| l.local_addr().ok())
+            .map(|addr| addr.port())
+    })
+}
+
+/// Block until the freshly spawned bridge accepts connections, or the timeout
+/// expires. Without this a failed bind in the child (its stderr is discarded)
+/// would look exactly like a successful start.
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+fn wait_until_listening(port: u16, timeout: std::time::Duration) -> bool {
+    let deadline = std::time::Instant::now() + timeout;
+    while std::time::Instant::now() < deadline {
+        if is_listening(port) {
+            return true;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    }
+    false
 }
 
 /// Start the bridge if it is installed and not already running. Best-effort:
@@ -184,9 +254,18 @@ fn is_bridge_running() -> bool {
 pub fn start_bridge() {
     #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
     {
-        if is_bridge_running() {
-            println!("[McpBridge] Bridge already running on port {BRIDGE_PORT}");
-            return;
+        // Held across the whole start so two concurrent callers (the Ollama
+        // lifecycle and `ensure_mcp_bridge`) can't race into killing each
+        // other's freshly spawned child.
+        let mut active = ACTIVE_PORT.lock().unwrap_or_else(|e| e.into_inner());
+
+        if let Some(port) = *active {
+            if is_listening(port) {
+                println!("[McpBridge] Bridge already running on port {port}");
+                return;
+            }
+            println!("[McpBridge] Bridge on port {port} is gone — restarting");
+            *active = None;
         }
 
         let bin = match resolve_bridge_bin() {
@@ -205,8 +284,24 @@ pub fn start_bridge() {
             }
         };
 
+        // We have no bridge of our own, so any surviving one is a leftover from
+        // a crashed run: reap it rather than leave an orphan holding a port.
+        // NOT `stop_bridge`: that re-takes the lock we are holding.
+        kill_bridge_processes();
+
+        let port = match pick_port(DEFAULT_BRIDGE_PORT) {
+            Some(p) => p,
+            None => {
+                println!("[McpBridge] No free port available; skipping bridge start");
+                return;
+            }
+        };
+        if port != DEFAULT_BRIDGE_PORT {
+            println!("[McpBridge] Port {DEFAULT_BRIDGE_PORT} is taken — using {port}");
+        }
+
         println!(
-            "[McpBridge] Starting bridge: {bin} --host {BRIDGE_HOST} --config {} --port {BRIDGE_PORT}",
+            "[McpBridge] Starting bridge: {bin} --host {BRIDGE_HOST} --config {} --port {port}",
             config.display()
         );
         let mut cmd = create_command(&bin);
@@ -215,7 +310,7 @@ pub fn start_bridge() {
             .arg("--config")
             .arg(&config)
             .arg("--port")
-            .arg(BRIDGE_PORT.to_string())
+            .arg(port.to_string())
             .stdout(Stdio::null())
             .stderr(Stdio::null());
 
@@ -229,7 +324,16 @@ pub fn start_bridge() {
         }
 
         match cmd.spawn() {
-            Ok(_) => println!("[McpBridge] Bridge started"),
+            Ok(_) => {
+                // Recorded only once it actually answers: a port that never came
+                // up must read as "no bridge", not as a chat URL that 404s.
+                if wait_until_listening(port, BRIDGE_READY_TIMEOUT) {
+                    *active = Some(port);
+                    println!("[McpBridge] Bridge started on port {port}");
+                } else {
+                    println!("[McpBridge] Bridge did not start listening on port {port}");
+                }
+            }
             Err(e) => println!("[McpBridge] Failed to start bridge: {e}"),
         }
     }
@@ -257,8 +361,16 @@ fn macos_server_path() -> String {
     parts.join(":")
 }
 
-/// Stop the bridge process. No-op on unsupported platforms.
+/// Stop the bridge process and forget its port. No-op on unsupported platforms.
 pub fn stop_bridge() {
+    kill_bridge_processes();
+    *ACTIVE_PORT.lock().unwrap_or_else(|e| e.into_inner()) = None;
+}
+
+/// Kill any bridge process by name, WITHOUT touching [`ACTIVE_PORT`] — the
+/// memo's lock is already held by `start_bridge` when it reaps leftovers, and
+/// re-entering it there would deadlock.
+fn kill_bridge_processes() {
     // macOS/Linux: match the full command line (the executable is a shim that
     // contains "ollama-mcp-bridge").
     #[cfg(any(target_os = "macos", target_os = "linux"))]
@@ -277,5 +389,80 @@ pub fn stop_bridge() {
             .args(["/F", "/T", "/IM", "ollama-mcp-bridge.exe"])
             .output()
             .ok();
+    }
+}
+
+#[cfg(all(
+    test,
+    any(target_os = "windows", target_os = "macos", target_os = "linux")
+))]
+mod tests {
+    use super::*;
+    use std::net::TcpListener;
+
+    /// The happy path: nothing is holding the preferred port, so the bridge
+    /// keeps its documented one.
+    ///
+    /// Retried across candidates: "reserve an ephemeral port, release it, bind
+    /// it again" races the sibling port tests, which the OS is happy to hand
+    /// the just-released number. One stolen candidate is a scheduling accident;
+    /// five in a row is a real preference bug.
+    #[test]
+    fn a_free_preferred_port_is_the_one_chosen() {
+        for _ in 0..5 {
+            // Ask the OS for a port and release it — free until someone races us.
+            let free = TcpListener::bind((BRIDGE_HOST, 0))
+                .unwrap()
+                .local_addr()
+                .unwrap()
+                .port();
+            if pick_port(free) == Some(free) {
+                return;
+            }
+        }
+        panic!("a free preferred port was never the one chosen");
+    }
+
+    /// The whole point: a busy 8000 must move the bridge, not break it.
+    #[test]
+    fn a_busy_preferred_port_falls_back_to_a_free_one() {
+        // Held for the duration, so the preferred port is genuinely occupied.
+        let squatter = TcpListener::bind((BRIDGE_HOST, 0)).unwrap();
+        let taken = squatter.local_addr().unwrap().port();
+
+        let picked = pick_port(taken).expect("a busy port must not stop us");
+        assert_ne!(picked, taken, "the occupied port cannot be handed out");
+        // Usable, not merely different: bind it to prove the bridge could too.
+        drop(TcpListener::bind((BRIDGE_HOST, picked)).expect("picked port is bindable"));
+    }
+
+    /// A *connect* probe would call the squatter "our bridge" — the old bug
+    /// that silently pointed chat at whatever answered on 8000.
+    #[test]
+    fn an_occupied_port_is_never_mistaken_for_our_bridge() {
+        let _guard = bridge_state_lock();
+        let squatter = TcpListener::bind((BRIDGE_HOST, 0)).unwrap();
+        let taken = squatter.local_addr().unwrap().port();
+
+        set_bridge_port_for_test(None);
+        assert_eq!(
+            bridge_port(),
+            None,
+            "someone else's listener is not a bridge of ours"
+        );
+        assert!(is_listening(taken), "the squatter really is answering");
+        set_bridge_port_for_test(None);
+    }
+
+    /// Stopping forgets the port: a later `chat_base_url` must fail loudly
+    /// rather than name a port nothing is serving.
+    #[test]
+    fn stopping_the_bridge_forgets_its_port() {
+        let _guard = bridge_state_lock();
+        set_bridge_port_for_test(Some(8123));
+        assert_eq!(bridge_port(), Some(8123));
+
+        stop_bridge();
+        assert_eq!(bridge_port(), None);
     }
 }

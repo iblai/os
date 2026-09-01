@@ -243,6 +243,8 @@ export function EmbedTab() {
     setFocusEditCustomFloatingBubble,
     updateConfig,
     updateMultipleConfig,
+    removeCustomImage,
+    isRemovingImage,
   } = useEmbedTab();
   const toast = useToast();
   const { data: mentorSettings, isLoading: isLoadingSettings } =
@@ -944,7 +946,12 @@ export function EmbedTab() {
                               {t('iconSelectionLabel')}
                             </h3>
                             <Select
-                              defaultValue={field.state.value}
+                              // Controlled (not `defaultValue`) so the trigger
+                              // label updates when the field is hydrated to
+                              // 'custom' asynchronously after settings load.
+                              // Radix reads `defaultValue` only once at mount,
+                              // which left the label stuck on "Default".
+                              value={field.state.value}
                               onValueChange={(value) =>
                                 field.handleChange(value)
                               }
@@ -2226,12 +2233,8 @@ export function EmbedTab() {
                                     type="button"
                                     variant="outline"
                                     size="sm"
-                                    onClick={() =>
-                                      updateMultipleConfig({
-                                        image: null,
-                                        //use_icon: true,
-                                      })
-                                    }
+                                    onClick={() => removeCustomImage()}
+                                    disabled={isRemovingImage}
                                   >
                                     {t('removeImage')}
                                   </Button>

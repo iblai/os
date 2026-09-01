@@ -27,6 +27,8 @@ export const QUERY_PARAMS = {
   TENANT: 'tenant',
   EMBED: 'embed',
   INTERNAL_PREVIEW: 'internalPreview',
+  MODE: 'mode',
+  SHOW_CLOSE_BUTTON: 'show-close-button',
 };
 
 // URL patterns

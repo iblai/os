@@ -29,10 +29,14 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{Child, ChildStdin, Command};
 use tokio::sync::{oneshot, Mutex};
 
-/// Default ibl.ai ASGI streaming host — the OpenAI-compatible chat/completions
-/// stream is served HERE, not the `api.iblai.app/dm` gateway (which 500s on chat).
-/// Full model endpoint: `{API_BASE}/api/ai-mentor/orgs/<tenant>/v1`.
-const DEFAULT_API_BASE: &str = "https://asgi.data.iblai.app";
+/// The ASGI streaming host, composed from the platform base domain — the
+/// OpenAI-compatible chat/completions stream is served HERE, not the
+/// `api.<domain>/dm` gateway (which 500s on chat). Full model endpoint:
+/// `{default_api_base(..)}/api/ai-mentor/orgs/<tenant>/v1`. With the default
+/// domain this is exactly the historical `https://asgi.data.iblai.app`.
+fn default_api_base(platform_domain: &str) -> String {
+    format!("https://asgi.data.{platform_domain}")
+}
 
 /// Coalesce assistant-token emits to at most one per this window — the buffer that
 /// keeps a fast opencode stream from re-render-storming (and freezing) the webview,
@@ -65,10 +69,53 @@ fn registry() -> &'static Registry {
     REG.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
+/// ACP session ids that outlive their processes: chat session id → the opencode
+/// session to `session/load` on the next spawn. Entries deliberately survive every
+/// teardown (crash, reaper, eviction, the chat-switch `opencode_close`) — opencode's
+/// own store under `~/.local/share/opencode` keeps the conversation, and this map is
+/// the key back into it, so a "random disconnect" no longer costs the agent its
+/// memory. Only "New workspace" forgets; the new-chat migration re-keys.
+// ponytail: in-memory, so an app restart loses the ids — the transcript resend in
+// `opencode_chat_stream` covers that; persist alongside the workspace map if
+// load-fidelity across restarts ever matters.
+fn resume_ids() -> &'static Mutex<HashMap<String, String>> {
+    static IDS: OnceLock<Mutex<HashMap<String, String>>> = OnceLock::new();
+    IDS.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+async fn remember_resume(session_id: &str, acp_id: &str) {
+    if !acp_id.is_empty() {
+        resume_ids()
+            .lock()
+            .await
+            .insert(session_id.to_string(), acp_id.to_string());
+    }
+}
+
+async fn resume_for(session_id: &str) -> Option<String> {
+    resume_ids().lock().await.get(session_id).cloned()
+}
+
+/// Re-key a resume id when a brand-new chat's ephemeral key gains its real id —
+/// without this the first turn's context is lost at the migration boundary.
+async fn adopt_resume(session_id: &str, prior: &str) {
+    let mut map = resume_ids().lock().await;
+    if let Some(id) = map.remove(prior) {
+        map.insert(session_id.to_string(), id);
+    }
+}
+
+async fn forget_resume(session_id: &str) {
+    resume_ids().lock().await.remove(session_id);
+}
+
 /// A permission request shown to the user and waiting on their answer.
 struct PendingPermission {
     /// Chat session it belongs to, so Stop can resolve just that chat's cards.
     session_id: String,
+    /// The card's allow option, so a switch to auto can answer it the way the
+    /// user just said they wanted rather than leaving it up.
+    allow_option_id: Option<String>,
     /// `Some(option_id)` = allow, `None` = deny/cancel.
     tx: oneshot::Sender<Option<String>>,
 }
@@ -103,6 +150,71 @@ pub async fn opencode_permission_respond(
 ) -> Result<(), String> {
     if let Some(p) = permissions().lock().await.remove(&request_id) {
         let _ = p.tx.send(option_id);
+    }
+    Ok(())
+}
+
+/// Whether operations are approved automatically.
+///
+/// Seeded from `settings.json` on first read rather than at startup, so a turn
+/// that begins before any UI has asked still honours the saved choice. Never
+/// chosen → manual, which is the safe direction: the user gets asked.
+fn permission_auto() -> &'static AtomicBool {
+    static AUTO: OnceLock<AtomicBool> = OnceLock::new();
+    AUTO.get_or_init(|| AtomicBool::new(saved_permission_mode().as_deref() == Some("auto")))
+}
+
+/// The saved approval mode, or `None` when the user has never chosen one.
+fn saved_permission_mode() -> Option<String> {
+    read_settings()
+        .get(SETTINGS_PERMISSION_MODE)
+        .and_then(|v| v.as_str())
+        .filter(|m| *m == "manual" || *m == "auto")
+        .map(str::to_string)
+}
+
+/// Answer every open card as allowed — for the moment the user switches to auto.
+///
+/// Leaving cards up after that switch would be incoherent: the operations
+/// behind them are exactly what the user just said to stop asking about. A card
+/// with no allow option is left alone rather than guessed at.
+async fn allow_all_pending() {
+    let mut map = permissions().lock().await;
+    let ids: Vec<String> = map
+        .iter()
+        .filter(|(_, p)| p.allow_option_id.is_some())
+        .map(|(k, _)| k.clone())
+        .collect();
+    for id in ids {
+        if let Some(p) = map.remove(&id) {
+            let _ = p.tx.send(p.allow_option_id.clone());
+        }
+    }
+}
+
+/// The saved approval mode: `"manual"`, `"auto"`, or `null` when never chosen
+/// (the frontend takes null as "ask the user which they want").
+#[command]
+pub async fn get_opencode_permission_mode() -> Result<Option<String>, String> {
+    Ok(saved_permission_mode())
+}
+
+/// Record the approval mode and apply it to running sessions immediately.
+#[command]
+pub async fn set_opencode_permission_mode(mode: String) -> Result<(), String> {
+    let auto = match mode.as_str() {
+        "auto" => true,
+        "manual" => false,
+        // Loud rather than defaulting: a typo here would silently pick a
+        // security posture on the user's behalf.
+        other => return Err(format!("unknown permission mode: {other}")),
+    };
+    let mut settings = read_settings();
+    settings.insert(SETTINGS_PERMISSION_MODE.to_string(), json!(mode));
+    write_settings(&settings)?;
+    permission_auto().store(auto, Ordering::SeqCst);
+    if auto {
+        allow_all_pending().await;
     }
     Ok(())
 }
@@ -153,6 +265,11 @@ struct Session {
     /// Set by every intentional teardown (close/evict/reap/model-switch) before
     /// the kill, so the mid-turn crash-retry can tell a close from a crash.
     closing: AtomicBool,
+    /// True until the first prompt on a session whose ACP session came from
+    /// `session/new` — opencode has no conversation memory yet, so that first
+    /// turn checks-and-clears this to decide whether to prepend the frontend's
+    /// transcript. A successful `session/load` never sets it.
+    context_fresh: AtomicBool,
 }
 
 /// `Session::request`'s error prefixes when the child vanished mid-request
@@ -291,7 +408,54 @@ pub fn opencode_program() -> String {
     "opencode".to_string()
 }
 
-/// `PATH` with the managed `bin` dir appended, for spawning or probing `opencode`.
+/// Bin dirs appended to the child `PATH`, existence-gated.
+///
+/// A GUI-launched app inherits a minimal `PATH` — none of the shell rc files
+/// that normally add Homebrew, asdf, mise or nvm have run — so `node`, `pnpm`
+/// or `git` can be unreachable inside Code even though the sandbox happily
+/// lets the child READ them. This closes that gap by naming the standard
+/// install locations directly.
+///
+/// Wrong-OS entries cost nothing: the absolute candidates are filtered by
+/// `is_dir()`, so `/opt/homebrew` simply doesn't exist on Linux. Read-only
+/// access is all that's needed to RUN these binaries — the Homebrew prefixes
+/// deliberately stay out of the write list.
+fn path_additions(home: &Path) -> Vec<PathBuf> {
+    let absolute = [
+        // macOS: Apple-silicon Homebrew, then the Intel/MacPorts prefix.
+        "/opt/homebrew/bin",
+        "/opt/homebrew/sbin",
+        "/usr/local/bin",
+        "/usr/local/sbin",
+        // Linuxbrew's default prefix.
+        "/home/linuxbrew/.linuxbrew/bin",
+        "/home/linuxbrew/.linuxbrew/sbin",
+    ];
+    let relative = [
+        ".local/bin",
+        ".asdf/shims",
+        ".asdf/bin",
+        ".local/share/mise/shims",
+        ".cargo/bin",
+        "go/bin",
+        ".bun/bin",
+        ".deno/bin",
+        ".volta/bin",
+        ".local/share/pnpm",
+        // fnm exposes the selected version through the default alias.
+        ".local/share/fnm",
+        ".local/share/fnm/aliases/default/bin",
+    ];
+    absolute
+        .iter()
+        .map(PathBuf::from)
+        .chain(relative.iter().map(|rel| home.join(rel)))
+        .filter(|p| p.is_dir())
+        .collect()
+}
+
+/// `PATH` with the managed `bin` dir and the common toolchain dirs appended,
+/// for spawning or probing `opencode`.
 ///
 /// Appended, not prepended: a system install takes precedence and ours only fills the gap.
 pub fn augmented_path() -> std::ffi::OsString {
@@ -299,6 +463,15 @@ pub fn augmented_path() -> std::ffi::OsString {
         .map(|p| std::env::split_paths(&p).collect())
         .unwrap_or_default();
     dirs.push(iblai_data_dir().join("bin"));
+    if let Some(home) = home_dir() {
+        // Skip anything the inherited PATH already lists, so a user's own
+        // ordering (commonly `/usr/local/bin` early) is not disturbed.
+        for dir in path_additions(&home) {
+            if !dirs.contains(&dir) {
+                dirs.push(dir);
+            }
+        }
+    }
     // `join_paths` uses the platform separator, so this is correct on Windows' `;` too.
     std::env::join_paths(dirs).unwrap_or_else(|_| std::env::var_os("PATH").unwrap_or_default())
 }
@@ -316,8 +489,12 @@ pub fn augmented_path() -> std::ffi::OsString {
 /// ([`ensure_write_dirs`]) — Code can't function without them. `.cache` is the
 /// umbrella every XDG-caching tool shares (pip, pnpm, corepack, uv,
 /// go-build…); `.local/share/opencode` is opencode's own state.
-const WRITE_DIRS_CORE: &[&str] =
-    &[".cache", ".npm", ".local/share/pnpm", ".local/share/opencode"];
+const WRITE_DIRS_CORE: &[&str] = &[
+    ".cache",
+    ".npm",
+    ".local/share/pnpm",
+    ".local/share/opencode",
+];
 
 /// macOS extras: the native caches root and the mac pnpm store.
 // The macOS-arm items in this section stay compiled on every unix target so
@@ -329,8 +506,39 @@ const WRITE_DIRS_CORE_MACOS: &[&str] = &["Library/Caches", "Library/pnpm"];
 /// Toolchain dirs, writable only when already present — never created. Using
 /// an installed toolchain works; installing one from scratch inside Code stays
 /// blocked (read-only `$HOME`).
-const WRITE_DIRS_TOOLCHAIN: &[&str] =
-    &[".cargo", ".rustup", "go", ".bun", ".local/share/uv", ".pyenv"];
+///
+/// The version managers (asdf, mise, nvm, volta, fnm, rbenv, sdkman) are here
+/// so an already-installed runtime can update its own state — shims, caches,
+/// downloaded versions — the way `.cargo` already could. Deliberately NOT
+/// `~/.local/bin`: it is on the user's own PATH outside the sandbox, so a
+/// writable copy would let the child plant a binary the user later runs
+/// unsandboxed. Same reason the Homebrew prefixes stay read-only (see
+/// [`path_additions`]) — `brew install` inside Code is not supported.
+const WRITE_DIRS_TOOLCHAIN: &[&str] = &[
+    ".cargo",
+    ".rustup",
+    "go",
+    ".bun",
+    ".local/share/uv",
+    ".pyenv",
+    ".asdf",
+    ".local/share/mise",
+    ".local/state/mise",
+    ".config/mise",
+    ".nvm",
+    ".volta",
+    ".deno",
+    ".local/share/fnm",
+    ".rbenv",
+    ".sdkman",
+    ".gem",
+];
+
+/// macOS toolchain extra, same only-if-present rule: Homebrew writes its logs
+/// under `~/Library/Logs/Homebrew` even for read-only operations like `brew
+/// --prefix`, so a missing write here surfaces as a spurious brew failure.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+const WRITE_DIRS_TOOLCHAIN_MACOS: &[&str] = &["Library/Logs/Homebrew"];
 
 /// Credential dirs hidden from the child, relative to `$HOME`.
 const SECRET_DIRS: &[&str] = &[
@@ -352,6 +560,11 @@ const SECRET_DIRS_LINUX: &[&str] = &[".local/share/keyrings"];
 const SECRET_DIRS_MACOS: &[&str] = &["Library/Keychains"];
 
 /// Credential files hidden from the child, relative to `$HOME`.
+///
+/// Each one lives inside a dir the write list allows, so masking the file is
+/// what keeps the token unreadable: `.gem/credentials` holds the RubyGems API
+/// key and `.cargo/credentials` is the pre-TOML spelling of the crates.io
+/// token that the `.toml` entry below already covers.
 const SECRET_FILES: &[&str] = &[
     ".netrc",
     ".npmrc",
@@ -359,6 +572,8 @@ const SECRET_FILES: &[&str] = &[
     ".pypirc",
     ".claude.json",
     ".cargo/credentials.toml",
+    ".cargo/credentials",
+    ".gem/credentials",
 ];
 
 /// bwrap argv for the Linux sandbox — everything before the program name.
@@ -473,6 +688,11 @@ fn sbpl_quote(p: &Path) -> String {
 /// decoy home ([`build_decoy_home`]); the secret denies are the enforcement
 /// backstop for anything that reaches the real paths anyway (`getpwuid`,
 /// symlink traversal — the kernel checks resolved paths).
+///
+/// The toolchain subpaths are listed unconditionally, unlike the Linux binds
+/// which gate on presence. That stays equivalent because the child runs under
+/// the decoy `$HOME`: a toolchain the user doesn't have isn't symlinked in, so
+/// creating it lands in the throwaway decoy rather than the real home.
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 fn sandbox_profile_macos(home: &Path, workspace: &Path, config_home: &Path) -> String {
     let mut p = String::from(
@@ -480,7 +700,12 @@ fn sandbox_profile_macos(home: &Path, workspace: &Path, config_home: &Path) -> S
     );
     // /dev: shell redirects and ttys; the tmp roots cover /tmp, /var/tmp and
     // the per-user $TMPDIR under /var/folders.
-    for dir in ["/dev", "/private/tmp", "/private/var/tmp", "/private/var/folders"] {
+    for dir in [
+        "/dev",
+        "/private/tmp",
+        "/private/var/tmp",
+        "/private/var/folders",
+    ] {
         p.push_str("\n  (subpath ");
         p.push_str(&sbpl_quote(Path::new(dir)));
         p.push(')');
@@ -494,6 +719,7 @@ fn sandbox_profile_macos(home: &Path, workspace: &Path, config_home: &Path) -> S
         .iter()
         .chain(WRITE_DIRS_CORE_MACOS)
         .chain(WRITE_DIRS_TOOLCHAIN)
+        .chain(WRITE_DIRS_TOOLCHAIN_MACOS)
     {
         p.push_str("\n  (subpath ");
         p.push_str(&sbpl_quote(&home.join(rel)));
@@ -564,11 +790,8 @@ fn populate_decoy(
         {
             populate_decoy(real_home, decoy_root, &child_rel, secret_dirs, secret_files)?;
         } else {
-            std::os::unix::fs::symlink(
-                real.join(entry.file_name()),
-                decoy_root.join(&child_rel),
-            )
-            .map_err(|e| format!("decoy home: {e}"))?;
+            std::os::unix::fs::symlink(real.join(entry.file_name()), decoy_root.join(&child_rel))
+                .map_err(|e| format!("decoy home: {e}"))?;
         }
     }
     Ok(())
@@ -666,27 +889,80 @@ fn write_workspace_map(map: &serde_json::Map<String, Value>) -> Result<(), Strin
     std::fs::write(&f, out).map_err(|e| format!("failed writing workspace map: {e}"))
 }
 
-/// A readable folder name for a new chat's workspace: `brave-otter-4f2a`.
+/// Desktop settings, persisted as `~/.local/share/iblai/settings.json`.
+///
+/// Deliberately a second file rather than more keys in `workspaces.json`:
+/// that map is keyed by chat session id and [`adopt_prior_mapping`] prunes it
+/// by key prefix, so anything else stored there would look like a stale
+/// session entry. Reads and writes go through the whole object, which is what
+/// keeps the two owners here — the permission mode and the per-mentor
+/// workspaces — from clobbering each other, and lets a key written by a newer
+/// build survive a downgrade.
+fn settings_file() -> PathBuf {
+    iblai_data_dir().join("settings.json")
+}
+
+// pub(crate): the model proxy persists its minted platform API key here too
+// (same read-modify-write-the-whole-object discipline keeps owners apart).
+pub(crate) fn read_settings() -> serde_json::Map<String, Value> {
+    std::fs::read_to_string(settings_file())
+        .ok()
+        .and_then(|s| serde_json::from_str::<Value>(&s).ok())
+        .and_then(|v| v.as_object().cloned())
+        .unwrap_or_default()
+}
+
+pub(crate) fn write_settings(map: &serde_json::Map<String, Value>) -> Result<(), String> {
+    let f = settings_file();
+    if let Some(parent) = f.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    let out =
+        serde_json::to_string_pretty(&Value::Object(map.clone())).map_err(|e| e.to_string())?;
+    std::fs::write(&f, out).map_err(|e| format!("failed writing settings: {e}"))
+}
+
+/// Settings key holding `{ "<tenant>/<mentor>": "<workspace path>" }`.
+const SETTINGS_WORKSPACES: &str = "workspaces";
+
+/// Settings key holding `"manual"` or `"auto"`; absent until the user chooses.
+const SETTINGS_PERMISSION_MODE: &str = "permission_mode";
+
+/// Word pools for [`workspace_slug`]. Sized so a mentor's folder name is
+/// unlikely to collide with another's by eye as well as on disk.
+const SLUG_ADJECTIVES: [&str; 48] = [
+    "brave", "calm", "clever", "eager", "fuzzy", "gentle", "happy", "keen", "lively", "lucky",
+    "merry", "quiet", "swift", "tidy", "warm", "wise", "amber", "bold", "breezy", "bright",
+    "candid", "cheerful", "crisp", "curious", "deft", "earnest", "fleet", "golden", "hardy",
+    "humble", "jolly", "kindly", "limber", "mellow", "nimble", "plucky", "polished", "prime",
+    "rapid", "ready", "rustic", "sincere", "spry", "steady", "sunny", "trusty", "vivid", "witty",
+];
+
+const SLUG_NOUNS: [&str; 48] = [
+    "otter", "falcon", "maple", "harbor", "lantern", "meadow", "pebble", "quartz", "raven",
+    "river", "sparrow", "summit", "thicket", "willow", "canyon", "cedar", "anchor", "aspen",
+    "atlas", "beacon", "birch", "brook", "cascade", "comet", "compass", "cove", "delta", "ember",
+    "fjord", "garnet", "glacier", "grove", "harvest", "heron", "island", "juniper", "kestrel",
+    "lagoon", "lattice", "orchard", "prairie", "ridge", "sequoia", "signal", "spruce", "tundra",
+    "valley", "wharf",
+];
+
+/// A readable folder name for a new workspace: `brave-otter-4f2a`.
 ///
 /// Random rather than derived from the session id so the folder is pleasant to find in a
 /// file manager; the map is what makes it durable. Entropy comes from the same source as
 /// the proxy's session secret, so this needs no `rand` dependency.
+///
+/// Four hex chars per index, not two: 256 isn't a multiple of 48, so a byte
+/// would draw the first sixteen words noticeably more often.
 fn workspace_slug() -> String {
-    const ADJECTIVES: [&str; 16] = [
-        "brave", "calm", "clever", "eager", "fuzzy", "gentle", "happy", "keen", "lively", "lucky",
-        "merry", "quiet", "swift", "tidy", "warm", "wise",
-    ];
-    const NOUNS: [&str; 16] = [
-        "otter", "falcon", "maple", "harbor", "lantern", "meadow", "pebble", "quartz", "raven",
-        "river", "sparrow", "summit", "thicket", "willow", "canyon", "cedar",
-    ];
     let seed = crate::opencode_proxy::new_secret();
-    let byte = |i: usize| usize::from_str_radix(&seed[i..i + 2], 16).unwrap_or(0);
+    let draw = |i: usize| usize::from_str_radix(&seed[i..i + 4], 16).unwrap_or(0);
     format!(
         "{}-{}-{}",
-        ADJECTIVES[byte(0) % ADJECTIVES.len()],
-        NOUNS[byte(2) % NOUNS.len()],
-        &seed[4..8]
+        SLUG_ADJECTIVES[draw(0) % SLUG_ADJECTIVES.len()],
+        SLUG_NOUNS[draw(4) % SLUG_NOUNS.len()],
+        &seed[8..12]
     )
 }
 
@@ -750,6 +1026,113 @@ pub fn resolve_workspace(session_id: &str) -> PathBuf {
     dir
 }
 
+/// Settings key for one mentor's workspace: `<tenant>/<mentor>`.
+///
+/// Both halves go through [`path_key`], which already neutralises ids that
+/// contain `/` or `..` and appends a hash so two ids that sanitise alike stay
+/// distinct. The result is only ever a JSON key, but keeping it path-safe means
+/// it reads the same as the folder names beside it.
+fn workspace_key(tenant: &str, mentor: &str) -> String {
+    format!("{}/{}", path_key(tenant), path_key(mentor))
+}
+
+/// Every workspace path already spoken for, by a chat or by a mentor.
+///
+/// Both maps are consulted so a fresh mint can never hand back a directory
+/// that something else is already using.
+fn claimed_workspaces() -> Vec<String> {
+    let owned = |map: serde_json::Map<String, Value>| {
+        map.values()
+            .filter_map(|v| v.as_str().map(str::to_string))
+            .collect::<Vec<_>>()
+    };
+    let mut taken = owned(read_workspace_map());
+    if let Some(ws) = read_settings()
+        .get(SETTINGS_WORKSPACES)
+        .and_then(|v| v.as_object())
+        .cloned()
+    {
+        taken.extend(owned(ws));
+    }
+    taken
+}
+
+/// A brand-new workspace directory. Never recycles: the caller is either
+/// deliberately leaving a folder behind or has none yet.
+///
+/// Collisions are astronomically unlikely but cheap to rule out, and one would
+/// silently hand two owners the same folder.
+fn mint_workspace_dir(taken: &[String]) -> PathBuf {
+    let root = iblai_data_dir().join("workspaces");
+    std::iter::repeat_with(workspace_slug)
+        .map(|slug| root.join(slug))
+        .find(|d| !d.exists() && !taken.iter().any(|t| Path::new(t) == d))
+        .unwrap_or_else(|| root.join("main"))
+}
+
+/// Record which folder a mentor works in.
+fn record_mentor_workspace(tenant: &str, mentor: &str, dir: &Path) -> Result<(), String> {
+    let mut settings = read_settings();
+    let mut workspaces = settings
+        .get(SETTINGS_WORKSPACES)
+        .and_then(|v| v.as_object())
+        .cloned()
+        .unwrap_or_default();
+    workspaces.insert(workspace_key(tenant, mentor), json!(dir.to_string_lossy()));
+    settings.insert(SETTINGS_WORKSPACES.to_string(), Value::Object(workspaces));
+    write_settings(&settings)
+}
+
+/// This mentor's workspace, generating and recording one the first time.
+///
+/// Keyed by mentor rather than by chat so the work persists: opening a new chat
+/// with the same mentor continues in the same folder instead of stranding the
+/// previous one. Local by design — the folder only exists on this machine, so
+/// there is nothing meaningful to sync.
+fn mentor_workspace(tenant: &str, mentor: &str) -> PathBuf {
+    let key = workspace_key(tenant, mentor);
+    if let Some(path) = read_settings()
+        .get(SETTINGS_WORKSPACES)
+        .and_then(|v| v.as_object())
+        .and_then(|m| m.get(&key))
+        .and_then(|v| v.as_str())
+    {
+        if !path.is_empty() {
+            return PathBuf::from(path);
+        }
+    }
+    // An untouched leftover is recycled before minting, for the same reason
+    // `resolve_workspace` does it: otherwise every launch that never writes
+    // anything strands one more empty folder.
+    let taken = claimed_workspaces();
+    let root = iblai_data_dir().join("workspaces");
+    let dir = find_empty_workspace(&root)
+        .filter(|d| !taken.iter().any(|t| Path::new(t) == d))
+        .unwrap_or_else(|| mint_workspace_dir(&taken));
+
+    // Created now, not at first turn: this is what the Code popover displays
+    // the moment a chat opens.
+    let _ = std::fs::create_dir_all(&dir);
+    let _ = record_mentor_workspace(tenant, mentor, &dir);
+    dir
+}
+
+/// The workspace a turn should run in: the mentor's when one is known, else
+/// this chat's.
+///
+/// The per-chat fallback keeps working for an older SDK that sends no mentor,
+/// and for surfaces that have a session but no mentor yet.
+pub fn resolve_workspace_for(
+    tenant: Option<&str>,
+    mentor: Option<&str>,
+    session_id: &str,
+) -> PathBuf {
+    match (tenant, mentor) {
+        (Some(t), Some(m)) if !m.is_empty() => mentor_workspace(t, m),
+        _ => resolve_workspace(session_id),
+    }
+}
+
 /// Move the ephemeral first-turn mapping onto the chat's real session id.
 ///
 /// A brand-new chat's first turn runs under an SDK-minted `coding-new-*` key;
@@ -782,25 +1165,76 @@ async fn migrate_new_chat(session_id: &str, prior: &str) {
     if adopt_prior_mapping(&mut map, session_id, prior) {
         let _ = write_workspace_map(&map);
     }
+    // The conversation follows the chat too: the reaped process's ACP session
+    // re-keys onto the real id, so the next turn `session/load`s it back.
+    adopt_resume(session_id, prior).await;
     close_session(prior).await;
 }
 
-/// Return this chat's coding workspace path.
+/// Return the coding workspace path — the mentor's when one is given.
 #[command]
-pub async fn get_opencode_workspace(session_id: String) -> Result<String, String> {
-    Ok(resolve_workspace(&session_id).to_string_lossy().to_string())
+pub async fn get_opencode_workspace(
+    session_id: String,
+    tenant: Option<String>,
+    mentor: Option<String>,
+) -> Result<String, String> {
+    Ok(
+        resolve_workspace_for(tenant.as_deref(), mentor.as_deref(), &session_id)
+            .to_string_lossy()
+            .to_string(),
+    )
 }
 
-/// Point ONE chat at a folder. The frontend supplies the path from a native folder picker
-/// (`@tauri-apps/plugin-dialog`); it can be anywhere on disk and is used as-is, not moved
-/// under the app-managed tree.
+/// Point a mentor (or, absent one, ONE chat) at a folder. The frontend supplies the path
+/// from a native folder picker (`@tauri-apps/plugin-dialog`); it can be anywhere on disk
+/// and is used as-is, not moved under the app-managed tree.
 #[command]
-pub async fn set_opencode_workspace(session_id: String, path: String) -> Result<String, String> {
+pub async fn set_opencode_workspace(
+    session_id: String,
+    path: String,
+    tenant: Option<String>,
+    mentor: Option<String>,
+) -> Result<String, String> {
     let dir = PathBuf::from(&path);
     ensure_workspace(&dir)?;
-    let mut map = read_workspace_map();
-    map.insert(session_id, json!(dir.to_string_lossy()));
-    write_workspace_map(&map)?;
+    match (tenant.as_deref(), mentor.as_deref()) {
+        (Some(t), Some(m)) if !m.is_empty() => record_mentor_workspace(t, m, &dir)?,
+        _ => {
+            let mut map = read_workspace_map();
+            map.insert(session_id, json!(dir.to_string_lossy()));
+            write_workspace_map(&map)?;
+        }
+    }
+    Ok(dir.to_string_lossy().to_string())
+}
+
+/// Start this mentor over in a fresh, empty workspace.
+///
+/// The old folder is left on disk — switching is meant to be cheap and
+/// undoable, and deleting a user's work behind a single click is not. The live
+/// opencode process is closed because a running session is reused without ever
+/// re-checking its cwd, so without this the next turn would still run in the
+/// old directory.
+#[command]
+pub async fn new_opencode_workspace(
+    session_id: String,
+    tenant: Option<String>,
+    mentor: Option<String>,
+) -> Result<String, String> {
+    let dir = mint_workspace_dir(&claimed_workspaces());
+    ensure_workspace(&dir)?;
+    match (tenant.as_deref(), mentor.as_deref()) {
+        (Some(t), Some(m)) if !m.is_empty() => record_mentor_workspace(t, m, &dir)?,
+        _ => {
+            let mut map = read_workspace_map();
+            map.insert(session_id.clone(), json!(dir.to_string_lossy()));
+            write_workspace_map(&map)?;
+        }
+    }
+    close_session(&session_id).await;
+    // A fresh workspace is the one intentional fresh start — don't resurrect the
+    // old folder's conversation into it on the next spawn.
+    forget_resume(&session_id).await;
     Ok(dir.to_string_lossy().to_string())
 }
 
@@ -1093,6 +1527,45 @@ fn last_user_text(messages: &[Value]) -> Option<String> {
     None
 }
 
+/// The prompt for a turn that landed on a fresh ACP session (`session/new`) even
+/// though the chat has prior turns: opencode's conversation memory is gone (load
+/// failed, `loadSession` unsupported, or the app restarted), so prepend the
+/// frontend's transcript. With no prior messages — a genuinely new chat, or an
+/// older SDK that only sends the latest message — this is `latest` unchanged.
+fn prompt_with_history(messages: &[Value], latest: &str) -> String {
+    let mut lines: Vec<String> = Vec::new();
+    for m in messages {
+        let role = m.get("role").and_then(|r| r.as_str()).unwrap_or("");
+        if role != "user" && role != "assistant" {
+            continue;
+        }
+        let text = match m.get("content") {
+            Some(Value::String(s)) => s.clone(),
+            Some(Value::Array(parts)) => parts
+                .iter()
+                .filter_map(|p| p.get("text").and_then(|t| t.as_str()))
+                .collect::<Vec<_>>()
+                .join(""),
+            _ => String::new(),
+        };
+        if !text.is_empty() {
+            lines.push(format!("{role}: {text}"));
+        }
+    }
+    // The messages array ends with the latest user message — history is
+    // everything before it, so drop that trailing duplicate.
+    if lines.last().map(String::as_str) == Some(format!("user: {latest}").as_str()) {
+        lines.pop();
+    }
+    if lines.is_empty() {
+        return latest.to_string();
+    }
+    format!(
+        "<conversation-history>\nThe coding agent restarted and lost its conversation memory. This is the conversation so far, replayed for context only — do not redo completed actions.\n\n{}\n</conversation-history>\n\n{latest}",
+        lines.join("\n")
+    )
+}
+
 /// Pick the option id of the first option whose ACP `kind` starts with `prefix`
 /// ("allow" / "reject").
 fn option_id(options: &Value, prefix: &str) -> Option<String> {
@@ -1130,12 +1603,16 @@ fn command_of(tool_call: &Value) -> Option<String> {
     })
 }
 
-/// Handle one `session/request_permission` by asking the user. Every request becomes an
-/// inline card — there is no auto-approval, and no policy of our own.
+/// Handle one `session/request_permission`.
 ///
-/// Nothing else confines the agent, so this is the boundary: what opencode asks about is
-/// decided by the `permission` block we write into its config (`edit`/`bash`/`webfetch`
-/// all `"ask"`), and what happens next is decided by the person reading the card.
+/// In manual mode every request becomes an inline card and the person reading it decides.
+/// In auto mode the allow option is taken immediately and no card is shown.
+///
+/// What opencode asks about is decided by the `permission` block we write into its config
+/// (`edit`/`bash`/`webfetch` all `"ask"`) — that stays pinned in both modes, so the mode
+/// is enforced here rather than by relaxing opencode's own policy on disk. In manual mode
+/// this is the boundary; in auto mode the OS sandbox is, which is why the mode is an
+/// explicit, deliberate choice rather than a default.
 ///
 /// The wait runs in its own task so the turn keeps streaming while a card is up —
 /// blocking the reader loop would freeze the reasoning/tool output the user needs in
@@ -1153,6 +1630,16 @@ async fn handle_permission_request(
     let allow = option_id(&options, "allow");
     let reject = option_id(&options, "reject");
 
+    // Auto mode answers without involving the user at all. A request that
+    // somehow offers no allow option falls through to a card rather than being
+    // guessed at.
+    if permission_auto().load(Ordering::SeqCst) {
+        if let Some(opt) = allow.clone() {
+            let _ = write_line(stdin, &permission_result(&id, Some(opt))).await;
+            return;
+        }
+    }
+
     static NEXT_REQ: AtomicI64 = AtomicI64::new(1);
     let request_id = format!("perm-{}", NEXT_REQ.fetch_add(1, Ordering::SeqCst));
     let (tx, rx) = oneshot::channel();
@@ -1160,6 +1647,7 @@ async fn handle_permission_request(
         request_id.clone(),
         PendingPermission {
             session_id: session_id.to_string(),
+            allow_option_id: allow.clone(),
             tx,
         },
     );
@@ -1413,6 +1901,33 @@ fn enforce_permission_policy(root: &mut serde_json::Map<String, Value>) {
     }
 }
 
+/// The system prompt Code's agent runs under, replacing opencode's built-in
+/// model-variant prompts (`agent.build.prompt` wins over `SystemPrompt.provider`
+/// in opencode's `llm/request.ts`, and the config merge applies it to the
+/// built-in `build` agent). A fork of opencode's `session/prompt/gpt.txt` at the
+/// pinned [`crate::opencode_installer::OPENCODE_VERSION`], with its narration
+/// protocol (progress updates, pre-edit notes, "explain what you are doing and
+/// why") replaced by a result-or-blocker contract. Re-diff against upstream
+/// whenever the version pin bumps.
+const OPENCODE_BUILD_PROMPT: &str = include_str!("opencode_build_prompt.txt");
+
+/// Force [`OPENCODE_BUILD_PROMPT`] onto the `build` agent and pin it as the
+/// default agent, so every ACP session runs under the result-only contract no
+/// matter which model family it uses (opencode otherwise picks a per-model
+/// prompt variant, several of which mandate step-by-step progress narration).
+/// Enforced on every spawn like [`enforce_permission_policy`]; any other keys
+/// on the entry are left alone.
+fn enforce_build_prompt(root: &mut serde_json::Map<String, Value>) {
+    root.insert("default_agent".to_string(), json!("build"));
+    let agents = root.entry("agent").or_insert_with(|| json!({}));
+    if let Some(obj) = agents.as_object_mut() {
+        let build = obj.entry("build").or_insert_with(|| json!({}));
+        if let Some(b) = build.as_object_mut() {
+            b.insert("prompt".to_string(), json!(OPENCODE_BUILD_PROMPT));
+        }
+    }
+}
+
 /// Point opencode at a model by patching its config: set the top-level `model`, keep
 /// `enabled_providers` to just the active provider, and reset that provider's `models`
 /// map to only the active model.
@@ -1455,6 +1970,8 @@ fn apply_opencode_model(
     // The security boundary — see `enforce_permission_policy`. Re-applied here because
     // this runs on every spawn, immediately before the process starts.
     enforce_permission_policy(root);
+    // The result-only system prompt — see `enforce_build_prompt`.
+    enforce_build_prompt(root);
     // Skills the agent discovers at startup — see `apply_skills_config`.
     let mentor_dir = mentor.map(mentor_skills_dir);
     apply_skills_config(root, &vibe_skills_dir(), mentor_dir.as_deref());
@@ -1492,7 +2009,8 @@ fn apply_opencode_model(
 /// if it isn't up yet.
 ///
 /// NOTE: this deliberately targets PLAIN Ollama on :11434, NOT the `ollama-mcp-bridge`
-/// on :8000 that `model_manager::chat_base_url` calls "the one and only chat port".
+/// (whose port is allocated at start) that `model_manager::chat_base_url` calls
+/// "the one and only chat port".
 /// That rule governs the app's own chat path, which needs the bridge to inject MCP
 /// tools. Code must not use it: the bridge speaks the *Ollama* API (`/api/chat`) while
 /// opencode needs *OpenAI*-compatible `/v1/chat/completions`, and opencode ships its own
@@ -1707,7 +2225,13 @@ async fn spawn_session(
         };
         (url, "local".to_string(), name, None)
     } else {
-        let api_base = api_base.unwrap_or_else(|| DEFAULT_API_BASE.to_string());
+        // Per-request `api_base` (future SDK plumbing) outranks; otherwise the
+        // host is composed from the one platform base domain the frontend (or
+        // a local dev override) delivered — `iblai.app` by default.
+        let api_base = match api_base.filter(|b| !b.trim().is_empty()) {
+            Some(b) => b,
+            None => default_api_base(&crate::opencode_proxy::platform_base_domain().await),
+        };
         let upstream = format!(
             "{}/api/ai-mentor/orgs/{}/v1",
             api_base.trim_end_matches('/'),
@@ -1763,14 +2287,27 @@ async fn spawn_session(
         .stderr(std::process::Stdio::piped())
         .kill_on_drop(true);
 
-    // Attribution/config for the agent's shell — NOT credentials (the DM token
-    // stays in the proxy; the rule is that no secret enters the child env).
-    // The vibe skills read these instead of asking the user who/where they are.
+    // Attribution/config for the agent's shell. The vibe skills read these
+    // instead of asking the user who/where they are.
     if let Some(user) = crate::opencode_proxy::learner_username().await {
         cmd.env("IBLAI_USERNAME", user);
     }
     if !tenant.is_empty() {
         cmd.env("IBLAI_PLATFORM_KEY", tenant);
+    }
+    // The one deliberate exception to "no secret enters the child env": a
+    // freshly minted PLATFORM api key, which is tenant-scoped, expires in a
+    // week and can be revoked from the platform. Without it the agent has to
+    // beg the user for a credential most of them cannot even create, and the
+    // deploy/Stripe skills simply don't work. The durable DM token still never
+    // leaves the proxy — that one would be a portable master credential.
+    // Absent (learner, not a platform admin) → skip the var; the injected
+    // guidance tells the agent to say so rather than ask for a key.
+    if let Some((key, expires_at)) = crate::opencode_proxy::platform_api_key(tenant, token).await {
+        cmd.env("IBLAI_API_KEY", key);
+        // Unix seconds — lets the agent (and apps it builds) reason about when
+        // the credential dies instead of hitting a surprise 401.
+        cmd.env("IBLAI_API_KEY_EXPIRES_AT", expires_at.to_string());
     }
 
     let mut child = cmd.spawn().map_err(|e| {
@@ -1825,6 +2362,7 @@ async fn spawn_session(
         last_used: Mutex::new(Instant::now()),
         active_turns: AtomicUsize::new(0),
         closing: AtomicBool::new(false),
+        context_fresh: AtomicBool::new(false),
     };
 
     // 1) initialize — we advertise NO fs/terminal capabilities so opencode uses its
@@ -1867,6 +2405,7 @@ async fn spawn_session(
         }
     }
     // 3) …or session/new with the workspace cwd.
+    let loaded = acp_session_id.is_some();
     session.acp_session_id = match acp_session_id {
         Some(id) => id,
         None => {
@@ -1883,6 +2422,11 @@ async fn spawn_session(
                 .to_string()
         }
     };
+    // A brand-new ACP session has no conversation memory — the first prompt on it
+    // may need the frontend's transcript prepended.
+    session.context_fresh.store(!loaded, Ordering::SeqCst);
+    // The id outlives this process: a later spawn for the same chat loads it back.
+    remember_resume(session_id, &session.acp_session_id).await;
 
     Ok(Arc::new(session))
 }
@@ -2108,8 +2652,9 @@ async fn teardown(session_id: &str, s: Option<Arc<Session>>) {
 /// Attempts (original + respawns) one prompt gets. 2 = exactly one respawn: a
 /// transient crash (OOM kill, opencode bug, dropped pipe) is fixed by one fresh
 /// process, while a prompt that deterministically kills the child would turn a
-/// higher cap into a crash loop that only delays the inevitable error — and
-/// each `session/new` fallback retry loses more context anyway.
+/// higher cap into a crash loop that only delays the inevitable error — and a
+/// `session/new` fallback retry keeps only the resent transcript, not the
+/// agent's full state, so more retries also degrade context.
 const PROMPT_ATTEMPTS: usize = 2;
 
 /// Should this failed `session/prompt` be retried on a fresh process? Only a
@@ -2164,9 +2709,9 @@ pub async fn opencode_chat_stream(
             migrate_new_chat(&session_id, prior).await;
         }
     }
-    let workspace = workspace
-        .map(PathBuf::from)
-        .unwrap_or_else(|| resolve_workspace(&session_id));
+    let workspace = workspace.map(PathBuf::from).unwrap_or_else(|| {
+        resolve_workspace_for(Some(tenant.as_str()), mentor.as_deref(), &session_id)
+    });
 
     let prompt_text = last_user_text(&messages).ok_or("no user message to send to opencode")?;
 
@@ -2193,7 +2738,11 @@ pub async fn opencode_chat_stream(
     // rather than an interruption. `should_retry` keeps this to genuine
     // crashes (never intentional closes or live-child errors) and to
     // [`PROMPT_ATTEMPTS`] total tries.
-    let mut resume: Option<String> = None;
+    //
+    // Seeded from the chat's remembered ACP session id, so a BETWEEN-turn death
+    // (crash, idle reaper, LRU eviction, chat-switch close) also reconnects: the
+    // respawn `session/load`s the prior conversation instead of starting amnesiac.
+    let mut resume: Option<String> = resume_for(&session_id).await;
     let mut turn_guard = None;
     let mut attempt = 1;
     let (session, res) = loop {
@@ -2229,12 +2778,20 @@ pub async fn opencode_chat_stream(
         turn_guard = Some(TurnGuard::new(session.clone()));
         session.turn.lock().await.reset(generation_id.clone());
 
+        // First prompt on a memory-less ACP session (`session/new` ran): resend
+        // the conversation so the agent continues instead of starting over.
+        let text = if session.context_fresh.swap(false, Ordering::SeqCst) {
+            prompt_with_history(&messages, &prompt_text)
+        } else {
+            prompt_text.clone()
+        };
+
         let res = session
             .request(
                 "session/prompt",
                 json!({
                     "sessionId": session.acp_session_id,
-                    "prompt": [ { "type": "text", "text": prompt_text } ]
+                    "prompt": [ { "type": "text", "text": text } ]
                 }),
             )
             .await;
@@ -2319,12 +2876,47 @@ pub async fn opencode_close(session_id: String) -> Result<(), String> {
     Ok(())
 }
 
-/// Record the signed-in user's username. The model proxy appends it as
-/// `learner_id=<username>` on every OpenAI-compat request it forwards, so upstream
-/// usage is attributed to the learner.
+/// Record who is signed in and where the platform lives.
+///
+/// The model proxy appends the username as `learner_id=<username>` on every
+/// OpenAI-compat request it forwards, so upstream usage is attributed to the
+/// learner, and surfaces the email to the agent so skills never ask for it.
+/// `dm_base` is the manager host (`config.dmUrl()`): the backend only ever sees
+/// the streaming-completions host otherwise, which doesn't serve `/api/core`.
+/// `platform_domain` is the ONE value code mode derives its hosts from
+/// (`iblai.app` unless a dev deployment says otherwise): it reaches the agent
+/// as an identity bullet (→ `iblai.env`'s `DOMAIN`) and composes the default
+/// streaming upstream `https://asgi.data.<domain>`. `auth_url` is the sole
+/// non-derivable host (`NEXT_PUBLIC_AUTH_URL`), surfaced only when set.
+/// All extras are optional so an older frontend keeps working.
 #[command]
-pub async fn set_opencode_learner(username: String) {
-    crate::opencode_proxy::set_learner(&username).await;
+pub async fn set_opencode_learner(
+    username: String,
+    email: Option<String>,
+    dm_base: Option<String>,
+    platform_domain: Option<String>,
+    auth_url: Option<String>,
+) {
+    crate::opencode_proxy::set_learner(
+        &username,
+        email.as_deref().unwrap_or_default(),
+        dm_base.as_deref().unwrap_or_default(),
+        platform_domain.as_deref().unwrap_or_default(),
+        auth_url.as_deref().unwrap_or_default(),
+    )
+    .await;
+}
+
+/// Mint-and-persist the platform API key NOW (no-op when `settings.json`
+/// already holds a fresh one). The frontend calls this the moment Code is on
+/// and a signed-in tenant/token exist — a child's env is fixed at spawn, so a
+/// key minted only lazily at spawn time was routinely "not there yet" for the
+/// session that needed it. Returns whether a key is available.
+#[command]
+pub async fn ensure_opencode_platform_key(tenant: String, token: String) -> Result<bool, String> {
+    Ok(crate::opencode_proxy::platform_api_key(&tenant, &token)
+        .await
+        .is_some())
 }
 
 #[cfg(test)]
@@ -2385,6 +2977,75 @@ mod tests {
         assert_eq!(cfg.get("permission").unwrap(), &json!("ask"));
     }
 
+    /// Every spawn pins the build agent's prompt (replacing opencode's per-model
+    /// variants) and the default agent, whatever the config started with; the
+    /// entry's other keys and sibling agents stay untouched.
+    #[test]
+    fn every_session_runs_the_result_only_build_prompt() {
+        let mut cfg: serde_json::Map<String, Value> = serde_json::from_str(
+            r#"{
+              "agent": {
+                "build": { "model": "x", "prompt": "stale override" },
+                "plan": { "model": "y" }
+              }
+            }"#,
+        )
+        .unwrap();
+
+        enforce_build_prompt(&mut cfg);
+
+        assert_eq!(cfg.get("default_agent").unwrap(), &json!("build"));
+        let agents = cfg.get("agent").unwrap();
+        assert_eq!(
+            agents["build"]["prompt"],
+            json!(OPENCODE_BUILD_PROMPT),
+            "a drifted prompt is overwritten every spawn"
+        );
+        assert_eq!(agents["build"]["model"], "x", "the rest of the agent stays");
+        assert!(
+            agents["plan"].get("prompt").is_none(),
+            "only the build agent's prompt is ours to own"
+        );
+
+        // A config with no `agent` block at all still gets the override.
+        let mut bare = serde_json::Map::new();
+        enforce_build_prompt(&mut bare);
+        assert_eq!(
+            bare["agent"]["build"]["prompt"],
+            json!(OPENCODE_BUILD_PROMPT)
+        );
+    }
+
+    /// The prompt replaces opencode's gpt.txt variant (forked at the pinned
+    /// opencode version) — its point is the result-or-blocker contract, so the
+    /// contract lines must survive edits and the narration protocol they
+    /// replaced must not creep back on a re-diff.
+    #[test]
+    fn the_build_prompt_keeps_its_result_only_contract() {
+        let text = OPENCODE_BUILD_PROMPT;
+        assert!(text.starts_with("You are OpenCode"), "{text}");
+        assert!(text.contains("You communicate in results"), "{text}");
+        assert!(
+            text.contains("Only use `commentary` when you hit a genuine blocker"),
+            "{text}"
+        );
+        assert!(text.contains("at most three short sentences"), "{text}");
+        assert!(
+            text.contains("Between tool calls, emit no text"),
+            "the no-inter-tool-narration rule must survive edits: {text}"
+        );
+        for narration in [
+            "keeping the user clearly informed",
+            "Before editing files, send an update",
+            "explain what you are doing and why",
+        ] {
+            assert!(
+                !text.contains(narration),
+                "the replaced narration protocol is back: {narration}"
+            );
+        }
+    }
+
     fn state(id: &str, idle_secs: u64, busy: bool) -> SessionState {
         SessionState {
             session_id: id.to_string(),
@@ -2430,9 +3091,13 @@ mod tests {
         let workspace = scratch.join("ws");
         let cfg_home = scratch.join("cfg");
         std::fs::create_dir_all(home.join(".ssh")).unwrap();
-        // An installed toolchain opts in; .bun is deliberately absent.
+        // An installed toolchain opts in; .bun and .nvm are deliberately absent.
         std::fs::create_dir_all(home.join(".cargo")).unwrap();
+        std::fs::create_dir_all(home.join(".asdf")).unwrap();
         std::fs::write(home.join(".netrc"), "machine x").unwrap();
+        // A credential inside a dir the write list allows.
+        std::fs::create_dir_all(home.join(".gem")).unwrap();
+        std::fs::write(home.join(".gem/credentials"), ":rubygems_api_key: k").unwrap();
 
         let args = bwrap_args(&home, &workspace, &cfg_home, None);
         let flat = args.join(" ");
@@ -2445,12 +3110,25 @@ mod tests {
         assert!(flat.contains(&rw(&workspace)));
         assert!(flat.contains(&rw(Path::new("/tmp"))));
         assert!(flat.contains(&rw(&cfg_home)));
-        assert!(flat.contains(&rw(&home.join(".cache"))), "core cache allowed");
+        assert!(
+            flat.contains(&rw(&home.join(".cache"))),
+            "core cache allowed"
+        );
         assert!(
             flat.contains(&rw(&home.join(".cargo"))),
             "present toolchain allowed"
         );
+        assert!(
+            flat.contains(&rw(&home.join(".asdf"))),
+            "a present version manager is allowed to update its own state"
+        );
         assert!(!flat.contains(".bun"), "absent toolchain not advertised");
+        assert!(!flat.contains(".nvm"), "absent version manager likewise");
+        assert!(
+            !flat.contains(&rw(&home.join(".local/bin"))),
+            "~/.local/bin stays read-only: it is on the user's own PATH outside \
+             the sandbox, so a writable copy is a persistence vector"
+        );
 
         // Masks stack AFTER the rw binds and only for existing secrets.
         let ssh_mask = format!("--tmpfs {}", home.join(".ssh").display());
@@ -2458,6 +3136,16 @@ mod tests {
         assert!(flat.rfind(&ssh_mask).unwrap() > flat.rfind("--bind-try").unwrap());
         let netrc = home.join(".netrc");
         assert!(flat.contains(&format!("--ro-bind /dev/null {}", netrc.display())));
+        let gem_cred = home.join(".gem/credentials");
+        let gem_mask = format!("--ro-bind /dev/null {}", gem_cred.display());
+        assert!(
+            flat.contains(&gem_mask),
+            "a credential inside a writable toolchain dir is still masked"
+        );
+        assert!(
+            flat.rfind(&gem_mask).unwrap() > flat.rfind("--bind-try").unwrap(),
+            "and the mask must land after the rw bind that would otherwise expose it"
+        );
         assert!(!flat.contains(".aws"), "missing secrets get no mask");
         assert_eq!(args.last().unwrap(), "--die-with-parent");
 
@@ -2526,9 +3214,7 @@ mod tests {
             Path::new("/Users/dev/proj"),
             Path::new("/Users/dev/.config/iblai/agents/sessions/k"),
         );
-        assert!(p.starts_with(
-            "(version 1)\n(allow default)\n(deny file-write* (subpath \"/\"))"
-        ));
+        assert!(p.starts_with("(version 1)\n(allow default)\n(deny file-write* (subpath \"/\"))"));
         assert!(p.contains("(allow file-write*"));
         assert!(p.contains("(subpath \"/dev\")"));
         assert!(p.contains("(subpath \"/private/var/folders\")"));
@@ -2598,9 +3284,15 @@ mod tests {
         let bare = root.join("c-bare");
         std::fs::create_dir_all(&bare).unwrap();
 
-        assert!(is_empty_project(&empty), "only .git + .DS_Store is untouched");
+        assert!(
+            is_empty_project(&empty),
+            "only .git + .DS_Store is untouched"
+        );
         assert!(!is_empty_project(&dirty), "real content disqualifies");
-        assert!(is_empty_project(&bare), "a bare dir (git init pending) counts");
+        assert!(
+            is_empty_project(&bare),
+            "a bare dir (git init pending) counts"
+        );
         assert!(!is_empty_project(&root.join("missing")));
 
         // Name-sorted first candidate, deterministically.
@@ -2667,6 +3359,271 @@ mod tests {
             a.chars().all(|c| c.is_ascii_alphanumeric() || c == '-'),
             "must be usable as a folder name: {a}"
         );
+    }
+
+    /// The Open-folder button broke once because this capability was a bare
+    /// string: `"opener:allow-open-path"` enables the command but carries NO
+    /// path scope, so `open_path` denied every path ("Not allowed to open
+    /// path …"). Independently, unix glob `**` refuses to cross a `.`-leading
+    /// component unless the opener plugin's `requireLiteralLeadingDot` is
+    /// false — and the default workspaces live under `~/.local/share/…`.
+    /// Pin both halves of the fix.
+    #[test]
+    fn the_open_path_capability_keeps_a_home_covering_scope() {
+        let manifest = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+        let caps: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(manifest.join("capabilities/default.json")).unwrap(),
+        )
+        .unwrap();
+        let entry = caps["permissions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|p| p["identifier"] == "opener:allow-open-path")
+            .expect("opener:allow-open-path must be a scoped object, not a bare string");
+        let allow = entry["allow"]
+            .as_array()
+            .expect("must carry an allow scope");
+        assert!(
+            allow
+                .iter()
+                .any(|e| e["path"].as_str().is_some_and(|p| p.starts_with("$HOME"))),
+            "the scope must cover $HOME so workspace folders can open: {allow:?}"
+        );
+
+        let conf: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(manifest.join("tauri.conf.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            conf["plugins"]["opener"]["requireLiteralLeadingDot"],
+            serde_json::Value::Bool(false),
+            "without this, $HOME/** cannot match ~/.local/share/iblai/workspaces"
+        );
+
+        // .env.example is the only documentation of the dotenv keys the entry
+        // points load (src-tauri/.env.local / .env.production) — keep the two
+        // app-URL vars named there.
+        let example = std::fs::read_to_string(manifest.join(".env.example")).unwrap();
+        for key in ["TAURI_APP_URL", "TAURI_DEV_URL"] {
+            assert!(example.contains(key), ".env.example must document {key}");
+        }
+    }
+
+    /// The word pools are what keep two mentors' folders from colliding by
+    /// name, so a duplicate (or a word that can't be a directory) silently
+    /// shrinks the space.
+    #[test]
+    fn the_slug_word_pools_are_unique_and_folder_safe() {
+        for (label, words) in [("adjectives", SLUG_ADJECTIVES), ("nouns", SLUG_NOUNS)] {
+            assert_eq!(words.len(), 48, "{label} pool size");
+            let unique: std::collections::HashSet<_> = words.iter().collect();
+            assert_eq!(unique.len(), words.len(), "{label} must not repeat a word");
+            for w in words {
+                assert!(
+                    !w.is_empty() && w.chars().all(|c| c.is_ascii_lowercase()),
+                    "{label}: {w:?} must be lowercase ascii to be a folder name"
+                );
+            }
+        }
+    }
+
+    /// A GUI-launched app inherits a bare PATH, so Code has to name the common
+    /// toolchain dirs itself — but only the ones that actually exist, or the
+    /// child's PATH fills with noise.
+    #[test]
+    fn path_additions_only_advertise_existing_dirs() {
+        let scratch = std::env::temp_dir().join(format!("opencode-path-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&scratch);
+        std::fs::create_dir_all(scratch.join(".asdf/shims")).unwrap();
+        std::fs::create_dir_all(scratch.join(".local/share/mise/shims")).unwrap();
+
+        let dirs = path_additions(&scratch);
+
+        assert!(dirs.contains(&scratch.join(".asdf/shims")));
+        assert!(dirs.contains(&scratch.join(".local/share/mise/shims")));
+        assert!(
+            !dirs.contains(&scratch.join(".volta/bin")),
+            "an absent toolchain must not be advertised"
+        );
+        assert!(
+            dirs.iter().all(|d| d.is_dir()),
+            "every advertised dir exists: {dirs:?}"
+        );
+
+        let _ = std::fs::remove_dir_all(&scratch);
+    }
+
+    /// Serialises the tests that repoint `XDG_DATA_HOME`, which is process-global.
+    fn data_dir_lock() -> std::sync::MutexGuard<'static, ()> {
+        static L: std::sync::Mutex<()> = std::sync::Mutex::new(());
+        L.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    /// Run `body` with the app data dir pointed at a throwaway directory.
+    fn with_scratch_data_dir<T>(tag: &str, body: impl FnOnce() -> T) -> T {
+        let _lock = data_dir_lock();
+        let scratch = std::env::temp_dir().join(format!("opencode-{tag}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&scratch);
+        std::fs::create_dir_all(&scratch).unwrap();
+        let previous = std::env::var_os("XDG_DATA_HOME");
+        std::env::set_var("XDG_DATA_HOME", &scratch);
+
+        let out = body();
+
+        match previous {
+            Some(v) => std::env::set_var("XDG_DATA_HOME", v),
+            None => std::env::remove_var("XDG_DATA_HOME"),
+        }
+        let _ = std::fs::remove_dir_all(&scratch);
+        out
+    }
+
+    /// One file holds both the approval mode and the mentor workspaces, so a
+    /// write to either must leave the other — and any key a newer build added —
+    /// intact. Read-modify-write of the whole object is what buys that.
+    #[test]
+    fn settings_keys_do_not_clobber_each_other() {
+        with_scratch_data_dir("settings", || {
+            assert_eq!(read_settings().len(), 0, "no file yet reads as empty");
+            assert_eq!(saved_permission_mode(), None, "and no mode is chosen");
+
+            let mut seeded = read_settings();
+            seeded.insert("some_future_key".into(), json!("keep me"));
+            seeded.insert(SETTINGS_PERMISSION_MODE.into(), json!("auto"));
+            write_settings(&seeded).unwrap();
+
+            record_mentor_workspace("acme", "mentor-1", Path::new("/ws/one")).unwrap();
+            record_mentor_workspace("acme", "mentor-2", Path::new("/ws/two")).unwrap();
+
+            let settings = read_settings();
+            assert_eq!(settings["some_future_key"], json!("keep me"));
+            assert_eq!(saved_permission_mode().as_deref(), Some("auto"));
+            let ws = settings[SETTINGS_WORKSPACES].as_object().unwrap();
+            assert_eq!(ws[&workspace_key("acme", "mentor-1")], json!("/ws/one"));
+            assert_eq!(
+                ws[&workspace_key("acme", "mentor-2")],
+                json!("/ws/two"),
+                "a second mentor does not displace the first"
+            );
+
+            // …and writing the mode back leaves the workspaces alone.
+            let mut settings = read_settings();
+            settings.insert(SETTINGS_PERMISSION_MODE.into(), json!("manual"));
+            write_settings(&settings).unwrap();
+            assert_eq!(
+                read_settings()[SETTINGS_WORKSPACES]
+                    .as_object()
+                    .unwrap()
+                    .len(),
+                2
+            );
+        });
+    }
+
+    /// A garbled or hand-edited mode must read as "never chosen" so the app
+    /// asks again, rather than silently picking a security posture.
+    #[test]
+    fn an_unrecognised_saved_mode_reads_as_unset() {
+        with_scratch_data_dir("settings-bad", || {
+            let mut settings = serde_json::Map::new();
+            settings.insert(SETTINGS_PERMISSION_MODE.into(), json!("YOLO"));
+            write_settings(&settings).unwrap();
+            assert_eq!(saved_permission_mode(), None);
+        });
+    }
+
+    /// The mentor keeps one folder across chats, and a fresh one is genuinely
+    /// fresh — never a recycled directory another owner already claims.
+    #[test]
+    fn a_mentor_keeps_one_workspace_and_new_ones_are_untaken() {
+        with_scratch_data_dir("settings-ws", || {
+            let first = mentor_workspace("acme", "mentor-1");
+            assert!(first.is_dir(), "created eagerly so the popover can show it");
+            assert_eq!(
+                mentor_workspace("acme", "mentor-1"),
+                first,
+                "the same mentor comes back to the same folder"
+            );
+            assert_ne!(
+                mentor_workspace("acme", "mentor-2"),
+                first,
+                "a different mentor gets its own"
+            );
+
+            // `first` is empty, so the recycler would happily hand it back —
+            // a fresh mint must not, or "New workspace" would be a no-op.
+            let fresh = mint_workspace_dir(&claimed_workspaces());
+            assert!(!fresh.exists());
+            assert_ne!(fresh, first);
+        });
+    }
+
+    /// Switching to auto is a statement about the operations already on screen
+    /// too: leaving those cards up would be incoherent.
+    #[tokio::test]
+    async fn switching_to_auto_answers_the_cards_already_waiting() {
+        let (tx_allow, rx_allow) = oneshot::channel();
+        let (tx_none, rx_none) = oneshot::channel();
+        {
+            let mut map = permissions().lock().await;
+            map.insert(
+                "perm-auto-test-1".into(),
+                PendingPermission {
+                    session_id: "s".into(),
+                    allow_option_id: Some("allow-1".into()),
+                    tx: tx_allow,
+                },
+            );
+            map.insert(
+                "perm-auto-test-2".into(),
+                PendingPermission {
+                    session_id: "s".into(),
+                    allow_option_id: None,
+                    tx: tx_none,
+                },
+            );
+        }
+
+        allow_all_pending().await;
+
+        assert_eq!(rx_allow.await.unwrap().as_deref(), Some("allow-1"));
+        let still_waiting = {
+            let mut map = permissions().lock().await;
+            map.remove("perm-auto-test-2").is_some()
+        };
+        assert!(
+            still_waiting,
+            "a card with no allow option is left for the user, not guessed at"
+        );
+        drop(rx_none);
+    }
+
+    /// Workspaces are keyed by (tenant, mentor), and the ids are opaque backend
+    /// strings — an id carrying `/` or `..` must not reshape the key.
+    #[test]
+    fn workspace_keys_are_mentor_scoped_and_safe() {
+        let key = workspace_key("acme", "mentor-1");
+        assert_eq!(key.matches('/').count(), 1, "one separator only: {key}");
+        assert_eq!(key, workspace_key("acme", "mentor-1"), "and it is stable");
+
+        assert_ne!(
+            workspace_key("acme", "mentor-1"),
+            workspace_key("other", "mentor-1"),
+            "the same mentor id on another tenant is another workspace"
+        );
+        assert_ne!(
+            workspace_key("acme", "mentor-1"),
+            workspace_key("acme", "mentor-2")
+        );
+
+        let hostile = workspace_key("../../etc", "../../../root");
+        assert_eq!(
+            hostile.matches('/').count(),
+            1,
+            "a traversal attempt stays one key, not a path: {hostile}"
+        );
+        assert!(!hostile.contains(".."), "{hostile}");
     }
 
     #[test]
@@ -2966,6 +3923,7 @@ mod tests {
             last_used: Mutex::new(Instant::now()),
             active_turns: AtomicUsize::new(0),
             closing: AtomicBool::new(false),
+            context_fresh: AtomicBool::new(false),
         })
     }
 
@@ -3003,6 +3961,7 @@ mod tests {
         let sid = format!("dead-reader-{}", std::process::id());
         let s = test_session("cat");
         registry().lock().await.insert(sid.clone(), s.clone());
+        remember_resume(&sid, "acp-survives-teardown").await;
 
         let inflight = {
             let s = s.clone();
@@ -3029,6 +3988,12 @@ mod tests {
             !registry().lock().await.contains_key(&sid),
             "the corpse must leave the registry"
         );
+        assert_eq!(
+            resume_for(&sid).await.as_deref(),
+            Some("acp-survives-teardown"),
+            "…but the resume id must survive it — that key is how the next spawn reconnects"
+        );
+        forget_resume(&sid).await;
     }
 
     /// The old reader's EOF may land AFTER a respawn replaced the session; its
@@ -3069,6 +4034,67 @@ mod tests {
             assert!(start.elapsed() < Duration::from_secs(5), "`true` must exit");
             tokio::time::sleep(Duration::from_millis(10)).await;
         }
+    }
+
+    /// A disconnect must not cost the chat its conversation: the resume id
+    /// outlives the process, follows the new-chat migration, and only "New
+    /// workspace" forgets it. Unique keys per run, so no serialization needed.
+    #[tokio::test]
+    async fn a_resume_id_outlives_its_process_and_follows_the_chat() {
+        let a = format!("resume-a-{}", std::process::id());
+        let real = format!("resume-real-{}", std::process::id());
+
+        remember_resume(&a, "acp-1").await;
+        assert_eq!(resume_for(&a).await.as_deref(), Some("acp-1"));
+
+        // New-chat migration: the ephemeral first-turn key gains its real id.
+        adopt_resume(&real, &a).await;
+        assert_eq!(resume_for(&a).await, None, "prior key is re-keyed away");
+        assert_eq!(resume_for(&real).await.as_deref(), Some("acp-1"));
+
+        // "New workspace" is the one intentional fresh start.
+        forget_resume(&real).await;
+        assert_eq!(resume_for(&real).await, None);
+
+        // An empty ACP id is never worth remembering.
+        remember_resume(&a, "").await;
+        assert_eq!(resume_for(&a).await, None);
+    }
+
+    /// The transcript fallback: a fresh ACP session gets the prior conversation
+    /// prepended; with no history the prompt is byte-identical to before.
+    #[test]
+    fn the_transcript_is_prepended_only_when_there_is_history() {
+        // Older SDK / first turn: only the latest message → unchanged.
+        let only_latest = vec![json!({ "role": "user", "content": "do the thing" })];
+        assert_eq!(
+            prompt_with_history(&only_latest, "do the thing"),
+            "do the thing"
+        );
+        assert_eq!(prompt_with_history(&[], "do the thing"), "do the thing");
+
+        // A real transcript: prior turns in order, roles labelled, the trailing
+        // duplicate of the latest message dropped, non-chat roles skipped.
+        let messages = vec![
+            json!({ "role": "system", "content": "routing goo" }),
+            json!({ "role": "user", "content": "build me a page" }),
+            json!({ "role": "assistant", "content": [ { "type": "text", "text": "done — index.html" } ] }),
+            json!({ "role": "user", "content": "now style it" }),
+        ];
+        let p = prompt_with_history(&messages, "now style it");
+        assert!(p.starts_with("<conversation-history>"), "{p}");
+        assert!(p.contains("user: build me a page"));
+        assert!(p.contains("assistant: done — index.html"));
+        assert!(!p.contains("routing goo"), "non-chat roles stay out");
+        assert!(
+            p.ends_with("</conversation-history>\n\nnow style it"),
+            "{p}"
+        );
+        assert_eq!(
+            p.matches("now style it").count(),
+            1,
+            "the latest message appears exactly once"
+        );
     }
 
     /// `closing` is the crash/close discriminator: `close_session` sets it,

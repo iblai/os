@@ -1679,16 +1679,27 @@ export function Chat({
   // so they must not suppress the typing indicator — otherwise the user sees
   // nothing while the agent reasons before any text streams in.
   const verboseReasoningEnabled = mentorSettings.showReasoning;
+  // Code turns (`opencode-<ts>` ids) show those surfaces regardless of the
+  // setting — see ai-message-bubble — so for them they ARE visible output, and
+  // the indicator must stand down or it sits beside a live tool list.
+  // Ids are typed as strings but arrive from several producers, and a numeric
+  // one must not take the whole chat down here.
+  const isCodeTurn = (id?: unknown) =>
+    typeof id === 'string' && id.startsWith('opencode-');
+  const lastMessageIsVerbose =
+    verboseReasoningEnabled || isCodeTurn(lastMessage?.id);
+  const streamIsVerbose =
+    verboseReasoningEnabled || isCodeTurn(currentStreamingMessage?.id);
   const lastAssistantHasOutput =
     lastMessage?.role === 'assistant' &&
     ((lastMessage.content ?? '').trim().length > 0 ||
-      (verboseReasoningEnabled &&
+      (lastMessageIsVerbose &&
         ((lastMessage.reasoningContent ?? '').trim().length > 0 ||
           (lastMessage.toolCalls?.length ?? 0) > 0)) ||
       (lastMessage.artifactVersions?.length ?? 0) > 0);
   const currentStreamHasOutput =
     (currentStreamingMessage?.content ?? '').trim().length > 0 ||
-    (verboseReasoningEnabled &&
+    (streamIsVerbose &&
       (isReasoning ||
         (streamingReasoningContent ?? '').trim().length > 0 ||
         (streamingToolCalls?.length ?? 0) > 0));
