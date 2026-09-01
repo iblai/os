@@ -94,6 +94,13 @@ overrides:
   qs: '>=6.15.2'
   uuid: 11.1.1
   sharp: '>=0.35.0'
+  # GHSA-c83g-rgw3-j3cx (unbounded memory growth -> OOM) + GHSA-73wf-gq98-2v4g
+  # (crash / prototype write via untrusted browserslist-stats.json in
+  # normalizeStats), both patched in 4.28.7; vulnerable <=4.28.6. Dev/build-only
+  # reach: @vitejs/plugin-react > @babel/core > @babel/helper-compilation-targets
+  # > browserslist. Patch bump within 4.x (consumers ask for >=4.21.0), so no
+  # constraint is crossed.
+  browserslist: '>=4.28.7'
   brace-expansion@<=5.0.8: '>=5.0.9'
   # serialize-javascript GHSA-5c6j-r48x-rmvq (RCE via RegExp.flags/Date, patched
   # 7.0.3) and GHSA-qj8w-gfj5-8c6v (CPU-exhaustion DoS, patched 7.0.5). Reached by
