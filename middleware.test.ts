@@ -20,7 +20,10 @@ function cspOf(res: { headers: Headers }): string | null {
 }
 
 describe('CSP middleware', () => {
-  afterEach(() => vi.unstubAllEnvs());
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
 
   it('enforces via Content-Security-Policy by default', () => {
     const res = middleware(req());
@@ -160,6 +163,39 @@ describe('CSP middleware', () => {
     // <bucket>.s3.amazonaws.com must match the wildcard so uploads/downloads
     // to iblai-app-dm-media etc. are not blocked.
     expect(connectSrc).toContain('https://*.s3.amazonaws.com');
+  });
+
+  // Without these the on-device TTS weights are blocked and the voice fails
+  // with nothing in the UI to explain it.
+  it('allows the Kokoro weight host and its redirect CDN in connect-src', () => {
+    const csp = cspOf(middleware(req())) ?? '';
+    const connectSrc = csp
+      .split(';')
+      .map((d) => d.trim())
+      .find((d) => d.startsWith('connect-src '));
+
+    expect(connectSrc).toContain('https://huggingface.co');
+    // huggingface.co 302s the weight file to a regional CDN, and connect-src
+    // is re-checked on the redirect target.
+    expect(connectSrc).toContain('https://*.hf.co');
+    expect(connectSrc).toContain('https://*.huggingface.co');
+  });
+
+  it('follows a self-hosted weight host instead of Hugging Face', async () => {
+    vi.stubEnv(
+      'NEXT_PUBLIC_TTS_KOKORO_MODEL_HOST',
+      'https://weights.acme.dev/models/',
+    );
+    // The NEXT_PUBLIC_* registry in lib/config is captured at module
+    // evaluation, and middleware runs where there is no `window.__ENV__` to
+    // override it -- so the build-time value only lands on a fresh import.
+    vi.resetModules();
+    const { middleware: fresh } = await import('./middleware');
+    const csp = cspOf(fresh(req())) ?? '';
+
+    expect(csp).toContain('https://weights.acme.dev');
+    // The HF redirect CDNs are only relevant to Hugging Face, so they go away.
+    expect(csp).not.toContain('hf.co');
   });
 
   it('allows the GitHub REST API in connect-src (dataset branch lookup)', () => {

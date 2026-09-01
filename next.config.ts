@@ -134,7 +134,7 @@ const nextConfig: NextConfig = {
       '*.svg': ['@svgr/webpack'],
     },
   },
-  webpack: (config, { dev }) => {
+  webpack: (config, { dev, isServer }) => {
     if (dev) {
       // Only use polling in Docker/container environments where file watching doesn't work
       // On macOS/local development, the default file watcher is more reliable
@@ -145,6 +145,20 @@ const nextConfig: NextConfig = {
           aggregateTimeout: 300,
         };
       }
+    }
+    if (isServer) {
+      // `lib/tts/kokoro-session.ts` references `lib/tts/kokoro.worker.ts` via
+      // `new Worker(new URL(...))`, so webpack builds the worker for the server
+      // graph too (client components are compiled for SSR as well). Server-side
+      // it resolves kokoro-js through the "node" export condition, which pulls
+      // in @huggingface/transformers' Node entry and, from there,
+      // onnxruntime-node's prebuilt `.node` binaries — binary files no loader
+      // can parse, and that nothing would ever execute anyway: a Web Worker
+      // only exists in a browser. Resolve the package to nothing on the server.
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        'kokoro-js': false,
+      };
     }
     return config;
   },

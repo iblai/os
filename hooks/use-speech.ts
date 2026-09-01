@@ -4,186 +4,53 @@ import { useCallback, useEffect, useSyncExternalStore } from 'react';
 
 import type { Message } from '@iblai/iblai-js/web-utils';
 
-import { config } from '@/lib/config';
-import { LOCAL_STORAGE_KEYS } from '@/lib/constants';
+import { stripMarkdownForSpeech } from '@/lib/strip-markdown';
+import {
+  downgradeToWasm,
+  isIosWebKit,
+  probeWebGpu,
+  resolveIblaiMode,
+  resolveKokoroConfig,
+} from '@/lib/tts/config';
+import {
+  demoteIblaiRoute,
+  peekIblaiRoute,
+  primeIblaiRoute,
+  startIblaiWarmUp,
+} from '@/lib/tts/iblai-routing';
+import {
+  cacheKokoroAudio,
+  getCachedKokoroAudio,
+  getKokoroPlayer,
+  getKokoroWorker,
+  nextKokoroRequestId,
+  teardownKokoro,
+} from '@/lib/tts/kokoro-session';
+import type { KokoroResponse } from '@/lib/tts/kokoro.worker';
+import {
+  getSnapshot,
+  listenerCount,
+  setIdle,
+  subscribe,
+  update,
+} from '@/lib/tts/speech-store';
+import type { StreamPlayer } from '@/lib/tts/stream-player';
+import { loadTtsAudio } from '@/lib/tts/tts-endpoint';
 import { useUsername } from '@/providers/use-user';
 import { useMentorSettings } from './use-mentors/use-mentor-settings';
 
-const DEFAULT_TTS_MIME = 'audio/mpeg';
+/**
+ * The mentor-settings value for the on-device voice. Mirrors the option the
+ * voice tab offers in `@iblai/iblai-js` (labelled "ibl.ai").
+ */
+const IBLAI_VOICE_PROVIDER = 'iblai';
 
-function normalizeAudioMime(contentType: string | null): string {
-  const mime = (contentType ?? '').split(';')[0].trim().toLowerCase();
-  if (!mime) return DEFAULT_TTS_MIME;
-  return mime === 'audio/mp3' ? DEFAULT_TTS_MIME : mime;
-}
-
-function canStreamWithMediaSource(mime: string): boolean {
-  return (
-    typeof window !== 'undefined' &&
-    typeof window.MediaSource !== 'undefined' &&
-    typeof window.MediaSource.isTypeSupported === 'function' &&
-    window.MediaSource.isTypeSupported(mime)
-  );
-}
-
-function attachMediaSourceStream(
-  audio: HTMLAudioElement,
-  body: ReadableStream<Uint8Array>,
-  mime: string,
-  signal: AbortSignal,
-): { objectUrl: string; ready: Promise<void> } {
-  const mediaSource = new window.MediaSource();
-  const objectUrl = URL.createObjectURL(mediaSource);
-  audio.src = objectUrl;
-
-  const ready = new Promise<void>((resolve, reject) => {
-    const onSourceOpen = () => {
-      mediaSource.removeEventListener('sourceopen', onSourceOpen);
-
-      let sourceBuffer: SourceBuffer;
-      try {
-        sourceBuffer = mediaSource.addSourceBuffer(mime);
-      } catch (err) {
-        reject(err);
-        return;
-      }
-
-      const appendChunk = (chunk: Uint8Array) =>
-        new Promise<void>((res, rej) => {
-          const onUpdateEnd = () => {
-            sourceBuffer.removeEventListener('updateend', onUpdateEnd);
-            sourceBuffer.removeEventListener('error', onError);
-            res();
-          };
-          const onError = () => {
-            sourceBuffer.removeEventListener('updateend', onUpdateEnd);
-            sourceBuffer.removeEventListener('error', onError);
-            rej(new Error('TTS source buffer append failed'));
-          };
-          sourceBuffer.addEventListener('updateend', onUpdateEnd);
-          sourceBuffer.addEventListener('error', onError);
-          sourceBuffer.appendBuffer(chunk as BufferSource);
-        });
-
-      const pump = async () => {
-        const reader = body.getReader();
-        let appendedAny = false;
-        try {
-          while (true) {
-            const result = await reader.read();
-            if (result.done) break;
-            if (result.value.byteLength > 0) {
-              await appendChunk(result.value);
-              appendedAny = true;
-              resolve();
-            }
-          }
-          if (mediaSource.readyState === 'open') {
-            mediaSource.endOfStream();
-          }
-          if (!appendedAny) {
-            reject(new Error('TTS stream produced no audio'));
-          }
-        } catch (err) {
-          reject(err);
-          if (!signal.aborted && mediaSource.readyState === 'open') {
-            try {
-              mediaSource.endOfStream();
-            } catch {}
-          }
-        }
-      };
-
-      void pump();
-    };
-
-    mediaSource.addEventListener('sourceopen', onSourceOpen);
-  });
-
-  return { objectUrl, ready };
-}
-
-async function loadTtsAudio(
-  audio: HTMLAudioElement,
-  org: string,
-  userId: string,
-  chatMessageId: string,
-  signal: AbortSignal,
-): Promise<boolean> {
-  const token =
-    typeof window !== 'undefined'
-      ? window.localStorage.getItem(LOCAL_STORAGE_KEYS.DM_TOKEN_KEY)
-      : null;
-  const url = `${config.dmUrl()}/api/ai-mentor/orgs/${org}/users/${userId}/chat-messages/${chatMessageId}/tts`;
-  const response = await fetch(url, {
-    method: 'GET',
-    cache: 'no-cache',
-    headers: token ? { Authorization: `Token ${token}` } : undefined,
-    signal,
-  });
-  if (!response.ok) {
-    throw new Error(`TTS request failed with status ${response.status}`);
-  }
-
-  const contentType = response.headers.get('Content-Type');
-
-  if (contentType && !contentType.toLowerCase().startsWith('audio/')) {
-    return false;
-  }
-  const mime = normalizeAudioMime(contentType);
-
-  if (response.body && canStreamWithMediaSource(mime)) {
-    const { objectUrl, ready } = attachMediaSourceStream(
-      audio,
-      response.body,
-      mime,
-      signal,
-    );
-    activeObjectUrl = objectUrl;
-    await ready;
-    return true;
-  }
-
-  const blob = await response.blob();
-  const objectUrl = URL.createObjectURL(blob);
-  activeObjectUrl = objectUrl;
-  audio.src = objectUrl;
-  return true;
-}
-
-type SpeechSnapshot = {
-  currentMessageId: string | null;
-  isSpeaking: boolean;
-  isLoading: boolean;
-};
-
-let snapshot: SpeechSnapshot = {
-  currentMessageId: null,
-  isSpeaking: false,
-  isLoading: false,
-};
-
+// The `<audio>`-based providers (endpoint and cached on-device replay) share
+// these: only one utterance plays at a time, so there is exactly one element,
+// one in-flight request and one object URL to revoke.
 let activeAudio: HTMLAudioElement | null = null;
 let activeStreamController: AbortController | null = null;
 let activeObjectUrl: string | null = null;
-
-const listeners = new Set<() => void>();
-
-function subscribe(listener: () => void) {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-function getSnapshot() {
-  return snapshot;
-}
-
-function update(patch: Partial<SpeechSnapshot>) {
-  snapshot = { ...snapshot, ...patch };
-  listeners.forEach((l) => l());
-}
 
 function releaseObjectUrl() {
   if (activeObjectUrl) {
@@ -203,6 +70,7 @@ function teardownPlayback() {
     activeAudio = null;
   }
   releaseObjectUrl();
+  teardownKokoro();
   if (typeof window !== 'undefined' && window.speechSynthesis) {
     window.speechSynthesis.cancel();
   }
@@ -210,7 +78,7 @@ function teardownPlayback() {
 
 function resetSpeech() {
   teardownPlayback();
-  update({ currentMessageId: null, isSpeaking: false, isLoading: false });
+  setIdle();
 }
 
 type Props = {
@@ -228,22 +96,61 @@ export function useSpeech({ mentorId, tenantKey }: Props = {}) {
   const username = useUsername();
   const { data: mentorSettings } = useMentorSettings({ mentorId, tenantKey });
   const voiceProvider = mentorSettings?.voiceProvider;
+  const iblaiVoice = mentorSettings?.iblaiVoice as string | undefined;
 
   const isBrowserSupported =
     typeof window !== 'undefined' && 'speechSynthesis' in window;
+  // `iblai` synthesises either on the backend or in the browser, and which one
+  // is decided per utterance. On the cloud path it is just another server-side
+  // provider, so it takes the same endpoint route as OpenAI and Google and
+  // needs an identity and tenant like they do; only the on-device path can
+  // work without them.
+  const isIblaiProvider = voiceProvider === IBLAI_VOICE_PROVIDER;
+  const iblaiMode = resolveIblaiMode();
+  // `device` pins the on-device path for debugging: it is the only way to
+  // exercise the WASM backend, so it deliberately keeps the cloud out of
+  // reach, including as a fallback.
+  const pinnedOnDevice = isIblaiProvider && iblaiMode === 'device';
+  // Under `auto` both halves stay reachable, which is the whole point: the
+  // cloud serves until the weights are cached, and remains the landing spot
+  // when an on-device utterance fails.
+  const arbitratedIblai = isIblaiProvider && iblaiMode === 'auto';
+  // iOS is excluded from the on-device path outright: every iOS browser is
+  // WebKit, and loading the model there trips WebKit's per-tab memory kill --
+  // a crash-reload loop no JS can catch.
+  const isIblaiSupported =
+    typeof window !== 'undefined' &&
+    typeof window.Worker === 'function' &&
+    !isIosWebKit();
   const useEndpoint = Boolean(
-    voiceProvider && voiceProvider !== 'browser' && username && tenantKey,
+    voiceProvider &&
+      voiceProvider !== 'browser' &&
+      !pinnedOnDevice &&
+      username &&
+      tenantKey,
   );
-  const isSupported = useEndpoint || isBrowserSupported;
+  const isSupported =
+    useEndpoint ||
+    isBrowserSupported ||
+    ((pinnedOnDevice || arbitratedIblai) && isIblaiSupported);
 
   useEffect(() => {
     return () => {
       // Only the last unmount needs to clean up; harmless when re-mounting.
-      if (listeners.size === 0) {
+      if (listenerCount() === 0) {
         resetSpeech();
       }
     };
   }, []);
+
+  // Resolving the route means awaiting a WebGPU adapter and a Cache Storage
+  // lookup, neither of which can happen inside the click that needs the
+  // answer. Both are read-only -- nothing is downloaded here -- so the work is
+  // done on mount and the click reads the memo synchronously.
+  useEffect(() => {
+    if (!arbitratedIblai || !isIblaiSupported) return;
+    void primeIblaiRoute(resolveKokoroConfig(iblaiVoice));
+  }, [arbitratedIblai, isIblaiSupported, iblaiVoice]);
 
   const stop = useCallback(() => {
     resetSpeech();
@@ -251,9 +158,33 @@ export function useSpeech({ mentorId, tenantKey }: Props = {}) {
 
   const speakViaBrowser = useCallback(
     (message: Message) => {
-      if (!isBrowserSupported || !message.content) return;
+      // The endpoint path falls back to here when the server returns a
+      // non-audio payload, and it arrives with `isLoading` already true, so
+      // every bail-out below resets rather than returning bare -- otherwise the
+      // button spins forever on a browser with no Web Speech API.
+      if (!isBrowserSupported || !message.content) {
+        resetSpeech();
+        return;
+      }
+      // `message.content` is markdown. The Web Speech API has no notion of
+      // markup, so handing it the raw string makes the voice read out the
+      // syntax itself -- "hash hash", "star star". Strip to prose first.
+      //
+      // Only this path needs it: `speakViaEndpoint` sends a message id and the
+      // backend derives its own text from it, so there is no text to strip
+      // there. When the endpoint falls back to this function it goes through
+      // the same stripping, because the fallback calls `speakViaBrowser`.
+      const spoken = stripMarkdownForSpeech(message.content);
+      // A message that is nothing but a code block or an image strips to
+      // nothing. Speaking an empty utterance would leave the button stuck in
+      // its "speaking" state waiting for an `onend` that some engines never
+      // fire.
+      if (!spoken) {
+        resetSpeech();
+        return;
+      }
       teardownPlayback();
-      const utterance = new SpeechSynthesisUtterance(message.content);
+      const utterance = new SpeechSynthesisUtterance(spoken);
       utterance.onend = () =>
         update({ currentMessageId: null, isSpeaking: false });
       utterance.onerror = () =>
@@ -295,14 +226,19 @@ export function useSpeech({ mentorId, tenantKey }: Props = {}) {
       };
 
       try {
-        const isAudio = await loadTtsAudio(
+        const outcome = await loadTtsAudio(
           audio,
-          tenantKey,
-          username,
-          String(message.id),
+          {
+            org: tenantKey,
+            userId: username,
+            chatMessageId: String(message.id),
+          },
           controller.signal,
+          (objectUrl) => {
+            activeObjectUrl = objectUrl;
+          },
         );
-        if (!isAudio) {
+        if (outcome === 'not-audio') {
           speakViaBrowser(message);
           return;
         }
@@ -317,23 +253,216 @@ export function useSpeech({ mentorId, tenantKey }: Props = {}) {
     [username, tenantKey, speakViaBrowser],
   );
 
+  /**
+   * Where a failed on-device utterance lands.
+   *
+   * Under `auto` that is the cloud, not the system voice: the two `iblai`
+   * paths run the same model and the same voices, so the backend is a far
+   * closer substitute than `speechSynthesis`. The route is demoted at the same
+   * time, so the rest of the session stops re-trying a path that just failed.
+   * The system voice remains the floor beneath both.
+   */
+  const fallbackFromDevice = useCallback(
+    (message: Message) => {
+      if (arbitratedIblai) {
+        demoteIblaiRoute(resolveKokoroConfig(iblaiVoice));
+        if (useEndpoint) {
+          void speakViaEndpoint(message);
+          return;
+        }
+      }
+      speakViaBrowser(message);
+    },
+    [
+      arbitratedIblai,
+      iblaiVoice,
+      useEndpoint,
+      speakViaEndpoint,
+      speakViaBrowser,
+    ],
+  );
+
+  /**
+   * On-device synthesis: no network call, no audio leaves the browser.
+   *
+   * Flow: strip markdown -> open the audio graph -> hand the text to the worker
+   * -> schedule each chunk of PCM the instant it comes back, while the worker
+   * is already generating the next one. Time-to-first-sound therefore depends
+   * on the length of the *first sentence*, not of the message.
+   *
+   * Every failure mode ends at `speakViaBrowser`, matching how the endpoint
+   * path degrades: no WebGPU and a WASM backend too slow to matter, a blocked
+   * model fetch, a worker that failed to boot, or an audio context the autoplay
+   * policy will not let us start.
+   */
+  const speakViaIblai = useCallback(
+    async (message: Message) => {
+      // `speak` has already rejected an empty `content`, and
+      // `stripMarkdownForSpeech` returns '' for anything that is not a string,
+      // so no defensive default is needed here.
+      const spoken = stripMarkdownForSpeech(message.content);
+      if (!spoken) {
+        resetSpeech();
+        return;
+      }
+
+      teardownPlayback();
+      update({
+        currentMessageId: message.id,
+        isSpeaking: false,
+        isLoading: true,
+      });
+
+      const messageId = String(message.id);
+
+      // The presence of `navigator.gpu` is not proof an adapter will be
+      // granted (blocklisted GPUs, denied contexts). Probe before committing:
+      // a refusal downgrades to WASM instead of failing the utterance.
+      let kokoroConfig = resolveKokoroConfig(iblaiVoice);
+      if (kokoroConfig.device === 'webgpu' && !(await probeWebGpu())) {
+        kokoroConfig = downgradeToWasm(kokoroConfig);
+      }
+
+      // Already synthesised this message in this voice: replay the assembled
+      // WAV rather than spending another pass on the CPU.
+      const cachedUrl = getCachedKokoroAudio(messageId, kokoroConfig.voice);
+      if (cachedUrl) {
+        const audio = new Audio();
+        activeAudio = audio;
+        const finish = () => {
+          activeAudio = null;
+          update({ currentMessageId: null, isSpeaking: false });
+        };
+        audio.onended = finish;
+        audio.onerror = finish;
+        audio.src = cachedUrl;
+        update({ isSpeaking: true, isLoading: false });
+        try {
+          await audio.play();
+        } catch {
+          resetSpeech();
+        }
+        return;
+      }
+
+      let player: StreamPlayer;
+      let worker: Worker;
+      try {
+        player = getKokoroPlayer();
+        worker = getKokoroWorker();
+      } catch {
+        fallbackFromDevice(message);
+        return;
+      }
+
+      // `start()` constructs the AudioContext synchronously before it awaits
+      // anything, so this is still inside the click that called us. It resolves
+      // false when the context stays suspended -- which is precisely the
+      // autoplay case (`selectAutoplayLastAiMessage` speaks with no gesture
+      // behind it). Falling back is the deliberate choice: the alternative is
+      // burning a minute of CPU producing audio that is silently discarded.
+      const started = await player.start();
+      if (!started) {
+        fallbackFromDevice(message);
+        return;
+      }
+
+      const requestId = nextKokoroRequestId();
+
+      player.onDrained = () => {
+        update({ currentMessageId: null, isSpeaking: false });
+      };
+
+      worker.onerror = () => {
+        fallbackFromDevice(message);
+      };
+
+      worker.onmessage = (event: MessageEvent<KokoroResponse>) => {
+        const data = event.data;
+        // A reply from an utterance the user already moved on from.
+        if (!data || data.requestId !== requestId) return;
+
+        if (data.type === 'chunk') {
+          player.enqueue(data.pcm, data.samplingRate);
+          // First audible sound: the button stops spinning here, not when the
+          // whole message has been generated.
+          if (data.index === 0) {
+            update({ isSpeaking: true, isLoading: false });
+          }
+          return;
+        }
+
+        if (data.type === 'complete') {
+          cacheKokoroAudio(messageId, kokoroConfig.voice, data.blob);
+          // Not "playback finished" -- the tail is still queued. This is what
+          // lets the player know the last chunk it holds really is the last.
+          player.markComplete();
+          return;
+        }
+
+        if (data.type === 'error') {
+          fallbackFromDevice(message);
+        }
+      };
+
+      worker.postMessage({
+        type: 'generate',
+        requestId,
+        text: spoken,
+        config: kokoroConfig,
+      });
+    },
+    [fallbackFromDevice, iblaiVoice],
+  );
+
   const speak = useCallback(
     (message: Message) => {
       if (!message?.content) return;
+      if (arbitratedIblai && isIblaiSupported) {
+        const kokoroConfig = resolveKokoroConfig(iblaiVoice);
+        // A route that is still resolving reads as null and takes the cloud.
+        // Waiting for it would cost the click its user gesture and let a
+        // double-click start two utterances; one cloud utterance costs a few
+        // seconds of backend time, once.
+        if (peekIblaiRoute(kokoroConfig) === 'device') {
+          void speakViaIblai(message);
+          return;
+        }
+        // First Read Aloud of an eligible session starts the download. It runs
+        // alongside the cloud playback below and interrupts nothing.
+        void startIblaiWarmUp(kokoroConfig);
+      } else if (pinnedOnDevice && isIblaiSupported) {
+        void speakViaIblai(message);
+        return;
+      }
       if (useEndpoint) {
         void speakViaEndpoint(message);
-      } else {
-        speakViaBrowser(message);
+        return;
       }
+      // Also the landing spot for `iblai` on unsupported devices (iOS): the
+      // provider stays configured, the voice degrades to the system one.
+      speakViaBrowser(message);
     },
-    [useEndpoint, speakViaEndpoint, speakViaBrowser],
+    [
+      arbitratedIblai,
+      pinnedOnDevice,
+      iblaiVoice,
+      isIblaiSupported,
+      useEndpoint,
+      speakViaIblai,
+      speakViaEndpoint,
+      speakViaBrowser,
+    ],
   );
 
   const toggle = useCallback(
     (message: Message) => {
+      // Read through the store rather than the render-time values so a rapid
+      // second click sees the state the first one just wrote.
+      const current = getSnapshot();
       const isThisActive =
-        snapshot.currentMessageId === message.id &&
-        (snapshot.isSpeaking || snapshot.isLoading);
+        current.currentMessageId === message.id &&
+        (current.isSpeaking || current.isLoading);
       if (isThisActive) {
         stop();
         return;
