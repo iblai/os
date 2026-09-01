@@ -1,0 +1,18 @@
+{
+  "version": "v1",
+  "packages": {
+    "@iblai/iblai-js": {
+      "signature": "f384286eae615247b22a039d7e4bf0e1",
+      "file": true,
+      "replaced": "1.7.0"
+    },
+    "@iblai/web-containers": {
+      "signature": "0fd1c309e01b289b7a2c991c1cd08614",
+      "file": true
+    },
+    "@iblai/web-utils": {
+      "signature": "8e2fce13fcf821e57edee04ef94b47b0",
+      "file": true
+    }
+  }
+}
