@@ -803,6 +803,64 @@ describe('AIMessageBubble', () => {
       ).not.toBeInTheDocument();
     });
 
+    /**
+     * Code is told to keep its visible text terse, and in automatic-approval
+     * mode it raises no permission cards either — so with verbose reasoning off
+     * (the default) a turn that spends minutes running commands would show
+     * nothing at all. Code turns are identified by the `opencode-` generation
+     * id the SDK mints (see opencode-client), and always keep the collapsed
+     * progress surfaces.
+     */
+    it('keeps the collapsed progress surfaces on a Code turn with verbose reasoning off', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          message={{ ...defaultProps.message, id: 'opencode-1700000000000' }}
+          content=""
+          reasoningContent="checking the API"
+          toolCalls={mockToolCalls}
+          showReasoning={false}
+          isCurrentlyStreaming={true}
+        />,
+      );
+      expect(screen.getByTestId('tool-call-indicator')).toBeInTheDocument();
+      expect(screen.getByTestId('reasoning-section')).toBeInTheDocument();
+    });
+
+    it('still hides them on an ordinary turn with verbose reasoning off', () => {
+      const { container } = renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          message={{ ...defaultProps.message, id: 'msg-2' }}
+          content=""
+          reasoningContent="hidden thoughts"
+          toolCalls={mockToolCalls}
+          showReasoning={false}
+          isCurrentlyStreaming={true}
+        />,
+      );
+      expect(container).toBeEmptyDOMElement();
+    });
+
+    it('survives a message id that is not a string', () => {
+      // Ids are typed as strings but several producers feed this component;
+      // a numeric one must not throw on the prefix check.
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          message={
+            {
+              ...defaultProps.message,
+              id: 42,
+            } as unknown as (typeof defaultProps)['message']
+          }
+          content="Done"
+          showReasoning={false}
+        />,
+      );
+      expect(screen.getByTestId('message-preview')).toBeInTheDocument();
+    });
+
     it('renders when there is text content even with verbose reasoning off', () => {
       renderWithRedux(
         <AIMessageBubble

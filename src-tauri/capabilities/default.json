@@ -11,8 +11,6 @@
       "https://*.ibl.ai/*",
       "http://127.0.0.1:*/*",
       "http://localhost:*/*",
-      "http://localhost:3456",
-      "http://localhost:3456/*",
       "mentor://localhost/*"
     ]
   },
@@ -41,6 +39,9 @@
     "allow-opencode-close",
     "allow-get-opencode-workspace",
     "allow-set-opencode-workspace",
+    "allow-new-opencode-workspace",
+    "allow-get-opencode-permission-mode",
+    "allow-set-opencode-permission-mode",
     "allow-set-opencode-skills",
     "allow-begin-opencode-skills-sync",
     "allow-install-opencode",
@@ -67,6 +68,10 @@
     "core:webview:default",
     "core:webview:allow-create-webview-window",
     "opener:default",
+    {
+      "identifier": "opener:allow-open-path",
+      "allow": [{ "path": "$HOME/**" }, { "path": "/**" }]
+    },
     "shell:allow-open",
     "dialog:allow-open",
     "allow-open-external-url",

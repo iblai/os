@@ -5,7 +5,7 @@ import { waitForPageReady } from '../utils/resilient';
 import { MENTOR_NEXTJS_HOST } from '../fixtures/test-data';
 
 /**
- * Journey 71: On-device TTS provider routing (issue #2341)
+ * Journey 73: On-device TTS provider routing (issue #2341)
  *
  * Covers `lib/tts/iblai-routing.ts`'s `decide()` arbiter for the `iblai`
  * voice provider (Kokoro), which picks per-utterance between the cloud
@@ -181,7 +181,7 @@ async function isKokoroCacheWarm(page: Page): Promise<boolean> {
 // Reading Aloud" after a real click — concurrent workers racing the same
 // account's chat/TTS activity, not a bug in the routing logic under test.
 // `describe.serial` avoids that shared-resource race.
-test.describe.serial('Journey 71: On-device TTS Provider Routing', () => {
+test.describe.serial('Journey 73: On-device TTS Provider Routing', () => {
   test.skip(!MENTOR_NEXTJS_HOST, 'Requires MENTOR_NEXTJS_HOST');
 
   test('ttsr-01: nothing is fetched from the Kokoro model host before any Read Aloud interaction', async ({

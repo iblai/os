@@ -1,6 +1,7 @@
 import { test, expect } from '../fixtures/mentor-test';
 import { navigateToMentorApp } from '../utils/auth';
 import { openMoreOptionsMenu } from '../utils/navigation';
+import { navigateAndObserveTenantMetadata } from '../utils/tenant-metadata-observed';
 
 test.describe('Journey 2: First-Time User Chat & Navigation', () => {
   test.beforeEach(async ({ nonadminPage }) => {
@@ -62,18 +63,41 @@ test.describe('Journey 2: First-Time User Chat & Navigation', () => {
     expect(['expanded', 'collapsed']).toContain(newState ?? 'collapsed');
   });
 
+  // #uat-9: this used to assume the Help menu item is always present. The
+  // nav-bar's "More options → Help" item is gated by the tenant's OWN
+  // `show_help` metadata (`hooks/use-help-center.ts` /
+  // `UserProfileDropdown`'s `getShowHelp()`: `show_help !== false`) — a
+  // pristine tenant shows it, but a tenant that explicitly sets
+  // `show_help: false` never renders it, and that's the CORRECT behavior,
+  // not a bug. Re-navigating here (redundant with the shared `beforeEach`,
+  // but isolated to this one test so the rest of the file's tests keep
+  // their original, simpler setup) observes the SAME tenant-metadata
+  // response the app itself fetches on load — no DM_URL, no per-environment
+  // setup — and asserts whichever behavior that tenant's config dictates.
   test('newly registered user goes to sidebar and clicks the help button to open docs link', async ({
     nonadminPage,
     nonadminSidebarPage,
   }) => {
+    const metadata = await navigateAndObserveTenantMetadata(nonadminPage);
+    const showHelp = metadata.show_help !== false;
+
+    await openMoreOptionsMenu(nonadminPage);
+    const helpItem = nonadminPage
+      .getByRole('menu', { name: /more options/i })
+      .or(nonadminPage.getByRole('dialog'))
+      .getByRole('menuitem', { name: /help/i });
+
+    if (!showHelp) {
+      // The SDK renders no menu item at all when `getShowHelp()` is false —
+      // absence here IS the correct behavior for this tenant's config.
+      await expect(helpItem).not.toBeVisible({ timeout: 5_000 });
+      return;
+    }
+
+    await expect(helpItem).toBeVisible({ timeout: 10_000 });
     const [newPage] = await Promise.all([
       nonadminPage.context().waitForEvent('page', { timeout: 10_000 }),
-      openMoreOptionsMenu(nonadminPage),
-      nonadminPage
-        .getByRole('menu', { name: /more options/i })
-        .or(nonadminPage.getByRole('dialog'))
-        .getByRole('menuitem', { name: /help/i })
-        .click(),
+      helpItem.click(),
     ]);
     expect(newPage.url()).toMatch(/ibl|docs|help/i);
     await newPage.close();

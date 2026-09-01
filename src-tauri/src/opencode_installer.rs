@@ -17,7 +17,12 @@ use crate::opencode_acp::{iblai_data_dir, opencode_bin, opencode_program};
 
 /// Pinned opencode version → GitHub release tag `v<VERSION>`. Bump ONLY after
 /// testing ACP + config against it. Override at runtime with `IBL_OPENCODE_VERSION`.
-const OPENCODE_VERSION: &str = "1.18.4";
+const OPENCODE_VERSION: &str = "1.18.13";
+
+/// The opencode version this run wants: the runtime override, or the pin.
+fn pinned_version() -> String {
+    std::env::var("IBL_OPENCODE_VERSION").unwrap_or_else(|_| OPENCODE_VERSION.to_string())
+}
 
 /// The ibl.ai opencode config, installed at
 /// `~/.config/iblai/agents/opencode/opencode.json`. baseURL + auth are injected as
@@ -210,8 +215,7 @@ fn hoist_binary(bin_dir: &Path, target: &Path) -> Result<(), String> {
 
 /// Download + install the pinned opencode binary into `~/.local/share/iblai/bin`.
 async fn download_and_install(app: &AppHandle) -> Result<(), String> {
-    let version =
-        std::env::var("IBL_OPENCODE_VERSION").unwrap_or_else(|_| OPENCODE_VERSION.to_string());
+    let version = pinned_version();
     let (os, arch, ext) = target_asset()?;
     let asset = format!("opencode-{os}-{arch}.{ext}");
     let url = format!("https://github.com/sst/opencode/releases/download/v{version}/{asset}");
@@ -533,6 +537,60 @@ pub async fn install_opencode(app: AppHandle) -> Result<String, String> {
     Ok(opencode_version().unwrap_or_else(|| "installed".to_string()))
 }
 
+/// `--version` of the MANAGED copy specifically. `opencode_version()` reports
+/// whichever copy PATH resolution wins — usually the user's own — so it can't
+/// tell us whether OUR download is stale.
+fn managed_opencode_version() -> Option<String> {
+    let bin = opencode_bin();
+    if !bin.exists() {
+        return None;
+    }
+    let out = create_command(&bin.to_string_lossy())
+        .arg("--version")
+        .output()
+        .ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    Some(String::from_utf8_lossy(&out.stdout).trim().to_string())
+}
+
+/// Whether the managed copy needs re-downloading: it exists (`Some`) and reports
+/// a version other than the pin (`opencode --version` prints the bare version).
+/// `None` — no managed copy, because the user runs their own from PATH or Code
+/// was never installed — is never an upgrade: this path must not conjure a
+/// download nobody asked for.
+fn needs_managed_upgrade(managed_version: Option<&str>, pin: &str) -> bool {
+    managed_version.is_some_and(|v| v.trim() != pin)
+}
+
+/// Boot-time upgrade of the managed opencode copy to the current pin — a bumped
+/// [`OPENCODE_VERSION`] would otherwise never reach a machine that already has a
+/// runnable copy (`install_opencode` downloads only when one is missing, and the
+/// frontend only calls it on first enable). No download race with
+/// `install_opencode`: that acts only when opencode is NOT runnable, this only
+/// when the managed copy IS present — disjoint conditions.
+pub async fn ensure_opencode_current(app: AppHandle) {
+    let pin = pinned_version();
+    let managed = managed_opencode_version();
+    if !needs_managed_upgrade(managed.as_deref(), &pin) {
+        return;
+    }
+    log(
+        &app,
+        &format!(
+            "managed opencode {} → v{pin}",
+            managed.as_deref().unwrap_or("?")
+        ),
+    );
+    if let Err(e) = download_and_install(&app).await {
+        log(
+            &app,
+            &format!("opencode upgrade failed (keeping the current copy): {e}"),
+        );
+    }
+}
+
 /// macOS App Sandbox detection — the sandbox exports `APP_SANDBOX_CONTAINER_ID`.
 /// Under the sandbox Code can't spawn the opencode binary (or freely touch the
 /// filesystem), so the UI hides Code and the spawn path refuses when this is true.
@@ -540,9 +598,70 @@ pub fn is_sandboxed() -> bool {
     cfg!(target_os = "macos") && std::env::var_os("APP_SANDBOX_CONTAINER_ID").is_some()
 }
 
+/// First `Name=` entry of a `.desktop` file — the app's display name.
+fn parse_desktop_name(text: &str) -> Option<String> {
+    text.lines()
+        .map(str::trim)
+        .find_map(|l| l.strip_prefix("Name="))
+        .map(|v| v.trim().to_string())
+        .filter(|v| !v.is_empty())
+}
+
+/// "org.kde.dolphin.desktop" → "Dolphin": last dot-segment of the id, first
+/// letter upper-cased. The not-found fallback, never the primary source.
+fn prettify_desktop_id(id: &str) -> Option<String> {
+    let stem = id.trim().trim_end_matches(".desktop");
+    let last = stem.rsplit('.').next()?.trim();
+    let mut chars = last.chars();
+    let first = chars.next()?;
+    Some(first.to_uppercase().collect::<String>() + chars.as_str())
+}
+
+/// Display name of whatever `xdg-open` (and thus the opener plugin's
+/// `open_path`) will launch for a folder: the `inode/directory` default.
+/// Honest over pretty — on a box where an editor claimed the mime type, the
+/// button names the editor, because that IS what opens. No default → `None`
+/// (the UI falls back to its generic label).
+#[cfg(target_os = "linux")]
+fn linux_file_manager() -> Option<String> {
+    let out = create_command("xdg-mime")
+        .args(["query", "default", "inode/directory"])
+        .output()
+        .ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    let id = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    if id.is_empty() {
+        return None;
+    }
+    // XDG data dirs, user first — flatpak exports ride XDG_DATA_DIRS.
+    let mut dirs: Vec<PathBuf> = Vec::new();
+    match std::env::var("XDG_DATA_HOME") {
+        Ok(h) if !h.is_empty() => dirs.push(PathBuf::from(h)),
+        _ => {
+            if let Some(home) = home_dir() {
+                dirs.push(home.join(".local/share"));
+            }
+        }
+    }
+    let sys = std::env::var("XDG_DATA_DIRS")
+        .unwrap_or_else(|_| "/usr/local/share:/usr/share".to_string());
+    dirs.extend(sys.split(':').filter(|s| !s.is_empty()).map(PathBuf::from));
+    dirs.iter()
+        .map(|d| d.join("applications").join(&id))
+        .find_map(|p| parse_desktop_name(&std::fs::read_to_string(p).ok()?))
+        .or_else(|| prettify_desktop_id(&id))
+}
+
 /// Report opencode readiness for the UI.
 #[command]
 pub async fn check_opencode_status() -> serde_json::Value {
+    // Linux only: mac/windows have fixed, hand-translated open-button labels.
+    #[cfg(target_os = "linux")]
+    let file_manager = linux_file_manager();
+    #[cfg(not(target_os = "linux"))]
+    let file_manager: Option<String> = None;
     json!({
         "installed": opencode_installed(),
         "version": opencode_version(),
@@ -552,6 +671,9 @@ pub async fn check_opencode_status() -> serde_json::Value {
         // `sandbox_ready` disables it with a hint while Linux lacks bubblewrap.
         "supported": cfg!(not(target_os = "windows")),
         "sandbox_ready": crate::opencode_acp::sandbox_ready(),
+        // Names the "Open in <app>" button after the folder handler that will
+        // actually launch; null → the UI's generic "Open Folder".
+        "file_manager": file_manager,
     })
 }
 
@@ -625,6 +747,46 @@ mod tests {
         assert!(err.contains("extract failed"), "{err}");
         let lower = err.to_lowercase();
         assert!(lower.contains("tar") || lower.contains("gzip"), "{err}");
+    }
+
+    /// The open-button label names whatever will actually open: the `Name=` of
+    /// the default handler's .desktop entry, or a prettified id when the file
+    /// can't be located. Localized `Name[xx]=` lines are never mistaken for it.
+    #[test]
+    fn the_file_manager_name_comes_from_the_desktop_entry() {
+        let dolphin =
+            "[Desktop Entry]\nType=Application\nName[fr]=Dauphin\nName=Dolphin\nExec=dolphin %u\n";
+        assert_eq!(parse_desktop_name(dolphin).as_deref(), Some("Dolphin"));
+        assert_eq!(parse_desktop_name("[Desktop Entry]\nExec=foo\n"), None);
+        assert_eq!(parse_desktop_name("Name=\n"), None, "empty name is no name");
+
+        assert_eq!(
+            prettify_desktop_id("org.kde.dolphin.desktop").as_deref(),
+            Some("Dolphin")
+        );
+        assert_eq!(
+            prettify_desktop_id("codium-wayland.desktop").as_deref(),
+            Some("Codium-wayland")
+        );
+        assert_eq!(prettify_desktop_id(""), None);
+    }
+
+    /// The upgrade decision: only a PRESENT managed copy on the wrong version
+    /// re-downloads. No managed copy — PATH-only users, or Code never installed —
+    /// must never trigger a download.
+    #[test]
+    fn only_a_present_and_outdated_managed_copy_wants_an_upgrade() {
+        assert!(!needs_managed_upgrade(None, "1.18.13"));
+        assert!(!needs_managed_upgrade(Some("1.18.13"), "1.18.13"));
+        assert!(
+            !needs_managed_upgrade(Some(" 1.18.13\n"), "1.18.13"),
+            "--version output is compared trimmed"
+        );
+        assert!(needs_managed_upgrade(Some("1.18.4"), "1.18.13"));
+        assert!(
+            needs_managed_upgrade(Some("1.19.0"), "1.18.13"),
+            "the managed copy tracks the pin exactly — even a 'newer' stray converges"
+        );
     }
 
     /// The vibe tarball's root dir is branch-named (`vibe-main/`), so the skills

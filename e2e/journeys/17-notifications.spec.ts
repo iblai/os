@@ -98,10 +98,7 @@ test.describe('Journey 17: Notifications — Admin', () => {
     await notificationsPage.goto();
     await notificationsPage.waitForTabsToSettle();
     const alertsActive = await notificationsPage.isAlertsTabActive();
-    const inboxActive =
-      (await notificationsPage.inboxTab
-        .getAttribute('data-state')
-        .catch(() => null)) === 'active';
+    const inboxActive = await notificationsPage.isInboxTabActive();
     // One of the two tabs must be active
     expect(alertsActive || inboxActive).toBe(true);
     if (alertsActive) {

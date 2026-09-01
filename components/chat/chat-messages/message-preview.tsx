@@ -4,6 +4,11 @@ import Markdown from '@/components/markdown';
 import { CanvasMessagePreview } from './canvas-message-preview';
 import type { CanvasOpenPayload } from './types';
 import type { ArtifactVersion } from '@iblai/iblai-js/web-utils';
+import {
+  resolveBinaryMimeType,
+  resolveEffectiveFileExtension,
+  shouldUseBinaryCanvas,
+} from '@/components/canvas/binary-artifact-utils';
 
 const CODE_EXTENSIONS = new Set([
   'py',
@@ -32,7 +37,13 @@ const CODE_EXTENSIONS = new Set([
   'sh',
 ]);
 
-const determineToolType = (fileExtension?: string): string => {
+const determineToolType = (
+  fileExtension?: string,
+  isBinary?: boolean,
+): string => {
+  if (isBinary) {
+    return 'binary';
+  }
   if (!fileExtension) {
     return 'canvas';
   }
@@ -144,17 +155,45 @@ export function MessagePreview({
 
   const artifact = selectedVersion.artifact;
   const artifactContent = selectedVersion.content || artifact.content || '';
-  const fileExtension = artifact.file_extension || 'md';
-  const toolType = determineToolType(fileExtension);
+  // Versions synthesized during live streaming can carry a "txt"/missing
+  // placeholder extension while the artifact is really a file titled by
+  // filename ("report.pdf") — resolve against the title so binary content
+  // gets priority over any streamed text rendering.
+  const fileExtension =
+    resolveEffectiveFileExtension(
+      artifact.file_extension,
+      artifact.title || selectedVersion.title,
+    ) ??
+    artifact.file_extension ??
+    'md';
+  // `is_binary` / `mime_type` are returned by the API but predate the SDK's
+  // ArtifactData type; live-streamed artifacts lack them entirely, so the
+  // extension map inside isBinaryArtifact is the fallback.
+  const { is_binary: rawIsBinary, mime_type: rawMimeType } =
+    artifact as typeof artifact & {
+      is_binary?: boolean;
+      mime_type?: string | null;
+    };
+  const isBinary = shouldUseBinaryCanvas({
+    isBinary: rawIsBinary,
+    mimeType: rawMimeType,
+    fileExtension,
+  });
+  const mimeType = isBinary
+    ? resolveBinaryMimeType(fileExtension, rawMimeType)
+    : undefined;
+  const toolType = determineToolType(fileExtension, isBinary);
 
   const payload: CanvasOpenPayload = {
     title: displayTitle || 'Untitled Artifact',
-    content: artifactContent,
+    content: isBinary ? '' : artifactContent,
     toolType,
     artifactId: artifact.id,
     org: undefined, // Will be resolved from context
     userId: artifact.username,
     fileExtension,
+    isBinary,
+    mimeType,
     metadata: {
       sessionId: artifact.session_id || selectedVersion.session_id,
       versionNumber: selectedVersion.version_number,
@@ -164,7 +203,7 @@ export function MessagePreview({
     },
   };
 
-  const previewText = buildSnippet(artifactContent);
+  const previewText = isBinary ? '' : buildSnippet(artifactContent);
 
   const renderArtifactPreview = () => {
     if (selectedVersion.is_current) {
@@ -173,11 +212,12 @@ export function MessagePreview({
       return (
         <CanvasMessagePreview
           title={displayTitle || 'Untitled Artifact'}
-          content={artifactContent}
+          content={isBinary ? '' : artifactContent}
           previewText={previewText}
           payload={payload}
           onOpenCanvas={onOpenCanvas}
           isStreaming={isStreaming}
+          isBinary={isBinary}
         />
       );
     }

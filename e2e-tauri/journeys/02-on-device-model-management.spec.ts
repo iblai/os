@@ -271,4 +271,12 @@ describe('Journey 2: On-device Model Management', () => {
     );
     it('odm-06: the nav-bar on-device badge reflects the selected local model');
   });
+
+  // Pending: needs a harness that occupies 8000/3457 BEFORE launching the
+  // binary. Covered meanwhile by the Rust port tests
+  // (`pick_port`/`bind_with_fallback`/`chat_base_url`) in
+  // `mcp_bridge_manager.rs`, `offline_server.rs` and `model_manager.rs`.
+  it(
+    'odm-07: busy default ports at launch degrade to allocated ones — the MCP bridge and offline server bind free ports and every consumer follows',
+  );
 });

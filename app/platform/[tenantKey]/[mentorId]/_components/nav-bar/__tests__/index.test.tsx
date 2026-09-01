@@ -228,6 +228,13 @@ vi.mock('@iblai/iblai-js/data-layer', async (importOriginal) => {
       isLoading: false,
       isSuccess: true,
     }),
+    // The nav-bar badge resolves the model label through useLlmDisplayName,
+    // which falls back to this catalogue when settings carry no `llm_config`.
+    useGetLlmsQuery: () => ({
+      data: undefined,
+      isLoading: false,
+      isSuccess: true,
+    }),
     useGetMemsearchStatusQuery: () => ({
       data: { enable_memsearch: false },
       isLoading: false,

@@ -187,6 +187,19 @@ export function ChatInputForm({
   const isChatDisabledByRbac = !hasChatPermission;
   const isSendDisabled = isChatDisabledByRbac || !sessionId;
 
+  // Listing an agent's skills is a separate, stricter grant than chatting:
+  // `GET .../agents/{uuid}/skills/` 403s for users without
+  // `view_skill_assignments`, so the skills fetch stays off until the
+  // mentor's permission check has explicitly granted it. No permission data
+  // loaded means no fetch — chatting never needs this endpoint.
+  const hasSkillAssignmentsPermission =
+    mentorDbId && hasMentorRbacData
+      ? checkRbacPermission(
+          rbacPermissions,
+          `/mentors/${mentorDbId}/#view_skill_assignments`,
+        )
+      : false;
+
   const {
     FreeTrialDialog,
     closeModal: closeFreeTrialModal,
@@ -249,10 +262,15 @@ export function ChatInputForm({
   // assignments-only until a mentor-scoped skills read exists backend-side:
   // no mentor-private skills (attached by ownership, absent from assignment
   // rows), no descriptions in the picker (assignment rows carry only
-  // name/slug/enabled), and users the endpoint 403s for (students today)
-  // get no picker. Errors degrade to an inactive picker.
+  // name/slug/enabled). Users without `view_skill_assignments` never hit the
+  // endpoint at all (it would 403) — they simply get no picker. Errors
+  // degrade to an inactive picker.
   const mentorUniqueId = mentorSettings?.data?.mentorUniqueId;
-  const skillsQuerySkipped = !mentorUniqueId || !tenantKey || !username;
+  const skillsQuerySkipped =
+    !mentorUniqueId ||
+    !tenantKey ||
+    !username ||
+    !hasSkillAssignmentsPermission;
 
   // Code mode: keep this mentor's Agent Skills (plus the shared vibe skills)
   // materialised on disk for the local opencode agent. Idle outside Tauri or

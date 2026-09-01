@@ -14,6 +14,7 @@ import { EmbedNavBar } from '../embed-nav-bar';
 let mockIsPreviewMode = false;
 let mockIsIframed = true;
 let mockChatMode: 'default' | 'advanced' = 'default';
+let mockShowCloseButton = true;
 let mockUsername: string | null = 'testuser';
 let mockIsLoggedIn = true;
 let mockPathname = '/platform/tenant123/mentor123';
@@ -38,6 +39,10 @@ vi.mock('@/hooks/use-chat-mode', () => ({
   useChatMode: () => mockChatMode,
 }));
 
+vi.mock('@/hooks/use-show-close-button', () => ({
+  useShowCloseButton: () => mockShowCloseButton,
+}));
+
 vi.mock('@/hooks/use-user', () => ({
   useUsername: () => mockUsername,
 }));
@@ -51,6 +56,7 @@ vi.mock('@/lib/config', () => ({
   config: {
     helpCenterUrl: () => 'https://help.example.com',
     supportEmail: () => 'support@example.com',
+    documentationUrl: () => 'https://docs.example.com',
     iblTemplateMentor: () => 'ai-mentor',
   },
 }));
@@ -139,6 +145,7 @@ describe('EmbedNavBar', () => {
     mockIsPreviewMode = false;
     mockIsIframed = true;
     mockChatMode = 'default';
+    mockShowCloseButton = true;
     mockUsername = 'testuser';
     mockIsLoggedIn = true;
     mockPathname = '/platform/tenant123/mentor123';
@@ -185,6 +192,18 @@ describe('EmbedNavBar', () => {
       mockIsIframed = false;
       renderEmbedNavBar();
       expect(screen.queryByLabelText('Close chat')).not.toBeInTheDocument();
+    });
+
+    it('does not render close chat button when the close affordance is disabled', () => {
+      mockShowCloseButton = false;
+      renderEmbedNavBar();
+      expect(screen.queryByLabelText('Close chat')).not.toBeInTheDocument();
+    });
+
+    it('renders close chat button when the host opts in', () => {
+      mockShowCloseButton = true;
+      renderEmbedNavBar();
+      expect(screen.getByLabelText('Close chat')).toBeInTheDocument();
     });
 
     it('renders the avatar container with mentor image ring class', () => {
@@ -485,6 +504,32 @@ describe('EmbedNavBar', () => {
       renderEmbedNavBar();
       pressEscape();
       expect(postMessageSpy).not.toHaveBeenCalled();
+    });
+
+    it('does not post message when the close affordance is disabled', () => {
+      mockShowCloseButton = false;
+      renderEmbedNavBar();
+      pressEscape();
+      expect(postMessageSpy).not.toHaveBeenCalled();
+    });
+
+    it('starts posting again once the close affordance is enabled', () => {
+      mockShowCloseButton = false;
+      const { rerender } = renderEmbedNavBar();
+      pressEscape();
+      expect(postMessageSpy).not.toHaveBeenCalled();
+
+      mockShowCloseButton = true;
+      rerender(
+        <Provider store={createTestStore()}>
+          <EmbedNavBar {...defaultProps} />
+        </Provider>,
+      );
+      pressEscape();
+      expect(postMessageSpy).toHaveBeenCalledWith(
+        { closeEmbed: true, collapseSidebarCopilot: true },
+        '*',
+      );
     });
 
     it('skips when an open Radix overlay is present', () => {

@@ -793,9 +793,11 @@ describe('useMentorSegments', () => {
 
   describe('Skills tab — admin-only, no RBAC gate', () => {
     it('declares no rbacResource (admin-only via userTypes, like Tasks/Sandbox)', () => {
-      // The agent-skills RBAC contract is unsettled backend-side (ActionDefs
-      // register /platforms/{db_pk}/… paths the FE has no sanctioned pk
-      // source for), so the tab is plainly admin-only for now.
+      // `isUserTypeAllowed` treats a satisfied rbacResource as an ALTERNATIVE
+      // to the userTypes check, so listing `view_skill_assignments` here would
+      // surface this admin tab to students holding the grant purely for the
+      // chat `/` picker. The skill-assignment grants are enforced inside the
+      // SDK's <AgentSkills/> (via `mentorDbId`) instead.
       const skillsSegment = MENTOR_SEGMENTS.find((s) => s.label === 'Skills')!;
       expect(skillsSegment.rbacResource).toBeUndefined();
       expect(skillsSegment.userTypes).toEqual([UserType.ADMIN]);
