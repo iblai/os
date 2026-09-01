@@ -1,9 +1,8 @@
 import type { Components } from 'react-markdown';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { tomorrow as syntaxHighlighter } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 import { CopyButtonIcon } from '@/components/copy-button-icon';
 import { MarkdownImageComponent } from './markdown-image-component';
+import { CodeBlockBody } from './code-block-body';
 
 export const components: Components = {
   h1: ({ node, ...props }) => {
@@ -147,11 +146,6 @@ export const components: Components = {
     // handed to KaTeX downstream and must stay plain <code>.
     if (match && props.className !== 'language-latex') {
       const code = String(props.children).replace(/\n$/, '');
-      // `ref` and `children` come off the <code> element and must NOT be
-      // forwarded: SyntaxHighlighter is a class component whose ref is typed
-      // `Ref<SyntaxHighlighter>` rather than `Ref<HTMLElement>`, and the
-      // children are passed explicitly below as the already-trimmed `code`.
-      const { ref: _ref, children: _children, ...highlighterProps } = props;
       return (
         <div
           data-code-block
@@ -172,20 +166,10 @@ export const components: Components = {
               className="h-7 gap-1.5 px-2 text-xs text-[#cccccc] hover:bg-white/10 hover:text-white"
             />
           </div>
-          <SyntaxHighlighter
-            {...highlighterProps}
-            // The theme's inline styles carry a `.5em 0` margin and no radius;
-            // drop the margin so the body sits flush under the header bar.
-            className="m-0!"
-            // No `@ts-expect-error` needed here any more: once `ref`/`children`
-            // are stripped above, the props object matches SyntaxHighlighter's
-            // first overload and the `style` prop resolves cleanly.
-            style={syntaxHighlighter}
-            language={match[1]}
-            PreTag="div"
-          >
-            {code}
-          </SyntaxHighlighter>
+          {/* The syntax highlighter is lazy-loaded (see code-block-body) so
+              the heavy react-syntax-highlighter bundle stays off the main chat
+              path and only downloads when a code block actually appears. */}
+          <CodeBlockBody code={code} language={match[1]} />
         </div>
       );
     }

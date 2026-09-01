@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.137.1](https://github.com/iblai/os/compare/v0.137.0...v0.137.1) (2026-09-01)
+
+### Performance
+
+* **bundle:** lazy-load syntax highlighter and LiveKit off the main chat path ([05844e9](https://github.com/iblai/os/commit/05844e9429c4f7d7b745f6a8bca564709cca6296))
+
 ## [0.137.0](https://github.com/iblai/os/compare/v0.136.1...v0.137.0) (2026-09-01)
 
 ### Features
