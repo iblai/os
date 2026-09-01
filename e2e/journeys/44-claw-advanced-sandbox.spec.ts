@@ -1,498 +1,410 @@
 /**
  * Journey 44: CLAW Advanced Sandbox
  *
- * Covers the full lifecycle of the "Advanced Sandbox" feature (CLAW) in
- * the Edit Mentor modal:
+ * Covers the full lifecycle of the "Sandbox" feature in the Edit Mentor
+ * modal:
  *
- *   Settings tab  — "Advanced Sandbox" toggle
- *   Tab visibility — Sandbox tab (after Settings) and Skills tab (after Prompts)
- *   Prompts tab   — "Agent Configuration" section
+ *   Sandbox tab    — sandbox-kind selector (Computational Runtime / Virtual
+ *                    Machine / Claw) + the Claw connection flow
+ *   Tab visibility — Sandbox tab is ALWAYS visible to admins
+ *   Prompts tab    — "Agent Configuration" section
  *
- * The Advanced Sandbox toggle is "admin intent" — it maps directly to
- * `enable_claw` on the mentor settings PUT. The toggle is always enabled for
- * admins (no dependency on a wired ClawMentorConfig).
+ * ── Sandbox-kind selector (SDK rewrite) ───────────────────────────────────
  *
- * Tab visibility (when `enable_claw=true`):
- *   - Sandbox tab — appears immediately so admins can connect a sandbox
- *   - Skills tab + "Agent Configuration" section — only appear AFTER the
- *     sandbox is wired to a Claw instance (a `ClawMentorConfig` exists for
- *     this mentor). They stay hidden when claw is enabled but no instance is
- *     connected yet.
+ * The Sandbox tab (`components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx`)
+ * used to wrap the SDK's `SandboxConfig` component in an app-level
+ * `CapabilityGate` around a single "Dedicated sandbox" (`enable_claw`)
+ * master toggle. That gate is GONE — the tab now renders only a header and
+ * `SandboxConfig` directly; the SDK component owns kind selection itself.
  *
- * Toggling claw OFF and saving hides all three (Sandbox, Skills, Agent
- * Configuration) regardless of whether a sandbox is connected.
+ * `SandboxConfig` always renders a "Sandbox Type" card with three switches
+ * (`sandbox-kind-computational-runtime`, `sandbox-kind-virtual-machine`,
+ * `sandbox-kind-claw`). The three kinds are MUTUALLY EXCLUSIVE and AT LEAST
+ * ONE IS ALWAYS ACTIVE — "Only one sandbox type can be enabled at a time"
+ * per the card's own subheading. Kinds change ONLY by selecting a different
+ * kind, which atomically deactivates whichever kind was previously active in
+ * the same PATCH; there is no "disable" operation, and toggling the
+ * currently-active kind's own switch to turn it off (leaving none active) is
+ * not a supported flow — this journey never asserts an all-off state. No
+ * kind switch ever gets a persistent `disabled` state — each is only briefly
+ * disabled while its own save is in flight, regardless of which kind is
+ * active. The claw connected/not-connected sections (instance table,
+ * connect, auto-push, push config) render ONLY while Claw is enabled — not
+ * merely grayed out, absent from the DOM entirely.
  *
- * Because the tabs are gated on the persisted `enable_claw` value from
- * mentor-settings, they must NOT appear while the toggle is changed in-form
- * but before Save is clicked.
+ * `hooks/use-mentor-segments.ts` does not gate the Sandbox segment's
+ * visibility on any of these flags — the tab is ALWAYS mounted for admins,
+ * unaffected by this SDK rewrite (that decoupling predates it, from
+ * feat/2040). Because kind selection has no visibility side effect on the
+ * tab itself, this journey asserts the kind switches' effect on the
+ * connected/not-connected sections directly (present/absent) rather than a
+ * `data-enabled` attribute.
  *
- * Non-admin users must not see the Sandbox or Skills tabs even when a mentor
- * has claw enabled (those segments are ADMIN-only in use-mentor-segments.ts).
+ * NOTE: Agent Skills is fully INDEPENDENT of the sandbox (feat/2040 +
+ * feat/2215) and is covered exclusively by journey 67
+ * (`e2e/journeys/67-agent-skills.spec.ts`) — the Skills tab, its content,
+ * and its management flows are deliberately not referenced anywhere in this
+ * journey.
+ *
+ * Non-admin users must not see the Sandbox tab regardless of claw state
+ * (the segment remains ADMIN-only in use-mentor-segments.ts — unaffected by
+ * this refactor).
  */
 
 import { test, expect } from '../fixtures/mentor-test';
-import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
+import {
+  navigateToMentorApp,
+  checkAdminStatus,
+  getPlatformContext,
+} from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
+import { MentorTracker } from '../utils/mentor-cleanup';
 import { SandboxTab } from '../page-objects/edit-mentor/sandbox.tab';
-import { SkillsTab } from '../page-objects/edit-mentor/skills.tab';
 import type { Locator } from '@playwright/test';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /**
- * Returns the tab list within the Edit Mentor dialog so we can assert on
- * tab presence/absence without relying on string matching inside the full page.
+ * Returns a SEGMENT-tab locator by exact label, scoped to the currently
+ * visible (active-category) sidebar list. The Edit Agent modal groups its
+ * tabs under a Configurations / Integrations / Runtime category strip and
+ * only mounts the ACTIVE category's segment tabs, so the target tab's
+ * category must be active first (`navigateToTab` handles that). Filtering on
+ * `[aria-controls^="panel-"]:visible` also excludes the category pills (which
+ * share `role="tab"` but own no `aria-controls`) and each segment's hidden
+ * responsive twin.
  */
-function tabList(dialog: Locator): Locator {
-  return dialog.getByRole('tablist');
-}
-
-/** Returns a tab locator by exact label within the dialog tab list. */
 function getTab(dialog: Locator, name: string): Locator {
-  return tabList(dialog).getByRole('tab', { name, exact: true });
+  return dialog
+    .getByRole('tab', { name, exact: true })
+    .and(dialog.locator('[aria-controls^="panel-"]:visible'));
 }
 
-/**
- * Waits until a tab with the given name appears in the dialog tab list.
- * Uses `waitFor` (not `isVisible`) to correctly honour the timeout.
- */
-async function waitForTabVisible(
-  dialog: Locator,
-  name: string,
-  timeout = 15_000,
-): Promise<void> {
-  await getTab(dialog, name).waitFor({ state: 'visible', timeout });
-}
-
-/**
- * Asserts that a tab is NOT present in the dialog tab list.
- * Uses `toHaveCount(0)` which is a web-first assertion that retries.
- */
-async function expectTabHidden(
-  dialog: Locator,
-  name: string,
-  timeout = 10_000,
-): Promise<void> {
-  await expect(getTab(dialog, name)).toHaveCount(0, { timeout });
+/** Text labels of the currently-visible segment tabs (active category only). */
+async function visibleSegmentTabLabels(dialog: Locator): Promise<string[]> {
+  return dialog
+    .locator('[role="tab"][aria-controls^="panel-"]:visible')
+    .allTextContents();
 }
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
+// Run the WHOLE file serially in a single worker. Sandbox instances are
+// PLATFORM-WIDE (`useGetClawInstancesQuery({ org: platformKey })` — not
+// mentor-scoped), so even though every test below creates its own dedicated
+// mentor, the instance-table mutation tests (Add/Edit/Connect/Delete) still
+// share the same underlying instance catalog across the whole tenant. Two
+// tests deleting/reconnecting instances concurrently in different workers
+// would flake intermittently. This is declared at the file's top level (not
+// per-describe) ON PURPOSE — see journey 47's mirrored note.
+test.describe.configure({ mode: 'serial' });
+
 test.describe('Journey 44: CLAW Advanced Sandbox', () => {
-  test.beforeEach(async ({ page }) => {
+  const tracker44A = new MentorTracker();
+
+  test.beforeEach(async ({ page, createMentorPage, editMentorPage }) => {
     await navigateToMentorApp(page);
     const isAdmin = await checkAdminStatus(page);
-    if (!isAdmin)
-      test.skip(true, 'CLAW Advanced Sandbox requires admin access');
+    if (!isAdmin) {
+      test.skip(true, 'CLAW Sandbox requires admin access');
+      return;
+    }
+
+    // Create a fresh agent for each test so the Sandbox flows run against
+    // a clean mentor (independent of whatever claw state a prior run or the
+    // default mentor was left in).
+    await createMentorPage.openAndCreate();
+    const { mentorId } = await getPlatformContext(page);
+    tracker44A.add(mentorId);
+
+    // Open the Edit Agent modal once here so each test starts with it mounted
+    // (mirrors journey 47's beforeEach). Landing on Settings — always present
+    // and in the default Configurations category — is a neutral anchor; each
+    // test then navigateToTab()s to whatever it needs. open() blocks until the
+    // modal finishes hydrating (it can spin ~30s+ on a just-created mentor).
+    await editMentorPage.open('Settings');
   });
 
-  // ── TC01: Toggle is present in Settings tab ───────────────────────────────
+  // ── TC01: The three sandbox-kind switches are present on the Sandbox tab ──
 
-  test('admin opens Settings tab and Advanced Sandbox toggle is present', async ({
+  test('admin opens Sandbox tab and the three sandbox-kind switches are visible', async ({
     page,
     editMentorPage,
   }) => {
-    await editMentorPage.open('Settings');
+    // Sandbox is always visible now — no Settings dependency.
+    await editMentorPage.navigateToTab('Sandbox');
     await waitForPageReady(page);
 
-    await expect(editMentorPage.settings.advancedSandboxToggle).toBeVisible({
-      timeout: 10_000,
-    });
-  });
-
-  // ── TC02: Toggle is always interactable for admins (intent-only) ──────────
-
-  test('Advanced Sandbox toggle is interactable regardless of claw config state', async ({
-    page,
-    editMentorPage,
-  }) => {
-    await editMentorPage.open('Settings');
-    await waitForPageReady(page);
-
-    const toggle = editMentorPage.settings.advancedSandboxToggle;
-    await expect(toggle).toBeVisible({ timeout: 10_000 });
-    await expect(toggle).toBeEnabled({ timeout: 5_000 });
-  });
-
-  // ── TC03: Pre-save state — toggled but not yet saved ─────────────────────
-  //
-  // Tab visibility is gated on the *persisted* `enable_claw` flag from
-  // mentor-settings, so flipping the toggle in the form (without clicking
-  // Save) must NOT change which tabs are visible — regardless of which
-  // state the persisted flag was already in.
-  //
-  // Snapshot tab counts BEFORE flipping and assert they're unchanged AFTER.
-  // This works for both directions (off→on and on→off) and for any starting
-  // tab state, so it doesn't depend on the test environment having CLAW
-  // disabled.
-
-  test('admin flips Advanced Sandbox toggle but does not save — tab visibility is unchanged', async ({
-    page,
-    editMentorPage,
-  }) => {
-    await editMentorPage.open('Settings');
-    await waitForPageReady(page);
-
-    const toggle = editMentorPage.settings.advancedSandboxToggle;
-    await expect(toggle).toBeVisible({ timeout: 10_000 });
-
-    const wasClaw = await editMentorPage.settings.isAdvancedSandboxEnabled();
-
-    // Snapshot tab visibility BEFORE flipping — this is the ground truth we
-    // want to preserve after the in-form-only toggle change.
-    const sandboxBefore = await getTab(
-      editMentorPage.dialog,
-      'Sandbox',
-    ).count();
-    const skillsBefore = await getTab(editMentorPage.dialog, 'Skills').count();
-
-    // Flip the toggle (don't click Save). Waiting for `aria-checked` to
-    // flip is a deterministic signal that React has applied the form-state
-    // change — no need for a static settle delay.
-    await toggle.click();
-    await expect(toggle).toHaveAttribute(
-      'aria-checked',
-      wasClaw ? 'false' : 'true',
-    );
-
-    // Tab visibility must not have changed: the persisted enable_claw value
-    // hasn't been updated yet (no Save click), so the Sandbox/Skills tabs
-    // must remain in whatever state they were before the flip. toHaveCount
-    // is a web-first assertion that retries.
-    await expect(getTab(editMentorPage.dialog, 'Sandbox')).toHaveCount(
-      sandboxBefore,
-    );
-    await expect(getTab(editMentorPage.dialog, 'Skills')).toHaveCount(
-      skillsBefore,
-    );
-
-    // Restore by flipping back, then close without saving
-    await toggle.click();
-    await expect(toggle).toHaveAttribute(
-      'aria-checked',
-      wasClaw ? 'true' : 'false',
-      { timeout: 5_000 },
-    );
+    const sandbox = new SandboxTab(page, editMentorPage.dialog);
+    await sandbox.verifyKindsVisible();
     await editMentorPage.close();
   });
 
-  // ── TC04: Golden path — enable CLAW and verify Sandbox tab appears ───────
-  //
-  // Sandbox tab appears immediately when claw is enabled (so admins can
-  // connect a sandbox). Skills tab + Agent Configuration are gated on a wired
-  // ClawMentorConfig (sandbox connected to an instance) — those are covered
-  // conditionally in TC04b.
+  // ── TC02: Computational Runtime / Virtual Machine are interactable ───────
 
-  test('admin enables Advanced Sandbox and Sandbox tab appears after save (right after Settings)', async ({
+  test('computational-runtime and virtual-machine switches are interactable when claw is off', async ({
     page,
     editMentorPage,
   }) => {
-    await editMentorPage.open('Settings');
+    await editMentorPage.navigateToTab('Sandbox');
     await waitForPageReady(page);
 
-    await expect(editMentorPage.settings.advancedSandboxToggle).toBeVisible({
+    const sandbox = new SandboxTab(page, editMentorPage.dialog);
+    // Don't assume a fresh mentor defaults to any particular kind (at least
+    // one is always active) — explicitly select Computational Runtime so
+    // Claw is definitely not the active kind.
+    await sandbox.selectKind('computational-runtime');
+    await expect(sandbox.computationalRuntimeSwitch).toBeEnabled({
       timeout: 10_000,
     });
+    await expect(sandbox.virtualMachineSwitch).toBeEnabled({
+      timeout: 5_000,
+    });
+    await editMentorPage.close();
+  });
 
-    const wasEnabled = await editMentorPage.settings.isAdvancedSandboxEnabled();
+  // ── TC03: Toggling auto-saves and kinds are mutually exclusive ───────────
+  //
+  // Each switch PATCHes immediately (optimistic local state) — there is no
+  // footer Save button involved. The Sandbox tab is unconditionally mounted
+  // regardless of any kind's value, so toggling never affects its presence.
+  // Enabling one kind turns off whichever kind was previously active.
+
+  test('toggling a sandbox kind auto-saves instantly, turns off the previously-active kind, and Sandbox tab visibility is unaffected', async ({
+    page,
+    editMentorPage,
+  }) => {
+    await editMentorPage.navigateToTab('Sandbox');
+    await waitForPageReady(page);
+
+    const sandbox = new SandboxTab(page, editMentorPage.dialog);
+    await expect(getTab(editMentorPage.dialog, 'Sandbox')).toBeVisible();
+
+    // Clean starting point: select Computational Runtime as the active kind.
+    // Don't assume a fresh mentor defaults to any particular kind (at least
+    // one is always active) — pin down which one before observing a
+    // transition.
+    await sandbox.selectKind('computational-runtime');
+    expect(await sandbox.isKindEnabled('computational-runtime')).toBe(true);
+    expect(await sandbox.isKindEnabled('virtual-machine')).toBe(false);
+
+    // Enabling Virtual Machine turns Computational Runtime back off — the
+    // kinds are mutually exclusive, not independent toggles.
+    await sandbox.toggleKind('virtual-machine');
+    expect(await sandbox.isKindEnabled('virtual-machine')).toBe(true);
+    expect(await sandbox.isKindEnabled('computational-runtime')).toBe(false);
+
+    await expect(getTab(editMentorPage.dialog, 'Sandbox')).toBeVisible();
+
+    await editMentorPage.close();
+  });
+
+  // ── TC04: Enabling Claw turns off whichever kind was previously active ───
+
+  test('enabling claw turns off the previously-active kind (mutual exclusivity)', async ({
+    page,
+    editMentorPage,
+  }) => {
+    await editMentorPage.navigateToTab('Sandbox');
+    await waitForPageReady(page);
+
+    const sandbox = new SandboxTab(page, editMentorPage.dialog);
 
     try {
-      await editMentorPage.settings.setAdvancedSandbox(true);
+      // Start with Computational Runtime active so enabling claw's effect is
+      // observable (on → off transition, not just "already off").
+      await sandbox.selectKind('computational-runtime');
+      expect(await sandbox.isKindEnabled('computational-runtime')).toBe(true);
 
-      // Sandbox tab should appear immediately after Settings in the tab list
-      await waitForTabVisible(editMentorPage.dialog, 'Sandbox', 15_000);
+      await sandbox.toggleKind('claw');
 
-      // Verify ordering: Sandbox sits right after Settings
-      const tabs = await tabList(editMentorPage.dialog)
-        .getByRole('tab')
-        .allTextContents();
-      const settingsIdx = tabs.findIndex((t) => /settings/i.test(t));
-      const sandboxIdx = tabs.findIndex((t) => /sandbox/i.test(t));
-      expect(sandboxIdx).toBe(settingsIdx + 1);
+      expect(await sandbox.isKindEnabled('claw')).toBe(true);
+      expect(await sandbox.isKindEnabled('computational-runtime')).toBe(false);
+      expect(await sandbox.isKindEnabled('virtual-machine')).toBe(false);
+      // Nothing gets a persistent disabled state any more — Computational
+      // Runtime is off, but still clickable (only briefly disabled while a
+      // save is in flight).
+      await expect(sandbox.computationalRuntimeSwitch).toBeEnabled();
+
+      // Verify ordering while we're here: Sandbox leads the Integrations
+      // category (feat/2040 moved it off Configurations, so it is no longer
+      // adjacent to Settings — Settings lives in Configurations).
+      const integrationTabs = await visibleSegmentTabLabels(
+        editMentorPage.dialog,
+      );
+      expect(integrationTabs.findIndex((t) => /sandbox/i.test(t))).toBe(0);
     } finally {
-      if (!wasEnabled) {
-        await editMentorPage.navigateToTab('Settings');
-        await waitForPageReady(page);
-        await editMentorPage.settings.setAdvancedSandbox(false);
-      }
+      // Switch away from claw (no "disable" operation exists) — cheap
+      // hygiene even though this mentor is deleted in afterAll regardless.
+      await sandbox.selectKind('computational-runtime');
       await editMentorPage.close();
     }
   });
 
-  // ── TC04b: Skills tab + Agent Configuration only show when sandbox wired ──
+  // ── TC06: Sandbox sits in its fixed category position unconditionally ────
   //
-  // After enabling claw, Skills tab and the Agent Configuration section
-  // appear in the dialog ONLY if a ClawMentorConfig already exists for this
-  // mentor (sandbox connected to a Claw instance). When no instance is
-  // connected, Skills + Agent Configuration must remain hidden even with
-  // claw enabled.
-  //
-  // The test reads the live state — if a sandbox is wired in this env, it
-  // asserts both surfaces appear; otherwise it asserts both stay hidden.
+  // feat/2040 groups the sidebar into Configurations / Integrations / Runtime
+  // categories. Sandbox now LEADS the Integrations category (no longer
+  // adjacent to Settings — Settings lives in Configurations). Only the
+  // active category's segment tabs are mounted, so the Sandbox tab must be
+  // navigated to first.
 
-  test('Skills tab and Agent Configuration are gated on a wired sandbox (visible only when connected)', async ({
+  test('Sandbox leads the Integrations category unconditionally', async ({
     page,
     editMentorPage,
   }) => {
-    await editMentorPage.open('Settings');
+    await editMentorPage.navigateToTab('Sandbox');
     await waitForPageReady(page);
-
-    const wasEnabled = await editMentorPage.settings.isAdvancedSandboxEnabled();
-
-    try {
-      if (!wasEnabled) {
-        await editMentorPage.settings.setAdvancedSandbox(true);
-      }
-      await waitForTabVisible(editMentorPage.dialog, 'Sandbox', 15_000);
-
-      // Detect whether the sandbox is currently wired by visiting the Sandbox
-      // tab and looking for the "connected" UI vs the instance picker.
-      await editMentorPage.navigateToTab('Sandbox');
-      await waitForPageReady(page);
-
-      // The SandboxConfig component shows "Connected Instance" when wired
-      // and an instance table ("No instances available" / instance rows)
-      // when not connected. Use a 4s probe: if "Connected Instance" appears
-      // within that window, treat as wired.
-      const connectedHeading =
-        editMentorPage.dialog.getByText(/connected instance/i);
-      let isWired = false;
-      try {
-        await connectedHeading.first().waitFor({
-          state: 'visible',
-          timeout: 4_000,
-        });
-        isWired = true;
-      } catch {
-        isWired = false;
-      }
-
-      const skillsTab = getTab(editMentorPage.dialog, 'Skills');
-      const agentConfigHeading = editMentorPage.dialog.getByRole('heading', {
-        name: /agent configuration/i,
-      });
-
-      if (isWired) {
-        // Wired sandbox → Skills tab visible, Agent Configuration visible
-        await waitForTabVisible(editMentorPage.dialog, 'Skills', 15_000);
-
-        const tabs = await tabList(editMentorPage.dialog)
-          .getByRole('tab')
-          .allTextContents();
-        const promptsIdx = tabs.findIndex((t) => /prompts/i.test(t));
-        const skillsIdx = tabs.findIndex((t) => /skills/i.test(t));
-        expect(skillsIdx).toBe(promptsIdx + 1);
-
-        await editMentorPage.navigateToTab('Prompts');
-        await waitForPageReady(page);
-        await expect(agentConfigHeading).toBeVisible({ timeout: 10_000 });
-      } else {
-        // Sandbox enabled but NOT wired → Skills + Agent Configuration hidden
-        await expect(skillsTab).toHaveCount(0, { timeout: 5_000 });
-
-        await editMentorPage.navigateToTab('Prompts');
-        await waitForPageReady(page);
-        await expect(agentConfigHeading).toHaveCount(0, { timeout: 5_000 });
-      }
-    } finally {
-      if (!wasEnabled) {
-        await editMentorPage.navigateToTab('Settings');
-        await waitForPageReady(page);
-        await editMentorPage.settings.setAdvancedSandbox(false);
-      }
-      await editMentorPage.close();
-    }
-  });
-
-  // ── TC05: Reverse path — disable CLAW and verify tabs + section disappear ─
-
-  test('admin disables Advanced Sandbox and Sandbox tab, Skills tab, and Agent Configuration section disappear after save', async ({
-    page,
-    editMentorPage,
-  }) => {
-    await editMentorPage.open('Settings');
-    await waitForPageReady(page);
-
-    await expect(editMentorPage.settings.advancedSandboxToggle).toBeVisible({
+    // The active tab itself proves the Integrations segment list rendered
+    // before its labels are read (allTextContents does not auto-retry).
+    await expect(getTab(editMentorPage.dialog, 'Sandbox')).toBeVisible({
       timeout: 10_000,
     });
+    const integrationTabs = await visibleSegmentTabLabels(
+      editMentorPage.dialog,
+    );
+    expect(integrationTabs.findIndex((t) => /sandbox/i.test(t))).toBe(0);
 
-    const wasEnabled = await editMentorPage.settings.isAdvancedSandboxEnabled();
-
-    try {
-      // First ensure claw IS enabled so we can then disable it
-      if (!wasEnabled) {
-        await editMentorPage.settings.setAdvancedSandbox(true);
-        await waitForTabVisible(editMentorPage.dialog, 'Sandbox', 15_000);
-      }
-
-      // Now disable and save
-      await editMentorPage.navigateToTab('Settings');
-      await waitForPageReady(page);
-      await editMentorPage.settings.setAdvancedSandbox(false);
-
-      // Sandbox and Skills tabs must disappear
-      await expectTabHidden(editMentorPage.dialog, 'Sandbox', 15_000);
-      await expectTabHidden(editMentorPage.dialog, 'Skills', 15_000);
-
-      // Navigate to Prompts tab and verify Agent Configuration is gone
-      await editMentorPage.navigateToTab('Prompts');
-      await waitForPageReady(page);
-
-      const agentConfigHeading = editMentorPage.dialog.getByRole('heading', {
-        name: /agent configuration/i,
-      });
-      await expect(agentConfigHeading).toHaveCount(0, { timeout: 5_000 });
-    } finally {
-      // Restore original enabled state if needed
-      if (wasEnabled) {
-        await editMentorPage.navigateToTab('Settings');
-        await waitForPageReady(page);
-        await editMentorPage.settings.setAdvancedSandbox(true);
-      }
-      await editMentorPage.close();
-    }
+    await editMentorPage.close();
   });
 
-  // ── TC06: Sandbox tab can be navigated to and renders its container ───────
-
-  test('admin navigates to Sandbox tab and sandbox config container is visible', async ({
-    page,
-    editMentorPage,
-  }) => {
-    await editMentorPage.open('Settings');
-    await waitForPageReady(page);
-
-    const wasEnabled = await editMentorPage.settings.isAdvancedSandboxEnabled();
-
-    try {
-      if (!wasEnabled) {
-        await editMentorPage.settings.setAdvancedSandbox(true);
-        await waitForTabVisible(editMentorPage.dialog, 'Sandbox', 15_000);
-      }
-
-      await editMentorPage.navigateToTab('Sandbox');
-      await waitForPageReady(page);
-
-      // The SandboxConfig component from @iblai/web-containers is rendered
-      // inside the tabpanel. Verify the panel is visible.
-      const sandboxPanel = editMentorPage.dialog.getByRole('tabpanel').first();
-      await expect(sandboxPanel).toBeVisible({ timeout: 10_000 });
-    } finally {
-      if (!wasEnabled) {
-        await editMentorPage.navigateToTab('Settings');
-        await waitForPageReady(page);
-        await editMentorPage.settings.setAdvancedSandbox(false);
-      }
-      await editMentorPage.close();
-    }
-  });
-
-  // ── TC07: Skills tab can be navigated to (only when sandbox is wired) ─────
+  // ── TC07: Switching away from Claw deactivates it (mutual exclusivity) ───
   //
-  // Skills tab only appears when claw is enabled AND a ClawMentorConfig is
-  // wired for this mentor. If the env has no wired sandbox, the tab won't
-  // show at all — the test gracefully skips that case.
+  // There is no "disable" operation — kinds change ONLY by selecting a
+  // different one. Selecting Computational Runtime while Claw is active
+  // deactivates Claw atomically (same PATCH) and hides its instance section;
+  // Computational Runtime becomes the sole active kind. Never assert an
+  // all-off state — at least one kind is always active.
 
-  test('admin navigates to Skills tab and agent skills container is visible (when sandbox is wired)', async ({
+  test('switching to computational-runtime while claw is active deactivates claw and hides its instance section', async ({
     page,
     editMentorPage,
   }) => {
-    await editMentorPage.open('Settings');
+    await editMentorPage.navigateToTab('Sandbox');
     await waitForPageReady(page);
 
-    const wasEnabled = await editMentorPage.settings.isAdvancedSandboxEnabled();
+    const sandbox = new SandboxTab(page, editMentorPage.dialog);
+
+    // Start from a known claw-active state (mutual exclusivity, TC04).
+    await sandbox.selectKind('claw');
+    expect(await sandbox.isKindEnabled('claw')).toBe(true);
+    await sandbox.verifyClawInstanceSectionVisible();
+
+    await sandbox.selectKind('computational-runtime');
+
+    // Claw is deactivated, its instance section is gone, and Computational
+    // Runtime is now the single active kind.
+    expect(await sandbox.isKindEnabled('claw')).toBe(false);
+    expect(await sandbox.isKindEnabled('computational-runtime')).toBe(true);
+    expect(await sandbox.isKindEnabled('virtual-machine')).toBe(false);
+    await sandbox.verifyClawInstanceSectionHidden();
+
+    // All three switches remain clickable — nothing is left disabled.
+    await expect(sandbox.computationalRuntimeSwitch).toBeEnabled({
+      timeout: 10_000,
+    });
+    await expect(sandbox.virtualMachineSwitch).toBeEnabled();
+    await expect(sandbox.clawSwitch).toBeEnabled();
+
+    // The Sandbox tab stays mounted regardless of any kind's value.
+    await expect(getTab(editMentorPage.dialog, 'Sandbox')).toBeVisible();
+
+    await editMentorPage.close();
+  });
+
+  // ── TC08: Claw instance sections render only while claw is enabled ───────
+  //
+  // The "Sandbox Type" card always renders. The claw connected/not-connected
+  // sections (instance picker or "Connected Instance" panel) render ONLY
+  // while the claw kind switch is on — the SDK unmounts them entirely when
+  // claw is off, it does not merely gray them out.
+
+  test('admin navigates to Sandbox tab; the sandbox-kind card always renders and the claw instance sections render only while claw is enabled', async ({
+    page,
+    editMentorPage,
+  }) => {
+    await editMentorPage.navigateToTab('Sandbox');
+    await waitForPageReady(page);
+
+    const sandbox = new SandboxTab(page, editMentorPage.dialog);
 
     try {
-      if (!wasEnabled) {
-        await editMentorPage.settings.setAdvancedSandbox(true);
-        await waitForTabVisible(editMentorPage.dialog, 'Sandbox', 15_000);
-      }
+      await sandbox.selectKind('computational-runtime');
+      await sandbox.verifyKindsVisible();
+      // No claw instance section (instance picker or connected panel) while
+      // claw is not the active kind.
+      await sandbox.verifyClawInstanceSectionHidden();
 
-      // Skills tab only shows when a sandbox is wired. Probe (4s) — if it
-      // never appears, the env has no wired sandbox; skip the assertion.
-      const skillsTab = getTab(editMentorPage.dialog, 'Skills');
-      let skillsAvailable = false;
-      try {
-        await skillsTab.waitFor({ state: 'visible', timeout: 4_000 });
-        skillsAvailable = true;
-      } catch {
-        skillsAvailable = false;
-      }
-
-      if (!skillsAvailable) {
-        test.skip(
-          true,
-          'No claw mentor config wired in this env — Skills tab is gated on it',
-        );
-        return;
-      }
-
-      await editMentorPage.navigateToTab('Skills');
-      await waitForPageReady(page);
-
-      // The AgentSkills component from @iblai/web-containers is rendered inside
-      // the tabpanel — verify the panel is visible and not blank.
-      const skillsPanel = editMentorPage.dialog.getByRole('tabpanel').first();
-      await expect(skillsPanel).toBeVisible({ timeout: 10_000 });
+      await sandbox.selectKind('claw');
+      // With claw active, either the not-connected instance picker or the
+      // connected panel must render — which one depends on the env's claw
+      // wiring for this brand-new mentor (always not-connected in practice,
+      // but tolerate either since instances are platform-wide state).
+      await sandbox.verifyClawInstanceSectionVisible();
     } finally {
-      if (!wasEnabled) {
-        await editMentorPage.navigateToTab('Settings');
-        await waitForPageReady(page);
-        await editMentorPage.settings.setAdvancedSandbox(false);
-      }
+      // Switch away from claw (no "disable" operation exists).
+      await sandbox.selectKind('computational-runtime');
       await editMentorPage.close();
     }
+  });
+
+  test.afterAll(async ({ browser }, testInfo) => {
+    await tracker44A.deleteAll(browser, testInfo);
   });
 });
 
 // ── TC09: Toggle on/off lifecycle in a single session ────────────────────────
-//
-// Verifies that enabling claw causes Sandbox to appear and disabling it makes
-// Sandbox disappear — all within the same modal session (no reopen).
 
 test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
-  test.beforeEach(async ({ page }) => {
+  const tracker44B = new MentorTracker();
+
+  test.beforeEach(async ({ page, createMentorPage, editMentorPage }) => {
     await navigateToMentorApp(page);
     const isAdmin = await checkAdminStatus(page);
-    if (!isAdmin)
-      test.skip(true, 'CLAW Advanced Sandbox requires admin access');
+    if (!isAdmin) {
+      test.skip(true, 'CLAW Sandbox requires admin access');
+      return;
+    }
+
+    // Create a fresh agent for each test so the Sandbox flows run against
+    // a clean mentor (independent of whatever claw state a prior run or the
+    // default mentor was left in).
+    await createMentorPage.openAndCreate();
+    const { mentorId } = await getPlatformContext(page);
+    tracker44B.add(mentorId);
+
+    // Open the Edit Agent modal once here (see describe-A's beforeEach) so
+    // each test starts with it mounted on a neutral Settings anchor.
+    await editMentorPage.open('Settings');
   });
 
-  test('admin toggles Advanced Sandbox ON then OFF and Sandbox tab appears then disappears in the same session', async ({
+  test('admin switches to claw and away from it, and the claw instance sections mount/unmount both times', async ({
     page,
     editMentorPage,
   }) => {
     // claw-09
-    await editMentorPage.open('Settings');
+    await editMentorPage.navigateToTab('Sandbox');
     await waitForPageReady(page);
 
-    await expect(editMentorPage.settings.advancedSandboxToggle).toBeVisible({
-      timeout: 10_000,
-    });
-
-    const originalState =
-      await editMentorPage.settings.isAdvancedSandboxEnabled();
+    const sandbox = new SandboxTab(page, editMentorPage.dialog);
+    // Don't assume a fresh mentor has any particular kind (or none at all)
+    // active — read the actual state so it can be restored afterwards.
+    const originalKind = await sandbox.getActiveKind();
 
     try {
-      // ── Phase 1: enable → Sandbox tab must appear ──────────────────────
-      await editMentorPage.settings.setAdvancedSandbox(true);
-      await waitForTabVisible(editMentorPage.dialog, 'Sandbox', 15_000);
+      // ── Phase 1: select claw → claw instance section mounts ──────────────
+      await sandbox.selectKind('claw');
+      await sandbox.verifyClawInstanceSectionVisible();
 
-      // ── Phase 2: disable → Sandbox tab must disappear ─────────────────
-      await editMentorPage.navigateToTab('Settings');
-      await waitForPageReady(page);
-      await editMentorPage.settings.setAdvancedSandbox(false);
-      await expectTabHidden(editMentorPage.dialog, 'Sandbox', 15_000);
+      // ── Phase 2: switch away from claw → claw instance section unmounts ──
+      const awayKind =
+        originalKind === 'claw' ? 'computational-runtime' : originalKind;
+      await sandbox.selectKind(awayKind);
+      await sandbox.verifyClawInstanceSectionHidden();
     } finally {
-      // Restore original state
-      if (
-        originalState !==
-        (await editMentorPage.settings.isAdvancedSandboxEnabled())
-      ) {
-        await editMentorPage.navigateToTab('Settings');
-        await waitForPageReady(page);
-        await editMentorPage.settings.setAdvancedSandbox(originalState);
+      // Restore the original active kind.
+      if ((await sandbox.getActiveKind()) !== originalKind) {
+        await sandbox.selectKind(originalKind);
       }
       await editMentorPage.close();
     }
@@ -505,26 +417,24 @@ test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
     editMentorPage,
   }) => {
     // claw-10
-    await editMentorPage.open('Settings');
+    await editMentorPage.navigateToTab('Sandbox');
     await waitForPageReady(page);
 
-    const wasEnabled = await editMentorPage.settings.isAdvancedSandboxEnabled();
+    const sandbox = new SandboxTab(page, editMentorPage.dialog);
+    // Don't assume a fresh mentor has any particular kind active — read the
+    // actual state so it can be restored afterwards.
+    const originalKind = await sandbox.getActiveKind();
 
-    // Add Instance UI lives only in the not-connected state. If env has a
-    // wired sandbox we capture the instance name, disconnect to reach the
-    // picker, then reconnect at the end to restore the env.
+    // Add Instance UI only renders while claw is the active kind — the SDK
+    // unmounts the instance sections entirely otherwise. If env has a wired
+    // sandbox we capture the instance name, disconnect to reach the picker,
+    // then reconnect at the end to restore the env.
     let priorConnectedInstance: string | null = null;
 
     try {
-      if (!wasEnabled) {
-        await editMentorPage.settings.setAdvancedSandbox(true);
-        await waitForTabVisible(editMentorPage.dialog, 'Sandbox', 15_000);
+      if (originalKind !== 'claw') {
+        await sandbox.selectKind('claw');
       }
-
-      await editMentorPage.navigateToTab('Sandbox');
-      await waitForPageReady(page);
-
-      const sandbox = new SandboxTab(page, editMentorPage.dialog);
 
       if (await sandbox.isConnected()) {
         priorConnectedInstance = await sandbox.getConnectedInstanceName();
@@ -546,13 +456,12 @@ test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
         // instance afterwards.
         token: `e2e-fake-token-${ts}`,
       });
-      // submitNewInstance waits for the "Instance created" toast, the
-      // dialog close, and the new row appearing in the table — those are
-      // the test's assertions for the happy path.
+      // submitNewInstance waits for the dialog close and the new row
+      // appearing in the table — those are the test's assertions for the
+      // happy path.
       await sandbox.submitNewInstance(instanceName);
 
-      // Cleanup: delete the throwaway instance. clickDeleteInRow waits
-      // for the "Instance deleted" toast internally.
+      // Cleanup: delete the throwaway instance.
       try {
         await sandbox.clickDeleteInRow(
           sandbox.getInstanceRowByName(instanceName),
@@ -564,18 +473,13 @@ test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
       // Restore the env's original connection (best-effort).
       if (priorConnectedInstance) {
         try {
-          const sandbox = new SandboxTab(page, editMentorPage.dialog);
-          await editMentorPage.navigateToTab('Sandbox');
-          await waitForPageReady(page);
           await sandbox.reconnectByName(priorConnectedInstance);
         } catch {
           // Best-effort — env may be left disconnected if reconnect fails
         }
       }
-      if (!wasEnabled) {
-        await editMentorPage.navigateToTab('Settings');
-        await waitForPageReady(page);
-        await editMentorPage.settings.setAdvancedSandbox(false);
+      if (originalKind !== 'claw') {
+        await sandbox.selectKind(originalKind);
       }
       await editMentorPage.close();
     }
@@ -597,10 +501,11 @@ test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
     editMentorPage,
   }) => {
     // claw-11
-    await editMentorPage.open('Settings');
+    await editMentorPage.navigateToTab('Sandbox');
     await waitForPageReady(page);
 
-    const wasEnabled = await editMentorPage.settings.isAdvancedSandboxEnabled();
+    const sandbox = new SandboxTab(page, editMentorPage.dialog);
+    const originalKind = await sandbox.getActiveKind();
 
     const ts = Date.now();
     const fakeToken = `e2e-fake-token-${ts}`;
@@ -610,15 +515,9 @@ test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
     let priorConnectedInstance: string | null = null;
 
     try {
-      if (!wasEnabled) {
-        await editMentorPage.settings.setAdvancedSandbox(true);
-        await waitForTabVisible(editMentorPage.dialog, 'Sandbox', 15_000);
+      if (originalKind !== 'claw') {
+        await sandbox.selectKind('claw');
       }
-
-      await editMentorPage.navigateToTab('Sandbox');
-      await waitForPageReady(page);
-
-      const sandbox = new SandboxTab(page, editMentorPage.dialog);
 
       // Edit Instance UI is only in the not-connected state. If env has a
       // wired sandbox we capture the connected instance name, disconnect,
@@ -646,7 +545,7 @@ test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
       // `name && server_url && gateway_token`.
       await sandbox.editInstanceTokenInput.fill(fakeToken);
 
-      // saveInstanceEdit waits for "Instance updated" toast + dialog close.
+      // saveInstanceEdit waits for the dialog to close.
       await sandbox.saveInstanceEdit();
       await expect(sandbox.getInstanceRowByName(renamed)).toBeVisible();
 
@@ -660,7 +559,6 @@ test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
       // Final fallback cleanup — try to delete by either name in case an
       // earlier step threw before completion.
       try {
-        const sandbox = new SandboxTab(page, editMentorPage.dialog);
         for (const name of [renamed, instanceName]) {
           const r = sandbox.getInstanceRowByName(name);
           if (
@@ -678,18 +576,13 @@ test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
       // Restore the env's original wired connection (best-effort).
       if (priorConnectedInstance) {
         try {
-          const sandbox = new SandboxTab(page, editMentorPage.dialog);
-          await editMentorPage.navigateToTab('Sandbox');
-          await waitForPageReady(page);
           await sandbox.reconnectByName(priorConnectedInstance);
         } catch {
           // Best-effort — env may be left disconnected if reconnect fails
         }
       }
-      if (!wasEnabled) {
-        await editMentorPage.navigateToTab('Settings');
-        await waitForPageReady(page);
-        await editMentorPage.settings.setAdvancedSandbox(false);
+      if (originalKind !== 'claw') {
+        await sandbox.selectKind(originalKind);
       }
       await editMentorPage.close();
     }
@@ -697,32 +590,28 @@ test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
 
   // ── TC12: Sandbox tab — Connect to instance ────────────────────────────────
   //
-  // Clicking Connect wires the mentor to a Claw instance. After connect the
-  // "Connected Instance" heading must appear, AND the Skills tab must now be
-  // visible in the dialog tab list (wired → Skills-visible transition).
+  // Clicking the row's dedicated Connect button (`connect-instance-<id>`,
+  // next to the "Actions" three-dot menu — Connect is no longer a dropdown
+  // item) wires the mentor to a Claw instance. After connect the "Connected
+  // Instance" heading must appear.
 
-  test('admin connects a sandbox instance and Connected Instance heading appears and Skills tab becomes visible', async ({
+  test('admin connects a sandbox instance via the dedicated Connect button and Connected Instance heading appears', async ({
     page,
     editMentorPage,
   }) => {
     // claw-12
-    await editMentorPage.open('Settings');
+    await editMentorPage.navigateToTab('Sandbox');
     await waitForPageReady(page);
 
-    const wasEnabled = await editMentorPage.settings.isAdvancedSandboxEnabled();
+    const sandbox = new SandboxTab(page, editMentorPage.dialog);
+    const originalKind = await sandbox.getActiveKind();
 
     let priorConnectedInstance: string | null = null;
 
     try {
-      if (!wasEnabled) {
-        await editMentorPage.settings.setAdvancedSandbox(true);
-        await waitForTabVisible(editMentorPage.dialog, 'Sandbox', 15_000);
+      if (originalKind !== 'claw') {
+        await sandbox.selectKind('claw');
       }
-
-      await editMentorPage.navigateToTab('Sandbox');
-      await waitForPageReady(page);
-
-      const sandbox = new SandboxTab(page, editMentorPage.dialog);
 
       // The Connect flow asserts the NOT-connected → connected transition.
       // If env is already wired, capture the connected instance name and
@@ -735,10 +624,10 @@ test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
       // Pick a connectable target. Prefer the env's prior-wired instance
       // (it was healthy enough to be wired before) so reconnecting also
       // restores the env. Otherwise find any healthy OpenClaw instance.
-      // Connect is disabled in the dropdown for instances with status
+      // The dedicated Connect button is disabled for instances with status
       // "Error" — picking the first row blindly can land on an unhealthy
-      // row and the onSelect handler will short-circuit, leaving the test
-      // hung waiting for `connectedHeading`.
+      // row and the click would no-op, leaving the test hung waiting for
+      // `connectedHeading`.
       let targetName = priorConnectedInstance;
       if (!targetName) {
         targetName = await sandbox.findConnectableOpenClawInstance();
@@ -761,9 +650,6 @@ test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
         timeout: 15_000,
       });
 
-      // Assert: Skills tab is now visible (wired → Skills-visible transition)
-      await waitForTabVisible(editMentorPage.dialog, 'Skills', 15_000);
-
       if (priorConnectedInstance === null) {
         // We connected to an existing healthy instance — disconnect to
         // restore the env's not-connected state. The instance row stays
@@ -779,18 +665,13 @@ test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
       // the env's original wired connection (best-effort).
       try {
         if (priorConnectedInstance) {
-          const sandbox = new SandboxTab(page, editMentorPage.dialog);
-          await editMentorPage.navigateToTab('Sandbox');
-          await waitForPageReady(page);
           await sandbox.reconnectByName(priorConnectedInstance);
         }
       } catch {
         // Best-effort — env may be left in not-connected state if reconnect fails
       }
-      if (!wasEnabled) {
-        await editMentorPage.navigateToTab('Settings');
-        await waitForPageReady(page);
-        await editMentorPage.settings.setAdvancedSandbox(false);
+      if (originalKind !== 'claw') {
+        await sandbox.selectKind(originalKind);
       }
       await editMentorPage.close();
     }
@@ -803,10 +684,11 @@ test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
     editMentorPage,
   }) => {
     // claw-13
-    await editMentorPage.open('Settings');
+    await editMentorPage.navigateToTab('Sandbox');
     await waitForPageReady(page);
 
-    const wasEnabled = await editMentorPage.settings.isAdvancedSandboxEnabled();
+    const sandbox = new SandboxTab(page, editMentorPage.dialog);
+    const originalKind = await sandbox.getActiveKind();
 
     // Agent Configuration is gated on a wired sandbox. If env isn't
     // already connected, attempt to wire a healthy OpenClaw instance so
@@ -815,15 +697,10 @@ test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
     let createdConnectionHere = false;
 
     try {
-      if (!wasEnabled) {
-        await editMentorPage.settings.setAdvancedSandbox(true);
-        await waitForTabVisible(editMentorPage.dialog, 'Sandbox', 15_000);
+      if (originalKind !== 'claw') {
+        await sandbox.selectKind('claw');
       }
 
-      await editMentorPage.navigateToTab('Sandbox');
-      await waitForPageReady(page);
-
-      const sandbox = new SandboxTab(page, editMentorPage.dialog);
       const connected = await sandbox.ensureConnected();
       if (!connected.instanceName) {
         test.skip(
@@ -842,7 +719,7 @@ test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
       // Bootstrap, Heartbeat, Memory.
       await editMentorPage.navigateToTab('Prompts');
 
-      // Wait for the FIRST field's card by its known label. This ride out
+      // Wait for the FIRST field's card by its known label. This rides out
       // the loading spinner without a hand-tuned timeout — Playwright's
       // auto-retrying expect polls until the element is visible or the
       // suite-level expect timeout elapses. Click() also auto-scrolls so
@@ -885,7 +762,6 @@ test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
       // disconnect to restore the not-connected state.
       if (createdConnectionHere) {
         try {
-          const sandbox = new SandboxTab(page, editMentorPage.dialog);
           await editMentorPage.navigateToTab('Sandbox');
           await waitForPageReady(page);
           if (await sandbox.isConnected(5_000)) {
@@ -895,245 +771,34 @@ test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
           // Best-effort
         }
       }
-      if (!wasEnabled) {
-        await editMentorPage.navigateToTab('Settings');
+      if (originalKind !== 'claw') {
+        await editMentorPage.navigateToTab('Sandbox');
         await waitForPageReady(page);
-        await editMentorPage.settings.setAdvancedSandbox(false);
+        await sandbox.selectKind(originalKind);
       }
       await editMentorPage.close();
     }
   });
 
-  // ── TC14: Skills tab — Toggle skill on/off ────────────────────────────────
-
-  test('admin toggles a skill on then off and aria-checked flips back to the original state', async ({
-    page,
-    editMentorPage,
-  }) => {
-    // claw-14
-    await editMentorPage.open('Settings');
-    await waitForPageReady(page);
-
-    const wasEnabled = await editMentorPage.settings.isAdvancedSandboxEnabled();
-
-    // Skills tab is gated on a wired sandbox. If env isn't connected,
-    // wire a healthy OpenClaw instance up-front so the tab is reachable.
-    let createdConnectionHere = false;
-
-    try {
-      if (!wasEnabled) {
-        await editMentorPage.settings.setAdvancedSandbox(true);
-        await waitForTabVisible(editMentorPage.dialog, 'Sandbox', 15_000);
-      }
-
-      await editMentorPage.navigateToTab('Sandbox');
-      await waitForPageReady(page);
-
-      const sandbox = new SandboxTab(page, editMentorPage.dialog);
-      const connected = await sandbox.ensureConnected();
-      if (!connected.instanceName) {
-        test.skip(
-          true,
-          'No connectable OpenClaw instance available — Skills tab requires a wired sandbox',
-        );
-        return;
-      }
-      createdConnectionHere = connected.createdConnection;
-
-      // After a fresh Connect, Skills tab needs a moment to render.
-      await waitForTabVisible(editMentorPage.dialog, 'Skills', 15_000);
-
-      await editMentorPage.navigateToTab('Skills');
-      await waitForPageReady(page);
-
-      const skills = new SkillsTab(page, editMentorPage.dialog);
-
-      // Skip if no platform-level skills exist
-      if (await skills.hasNoSkills()) {
-        test.skip(
-          true,
-          'No platform-level skills exist — cannot test toggle flow',
-        );
-        return;
-      }
-
-      // Pick the first skill toggle in the list
-      const allToggles = editMentorPage.dialog.getByRole('switch');
-      const firstToggle = allToggles.first();
-      await expect(firstToggle).toBeVisible({ timeout: 10_000 });
-
-      const initialState =
-        (await firstToggle.getAttribute('aria-checked')) === 'true';
-
-      // Flip ON (or OFF if already ON)
-      await firstToggle.click();
-      await expect(firstToggle).toHaveAttribute(
-        'aria-checked',
-        initialState ? 'false' : 'true',
-        { timeout: 10_000 },
-      );
-
-      // Flip back to original state
-      await firstToggle.click();
-      await expect(firstToggle).toHaveAttribute(
-        'aria-checked',
-        initialState ? 'true' : 'false',
-        { timeout: 10_000 },
-      );
-    } finally {
-      // If WE wired the sandbox, disconnect to restore not-connected state.
-      if (createdConnectionHere) {
-        try {
-          const sandbox = new SandboxTab(page, editMentorPage.dialog);
-          await editMentorPage.navigateToTab('Sandbox');
-          await waitForPageReady(page);
-          if (await sandbox.isConnected(5_000)) {
-            await sandbox.disconnect();
-          }
-        } catch {
-          // Best-effort
-        }
-      }
-      if (!wasEnabled) {
-        await editMentorPage.navigateToTab('Settings');
-        await waitForPageReady(page);
-        await editMentorPage.settings.setAdvancedSandbox(false);
-      }
-      await editMentorPage.close();
-    }
-  });
-
-  // ── TC15: Skills tab — Create + Edit skill ────────────────────────────────
-
-  test('admin creates a new skill then edits its description and the updated skill row is visible', async ({
-    page,
-    editMentorPage,
-  }) => {
-    // claw-15
-    await editMentorPage.open('Settings');
-    await waitForPageReady(page);
-
-    const wasEnabled = await editMentorPage.settings.isAdvancedSandboxEnabled();
-
-    const ts = Date.now();
-    const skillName = `e2e-test-skill-${ts}`;
-    const skillSlug = `e2e_test_skill_${ts}`;
-    const skillDescription = `E2E test skill created at ${ts}`;
-    const updatedDescription = `E2E updated description ${ts}`;
-
-    // Skills tab is gated on a wired sandbox. If env isn't connected,
-    // wire a healthy OpenClaw instance first; we'll disconnect after the
-    // test if WE were the ones that connected it.
-    let createdConnectionHere = false;
-
-    try {
-      if (!wasEnabled) {
-        await editMentorPage.settings.setAdvancedSandbox(true);
-        await waitForTabVisible(editMentorPage.dialog, 'Sandbox', 15_000);
-      }
-
-      await editMentorPage.navigateToTab('Sandbox');
-      await waitForPageReady(page);
-
-      const sandbox = new SandboxTab(page, editMentorPage.dialog);
-      const connected = await sandbox.ensureConnected();
-      if (!connected.instanceName) {
-        test.skip(
-          true,
-          'No connectable OpenClaw instance available — Skills tab requires a wired sandbox',
-        );
-        return;
-      }
-      createdConnectionHere = connected.createdConnection;
-
-      // After Connect, Skills tab needs a moment to render.
-      await waitForTabVisible(editMentorPage.dialog, 'Skills', 15_000);
-
-      await editMentorPage.navigateToTab('Skills');
-      await waitForPageReady(page);
-
-      const skills = new SkillsTab(page, editMentorPage.dialog);
-
-      // ── Create ─────────────────────────────────────────────────────────
-      await skills.openNewSkillDialog();
-      await skills.fillSkillForm({
-        name: skillName,
-        slug: skillSlug,
-        description: skillDescription,
-        version: '1.0.0',
-        instruction: `Instruction for ${skillName}`,
-      });
-      // submitNewSkill already waits for the "Skill created" toast, the
-      // dialog close, and the new row to appear in the list.
-      await skills.submitNewSkill(skillName);
-
-      // ── Edit ───────────────────────────────────────────────────────────
-      await skills.openEditSkillDialog(skillName);
-
-      // Update the description field. The bundle renders this as a regular
-      // <input name="skill-description"> so .fill() works directly.
-      await skills.editSkillDescriptionInput.fill(updatedDescription);
-
-      await skills.submitSkillEdit();
-
-      // submitSkillEdit already waits for the "Skill updated" toast and
-      // dialog close. Verify the row wasn't accidentally deleted.
-      await expect(skills.getSkillRowByName(skillName)).toBeVisible();
-
-      // Cleanup: delete the skill
-      await skills.deleteSkill(skillName);
-    } finally {
-      // Best-effort final cleanup — if delete above failed, try again
-      try {
-        const skills = new SkillsTab(page, editMentorPage.dialog);
-        const row = skills.getSkillRowByName(skillName);
-        let rowExists = false;
-        try {
-          await row.waitFor({ state: 'visible', timeout: 3_000 });
-          rowExists = true;
-        } catch {
-          rowExists = false;
-        }
-        if (rowExists) {
-          await skills.deleteSkill(skillName);
-        }
-      } catch {
-        // Best-effort
-      }
-      // If WE wired the sandbox, disconnect to restore not-connected state.
-      if (createdConnectionHere) {
-        try {
-          const sandbox = new SandboxTab(page, editMentorPage.dialog);
-          await editMentorPage.navigateToTab('Sandbox');
-          await waitForPageReady(page);
-          if (await sandbox.isConnected(5_000)) {
-            await sandbox.disconnect();
-          }
-        } catch {
-          // Best-effort
-        }
-      }
-      if (!wasEnabled) {
-        await editMentorPage.navigateToTab('Settings');
-        await waitForPageReady(page);
-        await editMentorPage.settings.setAdvancedSandbox(false);
-      }
-      await editMentorPage.close();
-    }
+  test.afterAll(async ({ browser }, testInfo) => {
+    await tracker44B.deleteAll(browser, testInfo);
   });
 });
 
-// ── Non-admin: Sandbox and Skills tabs invisible even when claw is enabled ───
+// ── Non-admin: Sandbox tab invisible regardless of claw state ────────────────
+//
+// Unaffected by the capability-gate refactor — Sandbox remains ADMIN-only
+// via `userTypes: [UserType.ADMIN]` in `MENTOR_SEGMENTS`.
 
 test.describe('Journey 44: CLAW Advanced Sandbox — Non-Admin', () => {
-  test('non-admin does not see Sandbox or Skills tabs in the Edit Mentor modal', async ({
+  test('non-admin does not see the Sandbox tab in the Edit Mentor modal', async ({
     nonadminPage,
     nonadminEditMentorPage,
   }) => {
     await navigateToMentorApp(nonadminPage);
 
     // Non-admin cannot open the edit mentor modal via the mentor dropdown
-    // (the Settings menu item is hidden). We assert the tabs are absent by
+    // (the Settings menu item is hidden). We assert the tab is absent by
     // checking the mentor dropdown does not expose a Modify / Settings
     // option. The mentor → agent rename moved this button's accessible
     // name to "Selected agent dropdown button"; accept either label so the
@@ -1157,20 +822,24 @@ test.describe('Journey 44: CLAW Advanced Sandbox — Non-Admin', () => {
     }
 
     if (!menuItemVisible) {
-      // Non-admin cannot open the edit dialog — Sandbox / Skills tabs are
+      // Non-admin cannot open the edit dialog — the Sandbox tab is
       // definitively not visible. Test passes.
       await nonadminPage.keyboard.press('Escape');
       return;
     }
 
-    // If (in some env) non-admin can open the dialog, verify tabs are absent
+    // If (in some env) non-admin can open the dialog, verify the tab is
+    // absent — dialog captured first, nested lookups scoped to it.
     await modifyItem.click();
-    await expect(nonadminEditMentorPage.dialog).toBeVisible({
-      timeout: 15_000,
-    });
+    const dialog = nonadminEditMentorPage.dialog;
+    await expect(dialog).toBeVisible({ timeout: 15_000 });
 
-    await expectTabHidden(nonadminEditMentorPage.dialog, 'Sandbox');
-    await expectTabHidden(nonadminEditMentorPage.dialog, 'Skills');
+    await expect(
+      dialog.getByRole('tablist').getByRole('tab', {
+        name: 'Sandbox',
+        exact: true,
+      }),
+    ).toHaveCount(0, { timeout: 10_000 });
 
     await nonadminEditMentorPage.close();
   });

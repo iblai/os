@@ -62,6 +62,12 @@ vi.mock('@/hooks/use-mentors/use-mentor-settings', () => ({
   useMentorSettings: () => mockUseMentorSettings(),
 }));
 
+// Mock use-embed-mode
+const mockUseEmbedMode = vi.fn();
+vi.mock('@/hooks/use-embed-mode', () => ({
+  useEmbedMode: () => mockUseEmbedMode(),
+}));
+
 // Mock cn util
 vi.mock('@/lib/utils', () => ({
   cn: (...args: any[]) => args.filter(Boolean).join(' '),
@@ -73,6 +79,7 @@ describe('Logo', () => {
     mockUseParams.mockReturnValue({ tenantKey: 'test-tenant' });
     mockUseHeader.mockReturnValue({ useSpecialIframeLogo: false });
     mockUseMentorSettings.mockReturnValue({ data: null });
+    mockUseEmbedMode.mockReturnValue(false);
   });
 
   it('renders the logo button', async () => {
@@ -213,7 +220,7 @@ describe('Logo', () => {
       mockUseHeader.mockReturnValue({ useSpecialIframeLogo: false });
     });
 
-    it('falls back to /logo.gif on image error', async () => {
+    it('falls back to /iblai-logo.png on image error', async () => {
       render(<Logo />);
       await waitFor(() => {
         expect(screen.getByTestId('logo-image')).toBeInTheDocument();
@@ -222,7 +229,7 @@ describe('Logo', () => {
       await waitFor(() => {
         expect(screen.getByTestId('logo-image')).toHaveAttribute(
           'src',
-          '/logo.gif',
+          '/iblai-logo.png',
         );
       });
     });
@@ -321,6 +328,68 @@ describe('Logo', () => {
         'src',
         'https://dm.example.com/api/core/orgs/param-tenant/logo/',
       );
+    });
+  });
+
+  describe('logo clickability with embed mode and show_catalogue', () => {
+    it('stays clickable outside embed mode even when show_catalogue is false', () => {
+      mockUseEmbedMode.mockReturnValue(false);
+      mockUseMentorSettings.mockReturnValue({
+        data: { showCatalogue: false },
+      });
+      render(<Logo />);
+
+      const button = screen.getByRole('button');
+      expect(button).toBeInTheDocument();
+      fireEvent.click(button);
+      expect(mockNavigateToHome).toHaveBeenCalledTimes(1);
+    });
+
+    it('stays clickable in embed mode when show_catalogue is true', () => {
+      mockUseEmbedMode.mockReturnValue(true);
+      mockUseMentorSettings.mockReturnValue({
+        data: { showCatalogue: true },
+      });
+      render(<Logo />);
+
+      const button = screen.getByRole('button');
+      expect(button).toBeInTheDocument();
+      fireEvent.click(button);
+      expect(mockNavigateToHome).toHaveBeenCalledTimes(1);
+    });
+
+    it('is not clickable in embed mode when show_catalogue is false', () => {
+      mockUseEmbedMode.mockReturnValue(true);
+      mockUseMentorSettings.mockReturnValue({
+        data: { showCatalogue: false },
+      });
+      render(<Logo />);
+
+      expect(screen.queryByRole('button')).not.toBeInTheDocument();
+      // The logo image still renders, just without navigation.
+      expect(screen.getByTestId('logo-image')).toBeInTheDocument();
+    });
+
+    it('does not navigate when the non-clickable logo is clicked in embed mode', () => {
+      mockUseEmbedMode.mockReturnValue(true);
+      mockUseMentorSettings.mockReturnValue({
+        data: { showCatalogue: false },
+      });
+      render(<Logo />);
+
+      fireEvent.click(screen.getByTestId('logo-image'));
+      expect(mockNavigateToHome).not.toHaveBeenCalled();
+    });
+
+    it('defaults to clickable in embed mode when show_catalogue is undefined', () => {
+      mockUseEmbedMode.mockReturnValue(true);
+      mockUseMentorSettings.mockReturnValue({ data: {} });
+      render(<Logo />);
+
+      const button = screen.getByRole('button');
+      expect(button).toBeInTheDocument();
+      fireEvent.click(button);
+      expect(mockNavigateToHome).toHaveBeenCalledTimes(1);
     });
   });
 });

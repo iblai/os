@@ -76,7 +76,12 @@ test.describe('Journey 27: User Invitations & Default Mentor', () => {
       !INVITE_USERNAME || !INVITE_USER_PASSWORD,
       'Requires INVITE_USERNAME and INVITE_USER_PASSWORD',
     );
-    const anonPage = await page.context().newPage();
+    // Use an isolated context so the invited user signs up with a clean
+    // session instead of inheriting the admin's cookies/storage.
+    const browser = page.context().browser();
+    if (!browser) throw new Error('No browser instance available');
+    const anonContext = await browser.newContext();
+    const anonPage = await anonContext.newPage();
     try {
       await authenticate(
         anonPage,
@@ -91,7 +96,7 @@ test.describe('Journey 27: User Invitations & Default Mentor', () => {
         },
       );
     } finally {
-      await anonPage.close();
+      await anonContext.close();
     }
   });
 
@@ -144,7 +149,12 @@ test.describe('Journey 27: User Invitations & Default Mentor', () => {
     page,
   }) => {
     test.skip(!INVITE_USERNAME, 'Requires INVITE_USERNAME env var');
-    const anonPage = await page.context().newPage();
+    // Use an isolated context so the invited user signs up with a clean
+    // session instead of inheriting the admin's cookies/storage.
+    const browser = page.context().browser();
+    if (!browser) throw new Error('No browser instance available');
+    const anonContext = await browser.newContext();
+    const anonPage = await anonContext.newPage();
     try {
       await authenticate(
         anonPage,
@@ -159,7 +169,7 @@ test.describe('Journey 27: User Invitations & Default Mentor', () => {
         },
       );
     } finally {
-      await anonPage.close();
+      await anonContext.close();
     }
   });
 });

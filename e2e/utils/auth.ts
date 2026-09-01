@@ -1,6 +1,7 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { safeWaitForURL } from './navigation';
 import { waitForPageReady } from './resilient';
+import { SignupPage } from '../page-objects/signup.page';
 import { logger } from '@iblai/iblai-js/playwright';
 
 const MENTOR_NEXTJS_HOST = process.env.MENTOR_NEXTJS_HOST || '';
@@ -60,6 +61,37 @@ export async function navigateToMentorApp(
   await expect(
     page.getByRole('button', { name: 'Selected agent dropdown button' }),
   ).toBeVisible({ timeout: 120_000 });
+
+  await waitForStableMentorUrl(page);
+}
+
+/**
+ * Block until the mentor segment of the URL stops changing.
+ *
+ * MentorProvider re-resolves the mentor after its own auto-redirect, so a
+ * fresh landing can hop between agents for several seconds — and each hop
+ * swaps the whole app tree for the provider's spinner. Returning while that
+ * is still in flight hands callers a page whose chrome is about to unmount.
+ */
+export async function waitForStableMentorUrl(
+  page: Page,
+  { quietMs = 2_000, timeout = 30_000 } = {},
+): Promise<void> {
+  const mentorFromUrl = () => page.url().split('?')[0];
+  const deadline = Date.now() + timeout;
+  let last = mentorFromUrl();
+  let stableSince = Date.now();
+
+  while (Date.now() < deadline) {
+    await page.waitForTimeout(250);
+    const current = mentorFromUrl();
+    if (current !== last) {
+      last = current;
+      stableSince = Date.now();
+      continue;
+    }
+    if (Date.now() - stableSince >= quietMs) return;
+  }
 }
 
 /**
@@ -155,6 +187,89 @@ export async function checkAdminStatus(page: Page): Promise<boolean> {
 }
 
 /**
+ * Block until the page has admin tenant context in `current_tenant`
+ * localStorage, or THROW. Unlike `checkAdminStatus`, this is non-optional:
+ * it never returns `false`. Use this in `beforeEach` hooks for admin-only
+ * journeys so a missing-admin state fails LOUD instead of silently
+ * skipping every test downstream.
+ *
+ * Strategy:
+ *   1. Poll `localStorage.current_tenant.is_admin === true` for up to
+ *      `firstWindowMs` (default 20 s).
+ *   2. If the first window expires, force a `navigateToMentorApp` to
+ *      re-trigger AuthProvider's `request-jwt` chain, then poll again
+ *      for the remaining budget.
+ *   3. On final timeout, throw with a diagnostic that names the
+ *      `localStorage` keys actually present and a preview of
+ *      `current_tenant` (if any), so the failure shows the root cause
+ *      (empty storageState file, stub JWT from auth.setup.ts, etc.).
+ *
+ * The 60 s default budget covers slow CI auth-host round trips —
+ * previously `checkAdminStatus`'s 10 s window was the proximate cause
+ * of journey-49 skip cascades.
+ */
+export async function waitForAdmin(
+  page: Page,
+  budgetMs = 60_000,
+): Promise<void> {
+  const firstWindowMs = Math.min(20_000, budgetMs);
+  const secondWindowMs = Math.max(budgetMs - firstWindowMs, 10_000);
+
+  const probe = async (timeout: number): Promise<boolean> => {
+    try {
+      await page.waitForFunction(
+        () => {
+          const raw = window.localStorage.getItem('current_tenant');
+          if (!raw) return false;
+          try {
+            return JSON.parse(raw).is_admin === true;
+          } catch {
+            return false;
+          }
+        },
+        { timeout },
+      );
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  if (await probe(firstWindowMs)) return;
+
+  // First window failed — force AuthProvider to re-hydrate by
+  // re-navigating. Handles the stub-JWT fallback path where the saved
+  // storageState contains an unusable JWT and only the live request-jwt
+  // round trip writes `current_tenant`.
+  logger.warn(
+    '[waitForAdmin] Admin state missing after first probe — re-navigating to force re-hydration',
+  );
+  await navigateToMentorApp(page).catch(() => undefined);
+  if (await probe(secondWindowMs)) return;
+
+  const diagnostic = await page
+    .evaluate(() => {
+      const keys = Object.keys(window.localStorage);
+      const tenant = window.localStorage.getItem('current_tenant');
+      return {
+        keys,
+        tenantPreview: tenant ? tenant.slice(0, 200) : null,
+      };
+    })
+    .catch(() => ({ keys: [], tenantPreview: null }));
+  throw new Error(
+    `[waitForAdmin] Admin tenant context not present after ${budgetMs} ms. ` +
+      `localStorage keys: ${JSON.stringify(diagnostic.keys)}. ` +
+      `current_tenant preview: ${diagnostic.tenantPreview ?? 'absent'}. ` +
+      `Likely causes: (a) playwright/.auth/user-{browser}.json is the empty ` +
+      `28-byte stub (delete it and re-run setup); (b) auth.setup.ts wrote a ` +
+      `stub JWT (look for "request-jwt: status … → returning stub JWT" in ` +
+      `setup logs); (c) MENTOR_NEXTJS_HOST changed between setup and test ` +
+      `runs so the storageState origin doesn't match.`,
+  );
+}
+
+/**
  * Waits for the platform to be fully loaded and returns the
  * current tenantKey and mentorId from the URL.
  */
@@ -168,4 +283,65 @@ export async function getPlatformContext(
     throw new Error(`Not on a platform URL: ${url}`);
   }
   return { tenantKey: parts[1], mentorId: parts[2] };
+}
+
+/**
+ * Signs up a brand-new user via the auth service's `/account/create` form
+ * and waits until they land on the "main" tenant's platform page with the
+ * navbar ready. Modeled on Journey 1's signup test and Journey 59 Flow 0
+ * (`e2e/journeys/59-ecommerce-credits-and-upgrade.spec.ts`).
+ *
+ * Use this whenever a test genuinely needs a fresh account — e.g. to assert
+ * first-run UI like the profile dropdown's default menu — rather than the
+ * `nonadminPage` fixture, which reuses a saved, pre-existing storageState
+ * account and does NOT represent a "newly registered user".
+ *
+ * Caller is responsible for running this against a clean, unauthenticated
+ * context (`test.use({ storageState: { cookies: [], origins: [] } })`).
+ *
+ * Returns the generated email for logging/debugging.
+ */
+export async function signUpNewUserOnMain(
+  page: Page,
+): Promise<{ email: string }> {
+  const email = `test+${Date.now()}@ibleducation.com`;
+  const password = 'test-password';
+
+  await page.goto(MENTOR_NEXTJS_HOST, {
+    waitUntil: 'domcontentloaded',
+    timeout: 60_000,
+  });
+  await safeWaitForURL(page, (u) => u.href.includes(AUTH_HOST), {
+    timeout: 60_000,
+  });
+  await page.waitForLoadState('domcontentloaded', { timeout: 60_000 });
+
+  const pleaseWaitText = page.getByText(/please wait.../i);
+  const signUpButton = page.getByRole('button', { name: 'Sign Up' });
+  await expect(signUpButton).toBeVisible({ timeout: 30_000 });
+  await expect(pleaseWaitText).not.toBeVisible({ timeout: 30_000 });
+  await signUpButton.click();
+
+  await safeWaitForURL(page, (u) => u.pathname.includes('/account/create'), {
+    timeout: 30_000,
+  });
+
+  const signupPage = new SignupPage(page);
+  logger.info(`[signUpNewUserOnMain] signup email: ${email}`);
+  await signupPage.signUp(email, password);
+
+  await safeWaitForURL(page, (u) => u.href.includes(MENTOR_NEXTJS_HOST), {
+    timeout: 120_000,
+  });
+  await safeWaitForURL(
+    page,
+    (u) => /\/platform\/main\/[^/]+$/.test(u.pathname),
+    { timeout: 120_000 },
+  );
+  await expect(
+    page.getByRole('button', { name: 'Selected agent dropdown button' }),
+  ).toBeVisible({ timeout: 60_000 });
+
+  logger.info(`[signUpNewUserOnMain] landed on main tenant: ${page.url()}`);
+  return { email };
 }

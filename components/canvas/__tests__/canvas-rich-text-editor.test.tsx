@@ -54,9 +54,11 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
 
 // Mock @/lib/utils
 vi.mock('@/lib/utils', () => ({
-  htmlToMarkdown: vi.fn((html: string) =>
-    (html || '').replace(/<[^>]*>/g, '').trim(),
-  ),
+  htmlToMarkdown: vi.fn((html: string) => {
+    let text = html || '';
+    while (/<[^>]*>/.test(text)) text = text.replace(/<[^>]*>/g, '');
+    return text.trim();
+  }),
   markdownToHtml: vi.fn((md: string) => `<p>${md || ''}</p>`),
 }));
 
@@ -475,6 +477,24 @@ describe('CanvasRichTextEditor', () => {
         }),
       );
       expect(result.current).toBeDefined();
+    });
+
+    it('scopes inline-code chip styling away from code blocks (issue #2109)', async () => {
+      const { useEditor } = await import('@tiptap/react');
+      (useEditor as any).mockClear();
+      renderHook(() =>
+        useCanvasRichTextEditor({
+          value: 'Test content',
+          onChange: vi.fn(),
+        }),
+      );
+      const options = (useEditor as any).mock.calls[0][0];
+      const editorClass = options.editorProps.attributes.class as string;
+      expect(editorClass).toContain('[&_:not(pre)>code]:bg-muted');
+      expect(editorClass).toContain('[&_pre_code]:bg-transparent');
+      expect(editorClass).toContain('[&_pre_code]:p-0');
+      expect(editorClass).not.toContain('[&_code]:bg-muted');
+      expect(editorClass).not.toContain('[&_pre]:bg-muted');
     });
 
     it('handles markdown value', () => {
@@ -1866,8 +1886,11 @@ describe('isHtml - Additional Cases', () => {
 });
 
 describe('getInitialEditorContent - Additional Cases', () => {
-  const mockHtmlToMarkdown = (html: string) =>
-    `MD:${html.replace(/<[^>]*>/g, '')}`;
+  const mockHtmlToMarkdown = (html: string) => {
+    let text = html;
+    while (/<[^>]*>/.test(text)) text = text.replace(/<[^>]*>/g, '');
+    return `MD:${text}`;
+  };
   const mockMarkdownToHtml = (md: string) => `<p>${md}</p>`;
 
   it('handles empty string with html format', () => {
@@ -1914,8 +1937,11 @@ describe('getInitialEditorContent - Additional Cases', () => {
 });
 
 describe('getNextEditorContent - Additional Cases', () => {
-  const mockHtmlToMarkdown = (html: string) =>
-    `MD:${html.replace(/<[^>]*>/g, '')}`;
+  const mockHtmlToMarkdown = (html: string) => {
+    let text = html;
+    while (/<[^>]*>/.test(text)) text = text.replace(/<[^>]*>/g, '');
+    return `MD:${text}`;
+  };
   const mockMarkdownToHtml = (md: string) => `<p>${md}</p>`;
 
   it('handles empty string with markdown format', () => {
@@ -2324,8 +2350,11 @@ describe('markdownContentMatches', () => {
 // ==========================================================================
 
 describe('getExportValue', () => {
-  const mockHtmlToMarkdown = (html: string) =>
-    `MD:${html.replace(/<[^>]*>/g, '')}`;
+  const mockHtmlToMarkdown = (html: string) => {
+    let text = html;
+    while (/<[^>]*>/.test(text)) text = text.replace(/<[^>]*>/g, '');
+    return `MD:${text}`;
+  };
 
   it('returns html directly when exportFormat is html', () => {
     expect(getExportValue('<p>Test</p>', 'html', mockHtmlToMarkdown)).toBe(
@@ -2584,8 +2613,11 @@ describe('shouldProceedWithUpdate', () => {
 // ==========================================================================
 
 describe('getOnChangeValue', () => {
-  const mockHtmlToMarkdown = (html: string) =>
-    `MD:${html.replace(/<[^>]*>/g, '')}`;
+  const mockHtmlToMarkdown = (html: string) => {
+    let text = html;
+    while (/<[^>]*>/.test(text)) text = text.replace(/<[^>]*>/g, '');
+    return `MD:${text}`;
+  };
 
   it('returns html directly for html format', () => {
     expect(getOnChangeValue('<p>Test</p>', 'html', mockHtmlToMarkdown)).toBe(

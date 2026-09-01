@@ -142,7 +142,7 @@
 }
 
 .ibl-tooltip-content {
-  @apply rounded-lg bg-gray-700 px-3 py-2 text-sm font-medium whitespace-nowrap text-white shadow-sm transition-opacity duration-300;
+  @apply max-w-xs rounded-lg bg-gray-700 px-3 py-2 text-sm font-medium break-words text-white shadow-sm transition-opacity duration-300;
 }
 
 /* LOGO styling from old mentor */
@@ -168,4 +168,122 @@ body {
 
 [data-sonner-toaster][data-sonner-theme='dark'] .toast-wrapped-contact-tag {
   @apply text-blue-400 hover:text-blue-300;
+}
+
+/*
+ * Private Mode toggle (SDK ChatPrivacyToggle from @iblai/web-containers):
+ * mask the off-flicker between the optimistic-on commit and the refetched-
+ * effective on commit during a session-id swap.
+ *
+ * Root cause inside the SDK (read from
+ * @iblai/iblai-js/dist/web-containers/source/index.esm.js):
+ *
+ *   isPrivate = (serverPrivate && !optimisticNormal) || optimisticPrivate
+ *
+ * When the toggle is clicked off→on with no messages, the SDK fires
+ * `createSessionWithFlag` which:
+ *   1. dispatches `chatActions.updateSessionIds(newSessionId)`, swapping
+ *      `useGetChatPrivacyEffectiveQuery`'s subscription from (mentor,
+ *      old_session) → (mentor, new_session);
+ *   2. dispatches `chatPrivacyApiSlice.util.invalidateTags(
+ *      ['ChatPrivacyEffective'])`.
+ *
+ * The OLD-session cache entry — still resident under RTK Query's default
+ * `keepUnusedDataFor` (the SDK sets no override on `getChatPrivacyEffective`)
+ * — briefly reports `mode='disabled'` from the invalidation refetch. That
+ * fires the SDK's clear-optimistic effect:
+ *
+ *   if (serverPrivate && optimisticPrivate) setOptimisticPrivate(false)
+ *
+ * but the NEW-session subscription hasn't resolved yet, so `effective`
+ * collapses to `DEFAULT_EFFECTIVE` (`mode='normal'`), `serverPrivate`
+ * goes false, and ONE React commit renders with `data-state="off"`.
+ * The SDK's `transition-[background-color,color,padding,gap] duration-300`
+ * on the button (and a matching label transition on the inner span) then
+ * begin animating to the off shape, producing the visible 1-frame wobble.
+ *
+ * Fix: add a non-zero `transition-delay` to the OFF state and 0 ms to the
+ * ON state. When a brief OFF commit lands, the 350 ms delay holds the
+ * visual on-state; if a re-render flips `data-state` back to ON within
+ * that window, the pending transition is cancelled before it starts.
+ * The pill never visually leaves "on" during a session swap. The DOM
+ * attributes (`data-state`, `data-source`, `aria-pressed`) are unaffected
+ * — only the CSS transitions are delayed — so journey-50 cp-header tests
+ * and the precedence-chain assertions stay green.
+ *
+ * For a real user-initiated turn-OFF click the morph still runs, just
+ * shifted by 350 ms. Felt deliberate, not flickery. If a future SDK bump
+ * extends the 300 ms transitions, re-tune this delay accordingly.
+ */
+[data-testid='chat-privacy-toggle'] {
+  transition-delay: 350ms;
+}
+[data-testid='chat-privacy-toggle'][data-state='on'] {
+  transition-delay: 0ms;
+}
+[data-testid='chat-privacy-toggle'] > span {
+  transition-delay: 350ms;
+}
+[data-testid='chat-privacy-toggle'][data-state='on'] > span {
+  transition-delay: 0ms;
+}
+
+/*
+ * Left-to-right shimmer for the in-progress row of the agent task list
+ * (`components/chat/agent-todo-list.tsx`). The gradient is clipped to the
+ * glyphs, so the band sweeps across the *text* rather than a block behind it.
+ *
+ * Direction: with `background-size: 200%`, position `100% 0` puts the image's
+ * midpoint (the bright band) at the box's LEFT edge and `0 0` puts it at the
+ * RIGHT edge — so animating 100% -> 0 sweeps left-to-right.
+ *
+ * Both gradient stops stay above the WCAG 1.4.3 4.5:1 floor against their
+ * background (gray-500 is 4.83:1 on white), so the text never dips below the
+ * contrast minimum mid-sweep. Colour is not a status cue here either — the
+ * icon shape carries that.
+ */
+@keyframes todo-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+
+.todo-shimmer {
+  --todo-shimmer-base: var(--color-gray-800);
+  --todo-shimmer-band: var(--color-gray-500);
+  background-image: linear-gradient(
+    90deg,
+    var(--todo-shimmer-base) 0%,
+    var(--todo-shimmer-base) 40%,
+    var(--todo-shimmer-band) 50%,
+    var(--todo-shimmer-base) 60%,
+    var(--todo-shimmer-base) 100%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: todo-shimmer 1.8s linear infinite;
+}
+
+.dark .todo-shimmer {
+  --todo-shimmer-base: var(--color-gray-200);
+  --todo-shimmer-band: var(--color-gray-500);
+}
+
+/*
+ * The sweep loops for as long as the step is running, which is exactly the
+ * indefinite motion WCAG 2.2.2 cautions against. Fall back to flat, solid
+ * text when the user asks for reduced motion.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .todo-shimmer {
+    background-image: none;
+    color: var(--todo-shimmer-base);
+    animation: none;
+  }
 }

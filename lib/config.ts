@@ -24,6 +24,7 @@ const env = {
   NEXT_PUBLIC_IBL_SENTRY_DSN: process.env.NEXT_PUBLIC_IBL_SENTRY_DSN,
   NEXT_PUBLIC_HELP_CENTER_URL: process.env.NEXT_PUBLIC_HELP_CENTER_URL,
   NEXT_PUBLIC_SUPPORT_EMAIL: process.env.NEXT_PUBLIC_SUPPORT_EMAIL,
+  NEXT_PUBLIC_DOCUMENTATION_URL: process.env.NEXT_PUBLIC_DOCUMENTATION_URL,
   NEXT_PUBLIC_ENABLE_GRAVATAR_ON_PROFILE_PIC:
     process.env.NEXT_PUBLIC_ENABLE_GRAVATAR_ON_PROFILE_PIC,
   NEXT_PUBLIC_DEFAULT_EMBED_CSS_URL:
@@ -44,13 +45,34 @@ const env = {
     process.env.NEXT_PUBLIC_DISABLED_ANALYTICS_REPORTS,
   NEXT_PUBLIC_PLATFORM_BASE_DOMAIN:
     process.env.NEXT_PUBLIC_PLATFORM_BASE_DOMAIN,
+  NEXT_PUBLIC_DEFAULT_SUPPORT_PHONE_NUMBER:
+    process.env.NEXT_PUBLIC_DEFAULT_SUPPORT_PHONE_NUMBER,
+  NEXT_PUBLIC_MAXIMUM_CHARACTER_SIZE_TO_COPY:
+    process.env.NEXT_PUBLIC_MAXIMUM_CHARACTER_SIZE_TO_COPY,
+  NEXT_PUBLIC_ENABLE_SUPPORT_PHONE:
+    process.env.NEXT_PUBLIC_ENABLE_SUPPORT_PHONE,
+  NEXT_PUBLIC_ENABLE_GRADEBOOK_TAB:
+    process.env.NEXT_PUBLIC_ENABLE_GRADEBOOK_TAB,
 };
 
 const runtimeEnv = () =>
   typeof window !== 'undefined' ? (window as any).__ENV__ || {} : {};
 
 export const getEnv = (key: keyof typeof env, fallback = ''): string => {
-  return runtimeEnv()[key] ?? env[key] ?? fallback;
+  // Prefer the first *non-empty* value. Plain `??` only falls back on
+  // null/undefined, so an empty-string runtime value — which `env.js`
+  // templating commonly emits for unset vars (`KEY: ""`) — would shadow a
+  // meaningful fallback. e.g. NEXT_PUBLIC_MAXIMUM_CHARACTER_SIZE_TO_COPY=""
+  // yields Number("") === 0 and turns every paste into an attachment chip.
+  const runtime = runtimeEnv()[key];
+  if (runtime !== undefined && runtime !== null && runtime !== '') {
+    return runtime;
+  }
+  const build = env[key];
+  if (build !== undefined && build !== null && build !== '') {
+    return build;
+  }
+  return fallback;
 };
 
 const domain = () => getEnv('NEXT_PUBLIC_PLATFORM_BASE_DOMAIN', 'iblai.app');
@@ -64,7 +86,7 @@ export const config = {
     return `https://learn.${domain()}`;
   },
   legacyLmsUrl: () =>
-    getEnv('NEXT_PUBLIC_LEGACY_LMS_URL', 'https://learn.iblai.org'),
+    getEnv('NEXT_PUBLIC_LEGACY_LMS_URL', 'https://learn.iblai.app'),
   dmUrl: () => {
     const apiBase = getEnv('NEXT_PUBLIC_API_BASE_URL');
     if (apiBase) return `${apiBase}/dm`;
@@ -81,9 +103,9 @@ export const config = {
   iblPlatform: () => getEnv('NEXT_PUBLIC_IBL_PLATFORM', 'mentor'),
   iblEnableSpecialLogoWhenIframed: () =>
     getEnv('NEXT_PUBLIC_IBL_ENABLE_SPECIAL_LOGO_WHEN_IFRAMED', 'false'),
-  mentorUrl: () => getEnv('NEXT_PUBLIC_MENTOR_URL', 'https://mentor.iblai.org'),
+  mentorUrl: () => getEnv('NEXT_PUBLIC_MENTOR_URL', 'https://mentor.iblai.app'),
   mentorIframeUrl: () =>
-    getEnv('NEXT_PUBLIC_MENTOR_IFRAME_URL', 'https://mentor.iblai.org'),
+    getEnv('NEXT_PUBLIC_MENTOR_IFRAME_URL', 'https://mentor.iblai.app'),
   externalPricingPageUrl: () =>
     getEnv(
       'NEXT_PUBLIC_EXTERNAL_PRICING_PAGE_URL',
@@ -91,11 +113,11 @@ export const config = {
     ),
   stripeEnabled: () => getEnv('NEXT_PUBLIC_STRIPE_ENABLED', 'true'),
   baseWsUrl: () =>
-    getEnv('NEXT_PUBLIC_BASE_WS_URL', 'https://asgi.data.iblai.org'),
+    getEnv('NEXT_PUBLIC_BASE_WS_URL', 'https://asgi.data.iblai.app'),
   liveKitServerUrl: () =>
     getEnv(
       'NEXT_PUBLIC_IBL_LIVE_KIT_SERVER_URL',
-      'wss://livekit.call.iblai.org',
+      'wss://livekit.call.iblai.app',
     ),
   mentorSettingsDisclaimer: () =>
     getEnv('NEXT_PUBLIC_MENTOR_SETTINGS_DISCLAIMER', ''),
@@ -108,22 +130,21 @@ export const config = {
       'https://f953ef66c4e0d5bda480069132dc9aee@sentry.ibl.network/33',
     ),
   helpCenterUrl: () =>
-    getEnv('NEXT_PUBLIC_HELP_CENTER_URL', 'https://docs.ibl.ai'),
+    getEnv('NEXT_PUBLIC_HELP_CENTER_URL', 'https://ibl.ai/support'),
   supportEmail: () =>
     getEnv('NEXT_PUBLIC_SUPPORT_EMAIL', 'support@iblai.zendesk.com'),
+  documentationUrl: () =>
+    getEnv('NEXT_PUBLIC_DOCUMENTATION_URL', 'https://ibl.ai/docs'),
   enableGravatarOnProfilePic: () =>
     getEnv('NEXT_PUBLIC_ENABLE_GRAVATAR_ON_PROFILE_PIC', 'true'),
   defaultEmbedCssUrl: () => getEnv('NEXT_PUBLIC_DEFAULT_EMBED_CSS_URL', ''),
   appBannerLink: () =>
-    getEnv('NEXT_PUBLIC_APP_BANNER_LINK', 'https://docs.ibl.ai'),
+    getEnv('NEXT_PUBLIC_APP_BANNER_LINK', 'https://ibl.ai/docs'),
   appBannerLinkText: () =>
-    getEnv('NEXT_PUBLIC_APP_BANNER_LINK_TEXT', 'View all'),
+    getEnv('NEXT_PUBLIC_APP_BANNER_LINK_TEXT', 'Check out'),
   appBannerBadge: () => getEnv('NEXT_PUBLIC_APP_BANNER_BADGE', 'New'),
   appBannerText: () =>
-    getEnv(
-      'NEXT_PUBLIC_APP_BANNER_TEXT',
-      'Explore our latest features for students',
-    ),
+    getEnv('NEXT_PUBLIC_APP_BANNER_TEXT', 'Explore our latest features'),
   showAppBanner: () => getEnv('NEXT_PUBLIC_SHOW_APP_BANNER', 'false'),
   mentorTrainingMaximumFileSize: () =>
     getEnv('NEXT_PUBLIC_MENTOR_TRAINING_MAXIMUM_FILE_SIZE', '60'),
@@ -140,4 +161,13 @@ export const config = {
     ),
   platformBaseDomain: () =>
     getEnv('NEXT_PUBLIC_PLATFORM_BASE_DOMAIN', 'iblai.app'),
+  defaultSupportPhoneNumber: () =>
+    getEnv('NEXT_PUBLIC_DEFAULT_SUPPORT_PHONE_NUMBER', '(571) 293-0242') ||
+    '(571) 293-0242',
+  maximumCharacterSizeToCopy: () =>
+    getEnv('NEXT_PUBLIC_MAXIMUM_CHARACTER_SIZE_TO_COPY', '2000'),
+  enableSupportPhone: () =>
+    getEnv('NEXT_PUBLIC_ENABLE_SUPPORT_PHONE', 'false') === 'true',
+  enableGradebookTab: () =>
+    getEnv('NEXT_PUBLIC_ENABLE_GRADEBOOK_TAB', 'false') === 'true',
 };

@@ -56,11 +56,21 @@ test.describe('Journey 18: Analytics Dashboard', () => {
     await expect(page).toHaveURL(/financial/, { timeout: 15_000 });
   });
 
+  test('admin opens the Memory sub-item from the Analytics sidebar and lands on the memory analytics page', async ({
+    analyticsPage,
+    page,
+  }) => {
+    await analyticsPage.navigateToMemory();
+    await expect(page).toHaveURL(/\/analytics\/memory\/?$/, {
+      timeout: 15_000,
+    });
+  });
+
   // fixme: analytics page doesn't have a financial tab
   test.fixme(
     'admin goes to analytics page and views the financial tab with cost cards',
     async ({ analyticsPage, page }) => {
-      await analyticsPage.navigateToTab('financial');
+      await analyticsPage.navigateToTab('costs');
       await expect(page).toHaveURL(/financial/, { timeout: 15_000 });
     },
   );

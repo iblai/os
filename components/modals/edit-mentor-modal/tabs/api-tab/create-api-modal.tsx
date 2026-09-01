@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
 import { useForm } from '@tanstack/react-form';
+import { useTranslations } from 'next-intl';
 
 import { cn } from '@/lib/utils';
 import {
@@ -36,17 +37,6 @@ type Props = {
   onClose: () => void;
 };
 
-const createApiFormSchema = z.object({
-  name: z
-    .string()
-    .min(1, 'API Key name is required')
-    .regex(
-      /^[a-zA-Z0-9_-]+$/,
-      'can only contain letters, numbers, and hyphens',
-    ),
-  expiration_date: z.date().nullable(),
-});
-
 type CreateApiForm = {
   name: string;
   expiration_date: Date | null;
@@ -66,8 +56,17 @@ function daysFromCurrentDate(targetDate: Date) {
 }
 
 export function CreateApiModal({ isOpen, onClose }: Props) {
+  const t = useTranslations('apiTabCreateApiModal');
   const { tenantKey } = useParams<TenantKeyMentorIdParams>();
   const username = useUsername();
+
+  const createApiFormSchema = z.object({
+    name: z
+      .string()
+      .min(1, t('apiKeyNameRequired'))
+      .regex(/^[a-zA-Z0-9_-]+$/, t('apiKeyNameInvalidChars')),
+    expiration_date: z.date().nullable(),
+  });
   const [apiKey, setApiKey] = React.useState<string | null>(null);
 
   const { executeWithTrialCheck, isModalOpen, FreeTrialDialog, closeModal } =
@@ -101,12 +100,12 @@ export function CreateApiModal({ isOpen, onClose }: Props) {
                 : expirationSeconds.toString(),
           },
         }).unwrap();
-        toast.success('API Key created successfully');
+        toast.success(t('apiKeyCreatedSuccess'));
         form.reset();
         setApiKey(response.key);
       } catch (error) {
         console.error(JSON.stringify(error));
-        toast.error('Failed to create API Key');
+        toast.error(t('apiKeyCreatedError'));
         console.error(JSON.stringify({ tenant: tenantKey, error }));
       }
     },
@@ -120,11 +119,11 @@ export function CreateApiModal({ isOpen, onClose }: Props) {
           className="w-full max-w-md"
         >
           <DialogDescription className="sr-only">
-            Create API Key
+            {t('dialogDescriptionSrOnly')}
           </DialogDescription>
           <DialogHeader>
             <DialogTitle className="ibl-dialog-title">
-              Create API Key
+              {t('dialogTitle')}
             </DialogTitle>
           </DialogHeader>
           <form
@@ -144,11 +143,11 @@ export function CreateApiModal({ isOpen, onClose }: Props) {
                 return (
                   <div className="space-y-1.5">
                     <Label className="flex items-center text-sm font-medium text-[#646464]">
-                      API Key Name
+                      {t('apiKeyNameLabel')}
                       <span className="ml-1 text-red-500">*</span>
                     </Label>
                     <Input
-                      placeholder="API Key Name"
+                      placeholder={t('apiKeyNamePlaceholder')}
                       value={field.state.value}
                       onChange={(event) =>
                         field.handleChange(event.target.value)
@@ -168,7 +167,7 @@ export function CreateApiModal({ isOpen, onClose }: Props) {
               {(field) => (
                 <div className="space-y-1.5">
                   <Label className="flex items-center text-sm font-medium text-[#646464]">
-                    Expiration Date
+                    {t('expirationDateLabel')}
                   </Label>
                   <Popover>
                     <PopoverTrigger asChild>
@@ -183,7 +182,7 @@ export function CreateApiModal({ isOpen, onClose }: Props) {
                         {field.state.value ? (
                           format(field.state.value, 'PPP')
                         ) : (
-                          <span>Pick a date</span>
+                          <span>{t('pickADate')}</span>
                         )}
                         <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                       </Button>
@@ -213,7 +212,7 @@ export function CreateApiModal({ isOpen, onClose }: Props) {
                     disabled={!canSubmit || isLoading}
                     className="bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90"
                   >
-                    {isLoading ? 'Submitting...' : 'Submit'}
+                    {isLoading ? t('submitting') : t('submit')}
                   </Button>
                 )}
               </form.Subscribe>

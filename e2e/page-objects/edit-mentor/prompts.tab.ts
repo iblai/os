@@ -10,10 +10,30 @@ export class PromptsTab {
   readonly suggestedPromptsSection: Locator;
   readonly seeMoreButton: Locator;
 
-  // ── Agent Configuration section (only visible when claw is enabled + wired) ──
+  // ── Agent Configuration section ──────────────────────────────────────────
+  // The Prompts tab (and its agent-config-prompts section) is now ALWAYS
+  // mounted — `hooks/use-mentor-segments.ts` no longer gates any top-level
+  // tab on claw/sandbox state. When no sandbox is wired, the section is
+  // expected to show a GRAYED PREVIEW of the real fields
+  // (`data-testid="agent-config-prompts-fields"`, with a `data-connected`
+  // attribute) plus a disconnected-state hint banner
+  // (`data-testid="agent-config-prompts-disconnected-hint"`) instead of just
+  // a "no agent configuration" message.
+  //
+  // NOT independently verified against a live app/backend — the SDK bundle
+  // available in this repo's node_modules still renders the older plain
+  // "Connect a sandbox instance in the Sandbox tab to manage agent prompts."
+  // message with no Create button. `hasAgentConfigSection` / `isAgentConfigEmpty`
+  // below therefore accept EITHER shape. Confirm against a live run once
+  // `@iblai/iblai-js` ships the grayed-preview build and simplify to the
+  // new-only shape.
   readonly agentConfigSection: Locator;
   readonly createAgentConfigButton: Locator;
   readonly noAgentConfigMessage: Locator;
+  /** Grayed-preview fields wrapper shown when no sandbox is connected (new shape). */
+  readonly disconnectedFields: Locator;
+  /** Disconnected-state hint banner (new shape). */
+  readonly disconnectedHint: Locator;
 
   constructor(page: Page, dialog: Locator) {
     this.page = page;
@@ -43,6 +63,10 @@ export class PromptsTab {
     });
     this.noAgentConfigMessage = dialog.getByText(
       /no agent configuration exists for this mentor yet/i,
+    );
+    this.disconnectedFields = dialog.getByTestId('agent-config-prompts-fields');
+    this.disconnectedHint = dialog.getByTestId(
+      'agent-config-prompts-disconnected-hint',
     );
   }
 
@@ -117,13 +141,17 @@ export class PromptsTab {
    * Waits for the dialog to close after submission.
    *
    * @param promptText - The text content of the prompt
-   * @param options.visibility - Optional visibility label ("Anyone", "Students",
+   * @param options.visibility - Optional visibility label ("Anyone", "Users",
    *   or "Administrators"). Defaults to whatever the form pre-selects.
    */
   async addSuggestedPrompt(
     promptText: string,
-    options: { visibility?: 'Anyone' | 'Students' | 'Administrators' } = {},
+    options: { visibility?: 'Anyone' | 'Users' | 'Administrators' } = {},
   ): Promise<void> {
+    // Capture the count before adding so we can confirm the new prompt
+    // actually rendered before returning (see the poll at the end).
+    const countBefore = await this.getSuggestedPromptCount();
+
     await expect(this.addNewPromptButton).toBeVisible({ timeout: 10_000 });
     await this.addNewPromptButton.click();
 
@@ -170,6 +198,14 @@ export class PromptsTab {
 
     // Wait for the dialog to close
     await expect(addDialog).not.toBeVisible({ timeout: 10_000 });
+
+    // The dialog closes immediately on submit, but the Suggested Prompts
+    // list only repaints once RTK Query invalidates and refetches — which
+    // can take well over 10s under CI load. Wait for the new prompt to
+    // actually render so callers can assert against it without flaking.
+    await expect
+      .poll(() => this.getSuggestedPromptCount(), { timeout: 30_000 })
+      .toBeGreaterThan(countBefore);
   }
 
   /**
@@ -244,6 +280,28 @@ export class PromptsTab {
   }
 
   /**
+   * Returns true when the section is showing its "no sandbox connected"
+   * state — either the new grayed-preview shape (`data-connected="false"`
+   * on `agent-config-prompts-fields`, plus the disconnected hint banner) or
+   * the older plain-message shape (`isAgentConfigEmpty`). See the class doc
+   * for the verification caveat on the new shape.
+   */
+  async isAgentConfigDisconnected(timeout = 5_000): Promise<boolean> {
+    const newShapeConnected = await this.disconnectedFields
+      .getAttribute('data-connected')
+      .catch(() => null);
+    if (newShapeConnected !== null) {
+      return newShapeConnected === 'false';
+    }
+    const hintVisible = await this.disconnectedHint
+      .waitFor({ state: 'visible', timeout })
+      .then(() => true)
+      .catch(() => false);
+    if (hintVisible) return true;
+    return this.isAgentConfigEmpty(timeout);
+  }
+
+  /**
    * Clicks the Create Agent Config button and waits for the workspace fields
    * to appear (i.e. the "no config" message disappears).
    */
@@ -262,7 +320,7 @@ export class PromptsTab {
   /**
    * Returns the row/card locator for an agent config field by its label.
    *
-   * AgentConfigPrompts in @iblai/web-containers exposes two stable
+   * AgentConfigPrompts in @iblai/iblai-js/web-containers exposes two stable
    * accessible markers per card:
    *   - a TooltipTrigger button with aria-label="More info about ${label}"
    *   - an "Edit" button next to it (plain text label)
@@ -272,20 +330,12 @@ export class PromptsTab {
    * coupling to Tailwind class signatures.
    */
   agentConfigFieldRowByLabel(label: string): Locator {
-    const tooltipBtn = this.dialog.getByRole('button', {
-      name: `More info about ${label}`,
-    });
-    const editBtn = this.dialog.getByRole('button', { name: /^edit$/i });
-    return this.dialog
-      .locator('div')
-      .filter({ has: tooltipBtn })
-      .filter({ has: editBtn })
-      .last();
+    return this.dialog.getByText(`${label}Edit`);
   }
 
   /**
    * Returns the EditFieldModal locator for an agent config field by label.
-   * The OverlayModal in @iblai/web-containers sets the dialog title to
+   * The OverlayModal in @iblai/iblai-js/web-containers sets the dialog title to
    * `Edit ${label}` (e.g. "Edit Identity"). We match by accessible name
    * (DialogPrimitive.Title) so we don't accidentally match the parent Edit
    * Mentor dialog when its content contains the label text.

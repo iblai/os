@@ -3,6 +3,7 @@
 import type React from 'react';
 
 import { useState, useRef, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   Sparkles,
   BookOpen,
@@ -19,56 +20,68 @@ import {
 type ControlOption = 'length' | 'reading' | 'polish' | 'emojis' | null;
 
 interface LengthLevel {
-  label: string;
+  labelKey: string;
   position: number;
   prompt: string;
 }
 
 interface ReadingLevel {
-  label: string;
+  labelKey: string;
   position: number;
   prompt: string;
 }
 
 const lengthLevels: LengthLevel[] = [
-  { label: 'Longest', position: 0, prompt: 'Make the text 75% Longer' },
-  { label: 'Longer', position: 1, prompt: 'Make the text 50% Longer' },
-  { label: 'Keep current length', position: 2, prompt: '' },
-  { label: 'Shorter', position: 3, prompt: 'Make the text 50% Shorter' },
-  { label: 'Shortest', position: 4, prompt: 'Make the text 75% Shortest' },
+  {
+    labelKey: 'lengthLongest',
+    position: 0,
+    prompt: 'Make the text 75% Longer',
+  },
+  { labelKey: 'lengthLonger', position: 1, prompt: 'Make the text 50% Longer' },
+  { labelKey: 'lengthKeepCurrent', position: 2, prompt: '' },
+  {
+    labelKey: 'lengthShorter',
+    position: 3,
+    prompt: 'Make the text 50% Shorter',
+  },
+  {
+    labelKey: 'lengthShortest',
+    position: 4,
+    prompt: 'Make the text 75% Shortest',
+  },
 ];
 
 const readingLevels: ReadingLevel[] = [
   {
-    label: 'Graduate School',
+    labelKey: 'readingGraduateSchool',
     position: 0,
     prompt:
-      'Rewrite this text at the reading level of a graduate school student who has taken a couple of classes in this subject',
+      'Rewrite this text at the reading level of someone at graduate school who has taken a couple of classes in this subject',
   },
   {
-    label: 'College',
+    labelKey: 'readingCollege',
     position: 1,
     prompt:
-      'Rewrite this text at the reading level of a college student who has taken a couple of classes in this subject',
+      'Rewrite this text at the reading level of someone at college who has taken a couple of classes in this subject',
   },
   {
-    label: 'High School',
+    labelKey: 'readingHighSchool',
     position: 2,
     prompt:
-      'Rewrite this text at the reading level of a high school student who has taken a couple of classes in this subject',
+      'Rewrite this text at the reading level of someone at high school who has taken a couple of classes in this subject',
   },
-  { label: 'Keep current reading level', position: 3, prompt: '' },
+  { labelKey: 'readingKeepCurrent', position: 3, prompt: '' },
   {
-    label: 'Middle School',
+    labelKey: 'readingMiddleSchool',
     position: 4,
     prompt:
-      'Rewrite this text at the reading level of a middle school student who has taken a couple of classes in this subject',
+      'Rewrite this text at the reading level of someone at middle school who has taken a couple of classes in this subject',
   },
   {
-    label: 'Kindergarten',
+    labelKey: 'readingKindergarten',
     position: 5,
     prompt:
-      'Rewrite this text at the reading level of a kindergarten student who has taken a couple of classes in this subject',
+      'Rewrite this text at the reading level of someone at kindergarten who has taken a couple of classes in this subject',
   },
 ];
 
@@ -91,6 +104,7 @@ interface CanvasControlsProps {
 export function CanvasControls({
   sendFullArtifactUpdate,
 }: CanvasControlsProps) {
+  const t = useTranslations('canvasCanvasControls');
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedOption, setSelectedOption] = useState<ControlOption>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -280,7 +294,7 @@ export function CanvasControls({
                           isActive ? 'opacity-100' : 'opacity-0'
                         }`}
                       >
-                        {level.label}
+                        {t(level.labelKey as Parameters<typeof t>[0])}
                       </div>
                       <div
                         className={`rounded-full transition-all duration-200 ${
@@ -336,20 +350,22 @@ export function CanvasControls({
 
       {selectedOption === 'emojis' && showSendOnIcon !== 'emojis' && (
         <div className="animate-in fade-in slide-in-from-right min-w-[280px] rounded-2xl bg-white p-6 shadow-xl duration-300">
-          <h3 className="mb-4 text-center text-lg font-semibold">Add emojis</h3>
+          <h3 className="mb-4 text-center text-lg font-semibold">
+            {t('addEmojisHeading')}
+          </h3>
           <div className="grid grid-cols-2 gap-3">
             {[
-              { icon: Type, label: 'Words' },
-              { icon: Layout, label: 'Sections' },
-              { icon: List, label: 'Lists' },
-              { icon: X, label: 'Remove' },
+              { icon: Type, key: 'Words', label: t('emojiWordsLabel') },
+              { icon: Layout, key: 'Sections', label: t('emojiSectionsLabel') },
+              { icon: List, key: 'Lists', label: t('emojiListsLabel') },
+              { icon: X, key: 'Remove', label: t('emojiRemoveLabel') },
             ].map((option, index) => {
               const IconComponent = option.icon;
               return (
                 <button
                   key={index}
                   className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-gray-200 p-4 transition-all duration-200 hover:border-blue-400 hover:bg-blue-50"
-                  onClick={() => handleEmojiOption(option.label)}
+                  onClick={() => handleEmojiOption(option.key)}
                 >
                   <IconComponent className="h-6 w-6 text-gray-700" />
                   <span className="text-sm text-gray-700">{option.label}</span>
@@ -385,7 +401,7 @@ export function CanvasControls({
               <Smile className="h-5 w-5 text-gray-500 transition-all duration-200 group-hover:scale-110 group-hover:text-gray-700" />
             </button>
             <div className="pointer-events-none absolute top-1/2 right-full mr-2 -translate-y-1/2 transform rounded bg-black px-3 py-1 text-sm whitespace-nowrap text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-              Add emojis
+              {t('addEmojisTooltip')}
             </div>
           </div>
 
@@ -410,7 +426,9 @@ export function CanvasControls({
               )}
             </button>
             <div className="pointer-events-none absolute top-1/2 right-full mr-2 -translate-y-1/2 transform rounded bg-black px-3 py-1 text-sm whitespace-nowrap text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-              {showSendOnIcon === 'polish' ? 'Send' : 'Add final polish'}
+              {showSendOnIcon === 'polish'
+                ? t('sendTooltip')
+                : t('addFinalPolishTooltip')}
             </div>
           </div>
 
@@ -423,7 +441,7 @@ export function CanvasControls({
               <BookOpen className="h-5 w-5 text-gray-500 transition-all duration-200 group-hover:scale-110 group-hover:text-gray-700" />
             </button>
             <div className="pointer-events-none absolute top-1/2 right-full mr-2 -translate-y-1/2 transform rounded bg-black px-3 py-1 text-sm whitespace-nowrap text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-              Reading level
+              {t('readingLevelTooltip')}
             </div>
           </div>
 
@@ -436,7 +454,7 @@ export function CanvasControls({
               <ArrowUpDown className="h-5 w-5 text-gray-500 transition-all duration-200 group-hover:scale-110 group-hover:text-gray-700" />
             </button>
             <div className="pointer-events-none absolute top-1/2 right-full mr-2 -translate-y-1/2 transform rounded bg-black px-3 py-1 text-sm whitespace-nowrap text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-              Adjust the length
+              {t('adjustLengthTooltip')}
             </div>
           </div>
         </div>

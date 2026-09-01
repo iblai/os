@@ -6,6 +6,8 @@ import {
   clearMessages,
   enableChatActionsPopup,
   selectEnableChatActionsPopup,
+  setAutoplayLastAiMessage,
+  selectAutoplayLastAiMessage,
   type ChatState,
 } from '../chatSlice';
 
@@ -13,6 +15,7 @@ describe('chat/chatSlice', () => {
   const initialState: ChatState = {
     messages: [],
     enableChatActionsPopup: false,
+    autoplayLastAiMessage: false,
   };
 
   describe('reducer', () => {
@@ -114,6 +117,7 @@ describe('chat/chatSlice', () => {
       const stateWithPopup = {
         messages: [{ role: 'user' as const, content: 'Test' }],
         enableChatActionsPopup: true,
+        autoplayLastAiMessage: false,
       };
 
       const state = chatReducer(stateWithPopup, clearMessages(undefined));
@@ -144,6 +148,7 @@ describe('chat/chatSlice', () => {
       const stateWithMessages = {
         messages: [{ role: 'user' as const, content: 'Test message' }],
         enableChatActionsPopup: false,
+        autoplayLastAiMessage: false,
       };
 
       const state = chatReducer(
@@ -162,6 +167,7 @@ describe('chat/chatSlice', () => {
         chat: {
           messages: [],
           enableChatActionsPopup: true,
+          autoplayLastAiMessage: false,
         },
       };
 
@@ -175,12 +181,46 @@ describe('chat/chatSlice', () => {
         chat: {
           messages: [],
           enableChatActionsPopup: false,
+          autoplayLastAiMessage: false,
         },
       };
 
       const result = selectEnableChatActionsPopup(mockState);
 
       expect(result).toBe(false);
+    });
+  });
+
+  describe('setAutoplayLastAiMessage', () => {
+    it('should enable autoplay', () => {
+      const state = chatReducer(initialState, setAutoplayLastAiMessage(true));
+
+      expect(state.autoplayLastAiMessage).toBe(true);
+    });
+
+    it('should disable autoplay', () => {
+      const enabledState = {
+        ...initialState,
+        autoplayLastAiMessage: true,
+      };
+
+      const state = chatReducer(enabledState, setAutoplayLastAiMessage(false));
+
+      expect(state.autoplayLastAiMessage).toBe(false);
+    });
+  });
+
+  describe('selectAutoplayLastAiMessage', () => {
+    it('should select autoplayLastAiMessage from state', () => {
+      const mockState = {
+        chat: {
+          messages: [],
+          enableChatActionsPopup: false,
+          autoplayLastAiMessage: true,
+        },
+      };
+
+      expect(selectAutoplayLastAiMessage(mockState)).toBe(true);
     });
   });
 
@@ -193,6 +233,7 @@ describe('chat/chatSlice', () => {
       expect(addMessage).toBeDefined();
       expect(clearMessages).toBeDefined();
       expect(enableChatActionsPopup).toBeDefined();
+      expect(setAutoplayLastAiMessage).toBeDefined();
     });
 
     it('should export reducer', () => {

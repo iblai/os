@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useDebouncedCallback } from 'use-debounce';
 import {
@@ -71,8 +72,6 @@ import { useCanvasVersionNavigation } from '@/hooks/use-canvas-version-navigatio
 
 // Import KaTeX CSS for math rendering
 import 'katex/dist/katex.min.css';
-// Import highlight.js theme for code syntax highlighting
-import 'highlight.js/styles/github.css';
 
 interface CanvasComponentProps {
   title?: string;
@@ -346,6 +345,7 @@ export function CanvasComponent({
   sessionId: _sessionId,
   sendMessage,
 }: CanvasComponentProps) {
+  const t = useTranslations('canvasCanvasComponent');
   const [showAnimation, setShowAnimation] = useState(false);
   const [editorContent, setEditorContent] = useState<string>(() =>
     getInitialEditorContent(content),
@@ -1154,7 +1154,7 @@ export function CanvasComponent({
     } catch (error) {
       if (isMountedRef.current) {
         console.error('[Canvas] Unable to load artifacts', error);
-        toast.error('Unable to load artifacts');
+        toast.error(t('unableToLoadArtifacts'));
       }
     } finally {
       if (isMountedRef.current) {
@@ -1365,8 +1365,8 @@ export function CanvasComponent({
         console.error('[Canvas] Failed to save artifact', error);
         if (isMountedRef.current) {
           setSaveState('error');
-          setSaveError('Unable to save changes');
-          toast.error('Failed to save canvas changes');
+          setSaveError(t('unableToSaveChanges'));
+          toast.error(t('failedToSaveCanvasChanges'));
         }
         throw error;
       }
@@ -1521,7 +1521,7 @@ export function CanvasComponent({
       await exportAsPDF(markdownSource, exportTitle);
     } catch (error) {
       console.error('[Canvas] Failed to export as PDF', error);
-      toast.error('Failed to export as PDF. Please try again.');
+      toast.error(t('failedToExportAsPdf'));
     } finally {
       setIsExporting(false);
     }
@@ -1535,7 +1535,7 @@ export function CanvasComponent({
       exportAsDOCX(markdownSource, exportTitle);
     } catch (error) {
       console.error('[Canvas] Failed to export as DOCX', error);
-      toast.error('Failed to export as DOCX');
+      toast.error(t('failedToExportAsDocx'));
     } finally {
       setIsExporting(false);
     }
@@ -1549,7 +1549,7 @@ export function CanvasComponent({
       exportAsMarkdown(markdownSource, exportTitle);
     } catch (error) {
       console.error('[Canvas] Failed to export as Markdown', error);
-      toast.error('Failed to export as Markdown');
+      toast.error(t('failedToExportAsMarkdown'));
     } finally {
       setIsExporting(false);
     }
@@ -1602,12 +1602,12 @@ export function CanvasComponent({
             },
           }),
         );
-        toast.success('Canvas title updated');
+        toast.success(t('canvasTitleUpdated'));
         setIsRenameModalOpen(false);
       }
     } catch (error) {
       console.error('[Canvas] Failed to rename canvas', error);
-      toast.error('Failed to rename canvas');
+      toast.error(t('failedToRenameCanvas'));
     } finally {
       setIsRenaming(false);
     }
@@ -1631,6 +1631,14 @@ export function CanvasComponent({
 
   const saveStatusClass = getSaveStatusClass(saveState);
 
+  // Translated save status label for display
+  const translatedSaveStatusLabel = useMemo(() => {
+    if (!saveStatusLabel) return null;
+    if (saveState === 'saving') return t('saveStatusSaving');
+    if (saveState === 'saved') return t('saveStatusAllChangesSaved');
+    return saveError ?? t('saveStatusSaveFailed');
+  }, [saveStatusLabel, saveState, saveError, t]);
+
   // Show overlay during loading states OR when streaming with no content yet
   const isStreamingWithNoContent = isStreamingWithNoContentCheck(
     isStreamingArtifact,
@@ -1644,14 +1652,16 @@ export function CanvasComponent({
     showUpdateAnimation,
     isStreamingWithNoContent,
   );
-  const overlayMessage = getOverlayMessage(
-    isExporting,
-    isInitialLoading,
-    isVersionLoading,
-    showUpdateAnimation,
-    isContentUpdating,
-    isStreamingWithNoContent,
-  );
+  const overlayMessageKey = ((): string => {
+    if (isExporting) return 'overlayPreparingDocument';
+    if (isInitialLoading) return 'overlayLoadingArtifacts';
+    if (isVersionLoading) return 'overlayLoadingVersion';
+    if (showUpdateAnimation || isContentUpdating)
+      return 'overlayUpdatingContent';
+    if (isStreamingWithNoContent) return 'overlayGeneratingCanvasContent';
+    return 'overlayGeneratingContent';
+  })();
+  const overlayMessage = t(overlayMessageKey);
 
   // Animation trigger
   useEffect(() => {
@@ -1784,7 +1794,7 @@ export function CanvasComponent({
       if (selection) selection.removeAllRanges();
     } catch (error) {
       console.error('[Canvas] Error sending highlight query:', error);
-      toast.error('Failed to send message. Please try again.');
+      toast.error(t('failedToSendMessage'));
     }
   }, [
     highlightInput,
@@ -1913,9 +1923,9 @@ export function CanvasComponent({
               isEditingDisabled &&
                 'cursor-not-allowed text-gray-500 hover:text-gray-500',
             )}
-            title="Click to rename"
+            title={t('clickToRename')}
           >
-            {displayTitle || 'Untitled Artifact'}
+            {displayTitle || t('untitledArtifact')}
           </button>
 
           {versionsData && versionsData.length > 1 && currentVersion && (
@@ -1941,7 +1951,7 @@ export function CanvasComponent({
                   }
                 >
                   <ChevronLeft className="mr-2 h-4 w-4" />
-                  Previous Version
+                  {t('previousVersion')}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={handleNextVersion}
@@ -1953,11 +1963,14 @@ export function CanvasComponent({
                   }
                 >
                   <ChevronRight className="mr-2 h-4 w-4" />
-                  Next Version
+                  {t('nextVersion')}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <div className="px-2 py-1.5 text-xs text-gray-500">
-                  Version {currentVersionIndex + 1} of {versionHistory.length}
+                  {t('versionXOfY', {
+                    current: currentVersionIndex + 1,
+                    total: versionHistory.length,
+                  })}
                 </div>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -1977,9 +1990,9 @@ export function CanvasComponent({
         </div>
 
         <div className="ml-1 flex flex-shrink-0 items-center gap-1 sm:gap-2">
-          {saveStatusLabel && (
+          {translatedSaveStatusLabel && (
             <span className={`${saveStatusClass} hidden sm:inline`}>
-              {saveStatusLabel}
+              {translatedSaveStatusLabel}
             </span>
           )}
           <DropdownMenu>
@@ -1993,13 +2006,13 @@ export function CanvasComponent({
                 {isExporting ? (
                   <>
                     <span className="h-3 w-3 animate-spin rounded-full border-[2px] border-blue-400 border-t-transparent" />
-                    <span className="hidden sm:inline">Exporting…</span>
-                    <span className="sm:hidden">Export</span>
+                    <span className="hidden sm:inline">{t('exporting')}</span>
+                    <span className="sm:hidden">{t('export')}</span>
                   </>
                 ) : (
                   <>
                     <Download className="h-3.5 w-3.5 sm:mr-1" />
-                    <span className="hidden sm:inline">Export</span>
+                    <span className="hidden sm:inline">{t('export')}</span>
                   </>
                 )}
               </Button>
@@ -2014,7 +2027,7 @@ export function CanvasComponent({
               >
                 <FileIcon className="mr-2 h-4 w-4 text-red-500" />
                 <div className="flex flex-col">
-                  <span>PDF Document</span>
+                  <span>{t('pdfDocument')}</span>
                   <span className="text-xs text-gray-500">.pdf</span>
                 </div>
               </DropdownMenuItem>
@@ -2027,7 +2040,7 @@ export function CanvasComponent({
               >
                 <FileText className="mr-2 h-4 w-4 text-blue-500" />
                 <div className="flex flex-col">
-                  <span>Microsoft Word</span>
+                  <span>{t('microsoftWord')}</span>
                   <span className="text-xs text-gray-500">.docx</span>
                 </div>
               </DropdownMenuItem>
@@ -2040,7 +2053,7 @@ export function CanvasComponent({
               >
                 <FileCode className="mr-2 h-4 w-4 text-gray-600" />
                 <div className="flex flex-col">
-                  <span>Markdown Document</span>
+                  <span>{t('markdownDocument')}</span>
                   <span className="text-xs text-gray-500">.md</span>
                 </div>
               </DropdownMenuItem>
@@ -2065,10 +2078,10 @@ export function CanvasComponent({
         <div className="flex flex-col gap-2 border-b border-gray-200 bg-gray-50 px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-4 sm:py-3">
           <div className="min-w-0">
             <div className="text-xs font-semibold text-gray-900 sm:text-sm">
-              You are viewing a previous version
+              {t('viewingPreviousVersion')}
             </div>
             <div className="hidden text-xs text-gray-600 sm:block">
-              Restore this version to make edits
+              {t('restoreVersionToEdit')}
             </div>
           </div>
           <div className="flex flex-shrink-0 items-center gap-2">
@@ -2077,7 +2090,7 @@ export function CanvasComponent({
               className="rounded-md bg-gradient-to-r from-[#2563EB] to-[#93C5FD] px-2 text-xs text-white hover:opacity-90 sm:px-4 sm:text-sm"
               size="sm"
             >
-              Restore this version
+              {t('restoreThisVersion')}
             </Button>
             <Button
               variant="outline"
@@ -2085,8 +2098,10 @@ export function CanvasComponent({
               className="rounded-md px-2 text-xs sm:px-4 sm:text-sm"
               size="sm"
             >
-              <span className="sm:hidden">Latest</span>
-              <span className="hidden sm:inline">Back to latest version</span>
+              <span className="sm:hidden">{t('latest')}</span>
+              <span className="hidden sm:inline">
+                {t('backToLatestVersion')}
+              </span>
             </Button>
           </div>
         </div>
@@ -2154,7 +2169,7 @@ export function CanvasComponent({
           <div className="flex w-[min(90vw,420px)] max-w-[420px] items-center gap-2.5 rounded-xl border border-gray-200/70 bg-white px-3.5 py-2.5 shadow-md">
             <Image
               src="/icons/my-mentors.svg"
-              alt="Ask Anything"
+              alt={t('askAnything')}
               width={20}
               height={20}
             />
@@ -2182,7 +2197,7 @@ export function CanvasComponent({
                   }
                 }
               }
-              placeholder="Ask Anything..."
+              placeholder={t('askAnythingPlaceholder')}
               className="flex-1 rounded-lg border-none px-2 py-1 text-base text-gray-700 placeholder:text-gray-400 focus:ring-0 focus:outline-none"
               autoFocus
             />
@@ -2226,17 +2241,17 @@ export function CanvasComponent({
         >
           <DialogHeader className="flex-shrink-0 border-b border-gray-200 bg-white px-6 py-4">
             <DialogTitle className="text-xl font-semibold text-gray-900">
-              Rename Canvas
+              {t('renameCanvas')}
             </DialogTitle>
           </DialogHeader>
 
           <div className="flex-1 px-6 py-6">
             <div>
               <label className="mb-2 block text-sm font-medium text-gray-700">
-                Canvas Title
+                {t('canvasTitle')}
               </label>
               <Input
-                placeholder="Enter new canvas title"
+                placeholder={t('enterNewCanvasTitle')}
                 value={renameTitle}
                 onChange={(e) => setRenameTitle(e.target.value)}
                 className="h-12 rounded-lg border-2 border-gray-200 px-4 text-base focus:border-blue-500 focus:ring-0"
@@ -2259,7 +2274,7 @@ export function CanvasComponent({
               onClick={() => setIsRenameModalOpen(false)}
               disabled={isRenaming}
             >
-              Cancel
+              {t('cancel')}
             </Button>
             <Button
               onClick={handleRenameTitle}
@@ -2270,7 +2285,7 @@ export function CanvasComponent({
               }
               className="ibl-button-primary"
             >
-              {isRenaming ? 'Renaming...' : 'Save'}
+              {isRenaming ? t('renaming') : t('save')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2479,6 +2494,14 @@ export function CanvasComponent({
         .ProseMirror code,
         [contenteditable] code {
           font-family: 'Fira Code', 'Consolas', 'Monaco', monospace !important;
+        }
+        .ProseMirror pre code,
+        [contenteditable] pre code {
+          background: transparent !important;
+          color: inherit !important;
+          padding: 0 !important;
+          border-radius: 0 !important;
+          font-size: inherit !important;
         }
         .ProseMirror :not(pre) > code,
         [contenteditable] :not(pre) > code {

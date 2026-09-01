@@ -28,21 +28,12 @@ test.describe('Journey 4: User Profile Management', () => {
     nonadminProfilePage,
   }) => {
     await nonadminProfilePage.open();
-    const tabs = [
-      'Basic',
-      'Social',
-      'Education',
-      'Experience',
-      'Resume',
-      'Security',
-    ];
+    const tabs = ['Basic', 'Social', 'Education', 'Experience', 'Security'];
     for (const tab of tabs) {
       await nonadminProfilePage.switchToTab(tab);
-      const activeTab = nonadminProfilePage.modal.getByRole('tab', {
-        name: new RegExp(tab, 'i'),
-        selected: true,
+      await expect(nonadminProfilePage.activeTab(tab)).toBeVisible({
+        timeout: 5_000,
       });
-      await expect(activeTab).toBeVisible({ timeout: 5_000 });
     }
   });
 
@@ -233,7 +224,7 @@ test.describe('Journey 4: User Profile Management', () => {
     await nonadminProfilePage.switchToTab('Education');
     await expect(
       nonadminProfilePage.modal.getByRole('heading', {
-        name: 'education',
+        name: 'Education',
         level: 3,
         exact: true,
       }),
@@ -736,13 +727,12 @@ test.describe('Journey 4: User Profile Management', () => {
     nonadminProfilePage,
   }) => {
     await nonadminProfilePage.open();
-    await nonadminProfilePage.switchToTab('Resume');
+    await nonadminProfilePage.switchToTab('Experience');
+    await nonadminProfilePage.switchToSubTab('Resume');
     await expect(
-      nonadminProfilePage.modal.getByRole('heading', {
-        name: 'resume',
-        level: 3,
-        exact: true,
-      }),
+      nonadminProfilePage.modal
+        .getByRole('tabpanel')
+        .getByRole('tab', { name: 'Resume', exact: true, selected: true }),
     ).toBeVisible({ timeout: 10_000 });
   });
 
@@ -750,7 +740,8 @@ test.describe('Journey 4: User Profile Management', () => {
     nonadminProfilePage,
   }) => {
     await nonadminProfilePage.open();
-    await nonadminProfilePage.switchToTab('Resume');
+    await nonadminProfilePage.switchToTab('Experience');
+    await nonadminProfilePage.switchToSubTab('Resume');
     await expect(nonadminProfilePage.uploadResumeButton).toBeVisible({
       timeout: 10_000,
     });
@@ -765,7 +756,7 @@ test.describe('Journey 4: User Profile Management', () => {
     await nonadminProfilePage.switchToTab('Security');
     await expect(
       nonadminProfilePage.modal.getByRole('heading', {
-        name: 'security',
+        name: 'Security',
         level: 3,
         exact: true,
       }),

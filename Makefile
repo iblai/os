@@ -6,6 +6,7 @@
         tauri-build-windows tauri-build-windows-arm \
         tauri-build-linux tauri-build-linux-arm \
         tauri-android-init tauri-android-dev tauri-android-build tauri-android-build-aab \
+        android-deep-link-scheme \
         tauri-ios-init tauri-ios-dev tauri-ios-build \
         tauri-info tauri-update tauri-clean tauri-icons \
         tauri-build-all-desktop tauri-build-all-mobile
@@ -198,10 +199,17 @@ tauri-build-linux-arm:
 # Initialize Android project (run once)
 tauri-android-init:
 	cargo tauri android init
+	@bash scripts/android-add-deep-link-scheme.sh
+
+# Re-apply the iblai-mentor:// custom URL scheme intent filters to the generated
+# (gitignored) Android manifest so SSO deep links route the browser back into the
+# app. Idempotent; runs automatically before every Android build/dev target.
+android-deep-link-scheme:
+	@bash scripts/android-add-deep-link-scheme.sh
 
 # Run Android dev build (auto-detects local IP for dev server)
 # Run 'make dev-mobile' first in another terminal
-tauri-android-dev:
+tauri-android-dev: android-deep-link-scheme
 	@LOCAL_IP=$$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null); \
 	if [ -z "$$LOCAL_IP" ]; then \
 		echo "Error: Could not detect local IP address"; \
@@ -212,12 +220,12 @@ tauri-android-dev:
 		--config '{"build":{"devUrl":"http://'"$$LOCAL_IP"':3001","frontendDist":"http://'"$$LOCAL_IP"':3001"}}'
 
 # Build for Android (release APK)
-tauri-android-build:
+tauri-android-build: android-deep-link-scheme
 	cargo tauri android build
 
 # Build for Android (release AAB for Play Store)
-tauri-android-build-aab:
-	cargo tauri android build --aab
+tauri-android-build-aab: android-deep-link-scheme
+	cargo tauri android build --aab true
 
 # ============================================
 # Tauri Mobile - iOS (macOS only)

@@ -88,6 +88,8 @@ describe('mentor constants', () => {
       expect(MODALS.EDIT_MENTOR.tabs.mcp).toBe('mcp');
       expect(MODALS.EDIT_MENTOR.tabs.tools).toBe('tools');
       expect(MODALS.EDIT_MENTOR.tabs.safety).toBe('safety');
+      expect(MODALS.EDIT_MENTOR.tabs.privacy).toBe('privacy');
+      expect(MODALS.EDIT_MENTOR.tabs.tasks).toBe('tasks');
       expect(MODALS.EDIT_MENTOR.tabs.disclaimer).toBe('disclaimer');
       expect(MODALS.EDIT_MENTOR.tabs.access).toBe('access');
       expect(MODALS.EDIT_MENTOR.tabs.memory).toBe('memory');
@@ -105,7 +107,16 @@ describe('mentor constants', () => {
     it('should have all default prompts', () => {
       expect(DEFAULT_PROMPTS.DEFAULT_SYSTEM_PROMPT).toBeTruthy();
       expect(DEFAULT_PROMPTS.DEFAULT_SYSTEM_PROMPT).toContain(
-        'helpful instructor',
+        'helpful assistant',
+      );
+      // LaTeX is scoped to math delimiters only. The old prompt's "Always use
+      // LaTeX formatting for presenting your responses" made models emit
+      // \begin{itemize}/\textbf document markup that KaTeX cannot render
+      // (issue #2109) -- it must never come back.
+      expect(DEFAULT_PROMPTS.DEFAULT_SYSTEM_PROMPT).toContain('$...$');
+      expect(DEFAULT_PROMPTS.DEFAULT_SYSTEM_PROMPT).toContain('$$...$$');
+      expect(DEFAULT_PROMPTS.DEFAULT_SYSTEM_PROMPT).not.toMatch(
+        /LaTeX formatting for presenting/i,
       );
 
       expect(DEFAULT_PROMPTS.DEFAULT_MODERATION_PROMPT).toBeTruthy();
@@ -141,7 +152,7 @@ describe('mentor constants', () => {
         value: 'viewable_by_tenant_admins',
       });
       expect(MENTOR_VISIBILITY[1]).toEqual({
-        label: 'Students',
+        label: 'Users',
         value: 'viewable_by_tenant_students',
       });
       expect(MENTOR_VISIBILITY[2]).toEqual({

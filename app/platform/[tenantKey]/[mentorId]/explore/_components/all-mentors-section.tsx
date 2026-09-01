@@ -1,3 +1,6 @@
+'use client';
+
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Spinner } from '@/components/spinner';
@@ -19,10 +22,13 @@ export function AllMentorsSection({
   activeTab,
   isFetching,
 }: AllMentorsSectionProps) {
+  const t = useTranslations('exploreAllMentorsSection');
+
+  const category = activeTab.charAt(0).toUpperCase() + activeTab.slice(1);
   const sectionTitle =
     activeTab === ''
-      ? 'All Agents'
-      : `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Agents`;
+      ? t('allAgentsTitle')
+      : t('categoryAgentsTitle', { category });
 
   return (
     <section className="overflow-hidden" aria-labelledby="all-mentors-heading">
@@ -41,7 +47,9 @@ export function AllMentorsSection({
               data-testid="all-mentors-card-list"
               className="grid w-full grid-cols-1 gap-2 sm:gap-3 md:grid-cols-2 md:gap-4"
               aria-label={
-                activeTab === '' ? 'All agents' : `${activeTab} agents`
+                activeTab === ''
+                  ? t('allAgentsAriaLabel')
+                  : t('categoryAgentsAriaLabel', { category: activeTab })
               }
             >
               {mentors?.map((mentor) => (
@@ -59,17 +67,21 @@ export function AllMentorsSection({
                   disabled={isFetching}
                   aria-label={
                     isFetching
-                      ? `Loading more ${activeTab === '' ? 'agents' : `${activeTab} agents`}`
-                      : `Load more ${activeTab === '' ? 'agents' : `${activeTab} agents`}`
+                      ? activeTab === ''
+                        ? t('loadingMoreAllAriaLabel')
+                        : t('loadingMoreAriaLabel', { category: activeTab })
+                      : activeTab === ''
+                        ? t('loadMoreAllAriaLabel')
+                        : t('loadMoreAriaLabel', { category: activeTab })
                   }
                 >
                   {isFetching ? (
                     <div className="flex items-center gap-2">
                       <Spinner className="h-4 w-4" aria-hidden="true" />
-                      <span>Loading more</span>
+                      <span>{t('loadingMore')}</span>
                     </div>
                   ) : (
-                    `See more`
+                    t('seeMore')
                   )}
                 </Button>
               </div>

@@ -47,9 +47,23 @@ export class NotificationsPage {
     );
   }
 
+  // Read the panel, not the trigger. Both carry data-state, but the trigger's
+  // flip lags the panel's by a render — a trace of the CI failure showed
+  // alerts-tab-content already `active` while both triggers still read
+  // `inactive`, settling to aria-selected="true" only afterwards. The panel is
+  // also what waitForTabsToSettle() waits on, so this reads a value that has
+  // demonstrably arrived rather than one that may still be in flight.
   async isAlertsTabActive(): Promise<boolean> {
     return (
-      (await this.alertsTab.getAttribute('data-state').catch(() => null)) ===
+      (await this.alertsContent
+        .getAttribute('data-state')
+        .catch(() => null)) === 'active'
+    );
+  }
+
+  async isInboxTabActive(): Promise<boolean> {
+    return (
+      (await this.inboxContent.getAttribute('data-state').catch(() => null)) ===
       'active'
     );
   }

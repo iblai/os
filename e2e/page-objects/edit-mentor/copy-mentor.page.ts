@@ -63,6 +63,7 @@ export class CopyMentorPage {
     const isChecked =
       (await this.trainingDataToggle.getAttribute('aria-checked')) === 'true';
     if (isChecked !== enabled) {
+      await expect(this.trainingDataToggle).toBeEnabled({ timeout: 10_000 });
       await this.trainingDataToggle.click();
     }
     await expect(this.trainingDataToggle).toHaveAttribute(
@@ -118,6 +119,12 @@ export class CopyMentorPage {
     await this.copyButton.click();
     await expect(this.dialog).not.toBeVisible({ timeout: 60_000 });
     await waitForPageReady(this.page);
-    await this.page.waitForLoadState('networkidle');
+    // Bounded + non-fatal: the app keeps long-lived connections open (chat
+    // streaming / websockets / polling) so the network may never idle for
+    // 500ms. Cap the wait so it can't hang the test, but still let it
+    // settle when traffic does quiesce.
+    await this.page
+      .waitForLoadState('networkidle', { timeout: 15_000 })
+      .catch(() => {});
   }
 }

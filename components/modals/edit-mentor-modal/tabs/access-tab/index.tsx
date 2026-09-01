@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Pencil, ShieldAlert, UserCog, Users } from 'lucide-react';
 
 import {
@@ -15,8 +16,12 @@ import {
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { useUsername } from '@/hooks/use-user';
 import { useNavigate } from '@/hooks/user-navigate';
-import { useAppDispatch } from '@/lib/hooks';
-import { updateRbacPermissions } from '@/features/rbac/rbac-slice';
+import { useAppDispatch, useAppSelector } from '@/lib/hooks';
+import {
+  selectRbacPermissions,
+  updateRbacPermissions,
+} from '@/features/rbac/rbac-slice';
+import { checkRbacPermission } from '@/hoc/withPermissions';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -46,6 +51,7 @@ import {
 } from './shared';
 
 export function AccessTab() {
+  const t = useTranslations('accessTabIndex');
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
   const username = useUsername();
   const { getMentorId } = useNavigate();
@@ -148,6 +154,21 @@ export function AccessTab() {
     isMentorSettingsLoading || isAccessLoading || isAccessFetching;
   const canManageAccess = Boolean(mentorDbId && platformKey);
 
+  // Sharing is a flat action on the mentor resource
+  // (`/mentors/{dbId}/#share_mentor`) — the same entry every other mentor
+  // check uses. A deployment whose permission-check endpoint predates
+  // `share_mentor` returns no entry for this mentor at all, so the action is
+  // only enforced when the tree actually contains that entry; otherwise the
+  // controls stay visible and the server remains the source of truth.
+  const rbacPermissions = useAppSelector(selectRbacPermissions);
+  const mentorRbacKey = mentorDbId ? `/mentors/${mentorDbId}/` : null;
+  const hasMentorRbacEntry = mentorRbacKey
+    ? mentorRbacKey in rbacPermissions
+    : false;
+  const canShare =
+    !hasMentorRbacEntry ||
+    checkRbacPermission(rbacPermissions, `${mentorRbacKey}#share_mentor`);
+
   return (
     <>
       <div className="hidden h-[73px] shrink-0 items-center border-b border-gray-200 bg-white p-4 lg:flex">
@@ -155,11 +176,11 @@ export function AccessTab() {
           <div className="flex items-center gap-2">
             <UserCog className="h-5 w-5 text-blue-600" aria-hidden="true" />
             <h3 className="text-base font-medium text-gray-900">
-              Access control
+              {t('heading')}
             </h3>
           </div>
           <p className="mt-1 text-xs text-gray-700">
-            Manage which users can view or edit this agent by role.
+            {t('headingDescription')}
           </p>
         </div>
       </div>
@@ -170,12 +191,19 @@ export function AccessTab() {
           overflowX: 'hidden',
         }}
       >
-        {canManageAccess && availableRoles.length > 0 && (
+        <div
+          className="rounded-md border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600"
+          data-testid="access-info-box"
+        >
+          {t('infoBox')}
+        </div>
+        {canManageAccess && canShare && availableRoles.length > 0 && (
           <div className="flex items-center justify-end">
             <AddAccessDialog
               availableRoles={availableRoles}
               isLoading={isLoading}
               onAccessCreated={handleRefetch}
+              canShare={canShare}
             />
           </div>
         )}
@@ -187,11 +215,10 @@ export function AccessTab() {
               aria-hidden="true"
             />
             <p className="font-medium text-gray-900">
-              Access management is unavailable.
+              {t('unavailableHeading')}
             </p>
             <p className="mt-1 text-sm text-gray-600">
-              We could not determine the agent context. Close the modal and try
-              again.
+              {t('unavailableDescription')}
             </p>
           </div>
         )}
@@ -220,17 +247,14 @@ export function AccessTab() {
               />
               <div className="space-y-2">
                 <p className="text-sm font-medium text-red-700">
-                  Unable to load agent access.
+                  {t('errorHeading')}
                 </p>
                 <p className="text-sm text-red-600">
-                  {getErrorMessage(
-                    accessError,
-                    'You may not have permission to manage access for this agent.',
-                  )}
+                  {getErrorMessage(accessError, t('errorDefaultMessage'))}
                 </p>
                 <div>
                   <Button variant="outline" size="sm" onClick={handleRefetch}>
-                    Try again
+                    {t('tryAgain')}
                   </Button>
                 </div>
               </div>
@@ -247,12 +271,9 @@ export function AccessTab() {
                 className="mx-auto mb-2 h-8 w-8 text-blue-600"
                 aria-hidden="true"
               />
-              <p className="font-medium text-gray-900">
-                No roles available for this agent.
-              </p>
+              <p className="font-medium text-gray-900">{t('emptyHeading')}</p>
               <p className="mt-1 text-sm text-gray-600">
-                Create a role in the admin console to start managing agent
-                access.
+                {t('emptyDescription')}
               </p>
             </div>
           )}
@@ -265,10 +286,14 @@ export function AccessTab() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-1/3">Role</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead className="w-24 text-center">Users</TableHead>
-                    <TableHead className="w-20 text-right">Actions</TableHead>
+                    <TableHead className="w-1/3">{t('columnRole')}</TableHead>
+                    <TableHead>{t('columnDescription')}</TableHead>
+                    <TableHead className="w-24 text-center">
+                      {t('columnUsers')}
+                    </TableHead>
+                    <TableHead className="w-20 text-right">
+                      {t('columnActions')}
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -277,7 +302,9 @@ export function AccessTab() {
                     const policyKey = String(policy.id ?? policy.role);
                     const description =
                       roleDescriptions[policy.role] ??
-                      `Manage who has ${formatRoleName(policy.role)} permissions for this agent.`;
+                      t('roleDefaultDescription', {
+                        role: formatRoleName(policy.role),
+                      });
 
                     return (
                       <TableRow key={policyKey}>
@@ -304,20 +331,26 @@ export function AccessTab() {
                           </Badge>
                           <span className="sr-only">
                             {assignedCount === 1
-                              ? '1 user assigned to this role'
-                              : `${assignedCount} users assigned to this role`}
+                              ? t('usersAssignedOne')
+                              : t('usersAssignedMany', {
+                                  count: assignedCount,
+                                })}
                           </span>
                         </TableCell>
                         <TableCell className="flex justify-end">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setEditingPolicyKey(policyKey)}
-                            aria-label={`Edit ${formatRoleName(policy.role)} access`}
-                          >
-                            <Pencil className="h-4 w-4" aria-hidden="true" />
-                          </Button>
+                          {canShare && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setEditingPolicyKey(policyKey)}
+                              aria-label={t('editRoleAriaLabel', {
+                                role: formatRoleName(policy.role),
+                              })}
+                            >
+                              <Pencil className="h-4 w-4" aria-hidden="true" />
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     );
@@ -340,16 +373,19 @@ export function AccessTab() {
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>
-                Manage {formatRoleName(editingPolicy.role)} access
+                {t('dialogTitle', { role: formatRoleName(editingPolicy.role) })}
               </DialogTitle>
               <DialogDescription>
                 {roleDescriptions[editingPolicy.role] ??
-                  `Add or remove users who should have ${formatRoleName(editingPolicy.role)} permissions for this agent.`}
+                  t('dialogDescriptionFallback', {
+                    role: formatRoleName(editingPolicy.role),
+                  })}
               </DialogDescription>
             </DialogHeader>
             <RoleAccessPanel
               policy={editingPolicy}
               onAccessUpdated={handleRefetch}
+              canShare={canShare}
             />
           </DialogContent>
         )}

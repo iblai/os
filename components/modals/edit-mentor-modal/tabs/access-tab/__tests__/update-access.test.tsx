@@ -7,6 +7,7 @@ import {
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ReactNode } from 'react';
 
 import { RoleAccessPanel } from '../update-access';
 import type { MentorAccessPolicy } from '../shared';
@@ -21,6 +22,10 @@ const mockUseGetMentorSettingsQuery = vi.fn();
 const mockToastError = vi.fn();
 const mockToastSuccess = vi.fn();
 const mockUpdateMentorAccess = vi.fn();
+// Defaults to granting every permission (matching prior behaviour). Individual
+// tests override the implementation to exercise the manual-entry mode
+// (no `/users/#list`) and the groups section (`/groups/#list`).
+const mockCheckRbacPermission = vi.fn((..._args: unknown[]) => true);
 
 vi.mock('next/navigation', () => ({
   useParams: () => mockUseParams(),
@@ -52,7 +57,7 @@ vi.mock('@/features/rbac/rbac-slice', () => ({
 }));
 
 vi.mock('@/hoc/withPermissions', () => ({
-  checkRbacPermission: () => true,
+  checkRbacPermission: (...args: unknown[]) => mockCheckRbacPermission(...args),
 }));
 
 vi.mock('sonner', () => ({
@@ -65,6 +70,41 @@ vi.mock('sonner', () => ({
 vi.mock('use-debounce', () => ({
   useDebounce: (value: string) => [value],
 }));
+
+// Render the Radix Select as a native <select> so the manual input-type switch
+// is deterministic under jsdom. The component's Select/SelectItem JSX still
+// executes (coverage is unaffected); only the interaction is simplified.
+vi.mock('@/components/ui/select', () => {
+  return {
+    Select: ({
+      value,
+      onValueChange,
+      children,
+    }: {
+      value: string;
+      onValueChange: (v: string) => void;
+      children: ReactNode;
+    }) => (
+      <select
+        aria-label="Select input type"
+        value={value}
+        onChange={(e) => onValueChange(e.target.value)}
+      >
+        {children}
+      </select>
+    ),
+    SelectTrigger: () => null,
+    SelectValue: () => null,
+    SelectContent: ({ children }: { children: ReactNode }) => children,
+    SelectItem: ({
+      value,
+      children,
+    }: {
+      value: string;
+      children: ReactNode;
+    }) => <option value={value}>{children}</option>,
+  };
+});
 
 describe('RoleAccessPanel', () => {
   const defaultPolicy: MentorAccessPolicy = {
@@ -81,10 +121,15 @@ describe('RoleAccessPanel', () => {
   const defaultProps = {
     policy: defaultPolicy,
     onAccessUpdated: vi.fn().mockResolvedValue(undefined),
+    canShare: true,
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
+
+    // clearAllMocks only clears call history, not implementations, so reset the
+    // permission gate back to "all granted" before each test.
+    mockCheckRbacPermission.mockImplementation(() => true);
 
     // Mock scrollIntoView for jsdom
     Element.prototype.scrollIntoView = vi.fn();
@@ -1044,5 +1089,619 @@ describe('RoleAccessPanel', () => {
     expect(
       screen.getByText('No users have this role yet.'),
     ).toBeInTheDocument();
+  });
+
+  describe('manual entry mode (no users:list permission)', () => {
+    beforeEach(() => {
+      // Deny the `/users/#list` permission so the panel renders the manual
+      // email/username entry UI instead of the directory search. Deny groups
+      // too so the manual input is the only text field on screen.
+      mockCheckRbacPermission.mockImplementation(() => false);
+    });
+
+    // The manual input is labelled "Add by" (htmlFor="manual-user-input"),
+    // stable across both email and username input types.
+    const getManualInput = () => screen.getByLabelText(/add by/i);
+    // Submit button text is an ICU plural: "Add" (0), "Add 1 user", "Add N users".
+    const getSubmitButton = () =>
+      screen.getByRole('button', { name: /^add( \d+ users?| 1 user)?$/i });
+
+    it('renders the manual entry UI instead of directory search', () => {
+      render(<RoleAccessPanel {...defaultProps} />);
+
+      expect(
+        screen.queryByPlaceholderText(/search by name, username, or email/i),
+      ).not.toBeInTheDocument();
+      expect(getManualInput()).toBeInTheDocument();
+    });
+
+    it('stages an entry via the add button and submits emails', async () => {
+      const user = userEvent.setup();
+      const onAccessUpdated = vi.fn().mockResolvedValue(undefined);
+      render(
+        <RoleAccessPanel {...defaultProps} onAccessUpdated={onAccessUpdated} />,
+      );
+
+      await user.type(getManualInput(), 'new@example.com');
+      // The icon-only "+" stage button (sr-only label).
+      await user.click(screen.getByRole('button', { name: /add entry/i }));
+
+      // Staged chip appears and the input is cleared.
+      expect(screen.getByText('new@example.com')).toBeInTheDocument();
+
+      await user.click(getSubmitButton());
+
+      await waitFor(() => {
+        expect(mockUpdateMentorAccess).toHaveBeenCalledWith(
+          expect.objectContaining({
+            requestBody: expect.objectContaining({
+              emails_to_add: ['new@example.com'],
+            }),
+          }),
+        );
+      });
+      expect(mockToastSuccess).toHaveBeenCalled();
+      expect(onAccessUpdated).toHaveBeenCalled();
+    });
+
+    it('stages an entry with the Enter key', async () => {
+      const user = userEvent.setup();
+      render(<RoleAccessPanel {...defaultProps} />);
+
+      await user.type(getManualInput(), 'someone@example.com{Enter}');
+
+      expect(screen.getByText('someone@example.com')).toBeInTheDocument();
+    });
+
+    it('does not stage blank or duplicate entries', async () => {
+      const user = userEvent.setup();
+      render(<RoleAccessPanel {...defaultProps} />);
+
+      // Whitespace only -> no chip.
+      await user.type(getManualInput(), '   {Enter}');
+      expect(screen.queryByText('   ')).not.toBeInTheDocument();
+
+      // Stage a value, then attempt to stage the same value again.
+      await user.type(getManualInput(), 'dup@example.com{Enter}');
+      await user.type(getManualInput(), 'dup@example.com{Enter}');
+
+      expect(screen.getAllByText('dup@example.com')).toHaveLength(1);
+    });
+
+    it('removes a staged entry', async () => {
+      const user = userEvent.setup();
+      render(<RoleAccessPanel {...defaultProps} />);
+
+      await user.type(getManualInput(), 'remove@example.com{Enter}');
+      expect(screen.getByText('remove@example.com')).toBeInTheDocument();
+
+      await user.click(
+        screen.getByRole('button', { name: /remove remove@example\.com/i }),
+      );
+      expect(screen.queryByText('remove@example.com')).not.toBeInTheDocument();
+    });
+
+    it('submits usernames when the input type is switched', async () => {
+      const user = userEvent.setup();
+      render(<RoleAccessPanel {...defaultProps} />);
+
+      // Switch the (mocked native) Select from email to username.
+      await user.selectOptions(
+        screen.getByRole('combobox', { name: /select input type/i }),
+        'username',
+      );
+
+      await user.type(getManualInput(), 'jdoe{Enter}');
+      await user.click(getSubmitButton());
+
+      await waitFor(() => {
+        expect(mockUpdateMentorAccess).toHaveBeenCalledWith(
+          expect.objectContaining({
+            requestBody: expect.objectContaining({
+              usernames_to_add: ['jdoe'],
+            }),
+          }),
+        );
+      });
+    });
+
+    it('includes a not-yet-staged input value on submit', async () => {
+      const user = userEvent.setup();
+      render(<RoleAccessPanel {...defaultProps} />);
+
+      // Type but do NOT press Enter; the value should still be submitted.
+      await user.type(getManualInput(), 'unstaged@example.com');
+      await user.click(getSubmitButton());
+
+      await waitFor(() => {
+        expect(mockUpdateMentorAccess).toHaveBeenCalledWith(
+          expect.objectContaining({
+            requestBody: expect.objectContaining({
+              emails_to_add: ['unstaged@example.com'],
+            }),
+          }),
+        );
+      });
+    });
+
+    it('shows an error when agent context is missing', async () => {
+      const user = userEvent.setup();
+      mockUseGetMentorSettingsQuery.mockReturnValue({
+        data: { mentor_id: undefined },
+      });
+      render(<RoleAccessPanel {...defaultProps} />);
+
+      await user.type(getManualInput(), 'noctx@example.com{Enter}');
+      await user.click(getSubmitButton());
+
+      await waitFor(() => {
+        expect(mockToastError).toHaveBeenCalledWith(
+          'Agent context is missing. Close the modal and try again.',
+        );
+      });
+      expect(mockUpdateMentorAccess).not.toHaveBeenCalled();
+    });
+
+    it('shows an error toast when the manual add fails', async () => {
+      const user = userEvent.setup();
+      mockUpdateMentorAccess.mockReturnValue({
+        unwrap: vi.fn().mockRejectedValue(new Error('boom')),
+      });
+      render(<RoleAccessPanel {...defaultProps} />);
+
+      await user.type(getManualInput(), 'fail@example.com{Enter}');
+      await user.click(getSubmitButton());
+
+      await waitFor(() => {
+        expect(mockToastError).toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe('group management', () => {
+    const policyWithGroups = {
+      ...defaultPolicy,
+      groups: [{ id: 20, name: 'Sales', unique_id: 'sales' }],
+    } as typeof defaultPolicy;
+
+    it('shows the empty state when no groups are assigned', () => {
+      render(<RoleAccessPanel {...defaultProps} />);
+
+      expect(screen.getByText('Assigned groups')).toBeInTheDocument();
+      expect(
+        screen.getByText('No groups have this role yet.'),
+      ).toBeInTheDocument();
+    });
+
+    it('removes an assigned group', async () => {
+      const user = userEvent.setup();
+      const onAccessUpdated = vi.fn().mockResolvedValue(undefined);
+      render(
+        <RoleAccessPanel
+          {...defaultProps}
+          policy={policyWithGroups}
+          onAccessUpdated={onAccessUpdated}
+        />,
+      );
+
+      expect(screen.getByText('Sales')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: /remove sales/i }));
+
+      await waitFor(() => {
+        expect(mockUpdateMentorAccess).toHaveBeenCalledWith(
+          expect.objectContaining({
+            requestBody: expect.objectContaining({
+              groups_to_remove: [20],
+            }),
+          }),
+        );
+      });
+      expect(onAccessUpdated).toHaveBeenCalled();
+    });
+
+    it('searches for and adds a group', async () => {
+      const user = userEvent.setup();
+      mockUseGetRbacGroupsQuery.mockReturnValue({
+        data: { results: [{ id: 30, name: 'Engineering' }] },
+        isFetching: false,
+        isLoading: false,
+      });
+      render(<RoleAccessPanel {...defaultProps} />);
+
+      const groupSearch = screen.getByPlaceholderText(/search groups by name/i);
+      await user.type(groupSearch, 'eng');
+
+      await waitFor(() => {
+        expect(screen.getByText('Engineering')).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByText('Engineering'));
+
+      await waitFor(() => {
+        expect(mockUpdateMentorAccess).toHaveBeenCalledWith(
+          expect.objectContaining({
+            requestBody: expect.objectContaining({
+              groups_to_add: [30],
+            }),
+          }),
+        );
+      });
+    });
+
+    it('filters out already-assigned groups from search results', async () => {
+      const user = userEvent.setup();
+      mockUseGetRbacGroupsQuery.mockReturnValue({
+        data: {
+          results: [
+            { id: 20, name: 'Sales' }, // already assigned -> filtered out
+            { id: 30, name: 'Engineering' },
+          ],
+        },
+        isFetching: false,
+        isLoading: false,
+      });
+      render(<RoleAccessPanel {...defaultProps} policy={policyWithGroups} />);
+
+      await user.type(
+        screen.getByPlaceholderText(/search groups by name/i),
+        'a',
+      );
+      await user.type(
+        screen.getByPlaceholderText(/search groups by name/i),
+        'l',
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Engineering')).toBeInTheDocument();
+      });
+      // The already-assigned "Sales" should not appear as a search option.
+      const options = screen
+        .getAllByRole('button')
+        .filter((b) => b.textContent === 'Sales');
+      expect(options).toHaveLength(0);
+    });
+
+    it('shows the minimum-characters hint for a short group query', async () => {
+      const user = userEvent.setup();
+      render(<RoleAccessPanel {...defaultProps} />);
+
+      await user.type(
+        screen.getByPlaceholderText(/search groups by name/i),
+        'e',
+      );
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('Type at least two characters to search.'),
+        ).toBeInTheDocument();
+      });
+    });
+
+    it('shows the loading state while fetching groups', async () => {
+      const user = userEvent.setup();
+      mockUseGetRbacGroupsQuery.mockReturnValue({
+        data: undefined,
+        isFetching: true,
+        isLoading: true,
+      });
+      render(<RoleAccessPanel {...defaultProps} />);
+
+      await user.type(
+        screen.getByPlaceholderText(/search groups by name/i),
+        'eng',
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText(/searching groups/i)).toBeInTheDocument();
+      });
+    });
+
+    it('shows the no-results state when no groups match', async () => {
+      const user = userEvent.setup();
+      mockUseGetRbacGroupsQuery.mockReturnValue({
+        data: { results: [] },
+        isFetching: false,
+        isLoading: false,
+      });
+      render(<RoleAccessPanel {...defaultProps} />);
+
+      await user.type(
+        screen.getByPlaceholderText(/search groups by name/i),
+        'zzz',
+      );
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('No matching groups found.'),
+        ).toBeInTheDocument();
+      });
+    });
+
+    it('hides group results on blur and re-shows them on focus', async () => {
+      const user = userEvent.setup();
+      mockUseGetRbacGroupsQuery.mockReturnValue({
+        data: { results: [{ id: 30, name: 'Engineering' }] },
+        isFetching: false,
+        isLoading: false,
+      });
+      render(<RoleAccessPanel {...defaultProps} />);
+
+      const groupSearch = screen.getByPlaceholderText(/search groups by name/i);
+      await user.type(groupSearch, 'eng');
+      expect(screen.getByText('Engineering')).toBeInTheDocument();
+
+      // Blur schedules a 100ms timeout that hides the results.
+      fireEvent.blur(groupSearch);
+      await waitFor(() => {
+        expect(screen.queryByText('Engineering')).not.toBeInTheDocument();
+      });
+
+      // Focusing again with a 2+ char term re-opens the results.
+      fireEvent.focus(groupSearch);
+      await waitFor(() => {
+        expect(screen.getByText('Engineering')).toBeInTheDocument();
+      });
+    });
+  });
+
+  // Regression cover for iblai-platform#2018: a viewer without
+  // `/mentors/{id}/#share_mentor` could still see (and click) every mutating
+  // control on this panel.
+  //
+  // The user-facing guarantee is "you can still SEE everything, you just can't
+  // CHANGE anything", so every case below asserts BOTH halves: the assigned
+  // users/groups are positively present (a test must not pass merely because
+  // the whole panel vanished) and the mutating surface is *exhaustively*
+  // absent.
+  describe('read-only mode (canShare: false)', () => {
+    const policyWithGroups = {
+      ...defaultPolicy,
+      groups: [
+        { id: 20, name: 'Sales', unique_id: 'sales' },
+        { id: 21, name: 'Support', unique_id: 'support' },
+      ],
+    } as typeof defaultPolicy;
+
+    /**
+     * The panel derives two independent flags from the permission tree:
+     * `/users/#list` picks the directory-search variant of the add block over
+     * the manual "Add by" variant, and `/groups/#list` mounts the entire
+     * groups section. They render *different DOM*, so each read-only assertion
+     * has to be proven in every combination.
+     */
+    const grant = ({ users, groups }: { users: boolean; groups: boolean }) => {
+      mockCheckRbacPermission.mockImplementation((..._args: unknown[]) => {
+        const resource = _args[1] as string;
+        if (resource === '/users/#list') return users;
+        if (resource === '/groups/#list') return groups;
+        return true;
+      });
+    };
+
+    /** Every "remove this assignment" affordance is labelled `Remove {name}`. */
+    const removeButtons = () =>
+      screen.queryAllByRole('button', { name: /^Remove\s/i });
+
+    /** Everything on the panel that can mutate the policy. */
+    const expectNoMutatingControls = () => {
+      // per-user and per-group remove-X — assert the COUNT, not one element,
+      // so an extra un-gated chip cannot slip through.
+      expect(removeButtons()).toHaveLength(0);
+      // directory-search variant of the add-users block
+      expect(screen.queryByLabelText('Add users')).not.toBeInTheDocument();
+      expect(screen.queryByText('Add users')).not.toBeInTheDocument();
+      expect(
+        screen.queryByPlaceholderText('Search by name, username, or email'),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+      // manual-entry variant: the "Add by" Select, its input, the "+" stage
+      // button and the "Add"/"Add N users" submit
+      expect(screen.queryByText('Add by')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Add by')).not.toBeInTheDocument();
+      expect(
+        screen.queryByLabelText('Select input type'),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByPlaceholderText('user@example.com'),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByPlaceholderText('username')).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: 'Add entry' }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: /^Add( \d+ users?| 1 user)?$/i }),
+      ).not.toBeInTheDocument();
+      // group add block
+      expect(screen.queryByText('Add groups')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Add groups')).not.toBeInTheDocument();
+      expect(
+        screen.queryByPlaceholderText('Search groups by name'),
+      ).not.toBeInTheDocument();
+      // and, belt-and-braces, nothing left that submits anything
+      expect(screen.queryAllByRole('button', { name: /^Add/i })).toHaveLength(
+        0,
+      );
+    };
+
+    /** The read-only content that must survive regardless of canShare. */
+    const expectAssignedListsStillVisible = ({
+      groups,
+    }: {
+      groups: boolean;
+    }) => {
+      expect(screen.getByText('Assigned users')).toBeInTheDocument();
+      expect(
+        screen.getByText('Remove users who should no longer have this role.'),
+      ).toBeInTheDocument();
+      expect(screen.getByText('user1@example.com')).toBeInTheDocument();
+      expect(screen.getByText('user2@example.com')).toBeInTheDocument();
+
+      if (groups) {
+        expect(screen.getByText('Assigned groups')).toBeInTheDocument();
+        expect(screen.getByText('Sales')).toBeInTheDocument();
+        expect(screen.getByText('Support')).toBeInTheDocument();
+      } else {
+        expect(screen.queryByText('Assigned groups')).not.toBeInTheDocument();
+      }
+    };
+
+    const matrix = [
+      { label: 'search mode, groups granted', users: true, groups: true },
+      { label: 'search mode, groups denied', users: true, groups: false },
+      {
+        label: 'manual-entry mode, groups granted',
+        users: false,
+        groups: true,
+      },
+      {
+        label: 'manual-entry mode, groups denied',
+        users: false,
+        groups: false,
+      },
+    ];
+
+    it.each(matrix)(
+      'in $label it renders the assignments and zero mutating controls',
+      ({ users, groups }) => {
+        grant({ users, groups });
+
+        render(
+          <RoleAccessPanel
+            {...defaultProps}
+            policy={policyWithGroups}
+            canShare={false}
+          />,
+        );
+
+        expectAssignedListsStillVisible({ groups });
+        expectNoMutatingControls();
+      },
+    );
+
+    it.each(matrix)(
+      'in $label the converse holds — canShare: true renders the controls again',
+      ({ users, groups }) => {
+        grant({ users, groups });
+
+        render(<RoleAccessPanel {...defaultProps} policy={policyWithGroups} />);
+
+        // Same read-only content…
+        expectAssignedListsStillVisible({ groups });
+
+        // …plus one remove-X per assigned user (+ per group when the groups
+        // section is mounted). This is what makes the read-only assertions
+        // above meaningful: if the gate ever inverts, these fail.
+        expect(removeButtons()).toHaveLength(groups ? 4 : 2);
+
+        if (users) {
+          expect(
+            screen.getByPlaceholderText('Search by name, username, or email'),
+          ).toBeInTheDocument();
+          expect(screen.getByLabelText('Add users')).toBeInTheDocument();
+        } else {
+          expect(screen.getByLabelText('Add by')).toBeInTheDocument();
+          expect(
+            screen.getByLabelText('Select input type'),
+          ).toBeInTheDocument();
+          expect(
+            screen.getByPlaceholderText('user@example.com'),
+          ).toBeInTheDocument();
+          expect(
+            screen.getByRole('button', { name: 'Add entry' }),
+          ).toBeInTheDocument();
+          expect(
+            screen.getByRole('button', {
+              name: /^Add( \d+ users?| 1 user)?$/i,
+            }),
+          ).toBeInTheDocument();
+        }
+
+        if (groups) {
+          expect(screen.getByLabelText('Add groups')).toBeInTheDocument();
+          expect(
+            screen.getByPlaceholderText('Search groups by name'),
+          ).toBeInTheDocument();
+        } else {
+          expect(
+            screen.queryByPlaceholderText('Search groups by name'),
+          ).not.toBeInTheDocument();
+        }
+      },
+    );
+
+    it('still shows the empty-state copy (not a blank panel) when nothing is assigned', () => {
+      grant({ users: true, groups: true });
+
+      render(
+        <RoleAccessPanel
+          {...defaultProps}
+          policy={{ ...defaultPolicy, users: [], groups: [] }}
+          canShare={false}
+        />,
+      );
+
+      expect(
+        screen.getByText('No users have this role yet.'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText('No groups have this role yet.'),
+      ).toBeInTheDocument();
+      expectNoMutatingControls();
+    });
+
+    it('falls back to username when an assigned user has no email', () => {
+      grant({ users: true, groups: false });
+
+      render(
+        <RoleAccessPanel
+          {...defaultProps}
+          policy={{
+            ...defaultPolicy,
+            users: [{ id: 9, username: 'nomail', email: '' }],
+          }}
+          canShare={false}
+        />,
+      );
+
+      expect(screen.getByText('nomail')).toBeInTheDocument();
+      expect(removeButtons()).toHaveLength(0);
+    });
+
+    it('falls back to unique_id when an assigned group has no name', () => {
+      grant({ users: true, groups: true });
+
+      render(
+        <RoleAccessPanel
+          {...defaultProps}
+          policy={{
+            ...defaultPolicy,
+            groups: [{ id: 30, name: '', unique_id: 'grp-30' }],
+          }}
+          canShare={false}
+        />,
+      );
+
+      expect(screen.getByText('grp-30')).toBeInTheDocument();
+      expect(removeButtons()).toHaveLength(0);
+    });
+
+    it('never fires an access mutation from a read-only panel', async () => {
+      grant({ users: true, groups: true });
+
+      render(
+        <RoleAccessPanel
+          {...defaultProps}
+          policy={policyWithGroups}
+          canShare={false}
+        />,
+      );
+
+      // There is simply nothing to click.
+      expect(removeButtons()).toHaveLength(0);
+      await waitFor(() => {
+        expect(mockUpdateMentorAccess).not.toHaveBeenCalled();
+      });
+    });
   });
 });

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import { useParams } from 'next/navigation';
 import { useCopyToClipboard } from '../use-copy-to-clipboard';
 
 // Mock next/navigation
@@ -149,10 +150,11 @@ describe('useCopyToClipboard', () => {
   });
 
   describe('error handling', () => {
-    it('should set error status when clipboard write fails', async () => {
+    it('should set error status when clipboard write and fallback both fail', async () => {
       const consoleSpy = vi
         .spyOn(console, 'error')
         .mockImplementation(() => {});
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
       mockWriteText.mockRejectedValueOnce(new Error('Clipboard write failed'));
       const { result } = renderHook(() => useCopyToClipboard());
 
@@ -164,11 +166,43 @@ describe('useCopyToClipboard', () => {
       expect(consoleSpy).toHaveBeenCalled();
       consoleSpy.mockRestore();
     });
+  });
 
-    it('should handle clipboard not supported', async () => {
-      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  describe('permissions-policy fallback', () => {
+    // A cross-origin embedder that does not delegate `clipboard-write` makes
+    // navigator.clipboard reject (or absent); execCommand is the escape hatch.
+    let execCommand: ReturnType<typeof vi.fn>;
 
-      // Remove clipboard API
+    beforeEach(() => {
+      execCommand = vi.fn(() => true);
+      Object.defineProperty(document, 'execCommand', {
+        writable: true,
+        configurable: true,
+        value: execCommand,
+      });
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      // @ts-expect-error - jsdom does not implement execCommand
+      delete document.execCommand;
+    });
+
+    it('should fall back to execCommand when the clipboard API is blocked', async () => {
+      mockWriteText.mockRejectedValueOnce(
+        new DOMException('blocked', 'NotAllowedError'),
+      );
+      const { result } = renderHook(() => useCopyToClipboard());
+
+      await act(async () => {
+        await result.current.copy('fallback text');
+      });
+
+      expect(execCommand).toHaveBeenCalledWith('copy');
+      expect(result.current.status).toBe('success');
+    });
+
+    it('should fall back to execCommand when the clipboard API is absent', async () => {
       Object.defineProperty(navigator, 'clipboard', {
         writable: true,
         configurable: true,
@@ -178,33 +212,207 @@ describe('useCopyToClipboard', () => {
       const { result } = renderHook(() => useCopyToClipboard());
 
       await act(async () => {
-        await result.current.copy('test text');
+        await result.current.copy('fallback text');
       });
 
-      // Status should remain idle since we early return
+      expect(execCommand).toHaveBeenCalledWith('copy');
+      expect(result.current.status).toBe('success');
+    });
+
+    it('should reset to idle after the timeout when the fallback succeeds', async () => {
+      mockWriteText.mockRejectedValueOnce(new Error('blocked'));
+      const { result } = renderHook(() => useCopyToClipboard());
+
+      await act(async () => {
+        await result.current.copy('fallback text');
+      });
+      expect(result.current.status).toBe('success');
+
+      await act(async () => {
+        vi.advanceTimersByTime(500);
+      });
       expect(result.current.status).toBe('idle');
-      expect(consoleSpy).toHaveBeenCalledWith('Clipboard not supported');
+    });
+
+    it('should report error when execCommand reports failure', async () => {
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+      execCommand.mockReturnValue(false);
+      mockWriteText.mockRejectedValueOnce(new Error('blocked'));
+      const { result } = renderHook(() => useCopyToClipboard());
+
+      await act(async () => {
+        await result.current.copy('fallback text');
+      });
+
+      expect(result.current.status).toBe('error');
+      expect(consoleSpy).toHaveBeenCalled();
       consoleSpy.mockRestore();
     });
 
-    it('should handle null navigator.clipboard', async () => {
-      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    it('should report error when execCommand throws', async () => {
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+      execCommand.mockImplementation(() => {
+        throw new Error('execCommand unavailable');
+      });
+      mockWriteText.mockRejectedValueOnce(new Error('blocked'));
+      const { result } = renderHook(() => useCopyToClipboard());
 
-      Object.defineProperty(navigator, 'clipboard', {
+      await act(async () => {
+        await result.current.copy('fallback text');
+      });
+
+      expect(result.current.status).toBe('error');
+      expect(consoleSpy).toHaveBeenCalled();
+      consoleSpy.mockRestore();
+    });
+
+    it('should not leave the staging textarea in the document', async () => {
+      mockWriteText.mockRejectedValueOnce(new Error('blocked'));
+      const { result } = renderHook(() => useCopyToClipboard());
+
+      await act(async () => {
+        await result.current.copy('fallback text');
+      });
+
+      expect(document.querySelectorAll('textarea')).toHaveLength(0);
+    });
+
+    it('should skip the clipboard API entirely when the permissions policy forbids it', async () => {
+      // Calling writeText() anyway would make Chrome log a
+      // "[Violation] Permissions policy violation" that no catch can suppress.
+      Object.defineProperty(document, 'featurePolicy', {
         writable: true,
         configurable: true,
-        value: null,
+        value: { allowsFeature: vi.fn(() => false) },
       });
 
       const { result } = renderHook(() => useCopyToClipboard());
 
       await act(async () => {
-        await result.current.copy('test text');
+        await result.current.copy('fallback text');
       });
 
-      expect(result.current.status).toBe('idle');
-      expect(consoleSpy).toHaveBeenCalledWith('Clipboard not supported');
-      consoleSpy.mockRestore();
+      expect(mockWriteText).not.toHaveBeenCalled();
+      expect(execCommand).toHaveBeenCalledWith('copy');
+      expect(result.current.status).toBe('success');
+
+      // @ts-expect-error - jsdom does not implement featurePolicy
+      delete document.featurePolicy;
+    });
+
+    it('should use the clipboard API when the permissions policy permits it', async () => {
+      Object.defineProperty(document, 'featurePolicy', {
+        writable: true,
+        configurable: true,
+        value: { allowsFeature: vi.fn(() => true) },
+      });
+      mockWriteText.mockResolvedValueOnce(undefined);
+
+      const { result } = renderHook(() => useCopyToClipboard());
+
+      await act(async () => {
+        await result.current.copy('native text');
+      });
+
+      expect(mockWriteText).toHaveBeenCalledWith('native text');
+      expect(execCommand).not.toHaveBeenCalled();
+      expect(result.current.status).toBe('success');
+
+      // @ts-expect-error - jsdom does not implement featurePolicy
+      delete document.featurePolicy;
+    });
+
+    it('should still try the clipboard API when the policy check throws', async () => {
+      Object.defineProperty(document, 'featurePolicy', {
+        writable: true,
+        configurable: true,
+        value: {
+          allowsFeature: vi.fn(() => {
+            throw new Error('unknown feature');
+          }),
+        },
+      });
+      mockWriteText.mockResolvedValueOnce(undefined);
+
+      const { result } = renderHook(() => useCopyToClipboard());
+
+      await act(async () => {
+        await result.current.copy('native text');
+      });
+
+      expect(mockWriteText).toHaveBeenCalledWith('native text');
+      expect(result.current.status).toBe('success');
+
+      // @ts-expect-error - jsdom does not implement featurePolicy
+      delete document.featurePolicy;
+    });
+
+    it('should return focus to the element that had it', async () => {
+      const input = document.createElement('input');
+      document.body.appendChild(input);
+      input.focus();
+      expect(document.activeElement).toBe(input);
+
+      mockWriteText.mockRejectedValueOnce(new Error('blocked'));
+      const { result } = renderHook(() => useCopyToClipboard());
+
+      await act(async () => {
+        await result.current.copy('fallback text');
+      });
+
+      expect(document.activeElement).toBe(input);
+
+      document.body.removeChild(input);
+    });
+
+    it('should still copy when there is no focusable active element', async () => {
+      Object.defineProperty(document, 'activeElement', {
+        configurable: true,
+        get: () => null,
+      });
+
+      mockWriteText.mockRejectedValueOnce(new Error('blocked'));
+      const { result } = renderHook(() => useCopyToClipboard());
+
+      await act(async () => {
+        await result.current.copy('fallback text');
+      });
+
+      expect(execCommand).toHaveBeenCalledWith('copy');
+      expect(result.current.status).toBe('success');
+
+      // @ts-expect-error - restore jsdom's own accessor
+      delete document.activeElement;
+    });
+
+    it('should restore a pre-existing selection', async () => {
+      const paragraph = document.createElement('p');
+      paragraph.textContent = 'selected content';
+      document.body.appendChild(paragraph);
+
+      const range = document.createRange();
+      range.selectNodeContents(paragraph);
+      const selection = document.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+
+      mockWriteText.mockRejectedValueOnce(new Error('blocked'));
+      const { result } = renderHook(() => useCopyToClipboard());
+
+      await act(async () => {
+        await result.current.copy('fallback text');
+      });
+
+      expect(document.getSelection()?.rangeCount).toBe(1);
+      expect(
+        document.getSelection()?.getRangeAt(0).commonAncestorContainer,
+      ).toBe(paragraph);
+
+      document.body.removeChild(paragraph);
     });
   });
 
@@ -288,6 +496,91 @@ describe('useCopyToClipboard', () => {
       });
 
       expect(result.current.status).toBe('idle');
+    });
+  });
+
+  describe('reset timer lifecycle', () => {
+    it('should not let an earlier copy clear a later copy indicator', async () => {
+      mockWriteText.mockResolvedValue(undefined);
+      const { result } = renderHook(() => useCopyToClipboard(500));
+
+      await act(async () => {
+        await result.current.copy('first');
+      });
+
+      await act(async () => {
+        vi.advanceTimersByTime(300);
+      });
+      expect(result.current.status).toBe('success');
+
+      await act(async () => {
+        await result.current.copy('second');
+      });
+
+      // The first copy's deadline lands here; it must not clear the second.
+      await act(async () => {
+        vi.advanceTimersByTime(300);
+      });
+      expect(result.current.status).toBe('success');
+
+      await act(async () => {
+        vi.advanceTimersByTime(200);
+      });
+      expect(result.current.status).toBe('idle');
+    });
+
+    it('should clear the pending reset timer on unmount', async () => {
+      const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout');
+      mockWriteText.mockResolvedValueOnce(undefined);
+      const { result, unmount } = renderHook(() => useCopyToClipboard());
+
+      await act(async () => {
+        await result.current.copy('test text');
+      });
+
+      clearTimeoutSpy.mockClear();
+      unmount();
+
+      expect(clearTimeoutSpy).toHaveBeenCalled();
+      clearTimeoutSpy.mockRestore();
+    });
+
+    it('should decay the error status back to idle', async () => {
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+      mockWriteText.mockRejectedValueOnce(new Error('blocked'));
+      const { result } = renderHook(() => useCopyToClipboard());
+
+      await act(async () => {
+        await result.current.copy('test text');
+      });
+      expect(result.current.status).toBe('error');
+
+      await act(async () => {
+        vi.advanceTimersByTime(500);
+      });
+      expect(result.current.status).toBe('idle');
+
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe('route params', () => {
+    it('should copy even when useParams returns null', async () => {
+      vi.mocked(useParams).mockReturnValueOnce(
+        null as unknown as ReturnType<typeof useParams>,
+      );
+      mockWriteText.mockResolvedValueOnce(undefined);
+      const { result } = renderHook(() => useCopyToClipboard());
+
+      await act(async () => {
+        await result.current.copy('test text');
+      });
+
+      expect(mockWriteText).toHaveBeenCalledWith('test text');
+      expect(result.current.status).toBe('success');
     });
   });
 

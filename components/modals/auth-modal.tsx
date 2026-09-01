@@ -1,3 +1,5 @@
+'use client';
+
 import {
   Dialog,
   DialogContent,
@@ -8,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { redirectToAuthSpaJoinTenant } from '@/lib/utils';
 import Logo from '../logo';
+import { useTranslations } from 'next-intl';
 
 type Props = {
   isOpen: boolean;
@@ -16,17 +19,18 @@ type Props = {
 };
 
 export function AuthModal({ isOpen, onClose, tenantKey }: Props) {
+  const t = useTranslations('modalsAuthModal');
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Welcome to Agentic OS</DialogTitle>
+          <DialogTitle>{t('welcomeTitle')}</DialogTitle>
         </DialogHeader>
         <DialogDescription className="sr-only">
-          Please login to continue using the chat.
+          {t('loginDescription')}
         </DialogDescription>
         <div className="mt-4 text-center text-sm text-gray-500">
-          Create an account or login to continue
+          {t('createAccountPrompt')}
         </div>
         <div className="flex justify-center">
           <Logo tenantKey={tenantKey} />
@@ -36,7 +40,7 @@ export function AuthModal({ isOpen, onClose, tenantKey }: Props) {
             onClick={() => redirectToAuthSpaJoinTenant(tenantKey)}
             className="ibl-button-primary cursor-pointer"
           >
-            Login To Chat
+            {t('loginButton')}
           </Button>
         </div>
       </DialogContent>

@@ -3,22 +3,33 @@
 import { useGetIntegratedSsoProvidersQuery } from '@/features/auth/api-slice';
 import { getUserName } from '@/features/utils';
 import {
+  mentorApiSlice,
   useCreateRedirectTokenMutation,
+  useEditMentorJsonMutation,
   useEditMentorMutation,
   useGetMentorPublicSettingsQuery,
+  useGetMentorSettingsQuery,
 } from '@iblai/iblai-js/data-layer';
 import { useForm } from '@tanstack/react-form';
 import { useParams } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { z } from 'zod';
-import { getEmbedCode } from '../utils';
+import {
+  buildEmbedIconSelectionData,
+  buildFloatingBubbleConfigFromSettings,
+  dataUrlToFile,
+  getEmbedCode,
+  hasCustomIconData,
+  isDataUrl,
+} from '../utils';
 import { toast } from 'sonner';
 import type { ChatMode } from '@iblai/iblai-js/web-utils';
 import { useNavigate } from '@/hooks/user-navigate';
 import { config } from '@/lib/config';
 import { useUsername } from '@/hooks/use-user';
 import { ANONYMOUS_USERNAME } from '@/lib/constants';
+import { useAppDispatch } from '@/lib/hooks';
 
 export interface EmbedFormValues {
   custom_css: string;
@@ -42,7 +53,9 @@ export interface EmbedFormValues {
   embed_show_attachment: boolean;
   embed_show_voice_call: boolean;
   embed_show_voice_record: boolean;
+  show_catalogue: boolean;
   starter_prompts: 'guided_prompt' | 'suggested_prompt';
+  strip_page_content_html: boolean;
 }
 
 export interface CustomFloatingBubbleConfig {
@@ -97,7 +110,9 @@ const defaultEmbedFormValues: EmbedFormValues = {
   embed_show_attachment: true,
   embed_show_voice_call: true,
   embed_show_voice_record: true,
+  show_catalogue: true,
   starter_prompts: 'guided_prompt',
+  strip_page_content_html: false,
 };
 
 const useEmbedTab = () => {
@@ -113,35 +128,46 @@ const useEmbedTab = () => {
     // @ts-ignore
     userId: username ?? ANONYMOUS_USERNAME,
   });
+  // `strip_page_content_html` is returned by the private mentor-settings GET
+  // (`/settings/`) but is not yet reflected in the published MentorSettings
+  // type — read it via a narrow cast. Defaults to `false` (backend default).
+  const { data: mentorSettings } = useGetMentorSettingsQuery(
+    // @ts-ignore - userId is required by the API but not in the query type
+    { mentor: mentorId, org: params.tenantKey, userId: username ?? '' },
+    { skip: !username || !mentorId || !params.tenantKey },
+  );
   const [
     createRedirectToken,
     { isLoading: isCreateTokenLoading, data: redirectTokenData },
   ] = useCreateRedirectTokenMutation();
   const [updateMentorSettings] = useEditMentorMutation();
+  const [editMentorSettingsJson] = useEditMentorJsonMutation();
+  const dispatch = useAppDispatch();
+  const defaultFloatingBubbleConfig: CustomFloatingBubbleConfig = {
+    image: `${config.dmUrl()}/api/core/orgs/${params.tenantKey}/thumbnail/`,
+    //use_icon: false,
+    position: 'bottom-right',
+    //offsetX: 20,
+    //offsetY: 20,
+    size: 'small',
+    backgroundColor: 'transparent',
+    textColor: '#ffffff',
+    subtitleTextColor: '#e5e7eb',
+    accentColor: '#1d4ed8',
+    borderRadius: 16,
+    shadow: false,
+    title: '',
+    subtitle: '',
+    height: 48,
+    fontSize: 14,
+    subtitleFontSize: 12,
+    padding: 12,
+    imageSize: 32,
+    strokeColor: '#000',
+    strokeWidth: 0,
+  };
   const [customFloatingBubbleConfig, setCustomFloatingBubbleConfig] =
-    useState<CustomFloatingBubbleConfig>({
-      image: `${config.dmUrl()}/api/core/orgs/${params.tenantKey}/thumbnail/`,
-      //use_icon: false,
-      position: 'bottom-right',
-      //offsetX: 20,
-      //offsetY: 20,
-      size: 'small',
-      backgroundColor: 'transparent',
-      textColor: '#ffffff',
-      subtitleTextColor: '#e5e7eb',
-      accentColor: '#1d4ed8',
-      borderRadius: 16,
-      shadow: false,
-      title: '',
-      subtitle: '',
-      height: 48,
-      fontSize: 14,
-      subtitleFontSize: 12,
-      padding: 12,
-      imageSize: 32,
-      strokeColor: '#000',
-      strokeWidth: 0,
-    });
+    useState<CustomFloatingBubbleConfig>(defaultFloatingBubbleConfig);
 
   const updateConfig = (
     key: keyof typeof customFloatingBubbleConfig,
@@ -172,6 +198,97 @@ const useEmbedTab = () => {
     });
   };
 
+  // Persist the mentor settings (the multipart PUT).
+  const saveMentorSettings = async (): Promise<{ success: boolean }> => {
+    const value = form.state.values;
+
+    // Set is_context_aware for advanced mode
+    const formValues = { ...value };
+    if (formValues.mode === 'advanced') {
+      formValues.is_context_aware = true;
+    }
+
+    // Update mentor settings
+    const valid_values = Object.fromEntries(
+      Object.entries(formValues).filter(
+        ([key, value]) => value !== '' || key === 'custom_css',
+      ),
+    );
+
+    // Persist the custom launcher icon config so it survives a page refresh.
+    // The custom-vs-default mode is derived from whether
+    // `embed_icon_selection_data` is a NON-EMPTY object (see `hasCustomIconData`
+    // / `buildFloatingBubbleConfigFromSettings`), so:
+    // - custom mode: persist the JSON map (bubble config minus the raw image
+    //   binary) plus the image. The request helper JSON-stringifies objects
+    //   automatically, so we pass a plain object.
+    // - default mode: CLEAR the stored JSON by persisting an empty JSON object
+    //   `{}` so a non-empty map unambiguously means custom and an empty map
+    //   means default on the next reload.
+    //
+    // Clearing nuance — verified LIVE against the real API for this multipart
+    // PUT field. `getFormData` JSON-stringifies a passed object, so the literal
+    // `{}` below is sent as the string `"{}"`. The three candidate clear values
+    // behave as:
+    //   - `''`   (empty string)        -> HTTP 400 ("Value must be valid JSON").
+    //   - `'null'` (JSON null, the old `JSON.stringify(null)` approach) -> HTTP
+    //     200 but the field is NOT changed: DRF's partial-update silently
+    //     ignores JSON null, so the old custom JSON persists. THIS WAS THE BUG.
+    //   - `'{}'`  (empty JSON object)  -> HTTP 200 and the field IS set to `{}`.
+    // Only `{}` actually clears, so default mode sends an empty object literal.
+    // On hydrate, `{}` has no own keys, so `hasCustomIconData` is false and the
+    // mode correctly derives back to 'default'.
+    const isCustomIcon = formValues.icon_selection === 'custom';
+    const embed_icon_selection_data: Record<string, unknown> = isCustomIcon
+      ? buildEmbedIconSelectionData(customFloatingBubbleConfig)
+      : {};
+
+    // - `embed_custom_image`: when the user just uploaded an image it lives in
+    //   state as a base64 data URL — convert it to a real File so it is sent as
+    //   multipart binary. When it is already a resolved URL (unchanged image)
+    //   we omit it so the previously-saved image isn't clobbered. In default
+    //   mode we never send an image.
+    const imageValue = customFloatingBubbleConfig.image;
+    let embed_custom_image: File | undefined;
+    if (isCustomIcon && isDataUrl(imageValue)) {
+      embed_custom_image = dataUrlToFile(imageValue) ?? undefined;
+    }
+
+    const response = await updateMentorSettings({
+      mentor: mentorId,
+      org: params.tenantKey,
+      // @ts-expect-error - userId is required by the API but not reflected in the type definition
+      userId: getUserName(),
+      // `embed_custom_image` is typed as `string` in the SDK request model, but
+      // the endpoint is multipart and the request helper appends a File/Blob as
+      // binary, so we send a File for new uploads via a narrow cast.
+      formData: {
+        ...valid_values,
+        metadata: { safety_disclaimer: valid_values.safety_disclaimer },
+        embed_icon_selection_data,
+        // Only include the image key when we have a new File to upload so an
+        // unchanged (already-persisted) image is left untouched by the backend.
+        ...(embed_custom_image
+          ? { embed_custom_image: embed_custom_image as unknown as string }
+          : {}),
+      },
+    });
+    if (response?.error) {
+      console.error(
+        `Failed to update mentor settings for mentor (${mentorId}) in org (${params.tenantKey})`,
+        response.error,
+      );
+      const errorMessage =
+        (response.error as any)?.error?.error ??
+        'An Unknown error occurred. Please try again';
+      setCreateTokenError(errorMessage);
+      toast.error(errorMessage);
+      return { success: false };
+    }
+
+    return { success: true };
+  };
+
   const syncEmbedSettings = async (): Promise<{
     success: boolean;
     redirectToken?: string;
@@ -188,21 +305,15 @@ const useEmbedTab = () => {
       return { success: false };
     }
 
-    // Set is_context_aware for advanced mode
-    const formValues = { ...value };
-    if (formValues.mode === 'advanced') {
-      formValues.is_context_aware = true;
-    }
-
     let redirectTokenResponse: { data?: { token?: string } } | null = null;
 
     // Create redirect token if not anonymous
-    if (!formValues.allow_anonymous) {
+    if (!value.allow_anonymous) {
       try {
         const response = await createRedirectToken({
           org: params.tenantKey,
           requestBody: {
-            url: formValues.website_url,
+            url: value.website_url,
             mentor_unique_id: mentorPublicSettings?.mentor_unique_id,
           },
         });
@@ -215,47 +326,71 @@ const useEmbedTab = () => {
         redirectTokenResponse = response;
       } catch (error) {
         console.error(
-          `Failed to create redirect token for website (${formValues.website_url}) in org (${params.tenantKey})`,
+          `Failed to create redirect token for website (${value.website_url}) in org (${params.tenantKey})`,
           error,
         );
         setCreateTokenError(
-          `Failed to create redirect token for website (${formValues.website_url}) in org (${params.tenantKey})`,
+          `Failed to create redirect token for website (${value.website_url}) in org (${params.tenantKey})`,
         );
         console.error(JSON.stringify({ tenant: tenantKey, error }));
         return { success: false };
       }
     }
 
-    // Update mentor settings
-    const valid_values = Object.fromEntries(
-      Object.entries(formValues).filter(
-        ([key, value]) => value !== '' || key === 'custom_css',
-      ),
-    );
-    const response = await updateMentorSettings({
-      mentor: mentorId,
-      org: params.tenantKey,
-      // @ts-expect-error - userId is required by the API but not reflected in the type definition
-      userId: getUserName(),
-      formData: {
-        ...valid_values,
-        metadata: { safety_disclaimer: valid_values.safety_disclaimer },
-      },
-    });
-    if (response?.error) {
-      console.error(
-        `Failed to update mentor settings for mentor (${mentorId}) in org (${params.tenantKey})`,
-        response.error,
-      );
-      const errorMessage =
-        (response.error as any)?.error?.error ??
-        'An Unknown error occurred. Please try again';
-      setCreateTokenError(errorMessage);
-      toast.error(errorMessage);
+    const saveResult = await saveMentorSettings();
+    if (!saveResult.success) {
       return { success: false };
     }
 
     return { success: true, redirectToken: redirectTokenResponse?.data?.token };
+  };
+
+  const [isRemovingImage, setIsRemovingImage] = useState(false);
+  // Independent settings write: it must NOT go through `syncEmbedSettings`,
+  // whose website-URL validation surfaces a spurious error on non-anonymous
+  // mentors with an empty Website URL (#2153). The endpoint only accepts PUT —
+  // PATCH returns 500 — and applies partial updates, so sending just these two
+  // fields leaves the rest of the settings untouched. `embed_icon_selection_data`
+  // must be cleared with `{}`; a JSON `null` is silently ignored by the backend.
+  const removeCustomImage = async (): Promise<void> => {
+    setIsRemovingImage(true);
+    try {
+      const response = await editMentorSettingsJson({
+        mentorId,
+        org: params.tenantKey,
+        userId: getUserName(),
+        requestBody: {
+          embed_custom_image: null,
+          embed_icon_selection_data: {},
+        },
+      });
+
+      if (response?.error) {
+        console.error(
+          `Failed to remove the custom embed image for mentor (${mentorId}) in org (${params.tenantKey})`,
+          response.error,
+        );
+        toast.error(
+          (response.error as any)?.error?.error ??
+            'Failed to remove the custom icon. Please try again',
+        );
+        return;
+      }
+
+      updateMultipleConfig({ image: null });
+      form.setFieldValue('icon_selection', 'default');
+      // `editMentorJson` lives in a sibling slice with no invalidation, so the
+      // cached public settings would re-hydrate the removed image on remount.
+      dispatch(
+        mentorApiSlice.util.invalidateTags([
+          { type: 'mentorSettings', id: mentorId },
+          { type: 'mentorPublicSettings', id: mentorId },
+        ]),
+      );
+      toast.success('Custom icon removed');
+    } finally {
+      setIsRemovingImage(false);
+    }
   };
 
   const form = useForm({
@@ -272,10 +407,39 @@ const useEmbedTab = () => {
         mentorPublicSettings?.embed_show_voice_call ?? true,
       embed_show_voice_record:
         mentorPublicSettings?.embed_show_voice_record ?? true,
+      // `show_catalogue` is exposed by the backend but not yet reflected in the
+      // published MentorSettingsPublic type — read it via a narrow cast.
+      show_catalogue:
+        (mentorPublicSettings as { show_catalogue?: boolean } | undefined)
+          ?.show_catalogue ?? true,
+      // The custom-vs-default launcher icon mode is derived from whether the
+      // persisted `embed_icon_selection_data` is a NON-EMPTY object (mirroring
+      // `buildFloatingBubbleConfigFromSettings` via the shared
+      // `hasCustomIconData` predicate, so both call sites stay in lockstep). A
+      // cleared field reads back as the empty object `{}`, which must yield
+      // 'default'. Initialize straight from settings so TanStack Form's reactive
+      // defaultValues hydrate it the same way the sibling fields above are
+      // hydrated — instead of an imperative `setFieldValue` in an effect that
+      // the reactive re-init would clobber.
+      icon_selection: hasCustomIconData(
+        (
+          mentorPublicSettings as
+            | { embed_icon_selection_data?: unknown }
+            | undefined
+        )?.embed_icon_selection_data,
+      )
+        ? 'custom'
+        : 'default',
       starter_prompts:
         mentorPublicSettings?.starter_prompts === 'suggested_prompt'
           ? 'suggested_prompt'
           : 'guided_prompt',
+      // `strip_page_content_html` is exposed by the private settings GET but
+      // not yet reflected in the published MentorSettings type — read it via a
+      // narrow cast. Defaults to `false` (backend default).
+      strip_page_content_html:
+        (mentorSettings as { strip_page_content_html?: boolean } | undefined)
+          ?.strip_page_content_html ?? false,
     },
     onSubmit: async ({ value }) => {
       const syncResult = await syncEmbedSettings();
@@ -294,6 +458,44 @@ const useEmbedTab = () => {
       setEmbedCode(embed);
     },
   });
+  // Hydrate the custom launcher icon config from persisted mentor settings
+  // once they load. Without this, the config only ever lived in local state, so
+  // a refresh reverted the icon (and the generated embed snippet) to defaults.
+  // We guard with a ref keyed on the settings identity so hydration runs on the
+  // initial load / settings-id change only — never on every render — to avoid
+  // clobbering in-progress user edits.
+  const hydratedSettingsKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!mentorPublicSettings) return;
+
+    const settings = mentorPublicSettings as {
+      mentor_unique_id?: string;
+      embed_icon_selection_data?: unknown;
+      embed_custom_image?: string | null;
+    };
+    const settingsKey = settings.mentor_unique_id ?? mentorId;
+    if (hydratedSettingsKeyRef.current === settingsKey) return;
+    hydratedSettingsKeyRef.current = settingsKey;
+
+    const hydrated = buildFloatingBubbleConfigFromSettings(
+      defaultFloatingBubbleConfig,
+      settings.embed_icon_selection_data,
+      settings.embed_custom_image,
+    );
+    if (!hydrated) return;
+
+    setCustomFloatingBubbleConfig(hydrated.config);
+    // NOTE: the `icon_selection` form field is NOT set here. It hydrates from
+    // settings via the form's reactive `defaultValues` (see the `useForm` block
+    // above). Setting it imperatively here would be clobbered by that reactive
+    // re-init when `mentorPublicSettings` loads, which was the root cause of the
+    // refresh bug (#789). `buildFloatingBubbleConfigFromSettings` still returns
+    // `iconSelection` for other consumers/tests; we simply don't apply it here.
+    // Intentionally keyed on settings identity only — `form` and
+    // `defaultFloatingBubbleConfig` are recreated each render but the ref guard
+    // ensures this hydrates once per settings load, not on every render.
+  }, [mentorPublicSettings, mentorId]);
+
   const {
     data: integratedSsoProviders,
     isError: isIntegratedSsoProvidersError = true,
@@ -359,6 +561,8 @@ const useEmbedTab = () => {
     updateConfig,
     updateMultipleConfig,
     syncEmbedSettings,
+    removeCustomImage,
+    isRemovingImage,
   };
 };
 

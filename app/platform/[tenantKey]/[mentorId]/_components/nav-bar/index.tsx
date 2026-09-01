@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import Image from 'next/image';
 import { useParams, usePathname, useSearchParams } from 'next/navigation';
 
@@ -11,16 +12,18 @@ import {
   Menu,
   User,
   Bot,
+  HardDrive,
   GitFork,
-  Loader2,
 } from 'lucide-react';
 
 import {
+  CategorizedDropdownMenu,
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+  type CategoryConfig,
+  type CategorizedItem,
+} from '@iblai/iblai-js/web-containers';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from '@/hooks/user-navigate';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -29,8 +32,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { EditMentorModal } from '@/components/modals/edit-mentor-modal';
 import {
+  ChatPrivacyToggle,
   CreditBalance,
   NotificationDropdown,
 } from '@iblai/iblai-js/web-containers';
@@ -52,7 +55,7 @@ import {
 } from '@/hooks/use-user';
 import { getUserEmail, getUserName } from '@/features/utils';
 import { MODALS, UserType } from '@/lib/constants';
-import { TenantKeyMentorIdParams } from '@/lib/types';
+import { ProjectPageParams, TenantKeyMentorIdParams } from '@/lib/types';
 import { AuthModal } from '@/components/modals/auth-modal';
 
 import {
@@ -78,12 +81,18 @@ import {
   selectSelectedMentor,
 } from '@/features/analytics/slice';
 import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
+import { useLlmDisplayName } from '@/hooks/use-llm-display-name';
 import { config } from '@/lib/config';
 import { MentorVisibilityEnum } from '@iblai/iblai-api';
 import { toast } from 'sonner';
 import { useModelDownload } from '@/hooks/use-model-download';
 import {
+  useSelectedLocalModel,
+  LOCAL_LLM_CHANGED_EVENT,
+} from '@/hooks/use-selected-local-model';
+import {
   useMentorSegments,
+  MENTOR_SEGMENT_NAV_CATEGORIES,
   type MentorSegment,
 } from '@/hooks/use-mentor-segments';
 import {
@@ -92,7 +101,7 @@ import {
 } from '@/hooks/use-tauri-offline';
 import { isTauriApp } from '@/types/tauri';
 import { useFreeTrial } from '@/hooks/use-free-trial';
-import { Tenant } from '@iblai/iblai-js/web-utils';
+import { chatActions, Tenant } from '@iblai/iblai-js/web-utils';
 
 /**
  * Nav-only "New Chat" entry. Always shown — it has no permissioned content,
@@ -119,6 +128,7 @@ export const NEW_CHAT_NAV_ITEM = {
 export const ANALYTICS_NAV_ITEM: MentorSegment = {
   value: 'analytics',
   label: 'Analytics',
+  labelKey: 'analytics',
   icon: LineChart,
   userTypes: [UserType.FREE_TRIAL, UserType.ADMIN],
   rbacResource: (mentorDbId) => `/mentors/${mentorDbId}/#view_analytics`,
@@ -127,20 +137,33 @@ export const ANALYTICS_NAV_ITEM: MentorSegment = {
     MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
     MentorVisibilityEnum.VIEWABLE_BY_TENANT_STUDENTS,
   ],
+  navCategory: 'runtime',
 };
 
 export function NavBar() {
+  const t = useTranslations('navBarIndex');
+  // Segment labels + category titles live in the shared `header` namespace
+  // (same keys header.tsx uses) so both nav surfaces stay in sync.
+  const tHeader = useTranslations('header');
   const [openModal, setOpenModal] = React.useState(false);
   const dispatch = useAppDispatch();
   const selectedAnalyticsMentor = useAppSelector(selectSelectedMentor);
   const isAccessingPublicRoute = useAccessingPublicRoute();
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
+  const { projectId } = useParams<ProjectPageParams>();
   const username = useUsername();
   const isAdmin = useIsAdmin();
   const userEmail = getUserEmail();
   const userIsStudent = useUserIsStudent();
   const { userOnFreeTrial } = useFreeTrial();
-  const canViewCreditCoinComponent = isAdmin || userOnFreeTrial();
+  // Live admin signal — `useIsAdmin` reads `currentTenant.is_admin` from
+  // localStorage (static), `useUserIsStudent` subscribes to the Redux
+  // user slice that the User/Admin nav-bar toggle writes to. Combining
+  // them gives "admin AND currently in admin mode" — so flipping the
+  // toggle in the navbar immediately hides admin-only chrome like the
+  // CreditBalance / Billing icon and the sidebar admin items.
+  const isLiveAdmin = isAdmin && !userIsStudent;
+  const canViewCreditCoinComponent = isLiveAdmin || userOnFreeTrial();
   const { executeWithTrialCheck, FreeTrialDialog, closeModal, isModalOpen } =
     useShowFreeTrialDialog();
 
@@ -167,28 +190,27 @@ export function NavBar() {
       MentorVisibilityEnum.VIEWABLE_BY_ANYONE &&
     mentorSettingsCombinedPublicAndPrivate?.allowAnonymous === false;
 
-  const loginButtonLabel = requiresLoginForChat ? 'Log in' : 'Log in';
+  const loginButtonLabel = requiresLoginForChat ? t('logIn') : t('logIn');
 
   const handleLoginClick = React.useCallback(() => {
     if (requiresLoginForChat && tenantKey) {
-      redirectToAuthSpaJoinTenant(tenantKey);
+      redirectToAuthSpaJoinTenant(tenantKey, undefined, true);
       return;
     }
 
     console.log(
       '[auth-redirect] User login from navbar without tenant key or login not required',
     );
-    redirectToAuthSpa();
+    redirectToAuthSpa(undefined, undefined, undefined, true, true);
   }, [requiresLoginForChat, tenantKey]);
 
   const {
     openEditMentorModal,
-    showEditMentorModal,
-    closeEditMentorModal,
     showCreateMentorModal,
     closeCreateMentorModal,
     navigateToAnalytics,
     navigateToMentor,
+    navigateToHome,
     getUpdatedModalStack,
     navigateToNotifications,
   } = useNavigate();
@@ -197,7 +219,7 @@ export function NavBar() {
 
   const userIsVisiting = useIsVisiting();
 
-  const { filteredSegments, isSegmentVisible } = useMentorSegments();
+  const { filteredSegments } = useMentorSegments();
 
   const llmProviderDetails = getLLMProviderDetails(
     mentorSettingsCombinedPublicAndPrivate?.llmProvider ?? '',
@@ -214,9 +236,11 @@ export function NavBar() {
     isAvailable: isLocalLLMAvailable,
     state: localLLMState,
     ollamaStatus,
+    systemMemory,
     startDownload,
     cancelDownload,
     installOllama,
+    stopManager,
     installFoundry,
     checkStatus,
     resetState,
@@ -227,6 +251,49 @@ export function NavBar() {
     foundryStatusLoaded,
     onSelectFoundryModel,
   } = useModelDownload();
+
+  // Active on-device (local) model, if any. Shown top-left in place of the cloud
+  // model while local mode is on (chat routes to the local model then, so the
+  // cloud model would be misleading). Reactive to picks + the master toggle.
+  const selectedLocal = useSelectedLocalModel();
+  const localModelLogo = selectedLocal.model
+    ? getLLMProviderDetails(
+        selectedLocal.model.provider,
+        selectedLocal.model.name,
+      ).logo
+    : '';
+  const localModelName =
+    selectedLocal.model?.name ?? selectedLocal.modelId ?? '';
+  // Admins (non-students) can switch the mentor's LLM; for them the on-device
+  // badge doubles as the entry point to the model picker (mirrors the cloud
+  // selector's gate). Others get a plain, non-interactive indicator.
+  const canChooseLlm = isAdmin && !userIsStudent;
+  const localModelBadgeInner = (
+    <>
+      <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white">
+        {localModelLogo ? (
+          <Image
+            src={localModelLogo}
+            alt={`${localModelName} model logo`}
+            className="h-5 w-5 object-contain"
+            height={32}
+            width={32}
+            loading="lazy"
+          />
+        ) : (
+          <HardDrive className="h-4 w-4 text-[#646464]" />
+        )}
+      </div>
+      <span className="hidden max-w-[150px] overflow-hidden text-ellipsis whitespace-nowrap lowercase sm:block">
+        {localModelName}
+      </span>
+      <span className="hidden flex-shrink-0 items-center gap-1 rounded-full bg-[#F5F8FF] px-2 py-0.5 text-[11px] font-medium text-[#38A1E5] md:inline-flex">
+        <HardDrive className="h-3 w-3" aria-hidden="true" />
+        On-device
+      </span>
+      {canChooseLlm && <ChevronDown className="h-4 w-4 text-gray-500" />}
+    </>
+  );
 
   console.log('[NavBar] After useModelDownload:', {
     isLocalLLMAvailable,
@@ -271,7 +338,7 @@ export function NavBar() {
 
   const handleModifyMentor = async () => {
     if (!tenantKey || !mentorId || !username) {
-      toast.error('Unable to modify agent. Missing context.');
+      toast.error(t('unableToModifyAgent'));
       return;
     }
     try {
@@ -302,7 +369,7 @@ export function NavBar() {
         }).unwrap();
       }
       //REDIRECT TO THE NEW MENTOR
-      toast.success('Agent successfully forked. Switching to new agent...');
+      toast.success(t('agentForkedSuccess'));
       const newStack = getUpdatedModalStack(
         MODALS.EDIT_MENTOR.name,
         MODALS.EDIT_MENTOR.tabs.settings,
@@ -314,27 +381,47 @@ export function NavBar() {
         `modal=${JSON.stringify(newStack)}`,
       );
     } catch (error) {
-      toast.error('Failed to modify agent');
+      toast.error(t('failedToModifyAgent'));
       // console.error(JSON.stringify(error));;
     }
   };
 
   const selectedMentorName =
     mentorSettingsCombinedPublicAndPrivate?.mentorName || '';
-  const selectedMentorCategory =
-    mentorSettingsCombinedPublicAndPrivate?.llmName ?? '';
+  // Settings persist the model's wire key; its label lives in `llm_config`,
+  // with the catalogue and a key-tidying fallback behind it. Without this the
+  // badge disagrees with the model picker for every provider -- the picker
+  // says "Claude Haiku 4.5" where the key reads `claude-haiku-4-5-20251001`.
+  const selectedMentorCategory = useLlmDisplayName({
+    llmName: mentorSettingsCombinedPublicAndPrivate?.llmName,
+    llmConfig: mentorSettingsCombinedPublicAndPrivate?.llmConfig,
+    org: tenantKey,
+    userId: username,
+    mentorId,
+  });
 
-  // Compose the nav-bar dropdown:
-  //   1. New Chat — always shown, no permission gating
-  //   2. The 13 mentor segments shared with EditMentorModal
-  //   3. Analytics — gated by the same RBAC/visibility rules as the segments
-  const dropdownItems = [
-    NEW_CHAT_NAV_ITEM,
-    ...filteredSegments,
-    ...(isSegmentVisible(ANALYTICS_NAV_ITEM) ? [ANALYTICS_NAV_ITEM] : []),
-  ];
+  // Map MentorSegment → SDK CategorizedItem. The SDK's
+  // `CategorizedDropdownMenu` owns the 3-column / mobile-accordion layout
+  // and the in-section state — we just hand it items + per-category
+  // metadata. New Chat is a `topAction` and Modify (fork) is a
+  // `footerAction`, both rendered outside the category columns.
+  const categorizedDropdownItems = React.useMemo<CategorizedItem[]>(() => {
+    // `analytics` is now a canonical segment in `MENTOR_SEGMENTS` (Runtime
+    // category), so `filteredSegments` already includes it — no need to append
+    // the legacy ad-hoc `ANALYTICS_NAV_ITEM`. Clicking it is still routed to
+    // the full-page analytics view in `handleSegmentClick` below.
+    return filteredSegments
+      .filter((s) => s.navCategory)
+      .map((s) => ({
+        value: s.value,
+        label: tHeader(s.labelKey),
+        icon: s.icon,
+        category: s.navCategory,
+      }));
+  }, [filteredSegments, tHeader]);
 
   const showForkButton =
+    !userIsStudent &&
     !(isAdmin && tenantKey === config.mainTenantKey()) &&
     mentorSettings?.mentor_visibility ===
       MentorVisibilityEnum.VIEWABLE_BY_ANYONE &&
@@ -342,9 +429,53 @@ export function NavBar() {
     mentorSettings?.platform_key === config.mainTenantKey() &&
     mentorSettings?.forkable;
 
-  // dropdownItems always contains New Chat (length ≥ 1), so this preserves
-  // the previous behavior where the dropdown was effectively always shown.
-  const hasDropdownItems = dropdownItems.length > 0 || showForkButton;
+  // New Chat is always present as a quick action, so the dropdown trigger
+  // is effectively always rendered.
+  const hasDropdownItems = true;
+
+  const FORK_ACTION_VALUE = 'fork-mentor';
+
+  const pathname = usePathname();
+  const isPromptGalleryPage = pathname.includes('/prompt-gallery');
+  const isWorkflowsPage = /\/workflows\/[^/]+\/?$/.test(pathname);
+  // The tenant-scoped Projects index (/platform/<tenant>/projects) is not a chat
+  // surface, so chat-only nav controls (e.g. the LLM provider selector) are hidden
+  // there. The project chat route (/platform/<tenant>/projects/<id>/<mentorId>) is
+  // still a chat page and keeps them.
+  const isProjectsIndexPage = /\/projects\/?$/.test(pathname);
+  const isOnChatPage =
+    !isPromptGalleryPage &&
+    !pathname.includes('/explore') &&
+    !isWorkflowsPage &&
+    !isProjectsIndexPage;
+  // Narrower than `isOnChatPage`: whether the chat component (the only
+  // `RemoteEvents.newChat` listener) is actually mounted on this route.
+  // Mirrors `isChatPage` in the sidebar so both "New Chat" affordances agree.
+  const isChatRoute = /\/platform\/[^/]+\/[^/]+$/.test(pathname) || !!projectId;
+
+  const handleSegmentClick = (value: string) => {
+    if (value === NEW_CHAT_NAV_ITEM.value) {
+      // Off a chat route (e.g. /analytics) the `newChat` event has no
+      // listener, so route home first and let the chat slice start the new
+      // session on arrival — same approach as the sidebar's `startNewChat`.
+      if (isChatRoute) {
+        eventBus.emit(RemoteEvents.newChat);
+      } else {
+        navigateToHome();
+        dispatch(chatActions.setShouldStartNewChat(true));
+      }
+      return;
+    }
+    if (value === ANALYTICS_NAV_ITEM.value) {
+      executeWithTrialCheck(navigateToAnalytics);
+      return;
+    }
+    if (value === FORK_ACTION_VALUE) {
+      executeWithTrialCheck(handleModifyMentor);
+      return;
+    }
+    openEditMentorModal(value);
+  };
 
   React.useEffect(() => {
     if (mentorSettingsCombinedPublicAndPrivate?.mentorUniqueId) {
@@ -359,16 +490,6 @@ export function NavBar() {
       );
     }
   }, [mentorSettingsCombinedPublicAndPrivate?.mentorUniqueId]);
-
-  const pathname = usePathname();
-  const isPromptGalleryOrAnalytics =
-    pathname.includes('/prompt-gallery') || pathname.includes('/analytics');
-  const isWorkflowsPage = /\/workflows\/[^/]+\/?$/.test(pathname);
-  const isOnChatPage =
-    !pathname.includes('/prompt-gallery') &&
-    !pathname.includes('/analytics') &&
-    !pathname.includes('/explore') &&
-    !isWorkflowsPage;
 
   const handleCloseModal = () => {
     setOpenModal(false);
@@ -405,6 +526,7 @@ export function NavBar() {
           mentorSettingsCombinedPublicAndPrivate?.profileImage ?? ''
         }
         tenantKey={tenantKey}
+        mentorId={mentorId}
       />
     );
   }
@@ -423,70 +545,116 @@ export function NavBar() {
                     size="icon"
                     className="ml-4 cursor-pointer"
                     onClick={toggleSidebar}
-                    aria-label={openSidebar ? 'Close sidebar' : 'Open sidebar'}
+                    aria-label={
+                      openSidebar ? t('closeSidebar') : t('openSidebar')
+                    }
                     data-testid="(Close|Open) sidebar"
                   >
                     <Menu className="h-5 w-5" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent className="ibl-tooltip-content" side="right">
-                  Toggle Sidebar
+                  {t('toggleSidebar')}
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           )}
 
           <div className="flex items-center pl-2 md:pl-4">
-            {isOnChatPage && isAdmin && !userIsStudent && (
+            {/* On-device (local) model indicator. Shown while local mode is on;
+                it replaces the cloud model selector below (hidden via the same
+                `selectedLocal.isLocal` condition). For users who can switch LLMs
+                it is ALSO the entry point to the model picker — click to open it
+                and choose a different model (cloud or local) without first
+                disabling local mode. */}
+            {isOnChatPage && selectedLocal.isLocal && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="flex cursor-pointer items-center gap-1 text-sm font-medium text-[#646464] transition-colors hover:text-[#484848]"
-                    onClick={() =>
-                      !userIsVisiting && setIsProviderSelectionOpen(true)
-                    }
-                    aria-label="LLM Model Selector"
-                  >
-                    <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white">
-                      {llmProviderDetails?.logo ? (
-                        <Image
-                          src={llmProviderDetails.logo}
-                          alt={`${selectedMentorCategory} model logo`}
-                          className="h-5 w-5 object-contain"
-                          height={32}
-                          width={32}
-                          loading="lazy"
-                        />
-                      ) : (
-                        <Bot />
-                      )}
-                    </div>
-                    <span
-                      className={cn(
-                        'max-w-[150px] overflow-hidden text-ellipsis whitespace-nowrap',
-                        creditBalanceComponentIsDisplayed
-                          ? 'max-w-[100px] md:max-w-[150px]'
-                          : '',
-                      )}
+                  {canChooseLlm ? (
+                    <button
+                      type="button"
+                      className="mr-2 flex cursor-pointer items-center gap-1.5 text-sm font-medium text-[#646464] transition-colors hover:text-[#484848]"
+                      onClick={() =>
+                        !userIsVisiting && setIsProviderSelectionOpen(true)
+                      }
+                      aria-label={`Change model, on-device model in use: ${localModelName}`}
+                      data-testid="local-model-indicator"
                     >
-                      {selectedMentorCategory}
-                    </span>
-                    {!userIsStudent && (
-                      <ChevronDown className="h-4 w-4 text-gray-500" />
-                    )}
-                  </Button>
+                      {localModelBadgeInner}
+                    </button>
+                  ) : (
+                    <div
+                      className="mr-2 flex items-center gap-1.5 text-sm font-medium text-[#646464]"
+                      aria-label={`On-device model in use: ${localModelName}`}
+                      data-testid="local-model-indicator"
+                    >
+                      {localModelBadgeInner}
+                    </div>
+                  )}
                 </TooltipTrigger>
                 <TooltipContent className="ibl-tooltip-content" side="bottom">
-                  {isAdmin ? 'Select LLM Model' : selectedMentorName}
+                  {canChooseLlm
+                    ? `On-device: ${localModelName} — click to change model`
+                    : `On-device model in use — ${localModelName}`}
                 </TooltipContent>
               </Tooltip>
             )}
 
+            {isOnChatPage &&
+              isAdmin &&
+              !userIsStudent &&
+              !selectedLocal.isLocal && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="flex cursor-pointer items-center gap-1 text-sm font-medium text-[#646464] transition-colors hover:text-[#484848]"
+                      onClick={() =>
+                        !userIsVisiting && setIsProviderSelectionOpen(true)
+                      }
+                      aria-label={t('llmModelSelector')}
+                    >
+                      <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white">
+                        {llmProviderDetails?.logo ? (
+                          <Image
+                            src={llmProviderDetails.logo}
+                            alt={`${selectedMentorCategory} model logo`}
+                            className="h-5 w-5 object-contain"
+                            height={32}
+                            width={32}
+                            loading="lazy"
+                          />
+                        ) : (
+                          <Bot />
+                        )}
+                      </div>
+                      <span
+                        className={cn(
+                          // Hidden below sm; the name is shown in the tooltip.
+                          'hidden max-w-[150px] overflow-hidden text-ellipsis whitespace-nowrap sm:block',
+                          creditBalanceComponentIsDisplayed
+                            ? 'max-w-[100px] md:max-w-[150px]'
+                            : '',
+                        )}
+                      >
+                        {selectedMentorCategory}
+                      </span>
+                      {!userIsStudent && (
+                        <ChevronDown className="h-4 w-4 text-gray-500" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent className="ibl-tooltip-content" side="bottom">
+                    {selectedMentorCategory ||
+                      (isAdmin ? t('selectModel') : selectedMentorName)}
+                  </TooltipContent>
+                </Tooltip>
+              )}
+
             {!pathname.includes('/explore') &&
               !isWorkflowsPage &&
               mentorId &&
-              (isPromptGalleryOrAnalytics ? (
+              (isPromptGalleryPage ? (
                 <div className="flex items-center gap-1 text-sm font-medium text-[#646464]">
                   <Avatar className="mr-1 h-5 w-5">
                     <AvatarImage
@@ -508,7 +676,7 @@ export function NavBar() {
                     <Button
                       variant="ghost"
                       className="flex cursor-pointer items-center gap-1"
-                      aria-label="Selected agent dropdown button"
+                      aria-label={t('selectedAgentDropdownButton')}
                     >
                       <User className="h-4 w-4 text-[#646464]" />
                       <span className="hidden sm:block">
@@ -517,67 +685,52 @@ export function NavBar() {
                       <ChevronDown className="h-4 w-4 text-gray-500" />
                     </Button>
                   </DropdownMenuTrigger>
+                  {/*
+                    Intrinsic width: with the SDK's
+                    `grid-template-columns: repeat(N, minmax(11rem, 1fr))`,
+                    each visible column claims its 11rem and the popup
+                    grows only as wide as the visible category count
+                    needs. `min-w` keeps a sane width when only the top
+                    action is visible; `max-w-[90vw]` + `max-h-[80vh]`
+                    + `overflow-y-auto` keep the popup inside small
+                    viewports for users with long item lists.
+                  */}
                   <DropdownMenuContent
-                    align="center"
-                    className="w-[180px] rounded-md border border-gray-200 bg-white p-2 shadow-lg"
+                    align="start"
+                    className="max-h-[80vh] w-auto max-w-[90vw] min-w-[260px] overflow-y-auto rounded-md border border-gray-200 bg-white p-2 shadow-lg"
                   >
-                    {dropdownItems.map((item) => {
-                      return (
-                        <DropdownMenuItem
-                          key={item.value}
-                          className={cn(
-                            'flex cursor-pointer items-center rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-100',
-                          )}
-                          onClick={() => {
-                            if (item.value === NEW_CHAT_NAV_ITEM.value) {
-                              eventBus.emit(RemoteEvents.newChat);
-                              return;
+                    <CategorizedDropdownMenu
+                      categories={
+                        MENTOR_SEGMENT_NAV_CATEGORIES.map((c) => ({
+                          key: c.key,
+                          title: tHeader(c.titleKey),
+                        })) as ReadonlyArray<CategoryConfig>
+                      }
+                      items={categorizedDropdownItems}
+                      onItemSelect={handleSegmentClick}
+                      topAction={{
+                        value: NEW_CHAT_NAV_ITEM.value,
+                        label: t('newChat'),
+                        icon: NEW_CHAT_NAV_ITEM.icon,
+                      }}
+                      footerAction={
+                        showForkButton
+                          ? {
+                              value: FORK_ACTION_VALUE,
+                              label: t('modify'),
+                              icon: GitFork,
+                              disabled: isForkingMentor,
                             }
-                            if (item.value === ANALYTICS_NAV_ITEM.value) {
-                              executeWithTrialCheck(navigateToAnalytics);
-                              return;
-                            }
-                            openEditMentorModal(item.value);
-                          }}
-                        >
-                          <item.icon className="mr-3 h-4 w-4 text-gray-600" />
-                          {item.label}
-                        </DropdownMenuItem>
-                      );
-                    })}
-                    {/* FORK MENTOR FEATURE */}
-                    {!(isAdmin && tenantKey === config.mainTenantKey()) &&
-                      mentorSettings?.mentor_visibility ===
-                        MentorVisibilityEnum.VIEWABLE_BY_ANYONE &&
-                      // @ts-ignore
-                      mentorSettings?.platform_key === config.mainTenantKey() &&
-                      mentorSettings?.forkable && (
-                        <DropdownMenuItem
-                          className={cn(
-                            'flex cursor-pointer items-center rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-100',
-                          )}
-                          onClick={() => {
-                            executeWithTrialCheck(handleModifyMentor);
-                          }}
-                          disabled={isForkingMentor}
-                          aria-disabled={isForkingMentor}
-                          aria-busy={isForkingMentor}
-                        >
-                          {isForkingMentor ? (
-                            <Loader2 className="mr-3 h-4 w-4 animate-spin text-gray-600" />
-                          ) : (
-                            <GitFork className="mr-3 h-4 w-4 text-gray-600" />
-                          )}
-                          Modify
-                        </DropdownMenuItem>
-                      )}
+                          : undefined
+                      }
+                    />
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
                 <Button
                   variant="ghost"
                   className="flex items-center gap-1 text-sm font-medium text-[#646464]"
-                  aria-label="Selected agent"
+                  aria-label={t('selectedAgent')}
                 >
                   <User className="h-4 w-4 text-[#646464]" />
                   <span className="hidden sm:block">{selectedMentorName}</span>
@@ -595,7 +748,7 @@ export function NavBar() {
                   userIsStudent ? 'font-semibold' : 'text-gray-500',
                 )}
               >
-                Learner
+                {t('user')}
               </span>
               <LearnerModeSwitch />
               <span
@@ -604,29 +757,39 @@ export function NavBar() {
                   userIsStudent ? 'text-gray-500' : 'font-semibold',
                 )}
               >
-                Instructor
+                {t('admin')}
               </span>
             </div>
           )}
-          {creditBalanceComponentIsDisplayed && (
-            <CreditBalance
-              tenant={tenantKey}
-              enabled={true}
-              redirectUrl={window.location.origin}
-              mainPlatformKey={config.mainTenantKey()}
-              currentUserEmail={getUserEmail()}
-              username={getUserName()}
-            />
-          )}
-          {!embedMode && visibleToLoggedInUsersOnly && (
-            <NotificationDropdown
-              org={tenantKey}
-              userId={username ?? ''}
-              isAdmin={isAdmin}
-              onViewNotifications={handleViewNotifications}
-            />
-          )}
-          {visibleToLoggedInUsersOnly && <UserProfile />}
+          <div className="flex items-center gap-2">
+            {isOnChatPage && visibleToLoggedInUsersOnly && tenantKey && (
+              <ChatPrivacyToggle
+                org={tenantKey}
+                userId={username ?? ''}
+                mentor={mentorId}
+                className="inline-flex max-md:[&>span]:hidden"
+              />
+            )}
+            {creditBalanceComponentIsDisplayed && (
+              <CreditBalance
+                tenant={tenantKey}
+                enabled={true}
+                redirectUrl={window.location.origin}
+                mainPlatformKey={config.mainTenantKey()}
+                currentUserEmail={getUserEmail()}
+                username={getUserName()}
+              />
+            )}
+            {!embedMode && visibleToLoggedInUsersOnly && (
+              <NotificationDropdown
+                org={tenantKey}
+                userId={username ?? ''}
+                isAdmin={isAdmin}
+                onViewNotifications={handleViewNotifications}
+              />
+            )}
+            {visibleToLoggedInUsersOnly && <UserProfile />}
+          </div>
 
           {!isLoggedIn() && (
             <div className="flex gap-x-2">
@@ -634,7 +797,7 @@ export function NavBar() {
                 {loginButtonLabel}
               </Button>
               <Button onClick={handleLoginClick} variant="outline">
-                Sign up for free
+                {t('signUpForFree')}
               </Button>
             </div>
           )}
@@ -648,12 +811,6 @@ export function NavBar() {
           onClose={() => setIsProviderSelectionOpen(false)}
         />
       )}
-      {showEditMentorModal && (
-        <EditMentorModal
-          isOpen={showEditMentorModal}
-          onClose={closeEditMentorModal}
-        />
-      )}
       {showCreateMentorModal && (
         <CreateMentorModal
           isOpen={showCreateMentorModal}
@@ -663,7 +820,12 @@ export function NavBar() {
       {isUserProfileOpen && (
         <UserProfileModal
           isOpen={isUserProfileOpen}
-          onClose={() => setIsUserProfileOpen(false)}
+          onClose={() => {
+            setIsUserProfileOpen(false);
+            // Profile → Advanced hosts the Local Models master toggle; re-read on
+            // close so the nav-bar on-device badge reflects an enable/disable.
+            window.dispatchEvent(new Event(LOCAL_LLM_CHANGED_EVENT));
+          }}
           params={{
             tenantKey,
             mentorId,
@@ -677,10 +839,12 @@ export function NavBar() {
           currentSPA={config.iblPlatform() || 'mentor'}
           authURL={config.authUrl()}
           currentPlatformBaseDomain={config.platformBaseDomain()}
+          defaultSupportPhone={config.defaultSupportPhoneNumber()}
           localLLMProps={{
             isAvailable: isLocalLLMAvailable,
             state: localLLMState,
             ollamaStatus,
+            systemMemory,
             isUsingFoundry,
             foundryModels,
             selectedFoundryModel,
@@ -688,6 +852,7 @@ export function NavBar() {
             onStartDownload: startDownload,
             onCancelDownload: cancelDownload,
             onInstallOllama: installOllama,
+            onStopManager: stopManager,
             onInstallFoundry: installFoundry,
             onCheckStatus: checkStatus,
             onResetState: resetState,

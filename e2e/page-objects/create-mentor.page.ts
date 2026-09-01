@@ -1,6 +1,11 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { safeWaitForURL } from '../utils/navigation';
-import { waitForPageReady } from '../utils/resilient';
+import {
+  waitForPageReady,
+  reliableClick,
+  isVisibleWithin,
+} from '../utils/resilient';
+import { SidebarPage } from './sidebar.page';
 
 export class CreateMentorPage {
   readonly page: Page;
@@ -44,9 +49,31 @@ export class CreateMentorPage {
   }
 
   /**
-   * Open the Create Mentor modal via the sidebar "New Mentor" button.
+   * Open the Create Mentor modal via the sidebar "New Agent" entry.
+   *
+   * In the new sidebar, "New Agent" lives inside the collapsible
+   * "Agents" section (alongside "My Agents" and "Explore"). Radix
+   * Collapsible hides items when the section is closed, so we expand
+   * Agents first and only then click New Agent.
    */
   async open(): Promise<void> {
+    // "New Agent" only mounts at full sidebar width, and the sidebar starts in
+    // its icon-rail form unless a `sidebar_state=true` cookie is present.
+    await new SidebarPage(this.page).ensureExpanded();
+
+    const agentsTrigger = this.page.getByRole('button', {
+      name: 'Agents',
+      exact: true,
+    });
+    if (await isVisibleWithin(agentsTrigger, 15_000)) {
+      const expanded = await agentsTrigger
+        .getAttribute('aria-expanded')
+        .catch(() => null);
+      if (expanded !== 'true') {
+        await agentsTrigger.click();
+      }
+    }
+
     const newMentorBtn = this.page.getByRole('button', {
       name: 'New Agent',
       exact: true,
@@ -60,21 +87,62 @@ export class CreateMentorPage {
    * Fill the required fields on the Settings tab and advance to Prompts.
    */
   async fillRequiredFields(name: string, description?: string): Promise<void> {
-    await expect(this.nameInput).toBeEnabled({ timeout: 30_000 });
+    // The modal starts with fields disabled while mentor categories load from
+    // the API (isLoadingMentorCategories). Use a generous timeout to
+    // accommodate slow environments / cold API caches.
+    //
+    // When multiple parallel workers each open the Create Agent dialog at the
+    // same time, the categories API can become overwhelmed and time out. In
+    // that case we close and reopen the dialog once — the retry almost always
+    // resolves because the server-side API cache has since warmed up. This
+    // is a best-effort recovery; the second wait uses the full 60 s budget.
+    let inputEnabled = false;
+    try {
+      await expect(this.nameInput).toBeEnabled({ timeout: 20_000 });
+      inputEnabled = true;
+    } catch {
+      // Categories API may be overloaded — close, wait briefly, then reopen.
+    }
+    if (!inputEnabled) {
+      await this.page.keyboard.press('Escape');
+      try {
+        await expect(this.dialog).not.toBeVisible({ timeout: 10_000 });
+      } catch {
+        // Dialog may have already closed; continue.
+      }
+      await this.open();
+      await expect(this.nameInput).toBeEnabled({ timeout: 60_000 });
+    }
     await this.nameInput.fill(name);
 
     await this.descriptionInput.fill(
       description || `E2E test mentor created at ${Date.now()}`,
     );
 
-    // Select first available category
+    // Select first available category. The cmdk option list streams in from
+    // the categories API and can be slow — or briefly empty — under parallel
+    // load, so the first <div role="option"> may not exist yet. Wait
+    // generously for it to populate; if it never shows, toggle the combobox
+    // closed and re-open to re-trigger the fetch, then wait again.
     await this.categoryCombobox.click();
     const firstCategory = this.page.locator('[role="option"]').first();
-    await expect(firstCategory).toBeVisible({ timeout: 5_000 });
-    await firstCategory.click();
+    const optionVisible = await firstCategory
+      .waitFor({ state: 'visible', timeout: 20_000 })
+      .then(() => true)
+      .catch(() => false);
+    if (!optionVisible) {
+      await this.categoryCombobox.click(); // toggle closed
+      await this.page.waitForTimeout(1_000);
+      await this.categoryCombobox.click(); // re-open to re-trigger the fetch
+      await firstCategory.waitFor({ state: 'visible', timeout: 20_000 });
+    }
+    // The list re-renders as more categories arrive, detaching the first
+    // option mid-click; reliableClick waits for stability and retries the
+    // whole click, so a detach just re-runs.
+    await reliableClick(this.page, firstCategory, 10_000);
 
     // Wait for Next button to become enabled
-    await expect(this.nextButton).toBeEnabled({ timeout: 5_000 });
+    await expect(this.nextButton).toBeEnabled({ timeout: 10_000 });
   }
 
   /**
@@ -98,7 +166,7 @@ export class CreateMentorPage {
       this.page,
       (url) => url.href.includes('/platform/') && previousUrl != url.href,
       {
-        timeout: 30_000,
+        timeout: 60_000,
       },
     );
     await waitForPageReady(this.page);
@@ -115,7 +183,7 @@ export class CreateMentorPage {
   }
 
   async isOpen(): Promise<boolean> {
-    return this.dialog.isVisible({ timeout: 2_000 }).catch(() => false);
+    return isVisibleWithin(this.dialog, 2_000);
   }
 
   async close(): Promise<void> {

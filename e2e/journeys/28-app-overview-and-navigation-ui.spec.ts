@@ -40,6 +40,10 @@ test.describe('Journey 28: App Overview & Navigation UI — Non-Admin', () => {
     nonadminPage,
     nonadminSidebarPage,
   }) => {
+    // "Explore" moved inside the collapsible "Agents" section in the new
+    // sidebar — expand it first so the inner item resolves. Notifications
+    // is a footer action and stays visible without expansion.
+    await nonadminSidebarPage.expandSection('Agents');
     await expect(nonadminSidebarPage.exploreLink).toBeVisible({
       timeout: 10_000,
     });
@@ -199,6 +203,36 @@ test.describe('Journey 28: Navbar LLM Name — Desktop Ellipsis & No Overflow', 
 
     // Allow for rounding: 150px ± 1
     expect(maxWidth).toBeLessThanOrEqual(151);
+  });
+
+  // ov-13
+  // The OS wrapper (llm-provider-selection-modal.tsx) opens the SDK's
+  // AgentLLMTab from the navbar with `showConfigurationHeader={false}`, so the
+  // "LLM Configuration" heading shown inside the edit-mentor tab must NOT
+  // render here. Mirrors the SDK's own llm-provider-modal.spec.ts assertion
+  // for the same prop, but proves the OS wrapper actually forwards it.
+  test('admin opens the navbar LLM selector modal and the configuration header is hidden', async ({
+    page,
+    navbarPage,
+  }) => {
+    const isAdmin = await checkAdminStatus(page);
+    test.skip(!isAdmin, 'LLM Model Selector only renders for admins');
+
+    const opened = await navbarPage.openLlmProviderModal();
+    if (!opened) {
+      // LLM selector not present on this environment/page state — graceful skip
+      return;
+    }
+
+    const dialog = page.getByRole('dialog', { name: /llm providers/i });
+    await expect(dialog).toBeVisible({ timeout: 10_000 });
+    await expect(
+      dialog.getByRole('heading', { name: /llm configuration/i }),
+    ).toHaveCount(0);
+    await expect(dialog.getByText(/llm configuration/i)).toHaveCount(0);
+
+    await page.keyboard.press('Escape');
+    await expect(dialog).not.toBeVisible({ timeout: 10_000 });
   });
 });
 

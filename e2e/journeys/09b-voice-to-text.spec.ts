@@ -61,6 +61,12 @@ test.describe('Journey 9b: Voice-to-Text Dictation', () => {
     // matching. Use a stable element-level locator for placeholder reads.
     const textarea = page.locator('textarea').first();
 
+    // vtt-03: seed the composer first. Dictation must append to what is already
+    // there — it used to replace it, destroying anything typed.
+    const TYPED = 'typed before dictating';
+    await textarea.fill(TYPED);
+    await expect(textarea).toHaveValue(TYPED);
+
     await chatPage.voiceInputButton.click();
     await expect(chatPage.voiceInputButton).toHaveAttribute(
       'aria-label',
@@ -92,11 +98,13 @@ test.describe('Journey 9b: Voice-to-Text Dictation', () => {
 
     // Real STT round-trip: hook POSTs to /audio-to-text/, backend transcribes,
     // response.text is piped into the textarea via setTextareaInput. Wait for
-    // the button to leave the "Processing voice input" state.
+    // the button to leave the "Processing voice input" state. The timeout is
+    // intentionally generous (120s) — this is a backend SLA dependency and
+    // intermittent STT latency was flaking the test at 60s.
     await expect(chatPage.voiceInputButton).toHaveAttribute(
       'aria-label',
       'Voice input',
-      { timeout: 60_000 },
+      { timeout: 120_000 },
     );
 
     // After processing, the accessible name reverts to "Ask anything", so
@@ -105,5 +113,119 @@ test.describe('Journey 9b: Voice-to-Text Dictation', () => {
     await expect(chatPage.chatInput).toBeVisible({ timeout: 10_000 });
     const transcript = await chatPage.chatInput.inputValue();
     expect(transcript.trim().length).toBeGreaterThan(0);
+
+    // vtt-03: the typed prefix survives and the transcript lands after it.
+    expect(transcript.startsWith(TYPED)).toBe(true);
+    expect(transcript.length).toBeGreaterThan(TYPED.length);
+  });
+
+  // vtt-04: regression cover for iblai-platform#2402. A sub-second recording
+  // produced an empty/header-only blob that was uploaded anyway; the backend
+  // rejected it with a 400 and the data layer then retried five times with
+  // exponential backoff, holding the UI for ~37s. The guard must reject it
+  // client-side so no request is ever made.
+  test('admin records for under half a second and no audio-to-text request is made', async ({
+    page,
+    context,
+    createMentorPage,
+    chatPage,
+  }) => {
+    await context.grantPermissions(['microphone']);
+    await navigateToMentorApp(page);
+
+    const isAdmin = await checkAdminStatus(page);
+    test.skip(!isAdmin, 'Requires admin access to create a mentor');
+
+    await createMentorPage.openAndCreate();
+    await waitForPageReady(page);
+
+    await expect(chatPage.voiceInputButton).toBeVisible({ timeout: 15_000 });
+
+    const audioRequests: string[] = [];
+    page.on('request', (request) => {
+      if (request.url().includes('audio-to-text')) {
+        audioRequests.push(request.url());
+      }
+    });
+
+    await chatPage.voiceInputButton.click();
+    await expect(chatPage.voiceInputButton).toHaveAttribute(
+      'aria-label',
+      'Stop voice input',
+      { timeout: 5_000 },
+    );
+
+    // Stop well inside the 500ms minimum.
+    await page.waitForTimeout(150);
+    await chatPage.voiceInputButton.click();
+
+    await expect(
+      page.locator('[data-sonner-toast]', {
+        hasText: 'That recording was too short',
+      }),
+    ).toBeVisible({ timeout: 10_000 });
+
+    // The button must return to idle immediately — never park on "Processing".
+    await expect(chatPage.voiceInputButton).toHaveAttribute(
+      'aria-label',
+      'Voice input',
+      { timeout: 5_000 },
+    );
+    await expect(chatPage.voiceInputButton).toBeEnabled();
+
+    // Give a retry storm every chance to appear before asserting none did.
+    await page.waitForTimeout(3_000);
+    expect(audioRequests).toHaveLength(0);
+  });
+
+  // vtt-02: microphone permission denial. `--use-fake-ui-for-media-stream` is
+  // set file-wide and auto-accepts the prompt, and Playwright refuses
+  // `test.use({ launchOptions })` inside a describe — so the denial is injected
+  // by making getUserMedia reject with the same DOMException Chrome raises.
+  test('admin denied microphone access sees an error and the button returns to idle', async ({
+    page,
+    createMentorPage,
+    chatPage,
+  }) => {
+    await page.addInitScript(() => {
+      navigator.mediaDevices.getUserMedia = () => {
+        const error = new Error('Permission denied');
+        error.name = 'NotAllowedError';
+        return Promise.reject(error);
+      };
+    });
+
+    await navigateToMentorApp(page);
+
+    const isAdmin = await checkAdminStatus(page);
+    test.skip(!isAdmin, 'Requires admin access to create a mentor');
+
+    await createMentorPage.openAndCreate();
+    await waitForPageReady(page);
+
+    await expect(chatPage.voiceInputButton).toBeVisible({ timeout: 15_000 });
+
+    const audioRequests: string[] = [];
+    page.on('request', (request) => {
+      if (request.url().includes('audio-to-text')) {
+        audioRequests.push(request.url());
+      }
+    });
+
+    await chatPage.voiceInputButton.click();
+
+    // Before the fix this escaped as an unhandled rejection: no toast, and the
+    // button silently did nothing.
+    await expect(
+      page.locator('[data-sonner-toast]', { hasText: 'Microphone access' }),
+    ).toBeVisible({ timeout: 15_000 });
+
+    await expect(chatPage.voiceInputButton).toHaveAttribute(
+      'aria-label',
+      'Voice input',
+      { timeout: 5_000 },
+    );
+    await expect(chatPage.voiceInputButton).toBeEnabled();
+    expect(audioRequests).toHaveLength(0);
   });
 });

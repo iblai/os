@@ -105,10 +105,7 @@ const useGoogleDrivePicker = () => {
             refresh_token: 'test-refresh token',
             client_id: credentials.client_id,
             token: authToken?.access_token,
-            scopes: [
-              'https://www.googleapis.com/auth/drive.metadata.readonly',
-              'https://www.googleapis.com/auth/drive.readonly',
-            ],
+            scopes: ['https://www.googleapis.com/auth/drive.file'],
             token_type: authToken?.token_type,
             expiry_date: new Date(
               Date.now() + (authToken?.expires_in || 0) * 1000,
@@ -232,10 +229,7 @@ const useGoogleDrivePicker = () => {
         openPicker({
           clientId: credentials.client_id,
           developerKey: credentials.developer_key,
-          customScopes: [
-            'https://www.googleapis.com/auth/drive.metadata.readonly',
-            'https://www.googleapis.com/auth/drive.readonly',
-          ],
+          customScopes: ['https://www.googleapis.com/auth/drive.file'],
           // @ts-expect-error - token accepts null to force fresh auth per google-drive-picker API
           token: null, // Always start with null token to force fresh auth
           showUploadView: true,

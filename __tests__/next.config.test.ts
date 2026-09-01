@@ -5,6 +5,12 @@ vi.mock('@sentry/nextjs', () => ({
   withSentryConfig: vi.fn((config) => config),
 }));
 
+// Mock the next-intl plugin as a passthrough so these tests assert the base
+// Next.js config (basePath/webpack/output) without next-intl's wrapping.
+vi.mock('next-intl/plugin', () => ({
+  default: () => (config: unknown) => config,
+}));
+
 describe('next.config', () => {
   let originalEnv: NodeJS.ProcessEnv;
 
@@ -94,11 +100,11 @@ describe('next.config', () => {
     );
   });
 
-  it('should enable production browser source maps', async () => {
+  it('should disable production browser source maps (Sentry uploads then deletes them)', async () => {
     vi.resetModules();
     const config = (await import('../next.config')).default;
 
-    expect(config.productionBrowserSourceMaps).toBe(true);
+    expect(config.productionBrowserSourceMaps).toBe(false);
   });
 
   it('should transpile required packages', async () => {

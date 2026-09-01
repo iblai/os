@@ -81,6 +81,8 @@ describe('useMentorSettings', () => {
     embed_show_attachment: false,
     embed_show_voice_call: true,
     embed_show_voice_record: false,
+    show_catalogue: false,
+    show_reasoning: true,
     llm_config: { temperature: 0.7 },
   };
 
@@ -209,8 +211,46 @@ describe('useMentorSettings', () => {
         embedShowAttachment: false,
         embedShowVoiceCall: true,
         embedShowVoiceRecord: false,
+        showCatalogue: false,
+        showReasoning: true,
         llmConfig: { temperature: 0.7 },
       });
+    });
+
+    it('should default showCatalogue to true when absent from settings', () => {
+      const mentorWithoutCatalogue = { ...mockMentorSettings };
+      delete (mentorWithoutCatalogue as { show_catalogue?: boolean })
+        .show_catalogue;
+      mockUseGetMentorSettingsQuery.mockReturnValue({
+        data: mentorWithoutCatalogue,
+        isLoading: false,
+      });
+      mockUseGetMentorPublicSettingsQuery.mockReturnValue({
+        data: { ...mockPublicSettings },
+        isLoading: false,
+      });
+
+      const { result } = renderHook(() => useMentorSettings());
+
+      expect(result.current.data.showCatalogue).toBe(true);
+    });
+
+    it('should default showReasoning to false when absent from settings', () => {
+      const mentorWithoutReasoning = { ...mockMentorSettings };
+      delete (mentorWithoutReasoning as { show_reasoning?: boolean })
+        .show_reasoning;
+      mockUseGetMentorSettingsQuery.mockReturnValue({
+        data: mentorWithoutReasoning,
+        isLoading: false,
+      });
+      mockUseGetMentorPublicSettingsQuery.mockReturnValue({
+        data: { ...mockPublicSettings },
+        isLoading: false,
+      });
+
+      const { result } = renderHook(() => useMentorSettings());
+
+      expect(result.current.data.showReasoning).toBe(false);
     });
   });
 

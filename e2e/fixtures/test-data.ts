@@ -11,6 +11,8 @@ export const MENTOR_NEXTJS_STRIPE_HOST =
   process.env.MENTOR_NEXTJS_STRIPE_HOST || '';
 export const DM_URL = process.env.DM_URL || '';
 export const FORDHAM_HOST = process.env.FORDHAM_HOST || '';
+export const ADVERTISING_TENANT_MENTOR_URL =
+  process.env.ADVERTISING_TENANT_MENTOR_URL || '';
 export const AUTH_NEXTJS_HOST = process.env.AUTH_NEXTJS_HOST || '';
 
 // ── Credentials ──────────────────────────────────────────────────────────────
@@ -71,6 +73,13 @@ export const EXTERNAL_STRIPE_PRICING_URL =
   process.env.EXTERNAL_STRIPE_PRICING_URL || '';
 export const ECOMMERCE_CREDIT_CLEANUP_TOKEN =
   process.env.ECOMMERCE_CREDIT_CLEANUP_TOKEN || '';
+export const ECOMMERCE_CHECKOUT_URL =
+  process.env.ECOMMERCE_CHECKOUT_URL || 'http://ibl.ai/join';
+// Password used for the Journey 56 ecommerce signup flow. The auth service
+// silently rejects common passwords like "12345678" (the signup form just
+// stays put with no visible error) so this must be non-trivial.
+export const ECOMMERCE_SIGNUP_PASSWORD =
+  process.env.ECOMMERCE_SIGNUP_PASSWORD || 'bamidelexoxo';
 
 // ── Canvas LMS (Journey 11) ──────────────────────────────────────────────────
 
@@ -97,9 +106,15 @@ export function generateMentorName(): string {
   return `E2E Mentor ${Date.now()}`;
 }
 
-/** Generates a unique project name for isolation between test runs */
+/** Generates a unique project name for isolation between test runs.
+ * Includes a random suffix (not just a timestamp) so that parallel
+ * workers or retries creating a project within the same millisecond
+ * never collide — collisions would break the `testProject` fixture's
+ * name-based id lookup right after creation. */
 export function generateProjectName(): string {
-  return `E2E Project ${Date.now()}`;
+  const ts = Date.now();
+  const rand = Math.random().toString(36).substring(2, 7);
+  return `E2E Project ${ts}-${rand}`;
 }
 
 /** Generates a unique MCP connector name */

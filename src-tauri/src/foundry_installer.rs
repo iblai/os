@@ -1,6 +1,6 @@
-use std::process::{Command, Stdio};
 use std::io::{BufRead, BufReader};
-use tauri::{Window, Emitter};
+use std::process::{Command, Stdio};
+use tauri::{Emitter, Window};
 
 /// Create a Command with hidden console window on Windows
 fn create_command(program: &str) -> Command {
@@ -34,7 +34,12 @@ pub async fn download_and_install_foundry() -> Result<(), String> {
                 "--silent",
             ])
             .output()
-            .map_err(|e| format!("Failed to run winget: {}. Make sure winget is available on this system.", e))?;
+            .map_err(|e| {
+                format!(
+                    "Failed to run winget: {}. Make sure winget is available on this system.",
+                    e
+                )
+            })?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -52,14 +57,15 @@ pub async fn download_and_install_foundry() -> Result<(), String> {
         println!("[FoundryInstaller] Verifying installation...");
         tokio::time::sleep(tokio::time::Duration::from_secs(3)).await; // Wait for installation to complete
 
-        let verify_status = create_command("foundry")
-            .arg("--version")
-            .output();
+        let verify_status = create_command("foundry").arg("--version").output();
 
         match verify_status {
             Ok(output) if output.status.success() => {
                 let version = String::from_utf8_lossy(&output.stdout);
-                println!("[FoundryInstaller] Foundry Local installed successfully: {}", version.trim());
+                println!(
+                    "[FoundryInstaller] Foundry Local installed successfully: {}",
+                    version.trim()
+                );
                 Ok(())
             }
             _ => {
@@ -79,7 +85,12 @@ pub async fn download_and_install_foundry() -> Result<(), String> {
         let tap_output = create_command("brew")
             .args(["tap", "microsoft/foundrylocal"])
             .output()
-            .map_err(|e| format!("Failed to run brew tap: {}. Make sure Homebrew is installed.", e))?;
+            .map_err(|e| {
+                format!(
+                    "Failed to run brew tap: {}. Make sure Homebrew is installed.",
+                    e
+                )
+            })?;
 
         if !tap_output.status.success() {
             let stderr = String::from_utf8_lossy(&tap_output.stderr);
@@ -100,9 +111,7 @@ pub async fn download_and_install_foundry() -> Result<(), String> {
 
         // Verify installation
         println!("[FoundryInstaller] Verifying installation...");
-        let verify_status = create_command("foundry")
-            .arg("--version")
-            .output();
+        let verify_status = create_command("foundry").arg("--version").output();
 
         match verify_status {
             Ok(output) if output.status.success() => {
@@ -131,7 +140,10 @@ pub async fn download_foundry_model(model_id: &str, window: Window) -> Result<()
     #[cfg(any(target_os = "windows", target_os = "macos"))]
     {
         // Use Foundry CLI to download the model
-        println!("[FoundryInstaller] Running: foundry model download {}", model_id);
+        println!(
+            "[FoundryInstaller] Running: foundry model download {}",
+            model_id
+        );
 
         let mut child = create_command("foundry")
             .args(&["model", "download", model_id])
@@ -148,17 +160,21 @@ pub async fn download_foundry_model(model_id: &str, window: Window) -> Result<()
                     println!("[FoundryInstaller] {}", line_str);
 
                     // Emit progress event to frontend
-                    let _ = window.emit("model:installation-log", serde_json::json!({
-                        "timestamp": chrono::Utc::now().to_rfc3339(),
-                        "level": "info",
-                        "message": line_str
-                    }));
+                    let _ = window.emit(
+                        "model:installation-log",
+                        serde_json::json!({
+                            "timestamp": chrono::Utc::now().to_rfc3339(),
+                            "level": "info",
+                            "message": line_str
+                        }),
+                    );
                 }
             }
         }
 
         // Wait for the process to complete
-        let status = child.wait()
+        let status = child
+            .wait()
             .map_err(|e| format!("Failed to wait for foundry process: {}", e))?;
 
         if !status.success() {
@@ -171,7 +187,9 @@ pub async fn download_foundry_model(model_id: &str, window: Window) -> Result<()
 
             return Err(format!(
                 "Failed to download model {}. Exit code: {:?}\nStderr: {}",
-                model_id, status.code(), stderr_output
+                model_id,
+                status.code(),
+                stderr_output
             ));
         }
 
@@ -189,8 +207,8 @@ pub async fn download_foundry_model(model_id: &str, window: Window) -> Result<()
 /// These are models that work well with Foundry Local
 pub fn get_recommended_models() -> Vec<&'static str> {
     vec![
-        "qwen2.5-0.5b",        // Qwen 2.5 0.5B - very fast, minimal resources
-        "phi3:mini",           // Microsoft's Phi-3 Mini - fast and efficient
-        "phi3:medium",         // Phi-3 Medium - more capable, more resources
+        "qwen2.5-0.5b", // Qwen 2.5 0.5B - very fast, minimal resources
+        "phi3:mini",    // Microsoft's Phi-3 Mini - fast and efficient
+        "phi3:medium",  // Phi-3 Medium - more capable, more resources
     ]
 }

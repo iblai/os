@@ -4,12 +4,18 @@ on:
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened, labeled, unlabeled]
+  workflow_run:
+    workflows: ['PR E2E Tests (Required)']
+    types: [completed]
 
 permissions:
   statuses: write
+  pull-requests: read
 
 jobs:
+  # ── On pull_request: set initial gate status ──
   pr-gate:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: Set validation status
@@ -53,7 +59,33 @@ jobs:
                 sha,
                 state: 'pending',
                 context: 'PR Validation',
-                description: 'Waiting for SPA PR Validation to complete...',
+                description: 'Waiting for PR E2E Tests to complete...',
               });
-              core.info('run-tests label found — set pending, validation workflow will update');
+              core.info('run-tests label found — set pending, waiting for E2E tests');
             }
+
+  # ── On workflow_run: update gate after E2E tests finish ──
+  update-gate:
+    if: github.event_name == 'workflow_run'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update validation status from E2E result
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const run = context.payload.workflow_run;
+            const sha = run.head_sha;
+            const conclusion = run.conclusion; // success, failure, cancelled, etc.
+
+            const passed = conclusion === 'success';
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha,
+              state: passed ? 'success' : 'failure',
+              context: 'PR Validation',
+              description: passed
+                ? 'PR E2E Tests passed'
+                : `PR E2E Tests ${conclusion}`,
+            });
+            core.info(`E2E tests ${conclusion} — set PR Validation to ${passed ? 'success' : 'failure'}`);

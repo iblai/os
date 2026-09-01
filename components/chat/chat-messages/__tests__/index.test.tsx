@@ -22,7 +22,13 @@ vi.mock('@/components/chat/ai-message-bubble', () => ({
     timestamp,
     onRetry,
     onReply,
+    onSpeak,
     onOpenCanvas,
+    reasoningContent,
+    toolCalls,
+    isReasoning,
+    showReasoning,
+    isCurrentlyStreaming,
   }: {
     content: string;
     mentorName: string;
@@ -30,9 +36,23 @@ vi.mock('@/components/chat/ai-message-bubble', () => ({
     timestamp: string;
     onRetry: (content: string) => void;
     onReply?: () => void;
+    onSpeak?: () => void;
     onOpenCanvas?: () => void;
+    reasoningContent?: string;
+    toolCalls?: unknown[];
+    isReasoning?: boolean;
+    showReasoning?: boolean;
+    isCurrentlyStreaming?: boolean;
   }) => (
-    <div data-testid="ai-message-bubble" data-content={content}>
+    <div
+      data-testid="ai-message-bubble"
+      data-content={content}
+      data-reasoning-content={reasoningContent || ''}
+      data-tool-calls-count={toolCalls?.length ?? 0}
+      data-is-reasoning={isReasoning ?? false}
+      data-show-reasoning={showReasoning ?? false}
+      data-is-currently-streaming={isCurrentlyStreaming ?? false}
+    >
       <span data-testid="mentor-name">{mentorName}</span>
       <span data-testid="timestamp">{timestamp}</span>
       <button data-testid="retry-btn" onClick={() => onRetry('test')}>
@@ -40,6 +60,9 @@ vi.mock('@/components/chat/ai-message-bubble', () => ({
       </button>
       <button data-testid="reply-btn" onClick={onReply}>
         Reply
+      </button>
+      <button data-testid="speak-btn" onClick={onSpeak}>
+        Speak
       </button>
       <button data-testid="open-canvas-btn" onClick={onOpenCanvas}>
         Open Canvas
@@ -81,6 +104,20 @@ vi.mock('@/components/chat/chat-messages/user-message-bubble', () => ({
   ),
 }));
 
+const mockSpeak = vi.fn();
+const mockStop = vi.fn();
+vi.mock('@/hooks/use-speech', () => ({
+  useSpeech: () => ({
+    currentMessageId: null,
+    isSpeaking: false,
+    isLoading: false,
+    isSupported: false,
+    speak: mockSpeak,
+    stop: mockStop,
+    toggle: vi.fn(),
+  }),
+}));
+
 vi.mock('@/components/chat/chat-messages/image-preview-modal', () => ({
   ImagePreviewModal: ({
     url,
@@ -98,10 +135,10 @@ vi.mock('@/components/chat/chat-messages/image-preview-modal', () => ({
   ),
 }));
 
-const createMockStore = () =>
+const createMockStore = (autoplayLastAiMessage = false) =>
   configureStore({
     reducer: {
-      chat: (state = {}) => state,
+      chat: (state = { autoplayLastAiMessage }) => state,
     },
   });
 
@@ -288,6 +325,16 @@ describe('ChatMessages', () => {
 
       // onReply is called with the assistant message
       expect(mockOnReply).toHaveBeenCalledWith(assistantMessage);
+    });
+  });
+
+  describe('onSpeak callback', () => {
+    it('should pass onSpeak as a no-op callback', () => {
+      renderWithRedux(<ChatMessages {...defaultProps} />);
+
+      const speakBtn = screen.getByTestId('speak-btn');
+      // Should not throw when called
+      fireEvent.click(speakBtn);
     });
   });
 
@@ -538,6 +585,183 @@ describe('ChatMessages', () => {
     });
   });
 
+  describe('streaming reasoning and tool calls', () => {
+    it('should pass streaming reasoning content to the active streaming message', () => {
+      renderWithRedux(
+        <ChatMessages
+          {...defaultProps}
+          streamingReasoningContent="Let me think..."
+          currentStreamingMessageId="2"
+        />,
+      );
+
+      const aiBubble = screen.getByTestId('ai-message-bubble');
+      expect(aiBubble).toHaveAttribute(
+        'data-reasoning-content',
+        'Let me think...',
+      );
+    });
+
+    it('should pass persisted reasoning content for non-streaming messages', () => {
+      const msgWithReasoning: Message = {
+        ...assistantMessage,
+        id: '2',
+        reasoningContent: 'Persisted reasoning',
+      };
+
+      renderWithRedux(
+        <ChatMessages
+          {...defaultProps}
+          messages={[userMessage, msgWithReasoning]}
+          streamingReasoningContent="Streaming reasoning"
+          currentStreamingMessageId="other-id"
+        />,
+      );
+
+      const aiBubble = screen.getByTestId('ai-message-bubble');
+      expect(aiBubble).toHaveAttribute(
+        'data-reasoning-content',
+        'Persisted reasoning',
+      );
+    });
+
+    it('should pass streaming tool calls to the active streaming message', () => {
+      const toolCalls = [
+        { id: 'tc1', name: 'web_search_call', log: '', result: '' },
+      ];
+
+      renderWithRedux(
+        <ChatMessages
+          {...defaultProps}
+          streamingToolCalls={toolCalls}
+          currentStreamingMessageId="2"
+        />,
+      );
+
+      const aiBubble = screen.getByTestId('ai-message-bubble');
+      expect(aiBubble).toHaveAttribute('data-tool-calls-count', '1');
+    });
+
+    it('should pass persisted tool calls for non-streaming messages', () => {
+      const msgWithToolCalls: Message = {
+        ...assistantMessage,
+        id: '2',
+        toolCalls: [
+          { id: 'tc1', name: 'vector_search', log: '', result: '' },
+          { id: 'tc2', name: 'web_search_call', log: '', result: '' },
+        ],
+      };
+
+      renderWithRedux(
+        <ChatMessages
+          {...defaultProps}
+          messages={[userMessage, msgWithToolCalls]}
+          streamingToolCalls={[
+            { id: 'tc3', name: 'other', log: '', result: '' },
+          ]}
+          currentStreamingMessageId="other-id"
+        />,
+      );
+
+      const aiBubble = screen.getByTestId('ai-message-bubble');
+      expect(aiBubble).toHaveAttribute('data-tool-calls-count', '2');
+    });
+
+    it('should forward showReasoning to AIMessageBubble', () => {
+      renderWithRedux(
+        <ChatMessages
+          {...defaultProps}
+          showReasoning={true}
+          currentStreamingMessageId="2"
+        />,
+      );
+
+      const aiBubble = screen.getByTestId('ai-message-bubble');
+      expect(aiBubble).toHaveAttribute('data-show-reasoning', 'true');
+    });
+
+    it('should default showReasoning to false when not provided', () => {
+      renderWithRedux(
+        <ChatMessages {...defaultProps} currentStreamingMessageId="2" />,
+      );
+
+      const aiBubble = screen.getByTestId('ai-message-bubble');
+      expect(aiBubble).toHaveAttribute('data-show-reasoning', 'false');
+    });
+
+    it('should pass isReasoning=true to the active streaming message', () => {
+      renderWithRedux(
+        <ChatMessages
+          {...defaultProps}
+          isReasoning={true}
+          currentStreamingMessageId="2"
+        />,
+      );
+
+      const aiBubble = screen.getByTestId('ai-message-bubble');
+      expect(aiBubble).toHaveAttribute('data-is-reasoning', 'true');
+    });
+
+    it('should pass isReasoning=false for non-streaming messages', () => {
+      renderWithRedux(
+        <ChatMessages
+          {...defaultProps}
+          isReasoning={true}
+          currentStreamingMessageId="other-id"
+        />,
+      );
+
+      const aiBubble = screen.getByTestId('ai-message-bubble');
+      expect(aiBubble).toHaveAttribute('data-is-reasoning', 'false');
+    });
+
+    it('should mark the active streaming message as isCurrentlyStreaming', () => {
+      renderWithRedux(
+        <ChatMessages
+          {...defaultProps}
+          isStreaming
+          currentStreamingMessageId="2"
+        />,
+      );
+
+      const aiBubble = screen.getByTestId('ai-message-bubble');
+      expect(aiBubble).toHaveAttribute('data-is-currently-streaming', 'true');
+    });
+
+    it('should not mark the message as currently streaming once the stream ends, even while currentStreamingMessageId still points at it', () => {
+      // currentStreamingMessageId keeps pointing at the last assistant message
+      // after the stream finishes; without gating on isStreaming the tool-call
+      // indicator's bounce dots would never stop and the action toolbar would
+      // stay hidden.
+      renderWithRedux(
+        <ChatMessages
+          {...defaultProps}
+          isStreaming={false}
+          currentStreamingMessageId="2"
+        />,
+      );
+
+      const aiBubble = screen.getByTestId('ai-message-bubble');
+      expect(aiBubble).toHaveAttribute('data-is-currently-streaming', 'false');
+    });
+
+    it('should mark non-streaming messages as not currently streaming', () => {
+      renderWithRedux(
+        <ChatMessages {...defaultProps} currentStreamingMessageId="other-id" />,
+      );
+
+      const aiBubble = screen.getByTestId('ai-message-bubble');
+      expect(aiBubble).toHaveAttribute('data-is-currently-streaming', 'false');
+    });
+
+    it('should not mark any message as streaming when currentStreamingMessageId is undefined', () => {
+      renderWithRedux(<ChatMessages {...defaultProps} />);
+
+      const aiBubble = screen.getByTestId('ai-message-bubble');
+      expect(aiBubble).toHaveAttribute('data-is-currently-streaming', 'false');
+    });
+  });
+
   describe('visible property edge cases', () => {
     it('should only render messages where visible is explicitly true', () => {
       const messages: Message[] = [
@@ -551,6 +775,86 @@ describe('ChatMessages', () => {
       // Only message with visible === true should be rendered
       const userBubbles = screen.getAllByTestId('user-message-bubble');
       expect(userBubbles).toHaveLength(1);
+    });
+  });
+
+  describe('autoplay last AI message', () => {
+    beforeEach(() => {
+      mockSpeak.mockReset();
+      mockStop.mockReset();
+    });
+
+    it('speaks the last AI message when autoplay becomes enabled with new content', () => {
+      const store = createMockStore(true);
+      const { rerender } = render(
+        <Provider store={store}>
+          <ChatMessages {...defaultProps} messages={[userMessage]} />
+        </Provider>,
+      );
+      // No AI message yet → nothing to speak
+      expect(mockSpeak).not.toHaveBeenCalled();
+
+      // A new AI message arrives while autoplay is on → speak it
+      rerender(
+        <Provider store={store}>
+          <ChatMessages
+            {...defaultProps}
+            messages={[userMessage, assistantMessage]}
+          />
+        </Provider>,
+      );
+      expect(mockSpeak).toHaveBeenCalledWith(assistantMessage);
+    });
+
+    it('does not speak while streaming is in progress', () => {
+      const store = createMockStore(true);
+      render(
+        <Provider store={store}>
+          <ChatMessages {...defaultProps} isStreaming />
+        </Provider>,
+      );
+      expect(mockSpeak).not.toHaveBeenCalled();
+    });
+
+    it('does not re-speak the same AI message on rerender', () => {
+      const store = createMockStore(true);
+      const { rerender } = render(
+        <Provider store={store}>
+          <ChatMessages {...defaultProps} />
+        </Provider>,
+      );
+      mockSpeak.mockClear();
+      rerender(
+        <Provider store={store}>
+          <ChatMessages {...defaultProps} />
+        </Provider>,
+      );
+      expect(mockSpeak).not.toHaveBeenCalled();
+    });
+
+    it('stops playback when autoplay is turned off', async () => {
+      const enabledStore = createMockStore(true);
+      const { rerender } = render(
+        <Provider store={enabledStore}>
+          <ChatMessages {...defaultProps} />
+        </Provider>,
+      );
+      const disabledStore = createMockStore(false);
+      rerender(
+        <Provider store={disabledStore}>
+          <ChatMessages {...defaultProps} />
+        </Provider>,
+      );
+      await waitFor(() => expect(mockStop).toHaveBeenCalled());
+    });
+
+    it('does not autoplay when the feature is disabled', () => {
+      render(
+        <Provider store={createMockStore(false)}>
+          <ChatMessages {...defaultProps} />
+        </Provider>,
+      );
+      expect(mockSpeak).not.toHaveBeenCalled();
     });
   });
 });

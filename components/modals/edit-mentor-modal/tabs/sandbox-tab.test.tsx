@@ -11,6 +11,7 @@ import { SandboxTab } from './sandbox-tab';
 const mockUseParams = vi.fn();
 const mockGetMentorId = vi.fn();
 const mockSandboxConfig = vi.fn();
+const mockUsername = vi.fn();
 
 vi.mock('next/navigation', () => ({
   useParams: () => mockUseParams(),
@@ -22,9 +23,14 @@ vi.mock('@/hooks/user-navigate', () => ({
   }),
 }));
 
-// SandboxTab imports from `@iblai/iblai-js/web-containers` (the unified
-// SDK barrel that re-exports `@iblai/web-containers`). Vitest keys mocks
-// by module specifier, so we must mock the exact path the source uses.
+vi.mock('@/hooks/use-user', () => ({
+  useUsername: () => mockUsername(),
+}));
+
+// SandboxTab renders the SDK's SandboxConfig directly — the SDK component owns
+// the sandbox-kind switches (computational runtime / virtual machine / claw)
+// and the claw connection flow, including persisting the flags. Vitest keys
+// mocks by module specifier, so we must mock the exact path the source uses.
 vi.mock('@iblai/iblai-js/web-containers', () => ({
   SandboxConfig: (props: any) => {
     mockSandboxConfig(props);
@@ -33,6 +39,7 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
         data-testid="sandbox-config"
         data-platform-key={props.platformKey}
         data-mentor-unique-id={props.mentorUniqueId}
+        data-username={props.username ?? ''}
       >
         SandboxConfig
       </div>
@@ -54,6 +61,7 @@ describe('SandboxTab', () => {
       mentorId: 'test-mentor',
     });
     mockGetMentorId.mockReturnValue(null);
+    mockUsername.mockReturnValue('testuser');
   });
 
   afterEach(() => {
@@ -72,7 +80,7 @@ describe('SandboxTab', () => {
       ).toBeInTheDocument();
     });
 
-    it('renders SandboxConfig with platformKey and mentorUniqueId from url params', () => {
+    it('renders SandboxConfig with platformKey, mentorUniqueId and username', () => {
       render(<SandboxTab />);
 
       const sandboxConfig = screen.getByTestId('sandbox-config');
@@ -84,7 +92,32 @@ describe('SandboxTab', () => {
       expect(mockSandboxConfig).toHaveBeenCalledWith({
         platformKey: 'test-tenant',
         mentorUniqueId: 'test-mentor',
+        username: 'testuser',
       });
+    });
+
+    it('renders SandboxConfig ungated — the kind selector must be reachable even when claw is off', () => {
+      render(<SandboxTab />);
+
+      // No CapabilityGate wrapper: the SDK component itself decides what is
+      // enabled based on the mentor's sandbox flags.
+      expect(
+        screen.queryByTestId('capability-gate-content'),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('sandbox-capability-toggle'),
+      ).not.toBeInTheDocument();
+      expect(screen.getByTestId('sandbox-config')).toBeInTheDocument();
+    });
+
+    it('passes a null username through to SandboxConfig when none is available', () => {
+      mockUsername.mockReturnValue(null);
+
+      render(<SandboxTab />);
+
+      expect(mockSandboxConfig).toHaveBeenCalledWith(
+        expect.objectContaining({ username: null }),
+      );
     });
   });
 
@@ -94,10 +127,12 @@ describe('SandboxTab', () => {
 
       render(<SandboxTab />);
 
-      expect(mockSandboxConfig).toHaveBeenCalledWith({
-        platformKey: 'test-tenant',
-        mentorUniqueId: 'nav-mentor-xyz',
-      });
+      expect(mockSandboxConfig).toHaveBeenCalledWith(
+        expect.objectContaining({
+          platformKey: 'test-tenant',
+          mentorUniqueId: 'nav-mentor-xyz',
+        }),
+      );
     });
 
     it('falls back to params.mentorId when getMentorId() returns null', () => {
@@ -105,10 +140,9 @@ describe('SandboxTab', () => {
 
       render(<SandboxTab />);
 
-      expect(mockSandboxConfig).toHaveBeenCalledWith({
-        platformKey: 'test-tenant',
-        mentorUniqueId: 'test-mentor',
-      });
+      expect(mockSandboxConfig).toHaveBeenCalledWith(
+        expect.objectContaining({ mentorUniqueId: 'test-mentor' }),
+      );
     });
 
     it('falls back to params.mentorId when getMentorId() returns undefined', () => {
@@ -116,10 +150,9 @@ describe('SandboxTab', () => {
 
       render(<SandboxTab />);
 
-      expect(mockSandboxConfig).toHaveBeenCalledWith({
-        platformKey: 'test-tenant',
-        mentorUniqueId: 'test-mentor',
-      });
+      expect(mockSandboxConfig).toHaveBeenCalledWith(
+        expect.objectContaining({ mentorUniqueId: 'test-mentor' }),
+      );
     });
   });
 
@@ -159,10 +192,9 @@ describe('SandboxTab', () => {
       render(<SandboxTab />);
 
       expect(screen.getByText('Sandbox')).toBeInTheDocument();
-      expect(mockSandboxConfig).toHaveBeenCalledWith({
-        platformKey: 'test-tenant',
-        mentorUniqueId: 'nav-mentor-xyz',
-      });
+      expect(mockSandboxConfig).toHaveBeenCalledWith(
+        expect.objectContaining({ mentorUniqueId: 'nav-mentor-xyz' }),
+      );
     });
   });
 });

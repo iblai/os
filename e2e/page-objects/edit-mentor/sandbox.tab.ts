@@ -1,19 +1,58 @@
 import { Page, Locator, expect } from '@playwright/test';
+import {
+  verifySandboxKindsVisible,
+  isSandboxKindEnabled,
+  verifyClawSectionVisible,
+  verifyClawSectionHidden,
+  type SandboxKind,
+} from '@iblai/iblai-js/playwright';
+
+export type { SandboxKind };
 
 /**
  * Page object for the Sandbox tab inside the Edit Mentor dialog.
  *
- * Renders the SandboxConfig component from @iblai/web-containers. The
- * component has two distinct states keyed off `mentorConfig`:
+ * Renders the SandboxConfig component from @iblai/iblai-js/web-containers
+ * directly — there is no app-level capability gate around it any more. The
+ * component always renders a "Sandbox Type" card with three kind switches
+ * (`sandbox-kind-computational-runtime`, `sandbox-kind-virtual-machine`,
+ * `sandbox-kind-claw`). The three kinds are MUTUALLY EXCLUSIVE and AT LEAST
+ * ONE IS ALWAYS ACTIVE — "Only one sandbox type can be enabled at a time"
+ * per the card's own subheading: kinds change ONLY by selecting a different
+ * kind, which atomically deactivates whichever kind was previously active in
+ * the same PATCH. There is no "disable" operation — toggling the
+ * currently-active kind's own switch off (leaving none active) is not a
+ * supported flow, so specs should never assert an all-off state; use
+ * `selectKind()`, never a boolean on/off toggle, to change which kind is
+ * active. (An older SDK build briefly supported an all-off state — that
+ * contract is gone; don't trust stray "leaves none enabled" wording in
+ * vendored docstrings over this.) Nothing gets a persistent `disabled`
+ * state — each switch is only briefly disabled while its own save is in
+ * flight (`isSavingSandboxKind`), never because of which kind is active.
+ * The claw connected/not-connected sections (instance picker / "Connected
+ * Instance" panel) render ONLY while the Claw kind is enabled — they are
+ * not merely grayed out when Claw is off, they are absent from the DOM
+ * entirely.
  *
- *  - NOT CONNECTED: instance picker (search input + Add Instance + table).
- *  - CONNECTED: "Connected Instance" panel + Disconnect + config switches.
+ *  - NOT CONNECTED (claw on, no wired instance): instance picker (search
+ *    input + Add Instance + table).
+ *  - CONNECTED (claw on, wired instance): "Connected Instance" panel +
+ *    Disconnect + config switches.
  *
- * The component fires sonner toasts as the externally observable success
- * signal for every mutation. We key off those rather than DOM transitions
- * where possible — they're the contract between the SDK and consumers.
+ * The kind switches wrap the SDK's own Playwright helpers
+ * (`@iblai/iblai-js/playwright` → `claw-sandbox-helpers`) rather than
+ * hand-rolled locators, since the SDK owns that DOM and ships helpers for it.
+ * Specs should go through this page object rather than importing those SDK
+ * helpers directly, consistent with how the rest of this class wraps SDK
+ * behavior for the connected/not-connected sections below.
  *
- * Toasts (from @iblai/web-containers/dist):
+ * The component otherwise fires sonner toasts as the externally observable
+ * success signal for every mutation. We key off those rather than DOM
+ * transitions where possible — they're the contract between the SDK and
+ * consumers.
+ *
+ * Toasts (from @iblai/iblai-js/web-containers/dist):
+ *   "Sandbox type updated"  — sandbox-kind switch toggle success
  *   "Instance created"      — handleCreateInstance success
  *   "Instance updated"      — EditInstanceDialog save success
  *   "Instance connected"    — handleConnect success
@@ -21,8 +60,11 @@ import { Page, Locator, expect } from '@playwright/test';
  *   "Instance deleted"      — handleDeleteInstance success
  *   "Configuration updated" — auto_push toggle success
  *
- * All locators are scoped to the parent `dialog` Locator so they cannot
- * accidentally match elements outside the Edit Mentor modal.
+ * Most locators are scoped to the parent `dialog` Locator so they cannot
+ * accidentally match elements outside the Edit Mentor modal. The sandbox-kind
+ * switches are the exception — the underlying SDK helpers resolve them via
+ * `page.getByTestId`, unscoped, since only one Edit Mentor dialog is ever
+ * open at a time in these tests.
  *
  * Web-first assertions: methods rely on Playwright's auto-retry and the
  * suite-level expect timeout — no hand-tuned `{ timeout }` values inside
@@ -32,6 +74,14 @@ import { Page, Locator, expect } from '@playwright/test';
 export class SandboxTab {
   readonly page: Page;
   readonly dialog: Locator;
+
+  // ── Sandbox kind selector ────────────────────────────────────────────────
+  // Always rendered (no gate). Mutually exclusive AND at least one kind is
+  // always active: selecting one kind turns off whichever kind was
+  // previously active. There is no "disable" operation.
+  readonly computationalRuntimeSwitch: Locator;
+  readonly virtualMachineSwitch: Locator;
+  readonly clawSwitch: Locator;
 
   // ── Not-connected state ──────────────────────────────────────────────────
   readonly searchInput: Locator;
@@ -65,6 +115,16 @@ export class SandboxTab {
   constructor(page: Page, dialog: Locator) {
     this.page = page;
     this.dialog = dialog;
+
+    // Sandbox kind selector — unscoped page-level testids (matching the SDK
+    // helpers), only one Edit Mentor dialog is ever open at a time.
+    this.computationalRuntimeSwitch = page.getByTestId(
+      'sandbox-kind-computational-runtime',
+    );
+    this.virtualMachineSwitch = page.getByTestId(
+      'sandbox-kind-virtual-machine',
+    );
+    this.clawSwitch = page.getByTestId('sandbox-kind-claw');
 
     // Not-connected state
     this.searchInput = dialog.getByPlaceholder('Search instances...');
@@ -139,6 +199,166 @@ export class SandboxTab {
     this.pushButton = dialog.getByRole('button', { name: /^push$/i });
   }
 
+  // ── Sandbox kind selector ────────────────────────────────────────────────
+  // Thin wrappers around the SDK's own `claw-sandbox-helpers` Playwright
+  // helpers — the SDK owns this DOM (SandboxConfig from
+  // @iblai/iblai-js/web-containers), so its helpers are the source of truth
+  // for how to interact with it. Specs call through this page object rather
+  // than importing the SDK helpers directly.
+
+  /** Display label used in the SDK's info-tooltip aria-labels, per kind. */
+  private kindLabel(kind: SandboxKind): string {
+    switch (kind) {
+      case 'computational-runtime':
+        return 'Computing Runtime';
+      case 'virtual-machine':
+        return 'Virtual Machine Shell';
+      case 'claw':
+        return 'Claw';
+    }
+  }
+
+  /** Locator for a kind row's switch, by kind. */
+  kindSwitch(kind: SandboxKind): Locator {
+    switch (kind) {
+      case 'computational-runtime':
+        return this.computationalRuntimeSwitch;
+      case 'virtual-machine':
+        return this.virtualMachineSwitch;
+      case 'claw':
+        return this.clawSwitch;
+    }
+  }
+
+  /**
+   * The row's info-icon tooltip trigger (accessible name "More info about
+   * {kind}"). Hovering it reveals the kind's detail-tooltip copy (what the
+   * kind does) — there is no "disabled by claw" style note any more, since
+   * no kind ever gets a persistent disabled state.
+   */
+  kindInfoTrigger(kind: SandboxKind): Locator {
+    return this.page.getByRole('button', {
+      name: `More info about ${this.kindLabel(kind)}`,
+    });
+  }
+
+  /** Verify all three sandbox-kind switches are visible. */
+  async verifyKindsVisible(): Promise<void> {
+    await verifySandboxKindsVisible(this.page);
+  }
+
+  /** Whether a sandbox-kind switch is currently on. */
+  async isKindEnabled(kind: SandboxKind): Promise<boolean> {
+    return isSandboxKindEnabled(this.page, kind);
+  }
+
+  /**
+   * Toggles a sandbox-kind switch. Only meaningful when `kind` is currently
+   * OFF: selecting it atomically activates it and deactivates whichever kind
+   * was previously active (mutual exclusivity). At least one kind is ALWAYS
+   * active — there is no supported way to turn the currently-active kind
+   * off without selecting a different one, so callers should never invoke
+   * this on the kind that's already active (that's an unsupported "disable"
+   * flow, not a toggle-to-off). Prefer `selectKind()`, which enforces this.
+   *
+   * Implemented locally rather than via the SDK's `toggleSandboxKind`: that
+   * helper waits for the switch's aria-checked flip FIRST and only then for
+   * the "Sandbox type updated" toast — but sonner toasts auto-dismiss after
+   * ~4s, so whenever the state assertion retries for longer than that the
+   * toast is already gone and the helper fails on an interaction that
+   * actually succeeded. Deterministic completion signals used instead: the
+   * mentor-settings PATCH response resolving OK, then the switch holding the
+   * target aria-checked state (a rejected PATCH rolls the optimistic flip
+   * back, so the state assertion would catch a real failure).
+   */
+  async toggleKind(kind: SandboxKind): Promise<void> {
+    const kindSwitch = this.kindSwitch(kind);
+    await expect(kindSwitch).toBeVisible({ timeout: 10_000 });
+    await expect(kindSwitch).toBeEnabled({ timeout: 10_000 });
+    const target = (await kindSwitch.getAttribute('aria-checked')) !== 'true';
+
+    // Register the response wait BEFORE clicking so the save can't win the
+    // race. The mentor-settings update is a PUT to .../mentors/{id}/settings/
+    // (aiMentorOrgsUsersMentorsSettingsUpdate); accept PATCH too in case the
+    // API client ever switches to a partial update.
+    const saveDone = this.page.waitForResponse(
+      (resp) => {
+        const method = resp.request().method();
+        return (
+          (method === 'PUT' || method === 'PATCH') &&
+          resp.url().includes('/api/ai-mentor/') &&
+          resp.url().includes('/settings/')
+        );
+      },
+      { timeout: 20_000 },
+    );
+    await kindSwitch.click();
+    const response = await saveDone;
+    if (!response.ok()) {
+      throw new Error(
+        `Sandbox-kind save failed with ${response.status()} for ${kind}`,
+      );
+    }
+    await expect(kindSwitch).toHaveAttribute('aria-checked', String(target), {
+      timeout: 10_000,
+    });
+  }
+
+  /**
+   * Idempotently makes `kind` the active sandbox kind. No-ops if `kind` is
+   * already active. At least one kind is always active on a mentor — kinds
+   * change ONLY by selecting a different one (mutual exclusivity turns the
+   * previously-active kind off atomically, in the same request); there is
+   * no "disable" operation, so this can never leave all three off. This is
+   * the primary API specs should use to change sandbox kind — prefer it
+   * over calling `toggleKind` directly.
+   */
+  async selectKind(kind: SandboxKind): Promise<void> {
+    const isOn = await this.isKindEnabled(kind);
+    if (isOn) return;
+    await this.toggleKind(kind);
+  }
+
+  /**
+   * Returns whichever sandbox kind is currently active. At least one kind
+   * is always active, so this never legitimately returns nothing — callers
+   * that need to restore a mentor's original kind after a test-local
+   * `selectKind()` should record this beforehand, then `selectKind()` back
+   * to it afterwards, rather than assuming a fresh mentor starts with any
+   * particular kind (or with none at all).
+   */
+  async getActiveKind(): Promise<SandboxKind> {
+    const kinds: SandboxKind[] = [
+      'computational-runtime',
+      'virtual-machine',
+      'claw',
+    ];
+    for (const kind of kinds) {
+      if (await this.isKindEnabled(kind)) return kind;
+    }
+    // Defensive fallback — unreachable given the "always one active"
+    // invariant, but avoids a hard crash if that invariant is ever
+    // violated in a given env.
+    return 'computational-runtime';
+  }
+
+  /**
+   * Verify the Claw instance section (not-connected instance table or the
+   * connected-instance card) renders below the kind selector. Only true
+   * while the Claw kind is enabled.
+   */
+  async verifyClawInstanceSectionVisible(): Promise<void> {
+    await verifyClawSectionVisible(this.page);
+  }
+
+  /**
+   * Verify the Claw instance section is absent — the state while Claw is
+   * not the selected kind.
+   */
+  async verifyClawInstanceSectionHidden(): Promise<void> {
+    await verifyClawSectionHidden(this.page);
+  }
+
   // ── State detection ──────────────────────────────────────────────────────
 
   /**
@@ -187,16 +407,27 @@ export class SandboxTab {
   }
 
   /**
-   * Opens the per-row dropdown menu. The SandboxConfig dropdown trigger
-   * uses `aria-label="Actions"` (or "Connecting instance" while a connect
-   * mutation is in flight) — match the leading "Action" prefix.
+   * Opens the per-row three-dot "Actions" dropdown menu (Run checks / Edit /
+   * Delete). Connect is no longer a menu item — it's a dedicated button next
+   * to this trigger (see `getConnectButton` / `clickConnect`).
    */
   async openRowMenu(row: Locator): Promise<void> {
     await row.getByRole('button', { name: /actions/i }).click();
   }
 
   /**
-   * Clicks the Connect item in the open row dropdown and waits for the
+   * Locator for the row's dedicated Connect button
+   * (`data-testid="connect-instance-<id>"`). Resolved by testid PREFIX
+   * (rather than role+name) so it also matches while the button reads
+   * "Connecting…" mid-mutation. Disabled (not clickable) when the instance
+   * is unhealthy — see `findConnectableOpenClawInstance`.
+   */
+  getConnectButton(row: Locator): Locator {
+    return row.locator('[data-testid^="connect-instance-"]');
+  }
+
+  /**
+   * Clicks the row's dedicated Connect button and waits for the
    * connected-state UI to render. We deliberately do NOT wait for the
    * "Instance connected" sonner toast: it auto-dismisses after ~4s and is
    * racy in slower CI runners (it can disappear before Playwright's first
@@ -205,8 +436,7 @@ export class SandboxTab {
    * resolved and RTK cache invalidated.
    */
   async clickConnect(row: Locator): Promise<void> {
-    await this.openRowMenu(row);
-    await this.page.getByRole('menuitem', { name: /^connect$/i }).click();
+    await this.getConnectButton(row).click();
     await expect(this.connectedHeading.first()).toBeVisible({
       timeout: 15_000,
     });
@@ -384,11 +614,11 @@ export class SandboxTab {
 
   /**
    * Walks the instance table and returns the name of the first OpenClaw
-   * instance whose STATUS is *not* "Error" — the SandboxConfig Connect
-   * menu item is dimmed (`opacity-50 cursor-not-allowed`) and its
-   * `onSelect` short-circuits via `e.preventDefault()` when
-   * `isInstanceUnhealthy(status)` is true.
+   * instance whose STATUS is *not* "Error" — the dedicated Connect button
+   * (`data-testid="connect-instance-<id>"`) is `disabled` and wrapped in a
+   * tooltip explaining why when `isInstanceUnhealthy(status)` is true.
    *
+
    * `isInstanceUnhealthy(s)` returns true only when status is set AND not
    * one of HEALTHY_STATUS_VALUES (`active|running|connected|ok|ready`).
    * Null/empty status is treated as connectable; StatusDot renders that as

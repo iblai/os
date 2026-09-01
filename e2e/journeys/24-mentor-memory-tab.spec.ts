@@ -94,20 +94,22 @@ test.describe('Journey 24: Mentor Memory Tab', () => {
     await editMentorPage.close();
   });
 
-  test('admin goes to settings tab and enables then disables the Memory toggle', async ({
+  test('admin goes to Memory tab and enables then disables the capability toggle', async ({
     createMentorPage,
     editMentorPage,
     page,
   }) => {
     await createMentorPage.openAndCreate();
-    await editMentorPage.open('Settings');
+    // The "Remember past conversations" master toggle moved from Settings →
+    // Capabilities to an in-tab `CapabilityGate` at the top of the Memory
+    // tab itself (feat/2040). It now auto-saves on click (optimistic local
+    // state via `useEditMentorMutation`) — no footer Save button involved.
+    await editMentorPage.open('Memory');
     await waitForPageReady(page);
-    // The Memory toggle moved from the Memory tab to the Settings tab (fix/1584).
-    // It is now a form-driven field — changes persist only on Save.
-    const wasEnabled = await editMentorPage.settings.isMemoryEnabled();
+    const wasEnabled = await editMentorPage.memory.isCapabilityEnabled();
     // Toggle to the opposite state, then toggle back to restore.
-    await editMentorPage.settings.setMemoryEnabled(!wasEnabled);
-    await editMentorPage.settings.setMemoryEnabled(wasEnabled);
+    await editMentorPage.memory.setCapabilityEnabled(!wasEnabled);
+    await editMentorPage.memory.setCapabilityEnabled(wasEnabled);
     await editMentorPage.close();
   });
 
@@ -148,6 +150,16 @@ test.describe('Journey 24: Mentor Memory Tab', () => {
     const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const initialContent = `E2E memory ${suffix}`;
     const updatedContent = `E2E memory updated ${suffix}`;
+
+    // Seed a category before the CRUD flow: selectConcreteMemoryCategory waits
+    // for a non-"All" option, but on a fresh mentor with zero admin categories
+    // the SelectContent renders 0 SelectItems and the locator times out. Seed
+    // an E2E category so the dropdown has at least one concrete entry. We
+    // best-effort clean it up at the end so the suite stays idempotent.
+    const seededCategory = `E2E Seed ${suffix}`;
+    await editMentorPage.memory.openManageCategories();
+    await editMentorPage.memory.createCategory(seededCategory);
+    await editMentorPage.memory.closeManageCategories();
 
     const memoryList = dialog.getByRole('list', { name: 'Saved memories' });
     const allTab = dialog
@@ -279,6 +291,20 @@ test.describe('Journey 24: Mentor Memory Tab', () => {
       memoryList.getByRole('listitem').filter({ hasText: updatedContent }),
     ).toHaveCount(0, { timeout: 30_000 });
 
+    // Best-effort cleanup of the seeded category so leftover E2E rows don't
+    // accumulate. Failures here are swallowed — the CRUD flow already passed.
+    try {
+      await editMentorPage.memory.openManageCategories();
+      if (await editMentorPage.memory.hasCategory(seededCategory)) {
+        await editMentorPage.memory
+          .deleteCategory(seededCategory)
+          .catch(() => undefined);
+      }
+      await editMentorPage.memory.closeManageCategories();
+    } catch {
+      // Ignore cleanup errors.
+    }
+
     await editMentorPage.close();
   });
 
@@ -332,6 +358,15 @@ test.describe('Journey 24: Memory in Prompt Box', () => {
     createMentorPage,
     editMentorPage,
   }) => {
+    // Every Edit Agent open blocks on the modal's hydration spinner
+    // (settings + RBAC prefetch churn — ~30-90s per open, see
+    // EditMentorPage.waitForHydrated), and this test opens the modal up to
+    // THREE times (enable memory, disable memory, restore) plus creates a
+    // fresh mentor first. The default 120s budget expired mid-hydration on
+    // the second open (observed on staging). Mirrors journey 50's
+    // cp-agent-02 and journey 60's sub-resource budget.
+    test.setTimeout(420_000);
+
     await navigateToMentorApp(page);
     const isAdmin = await checkAdminStatus(page);
     if (!isAdmin) {
@@ -341,14 +376,15 @@ test.describe('Journey 24: Memory in Prompt Box', () => {
     // Own mentor per test — see Journey 24 describe block above for rationale.
     await createMentorPage.openAndCreate();
 
-    // The Memory toggle is now in the Settings tab (fix/1584).
+    // The "Remember past conversations" master toggle now lives in-tab on
+    // the Memory tab itself (feat/2040 — moved off Settings → Capabilities).
     // First ensure memory is enabled on the mentor.
-    await editMentorPage.open('Settings');
+    await editMentorPage.open('Memory');
     await waitForPageReady(page);
 
-    const wasEnabled = await editMentorPage.settings.isMemoryEnabled();
+    const wasEnabled = await editMentorPage.memory.isCapabilityEnabled();
     if (!wasEnabled) {
-      await editMentorPage.settings.setMemoryEnabled(true);
+      await editMentorPage.memory.setCapabilityEnabled(true);
     }
     await editMentorPage.close();
     await page.waitForTimeout(2_000);
@@ -372,9 +408,9 @@ test.describe('Journey 24: Memory in Prompt Box', () => {
     }
 
     // Now disable memory on the mentor and verify button disappears.
-    await editMentorPage.open('Settings');
+    await editMentorPage.open('Memory');
     await waitForPageReady(page);
-    await editMentorPage.settings.setMemoryEnabled(false);
+    await editMentorPage.memory.setCapabilityEnabled(false);
     await editMentorPage.close();
     await page.waitForTimeout(2_000);
 
@@ -383,9 +419,9 @@ test.describe('Journey 24: Memory in Prompt Box', () => {
 
     // Restore original state
     if (wasEnabled) {
-      await editMentorPage.open('Settings');
+      await editMentorPage.open('Memory');
       await waitForPageReady(page);
-      await editMentorPage.settings.setMemoryEnabled(true);
+      await editMentorPage.memory.setCapabilityEnabled(true);
       await editMentorPage.close();
     }
   });

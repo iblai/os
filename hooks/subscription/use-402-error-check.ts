@@ -3,19 +3,20 @@ import { toast } from 'sonner';
 import {
   setPricingModalData,
   setOpenPricingModal,
-  setOpenAppleRestrictionModal,
 } from '@/features/subscription/subscription-slice';
 import {
   Error402MessageData,
   SUBSCRIPTION_MESSAGES,
   SUBSCRIPTION_V2_TRIGGERS,
+  setOpenAppleRestrictionModal,
+  useOS,
 } from '@iblai/iblai-js/web-utils';
 import { setTopBannerOptions } from '@/features/top-banner/top-banner-slice';
 import { getUserEmail } from '@/features/utils';
 import { useCallback } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useIsAdmin } from '../use-user';
-import { useOS } from '../use-os';
+import { useInAppPurchase } from '../use-in-app-purchase';
 
 export const use402ErrorCheck = () => {
   const dispatch = useAppDispatch();
@@ -24,7 +25,7 @@ export const use402ErrorCheck = () => {
   const pathname = usePathname();
   const isAdmin = useIsAdmin();
   const { isAppleDevice } = useOS();
-
+  const { isInAppPurchaseAllowed } = useInAppPurchase();
   const handle402Error = useCallback(
     async (messageData: Error402MessageData) => {
       toast.error(
@@ -37,8 +38,8 @@ export const use402ErrorCheck = () => {
         },
       );
 
-      // Show Apple restriction modal for iOS/macOS users
-      if (isAppleDevice) {
+      // Show Apple restriction modal for iOS/macOS users if in-app purchase is not allowed
+      if (isAppleDevice && !(await isInAppPurchaseAllowed())) {
         dispatch(setOpenAppleRestrictionModal(true));
         return;
       }

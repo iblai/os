@@ -1,0 +1,15 @@
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* The agent fills the entire side panel — no fixed width or overlay. The
+   component sizes its own (shadow-DOM) iframe to 100%, so this is all we need. */
+agent-ai {
+  display: block;
+  width: 100%;
+  height: 100vh;
+}
