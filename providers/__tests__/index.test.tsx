@@ -1301,6 +1301,116 @@ describe('Providers', () => {
         expect(matchingCall?.[1]).toBe(fetchErr);
         consoleSpy.mockRestore();
       });
+
+      // ── Sentry 5167f3e9b6e94692bfa60bf058292a34 ────────────────────────
+      // "Cannot read properties of undefined (reading 'custom_css')".
+      //
+      // The call passes `preferCacheValue: true`, which makes RTK Query
+      // resolve from the cache entry rather than the request. `unwrap()`
+      // only rejects when that entry `isError`; a pending or never-populated
+      // entry resolves `undefined` instead. The old code then read
+      // `response.custom_css` unguarded and threw inside the try block.
+      describe('undefined unwrap result (Sentry 5167f3e9)', () => {
+        it('does not throw when the cache-preferring call resolves undefined', async () => {
+          mockIsInIframe.mockReturnValue(true);
+          mockUnwrap.mockResolvedValueOnce(undefined).mockResolvedValueOnce({
+            allow_anonymous: true,
+            custom_css: 'body { color: red; }',
+            mentor_visibility: 'viewable_by_anyone',
+          });
+          const consoleSpy = vi
+            .spyOn(console, 'error')
+            .mockImplementation(() => {});
+          renderProviders();
+          const fn = getMiddlewareFn('platform');
+
+          let result: unknown;
+          await act(async () => {
+            result = await fn!();
+          });
+
+          expect(result).toBe(false);
+          // Pre-fix this logged the TypeError via the catch block.
+          const threw = consoleSpy.mock.calls.some(
+            (call) =>
+              typeof call[0] === 'string' &&
+              call[0].includes('getMentorPublicSettings failed'),
+          );
+          expect(threw).toBe(false);
+          consoleSpy.mockRestore();
+        });
+
+        it('forces a refetch with the same args when the cached read is empty', async () => {
+          mockUnwrap.mockResolvedValueOnce(undefined).mockResolvedValueOnce({
+            allow_anonymous: true,
+            custom_css: '',
+            mentor_visibility: 'viewable_by_anyone',
+          });
+          renderProviders();
+          const fn = getMiddlewareFn('platform');
+          await act(async () => {
+            await fn!();
+          });
+
+          expect(mockGetMentorPublicSettings).toHaveBeenCalledTimes(2);
+          // The mock is declared with no params, so its `calls` tuples are
+          // typed empty; widen to the real (args, preferCacheValue) shape.
+          const calls = mockGetMentorPublicSettings.mock.calls as unknown as [
+            unknown,
+            boolean,
+          ][];
+          const [firstArgs, firstPreferCache] = calls[0];
+          const [secondArgs, secondPreferCache] = calls[1];
+          expect(firstPreferCache).toBe(true);
+          expect(secondPreferCache).toBe(false);
+          expect(secondArgs).toEqual(firstArgs);
+        });
+
+        it('uses the refetched settings for visibility when the cached read is empty', async () => {
+          mockUnwrap.mockResolvedValueOnce(undefined).mockResolvedValueOnce({
+            allow_anonymous: false,
+            custom_css: '',
+            mentor_visibility: 'private',
+          });
+          renderProviders();
+          const fn = getMiddlewareFn('platform');
+          let result: unknown;
+          await act(async () => {
+            result = await fn!();
+          });
+          // Not anonymous-accessible -> middleware requires auth.
+          expect(result).toBe(true);
+        });
+
+        it('fails open and warns when both reads resolve undefined', async () => {
+          mockIsInIframe.mockReturnValue(true);
+          mockUnwrap
+            .mockResolvedValueOnce(undefined)
+            .mockResolvedValueOnce(undefined);
+          const warnSpy = vi
+            .spyOn(console, 'warn')
+            .mockImplementation(() => {});
+          renderProviders();
+          const fn = getMiddlewareFn('platform');
+
+          let result: unknown;
+          await act(async () => {
+            result = await fn!();
+          });
+
+          // Fail open: a transient network failure must never lock a viewer
+          // out of a mentor that allows anonymous access.
+          expect(result).toBe(false);
+          expect(
+            warnSpy.mock.calls.some(
+              (call) =>
+                typeof call[0] === 'string' &&
+                call[0].includes('resolved with no data'),
+            ),
+          ).toBe(true);
+          warnSpy.mockRestore();
+        });
+      });
     });
   });
 
