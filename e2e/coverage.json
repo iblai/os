@@ -2,8 +2,8 @@
   "version": 2,
   "lastUpdated": "2026-08-31",
   "summary": {
-    "totalCheckpoints": 693,
-    "coveredCheckpoints": 654,
+    "totalCheckpoints": 695,
+    "coveredCheckpoints": 656,
     "deprecatedCheckpoints": 16,
     "notReproducibleCheckpoints": 15,
     "pendingCheckpoints": 8,
@@ -301,9 +301,10 @@
         "components/modals/settings-modal.tsx",
         "hooks/use-mentors.ts",
         "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
-        "components/modals/edit-mentor-modal/tabs/llm-tab.tsx",
-        "components/modals/llm-provider-modal.tsx",
-        "lib/utils.ts"
+        "components/modals/edit-mentor-modal/llm-tab.tsx",
+        "hooks/use-llm-display-name.ts",
+        "lib/utils.ts",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx"
       ],
       "checkpoints": [
         {
@@ -394,6 +395,11 @@
         {
           "id": "mgmt-18",
           "description": "Issue #2318: LLM Selection model picker rows render a non-blank human-readable label (display_name || llm_name) and searching a substring of that label finds the row",
+          "status": "covered"
+        },
+        {
+          "id": "mgmt-19",
+          "description": "getLLMModelDisplayName navbar rewrite: after selecting the ibl.ai provider/model (wire key \"iblai-pro\") on the LLM tab, the navbar badge renders the display name \"ibl.ai\" exactly — not the raw wire key; skips gracefully if the tenant's LLM list omits ibl.ai",
           "status": "covered"
         }
       ]
@@ -1739,7 +1745,8 @@
         "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
         "components/ui/hover-card.tsx",
         "components/header.tsx",
-        "components/header/profile-button.tsx"
+        "components/header/profile-button.tsx",
+        "components/modals/llm-provider-selection-modal.tsx"
       ],
       "checkpoints": [
         {
@@ -1800,6 +1807,11 @@
         {
           "id": "ov-12",
           "description": "Admin: nav does not overflow on mobile when credit balance is hidden; LLM name span stays ≤150px",
+          "status": "covered"
+        },
+        {
+          "id": "ov-13",
+          "description": "Admin opens the navbar LLM selector modal (navbarPage.openLlmProviderModal, dialog name \"LLM Providers\") and the \"LLM Configuration\" heading/description are absent — proves the OS wrapper's showConfigurationHeader={false} prop reaches the SDK AgentLLMTab component",
           "status": "covered"
         }
       ]
