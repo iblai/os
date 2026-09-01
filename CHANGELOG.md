@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.136.0](https://github.com/iblai/os/compare/v0.135.1...v0.136.0) (2026-09-01)
+
+### Features
+
+* **edit-mentor:** source the LLM tab from the SDK AgentLLMTab ([f721364](https://github.com/iblai/os/commit/f7213647c5d0bdbcc67a864d2a50acf84307999f))
+
+### Bug Fixes
+
+* **mentor:** gate Access tab mutating controls on share_mentor ([ef8f3de](https://github.com/iblai/os/commit/ef8f3deaf41ae6365e901df634ed2f48f5c96bf9))
+* **nav-bar:** show the model's name instead of its wire key ([e1d50f7](https://github.com/iblai/os/commit/e1d50f76fa131de582ad129bc103ad7f597e8d3d))
+
+### Refactors
+
+* **edit-mentor:** delete the in-repo LLM tab ([26ef2b6](https://github.com/iblai/os/commit/26ef2b68a11d75a7e1a7aef3693029b5cc33f1dd))
+* **nav-bar:** open the SDK LLM tab from the model selector ([40a4d23](https://github.com/iblai/os/commit/40a4d23f24fc4166271c9cffe5e3a881fac3c595))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.7.2 ([99b4f6c](https://github.com/iblai/os/commit/99b4f6c2da8017475969f05429e828c39d711653))
+
+### Tests
+
+* **access-tab:** cover share_mentor gating in the access panels ([253afd1](https://github.com/iblai/os/commit/253afd1db8d695835856a0a81f8e8150f059fb61))
+* **access-tab:** exercise the real RBAC engine for share_mentor ([6458ef4](https://github.com/iblai/os/commit/6458ef4341aab670cf443b496e581aba3f5e0d0f))
+* **e2e:** cover the nav-bar model label and selector modal ([a641dbe](https://github.com/iblai/os/commit/a641dbe6cf9de6a6dfe458ced69a86f10462993e))
+
 ## [0.135.1](https://github.com/iblai/os/compare/v0.135.0...v0.135.1) (2026-09-01)
 
 ### Bug Fixes
