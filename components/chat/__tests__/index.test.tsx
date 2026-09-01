@@ -67,6 +67,32 @@ vi.mock('next/dynamic', () => ({
       };
       Component.displayName = 'DisclaimerModal';
       return Component;
+    } else if (
+      loaderStr.includes('live-kit-voice-chat') ||
+      loaderStr.includes('LiveKitChat')
+    ) {
+      // LiveKitChat is now lazy-loaded via next/dynamic; mirror the module mock.
+      const Component = (props: { isOpen?: boolean; onClose?: () => void }) =>
+        props.isOpen ? (
+          <div data-testid="live-kit-chat">
+            <button onClick={props.onClose}>Close</button>
+          </div>
+        ) : null;
+      Component.displayName = 'LiveKitChat';
+      return Component;
+    } else if (
+      loaderStr.includes('live-kit-screen-sharing') ||
+      loaderStr.includes('LiveKitScreenSharing')
+    ) {
+      // LiveKitScreenSharing is now lazy-loaded via next/dynamic too.
+      const Component = (props: { isOpen?: boolean; onClose?: () => void }) =>
+        props.isOpen ? (
+          <div data-testid="live-kit-screen-sharing">
+            <button onClick={props.onClose}>Close</button>
+          </div>
+        ) : null;
+      Component.displayName = 'LiveKitScreenSharing';
+      return Component;
     } else {
       // Default fallback (CanvasView for backward compatibility)
       const Component = (props: {

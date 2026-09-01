@@ -64,7 +64,6 @@ import { toast } from 'sonner';
 import { config } from '@/lib/config';
 import { AdvancedChatHeader } from '@/components/advanced-chat/advanced-chat-header';
 import { advancedTabs } from '@iblai/iblai-js/web-utils';
-import { LiveKitChat } from '../live-kit-voice-chat';
 import { GuidedSuggestedPrompts } from '../guided-suggested-prompts';
 import {
   Dialog,
@@ -92,7 +91,6 @@ import { useDebouncedCallback } from 'use-debounce';
 import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { useUserAgreement } from '@/hooks/use-user-agreement';
 import { CSS_CLASS_NAMES, LOCAL_STORAGE_KEYS } from '@/lib/constants';
-import { LiveKitScreenSharing } from '../live-kit-screen-sharing';
 import { WelcomeChatNew } from '../welcome-chat-new';
 import { Spinner } from '@/components/spinner';
 import { useEmbedMode } from '@/hooks/use-embed-mode';
@@ -120,6 +118,29 @@ const DisclaimerModal = dynamic(
   () =>
     import('@/components/modals/disclaimer-modal').then(
       (mod) => mod.DisclaimerModal,
+    ),
+  {
+    ssr: false,
+  },
+);
+
+// Voice call + screen sharing pull in the heavy LiveKit client, but both only
+// mount when the user starts a call/share. Load them lazily so LiveKit stays
+// off the main chat bundle until then.
+/* istanbul ignore next -- @preserve dynamic import */
+const LiveKitChat = dynamic(
+  () =>
+    import('@/components/live-kit-voice-chat').then((mod) => mod.LiveKitChat),
+  {
+    ssr: false,
+  },
+);
+
+/* istanbul ignore next -- @preserve dynamic import */
+const LiveKitScreenSharing = dynamic(
+  () =>
+    import('@/components/live-kit-screen-sharing').then(
+      (mod) => mod.LiveKitScreenSharing,
     ),
   {
     ssr: false,
