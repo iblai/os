@@ -2,8 +2,8 @@
   "version": 2,
   "lastUpdated": "2026-08-31",
   "summary": {
-    "totalCheckpoints": 703,
-    "coveredCheckpoints": 664,
+    "totalCheckpoints": 705,
+    "coveredCheckpoints": 666,
     "deprecatedCheckpoints": 16,
     "notReproducibleCheckpoints": 15,
     "pendingCheckpoints": 8,
@@ -301,9 +301,10 @@
         "components/modals/settings-modal.tsx",
         "hooks/use-mentors.ts",
         "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
-        "components/modals/edit-mentor-modal/tabs/llm-tab.tsx",
-        "components/modals/llm-provider-modal.tsx",
-        "lib/utils.ts"
+        "components/modals/edit-mentor-modal/llm-tab.tsx",
+        "hooks/use-llm-display-name.ts",
+        "lib/utils.ts",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx"
       ],
       "checkpoints": [
         {
@@ -394,6 +395,11 @@
         {
           "id": "mgmt-18",
           "description": "Issue #2318: LLM Selection model picker rows render a non-blank human-readable label (display_name || llm_name) and searching a substring of that label finds the row",
+          "status": "covered"
+        },
+        {
+          "id": "mgmt-19",
+          "description": "getLLMModelDisplayName navbar rewrite: after selecting the ibl.ai provider/model (wire key \"iblai-pro\") on the LLM tab, the navbar badge renders the display name \"ibl.ai\" exactly \u2014 not the raw wire key; skips gracefully if the tenant's LLM list omits ibl.ai",
           "status": "covered"
         }
       ]
@@ -1739,7 +1745,8 @@
         "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
         "components/ui/hover-card.tsx",
         "components/header.tsx",
-        "components/header/profile-button.tsx"
+        "components/header/profile-button.tsx",
+        "components/modals/llm-provider-selection-modal.tsx"
       ],
       "checkpoints": [
         {
@@ -1800,6 +1807,11 @@
         {
           "id": "ov-12",
           "description": "Admin: nav does not overflow on mobile when credit balance is hidden; LLM name span stays \u2264150px",
+          "status": "covered"
+        },
+        {
+          "id": "ov-13",
+          "description": "Admin opens the navbar LLM selector modal (navbarPage.openLlmProviderModal, dialog name \"LLM Providers\") and the \"LLM Configuration\" heading/description are absent \u2014 proves the OS wrapper's showConfigurationHeader={false} prop reaches the SDK AgentLLMTab component",
           "status": "covered"
         }
       ]
@@ -4225,69 +4237,6 @@
       ]
     },
     {
-      "id": "agent-working-indicator",
-      "name": "Agent Working Indicator",
-      "spec": "73-agent-working-indicator.spec.ts",
-      "sourceFiles": [
-        "components/chat/working-indicator.tsx",
-        "components/chat/ai-message-frame.tsx",
-        "components/chat/ai-message-bubble.tsx",
-        "components/chat/chat-messages/index.tsx",
-        "components/chat/index.tsx",
-        "components/chat/reasoning-section.tsx",
-        "components/chat/tool-call-indicator.tsx",
-        "lib/constants.ts",
-        "app/globals.css"
-      ],
-      "checkpoints": [
-        {
-          "id": "awi-01",
-          "description": "The working indicator appears on send and survives the first answer token \u2014 the regression this feature fixes (a prior placeholder vanished for good the instant any token rendered); proven by catching a >15s stall mid-stream and watching the reassurance line reappear",
-          "status": "covered"
-        },
-        {
-          "id": "awi-02",
-          "description": "With verbose reasoning off, no disclosure rows render at all \u2014 the shimmer alone carries the whole turn through thinking, a tool call, and into writing",
-          "status": "covered"
-        },
-        {
-          "id": "awi-03",
-          "description": "With verbose reasoning on, the reasoning row and tool-call row take over liveness via their own bouncing dots (isActive) and the shimmer stands down for exactly the phase a visible row already states \u2014 exactly one element conveys progress at any instant, never two, never none",
-          "status": "covered"
-        },
-        {
-          "id": "awi-04",
-          "description": "The shimmer hides while answer text is visibly streaming (writing phase + non-empty content + a token within STALLED_STREAM_DELAY_MS) and returns with 'Still working \u2014 longer tasks can take a few minutes.' once the stream stalls; a fresh token immediately stands it down again",
-          "status": "covered"
-        },
-        {
-          "id": "awi-05",
-          "description": "Only one Stop control is ever on screen \u2014 the composer's; the working indicator itself renders no button",
-          "status": "covered"
-        },
-        {
-          "id": "awi-06",
-          "description": "prefers-reduced-motion: reduce swaps the shimmer for flat muted text (no .ibl-text-shimmer class) and freezes the disclosure rows' bouncing dots (animationName: none) rather than merely hiding them",
-          "status": "covered"
-        },
-        {
-          "id": "awi-07",
-          "description": "An error frame with no eos clears the working indicator \u2014 real error frames are never followed by eos, the socket just closes right after; this was the original hang bug",
-          "status": "covered"
-        },
-        {
-          "id": "awi-08",
-          "description": "An eos frame carrying a different session_id than the session in view is ignored and does not clear the working indicator for the visible session (background-session scoping)",
-          "status": "covered"
-        },
-        {
-          "id": "awi-09",
-          "description": "Exactly one avatar/name/timestamp agent message frame is ever on screen per turn (never two stacked), including across a write_todos turn where AgentTodoList also renders",
-          "status": "covered"
-        }
-      ]
-    },
-    {
       "id": "embed-preview-embed-mode-leak",
       "name": "Embed Tab Preview Must Not Leak Embed Mode Into The App",
       "spec": "70-embed-preview-must-not-leak-embed-mode.spec.ts",
@@ -4402,6 +4351,69 @@
           "status": "deprecated",
           "deprecatedIn": "#uat-9",
           "deprecatedReason": "Journey 72 redesigned to be read-only against the shared live tenant (crash/race risk to org-scoped metadata \u2014 see #uat-9 incident). This is the same support_url||help_center_url||default precedence chain proven by hooks/__tests__/use-help-center.test.ts; shc-06 still verifies the support_url-present path live."
+        }
+      ]
+    },
+    {
+      "id": "agent-working-indicator",
+      "name": "Agent Working Indicator",
+      "spec": "73-agent-working-indicator.spec.ts",
+      "sourceFiles": [
+        "components/chat/working-indicator.tsx",
+        "components/chat/ai-message-frame.tsx",
+        "components/chat/ai-message-bubble.tsx",
+        "components/chat/chat-messages/index.tsx",
+        "components/chat/index.tsx",
+        "components/chat/reasoning-section.tsx",
+        "components/chat/tool-call-indicator.tsx",
+        "lib/constants.ts",
+        "app/globals.css"
+      ],
+      "checkpoints": [
+        {
+          "id": "awi-01",
+          "description": "The working indicator appears on send and survives the first answer token \u2014 the regression this feature fixes (a prior placeholder vanished for good the instant any token rendered); proven by catching a >15s stall mid-stream and watching the reassurance line reappear",
+          "status": "covered"
+        },
+        {
+          "id": "awi-02",
+          "description": "With verbose reasoning off, no disclosure rows render at all \u2014 the shimmer alone carries the whole turn through thinking, a tool call, and into writing",
+          "status": "covered"
+        },
+        {
+          "id": "awi-03",
+          "description": "With verbose reasoning on, the reasoning row and tool-call row take over liveness via their own bouncing dots (isActive) and the shimmer stands down for exactly the phase a visible row already states \u2014 exactly one element conveys progress at any instant, never two, never none",
+          "status": "covered"
+        },
+        {
+          "id": "awi-04",
+          "description": "The shimmer hides while answer text is visibly streaming (writing phase + non-empty content + a token within STALLED_STREAM_DELAY_MS) and returns with 'Still working \u2014 longer tasks can take a few minutes.' once the stream stalls; a fresh token immediately stands it down again",
+          "status": "covered"
+        },
+        {
+          "id": "awi-05",
+          "description": "Only one Stop control is ever on screen \u2014 the composer's; the working indicator itself renders no button",
+          "status": "covered"
+        },
+        {
+          "id": "awi-06",
+          "description": "prefers-reduced-motion: reduce swaps the shimmer for flat muted text (no .ibl-text-shimmer class) and freezes the disclosure rows' bouncing dots (animationName: none) rather than merely hiding them",
+          "status": "covered"
+        },
+        {
+          "id": "awi-07",
+          "description": "An error frame with no eos clears the working indicator \u2014 real error frames are never followed by eos, the socket just closes right after; this was the original hang bug",
+          "status": "covered"
+        },
+        {
+          "id": "awi-08",
+          "description": "An eos frame carrying a different session_id than the session in view is ignored and does not clear the working indicator for the visible session (background-session scoping)",
+          "status": "covered"
+        },
+        {
+          "id": "awi-09",
+          "description": "Exactly one avatar/name/timestamp agent message frame is ever on screen per turn (never two stacked), including across a write_todos turn where AgentTodoList also renders",
+          "status": "covered"
         }
       ]
     },

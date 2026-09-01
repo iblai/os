@@ -72,6 +72,7 @@ const createPolicy = (overrides = {}) => ({
 const defaultProps = {
   policy: createPolicy(),
   onAccessUpdated: vi.fn().mockResolvedValue(undefined),
+  canShare: true,
 };
 
 function setup(overrides: Partial<typeof defaultProps> = {}) {
@@ -514,6 +515,76 @@ describe('RoleAccessPanel', () => {
       expect(
         screen.queryByPlaceholderText('Search groups by name'),
       ).not.toBeInTheDocument();
+    });
+  });
+
+  /* ---------- share_mentor gating (iblai-platform#2018) ---------- */
+
+  describe('read-only mode (canShare: false)', () => {
+    // The exhaustive matrix lives in the sibling suite at
+    // `components/modals/edit-mentor-modal/tabs/access-tab/__tests__/update-access.test.tsx`.
+    // `vitest.config.ts` sets no `include` override, so vitest's default glob
+    // collects BOTH files — neither shadows the other — and the core
+    // guarantee is therefore asserted in each.
+    const sharedPolicy = createPolicy({
+      users: [{ id: 1, username: 'alice', email: 'alice@test.com' }],
+      groups: [{ id: 10, name: 'Engineering', unique_id: 'eng-1' }],
+    });
+
+    it.each([
+      { label: 'search mode', users: true },
+      { label: 'manual-entry mode', users: false },
+    ])(
+      'in $label the assignments stay readable and every mutating control is gone',
+      ({ users }) => {
+        mockCheckRbacPermission.mockImplementation(
+          (_perms: unknown, resource: string) =>
+            resource === `/users/#list` ? users : true,
+        );
+
+        setup({ policy: sharedPolicy, canShare: false });
+
+        // Readable.
+        expect(screen.getByText('alice@test.com')).toBeInTheDocument();
+        expect(screen.getByText('Assigned groups')).toBeInTheDocument();
+        expect(screen.getByText('Engineering')).toBeInTheDocument();
+
+        // Not mutable — assert the COUNT of remove-X controls, not one node.
+        expect(
+          screen.queryAllByRole('button', { name: /^Remove\s/i }),
+        ).toHaveLength(0);
+        expect(
+          screen.queryByPlaceholderText('Search by name, username, or email'),
+        ).not.toBeInTheDocument();
+        expect(screen.queryByText('Add users')).not.toBeInTheDocument();
+        expect(screen.queryByText('Add by')).not.toBeInTheDocument();
+        expect(
+          screen.queryByLabelText('Select input type'),
+        ).not.toBeInTheDocument();
+        expect(screen.queryByText('Add groups')).not.toBeInTheDocument();
+        expect(
+          screen.queryByPlaceholderText('Search groups by name'),
+        ).not.toBeInTheDocument();
+        expect(screen.queryAllByRole('button', { name: /^Add/i })).toHaveLength(
+          0,
+        );
+      },
+    );
+
+    it('renders those controls again when canShare is true (converse)', () => {
+      mockCheckRbacPermission.mockReturnValue(true);
+
+      setup({ policy: sharedPolicy });
+
+      expect(
+        screen.queryAllByRole('button', { name: /^Remove\s/i }),
+      ).toHaveLength(2);
+      expect(
+        screen.getByPlaceholderText('Search by name, username, or email'),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText('Search groups by name'),
+      ).toBeInTheDocument();
     });
   });
 });

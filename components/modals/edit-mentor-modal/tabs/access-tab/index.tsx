@@ -16,8 +16,12 @@ import {
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { useUsername } from '@/hooks/use-user';
 import { useNavigate } from '@/hooks/user-navigate';
-import { useAppDispatch } from '@/lib/hooks';
-import { updateRbacPermissions } from '@/features/rbac/rbac-slice';
+import { useAppDispatch, useAppSelector } from '@/lib/hooks';
+import {
+  selectRbacPermissions,
+  updateRbacPermissions,
+} from '@/features/rbac/rbac-slice';
+import { checkRbacPermission } from '@/hoc/withPermissions';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -150,6 +154,21 @@ export function AccessTab() {
     isMentorSettingsLoading || isAccessLoading || isAccessFetching;
   const canManageAccess = Boolean(mentorDbId && platformKey);
 
+  // Sharing is a flat action on the mentor resource
+  // (`/mentors/{dbId}/#share_mentor`) — the same entry every other mentor
+  // check uses. A deployment whose permission-check endpoint predates
+  // `share_mentor` returns no entry for this mentor at all, so the action is
+  // only enforced when the tree actually contains that entry; otherwise the
+  // controls stay visible and the server remains the source of truth.
+  const rbacPermissions = useAppSelector(selectRbacPermissions);
+  const mentorRbacKey = mentorDbId ? `/mentors/${mentorDbId}/` : null;
+  const hasMentorRbacEntry = mentorRbacKey
+    ? mentorRbacKey in rbacPermissions
+    : false;
+  const canShare =
+    !hasMentorRbacEntry ||
+    checkRbacPermission(rbacPermissions, `${mentorRbacKey}#share_mentor`);
+
   return (
     <>
       <div className="hidden h-[73px] shrink-0 items-center border-b border-gray-200 bg-white p-4 lg:flex">
@@ -178,12 +197,13 @@ export function AccessTab() {
         >
           {t('infoBox')}
         </div>
-        {canManageAccess && availableRoles.length > 0 && (
+        {canManageAccess && canShare && availableRoles.length > 0 && (
           <div className="flex items-center justify-end">
             <AddAccessDialog
               availableRoles={availableRoles}
               isLoading={isLoading}
               onAccessCreated={handleRefetch}
+              canShare={canShare}
             />
           </div>
         )}
@@ -318,17 +338,19 @@ export function AccessTab() {
                           </span>
                         </TableCell>
                         <TableCell className="flex justify-end">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setEditingPolicyKey(policyKey)}
-                            aria-label={t('editRoleAriaLabel', {
-                              role: formatRoleName(policy.role),
-                            })}
-                          >
-                            <Pencil className="h-4 w-4" aria-hidden="true" />
-                          </Button>
+                          {canShare && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setEditingPolicyKey(policyKey)}
+                              aria-label={t('editRoleAriaLabel', {
+                                role: formatRoleName(policy.role),
+                              })}
+                            >
+                              <Pencil className="h-4 w-4" aria-hidden="true" />
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     );
@@ -363,6 +385,7 @@ export function AccessTab() {
             <RoleAccessPanel
               policy={editingPolicy}
               onAccessUpdated={handleRefetch}
+              canShare={canShare}
             />
           </DialogContent>
         )}

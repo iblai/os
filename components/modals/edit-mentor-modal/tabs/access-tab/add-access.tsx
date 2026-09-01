@@ -52,12 +52,19 @@ type AddAccessDialogProps = {
   availableRoles: DefaultMentorRole[];
   isLoading: boolean;
   onAccessCreated: () => Promise<void>;
+  /**
+   * Whether the viewer holds `/mentors/{dbId}/#share_mentor`. The parent
+   * already hides this dialog when false; the prop keeps the component safe on
+   * its own so no create-access affordance can leak to a read-only viewer.
+   */
+  canShare: boolean;
 };
 
 export function AddAccessDialog({
   availableRoles,
   isLoading,
   onAccessCreated,
+  canShare,
 }: AddAccessDialogProps) {
   const t = useTranslations('accessTabAddAccess');
   const { mentorId, tenantKey } = useParams<TenantKeyMentorIdParams>();
@@ -443,6 +450,11 @@ export function AddAccessDialog({
       setIsCreateDialogOpen(false);
     }
   }, [availableRoles]);
+
+  // Read-only viewers get no create-access affordance at all.
+  if (!canShare) {
+    return null;
+  }
 
   return (
     <Dialog open={isCreateDialogOpen} onOpenChange={handleCreateDialogChange}>
