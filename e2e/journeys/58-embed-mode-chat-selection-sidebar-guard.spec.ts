@@ -13,7 +13,7 @@
  * the URL, so losing the param flipped the app out of embed mode mid-session
  * and the full admin sidebar rendered in its place — inside a widget embedded
  * on a third-party site where students should only ever see "New Chat" and
- * "Chats".
+ * "Recents".
  *
  * The fix (commit 67e74db2) navigates ONLY when the current pathname is not
  * already the mentor's own chat page; the session is selected via Redux +
@@ -47,7 +47,11 @@
  */
 
 import { test, expect } from '../fixtures/mentor-test';
-import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
+import {
+  navigateToMentorApp,
+  checkAdminStatus,
+  getPlatformContext,
+} from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
 
 /** Builds the embed URL (the iframe's own src) for a mentor page. */
@@ -86,7 +90,7 @@ async function assertMinimalEmbedSidebar(
   await expect(sidebarPage.newChatButton).toBeVisible({ timeout: 15_000 });
 
   const chatsTrigger = sidebarPage.sidebar.getByRole('button', {
-    name: 'Chats',
+    name: 'Recents',
     exact: true,
   });
   await expect(chatsTrigger).toBeVisible({ timeout: 15_000 });
@@ -148,35 +152,63 @@ test.describe('Journey 58: Embed Mode Chat Selection Sidebar Guard', () => {
     sidebarPage,
   }) => {
     // ── Step 1: Seed TWO chats on the (non-embed) mentor page ────────────────
+    // Rows are identified by SESSION ID (`data-session-id`) rather than sent
+    // text: the sidebar label prefers the backend's asynchronously generated
+    // session title, so a text match can stop working at any moment once the
+    // title lands (the flake behind this journey's Recent-list polls).
+    const { mentorId } = await getPlatformContext(page);
+
     // Chat A — will NOT be the auto-restored session after reload.
-    const chatAText = `j57 chat-a ${Date.now()}`;
+    const chatAText = `j58 chat-a ${Date.now()}`;
     await chatPage.sendMessage(chatAText);
     await waitForStreamingDone(page, chatPage.sendButton, chatPage.aiMessages);
+    const chatASessionId = await chatPage.getCachedSessionId(mentorId);
+    expect(
+      chatASessionId,
+      'Chat A session id must be cached after send',
+    ).toBeTruthy();
 
     // Chat B — sent last, so it becomes the cached/auto-restored session.
     await chatPage.startNewChat();
     await waitForPageReady(page);
-    const chatBText = `j57 chat-b ${Date.now()}`;
+    const chatBText = `j58 chat-b ${Date.now()}`;
     await chatPage.sendMessage(chatBText);
     await waitForStreamingDone(page, chatPage.sendButton, chatPage.aiMessages);
+    const chatBSessionId = await chatPage.getCachedSessionId(mentorId);
+    expect(
+      chatBSessionId,
+      'Chat B session id must be cached after send',
+    ).toBeTruthy();
+    expect(
+      chatBSessionId,
+      'Chat B must be a different session than Chat A',
+    ).not.toBe(chatASessionId);
 
     // Both chats must be visible in the Recent list before we navigate away —
     // this is our positive precondition, not a negative assertion, so it's
     // safe to anchor on it before touching embed mode.
     await sidebarPage.expandChatsSection();
     await expect
-      .poll(async () => sidebarPage.isRecentChatVisible(chatAText, 3_000), {
-        message: 'Chat A should be in the Recent list before embed reload',
-        timeout: 20_000,
-        intervals: [1_000, 2_000, 3_000],
-      })
+      .poll(
+        async () =>
+          sidebarPage.isRecentChatVisibleBySession(chatASessionId!, 3_000),
+        {
+          message: 'Chat A should be in the Recent list before embed reload',
+          timeout: 20_000,
+          intervals: [1_000, 2_000, 3_000],
+        },
+      )
       .toBe(true);
     await expect
-      .poll(async () => sidebarPage.isRecentChatVisible(chatBText, 3_000), {
-        message: 'Chat B should be in the Recent list before embed reload',
-        timeout: 20_000,
-        intervals: [1_000, 2_000, 3_000],
-      })
+      .poll(
+        async () =>
+          sidebarPage.isRecentChatVisibleBySession(chatBSessionId!, 3_000),
+        {
+          message: 'Chat B should be in the Recent list before embed reload',
+          timeout: 20_000,
+          intervals: [1_000, 2_000, 3_000],
+        },
+      )
       .toBe(true);
 
     // ── Step 2: Reload into embed mode via a real navigation ────────────────
@@ -210,15 +242,19 @@ test.describe('Journey 58: Embed Mode Chat Selection Sidebar Guard', () => {
     // (fixed) pathname-gated navigation.
     await sidebarPage.expandChatsSection();
     await expect
-      .poll(async () => sidebarPage.isRecentChatVisible(chatAText, 3_000), {
-        message: 'Chat A row should be present in the embed Chats list',
-        timeout: 20_000,
-        intervals: [1_000, 2_000, 3_000],
-      })
+      .poll(
+        async () =>
+          sidebarPage.isRecentChatVisibleBySession(chatASessionId!, 3_000),
+        {
+          message: 'Chat A row should be present in the embed Chats list',
+          timeout: 20_000,
+          intervals: [1_000, 2_000, 3_000],
+        },
+      )
       .toBe(true);
 
     const urlBeforeClick = page.url();
-    await sidebarPage.getRecentChatRow(chatAText).click();
+    await sidebarPage.getRecentChatRowBySession(chatASessionId!).click();
 
     // ── Step 5: Repaint check — Chat A's message must now be shown ───────────
     await expect(

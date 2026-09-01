@@ -1,6 +1,7 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { safeWaitForURL } from './navigation';
 import { waitForPageReady } from './resilient';
+import { SignupPage } from '../page-objects/signup.page';
 import { logger } from '@iblai/iblai-js/playwright';
 
 const MENTOR_NEXTJS_HOST = process.env.MENTOR_NEXTJS_HOST || '';
@@ -60,6 +61,37 @@ export async function navigateToMentorApp(
   await expect(
     page.getByRole('button', { name: 'Selected agent dropdown button' }),
   ).toBeVisible({ timeout: 120_000 });
+
+  await waitForStableMentorUrl(page);
+}
+
+/**
+ * Block until the mentor segment of the URL stops changing.
+ *
+ * MentorProvider re-resolves the mentor after its own auto-redirect, so a
+ * fresh landing can hop between agents for several seconds — and each hop
+ * swaps the whole app tree for the provider's spinner. Returning while that
+ * is still in flight hands callers a page whose chrome is about to unmount.
+ */
+export async function waitForStableMentorUrl(
+  page: Page,
+  { quietMs = 2_000, timeout = 30_000 } = {},
+): Promise<void> {
+  const mentorFromUrl = () => page.url().split('?')[0];
+  const deadline = Date.now() + timeout;
+  let last = mentorFromUrl();
+  let stableSince = Date.now();
+
+  while (Date.now() < deadline) {
+    await page.waitForTimeout(250);
+    const current = mentorFromUrl();
+    if (current !== last) {
+      last = current;
+      stableSince = Date.now();
+      continue;
+    }
+    if (Date.now() - stableSince >= quietMs) return;
+  }
 }
 
 /**
@@ -251,4 +283,65 @@ export async function getPlatformContext(
     throw new Error(`Not on a platform URL: ${url}`);
   }
   return { tenantKey: parts[1], mentorId: parts[2] };
+}
+
+/**
+ * Signs up a brand-new user via the auth service's `/account/create` form
+ * and waits until they land on the "main" tenant's platform page with the
+ * navbar ready. Modeled on Journey 1's signup test and Journey 59 Flow 0
+ * (`e2e/journeys/59-ecommerce-credits-and-upgrade.spec.ts`).
+ *
+ * Use this whenever a test genuinely needs a fresh account — e.g. to assert
+ * first-run UI like the profile dropdown's default menu — rather than the
+ * `nonadminPage` fixture, which reuses a saved, pre-existing storageState
+ * account and does NOT represent a "newly registered user".
+ *
+ * Caller is responsible for running this against a clean, unauthenticated
+ * context (`test.use({ storageState: { cookies: [], origins: [] } })`).
+ *
+ * Returns the generated email for logging/debugging.
+ */
+export async function signUpNewUserOnMain(
+  page: Page,
+): Promise<{ email: string }> {
+  const email = `test+${Date.now()}@ibleducation.com`;
+  const password = 'test-password';
+
+  await page.goto(MENTOR_NEXTJS_HOST, {
+    waitUntil: 'domcontentloaded',
+    timeout: 60_000,
+  });
+  await safeWaitForURL(page, (u) => u.href.includes(AUTH_HOST), {
+    timeout: 60_000,
+  });
+  await page.waitForLoadState('domcontentloaded', { timeout: 60_000 });
+
+  const pleaseWaitText = page.getByText(/please wait.../i);
+  const signUpButton = page.getByRole('button', { name: 'Sign Up' });
+  await expect(signUpButton).toBeVisible({ timeout: 30_000 });
+  await expect(pleaseWaitText).not.toBeVisible({ timeout: 30_000 });
+  await signUpButton.click();
+
+  await safeWaitForURL(page, (u) => u.pathname.includes('/account/create'), {
+    timeout: 30_000,
+  });
+
+  const signupPage = new SignupPage(page);
+  logger.info(`[signUpNewUserOnMain] signup email: ${email}`);
+  await signupPage.signUp(email, password);
+
+  await safeWaitForURL(page, (u) => u.href.includes(MENTOR_NEXTJS_HOST), {
+    timeout: 120_000,
+  });
+  await safeWaitForURL(
+    page,
+    (u) => /\/platform\/main\/[^/]+$/.test(u.pathname),
+    { timeout: 120_000 },
+  );
+  await expect(
+    page.getByRole('button', { name: 'Selected agent dropdown button' }),
+  ).toBeVisible({ timeout: 60_000 });
+
+  logger.info(`[signUpNewUserOnMain] landed on main tenant: ${page.url()}`);
+  return { email };
 }

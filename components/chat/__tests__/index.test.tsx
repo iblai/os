@@ -100,6 +100,12 @@ vi.mock('next/navigation', () => ({
   useSearchParams: vi.fn(() => new URLSearchParams()),
 }));
 
+// Mutable so a test can put the streaming turn in a tool-running state; the
+// selector below is otherwise a constant for every other test.
+const { streamingToolCalls } = vi.hoisted(() => ({
+  streamingToolCalls: { current: [] as unknown[] },
+}));
+
 vi.mock('@iblai/iblai-js/web-utils', async () => {
   const actual = await vi.importActual('@iblai/iblai-js/web-utils');
   return {
@@ -124,7 +130,7 @@ vi.mock('@iblai/iblai-js/web-utils', async () => {
     selectShowingSharedChat: vi.fn(() => false),
     selectStreamingReasoningContent: () => '',
     selectIsReasoning: () => false,
-    selectStreamingToolCalls: () => [],
+    selectStreamingToolCalls: () => streamingToolCalls.current,
     selectCurrentStreamingMessage: () => ({
       id: '',
       content: '',
@@ -201,8 +207,17 @@ vi.mock('@/lib/utils', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/utils')>();
   return {
     ...actual,
-    cn: (...args: (string | boolean | undefined)[]) =>
-      args.filter(Boolean).join(' '),
+    cn: (...args: unknown[]) =>
+      args
+        .flatMap((arg) =>
+          arg && typeof arg === 'object'
+            ? Object.entries(arg as Record<string, unknown>)
+                .filter(([, enabled]) => Boolean(enabled))
+                .map(([key]) => key)
+            : arg,
+        )
+        .filter(Boolean)
+        .join(' '),
     isLoggedIn: vi.fn(() => true),
     getAuthSpaJoinUrl: vi.fn(() => 'http://auth.test/join'),
     isInIframe: vi.fn(() => false),
@@ -3284,6 +3299,7 @@ describe('Chat', () => {
         enableSafetyDisclaimer: false,
         isPending: false,
         isLoadingChats: false,
+        refetchChats: vi.fn(),
       });
 
       renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
@@ -3300,6 +3316,46 @@ describe('Chat', () => {
 
       await waitFor(() => {
         expect(screen.queryByTestId('live-kit-chat')).not.toBeInTheDocument();
+      });
+    });
+
+    it('should refetch chats when the voice call modal is closed', async () => {
+      const mockRefetchChats = vi.fn();
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      (useAdvancedChat as any).mockReturnValue({
+        changeTab: vi.fn(),
+        activeTab: 'chat',
+        currentStreamingMessage: null,
+        enabledGuidedPrompts: [],
+        isStreaming: false,
+        mentorName: 'Test Mentor',
+        messages: [],
+        profileImage: '/avatar.png',
+        sendMessage: vi.fn(),
+        setMessage: vi.fn(),
+        stopGenerating: vi.fn(),
+        uniqueMentorId: 'unique-mentor-123',
+        sessionId: 'session-123',
+        startNewChat: vi.fn(),
+        enableSafetyDisclaimer: false,
+        isPending: false,
+        isLoadingChats: false,
+        refetchChats: mockRefetchChats,
+      });
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      fireEvent.click(screen.getByTestId('phone-call-btn'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('live-kit-chat')).toBeInTheDocument();
+      });
+
+      mockRefetchChats.mockClear();
+      fireEvent.click(screen.getByText('Close'));
+
+      await waitFor(() => {
+        expect(mockRefetchChats).toHaveBeenCalled();
       });
     });
 
@@ -8569,6 +8625,55 @@ describe('Chat', () => {
       renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
 
       expect(screen.getByTestId('loading-message')).toBeInTheDocument();
+    });
+
+    it('should hide loading on a Code turn that is only running tools', async () => {
+      // Code turns keep their collapsed tool list visible whatever the mentor's
+      // verbose-reasoning setting says (see ai-message-bubble), so that list IS
+      // visible output here — leaving the typing indicator up would sit it right
+      // next to a live one.
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      (useAdvancedChat as any).mockReturnValue({
+        changeTab: vi.fn(),
+        activeTab: 'chat',
+        currentStreamingMessage: {
+          id: 'opencode-1700000000000',
+          role: 'assistant',
+          content: '',
+          timestamp: new Date().toISOString(),
+          visible: true,
+        },
+        enabledGuidedPrompts: [],
+        isStreaming: true,
+        mentorName: 'Test Mentor',
+        messages: [
+          {
+            id: '1',
+            role: 'user',
+            content: 'Build me a site',
+            timestamp: new Date().toISOString(),
+            visible: true,
+          },
+        ],
+        profileImage: '/avatar.png',
+        sendMessage: vi.fn(),
+        setMessage: vi.fn(),
+        stopGenerating: vi.fn(),
+        uniqueMentorId: 'unique-mentor-123',
+        sessionId: 'session-123',
+        startNewChat: vi.fn(),
+        enableSafetyDisclaimer: false,
+        isPending: false,
+        isLoadingChats: false,
+      });
+      streamingToolCalls.current = [
+        { id: 'tc1', name: 'bash', log: '', result: '' },
+      ];
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      expect(screen.queryByTestId('loading-message')).not.toBeInTheDocument();
+      streamingToolCalls.current = [];
     });
 
     it('should hide loading when currentStreamingMessage has content', async () => {
@@ -19258,6 +19363,109 @@ describe('Chat', () => {
     });
   });
 
+  // Issue #2260 — a welcome message taller than the viewport could not be
+  // scrolled back to the top. In compact mode nothing scrolled at all because
+  // `overflow-y-auto` was withheld from the welcome-screen wrapper while the
+  // chat root carries `overflow-hidden`. This wrapper only ever hosts the
+  // welcome screen (the messages view is a sibling), so it must scroll on
+  // every non-advanced, non-canvas surface.
+  describe('welcome screen scroll wrapper (issue #2260)', () => {
+    const setCompact = async (compact: boolean) => {
+      const { useSearchParams } = await import('next/navigation');
+      (useSearchParams as any).mockReturnValue({
+        get: vi.fn((param: string) =>
+          param === 'compact' && compact ? 'true' : null,
+        ),
+      });
+    };
+
+    const getWrapper = (container: HTMLElement) =>
+      container.firstElementChild!.firstElementChild as HTMLElement;
+
+    it('scrolls the welcome screen on the default surface', async () => {
+      await setCompact(false);
+
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
+
+      expect(screen.getByTestId('welcome-chat')).toBeInTheDocument();
+      const wrapper = getWrapper(container);
+      expect(wrapper).toHaveClass('overflow-y-auto');
+      // `flex-1` grows into the space left over by the chat input; `h-full`
+      // claimed 100% of the chat root and pushed the input off-screen.
+      expect(wrapper).toHaveClass('min-h-0');
+      expect(wrapper).toHaveClass('flex-1');
+      expect(wrapper.className.split(/\s+/)).not.toContain('h-full');
+    });
+
+    it('scrolls the welcome screen in compact mode', async () => {
+      await setCompact(true);
+
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
+
+      expect(screen.getByTestId('welcome-chat')).toBeInTheDocument();
+      const wrapper = getWrapper(container);
+      expect(wrapper).toHaveClass('overflow-y-auto');
+      expect(wrapper).toHaveClass('min-h-0');
+    });
+
+    it('keeps the scrollbar visible so long messages advertise the overflow', async () => {
+      await setCompact(false);
+
+      const { container } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
+
+      expect(getWrapper(container)).not.toHaveClass('scrollbar-none');
+    });
+
+    it('leaves scrolling to the advanced chat panel in advanced mode', async () => {
+      await setCompact(false);
+
+      const { container } = renderWithRedux(
+        <Chat mode="advanced" isPreviewMode={false} />,
+      );
+
+      const wrapper = getWrapper(container);
+      expect(wrapper).not.toHaveClass('overflow-y-auto');
+      // Never a second scroll container in advanced mode — the advanced panel
+      // owns scrolling — but it still needs the gutter for alignment.
+      expect(wrapper).toHaveClass('overflow-y-hidden');
+    });
+
+    // Issue #2260 — the chat input container carries [scrollbar-gutter:stable]
+    // and reserves 15px, so mx-auto centres it inside a narrower box. Without
+    // a matching gutter here the welcome message sat ~8px right of the input.
+    it.each([
+      ['default', false],
+      ['compact', true],
+    ])(
+      'reserves the same scrollbar gutter as the chat input (%s)',
+      async (_label, compact) => {
+        await setCompact(compact);
+
+        const { container } = renderWithRedux(
+          <Chat mode="default" isPreviewMode={false} />,
+        );
+
+        expect(getWrapper(container)).toHaveClass('[scrollbar-gutter:stable]');
+      },
+    );
+
+    it('reserves the scrollbar gutter in advanced mode too', async () => {
+      await setCompact(false);
+
+      const { container } = renderWithRedux(
+        <Chat mode="advanced" isPreviewMode={false} />,
+      );
+
+      expect(getWrapper(container)).toHaveClass('[scrollbar-gutter:stable]');
+    });
+  });
+
   describe('streaming reasoning and tool call props', () => {
     it('should pass streaming props to ChatMessages', async () => {
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
@@ -19563,6 +19771,19 @@ describe('Chat', () => {
 
       expect(await getInitialPromptArg()).toBeUndefined();
     });
+
+    it('forwards the sanitized prompt (strips invisible/control chars)', async () => {
+      const { useSearchParams } = await import('next/navigation');
+      // Zero-width space + zero-width joiner + a control char embedded in an
+      // otherwise legitimate prompt from an attacker-crafted deep link.
+      (useSearchParams as any).mockReturnValue(
+        mockSearchParamsWith({ prompt: 'he​ll‍o\x00 world' }),
+      );
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      expect(await getInitialPromptArg()).toBe('hello world');
+    });
   });
 
   describe('pagination - load older messages on scroll', () => {
@@ -19613,7 +19834,7 @@ describe('Chat', () => {
     };
 
     const getScrollContainer = (container: HTMLElement) =>
-      container.querySelector('.overflow-y-auto') as HTMLDivElement;
+      container.querySelector('.flex-1.overflow-y-auto') as HTMLDivElement;
 
     const setScrollMetrics = (
       el: HTMLDivElement,

@@ -131,6 +131,14 @@ describe('useWelcome', () => {
       expect(MockWebSocketConstructor).toHaveBeenCalledWith('wss://test-url');
     });
 
+    it('should default isNewSession to true and create WebSocket when omitted', () => {
+      const { isNewSession, ...propsWithoutIsNewSession } = defaultProps;
+
+      renderHook(() => useWelcome(propsWithoutIsNewSession));
+
+      expect(MockWebSocketConstructor).toHaveBeenCalledWith('wss://test-url');
+    });
+
     it('should not create WebSocket when isNewSession is false', () => {
       renderHook(() =>
         useWelcome({
@@ -404,12 +412,97 @@ describe('useWelcome', () => {
         'Normal closure',
       );
 
-      // Should have loaded guided prompts
+      // Should have loaded guided prompts with the real username passed through
       expect(mockLoadGuidedPrompts).toHaveBeenCalledWith({
         org: 'tenant-1',
         sessionId: 'session-123',
         userId: 'testuser',
       });
+
+      vi.useRealTimers();
+    });
+
+    it('should pass through a real username to guided prompts on eos (issue #2148)', async () => {
+      vi.useFakeTimers();
+
+      mockUseMentorSettings.mockReturnValue({
+        data: {
+          greetingMethod: 'proactive_prompt',
+          proactiveResponse: null,
+        },
+      });
+
+      mockWebSocketInstance.readyState = WebSocket.OPEN;
+
+      renderHook(() =>
+        useWelcome({
+          ...defaultProps,
+          username: 'jdoe',
+        }),
+      );
+
+      act(() => {
+        mockWebSocketInstance.onmessage?.(
+          new MessageEvent('message', {
+            data: JSON.stringify({ eos: true }),
+          }),
+        );
+      });
+
+      await act(async () => {
+        vi.advanceTimersByTime(200);
+      });
+
+      expect(mockLoadGuidedPrompts).toHaveBeenCalledWith({
+        org: 'tenant-1',
+        sessionId: 'session-123',
+        userId: 'jdoe',
+      });
+
+      vi.useRealTimers();
+    });
+
+    it('should fall back to "anonymous" when username is empty in embed mode on eos (issue #2148)', async () => {
+      vi.useFakeTimers();
+
+      mockUseMentorSettings.mockReturnValue({
+        data: {
+          greetingMethod: 'proactive_prompt',
+          proactiveResponse: null,
+        },
+      });
+
+      mockWebSocketInstance.readyState = WebSocket.OPEN;
+
+      // Embed mode passes username as an empty string before hydration.
+      renderHook(() =>
+        useWelcome({
+          ...defaultProps,
+          username: '',
+        }),
+      );
+
+      act(() => {
+        mockWebSocketInstance.onmessage?.(
+          new MessageEvent('message', {
+            data: JSON.stringify({ eos: true }),
+          }),
+        );
+      });
+
+      await act(async () => {
+        vi.advanceTimersByTime(200);
+      });
+
+      // Must never send an empty userId (would produce /users//sessions/ -> 404).
+      expect(mockLoadGuidedPrompts).toHaveBeenCalledWith({
+        org: 'tenant-1',
+        sessionId: 'session-123',
+        userId: 'anonymous',
+      });
+      expect(mockLoadGuidedPrompts).not.toHaveBeenCalledWith(
+        expect.objectContaining({ userId: '' }),
+      );
 
       vi.useRealTimers();
     });

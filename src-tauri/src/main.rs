@@ -1,28 +1,35 @@
 // Hide console window on Windows in release builds
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod cua_driver_installer;
+mod cua_driver_mcp;
 mod foundry_installer;
 mod foundry_manager;
-mod ghost_os_manager;
 mod mcp_bridge_installer;
 mod mcp_bridge_manager;
 mod model_manager;
 mod oauth;
 mod offline_server;
 mod ollama_installer;
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod opencode_acp;
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod opencode_installer;
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod opencode_proxy;
 mod web_cache;
 
 use foundry_installer::{
     download_and_install_foundry, download_foundry_model, get_recommended_models,
 };
 use foundry_manager::{check_foundry_status, FoundryStatus};
+use mcp_bridge_installer::install_mcp_bridge;
 use model_manager::{
     cancel_download, check_disk_space, check_ollama_installed, get_timestamp, is_model_installed,
     is_ollama_running, list_installed_models, pull_model, start_ollama_server, stop_ollama_server,
     wait_for_ollama_ready, DiskSpaceError, DownloadProgress, InstallationLog, OllamaStatus,
     SystemMemory, REQUIRED_FREE_SPACE_GB,
 };
-use mcp_bridge_installer::install_mcp_bridge;
 use offline_server::{get_server_url, start_offline_server_with_signal};
 use ollama_installer::download_and_install_ollama;
 use std::sync::Arc;
@@ -72,6 +79,31 @@ fn in_app_popup_title(url: &str) -> Option<&'static str> {
         .map(|(_, title)| *title)
 }
 
+/// Emit an app-wide event to the frontend WITHOUT racing the main thread's
+/// webview-manager mutex.
+///
+/// Tauri's app-wide `Emitter::emit` locks the webview-manager mutex to fan a
+/// payload out to every webview. Every async `#[command]` here runs on a tokio
+/// worker, so calling `app.emit(...)` directly from one can deadlock against the
+/// main thread locking the SAME mutex to service a webview IPC message
+/// (`AppManager::get_webview`) — the intermittent "Not Responding" freeze
+/// (see `check_ollama_status`, which the UI polls). Marshalling every emit onto
+/// the main thread serializes it with IPC handling, so the two can never contend
+/// the lock across threads. `run_on_main_thread` only posts to the event loop (it
+/// does not block and preserves FIFO order), so it is safe to call from async
+/// code and keeps streamed events (e.g. `ollama:token`) in order.
+fn emit_on_main<S>(app: &AppHandle, event: &'static str, payload: S)
+where
+    S: serde::Serialize + Clone + Send + 'static,
+{
+    let handle = app.clone();
+    if let Err(err) = app.run_on_main_thread(move || {
+        let _ = handle.emit(event, payload);
+    }) {
+        eprintln!("[emit_on_main] could not schedule '{event}' on main thread: {err}");
+    }
+}
+
 /// Open OAuth URL in an in-app popup window
 /// The window monitors for callback URLs and closes automatically when auth completes
 fn open_oauth_in_popup(url: &str, app_handle: &AppHandle, title: &str) -> Result<(), String> {
@@ -94,7 +126,8 @@ fn open_oauth_in_popup(url: &str, app_handle: &AppHandle, title: &str) -> Result
         println!("[OAuth Popup] Navigation to: {}", url_str);
 
         // Check if this is a callback URL (auth completed)
-        let is_callback = url_str.contains("login.iblai.app")
+        let is_callback = (url_str.contains("login.iblai.app")
+            || url_str.contains("auth.iblai.org"))
             && (url_str.contains("/callback")
                 || url_str.contains("code=")
                 || url_str.contains("token=")
@@ -399,7 +432,7 @@ async fn check_ollama_status(app: AppHandle) -> Result<OllamaStatus, String> {
                 model_installed: true, // Pretend model is installed
                 installed_models: Vec::new(), // Foundry path: Ollama model table is hidden
             };
-            let _ = app.emit(EVENT_OLLAMA_STATUS, &status);
+            emit_on_main(&app, EVENT_OLLAMA_STATUS, status.clone());
             return Ok(status);
         }
     }
@@ -446,7 +479,7 @@ async fn check_ollama_status(app: AppHandle) -> Result<OllamaStatus, String> {
     };
 
     // Emit status update event
-    let _ = app.emit(EVENT_OLLAMA_STATUS, &status);
+    emit_on_main(&app, EVENT_OLLAMA_STATUS, status.clone());
 
     Ok(status)
 }
@@ -591,7 +624,7 @@ async fn check_disk_space_for_model(app: AppHandle) -> Result<bool, String> {
                 available_gb, REQUIRED_FREE_SPACE_GB
             ),
         };
-        let _ = app.emit(EVENT_DISK_SPACE_ERROR, &error);
+        emit_on_main(&app, EVENT_DISK_SPACE_ERROR, error);
         return Ok(false);
     }
 
@@ -633,7 +666,8 @@ async fn download_ollama_model(app: AppHandle, model: String) -> Result<(), Stri
     let app_log = Arc::new(app.clone());
 
     // Emit initial log
-    let _ = app.emit(
+    emit_on_main(
+        &app,
         EVENT_INSTALLATION_LOG,
         InstallationLog {
             timestamp: get_timestamp(),
@@ -644,7 +678,8 @@ async fn download_ollama_model(app: AppHandle, model: String) -> Result<(), Stri
 
     // Check if Ollama is running
     if !is_ollama_running().await {
-        let _ = app.emit(
+        emit_on_main(
+            &app,
             EVENT_INSTALLATION_LOG,
             InstallationLog {
                 timestamp: get_timestamp(),
@@ -663,7 +698,8 @@ async fn download_ollama_model(app: AppHandle, model: String) -> Result<(), Stri
             return Err("Could not start Ollama server. Please start Ollama manually.".to_string());
         }
 
-        let _ = app.emit(
+        emit_on_main(
+            &app,
             EVENT_INSTALLATION_LOG,
             InstallationLog {
                 timestamp: get_timestamp(),
@@ -684,13 +720,14 @@ async fn download_ollama_model(app: AppHandle, model: String) -> Result<(), Stri
                 available_gb, REQUIRED_FREE_SPACE_GB
             ),
         };
-        let _ = app.emit(EVENT_DISK_SPACE_ERROR, &error);
+        emit_on_main(&app, EVENT_DISK_SPACE_ERROR, error.clone());
         return Err(error.message);
     }
 
     // Check if already installed
     if is_model_installed(&model).await {
-        let _ = app.emit(
+        emit_on_main(
+            &app,
             EVENT_DOWNLOAD_PROGRESS,
             DownloadProgress {
                 status: "completed".to_string(),
@@ -702,7 +739,8 @@ async fn download_ollama_model(app: AppHandle, model: String) -> Result<(), Stri
             },
         );
 
-        let _ = app.emit(
+        emit_on_main(
+            &app,
             EVENT_INSTALLATION_LOG,
             InstallationLog {
                 timestamp: get_timestamp(),
@@ -718,10 +756,10 @@ async fn download_ollama_model(app: AppHandle, model: String) -> Result<(), Stri
     pull_model(
         &model,
         move |progress| {
-            let _ = app_progress.emit(EVENT_DOWNLOAD_PROGRESS, &progress);
+            emit_on_main(&app_progress, EVENT_DOWNLOAD_PROGRESS, progress);
         },
         move |log| {
-            let _ = app_log.emit(EVENT_INSTALLATION_LOG, &log);
+            emit_on_main(&app_log, EVENT_INSTALLATION_LOG, log);
         },
     )
     .await
@@ -760,7 +798,8 @@ async fn check_network_status() -> Result<bool, String> {
 /// Cancel an ongoing model download
 #[command]
 async fn cancel_model_download(app: AppHandle) -> Result<(), String> {
-    let _ = app.emit(
+    emit_on_main(
+        &app,
         EVENT_INSTALLATION_LOG,
         InstallationLog {
             timestamp: get_timestamp(),
@@ -771,7 +810,8 @@ async fn cancel_model_download(app: AppHandle) -> Result<(), String> {
 
     cancel_download()?;
 
-    let _ = app.emit(
+    emit_on_main(
+        &app,
         EVENT_DOWNLOAD_PROGRESS,
         DownloadProgress {
             status: "cancelled".to_string(),
@@ -1147,7 +1187,8 @@ async fn ollama_chat_stream(
                         {
                             full_content.push_str(content);
                             // Emit token event
-                            let _ = app.emit(
+                            emit_on_main(
+                                &app,
                                 "ollama:token",
                                 serde_json::json!({
                                     "generation_id": generation_id,
@@ -1175,7 +1216,8 @@ async fn ollama_chat_stream(
                                 continue;
                             }
                             // No tool calls -> final answer.
-                            let _ = app.emit(
+                            emit_on_main(
+                                &app,
                                 "ollama:done",
                                 serde_json::json!({
                                     "generation_id": generation_id,
@@ -1188,7 +1230,8 @@ async fn ollama_chat_stream(
                 }
             }
             Err(e) => {
-                let _ = app.emit(
+                emit_on_main(
+                    &app,
                     "ollama:error",
                     serde_json::json!({
                         "generation_id": generation_id,
@@ -1201,7 +1244,8 @@ async fn ollama_chat_stream(
     }
 
     // Stream closed without a tool-free `done` — emit done with what we have.
-    let _ = app.emit(
+    emit_on_main(
+        &app,
         "ollama:done",
         serde_json::json!({
             "generation_id": generation_id,
@@ -1632,6 +1676,10 @@ const URL_MONITOR_SCRIPT_ONLINE: &str = r#"
 
 /// JavaScript for offline mode - intercepts fetch calls and routes API calls through offline server
 /// CRITICAL: This script must restore localStorage context BEFORE the app initializes
+///
+/// `__OFFLINE_SERVER_URL__` is substituted by [`url_monitor_script_offline`] —
+/// the offline server's port is allocated at startup (3457 when free, any free
+/// port otherwise), so it cannot be baked in here.
 const URL_MONITOR_SCRIPT_OFFLINE: &str = r#"
 (function() {
     // Only run once per page
@@ -1642,7 +1690,7 @@ const URL_MONITOR_SCRIPT_OFFLINE: &str = r#"
     window.__TAURI_OFFLINE_MODE__ = true;
     localStorage.setItem('tauri_offline_mode', 'true');
 
-    var OFFLINE_SERVER = 'http://127.0.0.1:3457';
+    var OFFLINE_SERVER = '__OFFLINE_SERVER_URL__';
 
     // Override __ENV__ to route API calls through our offline server
     window.__ENV__ = window.__ENV__ || {};
@@ -1798,6 +1846,13 @@ const URL_MONITOR_SCRIPT_OFFLINE: &str = r#"
 })();
 "#;
 
+/// [`URL_MONITOR_SCRIPT_OFFLINE`] with the offline server's real URL patched in.
+/// Called at window-creation time, after the server has bound and recorded its
+/// port, so a fallback port reaches the webview instead of a stale 3457.
+fn url_monitor_script_offline() -> String {
+    URL_MONITOR_SCRIPT_OFFLINE.replace("__OFFLINE_SERVER_URL__", &offline_server::get_server_url())
+}
+
 /// Helper function to send streaming chat request to Foundry Local (OpenAI-compatible API)
 async fn foundry_chat_stream(
     app: AppHandle,
@@ -1921,7 +1976,8 @@ async fn foundry_chat_stream(
                                     full_content.push_str(content);
                                     println!("[FoundryChat] Emitting token: '{}'", content);
                                     // Emit token event
-                                    let _ = app.emit(
+                                    emit_on_main(
+                                        &app,
                                         "ollama:token",
                                         serde_json::json!({
                                             "generation_id": generation_id,
@@ -1948,7 +2004,8 @@ async fn foundry_chat_stream(
             Err(e) => {
                 let err_msg = format!("Stream error: {}", e);
                 println!("[FoundryChat] ERROR: {}", err_msg);
-                let _ = app.emit(
+                emit_on_main(
+                    &app,
                     "ollama:error",
                     serde_json::json!({
                         "generation_id": generation_id,
@@ -1967,7 +2024,8 @@ async fn foundry_chat_stream(
     );
 
     // Emit done event
-    let _ = app.emit(
+    emit_on_main(
+        &app,
         "ollama:done",
         serde_json::json!({
             "generation_id": generation_id,
@@ -2106,6 +2164,15 @@ async fn open_external_url(app: AppHandle, url: String) -> Result<(), String> {
 }
 
 fn main() {
+    // Dev-checkout overrides first: src-tauri/.env.local, then .env.production.
+    // The path is compile-time CARGO_MANIFEST_DIR, so installed builds have
+    // neither and skip straight on. Loaded before anything reads env; dotenvy
+    // never overrides already-set vars, so shell env > .env.local >
+    // .env.production > .env. Keys documented in src-tauri/.env.example.
+    for f in [".env.local", ".env.production"] {
+        let _ = dotenvy::from_path(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(f));
+    }
+
     // Load .env file if present (for local development and custom builds)
     // First try current directory (dev mode), then try next to the executable (bundled app)
     if dotenvy::dotenv().is_err() {
@@ -2143,12 +2210,28 @@ fn main() {
     #[cfg(target_os = "macos")]
     let base = base.plugin(tauri_plugin_macos_permissions::init());
 
-    base
-        .plugin(tauri_plugin_shell::init())
+    base.plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
+            // Keep the managed opencode on the pinned version — a pin bump would
+            // otherwise never reach a machine that already has a runnable copy.
+            let opencode_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                opencode_installer::ensure_opencode_current(opencode_handle).await;
+            });
+
+            // Vibe skills track the latest GitHub release with no freshness
+            // window — resolve-and-sync in the background on every launch, so
+            // Coding Mode always starts from the newest published set (and a
+            // fresh machine has them before Code is ever enabled).
+            let vibe_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                let _ = opencode_installer::ensure_vibe_skills(vibe_handle).await;
+            });
+
             // Initialize web cache with app data directory
             let app_data_dir = app
                 .path()
@@ -2358,7 +2441,7 @@ fn main() {
             } else {
                 // Offline - use tauri://localhost to allow IPC access
                 // The offline shell will be served from the bundled assets
-                // API calls will be routed to the HTTP server (localhost:3456) via fetch intercept
+                // API calls will be routed to the offline HTTP server via fetch intercept
                 println!("[ibl.ai] OFFLINE MODE: Using tauri://localhost for IPC access");
 
                 // Store the last route for the initialization script to use
@@ -2398,10 +2481,12 @@ fn main() {
             // Create main window with appropriate URL monitoring script
             let init_script = if is_online {
                 println!("[ibl.ai] Using ONLINE initialization script");
-                URL_MONITOR_SCRIPT_ONLINE
+                URL_MONITOR_SCRIPT_ONLINE.to_string()
             } else {
                 println!("[ibl.ai] Using OFFLINE initialization script");
-                URL_MONITOR_SCRIPT_OFFLINE
+                // Resolved here, not baked in: the offline server has already
+                // bound by now, so this carries its real (possibly fallback) port.
+                url_monitor_script_offline()
             };
 
             println!("[ibl.ai] Creating main window with URL: {:?}", initial_url);
@@ -2491,6 +2576,7 @@ fn main() {
                         || url_str.starts_with("http://127.0.0.1")
                         || url_str.starts_with("https://mentorai.iblai.app")
                         || url_str.starts_with("https://os.ibl.ai")
+                        || url_str.starts_with("https://auth.iblai.org")
                         || url_str.starts_with("https://login.iblai.app")
                         || url_str.starts_with("https://base.manager.iblai.app")
                         || url_str.starts_with("https://base.manager.iblai.org")
@@ -2640,7 +2726,8 @@ fn main() {
                 println!("[Protocol] Proxying to offline server: {}", path);
 
                 std::thread::spawn(move || {
-                    let offline_server_url = format!("http://127.0.0.1:3457{}", path);
+                    let offline_server_url =
+                        format!("{}{}", offline_server::get_server_url(), path);
                     println!(
                         "[Protocol] Fetching from offline server: {}",
                         offline_server_url
@@ -2717,9 +2804,12 @@ fn main() {
             stop_ollama,
             check_ollama_status,
             get_mcp_config_path,
-            ghost_os_manager::install_ghost_os,
-            ghost_os_manager::stop_ghost_os,
-            ghost_os_manager::check_ghost_os_status,
+            cua_driver_installer::install_cua_driver,
+            cua_driver_installer::check_cua_driver_status,
+            cua_driver_mcp::cua_driver_support,
+            cua_driver_mcp::cua_driver_start,
+            cua_driver_mcp::cua_driver_send,
+            cua_driver_mcp::cua_driver_stop,
             check_foundry_local_status,
             start_foundry_local_service,
             load_foundry_local_model,
@@ -2756,6 +2846,23 @@ fn main() {
             oauth::oauth_start,
             oauth::oauth_callback,
             oauth::oauth_get_result,
+            opencode_acp::opencode_chat_stream,
+            opencode_acp::opencode_stop,
+            opencode_acp::opencode_permission_respond,
+            opencode_acp::opencode_close,
+            opencode_acp::get_opencode_workspace,
+            opencode_acp::set_opencode_workspace,
+            opencode_acp::new_opencode_workspace,
+            opencode_acp::get_opencode_permission_mode,
+            opencode_acp::set_opencode_permission_mode,
+            opencode_acp::set_opencode_skills,
+            opencode_acp::begin_opencode_skills_sync,
+            opencode_installer::install_opencode,
+            opencode_installer::ensure_vibe_skills,
+            opencode_installer::check_opencode_status,
+            opencode_acp::check_code_local_model,
+            opencode_acp::set_opencode_learner,
+            opencode_acp::ensure_opencode_platform_key,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri app");

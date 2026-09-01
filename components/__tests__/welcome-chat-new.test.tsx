@@ -74,11 +74,13 @@ vi.mock('@/components/welcome-chat', () => ({
     mentorName,
     profileImage,
     sessionId,
+    chatAreaMaxWidth,
   }: any) => (
     <div data-testid="welcome-chat">
       <div data-testid="mentor-name">{mentorName}</div>
       <div data-testid="profile-image">{profileImage}</div>
       <div data-testid="session-id">{sessionId}</div>
+      <div data-testid="welcome-chat-max-width">{String(chatAreaMaxWidth)}</div>
       <button
         onClick={() => onPromptSelect('test prompt')}
         data-testid="prompt-select"
@@ -1221,8 +1223,22 @@ describe('WelcomeChatNew', () => {
       const { container } = renderWithRedux(
         <WelcomeChatNew {...defaultProps} />,
       );
-      const defaultContainer = container.querySelector('.overflow-y-auto');
+      const defaultContainer = container.querySelector('.w-full.py-6');
       expect(defaultContainer).toBeInTheDocument();
+    });
+
+    // Issue #2260 — the default-view wrapper never scrolled (clientHeight ===
+    // scrollHeight); its `overflow-y-auto` shadowed the real scroll container
+    // owned by components/chat. Keep it a plain wrapper.
+    it('does not declare its own scroll container in default view (issue #2260)', () => {
+      mockUseEmbedMode.mockReturnValue(false);
+      mockUseParams.mockReturnValue({ projectId: undefined });
+
+      const { container } = renderWithRedux(
+        <WelcomeChatNew {...defaultProps} />,
+      );
+      const root = container.firstElementChild as HTMLElement;
+      expect(root.className).toBe('');
     });
 
     it('should apply inline style for chatAreaMaxWidth', () => {
@@ -1237,6 +1253,61 @@ describe('WelcomeChatNew', () => {
       const chatInputForm = screen.getByTestId('chat-input-form');
       const chatContainer = chatInputForm.parentElement;
       expect(chatContainer).toHaveStyle({ maxWidth: '900px' });
+    });
+
+    // Issue #2260 — WelcomeMessage defaults to a hardcoded max-w-3xl (768px)
+    // while the chat input uses the tenant's chatAreaMaxWidth, so on a wide
+    // viewport the welcome text sat 80px narrower than the input below it.
+    it('sizes the welcome message to chatAreaMaxWidth, not max-w-3xl', () => {
+      mockUseEmbedMode.mockReturnValue(false);
+      mockUseParams.mockReturnValue({ projectId: undefined });
+
+      const { container } = renderWithRedux(
+        <WelcomeChatNew {...defaultProps} chatAreaMaxWidth={900} />,
+      );
+
+      const chatContainer =
+        screen.getByTestId('chat-input-form').parentElement!;
+      const messageContainer = screen
+        .getByTestId('markdown-content')
+        .closest('[style]') as HTMLElement;
+
+      expect(messageContainer).toHaveStyle({ maxWidth: '900px' });
+      expect(messageContainer).toHaveStyle({
+        maxWidth: chatContainer.style.maxWidth,
+      });
+      expect(container.querySelector('.max-w-3xl')).toBeNull();
+    });
+
+    // Issue #2260 — the embed branch is the only caller of WelcomeChat, and it
+    // originally dropped chatAreaMaxWidth, leaving the box on a hardcoded
+    // max-w-2xl that never matched the chat input.
+    it('forwards chatAreaMaxWidth to WelcomeChat in embed mode', () => {
+      mockUseEmbedMode.mockReturnValue(true);
+      mockUseParams.mockReturnValue({ projectId: undefined });
+
+      renderWithRedux(
+        <WelcomeChatNew {...defaultProps} chatAreaMaxWidth={1024} />,
+      );
+
+      expect(screen.getByTestId('welcome-chat-max-width')).toHaveTextContent(
+        '1024',
+      );
+    });
+
+    it('tracks chatAreaMaxWidth when the tenant widens the chat area', () => {
+      mockUseEmbedMode.mockReturnValue(false);
+      mockUseParams.mockReturnValue({ projectId: undefined });
+
+      renderWithRedux(
+        <WelcomeChatNew {...defaultProps} chatAreaMaxWidth={1024} />,
+      );
+
+      const messageContainer = screen
+        .getByTestId('markdown-content')
+        .closest('[style]') as HTMLElement;
+
+      expect(messageContainer).toHaveStyle({ maxWidth: '1024px' });
     });
   });
 
@@ -1263,7 +1334,9 @@ describe('WelcomeChatNew', () => {
       const markdownContent = screen.getByTestId('markdown-content');
       expect(markdownContent).toHaveClass('text-gray-600');
       expect(markdownContent).toHaveClass('text-lg');
-      expect(markdownContent).toHaveClass('max-w-3xl');
+      // Width now comes from the container's chatAreaMaxWidth so it matches
+      // the chat input; the hardcoded 768px cap would undercut it.
+      expect(markdownContent).not.toHaveClass('max-w-3xl');
     });
 
     it('should render aiWelcomeMessage with Markdown when welcomeMessage is empty', () => {

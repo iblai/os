@@ -1,12 +1,6 @@
 'use client';
 
-import {
-  useEffect,
-  useState,
-  useCallback,
-  useRef,
-  type ComponentProps,
-} from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   useParams,
   useRouter,
@@ -44,6 +38,7 @@ import {
 } from '@/features/rbac/rbac-slice';
 import { useModelDownload } from '@/hooks/use-model-download';
 import { useLockedTenant } from '@/hooks/use-tenant-lock';
+import { LOCAL_LLM_CHANGED_EVENT } from '@/hooks/use-selected-local-model';
 
 export function UserProfile() {
   const username = useUsername();
@@ -107,6 +102,10 @@ export function UserProfile() {
       if (!open) {
         // Set flag to prevent useEffect from reopening
         isClosingRef.current = true;
+        // This modal (Profile → Advanced) hosts the Local Models master toggle.
+        // Notify the nav-bar on-device badge to re-read so it reverts to the
+        // cloud model indicator when the user disables local models here.
+        window.dispatchEvent(new Event(LOCAL_LLM_CHANGED_EVENT));
         // Clear profileTab from URL when modal closes
         const params = new URLSearchParams(searchParams.toString());
         params.delete('profileTab');
@@ -311,7 +310,11 @@ export function UserProfile() {
       // Configuration
       showProfileTab={true}
       showAccountTab={false}
-      showTenantSwitcher={userIsAdmin && !lockedTenant}
+      showTenantSwitcher={
+        (userIsAdmin ||
+          userTenants.some((t) => t.key !== 'main' && t.key !== tenantKey)) &&
+        !lockedTenant
+      }
       showHelpLink={true}
       showLogoutButton={true}
       showLearnerModeSwitch={userIsAdmin && tenantKey !== 'main'}
@@ -364,15 +367,6 @@ export function UserProfile() {
         onResetState: resetState,
         onSelectFoundryModel,
       }}
-      // System Control (Computer Assistant): configure the size gate to 13 GB.
-      // The dropdown self-wires the rest of systemControlProps via useGhostOs;
-      // the SDK types the object as fully required, but each field falls back at
-      // runtime, so we intentionally pass only the gate.
-      systemControlProps={
-        { requiredSizeGb: 13 } as unknown as NonNullable<
-          ComponentProps<typeof UserProfileDropdown>['systemControlProps']
-        >
-      }
       // Controlled modal state for URL sync
       isModalOpen={isProfileModalOpen}
       onModalOpenChange={handleModalOpenChange}

@@ -1,0 +1,248 @@
+{
+  "version": 1,
+  "lastUpdated": "2026-08-29",
+  "summary": {
+    "totalCheckpoints": 37,
+    "coveredCheckpoints": 20,
+    "pendingCheckpoints": 17,
+    "deprecatedCheckpoints": 0,
+    "notReproducibleCheckpoints": 0,
+    "percent": 100,
+    "totalJourneys": 3,
+    "activeJourneys": 3
+  },
+  "journeys": [
+    {
+      "id": "app-launch-and-shell",
+      "name": "App Launch & Desktop Shell",
+      "spec": "01-app-launch-and-shell.spec.ts",
+      "sourceFiles": [
+        "src-tauri/src/lib.rs",
+        "src-tauri/src/main.rs",
+        "hooks/use-tauri.ts",
+        "types/tauri.ts"
+      ],
+      "checkpoints": [
+        {
+          "id": "shell-01",
+          "description": "App binary launches under tauri-driver and a WebDriver session attaches to its WebView",
+          "status": "covered"
+        },
+        {
+          "id": "shell-02",
+          "description": "The WebView renders a <body> element",
+          "status": "covered"
+        },
+        {
+          "id": "shell-03",
+          "description": "The WebView loads a document with a non-empty URL (the platform shell or the offline fallback)",
+          "status": "covered"
+        },
+        {
+          "id": "shell-04",
+          "description": "The document exposes a non-empty title",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "on-device-model-management",
+      "name": "On-device Model Management",
+      "spec": "02-on-device-model-management.spec.ts",
+      "sourceFiles": [
+        "hooks/use-model-download.ts",
+        "components/modals/llm-provider-modal.tsx",
+        "components/modals/llm-provider-modal/local-model-row.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
+        "src-tauri/src/model_manager.rs",
+        "src-tauri/src/lib.rs",
+        "src-tauri/src/mcp_bridge_manager.rs",
+        "src-tauri/src/offline_server.rs"
+      ],
+      "checkpoints": [
+        {
+          "id": "odm-01",
+          "description": "The LLM picker merges on-device (local) models with the provider's cloud models in one availability-ranked list",
+          "status": "pending"
+        },
+        {
+          "id": "odm-02",
+          "description": "A not-installed on-device model pulls via the download_model IPC and streams live progress events (real smollm:135m pull against the compiled binary)",
+          "status": "covered"
+        },
+        {
+          "id": "odm-03",
+          "description": "Cancelling an in-flight pull returns promptly and the app keeps answering IPC (the no-freeze regression fix)",
+          "status": "covered"
+        },
+        {
+          "id": "odm-04",
+          "description": "Clicking a different on-device model while one is downloading shows the 'already downloading' notice (one pull at a time)",
+          "status": "pending"
+        },
+        {
+          "id": "odm-05",
+          "description": "A completed pull installs the on-device model (check_ollama_status lists it); the selection UI is covered by odm-06",
+          "status": "covered"
+        },
+        {
+          "id": "odm-06",
+          "description": "The nav-bar on-device badge reflects the selected local model",
+          "status": "pending"
+        },
+        {
+          "id": "odm-07",
+          "description": "Busy default ports at launch degrade to allocated ones: the MCP bridge and the offline server each bind a free port (preferring 8000/3457) and every consumer follows — local chat still streams, the offline cache still serves",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "code-mode",
+      "name": "Code Mode (opencode)",
+      "spec": "03-code-mode.spec.ts",
+      "sourceFiles": [
+        "src-tauri/src/opencode_acp.rs",
+        "src-tauri/src/opencode_installer.rs",
+        "src-tauri/src/opencode_proxy.rs",
+        "components/chat-input-form/coding-mode-button.tsx",
+        "components/chat/code-permission-card.tsx",
+        "hooks/use-opencode-skill-sync.ts",
+        "hooks/use-opencode-learner.ts",
+        "components/chat/ai-message-bubble.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "code-01",
+          "description": "check_opencode_status reports Code readiness (installed / version / config_ready / sandboxed / supported / sandbox_ready)",
+          "status": "covered"
+        },
+        {
+          "id": "code-02",
+          "description": "install_opencode downloads and installs the pinned opencode release binary (live)",
+          "status": "covered"
+        },
+        {
+          "id": "code-03",
+          "description": "The freshly installed binary is discoverable on the augmented PATH — status reports installed with a version instead of re-downloading forever",
+          "status": "covered"
+        },
+        {
+          "id": "code-04",
+          "description": "A chat with real work keeps its own workspace under the app-managed root; an untouched leftover (just .git) is recycled for the next chat instead of stranding one dir per launch",
+          "status": "covered"
+        },
+        {
+          "id": "code-05",
+          "description": "A chat keeps the same workspace across calls, persisted in workspaces.json",
+          "status": "covered"
+        },
+        {
+          "id": "code-06",
+          "description": "The folder picker repoints ONE chat at an arbitrary path and leaves other chats untouched",
+          "status": "covered"
+        },
+        {
+          "id": "code-07",
+          "description": "opencode_close / opencode_permission_respond on an unknown id are graceful no-ops",
+          "status": "covered"
+        },
+        {
+          "id": "code-11",
+          "description": "The app keeps answering IPC while opencode downloads and extracts (setup-freeze regression)",
+          "status": "covered"
+        },
+        {
+          "id": "code-12",
+          "description": "set_opencode_skills materialises a mentor’s Agent Skills as SKILL.md packages (frontmatter + text resources), with hostile slugs/filenames confined to the staging dir",
+          "status": "covered"
+        },
+        {
+          "id": "code-13",
+          "description": "A skills rewrite drops deselected skills, an empty sync clears the tree, and `skills: null` ends a sync without touching it",
+          "status": "covered"
+        },
+        {
+          "id": "code-16",
+          "description": "ensure_vibe_skills installs the shared iblai/vibe skill set into the app data dir (live tarball fetch, daily sha-gated)",
+          "status": "covered"
+        },
+        {
+          "id": "code-08",
+          "description": "A permission prompt in one chat does not block another chat's turn",
+          "status": "pending"
+        },
+        {
+          "id": "code-09",
+          "description": "The 5-session cap evicts the least-recently-used idle opencode process",
+          "status": "pending"
+        },
+        {
+          "id": "code-10",
+          "description": "The permission prompt renders in the chat that raised it",
+          "status": "pending"
+        },
+        {
+          "id": "code-14",
+          "description": "The Code pill spins in place of its icon while skills sync, and the popover shows the amber note when the sync fails",
+          "status": "pending"
+        },
+        {
+          "id": "code-15",
+          "description": "A Code turn invokes a synced skill through opencode’s native skill tool (permission card, then skill content in context)",
+          "status": "pending"
+        },
+        {
+          "id": "code-17",
+          "description": "New Chat in the sidebar evicts the previous chat’s opencode process while Code is on",
+          "status": "pending"
+        },
+        {
+          "id": "code-18",
+          "description": "A Code turn’s opencode process runs inside the OS sandbox (bwrap / sandbox-exec) — only the workspace and tool caches writable, ~/.ssh empty",
+          "status": "pending"
+        },
+        {
+          "id": "code-19",
+          "description": "A second New Chat in one app run gets its own fresh workspace, and a chat’s folder follows it from the ephemeral first-turn key to its real session id",
+          "status": "pending"
+        },
+        {
+          "id": "code-20",
+          "description": "Killing the opencode process mid-turn: the answer continues in the same bubble with no visible interruption (one silent respawn re-sends the prompt), and a second kill in the same turn surfaces ollama:error",
+          "status": "pending"
+        },
+        {
+          "id": "code-21",
+          "description": "The Code approval mode (manual/auto) round-trips through ~/.local/share/iblai/settings.json, survives a restart, and an unknown mode is refused rather than defaulting",
+          "status": "covered"
+        },
+        {
+          "id": "code-22",
+          "description": "A mentor keeps one workspace across chats while another mentor gets its own, and New Workspace mints a fresh folder without deleting the previous one",
+          "status": "covered"
+        },
+        {
+          "id": "code-23",
+          "description": "The Code popover asks for an approval mode on first use and stores the answer against the signed-in user (so it follows them to another machine)",
+          "status": "pending"
+        },
+        {
+          "id": "code-24",
+          "description": "The Code popover offers New Workspace and a platform-named Open Folder button (Finder / Explorer / the probed Linux file manager)",
+          "status": "pending"
+        },
+        {
+          "id": "code-25",
+          "description": "A between-turn opencode death (crash, idle reap, LRU eviction) is invisible: the next turn session/loads the same conversation back, and when a load isn't possible the frontend's transcript is resent so the agent continues; a mid-turn death keeps the input busy — the Stop button stays Stop and no suggested prompts appear while the backend silently respawns",
+          "status": "pending"
+        },
+        {
+          "id": "code-26",
+          "description": "A managed opencode older than the pinned version is re-downloaded at boot; a user's own PATH copy is never replaced",
+          "status": "pending"
+        }
+      ]
+    }
+  ]
+}

@@ -1,5 +1,7 @@
 import { test, expect } from '../fixtures/mentor-test';
-import { navigateToMentorApp } from '../utils/auth';
+import { navigateToMentorApp, signUpNewUserOnMain } from '../utils/auth';
+import { NavbarPage } from '../page-objects/navbar.page';
+import { MENTOR_NEXTJS_HOST, AUTH_HOST } from '../fixtures/test-data';
 import { logger } from '@iblai/iblai-js/playwright';
 
 test.describe('Journey 3: New User UI & Profile Dropdown', () => {
@@ -32,13 +34,6 @@ test.describe('Journey 3: New User UI & Profile Dropdown', () => {
     const items = nonadminPage.getByRole('menuitem');
     const count = await items.count();
     expect(count).toBeGreaterThanOrEqual(1);
-  });
-
-  test('newly registered user goes to navbar and opens profile dropdown to see exactly 3 items', async ({
-    nonadminNavbarPage,
-  }) => {
-    const count = await nonadminNavbarPage.getMenuItemCount();
-    expect(count).toBe(3);
   });
 
   // ui-04: verify that any admin-only sidebar entry that happens to be
@@ -157,5 +152,52 @@ test.describe('Journey 3: New User UI & Profile Dropdown', () => {
           `paywall / main-tenant condition is off in this environment; skipping`,
       );
     }
+  });
+});
+
+// ── Journey 3 (fresh signup): Profile Dropdown for a genuinely new user ────
+//
+// ui-03 previously reused the `nonadminPage` fixture, which loads a saved,
+// pre-existing storageState account (see `auth-nonadmin.setup.ts`) — not a
+// "newly registered user". On the main tenant that stale account can carry
+// state (e.g. an "Account"/billing item) that the fresh-signup profile
+// dropdown doesn't have, so the exact `toBe(3)` assertion was fragile.
+//
+// This sibling describe signs up a brand-new account via the auth service
+// (mirroring Journey 1's signup test and Journey 59 Flow 0) and asserts the
+// default post-signup profile dropdown on the "main" tenant: exactly
+// Profile / Help / Log Out. It intentionally does NOT use the shared
+// `beforeEach`/nonadmin fixtures above — it needs a clean, unauthenticated
+// context so the signup flow can provision + authenticate its own account.
+test.describe('Journey 3: New User UI & Profile Dropdown (fresh signup)', () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  // Signup involves several redirects (auth host -> account/create ->
+  // SSO -> main tenant); give it plenty of room like Journeys 1 and 59.
+  test.setTimeout(120_000);
+
+  test('newly registered user goes to navbar and opens profile dropdown to see exactly 3 items', async ({
+    page,
+  }) => {
+    test.skip(
+      !MENTOR_NEXTJS_HOST || !AUTH_HOST,
+      'Requires MENTOR_NEXTJS_HOST and AUTH_HOST',
+    );
+
+    const { email } = await signUpNewUserOnMain(page);
+    logger.info(`ui-03: fresh signup landed on main tenant as ${email}`);
+
+    const navbarPage = new NavbarPage(page);
+    await navbarPage.openProfileDropdown();
+
+    await expect(page.getByRole('menuitem')).toHaveCount(3, {
+      timeout: 10_000,
+    });
+    await expect(page.getByRole('menuitem', { name: 'Profile' })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: 'Help' })).toBeVisible();
+    await expect(
+      page.getByRole('menuitem', { name: 'Log Out', exact: true }),
+    ).toBeVisible();
+    await page.keyboard.press('Escape');
   });
 });

@@ -77,11 +77,12 @@ export default function useWelcome({
     if (response?.eos) {
       setTimeout(() => {
         _endConnection();
+        const guidedUserId = username || 'anonymous';
         loadGuidedPrompts({
           org: tenantKey,
           sessionId,
-          // @ts-ignore
-          userId: username,
+          // @ts-ignore - userId is a valid runtime path param not yet in the query arg type
+          userId: guidedUserId,
         });
       }, 200);
     }

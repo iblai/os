@@ -1,12 +1,15 @@
 // spec: e2e/test-plans/tool-call-indicator-and-reasoning-section.md
 
 import { test, expect } from '../fixtures/mentor-test';
-import { navigateToMentorApp } from '../utils/auth';
+import { navigateToMentorApp, getPlatformContext } from '../utils/auth';
+import { MentorTracker } from '../utils/mentor-cleanup';
 
 // Generous timeout for LLM streaming responses
 const STREAMING_TIMEOUT = 120_000;
 
 test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
+  const tracker52 = new MentorTracker();
+
   test.beforeEach(async ({ page }) => {
     await navigateToMentorApp(page);
   });
@@ -20,7 +23,10 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     editMentorPage,
     chatPage,
   }) => {
-    await createMentorPage.openAndCreate('E2E Tool Call Test Mentor');
+    await createMentorPage.openAndCreate(
+      `E2E Tool Call Test Mentor ${Date.now()}`,
+    );
+    tracker52.add((await getPlatformContext(page)).mentorId);
 
     // Enable Web Search via Tools tab
     // Enable verbose reasoning gates the tool-call indicator — enable it first.
@@ -30,10 +36,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     // tenant, so the agent never responds. Pin the LLM to gpt-5, the model
     // confirmed to stream responses (and tool calls) here.
     await editMentorPage.navigateToTab('LLM');
-    await editMentorPage.llm.selectProviderAndModel(
-      'OpenAI',
-      'OpenAI icon gpt-5',
-    );
+    await editMentorPage.llm.selectProviderAndModel('OpenAI', 'gpt-5');
     await editMentorPage.navigateToTab('Tools');
     await editMentorPage.tools.enableTool('Web Search');
     await editMentorPage.close();
@@ -102,7 +105,10 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     editMentorPage,
     chatPage,
   }) => {
-    await createMentorPage.openAndCreate('E2E Tool Call Expand Test Mentor');
+    await createMentorPage.openAndCreate(
+      `E2E Tool Call Expand Test Mentor ${Date.now()}`,
+    );
+    tracker52.add((await getPlatformContext(page)).mentorId);
 
     // Enable verbose reasoning gates the tool-call indicator — enable it first.
     await editMentorPage.open('Settings');
@@ -111,10 +117,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     // tenant, so the agent never responds. Pin the LLM to gpt-5, the model
     // confirmed to stream responses (and tool calls) here.
     await editMentorPage.navigateToTab('LLM');
-    await editMentorPage.llm.selectProviderAndModel(
-      'OpenAI',
-      'OpenAI icon gpt-5',
-    );
+    await editMentorPage.llm.selectProviderAndModel('OpenAI', 'gpt-5');
     await editMentorPage.navigateToTab('Tools');
     await editMentorPage.tools.enableTool('Web Search');
     await editMentorPage.close();
@@ -154,8 +157,10 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
       timeout: 5_000,
     });
 
-    // Expanded content shows the query detail (extracted from tool input)
-    const toolContent = lastAIMessage.locator('div.border-l-2.border-gray-200');
+    // Expanded content shows the query detail (extracted from tool input).
+    // `border-gray-300`, not `-200`: the panel's left rule was darkened so the
+    // tool detail reads clearly against the bubble (see tool-call-indicator.tsx).
+    const toolContent = lastAIMessage.locator('div.border-l-2.border-gray-300');
     await expect(toolContent).toContainText(/f1|race|formula/i, {
       timeout: 5_000,
     });
@@ -183,7 +188,10 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     editMentorPage,
     chatPage,
   }) => {
-    await createMentorPage.openAndCreate('E2E Unique Tool Count Mentor');
+    await createMentorPage.openAndCreate(
+      `E2E Unique Tool Count Mentor ${Date.now()}`,
+    );
+    tracker52.add((await getPlatformContext(page)).mentorId);
 
     // Enable verbose reasoning gates the tool-call indicator — enable it first.
     await editMentorPage.open('Settings');
@@ -192,10 +200,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     // tenant, so the agent never responds. Pin the LLM to gpt-5, the model
     // confirmed to stream responses (and tool calls) here.
     await editMentorPage.navigateToTab('LLM');
-    await editMentorPage.llm.selectProviderAndModel(
-      'OpenAI',
-      'OpenAI icon gpt-5',
-    );
+    await editMentorPage.llm.selectProviderAndModel('OpenAI', 'gpt-5');
     await editMentorPage.navigateToTab('Tools');
     await editMentorPage.tools.enableTool('Web Search');
     await editMentorPage.close();
@@ -244,7 +249,8 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     editMentorPage,
     chatPage,
   }) => {
-    await createMentorPage.openAndCreate('E2E No-Tools Mentor');
+    await createMentorPage.openAndCreate(`E2E No-Tools Mentor ${Date.now()}`);
+    tracker52.add((await getPlatformContext(page)).mentorId);
 
     // No Web Search button should be visible
     try {
@@ -286,7 +292,10 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     editMentorPage,
     chatPage,
   }) => {
-    await createMentorPage.openAndCreate('E2E Web Search Not Activated Mentor');
+    await createMentorPage.openAndCreate(
+      `E2E Web Search Not Activated Mentor ${Date.now()}`,
+    );
+    tracker52.add((await getPlatformContext(page)).mentorId);
 
     // Enable verbose reasoning gates the tool-call indicator — enable it first.
     await editMentorPage.open('Settings');
@@ -295,10 +304,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     // tenant, so the agent never responds. Pin the LLM to gpt-5, the model
     // confirmed to stream responses (and tool calls) here.
     await editMentorPage.navigateToTab('LLM');
-    await editMentorPage.llm.selectProviderAndModel(
-      'OpenAI',
-      'OpenAI icon gpt-5',
-    );
+    await editMentorPage.llm.selectProviderAndModel('OpenAI', 'gpt-5');
     await editMentorPage.navigateToTab('Tools');
     await editMentorPage.tools.enableTool('Web Search');
     await editMentorPage.close();
@@ -330,23 +336,23 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
   // ────────────────────────────────────────────────────────────────
   // Test 2.1 - 2.3: Reasoning Section with gpt-5 Model
   // ────────────────────────────────────────────────────────────────
-  test('Reasoning Section Shows Thinking with Bounce Dots and Auto-Collapses After Streaming', async ({
+  test('Reasoning Section Renders and Auto-Collapses to Thought After Streaming', async ({
     page,
     createMentorPage,
     editMentorPage,
     chatPage,
   }) => {
-    await createMentorPage.openAndCreate('E2E Reasoning Test Mentor');
+    await createMentorPage.openAndCreate(
+      `E2E Reasoning Test Mentor ${Date.now()}`,
+    );
+    tracker52.add((await getPlatformContext(page)).mentorId);
 
     // Enable verbose reasoning gates the reasoning section — enable it, then set the
     // LLM to gpt-5 via the LLM tab page object.
     await editMentorPage.open('Settings');
     await editMentorPage.settings.setVerboseReasoning(true);
     await editMentorPage.navigateToTab('LLM');
-    await editMentorPage.llm.selectProviderAndModel(
-      'OpenAI',
-      'OpenAI icon gpt-5',
-    );
+    await editMentorPage.llm.selectProviderAndModel('OpenAI', 'gpt-5');
     await editMentorPage.close();
 
     // Send a question that triggers reasoning
@@ -358,18 +364,16 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
       30_000,
     );
 
-    // During streaming: "Thinking" label with bounce dots
-    const thinkingButton = chatPage.aiMessages
+    // Match either label. "Thinking" holds only while the reasoning phase is
+    // still streaming, and that window can close before the first poll — so
+    // pinning to it raced the model rather than testing the app. What this
+    // journey uniquely proves is that gpt-5's reasoning deltas reach the DOM at
+    // all; the Thinking/Thought and bounce-dot rendering is covered off props by
+    // components/chat/__tests__/reasoning-section.test.tsx.
+    const reasoningChip = chatPage.aiMessages
       .last()
-      .getByRole('button', { name: /thinking/i });
-    await expect(thinkingButton).toBeVisible({ timeout: 30_000 });
-
-    const bounceDotsContainer = chatPage.aiMessages
-      .last()
-      .locator('span.inline-flex.gap-0\\.5');
-    await expect(bounceDotsContainer).toBeVisible({ timeout: 10_000 });
-    const bounceDots = bounceDotsContainer.locator('span.animate-bounce');
-    await expect(bounceDots).toHaveCount(3, { timeout: 5_000 });
+      .getByRole('button', { name: /thinking|thought/i });
+    await expect(reasoningChip).toBeVisible({ timeout: 30_000 });
 
     // Wait for streaming to complete
     await chatPage.waitForStreamingComplete(STREAMING_TIMEOUT);
@@ -381,15 +385,10 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     await expect(thoughtButton).toBeVisible({ timeout: 15_000 });
 
     // Bounce dots are gone
-    try {
-      await bounceDotsContainer.waitFor({ state: 'hidden', timeout: 5_000 });
-    } catch {
-      const remainingDots = chatPage.aiMessages
-        .last()
-        .locator('span.animate-bounce');
-      const dotCount = await remainingDots.count();
-      expect(dotCount).toBe(0);
-    }
+    const bounceDots = chatPage.aiMessages
+      .last()
+      .locator('span.animate-bounce');
+    await expect(bounceDots).toHaveCount(0, { timeout: 5_000 });
 
     // Reasoning section is collapsed
     const reasoningContent = chatPage.aiMessages
@@ -441,7 +440,10 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     editMentorPage,
     chatPage,
   }) => {
-    await createMentorPage.openAndCreate('E2E Non-Reasoning Mentor');
+    await createMentorPage.openAndCreate(
+      `E2E Non-Reasoning Mentor ${Date.now()}`,
+    );
+    tracker52.add((await getPlatformContext(page)).mentorId);
 
     // Enable verbose reasoning so this test verifies the model produces no
     // reasoning tokens, rather than the section being hidden by the toggle.
@@ -451,10 +453,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     // assertion checks that no reasoning section appears for a model that emits
     // no reasoning tokens (not merely that the agent failed to respond).
     await editMentorPage.navigateToTab('LLM');
-    await editMentorPage.llm.selectProviderAndModel(
-      'OpenAI',
-      'OpenAI icon gpt-4o',
-    );
+    await editMentorPage.llm.selectProviderAndModel('OpenAI', 'gpt-4o');
     await editMentorPage.close();
 
     await chatPage.sendMessage('Explain the theory of relativity in detail');
@@ -492,7 +491,10 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     editMentorPage,
     chatPage,
   }) => {
-    await createMentorPage.openAndCreate('E2E Combined Features Mentor');
+    await createMentorPage.openAndCreate(
+      `E2E Combined Features Mentor ${Date.now()}`,
+    );
+    tracker52.add((await getPlatformContext(page)).mentorId);
 
     // Enable verbose reasoning gates both the reasoning section and the tool-call
     // indicator — enable it first.
@@ -501,10 +503,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
 
     // Set LLM to gpt-5
     await editMentorPage.navigateToTab('LLM');
-    await editMentorPage.llm.selectProviderAndModel(
-      'OpenAI',
-      'OpenAI icon gpt-5',
-    );
+    await editMentorPage.llm.selectProviderAndModel('OpenAI', 'gpt-5');
 
     // Enable Web Search
     await editMentorPage.navigateToTab('Tools');
@@ -528,11 +527,12 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
 
     const lastAIMessage = chatPage.aiMessages.last();
 
-    // Check reasoning section appears (Thinking)
-    const thinkingButton = lastAIMessage.getByRole('button', {
-      name: /thinking/i,
+    // Match either label — see the reasoning-section test above for why this is
+    // not pinned to "Thinking".
+    const reasoningChip = lastAIMessage.getByRole('button', {
+      name: /thinking|thought/i,
     });
-    await expect(thinkingButton).toBeVisible({ timeout: 30_000 });
+    await expect(reasoningChip).toBeVisible({ timeout: 30_000 });
 
     // Check tool call indicator appears. The tool call follows the reasoning
     // phase, so allow longer than the reasoning section's own appearance.
@@ -550,15 +550,29 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     });
     await expect(thoughtButton).toBeVisible({ timeout: 15_000 });
 
-    // Verify reasoning appears above tool calls in the DOM. Measured after
-    // streaming on the settled "Thought" button — the label flips from
-    // "Thinking" to "Thought" mid-stream, so measuring the transient "Thinking"
-    // button is racy and its boundingBox can vanish before it is read.
-    const reasoningTriggerBox = await thoughtButton.boundingBox();
-    const toolCallTriggerBox = await toolCallTrigger.boundingBox();
-    if (reasoningTriggerBox && toolCallTriggerBox) {
-      expect(reasoningTriggerBox.y).toBeLessThan(toolCallTriggerBox.y);
-    }
+    // Verify reasoning appears above tool calls in the DOM.
+    //
+    // Asserted on DOM order, NOT on boundingBox().y. Bounding boxes are
+    // viewport-relative and each read is a separate round-trip, so the chat's
+    // autoscroll and the reasoning panel's collapse on the Thinking→Thought
+    // flip can land the two measurements in different scroll frames — which
+    // reported the tool call as "above" the reasoning even though the markup
+    // was correctly ordered. `ai-message-bubble.tsx` renders
+    // <ReasoningSection> then <ToolCallIndicator> as block-level siblings, so
+    // their order among the message's chips is the property worth guarding.
+    const chipLabels = await lastAIMessage
+      .getByRole('button', { name: /thought|used \d+ tools?/i })
+      .allTextContents();
+    const reasoningIndex = chipLabels.findIndex((t) => /thought/i.test(t));
+    const toolCallIndex = chipLabels.findIndex((t) =>
+      /used \d+ tools?/i.test(t),
+    );
+
+    expect(reasoningIndex, 'reasoning chip must be present').toBeGreaterThan(
+      -1,
+    );
+    expect(toolCallIndex, 'tool call chip must be present').toBeGreaterThan(-1);
+    expect(reasoningIndex).toBeLessThan(toolCallIndex);
 
     // Tool call indicator remains without bounce dots (the streaming flag can
     // lag slightly behind the stop button disappearing).
@@ -581,7 +595,10 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     editMentorPage,
     chatPage,
   }) => {
-    await createMentorPage.openAndCreate('E2E Verbose Reasoning Off Mentor');
+    await createMentorPage.openAndCreate(
+      `E2E Verbose Reasoning Off Mentor ${Date.now()}`,
+    );
+    tracker52.add((await getPlatformContext(page)).mentorId);
 
     // Explicitly turn enable verbose reasoning OFF (new mentors default it ON), then
     // enable Web Search — the tool genuinely runs yet its indicator must stay
@@ -593,10 +610,7 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     );
     // Pin to gpt-5 so the agent actually streams a response (and runs the tool).
     await editMentorPage.navigateToTab('LLM');
-    await editMentorPage.llm.selectProviderAndModel(
-      'OpenAI',
-      'OpenAI icon gpt-5',
-    );
+    await editMentorPage.llm.selectProviderAndModel('OpenAI', 'gpt-5');
     await editMentorPage.navigateToTab('Tools');
     await editMentorPage.tools.enableTool('Web Search');
     await editMentorPage.close();
@@ -624,5 +638,9 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
     } catch {
       // Expected: indicator is gated off by the enable verbose reasoning toggle
     }
+  });
+
+  test.afterAll(async ({ browser }, testInfo) => {
+    await tracker52.deleteAll(browser, testInfo);
   });
 });

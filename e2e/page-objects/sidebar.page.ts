@@ -1,4 +1,5 @@
 import { Page, Locator, expect } from '@playwright/test';
+import { isVisibleWithin } from '../utils/resilient';
 
 /**
  * Sidebar selectors are scoped to the `<aside>` landmark so that
@@ -140,7 +141,7 @@ export class SidebarPage {
    * Radix Collapsible) rather than a blind click that would toggle.
    */
   async expandSection(
-    name: 'Agents' | 'Workflows' | 'Chats' | 'Projects' | 'Analytics',
+    name: 'Agents' | 'Workflows' | 'Recents' | 'Projects' | 'Analytics',
   ): Promise<void> {
     const trigger = this.sidebar.getByRole('button', { name, exact: true });
     await expect(trigger).toBeVisible({ timeout: 10_000 });
@@ -186,7 +187,7 @@ export class SidebarPage {
   }
 
   async isVisible(): Promise<boolean> {
-    return this.toggleButton.isVisible({ timeout: 3_000 }).catch(() => false);
+    return isVisibleWithin(this.toggleButton, 3_000);
   }
 
   /**
@@ -212,9 +213,18 @@ export class SidebarPage {
   }
 
   /**
-   * Returns true if the Support / docs link (ibl.ai/docs) is present in the
-   * sidebar footer. Uses `waitFor` with a short timeout so the check fast-
-   * fails when the footer is correctly hidden in embed mode.
+   * Returns true if the Support link is present in the sidebar footer. Uses
+   * `waitFor` with a short timeout so the check fast-fails when the footer
+   * is correctly hidden in embed mode.
+   *
+   * The label stayed "Support" (#uat-9 kept it as-is), but its `href` is no
+   * longer a hardcoded `https://ibl.ai/docs` — it now resolves from tenant
+   * metadata via `useHelpCenter()` (`documentation_url` override, falling
+   * back to `config.documentationUrl()`, default `https://ibl.ai/docs`). See
+   * `getSupportLinkHref()` below for asserting the actual destination — this
+   * visibility-only check was the root cause of the UAT bug: it never
+   * verified WHERE the link pointed, so a wrong hardcoded domain passed CI
+   * for months.
    */
   async isSupportLinkVisible(timeoutMs = 3_000): Promise<boolean> {
     // The link renders as an <a> with visible text "Support" (expanded) or
@@ -226,6 +236,23 @@ export class SidebarPage {
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Returns the resolved `href` of the sidebar footer "Support" link, or
+   * `null` if it is not visible within `timeoutMs`. Use this (not just
+   * `isSupportLinkVisible`) whenever a test needs to assert WHERE the link
+   * points — the whole point of the #uat-9 fix was that the previous helper
+   * only ever asserted visibility, never destination.
+   */
+  async getSupportLinkHref(timeoutMs = 3_000): Promise<string | null> {
+    const link = this.sidebar.getByRole('link', { name: /support/i });
+    try {
+      await link.waitFor({ state: 'visible', timeout: timeoutMs });
+    } catch {
+      return null;
+    }
+    return link.getAttribute('href');
   }
 
   /**
@@ -258,27 +285,54 @@ export class SidebarPage {
   }
 
   /**
-   * Expand the "Chats" collapsible section in the sidebar (no-op if already
+   * Collapses the sidebar into rail (icon-only) mode if currently expanded.
+   * Counterpart to `ensureExpanded()` — used by tests that need to assert
+   * against the rail-collapsed footer variant (e.g. the Support link's
+   * `SidebarCollapsedLabelFlyout` rendering, which uses `aria-label` instead
+   * of visible text).
+   */
+  async ensureCollapsed(timeoutMs = 10_000): Promise<void> {
+    await expect(this.toggleButton).toBeVisible({ timeout: timeoutMs });
+
+    // Only collapse when actually expanded: the toggle reads "Collapse
+    // sidebar" while expanded and "Expand sidebar" while collapsed.
+    const collapseButton = this.sidebar.getByRole('button', {
+      name: /collapse sidebar/i,
+    });
+    let alreadyCollapsed = false;
+    try {
+      await collapseButton.waitFor({ state: 'visible', timeout: 1_000 });
+    } catch {
+      alreadyCollapsed = true;
+    }
+    if (!alreadyCollapsed) {
+      await collapseButton.click();
+    }
+
+    await expect(
+      this.sidebar.getByRole('button', { name: /expand sidebar/i }),
+    ).toBeVisible({ timeout: timeoutMs });
+  }
+
+  /**
+   * Expand the "Recents" collapsible section in the sidebar (no-op if already
    * expanded). Prerequisite for any recent/pinned chat assertions.
    */
   async expandChatsSection(): Promise<void> {
-    await this.expandSection('Chats');
+    await this.expandSection('Recents');
   }
 
   /**
    * Returns the `<ul role="list">` that holds recent chat row buttons inside
-   * the expanded Chats collapsible. Scoped to the sidebar `<aside>` so it
+   * the expanded Recents collapsible. Scoped to the sidebar `<aside>` so it
    * cannot collide with any page-content lists.
    *
-   * The "Recent" heading `<p>` immediately precedes this list. We locate it
-   * via the sibling structure: find the heading text node then locate the
-   * following list. In practice the whole Chats content area is the only
-   * `role="list"` container inside the sidebar that follows a "Recent" heading.
+   * Located by testid: this used to hang off the "Recent" heading that sat
+   * above the list, and that heading is gone - the panel is called Recents,
+   * so a caps label repeating it was noise.
    */
   getRecentChatsList(): import('@playwright/test').Locator {
-    return this.sidebar
-      .locator('p', { hasText: /^recent$/i })
-      .locator('~ ul[role="list"]');
+    return this.sidebar.locator('[data-testid="recent-chats-list"]');
   }
 
   /**
@@ -301,6 +355,24 @@ export class SidebarPage {
   }
 
   /**
+   * Returns a locator for a specific Recent chat row by its SESSION ID
+   * (`data-session-id` on the row-select button — see `ChatRowItem`).
+   *
+   * Prefer this over `getRecentChatRow(text)` whenever the test knows the
+   * session id (via `chatPage.getCachedSessionId(mentorId)`): the visible
+   * label prefers the backend's asynchronously generated session title, so
+   * a row found by sent-message text can stop matching at any moment once
+   * the title lands.
+   */
+  getRecentChatRowBySession(
+    sessionId: string,
+  ): import('@playwright/test').Locator {
+    return this.getRecentChatsList().locator(
+      `button[data-session-id="${sessionId}"]`,
+    );
+  }
+
+  /**
    * Returns true if a Recent chat row matching `text` is visible within
    * `timeoutMs`. Uses `waitFor` (NOT `isVisible().catch()`) so the timeout
    * is honoured for cases where the row appears after an async refetch.
@@ -312,6 +384,26 @@ export class SidebarPage {
     const row = this.getRecentChatsList().locator('button', { hasText: text });
     try {
       await row.waitFor({ state: 'visible', timeout: timeoutMs });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Returns true if the Recent chat row for `sessionId` is visible within
+   * `timeoutMs`. Title-generation-proof variant of `isRecentChatVisible` —
+   * see `getRecentChatRowBySession`.
+   */
+  async isRecentChatVisibleBySession(
+    sessionId: string,
+    timeoutMs = 15_000,
+  ): Promise<boolean> {
+    try {
+      await this.getRecentChatRowBySession(sessionId).waitFor({
+        state: 'visible',
+        timeout: timeoutMs,
+      });
       return true;
     } catch {
       return false;
@@ -365,6 +457,20 @@ export class SidebarPage {
   }
 
   /**
+   * `getChatRowContainer` keyed by session id instead of label text —
+   * see `getRecentChatRowBySession` for why session id is preferred.
+   */
+  getChatRowContainerBySession(
+    sessionId: string,
+  ): import('@playwright/test').Locator {
+    return this.getRecentChatsList()
+      .locator('li')
+      .filter({
+        has: this.page.locator(`button[data-session-id="${sessionId}"]`),
+      });
+  }
+
+  /**
    * Returns the "Chat actions" three-dot trigger button for a specific
    * Recent/Pinned chat row. The button is `opacity-0` until the row is
    * hovered/focused (Tailwind `group-hover`) — Playwright's visibility
@@ -410,14 +516,38 @@ export class SidebarPage {
   async openChatActionsMenu(
     text: string,
   ): Promise<import('@playwright/test').Locator> {
+    return this.openMenuForRow(
+      this.getChatRowContainer(text),
+      this.getRecentChatRow(text),
+    );
+  }
+
+  /**
+   * `openChatActionsMenu` keyed by session id instead of label text —
+   * see `getRecentChatRowBySession` for why session id is preferred.
+   */
+  async openChatActionsMenuBySession(
+    sessionId: string,
+  ): Promise<import('@playwright/test').Locator> {
+    return this.openMenuForRow(
+      this.getChatRowContainerBySession(sessionId),
+      this.getRecentChatRowBySession(sessionId),
+    );
+  }
+
+  private async openMenuForRow(
+    container: import('@playwright/test').Locator,
+    selectButton: import('@playwright/test').Locator,
+  ): Promise<import('@playwright/test').Locator> {
     await this.closeAnyOpenMenu();
-    const container = this.getChatRowContainer(text);
     await expect(container).toBeVisible({ timeout: 15_000 });
     // Hover the select button (inside the `.group` wrapper) so the
     // Tailwind `group-hover:opacity-100` rule on the three-dot trigger
     // actually engages, same as a real user hovering the row.
-    await container.getByRole('button', { name: text }).hover();
-    const actionsBtn = this.getChatActionsButton(text);
+    await selectButton.hover();
+    const actionsBtn = container.getByRole('button', {
+      name: 'Chat actions',
+    });
     await expect(actionsBtn).toBeVisible({ timeout: 5_000 });
     await actionsBtn.click();
     const menu = this.page.getByRole('menu');

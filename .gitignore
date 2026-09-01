@@ -22,6 +22,9 @@ playwright/.auth/
 .env
 .env.*
 !.env.example
+# Shared, non-secret dev defaults loaded only by `next dev` (keeps CSP
+# report-only locally so enforcement doesn't block HMR/eval).
+!.env.development
 
 # keys & certificates
 *.pem
@@ -55,6 +58,8 @@ Thumbs.db
 src-tauri/target/
 src-tauri/gen/android/
 src-tauri/gen/apple/
+src-tauri/.env.*
+!src-tauri/.env.example
 
 # Turbo
 .turbo/
@@ -85,3 +90,11 @@ e2e/playwright-report
 e2e/test-results.json
 playwright/.auth
 e2e/playwright/.auth
+
+
+# harnesses
+.omo
+.omp
+.pi
+.npmrc.backup
+CLAUDE.local.md

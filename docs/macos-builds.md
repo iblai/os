@@ -1,16 +1,16 @@
-# macOS builds: Mac App Store vs. Developer ID
+# macOS Builds: Mac App Store vs. Developer ID
 
-The app ships in **two macOS variants** because System Control (GhostOS) and the
+The app ships in **two macOS variants** because Cowork (GhostOS) and the
 Mac App Store are mutually exclusive.
 
-|                       | MAS build                             | Developer ID build                          |
-| --------------------- | ------------------------------------- | ------------------------------------------- |
-| Config                | `src-tauri/tauri.conf.json` (default) | + `src-tauri/tauri.devid.conf.json` overlay |
-| Entitlements          | `entitlements.mac.plist`              | `entitlements.devid.plist`                  |
-| App Sandbox           | **on** (`app-sandbox = true`)         | **off**                                     |
-| Signing identity      | `Apple Distribution: …`               | `Developer ID Application: …`               |
-| Distribution          | Mac App Store                         | Direct download (DMG), notarized            |
-| System Control works? | ❌ no                                 | ✅ yes                                      |
+|                  | MAS build                             | Developer ID build                          |
+| ---------------- | ------------------------------------- | ------------------------------------------- |
+| Config           | `src-tauri/tauri.conf.json` (default) | + `src-tauri/tauri.devid.conf.json` overlay |
+| Entitlements     | `entitlements.mac.plist`              | `entitlements.devid.plist`                  |
+| App Sandbox      | **on** (`app-sandbox = true`)         | **off**                                     |
+| Signing identity | `Apple Distribution: …`               | `Developer ID Application: …`               |
+| Distribution     | Mac App Store                         | Direct download (DMG), notarized            |
+| Cowork works?    | ❌ no                                 | ✅ yes                                      |
 
 ## Why two builds
 
@@ -18,12 +18,12 @@ macOS blocks a **sandboxed** app from controlling _other_ apps through the
 Accessibility API — even after the user grants Accessibility permission. So the
 sandboxed MAS build can show the permission prompt but GhostOS can't actually
 drive other apps. App Sandbox is required for the Mac App Store and not allowed
-for what System Control does, hence the split.
+for what Cowork does, hence the split.
 
 Accessibility itself needs no entitlement — it's a runtime (TCC) permission the
 user grants in System Settings → Privacy & Security → Accessibility. The app
 requests it via `tauri-plugin-macos-permissions` (the "Grant Access" button in
-User Profile → Advanced → System Control).
+User Profile → Advanced → Cowork).
 
 ## Building
 
@@ -31,7 +31,7 @@ User Profile → Advanced → System Control).
 # Mac App Store (sandboxed) — uses the default config
 pnpm tauri:build:mas
 
-# Developer ID (non-sandboxed, System Control works) — applies the overlay
+# Developer ID (non-sandboxed, Cowork works) — applies the overlay
 pnpm tauri:build:devid
 ```
 

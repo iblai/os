@@ -50,7 +50,11 @@
  */
 
 import { test, expect } from '../fixtures/mentor-test';
-import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
+import {
+  navigateToMentorApp,
+  checkAdminStatus,
+  getPlatformContext,
+} from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
 import type { Page, Locator } from '@playwright/test';
 
@@ -286,12 +290,22 @@ test.describe.serial('Journey 57: Chat History Export Toggle', () => {
     await chatPage.sendMessage(sentText);
     await waitForStreamingDone(page, chatPage.sendButton, chatPage.aiMessages);
 
+    // Identify the chat row by SESSION ID, not by the sent text: the row
+    // label prefers the backend's asynchronously generated session title,
+    // so a text match can stop working at any moment mid-test.
+    const { mentorId } = await getPlatformContext(page);
+    const sessionId = await chatPage.getCachedSessionId(mentorId);
+    expect(sessionId, 'chat session id must be cached after send').toBeTruthy();
+
     await sidebarPage.expandChatsSection();
     await expect
-      .poll(async () => sidebarPage.isRecentChatVisible(sentText, 3_000), {
-        timeout: 20_000,
-        intervals: [1_000, 2_000, 3_000],
-      })
+      .poll(
+        async () => sidebarPage.isRecentChatVisibleBySession(sessionId!, 3_000),
+        {
+          timeout: 20_000,
+          intervals: [1_000, 2_000, 3_000],
+        },
+      )
       .toBe(true);
 
     const dialog = await openAdvancedTab(page);
@@ -313,7 +327,9 @@ test.describe.serial('Journey 57: Chat History Export Toggle', () => {
       await expect
         .poll(
           async () => {
-            const menu = await sidebarPage.openChatActionsMenu(sentText);
+            const menu = await sidebarPage.openChatActionsMenuBySession(
+              sessionId!,
+            );
             return menu.getByRole('menuitem', { name: /^Export$/ }).isVisible();
           },
           { timeout: 20_000, intervals: [1_000, 2_000, 3_000] },
@@ -361,12 +377,20 @@ test.describe.serial('Journey 57: Chat History Export Toggle', () => {
     await chatPage.sendMessage(sentText);
     await waitForStreamingDone(page, chatPage.sendButton, chatPage.aiMessages);
 
+    // Session-id row identity — see chexp-03 for why text matching is racy.
+    const { mentorId } = await getPlatformContext(page);
+    const sessionId = await chatPage.getCachedSessionId(mentorId);
+    expect(sessionId, 'chat session id must be cached after send').toBeTruthy();
+
     await sidebarPage.expandChatsSection();
     await expect
-      .poll(async () => sidebarPage.isRecentChatVisible(sentText, 3_000), {
-        timeout: 20_000,
-        intervals: [1_000, 2_000, 3_000],
-      })
+      .poll(
+        async () => sidebarPage.isRecentChatVisibleBySession(sessionId!, 3_000),
+        {
+          timeout: 20_000,
+          intervals: [1_000, 2_000, 3_000],
+        },
+      )
       .toBe(true);
 
     const dialog = await openAdvancedTab(page);
@@ -384,7 +408,9 @@ test.describe.serial('Journey 57: Chat History Export Toggle', () => {
       await expect
         .poll(
           async () => {
-            const menu = await sidebarPage.openChatActionsMenu(sentText);
+            const menu = await sidebarPage.openChatActionsMenuBySession(
+              sessionId!,
+            );
             return menu.getByRole('menuitem', { name: /^Export$/ }).isVisible();
           },
           { timeout: 20_000, intervals: [1_000, 2_000, 3_000] },
@@ -430,12 +456,20 @@ test.describe.serial('Journey 57: Chat History Export Toggle', () => {
     await chatPage.sendMessage(sentText);
     await waitForStreamingDone(page, chatPage.sendButton, chatPage.aiMessages);
 
+    // Session-id row identity — see chexp-03 for why text matching is racy.
+    const { mentorId } = await getPlatformContext(page);
+    const sessionId = await chatPage.getCachedSessionId(mentorId);
+    expect(sessionId, 'chat session id must be cached after send').toBeTruthy();
+
     await sidebarPage.expandChatsSection();
     await expect
-      .poll(async () => sidebarPage.isRecentChatVisible(sentText, 3_000), {
-        timeout: 20_000,
-        intervals: [1_000, 2_000, 3_000],
-      })
+      .poll(
+        async () => sidebarPage.isRecentChatVisibleBySession(sessionId!, 3_000),
+        {
+          timeout: 20_000,
+          intervals: [1_000, 2_000, 3_000],
+        },
+      )
       .toBe(true);
 
     const dialog = await openAdvancedTab(page);
@@ -454,7 +488,9 @@ test.describe.serial('Journey 57: Chat History Export Toggle', () => {
       await expect
         .poll(
           async () => {
-            const menu = await sidebarPage.openChatActionsMenu(sentText);
+            const menu = await sidebarPage.openChatActionsMenuBySession(
+              sessionId!,
+            );
             return menu.getByRole('menuitem', { name: /^Export$/ }).isVisible();
           },
           { timeout: 20_000, intervals: [1_000, 2_000, 3_000] },
