@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-08-27 | 683 checkpoints (648 covered, 8 pending/fixme, 15 not-reproducible in default env, 12 deprecated) | 73 journeys (72 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-08-31 | 693 checkpoints (654 covered, 8 pending/fixme, 15 not-reproducible in default env, 16 deprecated) | 74 journeys (73 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -36,7 +36,7 @@ When adding a new page or modifying an existing user flow:
 - [x] Newly created user can navigate to the Explore page via sidebar
 - [x] Newly created user can log out via the profile dropdown
 - [x] Sidebar can be toggled open and closed
-- [x] Help button opens the docs link in a new tab
+- [x] Help button opens the docs/help link in a new tab when the tenant's own metadata (observed from the app's own org-metadata GET, no `DM_URL` required) shows `show_help !== false`; the menu item is correctly absent when a tenant explicitly sets `show_help: false` (#uat-9)
 - [x] Suggested prompts authored with Markdown render via the Markdown component (issue #1179, fixme until a seeded mentor fixture is available)
 - [ ] NAV-08: Clicking "New Chat" once fires exactly ONE create-session POST (issue #1002 regression guard — parked as `test.fixme`; activate after verifying against the live backend)
 
@@ -221,9 +221,9 @@ Binary artifacts (pdf, xlsx, zip, …) are a read-only variant of the canvas art
 
 ---
 
-## Journey 13: Shareable Links & Embed Integration (14 checkpoints) — `journeys/13-shareable-links-and-embed-integration.spec.ts`
+## Journey 13: Shareable Links & Embed Integration (17 checkpoints) — `journeys/13-shareable-links-and-embed-integration.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/embed-tab.tsx`, `components/modals/edit-mentor-modal/hooks/useEmbedTab.ts`, `components/logo.tsx`, `hooks/use-mentors/use-mentor-settings.ts`, `hooks/use-embed-mode.ts`, `components/chat-input-form/voice-call-button.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form/screen-sharing-button.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
+**Source files:** `components/modals/edit-mentor-modal/tabs/embed-tab.tsx`, `components/modals/edit-mentor-modal/hooks/useEmbedTab.ts`, `components/modals/edit-mentor-modal/utils.ts`, `components/logo.tsx`, `hooks/use-mentors/use-mentor-settings.ts`, `hooks/use-embed-mode.ts`, `components/chat-input-form/voice-call-button.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form/screen-sharing-button.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
 
 - [x] Non-anonymous embed with voice call, voice record, and attachment buttons renders correctly
 - [x] Authenticated flow in embed: user can send a message and receive an AI response
@@ -239,6 +239,9 @@ Binary artifacts (pdf, xlsx, zip, …) are a read-only variant of the canvas art
 - [x] Issue #2153: clicking the regenerate (refresh) icon next to Shareable Link does not surface the Website URL validation error
 - [x] Issue #2153: toggling the Shareable Link switch OFF does not surface the Website URL validation error
 - [x] Issue #2153 contrast case: toggling Shareable Link ON for an anonymous mentor (Website URL section not rendered at all) remains error-free
+- [x] Issue #789: a custom embed icon (Icon Selection = Custom, uploaded via the Icon Editor's Content tab) persists after a full page reload as a real uploaded URL, not the local data: preview
+- [x] Issue #789: "Remove Image" persists immediately (own PUT, independent of Create Embed) with a "Custom icon removed" toast, Icon Selection reverting to Default, and the removal surviving a reload (guards the RTK cache invalidation behind the fix)
+- [x] Embed tab footer contains only the "Create Embed" button (the standalone footer Save button was removed); Advanced CSS / Advanced JavaScript panels elsewhere in the tab keep their own working Save buttons
 
 ---
 
@@ -1018,7 +1021,7 @@ Covers the "Enable prompt caching" toggle added to the Capabilities sub-tab of t
 - [x] Tool call pill is expandable and shows query detail
 - [x] Web Search button is not visible when tool is disabled on mentor
 - [x] Tool call indicator does not appear when Web Search is enabled but not activated in session
-- [x] Reasoning section shows "Thinking" with bounce dots during streaming and auto-collapses to "Thought" after
+- [x] Reasoning section renders for a reasoning model and auto-collapses to Thought after streaming
 - [x] Reasoning section does not appear for non-reasoning model
 - [x] Tool call indicator and reasoning section both render in correct order in same message
 - [x] Tool call indicator and reasoning section are gated by the Enable verbose reasoning setting — hidden when the toggle is off, shown when on
@@ -1327,17 +1330,32 @@ surfaces:
    no agent-type picker and only ever produces Base Agent mentors, so the
    gating checkpoints mock the mentor-settings GET for a real, freshly-created
    mentor (`route.fetch()` + mutate `mentor_slug`/`template_mentor` +
-   `route.fulfill()` — every other field stays authentic). The tab is plainly
-   ADMIN-ONLY via the userTypes filter — no RBAC resource (the agent-skills
-   RBAC contract is unsettled backend-side); the chat `/` picker, by
-   contrast, is available to students too.
+   `route.fulfill()` — every other field stays authentic). The tab SEGMENT is
+   plainly ADMIN-ONLY via the userTypes filter — no RBAC resource on the
+   segment itself; the chat `/` picker, by contrast, is available to
+   students too.
 2. The skills SECTION (the SDK's `AgentSkills` component: Agent Skills /
    Available Skills sub-tabs, enable toggles, New/Edit/Delete Skill dialogs)
    is driven exclusively through the dedicated helpers in
    `@iblai/iblai-js/playwright` (`verifySkillsTabVisible`,
    `switchToAgentSkillsSubTab`, `createSkill`, `editSkill`, `deleteSkill`,
    …). Management checkpoints run SERIAL with a dedicated mentor per test —
-   skill create/edit/delete mutates the platform-wide catalog.
+   skill create/edit/delete mutates the platform-wide catalog. The section
+   is RBAC-GATED per grant against the mentor permission check
+   (`/mentors/{dbId}/` — the host passes `mentorDbId` from mentor-settings):
+   `view_skill_assignments` gates the assignment fetches,
+   `create_skill_assignment` the whole Available Skills sub-tab + New Skill
+   button, `write_skill_assignment` the enable Switch,
+   `delete_skill_assignment` the row Remove button. Because the backend's
+   grant rollout is environment/profile-dependent, every checkpoint that
+   asserts the FULL admin view (ags-01, ags-04, ags-05) first forces all
+   four grants via `SkillsTab.mockSkillAssignmentGrants` (permission-check
+   response mutated in place, mirroring `ChatPage.grantSkillAssignmentsRead`;
+   registered before the modal opens since the modal fires the check on
+   open) — and ags-07 forces the deny side the same way. Per-grant ROW
+   affordances (Switch disabled without write, Remove hidden without delete)
+   are covered by the SDK's own `agent-skills.test.tsx` unit suite, not
+   duplicated here.
 3. The chat composer's `/` skill picker (`SlashSkillPicker` /
    `useSlashSkillPicker` from `@iblai/iblai-js/web-containers`, wired in
    `components/chat-input-form.tsx` + `components/auto-resize-text-area.tsx`)
@@ -1349,12 +1367,13 @@ surfaces:
    `ChatPage.mockEffectiveSkills` for full determinism — the composer fetches
    eagerly on mount, so the mock must be registered before navigation.
 
-- [x] ags-01: Admin sees the Skills tab on a freshly-created (Base Agent) mentor, with the updated tab description ("Reusable playbooks this Base Agent can discover and follow.") and skills-info-box copy describing the `/` picker; Skills sits right after Prompts in the Configurations category
+- [x] ags-01: Admin sees the Skills tab on a freshly-created (Base Agent) mentor, with the updated tab description ("Reusable playbooks this Base Agent can discover and follow.") and skills-info-box copy describing the `/` picker; Skills sits right after Prompts in the Configurations category — full RBAC grant set forced via `SkillsTab.grantAllSkillAssignmentPerms` so the both-sub-tabs assert is rollout-independent
 - [x] ags-02: Skills tab is hidden when the mentor resolves to a non-base-agent type (`mentor_slug` is not a base-agent alias and `template_mentor` does not resolve to one either)
 - [x] ags-03: Skills tab stays visible when the mentor type cannot be determined (`template_mentor` is a numeric PK the frontend cannot read a slug from) — the gate fails OPEN rather than hiding the tab
 - [x] ags-04: Admin creates a platform skill, attaches it from the Available Skills sub-tab (`addSkillToAgent` — assignment created ENABLED), and its enable Switch round-trips off/on on the Agent Skills sub-tab (`aria-checked`); detach + delete on cleanup — dedicated mentor per test
 - [x] ags-05: Admin creates a new platform skill, locates it on the server-paged Available Skills sub-tab (paging until found — catalog ordering not guaranteed), edits its description, and deletes it (row disappears) — via the SDK's `createSkill`/`editSkill`/`deleteSkill` helpers, serial (platform-wide catalog)
 - [x] ags-06: NON-ADMIN — the Skills tab is absent from the Edit Mentor modal (the segment is ADMIN-only via userTypes in `MENTOR_SEGMENTS`)
+- [x] ags-07: View-only RBAC (`view_skill_assignments` granted, create/write/delete denied via the same permission-check mock) — the Agent Skills sub-tab renders with its empty state, while the Available Skills sub-tab and the New Skill button are absent from the DOM
 - [x] slash-01: Mentor with no effective skills — chat composer stays a plain textbox (no combobox role) and typing "/" opens nothing
 - [x] slash-02: Mentor with skills — composer gets `role=combobox` wiring and "/" opens the picker listing only enabled skills as name + slug, no descriptions (assignment rows carry none; the platform-wide agent-skills catalog is never fetched from chat)
 - [x] slash-03: Typing after "/" filters the picker by both skill name and slug as the query narrows; no match closes the picker
@@ -1579,7 +1598,7 @@ lifetime of the tab. Real customer embeds are cross-origin and were never
 affected; only the internal preview could reach our storage.
 
 - [x] epl-01: Opening Edit Agent → Embed mounts the same-origin `?embed=true&internalPreview=true` preview iframe WITHOUT writing `ibl:embed-context` into the host tab's sessionStorage (guard 1: `persistEmbedContextFromUrl` no-ops for the internal preview) — polled, not read once, since the old write happened in an effect several seconds after the tab rendered
-- [x] epl-02: After visiting the Embed tab and closing the dialog, clicking "New Chat" keeps the FULL admin sidebar (Agents, Workflows, Projects, Analytics, Support) instead of collapsing to the embed rail, and does not append `embed=true` to the app URL (a poisoned tab also fed `embedContextQuery()`, writing the corruption into its own navigations)
+- [x] epl-02: After visiting the Embed tab and closing the dialog, clicking "New Chat" keeps the FULL admin sidebar (Agents, Workflows, Projects, Analytics, and Support at whichever visibility the tenant's own `show_help` metadata dictates, observed live and NOT hardcoded — #uat-9) instead of collapsing to the embed rail, and does not append `embed=true` to the app URL (a poisoned tab also fed `embedContextQuery()`, writing the corruption into its own navigations)
 - [x] epl-03: The full app survives a reload after the Embed tab was visited — the old bug was sticky for the lifetime of the tab because sessionStorage outlived the navigation
 - [x] epl-04: A top-level (non-iframed) tab ignores an `ibl:embed-context` entry it did not get from its own URL, across both a re-render (New Chat) and a reload (guard 2: `readStoredEmbedContext` requires `isInIframe`) — planted directly, so the read-side guard is covered even if some future same-origin iframe starts writing the key again
 
@@ -1593,5 +1612,70 @@ LIVE-LLM coverage of the VM-sandbox file-sharing pipeline that Journey 10 (Canva
 
 The binary-artifact surfaces themselves (binary chip gating, pdf/image preview, fallback and preview-error panels, binary stream orchestration) remain unit-covered only — see Journey 10's `cvs-12`/`cvs-13`/`cvs-14`/`cvs-15` for the exact gap wording.
 
-- [x] vmc-01: Admin selects the Virtual Machine Shell sandbox kind on a dedicated mentor and asks the agent (live LLM) to create and share hello.txt with a known marker line (.txt chosen over pdf/xlsx so the VM produces it reliably with shell tooling); the agent replies with the file as an artifact and the chat chip (`canvas-message-preview`) appears with Open Canvas
+- [x] vmc-01: Admin selects the Virtual Machine Shell sandbox kind on a dedicated mentor, enables the composer's Canvas tool (the artifact pipeline is inert without it), and asks the agent (live LLM) to create and share hello.txt with a known marker line (.txt chosen over pdf/xlsx so the VM produces it reliably with shell tooling); the agent replies with the file as an artifact and the chat chip (`canvas-message-preview`) appears with Open Canvas
 - [x] vmc-02: The canvas shows the shared file's content — the .txt artifact takes the TEXT canvas path (tolerant of auto-open at stream start vs. clicking `canvas-open-button`): the editable editor renders containing the marker line, and the binary canvas (`binary-canvas`) is asserted absent (text/binary routing picks the text path for text files)
+
+## Journey 72: Sidebar Support Link & Help Center Resolution (#uat-9) (7 checkpoints; 4 deprecated) — `journeys/72-sidebar-support-link-and-help-center.spec.ts`
+
+**Source files:** `hooks/use-help-center.ts`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`, `lib/config.ts`
+
+UAT bug: the sidebar footer's "Support" link and the nav-bar "More options →
+Help" menu item were hardcoded to `https://ibl.ai/docs` regardless of tenant
+configuration. `hooks/use-help-center.ts` now resolves both destinations from
+tenant metadata (`documentation_url`, `support_url`, `help_center_url`,
+`show_help`), each passed through `addProtocolToUrl` so a scheme-less tenant
+value is prefixed with `https://`. The label stayed "Support" — only the
+href and show/hide behavior changed.
+
+Root cause of the original bug: the e2e helper guarding this surface
+(`SidebarPage.isSupportLinkVisible`) only ever asserted VISIBILITY, never the
+link's DESTINATION, so a hardcoded wrong-domain href passed CI unnoticed for
+months. `SidebarPage.getSupportLinkHref()` (added alongside this journey)
+closes that gap.
+
+**READ-ONLY by design (redesigned in #uat-9):** this journey used to mutate
+the SAME org-scoped tenant metadata on the shared live `conradtesttenant`
+backend, guarded by `describe.serial` + a captured "original" snapshot
+restored in `afterAll`. That was not actually safe: `describe.serial` only
+serialises tests inside this one file (other journeys in other parallel
+workers, and other PRs' CI jobs, hit the same live tenant concurrently), and
+`afterAll` never runs on a killed process. A crashed run left
+`show_help: false` PERMANENTLY on the live tenant, and the next run's
+`beforeAll` captured that `false` as "original" and restored it forever —
+silently breaking an unrelated team's PR (os-222). No in-suite cleanup can
+fix a cross-job race; only not writing does. Every checkpoint now OBSERVES
+the org-metadata GET the app itself already fires on every authenticated
+load (`providers/index.tsx`'s `Providers` calls the SDK's
+`useTenantMetadata({ org: tenantKeyParams })`, which resolves to `GET
+/api/core/orgs/<org>/metadata/`) via
+`navigateAndObserveTenantMetadata` (`e2e/utils/tenant-metadata-observed.ts`),
+computes the SAME expected value the app/SDK would compute from that exact
+reading, and asserts the live UI matches it — there is no shared mutable
+state left to race, and no DM API call of the journey's own. The
+tenant-override PRECEDENCE logic previously proven by mutating the live
+tenant (`documentation_url` with/without a scheme, `show_help` gating in
+both layouts, `help_center_url` fallback) needed no live tenant at all — it
+is pure prop-in/render-out logic already covered with zero gap by
+`hooks/__tests__/use-help-center.test.ts` and
+`app-sidebar/__tests__/index.test.tsx` (the "AppSidebar — Support footer
+link" describe block and its rail-mode counterpart); those four checkpoints
+are marked `deprecated` below (checkpoint count preserved, not deleted —
+same pattern as journeys 15/16).
+
+**Zero-configuration (fixed in #uat-9):** this journey used to call the DM
+API directly (`getTenantMetadata`, `e2e/utils/tenant-metadata.ts`) gated on
+the `DM_URL` env var, which is exported only in CI and never in
+`e2e/.env.local` — so every checkpoint silently SKIPPED on any local or
+non-CI environment, a green run that tested nothing. It now observes traffic
+the app makes unconditionally on any environment, so it needs no `DM_URL`,
+no DM API credentials, and no per-environment setup — and it never skips: if
+the org-metadata response cannot be observed, the checkpoint FAILS loudly
+instead.
+
+- [x] shc-01: READ-ONLY — sidebar footer Support link's href in the EXPANDED layout matches `documentation_url || default` computed from a live GET of tenant metadata, or the link is absent when `show_help` is false
+- [x] shc-02: Same live-resolution check for the RAIL-COLLAPSED sidebar layout (`SidebarCollapsedLabelFlyout`, `aria-label="Support"`)
+- [x] ~~shc-03: A tenant `documentation_url` override WITH a scheme is used verbatim as the sidebar Support link's href~~ _(deprecated in #uat-9 — covered by hooks/**tests**/use-help-center.test.ts + app-sidebar/**tests**/index.test.tsx)_
+- [x] ~~shc-04: A tenant `documentation_url` override WITHOUT a scheme is prefixed with `https://` by `addProtocolToUrl`~~ _(deprecated in #uat-9 — same unit coverage as shc-03)_
+- [x] ~~shc-05: Tenant `show_help: false` hides the sidebar Support link in BOTH expanded and rail-collapsed layouts; removing the override brings it back~~ _(deprecated in #uat-9 — covered by app-sidebar/**tests**/index.test.tsx in both layouts)_
+- [x] shc-06: READ-ONLY — the nav-bar "More options → Help" dropdown item resolves `support_url || help_center_url || default` computed from a live GET of tenant metadata, or is absent when `show_help` is false
+- [x] ~~shc-07: The nav-bar "More options → Help" dropdown item falls back to tenant `help_center_url` when `support_url` is absent~~ _(deprecated in #uat-9 — same precedence chain proven by hooks/**tests**/use-help-center.test.ts; shc-06 still verifies the support_url-present path live)_

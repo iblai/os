@@ -126,6 +126,12 @@ vi.mock('next/navigation', () => ({
   useSearchParams: vi.fn(() => new URLSearchParams()),
 }));
 
+// Mutable so a test can put the streaming turn in a tool-running state; the
+// selector below is otherwise a constant for every other test.
+const { streamingToolCalls } = vi.hoisted(() => ({
+  streamingToolCalls: { current: [] as unknown[] },
+}));
+
 vi.mock('@iblai/iblai-js/web-utils', async () => {
   const actual = await vi.importActual('@iblai/iblai-js/web-utils');
   return {
@@ -150,7 +156,7 @@ vi.mock('@iblai/iblai-js/web-utils', async () => {
     selectShowingSharedChat: vi.fn(() => false),
     selectStreamingReasoningContent: () => '',
     selectIsReasoning: () => false,
-    selectStreamingToolCalls: () => [],
+    selectStreamingToolCalls: () => streamingToolCalls.current,
     selectCurrentStreamingMessage: () => ({
       id: '',
       content: '',
@@ -8645,6 +8651,55 @@ describe('Chat', () => {
       renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
 
       expect(screen.getByTestId('loading-message')).toBeInTheDocument();
+    });
+
+    it('should hide loading on a Code turn that is only running tools', async () => {
+      // Code turns keep their collapsed tool list visible whatever the mentor's
+      // verbose-reasoning setting says (see ai-message-bubble), so that list IS
+      // visible output here — leaving the typing indicator up would sit it right
+      // next to a live one.
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      (useAdvancedChat as any).mockReturnValue({
+        changeTab: vi.fn(),
+        activeTab: 'chat',
+        currentStreamingMessage: {
+          id: 'opencode-1700000000000',
+          role: 'assistant',
+          content: '',
+          timestamp: new Date().toISOString(),
+          visible: true,
+        },
+        enabledGuidedPrompts: [],
+        isStreaming: true,
+        mentorName: 'Test Mentor',
+        messages: [
+          {
+            id: '1',
+            role: 'user',
+            content: 'Build me a site',
+            timestamp: new Date().toISOString(),
+            visible: true,
+          },
+        ],
+        profileImage: '/avatar.png',
+        sendMessage: vi.fn(),
+        setMessage: vi.fn(),
+        stopGenerating: vi.fn(),
+        uniqueMentorId: 'unique-mentor-123',
+        sessionId: 'session-123',
+        startNewChat: vi.fn(),
+        enableSafetyDisclaimer: false,
+        isPending: false,
+        isLoadingChats: false,
+      });
+      streamingToolCalls.current = [
+        { id: 'tc1', name: 'bash', log: '', result: '' },
+      ];
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      expect(screen.queryByTestId('loading-message')).not.toBeInTheDocument();
+      streamingToolCalls.current = [];
     });
 
     it('should hide loading when currentStreamingMessage has content', async () => {

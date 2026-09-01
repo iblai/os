@@ -243,6 +243,8 @@ const createEmbedTabMock = (overrides = {}) => ({
   setFocusEditCustomFloatingBubble: vi.fn(),
   updateConfig: vi.fn(),
   updateMultipleConfig: vi.fn(),
+  removeCustomImage: vi.fn(),
+  isRemovingImage: false,
   ...overrides,
 });
 
@@ -2846,11 +2848,11 @@ describe('EmbedTab Component', () => {
   });
 
   describe('Remove Image Button', () => {
-    it('calls updateMultipleConfig with image: null when Remove Image button is clicked', async () => {
-      const mockUpdateMultipleConfig = vi.fn();
+    it('calls removeCustomImage when Remove Image button is clicked', async () => {
+      const mockRemoveCustomImage = vi.fn();
       mockUseEmbedTab.mockReturnValue(
         createEmbedTabMock({
-          updateMultipleConfig: mockUpdateMultipleConfig,
+          removeCustomImage: mockRemoveCustomImage,
           focusEditCustomFloatingBubble: true,
           customFloatingBubbleConfig: {
             ...createEmbedTabMock().customFloatingBubbleConfig,
@@ -2880,7 +2882,39 @@ describe('EmbedTab Component', () => {
       });
       fireEvent.click(removeImageButton);
 
-      expect(mockUpdateMultipleConfig).toHaveBeenCalledWith({ image: null });
+      expect(mockRemoveCustomImage).toHaveBeenCalled();
+    });
+
+    it('disables the Remove Image button while removal is in flight', async () => {
+      mockUseEmbedTab.mockReturnValue(
+        createEmbedTabMock({
+          isRemovingImage: true,
+          focusEditCustomFloatingBubble: true,
+          customFloatingBubbleConfig: {
+            ...createEmbedTabMock().customFloatingBubbleConfig,
+            image: '/test-custom-icon.png',
+          },
+          form: {
+            handleSubmit: vi.fn(),
+            getFieldValue: vi.fn((field: string) => {
+              if (field === 'icon_selection') return 'custom_bubble';
+              return '';
+            }),
+            state: { isSubmitting: false },
+            Field: ({ children, name }: any) => {
+              const value = name === 'icon_selection' ? 'custom_bubble' : '';
+              return children({ state: { value }, handleChange: vi.fn() });
+            },
+            Subscribe: ({ children }: any) => children(['custom_bubble']),
+          },
+        }),
+      );
+
+      render(<EmbedTab />);
+
+      expect(
+        screen.getByRole('button', { name: /Remove Image/i }),
+      ).toBeDisabled();
     });
   });
 
