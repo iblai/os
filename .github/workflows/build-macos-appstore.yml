@@ -1,0 +1,189 @@
+name: Build macOS (App Store)
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version override (e.g. 1.2.0) - leave empty to use tauri.conf.json version"
+        required: false
+        type: string
+
+concurrency:
+  group: macos-appstore-build
+  cancel-in-progress: false
+
+jobs:
+  build-macos:
+    name: Build macOS (.pkg)
+    runs-on: macos-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: rust-macos-universal-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: |
+            rust-macos-universal-
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Tauri CLI
+        run: |
+          cargo install cargo-binstall --locked
+          cargo binstall tauri-cli --no-confirm || cargo install tauri-cli --locked
+
+      - name: Import Apple Distribution certificate
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          MAC_INSTALLER_CERTIFICATE: ${{ secrets.MAC_INSTALLER_CERTIFICATE }}
+          MAC_INSTALLER_CERTIFICATE_PASSWORD: ${{ secrets.MAC_INSTALLER_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
+
+          # Create temporary keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          # Import Apple Distribution certificate (signs the .app)
+          APP_CERT_PATH="$RUNNER_TEMP/app_certificate.p12"
+          printf '%s' "$APPLE_CERTIFICATE" | tr -d '\n\r ' | base64 --decode > "$APP_CERT_PATH"
+          security import "$APP_CERT_PATH" -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+
+          # Import Mac Installer Distribution certificate (signs the .pkg)
+          INSTALLER_CERT_PATH="$RUNNER_TEMP/installer_certificate.p12"
+          printf '%s' "$MAC_INSTALLER_CERTIFICATE" | tr -d '\n\r ' | base64 --decode > "$INSTALLER_CERT_PATH"
+          security import "$INSTALLER_CERT_PATH" -P "$MAC_INSTALLER_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+
+          # Allow codesign and productbuild to access the keychain
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+
+          # Verify certificates were imported
+          echo "Installed signing identities:"
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+
+          # Clean up cert files
+          rm -f "$APP_CERT_PATH" "$INSTALLER_CERT_PATH"
+
+      - name: Install provisioning profile
+        env:
+          MAC_PROVISIONING_PROFILE: ${{ secrets.MAC_PROVISIONING_PROFILE }}
+        run: |
+          PP_PATH="$RUNNER_TEMP/embedded.provisionprofile"
+          printf '%s' "$MAC_PROVISIONING_PROFILE" | tr -d '\n\r ' | base64 --decode > "$PP_PATH"
+
+          if [ ! -s "$PP_PATH" ]; then
+            echo "::error::Provisioning profile is empty or was not created"
+            exit 1
+          fi
+
+          # Copy to src-tauri so Tauri can embed it in the .app bundle
+          cp "$PP_PATH" src-tauri/embedded.provisionprofile
+
+          # Tell Tauri to embed the provisioning profile via config merge
+          cd src-tauri
+          python3 -c "
+          import json
+          with open('tauri.conf.json', 'r') as f:
+              config = json.load(f)
+          if 'files' not in config['bundle']['macOS']:
+              config['bundle']['macOS']['files'] = {}
+          config['bundle']['macOS']['files']['embedded.provisionprofile'] = 'embedded.provisionprofile'
+          with open('tauri.conf.json', 'w') as f:
+              json.dump(config, f, indent=2)
+          "
+          echo "Provisioning profile configured for embedding"
+
+      - name: Override version
+        if: inputs.version != ''
+        working-directory: src-tauri
+        run: |
+          sed -i '' 's/"version": "[^"]*"/"version": "${{ inputs.version }}"/' tauri.conf.json
+          echo "Version set to ${{ inputs.version }}"
+          grep '"version"' tauri.conf.json
+
+      - name: Build universal macOS app
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        run: cargo tauri build --bundles app --target universal-apple-darwin
+
+      - name: Locate app bundle
+        id: app
+        run: |
+          APP_PATH=$(find src-tauri/target/universal-apple-darwin/release/bundle/macos -name "*.app" -maxdepth 1 | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "::error::No .app bundle found"
+            find src-tauri/target -name "*.app" -type d 2>/dev/null | head -10
+            exit 1
+          fi
+          APP_NAME=$(basename "$APP_PATH" .app)
+          echo "app_path=$APP_PATH" >> "$GITHUB_OUTPUT"
+          echo "app_name=$APP_NAME" >> "$GITHUB_OUTPUT"
+          echo "Found: $APP_PATH"
+
+      - name: Create signed .pkg for App Store
+        env:
+          MAC_INSTALLER_IDENTITY: ${{ secrets.MAC_INSTALLER_IDENTITY }}
+        run: |
+          APP_PATH="${{ steps.app.outputs.app_path }}"
+          APP_NAME="${{ steps.app.outputs.app_name }}"
+
+          # Read version from tauri.conf.json
+          VERSION=$(grep '"version"' src-tauri/tauri.conf.json | head -1 | sed 's/.*: *"\(.*\)".*/\1/')
+          PKG_NAME="${APP_NAME}-${VERSION}-universal.pkg"
+
+          xcrun productbuild \
+            --sign "$MAC_INSTALLER_IDENTITY" \
+            --component "$APP_PATH" /Applications \
+            "$PKG_NAME"
+
+          echo "pkg_path=$PKG_NAME" >> "$GITHUB_OUTPUT"
+          echo "Created: $PKG_NAME ($(du -h "$PKG_NAME" | cut -f1))"
+        id: pkg
+
+      - name: Upload .pkg artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mentorai-macos-pkg
+          path: ${{ steps.pkg.outputs.pkg_path }}
+          if-no-files-found: error
+
+      - name: Upload .app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mentorai-macos-app
+          path: ${{ steps.app.outputs.app_path }}
+          if-no-files-found: error
+
+      - name: Clean up keychain
+        if: always()
+        run: |
+          security delete-keychain "$RUNNER_TEMP/app-signing.keychain-db" 2>/dev/null || true
