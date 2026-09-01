@@ -75,18 +75,18 @@ jobs:
             rust_target: aarch64-pc-windows-msvc
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Node/pnpm are only needed so tauri-action can resolve the project's
       # package manager; the frontend bundle is prebuilt/remote (frontendDist),
       # so there's no `next build` here.
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ inputs.node_version }}
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -167,7 +167,7 @@ jobs:
       # tauri-action does not create a Release; we attach the installer ourselves.
       - name: Build & sign NSIS installer
         id: tauri
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Enable in-app purchase for release builds when requested. Read at Rust
@@ -203,7 +203,7 @@ jobs:
 
       # Always keep the installer as a CI artifact (per-arch).
       - name: Upload installer artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.artifact_prefix }}-${{ matrix.arch }}
           path: src-tauri/target/${{ matrix.rust_target }}/release/bundle/nsis/*-setup.exe

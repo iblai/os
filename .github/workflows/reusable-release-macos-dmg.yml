@@ -93,18 +93,18 @@ jobs:
       APPLE_SIGNING_IDENTITY: ${{ inputs.apple_signing_identity }}
       APPLE_TEAM_ID: ${{ inputs.apple_team_id }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Node/pnpm are only needed so tauri-action can resolve the project's
       # package manager; the frontend bundle is prebuilt/remote (frontendDist),
       # so there's no `next build` here.
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ inputs.node_version }}
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -124,7 +124,7 @@ jobs:
       # existing v<version> Release rather than a parallel one.
       - name: Build, sign & notarize DMG
         id: tauri
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Enable in-app purchase for release builds when requested. Read at Rust
@@ -191,7 +191,7 @@ jobs:
 
       # Always keep the DMG as a CI artifact (SHA-named for dev builds).
       - name: Upload DMG artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.artifact_name }}
           path: ${{ inputs.dmg_path }}
