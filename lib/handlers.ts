@@ -98,6 +98,13 @@ export function useIframeHandlers() {
       const payload = event.data.data;
       dispatch(chatActions.setEnableGrading(payload));
     },
+    'MENTOR:ENABLE_LESSON_COMPLETION': (
+      _payload: unknown,
+      event: MessageEvent,
+    ) => {
+      const payload = event.data.data;
+      dispatch(chatActions.setEnableLessonCompletion(payload));
+    },
     // Document filter hanlder
     'MENTOR:DOCUMENTFILTER': (_payload: unknown, event: MessageEvent) => {
       try {
@@ -122,6 +129,12 @@ export function useIframeHandlers() {
           edxCourseId,
         }),
       );
+    },
+    // Names the lesson block for the lesson-completion payload.
+    'MENTOR:EDX_DISPLAY_NAME': (_payload: unknown, event: MessageEvent) => {
+      const { edxDisplayName } = event.data.data;
+      console.log('EDX Display Name updated:', edxDisplayName);
+      dispatch(chatActions.setMetadata({ displayName: edxDisplayName }));
     },
 
     // Safety disclaimer handler

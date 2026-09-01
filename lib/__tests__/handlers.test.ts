@@ -15,6 +15,12 @@ const mockSetDocumentFilter = vi.hoisted(() =>
 const mockSetEnableGrading = vi.hoisted(() =>
   vi.fn((value) => ({ type: 'chat/setEnableGrading', payload: value })),
 );
+const mockSetEnableLessonCompletion = vi.hoisted(() =>
+  vi.fn((value) => ({
+    type: 'chat/setEnableLessonCompletion',
+    payload: value,
+  })),
+);
 const mockSetMetadata = vi.hoisted(() =>
   vi.fn((value) => ({ type: 'chat/setMetadata', payload: value })),
 );
@@ -36,6 +42,7 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
     setIframeContext: mockSetIframeContext,
     setDocumentFilter: mockSetDocumentFilter,
     setEnableGrading: mockSetEnableGrading,
+    setEnableLessonCompletion: mockSetEnableLessonCompletion,
     setMetadata: mockSetMetadata,
   },
 }));
@@ -129,6 +136,8 @@ describe('useIframeHandlers', () => {
       expect(result.current).toHaveProperty('MENTOR:ENABLE_CHAT_ACTION_POPUPS');
       expect(result.current).toHaveProperty('MENTOR:CHAT_ACTION_ADD_MESSAGE');
       expect(result.current).toHaveProperty('MENTOR:ENABLE_GRADING');
+      expect(result.current).toHaveProperty('MENTOR:ENABLE_LESSON_COMPLETION');
+      expect(result.current).toHaveProperty('MENTOR:EDX_DISPLAY_NAME');
     });
 
     it('should have all handlers as functions', () => {
@@ -519,6 +528,54 @@ describe('useIframeHandlers', () => {
 
       expect(mockDispatchInstance).toHaveBeenCalledWith(
         chatActions.setEnableGrading(false),
+      );
+    });
+  });
+
+  describe('MENTOR:ENABLE_LESSON_COMPLETION handler', () => {
+    it('should dispatch setEnableLessonCompletion(true)', () => {
+      const { result } = renderHook(() => useIframeHandlers());
+      const mockEvent = {
+        data: { type: 'MENTOR:ENABLE_LESSON_COMPLETION', data: true },
+      } as MessageEvent;
+
+      result.current['MENTOR:ENABLE_LESSON_COMPLETION'](undefined, mockEvent);
+
+      expect(mockDispatchInstance).toHaveBeenCalledWith(
+        chatActions.setEnableLessonCompletion(true),
+      );
+    });
+
+    it('should dispatch setEnableLessonCompletion(false)', () => {
+      const { result } = renderHook(() => useIframeHandlers());
+      const mockEvent = {
+        data: { type: 'MENTOR:ENABLE_LESSON_COMPLETION', data: false },
+      } as MessageEvent;
+
+      result.current['MENTOR:ENABLE_LESSON_COMPLETION'](undefined, mockEvent);
+
+      expect(mockDispatchInstance).toHaveBeenCalledWith(
+        chatActions.setEnableLessonCompletion(false),
+      );
+    });
+  });
+
+  describe('MENTOR:EDX_DISPLAY_NAME handler', () => {
+    it('should dispatch setMetadata with the display name', () => {
+      const { result } = renderHook(() => useIframeHandlers());
+      const mockEvent = {
+        data: {
+          type: 'MENTOR:EDX_DISPLAY_NAME',
+          data: { edxDisplayName: 'Benefits of AI For Education.' },
+        },
+      } as MessageEvent;
+
+      result.current['MENTOR:EDX_DISPLAY_NAME'](undefined, mockEvent);
+
+      expect(mockDispatchInstance).toHaveBeenCalledWith(
+        chatActions.setMetadata({
+          displayName: 'Benefits of AI For Education.',
+        }),
       );
     });
   });
