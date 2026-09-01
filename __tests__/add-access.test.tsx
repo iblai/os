@@ -66,6 +66,7 @@ const defaultProps = {
   availableRoles: ['editor'] as Array<'editor'>,
   isLoading: false,
   onAccessCreated: vi.fn().mockResolvedValue(undefined),
+  canShare: true,
 };
 
 function setup(overrides: Partial<typeof defaultProps> = {}) {
@@ -109,6 +110,43 @@ describe('AddAccessDialog', () => {
     mockCheckRbacPermission.mockReturnValue(true);
     mockUpdateRbacMentorAccess.mockReturnValue({
       unwrap: () => Promise.resolve({}),
+    });
+  });
+
+  /* ---------- share_mentor gating (iblai-platform#2018) ---------- */
+
+  describe('read-only viewers (canShare: false)', () => {
+    // This suite is a sibling of the one under
+    // `components/.../access-tab/__tests__/add-access.test.tsx`; BOTH files are
+    // collected by vitest's default include glob, so the gate is asserted in
+    // each. See the note at the top of that file.
+    it('renders nothing at all — no trigger, no dialog', () => {
+      const { container } = setup({ canShare: false });
+
+      expect(
+        screen.queryByRole('button', { name: /create role access/i }),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(container).toBeEmptyDOMElement();
+    });
+
+    it('renders nothing even when roles are available and not loading', () => {
+      const { container } = setup({
+        canShare: false,
+        isLoading: false,
+        availableRoles: ['editor'],
+      });
+
+      expect(container).toBeEmptyDOMElement();
+      expect(mockUpdateRbacMentorAccess).not.toHaveBeenCalled();
+    });
+
+    it('renders the trigger again when canShare is true (converse)', () => {
+      setup({ canShare: true });
+
+      expect(
+        screen.getByRole('button', { name: /create role access/i }),
+      ).toBeInTheDocument();
     });
   });
 
