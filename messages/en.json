@@ -537,6 +537,20 @@
     "stopStreaming": "Stop streaming",
     "stopStreamingTooltip": "Stop Streaming"
   },
+  "chatWorkingIndicator": {
+    "thinking": "Thinking…",
+    "usingTool": "Using {toolName}…",
+    "writing": "Writing response…",
+    "workflow": "Running workflow…",
+    "workflowDetail": "{detail}…",
+    "processingFile": "Processing {fileName}…",
+    "processingFileProgress": "Processing {fileName} ({current} of {total})…",
+    "generatingImage": "Generating image…",
+    "generatingVideo": "Generating video…",
+    "working": "Working…",
+    "stillWorking": "Still working — longer tasks can take a few minutes.",
+    "tooltip": "Working… — The agent is still processing your message. Longer tasks run for a while, especially when the agent is using tools, searching, or building content. You can keep the tab open and watch progress, or press Stop to cancel and get back control."
+  },
   "common": {
     "cancel": "Cancel",
     "continue": "Continue",
