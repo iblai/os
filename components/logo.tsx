@@ -42,7 +42,7 @@ export default function Logo({
 
   function handleLogoError() {
     if (!useSpecialIframeLogo) {
-      setLogoUrl('/logo.gif');
+      setLogoUrl('/iblai-logo.png');
     } else {
       setLogoUrl('/logo-iframe.gif');
     }

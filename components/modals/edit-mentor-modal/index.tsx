@@ -13,31 +13,40 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  SettingsTab,
   LLMTab,
   PromptsTab,
   McpTab,
   ToolsTab,
   SafetyTab,
+  SpendCapsTab,
   PrivacyTab,
   TasksTab,
   // FlowTab,
   HistoryTab,
-  DatasetsTab,
+  EvaluationTab,
   ApiTab,
   EmbedTab,
   AccessTab,
   SandboxTab,
   SkillsTab,
+  GraderTab,
   AuditLogTab,
   VoiceTab,
   ScreenShareTab,
+  HumanSupportTab,
   LtiTab,
+  AnalyticsTab,
 } from './tabs';
 import { useNavigate } from '@/hooks/user-navigate';
 import { MODALS } from '@/lib/constants';
+import { SettingsTab } from './settings-tab';
 import { MemoryTab } from './tabs/memory-tab';
 import { DisclaimersTab } from './tabs/disclaimers-tab';
+// Datasets renders the SDK `AgentDatasetsTab` via an OS host wrapper (provider
+// + injected pagination/add-resource) instead of the local `DatasetsTab`. The
+// local component stays on disk — it's still used by the workflows
+// node-config-panel — so this import is deliberately the wrapper, not `./tabs`.
+import { AgentDatasetsTabWrapper } from './tabs/datasets-tab/agent-datasets-tab';
 import {
   useMentorSegments,
   MENTOR_SEGMENT_NAV_CATEGORIES,
@@ -66,8 +75,10 @@ export const EDIT_MENTOR_TAB_COMPONENTS: Record<string, ReactNode> = {
   [MODALS.EDIT_MENTOR.tabs.sandbox]: <SandboxTab />,
   [MODALS.EDIT_MENTOR.tabs.access]: <AccessTab />,
   [MODALS.EDIT_MENTOR.tabs.llm]: <LLMTab />,
+  [MODALS.EDIT_MENTOR.tabs.spend_caps]: <SpendCapsTab />,
   [MODALS.EDIT_MENTOR.tabs.prompts]: <PromptsTab />,
   [MODALS.EDIT_MENTOR.tabs.skills]: <SkillsTab />,
+  [MODALS.EDIT_MENTOR.tabs.grader]: <GraderTab />,
   [MODALS.EDIT_MENTOR.tabs.safety]: <SafetyTab />,
   [MODALS.EDIT_MENTOR.tabs.privacy]: <PrivacyTab />,
   [MODALS.EDIT_MENTOR.tabs.tasks]: <TasksTab />,
@@ -76,17 +87,23 @@ export const EDIT_MENTOR_TAB_COMPONENTS: Record<string, ReactNode> = {
   [MODALS.EDIT_MENTOR.tabs.mcp]: <McpTab />,
   [MODALS.EDIT_MENTOR.tabs.memory]: <MemoryTab />,
   [MODALS.EDIT_MENTOR.tabs.history]: <HistoryTab />,
+  [MODALS.EDIT_MENTOR.tabs.human_support]: <HumanSupportTab />,
   [MODALS.EDIT_MENTOR.tabs.audit_log]: <AuditLogTab />,
-  [MODALS.EDIT_MENTOR.tabs.datasets]: <DatasetsTab />,
+  [MODALS.EDIT_MENTOR.tabs.datasets]: <AgentDatasetsTabWrapper />,
+  [MODALS.EDIT_MENTOR.tabs.evaluation]: <EvaluationTab />,
   [MODALS.EDIT_MENTOR.tabs.api]: <ApiTab />,
   [MODALS.EDIT_MENTOR.tabs.embed]: <EmbedTab />,
   [MODALS.EDIT_MENTOR.tabs.voice]: <VoiceTab />,
   [MODALS.EDIT_MENTOR.tabs.screenshare]: <ScreenShareTab />,
   [MODALS.EDIT_MENTOR.tabs.lti]: <LtiTab />,
+  [MODALS.EDIT_MENTOR.tabs.analytics]: <AnalyticsTab />,
 };
 
 export function EditMentorModal({ isOpen, onClose }: Props) {
   const t = useTranslations('editMentorModalIndex');
+  // Segment labels + category titles live in the shared `header` namespace
+  // (same keys header.tsx uses) so both nav surfaces stay in sync.
+  const tHeader = useTranslations('header');
   const { changeModalTab, getEditMentorTab } = useNavigate();
   const {
     filteredSegments,
@@ -382,7 +399,7 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
                                   : 'text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700/50',
                               )}
                             >
-                              {category.title}
+                              {tHeader(category.titleKey)}
                             </button>
                           );
                         })}
@@ -405,7 +422,9 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
                             className="mr-3 h-4 w-4 flex-shrink-0"
                             aria-hidden="true"
                           />
-                          <span className="truncate">{tab.label}</span>
+                          <span className="truncate">
+                            {tHeader(tab.labelKey)}
+                          </span>
                         </TabsTrigger>
                       ))}
                     </TabsList>
@@ -448,7 +467,7 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
                                 : 'text-gray-600 hover:bg-gray-50',
                             )}
                           >
-                            {category.title}
+                            {tHeader(category.titleKey)}
                           </button>
                         );
                       })}
@@ -472,7 +491,7 @@ export function EditMentorModal({ isOpen, onClose }: Props) {
                           className="h-3 w-3 sm:h-4 sm:w-4"
                           aria-hidden="true"
                         />
-                        <span>{tab.label}</span>
+                        <span>{tHeader(tab.labelKey)}</span>
                       </TabsTrigger>
                     ))}
                   </TabsList>

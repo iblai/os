@@ -2,9 +2,9 @@ use futures_util::StreamExt;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::sync::atomic::{AtomicBool, Ordering};
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 use std::path::Path;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 /// Set when the user cancels an in-flight model download. `pull_model` checks
 /// this each iteration and stops cleanly (emitting a "cancelled" event) instead
@@ -109,25 +109,37 @@ struct OllamaModel {
 }
 
 pub const OLLAMA_API_URL: &str = "http://localhost:11434";
-/// The ollama-mcp-bridge listens here (Ollama-API-compatible + MCP tools).
-pub const BRIDGE_API_URL: &str = "http://localhost:8000";
 pub const REQUIRED_FREE_SPACE_GB: f64 = 5.0;
 
-/// Base URL chat must stream from: the MCP bridge on :8000 — the one and only
-/// chat port. Plain Ollama on :11434 is reserved for status/version/pull checks,
-/// never chat. A non-tool-capable model can't use the bridge (Ollama would 400
-/// the injected `tools` field), so we refuse rather than route anywhere.
+/// Base URL chat must stream from: the MCP bridge — the one and only chat port.
+/// Plain Ollama on :11434 is reserved for status/version/pull checks, never
+/// chat. A non-tool-capable model can't use the bridge (Ollama would 400 the
+/// injected `tools` field), so we refuse rather than route anywhere.
 /// `tool_support` is the selected model's catalog flag, forwarded by the SDK.
-pub fn chat_base_url(tool_support: bool) -> Result<&'static str, String> {
+///
+/// The port comes from the running bridge rather than a constant: it prefers
+/// 8000 but takes any free port when that one is busy. No bridge of ours
+/// running is an error, never a guessed URL — assuming 8000 is what used to
+/// send chat at whatever unrelated server happened to hold the port.
+pub fn chat_base_url(tool_support: bool) -> Result<String, String> {
     if !tool_support {
         let msg = "Local chat requires a tool-capable model — streaming only runs \
-                   through the MCP bridge on :8000, and the selected model has \
+                   through the MCP bridge, and the selected model has \
                    tool_support=false"
             .to_string();
         println!("[McpBridge] {msg}");
         return Err(msg);
     }
-    Ok(BRIDGE_API_URL)
+    match crate::mcp_bridge_manager::bridge_port() {
+        Some(port) => Ok(format!("http://localhost:{port}")),
+        None => {
+            let msg = "Local chat needs the MCP bridge, which isn't running — \
+                       toggle local models off and on to start it"
+                .to_string();
+            println!("[McpBridge] {msg}");
+            Err(msg)
+        }
+    }
 }
 
 /// Get the current timestamp in RFC3339 format
@@ -174,8 +186,12 @@ pub fn check_ollama_installed() -> bool {
 
 /// Check if Ollama server is running by pinging the API
 pub async fn is_ollama_running() -> bool {
-    let Ok(resp) = reqwest::get(format!("{}/api/version", OLLAMA_API_URL)).await else { return false };
-    let Ok(json) = resp.json::<Value>().await else { return false };
+    let Ok(resp) = reqwest::get(format!("{}/api/version", OLLAMA_API_URL)).await else {
+        return false;
+    };
+    let Ok(json) = resp.json::<Value>().await else {
+        return false;
+    };
 
     let status = json.get("version").is_some_and(Value::is_string);
 
@@ -411,7 +427,7 @@ pub fn get_system_memory() -> SystemMemory {
         sys.refresh_memory();
         let ram = sys.total_memory();
         let vram = get_vram_total();
-        println!("RAM: {ram}, VRAM: {vram}", );
+        println!("RAM: {ram}, VRAM: {vram}",);
         SystemMemory {
             ram_total: ram,
             vram_total: vram,
@@ -481,7 +497,11 @@ pub async fn list_installed_models() -> Option<Vec<String>> {
                 .into_iter()
                 .filter_map(|m| m.name)
                 .collect();
-            println!("[Ollama] /api/tags ok: {} model(s) {:?}", names.len(), names);
+            println!(
+                "[Ollama] /api/tags ok: {} model(s) {:?}",
+                names.len(),
+                names
+            );
             Some(names)
         }
         Err(e) => {
@@ -543,7 +563,8 @@ where
     // and only reveals a layer's `total` once it starts, but summing across every
     // layer seen so far keeps the bar smooth instead of snapping back to 0% each
     // time a new layer begins.
-    let mut layers: std::collections::HashMap<String, (u64, u64)> = std::collections::HashMap::new();
+    let mut layers: std::collections::HashMap<String, (u64, u64)> =
+        std::collections::HashMap::new();
 
     while let Some(chunk) = stream.next().await {
         // The user requested cancellation — stop cleanly (not as an error).
@@ -729,46 +750,102 @@ where
 /// the Ollama server running afterwards (cancelling a download must not take the
 /// model manager down).
 pub fn cancel_download() -> Result<(), String> {
+    // Setting the flag is instant and is what actually cancels the download:
+    // pull_model polls it every chunk and stops cleanly. Do this synchronously,
+    // then return right away.
     DOWNLOAD_CANCELLED.store(true, Ordering::SeqCst);
 
-    #[cfg(target_os = "linux")]
-    {
-        // Restarting the systemd service via sudo cleanly aborts the pull AND
-        // leaves Ollama running. If sudo isn't available/permitted, kill the
-        // process and start it back up so the manager stays available.
-        let restarted = can_sudo()
-            && create_command("sudo")
-                .args(["systemctl", "restart", "ollama"])
-                .status()
-                .map(|s| s.success())
-                .unwrap_or(false);
-        if !restarted {
+    // Break the in-flight server-side pull in the BACKGROUND. Restarting/killing
+    // Ollama blocks — `systemctl restart ollama` waits for the full service
+    // restart (several seconds mid-pull), and pkill + start_ollama_server block
+    // too. Running it inline stalled the async command's runtime worker while the
+    // frontend awaited the invoke, freezing the app on cancel. This is only a
+    // best-effort measure to break the stream faster; the flag above already
+    // stops the download, so it must never block the command.
+    std::thread::spawn(|| {
+        #[cfg(target_os = "linux")]
+        {
+            // Restarting the systemd service via sudo cleanly aborts the pull AND
+            // leaves Ollama running. If sudo isn't available/permitted, kill the
+            // process and start it back up so the manager stays available.
+            let restarted = can_sudo()
+                && create_command("sudo")
+                    .args(["systemctl", "restart", "ollama"])
+                    .status()
+                    .map(|s| s.success())
+                    .unwrap_or(false);
+            if !restarted {
+                create_command("pkill")
+                    .args(["-TERM", "-f", "ollama"])
+                    .output()
+                    .ok();
+                let _ = start_ollama_server();
+            }
+        }
+
+        #[cfg(target_os = "macos")]
+        {
             create_command("pkill")
                 .args(["-TERM", "-f", "ollama"])
                 .output()
                 .ok();
+            // Bring Ollama back up so the manager stays available after cancel.
             let _ = start_ollama_server();
         }
-    }
 
-    #[cfg(target_os = "macos")]
-    {
-        create_command("pkill")
-            .args(["-TERM", "-f", "ollama"])
-            .output()
-            .ok();
-        // Bring Ollama back up so the manager stays available after cancel.
-        let _ = start_ollama_server();
-    }
-
-    #[cfg(target_os = "windows")]
-    {
-        create_command("taskkill")
-            .args(["/F", "/IM", "ollama.exe"])
-            .output()
-            .ok();
-        let _ = start_ollama_server();
-    }
+        #[cfg(target_os = "windows")]
+        {
+            create_command("taskkill")
+                .args(["/F", "/IM", "ollama.exe"])
+                .output()
+                .ok();
+            let _ = start_ollama_server();
+        }
+    });
 
     Ok(())
+}
+
+#[cfg(all(
+    test,
+    any(target_os = "windows", target_os = "macos", target_os = "linux")
+))]
+mod tests {
+    use super::*;
+    use crate::mcp_bridge_manager::{bridge_state_lock, set_bridge_port_for_test};
+
+    /// Chat streams from whatever port the bridge actually took — the number is
+    /// read from the running bridge, never assumed to be 8000.
+    #[test]
+    fn the_chat_url_follows_the_port_the_bridge_took() {
+        let _guard = bridge_state_lock();
+        set_bridge_port_for_test(Some(8137));
+        assert_eq!(
+            chat_base_url(true).unwrap(),
+            "http://localhost:8137",
+            "a fallback port must reach the chat URL"
+        );
+        set_bridge_port_for_test(None);
+    }
+
+    /// No bridge of ours running is an ERROR. Guessing 8000 here is what used
+    /// to send chat at an unrelated server that happened to hold the port.
+    #[test]
+    fn no_running_bridge_is_an_error_not_a_guessed_url() {
+        let _guard = bridge_state_lock();
+        set_bridge_port_for_test(None);
+        let err = chat_base_url(true).expect_err("a missing bridge must not yield a URL");
+        assert!(err.contains("MCP bridge"), "{err}");
+    }
+
+    /// The pre-existing rule: a model without tool support can't use the
+    /// bridge at all, and that refusal comes before any port lookup.
+    #[test]
+    fn a_model_without_tool_support_is_refused_whatever_the_port() {
+        let _guard = bridge_state_lock();
+        set_bridge_port_for_test(Some(8000));
+        let err = chat_base_url(false).expect_err("non-tool models are refused");
+        assert!(err.contains("tool_support=false"), "{err}");
+        set_bridge_port_for_test(None);
+    }
 }

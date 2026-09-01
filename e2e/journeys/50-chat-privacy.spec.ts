@@ -336,6 +336,13 @@ test.describe('Journey 50: Chat Privacy', () => {
       page,
       editMentorPage,
     }) => {
+      // Every Edit Agent open blocks on the modal's hydration spinner
+      // (settings + RBAC prefetch churn — ~30-90s per open, see
+      // EditMentorPage.waitForHydrated), and this test opens the modal up
+      // to three times (initial set, persistence poll, restore). The
+      // default budget expired mid-poll on staging.
+      test.setTimeout(420_000);
+
       const chatPrivacy = new ChatPrivacyPage(page);
 
       await editMentorPage.open('Settings');
@@ -383,8 +390,12 @@ test.describe('Journey 50: Chat Privacy', () => {
           {
             message:
               'Re-opened Settings should show Enable private mode ON once the post-save mentor refetch settles',
-            timeout: 30_000,
-            intervals: [1_000, 2_000, 3_000, 5_000],
+            // Each poll attempt re-runs editMentorPage.open(), which blocks
+            // on the modal's hydration spinner (~30-90s per open) — a 30s
+            // budget died inside the FIRST attempt. Size the poll for at
+            // least two full open→read→close cycles.
+            timeout: 240_000,
+            intervals: [1_000, 5_000, 10_000, 15_000],
           },
         )
         .toBe(true);

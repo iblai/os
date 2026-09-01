@@ -54,7 +54,10 @@ export function ReasoningSection({
         )}
       </CollapsibleTrigger>
       <CollapsibleContent className="pb-2 pl-4">
-        <div className="max-h-[200px] space-y-2 overflow-y-auto border-l-2 border-gray-200 pl-3 text-xs leading-relaxed text-gray-500">
+        {/* `pt-2` matches `space-y-2` so the first step sits the same distance
+            from the header as every following step does from the one above it —
+            without it the first step butts straight up against the trigger. */}
+        <div className="max-h-[200px] space-y-2 overflow-y-auto border-l-2 border-gray-200 pt-2 pl-3 text-xs leading-relaxed text-gray-500">
           {steps.length > 0 ? (
             steps.map((step, index) => (
               <div key={index}>

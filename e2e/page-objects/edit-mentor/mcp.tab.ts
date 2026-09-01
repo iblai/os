@@ -1,4 +1,5 @@
 import { Page, Locator, expect } from '@playwright/test';
+import { isVisibleWithin } from '../../utils/resilient';
 
 export class McpTab {
   readonly page: Page;
@@ -50,7 +51,7 @@ export class McpTab {
 
   async deleteFirst(): Promise<void> {
     const btn = this.deleteButtons.first();
-    const visible = await btn.isVisible({ timeout: 5_000 }).catch(() => false);
+    const visible = await isVisibleWithin(btn, 5_000);
     if (!visible) {
       const optionsBtn = this.dialog
         .getByRole('button', { name: /options|more/i })
@@ -69,9 +70,7 @@ export class McpTab {
       .getByRole('dialog')
       .filter({ hasText: /delete|confirm/i })
       .last();
-    const confirmVisible = await confirmDialog
-      .isVisible({ timeout: 3_000 })
-      .catch(() => false);
+    const confirmVisible = await isVisibleWithin(confirmDialog, 3_000);
     if (confirmVisible) {
       await confirmDialog
         .getByRole('button', { name: /delete|confirm/i })
@@ -81,9 +80,7 @@ export class McpTab {
   }
 
   async hasConnectors(): Promise<boolean> {
-    const empty = await this.emptyState
-      .isVisible({ timeout: 5_000 })
-      .catch(() => false);
+    const empty = await isVisibleWithin(this.emptyState, 5_000);
     return !empty;
   }
 }

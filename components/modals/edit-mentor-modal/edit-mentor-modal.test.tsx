@@ -182,28 +182,49 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
   AgentConfigPrompts: () => null,
 }));
 
-vi.mock('./tabs', () => ({
+// The settings slot now renders the SDK-wired wrapper from its own module
+// (index.tsx no longer imports SettingsTab from ./tabs). Mock the wrapper so
+// the existing settings-tab assertions keep exercising the settings panel.
+vi.mock('./settings-tab', () => ({
   SettingsTab: () => <div data-testid="settings-tab">Settings Tab</div>,
+}));
+
+vi.mock('./tabs', () => ({
   LLMTab: () => <div data-testid="llm-tab">LLM Tab</div>,
   PromptsTab: () => <div data-testid="prompts-tab">Prompts Tab</div>,
   McpTab: () => <div data-testid="mcp-tab">MCP Tab</div>,
   ToolsTab: () => <div data-testid="tools-tab">Tools Tab</div>,
   SafetyTab: () => <div data-testid="safety-tab">Safety Tab</div>,
+  SpendCapsTab: () => <div data-testid="spend-caps-tab">Spend Caps Tab</div>,
   PrivacyTab: () => <div data-testid="privacy-tab">Privacy Tab</div>,
   TasksTab: () => <div data-testid="tasks-tab">Tasks Tab</div>,
   HistoryTab: () => <div data-testid="history-tab">History Tab</div>,
-  DatasetsTab: () => <div data-testid="datasets-tab">Datasets Tab</div>,
+  // Local DatasetsTab still lives on the barrel (used by the workflows
+  // node-config-panel); the modal now mounts the SDK wrapper below.
+  DatasetsTab: () => <div data-testid="local-datasets-tab">Datasets Tab</div>,
+  EvaluationTab: () => <div data-testid="evaluation-tab">Evaluation Tab</div>,
   ApiTab: () => <div data-testid="api-tab">API Tab</div>,
   EmbedTab: () => <div data-testid="embed-tab">Embed Tab</div>,
   AccessTab: () => <div data-testid="access-tab">Access Tab</div>,
   SandboxTab: () => <div data-testid="sandbox-tab">Sandbox Tab</div>,
   SkillsTab: () => <div data-testid="skills-tab">Skills Tab</div>,
+  GraderTab: () => <div data-testid="grader-tab">Grader Tab</div>,
   AuditLogTab: () => <div data-testid="audit-log-tab">Audit Log Tab</div>,
   VoiceTab: () => <div data-testid="voice-tab">Voice Tab</div>,
   ScreenShareTab: () => (
     <div data-testid="screenshare-tab">Screen Share Tab</div>
   ),
+  HumanSupportTab: () => (
+    <div data-testid="human-support-tab">Human Support Tab</div>
+  ),
   LtiTab: () => <div data-testid="lti-tab">LTI Tab</div>,
+  AnalyticsTab: () => <div data-testid="analytics-tab">Analytics Tab</div>,
+}));
+
+vi.mock('./tabs/datasets-tab/agent-datasets-tab', () => ({
+  AgentDatasetsTabWrapper: () => (
+    <div data-testid="datasets-tab">Datasets Tab</div>
+  ),
 }));
 
 vi.mock('./tabs/memory-tab', () => ({
@@ -498,9 +519,11 @@ describe('EditMentorModal', () => {
             `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
           ),
         ).toBeInTheDocument();
+        // Skills is admin-only and lives in the Configuration category (the
+        // default active category), so it renders alongside Settings.
         expect(
           document.getElementById(
-            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.access}`,
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.skills}`,
           ),
         ).toBeInTheDocument();
       });
@@ -611,10 +634,12 @@ describe('EditMentorModal', () => {
       mockCheckRbacPermissionResult = true;
       mockMentorSettings = { ...dms(), permissions: { field: {} } };
       renderM();
+      // Skills has an empty permissionFieldsCheck and lives in the default
+      // Configuration category, so it renders under permissive RBAC.
       await waitFor(() =>
         expect(
           document.getElementById(
-            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.access}`,
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.skills}`,
           ),
         ).toBeInTheDocument(),
       );
@@ -832,25 +857,29 @@ describe('EditMentorModal', () => {
     // mounts the category's segments. Re-mount with cleanup() between
     // groups so each fresh render reflects the new mockGetEditMentorTab.
     const groups: Array<{ tabs: string[] }> = [
+      // Configuration (Access moved here from Integrations in feat/2286)
       {
         tabs: [
           MODALS.EDIT_MENTOR.tabs.settings,
           MODALS.EDIT_MENTOR.tabs.access,
           MODALS.EDIT_MENTOR.tabs.llm,
+          MODALS.EDIT_MENTOR.tabs.spend_caps,
           MODALS.EDIT_MENTOR.tabs.prompts,
           MODALS.EDIT_MENTOR.tabs.safety,
           MODALS.EDIT_MENTOR.tabs.disclaimer,
-          MODALS.EDIT_MENTOR.tabs.tools,
         ],
       },
+      // Integrations (Tools moved here in feat/2040)
       {
         tabs: [
           MODALS.EDIT_MENTOR.tabs.mcp,
           MODALS.EDIT_MENTOR.tabs.datasets,
           MODALS.EDIT_MENTOR.tabs.api,
           MODALS.EDIT_MENTOR.tabs.embed,
+          MODALS.EDIT_MENTOR.tabs.tools,
         ],
       },
+      // Runtime (formerly Analytics)
       {
         tabs: [MODALS.EDIT_MENTOR.tabs.memory, MODALS.EDIT_MENTOR.tabs.history],
       },

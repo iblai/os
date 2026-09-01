@@ -163,4 +163,179 @@ describe('ToolCallIndicator', () => {
     );
     expect(container.querySelector('.animate-bounce')).not.toBeInTheDocument();
   });
+
+  it('falls back to the generic wrench icon for an unmapped tool name', () => {
+    const { container } = render(
+      <ToolCallIndicator
+        toolCalls={[makeToolCall({ id: '1', name: 'some_custom_tool' })]}
+      />,
+    );
+    fireEvent.click(screen.getByText('Used 1 tool'));
+    // No entry in TOOL_ICONS and no entry in TOOL_NAME_MAP: the name is
+    // de-underscored and sentence-cased rather than dropped.
+    expect(screen.getByText('Some custom tool')).toBeInTheDocument();
+    expect(container.querySelectorAll('svg.shrink-0').length).toBe(1);
+  });
+
+  it('renders a tool call with no name and no id', () => {
+    const { container } = render(
+      <ToolCallIndicator
+        toolCalls={[
+          makeToolCall({
+            id: '',
+            name: undefined as unknown as string,
+            input: { query: 'orphan query' },
+          }),
+        ]}
+      />,
+    );
+    fireEvent.click(screen.getByText('Used 1 tool'));
+    // Falls back to the array index for the React key and to '' for the label,
+    // so the row still renders its query instead of throwing.
+    expect(screen.getByText('orphan query')).toBeInTheDocument();
+    expect(container.querySelectorAll('svg.shrink-0').length).toBe(1);
+  });
+
+  // The indicator always sits inside the assistant bubble, which is
+  // `bg-gray-100` (#F3F4F6) with no dark-mode override. gray-400 (#99A1AF) on
+  // that background is 2.36:1 and fails WCAG AA for this 12px text; gray-600
+  // (#4A5565) is 6.87:1.
+  describe('description contrast', () => {
+    function renderExpanded() {
+      const result = render(
+        <ToolCallIndicator
+          toolCalls={[makeToolCall({ id: '1', input: { query: 'F1 race' } })]}
+        />,
+      );
+      fireEvent.click(screen.getByText('Used 1 tool'));
+      return result;
+    }
+
+    it('renders the tool query at gray-600, not the washed-out gray-400', () => {
+      renderExpanded();
+      const markdownRoot = screen.getByText('F1 race').closest('div');
+      // The <Markdown> override wins over prose colours on every descendant,
+      // so it is the one that decides what the query actually looks like.
+      expect(markdownRoot?.className).toContain('[&_*]:text-gray-600');
+      expect(markdownRoot?.className).not.toContain('text-gray-400');
+    });
+
+    it('does not ship a dark-mode override that would invert on the light bubble', () => {
+      renderExpanded();
+      const markdownRoot = screen.getByText('F1 race').closest('div');
+      const wrapper = markdownRoot?.parentElement;
+      expect(markdownRoot?.className).not.toContain('dark:');
+      expect(wrapper?.className).not.toContain('dark:');
+    });
+
+    it('renders the tool name darker than the icon beside it', () => {
+      const { container } = renderExpanded();
+      const name = screen.getByText('Searching the web');
+      expect(name.parentElement?.className).toContain('text-gray-700');
+      const icon = container.querySelector('svg.shrink-0');
+      expect(icon?.getAttribute('class')).toContain('text-gray-500');
+    });
+
+    it('renders the collapsed header label at gray-600', () => {
+      render(<ToolCallIndicator toolCalls={[makeToolCall()]} />);
+      const trigger = screen.getByRole('button');
+      expect(trigger.className).toContain('text-gray-600');
+      expect(trigger.className).not.toContain('text-gray-500');
+    });
+  });
+
+  it('pulses only the last tool call while streaming', () => {
+    const { container } = render(
+      <ToolCallIndicator
+        toolCalls={[
+          makeToolCall({ id: '1', name: 'web_search_call' }),
+          makeToolCall({ id: '2', name: 'vector_search' }),
+        ]}
+        isCurrentlyStreaming={true}
+      />,
+    );
+
+    fireEvent.click(screen.getByText('Used 2 tools'));
+    // Only the last of the two rows carries the pulse dot.
+    expect(container.querySelectorAll('.animate-pulse').length).toBe(1);
+  });
+
+  describe('write_todos exclusion', () => {
+    it('renders nothing when write_todos is the only tool call', () => {
+      const { container } = render(
+        <ToolCallIndicator
+          toolCalls={[makeToolCall({ id: 'td', name: 'write_todos' })]}
+        />,
+      );
+      expect(container.innerHTML).toBe('');
+    });
+
+    it('renders nothing when every tool call is write_todos', () => {
+      const { container } = render(
+        <ToolCallIndicator
+          toolCalls={[
+            makeToolCall({ id: 'td1', name: 'write_todos' }),
+            makeToolCall({ id: 'td2', name: 'write_todos' }),
+          ]}
+        />,
+      );
+      expect(container.innerHTML).toBe('');
+    });
+
+    it('excludes write_todos from the "Used N tools" count', () => {
+      render(
+        <ToolCallIndicator
+          toolCalls={[
+            makeToolCall({ id: '1', name: 'web_search_call' }),
+            makeToolCall({ id: 'td', name: 'write_todos' }),
+          ]}
+        />,
+      );
+      expect(screen.getByText('Used 1 tool')).toBeInTheDocument();
+    });
+
+    it('does not render a card for write_todos when expanded', () => {
+      render(
+        <ToolCallIndicator
+          toolCalls={[
+            makeToolCall({
+              id: '1',
+              name: 'web_search_call',
+              input: { query: 'F1 race' },
+            }),
+            makeToolCall({
+              id: 'td',
+              name: 'write_todos',
+              input: { todos: [{ content: 'Step one', status: 'pending' }] },
+            }),
+          ]}
+        />,
+      );
+
+      fireEvent.click(screen.getByText('Used 1 tool'));
+
+      expect(screen.getByText('Searching the web')).toBeInTheDocument();
+      expect(screen.queryByText('write_todos')).not.toBeInTheDocument();
+      expect(screen.queryByText('Step one')).not.toBeInTheDocument();
+    });
+
+    it('keeps the streaming pulse on the last non-todo tool call', () => {
+      const { container } = render(
+        <ToolCallIndicator
+          toolCalls={[
+            makeToolCall({
+              id: '1',
+              name: 'web_search_call',
+              input: { query: 'F1 race' },
+            }),
+            makeToolCall({ id: 'td', name: 'write_todos' }),
+          ]}
+          isCurrentlyStreaming={true}
+        />,
+      );
+
+      fireEvent.click(screen.getByText('Used 1 tool'));
+      expect(container.querySelectorAll('.animate-pulse').length).toBe(1);
+    });
+  });
 });

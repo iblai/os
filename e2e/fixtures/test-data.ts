@@ -106,9 +106,15 @@ export function generateMentorName(): string {
   return `E2E Mentor ${Date.now()}`;
 }
 
-/** Generates a unique project name for isolation between test runs */
+/** Generates a unique project name for isolation between test runs.
+ * Includes a random suffix (not just a timestamp) so that parallel
+ * workers or retries creating a project within the same millisecond
+ * never collide — collisions would break the `testProject` fixture's
+ * name-based id lookup right after creation. */
 export function generateProjectName(): string {
-  return `E2E Project ${Date.now()}`;
+  const ts = Date.now();
+  const rand = Math.random().toString(36).substring(2, 7);
+  return `E2E Project ${ts}-${rand}`;
 }
 
 /** Generates a unique MCP connector name */

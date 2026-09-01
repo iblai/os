@@ -22,6 +22,19 @@ vi.mock('@/hooks/user-navigate', () => ({
   }),
 }));
 
+vi.mock('@/hooks/use-user', () => ({
+  useUsername: () => 'admin-user',
+}));
+
+// The settings lookup only supplies the mentor DB id that keys the RBAC
+// grants the SDK panel gates on — same query the hosting modal already
+// subscribes to, so at runtime it is an RTK cache read.
+const mockUseGetMentorSettingsQuery = vi.fn();
+vi.mock('@iblai/iblai-js/data-layer', () => ({
+  useGetMentorSettingsQuery: (...args: unknown[]) =>
+    mockUseGetMentorSettingsQuery(...args),
+}));
+
 // SkillsTab imports from `@iblai/iblai-js/web-containers` (the unified
 // SDK barrel). Mock the exact path the source uses — Vitest keys mocks
 // by module specifier so the underlying `@iblai/iblai-js/web-containers` mock
@@ -55,6 +68,9 @@ describe('SkillsTab', () => {
       mentorId: 'test-mentor',
     });
     mockGetMentorId.mockReturnValue(null);
+    mockUseGetMentorSettingsQuery.mockReturnValue({
+      data: { mentor_id: 42 },
+    });
   });
 
   afterEach(() => {
@@ -67,7 +83,9 @@ describe('SkillsTab', () => {
 
       expect(screen.getByText('Skills')).toBeInTheDocument();
       expect(
-        screen.getByText('Manage agent skill assignments for your mentor.'),
+        screen.getByText(
+          'Reusable playbooks this Base Agent can discover and follow.',
+        ),
       ).toBeInTheDocument();
     });
 
@@ -83,6 +101,7 @@ describe('SkillsTab', () => {
       expect(mockAgentSkills).toHaveBeenCalledWith({
         platformKey: 'test-tenant',
         mentorUniqueId: 'test-mentor',
+        mentorDbId: 42,
       });
     });
   });
@@ -96,6 +115,7 @@ describe('SkillsTab', () => {
       expect(mockAgentSkills).toHaveBeenCalledWith({
         platformKey: 'test-tenant',
         mentorUniqueId: 'nav-mentor-xyz',
+        mentorDbId: 42,
       });
     });
 
@@ -107,6 +127,7 @@ describe('SkillsTab', () => {
       expect(mockAgentSkills).toHaveBeenCalledWith({
         platformKey: 'test-tenant',
         mentorUniqueId: 'test-mentor',
+        mentorDbId: 42,
       });
     });
 
@@ -118,6 +139,7 @@ describe('SkillsTab', () => {
       expect(mockAgentSkills).toHaveBeenCalledWith({
         platformKey: 'test-tenant',
         mentorUniqueId: 'test-mentor',
+        mentorDbId: 42,
       });
     });
   });
@@ -161,6 +183,7 @@ describe('SkillsTab', () => {
       expect(mockAgentSkills).toHaveBeenCalledWith({
         platformKey: 'test-tenant',
         mentorUniqueId: 'nav-mentor-xyz',
+        mentorDbId: 42,
       });
     });
   });

@@ -1,10 +1,22 @@
 import type { Page } from '@playwright/test';
+import path from 'path';
 import { test, expect } from '../fixtures/mentor-test';
-import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
+import {
+  navigateToMentorApp,
+  checkAdminStatus,
+  getPlatformContext,
+} from '../utils/auth';
 import { EMBED_URL } from '../fixtures/test-data';
 import { waitForPageReady } from '../utils/resilient';
 import type { EditMentorPage } from '../page-objects/edit-mentor/edit-mentor.page';
 import { logger } from '@iblai/iblai-js/playwright';
+import { MentorTracker } from '../utils/mentor-cleanup';
+
+// Reused across journeys — a real, small PNG already checked into the repo
+// (see journeys 08 and 20) rather than a fabricated fake-bytes file, since the
+// upload must decode as a real image for the local `data:` preview to render.
+const FILES_DIR = path.resolve(__dirname, '../../e2e/files/testing_folder');
+const ACCEPTED_IMAGE = path.join(FILES_DIR, 'acessibility png.png');
 
 /** Builds the embed entry URL (the iframe's own src) for a mentor page. */
 function embedUrlFor(mentorUrl: string): string {
@@ -12,6 +24,39 @@ function embedUrlFor(mentorUrl: string): string {
   url.searchParams.set('embed', 'true');
   url.searchParams.set('extra-body-classes', 'iframed-externally');
   return url.toString();
+}
+
+/**
+ * Navigates to a mentor's embed view and resolves once the mentor-settings GET
+ * that carries `show_catalogue` has landed.
+ *
+ * `components/logo.tsx` gates clickability on
+ * `!embedMode || (mentorSettings?.showCatalogue ?? true)` — the `?? true` means
+ * the logo renders as a navigable <button> for as long as settings are still in
+ * flight. Asserting straight after `goto` therefore races the fetch: on a slow
+ * host (dev-mode compilation, cold API) the un-resolved default is read as
+ * "catalogue enabled" and the emb-07 assertion fails against a logo that would
+ * have become non-clickable a moment later.
+ *
+ * Waiting on the response removes the race regardless of host speed. The
+ * authenticated private endpoint (`.../mentors/<id>/settings/`) is the one whose
+ * value wins in `useMentorSettings` (private ?? public ?? true); `-settings/`
+ * variants such as `public-settings/` are deliberately excluded by the leading
+ * slash in the pattern.
+ */
+async function gotoEmbedWithSettingsLoaded(
+  page: Page,
+  mentorUrl: string,
+): Promise<void> {
+  const settingsLoaded = page.waitForResponse(
+    (res) => /\/settings\/?$/.test(new URL(res.url()).pathname) && res.ok(),
+    { timeout: 60_000 },
+  );
+  await page.goto(embedUrlFor(mentorUrl), {
+    waitUntil: 'domcontentloaded',
+    timeout: 30_000,
+  });
+  await settingsLoaded;
 }
 
 /** Configures + persists the embed with a given Show Catalogue value (via UI). */
@@ -210,6 +255,10 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
       editMentorPage,
       sidebarPage,
     }) => {
+      // Creates a mentor, saves its visibility, saves the embed, then loads the
+      // embed view — comfortably past the default per-test budget on a cold host.
+      test.slow();
+
       const baseMentorUrl = page.url();
       await createEmbedWithShowCatalogue(
         page,
@@ -218,14 +267,11 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
         false,
       );
 
-      await page.goto(embedUrlFor(baseMentorUrl), {
-        waitUntil: 'domcontentloaded',
-        timeout: 30_000,
-      });
+      await gotoEmbedWithSettingsLoaded(page, baseMentorUrl);
       await sidebarPage.ensureExpanded(40_000);
       await expect(sidebarPage.logoImage).toBeVisible({ timeout: 15_000 });
-      // The logo renders but is not wrapped in a navigable button. toHaveCount(0)
-      // retries past the brief loading window before settings resolve.
+      // Settings have resolved by now, so the logo must NOT be wrapped in a
+      // navigable button — this no longer races the optimistic default.
       await expect(sidebarPage.logoButton).toHaveCount(0, { timeout: 10_000 });
     });
 
@@ -236,6 +282,8 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
       editMentorPage,
       sidebarPage,
     }) => {
+      test.slow();
+
       const baseMentorUrl = page.url();
       await createEmbedWithShowCatalogue(
         page,
@@ -244,10 +292,10 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
         true,
       );
 
-      await page.goto(embedUrlFor(baseMentorUrl), {
-        waitUntil: 'domcontentloaded',
-        timeout: 30_000,
-      });
+      // Also waits for settings here: without it this test passes vacuously,
+      // since the pre-resolution default is exactly the clickable state it
+      // asserts. Waiting makes the pass mean "show_catalogue: true was read".
+      await gotoEmbedWithSettingsLoaded(page, baseMentorUrl);
       await sidebarPage.ensureExpanded(40_000);
       await expect(sidebarPage.logoButton).toBeVisible({ timeout: 15_000 });
     });
@@ -299,18 +347,21 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
     // "New Chat" button
     await expect(sidebarPage.newChatButton).toBeVisible({ timeout: 10_000 });
 
-    // "Chats" collapsible section trigger
+    // "Recents" collapsible section trigger
     const chatsVisible = await sidebarPage.isSectionTriggerVisible(
-      'Chats',
+      'Recents',
       5_000,
     );
     if (!chatsVisible) {
       logger.info(
-        'emb-09: Chats section trigger not visible — may render differently in this env; asserting New Chat only',
+        'emb-09: Recents section trigger not visible — may render differently in this env; asserting New Chat only',
       );
     } else {
       await expect(
-        sidebarPage.sidebar.getByRole('button', { name: 'Chats', exact: true }),
+        sidebarPage.sidebar.getByRole('button', {
+          name: 'Recents',
+          exact: true,
+        }),
       ).toBeVisible();
     }
 
@@ -351,7 +402,8 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
     );
     expect(projectsVisible).toBe(false);
 
-    // Support / docs link (ibl.ai/docs) — entire footer hidden in embed mode
+    // Support link (href resolves to the documentation URL, default
+    // https://ibl.ai/docs) — entire footer hidden in embed mode
     const supportVisible = await sidebarPage.isSupportLinkVisible(3_000);
     expect(supportVisible).toBe(false);
 
@@ -544,5 +596,395 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
 
     // Assert: the widget container is now hidden (display:none set by toggleWidget())
     await expect(widgetContainer).not.toBeVisible({ timeout: 10_000 });
+  });
+
+  // Issue #2153: toggling/regenerating the Shareable Link switch used to
+  // await syncEmbedSettings() as a side effect, which validates the embed
+  // form's website_url field whenever the mentor is non-anonymous. That
+  // surfaced a spurious "Please specify a valid Website URL" error under the
+  // (unrelated) Website URL field any time an admin merely flipped the
+  // Shareable Link switch or hit regenerate. The fix removes the
+  // syncEmbedSettings() calls from handleShareableTokenToggle and
+  // handleRegenerateToken entirely — the shareable-link mutations and their
+  // success toasts still fire, but no url validation runs.
+  test.describe('Shareable Link toggle does not trigger website URL validation (issue #2153)', () => {
+    // Each test below creates its own mentor (fresh per test, not shared via
+    // beforeEach), so cleanup is scoped per-suite via afterAll rather than
+    // per-test — see the "Mentor Creation" convention in other journeys
+    // (e.g. journey 22). Names are prefixed "E2E " so the globalTeardown
+    // sweeper (mentor-sweeper.ts) can also reap them as a backstop if the
+    // afterAll delete is ever skipped (e.g. a crashed run).
+    const tracker = new MentorTracker();
+
+    test.afterAll(async ({ browser }, testInfo) => {
+      await tracker.deleteAll(browser, testInfo);
+    });
+
+    // emb-11/12/13: exercised against a freshly created mentor, which is
+    // non-anonymous (allow_anonymous=false) with an empty Website URL by
+    // default — exactly the precondition that used to trigger the bug.
+    test('admin toggles Shareable Link on a non-anonymous mentor with an empty Website URL and sees no validation error', async ({
+      page,
+      createMentorPage,
+      editMentorPage,
+    }) => {
+      // This test creates a fresh mentor (name/description/category fill +
+      // Next + Save, which alone can take 50s+ under a loaded environment's
+      // category-list fetch and post-save redirect), then opens the Edit
+      // dialog and drives it through two levels of tab navigation before
+      // exercising three shareable-link toasts. Extend the timeout so the
+      // full chain has headroom, matching the convention used elsewhere in
+      // this file (see the Optimize Page Context Tokens test above) and in
+      // other create-mentor-then-navigate journeys.
+      test.setTimeout(300_000);
+
+      await createMentorPage.openAndCreate(`E2E Shareable Link ${Date.now()}`);
+      const { mentorId } = await getPlatformContext(page);
+      tracker.add(mentorId);
+
+      await editMentorPage.open('Embed');
+      await waitForPageReady(page);
+      await expect(editMentorPage.embed.shareableLinkToggle).toBeVisible({
+        timeout: 15_000,
+      });
+
+      // Confirm the bug's precondition actually holds: non-anonymous with an
+      // empty Website URL, and no validation error showing yet.
+      await expect(editMentorPage.embed.websiteUrlInput).toBeVisible();
+      await expect(editMentorPage.embed.websiteUrlInput).toHaveValue('');
+      await expect(editMentorPage.embed.websiteUrlError).not.toBeVisible();
+
+      // emb-11: toggling ON must not surface the validation error, and the
+      // shareable-link creation must still succeed (success toast).
+      await editMentorPage.embed.toggleShareableLink();
+      await expect(
+        page.getByText(/created shareable link/i).first(),
+      ).toBeVisible({ timeout: 15_000 });
+      await expect(editMentorPage.embed.shareableLinkToggle).toHaveAttribute(
+        'aria-checked',
+        'true',
+        { timeout: 10_000 },
+      );
+      await expect(editMentorPage.embed.websiteUrlError).not.toBeVisible();
+
+      // emb-12: regenerating the token must not surface the validation error.
+      await editMentorPage.embed.regenerateShareableLink();
+      await expect(
+        page.getByText(/regenerate shareable link/i).first(),
+      ).toBeVisible({ timeout: 15_000 });
+      await expect(editMentorPage.embed.websiteUrlError).not.toBeVisible();
+
+      // emb-13: toggling OFF must not surface the validation error either.
+      await editMentorPage.embed.toggleShareableLink();
+      await expect(
+        page.getByText(/disabled shareable link/i).first(),
+      ).toBeVisible({ timeout: 15_000 });
+      await expect(editMentorPage.embed.shareableLinkToggle).toHaveAttribute(
+        'aria-checked',
+        'false',
+        { timeout: 10_000 },
+      );
+      await expect(editMentorPage.embed.websiteUrlError).not.toBeVisible();
+
+      await editMentorPage.close();
+    });
+
+    // emb-14: contrast case — an anonymous mentor's Embed tab never renders
+    // the Website URL section at all (syncEmbedSettings' url guard only
+    // applies when !allow_anonymous), so toggling Shareable Link ON stays
+    // error-free here too. Pins down that this path was, and remains, safe.
+    test('admin toggles Shareable Link on an anonymous mentor and sees no validation error either', async ({
+      page,
+      createMentorPage,
+      editMentorPage,
+    }) => {
+      // See the sibling test above for why this needs headroom: mentor
+      // creation alone can consume most of the default budget under load,
+      // and this test additionally opens the Settings tab, saves, closes,
+      // and reopens on Embed before exercising the toggle.
+      test.setTimeout(300_000);
+
+      await createMentorPage.openAndCreate(
+        `E2E Shareable Link Anon ${Date.now()}`,
+      );
+      const { mentorId } = await getPlatformContext(page);
+      tracker.add(mentorId);
+
+      await editMentorPage.open('Settings');
+      await waitForPageReady(page);
+      await editMentorPage.settings.setVisibilityAnyone();
+      await editMentorPage.settings.setChatAccessAnyone();
+      const saveBtn = editMentorPage.dialog
+        .getByRole('button', { name: /save/i })
+        .first();
+      await expect(saveBtn).toBeEnabled({ timeout: 5_000 });
+      await saveBtn.click();
+      await expect(
+        page
+          .locator('[data-sonner-toast]', {
+            hasText: /agent updated successfully/i,
+          })
+          .first(),
+      ).toBeVisible({ timeout: 15_000 });
+      await editMentorPage.close();
+
+      await editMentorPage.open('Embed');
+      await waitForPageReady(page);
+      await expect(editMentorPage.embed.shareableLinkToggle).toBeVisible({
+        timeout: 15_000,
+      });
+      // With allow_anonymous=true the Website URL section (and its error
+      // paragraph) is not rendered at all.
+      await expect(editMentorPage.embed.websiteUrlInput).not.toBeVisible();
+
+      await editMentorPage.embed.toggleShareableLink();
+      await expect(
+        page
+          .getByText(/created shareable link|enabled shareable link/i)
+          .first(),
+      ).toBeVisible({ timeout: 15_000 });
+      await expect(editMentorPage.embed.websiteUrlError).not.toBeVisible();
+
+      await editMentorPage.close();
+    });
+  });
+
+  // Issue #789: uploading a custom launcher icon only ever set a local
+  // `data:` preview in component state. It was never sent to the backend
+  // unless Icon Selection was already "Custom" at save time, and even then a
+  // page refresh discarded it because the icon config lived only in local
+  // state with no hydration from persisted settings. The fix persists the
+  // image via the "Create Embed" multipart PUT and hydrates
+  // `customFloatingBubbleConfig` from `embed_icon_selection_data` /
+  // `embed_custom_image` on load (see the `hydratedSettingsKeyRef` effect in
+  // useEmbedTab.ts).
+  test.describe('Custom embed icon persistence (issue #789)', () => {
+    // Each test creates its own mentor since both mutate + reload the same
+    // mentor's embed icon state — sharing one would race between tests.
+    const tracker = new MentorTracker();
+
+    test.afterAll(async ({ browser }, testInfo) => {
+      await tracker.deleteAll(browser, testInfo);
+    });
+
+    // emb-15: Custom Icon Selection + an uploaded image survive a full page
+    // reload (not just a modal close/reopen) — the actual #789 regression
+    // manifested on refresh.
+    test('admin uploads a custom embed icon and it persists after a full page reload', async ({
+      page,
+      createMentorPage,
+      editMentorPage,
+    }) => {
+      test.setTimeout(300_000);
+
+      await createMentorPage.openAndCreate(`E2E Embed Icon ${Date.now()}`);
+      const { mentorId } = await getPlatformContext(page);
+      tracker.add(mentorId);
+
+      await editMentorPage.open('Embed');
+      await waitForPageReady(page);
+
+      await editMentorPage.embed.setIconSelection('Custom');
+      await editMentorPage.embed.openIconEditor();
+      await editMentorPage.embed.goToIconEditorContentTab();
+      await editMentorPage.embed.uploadIconImage(ACCEPTED_IMAGE);
+      await editMentorPage.embed.closeIconEditor();
+
+      // Non-anonymous mentors require a Website URL before "Create Embed"
+      // will persist anything (see fillWebsiteUrl's doc comment).
+      await editMentorPage.embed.fillWebsiteUrl('https://example.com');
+      await editMentorPage.embed.submit();
+      await editMentorPage.close();
+
+      // Full reload — this is the scenario #789 actually broke, as opposed to
+      // a same-session modal close/reopen which could hide a state-only bug.
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 30_000 });
+      await waitForPageReady(page);
+
+      await editMentorPage.open('Embed');
+      await waitForPageReady(page);
+
+      await expect
+        .poll(() => editMentorPage.embed.getIconSelectionValue(), {
+          timeout: 15_000,
+          message: 'Icon Selection did not read "Custom" after reload',
+        })
+        .toBe('Custom');
+
+      await editMentorPage.embed.openIconEditor();
+      await editMentorPage.embed.goToIconEditorContentTab();
+      await expect(editMentorPage.embed.iconPreviewImage).toBeVisible({
+        timeout: 15_000,
+      });
+
+      // The persisted image must be a real (uploaded) URL, not the local
+      // `data:` preview a pre-#789 build would still be showing after reload.
+      const src =
+        await editMentorPage.embed.iconPreviewImage.getAttribute('src');
+      expect(src).toBeTruthy();
+      expect(src).not.toMatch(/^data:/);
+      expect(src).toContain(mentorId);
+
+      await editMentorPage.embed.closeIconEditor();
+      await editMentorPage.close();
+    });
+
+    // emb-16: "Remove Image" persists immediately (its own PUT, independent of
+    // Create Embed) and — the checkpoint that actually guards the RTK cache
+    // invalidation behind the fix — the removal survives a reload instead of
+    // the old (cached) custom icon reappearing.
+    test('admin removes a custom embed icon and it stays removed after a reload', async ({
+      page,
+      createMentorPage,
+      editMentorPage,
+    }) => {
+      test.setTimeout(300_000);
+
+      await createMentorPage.openAndCreate(
+        `E2E Embed Icon Remove ${Date.now()}`,
+      );
+      const { mentorId } = await getPlatformContext(page);
+      tracker.add(mentorId);
+
+      await editMentorPage.open('Embed');
+      await waitForPageReady(page);
+
+      await editMentorPage.embed.setIconSelection('Custom');
+      await editMentorPage.embed.openIconEditor();
+      await editMentorPage.embed.goToIconEditorContentTab();
+      await editMentorPage.embed.uploadIconImage(ACCEPTED_IMAGE);
+      await editMentorPage.embed.closeIconEditor();
+
+      await editMentorPage.embed.fillWebsiteUrl('https://example.com');
+      await editMentorPage.embed.submit();
+
+      // Reopen so Remove Image acts on the persisted icon (round-tripped
+      // through settings), matching how an admin would actually revisit it.
+      await editMentorPage.close();
+      await waitForPageReady(page);
+      await editMentorPage.open('Embed');
+      await waitForPageReady(page);
+      await expect
+        .poll(() => editMentorPage.embed.getIconSelectionValue(), {
+          timeout: 15_000,
+        })
+        .toBe('Custom');
+
+      await editMentorPage.embed.openIconEditor();
+      await editMentorPage.embed.goToIconEditorContentTab();
+      await expect(editMentorPage.embed.iconPreviewImage).toBeVisible({
+        timeout: 15_000,
+      });
+
+      await editMentorPage.embed.removeImage();
+
+      await expect(page.getByText('Custom icon removed').first()).toBeVisible({
+        timeout: 15_000,
+      });
+
+      // The Icon Editor's own always-mounted Live Preview image falls back to
+      // the default bubble icon once the now-null src fails to load.
+      await expect(editMentorPage.embed.livePreviewImage).toHaveAttribute(
+        'src',
+        /message-circle/i,
+        { timeout: 15_000 },
+      );
+
+      await editMentorPage.embed.closeIconEditor();
+
+      // Icon Selection reverts to Default and the custom-icon block (Icon
+      // Editor button) disappears from the main tab.
+      await expect
+        .poll(() => editMentorPage.embed.getIconSelectionValue(), {
+          timeout: 10_000,
+        })
+        .toBe('Default');
+      await expect(editMentorPage.embed.iconEditorButton).toHaveCount(0, {
+        timeout: 5_000,
+      });
+
+      await editMentorPage.close();
+
+      // Reload — without the cache-invalidation fix, a stale cached
+      // public-settings response would resurrect the removed custom icon here.
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 30_000 });
+      await waitForPageReady(page);
+      await editMentorPage.open('Embed');
+      await waitForPageReady(page);
+
+      await expect
+        .poll(() => editMentorPage.embed.getIconSelectionValue(), {
+          timeout: 15_000,
+        })
+        .toBe('Default');
+      await expect(editMentorPage.embed.iconEditorButton).toHaveCount(0, {
+        timeout: 10_000,
+      });
+
+      await editMentorPage.close();
+    });
+  });
+
+  // emb-17: the embed tab footer was reduced to a single "Create Embed"
+  // button — the standalone footer "Save" button was removed. Scoped to the
+  // footer specifically because the Advanced CSS / Advanced JavaScript panels
+  // elsewhere in the same tab have their own "Save"/"Saving..." buttons which
+  // must keep working. Read-only (no mutation), so it reuses the ambient
+  // mentor from the top-level beforeEach rather than creating a new one.
+  test('embed tab footer has only "Create Embed" (no Save button); Advanced CSS/JS Save buttons still render', async ({
+    page,
+    editMentorPage,
+  }) => {
+    await editMentorPage.open('Embed');
+    await waitForPageReady(page);
+
+    const footerButtons = editMentorPage.embed.footer.getByRole('button');
+    await expect(footerButtons).toHaveCount(1);
+    await expect(footerButtons.first()).toHaveAccessibleName(
+      /create embed|generating embed/i,
+    );
+    await expect(
+      editMentorPage.embed.footer.getByRole('button', { name: /^save$/i }),
+    ).toHaveCount(0);
+
+    // Advanced CSS panel keeps its own Save button once expanded.
+    const expandCss = editMentorPage.dialog.getByRole('button', {
+      name: /expand advanced css/i,
+    });
+    await expect(expandCss).toBeVisible({ timeout: 10_000 });
+    await expandCss.click();
+    await expect(
+      editMentorPage.dialog.getByRole('button', {
+        name: /save advanced css/i,
+      }),
+    ).toBeVisible({ timeout: 10_000 });
+
+    // Advanced JavaScript panel keeps its own Save button too, when the
+    // tenant has the feature enabled — otherwise a "Contact support" notice
+    // renders instead of the textarea/save button (graceful degradation).
+    const expandJs = editMentorPage.dialog.getByRole('button', {
+      name: /expand advanced javascript/i,
+    });
+    await expect(expandJs).toBeVisible({ timeout: 10_000 });
+    await expandJs.click();
+    const jsSave = editMentorPage.dialog.getByRole('button', {
+      name: /save advanced javascript/i,
+    });
+    let jsSaveVisible = false;
+    try {
+      await jsSave.waitFor({ state: 'visible', timeout: 5_000 });
+      jsSaveVisible = true;
+    } catch {
+      jsSaveVisible = false;
+    }
+    if (jsSaveVisible) {
+      await expect(jsSave).toBeVisible();
+    } else {
+      logger.info(
+        'emb-17: Advanced JavaScript disabled for this tenant — Save button not rendered (expected)',
+      );
+    }
+
+    await editMentorPage.close();
   });
 });

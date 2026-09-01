@@ -2,6 +2,27 @@ import { test, expect } from '../fixtures/mentor-test';
 import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
 
+/**
+ * Journey 45 — Mentor Privacy Tab.
+ *
+ * ── Capability-gate refactor ─────────────────────────────────────────────
+ *
+ * The `enable_privacy_router` MASTER switch used to live in
+ * Settings → Capabilities ("Filter PII from messages") and gate the entire
+ * Privacy sidebar segment's visibility. It now lives inline at the top of
+ * the Privacy tab itself via the shared `CapabilityGate` component
+ * (`data-testid="privacy-capability-toggle"`), and
+ * `hooks/use-mentor-segments.ts` no longer gates the Privacy segment at all
+ * — the tab is ALWAYS mounted. The gated fields (action select, entity
+ * chips, output filter) stay in the DOM and readable when the router is
+ * off; they render inside a grayed + inert `data-testid="capability-gate-content"`
+ * wrapper. Interacting with them while off is not a supported flow — every
+ * test that reads/writes a gated field turns the router on first.
+ *
+ * The "When PII is detected" action dropdown now lists **Allow** first
+ * (`PRIVACY_ACTIONS = ['allow', 'redact', 'mask', 'block']` from
+ * `@iblai/data-layer`), followed by Redact, Mask, Block.
+ */
 test.describe('Journey 45: Mentor Privacy Tab', () => {
   // Run serially in a single worker. Every test toggles `enable_privacy_router`
   // on the SAME shared mentor — all workers use the same admin storageState and
@@ -11,9 +32,10 @@ test.describe('Journey 45: Mentor Privacy Tab', () => {
   //
   // The widened timeout absorbs the Privacy tab's chained server round-trips:
   // every field/router change auto-saves (editMentorJson PUT +
-  // refetchMentorSettings) and the 30s success-toast waits stack across
-  // beforeEach + body + afterEach, which can legitimately exceed the default
-  // 120s even on a fully PASSING run on slow staging.
+  // refetchMentorSettings), and `AgentPrivacyTab` is NOT optimistic (unlike
+  // the app-owned capability tabs) — the toggle only flips once the refetch
+  // lands, which can legitimately push the total well past the default 120s
+  // even on a fully PASSING run on slow staging.
   test.describe.configure({ mode: 'serial', timeout: 180_000 });
 
   test.beforeEach(async ({ page, editMentorPage }) => {
@@ -23,28 +45,17 @@ test.describe('Journey 45: Mentor Privacy Tab', () => {
       test.skip(true, 'Privacy tab requires admin access');
       return;
     }
-    // Open the dialog WITHOUT navigating to Privacy — the Privacy sidebar
-    // segment is only rendered when `enable_privacy_router` is ON, so jumping
-    // straight to 'Privacy' would time out on a freshly reset mentor.
-    await editMentorPage.open();
+    // The Privacy tab is always mounted now — navigate straight to it.
+    await editMentorPage.open('Privacy');
     await waitForPageReady(page);
-    // Enable the router via Settings → Capabilities so the Privacy tab segment
-    // is mounted in the sidebar, then land on it. `setRouterEnabled(true)`
-    // centralizes the enable→save→wait-for-segment→navigate flow, including a
-    // generous wait for the post-save mentor-settings refetch to surface the
-    // gated Privacy segment. A raw navigateToTab('Privacy') here was racy: the
-    // segment can mount a few seconds after the "Agent updated" toast, so the
-    // 15s waitFor inside navigateToTab intermittently timed out.
+    // Enable the router so the gated fields are interactive for tests that
+    // need them. `setRouterEnabled` waits out the non-optimistic round trip.
     await editMentorPage.privacy.setRouterEnabled(true);
   });
 
   test.afterEach(async ({ editMentorPage }) => {
     // Restore `enable_privacy_router` to off so the suite is idempotent and
     // other journeys inherit a mentor with the router disabled (the default).
-    // `setRouterEnabled(false)` navigates to Settings, saves, then asserts
-    // the Privacy tab is absent — so we don't need a separate close() here;
-    // the dialog will be closed by the individual test's teardown or the
-    // finally blocks below. Guard against an already-closed dialog.
     const isOpen = await editMentorPage.isOpen().catch(() => false);
     if (isOpen) {
       await editMentorPage.privacy.setRouterEnabled(false).catch(() => {});
@@ -52,7 +63,7 @@ test.describe('Journey 45: Mentor Privacy Tab', () => {
     }
   });
 
-  // PR-01: Privacy tab is visible in the modal sidebar
+  // PR-01: Privacy tab is visible in the modal sidebar (always mounted now)
   test('admin sees the Privacy tab label in the sidebar', async ({
     editMentorPage,
   }) => {
@@ -76,36 +87,48 @@ test.describe('Journey 45: Mentor Privacy Tab', () => {
     await editMentorPage.close();
   });
 
-  // PR-03: The SDK now gates the entire Privacy sidebar segment on
-  //        `enable_privacy_router` — when OFF the tab trigger is absent from
-  //        the sidebar entirely (not an empty body), and when ON the tab
-  //        renders with its heading and conditional fields. The master switch
-  //        lives exclusively in Settings → Capabilities ("Filter PII from
-  //        messages"); `setRouterEnabled` delegates there transparently.
-  test('Privacy sidebar segment is absent when router is off and present with fields when on', async ({
+  // PR-03: The Privacy tab is now ALWAYS mounted regardless of
+  //        `enable_privacy_router` — the capability toggle only grays/inerts
+  //        the fields below it. This checkpoint asserts the toggle's effect
+  //        on `capability-gate-content`'s `data-enabled` attribute rather
+  //        than tab presence.
+  test('Privacy tab stays visible and capability-gate-content tracks the router state', async ({
     editMentorPage,
   }) => {
-    // Scoped selector matching the visible sidebar tab trigger for Privacy
-    // (same shape used by navigateToTab internally).
-    const privacyTabTrigger = editMentorPage.dialog
-      .getByRole('tab', { name: 'Privacy', exact: true })
-      .and(editMentorPage.dialog.locator('[aria-controls^="panel-"]:visible'));
+    const privacyTabTrigger = editMentorPage.dialog.getByRole('tab', {
+      name: 'Privacy',
+      exact: true,
+    });
 
-    // We arrive here with the router ON (beforeEach enabled it and navigated
-    // to Privacy). Assert the tab is present and action select is visible.
+    // We arrive here with the router ON (beforeEach enabled it). Assert the
+    // tab is present, the gate reads enabled, and the action select is
+    // visible (and interactive, not inert).
     await expect(privacyTabTrigger).toBeVisible({ timeout: 5_000 });
+    await expect(editMentorPage.privacy.capabilityContent).toHaveAttribute(
+      'data-enabled',
+      'true',
+      { timeout: 10_000 },
+    );
     await expect(editMentorPage.privacy.actionSelect).toBeVisible({
       timeout: 10_000,
     });
 
-    // Router OFF → Privacy tab trigger disappears from the sidebar entirely.
-    // setRouterEnabled(false) saves via Capabilities and asserts tab absence.
+    // Router OFF → tab remains mounted, but the gate flips to disabled.
     await editMentorPage.privacy.setRouterEnabled(false);
-    await expect(privacyTabTrigger).toHaveCount(0, { timeout: 10_000 });
+    await expect(privacyTabTrigger).toBeVisible({ timeout: 5_000 });
+    await expect(editMentorPage.privacy.capabilityContent).toHaveAttribute(
+      'data-enabled',
+      'false',
+      { timeout: 10_000 },
+    );
 
-    // Router ON again → tab reappears and body renders conditional fields.
+    // Router ON again → gate flips back to enabled.
     await editMentorPage.privacy.setRouterEnabled(true);
-    await expect(privacyTabTrigger).toBeVisible({ timeout: 10_000 });
+    await expect(editMentorPage.privacy.capabilityContent).toHaveAttribute(
+      'data-enabled',
+      'true',
+      { timeout: 10_000 },
+    );
     await expect(editMentorPage.privacy.actionSelect).toBeVisible({
       timeout: 10_000,
     });
@@ -115,30 +138,22 @@ test.describe('Journey 45: Mentor Privacy Tab', () => {
     // afterEach restores router to off.
   });
 
-  // PR-04: When `enable_privacy_router` is off the Privacy sidebar segment is
-  //        absent entirely — the SDK filters the tab out of the segment list.
-  //        This checkpoint asserts that contract: turning the router off
-  //        removes the Privacy tab trigger from the sidebar, which implicitly
-  //        means none of the conditional fields (action select, entity chips,
-  //        output filter) are reachable.
-  test('Privacy sidebar tab trigger is absent from sidebar when router is off', async ({
+  // PR-04: The CapabilityGate off-state hint is shown only while the router
+  //        is off.
+  test('the off-state hint is shown only while the router is off', async ({
     editMentorPage,
   }) => {
-    // setRouterEnabled(false): navigates to Settings → Capabilities, saves,
-    // then asserts the Privacy tab trigger has count 0 in the sidebar.
+    // beforeEach already enabled the router.
+    await editMentorPage.privacy.expectOffHintVisible(false);
+
     await editMentorPage.privacy.setRouterEnabled(false);
+    await editMentorPage.privacy.expectOffHintVisible(true);
 
-    // Confirm the tab trigger is gone — the locator reuses the same scoping
-    // filter used by navigateToTab so it won't match sub-tab pills.
-    const privacyTabTrigger = editMentorPage.dialog
-      .getByRole('tab', { name: 'Privacy', exact: true })
-      .and(editMentorPage.dialog.locator('[aria-controls^="panel-"]:visible'));
-    await expect(privacyTabTrigger).toHaveCount(0, { timeout: 10_000 });
-
-    // afterEach restores router to off (already off here — no-op save).
+    // afterEach restores router to off (already off — no-op save).
   });
 
-  // PR-05: Toggling the router on reveals the conditional fields
+  // PR-05: Toggling the router on keeps the action, entities and
+  //        output-filter fields present and interactive.
   test('enabling the router reveals action, entities and output-filter fields', async ({
     editMentorPage,
   }) => {
@@ -150,8 +165,6 @@ test.describe('Journey 45: Mentor Privacy Tab', () => {
     await expect(editMentorPage.privacy.outputFilterSwitch).toBeVisible({
       timeout: 5_000,
     });
-    // Poll the count rather than reading it once: a late post-enable refetch
-    // can briefly remount the segment, and a one-shot count would see 0.
     await expect
       .poll(() => editMentorPage.privacy.getEntityChipCount(), {
         timeout: 10_000,
@@ -159,6 +172,33 @@ test.describe('Journey 45: Mentor Privacy Tab', () => {
       .toBeGreaterThan(0);
 
     // Reset to off so the test is idempotent against other tests in the suite.
+    await editMentorPage.privacy.setRouterEnabled(false);
+    await editMentorPage.close();
+  });
+
+  // PR-05b: The "When PII is detected" action dropdown lists Allow first,
+  //         then Redact, Mask, Block (PRIVACY_ACTIONS order).
+  test('the action dropdown lists Allow, Redact, Mask, Block in that order', async ({
+    editMentorPage,
+    page,
+  }) => {
+    await editMentorPage.privacy.setRouterEnabled(true);
+    await expect(editMentorPage.privacy.actionSelect).toBeEnabled({
+      timeout: 10_000,
+    });
+    await editMentorPage.privacy.actionSelect.click();
+
+    const options = page.getByRole('option');
+    await expect(options.first()).toBeVisible({ timeout: 6_000 });
+    const labels = (await options.allTextContents()).map((t) => t.trim());
+    expect(labels).toEqual(['Allow', 'Redact', 'Mask', 'Block']);
+
+    // closeActionSelect waits for the options listbox to actually detach
+    // rather than assuming a single Escape press closed it — an open Radix
+    // Select blocks pointer events dialog-wide, which previously made the
+    // next line's capability-toggle click hang for the full 30s whenever
+    // Escape intermittently no-op'd here.
+    await editMentorPage.privacy.closeActionSelect();
     await editMentorPage.privacy.setRouterEnabled(false);
     await editMentorPage.close();
   });
@@ -172,9 +212,7 @@ test.describe('Journey 45: Mentor Privacy Tab', () => {
   test('Block Message textarea is editable only while the action is Block', async ({
     editMentorPage,
   }) => {
-    // beforeEach already enabled the router and landed on Privacy; selectAction
-    // re-settles onto the tab itself, so a redundant (and expensive) enable here
-    // is unnecessary.
+    // beforeEach already enabled the router and landed on Privacy.
     await editMentorPage.privacy.selectAction('Block');
     await expect(editMentorPage.privacy.blockMessageTextarea).toBeVisible({
       timeout: 10_000,
@@ -201,10 +239,9 @@ test.describe('Journey 45: Mentor Privacy Tab', () => {
     const wasSelected =
       await editMentorPage.privacy.isEntitySelected('EMAIL_ADDRESS');
 
-    // `setEntitySelected` owns the resilience: the chip is server-bound and each
-    // click auto-saves (editMentorJson + refetch), which disables the chip
-    // mid-save and can briefly unmount the whole Privacy segment. It re-settles
-    // onto Privacy and polls the server-bound aria-checked until the toggle
+    // `setEntitySelected` owns the resilience: the chip is server-bound and
+    // each click auto-saves (editMentorJson + refetch), which disables the
+    // chip mid-save. It polls the server-bound aria-checked until the toggle
     // commits, asserting the flip internally.
     await editMentorPage.privacy.setEntitySelected(
       'EMAIL_ADDRESS',

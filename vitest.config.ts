@@ -61,7 +61,11 @@ export default defineConfig({
     // hangs still time out.
     testTimeout: 15000,
     hookTimeout: 15000,
-    exclude: [...configDefaults.exclude, 'e2e/**'],
+    // `e2e/**` (Playwright) and `e2e-tauri/**` (WebdriverIO, driven by
+    // e2e-tauri/wdio.conf.ts) are end-to-end suites that need a real browser /
+    // a launched Tauri binary. Vitest would otherwise collect their `.spec.ts`
+    // files and fail them for lack of a WebDriver session.
+    exclude: [...configDefaults.exclude, 'e2e/**', 'e2e-tauri/**'],
     server: {
       deps: {
         inline: true,
@@ -80,8 +84,9 @@ export default defineConfig({
         'app/share/**/*.{ts,tsx}',
       ],
       exclude: [
-        // Playwright E2E tests (not unit coverage)
+        // Playwright / WebdriverIO E2E tests (not unit coverage)
         'e2e/**',
+        'e2e-tauri/**',
 
         // Default exclusions
         'node_modules/**',
@@ -112,7 +117,6 @@ export default defineConfig({
 
         // Config files
         'instrumentation.ts',
-        'middleware.ts',
         'next.config.ts',
         'server-wrapper.js',
         'sentry.*.config.*',

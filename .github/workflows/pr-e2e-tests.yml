@@ -4,30 +4,20 @@ on:
   pull_request:
     branches: [main]
     types: [labeled, unlabeled, synchronize]
-    paths:
-      - 'app/**'
-      - 'components/**'
-      - 'hooks/**'
-      - 'lib/**'
-      - 'store/**'
-      - 'styles/**'
-      - 'public/**'
-      - 'e2e/**'
-      - 'src-tauri/**'
-      - '__tests__/**'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'next.config.*'
-      - 'tsconfig*.json'
-      - 'tailwind.config.*'
-      - 'postcss.config.*'
-      - 'vitest.config.*'
-      - 'playwright.config.*'
+    # NO `paths:` filter — deliberately. `pr-gate.yml` posts the required
+    # `PR Validation` status as *pending* whenever the run-tests label is present,
+    # then resolves it from this workflow's `workflow_run` completion. A paths
+    # filter here makes the two disagree: a labelled PR touching no listed path
+    # never starts this workflow, so `workflow_run` never fires and the required
+    # status stays pending forever with no way to clear it (os#462 sat blocked on
+    # `providers/index.tsx`, which no pattern matched). The label is already the
+    # deliberate opt-in; a second, narrower gate here only creates that deadlock.
 
-run-name: 'PR E2E Tests — stg1 (firefox,chrome,safari,edge)'
+run-name: 'PR E2E — mentor #${{ github.event.pull_request.number }} → stg1 (chrome)'
 
 permissions:
   contents: read
+  pull-requests: write # the e2e job posts the report link as a PR comment
 
 concurrency:
   group: pr-e2e-${{ github.event.pull_request.number }}
@@ -41,7 +31,11 @@ jobs:
     if: |
       contains(github.event.pull_request.labels.*.name, 'run-tests') &&
       github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: iblai-stg-runner
+    # A label check has no reason to need a self-hosted runner. Depending on one puts a single
+    # point of failure in FRONT of everything else: if that runner is down, gate never starts,
+    # nothing downstream runs, and the e2e queue guard cannot help — it lives inside the e2e
+    # job, which is never reached. stg2-spa going offline this way stalled a PR for 2h.
+    runs-on: ubuntu-latest
     steps:
       - run: echo "run-tests label detected — proceeding"
 
@@ -83,72 +77,105 @@ jobs:
     with:
       dockerfile-path: Dockerfile
       build-context: .
-      image-name: iblai-mentor-spa-pro
-      registry-type: ocir
+      # Same repo as the release images; PR builds are distinguished by the `pr-` tag prefix.
+      image-name: iblai-os-spa
+      # ECR, not OCIR: the OCIR org secrets were removed, which broke every PR build with
+      # "Password required" at docker login. The AWS credentials are already provisioned here
+      # and release images already live in ECR, so this drops a registry dependency rather
+      # than replacing one with another.
+      registry-type: ecr
       event-name: pull_request
       pr-number: ${{ github.event.pull_request.number }}
 
   # ============================================================
-  # BUILD PLAYWRIGHT IMAGE
+  # E2E — dispatched to the central pipeline (iblai/iblai-deploy-ops)
+  #
+  # Replaces the old OCI container-instance runner. The central pipeline swaps this
+  # PR's SPA image into the target env, builds the Playwright image from THIS PR's
+  # sha, runs the suite, publishes the standard report, then ALWAYS restores the
+  # env's original image. We dispatch (not `uses:`) because a public repo cannot
+  # call a private reusable workflow, and we poll so this job — and therefore the
+  # required check — carries the real e2e result.
   # ============================================================
-  build-playwright-image:
-    needs: gate
-    uses: ./.github/workflows/reusable-pr-docker-build.yml
-    secrets: inherit
-    with:
-      dockerfile-path: e2e/Dockerfile
-      build-context: .
-      image-name: ibl-mentor-playwright
-      registry-type: ocir
-      image-tag: pr-${{ github.event.pull_request.number }}-${{ github.sha }}
-      event-name: pull_request
-      pr-number: ${{ github.event.pull_request.number }}
+  e2e:
+    name: E2E (central pipeline)
+    needs: build-app-image
+    runs-on: ubuntu-latest
+    # The orchestration lives in iblai/pr-e2e-action, NOT here. A `pull_request` event runs
+    # workflows from the PR's MERGE REF, so a workflow copied into this repo is frozen per PR:
+    # a fix reaches no open PR until that PR rebases. On 2026-08-04 a merged fix reached none of
+    # ~27 open PRs. `uses: …@v1` resolves at RUN TIME from the action repo, so fixes land
+    # immediately, everywhere, with no rebase.
+    #
+    # Keep `name:` exactly as-is — it is the required-check name branch protection matches on.
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # need the base ref to diff changed specs
 
-  # ============================================================
-  # RUN PLAYWRIGHT TESTS ON OCI
-  # ============================================================
-  run-tests:
-    needs: [build-app-image, build-playwright-image]
-    uses: ./.github/workflows/reusable-oci-test-runner.yml
-    secrets: inherit
-    with:
-      domain-number: '1'
-      app-type: mentor
-      playwright-image: ${{ needs.build-playwright-image.outputs.image-uri }}
-      max-wait: 10800
-      total-shards: 1
-      run-type: main
-      browsers: 'chrome'
-      workers: '3'
-      registry-type: 'ocir'
-      ec2-host: '98.82.66.78'
-      runs-on: iblai-stg-runner
-      ec2-user: 'ubuntu'
-      ec2-commands: >-
-        cd /ibl/app/ibl-spa/mentor &&
-        sed -i 's|image: .*|image: ${{ needs.build-app-image.outputs.image-uri }}|' docker-compose.yml &&
-        docker compose down &&
-        docker compose up -d
+      - uses: iblai/pr-e2e-action@v1
+        id: e2e
+        with:
+          source_repo: os
+          pr_number: ${{ github.event.pull_request.number }}
+          merge_sha: ${{ github.sha }}
+          head_sha: ${{ github.event.pull_request.head.sha }}
+          base_sha: ${{ github.event.pull_request.base.sha }}
+          app_image: ${{ needs.build-app-image.outputs.image-uri }}
+          dispatch_token: ${{ secrets.DEPLOY_OPS_DISPATCH_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
 
-  # ============================================================
-  # SUMMARY
-  # ============================================================
+      # MUST stay here as a JOB step — it cannot live inside the action.
+      # A composite action is TERMINATED when the job is cancelled, so an `if: cancelled()` step
+      # inside it never runs. This job has `cancel-in-progress: true` and a label recycle fires two
+      # events, so the first caller is cancelled on essentially every re-tag. Without this, the
+      # central run it dispatched keeps going: it holds an environment for a full suite, produces a
+      # result nobody reads, and can PASS while the PR shows red (os#394 did exactly that).
+      #
+      # The run id comes from a FILE the action writes at dispatch time, not from
+      # `steps.e2e.outputs.run_id` — a composite action's declared outputs are only published when
+      # it COMPLETES, and by definition it has not completed here.
+      - name: Cancel the dispatched central run if this caller is cancelled
+        if: cancelled()
+        env:
+          GH_TOKEN: ${{ secrets.DEPLOY_OPS_DISPATCH_TOKEN }}
+        run: |
+          F="$RUNNER_TEMP/pr-e2e-run-id"
+          [ -s "$F" ] || { echo "no central run was dispatched — nothing to cancel"; exit 0; }
+          RUN_ID=$(cat "$F")
+          echo "caller cancelled — cancelling central run ${RUN_ID} so it does not orphan"
+          gh run cancel "$RUN_ID" -R iblai/iblai-deploy-ops || true
+
   summary:
-    needs: [build-app-image, build-playwright-image, run-tests]
+    needs: [gate, build-app-image, unit-tests, e2e]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Results
         run: |
-          echo "# PR E2E Test Results" >> $GITHUB_STEP_SUMMARY
-          echo "| Step | Result |" >> $GITHUB_STEP_SUMMARY
-          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Build App | ${{ needs.build-app-image.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Build Playwright | ${{ needs.build-playwright-image.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Run Tests (firefox,chrome,safari,edge) | ${{ needs.run-tests.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Mode: skip-infra-launch — tests ran against the pre-existing stg1 instance." >> $GITHUB_STEP_SUMMARY
+          {
+            echo "# PR E2E Test Results"
+            echo "| Step | Result |"
+            echo "|------|--------|"
+            echo "| Unit tests (vitest) | ${{ needs.unit-tests.result }} |"
+            echo "| Build App image | ${{ needs.build-app-image.result }} |"
+            echo "| E2E (central pipeline) | ${{ needs.e2e.result }} |"
+            echo ""
+            echo "E2E ran on the central pipeline against **stg1**; the SPA image is restored afterwards."
+          } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Fail if tests did not pass
-        if: needs.run-tests.result != 'success' && needs.run-tests.result != 'skipped'
+      - name: Fail if anything did not pass
+        # Only a real FAILURE should redden this check. `skipped` means the PR was never
+        # labelled `run-tests`, which is the opt-in model working as designed — treating it
+        # as failure would make every unlabelled PR unmergeable once this is a required check.
+        # build-app-image and gate are checked explicitly: when either fails, the jobs that
+        # depend on them (e2e needs build-app-image; everything needs gate) resolve to
+        # `skipped` rather than `failure`, so without these lines a broken image build — or a
+        # failed/cancelled gate — would let the required check go green with nothing run.
+        # `skipped` alone still stays green (the opt-in model: PR not labelled `run-tests`).
+        if: |
+          needs.e2e.result == 'failure' || needs.e2e.result == 'cancelled' ||
+          needs.unit-tests.result == 'failure' || needs.unit-tests.result == 'cancelled' ||
+          needs.build-app-image.result == 'failure' || needs.build-app-image.result == 'cancelled' ||
+          needs.gate.result == 'failure' || needs.gate.result == 'cancelled'
         run: exit 1

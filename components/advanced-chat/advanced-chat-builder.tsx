@@ -135,43 +135,53 @@ export function AdvancedStaticChatBuilder({
     );
   }
 
+  const showsWelcomeMessage = Boolean(
+    welcomeMessage &&
+      promptsData?.length === 0 &&
+      !isLoadingGuidedPrompts &&
+      !isLoadingSuggestedPrompts,
+  );
+
+  const defaultTag = (
+    <DefaultTag
+      onPromptSelect={sendMessage}
+      prompts={
+        (isChatTabActive
+          ? (promptsData?.slice(0, 4)?.map((prompt) => ({
+              type: 'ai',
+              content: prompt.content || '',
+            })) ?? [])
+          : activeTabProperties.prompts) as Prompt[]
+      }
+    />
+  );
+
   return (
     <>
-      {welcomeMessage &&
-        promptsData?.length === 0 &&
-        !isLoadingGuidedPrompts &&
-        !isLoadingSuggestedPrompts && (
-          /* WELCOME CHAT SECTION */
-          <div className="flex h-full justify-center">
-            <div className="flex items-center gap-4 p-4">
-              <Avatar className="h-14 w-14 border-2 border-blue-500">
-                <AvatarImage src={profileImage} alt={mentorName} />
-                <AvatarFallback className="bg-blue-400 text-white">
-                  {mentorName.substring(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <h1 className="text-xl font-bold text-gray-800">
-                  {mentorName}
-                </h1>
-                <Markdown className="mt-1 text-[14px] text-gray-600">
-                  {welcomeMessage}
-                </Markdown>
-              </div>
+      {showsWelcomeMessage && (
+        /* WELCOME CHAT SECTION */
+        <div className="flex min-h-0 flex-1 flex-col justify-center-safe overflow-y-auto">
+          <div className="flex items-start justify-center-safe gap-4 py-4">
+            <Avatar className="h-14 w-14 shrink-0 border-2 border-blue-500">
+              <AvatarImage src={profileImage} alt={mentorName} />
+              <AvatarFallback className="bg-blue-400 text-white">
+                {mentorName.substring(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <h1 className="text-xl font-bold text-gray-800">{mentorName}</h1>
+              <Markdown className="mt-1 text-[14px] text-gray-600">
+                {welcomeMessage}
+              </Markdown>
             </div>
           </div>
-        )}
-      <DefaultTag
-        onPromptSelect={sendMessage}
-        prompts={
-          (isChatTabActive
-            ? (promptsData?.slice(0, 4)?.map((prompt) => ({
-                type: 'ai',
-                content: prompt.content || '',
-              })) ?? [])
-            : activeTabProperties.prompts) as Prompt[]
-        }
-      />
+        </div>
+      )}
+      {showsWelcomeMessage ? (
+        <div className="shrink-0">{defaultTag}</div>
+      ) : (
+        defaultTag
+      )}
     </>
   );
 }

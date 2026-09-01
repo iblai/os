@@ -1,9 +1,24 @@
 import { Page, Locator, expect } from '@playwright/test';
+import { isVisibleWithin } from '../../utils/resilient';
 
 export class MemoryTab {
   readonly page: Page;
   readonly dialog: Locator;
 
+  /**
+   * "Remember past conversations" (`enable_memory_component`) master toggle.
+   * Used to live in Settings → Capabilities and gate the whole tab's
+   * visibility; it now lives inline at the top of this tab via the shared
+   * `CapabilityGate` component, and the Memory tab is always mounted
+   * (`hooks/use-mentor-segments.ts` no longer gates it). Toggling auto-saves
+   * (`MemoryTab`'s `handleToggleMemory` calls `useEditMentorMutation`
+   * directly with optimistic local state) — no footer Save button involved.
+   */
+  readonly capabilityToggle: Locator;
+  /** Wrapper around the gated memory-management content — `data-enabled` mirrors the toggle. */
+  readonly capabilityContent: Locator;
+  /** Hint shown next to the description while the capability is off. */
+  readonly capabilityOffHint: Locator;
   readonly addMemoryButton: Locator;
   readonly manageCategoriesButton: Locator;
   readonly emptyState: Locator;
@@ -23,6 +38,13 @@ export class MemoryTab {
   constructor(page: Page, dialog: Locator) {
     this.page = page;
     this.dialog = dialog;
+    this.capabilityToggle = dialog.getByTestId('memory-capability-toggle');
+    this.capabilityContent = dialog.locator(
+      '[data-testid="capability-gate-content"]:visible',
+    );
+    this.capabilityOffHint = dialog.locator(
+      '[data-testid="capability-gate-off-hint"]:visible',
+    );
     this.addMemoryButton = dialog.getByRole('button', { name: /add memory/i });
     this.manageCategoriesButton = dialog.getByRole('button', {
       name: 'Manage categories',
@@ -41,10 +63,43 @@ export class MemoryTab {
     });
   }
 
+  // ── Capability gate ───────────────────────────────────────────────────────
+
+  /** Whether the "Remember past conversations" capability toggle is currently on. */
+  async isCapabilityEnabled(): Promise<boolean> {
+    const attr = await this.capabilityToggle
+      .getAttribute('aria-checked')
+      .catch(() => null);
+    return attr === 'true';
+  }
+
+  /**
+   * Idempotently set the "Remember past conversations" capability toggle to
+   * the target state. Auto-saves on click (optimistic local state) — no
+   * footer Save button involved. Waits for both the toggle's `aria-checked`
+   * and the gated content's `data-enabled` attribute to reflect the target
+   * state.
+   */
+  async setCapabilityEnabled(target: boolean): Promise<void> {
+    await expect(this.capabilityToggle).toBeVisible({ timeout: 10_000 });
+    const isOn = await this.isCapabilityEnabled();
+    if (isOn === target) return;
+
+    await this.capabilityToggle.click();
+    await expect(this.capabilityToggle).toHaveAttribute(
+      'aria-checked',
+      String(target),
+      { timeout: 15_000 },
+    );
+    await expect(this.capabilityContent).toHaveAttribute(
+      'data-enabled',
+      String(target),
+      { timeout: 15_000 },
+    );
+  }
+
   async hasMemories(): Promise<boolean> {
-    const empty = await this.emptyState
-      .isVisible({ timeout: 5_000 })
-      .catch(() => false);
+    const empty = await isVisibleWithin(this.emptyState, 5_000);
     return !empty;
   }
 
@@ -331,9 +386,7 @@ export class MemoryTab {
       .getByRole('dialog')
       .filter({ hasText: /delete|confirm/i })
       .last();
-    const confirmVisible = await confirmDialog
-      .isVisible({ timeout: 3_000 })
-      .catch(() => false);
+    const confirmVisible = await isVisibleWithin(confirmDialog, 3_000);
     if (confirmVisible) {
       await confirmDialog
         .getByRole('button', { name: /delete|confirm/i })
@@ -412,9 +465,7 @@ export class MemoryTab {
       .getByRole('dialog')
       .filter({ hasText: /delete|confirm/i })
       .last();
-    const confirmVisible = await confirmDialog
-      .isVisible({ timeout: 3_000 })
-      .catch(() => false);
+    const confirmVisible = await isVisibleWithin(confirmDialog, 3_000);
     if (confirmVisible) {
       await confirmDialog
         .getByRole('button', { name: /delete|confirm/i })
@@ -524,10 +575,10 @@ export class MemoryTab {
    * Manage Categories modal. Assumes the modal is already open.
    */
   async hasCategory(name: string): Promise<boolean> {
-    return this.categoriesDialog
-      .getByText(name, { exact: true })
-      .isVisible({ timeout: 3_000 })
-      .catch(() => false);
+    return isVisibleWithin(
+      this.categoriesDialog.getByText(name, { exact: true }),
+      3_000,
+    );
   }
 
   /**

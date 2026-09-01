@@ -5,7 +5,9 @@ import rehypeKatex from 'rehype-katex';
 import ReactMarkdown from 'react-markdown';
 
 import 'katex/dist/katex.min.css';
-import { preprocessLaTeX, cn } from '@/lib/utils';
+import { cn } from '@/lib/utils';
+import { preprocessLaTeX } from '@/lib/preprocess-latex';
+import { normalizeListIndentation } from '@/lib/normalize-list-indentation';
 import { components } from './markdown/markdown-components';
 
 type Props = {
@@ -33,7 +35,7 @@ export default function Markdown({ children, className }: Props) {
           return '';
         }}
       >
-        {preprocessLaTeX(children ?? '')}
+        {normalizeListIndentation(preprocessLaTeX(children ?? ''))}
       </ReactMarkdown>
     </div>
   );

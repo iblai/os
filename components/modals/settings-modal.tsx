@@ -22,7 +22,11 @@ import { useIsAdmin, useUserIsStudent, useUsername } from '@/hooks/use-user';
 import { useAppSelector } from '@/lib/hooks';
 import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
 import { checkRbacPermission } from '@/hoc/withPermissions';
-import { formatDateString, getLLMProviderDetails } from '@/lib/utils';
+import {
+  formatDateString,
+  getLLMProviderDetails,
+  getLLMModelDisplayName,
+} from '@/lib/utils';
 import { useNavigate } from '@/hooks/user-navigate';
 import { MODALS } from '@/lib/constants';
 import { IblPagination } from '@/components/ibl-pagination';
@@ -206,8 +210,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                             </TableCell>
                             <TableCell className="px-3 py-4 whitespace-nowrap">
                               <div className="text-sm text-gray-900">
-                                {/* @ts-expect-error - llm_name property may not exist on mentor type */}
-                                {mentor?.llm_name}
+                                {getLLMModelDisplayName(
+                                  // @ts-expect-error - llm_name property may not exist on mentor type
+                                  mentor?.llm_name,
+                                )}
                               </div>
                             </TableCell>
                             <TableCell className="px-3 py-4 whitespace-nowrap">

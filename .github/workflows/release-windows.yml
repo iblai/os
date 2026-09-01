@@ -8,12 +8,20 @@ name: Release Windows
 # + inputs.
 #
 # Manual "Run workflow" produces build-only installer artifacts (no Release),
-# named by short SHA.
+# named by short SHA — unless `ibl_tenant` is set, which builds a tenant-locked
+# app and publishes it to a per-tenant release (app-v<version>-<tenant>) with the
+# download URLs in the run summary.
 on:
   push:
     tags:
       - 'app-v*'
   workflow_dispatch:
+    inputs:
+      ibl_tenant:
+        description: 'Tenant key to lock this build to (leave empty for a normal multi-tenant build). Publishes a per-tenant release with stable download URLs shown in the run summary.'
+        required: false
+        type: string
+        default: ''
 
 concurrency:
   group: release-windows-${{ github.ref }}
@@ -27,8 +35,11 @@ jobs:
     uses: ./.github/workflows/reusable-release-windows.yml
     with:
       allow_in_app_purchase: true
+      # Empty on tag pushes; set only on a manual tenant-locked dispatch.
+      ibl_tenant: ${{ inputs.ibl_tenant || '' }}
       # Tag push -> attach the installers to that app-v<X> Release.
       # Manual dispatch -> build-only artifacts (no Release), named by short SHA.
+      # Manual dispatch WITH ibl_tenant -> per-tenant release (handled downstream).
       release_tag: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
       release_name: ${{ github.ref_type == 'tag' && format('ibl.ai {0} (Windows)', github.ref_name) || '' }}
       artifact_prefix: ${{ github.ref_type == 'tag' && format('ibl-ai-windows-{0}', github.ref_name) || format('ibl-ai-windows-{0}', github.sha) }}

@@ -963,8 +963,9 @@ export function useCanvasRichTextEditor({
           '[&_ol_ol_ol]:list-[lower-roman] [&_ol_ol_ol]:pl-4 ' +
           '[&_li]:leading-7 [&_li]:pl-1 ' +
           // Code
-          '[&_code]:bg-muted [&_code]:rounded [&_code]:px-1 [&_code]:py-0.5 ' +
-          '[&_pre]:bg-muted [&_pre]:rounded-md [&_pre]:p-4 [&_pre]:mb-4 ' +
+          '[&_:not(pre)>code]:bg-muted [&_:not(pre)>code]:rounded [&_:not(pre)>code]:px-1 [&_:not(pre)>code]:py-0.5 ' +
+          '[&_pre]:rounded-md [&_pre]:p-4 [&_pre]:mb-4 ' +
+          '[&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:text-inherit ' +
           // Blockquote
           '[&_blockquote]:border-l-4 [&_blockquote]:border-primary [&_blockquote]:pl-4 [&_blockquote]:mb-4 [&_blockquote]:italic [&_blockquote]:leading-7 ' +
           // Links
