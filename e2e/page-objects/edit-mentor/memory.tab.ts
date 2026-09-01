@@ -1,4 +1,5 @@
 import { Page, Locator, expect } from '@playwright/test';
+import { isVisibleWithin } from '../../utils/resilient';
 
 export class MemoryTab {
   readonly page: Page;
@@ -98,9 +99,7 @@ export class MemoryTab {
   }
 
   async hasMemories(): Promise<boolean> {
-    const empty = await this.emptyState
-      .isVisible({ timeout: 5_000 })
-      .catch(() => false);
+    const empty = await isVisibleWithin(this.emptyState, 5_000);
     return !empty;
   }
 
@@ -387,9 +386,7 @@ export class MemoryTab {
       .getByRole('dialog')
       .filter({ hasText: /delete|confirm/i })
       .last();
-    const confirmVisible = await confirmDialog
-      .isVisible({ timeout: 3_000 })
-      .catch(() => false);
+    const confirmVisible = await isVisibleWithin(confirmDialog, 3_000);
     if (confirmVisible) {
       await confirmDialog
         .getByRole('button', { name: /delete|confirm/i })
@@ -468,9 +465,7 @@ export class MemoryTab {
       .getByRole('dialog')
       .filter({ hasText: /delete|confirm/i })
       .last();
-    const confirmVisible = await confirmDialog
-      .isVisible({ timeout: 3_000 })
-      .catch(() => false);
+    const confirmVisible = await isVisibleWithin(confirmDialog, 3_000);
     if (confirmVisible) {
       await confirmDialog
         .getByRole('button', { name: /delete|confirm/i })
@@ -580,10 +575,10 @@ export class MemoryTab {
    * Manage Categories modal. Assumes the modal is already open.
    */
   async hasCategory(name: string): Promise<boolean> {
-    return this.categoriesDialog
-      .getByText(name, { exact: true })
-      .isVisible({ timeout: 3_000 })
-      .catch(() => false);
+    return isVisibleWithin(
+      this.categoriesDialog.getByText(name, { exact: true }),
+      3_000,
+    );
   }
 
   /**

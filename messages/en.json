@@ -327,6 +327,14 @@
     "renaming": "Renaming...",
     "save": "Save"
   },
+  "canvasBinaryCanvas": {
+    "untitledFile": "Untitled file",
+    "export": "Export",
+    "loadError": "Couldn't load this file.",
+    "retry": "Retry",
+    "previewUnavailable": "We can't preview this kind of file just yet — but it's ready to go. Hit Export to save it to your device.",
+    "previewFailed": "This file can't be previewed — it appears to be invalid or corrupted. You can still export it."
+  },
   "canvasCanvasControls": {
     "lengthLongest": "Longest",
     "lengthLonger": "Longer",
@@ -389,7 +397,13 @@
   },
   "chatAiMessageBubble": {
     "retryScreenReader": "Retry for a new response",
-    "retryTooltip": "Retry"
+    "retryTooltip": "Retry",
+    "agentTodoListTitle": "Task list",
+    "agentTodoStatusCompleted": "Done",
+    "agentTodoStatusInProgress": "In progress",
+    "agentTodoStatusPending": "To do",
+    "agentTodoProgress": "{done} of {total} done",
+    "agentTodoAnnouncement": "Step {done} of {total} complete"
   },
   "chatAiMessageCopy": {
     "copyToClipboard": "Copy to Clipboard",
@@ -479,7 +493,8 @@
     "coworkConsentCancel": "Cancel",
     "coworkConsentConfirm": "Continue",
     "coworkNeedsAccessibility": "Cowork needs Accessibility access to control your computer. Grant it in System Settings › Privacy & Security › Accessibility, then restart the app and turn Cowork on again.",
-    "coworkNeedsScreenRecording": "Cowork needs Screen Recording access to read your windows. Grant it in System Settings › Privacy & Security › Screen Recording, then restart the app and turn Cowork on again."
+    "coworkNeedsScreenRecording": "Cowork needs Screen Recording access to read your windows. Grant it in System Settings › Privacy & Security › Screen Recording, then restart the app and turn Cowork on again.",
+    "skills": "Skills"
   },
   "chatInputFormMemoryMenu": {
     "yourMemory": "Your Memory",
@@ -806,6 +821,7 @@
     "newChat": "New chat",
     "settings": "Settings",
     "llm": "LLM",
+    "billing": "Billing",
     "prompts": "Prompts",
     "tools": "Tools",
     "mcp": "MCP",
@@ -1914,12 +1930,7 @@
   },
   "tabsSandboxTab": {
     "heading": "Sandbox",
-    "description": "Configure sandbox connection and deployment settings.",
-    "capabilityTitle": "Dedicated sandbox",
-    "capabilityDescription": "Give this agent its own secure workspace where it can run code, tools, and skills on your behalf. When on, connect it to an instance below to unlock skills and agent prompts.",
-    "capabilityOffHint": "Turn it on to give this agent a workspace and connect it to an instance.",
-    "toggleSuccess": "Sandbox setting updated",
-    "toggleError": "Couldn't update sandbox setting"
+    "description": "Configure sandbox connection and deployment settings."
   },
   "tabsGraderTab": {
     "headerTitle": "Grader",
@@ -2128,8 +2139,8 @@
   },
   "tabsSkillsTab": {
     "heading": "Skills",
-    "description": "Manage agent skill assignments for your mentor.",
-    "infoBox": "Skills are reusable capabilities you build once and assign to any agent. Create a skill, then toggle it on to give this agent that ability."
+    "description": "Reusable playbooks this Base Agent can discover and follow.",
+    "infoBox": "Agent Skills are reusable playbooks you can attach to a Base Agent — written instructions (plus optional reference files) for one job, like researching a topic on the web or reviewing code. The agent reads a skill only when it's relevant, so you can give it many capabilities without bloating every conversation. In chat, type / to see this agent's skills and pick one to start it."
   },
   "tabsToolsTab": {
     "infoBox": "Give your agent hands. Tools let it do things beyond chatting — look something up, call an API, trigger an action — so it can actually get work done for people.",
@@ -2343,8 +2354,26 @@
     "firstRunSlow": "First run can take a few minutes while the model loads.",
     "modelUnavailable": "isn’t available for Code — turns will fail. Pick a different model in the top-left.",
     "workspace": "Workspace",
-    "changeFolder": "Change folder…",
-    "chooseFolderTitle": "Choose your workspace folder"
+    "selectWorkspace": "Select Workspace",
+    "chooseFolderTitle": "Choose your workspace folder",
+    "skillsSyncFailed": "Skills couldn’t be synced — Code will run without them.",
+    "sandboxMissing": "Code needs bubblewrap (bwrap). Install it with your package manager, then reopen the app.",
+    "permissionModeLabel": "Approvals",
+    "permissionModeManual": "Ask Me",
+    "permissionModeAuto": "Automatic",
+    "permissionModeAutoHint": "Code edits files and runs commands without asking. Use it only in folders you trust.",
+    "newWorkspace": "New Workspace",
+    "openInFinder": "Open in Finder",
+    "openInExplorer": "Open in Explorer",
+    "openInApp": "Open in {app}",
+    "openFolder": "Open Folder",
+    "openFolderFailed": "Couldn’t open the folder",
+    "pickFolderFailed": "Couldn’t choose a folder",
+    "newWorkspaceFailed": "Couldn’t create a new workspace",
+    "permissionDialogTitle": "How should Code ask for approval?",
+    "permissionDialogDescription": "Code can edit files and run commands in your workspace. Choose whether it checks with you first — you can change this later in the Code panel.",
+    "permissionDialogManualAction": "Ask me each time",
+    "permissionDialogAutoAction": "Approve automatically"
   },
   "chatCodePermissionCard": {
     "title": "Code needs your permission",

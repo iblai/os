@@ -243,4 +243,99 @@ describe('ToolCallIndicator', () => {
       expect(trigger.className).not.toContain('text-gray-500');
     });
   });
+
+  it('pulses only the last tool call while streaming', () => {
+    const { container } = render(
+      <ToolCallIndicator
+        toolCalls={[
+          makeToolCall({ id: '1', name: 'web_search_call' }),
+          makeToolCall({ id: '2', name: 'vector_search' }),
+        ]}
+        isCurrentlyStreaming={true}
+      />,
+    );
+
+    fireEvent.click(screen.getByText('Used 2 tools'));
+    // Only the last of the two rows carries the pulse dot.
+    expect(container.querySelectorAll('.animate-pulse').length).toBe(1);
+  });
+
+  describe('write_todos exclusion', () => {
+    it('renders nothing when write_todos is the only tool call', () => {
+      const { container } = render(
+        <ToolCallIndicator
+          toolCalls={[makeToolCall({ id: 'td', name: 'write_todos' })]}
+        />,
+      );
+      expect(container.innerHTML).toBe('');
+    });
+
+    it('renders nothing when every tool call is write_todos', () => {
+      const { container } = render(
+        <ToolCallIndicator
+          toolCalls={[
+            makeToolCall({ id: 'td1', name: 'write_todos' }),
+            makeToolCall({ id: 'td2', name: 'write_todos' }),
+          ]}
+        />,
+      );
+      expect(container.innerHTML).toBe('');
+    });
+
+    it('excludes write_todos from the "Used N tools" count', () => {
+      render(
+        <ToolCallIndicator
+          toolCalls={[
+            makeToolCall({ id: '1', name: 'web_search_call' }),
+            makeToolCall({ id: 'td', name: 'write_todos' }),
+          ]}
+        />,
+      );
+      expect(screen.getByText('Used 1 tool')).toBeInTheDocument();
+    });
+
+    it('does not render a card for write_todos when expanded', () => {
+      render(
+        <ToolCallIndicator
+          toolCalls={[
+            makeToolCall({
+              id: '1',
+              name: 'web_search_call',
+              input: { query: 'F1 race' },
+            }),
+            makeToolCall({
+              id: 'td',
+              name: 'write_todos',
+              input: { todos: [{ content: 'Step one', status: 'pending' }] },
+            }),
+          ]}
+        />,
+      );
+
+      fireEvent.click(screen.getByText('Used 1 tool'));
+
+      expect(screen.getByText('Searching the web')).toBeInTheDocument();
+      expect(screen.queryByText('write_todos')).not.toBeInTheDocument();
+      expect(screen.queryByText('Step one')).not.toBeInTheDocument();
+    });
+
+    it('keeps the streaming pulse on the last non-todo tool call', () => {
+      const { container } = render(
+        <ToolCallIndicator
+          toolCalls={[
+            makeToolCall({
+              id: '1',
+              name: 'web_search_call',
+              input: { query: 'F1 race' },
+            }),
+            makeToolCall({ id: 'td', name: 'write_todos' }),
+          ]}
+          isCurrentlyStreaming={true}
+        />,
+      );
+
+      fireEvent.click(screen.getByText('Used 1 tool'));
+      expect(container.querySelectorAll('.animate-pulse').length).toBe(1);
+    });
+  });
 });

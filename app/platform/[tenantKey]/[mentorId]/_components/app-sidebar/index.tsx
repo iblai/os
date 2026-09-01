@@ -47,6 +47,7 @@ import {
   chatActions,
   clearFiles,
   getVisibleAnalyticsTabs,
+  selectSessionId,
   type AnalyticsTab,
 } from '@iblai/iblai-js/web-utils';
 import {
@@ -69,8 +70,10 @@ import { useAppSelector } from '@/lib/hooks';
 import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
 import { checkRbacPermission } from '@/hoc/withPermissions';
 import { useEmbedMode } from '@/hooks/use-embed-mode';
+import { useHelpCenter } from '@/hooks/use-help-center';
 import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { cn, isLoggedIn, redirectToLogin } from '@/lib/utils';
+import { isTauriApp } from '@/types/tauri';
 import { config } from '@/lib/config';
 import { ANONYMOUS_USERNAME, UserType } from '@/lib/constants';
 import { TenantKeyMentorIdParams, ProjectPageParams } from '@/lib/types';
@@ -465,6 +468,7 @@ export function AppSidebar() {
   const userIsStudent = useUserIsStudent();
   const isLiveAdmin = isAdmin && !userIsStudent;
   const { currentTenant } = useCurrentTenant();
+  const { documentationUrl, showHelp } = useHelpCenter(tenantKey);
   const rbacPermissions = useAppSelector(selectRbacPermissions);
   const userEmail = getUserEmail();
 
@@ -575,7 +579,24 @@ export function AppSidebar() {
     [],
   );
 
+  // The active chat's session id — what Code keys its opencode process on.
+  const appSessionId = useAppSelector(selectSessionId);
+
   const startNewChat = React.useCallback(() => {
+    // Code mode: the chat being left behind keeps a live opencode process
+    // (up to the 15-min idle reap). The user has moved on — evict it now.
+    // Fire-and-forget; a graceful no-op for a chat that never spawned one.
+    if (
+      appSessionId &&
+      isTauriApp() &&
+      localStorage.getItem('ibl_coding_mode_enabled') === 'true'
+    ) {
+      void import('@tauri-apps/api/core')
+        .then(({ invoke }) =>
+          invoke('opencode_close', { sessionId: appSessionId }),
+        )
+        .catch(() => {});
+    }
     dispatch(clearFiles(undefined));
     if (!mentorId) {
       openNoMentorSelectedModal();
@@ -588,6 +609,7 @@ export function AppSidebar() {
     }
     onAfterNav();
   }, [
+    appSessionId,
     dispatch,
     mentorId,
     isChatPage,
@@ -1409,20 +1431,22 @@ export function AppSidebar() {
                     </SidebarCollapsedLabelFlyout>
                   );
                 })}
-                <SidebarCollapsedLabelFlyout label={t('support')}>
-                  <a
-                    href="https://ibl.ai/docs"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex size-10 items-center justify-center rounded-lg text-[#5f5f61] transition-colors hover:bg-[#f0f0f0]"
-                    aria-label={t('support')}
-                  >
-                    <DOCUMENTATION_MENU.icon
-                      className="size-4 shrink-0"
-                      strokeWidth={1.5}
-                    />
-                  </a>
-                </SidebarCollapsedLabelFlyout>
+                {showHelp && (
+                  <SidebarCollapsedLabelFlyout label={t('support')}>
+                    <a
+                      href={documentationUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex size-10 items-center justify-center rounded-lg text-[#5f5f61] transition-colors hover:bg-[#f0f0f0]"
+                      aria-label={t('support')}
+                    >
+                      <DOCUMENTATION_MENU.icon
+                        className="size-4 shrink-0"
+                        strokeWidth={1.5}
+                      />
+                    </a>
+                  </SidebarCollapsedLabelFlyout>
+                )}
               </div>
             ) : (
               <div className="shrink-0 space-y-0.5 border-t border-[#e2e8f0] px-2 py-2">
@@ -1446,21 +1470,23 @@ export function AppSidebar() {
                     </button>
                   );
                 })}
-                <a
-                  href="https://ibl.ai/docs"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex h-9 w-full min-w-0 items-center gap-2 rounded-md px-2 text-left text-[14px] font-normal text-[#5f5f61] transition-colors hover:bg-[#f4f4f4]"
-                >
-                  <DOCUMENTATION_MENU.icon
-                    className="size-4 shrink-0"
-                    style={{ color: NAV_MUTED }}
-                    strokeWidth={1.5}
-                  />
-                  <span className="min-w-0 flex-1 truncate">
-                    {t('support')}
-                  </span>
-                </a>
+                {showHelp && (
+                  <a
+                    href={documentationUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex h-9 w-full min-w-0 items-center gap-2 rounded-md px-2 text-left text-[14px] font-normal text-[#5f5f61] transition-colors hover:bg-[#f4f4f4]"
+                  >
+                    <DOCUMENTATION_MENU.icon
+                      className="size-4 shrink-0"
+                      style={{ color: NAV_MUTED }}
+                      strokeWidth={1.5}
+                    />
+                    <span className="min-w-0 flex-1 truncate">
+                      {t('support')}
+                    </span>
+                  </a>
+                )}
               </div>
             ))}
         </aside>

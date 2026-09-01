@@ -60,8 +60,18 @@ vi.mock('@/lib/config', () => ({
 // The real Code button needs Redux and the mentor route; only the Tauri gate
 // around it belongs to this component.
 vi.mock('../coding-mode-button', () => ({
-  CodingModeButton: ({ sessionId }: { sessionId?: string }) => (
-    <button data-testid="coding-mode-button" data-session-id={sessionId}>
+  CodingModeButton: ({
+    sessionId,
+    skillSync,
+  }: {
+    sessionId?: string;
+    skillSync?: { state: string };
+  }) => (
+    <button
+      data-testid="coding-mode-button"
+      data-session-id={sessionId}
+      data-skill-sync={skillSync?.state}
+    >
       Code
     </button>
   ),
@@ -1077,6 +1087,22 @@ describe('InsideButtons', () => {
       );
     });
 
+    it('threads the skill-sync state through to the Code button', () => {
+      mockIsTauri = true;
+      render(
+        <InsideButtons
+          {...defaultProps}
+          sessionId="chat-77"
+          skillSync={{ state: 'error' }}
+        />,
+      );
+
+      expect(screen.getByTestId('coding-mode-button')).toHaveAttribute(
+        'data-skill-sync',
+        'error',
+      );
+    });
+
     it('appears once Tauri injects its globals after mount', () => {
       // Tauri populates window.__TAURI_INTERNALS__ some time after the remote
       // origin loads, so a mount-time read can latch false forever.
@@ -1471,6 +1497,198 @@ describe('InsideButtons', () => {
         expect(mockGhostInstall).toHaveBeenCalledTimes(1);
         expect(mockToastWarning).not.toHaveBeenCalled();
       });
+    });
+  });
+
+  describe('Skills dropdown', () => {
+    const skills = [
+      {
+        unique_id: 's1',
+        name: 'Web Research',
+        slug: 'web-research',
+        description: 'Research a topic on the open web.',
+        enabled: true,
+      },
+      {
+        unique_id: 's2',
+        name: 'Code Review',
+        slug: 'code-review',
+        enabled: true,
+      },
+    ];
+
+    it('renders the trigger only when the mentor has skills', () => {
+      const { rerender } = render(
+        <InsideButtons
+          {...defaultProps}
+          skills={skills}
+          activeSkillSlugs={new Set()}
+          onToggleSkill={vi.fn()}
+        />,
+      );
+      expect(screen.getByTestId('skills-menu-trigger')).toBeInTheDocument();
+      expect(screen.getByTestId('skills-menu-trigger')).toHaveTextContent(
+        'Skills',
+      );
+
+      rerender(
+        <InsideButtons
+          {...defaultProps}
+          skills={[]}
+          activeSkillSlugs={new Set()}
+          onToggleSkill={vi.fn()}
+        />,
+      );
+      expect(
+        screen.queryByTestId('skills-menu-trigger'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('renders right after Canvas — Canvas stays the first tool pill', () => {
+      render(
+        <InsideButtons
+          {...defaultProps}
+          artifactsEnabled={true}
+          skills={skills}
+          activeSkillSlugs={new Set()}
+          onToggleSkill={vi.fn()}
+        />,
+      );
+      const canvas = screen.getByRole('button', { name: /canvas/i });
+      const skillsTrigger = screen.getByTestId('skills-menu-trigger');
+      // Canvas precedes the Skills trigger in DOM order.
+      expect(
+        canvas.compareDocumentPosition(skillsTrigger) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
+    it('shows the armed skill name and active-pill styling when a token is in the composer', () => {
+      render(
+        <InsideButtons
+          {...defaultProps}
+          skills={skills}
+          activeSkillSlugs={new Set(['code-review'])}
+          onToggleSkill={vi.fn()}
+          onClearSkills={vi.fn()}
+        />,
+      );
+      const trigger = screen.getByTestId('skills-menu-trigger');
+      expect(trigger).toHaveTextContent('Code Review');
+      expect(trigger.className).toContain('bg-[#F5F8FF]');
+      expect(trigger.className).toContain('text-[#38A1E5]');
+    });
+
+    it('active pill shows the ✕ (like other tools); clicking it clears without opening the menu', () => {
+      const onClearSkills = vi.fn();
+      render(
+        <InsideButtons
+          {...defaultProps}
+          skills={skills}
+          activeSkillSlugs={new Set(['code-review'])}
+          onToggleSkill={vi.fn()}
+          onClearSkills={onClearSkills}
+        />,
+      );
+
+      const clear = screen.getByTestId('skills-menu-clear');
+      fireEvent.pointerDown(clear);
+      fireEvent.click(clear);
+
+      expect(onClearSkills).toHaveBeenCalledTimes(1);
+      // The menu did not open.
+      expect(
+        screen.queryByTestId('skills-menu-item-code-review'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('scrolling the menu near the bottom requests the next skills page', async () => {
+      const onLoadMoreSkills = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <InsideButtons
+          {...defaultProps}
+          skills={skills}
+          activeSkillSlugs={new Set()}
+          onToggleSkill={vi.fn()}
+          hasMoreSkills
+          onLoadMoreSkills={onLoadMoreSkills}
+        />,
+      );
+
+      await user.click(screen.getByTestId('skills-menu-trigger'));
+      const content = await screen.findByTestId('skills-menu-content');
+      // jsdom reports zero scroll metrics, so any scroll counts as bottom.
+      fireEvent.scroll(content);
+
+      expect(onLoadMoreSkills).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows a spinner row while a later skills page is in flight', async () => {
+      const user = userEvent.setup();
+      render(
+        <InsideButtons
+          {...defaultProps}
+          skills={skills}
+          activeSkillSlugs={new Set()}
+          onToggleSkill={vi.fn()}
+          hasMoreSkills
+          isFetchingMoreSkills
+          onLoadMoreSkills={vi.fn()}
+        />,
+      );
+
+      await user.click(screen.getByTestId('skills-menu-trigger'));
+      expect(
+        await screen.findByTestId('skills-menu-loading-more'),
+      ).toBeInTheDocument();
+    });
+
+    it('idle pill has no ✕', () => {
+      render(
+        <InsideButtons
+          {...defaultProps}
+          skills={skills}
+          activeSkillSlugs={new Set()}
+          onToggleSkill={vi.fn()}
+          onClearSkills={vi.fn()}
+        />,
+      );
+      expect(screen.queryByTestId('skills-menu-clear')).not.toBeInTheDocument();
+    });
+
+    it('lists skills (name + /slug, no description) and calls onToggleSkill on selection', async () => {
+      const onToggleSkill = vi.fn();
+      const user = userEvent.setup();
+      render(
+        <InsideButtons
+          {...defaultProps}
+          skills={skills}
+          activeSkillSlugs={new Set(['web-research'])}
+          onToggleSkill={onToggleSkill}
+        />,
+      );
+
+      await user.click(screen.getByTestId('skills-menu-trigger'));
+
+      const webItem = await screen.findByTestId(
+        'skills-menu-item-web-research',
+      );
+      expect(webItem).toHaveTextContent('Web Research');
+      // Rows show the slash-invocation form next to the name (mirrors the
+      // `/` picker) …
+      expect(webItem).toHaveTextContent('/web-research');
+      // … but no descriptions — those stay in the `/` picker, which has
+      // room for them.
+      expect(webItem).not.toHaveTextContent(
+        'Research a topic on the open web.',
+      );
+      expect(
+        screen.getByTestId('skills-menu-item-code-review'),
+      ).toBeInTheDocument();
+
+      await user.click(webItem);
+      expect(onToggleSkill).toHaveBeenCalledWith(skills[0]);
     });
   });
 });

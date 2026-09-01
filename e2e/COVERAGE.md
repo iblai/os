@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-08-11 | 615 checkpoints (584 covered, 8 pending/fixme, 11 not-reproducible in default env, 12 deprecated) | 68 journeys (67 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-08-31 | 693 checkpoints (654 covered, 8 pending/fixme, 15 not-reproducible in default env, 16 deprecated) | 74 journeys (73 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -36,7 +36,7 @@ When adding a new page or modifying an existing user flow:
 - [x] Newly created user can navigate to the Explore page via sidebar
 - [x] Newly created user can log out via the profile dropdown
 - [x] Sidebar can be toggled open and closed
-- [x] Help button opens the docs link in a new tab
+- [x] Help button opens the docs/help link in a new tab when the tenant's own metadata (observed from the app's own org-metadata GET, no `DM_URL` required) shows `show_help !== false`; the menu item is correctly absent when a tenant explicitly sets `show_help: false` (#uat-9)
 - [x] Suggested prompts authored with Markdown render via the Markdown component (issue #1179, fixme until a seeded mentor fixture is available)
 - [ ] NAV-08: Clicking "New Chat" once fires exactly ONE create-session POST (issue #1002 regression guard — parked as `test.fixme`; activate after verifying against the live backend)
 
@@ -95,9 +95,9 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 6: Mentor Management — Admin (14 checkpoints) — `journeys/06-mentor-management-admin.spec.ts`
+## Journey 6: Mentor Management — Admin (18 checkpoints) — `journeys/06-mentor-management-admin.spec.ts`
 
-**Source files:** `components/modals/create-mentor-modal.tsx`, `components/modals/edit-mentor-modal/index.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/tabs/llm-tab.tsx`, `components/modals/edit-mentor-modal/tabs/tools-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `components/modals/settings-modal.tsx`, `hooks/use-mentors.ts`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
+**Source files:** `components/modals/create-mentor-modal.tsx`, `components/modals/edit-mentor-modal/index.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/tabs/llm-tab.tsx`, `components/modals/edit-mentor-modal/tabs/tools-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `components/modals/settings-modal.tsx`, `hooks/use-mentors.ts`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/modals/llm-provider-modal.tsx`, `lib/utils.ts`
 
 - [x] Admin can update mentor profile (name, description, category, visibility), save, and close
 - [x] Non-admin does not see the Settings or Tools menu items
@@ -113,6 +113,10 @@ When adding a new page or modifying an existing user flow:
 - [ ] _(not-reproducible — RBAC off in default env)_ My Agents list scoped to `created_by=username` for non-admins via `useMentorsWithPagination({ createdBy })`; admin still sees full list — unit-covered in `settings-modal.test.tsx`
 - [ ] _(not-reproducible — RBAC off in default env)_ Student with `/mentors/#create` RBAC permission (`studentCanCreateMentors`) sees New Agent + My Agents in sidebar and can click a row to open Edit Agent dialog — unit-covered
 - [ ] _(not-reproducible — RBAC off in default env)_ Analytics shown to student mentor-creator only when `created_by===username` or holding per-mentor `/mentors/{id}/#view_analytics` permission — unit-covered
+- [x] Issue #2318: LLM tab provider grid renders usable (`canAccessProvider`) providers before unusable ones, each group alphabetical by display label (`data-testid=llm-provider-card`, `data-disabled`) — asserts the ordering invariants rather than a hard-coded provider list
+- [x] Issue #2318: ibl.ai provider card (`data-provider=iblai`) shows the ibl.ai logo and label instead of falling through to the generic default (the original bug — a missing map entry rendered a blank/404 logo); skips gracefully if the tenant's LLM list omits ibl.ai
+- [x] Issue #2318: a grayed (no-credential) provider card stays clickable and opens the LLM Selection model picker; skips gracefully if every provider in the tenant is usable
+- [x] Issue #2318: LLM Selection model picker rows render a non-blank human-readable label (`display_name || llm_name`) and searching a substring of that label finds the row
 
 ---
 
@@ -172,9 +176,11 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 10: Canvas — AI Document Editor (11 checkpoints) — `journeys/10-canvas-ai-document-editor.spec.ts`
+## Journey 10: Canvas — AI Document Editor (15 checkpoints; 2 not-reproducible) — `journeys/10-canvas-ai-document-editor.spec.ts`
 
-**Source files:** `components/canvas/canvas-component.tsx`, `components/canvas/canvas-rich-text-editor.tsx`, `components/canvas/canvas-view.tsx`, `components/canvas/canvas-controls.tsx`, `components/canvas/canvas-export-handlers.tsx`, `hooks/use-canvas-aware-send.ts`, `hooks/use-canvas-version-navigation.tsx`
+**Source files:** `components/canvas/canvas-component.tsx`, `components/canvas/canvas-rich-text-editor.tsx`, `components/canvas/canvas-view.tsx`, `components/canvas/canvas-controls.tsx`, `components/canvas/canvas-export-handlers.tsx`, `components/canvas/binary-canvas-component.tsx`, `components/canvas/binary-artifact-utils.ts`, `components/chat/chat-messages/canvas-message-preview.tsx`, `components/chat/chat-messages/message-preview.tsx`, `components/chat/chat-messages/types.ts`, `components/chat/index.tsx`, `hooks/use-canvas-aware-send.ts`, `hooks/use-canvas-version-navigation.tsx`
+
+Binary artifacts (pdf, xlsx, zip, …) are a read-only variant of the canvas artifact: the backend marks them with `is_binary`/`mime_type` and serves the bytes base64-encoded in `binary_content` from the artifact DETAIL endpoint only. The chat message chip always shows "Open Canvas" (disabled with a tooltip while the binary is still generating) — there is no separate "Download" chip variant; the binary canvas (`binary-canvas-component.tsx`) is view + a single header Export — no editing, formatting toolbar, AI controls, version menu, or rename — previews pdf/images/svg inline, shows friendly no-preview / malformed-file messages for everything else, and is never pinned to outgoing chat messages the way the text/code canvas is. **Journey 71** (`71-vm-sandbox-txt-file-canvas.spec.ts`) exercises the VM-sandbox file-sharing pipeline end-to-end against a live LLM — deliberately with a **.txt** file (reliable to produce in the VM with plain shell tooling), which is a TEXT artifact: it verifies the chip + text-canvas path and that text/binary routing picks the text path. The binary-specific surfaces (binary chip gating, pdf/image preview, non-previewable fallback, malformed-file preview-error, stream-end binary auto-open/takeover, no-pin behavior) stay unit-only (`binary-artifact-utils.test.ts`, `binary-canvas-component.test.tsx`, `canvas-view.test.tsx`, `canvas-message-preview.test.tsx`, `message-preview.test.tsx`) since no journey makes a live agent produce a real binary artifact.
 
 - [x] Canvas mode can be enabled and disabled via the toggle button
 - [x] AI can generate a business report document in the canvas
@@ -187,6 +193,10 @@ When adding a new page or modifying an existing user flow:
 - [x] Export dropdown shows PDF and Markdown options and triggers download
 - [x] Canvas panel can be closed; artifact card remains in chat and reopens canvas
 - [x] Follow-up chat message referencing canvas modifies the document content
+- [ ] _(not-reproducible)_ Chat message chip always offers "Open Canvas" for binaries (never "Download"), disabled with a 'hang tight' tooltip while generating — unit-covered in `canvas-message-preview.test.tsx` / `message-preview.test.tsx`; Journey 71 shares a .txt (text) file, so no journey produces a real binary artifact
+- [ ] _(not-reproducible)_ Read-only binary canvas renders the pdf preview with no editing affordances, and never the malformed-file preview-error state for a well-formed file — unit-covered in `binary-canvas-component.test.tsx` / `canvas-view.test.tsx` / `binary-artifact-utils.test.ts`; same live-binary dependency
+- [ ] _(not-reproducible)_ Binary-artifact stream/open orchestration in `components/chat/index.tsx`: no mid-stream auto-open, every binary type (displayable or not) auto-opens at stream end when no canvas is open — taking over a text canvas that opened mid-stream for the same artifact (binary content wins, extension re-resolved from the filename-style title) — and never pinned to outgoing messages; unit-only via `getBinaryStreamBehavior` / `resolveEffectiveFileExtension` in `binary-artifact-utils.test.ts`. Journey 71 exercises the TEXT stream path (chip + text-canvas auto-open) live
+- [ ] _(not-reproducible)_ Binary canvas preview paths beyond pdf: image/svg inline preview, the non-previewable-type fallback message, the malformed-file preview-error state, and loading/error/retry — unit-covered in `binary-canvas-component.test.tsx` / `canvas-view.test.tsx` / `binary-artifact-utils.test.ts`
 
 ---
 
@@ -211,9 +221,9 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 13: Shareable Links & Embed Integration (14 checkpoints) — `journeys/13-shareable-links-and-embed-integration.spec.ts`
+## Journey 13: Shareable Links & Embed Integration (17 checkpoints) — `journeys/13-shareable-links-and-embed-integration.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/embed-tab.tsx`, `components/modals/edit-mentor-modal/hooks/useEmbedTab.ts`, `components/logo.tsx`, `hooks/use-mentors/use-mentor-settings.ts`, `hooks/use-embed-mode.ts`, `components/chat-input-form/voice-call-button.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form/screen-sharing-button.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
+**Source files:** `components/modals/edit-mentor-modal/tabs/embed-tab.tsx`, `components/modals/edit-mentor-modal/hooks/useEmbedTab.ts`, `components/modals/edit-mentor-modal/utils.ts`, `components/logo.tsx`, `hooks/use-mentors/use-mentor-settings.ts`, `hooks/use-embed-mode.ts`, `components/chat-input-form/voice-call-button.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form/screen-sharing-button.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
 
 - [x] Non-anonymous embed with voice call, voice record, and attachment buttons renders correctly
 - [x] Authenticated flow in embed: user can send a message and receive an AI response
@@ -229,6 +239,9 @@ When adding a new page or modifying an existing user flow:
 - [x] Issue #2153: clicking the regenerate (refresh) icon next to Shareable Link does not surface the Website URL validation error
 - [x] Issue #2153: toggling the Shareable Link switch OFF does not surface the Website URL validation error
 - [x] Issue #2153 contrast case: toggling Shareable Link ON for an anonymous mentor (Website URL section not rendered at all) remains error-free
+- [x] Issue #789: a custom embed icon (Icon Selection = Custom, uploaded via the Icon Editor's Content tab) persists after a full page reload as a real uploaded URL, not the local data: preview
+- [x] Issue #789: "Remove Image" persists immediately (own PUT, independent of Create Embed) with a "Custom icon removed" toast, Icon Selection reverting to Default, and the removal surviving a reload (guards the RTK cache invalidation behind the fix)
+- [x] Embed tab footer contains only the "Create Embed" button (the standalone footer Save button was removed); Advanced CSS / Advanced JavaScript panels elsewhere in the tab keep their own working Save buttons
 
 ---
 
@@ -322,9 +335,9 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 20: Dataset Management (18 checkpoints) — `journeys/20-dataset-management.spec.ts`
+## Journey 20: Dataset Management (26 checkpoints) — `journeys/20-dataset-management.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/datasets-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/dataset-item.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/retrain-schedule-modal.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/train-or-delete-modal.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/resource-types.tsx`, `hooks/use-datasets.ts`
+**Source files:** `components/modals/edit-mentor-modal/tabs/datasets-tab/index.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/dataset-item.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/retrain-schedule-modal.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/train-or-delete-modal.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/resource-types.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/agent-datasets-tab.tsx`, `hooks/use-datasets.ts`, `hooks/user-navigate.ts`, `lib/constants.ts`
 
 - [x] Datasets tab header and description display correctly (TC01)
 - [x] Search input is visible and filters the dataset list (TC02–TC03)
@@ -344,6 +357,17 @@ When adding a new page or modifying an existing user flow:
 - [x] Untrained dataset can be deleted; trained dataset can be untrained then deleted; retraining can be scheduled; file upload cancellation is handled gracefully (TC25–TC28)
 - [x] Markdown resource type is available in the Add Resources modal (TC30, issue #1117)
 - [x] Markdown (.md) file can be uploaded and appears in the dataset list (TC31, issue #1117)
+
+**URL query-string sync** — the Datasets tab syncs its page/search state to `datasetsPage`/`datasetsSearch` query params (`agent-datasets-tab.tsx` + `hooks/user-navigate.ts`). Setting a search always implies a page reset, so page and search are never both non-default at once — the reload/deep-link checkpoints test each in isolation rather than a combined state the app can't produce. The pagination checkpoints (TC36–TC39) need more than one page of results (5 items/page), so each one **seeds its own fixture at runtime**: create a mentor, POST 12 tiny documents to the training API (3 pages — TC37 pages forward twice and TC38 searches from page 3), then delete the mentor in `afterAll` via `MentorTracker`. Seeding goes through `utils/dataset-seeding.ts` rather than the Add Resource UI, which costs ~20s per file. Nothing environment-specific is hard-coded: the tenant key, username and `dm_token` are read from `localStorage` at runtime and the mentor is the one the test just created. An earlier revision pointed these tests at a hand-seeded mentor identified by tenant key + id — that only resolved on the environment it was seeded on and sent every other admin to `/error/403`, so the tests timed out on navigation instead of running.
+
+- [x] Typing in the datasets search debounces into the `datasetsSearch` URL query param, using `router.replace` so it doesn't stack history entries (TC32)
+- [x] `datasetsSearch`/`datasetsPage` URL params clear when the edit mentor modal closes (TC33)
+- [x] `datasetsSearch`/`datasetsPage` URL params clear when switching from Datasets to another tab (TC34)
+- [x] Reloading the page after searching restores `datasetsSearch` and the search input from the URL (TC35)
+- [x] Clicking a pagination page number pushes `datasetsPage` into the URL via `router.push` (TC36, self-seeded multi-page mentor)
+- [x] Browser Back/Forward walk the visited `datasetsPage` values after paging forward twice (TC37, self-seeded multi-page mentor)
+- [x] Searching while on page 3 drops `datasetsPage` (reset to page 1) and sets `datasetsSearch` (TC38, self-seeded multi-page mentor)
+- [x] Reloading the page while paginated restores `datasetsPage` and the active pagination link from the URL (TC39, self-seeded multi-page mentor)
 
 ---
 
@@ -747,28 +771,25 @@ Requires `DM_URL` env var. Tests are skipped when `DM_URL` is unset.
 
 ---
 
-## Journey 44: CLAW Advanced Sandbox (16 checkpoints) — `journeys/44-claw-advanced-sandbox.spec.ts`
+## Journey 44: CLAW Advanced Sandbox (13 checkpoints) — `journeys/44-claw-advanced-sandbox.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx`, `components/modals/edit-mentor-modal/tabs/skills-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `components/modals/edit-mentor-modal/capability-gate.tsx`, `hooks/use-mentor-segments.ts`
+**Source files:** `components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `hooks/use-mentor-segments.ts`
 
-The "Dedicated sandbox" (`enable_claw`) master toggle moved off Settings → Capabilities into an in-tab `CapabilityGate` at the top of the Sandbox tab itself (feat/2040) and auto-saves on click (optimistic local state via `useEditMentorMutation`) — no footer Save button involved for the toggle. Both the Sandbox and Skills top-level tabs are now **always mounted** for admins regardless of `enable_claw` / wired-instance state — `hooks/use-mentor-segments.ts` no longer gates either segment. The gated `SandboxConfig` UI renders inside a grayed + inert `capability-gate-content` wrapper (`data-enabled` mirrors the toggle) while the capability is off; the Skills tab shows a content-level "not connected" preview when no `ClawMentorConfig` is wired, independent of the capability toggle. The instance table's per-row **Connect** action is a dedicated button (`data-testid="connect-instance-<id>"`) next to the "Actions" three-dot menu (Run checks / Edit / Delete) — no longer a dropdown menu item.
+The Sandbox tab used to wrap the SDK's `SandboxConfig` component in an app-level `CapabilityGate` around a single "Dedicated sandbox" (`enable_claw`) master toggle. That gate is gone — the tab now renders only a header and `SandboxConfig` (from `@iblai/iblai-js/web-containers`) directly, and the SDK component owns kind selection itself. `SandboxConfig` always renders a "Sandbox Type" card with three switches (`sandbox-kind-computational-runtime`, `sandbox-kind-virtual-machine`, `sandbox-kind-claw`). The three kinds are **mutually exclusive AND AT LEAST ONE IS ALWAYS ACTIVE** — "Only one sandbox type can be enabled at a time" per the card's own subheading: kinds change ONLY by selecting a different kind, which atomically deactivates whichever kind was previously active in the same PATCH. There is no "disable" operation — toggling the currently-active kind's own switch off (leaving none active) is not a supported flow, so this journey never asserts an all-off state. No kind switch ever gets a persistent disabled state — each is only briefly disabled while its own save is in flight, regardless of which kind is active. The claw connected/not-connected sections (instance table, connect, auto-push, push config) render **only** while Claw is enabled — not merely grayed out, absent from the DOM entirely. The Sandbox top-level tab remains **always mounted** for admins regardless of any kind's state — `hooks/use-mentor-segments.ts` doesn't gate the segment (unaffected by this SDK rewrite, predates it from feat/2040). The instance table's per-row **Connect** action is a dedicated button (`data-testid="connect-instance-<id>"`) next to the "Actions" three-dot menu (Run checks / Edit / Delete) — no longer a dropdown menu item. Agent Skills is fully independent of the sandbox and is covered **exclusively** by Journey 67 — this journey carries no skills assertions.
 
-- [x] Admin opens the Sandbox tab and the "Dedicated sandbox" capability toggle (in-tab CapabilityGate) is present
-- [x] Capability toggle is interactable for admins regardless of sandbox connection state (admin intent)
-- [x] Flipping the capability toggle auto-saves instantly (optimistic, no footer Save button) and does not change Sandbox or Skills tab visibility — both tabs are unconditionally mounted
-- [x] Enabling the capability flips `capability-gate-content`'s `data-enabled` to `true`, ungating the SandboxConfig UI; Sandbox leads the Integrations category (feat/2040 moved it off Configurations)
-- [x] Skills tab is always visible AND shows the real skills UI (heading, info box, New Skill action) independent of the sandbox — feat/2040 made the Skills content fully sandbox-independent (no "connect a sandbox" gate)
-- [x] Sandbox leads the Integrations category and Skills follows Prompts in the Configurations category, unconditionally (feat/2040 groups the sidebar into Configurations / Integrations / Runtime)
-- [x] Disabling the capability flips `capability-gate-content`'s `data-enabled` back to `false`, regating the SandboxConfig UI, while Sandbox and Skills tabs remain visible
-- [x] Admin navigates to Sandbox tab and the sandbox config container renders regardless of capability state
-- [x] Admin toggles the capability ON then OFF in one session and `capability-gate-content`'s `data-enabled` flips accordingly both times
-- [x] Admin adds a new sandbox instance via the Add Instance dialog (capability enabled first) and the new row appears in the instance table
+- [x] Admin opens the Sandbox tab and the three sandbox-kind switches (Computing Runtime / Virtual Machine Shell / Claw) are visible
+- [x] Computational-runtime and virtual-machine switches are interactable for admins while claw is off
+- [x] Selecting a sandbox kind auto-saves instantly; the three kinds are mutually exclusive and at least one is always active, so selecting one kind turns off whichever kind was previously active (no "disable" operation), and selection never affects Sandbox tab visibility — the tab is unconditionally mounted
+- [x] Selecting claw turns off whichever kind (computational-runtime or virtual-machine) was previously active in the same PATCH (mutual exclusivity); Sandbox leads the Integrations category (feat/2040 moved it off Configurations)
+- [x] Sandbox leads the Integrations category unconditionally (feat/2040 groups the sidebar into Configurations / Integrations / Runtime)
+- [x] Switching to computational-runtime while claw is active deactivates claw and hides its instance section, leaving computational-runtime as the sole active kind — never an all-off state — while all three switches remain interactable and the Sandbox tab stays visible
+- [x] Admin navigates to Sandbox tab: the sandbox-kind card always renders; the claw connected/not-connected instance sections render only while claw is enabled
+- [x] Admin selects claw then switches away from it (to the mentor's original kind) in one session, and the claw connected/not-connected instance sections mount and unmount accordingly both times
+- [x] Admin adds a new sandbox instance via the Add Instance dialog (claw kind selected first) and the new row appears in the instance table
 - [x] Admin edits an existing sandbox instance name via the Edit Instance dialog and the updated name is reflected in the table
-- [x] Admin connects a sandbox instance via the dedicated per-row Connect button (no longer a dropdown item): Connected Instance heading appears and the Skills tab renders its (sandbox-independent) skills UI
+- [x] Admin connects a sandbox instance via the dedicated per-row Connect button (no longer a dropdown item) and the Connected Instance heading appears
 - [x] Admin edits an Agent Configuration field in the Prompts tab: edit modal closes and the new value is persisted
-- [x] Admin toggles a skill on then off in the Skills tab and aria-checked flips back to the original state
-- [x] Admin creates a new skill, edits its description, and the updated skill row remains visible; skill is deleted on cleanup
-- [ ] _(not-reproducible — RBAC off in default env)_ Dedicated sandbox toggle (`enable_claw`) is disabled when the user only has read access — unit-covered in `sandbox-tab.test.tsx`
+- [ ] _(not-reproducible — RBAC off in default env)_ Claw kind switch (`enable_claw`) is disabled when the user only has read access — unit-covered in `sandbox-tab.test.tsx`
 
 ---
 
@@ -1000,7 +1021,7 @@ Covers the "Enable prompt caching" toggle added to the Capabilities sub-tab of t
 - [x] Tool call pill is expandable and shows query detail
 - [x] Web Search button is not visible when tool is disabled on mentor
 - [x] Tool call indicator does not appear when Web Search is enabled but not activated in session
-- [x] Reasoning section shows "Thinking" with bounce dots during streaming and auto-collapses to "Thought" after
+- [x] Reasoning section renders for a reasoning model and auto-collapses to Thought after streaming
 - [x] Reasoning section does not appear for non-reasoning model
 - [x] Tool call indicator and reasoning section both render in correct order in same message
 - [x] Tool call indicator and reasoning section are gated by the Enable verbose reasoning setting — hidden when the toggle is off, shown when on
@@ -1290,3 +1311,371 @@ Because the toggle mutates the mentor's attached tools — the same fields Journ
 - [x] grd-13: Non-admin does not see the Grader tab / cannot reach the Edit Agent Settings menu item at all
 - [ ] grd-14 _(not-reproducible)_: the grader tab's fine-grained RBAC gating is real (flat actions on the mentor resource, checked via `/mentors/{id}/#<action>` with a graceful fallback) — denied `read_grader_config` hides the tab and shows its denied state; denied write/create/delete/override actions omit the matching affordance. Not e2e-reproducible without seeding a restricted RBAC permission object for the e2e admin account, which this environment has no fixture for
 - [ ] grd-15 _(not-reproducible)_: the Results sub-tab's grade-override flow (override/clear a learner's grade, which PATCHes back to the LMS) requires a real graded submission produced by a live LMS-connected grading run — not reproducible in this e2e environment, which has no fixture to produce one on demand (grd-04 covers the reachable empty-table state)
+
+---
+
+## Journey 67: Agent Skills (22 checkpoints) — `journeys/67-agent-skills.spec.ts`
+
+**Source files:** `hooks/use-mentor-segments.ts`, `components/modals/edit-mentor-modal/tabs/skills-tab.tsx`, `components/chat-input-form.tsx`, `components/auto-resize-text-area.tsx`
+
+Issue feat/2215 — ALL Agent Skills coverage lives here (Agent Skills is fully
+independent of the sandbox, so the sandbox journey carries none). Three
+surfaces:
+
+1. The Edit Mentor "Skills" tab is gated on mentor type: mounted only when
+   the mentor resolves to "Base Agent" (`resolveIsBaseAgentMentor` in
+   `hooks/use-mentor-segments.ts`, mirroring the SDK's `isBaseAgentMentor` /
+   `BASE_AGENT_TEMPLATE_SLUGS`), failing OPEN when the type can't be
+   determined from the mentor-settings response. `CreateMentorPage`'s UI has
+   no agent-type picker and only ever produces Base Agent mentors, so the
+   gating checkpoints mock the mentor-settings GET for a real, freshly-created
+   mentor (`route.fetch()` + mutate `mentor_slug`/`template_mentor` +
+   `route.fulfill()` — every other field stays authentic). The tab SEGMENT is
+   plainly ADMIN-ONLY via the userTypes filter — no RBAC resource on the
+   segment itself; the chat `/` picker, by contrast, is available to
+   students too.
+2. The skills SECTION (the SDK's `AgentSkills` component: Agent Skills /
+   Available Skills sub-tabs, enable toggles, New/Edit/Delete Skill dialogs)
+   is driven exclusively through the dedicated helpers in
+   `@iblai/iblai-js/playwright` (`verifySkillsTabVisible`,
+   `switchToAgentSkillsSubTab`, `createSkill`, `editSkill`, `deleteSkill`,
+   …). Management checkpoints run SERIAL with a dedicated mentor per test —
+   skill create/edit/delete mutates the platform-wide catalog. The section
+   is RBAC-GATED per grant against the mentor permission check
+   (`/mentors/{dbId}/` — the host passes `mentorDbId` from mentor-settings):
+   `view_skill_assignments` gates the assignment fetches,
+   `create_skill_assignment` the whole Available Skills sub-tab + New Skill
+   button, `write_skill_assignment` the enable Switch,
+   `delete_skill_assignment` the row Remove button. Because the backend's
+   grant rollout is environment/profile-dependent, every checkpoint that
+   asserts the FULL admin view (ags-01, ags-04, ags-05) first forces all
+   four grants via `SkillsTab.mockSkillAssignmentGrants` (permission-check
+   response mutated in place, mirroring `ChatPage.grantSkillAssignmentsRead`;
+   registered before the modal opens since the modal fires the check on
+   open) — and ags-07 forces the deny side the same way. Per-grant ROW
+   affordances (Switch disabled without write, Remove hidden without delete)
+   are covered by the SDK's own `agent-skills.test.tsx` unit suite, not
+   duplicated here.
+3. The chat composer's `/` skill picker (`SlashSkillPicker` /
+   `useSlashSkillPicker` from `@iblai/iblai-js/web-containers`, wired in
+   `components/chat-input-form.tsx` + `components/auto-resize-text-area.tsx`)
+   opens when the composer holds a single `/`-prefixed token and the
+   mentor's effective skills — resolved client-side from its ONLY skill
+   source, the skill assignments (`GET .../agents/{uuid}/skills/`; the
+   platform-wide `/agent-skills/` catalog is never fetched from chat) — are
+   non-empty. These checkpoints mock that endpoint via
+   `ChatPage.mockEffectiveSkills` for full determinism — the composer fetches
+   eagerly on mount, so the mock must be registered before navigation.
+
+- [x] ags-01: Admin sees the Skills tab on a freshly-created (Base Agent) mentor, with the updated tab description ("Reusable playbooks this Base Agent can discover and follow.") and skills-info-box copy describing the `/` picker; Skills sits right after Prompts in the Configurations category — full RBAC grant set forced via `SkillsTab.grantAllSkillAssignmentPerms` so the both-sub-tabs assert is rollout-independent
+- [x] ags-02: Skills tab is hidden when the mentor resolves to a non-base-agent type (`mentor_slug` is not a base-agent alias and `template_mentor` does not resolve to one either)
+- [x] ags-03: Skills tab stays visible when the mentor type cannot be determined (`template_mentor` is a numeric PK the frontend cannot read a slug from) — the gate fails OPEN rather than hiding the tab
+- [x] ags-04: Admin creates a platform skill, attaches it from the Available Skills sub-tab (`addSkillToAgent` — assignment created ENABLED), and its enable Switch round-trips off/on on the Agent Skills sub-tab (`aria-checked`); detach + delete on cleanup — dedicated mentor per test
+- [x] ags-05: Admin creates a new platform skill, locates it on the server-paged Available Skills sub-tab (paging until found — catalog ordering not guaranteed), edits its description, and deletes it (row disappears) — via the SDK's `createSkill`/`editSkill`/`deleteSkill` helpers, serial (platform-wide catalog)
+- [x] ags-06: NON-ADMIN — the Skills tab is absent from the Edit Mentor modal (the segment is ADMIN-only via userTypes in `MENTOR_SEGMENTS`)
+- [x] ags-07: View-only RBAC (`view_skill_assignments` granted, create/write/delete denied via the same permission-check mock) — the Agent Skills sub-tab renders with its empty state, while the Available Skills sub-tab and the New Skill button are absent from the DOM
+- [x] slash-01: Mentor with no effective skills — chat composer stays a plain textbox (no combobox role) and typing "/" opens nothing
+- [x] slash-02: Mentor with skills — composer gets `role=combobox` wiring and "/" opens the picker listing only enabled skills as name + slug, no descriptions (assignment rows carry none; the platform-wide agent-skills catalog is never fetched from chat)
+- [x] slash-03: Typing after "/" filters the picker by both skill name and slug as the query narrows; no match closes the picker
+- [x] slash-04: ArrowDown/ArrowUp cycle the active picker option and the composer's `aria-activedescendant` follows the active option's id
+- [x] slash-05: Enter completes the active option IN PLACE — `/<slug> ` lands at the typed token's index and the backdrop layer (`skill-token-highlight`) paints an active-pill background behind it; nothing is submitted
+- [x] slash-06: Clicking a picker option (mousedown) completes that skill's token in place with the same highlight
+- [x] slash-07: Escape dismisses the picker until the slash token is cleared (stays dismissed while the token persists), then a fresh "/" re-arms and reopens it
+- [x] slash-08: Multi-word text starting with "/" (e.g. "/hello world") never opens the picker
+- [x] slash-09: One Backspace at the token's end (or Delete at its start) removes the whole `/slug ` token atomically
+- [x] slash-10: Backspace after plain text deletes characters normally — the highlighted token stays intact
+- [x] slash-11: A mid-sentence token is removed atomically and the seam space collapses ("say /web-research please" → "say please")
+- [x] slash-12: Multiple skill invocations in one message are each highlighted; unknown or disabled slugs never highlight
+- [x] slash-13: Typing "/" while the assignments fetch (the composer's only skill source) is still in flight shows the "Loading skills…" popover (`slash-skill-loading`, `role=status`), which yields to the picker once the list resolves
+- [x] slash-16: Skills dropdown (next to Canvas) lists enabled skills as name + `/slug`; selecting inserts the token AT THE CARET with context-aware spacing; the active pill shows the armed name + the standard ✕ (disarms without opening the menu); toggling removes cleanly; arming another replaces (single selection); `/`-picker arming updates the button — one composer-text source of truth
+- [x] slash-15: NON-ADMIN — with the assignments endpoint readable (mocked granted state; a 403 degrades to an inactive picker) the "/" picker offers skills; selecting completes the token and the sent invocation message receives a live AI reply — skips when the environment denies the non-admin CHAT permission entirely (composer disabled with a "you don't have permission to chat" placeholder): the picker rides on top of chat access
+- [x] slash-14: A "/" token typed after existing text (caret-adjacent, preceded by whitespace) opens the picker; selecting completes the invocation at that index keeping the sentence. A "/" glued inside a word (and/or, URLs) never triggers
+
+---
+
+## Journey 68: Agent Task List (11 checkpoints) — `journeys/68-agent-todo-list.spec.ts`
+
+**Source files:** `components/chat/agent-todo-list.tsx`, `components/chat/ai-message-bubble.tsx`, `components/chat/tool-call-indicator.tsx`, `app/globals.css`
+
+Issue #2216 — a Base Agent plans multi-step work with the deep-agent `write_todos`
+tool. Every call streams a FULL REPLACEMENT todo list, rendered as a collapsible
+task list (`AgentTodoList`) on the assistant turn, gated on the mentor's
+`show_reasoning` setting (default `false`) — the same gate as the reasoning
+section and the generic tool-call indicator.
+
+Two independent, deterministic seams are used, since neither one alone covers
+the whole feature:
+
+- **REST history seam** (Tier 1, tests 1–4): drives the LIVE, authenticated
+  chat page (not the public shared-chat page — that page never passes
+  `showReasoning`, and its `transformChatMessage` normalizer drops tool calls
+  entirely). Patches the mentor-settings GET (`show_reasoning: true`, via
+  `route.fetch()` so every other field stays real) and mocks the session
+  chat-history GET (`GET /api/ai-mentor/orgs/{org}/users/{user_id}/sessions/{sessionId}/`)
+  to inject a `write_todos` tool call onto a historical AI message. This is
+  the first real fixture-backed validation of the SDK's history-parsing
+  contract (`toolCallFromHistoryEntry` in `@iblai/web-utils`), which accepts
+  two shapes that had no prior fixture in either repo: LangChain
+  (`{id, name, args}`) and OpenAI
+  (`{id, type: 'function', function: {name, arguments}}`), plus a malformed
+  entry that must be dropped without throwing.
+- **`page.routeWebSocket()`** (Tier 2, test 5): mocks the live chat socket
+  (`wss://.../ws/langflow/`) to script a real streaming turn end-to-end —
+  a `generation_id` start frame, two `write_todos` `tool_call`/`tool_call.end`
+  pairs with different ids (proving wholesale replacement, not a merge), and
+  `eos`. This is what a static history fixture cannot cover: the
+  expanded-while-streaming → auto-collapse-on-completion transition, the
+  shimmer on the live in-progress row, and the throttled screen-reader
+  announcer. `page.routeWebSocket` was previously assumed impractical for
+  this app's chat socket (see Journey 61's comment) without knowing the exact
+  frame shapes; those shapes are now confirmed and the mock works.
+
+A lone leading `assistant`-role history message is special-cased by
+`components/chat/index.tsx` as a "welcome message" (rendered via
+`WelcomeChatNew`, never through `AIMessageBubble`) — every Tier 1 history
+fixture therefore includes a preceding human message so the AI message with
+tool calls actually mounts `AgentTodoList`.
+
+- [x] atl-01: The task list renders as a real `<ol>` with one `<li>` per todo; status via `data-status` + a sr-only status word + a distinct icon per status — no visible status text on the row itself
+- [x] atl-02: The panel header shows an "N of M done" progress summary, visible even while the row list underneath is collapsed
+- [x] atl-03: The panel is expanded by default while the turn is streaming, auto-collapses once the turn completes, and clicking the trigger re-expands it (collapsed-by-default also verified for historical/reload-recovered turns)
+- [x] atl-04: A second `write_todos` call within the same streaming turn replaces the list wholesale — never merges or appends onto the previous call's rows
+- [x] atl-05: An unrecognized todo status (e.g. "blocked") renders as pending rather than being dropped
+- [x] atl-06: A turn that never emits `write_todos` shows no affordance at all — no panel, no header, no skeleton
+- [x] atl-07: `write_todos` never appears in the generic "Used N tools" indicator or as its own raw tool card, even with a companion tool call present on the same turn
+- [x] atl-08: The in-progress row's text carries the `.todo-shimmer` left-to-right sweep class
+- [x] atl-09: The sr-only `aria-live` announcer carries only the throttled "Step N of M complete" summary, never any todo row text
+- [x] atl-10: The task list survives a page reload, recovered from chat history
+- [x] atl-11: First fixture-backed validation of the LangChain-shape and OpenAI-shape `write_todos` history parsing, plus a malformed entry dropped without throwing
+
+## Journey 69: LLM Spend Limits (Billing) — Agent & Tenant Settings (16 checkpoints) — `journeys/69-spend-limits.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/spend-caps-tab.tsx`, `components/modals/edit-mentor-modal/index.tsx`, `hooks/use-mentor-segments.ts`, `lib/constants.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`
+
+Covers BOTH surfaces the SDK's spend-limits UI touches, as two
+clearly-separated `test.describe` blocks in one file: **Agent settings**
+(the Edit Mentor "Billing" tab) and **Tenant settings** (the tenant Billing
+tab's "Spend Limits" + "Agent Limits" tabs). The whole file runs `serial` —
+the simplest safe arrangement given the tenant block's tenant-wide mutation
+(see its isolation note below); the agent block's tests are independent of
+each other and of the tenant block either way.
+
+**REWRITE (feat/2286):** the prior version of the agent block targeted a
+three-sub-tab UI (This agent / Per user / Workspace) via hand-rolled
+locators (`e2e/page-objects/edit-mentor/spend-caps.tab.ts`, now deleted).
+The current SDK UI drops the "Workspace" sub-tab — the tenant-wide limit
+moved to the tenant block. Every interaction in both blocks is driven
+through the dedicated helpers in `@iblai/iblai-js/playwright` (its "Spend
+limits (Billing) helpers" doc block) rather than hand-rolled locators.
+
+### Agent settings (Billing tab)
+
+Covers the "Billing" (LLM spend limits) top-level tab in the Edit Mentor
+(Agent) modal, rendered by the SDK's `AgentSpendCapsTab`
+(`@iblai/iblai-js/web-containers/next`). Unlike the feat/2040 `CapabilityGate`
+tabs (Sandbox/Voice/Screen Share/Privacy/Memory/LTI), Billing has no master
+on/off toggle — it is gated purely by `userTypes: [ADMIN]` in
+`hooks/use-mentor-segments.ts` and is always mounted for admins. It lives in
+the **Configurations** sidebar category, immediately after **LLM**.
+`AgentSpendCapsTab` has exactly two sub-tabs — **"This Agent"** and
+**"Per User"** — and the per-user flow is a proper **"Add User Limit" modal**
+with an email-based user picker (replacing the old inline
+username-text-input draft card).
+
+**RBAC guard:** the backend gates each scope ("This Agent" / "Per User")
+independently and the SDK renders a `data-testid="spend-caps-denied"` panel
+per scope on a 403 instead of erroring. Every checkpoint races that panel
+against the scope's real content right after switching and skips with a
+reason (not a `test.fixme`) when this admin/tenant hasn't been granted that
+RBAC resource in a given environment — mirroring the `hasCanvasEnv` /
+`HumanSupportTab.hasToggle()` skip-with-reason convention used elsewhere in
+this suite. A 404 (endpoint not yet deployed) is NOT guarded against and is
+expected to fail the test loudly — this project prefers red-until-fixed live
+gates over `test.fixme` for app/backend-level blockers.
+
+**Isolation:** every test gets its own freshly-created mentor
+(`MentorTracker`, deleted in `afterAll`); no test here touches tenant-wide
+state (the Workspace cap moved to the tenant block below).
+
+- [x] sc-01: Admin sees the "Billing" tab in the Configurations category, positioned immediately after "LLM", and it opens on the "This Agent" sub-tab with "Per User" also present
+- [x] sc-02: Admin creates an agent spend limit (limit, interval, alert-only enforcement, thresholds, enabled) via `setAgentSpendLimit` and the values persist after closing and reopening the Billing tab
+- [x] sc-03: An invalid/zero spend limit shows the "Enter an amount greater than 0" validation error and disables Save
+- [x] sc-04: Admin removes the agent spend limit via the confirm dialog and the "no limit configured" hint reappears
+- [x] sc-05: Admin adds a per-user spend limit through the "Add User Limit" modal's EMAIL-based user picker and sees it listed in the per-user table, keyed by username
+- [x] sc-06: Admin edits an existing per-user spend limit via the row's three-dots menu (Edit)
+- [x] sc-07: Admin flips a per-user spend limit's Status toggle off and back on and it saves immediately (datasets-table pattern)
+- [x] sc-08: Admin deletes a per-user spend limit via the row's three-dots menu (Delete) and its row disappears
+- [x] sc-09: Non-admin users do not see the Billing tab in the Edit Mentor modal
+
+### Tenant settings (Spend Limits + Agent Limits)
+
+Covers the two NEW tabs added to the tenant settings "Billing" surface — the
+SAME `BillingTab` component journey 21-B already exercises for Plan &
+Credits (`billingPage.openBillingTab()` / `?profileTab=billing`), now with
+an internal "Billing sections" tablist: **Plan & Credits** (default,
+journey 21's coverage) / **Spend Limits** / **Agent Limits**:
+
+- **Spend Limits** — the tenant-wide (workspace) LLM spend limit,
+  `SpendLimitsSection` inside `BillingTab`. ONE cap for the whole tenant;
+  mutating it affects every mentor and every user.
+- **Agent Limits** — every agent spend cap configured tenant-wide,
+  `AgentLimitsSection` inside `BillingTab`: an autocomplete filter, a direct
+  Status toggle per row, and a "manage" action that opens the SAME
+  agent-scoped Billing editor the agent block above covers
+  (`AgentSpendCapsTab`) in a POPUP stacked on top of the tenant settings
+  dialog.
+
+`AgentLimitsSection`'s table reads `useListAgentSpendCapsQuery` — the
+DB-backed caps list, which (verified in the SDK source) lists every
+configured cap tenant-wide the instant no filter is applied. The
+autocomplete FILTER, by contrast, is backed by a search index
+(`GET /api/search/orgs/{org}/users/{username}/mentors/`) that lags behind
+mentor creation — a known product limitation, not a test bug, reported
+upstream separately. So only ONE checkpoint (`tal-01`) needs the filter at
+all: every other `tal-*` test creates its cap through the Edit Agent
+dialog's Billing tab (the agent block's own proven `setAgentSpendLimit`
+flow, which addresses the mentor directly by id) and then drives the tenant
+Agent Limits table directly via `agentLimitsRow(mentorUniqueId)` and the
+`*FromTenantBilling` composites (`setAgentSpendLimitFromTenantBilling`,
+`addUserSpendLimitFromTenantBilling` — neither touches the filter
+internally). Those composites and `openAgentLimitsManage` internally
+open/close the manage popup and resolve every nested query FROM it — the
+nested-dialog stacking (tenant settings dialog → manage popup → user-cap
+modal → delete confirm) is handled entirely inside the SDK, never via a bare
+page-wide query. Deletes (`sc-04` in the agent block and `tal-05` here) use
+a local `deleteAgentCapAndAwaitResponse` helper instead of the SDK's own
+delete helpers — the SDK's hardcoded internal wait for the "no cap
+configured" hint to reappear intermittently timed out under load even
+though the DELETE itself succeeds (204) and the refetch is correct (404)
+within ~300ms; the local helper gates on the DELETE response directly.
+
+**RBAC guard:** RBAC is enforced at TAB level by the host (an admin without
+the spend-caps grant never sees the Billing tab at all), so there is no
+in-scope denied-panel probing here — a backend 403/404 fails the SDK
+helpers' own waits loudly (red-until-fixed, no skip for app/backend-level
+blockers).
+
+**Isolation:** the whole FILE runs in `default` mode (declaration order, no
+skip-on-failure cascade) and every test is self-contained with its own
+freshly-created mentor (`MentorTracker`, deleted in `afterAll`) — no test
+depends on another's mutation. The workspace Spend Limits cap is
+TENANT-WIDE — `twl-02` ALWAYS saves with `enforcement: 'alert_only'` (never
+`'block'`) and removes it in a `finally` block unconditionally, so a
+leftover cap can only ever surface a near-limit notification, never block a
+chat request for another journey sharing this tenant. `tal-01` — the sole
+filter-dependent checkpoint — is declared LAST in the block so every other
+test's runtime gives the search index maximum time to catch up, though it no
+longer relies on that timing: it searches broadly and samples up to 5
+already-indexed candidates rather than waiting on its own freshly-created
+mentor (see the checkpoint description below for why).
+
+- [x] twl-01: The tenant settings Billing tab exposes a "Billing sections" tablist with Plan & Credits (default), Spend Limits, and Agent Limits, and each tab switches to its section
+- [x] twl-02: Admin configures the workspace-wide (tenant) spend limit with alert-only enforcement via `setWorkspaceSpendLimit`, the presence-level usage stats render, the values persist after reopening the tab, and the limit is removed again in the test's own `finally`-block cleanup so no other journey sharing this tenant inherits it
+- [x] tal-02: Admin edits the agent spend limit — created via the Edit Agent dialog's Billing tab (no search-index dependency) — through the Agent Limits row's manage popup stacked on the tenant settings dialog (`setAgentSpendLimitFromTenantBilling`), and the row reflects the updated limit
+- [x] tal-03: Admin flips the agent's Status toggle directly in the Agent Limits table row (saves immediately) off and back on
+- [x] tal-04: Admin adds a per-user spend limit through the Agent Limits manage popup's nested "Per User" sub-tab / user-cap modal (`addUserSpendLimitFromTenantBilling`); reopening the popup confirms the user's row persisted server-side
+- [x] tal-05: Admin deletes the agent spend limit through the manage popup's confirm dialog (local `deleteAgentCapAndAwaitResponse` helper, network-response-gated — see the isolation note above); the tenant-wide unfiltered list only holds configured caps, so the row disappears entirely
+- [x] tal-01: Admin filters Agent Limits to an ALREADY-INDEXED mentor (broad query "E2E Mentor" against the search-index-backed autocomplete, sampling up to 5 results for the first capless one) — the ONE checkpoint that depends on that index, which lags mentor creation by DAYS on this backend (a known product limitation, not a test bug, reported upstream separately — a freshly-created mentor is never searchable in time, so this borrows a mentor from a past run instead of retrying its own) — sees the "Set Spend Limit" empty state, creates that mentor's spend limit (alert-only) from the popup, the row lists it, and the cap is removed again in an unconditional `finally` block so the borrowed (shared-tenant) mentor is left exactly as found; if every sampled candidate already has a cap, verifies the filter → row-visible path on the first one instead (annotated, never a failure)
+
+---
+
+## Journey 70: Embed Tab Preview Must Not Leak Embed Mode Into The App (4 checkpoints) — `journeys/70-embed-preview-must-not-leak-embed-mode.spec.ts`
+
+**Source files:** `lib/embed-context.ts`, `hooks/use-embed-mode.ts`, `providers/index.tsx`, `components/modals/edit-mentor-modal/tabs/embed-tab.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `lib/constants.ts`
+
+The inverse of journey 58. Journey 58 guards that the FULL sidebar never leaks
+into a genuine embed; this one guards that the EMBED shell never leaks into the
+full app. A fix that over-corrects either way breaks the other, so both assert
+through the same `SidebarPage` helpers.
+
+The bug: `sessionStorage` is scoped to the tab, not the browsing context, so
+the Embed tab's same-origin `?embed=true&internalPreview=true` preview iframe
+mirrored `ibl:embed-context` into the HOST tab's store. `useEmbedMode` falls
+back to that stored copy when the URL has no embed param, so after visiting the
+Embed tab the next re-render — clicking "New Chat" — collapsed the whole admin
+app into the 3-icon embed rail on a query-less URL, and stayed that way for the
+lifetime of the tab. Real customer embeds are cross-origin and were never
+affected; only the internal preview could reach our storage.
+
+- [x] epl-01: Opening Edit Agent → Embed mounts the same-origin `?embed=true&internalPreview=true` preview iframe WITHOUT writing `ibl:embed-context` into the host tab's sessionStorage (guard 1: `persistEmbedContextFromUrl` no-ops for the internal preview) — polled, not read once, since the old write happened in an effect several seconds after the tab rendered
+- [x] epl-02: After visiting the Embed tab and closing the dialog, clicking "New Chat" keeps the FULL admin sidebar (Agents, Workflows, Projects, Analytics, and Support at whichever visibility the tenant's own `show_help` metadata dictates, observed live and NOT hardcoded — #uat-9) instead of collapsing to the embed rail, and does not append `embed=true` to the app URL (a poisoned tab also fed `embedContextQuery()`, writing the corruption into its own navigations)
+- [x] epl-03: The full app survives a reload after the Embed tab was visited — the old bug was sticky for the lifetime of the tab because sessionStorage outlived the navigation
+- [x] epl-04: A top-level (non-iframed) tab ignores an `ibl:embed-context` entry it did not get from its own URL, across both a re-render (New Chat) and a reload (guard 2: `readStoredEmbedContext` requires `isInIframe`) — planted directly, so the read-side guard is covered even if some future same-origin iframe starts writing the key again
+
+---
+
+## Journey 71: VM Sandbox File Artifact — Canvas Preview (2 checkpoints) — `journeys/71-vm-sandbox-txt-file-canvas.spec.ts`
+
+**Source files:** `components/canvas/binary-canvas-component.tsx`, `components/canvas/binary-artifact-utils.ts`, `components/canvas/canvas-view.tsx`, `components/chat/chat-messages/canvas-message-preview.tsx`, `components/chat/chat-messages/message-preview.tsx`, `components/chat/index.tsx`, `components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx`
+
+LIVE-LLM coverage of the VM-sandbox file-sharing pipeline that Journey 10 (Canvas) and Journey 44 (CLAW Advanced Sandbox) can only reach at the unit-test / settings-toggle level. On a dedicated per-test mentor (selecting a sandbox kind is a destructive settings mutation — never run against the shared admin mentor, per the project's shared-mentor-isolation convention), this journey selects the "Virtual Machine Shell" sandbox kind via `SandboxTab.selectKind('virtual-machine')` (mutually exclusive with the other two kinds, and at least one kind is always active — see Journey 44), asks the agent over a real chat turn to create and share **hello.txt** with a known marker line, and verifies the agent replies with the file: the chat chip appears and the canvas shows the file's content. A .txt file was chosen deliberately over a binary format (pdf/xlsx) — the VM produces it reliably with plain shell tooling, so the journey verifies the sandbox→share_files→artifact pipeline without gambling on the LLM assembling valid binary bytes; since .txt is a TEXT artifact, the expected surface is the text canvas and the binary canvas is asserted absent (text/binary routing). The whole file runs in `test.describe.configure({ mode: 'serial' })` and uses `MentorTracker` + `afterAll` to delete its mentor, mirroring Journey 44's pattern. `test.slow()` accounts for VM boot + real generation time; the chip wait carries a multi-minute budget while unrelated assertions keep normal timeouts.
+
+The binary-artifact surfaces themselves (binary chip gating, pdf/image preview, fallback and preview-error panels, binary stream orchestration) remain unit-covered only — see Journey 10's `cvs-12`/`cvs-13`/`cvs-14`/`cvs-15` for the exact gap wording.
+
+- [x] vmc-01: Admin selects the Virtual Machine Shell sandbox kind on a dedicated mentor, enables the composer's Canvas tool (the artifact pipeline is inert without it), and asks the agent (live LLM) to create and share hello.txt with a known marker line (.txt chosen over pdf/xlsx so the VM produces it reliably with shell tooling); the agent replies with the file as an artifact and the chat chip (`canvas-message-preview`) appears with Open Canvas
+- [x] vmc-02: The canvas shows the shared file's content — the .txt artifact takes the TEXT canvas path (tolerant of auto-open at stream start vs. clicking `canvas-open-button`): the editable editor renders containing the marker line, and the binary canvas (`binary-canvas`) is asserted absent (text/binary routing picks the text path for text files)
+
+## Journey 72: Sidebar Support Link & Help Center Resolution (#uat-9) (7 checkpoints; 4 deprecated) — `journeys/72-sidebar-support-link-and-help-center.spec.ts`
+
+**Source files:** `hooks/use-help-center.ts`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`, `lib/config.ts`
+
+UAT bug: the sidebar footer's "Support" link and the nav-bar "More options →
+Help" menu item were hardcoded to `https://ibl.ai/docs` regardless of tenant
+configuration. `hooks/use-help-center.ts` now resolves both destinations from
+tenant metadata (`documentation_url`, `support_url`, `help_center_url`,
+`show_help`), each passed through `addProtocolToUrl` so a scheme-less tenant
+value is prefixed with `https://`. The label stayed "Support" — only the
+href and show/hide behavior changed.
+
+Root cause of the original bug: the e2e helper guarding this surface
+(`SidebarPage.isSupportLinkVisible`) only ever asserted VISIBILITY, never the
+link's DESTINATION, so a hardcoded wrong-domain href passed CI unnoticed for
+months. `SidebarPage.getSupportLinkHref()` (added alongside this journey)
+closes that gap.
+
+**READ-ONLY by design (redesigned in #uat-9):** this journey used to mutate
+the SAME org-scoped tenant metadata on the shared live `conradtesttenant`
+backend, guarded by `describe.serial` + a captured "original" snapshot
+restored in `afterAll`. That was not actually safe: `describe.serial` only
+serialises tests inside this one file (other journeys in other parallel
+workers, and other PRs' CI jobs, hit the same live tenant concurrently), and
+`afterAll` never runs on a killed process. A crashed run left
+`show_help: false` PERMANENTLY on the live tenant, and the next run's
+`beforeAll` captured that `false` as "original" and restored it forever —
+silently breaking an unrelated team's PR (os-222). No in-suite cleanup can
+fix a cross-job race; only not writing does. Every checkpoint now OBSERVES
+the org-metadata GET the app itself already fires on every authenticated
+load (`providers/index.tsx`'s `Providers` calls the SDK's
+`useTenantMetadata({ org: tenantKeyParams })`, which resolves to `GET
+/api/core/orgs/<org>/metadata/`) via
+`navigateAndObserveTenantMetadata` (`e2e/utils/tenant-metadata-observed.ts`),
+computes the SAME expected value the app/SDK would compute from that exact
+reading, and asserts the live UI matches it — there is no shared mutable
+state left to race, and no DM API call of the journey's own. The
+tenant-override PRECEDENCE logic previously proven by mutating the live
+tenant (`documentation_url` with/without a scheme, `show_help` gating in
+both layouts, `help_center_url` fallback) needed no live tenant at all — it
+is pure prop-in/render-out logic already covered with zero gap by
+`hooks/__tests__/use-help-center.test.ts` and
+`app-sidebar/__tests__/index.test.tsx` (the "AppSidebar — Support footer
+link" describe block and its rail-mode counterpart); those four checkpoints
+are marked `deprecated` below (checkpoint count preserved, not deleted —
+same pattern as journeys 15/16).
+
+**Zero-configuration (fixed in #uat-9):** this journey used to call the DM
+API directly (`getTenantMetadata`, `e2e/utils/tenant-metadata.ts`) gated on
+the `DM_URL` env var, which is exported only in CI and never in
+`e2e/.env.local` — so every checkpoint silently SKIPPED on any local or
+non-CI environment, a green run that tested nothing. It now observes traffic
+the app makes unconditionally on any environment, so it needs no `DM_URL`,
+no DM API credentials, and no per-environment setup — and it never skips: if
+the org-metadata response cannot be observed, the checkpoint FAILS loudly
+instead.
+
+- [x] shc-01: READ-ONLY — sidebar footer Support link's href in the EXPANDED layout matches `documentation_url || default` computed from a live GET of tenant metadata, or the link is absent when `show_help` is false
+- [x] shc-02: Same live-resolution check for the RAIL-COLLAPSED sidebar layout (`SidebarCollapsedLabelFlyout`, `aria-label="Support"`)
+- [x] ~~shc-03: A tenant `documentation_url` override WITH a scheme is used verbatim as the sidebar Support link's href~~ _(deprecated in #uat-9 — covered by hooks/**tests**/use-help-center.test.ts + app-sidebar/**tests**/index.test.tsx)_
+- [x] ~~shc-04: A tenant `documentation_url` override WITHOUT a scheme is prefixed with `https://` by `addProtocolToUrl`~~ _(deprecated in #uat-9 — same unit coverage as shc-03)_
+- [x] ~~shc-05: Tenant `show_help: false` hides the sidebar Support link in BOTH expanded and rail-collapsed layouts; removing the override brings it back~~ _(deprecated in #uat-9 — covered by app-sidebar/**tests**/index.test.tsx in both layouts)_
+- [x] shc-06: READ-ONLY — the nav-bar "More options → Help" dropdown item resolves `support_url || help_center_url || default` computed from a live GET of tenant metadata, or is absent when `show_help` is false
+- [x] ~~shc-07: The nav-bar "More options → Help" dropdown item falls back to tenant `help_center_url` when `support_url` is absent~~ _(deprecated in #uat-9 — same precedence chain proven by hooks/**tests**/use-help-center.test.ts; shc-06 still verifies the support_url-present path live)_

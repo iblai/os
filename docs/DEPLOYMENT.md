@@ -1,4 +1,4 @@
-# Immutable, deployment-ID static hosting
+# Immutable, Deployment-ID Static Hosting
 
 Eliminates the version-skew problem (a browser on build A fetching a chunk from
 a node on build B → `ChunkLoadError`) that today forces us to drain LB backend
@@ -62,6 +62,7 @@ its own static exactly as before — nothing breaks on merge.
    rewrite) so `assets.ibl.ai/apps/os/<v>/…` maps to bucket key `apps/os/<v>/…`.
 3. **CI secrets/vars** (set on the build repo, `iblai/os` → Settings → Secrets
    and variables → Actions):
+
    - **Variables**: `NEXTJS_PUBLIC_ASSET_CDN=https://assets.ibl.ai`,
      `NEXTJS_S3_BUCKET=<your bucket>`.
    - **Secrets**: `NEXTJS_S3_ACCESS_KEY`, `NEXTJS_S3_ACCESS_SECRET`,
@@ -69,6 +70,7 @@ its own static exactly as before — nothing breaks on merge.
 
    (`NEXT_PUBLIC_APP_NAME` is taken from the workflow's `app_name` — `os`.
    `S3_ENDPOINT` is only for a non-AWS S3-compatible store; leave it unset.)
+
 4. **Build + publish wiring — DONE** in `reusable-spa-docker-build.yml`: when
    `NEXTJS_PUBLIC_ASSET_CDN` is set it passes the `NEXT_PUBLIC_ASSET_CDN` /
    `NEXT_PUBLIC_APP_NAME` / `APP_VERSION` build-args, then a **Publish static

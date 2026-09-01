@@ -17,7 +17,12 @@ use crate::opencode_acp::{iblai_data_dir, opencode_bin, opencode_program};
 
 /// Pinned opencode version → GitHub release tag `v<VERSION>`. Bump ONLY after
 /// testing ACP + config against it. Override at runtime with `IBL_OPENCODE_VERSION`.
-const OPENCODE_VERSION: &str = "1.18.4";
+const OPENCODE_VERSION: &str = "1.18.13";
+
+/// The opencode version this run wants: the runtime override, or the pin.
+fn pinned_version() -> String {
+    std::env::var("IBL_OPENCODE_VERSION").unwrap_or_else(|_| OPENCODE_VERSION.to_string())
+}
 
 /// The ibl.ai opencode config, installed at
 /// `~/.config/iblai/agents/opencode/opencode.json`. baseURL + auth are injected as
@@ -45,6 +50,24 @@ const CONFIG_TEMPLATE: &str = r#"{
   }
 }
 "#;
+
+/// iblai/vibe — the public dev-toolkit skills repo, synced for Coding Mode.
+/// Every look resolves the LATEST GitHub Release and syncs to it — releases
+/// are what ship (the repo's release workflow cuts one on every landing),
+/// never the moving branch head, and no version is ever pinned here. There is
+/// deliberately NO freshness window: the app resolves latest at every launch
+/// (and on Code enable) and downloads only when the tag moved.
+///
+/// github.com, not api.github.com: this URL's redirect names the tag, the
+/// probe shares the tarball's host (one reachability question), and the
+/// unauthenticated API rate limit never applies.
+const VIBE_LATEST_RELEASE_URL: &str = "https://github.com/iblai/vibe/releases/latest";
+
+/// Source tarball for a release tag — github.com (not the API host), so no
+/// User-Agent requirement, same shape the branch download always had.
+fn vibe_tag_tarball_url(tag: &str) -> String {
+    format!("https://github.com/iblai/vibe/archive/refs/tags/{tag}.tar.gz")
+}
 
 fn create_command(program: &str) -> Command {
     let cmd = Command::new(program);
@@ -192,8 +215,7 @@ fn hoist_binary(bin_dir: &Path, target: &Path) -> Result<(), String> {
 
 /// Download + install the pinned opencode binary into `~/.local/share/iblai/bin`.
 async fn download_and_install(app: &AppHandle) -> Result<(), String> {
-    let version =
-        std::env::var("IBL_OPENCODE_VERSION").unwrap_or_else(|_| OPENCODE_VERSION.to_string());
+    let version = pinned_version();
     let (os, arch, ext) = target_asset()?;
     let asset = format!("opencode-{os}-{arch}.{ext}");
     let url = format!("https://github.com/sst/opencode/releases/download/v{version}/{asset}");
@@ -257,6 +279,203 @@ async fn download_and_install(app: &AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+/// `<data>/skills/vibe.sha` — release tag of the current vibe copy: a change
+/// detector, never a pin ("did latest move since the last sync?"). Pre-release
+/// copies stored a commit sha here — it matches no tag, so they self-heal with
+/// one re-download.
+fn vibe_sha_marker() -> PathBuf {
+    crate::opencode_acp::vibe_skills_dir().with_extension("sha")
+}
+
+/// "Installed" means a populated dir: an empty `skills/vibe/` (interrupted
+/// swap, manual poking) must read as absent so the next look re-installs.
+fn dir_is_populated(dir: &Path) -> bool {
+    std::fs::read_dir(dir)
+        .map(|mut d| d.next().is_some())
+        .unwrap_or(false)
+}
+
+/// The `<root>/skills` dir inside an extracted vibe tarball — the tarball root is
+/// `vibe-<branch>/`, so it's located, not assumed.
+fn find_extracted_skills(tmp: &Path) -> Option<PathBuf> {
+    for entry in std::fs::read_dir(tmp).ok()?.flatten() {
+        let cand = entry.path().join("skills");
+        if cand.is_dir() {
+            return Some(cand);
+        }
+    }
+    None
+}
+
+/// The tag a `releases/latest` redirect points at (`…/releases/tag/<tag>`).
+/// A redirect anywhere else — notably plain `/releases` when no release has
+/// ever been published — is `None`: never guess a version.
+fn tag_from_location(location: &str) -> Option<String> {
+    let (_, tag) = location.split_once("/releases/tag/")?;
+    let tag = tag.trim_end_matches('/');
+    (!tag.is_empty() && !tag.contains('/')).then(|| tag.to_string())
+}
+
+/// Resolve the latest release tag from `probe_url` WITHOUT following the
+/// redirect — the `Location` header names the tag.
+async fn resolve_latest_tag(probe_url: &str) -> Option<String> {
+    let resp = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .build()
+        .ok()?
+        .get(probe_url)
+        .header("User-Agent", "iblai-desktop")
+        .timeout(std::time::Duration::from_secs(10))
+        .send()
+        .await
+        .ok()?;
+    if !resp.status().is_redirection() {
+        return None;
+    }
+    tag_from_location(
+        resp.headers()
+            .get(reqwest::header::LOCATION)?
+            .to_str()
+            .ok()?,
+    )
+}
+
+/// Whatever the latest published release is right now — resolved fresh on
+/// every look, never cached beyond the marker's change detection.
+async fn fetch_latest_vibe_tag() -> Option<String> {
+    resolve_latest_tag(VIBE_LATEST_RELEASE_URL).await
+}
+
+/// Download the vibe tarball at `url` and swap its `skills/` over `dest`. The
+/// old copy survives any failure (extract to temp, rename with a backup).
+async fn download_vibe_skills(app: &AppHandle, dest: &Path, url: &str) -> Result<(), String> {
+    log(app, "downloading iblai/vibe skills");
+    let bytes = reqwest::Client::new()
+        .get(url)
+        // Bounded so a stalled download can't pin the sync lock (and the Code
+        // pill spinner) forever; the archive is a few MB.
+        .timeout(std::time::Duration::from_secs(120))
+        .send()
+        .await
+        .map_err(|e| format!("vibe download failed: {e}"))?
+        .error_for_status()
+        .map_err(|e| format!("vibe download failed (bad status): {e}"))?
+        .bytes()
+        .await
+        .map_err(|e| format!("vibe download read failed: {e}"))?;
+
+    let root = dest.parent().ok_or("vibe dir has no parent")?.to_path_buf();
+    std::fs::create_dir_all(&root).map_err(|e| format!("skills dir failed: {e}"))?;
+    let archive = root.join("vibe-dl.tar.gz");
+    std::fs::write(&archive, &bytes).map_err(|e| format!("vibe archive write failed: {e}"))?;
+
+    let tmp = root.join("vibe.extract-tmp");
+    let _ = std::fs::remove_dir_all(&tmp);
+    std::fs::create_dir_all(&tmp).map_err(|e| e.to_string())?;
+    // Blocking extraction off the async runtime — same reasoning as the opencode
+    // binary install above.
+    {
+        let (a, d) = (archive.clone(), tmp.clone());
+        tokio::task::spawn_blocking(move || extract(&a, &d))
+            .await
+            .map_err(|e| format!("extract task failed: {e}"))??;
+    }
+    let _ = std::fs::remove_file(&archive);
+
+    let skills_src = find_extracted_skills(&tmp).ok_or("no skills/ dir in vibe tarball")?;
+    let backup = root.join("vibe.old");
+    let _ = std::fs::remove_dir_all(&backup);
+    let had_old = dest.exists();
+    if had_old {
+        std::fs::rename(dest, &backup).map_err(|e| format!("vibe backup failed: {e}"))?;
+    }
+    let result = match std::fs::rename(&skills_src, dest) {
+        Ok(()) => {
+            let _ = std::fs::remove_dir_all(&backup);
+            Ok(())
+        }
+        Err(e) => {
+            if had_old {
+                let _ = std::fs::rename(&backup, dest);
+            }
+            Err(format!("vibe swap failed: {e}"))
+        }
+    };
+    let _ = std::fs::remove_dir_all(&tmp);
+    result
+}
+
+/// Sync the iblai/vibe skills for Coding Mode (shared across mentors and sessions).
+///
+/// Standalone from `install_opencode` on purpose: the Code pill's spinner covers
+/// skills, never the binary install. NO freshness window: every call (app
+/// startup spawns one, and each Code enable re-invokes) resolves the latest
+/// release and downloads only when the tag moved — always latest, never
+/// pinned. An actual download registers an in-flight entry so the spawn path
+/// holds instead of snapshotting a half-written dir. Failures keep the cached
+/// copy and never error the command — the caller reads `present`.
+#[command]
+pub async fn ensure_vibe_skills(app: AppHandle) -> Result<serde_json::Value, String> {
+    // One flight at a time: startup plus several composers can all invoke.
+    static LOCK: std::sync::OnceLock<tokio::sync::Mutex<()>> = std::sync::OnceLock::new();
+    let _guard = LOCK
+        .get_or_init(|| tokio::sync::Mutex::new(()))
+        .lock()
+        .await;
+
+    let dir = crate::opencode_acp::vibe_skills_dir();
+    let marker = vibe_sha_marker();
+    let cached = dir_is_populated(&dir);
+
+    let latest = fetch_latest_vibe_tag().await;
+    if cached {
+        match &latest {
+            Some(latest_tag) => {
+                let stored = std::fs::read_to_string(&marker).unwrap_or_default();
+                if stored.trim() == latest_tag.trim() {
+                    // Already on the latest release.
+                    return Ok(json!({ "present": true, "refreshed": false }));
+                }
+            }
+            None => {
+                // Offline/unreachable with a cache: keep it quietly; the next
+                // look (startup or Code enable) tries again.
+                log(&app, "vibe skills check unreachable — keeping cached copy");
+                return Ok(json!({ "present": true, "refreshed": false }));
+            }
+        }
+    }
+
+    // Something to fetch: first install, or upstream cut a new release.
+    let Some(tag) = latest else {
+        // No release info and no cache (the cached case returned above). A
+        // fallback to branch head would silently ship unreleased skills —
+        // don't; the sync hook retries with backoff, and the next launch
+        // tries again at startup.
+        log(
+            &app,
+            "vibe release lookup unreachable — skills not installed yet",
+        );
+        return Ok(json!({ "present": dir_is_populated(&dir), "refreshed": false }));
+    };
+    crate::opencode_acp::begin_skills_sync_entry(crate::opencode_acp::VIBE_SYNC_KEY.to_string())
+        .await;
+    let downloaded = download_vibe_skills(&app, &dir, &vibe_tag_tarball_url(&tag)).await;
+    crate::opencode_acp::end_skills_sync_entry(crate::opencode_acp::VIBE_SYNC_KEY).await;
+
+    match downloaded {
+        Ok(()) => {
+            let _ = std::fs::write(&marker, &tag);
+            log(&app, &format!("vibe skills installed ({tag})"));
+            Ok(json!({ "present": true, "refreshed": true }))
+        }
+        Err(e) => {
+            log(&app, &format!("vibe skills fetch failed: {e}"));
+            Ok(json!({ "present": dir.is_dir(), "refreshed": false }))
+        }
+    }
+}
+
 /// Write the ibl.ai opencode config into `config_home` if missing. Public so the ACP
 /// spawn path can materialise a session's own copy — the config ships embedded in the app
 /// (CONFIG_TEMPLATE), not as a loose file on the user's disk.
@@ -300,6 +519,9 @@ fn ensure_config(app: &AppHandle) -> Result<(), String> {
 /// Install opencode (if needed), write the config, and prepare the workspace.
 #[command]
 pub async fn install_opencode(app: AppHandle) -> Result<String, String> {
+    if cfg!(target_os = "windows") {
+        return Err("Code isn't available on Windows.".to_string());
+    }
     if !opencode_installed() {
         log(&app, "opencode not found — downloading");
         download_and_install(&app).await?;
@@ -315,6 +537,60 @@ pub async fn install_opencode(app: AppHandle) -> Result<String, String> {
     Ok(opencode_version().unwrap_or_else(|| "installed".to_string()))
 }
 
+/// `--version` of the MANAGED copy specifically. `opencode_version()` reports
+/// whichever copy PATH resolution wins — usually the user's own — so it can't
+/// tell us whether OUR download is stale.
+fn managed_opencode_version() -> Option<String> {
+    let bin = opencode_bin();
+    if !bin.exists() {
+        return None;
+    }
+    let out = create_command(&bin.to_string_lossy())
+        .arg("--version")
+        .output()
+        .ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    Some(String::from_utf8_lossy(&out.stdout).trim().to_string())
+}
+
+/// Whether the managed copy needs re-downloading: it exists (`Some`) and reports
+/// a version other than the pin (`opencode --version` prints the bare version).
+/// `None` — no managed copy, because the user runs their own from PATH or Code
+/// was never installed — is never an upgrade: this path must not conjure a
+/// download nobody asked for.
+fn needs_managed_upgrade(managed_version: Option<&str>, pin: &str) -> bool {
+    managed_version.is_some_and(|v| v.trim() != pin)
+}
+
+/// Boot-time upgrade of the managed opencode copy to the current pin — a bumped
+/// [`OPENCODE_VERSION`] would otherwise never reach a machine that already has a
+/// runnable copy (`install_opencode` downloads only when one is missing, and the
+/// frontend only calls it on first enable). No download race with
+/// `install_opencode`: that acts only when opencode is NOT runnable, this only
+/// when the managed copy IS present — disjoint conditions.
+pub async fn ensure_opencode_current(app: AppHandle) {
+    let pin = pinned_version();
+    let managed = managed_opencode_version();
+    if !needs_managed_upgrade(managed.as_deref(), &pin) {
+        return;
+    }
+    log(
+        &app,
+        &format!(
+            "managed opencode {} → v{pin}",
+            managed.as_deref().unwrap_or("?")
+        ),
+    );
+    if let Err(e) = download_and_install(&app).await {
+        log(
+            &app,
+            &format!("opencode upgrade failed (keeping the current copy): {e}"),
+        );
+    }
+}
+
 /// macOS App Sandbox detection — the sandbox exports `APP_SANDBOX_CONTAINER_ID`.
 /// Under the sandbox Code can't spawn the opencode binary (or freely touch the
 /// filesystem), so the UI hides Code and the spawn path refuses when this is true.
@@ -322,14 +598,82 @@ pub fn is_sandboxed() -> bool {
     cfg!(target_os = "macos") && std::env::var_os("APP_SANDBOX_CONTAINER_ID").is_some()
 }
 
+/// First `Name=` entry of a `.desktop` file — the app's display name.
+fn parse_desktop_name(text: &str) -> Option<String> {
+    text.lines()
+        .map(str::trim)
+        .find_map(|l| l.strip_prefix("Name="))
+        .map(|v| v.trim().to_string())
+        .filter(|v| !v.is_empty())
+}
+
+/// "org.kde.dolphin.desktop" → "Dolphin": last dot-segment of the id, first
+/// letter upper-cased. The not-found fallback, never the primary source.
+fn prettify_desktop_id(id: &str) -> Option<String> {
+    let stem = id.trim().trim_end_matches(".desktop");
+    let last = stem.rsplit('.').next()?.trim();
+    let mut chars = last.chars();
+    let first = chars.next()?;
+    Some(first.to_uppercase().collect::<String>() + chars.as_str())
+}
+
+/// Display name of whatever `xdg-open` (and thus the opener plugin's
+/// `open_path`) will launch for a folder: the `inode/directory` default.
+/// Honest over pretty — on a box where an editor claimed the mime type, the
+/// button names the editor, because that IS what opens. No default → `None`
+/// (the UI falls back to its generic label).
+#[cfg(target_os = "linux")]
+fn linux_file_manager() -> Option<String> {
+    let out = create_command("xdg-mime")
+        .args(["query", "default", "inode/directory"])
+        .output()
+        .ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    let id = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    if id.is_empty() {
+        return None;
+    }
+    // XDG data dirs, user first — flatpak exports ride XDG_DATA_DIRS.
+    let mut dirs: Vec<PathBuf> = Vec::new();
+    match std::env::var("XDG_DATA_HOME") {
+        Ok(h) if !h.is_empty() => dirs.push(PathBuf::from(h)),
+        _ => {
+            if let Some(home) = home_dir() {
+                dirs.push(home.join(".local/share"));
+            }
+        }
+    }
+    let sys = std::env::var("XDG_DATA_DIRS")
+        .unwrap_or_else(|_| "/usr/local/share:/usr/share".to_string());
+    dirs.extend(sys.split(':').filter(|s| !s.is_empty()).map(PathBuf::from));
+    dirs.iter()
+        .map(|d| d.join("applications").join(&id))
+        .find_map(|p| parse_desktop_name(&std::fs::read_to_string(p).ok()?))
+        .or_else(|| prettify_desktop_id(&id))
+}
+
 /// Report opencode readiness for the UI.
 #[command]
 pub async fn check_opencode_status() -> serde_json::Value {
+    // Linux only: mac/windows have fixed, hand-translated open-button labels.
+    #[cfg(target_os = "linux")]
+    let file_manager = linux_file_manager();
+    #[cfg(not(target_os = "linux"))]
+    let file_manager: Option<String> = None;
     json!({
         "installed": opencode_installed(),
         "version": opencode_version(),
         "config_ready": config_file().exists(),
         "sandboxed": is_sandboxed(),
+        // Platform gates: `supported` hides Code entirely (Windows);
+        // `sandbox_ready` disables it with a hint while Linux lacks bubblewrap.
+        "supported": cfg!(not(target_os = "windows")),
+        "sandbox_ready": crate::opencode_acp::sandbox_ready(),
+        // Names the "Open in <app>" button after the folder handler that will
+        // actually launch; null → the UI's generic "Open Folder".
+        "file_manager": file_manager,
     })
 }
 
@@ -403,5 +747,138 @@ mod tests {
         assert!(err.contains("extract failed"), "{err}");
         let lower = err.to_lowercase();
         assert!(lower.contains("tar") || lower.contains("gzip"), "{err}");
+    }
+
+    /// The open-button label names whatever will actually open: the `Name=` of
+    /// the default handler's .desktop entry, or a prettified id when the file
+    /// can't be located. Localized `Name[xx]=` lines are never mistaken for it.
+    #[test]
+    fn the_file_manager_name_comes_from_the_desktop_entry() {
+        let dolphin =
+            "[Desktop Entry]\nType=Application\nName[fr]=Dauphin\nName=Dolphin\nExec=dolphin %u\n";
+        assert_eq!(parse_desktop_name(dolphin).as_deref(), Some("Dolphin"));
+        assert_eq!(parse_desktop_name("[Desktop Entry]\nExec=foo\n"), None);
+        assert_eq!(parse_desktop_name("Name=\n"), None, "empty name is no name");
+
+        assert_eq!(
+            prettify_desktop_id("org.kde.dolphin.desktop").as_deref(),
+            Some("Dolphin")
+        );
+        assert_eq!(
+            prettify_desktop_id("codium-wayland.desktop").as_deref(),
+            Some("Codium-wayland")
+        );
+        assert_eq!(prettify_desktop_id(""), None);
+    }
+
+    /// The upgrade decision: only a PRESENT managed copy on the wrong version
+    /// re-downloads. No managed copy — PATH-only users, or Code never installed —
+    /// must never trigger a download.
+    #[test]
+    fn only_a_present_and_outdated_managed_copy_wants_an_upgrade() {
+        assert!(!needs_managed_upgrade(None, "1.18.13"));
+        assert!(!needs_managed_upgrade(Some("1.18.13"), "1.18.13"));
+        assert!(
+            !needs_managed_upgrade(Some(" 1.18.13\n"), "1.18.13"),
+            "--version output is compared trimmed"
+        );
+        assert!(needs_managed_upgrade(Some("1.18.4"), "1.18.13"));
+        assert!(
+            needs_managed_upgrade(Some("1.19.0"), "1.18.13"),
+            "the managed copy tracks the pin exactly — even a 'newer' stray converges"
+        );
+    }
+
+    /// The vibe tarball's root dir is branch-named (`vibe-main/`), so the skills
+    /// dir inside must be found, never assumed.
+    #[test]
+    fn the_extracted_skills_dir_is_located_not_assumed() {
+        let s = Scratch::new("vibe-locate");
+        assert!(find_extracted_skills(s.path()).is_none());
+        // A release-tag archive root (`vibe-<tag>`), not the old `vibe-main`:
+        // the locator must not care what the tag is.
+        let root = s.path().join("vibe-1.18.0");
+        std::fs::create_dir_all(root.join("skills").join("iblai-vibe-auth")).unwrap();
+        assert_eq!(find_extracted_skills(s.path()), Some(root.join("skills")));
+    }
+
+    /// "Installed" is a populated dir: missing and empty both mean absent, so
+    /// an interrupted swap can't masquerade as a working skill set.
+    #[test]
+    fn an_empty_or_missing_skills_dir_reads_as_not_installed() {
+        let s = Scratch::new("vibe-populated");
+        let dir = s.path().join("vibe");
+        assert!(!dir_is_populated(&dir), "missing");
+        std::fs::create_dir_all(&dir).unwrap();
+        assert!(!dir_is_populated(&dir), "empty");
+        std::fs::create_dir_all(dir.join("iblai-vibe-auth")).unwrap();
+        assert!(dir_is_populated(&dir), "populated");
+    }
+
+    /// Skills track whatever release is latest — the tag is read out of the
+    /// `releases/latest` redirect every time, never configured.
+    #[test]
+    fn the_release_tag_is_read_from_the_redirect_never_configured() {
+        assert_eq!(
+            tag_from_location("https://github.com/iblai/vibe/releases/tag/v9.9.9").as_deref(),
+            Some("v9.9.9")
+        );
+        assert_eq!(
+            tag_from_location("https://github.com/iblai/vibe/releases/tag/v9.9.9/").as_deref(),
+            Some("v9.9.9"),
+            "a trailing slash is tolerated"
+        );
+        assert_eq!(
+            tag_from_location("https://github.com/iblai/vibe/releases"),
+            None,
+            "no release published → no tag, never a guess"
+        );
+        assert_eq!(tag_from_location("https://github.com/"), None);
+        assert_eq!(
+            tag_from_location("https://x/releases/tag/a/b"),
+            None,
+            "a path after the tag is not a tag"
+        );
+    }
+
+    /// End to end against a canned redirect: the latest tag comes from the
+    /// `Location` header on github.com — no API host, no rate limit. A
+    /// non-redirect answer yields None instead of a guessed version.
+    #[tokio::test]
+    async fn the_latest_tag_comes_from_the_releases_redirect() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move {
+            // First connect: the redirect. Second: a plain 200 (no release).
+            for response in [
+                "HTTP/1.1 302 Found\r\nlocation: https://github.com/iblai/vibe/releases/tag/v9.9.9\r\ncontent-length: 0\r\nconnection: close\r\n\r\n",
+                "HTTP/1.1 200 OK\r\ncontent-length: 0\r\nconnection: close\r\n\r\n",
+            ] {
+                let (mut sock, _) = listener.accept().await.unwrap();
+                let mut buf = [0u8; 4096];
+                let _ = sock.read(&mut buf).await;
+                let _ = sock.write_all(response.as_bytes()).await;
+            }
+        });
+
+        let probe = format!("http://{addr}/releases/latest");
+        assert_eq!(resolve_latest_tag(&probe).await.as_deref(), Some("v9.9.9"));
+        assert_eq!(
+            resolve_latest_tag(&probe).await,
+            None,
+            "a non-redirect answer must not invent a tag"
+        );
+    }
+
+    /// The download URL is the tag's source archive on github.com — not the
+    /// API host (which would demand a User-Agent) and not any branch head.
+    #[test]
+    fn the_tarball_url_is_the_tags_source_archive() {
+        assert_eq!(
+            vibe_tag_tarball_url("v1.18.0"),
+            "https://github.com/iblai/vibe/archive/refs/tags/v1.18.0.tar.gz"
+        );
     }
 }

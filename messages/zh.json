@@ -327,6 +327,14 @@
     "renaming": "重命名中...",
     "save": "保存"
   },
+  "canvasBinaryCanvas": {
+    "untitledFile": "未命名文件",
+    "export": "导出",
+    "loadError": "无法加载此文件。",
+    "retry": "重试",
+    "previewUnavailable": "暂时无法预览此类型的文件，但文件已准备就绪——点击「导出」即可保存到你的设备。",
+    "previewFailed": "无法预览此文件——文件可能无效或已损坏。你仍然可以导出它。"
+  },
   "canvasCanvasControls": {
     "lengthLongest": "最长",
     "lengthLonger": "更长",
@@ -389,7 +397,13 @@
   },
   "chatAiMessageBubble": {
     "retryScreenReader": "重试以获取新的回复",
-    "retryTooltip": "重试"
+    "retryTooltip": "重试",
+    "agentTodoListTitle": "任务清单",
+    "agentTodoStatusCompleted": "已完成",
+    "agentTodoStatusInProgress": "进行中",
+    "agentTodoStatusPending": "待办",
+    "agentTodoProgress": "已完成 {done}/{total}",
+    "agentTodoAnnouncement": "第 {done} 步，共 {total} 步已完成"
   },
   "chatAiMessageCopy": {
     "copyToClipboard": "复制到剪贴板",
@@ -479,7 +493,8 @@
     "coworkConsentCancel": "取消",
     "coworkConsentConfirm": "继续",
     "coworkNeedsAccessibility": "Cowork 需要“辅助功能”权限才能控制您的电脑。请在“系统设置 › 隐私与安全性 › 辅助功能”中授权，然后重启应用并重新开启 Cowork。",
-    "coworkNeedsScreenRecording": "Cowork 需要“屏幕录制”权限才能读取窗口内容。请在“系统设置 › 隐私与安全性 › 屏幕录制”中授权，然后重启应用并重新开启 Cowork。"
+    "coworkNeedsScreenRecording": "Cowork 需要“屏幕录制”权限才能读取窗口内容。请在“系统设置 › 隐私与安全性 › 屏幕录制”中授权，然后重启应用并重新开启 Cowork。",
+    "skills": "技能"
   },
   "chatInputFormMemoryMenu": {
     "yourMemory": "您的记忆",
@@ -806,6 +821,7 @@
     "newChat": "新对话",
     "settings": "设置",
     "llm": "大语言模型",
+    "billing": "账单",
     "prompts": "提示词",
     "tools": "工具",
     "mcp": "MCP",
@@ -1914,12 +1930,7 @@
   },
   "tabsSandboxTab": {
     "heading": "沙盒",
-    "description": "配置沙盒连接和部署设置。",
-    "capabilityTitle": "专用沙盒",
-    "capabilityDescription": "为该智能体提供其专属的安全工作空间，使其可以代表您运行代码、工具和技能。开启后，在下方将其连接到实例，即可解锁技能和智能体提示词。",
-    "capabilityOffHint": "开启后可为该智能体提供工作空间并连接到实例。",
-    "toggleSuccess": "沙盒设置已更新",
-    "toggleError": "无法更新沙盒设置"
+    "description": "配置沙盒连接和部署设置。"
   },
   "tabsGraderTab": {
     "headerTitle": "评分器",
@@ -2128,8 +2139,8 @@
   },
   "tabsSkillsTab": {
     "heading": "技能",
-    "description": "管理您的导师的代理技能分配。",
-    "infoBox": "技能是可复用的能力，创建一次即可分配给任意智能体。创建技能后将其开启，即可赋予该智能体相应能力。"
+    "description": "此基础智能体可发现并遵循的可复用操作手册。",
+    "infoBox": "智能体技能是可附加到基础智能体的可复用操作手册——针对单一任务的书面指令（可附带参考文件），例如在网上调研主题或审查代码。智能体只在相关时才会阅读技能，因此你可以为它添加多种能力而不会让每次对话变得臃肿。在聊天中输入 / 即可查看此智能体的技能并选择一个来启动。"
   },
   "tabsToolsTab": {
     "infoBox": "为您的智能体赋予“双手”。工具让它能够超越单纯的聊天——查找信息、调用 API、触发操作——从而真正为用户完成工作。",
@@ -2343,8 +2354,26 @@
     "firstRunSlow": "首次运行时模型加载可能需要几分钟。",
     "modelUnavailable": "不可用于代码模式 — 对话会失败。请在左上角选择其他模型。",
     "workspace": "工作区",
-    "changeFolder": "更改文件夹…",
-    "chooseFolderTitle": "选择你的工作文件夹"
+    "selectWorkspace": "选择工作区",
+    "chooseFolderTitle": "选择你的工作文件夹",
+    "skillsSyncFailed": "技能同步失败——代码模式将在没有技能的情况下运行。",
+    "sandboxMissing": "代码模式需要 bubblewrap（bwrap）。请使用系统的包管理器安装后重新打开应用。",
+    "permissionModeLabel": "操作审批",
+    "permissionModeManual": "每次询问",
+    "permissionModeAuto": "自动批准",
+    "permissionModeAutoHint": "Code 将直接编辑文件并执行命令，不再询问。请仅在受信任的文件夹中使用。",
+    "newWorkspace": "新建工作区",
+    "openInFinder": "在访达中打开",
+    "openInExplorer": "在资源管理器中打开",
+    "openInApp": "在{app}中打开",
+    "openFolder": "打开文件夹",
+    "openFolderFailed": "无法打开文件夹",
+    "pickFolderFailed": "无法选择文件夹",
+    "newWorkspaceFailed": "无法创建新的工作区",
+    "permissionDialogTitle": "Code 应如何请求授权？",
+    "permissionDialogDescription": "Code 可以在你的工作区中编辑文件并执行命令。请选择它是否需要先征得你的同意；稍后可在 Code 面板中更改。",
+    "permissionDialogManualAction": "每次都询问我",
+    "permissionDialogAutoAction": "自动批准"
   },
   "chatCodePermissionCard": {
     "title": "代码模式需要你的许可",

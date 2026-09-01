@@ -41,6 +41,44 @@ describe('CSP middleware', () => {
     expect(csp).not.toContain('frame-ancestors'); // app runs embedded
   });
 
+  it('allows the asset CDN origin in style/font/connect when NEXT_PUBLIC_ASSET_CDN is set', () => {
+    // Static served cross-origin from the CDN (assets.ibl.ai). Accepts a bare
+    // host — assetCdnOrigin() normalizes it to https:// like next.config.ts.
+    vi.stubEnv('NEXT_PUBLIC_ASSET_CDN', 'assets.ibl.ai');
+    const csp = cspOf(middleware(req()))!;
+    // The gap https:/strict-dynamic don't cover: cross-origin CSS + fonts.
+    expect(csp).toMatch(/style-src [^;]*https:\/\/assets\.ibl\.ai/);
+    expect(csp).toMatch(/font-src [^;]*https:\/\/assets\.ibl\.ai/);
+    expect(csp).toMatch(/connect-src [^;]*https:\/\/assets\.ibl\.ai/);
+  });
+
+  it('accepts a full URL for NEXT_PUBLIC_ASSET_CDN, not just a bare host', () => {
+    vi.stubEnv('NEXT_PUBLIC_ASSET_CDN', 'https://cdn.example.com/base');
+    const csp = cspOf(middleware(req())) ?? '';
+    expect(csp).toMatch(/font-src [^;]*https:\/\/cdn\.example\.com/);
+  });
+
+  it('CSP_PARTNER_HOSTS REPLACES the default partner hosts', () => {
+    vi.stubEnv('CSP_PARTNER_HOSTS', 'https://lms.example.edu');
+    const csp = cspOf(middleware(req())) ?? '';
+    expect(csp).toMatch(/connect-src [^;]*https:\/\/lms\.example\.edu/);
+    // Each https:// partner also gets its wss:// twin for ASGI.
+    expect(csp).toMatch(/connect-src [^;]*wss:\/\/lms\.example\.edu/);
+    // Overriding drops the Syracuse default rather than appending to it.
+    expect(csp).not.toContain('syr.edu');
+  });
+
+  it('ignores a malformed asset CDN without throwing', () => {
+    vi.stubEnv('NEXT_PUBLIC_ASSET_CDN', 'not a cdn');
+    expect(() => middleware(req())).not.toThrow();
+    expect(cspOf(middleware(req()))).not.toContain('not a cdn');
+  });
+
+  it('omits the asset CDN origin from CSP when NEXT_PUBLIC_ASSET_CDN is unset', () => {
+    vi.stubEnv('NEXT_PUBLIC_ASSET_CDN', '');
+    expect(cspOf(middleware(req()))).not.toContain('assets.ibl.ai');
+  });
+
   it('does NOT key off NODE_ENV (a dev-built image still enforces)', () => {
     // Regression guard: Next inlines NODE_ENV into middleware at build time, so
     // an image built with NODE_ENV=development must not silently report-only.
@@ -122,6 +160,31 @@ describe('CSP middleware', () => {
     // <bucket>.s3.amazonaws.com must match the wildcard so uploads/downloads
     // to iblai-app-dm-media etc. are not blocked.
     expect(connectSrc).toContain('https://*.s3.amazonaws.com');
+  });
+
+  it('allows the GitHub REST API in connect-src (dataset branch lookup)', () => {
+    const csp = cspOf(middleware(req())) ?? '';
+    const directive = (name: string) =>
+      csp
+        .split(';')
+        .map((d) => d.trim())
+        .find((d) => d.startsWith(`${name} `));
+    // The datasets tab reads /repos/:owner/:repo/branches from the browser.
+    expect(directive('connect-src')).toContain('https://api.github.com');
+    // connect-src only — the API is never framed nor loaded as a script.
+    expect(directive('frame-src')).not.toContain('https://api.github.com');
+  });
+
+  it('allows blob: in frame-src (binary-artifact PDF preview iframe)', () => {
+    const csp = cspOf(middleware(req())) ?? '';
+    const frameSrc = csp
+      .split(';')
+      .map((d) => d.trim())
+      .find((d) => d.startsWith('frame-src '));
+    // The binary canvas renders PDFs via <iframe src="blob:...">; without
+    // blob: here the enforced CSP blocks the viewer ("This content is
+    // blocked") even though exporting the same blob works.
+    expect(frameSrc).toContain('blob:');
   });
 
   it('does not duplicate an ibl-domain API base (already wildcarded)', () => {

@@ -327,6 +327,14 @@
     "renaming": "Renombrando...",
     "save": "Guardar"
   },
+  "canvasBinaryCanvas": {
+    "untitledFile": "Archivo sin título",
+    "export": "Exportar",
+    "loadError": "No se pudo cargar este archivo.",
+    "retry": "Reintentar",
+    "previewUnavailable": "Todavía no podemos previsualizar este tipo de archivo, pero está listo. Pulsa Exportar para guardarlo en tu dispositivo.",
+    "previewFailed": "No se puede previsualizar este archivo: parece no ser válido o estar dañado. Aún puedes exportarlo."
+  },
   "canvasCanvasControls": {
     "lengthLongest": "El más largo",
     "lengthLonger": "Más largo",
@@ -389,7 +397,13 @@
   },
   "chatAiMessageBubble": {
     "retryScreenReader": "Reintentar para obtener una nueva respuesta",
-    "retryTooltip": "Reintentar"
+    "retryTooltip": "Reintentar",
+    "agentTodoListTitle": "Lista de tareas",
+    "agentTodoStatusCompleted": "Hecho",
+    "agentTodoStatusInProgress": "En curso",
+    "agentTodoStatusPending": "Pendiente",
+    "agentTodoProgress": "{done} de {total} completadas",
+    "agentTodoAnnouncement": "Paso {done} de {total} completado"
   },
   "chatAiMessageCopy": {
     "copyToClipboard": "Copiar al portapapeles",
@@ -479,7 +493,8 @@
     "coworkConsentCancel": "Cancelar",
     "coworkConsentConfirm": "Continuar",
     "coworkNeedsAccessibility": "Cowork necesita acceso de Accesibilidad para controlar tu equipo. Concédelo en Ajustes del Sistema › Privacidad y seguridad › Accesibilidad, reinicia la app y vuelve a activar Cowork.",
-    "coworkNeedsScreenRecording": "Cowork necesita acceso de Grabación de pantalla para leer tus ventanas. Concédelo en Ajustes del Sistema › Privacidad y seguridad › Grabación de pantalla, reinicia la app y vuelve a activar Cowork."
+    "coworkNeedsScreenRecording": "Cowork necesita acceso de Grabación de pantalla para leer tus ventanas. Concédelo en Ajustes del Sistema › Privacidad y seguridad › Grabación de pantalla, reinicia la app y vuelve a activar Cowork.",
+    "skills": "Habilidades"
   },
   "chatInputFormMemoryMenu": {
     "yourMemory": "Tu memoria",
@@ -806,6 +821,7 @@
     "newChat": "Nuevo chat",
     "settings": "Configuración",
     "llm": "LLM",
+    "billing": "Facturación",
     "prompts": "Indicaciones",
     "tools": "Herramientas",
     "mcp": "MCP",
@@ -1914,12 +1930,7 @@
   },
   "tabsSandboxTab": {
     "heading": "Sandbox",
-    "description": "Configure los ajustes de conexión y despliegue del sandbox.",
-    "capabilityTitle": "Sandbox dedicado",
-    "capabilityDescription": "Dé a este agente su propio espacio de trabajo seguro donde puede ejecutar código, herramientas y habilidades en su nombre. Cuando esté activado, conéctelo a una instancia a continuación para desbloquear las habilidades y las indicaciones del agente.",
-    "capabilityOffHint": "Actívelo para dar a este agente un espacio de trabajo y conectarlo a una instancia.",
-    "toggleSuccess": "Ajuste del sandbox actualizado",
-    "toggleError": "No se pudo actualizar el ajuste del sandbox"
+    "description": "Configure los ajustes de conexión y despliegue del sandbox."
   },
   "tabsGraderTab": {
     "headerTitle": "Calificador",
@@ -2128,8 +2139,8 @@
   },
   "tabsSkillsTab": {
     "heading": "Habilidades",
-    "description": "Gestiona las asignaciones de habilidades del agente para tu mentor.",
-    "infoBox": "Las habilidades son capacidades reutilizables que creas una vez y asignas a cualquier agente. Crea una habilidad y actívala para darle esa capacidad a este agente."
+    "description": "Guías reutilizables que este Agente Base puede descubrir y seguir.",
+    "infoBox": "Las Habilidades del Agente son guías reutilizables que puedes adjuntar a un Agente Base: instrucciones escritas (más archivos de referencia opcionales) para una tarea, como investigar un tema en la web o revisar código. El agente lee una habilidad solo cuando es relevante, así que puedes darle muchas capacidades sin sobrecargar cada conversación. En el chat, escribe / para ver las habilidades de este agente y elegir una para iniciarla."
   },
   "tabsToolsTab": {
     "infoBox": "Dale manos a tu agente. Las herramientas le permiten hacer cosas más allá de conversar —buscar información, llamar a una API, activar una acción— para que realmente pueda hacer el trabajo por las personas.",
@@ -2343,8 +2354,26 @@
     "firstRunSlow": "La primera ejecución puede tardar unos minutos mientras se carga el modelo.",
     "modelUnavailable": "no está disponible para Código: los turnos fallarán. Elige otro modelo arriba a la izquierda.",
     "workspace": "Espacio de trabajo",
-    "changeFolder": "Cambiar carpeta…",
-    "chooseFolderTitle": "Elige tu carpeta de trabajo"
+    "selectWorkspace": "Seleccionar espacio de trabajo",
+    "chooseFolderTitle": "Elige tu carpeta de trabajo",
+    "skillsSyncFailed": "No se pudieron sincronizar las habilidades: Código funcionará sin ellas.",
+    "sandboxMissing": "Código necesita bubblewrap (bwrap). Instálalo con tu gestor de paquetes y vuelve a abrir la aplicación.",
+    "permissionModeLabel": "Aprobaciones",
+    "permissionModeManual": "Preguntarme",
+    "permissionModeAuto": "Automático",
+    "permissionModeAutoHint": "Code edita archivos y ejecuta comandos sin preguntar. Úsalo solo en carpetas de confianza.",
+    "newWorkspace": "Nuevo espacio de trabajo",
+    "openInFinder": "Abrir en Finder",
+    "openInExplorer": "Abrir en el Explorador",
+    "openInApp": "Abrir en {app}",
+    "openFolder": "Abrir carpeta",
+    "openFolderFailed": "No se pudo abrir la carpeta",
+    "pickFolderFailed": "No se pudo elegir una carpeta",
+    "newWorkspaceFailed": "No se pudo crear un nuevo espacio de trabajo",
+    "permissionDialogTitle": "¿Cómo debe pedir permiso Code?",
+    "permissionDialogDescription": "Code puede editar archivos y ejecutar comandos en tu espacio de trabajo. Elige si debe consultarte antes; podrás cambiarlo más tarde en el panel de Code.",
+    "permissionDialogManualAction": "Preguntarme cada vez",
+    "permissionDialogAutoAction": "Aprobar automáticamente"
   },
   "chatCodePermissionCard": {
     "title": "Código necesita tu permiso",

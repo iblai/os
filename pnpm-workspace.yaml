@@ -36,6 +36,13 @@ overrides:
   # leaves a detached subtree executable (XSS). Reached through
   # @iblai/iblai-js > @iblai/web-containers.
   dompurify: '>=3.4.13'
+  # GHSA-ggr8-5vv4-36mx — stack exhaustion when merging recursive object
+  # graphs, patched only in 8.0.0. Reached solely through the e2e stack
+  # (@wdio/config, @wdio/utils — even the latest wdio 9.30.1 still declares
+  # ^7), so crossing the major here is the only route. Safe: v8 keeps the
+  # deepmerge/deepmergeCustom API wdio calls; its breaking change is dropping
+  # Node <20, and this repo runs 25.
+  deepmerge-ts: '>=8.0.0'
   # GHSA-2v37-7h3g-55p8 — custom generators loop indefinitely when size is 0,
   # patched in 3.3.17. Reached through postcss. Upper bound is deliberate:
   # nanoid 4+ is ESM-only and postcss requires the CJS 3.x line.
@@ -98,6 +105,16 @@ overrides:
   # buffered-worker-pool's serializeOptions, which runs solely under `--parallel` —
   # a mode the wdio runner never enables.
   serialize-javascript: '>=7.0.5'
+  # extract-zip GHSA-jmr9-qjv8-65gv (unvalidated symlink path traversal) has NO
+  # patched release — 2.0.1 is the latest ever published and the advisory lists
+  # "patched: <0.0.0". The only remedy is removing it from the tree:
+  # @puppeteer/browsers dropped extract-zip in 3.0 (replaced by modern-tar), so
+  # lift wdio's transitive 2.13.2. Cross-major is safe for our one consumer:
+  # @wdio/utils imports install/canDownload/resolveBuildId/
+  # detectBrowserPlatform/Browser/ChromeReleaseChannel/computeExecutablePath,
+  # all still exported by 3.x (the 3.0 break was the archive/download
+  # internals — exactly where extract-zip lived).
+  '@puppeteer/browsers': '>=3.0.2'
 patchedDependencies:
   google-drive-picker@1.1.29: patches/google-drive-picker@1.1.29.patch
 
@@ -106,3 +123,11 @@ patchedDependencies:
 #
 minimumReleaseAgeExclude:
   - '@iblai/*'
+
+auditConfig:
+  ignoreGhsas:
+    # extract-zip symlink traversal (GHSA-jmr9-qjv8-65gv) — no patched release
+    # exists; the advisory's patched range is <0.0.0. Dev-only reach:
+    # @wdio/cli > @puppeteer/browsers uses it to unpack browser downloads
+    # fetched from vendor CDNs.
+    - GHSA-jmr9-qjv8-65gv

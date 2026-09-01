@@ -202,9 +202,17 @@ const mockGetMentorPublicSettings = vi.fn(() => ({ unwrap: mockUnwrap }));
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   initializeDataLayer: (...args: unknown[]) => mockInitializeDataLayer(...args),
   useLazyGetMentorPublicSettingsQuery: () => [mockGetMentorPublicSettings],
+  // Supplemental agent-skills RBAC fetch (platform-pk-scoped resources).
+  useGetRbacPermissionsMutation: () => [
+    vi.fn(() => ({ unwrap: () => Promise.resolve({}) })),
+  ],
+  // usePlatformId (platform DB pk for platform-scoped rbac paths).
+  useGetPlatformInfoQuery: () => ({ data: undefined }),
   useLazyGetVectorDocumentsQuery: () => [vi.fn(), { data: [] }],
   useLazyGetRecentMessageQuery: () => [vi.fn(), { data: [] }],
   useLazyGetPinnedMessagesQuery: () => [vi.fn(), { data: [] }],
+  // Pulled in via useOpencode402 (Code-mode 402 → credit UX at the app root).
+  useLazyGetAccountBillingInfoQuery: () => [vi.fn()],
   useGetMentorSettingsQuery: () => ({ data: null }),
   useGetMentorPublicSettingsQuery: () => ({ data: null }),
   useGetTenantMetadataQuery: () => ({

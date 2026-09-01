@@ -25,6 +25,10 @@ export const QUERY_PARAMS = {
   APP: 'app',
   REDIRECT_TO: 'redirect-to',
   TENANT: 'tenant',
+  EMBED: 'embed',
+  INTERNAL_PREVIEW: 'internalPreview',
+  MODE: 'mode',
+  SHOW_CLOSE_BUTTON: 'show-close-button',
 };
 
 // URL patterns
@@ -42,6 +46,7 @@ export const MODALS = {
     tabs: {
       settings: 'settings',
       llm: 'llm',
+      spend_caps: 'spend_caps',
       prompts: 'prompts',
       mcp: 'mcp',
       tools: 'tools',
@@ -74,6 +79,16 @@ export const MODALS = {
   ADD_RESOURCE: { name: 'add_resource' },
   NO_MENTOR_SELECTED: { name: 'no_mentor_selected' },
 };
+
+// URL query params owned by the datasets tab inside the edit-mentor modal.
+// They are scoped to that tab: cleared together with the `modal` param when the
+// modal closes or the user switches to another tab, so they never outlive the
+// datasets view. Shared by the datasets-tab wrapper (writer) and useNavigate's
+// close/tab-change logic (cleaner) to keep the keys in one place.
+export const DATASETS_TAB_URL_PARAMS = {
+  page: 'datasetsPage',
+  search: 'datasetsSearch',
+} as const;
 
 export const DEFAULT_PROMPTS = {
   DEFAULT_SYSTEM_PROMPT: `You are a helpful assistant.

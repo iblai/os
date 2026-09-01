@@ -52,6 +52,22 @@ vi.mock('@iblai/iblai-js/data-layer', () => ({
   }),
   useGetClawMentorConfigQuery: (...args: unknown[]) =>
     mockUseGetClawMentorConfigQuery(...(args as [])),
+  // Inline mirror of the SDK helper (data-layer `skills-utils`). The mock is a
+  // bare factory (no importActual — pulling the real bundle into this suite is
+  // what the surrounding mocks avoid), so re-declare the slug check here.
+  isBaseAgentMentor: ({
+    mentorSlug,
+    templateMentorSlug,
+  }: {
+    mentorSlug?: string | null;
+    templateMentorSlug?: string | null;
+  }) => {
+    const slugs = ['base-agent', 'ai-mentor', 'ai-agent'];
+    return (
+      (!!mentorSlug && slugs.includes(mentorSlug)) ||
+      (!!templateMentorSlug && slugs.includes(templateMentorSlug))
+    );
+  },
 }));
 
 vi.mock('@/hooks/use-user', () => ({
@@ -111,6 +127,7 @@ vi.mock('@iblai/iblai-js/web-containers/next', () => ({
   AgentPrivacyTab: () => null,
   AgentTasksTab: () => null,
   AgentHumanSupportTab: () => null,
+  AgentSpendCapsTab: () => null,
   AgentSettingsProvider: () => null,
 }));
 
@@ -150,13 +167,18 @@ describe('useMentorSegments', () => {
     setupDefaults();
   });
 
-  it('returns the canonical 24 mentor segments unfiltered', () => {
+  it('returns the canonical 26 mentor segments unfiltered', () => {
     const { result } = renderHook(() => useMentorSegments());
     expect(result.current.segments).toBe(MENTOR_SEGMENTS);
     // 17 original + Voice + Screen Share (feat/mentor/1763) + Tasks
     // (feat/mentor/715) + LTI + Analytics hub (feat/2040) + Human Support + Grader
-    // (feat/2081) + Evals (feat/1178).
-    expect(MENTOR_SEGMENTS).toHaveLength(25);
+    // (feat/2081) + Evals (feat/1178) + Billing / spend caps (feat/2286).
+    expect(MENTOR_SEGMENTS).toHaveLength(26);
+  });
+
+  it('places the Billing (spend caps) segment right after LLM', () => {
+    const llmIndex = MENTOR_SEGMENTS.findIndex((s) => s.label === 'LLM');
+    expect(MENTOR_SEGMENTS[llmIndex + 1]?.label).toBe('Billing');
   });
 
   it('places the Sandbox segment right after Settings', () => {
@@ -671,6 +693,150 @@ describe('useMentorSegments', () => {
       renderHook(() => useMentorSegments());
 
       expect(mockUseGetClawMentorConfigQuery).not.toHaveBeenCalled();
+    });
+  });
+
+  // ==========================================================================
+  // SKILLS — Base Agent gating. Agent Skills only apply to base-agent
+  // mentors; the tab is hidden for other agent types and fails open when the
+  // type can't be determined from the settings response.
+  // ==========================================================================
+
+  describe('Skills tab — Base Agent gating', () => {
+    const baseSettings = {
+      platform_key: 'custom-tenant',
+      mentor_visibility: MentorVisibilityEnum.VIEWABLE_BY_TENANT_ADMINS,
+      mentor_id: 42,
+      permissions: { field: {} },
+    };
+
+    const skillLabels = () => {
+      const { result } = renderHook(() => useMentorSegments());
+      return result.current.filteredSegments.map((s) => s.label);
+    };
+
+    it.each(['base-agent', 'ai-mentor', 'ai-agent'])(
+      'shows Skills when the mentor slug is the base-agent alias %s',
+      (slug) => {
+        mockMentorSettings.mockReturnValue({
+          ...baseSettings,
+          mentor_slug: slug,
+          template_mentor: null,
+        });
+        expect(skillLabels()).toContain('Skills');
+      },
+    );
+
+    it('shows Skills when the template mentor object resolves to base-agent', () => {
+      mockMentorSettings.mockReturnValue({
+        ...baseSettings,
+        mentor_slug: 'my-custom-helper',
+        template_mentor: { slug: 'base-agent' },
+      });
+      expect(skillLabels()).toContain('Skills');
+    });
+
+    it('shows Skills when the template mentor is a plain base-agent slug string', () => {
+      mockMentorSettings.mockReturnValue({
+        ...baseSettings,
+        mentor_slug: 'my-custom-helper',
+        template_mentor: 'ai-mentor',
+      });
+      expect(skillLabels()).toContain('Skills');
+    });
+
+    it('hides Skills when the template mentor resolves to a non-base type', () => {
+      mockMentorSettings.mockReturnValue({
+        ...baseSettings,
+        mentor_slug: 'my-gemini-helper',
+        template_mentor: { slug: 'google-agent' },
+      });
+      expect(skillLabels()).not.toContain('Skills');
+    });
+
+    it('hides Skills for a template-less mentor with a non-base slug', () => {
+      mockMentorSettings.mockReturnValue({
+        ...baseSettings,
+        mentor_slug: 'openai-agent',
+        template_mentor: null,
+      });
+      expect(skillLabels()).not.toContain('Skills');
+    });
+
+    it('fails open (shows Skills) when template_mentor is an unreadable shape', () => {
+      // e.g. the serializer returns the FK as a numeric PK — we can't tell the
+      // mentor type, and hiding would strip the feature from real base agents.
+      mockMentorSettings.mockReturnValue({
+        ...baseSettings,
+        mentor_slug: 'my-custom-helper',
+        template_mentor: 123,
+      });
+      expect(skillLabels()).toContain('Skills');
+    });
+
+    it('fails open (shows Skills) when mentor_slug is missing entirely', () => {
+      mockMentorSettings.mockReturnValue({ ...baseSettings });
+      expect(skillLabels()).toContain('Skills');
+    });
+
+    it('does not affect the Sandbox tab (skills-only gate)', () => {
+      mockMentorSettings.mockReturnValue({
+        ...baseSettings,
+        mentor_slug: 'my-gemini-helper',
+        template_mentor: { slug: 'google-agent' },
+      });
+      const labels = skillLabels();
+      expect(labels).not.toContain('Skills');
+      expect(labels).toContain('Sandbox');
+    });
+  });
+
+  describe('Skills tab — admin-only, no RBAC gate', () => {
+    it('declares no rbacResource (admin-only via userTypes, like Tasks/Sandbox)', () => {
+      // `isUserTypeAllowed` treats a satisfied rbacResource as an ALTERNATIVE
+      // to the userTypes check, so listing `view_skill_assignments` here would
+      // surface this admin tab to students holding the grant purely for the
+      // chat `/` picker. The skill-assignment grants are enforced inside the
+      // SDK's <AgentSkills/> (via `mentorDbId`) instead.
+      const skillsSegment = MENTOR_SEGMENTS.find((s) => s.label === 'Skills')!;
+      expect(skillsSegment.rbacResource).toBeUndefined();
+      expect(skillsSegment.userTypes).toEqual([UserType.ADMIN]);
+    });
+
+    it('stays visible for admins even when RBAC denies everything', () => {
+      mockCheckRbacPermission.mockReturnValue(false);
+
+      const { result } = renderHook(() => useMentorSegments());
+      const labels = result.current.filteredSegments.map((s) => s.label);
+      expect(labels).toContain('Skills');
+    });
+  });
+
+  describe('Evals — strictly admin-only', () => {
+    it('declares no rbacResource (the RBAC escape hatch is closed)', () => {
+      // `isUserTypeAllowed` accepts an RBAC grant as an ALTERNATIVE to the
+      // userTypes check. Evals previously pointed at the same
+      // `/mentors/{id}/documents/#list` resource as Datasets, so a student
+      // with dataset access also saw Evals in the dropdown and the modal.
+      // Admin-only tabs must not carry an rbacResource (Tasks/Sandbox
+      // pattern) — this pins that.
+      const evals = MENTOR_SEGMENTS.find((s) => s.label === 'Evals')!;
+      expect(evals.rbacResource).toBeUndefined();
+      expect(evals.userTypes).toEqual([UserType.ADMIN]);
+      expect(evals.permissionFieldsCheck).toEqual([]);
+    });
+
+    it('is hidden from non-admin user types even with blanket RBAC grants', () => {
+      mockCheckRbacPermission.mockReturnValue(true);
+      mockIsUserTypeAllowed.mockImplementation(
+        (s) =>
+          s.userTypes.includes(UserType.STUDENT) ||
+          s.userTypes.includes(UserType.FREE_TRIAL),
+      );
+
+      const { result } = renderHook(() => useMentorSegments());
+      const labels = result.current.filteredSegments.map((s) => s.label);
+      expect(labels).not.toContain('Evals');
     });
   });
 });

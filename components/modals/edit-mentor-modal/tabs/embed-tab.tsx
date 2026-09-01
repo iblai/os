@@ -63,7 +63,7 @@ import Image from 'next/image';
 import { Tabs, TabsContent, TabsList } from '@/components/ui/tabs';
 import { TabsTrigger } from '@/components/tabs';
 import { Label } from '@/components/ui/label';
-import { MENTOR_VISIBILITY } from '@/lib/constants';
+import { MENTOR_VISIBILITY, QUERY_PARAMS } from '@/lib/constants';
 import type { ChatMode } from '@iblai/iblai-js/web-utils';
 import { toast as sonnerToast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -243,6 +243,8 @@ export function EmbedTab() {
     setFocusEditCustomFloatingBubble,
     updateConfig,
     updateMultipleConfig,
+    removeCustomImage,
+    isRemovingImage,
   } = useEmbedTab();
   const toast = useToast();
   const { data: mentorSettings, isLoading: isLoadingSettings } =
@@ -944,7 +946,12 @@ export function EmbedTab() {
                               {t('iconSelectionLabel')}
                             </h3>
                             <Select
-                              defaultValue={field.state.value}
+                              // Controlled (not `defaultValue`) so the trigger
+                              // label updates when the field is hydrated to
+                              // 'custom' asynchronously after settings load.
+                              // Radix reads `defaultValue` only once at mount,
+                              // which left the label stuck on "Default".
+                              value={field.state.value}
                               onValueChange={(value) =>
                                 field.handleChange(value)
                               }
@@ -1706,7 +1713,7 @@ export function EmbedTab() {
                     <iframe
                       id="embed-mentor-preview"
                       title="embed-mentor-preview"
-                      src={`${window.location.origin}/platform/${tenantKey}/${mentorId}?mentor=${mentorId}&embed=true&internalPreview=true&tenant=${tenantKey}&mode=anonymous&chat=${mode}`}
+                      src={`${window.location.origin}/platform/${tenantKey}/${mentorId}?mentor=${mentorId}&${QUERY_PARAMS.EMBED}=true&${QUERY_PARAMS.INTERNAL_PREVIEW}=true&${QUERY_PARAMS.TENANT}=${tenantKey}&mode=anonymous&chat=${mode}`}
                       style={{
                         height: '100%',
                         minHeight: '580px',
@@ -2226,12 +2233,8 @@ export function EmbedTab() {
                                     type="button"
                                     variant="outline"
                                     size="sm"
-                                    onClick={() =>
-                                      updateMultipleConfig({
-                                        image: null,
-                                        //use_icon: true,
-                                      })
-                                    }
+                                    onClick={() => removeCustomImage()}
+                                    disabled={isRemovingImage}
                                   >
                                     {t('removeImage')}
                                   </Button>

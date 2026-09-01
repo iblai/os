@@ -31,6 +31,7 @@ import {
   convertFromBytes,
   formatRelativeDate,
   getLLMProviderDetails,
+  getLLMModelDisplayName,
   getProviderName,
   sendMessageToParentWebsite,
   isLoggedIn,
@@ -1153,6 +1154,36 @@ describe('formatRelativeDate function', () => {
     date.setFullYear(date.getFullYear() - 1);
     const result = formatRelativeDate(date.toISOString());
     expect(result).toMatch(/[A-Z][a-z]{2} \d{1,2}, \d{4}/);
+  });
+});
+
+describe('getLLMModelDisplayName function', () => {
+  it('maps the ibl.ai model key onto its brand spelling', () => {
+    // Mentor settings persist `iblai`; the nav bar badge rendered that raw.
+    expect(getLLMModelDisplayName('iblai')).toBe('ibl.ai');
+  });
+
+  it('accepts the spellings that normalise onto the same key', () => {
+    expect(getLLMModelDisplayName('IBLAI')).toBe('ibl.ai');
+    expect(getLLMModelDisplayName('ibl.ai')).toBe('ibl.ai');
+    expect(getLLMModelDisplayName('ibl-ai')).toBe('ibl.ai');
+  });
+
+  it('passes through keys that are already presentable', () => {
+    // Only unpresentable keys are mapped; everything else is left alone rather
+    // than enumerated, so new models need no code change.
+    expect(getLLMModelDisplayName('gpt-4.1')).toBe('gpt-4.1');
+    expect(getLLMModelDisplayName('claude-opus-4-7')).toBe('claude-opus-4-7');
+    expect(getLLMModelDisplayName('amazon.nova-2-lite-v1:0')).toBe(
+      'amazon.nova-2-lite-v1:0',
+    );
+  });
+
+  it('never returns undefined for a missing model', () => {
+    // The nav bar renders this directly; undefined would print "undefined".
+    expect(getLLMModelDisplayName(undefined)).toBe('');
+    expect(getLLMModelDisplayName(null)).toBe('');
+    expect(getLLMModelDisplayName('')).toBe('');
   });
 });
 

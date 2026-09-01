@@ -14,6 +14,8 @@ import { AIMessageCopy } from './ai-message-copy';
 import { AIMessageShare } from './ai-message-share';
 import { AIMessageSpeak } from './ai-message-speak';
 import {
+  WRITE_TODOS_TOOL,
+  extractLatestTodos,
   selectShowingSharedChat,
   useTenantMetadata as useTenantMetadataHook,
   type Message,
@@ -33,6 +35,7 @@ import {
   CodePermissionCards,
   useCodePermissionRequests,
 } from './code-permission-card';
+import { AgentTodoList } from './agent-todo-list';
 import { config } from '@/lib/config';
 import { useChatPrivacy } from '@iblai/iblai-js/web-containers';
 import { useUsername } from '@/hooks/use-user';
@@ -132,18 +135,33 @@ export function AIMessageBubble({
     tenantMetadata?.mentor_report_inappropriate_content !== false;
   const supportEmail = tenantMetadata?.support_email || config.supportEmail();
 
-  // The reasoning section and tool-call indicator are gated by showReasoning.
-  // While that's off, an assistant message that is still streaming has no text
+  // A Code turn is identifiable by its id: `streamOpencodeChat` mints
+  // `opencode-<ts>` generation ids and the chat slice persists them as the
+  // message id (see the SDK's opencode-client). The collapsed activity
+  // surfaces are forced on for those turns regardless of the mentor's
+  // show_reasoning setting: Code is told to keep its visible text terse, and in
+  // automatic-approval mode there are no permission cards either, so a turn
+  // that spends minutes running commands would otherwise look frozen.
+  const isCodeTurn =
+    typeof message?.id === 'string' && message.id.startsWith('opencode-');
+  const showAgentActivity = showReasoning || isCodeTurn;
+
+  // The reasoning section and tool-call indicator are gated by that flag.
+  // While it's off, an assistant message that is still streaming has no text
   // yet — without the verbose surfaces there would be nothing to show, so the
   // bubble would render as an empty gray box. Skip rendering entirely until the
   // bubble has something visible (text, a visible verbose surface, actions, or
   // an artifact preview); the typing indicator covers the interim.
-  const hasReasoningToShow = !!(showReasoning && reasoningContent);
+  const hasReasoningToShow = !!(showAgentActivity && reasoningContent);
+  // `write_todos` calls render as the dedicated task list, not as generic tool
+  // cards, so they must not on their own make the tool-call indicator "visible"
+  // — otherwise a todos-only turn would reserve an empty gray bubble.
   const hasToolCallsToShow = !!(
-    showReasoning &&
-    toolCalls &&
-    toolCalls.length > 0
+    showAgentActivity &&
+    toolCalls?.some((toolCall) => toolCall?.name !== WRITE_TODOS_TOOL)
   );
+  const todos = showAgentActivity ? extractLatestTodos(toolCalls) : undefined;
+  const hasTodosToShow = !!todos?.length;
   const hasVisibleContent =
     (content ?? '').trim().length > 0 ||
     hasReasoningToShow ||
@@ -151,6 +169,7 @@ export function AIMessageBubble({
     // A permission prompt can be the FIRST thing in a Code turn, before any text.
     // Without this the bubble renders as null and the turn looks silently stalled.
     hasPermissionPrompts ||
+    hasTodosToShow ||
     !!message?.actions?.length ||
     hasArtifactVersions(message);
 
@@ -184,16 +203,22 @@ export function AIMessageBubble({
                 hasArtifactVersions(message) && 'bg-white p-0',
               )}
             >
-              {showReasoning && reasoningContent && (
+              {hasReasoningToShow && (
                 <ReasoningSection
                   reasoningContent={reasoningContent}
                   isReasoning={isReasoning ?? false}
                   isCurrentlyStreaming={isCurrentlyStreaming}
                 />
               )}
-              {showReasoning && toolCalls && toolCalls.length > 0 && (
+              {hasToolCallsToShow && (
                 <ToolCallIndicator
-                  toolCalls={toolCalls}
+                  toolCalls={toolCalls!}
+                  isCurrentlyStreaming={isCurrentlyStreaming}
+                />
+              )}
+              {hasTodosToShow && (
+                <AgentTodoList
+                  todos={todos}
                   isCurrentlyStreaming={isCurrentlyStreaming}
                 />
               )}

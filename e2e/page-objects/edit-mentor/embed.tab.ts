@@ -1,4 +1,5 @@
 import { Page, Locator, expect } from '@playwright/test';
+import { isVisibleWithin } from '../../utils/resilient';
 
 export class EmbedTab {
   readonly page: Page;
@@ -20,6 +21,17 @@ export class EmbedTab {
   readonly shareableLinkUrlBlock: Locator;
   readonly whoCanViewSelect: Locator;
   readonly whoCanChatSelect: Locator;
+  readonly footer: Locator;
+  readonly iconSelectionSelect: Locator;
+  readonly iconEditorButton: Locator;
+  readonly iconEditorDialog: Locator;
+  readonly iconEditorContentTabTrigger: Locator;
+  readonly iconTitleInput: Locator;
+  readonly iconSubtitleInput: Locator;
+  readonly iconImageInput: Locator;
+  readonly iconPreviewImage: Locator;
+  readonly removeImageButton: Locator;
+  readonly livePreviewImage: Locator;
 
   constructor(page: Page, dialog: Locator) {
     this.page = page;
@@ -90,6 +102,99 @@ export class EmbedTab {
     this.whoCanChatSelect = dialog.getByRole('combobox', {
       name: /select who can chat/i,
     });
+    // The footer holds exactly one button ("Create Embed" / "Generating
+    // Embed") — the Save button was removed from here (issue #789 follow-up).
+    // It has no accessible role/name of its own, so scope by walking up from
+    // the submit button to its immediate parent <div> (the footer wrapper —
+    // see the `justify-end border-t ... px-3 py-4` div in embed-tab.tsx) rather
+    // than `.filter({ has })`, whose inner locator carries the `dialog` root
+    // through into the :has() check and never matches. The Advanced CSS /
+    // Advanced JS "Save"/"Saving..." buttons live elsewhere in the form and
+    // must NOT match this locator.
+    this.footer = this.submitButton.locator('xpath=..');
+    // Icon Selection and Mode Selection are two separate Radix comboboxes that
+    // share the same aria-label ("Select an embed mode" — selectEmbedModeAriaLabel).
+    // Icon Selection is the first one to appear in the form (above the "Mode
+    // Selection" <hr> divider); disambiguate by position, not aria-label.
+    this.iconSelectionSelect = dialog
+      .getByRole('combobox', { name: /select an embed mode/i })
+      .first();
+    this.iconEditorButton = dialog.getByRole('button', {
+      name: /icon editor/i,
+    });
+    // The Icon Editor renders as a second, portal-mounted dialog (nested on top
+    // of the Edit Agent dialog) — scope to the page, not `dialog`.
+    this.iconEditorDialog = page.getByRole('dialog', { name: /icon editor/i });
+    this.iconEditorContentTabTrigger = this.iconEditorDialog.getByRole('tab', {
+      name: /content/i,
+    });
+    this.iconTitleInput = this.iconEditorDialog.locator('#title');
+    this.iconSubtitleInput = this.iconEditorDialog.locator('#subtitle');
+    this.iconImageInput = this.iconEditorDialog.locator('#iconImage');
+    this.iconPreviewImage = this.iconEditorDialog.getByAltText(
+      'Chat icon preview',
+      { exact: true },
+    );
+    this.removeImageButton = this.iconEditorDialog.getByRole('button', {
+      name: /remove image/i,
+    });
+    // The Live Preview image is rendered both inline (Icon Selection = Custom,
+    // outside the editor) and inside the Icon Editor dialog itself. Scope to
+    // whichever ancestor is relevant at call time via `.last()` — the Icon
+    // Editor's own Live Preview is what a caller inside that dialog wants.
+    this.livePreviewImage = page.getByAltText('Chat icon', { exact: true });
+  }
+
+  /** Returns the currently selected label of the Icon Selection combobox ("Default" / "Custom"). */
+  async getIconSelectionValue(): Promise<string> {
+    await expect(this.iconSelectionSelect).toBeVisible({ timeout: 10_000 });
+    return (await this.iconSelectionSelect.textContent())?.trim() ?? '';
+  }
+
+  /** Selects an option ("Default" / "Custom") in the Icon Selection Radix Select. */
+  async setIconSelection(label: 'Default' | 'Custom'): Promise<void> {
+    await expect(this.iconSelectionSelect).toBeVisible({ timeout: 10_000 });
+    await this.iconSelectionSelect.click();
+    await this.selectRadixOption(label);
+  }
+
+  /** Opens the Icon Editor dialog (only available when Icon Selection = Custom). */
+  async openIconEditor(): Promise<void> {
+    await expect(this.iconEditorButton).toBeVisible({ timeout: 10_000 });
+    await this.iconEditorButton.click();
+    await expect(this.iconEditorDialog).toBeVisible({ timeout: 10_000 });
+  }
+
+  /** Switches the Icon Editor to its "Content" tab, where the image controls live. */
+  async goToIconEditorContentTab(): Promise<void> {
+    await expect(this.iconEditorContentTabTrigger).toBeVisible({
+      timeout: 10_000,
+    });
+    await this.iconEditorContentTabTrigger.click();
+    await expect(this.iconImageInput).toBeVisible({ timeout: 10_000 });
+  }
+
+  /** Uploads a local image file via the Icon Editor's Content tab file input. */
+  async uploadIconImage(filePath: string): Promise<void> {
+    await expect(this.iconImageInput).toBeVisible({ timeout: 10_000 });
+    await this.iconImageInput.setInputFiles(filePath);
+    await expect(this.iconPreviewImage).toBeVisible({ timeout: 10_000 });
+  }
+
+  /**
+   * Clicks "Remove Image" on the Icon Editor's Content tab. Persists
+   * immediately via its own PUT (does not require Create Embed) — see
+   * removeCustomImage() in useEmbedTab.ts (issue #789 fix).
+   */
+  async removeImage(): Promise<void> {
+    await expect(this.removeImageButton).toBeVisible({ timeout: 10_000 });
+    await this.removeImageButton.click();
+  }
+
+  /** Closes the Icon Editor dialog via Escape. */
+  async closeIconEditor(): Promise<void> {
+    await this.page.keyboard.press('Escape');
+    await expect(this.iconEditorDialog).toBeHidden({ timeout: 5_000 });
   }
 
   /**
@@ -243,9 +348,7 @@ export class EmbedTab {
       name: 'Close',
       exact: true,
     });
-    const closeBtnVisible = await closeBtn
-      .isVisible({ timeout: 3_000 })
-      .catch(() => false);
+    const closeBtnVisible = await isVisibleWithin(closeBtn, 3_000);
 
     if (closeBtnVisible) {
       await closeBtn.click();
