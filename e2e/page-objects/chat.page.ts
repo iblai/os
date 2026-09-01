@@ -24,7 +24,62 @@ export class ChatPage {
   readonly newChatButton: Locator;
   readonly userMessages: Locator;
   readonly aiMessages: Locator;
+  /**
+   * The composer's "Canvas" tool chip (inside-buttons row). Artifacts are
+   * only produced for a session while this tool is active — without it the
+   * agent's reply never becomes an artifact chip/canvas, so specs that
+   * expect artifacts MUST call `enableCanvasTool()` before sending. The chip
+   * has no aria-pressed; its active state is styling-only (active background
+   * class `bg-[#F5F8FF]`).
+   */
   readonly canvasToggle: Locator;
+  /**
+   * The chat chip rendered for ANY canvas artifact (text/code or binary) —
+   * `CanvasMessagePreview`, `data-testid="canvas-message-preview"`. For
+   * binary artifacts (pdf, xlsx, zip, …) it always shows "Open Canvas" with
+   * a file-type label instead of a content snippet — there is no separate
+   * "Download" chip variant.
+   */
+  readonly canvasMessagePreview: Locator;
+  /** The chip's action button — always "Open Canvas", never "Download". */
+  readonly canvasOpenButton: Locator;
+  /**
+   * Wraps `canvasOpenButton` (and disables it, with a "hang tight" tooltip)
+   * while a binary artifact is still streaming — a half-written file can't
+   * be opened. Absent once generation finishes; also absent entirely for
+   * non-binary (text/code) canvas artifacts, which stay clickable while
+   * streaming.
+   */
+  readonly canvasBinaryGenerating: Locator;
+  /**
+   * The read-only binary canvas (`BinaryCanvasComponent`,
+   * `data-testid="binary-canvas"`) — renders for pdf/image/svg artifacts
+   * (and a friendly fallback for non-previewable types like zip/xlsx). Opens
+   * automatically at stream end for ANY binary artifact (not just
+   * previewable ones) if no canvas is already open — see
+   * `openBinaryCanvas()`.
+   */
+  readonly binaryCanvas: Locator;
+  /** The pdf `<iframe>` inside the binary canvas — `src` is a `blob:` URL. */
+  readonly binaryCanvasPdf: Locator;
+  /** The image `<img>` inside the binary canvas (image/svg artifacts). */
+  readonly binaryCanvasImage: Locator;
+  /** The binary canvas's single header action — downloads the raw bytes. */
+  readonly binaryCanvasExport: Locator;
+  /**
+   * Shown INSTEAD of the pdf/image preview when the file loaded but is
+   * malformed (invalid SVG XML, non-PDF bytes, image decode failure). A
+   * positive assertion on `binaryCanvasPdf`/`binaryCanvasImage` should never
+   * be substituted with "this didn't appear" — assert this is absent too.
+   */
+  readonly binaryCanvasPreviewError: Locator;
+  /**
+   * The editable TEXT canvas's rich-text surface (TipTap contenteditable /
+   * ProseMirror) — the path taken by text artifacts (`is_binary: false`),
+   * including .txt files shared from the sandbox VM. Same locator strategy
+   * as journey 10.
+   */
+  readonly canvasEditor: Locator;
   readonly memoryButton: Locator;
   readonly createMentorDialog: Locator;
   readonly loginBanner: Locator;
@@ -67,6 +122,20 @@ export class ChatPage {
     this.userMessages = page.locator('.chat-user-message-query');
     this.aiMessages = page.locator('.chat-ai-message-response');
     this.canvasToggle = page.getByRole('button', { name: /canvas/i });
+    this.canvasMessagePreview = page.getByTestId('canvas-message-preview');
+    this.canvasOpenButton = page.getByTestId('canvas-open-button');
+    this.canvasBinaryGenerating = page.getByTestId('canvas-binary-generating');
+    this.binaryCanvas = page.getByTestId('binary-canvas');
+    this.binaryCanvasPdf = page.getByTestId('binary-canvas-pdf');
+    this.binaryCanvasImage = page.getByTestId('binary-canvas-image');
+    this.binaryCanvasExport = page.getByTestId('binary-canvas-export');
+    this.binaryCanvasPreviewError = page.getByTestId(
+      'binary-canvas-preview-error',
+    );
+    this.canvasEditor = page
+      .locator('[contenteditable="true"]')
+      .or(page.locator('.ProseMirror'))
+      .first();
     // Exact name — NOT /memory/i. The chat-privacy toggle's aria-label is
     // "Turn on Private Mode. This chat won't be saved to history or used for
     // memory.", so a loose /memory/i match also resolves the (always-present,
@@ -448,7 +517,51 @@ export class ChatPage {
    * be registered BEFORE navigating to the chat page — see the
    * class-of-methods note above.
    */
+  /**
+   * Intercepts the RBAC permissions-check POST and fulfills it with the
+   * REAL response, mutated so every requested mentor-scoped resource
+   * (`/mentors/{id}/`) carries `view_skill_assignments: true`. The
+   * composer's skills fetch is gated on that grant — without it the
+   * request never fires — so mocking the skills endpoint alone no longer
+   * simulates the granted state. Keys the tests hermetic w.r.t. the
+   * backend's grant rollout; must be registered before the mentor page
+   * load that runs the permission check.
+   */
+  async grantSkillAssignmentsRead(): Promise<void> {
+    await this.page.route(
+      (url) => url.pathname.includes('/api/core/rbac/permissions/check'),
+      async (route) => {
+        const response = await route.fetch();
+        let json: Record<string, unknown>;
+        try {
+          json = await response.json();
+        } catch {
+          await route.fulfill({ response });
+          return;
+        }
+        // The POST body lists the resources being checked — grant the read
+        // on each mentor-scoped one, adding the entry when the real
+        // response omitted it (a user with no grants at all).
+        const requested: string[] =
+          route.request().postDataJSON()?.resources ?? [];
+        for (const resource of requested) {
+          if (/^\/mentors\/[^/]+\/$/.test(resource)) {
+            const entry = json[resource];
+            json[resource] = {
+              ...(entry && typeof entry === 'object' ? entry : {}),
+              view_skill_assignments: true,
+            };
+          }
+        }
+        await route.fulfill({ response, json });
+      },
+    );
+  }
+
   async mockEffectiveSkills(skills: EffectiveSkillFixture[]): Promise<void> {
+    // The fetch only fires for users granted `view_skill_assignments` —
+    // grant it alongside the payload mock so the mock actually gets hit.
+    await this.grantSkillAssignmentsRead();
     // Assignments: /agents/{uuid}/skills/ — NOT /agent-skills/ (catalog).
     await this.page.route(
       (url) => /\/agents\/[^/]+\/skills\//.test(url.pathname),
@@ -473,10 +586,11 @@ export class ChatPage {
 
   /**
    * Same as `mockEffectiveSkills` — kept as a named alias for the non-admin
-   * journey so the intent stays explicit. Students get the picker only if
-   * the backend lets them read the assignments endpoint (today it is
-   * platform-admin-only and 403s for them, which the composer degrades to
-   * an inactive picker); this mock simulates that granted state.
+   * journey so the intent stays explicit. Students get the picker only when
+   * the mentor permission check grants them `view_skill_assignments` (the
+   * composer never even fetches without it, since the endpoint 403s); this
+   * mock simulates that granted state end to end — the grant via
+   * `grantSkillAssignmentsRead`, the skill list via the endpoint mock.
    */
   async mockStudentSkills(skills: EffectiveSkillFixture[]): Promise<void> {
     await this.mockEffectiveSkills(skills);
@@ -575,7 +689,7 @@ export class ChatPage {
    * strictly required for a logged-in admin, but patching both keeps this
    * helper correct if it's ever reused for a non-admin/public context.
    */
-  async mockShowReasoning(): Promise<void> {
+  async mockShowReasoning(enabled = true): Promise<void> {
     const patchShowReasoning = async (route: Route) => {
       if (route.request().method() !== 'GET') {
         await route.continue();
@@ -589,7 +703,7 @@ export class ChatPage {
         await route.continue();
         return;
       }
-      json.show_reasoning = true;
+      json.show_reasoning = enabled;
       await route.fulfill({ response, json });
     };
 
@@ -797,5 +911,155 @@ export class ChatPage {
   /** Returns the sr-only `aria-live` announcer node for the task list. */
   getAgentTodoAnnouncer(scope?: Locator): Locator {
     return (scope ?? this.page).getByTestId('agent-todo-list-announcer');
+  }
+
+  // ── Binary artifact chip → binary canvas (Journey 71) ───────────────────────
+  //
+  // Binary artifacts (pdf, zip, xlsx, …) are produced by an agent with a
+  // sandbox VM (or claw) enabled — see `SandboxTab` — and rendered via
+  // `CanvasMessagePreview` (the chat chip) + `BinaryCanvasComponent` (the
+  // read-only canvas). Unlike the rich-text canvas, opening never streams
+  // live; the chip's button stays disabled until the file is fully written.
+
+  /**
+   * Waits for the most recent binary-artifact chat chip to appear and for it
+   * to finish generating (the `canvas-binary-generating` wrapper clears and
+   * `canvas-open-button` becomes enabled). Does NOT click anything — pair
+   * with `openBinaryCanvas()`. VM boot + file generation against a live LLM
+   * is slow, so the default timeouts here are generous; callers on a faster
+   * env can tighten them.
+   */
+  async waitForBinaryArtifactChipReady(opts?: {
+    /** Timeout for the chip itself to appear (artifact-stream-start). */
+    chipTimeout?: number;
+    /** Timeout for the generating wrapper to clear (artifact-stream-end). */
+    generatingTimeout?: number;
+  }): Promise<void> {
+    const { chipTimeout = 120_000, generatingTimeout = 180_000 } = opts ?? {};
+    await expect(this.canvasMessagePreview.first()).toBeVisible({
+      timeout: chipTimeout,
+    });
+    await expect(this.canvasBinaryGenerating).toHaveCount(0, {
+      timeout: generatingTimeout,
+    });
+    await expect(this.canvasOpenButton.first()).toBeEnabled({
+      timeout: 15_000,
+    });
+  }
+
+  /**
+   * Opens the binary canvas for the most recently generated binary artifact.
+   * Tolerant of the app's own auto-open-at-stream-end behavior: binary
+   * artifacts open the canvas automatically once generation finishes AS LONG
+   * AS no other canvas is already open (`components/chat/index.tsx`'s
+   * `handleArtifactStreamEnd`). Rather than assume either outcome, this
+   * probes for `binaryCanvas` already being visible first (a short `waitFor`
+   * — never `isVisible().catch()`) and only clicks `canvas-open-button` when
+   * it isn't. Call `waitForBinaryArtifactChipReady()` first so the button is
+   * actually clickable in the fallback branch.
+   */
+  async openBinaryCanvas(): Promise<void> {
+    let alreadyOpen = false;
+    try {
+      await this.binaryCanvas.waitFor({ state: 'visible', timeout: 5_000 });
+      alreadyOpen = true;
+    } catch {
+      alreadyOpen = false;
+    }
+    if (!alreadyOpen) {
+      await this.canvasOpenButton.first().click();
+      await expect(this.binaryCanvas).toBeVisible({ timeout: 15_000 });
+    }
+  }
+
+  /**
+   * Whether the composer's Canvas tool chip is currently active (artifacts
+   * enabled for outgoing messages). The chip carries no aria-pressed — its
+   * active state is styling-only, so this reads the active background class
+   * (`bg-[#F5F8FF]`, rendered literally by Tailwind's arbitrary-value
+   * syntax).
+   */
+  async isCanvasToolActive(): Promise<boolean> {
+    const cls = (await this.canvasToggle.first().getAttribute('class')) ?? '';
+    return cls.includes('bg-[#F5F8FF]');
+  }
+
+  /**
+   * Idempotently enables the composer's Canvas tool. The artifact pipeline
+   * is inert without it — the agent's reply never becomes an artifact
+   * chip/canvas — so any spec that expects artifacts must call this BEFORE
+   * `sendMessage()`. Some environments/mentors default the tool on, hence
+   * the state check instead of a blind (toggling) click.
+   */
+  async enableCanvasTool(): Promise<void> {
+    await expect(this.canvasToggle.first()).toBeVisible({ timeout: 30_000 });
+    if (await this.isCanvasToolActive()) return;
+    await this.canvasToggle.first().click();
+    await expect(this.canvasToggle.first()).toHaveClass(/bg-\[#F5F8FF\]/, {
+      timeout: 10_000,
+    });
+  }
+
+  // ── Persistent "agent is working" indicator — Journey 69 (issue #2217) ─────
+  //
+  // `WorkingIndicator` (components/chat/working-indicator.tsx) is the
+  // shimmering `role="status"` line that replaces the old placeholder which
+  // used to vanish the moment any token rendered. It is driven by the SDK's
+  // `ChatPhase` (`@iblai/iblai-js/web-utils`) and is mounted in two places
+  // that are mutually exclusive by design (never both at once): standalone,
+  // inside `AIWorkingMessage` (`data-testid="chat-working-message"`) before
+  // the streaming bubble has anything to show, and embedded at the foot of
+  // the real streaming bubble (`AIMessageBubble`) once it does. Both wrap the
+  // SAME `data-testid="chat-working-indicator"` element, so
+  // `getWorkingIndicator(scope)` finds it regardless of which frame currently
+  // owns it — pass the relevant frame (`getWorkingMessage()` or
+  // `getLastAiMessage()`) as `scope` to disambiguate.
+
+  /** Returns the standalone pre-token placeholder frame (whole turn, not just the indicator). */
+  getWorkingMessage(): Locator {
+    return this.page.getByTestId('chat-working-message');
+  }
+
+  /**
+   * Returns the shimmering status line itself, within `scope` (default:
+   * whole page). Renders nothing (`toHaveCount(0)`, not merely hidden) once
+   * the component decides there is nothing to add — see the class-level note
+   * above for the two frames this can be embedded in.
+   */
+  getWorkingIndicator(scope?: Locator): Locator {
+    return (scope ?? this.page).getByTestId('chat-working-indicator');
+  }
+
+  /**
+   * Returns the reasoning disclosure row's trigger, within `scope`. Its
+   * label is ALWAYS "Thought" (never "Thinking" — that word belongs solely
+   * to the shimmer), streaming or not; liveness is conveyed only by the
+   * bouncing dots appearing/disappearing next to it (see `getBounceDots`).
+   */
+  getReasoningTrigger(scope?: Locator): Locator {
+    return (scope ?? this.page).getByRole('button', {
+      name: 'Thought',
+      exact: true,
+    });
+  }
+
+  /** Returns the generic tool-call disclosure row's trigger, within `scope`. */
+  getToolCallTrigger(scope?: Locator): Locator {
+    return (scope ?? this.page).getByRole('button', {
+      name: /^Used \d+ tools?$/i,
+    });
+  }
+
+  /**
+   * Returns the bouncing-dot indicators within `scope` — rendered by
+   * `ReasoningSection`/`ToolCallIndicator` only while `isActive` (i.e. only
+   * one of them should ever be live at once; see working-indicator.tsx's
+   * "exactly one element conveys progress" invariant), and additionally
+   * exposed by `WorkingIndicator`'s shimmer treatment being independent of
+   * this — the shimmer has no dots of its own, only the two disclosure rows
+   * do.
+   */
+  getBounceDots(scope?: Locator): Locator {
+    return (scope ?? this.page).locator('span.animate-bounce');
   }
 }

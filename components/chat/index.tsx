@@ -26,17 +26,21 @@ import {
   GripVertical,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { LoadingMessage } from '@/components/chat/loading-message';
+import {
+  AIWorkingMessage,
+  hasVisibleBubbleContent,
+} from '@/components/chat/ai-message-frame';
+import { useCodePermissionRequests } from '@/components/chat/code-permission-card';
 import {
   ANONYMOUS_USERNAME,
   Message as BaseMessage,
+  type ChatPhase,
   chatActions,
   MessageAction,
   selectToken,
   selectTokenEnabled,
   selectShowingSharedChat,
   selectStreamingReasoningContent,
-  selectIsReasoning,
   selectStreamingToolCalls,
   selectCurrentStreamingMessage,
   useMentorTools,
@@ -48,6 +52,7 @@ import {
 } from '@iblai/iblai-js/web-utils';
 import {
   cn,
+  formatRelativeDate,
   getAuthSpaJoinUrl,
   isInIframe,
   isLoggedIn,
@@ -59,7 +64,6 @@ import { toast } from 'sonner';
 import { config } from '@/lib/config';
 import { AdvancedChatHeader } from '@/components/advanced-chat/advanced-chat-header';
 import { advancedTabs } from '@iblai/iblai-js/web-utils';
-import { LiveKitChat } from '../live-kit-voice-chat';
 import { GuidedSuggestedPrompts } from '../guided-suggested-prompts';
 import {
   Dialog,
@@ -87,7 +91,6 @@ import { useDebouncedCallback } from 'use-debounce';
 import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { useUserAgreement } from '@/hooks/use-user-agreement';
 import { CSS_CLASS_NAMES, LOCAL_STORAGE_KEYS } from '@/lib/constants';
-import { LiveKitScreenSharing } from '../live-kit-screen-sharing';
 import { WelcomeChatNew } from '../welcome-chat-new';
 import { Spinner } from '@/components/spinner';
 import { useEmbedMode } from '@/hooks/use-embed-mode';
@@ -115,6 +118,29 @@ const DisclaimerModal = dynamic(
   () =>
     import('@/components/modals/disclaimer-modal').then(
       (mod) => mod.DisclaimerModal,
+    ),
+  {
+    ssr: false,
+  },
+);
+
+// Voice call + screen sharing pull in the heavy LiveKit client, but both only
+// mount when the user starts a call/share. Load them lazily so LiveKit stays
+// off the main chat bundle until then.
+/* istanbul ignore next -- @preserve dynamic import */
+const LiveKitChat = dynamic(
+  () =>
+    import('@/components/live-kit-voice-chat').then((mod) => mod.LiveKitChat),
+  {
+    ssr: false,
+  },
+);
+
+/* istanbul ignore next -- @preserve dynamic import */
+const LiveKitScreenSharing = dynamic(
+  () =>
+    import('@/components/live-kit-screen-sharing').then(
+      (mod) => mod.LiveKitScreenSharing,
     ),
   {
     ssr: false,
@@ -312,7 +338,6 @@ export function Chat({
   const streamingReasoningContent = useAppSelector(
     selectStreamingReasoningContent,
   );
-  const isReasoning = useAppSelector(selectIsReasoning);
   const streamingToolCalls = useAppSelector(selectStreamingToolCalls);
   const currentStreamingMsg = useAppSelector(selectCurrentStreamingMessage);
   const TOAST_DURATION = 1000 * 60 * 2; // 2 minutes
@@ -342,7 +367,7 @@ export function Chat({
   const {
     changeTab,
     activeTab,
-    currentStreamingMessage,
+    chatPhase,
     enabledGuidedPrompts,
     isStreaming,
     mentorName,
@@ -504,7 +529,12 @@ export function Chat({
 
   useEffect(() => {
     if (isStreaming) {
-      setMentorAccessibilityMessage(t('mentorGenerating', { mentorName }));
+      // While a turn is in flight the WorkingIndicator's own polite live region
+      // owns the announcements (throttled, phase-aware). Announcing
+      // "…is generating a response" here as well would give screen readers two
+      // regions racing over the same event, so this one stays quiet until the
+      // answer lands.
+      setMentorAccessibilityMessage('');
     }
     if (
       !isStreaming &&
@@ -1590,38 +1620,75 @@ export function Chat({
     [enabledGuidedPrompts, tenantKey, sessionId, username, handleSubmit],
   );
 
-  // Gate for the "Just a sec..." loading placeholder.
-  // It must only appear in the brief window where a response is pending but
-  // nothing has rendered yet. Without the checks below, an unstable socket
-  // that retries/duplicates a generation renders "Just a sec..." next to an
-  // answer that is already streaming (or finished) in the current/previous
-  // bubble — the duplicate "stream showing while another stream is incoming"
-  // bug. So also hide it when the current stream already has reasoning/tool
-  // output, or when the last assistant message already shows any output.
-  const lastMessage =
-    messages.length > 0 ? messages[messages.length - 1] : undefined;
-  // Reasoning steps and tool calls only count as visible "output" when Verbose
-  // Reasoning is enabled. With it off those surfaces are hidden in the bubble,
-  // so they must not suppress the typing indicator — otherwise the user sees
-  // nothing while the agent reasons before any text streams in.
-  const verboseReasoningEnabled = mentorSettings.showReasoning;
-  const lastAssistantHasOutput =
-    lastMessage?.role === 'assistant' &&
-    ((lastMessage.content ?? '').trim().length > 0 ||
-      (verboseReasoningEnabled &&
-        ((lastMessage.reasoningContent ?? '').trim().length > 0 ||
-          (lastMessage.toolCalls?.length ?? 0) > 0)) ||
-      (lastMessage.artifactVersions?.length ?? 0) > 0);
-  const currentStreamHasOutput =
-    (currentStreamingMessage?.content ?? '').trim().length > 0 ||
-    (verboseReasoningEnabled &&
-      (isReasoning ||
-        (streamingReasoningContent ?? '').trim().length > 0 ||
-        (streamingToolCalls?.length ?? 0) > 0));
-  const showLoadingMessage =
-    (isPending || isStreaming) &&
-    !currentStreamHasOutput &&
-    !lastAssistantHasOutput;
+  // The working indicator stays up for the WHOLE turn, not just the silent gap
+  // before the first token. The previous placeholder hid itself as soon as any
+  // token/reasoning/tool output existed, which is exactly the long agentic turn
+  // where the user cannot tell whether the agent is still working or the app
+  // has hung. `isPending` covers the window between pressing send and the
+  // `generation_id` frame; `isStreaming` covers the rest of the turn.
+  const isTurnInFlight = isPending || isStreaming;
+  // Until the socket reports a more specific phase, "Thinking…" is the honest
+  // label — the request is in flight and nothing has come back yet. The
+  // optional chain also covers the gap while a host app runs against an SDK
+  // build that predates `chatPhase`.
+  const workingPhase: ChatPhase =
+    !chatPhase || chatPhase.kind === 'idle' ? { kind: 'thinking' } : chatPhase;
+
+  // The turn's own clock, captured once when it starts. The placeholder's
+  // header has to look like a real message header, and a header whose timestamp
+  // re-derives on every phase change would visibly tick during a long turn.
+  const turnStartedAtRef = useRef('');
+  if (!isTurnInFlight) {
+    turnStartedAtRef.current = '';
+  } else if (!turnStartedAtRef.current) {
+    turnStartedAtRef.current = formatRelativeDate(new Date().toISOString());
+  }
+
+  // Once the streaming bubble has anything to show it owns the working line
+  // (rendered inside its own bubble by `AIMessageBubble`), so the standalone
+  // placeholder must stand down. Both sides ask the same predicate, which is
+  // what keeps it to exactly one agent frame — and one shimmer — per turn.
+  const streamingMessage = currentStreamingMsg?.id
+    ? messages.find((message) => message.id === currentStreamingMsg.id)
+    : undefined;
+  // A waiting Code permission prompt is enough to make the bubble render, so
+  // the placeholder has to count it too or the two frames would sit on screen
+  // together. Same store and same match rule as `AIMessageBubble`: a streaming
+  // assistant message's id IS the generation id.
+  // Code turns (`opencode-<ts>` ids) force the collapsed activity surfaces on
+  // regardless of the mentor's show_reasoning setting — see ai-message-bubble.
+  // The container has to apply the same rule or the predicate would disagree
+  // with the bubble on a Code turn and both frames would render.
+  const streamIsCodeTurn =
+    typeof streamingMessage?.id === 'string' &&
+    streamingMessage.id.startsWith('opencode-');
+  const permissionRequests = useCodePermissionRequests();
+  const hasPermissionPrompts =
+    isStreaming &&
+    !!streamingMessage &&
+    permissionRequests.some((r) => r.generation_id === streamingMessage.id);
+  const isStreamingBubbleVisible =
+    isStreaming &&
+    !!streamingMessage &&
+    streamingMessage.visible === true &&
+    hasVisibleBubbleContent({
+      content: streamingMessage.content,
+      message: streamingMessage,
+      reasoningContent: streamingReasoningContent,
+      toolCalls: streamingToolCalls,
+      showReasoning: mentorSettings.showReasoning || streamIsCodeTurn,
+      hasPermissionPrompts,
+    });
+
+  const workingIndicator =
+    isTurnInFlight && !isStreamingBubbleVisible ? (
+      <AIWorkingMessage
+        phase={workingPhase}
+        mentorName={mentorName}
+        profileImage={profileImage}
+        timestamp={turnStartedAtRef.current}
+      />
+    ) : null;
 
   return (
     <div
@@ -1840,9 +1907,9 @@ export function Chat({
                       isStreaming={isStreaming}
                       streamingReasoningContent={streamingReasoningContent}
                       streamingToolCalls={streamingToolCalls}
-                      isReasoning={isReasoning}
                       showReasoning={mentorSettings.showReasoning}
                       currentStreamingMessageId={currentStreamingMsg?.id}
+                      workingPhase={isTurnInFlight ? workingPhase : undefined}
                     />
                   ) : (
                     <div className="flex h-full items-center justify-center text-sm text-gray-500">
@@ -1861,13 +1928,9 @@ export function Chat({
                     {mentorAccessibilityMessage}
                   </div>
 
-                  {/* Loading indicator - hide if last message has canvas preview or reasoning is active */}
-                  {showLoadingMessage && (
-                    <LoadingMessage
-                      mentorName={mentorName}
-                      profileImage={profileImage}
-                    />
-                  )}
+                  {/* Placeholder agent message for the window before the streaming
+                      bubble has anything to show. Stands down as soon as it does. */}
+                  {workingIndicator}
 
                   {/* Guided prompts in canvas view */}
                   {!showingSharedChat && guidedPrompts}
@@ -2076,21 +2139,17 @@ export function Chat({
                   isStreaming={isStreaming}
                   streamingReasoningContent={streamingReasoningContent}
                   streamingToolCalls={streamingToolCalls}
-                  isReasoning={isReasoning}
                   showReasoning={mentorSettings.showReasoning}
                   currentStreamingMessageId={currentStreamingMsg?.id}
+                  workingPhase={isTurnInFlight ? workingPhase : undefined}
                 />
                 <div aria-live="polite" role="status" className="sr-only">
                   {mentorAccessibilityMessage}
                 </div>
 
-                {/* Loading indicator - hide if last message has canvas preview or reasoning is active */}
-                {showLoadingMessage && (
-                  <LoadingMessage
-                    mentorName={mentorName}
-                    profileImage={profileImage}
-                  />
-                )}
+                {/* Placeholder agent message for the window before the streaming
+                    bubble has anything to show. Stands down as soon as it does. */}
+                {workingIndicator}
 
                 {/* Guided prompts in normal view */}
                 {!showingSharedChat && guidedPrompts}

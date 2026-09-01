@@ -126,7 +126,8 @@ fn open_oauth_in_popup(url: &str, app_handle: &AppHandle, title: &str) -> Result
         println!("[OAuth Popup] Navigation to: {}", url_str);
 
         // Check if this is a callback URL (auth completed)
-        let is_callback = url_str.contains("login.iblai.app")
+        let is_callback = (url_str.contains("login.iblai.app")
+            || url_str.contains("auth.iblai.org"))
             && (url_str.contains("/callback")
                 || url_str.contains("code=")
                 || url_str.contains("token=")
@@ -1675,6 +1676,10 @@ const URL_MONITOR_SCRIPT_ONLINE: &str = r#"
 
 /// JavaScript for offline mode - intercepts fetch calls and routes API calls through offline server
 /// CRITICAL: This script must restore localStorage context BEFORE the app initializes
+///
+/// `__OFFLINE_SERVER_URL__` is substituted by [`url_monitor_script_offline`] —
+/// the offline server's port is allocated at startup (3457 when free, any free
+/// port otherwise), so it cannot be baked in here.
 const URL_MONITOR_SCRIPT_OFFLINE: &str = r#"
 (function() {
     // Only run once per page
@@ -1685,7 +1690,7 @@ const URL_MONITOR_SCRIPT_OFFLINE: &str = r#"
     window.__TAURI_OFFLINE_MODE__ = true;
     localStorage.setItem('tauri_offline_mode', 'true');
 
-    var OFFLINE_SERVER = 'http://127.0.0.1:3457';
+    var OFFLINE_SERVER = '__OFFLINE_SERVER_URL__';
 
     // Override __ENV__ to route API calls through our offline server
     window.__ENV__ = window.__ENV__ || {};
@@ -1840,6 +1845,13 @@ const URL_MONITOR_SCRIPT_OFFLINE: &str = r#"
     console.log('[OfflineMode] Initialization complete');
 })();
 "#;
+
+/// [`URL_MONITOR_SCRIPT_OFFLINE`] with the offline server's real URL patched in.
+/// Called at window-creation time, after the server has bound and recorded its
+/// port, so a fallback port reaches the webview instead of a stale 3457.
+fn url_monitor_script_offline() -> String {
+    URL_MONITOR_SCRIPT_OFFLINE.replace("__OFFLINE_SERVER_URL__", &offline_server::get_server_url())
+}
 
 /// Helper function to send streaming chat request to Foundry Local (OpenAI-compatible API)
 async fn foundry_chat_stream(
@@ -2152,6 +2164,15 @@ async fn open_external_url(app: AppHandle, url: String) -> Result<(), String> {
 }
 
 fn main() {
+    // Dev-checkout overrides first: src-tauri/.env.local, then .env.production.
+    // The path is compile-time CARGO_MANIFEST_DIR, so installed builds have
+    // neither and skip straight on. Loaded before anything reads env; dotenvy
+    // never overrides already-set vars, so shell env > .env.local >
+    // .env.production > .env. Keys documented in src-tauri/.env.example.
+    for f in [".env.local", ".env.production"] {
+        let _ = dotenvy::from_path(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(f));
+    }
+
     // Load .env file if present (for local development and custom builds)
     // First try current directory (dev mode), then try next to the executable (bundled app)
     if dotenvy::dotenv().is_err() {
@@ -2195,6 +2216,13 @@ fn main() {
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
+            // Keep the managed opencode on the pinned version — a pin bump would
+            // otherwise never reach a machine that already has a runnable copy.
+            let opencode_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                opencode_installer::ensure_opencode_current(opencode_handle).await;
+            });
+
             // Vibe skills track the latest GitHub release with no freshness
             // window — resolve-and-sync in the background on every launch, so
             // Coding Mode always starts from the newest published set (and a
@@ -2413,7 +2441,7 @@ fn main() {
             } else {
                 // Offline - use tauri://localhost to allow IPC access
                 // The offline shell will be served from the bundled assets
-                // API calls will be routed to the HTTP server (localhost:3456) via fetch intercept
+                // API calls will be routed to the offline HTTP server via fetch intercept
                 println!("[ibl.ai] OFFLINE MODE: Using tauri://localhost for IPC access");
 
                 // Store the last route for the initialization script to use
@@ -2453,10 +2481,12 @@ fn main() {
             // Create main window with appropriate URL monitoring script
             let init_script = if is_online {
                 println!("[ibl.ai] Using ONLINE initialization script");
-                URL_MONITOR_SCRIPT_ONLINE
+                URL_MONITOR_SCRIPT_ONLINE.to_string()
             } else {
                 println!("[ibl.ai] Using OFFLINE initialization script");
-                URL_MONITOR_SCRIPT_OFFLINE
+                // Resolved here, not baked in: the offline server has already
+                // bound by now, so this carries its real (possibly fallback) port.
+                url_monitor_script_offline()
             };
 
             println!("[ibl.ai] Creating main window with URL: {:?}", initial_url);
@@ -2696,7 +2726,8 @@ fn main() {
                 println!("[Protocol] Proxying to offline server: {}", path);
 
                 std::thread::spawn(move || {
-                    let offline_server_url = format!("http://127.0.0.1:3457{}", path);
+                    let offline_server_url =
+                        format!("{}{}", offline_server::get_server_url(), path);
                     println!(
                         "[Protocol] Fetching from offline server: {}",
                         offline_server_url
@@ -2821,6 +2852,9 @@ fn main() {
             opencode_acp::opencode_close,
             opencode_acp::get_opencode_workspace,
             opencode_acp::set_opencode_workspace,
+            opencode_acp::new_opencode_workspace,
+            opencode_acp::get_opencode_permission_mode,
+            opencode_acp::set_opencode_permission_mode,
             opencode_acp::set_opencode_skills,
             opencode_acp::begin_opencode_skills_sync,
             opencode_installer::install_opencode,
@@ -2828,6 +2862,7 @@ fn main() {
             opencode_installer::check_opencode_status,
             opencode_acp::check_code_local_model,
             opencode_acp::set_opencode_learner,
+            opencode_acp::ensure_opencode_platform_key,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri app");

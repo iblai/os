@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-08-26 | 682 checkpoints (651 covered, 8 pending/fixme, 11 not-reproducible in default env, 12 deprecated) | 73 journeys (72 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-09-01 | 708 checkpoints (669 covered, 8 pending/fixme, 15 not-reproducible in default env, 16 deprecated) | 75 journeys (74 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -36,7 +36,7 @@ When adding a new page or modifying an existing user flow:
 - [x] Newly created user can navigate to the Explore page via sidebar
 - [x] Newly created user can log out via the profile dropdown
 - [x] Sidebar can be toggled open and closed
-- [x] Help button opens the docs link in a new tab
+- [x] Help button opens the docs/help link in a new tab when the tenant's own metadata (observed from the app's own org-metadata GET, no `DM_URL` required) shows `show_help !== false`; the menu item is correctly absent when a tenant explicitly sets `show_help: false` (#uat-9)
 - [x] Suggested prompts authored with Markdown render via the Markdown component (issue #1179, fixme until a seeded mentor fixture is available)
 - [ ] NAV-08: Clicking "New Chat" once fires exactly ONE create-session POST (issue #1002 regression guard — parked as `test.fixme`; activate after verifying against the live backend)
 
@@ -95,9 +95,11 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 6: Mentor Management — Admin (18 checkpoints) — `journeys/06-mentor-management-admin.spec.ts`
+## Journey 6: Mentor Management — Admin (19 checkpoints) — `journeys/06-mentor-management-admin.spec.ts`
 
-**Source files:** `components/modals/create-mentor-modal.tsx`, `components/modals/edit-mentor-modal/index.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/tabs/llm-tab.tsx`, `components/modals/edit-mentor-modal/tabs/tools-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `components/modals/settings-modal.tsx`, `hooks/use-mentors.ts`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/modals/llm-provider-modal.tsx`, `lib/utils.ts`
+**Source files:** `components/modals/create-mentor-modal.tsx`, `components/modals/edit-mentor-modal/index.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/llm-tab.tsx`, `components/modals/edit-mentor-modal/tabs/tools-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `components/modals/settings-modal.tsx`, `hooks/use-mentors.ts`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `lib/utils.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`
+
+_Note: the LLM tab is served by the SDK's `AgentLLMTab`; `components/modals/edit-mentor-modal/llm-tab.tsx` is the thin wrapper over it, and `hooks/use-llm-display-name.ts` resolves the model label the nav-bar badge shows (see also Journey 28)._
 
 - [x] Admin can update mentor profile (name, description, category, visibility), save, and close
 - [x] Non-admin does not see the Settings or Tools menu items
@@ -117,6 +119,7 @@ When adding a new page or modifying an existing user flow:
 - [x] Issue #2318: ibl.ai provider card (`data-provider=iblai`) shows the ibl.ai logo and label instead of falling through to the generic default (the original bug — a missing map entry rendered a blank/404 logo); skips gracefully if the tenant's LLM list omits ibl.ai
 - [x] Issue #2318: a grayed (no-credential) provider card stays clickable and opens the LLM Selection model picker; skips gracefully if every provider in the tenant is usable
 - [x] Issue #2318: LLM Selection model picker rows render a non-blank human-readable label (`display_name || llm_name`) and searching a substring of that label finds the row
+- [x] `getLLMModelDisplayName` navbar rewrite: after selecting the ibl.ai provider/model (wire key `iblai-pro`) on the LLM tab, the navbar badge renders the display name `ibl.ai` exactly — never the raw wire key; skips gracefully if the tenant's LLM list omits ibl.ai
 
 ---
 
@@ -176,9 +179,11 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 10: Canvas — AI Document Editor (11 checkpoints) — `journeys/10-canvas-ai-document-editor.spec.ts`
+## Journey 10: Canvas — AI Document Editor (15 checkpoints; 2 not-reproducible) — `journeys/10-canvas-ai-document-editor.spec.ts`
 
-**Source files:** `components/canvas/canvas-component.tsx`, `components/canvas/canvas-rich-text-editor.tsx`, `components/canvas/canvas-view.tsx`, `components/canvas/canvas-controls.tsx`, `components/canvas/canvas-export-handlers.tsx`, `hooks/use-canvas-aware-send.ts`, `hooks/use-canvas-version-navigation.tsx`
+**Source files:** `components/canvas/canvas-component.tsx`, `components/canvas/canvas-rich-text-editor.tsx`, `components/canvas/canvas-view.tsx`, `components/canvas/canvas-controls.tsx`, `components/canvas/canvas-export-handlers.tsx`, `components/canvas/binary-canvas-component.tsx`, `components/canvas/binary-artifact-utils.ts`, `components/chat/chat-messages/canvas-message-preview.tsx`, `components/chat/chat-messages/message-preview.tsx`, `components/chat/chat-messages/types.ts`, `components/chat/index.tsx`, `hooks/use-canvas-aware-send.ts`, `hooks/use-canvas-version-navigation.tsx`
+
+Binary artifacts (pdf, xlsx, zip, …) are a read-only variant of the canvas artifact: the backend marks them with `is_binary`/`mime_type` and serves the bytes base64-encoded in `binary_content` from the artifact DETAIL endpoint only. The chat message chip always shows "Open Canvas" (disabled with a tooltip while the binary is still generating) — there is no separate "Download" chip variant; the binary canvas (`binary-canvas-component.tsx`) is view + a single header Export — no editing, formatting toolbar, AI controls, version menu, or rename — previews pdf/images/svg inline, shows friendly no-preview / malformed-file messages for everything else, and is never pinned to outgoing chat messages the way the text/code canvas is. **Journey 71** (`71-vm-sandbox-txt-file-canvas.spec.ts`) exercises the VM-sandbox file-sharing pipeline end-to-end against a live LLM — deliberately with a **.txt** file (reliable to produce in the VM with plain shell tooling), which is a TEXT artifact: it verifies the chip + text-canvas path and that text/binary routing picks the text path. The binary-specific surfaces (binary chip gating, pdf/image preview, non-previewable fallback, malformed-file preview-error, stream-end binary auto-open/takeover, no-pin behavior) stay unit-only (`binary-artifact-utils.test.ts`, `binary-canvas-component.test.tsx`, `canvas-view.test.tsx`, `canvas-message-preview.test.tsx`, `message-preview.test.tsx`) since no journey makes a live agent produce a real binary artifact.
 
 - [x] Canvas mode can be enabled and disabled via the toggle button
 - [x] AI can generate a business report document in the canvas
@@ -191,6 +196,10 @@ When adding a new page or modifying an existing user flow:
 - [x] Export dropdown shows PDF and Markdown options and triggers download
 - [x] Canvas panel can be closed; artifact card remains in chat and reopens canvas
 - [x] Follow-up chat message referencing canvas modifies the document content
+- [ ] _(not-reproducible)_ Chat message chip always offers "Open Canvas" for binaries (never "Download"), disabled with a 'hang tight' tooltip while generating — unit-covered in `canvas-message-preview.test.tsx` / `message-preview.test.tsx`; Journey 71 shares a .txt (text) file, so no journey produces a real binary artifact
+- [ ] _(not-reproducible)_ Read-only binary canvas renders the pdf preview with no editing affordances, and never the malformed-file preview-error state for a well-formed file — unit-covered in `binary-canvas-component.test.tsx` / `canvas-view.test.tsx` / `binary-artifact-utils.test.ts`; same live-binary dependency
+- [ ] _(not-reproducible)_ Binary-artifact stream/open orchestration in `components/chat/index.tsx`: no mid-stream auto-open, every binary type (displayable or not) auto-opens at stream end when no canvas is open — taking over a text canvas that opened mid-stream for the same artifact (binary content wins, extension re-resolved from the filename-style title) — and never pinned to outgoing messages; unit-only via `getBinaryStreamBehavior` / `resolveEffectiveFileExtension` in `binary-artifact-utils.test.ts`. Journey 71 exercises the TEXT stream path (chip + text-canvas auto-open) live
+- [ ] _(not-reproducible)_ Binary canvas preview paths beyond pdf: image/svg inline preview, the non-previewable-type fallback message, the malformed-file preview-error state, and loading/error/retry — unit-covered in `binary-canvas-component.test.tsx` / `canvas-view.test.tsx` / `binary-artifact-utils.test.ts`
 
 ---
 
@@ -215,9 +224,9 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 13: Shareable Links & Embed Integration (14 checkpoints) — `journeys/13-shareable-links-and-embed-integration.spec.ts`
+## Journey 13: Shareable Links & Embed Integration (17 checkpoints) — `journeys/13-shareable-links-and-embed-integration.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/embed-tab.tsx`, `components/modals/edit-mentor-modal/hooks/useEmbedTab.ts`, `components/logo.tsx`, `hooks/use-mentors/use-mentor-settings.ts`, `hooks/use-embed-mode.ts`, `components/chat-input-form/voice-call-button.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form/screen-sharing-button.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
+**Source files:** `components/modals/edit-mentor-modal/tabs/embed-tab.tsx`, `components/modals/edit-mentor-modal/hooks/useEmbedTab.ts`, `components/modals/edit-mentor-modal/utils.ts`, `components/logo.tsx`, `hooks/use-mentors/use-mentor-settings.ts`, `hooks/use-embed-mode.ts`, `components/chat-input-form/voice-call-button.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form/screen-sharing-button.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
 
 - [x] Non-anonymous embed with voice call, voice record, and attachment buttons renders correctly
 - [x] Authenticated flow in embed: user can send a message and receive an AI response
@@ -233,6 +242,9 @@ When adding a new page or modifying an existing user flow:
 - [x] Issue #2153: clicking the regenerate (refresh) icon next to Shareable Link does not surface the Website URL validation error
 - [x] Issue #2153: toggling the Shareable Link switch OFF does not surface the Website URL validation error
 - [x] Issue #2153 contrast case: toggling Shareable Link ON for an anonymous mentor (Website URL section not rendered at all) remains error-free
+- [x] Issue #789: a custom embed icon (Icon Selection = Custom, uploaded via the Icon Editor's Content tab) persists after a full page reload as a real uploaded URL, not the local data: preview
+- [x] Issue #789: "Remove Image" persists immediately (own PUT, independent of Create Embed) with a "Custom icon removed" toast, Icon Selection reverting to Default, and the removal surviving a reload (guards the RTK cache invalidation behind the fix)
+- [x] Embed tab footer contains only the "Create Embed" button (the standalone footer Save button was removed); Advanced CSS / Advanced JavaScript panels elsewhere in the tab keep their own working Save buttons
 
 ---
 
@@ -492,7 +504,7 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 
 ---
 
-## Journey 28: App Overview & Navigation UI (12 checkpoints) — `journeys/28-app-overview-and-navigation-ui.spec.ts`
+## Journey 28: App Overview & Navigation UI (13 checkpoints) — `journeys/28-app-overview-and-navigation-ui.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/modals/llm-provider-selection-modal.tsx`
 
@@ -501,13 +513,14 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 - [x] User profile dropdown buttons function correctly
 - [x] Sidebar renders all expected components including Vector document button
 - [x] Vector document button is visible in the sidebar
-- [x] LLM provider modal opened from the navbar hides the configuration header
-- [x] LLM provider modal inside Edit Mentor retains the configuration header
+- [x] LLM provider modal opened from the navbar hides the configuration header _(ov-06 — uses a loose regex locator wrapped in an `isVisible().catch()` conditional around the whole test body; superseded by the stronger ov-13 below, kept for now)_
+- [ ] LLM provider modal inside Edit Mentor retains the configuration header _(ov-07 — currently a vacuous assertion, `expect(typeof headerVisible).toBe('boolean')`, which passes regardless of whether the header is shown; flagged for a follow-up fix, not corrected in this change)_
 - [x] Admin: LLM name span on desktop has `overflow:hidden`, `text-overflow:ellipsis`, `whitespace:nowrap` _(navbar overflow fix: ov-08)_
 - [x] Admin: nav element does not overflow the viewport width on desktop _(navbar overflow fix: ov-09)_
 - [x] Admin: LLM name span `max-width` is at most 150 px on desktop _(navbar overflow fix: ov-10)_
 - [x] Admin: nav does not overflow on mobile (Pixel 5); with credit balance visible the LLM name span shrinks to ≤100 px _(navbar overflow fix: ov-11)_
 - [x] Admin: nav does not overflow on mobile when credit balance is hidden; LLM name span stays ≤150 px _(navbar overflow fix: ov-12)_
+- [x] Admin opens the navbar LLM selector modal (`navbarPage.openLlmProviderModal`, dialog name "LLM Providers") and the "LLM Configuration" heading/description are absent — proves the OS wrapper's `showConfigurationHeader={false}` prop reaches the SDK `AgentLLMTab` component _(ov-13)_
 
 ---
 
@@ -764,23 +777,23 @@ Requires `DM_URL` env var. Tests are skipped when `DM_URL` is unset.
 
 ## Journey 44: CLAW Advanced Sandbox (13 checkpoints) — `journeys/44-claw-advanced-sandbox.spec.ts`
 
-**Source files:** `components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `components/modals/edit-mentor-modal/capability-gate.tsx`, `hooks/use-mentor-segments.ts`
+**Source files:** `components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `hooks/use-mentor-segments.ts`
 
-The "Dedicated sandbox" (`enable_claw`) master toggle moved off Settings → Capabilities into an in-tab `CapabilityGate` at the top of the Sandbox tab itself (feat/2040) and auto-saves on click (optimistic local state via `useEditMentorMutation`) — no footer Save button involved for the toggle. The Sandbox top-level tab is now **always mounted** for admins regardless of `enable_claw` / wired-instance state — `hooks/use-mentor-segments.ts` no longer gates the segment. The gated `SandboxConfig` UI renders inside a grayed + inert `capability-gate-content` wrapper (`data-enabled` mirrors the toggle) while the capability is off. The instance table's per-row **Connect** action is a dedicated button (`data-testid="connect-instance-<id>"`) next to the "Actions" three-dot menu (Run checks / Edit / Delete) — no longer a dropdown menu item. Agent Skills is fully independent of the sandbox and is covered **exclusively** by Journey 67 — this journey carries no skills assertions.
+The Sandbox tab used to wrap the SDK's `SandboxConfig` component in an app-level `CapabilityGate` around a single "Dedicated sandbox" (`enable_claw`) master toggle. That gate is gone — the tab now renders only a header and `SandboxConfig` (from `@iblai/iblai-js/web-containers`) directly, and the SDK component owns kind selection itself. `SandboxConfig` always renders a "Sandbox Type" card with three switches (`sandbox-kind-computational-runtime`, `sandbox-kind-virtual-machine`, `sandbox-kind-claw`). The three kinds are **mutually exclusive AND AT LEAST ONE IS ALWAYS ACTIVE** — "Only one sandbox type can be enabled at a time" per the card's own subheading: kinds change ONLY by selecting a different kind, which atomically deactivates whichever kind was previously active in the same PATCH. There is no "disable" operation — toggling the currently-active kind's own switch off (leaving none active) is not a supported flow, so this journey never asserts an all-off state. No kind switch ever gets a persistent disabled state — each is only briefly disabled while its own save is in flight, regardless of which kind is active. The claw connected/not-connected sections (instance table, connect, auto-push, push config) render **only** while Claw is enabled — not merely grayed out, absent from the DOM entirely. The Sandbox top-level tab remains **always mounted** for admins regardless of any kind's state — `hooks/use-mentor-segments.ts` doesn't gate the segment (unaffected by this SDK rewrite, predates it from feat/2040). The instance table's per-row **Connect** action is a dedicated button (`data-testid="connect-instance-<id>"`) next to the "Actions" three-dot menu (Run checks / Edit / Delete) — no longer a dropdown menu item. Agent Skills is fully independent of the sandbox and is covered **exclusively** by Journey 67 — this journey carries no skills assertions.
 
-- [x] Admin opens the Sandbox tab and the "Dedicated sandbox" capability toggle (in-tab CapabilityGate) is present
-- [x] Capability toggle is interactable for admins regardless of sandbox connection state (admin intent)
-- [x] Flipping the capability toggle auto-saves instantly (optimistic, no footer Save button) and does not change Sandbox tab visibility — the tab is unconditionally mounted
-- [x] Enabling the capability flips `capability-gate-content`'s `data-enabled` to `true`, ungating the SandboxConfig UI; Sandbox leads the Integrations category (feat/2040 moved it off Configurations)
+- [x] Admin opens the Sandbox tab and the three sandbox-kind switches (Computing Runtime / Virtual Machine Shell / Claw) are visible
+- [x] Computational-runtime and virtual-machine switches are interactable for admins while claw is off
+- [x] Selecting a sandbox kind auto-saves instantly; the three kinds are mutually exclusive and at least one is always active, so selecting one kind turns off whichever kind was previously active (no "disable" operation), and selection never affects Sandbox tab visibility — the tab is unconditionally mounted
+- [x] Selecting claw turns off whichever kind (computational-runtime or virtual-machine) was previously active in the same PATCH (mutual exclusivity); Sandbox leads the Integrations category (feat/2040 moved it off Configurations)
 - [x] Sandbox leads the Integrations category unconditionally (feat/2040 groups the sidebar into Configurations / Integrations / Runtime)
-- [x] Disabling the capability flips `capability-gate-content`'s `data-enabled` back to `false`, regating the SandboxConfig UI, while the Sandbox tab remains visible
-- [x] Admin navigates to Sandbox tab and the sandbox config container renders regardless of capability state
-- [x] Admin toggles the capability ON then OFF in one session and `capability-gate-content`'s `data-enabled` flips accordingly both times
-- [x] Admin adds a new sandbox instance via the Add Instance dialog (capability enabled first) and the new row appears in the instance table
+- [x] Switching to computational-runtime while claw is active deactivates claw and hides its instance section, leaving computational-runtime as the sole active kind — never an all-off state — while all three switches remain interactable and the Sandbox tab stays visible
+- [x] Admin navigates to Sandbox tab: the sandbox-kind card always renders; the claw connected/not-connected instance sections render only while claw is enabled
+- [x] Admin selects claw then switches away from it (to the mentor's original kind) in one session, and the claw connected/not-connected instance sections mount and unmount accordingly both times
+- [x] Admin adds a new sandbox instance via the Add Instance dialog (claw kind selected first) and the new row appears in the instance table
 - [x] Admin edits an existing sandbox instance name via the Edit Instance dialog and the updated name is reflected in the table
 - [x] Admin connects a sandbox instance via the dedicated per-row Connect button (no longer a dropdown item) and the Connected Instance heading appears
 - [x] Admin edits an Agent Configuration field in the Prompts tab: edit modal closes and the new value is persisted
-- [ ] _(not-reproducible — RBAC off in default env)_ Dedicated sandbox toggle (`enable_claw`) is disabled when the user only has read access — unit-covered in `sandbox-tab.test.tsx`
+- [ ] _(not-reproducible — RBAC off in default env)_ Claw kind switch (`enable_claw`) is disabled when the user only has read access — unit-covered in `sandbox-tab.test.tsx`
 
 ---
 
@@ -846,13 +859,18 @@ Wraps the packaged `AgentEvaluationTab` from `@iblai/iblai-js/web-containers/nex
 
 ---
 
-## Journey 9b: Voice-to-Text Dictation (1 checkpoint) — `journeys/09b-voice-to-text.spec.ts`
+## Journey 9b: Voice-to-Text Dictation (4 checkpoints) — `journeys/09b-voice-to-text.spec.ts`
 
 **Source files:** `hooks/use-voice-chat.ts`, `hooks/use-timer.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form.tsx`
 
 Chromium-only. Uses `--use-fake-device-for-media-stream` plus `--use-file-for-fake-audio-capture=e2e/files/testing_folder/speech.wav` to inject real audio, then exercises the real `/audio-to-text/` backend round-trip. Regression cover for [iblai-platform#1657](https://github.com/iblai/iblai-platform/issues/1657).
 
 - [x] VTT-01: Admin creates a new mentor and records via injected fake audio — the placeholder timer (`Listening... mm:ss`) counts seconds upward, and after stop, the real STT round-trip lands a non-empty transcript in the textarea
+- [x] VTT-02: Microphone permission denied — with the fake-UI auto-accept flag dropped and context permissions cleared, `getUserMedia` rejects with `NotAllowedError`, a "Microphone access" toast appears, the button returns to the idle `Voice input` label and stays enabled, and no `/audio-to-text/` request is made
+- [x] VTT-03: Dictation appends to the composer instead of replacing it — text typed before recording survives the round-trip and the transcript lands after it
+- [x] VTT-04: A recording stopped under the 500ms minimum is rejected client-side — a "That recording was too short" toast appears, the button returns to idle without parking on `Processing`, and zero `/audio-to-text/` requests are made
+
+VTT-02, VTT-03 and VTT-04 are regression cover for [iblai-platform#2402](https://github.com/iblai/iblai-platform/issues/2402): a sub-second recording uploaded an empty blob, the backend rejected it with a 400, and the data layer retried five times with exponential backoff — holding the voice UI for ~37s.
 
 ---
 
@@ -1012,7 +1030,7 @@ Covers the "Enable prompt caching" toggle added to the Capabilities sub-tab of t
 - [x] Tool call pill is expandable and shows query detail
 - [x] Web Search button is not visible when tool is disabled on mentor
 - [x] Tool call indicator does not appear when Web Search is enabled but not activated in session
-- [x] Reasoning section shows "Thinking" with bounce dots during streaming and auto-collapses to "Thought" after
+- [x] Reasoning section renders for a reasoning model and auto-collapses to Thought after streaming
 - [x] Reasoning section does not appear for non-reasoning model
 - [x] Tool call indicator and reasoning section both render in correct order in same message
 - [x] Tool call indicator and reasoning section are gated by the Enable verbose reasoning setting — hidden when the toggle is off, shown when on
@@ -1321,17 +1339,32 @@ surfaces:
    no agent-type picker and only ever produces Base Agent mentors, so the
    gating checkpoints mock the mentor-settings GET for a real, freshly-created
    mentor (`route.fetch()` + mutate `mentor_slug`/`template_mentor` +
-   `route.fulfill()` — every other field stays authentic). The tab is plainly
-   ADMIN-ONLY via the userTypes filter — no RBAC resource (the agent-skills
-   RBAC contract is unsettled backend-side); the chat `/` picker, by
-   contrast, is available to students too.
+   `route.fulfill()` — every other field stays authentic). The tab SEGMENT is
+   plainly ADMIN-ONLY via the userTypes filter — no RBAC resource on the
+   segment itself; the chat `/` picker, by contrast, is available to
+   students too.
 2. The skills SECTION (the SDK's `AgentSkills` component: Agent Skills /
    Available Skills sub-tabs, enable toggles, New/Edit/Delete Skill dialogs)
    is driven exclusively through the dedicated helpers in
    `@iblai/iblai-js/playwright` (`verifySkillsTabVisible`,
    `switchToAgentSkillsSubTab`, `createSkill`, `editSkill`, `deleteSkill`,
    …). Management checkpoints run SERIAL with a dedicated mentor per test —
-   skill create/edit/delete mutates the platform-wide catalog.
+   skill create/edit/delete mutates the platform-wide catalog. The section
+   is RBAC-GATED per grant against the mentor permission check
+   (`/mentors/{dbId}/` — the host passes `mentorDbId` from mentor-settings):
+   `view_skill_assignments` gates the assignment fetches,
+   `create_skill_assignment` the whole Available Skills sub-tab + New Skill
+   button, `write_skill_assignment` the enable Switch,
+   `delete_skill_assignment` the row Remove button. Because the backend's
+   grant rollout is environment/profile-dependent, every checkpoint that
+   asserts the FULL admin view (ags-01, ags-04, ags-05) first forces all
+   four grants via `SkillsTab.mockSkillAssignmentGrants` (permission-check
+   response mutated in place, mirroring `ChatPage.grantSkillAssignmentsRead`;
+   registered before the modal opens since the modal fires the check on
+   open) — and ags-07 forces the deny side the same way. Per-grant ROW
+   affordances (Switch disabled without write, Remove hidden without delete)
+   are covered by the SDK's own `agent-skills.test.tsx` unit suite, not
+   duplicated here.
 3. The chat composer's `/` skill picker (`SlashSkillPicker` /
    `useSlashSkillPicker` from `@iblai/iblai-js/web-containers`, wired in
    `components/chat-input-form.tsx` + `components/auto-resize-text-area.tsx`)
@@ -1343,12 +1376,13 @@ surfaces:
    `ChatPage.mockEffectiveSkills` for full determinism — the composer fetches
    eagerly on mount, so the mock must be registered before navigation.
 
-- [x] ags-01: Admin sees the Skills tab on a freshly-created (Base Agent) mentor, with the updated tab description ("Reusable playbooks this Base Agent can discover and follow.") and skills-info-box copy describing the `/` picker; Skills sits right after Prompts in the Configurations category
+- [x] ags-01: Admin sees the Skills tab on a freshly-created (Base Agent) mentor, with the updated tab description ("Reusable playbooks this Base Agent can discover and follow.") and skills-info-box copy describing the `/` picker; Skills sits right after Prompts in the Configurations category — full RBAC grant set forced via `SkillsTab.grantAllSkillAssignmentPerms` so the both-sub-tabs assert is rollout-independent
 - [x] ags-02: Skills tab is hidden when the mentor resolves to a non-base-agent type (`mentor_slug` is not a base-agent alias and `template_mentor` does not resolve to one either)
 - [x] ags-03: Skills tab stays visible when the mentor type cannot be determined (`template_mentor` is a numeric PK the frontend cannot read a slug from) — the gate fails OPEN rather than hiding the tab
 - [x] ags-04: Admin creates a platform skill, attaches it from the Available Skills sub-tab (`addSkillToAgent` — assignment created ENABLED), and its enable Switch round-trips off/on on the Agent Skills sub-tab (`aria-checked`); detach + delete on cleanup — dedicated mentor per test
 - [x] ags-05: Admin creates a new platform skill, locates it on the server-paged Available Skills sub-tab (paging until found — catalog ordering not guaranteed), edits its description, and deletes it (row disappears) — via the SDK's `createSkill`/`editSkill`/`deleteSkill` helpers, serial (platform-wide catalog)
 - [x] ags-06: NON-ADMIN — the Skills tab is absent from the Edit Mentor modal (the segment is ADMIN-only via userTypes in `MENTOR_SEGMENTS`)
+- [x] ags-07: View-only RBAC (`view_skill_assignments` granted, create/write/delete denied via the same permission-check mock) — the Agent Skills sub-tab renders with its empty state, while the Available Skills sub-tab and the New Skill button are absent from the DOM
 - [x] slash-01: Mentor with no effective skills — chat composer stays a plain textbox (no combobox role) and typing "/" opens nothing
 - [x] slash-02: Mentor with skills — composer gets `role=combobox` wiring and "/" opens the picker listing only enabled skills as name + slug, no descriptions (assignment rows carry none; the platform-wide agent-skills catalog is never fetched from chat)
 - [x] slash-03: Typing after "/" filters the picker by both skill name and slug as the query narrows; no match closes the picker
@@ -1573,7 +1607,7 @@ lifetime of the tab. Real customer embeds are cross-origin and were never
 affected; only the internal preview could reach our storage.
 
 - [x] epl-01: Opening Edit Agent → Embed mounts the same-origin `?embed=true&internalPreview=true` preview iframe WITHOUT writing `ibl:embed-context` into the host tab's sessionStorage (guard 1: `persistEmbedContextFromUrl` no-ops for the internal preview) — polled, not read once, since the old write happened in an effect several seconds after the tab rendered
-- [x] epl-02: After visiting the Embed tab and closing the dialog, clicking "New Chat" keeps the FULL admin sidebar (Agents, Workflows, Projects, Analytics, Support) instead of collapsing to the embed rail, and does not append `embed=true` to the app URL (a poisoned tab also fed `embedContextQuery()`, writing the corruption into its own navigations)
+- [x] epl-02: After visiting the Embed tab and closing the dialog, clicking "New Chat" keeps the FULL admin sidebar (Agents, Workflows, Projects, Analytics, and Support at whichever visibility the tenant's own `show_help` metadata dictates, observed live and NOT hardcoded — #uat-9) instead of collapsing to the embed rail, and does not append `embed=true` to the app URL (a poisoned tab also fed `embedContextQuery()`, writing the corruption into its own navigations)
 - [x] epl-03: The full app survives a reload after the Embed tab was visited — the old bug was sticky for the lifetime of the tab because sessionStorage outlived the navigation
 - [x] epl-04: A top-level (non-iframed) tab ignores an `ibl:embed-context` entry it did not get from its own URL, across both a re-render (New Chat) and a reload (guard 2: `readStoredEmbedContext` requires `isInIframe`) — planted directly, so the read-side guard is covered even if some future same-origin iframe starts writing the key again
 
@@ -1624,3 +1658,127 @@ under test.
 - [x] ttsr-03: The cold-cache read's background warm-up (`startIblaiWarmUp`) fetches the model weights and voice tensor pinned to the exact `NEXT_PUBLIC_TTS_KOKORO_MODEL_REVISION` sha, never the library's default `resolve/main` — verified via intercepted (fake-byte-fulfilled) requests to the model host
 - [x] ttsr-04: Once both Cache Storage entries (`transformers-cache`, `kokoro-voices`) the warm-up writes are populated, re-reading the same message aloud is served on-device (`peekIblaiRoute` flips to `device` in the same tab, no reload) with no additional call to the cloud `/tts/` endpoint
 - [x] ttsr-05: On an emulated mobile device (`navigator.userAgentData.mobile`/UA stub), Read Aloud always serves through the cloud `/tts/` endpoint and never contacts the Kokoro model host
+---
+
+## Journey 71: VM Sandbox File Artifact — Canvas Preview (2 checkpoints) — `journeys/71-vm-sandbox-txt-file-canvas.spec.ts`
+
+**Source files:** `components/canvas/binary-canvas-component.tsx`, `components/canvas/binary-artifact-utils.ts`, `components/canvas/canvas-view.tsx`, `components/chat/chat-messages/canvas-message-preview.tsx`, `components/chat/chat-messages/message-preview.tsx`, `components/chat/index.tsx`, `components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx`
+
+LIVE-LLM coverage of the VM-sandbox file-sharing pipeline that Journey 10 (Canvas) and Journey 44 (CLAW Advanced Sandbox) can only reach at the unit-test / settings-toggle level. On a dedicated per-test mentor (selecting a sandbox kind is a destructive settings mutation — never run against the shared admin mentor, per the project's shared-mentor-isolation convention), this journey selects the "Virtual Machine Shell" sandbox kind via `SandboxTab.selectKind('virtual-machine')` (mutually exclusive with the other two kinds, and at least one kind is always active — see Journey 44), asks the agent over a real chat turn to create and share **hello.txt** with a known marker line, and verifies the agent replies with the file: the chat chip appears and the canvas shows the file's content. A .txt file was chosen deliberately over a binary format (pdf/xlsx) — the VM produces it reliably with plain shell tooling, so the journey verifies the sandbox→share_files→artifact pipeline without gambling on the LLM assembling valid binary bytes; since .txt is a TEXT artifact, the expected surface is the text canvas and the binary canvas is asserted absent (text/binary routing). The whole file runs in `test.describe.configure({ mode: 'serial' })` and uses `MentorTracker` + `afterAll` to delete its mentor, mirroring Journey 44's pattern. `test.slow()` accounts for VM boot + real generation time; the chip wait carries a multi-minute budget while unrelated assertions keep normal timeouts.
+
+The binary-artifact surfaces themselves (binary chip gating, pdf/image preview, fallback and preview-error panels, binary stream orchestration) remain unit-covered only — see Journey 10's `cvs-12`/`cvs-13`/`cvs-14`/`cvs-15` for the exact gap wording.
+
+- [x] vmc-01: Admin selects the Virtual Machine Shell sandbox kind on a dedicated mentor, enables the composer's Canvas tool (the artifact pipeline is inert without it), and asks the agent (live LLM) to create and share hello.txt with a known marker line (.txt chosen over pdf/xlsx so the VM produces it reliably with shell tooling); the agent replies with the file as an artifact and the chat chip (`canvas-message-preview`) appears with Open Canvas
+- [x] vmc-02: The canvas shows the shared file's content — the .txt artifact takes the TEXT canvas path (tolerant of auto-open at stream start vs. clicking `canvas-open-button`): the editable editor renders containing the marker line, and the binary canvas (`binary-canvas`) is asserted absent (text/binary routing picks the text path for text files)
+
+## Journey 72: Sidebar Support Link & Help Center Resolution (#uat-9) (7 checkpoints; 4 deprecated) — `journeys/72-sidebar-support-link-and-help-center.spec.ts`
+
+**Source files:** `hooks/use-help-center.ts`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`, `lib/config.ts`
+
+UAT bug: the sidebar footer's "Support" link and the nav-bar "More options →
+Help" menu item were hardcoded to `https://ibl.ai/docs` regardless of tenant
+configuration. `hooks/use-help-center.ts` now resolves both destinations from
+tenant metadata (`documentation_url`, `support_url`, `help_center_url`,
+`show_help`), each passed through `addProtocolToUrl` so a scheme-less tenant
+value is prefixed with `https://`. The label stayed "Support" — only the
+href and show/hide behavior changed.
+
+Root cause of the original bug: the e2e helper guarding this surface
+(`SidebarPage.isSupportLinkVisible`) only ever asserted VISIBILITY, never the
+link's DESTINATION, so a hardcoded wrong-domain href passed CI unnoticed for
+months. `SidebarPage.getSupportLinkHref()` (added alongside this journey)
+closes that gap.
+
+**READ-ONLY by design (redesigned in #uat-9):** this journey used to mutate
+the SAME org-scoped tenant metadata on the shared live `conradtesttenant`
+backend, guarded by `describe.serial` + a captured "original" snapshot
+restored in `afterAll`. That was not actually safe: `describe.serial` only
+serialises tests inside this one file (other journeys in other parallel
+workers, and other PRs' CI jobs, hit the same live tenant concurrently), and
+`afterAll` never runs on a killed process. A crashed run left
+`show_help: false` PERMANENTLY on the live tenant, and the next run's
+`beforeAll` captured that `false` as "original" and restored it forever —
+silently breaking an unrelated team's PR (os-222). No in-suite cleanup can
+fix a cross-job race; only not writing does. Every checkpoint now OBSERVES
+the org-metadata GET the app itself already fires on every authenticated
+load (`providers/index.tsx`'s `Providers` calls the SDK's
+`useTenantMetadata({ org: tenantKeyParams })`, which resolves to `GET
+/api/core/orgs/<org>/metadata/`) via
+`navigateAndObserveTenantMetadata` (`e2e/utils/tenant-metadata-observed.ts`),
+computes the SAME expected value the app/SDK would compute from that exact
+reading, and asserts the live UI matches it — there is no shared mutable
+state left to race, and no DM API call of the journey's own. The
+tenant-override PRECEDENCE logic previously proven by mutating the live
+tenant (`documentation_url` with/without a scheme, `show_help` gating in
+both layouts, `help_center_url` fallback) needed no live tenant at all — it
+is pure prop-in/render-out logic already covered with zero gap by
+`hooks/__tests__/use-help-center.test.ts` and
+`app-sidebar/__tests__/index.test.tsx` (the "AppSidebar — Support footer
+link" describe block and its rail-mode counterpart); those four checkpoints
+are marked `deprecated` below (checkpoint count preserved, not deleted —
+same pattern as journeys 15/16).
+
+**Zero-configuration (fixed in #uat-9):** this journey used to call the DM
+API directly (`getTenantMetadata`, `e2e/utils/tenant-metadata.ts`) gated on
+the `DM_URL` env var, which is exported only in CI and never in
+`e2e/.env.local` — so every checkpoint silently SKIPPED on any local or
+non-CI environment, a green run that tested nothing. It now observes traffic
+the app makes unconditionally on any environment, so it needs no `DM_URL`,
+no DM API credentials, and no per-environment setup — and it never skips: if
+the org-metadata response cannot be observed, the checkpoint FAILS loudly
+instead.
+
+- [x] shc-01: READ-ONLY — sidebar footer Support link's href in the EXPANDED layout matches `documentation_url || default` computed from a live GET of tenant metadata, or the link is absent when `show_help` is false
+- [x] shc-02: Same live-resolution check for the RAIL-COLLAPSED sidebar layout (`SidebarCollapsedLabelFlyout`, `aria-label="Support"`)
+- [x] ~~shc-03: A tenant `documentation_url` override WITH a scheme is used verbatim as the sidebar Support link's href~~ _(deprecated in #uat-9 — covered by hooks/**tests**/use-help-center.test.ts + app-sidebar/**tests**/index.test.tsx)_
+- [x] ~~shc-04: A tenant `documentation_url` override WITHOUT a scheme is prefixed with `https://` by `addProtocolToUrl`~~ _(deprecated in #uat-9 — same unit coverage as shc-03)_
+- [x] ~~shc-05: Tenant `show_help: false` hides the sidebar Support link in BOTH expanded and rail-collapsed layouts; removing the override brings it back~~ _(deprecated in #uat-9 — covered by app-sidebar/**tests**/index.test.tsx in both layouts)_
+- [x] shc-06: READ-ONLY — the nav-bar "More options → Help" dropdown item resolves `support_url || help_center_url || default` computed from a live GET of tenant metadata, or is absent when `show_help` is false
+- [x] ~~shc-07: The nav-bar "More options → Help" dropdown item falls back to tenant `help_center_url` when `support_url` is absent~~ _(deprecated in #uat-9 — same precedence chain proven by hooks/**tests**/use-help-center.test.ts; shc-06 still verifies the support_url-present path live)_
+
+## Journey 73: Agent Working Indicator (9 checkpoints) — `journeys/73-agent-working-indicator.spec.ts`
+
+**Source files:** `components/chat/working-indicator.tsx`, `components/chat/ai-message-frame.tsx`, `components/chat/ai-message-bubble.tsx`, `components/chat/chat-messages/index.tsx`, `components/chat/index.tsx`, `components/chat/reasoning-section.tsx`, `components/chat/tool-call-indicator.tsx`, `lib/constants.ts`, `app/globals.css`
+
+Issue #2217 — a persistent "agent is working" indicator in chat, replacing a
+placeholder that used to vanish for good the instant any token rendered.
+During a long agentic turn (tool calls, reasoning, workflow steps) that
+disappearance made it impossible to tell whether the agent was working or the
+app had hung. Driven by the SDK's `ChatPhase` discriminated union
+(`@iblai/iblai-js/web-utils`, surfaced via `useAdvancedChat`'s `chatPhase`):
+`idle | thinking | tool | writing | workflow | file | media`.
+
+`WorkingIndicator` renders a shimmering `role="status"` line
+(`data-testid="chat-working-indicator"`) mounted either standalone
+(`AIWorkingMessage`, `data-testid="chat-working-message"`, before the
+streaming bubble has anything to show) or embedded at the foot of the real
+streaming bubble (`AIMessageBubble`) once it does — the two are mutually
+exclusive by construction, so exactly one agent message frame is ever on
+screen per turn (checkpoint 9). Reuses Journey 68's
+(`68-agent-todo-list.spec.ts`) `page.routeWebSocket()` technique
+(`ChatPage.mockChatWebSocket()`) to script deterministic phase transitions —
+chat is a raw WebSocket, not REST, so frames cannot be `page.route`-mocked —
+extended with two frame shapes journey 68 never needed:
+
+- A bare `{error, status_code}` frame with **no** `eos` (checkpoint 7, the
+  highest-value case): real error frames are never followed by `eos`, the
+  socket just closes right after — this was the original hang bug.
+- An `eos` frame carrying a `session_id` that does not match the session
+  currently in view (checkpoint 8): the SDK ignores it outright, so a
+  background turn finishing must not clear the indicator for the visible
+  session.
+
+The "verbose reasoning" (`show_reasoning`) mentor setting is toggled via
+`ChatPage.mockShowReasoning()` (a REST route patch), not by mutating the
+shared default mentor's real settings — unlike Journey 52, this spec creates
+no mentor and therefore needs no `MentorTracker`/cleanup.
+
+- [x] awi-01: The working indicator appears on send and survives the first answer token — proven by catching a >15s stall mid-stream and watching the reassurance line reappear (an unmounted component could not do that)
+- [x] awi-02: With verbose reasoning off, no disclosure rows render at all — the shimmer alone carries the whole turn through thinking, a tool call, and into writing
+- [x] awi-03: With verbose reasoning on, the reasoning and tool-call rows take over liveness via their own bouncing dots (`isActive`) and the shimmer stands down for exactly the phase a visible row already states — exactly one element conveys progress at any instant
+- [x] awi-04: The shimmer hides while answer text is visibly streaming and returns with "Still working — longer tasks can take a few minutes." once the stream stalls past `STALLED_STREAM_DELAY_MS`; a fresh token stands it down again immediately
+- [x] awi-05: Only one Stop control is ever on screen — the composer's; the working indicator itself renders no button
+- [x] awi-06: `prefers-reduced-motion: reduce` swaps the shimmer for flat muted text (no `.ibl-text-shimmer` class) and freezes the disclosure rows' bouncing dots (`animationName: none`) rather than merely hiding them
+- [x] awi-07: An error frame with no `eos` clears the working indicator — the original hang bug
+- [x] awi-08: An `eos` frame for a different `session_id` than the session in view is ignored and does not clear the indicator (background-session scoping)
+- [x] awi-09: Exactly one avatar/name/timestamp agent message frame is ever on screen per turn, including across a `write_todos` turn where `AgentTodoList` also renders

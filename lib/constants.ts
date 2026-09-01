@@ -27,6 +27,8 @@ export const QUERY_PARAMS = {
   TENANT: 'tenant',
   EMBED: 'embed',
   INTERNAL_PREVIEW: 'internalPreview',
+  MODE: 'mode',
+  SHOW_CLOSE_BUTTON: 'show-close-button',
 };
 
 // URL patterns
@@ -195,6 +197,7 @@ export const CSS_CLASS_NAMES = {
     TEXTAREA: 'chat-textarea',
     SUBMIT_MESSAGE_BUTTON: 'chat-submit-message-button',
     STOP_STREAMING_BUTTON: 'chat-stop-streaming-button',
+    WORKING_INDICATOR: 'chat-working-indicator',
   },
   APP_LAYOUT: {
     MAIN_CONTENT_AREA: 'chat-main-content-area',

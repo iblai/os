@@ -25,9 +25,10 @@ import { isInIframe } from '@/lib/utils';
 
 export const EMBED_CONTEXT_KEYS = [
   QUERY_PARAMS.EMBED,
-  'mode',
+  QUERY_PARAMS.MODE,
   'component',
   'extra-body-classes',
+  QUERY_PARAMS.SHOW_CLOSE_BUTTON,
 ] as const;
 
 const STORAGE_KEY = 'ibl:embed-context';

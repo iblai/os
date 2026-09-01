@@ -83,16 +83,16 @@ const LAST_ROUTE_FILE: &str = "last_mentor_route.txt";
 
 // App URL - configurable via TAURI_DEV_URL env variable (compile-time for mobile, runtime for desktop)
 fn get_app_url() -> String {
-    // For mobile: check compile-time env var (set during build)
-    // For desktop: check runtime env var
-    if let Some(url) = option_env!("TAURI_DEV_URL") {
-        return url.to_string();
-    }
-
-    // Desktop: also check runtime environment variable
+    // Desktop: runtime env first (includes src-tauri/.env.local via the early
+    // dotenv load) — a value baked in at compile time must not shadow it.
     #[cfg(not(any(target_os = "ios", target_os = "android")))]
     if let Ok(url) = std::env::var("TAURI_DEV_URL") {
         return url;
+    }
+
+    // Mobile: compile-time env var (set during build)
+    if let Some(url) = option_env!("TAURI_DEV_URL") {
+        return url.to_string();
     }
 
     // Mobile platforms: .org for debug, .app for release
@@ -2003,6 +2003,9 @@ const URL_MONITOR_SCRIPT_ONLINE: &str = r#"
 
 /// JavaScript for offline mode - intercepts fetch calls and routes API calls through offline server
 /// CRITICAL: This script must restore localStorage context BEFORE the app initializes
+///
+/// `__OFFLINE_SERVER_URL__` is substituted by [`url_monitor_script_offline`] —
+/// the offline server's port is allocated at startup, so it cannot be baked in.
 const URL_MONITOR_SCRIPT_OFFLINE: &str = r#"
 (function() {
     // Only run once per page
@@ -2013,7 +2016,7 @@ const URL_MONITOR_SCRIPT_OFFLINE: &str = r#"
     window.__TAURI_OFFLINE_MODE__ = true;
     localStorage.setItem('tauri_offline_mode', 'true');
 
-    var OFFLINE_SERVER = 'http://127.0.0.1:3456';
+    var OFFLINE_SERVER = '__OFFLINE_SERVER_URL__';
 
     // Override __ENV__ to route API calls through our offline server
     window.__ENV__ = window.__ENV__ || {};
@@ -2160,8 +2163,24 @@ const URL_MONITOR_SCRIPT_OFFLINE: &str = r#"
 })();
 "#;
 
+/// [`URL_MONITOR_SCRIPT_OFFLINE`] with the offline server's real URL patched in.
+/// Twin of `main.rs::url_monitor_script_offline`; both entry points must resolve
+/// the port at window-creation time rather than bake one in.
+fn url_monitor_script_offline() -> String {
+    URL_MONITOR_SCRIPT_OFFLINE.replace("__OFFLINE_SERVER_URL__", &offline_server::get_server_url())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Dev-checkout overrides first: src-tauri/.env.local, then .env.production.
+    // The path is compile-time CARGO_MANIFEST_DIR, so installed builds have
+    // neither and skip straight on. Loaded before anything reads env; dotenvy
+    // never overrides already-set vars, so shell env > .env.local >
+    // .env.production > .env. Keys documented in src-tauri/.env.example.
+    for f in [".env.local", ".env.production"] {
+        let _ = dotenvy::from_path(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(f));
+    }
+
     // Load .env file if present (for local development and custom builds)
     // First try current directory (dev mode), then try next to the executable (bundled app)
     if dotenvy::dotenv().is_err() {
@@ -2239,6 +2258,13 @@ pub fn run() {
             // =====================
             #[cfg(not(any(target_os = "ios", target_os = "android")))]
             {
+                // Keep the managed opencode on the pinned version — a pin bump would
+                // otherwise never reach a machine that already has a runnable copy.
+                let opencode_handle = app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    opencode_installer::ensure_opencode_current(opencode_handle).await;
+                });
+
                 // Vibe skills track the latest GitHub release with no freshness
                 // window — resolve-and-sync in the background on every launch, so
                 // Coding Mode always starts from the newest published set (and a
@@ -2331,9 +2357,14 @@ pub fn run() {
                             .filter(|r| !r.is_empty())
                     });
 
+                    // The offline server's port is allocated at startup (3457
+                    // when free, any free port otherwise) — read it rather than
+                    // hardcoding, which is how this twin drifted onto a 3456
+                    // the server never bound.
+                    let base = offline_server::get_server_url();
                     let offline_url = match route {
-                        Some(r) => format!("http://127.0.0.1:3456{}", r),
-                        None => "http://127.0.0.1:3456".to_string(),
+                        Some(r) => format!("{}{}", base, r),
+                        None => base,
                     };
                     println!("[MentorAI] Using offline URL: {}", offline_url);
                     tauri::WebviewUrl::External(offline_url.parse().unwrap())
@@ -2343,9 +2374,9 @@ pub fn run() {
 
                 // Create main window with appropriate URL monitoring script
                 let init_script = if is_online {
-                    URL_MONITOR_SCRIPT_ONLINE
+                    URL_MONITOR_SCRIPT_ONLINE.to_string()
                 } else {
-                    URL_MONITOR_SCRIPT_OFFLINE
+                    url_monitor_script_offline()
                 };
 
                 let _window = tauri::WebviewWindowBuilder::new(
@@ -2886,6 +2917,9 @@ pub fn run() {
         opencode_acp::opencode_close,
         opencode_acp::get_opencode_workspace,
         opencode_acp::set_opencode_workspace,
+        opencode_acp::new_opencode_workspace,
+        opencode_acp::get_opencode_permission_mode,
+        opencode_acp::set_opencode_permission_mode,
         opencode_acp::set_opencode_skills,
         opencode_acp::begin_opencode_skills_sync,
         opencode_installer::install_opencode,
@@ -2893,6 +2927,7 @@ pub fn run() {
         opencode_installer::check_opencode_status,
         opencode_acp::check_code_local_model,
         opencode_acp::set_opencode_learner,
+        opencode_acp::ensure_opencode_platform_key,
     ]);
 
     // Mobile platforms get only basic commands (no offline/cache features)

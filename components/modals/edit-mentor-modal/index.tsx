@@ -13,7 +13,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  LLMTab,
   PromptsTab,
   McpTab,
   ToolsTab,
@@ -40,6 +39,7 @@ import {
 import { useNavigate } from '@/hooks/user-navigate';
 import { MODALS } from '@/lib/constants';
 import { SettingsTab } from './settings-tab';
+import { LLMTab } from './llm-tab';
 import { MemoryTab } from './tabs/memory-tab';
 import { DisclaimersTab } from './tabs/disclaimers-tab';
 // Datasets renders the SDK `AgentDatasetsTab` via an OS host wrapper (provider

@@ -327,6 +327,14 @@
     "renaming": "Renommage...",
     "save": "Enregistrer"
   },
+  "canvasBinaryCanvas": {
+    "untitledFile": "Fichier sans titre",
+    "export": "Exporter",
+    "loadError": "Impossible de charger ce fichier.",
+    "retry": "Réessayer",
+    "previewUnavailable": "Nous ne pouvons pas encore afficher un aperçu de ce type de fichier, mais il est prêt. Cliquez sur Exporter pour l'enregistrer sur votre appareil.",
+    "previewFailed": "Impossible d'afficher l'aperçu de ce fichier — il semble non valide ou corrompu. Vous pouvez tout de même l'exporter."
+  },
   "canvasCanvasControls": {
     "lengthLongest": "Le plus long",
     "lengthLonger": "Plus long",
@@ -528,6 +536,20 @@
   "chatStopStreamingButton": {
     "stopStreaming": "Arrêter la diffusion",
     "stopStreamingTooltip": "Arrêter la diffusion"
+  },
+  "chatWorkingIndicator": {
+    "thinking": "Réflexion…",
+    "usingTool": "Utilisation de {toolName}…",
+    "writing": "Rédaction de la réponse…",
+    "workflow": "Exécution du flux de travail…",
+    "workflowDetail": "{detail}…",
+    "processingFile": "Traitement de {fileName}…",
+    "processingFileProgress": "Traitement de {fileName} ({current} sur {total})…",
+    "generatingImage": "Génération de l’image…",
+    "generatingVideo": "Génération de la vidéo…",
+    "working": "Traitement en cours…",
+    "stillWorking": "Toujours en cours — les tâches longues peuvent prendre quelques minutes.",
+    "tooltip": "Traitement en cours… — L’agent traite toujours votre message. Les tâches longues prennent du temps, surtout lorsque l’agent utilise des outils, effectue des recherches ou génère du contenu. Vous pouvez laisser l’onglet ouvert et suivre la progression, ou appuyer sur Arrêter pour annuler et reprendre la main."
   },
   "common": {
     "cancel": "Annuler",
@@ -1922,12 +1944,7 @@
   },
   "tabsSandboxTab": {
     "heading": "Bac à sable",
-    "description": "Configurez les paramètres de connexion et de déploiement du bac à sable.",
-    "capabilityTitle": "Bac à sable dédié",
-    "capabilityDescription": "Offrez à cet agent son propre espace de travail sécurisé où il peut exécuter du code, des outils et des compétences en votre nom. Une fois activé, connectez-le à une instance ci-dessous pour débloquer les compétences et les invites de l'agent.",
-    "capabilityOffHint": "Activez-le pour offrir un espace de travail à cet agent et le connecter à une instance.",
-    "toggleSuccess": "Paramètre du bac à sable mis à jour",
-    "toggleError": "Impossible de mettre à jour le paramètre du bac à sable"
+    "description": "Configurez les paramètres de connexion et de déploiement du bac à sable."
   },
   "tabsGraderTab": {
     "headerTitle": "Évaluateur",
@@ -2351,10 +2368,26 @@
     "firstRunSlow": "La première exécution peut prendre quelques minutes pendant le chargement du modèle.",
     "modelUnavailable": "n’est pas disponible pour Code — les tours échoueront. Choisissez un autre modèle en haut à gauche.",
     "workspace": "Espace de travail",
-    "changeFolder": "Changer de dossier…",
+    "selectWorkspace": "Sélectionner l’espace de travail",
     "chooseFolderTitle": "Choisissez votre dossier de travail",
     "skillsSyncFailed": "Impossible de synchroniser les compétences — Code fonctionnera sans elles.",
-    "sandboxMissing": "Code nécessite bubblewrap (bwrap). Installez-le avec votre gestionnaire de paquets, puis rouvrez l’application."
+    "sandboxMissing": "Code nécessite bubblewrap (bwrap). Installez-le avec votre gestionnaire de paquets, puis rouvrez l’application.",
+    "permissionModeLabel": "Approbations",
+    "permissionModeManual": "Me demander",
+    "permissionModeAuto": "Automatique",
+    "permissionModeAutoHint": "Code modifie des fichiers et exécute des commandes sans demander. À utiliser uniquement dans des dossiers de confiance.",
+    "newWorkspace": "Nouvel espace de travail",
+    "openInFinder": "Ouvrir dans le Finder",
+    "openInExplorer": "Ouvrir dans l’Explorateur",
+    "openInApp": "Ouvrir dans {app}",
+    "openFolder": "Ouvrir le dossier",
+    "openFolderFailed": "Impossible d’ouvrir le dossier",
+    "pickFolderFailed": "Impossible de choisir un dossier",
+    "newWorkspaceFailed": "Impossible de créer un nouvel espace de travail",
+    "permissionDialogTitle": "Comment Code doit-il demander votre accord ?",
+    "permissionDialogDescription": "Code peut modifier des fichiers et exécuter des commandes dans votre espace de travail. Choisissez s’il doit vous consulter d’abord ; vous pourrez le changer plus tard dans le panneau Code.",
+    "permissionDialogManualAction": "Me demander à chaque fois",
+    "permissionDialogAutoAction": "Approuver automatiquement"
   },
   "chatCodePermissionCard": {
     "title": "Code a besoin de votre autorisation",
