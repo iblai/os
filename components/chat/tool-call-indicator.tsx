@@ -22,7 +22,11 @@ import { getFriendlyToolName, getQueryLabel } from './tool-call-utils';
 
 interface ToolCallIndicatorProps {
   toolCalls: ToolCallInfo[];
-  isCurrentlyStreaming?: boolean;
+  /**
+   * True while this row *is* the live phase of the turn. Adds bouncing dots to
+   * the header and nothing else — no per-tool pulse, no change of wording.
+   */
+  isActive?: boolean;
 }
 
 const TOOL_ICONS: Record<string, typeof Globe> = {
@@ -37,9 +41,17 @@ function getToolIcon(toolName?: string) {
   return (toolName && TOOL_ICONS[toolName]) || Wrench;
 }
 
+/**
+ * Collapsible record of the tools a turn used.
+ *
+ * The header always reads as the completed record ("Used N tools") and the
+ * individual rows never animate. Only while this row is the live phase does the
+ * header sprout dots — at which point the working line has stood down, so there
+ * is still exactly one animated "agent is working" signal on screen.
+ */
 export function ToolCallIndicator({
   toolCalls,
-  isCurrentlyStreaming = false,
+  isActive = false,
 }: ToolCallIndicatorProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -52,8 +64,6 @@ export function ToolCallIndicator({
   if (visibleToolCalls.length === 0) {
     return null;
   }
-
-  const isStreaming = isCurrentlyStreaming;
 
   const uniqueToolCount = new Set(visibleToolCalls.map((tc) => tc.name)).size;
   const headerLabel = `Used ${uniqueToolCount} tool${uniqueToolCount === 1 ? '' : 's'}`;
@@ -69,11 +79,11 @@ export function ToolCallIndicator({
         />
         <Wrench className="h-3 w-3" />
         <span>{headerLabel}</span>
-        {isStreaming && (
-          <span className="inline-flex gap-0.5">
-            <span className="inline-block h-1 w-1 animate-bounce rounded-full bg-gray-600 [animation-delay:0ms]" />
-            <span className="inline-block h-1 w-1 animate-bounce rounded-full bg-gray-600 [animation-delay:150ms]" />
-            <span className="inline-block h-1 w-1 animate-bounce rounded-full bg-gray-600 [animation-delay:300ms]" />
+        {isActive && (
+          <span className="inline-flex gap-0.5" aria-hidden="true">
+            <span className="inline-block h-1 w-1 animate-bounce rounded-full bg-gray-600 [animation-delay:0ms] motion-reduce:animate-none" />
+            <span className="inline-block h-1 w-1 animate-bounce rounded-full bg-gray-600 [animation-delay:150ms] motion-reduce:animate-none" />
+            <span className="inline-block h-1 w-1 animate-bounce rounded-full bg-gray-600 [animation-delay:300ms] motion-reduce:animate-none" />
           </span>
         )}
       </CollapsibleTrigger>
@@ -84,7 +94,6 @@ export function ToolCallIndicator({
           {visibleToolCalls.map((toolCall, index) => {
             const query = getQueryLabel(toolCall);
             const Icon = getToolIcon(toolCall?.name);
-            const isLast = index === visibleToolCalls.length - 1;
 
             return (
               <div key={toolCall?.id || index}>
@@ -93,9 +102,6 @@ export function ToolCallIndicator({
                   <span className="font-medium">
                     {getFriendlyToolName(toolCall?.name ?? '')}
                   </span>
-                  {isLast && isStreaming && (
-                    <span className="inline-block h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-gray-500" />
-                  )}
                 </div>
                 {/* The tool description/query renders through <Markdown>, which
                     brings its own prose colours — they have to be overridden on

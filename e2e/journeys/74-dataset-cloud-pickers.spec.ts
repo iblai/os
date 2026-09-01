@@ -1,5 +1,5 @@
 /**
- * Journey 73: Dataset Cloud Pickers
+ * Journey 74: Dataset Cloud Pickers
  *
  * Verifies that clicking the Google Drive, Microsoft OneDrive, and Dropbox
  * buttons in the Add Resources modal opens the third-party auth/picker popup.
@@ -20,7 +20,7 @@
  * within the timeout, the test fails — that is exactly the regression #1677
  * exists to catch (broken click handler, missing credentials, SDK not loaded).
  *
- * Each test creates a fresh mentor first (matching journey 36 / 73 pattern)
+ * Each test creates a fresh mentor first (matching journey 36 / 75 pattern)
  * so the datasets tab is always reachable from a known-good starting state.
  */
 
@@ -29,7 +29,7 @@ import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
 import { logger } from '@iblai/iblai-js/playwright';
 
-test.describe('Journey 73: Dataset Cloud Pickers', () => {
+test.describe('Journey 74: Dataset Cloud Pickers', () => {
   test.setTimeout(200_000);
 
   test.beforeEach(async ({ page }) => {

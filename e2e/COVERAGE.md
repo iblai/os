@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-09-01 | 710 checkpoints (671 covered, 8 pending/fixme, 15 not-reproducible in default env, 16 deprecated) | 76 journeys (75 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-09-02 | 719 checkpoints (680 covered, 8 pending/fixme, 15 not-reproducible in default env, 16 deprecated) | 77 journeys (76 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -1689,31 +1689,78 @@ instead.
 - [x] shc-06: READ-ONLY — the nav-bar "More options → Help" dropdown item resolves `support_url || help_center_url || default` computed from a live GET of tenant metadata, or is absent when `show_help` is false
 - [x] ~~shc-07: The nav-bar "More options → Help" dropdown item falls back to tenant `help_center_url` when `support_url` is absent~~ _(deprecated in #uat-9 — same precedence chain proven by hooks/**tests**/use-help-center.test.ts; shc-06 still verifies the support_url-present path live)_
 
+## Journey 73: Agent Working Indicator (9 checkpoints) — `journeys/73-agent-working-indicator.spec.ts`
+
+**Source files:** `components/chat/working-indicator.tsx`, `components/chat/ai-message-frame.tsx`, `components/chat/ai-message-bubble.tsx`, `components/chat/chat-messages/index.tsx`, `components/chat/index.tsx`, `components/chat/reasoning-section.tsx`, `components/chat/tool-call-indicator.tsx`, `lib/constants.ts`, `app/globals.css`
+
+Issue #2217 — a persistent "agent is working" indicator in chat, replacing a
+placeholder that used to vanish for good the instant any token rendered.
+During a long agentic turn (tool calls, reasoning, workflow steps) that
+disappearance made it impossible to tell whether the agent was working or the
+app had hung. Driven by the SDK's `ChatPhase` discriminated union
+(`@iblai/iblai-js/web-utils`, surfaced via `useAdvancedChat`'s `chatPhase`):
+`idle | thinking | tool | writing | workflow | file | media`.
+
+`WorkingIndicator` renders a shimmering `role="status"` line
+(`data-testid="chat-working-indicator"`) mounted either standalone
+(`AIWorkingMessage`, `data-testid="chat-working-message"`, before the
+streaming bubble has anything to show) or embedded at the foot of the real
+streaming bubble (`AIMessageBubble`) once it does — the two are mutually
+exclusive by construction, so exactly one agent message frame is ever on
+screen per turn (checkpoint 9). Reuses Journey 68's
+(`68-agent-todo-list.spec.ts`) `page.routeWebSocket()` technique
+(`ChatPage.mockChatWebSocket()`) to script deterministic phase transitions —
+chat is a raw WebSocket, not REST, so frames cannot be `page.route`-mocked —
+extended with two frame shapes journey 68 never needed:
+
+- A bare `{error, status_code}` frame with **no** `eos` (checkpoint 7, the
+  highest-value case): real error frames are never followed by `eos`, the
+  socket just closes right after — this was the original hang bug.
+- An `eos` frame carrying a `session_id` that does not match the session
+  currently in view (checkpoint 8): the SDK ignores it outright, so a
+  background turn finishing must not clear the indicator for the visible
+  session.
+
+The "verbose reasoning" (`show_reasoning`) mentor setting is toggled via
+`ChatPage.mockShowReasoning()` (a REST route patch), not by mutating the
+shared default mentor's real settings — unlike Journey 52, this spec creates
+no mentor and therefore needs no `MentorTracker`/cleanup.
+
+- [x] awi-01: The working indicator appears on send and survives the first answer token — proven by catching a >15s stall mid-stream and watching the reassurance line reappear (an unmounted component could not do that)
+- [x] awi-02: With verbose reasoning off, no disclosure rows render at all — the shimmer alone carries the whole turn through thinking, a tool call, and into writing
+- [x] awi-03: With verbose reasoning on, the reasoning and tool-call rows take over liveness via their own bouncing dots (`isActive`) and the shimmer stands down for exactly the phase a visible row already states — exactly one element conveys progress at any instant
+- [x] awi-04: The shimmer hides while answer text is visibly streaming and returns with "Still working — longer tasks can take a few minutes." once the stream stalls past `STALLED_STREAM_DELAY_MS`; a fresh token stands it down again immediately
+- [x] awi-05: Only one Stop control is ever on screen — the composer's; the working indicator itself renders no button
+- [x] awi-06: `prefers-reduced-motion: reduce` swaps the shimmer for flat muted text (no `.ibl-text-shimmer` class) and freezes the disclosure rows' bouncing dots (`animationName: none`) rather than merely hiding them
+- [x] awi-07: An error frame with no `eos` clears the working indicator — the original hang bug
+- [x] awi-08: An `eos` frame for a different `session_id` than the session in view is ignored and does not clear the indicator (background-session scoping)
+- [x] awi-09: Exactly one avatar/name/timestamp agent message frame is ever on screen per turn, including across a `write_todos` turn where `AgentTodoList` also renders
+
 ---
 
-## Journey 73: Dataset Cloud Pickers (3 checkpoints) — `journeys/73-dataset-cloud-pickers.spec.ts`
+## Journey 74: Dataset Cloud Pickers (3 checkpoints) — `journeys/74-dataset-cloud-pickers.spec.ts`
 
 **Source files:** `hooks/use-google-drive-picker.ts`, `hooks/use-one-drive-picker.ts`, `hooks/use-dropdox-picker.ts`, `components/modals/edit-mentor-modal/tabs/datasets-tab/add-resource-modal.tsx`
 
-Verifies that clicking the Google Drive, Microsoft OneDrive, and Dropbox buttons in the Add Resources modal opens the third-party auth/picker popup. Each test creates a fresh mentor (matching journey 36 / 74 pattern), opens the Datasets tab → Add Resources modal, clicks the provider button, and uses `page.waitForEvent('popup')` to verify a popup opens. The popup URL is asserted to match the expected provider domain — `accounts.google.com`, `login.microsoftonline.com`, or `www.dropbox.com/chooser`. If no popup opens (e.g., broken click handler, missing credentials, SDK not loaded) the test fails loudly. Covers [iblai-platform#1677](https://github.com/iblai/iblai-platform/issues/1677).
+Verifies that clicking the Google Drive, Microsoft OneDrive, and Dropbox buttons in the Add Resources modal opens the third-party auth/picker popup. Each test creates a fresh mentor (matching journey 36 / 75 pattern), opens the Datasets tab → Add Resources modal, clicks the provider button, and uses `page.waitForEvent('popup')` to verify a popup opens. The popup URL is asserted to match the expected provider domain — `accounts.google.com`, `login.microsoftonline.com`, or `www.dropbox.com/chooser`. If no popup opens (e.g., broken click handler, missing credentials, SDK not loaded) the test fails loudly. Covers [iblai-platform#1677](https://github.com/iblai/iblai-platform/issues/1677).
 
-- [x] DSCP-73.1: Admin clicks Google Drive button — asserts a popup opens at `accounts.google.com` (OAuth flow)
-- [x] DSCP-73.2: Admin clicks Microsoft OneDrive button — asserts a popup opens at `login.microsoftonline.com` (OAuth flow)
-- [x] DSCP-73.3: Admin clicks Dropbox button — asserts a popup opens at `www.dropbox.com/chooser` (Dropbox Chooser SDK)
+- [x] DSCP-74.1: Admin clicks Google Drive button — asserts a popup opens at `accounts.google.com` (OAuth flow)
+- [x] DSCP-74.2: Admin clicks Microsoft OneDrive button — asserts a popup opens at `login.microsoftonline.com` (OAuth flow)
+- [x] DSCP-74.3: Admin clicks Dropbox button — asserts a popup opens at `www.dropbox.com/chooser` (Dropbox Chooser SDK)
 
 ---
 
-## Journey 74: Dataset Upload Types (8 checkpoints) — `journeys/74-dataset-upload-types.spec.ts`
+## Journey 75: Dataset Upload Types (8 checkpoints) — `journeys/75-dataset-upload-types.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/datasets-tab/add-resource-modal.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/resource-types.tsx`
 
 Uploads a real fixture file for each of the 8 local file-upload resource types available in the Add Resources modal: PowerPoint, DOCX, CSV, TXT, Audio, Video, Image, and Excel. **Each test first creates a fresh mentor via `createMentorPage.openAndCreate()`** (matching the journey 36 / Copy Mentor pattern) so uploads are made against a clean dataset list — pre-existing rows from other tests can't mask a missing upload. Then uses `DatasetsTab.uploadFile()` (the same generic helper used by the CSV and Markdown tests in journey 20) to execute the full modal flow — open Add Resources, click the resource type, `setInputFiles`, Submit, wait for network idle, close dialogs — then asserts the uploaded filename appears as a row in the dataset list within 15 s. A failed upload results in no row and an immediate hard-fail assertion. Covers the file-upload surface of [iblai-platform#1677](https://github.com/iblai/iblai-platform/issues/1677).
 
-- [x] DU-74.1: Admin uploads a PowerPoint (`.pptx`) file — `Title Lorem Ipsum.pptx` row appears in dataset list
-- [x] DU-74.2: Admin uploads a DOCX file — `audrey.docx` row appears in dataset list
-- [x] DU-74.3: Admin uploads a CSV file — `test-data.csv` row appears in dataset list
-- [x] DU-74.4: Admin uploads a TXT file — `outerHTML.txt` row appears in dataset list
-- [x] DU-74.5: Admin uploads an Audio file (`.mp3`) — `Fally_Ipupa` row appears in dataset list
-- [x] DU-74.6: Admin uploads a Video file (`.mp4`) — `IMG_4019` row appears in dataset list
-- [x] DU-74.7: Admin uploads an Image file (`.png`) — `acessibility png` row appears in dataset list
-- [x] DU-74.8: Admin uploads an Excel (`.xlsx`) file — `test-data.xlsx` row appears in dataset list
+- [x] DU-75.1: Admin uploads a PowerPoint (`.pptx`) file — `Title Lorem Ipsum.pptx` row appears in dataset list
+- [x] DU-75.2: Admin uploads a DOCX file — `audrey.docx` row appears in dataset list
+- [x] DU-75.3: Admin uploads a CSV file — `test-data.csv` row appears in dataset list
+- [x] DU-75.4: Admin uploads a TXT file — `outerHTML.txt` row appears in dataset list
+- [x] DU-75.5: Admin uploads an Audio file (`.mp3`) — `Fally_Ipupa` row appears in dataset list
+- [x] DU-75.6: Admin uploads a Video file (`.mp4`) — `IMG_4019` row appears in dataset list
+- [x] DU-75.7: Admin uploads an Image file (`.png`) — `acessibility png` row appears in dataset list
+- [x] DU-75.8: Admin uploads an Excel (`.xlsx`) file — `test-data.xlsx` row appears in dataset list

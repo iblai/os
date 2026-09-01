@@ -81,38 +81,93 @@ describe('ToolCallIndicator', () => {
     expect(screen.getByText('Used 1 tool')).toBeInTheDocument();
   });
 
-  it('shows tool count in header even when streaming', () => {
+  it('shows tool count in the header button', () => {
     render(
       <ToolCallIndicator
         toolCalls={[
           makeToolCall({ id: '1', name: 'web_search_call' }),
           makeToolCall({ id: '2', name: 'vector_search' }),
         ]}
-        isCurrentlyStreaming={true}
       />,
     );
     const headerButton = screen.getByRole('button');
     expect(headerButton).toHaveTextContent('Used 2 tools');
   });
 
-  it('shows bounce dots when streaming', () => {
-    const { container } = render(
-      <ToolCallIndicator
-        toolCalls={[makeToolCall()]}
-        isCurrentlyStreaming={true}
-      />,
-    );
-    expect(container.querySelectorAll('.animate-bounce').length).toBe(3);
-  });
+  // Only the header animates, and only while this row is the live phase — at
+  // which point the shimmering WorkingIndicator has stood down, so there is
+  // still exactly one animated signal on screen.
+  describe('liveness dots', () => {
+    it('renders no animation for a finished record', () => {
+      const { container } = render(
+        <ToolCallIndicator toolCalls={[makeToolCall()]} />,
+      );
+      fireEvent.click(screen.getByText('Used 1 tool'));
+      expect(
+        container.querySelector('.animate-bounce'),
+      ).not.toBeInTheDocument();
+      expect(container.querySelector('[class*="animate-"]')).toBeNull();
+    });
 
-  it('hides bounce dots when not streaming', () => {
-    const { container } = render(
-      <ToolCallIndicator
-        toolCalls={[makeToolCall()]}
-        isCurrentlyStreaming={false}
-      />,
-    );
-    expect(container.querySelector('.animate-bounce')).not.toBeInTheDocument();
+    it('renders no animation when isActive is explicitly false', () => {
+      const { container } = render(
+        <ToolCallIndicator toolCalls={[makeToolCall()]} isActive={false} />,
+      );
+      expect(container.querySelector('[class*="animate-"]')).toBeNull();
+    });
+
+    it('renders three staggered bouncing dots on the header while active', () => {
+      const { container } = render(
+        <ToolCallIndicator toolCalls={[makeToolCall()]} isActive />,
+      );
+
+      const header = screen.getByRole('button');
+      const dots = header.querySelectorAll('.animate-bounce');
+      expect(dots).toHaveLength(3);
+      expect(dots[0].className).toContain('[animation-delay:0ms]');
+      expect(dots[1].className).toContain('[animation-delay:150ms]');
+      expect(dots[2].className).toContain('[animation-delay:300ms]');
+      expect(container.querySelectorAll('.animate-bounce')).toHaveLength(3);
+    });
+
+    it('never renders a pulsing dot on the last tool row, active or not', () => {
+      const { container } = render(
+        <ToolCallIndicator
+          toolCalls={[
+            makeToolCall({ id: '1', name: 'web_search_call' }),
+            makeToolCall({ id: '2', name: 'vector_search' }),
+          ]}
+          isActive
+        />,
+      );
+      fireEvent.click(screen.getByText('Used 2 tools'));
+      expect(container.querySelector('.animate-pulse')).not.toBeInTheDocument();
+    });
+
+    it('freezes the dots for users who prefer reduced motion', () => {
+      const { container } = render(
+        <ToolCallIndicator toolCalls={[makeToolCall()]} isActive />,
+      );
+
+      container.querySelectorAll('.animate-bounce').forEach((dot) => {
+        expect(dot.className).toContain('motion-reduce:animate-none');
+      });
+    });
+
+    it('hides the decorative dots from assistive tech', () => {
+      const { container } = render(
+        <ToolCallIndicator toolCalls={[makeToolCall()]} isActive />,
+      );
+
+      expect(
+        container.querySelector('[aria-hidden="true"] .animate-bounce'),
+      ).toBeInTheDocument();
+    });
+
+    it('keeps the header wording static while active', () => {
+      render(<ToolCallIndicator toolCalls={[makeToolCall()]} isActive />);
+      expect(screen.getByText('Used 1 tool')).toBeInTheDocument();
+    });
   });
 
   it('expands to show individual tool calls when clicked', () => {
@@ -145,23 +200,35 @@ describe('ToolCallIndicator', () => {
     expect(screen.getByText('documents')).toBeInTheDocument();
   });
 
-  it('starts collapsed even during streaming', () => {
+  it('falls back to the generic wrench and the row index for a nameless call', () => {
+    // Streamed tool frames can land before the name/id are filled in.
+    const { container } = render(
+      <ToolCallIndicator
+        toolCalls={[
+          makeToolCall({
+            id: '',
+            name: undefined as unknown as string,
+            input: { query: 'still searching' },
+          }),
+        ]}
+      />,
+    );
+
+    fireEvent.click(screen.getByText('Used 1 tool'));
+
+    expect(screen.getByText('still searching')).toBeInTheDocument();
+    expect(container.querySelector('.lucide-wrench')).toBeInTheDocument();
+  });
+
+  it('starts collapsed', () => {
     render(
       <ToolCallIndicator
         toolCalls={[makeToolCall({ id: '1', input: { query: 'test' } })]}
-        isCurrentlyStreaming={true}
       />,
     );
 
     // Starts collapsed — query not visible
     expect(screen.queryByText('test')).not.toBeInTheDocument();
-  });
-
-  it('defaults isCurrentlyStreaming to false', () => {
-    const { container } = render(
-      <ToolCallIndicator toolCalls={[makeToolCall()]} />,
-    );
-    expect(container.querySelector('.animate-bounce')).not.toBeInTheDocument();
   });
 
   it('falls back to the generic wrench icon for an unmapped tool name', () => {
@@ -244,22 +311,6 @@ describe('ToolCallIndicator', () => {
     });
   });
 
-  it('pulses only the last tool call while streaming', () => {
-    const { container } = render(
-      <ToolCallIndicator
-        toolCalls={[
-          makeToolCall({ id: '1', name: 'web_search_call' }),
-          makeToolCall({ id: '2', name: 'vector_search' }),
-        ]}
-        isCurrentlyStreaming={true}
-      />,
-    );
-
-    fireEvent.click(screen.getByText('Used 2 tools'));
-    // Only the last of the two rows carries the pulse dot.
-    expect(container.querySelectorAll('.animate-pulse').length).toBe(1);
-  });
-
   describe('write_todos exclusion', () => {
     it('renders nothing when write_todos is the only tool call', () => {
       const { container } = render(
@@ -319,7 +370,7 @@ describe('ToolCallIndicator', () => {
       expect(screen.queryByText('Step one')).not.toBeInTheDocument();
     });
 
-    it('keeps the streaming pulse on the last non-todo tool call', () => {
+    it('excludes write_todos even while the row is the live phase', () => {
       const { container } = render(
         <ToolCallIndicator
           toolCalls={[
@@ -330,12 +381,15 @@ describe('ToolCallIndicator', () => {
             }),
             makeToolCall({ id: 'td', name: 'write_todos' }),
           ]}
-          isCurrentlyStreaming={true}
+          isActive={true}
         />,
       );
 
       fireEvent.click(screen.getByText('Used 1 tool'));
-      expect(container.querySelectorAll('.animate-pulse').length).toBe(1);
+      expect(screen.getByText('F1 race')).toBeInTheDocument();
+      // Liveness is the header dots only — the per-row pulse is gone, so a
+      // live row must not reintroduce a second animation.
+      expect(container.querySelectorAll('.animate-pulse').length).toBe(0);
     });
   });
 });
