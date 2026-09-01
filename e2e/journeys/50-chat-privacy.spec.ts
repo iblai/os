@@ -571,7 +571,9 @@ test.describe('Journey 50: Chat Privacy', () => {
       // shared states already in the configuration this block wants:
       //   • Gate ON           → header toggle is visible
       //   • Mentor lock OFF   → aria-disabled is absent/"false"
-      //   • User mode normal  → data-source is anything but "user"
+      //   • User mode not "Disabled" → a fresh chat's data-state is "off"
+      //     (data-source may still legitimately read "user" — see the
+      //     fastPathOk / cp-profile-05 comments below)
       // All three are readable from the header toggle DOM in ~150ms with
       // no modal opens. If they hold, skip the three ensures (each of
       // which opens a modal and can cost 5-15s on slow envs). On the
@@ -591,7 +593,20 @@ test.describe('Journey 50: Chat Privacy', () => {
         const dataSource = await toggle
           .getAttribute('data-source')
           .catch(() => null);
-        if (dataSource === 'mentor' || dataSource === 'user') return false;
+        if (dataSource === 'mentor') return false;
+        // A "user" source alone is not a reason to fall back to the slow
+        // path: per cp-profile-05, once ANY profile Private Mode selection
+        // has ever been saved, the backend keeps data-source="user" for
+        // BOTH Normal and Disabled — it can never clear back to another
+        // tier. Only "user" + data-state="on" (profile mode "Disabled")
+        // actually needs recovery; "user" + "off" is the same resting
+        // state a never-saved profile would produce.
+        if (dataSource === 'user') {
+          const dataState = await toggle
+            .getAttribute('data-state')
+            .catch(() => null);
+          if (dataState === 'on') return false;
+        }
         return true;
       })();
 
@@ -812,7 +827,20 @@ test.describe('Journey 50: Chat Privacy', () => {
         const dataSource = await toggle
           .getAttribute('data-source')
           .catch(() => null);
-        if (dataSource === 'mentor' || dataSource === 'user') return false;
+        if (dataSource === 'mentor') return false;
+        // A "user" source alone is not a reason to fall back to the slow
+        // path: per cp-profile-05, once ANY profile Private Mode selection
+        // has ever been saved, the backend keeps data-source="user" for
+        // BOTH Normal and Disabled — it can never clear back to another
+        // tier. Only "user" + data-state="on" (profile mode "Disabled")
+        // actually needs recovery; "user" + "off" is the same resting
+        // state a never-saved profile would produce.
+        if (dataSource === 'user') {
+          const dataState = await toggle
+            .getAttribute('data-state')
+            .catch(() => null);
+          if (dataState === 'on') return false;
+        }
         return true;
       })();
 
@@ -1021,7 +1049,20 @@ test.describe('Journey 50: Chat Privacy', () => {
         const dataSource = await toggle
           .getAttribute('data-source')
           .catch(() => null);
-        if (dataSource === 'mentor' || dataSource === 'user') return false;
+        if (dataSource === 'mentor') return false;
+        // A "user" source alone is not a reason to fall back to the slow
+        // path: per cp-profile-05, once ANY profile Private Mode selection
+        // has ever been saved, the backend keeps data-source="user" for
+        // BOTH Normal and Disabled — it can never clear back to another
+        // tier. Only "user" + data-state="on" (profile mode "Disabled")
+        // actually needs recovery; "user" + "off" is the same resting
+        // state a never-saved profile would produce.
+        if (dataSource === 'user') {
+          const dataState = await toggle
+            .getAttribute('data-state')
+            .catch(() => null);
+          if (dataState === 'on') return false;
+        }
         return true;
       })();
 
