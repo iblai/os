@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.135.1](https://github.com/iblai/os/compare/v0.135.0...v0.135.1) (2026-09-01)
+
+### Bug Fixes
+
+* **providers:** guard undefined unwrap result from mentor public settings ([e7d5672](https://github.com/iblai/os/commit/e7d567286589a8d0670b11b8ffae49c2df599bfb))
+
+### Chores
+
+* **format:** apply prettier to CHANGELOG.md ([3d703c3](https://github.com/iblai/os/commit/3d703c3926594a29abc5a5aff0f62f90d6360f34))
+
+### Tests
+
+* **providers:** cover undefined unwrap result from mentor public settings ([555ec71](https://github.com/iblai/os/commit/555ec71abee8978b3472581b512fbc35d6cfbfc0))
+
 ## [0.135.0](https://github.com/iblai/os/compare/v0.134.1...v0.135.0) (2026-08-31)
 
 ### Features
