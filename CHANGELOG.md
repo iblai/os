@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.136.1](https://github.com/iblai/os/compare/v0.136.0...v0.136.1) (2026-09-01)
+
+### Bug Fixes
+
+* **mentorai:** guard voice recording against invalid audio uploads ([831db8e](https://github.com/iblai/os/commit/831db8e02fe0af4f58379b9637967a363e756a23))
+* **mentorai:** stop the dictation timer when the recorder errors ([c7c41ec](https://github.com/iblai/os/commit/c7c41ec84be34ef158557431de61600951ac7da4))
+
+### Tests
+
+* **e2e:** cover voice-to-text permission denial, append and short-recording guard ([24518ea](https://github.com/iblai/os/commit/24518ea511b8660bb536c64ad2e0422837e63727))
+* **mentorai:** cover voice recording guards and failure paths ([bb51db7](https://github.com/iblai/os/commit/bb51db76fd22d83c98264837eb6691d08bdc7f47))
+* **mentorai:** cover voice transcript insertion into the composer ([19cb932](https://github.com/iblai/os/commit/19cb93228924bdd9a0690d9ffdfa9a6045b0e8d2))
+
 ## [0.136.0](https://github.com/iblai/os/compare/v0.135.1...v0.136.0) (2026-09-01)
 
 ### Features
