@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   Dialog,
   DialogContent,
@@ -81,6 +82,7 @@ export function SendNotificationDialog({
   onNotificationSent,
   preSelectedUser,
 }: SendNotificationDialogProps) {
+  const t = useTranslations('modalsSendNotificationDialog');
   const [notificationTitle, setNotificationTitle] = useState('');
   const [notificationBody, setNotificationBody] = useState('');
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
@@ -167,7 +169,7 @@ export function SendNotificationDialog({
       <DialogContent className="flex h-[85vh] max-w-3xl flex-col">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="text-xl font-semibold">
-            Send New Notification
+            {t('dialogTitle')}
           </DialogTitle>
         </DialogHeader>
 
@@ -179,11 +181,11 @@ export function SendNotificationDialog({
                   htmlFor="notification-title"
                   className="text-sm font-medium"
                 >
-                  Preview
+                  {t('previewLabel')}
                 </Label>
                 <Input
                   id="notification-title"
-                  placeholder="Enter notification preview text"
+                  placeholder={t('previewPlaceholder')}
                   value={notificationTitle}
                   onChange={(e) => setNotificationTitle(e.target.value)}
                   className="w-full"
@@ -195,7 +197,7 @@ export function SendNotificationDialog({
                   htmlFor="notification-body"
                   className="text-sm font-medium"
                 >
-                  Body
+                  {t('bodyLabel')}
                 </Label>
                 <RichTextEditor
                   value={notificationBody}
@@ -204,7 +206,9 @@ export function SendNotificationDialog({
               </div>
 
               <div className="space-y-3">
-                <Label className="text-sm font-medium">Send Time</Label>
+                <Label className="text-sm font-medium">
+                  {t('sendTimeLabel')}
+                </Label>
                 <RadioGroup
                   value={sendType}
                   onValueChange={(value) =>
@@ -217,7 +221,7 @@ export function SendNotificationDialog({
                       htmlFor="send-now"
                       className="cursor-pointer font-normal"
                     >
-                      Send immediately
+                      {t('sendImmediately')}
                     </Label>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -226,7 +230,7 @@ export function SendNotificationDialog({
                       htmlFor="send-schedule"
                       className="cursor-pointer font-normal"
                     >
-                      Schedule for later
+                      {t('scheduleForLater')}
                     </Label>
                   </div>
                 </RadioGroup>
@@ -245,7 +249,7 @@ export function SendNotificationDialog({
                           <Calendar className="mr-2 h-4 w-4" />
                           {scheduledDate
                             ? format(scheduledDate, 'PPP')
-                            : 'Pick a date'}
+                            : t('pickADate')}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
@@ -275,18 +279,17 @@ export function SendNotificationDialog({
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label className="text-sm font-medium">
-                    Select Recipients
+                    {t('selectRecipientsLabel')}
                   </Label>
                   <span className="text-sm text-gray-500">
-                    {selectedUsers.length} user
-                    {selectedUsers.length !== 1 ? 's' : ''} selected
+                    {t('usersSelected', { count: selectedUsers.length })}
                   </span>
                 </div>
 
                 <div className="relative">
                   <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-gray-500" />
                   <Input
-                    placeholder="Search users by name or email..."
+                    placeholder={t('searchUsersPlaceholder')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
@@ -375,7 +378,7 @@ export function SendNotificationDialog({
                     ))
                   ) : (
                     <div className="py-8 text-center text-sm text-gray-500">
-                      No users found
+                      {t('noUsersFound')}
                     </div>
                   )}
                 </div>
@@ -386,7 +389,7 @@ export function SendNotificationDialog({
 
         <div className="flex flex-shrink-0 justify-end gap-3 border-t pt-4">
           <Button variant="outline" onClick={handleClose}>
-            Cancel
+            {t('cancelButton')}
           </Button>
           <Button
             onClick={handleSendNotification}
@@ -394,7 +397,9 @@ export function SendNotificationDialog({
             className="bg-gradient-to-r from-[#2563EB] to-[#93C5FD] text-white hover:opacity-90"
           >
             <Send className="mr-2 h-4 w-4" />
-            {sendType === 'now' ? 'Send Now' : 'Schedule Notification'}
+            {sendType === 'now'
+              ? t('sendNowButton')
+              : t('scheduleNotificationButton')}
           </Button>
         </div>
       </DialogContent>

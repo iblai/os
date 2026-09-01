@@ -18,6 +18,7 @@ import {
 import { chatActions } from '@iblai/iblai-js/web-utils';
 import {
   ANONYMOUS_USERNAME,
+  DATASETS_TAB_URL_PARAMS,
   LOCAL_STORAGE_KEYS,
   MODALS,
   UserType,
@@ -32,6 +33,7 @@ import {
   Settings,
   LucideMail,
   Workflow,
+  FolderKanban,
 } from 'lucide-react';
 import eventBus, { RemoteEvents } from '@/lib/eventBus';
 import { TenantKeyMentorIdParams } from '@/lib/types';
@@ -178,14 +180,23 @@ export function useNavigate() {
     [mentorIdFromParams],
   );
 
-  // Navigate with updated search params
+  // Navigate with updated search params.
+  // Pass `{ replace: true }` for high-frequency updates (e.g. debounced search)
+  // so they don't stack up history entries.
   const navigateWithSearchParams = useCallback(
-    (paramsToUpdate: Record<string, string | null>) => {
+    (
+      paramsToUpdate: Record<string, string | null>,
+      options: { replace?: boolean } = {},
+    ) => {
       const newSearchParams = createSearchParams(paramsToUpdate);
       const searchString = newSearchParams.toString();
       const targetPath = searchString
         ? `${pathname}?${searchString}`
         : pathname;
+      if (options.replace) {
+        router.replace(targetPath, { scroll: false });
+        return;
+      }
       router.push(targetPath);
     },
     [pathname, router, createSearchParams],
@@ -219,11 +230,21 @@ export function useNavigate() {
   const closeModal = useCallback(() => {
     if (currentModalStackFromRedux.length === 0) return;
 
+    // Datasets-tab URL params are scoped to that view — drop them in the same
+    // navigation so they don't outlive the modal (or the tab, below).
+    const clearedTabParams = Object.fromEntries(
+      Object.values(DATASETS_TAB_URL_PARAMS).map((key) => [key, null]),
+    );
+
     if (currentModalStackFromRedux.length <= 1) {
-      navigateWithSearchParams({ modal: null }); // Remove modal param entirely
+      // Remove the modal param entirely, plus any tab-scoped params.
+      navigateWithSearchParams({ modal: null, ...clearedTabParams });
     } else {
       const newStack = currentModalStackFromRedux.slice(0, -1);
-      navigateWithSearchParams({ modal: JSON.stringify(newStack) });
+      navigateWithSearchParams({
+        modal: JSON.stringify(newStack),
+        ...clearedTabParams,
+      });
     }
   }, [currentModalStackFromRedux, navigateWithSearchParams]);
 
@@ -237,7 +258,15 @@ export function useNavigate() {
         ...newStack[newStack.length - 1],
         tab,
       };
-      navigateWithSearchParams({ modal: JSON.stringify(newStack) });
+      // Leaving (or re-entering) a tab clears the datasets-tab URL params so
+      // they never linger on a tab that doesn't own them.
+      const clearedTabParams = Object.fromEntries(
+        Object.values(DATASETS_TAB_URL_PARAMS).map((key) => [key, null]),
+      );
+      navigateWithSearchParams({
+        modal: JSON.stringify(newStack),
+        ...clearedTabParams,
+      });
     },
     [currentModalStackFromRedux, navigateWithSearchParams],
   );
@@ -402,6 +431,15 @@ export function useNavigate() {
         );
       }
     },
+    navigateToProjects: () => {
+      if (tenantKey) {
+        router.push(`/platform/${tenantKey}/projects`);
+      } else {
+        console.warn(
+          'Cannot navigate to projects: tenantKey missing from URL params.',
+        );
+      }
+    },
 
     // Enhanced modal functions
     openCreateMentorModal: (tab?: string) =>
@@ -490,6 +528,7 @@ export function useSidebarNavigation() {
     openNoMentorSelectedModal,
     navigateToNotifications,
     navigateToWorkflows,
+    navigateToProjects,
   } = useNavigate();
   const pathname = usePathname();
   const isChatPage =
@@ -581,6 +620,15 @@ export function useSidebarNavigation() {
           return;
         }
         executeWithTrialCheck(navigateToWorkflows);
+      },
+      userTypes: [UserType.FREE_TRIAL, UserType.ADMIN, UserType.ANONYMOUS],
+      isAnAdminAction: true,
+    },
+    {
+      label: 'Projects',
+      icon: FolderKanban,
+      onClick: () => {
+        executeWithTrialCheck(navigateToProjects);
       },
       userTypes: [UserType.FREE_TRIAL, UserType.ADMIN, UserType.ANONYMOUS],
       isAnAdminAction: true,

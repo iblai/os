@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import {
   Dialog,
   DialogContent,
@@ -27,37 +28,40 @@ export function EditDisclaimerModal({
   onCancel,
   isSaving = false,
 }: EditDisclaimerModalProps) {
+  const t = useTranslations('disclaimersTabEditDisclaimerModal');
   const [content, setContent] = React.useState(disclaimer ?? '');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="mx-4 max-w-2xl sm:mx-auto">
         <DialogHeader>
-          <DialogTitle className="text-gray-700">Edit Advisory</DialogTitle>
+          <DialogTitle className="text-gray-700">
+            {t('editAdvisory')}
+          </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div>
             <label className="text-sm font-medium text-gray-600">
-              Advisory Content
+              {t('advisoryContent')}
             </label>
             <Textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder="Enter advisory content..."
+              placeholder={t('advisoryContentPlaceholder')}
               className="mt-1 min-h-[200px]"
               rows={8}
             />
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={onCancel}>
-              Cancel
+              {t('cancel')}
             </Button>
             <Button
               onClick={() => onSave(content)}
               className="ibl-button-primary"
               disabled={content.trim() === '' || isSaving}
             >
-              {isSaving ? 'Saving...' : 'Save'}
+              {isSaving ? t('saving') : t('save')}
             </Button>
           </div>
         </div>

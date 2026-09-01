@@ -11,7 +11,19 @@ const tenantMetadataReturnValue: { metadata: Record<string, unknown> } = {
   metadata: {},
 };
 
+// The SDK's todo parser. This suite stubs the whole `web-utils` module (the
+// transitive axios import does not resolve under vitest), so the real
+// `extractLatestTodos` is unavailable here — its own behaviour is covered by
+// the SDK. What matters for this component is what it does with the result.
+let mockLatestTodos: { content: string; status: string }[] | undefined;
+const extractLatestTodosArgs: unknown[] = [];
+
 vi.mock('@iblai/iblai-js/web-utils', () => ({
+  WRITE_TODOS_TOOL: 'write_todos',
+  extractLatestTodos: (toolCalls: unknown) => {
+    extractLatestTodosArgs.push(toolCalls);
+    return mockLatestTodos;
+  },
   selectShowingSharedChat: () => mockShowingSharedChat,
   useTenantMetadata: () => ({
     ...tenantMetadataReturnValue,
@@ -19,6 +31,38 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
     isLoading: false,
     isError: false,
   }),
+}));
+
+// Chat-privacy signal driving the share-button gate. Defaults to a normal
+// (non-private) session so existing tests keep seeing the Share button.
+let mockChatPrivacyMode: 'normal' | 'anonymized' | 'disabled' = 'normal';
+let mockChatPrivacyReady = true;
+
+vi.mock('@iblai/iblai-js/web-containers', () => ({
+  useChatPrivacy: () => ({
+    effective: {
+      mode: mockChatPrivacyMode,
+      source: 'session',
+      is_locked: false,
+    },
+    isEffectiveReady: mockChatPrivacyReady,
+  }),
+}));
+
+vi.mock('@/hooks/use-user', () => ({
+  useUsername: () => 'testuser',
+}));
+
+// Code's permission prompts live in a module-level store shared with the bubble.
+// Drive it directly rather than through Tauri events.
+const mockPermissionRequests = vi.hoisted(() => ({
+  current: [] as Array<Record<string, unknown>>,
+}));
+vi.mock('../code-permission-card', () => ({
+  useCodePermissionRequests: () => mockPermissionRequests.current,
+  CodePermissionCards: ({ generationId }: { generationId: string }) => (
+    <div data-testid="code-permission-cards">prompt for {generationId}</div>
+  ),
 }));
 
 vi.mock('@/lib/hooks', async () => {
@@ -41,9 +85,9 @@ vi.mock('@/components/chat/ai-message-copy', () => ({
 }));
 
 vi.mock('@/components/chat/ai-message-speak', () => ({
-  AIMessageSpeak: ({ content }: { content: string }) => (
+  AIMessageSpeak: ({ message }: { message?: { content?: string } }) => (
     <button data-testid="ai-message-speak">
-      Speak: {content.slice(0, 10)}
+      Speak: {(message?.content ?? '').slice(0, 10)}
     </button>
   ),
 }));
@@ -94,6 +138,59 @@ vi.mock('@/components/chat/chat-messages/message-preview', () => ({
   ),
 }));
 
+vi.mock('@/components/chat/reasoning-section', () => ({
+  ReasoningSection: ({
+    reasoningContent,
+    isReasoning,
+    isCurrentlyStreaming,
+  }: {
+    reasoningContent: string;
+    isReasoning: boolean;
+    isCurrentlyStreaming?: boolean;
+  }) => (
+    <div
+      data-testid="reasoning-section"
+      data-reasoning-content={reasoningContent}
+      data-is-reasoning={isReasoning}
+      data-is-currently-streaming={isCurrentlyStreaming ?? false}
+    >
+      {reasoningContent}
+    </div>
+  ),
+}));
+
+vi.mock('@/components/chat/tool-call-indicator', () => ({
+  ToolCallIndicator: ({
+    toolCalls,
+    isCurrentlyStreaming,
+  }: {
+    toolCalls: unknown[];
+    isCurrentlyStreaming?: boolean;
+  }) => (
+    <div
+      data-testid="tool-call-indicator"
+      data-tool-calls-count={toolCalls.length}
+      data-is-currently-streaming={isCurrentlyStreaming ?? false}
+    />
+  ),
+}));
+
+vi.mock('@/components/chat/agent-todo-list', () => ({
+  AgentTodoList: ({
+    todos,
+    isCurrentlyStreaming,
+  }: {
+    todos?: unknown[];
+    isCurrentlyStreaming?: boolean;
+  }) => (
+    <div
+      data-testid="agent-todo-list"
+      data-todo-count={todos?.length ?? 0}
+      data-is-currently-streaming={isCurrentlyStreaming ?? false}
+    />
+  ),
+}));
+
 vi.mock('@/lib/utils', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/utils')>();
   return {
@@ -104,6 +201,15 @@ vi.mock('@/lib/utils', async (importOriginal) => {
     redirectToAuthSpaJoinTenant: vi.fn(),
   };
 });
+
+vi.mock('@/lib/config', () => ({
+  config: {
+    supportEmail: () => 'support@default.com',
+    iblTemplateMentor: () => 'default-agent',
+    authUrl: () => 'https://auth.test',
+    iblPlatform: () => 'mentor',
+  },
+}));
 
 const createMockStore = (showingSharedChat = false) =>
   configureStore({
@@ -144,17 +250,24 @@ describe('AIMessageBubble', () => {
     timestamp: '10:30 AM',
     sessionId: 'session-123',
     messages: mockMessages,
+    message: mockMessages[1],
     tenantKey: 'test-tenant',
     mentorId: 'mentor-123',
     onRetry: mockOnRetry,
     onReply: mockOnReply,
     onOpenCanvas: mockOnOpenCanvas,
+    showReasoning: true,
   };
 
   beforeEach(async () => {
     vi.clearAllMocks();
     mockShowingSharedChat = false;
+    mockChatPrivacyMode = 'normal';
+    mockChatPrivacyReady = true;
+    mockLatestTodos = undefined;
+    extractLatestTodosArgs.length = 0;
     tenantMetadataReturnValue.metadata = {};
+    mockPermissionRequests.current = [];
     const { isLoggedIn } = await import('@/lib/utils');
     vi.mocked(isLoggedIn).mockReturnValue(true);
   });
@@ -169,6 +282,60 @@ describe('AIMessageBubble', () => {
       </Provider>,
     );
   };
+
+  describe('Code permission prompts', () => {
+    it('renders them inside the reply bubble while the turn streams', () => {
+      mockPermissionRequests.current = [
+        { request_id: 'perm-1', generation_id: defaultProps.message.id },
+      ];
+      renderWithRedux(
+        <AIMessageBubble {...defaultProps} isCurrentlyStreaming />,
+      );
+      expect(screen.getByTestId('code-permission-cards')).toBeInTheDocument();
+    });
+
+    it('ignores a prompt raised by a different turn', () => {
+      // Chats each run their own opencode process, so another chat can be waiting at
+      // the same time. Its prompt belongs in its own bubble, not this one.
+      mockPermissionRequests.current = [
+        { request_id: 'perm-1', generation_id: 'some-other-turn' },
+      ];
+      renderWithRedux(
+        <AIMessageBubble {...defaultProps} isCurrentlyStreaming />,
+      );
+      expect(
+        screen.queryByTestId('code-permission-cards'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('keeps an otherwise-empty bubble alive so the prompt is visible', () => {
+      // A prompt can be the FIRST thing in a Code turn. Without the bubble staying
+      // mounted the user faces a turn that has silently stalled on a question they
+      // were never shown.
+      mockPermissionRequests.current = [
+        { request_id: 'perm-1', generation_id: defaultProps.message.id },
+      ];
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          content=""
+          message={{ ...defaultProps.message, actions: undefined }}
+          isCurrentlyStreaming
+        />,
+      );
+      expect(screen.getByTestId('code-permission-cards')).toBeInTheDocument();
+    });
+
+    it('does not repeat them on older messages that are not streaming', () => {
+      mockPermissionRequests.current = [
+        { request_id: 'perm-1', generation_id: defaultProps.message.id },
+      ];
+      renderWithRedux(<AIMessageBubble {...defaultProps} />);
+      expect(
+        screen.queryByTestId('code-permission-cards'),
+      ).not.toBeInTheDocument();
+    });
+  });
 
   describe('rendering', () => {
     it('should render without crashing', () => {
@@ -202,8 +369,6 @@ describe('AIMessageBubble', () => {
       if (avatarImg) {
         expect(avatarImg).toBeInTheDocument();
       } else {
-        // Fallback: Avatar might not show img if image fails to load
-        // Check that avatar container exists
         const avatar = container.querySelector('[data-slot="avatar"]');
         expect(avatar || screen.getByText('TE')).toBeTruthy();
       }
@@ -222,12 +387,51 @@ describe('AIMessageBubble', () => {
       expect(screen.getByTestId('ai-message-copy')).toBeInTheDocument();
     });
 
-    it('should render share button when not in shared chat', () => {
+    it('should render share button when logged in and not in shared chat', () => {
       renderWithRedux(<AIMessageBubble {...defaultProps} />);
       expect(screen.getByTestId('ai-message-share')).toBeInTheDocument();
     });
 
-    it('should not render share button when in shared chat', () => {
+    // Issue #1546: anonymous users (opened a chat via a ?token= shareable
+    // link, not logged in) must still be able to share.
+    it('should render share button when NOT logged in and not in shared chat', async () => {
+      const { isLoggedIn } = await import('@/lib/utils');
+      vi.mocked(isLoggedIn).mockReturnValue(false);
+      renderWithRedux(<AIMessageBubble {...defaultProps} />);
+      expect(screen.getByTestId('ai-message-share')).toBeInTheDocument();
+    });
+
+    it('should not render share button when in shared chat (logged in)', () => {
+      mockShowingSharedChat = true;
+      renderWithRedux(<AIMessageBubble {...defaultProps} />, true);
+      expect(screen.queryByTestId('ai-message-share')).not.toBeInTheDocument();
+      mockShowingSharedChat = false; // Reset for other tests
+    });
+
+    // Private mode is a temporary, non-persisted chat — there is no durable
+    // session to share, so the share button is hidden while it is active.
+    it('should not render share button when chat private mode is active', () => {
+      mockChatPrivacyMode = 'disabled';
+      renderWithRedux(<AIMessageBubble {...defaultProps} />);
+      expect(screen.queryByTestId('ai-message-share')).not.toBeInTheDocument();
+    });
+
+    it('should still render share button while the chat-privacy query is not yet ready (no flash-hide)', () => {
+      mockChatPrivacyMode = 'disabled';
+      mockChatPrivacyReady = false;
+      renderWithRedux(<AIMessageBubble {...defaultProps} />);
+      expect(screen.getByTestId('ai-message-share')).toBeInTheDocument();
+    });
+
+    it('should render share button when private mode is anonymized (only disabled hides it)', () => {
+      mockChatPrivacyMode = 'anonymized';
+      renderWithRedux(<AIMessageBubble {...defaultProps} />);
+      expect(screen.getByTestId('ai-message-share')).toBeInTheDocument();
+    });
+
+    it('should not render share button when in shared chat (anonymous)', async () => {
+      const { isLoggedIn } = await import('@/lib/utils');
+      vi.mocked(isLoggedIn).mockReturnValue(false);
       mockShowingSharedChat = true;
       renderWithRedux(<AIMessageBubble {...defaultProps} />, true);
       expect(screen.queryByTestId('ai-message-share')).not.toBeInTheDocument();
@@ -443,9 +647,6 @@ describe('AIMessageBubble', () => {
 
       const messagePreview = screen.getByTestId('message-preview');
       fireEvent.click(messagePreview);
-
-      // The mock MessagePreview calls onOpenCanvas on click
-      // This tests the prop is passed through
     });
 
     it('should pass artifactVersions to MessagePreview', () => {
@@ -481,6 +682,476 @@ describe('AIMessageBubble', () => {
       );
 
       expect(screen.getByTestId('message-preview')).toBeInTheDocument();
+    });
+  });
+
+  describe('reasoning section', () => {
+    it('should render ReasoningSection when reasoningContent is provided', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          reasoningContent="Let me think..."
+          isReasoning={true}
+        />,
+      );
+      expect(screen.getByTestId('reasoning-section')).toBeInTheDocument();
+      expect(screen.getByTestId('reasoning-section')).toHaveAttribute(
+        'data-reasoning-content',
+        'Let me think...',
+      );
+    });
+
+    it('should not render ReasoningSection when reasoningContent is empty', () => {
+      renderWithRedux(
+        <AIMessageBubble {...defaultProps} reasoningContent="" />,
+      );
+      expect(screen.queryByTestId('reasoning-section')).not.toBeInTheDocument();
+    });
+
+    it('should not render ReasoningSection when reasoningContent is undefined', () => {
+      renderWithRedux(<AIMessageBubble {...defaultProps} />);
+      expect(screen.queryByTestId('reasoning-section')).not.toBeInTheDocument();
+    });
+
+    it('should pass isReasoning to ReasoningSection', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          reasoningContent="thinking"
+          isReasoning={true}
+        />,
+      );
+      expect(screen.getByTestId('reasoning-section')).toHaveAttribute(
+        'data-is-reasoning',
+        'true',
+      );
+    });
+
+    it('should default isReasoning to false for ReasoningSection', () => {
+      renderWithRedux(
+        <AIMessageBubble {...defaultProps} reasoningContent="done thinking" />,
+      );
+      expect(screen.getByTestId('reasoning-section')).toHaveAttribute(
+        'data-is-reasoning',
+        'false',
+      );
+    });
+
+    it('should pass isCurrentlyStreaming to ReasoningSection', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          reasoningContent="thinking"
+          isReasoning={true}
+          isCurrentlyStreaming={true}
+        />,
+      );
+      expect(screen.getByTestId('reasoning-section')).toHaveAttribute(
+        'data-is-currently-streaming',
+        'true',
+      );
+    });
+
+    it('should not render ReasoningSection when showReasoning is false', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          reasoningContent="Let me think..."
+          isReasoning={true}
+          showReasoning={false}
+        />,
+      );
+      expect(screen.queryByTestId('reasoning-section')).not.toBeInTheDocument();
+    });
+
+    it('should not render ReasoningSection when showReasoning is undefined', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          reasoningContent="Let me think..."
+          isReasoning={true}
+          showReasoning={undefined}
+        />,
+      );
+      expect(screen.queryByTestId('reasoning-section')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('empty bubble suppression', () => {
+    const mockToolCalls = [
+      { id: 'tc1', name: 'web_search_call', log: '', result: '' },
+    ];
+
+    it('renders nothing while streaming with no text and verbose reasoning off', () => {
+      const { container } = renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          content=""
+          reasoningContent="hidden thoughts"
+          toolCalls={mockToolCalls}
+          showReasoning={false}
+          isReasoning={true}
+          isCurrentlyStreaming={true}
+        />,
+      );
+      // No text, and both verbose surfaces are gated off -> nothing to show.
+      expect(container).toBeEmptyDOMElement();
+      expect(screen.queryByTestId('message-preview')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('reasoning-section')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('tool-call-indicator'),
+      ).not.toBeInTheDocument();
+    });
+
+    /**
+     * Code is told to keep its visible text terse, and in automatic-approval
+     * mode it raises no permission cards either — so with verbose reasoning off
+     * (the default) a turn that spends minutes running commands would show
+     * nothing at all. Code turns are identified by the `opencode-` generation
+     * id the SDK mints (see opencode-client), and always keep the collapsed
+     * progress surfaces.
+     */
+    it('keeps the collapsed progress surfaces on a Code turn with verbose reasoning off', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          message={{ ...defaultProps.message, id: 'opencode-1700000000000' }}
+          content=""
+          reasoningContent="checking the API"
+          toolCalls={mockToolCalls}
+          showReasoning={false}
+          isCurrentlyStreaming={true}
+        />,
+      );
+      expect(screen.getByTestId('tool-call-indicator')).toBeInTheDocument();
+      expect(screen.getByTestId('reasoning-section')).toBeInTheDocument();
+    });
+
+    it('still hides them on an ordinary turn with verbose reasoning off', () => {
+      const { container } = renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          message={{ ...defaultProps.message, id: 'msg-2' }}
+          content=""
+          reasoningContent="hidden thoughts"
+          toolCalls={mockToolCalls}
+          showReasoning={false}
+          isCurrentlyStreaming={true}
+        />,
+      );
+      expect(container).toBeEmptyDOMElement();
+    });
+
+    it('survives a message id that is not a string', () => {
+      // Ids are typed as strings but several producers feed this component;
+      // a numeric one must not throw on the prefix check.
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          message={
+            {
+              ...defaultProps.message,
+              id: 42,
+            } as unknown as (typeof defaultProps)['message']
+          }
+          content="Done"
+          showReasoning={false}
+        />,
+      );
+      expect(screen.getByTestId('message-preview')).toBeInTheDocument();
+    });
+
+    it('renders when there is text content even with verbose reasoning off', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          content="Here is the answer"
+          showReasoning={false}
+        />,
+      );
+      expect(screen.getByTestId('message-preview')).toBeInTheDocument();
+    });
+
+    it('renders when the reasoning section is visible despite empty text', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          content=""
+          reasoningContent="visible thoughts"
+          showReasoning={true}
+          isReasoning={true}
+          isCurrentlyStreaming={true}
+        />,
+      );
+      expect(screen.getByTestId('reasoning-section')).toBeInTheDocument();
+    });
+
+    it('renders when the tool-call indicator is visible despite empty text', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          content=""
+          toolCalls={mockToolCalls}
+          showReasoning={true}
+          isCurrentlyStreaming={true}
+        />,
+      );
+      expect(screen.getByTestId('tool-call-indicator')).toBeInTheDocument();
+    });
+
+    it('renders an empty-text message that carries actions', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          content=""
+          showReasoning={false}
+          message={{
+            ...mockMessages[1],
+            content: '',
+            actions: [
+              {
+                actionType: 'redirectToAuthSpaJoinTenant',
+                text: 'Join',
+                type: 'primary',
+              },
+            ],
+          }}
+        />,
+      );
+      expect(screen.getByText('Join')).toBeInTheDocument();
+    });
+  });
+
+  describe('tool call indicator', () => {
+    const mockToolCalls = [
+      { id: 'tc1', name: 'web_search_call', log: '', result: '' },
+      { id: 'tc2', name: 'vector_search', log: '', result: '' },
+    ];
+
+    it('should render ToolCallIndicator when toolCalls are provided', () => {
+      renderWithRedux(
+        <AIMessageBubble {...defaultProps} toolCalls={mockToolCalls} />,
+      );
+      expect(screen.getByTestId('tool-call-indicator')).toBeInTheDocument();
+      expect(screen.getByTestId('tool-call-indicator')).toHaveAttribute(
+        'data-tool-calls-count',
+        '2',
+      );
+    });
+
+    it('should not render ToolCallIndicator when toolCalls is empty', () => {
+      renderWithRedux(<AIMessageBubble {...defaultProps} toolCalls={[]} />);
+      expect(
+        screen.queryByTestId('tool-call-indicator'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('should not render ToolCallIndicator when toolCalls is undefined', () => {
+      renderWithRedux(<AIMessageBubble {...defaultProps} />);
+      expect(
+        screen.queryByTestId('tool-call-indicator'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('should pass isCurrentlyStreaming to ToolCallIndicator', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          toolCalls={mockToolCalls}
+          isCurrentlyStreaming={true}
+        />,
+      );
+      expect(screen.getByTestId('tool-call-indicator')).toHaveAttribute(
+        'data-is-currently-streaming',
+        'true',
+      );
+    });
+
+    it('should not render ToolCallIndicator when showReasoning is false', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          toolCalls={mockToolCalls}
+          showReasoning={false}
+        />,
+      );
+      expect(
+        screen.queryByTestId('tool-call-indicator'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('should not render ToolCallIndicator when showReasoning is undefined', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          toolCalls={mockToolCalls}
+          showReasoning={undefined}
+        />,
+      );
+      expect(
+        screen.queryByTestId('tool-call-indicator'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('should not render ToolCallIndicator when write_todos is the only tool call', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          toolCalls={[{ id: 'td', name: 'write_todos', log: '', result: '' }]}
+        />,
+      );
+      expect(
+        screen.queryByTestId('tool-call-indicator'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('should still render ToolCallIndicator when a non-todo tool call is present', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          toolCalls={[
+            { id: 'td', name: 'write_todos', log: '', result: '' },
+            { id: 'tc1', name: 'web_search_call', log: '', result: '' },
+          ]}
+        />,
+      );
+      expect(screen.getByTestId('tool-call-indicator')).toBeInTheDocument();
+    });
+  });
+
+  describe('agent todo list', () => {
+    const todoToolCalls = [
+      { id: 'td', name: 'write_todos', log: '', result: '' },
+    ];
+    const todos = [
+      { content: 'Read the brief', status: 'completed' },
+      { content: 'Write the summary', status: 'pending' },
+    ];
+
+    it('renders the task list when showReasoning is on and todos exist', () => {
+      mockLatestTodos = todos;
+      renderWithRedux(
+        <AIMessageBubble {...defaultProps} toolCalls={todoToolCalls} />,
+      );
+
+      const list = screen.getByTestId('agent-todo-list');
+      expect(list).toBeInTheDocument();
+      expect(list).toHaveAttribute('data-todo-count', '2');
+    });
+
+    it('passes the turn tool calls to the SDK parser', () => {
+      mockLatestTodos = todos;
+      renderWithRedux(
+        <AIMessageBubble {...defaultProps} toolCalls={todoToolCalls} />,
+      );
+      expect(extractLatestTodosArgs[0]).toEqual(todoToolCalls);
+    });
+
+    it('does not render the task list when showReasoning is off', () => {
+      mockLatestTodos = todos;
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          toolCalls={todoToolCalls}
+          showReasoning={false}
+        />,
+      );
+      expect(screen.queryByTestId('agent-todo-list')).not.toBeInTheDocument();
+    });
+
+    it('does not call the SDK parser at all when showReasoning is off', () => {
+      mockLatestTodos = todos;
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          toolCalls={todoToolCalls}
+          showReasoning={false}
+        />,
+      );
+      expect(extractLatestTodosArgs).toHaveLength(0);
+    });
+
+    it('renders no affordance when the turn has no write_todos call', () => {
+      mockLatestTodos = undefined;
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          toolCalls={[
+            { id: 'tc1', name: 'web_search_call', log: '', result: '' },
+          ]}
+        />,
+      );
+      expect(screen.queryByTestId('agent-todo-list')).not.toBeInTheDocument();
+    });
+
+    it('renders no affordance when the parser returns an empty list', () => {
+      mockLatestTodos = [];
+      renderWithRedux(
+        <AIMessageBubble {...defaultProps} toolCalls={todoToolCalls} />,
+      );
+      expect(screen.queryByTestId('agent-todo-list')).not.toBeInTheDocument();
+    });
+
+    it('passes isCurrentlyStreaming through to the task list', () => {
+      mockLatestTodos = todos;
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          toolCalls={todoToolCalls}
+          isCurrentlyStreaming={true}
+        />,
+      );
+      expect(screen.getByTestId('agent-todo-list')).toHaveAttribute(
+        'data-is-currently-streaming',
+        'true',
+      );
+    });
+
+    it('renders a todos-only turn that has no text yet', () => {
+      // hasVisibleContent must count the todo list, otherwise a turn that
+      // writes its plan before producing any text renders nothing at all.
+      mockLatestTodos = todos;
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          content=""
+          toolCalls={todoToolCalls}
+          isCurrentlyStreaming={true}
+        />,
+      );
+
+      expect(screen.getByTestId('agent-todo-list')).toBeInTheDocument();
+      expect(
+        screen.queryByTestId('tool-call-indicator'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('renders nothing for a todos-only turn while showReasoning is off', () => {
+      mockLatestTodos = todos;
+      const { container } = renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          content=""
+          toolCalls={todoToolCalls}
+          showReasoning={false}
+          isCurrentlyStreaming={true}
+        />,
+      );
+      expect(container).toBeEmptyDOMElement();
+    });
+
+    it('renders nothing when a write_todos call yields no usable todos', () => {
+      // A malformed `write_todos` payload must not reserve an empty gray bubble.
+      mockLatestTodos = undefined;
+      const { container } = renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          content=""
+          toolCalls={todoToolCalls}
+          isCurrentlyStreaming={true}
+        />,
+      );
+      expect(container).toBeEmptyDOMElement();
     });
   });
 });

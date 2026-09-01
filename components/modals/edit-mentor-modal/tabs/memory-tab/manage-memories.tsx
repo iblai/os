@@ -46,6 +46,7 @@ import {
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import IblPagination from '@/components/ibl-pagination';
+import { useTranslations } from 'next-intl';
 
 const EditMemoryModal = dynamic(
   () =>
@@ -113,6 +114,7 @@ export function ManageMemories({
   username,
   mentorId,
 }: ManageMemoriesProps) {
+  const t = useTranslations('memoryTabManageMemories');
   const [selectedLearner, setSelectedLearner] = useState('');
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [selectedCategorySlug, setSelectedCategorySlug] = useState('all');
@@ -269,10 +271,10 @@ export function ManageMemories({
         memoryId: id,
       }).unwrap();
       setShowDeleteConfirm(null);
-      toast.success('Memory deleted successfully');
+      toast.success(t('memoryDeletedSuccess'));
     } catch (error) {
       console.error('Failed to delete memory:', error);
-      toast.error('Failed to delete memory');
+      toast.error(t('memoryDeletedError'));
     }
   };
 
@@ -297,13 +299,11 @@ export function ManageMemories({
           }).unwrap(),
         ),
       );
-      toast.success(
-        `All ${selectedCategoryName} memories deleted successfully`,
-      );
+      toast.success(t('bulkDeleteSuccess', { category: selectedCategoryName }));
       setShowBulkDeleteConfirm(false);
     } catch (error) {
       console.error('Failed to delete memories:', error);
-      toast.error('Failed to delete memories');
+      toast.error(t('bulkDeleteError'));
     } finally {
       setIsBulkDeleting(false);
     }
@@ -332,7 +332,7 @@ export function ManageMemories({
           ...(categoryChanged ? { category_slug: selectedCat.slug } : {}),
         },
       }).unwrap();
-      toast.success('Memory updated successfully');
+      toast.success(t('memoryUpdatedSuccess'));
 
       // Follow the entry to its new category tab so the user doesn't lose
       // sight of it. Skip when viewing "All" — the entry is still visible.
@@ -345,7 +345,7 @@ export function ManageMemories({
       setEditCategory('');
     } catch (error) {
       console.error('Failed to update memory:', error);
-      toast.error('Failed to update memory');
+      toast.error(t('memoryUpdatedError'));
     }
   };
 
@@ -383,10 +383,10 @@ export function ManageMemories({
       if (selectedCat) {
         setSelectedCategorySlug(selectedCat.slug);
       }
-      toast.success('Memory created successfully');
+      toast.success(t('memoryCreatedSuccess'));
     } catch (error) {
       console.error('Failed to create memory:', error);
-      toast.error('Failed to create memory');
+      toast.error(t('memoryCreatedError'));
     }
   };
 
@@ -410,22 +410,24 @@ export function ManageMemories({
                   <Button
                     variant="outline"
                     role="combobox"
-                    aria-label="Search for User"
+                    aria-label={t('searchForUserAriaLabel')}
                     className="w-full justify-between bg-transparent font-normal"
                   >
                     {selectedLearner
                       ? (learners.find(
                           (learner) => learner.email === selectedLearner,
                         )?.email ?? selectedLearner)
-                      : 'Search for User'}
+                      : t('searchForUserPlaceholder')}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-full p-0" align="start">
                   <Command>
-                    <CommandInput placeholder="Search users..." />
+                    <CommandInput
+                      placeholder={t('searchUsersInputPlaceholder')}
+                    />
                     <CommandList>
-                      <CommandEmpty>No users found.</CommandEmpty>
+                      <CommandEmpty>{t('noUsersFound')}</CommandEmpty>
                       <CommandGroup>
                         <CommandItem
                           value=""
@@ -439,7 +441,7 @@ export function ManageMemories({
                               !selectedLearner ? 'opacity-100' : 'opacity-0',
                             )}
                           />
-                          All Users
+                          {t('allUsers')}
                         </CommandItem>
                         {learners.map((learner) => (
                           <CommandItem
@@ -480,7 +482,7 @@ export function ManageMemories({
                   <Calendar className="h-4 w-4" />
                   {dateRange?.from && dateRange?.to
                     ? `${format(dateRange.from, 'MMM dd')} - ${format(dateRange.to, 'MMM dd')}`
-                    : 'Pick a Date Range'}
+                    : t('pickDateRange')}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -498,10 +500,16 @@ export function ManageMemories({
 
         <div>
           <div className="flex items-center justify-between gap-4">
-            <div className="scrollbar-none hidden flex-1 items-center space-x-8 overflow-x-auto sm:flex">
+            <div
+              role="tablist"
+              aria-label={t('memoryCategoriesAriaLabel')}
+              className="scrollbar-none hidden flex-1 items-center space-x-8 overflow-x-auto sm:flex"
+            >
               {visibleCategories.map((category) => (
                 <button
                   key={category.slug}
+                  role="tab"
+                  aria-selected={selectedCategorySlug === category.slug}
                   onClick={() => setSelectedCategorySlug(category.slug)}
                   className={`relative px-1 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
                     selectedCategorySlug === category.slug
@@ -528,9 +536,9 @@ export function ManageMemories({
                           ? 'text-[#38A1E5]'
                           : 'text-gray-600 hover:text-gray-900',
                       )}
-                      aria-label="More categories"
+                      aria-label={t('moreCategoriesAriaLabel')}
                     >
-                      {overflowSelected ? overflowSelected.name : 'More'}
+                      {overflowSelected ? overflowSelected.name : t('more')}
                       <ChevronDown className="h-3.5 w-3.5" />
                       {overflowSelected && (
                         <div
@@ -601,10 +609,10 @@ export function ManageMemories({
               size="sm"
               variant="outline"
               className="shrink-0"
-              aria-label="Manage categories"
+              aria-label={t('manageCategoriesAriaLabel')}
             >
               <Tags className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Categories</span>
+              <span className="hidden sm:inline">{t('categoriesButton')}</span>
             </Button>
 
             <Button
@@ -613,16 +621,20 @@ export function ManageMemories({
               className="ibl-button-primary shrink-0"
             >
               <Plus className="mr-1 h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Add Memory</span>
-              <span className="sm:hidden">Add</span>
+              <span className="hidden sm:inline">{t('addMemoryButton')}</span>
+              <span className="sm:hidden">{t('addButton')}</span>
             </Button>
           </div>
         </div>
 
-        <div className="space-y-3 px-1 sm:px-0">
+        <div
+          role="list"
+          aria-label={t('savedMemoriesAriaLabel')}
+          className="space-y-3 px-1 sm:px-0"
+        >
           {isLoadingMemories ? (
             <div className="py-8 text-center text-gray-600">
-              <p>Loading memories...</p>
+              <p>{t('loadingMemories')}</p>
             </div>
           ) : (
             filteredMemories.map((memory) => {
@@ -631,11 +643,12 @@ export function ManageMemories({
                     addSuffix: true,
                   })
                 : '';
-              const displayUser = memory.email || 'Unknown';
+              const displayUser = memory.email || t('unknownUser');
 
               return (
                 <div
                   key={memory.id}
+                  role="listitem"
                   className="flex items-start gap-3 rounded-lg border border-gray-200 bg-white p-3"
                 >
                   <div className="flex-1">
@@ -653,15 +666,16 @@ export function ManageMemories({
                         )}
                       </div>
                     )}
-                    <div className="text-sm leading-relaxed text-gray-900">
+                    <p className="text-sm leading-relaxed text-gray-900">
                       {memory.content}
-                    </div>
+                    </p>
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
                         variant="ghost"
                         size="sm"
+                        aria-label={t('memoryActionsAriaLabel')}
                         className="h-6 w-6 flex-shrink-0 p-0 text-gray-600 hover:text-gray-900"
                       >
                         <MoreHorizontal className="h-4 w-4" />
@@ -669,12 +683,12 @@ export function ManageMemories({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => startEdit(memory)}>
-                        Edit
+                        {t('editAction')}
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => setShowDeleteConfirm(memory.id)}
                       >
-                        Delete
+                        {t('deleteAction')}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -690,14 +704,14 @@ export function ManageMemories({
               variant="outline"
               onClick={() => setShowBulkDeleteConfirm(true)}
             >
-              Delete All
+              {t('deleteAllButton')}
             </Button>
           </div>
         )}
 
         {filteredMemories.length === 0 && !isLoadingMemories && (
           <div className="py-8 text-center text-gray-600">
-            <p>No saved memories yet.</p>
+            <p>{t('noSavedMemories')}</p>
           </div>
         )}
 

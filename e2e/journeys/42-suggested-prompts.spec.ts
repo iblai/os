@@ -1,9 +1,16 @@
 import { test, expect } from '../fixtures/mentor-test';
-import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
+import {
+  navigateToMentorApp,
+  checkAdminStatus,
+  getPlatformContext,
+} from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
+import { MentorTracker } from '../utils/mentor-cleanup';
 
 test.describe('Journey 42: Suggested Prompts', () => {
   test.setTimeout(200_000);
+
+  const tracker = new MentorTracker();
 
   test.beforeEach(async ({ page, createMentorPage }) => {
     await navigateToMentorApp(page);
@@ -16,6 +23,8 @@ test.describe('Journey 42: Suggested Prompts', () => {
     // Create a fresh mentor for each test so the suggested prompts list
     // starts empty (avoids pagination/page-size pollution from prior runs).
     await createMentorPage.openAndCreate();
+    const { mentorId } = await getPlatformContext(page);
+    tracker.add(mentorId);
   });
 
   // --------------------------------------------------------------------------
@@ -173,10 +182,15 @@ test.describe('Journey 42: Suggested Prompts', () => {
     // The Edit Mentor modal should close
     await expect(editMentorPage.dialog).not.toBeVisible({ timeout: 10_000 });
 
-    // The chat input should be populated with the prompt text
-    await expect(chatPage.chatInput).toBeVisible({ timeout: 10_000 });
+    // The chat input should be populated with the prompt text. Use a stable
+    // id-based locator (source: components/chat-input-form.tsx:342 sets
+    // id="chat-input-textarea") because the role+name selector races against
+    // the textarea's aria-labelledby briefly changing during the Redux
+    // re-render that follows the modal close.
+    const chatInputById = page.locator('#chat-input-textarea');
+    await expect(chatInputById).toBeVisible({ timeout: 10_000 });
     if (promptText) {
-      await expect(chatPage.chatInput).toHaveValue(promptText, {
+      await expect(chatInputById).toHaveValue(promptText, {
         timeout: 10_000,
       });
     }
@@ -217,6 +231,8 @@ test.describe('Journey 42: Suggested Prompts', () => {
     await editMentorPage.prompts.addSuggestedPrompt(
       'E2E prompt for delete visibility',
     );
+    // `addSuggestedPrompt` already waits for the new prompt to render, so
+    // this resolves immediately; kept as the explicit assertion of intent.
     await expect
       .poll(() => editMentorPage.prompts.getSuggestedPromptCount(), {
         timeout: 10_000,
@@ -380,16 +396,16 @@ test.describe('Journey 42: Suggested Prompts', () => {
   // Non-Admin: a student should be able to see and run admin-created prompts
   // but should NOT be able to edit, delete, or add new prompts.
   //
-  // We exercise this via the Learner-mode toggle on the same admin user. The
+  // We exercise this via the User-mode toggle on the same admin user. The
   // RBAC code path that hides Edit/Delete (`useUserIsStudent()` in
-  // hooks/use-user.ts) returns `true` for admins in learner mode, so the
+  // hooks/use-user.ts) returns `true` for admins in user mode, so the
   // student experience is rendered identically to that of a real student user.
   // This avoids cross-tenant prompt-visibility limitations that prevent a
   // separately-authenticated non-admin from seeing the admin's prompts.
   // ==========================================================================
 
   test.describe('Non-Admin', () => {
-    test('admin in learner mode can see and run admin-created prompts but cannot edit, delete, or add', async ({
+    test('admin in user mode can see and run admin-created prompts but cannot edit, delete, or add', async ({
       page,
       editMentorPage,
       chatPage,
@@ -401,28 +417,38 @@ test.describe('Journey 42: Suggested Prompts', () => {
       const promptText = `Non-admin visible prompt ${Date.now()}`;
       await editMentorPage.prompts.addSuggestedPrompt(promptText);
 
+      // Match the sibling test at line 137 — the prompt list refresh after a
+      // POST can take 30s+ when the backing mentor data is mid-fetch (same
+      // abort+retry race as explore). A 10s ceiling here is racy in CI.
       await expect
         .poll(() => editMentorPage.prompts.getSuggestedPromptCount(), {
-          timeout: 10_000,
+          timeout: 120_000,
         })
         .toBeGreaterThan(0);
 
       await editMentorPage.close();
+
+      // The chat "Prompts" button is gated on the SDK's `promptsIsEnabled`,
+      // derived from useGetPromptsSearchQuery (true only when the mentor has
+      // ≥1 suggested prompt). The just-added prompt leaves that query result
+      // stale on the current mount, so the button never renders. Reload to
+      // force a fresh mount and refetch.
+      await page.reload({ waitUntil: 'domcontentloaded' });
       await waitForPageReady(page);
 
-      // ── Switch to Learner mode (acts as a non-admin / student) ──────────────
-      const learnerSwitch = page.getByRole('switch', {
-        name: /learner mode/i,
-      });
+      // ── Switch to User mode (acts as a non-admin / student) ──────────────
+      // Match by aria-label, not role: a stale `aria-hidden="true"` left on the
+      // app shell can drop the navbar switch out of the accessibility tree, so
+      // `getByLabel` (attribute-based) is more robust than a role query.
+      const learnerSwitch = page.getByLabel(/user mode/i);
       await expect(learnerSwitch).toBeVisible({ timeout: 10_000 });
-      // The switch is `checked` when in instructor mode; click to flip to
-      // learner mode.
+      // The switch is `checked` when in administrator mode; click to flip to
+      // user mode.
       const isInstructor =
         (await learnerSwitch.getAttribute('aria-checked')) === 'true';
       if (isInstructor) {
         await learnerSwitch.click();
       }
-      await page.waitForTimeout(1_000);
 
       // ── Open the Prompt Gallery from the chat area ──────────────────────────
       await expect(chatPage.promptsButton).toBeVisible({ timeout: 15_000 });
@@ -469,5 +495,9 @@ test.describe('Journey 42: Suggested Prompts', () => {
         timeout: 10_000,
       });
     });
+  });
+
+  test.afterAll(async ({ browser }, testInfo) => {
+    await tracker.deleteAll(browser, testInfo);
   });
 });

@@ -8,14 +8,38 @@ permissions = [
     "allow-open-external-url",
     "allow-navigate-to",
     "allow-get-os-type",
+    "allow-allow-in-app-purchase",
+    "allow-get-locked-tenant",
     "allow-install-ollama",
+    "allow-stop-ollama",
     "allow-check-ollama-status",
     "allow-check-disk-space-for-model",
     "allow-download-phi3-model",
+    "allow-download-model",
     "allow-cancel-model-download",
     "allow-check-network-status",
     "allow-ollama-chat",
-    "allow-ollama-chat-stream"
+    "allow-ollama-chat-stream",
+    "allow-get-mcp-config-path",
+    "allow-install-cua-driver",
+    "allow-check-cua-driver-status",
+    "allow-cua-driver-support",
+    "allow-cua-driver-start",
+    "allow-cua-driver-send",
+    "allow-cua-driver-stop",
+    "allow-opencode-chat-stream",
+    "allow-opencode-stop",
+    "allow-opencode-permission-respond",
+    "allow-opencode-close",
+    "allow-get-opencode-workspace",
+    "allow-set-opencode-workspace",
+    "allow-set-opencode-skills",
+    "allow-begin-opencode-skills-sync",
+    "allow-install-opencode",
+    "allow-ensure-vibe-skills",
+    "allow-check-opencode-status",
+    "allow-check-code-local-model",
+    "allow-set-opencode-learner",
 ]
 
 [[permission]]
@@ -23,6 +47,18 @@ identifier = "allow-open-external-url"
 description = "Enables opening URLs in the system browser for OAuth flows"
 [permission.commands]
 allow = ["open_external_url"]
+
+[[permission]]
+identifier = "allow-log-fe"
+description = "Allow logging from frontend"
+[permission.commands]
+allow = ["log_fe"]
+
+[[permission]]
+identifier = "allow-get-system-memory"
+description = "Allow getting system memory"
+[permission.commands]
+allow = ["get_system_memory"]
 
 [[permission]]
 identifier = "allow-navigate-to"
@@ -37,10 +73,28 @@ description = "Enables getting the OS type"
 allow = ["get_os_type"]
 
 [[permission]]
+identifier = "allow-allow-in-app-purchase"
+description = "Enables checking whether in-app purchase is allowed for this build"
+[permission.commands]
+allow = ["allow_in_app_purchase"]
+
+[[permission]]
+identifier = "allow-get-locked-tenant"
+description = "Enables reading the tenant this build is locked to"
+[permission.commands]
+allow = ["get_locked_tenant"]
+
+[[permission]]
 identifier = "allow-install-ollama"
 description = "Enables installing Ollama"
 [permission.commands]
 allow = ["install_ollama"]
+
+[[permission]]
+identifier = "allow-stop-ollama"
+description = "Enables stopping the Ollama model manager server"
+[permission.commands]
+allow = ["stop_ollama"]
 
 [[permission]]
 identifier = "allow-check-ollama-status"
@@ -59,6 +113,12 @@ identifier = "allow-download-phi3-model"
 description = "Enables downloading the phi3 model"
 [permission.commands]
 allow = ["download_phi3_model"]
+
+[[permission]]
+identifier = "allow-download-model"
+description = "Enables downloading any Ollama model (generic model download)"
+[permission.commands]
+allow = ["download_model"]
 
 [[permission]]
 identifier = "allow-cancel-model-download"
@@ -83,3 +143,141 @@ identifier = "allow-ollama-chat-stream"
 description = "Enables Ollama streaming chat"
 [permission.commands]
 allow = ["ollama_chat_stream"]
+
+[[permission]]
+identifier = "allow-get-mcp-config-path"
+description = "Enables reading the path to the user-editable MCP servers config file"
+[permission.commands]
+allow = ["get_mcp_config_path"]
+
+[[permission]]
+identifier = "allow-install-cua-driver"
+description = "Enables downloading and installing the Cua Driver (Cowork)"
+[permission.commands]
+allow = ["install_cua_driver"]
+
+[[permission]]
+identifier = "allow-check-cua-driver-status"
+description = "Enables checking Cua Driver (Cowork) install and session support"
+[permission.commands]
+allow = ["check_cua_driver_status"]
+
+[[permission]]
+identifier = "allow-cua-driver-support"
+description = "Enables checking whether Cowork can run on this desktop session"
+[permission.commands]
+allow = ["cua_driver_support"]
+
+[[permission]]
+identifier = "allow-cua-driver-start"
+description = "Enables starting the on-device Cua Driver MCP process for Computer Use"
+[permission.commands]
+allow = ["cua_driver_start"]
+
+[[permission]]
+identifier = "allow-cua-driver-send"
+description = "Enables forwarding a JSON-RPC message to the Cua Driver MCP process"
+[permission.commands]
+allow = ["cua_driver_send"]
+
+[[permission]]
+identifier = "allow-cua-driver-stop"
+description = "Enables stopping the Cua Driver MCP process for Computer Use"
+[permission.commands]
+allow = ["cua_driver_stop"]
+
+[[permission]]
+identifier = "allow-opencode-chat-stream"
+description = "Enables streaming a Coding Mode turn through opencode over ACP"
+[permission.commands]
+allow = ["opencode_chat_stream"]
+
+[[permission]]
+identifier = "allow-opencode-stop"
+description = "Enables cancelling the active opencode turn (ACP session/cancel)"
+[permission.commands]
+allow = ["opencode_stop"]
+
+[[permission]]
+identifier = "allow-opencode-permission-respond"
+description = "Enables answering a Code permission prompt (allow/deny a risky tool call)"
+[permission.commands]
+allow = ["opencode_permission_respond"]
+
+[[permission]]
+identifier = "allow-opencode-close"
+description = "Enables killing a chat's opencode process"
+[permission.commands]
+allow = ["opencode_close"]
+
+[[permission]]
+identifier = "allow-get-opencode-workspace"
+description = "Enables reading the Coding Mode workspace path"
+[permission.commands]
+allow = ["get_opencode_workspace"]
+
+[[permission]]
+identifier = "allow-set-opencode-workspace"
+description = "Enables setting the Coding Mode workspace path"
+[permission.commands]
+allow = ["set_opencode_workspace"]
+
+[[permission]]
+identifier = "allow-set-opencode-skills"
+description = "Enables materialising a mentor's Agent Skills for Code sessions"
+[permission.commands]
+allow = ["set_opencode_skills"]
+
+[[permission]]
+identifier = "allow-begin-opencode-skills-sync"
+description = "Enables announcing an in-flight skills sync so Code spawns wait for it"
+[permission.commands]
+allow = ["begin_opencode_skills_sync"]
+
+[[permission]]
+identifier = "allow-ensure-vibe-skills"
+description = "Enables syncing the shared iblai/vibe skills for Code sessions"
+[permission.commands]
+allow = ["ensure_vibe_skills"]
+
+[[permission]]
+identifier = "allow-install-opencode"
+description = "Enables installing opencode + writing its config + preparing the workspace"
+[permission.commands]
+allow = ["install_opencode"]
+
+[[permission]]
+identifier = "allow-check-opencode-status"
+description = "Enables checking opencode readiness (installed/version/config/workspace)"
+[permission.commands]
+allow = ["check_opencode_status"]
+
+[[permission]]
+identifier = "allow-check-code-local-model"
+description = "Enables checking whether the selected on-device model can drive Code (tool-calling support, runtime reachability)"
+[permission.commands]
+allow = ["check_code_local_model"]
+
+[[permission]]
+identifier = "allow-set-opencode-learner"
+description = "Enables recording the signed-in username so the model proxy attributes usage via learner_id"
+[permission.commands]
+allow = ["set_opencode_learner"]
+
+[[permission]]
+identifier = "allow-new-opencode-workspace"
+description = "Enables switching a mentor to a fresh, empty Coding Mode workspace"
+[permission.commands]
+allow = ["new_opencode_workspace"]
+
+[[permission]]
+identifier = "allow-get-opencode-permission-mode"
+description = "Enables reading the saved Coding Mode approval mode (manual/auto, or unset)"
+[permission.commands]
+allow = ["get_opencode_permission_mode"]
+
+[[permission]]
+identifier = "allow-set-opencode-permission-mode"
+description = "Enables choosing whether Coding Mode asks before each operation or approves automatically"
+[permission.commands]
+allow = ["set_opencode_permission_mode"]

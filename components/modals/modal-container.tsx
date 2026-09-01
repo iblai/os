@@ -15,14 +15,16 @@ import {
 
 // Modals
 import { SettingsModal } from '@/components/modals/settings-modal';
+import { EditMentorModal } from '@/components/modals/edit-mentor-modal';
 // import { CreateMentorModal } from '@/components/modals/create-mentor-modal';
 import { CustomAlertDialog } from '../custom-alert-dialog';
 import { UpgradePackageModal } from '@iblai/iblai-js/web-containers';
+import { setOpenPricingModal } from '@/features/subscription/subscription-slice';
 import {
-  setOpenPricingModal,
   setOpenAppleRestrictionModal,
-} from '@/features/subscription/subscription-slice';
-import { AppleRestrictionModal } from '@/components/modals/apple-restriction-modal';
+  type AppleRestrictionState,
+} from '@iblai/iblai-js/web-utils';
+import { AppleRestrictionModal } from '@iblai/iblai-js/web-containers';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import {
   InvitedUsersDialog,
@@ -44,6 +46,7 @@ export const ModalContainer = () => {
     // closeCreateMentorModal,
     closeInviteUserModal,
     closeSettingsModal,
+    closeEditMentorModal,
     closeNoMentorSelectedModal,
   } = useNavigate();
 
@@ -51,9 +54,15 @@ export const ModalContainer = () => {
   const state = useSelector((state: RootState) => state);
   const dispatch = useAppDispatch();
 
+  const AUTH_URL = String(config.authUrl()).endsWith('/')
+    ? config.authUrl()
+    : `${config.authUrl()}/`;
+
   const { customAlertDialog } = state.modals;
 
-  const { openPricingModal, openAppleRestrictionModal } = state.subscription;
+  const { openPricingModal } = state.subscription;
+  const { openAppleRestrictionModal } =
+    state.appleRestriction as AppleRestrictionState;
 
   // Use state with selectors
   // const showCreateMentorModal = selectIsModalOpen(MODALS.CREATE_MENTOR.name)(
@@ -61,6 +70,7 @@ export const ModalContainer = () => {
   // );
   const showInviteUserModal = selectIsModalOpen(MODALS.INVITE_USER.name)(state);
   const showSettingsModal = selectIsModalOpen(MODALS.SETTINGS.name)(state);
+  const showEditMentorModal = selectIsModalOpen(MODALS.EDIT_MENTOR.name)(state);
   const showNoMentorSelectedModal = selectIsModalOpen(
     MODALS.NO_MENTOR_SELECTED.name,
   )(state);
@@ -105,6 +115,13 @@ export const ModalContainer = () => {
         />
       )}
 
+      {showEditMentorModal && (
+        <EditMentorModal
+          isOpen={showEditMentorModal}
+          onClose={closeEditMentorModal}
+        />
+      )}
+
       {/* Custom Alert Dialog */}
       {customAlertDialog.isOpen && (
         <CustomAlertDialog
@@ -120,7 +137,7 @@ export const ModalContainer = () => {
         <UpgradePackageModal
           open={openPricingModal}
           onClose={() => dispatch(setOpenPricingModal(false))}
-          redirectUrl={window.location.origin}
+          redirectUrl={`${AUTH_URL}login`}
           mainPlatformKey={config.mainTenantKey()}
           sourcePlatformKey={tenantKey}
           currentUserEmail={getUserEmail()}

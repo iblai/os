@@ -1,6 +1,65 @@
 import { test, expect } from '../fixtures/mentor-test';
+import type { Locator, Page } from '@playwright/test';
 import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
+
+async function selectConcreteMemoryCategory(
+  page: Page,
+  memoryDialog: Locator,
+): Promise<void> {
+  const categoryTrigger = memoryDialog.getByRole('combobox').first();
+  await expect(categoryTrigger).toBeVisible({ timeout: 10_000 });
+  await categoryTrigger.click();
+
+  // "All" is a filter tab, not a create/edit category option. Prefer a
+  // seeded category over any E2E category left behind by a previous failed run.
+  let option = page
+    .getByRole('option')
+    .filter({ hasNotText: /^All$/i })
+    .filter({ hasNotText: /^E2E /i })
+    .first();
+
+  if (
+    !(await option
+      .waitFor({ state: 'visible', timeout: 10_000 })
+      .then(() => true)
+      .catch(() => false))
+  ) {
+    option = page.getByRole('option').filter({ hasNotText: /^All$/i }).first();
+  }
+
+  await expect(option).toBeVisible({ timeout: 10_000 });
+  const categoryName = ((await option.textContent()) ?? '').trim();
+  expect(categoryName, 'memory category option text').not.toBe('');
+  await option.click();
+  await expect(categoryTrigger).toContainText(categoryName, {
+    timeout: 5_000,
+  });
+}
+
+async function expectDialogClosedWithoutError(
+  page: Page,
+  dialog: Locator,
+  errorText: RegExp,
+  actionName: string,
+): Promise<void> {
+  const result = await Promise.race([
+    dialog
+      .waitFor({ state: 'hidden', timeout: 30_000 })
+      .then(() => 'closed' as const)
+      .catch(() => 'timeout' as const),
+    page
+      .getByText(errorText)
+      .first()
+      .waitFor({ state: 'visible', timeout: 30_000 })
+      .then(() => 'error' as const)
+      .catch(() => 'timeout' as const),
+  ]);
+
+  expect(result, `${actionName} should close without an error toast`).toBe(
+    'closed',
+  );
+}
 
 test.describe('Journey 24: Mentor Memory Tab', () => {
   test.beforeEach(async ({ page }) => {
@@ -35,48 +94,50 @@ test.describe('Journey 24: Mentor Memory Tab', () => {
     await editMentorPage.close();
   });
 
-  test.fixme(
-    'admin goes to settings tab and enables then disables the Memory toggle',
-    async ({ editMentorPage, page }) => {
-      await waitForPageReady(page);
-      // The Memory toggle moved from the Memory tab to the Settings tab (fix/1584).
-      // It is now a form-driven field — changes persist only on Save.
-      //await editMentorPage.close();
-      await editMentorPage.open('Settings');
-      const wasEnabled = await editMentorPage.settings.isMemoryEnabled();
-      // Toggle to the opposite state, then toggle back to restore.
-      await editMentorPage.settings.setMemoryEnabled(!wasEnabled);
-      await editMentorPage.settings.setMemoryEnabled(wasEnabled);
-      await editMentorPage.close();
-    },
-  );
-
-  test('admin goes to memory tab and verifies user memories list shows entries or empty state and can delete an entry', async ({
-    page,
+  test('admin goes to Memory tab and enables then disables the capability toggle', async ({
     createMentorPage,
     editMentorPage,
+    page,
   }) => {
     await createMentorPage.openAndCreate();
+    // The "Remember past conversations" master toggle moved from Settings →
+    // Capabilities to an in-tab `CapabilityGate` at the top of the Memory
+    // tab itself (feat/2040). It now auto-saves on click (optimistic local
+    // state via `useEditMentorMutation`) — no footer Save button involved.
     await editMentorPage.open('Memory');
     await waitForPageReady(page);
-
-    await expect(editMentorPage.memory.addMemoryButton).toBeVisible({
-      timeout: 10_000,
-    });
-    // Seed our own entry so we can delete it without racing other parallel
-    // specs that may be adding/removing entries concurrently.
-    const seedContent = `Delete-target memory ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    await editMentorPage.memory.createMemory(seedContent);
-    await expect(
-      editMentorPage.memory.entryByContent(seedContent).first(),
-    ).toBeVisible({ timeout: 10_000 });
-
-    // deleteByContent already asserts the entry is gone; no extra check needed.
-    await editMentorPage.memory.deleteByContent(seedContent);
+    const wasEnabled = await editMentorPage.memory.isCapabilityEnabled();
+    // Toggle to the opposite state, then toggle back to restore.
+    await editMentorPage.memory.setCapabilityEnabled(!wasEnabled);
+    await editMentorPage.memory.setCapabilityEnabled(wasEnabled);
     await editMentorPage.close();
   });
 
-  test('admin creates a new memory from the memory tab', async ({
+  /**
+   * Consolidated CRUD lifecycle: add → edit → delete in one test.
+   *
+   * Replaced the previous separate add/edit/delete tests because each one
+   * paid the full mentor-creation cost and they collectively retried the
+   * same RTK refetch window 4× — multiplying the chance of CI flakes.
+   *
+   * Selectors are pinned to the source:
+   *   - List container:  role="list", aria-label="Saved memories"
+   *   - Entry:           role="listitem"
+   *   - Action button:   role="button", aria-label="Memory actions"
+   *   - Add button:      "Add Memory" text (full label, sm:inline)
+   *   - Add dialog:      DialogTitle "Add Memory"
+   *   - Edit dialog:     DialogTitle "Edit Memory"
+   *   - Delete dialog:   DialogTitle "Delete Memory"
+   *   - Save / Delete:   role="button" with the literal text
+   *   - Categories tab:  role="tablist", aria-label="Memory categories"
+   *
+   * No success-toast waits — sonner toasts auto-dismiss after ~4s and are
+   * racy in CI. We wait on durable post-state UI, but fail fast on explicit
+   * error toasts so rejected mutations don't burn the full hidden timeout.
+   *
+   * Save button is gated on content >= 10 chars (source: add/edit modals).
+   */
+  test('admin completes the full memory CRUD lifecycle in one flow: add → edit → delete', async ({
     page,
     createMentorPage,
     editMentorPage,
@@ -85,49 +146,165 @@ test.describe('Journey 24: Mentor Memory Tab', () => {
     await editMentorPage.open('Memory');
     await waitForPageReady(page);
 
-    const testContent = `E2E test memory ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    await editMentorPage.memory.createMemory(testContent);
-    // Auto-retrying expect rides out the brief RTK Query refetch window
-    // that follows the "Memory created" toast.
-    await expect(
-      editMentorPage.memory.entryByContent(testContent).first(),
-    ).toBeVisible({ timeout: 10_000 });
-    await editMentorPage.close();
-  });
-
-  test('admin edits a memory entry from the memory tab', async ({
-    page,
-    createMentorPage,
-    editMentorPage,
-  }) => {
-    await createMentorPage.openAndCreate();
-    await editMentorPage.open('Memory');
-    await waitForPageReady(page);
-
-    // Always seed our own memory so the edit targets a known entry. Do NOT
-    // edit the "first" entry — parallel specs may insert/remove entries and
-    // shift positions mid-test.
+    const dialog = editMentorPage.dialog;
     const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const seedContent = `Seed memory ${suffix}`;
-    const updatedContent = `Updated memory ${suffix}`;
+    const initialContent = `E2E memory ${suffix}`;
+    const updatedContent = `E2E memory updated ${suffix}`;
 
-    await editMentorPage.memory.createMemory(seedContent);
-    await expect(
-      editMentorPage.memory.entryByContent(seedContent).first(),
-    ).toBeVisible({ timeout: 10_000 });
+    // Seed a category before the CRUD flow: selectConcreteMemoryCategory waits
+    // for a non-"All" option, but on a fresh mentor with zero admin categories
+    // the SelectContent renders 0 SelectItems and the locator times out. Seed
+    // an E2E category so the dropdown has at least one concrete entry. We
+    // best-effort clean it up at the end so the suite stays idempotent.
+    const seededCategory = `E2E Seed ${suffix}`;
+    await editMentorPage.memory.openManageCategories();
+    await editMentorPage.memory.createCategory(seededCategory);
+    await editMentorPage.memory.closeManageCategories();
 
-    await editMentorPage.memory.editByContent(seedContent, updatedContent);
+    const memoryList = dialog.getByRole('list', { name: 'Saved memories' });
+    const allTab = dialog
+      .getByRole('tablist', { name: 'Memory categories' })
+      .getByRole('tab', { name: 'All', exact: true });
 
-    // After save, the list refetches; use auto-retrying assertions so we
-    // wait for the DOM to settle into the post-update state instead of
-    // snapshotting it mid-refetch.
-    await expect(
-      editMentorPage.memory.entryByContent(updatedContent).first(),
-    ).toBeVisible({ timeout: 10_000 });
-    await expect(editMentorPage.memory.entryByContent(seedContent)).toHaveCount(
-      0,
-      { timeout: 10_000 },
+    /** Click "All" filter (if available) so the unfiltered list is showing. */
+    const ensureAllFilter = async () => {
+      if (await allTab.isVisible({ timeout: 3_000 }).catch(() => false)) {
+        await allTab.click();
+      }
+      // Wait for the in-flight memories fetch to settle before assertions.
+      await dialog
+        .getByText('Loading memories...')
+        .waitFor({ state: 'hidden', timeout: 15_000 })
+        .catch(() => undefined);
+    };
+
+    // Pre-settle the list so the Add Memory button is stable.
+    await dialog
+      .getByText('Loading memories...')
+      .waitFor({ state: 'hidden', timeout: 15_000 })
+      .catch(() => undefined);
+
+    // ─── ADD ────────────────────────────────────────────────────────────
+    const addMemoryBtn = dialog.getByRole('button', {
+      name: /^add memory$/i,
+    });
+    await expect(addMemoryBtn).toBeVisible({ timeout: 15_000 });
+    await addMemoryBtn.click();
+
+    // IMPORTANT: identify each child modal by its DialogTitle (Radix wires
+    // it to the dialog's accessible name) rather than `filter({ hasText })`.
+    // The parent "Edit Agent" dialog contains an "Add Memory" button, so a
+    // hasText filter would match BOTH dialogs and `toBeHidden()` would never
+    // resolve after the child closes.
+    const addDialog = page.getByRole('dialog', {
+      name: 'Add Memory',
+      exact: true,
+    });
+    await expect(addDialog).toBeVisible({ timeout: 10_000 });
+
+    // Fill ≥ 10 chars (source: Save is disabled below 10). Pick a concrete
+    // category: "All" is only a filter, and its "general" fallback may not be
+    // a valid category slug in the E2E tenant.
+    await selectConcreteMemoryCategory(page, addDialog);
+    await addDialog
+      .getByPlaceholder('Enter memory content...')
+      .fill(initialContent);
+
+    const addSaveBtn = addDialog.getByRole('button', { name: 'Save' });
+    await expect(addSaveBtn).toBeEnabled({ timeout: 5_000 });
+    await addSaveBtn.click();
+
+    // Dialog close = create mutation resolved. Don't wait on success toasts.
+    await expectDialogClosedWithoutError(
+      page,
+      addDialog,
+      /Failed to create memory/i,
+      'Add memory',
     );
+
+    await ensureAllFilter();
+
+    const initialEntry = memoryList
+      .getByRole('listitem')
+      .filter({ hasText: initialContent });
+    await expect(initialEntry).toBeVisible({ timeout: 30_000 });
+
+    // ─── EDIT ───────────────────────────────────────────────────────────
+    await initialEntry.getByRole('button', { name: 'Memory actions' }).click();
+    await page.getByRole('menuitem', { name: 'Edit' }).click();
+
+    const editDialog = page.getByRole('dialog', {
+      name: 'Edit Memory',
+      exact: true,
+    });
+    await expect(editDialog).toBeVisible({ timeout: 10_000 });
+
+    const editTextarea = editDialog.getByPlaceholder('Enter memory content...');
+    await editTextarea.fill(updatedContent);
+
+    const editSaveBtn = editDialog.getByRole('button', { name: 'Save' });
+    await expect(editSaveBtn).toBeEnabled({ timeout: 5_000 });
+    await editSaveBtn.click();
+
+    await expectDialogClosedWithoutError(
+      page,
+      editDialog,
+      /Failed to update memory/i,
+      'Edit memory',
+    );
+
+    await ensureAllFilter();
+
+    const updatedEntry = memoryList
+      .getByRole('listitem')
+      .filter({ hasText: updatedContent });
+    await expect(updatedEntry).toBeVisible({ timeout: 30_000 });
+    await expect(
+      memoryList.getByRole('listitem').filter({ hasText: initialContent }),
+    ).toHaveCount(0, { timeout: 30_000 });
+
+    // ─── DELETE ─────────────────────────────────────────────────────────
+    await updatedEntry.getByRole('button', { name: 'Memory actions' }).click();
+    await page.getByRole('menuitem', { name: 'Delete' }).click();
+
+    const deleteDialog = page.getByRole('dialog', {
+      name: 'Delete Memory',
+      exact: true,
+    });
+    await expect(deleteDialog).toBeVisible({ timeout: 10_000 });
+
+    const confirmDeleteBtn = deleteDialog.getByRole('button', {
+      name: 'Delete',
+      exact: true,
+    });
+    await expect(confirmDeleteBtn).toBeEnabled({ timeout: 5_000 });
+    await confirmDeleteBtn.click();
+
+    await expectDialogClosedWithoutError(
+      page,
+      deleteDialog,
+      /Failed to delete memory/i,
+      'Delete memory',
+    );
+
+    await expect(
+      memoryList.getByRole('listitem').filter({ hasText: updatedContent }),
+    ).toHaveCount(0, { timeout: 30_000 });
+
+    // Best-effort cleanup of the seeded category so leftover E2E rows don't
+    // accumulate. Failures here are swallowed — the CRUD flow already passed.
+    try {
+      await editMentorPage.memory.openManageCategories();
+      if (await editMentorPage.memory.hasCategory(seededCategory)) {
+        await editMentorPage.memory
+          .deleteCategory(seededCategory)
+          .catch(() => undefined);
+      }
+      await editMentorPage.memory.closeManageCategories();
+    } catch {
+      // Ignore cleanup errors.
+    }
+
     await editMentorPage.close();
   });
 
@@ -140,7 +317,9 @@ test.describe('Journey 24: Mentor Memory Tab', () => {
     await editMentorPage.open('Memory');
     await waitForPageReady(page);
 
-    const suffix = Date.now();
+    // Random suffix (not just Date.now()) so category names cannot collide
+    // when two parallel workers reach this test in the same millisecond.
+    const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const created = `E2E Cat ${suffix}`;
     const renamed = `E2E Cat Renamed ${suffix}`;
 
@@ -170,27 +349,6 @@ test.describe('Journey 24: Mentor Memory Tab', () => {
 
     await editMentorPage.close();
   });
-
-  test('admin creates then deletes a memory to verify full CRUD cycle', async ({
-    page,
-    createMentorPage,
-    editMentorPage,
-  }) => {
-    await createMentorPage.openAndCreate();
-    await editMentorPage.open('Memory');
-    await waitForPageReady(page);
-
-    const testContent = `CRUD test memory ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    await editMentorPage.memory.createMemory(testContent);
-    await expect(
-      editMentorPage.memory.entryByContent(testContent).first(),
-    ).toBeVisible({ timeout: 10_000 });
-
-    // Delete by content, not position — parallel specs mutate the list.
-    // deleteByContent has its own auto-retrying detached assertion.
-    await editMentorPage.memory.deleteByContent(testContent);
-    await editMentorPage.close();
-  });
 });
 
 test.describe('Journey 24: Memory in Prompt Box', () => {
@@ -200,6 +358,15 @@ test.describe('Journey 24: Memory in Prompt Box', () => {
     createMentorPage,
     editMentorPage,
   }) => {
+    // Every Edit Agent open blocks on the modal's hydration spinner
+    // (settings + RBAC prefetch churn — ~30-90s per open, see
+    // EditMentorPage.waitForHydrated), and this test opens the modal up to
+    // THREE times (enable memory, disable memory, restore) plus creates a
+    // fresh mentor first. The default 120s budget expired mid-hydration on
+    // the second open (observed on staging). Mirrors journey 50's
+    // cp-agent-02 and journey 60's sub-resource budget.
+    test.setTimeout(420_000);
+
     await navigateToMentorApp(page);
     const isAdmin = await checkAdminStatus(page);
     if (!isAdmin) {
@@ -209,14 +376,15 @@ test.describe('Journey 24: Memory in Prompt Box', () => {
     // Own mentor per test — see Journey 24 describe block above for rationale.
     await createMentorPage.openAndCreate();
 
-    // The Memory toggle is now in the Settings tab (fix/1584).
+    // The "Remember past conversations" master toggle now lives in-tab on
+    // the Memory tab itself (feat/2040 — moved off Settings → Capabilities).
     // First ensure memory is enabled on the mentor.
-    await editMentorPage.open('Settings');
+    await editMentorPage.open('Memory');
     await waitForPageReady(page);
 
-    const wasEnabled = await editMentorPage.settings.isMemoryEnabled();
+    const wasEnabled = await editMentorPage.memory.isCapabilityEnabled();
     if (!wasEnabled) {
-      await editMentorPage.settings.setMemoryEnabled(true);
+      await editMentorPage.memory.setCapabilityEnabled(true);
     }
     await editMentorPage.close();
     await page.waitForTimeout(2_000);
@@ -240,9 +408,9 @@ test.describe('Journey 24: Memory in Prompt Box', () => {
     }
 
     // Now disable memory on the mentor and verify button disappears.
-    await editMentorPage.open('Settings');
+    await editMentorPage.open('Memory');
     await waitForPageReady(page);
-    await editMentorPage.settings.setMemoryEnabled(false);
+    await editMentorPage.memory.setCapabilityEnabled(false);
     await editMentorPage.close();
     await page.waitForTimeout(2_000);
 
@@ -251,9 +419,9 @@ test.describe('Journey 24: Memory in Prompt Box', () => {
 
     // Restore original state
     if (wasEnabled) {
-      await editMentorPage.open('Settings');
+      await editMentorPage.open('Memory');
       await waitForPageReady(page);
-      await editMentorPage.settings.setMemoryEnabled(true);
+      await editMentorPage.memory.setCapabilityEnabled(true);
       await editMentorPage.close();
     }
   });

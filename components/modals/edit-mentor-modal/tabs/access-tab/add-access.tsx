@@ -1,5 +1,6 @@
 import * as React from 'react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useDebounce } from 'use-debounce';
 import { Loader2, Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -58,6 +59,7 @@ export function AddAccessDialog({
   isLoading,
   onAccessCreated,
 }: AddAccessDialogProps) {
+  const t = useTranslations('accessTabAddAccess');
   const { mentorId, tenantKey } = useParams<TenantKeyMentorIdParams>();
   const username = useUsername();
   const rbacPermissions = useAppSelector(selectRbacPermissions);
@@ -84,6 +86,24 @@ export function AddAccessDialog({
   const [groupSearchTerm, setGroupSearchTerm] = useState('');
   const [showGroupSearchResults, setShowGroupSearchResults] = useState(false);
   const [debouncedGroupSearchTerm] = useDebounce(groupSearchTerm, 300);
+  const userSearchBlurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const groupSearchBlurTimeoutRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (userSearchBlurTimeoutRef.current !== null) {
+        clearTimeout(userSearchBlurTimeoutRef.current);
+      }
+      if (groupSearchBlurTimeoutRef.current !== null) {
+        clearTimeout(groupSearchBlurTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const [createMentorAccess, { isLoading: isCreatingMentorAccess }] =
     useUpdateRbacMentorAccessMutation();
 
@@ -222,7 +242,11 @@ export function AddAccessDialog({
   }, [userSearchTerm]);
 
   const handleUserSearchBlur = useCallback(() => {
-    setTimeout(() => {
+    if (userSearchBlurTimeoutRef.current !== null) {
+      clearTimeout(userSearchBlurTimeoutRef.current);
+    }
+    userSearchBlurTimeoutRef.current = setTimeout(() => {
+      userSearchBlurTimeoutRef.current = null;
       setShowUserSearchResults(false);
     }, 100);
   }, []);
@@ -298,7 +322,11 @@ export function AddAccessDialog({
   }, [groupSearchTerm]);
 
   const handleGroupSearchBlur = useCallback(() => {
-    setTimeout(() => {
+    if (groupSearchBlurTimeoutRef.current !== null) {
+      clearTimeout(groupSearchBlurTimeoutRef.current);
+    }
+    groupSearchBlurTimeoutRef.current = setTimeout(() => {
+      groupSearchBlurTimeoutRef.current = null;
       setShowGroupSearchResults(false);
     }, 100);
   }, []);
@@ -319,20 +347,20 @@ export function AddAccessDialog({
   const handleCreateRoleAccess = useCallback(async () => {
     /* istanbul ignore if -- defensive: Create button is disabled when no role selected */
     if (!selectedRole) {
-      toast.error('Select a role to create access.');
+      toast.error(t('toastSelectRole'));
       return;
     }
 
     /* istanbul ignore if -- defensive: Create button is disabled when mentor context missing */
     if (!mentorDbId || !tenantKey) {
-      toast.error('Agent context is missing. Close the modal and try again.');
+      toast.error(t('toastMissingContext'));
       return;
     }
 
     /* istanbul ignore if -- defensive: role selection only allows valid availableRoles */
     if (!availableRoles.includes(selectedRole)) {
       toast.error(
-        `${formatRoleName(selectedRole)} already exists for this agent.`,
+        t('toastRoleExists', { roleName: formatRoleName(selectedRole) }),
       );
       return;
     }
@@ -370,7 +398,9 @@ export function AddAccessDialog({
         },
       } as unknown as { requestBody: MentorPolicy }).unwrap();
 
-      toast.success(`${formatRoleName(selectedRole)} access created.`);
+      toast.success(
+        t('toastAccessCreated', { roleName: formatRoleName(selectedRole) }),
+      );
       setSelectedRole('');
       setSelectedUsers([]);
       setUserSearchTerm('');
@@ -384,9 +414,7 @@ export function AddAccessDialog({
       setIsCreateDialogOpen(false);
       await onAccessCreated();
     } catch (error) {
-      toast.error(
-        getErrorMessage(error, 'Unable to create agent role access.'),
-      );
+      toast.error(getErrorMessage(error, t('toastCreateError')));
     }
   }, [
     availableRoles,
@@ -426,19 +454,16 @@ export function AddAccessDialog({
           disabled={isLoading || !mentorDbId || !platformKey}
         >
           <Plus className="h-4 w-4" />
-          Create role access
+          {t('createRoleAccessButton')}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create agent role access</DialogTitle>
-          <DialogDescription>
-            Create an agent access policy for a new role. You can add users to
-            it afterward.
-          </DialogDescription>
+          <DialogTitle>{t('dialogTitle')}</DialogTitle>
+          <DialogDescription>{t('dialogDescription')}</DialogDescription>
         </DialogHeader>
         <div className="space-y-2">
-          <Label htmlFor="select-role">Role</Label>
+          <Label htmlFor="select-role">{t('roleLabel')}</Label>
           <Select
             value={selectedRole}
             onValueChange={(value) =>
@@ -446,8 +471,11 @@ export function AddAccessDialog({
             }
             disabled={availableRoles.length === 0}
           >
-            <SelectTrigger id="select-role" aria-label="Select role">
-              <SelectValue placeholder="Choose a role" />
+            <SelectTrigger
+              id="select-role"
+              aria-label={t('selectRoleAriaLabel')}
+            >
+              <SelectValue placeholder={t('chooseRolePlaceholder')} />
             </SelectTrigger>
             <SelectContent>
               {availableRoles.map((role) => (
@@ -460,7 +488,7 @@ export function AddAccessDialog({
         </div>
         <div className="space-y-3">
           <div className="space-y-2">
-            <Label>Users</Label>
+            <Label>{t('usersLabel')}</Label>
             {selectedUsers.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {selectedUsers.map((user) => (
@@ -480,7 +508,7 @@ export function AddAccessDialog({
                     >
                       <X className="h-3.5 w-3.5" aria-hidden="true" />
                       <span className="sr-only">
-                        Remove {user.email || user.name}
+                        {t('removeUser', { name: user.email || user.name })}
                       </span>
                     </Button>
                   </div>
@@ -488,7 +516,7 @@ export function AddAccessDialog({
               </div>
             ) : (
               <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
-                No users selected yet.
+                {t('noUsersSelected')}
               </div>
             )}
           </div>
@@ -496,7 +524,7 @@ export function AddAccessDialog({
           <div className="space-y-1.5">
             {hasUsersPermission ? (
               <>
-                <Label htmlFor="create-user-search">Add users</Label>
+                <Label htmlFor="create-user-search">{t('addUsersLabel')}</Label>
                 <div className="relative">
                   <Input
                     id="create-user-search"
@@ -504,7 +532,7 @@ export function AddAccessDialog({
                     onChange={handleUserSearchChange}
                     onFocus={handleUserSearchFocus}
                     onBlur={handleUserSearchBlur}
-                    placeholder="Search by name, username, or email"
+                    placeholder={t('userSearchPlaceholder')}
                     autoComplete="off"
                     aria-autocomplete="list"
                     aria-expanded={showUserSearchResults}
@@ -513,7 +541,7 @@ export function AddAccessDialog({
                     <div className="absolute top-full right-0 left-0 z-50 mt-1 max-h-64 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg">
                       {userSearchTerm.trim().length < 2 ? (
                         <div className="px-3 py-2 text-sm text-gray-600">
-                          Type at least two characters to search.
+                          {t('typeAtLeastTwoChars')}
                         </div>
                       ) : isLoadingCreationUsers || isFetchingCreationUsers ? (
                         <div className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600">
@@ -521,7 +549,7 @@ export function AddAccessDialog({
                             className="h-3.5 w-3.5 animate-spin"
                             aria-hidden="true"
                           />
-                          Searching users…
+                          {t('searchingUsers')}
                         </div>
                       ) : creationAvailableUsers.length > 0 ? (
                         creationAvailableUsers.map((user) => (
@@ -546,20 +574,19 @@ export function AddAccessDialog({
                         ))
                       ) : (
                         <div className="px-3 py-2 text-sm text-gray-600">
-                          No matching users found.
+                          {t('noMatchingUsers')}
                         </div>
                       )}
                     </div>
                   )}
                 </div>
-                <p className="text-xs text-gray-500">
-                  Type at least two characters to search and assign users to
-                  this role.
-                </p>
+                <p className="text-xs text-gray-500">{t('userSearchHint')}</p>
               </>
             ) : (
               <>
-                <Label htmlFor="create-manual-user-input">Add by</Label>
+                <Label htmlFor="create-manual-user-input">
+                  {t('addByLabel')}
+                </Label>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <Select
@@ -570,13 +597,17 @@ export function AddAccessDialog({
                     >
                       <SelectTrigger
                         className="w-[130px]"
-                        aria-label="Select input type"
+                        aria-label={t('selectInputTypeAriaLabel')}
                       >
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="email">Email</SelectItem>
-                        <SelectItem value="username">Username</SelectItem>
+                        <SelectItem value="email">
+                          {t('emailOption')}
+                        </SelectItem>
+                        <SelectItem value="username">
+                          {t('usernameOption')}
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                     <Input
@@ -596,8 +627,8 @@ export function AddAccessDialog({
                       }}
                       placeholder={
                         manualInputType === 'email'
-                          ? 'user@example.com'
-                          : 'username'
+                          ? t('emailPlaceholder')
+                          : t('usernamePlaceholder')
                       }
                       autoComplete="off"
                       className="flex-1"
@@ -618,7 +649,7 @@ export function AddAccessDialog({
                       className="h-9 w-9 shrink-0"
                     >
                       <Plus className="h-4 w-4" />
-                      <span className="sr-only">Add entry</span>
+                      <span className="sr-only">{t('addEntryButton')}</span>
                     </Button>
                   </div>
                   {manualEntries.length > 0 && (
@@ -639,7 +670,9 @@ export function AddAccessDialog({
                             className="text-gray-400 hover:text-red-600"
                           >
                             <X className="h-3.5 w-3.5" />
-                            <span className="sr-only">Remove {entry}</span>
+                            <span className="sr-only">
+                              {t('removeEntry', { entry })}
+                            </span>
                           </button>
                         </div>
                       ))}
@@ -647,8 +680,7 @@ export function AddAccessDialog({
                   )}
                 </div>
                 <p className="text-xs text-gray-500">
-                  Press Enter or click + to stage {manualInputType}s, then click
-                  Create to assign them.
+                  {t('manualInputHint', { inputType: manualInputType })}
                 </p>
               </>
             )}
@@ -657,7 +689,7 @@ export function AddAccessDialog({
         {hasGroupsPermission && (
           <div className="space-y-3">
             <div className="space-y-2">
-              <Label>Groups</Label>
+              <Label>{t('groupsLabel')}</Label>
               {selectedGroups.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {selectedGroups.map((group) => (
@@ -674,19 +706,21 @@ export function AddAccessDialog({
                         onClick={() => handleRemoveSelectedGroup(group.id)}
                       >
                         <X className="h-3.5 w-3.5" aria-hidden="true" />
-                        <span className="sr-only">Remove {group.name}</span>
+                        <span className="sr-only">
+                          {t('removeGroup', { name: group.name })}
+                        </span>
                       </Button>
                     </div>
                   ))}
                 </div>
               ) : (
                 <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
-                  No groups selected yet.
+                  {t('noGroupsSelected')}
                 </div>
               )}
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="create-group-search">Add groups</Label>
+              <Label htmlFor="create-group-search">{t('addGroupsLabel')}</Label>
               <div className="relative">
                 <Input
                   id="create-group-search"
@@ -694,7 +728,7 @@ export function AddAccessDialog({
                   onChange={handleGroupSearchChange}
                   onFocus={handleGroupSearchFocus}
                   onBlur={handleGroupSearchBlur}
-                  placeholder="Search groups by name"
+                  placeholder={t('groupSearchPlaceholder')}
                   autoComplete="off"
                   aria-autocomplete="list"
                   aria-expanded={showGroupSearchResults}
@@ -703,7 +737,7 @@ export function AddAccessDialog({
                   <div className="absolute top-full right-0 left-0 z-50 mt-1 max-h-64 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg">
                     {groupSearchTerm.trim().length < 2 ? (
                       <div className="px-3 py-2 text-sm text-gray-600">
-                        Type at least two characters to search.
+                        {t('typeAtLeastTwoChars')}
                       </div>
                     ) : isLoadingGroups || isFetchingGroups ? (
                       <div className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600">
@@ -711,7 +745,7 @@ export function AddAccessDialog({
                           className="h-3.5 w-3.5 animate-spin"
                           aria-hidden="true"
                         />
-                        Searching groups…
+                        {t('searchingGroups')}
                       </div>
                     ) : availableGroups.length > 0 ? (
                       availableGroups.map((group) => (
@@ -729,22 +763,19 @@ export function AddAccessDialog({
                       ))
                     ) : (
                       <div className="px-3 py-2 text-sm text-gray-600">
-                        No matching groups found.
+                        {t('noMatchingGroups')}
                       </div>
                     )}
                   </div>
                 )}
               </div>
-              <p className="text-xs text-gray-500">
-                Type at least two characters to search and assign groups to this
-                role.
-              </p>
+              <p className="text-xs text-gray-500">{t('groupSearchHint')}</p>
             </div>
           </div>
         )}
         <DialogFooter className="gap-2">
           <Button type="button" variant="outline" onClick={handleCancelCreate}>
-            Cancel
+            {t('cancelButton')}
           </Button>
           <Button
             type="button"
@@ -755,10 +786,10 @@ export function AddAccessDialog({
             {isCreatingMentorAccess ? (
               <span className="inline-flex items-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                Creating…
+                {t('creatingButton')}
               </span>
             ) : (
-              'Create'
+              t('createButton')
             )}
           </Button>
         </DialogFooter>

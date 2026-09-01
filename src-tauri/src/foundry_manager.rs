@@ -83,7 +83,10 @@ fn list_foundry_models() -> Result<Vec<FoundryModel>, String> {
 
     // Get the list of downloaded models ONCE for efficiency
     let downloaded_models = get_downloaded_models();
-    println!("[FoundryManager] Found {} downloaded models", downloaded_models.len());
+    println!(
+        "[FoundryManager] Found {} downloaded models",
+        downloaded_models.len()
+    );
     for model_id in &downloaded_models {
         println!("[FoundryManager]   Downloaded: {}", model_id);
     }
@@ -99,7 +102,10 @@ fn list_foundry_models() -> Result<Vec<FoundryModel>, String> {
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        println!("[FoundryManager] ❌ Command failed with stderr:\n{}", stderr);
+        println!(
+            "[FoundryManager] ❌ Command failed with stderr:\n{}",
+            stderr
+        );
 
         // If --json flag failed, try without it
         println!("[FoundryManager] Retrying without --json flag...");
@@ -110,7 +116,10 @@ fn list_foundry_models() -> Result<Vec<FoundryModel>, String> {
 
         if !output_plain.status.success() {
             let stderr_plain = String::from_utf8_lossy(&output_plain.stderr);
-            println!("[FoundryManager] ❌ Plain command also failed: {}", stderr_plain);
+            println!(
+                "[FoundryManager] ❌ Plain command also failed: {}",
+                stderr_plain
+            );
             return Err(format!("Failed to list models: {}", stderr_plain));
         }
 
@@ -119,16 +128,28 @@ fn list_foundry_models() -> Result<Vec<FoundryModel>, String> {
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    println!("[FoundryManager] ✓ Raw stdout length: {} bytes", stdout.len());
-    println!("[FoundryManager] ✓ Raw stdout preview (first 500 chars):\n{}",
-        if stdout.len() > 500 { &stdout[..500] } else { &stdout });
+    println!(
+        "[FoundryManager] ✓ Raw stdout length: {} bytes",
+        stdout.len()
+    );
+    println!(
+        "[FoundryManager] ✓ Raw stdout preview (first 500 chars):\n{}",
+        if stdout.len() > 500 {
+            &stdout[..500]
+        } else {
+            &stdout
+        }
+    );
     println!("[FoundryManager] ✓ Full raw stdout:\n{}", stdout);
 
     // Try to parse as JSON first
     println!("[FoundryManager] Attempting JSON parse...");
     match serde_json::from_str::<Vec<serde_json::Value>>(&stdout) {
         Ok(json_models) => {
-            println!("[FoundryManager] ✓ Successfully parsed as JSON array with {} items", json_models.len());
+            println!(
+                "[FoundryManager] ✓ Successfully parsed as JSON array with {} items",
+                json_models.len()
+            );
             let models: Vec<FoundryModel> = json_models
                 .iter()
                 .enumerate()
@@ -161,9 +182,15 @@ fn list_foundry_models() -> Result<Vec<FoundryModel>, String> {
                 })
                 .collect();
 
-            println!("[FoundryManager] ✓ Parsed {} models from JSON", models.len());
+            println!(
+                "[FoundryManager] ✓ Parsed {} models from JSON",
+                models.len()
+            );
             for (idx, model) in models.iter().enumerate() {
-                println!("[FoundryManager]   Model {}: id='{}', name='{}'", idx, model.id, model.name);
+                println!(
+                    "[FoundryManager]   Model {}: id='{}', name='{}'",
+                    idx, model.id, model.name
+                );
             }
             return Ok(models);
         }
@@ -182,19 +209,33 @@ fn list_foundry_models() -> Result<Vec<FoundryModel>, String> {
 ///   "deepseek-r1-distill-qwen-14b-qnn-npu" -> "deepseek-r1-distill-qwen-14b-qnn"
 ///   "llama-3-8b-cpu" -> "llama-3-8b"
 fn strip_device_suffix(model_name: &str) -> String {
-    let device_suffixes = ["-npu", "-cpu", "-gpu", "-cuda", "-rocm", "-metal", "-directml", "-vulkan"];
+    let device_suffixes = [
+        "-npu",
+        "-cpu",
+        "-gpu",
+        "-cuda",
+        "-rocm",
+        "-metal",
+        "-directml",
+        "-vulkan",
+    ];
 
     for suffix in device_suffixes.iter() {
         if model_name.to_lowercase().ends_with(suffix) {
             let base_name = &model_name[..model_name.len() - suffix.len()];
-            println!("[FoundryManager] Stripped device suffix: '{}' -> base: '{}', suffix: '{}'",
-                model_name, base_name, suffix);
+            println!(
+                "[FoundryManager] Stripped device suffix: '{}' -> base: '{}', suffix: '{}'",
+                model_name, base_name, suffix
+            );
             return base_name.to_string();
         }
     }
 
     // No device suffix found, return as-is
-    println!("[FoundryManager] No device suffix found in: '{}'", model_name);
+    println!(
+        "[FoundryManager] No device suffix found in: '{}'",
+        model_name
+    );
     model_name.to_string()
 }
 
@@ -233,14 +274,23 @@ fn get_downloaded_models() -> std::collections::HashSet<String> {
 }
 
 /// Check if a model is downloaded by checking against `foundry service list`
-fn is_model_downloaded(foundry_id: &str, downloaded_models: &std::collections::HashSet<String>) -> bool {
+fn is_model_downloaded(
+    foundry_id: &str,
+    downloaded_models: &std::collections::HashSet<String>,
+) -> bool {
     downloaded_models.contains(foundry_id)
 }
 
 /// Parse models from plain text output
-fn parse_plain_text_models(stdout: &str, downloaded_models: &std::collections::HashSet<String>) -> Result<Vec<FoundryModel>, String> {
+fn parse_plain_text_models(
+    stdout: &str,
+    downloaded_models: &std::collections::HashSet<String>,
+) -> Result<Vec<FoundryModel>, String> {
     println!("[FoundryManager] ===== PARSING PLAIN TEXT (TABLE FORMAT WITH DEVICE VARIANTS) =====");
-    println!("[FoundryManager] Total lines in output: {}", stdout.lines().count());
+    println!(
+        "[FoundryManager] Total lines in output: {}",
+        stdout.lines().count()
+    );
 
     let mut line_num = 0;
     for line in stdout.lines() {
@@ -263,8 +313,11 @@ fn parse_plain_text_models(stdout: &str, downloaded_models: &std::collections::H
         }
 
         // Skip header and separator lines
-        if trimmed.starts_with("Alias") || trimmed.starts_with("Model") ||
-           trimmed.starts_with("NAME") || trimmed.chars().all(|c| c == '-') {
+        if trimmed.starts_with("Alias")
+            || trimmed.starts_with("Model")
+            || trimmed.starts_with("NAME")
+            || trimmed.chars().all(|c| c == '-')
+        {
             println!("[FoundryManager]   Line {} SKIP: header/separator", idx);
             continue;
         }
@@ -284,7 +337,11 @@ fn parse_plain_text_models(stdout: &str, downloaded_models: &std::collections::H
             if parts.len() >= 4 {
                 let device = parts.get(1).unwrap_or(&"").to_string();
                 let size = if parts.len() >= 5 {
-                    format!("{} {}", parts.get(3).unwrap_or(&""), parts.get(4).unwrap_or(&""))
+                    format!(
+                        "{} {}",
+                        parts.get(3).unwrap_or(&""),
+                        parts.get(4).unwrap_or(&"")
+                    )
                 } else {
                     String::new()
                 };
@@ -320,7 +377,11 @@ fn parse_plain_text_models(stdout: &str, downloaded_models: &std::collections::H
             if parts.len() >= 3 {
                 let device = parts.get(0).unwrap_or(&"").to_string();
                 let size = if parts.len() >= 4 {
-                    format!("{} {}", parts.get(2).unwrap_or(&""), parts.get(3).unwrap_or(&""))
+                    format!(
+                        "{} {}",
+                        parts.get(2).unwrap_or(&""),
+                        parts.get(3).unwrap_or(&"")
+                    )
                 } else {
                     String::new()
                 };
@@ -352,19 +413,28 @@ fn parse_plain_text_models(stdout: &str, downloaded_models: &std::collections::H
     }
 
     println!("[FoundryManager] ===== PARSING COMPLETE =====");
-    println!("[FoundryManager] ✓ Parsed {} model variants from table format", models.len());
+    println!(
+        "[FoundryManager] ✓ Parsed {} model variants from table format",
+        models.len()
+    );
     for (idx, model) in models.iter().enumerate() {
-        println!("[FoundryManager]   Model {}: id='{}', name='{}', device='{}', size='{}'",
-            idx, model.id, model.name,
+        println!(
+            "[FoundryManager]   Model {}: id='{}', name='{}', device='{}', size='{}'",
+            idx,
+            model.id,
+            model.name,
             model.device.as_ref().unwrap_or(&String::from("N/A")),
-            model.size.as_ref().unwrap_or(&String::from("N/A")));
+            model.size.as_ref().unwrap_or(&String::from("N/A"))
+        );
     }
 
     Ok(models)
 }
 
 /// Get the actual Foundry service endpoint by running `foundry service status`
-fn get_foundry_service_endpoint() -> Option<String> {
+/// (the port is dynamic). `pub` so Code (opencode over ACP) can point opencode at
+/// Foundry's OpenAI-compatible API at `{endpoint}/v1`.
+pub fn get_foundry_service_endpoint() -> Option<String> {
     let output = create_command("foundry")
         .args(&["service", "status"])
         .output()
@@ -441,7 +511,9 @@ pub async fn check_foundry_status() -> Result<FoundryStatus, String> {
     let is_supported = is_foundry_supported_os();
 
     if !is_supported {
-        println!("[FoundryManager] OS not supported, Foundry Local only works on Windows and macOS");
+        println!(
+            "[FoundryManager] OS not supported, Foundry Local only works on Windows and macOS"
+        );
         return Ok(FoundryStatus {
             is_windows,
             is_supported: false,

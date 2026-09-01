@@ -1,9 +1,19 @@
 import { Page, Locator, expect } from '@playwright/test';
+import { isVisibleWithin } from '../utils/resilient';
 
 export class ExplorePage {
   readonly page: Page;
 
   readonly heading: Locator;
+  /**
+   * The always-rendered page title/description `<h1>` ("Discover and create
+   * agents …"). Unlike `heading` (the "All Agents" `<h2>`, which is
+   * a data-conditional SECTION heading that disappears when
+   * `DefaultMentorsSection` renders `<EmptyState />`), this `<h1>` renders as
+   * soon as `ExplorePageContent` mounts — so it's the correct signal for
+   * "page title is shown".
+   */
+  readonly pageTitle: Locator;
   readonly searchInput: Locator;
   readonly mentorCards: Locator;
   readonly seeMoreButton: Locator;
@@ -15,10 +25,29 @@ export class ExplorePage {
   readonly typeFilterTrigger: Locator;
   readonly createdByFilterTrigger: Locator;
   readonly clearFiltersButton: Locator;
+  /**
+   * `DefaultMentorsSection` short-circuits to `<EmptyState />` (rendered by
+   * `app/.../explore/_components/empty-state.tsx`) when the mentors query
+   * returns zero results AND is not loading. Test environments with no
+   * seeded mentors hit this path and should not be treated as a code bug.
+   */
+  readonly emptyState: Locator;
+  /**
+   * Always-rendered page chrome: the scrollable
+   * `<div id="main-content" aria-label="Agent exploration page">` wraps
+   * the entire ExplorePageContent tree (the shared `<main>` landmark in
+   * app-layout carries no accessible name), so its visibility confirms
+   * the page mounted regardless of how the inner data query resolved.
+   */
+  readonly main: Locator;
 
   constructor(page: Page) {
     this.page = page;
     this.heading = page.getByRole('heading', { name: /all agents/i });
+    this.pageTitle = page.getByRole('heading', {
+      level: 1,
+      name: /discover and create/i,
+    });
     this.searchInput = page.getByPlaceholder(/search/i);
     this.mentorCards = page.getByRole('listitem', {
       name: /^explore agent:/i,
@@ -56,6 +85,10 @@ export class ExplorePage {
       .getByRole('button', { name: /created by/i })
       .first();
     this.clearFiltersButton = page.getByRole('button', { name: /clear/i });
+    // Empty-state text rendered by `EmptyState` when DefaultMentorsSection
+    // has nothing to show.
+    this.emptyState = page.getByText(/sorry, no agents found/i);
+    this.main = page.getByLabel('Agent exploration page');
   }
 
   async search(query: string): Promise<void> {
@@ -75,9 +108,7 @@ export class ExplorePage {
   async selectOption(optionName: string | RegExp): Promise<void> {
     const option = this.page.getByRole('option', { name: optionName });
     const menuItem = this.page.getByRole('menuitem', { name: optionName });
-    const visible = await option
-      .isVisible({ timeout: 3_000 })
-      .catch(() => false);
+    const visible = await isVisibleWithin(option, 3_000);
     if (visible) {
       await option.click();
     } else {

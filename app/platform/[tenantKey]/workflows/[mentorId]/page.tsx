@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -22,6 +23,7 @@ import type { Workflow } from '@iblai/iblai-js/data-layer';
 import { toast } from 'sonner';
 
 export default function WorkflowsPage() {
+  const t = useTranslations('workflowsPage2');
   const [searchValue, setSearchValue] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const router = useRouter();
@@ -115,7 +117,7 @@ export default function WorkflowsPage() {
         `/platform/${params.tenantKey}/workflows/${workflow.entry_mentor_id}/${workflow.unique_id}?listMentorId=${params.mentorId}`,
       );
     } catch {
-      toast.error('Failed to create workflow');
+      toast.error(t('failedToCreateWorkflow'));
     }
   };
 
@@ -130,7 +132,7 @@ export default function WorkflowsPage() {
       <div className="flex h-full items-center justify-center">
         <div className="text-center">
           <AlertCircle className="mx-auto mb-4 h-12 w-12 text-red-500" />
-          <p className="text-gray-600">Failed to load workflows</p>
+          <p className="text-gray-600">{t('failedToLoadWorkflows')}</p>
         </div>
       </div>
     );
@@ -142,19 +144,16 @@ export default function WorkflowsPage() {
         <div className="mx-auto max-w-[920px] px-3 py-6 md:px-6 md:py-8">
           <div className="mb-6">
             <h1 className="mb-2 text-2xl font-semibold text-gray-700">
-              Workflows
+              {t('pageTitle')}
             </h1>
-            <p className="text-sm text-gray-600">
-              Create and manage automated workflows for your agents and learning
-              experiences
-            </p>
+            <p className="text-sm text-gray-600">{t('pageSubtitle')}</p>
           </div>
 
           <div className="mb-6 flex flex-col gap-4 sm:flex-row">
             <div className="relative flex-1">
               <Search className="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 transform text-gray-400" />
               <Input
-                placeholder="Search workflows..."
+                placeholder={t('searchPlaceholder')}
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
                 className="w-full rounded-lg border-gray-300 py-3 pr-4 pl-12 text-base focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
@@ -165,7 +164,7 @@ export default function WorkflowsPage() {
               onClick={() => setIsCreateModalOpen(true)}
             >
               <Plus className="mr-2 h-5 w-5" />
-              Create Workflow
+              {t('createWorkflow')}
             </Button>
           </div>
 
@@ -191,17 +190,25 @@ export default function WorkflowsPage() {
                           className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColor(workflow.is_active ?? false)}`}
                         >
                           {getStatusIcon(workflow.is_active ?? false)}
-                          {workflow.is_active ? 'Active' : 'Draft'}
+                          {workflow.is_active
+                            ? t('statusActive')
+                            : t('statusDraft')}
                         </span>
                       </div>
                       <p className="mb-4 line-clamp-2 text-sm leading-relaxed text-gray-600">
-                        {workflow.description || 'No description'}
+                        {workflow.description || t('noDescription')}
                       </p>
                       <div className="flex items-center justify-between text-xs text-gray-500">
                         <span>
-                          Modified {getRelativeTime(workflow.updated_at)}
+                          {t('modified', {
+                            time: getRelativeTime(workflow.updated_at),
+                          })}
                         </span>
-                        <span>Created {formatDate(workflow.created_at)}</span>
+                        <span>
+                          {t('created', {
+                            date: formatDate(workflow.created_at),
+                          })}
+                        </span>
                       </div>
                     </CardContent>
                   </Card>
@@ -210,14 +217,14 @@ export default function WorkflowsPage() {
 
               {workflows.length === 0 && !isLoading && (
                 <div className="py-12 text-center">
-                  <p className="mb-4 text-gray-500">No workflows found</p>
+                  <p className="mb-4 text-gray-500">{t('noWorkflowsFound')}</p>
                   <Button
                     variant="outline"
                     onClick={() => setIsCreateModalOpen(true)}
                     className="border-gray-300"
                   >
                     <Plus className="mr-2 h-4 w-4" />
-                    Create your first workflow
+                    {t('createFirstWorkflow')}
                   </Button>
                 </div>
               )}

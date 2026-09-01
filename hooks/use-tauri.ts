@@ -152,10 +152,26 @@ export function useTauri() {
       event: string,
       handler: (payload: T) => void,
     ): Promise<() => void> => {
-      if (!apis?.listen) {
-        throw new Error('Tauri is not available');
+      // The synchronous global (`__TAURI_INTERNALS__`) exposes `invoke` but
+      // frequently NOT `event.listen`, so `apis.listen` can be undefined even
+      // though Tauri is fully available. Fall back to the real event API via
+      // dynamic import so download progress/completion events are actually
+      // delivered — otherwise the UI never leaves the "downloading" state.
+      let listenFn = apis?.listen;
+      if (!listenFn) {
+        // `apis.listen` can be undefined even when Tauri is fully available, so
+        // fall back to the real event API via dynamic import. But if Tauri
+        // isn't available at all, there's nothing to listen to — surface the
+        // same error as `invoke` instead of attempting a doomed import.
+        if (!isTauriApp()) {
+          throw new Error('Tauri is not available');
+        }
+        const { listen: importedListen } = await import(
+          '@tauri-apps/api/event'
+        );
+        listenFn = importedListen as unknown as ListenFn;
       }
-      return apis.listen<T>(event, (e) => handler(e.payload));
+      return listenFn<T>(event, (e) => handler(e.payload));
     },
     [apis],
   );

@@ -1,0 +1,36 @@
+name: i18n Validation
+
+# Blocks PRs that introduce untranslated or out-of-sync locale catalogs.
+# Runs scripts/validate-i18n.mjs, which fails (non-zero exit) when any locale
+# file is missing, when keys are not in parity across en/fr/es/zh, or when a
+# non-allowlisted entry is byte-identical to English (likely untranslated text).
+#
+# Make this a required status check in branch protection so it gates merges.
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'messages/**'
+      - 'scripts/validate-i18n.mjs'
+      - '.github/workflows/pr-i18n.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-i18n:
+    name: Validate translations
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Validate locale catalogs
+        run: node scripts/validate-i18n.mjs

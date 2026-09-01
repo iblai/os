@@ -71,6 +71,8 @@ function dms() {
     // Default to true so the canonical fully-permitted-mentor case still
     // exposes the Memory tab in tests that don't override settings.
     enable_memory_component: true,
+    // Gates the Privacy tab segment; default on so the Privacy tab shows.
+    enable_privacy_router: true,
   };
 }
 
@@ -90,6 +92,7 @@ vi.mock('@/hooks/use-user-type', () => ({
   useUserType: () => ({
     isUserTypeAllowed: (item: { userTypes: string[] }) =>
       mockIsUserTypeAllowed(item),
+    userType: UserType.ADMIN,
   }),
 }));
 
@@ -114,6 +117,16 @@ vi.mock('@iblai/iblai-js/data-layer', async (importOriginal) => {
     useGetMemsearchStatusQuery: () => ({
       data: { enable_memsearch: true },
     }),
+    // The mentor-segments hook now queries the claw-config to gate the Skills
+    // segment. We don't add the clawApiSlice middleware to the test store, so
+    // mock the hook to return `null` (no wired config) — Skills stays hidden.
+    useGetClawMentorConfigQuery: () => ({ data: null }),
+    // EditMentorModal hydrates the mentor's RBAC on open via this hook; stub
+    // to keep the test Redux store free of the coreApiSlice middleware.
+    useGetRbacPermissionsMutation: () => [
+      () => ({ unwrap: () => Promise.resolve({}) }),
+      { isLoading: false },
+    ],
   };
 });
 
@@ -159,19 +172,59 @@ vi.mock('@/lib/config', () => ({
 
 vi.mock('@sentry/nextjs', () => ({ captureException: vi.fn() }));
 
-vi.mock('./tabs', () => ({
+// @iblai/iblai-js/web-containers transitively imports @iblai/web-utils which imports
+// axios — which fails to resolve in Vitest's transform pipeline. Stub it here
+// so importing the tabs barrel (which re-exports SandboxTab/SkillsTab that use
+// these components) doesn't break the test.
+vi.mock('@iblai/iblai-js/web-containers', () => ({
+  SandboxConfig: () => null,
+  AgentSkills: () => null,
+  AgentConfigPrompts: () => null,
+}));
+
+// The settings slot now renders the SDK-wired wrapper from its own module
+// (index.tsx no longer imports SettingsTab from ./tabs). Mock the wrapper so
+// the existing settings-tab assertions keep exercising the settings panel.
+vi.mock('./settings-tab', () => ({
   SettingsTab: () => <div data-testid="settings-tab">Settings Tab</div>,
+}));
+
+vi.mock('./tabs', () => ({
   LLMTab: () => <div data-testid="llm-tab">LLM Tab</div>,
   PromptsTab: () => <div data-testid="prompts-tab">Prompts Tab</div>,
   McpTab: () => <div data-testid="mcp-tab">MCP Tab</div>,
   ToolsTab: () => <div data-testid="tools-tab">Tools Tab</div>,
   SafetyTab: () => <div data-testid="safety-tab">Safety Tab</div>,
+  SpendCapsTab: () => <div data-testid="spend-caps-tab">Spend Caps Tab</div>,
+  PrivacyTab: () => <div data-testid="privacy-tab">Privacy Tab</div>,
+  TasksTab: () => <div data-testid="tasks-tab">Tasks Tab</div>,
   HistoryTab: () => <div data-testid="history-tab">History Tab</div>,
-  DatasetsTab: () => <div data-testid="datasets-tab">Datasets Tab</div>,
+  // Local DatasetsTab still lives on the barrel (used by the workflows
+  // node-config-panel); the modal now mounts the SDK wrapper below.
+  DatasetsTab: () => <div data-testid="local-datasets-tab">Datasets Tab</div>,
+  EvaluationTab: () => <div data-testid="evaluation-tab">Evaluation Tab</div>,
   ApiTab: () => <div data-testid="api-tab">API Tab</div>,
   EmbedTab: () => <div data-testid="embed-tab">Embed Tab</div>,
   AccessTab: () => <div data-testid="access-tab">Access Tab</div>,
+  SandboxTab: () => <div data-testid="sandbox-tab">Sandbox Tab</div>,
+  SkillsTab: () => <div data-testid="skills-tab">Skills Tab</div>,
+  GraderTab: () => <div data-testid="grader-tab">Grader Tab</div>,
   AuditLogTab: () => <div data-testid="audit-log-tab">Audit Log Tab</div>,
+  VoiceTab: () => <div data-testid="voice-tab">Voice Tab</div>,
+  ScreenShareTab: () => (
+    <div data-testid="screenshare-tab">Screen Share Tab</div>
+  ),
+  HumanSupportTab: () => (
+    <div data-testid="human-support-tab">Human Support Tab</div>
+  ),
+  LtiTab: () => <div data-testid="lti-tab">LTI Tab</div>,
+  AnalyticsTab: () => <div data-testid="analytics-tab">Analytics Tab</div>,
+}));
+
+vi.mock('./tabs/datasets-tab/agent-datasets-tab', () => ({
+  AgentDatasetsTabWrapper: () => (
+    <div data-testid="datasets-tab">Datasets Tab</div>
+  ),
 }));
 
 vi.mock('./tabs/memory-tab', () => ({
@@ -466,9 +519,11 @@ describe('EditMentorModal', () => {
             `desktop-tab-${MODALS.EDIT_MENTOR.tabs.settings}`,
           ),
         ).toBeInTheDocument();
+        // Skills is admin-only and lives in the Configuration category (the
+        // default active category), so it renders alongside Settings.
         expect(
           document.getElementById(
-            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.access}`,
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.skills}`,
           ),
         ).toBeInTheDocument();
       });
@@ -579,10 +634,12 @@ describe('EditMentorModal', () => {
       mockCheckRbacPermissionResult = true;
       mockMentorSettings = { ...dms(), permissions: { field: {} } };
       renderM();
+      // Skills has an empty permissionFieldsCheck and lives in the default
+      // Configuration category, so it renders under permissive RBAC.
       await waitFor(() =>
         expect(
           document.getElementById(
-            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.access}`,
+            `desktop-tab-${MODALS.EDIT_MENTOR.tabs.skills}`,
           ),
         ).toBeInTheDocument(),
       );
@@ -669,6 +726,8 @@ describe('EditMentorModal', () => {
       { t: MODALS.EDIT_MENTOR.tabs.llm, id: 'llm-tab' },
       { t: MODALS.EDIT_MENTOR.tabs.prompts, id: 'prompts-tab' },
       { t: MODALS.EDIT_MENTOR.tabs.safety, id: 'safety-tab' },
+      { t: MODALS.EDIT_MENTOR.tabs.privacy, id: 'privacy-tab' },
+      { t: MODALS.EDIT_MENTOR.tabs.tasks, id: 'tasks-tab' },
       { t: MODALS.EDIT_MENTOR.tabs.disclaimer, id: 'disclaimers-tab' },
       { t: MODALS.EDIT_MENTOR.tabs.tools, id: 'tools-tab' },
       { t: MODALS.EDIT_MENTOR.tabs.mcp, id: 'mcp-tab' },
@@ -713,6 +772,11 @@ describe('EditMentorModal', () => {
       mockEnableRBAC = true;
       mockCheckRbacPermissionResult = true;
       mockMentorSettings = { ...dms(), permissions: { field: {} } };
+      // MCP lives under the Integrations category. The sidebar only renders
+      // segments belonging to the active category, so we open the modal
+      // pre-pointed at MCP — the modal derives activeCategory from the
+      // segment's navCategory, which puts MCP into the DOM.
+      mockGetEditMentorTab = MODALS.EDIT_MENTOR.tabs.mcp;
       renderM();
       await waitFor(() =>
         expect(
@@ -786,30 +850,53 @@ describe('EditMentorModal', () => {
   });
 
   describe('Full 13 tabs', () => {
-    it('all tabs render', async () => {
-      renderM();
-      const ts = [
-        MODALS.EDIT_MENTOR.tabs.settings,
-        MODALS.EDIT_MENTOR.tabs.access,
-        MODALS.EDIT_MENTOR.tabs.llm,
-        MODALS.EDIT_MENTOR.tabs.prompts,
-        MODALS.EDIT_MENTOR.tabs.safety,
-        MODALS.EDIT_MENTOR.tabs.disclaimer,
-        MODALS.EDIT_MENTOR.tabs.tools,
-        MODALS.EDIT_MENTOR.tabs.mcp,
-        MODALS.EDIT_MENTOR.tabs.memory,
-        MODALS.EDIT_MENTOR.tabs.history,
-        MODALS.EDIT_MENTOR.tabs.datasets,
-        MODALS.EDIT_MENTOR.tabs.api,
-        MODALS.EDIT_MENTOR.tabs.embed,
-      ];
-      await waitFor(() => {
-        for (const v of ts)
-          expect(
-            document.getElementById(`desktop-tab-${v}`),
-          ).toBeInTheDocument();
+    // The sidebar now groups segments under three category tabs, and only
+    // the segments belonging to the active category render. We exercise each
+    // category by opening the modal with that category's first segment as
+    // the active tab — the modal derives activeCategory from navCategory and
+    // mounts the category's segments. Re-mount with cleanup() between
+    // groups so each fresh render reflects the new mockGetEditMentorTab.
+    const groups: Array<{ tabs: string[] }> = [
+      // Configuration (Access moved here from Integrations in feat/2286)
+      {
+        tabs: [
+          MODALS.EDIT_MENTOR.tabs.settings,
+          MODALS.EDIT_MENTOR.tabs.access,
+          MODALS.EDIT_MENTOR.tabs.llm,
+          MODALS.EDIT_MENTOR.tabs.spend_caps,
+          MODALS.EDIT_MENTOR.tabs.prompts,
+          MODALS.EDIT_MENTOR.tabs.safety,
+          MODALS.EDIT_MENTOR.tabs.disclaimer,
+        ],
+      },
+      // Integrations (Tools moved here in feat/2040)
+      {
+        tabs: [
+          MODALS.EDIT_MENTOR.tabs.mcp,
+          MODALS.EDIT_MENTOR.tabs.datasets,
+          MODALS.EDIT_MENTOR.tabs.api,
+          MODALS.EDIT_MENTOR.tabs.embed,
+          MODALS.EDIT_MENTOR.tabs.tools,
+        ],
+      },
+      // Runtime (formerly Analytics)
+      {
+        tabs: [MODALS.EDIT_MENTOR.tabs.memory, MODALS.EDIT_MENTOR.tabs.history],
+      },
+    ];
+
+    for (const [idx, group] of groups.entries()) {
+      it(`category #${idx + 1} renders all its tabs`, async () => {
+        mockGetEditMentorTab = group.tabs[0];
+        renderM();
+        await waitFor(() => {
+          for (const v of group.tabs)
+            expect(
+              document.getElementById(`desktop-tab-${v}`),
+            ).toBeInTheDocument();
+        });
       });
-    });
+    }
   });
 
   describe('Re-runs', () => {

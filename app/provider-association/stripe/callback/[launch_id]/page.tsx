@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { useGetStripeCallbackAssociationQuery } from '@/features/provider-association/api-slice';
 import { hideInitialLoader } from '@/lib/initial-loader';
 
@@ -19,6 +20,7 @@ interface PageProps {
 export default function ProviderAssociationStripeCallback({
   params,
 }: PageProps) {
+  const t = useTranslations('callbackPage');
   const resolvedParams = React.use(params);
   const { launch_id } = resolvedParams;
   const searchParams = useSearchParams();
@@ -65,7 +67,7 @@ export default function ProviderAssociationStripeCallback({
     <div className="relative z-50 mt-6 mb-8 flex w-full justify-center">
       <Image
         src="/logo.gif"
-        alt="Logo"
+        alt={t('logoAlt')}
         width={240}
         height={60}
         className="h-[60px] object-contain"
@@ -80,7 +82,7 @@ export default function ProviderAssociationStripeCallback({
         <div className="flex min-h-[70vh] items-center justify-center">
           <div className="text-center">
             <Loader2 className="mx-auto mb-4 h-12 w-12 animate-spin" />
-            <p className="text-lg font-medium">Association in progress...</p>
+            <p className="text-lg font-medium">{t('associationInProgress')}</p>
           </div>
         </div>
       </div>
@@ -109,12 +111,14 @@ export default function ProviderAssociationStripeCallback({
                 </svg>
               </div>
             </div>
-            <h2 className="mb-2 text-2xl font-semibold">Association failed</h2>
+            <h2 className="mb-2 text-2xl font-semibold">
+              {t('associationFailed')}
+            </h2>
             <p className="text-muted-foreground mb-6">
-              An error occurred while associating your account.
+              {t('associationErrorMessage')}
             </p>
             <Button onClick={handleGoBack} variant="destructive">
-              Go back
+              {t('goBack')}
             </Button>
           </div>
         </div>
@@ -144,13 +148,11 @@ export default function ProviderAssociationStripeCallback({
             </div>
           </div>
           <h2 className="mb-2 text-2xl font-semibold">
-            Association successful!
+            {t('associationSuccessful')}
           </h2>
-          <p className="text-muted-foreground mb-4">
-            You&apos;ll be redirected to the app in a few seconds.
-          </p>
+          <p className="text-muted-foreground mb-4">{t('redirectMessage')}</p>
           <Button onClick={handleGoBack} variant="default">
-            Go to app
+            {t('goToApp')}
           </Button>
         </div>
       </div>

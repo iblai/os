@@ -5,6 +5,7 @@ import {
 } from '@/components/ui/tooltip';
 import { useShowVoiceCall } from '@/hooks/use-show-voice-call';
 import { Button } from '@/components/ui/button';
+import { useTranslations } from 'next-intl';
 
 type Props = {
   isPreviewMode?: boolean;
@@ -17,6 +18,7 @@ export function VoiceCallButton({
   onClick,
   disabled = false,
 }: Props) {
+  const t = useTranslations('chatInputFormVoiceCallButton');
   const showVoiceCall = useShowVoiceCall();
 
   if (!showVoiceCall) {
@@ -34,7 +36,6 @@ export function VoiceCallButton({
             onClick={onClick}
             disabled={disabled || isPreviewMode}
             type="button"
-            aria-label="Voice call"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -42,17 +43,16 @@ export function VoiceCallButton({
               viewBox="0 -960 960 960"
               width="28"
               fill="currentColor"
-              aria-hidden="true"
               className="scale-125 text-gray-400"
             >
               <path d="M280-240v-480h80v480h-80ZM440-80v-800h80v800h-80ZM120-400v-160h80v160h-80Zm480 160v-480h80v480h-80Zm160-160v-160h80v160h-80Z" />
             </svg>
-            <span className="sr-only">Voice call</span>
+            <span className="sr-only">{t('voiceCallSrOnly')}</span>
           </Button>
         </div>
       </TooltipTrigger>
       <TooltipContent className="ibl-tooltip-content capitalize">
-        Voice Call
+        {t('voiceCallTooltip')}
       </TooltipContent>
     </Tooltip>
   );

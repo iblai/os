@@ -12,9 +12,12 @@ import { EmbedNavBar } from '../embed-nav-bar';
 // ============================================================================
 
 let mockIsPreviewMode = false;
+let mockIsIframed = true;
 let mockChatMode: 'default' | 'advanced' = 'default';
+let mockShowCloseButton = true;
 let mockUsername: string | null = 'testuser';
 let mockIsLoggedIn = true;
+let mockPathname = '/platform/tenant123/mentor123';
 let mockMetadata: any = {
   show_help: true,
   help_center_url: 'https://help.example.com',
@@ -28,8 +31,16 @@ vi.mock('@/hooks/use-is-preview-mode', () => ({
   useIsPreviewMode: () => mockIsPreviewMode,
 }));
 
+vi.mock('@/hooks/use-is-iframed', () => ({
+  useIsIframed: () => mockIsIframed,
+}));
+
 vi.mock('@/hooks/use-chat-mode', () => ({
   useChatMode: () => mockChatMode,
+}));
+
+vi.mock('@/hooks/use-show-close-button', () => ({
+  useShowCloseButton: () => mockShowCloseButton,
 }));
 
 vi.mock('@/hooks/use-user', () => ({
@@ -45,6 +56,7 @@ vi.mock('@/lib/config', () => ({
   config: {
     helpCenterUrl: () => 'https://help.example.com',
     supportEmail: () => 'support@example.com',
+    documentationUrl: () => 'https://docs.example.com',
     iblTemplateMentor: () => 'ai-mentor',
   },
 }));
@@ -72,6 +84,25 @@ vi.mock('@/lib/eventBus', () => ({
   RemoteEvents: { newChat: 'MENTOR:NEW_CHAT' },
 }));
 
+vi.mock('next/navigation', () => ({
+  usePathname: () => mockPathname,
+}));
+
+// Stub the SDK Private Mode pill (the real one fires chat-privacy API calls).
+vi.mock('@iblai/iblai-js/web-containers', () => ({
+  ChatPrivacyToggle: ({ org, userId, mentor, className }: any) => (
+    <button
+      data-testid="chat-privacy-toggle"
+      data-org={org}
+      data-user={userId}
+      data-mentor={mentor}
+      className={className}
+    >
+      Private Mode
+    </button>
+  ),
+}));
+
 // ============================================================================
 // STORE & HELPERS
 // ============================================================================
@@ -92,6 +123,7 @@ const defaultProps = {
   toggleSidebar: vi.fn(),
   openSidebar: false,
   tenantKey: 'tenant123',
+  mentorId: 'mentor123',
 };
 
 function renderEmbedNavBar(props: Partial<typeof defaultProps> = {}) {
@@ -111,9 +143,12 @@ describe('EmbedNavBar', () => {
   beforeEach(() => {
     cleanup();
     mockIsPreviewMode = false;
+    mockIsIframed = true;
     mockChatMode = 'default';
+    mockShowCloseButton = true;
     mockUsername = 'testuser';
     mockIsLoggedIn = true;
+    mockPathname = '/platform/tenant123/mentor123';
     mockMetadata = {
       show_help: true,
       help_center_url: 'https://help.example.com',
@@ -149,6 +184,24 @@ describe('EmbedNavBar', () => {
     });
 
     it('renders close chat button', () => {
+      renderEmbedNavBar();
+      expect(screen.getByLabelText('Close chat')).toBeInTheDocument();
+    });
+
+    it('does not render close chat button when not iframed', () => {
+      mockIsIframed = false;
+      renderEmbedNavBar();
+      expect(screen.queryByLabelText('Close chat')).not.toBeInTheDocument();
+    });
+
+    it('does not render close chat button when the close affordance is disabled', () => {
+      mockShowCloseButton = false;
+      renderEmbedNavBar();
+      expect(screen.queryByLabelText('Close chat')).not.toBeInTheDocument();
+    });
+
+    it('renders close chat button when the host opts in', () => {
+      mockShowCloseButton = true;
       renderEmbedNavBar();
       expect(screen.getByLabelText('Close chat')).toBeInTheDocument();
     });
@@ -453,6 +506,32 @@ describe('EmbedNavBar', () => {
       expect(postMessageSpy).not.toHaveBeenCalled();
     });
 
+    it('does not post message when the close affordance is disabled', () => {
+      mockShowCloseButton = false;
+      renderEmbedNavBar();
+      pressEscape();
+      expect(postMessageSpy).not.toHaveBeenCalled();
+    });
+
+    it('starts posting again once the close affordance is enabled', () => {
+      mockShowCloseButton = false;
+      const { rerender } = renderEmbedNavBar();
+      pressEscape();
+      expect(postMessageSpy).not.toHaveBeenCalled();
+
+      mockShowCloseButton = true;
+      rerender(
+        <Provider store={createTestStore()}>
+          <EmbedNavBar {...defaultProps} />
+        </Provider>,
+      );
+      pressEscape();
+      expect(postMessageSpy).toHaveBeenCalledWith(
+        { closeEmbed: true, collapseSidebarCopilot: true },
+        '*',
+      );
+    });
+
     it('skips when an open Radix overlay is present', () => {
       const overlay = document.createElement('div');
       overlay.setAttribute('data-state', 'open');
@@ -490,6 +569,56 @@ describe('EmbedNavBar', () => {
   // --------------------------------------------------------------------------
   // Help Items Config
   // --------------------------------------------------------------------------
+
+  // --------------------------------------------------------------------------
+  // Private Mode toggle (parity with the main NavBar)
+  // --------------------------------------------------------------------------
+
+  describe('Private Mode toggle', () => {
+    it('renders the toggle on the chat page for a logged-in user', () => {
+      renderEmbedNavBar();
+      expect(screen.getByTestId('chat-privacy-toggle')).toBeInTheDocument();
+    });
+
+    it('passes org, userId and mentor through to the SDK toggle', () => {
+      mockUsername = 'jane';
+      renderEmbedNavBar({ tenantKey: 'acme', mentorId: 'mentor-xyz' });
+      const toggle = screen.getByTestId('chat-privacy-toggle');
+      expect(toggle).toHaveAttribute('data-org', 'acme');
+      expect(toggle).toHaveAttribute('data-user', 'jane');
+      expect(toggle).toHaveAttribute('data-mentor', 'mentor-xyz');
+    });
+
+    it('stays compact on small screens (inline-flex + label hidden)', () => {
+      renderEmbedNavBar();
+      const cls = screen.getByTestId('chat-privacy-toggle').className;
+      expect(cls).toContain('inline-flex');
+      expect(cls).toContain('max-md:[&>span]:hidden');
+    });
+
+    it('hides the toggle on non-chat routes (e.g. analytics)', () => {
+      mockPathname = '/platform/tenant123/mentor123/analytics';
+      renderEmbedNavBar();
+      expect(
+        screen.queryByTestId('chat-privacy-toggle'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('hides the toggle when the user is not logged in', () => {
+      mockIsLoggedIn = false;
+      renderEmbedNavBar({ isAnonymousMentor: false });
+      expect(
+        screen.queryByTestId('chat-privacy-toggle'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('hides the toggle when there is no tenant key', () => {
+      renderEmbedNavBar({ tenantKey: '' });
+      expect(
+        screen.queryByTestId('chat-privacy-toggle'),
+      ).not.toBeInTheDocument();
+    });
+  });
 
   describe('Help Items', () => {
     it('uses config fallback when metadata URLs are missing', async () => {

@@ -39,6 +39,8 @@ export const useUserType = (mentorSettings?: any) => {
     return UserType.ANONYMOUS;
   };
 
+  const userType = determineUserType();
+
   function isUserTypeAllowed<
     T extends {
       userTypes: UserType[];
@@ -46,8 +48,15 @@ export const useUserType = (mentorSettings?: any) => {
       rbacResource?: (arg0: number) => string;
     },
   >(resource: T): boolean {
+    const isAdminInStudentMode = userIsAdmin && userType === UserType.STUDENT;
+    if (
+      isAdminInStudentMode &&
+      !resource.userTypes.includes(UserType.STUDENT)
+    ) {
+      return false;
+    }
     return (
-      resource.userTypes.includes(determineUserType()) ||
+      resource.userTypes.includes(userType) ||
       (config.enableRBAC() &&
         ((!!resource.rbacResource &&
           checkRbacPermission(
@@ -63,5 +72,5 @@ export const useUserType = (mentorSettings?: any) => {
     );
   }
 
-  return { isUserTypeAllowed };
+  return { isUserTypeAllowed, userType };
 };

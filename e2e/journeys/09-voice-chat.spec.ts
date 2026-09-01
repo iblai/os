@@ -1,6 +1,15 @@
+import path from 'path';
+
 import { test, expect } from '../fixtures/mentor-test';
 import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
+
+// Real WAV played as the fake mic input (looped while a track is consumed).
+// Lets the LiveKit voice agent receive real audio during vc-07's round-trip.
+const FAKE_AUDIO_WAV = path.resolve(
+  __dirname,
+  '../files/testing_folder/speech.wav',
+);
 
 // H2 fix: Chromium-only flags for fake audio device
 test.use({
@@ -8,6 +17,7 @@ test.use({
     args: [
       '--use-fake-device-for-media-stream',
       '--use-fake-ui-for-media-stream',
+      `--use-file-for-fake-audio-capture=${FAKE_AUDIO_WAV}`,
     ],
   },
 });
@@ -75,63 +85,48 @@ test.describe('Journey 9: Voice Chat', () => {
       await navigateToMentorApp(page);
     });
 
-    test('admin goes to mentor settings and hides the voice call button by toggling off Show Voice Call', async ({
+    test('admin goes to mentor settings and hides the voice call button by toggling off Voice Calls', async ({
       page,
       editMentorPage,
       chatPage,
+      createMentorPage,
     }) => {
       const isAdmin = await checkAdminStatus(page);
       test.skip(!isAdmin, 'Requires admin access');
-      await editMentorPage.open('Settings');
+      // Isolate this voice-toggle flow onto a fresh, dedicated mentor so it
+      // never mutates the shared default mentor that journey 47 (and this
+      // file's sibling Admin test) also edit in parallel. `show_voice_call` is
+      // persisted server-side per mentor, so editing the shared one races
+      // journey 47's assertions. New mentors default voice ON, so there is
+      // still something to toggle off. Mirrors vc-07 + journey 37.
+      //
+      // The "Enable voice calls" master toggle now lives in-tab on the Voice
+      // tab itself (feat/2040 — moved off Settings → Capabilities) and
+      // auto-saves on click — no footer Save button involved.
+      await createMentorPage.openAndCreate();
+      await editMentorPage.open('Voice');
       await waitForPageReady(page);
-      const showVoiceSwitch = editMentorPage.dialog.getByRole('switch', {
-        name: /show voice call/i,
-      });
-      const visible = await showVoiceSwitch
+
+      const visible = await editMentorPage.voice.capabilityToggle
         .isVisible({ timeout: 5_000 })
         .catch(() => false);
       if (!visible) {
         await editMentorPage.close();
         return;
       }
-      const wasEnabled =
-        (await showVoiceSwitch.getAttribute('aria-checked')) === 'true';
+      const wasEnabled = await editMentorPage.voice.isCapabilityEnabled();
       if (wasEnabled) {
-        // H3 fix: toggle, SAVE, then close (original used toggleSwitchSaveAndClose)
-        await showVoiceSwitch.click();
-        await expect(showVoiceSwitch).toHaveAttribute('aria-checked', 'false', {
-          timeout: 10_000,
-        });
-        const saveButton = editMentorPage.dialog.getByRole('button', {
-          name: 'Save',
-        });
-        await expect(saveButton).toBeEnabled({ timeout: 10_000 });
-        await saveButton.click();
-        await page.waitForTimeout(3_000);
+        await editMentorPage.voice.setCapabilityEnabled(false);
       }
       await editMentorPage.close();
       await expect(chatPage.voiceCallButton).not.toBeVisible({
         timeout: 10_000,
       });
 
-      // Restore: toggle back ON, save, close
-      await editMentorPage.open('Settings');
+      // Restore: toggle back ON.
+      await editMentorPage.open('Voice');
       await waitForPageReady(page);
-      const switchAgain = editMentorPage.dialog.getByRole('switch', {
-        name: /show voice call/i,
-      });
-      if ((await switchAgain.getAttribute('aria-checked')) === 'false') {
-        await switchAgain.click();
-        await expect(switchAgain).toHaveAttribute('aria-checked', 'true', {
-          timeout: 10_000,
-        });
-        const saveButton2 = editMentorPage.dialog.getByRole('button', {
-          name: 'Save',
-        });
-        await expect(saveButton2).toBeEnabled({ timeout: 10_000 });
-        await saveButton2.click();
-        await page.waitForTimeout(3_000);
-      }
+      await editMentorPage.voice.setCapabilityEnabled(true);
       await editMentorPage.close();
     });
 
@@ -139,33 +134,31 @@ test.describe('Journey 9: Voice Chat', () => {
       page,
       editMentorPage,
       chatPage,
+      createMentorPage,
     }) => {
       const isAdmin = await checkAdminStatus(page);
       test.skip(!isAdmin, 'Requires admin access');
-      await editMentorPage.open('Settings');
+      // Isolate onto a fresh, dedicated mentor (see the sibling test above) so
+      // this re-enable flow never touches the shared default mentor that
+      // journey 47 asserts against in parallel.
+      //
+      // The "Enable voice calls" master toggle now lives in-tab on the Voice
+      // tab itself (feat/2040 — moved off Settings → Capabilities) and
+      // auto-saves on click.
+      await createMentorPage.openAndCreate();
+      await editMentorPage.open('Voice');
       await waitForPageReady(page);
-      const showVoiceSwitch = editMentorPage.dialog.getByRole('switch', {
-        name: /show voice call/i,
-      });
-      const visible = await showVoiceSwitch
+
+      const visible = await editMentorPage.voice.capabilityToggle
         .isVisible({ timeout: 5_000 })
         .catch(() => false);
       if (!visible) {
         await editMentorPage.close();
         return;
       }
-      if ((await showVoiceSwitch.getAttribute('aria-checked')) !== 'true') {
-        // H3 fix: save after toggling
-        await showVoiceSwitch.click();
-        await expect(showVoiceSwitch).toHaveAttribute('aria-checked', 'true', {
-          timeout: 10_000,
-        });
-        const saveButton = editMentorPage.dialog.getByRole('button', {
-          name: 'Save',
-        });
-        await expect(saveButton).toBeEnabled({ timeout: 10_000 });
-        await saveButton.click();
-        await page.waitForTimeout(3_000);
+      const isEnabled = await editMentorPage.voice.isCapabilityEnabled();
+      if (!isEnabled) {
+        await editMentorPage.voice.setCapabilityEnabled(true);
       }
       await editMentorPage.close();
       await expect(chatPage.voiceCallButton).toBeVisible({ timeout: 10_000 });
@@ -246,5 +239,47 @@ test.describe('Journey 9: Voice Chat', () => {
         });
       },
     );
+
+    test('admin creates a new mentor and completes a real voice-call round-trip with LiveKit (vc-07)', async ({
+      page,
+      createMentorPage,
+      chatPage,
+    }) => {
+      const isAdmin = await checkAdminStatus(page);
+      test.skip(!isAdmin, 'Requires admin access to create a mentor');
+
+      await createMentorPage.openAndCreate();
+      await waitForPageReady(page);
+
+      await expect(chatPage.voiceCallButton).toBeVisible({ timeout: 15_000 });
+      await chatPage.voiceCallButton.click();
+
+      const voiceDialog = page.getByRole('dialog', { name: 'Voice Chat' });
+      await expect(voiceDialog).toBeVisible({ timeout: 15_000 });
+
+      // The mute button is `disabled={isLoading}` (voice-chat-modal.tsx),
+      // and the hook auto-unmutes on connect. Once the mute button is
+      // enabled with aria-label="Mute microphone", connectionState has
+      // reached "connected" — proves /create-call-credentials/, room.connect,
+      // and setMicrophoneEnabled all succeeded against the real backend.
+      const muteButton = voiceDialog.getByRole('button', {
+        name: 'Mute microphone',
+      });
+      await expect(muteButton).toBeEnabled({ timeout: 90_000 });
+
+      // Loading messages should be gone once connected.
+      await expect(
+        voiceDialog.getByText(
+          /Requesting microphone access|Connecting to voice chat/,
+        ),
+      ).not.toBeVisible({ timeout: 5_000 });
+
+      // End the call — verifies the disconnect/cleanup path.
+      const endCallButton = voiceDialog.getByRole('button', {
+        name: 'Close voice chat',
+      });
+      await endCallButton.click();
+      await expect(voiceDialog).not.toBeVisible({ timeout: 10_000 });
+    });
   });
 });

@@ -3,6 +3,7 @@ import React from 'react';
 import dynamic from 'next/dynamic';
 import { toast } from 'sonner';
 import { Eye, EyeOff, Clock } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
@@ -61,6 +62,7 @@ type Props = {
 };
 
 export function DatasetItem({ dataset, onSelect, isSelected }: Props) {
+  const t = useTranslations('datasetsTabDatasetItem');
   const [isDeleteDatasetModalOpen, setIsDeleteDatasetModalOpen] =
     React.useState(false);
   const [isRetrainScheduleModalOpen, setIsRetrainScheduleModalOpen] =
@@ -87,10 +89,10 @@ export function DatasetItem({ dataset, onSelect, isSelected }: Props) {
         },
         userId: username ?? '',
       }).unwrap();
-      toast.success('Training document updated successfully');
+      toast.success(t('trainingDocumentUpdatedSuccess'));
       callback?.();
     } catch (error) {
-      toast.error('Failed to update training document');
+      toast.error(t('trainingDocumentUpdateFailed'));
       console.error(JSON.stringify({ tenant: tenantKey, error }));
     }
   };
@@ -200,15 +202,15 @@ export function DatasetItem({ dataset, onSelect, isSelected }: Props) {
                   onClick={() => setIsRetrainScheduleModalOpen(true)}
                 >
                   <Clock className="h-4 w-4" />
-                  <span className="sr-only">Schedule retrain</span>
+                  <span className="sr-only">{t('scheduleRetrain')}</span>
                 </Button>
               </span>
             </TooltipTrigger>
             <TooltipContent className="bg-gray-700 px-3 py-2 text-sm font-medium whitespace-nowrap text-white shadow-sm transition-opacity duration-300">
               <p>
                 {isRetrainDisabled()
-                  ? 'This document cannot be retrained'
-                  : 'Schedule automatic retraining for this dataset'}
+                  ? t('documentCannotBeRetrained')
+                  : t('scheduleAutomaticRetraining')}
               </p>
             </TooltipContent>
           </Tooltip>
@@ -239,12 +241,12 @@ export function DatasetItem({ dataset, onSelect, isSelected }: Props) {
                 {dataset.access === 'private' ? (
                   <>
                     <EyeOff className="h-4 w-4" />
-                    <span className="sr-only">Make public</span>
+                    <span className="sr-only">{t('makePublic')}</span>
                   </>
                 ) : (
                   <>
                     <Eye className="h-4 w-4" />
-                    <span className="sr-only">Make private</span>
+                    <span className="sr-only">{t('makePrivate')}</span>
                   </>
                 )}
               </Button>
@@ -321,10 +323,12 @@ function TrainingStatusSwitch({
   onUntrainSuccess?: () => void;
   onTrainRequest?: () => void;
 }) {
+  const t = useTranslations('datasetsTabDatasetItem');
+
   if (training_status === 'pending') {
     return (
       <Badge variant="outline" className="bg-blue-50 text-blue-700">
-        In Progress
+        {t('inProgress')}
       </Badge>
     );
   }
@@ -353,8 +357,8 @@ function TrainingStatusSwitch({
       disabled={disabled}
       aria-label={
         is_trained
-          ? 'Disable training for document'
-          : 'Enable training for document'
+          ? t('disableTrainingForDocument')
+          : t('enableTrainingForDocument')
       }
     />
   );

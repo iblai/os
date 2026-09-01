@@ -7,12 +7,32 @@ import { safeWaitForURL } from './navigation';
  * This avoids a full page.goto() which can lose client-side auth tokens.
  */
 export async function navigateToWorkflowsPage(page: Page): Promise<void> {
-  const workflowsButton = page.getByRole('button', {
+  // Sidebar "Workflows" is now a collapsible section (same pattern as
+  // Agents / Chats / Projects / Analytics). Scope to the `<aside>`
+  // landmark, then idempotently expand via `aria-expanded` so we don't
+  // accidentally collapse an already-open section by clicking twice.
+  const sidebar = page.locator('aside').first();
+  const workflowsButton = sidebar.getByRole('button', {
     name: 'Workflows',
     exact: true,
   });
   await expect(workflowsButton).toBeVisible({ timeout: 15_000 });
-  await workflowsButton.click();
+  const expanded = await workflowsButton
+    .getAttribute('aria-expanded')
+    .catch(() => null);
+  if (expanded !== 'true') {
+    await workflowsButton.click();
+    await expect(workflowsButton).toHaveAttribute('aria-expanded', 'true', {
+      timeout: 5_000,
+    });
+  }
+
+  const myWorkflowsLink = sidebar.getByRole('button', {
+    name: 'My Workflows',
+    exact: true,
+  });
+  await expect(myWorkflowsLink).toBeVisible({ timeout: 10_000 });
+  await myWorkflowsLink.click();
 
   await safeWaitForURL(page, (url) => url.href.includes('/workflows/'), {
     timeout: 60_000,
@@ -23,9 +43,33 @@ export async function navigateToWorkflowsPage(page: Page): Promise<void> {
     level: 1,
     exact: true,
   });
-  // The workflows page hydration can stall behind a slow backend response;
-  // a generous ceiling keeps the happy path fast and avoids spurious flakes.
-  await expect(heading).toBeVisible({ timeout: 60_000 });
+  const errorFallback = page.getByText('Failed to load workflows');
+  const searchInput = page.getByPlaceholder('Search workflows...');
+
+  // Readiness race. The <h1> "Workflows" is the obvious success signal,
+  // but it is matched by ROLE — so a stale `aria-hidden` lingering on the
+  // app shell (e.g. left by a dialog/overlay close earlier in the flow)
+  // drops it from the accessibility tree even though it renders, and the
+  // role query returns nothing. The search input is matched by its
+  // `placeholder` attribute, which survives a hidden ancestor, so include
+  // it as an aria-hidden-immune success signal. Race both against the
+  // error branch (the page renders only an error placeholder when
+  // useGetWorkflowsQuery fails on a transient 401/403 auth-token race)
+  // so we still fail fast with a clear message. 60s absorbs a slow
+  // AppLayout mentor-settings gate under CI load. `.first()` because the
+  // h1 and the search input both render on success, so the union resolves
+  // to >1 element — `toBeVisible` is strict-mode and would otherwise throw.
+  await expect(heading.or(searchInput).or(errorFallback).first()).toBeVisible({
+    timeout: 60_000,
+  });
+  if (await errorFallback.isVisible().catch(() => false)) {
+    throw new Error(
+      'Workflows page rendered error state (useGetWorkflowsQuery failed) — likely auth/token race after sidebar navigation',
+    );
+  }
+  // The search input is the stable, aria-hidden-immune signal callers
+  // care about — assert it directly as the final readiness gate.
+  await expect(searchInput).toBeVisible({ timeout: 10_000 });
   logger.info('Navigated to workflows list page');
 }
 
@@ -66,7 +110,11 @@ export async function createWorkflow(
  * Wait for the workflow editor to be ready (canvas loaded).
  */
 export async function waitForWorkflowEditorReady(page: Page): Promise<void> {
-  const saveButton = page.getByRole('button', { name: 'Save' });
+  // Exact name — NOT a loose 'Save' substring match. The always-present
+  // chat-privacy toggle's aria-label ("...This chat won't be saved to
+  // history...") substring-matches "Save", so a non-exact locator resolves
+  // to BOTH that toggle and the real Save button → strict-mode violation.
+  const saveButton = page.getByRole('button', { name: 'Save', exact: true });
   await expect(saveButton).toBeVisible({ timeout: 30_000 });
 
   const canvas = page.locator('[data-testid="workflow-canvas"]');
@@ -207,7 +255,9 @@ export async function exitPreviewMode(page: Page): Promise<void> {
  * Click the Save button.
  */
 export async function saveWorkflow(page: Page): Promise<void> {
-  const saveButton = page.getByRole('button', { name: 'Save' });
+  // Exact name — see waitForWorkflowEditorReady: a loose 'Save' also matches
+  // the chat-privacy toggle's aria-label ("...won't be saved to history...").
+  const saveButton = page.getByRole('button', { name: 'Save', exact: true });
   await expect(saveButton).toBeVisible({ timeout: 10_000 });
   await expect(saveButton).toBeEnabled();
   await saveButton.click();

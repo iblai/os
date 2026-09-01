@@ -1,7 +1,12 @@
 import { test, expect } from '../fixtures/mentor-test';
-import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
+import {
+  navigateToMentorApp,
+  checkAdminStatus,
+  getPlatformContext,
+} from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
 import { logger } from '@iblai/iblai-js/playwright';
+import { MentorTracker } from '../utils/mentor-cleanup';
 
 test.describe('Journey 7: Mentor Settings Tab — Unique ID', () => {
   test.beforeEach(async ({ page, editMentorPage }) => {
@@ -190,12 +195,15 @@ test.describe('Journey 7: Mentor Settings Tab — Unique ID', () => {
     await editMentorPage.close();
   });
 
-  // uid-06: Enhance Document Retrieval toggle is visible with correct label, default OFF
-  test('admin goes to mentor settings tab and sees the Enhance Document Retrieval toggle defaulting to OFF', async ({
+  // uid-06: Enhanced RAG toggle is visible with correct label, default OFF
+  test('admin goes to mentor settings tab and sees the Enhanced RAG toggle defaulting to OFF', async ({
     editMentorPage,
   }) => {
+    // Renamed from "Enhanced RAG" → "Enhanced document retrieval" and moved
+    // into the Capabilities sub-tab when Settings was split.
+    await editMentorPage.settings.selectSubTab('Capabilities');
     const label = editMentorPage.dialog.getByText(
-      'Enhance Document Retrieval',
+      'Enhanced document retrieval',
       {
         exact: true,
       },
@@ -208,18 +216,17 @@ test.describe('Journey 7: Mentor Settings Tab — Unique ID', () => {
     // Default value is false (mentor?.enable_multi_query_rag ?? false)
     const ariaChecked = await toggle.getAttribute('aria-checked');
     expect(ariaChecked).toBe('false');
-    logger.info(
-      `uid-06: Enhance Document Retrieval toggle aria-checked=${ariaChecked}`,
-    );
+    logger.info(`uid-06: Enhanced RAG toggle aria-checked=${ariaChecked}`);
 
     await editMentorPage.close();
   });
 
-  // uid-07: Enhance Document Retrieval tooltip contains expected wording
-  test('admin goes to mentor settings tab and sees the Enhance Document Retrieval tooltip text', async ({
+  // uid-07: Enhanced RAG tooltip contains expected wording
+  test('admin goes to mentor settings tab and sees the Enhanced RAG tooltip text', async ({
     page,
     editMentorPage,
   }) => {
+    await editMentorPage.settings.selectSubTab('Capabilities');
     const tooltipTrigger =
       editMentorPage.settings.enhanceDocumentRetrievalTooltipTrigger;
     await expect(tooltipTrigger).toBeVisible({ timeout: 10_000 });
@@ -227,24 +234,22 @@ test.describe('Journey 7: Mentor Settings Tab — Unique ID', () => {
 
     await expect(
       page.getByRole('tooltip', {
-        name: /multiple search queries from a single user question/i,
+        name: /runs several search queries per question to pull more relevant documents/i,
       }),
     ).toBeVisible({ timeout: 5_000 });
-    logger.info(
-      'uid-07: Enhance Document Retrieval tooltip content is visible',
-    );
+    logger.info('uid-07: Enhanced RAG tooltip content is visible');
 
     await editMentorPage.close();
   });
 
-  // uid-08: Enhance Document Retrieval toggle persists ON then OFF across save/reopen cycles
-  test('admin goes to mentor settings tab and toggles Enhance Document Retrieval ON then OFF with persistence', async ({
+  // uid-08: Enhanced RAG toggle persists ON then OFF across save/reopen cycles
+  test('admin goes to mentor settings tab and toggles Enhanced RAG ON then OFF with persistence', async ({
     page,
     editMentorPage,
   }) => {
     // --- Turn ON ---
     await editMentorPage.settings.enableEnhanceDocumentRetrieval();
-    logger.info('uid-08: Saved Enhance Document Retrieval = ON');
+    logger.info('uid-08: Saved Enhanced RAG = ON');
 
     await editMentorPage.close();
 
@@ -261,7 +266,7 @@ test.describe('Journey 7: Mentor Settings Tab — Unique ID', () => {
 
     // --- Turn OFF ---
     await editMentorPage.settings.disableEnhanceDocumentRetrieval();
-    logger.info('uid-08: Saved Enhance Document Retrieval = OFF');
+    logger.info('uid-08: Saved Enhanced RAG = OFF');
 
     await editMentorPage.close();
 
@@ -276,6 +281,243 @@ test.describe('Journey 7: Mentor Settings Tab — Unique ID', () => {
       `uid-08: After reopen, toggle = ${isOff ? 'ON' : 'OFF'} (expected OFF)`,
     );
 
+    await editMentorPage.close();
+  });
+});
+
+// ─── Journey 7B: Category Combobox — iblai-platform#2289 ──────────────────
+//
+// The Basic sub-tab's Category combobox rendered/painted its options but
+// was not hit-testable: it inherited `pointer-events: none` from the host
+// Dialog (the SDK ships its own copy of `@radix-ui/react-dismissable-layer`)
+// and the host's focus trap stole focus from the search box. A second,
+// independent bug scored the typed search query against the option's
+// numeric id instead of its name, so typing a category NAME matched
+// nothing and every option vanished behind the empty state.
+//
+// This bug is NOT specific to copied mentors — the client reported it via a
+// copied mentor, but it reproduces on a plain, never-copied agent and
+// affects every agent in every tenant. This describe block runs against a
+// freshly created, owned, tracked mentor (never copied) so the fix is
+// verified on the common path too; the copied-mentor scenario the client
+// actually hit is covered separately in
+// journeys/36-copy-mentor.spec.ts.
+//
+// `toBeVisible()` alone never catches this regression — the options were
+// visible the entire time the bug was live. Every checkpoint below proves
+// INTERACTIVITY: a real click or keystroke followed by an assertion on the
+// resulting state change. No click in this block uses `{ force: true }` —
+// that would defeat the exact actionability check that caught the bug.
+test.describe('Journey 7B: Mentor Settings Tab — Category Combobox (#2289)', () => {
+  test.setTimeout(120_000);
+  const tracker = new MentorTracker();
+
+  test.beforeEach(async ({ page, createMentorPage, editMentorPage }) => {
+    await navigateToMentorApp(page);
+    const isAdmin = await checkAdminStatus(page);
+    if (!isAdmin) {
+      test.skip(true, 'Requires admin access');
+      return;
+    }
+    await createMentorPage.openAndCreate();
+    const { mentorId } = await getPlatformContext(page);
+    tracker.add(mentorId);
+    await editMentorPage.open('Settings');
+    await waitForPageReady(page);
+  });
+
+  test.afterAll(async ({ browser }, testInfo) => {
+    await tracker.deleteAll(browser, testInfo);
+  });
+
+  test('admin clicks a Category option and the trigger label updates to that category (cat-01)', async ({
+    editMentorPage,
+  }) => {
+    await editMentorPage.settings.openCategoryPopover();
+    const names = await editMentorPage.settings.getCategoryOptionNames();
+    expect(names.length).toBeGreaterThan(0);
+    const target = names[0];
+
+    await editMentorPage.settings.categoryOption(target).click();
+    await expect(editMentorPage.settings.categoryTrigger).toHaveText(target, {
+      timeout: 10_000,
+    });
+    logger.info(
+      `cat-01: trigger label updated to "${target}" after a real click`,
+    );
+    await editMentorPage.close();
+  });
+
+  // cat-04: keystrokes land in the search box. Deliberately independent of
+  // cat-02 below — this only proves the search input can receive and echo
+  // real keystrokes (what `portalled={false}` fixes: the host Dialog's focus
+  // trap previously stole focus before a single key could land). It says
+  // nothing about whether the *filtering* is correct, which is a separate,
+  // still-open bug (see cat-02). Uses `pressSequentially` (real per-key
+  // keydown/keyup events) rather than `.fill()` so a regressed focus trap
+  // would actually be caught.
+  test('admin types into the Category search box and every keystroke lands in the input (cat-04)', async ({
+    editMentorPage,
+  }) => {
+    await editMentorPage.settings.openCategoryPopover();
+    const names = await editMentorPage.settings.getCategoryOptionNames();
+    expect(names.length).toBeGreaterThan(0);
+    const substring = names[0].slice(
+      0,
+      Math.max(1, Math.ceil(names[0].length / 2)),
+    );
+
+    await editMentorPage.settings.categorySearchInput.pressSequentially(
+      substring,
+      { delay: 20 },
+    );
+    await expect(editMentorPage.settings.categorySearchInput).toHaveValue(
+      substring,
+    );
+    logger.info(
+      `cat-04: search input echoed every typed character: "${substring}"`,
+    );
+    await editMentorPage.close();
+  });
+
+  // cat-02: type-to-filter by category NAME.
+  //
+  // fixme — KNOWN FAILING against @iblai/web-containers@1.16.1, blocked on an
+  // upstream SDK fix. This is NOT flakiness and NOT a test defect: the second
+  // bug described in iblai-platform#2289 is still live. `<Command>` runs with
+  // cmdk's default filtering, which scores the typed query against each
+  // item's `value` — and `basic-sub-tab.tsx` still passes
+  // `value={category.id.toString()}`, a numeric id. So typing a category NAME
+  // matches nothing and every option disappears behind `CommandEmpty`.
+  // Verified on the published package: typing "Advi" leaves the input
+  // populated and renders "No Category found.".
+  //
+  // The fix is `value={category.name}` with the id captured in the
+  // `onSelect` closure. It was authored, then reverted to narrow #2289's PR
+  // to the `portalled={false}` popover-placement fix alone.
+  //
+  // REMOVE THIS `.fixme` once that SDK change ships — the assertion below is
+  // the correct end state and must not be weakened or inverted.
+  test.fixme(
+    'admin types a category NAME substring and the option list narrows to matching results (cat-02)',
+    async ({ editMentorPage }) => {
+      await editMentorPage.settings.openCategoryPopover();
+      const names = await editMentorPage.settings.getCategoryOptionNames();
+      expect(names.length).toBeGreaterThan(0);
+      const target = names[0];
+      const substring = target.slice(
+        0,
+        Math.max(1, Math.ceil(target.length / 2)),
+      );
+      const other = names.find(
+        (n) =>
+          n !== target && !n.toLowerCase().includes(substring.toLowerCase()),
+      );
+
+      await editMentorPage.settings.categorySearchInput.fill(substring);
+
+      await expect(editMentorPage.settings.categoryOption(target)).toBeVisible({
+        timeout: 10_000,
+      });
+      await expect(
+        editMentorPage.settings.categoryEmptyState,
+      ).not.toBeVisible();
+      if (other) {
+        await expect(
+          editMentorPage.settings.categoryOption(other),
+        ).not.toBeVisible();
+      }
+      logger.info(
+        `cat-02: option list narrowed to "${target}" for query "${substring}"`,
+      );
+      await editMentorPage.close();
+    },
+  );
+
+  test('admin types a query with no matches and sees the empty state (cat-03)', async ({
+    editMentorPage,
+  }) => {
+    await editMentorPage.settings.openCategoryPopover();
+    await editMentorPage.settings.categorySearchInput.fill(
+      'zzz-no-such-category-9999',
+    );
+    await expect(editMentorPage.settings.categoryEmptyState).toBeVisible({
+      timeout: 10_000,
+    });
+    logger.info('cat-03: "No Category found." shown for a non-matching query');
+    await editMentorPage.close();
+  });
+
+  test('admin selects a category, saves, and it persists after reopening — including the check mark (cat-05, cat-06)', async ({
+    page,
+    editMentorPage,
+  }) => {
+    await editMentorPage.settings.openCategoryPopover();
+    const names = await editMentorPage.settings.getCategoryOptionNames();
+    expect(names.length).toBeGreaterThan(0);
+    const target = names[0];
+
+    await editMentorPage.settings.categoryOption(target).click();
+    await expect(editMentorPage.settings.categoryTrigger).toHaveText(target, {
+      timeout: 10_000,
+    });
+
+    await expect(editMentorPage.settings.saveButton).toBeEnabled({
+      timeout: 10_000,
+    });
+    await editMentorPage.settings.saveButton.click();
+    await expect(
+      page.getByText(/agent updated successfully/i).first(),
+    ).toBeVisible({ timeout: 30_000 });
+    logger.info(`cat-05: saved Category = "${target}"`);
+
+    await editMentorPage.close();
+    await editMentorPage.open('Settings');
+    await waitForPageReady(page);
+
+    // Persisted trigger label proves the numeric id (not the name) reached
+    // the API payload and was correctly resolved back to a name on refetch.
+    await expect(editMentorPage.settings.categoryTrigger).toHaveText(target, {
+      timeout: 10_000,
+    });
+    logger.info('cat-05: Category label persisted across close/reopen');
+
+    await editMentorPage.settings.categoryTrigger.click();
+    await expect(editMentorPage.settings.categorySearchInput).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(
+      editMentorPage.settings.categoryOptionCheck(target),
+    ).toHaveClass(/opacity-100/, { timeout: 10_000 });
+    logger.info(`cat-06: check mark visible on "${target}" after reopen`);
+    await editMentorPage.close();
+  });
+
+  // cat-07: clipping guard. The popover now renders inside the dialog's
+  // `overflow-hidden` subtree (align="start" portalled={false}) instead of a
+  // body-level portal — nobody has verified a short viewport doesn't clip it.
+  // Deliberately interaction-based rather than bounding-box math: pixel
+  // comparisons are flaky across browsers/DPI and wouldn't even catch the
+  // failure mode that matters (an option that LOOKS present but can never be
+  // scrolled into an actionable position). A real click that still lands and
+  // updates the trigger is the strongest available signal that the popover
+  // was not clipped un-scrollably.
+  test('Category popover remains interactive at a small viewport (cat-07, clipping guard)', async ({
+    page,
+    editMentorPage,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 640 });
+    await editMentorPage.settings.openCategoryPopover();
+    const names = await editMentorPage.settings.getCategoryOptionNames();
+    expect(names.length).toBeGreaterThan(0);
+
+    await editMentorPage.settings.categoryOption(names[0]).click();
+    await expect(editMentorPage.settings.categoryTrigger).toHaveText(names[0], {
+      timeout: 10_000,
+    });
+    logger.info(
+      `cat-07: selected "${names[0]}" at a 390x640 viewport — popover was not clipped un-scrollably`,
+    );
     await editMentorPage.close();
   });
 });

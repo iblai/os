@@ -471,15 +471,28 @@ export interface ExportData {
   exportTitle: string;
 }
 
+export type ExportTranslate = (key: string) => string;
+
+const defaultT: ExportTranslate = (key) => {
+  const fallbacks: Record<string, string> = {
+    nothingToExport: 'Nothing to export yet',
+    exportedAsPdf: 'Document exported as PDF',
+    exportedAsDocx: 'Document exported as DOCX',
+    exportedAsMarkdown: 'Document exported as Markdown',
+  };
+  return fallbacks[key] ?? key;
+};
+
 /**
  * Export content as PDF with full support for tables, lists, and links
  */
 export const exportAsPDF = async (
   markdownSource: string,
   exportTitle: string,
+  t: ExportTranslate = defaultT,
 ): Promise<void> => {
   if (!markdownSource || !markdownSource.trim()) {
-    toast.error('Nothing to export yet');
+    toast.error(t('nothingToExport'));
     return;
   }
 
@@ -1942,7 +1955,7 @@ export const exportAsPDF = async (
   }
 
   pdf.save(`${sanitizeFilename(exportTitle)}.pdf`);
-  toast.success('Document exported as PDF');
+  toast.success(t('exportedAsPdf'));
 };
 
 /**
@@ -1975,9 +1988,10 @@ const replaceKatexWithText = (html: string): string => {
 export const exportAsDOCX = (
   markdownSource: string,
   exportTitle: string,
+  t: ExportTranslate = defaultT,
 ): void => {
   if (!markdownSource || !markdownSource.trim()) {
-    toast.error('Nothing to export yet');
+    toast.error(t('nothingToExport'));
     return;
   }
 
@@ -2008,7 +2022,7 @@ export const exportAsDOCX = (
     type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   });
   downloadBlob(blob, `${sanitizeFilename(exportTitle)}.docx`);
-  toast.success('Document exported as DOCX');
+  toast.success(t('exportedAsDocx'));
 };
 
 /**
@@ -2017,13 +2031,14 @@ export const exportAsDOCX = (
 export const exportAsMarkdown = (
   markdownSource: string,
   exportTitle: string,
+  t: ExportTranslate = defaultT,
 ): void => {
   if (!markdownSource || !markdownSource.trim()) {
-    toast.error('Nothing to export yet');
+    toast.error(t('nothingToExport'));
     return;
   }
 
   const blob = new Blob([markdownSource], { type: 'text/markdown' });
   downloadBlob(blob, `${sanitizeFilename(exportTitle)}.md`);
-  toast.success('Document exported as Markdown');
+  toast.success(t('exportedAsMarkdown'));
 };

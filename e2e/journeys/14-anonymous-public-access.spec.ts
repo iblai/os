@@ -63,10 +63,11 @@ test.describe('Journey 14: Anonymous / Public Access', () => {
 
       // Enable memory on the mentor so the auth-gate assertion below is
       // meaningful (the Memory button also requires mentor memory to be on).
-      // The Memory toggle moved from the Memory tab to the Settings tab (fix/1584).
-      await editMentorPage.open('Settings');
+      // The "Remember past conversations" master toggle lives in-tab on the
+      // Memory tab itself (feat/2040 — moved off Settings → Capabilities).
+      await editMentorPage.open('Memory');
       await waitForPageReady(setupPage);
-      await editMentorPage.settings.setMemoryEnabled(true);
+      await editMentorPage.memory.setCapabilityEnabled(true);
       await editMentorPage.close();
     } finally {
       await setupPage.close();
@@ -204,14 +205,38 @@ test.describe('Journey 14: Anonymous / Public Access', () => {
   }) => {
     test.skip(!MENTOR_NEXTJS_HOST, 'Requires MENTOR_NEXTJS_HOST');
     await goToAnonymousMentor(page);
-    const mentorsButton = page.getByRole('button', {
+    // "Explore" lives inside the collapsible "Agents" section in the new
+    // sidebar. Clicking "Agents" only toggles the section open — it does
+    // NOT navigate — so expand it (idempotently, via aria-expanded) and
+    // then click the inner "Explore" item to actually navigate. Scope to
+    // the <aside> so page-content text ("Explore Agents") can't collide.
+    const sidebar = page.locator('aside').first();
+    const agentsButton = sidebar.getByRole('button', {
       name: 'Agents',
       exact: true,
     });
-    await expect(mentorsButton).toBeVisible({ timeout: 10_000 });
-    await mentorsButton.click();
-    await safeWaitForURL(page, (url) => url.pathname.endsWith('/explore'), {
-      timeout: 15_000,
+    await expect(agentsButton).toBeVisible({ timeout: 10_000 });
+    const expanded = await agentsButton
+      .getAttribute('aria-expanded')
+      .catch(() => null);
+    if (expanded !== 'true') {
+      await agentsButton.click();
+    }
+    const exploreItem = sidebar.getByRole('button', {
+      name: 'Explore',
+      exact: true,
+    });
+    await expect(exploreItem).toBeVisible({ timeout: 10_000 });
+    await exploreItem.click();
+    // Wait for the explore page to actually render, not for the URL. This is
+    // a SPA client-side navigation (router.push), so there's no document
+    // load event — `waitForURL({ waitUntil: 'domcontentloaded' })` can miss
+    // the same-document transition and time out even though navigation
+    // succeeded. The always-rendered `<div id="main-content"
+    // aria-label="Agent exploration page">` is the deterministic signal, and
+    // matching by aria-label survives any stale aria-hidden on the shell.
+    await expect(page.getByLabel('Agent exploration page')).toBeVisible({
+      timeout: 30_000,
     });
     await expect(page).toHaveURL(/explore/);
   });
@@ -229,16 +254,22 @@ test.describe('Journey 14: Anonymous / Public Access', () => {
       name: 'Analytics',
       exact: true,
     });
-    if (await analyticsBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
-      await analyticsBtn.click();
-      await page.waitForTimeout(2_000);
-      const isRedirected =
-        page.url().includes(AUTH_HOST) || page.url().includes('login');
-      const hasModal = await page
-        .getByRole('dialog')
-        .isVisible({ timeout: 3_000 })
-        .catch(() => false);
-      expect(isRedirected || hasModal).toBe(true);
-    }
+    await expect(analyticsBtn).toBeVisible({ timeout: 10_000 });
+    await analyticsBtn.click();
+
+    const overviewBtn = page.getByRole('button', {
+      name: 'Overview',
+      exact: true,
+    });
+    await expect(overviewBtn).toBeVisible({ timeout: 10_000 });
+    await overviewBtn.click();
+
+    await page.waitForURL(
+      (url) => url.href.includes(AUTH_HOST) || url.href.includes('login'),
+      { timeout: 30_000 },
+    );
+    expect(page.url().includes(AUTH_HOST) || page.url().includes('login')).toBe(
+      true,
+    );
   });
 });

@@ -2,6 +2,7 @@
 
 import type React from 'react';
 import { useState, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ChevronRight, Filter, Star, ChevronLeft, Check } from 'lucide-react';
@@ -32,7 +33,7 @@ const tools: Tool[] = [
       'Generate a lesson plan based on standard, topic, or objective.',
     icon: '/icons/quiz.svg',
     updatedDate: 'February 13, 2025',
-    categories: ['Content', 'Questions', 'Student Success'],
+    categories: ['Content', 'Questions', 'User Success'],
     usageCount: 245,
   },
   {
@@ -93,7 +94,7 @@ const categories = [
   'Grading',
   'Communication',
   'Administrative',
-  'Student Success',
+  'User Success',
 ];
 
 type SortOption = 'most-used' | 'latest' | 'alphabetical' | 'favorites';
@@ -103,6 +104,7 @@ interface ToolsSectionProps {
 }
 
 export function ToolsSection({ onToolSelect }: ToolsSectionProps) {
+  const t = useTranslations('welcomeChatToolsSection');
   const [selectedCategory, setSelectedCategory] = useState('Content');
   const [filterOpen, setFilterOpen] = useState(false);
   const [scrollPosition, setScrollPosition] = useState(0);
@@ -132,6 +134,7 @@ export function ToolsSection({ onToolSelect }: ToolsSectionProps) {
         const bFav = favorites.has(b.id) ? 1 : 0;
         if (aFav !== bFav) return bFav - aFav;
         return b.usageCount - a.usageCount; // Secondary sort by usage
+      /* istanbul ignore next -- defensive default; sortBy is always a valid SortOption */
       default:
         return 0;
     }
@@ -168,15 +171,16 @@ export function ToolsSection({ onToolSelect }: ToolsSectionProps) {
   const getSortLabel = (option: SortOption) => {
     switch (option) {
       case 'most-used':
-        return 'Sort by Most Used';
+        return t('sortByMostUsed');
       case 'latest':
-        return 'Latest';
+        return t('latest');
       case 'alphabetical':
-        return 'Alphabetical';
+        return t('alphabetical');
       case 'favorites':
-        return 'Favorites';
+        return t('favorites');
+      /* istanbul ignore next -- defensive default; option is always a valid SortOption */
       default:
-        return 'Sort by Most Used';
+        return t('sortByMostUsed');
     }
   };
 
@@ -192,12 +196,12 @@ export function ToolsSection({ onToolSelect }: ToolsSectionProps) {
   return (
     <div className="mx-auto w-full max-w-6xl px-4">
       <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-gray-900">Tools</h2>
+        <h2 className="text-xl font-semibold text-gray-900">{t('heading')}</h2>
         <Button
           variant="ghost"
           className="h-auto min-h-6 p-0 text-blue-600 hover:text-blue-700"
         >
-          Browse All
+          {t('browseAll')}
           <ChevronRight className="ml-1 h-4 w-4" />
         </Button>
       </div>
@@ -267,7 +271,7 @@ export function ToolsSection({ onToolSelect }: ToolsSectionProps) {
               className="ml-4 flex-shrink-0 bg-transparent"
             >
               <Filter className="mr-2 h-4 w-4" />
-              Filter
+              {t('filter')}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
@@ -340,11 +344,11 @@ export function ToolsSection({ onToolSelect }: ToolsSectionProps) {
                   </p>
                   <div className="mt-auto flex items-center justify-between">
                     <p className="text-xs text-gray-400">
-                      Updated on {tool.updatedDate}
+                      {t('updatedOn', { date: tool.updatedDate })}
                     </p>
                     {sortBy === 'most-used' && (
                       <p className="text-xs text-gray-500">
-                        {tool.usageCount} uses
+                        {t('usageCount', { count: tool.usageCount })}
                       </p>
                     )}
                   </div>

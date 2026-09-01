@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useEditor, EditorContent, Editor } from '@tiptap/react';
 import { Mark, mergeAttributes } from '@tiptap/core';
 import { Heading } from '@tiptap/extension-heading';
@@ -347,6 +348,7 @@ export function CanvasRichTextEditorToolbar({
 }: {
   editor: Editor | null;
 }) {
+  const t = useTranslations('canvasCanvasRichTextEditor');
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -442,49 +444,49 @@ export function CanvasRichTextEditorToolbar({
   if (isMobile) {
     const toolbarItems = [
       {
-        name: 'Heading 1',
+        name: t('heading1'),
         icon: <Heading1 className="h-4 w-4" />,
         isActive: editor.isActive('heading', { level: 1 }),
         action: () => focusWithoutScroll().toggleHeading({ level: 1 }).run(),
       },
       {
-        name: 'Heading 2',
+        name: t('heading2'),
         icon: <Heading2 className="h-4 w-4" />,
         isActive: editor.isActive('heading', { level: 2 }),
         action: () => focusWithoutScroll().toggleHeading({ level: 2 }).run(),
       },
       {
-        name: 'Heading 3',
+        name: t('heading3'),
         icon: <Heading3 className="h-4 w-4" />,
         isActive: editor.isActive('heading', { level: 3 }),
         action: () => focusWithoutScroll().toggleHeading({ level: 3 }).run(),
       },
       {
-        name: 'Bold',
+        name: t('bold'),
         icon: <Bold className="h-4 w-4" />,
         isActive: editor.isActive('bold'),
         action: () => focusWithoutScroll().toggleBold().run(),
       },
       {
-        name: 'Italic',
+        name: t('italic'),
         icon: <Italic className="h-4 w-4" />,
         isActive: editor.isActive('italic'),
         action: () => focusWithoutScroll().toggleItalic().run(),
       },
       {
-        name: 'Code',
+        name: t('code'),
         icon: <Code2 className="h-4 w-4" />,
         isActive: editor.isActive('code'),
         action: () => focusWithoutScroll().toggleCode().run(),
       },
       {
-        name: 'Code Block',
+        name: t('codeBlock'),
         icon: <FileCode className="h-4 w-4" />,
         isActive: editor.isActive('codeBlock'),
         action: () => focusWithoutScroll().toggleCodeBlock().run(),
       },
       {
-        name: 'Quote',
+        name: t('quote'),
         icon: <Quote className="h-4 w-4" />,
         isActive: editor.isActive('blockquote'),
         action: () => focusWithoutScroll().toggleBlockquote().run(),
@@ -506,7 +508,7 @@ export function CanvasRichTextEditorToolbar({
               .run();
           }}
           disabled={!canUndo}
-          aria-label="Undo"
+          aria-label={t('undo')}
         >
           <Undo2 className="h-4 w-4 text-gray-600" />
         </Button>
@@ -522,7 +524,7 @@ export function CanvasRichTextEditorToolbar({
               .run();
           }}
           disabled={!canRedo}
-          aria-label="Redo"
+          aria-label={t('redo')}
         >
           <Redo2 className="h-4 w-4 text-gray-600" />
         </Button>
@@ -535,7 +537,7 @@ export function CanvasRichTextEditorToolbar({
               variant="ghost"
               size="sm"
               className="h-8 w-8 p-0"
-              aria-label="More formatting options"
+              aria-label={t('moreFormattingOptions')}
             >
               <MoreHorizontal className="h-4 w-4 text-gray-600" />
             </Button>
@@ -589,7 +591,7 @@ export function CanvasRichTextEditorToolbar({
           }
         }
         disabled={!canUndo}
-        aria-label="Undo"
+        aria-label={t('undo')}
       >
         <Undo2 className="h-4 w-4 text-gray-600" />
       </Button>
@@ -607,7 +609,7 @@ export function CanvasRichTextEditorToolbar({
           }
         }
         disabled={!canRedo}
-        aria-label="Redo"
+        aria-label={t('redo')}
       >
         <Redo2 className="h-4 w-4 text-gray-600" />
       </Button>
@@ -621,7 +623,7 @@ export function CanvasRichTextEditorToolbar({
         size="sm"
         className="h-8 w-8 p-0"
         onClick={() => focusWithoutScroll().toggleHeading({ level: 1 }).run()}
-        aria-label="Toggle heading 1"
+        aria-label={t('toggleHeading1')}
       >
         <Heading1 className="h-4 w-4 text-gray-600" />
       </Button>
@@ -632,7 +634,7 @@ export function CanvasRichTextEditorToolbar({
         size="sm"
         className="h-8 w-8 p-0"
         onClick={() => focusWithoutScroll().toggleHeading({ level: 2 }).run()}
-        aria-label="Toggle heading 2"
+        aria-label={t('toggleHeading2')}
       >
         <Heading2 className="h-4 w-4 text-gray-600" />
       </Button>
@@ -643,7 +645,7 @@ export function CanvasRichTextEditorToolbar({
         size="sm"
         className="h-8 w-8 p-0"
         onClick={() => focusWithoutScroll().toggleHeading({ level: 3 }).run()}
-        aria-label="Toggle heading 3"
+        aria-label={t('toggleHeading3')}
       >
         <Heading3 className="h-4 w-4 text-gray-600" />
       </Button>
@@ -655,7 +657,7 @@ export function CanvasRichTextEditorToolbar({
         size="sm"
         className="h-8 w-8 p-0"
         onClick={() => focusWithoutScroll().toggleBold().run()}
-        aria-label="Toggle bold"
+        aria-label={t('toggleBold')}
       >
         <Bold className="h-4 w-4 text-gray-600" />
       </Button>
@@ -664,7 +666,7 @@ export function CanvasRichTextEditorToolbar({
         size="sm"
         className="h-8 w-8 p-0"
         onClick={() => focusWithoutScroll().toggleItalic().run()}
-        aria-label="Toggle italic"
+        aria-label={t('toggleItalic')}
       >
         <Italic className="h-4 w-4 text-gray-600" />
       </Button>
@@ -673,7 +675,7 @@ export function CanvasRichTextEditorToolbar({
         size="sm"
         className="h-8 w-8 p-0"
         onClick={() => focusWithoutScroll().toggleCode().run()}
-        aria-label="Toggle inline code"
+        aria-label={t('toggleInlineCode')}
       >
         <Code2 className="h-4 w-4 text-gray-600" />
       </Button>
@@ -685,7 +687,7 @@ export function CanvasRichTextEditorToolbar({
         size="sm"
         className="h-8 w-8 p-0"
         onClick={() => focusWithoutScroll().toggleCodeBlock().run()}
-        aria-label="Toggle code block"
+        aria-label={t('toggleCodeBlock')}
       >
         <FileCode className="h-4 w-4 text-gray-600" />
       </Button>
@@ -694,7 +696,7 @@ export function CanvasRichTextEditorToolbar({
         size="sm"
         className="h-8 w-8 p-0"
         onClick={() => focusWithoutScroll().toggleBlockquote().run()}
-        aria-label="Toggle blockquote"
+        aria-label={t('toggleBlockquote')}
       >
         <Quote className="h-4 w-4 text-gray-600" />
       </Button>
@@ -961,8 +963,9 @@ export function useCanvasRichTextEditor({
           '[&_ol_ol_ol]:list-[lower-roman] [&_ol_ol_ol]:pl-4 ' +
           '[&_li]:leading-7 [&_li]:pl-1 ' +
           // Code
-          '[&_code]:bg-muted [&_code]:rounded [&_code]:px-1 [&_code]:py-0.5 ' +
-          '[&_pre]:bg-muted [&_pre]:rounded-md [&_pre]:p-4 [&_pre]:mb-4 ' +
+          '[&_:not(pre)>code]:bg-muted [&_:not(pre)>code]:rounded [&_:not(pre)>code]:px-1 [&_:not(pre)>code]:py-0.5 ' +
+          '[&_pre]:rounded-md [&_pre]:p-4 [&_pre]:mb-4 ' +
+          '[&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:text-inherit ' +
           // Blockquote
           '[&_blockquote]:border-l-4 [&_blockquote]:border-primary [&_blockquote]:pl-4 [&_blockquote]:mb-4 [&_blockquote]:italic [&_blockquote]:leading-7 ' +
           // Links

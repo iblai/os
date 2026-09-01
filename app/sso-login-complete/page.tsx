@@ -27,6 +27,26 @@ function SsoLoginCompleteContent() {
         redirectPath: string,
         parsedData: Record<string, string>,
       ): string => {
+        // Prefer an explicit `?redirect-path=` on the URL over any value
+        // SsoLogin resolved from localStorage. The Chrome side-panel routes the
+        // partitioned mentor iframe through this page to install the session,
+        // and a prior failed-auth cycle can leave a stale `redirect-to` in that
+        // iframe's storage that would otherwise win and drop the embed params
+        // (embed / mode / component / extra-body-classes) the panel asked for.
+        //
+        // Only honor an in-app, same-origin path: SsoLogin navigates to
+        // `location.origin + redirectPath`, so an unvalidated value like
+        // `@evil.com` or `//evil.com` would be an open redirect. Require a
+        // single leading slash with no protocol-relative `//` or `/\` authority.
+        if (typeof window !== 'undefined') {
+          const explicit = new URLSearchParams(window.location.search).get(
+            'redirect-path',
+          );
+          if (explicit && /^\/(?![/\\])/.test(explicit)) {
+            redirectPath = explicit;
+          }
+        }
+
         // Check if redirectPath contains a platform key that doesn't match the authenticated tenant
         const platformKeyMatch = redirectPath.match(/^\/platform\/([^/]+)/);
         if (platformKeyMatch) {

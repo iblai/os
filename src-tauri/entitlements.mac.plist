@@ -2,11 +2,9 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- Application identifier (required for App Store) -->
+	<!-- Must match provisioning profile -->
 	<key>com.apple.application-identifier</key>
 	<string>L4FWRM8W5Z.ai.ibl.mentorai</string>
-	<key>com.apple.developer.team-identifier</key>
-	<string>L4FWRM8W5Z</string>
 
 	<!-- Required for Mac App Store -->
 	<key>com.apple.security.app-sandbox</key>
@@ -16,18 +14,7 @@
 	<key>com.apple.security.network.client</key>
 	<true/>
 
-	<!-- Allow outgoing network connections (server for web content) -->
-	<key>com.apple.security.network.server</key>
-	<true/>
-
-	<!-- Deep linking support -->
-	<key>com.apple.developer.associated-domains</key>
-	<array>
-		<string>applinks:mentorai.iblai.app</string>
-		<string>applinks:login.iblai.app</string>
-	</array>
-
-	<!-- Required for WebView to work properly -->
+<!-- Required for WebView to work properly -->
 	<key>com.apple.security.cs.allow-jit</key>
 	<true/>
 
@@ -35,12 +22,8 @@
 	<key>com.apple.security.cs.allow-unsigned-executable-memory</key>
 	<true/>
 
-	<!-- File access for downloads and cache -->
+	<!-- File access for user-selected save locations (e.g. exports) -->
 	<key>com.apple.security.files.user-selected.read-write</key>
-	<true/>
-
-	<!-- Access to downloads folder -->
-	<key>com.apple.security.files.downloads.read-write</key>
 	<true/>
 
 	<!-- Audio/Video for voice calls and screen sharing -->

@@ -42,6 +42,26 @@ describe('config', () => {
       // Should return env value or empty string
       expect(typeof result).toBe('string');
     });
+
+    it('should ignore the runtime env when window is undefined (server-side)', () => {
+      // On the server there is no window, so runtimeEnv() returns {} and the
+      // build-time env / fallback is used instead.
+      // @ts-expect-error deliberately removing window to simulate the server
+      delete global.window;
+      const result = getEnv('NEXT_PUBLIC_AUTH_URL', 'server-fallback');
+      expect(typeof result).toBe('string');
+      global.window = originalWindow;
+    });
+
+    it('should fall back when the runtime value is an empty string', () => {
+      // env.js templating commonly emits unset vars as "" — that must not
+      // shadow a meaningful fallback (plain ?? would return the empty string).
+      (global.window as any).__ENV__ = {
+        NEXT_PUBLIC_AUTH_URL: '',
+      };
+      const result = getEnv('NEXT_PUBLIC_AUTH_URL', 'fallback');
+      expect(result).toBe('fallback');
+    });
   });
 
   describe('config methods', () => {
@@ -73,10 +93,48 @@ describe('config', () => {
       });
     });
 
+    describe('legacyLmsUrl', () => {
+      it('should return legacy LMS URL', () => {
+        const result = config.legacyLmsUrl();
+        expect(typeof result).toBe('string');
+      });
+
+      it('should have default fallback when not set', () => {
+        (global.window as any).__ENV__ = {};
+        const result = config.legacyLmsUrl();
+        expect(result).toBe('https://learn.iblai.app');
+      });
+
+      it('should use window.__ENV__ value over the fallback', () => {
+        (global.window as any).__ENV__ = {
+          NEXT_PUBLIC_LEGACY_LMS_URL: 'https://legacy.example.com',
+        };
+        const result = config.legacyLmsUrl();
+        expect(result).toBe('https://legacy.example.com');
+      });
+    });
+
     describe('lmsUrl', () => {
       it('should return LMS URL', () => {
         const result = config.lmsUrl();
         expect(typeof result).toBe('string');
+      });
+
+      it('should derive from the API base URL when set', () => {
+        (global.window as any).__ENV__ = {
+          NEXT_PUBLIC_API_BASE_URL: 'https://api.example.com',
+        };
+        const result = config.lmsUrl();
+        expect(result).toBe('https://api.example.com/lms');
+      });
+
+      it('should fall back to the learn subdomain when API base is unset', () => {
+        (global.window as any).__ENV__ = {
+          NEXT_PUBLIC_API_BASE_URL: '',
+          NEXT_PUBLIC_PLATFORM_BASE_DOMAIN: 'example.app',
+        };
+        const result = config.lmsUrl();
+        expect(result).toBe('https://learn.example.app');
       });
     });
 
@@ -85,12 +143,46 @@ describe('config', () => {
         const result = config.dmUrl();
         expect(typeof result).toBe('string');
       });
+
+      it('should derive from the API base URL when set', () => {
+        (global.window as any).__ENV__ = {
+          NEXT_PUBLIC_API_BASE_URL: 'https://api.example.com',
+        };
+        const result = config.dmUrl();
+        expect(result).toBe('https://api.example.com/dm');
+      });
+
+      it('should fall back to the base manager subdomain when API base is unset', () => {
+        (global.window as any).__ENV__ = {
+          NEXT_PUBLIC_API_BASE_URL: '',
+          NEXT_PUBLIC_PLATFORM_BASE_DOMAIN: 'example.app',
+        };
+        const result = config.dmUrl();
+        expect(result).toBe('https://base.manager.example.app');
+      });
     });
 
     describe('axdUrl', () => {
       it('should return AXD URL', () => {
         const result = config.axdUrl();
         expect(typeof result).toBe('string');
+      });
+
+      it('should derive from the API base URL when set', () => {
+        (global.window as any).__ENV__ = {
+          NEXT_PUBLIC_API_BASE_URL: 'https://api.example.com',
+        };
+        const result = config.axdUrl();
+        expect(result).toBe('https://api.example.com/axd');
+      });
+
+      it('should fall back to the base manager subdomain when API base is unset', () => {
+        (global.window as any).__ENV__ = {
+          NEXT_PUBLIC_API_BASE_URL: '',
+          NEXT_PUBLIC_PLATFORM_BASE_DOMAIN: 'example.app',
+        };
+        const result = config.axdUrl();
+        expect(result).toBe('https://base.manager.example.app');
       });
     });
 
@@ -247,12 +339,24 @@ describe('config', () => {
         const result = config.appBannerLink();
         expect(typeof result).toBe('string');
       });
+
+      it('should have default fallback', () => {
+        (global.window as any).__ENV__ = {};
+        const result = config.appBannerLink();
+        expect(result).toBe('https://ibl.ai/docs');
+      });
     });
 
     describe('appBannerLinkText', () => {
       it('should return app banner link text', () => {
         const result = config.appBannerLinkText();
         expect(typeof result).toBe('string');
+      });
+
+      it('should have default fallback', () => {
+        (global.window as any).__ENV__ = {};
+        const result = config.appBannerLinkText();
+        expect(result).toBe('Check out');
       });
     });
 
@@ -267,6 +371,12 @@ describe('config', () => {
       it('should return app banner text', () => {
         const result = config.appBannerText();
         expect(typeof result).toBe('string');
+      });
+
+      it('should have default fallback', () => {
+        (global.window as any).__ENV__ = {};
+        const result = config.appBannerText();
+        expect(result).toBe('Explore our latest features');
       });
     });
 
@@ -355,6 +465,120 @@ describe('config', () => {
       it('should return platform base domain', () => {
         const result = config.platformBaseDomain();
         expect(typeof result).toBe('string');
+      });
+    });
+
+    describe('maximumCharacterSizeToCopy', () => {
+      it('should return the maximum character size to copy', () => {
+        const result = config.maximumCharacterSizeToCopy();
+        expect(typeof result).toBe('string');
+      });
+
+      it('should default to 2000 when not set', () => {
+        (global.window as any).__ENV__ = {};
+        const result = config.maximumCharacterSizeToCopy();
+        expect(result).toBe('2000');
+      });
+
+      it('should use window.__ENV__ value over the fallback', () => {
+        (global.window as any).__ENV__ = {
+          NEXT_PUBLIC_MAXIMUM_CHARACTER_SIZE_TO_COPY: '500',
+        };
+        const result = config.maximumCharacterSizeToCopy();
+        expect(result).toBe('500');
+      });
+
+      it('should default to 2000 when the runtime value is an empty string', () => {
+        // An empty value must not collapse to Number("") === 0, which would
+        // turn every paste into an attachment chip.
+        (global.window as any).__ENV__ = {
+          NEXT_PUBLIC_MAXIMUM_CHARACTER_SIZE_TO_COPY: '',
+        };
+        const result = config.maximumCharacterSizeToCopy();
+        expect(result).toBe('2000');
+      });
+    });
+
+    describe('documentationUrl', () => {
+      it('should have a default fallback when not set', () => {
+        (global.window as any).__ENV__ = {};
+        const result = config.documentationUrl();
+        expect(result).toBe('https://ibl.ai/docs');
+      });
+
+      it('should use window.__ENV__ value over the fallback', () => {
+        (global.window as any).__ENV__ = {
+          NEXT_PUBLIC_DOCUMENTATION_URL: 'https://docs.partner.io',
+        };
+        const result = config.documentationUrl();
+        expect(result).toBe('https://docs.partner.io');
+      });
+    });
+
+    describe('defaultSupportPhoneNumber', () => {
+      it('should return default support phone number', () => {
+        const result = config.defaultSupportPhoneNumber();
+        expect(typeof result).toBe('string');
+      });
+
+      it('should have a default fallback when not set', () => {
+        (global.window as any).__ENV__ = {};
+        const result = config.defaultSupportPhoneNumber();
+        expect(result).toBe('(571) 293-0242');
+      });
+
+      it('should use window.__ENV__ value over the fallback', () => {
+        (global.window as any).__ENV__ = {
+          NEXT_PUBLIC_DEFAULT_SUPPORT_PHONE_NUMBER: '+1 (800) 555-0199',
+        };
+        const result = config.defaultSupportPhoneNumber();
+        expect(result).toBe('+1 (800) 555-0199');
+      });
+    });
+
+    describe('enableSupportPhone', () => {
+      it('should return boolean value', () => {
+        const result = config.enableSupportPhone();
+        expect(typeof result).toBe('boolean');
+      });
+
+      it('should return true when env is true', () => {
+        (global.window as any).__ENV__ = {
+          NEXT_PUBLIC_ENABLE_SUPPORT_PHONE: 'true',
+        };
+        const result = config.enableSupportPhone();
+        expect(result).toBe(true);
+      });
+
+      it('should return false when env is not true', () => {
+        (global.window as any).__ENV__ = {
+          NEXT_PUBLIC_ENABLE_SUPPORT_PHONE: 'false',
+        };
+        const result = config.enableSupportPhone();
+        expect(result).toBe(false);
+      });
+    });
+
+    describe('enableGradebookTab', () => {
+      it('should return boolean value', () => {
+        const result = config.enableGradebookTab();
+        expect(typeof result).toBe('boolean');
+      });
+
+      it('should return true when env is true', () => {
+        (global.window as any).__ENV__ = {
+          NEXT_PUBLIC_ENABLE_GRADEBOOK_TAB: 'true',
+        };
+        const result = config.enableGradebookTab();
+        expect(result).toBe(true);
+      });
+
+      it('should return false when env is not true', () => {
+        (global.window as any).__ENV__ = {
+          NEXT_PUBLIC_ENABLE_GRADEBOOK_TAB: 'false',
+        };
+        const result = config.enableGradebookTab();
+        expect(result).toBe(false);
       });
     });
   });

@@ -7,6 +7,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import { ModalContainer } from '../modal-container';
 import { modalReducer, type ModalInfo } from '@/features/navigation/slice';
 import { mentorApiSlice } from '@iblai/iblai-js/data-layer';
+import { appleRestrictionReducer } from '@iblai/iblai-js/web-utils';
 import { MODALS } from '@/lib/constants';
 
 // ============================================================================
@@ -58,18 +59,23 @@ vi.mock('@/lib/eventBus', () => ({
   RemoteEvents: {},
 }));
 
-vi.mock('@iblai/iblai-js/web-utils', () => ({
-  useTenantContext: () => ({
-    setDetermineUserPath: vi.fn(),
-    determineUserPath: false,
-    tenantKey: 'tenant123',
-    metadata: {},
-    setMetadata: vi.fn(),
-  }),
-  clearFiles: vi.fn(),
-  chatActions: { setShouldStartNewChat: vi.fn() },
-  SUBSCRIPTION_V2_TRIGGERS: { PRICING_MODAL: 'pricing_modal' },
-}));
+vi.mock('@iblai/iblai-js/web-utils', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@iblai/iblai-js/web-utils')>();
+  return {
+    ...actual,
+    useTenantContext: () => ({
+      setDetermineUserPath: vi.fn(),
+      determineUserPath: false,
+      tenantKey: 'tenant123',
+      metadata: {},
+      setMetadata: vi.fn(),
+    }),
+    clearFiles: vi.fn(),
+    chatActions: { setShouldStartNewChat: vi.fn() },
+    SUBSCRIPTION_V2_TRIGGERS: { PRICING_MODAL: 'pricing_modal' },
+  };
+});
 
 vi.mock('@/hooks/use-local-storage', () => ({
   useLocalStorage: () => [{}, vi.fn()],
@@ -93,6 +99,22 @@ vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
 
+// Controllable auth URL so we can exercise the redirectUrl normalization in
+// ModalContainer without depending on real env config.
+
+let mockAuthUrl = 'https://auth.example.com/';
+
+vi.mock('@/lib/config', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/config')>();
+  return {
+    ...actual,
+    config: {
+      ...actual.config,
+      authUrl: () => mockAuthUrl,
+    },
+  };
+});
+
 // Mock child modals to simple stubs — use absolute (@/) paths
 vi.mock('@/components/modals/settings-modal', () => ({
   SettingsModal: ({
@@ -105,25 +127,6 @@ vi.mock('@/components/modals/settings-modal', () => ({
     isOpen ? (
       <div data-testid="settings-modal" role="dialog" aria-label="Settings">
         <button onClick={onClose}>Close Settings</button>
-      </div>
-    ) : null,
-}));
-
-vi.mock('@/components/modals/apple-restriction-modal', () => ({
-  AppleRestrictionModal: ({
-    isOpen,
-    onClose,
-  }: {
-    isOpen: boolean;
-    onClose: () => void;
-  }) =>
-    isOpen ? (
-      <div
-        data-testid="apple-restriction-modal"
-        role="dialog"
-        aria-label="Apple Restriction"
-      >
-        <button onClick={onClose}>Close Apple</button>
       </div>
     ) : null,
 }));
@@ -162,46 +165,74 @@ vi.mock('@/components/modals/no-mentor-selected-modal', () => ({
     ) : null,
 }));
 
-vi.mock('@iblai/iblai-js/web-containers', () => ({
-  InviteUserDialog: ({
-    isOpen,
-    onClose,
-    onSeeAllInvitedUsersClick,
-  }: {
-    isOpen: boolean;
-    onClose: () => void;
-    onSeeAllInvitedUsersClick?: () => void;
-  }) =>
-    isOpen ? (
-      <div data-testid="invite-user-modal" role="dialog" aria-label="Invite">
-        <button onClick={onClose}>Close Invite</button>
-        {onSeeAllInvitedUsersClick && (
-          <button onClick={onSeeAllInvitedUsersClick}>See All Invited</button>
-        )}
+vi.mock('@iblai/iblai-js/web-containers', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@iblai/iblai-js/web-containers')>();
+  return {
+    ...actual,
+    InviteUserDialog: ({
+      isOpen,
+      onClose,
+      onSeeAllInvitedUsersClick,
+    }: {
+      isOpen: boolean;
+      onClose: () => void;
+      onSeeAllInvitedUsersClick?: () => void;
+    }) =>
+      isOpen ? (
+        <div data-testid="invite-user-modal" role="dialog" aria-label="Invite">
+          <button onClick={onClose}>Close Invite</button>
+          {onSeeAllInvitedUsersClick && (
+            <button onClick={onSeeAllInvitedUsersClick}>See All Invited</button>
+          )}
+        </div>
+      ) : null,
+    InvitedUsersDialog: ({ onClose }: { onClose: () => void }) => (
+      <div
+        data-testid="invited-users-dialog"
+        role="dialog"
+        aria-label="Invited Users"
+      >
+        <button onClick={onClose}>Close Invited</button>
       </div>
-    ) : null,
-  InvitedUsersDialog: ({ onClose }: { onClose: () => void }) => (
-    <div
-      data-testid="invited-users-dialog"
-      role="dialog"
-      aria-label="Invited Users"
-    >
-      <button onClick={onClose}>Close Invited</button>
-    </div>
-  ),
-  UpgradePackageModal: ({
-    open,
-    onClose,
-  }: {
-    open: boolean;
-    onClose: () => void;
-  }) =>
-    open ? (
-      <div data-testid="pricing-modal" role="dialog" aria-label="Pricing">
-        <button onClick={onClose}>Close Pricing</button>
-      </div>
-    ) : null,
-}));
+    ),
+    UpgradePackageModal: ({
+      open,
+      onClose,
+      redirectUrl,
+    }: {
+      open: boolean;
+      onClose: () => void;
+      redirectUrl?: string;
+    }) =>
+      open ? (
+        <div
+          data-testid="pricing-modal"
+          role="dialog"
+          aria-label="Pricing"
+          data-redirect-url={redirectUrl}
+        >
+          <button onClick={onClose}>Close Pricing</button>
+        </div>
+      ) : null,
+    AppleRestrictionModal: ({
+      isOpen,
+      onClose,
+    }: {
+      isOpen: boolean;
+      onClose: () => void;
+    }) =>
+      isOpen ? (
+        <div
+          data-testid="apple-restriction-modal"
+          role="dialog"
+          aria-label="Apple Restriction"
+        >
+          <button onClick={onClose}>Close Apple</button>
+        </div>
+      ) : null,
+  };
+});
 
 vi.mock('@/components/custom-alert-dialog', () => ({
   CustomAlertDialog: ({
@@ -248,7 +279,6 @@ function createTestStore(options: StoreOptions = {}) {
       subscription: (
         state = {
           openPricingModal,
-          openAppleRestrictionModal,
           freeTrialUsageOptions: { count: 0, limitReached: false, message: '' },
           pricingModalData: {
             referenceId: '',
@@ -260,6 +290,7 @@ function createTestStore(options: StoreOptions = {}) {
           error402Detected: '',
         },
       ) => state,
+      appleRestriction: appleRestrictionReducer,
       [mentorApiSlice.reducerPath]: mentorApiSlice.reducer,
     },
     middleware: (getDefaultMiddleware) =>
@@ -280,6 +311,7 @@ function createTestStore(options: StoreOptions = {}) {
         darkMode: false,
         shortcutsModal,
       },
+      appleRestriction: { openAppleRestrictionModal },
     },
   });
 }
@@ -293,6 +325,7 @@ describe('ModalContainer', () => {
     cleanup();
     pushMock.mockReset();
     mockSearchParamsRaw = '';
+    mockAuthUrl = 'https://auth.example.com/';
   });
 
   afterEach(() => {
@@ -415,6 +448,55 @@ describe('ModalContainer', () => {
       );
 
       expect(screen.queryByTestId('pricing-modal')).not.toBeInTheDocument();
+    });
+
+    it('passes the auth login URL as redirectUrl when authUrl has a trailing slash', () => {
+      mockAuthUrl = 'https://auth.example.com/';
+      const store = createTestStore({ openPricingModal: true });
+
+      render(
+        <Provider store={store}>
+          <ModalContainer />
+        </Provider>,
+      );
+
+      expect(screen.getByTestId('pricing-modal')).toHaveAttribute(
+        'data-redirect-url',
+        'https://auth.example.com/login',
+      );
+    });
+
+    it('normalizes a missing trailing slash on authUrl when building redirectUrl', () => {
+      mockAuthUrl = 'https://auth.example.com';
+      const store = createTestStore({ openPricingModal: true });
+
+      render(
+        <Provider store={store}>
+          <ModalContainer />
+        </Provider>,
+      );
+
+      // No double slash, and exactly one between origin and `login`.
+      expect(screen.getByTestId('pricing-modal')).toHaveAttribute(
+        'data-redirect-url',
+        'https://auth.example.com/login',
+      );
+    });
+
+    it('does not point redirectUrl at window.location.origin', () => {
+      mockAuthUrl = 'https://auth.example.com/';
+      const store = createTestStore({ openPricingModal: true });
+
+      render(
+        <Provider store={store}>
+          <ModalContainer />
+        </Provider>,
+      );
+
+      expect(screen.getByTestId('pricing-modal')).not.toHaveAttribute(
+        'data-redirect-url',
+        window.location.origin,
+      );
     });
   });
 

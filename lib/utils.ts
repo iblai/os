@@ -9,11 +9,12 @@ import { remark } from 'remark';
 import { Marked } from 'marked';
 import markedKatex from 'marked-katex-extension';
 import { gfmHeadingId } from 'marked-gfm-heading-id';
-import { markedHighlight } from 'marked-highlight';
-import hljs from 'highlight.js';
 
+import { preprocessLaTeX } from './preprocess-latex';
+import { normalizeListIndentation } from './normalize-list-indentation';
 import {
   LOCAL_STORAGE_KEYS,
+  MAX_PROMPT_PARAM_LENGTH,
   QUERY_PARAMS,
   REDIRECT_PATH_LOCAL_STORAGE_KEY,
   URL_PATTERNS,
@@ -24,6 +25,14 @@ import { isTauriApp } from '@/types/tauri';
 import { isTauriOfflineMode } from '@/lib/tauri-api-cache';
 import { isOfflineServerOrigin } from '@/hooks/use-tauri-offline';
 import type { Tenant } from '@iblai/iblai-js/web-utils';
+// NOTE: clearCurrentTenantCookie is imported dynamically inside handleTenantSwitch
+// (not statically) — the main web-utils entry pulls in React providers, which
+// would break this module when it's loaded in a React Server Component.
+import {
+  redirectToAuthSpa as sdkRedirectToAuthSpa,
+  handleTenantSwitch as sdkHandleTenantSwitch,
+} from '@iblai/iblai-js/web-utils/auth';
+import { getLockedTenant } from '@/lib/locked-tenant';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -34,7 +43,49 @@ export function isSafariBrowser(): boolean {
   return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 }
 
+/**
+ * Reads a JWT's `exp` claim and reports whether it is in the past. A token that
+ * cannot be decoded (or is malformed) is treated as expired; a token with no
+ * `exp` claim is treated as non-expiring (mirrors the axd "no expiry" case).
+ */
+export function isJwtExpired(token: string): boolean {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return true;
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized.padEnd(
+      normalized.length + ((4 - (normalized.length % 4)) % 4),
+      '=',
+    );
+    const claims = JSON.parse(atob(padded)) as { exp?: number };
+    if (typeof claims.exp !== 'number') return false;
+    return claims.exp * 1000 <= Date.now();
+  } catch {
+    return true;
+  }
+}
+
 export function hasNonExpiredAuthToken() {
+  // The edx JWT is stored alongside the axd token at SSO login; a valid session
+  // requires it to be present and unexpired too, so re-auth is triggered when
+  // it is missing or its `exp` has passed.
+  const edxToken = window.localStorage.getItem(
+    LOCAL_STORAGE_KEYS.EDX_TOKEN_KEY,
+  );
+  if (!edxToken) {
+    console.log(
+      '################### [hasNonExpiredAuthToken] edx_jwt_token is not defined',
+      edxToken,
+    );
+    return false;
+  }
+  if (isJwtExpired(edxToken)) {
+    console.log(
+      '################### [hasNonExpiredAuthToken] edx_jwt_token is expired',
+    );
+    return false;
+  }
+
   const token = window.localStorage.getItem(LOCAL_STORAGE_KEYS.AUTH_TOKEN);
   if (!token) {
     console.log(
@@ -82,126 +133,35 @@ export async function redirectToAuthSpa(
   platformKey?: string,
   logout?: boolean,
   saveRedirect = true,
+  explicitUserAction = false,
 ) {
-  console.log(
-    '[redirectToAuthSpa] starting redirect to auth spa',
+  // On a tenant-locked (Tauri) build, always authenticate into the locked
+  // tenant — this sends anonymous users straight there instead of their default
+  // tenant. Empty on web builds, so the caller's platformKey is used as before.
+  const lockedTenant = await getLockedTenant();
+
+  return sdkRedirectToAuthSpa({
     redirectTo,
-    platformKey,
+    platformKey: lockedTenant || platformKey,
     logout,
     saveRedirect,
-  );
-  // Skip if a tenant switch is already in progress
-  if (document.cookie.includes('ibl_tenant_switching')) {
-    console.log('[AuthProvider] Tenant switch in progress, skipping redirect');
-    return;
-  }
-
-  // Skip if a login occurred after the last logout (login takes precedence)
-  // but only if this app actually has a valid auth token — otherwise the login
-  // cookie may have been set by a different app on the same domain.
-  const loginTs = getCookieValue('ibl_login_timestamp');
-  const logoutTs = getCookieValue('ibl_logout_timestamp');
-  const hasValidToken = hasNonExpiredAuthToken();
-  console.log('[AuthProvider] Login/logout timestamp check', {
-    loginTs,
-    logoutTs,
-    hasValidToken,
-    loginAhead:
-      loginTs && logoutTs ? Number(loginTs) > Number(logoutTs) : false,
+    forceRedirect: explicitUserAction,
+    authUrl: config.authUrl(),
+    appName: config.iblPlatform(),
+    queryParams: {
+      app: QUERY_PARAMS.APP,
+      redirectTo: QUERY_PARAMS.REDIRECT_TO,
+      tenant: QUERY_PARAMS.TENANT,
+    },
+    redirectPathStorageKey: LOCAL_STORAGE_KEYS.REDIRECT_TO,
+    hasNonExpiredAuthToken,
+    isOffline: () =>
+      isOfflineServerOrigin() || (isTauriApp() && isTauriOfflineMode()),
+    preserveTokenKey: 'edx_jwt_token',
+    authRedirectProxy: '/api/auth-redirect',
+    isNativeApp: () => isTauriApp(),
+    scheme: 'iblai-mentor',
   });
-  if (
-    hasValidToken &&
-    loginTs &&
-    logoutTs &&
-    Number(loginTs) > Number(logoutTs)
-  ) {
-    console.log(
-      '[AuthProvider] Login timestamp is ahead of logout timestamp, skipping redirect',
-      { loginTs, logoutTs },
-    );
-    return;
-  }
-  // Don't redirect to auth when in Tauri offline mode
-  // Check origin first (most reliable) or Tauri offline flags
-  if (isOfflineServerOrigin() || (isTauriApp() && isTauriOfflineMode())) {
-    console.log('[redirectToAuthSpa] Skipping redirect - Tauri offline mode', {
-      isOfflineServerOrigin: isOfflineServerOrigin(),
-      isTauriApp: isTauriApp(),
-      isTauriOfflineMode: isTauriOfflineMode(),
-    });
-    return;
-  }
-
-  // Save JWT token before clearing localStorage (needed for Tauri mode)
-  const edxJwtToken = window.localStorage.getItem('edx_jwt_token');
-  console.log('[redirectToAuthSpa] clearing local storage');
-  localStorage.clear();
-
-  if (logout || isInIframe()) {
-    // Delete authentication cookies for cross-SPA synchronization
-    const currentDomain = window.location.hostname;
-    deleteCookieOnAllDomains('ibl_current_tenant', currentDomain);
-    deleteCookieOnAllDomains('ibl_user_data', currentDomain);
-    deleteCookieOnAllDomains('ibl_tenant', currentDomain);
-
-    // Set logout timestamp cookie to trigger logout on other SPAs
-    if (!isInIframe()) {
-      setCookieForAuth('ibl_logout_timestamp', Date.now().toString());
-    }
-  }
-
-  if (isInIframe()) {
-    console.log('[redirectToAuthSpa]: sending authExpired to parent');
-    sendMessageToParentWebsite({ authExpired: true });
-    return;
-  }
-
-  const redirectPath =
-    redirectTo ?? `${window.location.pathname}${window.location.search}`;
-
-  // Never save sso-login routes as redirect paths
-  if (
-    !redirectPath.startsWith('/sso-login') &&
-    !redirectPath.startsWith('/sso-login-complete') &&
-    saveRedirect
-  ) {
-    window.localStorage.setItem(LOCAL_STORAGE_KEYS.REDIRECT_TO, redirectPath);
-  }
-
-  const platform = platformKey ?? getPlatformKey(redirectPath);
-
-  const redirectToUrl = `${window.location.origin}`;
-
-  let authRedirectUrl = `${config.authUrl()}/login?${QUERY_PARAMS.APP}=${config.iblPlatform()}`;
-
-  authRedirectUrl += `&${QUERY_PARAMS.REDIRECT_TO}=${redirectToUrl}`;
-
-  if (platform) {
-    authRedirectUrl += `&${QUERY_PARAMS.TENANT}=${platform}`;
-  }
-  if (logout) {
-    authRedirectUrl += '&logout=1';
-  }
-
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  if (isTauriApp()) {
-    // On Tauri (mobile), pass the JWT token as a query param so the auth app can use it
-    if (edxJwtToken) {
-      authRedirectUrl += `&token=${encodeURIComponent(edxJwtToken)}`;
-      console.log('[redirectToAuthSpa] Added edx_jwt_token to auth URL');
-    }
-    // Navigate the main webview directly to the auth URL
-    // This keeps the user within the app
-    console.log(
-      '[redirectToAuthSpa] isTauriApp=true, navigating to auth URL:',
-      authRedirectUrl,
-    );
-    window.location.href = authRedirectUrl;
-  } else {
-    // window.location.href = authRedirectUrl;
-    window.location.href = `/api/auth-redirect?to=${encodeURIComponent(authRedirectUrl)}`;
-    // window.open(authRedirectUrl, "_self");
-  }
 }
 
 export function getAuthSpaJoinUrl(tenantKey?: string, redirectUrl?: string) {
@@ -222,6 +182,7 @@ export function getAuthSpaJoinUrl(tenantKey?: string, redirectUrl?: string) {
 export function redirectToAuthSpaJoinTenant(
   tenantKey?: string,
   redirectUrl?: string,
+  explicitUserAction = false,
 ) {
   const resolvedTenant =
     tenantKey || getPlatformKey(window.location.pathname) || '';
@@ -231,7 +192,13 @@ export function redirectToAuthSpaJoinTenant(
       tenantKey,
       redirectUrl,
     });
-    redirectToAuthSpa(redirectUrl);
+    redirectToAuthSpa(
+      redirectUrl,
+      undefined,
+      undefined,
+      true,
+      explicitUserAction,
+    );
     return;
   }
 
@@ -241,6 +208,19 @@ export function redirectToAuthSpaJoinTenant(
   )}`;
 
   window.location.href = joinUrl;
+}
+
+/**
+ * Send a not-logged-in user to the auth SPA when they trigger a gated action.
+ * Single source of truth shared by the auth popover and the sidebar.
+ */
+export function redirectToLogin(tenantKey?: string) {
+  if (!tenantKey) {
+    console.log('[auth-redirect] Login triggered without a tenant key');
+    redirectToAuthSpa('/', tenantKey, undefined, true, true);
+    return;
+  }
+  redirectToAuthSpaJoinTenant(tenantKey, undefined, true);
 }
 
 export function getPlatformKey(url: string) {
@@ -329,217 +309,6 @@ export function getHostFromUrl(url: string) {
   const a = document.createElement('a');
   a.href = url;
   return a.hostname;
-}
-
-export function preprocessLaTeX(content: string) {
-  // Handle non-string inputs
-  if (typeof content !== 'string') {
-    return '';
-  }
-
-  // Helper function to process tabular/array content into markdown table
-  const processTabularContent = (tableContent: string): string => {
-    // Split into rows by \\ (LaTeX row separator)
-    const rows = tableContent
-      .split(/\\\\\s*/)
-      .map((row: string) => row.trim())
-      .filter((row: string) => row && !row.match(/^\\hline\s*$/));
-
-    if (rows.length === 0) return '';
-
-    // Process each row: split by & (column separator) and clean up
-    const processedRows = rows
-      .map((row: string) => {
-        // Remove \hline from the row content
-        let cleanRow = row.replace(/\\hline\s*/g, '').trim();
-        if (!cleanRow) return null;
-
-        // Convert \text{...} to plain text
-        cleanRow = cleanRow.replace(/\\text\{([^}]*)\}/g, '$1');
-
-        // Remove {,} (LaTeX thousands separator formatting)
-        cleanRow = cleanRow.replace(/\{,\}/g, ',');
-
-        // Split by & and trim each cell
-        const cells = cleanRow.split('&').map((cell: string) => cell.trim());
-        return `| ${cells.join(' | ')} |`;
-      })
-      .filter(Boolean);
-
-    if (processedRows.length === 0) return '';
-
-    // Insert header separator after first row
-    const firstRow = processedRows[0] as string;
-    const columnCount = firstRow.split('|').length - 2;
-    const headerSeparator = `|${' --- |'.repeat(columnCount)}`;
-    processedRows.splice(1, 0, headerSeparator);
-
-    return `\n${processedRows.join('\n')}\n`;
-  };
-
-  // Process tabular inside \[...\] first (before converting math delimiters)
-  let processedContent = content.replace(
-    /\\\[\s*\\begin\{tabular\}\{[^}]*\}([\s\S]*?)\\end\{tabular\}\s*\\\]/g,
-    (_, tableContent) => processTabularContent(tableContent),
-  );
-
-  // Process tabular inside $$...$$ as well
-  processedContent = processedContent.replace(
-    /\$\$\s*\\begin\{tabular\}\{[^}]*\}([\s\S]*?)\\end\{tabular\}\s*\$\$/g,
-    (_, tableContent) => processTabularContent(tableContent),
-  );
-
-  // Process standalone tabular (not inside math delimiters)
-  processedContent = processedContent.replace(
-    /\\begin\{tabular\}\{[^}]*\}([\s\S]*?)\\end\{tabular\}/g,
-    (_, tableContent) => processTabularContent(tableContent),
-  );
-
-  // Process array inside \[...\] first
-  processedContent = processedContent.replace(
-    /\\\[\s*\\begin\{array\}\{[^}]*\}([\s\S]*?)\\end\{array\}\s*\\\]/g,
-    (_, tableContent) => processTabularContent(tableContent),
-  );
-
-  // Process array inside $$...$$
-  processedContent = processedContent.replace(
-    /\$\$\s*\\begin\{array\}\{[^}]*\}([\s\S]*?)\\end\{array\}\s*\$\$/g,
-    (_, tableContent) => processTabularContent(tableContent),
-  );
-
-  // Process standalone array
-  processedContent = processedContent.replace(
-    /\\begin\{array\}\{[^}]*\}([\s\S]*?)\\end\{array\}/g,
-    (_, tableContent) => processTabularContent(tableContent),
-  );
-
-  // Escape currency dollar signs: if a $ is directly followed by a digit,
-  // prepend a backslash so that it is rendered as a literal dollar sign.
-  // Replace the regex replacement with one using a lookbehind and a function to ensure the digit group is preserved correctly.
-  processedContent = processedContent.replace(
-    /(?<!\\)\$(\d)/g,
-    (_, digit) => `\\$${digit}`,
-  );
-
-  // Replace block-level LaTeX delimiters \[ \] with $$ $$.
-  processedContent = processedContent.replace(
-    /\\\[(\s*[\s\S]*?\s*)\\\]/g,
-    (_, equation) => `$$${equation}$$`,
-  );
-
-  // Replace inline LaTeX delimiters \( \) with $ $
-  processedContent = processedContent.replace(
-    /\\\(([\s\S]*?)\\\)/g,
-    (_, equation) => `$${equation}$`,
-  );
-
-  // Convert LaTeX text formatting commands to Markdown
-  // \textbf{text} -> **text**
-  processedContent = processedContent.replace(/\\textbf\{([^}]+)\}/g, '**$1**');
-
-  // \textit{text} -> *text*
-  processedContent = processedContent.replace(/\\textit\{([^}]+)\}/g, '*$1*');
-
-  // \emph{text} -> *text*
-  processedContent = processedContent.replace(/\\emph\{([^}]+)\}/g, '*$1*');
-
-  // \texttt{text} -> `text`
-  processedContent = processedContent.replace(/\\texttt\{([^}]+)\}/g, '`$1`');
-
-  // \underline{text} -> <u>text</u> (requires rehype-raw)
-  processedContent = processedContent.replace(
-    /\\underline\{([^}]+)\}/g,
-    '<u>$1</u>',
-  );
-
-  // Convert LaTeX environments to Markdown/HTML
-  // \begin{itemize} ... \end{itemize} -> convert to unordered list
-  processedContent = processedContent.replace(
-    /\\begin\{itemize\}([\s\S]*?)\\end\{itemize\}/g,
-    (_, items) => {
-      // Convert \item to list items
-      const listItems = items
-        .split(/\\item\s+/)
-        .filter((item: string) => item.trim())
-        .map((item: string) => `- ${item.trim()}`)
-        .join('\n');
-      return `\n${listItems}\n`;
-    },
-  );
-
-  // \begin{enumerate} ... \end{enumerate} -> convert to ordered list
-  processedContent = processedContent.replace(
-    /\\begin\{enumerate\}([\s\S]*?)\\end\{enumerate\}/g,
-    (_, items) => {
-      // Convert \item to numbered list items
-      const listItems = items
-        .split(/\\item\s+/)
-        .filter((item: string) => item.trim())
-        .map((item: string, index: number) => `${index + 1}. ${item.trim()}`)
-        .join('\n');
-      return `\n${listItems}\n`;
-    },
-  );
-
-  // \begin{quote} ... \end{quote} -> convert to blockquote
-  processedContent = processedContent.replace(
-    /\\begin\{quote\}([\s\S]*?)\\end\{quote\}/g,
-    (_, content) => `\n> ${content.trim()}\n`,
-  );
-
-  // \begin{center} ... \end{center} -> convert to centered div
-  processedContent = processedContent.replace(
-    /\\begin\{center\}([\s\S]*?)\\end\{center\}/g,
-    (_, content) =>
-      `\n<div style="text-align: center;">${content.trim()}</div>\n`,
-  );
-
-  // Convert section headings (with optional * for unnumbered variants)
-  // \section{text} or \section*{text} -> ## text
-  processedContent = processedContent.replace(
-    /\\section\*?\{([^}]+)\}/g,
-    '\n## $1\n',
-  );
-
-  // \subsection{text} or \subsection*{text} -> ### text
-  processedContent = processedContent.replace(
-    /\\subsection\*?\{([^}]+)\}/g,
-    '\n### $1\n',
-  );
-
-  // \subsubsection{text} or \subsubsection*{text} -> #### text
-  processedContent = processedContent.replace(
-    /\\subsubsection\*?\{([^}]+)\}/g,
-    '\n#### $1\n',
-  );
-
-  // Handle line breaks
-  // \\ or \newline -> line break
-  processedContent = processedContent.replace(/\\\\|\n\\newline/g, '  \n');
-
-  // Handle verbatim text
-  // \verb|text| -> `text`
-  processedContent = processedContent.replace(/\\verb\|([^|]+)\|/g, '`$1`');
-
-  // Handle quotes
-  // `` and '' -> proper quotes
-  processedContent = processedContent.replace(/``/g, '"');
-  processedContent = processedContent.replace(/''/g, '"');
-
-  // Handle common LaTeX symbols that should remain as-is or convert
-  // \& -> &
-  processedContent = processedContent.replace(/\\&/g, '&');
-
-  // \% -> %
-  processedContent = processedContent.replace(/\\%/g, '%');
-
-  // \# -> #
-  processedContent = processedContent.replace(/\\#/g, '#');
-
-  // \_ -> _
-  processedContent = processedContent.replace(/\\_/g, '_');
-
-  return processedContent;
 }
 
 export const textTruncate = function (
@@ -679,80 +448,29 @@ export function canSwitchProvider(providers: Provider[], name: string) {
   return !!provider?.chat_models && provider.chat_models.length > 0;
 }
 
+// Cross-tab tenant switching now lives in the SDK
+// (@iblai/iblai-js/web-utils). This thin wrapper injects mentorai's config;
+// all coordination (TTL lock + BroadcastChannel) is handled in the SDK.
 export const handleTenantSwitch = async (
   tenant: string,
   saveRedirect = false,
   redirectUrl?: string,
   broadcastTenantSwitching = true,
-) => {
-  console.log('############### HANDLE TENANT SWITCHING ###############', {
-    broadcastTenantSwitching,
+): Promise<void> => {
+  // Lazy import: the main web-utils entry pulls in React providers, so importing
+  // it at module top-level would break this file inside a Server Component.
+  const { clearCurrentTenantCookie } = await import(
+    '@iblai/iblai-js/web-utils'
+  );
+  return sdkHandleTenantSwitch(tenant, {
+    authUrl: config.authUrl(),
+    redirectPathStorageKey: REDIRECT_PATH_LOCAL_STORAGE_KEY,
+    queryParams: { redirectTo: REDIRECT_PATH_LOCAL_STORAGE_KEY },
+    clearCurrentTenantCookie,
+    saveRedirect,
+    redirectUrl,
+    broadcast: broadcastTenantSwitching,
   });
-  // Signal to the app that a tenant switch is in progress
-  if (
-    document.cookie.includes('ibl_tenant_switching') &&
-    broadcastTenantSwitching
-  ) {
-    console.log(
-      '[handleTenantSwitch] Skipping tenant switch - tenant switching',
-    );
-    return;
-  }
-  if (tenant === localStorage.getItem('tenant')) {
-    console.log(
-      '[handleTenantSwitch] Skipping tenant switch - tenant is the same',
-    );
-    return;
-  }
-
-  if (broadcastTenantSwitching) {
-    setCookieForAuth('ibl_tenant_switching', 'true');
-  }
-  // Notify other tabs/windows that a tenant switch is starting
-  if (typeof BroadcastChannel !== 'undefined' && broadcastTenantSwitching) {
-    const channel = new BroadcastChannel('ibl-tenant-switch');
-    channel.postMessage({ type: 'TENANT_SWITCHING', tenant });
-    channel.close();
-  }
-  if (broadcastTenantSwitching) {
-    // Clear current tenant cookie before switching
-    const { clearCurrentTenantCookie } = await import(
-      '@iblai/iblai-js/web-utils'
-    );
-    clearCurrentTenantCookie();
-  }
-  // Preserve the current path before clearing localStorage
-  const currentPath = `${window.location.pathname}${window.location.search}`;
-  // Get JWT token before clearing localStorage
-  const jwtToken = localStorage.getItem('edx_jwt_token');
-  console.log('[handleTenantSwitch] clearing local storage', {
-    tenant,
-    currentTenant: localStorage.getItem('tenant'),
-  });
-  if (broadcastTenantSwitching) {
-    console.log('[handleTenantSwitch] clearing local storage');
-    localStorage.clear();
-  }
-  const url = `${config.authUrl()}/login/complete`;
-  const params: Record<string, string> = {
-    tenant,
-    [REDIRECT_PATH_LOCAL_STORAGE_KEY]: redirectUrl ?? window.location.origin,
-  };
-
-  // Add token if it exists
-  if (jwtToken) {
-    params.token = jwtToken;
-  }
-
-  const param = new URLSearchParams(params).toString();
-
-  localStorage.setItem('tenant', tenant);
-  if (saveRedirect) {
-    // Restore the redirect path after setting tenant
-    localStorage.setItem(REDIRECT_PATH_LOCAL_STORAGE_KEY, currentPath);
-  }
-  await new Promise((resolve) => setTimeout(resolve, 100));
-  window.location.href = `${url}?${param}`;
 };
 
 export const canSwitchLLm = (llm: {
@@ -802,48 +520,203 @@ export function formatRelativeDate(date: string) {
   }
 }
 
+// Canonical provider name for any label — a backend key ("azure_openai"), a
+// human label ("Microsoft"), or a local model's provider ("Meta"). Folds every
+// alias onto one identity so the same provider from different sources compares
+// equal. See getProviderName.
+const PROVIDER_NAME_BY_ALIAS: Record<string, string> = {
+  microsoft: 'azure_openai',
+  azureopenai: 'azure_openai',
+  openai: 'openai',
+  google: 'google',
+  gemini: 'google',
+  meta: 'llama',
+  metallama: 'llama',
+  llama: 'llama',
+  mistral: 'mistral',
+  mistralai: 'mistral',
+  nvidia: 'nvidia',
+  iblchatnvidia: 'nvidia',
+  deepseek: 'deepseek',
+  anthropic: 'anthropic',
+  iblchatanthropic: 'anthropic',
+  claude: 'anthropic',
+  groq: 'groq',
+  perplexity: 'perplexity',
+  xai: 'xai',
+  bedrock: 'bedrock',
+  amazonbedrock: 'bedrock',
+  amazon: 'bedrock',
+  iblchatbedrock: 'bedrock',
+  alibaba: 'alibaba',
+  qwen: 'alibaba',
+  ibm: 'ibm',
+  granite: 'ibm',
+  // ibl.ai's own hosted provider. The backend key is `iblai` (NameEnum.IBLAI);
+  // the extra aliases cover the `IBLChat<Vendor>` house spelling and the
+  // dotted/spaced brand forms, which all normalize to one of these.
+  iblai: 'iblai',
+  ibl: 'iblai',
+  iblchatibl: 'iblai',
+  iblchatiblai: 'iblai',
+};
+
+/**
+ * Canonical provider name for any label, case- and punctuation-insensitive.
+ * Folds backend keys and human/display labels onto one identity — e.g.
+ * `getProviderName('Microsoft') === 'azure_openai'`,
+ * `getProviderName('Meta') === 'llama'`, `getProviderName('Google') === 'google'`.
+ * Unknown providers return their normalized (lowercased, alphanumeric-only) form.
+ * This is the single source of truth for provider identity (dedup/merge) and
+ * for logo/name resolution via {@link getLLMProviderDetails}.
+ */
+export function getProviderName(llmProvider: string): string {
+  const normalized = (llmProvider ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+  return PROVIDER_NAME_BY_ALIAS[normalized] ?? normalized;
+}
+
+// Logo + display name keyed by canonical provider name (see getProviderName).
+const PROVIDER_DETAILS_BY_NAME: Record<string, { logo: string; name: string }> =
+  {
+    groq: { logo: '/llm-groq-provider.png', name: 'Groq' },
+    nvidia: { logo: '/llm-nvidia-provider.webp', name: 'NVIDIA' },
+    azure_openai: { logo: '/llm-microsoft-provider.png', name: 'Microsoft' },
+    openai: { logo: '/llm-openai-provider-2.svg', name: 'OpenAI' },
+    mistral: { logo: '/llm-mistral-provider.jpeg', name: 'Mistral' },
+    google: { logo: '/llm-google-provider.svg', name: 'Google' },
+    llama: { logo: '/llm-llama-provider.jpeg', name: 'Meta' },
+    anthropic: { logo: '/llm-claude-provider.png', name: 'Anthropic' },
+    perplexity: { logo: '/llm-perplexity-provider.webp', name: 'Perplexity' },
+    deepseek: { logo: '/llm-deepseek-provider.png', name: 'DeepSeek' },
+    xai: { logo: '/llm-xai-provider.jpg', name: 'xAI' },
+    bedrock: { logo: '/llm-amazon-provider.png', name: 'Amazon' },
+    alibaba: { logo: '/llm-alibaba-provider.png', name: 'Alibaba' },
+    ibm: { logo: '/llm-ibm-provider.png', name: 'IBM' },
+    iblai: { logo: '/llm-iblai-provider.png', name: 'ibl.ai' },
+  };
+
 export function getLLMProviderDetails(llmProvider: string, llmName?: string) {
-  switch (llmProvider) {
-    case 'groq':
-      return { logo: '/llm-groq-provider.png', name: 'Groq' };
-    case 'IBLChatNvidia':
-      return { logo: '/llm-nvidia-provider.webp', name: 'NVIDIA' };
-    case 'azure_openai':
-      return { logo: '/llm-microsoft-provider.png', name: 'Microsoft' };
-    case 'openai':
-      if (llmName) return { logo: '/llm-openai-provider.jpg', name: 'OpenAI' };
-      return { logo: '/llm-openai-provider-2.svg', name: 'OpenAI' };
-    case 'mistral':
-      return { logo: '/llm-mistral-provider.jpeg', name: 'Mistral' };
-    case 'google':
-      if (llmName) return { logo: '/llm-gemini-provider.png', name: 'Google' };
-      return { logo: '/llm-google-provider.svg', name: 'Google' };
-    case 'llama':
-      return { logo: '/llm-llama-provider.jpeg', name: 'Meta' };
-    case 'IBLChatAnthropic':
-      return { logo: '/llm-claude-provider.png', name: 'Anthropic' };
-    case 'perplexity':
-      return { logo: '/llm-perplexity-provider.webp', name: 'Perplexity' };
-    case 'deepseek':
-      return { logo: '/llm-deepseek-provider.png', name: 'DeepSeek' };
-    case 'xai':
-      return { logo: '/llm-xai-provider.jpg', name: 'xAI' };
-    case 'anthropic':
-      return { logo: '/llm-claude-provider.png', name: 'Anthropic' };
-    case 'nvidia':
-      return { logo: '/llm-nvidia-provider.webp', name: 'NVIDIA' };
-    case 'bedrock':
-    case 'amazon-bedrock':
-    case 'amazon_bedrock':
-    case 'IBLChatBedrock':
-      return { logo: '/llm-amazon-provider.png', name: 'Amazon' };
-    default:
-      return { logo: '/llm-generic-provider.png', name: llmProvider };
-  }
+  const name = getProviderName(llmProvider);
+  // OpenAI and Google use a model-specific logo when a concrete model is named.
+  if (name === 'openai' && llmName)
+    return { logo: '/llm-openai-provider.jpg', name: 'OpenAI' };
+  if (name === 'google' && llmName)
+    return { logo: '/llm-gemini-provider.png', name: 'Google' };
+  return (
+    PROVIDER_DETAILS_BY_NAME[name] ?? {
+      logo: '/llm-generic-provider.png',
+      name: llmProvider,
+    }
+  );
+}
+
+// Model wire keys whose raw form is not presentable, keyed the same way as
+// PROVIDER_NAME_BY_ALIAS (lowercased, alphanumerics only).
+const MODEL_DISPLAY_NAME_BY_KEY: Record<string, string> = {
+  iblai: 'ibl.ai',
+};
+
+/**
+ * The label to show for a mentor's selected model.
+ *
+ * The LLM picker gets a `display_name` per model straight from the API, but
+ * mentor settings persist only `llm_name` — a wire key — so surfaces that read
+ * from settings (the nav bar badge, the mentors table) have no label to fall
+ * back on and would render `iblai`. Most keys are already presentable
+ * (`gpt-4.1`), so this maps only the ones that are not and passes everything
+ * else through untouched.
+ */
+export function getLLMModelDisplayName(llmName?: string | null): string {
+  const raw = llmName ?? '';
+  const normalized = raw.toLowerCase().replace(/[^a-z0-9]/g, '');
+  return MODEL_DISPLAY_NAME_BY_KEY[normalized] ?? raw;
+}
+
+/**
+ * Compares two raw provider names by the label the user actually sees on the
+ * card — `getLLMProviderDetails(name).name` — not by the backend key. The two
+ * diverge often enough to matter: `bedrock` renders as "Amazon", `azure_openai`
+ * as "Microsoft", `iblai` as "ibl.ai". Comparison is case-insensitive
+ * (`sensitivity: 'base'`) so casing never produces a surprising order.
+ * Unknown providers fall back to their raw name as the display name.
+ */
+export function compareLLMProvidersByDisplayName(a: string, b: string): number {
+  return getLLMProviderDetails(a).name.localeCompare(
+    getLLMProviderDetails(b).name,
+    undefined,
+    { sensitivity: 'base' },
+  );
+}
+
+type LLMCredentialFlags = {
+  has_credentials?: boolean;
+  can_use_main_keys?: boolean;
+  main_has_credentials?: boolean;
+};
+
+export type LLMProviderAccess = LLMCredentialFlags & {
+  chat_models?: unknown[] | null;
+};
+
+/**
+ * Whether the user can reach *any* model of this provider.
+ *
+ * This is exactly the provider-level half of the per-model `isDisabled` rule in
+ * `components/modals/llm-provider-modal.tsx`: a model row there is disabled when
+ * `!canSwitchLLm(provider) || !canSwitchProvider(llms, provider.name)`, and both
+ * of those depend only on the provider — so when either fails, *every* model row
+ * of that provider is disabled. `canSwitchProvider` is just "has at least one
+ * `chat_models` entry", which is checked inline here to keep the helper pure and
+ * free of the surrounding provider list.
+ *
+ * `canSwitchLLm` can return `undefined` (its `can_use_main_keys` branch), hence
+ * the explicit `Boolean(...)`.
+ */
+export function canAccessProvider(provider: LLMProviderAccess): boolean {
+  return (
+    Boolean(canSwitchLLm(provider ?? {})) &&
+    (provider?.chat_models?.length ?? 0) > 0
+  );
+}
+
+/**
+ * Orders LLM provider cards as two alphabetical groups: providers the user can
+ * actually use (see {@link canAccessProvider}) first, then the ones they can't —
+ * each group sorted alphabetically by display name (see
+ * {@link compareLLMProvidersByDisplayName}).
+ *
+ * The grouping predicate is deliberately the same one the grid grays cards with,
+ * so the two always line up: group 1 renders normally, group 2 renders grayed.
+ * Grouping on credentials alone would let a provider that has a key but ships no
+ * chat models sort into the "usable" group while rendering grayed.
+ *
+ * Pure and non-mutating: RTK Query results are frozen, so the input is copied
+ * before sorting. `Array.prototype.sort` is stable, so providers that tie on
+ * both group and display name keep their original relative order.
+ */
+export function sortLLMProvidersByCredentials<
+  T extends LLMProviderAccess & { name: string },
+>(providers: readonly T[]): T[] {
+  return [...providers].sort((a, b) => {
+    const aUsable = canAccessProvider(a);
+    const bUsable = canAccessProvider(b);
+    if (aUsable !== bUsable) return aUsable ? -1 : 1;
+    return compareLLMProvidersByDisplayName(a.name, b.name);
+  });
 }
 
 export function sendMessageToParentWebsite(payload: unknown) {
-  window.parent.postMessage(payload, '*');
+  let targetOrigin = '*';
+  try {
+    if (document.referrer) {
+      targetOrigin = new URL(document.referrer).origin;
+    }
+  } catch {
+    // keep '*' if referrer is unavailable or unparseable
+  }
+  window.parent.postMessage(payload, targetOrigin);
 }
 
 export function isLoggedIn() {
@@ -990,6 +863,38 @@ export function parsePrompt(prompt: string) {
 function preprocessMarkdownForHtml(markdown: string): string {
   let processed = markdown;
 
+  // Handle ```markdown code blocks - extract content and render as actual markdown
+  // This handles cases where LLM wraps markdown content in code blocks.
+  // Runs before the code mask below on purpose: the unwrapped content IS
+  // markdown and must go through the fixes.
+  processed = processed.replace(
+    /```(?:markdown|md)\s*\n([\s\S]*?)```/gi,
+    (_match, content) => content.trim(),
+  );
+
+  // Every fix below is a whole-document regex, and a code-fence body is
+  // literal text where a `# comment` line or the exact newline layout must
+  // survive byte-for-byte (the list-break fix used to inject blank lines into
+  // fenced code, and the heading fixes merged comment lines). Mask fenced and
+  // inline code first -- including a trailing fence whose closer has not
+  // streamed in yet -- and restore verbatim at the end.
+  const codeOpen = String.fromCharCode(0xe006);
+  const codeClose = String.fromCharCode(0xe007);
+  const codePlaceholders: string[] = [];
+  const maskCode = (segment: string): string => {
+    const index = codePlaceholders.length;
+    codePlaceholders.push(segment);
+    return `${codeOpen}${index}${codeClose}`;
+  };
+  processed = processed
+    .replace(/(`{3,})[\s\S]*?\1/g, maskCode)
+    .replace(/(~{3,})[\s\S]*?\1/g, maskCode)
+    .replace(
+      /(^|\n)([ \t]*(?:`{3,}|~{3,})[\s\S]*)$/,
+      (_match, before: string, fence: string) => before + maskCode(fence),
+    )
+    .replace(/(`+)((?:(?!\1)[\s\S])+?)\1(?!`)/g, maskCode);
+
   // Restore escaped markdown links so they render as actual links
   // Example: "\[Get started\](https://example.com)" -> "[Get started](https://example.com)"
   processed = processed.replace(
@@ -1006,13 +911,6 @@ function preprocessMarkdownForHtml(markdown: string): string {
     },
   );
 
-  // Handle ```markdown code blocks - extract content and render as actual markdown
-  // This handles cases where LLM wraps markdown content in code blocks
-  processed = processed.replace(
-    /```(?:markdown|md)\s*\n([\s\S]*?)```/gi,
-    (_match, content) => content.trim(),
-  );
-
   // Fix headings with newlines after # (e.g., "#\nTitle" -> "# Title")
   // This handles cases where LLM outputs malformed heading syntax
   processed = processed.replace(/^(#{1,6})\s*\n+(.+)$/gm, '$1 $2');
@@ -1027,6 +925,13 @@ function preprocessMarkdownForHtml(markdown: string): string {
   // Ensure list items have proper line breaks
   // Fix consecutive list items that might be on same line
   processed = processed.replace(/([^\n])(\n)([-*+]|\d+\.)\s/g, '$1\n\n$3 ');
+
+  // Restore code verbatim.
+  const restoreCodePattern = new RegExp(`${codeOpen}(\\d+)${codeClose}`, 'g');
+  processed = processed.replace(
+    restoreCodePattern,
+    (_, index) => codePlaceholders[Number(index)] ?? '',
+  );
 
   return processed;
 }
@@ -1503,14 +1408,8 @@ const configuredMarked = new Marked(
     output: 'htmlAndMathml', // Accessibility-friendly output with MathML fallback
   }),
   gfmHeadingId(),
-  markedHighlight({
-    langPrefix: 'hljs language-',
-    /* istanbul ignore next -- @preserve callback invoked by markedHighlight during code block parsing */
-    highlight(code: string, lang: string, _info: string) {
-      const language = hljs.getLanguage(lang) ? lang : 'plaintext';
-      return hljs.highlight(code, { language }).value;
-    },
-  }),
+  // No highlight extension: TipTap drops newline text nodes between highlight
+  // spans, merging code lines (issue #2109), and no consumer renders the spans.
   {
     gfm: true, // GitHub Flavored Markdown (tables, strikethrough, task lists)
     breaks: false, // Don't convert \n to <br>
@@ -1524,8 +1423,8 @@ export function markdownToHtml(markdownText: string) {
 
   try {
     // Pre-process to fix common markdown issues and convert LaTeX environments
-    const cleanedMarkdown = preprocessLaTeX(
-      preprocessMarkdownForHtml(markdownText),
+    const cleanedMarkdown = normalizeListIndentation(
+      preprocessLaTeX(preprocessMarkdownForHtml(markdownText)),
     );
 
     const result = configuredMarked.parse(cleanedMarkdown);
@@ -1559,6 +1458,18 @@ export function getUserOS() {
     return 'Android';
   }
   return 'Unknown OS';
+}
+
+export function isMobileOS(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  // iPadOS 13+ presents a desktop Safari UA; detect via a touch-capable Mac
+  const isIPadOS =
+    navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+  return (
+    /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua) ||
+    isIPadOS
+  );
 }
 
 /**
@@ -1765,4 +1676,63 @@ export function getFirstMessageWithContent(messages: any[]): string {
     if (content) return content;
   }
   return '';
+}
+
+export function getFirstHumanMessageWithContent(messages: any[]): string {
+  if (!messages?.length) return '';
+  for (const msg of messages) {
+    const isHuman =
+      msg?.is_human === true || msg?.message?.data?.type === 'human';
+    const content = msg?.message?.data?.content;
+    if (isHuman && content) return content;
+  }
+  return '';
+}
+
+export function getLatestMessageTimestamp(messages: any[]): number | null {
+  if (!messages?.length) return null;
+  let latest: number | null = null;
+  for (const msg of messages) {
+    const raw = msg?.inserted_at;
+    if (!raw) continue;
+    const ms = new Date(raw).getTime();
+    if (!Number.isNaN(ms) && (latest === null || ms > latest)) latest = ms;
+  }
+  return latest;
+}
+
+/**
+ * Sanitize the value of the `?prompt=` deep-link query param before it is
+ * auto-submitted as a user chat message.
+ *
+ * The render layer already auto-escapes user turns (plain React text in a
+ * `whitespace-pre-wrap` container — no `dangerouslySetInnerHTML`, no Markdown),
+ * so HTML is NOT escaped here: doing so would corrupt legitimate prompts like
+ * `what does <div> do?` without buying any safety. Instead we defend against the
+ * real risks of an attacker-crafted link: prompt-injection smuggling via
+ * invisible/control characters and oversized auto-submitted payloads.
+ */
+export function sanitizePromptParam(
+  raw: string | null | undefined,
+): string | undefined {
+  if (raw == null) return undefined;
+
+  const cleaned = raw
+    // Strip control chars but preserve newlines (\n) and tabs (\t).
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    // Strip zero-width / invisible characters used to hide instructions.
+    .replace(/[​-‍⁠﻿]/g, '')
+    // Strip the Unicode Tag block (invisible-instruction injection).
+    .replace(/[\u{E0000}-\u{E007F}]/gu, '')
+    // Strip bidirectional control chars (LRM/RLM, embeddings/overrides,
+    // isolates) — the "Trojan Source" (CVE-2021-42574) vector that can
+    // invisibly reorder text to hide or misrepresent the injected prompt.
+    .replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/gu, '')
+    .trim()
+    // Cap length AFTER cleaning so it reflects real visible content, then
+    // re-trim so a mid-word slice never leaves dangling whitespace.
+    .slice(0, MAX_PROMPT_PARAM_LENGTH)
+    .trim();
+
+  return cleaned.length > 0 ? cleaned : undefined;
 }

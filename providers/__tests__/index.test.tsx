@@ -33,6 +33,17 @@ vi.mock('@/lib/hooks', () => ({
 
 vi.mock('react-redux', () => ({
   useSelector: vi.fn(() => false),
+  // RTK Query's reactHooksModule (pulled in transitively via @iblai/data-layer)
+  // reads `useDispatch`, `useSelector`, `useStore` and `batch` from react-redux
+  // at module init and throws if any are undefined. Provide pass-through stubs
+  // so the suite can load; the component under test only consumes useSelector.
+  useDispatch: vi.fn(() => vi.fn()),
+  useStore: vi.fn(() => ({
+    getState: vi.fn(),
+    dispatch: vi.fn(),
+    subscribe: vi.fn(),
+  })),
+  batch: (fn: () => void) => fn(),
 }));
 
 // ── Tauri / offline ─────────────────────────────────────────────────────────
@@ -126,7 +137,6 @@ const mockInitializeDataLayer = vi.fn();
 const mockRedirectToAuthSpa = vi.fn();
 const mockHandleTenantSwitch = vi.fn();
 const mockIsInIframe = vi.fn(() => false);
-const mockHasNonExpiredAuthToken = vi.fn(() => true);
 
 vi.mock('@/lib/utils', () => ({
   isInIframe: () => mockIsInIframe(),
@@ -141,7 +151,6 @@ vi.mock('@/lib/utils', () => ({
     mockSaveUserObjectToLocalStorage(...args),
   sendMessageToParentWebsite: (...args: unknown[]) =>
     mockSendMessageToParentWebsite(...args),
-  hasNonExpiredAuthToken: () => mockHasNonExpiredAuthToken(),
   redirectToAuthSpa: (...args: unknown[]) => mockRedirectToAuthSpa(...args),
   handleTenantSwitch: (...args: unknown[]) => mockHandleTenantSwitch(...args),
   deleteCookieOnAllDomains: vi.fn(),
@@ -193,9 +202,17 @@ const mockGetMentorPublicSettings = vi.fn(() => ({ unwrap: mockUnwrap }));
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   initializeDataLayer: (...args: unknown[]) => mockInitializeDataLayer(...args),
   useLazyGetMentorPublicSettingsQuery: () => [mockGetMentorPublicSettings],
+  // Supplemental agent-skills RBAC fetch (platform-pk-scoped resources).
+  useGetRbacPermissionsMutation: () => [
+    vi.fn(() => ({ unwrap: () => Promise.resolve({}) })),
+  ],
+  // usePlatformId (platform DB pk for platform-scoped rbac paths).
+  useGetPlatformInfoQuery: () => ({ data: undefined }),
   useLazyGetVectorDocumentsQuery: () => [vi.fn(), { data: [] }],
   useLazyGetRecentMessageQuery: () => [vi.fn(), { data: [] }],
   useLazyGetPinnedMessagesQuery: () => [vi.fn(), { data: [] }],
+  // Pulled in via useOpencode402 (Code-mode 402 → credit UX at the app root).
+  useLazyGetAccountBillingInfoQuery: () => [vi.fn()],
   useGetMentorSettingsQuery: () => ({ data: null }),
   useGetMentorPublicSettingsQuery: () => ({ data: null }),
   useGetTenantMetadataQuery: () => ({
@@ -257,6 +274,9 @@ let mentorProviderCallbacksToInvoke: Array<{ name: string; args?: unknown[] }> =
   [];
 
 vi.mock('@iblai/iblai-js/web-utils', () => ({
+  useTenantSwitchSync: vi.fn(),
+  refreshTenantSwitchLock: vi.fn(),
+  isTenantSwitchInProgress: vi.fn(() => false),
   useTenantMetadata: () => ({
     metadata: mockMetadata,
     platformName: null,
@@ -363,6 +383,18 @@ vi.mock('@/components/spinner', () => ({
 
 vi.mock('@/components/sentry-init', () => ({
   SentryInit: () => null,
+}));
+
+// Side-effect-only component (syncs language pref via useGetUserMetadataQuery);
+// stub it out so the suite needn't wire up a real RTK store.
+vi.mock('@/components/language-preference-sync', () => ({
+  LanguagePreferenceSync: () => null,
+}));
+
+// Wrapper provider — render children straight through.
+vi.mock('@/components/web-containers-locale-provider', () => ({
+  WebContainersLocaleProvider: ({ children }: { children: React.ReactNode }) =>
+    children,
 }));
 
 vi.mock('@/hooks/use-mentor-time-tracking', () => ({
@@ -758,15 +790,6 @@ describe('Providers', () => {
         true,
         false,
       );
-    });
-
-    it('redirectToAuthSpa callback is no-op in Tauri offline mode', () => {
-      // Need to test the callback in offline mode – but offline mode renders different JSX
-      // Instead, we test the hasNonExpiredAuthToken callback
-      renderProviders();
-      const hasTokenFn =
-        capturedAuthProviderProps.hasNonExpiredAuthToken as Function;
-      expect(hasTokenFn()).toBe(true); // calls mockHasNonExpiredAuthToken which returns true
     });
 
     it('passes correct pathname with query params', () => {
@@ -1700,14 +1723,6 @@ describe('Providers', () => {
       renderProviders();
       // Callback was invoked during render with isTauriOffline=false, so it calls the real function
       expect(mockRedirectToAuthSpa).toHaveBeenCalled();
-    });
-
-    it('invokes AuthProvider hasNonExpiredAuthToken during render', () => {
-      authProviderCallbacksToInvoke = [
-        { name: 'hasNonExpiredAuthToken', args: [] },
-      ];
-      renderProviders();
-      expect(mockHasNonExpiredAuthToken).toHaveBeenCalled();
     });
 
     it('invokes TenantProvider redirectToAuthSpa during render', () => {

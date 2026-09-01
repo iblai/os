@@ -46,6 +46,7 @@ vi.mock('@/lib/config', () => ({
   config: {
     authUrl: () => 'https://auth.example.com',
     platformBaseDomain: () => 'example.com',
+    defaultSupportPhoneNumber: () => '(571) 293-0242',
     mainTenantKey: () => 'main',
   },
 }));
@@ -608,16 +609,16 @@ describe('Header component', () => {
       mockUseIsAdmin.mockReturnValue(true);
       render(<Header />);
 
-      expect(screen.getByText('Learner')).toBeInTheDocument();
-      expect(screen.getByText('Instructor')).toBeInTheDocument();
+      expect(screen.getByText('User')).toBeInTheDocument();
+      expect(screen.getByText('Admin')).toBeInTheDocument();
     });
 
     it('should not render instructor toggle for non-admin users', () => {
       mockUseIsAdmin.mockReturnValue(false);
       render(<Header />);
 
-      expect(screen.queryByText('Learner')).not.toBeInTheDocument();
-      expect(screen.queryByText('Instructor')).not.toBeInTheDocument();
+      expect(screen.queryByText('User')).not.toBeInTheDocument();
+      expect(screen.queryByText('Admin')).not.toBeInTheDocument();
     });
 
     it('should start with instructor mode enabled', () => {

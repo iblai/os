@@ -21,7 +21,9 @@ import {
 vi.mock('@/lib/utils', () => ({
   htmlToMarkdown: vi.fn((html: string) => {
     // Simple mock that strips HTML tags
-    return html.replace(/<[^>]*>/g, '');
+    let text = html;
+    while (/<[^>]*>/.test(text)) text = text.replace(/<[^>]*>/g, '');
+    return text;
   }),
 }));
 
@@ -425,7 +427,9 @@ describe('Canvas Utils', () => {
               set innerHTML(value: string) {
                 this._innerHTML = value;
                 // Simple HTML stripping for test
-                this._textContent = value.replace(/<[^>]*>/g, '');
+                let t = value;
+                while (/<[^>]*>/.test(t)) t = t.replace(/<[^>]*>/g, '');
+                this._textContent = t;
               },
               get textContent() {
                 return this._textContent;
@@ -975,7 +979,9 @@ describe('Canvas Utils', () => {
               },
               set innerHTML(value: string) {
                 this._innerHTML = value;
-                this._textContent = value.replace(/<[^>]*>/g, '');
+                let t = value;
+                while (/<[^>]*>/.test(t)) t = t.replace(/<[^>]*>/g, '');
+                this._textContent = t;
               },
               get textContent() {
                 return this._textContent;

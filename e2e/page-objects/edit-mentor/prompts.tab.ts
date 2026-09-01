@@ -10,6 +10,31 @@ export class PromptsTab {
   readonly suggestedPromptsSection: Locator;
   readonly seeMoreButton: Locator;
 
+  // ── Agent Configuration section ──────────────────────────────────────────
+  // The Prompts tab (and its agent-config-prompts section) is now ALWAYS
+  // mounted — `hooks/use-mentor-segments.ts` no longer gates any top-level
+  // tab on claw/sandbox state. When no sandbox is wired, the section is
+  // expected to show a GRAYED PREVIEW of the real fields
+  // (`data-testid="agent-config-prompts-fields"`, with a `data-connected`
+  // attribute) plus a disconnected-state hint banner
+  // (`data-testid="agent-config-prompts-disconnected-hint"`) instead of just
+  // a "no agent configuration" message.
+  //
+  // NOT independently verified against a live app/backend — the SDK bundle
+  // available in this repo's node_modules still renders the older plain
+  // "Connect a sandbox instance in the Sandbox tab to manage agent prompts."
+  // message with no Create button. `hasAgentConfigSection` / `isAgentConfigEmpty`
+  // below therefore accept EITHER shape. Confirm against a live run once
+  // `@iblai/iblai-js` ships the grayed-preview build and simplify to the
+  // new-only shape.
+  readonly agentConfigSection: Locator;
+  readonly createAgentConfigButton: Locator;
+  readonly noAgentConfigMessage: Locator;
+  /** Grayed-preview fields wrapper shown when no sandbox is connected (new shape). */
+  readonly disconnectedFields: Locator;
+  /** Disconnected-state hint banner (new shape). */
+  readonly disconnectedHint: Locator;
+
   constructor(page: Page, dialog: Locator) {
     this.page = page;
     this.dialog = dialog;
@@ -28,6 +53,21 @@ export class PromptsTab {
     this.seeMoreButton = dialog.getByRole('button', {
       name: /see more/i,
     });
+
+    // Agent Configuration section
+    this.agentConfigSection = dialog.getByRole('heading', {
+      name: /agent configuration/i,
+    });
+    this.createAgentConfigButton = dialog.getByRole('button', {
+      name: /create agent config/i,
+    });
+    this.noAgentConfigMessage = dialog.getByText(
+      /no agent configuration exists for this mentor yet/i,
+    );
+    this.disconnectedFields = dialog.getByTestId('agent-config-prompts-fields');
+    this.disconnectedHint = dialog.getByTestId(
+      'agent-config-prompts-disconnected-hint',
+    );
   }
 
   async setSystemPrompt(content: string): Promise<void> {
@@ -101,13 +141,17 @@ export class PromptsTab {
    * Waits for the dialog to close after submission.
    *
    * @param promptText - The text content of the prompt
-   * @param options.visibility - Optional visibility label ("Anyone", "Students",
+   * @param options.visibility - Optional visibility label ("Anyone", "Users",
    *   or "Administrators"). Defaults to whatever the form pre-selects.
    */
   async addSuggestedPrompt(
     promptText: string,
-    options: { visibility?: 'Anyone' | 'Students' | 'Administrators' } = {},
+    options: { visibility?: 'Anyone' | 'Users' | 'Administrators' } = {},
   ): Promise<void> {
+    // Capture the count before adding so we can confirm the new prompt
+    // actually rendered before returning (see the poll at the end).
+    const countBefore = await this.getSuggestedPromptCount();
+
     await expect(this.addNewPromptButton).toBeVisible({ timeout: 10_000 });
     await this.addNewPromptButton.click();
 
@@ -154,6 +198,14 @@ export class PromptsTab {
 
     // Wait for the dialog to close
     await expect(addDialog).not.toBeVisible({ timeout: 10_000 });
+
+    // The dialog closes immediately on submit, but the Suggested Prompts
+    // list only repaints once RTK Query invalidates and refetches — which
+    // can take well over 10s under CI load. Wait for the new prompt to
+    // actually render so callers can assert against it without flaking.
+    await expect
+      .poll(() => this.getSuggestedPromptCount(), { timeout: 30_000 })
+      .toBeGreaterThan(countBefore);
   }
 
   /**
@@ -198,5 +250,144 @@ export class PromptsTab {
   async save(): Promise<void> {
     await expect(this.saveButton).toBeEnabled({ timeout: 5_000 });
     await this.saveButton.click();
+  }
+
+  // ── Agent Configuration helpers ────────────────────────────────────────────
+
+  /**
+   * Returns true when the Agent Configuration section heading is visible.
+   */
+  async hasAgentConfigSection(timeout = 5_000): Promise<boolean> {
+    try {
+      await this.agentConfigSection.waitFor({ state: 'visible', timeout });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Returns true when the "no agent config" message is shown (config not yet
+   * created for this mentor).
+   */
+  async isAgentConfigEmpty(timeout = 5_000): Promise<boolean> {
+    try {
+      await this.noAgentConfigMessage.waitFor({ state: 'visible', timeout });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Returns true when the section is showing its "no sandbox connected"
+   * state — either the new grayed-preview shape (`data-connected="false"`
+   * on `agent-config-prompts-fields`, plus the disconnected hint banner) or
+   * the older plain-message shape (`isAgentConfigEmpty`). See the class doc
+   * for the verification caveat on the new shape.
+   */
+  async isAgentConfigDisconnected(timeout = 5_000): Promise<boolean> {
+    const newShapeConnected = await this.disconnectedFields
+      .getAttribute('data-connected')
+      .catch(() => null);
+    if (newShapeConnected !== null) {
+      return newShapeConnected === 'false';
+    }
+    const hintVisible = await this.disconnectedHint
+      .waitFor({ state: 'visible', timeout })
+      .then(() => true)
+      .catch(() => false);
+    if (hintVisible) return true;
+    return this.isAgentConfigEmpty(timeout);
+  }
+
+  /**
+   * Clicks the Create Agent Config button and waits for the workspace fields
+   * to appear (i.e. the "no config" message disappears).
+   */
+  async createAgentConfig(): Promise<void> {
+    await expect(this.createAgentConfigButton).toBeVisible({
+      timeout: 10_000,
+    });
+    await this.createAgentConfigButton.click();
+    // Wait for the "no agent configuration" message to disappear — that signals
+    // the POST completed and the workspace field cards are now rendering.
+    await expect(this.noAgentConfigMessage).not.toBeVisible({
+      timeout: 20_000,
+    });
+  }
+
+  /**
+   * Returns the row/card locator for an agent config field by its label.
+   *
+   * AgentConfigPrompts in @iblai/iblai-js/web-containers exposes two stable
+   * accessible markers per card:
+   *   - a TooltipTrigger button with aria-label="More info about ${label}"
+   *   - an "Edit" button next to it (plain text label)
+   *
+   * Anchor on the unique TooltipTrigger and walk up to the innermost
+   * div that also contains the Edit button — that's the card. No
+   * coupling to Tailwind class signatures.
+   */
+  agentConfigFieldRowByLabel(label: string): Locator {
+    return this.dialog.getByText(`${label}Edit`);
+  }
+
+  /**
+   * Returns the EditFieldModal locator for an agent config field by label.
+   * The OverlayModal in @iblai/iblai-js/web-containers sets the dialog title to
+   * `Edit ${label}` (e.g. "Edit Identity"). We match by accessible name
+   * (DialogPrimitive.Title) so we don't accidentally match the parent Edit
+   * Mentor dialog when its content contains the label text.
+   */
+  agentConfigEditDialog(label: string): Locator {
+    return this.page.getByRole('dialog', {
+      name: `Edit ${label}`,
+      exact: true,
+    });
+  }
+
+  /**
+   * Opens the Edit modal for an agent config field identified by `label`,
+   * replaces the editor content with `newValue`, and clicks Save.
+   *
+   * The editor is a RichTextEditor (TipTap/ProseMirror). The OUTER
+   * `<div role="textbox">` wrapper is NOT contenteditable — Playwright's
+   * `fill()` rejects it. The actual editable element is the inner
+   * `[contenteditable="true"]` div, which ProseMirror's input plugins
+   * listen to. Drive it via real keyboard events.
+   *
+   * Returns the original editor text so callers can restore it.
+   */
+  async editAgentConfigField(label: string, newValue: string): Promise<string> {
+    const row = this.agentConfigFieldRowByLabel(label).first();
+    await expect(row).toBeVisible();
+
+    const editBtn = row.getByRole('button', { name: /^edit$/i }).first();
+    await editBtn.click();
+
+    const editDialog = this.agentConfigEditDialog(label);
+    await expect(editDialog).toBeVisible();
+
+    // Target the ProseMirror contenteditable directly — the role="textbox"
+    // wrapper around it is not editable.
+    const editor = editDialog.locator('[contenteditable="true"]').last();
+    await expect(editor).toBeVisible();
+
+    const original = (await editor.textContent()) ?? '';
+
+    await editor.click();
+    const selectAll = process.platform === 'darwin' ? 'Meta+A' : 'Control+A';
+    await this.page.keyboard.press(selectAll);
+    await this.page.keyboard.press('Delete');
+    await this.page.keyboard.type(newValue);
+
+    const saveBtn = editDialog.getByRole('button', { name: /^save$/i }).first();
+    await expect(saveBtn).toBeEnabled();
+    await saveBtn.click();
+
+    await expect(editDialog).toBeHidden();
+
+    return original;
   }
 }

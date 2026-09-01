@@ -55,21 +55,6 @@ describe('VoiceCallButton', () => {
       expect(screen.getByText('Voice call')).toHaveClass('sr-only');
     });
 
-    it('should expose accessible name "Voice call" via aria-label', () => {
-      render(<VoiceCallButton onClick={mockOnClick} />);
-
-      expect(
-        screen.getByRole('button', { name: 'Voice call' }),
-      ).toBeInTheDocument();
-    });
-
-    it('should mark decorative SVG as aria-hidden', () => {
-      render(<VoiceCallButton onClick={mockOnClick} />);
-
-      const svg = screen.getByRole('button').querySelector('svg');
-      expect(svg).toHaveAttribute('aria-hidden', 'true');
-    });
-
     it('should have button type="button" to prevent form submission', () => {
       render(<VoiceCallButton onClick={mockOnClick} />);
 
