@@ -115,22 +115,104 @@
  * wiring (app hook → sidebar component → SDK dropdown → tenant API) still
  * works end-to-end, which no unit test can substitute for. They run on
  * ANY environment with zero configuration.
+ *
+ * ── The deployment's config comes from the BROWSER, not process.env ──────
+ *
+ * When the tenant overrides nothing, both destinations fall back to the
+ * deployment's `NEXT_PUBLIC_DOCUMENTATION_URL` / `NEXT_PUBLIC_HELP_CENTER_URL`.
+ * Those are read from `window.__ENV__` (written by the container's
+ * `entrypoint.sh`) via `e2e/utils/runtime-env.ts` — NOT from the Playwright
+ * runner's `process.env`, which belongs to a different machine entirely and
+ * is never given the deployment's values. Reading the runner's env made
+ * shc-06 fail on stg2 (which sets `NEXT_PUBLIC_HELP_CENTER_URL=
+ * https://docs.ibl.ai`) while passing on every environment that leaves it
+ * unset.
+ *
+ * shc-06 also asserts on the URL handed to `window.open` rather than on the
+ * opened tab's settled URL: `https://docs.ibl.ai` redirects three times
+ * before landing on `https://ibl.ai/docs/os/overview`, so reading the tab's
+ * URL raced the redirect chain and depended on ibl.ai being reachable.
  */
+
+import type { Page } from '@playwright/test';
 
 import { test, expect } from '../fixtures/mentor-test';
 import { waitForPageReady } from '../utils/resilient';
 import { navigateAndObserveTenantMetadata } from '../utils/tenant-metadata-observed';
+import { getRuntimeEnv } from '../utils/runtime-env';
 
 // ─── Constants ────────────────────────────────────────────────────────────
 
-// Mirrors lib/config.ts's `documentationUrl()` / `helpCenterUrl()` defaults.
-// Not imported directly (the app's config module isn't part of the e2e TS
-// project) — these read the SAME env vars the app build reads, so they stay
-// correct if a deployment ever overrides them.
-const DEFAULT_DOCUMENTATION_URL =
-  process.env.NEXT_PUBLIC_DOCUMENTATION_URL || 'https://ibl.ai/docs';
-const DEFAULT_HELP_CENTER_URL =
-  process.env.NEXT_PUBLIC_HELP_CENTER_URL || 'https://ibl.ai/support';
+// The LAST-RESORT defaults hardcoded in lib/config.ts's `documentationUrl()`
+// / `helpCenterUrl()`. These apply only when the deployment configures
+// nothing — `configuredDocumentationUrl` / `configuredHelpCenterUrl` below
+// ask the running app for its real value first.
+//
+// These used to be `process.env.NEXT_PUBLIC_* || <default>`, on the theory
+// that the spec "reads the SAME env vars the app build reads". It does not.
+// `process.env` here is the PLAYWRIGHT RUNNER's environment; the app reads
+// the deployed container's, published as `window.__ENV__` by
+// `entrypoint.sh`. The runner is never given those variables, so the
+// expression always collapsed to the hardcoded default and only agreed with
+// the app on deployments that configure nothing. stg2 sets
+// `NEXT_PUBLIC_HELP_CENTER_URL=https://docs.ibl.ai`, so shc-06 failed there
+// while passing everywhere else — see the header note on shc-06.
+const FALLBACK_DOCUMENTATION_URL = 'https://ibl.ai/docs';
+const FALLBACK_HELP_CENTER_URL = 'https://ibl.ai/support';
+
+/** The documentation URL THIS deployment is configured with. */
+async function configuredDocumentationUrl(page: Page): Promise<string> {
+  return (
+    (await getRuntimeEnv(page, 'NEXT_PUBLIC_DOCUMENTATION_URL')) ??
+    FALLBACK_DOCUMENTATION_URL
+  );
+}
+
+/** The help-center URL THIS deployment is configured with. */
+async function configuredHelpCenterUrl(page: Page): Promise<string> {
+  return (
+    (await getRuntimeEnv(page, 'NEXT_PUBLIC_HELP_CENTER_URL')) ??
+    FALLBACK_HELP_CENTER_URL
+  );
+}
+
+/**
+ * Records every `window.open(url, target)` the app performs from here on
+ * and suppresses the popup, returning a reader for what was captured.
+ *
+ * shc-06 used to open the real tab and assert on `newPage.url()`. That is a
+ * race against redirects the app has no part in: stg2's help URL
+ * `https://docs.ibl.ai` answers `301 → https://ibl.ai/docs/`, which answers
+ * `308 → /docs`, which answers `301 → /docs/os/overview`. `newPage.url()`
+ * right after the `page` event returns whichever of those four URLs the
+ * popup happens to have reached, so the same build can pass or fail on the
+ * same environment depending on how fast ibl.ai answers — and the assertion
+ * additionally depended on ibl.ai being reachable at all.
+ *
+ * What the app is actually responsible for is the URL it hands to
+ * `window.open`. That is what this captures, exactly once, with no network
+ * and no timing window.
+ */
+async function captureWindowOpen(
+  page: Page,
+): Promise<() => Promise<{ url: string; target: string }[]>> {
+  await page.evaluate(() => {
+    const opened: { url: string; target: string }[] = [];
+    (window as unknown as Record<string, unknown>).__e2eWindowOpenCalls =
+      opened;
+    window.open = (url?: string | URL, target?: string) => {
+      opened.push({ url: String(url ?? ''), target: String(target ?? '') });
+      return null;
+    };
+  });
+
+  return () =>
+    page.evaluate(
+      () =>
+        ((window as unknown as Record<string, unknown>)
+          .__e2eWindowOpenCalls as { url: string; target: string }[]) ?? [],
+    );
+}
 
 /**
  * Mirrors the app's / SDK's `addProtocolToUrl`: an empty/falsy value stays
@@ -165,7 +247,8 @@ test.describe('Journey 72: Sidebar Support Link & Help Center', () => {
 
     const showHelp = metadata.show_help !== false;
     const expectedHref = addProtocolToUrl(
-      (metadata.documentation_url as string) || DEFAULT_DOCUMENTATION_URL,
+      (metadata.documentation_url as string) ||
+        (await configuredDocumentationUrl(page)),
     );
 
     await sidebarPage.ensureExpanded(20_000);
@@ -196,8 +279,10 @@ test.describe('Journey 72: Sidebar Support Link & Help Center', () => {
     const expectedHelpUrl = addProtocolToUrl(
       (metadata.support_url as string) ||
         (metadata.help_center_url as string) ||
-        DEFAULT_HELP_CENTER_URL,
+        (await configuredHelpCenterUrl(page)),
     );
+
+    const readWindowOpenCalls = await captureWindowOpen(page);
 
     await navbarPage.openProfileDropdown();
 
@@ -209,11 +294,14 @@ test.describe('Journey 72: Sidebar Support Link & Help Center', () => {
     }
 
     await expect(navbarPage.helpItem).toBeVisible({ timeout: 10_000 });
-    const [newPage] = await Promise.all([
-      page.context().waitForEvent('page', { timeout: 10_000 }),
-      navbarPage.helpItem.click(),
-    ]);
-    expect(newPage.url()).toBe(expectedHelpUrl);
-    await newPage.close();
+    await navbarPage.helpItem.click();
+
+    // Assert on the URL the app asked the browser to open, not on where the
+    // popup ended up: the configured help URL redirects, and the item is a
+    // `div[role=menuitem]` with no href, so `window.open`'s argument is the
+    // only place the app's own resolution is observable.
+    await expect
+      .poll(readWindowOpenCalls, { timeout: 10_000 })
+      .toEqual([{ url: expectedHelpUrl, target: '_blank' }]);
   });
 });
