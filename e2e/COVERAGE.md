@@ -859,13 +859,18 @@ Wraps the packaged `AgentEvaluationTab` from `@iblai/iblai-js/web-containers/nex
 
 ---
 
-## Journey 9b: Voice-to-Text Dictation (1 checkpoint) — `journeys/09b-voice-to-text.spec.ts`
+## Journey 9b: Voice-to-Text Dictation (4 checkpoints) — `journeys/09b-voice-to-text.spec.ts`
 
 **Source files:** `hooks/use-voice-chat.ts`, `hooks/use-timer.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form.tsx`
 
 Chromium-only. Uses `--use-fake-device-for-media-stream` plus `--use-file-for-fake-audio-capture=e2e/files/testing_folder/speech.wav` to inject real audio, then exercises the real `/audio-to-text/` backend round-trip. Regression cover for [iblai-platform#1657](https://github.com/iblai/iblai-platform/issues/1657).
 
 - [x] VTT-01: Admin creates a new mentor and records via injected fake audio — the placeholder timer (`Listening... mm:ss`) counts seconds upward, and after stop, the real STT round-trip lands a non-empty transcript in the textarea
+- [x] VTT-02: Microphone permission denied — with the fake-UI auto-accept flag dropped and context permissions cleared, `getUserMedia` rejects with `NotAllowedError`, a "Microphone access" toast appears, the button returns to the idle `Voice input` label and stays enabled, and no `/audio-to-text/` request is made
+- [x] VTT-03: Dictation appends to the composer instead of replacing it — text typed before recording survives the round-trip and the transcript lands after it
+- [x] VTT-04: A recording stopped under the 500ms minimum is rejected client-side — a "That recording was too short" toast appears, the button returns to idle without parking on `Processing`, and zero `/audio-to-text/` requests are made
+
+VTT-02, VTT-03 and VTT-04 are regression cover for [iblai-platform#2402](https://github.com/iblai/iblai-platform/issues/2402): a sub-second recording uploaded an empty blob, the backend rejected it with a 400, and the data layer retried five times with exponential backoff — holding the voice UI for ~37s.
 
 ---
 

@@ -3165,6 +3165,21 @@
           "id": "vtt-01",
           "description": "Admin creates a new mentor and records via injected fake audio: timer placeholder counts seconds upward; after stop, the real /audio-to-text/ round-trip lands a non-empty transcript in the textarea (Chromium-only). Regression cover for iblai-platform#1657",
           "status": "covered"
+        },
+        {
+          "id": "vtt-02",
+          "description": "Microphone permission denied (fake-UI auto-accept flag dropped, context permissions cleared): getUserMedia rejects with NotAllowedError, a \"Microphone access\" toast appears, the button returns to the idle \"Voice input\" label and stays enabled, and no /audio-to-text/ request is made. Before the fix this escaped as an unhandled rejection with no toast and a dead button. Regression cover for iblai-platform#2402",
+          "status": "covered"
+        },
+        {
+          "id": "vtt-03",
+          "description": "Dictation appends to the composer instead of replacing it: text typed before recording survives the round-trip and the transcript lands after it (asserted on the same real /audio-to-text/ round-trip as vtt-01). Regression cover for iblai-platform#2402",
+          "status": "covered"
+        },
+        {
+          "id": "vtt-04",
+          "description": "Recording stopped under the 500ms minimum is rejected client-side: a \"That recording was too short\" toast appears, the button returns to idle without parking on \"Processing\", and zero /audio-to-text/ requests are made. Before the fix this uploaded an empty blob, drew a 400, and the data layer retried it five times over ~37s. Regression cover for iblai-platform#2402",
+          "status": "covered"
         }
       ]
     },

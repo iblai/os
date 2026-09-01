@@ -1283,6 +1283,75 @@ describe('ChatInputForm', () => {
     });
   });
 
+  describe('voice transcript insertion', () => {
+    /** Render, capturing the onTranscript callback the form hands the hook. */
+    const renderCapturingTranscript = async () => {
+      const useVoiceChat = (await import('@/hooks/use-voice-chat')).default;
+      let onTranscript!: (text: string) => void;
+      (useVoiceChat as any).mockImplementation((props: any) => {
+        onTranscript = props.onTranscript;
+        return {
+          handleMicrophoneBtnClick: vi.fn(),
+          cancelRecording: vi.fn(),
+          processing: false,
+          recording: false,
+          time: 0,
+        };
+      });
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+      return {
+        textarea: screen.getByTestId('auto-resize-textarea'),
+        emit: (text: string) => onTranscript(text),
+      };
+    };
+
+    it('inserts the transcript into an empty composer', async () => {
+      const { textarea, emit } = await renderCapturingTranscript();
+
+      await act(async () => {
+        emit('hello world');
+      });
+
+      await waitFor(() => expect(textarea).toHaveValue('hello world'));
+    });
+
+    it('appends onto the latest composer text, not a stale snapshot', async () => {
+      const { textarea, emit } = await renderCapturingTranscript();
+
+      await act(async () => {
+        fireEvent.change(textarea, { target: { value: 'first' } });
+      });
+      // simulates the user continuing to type after hitting record
+      await act(async () => {
+        fireEvent.change(textarea, { target: { value: 'first second' } });
+      });
+      await act(async () => {
+        emit('dictated');
+      });
+
+      await waitFor(() =>
+        expect(textarea).toHaveValue('first second dictated'),
+      );
+    });
+
+    // iblai-platform#2402: dictation used to replace the composer contents,
+    // destroying anything the user had already typed.
+    it('appends the transcript after existing text instead of replacing it', async () => {
+      const { textarea, emit } = await renderCapturingTranscript();
+
+      await act(async () => {
+        fireEvent.change(textarea, { target: { value: 'already typed' } });
+      });
+      await act(async () => {
+        emit('and dictated');
+      });
+
+      await waitFor(() =>
+        expect(textarea).toHaveValue('already typed and dictated'),
+      );
+    });
+  });
+
   describe('voice chat states', () => {
     it('should show "Listening..." placeholder when recording', async () => {
       const useVoiceChat = (await import('@/hooks/use-voice-chat')).default;
