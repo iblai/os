@@ -10,6 +10,7 @@
 /* SDK: scan compiled components so Tailwind generates their utility classes */
 @source "../node_modules/@iblai/iblai-js/dist/web-containers/source";
 @source "../node_modules/@iblai/iblai-js/dist/web-containers/source/next";
+@source "../node_modules/streamdown/dist/*.js";
 
 @custom-variant dark (&:is(.dark *));
 
