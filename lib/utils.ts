@@ -6,11 +6,18 @@ import rehypeRemark from 'rehype-remark';
 import remarkStringify from 'remark-stringify';
 import remarkGfm from 'remark-gfm';
 import { remark } from 'remark';
-import { Marked } from 'marked';
-import markedKatex from 'marked-katex-extension';
-import { gfmHeadingId } from 'marked-gfm-heading-id';
+import { unified } from 'unified';
+import remarkParse from 'remark-parse';
+import remarkRehype from 'remark-rehype';
+import rehypeRaw from 'rehype-raw';
+import rehypeKatex from 'rehype-katex';
+import rehypeStringify from 'rehype-stringify';
+import zilMath from '@ziloen/remark-math';
+import { rehypeAlignedMath } from './rehype-aligned-math';
+import { rehypeReportMathErrors } from './markdown-math-error-reporter';
+import { KATEX_ERROR_COLOR } from './katex-options';
+import 'katex/contrib/mhchem';
 
-import { preprocessLaTeX } from './preprocess-latex';
 import { normalizeListIndentation } from './normalize-list-indentation';
 import {
   LOCAL_STORAGE_KEYS,
@@ -1332,20 +1339,20 @@ const linkifyHtml = (html: string): string => {
   return container.innerHTML;
 };
 
-// Configure marked instance with all extensions for comprehensive markdown support
-const configuredMarked = new Marked(
-  markedKatex({
-    throwOnError: false,
-    output: 'htmlAndMathml', // Accessibility-friendly output with MathML fallback
-  }),
-  gfmHeadingId(),
-  // No highlight extension: TipTap drops newline text nodes between highlight
-  // spans, merging code lines (issue #2109), and no consumer renders the spans.
-  {
-    gfm: true, // GitHub Flavored Markdown (tables, strikethrough, task lists)
-    breaks: false, // Don't convert \n to <br>
-  },
-);
+// Same parser stack as the chat renderer (components/markdown.tsx) so both
+// paths agree on markdown and LaTeX. Built once at module scope.
+const markdownHtmlProcessor = unified()
+  .use(remarkParse)
+  .use(remarkGfm)
+  .use(zilMath)
+  .use(remarkRehype, { allowDangerousHtml: true })
+  .use(rehypeRaw)
+  .use(rehypeAlignedMath)
+  // htmlAndMathml keeps the <annotation> element the canvas math/export
+  // consumers read back, and is accessibility-friendly.
+  .use(rehypeKatex, { output: 'htmlAndMathml', errorColor: KATEX_ERROR_COLOR })
+  .use(rehypeReportMathErrors, { path: 'canvas' })
+  .use(rehypeStringify, { allowDangerousHtml: true });
 
 export function markdownToHtml(markdownText: string) {
   if (!markdownText || typeof markdownText !== 'string') {
@@ -1353,13 +1360,12 @@ export function markdownToHtml(markdownText: string) {
   }
 
   try {
-    // Pre-process to fix common markdown issues and convert LaTeX environments
+    // Pre-process to fix common markdown issues
     const cleanedMarkdown = normalizeListIndentation(
-      preprocessLaTeX(preprocessMarkdownForHtml(markdownText)),
+      preprocessMarkdownForHtml(markdownText),
     );
 
-    const result = configuredMarked.parse(cleanedMarkdown);
-    const html = typeof result === 'string' ? result : String(result);
+    const html = String(markdownHtmlProcessor.processSync(cleanedMarkdown));
     return linkifyHtml(html);
   } catch (error) {
     /* istanbul ignore next -- @preserve defensive error handling */
