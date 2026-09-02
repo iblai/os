@@ -113,12 +113,16 @@ jobs:
               return;
             }
 
-            // Never let an older run overwrite a newer one's verdict. Run ids increase
-            // monotonically, so a higher id for this same sha is strictly more recent.
+            // Never let an older run overwrite a newer one's verdict — but only defer to a
+            // sibling that is STILL RUNNING. A completed sibling has had its turn: if it was
+            // cancelled it wrote nothing and never will. Deferring on id alone deadlocked
+            // lms#232: the same-second double-fire cancelled the HIGHER-id run (…781) and the
+            // lower-id run (…626) survived and passed, so the passing verdict was never written
+            // and the check sat on "pending" with nothing left to move it.
             const { data: siblings } = await github.rest.actions.listWorkflowRuns({
               owner, repo, workflow_id: run.workflow_id, head_sha: sha, per_page: 100,
             });
-            if (siblings.workflow_runs.some(r => r.id > run.id)) {
+            if (siblings.workflow_runs.some(r => r.id > run.id && r.status !== 'completed')) {
               core.info(`newer run exists for ${sha.slice(0, 8)} — deferring to it`);
               return;
             }
