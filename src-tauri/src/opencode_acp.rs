@@ -388,6 +388,19 @@ pub fn iblai_data_dir() -> PathBuf {
     home_dir().unwrap_or_default().join(".local/share/iblai")
 }
 
+/// Serialises every test that repoints `XDG_DATA_HOME` (the scratch settings
+/// tests here) with every test that RESOLVES [`iblai_data_dir`] (the
+/// installer's pinned-binary tests): the env is process-global, so a reader
+/// that skips this lock can chase another test's scratch dir right as its
+/// teardown deletes it — an ensure once aimed a ~100MB opencode download into
+/// `opencode-settings-bad-*` and died on ENOENT mid-write. Same race class
+/// `opencode_proxy::device_id` documents on the production side.
+#[cfg(test)]
+pub(crate) fn data_dir_lock() -> std::sync::MutexGuard<'static, ()> {
+    static L: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    L.lock().unwrap_or_else(|e| e.into_inner())
+}
+
 /// Managed opencode binary: `~/.local/share/iblai/bin/opencode[.exe]`.
 pub fn opencode_bin() -> PathBuf {
     let name = if cfg!(target_os = "windows") {
@@ -1523,7 +1536,11 @@ fn apply_skills_config(
 /// Ordering contract: this runs from `apply_opencode_model`, which
 /// `spawn_session` awaits BEFORE `cmd.spawn()` — the AGENTS.md is on disk
 /// (or the spawn has already failed) before `opencode acp` ever starts.
-fn write_iblai_guidance(config_home: &Path, text: Option<&str>) -> Result<(), String> {
+///
+/// `pub(crate)` for one caller outside the spawn path: the installer's
+/// end-to-end guidance test writes the per-turn AGENTS.md through this exact
+/// production writer, never a hand-rolled copy.
+pub(crate) fn write_iblai_guidance(config_home: &Path, text: Option<&str>) -> Result<(), String> {
     let path = config_home.join("opencode").join("AGENTS.md");
     match text {
         Some(t) => std::fs::write(&path, t)
@@ -3496,12 +3513,6 @@ mod tests {
         );
 
         let _ = std::fs::remove_dir_all(&scratch);
-    }
-
-    /// Serialises the tests that repoint `XDG_DATA_HOME`, which is process-global.
-    fn data_dir_lock() -> std::sync::MutexGuard<'static, ()> {
-        static L: std::sync::Mutex<()> = std::sync::Mutex::new(());
-        L.lock().unwrap_or_else(|e| e.into_inner())
     }
 
     /// Run `body` with the app data dir pointed at a throwaway directory.

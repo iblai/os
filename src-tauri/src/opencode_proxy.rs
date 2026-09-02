@@ -45,7 +45,7 @@ use tokio::sync::{Mutex, RwLock};
 /// checks that path for existence and re-reads its content on every model
 /// call, folding it into the system prompt for main turns, subagents and ACP
 /// alike, cloud and on-device sessions both.
-const IBLAI_INSTRUCTIONS: &str = "\
+pub(crate) const IBLAI_INSTRUCTIONS: &str = "\
 # ibl.ai guidance
 
 - Keep your visible replies terse and outcome-focused — HARD CAP: three \
