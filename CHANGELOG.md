@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.138.0](https://github.com/iblai/os/compare/v0.137.1...v0.138.0) (2026-09-02)
+
+### Features
+
+* **code-mode:** ships the guidance as AGENTS.md instead of proxy body injection ([543e4cd](https://github.com/iblai/os/commit/543e4cd4934a3b7edad6ac5dc21c1319ea47d2c4))
+
+### Chores
+
+* **tauri:** release app-v0.95.18 ([c54d361](https://github.com/iblai/os/commit/c54d361d16f59beeef746744c0248a9943eef85f))
+
+### Tests
+
+* **code-mode:** prove the pinned opencode loads the AGENTS.md guidance on every agent turn ([03be8ef](https://github.com/iblai/os/commit/03be8ef22f9e370c7858a3cc548ad2880d71e98e))
+
 ## [0.137.1](https://github.com/iblai/os/compare/v0.137.0...v0.137.1) (2026-09-01)
 
 ### Performance
