@@ -388,6 +388,19 @@ pub fn iblai_data_dir() -> PathBuf {
     home_dir().unwrap_or_default().join(".local/share/iblai")
 }
 
+/// Serialises every test that repoints `XDG_DATA_HOME` (the scratch settings
+/// tests here) with every test that RESOLVES [`iblai_data_dir`] (the
+/// installer's pinned-binary tests): the env is process-global, so a reader
+/// that skips this lock can chase another test's scratch dir right as its
+/// teardown deletes it — an ensure once aimed a ~100MB opencode download into
+/// `opencode-settings-bad-*` and died on ENOENT mid-write. Same race class
+/// `opencode_proxy::device_id` documents on the production side.
+#[cfg(test)]
+pub(crate) fn data_dir_lock() -> std::sync::MutexGuard<'static, ()> {
+    static L: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    L.lock().unwrap_or_else(|e| e.into_inner())
+}
+
 /// Managed opencode binary: `~/.local/share/iblai/bin/opencode[.exe]`.
 pub fn opencode_bin() -> PathBuf {
     let name = if cfg!(target_os = "windows") {
@@ -1476,9 +1489,9 @@ pub async fn set_opencode_skills(
 /// overrides a same-named vibe skill. Neither present → no `skills` key at all,
 /// and a leftover one is dropped (the per-session config persists between spawns).
 ///
-/// The ibl.ai guidance does NOT live here: the loopback proxy injects it as a
-/// system message into skills-wired sessions' chat/completions calls (see
-/// `opencode_proxy::inject_system_guidance`).
+/// The ibl.ai guidance does NOT live here: `write_iblai_guidance` writes it as
+/// the per-session AGENTS.md, which opencode's global-instructions convention
+/// picks up on every model call.
 fn apply_skills_config(
     root: &mut serde_json::Map<String, Value>,
     vibe_dir: &Path,
@@ -1500,6 +1513,46 @@ fn apply_skills_config(
         root.remove("skills");
     } else {
         root.insert("skills".to_string(), json!({ "paths": paths }));
+    }
+}
+
+/// Write (or clear) the per-session ibl.ai guidance as the global-scope
+/// AGENTS.md beside the session's opencode.json. opencode checks
+/// `$XDG_CONFIG_HOME/opencode/AGENTS.md` for existence on every model call
+/// and folds it into the system prompt first among instruction files — main
+/// turns, subagents and ACP alike, cloud and on-device sessions both.
+/// (Verified against pinned opencode v1.18.13 `session/instruction.ts`;
+/// re-verify when `OPENCODE_VERSION` bumps.) The file lives only under the
+/// per-session ibl.ai config home — never the user's workspace or any
+/// non-ibl.ai directory; opencode reads it from there because spawn points
+/// `XDG_CONFIG_HOME` at this session's dir.
+///
+/// Fails LOUDLY on purpose: opencode silently ignores a missing instructions
+/// file, so a swallowed error here would run the whole session with zero
+/// guidance — the spawn must fail instead. The parent dir already exists
+/// (`ensure_opencode_config_at` ran first on this spawn). `None` (skills not
+/// wired) clears any stale copy, since pickup is by existence.
+///
+/// Ordering contract: this runs from `apply_opencode_model`, which
+/// `spawn_session` awaits BEFORE `cmd.spawn()` — the AGENTS.md is on disk
+/// (or the spawn has already failed) before `opencode acp` ever starts.
+///
+/// `pub(crate)` for one caller outside the spawn path: the installer's
+/// end-to-end guidance test writes the per-turn AGENTS.md through this exact
+/// production writer, never a hand-rolled copy.
+pub(crate) fn write_iblai_guidance(config_home: &Path, text: Option<&str>) -> Result<(), String> {
+    let path = config_home.join("opencode").join("AGENTS.md");
+    match text {
+        Some(t) => std::fs::write(&path, t)
+            .map_err(|e| format!("failed writing ibl.ai guidance ({}): {e}", path.display())),
+        None => match std::fs::remove_file(&path) {
+            Ok(()) => Ok(()),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(e) => Err(format!(
+                "failed clearing stale ibl.ai guidance ({}): {e}",
+                path.display()
+            )),
+        },
     }
 }
 
@@ -1935,6 +1988,8 @@ fn enforce_build_prompt(root: &mut serde_json::Map<String, Value>) {
 /// `base_url` + `api_key` are always explicit now — an on-device runtime's own
 /// endpoint, or the loopback proxy for cloud. The old `{env:IBL_*}` placeholders are
 /// gone, which is what lets the real DM token stay out of the agent's environment.
+/// `guidance` is the composed ibl.ai guidance for a skills-wired session, written
+/// beside the config as the per-session AGENTS.md; `None` clears any stale copy.
 ///
 // ponytail: patches the single shared config at ~/.config/iblai/agents/opencode —
 // fine for one Code session at a time; give each session its own XDG_CONFIG_HOME if
@@ -1946,6 +2001,7 @@ fn apply_opencode_model(
     base_url: &str,
     api_key: &str,
     display_name: &str,
+    guidance: Option<&str>,
 ) -> Result<(), String> {
     // The config ships embedded in the app and is materialized on first use — make
     // sure this session's copy is on disk before we patch it.
@@ -1975,6 +2031,9 @@ fn apply_opencode_model(
     // Skills the agent discovers at startup — see `apply_skills_config`.
     let mentor_dir = mentor.map(mentor_skills_dir);
     apply_skills_config(root, &vibe_skills_dir(), mentor_dir.as_deref());
+    // The ibl.ai guidance, as the per-session AGENTS.md opencode reads on
+    // every model call — see `write_iblai_guidance`.
+    write_iblai_guidance(&home, guidance)?;
 
     let providers = root
         .entry("provider")
@@ -2213,6 +2272,21 @@ async fn spawn_session(
     };
     let spec = parse_model_spec(&chosen_model);
 
+    // The ibl.ai guidance rides opencode's own instructions mechanism (the
+    // per-session AGENTS.md, re-read on every model call), so it is composed
+    // for every spawn with skills wired — including local (ollama/foundry)
+    // sessions, which never touch the proxy and under the old in-flight
+    // injection ran with zero guidance.
+    let skills_wired = vibe_skills_dir().is_dir()
+        || mentor
+            .as_deref()
+            .map(mentor_skills_dir)
+            .is_some_and(|d| d.is_dir());
+    let guidance = match skills_wired {
+        true => Some(crate::opencode_proxy::guidance_with_identity(tenant).await),
+        false => None,
+    };
+
     // On-device runtimes talk straight to their own local endpoint. Cloud goes through
     // the loopback proxy, which holds the real DM token — the agent only ever sees a
     // throwaway per-session key, so `echo $IBL_AUTH_HEADER` has nothing to steal.
@@ -2241,21 +2315,7 @@ async fn spawn_session(
         // The proxy announces upstream 402s (insufficient credit) to the webview.
         crate::opencode_proxy::set_app(app);
         let secret = crate::opencode_proxy::new_secret();
-        // Skills wired for this spawn → the proxy injects the ibl.ai guidance
-        // as a system message into this session's chat/completions calls.
-        let skills_wired = vibe_skills_dir().is_dir()
-            || mentor
-                .as_deref()
-                .map(mentor_skills_dir)
-                .is_some_and(|d| d.is_dir());
-        crate::opencode_proxy::register(
-            &secret,
-            upstream,
-            token.to_string(),
-            tenant.to_string(),
-            skills_wired,
-        )
-        .await;
+        crate::opencode_proxy::register(&secret, upstream, token.to_string()).await;
         (
             format!("http://127.0.0.1:{port}/v1"),
             secret.clone(),
@@ -2270,6 +2330,7 @@ async fn spawn_session(
         &base_url,
         &api_key,
         display_name,
+        guidance.as_deref(),
     )?;
 
     // Kernel confinement on top of the permission prompt in
@@ -3454,12 +3515,6 @@ mod tests {
         let _ = std::fs::remove_dir_all(&scratch);
     }
 
-    /// Serialises the tests that repoint `XDG_DATA_HOME`, which is process-global.
-    fn data_dir_lock() -> std::sync::MutexGuard<'static, ()> {
-        static L: std::sync::Mutex<()> = std::sync::Mutex::new(());
-        L.lock().unwrap_or_else(|e| e.into_inner())
-    }
-
     /// Run `body` with the app data dir pointed at a throwaway directory.
     fn with_scratch_data_dir<T>(tag: &str, body: impl FnOnce() -> T) -> T {
         let _lock = data_dir_lock();
@@ -3823,6 +3878,44 @@ mod tests {
             cfg.get("skills").is_none(),
             "a leftover key from a previous spawn is removed"
         );
+    }
+
+    /// The ibl.ai guidance lands as the per-session AGENTS.md beside
+    /// opencode.json — never outside the ibl.ai config home — is rewritten
+    /// whole each spawn, cleared when skills aren't wired (pickup is by
+    /// existence), and a failed write fails LOUDLY: opencode silently ignores
+    /// missing instruction files, so a swallowed error would run the whole
+    /// session unguided.
+    #[test]
+    fn the_guidance_rides_the_per_session_agents_md() {
+        let s = Scratch::new("guidance-agents-md");
+        std::fs::create_dir_all(s.path().join("opencode")).unwrap();
+
+        write_iblai_guidance(s.path(), Some("# ibl.ai guidance\nv1\n")).unwrap();
+        let path = s.path().join("opencode").join("AGENTS.md");
+        assert!(
+            path.starts_with(s.path()),
+            "the file stays inside the ibl.ai config home passed in"
+        );
+        assert_eq!(
+            std::fs::read_to_string(&path).unwrap(),
+            "# ibl.ai guidance\nv1\n"
+        );
+
+        write_iblai_guidance(s.path(), Some("v2")).unwrap();
+        assert_eq!(
+            std::fs::read_to_string(&path).unwrap(),
+            "v2",
+            "rewritten per spawn"
+        );
+
+        write_iblai_guidance(s.path(), None).unwrap();
+        assert!(!path.exists(), "no skills wired → no stale guidance file");
+        write_iblai_guidance(s.path(), None).unwrap();
+
+        let err = write_iblai_guidance(&s.path().join("missing"), Some("text"))
+            .expect_err("an unwritable guidance file must fail the spawn");
+        assert!(err.contains("AGENTS.md"), "{err}");
     }
 
     /// A resource that sanitises to the manifest's own name must not clobber it,
