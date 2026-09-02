@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.138.2](https://github.com/iblai/os/compare/v0.138.1...v0.138.2) (2026-09-02)
+
+### Bug Fixes
+
+* **pr-gate:** defer only to a sibling run that is still running ([4573a38](https://github.com/iblai/os/commit/4573a38b452eeea108335d941e122fa86cfcb824)), closes [lms#232](https://github.com/iblai/lms/issues/232)
+
 ## [0.138.1](https://github.com/iblai/os/compare/v0.138.0...v0.138.1) (2026-09-02)
 
 ### Bug Fixes
