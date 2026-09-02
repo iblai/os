@@ -1,0 +1,75 @@
+diff --git a/dist/index.js b/dist/index.js
+index 6091c520d82832e267b0276ab9cec7df427e6ec8..74fb13715ecf43111ace24a75116c9352b3e9a8f 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -611,6 +611,7 @@ function mathText(options) {
+ 		let sizeOpen = 0;
+ 		let sizeClose = 0;
+ 		let backslashRun = 0;
++		let afterWhitespace = false;
+ 		let candidate;
+ 		let container;
+ 		let opener;
+@@ -644,6 +645,7 @@ function mathText(options) {
+ 					effects.consume(code);
+ 					effects.exit("mathTextData");
+ 					backslashRun = 0;
++					afterWhitespace = false;
+ 					return between;
+ 				}
+ 				candidate = effects.enter(sizeOpen === 2 ? "mathTextDisplaySequence" : "mathTextSequence");
+@@ -655,15 +657,10 @@ function mathText(options) {
+ 				effects.consume(code);
+ 				effects.exit("space");
+ 				backslashRun = 0;
++				afterWhitespace = true;
+ 				return between;
+ 			}
+-			if (markdownLineEnding(code)) {
+-				effects.enter(types.lineEnding);
+-				effects.consume(code);
+-				effects.exit(types.lineEnding);
+-				backslashRun = 0;
+-				return between;
+-			}
++			if (markdownLineEnding(code)) return nok(code);
+ 			effects.enter("mathTextData");
+ 			return data(code);
+ 		}
+@@ -674,20 +671,21 @@ function mathText(options) {
+ 			}
+ 			effects.consume(code);
+ 			backslashRun = code === codes.backslash ? backslashRun + 1 : 0;
++			afterWhitespace = false;
+ 			return data;
+ 		}
+ 		function close(code) {
+-			if (code === codes.dollarSign) {
+-				effects.consume(code);
+-				sizeClose++;
+-				return close;
+-			}
+ 			if (sizeClose === sizeOpen) {
+-				if (sizeOpen === 1 && (code === codes.dollarSign || isAsciiWord(code))) return nok(code);
++				if (sizeOpen === 1 && (isAsciiWord(code) || afterWhitespace)) return nok(code);
+ 				effects.exit(sizeOpen === 2 ? "mathTextDisplaySequence" : "mathTextSequence");
+ 				effects.exit(sizeOpen === 2 ? "mathTextDisplay" : "mathText");
+ 				return ok$1(code);
+ 			}
++			if (code === codes.dollarSign) {
++				effects.consume(code);
++				sizeClose++;
++				return close;
++			}
+ 			candidate.type = "mathTextData";
+ 			backslashRun = 0;
+ 			return data(code);
+@@ -812,7 +810,7 @@ const resolveMathText = (events) => {
+ 	return events;
+ };
+ const previousDollar = function(code) {
+-	if (code !== codes.dollarSign && code !== codes.backslash) return true;
++	if (code !== codes.backslash) return true;
+ 	return this.events[this.events.length - 1]?.[1].type === types.characterEscape;
+ };
+ function isAsciiWord(code) {

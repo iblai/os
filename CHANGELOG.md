@@ -4,30 +4,30 @@
 
 ### Performance
 
-* **bundle:** lazy-load syntax highlighter and LiveKit off the main chat path ([05844e9](https://github.com/iblai/os/commit/05844e9429c4f7d7b745f6a8bca564709cca6296))
+- **bundle:** lazy-load syntax highlighter and LiveKit off the main chat path ([05844e9](https://github.com/iblai/os/commit/05844e9429c4f7d7b745f6a8bca564709cca6296))
 
 ## [0.137.0](https://github.com/iblai/os/compare/v0.136.1...v0.137.0) (2026-09-01)
 
 ### Features
 
-* **chat:** add the working indicator component ([8620fab](https://github.com/iblai/os/commit/8620faba413b9dbc9d447f738d7b1bf0d591ec4d))
-* **chat:** show the working indicator for the in-flight turn ([cfc0f00](https://github.com/iblai/os/commit/cfc0f00837f59a17be307856af02e42ab98983d5))
-* **i18n:** add working indicator copy ([230dfe5](https://github.com/iblai/os/commit/230dfe5f0f3c36a2f54004fe6c2fb57fba36f93f))
+- **chat:** add the working indicator component ([8620fab](https://github.com/iblai/os/commit/8620faba413b9dbc9d447f738d7b1bf0d591ec4d))
+- **chat:** show the working indicator for the in-flight turn ([cfc0f00](https://github.com/iblai/os/commit/cfc0f00837f59a17be307856af02e42ab98983d5))
+- **i18n:** add working indicator copy ([230dfe5](https://github.com/iblai/os/commit/230dfe5f0f3c36a2f54004fe6c2fb57fba36f93f))
 
 ### Refactors
 
-* **chat:** extract the agent message frame ([5531d0c](https://github.com/iblai/os/commit/5531d0c5744b25f5283e1adaa93f601f925d4113))
-* **chat:** let the disclosure rows report their own liveness ([593d0d5](https://github.com/iblai/os/commit/593d0d514a360e0fe86034988eb022d17f68e434))
+- **chat:** extract the agent message frame ([5531d0c](https://github.com/iblai/os/commit/5531d0c5744b25f5283e1adaa93f601f925d4113))
+- **chat:** let the disclosure rows report their own liveness ([593d0d5](https://github.com/iblai/os/commit/593d0d514a360e0fe86034988eb022d17f68e434))
 
 ### Styles
 
-* **changelog:** apply prettier formatting ([022f689](https://github.com/iblai/os/commit/022f689ca78e4078e0d4f3d4a21f48945c257050))
+- **changelog:** apply prettier formatting ([022f689](https://github.com/iblai/os/commit/022f689ca78e4078e0d4f3d4a21f48945c257050))
 
 ### Tests
 
-* **e2e:** cover the agent working indicator ([6d64c73](https://github.com/iblai/os/commit/6d64c731f91cbf1e2ba5fbb820906cb0475195ae))
-* **e2e:** give journey 50 its own mentor instead of an auto-resolved one ([0b9b068](https://github.com/iblai/os/commit/0b9b068b9ae29923f3f7fa5fe901d45d2e5f2d6e))
-* **e2e:** stop journey 50's fast path treating a "user" source as broken ([a335d6b](https://github.com/iblai/os/commit/a335d6b202732c45c062f6807c858d01c7175862))
+- **e2e:** cover the agent working indicator ([6d64c73](https://github.com/iblai/os/commit/6d64c731f91cbf1e2ba5fbb820906cb0475195ae))
+- **e2e:** give journey 50 its own mentor instead of an auto-resolved one ([0b9b068](https://github.com/iblai/os/commit/0b9b068b9ae29923f3f7fa5fe901d45d2e5f2d6e))
+- **e2e:** stop journey 50's fast path treating a "user" source as broken ([a335d6b](https://github.com/iblai/os/commit/a335d6b202732c45c062f6807c858d01c7175862))
 
 ## [0.136.1](https://github.com/iblai/os/compare/v0.136.0...v0.136.1) (2026-09-01)
 
