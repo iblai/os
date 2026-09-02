@@ -32,3 +32,13 @@ See `.claude/skills/e2e-coverage.md` for when and how to add the e2e half.
 After any change to user-facing behavior, evaluate whether `e2e/coverage.json` and `e2e/COVERAGE.md` need updating. Coverage must never regress.
 
 See `.claude/skills/e2e-coverage.md` for the full decision process.
+
+## Code mode: ibl.ai instruction layers
+
+Three OS-owned layers steer the Code agent (opencode); each has guard tests pinning its load-bearing lines — update the pins in the same change as any text edit.
+
+1. **Voice**: `src-tauri/src/opencode_build_prompt.txt` fully replaces opencode's per-model prompt (`enforce_build_prompt` writes `agent.build.prompt` + `default_agent: "build"` on every spawn). Fork of upstream `gpt.txt` at the pinned `OPENCODE_VERSION` — re-diff on pin bumps.
+2. **Desktop policy**: `IBLAI_INSTRUCTIONS` in `src-tauri/src/opencode_proxy.rs` — the three asked setup steps (default template? → local preview at localhost:3000? → deploy?, once per project, yes = auto-redeploy after), nothing localhost- or deploy-shaped unasked, "our hosting" never "Vercel", RESOLVED env values, auto-minted `IBLAI_API_KEY`. `guidance_with_identity` composes it with per-user identity lines at spawn; `write_iblai_guidance` (`opencode_acp.rs`) writes it as `<config_home(session)>/opencode/AGENTS.md` on every spawn, strictly BEFORE `cmd.spawn()`, and a failed write aborts the spawn — opencode silently ignores missing instruction files, so never soften that error. opencode re-reads the file on every model call: main turns, subagents, ACP, and on-device (ollama/foundry) sessions alike. Never write that AGENTS.md outside the per-session ibl.ai config home (it is unrelated to this repo-root AGENTS.md). The retired delivery paths — loopback-proxy body injection and the config `instructions` key — must not come back.
+3. **Skills**: vibe SKILL.md files sync from the LATEST vibe GitHub release at startup. Portable procedures go there; desktop-only policy goes in layer 2, which supersedes skill wording.
+
+When `OPENCODE_VERSION` bumps: re-verify upstream `session/instruction.ts` still loads the global AGENTS.md, then re-prove it empirically — run `opencode run "hi"` (the managed pinned binary) with a scratch `XDG_CONFIG_HOME` holding `opencode/opencode.json` (provider baseURL pointed at a local stub that captures the request body) plus `opencode/AGENTS.md` with a marker, and grep the captured system content for `# ibl.ai guidance`.

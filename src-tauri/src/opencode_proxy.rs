@@ -39,10 +39,12 @@ use axum::Router;
 use sha2::{Digest, Sha256};
 use tokio::sync::{Mutex, RwLock};
 
-/// System-prompt guidance for the coding agent. The proxy injects it as an
-/// extra system message into every `chat/completions` body it forwards (for
-/// sessions registered with skills wired) — nothing on disk, no extra routes,
-/// and opencode never even sees it in its own conversation state.
+/// System-prompt guidance for the coding agent. Composed with the identity
+/// bullets ([`guidance_with_identity`]) and written at every spawn as the
+/// per-session `AGENTS.md` beside the session's opencode.json — opencode
+/// checks that path for existence and re-reads its content on every model
+/// call, folding it into the system prompt for main turns, subagents and ACP
+/// alike, cloud and on-device sessions both.
 const IBLAI_INSTRUCTIONS: &str = "\
 # ibl.ai guidance
 
@@ -58,7 +60,12 @@ the user explicitly asks for detail (an explanation, a report, a walkthrough).
 - Whenever an available skill covers the task at hand — especially the \
 iblai-vibe-* skills — you MUST invoke that skill (via the skill tool) before \
 improvising the same work by hand.
-- When the user asks to build a website or web app, first ask ONE short \
+- Building a web app moves through three loose steps, in order: 1. the \
+default-template question, 2. the local-preview question, 3. the deploy \
+question. Keep the steps distinct — finish one before starting the next — \
+and stay conversational, never a rigid wizard.
+- Step 1, the template: when the user asks to build a website or web app, \
+first ask ONE short \
 question: whether to start from our default template, recommending it (\"it's \
 the fastest and most reliable way to get started\"). In everything you say to \
 the user, call it \"our default template\" — never the internal name \
@@ -76,17 +83,37 @@ the project started from vibe-starter or otherwise.
 - When working with vibe-starter and other ibl.ai projects, always copy \
 `.env.example` into `.env.local` (before the first run, so the app boots with \
 its expected configuration).
-- After building or changing a website, publish it and show the user the \
-live site: run `pnpm typecheck` and `pnpm lint`, deploy automatically with \
-the iblai-vibe-ops-deploy skill (no Vercel account or token — do not ask \
-whether to deploy; the skill's status script does the deploy polling, one \
-bounded check every ~10 s — never improvise status commands or extra \
-\"is it pushed?\" checks), then open the deployed URL in the user's browser — \
-macOS: `open -a \"Google Chrome\" <url>` (plain `open <url>` as a fallback), \
-Linux: `xdg-open <url>`, Windows: `start <url>`. The deployed URL is how \
-the user sees their site — never show localhost or offer a local dev \
-server. If the deploy fails, report the error verbatim and continue \
-helping.
+- Step 2, the local-preview question — its own step, and the question is \
+never skipped: after building or changing a website, ask ONE short \
+question — whether they want a local preview at http://localhost:3000. \
+Never start a dev server or open a browser at localhost without that \
+yes. On yes: start the dev server (`pnpm dev`, in the background) unless \
+one is already running — never spawn a second — then give the user the \
+URL and open it in their browser — macOS: `open -a \"Google Chrome\" \
+<url>` (plain `open <url>` as a fallback), Linux: `xdg-open <url>`, \
+Windows: `start <url>`. The URL is http://localhost:3000 unless \
+`pnpm dev` prints a different one (busy port) — report the URL it \
+actually prints. While the server keeps running, later changes \
+hot-reload — do not re-ask and do not reopen the browser. If they \
+decline, move on — they can ask for the preview any time. Run no checks \
+before the preview — typecheck and lint run before deploys, not here. \
+The local preview is the work in progress; the deployed URL is the \
+shipped site.
+- Step 3, the deploy question — a separate step, asked after the preview \
+step: the first time a project is built and working, ask ONE short \
+question — whether to put it on a live URL with our hosting (no extra \
+accounts or tokens needed). In everything you say to the user, call it \
+\"our hosting\" — never the provider name \"Vercel\" (the live URL ends \
+in vercel.app, and showing that URL is fine). Ask it once per project — \
+once it is answered do not ask again, and skip it when the project has \
+already deployed. Yes means deploy now and automatically redeploy after \
+later changes; no means deploy only when the user asks. To deploy: run \
+`pnpm typecheck` and `pnpm lint`, then the iblai-vibe-ops-deploy skill \
+(the skill's status script does the deploy polling, one bounded check \
+every ~10 s — never improvise status commands or extra \"is it pushed?\" \
+checks), then show the user the deployed URL and open it in their \
+browser (same commands as above). If the deploy fails, report the error \
+verbatim and continue helping.
 - Monetization is optional and on request only: when the user asks to charge \
 users to enter the app (a paywall), use the \
 iblai-vibe-monetization-app-paywall skill. Do not suggest it unprompted.
@@ -134,12 +161,6 @@ struct Upstream {
     base: String,
     /// The real DM token — held here, never handed to the agent.
     token: String,
-    /// The platform (tenant) key this session serves — surfaced to the agent
-    /// in the injected guidance so skills know which org they act on.
-    tenant: String,
-    /// Whether this session has skills wired — the gate for injecting
-    /// [`IBLAI_INSTRUCTIONS`] into its chat/completions calls.
-    inject_guidance: bool,
 }
 
 type Sessions = RwLock<HashMap<String, Upstream>>;
@@ -172,7 +193,7 @@ pub fn set_app(handle: &tauri::AppHandle) {
     let _ = app().set(handle.clone());
 }
 
-/// The signed-in user's email, surfaced to the agent in the injected guidance
+/// The signed-in user's email, surfaced to the agent in the guidance file
 /// alongside the username. App-global for the same reason as [`learner`].
 fn learner_email() -> &'static RwLock<Option<String>> {
     static E: OnceLock<RwLock<Option<String>>> = OnceLock::new();
@@ -252,13 +273,13 @@ pub async fn set_learner(
 }
 
 /// The signed-in learner's username, for the child's `IBLAI_USERNAME` env var
-/// at spawn and the identity line in the injected guidance. `None` until a
+/// at spawn and the identity line in the guidance file. `None` until a
 /// non-empty username arrives — callers add nothing then.
 pub async fn learner_username() -> Option<String> {
     learner().read().await.clone()
 }
 
-/// The signed-in user's email, for the identity line in the injected guidance.
+/// The signed-in user's email, for the identity line in the guidance file.
 pub async fn learner_email_address() -> Option<String> {
     learner_email().read().await.clone()
 }
@@ -655,26 +676,11 @@ pub async fn ensure_started() -> Result<u16, String> {
 }
 
 /// Register a session's upstream + real token against its throwaway secret.
-/// `tenant` is the platform key the session serves (surfaced in the injected
-/// guidance); `inject_guidance` marks a session with skills wired: its
-/// chat/completions calls get [`IBLAI_INSTRUCTIONS`] injected as a system
-/// message.
-pub async fn register(
-    secret: &str,
-    base: String,
-    token: String,
-    tenant: String,
-    inject_guidance: bool,
-) {
-    sessions().write().await.insert(
-        secret.to_string(),
-        Upstream {
-            base,
-            token,
-            tenant,
-            inject_guidance,
-        },
-    );
+pub async fn register(secret: &str, base: String, token: String) {
+    sessions()
+        .write()
+        .await
+        .insert(secret.to_string(), Upstream { base, token });
 }
 
 /// Refresh the held token in place — the whole point of holding it here rather than
@@ -738,41 +744,31 @@ the domain.\n"
     out
 }
 
-/// Insert [`IBLAI_INSTRUCTIONS`] (plus the caller's [`identity_lines`]) as a
-/// system message into a chat/completions body — after the last LEADING system
-/// message, so opencode's own system prompt keeps first position. `None` =
-/// forward the body untouched (not JSON, no `messages` array, or the guidance
-/// is somehow already present).
-fn inject_system_guidance(
-    body: &[u8],
-    learner: Option<&str>,
-    tenant: Option<&str>,
-    email: Option<&str>,
-    base_domain: Option<&str>,
-    auth: Option<&str>,
-) -> Option<Vec<u8>> {
-    let mut v: serde_json::Value = serde_json::from_slice(body).ok()?;
-    let messages = v.get_mut("messages")?.as_array_mut()?;
-    if messages.iter().any(|m| {
-        m.get("content")
-            .and_then(|c| c.as_str())
-            .is_some_and(|c| c.contains("# ibl.ai guidance"))
-    }) {
-        return None;
-    }
-    let at = messages
-        .iter()
-        .take_while(|m| m.get("role").and_then(|r| r.as_str()) == Some("system"))
-        .count();
-    let content = format!(
+/// The full ibl.ai guidance for one session: [`IBLAI_INSTRUCTIONS`] plus the
+/// [`identity_lines`], resolved from the process-global learner/domain state.
+/// Spawn writes it as the per-session AGENTS.md that opencode folds into the
+/// system prompt on every model call — so identity is captured at spawn time,
+/// and a login that lands mid-session takes effect on the next spawn, not the
+/// next call.
+pub(crate) async fn guidance_with_identity(tenant: &str) -> String {
+    let learner = learner_username().await;
+    let email = learner_email_address().await;
+    // The ONE domain everything derives from and the auth SPA URL (the sole
+    // non-derivable host) — both always resolve, so both bullets are always
+    // present: production values unless a dev override or the signed-in
+    // frontend says otherwise.
+    let domain = platform_base_domain().await;
+    let auth = auth_url_value().await;
+    format!(
         "{IBLAI_INSTRUCTIONS}{}",
-        identity_lines(learner, tenant, email, base_domain, auth)
-    );
-    messages.insert(
-        at,
-        serde_json::json!({ "role": "system", "content": content }),
-    );
-    serde_json::to_vec(&v).ok()
+        identity_lines(
+            learner.as_deref(),
+            (!tenant.is_empty()).then_some(tenant),
+            email.as_deref(),
+            Some(domain.as_str()),
+            Some(auth.as_str()),
+        )
+    )
 }
 
 /// Read the throwaway secret from `Authorization: Bearer <secret>` (what an
@@ -845,14 +841,12 @@ async fn forward(req: Request) -> Response {
     let Some(secret) = bearer(&parts.headers) else {
         return (StatusCode::UNAUTHORIZED, "missing key").into_response();
     };
-    let Some((base, token, tenant, inject)) = sessions().read().await.get(&secret).map(|u| {
-        (
-            u.base.clone(),
-            u.token.clone(),
-            u.tenant.clone(),
-            u.inject_guidance,
-        )
-    }) else {
+    let Some((base, token)) = sessions()
+        .read()
+        .await
+        .get(&secret)
+        .map(|u| (u.base.clone(), u.token.clone()))
+    else {
         return (StatusCode::UNAUTHORIZED, "unknown key").into_response();
     };
 
@@ -867,34 +861,6 @@ async fn forward(req: Request) -> Response {
         Ok(b) => b,
         Err(e) => return (StatusCode::BAD_REQUEST, format!("bad body: {e}")).into_response(),
     };
-    // Skills-wired sessions get the ibl.ai guidance injected as a system
-    // message, in flight — opencode's own conversation state never sees it.
-    // The identity lines read the app-global learner per request, so a login
-    // that lands mid-session takes effect on the next call.
-    let bytes = if inject && path == "chat/completions" {
-        let tenant_line = (!tenant.is_empty()).then_some(tenant.as_str());
-        let email = learner_email_address().await;
-        // The ONE domain everything derives from and the auth SPA URL (the
-        // sole non-derivable host) — both resolved, so both bullets are always
-        // present: production values unless a dev override or the signed-in
-        // frontend says otherwise.
-        let domain = platform_base_domain().await;
-        let auth = auth_url_value().await;
-        match inject_system_guidance(
-            &bytes,
-            learner.as_deref(),
-            tenant_line,
-            email.as_deref(),
-            Some(domain.as_str()),
-            Some(auth.as_str()),
-        ) {
-            Some(patched) => axum::body::Bytes::from(patched),
-            None => bytes,
-        }
-    } else {
-        bytes
-    };
-
     let mut headers = reqwest::header::HeaderMap::new();
     for (name, value) in parts.headers.iter() {
         if !is_skipped(name.as_str()) {
@@ -1140,13 +1106,10 @@ mod tests {
 
         let port = ensure_started().await.unwrap();
         let secret = new_secret();
-        // No guidance injection: the passthrough must stay byte-verbatim.
         register(
             &secret,
             format!("http://{upstream_addr}/v1"),
             "real-dm-token".to_string(),
-            "main-tenant".to_string(),
-            false,
         )
         .await;
 
@@ -1171,132 +1134,34 @@ mod tests {
         unregister(&secret).await;
     }
 
-    /// The guidance complements opencode's own system prompt — it must land
-    /// AFTER the leading system block, never in front of it.
-    #[test]
-    fn guidance_lands_after_the_leading_system_block() {
-        let body = serde_json::json!({
-            "model": "openai/gpt-5.5",
-            "messages": [
-                { "role": "system", "content": "opencode system prompt" },
-                { "role": "system", "content": "environment" },
-                { "role": "user", "content": "build a todo app" }
-            ]
-        })
-        .to_string();
-
-        let out = inject_system_guidance(body.as_bytes(), None, None, None, None, None)
-            .expect("must inject");
-        let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
-        let msgs = v["messages"].as_array().unwrap();
-
-        assert_eq!(msgs.len(), 4);
-        assert_eq!(msgs[0]["content"], "opencode system prompt");
-        assert_eq!(msgs[2]["role"], "system");
-        assert!(
-            msgs[2]["content"]
-                .as_str()
-                .unwrap()
-                .contains("iblai-vibe-ops-init"),
-            "the injected message carries the guidance"
-        );
-        assert_eq!(msgs[3]["role"], "user", "the user turn stays last");
-        assert_eq!(
-            v["model"], "openai/gpt-5.5",
-            "the rest of the body survives"
-        );
-    }
-
-    #[test]
-    fn a_body_with_no_system_prompt_gets_the_guidance_first() {
-        let body = serde_json::json!({
-            "messages": [{ "role": "user", "content": "hi" }]
-        })
-        .to_string();
-
-        let out = inject_system_guidance(body.as_bytes(), None, None, None, None, None).unwrap();
-        let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
-        assert_eq!(v["messages"][0]["role"], "system");
-        assert_eq!(v["messages"][1]["role"], "user");
-    }
-
-    /// Anything the injector can't handle is forwarded byte-for-byte: a broken
-    /// guidance patch must never break the model call it rides on.
-    #[test]
-    fn unpatchable_bodies_are_left_untouched() {
-        assert!(inject_system_guidance(b"not json at all", None, None, None, None, None).is_none());
-        assert!(inject_system_guidance(
-            br#"{"prompt": "legacy completions"}"#,
-            None,
-            None,
-            None,
-            None,
-            None
-        )
-        .is_none());
-
-        // Already carrying the guidance → not doubled, identity or not.
-        let body = serde_json::json!({
-            "messages": [{ "role": "system", "content": IBLAI_INSTRUCTIONS }]
-        })
-        .to_string();
-        assert!(inject_system_guidance(body.as_bytes(), None, None, None, None, None).is_none());
-        assert!(inject_system_guidance(
-            body.as_bytes(),
-            Some("codey"),
-            Some("acme"),
-            None,
-            Some("iblai.org"),
-            None
-        )
-        .is_none());
-    }
-
     /// The agent must be TOLD who it acts for: the identity bullets carry the
     /// username and platform key plus the env vars that mirror them.
     #[test]
-    fn identity_lines_land_in_the_guidance() {
-        let body = serde_json::json!({
-            "messages": [{ "role": "user", "content": "deploy this" }]
-        })
-        .to_string();
-
-        let out = inject_system_guidance(
-            body.as_bytes(),
+    fn identity_lines_carry_each_known_part_and_stand_alone() {
+        let all = identity_lines(
             Some("codey"),
             Some("acme"),
             Some("codey@example.com"),
             Some("iblai.org"),
             Some("https://auth.iblai.org"),
-        )
-        .unwrap();
-        let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
-        let content = v["messages"][0]["content"].as_str().unwrap();
-        assert!(content.contains("username is `codey`"), "{content}");
-        assert!(content.contains("IBLAI_USERNAME"), "{content}");
-        assert!(
-            content.contains("platform (tenant) key is `acme`"),
-            "{content}"
         );
-        assert!(content.contains("IBLAI_PLATFORM_KEY"), "{content}");
+        assert!(all.contains("username is `codey`"), "{all}");
+        assert!(all.contains("IBLAI_USERNAME"), "{all}");
+        assert!(all.contains("platform (tenant) key is `acme`"), "{all}");
+        assert!(all.contains("IBLAI_PLATFORM_KEY"), "{all}");
         assert!(
-            content.contains("email address is `codey@example.com`"),
-            "{content}"
+            all.contains("email address is `codey@example.com`"),
+            "{all}"
         );
         // The ONE domain the agent derives everything from, and the sole
         // non-derivable host beside it.
-        assert!(content.contains("base domain is `iblai.org`"), "{content}");
-        assert!(content.contains("DOMAIN=iblai.org"), "{content}");
+        assert!(all.contains("base domain is `iblai.org`"), "{all}");
+        assert!(all.contains("DOMAIN=iblai.org"), "{all}");
         assert!(
-            content.contains("auth SPA) URL is `https://auth.iblai.org`"),
-            "{content}"
+            all.contains("auth SPA) URL is `https://auth.iblai.org`"),
+            "{all}"
         );
-        assert!(content.contains("NEXT_PUBLIC_AUTH_URL"), "{content}");
-
-        // No identity known → the guidance is exactly the base text, no stubs.
-        let out = inject_system_guidance(body.as_bytes(), None, None, None, None, None).unwrap();
-        let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
-        assert_eq!(v["messages"][0]["content"], IBLAI_INSTRUCTIONS);
+        assert!(all.contains("NEXT_PUBLIC_AUTH_URL"), "{all}");
 
         // Each line stands alone when only one part of the identity is known.
         assert!(identity_lines(Some("codey"), None, None, None, None).contains("IBLAI_USERNAME"));
@@ -1310,6 +1175,29 @@ mod tests {
         assert!(domain_only.contains("DOMAIN=iblai.app"), "{domain_only}");
         assert!(!domain_only.contains("auth SPA"), "{domain_only}");
         assert_eq!(identity_lines(None, None, None, None, None), "");
+    }
+
+    /// What spawn writes into the per-session AGENTS.md: the base guidance
+    /// first, the identity bullets appended, resolved from the process-global
+    /// learner/domain state.
+    #[tokio::test]
+    async fn the_composed_guidance_is_the_base_text_plus_identity() {
+        let _state = learner_state_lock();
+        set_learner("codey", "codey@example.com", "https://dm.example/dm", "", "").await;
+
+        let g = guidance_with_identity("acme").await;
+        assert!(g.starts_with(IBLAI_INSTRUCTIONS), "base text comes first");
+        assert!(g.contains("username is `codey`"), "{g}");
+        assert!(g.contains("email address is `codey@example.com`"), "{g}");
+        assert!(g.contains("platform (tenant) key is `acme`"), "{g}");
+        // Domain and auth always resolve (default or dev override) — pin their
+        // presence, not their machine-dependent values.
+        assert!(g.contains("base domain is `"), "{g}");
+        assert!(g.contains("auth SPA) URL is `"), "{g}");
+
+        // No tenant → no tenant bullet.
+        let no_tenant = guidance_with_identity("").await;
+        assert!(!no_tenant.contains("IBLAI_PLATFORM_KEY"), "{no_tenant}");
     }
 
     /// The env-var half of the same contract: what spawn exports as
@@ -1764,7 +1652,7 @@ mod tests {
     /// The guidance must keep its load-bearing content: skill priority, the
     /// recommended default-template question for web apps (user-facing name
     /// only, never "vibe-starter"), never stripping ibl.ai components, and
-    /// publishing + showing the live site.
+    /// the local-preview + ask-once-deploy flow.
     #[test]
     fn the_iblai_guidance_keeps_its_load_bearing_lines() {
         let text = IBLAI_INSTRUCTIONS;
@@ -1790,14 +1678,36 @@ mod tests {
             "the show-the-live-site guidance must survive edits: {text}"
         );
         assert!(
-            text.contains("pnpm typecheck") && text.contains("never show localhost"),
-            "the no-localhost rule must survive edits: {text}"
+            text.contains("three loose steps")
+                && text.contains("Step 1")
+                && text.contains("Step 2")
+                && text.contains("Step 3"),
+            "the 3-step arc must survive edits: {text}"
+        );
+        assert!(
+            text.contains("pnpm dev")
+                && text.contains("localhost:3000")
+                && text.contains("whether they want a local preview")
+                && text.contains("Never start a dev server")
+                && text.contains("already running"),
+            "the ask-first local-preview rule must survive edits: {text}"
         );
         assert!(
             text.contains("iblai-vibe-ops-deploy")
-                && text.contains("do not ask whether to deploy")
+                && text.contains("once per project")
+                && text.contains("automatically redeploy")
+                && text.contains("deploy only when the user asks")
+                && text.contains("pnpm typecheck")
+                && text.contains("pnpm lint")
                 && text.contains("never improvise status commands"),
-            "the auto-deploy rule must survive edits: {text}"
+            "the ask-once-then-auto-redeploy deploy rule must survive edits: {text}"
+        );
+        assert!(
+            text.contains("call it \"our hosting\"")
+                && text.contains("never the provider name \"Vercel\"")
+                && text.contains("vercel.app")
+                && !text.contains("no Vercel account"),
+            "the never-name-the-hosting-provider rule must survive edits: {text}"
         );
         assert!(
             text.contains("iblai-vibe-monetization-app-paywall")
