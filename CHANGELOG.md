@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.138.1](https://github.com/iblai/os/compare/v0.138.0...v0.138.1) (2026-09-02)
+
+### Bug Fixes
+
+* **pr-gate:** derive the verdict from the E2E job, not the workflow conclusion ([52500ff](https://github.com/iblai/os/commit/52500ffac2c662a6a5ebbd73f3c41a98c0dca16e)), closes [lms#232](https://github.com/iblai/lms/issues/232)
+
 ## [0.138.0](https://github.com/iblai/os/compare/v0.137.1...v0.138.0) (2026-09-02)
 
 ### Features
