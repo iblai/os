@@ -3360,3 +3360,419 @@ describe('markdownToHtml function - preprocess paths', () => {
     expect(html).not.toContain('<a ');
   });
 });
+
+/**
+ * Canvas-path half of the LaTeX corpus recovered from the deleted
+ * `lib/__tests__/preprocess-latex.test.ts`.
+ *
+ * Those inputs came from real broken assistant replies logged under issue
+ * #2109 and used to be asserted against `lib/preprocess-latex.ts`, the
+ * hand-rolled string rewriter deleted on this branch. `markdownToHtml` now
+ * runs the same unified stack as the chat renderer (`remark-parse` ->
+ * `remark-gfm` -> `@ziloen/remark-math` -> `rehype-katex`), so document-mode
+ * LaTeX is literal text and only genuine math delimiters become KaTeX.
+ *
+ * The inputs kept here are the ones that were really about the HTML-string
+ * path: fenced-code fidelity, list nesting, and `tabular`/`array` table
+ * output. Everything else in the corpus is pinned against the component in
+ * `components/__tests__/markdown.test.tsx`; no input is asserted in both.
+ */
+describe('markdownToHtml - LaTeX corpus from real assistant replies', () => {
+  describe('fenced code fidelity', () => {
+    it('leaves an unclosed streaming fence body verbatim, dollars included', () => {
+      expect(markdownToHtml('```python\n# streaming\nprice = "$5"')).toBe(
+        '<pre><code class="language-python"># streaming\nprice = "$5"\n</code></pre>',
+      );
+      const midDocument = markdownToHtml(
+        'Intro text\n```python\n# streaming\nprice = "$5"',
+      );
+      expect(midDocument).toContain('<p>Intro text</p>');
+      expect(midDocument).toContain('price = "$5"');
+    });
+
+    it('treats a double-backtick run as a code span, not a LaTeX quote', () => {
+      // Rewriting ``...`` to "..." is what used to shred every fenced block.
+      expect(markdownToHtml('``quoted``')).toBe('<p><code>quoted</code></p>');
+      expect(markdownToHtml('```js\nconst x = 10;\n```')).toBe(
+        '<pre><code class="language-js">const x = 10;\n</code></pre>',
+      );
+    });
+
+    it('leaves math delimiters inside a fence unparsed', () => {
+      expect(markdownToHtml('```\n$$x + y$$\n```')).toBe(
+        '<pre><code>$$x + y$$\n</code></pre>',
+      );
+      expect(markdownToHtml('```\n\\[x + y\\]\n```')).toBe(
+        '<pre><code>\\[x + y\\]\n</code></pre>',
+      );
+    });
+
+    it('leaves a verbatim environment literal with its dollars and percents', () => {
+      const html = markdownToHtml(
+        'Code kata:\n\\begin{verbatim}\nconst price = "$5"; // 10% off\n\\end{verbatim}\nDone.',
+      );
+      expect(html).toContain('\\begin{verbatim}');
+      expect(html).toContain('const price = "$5"; // 10% off');
+      expect(html).toContain('Done.');
+      expect(html).not.toContain('<pre>');
+    });
+
+    it('leaves the LaTeX quote idiom literal', () => {
+      expect(markdownToHtml("``quoted text''")).toBe("<p>``quoted text''</p>");
+    });
+  });
+
+  describe('document-mode LaTeX stays literal', () => {
+    it('does not turn a nested itemize into nested lists', () => {
+      const html = markdownToHtml(
+        '\\begin{itemize}\n  \\item Deliverables:\n    \\begin{itemize}\n      \\item README with tradeoffs.\n      \\item Coverage summary.\n    \\end{itemize}\n  \\item Ship it.\n\\end{itemize}',
+      );
+      expect(html).not.toContain('<ul>');
+      expect(html).toContain('\\item Deliverables:');
+      expect(html).toContain('\\item README with tradeoffs.');
+      expect(html).toContain('\\item Coverage summary.');
+      expect(html).toContain('\\item Ship it.');
+    });
+
+    it('does not turn a flat itemize into a list', () => {
+      const html = markdownToHtml(
+        '\\begin{itemize}\n\\item First item\n\\item Second item\n\\end{itemize}',
+      );
+      expect(html).not.toContain('<ul>');
+      expect(html).toContain('\\item First item');
+      expect(html).toContain('\\item Second item');
+    });
+
+    it('leaves \\textbf and \\section literal', () => {
+      expect(markdownToHtml('This is \\textbf{bold} text.')).toBe(
+        '<p>This is \\textbf{bold} text.</p>',
+      );
+      expect(markdownToHtml('\\section{Introduction}')).toBe(
+        '<p>\\section{Introduction}</p>',
+      );
+    });
+
+    it('keeps a currency range literal', () => {
+      expect(markdownToHtml('tickets are $5-$10 today')).toBe(
+        '<p>tickets are $5-$10 today</p>',
+      );
+    });
+
+    it('keeps a backslash-led span out of an earlier currency dollar', () => {
+      const html = markdownToHtml(
+        'range is $100-$200.\nChem $\\ce{H2O}$ and $\\ce{SO4^2-}$',
+      );
+      expect(html).toContain('range is $100-$200.');
+      expect(
+        [
+          ...html.matchAll(
+            /<annotation encoding="application\/x-tex">([^<]*)</g,
+          ),
+        ].map((m) => m[1]),
+      ).toEqual(['\\ce{H2O}', '\\ce{SO4^2-}']);
+    });
+
+    it('supplies the aligned environment a bare & display block omits', () => {
+      const html = markdownToHtml('$$\na &= b + c \\\\\nd &= e + f\n$$');
+      expect(html).not.toContain('katex-error');
+      expect(html).toContain('katex-display');
+      expect(html).toContain('\\begin{aligned}');
+    });
+
+    it('leaves an existing environment unwrapped', () => {
+      const html = markdownToHtml(
+        '$$\\begin{pmatrix}1 & 2 \\\\ 3 & 4\\end{pmatrix}$$',
+      );
+      expect(html).not.toContain('katex-error');
+      expect(html).not.toContain('\\begin{aligned}');
+    });
+
+    /**
+     * KaTeX's default `errorColor` is `#cc0000`. Genuinely malformed TeX that
+     * no fix can repair degrades better in the muted body colour, and the two
+     * renderers have to agree, so the canvas path passes it too.
+     */
+    it('renders an error box in the muted foreground, never KaTeX red', () => {
+      const html = markdownToHtml(
+        '$$\n\\begin{enumerate}\n\\item First step.\n\\end{enumerate}\n$$',
+      );
+      expect(html).toContain('katex-error');
+      expect(html).toContain('color:var(--muted-foreground)');
+    });
+  });
+
+  describe('tabular and array environments', () => {
+    /**
+     * A bare `tabular`/`array` block carries no math delimiter, so it is
+     * ordinary text: no markdown table, no KaTeX, nothing dropped.
+     */
+    it('leaves an undelimited tabular or array block literal', () => {
+      for (const src of [
+        '\\begin{tabular}{|c|c|c|}\\hline Name & Age & City \\\\\\hline Alice & 30 & NYC \\\\\\hline\\end{tabular}',
+        '\\begin{tabular}{ccc}Header1 & Header2 & Header3 \\\\Row1 & Row2 & Row3\\end{tabular}',
+        '\\begin{array}{cc}A & B \\\\C & D\\end{array}',
+        '\\begin{array}{cc}9 & 10 \\\\ 11 & 12\\end{array}',
+      ]) {
+        const html = markdownToHtml(src);
+        expect(html).not.toContain('<table');
+        expect(html).not.toContain('katex');
+        expect(html).toContain('\\begin{');
+        expect(html).toContain('\\end{');
+      }
+    });
+
+    it('leaves a degenerate tabular literal instead of emitting an empty table', () => {
+      expect(markdownToHtml('\\begin{tabular}{|c|}\\end{tabular}')).toBe(
+        '<p>\\begin{tabular}{|c|}\\end{tabular}</p>',
+      );
+      expect(
+        markdownToHtml('\\begin{tabular}{|c|}\\hline\\hline\\end{tabular}'),
+      ).toBe('<p>\\begin{tabular}{|c|}\\hline\\hline\\end{tabular}</p>');
+    });
+
+    /**
+     * ACCEPTED ERROR. `tabular` is a LaTeX document environment KaTeX does not
+     * implement, so wrapping one in real display-math delimiters hands it to
+     * KaTeX, which reports "No such environment: tabular". Same family as the
+     * `\[\begin{itemize}...\]` case pinned in the component suite: we take the
+     * error box rather than owning delimiter heuristics again, and the source
+     * survives verbatim inside it.
+     */
+    it('reports a display-math-wrapped tabular and keeps every cell', () => {
+      const cases: [string, string[]][] = [
+        [
+          '\\[\\begin{tabular}{lcc}A & B & C \\\\D & E & F\\end{tabular}\\]',
+          ['A ', 'B ', 'C ', 'D ', 'E ', 'F'],
+        ],
+        [
+          '\\[\\begin{tabular}{lc}\\text{Disease} & \\text{Count} \\\\\\text{Yes} & 42\\end{tabular}\\]',
+          ['\\text{Disease}', '\\text{Count}', '\\text{Yes}', '42'],
+        ],
+        [
+          '\\[\\begin{tabular}{lr}\\text{Cases} & 12{,}500 \\\\\\text{Total} & 100{,}000\\end{tabular}\\]',
+          ['12{,}500', '100{,}000'],
+        ],
+      ];
+      for (const [src, fragments] of cases) {
+        const html = markdownToHtml(src);
+        expect(html.match(/katex-error/g)).toHaveLength(1);
+        for (const fragment of fragments) {
+          expect(html).toContain(fragment);
+        }
+      }
+    });
+
+    /**
+     * A `$$` span is inline math, so it may not cross a line ending (issue
+     * #2441): the multi-line `tabular` below is not math at all, and its
+     * source survives verbatim as prose rather than as a KaTeX error box.
+     */
+    it('leaves a multi-line $$-wrapped tabular literal', () => {
+      const html = markdownToHtml(
+        '$$\\begin{tabular}{cc}\\hline\nName & Age \\\\\nAlice & 30 \\\\\n\\hline\\end{tabular}$$',
+      );
+      expect(html).not.toContain('katex');
+      expect(html).not.toContain('<table');
+      for (const fragment of [
+        '$$\\begin{tabular}{cc}',
+        'Name',
+        'Age',
+        'Alice',
+        '30',
+        '\\end{tabular}$$',
+      ]) {
+        expect(html).toContain(fragment);
+      }
+    });
+
+    it('reports the real-world epidemiology table and keeps all of its numbers', () => {
+      const html = markdownToHtml(
+        '\\[\n\\begin{tabular}{lccc}\n\\hline\n & \\text{Disease} & \\text{No Disease} & \\text{Total} \\\\\n\\hline\n\\text{Exposed} & 42 & 158 & 200 \\\\\n\\text{Unexposed} & 18 & 182 & 200 \\\\\n\\hline\n\\end{tabular}\n\\]',
+      );
+      expect(html.match(/katex-error/g)).toHaveLength(1);
+      for (const fragment of [
+        '\\text{Exposed}',
+        '\\text{Unexposed}',
+        '42',
+        '158',
+        '182',
+        '200',
+      ]) {
+        expect(html).toContain(fragment);
+      }
+    });
+
+    /**
+     * `array` IS a KaTeX environment, so the same wrapper that fails for
+     * `tabular` typesets here -- a real display-math grid, not an error box.
+     */
+    it('typesets a display-math-wrapped array as real display math', () => {
+      for (const [src, tex] of [
+        [
+          '\\[\\begin{array}{cc}1 & 2 \\\\ 3 & 4\\end{array}\\]',
+          '\\begin{array}{cc}1 &amp; 2 \\\\ 3 &amp; 4\\end{array}',
+        ],
+        [
+          '$$\\begin{array}{cc}5 & 6 \\\\ 7 & 8\\end{array}$$',
+          '\\begin{array}{cc}5 &amp; 6 \\\\ 7 &amp; 8\\end{array}',
+        ],
+      ]) {
+        const html = markdownToHtml(src);
+        expect(html).not.toContain('katex-error');
+        expect(html.match(/katex-display/g)).toHaveLength(1);
+        expect(html).toContain(
+          `<annotation encoding="application/x-tex">${tex}</annotation>`,
+        );
+      }
+    });
+  });
+
+  describe('aligned \\verb code blocks', () => {
+    it('typesets an aligned environment of \\verb rows, one row per line', () => {
+      const html = markdownToHtml(
+        'Create Counter.tsx:\n\\[\n\\begin{aligned}\n&\\verb|import { useState } from "react";|\\\\\n&\\verb|  const [count, setCount] = useState(initial);|\\\\\n&\\verb|}|\\\\\n\\end{aligned}\n\\]\nDone.',
+      );
+      expect(html).not.toContain('katex-error');
+      expect(html.match(/katex-display/g)).toHaveLength(1);
+      expect(html).toContain('<p>Create Counter.tsx:</p>');
+      expect(html).toContain('<p>Done.</p>');
+      const rows = [...html.matchAll(/<mtext[^>]*>([\s\S]*?)<\/mtext>/g)].map(
+        (m) => m[1].replace(/&nbsp;/g, ' '),
+      );
+      expect(rows).toContain('import { useState } from "react";');
+      expect(rows).toContain('  const [count, setCount] = useState(initial);');
+      expect(rows).toContain('}');
+    });
+  });
+
+  describe('consecutive dollar runs', () => {
+    const tex = (html: string) =>
+      [
+        ...html.matchAll(
+          /<annotation encoding="application\/x-tex">([^<]*)<\/annotation>/g,
+        ),
+      ].map((m) => m[1]);
+
+    /**
+     * `$a$$b$` used to pair as one span with the invalid body `a$$b`. The
+     * closing run now stops the moment it matches the opening one, so the
+     * second `$` opens the next span. Pinned here for the canvas path as it is
+     * for the component path.
+     */
+    it('splits $a$$b$ into two spans', () => {
+      const html = markdownToHtml('$a$$b$');
+      expect(html).not.toContain('katex-error');
+      expect(tex(html)).toEqual(['a', 'b']);
+    });
+
+    it('chains three consecutive spans', () => {
+      const html = markdownToHtml('$a$$b$$c$');
+      expect(html).not.toContain('katex-error');
+      expect(tex(html)).toEqual(['a', 'b', 'c']);
+    });
+
+    it('keeps a run glued to word characters literal', () => {
+      const html = markdownToHtml('text$a$$b$text');
+      expect(html).not.toContain('katex-error');
+      expect(html).toContain('<p>text$a$$b$text</p>');
+    });
+
+    it.each([['$x$$'], ['$$x$']])(
+      'typesets %s as one span plus a literal dollar',
+      (md) => {
+        const html = markdownToHtml(md);
+        expect(html).not.toContain('katex-error');
+        expect(tex(html)).toEqual(['x']);
+      },
+    );
+
+    it('still pairs a $$ run only against another run of two', () => {
+      const html = markdownToHtml('a $$ b $$ c');
+      expect(html).not.toContain('katex-error');
+      expect(tex(html)).toEqual(['b']);
+    });
+  });
+});
+
+/**
+ * Issue #2441, canvas path. Same twenty probes as the component suite: pasted
+ * as one message they form one paragraph, and before the fix line e's `$$`
+ * opened a span that closed nine lines below on line n, swallowing f..m.
+ */
+describe('markdownToHtml - dollar math never spans a line ending (issue #2441)', () => {
+  const LINES = [
+    'a. Other currencies: €5-€10, £20-£30, ¥100-¥200, and $5-$10.',
+    'b. Escaped already: I paid \\$5 and \\$10 today.',
+    'c. Dollar at very start: $5 is the price.',
+    'd. Only a dollar sign: $',
+    'e. Double dollar inline: price is $$5 here.',
+    'f. Triple: $$$5',
+    'g. Dollar then letter: $abc and $xyz',
+    'h. Dollar then space then digit: $ 5 and $ 10',
+    'i. Negative: -$5 to -$10',
+    'j. Thousands: $1,000,000 and $2,500.75',
+    'k. Percent: 50% off $20, tax is 8.5%',
+    'l. Math with underscores: $a_1 + b_2$ and $c_3$',
+    'm. Math with asterisk: $a * b$ and $x \\cdot y$',
+    'n. Consecutive math: $a$$b$ and $x$ $y$',
+    'o. Currency then math no space: $5$x + 1$',
+    'p. Very long money: $999,999,999,999.99',
+    'q. Zero: $0 and $0.00',
+    'r. Trailing: cost is $5.',
+    's. Bold money: **$5** and *$10*',
+    't. Money in code: `$5` and `$x$`',
+  ];
+
+  const html = () => markdownToHtml(LINES.join('\n'));
+
+  it.each([
+    ['a', 'a. Other currencies: €5-€10, £20-£30, ¥100-¥200, and $5-$10.'],
+    ['b', 'b. Escaped already: I paid $5 and $10 today.'],
+    ['c', 'c. Dollar at very start: $5 is the price.'],
+    ['d', 'd. Only a dollar sign: $'],
+    ['e', 'e. Double dollar inline: price is $$5 here.'],
+    ['f', 'f. Triple: $$$5'],
+    ['g', 'g. Dollar then letter: $abc and $xyz'],
+    ['h', 'h. Dollar then space then digit: $ 5 and $ 10'],
+    ['i', 'i. Negative: -$5 to -$10'],
+    ['j', 'j. Thousands: $1,000,000 and $2,500.75'],
+    ['k', 'k. Percent: 50% off $20, tax is 8.5%'],
+    ['o', 'o. Currency then math no space: $5$x + 1$'],
+    ['p', 'p. Very long money: $999,999,999,999.99'],
+    ['q', 'q. Zero: $0 and $0.00'],
+    ['r', 'r. Trailing: cost is $5.'],
+    ['t', 't. Money in code: <code>$5</code> and <code>$x$</code>'],
+  ])('keeps line %s literal', (_id, expected) => {
+    expect(html()).toContain(expected);
+  });
+
+  it('keeps the emphasis but not the dollars on line s', () => {
+    expect(html()).toContain(
+      's. Bold money: <strong>$5</strong> and <em>$10</em>',
+    );
+  });
+
+  it('typesets only the genuine math on lines l, m and n', () => {
+    const annotations = [
+      ...html().matchAll(
+        /<annotation encoding="application\/x-tex">([^<]*)<\/annotation>/g,
+      ),
+    ].map((m) => m[1]);
+    expect(annotations).toEqual([
+      'a_1 + b_2',
+      'c_3',
+      'a * b',
+      'x \\cdot y',
+      'a',
+      'b',
+      'x',
+      'y',
+    ]);
+  });
+
+  it('splits the consecutive $a$$b$ into two spans with no error box', () => {
+    const out = html();
+    expect(out).not.toContain('katex-error');
+    expect(out).not.toContain('$a$$b$');
+  });
+});
