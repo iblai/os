@@ -18,6 +18,7 @@
     "format-lint": "npm run format && npm run lint",
     "prepare": "husky",
     "test": "vitest run",
+    "gallery": "pnpm build && vitest run --config vitest.gallery.config.ts",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
