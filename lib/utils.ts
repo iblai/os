@@ -647,6 +647,9 @@ export function sendMessageToParentWebsite(payload: unknown) {
   } catch {
     // keep '*' if referrer is unavailable or unparseable
   }
+  if (targetOrigin === window.location.origin) {
+    targetOrigin = '*';
+  }
   window.parent.postMessage(payload, targetOrigin);
 }
 
