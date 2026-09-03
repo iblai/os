@@ -47,12 +47,22 @@ overrides:
   # patched in 3.3.17. Reached through postcss. Upper bound is deliberate:
   # nanoid 4+ is ESM-only and postcss requires the CJS 3.x line.
   nanoid: '>=3.3.17 <4'
+  # GHSA-c83g-rgw3-j3cx (unbounded cache growth -> OOM) and GHSA-73wf-gq98-2v4g
+  # (uncaught crash / prototype write via untrusted browserslist-stats.json),
+  # both patched in 4.28.7. Dev-only, reached through
+  # @vitejs/plugin-react > @babel/core > @babel/helper-compilation-targets;
+  # every consumer already asks for ^4.x, so the floor lifts within the major.
+  browserslist: '>=4.28.7'
   '@hono/node-server': '>=2.0.10'
   bytes: '>=1.11.1'
   devalue: '>=5.8.1'
   # GHSA-7p8r-x3mc-p8w7 — host confusion via backslash, patched in 4.1.2.
-  # Reached through @commitlint/cli > @commitlint/load.
-  fast-uri: '>=4.1.2'
+  # Floor lifted again to 4.1.3 for four more host-confusion/SSRF advisories in
+  # the same line: GHSA-jqff-g426-hqxp (percent-encoded scheme normalization),
+  # GHSA-fph4-wmhf-6fwf (repeated hostname percent-decoding), GHSA-f65p-4m7j-42xc
+  # (malformed IPv6 normalization) and GHSA-5jgf-p345-68v8 (skipped IDN
+  # canonicalization). Reached through @commitlint/cli > @commitlint/load.
+  fast-uri: '>=4.1.3'
   # GHSA-mwp4-54f8-5fhr — Address4 decodes leading-zero octets as decimal, so an
   # address like 010.0.0.1 parses to an unintended host. Patched in 10.3.1.
   # Reached through @wdio/cli > @wdio/utils > @puppeteer/browsers > proxy-agent.
