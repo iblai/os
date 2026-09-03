@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.139.0](https://github.com/iblai/os/compare/v0.138.2...v0.139.0) (2026-09-03)
+
+### Features
+
+* **chat:** recover from chat 401s by refreshing the DM token ([ca9c23a](https://github.com/iblai/os/commit/ca9c23a6b9590841211380fa76e55089973fde24))
+
+### Chores
+
+* **deps:** bump iblai-js to 2.8.1 ([b0bd262](https://github.com/iblai/os/commit/b0bd26282300425110bde8bc31070c8e67b20dcc))
+* **deps:** lift the browserslist and fast-uri floors past their advisories ([f2405b3](https://github.com/iblai/os/commit/f2405b330ac0ec56b77fa6f5a1a66ae4e52de5bb))
+
 ## [0.138.2](https://github.com/iblai/os/compare/v0.138.1...v0.138.2) (2026-09-02)
 
 ### Bug Fixes
