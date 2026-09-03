@@ -632,7 +632,8 @@
     "addResources": "添加资源",
     "description": "添加知识以帮助您的智能体提供更相关的见解。拥有编辑权限的其他用户可以将这些来源重复用于更多主题。",
     "googleDrivePickerError": "Google Drive 选择器错误",
-    "forceClosePicker": "强制关闭选择器"
+    "forceClosePicker": "强制关闭选择器",
+    "notConfigured": "未为此租户配置"
   },
   "datasetsTabDatasetItem": {
     "trainingDocumentUpdatedSuccess": "训练文档更新成功",
