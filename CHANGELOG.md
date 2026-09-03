@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.140.1](https://github.com/iblai/os/compare/v0.140.0...v0.140.1) (2026-09-03)
+
+### Bug Fixes
+
+* **embed:** fall back to '*' when the referrer is our own origin ([ae68842](https://github.com/iblai/os/commit/ae68842f43db9b44133bf19f174dddd44b3bc8cc))
+
 ## [0.140.0](https://github.com/iblai/os/compare/v0.139.0...v0.140.0) (2026-09-03)
 
 ### Features
