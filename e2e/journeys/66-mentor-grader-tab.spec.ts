@@ -227,11 +227,17 @@ test.describe('Journey 66: Mentor Grader Tab', () => {
     await editMentorPage.close();
   });
 
-  // GRD-06: Enabling the toggle flips it on and ungates the content; since
-  // neither a config nor any criteria exist yet, the "no config yet"
-  // misconfigured warning is shown (not the "no criteria" one — that only
-  // appears once a config exists).
-  test('admin enables Grading and sees the "not set up yet" warning', async ({
+  // GRD-06: Enabling the toggle flips it on and ungates the content, and the
+  // misconfigured warning settles on "rubric is empty". Attaching the
+  // Grading tool AUTO-PROVISIONS the grader config row server-side, and the
+  // SDK's `toggleGrading` (useGrader, iblai-js ≥ 2.8.1) refetches the config
+  // right after the settings PATCH succeeds — so the "not set up yet" (no
+  // config) wording is only a transient flash between the success toast and
+  // that refetch landing, never the settled state on a fresh mentor. A live
+  // trace caught exactly that flash: "not set up yet" at the toast, "rubric
+  // is empty" ~1s later. `toContainText` retries, so it rides out the flash
+  // and asserts the settled wording — do NOT assert `noConfig` here.
+  test('admin enables Grading and sees the "rubric is empty" warning (config is auto-provisioned on attach)', async ({
     editMentorPage,
   }) => {
     const { grader } = editMentorPage;
@@ -248,16 +254,18 @@ test.describe('Journey 66: Mentor Grader Tab', () => {
     );
     await grader.expectMisconfiguredWarning(true);
     await expect(grader.misconfiguredWarning).toContainText(
-      GraderTab.UNEXPORTED_LABELS.warnings.noConfig,
+      GraderTab.UNEXPORTED_LABELS.warnings.noCriteria,
+      { timeout: 10_000 },
     );
 
     await editMentorPage.close();
   });
 
-  // GRD-07: Filling in and saving the Grading setup form clears the "no
-  // config" warning and replaces it with the "no criteria" warning (rubric
-  // is still empty).
-  test('admin saves the grading setup and the warning switches from "no config" to "no criteria"', async ({
+  // GRD-07: Filling in and saving the Grading setup form (a PATCH, since the
+  // config row was auto-provisioned on attach — see GRD-06) succeeds and
+  // leaves the "no criteria" warning in place: the rubric is still empty,
+  // so saving instructions alone must not clear the banner.
+  test('admin saves the grading setup and the "no criteria" warning stays until a criterion exists', async ({
     editMentorPage,
   }) => {
     const { grader } = editMentorPage;

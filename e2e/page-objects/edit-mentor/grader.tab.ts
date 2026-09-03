@@ -169,6 +169,10 @@ export class GraderTab {
       toggleError: "Couldn't update grading",
     },
     warnings: {
+      // `noConfig` is only a transient flash on a fresh mentor: attaching
+      // the Grading tool auto-provisions the config row and useGrader
+      // refetches it right after the toggle succeeds, so the settled
+      // post-enable wording is `noCriteria` (journey 66 GRD-06).
       noConfig: /not set up yet/i,
       noCriteria: /rubric is empty/i,
     },

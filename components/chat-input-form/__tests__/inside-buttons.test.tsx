@@ -406,6 +406,35 @@ describe('InsideButtons', () => {
       expect(canvasButton).toHaveClass('text-[#38A1E5]');
     });
 
+    // Regression: e2e (ChatPage.isCanvasToolActive) reads aria-pressed. The
+    // inactive pill's `hover:bg-[#F5F8FF]` contains the active `bg-[#F5F8FF]`
+    // token as a substring, so a class-based check reported "on" while the
+    // tool was off and journey 71 never enabled Canvas.
+    it('exposes the Canvas on/off state as aria-pressed', () => {
+      const { rerender } = render(
+        <InsideButtons
+          {...defaultProps}
+          artifactsEnabled={false}
+          containerWidth={1000}
+        />,
+      );
+      const inactive = screen.getByText('Canvas').closest('button');
+      expect(inactive).toHaveAttribute('aria-pressed', 'false');
+      expect(inactive?.className).toContain('hover:bg-[#F5F8FF]');
+
+      rerender(
+        <InsideButtons
+          {...defaultProps}
+          artifactsEnabled={true}
+          containerWidth={1000}
+        />,
+      );
+      expect(screen.getByText('Canvas').closest('button')).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+    });
+
     it('should apply active styling when Deep Research is in activeOptions', () => {
       render(
         <InsideButtons
