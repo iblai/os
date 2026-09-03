@@ -263,3 +263,21 @@ identifier = "allow-set-opencode-learner"
 description = "Enables recording the signed-in username so the model proxy attributes usage via learner_id"
 [permission.commands]
 allow = ["set_opencode_learner"]
+
+[[permission]]
+identifier = "allow-new-opencode-workspace"
+description = "Enables switching a mentor to a fresh, empty Coding Mode workspace"
+[permission.commands]
+allow = ["new_opencode_workspace"]
+
+[[permission]]
+identifier = "allow-get-opencode-permission-mode"
+description = "Enables reading the saved Coding Mode approval mode (manual/auto, or unset)"
+[permission.commands]
+allow = ["get_opencode_permission_mode"]
+
+[[permission]]
+identifier = "allow-set-opencode-permission-mode"
+description = "Enables choosing whether Coding Mode asks before each operation or approves automatically"
+[permission.commands]
+allow = ["set_opencode_permission_mode"]

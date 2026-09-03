@@ -34,6 +34,18 @@ vi.mock('../markdown-image-component', () => ({
   }) => <img data-testid="markdown-image" src={src} alt={alt} title={title} />,
 }));
 
+// The code-block body lazy-loads the syntax highlighter. Mock it to a plain
+// <pre> so these tests render synchronously without pulling the heavy
+// react-syntax-highlighter bundle; the lazy behaviour is covered in
+// code-block-body.test.tsx.
+vi.mock('../code-block-body', () => ({
+  CodeBlockBody: ({ code, language }: { code: string; language: string }) => (
+    <pre data-testid="code-body" data-language={language}>
+      <code>{code}</code>
+    </pre>
+  ),
+}));
+
 describe('Markdown Components', () => {
   describe('h1 component', () => {
     const H1 = components.h1!;

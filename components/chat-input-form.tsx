@@ -267,7 +267,10 @@ export function ChatInputForm({
   // degrade to an inactive picker.
   const mentorUniqueId = mentorSettings?.data?.mentorUniqueId;
   const skillsQuerySkipped =
-    !mentorUniqueId || !tenantKey || !username || !hasSkillAssignmentsPermission;
+    !mentorUniqueId ||
+    !tenantKey ||
+    !username ||
+    !hasSkillAssignmentsPermission;
 
   // Code mode: keep this mentor's Agent Skills (plus the shared vibe skills)
   // materialised on disk for the local opencode agent. Idle outside Tauri or
@@ -691,7 +694,10 @@ export function ChatInputForm({
 
   const { handleMicrophoneBtnClick, processing, recording, time } =
     useVoiceChat({
-      sendMessage: handleSelectPrompt,
+      onTranscript: (text) =>
+        setInputValue(
+          inputValue.trim() ? `${inputValue.trim()} ${text}` : text,
+        ),
     });
 
   // Get attached files from Redux store with a fallback for when the state is not yet available

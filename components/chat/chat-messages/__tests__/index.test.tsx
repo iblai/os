@@ -26,9 +26,10 @@ vi.mock('@/components/chat/ai-message-bubble', () => ({
     onOpenCanvas,
     reasoningContent,
     toolCalls,
-    isReasoning,
     showReasoning,
     isCurrentlyStreaming,
+    workingPhase,
+    ...rest
   }: {
     content: string;
     mentorName: string;
@@ -40,18 +41,19 @@ vi.mock('@/components/chat/ai-message-bubble', () => ({
     onOpenCanvas?: () => void;
     reasoningContent?: string;
     toolCalls?: unknown[];
-    isReasoning?: boolean;
     showReasoning?: boolean;
     isCurrentlyStreaming?: boolean;
+    workingPhase?: { kind: string };
   }) => (
     <div
       data-testid="ai-message-bubble"
       data-content={content}
       data-reasoning-content={reasoningContent || ''}
       data-tool-calls-count={toolCalls?.length ?? 0}
-      data-is-reasoning={isReasoning ?? false}
+      data-has-is-reasoning={Object.keys(rest).includes('isReasoning')}
       data-show-reasoning={showReasoning ?? false}
       data-is-currently-streaming={isCurrentlyStreaming ?? false}
+      data-working-phase={workingPhase?.kind ?? ''}
     >
       <span data-testid="mentor-name">{mentorName}</span>
       <span data-testid="timestamp">{timestamp}</span>
@@ -585,6 +587,65 @@ describe('ChatMessages', () => {
     });
   });
 
+  describe('working phase', () => {
+    const secondAssistantMessage: Message = {
+      id: '4',
+      role: 'assistant',
+      content: 'An older answer',
+      timestamp: new Date().toISOString(),
+      visible: true,
+    };
+
+    it('forwards the phase to the streaming message only', () => {
+      renderWithRedux(
+        <ChatMessages
+          {...defaultProps}
+          messages={[userMessage, secondAssistantMessage, assistantMessage]}
+          isStreaming
+          currentStreamingMessageId="2"
+          workingPhase={{ kind: 'tool', name: 'web_search' }}
+        />,
+      );
+
+      const bubbles = screen.getAllByTestId('ai-message-bubble');
+      expect(bubbles).toHaveLength(2);
+      // Only one bubble may shimmer, never both.
+      expect(bubbles[0]).toHaveAttribute('data-working-phase', '');
+      expect(bubbles[1]).toHaveAttribute('data-working-phase', 'tool');
+    });
+
+    it('withholds the phase once the stream has stopped', () => {
+      renderWithRedux(
+        <ChatMessages
+          {...defaultProps}
+          isStreaming={false}
+          currentStreamingMessageId="2"
+          workingPhase={{ kind: 'writing' }}
+        />,
+      );
+
+      expect(screen.getByTestId('ai-message-bubble')).toHaveAttribute(
+        'data-working-phase',
+        '',
+      );
+    });
+
+    it('passes nothing through between turns', () => {
+      renderWithRedux(
+        <ChatMessages
+          {...defaultProps}
+          isStreaming
+          currentStreamingMessageId="2"
+        />,
+      );
+
+      expect(screen.getByTestId('ai-message-bubble')).toHaveAttribute(
+        'data-working-phase',
+        '',
+      );
+    });
+  });
+
   describe('streaming reasoning and tool calls', () => {
     it('should pass streaming reasoning content to the active streaming message', () => {
       renderWithRedux(
@@ -689,30 +750,20 @@ describe('ChatMessages', () => {
       expect(aiBubble).toHaveAttribute('data-show-reasoning', 'false');
     });
 
-    it('should pass isReasoning=true to the active streaming message', () => {
+    // `isReasoning` no longer reaches the bubble at all: the reasoning surface
+    // is a static "Thought" record, and the shimmering WorkingIndicator is the
+    // only live signal for the turn.
+    it('should never pass an isReasoning flag to the bubble', () => {
       renderWithRedux(
         <ChatMessages
           {...defaultProps}
-          isReasoning={true}
+          isStreaming
           currentStreamingMessageId="2"
         />,
       );
 
       const aiBubble = screen.getByTestId('ai-message-bubble');
-      expect(aiBubble).toHaveAttribute('data-is-reasoning', 'true');
-    });
-
-    it('should pass isReasoning=false for non-streaming messages', () => {
-      renderWithRedux(
-        <ChatMessages
-          {...defaultProps}
-          isReasoning={true}
-          currentStreamingMessageId="other-id"
-        />,
-      );
-
-      const aiBubble = screen.getByTestId('ai-message-bubble');
-      expect(aiBubble).toHaveAttribute('data-is-reasoning', 'false');
+      expect(aiBubble).toHaveAttribute('data-has-is-reasoning', 'false');
     });
 
     it('should mark the active streaming message as isCurrentlyStreaming', () => {

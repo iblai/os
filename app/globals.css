@@ -145,6 +145,59 @@
   @apply max-w-xs rounded-lg bg-gray-700 px-3 py-2 text-sm font-medium break-words text-white shadow-sm transition-opacity duration-300;
 }
 
+/*
+ * Shimmering text ("the agent is working"), the treatment Claude and ChatGPT
+ * use in place of a spinner: the glyphs sit in the muted foreground colour and
+ * a brighter band sweeps left→right across them on a loop.
+ *
+ * Both stops are theme tokens, so the base stays legible and the highlight
+ * stays the higher-contrast colour in light AND dark.
+ *
+ * The gradient is periodic (muted at 0% and 100%, bright at 50%) and the
+ * animation shifts the background by exactly one background-size width, so the
+ * loop is seamless. The band is spaced 2x the element width apart, which gives
+ * a natural pause between sweeps rather than a conveyor belt.
+ */
+@keyframes ibl-text-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+.ibl-text-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    var(--muted-foreground) 0%,
+    var(--muted-foreground) 35%,
+    var(--foreground) 50%,
+    var(--muted-foreground) 65%,
+    var(--muted-foreground) 100%
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: ibl-text-shimmer 3s linear infinite;
+}
+
+/*
+ * Belt and braces alongside the component's `usePrefersReducedMotion` branch:
+ * fall all the way back to flat muted text. Freezing the animation is not
+ * enough — transparent glyphs over a stopped gradient can render invisible.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .ibl-text-shimmer {
+    animation: none;
+    background-image: none;
+    color: var(--muted-foreground);
+    -webkit-text-fill-color: var(--muted-foreground);
+  }
+}
+
 /* LOGO styling from old mentor */
 .default-mentor-logo {
   max-height: unset !important;

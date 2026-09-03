@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-08-31 | 693 checkpoints (654 covered, 8 pending/fixme, 15 not-reproducible in default env, 16 deprecated) | 74 journeys (73 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-09-01 | 708 checkpoints (669 covered, 8 pending/fixme, 15 not-reproducible in default env, 16 deprecated) | 75 journeys (74 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -95,9 +95,11 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 6: Mentor Management — Admin (18 checkpoints) — `journeys/06-mentor-management-admin.spec.ts`
+## Journey 6: Mentor Management — Admin (19 checkpoints) — `journeys/06-mentor-management-admin.spec.ts`
 
-**Source files:** `components/modals/create-mentor-modal.tsx`, `components/modals/edit-mentor-modal/index.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/tabs/llm-tab.tsx`, `components/modals/edit-mentor-modal/tabs/tools-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `components/modals/settings-modal.tsx`, `hooks/use-mentors.ts`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/modals/llm-provider-modal.tsx`, `lib/utils.ts`
+**Source files:** `components/modals/create-mentor-modal.tsx`, `components/modals/edit-mentor-modal/index.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/llm-tab.tsx`, `components/modals/edit-mentor-modal/tabs/tools-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `components/modals/settings-modal.tsx`, `hooks/use-mentors.ts`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `lib/utils.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`
+
+_Note: the LLM tab is served by the SDK's `AgentLLMTab`; `components/modals/edit-mentor-modal/llm-tab.tsx` is the thin wrapper over it, and `hooks/use-llm-display-name.ts` resolves the model label the nav-bar badge shows (see also Journey 28)._
 
 - [x] Admin can update mentor profile (name, description, category, visibility), save, and close
 - [x] Non-admin does not see the Settings or Tools menu items
@@ -117,6 +119,7 @@ When adding a new page or modifying an existing user flow:
 - [x] Issue #2318: ibl.ai provider card (`data-provider=iblai`) shows the ibl.ai logo and label instead of falling through to the generic default (the original bug — a missing map entry rendered a blank/404 logo); skips gracefully if the tenant's LLM list omits ibl.ai
 - [x] Issue #2318: a grayed (no-credential) provider card stays clickable and opens the LLM Selection model picker; skips gracefully if every provider in the tenant is usable
 - [x] Issue #2318: LLM Selection model picker rows render a non-blank human-readable label (`display_name || llm_name`) and searching a substring of that label finds the row
+- [x] `getLLMModelDisplayName` navbar rewrite: after selecting the ibl.ai provider/model (wire key `iblai-pro`) on the LLM tab, the navbar badge renders the display name `ibl.ai` exactly — never the raw wire key; skips gracefully if the tenant's LLM list omits ibl.ai
 
 ---
 
@@ -501,7 +504,7 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 
 ---
 
-## Journey 28: App Overview & Navigation UI (12 checkpoints) — `journeys/28-app-overview-and-navigation-ui.spec.ts`
+## Journey 28: App Overview & Navigation UI (13 checkpoints) — `journeys/28-app-overview-and-navigation-ui.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/modals/llm-provider-selection-modal.tsx`
 
@@ -510,13 +513,14 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 - [x] User profile dropdown buttons function correctly
 - [x] Sidebar renders all expected components including Vector document button
 - [x] Vector document button is visible in the sidebar
-- [x] LLM provider modal opened from the navbar hides the configuration header
-- [x] LLM provider modal inside Edit Mentor retains the configuration header
+- [x] LLM provider modal opened from the navbar hides the configuration header _(ov-06 — uses a loose regex locator wrapped in an `isVisible().catch()` conditional around the whole test body; superseded by the stronger ov-13 below, kept for now)_
+- [ ] LLM provider modal inside Edit Mentor retains the configuration header _(ov-07 — currently a vacuous assertion, `expect(typeof headerVisible).toBe('boolean')`, which passes regardless of whether the header is shown; flagged for a follow-up fix, not corrected in this change)_
 - [x] Admin: LLM name span on desktop has `overflow:hidden`, `text-overflow:ellipsis`, `whitespace:nowrap` _(navbar overflow fix: ov-08)_
 - [x] Admin: nav element does not overflow the viewport width on desktop _(navbar overflow fix: ov-09)_
 - [x] Admin: LLM name span `max-width` is at most 150 px on desktop _(navbar overflow fix: ov-10)_
 - [x] Admin: nav does not overflow on mobile (Pixel 5); with credit balance visible the LLM name span shrinks to ≤100 px _(navbar overflow fix: ov-11)_
 - [x] Admin: nav does not overflow on mobile when credit balance is hidden; LLM name span stays ≤150 px _(navbar overflow fix: ov-12)_
+- [x] Admin opens the navbar LLM selector modal (`navbarPage.openLlmProviderModal`, dialog name "LLM Providers") and the "LLM Configuration" heading/description are absent — proves the OS wrapper's `showConfigurationHeader={false}` prop reaches the SDK `AgentLLMTab` component _(ov-13)_
 
 ---
 
@@ -855,13 +859,18 @@ Wraps the packaged `AgentEvaluationTab` from `@iblai/iblai-js/web-containers/nex
 
 ---
 
-## Journey 9b: Voice-to-Text Dictation (1 checkpoint) — `journeys/09b-voice-to-text.spec.ts`
+## Journey 9b: Voice-to-Text Dictation (4 checkpoints) — `journeys/09b-voice-to-text.spec.ts`
 
 **Source files:** `hooks/use-voice-chat.ts`, `hooks/use-timer.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form.tsx`
 
 Chromium-only. Uses `--use-fake-device-for-media-stream` plus `--use-file-for-fake-audio-capture=e2e/files/testing_folder/speech.wav` to inject real audio, then exercises the real `/audio-to-text/` backend round-trip. Regression cover for [iblai-platform#1657](https://github.com/iblai/iblai-platform/issues/1657).
 
 - [x] VTT-01: Admin creates a new mentor and records via injected fake audio — the placeholder timer (`Listening... mm:ss`) counts seconds upward, and after stop, the real STT round-trip lands a non-empty transcript in the textarea
+- [x] VTT-02: Microphone permission denied — with the fake-UI auto-accept flag dropped and context permissions cleared, `getUserMedia` rejects with `NotAllowedError`, a "Microphone access" toast appears, the button returns to the idle `Voice input` label and stays enabled, and no `/audio-to-text/` request is made
+- [x] VTT-03: Dictation appends to the composer instead of replacing it — text typed before recording survives the round-trip and the transcript lands after it
+- [x] VTT-04: A recording stopped under the 500ms minimum is rejected client-side — a "That recording was too short" toast appears, the button returns to idle without parking on `Processing`, and zero `/audio-to-text/` requests are made
+
+VTT-02, VTT-03 and VTT-04 are regression cover for [iblai-platform#2402](https://github.com/iblai/iblai-platform/issues/2402): a sub-second recording uploaded an empty blob, the backend rejected it with a 400, and the data layer retried five times with exponential backoff — holding the voice UI for ~37s.
 
 ---
 
@@ -1679,3 +1688,50 @@ instead.
 - [x] ~~shc-05: Tenant `show_help: false` hides the sidebar Support link in BOTH expanded and rail-collapsed layouts; removing the override brings it back~~ _(deprecated in #uat-9 — covered by app-sidebar/**tests**/index.test.tsx in both layouts)_
 - [x] shc-06: READ-ONLY — the nav-bar "More options → Help" dropdown item resolves `support_url || help_center_url || default` computed from a live GET of tenant metadata, or is absent when `show_help` is false
 - [x] ~~shc-07: The nav-bar "More options → Help" dropdown item falls back to tenant `help_center_url` when `support_url` is absent~~ _(deprecated in #uat-9 — same precedence chain proven by hooks/**tests**/use-help-center.test.ts; shc-06 still verifies the support_url-present path live)_
+
+## Journey 73: Agent Working Indicator (9 checkpoints) — `journeys/73-agent-working-indicator.spec.ts`
+
+**Source files:** `components/chat/working-indicator.tsx`, `components/chat/ai-message-frame.tsx`, `components/chat/ai-message-bubble.tsx`, `components/chat/chat-messages/index.tsx`, `components/chat/index.tsx`, `components/chat/reasoning-section.tsx`, `components/chat/tool-call-indicator.tsx`, `lib/constants.ts`, `app/globals.css`
+
+Issue #2217 — a persistent "agent is working" indicator in chat, replacing a
+placeholder that used to vanish for good the instant any token rendered.
+During a long agentic turn (tool calls, reasoning, workflow steps) that
+disappearance made it impossible to tell whether the agent was working or the
+app had hung. Driven by the SDK's `ChatPhase` discriminated union
+(`@iblai/iblai-js/web-utils`, surfaced via `useAdvancedChat`'s `chatPhase`):
+`idle | thinking | tool | writing | workflow | file | media`.
+
+`WorkingIndicator` renders a shimmering `role="status"` line
+(`data-testid="chat-working-indicator"`) mounted either standalone
+(`AIWorkingMessage`, `data-testid="chat-working-message"`, before the
+streaming bubble has anything to show) or embedded at the foot of the real
+streaming bubble (`AIMessageBubble`) once it does — the two are mutually
+exclusive by construction, so exactly one agent message frame is ever on
+screen per turn (checkpoint 9). Reuses Journey 68's
+(`68-agent-todo-list.spec.ts`) `page.routeWebSocket()` technique
+(`ChatPage.mockChatWebSocket()`) to script deterministic phase transitions —
+chat is a raw WebSocket, not REST, so frames cannot be `page.route`-mocked —
+extended with two frame shapes journey 68 never needed:
+
+- A bare `{error, status_code}` frame with **no** `eos` (checkpoint 7, the
+  highest-value case): real error frames are never followed by `eos`, the
+  socket just closes right after — this was the original hang bug.
+- An `eos` frame carrying a `session_id` that does not match the session
+  currently in view (checkpoint 8): the SDK ignores it outright, so a
+  background turn finishing must not clear the indicator for the visible
+  session.
+
+The "verbose reasoning" (`show_reasoning`) mentor setting is toggled via
+`ChatPage.mockShowReasoning()` (a REST route patch), not by mutating the
+shared default mentor's real settings — unlike Journey 52, this spec creates
+no mentor and therefore needs no `MentorTracker`/cleanup.
+
+- [x] awi-01: The working indicator appears on send and survives the first answer token — proven by catching a >15s stall mid-stream and watching the reassurance line reappear (an unmounted component could not do that)
+- [x] awi-02: With verbose reasoning off, no disclosure rows render at all — the shimmer alone carries the whole turn through thinking, a tool call, and into writing
+- [x] awi-03: With verbose reasoning on, the reasoning and tool-call rows take over liveness via their own bouncing dots (`isActive`) and the shimmer stands down for exactly the phase a visible row already states — exactly one element conveys progress at any instant
+- [x] awi-04: The shimmer hides while answer text is visibly streaming and returns with "Still working — longer tasks can take a few minutes." once the stream stalls past `STALLED_STREAM_DELAY_MS`; a fresh token stands it down again immediately
+- [x] awi-05: Only one Stop control is ever on screen — the composer's; the working indicator itself renders no button
+- [x] awi-06: `prefers-reduced-motion: reduce` swaps the shimmer for flat muted text (no `.ibl-text-shimmer` class) and freezes the disclosure rows' bouncing dots (`animationName: none`) rather than merely hiding them
+- [x] awi-07: An error frame with no `eos` clears the working indicator — the original hang bug
+- [x] awi-08: An `eos` frame for a different `session_id` than the session in view is ignored and does not clear the indicator (background-session scoping)
+- [x] awi-09: Exactly one avatar/name/timestamp agent message frame is ever on screen per turn, including across a `write_todos` turn where `AgentTodoList` also renders

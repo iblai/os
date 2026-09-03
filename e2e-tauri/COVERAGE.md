@@ -1,6 +1,6 @@
 # Tauri Desktop E2E Coverage — Journey Checklist
 
-> Last updated: 2026-08-22 | 30 checkpoints (18 covered, 12 pending) | 3 journeys | 100% of reproducible checkpoints covered | Driver: WebdriverIO + tauri-driver
+> Last updated: 2026-09-02 | 38 checkpoints (20 covered, 18 pending) | 3 journeys | 100% of reproducible checkpoints covered | Driver: WebdriverIO + tauri-driver
 
 This is the desktop counterpart to the web `e2e/COVERAGE.md`. It tracks only what
 is exercised by driving the **built desktop binary** through `tauri-driver` (see
@@ -39,7 +39,7 @@ Windows (`msedgedriver`) only — `tauri-driver` has no macOS support.
 
 ---
 
-## Journey 2: On-device Model Management (6 checkpoints: 3 covered, 3 pending) — `journeys/02-on-device-model-management.spec.ts`
+## Journey 2: On-device Model Management (7 checkpoints: 3 covered, 4 pending) — `journeys/02-on-device-model-management.spec.ts`
 
 > **Partly covered.** The download mechanics (odm-02/03/05) run against the REAL
 > compiled binary through the live Tauri IPC bridge (`window.__TAURI__`), pulling
@@ -60,10 +60,11 @@ Windows (`msedgedriver`) only — `tauri-driver` has no macOS support.
 - [ ] `odm-04` Starting a second on-device download while one is in flight shows the "already downloading" guard — one pull at a time _(UI pass)_
 - [x] `odm-05` A completed pull installs the on-device model (`check_ollama_status` lists it)
 - [ ] `odm-06` The nav-bar on-device badge reflects the selected local model _(UI pass)_
+- [ ] `odm-07` Busy default ports at launch degrade to allocated ones: the MCP bridge and the offline server each bind a free port (preferring 8000/3457) and every consumer follows — local chat still streams, the offline cache still serves _(needs a journey that pre-occupies the ports before launching the binary; covered meanwhile by the `pick_port`/`bind_with_fallback`/`chat_base_url` Rust tests in `mcp_bridge_manager.rs`, `offline_server.rs` and `model_manager.rs`)_
 
 ---
 
-## Journey 3: Code Mode (opencode) (20 checkpoints: 11 covered, 9 pending) — `journeys/03-code-mode.spec.ts`
+## Journey 3: Code Mode (opencode) (27 checkpoints: 13 covered, 14 pending) — `journeys/03-code-mode.spec.ts`
 
 > **Partly covered.** The installer and per-chat state (code-01…07) run against
 > the REAL compiled binary through the live Tauri IPC bridge (`window.__TAURI__`):
@@ -117,3 +118,10 @@ Windows (`msedgedriver`) only — `tauri-driver` has no macOS support.
 - [ ] `code-18` A Code turn's opencode process runs inside the OS sandbox (bwrap / sandbox-exec) — only the workspace and tool caches writable, ~/.ssh empty _(needs a tool-calling model; the bwrap argv, SBPL profile and decoy home are covered by the Rust sandbox tests in `opencode_acp.rs`)_
 - [ ] `code-19` A second New Chat in one app run gets its own fresh workspace, and a chat's folder follows it from the ephemeral first-turn key to its real session id _(needs an authenticated UI session; covered meanwhile by the Rust `adopt_prior_mapping` tests and the SDK per-chat key Vitest cases)_
 - [ ] `code-20` Killing the opencode process mid-turn: the answer continues in the same bubble with no visible interruption (one silent respawn re-sends the prompt), and a second kill in the same turn surfaces `ollama:error` _(needs a tool-calling model; covered meanwhile by the Rust crash-retry tests in `opencode_acp.rs` — `should_retry`, `reader_gone`, `closing` — and the proxy rebind/read-timeout tests)_
+- [x] `code-21` The Code approval mode (manual/auto) round-trips through `settings.json`, survives a restart, and an unknown mode is refused rather than defaulting
+- [x] `code-22` A mentor keeps one workspace across chats while another mentor gets its own, and New Workspace mints a fresh folder without deleting the previous one
+- [ ] `code-23` The Code popover asks for an approval mode on first use and stores the answer against the signed-in user, so it follows them to another machine _(needs an authenticated UI session; covered meanwhile by the coding-mode-button Vitest cases)_
+- [ ] `code-24` The Code popover offers New Workspace and a platform-named Open Folder button (Finder / Explorer / the probed Linux file manager) _(needs an authenticated UI session, and clicking Open Folder would spawn a real file manager; labels and disabled states covered by the coding-mode-button Vitest cases)_
+- [ ] `code-25` A between-turn opencode death (crash, idle reap, LRU eviction) is invisible: the next turn `session/load`s the same conversation back, and when a load isn't possible the frontend's transcript is resent so the agent continues; a mid-turn death keeps the input busy — the Stop button stays Stop and no suggested prompts appear while the backend silently respawns _(needs an authenticated chat driving real opencode turns; covered meanwhile by the Rust resume-map + `prompt_with_history` tests in `opencode_acp.rs` and the SDK transcript/restart + mentor-socket-guard Vitest cases)_
+- [ ] `code-26` A managed opencode older than the pinned version is re-downloaded at boot, and a user's own PATH copy is never replaced _(the upgrade downloads a ~100MB release, too heavy for the harness; the decision is covered by `only_a_present_and_outdated_managed_copy_wants_an_upgrade` in `opencode_installer.rs`)_
+- [ ] `code-27` A new web project walks the 3-step flow: the default-template question, then the local-preview question (dev server + browser open at http://localhost:3000 only on yes), then one deploy question per project (yes = deploy now and auto-redeploy on later changes, no = deploy only on request), and replies never name the hosting provider _(needs a tool-calling model driving real turns, the same harness gap as code-08..10/15; the instruction text is covered meanwhile by `the_iblai_guidance_keeps_its_load_bearing_lines` in `opencode_proxy.rs`)_

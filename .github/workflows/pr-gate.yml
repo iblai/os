@@ -11,6 +11,7 @@ on:
 permissions:
   statuses: write
   pull-requests: read
+  actions: read          # update-gate reads the E2E run's jobs to derive the verdict
 
 jobs:
   # ── On pull_request: set initial gate status ──
@@ -65,6 +66,21 @@ jobs:
             }
 
   # ── On workflow_run: update gate after E2E tests finish ──
+  #
+  # The verdict comes from the E2E JOB, never from the workflow-level conclusion. A workflow whose
+  # jobs were all skipped concludes `success` — that is normal GitHub behaviour and it is NOT a
+  # pass. Reading `workflow_run.conclusion` directly produced two live faults:
+  #
+  #   FALSE GREEN (the dangerous one). pr-e2e-tests.yml triggers on every `labeled` event, so
+  #   applying ANY label to a PR that lacks `run-tests` starts a run whose `gate` is skipped,
+  #   everything downstream is skipped, the workflow reports `success`, and this step published
+  #   "PR E2E Tests passed" — overwriting the correct "Add the run-tests label" block. In lms,
+  #   11 of 11 sampled sub-30s "successful" runs did exactly that: a required check went green
+  #   having tested nothing, leaving the PR mergeable.
+  #
+  #   FALSE RED. concurrency (`pr-e2e-<PR#>`, cancel-in-progress) supersedes the older run when
+  #   two events land together. Two labels applied in the same second put lms#232 into
+  #   "PR E2E Tests cancelled" while the surviving run was still building.
   update-gate:
     if: github.event_name == 'workflow_run'
     runs-on: ubuntu-latest
@@ -75,17 +91,69 @@ jobs:
           script: |
             const run = context.payload.workflow_run;
             const sha = run.head_sha;
-            const conclusion = run.conclusion; // success, failure, cancelled, etc.
+            const { owner, repo } = context.repo;
 
-            const passed = conclusion === 'success';
-            await github.rest.repos.createCommitStatus({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              sha,
-              state: passed ? 'success' : 'failure',
-              context: 'PR Validation',
-              description: passed
-                ? 'PR E2E Tests passed'
-                : `PR E2E Tests ${conclusion}`,
+            const setStatus = (state, description) =>
+              github.rest.repos.createCommitStatus({
+                owner, repo, sha, state, context: 'PR Validation', description,
+              });
+
+            // Release branches are auto-passed by the pull_request job above; don't undo that.
+            if ((run.head_branch || '').startsWith('release/')) {
+              core.info('release branch — leaving the auto-pass in place');
+              return;
+            }
+
+            // A cancelled run is not a verdict — concurrency superseded it, and the run that
+            // superseded it will post the real result. Writing `failure` here shows a healthy PR
+            // as broken and, if this event arrives after the survivor's success, overwrites a
+            // green check with nothing left to re-run it.
+            if (run.conclusion === 'cancelled') {
+              core.info('run cancelled (superseded by concurrency) — leaving the status alone');
+              return;
+            }
+
+            // Never let an older run overwrite a newer one's verdict — but only defer to a
+            // sibling that is STILL RUNNING. A completed sibling has had its turn: if it was
+            // cancelled it wrote nothing and never will. Deferring on id alone deadlocked
+            // lms#232: the same-second double-fire cancelled the HIGHER-id run (…781) and the
+            // lower-id run (…626) survived and passed, so the passing verdict was never written
+            // and the check sat on "pending" with nothing left to move it.
+            const { data: siblings } = await github.rest.actions.listWorkflowRuns({
+              owner, repo, workflow_id: run.workflow_id, head_sha: sha, per_page: 100,
             });
-            core.info(`E2E tests ${conclusion} — set PR Validation to ${passed ? 'success' : 'failure'}`);
+            if (siblings.workflow_runs.some(r => r.id > run.id && r.status !== 'completed')) {
+              core.info(`newer run exists for ${sha.slice(0, 8)} — deferring to it`);
+              return;
+            }
+
+            // The verdict: what did the jobs actually do?
+            const { data: jobList } = await github.rest.actions.listJobsForWorkflowRun({
+              owner, repo, run_id: run.id, per_page: 100,
+            });
+            const gate = jobList.jobs.find(j => j.name === 'gate');
+            const e2e  = jobList.jobs.find(j => j.name.startsWith('E2E'));
+
+            // Gate skipped => no run-tests label (or a fork). This run tested nothing, so restore
+            // the blocking status instead of passing. An unknown state must never yield a green
+            // required check — that is the entire purpose of this gate.
+            if (!gate || gate.conclusion === 'skipped') {
+              await setStatus('failure', 'Add the run-tests label to trigger validation');
+              core.info('gate skipped — this run tested nothing; restored the blocking status');
+              return;
+            }
+
+            // Gate ran but E2E did not => an earlier job (build) failed. Report that honestly
+            // rather than blaming a missing label.
+            if (!e2e || e2e.conclusion === 'skipped') {
+              await setStatus('failure', 'PR E2E Tests did not run — an earlier job failed');
+              core.info('E2E skipped despite gate passing — upstream job failure');
+              return;
+            }
+
+            const passed = e2e.conclusion === 'success';
+            await setStatus(
+              passed ? 'success' : 'failure',
+              passed ? 'PR E2E Tests passed' : `PR E2E Tests ${e2e.conclusion}`,
+            );
+            core.info(`E2E job ${e2e.conclusion} — PR Validation ${passed ? 'success' : 'failure'}`);
