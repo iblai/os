@@ -10,10 +10,14 @@ import { unified } from 'unified';
 import remarkParse from 'remark-parse';
 import remarkRehype from 'remark-rehype';
 import rehypeRaw from 'rehype-raw';
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import rehypeKatex from 'rehype-katex';
 import rehypeStringify from 'rehype-stringify';
 import zilMath from '@ziloen/remark-math';
 import { rehypeAlignedMath } from './rehype-aligned-math';
+import { rehypeVerbCode } from './rehype-verb-code';
+import { remarkLatexIslands } from './remark-latex-islands';
+import { remarkLatexLineBreaks } from './remark-latex-line-breaks';
 import { rehypeReportMathErrors } from './markdown-math-error-reporter';
 import { KATEX_ERROR_COLOR } from './katex-options';
 import 'katex/contrib/mhchem';
@@ -1339,14 +1343,46 @@ const linkifyHtml = (html: string): string => {
   return container.innerHTML;
 };
 
-// Same parser stack as the chat renderer (components/markdown.tsx) so both
-// paths agree on markdown and LaTeX. Built once at module scope.
+// The LaTeX and maths stack is the chat renderer's (components/markdown.tsx),
+// in the same order -- @ziloen/remark-math, remarkLatexIslands,
+// remarkLatexLineBreaks, then rehypeVerbCode, rehypeAlignedMath, rehype-katex
+// and the telemetry pass -- so a formula resolves identically on both paths.
+// The rest deliberately differs, and the differences are visible:
+//   - no remark-breaks: canvas keeps the old `marked` `breaks: false`
+//     behaviour, so a single newline is a space here and a <br> in chat;
+//   - no Streamdown codeMeta: canvas has no code-fence metadata to read;
+//   - no rehype-harden: chat's raw -> sanitize -> harden chain ends with
+//     harden's link/image origin policy, which canvas does not need (it has
+//     no interstitial and its links open through the editor);
+//   - the whole string is parsed in one piece, where chat block-splits it
+//     first with parseLatexAwareBlocks.
+// Built once at module scope.
+// Streamdown's own sanitiser schema, so the two paths allow the same HTML.
+// `clobberPrefix: ''` keeps heading/footnote ids unprefixed, and `tel:` is
+// permitted for parity with the chat renderer's urlTransform.
+const sanitizeSchema = {
+  ...defaultSchema,
+  clobberPrefix: '',
+  protocols: {
+    ...defaultSchema.protocols,
+    href: [...(defaultSchema.protocols?.href ?? []), 'tel'],
+  },
+};
+
 const markdownHtmlProcessor = unified()
   .use(remarkParse)
   .use(remarkGfm)
   .use(zilMath)
+  .use(remarkLatexIslands)
+  .use(remarkLatexLineBreaks)
   .use(remarkRehype, { allowDangerousHtml: true })
   .use(rehypeRaw)
+  // Must sit between rehype-raw and rehype-katex, exactly as it does in
+  // Streamdown: raw HTML from the message is scrubbed here, while KaTeX's own
+  // markup is generated afterwards and so is never subject to the schema
+  // (defaultSchema would strip its MathML and class names).
+  .use(rehypeSanitize, sanitizeSchema)
+  .use(rehypeVerbCode)
   .use(rehypeAlignedMath)
   // htmlAndMathml keeps the <annotation> element the canvas math/export
   // consumers read back, and is accessibility-friendly.
