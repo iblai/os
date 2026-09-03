@@ -29,6 +29,7 @@ describe('gallery', () => {
     let body = '';
     let total = 0;
     let errs = 0;
+    let textDiffs = 0;
     for (const g of GALLERY) {
       body += `<section><h2>${esc(g.group)}</h2><p class="blurb">${esc(g.blurb)}</p>`;
       for (const c of g.cases) {
@@ -38,14 +39,24 @@ describe('gallery', () => {
         errs += e;
         const canvas = markdownToHtml(c.md);
         const canvasErr = (canvas.match(/katex-error/g) || []).length;
+        const cd = document.createElement('div');
+        cd.innerHTML = canvas;
+        const flat = (n: Element) =>
+          (n.textContent || '').replace(/\s+/g, ' ').trim();
+        const textDiffers = flat(cd) !== flat(container);
+        if (textDiffers) textDiffs++;
         body += `<article data-case="${c.id}" ${e ? 'data-err' : ''}>
   <header><code>${c.id}</code> <b>${esc(c.label)}</b>
     ${e ? `<span class="badge err">${e} katex error${e > 1 ? 's' : ''}</span>` : ''}
-    ${canvasErr !== e ? `<span class="badge warn">canvas differs (${canvasErr})</span>` : ''}
+    ${canvasErr !== e ? `<span class="badge warn">canvas errors differ (${canvasErr})</span>` : ''}
+    ${textDiffers ? `<span class="badge warn">canvas text differs</span>` : ''}
   </header>
   ${c.note ? `<p class="note">${esc(c.note)}</p>` : ''}
   <pre class="src">${esc(c.md)}</pre>
-  <div class="out">${container.innerHTML}</div>
+  <div class="panes">
+    <div class="pane"><p class="pane-h">chat &mdash; &lt;Markdown&gt;</p><div class="out">${container.innerHTML}</div></div>
+    <div class="pane"><p class="pane-h">canvas &mdash; markdownToHtml()</p><div class="out">${canvas}</div></div>
+  </div>
 </article>`;
       }
       body += '</section>';
@@ -78,19 +89,25 @@ header code{font:12px ui-monospace,monospace;color:var(--mut);background:#eee;pa
 .badge.warn{background:#fff4e0;color:#8a5a00}
 .note{margin:0;padding:7px 12px;background:#fffbe9;border-bottom:1px solid #f0e4bc;font-size:12px;color:#6b5900}
 .src{margin:0;padding:9px 12px;background:#fbfbfb;border-bottom:1px solid var(--line);font:12px/1.5 ui-monospace,monospace;color:#555;white-space:pre-wrap;word-break:break-word}
-.out{padding:14px 12px}
+.panes{display:grid;grid-template-columns:1fr 1fr}
+.pane:first-child{border-right:1px solid var(--line)}
+.pane-h{margin:0;padding:5px 12px;background:#f4f6f8;border-bottom:1px solid var(--line);font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}
+.out{padding:14px 12px;overflow-x:auto}
 .katex-error{outline:1px dashed #c66;outline-offset:2px}
 </style></head><body>
 <h1>Markdown render gallery</h1>
-<p class="lede">Every case rendered through the real <code>&lt;Markdown&gt;</code> component — Streamdown + @ziloen/remark-math + rehype-katex — with the app's compiled CSS.</p>
+<p class="lede">Every case rendered through the real <code>&lt;Markdown&gt;</code> component (chat) and <code>markdownToHtml()</code> (canvas) side by side, with the app's compiled CSS.</p>
 <div class="summary">
   <div><b>${total}</b><span>cases</span></div>
   <div><b>${errs}</b><span>katex errors</span></div>
+  <div><b>${textDiffs}</b><span>canvas text diffs</span></div>
   <div><b>${GALLERY.length}</b><span>groups</span></div>
   <div><b>${new Date().toISOString().slice(0, 16).replace('T', ' ')}</b><span>generated (UTC)</span></div>
 </div>
 ${body}</body></html>`,
     );
-    console.log(`GALLERY_BUILT cases=${total} errors=${errs}`);
+    console.log(
+      `GALLERY_BUILT cases=${total} errors=${errs} canvasTextDiffs=${textDiffs}`,
+    );
   });
 });
