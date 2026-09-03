@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.140.0](https://github.com/iblai/os/compare/v0.139.0...v0.140.0) (2026-09-03)
+
+### Features
+
+* **code-mode:** removed pre-tool narration in the reply ([73e8962](https://github.com/iblai/os/commit/73e896299a328a7691f857b8f99c2e8a546c9f68))
+
+### Chores
+
+* **tauri:** release app-v0.95.19 ([6da75d2](https://github.com/iblai/os/commit/6da75d2ff824224af37ebe8b33b6f0d6b9a4b180))
+
 ## [0.139.0](https://github.com/iblai/os/compare/v0.138.2...v0.139.0) (2026-09-03)
 
 ### Features
