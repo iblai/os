@@ -22,12 +22,61 @@
  *
  * Each test creates a fresh mentor first (matching journey 36 / 75 pattern)
  * so the datasets tab is always reachable from a known-good starting state.
+ *
+ * ── The tenant decides which behaviour is correct ────────────────────────
+ *
+ * A cloud picker only works when the tenant has OAuth credentials for that
+ * provider, which the modal looks up on mount via
+ * `GET .../orgs/<org>/integration-credential/?name=<provider>`. This journey
+ * originally assumed those credentials always exist — true of the tenant it
+ * was written against, false of `spa-tests-chrome-two` (stg1/stg2 CI), where
+ * all three lookups return `[]`. With no credential the SDK is handed an
+ * empty client id, so no popup can ever open and all three tests failed for
+ * a reason that was nothing to do with a regression.
+ *
+ * So each test now reads the live answer (`observeIntegrationCredentials`)
+ * and asserts the branch that answer selects:
+ *
+ *   credential present → clicking opens the provider's popup (below)
+ *   credential absent  → the button is disabled and labelled "Not configured
+ *                        for this tenant" (`expectNotConfigured`)
+ *
+ * Both are real assertions about shipped behaviour, so the journey is
+ * meaningful on either kind of tenant and never silently skips. The disabled
+ * state is itself a fix that shipped with this journey: the buttons used to
+ * render enabled and do nothing at all when clicked.
  */
+
+import type { Locator } from '@playwright/test';
 
 import { test, expect } from '../fixtures/mentor-test';
 import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
+import { observeIntegrationCredentials } from '../utils/integration-credentials';
 import { logger } from '@iblai/iblai-js/playwright';
+
+/** Copy the modal shows on a provider the tenant has no credential for. */
+const NOT_CONFIGURED = /not configured for this tenant/i;
+
+/**
+ * Asserts the button is inert and says why. This is the correct behaviour on a
+ * tenant with no credential for the provider: the SDK would be handed an empty
+ * client id and the click would do nothing at all, so the app disables it.
+ */
+async function expectNotConfigured(
+  modal: Locator,
+  button: Locator,
+  provider: string,
+): Promise<void> {
+  await expect(button).toBeVisible({ timeout: 10_000 });
+  await expect(button).toBeDisabled();
+  await expect(button).toHaveAttribute('title', NOT_CONFIGURED);
+  await expect(modal.getByText(NOT_CONFIGURED).first()).toBeVisible();
+  logger.info(
+    `${provider}: tenant has no integration credential — asserted the button ` +
+      'is disabled and labelled, not that a popup opens',
+  );
+}
 
 test.describe('Journey 74: Dataset Cloud Pickers', () => {
   test.setTimeout(200_000);
@@ -53,6 +102,8 @@ test.describe('Journey 74: Dataset Cloud Pickers', () => {
     createMentorPage,
     editMentorPage,
   }) => {
+    const credentialFor = observeIntegrationCredentials(page);
+
     await createMentorPage.openAndCreate();
     await editMentorPage.open('Datasets');
     await waitForPageReady(page);
@@ -61,6 +112,12 @@ test.describe('Journey 74: Dataset Cloud Pickers', () => {
     await expect(modal).toBeVisible({ timeout: 10_000 });
 
     const googleDriveBtn = editMentorPage.datasets.googleDriveButton(modal);
+
+    if (!(await credentialFor('drive'))) {
+      await expectNotConfigured(modal, googleDriveBtn, 'Google Drive');
+      return;
+    }
+
     await expect(googleDriveBtn).toBeVisible({ timeout: 10_000 });
     await expect(googleDriveBtn).toBeEnabled({ timeout: 5_000 });
 
@@ -98,6 +155,8 @@ test.describe('Journey 74: Dataset Cloud Pickers', () => {
     createMentorPage,
     editMentorPage,
   }) => {
+    const credentialFor = observeIntegrationCredentials(page);
+
     await createMentorPage.openAndCreate();
     await editMentorPage.open('Datasets');
     await waitForPageReady(page);
@@ -106,6 +165,12 @@ test.describe('Journey 74: Dataset Cloud Pickers', () => {
     await expect(modal).toBeVisible({ timeout: 10_000 });
 
     const oneDriveBtn = editMentorPage.datasets.oneDriveButton(modal);
+
+    if (!(await credentialFor('onedrive'))) {
+      await expectNotConfigured(modal, oneDriveBtn, 'Microsoft OneDrive');
+      return;
+    }
+
     await expect(oneDriveBtn).toBeVisible({ timeout: 10_000 });
     await expect(oneDriveBtn).toBeEnabled({ timeout: 5_000 });
 
@@ -140,6 +205,8 @@ test.describe('Journey 74: Dataset Cloud Pickers', () => {
     createMentorPage,
     editMentorPage,
   }) => {
+    const credentialFor = observeIntegrationCredentials(page);
+
     await createMentorPage.openAndCreate();
     await editMentorPage.open('Datasets');
     await waitForPageReady(page);
@@ -148,6 +215,12 @@ test.describe('Journey 74: Dataset Cloud Pickers', () => {
     await expect(modal).toBeVisible({ timeout: 10_000 });
 
     const dropboxBtn = editMentorPage.datasets.dropboxButton(modal);
+
+    if (!(await credentialFor('dropbox'))) {
+      await expectNotConfigured(modal, dropboxBtn, 'Dropbox');
+      return;
+    }
+
     await expect(dropboxBtn).toBeVisible({ timeout: 10_000 });
     await expect(dropboxBtn).toBeEnabled({ timeout: 5_000 });
 
@@ -166,7 +239,17 @@ test.describe('Journey 74: Dataset Cloud Pickers', () => {
 
     // Wait for the Chooser URL — the popup may briefly hold about:blank
     // before the SDK navigates it.
-    await popup.waitForURL(/dropbox\.com\/chooser/, { timeout: 15_000 });
+    //
+    // `/dropins/login` is accepted as well as `/chooser`: Dropbox answers the
+    // Chooser URL with a 302 to its sign-in page whenever the browser has no
+    // Dropbox session, which is always true in a fresh Playwright context.
+    // Verified on .org — the popup opens at
+    // `www.dropbox.com/chooser?...app_key=<tenant key>...` and is immediately
+    // redirected. Matching only `/chooser` asserts on where the popup settled
+    // rather than where the app sent it, and fails on any signed-out run.
+    await popup.waitForURL(/dropbox\.com\/(chooser|dropins\/login)/, {
+      timeout: 15_000,
+    });
     logger.info(`dscp-03: Dropbox popup navigated to ${popup.url()}`);
 
     await popup.close();
