@@ -69,17 +69,17 @@ jobs:
       image-tag: ${{ steps.set-outputs.outputs.image-tag }}
     steps:
       - name: Checkout source repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Checkout ops actions
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: iblai/ibl-web-ops
           token: ${{ secrets.GIT_TOKEN || github.token }}
           path: .ops
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Generate or use image tag
         id: tag
@@ -100,7 +100,7 @@ jobs:
       # ECR Login and Build
       - name: Configure AWS Credentials
         if: inputs.registry-type == 'ecr'
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v5
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -124,7 +124,7 @@ jobs:
       # OCIR Login and Build
       - name: Log in to OCIR
         if: inputs.registry-type == 'ocir'
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.OCIR_REGISTRY }}
           username: ${{ env.OCIR_NAMESPACE }}/${{ secrets.OCIR_USERNAME }}
