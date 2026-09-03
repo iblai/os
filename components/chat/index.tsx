@@ -49,6 +49,7 @@ import {
   CHAT_AREA_SIZE,
   FileReference,
   TOOLS,
+  use401TokenRefresh,
 } from '@iblai/iblai-js/web-utils';
 import {
   cn,
@@ -328,6 +329,7 @@ export function Chat({
   );
 
   const { handle402Error } = use402ErrorCheck();
+  const { handle401Error } = use401TokenRefresh({ tenantKey });
   const tokenEnabled = useAppSelector(selectTokenEnabled);
   const token = useAppSelector(selectToken);
   const showingSharedChat = useAppSelector(selectShowingSharedChat);
@@ -450,6 +452,7 @@ export function Chat({
         !searchParams.get('token')),
     mentorShareableToken: searchParams.get('token'),
     on402Error: handle402Error,
+    on401Error: handle401Error,
     cachedSessionId,
     onStartNewChat: (sessionId: string) => {
       dispatch(chatActions.updateSessionIds(sessionId));

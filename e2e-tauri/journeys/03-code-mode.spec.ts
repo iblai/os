@@ -593,5 +593,19 @@ describe('Journey 3: Code Mode (opencode)', () => {
          meanwhile by the Rust adopt_prior_mapping tests and the SDK per-chat
          key vitest cases */
     });
+
+    it.skip('code-27: a new web project walks the 3-step flow — the template question, the local-preview question (dev server + browser only on yes), then one deploy question per project; replies never name the hosting provider', () => {
+      /* pending — needs a tool-calling model driving real turns (the same
+         harness gap as code-08..10/15); the instruction text is covered
+         meanwhile by the_iblai_guidance_keeps_its_load_bearing_lines in
+         opencode_proxy.rs */
+    });
+
+    it.skip('code-28: text the agent emits before a tool call lands in the thinking section, never the reply bubble — the visible reply is what follows the last tool call', () => {
+      /* pending — needs a tool-calling model driving real turns (the same
+         harness gap as code-08..10/15); the reclassification is covered
+         meanwhile by pre_tool_text_is_reclassified_as_narration in
+         opencode_acp.rs */
+    });
   });
 });

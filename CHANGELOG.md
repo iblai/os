@@ -1,10 +1,63 @@
 # Changelog
 
+## [0.140.1](https://github.com/iblai/os/compare/v0.140.0...v0.140.1) (2026-09-03)
+
+### Bug Fixes
+
+* **embed:** fall back to '*' when the referrer is our own origin ([ae68842](https://github.com/iblai/os/commit/ae68842f43db9b44133bf19f174dddd44b3bc8cc))
+
+## [0.140.0](https://github.com/iblai/os/compare/v0.139.0...v0.140.0) (2026-09-03)
+
+### Features
+
+* **code-mode:** removed pre-tool narration in the reply ([73e8962](https://github.com/iblai/os/commit/73e896299a328a7691f857b8f99c2e8a546c9f68))
+
+### Chores
+
+* **tauri:** release app-v0.95.19 ([6da75d2](https://github.com/iblai/os/commit/6da75d2ff824224af37ebe8b33b6f0d6b9a4b180))
+
+## [0.139.0](https://github.com/iblai/os/compare/v0.138.2...v0.139.0) (2026-09-03)
+
+### Features
+
+- **chat:** recover from chat 401s by refreshing the DM token ([ca9c23a](https://github.com/iblai/os/commit/ca9c23a6b9590841211380fa76e55089973fde24))
+
+### Chores
+
+- **deps:** bump iblai-js to 2.8.1 ([b0bd262](https://github.com/iblai/os/commit/b0bd26282300425110bde8bc31070c8e67b20dcc))
+- **deps:** lift the browserslist and fast-uri floors past their advisories ([f2405b3](https://github.com/iblai/os/commit/f2405b330ac0ec56b77fa6f5a1a66ae4e52de5bb))
+
+## [0.138.2](https://github.com/iblai/os/compare/v0.138.1...v0.138.2) (2026-09-02)
+
+### Bug Fixes
+
+- **pr-gate:** defer only to a sibling run that is still running ([4573a38](https://github.com/iblai/os/commit/4573a38b452eeea108335d941e122fa86cfcb824)), closes [lms#232](https://github.com/iblai/lms/issues/232)
+
+## [0.138.1](https://github.com/iblai/os/compare/v0.138.0...v0.138.1) (2026-09-02)
+
+### Bug Fixes
+
+- **pr-gate:** derive the verdict from the E2E job, not the workflow conclusion ([52500ff](https://github.com/iblai/os/commit/52500ffac2c662a6a5ebbd73f3c41a98c0dca16e)), closes [lms#232](https://github.com/iblai/lms/issues/232)
+
+## [0.138.0](https://github.com/iblai/os/compare/v0.137.1...v0.138.0) (2026-09-02)
+
+### Features
+
+- **code-mode:** ships the guidance as AGENTS.md instead of proxy body injection ([543e4cd](https://github.com/iblai/os/commit/543e4cd4934a3b7edad6ac5dc21c1319ea47d2c4))
+
+### Chores
+
+- **tauri:** release app-v0.95.18 ([c54d361](https://github.com/iblai/os/commit/c54d361d16f59beeef746744c0248a9943eef85f))
+
+### Tests
+
+- **code-mode:** prove the pinned opencode loads the AGENTS.md guidance on every agent turn ([03be8ef](https://github.com/iblai/os/commit/03be8ef22f9e370c7858a3cc548ad2880d71e98e))
+
 ## [0.137.1](https://github.com/iblai/os/compare/v0.137.0...v0.137.1) (2026-09-01)
 
 ### Performance
 
-* **bundle:** lazy-load syntax highlighter and LiveKit off the main chat path ([05844e9](https://github.com/iblai/os/commit/05844e9429c4f7d7b745f6a8bca564709cca6296))
+- **bundle:** lazy-load syntax highlighter and LiveKit off the main chat path ([05844e9](https://github.com/iblai/os/commit/05844e9429c4f7d7b745f6a8bca564709cca6296))
 
 ## [0.137.0](https://github.com/iblai/os/compare/v0.136.1...v0.137.0) (2026-09-01)
 
