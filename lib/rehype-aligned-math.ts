@@ -25,6 +25,28 @@ import { visit } from 'unist-util-visit';
 
 const OPENS_ENVIRONMENT = /\\begin\s*\{/;
 const UNBOUND_ALIGNMENT = /(?:^|[^\\])&|\\\\/;
+/** One balanced `\begin{env}...\end{env}` pair, innermost first. */
+const ENVIRONMENT =
+  /\\begin\s*\{([a-zA-Z]+\*?)\}(?:(?!\\begin\s*\{)[\s\S])*?\\end\s*\{\1\}/g;
+
+/**
+ * The maths with every balanced environment removed -- what is left is the
+ * part whose `&` and `\\` are NOT already bound by an environment.
+ *
+ * `$$\begin{matrix} a & b \end{matrix} \\ \begin{matrix} c & d \end{matrix}$$`
+ * -- two matrices a model put on separate rows -- opens an environment, so a
+ * "does it contain \begin{" test skips it; but the `\\` BETWEEN the matrices
+ * is as unbound as any other, and KaTeX drops it silently, collapsing the two
+ * onto one line. Only the alignment outside every environment counts.
+ */
+function outsideEnvironments(tex: string): string {
+  let value = tex;
+  for (let next = value.replace(ENVIRONMENT, ' '); next !== value; ) {
+    value = next;
+    next = value.replace(ENVIRONMENT, ' ');
+  }
+  return value;
+}
 
 export function rehypeAlignedMath() {
   return (tree: Root) => {
@@ -43,8 +65,11 @@ export function rehypeAlignedMath() {
       if (!isDisplay) return;
       const [text] = node.children;
       if (text?.type !== 'text') return;
-      if (OPENS_ENVIRONMENT.test(text.value)) return;
-      if (!UNBOUND_ALIGNMENT.test(text.value)) return;
+      const outside = outsideEnvironments(text.value);
+      // An environment left open: the source is malformed or still streaming,
+      // and wrapping half a `\begin` in `aligned` helps nobody.
+      if (OPENS_ENVIRONMENT.test(outside)) return;
+      if (!UNBOUND_ALIGNMENT.test(outside)) return;
       text.value = `\\begin{aligned}\n${text.value}\n\\end{aligned}`;
     });
   };

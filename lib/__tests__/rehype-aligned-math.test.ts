@@ -80,6 +80,28 @@ describe('rehypeAlignedMath', () => {
     }
   });
 
+  // A "does it contain \begin{" test skipped these: the environment binds its
+  // own `&`, but the `\\` BETWEEN the two environments is as unbound as any
+  // other and KaTeX drops it silently, collapsing the rows onto one line.
+  it('wraps alignment that sits outside a balanced environment', () => {
+    const html = render('$$\\begin{matrix} a & b \\end{matrix} \\\\ c &= d$$');
+    expect(html).toContain('\\begin{aligned}');
+    expect(html).toContain('\\begin{matrix}');
+  });
+
+  it('wraps a row break between two balanced environments', () => {
+    const html = render(
+      '$$\\begin{pmatrix}1 & 2\\end{pmatrix} \\\\ \\begin{pmatrix}3 & 4\\end{pmatrix}$$',
+    );
+    expect(html.match(/\\begin\{aligned\}/g) ?? []).toHaveLength(1);
+  });
+
+  it('leaves an environment left open by the stream untouched', () => {
+    expect(render('$$\\begin{aligned} a &= b \\\\ c$$')).not.toContain(
+      '\\begin{aligned}\n\\begin',
+    );
+  });
+
   it('leaves math with no alignment markers untouched', () => {
     expect(render('$$E = mc^2$$')).not.toContain('aligned');
   });
