@@ -329,6 +329,9 @@ importers:
       rehype-remark:
         specifier: 10.0.1
         version: 10.0.1
+      rehype-sanitize:
+        specifier: 6.0.0
+        version: 6.0.0
       rehype-stringify:
         specifier: 10.0.1
         version: 10.0.1
@@ -426,6 +429,9 @@ importers:
       '@types/hast':
         specifier: 3.0.5
         version: 3.0.5
+      '@types/mdast':
+        specifier: 4.0.4
+        version: 4.0.4
       '@types/mocha':
         specifier: 10.0.10
         version: 10.0.10
