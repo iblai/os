@@ -21,6 +21,14 @@ const mockSetEnableLessonCompletion = vi.hoisted(() =>
     payload: value,
   })),
 );
+const mockSetLessonCompletion = vi.hoisted(() =>
+  vi.fn((value) => ({ type: 'chat/setLessonCompletion', payload: value })),
+);
+const mockSelectLessonCompletion = vi.hoisted(() => vi.fn(() => null));
+const mockUseAppSelector = vi.hoisted(() =>
+  vi.fn((selector: (state: unknown) => unknown) => selector({})),
+);
+const mockSendMessageToParentWebsite = vi.hoisted(() => vi.fn());
 const mockSetMetadata = vi.hoisted(() =>
   vi.fn((value) => ({ type: 'chat/setMetadata', payload: value })),
 );
@@ -31,6 +39,11 @@ const mockEnableChatActionsPopup = vi.hoisted(() =>
 // Mock the dependencies
 vi.mock('@/lib/hooks', () => ({
   useAppDispatch: mockUseAppDispatch,
+  useAppSelector: mockUseAppSelector,
+}));
+
+vi.mock('../utils', () => ({
+  sendMessageToParentWebsite: mockSendMessageToParentWebsite,
 }));
 
 vi.mock('@/features/navigation/slice', () => ({
@@ -43,8 +56,10 @@ vi.mock('@iblai/iblai-js/web-utils', () => ({
     setDocumentFilter: mockSetDocumentFilter,
     setEnableGrading: mockSetEnableGrading,
     setEnableLessonCompletion: mockSetEnableLessonCompletion,
+    setLessonCompletion: mockSetLessonCompletion,
     setMetadata: mockSetMetadata,
   },
+  selectLessonCompletion: mockSelectLessonCompletion,
 }));
 
 vi.mock('@/features/chat/chatSlice', () => ({
@@ -63,6 +78,7 @@ describe('useIframeHandlers', () => {
   let originalLocation: Location;
 
   beforeEach(() => {
+    mockSelectLessonCompletion.mockReturnValue(null);
     // Mock dispatch
     mockDispatchInstance = vi.fn();
     mockUseAppDispatch.mockReturnValue(mockDispatchInstance);
@@ -1010,6 +1026,45 @@ describe('useIframeHandlers', () => {
         });
         result.current['MENTOR:ENABLE_CHAT_ACTION_POPUPS']({ enable: true });
       }).not.toThrow();
+    });
+  });
+
+  describe('lesson.completed relay', () => {
+    const frame = {
+      type: 'lesson.completed',
+      course_id: 'course-v1:joetibtest2+C1+2026-08',
+      usage_id:
+        'block-v1:joetibtest2+C1+2026-08+type@html+block@f34715580cdb4ecaa51544c57b3ee264',
+      completion: 1,
+      display_name: 'Benefits of AI For Education.',
+      status_code: 200,
+      session_id: '04195f39-8885-4a8a-88d1-495f0bb34225',
+    };
+
+    it('posts the stored frame to the parent website', () => {
+      mockSelectLessonCompletion.mockReturnValue(frame as any);
+      renderHook(() => useIframeHandlers());
+
+      expect(mockSendMessageToParentWebsite).toHaveBeenCalledWith(frame);
+    });
+
+    it('clears the frame once relayed', () => {
+      mockSelectLessonCompletion.mockReturnValue(frame as any);
+      renderHook(() => useIframeHandlers());
+
+      expect(mockDispatchInstance).toHaveBeenCalledWith(
+        chatActions.setLessonCompletion(null),
+      );
+    });
+
+    it('posts nothing while there is no completed lesson', () => {
+      mockSelectLessonCompletion.mockReturnValue(null);
+      renderHook(() => useIframeHandlers());
+
+      expect(mockSendMessageToParentWebsite).not.toHaveBeenCalled();
+      expect(mockDispatchInstance).not.toHaveBeenCalledWith(
+        chatActions.setLessonCompletion(null),
+      );
     });
   });
 });

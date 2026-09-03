@@ -1,11 +1,12 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 
-import { useAppDispatch } from './hooks';
+import { useAppDispatch, useAppSelector } from './hooks';
 import {
   darkModeUpdated,
   // iframeCloseButtonEnabled,
 } from '@/features/navigation/slice';
-import { chatActions } from '@iblai/iblai-js/web-utils';
+import { chatActions, selectLessonCompletion } from '@iblai/iblai-js/web-utils';
+import { sendMessageToParentWebsite } from './utils';
 import {
   enableChatActionsPopup,
   setAutoplayLastAiMessage,
@@ -15,6 +16,18 @@ import eventBus, { RemoteEvents } from './eventBus';
 export function useIframeHandlers() {
   const dispatch = useAppDispatch();
   const tenantKey = 'use-iframe-handlers';
+
+  // Outbound counterpart to the handlers below. `useChat` parks each
+  // `lesson.completed` frame on the chat slice rather than reaching for the
+  // window itself; this relays it to the host page (the LMS courseware, which
+  // refreshes its outline and offers the next unit) and clears it so a repeat
+  // completion of the same lesson still reads as a new event.
+  const lessonCompletion = useAppSelector(selectLessonCompletion);
+  useEffect(() => {
+    if (!lessonCompletion) return;
+    sendMessageToParentWebsite(lessonCompletion);
+    dispatch(chatActions.setLessonCompletion(null));
+  }, [lessonCompletion, dispatch]);
 
   const handleThemePostMessage = (theme: string) => {
     const bodyEl = document.body;
