@@ -11,7 +11,7 @@ on:
 permissions:
   statuses: write
   pull-requests: read
-  actions: read          # update-gate reads the E2E run's jobs to derive the verdict
+  actions: read # update-gate reads the E2E run's jobs to derive the verdict
 
 jobs:
   # ── On pull_request: set initial gate status ──
