@@ -37,12 +37,12 @@ describe('Markdown Component', () => {
      */
     it('should render bold text', () => {
       const { container } = render(<Markdown>This is **bold** text.</Markdown>);
-      // STREAMDOWN REGRESSION: Streamdown renders `**bold**` as
-      // <span class="font-semibold" data-streamdown="strong"> rather than a
-      // semantic <strong>, so screen readers lose the emphasis role.
-      const strong = container.querySelector('[data-streamdown="strong"]');
+      // Streamdown's own `strong` is a <span class="font-semibold">, which is
+      // neither bold to a screen reader nor a match for the bubble's
+      // `[&_strong]:font-bold`; the app overrides it back to the element.
+      const strong = container.querySelector('strong');
       expect(strong).toBeTruthy();
-      expect(strong?.tagName).toBe('SPAN');
+      expect(strong?.tagName).toBe('STRONG');
       expect(strong?.textContent).toBe('bold');
     });
 
@@ -114,10 +114,8 @@ describe('Markdown Component', () => {
       for (const li of container.querySelectorAll('li')) {
         expect(li.className ?? '').not.toMatch(/overflow/);
       }
-      // STREAMDOWN REGRESSION: the inner `.overflow-x-auto` wrapper is gone
-      // with the custom `li` override, so wide content (long equations) inside
-      // a list item now overflows the bubble instead of scrolling.
-      expect(container.querySelector('li .overflow-x-auto')).toBeNull();
+      // Wide content (a long equation) scrolls in a wrapper INSIDE the item.
+      expect(container.querySelector('li .overflow-x-auto')).not.toBeNull();
     });
 
     /**
@@ -155,20 +153,24 @@ describe('Markdown Component', () => {
     });
 
     /**
-     * STREAMDOWN REGRESSION: the app used to give lists `my-6` with
-     * `[ul_&]/[ol_&]:my-1` overrides so a nested list stayed visually attached
-     * to its parent item. Streamdown's own list classes carry no vertical
-     * margin at all (`list-inside list-decimal whitespace-normal [li_&]:pl-6`),
-     * so top-level lists no longer get the 24px breathing room; nesting is
-     * indented with padding instead.
+     * A top-level list gets `my-6` for breathing room; a nested one drops to
+     * `my-1` via the `[ul_&]/[ol_&]` variants, so it stays visually attached
+     * to its parent item instead of floating 24px away on each side.
+     * Streamdown's own list classes carry no vertical margin at all.
      */
     it('should tighten nested list margins while keeping top-level margins', () => {
       const { container } = render(
         <Markdown>{'1. Item\n   - sub\n2. Next'}</Markdown>,
       );
+      const top = container.querySelector('ol');
+      expect(top?.className).toContain('my-6');
+      expect(top?.className).toContain('[ul_&]:my-1');
+      const nested = container.querySelector('ol li ul');
+      expect(nested?.className).toContain('[ol_&]:my-1');
+      // The marker has to sit OUTSIDE the item: `list-inside` puts it in the
+      // content box, where the item's block wrapper pushes it onto its own line.
       for (const list of container.querySelectorAll('ul, ol')) {
-        expect(list.className).not.toContain('my-6');
-        expect(list.className).toContain('[li_&]:pl-6');
+        expect(list.className).not.toContain('list-inside');
       }
     });
 
@@ -459,11 +461,12 @@ Show me your steps — write out each one just like I did above. 😊`;
       expect(container.textContent).not.toContain('$');
     });
 
-    it('should render dollar-wrapped text styling commands as KaTeX text (issue #2109)', () => {
+    it('unwraps dollar-wrapped text styling commands to real markdown (issue #2109)', () => {
       // Real LLM output: feature names wrapped in `$\textbf{...}$` / `$\text{...}$`
       // to mean *bold*, not math (from the shared-chat repro on the issue).
-      // These are genuine `$...$` spans, so they render as math -- KaTeX
-      // typesets \textbf/\text as bold/upright prose, which reads correctly.
+      // KaTeX typesets them as serif math sitting inside sans-serif prose, and
+      // the bold is math-bold rather than a real <strong>, so a span whose
+      // whole body is one text command is unwrapped instead.
       const featureList = `The $\\text{ibl.ai}$ platform offers:
 
 * $\\textbf{Custom AI Agents}$: Create personalized agents.
@@ -472,13 +475,16 @@ Show me your steps — write out each one just like I did above. 😊`;
 
       const { container } = render(<Markdown>{featureList}</Markdown>);
 
-      const tex = [...container.querySelectorAll('.katex annotation')].map(
+      expect(container.querySelectorAll('.katex')).toHaveLength(0);
+      const bold = [...container.querySelectorAll('strong')].map(
         (el) => el.textContent,
       );
-      expect(tex).toContain('\\textbf{Custom AI Agents}');
-      expect(tex).toContain('\\textbf{Canvas \\& Artifacts}');
-      expect(tex).toContain('\\textbf{Enterprise Management}');
-      // Every span typesets cleanly; no leaked delimiters or trapped `**`.
+      expect(bold).toEqual([
+        'Custom AI Agents',
+        'Canvas & Artifacts',
+        'Enterprise Management',
+      ]);
+      // Every span resolves cleanly; no leaked delimiters or trapped `**`.
       expect(container.querySelector('.katex-error')).toBeNull();
       expect(container.textContent).not.toContain('$');
       expect(container.textContent).not.toContain('**');
@@ -658,9 +664,7 @@ where \\( r = |z| = \\sqrt{x^2 + y^2} \\) and \\( \\theta = \\tan^{-1}\\left(\\f
       expect(ol).toBeTruthy();
 
       // Check for bold text (Streamdown emits a span, not <strong>)
-      const strongElements = container.querySelectorAll(
-        '[data-streamdown="strong"]',
-      );
+      const strongElements = container.querySelectorAll('strong');
       expect(strongElements.length).toBeGreaterThan(0);
 
       // Check for mathematical content
@@ -879,9 +883,7 @@ Inline math: $x = 5$ and \\(y = 10\\)
 `;
       const { container } = render(<Markdown>{mixed}</Markdown>);
       expect(container.querySelector('h1')).toBeTruthy();
-      expect(
-        container.querySelectorAll('[data-streamdown="strong"]').length,
-      ).toBeGreaterThan(0);
+      expect(container.querySelectorAll('strong').length).toBeGreaterThan(0);
       expect(container.querySelectorAll('ul').length).toBeGreaterThan(0);
     });
 
@@ -1067,46 +1069,53 @@ describe('Markdown Component - whole-line $$ display promotion (issue #2109 fix 
  */
 describe('Markdown Component - LaTeX document markup in math costume (issue #2109)', () => {
   /**
-   * A heading emitted as \[\textbf{...}\] typesets as a bold display block.
-   * That reads correctly; what must never happen is a parse error or literal
-   * asterisks leaking into the visible text.
+   * A heading emitted as \[\textbf{...}\] is a model faking a heading, not a
+   * centred equation: KaTeX sets it serif-bold in the middle of sans-serif
+   * prose. A display span whose whole body is a STYLING command unwraps to the
+   * markdown it means; a plain-text one (`$$\text{Step 2}$$`) is a genuine
+   * centred annotation between equations and stays maths.
    */
-  it('renders a \\[\\textbf{...}\\] heading as a bold display block', () => {
+  it('unwraps a \\[\\textbf{...}\\] heading to real bold prose', () => {
     const { container } = render(
       <Markdown>
         {'\\[\n\\textbf{React Learning Plan (4-6 Weeks)}\n\\]\nIntro line.'}
       </Markdown>,
     );
-    expect(container.querySelectorAll('.katex-display')).toHaveLength(1);
-    expect(container.querySelectorAll('.katex')).toHaveLength(1);
+    expect(container.querySelectorAll('.katex')).toHaveLength(0);
     expect(container.querySelector('.katex-error')).toBeNull();
-    expect(
-      container.querySelector('.katex-display annotation')?.textContent,
-    ).toBe('\\textbf{React Learning Plan (4-6 Weeks)}');
-    expect(container.textContent).toContain('React Learning Plan (4-6 Weeks)');
+    expect(container.querySelector('strong')?.textContent).toBe(
+      'React Learning Plan (4-6 Weeks)',
+    );
     expect(container.textContent).not.toContain('∗∗');
     expect(container.textContent).toContain('Intro line.');
   });
 
-  it('renders an inline \\(\\textit{...}\\) wrapper as inline italic math', () => {
+  it('keeps a \\[\\text{...}\\] annotation as a display block', () => {
+    const { container } = render(
+      <Markdown>{'\\[\n\\text{Step 2: Multiply first}\n\\]'}</Markdown>,
+    );
+    expect(container.querySelectorAll('.katex-display')).toHaveLength(1);
+    expect(container.querySelector('.katex-error')).toBeNull();
+    expect(container.querySelector('strong')).toBeNull();
+  });
+
+  it('unwraps an inline \\(\\textit{...}\\) wrapper to real emphasis', () => {
     const { container } = render(
       <Markdown>{'\\(\\textit{a closing thought}\\) here'}</Markdown>,
     );
-    expect(container.querySelectorAll('.katex')).toHaveLength(1);
-    expect(container.querySelectorAll('.katex-display')).toHaveLength(0);
+    expect(container.querySelectorAll('.katex')).toHaveLength(0);
     expect(container.querySelector('.katex-error')).toBeNull();
-    expect(container.querySelector('.katex annotation')?.textContent).toBe(
-      '\\textit{a closing thought}',
+    expect(container.querySelector('em')?.textContent).toBe(
+      'a closing thought',
     );
-    expect(container.textContent).toContain('a closing thought');
-    expect(container.textContent).toContain('here');
+    expect(container.textContent).toBe('a closing thought here');
   });
 
   /**
    * Code emitted as an aligned environment of \verb rows: KaTeX typesets it
    * as a monospace aligned block, one row per \verb, with the source intact.
    */
-  it('renders an aligned environment of \\verb rows without a parse error', () => {
+  it('turns an aligned environment of \\verb rows into a code fence', () => {
     const raw = [
       'Create the file:',
       '\\[',
@@ -1118,23 +1127,20 @@ describe('Markdown Component - LaTeX document markup in math costume (issue #210
       '\\]',
     ].join('\n');
     const { container } = render(<Markdown>{raw}</Markdown>);
-    expect(container.querySelectorAll('.katex-display')).toHaveLength(1);
+    expect(container.querySelectorAll('.katex-display')).toHaveLength(0);
     expect(container.querySelector('.katex-error')).toBeNull();
-    // Every \verb row is typeset, one per aligned row, with the `\\` row
-    // separators intact in the source annotation.
-    const tex =
-      container.querySelector('.katex-display annotation')?.textContent ?? '';
-    expect(tex).toContain('\\verb|import { useState } from "react";|\\\\');
-    expect(tex).toContain(
-      '\\verb|  const [count, setCount] = useState(0);|\\\\',
-    );
-    expect(container.textContent).toContain(
-      'import { useState } from "react";',
+    // Every \verb body becomes one line of a bare, monospaced code fence.
+    expect(container.querySelector('pre code')?.textContent).toBe(
+      [
+        'import { useState } from "react";',
+        '  const [count, setCount] = useState(0);',
+        '}',
+      ].join('\n'),
     );
     expect(container.textContent).toContain('Create the file:');
   });
 
-  it('leaves a \\begin{verbatim} block as literal text with dollars intact', () => {
+  it('turns a \\begin{verbatim} block into a code fence with dollars intact', () => {
     const { container } = render(
       <Markdown>
         {'Kata:\n\\begin{verbatim}\nconst price = "$5";\n\\end{verbatim}'}
@@ -1142,18 +1148,19 @@ describe('Markdown Component - LaTeX document markup in math costume (issue #210
     );
     expect(container.querySelector('.katex')).toBeNull();
     expect(container.querySelector('.katex-error')).toBeNull();
-    expect(container.textContent).toContain('const price = "$5";');
-    expect(container.textContent).toContain('\\begin{verbatim}');
+    expect(container.querySelector('pre code')?.textContent).toContain(
+      'const price = "$5";',
+    );
+    expect(container.textContent).not.toContain('\\begin{verbatim}');
   });
 
   /**
-   * The carpentry shape: an entire itemize wrapped in \[...\]. The wrapper is
-   * real display-math syntax, so KaTeX owns the span and reports the unknown
-   * environment. We accept the error box rather than re-introducing
-   * delimiter heuristics; what matters is that the source is preserved
-   * verbatim and nothing around it is corrupted.
+   * The carpentry shape: an entire itemize wrapped in \[...\]. A list is never
+   * maths, so the wrapper is the model reaching for the delimiters it had been
+   * told to use; left to KaTeX it becomes a red "No such environment" box. The
+   * island bridge rebuilds the list, nesting and inline maths included.
    */
-  it('keeps a display-math-wrapped itemize verbatim inside its error box', () => {
+  it('rebuilds a display-math-wrapped itemize as a real list', () => {
     const raw = [
       '\\[',
       '\\begin{itemize}',
@@ -1167,11 +1174,18 @@ describe('Markdown Component - LaTeX document markup in math costume (issue #210
       '\\]',
     ].join('\n');
     const { container } = render(<Markdown>{raw}</Markdown>);
-    expect(container.querySelectorAll('.katex-error')).toHaveLength(1);
+    expect(container.querySelectorAll('.katex-error')).toHaveLength(0);
     // Every item of the payload is still readable -- nothing is dropped.
     expect(container.textContent).toContain('spatial reasoning.');
     expect(container.textContent).toContain('Tolerances:');
     expect(container.textContent).toContain('push sticks.');
+    // The nesting survives, and the inline math inside an item still typesets.
+    expect(container.querySelectorAll('ul')).toHaveLength(2);
+    expect(container.querySelectorAll('li')).toHaveLength(4);
+    expect(container.querySelector('.katex annotation')?.textContent).toBe(
+      '\\alpha',
+    );
+    expect(container.textContent).not.toContain('\\begin{itemize}');
   });
 
   /**
@@ -1205,7 +1219,7 @@ describe('Markdown Component - LaTeX document markup in math costume (issue #210
  * as literal text, produces no red KaTeX error box, and does not corrupt the
  * prose around it.
  */
-describe('LaTeX document markup renders as literal text (preprocessor removed)', () => {
+describe('LaTeX document markup (preprocessor removed, island bridge added)', () => {
   const expectLiteral = (source: string, extra = '') => {
     const { container } = render(<Markdown>{source + extra}</Markdown>);
     expect(container.querySelector('.katex')).toBeNull();
@@ -1214,81 +1228,88 @@ describe('LaTeX document markup renders as literal text (preprocessor removed)',
   };
 
   describe('text formatting commands', () => {
-    it('leaves \\textbf{} literal', () => {
+    it('converts \\textbf{} to strong', () => {
       const container = expectLiteral('This is \\textbf{bold} text.');
-      expect(container.querySelector('strong')).toBeNull();
-      expect(container.textContent).toBe('This is \\textbf{bold} text.');
+      expect(container.querySelector('strong')?.textContent).toBe('bold');
+      expect(container.textContent).toBe('This is bold text.');
     });
 
-    it('leaves \\textit{} literal', () => {
+    it('converts \\textit{} to em', () => {
       const container = expectLiteral('This is \\textit{italic} text.');
-      expect(container.querySelector('em')).toBeNull();
-      expect(container.textContent).toBe('This is \\textit{italic} text.');
+      expect(container.querySelector('em')?.textContent).toBe('italic');
+      expect(container.textContent).toBe('This is italic text.');
     });
 
-    it('leaves \\emph{} literal', () => {
+    it('converts \\emph{} to em', () => {
       const container = expectLiteral('This is \\emph{emphasized} text.');
-      expect(container.querySelector('em')).toBeNull();
-      expect(container.textContent).toBe('This is \\emph{emphasized} text.');
+      expect(container.querySelector('em')?.textContent).toBe('emphasized');
+      expect(container.textContent).toBe('This is emphasized text.');
     });
 
-    it('leaves \\texttt{} literal', () => {
+    it('converts \\texttt{} to inline code', () => {
       const container = expectLiteral('Use \\texttt{const} for constants.');
-      expect(container.querySelector('code')).toBeNull();
-      expect(container.textContent).toBe('Use \\texttt{const} for constants.');
+      expect(container.querySelector('code')?.textContent).toBe('const');
+      expect(container.textContent).toBe('Use const for constants.');
     });
 
-    it('leaves \\underline{} literal', () => {
+    it('converts \\underline{} to em', () => {
+      // Streamdown's sanitizer drops <u> outright, so an underline rendered as
+      // one would lose all marking; emphasis is the nearest surviving mark.
       const container = expectLiteral('This is \\underline{underlined} text.');
       expect(container.querySelector('u')).toBeNull();
-      expect(container.textContent).toBe(
-        'This is \\underline{underlined} text.',
-      );
+      expect(container.querySelector('em')?.textContent).toBe('underlined');
+      expect(container.textContent).toBe('This is underlined text.');
     });
 
-    it('leaves several formatting commands on one line literal', () => {
+    it('converts every handled command in one line of prose', () => {
       const container = expectLiteral(
         'Text with \\textbf{bold}, \\textit{italic}, and \\texttt{code}.',
       );
-      expect(container.textContent).toBe(
-        'Text with \\textbf{bold}, \\textit{italic}, and \\texttt{code}.',
-      );
+      expect(container.textContent).toBe('Text with bold, italic, and code.');
     });
 
-    it('leaves a long run of \\textbf{} commands literal without erroring', () => {
+    it('leaves the plain-text command family literal in prose', () => {
+      // Outside maths `\\text{...}` carries no formatting, so claiming it would
+      // rewrite prose that merely names the command.
+      const container = expectLiteral('Write \\text{this} verbatim.');
+      expect(container.textContent).toBe('Write \\text{this} verbatim.');
+    });
+
+    it('converts a long run of \\textbf{} commands without erroring', () => {
       const line = '\\textbf{Bold text} with some content.';
       const container = expectLiteral(Array(100).fill(line).join(' '));
-      expect(container.querySelectorAll('strong')).toHaveLength(0);
-      expect(container.textContent?.split('\\textbf{Bold text}')).toHaveLength(
-        101,
-      );
+      expect(container.querySelectorAll('strong')).toHaveLength(100);
+      expect(container.textContent?.split('Bold text')).toHaveLength(101);
     });
   });
 
   describe('environments', () => {
-    it('leaves \\begin{itemize} literal', () => {
+    it('converts \\begin{itemize} to a list', () => {
       const container = expectLiteral(
         '\\begin{itemize}\n\\item First item\n\\item Second item\n\\end{itemize}',
       );
-      expect(container.querySelector('ul')).toBeNull();
-      expect(container.textContent).toContain('\\item First item');
-      expect(container.textContent).toContain('\\item Second item');
+      expect(
+        [...container.querySelectorAll('ul li')].map((li) =>
+          li.textContent?.trim(),
+        ),
+      ).toEqual(['First item', 'Second item']);
     });
 
-    it('leaves \\begin{enumerate} literal', () => {
+    it('converts \\begin{enumerate} to an ordered list', () => {
       const container = expectLiteral(
         '\\begin{enumerate}\n\\item First item\n\\item Second item\n\\end{enumerate}',
       );
-      expect(container.querySelector('ol')).toBeNull();
-      expect(container.textContent).toContain('\\begin{enumerate}');
+      expect(container.querySelectorAll('ol li')).toHaveLength(2);
+      expect(container.textContent).not.toContain('\\begin{enumerate}');
     });
 
-    it('leaves \\begin{quote} literal', () => {
+    it('converts \\begin{quote} to a blockquote', () => {
       const container = expectLiteral(
         '\\begin{quote}\nThis is a quoted text.\n\\end{quote}',
       );
-      expect(container.querySelector('blockquote')).toBeNull();
-      expect(container.textContent).toContain('This is a quoted text.');
+      expect(container.querySelector('blockquote')?.textContent).toContain(
+        'This is a quoted text.',
+      );
     });
 
     it('leaves \\begin{center} literal', () => {
@@ -1314,33 +1335,33 @@ describe('LaTeX document markup renders as literal text (preprocessor removed)',
       expect(container.textContent).toContain('Third po');
     });
 
-    it('leaves itemize items that carry markdown markers literal', () => {
+    it('converts itemize items that carry markdown markers', () => {
+      // The environment supplies the marker, so the doubled markdown one is
+      // dropped: the reader saw a bullet AND a dash (issue #2441).
       const container = expectLiteral(
         '\\begin{itemize}\n\\item - First\n\\item - Second\n\\end{itemize}',
       );
-      expect(container.querySelectorAll('li')).toHaveLength(0);
-      expect(container.textContent).toContain('\\item - First');
-      expect(container.textContent).toContain('\\item - Second');
+      const items = [...container.querySelectorAll('li')];
+      expect(items).toHaveLength(2);
+      expect(items.map((li) => li.textContent)).toEqual(['First', 'Second']);
+      expect(container.querySelector('li ul')).toBeNull();
     });
   });
 
   describe('sectioning', () => {
-    it('leaves \\section{} literal', () => {
+    it('converts \\section{} to an h2', () => {
       const container = expectLiteral('\\section{Introduction}');
-      expect(container.querySelector('h2')).toBeNull();
-      expect(container.textContent).toBe('\\section{Introduction}');
+      expect(container.querySelector('h2')?.textContent).toBe('Introduction');
     });
 
-    it('leaves \\subsection{} literal', () => {
+    it('converts \\subsection{} to an h3', () => {
       const container = expectLiteral('\\subsection{Background}');
-      expect(container.querySelector('h3')).toBeNull();
-      expect(container.textContent).toBe('\\subsection{Background}');
+      expect(container.querySelector('h3')?.textContent).toBe('Background');
     });
 
-    it('leaves \\subsubsection{} literal', () => {
+    it('converts \\subsubsection{} to an h4', () => {
       const container = expectLiteral('\\subsubsection{Details}');
-      expect(container.querySelector('h4')).toBeNull();
-      expect(container.textContent).toBe('\\subsubsection{Details}');
+      expect(container.querySelector('h4')?.textContent).toBe('Details');
     });
   });
 
@@ -1399,8 +1420,10 @@ In bioethics, the "four principles" framework emphasizes \\textbf{autonomy}, \\t
       ]) {
         expect(container.textContent).toContain(principle);
       }
-      // The intro and closing paragraphs stay separate blocks.
-      expect(container.querySelectorAll('p').length).toBeGreaterThanOrEqual(3);
+      // Ten principles, one list item each, with the intro and closing
+      // paragraphs still separate blocks around them.
+      expect(container.querySelectorAll('ul li')).toHaveLength(10);
+      expect(container.querySelectorAll('p')).toHaveLength(2);
     });
   });
 });
@@ -1423,9 +1446,9 @@ In bioethics, the "four principles" framework emphasizes \\textbf{autonomy}, \\t
  *
  *   1. Nothing is lost -- the words and symbols still reach the DOM.
  *   2. No red KaTeX error box (`.katex-error`), except for the accepted
- *      families pinned in `accepted KaTeX error boxes` below and in
- *      `keeps a display-math-wrapped itemize verbatim inside its error box`
- *      above.
+ *      families pinned in `accepted KaTeX error boxes` below -- an
+ *      environment NOTHING implements. `tabular` used to belong there and no
+ *      longer does: it is rebuilt as a markdown table.
  *   3. Genuine math still typesets, with the right `\annotation` TeX.
  *   4. The prose around the payload is not corrupted.
  *   5. Document-mode LaTeX (`\textbf`, `\begin{itemize}`, `\section`,
@@ -1433,7 +1456,7 @@ In bioethics, the "four principles" framework emphasizes \\textbf{autonomy}, \\t
  *      an accident.
  *
  * Inputs about the canvas/HTML-string path (`markdownToHtml`) -- code-fence
- * fidelity, list nesting, `tabular` table output -- live in
+ * fidelity, list nesting, the undelimited `tabular` block -- live in
  * `lib/__tests__/utils.test.ts` instead, so no input is pinned twice.
  */
 describe('LaTeX corpus from real assistant replies (post-preprocessor)', () => {
@@ -1600,9 +1623,10 @@ describe('LaTeX corpus from real assistant replies (post-preprocessor)', () => {
       expect(texOf(block)).toEqual(['\\frac{1 \\text{ L}}{1000 \\text{ mL}}']);
     });
 
-    it('typesets a styling wrapper while the amount beside it stays currency', () => {
+    it('unwraps a styling wrapper while the amount beside it stays currency', () => {
       const container = renderClean('The $\\textbf{Pro}$ plan costs $5.');
-      expect(texOf(container)).toEqual(['\\textbf{Pro}']);
+      expect(texOf(container)).toEqual([]);
+      expect(container.querySelector('strong')?.textContent).toBe('Pro');
       expect(container.textContent).toContain('plan costs $5.');
     });
   });
@@ -1672,28 +1696,25 @@ describe('LaTeX corpus from real assistant replies (post-preprocessor)', () => {
    * Markdown by a pre-pass.
    */
   describe('formatting trapped inside dollar delimiters', () => {
-    it('typesets the upright text commands', () => {
+    it('unwraps the upright text commands to plain prose', () => {
       const container = renderClean(
         '$\\textrm{plain}$ and $\\textsf{sans}$ and $\\textnormal{normal}$',
       );
-      expect(texOf(container)).toEqual([
-        '\\textrm{plain}',
-        '\\textsf{sans}',
-        '\\textnormal{normal}',
-      ]);
-      expect(container.textContent).not.toContain('$');
+      expect(texOf(container)).toEqual([]);
+      expect(container.textContent).toBe('plain and sans and normal');
     });
 
-    it('typesets the emphasis, monospace and underline commands', () => {
+    it('unwraps the emphasis, monospace and underline commands', () => {
       const container = renderClean(
         '$\\emph{note}$ / $\\texttt{code}$ / $\\underline{underlined}$ / $\\textit{RAG Training}$',
       );
-      expect(texOf(container)).toEqual([
-        '\\emph{note}',
-        '\\texttt{code}',
-        '\\underline{underlined}',
-        '\\textit{RAG Training}',
-      ]);
+      expect(texOf(container)).toEqual([]);
+      // `\\underline` becomes emphasis: Streamdown's sanitizer drops <u>, so an
+      // underline would otherwise lose its marking entirely.
+      expect(
+        [...container.querySelectorAll('em')].map((e) => e.textContent),
+      ).toEqual(['note', 'underlined', 'RAG Training']);
+      expect(container.querySelector('code')?.textContent).toBe('code');
     });
 
     it('keeps a $$\\text{...}$$ span that shares its line with prose inline', () => {
@@ -1704,13 +1725,30 @@ describe('LaTeX corpus from real assistant replies (post-preprocessor)', () => {
       expect(container.textContent).toContain('here');
     });
 
-    it('renders Markdown bold trapped in dollars as math without erroring', () => {
-      expect(texOf(renderClean('$**Custom AI Agents**$'))).toEqual([
-        '**Custom AI Agents**',
-      ]);
+    /**
+     * `$**Custom AI Agents**$` is the same mistake as `$\textbf{...}$` in a
+     * different dialect: the model reached for bold and wrapped it in the
+     * maths delimiters it had been told to use. KaTeX renders the markers as
+     * literal stars, so a doubled marker that owns the whole span unwraps to
+     * the markdown it means.
+     */
+    it('unwraps Markdown bold trapped in dollars', () => {
+      const bold = (el: HTMLElement) =>
+        [...el.querySelectorAll('strong')].map((e) => e.textContent);
+
+      const inline = renderClean('$**Custom AI Agents**$');
+      expect(texOf(inline)).toEqual([]);
+      expect(bold(inline)).toEqual(['Custom AI Agents']);
+
       const block = renderClean('$$**Enterprise Management**$$');
-      expect(block.querySelectorAll('.katex-display')).toHaveLength(1);
-      expect(texOf(block)).toEqual(['**Enterprise Management**']);
+      expect(texOf(block)).toEqual([]);
+      expect(bold(block)).toEqual(['Enterprise Management']);
+
+      const underscored = renderClean(
+        '__underscored bold__ outside stays: $__b__$',
+      );
+      expect(texOf(underscored)).toEqual([]);
+      expect(bold(underscored)).toEqual(['underscored bold', 'b']);
     });
 
     it('leaves single * and _ inside math as legitimate math', () => {
@@ -1745,22 +1783,20 @@ describe('LaTeX corpus from real assistant replies (post-preprocessor)', () => {
       // in-sentence spans stay inline.
       expect(container.querySelectorAll('.katex-display')).toHaveLength(2);
       expect(
-        [...container.querySelectorAll('[data-streamdown="strong"]')].map(
-          (s) => s.textContent,
-        ),
+        [...container.querySelectorAll('strong')].map((s) => s.textContent),
       ).toContain('Step 1: Write the original expression');
       expect(container.textContent).not.toContain('$');
     });
   });
 
   describe('styling commands wrapped in real math delimiters', () => {
-    it('typesets a lone styling command inside an inline \\(...\\) span', () => {
+    it('unwraps a lone styling command inside an inline \\(...\\) span', () => {
       const bold = renderClean('\\(\\textbf{bold heading}\\)');
-      expect(texOf(bold)).toEqual(['\\textbf{bold heading}']);
-      expect(bold.querySelectorAll('.katex-display')).toHaveLength(0);
-      expect(texOf(renderClean('\\(\\emph{soft}\\)'))).toEqual([
-        '\\emph{soft}',
-      ]);
+      expect(texOf(bold)).toEqual([]);
+      expect(bold.querySelector('strong')?.textContent).toBe('bold heading');
+      expect(
+        renderClean('\\(\\emph{soft}\\)').querySelector('em')?.textContent,
+      ).toBe('soft');
     });
 
     it('keeps a display-math plain-text annotation as a display block', () => {
@@ -1778,15 +1814,13 @@ describe('LaTeX corpus from real assistant replies (post-preprocessor)', () => {
       expect(container.textContent).not.toContain('**');
     });
 
-    it('leaves two formatting commands on one line literal', () => {
+    it('converts two formatting commands on one line', () => {
       const container = renderLiteral(
         '\\textbf{Bold text} and \\textit{italic text} together',
       );
-      expect(container.textContent).toBe(
-        '\\textbf{Bold text} and \\textit{italic text} together',
-      );
-      expect(container.querySelector('strong')).toBeNull();
-      expect(container.querySelector('em')).toBeNull();
+      expect(container.textContent).toBe('Bold text and italic text together');
+      expect(container.querySelector('strong')?.textContent).toBe('Bold text');
+      expect(container.querySelector('em')?.textContent).toBe('italic text');
     });
   });
 
@@ -1893,75 +1927,97 @@ describe('LaTeX corpus from real assistant replies (post-preprocessor)', () => {
     });
   });
 
-  describe('environments render as literal text', () => {
-    it('leaves a single-line itemize literal', () => {
-      const src = '\\begin{itemize}\\item First\\item Second\\end{itemize}';
-      const container = renderLiteral(src);
-      expect(container.textContent).toBe(src);
-      expect(container.querySelector('ul')).toBeNull();
+  describe('environments the island bridge converts', () => {
+    it('converts a single-line itemize', () => {
+      const container = renderLiteral(
+        '\\begin{itemize}\\item First\\item Second\\end{itemize}',
+      );
+      expect(container.querySelectorAll('ul li')).toHaveLength(2);
+      expect(container.textContent).not.toContain('\\item');
     });
 
-    it('leaves a single-line enumerate literal', () => {
-      const src = '\\begin{enumerate}\\item First\\item Second\\end{enumerate}';
-      const container = renderLiteral(src);
-      expect(container.textContent).toBe(src);
-      expect(container.querySelector('ol')).toBeNull();
+    it('converts a single-line enumerate', () => {
+      const container = renderLiteral(
+        '\\begin{enumerate}\\item First\\item Second\\end{enumerate}',
+      );
+      expect(container.querySelectorAll('ol li')).toHaveLength(2);
     });
 
-    it('leaves single-line quote and center environments literal', () => {
+    it('converts a single-line quote but leaves center literal', () => {
       expect(
-        renderLiteral('\\begin{quote}quoted text\\end{quote}').textContent,
-      ).toBe('\\begin{quote}quoted text\\end{quote}');
+        renderLiteral('\\begin{quote}quoted text\\end{quote}').querySelector(
+          'blockquote',
+        )?.textContent,
+      ).toContain('quoted text');
       expect(
         renderLiteral('\\begin{center}centered\\end{center}').textContent,
       ).toBe('\\begin{center}centered\\end{center}');
     });
 
-    it('leaves items that already carry a numbered marker literal', () => {
+    // Reclassified for issue #2441: the numbering the environment supplies is
+    // the only numbering the reader should see, so the doubled markdown one is
+    // dropped rather than kept visible.
+    it('drops a numbered marker doubled onto the item it converts', () => {
       const container = renderLiteral(
         '\\begin{enumerate}\n\\item 1. First\n\\item 2) Second\n\\end{enumerate}',
       );
-      expect(container.textContent).toContain('\\item 1. First');
-      expect(container.textContent).toContain('\\item 2) Second');
-      expect(container.querySelector('ol')).toBeNull();
+      expect(container.querySelectorAll('ol')).toHaveLength(1);
+      const items = [...container.querySelectorAll('ol li')];
+      expect(items.map((li) => li.textContent)).toEqual(['First', 'Second']);
     });
 
     /**
      * Markdown inside an `\item` is still Markdown: `*emphasis*` becomes an
-     * `<em>`. The LaTeX scaffolding around it stays literal, and a negative
-     * number is never mistaken for a list marker.
+     * `<em>`, and it no longer costs the environment its conversion. A
+     * negative number is never mistaken for a list marker.
      */
-    it('keeps markdown emphasis live inside literal item lines', () => {
+    it('keeps markdown emphasis live inside the items it converts', () => {
       const container = renderLiteral(
         '\\begin{itemize}\n\\item *emphasis* stays\n\\item -5 degrees\n\\end{itemize}',
       );
+      expect(container.querySelectorAll('ul li')).toHaveLength(2);
       expect(container.querySelector('em')?.textContent).toBe('emphasis');
-      expect(container.textContent).toContain('\\item -5 degrees');
-      expect(container.querySelector('ul')).toBeNull();
+      expect(container.textContent).toContain('-5 degrees');
+      expect(container.textContent).not.toContain('\\item');
     });
 
-    it('leaves an unclosed streaming enumerate literal', () => {
+    /**
+     * A reply arrives token by token, so the opener and the finished items sit
+     * on screen for as long as the model takes to write the rest. Converting
+     * only the COMPLETED lines keeps the raw backslashes off screen without
+     * closing an environment on the model's behalf: the last line is half a
+     * token and stays literal until its newline lands.
+     */
+    it('converts the completed items of a streaming enumerate', () => {
       const container = renderLiteral(
         '\\begin{enumerate}\n\\item First step\n\\item Second step\n\\item Thi',
       );
-      expect(container.textContent).toContain('First step');
-      expect(container.textContent).toContain('Second step');
+      expect(
+        [...container.querySelectorAll('ol li')].map((e) => e.textContent),
+      ).toEqual(['First step', 'Second step']);
       expect(container.textContent).toContain('\\item Thi');
+      expect(container.textContent).not.toContain('\\begin{enumerate}');
     });
 
-    it('leaves a bare unclosed \\begin{itemize} literal', () => {
-      expect(renderLiteral('\\begin{itemize}\n').textContent).toBe(
+    it('shows nothing for a streaming opener with no item yet', () => {
+      expect(renderLiteral('\\begin{itemize}\n').textContent).toBe('');
+      // Not yet a complete line: there is nothing safe to convert.
+      expect(renderLiteral('\\begin{itemize}').textContent).toBe(
         '\\begin{itemize}',
       );
     });
 
-    it('leaves streaming quote and center environments literal', () => {
+    it('converts a streaming quote but leaves center literal', () => {
       const quote = renderLiteral('\\begin{quote}\nwise words\npartial li');
-      expect(quote.textContent).toContain('wise words');
+      expect(quote.querySelector('blockquote')?.textContent).toContain(
+        'wise words',
+      );
       expect(quote.textContent).toContain('partial li');
-      expect(quote.querySelector('blockquote')).toBeNull();
+      expect(quote.textContent).not.toContain('\\begin{quote}');
 
+      // `center` is an accepted loss whether or not it has closed.
       const center = renderLiteral('\\begin{center}\ncentered text\npartial');
+      expect(center.textContent).toContain('\\begin{center}');
       expect(center.textContent).toContain('centered text');
       expect(center.textContent).toContain('partial');
       expect(
@@ -1983,9 +2039,9 @@ describe('LaTeX corpus from real assistant replies (post-preprocessor)', () => {
         '- **Display equation with \\begin{aligned}** showing search and indexing time complexity',
       );
       expect(container.querySelectorAll('ul > li')).toHaveLength(1);
-      expect(
-        container.querySelector('[data-streamdown="strong"]')?.textContent,
-      ).toBe('Display equation with \\begin{aligned}');
+      expect(container.querySelector('strong')?.textContent).toBe(
+        'Display equation with \\begin{aligned}',
+      );
       expect(container.textContent).toContain('time complexity');
     });
 
@@ -2011,8 +2067,15 @@ describe('LaTeX corpus from real assistant replies (post-preprocessor)', () => {
       expect(container.textContent).toContain('T_s &= O(\\log n)');
     });
 
-    it('leaves \\verb outside math literal', () => {
-      expect(renderLiteral('\\verb|code|').textContent).toBe('\\verb|code|');
+    it('converts \\verb outside math to inline code', () => {
+      const container = renderLiteral('\\verb|code|');
+      expect(container.querySelector('code')?.textContent).toBe('code');
+      expect(container.textContent).toBe('code');
+      // Any non-alphanumeric character is a legal \\verb delimiter.
+      expect(
+        renderLiteral('run \\verb+npm test+ first').querySelector('code')
+          ?.textContent,
+      ).toBe('npm test');
     });
   });
 
@@ -2037,19 +2100,17 @@ describe('LaTeX corpus from real assistant replies (post-preprocessor)', () => {
       expect(container.textContent).toContain('const a = 1;');
     });
 
-    it('renders a $$-wrapped aligned \\verb environment as display math', () => {
+    it('renders a $$-wrapped aligned \\verb environment as a code fence', () => {
       const container = renderClean(
         '$$\n\\begin{aligned}\n&\\verb|npm run dev|\\\\\n\\end{aligned}\n$$',
       );
-      expect(container.querySelectorAll('.katex-display')).toHaveLength(1);
-      expect(
-        [...container.querySelectorAll('mtext')].map((el) =>
-          (el.textContent ?? '').replace(/\u00a0/g, ' '),
-        ),
-      ).toContain('npm run dev');
+      expect(container.querySelectorAll('.katex-display')).toHaveLength(0);
+      expect(container.querySelector('pre code')?.textContent).toBe(
+        'npm run dev',
+      );
     });
 
-    it('keeps an aligned \\verb block inside its nested list item', () => {
+    it('keeps an aligned \\verb code fence inside its nested list item', () => {
       const container = renderClean(
         '- Files and code:\n  - Create App.tsx:\n    \\[\n    \\begin{aligned}\n    &\\verb|const a = 1;|\\\\\n    &\\verb|const b = 2;|\\\\\n    \\end{aligned}\n    \\]',
       );
@@ -2057,9 +2118,9 @@ describe('LaTeX corpus from real assistant replies (post-preprocessor)', () => {
       expect(outer.length).toBeGreaterThanOrEqual(2);
       expect(container.textContent).toContain('Files and code:');
       expect(container.textContent).toContain('Create App.tsx:');
-      // The block is typeset inside the nested item, not hoisted out of it.
-      expect(container.querySelector('ul ul li .katex-display')).toBeTruthy();
-      expect(container.querySelectorAll('.katex-display')).toHaveLength(1);
+      // The block stays inside the nested item, not hoisted out of it.
+      expect(container.querySelector('ul ul li pre code')).toBeTruthy();
+      expect(container.querySelectorAll('.katex-display')).toHaveLength(0);
       expect(container.textContent).toContain('const a = 1;');
       expect(container.textContent).toContain('const b = 2;');
     });
@@ -2072,13 +2133,15 @@ describe('LaTeX corpus from real assistant replies (post-preprocessor)', () => {
      * this branch changed `rehype-raw`; the case is recorded here so the
      * behavior is visible rather than silently dropped from the corpus.
      */
-    it('drops an HTML-looking \\verb payload outside math (rehype-raw eats the tag)', () => {
+    it('fences an HTML-looking \\verb payload outside math, tag intact', () => {
       const container = renderLiteral(
         '\\begin{aligned}\n&\\verb|<TodoCard />|\\\\\n\\end{aligned}',
       );
-      expect(container.textContent).toContain('\\begin{aligned}');
-      expect(container.textContent).toContain('\\end{aligned}');
-      expect(container.textContent).not.toContain('TodoCard');
+      // Detection runs against the raw source, so the `<TodoCard />` the
+      // markdown parser turned into an HTML node no longer hides the island.
+      expect(container.querySelector('[data-code-block]')).not.toBeNull();
+      expect(container.textContent).toContain('<TodoCard />');
+      expect(container.textContent).not.toContain('\\begin{aligned}');
     });
 
     it('renders single-line \\[...\\] and \\(...\\) environment spans', () => {
@@ -2109,18 +2172,17 @@ describe('LaTeX corpus from real assistant replies (post-preprocessor)', () => {
   });
 
   describe('sectioning and other document commands render literally', () => {
-    it('leaves starred sectioning commands literal', () => {
-      for (const src of [
-        '\\section*{Heading One}',
-        '\\subsection*{Core Evidence}',
-        '\\subsubsection*{Deep Heading}',
+    it('converts starred sectioning commands to headings', () => {
+      for (const [src, tag, text] of [
+        ['\\section*{Heading One}', 'h2', 'Heading One'],
+        ['\\subsection*{Core Evidence}', 'h3', 'Core Evidence'],
+        ['\\subsubsection*{Deep Heading}', 'h4', 'Deep Heading'],
       ]) {
         const container = renderLiteral(src);
         // With parseIncompleteMarkdown off, the lone `*` in `\section*{...}`
-        // is no longer read as unclosed emphasis, so no stray asterisk is
-        // appended to finished text.
-        expect(container.textContent).toBe(src);
-        expect(container.querySelector('h1,h2,h3,h4')).toBeNull();
+        // is not read as unclosed emphasis, so no stray asterisk survives.
+        expect(container.querySelector(tag)?.textContent).toBe(text);
+        expect(container.textContent).toBe(text);
       }
     });
 
@@ -2141,25 +2203,25 @@ describe('LaTeX corpus from real assistant replies (post-preprocessor)', () => {
       expect(renderLiteral("''quoted''").textContent).toBe("''quoted''");
     });
 
-    it('leaves a whole LaTeX document line literal', () => {
+    it('converts a whole LaTeX document line', () => {
       const container = renderLiteral(
         '\\section{Title}\\textbf{Bold} and \\textit{italic}\\\\\\item Test',
       );
-      // `\\` is a CommonMark escape for one literal backslash.
-      expect(container.textContent).toBe(
-        '\\section{Title}\\textbf{Bold} and \\textit{italic}\\\\item Test',
-      );
-      expect(container.querySelector('strong')).toBeNull();
-      expect(container.querySelector('em')).toBeNull();
+      expect(container.querySelector('h2')?.textContent).toBe('Title');
+      // `\\` is a CommonMark escape for one literal backslash, and `\item`
+      // outside an environment is not handled, so both stay as they were.
+      expect(container.textContent).toBe('Title\nBold and italic\\\\item Test');
     });
 
-    it('leaves document commands literal while genuine math beside them renders', () => {
+    it('converts the inline commands while genuine math beside them renders', () => {
       const container = renderClean(
         '\\section{Title} with \\textbf{bold} and \\textit{italic} and \\(x = 5\\)',
       );
-      expect(container.textContent).toContain('\\section{Title}');
-      expect(container.textContent).toContain('\\textbf{bold}');
-      expect(container.textContent).toContain('\\textit{italic}');
+      // The math span no longer costs the paragraph its `\section` island:
+      // detection reads the raw source, not the parsed children.
+      expect(container.querySelector('h2')?.textContent).toBe('Title');
+      expect(container.querySelector('strong')?.textContent).toBe('bold');
+      expect(container.querySelector('em')?.textContent).toBe('italic');
       expect(texOf(container)).toEqual(['x = 5']);
     });
   });
@@ -2168,9 +2230,11 @@ describe('LaTeX corpus from real assistant replies (post-preprocessor)', () => {
    * Accepted failures. A payload that is not valid TeX but sits inside real
    * math delimiters is owned by KaTeX, which reports it in a red error box.
    * We keep the boxes rather than re-introducing delimiter heuristics -- the
-   * source is preserved verbatim inside them, so nothing is lost. The case
-   * called out on the branch is pinned above: `\[\begin{itemize}...\]` in
-   * "keeps a display-math-wrapped itemize verbatim inside its error box".
+   * source is preserved verbatim inside them, so nothing is lost. What is NOT
+   * accepted is a payload that was never maths in the first place: a list or a
+   * styling command wrapped in display delimiters is rebuilt as the markdown
+   * it means, pinned above in "rebuilds a display-math-wrapped itemize as a
+   * real list".
    */
   describe('accepted KaTeX error boxes', () => {
     /**
@@ -2179,20 +2243,44 @@ describe('LaTeX corpus from real assistant replies (post-preprocessor)', () => {
      * the muted body colour, so both renderers pass `errorColor`.
      */
     it('renders an error box in the muted foreground, never KaTeX red', () => {
-      const container = renderMd(
-        '$$\n\\begin{enumerate}\n\\item First step.\n\\end{enumerate}\n$$',
-      );
+      const container = renderMd('$$\\begin{nosuchenv}A & B\\end{nosuchenv}$$');
       const box = container.querySelector('.katex-error');
       expect(box?.getAttribute('style')).toContain('var(--muted-foreground)');
     });
 
+    /**
+     * An environment neither KaTeX nor the island bridge implements degrades
+     * to its VISIBLE SOURCE inside the error box rather than vanishing.
+     */
     it('reports an unknown environment wrapped in $$...$$ and keeps its source', () => {
       const container = renderMd(
-        '$$\n\\begin{enumerate}\n\\item First step.\n\\item Second step.\n\\end{enumerate}\n$$',
+        '$$\n\\begin{nosuchenv}\nName & Age \\\\\nAlice & 30\n\\end{nosuchenv}\n$$',
       );
       expect(container.querySelectorAll('.katex-error')).toHaveLength(1);
-      expect(container.textContent).toContain('\\item First step.');
-      expect(container.textContent).toContain('\\item Second step.');
+      expect(container.textContent).toContain('Name & Age');
+      expect(container.textContent).toContain('Alice & 30');
+    });
+
+    /**
+     * `tabular` used to be one of these: KaTeX has no such environment, so a
+     * display block holding one was a red error box. Markdown has a grid, so
+     * the island bridge now rebuilds it -- rules dropped, `\text{}` cells
+     * unwrapped, `{,}` read as LaTeX's thousands separator, first row header.
+     */
+    it('rebuilds a display-math-wrapped tabular as a real table', () => {
+      const container = renderMd(
+        '$$\n\\begin{tabular}{lr}\n\\hline\n\\text{Cases} & \\text{Count} \\\\\n\\hline\n\\text{Yes} & 12{,}500 \\\\\n\\hline\n\\end{tabular}\n$$',
+      );
+      expect(container.querySelectorAll('.katex-error')).toHaveLength(0);
+      expect(container.querySelectorAll('table')).toHaveLength(1);
+      expect(
+        [...container.querySelectorAll('th')].map((e) => e.textContent),
+      ).toEqual(['Cases', 'Count']);
+      expect(
+        [...container.querySelectorAll('td')].map((e) => e.textContent),
+      ).toEqual(['Yes', '12,500']);
+      expect(container.textContent).not.toContain('hline');
+      expect(container.textContent).not.toContain('$$');
     });
 
     /**
@@ -2210,22 +2298,21 @@ describe('LaTeX corpus from real assistant replies (post-preprocessor)', () => {
       ]);
     });
 
-    it('reports a double-underscore span while bold outside it still renders', () => {
+    it('unwraps a double-underscore span instead of erroring on it', () => {
       const container = renderMd('__underscored bold__ outside stays: $__b__$');
+      expect(container.querySelectorAll('.katex-error')).toHaveLength(0);
       expect(
-        container.querySelector('[data-streamdown="strong"]')?.textContent,
-      ).toBe('underscored bold');
-      expect(container.querySelectorAll('.katex-error')).toHaveLength(1);
-      expect(container.querySelector('.katex-error')?.textContent).toBe(
-        '__b__',
-      );
+        [...container.querySelectorAll('strong')].map((e) => e.textContent),
+      ).toEqual(['underscored bold', 'b']);
     });
 
-    it('reports a dollar-wrapped bold span carrying a bare &, keeping its bullet', () => {
+    it('unwraps a dollar-wrapped bold span carrying a bare &, keeping its bullet', () => {
       const container = renderMd('* $**Canvas & Artifacts**$: rich documents.');
       expect(container.querySelectorAll('ul > li')).toHaveLength(1);
-      expect(container.querySelectorAll('.katex-error')).toHaveLength(1);
-      expect(container.textContent).toContain('Canvas & Artifacts');
+      expect(container.querySelectorAll('.katex-error')).toHaveLength(0);
+      expect(container.querySelector('strong')?.textContent).toBe(
+        'Canvas & Artifacts',
+      );
       expect(container.textContent).toContain('rich documents.');
     });
   });
@@ -2311,5 +2398,735 @@ describe('Markdown Component - dollar math never spans a line ending (issue #244
       (c) => c.textContent,
     );
     expect(codes).toEqual(['$5', '$x$']);
+  });
+});
+
+/**
+ * Issue #2441, chat path. The message a legacy mentor actually sent: three
+ * environments whose items carry maths, currency and nesting. Before the fix
+ * the island bridge scanned parsed mdast children, so a single `$x = 4$` split
+ * the paragraph and left `\begin` and `\end` in different text nodes -- the
+ * environment was never seen and every list arrived as literal backslashes.
+ * `lib/__tests__/utils.test.ts` pins the same message on the canvas path.
+ */
+describe('Markdown - environments whose items carry inline markdown (issue #2441)', () => {
+  const MESSAGE = [
+    'Here is a flat list:',
+    '',
+    '\\begin{itemize}',
+    '\\item First point',
+    '\\item Second point with math $x = 4$',
+    '\\item Third point costs $5',
+    '\\end{itemize}',
+    '',
+    'Here is a nested list:',
+    '',
+    '\\begin{itemize}',
+    '\\item Outer one',
+    '  \\begin{itemize}',
+    '  \\item Inner A',
+    '  \\item Inner B',
+    '  \\end{itemize}',
+    '\\item Outer two',
+    '\\end{itemize}',
+    '',
+    'Here is a mixed nested list:',
+    '',
+    '\\begin{enumerate}',
+    '\\item Step one',
+    '  \\begin{itemize}',
+    '  \\item sub-bullet a',
+    '  \\item sub-bullet b',
+    '  \\end{itemize}',
+    '\\item Step two',
+    '\\end{enumerate}',
+  ].join('\n');
+
+  const message = () => render(<Markdown>{MESSAGE}</Markdown>).container;
+
+  it('renders all three environments as real lists', () => {
+    const container = message();
+    // Four <ul>: the flat list, the nested list and its sublist, and the
+    // sublist inside the ordered list.
+    expect(container.querySelectorAll('ul')).toHaveLength(4);
+    expect(container.querySelectorAll('ol')).toHaveLength(1);
+    expect(container.querySelectorAll('li')).toHaveLength(11);
+    expect(container.textContent).not.toContain('\\begin{');
+    expect(container.textContent).not.toContain('\\item');
+    expect(container.querySelectorAll('.katex-error')).toHaveLength(0);
+  });
+
+  it('keeps the maths in item two and the currency in item three', () => {
+    const container = message();
+    expect(
+      [...container.querySelectorAll('.katex annotation')].map(
+        (a) => a.textContent,
+      ),
+    ).toEqual(['x = 4']);
+    expect(container.textContent).toContain('Third point costs $5');
+  });
+
+  it('nests each sublist inside its own item', () => {
+    const container = message();
+    const [, nested, mixed] = [...container.querySelectorAll('ul, ol')].filter(
+      (list) => !list.closest('li'),
+    );
+    expect(nested.querySelectorAll(':scope > li')).toHaveLength(2);
+    expect(
+      nested.querySelector(':scope > li')?.querySelectorAll('ul li'),
+    ).toHaveLength(2);
+    expect(mixed.tagName).toBe('OL');
+    expect(mixed.querySelectorAll(':scope > li')).toHaveLength(2);
+    expect(
+      mixed.querySelector(':scope > li')?.querySelectorAll('ul li'),
+    ).toHaveLength(2);
+  });
+
+  it('converts items carrying code, bold, bracket math and links', () => {
+    const { container } = render(
+      <Markdown>
+        {[
+          '\\begin{itemize}',
+          '\\item Run `npm run dev`',
+          '\\item A **bold** claim',
+          '\\item Solve \\(y = 2\\)',
+          '\\item See [the docs](https://example.dev)',
+          '\\end{itemize}',
+        ].join('\n')}
+      </Markdown>,
+    );
+    expect(container.querySelectorAll('li')).toHaveLength(4);
+    expect(container.querySelector('code')?.textContent).toBe('npm run dev');
+    expect(container.querySelector('strong')?.textContent).toBe('bold');
+    expect(container.querySelector('a')?.textContent).toBe('the docs');
+    expect(container.querySelector('.katex annotation')?.textContent).toBe(
+      'y = 2',
+    );
+    expect(container.querySelectorAll('.katex-error')).toHaveLength(0);
+  });
+
+  it('parses an item body that spans several source lines', () => {
+    const { container } = render(
+      <Markdown>
+        {
+          '\\begin{itemize}\n\\item A body that runs on\n  to a second line\n\\item Next\n\\end{itemize}'
+        }
+      </Markdown>,
+    );
+    expect(container.querySelectorAll('li')).toHaveLength(2);
+    expect(container.querySelectorAll('li')[0].textContent).toContain(
+      'A body that runs on',
+    );
+    expect(container.querySelectorAll('li')[0].textContent).toContain(
+      'to a second line',
+    );
+  });
+
+  it('converts two environments in one message without offset drift', () => {
+    const { container } = render(
+      <Markdown>
+        {
+          'Before.\n\n\\begin{itemize}\n\\item A $x = 1$\n\\end{itemize}\n\nBetween.\n\n\\begin{enumerate}\n\\item B `code`\n\\end{enumerate}\n\nAfter.'
+        }
+      </Markdown>,
+    );
+    expect(
+      [...container.querySelectorAll('p')].map((p) => p.textContent),
+    ).toEqual(['Before.', 'Between.', 'After.']);
+    expect(container.querySelectorAll('ul')).toHaveLength(1);
+    expect(container.querySelectorAll('ol')).toHaveLength(1);
+    expect(container.querySelector('code')?.textContent).toBe('code');
+    expect(container.textContent).not.toContain('\\begin{');
+  });
+
+  it('keeps the prose that follows an environment with no blank line', () => {
+    const { container } = render(
+      <Markdown>
+        {'\\begin{itemize}\n\\item A\n\\end{itemize}\nProse right after.'}
+      </Markdown>,
+    );
+    expect(container.querySelectorAll('li')).toHaveLength(1);
+    expect(container.querySelector('p')?.textContent).toBe(
+      'Prose right after.',
+    );
+  });
+});
+
+/**
+ * Issue #2441, chat path. Models reach for `$\textbf{...}$` when they mean
+ * bold, and KaTeX obliges with serif math-bold set into sans-serif prose. A
+ * span whose whole body is one text command is unwrapped to the markdown it
+ * meant; a span that merely contains `\text` is real maths and is left alone.
+ */
+describe('Markdown - text styling wrapped in math delimiters (issue #2441)', () => {
+  const MESSAGE = [
+    'The $\\text{ibl.ai}$ platform offers:',
+    '',
+    '* $\\textbf{Custom AI Agents}$: configurable LLMs and tools.',
+    '* $\\textbf{Canvas \\& Artifacts}$: rich documents and code.',
+    '',
+    'Genuine math still works: $0.075 \\text{ L} \\times \\frac{1000 \\text{ mL}}{1 \\text{ L}} = 75 \\text{ mL}$, and $5 stays literal.',
+  ].join('\n');
+
+  it('unwraps the styling spans and keeps the real maths', () => {
+    const { container } = render(<Markdown>{MESSAGE}</Markdown>);
+    expect(container.textContent).toContain('The ibl.ai platform offers:');
+    expect(
+      [...container.querySelectorAll('strong')].map((el) => el.textContent),
+    ).toEqual(['Custom AI Agents', 'Canvas & Artifacts']);
+    expect(container.textContent).toContain('and $5 stays literal.');
+    expect(
+      [...container.querySelectorAll('.katex annotation')].map(
+        (a) => a.textContent,
+      ),
+    ).toEqual([
+      '0.075 \\text{ L} \\times \\frac{1000 \\text{ mL}}{1 \\text{ L}} = 75 \\text{ mL}',
+    ]);
+    expect(container.querySelectorAll('.katex-error')).toHaveLength(0);
+  });
+
+  it('leaves a span that merely mentions a text command as maths', () => {
+    for (const source of [
+      '$\\text{a} + \\text{b}$',
+      '$\\textbf{x} + 1$',
+      // A display block whose body is a PLAIN-text command is a centred
+      // annotation between equations, so it stays maths.
+      'see $$\\text{this note}$$ here',
+      '$$\\text{Step 2: Multiply first}$$',
+    ]) {
+      const { container } = render(<Markdown>{source}</Markdown>);
+      expect(container.querySelectorAll('.katex')).toHaveLength(1);
+      expect(container.querySelector('strong')).toBeNull();
+    }
+  });
+
+  it('unwraps a styling command wrapped in display delimiters', () => {
+    for (const source of ['$$\\textbf{X}$$', 'see $$\\textbf{that}$$ here']) {
+      const { container } = render(<Markdown>{source}</Markdown>);
+      expect(container.querySelectorAll('.katex')).toHaveLength(0);
+      expect(container.querySelector('strong')?.textContent).toBeTruthy();
+    }
+  });
+});
+
+/**
+ * Every fenced block gets the code-block chrome, whether or not it declares a
+ * language. The decision lives on the `pre` override -- `pre` only ever wraps
+ * a block -- so a bare fence, and the code this app recovers from legacy
+ * `\begin{verbatim}` and `\verb` LaTeX, gets the same header and copy button a
+ * ```bash fence has always had, while inline code keeps its inline styling.
+ */
+describe('Markdown - code block chrome (issue #2441)', () => {
+  const chrome = (source: string) => {
+    const { container } = render(<Markdown>{source}</Markdown>);
+    return {
+      block: container.querySelector('[data-code-block]'),
+      label: container.querySelector('[data-testid="code-block-language"]')
+        ?.textContent,
+      copy: container.querySelector('[data-testid="code-block-copy"]'),
+      text: container.textContent ?? '',
+      container,
+    };
+  };
+
+  it('keeps the language label and copy button on a ```bash fence', () => {
+    const { block, label, copy } = chrome('```bash\nnpm run dev\n```');
+    expect(block).not.toBeNull();
+    expect(label).toBe('bash');
+    expect(copy).not.toBeNull();
+  });
+
+  it('gives a bare fence the chrome with no invented language', () => {
+    const { block, label, copy, text } = chrome('```\nnpm run dev\n```');
+    expect(block).not.toBeNull();
+    expect(label).toBeUndefined();
+    expect(copy).not.toBeNull();
+    expect(text).toContain('npm run dev');
+  });
+
+  it('gives a verbatim environment the chrome, dollars intact', () => {
+    const { block, copy, text } = chrome(
+      '\\begin{verbatim}\nconst price = "$5";\n\\end{verbatim}',
+    );
+    expect(block).not.toBeNull();
+    expect(copy).not.toBeNull();
+    expect(text).toContain('const price = "$5";');
+  });
+
+  it('gives a \\verb aligned block the chrome, JSX intact', () => {
+    const { block, copy, text } = chrome(
+      '\\[\n\\begin{aligned}\n&\\verb|  return <div style={{ gap: 8 }}>|\\\\\n&\\verb|    <TodoCard />|\\\\\n\\end{aligned}\n\\]',
+    );
+    expect(block).not.toBeNull();
+    expect(copy).not.toBeNull();
+    expect(text).toContain('return <div style={{ gap: 8 }}>');
+    expect(text).toContain('<TodoCard />');
+  });
+
+  it('leaves inline code inline', () => {
+    const { block, copy, container } = chrome('run `npm run dev` now');
+    expect(block).toBeNull();
+    expect(copy).toBeNull();
+    expect(container.querySelector('pre')).toBeNull();
+    expect(container.querySelector('code')?.className).toContain('font-mono');
+  });
+
+  it('gives a ```latex fence the same chrome as every other fence', () => {
+    const { block, copy, label, text } = chrome('```latex\n\\frac{1}{2}\n```');
+    expect(block).not.toBeNull();
+    expect(copy).not.toBeNull();
+    expect(label).toBe('latex');
+    expect(text).toContain('\\frac{1}{2}');
+  });
+
+  it('leaves a ```latex fence as code, never a list', () => {
+    const { block, container, text } = chrome(
+      '```latex\n\\begin{itemize}\n    \\item First item\n\\end{itemize}\n```',
+    );
+    expect(block).not.toBeNull();
+    expect(container.querySelector('li')).toBeNull();
+    expect(container.querySelector('.katex')).toBeNull();
+    expect(text).toContain('\\begin{itemize}');
+    expect(text).toContain('\\item First item');
+  });
+});
+
+/**
+ * Streamdown splits a message into independently parsed blocks BEFORE remark
+ * runs, and a blank line ends a block. A `\[...\]` or a `\begin{env}` whose
+ * body carries one -- a loose list, which is what a model writes when it
+ * separates two top-level items -- was torn in two before any plugin could
+ * see the pair, so the whole environment reached the reader as literal
+ * backslashes. The same message has always rendered correctly through
+ * markdownToHtml(), which parses it in one piece; these are the chat path
+ * catching up. See lib/latex-aware-blocks.ts.
+ */
+describe('Markdown - environments a blank line splits (issue #2441)', () => {
+  /** The rendered text KaTeX did not put there as its own TeX source. */
+  const visibleText = (container: HTMLElement) => {
+    const copy = container.cloneNode(true) as HTMLElement;
+    copy
+      .querySelectorAll('annotation, .katex-mathml')
+      .forEach((n) => n.remove());
+    return copy.textContent ?? '';
+  };
+
+  it('rebuilds a display-wrapped itemize whose items are blank-line separated', () => {
+    const { container } = render(
+      <Markdown>
+        {
+          '\\[\n\\begin{itemize}\n  \\item One\n\n  \\item Two\n\\end{itemize}\n\\]'
+        }
+      </Markdown>,
+    );
+    expect(container.querySelectorAll('ul')).toHaveLength(1);
+    expect(container.querySelectorAll('li')).toHaveLength(2);
+    expect(visibleText(container)).not.toMatch(/\\(?:begin|end|item)/);
+    expect(container.querySelectorAll('.katex-error')).toHaveLength(0);
+  });
+
+  it('rebuilds a bare itemize whose items are blank-line separated', () => {
+    const { container } = render(
+      <Markdown>
+        {'\\begin{itemize}\n\\item One\n\n\\item Two\n\\end{itemize}'}
+      </Markdown>,
+    );
+    expect(container.querySelectorAll('ul')).toHaveLength(1);
+    expect(container.querySelectorAll('li')).toHaveLength(2);
+    expect(visibleText(container)).not.toMatch(/\\(?:begin|end|item)/);
+  });
+
+  /**
+   * The real reply from the "Next F1 Race Date" session: two top-level items
+   * separated by a blank line, three levels of nesting, `\textbf{}` in the
+   * item labels and `\approx` -- a genuine maths command -- in their bodies,
+   * which has to survive the trip out of `\[...\]` as a rendered symbol.
+   */
+  it('rebuilds the three-deep F1 weekend reply, `\\approx` and all', () => {
+    const message = [
+      '\\[',
+      '\\begin{itemize}',
+      '  \\item \\textbf{Standard Grand Prix weekend}',
+      '    \\begin{itemize}',
+      '      \\item \\textbf{Qualifying:} \\approx 60 minutes total',
+      '        \\begin{itemize}',
+      '          \\item Q1: 18 minutes, bottom 5 eliminated (20 \u2192 15)',
+      '        \\end{itemize}',
+      '    \\end{itemize}',
+      '',
+      '  \\item \\textbf{Sprint weekend format} (at selected events)',
+      '    \\begin{itemize}',
+      '      \\item \\textbf{Sunday:} Grand Prix race (as above)',
+      '    \\end{itemize}',
+      '\\end{itemize}',
+      '\\]',
+    ].join('\n');
+    const { container } = render(<Markdown>{message}</Markdown>);
+    const text = visibleText(container);
+    expect(text).not.toMatch(/\\(?:begin|end|item)/);
+    expect(container.querySelectorAll('.katex-error')).toHaveLength(0);
+    // The outer list, the two second-level lists and the third-level one.
+    expect(container.querySelectorAll('ul')).toHaveLength(4);
+    expect(container.querySelectorAll('li')).toHaveLength(5);
+    // Both top-level items survive the blank line that used to end the block.
+    expect(text).toContain('Standard Grand Prix weekend');
+    expect(text).toContain('Sprint weekend format');
+    expect(text).toContain('Q1: 18 minutes');
+    // `\approx` came out of the display block, so it goes back into maths
+    // and reaches the reader as the symbol it always meant.
+    expect(text).not.toContain('\\approx');
+    expect(text).toContain('\u2248 60 minutes total');
+  });
+
+  it('renders the maths commands an item body carries out of `\\[...\\]`', () => {
+    const { container } = render(
+      <Markdown>
+        {
+          '\\[\n\\begin{itemize}\n\\item 3 \\times 4 \\pm 1\n\\end{itemize}\n\\]'
+        }
+      </Markdown>,
+    );
+    expect(container.querySelectorAll('.katex-error')).toHaveLength(0);
+    expect(visibleText(container)).toContain('3 \u00d7 4 \u00b1 1');
+  });
+
+  it('keeps a command KaTeX cannot render readable rather than an error box', () => {
+    const { container } = render(
+      <Markdown>
+        {
+          '\\[\n\\begin{itemize}\n\\item Value \\notarealcommand 12 here\n\\end{itemize}\n\\]'
+        }
+      </Markdown>,
+    );
+    expect(container.querySelectorAll('.katex-error')).toHaveLength(0);
+    expect(visibleText(container)).toContain('Value \\notarealcommand 12 here');
+  });
+
+  // The reach is bounded in both directions: an `\end` that never arrives
+  // and an `\end` for the wrong environment both leave the source exactly
+  // where the streaming rules already put it -- no list is built from it.
+  it('builds no list from an environment a blank line splits and never closes', () => {
+    const { container } = render(
+      <Markdown>{'\\begin{itemize}\n\\item One\n\nStill typing'}</Markdown>,
+    );
+    expect(container.querySelectorAll('ul')).toHaveLength(0);
+    const text = visibleText(container);
+    expect(text).toContain('\\item One');
+    expect(text).toContain('Still typing');
+  });
+
+  /**
+   * `\[\textbf{Short answer:} ... \]` -- a whole paragraph of prose the model
+   * wrapped in display delimiters. KaTeX sets the words outside the group in
+   * MATH mode, which drops every space between them, so the reader gets
+   * `Ican't useawebtool` as one unbroken run. Real display maths keeps its
+   * words inside `\text{}`, so a run of bare words is the discriminator.
+   */
+  it('rebuilds a display block that is really prose', () => {
+    const { container } = render(
+      <Markdown>
+        {
+          '\\[\n\\textbf{Short answer:} I can not use a web tool in this chat.\n\\]'
+        }
+      </Markdown>,
+    );
+    expect(container.querySelectorAll('.katex')).toHaveLength(0);
+    const strong = container.querySelector('strong');
+    expect(strong?.textContent).toBe('Short answer:');
+    expect(visibleText(container)).toContain(
+      'I can not use a web tool in this chat.',
+    );
+  });
+
+  it('leaves display maths whose words live inside \\text as maths', () => {
+    const { container } = render(
+      <Markdown>
+        {
+          '\\[\nI_{sp} = \\frac{\\text{Thrust}}{\\text{Fuel weight flow rate}}\n\\]'
+        }
+      </Markdown>,
+    );
+    expect(container.querySelector('.katex')).toBeTruthy();
+    expect(container.querySelectorAll('.katex-error')).toHaveLength(0);
+    expect(container.querySelector('strong')).toBeNull();
+  });
+
+  it('builds no list from an environment a blank line splits and mis-closes', () => {
+    const { container } = render(
+      <Markdown>{'\\begin{itemize}\n\\item One\n\n\\end{enumerate}'}</Markdown>,
+    );
+    expect(container.querySelectorAll('ul')).toHaveLength(0);
+    const text = visibleText(container);
+    expect(text).toContain('\\item One');
+    expect(text).toContain('\\end{enumerate}');
+  });
+});
+
+/**
+ * Streamdown prestyles every element for a DOCUMENT: `h1` is `text-3xl`
+ * (30px) inside a `text-sm/6` (14px) chat bubble, `strong` is a `<span>`, a
+ * list item is no longer a scroll container and an image has no height limit.
+ * The app carried an override for each of these before the migration and
+ * still needs it. Issue #2441.
+ */
+describe('Markdown - typography overrides the chat bubble needs (issue #2441)', () => {
+  const heading = (source: string, tag: string) =>
+    render(<Markdown>{source}</Markdown>).container.querySelector(tag);
+
+  it('steps h1-h6 DOWN from the bubble body, not up', () => {
+    expect(heading('# Hello Conrad!', 'h1')?.className).toContain('text-xl');
+    expect(heading('## Two', 'h2')?.className).toContain('text-lg');
+    expect(heading('### Three', 'h3')?.className).toContain('text-base');
+    expect(heading('#### Four', 'h4')?.className).toContain('text-sm');
+    // Streamdown would give h5 `text-base` (16px), LARGER than the h4 above it.
+    expect(heading('##### Five', 'h5')?.className).toContain('text-sm');
+    expect(heading('###### Six', 'h6')?.className).toContain('text-sm');
+  });
+
+  it('never lets a heading keep Streamdown\u2019s document scale', () => {
+    // Streamdown: h1 text-3xl, h2 text-2xl, h3 text-xl, h4 text-lg.
+    for (const [source, tag, streamdown] of [
+      ['# One', 'h1', 'text-3xl'],
+      ['## Two', 'h2', 'text-2xl'],
+      ['### Three', 'h3', 'text-xl'],
+      ['#### Four', 'h4', 'text-lg'],
+      ['##### Five', 'h5', 'text-base'],
+    ] as const) {
+      const className = heading(source, tag)?.className ?? '';
+      expect(className).not.toContain(streamdown);
+      expect(className).toContain('tracking-tight');
+    }
+  });
+
+  it('suppresses a heading whose text has not streamed in yet', () => {
+    for (const tag of ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']) {
+      const hashes = '#'.repeat(Number(tag[1]));
+      const { container } = render(<Markdown>{`${hashes} \n`}</Markdown>);
+      expect(container.querySelector(tag)).toBeNull();
+    }
+  });
+
+  it('emits a real <strong>, not Streamdown\u2019s <span>', () => {
+    const { container } = render(<Markdown>{'**bold**'}</Markdown>);
+    expect(container.querySelector('strong')?.textContent).toBe('bold');
+    expect(container.querySelector('span.font-semibold')).toBeNull();
+  });
+
+  it('emits a real <em> for emphasis', () => {
+    const { container } = render(<Markdown>{'*italic*'}</Markdown>);
+    expect(container.querySelector('em')?.textContent).toBe('italic');
+  });
+
+  it('opens every link in a new tab with a safe rel', () => {
+    const { container } = render(
+      <Markdown>{'[a link](https://example.com)'}</Markdown>,
+    );
+    const link = container.querySelector('a');
+    expect(link?.getAttribute('target')).toBe('_blank');
+    expect(link?.getAttribute('rel')).toContain('noreferrer');
+  });
+
+  it('gives a list item an inner scroll container, never the item itself', () => {
+    const { container } = render(
+      <Markdown>{'- A bullet\n- Another bullet'}</Markdown>,
+    );
+    for (const li of container.querySelectorAll('li')) {
+      expect(li.className).not.toMatch(/overflow/);
+      expect(li.className).not.toMatch(/py-1/);
+      expect(li.querySelector(':scope > div.overflow-x-auto')).not.toBeNull();
+    }
+  });
+
+  it('inlines only a loose item\u2019s FIRST paragraph, not its continuations', () => {
+    // Streamdown's unscoped `[&>p]:inline` inlined every paragraph in a loose
+    // list item, so `- one\n\n  two` rendered as a single run "onetwo". Only
+    // the first paragraph should share the marker's line.
+    const { container } = render(
+      <Markdown>{'- one\n\n  two\n\n- three'}</Markdown>,
+    );
+    const wrapper = container.querySelector('li > div.overflow-x-auto');
+    expect(wrapper).not.toBeNull();
+    expect(wrapper?.className).toContain('[&>p:first-child]:inline');
+    expect(wrapper?.className).not.toMatch(/\[&>p\]:inline/);
+    // the item really does hold two separate paragraphs to keep apart
+    expect(wrapper?.querySelectorAll('p')).toHaveLength(2);
+  });
+
+  it('keeps a wide equation inside the item\u2019s scroll container', () => {
+    const { container } = render(
+      <Markdown>
+        {'- Bullet\n\n  $$\\int_0^1 x^2 \\, dx = \\frac{1}{3}$$\n'}
+      </Markdown>,
+    );
+    const wrapper = container.querySelector('li > div.overflow-x-auto');
+    expect(wrapper).not.toBeNull();
+    expect(wrapper?.querySelector('.katex-display')).not.toBeNull();
+  });
+
+  it('renders a table at full height with no fullscreen expander', () => {
+    // Streamdown ships a fullscreen expander (a modal over the conversation)
+    // and clips the table to 300px. The expander is off by product decision,
+    // which would leave a long table trapped in a 300px scrollbox, so the
+    // height cap is off too — matching what the pre-Streamdown renderer did.
+    const rows = Array.from({ length: 40 }, (_, i) => `| r${i} | v${i} |`).join(
+      '\n',
+    );
+    const { container } = render(
+      <Markdown>{`| a | b |\n|---|---|\n${rows}`}</Markdown>,
+    );
+
+    expect(container.querySelector('table')).not.toBeNull();
+
+    const scroller = container.querySelector<HTMLElement>(
+      '[data-streamdown="table-wrapper"] div[class*="overflow-y-auto"]',
+    );
+    expect(scroller).not.toBeNull();
+    expect(scroller?.style.maxHeight).toBe('');
+
+    expect(
+      container.querySelector('[aria-label*="ullscreen"],[title*="ullscreen"]'),
+    ).toBeNull();
+  });
+
+  it('clamps an image and gives it an accessible failure state', () => {
+    const { container } = render(
+      <Markdown>{'![a picture](https://example.invalid/nope.png)'}</Markdown>,
+    );
+    const img = container.querySelector('img');
+    expect(img?.className).toContain('max-h-96');
+    expect(img?.className).toContain('object-contain');
+    // Streamdown's own image chrome (a hover download control) is bypassed.
+    expect(container.querySelector('[data-streamdown="image"]')).toBeNull();
+    expect(container.querySelector('button')).toBeNull();
+  });
+});
+
+/**
+ * `\[\text{...}\]` around a whole sentence is prose in a maths costume: KaTeX
+ * sets it centred, in a serif face, at display scale. Two real user reports.
+ * Issue #2441.
+ */
+describe('Markdown - display maths that is entirely \\text{} (issue #2441)', () => {
+  const rendered = (source: string) => {
+    const { container } = render(<Markdown>{source}</Markdown>);
+    return {
+      katex: container.querySelectorAll('.katex').length,
+      display: container.querySelectorAll('.katex-display').length,
+      paragraphs: [...container.querySelectorAll('p')].map(
+        (p) => p.textContent,
+      ),
+      container,
+    };
+  };
+
+  it('renders a one-sentence display block as a plain paragraph', () => {
+    const { katex, display, paragraphs } = rendered(
+      '\\[\n\\text{Hi Conrad, how can I help you today?}\n\\]',
+    );
+    expect(katex).toBe(0);
+    expect(display).toBe(0);
+    expect(paragraphs).toEqual(['Hi Conrad, how can I help you today?']);
+  });
+
+  it('renders an all-\\text{} aligned block as one paragraph per row', () => {
+    const { katex, paragraphs } = rendered(
+      '$$\n\\begin{aligned}\n&\\text{Got it, Conrad. I received: "e2e first msg 1781965048662".}\\\\\n&\\text{Would you like me to confirm delivery, save this ID, or do something else with it?}\n\\end{aligned}\n$$',
+    );
+    expect(katex).toBe(0);
+    expect(paragraphs).toHaveLength(2);
+    expect(paragraphs[0]).toContain('Got it, Conrad. I received:');
+    expect(paragraphs[1]).toContain('Would you like me to confirm delivery');
+  });
+
+  it('keeps real alignment maths, unit maths and a short label as maths', () => {
+    expect(
+      rendered('$$\\begin{aligned} a &= b + c \\\\ d &= e + f \\end{aligned}$$')
+        .display,
+    ).toBe(1);
+    const units = rendered(
+      '$0.075 \\text{ L} \\times \\frac{1000 \\text{ mL}}{1 \\text{ L}} = 75 \\text{ mL}$',
+    );
+    expect(units.katex).toBe(1);
+    expect(units.display).toBe(0);
+    expect(rendered('$$\\text{Step 2}$$').display).toBe(1);
+  });
+});
+
+/**
+ * An assistant ends a line with LaTeX's `\\` row break; CommonMark reads it as
+ * an escaped backslash and leaves the literal behind. Issue #2441.
+ */
+describe('Markdown - the backslash a LaTeX row break leaves (issue #2441)', () => {
+  const html = (source: string) =>
+    render(<Markdown>{source}</Markdown>).container.innerHTML;
+
+  it('breaks the line without leaving a stray backslash', () => {
+    const out = html(
+      'Line ending with backslashes \\\\\nnext line after hard break.',
+    );
+    expect(out).toContain('<br>');
+    expect(out).not.toContain('\\<br>');
+    expect(out).toContain('Line ending with backslashes');
+    expect(out).toContain('next line after hard break.');
+  });
+
+  it('keeps the row separators of a matrix and an aligned block', () => {
+    const matrix = render(
+      <Markdown>
+        {'$$\\begin{pmatrix} 1 & 2 \\\\ 3 & 4 \\end{pmatrix}$$'}
+      </Markdown>,
+    ).container;
+    expect(matrix.querySelectorAll('.katex-display')).toHaveLength(1);
+    expect(matrix.querySelector('.katex-error')).toBeNull();
+    expect(matrix.textContent).toContain('3');
+
+    const aligned = render(
+      <Markdown>
+        {'$$\n\\begin{aligned}\na &= b \\\\\nc &= d\n\\end{aligned}\n$$'}
+      </Markdown>,
+    ).container;
+    expect(aligned.querySelectorAll('.katex-display')).toHaveLength(1);
+    expect(aligned.querySelector('.katex-error')).toBeNull();
+  });
+
+  it('keeps a trailing backslash in code and a path mid-sentence', () => {
+    expect(html('```\nline one \\\nline two\n```')).toContain('line one \\');
+    expect(
+      render(<Markdown>{'inline `trailing \\` here'}</Markdown>).container
+        .textContent,
+    ).toContain('trailing \\');
+    expect(
+      render(<Markdown>{'Path C:\\Users\\name mid-sentence.'}</Markdown>)
+        .container.textContent,
+    ).toContain('C:\\Users\\name');
+  });
+});
+
+describe('Markdown - overrides at their edges (issue #2441)', () => {
+  it('suppresses a <strong> an empty \\textbf{} would otherwise leave behind', () => {
+    // remarkLatexIslands rebuilds `\textbf{...}` as a strong node; an empty
+    // group gives it no children, and Streamdown renders the bare tag.
+    const { container } = render(<Markdown>{'A $\\textbf{}$ gap'}</Markdown>);
+    expect(container.querySelector('strong')).toBeNull();
+    expect(container.textContent).toContain('A');
+    expect(container.textContent).toContain('gap');
+  });
+
+  it('suppresses an <em> an empty \\textit{} would otherwise leave behind', () => {
+    const { container } = render(<Markdown>{'A $\\textit{}$ gap'}</Markdown>);
+    expect(container.querySelector('em')).toBeNull();
+    expect(container.textContent).toContain('A');
+    expect(container.textContent).toContain('gap');
+  });
+
+  it('leaves a raw <pre> that wraps no fence as a plain block', () => {
+    const { container } = render(
+      <Markdown>{'<pre>plain preformatted text</pre>'}</Markdown>,
+    );
+    const pre = container.querySelector('pre');
+    expect(pre).not.toBeNull();
+    expect(pre?.className).toContain('bg-gray-200');
+    expect(container.querySelector('[data-code-block]')).toBeNull();
+    expect(container.textContent).toContain('plain preformatted text');
   });
 });

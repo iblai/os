@@ -10,6 +10,10 @@ import { cn } from '@/lib/utils';
 import { normalizeListIndentation } from '@/lib/normalize-list-indentation';
 import { components } from './markdown/markdown-components';
 import { rehypeAlignedMath } from '@/lib/rehype-aligned-math';
+import { rehypeVerbCode } from '@/lib/rehype-verb-code';
+import { remarkLatexIslands } from '@/lib/remark-latex-islands';
+import { remarkLatexLineBreaks } from '@/lib/remark-latex-line-breaks';
+import { parseLatexAwareBlocks } from '@/lib/latex-aware-blocks';
 import { rehypeReportMathErrors } from '@/lib/markdown-math-error-reporter';
 import { KATEX_ERROR_COLOR } from '@/lib/katex-options';
 
@@ -43,10 +47,23 @@ const math = {
   // defaults (remark-gfm, codeMeta), so the preset is the seam that adds a
   // plugin without dropping any.
   remarkPlugin: {
-    plugins: [[zilMath, { singleDollarTextMath: true }], remarkBreaks],
+    plugins: [
+      [zilMath, { singleDollarTextMath: true }],
+      // Legacy document-mode LaTeX is repaired after the math extension has
+      // carved out real maths and before remark-breaks splits the text nodes
+      // an island has to span. See lib/remark-latex-islands.ts.
+      remarkLatexIslands,
+      // The `\\` an assistant ends a line with is LaTeX's row break, but
+      // CommonMark has already read it as an escaped backslash and left the
+      // literal behind. Strip the residue before remark-breaks turns the
+      // newline itself into the <br> the author meant.
+      remarkLatexLineBreaks,
+      remarkBreaks,
+    ],
   } as Pluggable,
   rehypePlugin: {
     plugins: [
+      rehypeVerbCode,
       rehypeAlignedMath,
       [rehypeKatex, { output: 'htmlAndMathml', errorColor: KATEX_ERROR_COLOR }],
       [rehypeReportMathErrors, { path: 'chat' }],
@@ -62,14 +79,39 @@ const plugins = { math };
 // remains the protocol gate.
 const linkSafety = { enabled: false };
 
+// Streamdown puts three controls on every table: copy, download and a
+// fullscreen expander. The expander opens a modal over the conversation,
+// which is more than a chat message needs, so it is off; copy and download
+// stay.
+const controls = { table: { fullscreen: false } };
+
+// Streamdown clips a table to 300px and scrolls it in place. With the
+// fullscreen expander off there is no way out of that box, so a long table
+// would be harder to read here than it was before the migration. 'none' is
+// Streamdown's documented opt-out and restores full height.
+const TABLE_MAX_HEIGHT = 'none';
+
 export default function Markdown({ children, className }: Props) {
   return (
     <div className={cn('space-y-4', className)}>
       <Streamdown
         plugins={plugins}
         components={components}
+        // Streamdown splits the message into independently parsed blocks
+        // before remark runs, so a blank line inside a `\[...\]` or a
+        // `\begin{env}` tears the pair apart and no remark plugin can see
+        // it. See lib/latex-aware-blocks.ts.
+        parseMarkdownIntoBlocksFn={parseLatexAwareBlocks}
+        // Streamdown's remend pass speculatively closes what a half-arrived
+        // token opened: a mid-stream `**bold` is rendered bold, and a lone
+        // `$` or `\[` is closed into maths that the next token contradicts.
+        // Off, a delimiter stays literal until its partner actually lands,
+        // which is a beat of raw text instead of a formula that flickers
+        // through a wrong shape. See scripts/gallery-cases.ts.
         parseIncompleteMarkdown={false}
         linkSafety={linkSafety}
+        controls={controls}
+        tableMaxHeight={TABLE_MAX_HEIGHT}
         urlTransform={(url) => {
           // Allow mailto:, tel:, and http(s): protocols
           if (
