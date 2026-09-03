@@ -4521,17 +4521,17 @@
       "checkpoints": [
         {
           "id": "dscp-01",
-          "description": "Admin creates a mentor, opens the Add Resources modal, clicks Google Drive — asserts a popup opens at accounts.google.com (OAuth flow)",
+          "description": "Admin opens the Add Resources modal and clicks Google Drive - a popup opens at accounts.google.com when the tenant has a 'drive' integration credential, otherwise the button is disabled and labelled \"Not configured for this tenant\"",
           "status": "covered"
         },
         {
           "id": "dscp-02",
-          "description": "Admin creates a mentor, opens the Add Resources modal, clicks Microsoft OneDrive — asserts a popup opens at login.microsoftonline.com (OAuth flow)",
+          "description": "Admin opens the Add Resources modal and clicks Microsoft OneDrive - a popup opens at login.microsoftonline.com when the tenant has an 'onedrive' integration credential, otherwise the button is disabled and labelled \"Not configured for this tenant\"",
           "status": "covered"
         },
         {
           "id": "dscp-03",
-          "description": "Admin creates a mentor, opens the Add Resources modal, clicks Dropbox — asserts a popup opens at www.dropbox.com/chooser (Dropbox Chooser SDK)",
+          "description": "Admin opens the Add Resources modal and clicks Dropbox - a popup opens at www.dropbox.com/chooser when the tenant has a 'dropbox' integration credential, otherwise the button is disabled and labelled \"Not configured for this tenant\"",
           "status": "covered"
         }
       ]

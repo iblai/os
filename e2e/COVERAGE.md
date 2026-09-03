@@ -1742,11 +1742,18 @@ no mentor and therefore needs no `MentorTracker`/cleanup.
 
 **Source files:** `hooks/use-google-drive-picker.ts`, `hooks/use-one-drive-picker.ts`, `hooks/use-dropdox-picker.ts`, `components/modals/edit-mentor-modal/tabs/datasets-tab/add-resource-modal.tsx`
 
-Verifies that clicking the Google Drive, Microsoft OneDrive, and Dropbox buttons in the Add Resources modal opens the third-party auth/picker popup. Each test creates a fresh mentor (matching journey 36 / 75 pattern), opens the Datasets tab → Add Resources modal, clicks the provider button, and uses `page.waitForEvent('popup')` to verify a popup opens. The popup URL is asserted to match the expected provider domain — `accounts.google.com`, `login.microsoftonline.com`, or `www.dropbox.com/chooser`. If no popup opens (e.g., broken click handler, missing credentials, SDK not loaded) the test fails loudly. Covers [iblai-platform#1677](https://github.com/iblai/iblai-platform/issues/1677).
+Verifies the Google Drive, Microsoft OneDrive, and Dropbox buttons in the Add Resources modal. Each test creates a fresh mentor (matching journey 36 / 75 pattern), opens the Datasets tab → Add Resources modal, and asserts the behaviour the **tenant's own configuration** selects.
 
-- [x] DSCP-74.1: Admin clicks Google Drive button — asserts a popup opens at `accounts.google.com` (OAuth flow)
-- [x] DSCP-74.2: Admin clicks Microsoft OneDrive button — asserts a popup opens at `login.microsoftonline.com` (OAuth flow)
-- [x] DSCP-74.3: Admin clicks Dropbox button — asserts a popup opens at `www.dropbox.com/chooser` (Dropbox Chooser SDK)
+A cloud picker only works when the tenant has OAuth credentials for that provider, looked up on modal mount via `GET .../orgs/<org>/integration-credential/?name=<provider>`. `e2e/utils/integration-credentials.ts` observes that live response and each checkpoint asserts the matching branch:
+
+- **credential present** — clicking opens the provider popup, asserted to reach `accounts.google.com`, `login.microsoftonline.com`, or `www.dropbox.com/chooser`
+- **credential absent** — the button is `disabled` and labelled "Not configured for this tenant"
+
+Both are real assertions about shipped behaviour, so the journey never silently skips and is meaningful on either kind of tenant. The disabled state shipped with this journey: the buttons previously rendered enabled and did nothing at all when clicked (the SDK was handed an empty client id), which read as a broken button — that is why all three checkpoints failed on `spa-tests-chrome-two`, the CI tenant, which has none of the three configured. Covers [iblai-platform#1677](https://github.com/iblai/iblai-platform/issues/1677).
+
+- [x] DSCP-74.1: Admin clicks Google Drive — popup at `accounts.google.com` when a `drive` credential exists, otherwise the button is disabled and labelled
+- [x] DSCP-74.2: Admin clicks Microsoft OneDrive — popup at `login.microsoftonline.com` when an `onedrive` credential exists, otherwise the button is disabled and labelled
+- [x] DSCP-74.3: Admin clicks Dropbox — popup at `www.dropbox.com/chooser` when a `dropbox` credential exists, otherwise the button is disabled and labelled
 
 ---
 
