@@ -600,5 +600,12 @@ describe('Journey 3: Code Mode (opencode)', () => {
          meanwhile by the_iblai_guidance_keeps_its_load_bearing_lines in
          opencode_proxy.rs */
     });
+
+    it.skip('code-28: text the agent emits before a tool call lands in the thinking section, never the reply bubble — the visible reply is what follows the last tool call', () => {
+      /* pending — needs a tool-calling model driving real turns (the same
+         harness gap as code-08..10/15); the reclassification is covered
+         meanwhile by pre_tool_text_is_reclassified_as_narration in
+         opencode_acp.rs */
+    });
   });
 });

@@ -225,6 +225,11 @@ struct TurnState {
     full_content: String,
     pending_delta: String,
     last_emit: Instant,
+    /// Text the model emitted before a tool call this turn — process
+    /// narration (a GPT-style preamble), reclassified into the reasoning
+    /// section rather than the reply. Kept so a turn that ends on a tool call
+    /// with no trailing text still shows the model's only words.
+    last_narration: String,
 }
 
 impl TurnState {
@@ -232,7 +237,32 @@ impl TurnState {
         self.generation_id = generation_id;
         self.full_content.clear();
         self.pending_delta.clear();
+        self.last_narration.clear();
         self.last_emit = Instant::now();
+    }
+
+    /// A NEW tool call starts: whatever streamed so far was a preamble ("Let
+    /// me check…"), not the reply. Hand it back for the reasoning section and
+    /// start the reply buffer over — the reply is what follows the LAST tool
+    /// call. Deterministic where the prompt's no-narration rule is not.
+    fn take_narration(&mut self) -> Option<String> {
+        if self.full_content.is_empty() {
+            return None;
+        }
+        let text = std::mem::take(&mut self.full_content);
+        self.pending_delta.clear();
+        self.last_narration = text.clone();
+        Some(text)
+    }
+
+    /// The visible reply: the text after the last tool call, or — when the
+    /// turn ended on a tool call (abort/error shapes) — the model's only text.
+    fn final_reply(&self) -> &str {
+        if self.full_content.is_empty() {
+            &self.last_narration
+        } else {
+            &self.full_content
+        }
     }
 
     /// A turn is streaming — updates arriving with no generation in flight
@@ -1873,7 +1903,30 @@ async fn handle_update(app: &AppHandle, v: &Value, turn: &Arc<Mutex<TurnState>>)
                 );
             }
         }
-        "tool_call" | "tool_call_update" => {
+        "tool_call" => {
+            let (gid, narration) = {
+                let mut ts = turn.lock().await;
+                (ts.generation_id.clone(), ts.take_narration())
+            };
+            if let Some(text) = narration {
+                // Pre-tool text is process narration: move it to the reasoning
+                // section and retract it from the reply bubble (the frontend
+                // replaces its content with `full_content`).
+                let _ = app.emit(
+                    "opencode:reasoning",
+                    json!({ "generation_id": gid, "delta": format!("{text}\n") }),
+                );
+                let _ = app.emit(
+                    "ollama:token",
+                    json!({ "generation_id": gid, "token": "", "full_content": "" }),
+                );
+            }
+            let _ = app.emit(
+                "opencode:tool_call",
+                json!({ "generation_id": gid, "update": update }),
+            );
+        }
+        "tool_call_update" => {
             let gid = turn.lock().await.generation_id.clone();
             let _ = app.emit(
                 "opencode:tool_call",
@@ -1954,22 +2007,22 @@ fn enforce_permission_policy(root: &mut serde_json::Map<String, Value>) {
     }
 }
 
-/// The system prompt Code's agent runs under, replacing opencode's built-in
-/// model-variant prompts (`agent.build.prompt` wins over `SystemPrompt.provider`
-/// in opencode's `llm/request.ts`, and the config merge applies it to the
-/// built-in `build` agent). A fork of opencode's `session/prompt/gpt.txt` at the
-/// pinned [`crate::opencode_installer::OPENCODE_VERSION`], with its narration
-/// protocol (progress updates, pre-edit notes, "explain what you are doing and
-/// why") replaced by a result-or-blocker contract. Re-diff against upstream
-/// whenever the version pin bumps.
+/// The `build` agent's ONE-LINE suppressor stub. Its only job is to exist:
+/// opencode resolves `agent.prompt ? [agent.prompt] : SystemPrompt.provider`
+/// (`llm/request.ts`), so a non-empty prompt SUPPRESSES the built-in per-model
+/// prompt — which mandates step-by-step narration ("keeping the user clearly
+/// informed", "Before editing files, send an update") — while an empty or
+/// missing one silently RESTORES it. All authored behavior (voice, policy,
+/// working discipline) lives in the per-session AGENTS.md guidance instead
+/// ([`crate::opencode_proxy::IBLAI_INSTRUCTIONS`]).
 const OPENCODE_BUILD_PROMPT: &str = include_str!("opencode_build_prompt.txt");
 
 /// Force [`OPENCODE_BUILD_PROMPT`] onto the `build` agent and pin it as the
-/// default agent, so every ACP session runs under the result-only contract no
-/// matter which model family it uses (opencode otherwise picks a per-model
-/// prompt variant, several of which mandate step-by-step progress narration).
-/// Enforced on every spawn like [`enforce_permission_policy`]; any other keys
-/// on the entry are left alone.
+/// default agent, so no model family ever falls back to opencode's built-in
+/// per-model prompt variants (several mandate progress narration). Enforced on
+/// every spawn like [`enforce_permission_policy`] — persisted per-session
+/// configs self-heal to the current stub; any other keys on the entry are
+/// left alone.
 fn enforce_build_prompt(root: &mut serde_json::Map<String, Value>) {
     root.insert("default_agent".to_string(), json!("build"));
     let agents = root.entry("agent").or_insert_with(|| json!({}));
@@ -2026,7 +2079,7 @@ fn apply_opencode_model(
     // The security boundary — see `enforce_permission_policy`. Re-applied here because
     // this runs on every spawn, immediately before the process starts.
     enforce_permission_policy(root);
-    // The result-only system prompt — see `enforce_build_prompt`.
+    // The one-line suppressor stub — see `enforce_build_prompt`.
     enforce_build_prompt(root);
     // Skills the agent discovers at startup — see `apply_skills_config`.
     let mentor_dir = mentor.map(mentor_skills_dir);
@@ -2273,19 +2326,11 @@ async fn spawn_session(
     let spec = parse_model_spec(&chosen_model);
 
     // The ibl.ai guidance rides opencode's own instructions mechanism (the
-    // per-session AGENTS.md, re-read on every model call), so it is composed
-    // for every spawn with skills wired — including local (ollama/foundry)
-    // sessions, which never touch the proxy and under the old in-flight
-    // injection ran with zero guidance.
-    let skills_wired = vibe_skills_dir().is_dir()
-        || mentor
-            .as_deref()
-            .map(mentor_skills_dir)
-            .is_some_and(|d| d.is_dir());
-    let guidance = match skills_wired {
-        true => Some(crate::opencode_proxy::guidance_with_identity(tenant).await),
-        false => None,
-    };
+    // per-session AGENTS.md, re-read on every model call). It is composed for
+    // EVERY spawn — cloud and on-device alike, skills wired or not: the build
+    // prompt is a one-line suppressor stub, so this guidance is the agent's
+    // entire authored behavior and a session must never run without it.
+    let guidance = crate::opencode_proxy::guidance_with_identity(tenant).await;
 
     // On-device runtimes talk straight to their own local endpoint. Cloud goes through
     // the loopback proxy, which holds the real DM token — the agent only ever sees a
@@ -2330,7 +2375,7 @@ async fn spawn_session(
         &base_url,
         &api_key,
         display_name,
-        guidance.as_deref(),
+        Some(guidance.as_str()),
     )?;
 
     // Kernel confinement on top of the permission prompt in
@@ -2397,6 +2442,7 @@ async fn spawn_session(
         generation_id: String::new(),
         full_content: String::new(),
         pending_delta: String::new(),
+        last_narration: String::new(),
         last_emit: Instant::now(),
     }));
 
@@ -2896,7 +2942,7 @@ pub async fn opencode_chat_stream(
                 "ollama:done",
                 json!({
                     "generation_id": generation_id,
-                    "full_content": ts.full_content,
+                    "full_content": ts.final_reply(),
                     "stop_reason": result.get("stopReason").cloned().unwrap_or(Value::Null),
                 }),
             );
@@ -3038,11 +3084,11 @@ mod tests {
         assert_eq!(cfg.get("permission").unwrap(), &json!("ask"));
     }
 
-    /// Every spawn pins the build agent's prompt (replacing opencode's per-model
-    /// variants) and the default agent, whatever the config started with; the
-    /// entry's other keys and sibling agents stay untouched.
+    /// Every spawn pins the build agent's prompt (suppressing opencode's
+    /// per-model variants) and the default agent, whatever the config started
+    /// with; the entry's other keys and sibling agents stay untouched.
     #[test]
-    fn every_session_runs_the_result_only_build_prompt() {
+    fn every_session_runs_the_suppressor_build_prompt() {
         let mut cfg: serde_json::Map<String, Value> = serde_json::from_str(
             r#"{
               "agent": {
@@ -3077,23 +3123,28 @@ mod tests {
         );
     }
 
-    /// The prompt replaces opencode's gpt.txt variant (forked at the pinned
-    /// opencode version) — its point is the result-or-blocker contract, so the
-    /// contract lines must survive edits and the narration protocol they
-    /// replaced must not creep back on a re-diff.
+    /// The build prompt's ONLY job is to exist: opencode resolves
+    /// `agent.prompt ? [agent.prompt] : SystemPrompt.provider(model)`, so a
+    /// blank prompt is FALSY and silently restores the built-in per-model
+    /// prompt with its narration mandates. Everything authored lives in the
+    /// AGENTS.md guidance instead — the stub must stay non-blank, tiny, and
+    /// free of the upstream narration protocol.
     #[test]
-    fn the_build_prompt_keeps_its_result_only_contract() {
+    fn the_build_prompt_is_a_minimal_suppressor_stub() {
         let text = OPENCODE_BUILD_PROMPT;
-        assert!(text.starts_with("You are OpenCode"), "{text}");
-        assert!(text.contains("You communicate in results"), "{text}");
         assert!(
-            text.contains("Only use `commentary` when you hit a genuine blocker"),
-            "{text}"
+            !text.trim().is_empty(),
+            "an empty prompt falsy-restores opencode's built-in narration prompt"
         );
-        assert!(text.contains("at most three short sentences"), "{text}");
+        assert!(text.starts_with("You are OpenCode"), "{text}");
         assert!(
-            text.contains("Between tool calls, emit no text"),
-            "the no-inter-tool-narration rule must survive edits: {text}"
+            text.contains("between tool calls"),
+            "the stub's second line — the top-slot silence rule — must survive edits: {text}"
+        );
+        assert!(
+            text.len() < 400,
+            "the stub must not regrow into a prompt fork ({} bytes): {text}",
+            text.len()
         );
         for narration in [
             "keeping the user clearly informed",
@@ -4011,6 +4062,7 @@ mod tests {
                 generation_id: String::new(),
                 full_content: String::new(),
                 pending_delta: String::new(),
+                last_narration: String::new(),
                 last_emit: Instant::now(),
             })),
             last_used: Mutex::new(Instant::now()),
@@ -4239,6 +4291,46 @@ mod tests {
         assert!(should_retry(&err, false, 1));
     }
 
+    /// Text the model streams BEFORE a tool call is a preamble, not the reply:
+    /// a new tool call hands it to the reasoning section and restarts the
+    /// reply buffer, so the visible reply is what follows the LAST tool call —
+    /// falling back to the model's only text when a turn ends on a tool call.
+    #[test]
+    fn pre_tool_text_is_reclassified_as_narration() {
+        let mut ts = TurnState {
+            generation_id: String::new(),
+            full_content: String::new(),
+            pending_delta: String::new(),
+            last_narration: String::new(),
+            last_emit: Instant::now(),
+        };
+        ts.reset("g1".to_string());
+        assert_eq!(ts.take_narration(), None, "nothing streamed → nothing to reclassify");
+
+        ts.full_content.push_str("Let me check the files.");
+        ts.pending_delta.push_str("files.");
+        assert_eq!(ts.take_narration().as_deref(), Some("Let me check the files."));
+        assert!(
+            ts.full_content.is_empty() && ts.pending_delta.is_empty(),
+            "the reply buffer restarts after the tool call"
+        );
+        assert_eq!(
+            ts.final_reply(),
+            "Let me check the files.",
+            "a turn ending on the tool call still shows the model's only text"
+        );
+
+        ts.full_content.push_str("Fixed the failing test.");
+        assert_eq!(
+            ts.final_reply(),
+            "Fixed the failing test.",
+            "text after the last tool call is the reply"
+        );
+
+        ts.reset("g2".to_string());
+        assert_eq!(ts.final_reply(), "", "reset clears the narration too");
+    }
+
     /// The spawn-time `session/load` replay window: no generation in flight →
     /// updates are dropped; a reset opens the gate.
     #[test]
@@ -4247,6 +4339,7 @@ mod tests {
             generation_id: String::new(),
             full_content: String::new(),
             pending_delta: String::new(),
+            last_narration: String::new(),
             last_emit: Instant::now(),
         };
         assert!(!ts.in_flight(), "fresh spawn: replay must be droppable");
