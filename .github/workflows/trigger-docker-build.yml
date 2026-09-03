@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - 'v*'
+  # Recovery path. The tag filter above is the ONLY trigger this workflow had, so a tag that
+  # did not match it (e.g. `0.139.0-patch-1`, missing the `v`) left NO way to build at all —
+  # the fix was to push another tag. Dispatch lets you build any existing ref, including a
+  # mistyped tag, by selecting it in the ref dropdown. See also tag-guard.yml, which makes the
+  # mistake visible instead of silent.
+  workflow_dispatch:
 
 run-name: 'Build os ${{ github.ref_name }}'
 
