@@ -2,11 +2,11 @@
   "version": 2,
   "lastUpdated": "2026-08-31",
   "summary": {
-    "totalCheckpoints": 708,
+    "totalCheckpoints": 711,
     "coveredCheckpoints": 669,
     "deprecatedCheckpoints": 16,
     "notReproducibleCheckpoints": 15,
-    "pendingCheckpoints": 8,
+    "pendingCheckpoints": 11,
     "percent": 100,
     "totalJourneys": 75,
     "activeJourneys": 74
@@ -3627,7 +3627,18 @@
       "id": "latex-math-rendering",
       "name": "LaTeX / Math Rendering",
       "spec": "61-latex-math-rendering.spec.ts",
-      "sourceFiles": ["lib/utils.ts", "components/markdown.tsx"],
+      "sourceFiles": [
+        "lib/utils.ts",
+        "components/markdown.tsx",
+        "components/markdown/markdown-components.tsx",
+        "components/markdown/markdown-image-component.tsx",
+        "lib/remark-latex-islands.ts",
+        "lib/remark-latex-line-breaks.ts",
+        "lib/latex-aware-blocks.ts",
+        "lib/rehype-verb-code.ts",
+        "lib/rehype-aligned-math.ts",
+        "lib/markdown-math-error-reporter.ts"
+      ],
       "checkpoints": [
         {
           "id": "latex-01",
@@ -3653,6 +3664,21 @@
           "id": "latex-05",
           "description": "Math then money on the same line (\"since $2x = 8$, each unit is $8 and the pair is $16.\") renders $2x = 8$ as KaTeX while $8 and $16 stay literal",
           "status": "covered"
+        },
+        {
+          "id": "latex-06",
+          "description": "Chat-bubble typography after the Streamdown migration (#2441): h1-h6 render at the bubble's scale (h1 20px against 14px body, monotonically decreasing through h6) and **bold** renders as a real <strong> at weight 700 so the [&_strong] utilities in ai-message-bubble.tsx and reasoning-section.tsx still bind",
+          "status": "pending"
+        },
+        {
+          "id": "latex-07",
+          "description": "Markdown images (components/markdown/markdown-image-component.tsx) clamp to max-h-96 and fall back to the 'Image unavailable' placeholder on load error, with no Streamdown hover download control",
+          "status": "pending"
+        },
+        {
+          "id": "latex-08",
+          "description": "Code-block chrome is identical across every fence origin (declared language, no language, indented, \\begin{verbatim} and \\verb-in-aligned recovered fences) and tables expose no fullscreen control",
+          "status": "pending"
         }
       ]
     },
