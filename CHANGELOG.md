@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.140.3](https://github.com/iblai/os/compare/v0.140.2...v0.140.3) (2026-09-04)
+
+### Bug Fixes
+
+* **embed:** accept auth data sent as a JSON string from the host ([c57f250](https://github.com/iblai/os/commit/c57f25056cb3eaecf251401ccc8312b855aec37f))
+
 ## [0.140.2](https://github.com/iblai/os/compare/v0.140.1...v0.140.2) (2026-09-04)
 
 ### Chores
