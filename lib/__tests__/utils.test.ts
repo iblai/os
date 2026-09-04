@@ -2737,6 +2737,40 @@ describe('saveUserObjectToLocalStorage - syncAuthDataToCookies coverage', () => 
     vi.clearAllMocks();
   });
 
+  it('does not write the shared auth cookies when embedded in an iframe', () => {
+    // The cookies live on the base domain, so an embed writing them mutates
+    // the host's auth state and drives a refresh loop between the frames.
+    Object.defineProperty(window, 'location', {
+      value: { hostname: 'sub.example.com' },
+      writable: true,
+      configurable: true,
+    });
+    const originalTop = window.top;
+    Object.defineProperty(window, 'top', {
+      value: {},
+      configurable: true,
+      writable: true,
+    });
+
+    try {
+      saveUserObjectToLocalStorage({
+        [LOCAL_STORAGE_KEYS.CURRENT_TENANT]: JSON.stringify({ key: 'demo' }),
+      });
+
+      expect(document.cookie).not.toContain('ibl_current_tenant');
+      // The embed still keeps its own copy.
+      expect(localStorageMock.getItem(LOCAL_STORAGE_KEYS.CURRENT_TENANT)).toBe(
+        JSON.stringify({ key: 'demo' }),
+      );
+    } finally {
+      Object.defineProperty(window, 'top', {
+        value: originalTop,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
+
   it('should sync current_tenant to cookies when present', () => {
     // Setup hostname with more than 2 parts to test baseDomain calculation
     Object.defineProperty(window, 'location', {

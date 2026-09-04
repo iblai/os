@@ -1480,8 +1480,17 @@ export function saveUserObjectToLocalStorage(userObject: object) {
     window.dispatchEvent(new StorageEvent('local-storage', { key }));
   }
 
-  // Sync auth data to cookies for cross-SPA synchronization
-  syncAuthDataToCookies(userObject as Record<string, any>);
+  // Sync auth data to cookies for cross-SPA synchronization.
+  //
+  // Never from inside an iframe. These cookies live on the base domain, so an
+  // embed writing them mutates the HOST's auth state: the host's poller reads
+  // "changes from another SPA", refreshes, re-sends its auth data to the
+  // embed, which saves it and rewrites the cookies again — a refresh loop
+  // between the two frames. The embed's tokens are its own; the host owns the
+  // shared cookies.
+  if (!isInIframe()) {
+    syncAuthDataToCookies(userObject as Record<string, any>);
+  }
 }
 
 export const maxDatasetFileSizeInMegaBytes = () => {
