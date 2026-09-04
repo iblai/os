@@ -127,6 +127,25 @@ overrides:
   '@puppeteer/browsers': '>=3.0.2'
 patchedDependencies:
   google-drive-picker@1.1.29: patches/google-drive-picker@1.1.29.patch
+  # Three missing Pandoc/markdown-it-katex rules for dollar-delimited text math:
+  #   1. A single `$` preceded by whitespace cannot close a span. Without it a
+  #      currency `$100-$200` earlier in a block pairs with the `$` opening a
+  #      later `$\ce{...}$`, typesetting the prose between them.
+  #   2. A `$`/`$$` span cannot cross a line ending. Without it a `$$` on one
+  #      line of a paragraph pairs with a `$$` many lines below, swallowing
+  #      every line in between (issue #2441). Only `mathText` is restricted;
+  #      `latexMathText` (`\[..\]`, `\(..\)`) and `mathFlow` (a `$$` fence on
+  #      its own line) are separate tokenizers and still span lines.
+  #   3. A closing dollar run stops as soon as it matches the opening run.
+  #      `close()` used to swallow the whole run before comparing lengths, so
+  #      `$a$$b$` (runs 1, 2, 1) saw a closing run of two, demoted it to body
+  #      data and closed on the final `$` with the invalid body `a$$b`. Checking
+  #      the length first leaves the second `$` of the `$$` unconsumed, so it
+  #      opens the next span and `$a$$b$` renders as two adjacent spans. The
+  #      `previous` guard is relaxed to match: a `$` may follow a `$` (only a
+  #      bare `\` is still refused), otherwise the second span could never open.
+  # Upstream issue drafted; drop this patch once it lands.
+  '@ziloen/remark-math@0.1.1': patches/@ziloen__remark-math@0.1.1.patch
 
 # trust iblai packages
 #
