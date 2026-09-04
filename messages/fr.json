@@ -632,7 +632,8 @@
     "addResources": "Ajouter des ressources",
     "description": "Ajoutez des connaissances pour aider votre agent à fournir des informations plus pertinentes. Les autres utilisateurs disposant d'un accès en modification peuvent réutiliser ces sources pour d'autres sujets.",
     "googleDrivePickerError": "Erreur du sélecteur Google Drive",
-    "forceClosePicker": "Forcer la fermeture du sélecteur"
+    "forceClosePicker": "Forcer la fermeture du sélecteur",
+    "notConfigured": "Non configuré pour ce locataire"
   },
   "datasetsTabDatasetItem": {
     "trainingDocumentUpdatedSuccess": "Document d'entraînement mis à jour avec succès",

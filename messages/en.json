@@ -632,7 +632,8 @@
     "addResources": "Add Resources",
     "description": "Add knowledge to help your agent provide more relevant insights. Others with edit access can reuse these sources for more topics.",
     "googleDrivePickerError": "Google Drive Picker Error",
-    "forceClosePicker": "Force Close Picker"
+    "forceClosePicker": "Force Close Picker",
+    "notConfigured": "Not configured for this tenant"
   },
   "datasetsTabDatasetItem": {
     "trainingDocumentUpdatedSuccess": "Training document updated successfully",

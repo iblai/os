@@ -18,6 +18,7 @@ const useOneDrivePicker = () => {
   const [onedriveAppId, setOnedriveAppId] = useState(null);
   const [fullDomain, setFullDomain] = useState<null | string>(null);
   const [isSDKLoaded, setIsSDKLoaded] = useState(false);
+  const [credentialsLoaded, setCredentialsLoaded] = useState(false);
 
   // Use RTK Query hooks
   const [getCredentials] = useLazyGetCredentialsQuery();
@@ -151,6 +152,7 @@ const useOneDrivePicker = () => {
         } catch (error) {
           console.error(JSON.stringify({ tenant: tenantKey, error }));
         }
+        setCredentialsLoaded(true);
       }
     };
 
@@ -258,6 +260,8 @@ const useOneDrivePicker = () => {
     pickOneDriveFile,
     onedriveAppId,
     isSDKLoaded,
+    credentialsLoaded,
+    isConfigured: Boolean(onedriveAppId),
   };
 };
 

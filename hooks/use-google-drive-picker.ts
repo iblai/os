@@ -333,6 +333,8 @@ const useGoogleDrivePicker = () => {
     forceClosePickerModal,
     pickerError,
     resetPickerState,
+    credentialsLoaded: credentialLoaded,
+    isConfigured: Boolean(credentials.client_id),
   };
 };
 

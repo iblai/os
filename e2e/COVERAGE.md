@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-09-01 | 708 checkpoints (669 covered, 8 pending/fixme, 15 not-reproducible in default env, 16 deprecated) | 75 journeys (74 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-09-02 | 719 checkpoints (680 covered, 8 pending/fixme, 15 not-reproducible in default env, 16 deprecated) | 77 journeys (76 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -1735,3 +1735,39 @@ no mentor and therefore needs no `MentorTracker`/cleanup.
 - [x] awi-07: An error frame with no `eos` clears the working indicator — the original hang bug
 - [x] awi-08: An `eos` frame for a different `session_id` than the session in view is ignored and does not clear the indicator (background-session scoping)
 - [x] awi-09: Exactly one avatar/name/timestamp agent message frame is ever on screen per turn, including across a `write_todos` turn where `AgentTodoList` also renders
+
+---
+
+## Journey 74: Dataset Cloud Pickers (3 checkpoints) — `journeys/74-dataset-cloud-pickers.spec.ts`
+
+**Source files:** `hooks/use-google-drive-picker.ts`, `hooks/use-one-drive-picker.ts`, `hooks/use-dropdox-picker.ts`, `components/modals/edit-mentor-modal/tabs/datasets-tab/add-resource-modal.tsx`
+
+Verifies the Google Drive, Microsoft OneDrive, and Dropbox buttons in the Add Resources modal. Each test creates a fresh mentor (matching journey 36 / 75 pattern), opens the Datasets tab → Add Resources modal, and asserts the behaviour the **tenant's own configuration** selects.
+
+A cloud picker only works when the tenant has OAuth credentials for that provider, looked up on modal mount via `GET .../orgs/<org>/integration-credential/?name=<provider>`. `e2e/utils/integration-credentials.ts` observes that live response and each checkpoint asserts the matching branch:
+
+- **credential present** — clicking opens the provider popup, asserted to reach `accounts.google.com`, `login.microsoftonline.com`, or `www.dropbox.com/chooser`
+- **credential absent** — the button is `disabled` and labelled "Not configured for this tenant"
+
+Both are real assertions about shipped behaviour, so the journey never silently skips and is meaningful on either kind of tenant. The disabled state shipped with this journey: the buttons previously rendered enabled and did nothing at all when clicked (the SDK was handed an empty client id), which read as a broken button — that is why all three checkpoints failed on `spa-tests-chrome-two`, the CI tenant, which has none of the three configured. Covers [iblai-platform#1677](https://github.com/iblai/iblai-platform/issues/1677).
+
+- [x] DSCP-74.1: Admin clicks Google Drive — popup at `accounts.google.com` when a `drive` credential exists, otherwise the button is disabled and labelled
+- [x] DSCP-74.2: Admin clicks Microsoft OneDrive — popup at `login.microsoftonline.com` when an `onedrive` credential exists, otherwise the button is disabled and labelled
+- [x] DSCP-74.3: Admin clicks Dropbox — popup at `www.dropbox.com/chooser` when a `dropbox` credential exists, otherwise the button is disabled and labelled
+
+---
+
+## Journey 75: Dataset Upload Types (8 checkpoints) — `journeys/75-dataset-upload-types.spec.ts`
+
+**Source files:** `components/modals/edit-mentor-modal/tabs/datasets-tab/add-resource-modal.tsx`, `components/modals/edit-mentor-modal/tabs/datasets-tab/resource-types.tsx`
+
+Uploads a real fixture file for each of the 8 local file-upload resource types available in the Add Resources modal: PowerPoint, DOCX, CSV, TXT, Audio, Video, Image, and Excel. **Each test first creates a fresh mentor via `createMentorPage.openAndCreate()`** (matching the journey 36 / Copy Mentor pattern) so uploads are made against a clean dataset list — pre-existing rows from other tests can't mask a missing upload. Then uses `DatasetsTab.uploadFile()` (the same generic helper used by the CSV and Markdown tests in journey 20) to execute the full modal flow — open Add Resources, click the resource type, `setInputFiles`, Submit, wait for network idle, close dialogs — then asserts the uploaded filename appears as a row in the dataset list within 15 s. A failed upload results in no row and an immediate hard-fail assertion. Covers the file-upload surface of [iblai-platform#1677](https://github.com/iblai/iblai-platform/issues/1677).
+
+- [x] DU-75.1: Admin uploads a PowerPoint (`.pptx`) file — `Title Lorem Ipsum.pptx` row appears in dataset list
+- [x] DU-75.2: Admin uploads a DOCX file — `audrey.docx` row appears in dataset list
+- [x] DU-75.3: Admin uploads a CSV file — `test-data.csv` row appears in dataset list
+- [x] DU-75.4: Admin uploads a TXT file — `outerHTML.txt` row appears in dataset list
+- [x] DU-75.5: Admin uploads an Audio file (`.mp3`) — `Fally_Ipupa` row appears in dataset list
+- [x] DU-75.6: Admin uploads a Video file (`.mp4`) — `IMG_4019` row appears in dataset list
+- [x] DU-75.7: Admin uploads an Image file (`.png`) — `acessibility png` row appears in dataset list
+- [x] DU-75.8: Admin uploads an Excel (`.xlsx`) file — `test-data.xlsx` row appears in dataset list

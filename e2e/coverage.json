@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-08-31",
+  "lastUpdated": "2026-09-02",
   "summary": {
-    "totalCheckpoints": 708,
-    "coveredCheckpoints": 669,
+    "totalCheckpoints": 719,
+    "coveredCheckpoints": 680,
     "deprecatedCheckpoints": 16,
     "notReproducibleCheckpoints": 15,
     "pendingCheckpoints": 8,
     "percent": 100,
-    "totalJourneys": 75,
-    "activeJourneys": 74
+    "totalJourneys": 77,
+    "activeJourneys": 76
   },
   "journeys": [
     {
@@ -4505,6 +4505,85 @@
           "id": "upi-10",
           "description": "sanitizePromptParam() (iblai-platform#2164): oversized ?prompt= (>4000 chars) is truncated to MAX_PROMPT_PARAM_LENGTH then re-trimmed; unit-covered in lib/__tests__/sanitize-prompt-param.test.ts \u2014 not e2e-reproducible without flake risk from very long query strings (URL length limits, page.goto/typing cost)",
           "status": "not-reproducible"
+        }
+      ]
+    },
+    {
+      "id": "dataset-cloud-pickers",
+      "name": "Dataset Cloud Pickers",
+      "spec": "74-dataset-cloud-pickers.spec.ts",
+      "sourceFiles": [
+        "hooks/use-google-drive-picker.ts",
+        "hooks/use-one-drive-picker.ts",
+        "hooks/use-dropdox-picker.ts",
+        "components/modals/edit-mentor-modal/tabs/datasets-tab/add-resource-modal.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "dscp-01",
+          "description": "Admin opens the Add Resources modal and clicks Google Drive - a popup opens at accounts.google.com when the tenant has a 'drive' integration credential, otherwise the button is disabled and labelled \"Not configured for this tenant\"",
+          "status": "covered"
+        },
+        {
+          "id": "dscp-02",
+          "description": "Admin opens the Add Resources modal and clicks Microsoft OneDrive - a popup opens at login.microsoftonline.com when the tenant has an 'onedrive' integration credential, otherwise the button is disabled and labelled \"Not configured for this tenant\"",
+          "status": "covered"
+        },
+        {
+          "id": "dscp-03",
+          "description": "Admin opens the Add Resources modal and clicks Dropbox - a popup opens at www.dropbox.com/chooser when the tenant has a 'dropbox' integration credential, otherwise the button is disabled and labelled \"Not configured for this tenant\"",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "dataset-upload-types",
+      "name": "Dataset Upload Types",
+      "spec": "75-dataset-upload-types.spec.ts",
+      "sourceFiles": [
+        "components/modals/edit-mentor-modal/tabs/datasets-tab/add-resource-modal.tsx",
+        "components/modals/edit-mentor-modal/tabs/datasets-tab/resource-types.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "du-01",
+          "description": "Admin uploads a PowerPoint (.pptx) file via the Add Resources modal and the file row appears in the dataset list",
+          "status": "covered"
+        },
+        {
+          "id": "du-02",
+          "description": "Admin uploads a DOCX file via the Add Resources modal and the file row appears in the dataset list",
+          "status": "covered"
+        },
+        {
+          "id": "du-03",
+          "description": "Admin uploads a CSV file via the Add Resources modal and the file row appears in the dataset list",
+          "status": "covered"
+        },
+        {
+          "id": "du-04",
+          "description": "Admin uploads a TXT file via the Add Resources modal and the file row appears in the dataset list",
+          "status": "covered"
+        },
+        {
+          "id": "du-05",
+          "description": "Admin uploads an Audio (.mp3) file via the Add Resources modal and the file row appears in the dataset list",
+          "status": "covered"
+        },
+        {
+          "id": "du-06",
+          "description": "Admin uploads a Video (.mp4) file via the Add Resources modal and the file row appears in the dataset list",
+          "status": "covered"
+        },
+        {
+          "id": "du-07",
+          "description": "Admin uploads an Image (.png) file via the Add Resources modal and the file row appears in the dataset list",
+          "status": "covered"
+        },
+        {
+          "id": "du-08",
+          "description": "Admin uploads an Excel (.xlsx) file via the Add Resources modal and the file row appears in the dataset list",
+          "status": "covered"
         }
       ]
     }
