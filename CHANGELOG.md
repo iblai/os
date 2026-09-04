@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.140.5](https://github.com/iblai/os/compare/v0.140.4...v0.140.5) (2026-09-04)
+
+### Bug Fixes
+
+* **embed:** do not write the shared auth cookies from inside an iframe ([4563352](https://github.com/iblai/os/commit/4563352d17cf3d11e3c05f39d341f4d4ea38add2))
+
 ## [0.140.4](https://github.com/iblai/os/compare/v0.140.3...v0.140.4) (2026-09-04)
 
 ### Bug Fixes
