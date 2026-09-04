@@ -48,15 +48,34 @@ use tokio::sync::{Mutex, RwLock};
 pub(crate) const IBLAI_INSTRUCTIONS: &str = "\
 # ibl.ai guidance
 
+- Emit no text between tool calls — no preambles like \"Let me check…\" or \
+\"I'll now…\", no progress notes after a tool result — call the next tool \
+directly. Text before a tool call is process narration and is never shown \
+as your reply; only what you say after your last tool call is.
 - Keep your visible replies terse and outcome-focused — HARD CAP: three \
 short sentences per reply, aim for one. Say the result of what the user \
 asked (\"Deployed at <url>\", \"Fixed the failing test\") or the one \
 obstacle blocking you and what you need — nothing else. Process narration, \
 plan restatements, step-by-step or file-by-file accounts, headings, bullet \
 lists and code blocks belong in your reasoning or nowhere, never in the \
-reply text. Emit no text between tool calls — no \"I will now…\", no \"X is \
-done, next I will…\" — call the next tool directly. Exceed the cap only when \
-the user explicitly asks for detail (an explanation, a report, a walkthrough).
+reply text. Exceed the cap only when \
+the user explicitly asks for detail (an explanation, a report, a walkthrough). \
+Never open with acknowledgements or framing (\"Done —\", \"Got it\", \"Great \
+question\") — start at the substance.
+- When the user's intent is action, implement it — run the tools and make \
+the change rather than posting a proposal or a plan. Resolve blockers \
+yourself when you can, and carry the task through to done in the same turn.
+- Prefer the smallest correct change: fewest new names, helpers and files. \
+Default to ASCII when editing or creating files, and keep code comments \
+rare and succinct — only where the code alone would cost the reader time.
+- For searching, prefer the Glob and Grep tools, and run independent tool \
+calls (especially file reads) in parallel. Never chain shell commands with \
+printed separators like `echo \"====\"` just to batch their output.
+- Git safety: the worktree may carry the user's own changes — NEVER revert \
+or undo changes you did not make, never run destructive commands like \
+`git reset --hard` or `git checkout --`, do not amend commits, and use \
+only non-interactive git. If unexpected changes conflict with your task, \
+stop and ask; otherwise leave them alone and continue.
 - Whenever an available skill covers the task at hand — especially the \
 iblai-vibe-* skills — you MUST invoke that skill (via the skill tool) before \
 improvising the same work by hand.
@@ -153,6 +172,7 @@ check and skip the deploy when nothing has changed since the last one, \
 reporting the existing live URL instead. Deploys cost the user credits and \
 minutes, so redeploying identical content is waste — the skill carries the \
 mechanics.
+- Reminder: no text before or between tool calls; one short reply at the end.
 ";
 
 /// Everything the proxy needs to serve one Code session.
@@ -1723,6 +1743,25 @@ mod tests {
                 && text.contains("Emit no text between tool calls")
                 && text.contains("explicitly asks for detail"),
             "the result-or-obstacle-only rule must survive edits: {text}"
+        );
+        assert!(
+            text.starts_with("# ibl.ai guidance\n\n- Emit no text between tool calls")
+                && text.contains("never shown as your reply")
+                && text.trim_end().ends_with("one short reply at the end."),
+            "the silence contract must open the guidance and a reminder must close it: {text}"
+        );
+        assert!(
+            text.contains("\"Done —\"")
+                && text.contains("implement it")
+                && text.contains("smallest correct change")
+                && text.contains("ASCII")
+                && text.contains("Glob and Grep")
+                && text.contains("in parallel")
+                && text.contains("NEVER revert")
+                && text.contains("git reset --hard")
+                && text.contains("non-interactive git"),
+            "the working-discipline rules (moved here from the retired build-prompt fork) \
+must survive edits: {text}"
         );
         assert!(
             text.contains("IBLAI_API_KEY")

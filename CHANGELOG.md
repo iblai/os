@@ -1,70 +1,117 @@
 # Changelog
 
+## [0.140.6](https://github.com/iblai/os/compare/v0.140.5...v0.140.6) (2026-09-04)
+
+### Bug Fixes
+
+* **embed:** only save and reload when the host's auth data actually changed ([6a49601](https://github.com/iblai/os/commit/6a496012fdb7547622fb41eb203a1c161edad03d)), closes [os#484](https://github.com/iblai/os/issues/484)
+
+## [0.140.5](https://github.com/iblai/os/compare/v0.140.4...v0.140.5) (2026-09-04)
+
+### Bug Fixes
+
+* **embed:** do not write the shared auth cookies from inside an iframe ([4563352](https://github.com/iblai/os/commit/4563352d17cf3d11e3c05f39d341f4d4ea38add2))
+
+## [0.140.4](https://github.com/iblai/os/compare/v0.140.3...v0.140.4) (2026-09-04)
+
+### Bug Fixes
+
+* **e2e:** fixing e2e tests for 66 and 71 journeys ([74ac324](https://github.com/iblai/os/commit/74ac32408261f1555741ac487d3f5c58461efb2f))
+
+## [0.140.3](https://github.com/iblai/os/compare/v0.140.2...v0.140.3) (2026-09-04)
+
+### Bug Fixes
+
+* **embed:** accept auth data sent as a JSON string from the host ([c57f250](https://github.com/iblai/os/commit/c57f25056cb3eaecf251401ccc8312b855aec37f))
+
+## [0.140.2](https://github.com/iblai/os/compare/v0.140.1...v0.140.2) (2026-09-04)
+
+### Chores
+
+* **deps:** bump iblai-js to 2.8.3 ([a362126](https://github.com/iblai/os/commit/a3621266f019da211272c3209498a9bf8b7728ec))
+* **deps:** bump iblai-js to 2.8.4 ([9fd9a3b](https://github.com/iblai/os/commit/9fd9a3bff5c7561a1a37e50e0dc1ac1e1ce6e3c9))
+
+## [0.140.1](https://github.com/iblai/os/compare/v0.140.0...v0.140.1) (2026-09-03)
+
+### Bug Fixes
+
+* **embed:** fall back to '*' when the referrer is our own origin ([ae68842](https://github.com/iblai/os/commit/ae68842f43db9b44133bf19f174dddd44b3bc8cc))
+
+## [0.140.0](https://github.com/iblai/os/compare/v0.139.0...v0.140.0) (2026-09-03)
+
+### Features
+
+* **code-mode:** removed pre-tool narration in the reply ([73e8962](https://github.com/iblai/os/commit/73e896299a328a7691f857b8f99c2e8a546c9f68))
+
+### Chores
+
+* **tauri:** release app-v0.95.19 ([6da75d2](https://github.com/iblai/os/commit/6da75d2ff824224af37ebe8b33b6f0d6b9a4b180))
+
 ## [0.139.0](https://github.com/iblai/os/compare/v0.138.2...v0.139.0) (2026-09-03)
 
 ### Features
 
-* **chat:** recover from chat 401s by refreshing the DM token ([ca9c23a](https://github.com/iblai/os/commit/ca9c23a6b9590841211380fa76e55089973fde24))
+- **chat:** recover from chat 401s by refreshing the DM token ([ca9c23a](https://github.com/iblai/os/commit/ca9c23a6b9590841211380fa76e55089973fde24))
 
 ### Chores
 
-* **deps:** bump iblai-js to 2.8.1 ([b0bd262](https://github.com/iblai/os/commit/b0bd26282300425110bde8bc31070c8e67b20dcc))
-* **deps:** lift the browserslist and fast-uri floors past their advisories ([f2405b3](https://github.com/iblai/os/commit/f2405b330ac0ec56b77fa6f5a1a66ae4e52de5bb))
+- **deps:** bump iblai-js to 2.8.1 ([b0bd262](https://github.com/iblai/os/commit/b0bd26282300425110bde8bc31070c8e67b20dcc))
+- **deps:** lift the browserslist and fast-uri floors past their advisories ([f2405b3](https://github.com/iblai/os/commit/f2405b330ac0ec56b77fa6f5a1a66ae4e52de5bb))
 
 ## [0.138.2](https://github.com/iblai/os/compare/v0.138.1...v0.138.2) (2026-09-02)
 
 ### Bug Fixes
 
-* **pr-gate:** defer only to a sibling run that is still running ([4573a38](https://github.com/iblai/os/commit/4573a38b452eeea108335d941e122fa86cfcb824)), closes [lms#232](https://github.com/iblai/lms/issues/232)
+- **pr-gate:** defer only to a sibling run that is still running ([4573a38](https://github.com/iblai/os/commit/4573a38b452eeea108335d941e122fa86cfcb824)), closes [lms#232](https://github.com/iblai/lms/issues/232)
 
 ## [0.138.1](https://github.com/iblai/os/compare/v0.138.0...v0.138.1) (2026-09-02)
 
 ### Bug Fixes
 
-* **pr-gate:** derive the verdict from the E2E job, not the workflow conclusion ([52500ff](https://github.com/iblai/os/commit/52500ffac2c662a6a5ebbd73f3c41a98c0dca16e)), closes [lms#232](https://github.com/iblai/lms/issues/232)
+- **pr-gate:** derive the verdict from the E2E job, not the workflow conclusion ([52500ff](https://github.com/iblai/os/commit/52500ffac2c662a6a5ebbd73f3c41a98c0dca16e)), closes [lms#232](https://github.com/iblai/lms/issues/232)
 
 ## [0.138.0](https://github.com/iblai/os/compare/v0.137.1...v0.138.0) (2026-09-02)
 
 ### Features
 
-* **code-mode:** ships the guidance as AGENTS.md instead of proxy body injection ([543e4cd](https://github.com/iblai/os/commit/543e4cd4934a3b7edad6ac5dc21c1319ea47d2c4))
+- **code-mode:** ships the guidance as AGENTS.md instead of proxy body injection ([543e4cd](https://github.com/iblai/os/commit/543e4cd4934a3b7edad6ac5dc21c1319ea47d2c4))
 
 ### Chores
 
-* **tauri:** release app-v0.95.18 ([c54d361](https://github.com/iblai/os/commit/c54d361d16f59beeef746744c0248a9943eef85f))
+- **tauri:** release app-v0.95.18 ([c54d361](https://github.com/iblai/os/commit/c54d361d16f59beeef746744c0248a9943eef85f))
 
 ### Tests
 
-* **code-mode:** prove the pinned opencode loads the AGENTS.md guidance on every agent turn ([03be8ef](https://github.com/iblai/os/commit/03be8ef22f9e370c7858a3cc548ad2880d71e98e))
+- **code-mode:** prove the pinned opencode loads the AGENTS.md guidance on every agent turn ([03be8ef](https://github.com/iblai/os/commit/03be8ef22f9e370c7858a3cc548ad2880d71e98e))
 
 ## [0.137.1](https://github.com/iblai/os/compare/v0.137.0...v0.137.1) (2026-09-01)
 
 ### Performance
 
-* **bundle:** lazy-load syntax highlighter and LiveKit off the main chat path ([05844e9](https://github.com/iblai/os/commit/05844e9429c4f7d7b745f6a8bca564709cca6296))
+- **bundle:** lazy-load syntax highlighter and LiveKit off the main chat path ([05844e9](https://github.com/iblai/os/commit/05844e9429c4f7d7b745f6a8bca564709cca6296))
 
 ## [0.137.0](https://github.com/iblai/os/compare/v0.136.1...v0.137.0) (2026-09-01)
 
 ### Features
 
-* **chat:** add the working indicator component ([8620fab](https://github.com/iblai/os/commit/8620faba413b9dbc9d447f738d7b1bf0d591ec4d))
-* **chat:** show the working indicator for the in-flight turn ([cfc0f00](https://github.com/iblai/os/commit/cfc0f00837f59a17be307856af02e42ab98983d5))
-* **i18n:** add working indicator copy ([230dfe5](https://github.com/iblai/os/commit/230dfe5f0f3c36a2f54004fe6c2fb57fba36f93f))
+- **chat:** add the working indicator component ([8620fab](https://github.com/iblai/os/commit/8620faba413b9dbc9d447f738d7b1bf0d591ec4d))
+- **chat:** show the working indicator for the in-flight turn ([cfc0f00](https://github.com/iblai/os/commit/cfc0f00837f59a17be307856af02e42ab98983d5))
+- **i18n:** add working indicator copy ([230dfe5](https://github.com/iblai/os/commit/230dfe5f0f3c36a2f54004fe6c2fb57fba36f93f))
 
 ### Refactors
 
-* **chat:** extract the agent message frame ([5531d0c](https://github.com/iblai/os/commit/5531d0c5744b25f5283e1adaa93f601f925d4113))
-* **chat:** let the disclosure rows report their own liveness ([593d0d5](https://github.com/iblai/os/commit/593d0d514a360e0fe86034988eb022d17f68e434))
+- **chat:** extract the agent message frame ([5531d0c](https://github.com/iblai/os/commit/5531d0c5744b25f5283e1adaa93f601f925d4113))
+- **chat:** let the disclosure rows report their own liveness ([593d0d5](https://github.com/iblai/os/commit/593d0d514a360e0fe86034988eb022d17f68e434))
 
 ### Styles
 
-* **changelog:** apply prettier formatting ([022f689](https://github.com/iblai/os/commit/022f689ca78e4078e0d4f3d4a21f48945c257050))
+- **changelog:** apply prettier formatting ([022f689](https://github.com/iblai/os/commit/022f689ca78e4078e0d4f3d4a21f48945c257050))
 
 ### Tests
 
-* **e2e:** cover the agent working indicator ([6d64c73](https://github.com/iblai/os/commit/6d64c731f91cbf1e2ba5fbb820906cb0475195ae))
-* **e2e:** give journey 50 its own mentor instead of an auto-resolved one ([0b9b068](https://github.com/iblai/os/commit/0b9b068b9ae29923f3f7fa5fe901d45d2e5f2d6e))
-* **e2e:** stop journey 50's fast path treating a "user" source as broken ([a335d6b](https://github.com/iblai/os/commit/a335d6b202732c45c062f6807c858d01c7175862))
+- **e2e:** cover the agent working indicator ([6d64c73](https://github.com/iblai/os/commit/6d64c731f91cbf1e2ba5fbb820906cb0475195ae))
+- **e2e:** give journey 50 its own mentor instead of an auto-resolved one ([0b9b068](https://github.com/iblai/os/commit/0b9b068b9ae29923f3f7fa5fe901d45d2e5f2d6e))
+- **e2e:** stop journey 50's fast path treating a "user" source as broken ([a335d6b](https://github.com/iblai/os/commit/a335d6b202732c45c062f6807c858d01c7175862))
 
 ## [0.136.1](https://github.com/iblai/os/compare/v0.136.0...v0.136.1) (2026-09-01)
 
