@@ -65,7 +65,19 @@ export default defineConfig({
     // e2e-tauri/wdio.conf.ts) are end-to-end suites that need a real browser /
     // a launched Tauri binary. Vitest would otherwise collect their `.spec.ts`
     // files and fail them for lack of a WebDriver session.
-    exclude: [...configDefaults.exclude, 'e2e/**', 'e2e-tauri/**'],
+    //
+    // `scripts/build-gallery.test.tsx` is not a test either: it is the
+    // generator for public/markdown-gallery.html, and it reads the compiled
+    // CSS out of `.next/static/css` so the page looks like the real app. CI
+    // runs unit tests without building, so collecting it here would fail on a
+    // missing build rather than on anything about the code. Run it on demand
+    // with `pnpm gallery`, which builds first.
+    exclude: [
+      ...configDefaults.exclude,
+      'e2e/**',
+      'e2e-tauri/**',
+      'scripts/build-gallery.test.tsx',
+    ],
     server: {
       deps: {
         inline: true,

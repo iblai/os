@@ -1,5 +1,105 @@
 # Changelog
 
+## [0.141.0](https://github.com/iblai/os/compare/v0.140.6...v0.141.0) (2026-09-04)
+
+### Features
+
+* **markdown:** convert document-mode LaTeX into markdown nodes ([8ee6fdc](https://github.com/iblai/os/commit/8ee6fdcc9dd02f09611ab657a1bdb8c5eeb472a4)), closes [#2441](https://github.com/iblai/os/issues/2441)
+* **markdown:** render document-mode LaTeX in chat ([c310931](https://github.com/iblai/os/commit/c310931b75b2c865c98a7a7284a29870809aee3c)), closes [#2441](https://github.com/iblai/os/issues/2441)
+* **markdown:** report KaTeX render failures to Sentry ([aef1a34](https://github.com/iblai/os/commit/aef1a34cfc8d8e75747317c99dfc78815103667a))
+* **markdown:** report silent LaTeX conversion failures ([4495323](https://github.com/iblai/os/commit/4495323758e6c8f25e7d6979a624b8486f922e79)), closes [#2441](https://github.com/iblai/os/issues/2441)
+* **markdown:** wrap bare-& display math in \begin{aligned} ([782f12d](https://github.com/iblai/os/commit/782f12dc9d4891d1dab7b282bf99b18f20bdd1d3))
+
+### Bug Fixes
+
+* **canvas:** sanitise markdownToHtml output ([4296621](https://github.com/iblai/os/commit/4296621e96ef5537fbf43dcebe3f50bc15b24dc4)), closes [#2441](https://github.com/iblai/os/issues/2441)
+* **markdown:** keep the gallery generator out of the unit suite ([afa72e8](https://github.com/iblai/os/commit/afa72e80a3f594777cd881d5897c607485ac9cfd)), closes [#2441](https://github.com/iblai/os/issues/2441)
+* **markdown:** restore chat-bubble typography, lists and images ([32b69a2](https://github.com/iblai/os/commit/32b69a2fb170a7c74bacf43adc7badb1c1e0118c)), closes [#2441](https://github.com/iblai/os/issues/2441)
+
+### Refactors
+
+* **canvas:** move markdownToHtml from marked to unified ([5feb2ff](https://github.com/iblai/os/commit/5feb2fff75ac22c3d5e0d37391753fe26730ebb1))
+* **markdown:** delete the hand-rolled LaTeX preprocessor ([e2577d9](https://github.com/iblai/os/commit/e2577d9ee33f89a3a0a8dda921c7ae934ca2d629))
+* **markdown:** render chat with Streamdown ([f37cf74](https://github.com/iblai/os/commit/f37cf7464f83c9dc251d5630f941ba3ee4fd3629))
+
+### Chores
+
+* **markdown:** add a render gallery generator ([2a9ce4f](https://github.com/iblai/os/commit/2a9ce4f1febe833fb762fe4a857bc0f0bc1e3fdc))
+* **tailwind:** drop the dead streamdown content array ([6e8c37f](https://github.com/iblai/os/commit/6e8c37f72bf3827b290cb8809a0c6b6fa0de7f96)), closes [#2441](https://github.com/iblai/os/issues/2441)
+
+### Documentation
+
+* **e2e:** refresh journey 61 for the Streamdown pipeline ([5b9c074](https://github.com/iblai/os/commit/5b9c07491a4491738c6481b49a8b34357965f1b6)), closes [#2441](https://github.com/iblai/os/issues/2441)
+
+### Tests
+
+* **canvas:** pin the math round-trip through TipTap ([c4d73ae](https://github.com/iblai/os/commit/c4d73ae60d0edbe8c3dd2805113017b715ea6970)), closes [#2441](https://github.com/iblai/os/issues/2441)
+* **markdown:** grow the render gallery and show canvas beside chat ([ae2cf56](https://github.com/iblai/os/commit/ae2cf5653b7d9b53a719f868d43b06cb642baa4b)), closes [#2441](https://github.com/iblai/os/issues/2441)
+* **markdown:** rebuild the LaTeX corpus against the new pipeline ([b2b830e](https://github.com/iblai/os/commit/b2b830e4df049b3d937e26da741af6f85cbb7c59))
+
+### Build
+
+* **deps:** add rehype-sanitize and @types/mdast ([d869554](https://github.com/iblai/os/commit/d86955449bd29bd9ca27afb1d46a4432e831f166)), closes [#2441](https://github.com/iblai/os/issues/2441)
+* **markdown:** swap the markdown stack to Streamdown and @ziloen/remark-math ([386df85](https://github.com/iblai/os/commit/386df856be7e293c709e5b9458ea21f97152b686))
+
+## [0.140.6](https://github.com/iblai/os/compare/v0.140.5...v0.140.6) (2026-09-04)
+
+### Bug Fixes
+
+* **embed:** only save and reload when the host's auth data actually changed ([6a49601](https://github.com/iblai/os/commit/6a496012fdb7547622fb41eb203a1c161edad03d)), closes [os#484](https://github.com/iblai/os/issues/484)
+
+## [0.140.5](https://github.com/iblai/os/compare/v0.140.4...v0.140.5) (2026-09-04)
+
+### Bug Fixes
+
+* **embed:** do not write the shared auth cookies from inside an iframe ([4563352](https://github.com/iblai/os/commit/4563352d17cf3d11e3c05f39d341f4d4ea38add2))
+
+## [0.140.4](https://github.com/iblai/os/compare/v0.140.3...v0.140.4) (2026-09-04)
+
+### Bug Fixes
+
+* **e2e:** fixing e2e tests for 66 and 71 journeys ([74ac324](https://github.com/iblai/os/commit/74ac32408261f1555741ac487d3f5c58461efb2f))
+
+## [0.140.3](https://github.com/iblai/os/compare/v0.140.2...v0.140.3) (2026-09-04)
+
+### Bug Fixes
+
+* **embed:** accept auth data sent as a JSON string from the host ([c57f250](https://github.com/iblai/os/commit/c57f25056cb3eaecf251401ccc8312b855aec37f))
+
+## [0.140.2](https://github.com/iblai/os/compare/v0.140.1...v0.140.2) (2026-09-04)
+
+### Chores
+
+* **deps:** bump iblai-js to 2.8.3 ([a362126](https://github.com/iblai/os/commit/a3621266f019da211272c3209498a9bf8b7728ec))
+* **deps:** bump iblai-js to 2.8.4 ([9fd9a3b](https://github.com/iblai/os/commit/9fd9a3bff5c7561a1a37e50e0dc1ac1e1ce6e3c9))
+
+## [0.140.1](https://github.com/iblai/os/compare/v0.140.0...v0.140.1) (2026-09-03)
+
+### Bug Fixes
+
+* **embed:** fall back to '*' when the referrer is our own origin ([ae68842](https://github.com/iblai/os/commit/ae68842f43db9b44133bf19f174dddd44b3bc8cc))
+
+## [0.140.0](https://github.com/iblai/os/compare/v0.139.0...v0.140.0) (2026-09-03)
+
+### Features
+
+* **code-mode:** removed pre-tool narration in the reply ([73e8962](https://github.com/iblai/os/commit/73e896299a328a7691f857b8f99c2e8a546c9f68))
+
+### Chores
+
+* **tauri:** release app-v0.95.19 ([6da75d2](https://github.com/iblai/os/commit/6da75d2ff824224af37ebe8b33b6f0d6b9a4b180))
+
+## [0.139.0](https://github.com/iblai/os/compare/v0.138.2...v0.139.0) (2026-09-03)
+
+### Features
+
+- **chat:** recover from chat 401s by refreshing the DM token ([ca9c23a](https://github.com/iblai/os/commit/ca9c23a6b9590841211380fa76e55089973fde24))
+
+### Chores
+
+- **deps:** bump iblai-js to 2.8.1 ([b0bd262](https://github.com/iblai/os/commit/b0bd26282300425110bde8bc31070c8e67b20dcc))
+- **deps:** lift the browserslist and fast-uri floors past their advisories ([f2405b3](https://github.com/iblai/os/commit/f2405b330ac0ec56b77fa6f5a1a66ae4e52de5bb))
+
 ## [0.138.2](https://github.com/iblai/os/compare/v0.138.1...v0.138.2) (2026-09-02)
 
 ### Bug Fixes
