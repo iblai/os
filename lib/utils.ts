@@ -6,11 +6,22 @@ import rehypeRemark from 'rehype-remark';
 import remarkStringify from 'remark-stringify';
 import remarkGfm from 'remark-gfm';
 import { remark } from 'remark';
-import { Marked } from 'marked';
-import markedKatex from 'marked-katex-extension';
-import { gfmHeadingId } from 'marked-gfm-heading-id';
+import { unified } from 'unified';
+import remarkParse from 'remark-parse';
+import remarkRehype from 'remark-rehype';
+import rehypeRaw from 'rehype-raw';
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
+import rehypeKatex from 'rehype-katex';
+import rehypeStringify from 'rehype-stringify';
+import zilMath from '@ziloen/remark-math';
+import { rehypeAlignedMath } from './rehype-aligned-math';
+import { rehypeVerbCode } from './rehype-verb-code';
+import { remarkLatexIslands } from './remark-latex-islands';
+import { remarkLatexLineBreaks } from './remark-latex-line-breaks';
+import { rehypeReportMathErrors } from './markdown-math-error-reporter';
+import { KATEX_ERROR_COLOR } from './katex-options';
+import 'katex/contrib/mhchem';
 
-import { preprocessLaTeX } from './preprocess-latex';
 import { normalizeListIndentation } from './normalize-list-indentation';
 import {
   LOCAL_STORAGE_KEYS,
@@ -1335,20 +1346,52 @@ const linkifyHtml = (html: string): string => {
   return container.innerHTML;
 };
 
-// Configure marked instance with all extensions for comprehensive markdown support
-const configuredMarked = new Marked(
-  markedKatex({
-    throwOnError: false,
-    output: 'htmlAndMathml', // Accessibility-friendly output with MathML fallback
-  }),
-  gfmHeadingId(),
-  // No highlight extension: TipTap drops newline text nodes between highlight
-  // spans, merging code lines (issue #2109), and no consumer renders the spans.
-  {
-    gfm: true, // GitHub Flavored Markdown (tables, strikethrough, task lists)
-    breaks: false, // Don't convert \n to <br>
+// The LaTeX and maths stack is the chat renderer's (components/markdown.tsx),
+// in the same order -- @ziloen/remark-math, remarkLatexIslands,
+// remarkLatexLineBreaks, then rehypeVerbCode, rehypeAlignedMath, rehype-katex
+// and the telemetry pass -- so a formula resolves identically on both paths.
+// The rest deliberately differs, and the differences are visible:
+//   - no remark-breaks: canvas keeps the old `marked` `breaks: false`
+//     behaviour, so a single newline is a space here and a <br> in chat;
+//   - no Streamdown codeMeta: canvas has no code-fence metadata to read;
+//   - no rehype-harden: chat's raw -> sanitize -> harden chain ends with
+//     harden's link/image origin policy, which canvas does not need (it has
+//     no interstitial and its links open through the editor);
+//   - the whole string is parsed in one piece, where chat block-splits it
+//     first with parseLatexAwareBlocks.
+// Built once at module scope.
+// Streamdown's own sanitiser schema, so the two paths allow the same HTML.
+// `clobberPrefix: ''` keeps heading/footnote ids unprefixed, and `tel:` is
+// permitted for parity with the chat renderer's urlTransform.
+const sanitizeSchema = {
+  ...defaultSchema,
+  clobberPrefix: '',
+  protocols: {
+    ...defaultSchema.protocols,
+    href: [...(defaultSchema.protocols?.href ?? []), 'tel'],
   },
-);
+};
+
+const markdownHtmlProcessor = unified()
+  .use(remarkParse)
+  .use(remarkGfm)
+  .use(zilMath)
+  .use(remarkLatexIslands)
+  .use(remarkLatexLineBreaks)
+  .use(remarkRehype, { allowDangerousHtml: true })
+  .use(rehypeRaw)
+  // Must sit between rehype-raw and rehype-katex, exactly as it does in
+  // Streamdown: raw HTML from the message is scrubbed here, while KaTeX's own
+  // markup is generated afterwards and so is never subject to the schema
+  // (defaultSchema would strip its MathML and class names).
+  .use(rehypeSanitize, sanitizeSchema)
+  .use(rehypeVerbCode)
+  .use(rehypeAlignedMath)
+  // htmlAndMathml keeps the <annotation> element the canvas math/export
+  // consumers read back, and is accessibility-friendly.
+  .use(rehypeKatex, { output: 'htmlAndMathml', errorColor: KATEX_ERROR_COLOR })
+  .use(rehypeReportMathErrors, { path: 'canvas' })
+  .use(rehypeStringify, { allowDangerousHtml: true });
 
 export function markdownToHtml(markdownText: string) {
   if (!markdownText || typeof markdownText !== 'string') {
@@ -1356,13 +1399,12 @@ export function markdownToHtml(markdownText: string) {
   }
 
   try {
-    // Pre-process to fix common markdown issues and convert LaTeX environments
+    // Pre-process to fix common markdown issues
     const cleanedMarkdown = normalizeListIndentation(
-      preprocessLaTeX(preprocessMarkdownForHtml(markdownText)),
+      preprocessMarkdownForHtml(markdownText),
     );
 
-    const result = configuredMarked.parse(cleanedMarkdown);
-    const html = typeof result === 'string' ? result : String(result);
+    const html = String(markdownHtmlProcessor.processSync(cleanedMarkdown));
     return linkifyHtml(html);
   } catch (error) {
     /* istanbul ignore next -- @preserve defensive error handling */

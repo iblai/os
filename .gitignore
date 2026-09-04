@@ -98,3 +98,7 @@ e2e/playwright/.auth
 .pi
 .npmrc.backup
 CLAUDE.local.md
+
+# Generated render gallery (scripts/build-gallery.test.tsx) — a ~1MB build
+# artifact regenerated on demand, never committed.
+public/markdown-gallery.html
