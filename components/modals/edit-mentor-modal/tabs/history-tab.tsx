@@ -56,10 +56,20 @@ import { useParams } from 'next/navigation';
 import { useUsername } from '@/hooks/use-user';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ANONYMOUS_USERNAME } from '@/lib/constants';
+import {
+  HistoryAttachments,
+  normalizeHistoryFiles,
+  type HistoryFile,
+} from './history-attachments';
 
 interface Conversation {
   id: string;
-  messages: Array<{ human: string; ai: string }>;
+  messages: Array<{
+    human: string;
+    ai: string;
+    human_files?: HistoryFile[];
+    ai_files?: HistoryFile[];
+  }>;
   topics: Array<{ name: string }>;
   sentiment: string;
   mentor: string;
@@ -516,9 +526,16 @@ export function HistoryTab() {
                         addSuffix: true,
                       },
                     );
+                    // A turn can be an upload with no text, in which case the
+                    // attachment name is the only meaningful title we have.
+                    const firstAttachmentName = normalizeHistoryFiles(
+                      firstMessage?.human_files,
+                    )[0]?.fileName;
                     const title = firstMessage?.human
                       ? textTruncate(firstMessage.human, 50)
-                      : t('conversationFallbackTitle');
+                      : firstAttachmentName
+                        ? textTruncate(firstAttachmentName, 50)
+                        : t('conversationFallbackTitle');
                     const preview = firstMessage?.ai
                       ? textTruncate(firstMessage.ai, 60)
                       : t('noResponseAvailable');
@@ -619,6 +636,10 @@ export function HistoryTab() {
                               <p className="mt-1 text-sm whitespace-pre-line text-gray-500">
                                 {message.human}
                               </p>
+                              <HistoryAttachments
+                                files={message.human_files}
+                                idPrefix={`detail-human-${index}`}
+                              />
                             </div>
                           </div>
 
@@ -635,6 +656,10 @@ export function HistoryTab() {
                               <div className="mt-1 text-sm text-gray-500">
                                 <Markdown>{message.ai}</Markdown>
                               </div>
+                              <HistoryAttachments
+                                files={message.ai_files}
+                                idPrefix={`detail-ai-${index}`}
+                              />
                             </div>
                           </div>
                         </div>
@@ -751,6 +776,10 @@ export function HistoryTab() {
                         <p className="mt-1 text-sm whitespace-pre-line text-gray-900">
                           {message.human}
                         </p>
+                        <HistoryAttachments
+                          files={message.human_files}
+                          idPrefix={`preview-human-${index}`}
+                        />
                       </div>
                     </div>
 
@@ -767,6 +796,10 @@ export function HistoryTab() {
                         <div className="mt-1 text-sm text-gray-900">
                           <Markdown>{message.ai}</Markdown>
                         </div>
+                        <HistoryAttachments
+                          files={message.ai_files}
+                          idPrefix={`preview-ai-${index}`}
+                        />
                       </div>
                     </div>
                   </div>
