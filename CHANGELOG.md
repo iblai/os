@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.140.4](https://github.com/iblai/os/compare/v0.140.3...v0.140.4) (2026-09-04)
+
+### Bug Fixes
+
+* **e2e:** fixing e2e tests for 66 and 71 journeys ([74ac324](https://github.com/iblai/os/commit/74ac32408261f1555741ac487d3f5c58461efb2f))
+
 ## [0.140.3](https://github.com/iblai/os/compare/v0.140.2...v0.140.3) (2026-09-04)
 
 ### Bug Fixes
