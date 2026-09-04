@@ -81,7 +81,7 @@
     "@tauri-apps/plugin-opener": "2.5.3",
     "@tauri-apps/plugin-os": "2.3.2",
     "@tauri-apps/plugin-shell": "2.3.4",
-    "@tiptap/core": "2.27.2",
+    "@tiptap/core": "3.30.4",
     "@tiptap/extension-heading": "2.27.2",
     "@tiptap/extension-highlight": "2.27.2",
     "@tiptap/extension-link": "2.27.2",
