@@ -138,10 +138,24 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           return;
         }
       }
-      if (payload?.axd_token) {
-        saveUserObjectToLocalStorage(payload);
-        window.location.reload();
+      if (!payload?.axd_token) {
+        return;
       }
+
+      // The host re-sends its auth data every time we announce ourselves
+      // (`ready`/`loaded`), and saving it reloads us — which announces us
+      // again. Acting on an identical payload therefore loops forever: save,
+      // reload, receive the same data, save. Only act on a real change.
+      const unchanged =
+        localStorage.getItem('axd_token') === payload.axd_token &&
+        localStorage.getItem('dm_token') === payload.dm_token &&
+        localStorage.getItem('tenant') === payload.tenant;
+      if (unchanged) {
+        return;
+      }
+
+      saveUserObjectToLocalStorage(payload);
+      window.location.reload();
     },
   });
 
