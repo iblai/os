@@ -126,8 +126,20 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   useIframeMessageHandler({
     handlers,
     defaultHandler: (data) => {
-      if (data.axd_token) {
-        saveUserObjectToLocalStorage(data);
+      // agent-ai sends auth data either as an object (`userObject`) or as a
+      // JSON string (`iblData`, `JSON.stringify(localStorage)`). Only the
+      // object form was handled, so every string-form reply — including the
+      // one answering a `tenantSwitch` — was dropped without a trace.
+      let payload = data;
+      if (typeof payload === 'string') {
+        try {
+          payload = JSON.parse(payload);
+        } catch {
+          return;
+        }
+      }
+      if (payload?.axd_token) {
+        saveUserObjectToLocalStorage(payload);
         window.location.reload();
       }
     },
