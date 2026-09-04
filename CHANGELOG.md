@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.140.6](https://github.com/iblai/os/compare/v0.140.5...v0.140.6) (2026-09-04)
+
+### Bug Fixes
+
+* **embed:** only save and reload when the host's auth data actually changed ([6a49601](https://github.com/iblai/os/commit/6a496012fdb7547622fb41eb203a1c161edad03d)), closes [os#484](https://github.com/iblai/os/issues/484)
+
 ## [0.140.5](https://github.com/iblai/os/compare/v0.140.4...v0.140.5) (2026-09-04)
 
 ### Bug Fixes
