@@ -14,7 +14,7 @@ index 6091c520d82832e267b0276ab9cec7df427e6ec8..317a61d461652dcc3579c9dc6a6652ef
  		} else result.push(next);
  	}
  	return result;
-@@ -283,10 +286,16 @@ function splitParagraph(paragraph, displayMathInText) {
+@@ -283,10 +286,23 @@ function splitParagraph(paragraph, displayMathInText) {
  		};
  		const first = phrasing[0];
  		const last = phrasing[phrasing.length - 1];
@@ -22,13 +22,20 @@ index 6091c520d82832e267b0276ab9cec7df427e6ec8..317a61d461652dcc3579c9dc6a6652ef
 -			start: first.position.start,
 -			end: last.position.end
 -		};
-+		// A phrasing child is not guaranteed to carry `position`: restoreInlineHtmlMath
-+		// above rebuilds nodes as { ...type, position: child.position }, which is
-+		// undefined whenever the source node had none. Reading .position.start
-+		// unguarded threw "Cannot read properties of undefined (reading 'start')"
-+		// out of fromMarkdown, killing the whole page through the app error
-+		// boundary. Fall back to the paragraph's own span, then to omitting
-+		// position entirely -- position is advisory for rendering.
++		// A phrasing child is not guaranteed to carry `position`, and the usual
++		// source is upstream of this file. micromark will not start a `www.`
++		// autolink that sits against punctuation, but
++		// mdast-util-gfm-autolink-literal ships a fallback `transforms` pass
++		// whose previous() gate accepts any Unicode punctuation. That pass
++		// rewrites the paragraph through findAndReplace, which builds its
++		// replacement nodes with no `position` at all. Reading .position.start
++		// off one of them threw "Cannot read properties of undefined (reading
++		// 'start')" out of fromMarkdown -- Sentry c47052cc, which took down the
++		// whole page through the app error boundary on text as ordinary as
++		// "Our site--www.example.edu--has more." restoreInlineHtmlMath above can
++		// propagate an absent position the same way. Fall back to the
++		// paragraph's own span, then to omitting position entirely -- position
++		// is advisory for rendering.
 +		const startPos = first?.position?.start ?? paragraph.position?.start;
 +		const endPos = last?.position?.end ?? paragraph.position?.end;
 +		if (startPos && endPos) node.position = { start: startPos, end: endPos };

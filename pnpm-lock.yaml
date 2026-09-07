@@ -38,7 +38,7 @@ overrides:
 
 patchedDependencies:
   '@ziloen/remark-math@0.1.1':
-    hash: 69fbade96b3da00c8317009948018be9fc569dc986ba691c9b029481d8d721d7
+    hash: 11af18226b84b08a6fbe2757bceac17237ae993681543050132f920d76145f70
     path: patches/@ziloen__remark-math@0.1.1.patch
   google-drive-picker@1.1.29:
     hash: 92ab8f635a9354b2f28d3bc2ee517ac82159a2747342bd5da1606ef41ad10f4a
@@ -206,7 +206,7 @@ importers:
         version: 2.11.7
       '@ziloen/remark-math':
         specifier: 0.1.1
-        version: 0.1.1(patch_hash=69fbade96b3da00c8317009948018be9fc569dc986ba691c9b029481d8d721d7)
+        version: 0.1.1(patch_hash=11af18226b84b08a6fbe2757bceac17237ae993681543050132f920d76145f70)
       axios:
         specifier: '>=1.16.0'
         version: 1.18.1
@@ -15152,7 +15152,7 @@ snapshots:
 
   '@xtuc/long@4.2.2': {}
 
-  '@ziloen/remark-math@0.1.1(patch_hash=69fbade96b3da00c8317009948018be9fc569dc986ba691c9b029481d8d721d7)':
+  '@ziloen/remark-math@0.1.1(patch_hash=11af18226b84b08a6fbe2757bceac17237ae993681543050132f920d76145f70)':
     dependencies:
       '@types/hast': 3.0.5
       '@types/mdast': 4.0.4

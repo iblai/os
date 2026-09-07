@@ -3129,4 +3129,37 @@ describe('Markdown - overrides at their edges (issue #2441)', () => {
     expect(container.querySelector('[data-code-block]')).toBeNull();
     expect(container.textContent).toContain('plain preformatted text');
   });
+
+  // Sentry c47052cc. micromark's autolink tokenizer will not start a `www.`
+  // link that sits against punctuation, but mdast-util-gfm-autolink-literal
+  // ships a fallback `transforms` pass whose `previous()` gate accepts any
+  // Unicode punctuation. That pass rewrites the paragraph through
+  // findAndReplace, which builds its replacement nodes without `position`,
+  // and @ziloen/remark-math's splitParagraph then read `first.position.start`
+  // off one of them. Every case below threw
+  // "Cannot read properties of undefined (reading 'start')" before the guard
+  // in patches/@ziloen__remark-math@0.1.1.patch.
+  describe('autolinks pressed against punctuation', () => {
+    const cases = [
+      'Our site—www.fordham.edu—has more.',
+      'See “www.fordham.edu” for details.',
+      'Go to:www.fordham.edu',
+      'Read more at fordham.edu/www.html',
+    ];
+
+    for (const md of cases) {
+      it(`renders ${JSON.stringify(md)} without throwing`, () => {
+        expect(() => render(<Markdown>{md}</Markdown>)).not.toThrow();
+      });
+    }
+
+    // Control: whitespace before `www.` is the case micromark does tokenize,
+    // so it never reaches the fallback pass and never lost its positions.
+    it('still renders a whitespace-separated autolink', () => {
+      const { container } = render(
+        <Markdown>Visit www.fordham.edu today.</Markdown>,
+      );
+      expect(container.textContent).toContain('www.fordham.edu');
+    });
+  });
 });
