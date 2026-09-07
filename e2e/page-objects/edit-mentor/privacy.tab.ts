@@ -160,34 +160,57 @@ export class PrivacyTab {
    *
    * Unlike the optimistic app-owned tabs, `AgentPrivacyTab` derives `enabled`
    * straight from the mentor-settings query, so the switch only flips after
-   * the `editMentorJson` PUT + refetch round trip lands — the timeout below
-   * is generous to absorb that (mirrors `setEntitySelected`'s existing
-   * server-bound wait).
+   * the `editMentorJson` PUT + refetch round trip lands. Mirrors
+   * `setEntitySelected`'s retry shape: each attempt first waits out any
+   * in-flight save (the toggle disables itself mid-save), short-circuits if
+   * the target state already landed, and the loop retries when a slow
+   * staging round trip outlives a single attempt's assertion window.
    */
   async setRouterEnabled(enable: boolean): Promise<void> {
-    await expect(this.capabilityToggle).toBeVisible({ timeout: 10_000 });
-    const isOn = await this.isRouterEnabled();
-    if (isOn === enable) return;
+    const want = String(enable);
+    const maxAttempts = 3;
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        await expect(this.capabilityToggle).toBeVisible({ timeout: 10_000 });
+        // Settle any in-flight save FIRST — the toggle disables itself while
+        // an editMentorJson PUT + refetch is pending (its own save, or a
+        // just-finished entity-chip/action save a caller chained before this),
+        // and `aria-checked` isn't repainted until the refetch lands. Reading
+        // it before this gate could see a stale value, and clicking a
+        // disabled switch is silently swallowed. A switch click is NOT
+        // idempotent, so a stale read here would fire a state-reverting click.
+        await expect(this.capabilityToggle).toBeEnabled({ timeout: 30_000 });
+        if ((await this.isRouterEnabled()) === enable) return;
 
-    // Defensively dismiss any open action-Select listbox first — an open
-    // Radix Select blocks pointer events on everything outside it (including
-    // this toggle), so a caller that left it open (see `closeActionSelect`
-    // doc) would otherwise hang the click below for the full timeout with a
-    // misleading "toggle unresponsive" signature. Hardens every caller, not
-    // just the one that surfaced this.
-    await this.closeActionSelect();
+        // Defensively dismiss any open action-Select listbox first — an open
+        // Radix Select blocks pointer events on everything outside it
+        // (including this toggle), so a caller that left it open (see
+        // `closeActionSelect` doc) would otherwise hang the click below for
+        // the full timeout with a misleading "toggle unresponsive" signature.
+        // Hardens every caller, not just the one that surfaced this.
+        await this.closeActionSelect();
 
-    await this.capabilityToggle.click();
-    await expect(this.capabilityToggle).toHaveAttribute(
-      'aria-checked',
-      String(enable),
-      { timeout: 20_000 },
-    );
-    await expect(this.capabilityContent).toHaveAttribute(
-      'data-enabled',
-      String(enable),
-      { timeout: 20_000 },
-    );
+        await this.capabilityToggle.click();
+        await expect(this.capabilityToggle).toHaveAttribute(
+          'aria-checked',
+          want,
+          { timeout: 30_000 },
+        );
+        await expect(this.capabilityContent).toHaveAttribute(
+          'data-enabled',
+          want,
+          { timeout: 20_000 },
+        );
+        return;
+      } catch (error) {
+        lastError = error;
+        // A slow save round-trip just gets waited out again on the next
+        // attempt — the toBeEnabled gate at the top absorbs it, and the
+        // short-circuit prevents a double-toggle if the flip landed late.
+      }
+    }
+    throw lastError;
   }
 
   /** Assert whether the CapabilityGate off-state hint is currently shown. */

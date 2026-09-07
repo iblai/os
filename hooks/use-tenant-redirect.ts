@@ -7,6 +7,7 @@ import {
   useLazyGetUserTenantsQuery,
 } from '@/features/tenants/api-slice';
 import { tenantSchema } from '@/lib/types';
+import { appendEmbedContext } from '@/lib/embed-context';
 
 type UseTenantProviderProps = {
   onAuthSuccess?: () => void;
@@ -65,8 +66,11 @@ export function useTenantProvider({
 
       // check if the tenant is active
       if (tenantMetadata?.metadata?.spa_domains?.mentor?.active) {
-        window.location.href =
-          tenantMetadata?.metadata?.spa_domains?.mentor?.domain;
+        // Cross-origin redirect: sessionStorage doesn't follow to another
+        // domain, so carry the embed params explicitly to keep the embed view.
+        window.location.href = appendEmbedContext(
+          tenantMetadata?.metadata?.spa_domains?.mentor?.domain,
+        );
         onAuthSuccess?.();
         return;
       }

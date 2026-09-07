@@ -1,0 +1,100 @@
+name: Release Chrome Extension
+
+# Publishes the side-panel extension (extensions/chrome/) to the Chrome Web
+# Store whenever its manifest version is bumped on main. Also runnable manually.
+#
+# Chrome rejects re-uploading an existing version, so a publish only happens when
+# extensions/chrome/manifest.json "version" changes vs the previous commit — bump
+# it in the same change you want shipped. A manual "Run workflow" always attempts
+# to publish the current version.
+#
+# Requires these repo secrets (Chrome Web Store API — generate for the publishing
+# Google account: https://github.com/fregante/chrome-webstore-upload-keys):
+#   CHROME_EXTENSION_ID    the item's ID in the Web Store developer dashboard
+#   CHROME_CLIENT_ID       OAuth client id
+#   CHROME_CLIENT_SECRET   OAuth client secret
+#   CHROME_REFRESH_TOKEN   OAuth refresh token
+# Until CHROME_EXTENSION_ID is set the job no-ops (logs a notice) instead of failing.
+#
+# NOTE: point panel.html `mentorurl` at the production app (not an ngrok tunnel)
+# before the first real publish — see issue #432.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'extensions/chrome/**'
+  workflow_dispatch:
+
+concurrency:
+  group: release-chrome-extension
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2 # need HEAD~1 to detect a manifest version bump
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '25.3.0'
+
+      - name: Check Web Store credentials are configured
+        id: creds
+        env:
+          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+        run: |
+          if [ -z "$CHROME_EXTENSION_ID" ]; then
+            echo "::notice::Chrome Web Store secrets not configured — skipping publish."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Resolve version and whether it changed
+        if: steps.creds.outputs.configured == 'true'
+        id: version
+        run: |
+          VERSION=$(node -p "require('./extensions/chrome/manifest.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Manual dispatch — will publish v$VERSION."
+            exit 0
+          fi
+          PREV=$(git show HEAD~1:extensions/chrome/manifest.json 2>/dev/null \
+            | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{process.stdout.write(String(JSON.parse(s).version))}catch{process.stdout.write('')}})")
+          if [ "$VERSION" != "$PREV" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Version bumped ${PREV:-<none>} -> $VERSION — will publish."
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::manifest version unchanged ($VERSION) — nothing to publish. Bump extensions/chrome/manifest.json/version to release."
+          fi
+
+      - name: Package extension
+        if: steps.creds.outputs.configured == 'true' && steps.version.outputs.changed == 'true'
+        run: |
+          cd extensions/chrome
+          zip -r "$GITHUB_WORKSPACE/ibl-ai-extension.zip" . -x 'README.md'
+          echo "Packaged contents:" && unzip -l "$GITHUB_WORKSPACE/ibl-ai-extension.zip"
+
+      - name: Upload and publish to the Chrome Web Store
+        if: steps.creds.outputs.configured == 'true' && steps.version.outputs.changed == 'true'
+        env:
+          EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+        run: |
+          npx --yes chrome-webstore-upload-cli@3 upload \
+            --source ibl-ai-extension.zip \
+            --auto-publish
+          echo "::notice::Published ibl.ai extension v${{ steps.version.outputs.version }} to the Chrome Web Store."

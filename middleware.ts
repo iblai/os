@@ -67,6 +67,10 @@ const GOOGLE = [
   'https://accounts.google.com',
 ];
 const STRIPE = ['https://js.stripe.com', 'https://api.stripe.com'];
+// GitHub REST API — the datasets tab resolves a repo's branch list straight from
+// the browser (github-file-upload-modal.tsx), so it is a fetch connection, not a
+// server-side call. connect-src only; nothing here is framed or scripted.
+const GITHUB = ['https://api.github.com'];
 // S3 presigned URLs for media (e.g. iblai-app-dm-media) — chat file uploads PUT
 // straight to the bucket and downloads GET from it, which the browser treats as
 // fetch/XHR connections, so the bucket host must be in connect-src. Virtual-hosted
@@ -159,6 +163,7 @@ function buildCsp(nonce: string): string {
       ...IBL_WS,
       ...GOOGLE,
       ...STRIPE,
+      ...GITHUB,
       ...AWS_S3,
       ...assetCdn,
       ...partners,
@@ -169,6 +174,10 @@ function buildCsp(nonce: string): string {
     'worker-src': ["'self'", 'blob:'],
     'frame-src': [
       "'self'",
+      // The binary-artifact canvas previews PDFs in an <iframe> whose src is
+      // a same-origin blob: URL built from artifact bytes; without this the
+      // browser blocks the viewer ("This content is blocked").
+      'blob:',
       ...IBL_HTTP,
       ...partners,
       'https://accounts.google.com',

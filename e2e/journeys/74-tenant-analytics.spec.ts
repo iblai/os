@@ -6,7 +6,7 @@ import {
 } from '../utils/auth';
 
 /**
- * Journey 68: Tenant-wide Analytics
+ * Journey 74: Tenant-wide Analytics
  *
  * The same analytics section as Journey 18, but mounted directly under
  * `/platform/{tenantKey}/analytics` — no agent in the URL, so every container
@@ -14,7 +14,7 @@ import {
  * selected; these tests deep-link instead, since the fixtures always start on
  * an agent route.
  */
-test.describe('Journey 68: Tenant-wide Analytics', () => {
+test.describe('Journey 74: Tenant-wide Analytics', () => {
   let tenantKey: string;
 
   test.beforeEach(async ({ page }) => {

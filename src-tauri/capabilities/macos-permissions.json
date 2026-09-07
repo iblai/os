@@ -12,8 +12,6 @@
       "https://*.ibl.ai/*",
       "http://127.0.0.1:*/*",
       "http://localhost:*/*",
-      "http://localhost:3456",
-      "http://localhost:3456/*",
       "mentor://localhost/*"
     ]
   },

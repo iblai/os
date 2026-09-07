@@ -237,6 +237,7 @@ vi.mock('../tabs', () => ({
   McpTab: () => <div data-testid="mcp-tab">MCP Tab</div>,
   ToolsTab: () => <div data-testid="tools-tab">Tools Tab</div>,
   SafetyTab: () => <div data-testid="safety-tab">Safety Tab</div>,
+  SpendCapsTab: () => <div data-testid="spend-caps-tab">Spend Caps Tab</div>,
   PrivacyTab: () => <div data-testid="privacy-tab">Privacy Tab</div>,
   TasksTab: () => <div data-testid="tasks-tab">Tasks Tab</div>,
   FlowTab: () => <div data-testid="flow-tab">Flow Tab</div>,
@@ -259,6 +260,12 @@ vi.mock('../tabs', () => ({
   ),
   LtiTab: () => <div data-testid="lti-tab">LTI Tab</div>,
   AnalyticsTab: () => <div data-testid="analytics-tab">Analytics Tab</div>,
+}));
+
+vi.mock('../tabs/datasets-tab/agent-datasets-tab', () => ({
+  AgentDatasetsTabWrapper: () => (
+    <div data-testid="datasets-tab">Datasets Tab</div>
+  ),
 }));
 
 vi.mock('../tabs/memory-tab', () => ({

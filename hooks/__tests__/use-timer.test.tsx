@@ -367,6 +367,73 @@ describe('useTimer', () => {
     });
   });
 
+  describe('callbacks captured from an earlier render', () => {
+    it('stops a timer that was started after the callback was captured', () => {
+      const { result } = renderHook(() => useTimer());
+
+      const capturedStop = result.current.stop;
+
+      act(() => {
+        result.current.start();
+      });
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+
+      const elapsed = result.current.time;
+
+      act(() => {
+        capturedStop();
+      });
+      act(() => {
+        vi.advanceTimersByTime(3000);
+      });
+
+      expect(result.current.isRunning).toBe(false);
+      expect(result.current.time).toBe(elapsed);
+    });
+
+    it('restarts a timer that was stopped after the callback was captured', () => {
+      const { result } = renderHook(() => useTimer());
+
+      const capturedStart = result.current.start;
+
+      act(() => {
+        result.current.start();
+      });
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+      act(() => {
+        result.current.stop();
+      });
+
+      act(() => {
+        capturedStart();
+      });
+      act(() => {
+        vi.advanceTimersByTime(100);
+      });
+
+      expect(result.current.isRunning).toBe(true);
+      expect(result.current.time).toBeLessThan(200);
+    });
+
+    it('keeps start and stop stable across renders', () => {
+      const { result, rerender } = renderHook(() => useTimer());
+
+      const { start, stop } = result.current;
+
+      act(() => {
+        result.current.start();
+      });
+      rerender();
+
+      expect(result.current.start).toBe(start);
+      expect(result.current.stop).toBe(stop);
+    });
+  });
+
   describe('return value structure', () => {
     it('should return all expected properties', () => {
       const { result } = renderHook(() => useTimer());

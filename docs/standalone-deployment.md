@@ -174,7 +174,7 @@ Handles server startup with error suppression:
 ### GitHub Actions Example
 
 ```yaml
-- name: Build mentor app
+- name: Build the app
   run: |
     cd apps/mentor
     pnpm build

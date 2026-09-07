@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import {
   render,
   screen,
@@ -43,6 +43,11 @@ const mockFreeTrialDialogState = {
 const mockUseMentorSettings = vi.hoisted(() => vi.fn());
 const mockUseModelFileUploadCapabilities = vi.hoisted(() => vi.fn());
 const mockCheckRbacPermission = vi.hoisted(() => vi.fn(() => true));
+// Code-mode skill sync: the real hook fires Tauri IPC + RTK lazy queries this
+// suite doesn't provide; the composer only mounts it and threads its state.
+const mockUseOpencodeSkillSync = vi.hoisted(() =>
+  vi.fn(() => ({ state: 'idle' as const })),
+);
 // `/` skill picker sources — skill assignments + catalog, resolved
 // client-side via the real `resolveEffectiveAgentSkills`. Default: no data →
 // picker fully inactive, so the pre-existing tests observe the composer
@@ -74,6 +79,10 @@ vi.mock('@iblai/iblai-js/data-layer', async () => {
   };
 });
 
+vi.mock('@/hooks/use-opencode-skill-sync', () => ({
+  useOpencodeSkillSync: mockUseOpencodeSkillSync,
+}));
+
 // Shareable-link token present in the URL (`?token=...`). When set, the RBAC
 // chat gate must be bypassed. Controlled per-test and reset in beforeEach.
 let mockShareableToken: string | null = null;
@@ -91,16 +100,6 @@ vi.mock('next/navigation', () => ({
     new URLSearchParams(
       mockShareableToken ? `token=${mockShareableToken}` : '',
     ),
-}));
-
-// The component reads chat-privacy state via web-containers' useChatPrivacy,
-// which internally selects from the SDK chat slice that this test's mock store
-// does not provide. Mock it (as sibling tests do) so the component renders.
-vi.mock('@iblai/iblai-js/web-containers', () => ({
-  useChatPrivacy: () => ({
-    effective: { mode: 'enabled', source: 'session', is_locked: false },
-    isEffectiveReady: true,
-  }),
 }));
 
 vi.mock('next/dynamic', () => ({
@@ -286,7 +285,9 @@ vi.mock('@iblai/iblai-js/web-utils', async () => {
 
 // The real useChatPrivacy fires chat-privacy selectors/API calls against redux
 // slices this test's minimal store doesn't provide; stub it (the nav-bar tests
-// stub ChatPrivacyToggle for the same reason).
+// stub ChatPrivacyToggle for the same reason). Spread the real module: a bare
+// factory drops every other export, and which of two registrations for the same
+// path wins is not deterministic across environments.
 vi.mock('@iblai/iblai-js/web-containers', async () => {
   const actual = await vi.importActual('@iblai/iblai-js/web-containers');
   return {
@@ -1282,6 +1283,75 @@ describe('ChatInputForm', () => {
     });
   });
 
+  describe('voice transcript insertion', () => {
+    /** Render, capturing the onTranscript callback the form hands the hook. */
+    const renderCapturingTranscript = async () => {
+      const useVoiceChat = (await import('@/hooks/use-voice-chat')).default;
+      let onTranscript!: (text: string) => void;
+      (useVoiceChat as any).mockImplementation((props: any) => {
+        onTranscript = props.onTranscript;
+        return {
+          handleMicrophoneBtnClick: vi.fn(),
+          cancelRecording: vi.fn(),
+          processing: false,
+          recording: false,
+          time: 0,
+        };
+      });
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+      return {
+        textarea: screen.getByTestId('auto-resize-textarea'),
+        emit: (text: string) => onTranscript(text),
+      };
+    };
+
+    it('inserts the transcript into an empty composer', async () => {
+      const { textarea, emit } = await renderCapturingTranscript();
+
+      await act(async () => {
+        emit('hello world');
+      });
+
+      await waitFor(() => expect(textarea).toHaveValue('hello world'));
+    });
+
+    it('appends onto the latest composer text, not a stale snapshot', async () => {
+      const { textarea, emit } = await renderCapturingTranscript();
+
+      await act(async () => {
+        fireEvent.change(textarea, { target: { value: 'first' } });
+      });
+      // simulates the user continuing to type after hitting record
+      await act(async () => {
+        fireEvent.change(textarea, { target: { value: 'first second' } });
+      });
+      await act(async () => {
+        emit('dictated');
+      });
+
+      await waitFor(() =>
+        expect(textarea).toHaveValue('first second dictated'),
+      );
+    });
+
+    // iblai-platform#2402: dictation used to replace the composer contents,
+    // destroying anything the user had already typed.
+    it('appends the transcript after existing text instead of replacing it', async () => {
+      const { textarea, emit } = await renderCapturingTranscript();
+
+      await act(async () => {
+        fireEvent.change(textarea, { target: { value: 'already typed' } });
+      });
+      await act(async () => {
+        emit('and dictated');
+      });
+
+      await waitFor(() =>
+        expect(textarea).toHaveValue('already typed and dictated'),
+      );
+    });
+  });
+
   describe('voice chat states', () => {
     it('should show "Listening..." placeholder when recording', async () => {
       const useVoiceChat = (await import('@/hooks/use-voice-chat')).default;
@@ -1938,6 +2008,16 @@ describe('ChatInputForm', () => {
       });
     };
 
+    it('mounts the code-mode skill sync with the mentor identity', () => {
+      arrangeSkills();
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+
+      expect(mockUseOpencodeSkillSync).toHaveBeenCalledWith({
+        org: 'test-tenant',
+        mentorUniqueId: 'mentor-uuid-1',
+      });
+    });
+
     it('opens the picker with enabled skills when typing "/"', () => {
       arrangeSkills();
       renderWithRedux(<ChatInputForm {...defaultProps} />);
@@ -2585,6 +2665,63 @@ describe('ChatInputForm', () => {
         expect.anything(),
         expect.objectContaining({ skip: true }),
       );
+    });
+
+    describe('view_skill_assignments RBAC gate', () => {
+      // The endpoint 403s for users without the grant, so the fetch itself
+      // must stay off — not merely degrade — until the mentor's permission
+      // check has granted `view_skill_assignments`.
+      const arrangeMentor = () => {
+        mockMentorSettings = {
+          data: {
+            mentorVisibility: 'PRIVATE',
+            disclaimer: null,
+            mentorUniqueId: 'mentor-uuid-1',
+            mentorDbId: 42,
+          },
+        } as any;
+      };
+
+      it('fetches once the permission check grants view_skill_assignments', () => {
+        arrangeMentor();
+        mockCheckRbacPermission.mockReturnValue(true);
+        renderWithRedux(<ChatInputForm {...defaultProps} />, {
+          rbac: { rbacPermissions: { '/mentors/42/': {} } },
+        });
+        expect(mockCheckRbacPermission).toHaveBeenCalledWith(
+          { '/mentors/42/': {} },
+          '/mentors/42/#view_skill_assignments',
+        );
+        expect(mockUseGetMentorSkillAssignmentsQuery).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({ skip: false }),
+        );
+      });
+
+      it('never fetches when the permission check denies view_skill_assignments', () => {
+        arrangeMentor();
+        (mockCheckRbacPermission as unknown as Mock).mockImplementation(
+          (_perms: unknown, resource: string) =>
+            !resource.includes('#view_skill_assignments'),
+        );
+        renderWithRedux(<ChatInputForm {...defaultProps} />, {
+          rbac: { rbacPermissions: { '/mentors/42/': {} } },
+        });
+        expect(mockUseGetMentorSkillAssignmentsQuery).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({ skip: true }),
+        );
+      });
+
+      it('never fetches before the mentor permission data has loaded', () => {
+        arrangeMentor();
+        mockCheckRbacPermission.mockReturnValue(true); // would allow if consulted
+        renderWithRedux(<ChatInputForm {...defaultProps} />); // empty rbac store
+        expect(mockUseGetMentorSkillAssignmentsQuery).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({ skip: true }),
+        );
+      });
     });
 
     it('never queries the platform-wide agent-skills catalog', () => {

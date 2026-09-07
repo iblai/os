@@ -58,6 +58,8 @@ Thumbs.db
 src-tauri/target/
 src-tauri/gen/android/
 src-tauri/gen/apple/
+src-tauri/.env.*
+!src-tauri/.env.example
 
 # Turbo
 .turbo/
@@ -95,3 +97,8 @@ e2e/playwright/.auth
 .omp
 .pi
 .npmrc.backup
+CLAUDE.local.md
+
+# Generated render gallery (scripts/build-gallery.test.tsx) — a ~1MB build
+# artifact regenerated on demand, never committed.
+public/markdown-gallery.html

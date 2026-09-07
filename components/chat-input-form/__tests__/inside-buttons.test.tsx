@@ -60,8 +60,18 @@ vi.mock('@/lib/config', () => ({
 // The real Code button needs Redux and the mentor route; only the Tauri gate
 // around it belongs to this component.
 vi.mock('../coding-mode-button', () => ({
-  CodingModeButton: ({ sessionId }: { sessionId?: string }) => (
-    <button data-testid="coding-mode-button" data-session-id={sessionId}>
+  CodingModeButton: ({
+    sessionId,
+    skillSync,
+  }: {
+    sessionId?: string;
+    skillSync?: { state: string };
+  }) => (
+    <button
+      data-testid="coding-mode-button"
+      data-session-id={sessionId}
+      data-skill-sync={skillSync?.state}
+    >
       Code
     </button>
   ),
@@ -394,6 +404,35 @@ describe('InsideButtons', () => {
       const canvasButton = screen.getByText('Canvas').closest('button');
       // When artifactsEnabled is true, button should have active styling
       expect(canvasButton).toHaveClass('text-[#38A1E5]');
+    });
+
+    // Regression: e2e (ChatPage.isCanvasToolActive) reads aria-pressed. The
+    // inactive pill's `hover:bg-[#F5F8FF]` contains the active `bg-[#F5F8FF]`
+    // token as a substring, so a class-based check reported "on" while the
+    // tool was off and journey 71 never enabled Canvas.
+    it('exposes the Canvas on/off state as aria-pressed', () => {
+      const { rerender } = render(
+        <InsideButtons
+          {...defaultProps}
+          artifactsEnabled={false}
+          containerWidth={1000}
+        />,
+      );
+      const inactive = screen.getByText('Canvas').closest('button');
+      expect(inactive).toHaveAttribute('aria-pressed', 'false');
+      expect(inactive?.className).toContain('hover:bg-[#F5F8FF]');
+
+      rerender(
+        <InsideButtons
+          {...defaultProps}
+          artifactsEnabled={true}
+          containerWidth={1000}
+        />,
+      );
+      expect(screen.getByText('Canvas').closest('button')).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
     });
 
     it('should apply active styling when Deep Research is in activeOptions', () => {
@@ -1074,6 +1113,22 @@ describe('InsideButtons', () => {
       expect(screen.getByTestId('coding-mode-button')).toHaveAttribute(
         'data-session-id',
         'chat-77',
+      );
+    });
+
+    it('threads the skill-sync state through to the Code button', () => {
+      mockIsTauri = true;
+      render(
+        <InsideButtons
+          {...defaultProps}
+          sessionId="chat-77"
+          skillSync={{ state: 'error' }}
+        />,
+      );
+
+      expect(screen.getByTestId('coding-mode-button')).toHaveAttribute(
+        'data-skill-sync',
+        'error',
       );
     });
 

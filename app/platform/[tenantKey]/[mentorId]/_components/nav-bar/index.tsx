@@ -61,7 +61,6 @@ import { AuthModal } from '@/components/modals/auth-modal';
 import {
   cn,
   getLLMProviderDetails,
-  getLLMModelDisplayName,
   isLoggedIn,
   isStripeActivated,
   redirectToAuthSpa,
@@ -82,6 +81,7 @@ import {
   selectSelectedMentor,
 } from '@/features/analytics/slice';
 import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
+import { useLlmDisplayName } from '@/hooks/use-llm-display-name';
 import { config } from '@/lib/config';
 import { MentorVisibilityEnum } from '@iblai/iblai-api';
 import { toast } from 'sonner';
@@ -388,11 +388,17 @@ export function NavBar() {
 
   const selectedMentorName =
     mentorSettingsCombinedPublicAndPrivate?.mentorName || '';
-  // Mentor settings persist the model's wire key, not its label, so map the
-  // keys whose raw form is not presentable (`iblai` -> "ibl.ai").
-  const selectedMentorCategory = getLLMModelDisplayName(
-    mentorSettingsCombinedPublicAndPrivate?.llmName,
-  );
+  // Settings persist the model's wire key; its label lives in `llm_config`,
+  // with the catalogue and a key-tidying fallback behind it. Without this the
+  // badge disagrees with the model picker for every provider -- the picker
+  // says "Claude Haiku 4.5" where the key reads `claude-haiku-4-5-20251001`.
+  const selectedMentorCategory = useLlmDisplayName({
+    llmName: mentorSettingsCombinedPublicAndPrivate?.llmName,
+    llmConfig: mentorSettingsCombinedPublicAndPrivate?.llmConfig,
+    org: tenantKey,
+    userId: username,
+    mentorId,
+  });
 
   // Map MentorSegment → SDK CategorizedItem. The SDK's
   // `CategorizedDropdownMenu` owns the 3-column / mobile-accordion layout

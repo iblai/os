@@ -1,4 +1,4 @@
-# Immutable, deployment-ID static hosting
+# Immutable, Deployment-ID Static Hosting
 
 Eliminates the version-skew problem (a browser on build A fetching a chunk from
 a node on build B → `ChunkLoadError`) that today forces us to drain LB backend

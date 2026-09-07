@@ -10,7 +10,7 @@ test.describe('Journey 18: Analytics Dashboard', () => {
       return;
     }
     // The sidebar's Analytics entry now opens the TENANT-WIDE section
-    // (Journey 68); this journey is the per-agent one, reached from the navbar
+    // (Journey 74); this journey is the per-agent one, reached from the navbar
     // agent dropdown.
     await analyticsPage.gotoAgentAnalytics();
   });

@@ -146,6 +146,65 @@ test.describe('Journey 6: Mentor Management — Admin', () => {
     await editMentorPage.close();
   });
 
+  // Regression guard for the getLLMModelDisplayName navbar rewrite: the card
+  // label test above (#2318) only proves the LLM tab's own grid renders "ibl.ai"
+  // — it says nothing about what the navbar badge shows once an ibl.ai model is
+  // actually SAVED on the mentor. The navbar reads the mentor's persisted
+  // llm_name ("iblai-pro") through the same display-name mapping independently,
+  // so this exercises that second call site end-to-end. Skips gracefully if
+  // this tenant's LLM list doesn't include the ibl.ai provider (same
+  // precondition as the card test above).
+  test('admin switches to the ibl.ai model and the navbar badge shows the display name, not the raw wire key', async ({
+    page,
+    editMentorPage,
+    navbarPage,
+  }) => {
+    await editMentorPage.open('LLM');
+    await waitForPageReady(page);
+    await expect(editMentorPage.llm.providerCards.first()).toBeVisible({
+      timeout: 15_000,
+    });
+
+    const iblaiCard = editMentorPage.llm.providerCardByKey('iblai');
+    let hasIblai = false;
+    try {
+      await iblaiCard.waitFor({ state: 'visible', timeout: 5_000 });
+      hasIblai = true;
+    } catch {
+      hasIblai = false;
+    }
+    if (!hasIblai) {
+      test.skip(true, "ibl.ai provider not present in this tenant's LLM list");
+      return;
+    }
+
+    try {
+      // Display label ("ibl.ai"), not the raw provider key — providerCard()
+      // matches on the rendered alt text ("<label> logo"), same label the
+      // #2318 card test asserts above. The model key is the wire value
+      // (llm_name), which for this tenant's sole ibl.ai model is "iblai-pro".
+      await editMentorPage.llm.selectProviderAndModel('ibl.ai', 'iblai-pro');
+      await editMentorPage.close();
+
+      // The navbar badge must render the display name ("ibl.ai"), never the
+      // raw wire key ("iblai-pro") the API returns as llm_name — an exact
+      // match, not a substring/regex, so a regression that renders the raw
+      // key fails this assertion instead of silently passing it.
+      await expect(navbarPage.llmNameSpan).toHaveText('ibl.ai Pro', {
+        timeout: 15_000,
+      });
+    } finally {
+      // Restore the mentor's original provider/model so later tests in this
+      // (and other) journeys don't inherit an ibl.ai-selected mentor.
+      await editMentorPage.open('LLM');
+      await editMentorPage.llm.selectProviderAndModel(
+        'Anthropic',
+        'claude-haiku-4-5-20251001',
+      );
+      await editMentorPage.close();
+    }
+  });
+
   // A grayed (no-credential) provider card must stay clickable — graying is a
   // visual/model-row-disabling treatment, not a click-blocker on the card
   // itself. Skips gracefully if every provider in this tenant is usable.

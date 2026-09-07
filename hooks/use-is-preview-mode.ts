@@ -2,6 +2,7 @@ import { useSearchParams } from 'next/navigation';
 import { useMentorSettings } from './use-mentors/use-mentor-settings';
 import { useUsername } from './use-user';
 import { useAppSelector } from '@/lib/hooks';
+import { QUERY_PARAMS } from '@/lib/constants';
 import { selectTokenEnabled } from '@iblai/iblai-js/web-utils';
 
 export function useIsPreviewMode(): boolean {
@@ -18,6 +19,7 @@ export function useIsPreviewMode(): boolean {
     !tokenEnabled;
 
   return (
-    searchParams.get('internalPreview') === 'true' || userIsNotAllowedToChat
+    searchParams.get(QUERY_PARAMS.INTERNAL_PREVIEW) === 'true' ||
+    userIsNotAllowedToChat
   );
 }

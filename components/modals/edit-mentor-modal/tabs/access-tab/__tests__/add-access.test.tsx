@@ -71,6 +71,7 @@ describe('AddAccessDialog', () => {
     availableRoles: ['editor'] as DefaultMentorRole[],
     isLoading: false,
     onAccessCreated: vi.fn().mockResolvedValue(undefined),
+    canShare: true,
   };
 
   beforeEach(() => {
@@ -136,6 +137,22 @@ describe('AddAccessDialog', () => {
     expect(
       screen.getByRole('button', { name: /create role access/i }),
     ).toBeInTheDocument();
+  });
+
+  // NOTE: `__tests__/add-access.test.tsx` at the repo root is a second,
+  // independent suite for this same component. Vitest has no `include`
+  // override in `vitest.config.ts`, so the default glob collects BOTH — they
+  // do not shadow each other. The share_mentor gate is asserted in both.
+  it('renders nothing when the viewer cannot share the agent', () => {
+    const { container } = render(
+      <AddAccessDialog {...defaultProps} canShare={false} />,
+    );
+
+    expect(
+      screen.queryByRole('button', { name: /create role access/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(container).toBeEmptyDOMElement();
   });
 
   it('disables button when isLoading is true', () => {

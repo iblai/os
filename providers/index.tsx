@@ -56,6 +56,11 @@ import { Spinner } from '@/components/spinner';
 import { useIsPreviewMode } from '@/hooks/use-is-preview-mode';
 import { ANONYMOUS_USERNAME, MENTOR_VISIBILITY_VALUES } from '@/lib/constants';
 import { useEmbedMode } from '@/hooks/use-embed-mode';
+import {
+  embedContextQuery,
+  appendEmbedContext,
+  persistEmbedContextFromUrl,
+} from '@/lib/embed-context';
 import { use402ErrorCheck } from '@/hooks/subscription/use-402-error-check';
 import { SUBSCRIPTION_CREDIT_LIMIT_ERROR_MESSAGE } from '@/hooks/subscription/constants';
 import { customErrorMessages } from '@/lib/error';
@@ -79,10 +84,25 @@ import {
 } from '@/hooks/use-tauri-offline';
 import { isTauriApp } from '@/types/tauri';
 import { hideInitialLoader } from '@/lib/initial-loader';
+import { useOpencodeLearner } from '@/hooks/use-opencode-learner';
+import { useOpencode402 } from '@/hooks/use-opencode-402';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const { handle402Error } = use402ErrorCheck();
   const [ready, setReady] = useState(false);
+
+  // Desktop only (no-op elsewhere): tell the Rust model proxy who is signed in,
+  // before any chat surface can send a Code turn.
+  useOpencodeLearner();
+  // Desktop only: a Code-turn 402 (insufficient credit) gets normal chat's UX.
+  useOpencode402();
+
+  // Mirror the embed-context params into sessionStorage on first load so embed
+  // mode survives later navigations that rebuild the URL without them — notably
+  // the hard `window.location.href` resets below. See lib/embed-context.
+  useEffect(() => {
+    persistEmbedContextFromUrl();
+  }, []);
 
   useEffect(() => {
     deleteCookieOnAllDomains('ibl_tenant_switching', window.location.hostname);
@@ -106,10 +126,36 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   useIframeMessageHandler({
     handlers,
     defaultHandler: (data) => {
-      if (data.axd_token) {
-        saveUserObjectToLocalStorage(data);
-        window.location.reload();
+      // agent-ai sends auth data either as an object (`userObject`) or as a
+      // JSON string (`iblData`, `JSON.stringify(localStorage)`). Only the
+      // object form was handled, so every string-form reply — including the
+      // one answering a `tenantSwitch` — was dropped without a trace.
+      let payload = data;
+      if (typeof payload === 'string') {
+        try {
+          payload = JSON.parse(payload);
+        } catch {
+          return;
+        }
       }
+      if (!payload?.axd_token) {
+        return;
+      }
+
+      // The host re-sends its auth data every time we announce ourselves
+      // (`ready`/`loaded`), and saving it reloads us — which announces us
+      // again. Acting on an identical payload therefore loops forever: save,
+      // reload, receive the same data, save. Only act on a real change.
+      const unchanged =
+        localStorage.getItem('axd_token') === payload.axd_token &&
+        localStorage.getItem('dm_token') === payload.dm_token &&
+        localStorage.getItem('tenant') === payload.tenant;
+      if (unchanged) {
+        return;
+      }
+
+      saveUserObjectToLocalStorage(payload);
+      window.location.reload();
     },
   });
 
@@ -273,24 +319,12 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     saveDmTokenExpires(tokenResponse.dm_token.expires);
   }
 
-  // Preserve the iframe/embed-context params (embed / mode / component /
-  // extra-body-classes) across mentor redirects. They were only forwarded when
-  // landing on '/', but MentorProvider re-resolves the mentor once you're
-  // already on /platform/{tenant}/{mentorId} and calls redirectToMentor again —
-  // there pathname !== '/', so the query was dropped, stripping the embed view.
-  // Carry just those keys from the live URL regardless of the current path (so
-  // we never leak tokens or other one-shot params into the mentor URL).
-  function embedContextQuery() {
-    const current = new URLSearchParams(window.location.search);
-    const preserved = new URLSearchParams();
-    for (const key of ['embed', 'mode', 'component', 'extra-body-classes']) {
-      const value = current.get(key);
-      if (value !== null) preserved.set(key, value);
-    }
-    const qs = preserved.toString();
-    return qs ? `?${qs}` : '';
-  }
-
+  // `embedContextQuery()` (from lib/embed-context) carries the embed params
+  // across mentor redirects: MentorProvider re-resolves the mentor once you're
+  // already on /platform/{tenant}/{mentorId} and calls redirectToMentor again,
+  // where the query would otherwise be dropped, stripping the embed view. It
+  // reads the live URL first, then the persisted copy, so it works even after a
+  // hard reset has wiped the query.
   function redirectToNoMentorsPage() {
     router.push(`/platform/${tenantKey}/explore${embedContextQuery()}`);
   }
@@ -377,28 +411,59 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           }),
         );
 
+        const publicSettingsArgs = {
+          mentor: mentorId,
+          org: tenantKeyParams,
+          // @ts-ignore
+          userId: username ?? ANONYMOUS_USERNAME,
+        };
+
         try {
-          const response = await getMentorPublicSettings(
-            {
-              mentor: mentorId,
-              org: tenantKeyParams,
-              // @ts-ignore
-              userId: username ?? ANONYMOUS_USERNAME,
-            },
+          // `preferCacheValue` resolves straight from the RTK Query cache entry.
+          // `unwrap()` only rejects when that entry is in an error state, so a
+          // pending or never-populated entry resolves `undefined` instead of
+          // throwing. That happens when an in-flight request is torn down --
+          // e.g. the service worker's `controllerchange` reload lands while
+          // `username` flips anonymous -> authenticated and re-runs this
+          // middleware under a second cache key.
+          let response = await getMentorPublicSettings(
+            publicSettingsArgs,
             true, // preferCacheValue - use cached data if available
           ).unwrap();
+
+          if (!response) {
+            // Cache miss masquerading as a success. Force a real request so the
+            // tenant's custom CSS/JS still gets applied instead of silently
+            // being skipped.
+            response = await getMentorPublicSettings(
+              publicSettingsArgs,
+              false, // force a refetch
+            ).unwrap();
+          }
+
+          if (!response) {
+            // Still nothing to go on. Fail open, matching the outcome the
+            // previous unguarded `response.custom_css` deref produced via its
+            // catch block, so a transient network failure never locks a viewer
+            // out of a mentor that allows anonymous access.
+            console.warn(
+              'getMentorPublicSettings resolved with no data; skipping embed styling',
+            );
+            return false;
+          }
+
           if (isInIframe()) {
             setExternalCSS(response.custom_css ?? '');
             setDefaultEmbedCSS(config.defaultEmbedCssUrl() ?? '');
-            setExternalJS(response?.custom_javascript ?? '');
+            setExternalJS(response.custom_javascript ?? '');
             console.log('getMentorPublicSettings response', {
-              allow_anonymous: response?.allow_anonymous,
+              allow_anonymous: response.allow_anonymous,
             });
           }
 
           if (
-            response?.allow_anonymous ||
-            response?.mentor_visibility === MENTOR_VISIBILITY_VALUES.ANYONE
+            response.allow_anonymous ||
+            response.mentor_visibility === MENTOR_VISIBILITY_VALUES.ANYONE
           ) {
             return false;
           } else {
@@ -595,7 +660,10 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             console.log(
               '[TenantProvider] Tenant mismatch - redirecting to home',
             );
-            window.location.href = '/';
+            // Carry embed params onto '/' so an embedded iframe isn't flipped
+            // back to the full app by this hard reset (sessionStorage also
+            // recovers them on the '/' load; this makes it immediate).
+            window.location.href = appendEmbedContext('/');
           }}
         >
           {useMentorProvider ? (

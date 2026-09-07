@@ -26,11 +26,12 @@
  *    ```
  *
  * API endpoint used:
- *   DELETE {NEXT_PUBLIC_API_BASE_URL}/dm/api/ai-mentor/orgs/{tenantKey}/users/{username}/{mentorId}/
+ *   DELETE {dmBase}/api/ai-mentor/orgs/{tenantKey}/users/{username}/{mentorId}/
  *   Authorization: Token {dm_token}
  *
- * The NEXT_PUBLIC_API_BASE_URL env var is already set in the app's .env.local
- * and is available to Playwright via the dotenv load in playwright.config.ts.
+ * The DM base is resolved at runtime by `dm-api.ts` (env override, else read
+ * off the app's own traffic) — playwright.config.ts loads `e2e/.env*`, not the
+ * app's root `.env`, so NEXT_PUBLIC_API_BASE_URL is usually absent here.
  *
  * WHY API rather than UI:
  *   The UI path (`editMentorPage.settings.deleteMentor()`) requires the page
@@ -54,7 +55,7 @@ import type { Browser, TestInfo } from '@playwright/test';
 import { logger } from '@iblai/iblai-js/playwright';
 import path from 'path';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+import { tryResolveDmApiBase } from './dm-api';
 
 /**
  * Reads auth context from localStorage of an already-navigated page and
@@ -70,9 +71,18 @@ export async function deleteMentorById(
   mentorId: string,
 ): Promise<void> {
   try {
-    if (!API_BASE) {
+    // Resolved from live app traffic when no env override is present. This used
+    // to gate on NEXT_PUBLIC_API_BASE_URL alone, which playwright.config.ts does
+    // not load — so cleanup silently no-opped on every local run and leaked
+    // every mentor the suite created. Reloading is disallowed here: cleanup must
+    // not disturb whatever page state the caller still depends on.
+    const dmBase = await tryResolveDmApiBase(page, {
+      allowReload: false,
+      timeout: 10_000,
+    });
+    if (!dmBase) {
       logger.warn(
-        '[mentor-cleanup] NEXT_PUBLIC_API_BASE_URL is not set — skipping API delete',
+        '[mentor-cleanup] Could not resolve the DM API base (set DM_URL to override) — skipping API delete',
       );
       return;
     }
@@ -113,11 +123,13 @@ export async function deleteMentorById(
     }
 
     // DM API lives under the `/dm` path on the API base (see config.dmUrl()).
-    const url = `${API_BASE}/dm/api/ai-mentor/orgs/${encodeURIComponent(tenantKey)}/users/${encodeURIComponent(username)}/${encodeURIComponent(mentorId)}/`;
+    const url = `${dmBase}/api/ai-mentor/orgs/${encodeURIComponent(tenantKey)}/users/${encodeURIComponent(username)}/${encodeURIComponent(mentorId)}/`;
 
+    // Deliberately short: cleanup runs inside afterAll's 120s budget, and a
+    // DELETE that hangs is far more expensive than one left for the sweeper.
     const res = await page.request.delete(url, {
       headers: { Authorization: `Token ${dmToken}` },
-      timeout: 20_000,
+      timeout: 10_000,
     });
 
     if (res.ok() || res.status() === 404) {
@@ -148,10 +160,26 @@ export class MentorTracker {
     if (mentorId) this.ids.add(mentorId);
   }
 
-  /** Best-effort delete of all tracked mentors using a fresh browser context
-   *  authenticated via the project's storageState. */
-  async deleteAll(browser: Browser, testInfo: TestInfo): Promise<void> {
+  /**
+   * Best-effort delete of all tracked mentors using a fresh browser context
+   * authenticated via the project's storageState.
+   *
+   * Bounded by `budgetMs` (default 60s) because callers run this from
+   * `afterAll`, whose own timeout is 120s. Cleanup previously cost nothing —
+   * it bailed out immediately on a missing env var — so suites with many
+   * tracked mentors never noticed it. Now that it really issues requests, an
+   * unbounded loop of slow DELETEs can exhaust the hook budget and fail the
+   * whole suite (observed on journeys 44/47/66). Leaving a few mentors behind
+   * is strictly better than failing a green run, so this stops at the deadline
+   * and says what it skipped.
+   */
+  async deleteAll(
+    browser: Browser,
+    testInfo: TestInfo,
+    budgetMs = 60_000,
+  ): Promise<void> {
     if (this.ids.size === 0) return;
+    const deadline = Date.now() + budgetMs;
 
     // Derive the browser storageState from the project name, matching how
     // journeys 14 and 60 do it.
@@ -175,6 +203,21 @@ export class MentorTracker {
             waitUntil: 'domcontentloaded',
             timeout: 60_000,
           });
+
+          // Warm the DM-base cache once on this throwaway page. A reload is
+          // safe here (nothing depends on its state) and guarantees the traffic
+          // to sniff, so the per-mentor deletes below can't no-op just because
+          // the app happened to be idle during their short lookup.
+          //
+          // This runs BEFORE the dm_token wait on purpose: the reload it may
+          // trigger tears down the execution context, and any evaluate racing
+          // that teardown dies with "Execution context was destroyed". Doing it
+          // first means the wait below re-settles the page afterwards.
+          await tryResolveDmApiBase(page, {
+            allowReload: true,
+            timeout: 15_000,
+          });
+
           // Wait until dm_token is available in localStorage (set by AuthProvider).
           await page
             .waitForFunction(() => !!window.localStorage.getItem('dm_token'), {
@@ -189,8 +232,28 @@ export class MentorTracker {
         }
       }
 
-      for (const mentorId of this.ids) {
-        await deleteMentorById(page, mentorId);
+      // Deletes are independent, so run them a few at a time rather than
+      // strictly serially — a suite with a dozen tracked mentors would
+      // otherwise spend longer queueing than deleting. Re-check the deadline
+      // between batches so a stalled backend can't run past the hook budget.
+      const pending = [...this.ids];
+      const BATCH = 4;
+      let skipped = 0;
+
+      while (pending.length > 0) {
+        if (Date.now() >= deadline) {
+          skipped = pending.length;
+          break;
+        }
+        const batch = pending.splice(0, BATCH);
+        await Promise.all(batch.map((id) => deleteMentorById(page, id)));
+      }
+
+      if (skipped > 0) {
+        logger.warn(
+          `[MentorTracker] Cleanup budget exhausted — ${skipped} mentor(s) left undeleted. ` +
+            'They will be picked up by the sweeper, if one is configured.',
+        );
       }
       this.ids.clear();
     } catch (err) {

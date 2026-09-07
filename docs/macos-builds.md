@@ -1,4 +1,4 @@
-# macOS builds: Mac App Store vs. Developer ID
+# macOS Builds: Mac App Store vs. Developer ID
 
 The app ships in **two macOS variants** because Cowork (GhostOS) and the
 Mac App Store are mutually exclusive.

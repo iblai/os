@@ -1,4 +1,4 @@
-# Running the Mentor App
+# Running the App
 
 ## Development Mode
 

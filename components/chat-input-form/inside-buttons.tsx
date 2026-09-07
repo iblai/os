@@ -51,6 +51,7 @@ import { MemoryButton } from './memory-button';
 import { CodingModeButton } from './coding-mode-button';
 import { MemoryMenu } from './memory-menu';
 import { isTauriApp } from '@/types/tauri';
+import type { OpencodeSkillSync } from '@/hooks/use-opencode-skill-sync';
 
 // 12GB floor, matching the SDK default (DEFAULT_COWORK_REQUIRED_SIZE_GB)
 // and the Local Models tab's "supported" indicator. modelSupportsCowork
@@ -102,6 +103,11 @@ interface InsideButtonsProps {
   isFetchingMoreSkills?: boolean;
   /** Called when the menu is scrolled near its bottom. */
   onLoadMoreSkills?: () => void;
+  /**
+   * Code-mode skill sync (mentor + vibe skills onto the local agent's disk).
+   * Drives the Code pill's spinner while syncing and its popover's error note.
+   */
+  skillSync?: OpencodeSkillSync;
 }
 
 export const InsideButtons = ({
@@ -127,6 +133,7 @@ export const InsideButtons = ({
   hasMoreSkills = false,
   isFetchingMoreSkills = false,
   onLoadMoreSkills,
+  skillSync,
 }: InsideButtonsProps) => {
   const t = useTranslations('chatInputFormInsideButtons');
 
@@ -367,6 +374,11 @@ export const InsideButtons = ({
         type="button"
         disabled={disabled || !!button.disabledReason}
         title={button.disabledReason}
+        // The pill's on/off state is otherwise styling-only. Exposed as
+        // aria-pressed so assistive tech and e2e (ChatPage.isCanvasToolActive)
+        // can read it — the inactive `hover:bg-[#F5F8FF]` class contains the
+        // active `bg-[#F5F8FF]` token as a substring, so class sniffing lies.
+        aria-pressed={button.isActive}
         className={`flex h-8 items-center gap-1.5 rounded-lg px-2 text-sm transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 ${
           button.isActive
             ? 'border border-[#D0E0FF] bg-[#F5F8FF] text-[#38A1E5]'
@@ -520,7 +532,9 @@ export const InsideButtons = ({
     <div className="relative flex items-center gap-1.5">
       {/* Code + Cowork — the desktop assistant pair, Code on the left. Both sit
           outside the responsive list so they always render side by side. */}
-      {inTauri && <CodingModeButton sessionId={sessionId} />}
+      {inTauri && (
+        <CodingModeButton sessionId={sessionId} skillSync={skillSync} />
+      )}
       {coworkButton.isEnabled && renderToolButton(coworkButton)}
       {/* Responsive Inside Buttons — the Skills dropdown slots in right after
           Canvas so Canvas stays the first tool pill. */}

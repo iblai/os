@@ -63,6 +63,7 @@ import {
   type MentorSkillAssignment,
 } from '@iblai/iblai-js/data-layer';
 import { TenantKeyMentorIdParams } from '@/lib/types';
+import { useOpencodeSkillSync } from '@/hooks/use-opencode-skill-sync';
 
 // Fallback used when the configured paste-to-attachment threshold is missing
 // or non-numeric, so a misconfigured env value can't make a 0-char threshold
@@ -186,6 +187,19 @@ export function ChatInputForm({
   const isChatDisabledByRbac = !hasChatPermission;
   const isSendDisabled = isChatDisabledByRbac || !sessionId;
 
+  // Listing an agent's skills is a separate, stricter grant than chatting:
+  // `GET .../agents/{uuid}/skills/` 403s for users without
+  // `view_skill_assignments`, so the skills fetch stays off until the
+  // mentor's permission check has explicitly granted it. No permission data
+  // loaded means no fetch — chatting never needs this endpoint.
+  const hasSkillAssignmentsPermission =
+    mentorDbId && hasMentorRbacData
+      ? checkRbacPermission(
+          rbacPermissions,
+          `/mentors/${mentorDbId}/#view_skill_assignments`,
+        )
+      : false;
+
   const {
     FreeTrialDialog,
     closeModal: closeFreeTrialModal,
@@ -248,10 +262,20 @@ export function ChatInputForm({
   // assignments-only until a mentor-scoped skills read exists backend-side:
   // no mentor-private skills (attached by ownership, absent from assignment
   // rows), no descriptions in the picker (assignment rows carry only
-  // name/slug/enabled), and users the endpoint 403s for (students today)
-  // get no picker. Errors degrade to an inactive picker.
+  // name/slug/enabled). Users without `view_skill_assignments` never hit the
+  // endpoint at all (it would 403) — they simply get no picker. Errors
+  // degrade to an inactive picker.
   const mentorUniqueId = mentorSettings?.data?.mentorUniqueId;
-  const skillsQuerySkipped = !mentorUniqueId || !tenantKey || !username;
+  const skillsQuerySkipped =
+    !mentorUniqueId ||
+    !tenantKey ||
+    !username ||
+    !hasSkillAssignmentsPermission;
+
+  // Code mode: keep this mentor's Agent Skills (plus the shared vibe skills)
+  // materialised on disk for the local opencode agent. Idle outside Tauri or
+  // while Code is off; drives the Code pill's spinner and error note.
+  const skillSync = useOpencodeSkillSync({ org: tenantKey, mentorUniqueId });
 
   // Paged fetching, 20 at a time, matching the SDK picker's lazy-load
   // contract: pages accumulate as the user scrolls the picker/dropdown near
@@ -670,7 +694,10 @@ export function ChatInputForm({
 
   const { handleMicrophoneBtnClick, processing, recording, time } =
     useVoiceChat({
-      sendMessage: handleSelectPrompt,
+      onTranscript: (text) =>
+        setInputValue(
+          inputValue.trim() ? `${inputValue.trim()} ${text}` : text,
+        ),
     });
 
   // Get attached files from Redux store with a fallback for when the state is not yet available
@@ -1002,6 +1029,7 @@ export function ChatInputForm({
                   hasMoreSkills={hasMoreSkills}
                   isFetchingMoreSkills={isFetchingMoreSkills}
                   onLoadMoreSkills={loadMoreSkills}
+                  skillSync={skillSync}
                 />
               )}
 
