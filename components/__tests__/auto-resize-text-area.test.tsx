@@ -823,6 +823,23 @@ describe('AutoResizeTextarea', () => {
   });
 
   describe('focus on mount', () => {
+    it('should NOT focus on mount on touch devices (would raise the keyboard)', () => {
+      // The composer blurs itself on send so the on-screen keyboard closes;
+      // the messages-view composer that then mounts must not focus, or the
+      // keyboard pops straight back up over the reply.
+      const originalMatchMedia = window.matchMedia;
+      window.matchMedia = vi.fn().mockReturnValue({ matches: true }) as never;
+      try {
+        renderWithRedux(
+          <AutoResizeTextarea {...defaultProps} sessionId="session-123" />,
+        );
+        const textarea = screen.getByRole('textbox');
+        expect(document.activeElement).not.toBe(textarea);
+      } finally {
+        window.matchMedia = originalMatchMedia;
+      }
+    });
+
     it('should focus the textarea on mount when enabled', () => {
       renderWithRedux(
         <AutoResizeTextarea {...defaultProps} sessionId="session-123" />,

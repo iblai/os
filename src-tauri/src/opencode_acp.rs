@@ -34,7 +34,7 @@ use tokio::sync::{oneshot, Mutex};
 /// `api.<domain>/dm` gateway (which 500s on chat). Full model endpoint:
 /// `{default_api_base(..)}/api/ai-mentor/orgs/<tenant>/v1`. With the default
 /// domain this is exactly the historical `https://asgi.data.iblai.app`.
-fn default_api_base(platform_domain: &str) -> String {
+pub(crate) fn default_api_base(platform_domain: &str) -> String {
     format!("https://asgi.data.{platform_domain}")
 }
 
@@ -1245,7 +1245,7 @@ pub async fn new_opencode_workspace(
 /// git. The snapshots themselves were revert-safety for the auto-approve era — now that
 /// every write is individually approved they only added noise to the user's history, and
 /// two concurrent sessions would have collided on `.git/index.lock`.
-fn ensure_workspace(dir: &PathBuf) -> Result<(), String> {
+pub(crate) fn ensure_workspace(dir: &PathBuf) -> Result<(), String> {
     std::fs::create_dir_all(dir).map_err(|e| format!("workspace create failed: {e}"))?;
     if !dir.join(".git").exists() {
         let _ = std::process::Command::new("git")
@@ -1836,13 +1836,13 @@ async fn handle_update(app: &AppHandle, v: &Value, turn: &Arc<Mutex<TurnState>>)
 /// The model string doubles as the routing signal so the SDK wire format doesn't have
 /// to change: `ollama/<id>` and `foundry/<id>` are on-device, anything else is a
 /// cloud ibl.ai compat id that already carries its own prefix (`openai/gpt-5.5`).
-struct ModelSpec {
+pub(crate) struct ModelSpec {
     /// opencode provider key: "ollama" | "foundry" | "iblai".
-    provider: &'static str,
+    pub(crate) provider: &'static str,
     /// Bare model id as the runtime knows it (routing prefix stripped for local).
-    model: String,
+    pub(crate) model: String,
     /// On-device runtimes need an explicit baseURL and no ibl.ai auth.
-    local: bool,
+    pub(crate) local: bool,
 }
 
 fn parse_model_spec(model: &str) -> ModelSpec {
@@ -1939,7 +1939,7 @@ fn enforce_build_prompt(root: &mut serde_json::Map<String, Value>) {
 // ponytail: patches the single shared config at ~/.config/iblai/agents/opencode —
 // fine for one Code session at a time; give each session its own XDG_CONFIG_HOME if
 // concurrent Code sessions with different models ever matter.
-fn apply_opencode_model(
+pub(crate) fn apply_opencode_model(
     session_id: &str,
     mentor: Option<&str>,
     spec: &ModelSpec,

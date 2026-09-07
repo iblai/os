@@ -1391,6 +1391,17 @@ export function getUserOS() {
   return 'Unknown OS';
 }
 
+/**
+ * True on devices whose primary pointer is a finger (phones, tablets) — where
+ * focusing a text field raises an on-screen keyboard. Unlike `isMobileOS`,
+ * this is capability-based, so it also covers touch-first desktop builds.
+ */
+export function hasCoarsePointer(): boolean {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function')
+    return false;
+  return window.matchMedia('(pointer: coarse)')?.matches ?? false;
+}
+
 export function isMobileOS(): boolean {
   if (typeof navigator === 'undefined') return false;
   const ua = navigator.userAgent || '';

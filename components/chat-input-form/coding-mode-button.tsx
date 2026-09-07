@@ -97,6 +97,22 @@ async function callTauri<T = unknown>(
 }
 
 /**
+ * True on Tauri mobile (iOS/Android). Mobile Code runs against a PAIRED
+ * desktop's opencode server (the phone's Rust side proxies the `opencode_*`
+ * commands over HTTP+SSE), so mobile skips `check_opencode_status` — that
+ * probe is desktop-only — and gates on the pairing state instead.
+ */
+async function isTauriMobile(): Promise<boolean> {
+  try {
+    const { platform } = await import('@tauri-apps/plugin-os');
+    const os = platform();
+    return os === 'ios' || os === 'android';
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Resolve the cloud model Code should use — EXACTLY the top-left mentor LLM
  * (`<provider>/<name>`), with a `matched` flag from validating it against the
  * tenant's compat `/v1/models`. There is NO substitution: an unprovisioned model is
@@ -128,9 +144,11 @@ async function resolveCodingModel(
 }
 
 /**
- * Code (agentic coding via opencode/ACP) control — a desktop-only popover with the
- * on/off toggle + workspace folder selector. The SDK chat transport reads
- * `ibl_coding_mode_enabled` / `ibl_coding_mode_model` from localStorage.
+ * Code (agentic coding via opencode) control — the on/off toggle plus, on
+ * desktop, the workspace folder selector and the phone-access host, and, on
+ * Tauri mobile, the pairing form for connecting to that host. The SDK chat
+ * transport reads `ibl_coding_mode_enabled` / `ibl_coding_mode_model` (and, on
+ * mobile, `ibl_remote_code_ready`) from localStorage.
  *
  * The workspace is **per chat**: `sessionId` keys it, the Rust side generates a folder
  * on first use, and the picker overrides it for this chat only. A chat with no session
@@ -166,6 +184,33 @@ export function CodingModeButton({
   const [permissionMode, setPermissionMode] = useState<
     PermissionMode | null | undefined
   >(undefined);
+  // Tauri mobile: Code runs against a paired desktop's opencode server. The
+  // pairing state gates everything; the SDK reads the mirrored localStorage
+  // flag (ibl_remote_code_ready) at send time.
+  const [mobile, setMobile] = useState(false);
+  const [remoteHost, setRemoteHost] = useState<{
+    configured: boolean;
+    connected: boolean;
+    url?: string;
+    directory?: string;
+  } | null>(null);
+  const [hostUrl, setHostUrl] = useState('');
+  const [hostPassword, setHostPassword] = useState('');
+  const [connecting, setConnecting] = useState(false);
+  const [connectError, setConnectError] = useState('');
+  // Desktop: the phone-access server (opencode serve) pairing info.
+  const [phoneAccess, setPhoneAccess] = useState<{
+    running: boolean;
+    urls: string[];
+    password?: string | null;
+  } | null>(null);
+  const [phoneAccessBusy, setPhoneAccessBusy] = useState(false);
+  const [pairingQr, setPairingQr] = useState('');
+  // null = picker closed; [] = open but empty/loading.
+  const [folderList, setFolderList] = useState<
+    { name: string; path: string }[] | null
+  >(null);
+  const [folderBusy, setFolderBusy] = useState(false);
 
   const t = useTranslations('chatInputFormCodingModeButton');
 
@@ -222,13 +267,280 @@ export function CodingModeButton({
   const localVerdictBad =
     isLocal && !!local && (!local.running || local.tools_supported === false);
   const blocked =
-    !sandboxReady || (isLocal ? !local || localVerdictBad : false);
+    !sandboxReady ||
+    (isLocal ? !local || localVerdictBad : false) ||
+    (mobile && !remoteHost?.connected);
+
+  /** Refresh the phone↔desktop pairing state and mirror it for the SDK. */
+  const refreshRemoteHost = async () => {
+    try {
+      const h = await callTauri<{
+        configured: boolean;
+        connected: boolean;
+        url?: string;
+        directory?: string;
+      }>('remote_code_get_host');
+      setRemoteHost(h);
+      const ready = !!h?.configured && !!h?.connected;
+      localStorage.setItem('ibl_remote_code_ready', ready ? 'true' : 'false');
+      window.dispatchEvent(new Event('local-storage'));
+      // NOTE: deliberately no setWorkspace(h.directory) here — that's the
+      // SERVER default (the shared phone project) and this probe resolves
+      // late, clobbering the per-chat folder that refresh() just displayed.
+    } catch {
+      /* best-effort */
+    }
+  };
+
+  useEffect(() => {
+    if (!mobile) return;
+    void refreshRemoteHost();
+  }, [mobile, isOpen]);
+
+  /** Try candidate addresses in order until one answers with this password. */
+  const pairWith = async (
+    urls: string[],
+    password: string,
+    mgmt?: string[],
+  ) => {
+    setConnecting(true);
+    setConnectError('');
+    try {
+      let lastError = '';
+      for (const url of urls) {
+        try {
+          // `urls` rides along so the phone remembers EVERY address this
+          // desktop advertises and can fail over when one stops answering.
+          await callTauri('remote_code_set_host', {
+            url,
+            password,
+            mgmt,
+            urls,
+          });
+          setHostPassword('');
+          await refreshRemoteHost();
+          return;
+        } catch (e) {
+          lastError = e instanceof Error ? e.message : String(e);
+        }
+      }
+      setConnectError(lastError || 'no address answered');
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  const connectToDesktop = () =>
+    pairWith([hostUrl.trim()], hostPassword.trim());
+
+  /** Scan the desktop's pairing QR (payload: `iblcode1:{"urls":[…],"password":…}`). */
+  const scanPairingQr = async () => {
+    setConnectError('');
+    try {
+      const scanner = await import('@tauri-apps/plugin-barcode-scanner');
+      const perm = await scanner.checkPermissions();
+      if (perm !== 'granted') {
+        const asked = await scanner.requestPermissions();
+        if (asked !== 'granted') {
+          setConnectError(t('cameraDenied'));
+          return;
+        }
+      }
+      const result = await scanner.scan({
+        windowed: false,
+        formats: [scanner.Format.QRCode],
+      });
+      const content = result?.content ?? '';
+      if (!content.startsWith('iblcode1:')) {
+        setConnectError(t('notAPairingCode'));
+        return;
+      }
+      const payload = JSON.parse(content.slice('iblcode1:'.length)) as {
+        urls?: string[];
+        password?: string;
+        mgmt?: string[];
+      };
+      const urls = (payload.urls ?? []).filter(Boolean);
+      if (!urls.length || !payload.password) {
+        setConnectError(t('notAPairingCode'));
+        return;
+      }
+      await pairWith(urls, payload.password, payload.mgmt);
+    } catch (e) {
+      // A dismissed scanner rejects too — show it small, not as a failure toast.
+      setConnectError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const openFolderPicker = async () => {
+    setFolderBusy(true);
+    try {
+      const res = await callTauri<{
+        workspaces?: { name: string; path: string }[];
+      }>('remote_code_list_workspaces');
+      setFolderList(res?.workspaces ?? []);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      setFolderBusy(false);
+    }
+  };
+
+  const chooseRemoteFolder = async (path: string) => {
+    if (!sessionId) return;
+    setFolderBusy(true);
+    try {
+      await callTauri('set_opencode_workspace', {
+        sessionId,
+        path,
+        tenant: tenantKey || undefined,
+        mentor: mentorUniqueId || undefined,
+      });
+      setWorkspace(path);
+      setFolderList(null);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      setFolderBusy(false);
+    }
+  };
+
+  const newRemoteFolder = async () => {
+    if (!sessionId) return;
+    setFolderBusy(true);
+    try {
+      const dir = await callTauri<string>('new_opencode_workspace', {
+        sessionId,
+        tenant: tenantKey || undefined,
+        mentor: mentorUniqueId || undefined,
+      });
+      if (dir) setWorkspace(dir);
+      setFolderList(null);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      setFolderBusy(false);
+    }
+  };
+
+  const disconnectFromDesktop = async () => {
+    try {
+      await callTauri('remote_code_clear_host');
+    } catch {
+      /* best-effort */
+    }
+    await refreshRemoteHost();
+  };
+
+  // Desktop: phone access that was ON before the app restarted comes back up
+  // by itself — otherwise every desktop restart silently bricks the paired
+  // phones (their stored password stops matching a server that isn't there).
+  useEffect(() => {
+    if (mobile || sandboxed !== false) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const st = await callTauri<{ running: boolean; auto_enable?: boolean }>(
+          'remote_code_status',
+        );
+        if (cancelled || !st?.auto_enable) return;
+        await callTauri('remote_code_enable', {
+          tenant: localStorage.getItem('tenant') || '',
+          token: localStorage.getItem('dm_token') || '',
+        });
+      } catch {
+        /* best-effort; the popover's Enable button remains */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [mobile, sandboxed]);
+
+  // Desktop: load the phone-access server state whenever the popover opens.
+  useEffect(() => {
+    if (!isOpen || mobile || sandboxed !== false) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const st = await callTauri<{
+          running: boolean;
+          urls: string[];
+          password?: string | null;
+        }>('remote_code_status');
+        // Guard against a backend without the command (returns nothing).
+        if (!cancelled && st && typeof st.running === 'boolean') {
+          setPhoneAccess(st);
+          if (st.running) {
+            // Idempotent re-enable = refresh the held sign-in token. It
+            // expires, and a stale one leaves phone turns silently retrying.
+            void callTauri('remote_code_enable', {
+              tenant: localStorage.getItem('tenant') || '',
+              token: localStorage.getItem('dm_token') || '',
+            }).catch(() => {});
+          }
+        }
+      } catch {
+        /* older backend: leave the section hidden */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, mobile, sandboxed]);
+
+  // The pairing QR follows the server state: fetch when running, drop when not.
+  useEffect(() => {
+    if (mobile || !phoneAccess?.running) {
+      setPairingQr('');
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const svg = await callTauri<string>('remote_code_pairing_qr');
+        if (!cancelled && svg) setPairingQr(svg);
+      } catch {
+        /* QR is sugar; the address+password stay visible */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [mobile, phoneAccess?.running]);
+
+  const togglePhoneAccess = async () => {
+    setPhoneAccessBusy(true);
+    try {
+      if (phoneAccess?.running) {
+        await callTauri('remote_code_disable');
+        setPhoneAccess({ running: false, urls: [] });
+      } else {
+        const st = await callTauri<{
+          running: boolean;
+          urls: string[];
+          password?: string | null;
+        }>('remote_code_enable', {
+          tenant: localStorage.getItem('tenant') || '',
+          token: localStorage.getItem('dm_token') || '',
+        });
+        setPhoneAccess(st);
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      setPhoneAccessBusy(false);
+    }
+  };
 
   const refresh = async () => {
-    if (!sessionId) return;
+    // Mobile mints/records folders keyed by mentor, so even an unsaved chat
+    // (no session id yet) can show its real folder; desktop still needs the
+    // id (its workspace map is chat-keyed).
+    if (!sessionId && !mobile) return;
     try {
       const ws = await callTauri<string>('get_opencode_workspace', {
-        sessionId,
+        sessionId: sessionId ?? '',
         tenant: tenantKey || undefined,
         mentor: mentorUniqueId || undefined,
       });
@@ -306,15 +618,19 @@ export function CodingModeButton({
   // tool calling, or a Linux host missing bubblewrap) — the send path (SDK) reads
   // this flag, so clearing it routes back to normal chat instead of failing every turn.
   useEffect(() => {
+    // On mobile, an un-paired (or unreachable) desktop also forces Code off:
+    // sends would fail every turn otherwise.
+    const mobileDisconnected =
+      mobile && remoteHost !== null && !remoteHost.connected;
     if (
-      (localVerdictBad || !sandboxReady) &&
+      (localVerdictBad || !sandboxReady || mobileDisconnected) &&
       localStorage.getItem(ENABLED_KEY) === 'true'
     ) {
       localStorage.setItem(ENABLED_KEY, 'false');
       window.dispatchEvent(new Event('local-storage'));
       setEnabled(false);
     }
-  }, [localVerdictBad, sandboxReady]);
+  }, [localVerdictBad, sandboxReady, mobile, remoteHost]);
 
   // On-device: ask the backend which runtime serves the selected local model and
   // whether it can drive Code. Rust auto-detects Ollama vs Foundry Local.
@@ -368,6 +684,15 @@ export function CodingModeButton({
   useEffect(() => {
     let cancelled = false;
     void (async () => {
+      if (await isTauriMobile()) {
+        // Mobile Code is real now — it runs on a paired desktop. Show the
+        // control; the pairing state (below) gates whether it can turn on.
+        if (!cancelled) {
+          setMobile(true);
+          setSandboxed(false);
+        }
+        return;
+      }
       try {
         const st = await callTauri<{
           sandboxed?: boolean;
@@ -392,7 +717,8 @@ export function CodingModeButton({
   // choice, skips the sandboxed build + on-device-model (blocked) case, and does NOT
   // prompt for a folder — the default workspace is used until the user changes it.
   useEffect(() => {
-    if (sandboxed !== false || blocked) return;
+    // Mobile is opt-in: Code turns on only after the user pairs and flips it.
+    if (sandboxed !== false || blocked || mobile) return;
     if (localStorage.getItem(ENABLED_KEY) !== null) return;
     const loggedIn =
       !!localStorage.getItem('tenant') && !!localStorage.getItem('dm_token');
@@ -409,7 +735,7 @@ export function CodingModeButton({
     // and mint the platform key now rather than at first spawn.
     callTauri('install_opencode').catch(() => {});
     prewarmPlatformKey();
-  }, [sandboxed, blocked, isLocal, local?.spec, llmProvider, llmName]);
+  }, [sandboxed, blocked, mobile, isLocal, local?.spec, llmProvider, llmName]);
 
   // Native folder picker → persist via set_opencode_workspace (which mkdir -p's +
   // git init's the folder).
@@ -520,6 +846,13 @@ export function CodingModeButton({
     } else if (!isLocal && llmProvider && llmName) {
       localStorage.setItem(MODEL_KEY, `${llmProvider}/${llmName}`);
     }
+    // Mobile: the workspace, the opencode install, and the platform key all
+    // live on the paired desktop — none of the desktop prep below applies
+    // (the folder picker in particular would just fail on a phone).
+    if (mobile) {
+      void refresh();
+      return;
+    }
     // First enable → force a deliberate folder choice immediately.
     if (!localStorage.getItem(FOLDER_CHOSEN_KEY)) {
       await pickFolder();
@@ -606,7 +939,13 @@ export function CodingModeButton({
                     <Code2 className="h-4 w-4" />
                   )}
                 </span>
-                {t('code')}
+                {/* On phone widths an INACTIVE pill is icon-only so the
+                    composer row never pushes the send button off-screen;
+                    once Code is on (or its popover is open) the label
+                    always shows, so the user can see it is selected. */}
+                <span className={active ? undefined : 'max-[520px]:hidden'}>
+                  {t('code')}
+                </span>
                 {isOpen && (
                   <X
                     className="ml-1 h-3 w-3 cursor-pointer"
@@ -627,7 +966,7 @@ export function CodingModeButton({
         </Tooltip>
         <PopoverContent
           align="start"
-          className="w-96 rounded-lg border border-gray-200 bg-white p-4 shadow-xl"
+          className="w-96 max-w-[calc(100vw-1rem)] rounded-lg border border-gray-200 bg-white p-4 shadow-xl"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -718,48 +1057,262 @@ export function CodingModeButton({
             </p>
           )}
 
-          <div className="mt-3 rounded-md border border-gray-200 p-3">
-            <div className="flex items-center gap-1.5 text-xs font-medium text-gray-600">
-              <Folder className="h-3.5 w-3.5" />
-              {t('workspace')}
+          {mobile ? (
+            /* Phone: Code runs on a paired desktop. This section IS the
+              workspace story here — connect, see the folder, disconnect. */
+            <div
+              data-testid="code-remote-host"
+              className="mt-3 rounded-md border border-gray-200 p-3"
+            >
+              <div className="flex items-center gap-1.5 text-xs font-medium text-gray-600">
+                <Folder className="h-3.5 w-3.5" />
+                {t('connectTitle')}
+              </div>
+              {remoteHost?.configured && remoteHost.connected ? (
+                <>
+                  <div className="mt-2 text-xs text-gray-600">
+                    {t('connectedTo')}
+                  </div>
+                  <div className="mt-1 font-mono text-xs break-all text-gray-800">
+                    {remoteHost.url}
+                  </div>
+                  <div className="mt-2 text-xs text-gray-600">
+                    {t('workspace')}
+                  </div>
+                  <div
+                    data-testid="code-remote-workspace"
+                    className="mt-1 font-mono text-[11px] break-all text-gray-800"
+                  >
+                    {workspace || '—'}
+                  </div>
+                  {folderList !== null && (
+                    <div
+                      data-testid="code-remote-folder-list"
+                      className="mt-2 max-h-40 overflow-y-auto rounded-md border border-gray-200"
+                    >
+                      {folderList.length === 0 ? (
+                        <div className="p-2 text-[11px] text-gray-400">—</div>
+                      ) : (
+                        folderList.map((f) => (
+                          <button
+                            key={f.path}
+                            type="button"
+                            className="block w-full truncate px-2 py-1.5 text-left font-mono text-[11px] text-gray-700 hover:bg-gray-50"
+                            disabled={folderBusy}
+                            onClick={() => void chooseRemoteFolder(f.path)}
+                          >
+                            {f.name}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                  <div className="mt-3 flex flex-col gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      type="button"
+                      data-testid="code-remote-select-folder"
+                      className="h-7 w-full text-xs"
+                      disabled={folderBusy || !sessionId}
+                      onClick={() =>
+                        folderList === null
+                          ? void openFolderPicker()
+                          : setFolderList(null)
+                      }
+                    >
+                      {t('selectWorkspace')}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      type="button"
+                      data-testid="code-remote-new-folder"
+                      className="h-7 w-full text-xs"
+                      disabled={folderBusy || !sessionId}
+                      onClick={() => void newRemoteFolder()}
+                    >
+                      {t('newWorkspace')}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      type="button"
+                      className="h-7 w-full text-xs"
+                      onClick={() => void disconnectFromDesktop()}
+                    >
+                      {t('disconnect')}
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="mt-2 text-[11px] text-gray-500">
+                    {t('connectHint')}
+                  </p>
+                  {remoteHost?.configured && !remoteHost.connected && (
+                    <p
+                      data-testid="code-remote-unreachable"
+                      className="mt-1 text-[11px] text-amber-600"
+                    >
+                      {t('desktopUnreachable')}
+                    </p>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    type="button"
+                    data-testid="code-remote-scan"
+                    className="mt-2 h-8 w-full text-xs"
+                    disabled={connecting}
+                    onClick={() => void scanPairingQr()}
+                  >
+                    {t('scanQr')}
+                  </Button>
+                  <p className="mt-2 text-center text-[10px] text-gray-400">
+                    {t('orTypeManually')}
+                  </p>
+                  <input
+                    data-testid="code-remote-url"
+                    className="mt-2 h-8 w-full rounded-md border border-gray-200 px-2 font-mono text-xs"
+                    placeholder="http://192.168.0.10:4096"
+                    value={hostUrl}
+                    onChange={(e) => setHostUrl(e.target.value)}
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                  />
+                  <input
+                    data-testid="code-remote-password"
+                    className="mt-2 h-8 w-full rounded-md border border-gray-200 px-2 font-mono text-xs"
+                    placeholder={t('hostPasswordLabel')}
+                    type="password"
+                    value={hostPassword}
+                    onChange={(e) => setHostPassword(e.target.value)}
+                  />
+                  {connectError && (
+                    <p className="mt-1 text-[11px] break-all text-red-600">
+                      {connectError}
+                    </p>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    type="button"
+                    className="mt-2 h-7 w-full text-xs"
+                    disabled={connecting || !hostUrl.trim() || !hostPassword}
+                    onClick={() => void connectToDesktop()}
+                  >
+                    {connecting ? t('connecting') : t('connect')}
+                  </Button>
+                </>
+              )}
             </div>
-            <div className="mt-2 font-mono text-xs break-all text-gray-800">
-              {workspace || '—'}
-            </div>
-            {/* Stacked full-width so all three stay the same size in every
+          ) : (
+            <div className="mt-3 rounded-md border border-gray-200 p-3">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-gray-600">
+                <Folder className="h-3.5 w-3.5" />
+                {t('workspace')}
+              </div>
+              <div className="mt-2 font-mono text-xs break-all text-gray-800">
+                {workspace || '—'}
+              </div>
+              {/* Stacked full-width so all three stay the same size in every
               locale — the es/fr labels don't fit equal columns in one row. */}
-            <div className="mt-3 flex flex-col gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                type="button"
-                className="h-7 w-full text-xs"
-                disabled={!workspace}
-                onClick={openWorkspace}
-              >
-                {openFolderLabel()}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                type="button"
-                className="h-7 w-full text-xs"
-                onClick={pickFolder}
-              >
-                {t('selectWorkspace')}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                type="button"
-                className="h-7 w-full text-xs"
-                disabled={!sessionId}
-                onClick={startNewWorkspace}
-              >
-                {t('newWorkspace')}
-              </Button>
+              <div className="mt-3 flex flex-col gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  className="h-7 w-full text-xs"
+                  disabled={!workspace}
+                  onClick={openWorkspace}
+                >
+                  {openFolderLabel()}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  className="h-7 w-full text-xs"
+                  onClick={pickFolder}
+                >
+                  {t('selectWorkspace')}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  className="h-7 w-full text-xs"
+                  disabled={!sessionId}
+                  onClick={startNewWorkspace}
+                >
+                  {t('newWorkspace')}
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Desktop: let a phone pair with this machine. Hidden until the
+            backend answers (older backends don't have the commands). */}
+          {!mobile && phoneAccess !== null && (
+            <div
+              data-testid="code-phone-access"
+              className="mt-3 rounded-md border border-gray-200 p-3"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-medium text-gray-600">
+                  {t('phoneAccess')}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  className="h-6 px-2 text-[11px]"
+                  disabled={phoneAccessBusy}
+                  onClick={() => void togglePhoneAccess()}
+                >
+                  {phoneAccess.running
+                    ? t('phoneAccessDisable')
+                    : t('phoneAccessEnable')}
+                </Button>
+              </div>
+              {phoneAccess.running ? (
+                <div className="mt-2 space-y-1">
+                  {pairingQr && (
+                    <div className="flex justify-center py-1">
+                      <img
+                        data-testid="code-pairing-qr"
+                        alt={t('phoneAccess')}
+                        className="h-40 w-40 rounded bg-white"
+                        src={`data:image/svg+xml;utf8,${encodeURIComponent(pairingQr)}`}
+                      />
+                    </div>
+                  )}
+                  <div className="text-[11px] text-gray-500">
+                    {t('phoneAccessAddress')}
+                  </div>
+                  <div className="font-mono text-xs break-all text-gray-800">
+                    {phoneAccess.urls[0] || '—'}
+                  </div>
+                  <div className="text-[11px] text-gray-500">
+                    {t('hostPasswordLabel')}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs break-all text-gray-800">
+                      {phoneAccess.password || '—'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-400">
+                    {t('phoneAccessHint')}
+                  </p>
+                </div>
+              ) : (
+                <p className="mt-1 text-[11px] text-gray-400">
+                  {t('phoneAccessOffHint')}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Error-only surface: the happy path adds no UI, but a failed skill
             sync (skills catalog 403s for some users, network, vibe missing

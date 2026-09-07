@@ -345,6 +345,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
 
 [[package]]
+name = "bindgen"
+version = "0.72.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "993776b509cfb49c750f11b8f07a46fa23e0a1386ffc01fb1e7d343efc387895"
+dependencies = [
+ "bitflags 2.11.1",
+ "cexpr",
+ "clang-sys",
+ "itertools",
+ "log",
+ "prettyplease",
+ "proc-macro2",
+ "quote",
+ "regex",
+ "rustc-hash",
+ "shlex",
+ "syn 2.0.117",
+]
+
+[[package]]
 name = "bit-set"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -542,6 +562,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a1dce859f0832a7d088c4f1119888ab94ef4b5d6795d1ce05afb7fe159d79f98"
 dependencies = [
  "find-msvc-tools",
+ "jobserver",
+ "libc",
  "shlex",
 ]
 
@@ -550,6 +572,15 @@ name = "cesu8"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6d43a04d8753f35258c91f8ec639f792891f748a1edbd759cf1dcea3382ad83c"
+
+[[package]]
+name = "cexpr"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6fac387a98bb7c37292057cffc56d62ecb629900026402633ae9160df93a8766"
+dependencies = [
+ "nom",
+]
 
 [[package]]
 name = "cfb"
@@ -596,6 +627,26 @@ dependencies = [
  "serde",
  "wasm-bindgen",
  "windows-link 0.2.1",
+]
+
+[[package]]
+name = "clang-sys"
+version = "1.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "157a8ba7b480713b56f4c09fd13fc3e0a22a5dfab8097ba61cbc5feef950788a"
+dependencies = [
+ "glob",
+ "libc",
+ "libloading 0.8.9",
+]
+
+[[package]]
+name = "cmake"
+version = "0.1.58"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c0f78a02292a74a88ac736019ab962ece0bc380e3f977bf72e376c5d78ff0678"
+dependencies = [
+ "cc",
 ]
 
 [[package]]
@@ -1272,6 +1323,15 @@ name = "find-msvc-tools"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5baebc0774151f905a1a2cc41989300b1e6fbb29aff0ceffa1064fdd3088d582"
+
+[[package]]
+name = "find_cuda_helper"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f9f9e65c593dd01ac77daad909ea4ad17f0d6d1776193fc8ea766356177abdad"
+dependencies = [
+ "glob",
+]
 
 [[package]]
 name = "flate2"
@@ -2042,8 +2102,12 @@ dependencies = [
  "futures-util",
  "hex",
  "http 1.4.0",
+ "if-addrs",
+ "libc",
+ "llama-cpp-2",
  "mime_guess",
  "objc",
+ "qrcode",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
@@ -2051,6 +2115,7 @@ dependencies = [
  "sysinfo",
  "tauri",
  "tauri-build",
+ "tauri-plugin-barcode-scanner",
  "tauri-plugin-deep-link",
  "tauri-plugin-devtools",
  "tauri-plugin-dialog",
@@ -2059,6 +2124,7 @@ dependencies = [
  "tauri-plugin-os",
  "tauri-plugin-shell",
  "tokio",
+ "tokio-stream",
  "tower-http 0.6.11",
  "url",
  "urlencoding",
@@ -2187,6 +2253,16 @@ checksum = "cb68373c0d6620ef8105e855e7745e18b0d00d3bdb07fb532e434244cdb9a714"
 dependencies = [
  "icu_normalizer",
  "icu_properties",
+]
+
+[[package]]
+name = "if-addrs"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bf39cc0423ee66021dc5eccface85580e4a001e0c5288bae8bea7ecb69225e90"
+dependencies = [
+ "libc",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -2329,6 +2405,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "jobserver"
+version = "0.1.35"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1c00acbd29eabad4a2392fa0e921c874934dbbf4194312ad20f04a0ed67a3cb3"
+dependencies = [
+ "getrandom 0.4.2",
+ "libc",
+]
+
+[[package]]
 name = "js-sys"
 version = "0.3.99"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2405,7 +2491,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6e9ec52138abedcc58dc17a7c6c0c00a2bdb4f3427c7f63fa97fd0d859155caf"
 dependencies = [
  "gtk-sys",
- "libloading",
+ "libloading 0.7.4",
  "once_cell",
 ]
 
@@ -2435,6 +2521,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "libloading"
+version = "0.8.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d7c4b02199fee7c5d21a5ae7d8cfa79a6ef5bb2fc834d6e9058e89c825efdc55"
+dependencies = [
+ "cfg-if",
+ "windows-link 0.2.1",
+]
+
+[[package]]
 name = "libredox"
 version = "0.1.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2454,6 +2550,34 @@ name = "litemap"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "92daf443525c4cce67b150400bc2316076100ce0b3686209eb8cf3c31612e6f0"
+
+[[package]]
+name = "llama-cpp-2"
+version = "0.1.155"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a487906c1bab58ccc714a99934279a5626f2ca7ba76cbefa39d98dade3bf88a7"
+dependencies = [
+ "encoding_rs",
+ "enumflags2",
+ "llama-cpp-sys-2",
+ "thiserror 2.0.18",
+ "tracing",
+ "tracing-core",
+]
+
+[[package]]
+name = "llama-cpp-sys-2"
+version = "0.1.155"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d59ed2a770245cf16526a8643c79872701fc6115556e5d8e675d9248752a1394"
+dependencies = [
+ "bindgen",
+ "cc",
+ "cmake",
+ "find_cuda_helper",
+ "glob",
+ "walkdir",
+]
 
 [[package]]
 name = "local-ip-address"
@@ -2571,6 +2695,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "minimal-lexical"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "68354c5c6bd36d73ff3feceb05efa59b6acb7626617f4962be322a825e61f79a"
+
+[[package]]
 name = "miniz_oxide"
 version = "0.8.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2677,6 +2807,16 @@ dependencies = [
  "cfg-if",
  "cfg_aliases",
  "libc",
+]
+
+[[package]]
+name = "nom"
+version = "7.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d273983c5a657a70a3e8f2a01329822f3b8c8172b73826411a55751e404a0a4a"
+dependencies = [
+ "memchr",
+ "minimal-lexical",
 ]
 
 [[package]]
@@ -3372,6 +3512,12 @@ checksum = "9091c90b0a32608e984ff2fa4091273cbdd755d54935c51d520887f4a1dbd5b0"
 dependencies = [
  "prost",
 ]
+
+[[package]]
+name = "qrcode"
+version = "0.14.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d68782463e408eb1e668cf6152704bd856c78c5b6417adaee3203d8f4c1fc9ec"
 
 [[package]]
 name = "quick-xml"
@@ -4582,6 +4728,20 @@ dependencies = [
  "serde_json",
  "tauri-utils",
  "walkdir",
+]
+
+[[package]]
+name = "tauri-plugin-barcode-scanner"
+version = "2.4.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "81f76741c77b8213350fd37a5608f0c78f4e61fe33f0334f5dfd0e6cc8d00138"
+dependencies = [
+ "log",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-plugin",
+ "thiserror 2.0.18",
 ]
 
 [[package]]

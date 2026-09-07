@@ -3,6 +3,12 @@
 
 mod cua_driver_installer;
 mod cua_driver_mcp;
+// Embedded on-device LLM runtime (iOS). Compiled everywhere so its HTTP layer
+// and tests build on the host; the llama.cpp engine inside is iOS/feature-gated.
+// Desktop builds don't call it (Ollama serves them), hence the dead_code allow —
+// the same arrangement as `foundry_manager` below.
+#[allow(dead_code)]
+mod local_llm;
 // Gated exactly like `opencode_acp`, which is its only consumer here: Code uses
 // `get_foundry_service_endpoint` to reach Foundry Local's OpenAI-compatible API.
 // The rest of the module is exercised by the desktop bin (see main.rs).
@@ -21,9 +27,19 @@ mod opencode_acp;
 mod opencode_installer;
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 mod opencode_proxy;
+// Remote Code host — desktop only, like everything opencode: it spawns the
+// managed binary in `serve` mode for mobile clients to connect to.
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod remote_code;
+// Phone-side Code: the opencode_* commands as proxies to a paired desktop's
+// opencode server. Compiled everywhere so its tests run on the host; the
+// commands are registered only on mobile.
+#[allow(dead_code)]
+mod remote_code_client;
 #[cfg(not(any(target_os = "ios", target_os = "android")))]
 mod web_cache;
 
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
 use mcp_bridge_installer::install_mcp_bridge;
 use model_manager::{
     cancel_download, check_disk_space, check_ollama_installed, get_timestamp, is_model_installed,
@@ -820,10 +836,19 @@ async fn install_ollama() -> Result<String, String> {
 /// comes up even when Ollama was already running and the server start was
 /// skipped. `start_bridge` is idempotent (no-ops if not installed or already up).
 async fn ensure_mcp_bridge() {
-    if let Err(e) = install_mcp_bridge().await {
-        println!("[McpBridge] Warning: failed to install ollama-mcp-bridge: {e}");
+    // No bridge on mobile: it's a spawned Node process, and the embedded
+    // iOS server serves chat directly (see model_manager::chat_base_url).
+    #[cfg(any(target_os = "ios", target_os = "android"))]
+    {
+        return;
     }
-    mcp_bridge_manager::start_bridge();
+    #[cfg(not(any(target_os = "ios", target_os = "android")))]
+    {
+        if let Err(e) = install_mcp_bridge().await {
+            println!("[McpBridge] Warning: failed to install ollama-mcp-bridge: {e}");
+        }
+        mcp_bridge_manager::start_bridge();
+    }
 }
 
 /// Absolute path to the user-editable `mcp-config.json`. MCP servers are managed
@@ -910,18 +935,34 @@ async fn check_ollama_status(app: AppHandle) -> Result<OllamaStatus, String> {
     Ok(status)
 }
 
-/// Check if there's enough disk space for the model download
-#[command]
-async fn check_disk_space_for_model(app: AppHandle) -> Result<bool, String> {
-    let available_gb = check_disk_space()?;
+/// How much free space a download of `model` actually needs. Mobile knows the
+/// exact GGUF byte size from the embedded catalog, so it budgets model + 1 GB
+/// of headroom — a 0.8 GB model must not demand the desktop's blanket 5 GB on
+/// a phone. Desktop pulls through Ollama (sizes unknown here) and keeps the
+/// blanket requirement.
+fn required_space_gb_for(model: Option<&str>) -> f64 {
+    #[cfg(any(target_os = "ios", target_os = "android"))]
+    if let Some(entry) = model.and_then(local_llm::resolve) {
+        return entry.size as f64 / (1024.0 * 1024.0 * 1024.0) + 1.0;
+    }
+    let _ = model;
+    REQUIRED_FREE_SPACE_GB
+}
 
-    if available_gb < REQUIRED_FREE_SPACE_GB {
+/// Check if there's enough disk space for the model download. `model` is
+/// optional so older SDK builds that don't send it keep working (they get the
+/// blanket requirement).
+#[command]
+async fn check_disk_space_for_model(app: AppHandle, model: Option<String>) -> Result<bool, String> {
+    let available_gb = check_disk_space()?;
+    let required_gb = required_space_gb_for(model.as_deref());
+
+    if available_gb < required_gb {
         let error = DiskSpaceError {
-            required_gb: REQUIRED_FREE_SPACE_GB,
+            required_gb,
             available_gb,
             message: format!(
-                "Insufficient disk space. {:.1} GB available, {:.1} GB required.",
-                available_gb, REQUIRED_FREE_SPACE_GB
+                "Insufficient disk space. {available_gb:.1} GB available, {required_gb:.1} GB required."
             ),
         };
         emit_on_main(&app, EVENT_DISK_SPACE_ERROR, error);
@@ -993,6 +1034,25 @@ async fn download_ollama_model(app: AppHandle, model: String) -> Result<(), Stri
         // Wait for it to actually become ready (it can take several seconds; a
         // fixed short delay raced the server and made downloads fail).
         if !wait_for_ollama_ready(30).await {
+            // Mobile: there is no "manually" — the server is embedded. Say
+            // what the probe actually saw so a failure is diagnosable from
+            // the error toast alone (device stdout is not readable in dev).
+            #[cfg(any(target_os = "ios", target_os = "android"))]
+            {
+                let url = crate::local_llm::server_url();
+                let probe = match url.as_deref() {
+                    Some(u) => match reqwest::get(format!("{u}/api/version")).await {
+                        Ok(r) => format!("HTTP {}", r.status()),
+                        Err(e) => format!("{e}"),
+                    },
+                    None => "embedded server never started".to_string(),
+                };
+                return Err(format!(
+                    "Embedded model server is not responding (url: {}, probe: {probe})",
+                    url.as_deref().unwrap_or("none")
+                ));
+            }
+            #[cfg(not(any(target_os = "ios", target_os = "android")))]
             return Err("Could not start Ollama server. Please start Ollama manually.".to_string());
         }
 
@@ -1007,15 +1067,16 @@ async fn download_ollama_model(app: AppHandle, model: String) -> Result<(), Stri
         );
     }
 
-    // Check disk space
+    // Check disk space (mobile: the model's real size + headroom, see
+    // `required_space_gb_for`)
     let available_gb = check_disk_space()?;
-    if available_gb < REQUIRED_FREE_SPACE_GB {
+    let required_gb = required_space_gb_for(Some(&model));
+    if available_gb < required_gb {
         let error = DiskSpaceError {
-            required_gb: REQUIRED_FREE_SPACE_GB,
+            required_gb,
             available_gb,
             message: format!(
-                "Insufficient disk space. {:.1} GB available, {:.1} GB required.",
-                available_gb, REQUIRED_FREE_SPACE_GB
+                "Insufficient disk space. {available_gb:.1} GB available, {required_gb:.1} GB required."
             ),
         };
         emit_on_main(&app, EVENT_DISK_SPACE_ERROR, error.clone());
@@ -2006,6 +2067,7 @@ const URL_MONITOR_SCRIPT_ONLINE: &str = r#"
 ///
 /// `__OFFLINE_SERVER_URL__` is substituted by [`url_monitor_script_offline`] —
 /// the offline server's port is allocated at startup, so it cannot be baked in.
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
 const URL_MONITOR_SCRIPT_OFFLINE: &str = r#"
 (function() {
     // Only run once per page
@@ -2166,6 +2228,7 @@ const URL_MONITOR_SCRIPT_OFFLINE: &str = r#"
 /// [`URL_MONITOR_SCRIPT_OFFLINE`] with the offline server's real URL patched in.
 /// Twin of `main.rs::url_monitor_script_offline`; both entry points must resolve
 /// the port at window-creation time rather than bake one in.
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
 fn url_monitor_script_offline() -> String {
     URL_MONITOR_SCRIPT_OFFLINE.replace("__OFFLINE_SERVER_URL__", &offline_server::get_server_url())
 }
@@ -2214,13 +2277,66 @@ pub fn run() {
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
-        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_dialog::init());
+    // QR pairing: the phone scans the desktop's Code pairing code.
+    #[cfg(any(target_os = "ios", target_os = "android"))]
+    let builder = builder.plugin(tauri_plugin_barcode_scanner::init());
+    let builder = builder
         .setup(|app| {
             let app_url = get_app_url();
             println!("[ibl.ai] ============================================");
             println!("[ibl.ai] App URL resolved to: {}", app_url);
             println!("[ibl.ai] TAURI_DEV_URL at compile time: {:?}", option_env!("TAURI_DEV_URL"));
             println!("[ibl.ai] ============================================");
+
+            // Dev builds load the frontend from the Mac's dev server over plain
+            // HTTP on a LAN address. The static capability can't name that
+            // origin (it changes per network, and URLPattern hostname
+            // wildcards don't match dotted IPs), so grant the STATIC default
+            // capability's permissions to the actual dev origin at runtime.
+            // Debug-only: release loads pinned HTTPS origins.
+            #[cfg(debug_assertions)]
+            {
+                let origin = app_url.trim_end_matches('/');
+                if origin.starts_with("http://")
+                    && !origin.contains("localhost")
+                    && !origin.contains("127.0.0.1")
+                {
+                    match serde_json::from_str::<serde_json::Value>(include_str!(
+                        "../capabilities/default.json"
+                    )) {
+                        Ok(mut cap) => {
+                            cap["identifier"] =
+                                serde_json::Value::from("dev-frontend-origin");
+                            cap["remote"] =
+                                serde_json::json!({ "urls": [format!("{origin}/*")] });
+                            // Mobile-only permissions live in a separate
+                            // platform-scoped capability; the dev origin needs
+                            // them too (QR pairing camera).
+                            #[cfg(any(target_os = "ios", target_os = "android"))]
+                            if let Some(perms) =
+                                cap["permissions"].as_array_mut()
+                            {
+                                for p in [
+                                    "barcode-scanner:allow-scan",
+                                    "barcode-scanner:allow-cancel",
+                                    "barcode-scanner:allow-check-permissions",
+                                    "barcode-scanner:allow-request-permissions",
+                                    "barcode-scanner:allow-open-app-settings",
+                                ] {
+                                    perms.push(serde_json::Value::from(p));
+                                }
+                            }
+                            if let Err(e) = app.add_capability(cap.to_string()) {
+                                eprintln!("[ibl.ai] dev origin capability failed: {e}");
+                            } else {
+                                println!("[ibl.ai] dev origin capability added for {origin}");
+                            }
+                        }
+                        Err(e) => eprintln!("[ibl.ai] default capability unreadable: {e}"),
+                    }
+                }
+            }
 
             #[cfg(any(target_os = "ios", target_os = "android"))]
             {
@@ -2251,6 +2367,24 @@ pub fn run() {
                     }
                 });
                 println!("[ibl.ai] Deep link event listener registered");
+            }
+
+            // Mobile: bring up the embedded Ollama-compatible LLM server so
+            // local model download + chat work with no external process.
+            // Started here (not lazily) so `is_ollama_running` reads true
+            // from the first status check on.
+            #[cfg(any(target_os = "ios", target_os = "android"))]
+            {
+                match app.path().app_data_dir() {
+                    Ok(dir) => {
+                        if let Err(e) = local_llm::start(dir.join("models")) {
+                            eprintln!("[LocalLLM] failed to start embedded server: {e}");
+                        }
+                        // Phone Code: pairing + per-chat session map storage.
+                        remote_code_client::init(dir.clone());
+                    }
+                    Err(e) => eprintln!("[LocalLLM] no app data dir: {e}"),
+                }
             }
 
             // =====================
@@ -2911,6 +3045,7 @@ pub fn run() {
         navigate_to,
         ollama_chat,
         ollama_chat_stream,
+        log_fe,
         opencode_acp::opencode_chat_stream,
         opencode_acp::opencode_stop,
         opencode_acp::opencode_permission_respond,
@@ -2928,6 +3063,10 @@ pub fn run() {
         opencode_acp::check_code_local_model,
         opencode_acp::set_opencode_learner,
         opencode_acp::ensure_opencode_platform_key,
+        remote_code::remote_code_status,
+        remote_code::remote_code_enable,
+        remote_code::remote_code_disable,
+        remote_code::remote_code_pairing_qr,
     ]);
 
     // Mobile platforms get only basic commands (no offline/cache features)
@@ -2949,6 +3088,20 @@ pub fn run() {
         navigate_to,
         ollama_chat,
         ollama_chat_stream,
+        log_fe,
+        remote_code_client::remote_code_set_host,
+        remote_code_client::remote_code_get_host,
+        remote_code_client::remote_code_clear_host,
+        remote_code_client::opencode_chat_stream,
+        remote_code_client::opencode_stop,
+        remote_code_client::opencode_close,
+        remote_code_client::opencode_permission_respond,
+        remote_code_client::get_opencode_permission_mode,
+        remote_code_client::set_opencode_permission_mode,
+        remote_code_client::get_opencode_workspace,
+        remote_code_client::set_opencode_workspace,
+        remote_code_client::new_opencode_workspace,
+        remote_code_client::remote_code_list_workspaces,
     ]);
 
     builder

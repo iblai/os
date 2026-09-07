@@ -26,6 +26,22 @@ checkpoint count has not regressed (`--no-regress`).
 Platform support (same as `e2e-tauri/README.md`): Linux (`WebKitWebDriver`) and
 Windows (`msedgedriver`) only — `tauri-driver` has no macOS support.
 
+**iOS note:** the mobile app's embedded on-device LLM runtime
+(`src-tauri/src/local_llm.rs` — the Ollama-compatible server that backs
+Journey 2's commands on iPhones) cannot be driven by `tauri-driver` (no
+iOS support). Its coverage lives in the Rust unit tests (`local_llm.rs`
+`mod tests`, including an opt-in real-inference test:
+`IBL_LLM_TEST_MODEL=… cargo test --features embedded-llm -- --ignored`) and
+the Vitest suites (`coding-mode-button` mobile gating,
+`__tests__/web-utils-ios-local-llm-patch.test.ts`). The same applies to the
+phone↔desktop Code pairing (`src-tauri/src/remote_code_client.rs`): its Rust
+`mod tests` cover turn translation, delta coalescing, and the multi-address
+pairing failover (a pairing heals to an alternate advertised address when
+the primary dies), and the Vitest suites cover the pairing UI (full `urls` list
+persisted for failover) plus the phone composer ergonomics (icon-only tool
+pills below 520px, keyboard dismissed on send for coarse pointers —
+`chat-input-form.test.tsx`).
+
 ---
 
 ## Journey 1: App Launch & Desktop Shell (4 checkpoints) — `journeys/01-app-launch-and-shell.spec.ts`

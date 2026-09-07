@@ -2,7 +2,9 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Default capabilities for the Mentor AI app",
-  "windows": ["main"],
+  "windows": [
+    "main"
+  ],
   "local": true,
   "remote": {
     "urls": [
@@ -70,7 +72,14 @@
     "opener:default",
     {
       "identifier": "opener:allow-open-path",
-      "allow": [{ "path": "$HOME/**" }, { "path": "/**" }]
+      "allow": [
+        {
+          "path": "$HOME/**"
+        },
+        {
+          "path": "/**"
+        }
+      ]
     },
     "shell:allow-open",
     "dialog:allow-open",
@@ -80,6 +89,14 @@
     "allow-allow-in-app-purchase",
     "allow-get-locked-tenant",
     "os:default",
-    "allow-check-network-status"
+    "allow-check-network-status",
+    "allow-remote-code-status",
+    "allow-remote-code-enable",
+    "allow-remote-code-disable",
+    "allow-remote-code-set-host",
+    "allow-remote-code-get-host",
+    "allow-remote-code-clear-host",
+    "allow-remote-code-pairing-qr",
+    "allow-remote-code-list-workspaces"
   ]
 }
