@@ -1,8 +1,48 @@
 diff --git a/dist/index.js b/dist/index.js
-index 6091c520d82832e267b0276ab9cec7df427e6ec8..74fb13715ecf43111ace24a75116c9352b3e9a8f 100644
+index 6091c520d82832e267b0276ab9cec7df427e6ec8..317a61d461652dcc3579c9dc6a6652ef043abc96 100644
 --- a/dist/index.js
 +++ b/dist/index.js
-@@ -611,6 +611,7 @@ function mathText(options) {
+@@ -236,7 +236,10 @@ function processHtmlChildren(children, tags) {
+ 		const previous = result[result.length - 1];
+ 		if (previous?.type === "text" && next.type === "text") {
+ 			previous.value += next.value;
+-			previous.position.end = next.position.end;
++			// Same guard as the paragraph span below: a rebuilt node may carry no
++			// position, and merging two of them must not throw.
++			if (previous.position && next.position) previous.position.end = next.position.end;
++			else if (!previous.position && next.position) previous.position = next.position;
+ 		} else result.push(next);
+ 	}
+ 	return result;
+@@ -283,10 +286,23 @@ function splitParagraph(paragraph, displayMathInText) {
+ 		};
+ 		const first = phrasing[0];
+ 		const last = phrasing[phrasing.length - 1];
+-		node.position = {
+-			start: first.position.start,
+-			end: last.position.end
+-		};
++		// A phrasing child is not guaranteed to carry `position`, and the usual
++		// source is upstream of this file. micromark will not start a `www.`
++		// autolink that sits against punctuation, but
++		// mdast-util-gfm-autolink-literal ships a fallback `transforms` pass
++		// whose previous() gate accepts any Unicode punctuation. That pass
++		// rewrites the paragraph through findAndReplace, which builds its
++		// replacement nodes with no `position` at all. Reading .position.start
++		// off one of them threw "Cannot read properties of undefined (reading
++		// 'start')" out of fromMarkdown -- Sentry c47052cc, which took down the
++		// whole page through the app error boundary on text as ordinary as
++		// "Our site--www.example.edu--has more." restoreInlineHtmlMath above can
++		// propagate an absent position the same way. Fall back to the
++		// paragraph's own span, then to omitting position entirely -- position
++		// is advisory for rendering.
++		const startPos = first?.position?.start ?? paragraph.position?.start;
++		const endPos = last?.position?.end ?? paragraph.position?.end;
++		if (startPos && endPos) node.position = { start: startPos, end: endPos };
+ 		result.push(node);
+ 		phrasing = [];
+ 	};
+@@ -611,6 +620,7 @@ function mathText(options) {
  		let sizeOpen = 0;
  		let sizeClose = 0;
  		let backslashRun = 0;
@@ -10,7 +50,7 @@ index 6091c520d82832e267b0276ab9cec7df427e6ec8..74fb13715ecf43111ace24a75116c935
  		let candidate;
  		let container;
  		let opener;
-@@ -644,6 +645,7 @@ function mathText(options) {
+@@ -644,6 +654,7 @@ function mathText(options) {
  					effects.consume(code);
  					effects.exit("mathTextData");
  					backslashRun = 0;
@@ -18,7 +58,7 @@ index 6091c520d82832e267b0276ab9cec7df427e6ec8..74fb13715ecf43111ace24a75116c935
  					return between;
  				}
  				candidate = effects.enter(sizeOpen === 2 ? "mathTextDisplaySequence" : "mathTextSequence");
-@@ -655,15 +657,10 @@ function mathText(options) {
+@@ -655,15 +666,10 @@ function mathText(options) {
  				effects.consume(code);
  				effects.exit("space");
  				backslashRun = 0;
@@ -36,7 +76,7 @@ index 6091c520d82832e267b0276ab9cec7df427e6ec8..74fb13715ecf43111ace24a75116c935
  			effects.enter("mathTextData");
  			return data(code);
  		}
-@@ -674,20 +671,21 @@ function mathText(options) {
+@@ -674,20 +680,21 @@ function mathText(options) {
  			}
  			effects.consume(code);
  			backslashRun = code === codes.backslash ? backslashRun + 1 : 0;
@@ -64,7 +104,7 @@ index 6091c520d82832e267b0276ab9cec7df427e6ec8..74fb13715ecf43111ace24a75116c935
  			candidate.type = "mathTextData";
  			backslashRun = 0;
  			return data(code);
-@@ -812,7 +810,7 @@ const resolveMathText = (events) => {
+@@ -812,7 +819,7 @@ const resolveMathText = (events) => {
  	return events;
  };
  const previousDollar = function(code) {
