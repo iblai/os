@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/tooltip';
 import { AIMessageCopy } from './ai-message-copy';
 import { AIMessageShare } from './ai-message-share';
+import { AIMessageDownload } from './ai-message-download';
 import { AIMessageSpeak } from './ai-message-speak';
 import {
   selectShowingSharedChat,
@@ -285,7 +286,14 @@ export function AIMessageBubble({
             )}
 
             {!showingSharedChat && !chatPrivacyActive && (
-              <AIMessageShare sessionId={sessionId} tenantKey={tenantKey} />
+              <>
+                <AIMessageShare sessionId={sessionId} tenantKey={tenantKey} />
+                <AIMessageDownload
+                  message={message}
+                  messages={messages}
+                  mentorName={mentorName}
+                />
+              </>
             )}
 
             {isLoggedIn() &&
