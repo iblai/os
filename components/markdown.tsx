@@ -13,6 +13,7 @@ import { rehypeAlignedMath } from '@/lib/rehype-aligned-math';
 import { rehypeVerbCode } from '@/lib/rehype-verb-code';
 import { remarkLatexIslands } from '@/lib/remark-latex-islands';
 import { remarkLatexLineBreaks } from '@/lib/remark-latex-line-breaks';
+import { remarkTrimAutolinkHost } from '@/lib/remark-trim-autolink-host';
 import { parseLatexAwareBlocks } from '@/lib/latex-aware-blocks';
 import { rehypeReportMathErrors } from '@/lib/markdown-math-error-reporter';
 import { KATEX_ERROR_COLOR } from '@/lib/katex-options';
@@ -58,6 +59,10 @@ const math = {
       // literal behind. Strip the residue before remark-breaks turns the
       // newline itself into the <br> the author meant.
       remarkLatexLineBreaks,
+      // GFM leaves an em dash glued to a bare autolink inside the host, so
+      // `www.google.com—has` links to a domain that is not google.com. See
+      // lib/remark-trim-autolink-host.ts.
+      remarkTrimAutolinkHost,
       remarkBreaks,
     ],
   } as Pluggable,
