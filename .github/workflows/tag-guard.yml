@@ -1,0 +1,45 @@
+name: Tag Guard
+
+# A mistyped release tag used to produce NOTHING — no run, no annotation, no clue.
+# `trigger-docker-build.yml` only fires on `v*`, so pushing `0.139.0-patch-1` (no `v`)
+# created no workflow run at all, which presents as "the build workflow didn't pick up"
+# with an empty Actions tab and nowhere to look. Happened 2026-09-03 on os
+# `0.139.0-patch-1` and lms `0.76.1-patch-1`.
+#
+# This fires on EVERY tag so a version-shaped tag that cannot build fails loudly instead.
+# It builds nothing and needs no secrets.
+on:
+  push:
+    tags: ['**']
+
+run-name: "Tag guard — ${{ github.ref_name }}"
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: "Will this tag build?"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify the tag matches a build trigger
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          # Keep in step with the `on.push.tags` filters in this repo's workflows.
+          case "$TAG" in
+            v*|skills-v*|app-v*)
+              echo "OK — '$TAG' matches a build trigger."
+              exit 0 ;;
+          esac
+
+          # Not a build trigger. Is it shaped like a release version someone meant to ship?
+          if printf '%s' "$TAG" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then
+            MSG="'$TAG' looks like a release version but does NOT match the Docker Build trigger"
+            MSG="$MSG ('v*'), so NO image will be built and no other run will appear."
+            MSG="$MSG Re-tag as 'v$TAG': git tag v$TAG $GITHUB_SHA && git push origin v$TAG"
+            echo "::error title=Tag will not build::$MSG"
+            exit 1
+          fi
+
+          echo "'$TAG' is not a version-shaped tag — nothing to check."
