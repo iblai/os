@@ -3161,5 +3161,34 @@ describe('Markdown - overrides at their edges (issue #2441)', () => {
       );
       expect(container.textContent).toContain('www.fordham.edu');
     });
+
+    // The href, not just the absence of a throw. GFM keeps an em dash inside
+    // the authority, so these used to link to a host the reader never saw --
+    // `www.google.com—has` resolves to `www.google.xn--comhas-5g0c`.
+    // See lib/remark-trim-autolink-host.ts.
+    it('links only the real host when an em dash follows the URL', () => {
+      const { container } = render(
+        <Markdown>Our site—www.google.com—has more.</Markdown>,
+      );
+      const href = container.querySelector('a')?.getAttribute('href');
+      // The host is the property that matters: before the trim this was
+      // www.google.xn--comhas-5g0c.
+      expect(new URL(href!).host).toBe('www.google.com');
+    });
+
+    it('keeps the trimmed punctuation visible in the prose', () => {
+      const { container } = render(
+        <Markdown>Our site—www.google.com—has more.</Markdown>,
+      );
+      expect(container.textContent).toBe('Our site—www.google.com—has more.');
+    });
+
+    it('leaves an ordinary autolink href alone', () => {
+      const { container } = render(
+        <Markdown>Our site www.google.com has more.</Markdown>,
+      );
+      const href = container.querySelector('a')?.getAttribute('href');
+      expect(new URL(href!).host).toBe('www.google.com');
+    });
   });
 });
