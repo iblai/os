@@ -431,6 +431,20 @@
     "copied": "Copiado",
     "share": "Compartir"
   },
+  "chatAiMessageDownload": {
+    "downloadThisChat": "Descargar este chat",
+    "download": "Descargar",
+    "dialogTitle": "Descargar chat",
+    "dialogDescription": "Elige qué quieres descargar como archivo de texto.",
+    "entireChat": "Todo el chat",
+    "entireChatDescription": "Todos los mensajes de esta conversación.",
+    "thisMessage": "Solo este mensaje",
+    "thisMessageDescription": "Solo la respuesta que seleccionaste.",
+    "downloadButton": "Descargar",
+    "transcriptHeader": "Chat con {mentorName}",
+    "roleUser": "Tú",
+    "roleAi": "IA"
+  },
   "chatIndex": {
     "youAreOffline": "Estás sin conexión",
     "offlineChatUnavailable": "El chat no está disponible en modo sin conexión. Activa «Descargar LLMs locales» en Configuración para usar el chat sin conexión.",

@@ -431,6 +431,20 @@
     "copied": "已复制",
     "share": "分享"
   },
+  "chatAiMessageDownload": {
+    "downloadThisChat": "下载此聊天",
+    "download": "下载",
+    "dialogTitle": "下载聊天记录",
+    "dialogDescription": "请选择要下载为文本文件的内容。",
+    "entireChat": "整个聊天",
+    "entireChatDescription": "此对话中的所有消息。",
+    "thisMessage": "仅此消息",
+    "thisMessageDescription": "仅限你选择的回复。",
+    "downloadButton": "下载",
+    "transcriptHeader": "与 {mentorName} 的聊天",
+    "roleUser": "你",
+    "roleAi": "AI"
+  },
   "chatIndex": {
     "youAreOffline": "您已离线",
     "offlineChatUnavailable": "离线模式下聊天不可用。请在设置中启用“下载本地 LLM”以便离线使用聊天功能。",

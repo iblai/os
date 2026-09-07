@@ -431,6 +431,20 @@
     "copied": "Copié",
     "share": "Partager"
   },
+  "chatAiMessageDownload": {
+    "downloadThisChat": "Télécharger cette conversation",
+    "download": "Télécharger",
+    "dialogTitle": "Télécharger la conversation",
+    "dialogDescription": "Choisissez ce que vous souhaitez télécharger sous forme de fichier texte.",
+    "entireChat": "Toute la conversation",
+    "entireChatDescription": "Tous les messages de cette conversation.",
+    "thisMessage": "Ce message uniquement",
+    "thisMessageDescription": "Uniquement la réponse sélectionnée.",
+    "downloadButton": "Télécharger",
+    "transcriptHeader": "Conversation avec {mentorName}",
+    "roleUser": "Vous",
+    "roleAi": "IA"
+  },
   "chatIndex": {
     "youAreOffline": "Vous êtes hors ligne",
     "offlineChatUnavailable": "Le chat est indisponible en mode hors ligne. Activez « Télécharger les LLMs locaux » dans les paramètres pour utiliser le chat hors ligne.",
