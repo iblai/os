@@ -1,8 +1,13 @@
 import path from 'path';
 
 import { test, expect } from '../fixtures/mentor-test';
-import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
+import {
+  navigateToMentorApp,
+  checkAdminStatus,
+  getPlatformContext,
+} from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
+import { MentorTracker } from '../utils/mentor-cleanup';
 
 // Real WAV played as the fake mic input (looped while a track is consumed).
 // Lets the LiveKit voice agent receive real audio during vc-07's round-trip.
@@ -79,10 +84,22 @@ test.describe('Journey 9: Voice Chat', () => {
   });
 
   test.describe('Admin', () => {
+    // Every test in this block creates its own dedicated mentor via
+    // createMentorPage.openAndCreate() so voice-toggle assertions never race
+    // journey 47 (or each other) over a shared mentor's show_voice_call.
+    // Track and delete them here — never afterEach, since MentorTracker's
+    // deleteAll() is best-effort and per-test creation means nothing else
+    // depends on any one of these mentors surviving past its own test.
+    const tracker = new MentorTracker();
+
     test.beforeEach(async ({ page }) => {
       // H2 fix: grant microphone permissions for fake device
       await page.context().grantPermissions(['microphone']);
       await navigateToMentorApp(page);
+    });
+
+    test.afterAll(async ({ browser }, testInfo) => {
+      await tracker.deleteAll(browser, testInfo);
     });
 
     test('admin goes to mentor settings and hides the voice call button by toggling off Voice Calls', async ({
@@ -104,16 +121,19 @@ test.describe('Journey 9: Voice Chat', () => {
       // tab itself (feat/2040 — moved off Settings → Capabilities) and
       // auto-saves on click — no footer Save button involved.
       await createMentorPage.openAndCreate();
+      const { mentorId } = await getPlatformContext(page);
+      tracker.add(mentorId);
       await editMentorPage.open('Voice');
       await waitForPageReady(page);
 
-      const visible = await editMentorPage.voice.capabilityToggle
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-      if (!visible) {
-        await editMentorPage.close();
-        return;
-      }
+      // A freshly admin-created mentor always renders the Voice tab's
+      // capability toggle (it's unconditionally mounted — see the VoiceTab
+      // docstring), so this must be a hard assertion rather than a
+      // conditional skip: a test that silently returns here would pass
+      // without ever exercising the toggle it's meant to cover.
+      await expect(editMentorPage.voice.capabilityToggle).toBeVisible({
+        timeout: 5_000,
+      });
       const wasEnabled = await editMentorPage.voice.isCapabilityEnabled();
       if (wasEnabled) {
         await editMentorPage.voice.setCapabilityEnabled(false);
@@ -146,16 +166,16 @@ test.describe('Journey 9: Voice Chat', () => {
       // tab itself (feat/2040 — moved off Settings → Capabilities) and
       // auto-saves on click.
       await createMentorPage.openAndCreate();
+      const { mentorId } = await getPlatformContext(page);
+      tracker.add(mentorId);
       await editMentorPage.open('Voice');
       await waitForPageReady(page);
 
-      const visible = await editMentorPage.voice.capabilityToggle
-        .isVisible({ timeout: 5_000 })
-        .catch(() => false);
-      if (!visible) {
-        await editMentorPage.close();
-        return;
-      }
+      // Same reasoning as the sibling test above: a freshly created mentor
+      // always shows this toggle, so assert instead of silently bailing.
+      await expect(editMentorPage.voice.capabilityToggle).toBeVisible({
+        timeout: 5_000,
+      });
       const isEnabled = await editMentorPage.voice.isCapabilityEnabled();
       if (!isEnabled) {
         await editMentorPage.voice.setCapabilityEnabled(true);
@@ -249,6 +269,8 @@ test.describe('Journey 9: Voice Chat', () => {
       test.skip(!isAdmin, 'Requires admin access to create a mentor');
 
       await createMentorPage.openAndCreate();
+      const { mentorId } = await getPlatformContext(page);
+      tracker.add(mentorId);
       await waitForPageReady(page);
 
       await expect(chatPage.voiceCallButton).toBeVisible({ timeout: 15_000 });
