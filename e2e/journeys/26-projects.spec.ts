@@ -243,7 +243,19 @@ test.describe('Journey 26-B: Projects — Landing Page', () => {
     // Use a longer AI response timeout — project-chat LLM calls can be
     // slower than normal chat because the project context is resolved first.
     await chatPage.sendMessage('Hello from E2E project test');
-    await chatPage.waitForAIResponse(120_000);
+
+    // A project resolves to whichever agents are attached to it, and an agent
+    // may have the User Agreement enabled — in which case sending opens the
+    // consent modal instead of streaming a reply, and no
+    // .chat-ai-message-response ever arrives. Both outcomes prove the project
+    // chat accepted the message, which is what this checkpoint is about; the
+    // session assertion below is the same either way.
+    const outcome = await chatPage.waitForAIResponseOrUserAgreement(120_000);
+    if (outcome === 'user-agreement') {
+      await expect(chatPage.userAgreementAccept).toBeVisible({
+        timeout: 10_000,
+      });
+    }
     const sessionAfter = await page.evaluate(() => {
       const raw = localStorage.getItem('session_id');
       return raw ? JSON.parse(raw) : {};
