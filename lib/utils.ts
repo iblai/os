@@ -18,6 +18,7 @@ import { rehypeAlignedMath } from './rehype-aligned-math';
 import { rehypeVerbCode } from './rehype-verb-code';
 import { remarkLatexIslands } from './remark-latex-islands';
 import { remarkLatexLineBreaks } from './remark-latex-line-breaks';
+import { remarkTrimAutolinkHost } from './remark-trim-autolink-host';
 import { rehypeReportMathErrors } from './markdown-math-error-reporter';
 import { KATEX_ERROR_COLOR } from './katex-options';
 import 'katex/contrib/mhchem';
@@ -1378,6 +1379,7 @@ const markdownHtmlProcessor = unified()
   .use(zilMath)
   .use(remarkLatexIslands)
   .use(remarkLatexLineBreaks)
+  .use(remarkTrimAutolinkHost)
   .use(remarkRehype, { allowDangerousHtml: true })
   .use(rehypeRaw)
   // Must sit between rehype-raw and rehype-katex, exactly as it does in

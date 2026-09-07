@@ -174,8 +174,19 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
   // mentor — isolating the tests (no contention over a shared mentor's
   // show_catalogue) and letting "Create Embed" pass the anonymous-or-URL gate.
   test.describe('Show Catalogue setting', () => {
+    const catalogueTracker = new MentorTracker();
+
+    test.afterAll(async ({ browser }, testInfo) => {
+      await catalogueTracker.deleteAll(browser, testInfo);
+    });
+
     test.beforeEach(async ({ page, createMentorPage, editMentorPage }) => {
-      await createMentorPage.openAndCreate(`Catalogue E2E ${Date.now()}`);
+      // Named "E2E ..." so mentor-sweeper's globalTeardown regex can reap it as
+      // a backstop. The old "Catalogue E2E ..." never matched, so every one of
+      // these — each made publicly chattable below — survived the run forever.
+      await createMentorPage.openAndCreate(`E2E Catalogue ${Date.now()}`);
+      const { mentorId } = await getPlatformContext(page);
+      catalogueTracker.add(mentorId);
 
       // Make the mentor anonymous so "Create Embed" can persist settings.
       await editMentorPage.open('Settings');
