@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "lastUpdated": "2026-08-31",
+  "lastUpdated": "2026-09-07",
   "summary": {
-    "totalCheckpoints": 711,
-    "coveredCheckpoints": 669,
+    "totalCheckpoints": 716,
+    "coveredCheckpoints": 674,
     "deprecatedCheckpoints": 16,
     "notReproducibleCheckpoints": 15,
     "pendingCheckpoints": 11,
@@ -707,7 +707,9 @@
       "spec": "12-chat-sharing.spec.ts",
       "sourceFiles": [
         "app/share/chat/[sessionId]/page.tsx",
-        "app/share/chat/[sessionId]/[tenantKey]/[mentorId]/page.tsx"
+        "app/share/chat/[sessionId]/[tenantKey]/[mentorId]/page.tsx",
+        "components/chat/ai-message-download.tsx",
+        "components/chat/chat-transcript.ts"
       ],
       "checkpoints": [
         {
@@ -738,6 +740,26 @@
         {
           "id": "sh-06",
           "description": "Chat textarea is not shown for unauthenticated users on shared chat",
+          "status": "covered"
+        },
+        {
+          "id": "sh-07",
+          "description": "Download dialog opens with Entire chat preselected and both option descriptions visible",
+          "status": "covered"
+        },
+        {
+          "id": "sh-08",
+          "description": "Default Entire chat download produces a chat-*.txt file whose content contains both conversation turns",
+          "status": "covered"
+        },
+        {
+          "id": "sh-09",
+          "description": "Selecting This message only produces a message-*.txt file whose content contains the AI reply but not the earlier user message",
+          "status": "covered"
+        },
+        {
+          "id": "sh-10",
+          "description": "Pressing Escape dismisses the download dialog without triggering a download",
           "status": "covered"
         }
       ]
@@ -3198,6 +3220,12 @@
           "description": "Share-chat button in the AI message bubble is hidden in private mode (a private session is a temporary, non-persisted chat with no durable session to share); visible in normal mode and gated out while effective mode is disabled",
           "status": "covered",
           "note": "Frontend gate implemented in components/chat/ai-message-bubble.tsx (useChatPrivacy -> chatPrivacyActive gates the <AIMessageShare> render alongside !showingSharedChat); deterministic regression coverage in components/chat/__tests__/ai-message-bubble.test.tsx ('chat private mode active' share-button cases)"
+        },
+        {
+          "id": "cp-chat-10",
+          "description": "Download-chat button in the AI message bubble is hidden in private mode (same gate as cp-chat-09: a private session has no durable record to export); visible in normal mode",
+          "status": "covered",
+          "note": "Frontend gate implemented in components/chat/ai-message-bubble.tsx (useChatPrivacy -> chatPrivacyActive gates the <AIMessageDownload> render alongside !showingSharedChat, right after <AIMessageShare>)"
         }
       ]
     },
