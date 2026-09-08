@@ -126,10 +126,36 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   useIframeMessageHandler({
     handlers,
     defaultHandler: (data) => {
-      if (data.axd_token) {
-        saveUserObjectToLocalStorage(data);
-        window.location.reload();
+      // agent-ai sends auth data either as an object (`userObject`) or as a
+      // JSON string (`iblData`, `JSON.stringify(localStorage)`). Only the
+      // object form was handled, so every string-form reply — including the
+      // one answering a `tenantSwitch` — was dropped without a trace.
+      let payload = data;
+      if (typeof payload === 'string') {
+        try {
+          payload = JSON.parse(payload);
+        } catch {
+          return;
+        }
       }
+      if (!payload?.axd_token) {
+        return;
+      }
+
+      // The host re-sends its auth data every time we announce ourselves
+      // (`ready`/`loaded`), and saving it reloads us — which announces us
+      // again. Acting on an identical payload therefore loops forever: save,
+      // reload, receive the same data, save. Only act on a real change.
+      const unchanged =
+        localStorage.getItem('axd_token') === payload.axd_token &&
+        localStorage.getItem('dm_token') === payload.dm_token &&
+        localStorage.getItem('tenant') === payload.tenant;
+      if (unchanged) {
+        return;
+      }
+
+      saveUserObjectToLocalStorage(payload);
+      window.location.reload();
     },
   });
 

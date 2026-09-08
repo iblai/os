@@ -10,6 +10,7 @@
 /* SDK: scan compiled components so Tailwind generates their utility classes */
 @source "../node_modules/@iblai/iblai-js/dist/web-containers/source";
 @source "../node_modules/@iblai/iblai-js/dist/web-containers/source/next";
+@source "../node_modules/streamdown/dist/*.js";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -339,4 +340,26 @@ body {
     color: var(--todo-shimmer-base);
     animation: none;
   }
+}
+
+/*
+ * KaTeX ships `.katex{font:normal 1.21em ...}`, which sets EVERY formula 21%
+ * larger than the text around it. In a document that is a deliberate optical
+ * correction; in a chat bubble, whose body is `text-sm/6` (14px), an inline
+ * `$x^2$` lands at 16.94px and reads as a size jump mid-sentence.
+ *
+ * Only INLINE maths is brought back to the surrounding size. Display maths
+ * keeps 1.21em: it is a centred block on its own line, where the larger scale
+ * is the point, so `.katex-display` is excluded rather than shrunk.
+ *
+ * `:not(.katex-display *)` rather than a bare `.katex`: the app stylesheet and
+ * katex.min.css (imported from components/markdown.tsx) can land in either
+ * order in the bundle, and a same-specificity rule would then be a coin flip.
+ * The `:not()` makes this (0,2,0) against KaTeX's (0,1,0), so it wins on
+ * specificity whatever the order. Applies to both render paths -- the chat
+ * component and the `markdownToHtml()` output -- because both emit the same
+ * KaTeX markup.
+ */
+.katex:not(.katex-display *) {
+  font-size: 1em;
 }

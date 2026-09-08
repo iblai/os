@@ -374,6 +374,11 @@ export const InsideButtons = ({
         type="button"
         disabled={disabled || !!button.disabledReason}
         title={button.disabledReason}
+        // The pill's on/off state is otherwise styling-only. Exposed as
+        // aria-pressed so assistive tech and e2e (ChatPage.isCanvasToolActive)
+        // can read it — the inactive `hover:bg-[#F5F8FF]` class contains the
+        // active `bg-[#F5F8FF]` token as a substring, so class sniffing lies.
+        aria-pressed={button.isActive}
         className={`flex h-8 items-center gap-1.5 rounded-lg px-2 text-sm transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 ${
           button.isActive
             ? 'border border-[#D0E0FF] bg-[#F5F8FF] text-[#38A1E5]'

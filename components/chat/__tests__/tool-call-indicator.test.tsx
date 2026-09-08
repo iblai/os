@@ -278,9 +278,14 @@ describe('ToolCallIndicator', () => {
       return result;
     }
 
+    // Streamdown wraps its blocks in an extra div, so the element carrying the
+    // <Markdown className> is one level above the nearest ancestor div.
+    const markdownRootOf = (el: HTMLElement) =>
+      el.closest('div')?.parentElement;
+
     it('renders the tool query at gray-600, not the washed-out gray-400', () => {
       renderExpanded();
-      const markdownRoot = screen.getByText('F1 race').closest('div');
+      const markdownRoot = markdownRootOf(screen.getByText('F1 race'));
       // The <Markdown> override wins over prose colours on every descendant,
       // so it is the one that decides what the query actually looks like.
       expect(markdownRoot?.className).toContain('[&_*]:text-gray-600');
@@ -289,7 +294,7 @@ describe('ToolCallIndicator', () => {
 
     it('does not ship a dark-mode override that would invert on the light bubble', () => {
       renderExpanded();
-      const markdownRoot = screen.getByText('F1 race').closest('div');
+      const markdownRoot = markdownRootOf(screen.getByText('F1 race'));
       const wrapper = markdownRoot?.parentElement;
       expect(markdownRoot?.className).not.toContain('dark:');
       expect(wrapper?.className).not.toContain('dark:');
