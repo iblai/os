@@ -537,6 +537,20 @@
     "stopStreaming": "Arrêter la diffusion",
     "stopStreamingTooltip": "Arrêter la diffusion"
   },
+  "chatWorkingIndicator": {
+    "thinking": "Réflexion…",
+    "usingTool": "Utilisation de {toolName}…",
+    "writing": "Rédaction de la réponse…",
+    "workflow": "Exécution du flux de travail…",
+    "workflowDetail": "{detail}…",
+    "processingFile": "Traitement de {fileName}…",
+    "processingFileProgress": "Traitement de {fileName} ({current} sur {total})…",
+    "generatingImage": "Génération de l’image…",
+    "generatingVideo": "Génération de la vidéo…",
+    "working": "Traitement en cours…",
+    "stillWorking": "Toujours en cours — les tâches longues peuvent prendre quelques minutes.",
+    "tooltip": "Traitement en cours… — L’agent traite toujours votre message. Les tâches longues prennent du temps, surtout lorsque l’agent utilise des outils, effectue des recherches ou génère du contenu. Vous pouvez laisser l’onglet ouvert et suivre la progression, ou appuyer sur Arrêter pour annuler et reprendre la main."
+  },
   "common": {
     "cancel": "Annuler",
     "continue": "Continuer",

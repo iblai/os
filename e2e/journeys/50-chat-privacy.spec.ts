@@ -76,19 +76,33 @@ import {
 import { waitForPageReady } from '../utils/resilient';
 import { dragAndDropFiles } from '../utils/drag-drop';
 import { ChatPrivacyPage } from '../page-objects/chat-privacy.page';
+import { CreateMentorPage } from '../page-objects/create-mentor.page';
+import { generateMentorName } from '../fixtures/test-data';
+import { deleteMentorById } from '../utils/mentor-cleanup';
 import { clickChatPrivacyToggle } from '@iblai/iblai-js/playwright';
 
 // ─── Shared helpers ──────────────────────────────────────────────────────────
 
 /**
- * Ensure we are on the chat page for the default mentor and the page chrome
- * is fully hydrated. Called in beforeEach blocks so each test starts in a
- * known-good state.
+ * Ensure we are on the chat page for the journey's dedicated mentor (see the
+ * journey-level `beforeAll`) and the page chrome is fully hydrated. Called in
+ * beforeEach blocks so each test starts in a known-good state.
+ *
+ * `mentorUrl` is required rather than optional: every call site owns a
+ * `mentorUrl` closed over from the journey `describe` scope, and skipping
+ * here (rather than silently falling back to `MentorProvider`'s auto-resolve)
+ * is exactly the provisioning guard journey 63 uses when its dedicated
+ * mentor failed to come up in `beforeAll`.
  */
 async function goToChatPage(
   page: import('@playwright/test').Page,
+  mentorUrl: string,
 ): Promise<void> {
-  await navigateToMentorApp(page);
+  test.skip(
+    !mentorUrl,
+    'Dedicated chat-privacy mentor was not created in beforeAll',
+  );
+  await navigateToMentorApp(page, mentorUrl);
   await waitForPageReady(page);
 }
 
@@ -117,7 +131,28 @@ test.describe('Journey 50: Chat Privacy', () => {
   let originalTenantGateState: boolean | null = null;
   let originalProfileMode: 'normal' | 'anonymized' | 'disabled' | null = null;
 
+  // The journey's own dedicated mentor (created in beforeAll below). Every
+  // test/beforeEach routes here via `goToChatPage`/`navigateToMentorApp`
+  // instead of letting `MentorProvider` auto-resolve — a fresh landing can
+  // hop onto ANY mentor in the tenant, including one a parallel worker
+  // (journeys 06/14/60/63/69, cleanup.spec.ts) deletes mid-run. That race
+  // is exactly what produced the CI flake this dedicated mentor exists to
+  // eliminate: cp-chat-01 landed on another test's mentor, which was
+  // deleted out from under it seconds later, so every privacy-toggle
+  // mutation 404'd and the toggle stayed stuck disabled.
+  let mentorUrl = '';
+  let mentorId = '';
+
   test.beforeAll(async ({ browser }) => {
+    // Creating the dedicated mentor below waits out the create-modal's own
+    // category-list load (with a close/reopen retry baked into
+    // CreateMentorPage under contention) on top of the initial platform
+    // navigation and the two snapshot reads. `describe.configure`'s timeout
+    // covers tests and per-test hooks, not beforeAll, and the 120 s default
+    // is too tight for that chain — journey 63's mentor-creating beforeAll
+    // takes the same margin. Happy path stays well under it.
+    test.setTimeout(180_000);
+
     // Use a dedicated context so this snapshot doesn't interact with any
     // per-test page object lifecycle. The project storageState makes the
     // new context authenticated automatically.
@@ -126,6 +161,17 @@ test.describe('Journey 50: Chat Privacy', () => {
     try {
       await navigateToMentorApp(page);
       await waitForAdmin(page);
+
+      // Create the journey's dedicated mentor before capturing the tenant
+      // gate / profile mode snapshot below — `openAndCreate` leaves the
+      // page on the new mentor's URL, so the snapshot reads are taken from
+      // the same page this journey will use throughout.
+      const createMentorPage = new CreateMentorPage(page);
+      await createMentorPage.openAndCreate(generateMentorName());
+      await waitForPageReady(page);
+      mentorUrl = page.url();
+      ({ mentorId } = await getPlatformContext(page));
+
       const chatPrivacy = new ChatPrivacyPage(page);
       originalTenantGateState = await chatPrivacy
         .readTenantGateState()
@@ -158,7 +204,9 @@ test.describe('Journey 50: Chat Privacy', () => {
     const context = await browser.newContext();
     const page = await context.newPage();
     try {
-      await navigateToMentorApp(page);
+      // Falls back to auto-resolve (matching the pre-fix behavior) only if
+      // beforeAll never managed to create the dedicated mentor.
+      await navigateToMentorApp(page, mentorUrl);
       await waitForAdmin(page).catch(() => undefined);
       const chatPrivacy = new ChatPrivacyPage(page);
       // Restore tenant gate.
@@ -187,6 +235,11 @@ test.describe('Journey 50: Chat Privacy', () => {
             .catch(() => undefined);
         }
       }
+      // Delete the journey's dedicated mentor. Best-effort — deleteMentorById
+      // swallows its own errors internally and never throws.
+      if (mentorId) {
+        await deleteMentorById(page, mentorId);
+      }
     } finally {
       await context.close().catch(() => undefined);
     }
@@ -200,7 +253,7 @@ test.describe('Journey 50: Chat Privacy', () => {
 
   test.describe('Tenant gate (cp-tenant-*)', () => {
     test.beforeEach(async ({ page }) => {
-      await goToChatPage(page);
+      await goToChatPage(page, mentorUrl);
       // Hard precondition: throws (does NOT skip) when admin context is
       // missing so storageState bugs are visible instead of silently
       // green-by-default. Budget 60s + forced re-nav covers slow CI auth.
@@ -290,7 +343,7 @@ test.describe('Journey 50: Chat Privacy', () => {
 
   test.describe('Agent settings kill switch (cp-agent-*)', () => {
     test.beforeEach(async ({ page, editMentorPage }) => {
-      await goToChatPage(page);
+      await goToChatPage(page, mentorUrl);
       // Throw (don't skip) when admin context is missing.
       await waitForAdmin(page);
 
@@ -508,7 +561,7 @@ test.describe('Journey 50: Chat Privacy', () => {
 
   test.describe('Header toggle — unlocked mentor (cp-header-*)', () => {
     test.beforeEach(async ({ page, editMentorPage }) => {
-      await goToChatPage(page);
+      await goToChatPage(page, mentorUrl);
       await waitForAdmin(page);
 
       const chatPrivacy = new ChatPrivacyPage(page);
@@ -518,7 +571,9 @@ test.describe('Journey 50: Chat Privacy', () => {
       // shared states already in the configuration this block wants:
       //   • Gate ON           → header toggle is visible
       //   • Mentor lock OFF   → aria-disabled is absent/"false"
-      //   • User mode normal  → data-source is anything but "user"
+      //   • User mode not "Disabled" → a fresh chat's data-state is "off"
+      //     (data-source may still legitimately read "user" — see the
+      //     fastPathOk / cp-profile-05 comments below)
       // All three are readable from the header toggle DOM in ~150ms with
       // no modal opens. If they hold, skip the three ensures (each of
       // which opens a modal and can cost 5-15s on slow envs). On the
@@ -538,7 +593,20 @@ test.describe('Journey 50: Chat Privacy', () => {
         const dataSource = await toggle
           .getAttribute('data-source')
           .catch(() => null);
-        if (dataSource === 'mentor' || dataSource === 'user') return false;
+        if (dataSource === 'mentor') return false;
+        // A "user" source alone is not a reason to fall back to the slow
+        // path: per cp-profile-05, once ANY profile Private Mode selection
+        // has ever been saved, the backend keeps data-source="user" for
+        // BOTH Normal and Disabled — it can never clear back to another
+        // tier. Only "user" + data-state="on" (profile mode "Disabled")
+        // actually needs recovery; "user" + "off" is the same resting
+        // state a never-saved profile would produce.
+        if (dataSource === 'user') {
+          const dataState = await toggle
+            .getAttribute('data-state')
+            .catch(() => null);
+          if (dataState === 'on') return false;
+        }
         return true;
       })();
 
@@ -734,7 +802,7 @@ test.describe('Journey 50: Chat Privacy', () => {
 
   test.describe('User profile Private Mode tab (cp-profile-*)', () => {
     test.beforeEach(async ({ page, editMentorPage }) => {
-      await goToChatPage(page);
+      await goToChatPage(page, mentorUrl);
       await waitForAdmin(page);
 
       const chatPrivacy = new ChatPrivacyPage(page);
@@ -759,7 +827,20 @@ test.describe('Journey 50: Chat Privacy', () => {
         const dataSource = await toggle
           .getAttribute('data-source')
           .catch(() => null);
-        if (dataSource === 'mentor' || dataSource === 'user') return false;
+        if (dataSource === 'mentor') return false;
+        // A "user" source alone is not a reason to fall back to the slow
+        // path: per cp-profile-05, once ANY profile Private Mode selection
+        // has ever been saved, the backend keeps data-source="user" for
+        // BOTH Normal and Disabled — it can never clear back to another
+        // tier. Only "user" + data-state="on" (profile mode "Disabled")
+        // actually needs recovery; "user" + "off" is the same resting
+        // state a never-saved profile would produce.
+        if (dataSource === 'user') {
+          const dataState = await toggle
+            .getAttribute('data-state')
+            .catch(() => null);
+          if (dataState === 'on') return false;
+        }
         return true;
       })();
 
@@ -945,7 +1026,7 @@ test.describe('Journey 50: Chat Privacy', () => {
 
   test.describe('Private chat round-trip (cp-chat-*)', () => {
     test.beforeEach(async ({ page, editMentorPage }) => {
-      await goToChatPage(page);
+      await goToChatPage(page, mentorUrl);
       await waitForAdmin(page);
 
       const chatPrivacy = new ChatPrivacyPage(page);
@@ -968,7 +1049,20 @@ test.describe('Journey 50: Chat Privacy', () => {
         const dataSource = await toggle
           .getAttribute('data-source')
           .catch(() => null);
-        if (dataSource === 'mentor' || dataSource === 'user') return false;
+        if (dataSource === 'mentor') return false;
+        // A "user" source alone is not a reason to fall back to the slow
+        // path: per cp-profile-05, once ANY profile Private Mode selection
+        // has ever been saved, the backend keeps data-source="user" for
+        // BOTH Normal and Disabled — it can never clear back to another
+        // tier. Only "user" + data-state="on" (profile mode "Disabled")
+        // actually needs recovery; "user" + "off" is the same resting
+        // state a never-saved profile would produce.
+        if (dataSource === 'user') {
+          const dataState = await toggle
+            .getAttribute('data-state')
+            .catch(() => null);
+          if (dataState === 'on') return false;
+        }
         return true;
       })();
 
@@ -1027,8 +1121,13 @@ test.describe('Journey 50: Chat Privacy', () => {
       nonadminChatPage,
     }) => {
       // The admin beforeEach left the tenant gate ON (org-scoped), so the
-      // non-admin sees the header toggle once it navigates in.
-      await navigateToMentorApp(nonadminPage);
+      // non-admin sees the header toggle once it navigates in. Route to the
+      // journey's own dedicated mentor rather than auto-resolving — a
+      // freshly created mentor has no visibility/chat-access restrictions
+      // by default, so the non-admin user can reach it directly, and this
+      // way both admin and non-admin land on a mentor no parallel worker
+      // can delete out from under them.
+      await navigateToMentorApp(nonadminPage, mentorUrl);
       await waitForPageReady(nonadminPage);
 
       const chatPrivacy = new ChatPrivacyPage(nonadminPage);

@@ -537,6 +537,20 @@
     "stopStreaming": "停止流式传输",
     "stopStreamingTooltip": "停止流式传输"
   },
+  "chatWorkingIndicator": {
+    "thinking": "思考中…",
+    "usingTool": "正在使用 {toolName}…",
+    "writing": "正在编写回复…",
+    "workflow": "正在运行工作流…",
+    "workflowDetail": "{detail}…",
+    "processingFile": "正在处理 {fileName}…",
+    "processingFileProgress": "正在处理 {fileName}（第 {current} / {total} 个）…",
+    "generatingImage": "正在生成图片…",
+    "generatingVideo": "正在生成视频…",
+    "working": "处理中…",
+    "stillWorking": "仍在处理——较长的任务可能需要几分钟。",
+    "tooltip": "处理中…——代理仍在处理您的消息。较长的任务会运行一段时间，尤其是当代理在使用工具、搜索或生成内容时。您可以保持标签页打开并查看进度，或者按“停止”取消并重新控制。"
+  },
   "common": {
     "cancel": "取消",
     "continue": "继续",

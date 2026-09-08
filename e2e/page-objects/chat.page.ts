@@ -25,12 +25,22 @@ export class ChatPage {
   readonly userMessages: Locator;
   readonly aiMessages: Locator;
   /**
+   * The runtime "User Agreement" consent modal. An agent with the agreement
+   * enabled gates chatting behind it, so a sent message produces this instead
+   * of a reply until it is accepted.
+   */
+  readonly userAgreementDialog: Locator;
+  readonly userAgreementAccept: Locator;
+  /**
    * The composer's "Canvas" tool chip (inside-buttons row). Artifacts are
    * only produced for a session while this tool is active — without it the
    * agent's reply never becomes an artifact chip/canvas, so specs that
    * expect artifacts MUST call `enableCanvasTool()` before sending. The chip
-   * has no aria-pressed; its active state is styling-only (active background
-   * class `bg-[#F5F8FF]`).
+   * exposes its state as `aria-pressed` (see `renderToolButton` in
+   * components/chat-input-form/inside-buttons.tsx) — read THAT, never the
+   * class list: the inactive pill carries `hover:bg-[#F5F8FF]`, which
+   * contains the active `bg-[#F5F8FF]` token as a substring and made the
+   * old class-based check report "already on" while the tool was off.
    */
   readonly canvasToggle: Locator;
   /**
@@ -121,6 +131,12 @@ export class ChatPage {
     this.newChatButton = page.getByRole('button', { name: 'New Chat' });
     this.userMessages = page.locator('.chat-user-message-query');
     this.aiMessages = page.locator('.chat-ai-message-response');
+    this.userAgreementDialog = page.getByRole('dialog', {
+      name: /user agreement/i,
+    });
+    this.userAgreementAccept = this.userAgreementDialog.getByRole('button', {
+      name: /i accept/i,
+    });
     this.canvasToggle = page.getByRole('button', { name: /canvas/i });
     this.canvasMessagePreview = page.getByTestId('canvas-message-preview');
     this.canvasOpenButton = page.getByTestId('canvas-open-button');
@@ -203,6 +219,35 @@ export class ChatPage {
 
   async waitForAIResponse(timeout = 60_000): Promise<void> {
     await expect(this.aiMessages.first()).toBeVisible({ timeout });
+  }
+
+  /**
+   * Resolves on whichever the agent produces first: its reply, or the User
+   * Agreement modal that gates the reply.
+   *
+   * Whether an agent carries a user agreement is a property of the agent, not
+   * of the flow under test, so a caller that only needs "the chat is live"
+   * cannot assume a reply. Callers that specifically test replies should keep
+   * using waitForAIResponse.
+   */
+  async waitForAIResponseOrUserAgreement(
+    timeout = 60_000,
+  ): Promise<'response' | 'user-agreement'> {
+    try {
+      return await Promise.any([
+        this.aiMessages
+          .first()
+          .waitFor({ state: 'visible', timeout })
+          .then(() => 'response' as const),
+        this.userAgreementDialog
+          .waitFor({ state: 'visible', timeout })
+          .then(() => 'user-agreement' as const),
+      ]);
+    } catch {
+      throw new Error(
+        `Neither an assistant reply nor the User Agreement modal appeared within ${timeout}ms`,
+      );
+    }
   }
 
   async waitForUserMessage(text: string, timeout = 30_000): Promise<void> {
@@ -689,7 +734,7 @@ export class ChatPage {
    * strictly required for a logged-in admin, but patching both keeps this
    * helper correct if it's ever reused for a non-admin/public context.
    */
-  async mockShowReasoning(): Promise<void> {
+  async mockShowReasoning(enabled = true): Promise<void> {
     const patchShowReasoning = async (route: Route) => {
       if (route.request().method() !== 'GET') {
         await route.continue();
@@ -703,7 +748,7 @@ export class ChatPage {
         await route.continue();
         return;
       }
-      json.show_reasoning = true;
+      json.show_reasoning = enabled;
       await route.fulfill({ response, json });
     };
 
@@ -974,14 +1019,18 @@ export class ChatPage {
 
   /**
    * Whether the composer's Canvas tool chip is currently active (artifacts
-   * enabled for outgoing messages). The chip carries no aria-pressed — its
-   * active state is styling-only, so this reads the active background class
-   * (`bg-[#F5F8FF]`, rendered literally by Tailwind's arbitrary-value
-   * syntax).
+   * enabled for outgoing messages). Reads the pill's `aria-pressed` — the
+   * only reliable signal. Do NOT fall back to the class list: the INACTIVE
+   * pill is styled `hover:bg-[#F5F8FF]`, and a substring check for the
+   * active `bg-[#F5F8FF]` token matches that too, so a class-based check
+   * reported "already active" on a fresh session and `enableCanvasTool`
+   * silently skipped the click (journey 71's 4-minute chip timeout).
    */
   async isCanvasToolActive(): Promise<boolean> {
-    const cls = (await this.canvasToggle.first().getAttribute('class')) ?? '';
-    return cls.includes('bg-[#F5F8FF]');
+    const pressed = await this.canvasToggle
+      .first()
+      .getAttribute('aria-pressed');
+    return pressed === 'true';
   }
 
   /**
@@ -995,8 +1044,73 @@ export class ChatPage {
     await expect(this.canvasToggle.first()).toBeVisible({ timeout: 30_000 });
     if (await this.isCanvasToolActive()) return;
     await this.canvasToggle.first().click();
-    await expect(this.canvasToggle.first()).toHaveClass(/bg-\[#F5F8FF\]/, {
-      timeout: 10_000,
+    await expect(this.canvasToggle.first()).toHaveAttribute(
+      'aria-pressed',
+      'true',
+      { timeout: 10_000 },
+    );
+  }
+
+  // ── Persistent "agent is working" indicator — Journey 69 (issue #2217) ─────
+  //
+  // `WorkingIndicator` (components/chat/working-indicator.tsx) is the
+  // shimmering `role="status"` line that replaces the old placeholder which
+  // used to vanish the moment any token rendered. It is driven by the SDK's
+  // `ChatPhase` (`@iblai/iblai-js/web-utils`) and is mounted in two places
+  // that are mutually exclusive by design (never both at once): standalone,
+  // inside `AIWorkingMessage` (`data-testid="chat-working-message"`) before
+  // the streaming bubble has anything to show, and embedded at the foot of
+  // the real streaming bubble (`AIMessageBubble`) once it does. Both wrap the
+  // SAME `data-testid="chat-working-indicator"` element, so
+  // `getWorkingIndicator(scope)` finds it regardless of which frame currently
+  // owns it — pass the relevant frame (`getWorkingMessage()` or
+  // `getLastAiMessage()`) as `scope` to disambiguate.
+
+  /** Returns the standalone pre-token placeholder frame (whole turn, not just the indicator). */
+  getWorkingMessage(): Locator {
+    return this.page.getByTestId('chat-working-message');
+  }
+
+  /**
+   * Returns the shimmering status line itself, within `scope` (default:
+   * whole page). Renders nothing (`toHaveCount(0)`, not merely hidden) once
+   * the component decides there is nothing to add — see the class-level note
+   * above for the two frames this can be embedded in.
+   */
+  getWorkingIndicator(scope?: Locator): Locator {
+    return (scope ?? this.page).getByTestId('chat-working-indicator');
+  }
+
+  /**
+   * Returns the reasoning disclosure row's trigger, within `scope`. Its
+   * label is ALWAYS "Thought" (never "Thinking" — that word belongs solely
+   * to the shimmer), streaming or not; liveness is conveyed only by the
+   * bouncing dots appearing/disappearing next to it (see `getBounceDots`).
+   */
+  getReasoningTrigger(scope?: Locator): Locator {
+    return (scope ?? this.page).getByRole('button', {
+      name: 'Thought',
+      exact: true,
     });
+  }
+
+  /** Returns the generic tool-call disclosure row's trigger, within `scope`. */
+  getToolCallTrigger(scope?: Locator): Locator {
+    return (scope ?? this.page).getByRole('button', {
+      name: /^Used \d+ tools?$/i,
+    });
+  }
+
+  /**
+   * Returns the bouncing-dot indicators within `scope` — rendered by
+   * `ReasoningSection`/`ToolCallIndicator` only while `isActive` (i.e. only
+   * one of them should ever be live at once; see working-indicator.tsx's
+   * "exactly one element conveys progress" invariant), and additionally
+   * exposed by `WorkingIndicator`'s shimmer treatment being independent of
+   * this — the shimmer has no dots of its own, only the two disclosure rows
+   * do.
+   */
+  getBounceDots(scope?: Locator): Locator {
+    return (scope ?? this.page).locator('span.animate-bounce');
   }
 }
