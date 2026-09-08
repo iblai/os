@@ -28,6 +28,12 @@ export interface UseCanvasVersionNavigationProps {
     commands?: { setContent?: (content: string, emitUpdate?: boolean) => void };
   } | null>;
   applyProgrammaticContent: (content: string) => void;
+  /**
+   * Artifact content → editor markdown. Defaults to
+   * `normalizeContentToMarkdown`; the canvas passes an extension-aware
+   * variant so csv/tsv versions render as tables like the live content.
+   */
+  normalizeContent?: (content?: string) => string;
   onVersionChange?: (versionId: string, isCurrent: boolean) => void;
   isStreamingArtifact?: boolean;
   isContentUpdating?: boolean;
@@ -84,6 +90,7 @@ export function useCanvasVersionNavigation({
   metadataVersionNumber,
   editorRef,
   applyProgrammaticContent,
+  normalizeContent = normalizeContentToMarkdown,
   onVersionChange,
   isStreamingArtifact = false,
   isContentUpdating = false,
@@ -251,7 +258,7 @@ export function useCanvasVersionNavigation({
             suppressNextOnChangeRef.current = true;
             hasUserNavigatedVersionRef.current = false;
 
-            const normalizedContent = normalizeContentToMarkdown(
+            const normalizedContent = normalizeContent(
               newCurrentVersion.content,
             );
             setActiveVersionId(currentId);
@@ -385,7 +392,7 @@ export function useCanvasVersionNavigation({
     setActiveVersionId(targetId);
     setActiveVersionIsCurrent(!!targetVersion.is_current);
     suppressNextOnChangeRef.current = true;
-    const normalized = normalizeContentToMarkdown(targetVersion.content);
+    const normalized = normalizeContent(targetVersion.content);
     setCurrentVersion(targetId);
     lastSavedMarkdownRef.current = normalized;
 
@@ -443,7 +450,7 @@ export function useCanvasVersionNavigation({
             versionId: version.versionId,
           }).unwrap();
 
-          const nextContent = normalizeContentToMarkdown(
+          const nextContent = normalizeContent(
             fetchedVersion.content ?? version.content ?? '',
           );
           const isCurrent = !!fetchedVersion.is_current;
@@ -623,7 +630,7 @@ export function useCanvasVersionNavigation({
         const existingIndex = withoutCurrent.findIndex(
           (v) => v.id === nextVersionId,
         );
-        const normalizedContent = normalizeContentToMarkdown(
+        const normalizedContent = normalizeContent(
           startIndex !== undefined && endIndex !== undefined && previousContent
             ? previousContent.slice(0, startIndex) +
                 content +

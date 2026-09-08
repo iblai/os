@@ -1,5 +1,6 @@
 import { test, expect } from '../fixtures/mentor-test';
 import { navigateToMentorApp } from '../utils/auth';
+import { PLAYWRIGHT_NONADMIN_USERNAME } from '../fixtures/test-data';
 import { logger } from '@iblai/iblai-js/playwright';
 
 test.describe('Journey 4: User Profile Management', () => {
@@ -915,5 +916,100 @@ test.describe('Journey 4: User Profile Management', () => {
     } else {
       logger.info('Admin badge not visible — user is not an admin');
     }
+  });
+
+  // ── History tab (SDK ChatHistoryTab) ───────────────────────────────────────
+  //
+  // The profile History tab is backed by the user-scoped `my-chat-history*`
+  // endpoints. The SDK shows it on your OWN profile always, and on someone
+  // else's profile only when the viewer is a tenant admin or a watcher —
+  // anyone else gets a 403 that the tab renders as a permission notice.
+
+  const HISTORY_FORBIDDEN_NOTICE =
+    /don't have permission to view this user's history/i;
+
+  test('non-admin goes to profile modal and the History tab shows their own history (never the permission notice)', async ({
+    nonadminProfilePage,
+  }) => {
+    await nonadminProfilePage.open();
+    await nonadminProfilePage.switchToTab('History');
+    await expect(nonadminProfilePage.activeTab('History')).toBeVisible({
+      timeout: 5_000,
+    });
+
+    const modal = nonadminProfilePage.modal;
+    // Loaded state: either conversation rows or the empty state — the
+    // request is for the user's own history, so it can never be forbidden.
+    await expect(
+      modal
+        .getByTestId('history-conversation-row')
+        .first()
+        .or(modal.getByText('No conversations found')),
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(modal.getByText(HISTORY_FORBIDDEN_NOTICE)).toHaveCount(0);
+  });
+
+  test("admin opens another user's profile from Management → Users and its History tab loads that user's history", async ({
+    page,
+    sidebarPage,
+  }) => {
+    test.skip(
+      !PLAYWRIGHT_NONADMIN_USERNAME,
+      'PLAYWRIGHT_NONADMIN_USERNAME is required to look up another user',
+    );
+    await navigateToMentorApp(page);
+
+    // Management (sidebar footer) is the app's only path to another user's
+    // profile. It is RBAC-gated (`can_manage_users`), so skip rather than
+    // fail when the environment does not grant it to the admin user.
+    const managementVisible = await sidebarPage.managementButton
+      .isVisible({ timeout: 10_000 })
+      .catch(() => false);
+    test.skip(
+      !managementVisible,
+      'Management sidebar entry is not available to this admin user',
+    );
+    await sidebarPage.managementButton.click();
+
+    const managementDialog = page.getByRole('dialog', { name: 'Management' });
+    await expect(managementDialog).toBeVisible({ timeout: 15_000 });
+
+    // Users is the default Management sub-tab; find the non-admin user.
+    await managementDialog
+      .getByRole('textbox', { name: 'Search Users' })
+      .fill(PLAYWRIGHT_NONADMIN_USERNAME);
+    const viewProfile = managementDialog
+      .getByRole('button', { name: /^View profile for / })
+      .first();
+    await expect(viewProfile).toBeVisible({ timeout: 20_000 });
+    await viewProfile.click();
+
+    // The nested "User profile" dialog renders the SDK Profile in preview
+    // mode for the OTHER user: edit-only tabs (Security) are gone, but the
+    // History tab is offered because the viewer is a tenant admin.
+    const userProfileDialog = page.getByRole('dialog', {
+      name: 'User profile',
+    });
+    await expect(userProfileDialog).toBeVisible({ timeout: 15_000 });
+    const tabNav = userProfileDialog.getByRole('navigation', {
+      name: /profile tabs/i,
+    });
+    await expect(tabNav.getByRole('tab', { name: 'Security' })).toHaveCount(0);
+    const historyTab = tabNav.getByRole('tab', { name: 'History' });
+    await expect(historyTab).toBeVisible({ timeout: 5_000 });
+    await historyTab.click();
+    await expect(historyTab).toHaveAttribute('aria-selected', 'true');
+
+    // Tenant admins are served the other user's history: rows or the empty
+    // state, and never the 403 permission notice.
+    await expect(
+      userProfileDialog
+        .getByTestId('history-conversation-row')
+        .first()
+        .or(userProfileDialog.getByText('No conversations found')),
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(
+      userProfileDialog.getByText(HISTORY_FORBIDDEN_NOTICE),
+    ).toHaveCount(0);
   });
 });
