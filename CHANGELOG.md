@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.142.0](https://github.com/iblai/os/compare/v0.141.1...v0.142.0) (2026-09-08)
+
+### Features
+
+* agent based lesson completion > iblai-js bump ([3f41c06](https://github.com/iblai/os/commit/3f41c06f175f997e4dae297879f4c8f235495263))
+
+### Chores
+
+* untrack .claude/worktrees scratch dirs ([98bcd5d](https://github.com/iblai/os/commit/98bcd5d3084033c9d869704311e096edad619bc8))
+
+## [0.140.6-patch-1](https://github.com/iblai/os/compare/v0.141.1...v0.142.0) (2026-09-04)
+
+### Features
+
+* agent based lesson completion > version patch org ([0b119c2](https://github.com/iblai/os/commit/0b119c2f11089a31ef5692f3bc87d8f9c13c0ae5))
+
+## [0.139.0-patch-1](https://github.com/iblai/os/compare/v0.141.1...v0.142.0) (2026-09-03)
+
+### Features
+
+* agent based lesson completion ([0c80fd1](https://github.com/iblai/os/commit/0c80fd158521dddaffb50e473a5a6c28da67927c))
+* agent based lesson completion ([e99baa5](https://github.com/iblai/os/commit/e99baa5dae9221251e5120714cd9f62815e96980))
+* agent based lesson completion > iblai-js bump ([638a228](https://github.com/iblai/os/commit/638a22880cd5d7a642424d531ce476280b897e01))
+* agent based lesson completion > version patch org ([6e906e7](https://github.com/iblai/os/commit/6e906e7e85f47e44c5ef20fa9d7c2a3336e3a103))
+
 ## [0.141.1](https://github.com/iblai/os/compare/v0.141.0...v0.141.1) (2026-09-07)
 
 ### Bug Fixes
