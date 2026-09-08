@@ -1302,6 +1302,31 @@ describe('WorkflowDetailPage', () => {
       expect(screen.getByTestId('workflow-canvas')).toBeInTheDocument();
     });
 
+    it('should clear the pending clicked-item timer on unmount', () => {
+      const setSpy = vi.spyOn(globalThis, 'setTimeout');
+      const clearSpy = vi.spyOn(globalThis, 'clearTimeout');
+
+      const { unmount } = render(<WorkflowDetailPage />);
+      setSpy.mockClear();
+
+      fireEvent.click(screen.getByTestId('sidebar-item'));
+
+      const scheduled = setSpy.mock.calls.findIndex(
+        ([, delay]) => delay === 100,
+      );
+      expect(scheduled).toBeGreaterThanOrEqual(0);
+      const timerId = setSpy.mock.results[scheduled].value;
+
+      unmount();
+
+      // Without the cleanup the 100ms reset fires after teardown and calls
+      // setClickedItem on an unmounted tree — "window is not defined" in CI.
+      expect(clearSpy).toHaveBeenCalledWith(timerId);
+
+      setSpy.mockRestore();
+      clearSpy.mockRestore();
+    });
+
     it('should handle sidebar drag start', () => {
       render(<WorkflowDetailPage />);
 

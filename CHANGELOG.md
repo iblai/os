@@ -4,40 +4,40 @@
 
 ### Features
 
-* agent based lesson completion > iblai-js bump ([3f41c06](https://github.com/iblai/os/commit/3f41c06f175f997e4dae297879f4c8f235495263))
+- agent based lesson completion > iblai-js bump ([3f41c06](https://github.com/iblai/os/commit/3f41c06f175f997e4dae297879f4c8f235495263))
 
 ### Chores
 
-* untrack .claude/worktrees scratch dirs ([98bcd5d](https://github.com/iblai/os/commit/98bcd5d3084033c9d869704311e096edad619bc8))
+- untrack .claude/worktrees scratch dirs ([98bcd5d](https://github.com/iblai/os/commit/98bcd5d3084033c9d869704311e096edad619bc8))
 
 ## [0.140.6-patch-1](https://github.com/iblai/os/compare/v0.141.1...v0.142.0) (2026-09-04)
 
 ### Features
 
-* agent based lesson completion > version patch org ([0b119c2](https://github.com/iblai/os/commit/0b119c2f11089a31ef5692f3bc87d8f9c13c0ae5))
+- agent based lesson completion > version patch org ([0b119c2](https://github.com/iblai/os/commit/0b119c2f11089a31ef5692f3bc87d8f9c13c0ae5))
 
 ## [0.139.0-patch-1](https://github.com/iblai/os/compare/v0.141.1...v0.142.0) (2026-09-03)
 
 ### Features
 
-* agent based lesson completion ([0c80fd1](https://github.com/iblai/os/commit/0c80fd158521dddaffb50e473a5a6c28da67927c))
-* agent based lesson completion ([e99baa5](https://github.com/iblai/os/commit/e99baa5dae9221251e5120714cd9f62815e96980))
-* agent based lesson completion > iblai-js bump ([638a228](https://github.com/iblai/os/commit/638a22880cd5d7a642424d531ce476280b897e01))
-* agent based lesson completion > version patch org ([6e906e7](https://github.com/iblai/os/commit/6e906e7e85f47e44c5ef20fa9d7c2a3336e3a103))
+- agent based lesson completion ([0c80fd1](https://github.com/iblai/os/commit/0c80fd158521dddaffb50e473a5a6c28da67927c))
+- agent based lesson completion ([e99baa5](https://github.com/iblai/os/commit/e99baa5dae9221251e5120714cd9f62815e96980))
+- agent based lesson completion > iblai-js bump ([638a228](https://github.com/iblai/os/commit/638a22880cd5d7a642424d531ce476280b897e01))
+- agent based lesson completion > version patch org ([6e906e7](https://github.com/iblai/os/commit/6e906e7e85f47e44c5ef20fa9d7c2a3336e3a103))
 
 ## [0.141.1](https://github.com/iblai/os/compare/v0.141.0...v0.141.1) (2026-09-07)
 
 ### Bug Fixes
 
-* **markdown:** guard the unguarded position reads in @ziloen/remark-math ([a64576f](https://github.com/iblai/os/commit/a64576f7559d26485d040234138ff13d29fc425d)), closes [#2441](https://github.com/iblai/os/issues/2441)
-* **markdown:** stop an em dash dragging prose into an autolink's host ([abb1c31](https://github.com/iblai/os/commit/abb1c311b11603534cf37e57b22e8e8500203535))
+- **markdown:** guard the unguarded position reads in @ziloen/remark-math ([a64576f](https://github.com/iblai/os/commit/a64576f7559d26485d040234138ff13d29fc425d)), closes [#2441](https://github.com/iblai/os/issues/2441)
+- **markdown:** stop an em dash dragging prose into an autolink's host ([abb1c31](https://github.com/iblai/os/commit/abb1c311b11603534cf37e57b22e8e8500203535))
 
 ### Tests
 
-* **e2e:** assert the voice capability toggle instead of skipping past it ([63fe161](https://github.com/iblai/os/commit/63fe1613773b0bba1071daf97f687d703ca2f726))
-* **e2e:** give journey 48 its own agent and stop leaking journey 13's ([efdac49](https://github.com/iblai/os/commit/efdac49c6b1e48fd61b73e93baf87073686db9ff))
-* **e2e:** let project chat settle on a reply or the User Agreement ([214dd59](https://github.com/iblai/os/commit/214dd59c3056f372cab9c8e4abc8e2ea9f82a731))
-* **markdown:** cover the autolink crash the guard actually fixes ([85f4625](https://github.com/iblai/os/commit/85f4625db10f3d1225925fc9e034ac921a0f43de))
+- **e2e:** assert the voice capability toggle instead of skipping past it ([63fe161](https://github.com/iblai/os/commit/63fe1613773b0bba1071daf97f687d703ca2f726))
+- **e2e:** give journey 48 its own agent and stop leaking journey 13's ([efdac49](https://github.com/iblai/os/commit/efdac49c6b1e48fd61b73e93baf87073686db9ff))
+- **e2e:** let project chat settle on a reply or the User Agreement ([214dd59](https://github.com/iblai/os/commit/214dd59c3056f372cab9c8e4abc8e2ea9f82a731))
+- **markdown:** cover the autolink crash the guard actually fixes ([85f4625](https://github.com/iblai/os/commit/85f4625db10f3d1225925fc9e034ac921a0f43de))
 
 ## [0.141.0](https://github.com/iblai/os/compare/v0.140.6...v0.141.0) (2026-09-04)
 

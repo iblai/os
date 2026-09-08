@@ -28,18 +28,25 @@ vi.mock('../resource-modal', () => ({
   ),
 }));
 
+// Each picker hook reports whether its tenant credential lookup has finished
+// (`credentialsLoaded`) and whether a credential was found (`isConfigured`).
+const dropboxState = { credentialsLoaded: true, isConfigured: true };
+const googleDriveState = {
+  isPickerLoaded: true,
+  pickerError: null as string | null,
+  credentialsLoaded: true,
+  isConfigured: true,
+};
+const oneDriveState = { credentialsLoaded: true, isConfigured: true };
+
 const mockOpenChooser = vi.fn();
 vi.mock('@/hooks/use-dropdox-picker', () => ({
-  default: () => ({ openChooser: mockOpenChooser }),
+  default: () => ({ openChooser: mockOpenChooser, ...dropboxState }),
 }));
 
 const mockHandlePickerOpen = vi.fn();
 const mockLoadGoogleApiScript = vi.fn();
 const mockForceClosePickerModal = vi.fn();
-const googleDriveState = {
-  isPickerLoaded: true,
-  pickerError: null as string | null,
-};
 vi.mock('@/hooks/use-google-drive-picker', () => ({
   default: () => ({
     handlePickerOpen: mockHandlePickerOpen,
@@ -47,12 +54,14 @@ vi.mock('@/hooks/use-google-drive-picker', () => ({
     isPickerLoaded: googleDriveState.isPickerLoaded,
     forceClosePickerModal: mockForceClosePickerModal,
     pickerError: googleDriveState.pickerError,
+    credentialsLoaded: googleDriveState.credentialsLoaded,
+    isConfigured: googleDriveState.isConfigured,
   }),
 }));
 
 const mockPickOneDriveFile = vi.fn();
 vi.mock('@/hooks/use-one-drive-picker', () => ({
-  default: () => ({ pickOneDriveFile: mockPickOneDriveFile }),
+  default: () => ({ pickOneDriveFile: mockPickOneDriveFile, ...oneDriveState }),
 }));
 
 const mockDisabledDatasets = vi.fn(() => 'zip|courses');
@@ -78,6 +87,12 @@ describe('AddResourceModal', () => {
     vi.clearAllMocks();
     googleDriveState.isPickerLoaded = true;
     googleDriveState.pickerError = null;
+    googleDriveState.credentialsLoaded = true;
+    googleDriveState.isConfigured = true;
+    dropboxState.credentialsLoaded = true;
+    dropboxState.isConfigured = true;
+    oneDriveState.credentialsLoaded = true;
+    oneDriveState.isConfigured = true;
     mockDisabledDatasets.mockReturnValue('zip|courses');
   });
 
@@ -177,5 +192,88 @@ describe('AddResourceModal', () => {
 
     fireEvent.click(screen.getByText('Force Close Picker'));
     expect(mockForceClosePickerModal).toHaveBeenCalledTimes(1);
+  });
+
+  describe('cloud providers without tenant credentials', () => {
+    const NOT_CONFIGURED = 'Not configured for this tenant';
+
+    it('leaves the cloud buttons enabled and unlabelled when credentials exist', () => {
+      render(<AddResourceModal {...defaultProps} />);
+
+      expect(screen.getByText('Google Drive').closest('button')).toBeEnabled();
+      expect(screen.getByText('Dropbox').closest('button')).toBeEnabled();
+      expect(
+        screen.getByText('Microsoft OneDrive').closest('button'),
+      ).toBeEnabled();
+      expect(screen.queryByText(NOT_CONFIGURED)).not.toBeInTheDocument();
+    });
+
+    it('disables Google Drive and says why when the tenant has no credential', () => {
+      googleDriveState.isConfigured = false;
+
+      render(<AddResourceModal {...defaultProps} />);
+
+      const button = screen.getByText('Google Drive').closest('button');
+      expect(button).toBeDisabled();
+      expect(button).toHaveAttribute('title', NOT_CONFIGURED);
+      expect(screen.getByText(NOT_CONFIGURED)).toBeInTheDocument();
+    });
+
+    it('disables OneDrive when the tenant has no credential', () => {
+      oneDriveState.isConfigured = false;
+
+      render(<AddResourceModal {...defaultProps} />);
+
+      expect(
+        screen.getByText('Microsoft OneDrive').closest('button'),
+      ).toBeDisabled();
+      expect(screen.getByText('Google Drive').closest('button')).toBeEnabled();
+    });
+
+    it('disables Dropbox when the tenant has no credential', () => {
+      dropboxState.isConfigured = false;
+
+      render(<AddResourceModal {...defaultProps} />);
+
+      expect(screen.getByText('Dropbox').closest('button')).toBeDisabled();
+      expect(screen.getByText('Google Drive').closest('button')).toBeEnabled();
+    });
+
+    it('does not disable a provider while its credential lookup is in flight', () => {
+      googleDriveState.credentialsLoaded = false;
+      googleDriveState.isConfigured = false;
+
+      render(<AddResourceModal {...defaultProps} />);
+
+      expect(screen.getByText('Google Drive').closest('button')).toBeEnabled();
+      expect(screen.queryByText(NOT_CONFIGURED)).not.toBeInTheDocument();
+    });
+
+    it('does not invoke a picker when its button is disabled', () => {
+      googleDriveState.isConfigured = false;
+      dropboxState.isConfigured = false;
+      oneDriveState.isConfigured = false;
+
+      render(<AddResourceModal {...defaultProps} />);
+
+      fireEvent.click(screen.getByText('Google Drive'));
+      fireEvent.click(screen.getByText('Dropbox'));
+      fireEvent.click(screen.getByText('Microsoft OneDrive'));
+
+      expect(mockHandlePickerOpen).not.toHaveBeenCalled();
+      expect(mockOpenChooser).not.toHaveBeenCalled();
+      expect(mockPickOneDriveFile).not.toHaveBeenCalled();
+    });
+
+    it('leaves non-cloud resources unaffected by credential state', () => {
+      googleDriveState.isConfigured = false;
+      dropboxState.isConfigured = false;
+      oneDriveState.isConfigured = false;
+
+      render(<AddResourceModal {...defaultProps} />);
+
+      expect(screen.getByText('PowerPoint').closest('button')).toBeEnabled();
+      expect(screen.getByText('GitHub').closest('button')).toBeEnabled();
+    });
   });
 });
