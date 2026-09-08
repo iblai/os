@@ -4,15 +4,15 @@
 
 ### Bug Fixes
 
-* **markdown:** guard the unguarded position reads in @ziloen/remark-math ([a64576f](https://github.com/iblai/os/commit/a64576f7559d26485d040234138ff13d29fc425d)), closes [#2441](https://github.com/iblai/os/issues/2441)
-* **markdown:** stop an em dash dragging prose into an autolink's host ([abb1c31](https://github.com/iblai/os/commit/abb1c311b11603534cf37e57b22e8e8500203535))
+- **markdown:** guard the unguarded position reads in @ziloen/remark-math ([a64576f](https://github.com/iblai/os/commit/a64576f7559d26485d040234138ff13d29fc425d)), closes [#2441](https://github.com/iblai/os/issues/2441)
+- **markdown:** stop an em dash dragging prose into an autolink's host ([abb1c31](https://github.com/iblai/os/commit/abb1c311b11603534cf37e57b22e8e8500203535))
 
 ### Tests
 
-* **e2e:** assert the voice capability toggle instead of skipping past it ([63fe161](https://github.com/iblai/os/commit/63fe1613773b0bba1071daf97f687d703ca2f726))
-* **e2e:** give journey 48 its own agent and stop leaking journey 13's ([efdac49](https://github.com/iblai/os/commit/efdac49c6b1e48fd61b73e93baf87073686db9ff))
-* **e2e:** let project chat settle on a reply or the User Agreement ([214dd59](https://github.com/iblai/os/commit/214dd59c3056f372cab9c8e4abc8e2ea9f82a731))
-* **markdown:** cover the autolink crash the guard actually fixes ([85f4625](https://github.com/iblai/os/commit/85f4625db10f3d1225925fc9e034ac921a0f43de))
+- **e2e:** assert the voice capability toggle instead of skipping past it ([63fe161](https://github.com/iblai/os/commit/63fe1613773b0bba1071daf97f687d703ca2f726))
+- **e2e:** give journey 48 its own agent and stop leaking journey 13's ([efdac49](https://github.com/iblai/os/commit/efdac49c6b1e48fd61b73e93baf87073686db9ff))
+- **e2e:** let project chat settle on a reply or the User Agreement ([214dd59](https://github.com/iblai/os/commit/214dd59c3056f372cab9c8e4abc8e2ea9f82a731))
+- **markdown:** cover the autolink crash the guard actually fixes ([85f4625](https://github.com/iblai/os/commit/85f4625db10f3d1225925fc9e034ac921a0f43de))
 
 ## [0.141.0](https://github.com/iblai/os/compare/v0.140.6...v0.141.0) (2026-09-04)
 
