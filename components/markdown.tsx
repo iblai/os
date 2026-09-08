@@ -9,6 +9,7 @@ import 'katex/contrib/mhchem';
 import { cn } from '@/lib/utils';
 import { normalizeListIndentation } from '@/lib/normalize-list-indentation';
 import { components } from './markdown/markdown-components';
+import { MarkdownErrorBoundary } from './markdown/markdown-error-boundary';
 import { rehypeAlignedMath } from '@/lib/rehype-aligned-math';
 import { rehypeVerbCode } from '@/lib/rehype-verb-code';
 import { remarkLatexIslands } from '@/lib/remark-latex-islands';
@@ -99,39 +100,41 @@ const TABLE_MAX_HEIGHT = 'none';
 export default function Markdown({ children, className }: Props) {
   return (
     <div className={cn('space-y-4', className)}>
-      <Streamdown
-        plugins={plugins}
-        components={components}
-        // Streamdown splits the message into independently parsed blocks
-        // before remark runs, so a blank line inside a `\[...\]` or a
-        // `\begin{env}` tears the pair apart and no remark plugin can see
-        // it. See lib/latex-aware-blocks.ts.
-        parseMarkdownIntoBlocksFn={parseLatexAwareBlocks}
-        // Streamdown's remend pass speculatively closes what a half-arrived
-        // token opened: a mid-stream `**bold` is rendered bold, and a lone
-        // `$` or `\[` is closed into maths that the next token contradicts.
-        // Off, a delimiter stays literal until its partner actually lands,
-        // which is a beat of raw text instead of a formula that flickers
-        // through a wrong shape. See scripts/gallery-cases.ts.
-        parseIncompleteMarkdown={false}
-        linkSafety={linkSafety}
-        controls={controls}
-        tableMaxHeight={TABLE_MAX_HEIGHT}
-        urlTransform={(url) => {
-          // Allow mailto:, tel:, and http(s): protocols
-          if (
-            url.startsWith('mailto:') ||
-            url.startsWith('tel:') ||
-            url.startsWith('http://') ||
-            url.startsWith('https://')
-          ) {
-            return url;
-          }
-          return '';
-        }}
-      >
-        {normalizeListIndentation(children ?? '')}
-      </Streamdown>
+      <MarkdownErrorBoundary source={children ?? ''}>
+        <Streamdown
+          plugins={plugins}
+          components={components}
+          // Streamdown splits the message into independently parsed blocks
+          // before remark runs, so a blank line inside a `\[...\]` or a
+          // `\begin{env}` tears the pair apart and no remark plugin can see
+          // it. See lib/latex-aware-blocks.ts.
+          parseMarkdownIntoBlocksFn={parseLatexAwareBlocks}
+          // Streamdown's remend pass speculatively closes what a half-arrived
+          // token opened: a mid-stream `**bold` is rendered bold, and a lone
+          // `$` or `\[` is closed into maths that the next token contradicts.
+          // Off, a delimiter stays literal until its partner actually lands,
+          // which is a beat of raw text instead of a formula that flickers
+          // through a wrong shape. See scripts/gallery-cases.ts.
+          parseIncompleteMarkdown={false}
+          linkSafety={linkSafety}
+          controls={controls}
+          tableMaxHeight={TABLE_MAX_HEIGHT}
+          urlTransform={(url) => {
+            // Allow mailto:, tel:, and http(s): protocols
+            if (
+              url.startsWith('mailto:') ||
+              url.startsWith('tel:') ||
+              url.startsWith('http://') ||
+              url.startsWith('https://')
+            ) {
+              return url;
+            }
+            return '';
+          }}
+        >
+          {normalizeListIndentation(children ?? '')}
+        </Streamdown>
+      </MarkdownErrorBoundary>
     </div>
   );
 }
