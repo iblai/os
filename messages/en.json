@@ -431,6 +431,20 @@
     "copied": "Copied",
     "share": "Share"
   },
+  "chatAiMessageDownload": {
+    "downloadThisChat": "Download this chat",
+    "download": "Download",
+    "dialogTitle": "Download Chat",
+    "dialogDescription": "Choose what you would like to download as a text file.",
+    "entireChat": "Entire chat",
+    "entireChatDescription": "Every message in this conversation.",
+    "thisMessage": "This message only",
+    "thisMessageDescription": "Only the reply you selected.",
+    "downloadButton": "Download",
+    "transcriptHeader": "Chat with {mentorName}",
+    "roleUser": "You",
+    "roleAi": "AI"
+  },
   "chatIndex": {
     "youAreOffline": "You are offline",
     "offlineChatUnavailable": "Chat is unavailable in offline mode. Enable \"Download Local LLMs\" in Settings to use chat offline.",

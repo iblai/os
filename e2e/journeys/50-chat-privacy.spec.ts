@@ -27,14 +27,15 @@
  *     enable private mode via the header toggle on a fresh chat, send a
  *     message, and confirm the assistant still replies. Exercised once as
  *     the admin (`page`) and once as a non-admin (`nonadminPage`). Also
- *     covers six feature-interaction checkpoints (cp-chat-04 … cp-chat-09)
+ *     covers seven feature-interaction checkpoints (cp-chat-04 … cp-chat-10)
  *     that exercise prompts, voice/screen, multi-turn context, file
- *     attachments, the memory button, and the AI-bubble share button while
- *     private mode is active. These assert the CORRECT/EXPECTED behavior.
- *     cp-chat-08 (memory button) and cp-chat-09 (share button) have their
- *     in-repo gates implemented and should pass; cp-chat-04/05/06 are
- *     expected to be RED until the corresponding backend fixes land. Do NOT
- *     weaken assertions to pass.
+ *     attachments, the memory button, and the AI-bubble share/download
+ *     buttons while private mode is active. These assert the
+ *     CORRECT/EXPECTED behavior. cp-chat-08 (memory button), cp-chat-09
+ *     (share button), and cp-chat-10 (download button) have their in-repo
+ *     gates implemented and should pass; cp-chat-04/05/06 are expected to be
+ *     RED until the corresponding backend fixes land. Do NOT weaken
+ *     assertions to pass.
  *
  * Precedence chain (highest → lowest):
  *   mentor > tenant > session > user > default
@@ -1706,6 +1707,69 @@ test.describe('Journey 50: Chat Privacy', () => {
       await expect(
         shareButton,
         'Share-chat button must be hidden in the AI bubble while private mode is on',
+      ).not.toBeVisible({ timeout: 15_000 });
+
+      // Private mode must remain on throughout.
+      await chatPrivacy.assertHeaderState('on');
+    });
+
+    // cp-chat-10: "Download this chat" button in the AI message bubble is
+    //             hidden in private mode.
+    //
+    // Same gate as cp-chat-09: components/chat/ai-message-bubble.tsx renders
+    // <AIMessageDownload> right after <AIMessageShare>, inside the identical
+    // `!showingSharedChat && !chatPrivacyActive` condition — a private
+    // session has no durable record to export any more than it has one to
+    // share. The download control's accessible name is "Download this chat"
+    // (the sr-only span in ai-message-download.tsx), matching journey 12's
+    // locator.
+    test('cp-chat-10: download-chat button in the AI bubble is hidden in private mode', async ({
+      page,
+      chatPage,
+    }) => {
+      const chatPrivacy = new ChatPrivacyPage(page);
+      const downloadButton = page
+        .getByRole('button', { name: 'Download this chat' })
+        .first();
+
+      // ── Baseline: NORMAL mode shows the download button after a reply ───
+      await chatPage.startNewChat();
+      await waitForPageReady(page);
+      await chatPrivacy.assertHeaderState('off');
+
+      await chatPage.sendMessage('Hello there');
+      await expect(chatPage.userMessages.first()).toBeVisible({
+        timeout: 30_000,
+      });
+      await chatPage.waitForAIResponse();
+      await chatPage.waitForStreamingComplete(120_000);
+
+      // The download button appears in the AI bubble's action toolbar once
+      // the response is complete. This proves the button exists for this
+      // mentor/user before we assert private mode hides it.
+      await expect(downloadButton).toBeVisible({ timeout: 30_000 });
+
+      // ── Private mode hides the download button ───────────────────────────
+      await chatPage.startNewChat();
+      await waitForPageReady(page);
+      await chatPrivacy.assertHeaderState('off');
+
+      // Enable private mode on the empty chat (no confirm dialog).
+      await chatPrivacy.clickToggleAndWaitFor('on', 'session');
+
+      await chatPage.sendMessage('Hello in private mode');
+      await expect(chatPage.userMessages.first()).toBeVisible({
+        timeout: 30_000,
+      });
+      await chatPage.waitForAIResponse();
+      await chatPage.waitForStreamingComplete(120_000);
+
+      // The AI bubble rendered in a private session must NOT expose the
+      // download control (chatPrivacyActive → the AIMessageDownload render
+      // is gated out).
+      await expect(
+        downloadButton,
+        'Download-chat button must be hidden in the AI bubble while private mode is on',
       ).not.toBeVisible({ timeout: 15_000 });
 
       // Private mode must remain on throughout.

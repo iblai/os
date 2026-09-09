@@ -1,4 +1,11 @@
-import { Page, Locator, Route, WebSocketRoute, expect } from '@playwright/test';
+import {
+  Page,
+  Locator,
+  Route,
+  WebSocketRoute,
+  Download,
+  expect,
+} from '@playwright/test';
 
 /**
  * Minimal shape accepted by `mockEffectiveSkills` — mirrors the SDK's
@@ -120,6 +127,22 @@ export class ChatPage {
   readonly skillsMenuClear: Locator;
   /** The Skills dropdown's content panel (Radix portal), when open. */
   readonly skillsMenuContent: Locator;
+  /**
+   * The AI message toolbar's download trigger — sr-only accessible name
+   * "Download this chat" (`ai-message-download.tsx`), rendered right after
+   * the share button under the same `!showingSharedChat && !chatPrivacyActive`
+   * gate. One instance per AI bubble; scope with `.first()`/`.last()` or
+   * `getDownloadButton(scope)` when more than one reply is on screen.
+   */
+  readonly downloadButton: Locator;
+  /** The "Download Chat" dialog opened by `downloadButton` — a radio-group scope picker. */
+  readonly downloadDialog: Locator;
+  /** "Entire chat" radio inside the download dialog — preselected on every open. */
+  readonly downloadScopeChatRadio: Locator;
+  /** "This message only" radio inside the download dialog. */
+  readonly downloadScopeMessageRadio: Locator;
+  /** The dialog's single primary action button ("Download"). There is no Cancel — dismiss via Escape or the dialog's built-in close. */
+  readonly downloadConfirmButton: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -207,11 +230,32 @@ export class ChatPage {
     this.skillsMenuClear =
       this.skillsMenuTrigger.getByTestId('skills-menu-clear');
     this.skillsMenuContent = page.getByTestId('skills-menu-content');
+    this.downloadButton = page.getByRole('button', {
+      name: 'Download this chat',
+    });
+    this.downloadDialog = page.getByRole('dialog', { name: 'Download Chat' });
+    this.downloadScopeChatRadio = this.downloadDialog.getByRole('radio', {
+      name: 'Entire chat',
+    });
+    this.downloadScopeMessageRadio = this.downloadDialog.getByRole('radio', {
+      name: 'This message only',
+    });
+    this.downloadConfirmButton = this.downloadDialog.getByRole('button', {
+      name: 'Download',
+      exact: true,
+    });
   }
 
   async sendMessage(text: string): Promise<void> {
-    await expect(this.chatInput).toBeVisible({ timeout: 15_000 });
-    await this.chatInput.fill(text);
+    // Role-agnostic id-based locator, NOT `this.chatInput` — the composer's
+    // accessible role flips from `textbox` to `combobox` whenever the
+    // current mentor has any enabled skills (see the "`/` skill picker"
+    // section below), which `sendMessage` has no business caring about. Any
+    // mentor with skills configured made every caller of `sendMessage`
+    // (nearly every journey) fail on `chatInput` alone (issue #2464 sh-07).
+    const composer = this.getComposerTextarea();
+    await expect(composer).toBeVisible({ timeout: 15_000 });
+    await composer.fill(text);
     await expect(this.sendButton).toBeEnabled({ timeout: 10_000 });
     await this.page.waitForTimeout(5_000);
     await this.sendButton.click();
@@ -1112,5 +1156,45 @@ export class ChatPage {
    */
   getBounceDots(scope?: Locator): Locator {
     return (scope ?? this.page).locator('span.animate-bounce');
+  }
+
+  // ── Chat download (issue #2464) ─────────────────────────────────────────
+
+  /** Returns the download trigger within `scope` (default: whole page) — disambiguates when multiple AI bubbles are on screen. */
+  getDownloadButton(scope?: Locator): Locator {
+    return (scope ?? this.page).getByRole('button', {
+      name: 'Download this chat',
+    });
+  }
+
+  /**
+   * Opens the download dialog via `trigger` (default: the first
+   * "Download this chat" button on the page) and waits for it to render.
+   * The scope selection always resets to "Entire chat" on open — callers
+   * that want "This message only" must select it explicitly every time.
+   */
+  async openDownloadDialog(trigger?: Locator): Promise<void> {
+    const button = trigger ?? this.downloadButton.first();
+    await expect(button).toBeVisible({ timeout: 15_000 });
+    await button.click();
+    await expect(this.downloadDialog).toBeVisible({ timeout: 10_000 });
+  }
+
+  /**
+   * Reads a triggered `Download`'s full content as UTF-8 text. Uses
+   * `createReadStream()` rather than `download.path()` — the stream works
+   * the same across Chromium/Firefox/WebKit, while `path()` is not always
+   * available depending on how the download was accepted.
+   */
+  async readDownloadText(download: Download): Promise<string> {
+    const stream = await download.createReadStream();
+    if (!stream) return '';
+    const chunks: Buffer[] = [];
+    await new Promise<void>((resolve, reject) => {
+      stream.on('data', (chunk: Buffer) => chunks.push(chunk));
+      stream.on('end', () => resolve());
+      stream.on('error', reject);
+    });
+    return Buffer.concat(chunks).toString('utf-8');
   }
 }

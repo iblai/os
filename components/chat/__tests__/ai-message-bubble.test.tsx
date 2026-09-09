@@ -108,6 +108,20 @@ vi.mock('@/components/chat/ai-message-share', () => ({
   ),
 }));
 
+vi.mock('@/components/chat/ai-message-download', () => ({
+  AIMessageDownload: ({
+    mentorName,
+    messages,
+  }: {
+    mentorName: string;
+    messages: unknown[];
+  }) => (
+    <button data-testid="ai-message-download">
+      Download: {mentorName} ({messages.length})
+    </button>
+  ),
+}));
+
 vi.mock('@/components/chat/ai-message-rating', () => ({
   AIMessageRating: () => <div data-testid="ai-message-rating">Rating</div>,
 }));
@@ -442,6 +456,31 @@ describe('AIMessageBubble', () => {
       renderWithRedux(<AIMessageBubble {...defaultProps} />, true);
       expect(screen.queryByTestId('ai-message-share')).not.toBeInTheDocument();
       mockShowingSharedChat = false; // Reset for other tests
+    });
+
+    // Issue #2464: the download button rides the same gate as share — a
+    // per-message toolbar action on AI bubbles only, hidden in shared-chat and
+    // private-mode views.
+    it('should render download button when not in shared chat and not private', () => {
+      renderWithRedux(<AIMessageBubble {...defaultProps} />);
+      expect(screen.getByTestId('ai-message-download')).toBeInTheDocument();
+    });
+
+    it('should not render download button when in shared chat', () => {
+      mockShowingSharedChat = true;
+      renderWithRedux(<AIMessageBubble {...defaultProps} />, true);
+      expect(
+        screen.queryByTestId('ai-message-download'),
+      ).not.toBeInTheDocument();
+      mockShowingSharedChat = false;
+    });
+
+    it('should not render download button when chat private mode is active', () => {
+      mockChatPrivacyMode = 'disabled';
+      renderWithRedux(<AIMessageBubble {...defaultProps} />);
+      expect(
+        screen.queryByTestId('ai-message-download'),
+      ).not.toBeInTheDocument();
     });
 
     it('should render rating component when logged in and not shared chat', () => {

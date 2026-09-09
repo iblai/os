@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-09-01 | 708 checkpoints (669 covered, 8 pending/fixme, 15 not-reproducible in default env, 16 deprecated) | 75 journeys (74 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-09-07 | 713 checkpoints (674 covered, 8 pending/fixme, 15 not-reproducible in default env, 16 deprecated) | 75 journeys (74 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -211,9 +211,9 @@ Binary artifacts (pdf, xlsx, zip, …) are a read-only variant of the canvas art
 
 ---
 
-## Journey 12: Chat Sharing (6 checkpoints) — `journeys/12-chat-sharing.spec.ts`
+## Journey 12: Chat Sharing (10 checkpoints) — `journeys/12-chat-sharing.spec.ts`
 
-**Source files:** `app/share/chat/[sessionId]/page.tsx`, `app/share/chat/[sessionId]/[tenantKey]/[mentorId]/page.tsx`, `components/chat/ai-message-share.tsx`, `hooks/use-shared-chat-messages.ts`
+**Source files:** `app/share/chat/[sessionId]/page.tsx`, `app/share/chat/[sessionId]/[tenantKey]/[mentorId]/page.tsx`, `components/chat/ai-message-share.tsx`, `hooks/use-shared-chat-messages.ts`, `components/chat/ai-message-download.tsx`, `components/chat/chat-transcript.ts`
 
 - [x] Shared chat URL is created and matches the `/share/chat/{uuid}` pattern
 - [x] Unauthenticated user can access shared chat and sees the chat history
@@ -221,6 +221,13 @@ Binary artifacts (pdf, xlsx, zip, …) are a read-only variant of the canvas art
 - [x] Shared chat page loads correctly and displays the chat interface
 - [x] "Sign up for Free" button on shared chat redirects to the auth host
 - [x] Chat textarea is not shown (or is disabled) for unauthenticated users on shared chat
+
+The **download-chat** checkpoints (sh-07 … sh-10, issue #2464) cover the "Download this chat" control that sits beside share in the AI message toolbar (`ai-message-download.tsx`, same `!showingSharedChat && !chatPrivacyActive` render gate). Each downloads a real file via `page.waitForEvent('download')` and asserts on the file's actual content, not just its name.
+
+- [x] sh-07: Download dialog opens with "Entire chat" preselected and both option descriptions visible
+- [x] sh-08: Default "Entire chat" download produces a `chat-*.txt` file whose content contains both conversation turns
+- [x] sh-09: Selecting "This message only" produces a `message-*.txt` file whose content contains the AI reply but not the earlier user message
+- [x] sh-10: Pressing Escape dismisses the download dialog without triggering a download
 
 ---
 
@@ -956,7 +963,7 @@ Standalone top-level tab rendered by the SDK's `AgentScreenShareTab` (`@iblai/we
 
 ---
 
-## Journey 50: Chat Privacy (27 checkpoints) — `journeys/50-chat-privacy.spec.ts`
+## Journey 50: Chat Privacy (28 checkpoints) — `journeys/50-chat-privacy.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`
 
@@ -964,7 +971,7 @@ Covers all four user-facing surfaces of the chat-privacy feature and verifies th
 
 The **agent kill switch** tests (cp-agent-03) are the regression anchor for `dispatch(chatPrivacyApiSlice.util.invalidateTags(['ChatPrivacyEffective']))` wiring in `settings-tab.tsx` (feat/mentor/1797): after saving, the header toggle reflects mentor-locked state **without a page refresh**.
 
-The **private chat round-trip** tests (cp-chat-\*) cover the end-to-end happy path: enable private mode via the header toggle on a fresh chat, send a message, and confirm the assistant still replies — once as the admin and once as a non-admin (separate browser context). Six additional feature-interaction checkpoints (cp-chat-04 … cp-chat-09) exercise prompts, voice/screen, multi-turn context, file attachments, the memory button, and the AI-bubble share button while private mode is active. cp-chat-08 (memory button) and cp-chat-09 (share button) have their in-repo gates implemented; cp-chat-04/05/06 are **live regression gates** expected to be red until the backend fixes land.
+The **private chat round-trip** tests (cp-chat-\*) cover the end-to-end happy path: enable private mode via the header toggle on a fresh chat, send a message, and confirm the assistant still replies — once as the admin and once as a non-admin (separate browser context). Seven additional feature-interaction checkpoints (cp-chat-04 … cp-chat-10) exercise prompts, voice/screen, multi-turn context, file attachments, the memory button, and the AI-bubble share/download buttons while private mode is active. cp-chat-08 (memory button), cp-chat-09 (share button), and cp-chat-10 (download button) have their in-repo gates implemented; cp-chat-04/05/06 are **live regression gates** expected to be red until the backend fixes land.
 
 ### Tenant gate (cp-tenant-\*)
 
@@ -1007,6 +1014,7 @@ The **private chat round-trip** tests (cp-chat-\*) cover the end-to-end happy pa
 - [ ] cp-chat-07: File attachment (drag-drop) works in private mode — chip appears, message sends, assistant replies; pins that `selectSessionId` follows the private session id _(pending: expected to pass today; included as regression gate)_
 - [x] cp-chat-08: Memory button is hidden while `data-state="on"` and reappears when private mode is off _(frontend gate implemented — `chat-input-form.tsx` derives `chatPrivacyActive` from `useChatPrivacy` and passes `isPrivate` into `InsideButtons`; unit-tested in `inside-buttons.test.tsx`)_
 - [x] cp-chat-09: "Share this chat" button in the AI message bubble is hidden in private mode (temporary chat — no durable session to share) and visible in normal mode _(frontend gate implemented — `ai-message-bubble.tsx` gates `<AIMessageShare>` on `!chatPrivacyActive`; unit-tested in `ai-message-bubble.test.tsx`)_
+- [x] cp-chat-10: "Download this chat" button in the AI message bubble is hidden in private mode (same gate as cp-chat-09 — a private session has no durable record to export) and visible in normal mode _(frontend gate implemented — `ai-message-bubble.tsx` gates `<AIMessageDownload>` on `!chatPrivacyActive`, right after `<AIMessageShare>`)_
 
 ## Journey 51: Prompt Caching Toggle (3 checkpoints) — `journeys/51-prompt-caching-toggle.spec.ts`
 
