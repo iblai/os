@@ -140,6 +140,13 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           # APPLE_SIGNING_IDENTITY / APPLE_TEAM_ID are inherited from job env.
+          # --- In-app updater (tauri-plugin-updater) ---
+          # Minisign key that signs the update artifacts (.app.tar.gz.sig);
+          # the matching pubkey is pinned in tauri.conf.json. Without the
+          # secret the build still succeeds — updater artifacts are simply
+          # unsigned/absent and the manifest step below skips.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ''
         with:
           args: ${{ inputs.tauri_args }}
 
@@ -222,3 +229,50 @@ jobs:
           fi
           gh release upload "$RELEASE_TAG" "${files[@]}" --clobber
           echo "Attached ${#files[@]} DMG(s) to $RELEASE_TAG"
+
+      # Release builds only (never tenant-locked ones — those must not feed the
+      # generic updater feed): publish the in-app updater artifacts. The apps
+      # poll `releases/latest/download/latest-darwin-<arch>.json`, so uploading
+      # the manifests to this release makes them live the moment the release
+      # is newest. Skips quietly when the signing secret isn't configured yet.
+      - name: Publish updater manifests (latest-darwin-*.json)
+        if: ${{ inputs.release_tag != '' && inputs.ibl_tenant == '' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          bundles=(src-tauri/target/universal-apple-darwin/release/bundle/macos/*.app.tar.gz)
+          if [ ${#bundles[@]} -eq 0 ]; then
+            echo "No updater bundle (.app.tar.gz) — TAURI_SIGNING_PRIVATE_KEY not set? Skipping manifest."
+            exit 0
+          fi
+          src="${bundles[0]}"
+          sig="${src}.sig"
+          if [ ! -f "$sig" ]; then
+            echo "No signature next to $src — skipping manifest."
+            exit 0
+          fi
+          ver="$(jq -r .version src-tauri/tauri.conf.json)"
+          asset="ibl.ai_${ver}_universal.app.tar.gz"
+          cp "$src" "$asset"
+          cp "$sig" "${asset}.sig"
+          url="https://github.com/${REPO}/releases/download/${RELEASE_TAG}/${asset}"
+          # Per-arch manifests (the apps poll latest-{{target}}-{{arch}}.json;
+          # the Windows legs publish theirs the same way, race-free). The
+          # universal binary serves both Mac architectures.
+          for arch in aarch64 x86_64; do
+            jq -n \
+              --arg version "$ver" \
+              --arg url "$url" \
+              --arg sig "$(cat "${asset}.sig")" \
+              --arg date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+              --arg platform "darwin-${arch}" \
+              '{version: $version, pub_date: $date, platforms: {($platform): {signature: $sig, url: $url}}}' \
+              > "latest-darwin-${arch}.json"
+          done
+          gh release upload "$RELEASE_TAG" "$asset" "${asset}.sig" \
+            latest-darwin-aarch64.json latest-darwin-x86_64.json --clobber
+          echo "Updater manifests published for $ver"

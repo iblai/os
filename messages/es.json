@@ -2405,7 +2405,9 @@
     "scanQr": "Escanear código QR",
     "orTypeManually": "o ingrésalo manualmente",
     "cameraDenied": "Se denegó el acceso a la cámara: ingresa la dirección manualmente.",
-    "notAPairingCode": "Ese código QR no es un código de emparejamiento de Code."
+    "notAPairingCode": "Ese código QR no es un código de emparejamiento de Code.",
+    "closeScanner": "Cerrar escáner",
+    "scanHint": "Apunta la cámara al código QR de emparejamiento que se muestra en tu computadora."
   },
   "chatCodePermissionCard": {
     "title": "Código necesita tu permiso",
@@ -2423,5 +2425,13 @@
     },
     "allow": "Permitir",
     "deny": "Denegar"
+  },
+  "appUpdatePrompt": {
+    "title": "Actualización disponible",
+    "description": "La versión {version} está lista para instalar. Estás usando una versión anterior.",
+    "updateNow": "Actualizar ahora",
+    "updating": "Actualizando…",
+    "later": "Más tarde",
+    "skip": "Omitir esta versión"
   }
 }

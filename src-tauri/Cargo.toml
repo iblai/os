@@ -63,6 +63,9 @@ tauri-plugin-barcode-scanner = "2"
 # Same engine, opt-in on desktop so `cargo test --features embedded-llm` can
 # exercise real inference on the Mac without slowing the normal build.
 llama-cpp-2 = { version = "0.1.155", features = ["metal"], optional = true }
+# In-place auto-update (desktop only): checks the signed latest-{{target}}.json
+# on the GitHub release, downloads + verifies + installs, then relaunches.
+tauri-plugin-updater = "2"
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

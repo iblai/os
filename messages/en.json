@@ -2405,7 +2405,9 @@
     "scanQr": "Scan QR Code",
     "orTypeManually": "or enter it manually",
     "cameraDenied": "Camera access was denied — enter the address manually.",
-    "notAPairingCode": "That QR code isn't a Code pairing code."
+    "notAPairingCode": "That QR code isn't a Code pairing code.",
+    "closeScanner": "Close Scanner",
+    "scanHint": "Point your camera at the pairing QR code shown on your computer."
   },
   "chatCodePermissionCard": {
     "title": "Code needs your permission",
@@ -2423,5 +2425,13 @@
     },
     "allow": "Allow",
     "deny": "Deny"
+  },
+  "appUpdatePrompt": {
+    "title": "Update Available",
+    "description": "Version {version} is ready to install. You are running an older version.",
+    "updateNow": "Update Now",
+    "updating": "Updating…",
+    "later": "Later",
+    "skip": "Skip This Version"
   }
 }

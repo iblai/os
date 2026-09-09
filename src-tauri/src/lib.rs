@@ -1,6 +1,7 @@
 // Hide console window on Windows in release builds
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod app_update;
 mod cua_driver_installer;
 mod cua_driver_mcp;
 // Embedded on-device LLM runtime (iOS). Compiled everywhere so its HTTP layer
@@ -1543,7 +1544,14 @@ async fn ollama_chat_stream(
     // must NOT stop on the first `done` — only a `done` with no tool calls is
     // the final answer. Intermediate tool rounds just log "running tool...".
     let mut stream = response.bytes_stream();
-    let mut full_content = String::new();
+    // Bounded-rate token emits on MOBILE ONLY — unthrottled per-token events
+    // (each carrying the whole reply so far) drowned phone webviews; see
+    // TokenCoalescer. Desktop never had the problem, so its per-token
+    // cadence stays exactly as it was (passthrough).
+    #[cfg(any(target_os = "ios", target_os = "android"))]
+    let mut tokens = crate::remote_code_client::TokenCoalescer::new();
+    #[cfg(not(any(target_os = "ios", target_os = "android")))]
+    let mut tokens = crate::remote_code_client::TokenCoalescer::passthrough();
     let mut round_has_tool_calls = false;
 
     use futures_util::StreamExt;
@@ -1563,17 +1571,17 @@ async fn ollama_chat_stream(
                             .and_then(|m| m.get("content"))
                             .and_then(|c| c.as_str())
                         {
-                            full_content.push_str(content);
-                            // Emit token event
-                            emit_on_main(
-                                &app,
-                                "ollama:token",
-                                serde_json::json!({
-                                    "generation_id": generation_id,
-                                    "token": content,
-                                    "full_content": full_content
-                                }),
-                            );
+                            if let Some(batch) = tokens.push(content) {
+                                emit_on_main(
+                                    &app,
+                                    "ollama:token",
+                                    serde_json::json!({
+                                        "generation_id": generation_id,
+                                        "token": batch,
+                                        "full_content": tokens.full_content()
+                                    }),
+                                );
+                            }
                         }
                         // The model requested MCP tools this round (bridge only).
                         if json
@@ -1593,13 +1601,25 @@ async fn ollama_chat_stream(
                                 round_has_tool_calls = false;
                                 continue;
                             }
-                            // No tool calls -> final answer.
+                            // No tool calls -> final answer. Flush the
+                            // buffered tail first so no text is lost.
+                            if let Some(batch) = tokens.flush() {
+                                emit_on_main(
+                                    &app,
+                                    "ollama:token",
+                                    serde_json::json!({
+                                        "generation_id": generation_id,
+                                        "token": batch,
+                                        "full_content": tokens.full_content()
+                                    }),
+                                );
+                            }
                             emit_on_main(
                                 &app,
                                 "ollama:done",
                                 serde_json::json!({
                                     "generation_id": generation_id,
-                                    "full_content": full_content
+                                    "full_content": tokens.full_content()
                                 }),
                             );
                             return Ok(());
@@ -1622,12 +1642,23 @@ async fn ollama_chat_stream(
     }
 
     // Stream closed without a tool-free `done` — emit done with what we have.
+    if let Some(batch) = tokens.flush() {
+        emit_on_main(
+            &app,
+            "ollama:token",
+            serde_json::json!({
+                "generation_id": generation_id,
+                "token": batch,
+                "full_content": tokens.full_content()
+            }),
+        );
+    }
     emit_on_main(
         &app,
         "ollama:done",
         serde_json::json!({
             "generation_id": generation_id,
-            "full_content": full_content
+            "full_content": tokens.full_content()
         }),
     );
 
@@ -2278,6 +2309,10 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_dialog::init());
+    // In-place self-update (desktop only; mobile updates go through the
+    // stores, and the MAS build refuses at runtime via is_sandboxed).
+    #[cfg(not(any(target_os = "ios", target_os = "android")))]
+    let builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
     // QR pairing: the phone scans the desktop's Code pairing code.
     #[cfg(any(target_os = "ios", target_os = "android"))]
     let builder = builder.plugin(tauri_plugin_barcode_scanner::init());
@@ -2905,6 +2940,19 @@ pub fn run() {
                         println!("[ibl.ai] [MOBILE] Returning false to prevent webview navigation");
                         return false;
                     }
+                    // Our own deep-link schemes, navigated INSIDE the webview
+                    // (the SSO flow ends by redirecting to
+                    // iblai-mentor:///sso-login-complete?data=…). iOS hands
+                    // such navigations to the OS, which loops them back via
+                    // the deep-link plugin — but Android's WebView just fails
+                    // with ERR_UNKNOWN_URL_SCHEME, so route them into the
+                    // same handler ourselves and block the navigation.
+                    let scheme = url.scheme();
+                    if scheme == "iblai-mentor" || scheme == "ai.ibl.mentorai" {
+                        println!("[ibl.ai] [MOBILE] In-webview deep link intercepted: {url_str}");
+                        handle_deep_link_url(&app_handle, url_str);
+                        return false;
+                    }
                     println!("[ibl.ai] [MOBILE] Allowing normal navigation");
                     true
                 })
@@ -3063,6 +3111,8 @@ pub fn run() {
         opencode_acp::check_code_local_model,
         opencode_acp::set_opencode_learner,
         opencode_acp::ensure_opencode_platform_key,
+        app_update::check_app_update,
+        app_update::install_app_update,
         remote_code::remote_code_status,
         remote_code::remote_code_enable,
         remote_code::remote_code_disable,
@@ -3089,6 +3139,7 @@ pub fn run() {
         ollama_chat,
         ollama_chat_stream,
         log_fe,
+        app_update::check_app_update,
         remote_code_client::remote_code_set_host,
         remote_code_client::remote_code_get_host,
         remote_code_client::remote_code_clear_host,

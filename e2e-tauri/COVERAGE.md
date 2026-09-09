@@ -40,7 +40,24 @@ pairing failover (a pairing heals to an alternate advertised address when
 the primary dies), and the Vitest suites cover the pairing UI (full `urls` list
 persisted for failover) plus the phone composer ergonomics (icon-only tool
 pills below 520px, keyboard dismissed on send for coarse pointers —
-`chat-input-form.test.tsx`).
+`chat-input-form.test.tsx`). Streaming-performance guards (unthrottled
+per-token re-renders froze/crashed phone webviews): the shared
+`TokenCoalescer` batches the local-LLM stream ON MOBILE ONLY — desktop keeps
+its original per-token cadence via the passthrough mode — both pinned in the
+`remote_code_client` Rust tests; the render side is pinned in
+`markdown-memo.test.tsx` (memoized wrapper + referentially stable Streamdown
+props) and `tool-call-item-memo.test.tsx` (tool rows skip identity-only
+re-renders).
+
+**App self-update note:** the update prompt (`components/app-update-prompt.tsx`,
+`src-tauri/src/app_update.rs`) cannot be e2e-driven either — tauri-driver has no
+release-build updater endpoint to point at, and the mobile halves open real
+store pages. Coverage lives in the Rust `app_update` `mod tests` (version
+comparison, iTunes lookup parsing, Play listing parsing) and the
+`app-update-prompt` Vitest suite (throttle, skip-version persistence,
+desktop install vs mobile store routing, install-failure surfacing). The CI
+halves — signing env + `latest-<target>-<arch>.json` publishing — live in the
+two vendored release workflows and are exercised by real releases.
 
 ---
 

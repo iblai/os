@@ -2405,7 +2405,9 @@
     "scanQr": "Scanner le code QR",
     "orTypeManually": "ou saisissez-le manuellement",
     "cameraDenied": "Accès à la caméra refusé — saisissez l'adresse manuellement.",
-    "notAPairingCode": "Ce code QR n'est pas un code d'appairage Code."
+    "notAPairingCode": "Ce code QR n'est pas un code d'appairage Code.",
+    "closeScanner": "Fermer le scanner",
+    "scanHint": "Pointez la caméra vers le code QR d'appairage affiché sur votre ordinateur."
   },
   "chatCodePermissionCard": {
     "title": "Code a besoin de votre autorisation",
@@ -2423,5 +2425,13 @@
     },
     "allow": "Autoriser",
     "deny": "Refuser"
+  },
+  "appUpdatePrompt": {
+    "title": "Mise à jour disponible",
+    "description": "La version {version} est prête à être installée. Vous utilisez une version plus ancienne.",
+    "updateNow": "Mettre à jour",
+    "updating": "Mise à jour…",
+    "later": "Plus tard",
+    "skip": "Ignorer cette version"
   }
 }

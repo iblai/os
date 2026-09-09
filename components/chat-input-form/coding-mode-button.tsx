@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslations } from 'next-intl';
 import { Code2, Folder, Info, Loader2, X } from 'lucide-react';
 import {
@@ -198,6 +199,11 @@ export function CodingModeButton({
   const [hostPassword, setHostPassword] = useState('');
   const [connecting, setConnecting] = useState(false);
   const [connectError, setConnectError] = useState('');
+  // Fullscreen QR scanner overlay (mobile). While true, the barcode-scanner
+  // plugin shows the camera behind a transparent webview and the overlay
+  // below renders the only visible UI — including the close button that was
+  // missing (there was no way to leave the scanner without scanning).
+  const [scanning, setScanning] = useState(false);
   // Desktop: the phone-access server (opencode serve) pairing info.
   const [phoneAccess, setPhoneAccess] = useState<{
     running: boolean;
@@ -333,6 +339,9 @@ export function CodingModeButton({
   const connectToDesktop = () =>
     pairWith([hostUrl.trim()], hostPassword.trim());
 
+  /** User closed the scanner — suppresses the scan() rejection that follows. */
+  const scanCancelledRef = useRef(false);
+
   /** Scan the desktop's pairing QR (payload: `iblcode1:{"urls":[…],"password":…}`). */
   const scanPairingQr = async () => {
     setConnectError('');
@@ -346,11 +355,25 @@ export function CodingModeButton({
           return;
         }
       }
-      const result = await scanner.scan({
-        windowed: false,
-        formats: [scanner.Format.QRCode],
-      });
-      const content = result?.content ?? '';
+      scanCancelledRef.current = false;
+      setScanning(true);
+      // The camera renders BEHIND the webview: this class blanks the page to
+      // transparent and hides everything but the overlay (see globals.css).
+      document.documentElement.classList.add('qr-scan-active');
+      let content = '';
+      try {
+        // windowed: the webview stays up (transparent), so the overlay's
+        // close button is usable — `windowed: false` hides the webview and
+        // with it any way out of the scanner.
+        const result = await scanner.scan({
+          windowed: true,
+          formats: [scanner.Format.QRCode],
+        });
+        content = result?.content ?? '';
+      } finally {
+        document.documentElement.classList.remove('qr-scan-active');
+        setScanning(false);
+      }
       if (!content.startsWith('iblcode1:')) {
         setConnectError(t('notAPairingCode'));
         return;
@@ -367,9 +390,26 @@ export function CodingModeButton({
       }
       await pairWith(urls, payload.password, payload.mgmt);
     } catch (e) {
+      document.documentElement.classList.remove('qr-scan-active');
+      setScanning(false);
+      // Closing the scanner rejects the scan() promise — that is the user's
+      // own action, not an error to surface.
+      if (scanCancelledRef.current) return;
       // A dismissed scanner rejects too — show it small, not as a failure toast.
       setConnectError(e instanceof Error ? e.message : String(e));
     }
+  };
+
+  const cancelScan = async () => {
+    scanCancelledRef.current = true;
+    try {
+      const scanner = await import('@tauri-apps/plugin-barcode-scanner');
+      await scanner.cancel();
+    } catch {
+      /* the scan() promise settles either way */
+    }
+    document.documentElement.classList.remove('qr-scan-active');
+    setScanning(false);
   };
 
   const openFolderPicker = async () => {
@@ -1327,6 +1367,49 @@ export function CodingModeButton({
           )}
         </PopoverContent>
       </Popover>
+      {/* Fullscreen QR-scanner overlay — portaled to <body> so it survives
+          the globals.css rule that hides every other body child while the
+          camera renders behind the transparent webview. The close button
+          sits below the status bar via the host-injected safe-area vars. */}
+      {scanning &&
+        createPortal(
+          <div
+            data-testid="qr-scan-overlay"
+            className="qr-scan-overlay fixed inset-0 z-[9999]"
+          >
+            {/* Top gradient keeps the close button legible over any camera
+                image without darkening the scan area itself. */}
+            <div
+              className="absolute inset-x-0 top-0 bg-gradient-to-b from-black/60 to-transparent"
+              style={{ height: 'calc(var(--sat, 0px) + 72px)' }}
+            />
+            <button
+              type="button"
+              data-testid="qr-scan-close"
+              aria-label={t('closeScanner')}
+              onClick={() => void cancelScan()}
+              className="absolute right-4 flex h-10 w-10 items-center justify-center rounded-full bg-black/60 text-white"
+              style={{ top: 'calc(var(--sat, 0px) + 12px)' }}
+            >
+              <X className="h-5 w-5" />
+            </button>
+            {/* Centered framing corners so it reads as a scanner, not a
+                broken screen. */}
+            <div className="pointer-events-none absolute top-1/2 left-1/2 h-56 w-56 -translate-x-1/2 -translate-y-1/2">
+              <div className="absolute top-0 left-0 h-8 w-8 rounded-tl-lg border-t-4 border-l-4 border-white/90" />
+              <div className="absolute top-0 right-0 h-8 w-8 rounded-tr-lg border-t-4 border-r-4 border-white/90" />
+              <div className="absolute bottom-0 left-0 h-8 w-8 rounded-bl-lg border-b-4 border-l-4 border-white/90" />
+              <div className="absolute right-0 bottom-0 h-8 w-8 rounded-br-lg border-r-4 border-b-4 border-white/90" />
+            </div>
+            <p
+              className="absolute inset-x-6 text-center text-sm text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
+              style={{ bottom: 'calc(var(--sab, 0px) + 40px)' }}
+            >
+              {t('scanHint')}
+            </p>
+          </div>,
+          document.body,
+        )}
     </>
   );
 }

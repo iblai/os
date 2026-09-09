@@ -76,6 +76,81 @@ struct HostConfig {
     mentor_directories: HashMap<String, String>,
 }
 
+/// Coalesces streamed token deltas so the webview re-renders at a bounded
+/// rate instead of once per token. Same policy as the remote-code turn loop:
+/// the FIRST delta flushes immediately (fast perceived start), later ones
+/// batch inside an adaptive window that stretches from 200ms toward 1s as
+/// the reply grows — re-rendering a long markdown message is what actually
+/// costs, so the bigger the message, the calmer the stream. Used by the
+/// embedded local-LLM chat stream (`ollama_chat_stream`), where unthrottled
+/// per-token emits (each carrying the ever-growing full content) drowned
+/// phone webviews until iOS killed the app.
+pub(crate) struct TokenCoalescer {
+    full: String,
+    pending: String,
+    last_flush: Option<std::time::Instant>,
+    /// Passthrough mode: every push flushes immediately — behaviorally
+    /// identical to no coalescer at all. Desktop local-model streaming uses
+    /// this: it never had a problem, and its event cadence must not change.
+    /// Only phones (where the webview drowned) get the batching windows.
+    passthrough: bool,
+}
+
+impl TokenCoalescer {
+    pub(crate) fn new() -> Self {
+        Self {
+            full: String::new(),
+            pending: String::new(),
+            last_flush: None,
+            passthrough: false,
+        }
+    }
+
+    /// A coalescer that never holds anything back — see `passthrough` field.
+    pub(crate) fn passthrough() -> Self {
+        Self {
+            passthrough: true,
+            ..Self::new()
+        }
+    }
+
+    fn window(&self) -> std::time::Duration {
+        let extra_ms = (self.full.len() / 4096) as u64 * 100;
+        std::time::Duration::from_millis((200 + extra_ms).min(1000))
+    }
+
+    /// Append a delta; returns the batched delta to emit when a flush is due
+    /// (always due on the very first delta).
+    pub(crate) fn push(&mut self, delta: &str) -> Option<String> {
+        self.full.push_str(delta);
+        self.pending.push_str(delta);
+        let due = self.passthrough
+            || match self.last_flush {
+                None => true,
+                Some(t) => t.elapsed() >= self.window(),
+            };
+        due.then(|| self.take_pending()).flatten()
+    }
+
+    /// The buffered remainder, if any — call before a terminal event so no
+    /// tail is lost.
+    pub(crate) fn flush(&mut self) -> Option<String> {
+        self.take_pending()
+    }
+
+    pub(crate) fn full_content(&self) -> &str {
+        &self.full
+    }
+
+    fn take_pending(&mut self) -> Option<String> {
+        if self.pending.is_empty() {
+            return None;
+        }
+        self.last_flush = Some(std::time::Instant::now());
+        Some(std::mem::take(&mut self.pending))
+    }
+}
+
 /// Same shape as the desktop's mentor workspace key.
 fn mentor_key(tenant: &str, mentor: &str) -> String {
     format!("{tenant}::{mentor}")
@@ -1306,6 +1381,41 @@ mod tests {
             ..HostConfig::default()
         };
         write_config(&cfg).unwrap();
+    }
+
+    #[test]
+    fn token_coalescer_batches_a_burst_into_few_flushes() {
+        // The bug this pins: every streamed token used to become its own
+        // webview event (with the full reply in the payload), and a long
+        // on-device reply crashed the phone app. A burst of 500 deltas
+        // must flush once immediately and then hold within the window.
+        let mut c = TokenCoalescer::new();
+        let mut flushes = 0;
+        for i in 0..500 {
+            if c.push(&format!("tok{i} ")).is_some() {
+                flushes += 1;
+            }
+        }
+        assert_eq!(flushes, 1, "only the first delta flushes inside one window");
+        // Nothing is lost: the tail is waiting in flush().
+        let tail = c.flush().expect("pending tail");
+        assert!(tail.contains("tok499"));
+        assert!(c.full_content().starts_with("tok0 tok1 "));
+        assert!(c.full_content().ends_with("tok499 "));
+        // And a second flush has nothing.
+        assert!(c.flush().is_none());
+    }
+
+    #[test]
+    fn token_coalescer_passthrough_flushes_every_push() {
+        // Desktop mode: behaviorally identical to the pre-coalescer code —
+        // every delta emits on its own, nothing is ever held back.
+        let mut c = TokenCoalescer::passthrough();
+        for i in 0..50 {
+            assert_eq!(c.push("x").as_deref(), Some("x"), "push {i} must flush");
+        }
+        assert!(c.flush().is_none());
+        assert_eq!(c.full_content().len(), 50);
     }
 
     #[test]

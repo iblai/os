@@ -18,6 +18,7 @@ const {
   invoke,
   openDialog,
   openPath,
+  scannerState,
   mentorSettings,
   offlineMode,
   platformMetadata,
@@ -37,6 +38,11 @@ const {
   saveMetadata: vi.fn(),
   userOS: { current: 'Linux' },
   tauriPlatform: { current: 'linux' },
+  scannerState: {
+    permission: 'granted' as string,
+    cancelled: false,
+    rejectScan: undefined as undefined | ((e: unknown) => void),
+  },
 }));
 
 vi.mock('@tauri-apps/api/core', () => ({
@@ -50,6 +56,20 @@ vi.mock('@tauri-apps/plugin-os', () => ({
 }));
 vi.mock('@tauri-apps/plugin-opener', () => ({
   openPath: (...args: unknown[]) => openPath(...args),
+}));
+vi.mock('@tauri-apps/plugin-barcode-scanner', () => ({
+  checkPermissions: () => scannerState.permission,
+  requestPermissions: () => scannerState.permission,
+  cancel: () => {
+    scannerState.cancelled = true;
+    scannerState.rejectScan?.(new Error('cancelled'));
+    return Promise.resolve();
+  },
+  scan: () =>
+    new Promise((_resolve, reject) => {
+      scannerState.rejectScan = reject;
+    }),
+  Format: { QRCode: 'QR_CODE' },
 }));
 vi.mock('sonner', () => ({
   toast: { error: (...args: unknown[]) => toastError(...args) },
@@ -224,6 +244,34 @@ describe('CodingModeButton', () => {
           }),
         ),
       );
+    });
+
+    it('QR scanner shows a close button that cancels the scan', async () => {
+      // The camera view had NO way out: scan() ran fullscreen with nothing
+      // tappable. Now scanning renders an overlay whose close button cancels
+      // the plugin scan, drops the overlay, and surfaces no error.
+      scannerState.cancelled = false;
+      renderButton();
+      await openPopover();
+      await userEvent.click(screen.getByTestId('code-remote-scan'));
+
+      const overlay = await screen.findByTestId('qr-scan-overlay');
+      expect(overlay).toBeInTheDocument();
+      // The transparency class is on while the camera is behind the webview.
+      expect(
+        document.documentElement.classList.contains('qr-scan-active'),
+      ).toBe(true);
+
+      await userEvent.click(screen.getByTestId('qr-scan-close'));
+      await waitFor(() =>
+        expect(screen.queryByTestId('qr-scan-overlay')).toBeNull(),
+      );
+      expect(scannerState.cancelled).toBe(true);
+      expect(
+        document.documentElement.classList.contains('qr-scan-active'),
+      ).toBe(false);
+      // A user-cancelled scan is not an error.
+      expect(screen.queryByText('cancelled')).toBeNull();
     });
 
     it('mirrors a live pairing into the SDK flag and enables the switch', async () => {

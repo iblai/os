@@ -2405,7 +2405,9 @@
     "scanQr": "扫描二维码",
     "orTypeManually": "或手动输入",
     "cameraDenied": "相机访问被拒绝 — 请手动输入地址。",
-    "notAPairingCode": "该二维码不是 Code 配对码。"
+    "notAPairingCode": "该二维码不是 Code 配对码。",
+    "closeScanner": "关闭扫描器",
+    "scanHint": "将相机对准电脑上显示的配对二维码。"
   },
   "chatCodePermissionCard": {
     "title": "代码模式需要你的许可",
@@ -2423,5 +2425,13 @@
     },
     "allow": "允许",
     "deny": "拒绝"
+  },
+  "appUpdatePrompt": {
+    "title": "有可用更新",
+    "description": "版本 {version} 已可安装。您正在使用旧版本。",
+    "updateNow": "立即更新",
+    "updating": "正在更新…",
+    "later": "稍后",
+    "skip": "跳过此版本"
   }
 }

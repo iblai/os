@@ -496,14 +496,11 @@ pub async fn remote_code_enable(
     let proxy_port = crate::opencode_proxy::ensure_started().await?;
     crate::opencode_proxy::set_app(&app);
     let proxy_secret = crate::opencode_proxy::new_secret();
-    crate::opencode_proxy::register(
-        &proxy_secret,
-        upstream,
-        token.clone(),
-        tenant.clone(),
-        crate::opencode_acp::vibe_skills_dir().is_dir(),
-    )
-    .await;
+    crate::opencode_proxy::register(&proxy_secret, upstream, token.clone()).await;
+    // The ibl.ai guidance travels as the per-session AGENTS.md (written by
+    // apply_opencode_model below), the same delivery every desktop spawn
+    // uses — the retired proxy body-injection path must not come back.
+    let guidance = crate::opencode_proxy::guidance_with_identity(&tenant).await;
 
     // Config home for the served process: iblai provider through the proxy,
     // permission policy pinned to "ask" (the phone answers the prompts), the
@@ -521,6 +518,7 @@ pub async fn remote_code_enable(
         &format!("http://127.0.0.1:{proxy_port}/v1"),
         &proxy_secret,
         "ibl.ai",
+        Some(guidance.as_str()),
     )?;
     // opencode only accepts models its config REGISTERS (unknown ids die as a
     // silent async ProviderModelNotFoundError — no event, no message). The

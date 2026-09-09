@@ -4305,11 +4305,18 @@ mod tests {
             last_emit: Instant::now(),
         };
         ts.reset("g1".to_string());
-        assert_eq!(ts.take_narration(), None, "nothing streamed → nothing to reclassify");
+        assert_eq!(
+            ts.take_narration(),
+            None,
+            "nothing streamed → nothing to reclassify"
+        );
 
         ts.full_content.push_str("Let me check the files.");
         ts.pending_delta.push_str("files.");
-        assert_eq!(ts.take_narration().as_deref(), Some("Let me check the files."));
+        assert_eq!(
+            ts.take_narration().as_deref(),
+            Some("Let me check the files.")
+        );
         assert!(
             ts.full_content.is_empty() && ts.pending_delta.is_empty(),
             "the reply buffer restarts after the tool call"
