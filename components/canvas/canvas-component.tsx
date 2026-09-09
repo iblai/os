@@ -31,7 +31,12 @@ import {
   useLazyListArtifactsQuery,
   useEditSessionMutation,
 } from '@iblai/iblai-js/data-layer';
-import { cn, htmlToMarkdown, markdownToHtml } from '@/lib/utils';
+import { cn, markdownToHtml } from '@/lib/utils';
+import {
+  editorHtmlToDelimitedText,
+  markdownTableToDelimitedText,
+  resolveDelimitedFileExtension,
+} from '@/components/canvas/csv-table-utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -84,6 +89,8 @@ interface CanvasComponentProps {
   metadata?: Record<string, unknown>;
   sessionId?: string;
   tenantKey?: string;
+  /** Artifact extension as known when the canvas opened (csv/tsv render as a table). */
+  fileExtension?: string;
   sendMessage?: (
     text: string,
     options?: { visible?: boolean; artifact?: any },
@@ -343,12 +350,16 @@ export function CanvasComponent({
   userId,
   metadata: _metadata,
   sessionId: _sessionId,
+  fileExtension,
   sendMessage,
 }: CanvasComponentProps) {
   const t = useTranslations('canvasCanvasComponent');
   const [showAnimation, setShowAnimation] = useState(false);
   const [editorContent, setEditorContent] = useState<string>(() =>
-    getInitialEditorContent(content),
+    getInitialEditorContent(
+      content,
+      resolveDelimitedFileExtension(fileExtension, title),
+    ),
   );
   const editorContentValueRef = useRef(editorContent);
   const [displayTitle, setDisplayTitle] = useState<string>(title);
@@ -526,25 +537,51 @@ export function CanvasComponent({
 
   const effectiveArtifactId = resolvedArtifactId ?? currentArtifact?.id;
 
+  // csv/tsv artifacts render as a table in the editor and save back as
+  // delimited text. The extension is resolved from whatever is known first
+  // (loaded artifact → metadata → the extension the canvas opened with),
+  // with the filename-style title as the fallback for stream-start "txt"
+  // placeholders. Kept in a ref so the stable content callbacks below (which
+  // hooks and event listeners hold onto) always see the latest value.
+  const delimitedFileExtension = resolveDelimitedFileExtension(
+    currentArtifact?.file_extension ??
+      (metadataRecord?.fileExtension as string | undefined) ??
+      fileExtension,
+    currentArtifact?.title ?? metadataTitle ?? title,
+  );
+  const delimitedFileExtensionRef = useRef(delimitedFileExtension);
+  delimitedFileExtensionRef.current = delimitedFileExtension;
+  const normalizeArtifactContent = useCallback(
+    (rawContent?: string | null): string =>
+      normalizeContentToMarkdown(
+        rawContent ?? undefined,
+        delimitedFileExtensionRef.current,
+      ),
+    [],
+  );
+
   // Apply programmatic content updates
-  const applyProgrammaticContent = useCallback((rawContent: string) => {
-    const normalized = normalizeContentToMarkdown(rawContent);
-    hasUserEditedRef.current = false;
-    setEditorContent(normalized);
-    editorContentValueRef.current = normalized;
-    streamingContentBufferRef.current.lastAppliedContent = normalized;
-    streamingContentBufferRef.current.lastAppliedLength = normalized.length;
-    streamingContentBufferRef.current.lastAppliedParagraphs =
-      countStreamingParagraphs(normalized);
-    const currentEditor = editorRef.current;
-    if (currentEditor?.commands?.setContent) {
-      const htmlContent = markdownToHtml(normalized);
-      // setContent with false prevents onUpdate from firing and doesn't add to history
-      currentEditor.commands.setContent(htmlContent, false);
-      // Reset the editor's user edit tracking since this is a programmatic update
-      (currentEditor as any).__hasUserEdited = false;
-    }
-  }, []);
+  const applyProgrammaticContent = useCallback(
+    (rawContent: string) => {
+      const normalized = normalizeArtifactContent(rawContent);
+      hasUserEditedRef.current = false;
+      setEditorContent(normalized);
+      editorContentValueRef.current = normalized;
+      streamingContentBufferRef.current.lastAppliedContent = normalized;
+      streamingContentBufferRef.current.lastAppliedLength = normalized.length;
+      streamingContentBufferRef.current.lastAppliedParagraphs =
+        countStreamingParagraphs(normalized);
+      const currentEditor = editorRef.current;
+      if (currentEditor?.commands?.setContent) {
+        const htmlContent = markdownToHtml(normalized);
+        // setContent with false prevents onUpdate from firing and doesn't add to history
+        currentEditor.commands.setContent(htmlContent, false);
+        // Reset the editor's user edit tracking since this is a programmatic update
+        (currentEditor as any).__hasUserEdited = false;
+      }
+    },
+    [normalizeArtifactContent],
+  );
 
   useEffect(() => {
     editorContentValueRef.current = editorContent;
@@ -558,6 +595,7 @@ export function CanvasComponent({
     metadataVersionNumber,
     editorRef,
     applyProgrammaticContent,
+    normalizeContent: normalizeArtifactContent,
     isStreamingArtifact,
     isContentUpdating,
     isInitialLoading,
@@ -624,7 +662,7 @@ export function CanvasComponent({
         return;
       }
 
-      const normalized = normalizeContentToMarkdown(rawContent);
+      const normalized = normalizeArtifactContent(rawContent);
       const currentContent = editorContentValueRef.current ?? '';
       if (normalized === currentContent) {
         buffer.lastAppliedContent = normalized;
@@ -641,7 +679,7 @@ export function CanvasComponent({
       buffer.lastAppliedParagraphs = paragraphCount;
       buffer.lastUpdateTime = now;
     },
-    [applyProgrammaticContent, lastSavedMarkdownRef],
+    [applyProgrammaticContent, lastSavedMarkdownRef, normalizeArtifactContent],
   );
 
   // Chat integration
@@ -668,7 +706,7 @@ export function CanvasComponent({
       setShowUpdateAnimation(true);
       setTimeout(() => setShowUpdateAnimation(false), 2000);
 
-      const normalizedContent = normalizeContentToMarkdown(newContent);
+      const normalizedContent = normalizeArtifactContent(newContent);
       setEditorContent(normalizedContent);
       lastSavedMarkdownRef.current = normalizedContent;
       setCurrentArtifact((prev) =>
@@ -714,7 +752,7 @@ export function CanvasComponent({
         contentLength: globalStreamingState.accumulatedContent?.length || 0,
       });
       if (globalStreamingState.accumulatedContent) {
-        const normalized = normalizeContentToMarkdown(
+        const normalized = normalizeArtifactContent(
           globalStreamingState.accumulatedContent,
         );
         if (normalized && normalized.trim()) {
@@ -854,7 +892,7 @@ export function CanvasComponent({
               previousContent.slice(0, startIndex) +
               streamContent +
               previousContent.slice(endIndex);
-            const normalizedContent = normalizeContentToMarkdown(newContent);
+            const normalizedContent = normalizeArtifactContent(newContent);
             if (!(editorRef.current?.isFocused && hasUserEditedRef.current)) {
               applyProgrammaticContent(normalizedContent);
             }
@@ -875,7 +913,7 @@ export function CanvasComponent({
                 : prev,
             );
           } else {
-            const normalizedContent = normalizeContentToMarkdown(streamContent);
+            const normalizedContent = normalizeArtifactContent(streamContent);
             if (!(editorRef.current?.isFocused && hasUserEditedRef.current)) {
               applyProgrammaticContent(normalizedContent);
             }
@@ -915,7 +953,7 @@ export function CanvasComponent({
             setPreviousContent(null);
           }, 2000);
         } else {
-          const normalizedContent = normalizeContentToMarkdown(streamContent);
+          const normalizedContent = normalizeArtifactContent(streamContent);
           applyProgrammaticContent(normalizedContent);
           lastSavedMarkdownRef.current = normalizedContent;
           setCurrentArtifact((prev) =>
@@ -1000,6 +1038,7 @@ export function CanvasComponent({
     artifactId,
     applyProgrammaticContent,
     applyStreamingContent,
+    normalizeArtifactContent,
     isStreamingArtifact,
     refetchVersions,
     updateVersionAfterStreaming,
@@ -1136,7 +1175,7 @@ export function CanvasComponent({
         if (!isMountedRef.current) return;
 
         setCurrentArtifact(fullArtifact);
-        lastSavedMarkdownRef.current = normalizeContentToMarkdown(
+        lastSavedMarkdownRef.current = normalizeArtifactContent(
           fullArtifact.content,
         );
         lastKnownVersionRef.current =
@@ -1169,6 +1208,7 @@ export function CanvasComponent({
     resolvedUserId,
     resolvedSessionId,
     applyProgrammaticContent,
+    normalizeArtifactContent,
     resetVersionNavigation,
     lastSavedMarkdownRef,
   ]);
@@ -1226,14 +1266,17 @@ export function CanvasComponent({
 
   // Derived content
   const derivedMarkdownContent = useMemo(() => {
-    if (currentArtifact) return currentArtifact.content ?? '';
-    if (content && content.trim() !== '') {
-      const trimmed = content.trim();
-      if (trimmed.startsWith('<')) return htmlToMarkdown(trimmed);
-      return trimmed;
-    }
-    return '';
-  }, [content, currentArtifact]);
+    if (currentArtifact)
+      return normalizeArtifactContent(currentArtifact.content);
+    return normalizeArtifactContent(content);
+    // delimitedFileExtension is read through the ref inside
+    // normalizeArtifactContent; listing it re-derives when it changes.
+  }, [
+    content,
+    currentArtifact,
+    delimitedFileExtension,
+    normalizeArtifactContent,
+  ]);
 
   /* istanbul ignore next -- @preserve content sync effect */
   useEffect(() => {
@@ -1303,8 +1346,20 @@ export function CanvasComponent({
           currentArtifact?.title ??
           title ??
           'Untitled Artifact';
+        // A csv/tsv artifact is edited as a table but stored as delimited
+        // text — never write the markdown table into the file.
+        // Prefer the live editor DOM (cell text exactly as displayed); the
+        // markdown path is the fallback when no editor is mounted.
+        const delimitedExtension = delimitedFileExtensionRef.current;
+        const liveEditor = editorRef.current;
+        const editorHtml =
+          liveEditor && !liveEditor.isDestroyed ? liveEditor.getHTML() : null;
         const requestBody: { content: string; title?: string } = {
-          content: markdown,
+          content: delimitedExtension
+            ? ((editorHtml &&
+                editorHtmlToDelimitedText(editorHtml, delimitedExtension)) ??
+              markdownTableToDelimitedText(markdown, delimitedExtension))
+            : markdown,
         };
         if (nextTitle) requestBody.title = nextTitle;
 
@@ -1319,11 +1374,14 @@ export function CanvasComponent({
 
         if (savedArtifact) {
           setCurrentArtifact(savedArtifact);
-          lastSavedMarkdownRef.current = normalizeContentToMarkdown(
-            savedArtifact.content,
-          );
+          // For delimited files keep the editor's own table markdown as the
+          // saved baseline: re-deriving it from the stored csv would differ
+          // only in cell padding and read as an unsaved edit.
+          lastSavedMarkdownRef.current = delimitedExtension
+            ? markdown
+            : normalizeArtifactContent(savedArtifact.content);
         } else {
-          lastSavedMarkdownRef.current = normalizeContentToMarkdown(markdown);
+          lastSavedMarkdownRef.current = normalizeArtifactContent(markdown);
         }
         setSaveState('saved');
 
@@ -1769,7 +1827,7 @@ export function CanvasComponent({
 
       const fileExt = metadataRecord?.fileExtension as string | undefined;
 
-      const artifactPayload = {
+      const baseArtifactPayload = {
         title:
           currentArtifact.title ||
           metadataTitle ||
@@ -1777,10 +1835,18 @@ export function CanvasComponent({
           'Untitled Artifact',
         file_extension: currentArtifact.file_extension || fileExt || 'txt',
         id: String(currentArtifact.id),
-        is_partial: true,
-        snippet_start: snippetStart,
-        snippet_end: snippetEnd,
       };
+      // Snippet indices point into the editor's markdown. For a csv/tsv
+      // artifact that is the rendered table, not the stored file the backend
+      // would splice, so send the whole artifact instead of a range.
+      const artifactPayload = delimitedFileExtensionRef.current
+        ? { ...baseArtifactPayload, is_partial: false }
+        : {
+            ...baseArtifactPayload,
+            is_partial: true,
+            snippet_start: snippetStart,
+            snippet_end: snippetEnd,
+          };
 
       sendMessage(inputText, { visible: true, artifact: artifactPayload });
 

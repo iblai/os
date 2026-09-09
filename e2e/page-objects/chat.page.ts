@@ -159,11 +159,13 @@ export class ChatPage {
     // memory was off (toggle still visible) and let `toBeVisible()` pass off the
     // toggle even when the real button was gone. The MemoryButton renders text
     // "Memory" with only decorative icons, so its accessible name is exactly
-    // "Memory" — which the privacy toggle never matches.
-    this.memoryButton = page.getByRole('button', {
-      name: 'Memory',
-      exact: true,
-    });
+    // "Memory" — which the privacy toggle never matches. Pinned further to its
+    // `chat-memory-button` test id because an admin's sidebar footer now also
+    // has a "Memory" button (tenant Memory tab), which an unscoped exact-name
+    // match would resolve as well (strict-mode violation).
+    this.memoryButton = page
+      .getByTestId('chat-memory-button')
+      .and(page.getByRole('button', { name: 'Memory', exact: true }));
     this.createMentorDialog = page.getByRole('dialog', {
       name: /create.*mentor/i,
     });

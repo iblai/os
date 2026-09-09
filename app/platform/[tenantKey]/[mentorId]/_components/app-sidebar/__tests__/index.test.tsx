@@ -34,6 +34,7 @@ import {
   fireEvent,
   waitFor,
   act,
+  within,
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
@@ -515,6 +516,21 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
   BillingTab: () => <div data-testid="sdk-billing-tab">Billing SDK Tab</div>,
   MonetizationTab: () => (
     <div data-testid="sdk-monetization-tab">Monetization SDK Tab</div>
+  ),
+  MemoryAdminTab: ({
+    tenantKey,
+    username,
+  }: {
+    tenantKey: string;
+    username: string;
+  }) => (
+    <div
+      data-testid="sdk-memory-admin-tab"
+      data-tenant-key={tenantKey}
+      data-username={username}
+    >
+      Memory Admin SDK Tab
+    </div>
   ),
   AdvancedTab: () => <div data-testid="sdk-advanced-tab">Advanced SDK Tab</div>,
 }));
@@ -1893,7 +1909,7 @@ describe('AppSidebar — Footer actions', () => {
       screen.getAllByRole('button', { name: 'Management' }).length,
     ).toBeGreaterThan(0);
     // …but the items they DON'T hold a permission for stay hidden, and
-    // Integrations/Advanced (no dedicated permission) remain admin-only.
+    // Integrations/Memory/Advanced (no dedicated permission) remain admin-only.
     expect(
       screen.queryByRole('button', { name: 'Invites' }),
     ).not.toBeInTheDocument();
@@ -1904,7 +1920,39 @@ describe('AppSidebar — Footer actions', () => {
       screen.queryByRole('button', { name: 'Integrations' }),
     ).not.toBeInTheDocument();
     expect(
+      within(screen.getByTestId('sidebar-footer')).queryByRole('button', {
+        name: 'Memory',
+      }),
+    ).not.toBeInTheDocument();
+    expect(
       screen.queryByRole('button', { name: 'Advanced' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('keeps Memory admin-only under RBAC: a non-admin holding EVERY platform permission still does not get it (mirrors the SDK Account rail isAdmin filter)', () => {
+    mockIsAdmin = false;
+    mockUserIsStudent = true;
+    mockEnableRBAC = true;
+    mockCheckRbacPermission = () => true;
+    renderSidebar();
+    expect(
+      screen.getAllByRole('button', { name: 'Management' }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      within(screen.getByTestId('sidebar-footer')).queryByRole('button', {
+        name: 'Memory',
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('hides Memory when an admin flips the navbar toggle into learner mode (gated by isLiveAdmin)', () => {
+    mockIsAdmin = true;
+    mockUserIsStudent = true;
+    renderSidebar();
+    expect(
+      within(screen.getByTestId('sidebar-footer')).queryByRole('button', {
+        name: 'Memory',
+      }),
     ).not.toBeInTheDocument();
   });
 
@@ -2146,16 +2194,20 @@ describe('AppSidebar — non-admin trial-gated full admin menu (main OR advertis
     ).toBeGreaterThan(0);
   });
 
-  it('reveals the full footer admin cluster (Management / Integrations / Monetization / Advanced)', () => {
+  it('reveals the full footer admin cluster (Management / Integrations / Monetization / Memory / Advanced)', () => {
     setupMainTenantNonAdmin();
     renderSidebar();
-    ['Management', 'Integrations', 'Monetization', 'Advanced'].forEach(
-      (label) => {
-        expect(
-          screen.getAllByRole('button', { name: label }).length,
-        ).toBeGreaterThan(0);
-      },
-    );
+    [
+      'Management',
+      'Integrations',
+      'Monetization',
+      'Memory',
+      'Advanced',
+    ].forEach((label) => {
+      expect(
+        screen.getAllByRole('button', { name: label }).length,
+      ).toBeGreaterThan(0);
+    });
   });
 
   it('routes a trial-gated entry through executeWithTrialCheck on click (logged-in user)', () => {
@@ -2199,13 +2251,17 @@ describe('AppSidebar — non-admin trial-gated full admin menu (main OR advertis
     expect(
       screen.getAllByRole('button', { name: 'Analytics' }).length,
     ).toBeGreaterThan(0);
-    ['Management', 'Integrations', 'Monetization', 'Advanced'].forEach(
-      (label) => {
-        expect(
-          screen.getAllByRole('button', { name: label }).length,
-        ).toBeGreaterThan(0);
-      },
-    );
+    [
+      'Management',
+      'Integrations',
+      'Monetization',
+      'Memory',
+      'Advanced',
+    ].forEach((label) => {
+      expect(
+        screen.getAllByRole('button', { name: label }).length,
+      ).toBeGreaterThan(0);
+    });
   });
 });
 
@@ -2238,13 +2294,17 @@ describe('AppSidebar — anonymous (not-logged-in) user sees the full menu, clic
     expect(
       screen.getAllByRole('button', { name: 'Analytics' }).length,
     ).toBeGreaterThan(0);
-    ['Management', 'Integrations', 'Monetization', 'Advanced'].forEach(
-      (label) => {
-        expect(
-          screen.getAllByRole('button', { name: label }).length,
-        ).toBeGreaterThan(0);
-      },
-    );
+    [
+      'Management',
+      'Integrations',
+      'Monetization',
+      'Memory',
+      'Advanced',
+    ].forEach((label) => {
+      expect(
+        screen.getAllByRole('button', { name: label }).length,
+      ).toBeGreaterThan(0);
+    });
   });
 
   it('routes a clicked admin item to the auth SPA (not the upgrade dialog / real action)', () => {
@@ -2396,6 +2456,53 @@ describe('AppSidebar — AccountSheet tabs', () => {
     ).toBeInTheDocument();
   });
 
+  it('admin sees Memory between Monetization/Integrations and Advanced, matching the SDK Account rail order', () => {
+    mockCurrentTenant = {
+      key: 'tenant-a',
+      is_admin: true,
+      is_advertising: false,
+      enable_monetization: true,
+    };
+    renderSidebar();
+    const footer = within(screen.getByTestId('sidebar-footer'));
+    const labels = [
+      'Management',
+      'Integrations',
+      'Monetization',
+      'Memory',
+      'Advanced',
+    ].map((name) => footer.getByRole('button', { name }));
+    // Every entry is rendered, and Memory sits right before Advanced.
+    const order = labels.map((el) =>
+      el.compareDocumentPosition(labels[labels.length - 1]),
+    );
+    order.slice(0, -1).forEach((pos) => {
+      expect(pos & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+    expect(
+      labels[3].compareDocumentPosition(labels[2]) &
+        Node.DOCUMENT_POSITION_PRECEDING,
+    ).toBeTruthy();
+  });
+
+  it('clicking Memory opens the SDK MemoryAdminTab in the account dialog with the tenant and username', async () => {
+    renderSidebar();
+    fireEvent.click(
+      within(screen.getByTestId('sidebar-footer')).getByRole('button', {
+        name: 'Memory',
+      }),
+    );
+    const tab = await screen.findByTestId('sdk-memory-admin-tab');
+    expect(tab).toBeInTheDocument();
+    expect(tab).toHaveAttribute('data-tenant-key', 'tenant-a');
+    expect(tab).toHaveAttribute('data-username', 'admin-user');
+    // Dialog chrome carries the same title/description the SDK rail shows.
+    expect(screen.getByRole('dialog', { name: 'Memory' })).toBeInTheDocument();
+    expect(
+      screen.getByText('Manage user global memories and agent memories.'),
+    ).toBeInTheDocument();
+  });
+
   it('clicking Monetization opens the MonetizationTab (when tenant has it enabled)', async () => {
     mockCurrentTenant = {
       is_admin: true,
@@ -2472,9 +2579,11 @@ describe('AppSidebar — Analytics sub-item navigation', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Analytics' })[0]);
 
     // Order matters — Memory sits between Transcripts and Costs.
-    const transcripts = screen.getByRole('button', { name: 'Transcripts' });
-    const memory = screen.getByRole('button', { name: 'Memory' });
-    const costs = screen.getByRole('button', { name: 'Costs' });
+    // Scoped to the nav: the admin footer has its own "Memory" entry.
+    const nav = within(screen.getByTestId('sidebar-nav'));
+    const transcripts = nav.getByRole('button', { name: 'Transcripts' });
+    const memory = nav.getByRole('button', { name: 'Memory' });
+    const costs = nav.getByRole('button', { name: 'Costs' });
     expect(
       transcripts.compareDocumentPosition(memory) &
         Node.DOCUMENT_POSITION_FOLLOWING,
@@ -2492,9 +2601,11 @@ describe('AppSidebar — Analytics sub-item navigation', () => {
   it('highlights Memory when the URL is the memory analytics page', () => {
     mockPathname = '/platform/tenant-a/mentor-1/analytics/memory';
     renderSidebar();
-    expect(screen.getByRole('button', { name: 'Memory' }).className).toMatch(
-      /bg-/,
-    );
+    expect(
+      within(screen.getByTestId('sidebar-nav')).getByRole('button', {
+        name: 'Memory',
+      }).className,
+    ).toMatch(/bg-/);
   });
 });
 
@@ -2518,7 +2629,8 @@ describe('AppSidebar — Analytics tab visibility (getVisibleAnalyticsTabs)', ()
     renderSidebar();
     fireEvent.click(screen.getAllByRole('button', { name: 'Analytics' })[0]);
 
-    expect(screen.getByRole('button', { name: 'Memory' })).toBeInTheDocument();
+    const nav = within(screen.getByTestId('sidebar-nav'));
+    expect(nav.getByRole('button', { name: 'Memory' })).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Data Reports' }),
     ).toBeInTheDocument();
@@ -2541,8 +2653,11 @@ describe('AppSidebar — Analytics tab visibility (getVisibleAnalyticsTabs)', ()
     renderSidebar();
     fireEvent.click(screen.getAllByRole('button', { name: 'Analytics' })[0]);
 
+    // Scoped to the nav — the admin footer's own "Memory" entry stays.
     expect(
-      screen.queryByRole('button', { name: 'Memory' }),
+      within(screen.getByTestId('sidebar-nav')).queryByRole('button', {
+        name: 'Memory',
+      }),
     ).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Users' })).toBeInTheDocument();
   });
