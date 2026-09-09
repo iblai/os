@@ -6,7 +6,6 @@ import { parsePlatformUrl } from '../utils/navigation';
 import { waitForPageReady } from '../utils/resilient';
 import { MENTOR_NEXTJS_HOST } from '../fixtures/test-data';
 import { CreateMentorPage } from '../page-objects/create-mentor.page';
-import { EditMentorPage } from '../page-objects/edit-mentor/edit-mentor.page';
 import { EvaluationTab } from '../page-objects/edit-mentor/evaluation.tab';
 import {
   closeWithEsc,
@@ -151,51 +150,6 @@ test.describe('Journey 63: Mentor Evaluation Tab', () => {
     } finally {
       await setupPage.close();
       await setupContext.close();
-    }
-  });
-
-  test.afterAll(async ({ browser }, testInfo) => {
-    if (!mentorUrl) return;
-    // Deleting the mentor is a two-modal-open round trip (Settings) against
-    // a real backend on top of whatever the last test in the file already
-    // took; give it materially more room than the default test timeout so
-    // a slow-but-successful cleanup never gets reported as a hook timeout.
-    testInfo.setTimeout(180_000);
-
-    const browserKey = testInfo.project.name
-      .replace('mentor-desktop-', '')
-      .toLowerCase();
-    const authFile = path.join(
-      __dirname,
-      `../../playwright/.auth/user-${browserKey}.json`,
-    );
-    const cleanupContext = await browser.newContext({ storageState: authFile });
-    const cleanupPage = await cleanupContext.newPage();
-
-    try {
-      await navigateToMentorAppWithRetry(cleanupPage, mentorUrl);
-      const editMentorPage = new EditMentorPage(cleanupPage);
-
-      // Deleting the mentor is the real cleanup goal — once it's gone, an
-      // undeleted run under it becomes invisible to everyone (the runs
-      // table is scoped by mentor_unique_id) and is effectively harmless.
-      // EVAL-13 already exercises + asserts the primary run's own delete
-      // flow when it runs, so this hook doesn't repeat that as a second,
-      // unasserted round trip — it would roughly double this hook's
-      // duration for no coverage benefit. The benchmark itself is left
-      // behind on purpose — there is no delete affordance for it anywhere
-      // in the UI (see class comment above).
-      await editMentorPage.open('Settings');
-      await waitForPageReady(cleanupPage);
-      await editMentorPage.settings.deleteMentor();
-      logger.info(`[Journey 63] Deleted dedicated eval mentor ${mentorId}`);
-    } catch (err) {
-      logger.warn(
-        `[Journey 63] Failed to clean up eval mentor ${mentorId}: ${err}`,
-      );
-    } finally {
-      await cleanupPage.close();
-      await cleanupContext.close();
     }
   });
 

@@ -78,7 +78,6 @@ import { dragAndDropFiles } from '../utils/drag-drop';
 import { ChatPrivacyPage } from '../page-objects/chat-privacy.page';
 import { CreateMentorPage } from '../page-objects/create-mentor.page';
 import { generateMentorName } from '../fixtures/test-data';
-import { deleteMentorById } from '../utils/mentor-cleanup';
 import { clickChatPrivacyToggle } from '@iblai/iblai-js/playwright';
 
 // ─── Shared helpers ──────────────────────────────────────────────────────────
@@ -141,7 +140,6 @@ test.describe('Journey 50: Chat Privacy', () => {
   // deleted out from under it seconds later, so every privacy-toggle
   // mutation 404'd and the toggle stayed stuck disabled.
   let mentorUrl = '';
-  let mentorId = '';
 
   test.beforeAll(async ({ browser }) => {
     // Creating the dedicated mentor below waits out the create-modal's own
@@ -170,7 +168,6 @@ test.describe('Journey 50: Chat Privacy', () => {
       await createMentorPage.openAndCreate(generateMentorName());
       await waitForPageReady(page);
       mentorUrl = page.url();
-      ({ mentorId } = await getPlatformContext(page));
 
       const chatPrivacy = new ChatPrivacyPage(page);
       originalTenantGateState = await chatPrivacy
@@ -234,11 +231,6 @@ test.describe('Journey 50: Chat Privacy', () => {
             .ensureTenantGateEnabled(false)
             .catch(() => undefined);
         }
-      }
-      // Delete the journey's dedicated mentor. Best-effort — deleteMentorById
-      // swallows its own errors internally and never throws.
-      if (mentorId) {
-        await deleteMentorById(page, mentorId);
       }
     } finally {
       await context.close().catch(() => undefined);

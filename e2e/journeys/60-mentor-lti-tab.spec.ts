@@ -73,8 +73,8 @@ import { reapStaleLtiResidue } from '../utils/lti-residue';
 
 type LtiWorkerFixtures = {
   /**
-   * URL of an LTI-enabled mentor, created once per worker and deleted on worker
-   * teardown. `null` on a non-admin worker (the mentor cannot be created); such
+   * URL of an LTI-enabled mentor, created once per worker (and deleted by the
+   * `createdResources` worker fixture). `null` on a non-admin worker (the mentor cannot be created); such
    * tests skip via their own admin guard. Shared by read-only / mutation tests
    * that just need an LTI-enabled mentor.
    *
@@ -140,25 +140,6 @@ const test = base.extend<object, LtiWorkerFixtures>({
       }
 
       await use(mentorUrl);
-
-      // Teardown — delete the worker's LTI mentor.
-      if (mentorUrl) {
-        const teardownCtx = await browser.newContext(
-          storageState ? { storageState } : {},
-        );
-        try {
-          const page = await teardownCtx.newPage();
-          await navigateToMentorApp(page, mentorUrl);
-          await waitForPageReady(page);
-          const editPage = new EditMentorPage(page);
-          await editPage.open('Settings');
-          await editPage.settings.deleteMentor();
-        } catch {
-          // Best-effort cleanup — an orphaned ephemeral mentor is non-critical.
-        } finally {
-          await teardownCtx.close();
-        }
-      }
     },
     { scope: 'worker' },
   ],
@@ -200,18 +181,6 @@ async function createTestMentor(
   }
 }
 
-/** Delete the mentor the page is currently on. Best-effort. */
-async function deleteTestMentor(editMentorPage: EditMentorPage): Promise<void> {
-  try {
-    await editMentorPage.close().catch(() => {});
-    await editMentorPage.open('Settings');
-    await waitForPageReady(editMentorPage.page);
-    await editMentorPage.settings.deleteMentor();
-  } catch {
-    // Best-effort cleanup.
-  }
-}
-
 /**
  * Navigate the test page to the shared worker LTI mentor and open the LTI tab.
  * Returns after the LTI sub-tab bar is interactive.
@@ -244,8 +213,8 @@ test.describe('Journey 60 — LTI tab visibility', () => {
     }
   });
 
-  // Each gating test is self-contained: it creates its OWN mentor and deletes
-  // it in a finally block. No shared module state, so no test can be skipped
+  // Each gating test is self-contained: it creates its OWN mentor (deleted by
+  // the worker fixture). No shared module state, so no test can be skipped
   // by a sibling's setup running in a different worker process.
 
   // ── lti-01: tab visible by default (no toggle needed) ────────────────────
@@ -262,15 +231,11 @@ test.describe('Journey 60 — LTI tab visibility', () => {
     await createTestMentor(page, createMentorPage, editMentorPage, {
       enableLti: false,
     });
-    try {
-      await editMentorPage.open('Settings');
-      await waitForPageReady(page);
-      // Tab must be visible even though is_lti_accessible is false.
-      await editMentorPage.lti.expectTabVisible();
-      await editMentorPage.close();
-    } finally {
-      await deleteTestMentor(editMentorPage);
-    }
+    await editMentorPage.open('Settings');
+    await waitForPageReady(page);
+    // Tab must be visible even though is_lti_accessible is false.
+    await editMentorPage.lti.expectTabVisible();
+    await editMentorPage.close();
   });
 
   // ── lti-03: disabling "Enable LTI launches" regates the tab content ──────
@@ -290,28 +255,24 @@ test.describe('Journey 60 — LTI tab visibility', () => {
     await createTestMentor(page, createMentorPage, editMentorPage, {
       enableLti: true,
     });
-    try {
-      // createTestMentor closes the modal after enabling LTI — reopen it.
-      await editMentorPage.open();
-      await editMentorPage.lti.switchToTab();
-      await waitForPageReady(page);
-      // Content is ungated while the capability is on.
-      await expect(editMentorPage.lti.capabilityContent).toHaveAttribute(
-        'data-enabled',
-        'true',
-        { timeout: 10_000 },
-      );
-      // Flip the toggle off — in-tab now (feat/2040), auto-saves on click.
-      await editMentorPage.lti.setCapabilityEnabled(false);
-      await expect(editMentorPage.lti.capabilityContent).toHaveAttribute(
-        'data-enabled',
-        'false',
-        { timeout: 10_000 },
-      );
-      await editMentorPage.close();
-    } finally {
-      await deleteTestMentor(editMentorPage);
-    }
+    // createTestMentor closes the modal after enabling LTI — reopen it.
+    await editMentorPage.open();
+    await editMentorPage.lti.switchToTab();
+    await waitForPageReady(page);
+    // Content is ungated while the capability is on.
+    await expect(editMentorPage.lti.capabilityContent).toHaveAttribute(
+      'data-enabled',
+      'true',
+      { timeout: 10_000 },
+    );
+    // Flip the toggle off — in-tab now (feat/2040), auto-saves on click.
+    await editMentorPage.lti.setCapabilityEnabled(false);
+    await expect(editMentorPage.lti.capabilityContent).toHaveAttribute(
+      'data-enabled',
+      'false',
+      { timeout: 10_000 },
+    );
+    await editMentorPage.close();
   });
 
   // ── lti-04: non-admin does not see the LTI tab ───────────────────────────
@@ -425,15 +386,11 @@ test.describe('Journey 60 — LTI tab sub-resource tests', () => {
     await createTestMentor(page, createMentorPage, editMentorPage, {
       enableLti: true,
     });
-    try {
-      await editMentorPage.open();
-      await editMentorPage.lti.switchToTab();
-      await editMentorPage.lti.switchToSubTab('agentLinks');
-      await editMentorPage.lti.expectLinksEmpty();
-      await editMentorPage.close();
-    } finally {
-      await deleteTestMentor(editMentorPage);
-    }
+    await editMentorPage.open();
+    await editMentorPage.lti.switchToTab();
+    await editMentorPage.lti.switchToSubTab('agentLinks');
+    await editMentorPage.lti.expectLinksEmpty();
+    await editMentorPage.close();
   });
 
   // lti-07: Create a link (shared worker mentor; unique name).
@@ -472,23 +429,19 @@ test.describe('Journey 60 — LTI tab sub-resource tests', () => {
     await createTestMentor(page, createMentorPage, editMentorPage, {
       enableLti: true,
     });
-    try {
-      await editMentorPage.open();
-      await editMentorPage.lti.switchToTab();
-      await editMentorPage.lti.switchToSubTab('agentLinks');
+    await editMentorPage.open();
+    await editMentorPage.lti.switchToTab();
+    await editMentorPage.lti.switchToSubTab('agentLinks');
 
-      const name = LtiTab.uniqueName('e2e-link-orig');
-      const renamed = LtiTab.uniqueName('e2e-link-renamed');
-      await editMentorPage.lti.createLink(name);
-      await editMentorPage.lti.expectLinkInList(name);
-      await editMentorPage.lti.editLink(name, renamed);
-      await editMentorPage.lti.expectLinkInList(renamed);
-      await editMentorPage.lti.expectLinkNotInList(name);
+    const name = LtiTab.uniqueName('e2e-link-orig');
+    const renamed = LtiTab.uniqueName('e2e-link-renamed');
+    await editMentorPage.lti.createLink(name);
+    await editMentorPage.lti.expectLinkInList(name);
+    await editMentorPage.lti.editLink(name, renamed);
+    await editMentorPage.lti.expectLinkInList(renamed);
+    await editMentorPage.lti.expectLinkNotInList(name);
 
-      await editMentorPage.close();
-    } finally {
-      await deleteTestMentor(editMentorPage);
-    }
+    await editMentorPage.close();
   });
 
   // ── lti-10..lti-12: Keys sub-tab ──────────────────────────────────────────
