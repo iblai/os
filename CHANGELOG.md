@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.142.1](https://github.com/iblai/os/compare/v0.142.0...v0.142.1) (2026-09-09)
+
+### Bug Fixes
+
+* **chunk-error:** auto-reload N times then show a recoverable error page ([5df329b](https://github.com/iblai/os/commit/5df329bdfd7a4c0535e54f354d3a69cac0be64c2))
+
 ## [0.142.0](https://github.com/iblai/os/compare/v0.141.1...v0.142.0) (2026-09-08)
 
 ### Features
