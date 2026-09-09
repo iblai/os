@@ -8,22 +8,9 @@
  *    dm_token, username, and tenantKey from localStorage so no extra
  *    credentials are needed. Falls back silently on any error.
  *
- * 2. `MentorTracker` — a simple accumulator a spec can use to register
- *    created mentor ids and then wipe them all in `afterAll`. Example:
- *
- *    ```ts
- *    const tracker = new MentorTracker();
- *
- *    test.beforeEach(async ({ page, createMentorPage }) => {
- *      await createMentorPage.openAndCreate();
- *      const { mentorId } = await getPlatformContext(page);
- *      tracker.add(mentorId);
- *    });
- *
- *    test.afterAll(async ({ browser }, testInfo) => {
- *      await tracker.deleteAll(browser, testInfo);
- *    });
- *    ```
+ * 2. `MentorTracker` — legacy `afterAll` flush of this worker's
+ *    `resource-tracker`. Mentors are registered by construction when
+ *    `CreateMentorPage.createWithName` returns, so new specs need neither.
  *
  * API endpoint used:
  *   DELETE {dmBase}/api/ai-mentor/orgs/{tenantKey}/users/{username}/{mentorId}/
@@ -53,9 +40,9 @@
 
 import type { Browser, TestInfo } from '@playwright/test';
 import { logger } from '@iblai/iblai-js/playwright';
-import path from 'path';
 
 import { tryResolveDmApiBase } from './dm-api';
+import { workerTracker } from './resource-tracker';
 
 /**
  * Reads auth context from localStorage of an already-navigated page and
@@ -148,118 +135,21 @@ export async function deleteMentorById(
 }
 
 /**
- * Accumulates mentor ids created during a describe block and batch-deletes
- * them in `afterAll`. Thread-safe within a single worker (tests inside one
- * describe run sequentially). Each spec file should create its own instance.
+ * Kept for the specs that predate by-construction registration (see
+ * `resource-tracker.ts`). `add` is a no-op for ids the page object already
+ * registered; `deleteAll` flushes this worker's tracker early, in `afterAll`,
+ * instead of waiting for worker shutdown.
  */
 export class MentorTracker {
-  private readonly ids: Set<string> = new Set();
-
-  /** Register a mentorId so it is cleaned up in deleteAll(). */
   add(mentorId: string): void {
-    if (mentorId) this.ids.add(mentorId);
+    if (mentorId && !workerTracker().hasMentor(mentorId)) {
+      logger.warn(
+        `[MentorTracker] ${mentorId} was not registered at creation — only the sweeper can reap it`,
+      );
+    }
   }
 
-  /**
-   * Best-effort delete of all tracked mentors using a fresh browser context
-   * authenticated via the project's storageState.
-   *
-   * Bounded by `budgetMs` (default 60s) because callers run this from
-   * `afterAll`, whose own timeout is 120s. Cleanup previously cost nothing —
-   * it bailed out immediately on a missing env var — so suites with many
-   * tracked mentors never noticed it. Now that it really issues requests, an
-   * unbounded loop of slow DELETEs can exhaust the hook budget and fail the
-   * whole suite (observed on journeys 44/47/66). Leaving a few mentors behind
-   * is strictly better than failing a green run, so this stops at the deadline
-   * and says what it skipped.
-   */
-  async deleteAll(
-    browser: Browser,
-    testInfo: TestInfo,
-    budgetMs = 60_000,
-  ): Promise<void> {
-    if (this.ids.size === 0) return;
-    const deadline = Date.now() + budgetMs;
-
-    // Derive the browser storageState from the project name, matching how
-    // journeys 14 and 60 do it.
-    const browserKey = testInfo.project.name
-      .replace('mentor-desktop-', '')
-      .toLowerCase();
-    const authFile = path.join(
-      __dirname,
-      `../../playwright/.auth/user-${browserKey}.json`,
-    );
-
-    const ctx = await browser.newContext({ storageState: authFile });
-    try {
-      const page = await ctx.newPage();
-
-      const mentorNextjsHost = process.env.MENTOR_NEXTJS_HOST || '';
-      if (mentorNextjsHost) {
-        // Navigate to the app to hydrate localStorage with dm_token etc.
-        try {
-          await page.goto(mentorNextjsHost, {
-            waitUntil: 'domcontentloaded',
-            timeout: 60_000,
-          });
-
-          // Warm the DM-base cache once on this throwaway page. A reload is
-          // safe here (nothing depends on its state) and guarantees the traffic
-          // to sniff, so the per-mentor deletes below can't no-op just because
-          // the app happened to be idle during their short lookup.
-          //
-          // This runs BEFORE the dm_token wait on purpose: the reload it may
-          // trigger tears down the execution context, and any evaluate racing
-          // that teardown dies with "Execution context was destroyed". Doing it
-          // first means the wait below re-settles the page afterwards.
-          await tryResolveDmApiBase(page, {
-            allowReload: true,
-            timeout: 15_000,
-          });
-
-          // Wait until dm_token is available in localStorage (set by AuthProvider).
-          await page
-            .waitForFunction(() => !!window.localStorage.getItem('dm_token'), {
-              timeout: 30_000,
-            })
-            .catch(() => {
-              /* best-effort — proceed even if dm_token never shows up */
-            });
-        } catch {
-          // Navigation failure — proceed anyway, deleteMentorById will
-          // detect missing tokens and bail out gracefully.
-        }
-      }
-
-      // Deletes are independent, so run them a few at a time rather than
-      // strictly serially — a suite with a dozen tracked mentors would
-      // otherwise spend longer queueing than deleting. Re-check the deadline
-      // between batches so a stalled backend can't run past the hook budget.
-      const pending = [...this.ids];
-      const BATCH = 4;
-      let skipped = 0;
-
-      while (pending.length > 0) {
-        if (Date.now() >= deadline) {
-          skipped = pending.length;
-          break;
-        }
-        const batch = pending.splice(0, BATCH);
-        await Promise.all(batch.map((id) => deleteMentorById(page, id)));
-      }
-
-      if (skipped > 0) {
-        logger.warn(
-          `[MentorTracker] Cleanup budget exhausted — ${skipped} mentor(s) left undeleted. ` +
-            'They will be picked up by the sweeper, if one is configured.',
-        );
-      }
-      this.ids.clear();
-    } catch (err) {
-      logger.warn(`[MentorTracker] deleteAll failed: ${err}`);
-    } finally {
-      await ctx.close().catch(() => {});
-    }
+  async deleteAll(_browser: Browser, _testInfo: TestInfo): Promise<void> {
+    await workerTracker().deleteAll();
   }
 }
