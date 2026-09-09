@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.142.3](https://github.com/iblai/os/compare/v0.142.2...v0.142.3) (2026-09-09)
+
+### Bug Fixes
+
+* **e2e:** adding test fixme for history test ([4249278](https://github.com/iblai/os/commit/42492786cf479c716faa369d068d25f6e665e0b5))
+* **mentor:** adding fixes for history, memory and canvas ([9e01e2c](https://github.com/iblai/os/commit/9e01e2ca04c967e372f4dff64c729048612786b3))
+
 ## [0.142.2](https://github.com/iblai/os/compare/v0.142.1...v0.142.2) (2026-09-09)
 
 ### Chores
