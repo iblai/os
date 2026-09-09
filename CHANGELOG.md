@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.142.2](https://github.com/iblai/os/compare/v0.142.1...v0.142.2) (2026-09-09)
+
+### Chores
+
+* bump iblai-js to 2.9.7 ([5813323](https://github.com/iblai/os/commit/58133234470efdf8e277ff726f896fa8469b5971))
+
 ## [0.142.1](https://github.com/iblai/os/compare/v0.142.0...v0.142.1) (2026-09-09)
 
 ### Bug Fixes
