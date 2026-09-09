@@ -3,38 +3,40 @@
  *
  * After every full test run this sweeper lists all mentors owned by the admin
  * user and deletes any that:
- *   1. Have a name matching the E2E test-created pattern (starts with "E2E "
- *      and ends with a 13-digit Unix-millisecond timestamp), AND
- *   2. Were created more than STALE_AFTER_MS ago (2 hours).
+ *   1. Have a name matching the E2E test-created pattern (starts with "E2E ",
+ *      "Copy of E2E " or "Custom Copy " and embeds a 13-digit Unix-millisecond
+ *      timestamp), AND
+ *   2. Were created more than STALE_AFTER_MS ago (30 minutes).
  *
  * The age gate guarantees that a concurrent/just-started run's mentors are
  * never reaped — a freshly created mentor is at most a few seconds old, far
- * below the 2-hour floor.
+ * below the 30-minute floor.
  *
  * SAFETY guarantees (mirrors lti-residue.ts):
  *   • Only names matching E2E_MENTOR_RE are considered. Any seed mentor or
  *     manually created mentor never matches.
- *   • Only stale (> 2h) matches are deleted. A parallel run's live mentors
+ *   • Only stale (> 30 min) matches are deleted. A parallel run's live mentors
  *     are never touched.
  *   • The tenant always keeps ≥1 mentor: the default/seed mentor doesn't
  *     match the regex, so it is never a candidate.
- *   • Everything is best-effort: a failed delete is logged and skipped.
- *     A sweep failure NEVER causes the Playwright process to exit non-zero.
+ *   • A failed delete, an unresolvable DM base, or missing auth goes through
+ *     `failLoudly` (resource-tracker.ts): it throws — failing the run — when
+ *     CI or DM_URL is set, and is a `console.error` line otherwise.
  *
  * Auth: reads dm_token, username (user_nicename), and tenantKey (key) directly
  * from the saved storageState JSON (`playwright/.auth/user-chrome.json`) so no
  * live browser context is needed and globalTeardown stays fast.
  *
  * API used:
- *   GET  {API_BASE}/dm/api/ai-mentor/orgs/{org}/users/{username}/?page=N
- *   DELETE {API_BASE}/dm/api/ai-mentor/orgs/{org}/users/{username}/{mentorUniqueId}/
+ *   GET  {dmBase}/api/ai-mentor/orgs/{org}/users/{username}/?page=N
+ *   DELETE {dmBase}/api/ai-mentor/orgs/{org}/users/{username}/{mentorUniqueId}/
  *   Authorization: Token {dm_token}
  *
  * Name pattern produced by `generateMentorName()` in test-data.ts:
  *   "E2E Mentor 1720000000000"
  * Name pattern used by journey 52 (after this fix):
  *   "E2E Tool Call Test Mentor 1720000000000"
- * Both match: /^E2E .+\b(\d{13})\b/
+ * Both match E2E_MENTOR_RE below.
  */
 
 import fs from 'fs';
@@ -42,9 +44,12 @@ import path from 'path';
 import https from 'https';
 import http from 'http';
 
+import { dmBaseFromEnv } from './dm-api';
+import { anySnapshotDmBase, failLoudly } from './resource-tracker';
+
 // ── Configuration ─────────────────────────────────────────────────────────────
 
-const STALE_AFTER_MS = 2 * 60 * 60 * 1000; // 2 hours
+const STALE_AFTER_MS = 30 * 60 * 1000; // 30 minutes
 const MAX_PAGES = 50; // cap page-walk to avoid runaway loops
 
 /**
@@ -52,10 +57,13 @@ const MAX_PAGES = 50; // cap page-walk to avoid runaway loops
  * Examples:
  *   "E2E Mentor 1720000000000"
  *   "E2E Tool Call Test Mentor 1720000000000"
- *   "E2E No-Tools Mentor 1720000000000"
+ *   "E2E Eval Mentor-1720000000000"
+ *   "Copy of E2E Mentor 1720000000000"   (journey 36 default copy name)
+ *   "Custom Copy 1720000000000"          (journey 36 custom copy name)
  * The captured group 1 is the timestamp string.
  */
-export const E2E_MENTOR_RE = /^E2E .+\b(\d{13})\b/;
+export const E2E_MENTOR_RE =
+  /^(?:(?:Copy of )?E2E |Custom Copy ).*\b(\d{13})\b/;
 
 // ── Auth extraction ───────────────────────────────────────────────────────────
 
@@ -167,7 +175,7 @@ function isStale(name: string | undefined): boolean {
 }
 
 async function sweepStaleMentors(
-  apiBase: string,
+  dmBase: string,
   auth: AuthContext,
 ): Promise<void> {
   const { dmToken, username, tenantKey } = auth;
@@ -177,10 +185,11 @@ async function sweepStaleMentors(
   };
 
   // DM API lives under the `/dm` path on the API base (see config.dmUrl()).
-  const baseListUrl = `${apiBase}/dm/api/ai-mentor/orgs/${encodeURIComponent(tenantKey)}/users/${encodeURIComponent(username)}/`;
+  const baseListUrl = `${dmBase}/api/ai-mentor/orgs/${encodeURIComponent(tenantKey)}/users/${encodeURIComponent(username)}/`;
 
   let reaped = 0;
   let skipped = 0;
+  let failed = 0;
 
   for (let page = 1; page <= MAX_PAGES; page++) {
     const listUrl = `${baseListUrl}?page=${page}&page_size=100`;
@@ -239,13 +248,13 @@ async function sweepStaleMentors(
           console.warn(
             `[mentor-sweeper] DELETE ${uniqueId} → ${delRes.status} — skipping`,
           );
-          skipped++;
+          failed++;
         }
       } catch (err) {
         console.warn(
           `[mentor-sweeper] DELETE ${uniqueId} failed: ${err} — skipping`,
         );
-        skipped++;
+        failed++;
       }
     }
 
@@ -253,18 +262,24 @@ async function sweepStaleMentors(
   }
 
   console.log(
-    `[mentor-sweeper] Done — reaped ${reaped}, skipped/failed ${skipped}`,
+    `[mentor-sweeper] Done — reaped ${reaped}, skipped ${skipped}, failed ${failed}`,
   );
+  if (failed > 0)
+    failLoudly(`mentor-sweeper could not delete ${failed} stale mentor(s)`);
 }
 
 // ── Playwright globalTeardown entry point ─────────────────────────────────────
 
 export default async function globalTeardown(): Promise<void> {
+  if (process.env.E2E_SKIP_SWEEP === '1') {
+    console.log('[mentor-sweeper] E2E_SKIP_SWEEP=1 — sweep skipped');
+    return;
+  }
   try {
-    const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL;
-    if (!apiBase) {
-      console.log(
-        '[mentor-sweeper] NEXT_PUBLIC_API_BASE_URL not set — skipping sweep',
+    const dmBase = dmBaseFromEnv() || anySnapshotDmBase();
+    if (!dmBase) {
+      failLoudly(
+        'mentor-sweeper: cannot resolve the DM API base (set DM_URL) — sweep skipped',
       );
       return;
     }
@@ -293,15 +308,16 @@ export default async function globalTeardown(): Promise<void> {
     }
 
     if (!auth) {
-      console.log(
-        '[mentor-sweeper] No valid admin auth found in storageState files — skipping sweep',
+      failLoudly(
+        'mentor-sweeper: no valid admin auth in playwright/.auth — sweep skipped',
       );
       return;
     }
 
-    await sweepStaleMentors(apiBase, auth);
+    await sweepStaleMentors(dmBase, auth);
   } catch (err) {
-    // Best-effort — never let teardown failure affect the exit code.
-    console.warn(`[mentor-sweeper] Unexpected error: ${err}`);
+    if (err instanceof Error && err.message.startsWith('[e2e-residue]'))
+      throw err;
+    failLoudly(`mentor-sweeper: unexpected error: ${err}`);
   }
 }
