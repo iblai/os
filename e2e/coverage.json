@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "lastUpdated": "2026-09-07",
+  "lastUpdated": "2026-09-10",
   "summary": {
-    "totalCheckpoints": 720,
-    "coveredCheckpoints": 678,
+    "totalCheckpoints": 723,
+    "coveredCheckpoints": 681,
     "deprecatedCheckpoints": 16,
     "notReproducibleCheckpoints": 15,
     "pendingCheckpoints": 11,
@@ -129,7 +129,7 @@
         },
         {
           "id": "ui-05",
-          "description": "Non-admin in the main OR an advertising tenant sees the full admin sidebar (New Agent, Workflows, Analytics, Invites, Management, Integrations, Monetization, Advanced) and clicking any trial-gated entry opens the upgrade/pricing dialog instead of performing the real action; gracefully skips when paywall is off",
+          "description": "Non-admin in the main OR an advertising tenant sees the full admin sidebar (New Agent, Workflows, Analytics, Invites, Management, Integrations, Monetization, Memory, Advanced) and clicking any trial-gated entry opens the upgrade/pricing dialog instead of performing the real action; gracefully skips when paywall is off",
           "status": "covered"
         }
       ]
@@ -211,6 +211,16 @@
         {
           "id": "prof-14",
           "description": "Security tab shows password reset link but no Save button",
+          "status": "covered"
+        },
+        {
+          "id": "prof-15",
+          "description": "History tab on the user's OWN profile (SDK ChatHistoryTab over the user-scoped my-chat-history endpoints): non-admin switches to History and gets a loaded state (conversation rows or the 'No conversations found' empty state) \u2014 never the 403 permission notice",
+          "status": "covered"
+        },
+        {
+          "id": "prof-16",
+          "description": "Tenant admin opens ANOTHER user's profile via the sidebar Management \u2192 Users search \u2192 'View profile for \u2026' row action: the nested 'User profile' dialog is in preview mode (no Security tab) yet offers the History tab (SDK canViewOtherUsersChatHistory: tenant admins + watchers) and loads that user's history (rows or empty state) rather than the 403 permission notice \u2014 skips when PLAYWRIGHT_NONADMIN_USERNAME is unset or the RBAC-gated Management entry is unavailable",
           "status": "covered"
         }
       ]
@@ -600,7 +610,6 @@
       "name": "Canvas \u2014 AI Document Editor",
       "spec": "10-canvas-ai-document-editor.spec.ts",
       "sourceFiles": [
-        "components/canvas/canvas-component.tsx",
         "components/canvas/canvas-controls.tsx",
         "components/canvas/canvas-view.tsx",
         "components/canvas/binary-canvas-component.tsx",
@@ -1818,6 +1827,11 @@
         {
           "id": "ov-13",
           "description": "Admin opens the navbar LLM selector modal (navbarPage.openLlmProviderModal, dialog name \"LLM Providers\") and the \"LLM Configuration\" heading/description are absent \u2014 proves the OS wrapper's showConfigurationHeader={false} prop reaches the SDK AgentLLMTab component",
+          "status": "covered"
+        },
+        {
+          "id": "ov-14",
+          "description": "Admin sidebar footer mirrors the SDK tenant-settings rail: a \"Memory\" entry sits next to Integrations/Advanced (admin-only, no dedicated RBAC permission) and clicking it opens the Account dialog titled \"Memory\" (\"Manage user global memories and agent memories.\") hosting the SDK MemoryAdminTab \u2014 Global / Agent sub-tabs (or the memsearch-disabled notice), Agent sub-tab renders the agents section, Escape closes it",
           "status": "covered"
         }
       ]
@@ -3500,7 +3514,7 @@
         },
         {
           "id": "ecu-04",
-          "description": "Every gated sidebar entry (Agents > New Agent/My Agents, Workflows > My Workflows, Projects > My Projects, Analytics > Overview, Invites, Management, Integrations, Monetization, Advanced) opens the shared \"Subscribe to unlock full features\" dialog with an \"Upgrade for free\" CTA",
+          "description": "Every gated sidebar entry (Agents > New Agent/My Agents, Workflows > My Workflows, Projects > My Projects, Analytics > Overview, Invites, Management, Integrations, Monetization, Memory, Advanced) opens the shared \"Subscribe to unlock full features\" dialog with an \"Upgrade for free\" CTA",
           "status": "covered"
         },
         {
@@ -4312,6 +4326,7 @@
         "components/canvas/binary-canvas-component.tsx",
         "components/canvas/binary-artifact-utils.ts",
         "components/canvas/canvas-view.tsx",
+        "components/canvas/canvas-component.tsx",
         "components/chat/chat-messages/canvas-message-preview.tsx",
         "components/chat/chat-messages/message-preview.tsx",
         "components/chat/index.tsx",

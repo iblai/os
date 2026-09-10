@@ -102,3 +102,6 @@ CLAUDE.local.md
 # Generated render gallery (scripts/build-gallery.test.tsx) — a ~1MB build
 # artifact regenerated on demand, never committed.
 public/markdown-gallery.html
+
+# Claude Code review worktrees (local scratch, never committed)
+.claude/worktrees/

@@ -97,12 +97,12 @@ export class AnalyticsPage {
   async navigateToMemory(): Promise<void> {
     // Memory has no on-page tab — it is reached through the sidebar's
     // "Memory" sub-item (rendered right after Transcripts), which
-    // deep-links to `/analytics/memory`.
+    // deep-links to `/analytics/memory`. Scoped to the nav (`sidebar-nav`)
+    // because the admin footer also has a "Memory" entry (tenant Memory tab).
     await this.expandSidebarAnalytics();
-    const memoryLink = this.sidebar.getByRole('button', {
-      name: 'Memory',
-      exact: true,
-    });
+    const memoryLink = this.sidebar
+      .getByTestId('sidebar-nav')
+      .getByRole('button', { name: 'Memory', exact: true });
     await expect(memoryLink).toBeVisible({ timeout: 10_000 });
     await memoryLink.click();
     await safeWaitForURL(
