@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.142.5](https://github.com/iblai/os/compare/v0.142.4...v0.142.5) (2026-09-10)
+
+### Bug Fixes
+
+* **tenant-switch:** complete auth handoff and pull in SDK loader-hang fix ([cf8c48c](https://github.com/iblai/os/commit/cf8c48caeb1ed28e98625e9ede7b9a59ec4b7895))
+
 ## [0.142.4](https://github.com/iblai/os/compare/v0.142.3...v0.142.4) (2026-09-10)
 
 ### Bug Fixes
