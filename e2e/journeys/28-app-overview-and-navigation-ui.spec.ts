@@ -119,6 +119,59 @@ test.describe('Journey 28: App Overview & Navigation UI — Admin', () => {
     }
     await editMentorPage.close();
   });
+
+  // ov-14: The sidebar footer mirrors the SDK tenant-settings (`Account`)
+  // rail, which lists Memory between Monetization and Advanced and gates it
+  // on `isAdmin` (no dedicated RBAC permission — same as Integrations /
+  // Advanced). Clicking it opens the Account dialog titled "Memory" hosting
+  // the SDK `MemoryAdminTab` with its Global / Agent sub-tabs.
+  test('admin sees the Memory footer entry next to Integrations/Advanced and it opens the tenant Memory tab (Global / Agent)', async ({
+    page,
+    sidebarPage,
+  }) => {
+    const isAdmin = await checkAdminStatus(page);
+    test.skip(!isAdmin, 'Memory footer entry requires admin access');
+
+    // Same admin-only cluster the SDK rail shows: all three are present.
+    await expect(sidebarPage.integrationsButton).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(sidebarPage.memoryButton).toBeVisible({ timeout: 10_000 });
+    await expect(sidebarPage.settingsButton).toBeVisible({ timeout: 10_000 });
+
+    await sidebarPage.memoryButton.click();
+
+    const memoryDialog = page.getByRole('dialog', { name: 'Memory' });
+    await expect(memoryDialog).toBeVisible({ timeout: 15_000 });
+    await expect(
+      memoryDialog.getByText('Manage user global memories and agent memories.'),
+    ).toBeVisible({ timeout: 5_000 });
+
+    // The SDK MemoryAdminTab renders its Global / Agent sub-tabs once the
+    // tenant's memsearch status resolves; if memsearch is off for this
+    // tenant the tab shows its "feature disabled" notice instead. Either
+    // is the SDK component mounted inside the sidebar-driven dialog.
+    const globalSubTab = memoryDialog.getByTestId(
+      'memory-admin-sub-tab-global',
+    );
+    const agentSubTab = memoryDialog.getByTestId('memory-admin-sub-tab-agent');
+    const disabledNotice = memoryDialog.getByText(
+      /memory .*(disabled|not enabled)/i,
+    );
+    await expect(globalSubTab.or(disabledNotice).first()).toBeVisible({
+      timeout: 20_000,
+    });
+    if (await globalSubTab.isVisible().catch(() => false)) {
+      await expect(agentSubTab).toBeVisible({ timeout: 5_000 });
+      await agentSubTab.click();
+      await expect(
+        memoryDialog.getByTestId('memory-admin-agent-section'),
+      ).toBeVisible({ timeout: 15_000 });
+    }
+
+    await page.keyboard.press('Escape');
+    await expect(memoryDialog).not.toBeVisible({ timeout: 10_000 });
+  });
 });
 
 // ── Journey 28: Navbar LLM-name overflow fix (desktop) ────────────────────────
@@ -203,6 +256,36 @@ test.describe('Journey 28: Navbar LLM Name — Desktop Ellipsis & No Overflow', 
 
     // Allow for rounding: 150px ± 1
     expect(maxWidth).toBeLessThanOrEqual(151);
+  });
+
+  // ov-13
+  // The OS wrapper (llm-provider-selection-modal.tsx) opens the SDK's
+  // AgentLLMTab from the navbar with `showConfigurationHeader={false}`, so the
+  // "LLM Configuration" heading shown inside the edit-mentor tab must NOT
+  // render here. Mirrors the SDK's own llm-provider-modal.spec.ts assertion
+  // for the same prop, but proves the OS wrapper actually forwards it.
+  test('admin opens the navbar LLM selector modal and the configuration header is hidden', async ({
+    page,
+    navbarPage,
+  }) => {
+    const isAdmin = await checkAdminStatus(page);
+    test.skip(!isAdmin, 'LLM Model Selector only renders for admins');
+
+    const opened = await navbarPage.openLlmProviderModal();
+    if (!opened) {
+      // LLM selector not present on this environment/page state — graceful skip
+      return;
+    }
+
+    const dialog = page.getByRole('dialog', { name: /llm providers/i });
+    await expect(dialog).toBeVisible({ timeout: 10_000 });
+    await expect(
+      dialog.getByRole('heading', { name: /llm configuration/i }),
+    ).toHaveCount(0);
+    await expect(dialog.getByText(/llm configuration/i)).toHaveCount(0);
+
+    await page.keyboard.press('Escape');
+    await expect(dialog).not.toBeVisible({ timeout: 10_000 });
   });
 });
 

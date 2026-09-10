@@ -189,8 +189,13 @@ vi.mock('./settings-tab', () => ({
   SettingsTab: () => <div data-testid="settings-tab">Settings Tab</div>,
 }));
 
-vi.mock('./tabs', () => ({
+// Same for the LLM slot — index.tsx now renders the SDK-wired wrapper from
+// ./llm-tab instead of the OS-local LLMTab in ./tabs.
+vi.mock('./llm-tab', () => ({
   LLMTab: () => <div data-testid="llm-tab">LLM Tab</div>,
+}));
+
+vi.mock('./tabs', () => ({
   PromptsTab: () => <div data-testid="prompts-tab">Prompts Tab</div>,
   McpTab: () => <div data-testid="mcp-tab">MCP Tab</div>,
   ToolsTab: () => <div data-testid="tools-tab">Tools Tab</div>,

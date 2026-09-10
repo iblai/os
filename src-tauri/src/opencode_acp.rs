@@ -225,6 +225,11 @@ struct TurnState {
     full_content: String,
     pending_delta: String,
     last_emit: Instant,
+    /// Text the model emitted before a tool call this turn — process
+    /// narration (a GPT-style preamble), reclassified into the reasoning
+    /// section rather than the reply. Kept so a turn that ends on a tool call
+    /// with no trailing text still shows the model's only words.
+    last_narration: String,
 }
 
 impl TurnState {
@@ -232,7 +237,32 @@ impl TurnState {
         self.generation_id = generation_id;
         self.full_content.clear();
         self.pending_delta.clear();
+        self.last_narration.clear();
         self.last_emit = Instant::now();
+    }
+
+    /// A NEW tool call starts: whatever streamed so far was a preamble ("Let
+    /// me check…"), not the reply. Hand it back for the reasoning section and
+    /// start the reply buffer over — the reply is what follows the LAST tool
+    /// call. Deterministic where the prompt's no-narration rule is not.
+    fn take_narration(&mut self) -> Option<String> {
+        if self.full_content.is_empty() {
+            return None;
+        }
+        let text = std::mem::take(&mut self.full_content);
+        self.pending_delta.clear();
+        self.last_narration = text.clone();
+        Some(text)
+    }
+
+    /// The visible reply: the text after the last tool call, or — when the
+    /// turn ended on a tool call (abort/error shapes) — the model's only text.
+    fn final_reply(&self) -> &str {
+        if self.full_content.is_empty() {
+            &self.last_narration
+        } else {
+            &self.full_content
+        }
     }
 
     /// A turn is streaming — updates arriving with no generation in flight
@@ -386,6 +416,19 @@ pub fn iblai_data_dir() -> PathBuf {
         return PathBuf::from(xdg).join("iblai");
     }
     home_dir().unwrap_or_default().join(".local/share/iblai")
+}
+
+/// Serialises every test that repoints `XDG_DATA_HOME` (the scratch settings
+/// tests here) with every test that RESOLVES [`iblai_data_dir`] (the
+/// installer's pinned-binary tests): the env is process-global, so a reader
+/// that skips this lock can chase another test's scratch dir right as its
+/// teardown deletes it — an ensure once aimed a ~100MB opencode download into
+/// `opencode-settings-bad-*` and died on ENOENT mid-write. Same race class
+/// `opencode_proxy::device_id` documents on the production side.
+#[cfg(test)]
+pub(crate) fn data_dir_lock() -> std::sync::MutexGuard<'static, ()> {
+    static L: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    L.lock().unwrap_or_else(|e| e.into_inner())
 }
 
 /// Managed opencode binary: `~/.local/share/iblai/bin/opencode[.exe]`.
@@ -1476,9 +1519,9 @@ pub async fn set_opencode_skills(
 /// overrides a same-named vibe skill. Neither present → no `skills` key at all,
 /// and a leftover one is dropped (the per-session config persists between spawns).
 ///
-/// The ibl.ai guidance does NOT live here: the loopback proxy injects it as a
-/// system message into skills-wired sessions' chat/completions calls (see
-/// `opencode_proxy::inject_system_guidance`).
+/// The ibl.ai guidance does NOT live here: `write_iblai_guidance` writes it as
+/// the per-session AGENTS.md, which opencode's global-instructions convention
+/// picks up on every model call.
 fn apply_skills_config(
     root: &mut serde_json::Map<String, Value>,
     vibe_dir: &Path,
@@ -1500,6 +1543,46 @@ fn apply_skills_config(
         root.remove("skills");
     } else {
         root.insert("skills".to_string(), json!({ "paths": paths }));
+    }
+}
+
+/// Write (or clear) the per-session ibl.ai guidance as the global-scope
+/// AGENTS.md beside the session's opencode.json. opencode checks
+/// `$XDG_CONFIG_HOME/opencode/AGENTS.md` for existence on every model call
+/// and folds it into the system prompt first among instruction files — main
+/// turns, subagents and ACP alike, cloud and on-device sessions both.
+/// (Verified against pinned opencode v1.18.13 `session/instruction.ts`;
+/// re-verify when `OPENCODE_VERSION` bumps.) The file lives only under the
+/// per-session ibl.ai config home — never the user's workspace or any
+/// non-ibl.ai directory; opencode reads it from there because spawn points
+/// `XDG_CONFIG_HOME` at this session's dir.
+///
+/// Fails LOUDLY on purpose: opencode silently ignores a missing instructions
+/// file, so a swallowed error here would run the whole session with zero
+/// guidance — the spawn must fail instead. The parent dir already exists
+/// (`ensure_opencode_config_at` ran first on this spawn). `None` (skills not
+/// wired) clears any stale copy, since pickup is by existence.
+///
+/// Ordering contract: this runs from `apply_opencode_model`, which
+/// `spawn_session` awaits BEFORE `cmd.spawn()` — the AGENTS.md is on disk
+/// (or the spawn has already failed) before `opencode acp` ever starts.
+///
+/// `pub(crate)` for one caller outside the spawn path: the installer's
+/// end-to-end guidance test writes the per-turn AGENTS.md through this exact
+/// production writer, never a hand-rolled copy.
+pub(crate) fn write_iblai_guidance(config_home: &Path, text: Option<&str>) -> Result<(), String> {
+    let path = config_home.join("opencode").join("AGENTS.md");
+    match text {
+        Some(t) => std::fs::write(&path, t)
+            .map_err(|e| format!("failed writing ibl.ai guidance ({}): {e}", path.display())),
+        None => match std::fs::remove_file(&path) {
+            Ok(()) => Ok(()),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(e) => Err(format!(
+                "failed clearing stale ibl.ai guidance ({}): {e}",
+                path.display()
+            )),
+        },
     }
 }
 
@@ -1820,7 +1903,30 @@ async fn handle_update(app: &AppHandle, v: &Value, turn: &Arc<Mutex<TurnState>>)
                 );
             }
         }
-        "tool_call" | "tool_call_update" => {
+        "tool_call" => {
+            let (gid, narration) = {
+                let mut ts = turn.lock().await;
+                (ts.generation_id.clone(), ts.take_narration())
+            };
+            if let Some(text) = narration {
+                // Pre-tool text is process narration: move it to the reasoning
+                // section and retract it from the reply bubble (the frontend
+                // replaces its content with `full_content`).
+                let _ = app.emit(
+                    "opencode:reasoning",
+                    json!({ "generation_id": gid, "delta": format!("{text}\n") }),
+                );
+                let _ = app.emit(
+                    "ollama:token",
+                    json!({ "generation_id": gid, "token": "", "full_content": "" }),
+                );
+            }
+            let _ = app.emit(
+                "opencode:tool_call",
+                json!({ "generation_id": gid, "update": update }),
+            );
+        }
+        "tool_call_update" => {
             let gid = turn.lock().await.generation_id.clone();
             let _ = app.emit(
                 "opencode:tool_call",
@@ -1901,22 +2007,22 @@ fn enforce_permission_policy(root: &mut serde_json::Map<String, Value>) {
     }
 }
 
-/// The system prompt Code's agent runs under, replacing opencode's built-in
-/// model-variant prompts (`agent.build.prompt` wins over `SystemPrompt.provider`
-/// in opencode's `llm/request.ts`, and the config merge applies it to the
-/// built-in `build` agent). A fork of opencode's `session/prompt/gpt.txt` at the
-/// pinned [`crate::opencode_installer::OPENCODE_VERSION`], with its narration
-/// protocol (progress updates, pre-edit notes, "explain what you are doing and
-/// why") replaced by a result-or-blocker contract. Re-diff against upstream
-/// whenever the version pin bumps.
+/// The `build` agent's ONE-LINE suppressor stub. Its only job is to exist:
+/// opencode resolves `agent.prompt ? [agent.prompt] : SystemPrompt.provider`
+/// (`llm/request.ts`), so a non-empty prompt SUPPRESSES the built-in per-model
+/// prompt — which mandates step-by-step narration ("keeping the user clearly
+/// informed", "Before editing files, send an update") — while an empty or
+/// missing one silently RESTORES it. All authored behavior (voice, policy,
+/// working discipline) lives in the per-session AGENTS.md guidance instead
+/// ([`crate::opencode_proxy::IBLAI_INSTRUCTIONS`]).
 const OPENCODE_BUILD_PROMPT: &str = include_str!("opencode_build_prompt.txt");
 
 /// Force [`OPENCODE_BUILD_PROMPT`] onto the `build` agent and pin it as the
-/// default agent, so every ACP session runs under the result-only contract no
-/// matter which model family it uses (opencode otherwise picks a per-model
-/// prompt variant, several of which mandate step-by-step progress narration).
-/// Enforced on every spawn like [`enforce_permission_policy`]; any other keys
-/// on the entry are left alone.
+/// default agent, so no model family ever falls back to opencode's built-in
+/// per-model prompt variants (several mandate progress narration). Enforced on
+/// every spawn like [`enforce_permission_policy`] — persisted per-session
+/// configs self-heal to the current stub; any other keys on the entry are
+/// left alone.
 fn enforce_build_prompt(root: &mut serde_json::Map<String, Value>) {
     root.insert("default_agent".to_string(), json!("build"));
     let agents = root.entry("agent").or_insert_with(|| json!({}));
@@ -1935,6 +2041,8 @@ fn enforce_build_prompt(root: &mut serde_json::Map<String, Value>) {
 /// `base_url` + `api_key` are always explicit now — an on-device runtime's own
 /// endpoint, or the loopback proxy for cloud. The old `{env:IBL_*}` placeholders are
 /// gone, which is what lets the real DM token stay out of the agent's environment.
+/// `guidance` is the composed ibl.ai guidance for a skills-wired session, written
+/// beside the config as the per-session AGENTS.md; `None` clears any stale copy.
 ///
 // ponytail: patches the single shared config at ~/.config/iblai/agents/opencode —
 // fine for one Code session at a time; give each session its own XDG_CONFIG_HOME if
@@ -1946,6 +2054,7 @@ fn apply_opencode_model(
     base_url: &str,
     api_key: &str,
     display_name: &str,
+    guidance: Option<&str>,
 ) -> Result<(), String> {
     // The config ships embedded in the app and is materialized on first use — make
     // sure this session's copy is on disk before we patch it.
@@ -1970,11 +2079,14 @@ fn apply_opencode_model(
     // The security boundary — see `enforce_permission_policy`. Re-applied here because
     // this runs on every spawn, immediately before the process starts.
     enforce_permission_policy(root);
-    // The result-only system prompt — see `enforce_build_prompt`.
+    // The one-line suppressor stub — see `enforce_build_prompt`.
     enforce_build_prompt(root);
     // Skills the agent discovers at startup — see `apply_skills_config`.
     let mentor_dir = mentor.map(mentor_skills_dir);
     apply_skills_config(root, &vibe_skills_dir(), mentor_dir.as_deref());
+    // The ibl.ai guidance, as the per-session AGENTS.md opencode reads on
+    // every model call — see `write_iblai_guidance`.
+    write_iblai_guidance(&home, guidance)?;
 
     let providers = root
         .entry("provider")
@@ -2213,6 +2325,13 @@ async fn spawn_session(
     };
     let spec = parse_model_spec(&chosen_model);
 
+    // The ibl.ai guidance rides opencode's own instructions mechanism (the
+    // per-session AGENTS.md, re-read on every model call). It is composed for
+    // EVERY spawn — cloud and on-device alike, skills wired or not: the build
+    // prompt is a one-line suppressor stub, so this guidance is the agent's
+    // entire authored behavior and a session must never run without it.
+    let guidance = crate::opencode_proxy::guidance_with_identity(tenant).await;
+
     // On-device runtimes talk straight to their own local endpoint. Cloud goes through
     // the loopback proxy, which holds the real DM token — the agent only ever sees a
     // throwaway per-session key, so `echo $IBL_AUTH_HEADER` has nothing to steal.
@@ -2241,21 +2360,7 @@ async fn spawn_session(
         // The proxy announces upstream 402s (insufficient credit) to the webview.
         crate::opencode_proxy::set_app(app);
         let secret = crate::opencode_proxy::new_secret();
-        // Skills wired for this spawn → the proxy injects the ibl.ai guidance
-        // as a system message into this session's chat/completions calls.
-        let skills_wired = vibe_skills_dir().is_dir()
-            || mentor
-                .as_deref()
-                .map(mentor_skills_dir)
-                .is_some_and(|d| d.is_dir());
-        crate::opencode_proxy::register(
-            &secret,
-            upstream,
-            token.to_string(),
-            tenant.to_string(),
-            skills_wired,
-        )
-        .await;
+        crate::opencode_proxy::register(&secret, upstream, token.to_string()).await;
         (
             format!("http://127.0.0.1:{port}/v1"),
             secret.clone(),
@@ -2270,6 +2375,7 @@ async fn spawn_session(
         &base_url,
         &api_key,
         display_name,
+        Some(guidance.as_str()),
     )?;
 
     // Kernel confinement on top of the permission prompt in
@@ -2336,6 +2442,7 @@ async fn spawn_session(
         generation_id: String::new(),
         full_content: String::new(),
         pending_delta: String::new(),
+        last_narration: String::new(),
         last_emit: Instant::now(),
     }));
 
@@ -2835,7 +2942,7 @@ pub async fn opencode_chat_stream(
                 "ollama:done",
                 json!({
                     "generation_id": generation_id,
-                    "full_content": ts.full_content,
+                    "full_content": ts.final_reply(),
                     "stop_reason": result.get("stopReason").cloned().unwrap_or(Value::Null),
                 }),
             );
@@ -2977,11 +3084,11 @@ mod tests {
         assert_eq!(cfg.get("permission").unwrap(), &json!("ask"));
     }
 
-    /// Every spawn pins the build agent's prompt (replacing opencode's per-model
-    /// variants) and the default agent, whatever the config started with; the
-    /// entry's other keys and sibling agents stay untouched.
+    /// Every spawn pins the build agent's prompt (suppressing opencode's
+    /// per-model variants) and the default agent, whatever the config started
+    /// with; the entry's other keys and sibling agents stay untouched.
     #[test]
-    fn every_session_runs_the_result_only_build_prompt() {
+    fn every_session_runs_the_suppressor_build_prompt() {
         let mut cfg: serde_json::Map<String, Value> = serde_json::from_str(
             r#"{
               "agent": {
@@ -3016,23 +3123,28 @@ mod tests {
         );
     }
 
-    /// The prompt replaces opencode's gpt.txt variant (forked at the pinned
-    /// opencode version) — its point is the result-or-blocker contract, so the
-    /// contract lines must survive edits and the narration protocol they
-    /// replaced must not creep back on a re-diff.
+    /// The build prompt's ONLY job is to exist: opencode resolves
+    /// `agent.prompt ? [agent.prompt] : SystemPrompt.provider(model)`, so a
+    /// blank prompt is FALSY and silently restores the built-in per-model
+    /// prompt with its narration mandates. Everything authored lives in the
+    /// AGENTS.md guidance instead — the stub must stay non-blank, tiny, and
+    /// free of the upstream narration protocol.
     #[test]
-    fn the_build_prompt_keeps_its_result_only_contract() {
+    fn the_build_prompt_is_a_minimal_suppressor_stub() {
         let text = OPENCODE_BUILD_PROMPT;
-        assert!(text.starts_with("You are OpenCode"), "{text}");
-        assert!(text.contains("You communicate in results"), "{text}");
         assert!(
-            text.contains("Only use `commentary` when you hit a genuine blocker"),
-            "{text}"
+            !text.trim().is_empty(),
+            "an empty prompt falsy-restores opencode's built-in narration prompt"
         );
-        assert!(text.contains("at most three short sentences"), "{text}");
+        assert!(text.starts_with("You are OpenCode"), "{text}");
         assert!(
-            text.contains("Between tool calls, emit no text"),
-            "the no-inter-tool-narration rule must survive edits: {text}"
+            text.contains("between tool calls"),
+            "the stub's second line — the top-slot silence rule — must survive edits: {text}"
+        );
+        assert!(
+            text.len() < 400,
+            "the stub must not regrow into a prompt fork ({} bytes): {text}",
+            text.len()
         );
         for narration in [
             "keeping the user clearly informed",
@@ -3454,12 +3566,6 @@ mod tests {
         let _ = std::fs::remove_dir_all(&scratch);
     }
 
-    /// Serialises the tests that repoint `XDG_DATA_HOME`, which is process-global.
-    fn data_dir_lock() -> std::sync::MutexGuard<'static, ()> {
-        static L: std::sync::Mutex<()> = std::sync::Mutex::new(());
-        L.lock().unwrap_or_else(|e| e.into_inner())
-    }
-
     /// Run `body` with the app data dir pointed at a throwaway directory.
     fn with_scratch_data_dir<T>(tag: &str, body: impl FnOnce() -> T) -> T {
         let _lock = data_dir_lock();
@@ -3825,6 +3931,44 @@ mod tests {
         );
     }
 
+    /// The ibl.ai guidance lands as the per-session AGENTS.md beside
+    /// opencode.json — never outside the ibl.ai config home — is rewritten
+    /// whole each spawn, cleared when skills aren't wired (pickup is by
+    /// existence), and a failed write fails LOUDLY: opencode silently ignores
+    /// missing instruction files, so a swallowed error would run the whole
+    /// session unguided.
+    #[test]
+    fn the_guidance_rides_the_per_session_agents_md() {
+        let s = Scratch::new("guidance-agents-md");
+        std::fs::create_dir_all(s.path().join("opencode")).unwrap();
+
+        write_iblai_guidance(s.path(), Some("# ibl.ai guidance\nv1\n")).unwrap();
+        let path = s.path().join("opencode").join("AGENTS.md");
+        assert!(
+            path.starts_with(s.path()),
+            "the file stays inside the ibl.ai config home passed in"
+        );
+        assert_eq!(
+            std::fs::read_to_string(&path).unwrap(),
+            "# ibl.ai guidance\nv1\n"
+        );
+
+        write_iblai_guidance(s.path(), Some("v2")).unwrap();
+        assert_eq!(
+            std::fs::read_to_string(&path).unwrap(),
+            "v2",
+            "rewritten per spawn"
+        );
+
+        write_iblai_guidance(s.path(), None).unwrap();
+        assert!(!path.exists(), "no skills wired → no stale guidance file");
+        write_iblai_guidance(s.path(), None).unwrap();
+
+        let err = write_iblai_guidance(&s.path().join("missing"), Some("text"))
+            .expect_err("an unwritable guidance file must fail the spawn");
+        assert!(err.contains("AGENTS.md"), "{err}");
+    }
+
     /// A resource that sanitises to the manifest's own name must not clobber it,
     /// and two slugs collapsing to one directory keep the first skill intact.
     #[test]
@@ -3918,6 +4062,7 @@ mod tests {
                 generation_id: String::new(),
                 full_content: String::new(),
                 pending_delta: String::new(),
+                last_narration: String::new(),
                 last_emit: Instant::now(),
             })),
             last_used: Mutex::new(Instant::now()),
@@ -4146,6 +4291,46 @@ mod tests {
         assert!(should_retry(&err, false, 1));
     }
 
+    /// Text the model streams BEFORE a tool call is a preamble, not the reply:
+    /// a new tool call hands it to the reasoning section and restarts the
+    /// reply buffer, so the visible reply is what follows the LAST tool call —
+    /// falling back to the model's only text when a turn ends on a tool call.
+    #[test]
+    fn pre_tool_text_is_reclassified_as_narration() {
+        let mut ts = TurnState {
+            generation_id: String::new(),
+            full_content: String::new(),
+            pending_delta: String::new(),
+            last_narration: String::new(),
+            last_emit: Instant::now(),
+        };
+        ts.reset("g1".to_string());
+        assert_eq!(ts.take_narration(), None, "nothing streamed → nothing to reclassify");
+
+        ts.full_content.push_str("Let me check the files.");
+        ts.pending_delta.push_str("files.");
+        assert_eq!(ts.take_narration().as_deref(), Some("Let me check the files."));
+        assert!(
+            ts.full_content.is_empty() && ts.pending_delta.is_empty(),
+            "the reply buffer restarts after the tool call"
+        );
+        assert_eq!(
+            ts.final_reply(),
+            "Let me check the files.",
+            "a turn ending on the tool call still shows the model's only text"
+        );
+
+        ts.full_content.push_str("Fixed the failing test.");
+        assert_eq!(
+            ts.final_reply(),
+            "Fixed the failing test.",
+            "text after the last tool call is the reply"
+        );
+
+        ts.reset("g2".to_string());
+        assert_eq!(ts.final_reply(), "", "reset clears the narration too");
+    }
+
     /// The spawn-time `session/load` replay window: no generation in flight →
     /// updates are dropped; a reset opens the gate.
     #[test]
@@ -4154,6 +4339,7 @@ mod tests {
             generation_id: String::new(),
             full_content: String::new(),
             pending_delta: String::new(),
+            last_narration: String::new(),
             last_emit: Instant::now(),
         };
         assert!(!ts.in_flight(), "fresh spawn: replay must be droppable");

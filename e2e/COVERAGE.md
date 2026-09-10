@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-08-31 | 693 checkpoints (654 covered, 8 pending/fixme, 15 not-reproducible in default env, 16 deprecated) | 74 journeys (73 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-09-08 | 709 checkpoints (670 covered, 8 pending/fixme, 15 not-reproducible in default env, 16 deprecated) | 75 journeys (74 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -50,11 +50,11 @@ When adding a new page or modifying an existing user flow:
 - [x] "My Mentors" button is NOT present in the header (removed in feat-1431); mentor dropdown still shows New Chat item
 - [x] Fresh signup (unauthenticated context, real `/account/create` registration) lands on the main tenant and the profile dropdown shows exactly 3 items: Profile, Help, Log out
 - [x] Sidebar admin-only buttons (e.g. New Project) show upgrade/auth dialog for non-admins when visible
-- [x] Non-admin in the main OR an advertising tenant sees full admin sidebar (New Agent, Workflows, Analytics, Invites, Management, Integrations, Monetization, Advanced) and clicking any trial-gated entry opens the upgrade/pricing dialog; gracefully skips when paywall is off
+- [x] Non-admin in the main OR an advertising tenant sees full admin sidebar (New Agent, Workflows, Analytics, Invites, Management, Integrations, Monetization, Memory, Advanced) and clicking any trial-gated entry opens the upgrade/pricing dialog; gracefully skips when paywall is off
 
 ---
 
-## Journey 4: User Profile Management (14 checkpoints) — `journeys/04-user-profile-management.spec.ts`
+## Journey 4: User Profile Management (16 checkpoints) — `journeys/04-user-profile-management.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`
 
@@ -72,6 +72,8 @@ When adding a new page or modifying an existing user flow:
 - [x] Security tab: Send Password Reset Link button is visible; no Save button present
 - [x] Profile modal has proper ARIA attributes (tablist, tabpanel, aria-selected, aria-controls)
 - [x] User avatar with initials and Admin badge (for admins) are visible
+- [x] History tab on the user's own profile loads (rows or the "No conversations found" empty state) and never shows the 403 permission notice
+- [x] Tenant admin opens another user's profile via sidebar Management → Users → "View profile for …": preview mode (no Security tab) still offers the History tab, which loads that user's history instead of the permission notice (skips without PLAYWRIGHT_NONADMIN_USERNAME or the RBAC-gated Management entry)
 
 ---
 
@@ -95,9 +97,11 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 6: Mentor Management — Admin (18 checkpoints) — `journeys/06-mentor-management-admin.spec.ts`
+## Journey 6: Mentor Management — Admin (19 checkpoints) — `journeys/06-mentor-management-admin.spec.ts`
 
-**Source files:** `components/modals/create-mentor-modal.tsx`, `components/modals/edit-mentor-modal/index.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/tabs/llm-tab.tsx`, `components/modals/edit-mentor-modal/tabs/tools-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `components/modals/settings-modal.tsx`, `hooks/use-mentors.ts`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/modals/llm-provider-modal.tsx`, `lib/utils.ts`
+**Source files:** `components/modals/create-mentor-modal.tsx`, `components/modals/edit-mentor-modal/index.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/llm-tab.tsx`, `components/modals/edit-mentor-modal/tabs/tools-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `components/modals/settings-modal.tsx`, `hooks/use-mentors.ts`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `lib/utils.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`
+
+_Note: the LLM tab is served by the SDK's `AgentLLMTab`; `components/modals/edit-mentor-modal/llm-tab.tsx` is the thin wrapper over it, and `hooks/use-llm-display-name.ts` resolves the model label the nav-bar badge shows (see also Journey 28)._
 
 - [x] Admin can update mentor profile (name, description, category, visibility), save, and close
 - [x] Non-admin does not see the Settings or Tools menu items
@@ -117,6 +121,7 @@ When adding a new page or modifying an existing user flow:
 - [x] Issue #2318: ibl.ai provider card (`data-provider=iblai`) shows the ibl.ai logo and label instead of falling through to the generic default (the original bug — a missing map entry rendered a blank/404 logo); skips gracefully if the tenant's LLM list omits ibl.ai
 - [x] Issue #2318: a grayed (no-credential) provider card stays clickable and opens the LLM Selection model picker; skips gracefully if every provider in the tenant is usable
 - [x] Issue #2318: LLM Selection model picker rows render a non-blank human-readable label (`display_name || llm_name`) and searching a substring of that label finds the row
+- [x] `getLLMModelDisplayName` navbar rewrite: after selecting the ibl.ai provider/model (wire key `iblai-pro`) on the LLM tab, the navbar badge renders the display name `ibl.ai` exactly — never the raw wire key; skips gracefully if the tenant's LLM list omits ibl.ai
 
 ---
 
@@ -501,7 +506,7 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 
 ---
 
-## Journey 28: App Overview & Navigation UI (12 checkpoints) — `journeys/28-app-overview-and-navigation-ui.spec.ts`
+## Journey 28: App Overview & Navigation UI (14 checkpoints) — `journeys/28-app-overview-and-navigation-ui.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/modals/llm-provider-selection-modal.tsx`
 
@@ -510,13 +515,15 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 - [x] User profile dropdown buttons function correctly
 - [x] Sidebar renders all expected components including Vector document button
 - [x] Vector document button is visible in the sidebar
-- [x] LLM provider modal opened from the navbar hides the configuration header
-- [x] LLM provider modal inside Edit Mentor retains the configuration header
+- [x] LLM provider modal opened from the navbar hides the configuration header _(ov-06 — uses a loose regex locator wrapped in an `isVisible().catch()` conditional around the whole test body; superseded by the stronger ov-13 below, kept for now)_
+- [ ] LLM provider modal inside Edit Mentor retains the configuration header _(ov-07 — currently a vacuous assertion, `expect(typeof headerVisible).toBe('boolean')`, which passes regardless of whether the header is shown; flagged for a follow-up fix, not corrected in this change)_
 - [x] Admin: LLM name span on desktop has `overflow:hidden`, `text-overflow:ellipsis`, `whitespace:nowrap` _(navbar overflow fix: ov-08)_
 - [x] Admin: nav element does not overflow the viewport width on desktop _(navbar overflow fix: ov-09)_
 - [x] Admin: LLM name span `max-width` is at most 150 px on desktop _(navbar overflow fix: ov-10)_
 - [x] Admin: nav does not overflow on mobile (Pixel 5); with credit balance visible the LLM name span shrinks to ≤100 px _(navbar overflow fix: ov-11)_
 - [x] Admin: nav does not overflow on mobile when credit balance is hidden; LLM name span stays ≤150 px _(navbar overflow fix: ov-12)_
+- [x] Admin opens the navbar LLM selector modal (`navbarPage.openLlmProviderModal`, dialog name "LLM Providers") and the "LLM Configuration" heading/description are absent — proves the OS wrapper's `showConfigurationHeader={false}` prop reaches the SDK `AgentLLMTab` component _(ov-13)_
+- [x] Admin sidebar footer mirrors the SDK tenant-settings (`Account`) rail: a "Memory" entry sits next to Integrations/Advanced (admin-only — no dedicated RBAC permission, so a non-admin never gets it via RBAC alone; hidden when an admin flips to learner mode) and clicking it opens the Account dialog titled "Memory" ("Manage user global memories and agent memories.") hosting the SDK `MemoryAdminTab` — Global / Agent sub-tabs (or the memsearch-disabled notice); the Agent sub-tab renders the agents section and Escape closes the dialog _(ov-14)_
 
 ---
 
@@ -855,13 +862,18 @@ Wraps the packaged `AgentEvaluationTab` from `@iblai/iblai-js/web-containers/nex
 
 ---
 
-## Journey 9b: Voice-to-Text Dictation (1 checkpoint) — `journeys/09b-voice-to-text.spec.ts`
+## Journey 9b: Voice-to-Text Dictation (4 checkpoints) — `journeys/09b-voice-to-text.spec.ts`
 
 **Source files:** `hooks/use-voice-chat.ts`, `hooks/use-timer.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form.tsx`
 
 Chromium-only. Uses `--use-fake-device-for-media-stream` plus `--use-file-for-fake-audio-capture=e2e/files/testing_folder/speech.wav` to inject real audio, then exercises the real `/audio-to-text/` backend round-trip. Regression cover for [iblai-platform#1657](https://github.com/iblai/iblai-platform/issues/1657).
 
 - [x] VTT-01: Admin creates a new mentor and records via injected fake audio — the placeholder timer (`Listening... mm:ss`) counts seconds upward, and after stop, the real STT round-trip lands a non-empty transcript in the textarea
+- [x] VTT-02: Microphone permission denied — with the fake-UI auto-accept flag dropped and context permissions cleared, `getUserMedia` rejects with `NotAllowedError`, a "Microphone access" toast appears, the button returns to the idle `Voice input` label and stays enabled, and no `/audio-to-text/` request is made
+- [x] VTT-03: Dictation appends to the composer instead of replacing it — text typed before recording survives the round-trip and the transcript lands after it
+- [x] VTT-04: A recording stopped under the 500ms minimum is rejected client-side — a "That recording was too short" toast appears, the button returns to idle without parking on `Processing`, and zero `/audio-to-text/` requests are made
+
+VTT-02, VTT-03 and VTT-04 are regression cover for [iblai-platform#2402](https://github.com/iblai/iblai-platform/issues/2402): a sub-second recording uploaded an empty blob, the backend rejected it with a 400, and the data layer retried five times with exponential backoff — holding the voice UI for ~37s.
 
 ---
 
@@ -1114,7 +1126,7 @@ Full-lifecycle regression guard for the ecommerce credits/upgrade flow, run as a
 - [x] ecu-01: New user signs up via `/account/create` and lands authenticated on `<base-url>/platform/main/<mentor-id>` with the mentor dropdown ready
 - [x] ecu-02: Credit balance dropdown shows a Free plan badge, a positive remaining balance, and an Upgrade Plan button on the main tenant
 - [x] ecu-03: Profile dropdown shows exactly Profile / Help / Log Out on a brand-new free-trial account
-- [x] ecu-04: Every gated sidebar entry (Agents > New Agent/My Agents, Workflows > My Workflows, Projects > My Projects, Analytics > Overview, Invites, Management, Integrations, Monetization, Advanced) opens the shared "Subscribe to unlock full features" dialog with an "Upgrade for free" CTA
+- [x] ecu-04: Every gated sidebar entry (Agents > New Agent/My Agents, Workflows > My Workflows, Projects > My Projects, Analytics > Overview, Invites, Management, Integrations, Monetization, Memory, Advanced) opens the shared "Subscribe to unlock full features" dialog with an "Upgrade for free" CTA
 - [x] ecu-05: Zero credits (via the DM service credit-cleanup admin endpoint) blocks chat submission on the main tenant and surfaces the same subscribe dialog instead of an AI response
 - [x] ecu-06: Clicking "Upgrade for free" redirects to a zero-cost Stripe-hosted checkout; submitting it completes the SSO redirect chain onto a real (non-"main") platform id with a fresh Free-plan credit balance and working chat
 - [x] ecu-07: The profile dropdown's Account item opens the User Profile dialog; its Billing tab (`?profileTab=billing`) shows the Free plan, Current badge, Upgrade button, and a positive credit balance
@@ -1173,13 +1185,13 @@ Sub-resource tests (Links / Keys / Tools) still require `is_lti_accessible=true`
 
 ---
 
-## Journey 61: LaTeX / Math Rendering (5 checkpoints) — `journeys/61-latex-math-rendering.spec.ts`
+## Journey 61: LaTeX / Math Rendering (8 checkpoints) — `journeys/61-latex-math-rendering.spec.ts`
 
-**Source files:** `lib/utils.ts`, `components/markdown.tsx`
+**Source files:** `lib/utils.ts`, `components/markdown.tsx`, `lib/remark-latex-islands.ts`, `lib/remark-latex-line-breaks.ts`, `lib/latex-aware-blocks.ts`, `lib/rehype-verb-code.ts`, `lib/rehype-aligned-math.ts`, `lib/markdown-math-error-reporter.ts`
 
-Covers the fix for GitHub issue #2109 ("Improve latex compatibility for rendering chat messages and artifacts"). `preprocessLaTeX` (`lib/utils.ts`) escapes a `$` immediately followed by a digit into `\$` so currency amounts render literally — but that same escape corrupted backslash-free / digit-leading inline math like `$3x + 5$` and `$x = 4$`, and a leading currency amount could swallow the opening `$` of a real math span later on the same line. The fix classifies a `$...$` span as math using Pandoc's `tex_math_dollars` rule (opening `$` followed by a non-space, closing `$` preceded by a non-space, and the closing `$` not followed by a digit — so `$5, $10` and `$5-$10` stay currency while `$3x + 5$` and `$x = 4$` render), applied by an `isInlineMath` predicate plus a left-to-right rewind scan (a non-math span only consumes its opening `$`, leaving the closing `$` free to open a later real math span).
+Covers the behaviour first fixed for GitHub issue #2109 ("Improve latex compatibility for rendering chat messages and artifacts"): currency such as "I have $5" must stay literal text, while backslash-free / digit-leading inline math like `$3x + 5$`and`$x = 4$`must still render, and a leading currency amount must not swallow the opening`$` of a real math span later on the same line. Issue #2441 replaced the hand-rolled `preprocessLaTeX` string rewriter that originally implemented this with a maintained tokenizer: `@ziloen/remark-math` (patched) decides `$...$` at the micromark level using Pandoc's `tex_math_dollars` rule — an opening `$`must be followed by a non-space, a closing`$` preceded by a non-space and not followed by a digit. Currency therefore never opens a math span at all, so the escape-and-rewind machinery the original fix needed is gone. The user-visible contract these checkpoints assert is unchanged.
 
-A second class of #2109 breakage: LLMs wrap prose in a `$...$` / `$$...$$` span using a text-mode command — `$\textbf{Custom AI Agents}$`, `$\text{ibl.ai}$` — to mean _formatting_, not math. Under the Pandoc rule those are valid inline math, so KaTeX rendered them as collapsed math italics, and the downstream `\textbf{...}` → `**...**` conversion ran _inside_ the surviving `$` delimiters, producing `$**Custom AI Agents**$` whose `**` showed up as literal `∗∗`. `preprocessLaTeX` now unwraps any span whose entire body is a single text-styling command (`\text`, `\textbf`, `\textit`, `\emph`, `\texttt`, `\underline`, `\textrm`, `\textsf`, `\textnormal`) into its Markdown equivalent, dropping the `$` delimiters, before the math-masking step. Genuine math that merely _contains_ `\text{...}` (e.g. `$0.075 \text{ L} \times \frac{...}{...}$`) is not a single sole-content command and stays math. This class is currently covered by unit tests in `lib/__tests__/utils.test.ts`; a Journey 61 checkpoint for it is pending.
+A second class of #2109 breakage: LLMs wrap prose in a `$...$` / `$$...$$` span using a text-mode command — `$\textbf{Custom AI Agents}$`, `$\text{ibl.ai}$` — to mean _formatting_, not math. Under the Pandoc rule those are valid inline math, so KaTeX rendered them as collapsed math italics. Under #2441 a rehype pass unwraps a math node whose entire body is prose in a text-styling command (`\text`, `\textbf`, `\textit`, …) into ordinary markdown, while genuine math that merely _contains_ `\text{...}` (e.g. `$0.075 \text{ L} \times \frac{a}{b}$`) stays math. This class is covered by unit tests in `lib/__tests__/utils.test.ts` and `components/__tests__/markdown.test.tsx`; a Journey 61 checkpoint for it is pending.
 
 **Deterministic seam:** live chat streams over a raw WebSocket (`useChat` in `@iblai/web-utils`), which has no practical Playwright route-mocking seam without reimplementing the wire protocol. Instead this journey drives the public "shared chat" page (`app/share/chat/[sessionId]/[tenantKey]/[mentorId]/page.tsx`), which fetches message history over a plain REST GET (`.../sessions/{sessionId}/shared/`) and renders it through the exact same `ChatMessages` → `AIMessageBubble` → `MessagePreview` → `<Markdown>` component tree as live chat. `ChatPage.mockSharedChatSession` intercepts that GET with `page.route` and injects a FIXED assistant markdown message, so every assertion is against real KaTeX/react-markdown rendering of known-in-advance content — no LLM in the loop, no flakiness from varying model output.
 
@@ -1190,6 +1202,9 @@ Note: `remark-math` only classifies a `$$...$$` span as block/display math when 
 - [x] latex-03: Currency amounts ("I have $5 and $10, it costs $5, and the total is $3.50.") stay literal text with no KaTeX rendering and no visible escape backslash
 - [x] latex-04: Money then math on the same line ("the kit costs $12, and the formula $3x + 5$ gives the price.") keeps `$12` literal while `$3x + 5$` renders as KaTeX
 - [x] latex-05: Math then money on the same line ("since $2x = 8$, each unit is $8 and the pair is $16.") renders `$2x = 8$`as KaTeX while`$8`and`$16` stay literal
+- [ ] LATEX-06: Chat-bubble typography after the Streamdown migration (#2441) — h1–h6 render at the bubble’s scale (h1 20px against 14px body, decreasing monotonically through h6) and `**bold**` renders as a real `<strong>` at weight 700 so the `[&_strong]` utilities in `ai-message-bubble.tsx` and `reasoning-section.tsx` still bind _(pending — unit-covered in `components/__tests__/markdown.test.tsx`; Playwright checkpoint to follow)_
+- [ ] LATEX-07: Markdown images clamp to `max-h-96` and fall back to the “Image unavailable” placeholder on load error, with no Streamdown hover download control _(pending — unit-covered in `components/markdown/__tests__/markdown-image-component.test.tsx`)_
+- [ ] LATEX-08: Code-block chrome is identical across every fence origin (declared language, no language, indented, `\begin{verbatim}`, and `\verb`-in-`aligned` recovered fences) and tables expose no fullscreen control _(pending — unit-covered in `components/__tests__/markdown.test.tsx`)_
 
 ---
 
@@ -1301,8 +1316,8 @@ Because the toggle mutates the mentor's attached tools — the same fields Journ
 - [x] grd-03: Gated content exposes the Grading Setup and Rubric sub-tabs — both consistently visible for the e2e admin — and switching between them renders the matching section (`grader-setup-section` / `grader-criteria-section`); the Results pill is checked separately in grd-04 since it's RBAC-gated (`view_grade_results`) and not granted to the e2e admin on the real tenant
 - [x] grd-04: The Results sub-tab renders its own grade-results table and shows the zero-filters empty state ("No grades yet…") on a mentor with no graded submissions yet; independent of a saved config or rubric. Gracefully skips when the Results pill isn't granted — confirmed live that the e2e admin lacks `view_grade_results` on the real tenant
 - [x] grd-05: On a freshly created mentor, the Grading capability toggle defaults OFF and the gated config/rubric/results content is grayed (`capability-gate-content` `data-enabled="false"`) with the off-hint shown
-- [x] grd-06: Admin enables the Grading capability toggle and sees the "not set up yet" misconfigured warning (no config saved yet); gracefully skips if the tenant's tool catalogue has no "Grading" tool to attach
-- [x] grd-07: Admin fills in and saves the Grading setup form (instructions required for Save to enable); the misconfigured warning switches from "not set up yet" to "rubric is empty"
+- [x] grd-06: Admin enables the Grading capability toggle and the misconfigured warning settles on "rubric is empty" (attaching the tool auto-provisions the grader config, which the SDK refetches after the toggle, so "not set up yet" is only a transient flash); gracefully skips if the tenant's tool catalogue has no "Grading" tool to attach
+- [x] grd-07: Admin fills in and saves the Grading setup form (instructions required for Save to enable; a PATCH since the config was auto-provisioned on attach); the "rubric is empty" misconfigured warning stays until a criterion exists
 - [x] grd-08: Admin adds a rubric criterion via the Add-criterion modal (name, criteria, points) — it appears in the criteria list, the misconfigured warning clears, and the running total reflects its points
 - [x] grd-09: Admin edits an existing criterion's name and points via the row's three-dots menu → Edit modal, and the row + running total reflect the update
 - [x] grd-10: With two criteria present, admin cancels a delete confirmation modal (row untouched) then deletes a non-last criterion for real via the row menu → confirm modal
@@ -1375,7 +1390,7 @@ surfaces:
 - [x] ags-06: NON-ADMIN — the Skills tab is absent from the Edit Mentor modal (the segment is ADMIN-only via userTypes in `MENTOR_SEGMENTS`)
 - [x] ags-07: View-only RBAC (`view_skill_assignments` granted, create/write/delete denied via the same permission-check mock) — the Agent Skills sub-tab renders with its empty state, while the Available Skills sub-tab and the New Skill button are absent from the DOM
 - [x] slash-01: Mentor with no effective skills — chat composer stays a plain textbox (no combobox role) and typing "/" opens nothing
-- [x] slash-02: Mentor with skills — composer gets `role=combobox` wiring and "/" opens the picker listing only enabled skills as name + slug, no descriptions (assignment rows carry none; the platform-wide agent-skills catalog is never fetched from chat)
+- [x] slash-02: Mentor with skills — composer gets `role=combobox` wiring and "/" opens the picker listing only enabled skills as name stacked over `/slug` (column layout — full name, never truncated; geometry-asserted), no descriptions (assignment rows carry none; the platform-wide agent-skills catalog is never fetched from chat)
 - [x] slash-03: Typing after "/" filters the picker by both skill name and slug as the query narrows; no match closes the picker
 - [x] slash-04: ArrowDown/ArrowUp cycle the active picker option and the composer's `aria-activedescendant` follows the active option's id
 - [x] slash-05: Enter completes the active option IN PLACE — `/<slug> ` lands at the typed token's index and the backdrop layer (`skill-token-highlight`) paints an active-pill background behind it; nothing is submitted
@@ -1387,7 +1402,7 @@ surfaces:
 - [x] slash-11: A mid-sentence token is removed atomically and the seam space collapses ("say /web-research please" → "say please")
 - [x] slash-12: Multiple skill invocations in one message are each highlighted; unknown or disabled slugs never highlight
 - [x] slash-13: Typing "/" while the assignments fetch (the composer's only skill source) is still in flight shows the "Loading skills…" popover (`slash-skill-loading`, `role=status`), which yields to the picker once the list resolves
-- [x] slash-16: Skills dropdown (next to Canvas) lists enabled skills as name + `/slug`; selecting inserts the token AT THE CARET with context-aware spacing; the active pill shows the armed name + the standard ✕ (disarms without opening the menu); toggling removes cleanly; arming another replaces (single selection); `/`-picker arming updates the button — one composer-text source of truth
+- [x] slash-16: Skills dropdown (next to Canvas) lists enabled skills as name stacked over `/slug` (same column layout as the `/` picker — full name, never truncated; geometry-asserted); selecting inserts the token AT THE CARET with context-aware spacing; the active pill shows the armed name + the standard ✕ (disarms without opening the menu); toggling removes cleanly; arming another replaces (single selection); `/`-picker arming updates the button — one composer-text source of truth
 - [x] slash-15: NON-ADMIN — with the assignments endpoint readable (mocked granted state; a 403 degrades to an inactive picker) the "/" picker offers skills; selecting completes the token and the sent invocation message receives a live AI reply — skips when the environment denies the non-admin CHAT permission entirely (composer disabled with a "you don't have permission to chat" placeholder): the picker rides on top of chat access
 - [x] slash-14: A "/" token typed after existing text (caret-adjacent, preceded by whitespace) opens the picker; selecting completes the invocation at that index keeping the sentence. A "/" glued inside a word (and/or, URLs) never triggers
 
@@ -1679,3 +1694,50 @@ instead.
 - [x] ~~shc-05: Tenant `show_help: false` hides the sidebar Support link in BOTH expanded and rail-collapsed layouts; removing the override brings it back~~ _(deprecated in #uat-9 — covered by app-sidebar/**tests**/index.test.tsx in both layouts)_
 - [x] shc-06: READ-ONLY — the nav-bar "More options → Help" dropdown item resolves `support_url || help_center_url || default` computed from a live GET of tenant metadata, or is absent when `show_help` is false
 - [x] ~~shc-07: The nav-bar "More options → Help" dropdown item falls back to tenant `help_center_url` when `support_url` is absent~~ _(deprecated in #uat-9 — same precedence chain proven by hooks/**tests**/use-help-center.test.ts; shc-06 still verifies the support_url-present path live)_
+
+## Journey 73: Agent Working Indicator (9 checkpoints) — `journeys/73-agent-working-indicator.spec.ts`
+
+**Source files:** `components/chat/working-indicator.tsx`, `components/chat/ai-message-frame.tsx`, `components/chat/ai-message-bubble.tsx`, `components/chat/chat-messages/index.tsx`, `components/chat/index.tsx`, `components/chat/reasoning-section.tsx`, `components/chat/tool-call-indicator.tsx`, `lib/constants.ts`, `app/globals.css`
+
+Issue #2217 — a persistent "agent is working" indicator in chat, replacing a
+placeholder that used to vanish for good the instant any token rendered.
+During a long agentic turn (tool calls, reasoning, workflow steps) that
+disappearance made it impossible to tell whether the agent was working or the
+app had hung. Driven by the SDK's `ChatPhase` discriminated union
+(`@iblai/iblai-js/web-utils`, surfaced via `useAdvancedChat`'s `chatPhase`):
+`idle | thinking | tool | writing | workflow | file | media`.
+
+`WorkingIndicator` renders a shimmering `role="status"` line
+(`data-testid="chat-working-indicator"`) mounted either standalone
+(`AIWorkingMessage`, `data-testid="chat-working-message"`, before the
+streaming bubble has anything to show) or embedded at the foot of the real
+streaming bubble (`AIMessageBubble`) once it does — the two are mutually
+exclusive by construction, so exactly one agent message frame is ever on
+screen per turn (checkpoint 9). Reuses Journey 68's
+(`68-agent-todo-list.spec.ts`) `page.routeWebSocket()` technique
+(`ChatPage.mockChatWebSocket()`) to script deterministic phase transitions —
+chat is a raw WebSocket, not REST, so frames cannot be `page.route`-mocked —
+extended with two frame shapes journey 68 never needed:
+
+- A bare `{error, status_code}` frame with **no** `eos` (checkpoint 7, the
+  highest-value case): real error frames are never followed by `eos`, the
+  socket just closes right after — this was the original hang bug.
+- An `eos` frame carrying a `session_id` that does not match the session
+  currently in view (checkpoint 8): the SDK ignores it outright, so a
+  background turn finishing must not clear the indicator for the visible
+  session.
+
+The "verbose reasoning" (`show_reasoning`) mentor setting is toggled via
+`ChatPage.mockShowReasoning()` (a REST route patch), not by mutating the
+shared default mentor's real settings — unlike Journey 52, this spec creates
+no mentor and therefore needs no `MentorTracker`/cleanup.
+
+- [x] awi-01: The working indicator appears on send and survives the first answer token — proven by catching a >15s stall mid-stream and watching the reassurance line reappear (an unmounted component could not do that)
+- [x] awi-02: With verbose reasoning off, no disclosure rows render at all — the shimmer alone carries the whole turn through thinking, a tool call, and into writing
+- [x] awi-03: With verbose reasoning on, the reasoning and tool-call rows take over liveness via their own bouncing dots (`isActive`) and the shimmer stands down for exactly the phase a visible row already states — exactly one element conveys progress at any instant
+- [x] awi-04: The shimmer hides while answer text is visibly streaming and returns with "Still working — longer tasks can take a few minutes." once the stream stalls past `STALLED_STREAM_DELAY_MS`; a fresh token stands it down again immediately
+- [x] awi-05: Only one Stop control is ever on screen — the composer's; the working indicator itself renders no button
+- [x] awi-06: `prefers-reduced-motion: reduce` swaps the shimmer for flat muted text (no `.ibl-text-shimmer` class) and freezes the disclosure rows' bouncing dots (`animationName: none`) rather than merely hiding them
+- [x] awi-07: An error frame with no `eos` clears the working indicator — the original hang bug
+- [x] awi-08: An `eos` frame for a different `session_id` than the session in view is ignored and does not clear the indicator (background-session scoping)
+- [x] awi-09: Exactly one avatar/name/timestamp agent message frame is ever on screen per turn, including across a `write_todos` turn where `AgentTodoList` also renders

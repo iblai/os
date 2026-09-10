@@ -126,15 +126,36 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   useIframeMessageHandler({
     handlers,
     defaultHandler: (data) => {
-      // The SSO handoff payload can arrive as a JSON string (cross-origin
-      // postMessage) or an already-parsed object — normalize before reading.
-      try {
-        data = JSON.parse(data);
-      } catch {}
-      if (data.axd_token) {
-        saveUserObjectToLocalStorage(data);
-        window.location.reload();
+      // agent-ai sends auth data either as an object (`userObject`) or as a
+      // JSON string (`iblData`, `JSON.stringify(localStorage)`). Only the
+      // object form was handled, so every string-form reply — including the
+      // one answering a `tenantSwitch` — was dropped without a trace.
+      let payload = data;
+      if (typeof payload === 'string') {
+        try {
+          payload = JSON.parse(payload);
+        } catch {
+          return;
+        }
       }
+      if (!payload?.axd_token) {
+        return;
+      }
+
+      // The host re-sends its auth data every time we announce ourselves
+      // (`ready`/`loaded`), and saving it reloads us — which announces us
+      // again. Acting on an identical payload therefore loops forever: save,
+      // reload, receive the same data, save. Only act on a real change.
+      const unchanged =
+        localStorage.getItem('axd_token') === payload.axd_token &&
+        localStorage.getItem('dm_token') === payload.dm_token &&
+        localStorage.getItem('tenant') === payload.tenant;
+      if (unchanged) {
+        return;
+      }
+
+      saveUserObjectToLocalStorage(payload);
+      window.location.reload();
     },
   });
 
@@ -381,28 +402,59 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           }),
         );
 
+        const publicSettingsArgs = {
+          mentor: mentorId,
+          org: tenantKeyParams,
+          // @ts-ignore
+          userId: username ?? ANONYMOUS_USERNAME,
+        };
+
         try {
-          const response = await getMentorPublicSettings(
-            {
-              mentor: mentorId,
-              org: tenantKeyParams,
-              // @ts-ignore
-              userId: username ?? ANONYMOUS_USERNAME,
-            },
+          // `preferCacheValue` resolves straight from the RTK Query cache entry.
+          // `unwrap()` only rejects when that entry is in an error state, so a
+          // pending or never-populated entry resolves `undefined` instead of
+          // throwing. That happens when an in-flight request is torn down --
+          // e.g. the service worker's `controllerchange` reload lands while
+          // `username` flips anonymous -> authenticated and re-runs this
+          // middleware under a second cache key.
+          let response = await getMentorPublicSettings(
+            publicSettingsArgs,
             true, // preferCacheValue - use cached data if available
           ).unwrap();
+
+          if (!response) {
+            // Cache miss masquerading as a success. Force a real request so the
+            // tenant's custom CSS/JS still gets applied instead of silently
+            // being skipped.
+            response = await getMentorPublicSettings(
+              publicSettingsArgs,
+              false, // force a refetch
+            ).unwrap();
+          }
+
+          if (!response) {
+            // Still nothing to go on. Fail open, matching the outcome the
+            // previous unguarded `response.custom_css` deref produced via its
+            // catch block, so a transient network failure never locks a viewer
+            // out of a mentor that allows anonymous access.
+            console.warn(
+              'getMentorPublicSettings resolved with no data; skipping embed styling',
+            );
+            return false;
+          }
+
           if (isInIframe()) {
             setExternalCSS(response.custom_css ?? '');
             setDefaultEmbedCSS(config.defaultEmbedCssUrl() ?? '');
-            setExternalJS(response?.custom_javascript ?? '');
+            setExternalJS(response.custom_javascript ?? '');
             console.log('getMentorPublicSettings response', {
-              allow_anonymous: response?.allow_anonymous,
+              allow_anonymous: response.allow_anonymous,
             });
           }
 
           if (
-            response?.allow_anonymous ||
-            response?.mentor_visibility === MENTOR_VISIBILITY_VALUES.ANYONE
+            response.allow_anonymous ||
+            response.mentor_visibility === MENTOR_VISIBILITY_VALUES.ANYONE
           ) {
             return false;
           } else {

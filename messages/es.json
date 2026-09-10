@@ -236,6 +236,7 @@
     "integrations": "Integraciones",
     "monetization": "Monetización",
     "advanced": "Avanzado",
+    "memory": "Memoria",
     "support": "Soporte",
     "accountTabOrganization": "Organización",
     "accountTabBilling": "Facturación",
@@ -244,6 +245,7 @@
     "accountDescIntegrations": "Gestiona tus integraciones con otros servicios.",
     "accountDescMonetization": "Configura muros de pago, precios e ingresos.",
     "accountDescAdvanced": "Configura los ajustes avanzados de la organización.",
+    "accountDescMemory": "Gestiona las memorias globales de los usuarios y las memorias de los agentes.",
     "accountDescBilling": "Gestiona tu facturación y suscripción.",
     "awaitingPermission": "Esperando tu permiso"
   },
@@ -536,6 +538,20 @@
   "chatStopStreamingButton": {
     "stopStreaming": "Detener transmisión",
     "stopStreamingTooltip": "Detener transmisión"
+  },
+  "chatWorkingIndicator": {
+    "thinking": "Pensando…",
+    "usingTool": "Usando {toolName}…",
+    "writing": "Escribiendo respuesta…",
+    "workflow": "Ejecutando flujo de trabajo…",
+    "workflowDetail": "{detail}…",
+    "processingFile": "Procesando {fileName}…",
+    "processingFileProgress": "Procesando {fileName} ({current} de {total})…",
+    "generatingImage": "Generando imagen…",
+    "generatingVideo": "Generando video…",
+    "working": "Trabajando…",
+    "stillWorking": "Sigue trabajando: las tareas largas pueden tardar unos minutos.",
+    "tooltip": "Trabajando…: el agente todavía está procesando tu mensaje. Las tareas largas tardan un rato, sobre todo cuando el agente usa herramientas, busca o genera contenido. Puedes dejar la pestaña abierta y ver el progreso, o pulsar Detener para cancelar y recuperar el control."
   },
   "common": {
     "cancel": "Cancelar",

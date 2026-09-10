@@ -64,7 +64,14 @@ const deploymentId =
   process.env.APP_VERSION ||
   process.env.npm_package_version ||
   'dev';
-const assetCdnBase = process.env.NEXT_PUBLIC_ASSET_CDN?.replace(/\/+$/, '');
+// Accept the CDN host with OR without a scheme ("assets.ibl.ai" or
+// "https://assets.ibl.ai"). Next requires assetPrefix to be an absolute URL
+// (or leading-slash), so default a bare host to https:// — otherwise the build
+// fails with "assetPrefix must start with a leading slash or be an absolute URL".
+let assetCdnBase = process.env.NEXT_PUBLIC_ASSET_CDN?.trim().replace(/\/+$/, '');
+if (assetCdnBase && !/^https?:\/\//i.test(assetCdnBase)) {
+  assetCdnBase = `https://${assetCdnBase}`;
+}
 const cdnAssetPrefix = assetCdnBase
   ? `${assetCdnBase}/apps/${appName}/${deploymentId}`
   : '';
@@ -98,6 +105,12 @@ const nextConfig: NextConfig = {
   },
   images: {
     remotePatterns,
+  },
+  experimental: {
+    // Tree-shake barrel exports from these heavy libraries so only what's
+    // actually used is bundled. Next optimizes a built-in list by default;
+    // these are large ones this app uses that aren't covered.
+    optimizePackageImports: ['recharts', 'date-fns', 'lucide-react'],
   },
   // Prevent CDN/browser from serving stale HTML that references old chunk hashes.
   // Static assets under /_next/static/ already get immutable caching from Next.js.

@@ -364,15 +364,17 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
       30_000,
     );
 
-    // Match either label. "Thinking" holds only while the reasoning phase is
-    // still streaming, and that window can close before the first poll — so
-    // pinning to it raced the model rather than testing the app. What this
-    // journey uniquely proves is that gpt-5's reasoning deltas reach the DOM at
-    // all; the Thinking/Thought and bounce-dot rendering is covered off props by
+    // The trigger ALWAYS reads "Thought": #2217 moved the word "Thinking" to
+    // the separate shimmering working indicator so the two surfaces never say
+    // the same thing at once, and the row conveys liveness with bouncing dots
+    // instead of relabelling. Deliberately not asserting those dots here —
+    // they only show while the reasoning phase is live, a window that can close
+    // before the first poll, which is the race this journey was already fixed
+    // for once. Dot rendering is covered off props by
     // components/chat/__tests__/reasoning-section.test.tsx.
     const reasoningChip = chatPage.aiMessages
       .last()
-      .getByRole('button', { name: /thinking|thought/i });
+      .getByRole('button', { name: /thought/i });
     await expect(reasoningChip).toBeVisible({ timeout: 30_000 });
 
     // Wait for streaming to complete
@@ -527,10 +529,10 @@ test.describe('Journey 52: Tool Call Indicator and Reasoning Section', () => {
 
     const lastAIMessage = chatPage.aiMessages.last();
 
-    // Match either label — see the reasoning-section test above for why this is
-    // not pinned to "Thinking".
+    // Trigger always reads "Thought" — see the comment on the same locator in
+    // the test above.
     const reasoningChip = lastAIMessage.getByRole('button', {
-      name: /thinking|thought/i,
+      name: /thought/i,
     });
     await expect(reasoningChip).toBeVisible({ timeout: 30_000 });
 
