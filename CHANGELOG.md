@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.142.4](https://github.com/iblai/os/compare/v0.142.3...v0.142.4) (2026-09-10)
+
+### Bug Fixes
+
+* **deploy:** default a scheme-less NEXT_PUBLIC_ASSET_CDN to https:// ([05cb3b0](https://github.com/iblai/os/commit/05cb3b07759dd25b08e8ebfee8d9fa933c0465d1))
+
+### Performance
+
+* **sentry:** cut Session Replay recording cost and trace sampling ([a0908f0](https://github.com/iblai/os/commit/a0908f03cb01f78a64a0aa871443f340cd22b35a))
+
 ## [0.142.3](https://github.com/iblai/os/compare/v0.142.2...v0.142.3) (2026-09-09)
 
 ### Bug Fixes
