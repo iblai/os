@@ -2,8 +2,8 @@
   "version": 2,
   "lastUpdated": "2026-09-08",
   "summary": {
-    "totalCheckpoints": 712,
-    "coveredCheckpoints": 670,
+    "totalCheckpoints": 718,
+    "coveredCheckpoints": 676,
     "deprecatedCheckpoints": 16,
     "notReproducibleCheckpoints": 15,
     "pendingCheckpoints": 11,
@@ -2092,7 +2092,8 @@
       "spec": "32-multi-tenancy-advertising-and-auth-customization.spec.ts",
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/page.tsx",
-        "app/sso-login/page.tsx"
+        "app/sso-login/page.tsx",
+        "app/sso-login-complete/page.tsx"
       ],
       "checkpoints": [
         {
@@ -2151,6 +2152,26 @@
           "status": "deprecated",
           "deprecatedIn": "#1431",
           "deprecatedReason": "MyMentorsModal removed; sidebar New Mentor flow covered by mt-01"
+        },
+        {
+          "id": "mt-12",
+          "description": "Direct-URL redirect invariant: unauthenticated visit to a mentor URL lands on that exact tenant+mentor after login (not the default tenant)",
+          "status": "covered"
+        },
+        {
+          "id": "mt-13",
+          "description": "Direct-URL redirect invariant: visiting a second tenant's mentor URL while signed into a different tenant lands on that exact tenant+mentor (locks in the resolveSsoRedirectPath fix)",
+          "status": "covered"
+        },
+        {
+          "id": "mt-14",
+          "description": "Direct-URL redirect invariant: visiting a mentor URL while already signed into that same tenant lands there directly with no auth/tenant-switch detour",
+          "status": "covered"
+        },
+        {
+          "id": "mt-15",
+          "description": "Direct-URL redirect invariant: a user with no access to the visited tenant is denied (routed to /error/403) rather than silently redirected to the default or visited tenant",
+          "status": "covered"
         }
       ]
     },

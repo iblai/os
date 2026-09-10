@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-09-08 | 709 checkpoints (670 covered, 8 pending/fixme, 15 not-reproducible in default env, 16 deprecated) | 75 journeys (74 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-09-08 | 718 checkpoints (676 covered, 11 pending/fixme, 15 not-reproducible in default env, 16 deprecated) | 75 journeys (74 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -591,7 +591,7 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 
 ---
 
-## Journey 32: Multi-Tenancy, Advertising & Auth Customization (11 checkpoints; 1 deprecated) — `journeys/32-multi-tenancy-advertising-and-auth-customization.spec.ts`
+## Journey 32: Multi-Tenancy, Advertising & Auth Customization (15 checkpoints; 1 deprecated) — `journeys/32-multi-tenancy-advertising-and-auth-customization.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/modals/create-mentor-modal.tsx`, `app/sso-login/page.tsx`
 
@@ -606,6 +606,10 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 - [x] Help Center toggle controls dropdown and embed visibility _(serial mode added to prevent parallel browser interference)_
 - [x] Help Center URL updates correctly in the dropdown and embed menu _(serial mode added)_
 - [x] ~~Enterprise tenant: new mentor can be created from the My Mentors dialog~~ _(deprecated in #1431 — MyMentorsModal removed; covered by sidebar dialog flow above)_
+- [x] Direct-URL redirect invariant: an unauthenticated visit to a mentor URL lands on that exact tenant+mentor after logging in, not the default tenant _(env-gated: set SECOND_TENANT_MENTOR_URL; locks in the `resolveSsoRedirectPath` fix in `lib/sso-redirect.ts`)_
+- [x] Direct-URL redirect invariant: visiting a second tenant's mentor URL while signed into a different tenant lands on that exact tenant+mentor _(env-gated: SECOND_TENANT_MENTOR_URL)_
+- [x] Direct-URL redirect invariant: visiting a mentor URL while already signed into that same tenant lands there directly with no auth/tenant-switch detour
+- [x] Direct-URL redirect invariant: a user with no access to the visited tenant is denied (routed to `/error/403`), not silently redirected to the default or visited tenant _(env-gated: set NO_ACCESS_TENANT_MENTOR_URL to a tenant with self-join disabled; see the discovery notes in the spec — there is no 409 "no access" page in the current codebase)_
 
 ---
 
