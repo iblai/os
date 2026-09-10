@@ -236,6 +236,7 @@
     "integrations": "Integraciones",
     "monetization": "Monetización",
     "advanced": "Avanzado",
+    "memory": "Memoria",
     "support": "Soporte",
     "accountTabOrganization": "Organización",
     "accountTabBilling": "Facturación",
@@ -244,6 +245,7 @@
     "accountDescIntegrations": "Gestiona tus integraciones con otros servicios.",
     "accountDescMonetization": "Configura muros de pago, precios e ingresos.",
     "accountDescAdvanced": "Configura los ajustes avanzados de la organización.",
+    "accountDescMemory": "Gestiona las memorias globales de los usuarios y las memorias de los agentes.",
     "accountDescBilling": "Gestiona tu facturación y suscripción.",
     "awaitingPermission": "Esperando tu permiso"
   },

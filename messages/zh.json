@@ -236,6 +236,7 @@
     "integrations": "集成",
     "monetization": "变现",
     "advanced": "高级",
+    "memory": "记忆",
     "support": "支持",
     "accountTabOrganization": "组织",
     "accountTabBilling": "账单",
@@ -244,6 +245,7 @@
     "accountDescIntegrations": "管理与其他服务的集成。",
     "accountDescMonetization": "配置付费墙、定价和收入。",
     "accountDescAdvanced": "配置组织的高级设置。",
+    "accountDescMemory": "管理用户的全局记忆和智能体记忆。",
     "accountDescBilling": "管理您的账单和订阅。",
     "awaitingPermission": "等待你的许可"
   },

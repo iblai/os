@@ -182,14 +182,46 @@ export function setupChunkErrorRecovery(): () => void {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function isChunkLoadError(error: unknown): boolean {
+export function isChunkLoadError(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false;
   const e = error as { name?: string; message?: string };
+  if (e.name === 'ChunkLoadError') return true;
+  const msg = typeof e.message === 'string' ? e.message : '';
   return (
-    e.name === 'ChunkLoadError' ||
-    (typeof e.message === 'string' && e.message.includes('ChunkLoadError')) ||
-    (typeof e.message === 'string' && e.message.includes('Loading chunk'))
+    msg.includes('ChunkLoadError') ||
+    msg.includes('Loading chunk') || // webpack JS chunk
+    msg.includes('Loading CSS chunk') || // webpack CSS chunk
+    // Native dynamic import() failures — Chrome/Firefox and Safari phrasings.
+    msg.includes('Failed to fetch dynamically imported module') ||
+    msg.includes('error loading dynamically imported module') ||
+    msg.includes('Importing a module script failed')
   );
+}
+
+/** Max automatic reloads before we stop and show a recoverable error UI. */
+export const MAX_CHUNK_RELOADS = MAX_RELOADS;
+
+/**
+ * True once the session's auto-reload budget for chunk errors is spent. Error
+ * boundaries render a proper "please reload" UI instead of reloading again.
+ */
+export function chunkReloadsExhausted(): boolean {
+  return getReloadCount() >= MAX_RELOADS;
+}
+
+/**
+ * Consume one auto-reload from the shared budget and hard-reload the page to
+ * fetch fresh HTML (current chunk hashes). Returns false without reloading once
+ * the budget is spent — the caller should then render an error instead of
+ * looping. Shares the counter with the window-level fallback, so both paths
+ * honor a single budget; a clean load clears it (see setupChunkErrorRecovery).
+ */
+export function reloadForChunkError(): boolean {
+  if (typeof window === 'undefined') return false;
+  if (getReloadCount() >= MAX_RELOADS) return false;
+  setReloadCount(getReloadCount() + 1);
+  window.location.reload();
+  return true;
 }
 
 function getReloadCount(): number {

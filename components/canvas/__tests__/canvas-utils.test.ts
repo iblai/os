@@ -113,6 +113,25 @@ describe('Canvas Utils', () => {
     it('should handle whitespace-only content', () => {
       expect(normalizeContentToMarkdown('   ')).toBe('');
     });
+
+    // Regression: csv artifacts used to reach the editor as raw comma-separated
+    // lines, which markdown renders as a single paragraph of plain text.
+    it('renders csv/tsv content as a markdown table when given the extension', () => {
+      const table =
+        '| <samp>a</samp> | <samp>b</samp> |\n| --- | --- |\n| <samp>1</samp> | <samp>2</samp> |';
+      expect(normalizeContentToMarkdown('a,b\n1,2\n', 'csv')).toBe(table);
+      expect(normalizeContentToMarkdown('a\tb\n1\t2', 'tsv')).toBe(table);
+    });
+
+    it('leaves comma-separated prose alone without a delimited extension', () => {
+      expect(normalizeContentToMarkdown('a,b\n1,2')).toBe('a,b\n1,2');
+      expect(normalizeContentToMarkdown('a,b\n1,2', 'md')).toBe('a,b\n1,2');
+    });
+
+    it('does not re-convert content that is already a table', () => {
+      const table = '| a | b |\n| --- | --- |\n| 1 | 2 |';
+      expect(normalizeContentToMarkdown(table, 'csv')).toBe(table);
+    });
   });
 
   describe('getInitialEditorContent', () => {
@@ -130,6 +149,13 @@ describe('Canvas Utils', () => {
 
     it('should convert HTML to markdown', () => {
       expect(getInitialEditorContent('<div>content</div>')).toBe('content');
+    });
+
+    it('renders csv content as a table when given the extension', () => {
+      expect(getInitialEditorContent('a,b\n1,2', 'csv')).toBe(
+        '| <samp>a</samp> | <samp>b</samp> |\n| --- | --- |\n| <samp>1</samp> | <samp>2</samp> |',
+      );
+      expect(getInitialEditorContent('a,b\n1,2')).toBe('a,b\n1,2');
     });
 
     it('should return trimmed content for non-HTML', () => {

@@ -886,6 +886,12 @@ const LINKIFY_SKIP_TAGS = new Set([
   'A',
   'CODE',
   'PRE',
+  // <samp> is literal sample output. The canvas wraps csv/tsv cells in it
+  // (components/canvas/csv-table-utils.ts) so data like a run id
+  // `2026-09-08_1109` is neither turned into a subscript nor into a tel:
+  // link — both rewrites drop characters and then get re-applied on every
+  // save, growing the cell each time.
+  'SAMP',
   'SCRIPT',
   'STYLE',
   'TEXTAREA',
