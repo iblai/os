@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.142.6](https://github.com/iblai/os/compare/v0.142.5...v0.142.6) (2026-09-10)
+
+### CI
+
+* build a PR test image on demand, without the e2e suite ([ede4100](https://github.com/iblai/os/commit/ede4100e7bf61ad8a1f51964e44fce711da94af5))
+* let the PR image builder take an explicit ref ([589b6f5](https://github.com/iblai/os/commit/589b6f5b0f2d64114f977b59f6f2253662064722))
+
 ## [0.142.5](https://github.com/iblai/os/compare/v0.142.4...v0.142.5) (2026-09-10)
 
 ### Bug Fixes
