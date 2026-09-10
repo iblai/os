@@ -1,5 +1,65 @@
 # Changelog
 
+## [0.142.5](https://github.com/iblai/os/compare/v0.142.4...v0.142.5) (2026-09-10)
+
+### Bug Fixes
+
+- **tenant-switch:** complete auth handoff and pull in SDK loader-hang fix ([cf8c48c](https://github.com/iblai/os/commit/cf8c48caeb1ed28e98625e9ede7b9a59ec4b7895))
+
+## [0.142.4](https://github.com/iblai/os/compare/v0.142.3...v0.142.4) (2026-09-10)
+
+### Bug Fixes
+
+- **deploy:** default a scheme-less NEXT_PUBLIC_ASSET_CDN to https:// ([05cb3b0](https://github.com/iblai/os/commit/05cb3b07759dd25b08e8ebfee8d9fa933c0465d1))
+
+### Performance
+
+- **sentry:** cut Session Replay recording cost and trace sampling ([a0908f0](https://github.com/iblai/os/commit/a0908f03cb01f78a64a0aa871443f340cd22b35a))
+
+## [0.142.3](https://github.com/iblai/os/compare/v0.142.2...v0.142.3) (2026-09-09)
+
+### Bug Fixes
+
+- **e2e:** adding test fixme for history test ([4249278](https://github.com/iblai/os/commit/42492786cf479c716faa369d068d25f6e665e0b5))
+- **mentor:** adding fixes for history, memory and canvas ([9e01e2c](https://github.com/iblai/os/commit/9e01e2ca04c967e372f4dff64c729048612786b3))
+
+## [0.142.2](https://github.com/iblai/os/compare/v0.142.1...v0.142.2) (2026-09-09)
+
+### Chores
+
+- bump iblai-js to 2.9.7 ([5813323](https://github.com/iblai/os/commit/58133234470efdf8e277ff726f896fa8469b5971))
+
+## [0.142.1](https://github.com/iblai/os/compare/v0.142.0...v0.142.1) (2026-09-09)
+
+### Bug Fixes
+
+- **chunk-error:** auto-reload N times then show a recoverable error page ([5df329b](https://github.com/iblai/os/commit/5df329bdfd7a4c0535e54f354d3a69cac0be64c2))
+
+## [0.142.0](https://github.com/iblai/os/compare/v0.141.1...v0.142.0) (2026-09-08)
+
+### Features
+
+- agent based lesson completion > iblai-js bump ([3f41c06](https://github.com/iblai/os/commit/3f41c06f175f997e4dae297879f4c8f235495263))
+
+### Chores
+
+- untrack .claude/worktrees scratch dirs ([98bcd5d](https://github.com/iblai/os/commit/98bcd5d3084033c9d869704311e096edad619bc8))
+
+## [0.140.6-patch-1](https://github.com/iblai/os/compare/v0.141.1...v0.142.0) (2026-09-04)
+
+### Features
+
+- agent based lesson completion > version patch org ([0b119c2](https://github.com/iblai/os/commit/0b119c2f11089a31ef5692f3bc87d8f9c13c0ae5))
+
+## [0.139.0-patch-1](https://github.com/iblai/os/compare/v0.141.1...v0.142.0) (2026-09-03)
+
+### Features
+
+- agent based lesson completion ([0c80fd1](https://github.com/iblai/os/commit/0c80fd158521dddaffb50e473a5a6c28da67927c))
+- agent based lesson completion ([e99baa5](https://github.com/iblai/os/commit/e99baa5dae9221251e5120714cd9f62815e96980))
+- agent based lesson completion > iblai-js bump ([638a228](https://github.com/iblai/os/commit/638a22880cd5d7a642424d531ce476280b897e01))
+- agent based lesson completion > version patch org ([6e906e7](https://github.com/iblai/os/commit/6e906e7e85f47e44c5ef20fa9d7c2a3336e3a103))
+
 ## [0.141.1](https://github.com/iblai/os/compare/v0.141.0...v0.141.1) (2026-09-07)
 
 ### Bug Fixes

@@ -236,6 +236,7 @@
     "integrations": "Integrations",
     "monetization": "Monetization",
     "advanced": "Advanced",
+    "memory": "Memory",
     "support": "Support",
     "accountTabOrganization": "Organization",
     "accountTabBilling": "Billing",
@@ -244,6 +245,7 @@
     "accountDescIntegrations": "Manage your integrations with other services.",
     "accountDescMonetization": "Configure paywalls, pricing, and revenue.",
     "accountDescAdvanced": "Configure advanced organization settings.",
+    "accountDescMemory": "Manage user global memories and agent memories.",
     "accountDescBilling": "Manage your billing and subscription.",
     "awaitingPermission": "Waiting for your permission"
   },

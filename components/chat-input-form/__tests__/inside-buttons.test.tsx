@@ -5,6 +5,7 @@ import {
   fireEvent,
   waitFor,
   act,
+  within,
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { InsideButtons } from '../inside-buttons';
@@ -1704,7 +1705,7 @@ describe('InsideButtons', () => {
         'skills-menu-item-web-research',
       );
       expect(webItem).toHaveTextContent('Web Research');
-      // Rows show the slash-invocation form next to the name (mirrors the
+      // Rows show the slash-invocation form beneath the name (mirrors the
       // `/` picker) …
       expect(webItem).toHaveTextContent('/web-research');
       // … but no descriptions — those stay in the `/` picker, which has
@@ -1718,6 +1719,46 @@ describe('InsideButtons', () => {
 
       await user.click(webItem);
       expect(onToggleSkill).toHaveBeenCalledWith(skills[0]);
+    });
+
+    it('stacks the full skill name over its slug instead of truncating the name beside it', async () => {
+      const user = userEvent.setup();
+      render(
+        <InsideButtons
+          {...defaultProps}
+          skills={[
+            {
+              unique_id: 'long',
+              name: 'canvas-course-builder-with-a-very-long-name',
+              slug: 'canvas-course-builder',
+              enabled: true,
+            },
+          ]}
+          activeSkillSlugs={new Set()}
+          onToggleSkill={vi.fn()}
+        />,
+      );
+
+      await user.click(screen.getByTestId('skills-menu-trigger'));
+      const item = await screen.findByTestId(
+        'skills-menu-item-canvas-course-builder',
+      );
+      const name = within(item).getByTestId('skills-menu-item-name');
+      const slug = within(item).getByTestId('skills-menu-item-slug');
+
+      // The name used to be `truncate`d next to the slug, which clipped long
+      // names to "canvas-course-b…". It now wraps in full …
+      expect(name).toHaveTextContent(
+        'canvas-course-builder-with-a-very-long-name',
+      );
+      expect(name).not.toHaveClass('truncate');
+      // … with the slug on its own line underneath (column, not row).
+      expect(slug).toHaveTextContent('/canvas-course-builder');
+      expect(name.parentElement).toBe(slug.parentElement);
+      expect(name.parentElement).toHaveClass('flex-col');
+      expect(
+        name.compareDocumentPosition(slug) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
     });
   });
 });
