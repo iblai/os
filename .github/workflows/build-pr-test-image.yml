@@ -1,0 +1,92 @@
+name: Build PR test image
+
+# Build ONE PR's SPA image on demand, without running the e2e suite.
+#
+# WHY THIS EXISTS: until now the only way to get a PR image was to apply `run-tests`, which also
+# claims a shared stg environment for ~2h of Playwright. Teams who just want a build to deploy
+# somewhere had no way to ask for one.
+#
+# The image is built by the SAME reusable the PR e2e uses, into the SAME ECR repo, with the SAME
+# `pr-<number>-<sha>` tag. Nothing about the artifact is special — only the trigger is.
+#
+# Deploy it with "Deploy PR test image" in iblai/iblai-deploy-ops.
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to build (e.g. 505)'
+        type: string
+        required: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  gate:
+    name: "gate"
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.g.outputs.sha }}
+    steps:
+      - id: g
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR:       ${{ inputs.pr_number }}
+        run: |
+          set -euo pipefail
+          DATA=$(gh pr view "$PR" --repo "${{ github.repository }}" \
+                   --json headRefOid,headRepositoryOwner,isCrossRepository,state,title)
+          FORK=$(printf '%s' "$DATA" | python3 -c 'import json,sys; print(json.load(sys.stdin)["isCrossRepository"])')
+          # A fork PR's head is untrusted code, and this job holds registry credentials. The PR e2e
+          # gate refuses forks for the same reason; refusing here keeps one rule, not two.
+          if [ "$FORK" = "True" ]; then
+            echo "::error::PR $PR is from a fork. Fork PRs are not built here (untrusted code with registry credentials)."
+            exit 1
+          fi
+          SHA=$(printf '%s' "$DATA" | python3 -c 'import json,sys; print(json.load(sys.stdin)["headRefOid"])')
+          STATE=$(printf '%s' "$DATA" | python3 -c 'import json,sys; print(json.load(sys.stdin)["state"])')
+          TITLE=$(printf '%s' "$DATA" | python3 -c 'import json,sys; print(json.load(sys.stdin)["title"])')
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "PR $PR ($STATE): $TITLE"
+          echo "head: $SHA"
+
+  build:
+    name: "build"
+    needs: gate
+    uses: ./.github/workflows/reusable-pr-docker-build.yml
+    secrets: inherit
+    with:
+      dockerfile-path: Dockerfile
+      build-context: .
+      # Same repo and tag shape as the release and PR-e2e images.
+      image-name: iblai-os-spa
+      registry-type: ecr
+      event-name: pull_request
+      pr-number: ${{ inputs.pr_number }}
+      # Without this, checkout would take the default branch and the image would be tagged for a
+      # PR whose code it does not contain.
+      ref: ${{ needs.gate.outputs.sha }}
+
+  summary:
+    name: "summary"
+    needs: [gate, build]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          {
+            echo "### PR test image"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| PR | \`#${{ inputs.pr_number }}\` |"
+            echo "| head | \`${{ needs.gate.outputs.sha }}\` |"
+            echo "| image | \`${{ needs.build.outputs.image-uri }}\` |"
+            echo "| tag | \`${{ needs.build.outputs.image-tag }}\` |"
+            echo "| build | **${{ needs.build.result }}** |"
+            echo ""
+            echo "Deploy it with **Deploy PR test image** in \`iblai/iblai-deploy-ops\`:"
+            echo "source_repo \`os\` · pr_number \`${{ inputs.pr_number }}\` · target_env of your choice."
+          } >> "$GITHUB_STEP_SUMMARY"
