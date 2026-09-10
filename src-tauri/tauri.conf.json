@@ -125,7 +125,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDVFMUFFMUYwNThGOTVBQzgKUldUSVd2bFk4T0VhWHBIbWp3ditUTkVTbmxGUnRNY2p6cDA2YUhCNXJtSVhwYVlDUzNjcFd2M28K",
       "endpoints": [
-        "https://github.com/iblai/os/releases/latest/download/latest-{{target}}-{{arch}}.json"
+        "https://github.com/iblai/os/releases/download/app-latest/latest-{{target}}-{{arch}}.json"
       ]
     }
   }

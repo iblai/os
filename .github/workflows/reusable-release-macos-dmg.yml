@@ -146,7 +146,8 @@ jobs:
           # secret the build still succeeds — updater artifacts are simply
           # unsigned/absent and the manifest step below skips.
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ''
+          # Empty unless the key was generated with a password (then set the secret).
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           args: ${{ inputs.tauri_args }}
 
@@ -232,9 +233,9 @@ jobs:
 
       # Release builds only (never tenant-locked ones — those must not feed the
       # generic updater feed): publish the in-app updater artifacts. The apps
-      # poll `releases/latest/download/latest-darwin-<arch>.json`, so uploading
-      # the manifests to this release makes them live the moment the release
-      # is newest. Skips quietly when the signing secret isn't configured yet.
+      # poll the rolling `app-latest` release for latest-darwin-<arch>.json;
+      # the signed bundle lives on this version's release and the manifests are
+      # copied to both. Skips quietly when the signing secret isn't configured yet.
       - name: Publish updater manifests (latest-darwin-*.json)
         if: ${{ inputs.release_tag != '' && inputs.ibl_tenant == '' }}
         env:
@@ -275,4 +276,16 @@ jobs:
           done
           gh release upload "$RELEASE_TAG" "$asset" "${asset}.sig" \
             latest-darwin-aarch64.json latest-darwin-x86_64.json --clobber
-          echo "Updater manifests published for $ver"
+
+          # Rolling "app-latest" release — the FIXED URL the apps poll
+          # (tauri.conf.json > plugins.updater.endpoints). GitHub's
+          # releases/latest is simply the most recently created release, which
+          # here is usually a web v* release, so it cannot serve the feed.
+          # The manifests still point at this version's assets above.
+          if ! gh release view app-latest >/dev/null 2>&1; then
+            gh release create app-latest --latest=false \
+              --title "ibl.ai desktop — in-app updater feed" \
+              --notes "Rolling updater manifests for the desktop apps. Do not delete: every installed app polls this release for updates." || true
+          fi
+          gh release upload app-latest latest-darwin-aarch64.json latest-darwin-x86_64.json --clobber
+          echo "Updater manifests published for $ver (app-latest feed updated)"

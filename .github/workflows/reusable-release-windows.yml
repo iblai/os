@@ -181,7 +181,8 @@ jobs:
           # matching pubkey is pinned in tauri.conf.json. Without the secret
           # the build still succeeds — the manifest step below just skips.
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ''
+          # Empty unless the key was generated with a password (then set the secret).
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           # MSI/WiX doesn't support arm64, so restrict to NSIS (the only Tauri
           # bundle type that builds for both x64 and arm64). tauri-action reads
@@ -249,7 +250,8 @@ jobs:
 
       # Release builds only (never tenant-locked ones — those must not feed
       # the generic updater feed): publish this arch's in-app updater
-      # manifest. The apps poll latest-windows-<arch>.json; each matrix leg
+      # manifest. The apps poll the rolling `app-latest` release for
+      # latest-windows-<arch>.json; each matrix leg
       # writes only its own file, so the concurrent legs never race. Skips
       # quietly when the signing secret isn't configured yet.
       - name: Publish updater manifest (latest-windows-${{ matrix.arch }})
@@ -285,7 +287,19 @@ jobs:
             '{version: $version, pub_date: $date, platforms: {($platform): {signature: $sig, url: $url}}}' \
             > "latest-windows-${arch}.json"
           gh release upload "$RELEASE_TAG" "$sig" "latest-windows-${arch}.json" --clobber
-          echo "Updater manifest published for windows-${arch} $ver"
+
+          # Rolling "app-latest" release — the FIXED URL the apps poll
+          # (tauri.conf.json > plugins.updater.endpoints). GitHub's
+          # releases/latest is simply the most recently created release, which
+          # here is usually a web v* release, so it cannot serve the feed.
+          # The manifests still point at this version's assets above.
+          if ! gh release view app-latest >/dev/null 2>&1; then
+            gh release create app-latest --latest=false \
+              --title "ibl.ai desktop — in-app updater feed" \
+              --notes "Rolling updater manifests for the desktop apps. Do not delete: every installed app polls this release for updates." || true
+          fi
+          gh release upload app-latest "latest-windows-${arch}.json" --clobber
+          echo "Updater manifest published for windows-${arch} $ver (app-latest feed updated)"
 
       # Tenant-locked build: tenant-suffix this arch's installer, publish it to a
       # per-tenant release (app-v<version>-<tenant>, shared with the other arch and
