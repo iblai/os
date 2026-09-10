@@ -199,6 +199,10 @@ vi.mock('../edit-mentor-modal/hooks/useEmbedTab', () => ({
 }));
 
 const createEmbedTabMock = (overrides = {}) => ({
+  // #2476: "Who can chat" is read from the mentor settings by the hook, not
+  // from an embed form field. Anonymous chat hides the website-URL / token
+  // controls, which is what this harness's minimal form mock supports.
+  allowAnonymous: true,
   form: {
     handleSubmit: vi.fn(),
     getFieldValue: vi.fn(),
@@ -1034,7 +1038,7 @@ describe('EmbedTab Component', () => {
   });
 
   describe('Form Elements', () => {
-    it('renders mentor visibility select', () => {
+    it('renders the form selects', () => {
       render(<EmbedTab />);
 
       // Check that select components are rendered

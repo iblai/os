@@ -18,13 +18,14 @@ vi.mock('@/lib/config', () => ({
   },
 }));
 
-const settings: EmbedFormValues = {
+// `allow_anonymous` is no longer an embed-form field (#2476); the hook reads it
+// from the persisted mentor settings and passes it in alongside the form values.
+const settings: EmbedFormValues & { allow_anonymous: boolean } = {
   custom_css: '',
   description: '',
   website_url: '',
   mode: 'default',
   allow_anonymous: false,
-  mentor_visibility: null,
   is_context_aware: false,
   safety_disclaimer: false,
   sso: false,
@@ -37,9 +38,6 @@ const settings: EmbedFormValues = {
   },
   slug: 'my-mentor',
   icon_selection: 'default',
-  embed_show_attachment: true,
-  embed_show_voice_call: true,
-  embed_show_voice_record: true,
   show_catalogue: true,
   starter_prompts: 'guided_prompt',
   strip_page_content_html: false,
