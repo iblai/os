@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-09-08",
+  "lastUpdated": "2026-09-10",
   "summary": {
-    "totalCheckpoints": 712,
-    "coveredCheckpoints": 670,
+    "totalCheckpoints": 723,
+    "coveredCheckpoints": 681,
     "deprecatedCheckpoints": 16,
     "notReproducibleCheckpoints": 15,
     "pendingCheckpoints": 11,
     "percent": 100,
-    "totalJourneys": 75,
-    "activeJourneys": 74
+    "totalJourneys": 76,
+    "activeJourneys": 75
   },
   "journeys": [
     {
@@ -988,7 +988,8 @@
         "app/platform/[tenantKey]/[mentorId]/notifications/page.tsx",
         "app/platform/[tenantKey]/[mentorId]/notifications/[notificationId]/page.tsx",
         "app/platform/[tenantKey]/notifications/page.tsx",
-        "app/platform/[tenantKey]/notifications/[notificationId]/page.tsx"
+        "app/platform/[tenantKey]/notifications/[notificationId]/page.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx"
       ],
       "checkpoints": [
         {
@@ -1019,6 +1020,11 @@
         {
           "id": "notif-06",
           "description": "Alerts tab auto-opens when inbox is empty",
+          "status": "covered"
+        },
+        {
+          "id": "notif-07",
+          "description": "Navbar drops the chat-only chrome (LLM Model Selector, on-device model badge, privacy chip) on the notifications inbox \u2014 tenant-scoped, per-agent and single-notification routes alike; an inbox is not a chat surface",
           "status": "covered"
         }
       ]
@@ -4546,6 +4552,65 @@
           "id": "upi-10",
           "description": "sanitizePromptParam() (iblai-platform#2164): oversized ?prompt= (>4000 chars) is truncated to MAX_PROMPT_PARAM_LENGTH then re-trimmed; unit-covered in lib/__tests__/sanitize-prompt-param.test.ts \u2014 not e2e-reproducible without flake risk from very long query strings (URL length limits, page.goto/typing cost)",
           "status": "not-reproducible"
+        }
+      ]
+    },
+    {
+      "id": "tenant-analytics",
+      "name": "Tenant-wide Analytics",
+      "spec": "74-tenant-analytics.spec.ts",
+      "sourceFiles": [
+        "app/platform/[tenantKey]/analytics/page.tsx",
+        "app/platform/[tenantKey]/analytics/users/page.tsx",
+        "app/platform/[tenantKey]/analytics/topics/page.tsx",
+        "app/platform/[tenantKey]/analytics/transcripts/page.tsx",
+        "app/platform/[tenantKey]/analytics/memory/page.tsx",
+        "app/platform/[tenantKey]/analytics/financial/page.tsx",
+        "app/platform/[tenantKey]/analytics/audit/page.tsx",
+        "app/platform/[tenantKey]/analytics/reports/page.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx",
+        "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "tanl-01",
+          "description": "Tenant-wide analytics overview (/platform/{tenantKey}/analytics, no agent segment) renders the tab strip inside the platform shell \u2014 the sidebar proves the layout supplies the shell itself",
+          "status": "covered"
+        },
+        {
+          "id": "tanl-02",
+          "description": "Clicking a tab from the tenant-wide overview routes to /platform/{tenantKey}/analytics/{tab} and never reintroduces an agent id",
+          "status": "covered"
+        },
+        {
+          "id": "tanl-03",
+          "description": "Tenant-wide Users, Topics, Transcripts and Costs tabs are reachable by direct URL",
+          "status": "covered"
+        },
+        {
+          "id": "tanl-04",
+          "description": "Tenant-wide Memory page loads with no agent scope (the tab opens on global / all-agent memories)",
+          "status": "covered"
+        },
+        {
+          "id": "tanl-05",
+          "description": "Tenant-wide Data Reports page loads and shows the Data Reports tab",
+          "status": "covered"
+        },
+        {
+          "id": "tanl-06",
+          "description": "Tenant-wide Audit page loads \u2014 with no agent to check `view_audit_logs` against, the API is the authority and the container renders its own no-permission card on a 403",
+          "status": "covered"
+        },
+        {
+          "id": "tanl-07",
+          "description": "Sidebar Analytics entry opens the tenant-wide section whether or not an agent is in the URL \u2014 the per-agent section is reached from the navbar agent dropdown instead",
+          "status": "covered"
+        },
+        {
+          "id": "tanl-08",
+          "description": "Navbar on the tenant-wide section drops the chat-only chrome (LLM Model Selector, agent dropdown, privacy chip) and shows the \"Analytics\" section title instead; the per-agent analytics page keeps full parity (Journey 65)",
+          "status": "covered"
         }
       ]
     }

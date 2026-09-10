@@ -365,6 +365,52 @@ describe('user-navigate', () => {
         );
       });
 
+      it('navigateToPlatformAnalytics - should ignore the mentorId in the URL', () => {
+        const { result } = renderHook(() => useNavigate());
+
+        result.current.navigateToPlatformAnalytics();
+
+        expect(mocked.push).toHaveBeenCalledWith(
+          '/platform/test-tenant/analytics',
+        );
+      });
+
+      it('navigateToPlatformAnalytics - should land on the given tab', () => {
+        const { result } = renderHook(() => useNavigate());
+
+        result.current.navigateToPlatformAnalytics('users');
+
+        expect(mocked.push).toHaveBeenCalledWith(
+          '/platform/test-tenant/analytics/users',
+        );
+      });
+
+      it('navigateToPlatformAnalytics - should not leave a trailing slash for an empty tab', () => {
+        const { result } = renderHook(() => useNavigate());
+
+        result.current.navigateToPlatformAnalytics('');
+
+        expect(mocked.push).toHaveBeenCalledWith(
+          '/platform/test-tenant/analytics',
+        );
+      });
+
+      it('navigateToPlatformAnalytics - should warn when tenantKey is missing', () => {
+        const consoleWarnSpy = vi
+          .spyOn(console, 'warn')
+          .mockImplementation(() => {});
+        mocked.useParams.mockReturnValue({});
+        const { result } = renderHook(() => useNavigate());
+
+        result.current.navigateToPlatformAnalytics();
+
+        expect(mocked.push).not.toHaveBeenCalled();
+        expect(consoleWarnSpy).toHaveBeenCalledWith(
+          expect.stringContaining('Cannot navigate to platform analytics'),
+        );
+        consoleWarnSpy.mockRestore();
+      });
+
       it('navigateToMentor - should navigate to new mentor and clear session cache', () => {
         const saveCachedSessionId = vi.fn();
         mocked.useLocalStorage.mockReturnValue([

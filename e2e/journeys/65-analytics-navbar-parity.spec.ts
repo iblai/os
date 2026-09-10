@@ -65,7 +65,8 @@ test.describe('Journey 65: Analytics Navbar Parity', () => {
   test.setTimeout(120_000);
 
   // Only logs in and lands on the regular chat page. Individual tests
-  // navigate to `/analytics` themselves (via `analyticsPage.goto()`) so the
+  // navigate to the agent's `/analytics` themselves (via
+  // `analyticsPage.gotoAgentAnalytics()`) so the
   // "full navbar parity" test can assert the chat-page baseline first
   // without a second `navigateToMentorApp` round-trip (that redundant
   // re-auth was the root cause of its flakiness — see below).
@@ -84,7 +85,7 @@ test.describe('Journey 65: Analytics Navbar Parity', () => {
     navbarPage,
     analyticsPage,
   }) => {
-    await analyticsPage.goto();
+    await analyticsPage.gotoAgentAnalytics();
 
     // Regression guard: before the fix this branch rendered a static
     // Avatar + name `<div>` instead of the dropdown trigger button.
@@ -125,7 +126,7 @@ test.describe('Journey 65: Analytics Navbar Parity', () => {
     // Now the analytics route — before the fix, both were hidden here
     // because `isOnChatPage` excluded `/analytics`. This is a client-side
     // SPA navigation (no re-auth), so it doesn't reintroduce the timeout.
-    await analyticsPage.goto();
+    await analyticsPage.gotoAgentAnalytics();
     await expect(page).toHaveURL(/\/analytics$/, { timeout: 15_000 });
 
     await expect(navbarPage.llmModelSelectorButton).toBeVisible({
@@ -146,7 +147,7 @@ test.describe('Journey 65: Analytics Navbar Parity', () => {
     // `/analytics`. The fix routes home first via `navigateToHome()` and
     // dispatches `chatActions.setShouldStartNewChat(true)` when not on a
     // chat route.
-    await analyticsPage.goto();
+    await analyticsPage.gotoAgentAnalytics();
     await expect(page).toHaveURL(/\/analytics$/, { timeout: 15_000 });
 
     await navbarPage.openMentorDropdown();
@@ -175,7 +176,7 @@ test.describe('Journey 65: Analytics Navbar Parity', () => {
     // `/analytics` index — `isPromptGalleryPage`/`isOnChatPage` use
     // `pathname.includes(...)`, so this also guards against a narrower
     // exact-match regression being introduced later.
-    await analyticsPage.goto();
+    await analyticsPage.gotoAgentAnalytics();
     await analyticsPage.navigateToTab('users');
     await expect(page).toHaveURL(/\/analytics\/users$/, { timeout: 15_000 });
 
@@ -195,7 +196,7 @@ test.describe('Journey 65: Analytics Navbar Parity', () => {
     // hide it on analytics exactly as it does on the regular chat page —
     // this is a client-local Redux toggle (`state.user.isInstructorMode`),
     // not a backend mutation, so no cleanup is needed.
-    await analyticsPage.goto();
+    await analyticsPage.gotoAgentAnalytics();
     await navbarPage.switchToUserMode();
 
     await expect(navbarPage.llmModelSelectorButton).toBeHidden({

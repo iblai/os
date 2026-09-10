@@ -50,6 +50,12 @@ export class AnalyticsPage {
     }
   }
 
+  /**
+   * Open analytics from the sidebar. That entry now always lands on the
+   * TENANT-WIDE section (`/platform/{tenantKey}/analytics`) — the navbar's
+   * agent picker narrows it from there. Use `gotoAgentAnalytics()` for the
+   * per-agent section.
+   */
   async goto(): Promise<void> {
     // The sidebar's "Analytics" button is a collapsible-section trigger
     // (Agents/Workflows/Chats/Projects/Analytics all collapse). The
@@ -122,5 +128,53 @@ export class AnalyticsPage {
       (url) => /\/analytics\/reports\/?$/.test(url.href),
       { timeout: 60_000 },
     );
+  }
+
+  /**
+   * Open the CURRENT agent's analytics from the navbar agent dropdown — the
+   * only click-path to the per-agent section now that the sidebar entry points
+   * at the tenant-wide one.
+   */
+  async gotoAgentAnalytics(): Promise<void> {
+    const dropdown = this.page.getByRole('button', {
+      name: 'Selected agent dropdown button',
+    });
+    await expect(dropdown).toBeVisible({ timeout: 30_000 });
+    await dropdown.click();
+    const analyticsItem = this.page
+      .getByRole('menuitem', { name: 'Analytics', exact: true })
+      .or(this.page.getByRole('button', { name: 'Analytics', exact: true }))
+      .last();
+    await expect(analyticsItem).toBeVisible({ timeout: 10_000 });
+    await analyticsItem.click();
+    await safeWaitForURL(
+      this.page,
+      (url) => {
+        const parts = url.pathname.split('/').filter(Boolean);
+        // /platform/{tenantKey}/{mentorId}/analytics — agent segment intact.
+        return parts[0] === 'platform' && parts[3] === 'analytics';
+      },
+      { timeout: 60_000 },
+    );
+  }
+
+  /**
+   * Deep-link to the tenant-wide analytics section — `/platform/{tenantKey}/
+   * analytics[/tab]`, with no mentor segment. These routes are only reachable
+   * by URL (or from the sidebar while no agent is selected), so there is no
+   * click-path equivalent of `goto()` here.
+   */
+  async gotoTenantWide(tenantKey: string, tab = ''): Promise<void> {
+    const path = `/platform/${tenantKey}/analytics${tab ? `/${tab}` : ''}`;
+    await this.page.goto(path, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60_000,
+    });
+    await safeWaitForURL(this.page, (url) => url.pathname === path, {
+      timeout: 60_000,
+    });
+    // The tab strip is the one thing `AnalyticsLayout` renders regardless of
+    // how the data queries resolve, so it is the stable "section mounted" cue.
+    await expect(this.overviewTab).toBeVisible({ timeout: 60_000 });
   }
 }

@@ -37,6 +37,28 @@ test.describe('Journey 17: Notifications — Admin', () => {
     await navigateToMentorApp(page);
   });
 
+  test('navbar drops the chat-only chrome on the notifications inbox', async ({
+    page,
+    navbarPage,
+    notificationsPage,
+  }) => {
+    const isAdmin = await checkAdminStatus(page);
+    test.skip(!isAdmin, 'The LLM Model Selector is admin-only');
+
+    // Baseline on the chat page first, so this cannot pass vacuously if the
+    // selector were hidden for an unrelated reason (local mode, learner mode).
+    await expect(navbarPage.llmModelSelectorButton).toBeVisible({
+      timeout: 15_000,
+    });
+
+    await notificationsPage.goto();
+
+    // An inbox is not a chat surface — same rule as explore/workflows.
+    await expect(navbarPage.llmModelSelectorButton).not.toBeVisible({
+      timeout: 15_000,
+    });
+  });
+
   test('admin goes to notifications page and creates a new notification', async ({
     page,
     notificationsPage,
