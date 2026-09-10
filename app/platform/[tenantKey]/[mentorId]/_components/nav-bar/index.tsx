@@ -756,7 +756,7 @@ export function NavBar() {
                 dropdown above never renders there. The section title stands in
                 for it, naming what the page is reporting on. */}
             {isTenantAnalyticsPage && (
-              <span className="pl-0 text-md font-semibold text-[#484848] md:pl-[18px]">
+              <span className="text-md pl-0 font-semibold text-[#484848] md:pl-[18px]">
                 {tHeader('analytics')}
               </span>
             )}

@@ -72,11 +72,18 @@ export default defineConfig({
     // runs unit tests without building, so collecting it here would fail on a
     // missing build rather than on anything about the code. Run it on demand
     // with `pnpm gallery`, which builds first.
+    //
+    // `.claude/**` holds Claude Code's git worktrees (`.claude/worktrees/*`,
+    // git-ignored). Each is a full sibling checkout with its own tests and
+    // node_modules; without this exclusion Vitest walks into them and runs
+    // another branch's suite against this branch's setup, failing the
+    // pre-push hook on tests that do not belong to this checkout.
     exclude: [
       ...configDefaults.exclude,
       'e2e/**',
       'e2e-tauri/**',
       'scripts/build-gallery.test.tsx',
+      '.claude/**',
     ],
     server: {
       deps: {
