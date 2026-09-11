@@ -107,6 +107,27 @@ export class LlmTab {
     providerName: string,
     modelKey: string,
   ): Promise<void> {
+    // A prior selection can leave the LLM Selection dialog open (e.g. a
+    // caller that peeked at its model rows before calling this method) —
+    // dismiss it first so the provider-card click below isn't intercepted
+    // by the dialog's interaction layer.
+    let dialogOpen = false;
+    try {
+      await this.llmSelectionDialog.waitFor({
+        state: 'visible',
+        timeout: 1_000,
+      });
+      dialogOpen = true;
+    } catch {
+      dialogOpen = false;
+    }
+    if (dialogOpen) {
+      await this.page.keyboard.press('Escape');
+      await expect(this.llmSelectionDialog).not.toBeVisible({
+        timeout: 5_000,
+      });
+    }
+
     const card = this.providerCard(providerName);
     await expect(card).toBeVisible({ timeout: 15_000 });
     await card.click();
