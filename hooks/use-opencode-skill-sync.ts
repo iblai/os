@@ -92,17 +92,40 @@ export function useOpencodeSkillSync({
   // render-time false (same pattern as inside-buttons).
   const [inTauri, setInTauri] = useState(false);
   useEffect(() => {
-    if (isTauriApp()) return setInTauri(true);
+    let cancelled = false;
+    // Skills sync is desktop-only: on Tauri mobile the paired desktop's server
+    // already carries the synced skills (remote_code_enable wires them in),
+    // and the sync commands aren't registered there — running would only
+    // raise the "skills couldn't be synced" banner on every chat.
+    const markDesktopTauri = async () => {
+      try {
+        const { platform } = await import('@tauri-apps/plugin-os');
+        const os = platform();
+        if (os === 'ios' || os === 'android') return;
+      } catch {
+        /* no OS plugin → desktop-era build */
+      }
+      if (!cancelled) setInTauri(true);
+    };
+    if (isTauriApp()) {
+      void markDesktopTauri();
+      return () => {
+        cancelled = true;
+      };
+    }
     let tries = 0;
     const t = setInterval(() => {
       if (isTauriApp()) {
-        setInTauri(true);
+        void markDesktopTauri();
         clearInterval(t);
       } else if (++tries > 10) {
         clearInterval(t);
       }
     }, 500);
-    return () => clearInterval(t);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
   }, []);
 
   const [codeEnabled, setCodeEnabled] = useState(false);

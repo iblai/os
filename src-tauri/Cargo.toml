@@ -31,15 +31,47 @@ url = "2"
 urlencoding = "2.1"
 dotenvy = "0.15"
 axum = "0.8"
+tokio-stream = "0.1"
 tower-http = { version = "0.6", features = ["cors", "fs"] }
 mime_guess = "2.0"
 base64 = "0.22"
 tauri-plugin-os = "2.3.2"
 tauri-plugin-dialog = "2"
+# All local interface addresses — the phone-pairing address list must prefer
+# real LAN NICs over VPN tunnels, which the UDP default-route trick cannot do.
+if-addrs = "0.14"
+# QR rendering (SVG) for phone pairing; pure Rust, desktop popover only.
+qrcode = { version = "0.14", default-features = false, features = ["svg"] }
 
 [target.'cfg(target_os = "ios")'.dependencies]
 objc = "0.2"
 block = "0.1"
+# Embedded on-device inference (Metal). iOS has no Ollama, so local models run
+# in-process behind an Ollama-compatible HTTP server (see local_llm.rs).
+llama-cpp-2 = { version = "0.1.155", features = ["metal"] }
+# QR pairing: the phone scans the desktop's pairing code with the camera.
+tauri-plugin-barcode-scanner = "2"
+
+[target.'cfg(target_os = "android")'.dependencies]
+# Same embedded engine as iOS, CPU-only (Metal is Apple-only; llama.cpp's
+# ARM NEON path carries Android inference).
+llama-cpp-2 = { version = "0.1.155" }
+# QR pairing: the phone scans the desktop's pairing code with the camera.
+tauri-plugin-barcode-scanner = "2"
+
+[target.'cfg(not(any(target_os = "ios", target_os = "android")))'.dependencies]
+# Same engine, opt-in on desktop so `cargo test --features embedded-llm` can
+# exercise real inference on the Mac without slowing the normal build.
+llama-cpp-2 = { version = "0.1.155", features = ["metal"], optional = true }
+# In-place auto-update (desktop only): checks the signed latest-{{target}}.json
+# on the GitHub release, downloads + verifies + installs, then relaunches.
+tauri-plugin-updater = "2"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[features]
+embedded-llm = ["dep:llama-cpp-2"]
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc = "0.2"

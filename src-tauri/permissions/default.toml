@@ -40,6 +40,14 @@ permissions = [
     "allow-check-opencode-status",
     "allow-check-code-local-model",
     "allow-set-opencode-learner",
+    "allow-remote-code-status",
+    "allow-remote-code-enable",
+    "allow-remote-code-disable",
+    "allow-remote-code-set-host",
+    "allow-remote-code-get-host",
+    "allow-remote-code-clear-host",
+    "allow-remote-code-pairing-qr",
+    "allow-remote-code-list-workspaces",
 ]
 
 [[permission]]
@@ -281,3 +289,51 @@ identifier = "allow-set-opencode-permission-mode"
 description = "Enables choosing whether Coding Mode asks before each operation or approves automatically"
 [permission.commands]
 allow = ["set_opencode_permission_mode"]
+
+[[permission]]
+identifier = "allow-remote-code-status"
+description = "Enables reading whether the phone-access Code server is running (desktop)"
+[permission.commands]
+allow = ["remote_code_status"]
+
+[[permission]]
+identifier = "allow-remote-code-enable"
+description = "Enables starting the phone-access Code server (desktop)"
+[permission.commands]
+allow = ["remote_code_enable"]
+
+[[permission]]
+identifier = "allow-remote-code-disable"
+description = "Enables stopping the phone-access Code server (desktop)"
+[permission.commands]
+allow = ["remote_code_disable"]
+
+[[permission]]
+identifier = "allow-remote-code-set-host"
+description = "Enables pairing this phone with a desktop Code host"
+[permission.commands]
+allow = ["remote_code_set_host"]
+
+[[permission]]
+identifier = "allow-remote-code-get-host"
+description = "Enables reading this phone's desktop Code pairing state"
+[permission.commands]
+allow = ["remote_code_get_host"]
+
+[[permission]]
+identifier = "allow-remote-code-clear-host"
+description = "Enables removing this phone's desktop Code pairing"
+[permission.commands]
+allow = ["remote_code_clear_host"]
+
+[[permission]]
+identifier = "allow-remote-code-pairing-qr"
+description = "Enables rendering the phone-pairing QR code (desktop)"
+[permission.commands]
+allow = ["remote_code_pairing_qr"]
+
+[[permission]]
+identifier = "allow-remote-code-list-workspaces"
+description = "Enables listing the paired desktop's Code folders (phone)"
+[permission.commands]
+allow = ["remote_code_list_workspaces"]

@@ -1203,7 +1203,14 @@ mod tests {
     #[tokio::test]
     async fn the_composed_guidance_is_the_base_text_plus_identity() {
         let _state = learner_state_lock();
-        set_learner("codey", "codey@example.com", "https://dm.example/dm", "", "").await;
+        set_learner(
+            "codey",
+            "codey@example.com",
+            "https://dm.example/dm",
+            "",
+            "",
+        )
+        .await;
 
         let g = guidance_with_identity("acme").await;
         assert!(g.starts_with(IBLAI_INSTRUCTIONS), "base text comes first");

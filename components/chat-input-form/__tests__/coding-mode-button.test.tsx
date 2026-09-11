@@ -18,10 +18,12 @@ const {
   invoke,
   openDialog,
   openPath,
+  scannerState,
   mentorSettings,
   offlineMode,
   platformMetadata,
   saveMetadata,
+  tauriPlatform,
   toastError,
   userOS,
 } = vi.hoisted(() => ({
@@ -35,6 +37,12 @@ const {
   platformMetadata: { current: undefined as unknown },
   saveMetadata: vi.fn(),
   userOS: { current: 'Linux' },
+  tauriPlatform: { current: 'linux' },
+  scannerState: {
+    permission: 'granted' as string,
+    cancelled: false,
+    rejectScan: undefined as undefined | ((e: unknown) => void),
+  },
 }));
 
 vi.mock('@tauri-apps/api/core', () => ({
@@ -43,8 +51,25 @@ vi.mock('@tauri-apps/api/core', () => ({
 vi.mock('@tauri-apps/plugin-dialog', () => ({
   open: (...args: unknown[]) => openDialog(...args),
 }));
+vi.mock('@tauri-apps/plugin-os', () => ({
+  platform: () => tauriPlatform.current,
+}));
 vi.mock('@tauri-apps/plugin-opener', () => ({
   openPath: (...args: unknown[]) => openPath(...args),
+}));
+vi.mock('@tauri-apps/plugin-barcode-scanner', () => ({
+  checkPermissions: () => scannerState.permission,
+  requestPermissions: () => scannerState.permission,
+  cancel: () => {
+    scannerState.cancelled = true;
+    scannerState.rejectScan?.(new Error('cancelled'));
+    return Promise.resolve();
+  },
+  scan: () =>
+    new Promise((_resolve, reject) => {
+      scannerState.rejectScan = reject;
+    }),
+  Format: { QRCode: 'QR_CODE' },
 }));
 vi.mock('sonner', () => ({
   toast: { error: (...args: unknown[]) => toastError(...args) },
@@ -84,6 +109,8 @@ function backend(
     fileManager?: string | null;
     /** The locally cached approval mode; null = never chosen. */
     permissionMode?: string | null;
+    /** Phone↔desktop pairing state (Tauri mobile). */
+    remoteHost?: unknown;
   } = {},
 ) {
   invoke.mockImplementation(async (cmd: string) => {
@@ -108,6 +135,12 @@ function backend(
           : 'manual';
       case 'check_code_local_model':
         return overrides.local;
+      case 'remote_code_get_host':
+        return overrides.remoteHost ?? { configured: false, connected: false };
+      case 'remote_code_set_host':
+        return { ok: true };
+      case 'remote_code_clear_host':
+        return undefined;
       default:
         return undefined;
     }
@@ -140,6 +173,7 @@ describe('CodingModeButton', () => {
     platformMetadata.current = undefined;
     saveMetadata.mockReturnValue({ unwrap: async () => ({}) });
     userOS.current = 'Linux';
+    tauriPlatform.current = 'linux';
     backend();
     vi.stubGlobal(
       'fetch',
@@ -164,6 +198,144 @@ describe('CodingModeButton', () => {
     backend({ supported: false });
     const { container } = renderButton();
     await waitFor(() => expect(container).toBeEmptyDOMElement());
+  });
+
+  // Tauri mobile: Code shows, but it runs on a PAIRED desktop (the phone's
+  // Rust side proxies the opencode commands to `opencode serve` over there).
+  // Un-paired, the control renders a connect form and the switch stays off.
+  describe('Tauri mobile (paired-desktop Code)', () => {
+    beforeEach(() => {
+      tauriPlatform.current = 'ios';
+    });
+
+    it('shows a pairing form instead of workspace pickers when un-paired', async () => {
+      renderButton();
+      await openPopover();
+      expect(screen.getByTestId('code-remote-host')).toBeInTheDocument();
+      expect(screen.getByTestId('code-remote-url')).toBeInTheDocument();
+      expect(screen.getByTestId('code-remote-password')).toBeInTheDocument();
+      expect(screen.getByTestId('code-remote-scan')).toBeInTheDocument();
+      expect(screen.getByRole('switch')).toBeDisabled();
+      // The SDK's send-time flag must read un-paired.
+      await waitFor(() =>
+        expect(localStorage.getItem('ibl_remote_code_ready')).toBe('false'),
+      );
+    });
+
+    it('pairing stores every candidate address for network failover', async () => {
+      // The Rust side keeps the full `urls` list so the pairing can heal
+      // itself when the current address stops answering and another of the
+      // desktop's advertised addresses still does.
+      renderButton();
+      await openPopover();
+      await userEvent.type(
+        screen.getByTestId('code-remote-url'),
+        '192.168.0.10:4096',
+      );
+      await userEvent.type(screen.getByTestId('code-remote-password'), 'pw1');
+      await userEvent.click(screen.getByRole('button', { name: /Connect/i }));
+      await waitFor(() =>
+        expect(invoke).toHaveBeenCalledWith(
+          'remote_code_set_host',
+          expect.objectContaining({
+            url: '192.168.0.10:4096',
+            password: 'pw1',
+            urls: ['192.168.0.10:4096'],
+          }),
+        ),
+      );
+    });
+
+    it('QR scanner shows a close button that cancels the scan', async () => {
+      // The camera view had NO way out: scan() ran fullscreen with nothing
+      // tappable. Now scanning renders an overlay whose close button cancels
+      // the plugin scan, drops the overlay, and surfaces no error.
+      scannerState.cancelled = false;
+      renderButton();
+      await openPopover();
+      await userEvent.click(screen.getByTestId('code-remote-scan'));
+
+      const overlay = await screen.findByTestId('qr-scan-overlay');
+      expect(overlay).toBeInTheDocument();
+      // The transparency class is on while the camera is behind the webview.
+      expect(
+        document.documentElement.classList.contains('qr-scan-active'),
+      ).toBe(true);
+
+      await userEvent.click(screen.getByTestId('qr-scan-close'));
+      await waitFor(() =>
+        expect(screen.queryByTestId('qr-scan-overlay')).toBeNull(),
+      );
+      expect(scannerState.cancelled).toBe(true);
+      expect(
+        document.documentElement.classList.contains('qr-scan-active'),
+      ).toBe(false);
+      // A user-cancelled scan is not an error.
+      expect(screen.queryByText('cancelled')).toBeNull();
+    });
+
+    it('mirrors a live pairing into the SDK flag and enables the switch', async () => {
+      backend({
+        remoteHost: {
+          configured: true,
+          connected: true,
+          url: 'http://192.168.0.10:4096',
+          directory: '/Users/me/.local/share/iblai/workspaces/phone',
+        },
+      });
+      renderButton();
+      await openPopover();
+      await waitFor(() =>
+        expect(localStorage.getItem('ibl_remote_code_ready')).toBe('true'),
+      );
+      expect(screen.getByRole('switch')).not.toBeDisabled();
+      expect(screen.getByText('http://192.168.0.10:4096')).toBeInTheDocument();
+    });
+
+    it('forces Code off when the paired desktop is unreachable', async () => {
+      localStorage.setItem('ibl_coding_mode_enabled', 'true');
+      backend({
+        remoteHost: {
+          configured: true,
+          connected: false,
+          url: 'http://192.168.0.10:4096',
+        },
+      });
+      renderButton();
+      await waitFor(() =>
+        expect(localStorage.getItem('ibl_coding_mode_enabled')).toBe('false'),
+      );
+    });
+
+    it('enables without the desktop folder-choice flow (no picker on a phone)', async () => {
+      backend({
+        remoteHost: { configured: true, connected: true, url: 'http://x:1' },
+      });
+      renderButton();
+      await openPopover();
+      const sw = screen.getByRole('switch');
+      await waitFor(() => expect(sw).not.toBeDisabled());
+      await userEvent.click(sw);
+      await waitFor(() =>
+        expect(localStorage.getItem('ibl_coding_mode_enabled')).toBe('true'),
+      );
+      // The pre-fix bug: first enable ran pickFolder(), which can only fail
+      // on iOS ("Couldn't choose a folder") — the workspace lives on the Mac.
+      expect(openDialog).not.toHaveBeenCalled();
+      expect(invoke).not.toHaveBeenCalledWith('install_opencode', undefined);
+    });
+
+    it('does NOT default Code on for signed-in users (mobile is opt-in)', async () => {
+      localStorage.setItem('tenant', 'acme');
+      localStorage.setItem('dm_token', 'jwt-test-token');
+      backend({
+        remoteHost: { configured: true, connected: true, url: 'http://x:1' },
+      });
+      renderButton();
+      await openPopover();
+      // Paired and unblocked — yet no silent default-on.
+      expect(localStorage.getItem('ibl_coding_mode_enabled')).toBeNull();
+    });
   });
 
   it('disables the switch and explains when bubblewrap is missing', async () => {
@@ -881,5 +1053,30 @@ describe('CodingModeButton', () => {
         window.removeEventListener('local-storage', fanOut);
       }
     });
+  });
+});
+
+describe('CodingModeButton pill label on phone widths', () => {
+  // The label is CSS-hidden below 520px ONLY while Code is off; once it is
+  // on the name always shows so the user can see what is selected.
+  const labelSpan = () => {
+    const button = screen.getByRole('button', { name: /Code/i });
+    return Array.from(button.querySelectorAll('span')).find(
+      (span) => span.textContent === 'Code',
+    )!;
+  };
+
+  it('hides the label on phones while Code is off', async () => {
+    localStorage.setItem('ibl_coding_mode_enabled', 'false');
+    renderButton();
+    await screen.findByRole('button', { name: /Code/i });
+    expect(labelSpan().className).toContain('max-[520px]:hidden');
+  });
+
+  it('always shows the label once Code is on', async () => {
+    localStorage.setItem('ibl_coding_mode_enabled', 'true');
+    renderButton();
+    await screen.findByRole('button', { name: /Code/i });
+    expect(labelSpan().className).not.toContain('max-[520px]:hidden');
   });
 });

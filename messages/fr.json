@@ -2389,7 +2389,27 @@
     "permissionDialogTitle": "Comment Code doit-il demander votre accord ?",
     "permissionDialogDescription": "Code peut modifier des fichiers et exécuter des commandes dans votre espace de travail. Choisissez s’il doit vous consulter d’abord ; vous pourrez le changer plus tard dans le panneau Code.",
     "permissionDialogManualAction": "Me demander à chaque fois",
-    "permissionDialogAutoAction": "Approuver automatiquement"
+    "permissionDialogAutoAction": "Approuver automatiquement",
+    "connectTitle": "Votre ordinateur",
+    "connectHint": "Dans l'app de bureau, ouvrez Code et activez l'accès depuis le téléphone, puis saisissez ici son adresse et son mot de passe.",
+    "connectedTo": "Connecté à",
+    "desktopUnreachable": "Votre ordinateur est injoignable — l'app de bureau est-elle ouverte sur le même réseau ?",
+    "hostPasswordLabel": "Mot de passe",
+    "connect": "Se connecter",
+    "connecting": "Connexion…",
+    "disconnect": "Se déconnecter",
+    "phoneAccess": "Accès depuis le téléphone",
+    "phoneAccessEnable": "Activer",
+    "phoneAccessDisable": "Désactiver",
+    "phoneAccessAddress": "Adresse",
+    "phoneAccessHint": "Sur votre téléphone, ouvrez Code et saisissez cette adresse et ce mot de passe.",
+    "phoneAccessOffHint": "Autorisez votre téléphone à utiliser Code sur cet ordinateur.",
+    "scanQr": "Scanner le code QR",
+    "orTypeManually": "ou saisissez-le manuellement",
+    "cameraDenied": "Accès à la caméra refusé — saisissez l'adresse manuellement.",
+    "notAPairingCode": "Ce code QR n'est pas un code d'appairage Code.",
+    "closeScanner": "Fermer le scanner",
+    "scanHint": "Pointez la caméra vers le code QR d'appairage affiché sur votre ordinateur."
   },
   "chatCodePermissionCard": {
     "title": "Code a besoin de votre autorisation",
@@ -2407,5 +2427,13 @@
     },
     "allow": "Autoriser",
     "deny": "Refuser"
+  },
+  "appUpdatePrompt": {
+    "title": "Mise à jour disponible",
+    "description": "La version {version} est prête à être installée. Vous utilisez une version plus ancienne.",
+    "updateNow": "Mettre à jour",
+    "updating": "Mise à jour…",
+    "later": "Plus tard",
+    "skip": "Ignorer cette version"
   }
 }

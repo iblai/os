@@ -49,9 +49,22 @@ import {
 } from '@iblai/iblai-js/web-containers';
 import { MemoryButton } from './memory-button';
 import { CodingModeButton } from './coding-mode-button';
+import { estimatePillWidth, useOverflowFit } from './use-overflow-fit';
 import { MemoryMenu } from './memory-menu';
 import { isTauriApp } from '@/types/tauri';
 import type { OpencodeSkillSync } from '@/hooks/use-opencode-skill-sync';
+
+/** One tool pill in the composer row (inline) or the ••• overflow menu. */
+interface ToolPill {
+  name: string;
+  label: string;
+  icon: React.ReactNode;
+  isActive: boolean;
+  action: () => void;
+  isEnabled: boolean;
+  /** Set when this specific tool can't run here; also the tooltip text. */
+  disabledReason?: string;
+}
 
 // 12GB floor, matching the SDK default (DEFAULT_COWORK_REQUIRED_SIZE_GB)
 // and the Local Models tab's "supported" indicator. modelSupportsCowork
@@ -151,6 +164,28 @@ export const InsideButtons = ({
     }
   };
 
+  // Cowork drives THIS machine's screen — meaningful only on desktop. Tauri
+  // mobile injects the same globals, so without this check the pill shows on
+  // phones, where there is no computer to drive.
+  const [tauriMobile, setTauriMobile] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { platform } = await import('@tauri-apps/plugin-os');
+        const os = platform();
+        if (!cancelled && (os === 'ios' || os === 'android')) {
+          setTauriMobile(true);
+        }
+      } catch {
+        /* no OS plugin → desktop/web */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Cowork = the Tauri Cua Driver assistant (useCuaDriver install/stop +
   // localStorage pref), no backend round-trip. Reads the pref on mount; cross-tab sync not
   // polled. Local state is `coworkOn` so it doesn't shadow the imported
@@ -234,11 +269,9 @@ export const InsideButtons = ({
     return () => clearInterval(t);
   }, []);
 
-  // Cowork renders inline beside Code (Code left, Cowork right) instead of joining
-  // the responsive list below. Both are desktop-only assistants and read as one
-  // pair, so Cowork must not collapse into the overflow dropdown while Code stays
-  // inline — which is what the <800px breakpoint would otherwise do to it.
-  const coworkButton = {
+  // Cowork is the FIRST entry of the responsive list (right after the fixed
+  // Code pill), so it is the last tool to collapse into the ••• overflow.
+  const coworkButton: ToolPill = {
     name: 'Cowork',
     label: t('cowork'),
     icon: <Monitor className="h-4 w-4" />,
@@ -283,7 +316,7 @@ export const InsideButtons = ({
     cuaDriver.install();
   }, [coworkAvailable, coworkOn, cuaDriver]);
 
-  const allInsideButtons = [
+  const allInsideButtons: ToolPill[] = [
     {
       name: 'Canvas',
       label: t('canvas'),
@@ -329,45 +362,47 @@ export const InsideButtons = ({
     },
   ].filter((item) => item.isEnabled);
 
-  // Get visible inside buttons based on screen size.
-  // Below the desktop breakpoint (800px) we collapse ALL tool buttons —
-  // including active ones — into the overflow dropdown. Active pills render
-  // as `icon + label + ✕`, so even two of them blow the inline row's width
-  // and push the outside buttons / send control out of alignment on
-  // small/tablet viewports. See issue #1533.
-  const getVisibleInsideButtons = () => {
-    const minButtonWidth = 120;
+  const overflowItems: ToolPill[] = [
+    ...(coworkButton.isEnabled && !tauriMobile ? [coworkButton] : []),
+    ...allInsideButtons,
+  ];
 
-    if (allInsideButtons.length === 1 && containerWidth > minButtonWidth) {
-      return { visible: allInsideButtons, hidden: [] };
-    }
-
-    if (containerWidth < 800) {
-      // Mobile + tablet: nothing inline, everything in the dropdown.
-      return { visible: [], hidden: allInsideButtons };
-    }
-
-    // Desktop: show all buttons inline.
-    return { visible: allInsideButtons, hidden: [] };
-  };
-
-  const { visible: visibleInsideButtons, hidden: hiddenInsideButtons } =
-    getVisibleInsideButtons();
+  // Priority overflow. Pills keep their order and, as the row narrows,
+  // collapse ONE BY ONE from the end into the ••• menu, driven by the row's
+  // measured width and each pill's measured width — never by a viewport
+  // breakpoint. Active pills (`icon + label + ✕`) are wider and are fitted
+  // as such, so the row can never push the send control out of line (#1533).
+  // Code and Skills stay inline (each owns its own popover / menu) and only
+  // take their space out of the fit. Until the row has been measured (first
+  // paint, or while it is not displayed) fall back to the old breakpoint
+  // rule: nothing inline below 800px, everything above.
+  const fit = useOverflowFit(
+    overflowItems.map((button) => ({
+      key: button.name,
+      estimate: estimatePillWidth(button.label, button.isActive),
+    })),
+    ['Code', 'Skills'],
+  );
+  const legacyVisibleCount =
+    (overflowItems.length === 1 && containerWidth > 120) ||
+    containerWidth >= 800
+      ? overflowItems.length
+      : 0;
+  const visibleCount = fit.visibleCount ?? legacyVisibleCount;
+  const visibleInsideButtons = overflowItems.slice(0, visibleCount);
+  const hiddenInsideButtons = overflowItems.slice(visibleCount);
 
   const [hiddenMemoryPopoverOpen, setHiddenMemoryPopoverOpen] = useState(false);
 
-  // Shared pill markup, used by both the fixed Code/Cowork pair and the
-  // responsive list so the two render identically.
-  const renderToolButton = (button: {
-    name: string;
-    label: string;
-    icon: React.ReactNode;
-    isActive: boolean;
-    action: () => void;
-    /** Set when this specific tool can't run here; also the tooltip text. */
-    disabledReason?: string;
-  }) => (
-    <div key={button.name} className="relative">
+  // Inline pill markup. The wrapper is measured so the overflow fit knows
+  // the pill's real width (label, active ✕ and all).
+  const renderToolButton = (button: ToolPill) => (
+    <div
+      key={button.name}
+      ref={fit.itemRef(button.name)}
+      className="relative"
+      data-overflow-key={button.name}
+    >
       <Button
         variant="ghost"
         size="sm"
@@ -393,7 +428,7 @@ export const InsideButtons = ({
         <span className={button.isActive ? 'text-[#38A1E5]' : 'text-gray-600'}>
           {button.icon}
         </span>
-        {button.label}
+        <span>{button.label}</span>
         {button.isActive && (
           <X
             className="ml-1 h-3 w-3 cursor-pointer"
@@ -414,123 +449,143 @@ export const InsideButtons = ({
   // when the mentor has no skills.
   const skillsMenu =
     skills && skills.length > 0 && onToggleSkill ? (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild disabled={disabled}>
-          <Button
-            variant="ghost"
-            size="sm"
-            type="button"
-            disabled={disabled}
-            data-testid="skills-menu-trigger"
-            className={`flex h-8 items-center gap-1.5 rounded-lg px-2 text-sm transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 ${
-              activeSkillSlugs && activeSkillSlugs.size > 0
-                ? 'border border-[#D0E0FF] bg-[#F5F8FF] text-[#38A1E5]'
-                : 'text-gray-600 hover:border hover:border-[#D0E0FF] hover:bg-[#F5F8FF]'
-            }`}
-          >
-            <Sparkles className="h-4 w-4" />
-            {/* Show the armed skill's name so the button mirrors the token
-                  in the composer; falls back to the generic label. */}
-            {(activeSkillSlugs &&
-              activeSkillSlugs.size > 0 &&
-              skills.find((skill) => activeSkillSlugs.has(skill.slug))?.name) ||
-              t('skills')}
-            {/* Same ✕ affordance as every other active tool pill — disarms
+      <div
+        ref={fit.itemRef('Skills')}
+        className="flex"
+        data-overflow-key="Skills"
+      >
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild disabled={disabled}>
+            <Button
+              variant="ghost"
+              size="sm"
+              type="button"
+              disabled={disabled}
+              data-testid="skills-menu-trigger"
+              className={`flex h-8 items-center gap-1.5 rounded-lg px-2 text-sm transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 ${
+                activeSkillSlugs && activeSkillSlugs.size > 0
+                  ? 'border border-[#D0E0FF] bg-[#F5F8FF] text-[#38A1E5]'
+                  : 'text-gray-600 hover:border hover:border-[#D0E0FF] hover:bg-[#F5F8FF]'
+              }`}
+            >
+              <Sparkles className="h-4 w-4" />
+              {/* Show the armed skill's name so the button mirrors the token
+                  in the composer; falls back to the generic label. On phone
+                  widths an INACTIVE pill shrinks to its icon; once a skill
+                  is armed the name always shows, so the user can see what
+                  is selected. */}
+              <span
+                className={
+                  activeSkillSlugs && activeSkillSlugs.size > 0
+                    ? undefined
+                    : 'max-[520px]:hidden'
+                }
+              >
+                {(activeSkillSlugs &&
+                  activeSkillSlugs.size > 0 &&
+                  skills.find((skill) => activeSkillSlugs.has(skill.slug))
+                    ?.name) ||
+                  t('skills')}
+              </span>
+              {/* Same ✕ affordance as every other active tool pill — disarms
                 the skill(s) without opening the menu. Radix opens the menu
                 on pointerdown, so that's where propagation must stop. The
                 handlers live on a SPAN, not the svg: the Button's base
                 styles set `[&_svg]:pointer-events-none`, which makes the
                 icon itself event-dead in real browsers. */}
-            {activeSkillSlugs && activeSkillSlugs.size > 0 && onClearSkills && (
-              <span
-                data-testid="skills-menu-clear"
-                role="button"
-                aria-label={t('skills')}
-                className="ml-1 inline-flex cursor-pointer items-center"
-                onPointerDown={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onClearSkills();
-                }}
-              >
-                <X className="h-3 w-3" />
-              </span>
-            )}
-          </Button>
-        </DropdownMenuTrigger>
-        {/* Sizes to its content: min width keeps short name-only lists from
+              {activeSkillSlugs &&
+                activeSkillSlugs.size > 0 &&
+                onClearSkills && (
+                  <span
+                    data-testid="skills-menu-clear"
+                    role="button"
+                    aria-label={t('skills')}
+                    className="ml-1 inline-flex cursor-pointer items-center"
+                    onPointerDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onClearSkills();
+                    }}
+                  >
+                    <X className="h-3 w-3" />
+                  </span>
+                )}
+            </Button>
+          </DropdownMenuTrigger>
+          {/* Sizes to its content: min width keeps short name-only lists from
             looking cramped, the max caps at 18rem OR the viewport (minus a
             1rem gutter) on small devices, and long skill lists scroll
             instead of overflowing short screens. */}
-        <DropdownMenuContent
-          align="start"
-          collisionPadding={8}
-          data-testid="skills-menu-content"
-          className="max-h-[min(60vh,20rem)] max-w-[min(18rem,calc(100vw-1rem))] min-w-40 overflow-y-auto"
-          // Lazy loading: skills come 20 per page — scrolling near the
-          // bottom pulls the next page, mirroring the `/` picker.
-          onScroll={(e) => {
-            if (!hasMoreSkills || isFetchingMoreSkills || !onLoadMoreSkills) {
-              return;
-            }
-            const el = e.currentTarget;
-            if (el.scrollTop + el.clientHeight >= el.scrollHeight - 24) {
-              onLoadMoreSkills();
-            }
-          }}
-        >
-          {skills.map((skill) => {
-            const isArmed = activeSkillSlugs?.has(skill.slug) ?? false;
-            return (
-              <DropdownMenuItem
-                key={skill.unique_id}
-                data-testid={`skills-menu-item-${skill.slug}`}
-                onClick={() => onToggleSkill(skill)}
-                className="flex items-start gap-2"
-              >
-                {/* Name stacked over the slug: the full name wraps instead of
-                    truncating to "canvas-course-b…", and the slug below it
-                    gets the row's whole width too. */}
-                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span
-                    data-testid="skills-menu-item-name"
-                    className="text-sm break-words text-gray-800"
-                  >
-                    {skill.name}
+          <DropdownMenuContent
+            align="start"
+            collisionPadding={8}
+            data-testid="skills-menu-content"
+            className="max-h-[min(60vh,20rem)] max-w-[min(18rem,calc(100vw-1rem))] min-w-40 overflow-y-auto"
+            // Lazy loading: skills come 20 per page — scrolling near the
+            // bottom pulls the next page, mirroring the `/` picker.
+            onScroll={(e) => {
+              if (!hasMoreSkills || isFetchingMoreSkills || !onLoadMoreSkills) {
+                return;
+              }
+              const el = e.currentTarget;
+              if (el.scrollTop + el.clientHeight >= el.scrollHeight - 24) {
+                onLoadMoreSkills();
+              }
+            }}
+          >
+            {skills.map((skill) => {
+              const isArmed = activeSkillSlugs?.has(skill.slug) ?? false;
+              return (
+                <DropdownMenuItem
+                  key={skill.unique_id}
+                  data-testid={`skills-menu-item-${skill.slug}`}
+                  onClick={() => onToggleSkill(skill)}
+                  className="flex items-start gap-2"
+                >
+                  {/* Name stacked over the slug: the full name wraps instead of
+                      truncating to "canvas-course-b…", and the slug below it
+                      gets the row's whole width too. */}
+                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span
+                      data-testid="skills-menu-item-name"
+                      className="text-sm break-words text-gray-800"
+                    >
+                      {skill.name}
+                    </span>
+                    {/* Slash-invocation form, mirroring the `/` picker's rows */}
+                    <span
+                      data-testid="skills-menu-item-slug"
+                      className="text-xs break-all text-gray-400"
+                    >
+                      /{skill.slug}
+                    </span>
                   </span>
-                  {/* Slash-invocation form, mirroring the `/` picker's rows */}
-                  <span
-                    data-testid="skills-menu-item-slug"
-                    className="text-xs break-all text-gray-400"
-                  >
-                    /{skill.slug}
-                  </span>
-                </span>
-                {/* Armed marker sits on the RIGHT (same pattern as the •••
+                  {/* Armed marker sits on the RIGHT (same pattern as the •••
                     overflow menu above) so rows never carry a left indent. */}
-                {isArmed && (
-                  <Check
-                    aria-hidden="true"
-                    className="mt-0.5 h-4 w-4 shrink-0 text-[#38A1E5]"
-                  />
-                )}
-              </DropdownMenuItem>
-            );
-          })}
-          {isFetchingMoreSkills && (
-            <div
-              data-testid="skills-menu-loading-more"
-              className="flex items-center justify-center px-2 py-1.5"
-            >
-              <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-            </div>
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
+                  {isArmed && (
+                    <Check
+                      aria-hidden="true"
+                      className="mt-0.5 h-4 w-4 shrink-0 text-[#38A1E5]"
+                    />
+                  )}
+                </DropdownMenuItem>
+              );
+            })}
+            {isFetchingMoreSkills && (
+              <div
+                data-testid="skills-menu-loading-more"
+                className="flex items-center justify-center px-2 py-1.5"
+              >
+                <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+              </div>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     ) : null;
 
   const canvasIsVisible = visibleInsideButtons.some(
@@ -538,23 +593,38 @@ export const InsideButtons = ({
   );
 
   return (
-    <div className="relative flex items-center gap-1.5">
-      {/* Code + Cowork — the desktop assistant pair, Code on the left. Both sit
-          outside the responsive list so they always render side by side. */}
+    // `min-w-0 flex-1`: the row takes exactly the space left beside the
+    // composer's other controls, and that width is what the overflow fit
+    // measures.
+    <div
+      ref={fit.rootRef}
+      className="relative flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden"
+      data-testid="inside-buttons-row"
+    >
+      {/* Code — the desktop assistant, always first and always inline. */}
       {inTauri && (
-        <CodingModeButton sessionId={sessionId} skillSync={skillSync} />
+        <div
+          ref={fit.itemRef('Code')}
+          className="flex"
+          data-overflow-key="Code"
+        >
+          <CodingModeButton sessionId={sessionId} skillSync={skillSync} />
+        </div>
       )}
-      {coworkButton.isEnabled && renderToolButton(coworkButton)}
-      {/* Responsive Inside Buttons — the Skills dropdown slots in right after
-          Canvas so Canvas stays the first tool pill. */}
+      {/* Responsive pills (Cowork first, then the tools) — the Skills
+          dropdown slots in right after Canvas so Canvas stays the first
+          tool pill. */}
       {visibleInsideButtons.map((button) => {
         if (button.name === 'Memory') {
           return (
-            <MemoryButton
+            <div
               key={button.name}
-              tenantKey={tenantKey}
-              username={username}
-            />
+              ref={fit.itemRef(button.name)}
+              className="flex"
+              data-overflow-key={button.name}
+            >
+              <MemoryButton tenantKey={tenantKey} username={username} />
+            </div>
           );
         }
 
@@ -600,6 +670,8 @@ export const InsideButtons = ({
                   return (
                     <DropdownMenuItem
                       key={button.name}
+                      disabled={!!button.disabledReason}
+                      title={button.disabledReason}
                       onClick={
                         isMemory
                           ? (e) => {

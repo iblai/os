@@ -17,6 +17,7 @@ mod opencode_acp;
 mod opencode_installer;
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 mod opencode_proxy;
+mod remote_code;
 mod web_cache;
 
 use foundry_installer::{
@@ -2863,7 +2864,19 @@ fn main() {
             opencode_acp::check_code_local_model,
             opencode_acp::set_opencode_learner,
             opencode_acp::ensure_opencode_platform_key,
+            remote_code::remote_code_status,
+            remote_code::remote_code_enable,
+            remote_code::remote_code_disable,
+            remote_code::remote_code_pairing_qr,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri app");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri app")
+        .run(|_app, event| {
+            // The phone-access opencode server must die with the app: opencode
+            // instances coordinate through a machine-global port, and an
+            // orphan with a dead password poisons auth for every later one.
+            if let tauri::RunEvent::Exit = event {
+                remote_code::shutdown_sync();
+            }
+        });
 }
