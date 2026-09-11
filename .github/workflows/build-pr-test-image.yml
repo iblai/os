@@ -25,7 +25,7 @@ permissions:
 
 jobs:
   gate:
-    name: "gate"
+    name: 'gate'
     runs-on: ubuntu-latest
     outputs:
       sha: ${{ steps.g.outputs.sha }}
@@ -33,7 +33,7 @@ jobs:
       - id: g
         env:
           GH_TOKEN: ${{ github.token }}
-          PR:       ${{ inputs.pr_number }}
+          PR: ${{ inputs.pr_number }}
         run: |
           set -euo pipefail
           DATA=$(gh pr view "$PR" --repo "${{ github.repository }}" \
@@ -53,7 +53,7 @@ jobs:
           echo "head: $SHA"
 
   build:
-    name: "build"
+    name: 'build'
     needs: gate
     uses: ./.github/workflows/reusable-pr-docker-build.yml
     secrets: inherit
@@ -70,7 +70,7 @@ jobs:
       ref: ${{ needs.gate.outputs.sha }}
 
   summary:
-    name: "summary"
+    name: 'summary'
     needs: [gate, build]
     if: always()
     runs-on: ubuntu-latest
