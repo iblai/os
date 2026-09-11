@@ -7,14 +7,6 @@ onlyBuiltDependencies:
   - sharp
   - unrs-resolver
 overrides:
-  # yalc dev: force EVERY consumer (iblai-js's re-export shims included) onto
-  # the yalc copies — without these, transitive deps resolve to the registry
-  # and the app runs two different SDK builds at once.
-  '@iblai/iblai-js': 'file:.yalc/@iblai/iblai-js'
-  '@iblai/web-utils': 'file:.yalc/@iblai/web-utils'
-  '@iblai/web-containers': 'file:.yalc/@iblai/web-containers'
-  '@iblai/data-layer': 'file:.yalc/@iblai/data-layer'
-  '@iblai/agent-ai': 'file:.yalc/@iblai/agent-ai'
   vite: '>=7.3.2'
   basic-ftp: '>=5.2.1'
   follow-redirects: '>=1.16.0'
