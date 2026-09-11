@@ -44,7 +44,13 @@
  * All four describe blocks below mutate the SAME backend state:
  *   • Tenant chat-privacy gate (org-scoped, all blocks read this)
  *   • Default mentor's `disable_chathistory` (mentor-scoped)
- *   • Admin user's profile Private Mode selection (user-scoped)
+ *   • A user's profile Private Mode selection (user-scoped) — cp-profile-*
+ *     drives this exclusively on `nonadminPage`'s own account, not the
+ *     shared admin account: that account is also used by Journey 62 in a
+ *     different worker, and this block flipping its Private Mode used to
+ *     race Journey 62 into an intermittent 403 (CI: iblai/os#499).
+ *     cp-header-*'s beforeEach still has its own admin-account fallback
+ *     path for the same setting; only cp-profile-* was moved.
  *
  * Sub-fixture isolation is impossible without per-test backend records,
  * which the suite does not provision. Running these blocks in parallel
@@ -792,72 +798,72 @@ test.describe('Journey 50: Chat Privacy', () => {
 
   // ── 4. User profile "Private Mode" tab ────────────────────────────────────
 
+  // This block exercises the profile-level Private Mode tab, a per-USER
+  // preference — driven entirely on `nonadminPage`, never the shared admin
+  // account. Journey 62 reads/writes chat sessions for that same shared
+  // admin user from a different worker; this block used to flip the
+  // admin's own Private Mode via the profile modal on the admin `page`,
+  // racing Journey 62 into an intermittent 403 (CI: iblai/os#499). The
+  // tenant-gate + mentor-lock preconditions still require admin RBAC, so
+  // those `ensure*` calls stay on the admin `page`.
   test.describe('User profile Private Mode tab (cp-profile-*)', () => {
-    test.beforeEach(async ({ page, editMentorPage }) => {
+    test.beforeEach(async ({ page, editMentorPage, nonadminPage }) => {
       await goToChatPage(page, mentorUrl);
       await waitForAdmin(page);
 
       const chatPrivacy = new ChatPrivacyPage(page);
 
-      // Same fast-path as the cp-header beforeEach. The three states
-      // this block depends on (gate ON, mentor lock OFF, user mode
-      // normal) are all readable from the header toggle DOM in ~150ms
-      // with no modal opens; in a serial block the previous test's
-      // restore almost always leaves them in the expected configuration.
-      // Skip the three slow `ensure*` modal-opening helpers when the
-      // header confirms the state is correct.
+      // Fast-path: gate ON + mentor lock OFF are readable from the admin
+      // header toggle DOM in ~150ms with no modal opens. Unlike
+      // cp-header-*'s equivalent check, this block never drives the admin
+      // user's own profile tier, so there is nothing tier-specific to
+      // read here.
       const toggle = chatPrivacy.headerToggle();
-      const fastPathOk = await (async () => {
-        const visible = await toggle
-          .isVisible({ timeout: 5_000 })
-          .catch(() => false);
-        if (!visible) return false;
-        const ariaDisabled = await toggle
-          .getAttribute('aria-disabled')
-          .catch(() => null);
-        if (ariaDisabled === 'true') return false;
-        const dataSource = await toggle
-          .getAttribute('data-source')
-          .catch(() => null);
-        if (dataSource === 'mentor') return false;
-        // A "user" source alone is not a reason to fall back to the slow
-        // path: per cp-profile-05, once ANY profile Private Mode selection
-        // has ever been saved, the backend keeps data-source="user" for
-        // BOTH Normal and Disabled — it can never clear back to another
-        // tier. Only "user" + data-state="on" (profile mode "Disabled")
-        // actually needs recovery; "user" + "off" is the same resting
-        // state a never-saved profile would produce.
-        if (dataSource === 'user') {
-          const dataState = await toggle
-            .getAttribute('data-state')
-            .catch(() => null);
-          if (dataState === 'on') return false;
-        }
-        return true;
-      })();
+      let fastPathOk = false;
+      try {
+        await toggle.waitFor({ state: 'visible', timeout: 5_000 });
+        const ariaDisabled = await toggle.getAttribute('aria-disabled');
+        const dataSource = await toggle.getAttribute('data-source');
+        fastPathOk = ariaDisabled !== 'true' && dataSource !== 'mentor';
+      } catch {
+        fastPathOk = false;
+      }
 
       if (!fastPathOk) {
-        // Tier-targeted recovery (same approach as the cp-header
-        // beforeEach above). The profile-modal open is the slowest of
-        // the three ensures and the most failure-prone — only run it
-        // when the toggle confirms the user tier is actually overriding.
         await chatPrivacy.ensureTenantGateEnabled(true);
         await chatPrivacy.ensureAgentPrivacy(editMentorPage, false);
+      }
 
-        const dataSourceAfterAgentReset = await toggle
-          .getAttribute('data-source')
-          .catch(() => null);
-        if (dataSourceAfterAgentReset === 'user') {
-          await chatPrivacy.ensureProfilePrivateMode('normal');
-        }
+      // Non-admin: reset THIS block's own account's profile Private Mode
+      // to "normal" before each test, mirroring the fast-path/slow-path
+      // split above but scoped to the non-admin user.
+      await navigateToMentorApp(nonadminPage, mentorUrl);
+      await waitForPageReady(nonadminPage);
+
+      const nonadminChatPrivacy = new ChatPrivacyPage(nonadminPage);
+      const nonadminToggle = nonadminChatPrivacy.headerToggle();
+      let nonadminFastPathOk = false;
+      try {
+        await nonadminToggle.waitFor({ state: 'visible', timeout: 5_000 });
+        const dataSource = await nonadminToggle.getAttribute('data-source');
+        const dataState = await nonadminToggle.getAttribute('data-state');
+        // Per cp-profile-05: "user" + "off" is the same resting state a
+        // never-saved profile would produce; only "user" + "on" (profile
+        // mode "Disabled") actually needs recovery.
+        nonadminFastPathOk = !(dataSource === 'user' && dataState === 'on');
+      } catch {
+        nonadminFastPathOk = false;
+      }
+      if (!nonadminFastPathOk) {
+        await nonadminChatPrivacy.ensureProfilePrivateMode('normal');
       }
     });
 
     // cp-profile-01: Private Mode tab is visible when the tenant gate is on.
     test('cp-profile-01: Private Mode tab is visible in UserProfileModal when tenant gate is on', async ({
-      page,
+      nonadminPage,
     }) => {
-      const chatPrivacy = new ChatPrivacyPage(page);
+      const chatPrivacy = new ChatPrivacyPage(nonadminPage);
       // beforeEach guarantees gate ON — no conditional dance needed here.
 
       const modal = await chatPrivacy.openProfileModal();
@@ -867,20 +873,32 @@ test.describe('Journey 50: Chat Privacy', () => {
     });
 
     // cp-profile-02: Private Mode tab is hidden when the tenant gate is off.
+    // The gate itself is tenant-wide and admin-only to mutate, so this test
+    // flips it via the admin `page` and observes the effect on the
+    // non-admin `nonadminPage`.
     test('cp-profile-02: Private Mode tab is hidden when tenant gate is off', async ({
       page,
+      nonadminPage,
     }) => {
       const chatPrivacy = new ChatPrivacyPage(page);
+      const nonadminChatPrivacy = new ChatPrivacyPage(nonadminPage);
 
       try {
         // Drive gate OFF. beforeEach started from ON, so this is a real
         // ON→OFF transition under test.
         await chatPrivacy.ensureTenantGateEnabled(false);
-        await waitForPageReady(page);
 
-        const modal = await chatPrivacy.openProfileModal();
-        expect(await chatPrivacy.isProfilePrivateModeTabVisible()).toBe(false);
-        await chatPrivacy.closeProfileModal(modal);
+        // The non-admin page's own query cache needs a fresh navigation to
+        // observe the tenant-level change — RTK Query tag invalidation is
+        // scoped to the browser context that performed the mutation.
+        await navigateToMentorApp(nonadminPage, mentorUrl);
+        await waitForPageReady(nonadminPage);
+
+        const modal = await nonadminChatPrivacy.openProfileModal();
+        expect(await nonadminChatPrivacy.isProfilePrivateModeTabVisible()).toBe(
+          false,
+        );
+        await nonadminChatPrivacy.closeProfileModal(modal);
       } finally {
         // Restore the journey-wide invariant of gate ON so the next test
         // doesn't inherit an OFF gate. The journey-level afterAll also
@@ -891,9 +909,9 @@ test.describe('Journey 50: Chat Privacy', () => {
 
     // cp-profile-03: All three cards render after switchToPrivateModeTab.
     test('cp-profile-03: all three Private Mode radio cards render on the tab', async ({
-      page,
+      nonadminPage,
     }) => {
-      const chatPrivacy = new ChatPrivacyPage(page);
+      const chatPrivacy = new ChatPrivacyPage(nonadminPage);
       // Gate ON guaranteed by beforeEach.
 
       const modal = await chatPrivacy.openProfileModal();
@@ -920,10 +938,10 @@ test.describe('Journey 50: Chat Privacy', () => {
     //               then reflects data-source="user" on a fresh unlocked chat.
     //               This verifies the user-tier precedence in the chain.
     test('cp-profile-04: selecting Disabled card propagates to header toggle as user-source', async ({
-      page,
-      chatPage,
+      nonadminPage,
+      nonadminChatPage,
     }) => {
-      const chatPrivacy = new ChatPrivacyPage(page);
+      const chatPrivacy = new ChatPrivacyPage(nonadminPage);
       // beforeEach forced mode to "normal", so the pre-test value is always
       // "normal". Capture defensively in case a future change moves the
       // starting state and to keep the restore symmetric.
@@ -934,8 +952,8 @@ test.describe('Journey 50: Chat Privacy', () => {
         await chatPrivacy.ensureProfilePrivateMode('disabled');
 
         // Fresh chat on an unlocked mentor — header source must be "user".
-        await chatPage.startNewChat();
-        await waitForPageReady(page);
+        await nonadminChatPage.startNewChat();
+        await waitForPageReady(nonadminPage);
 
         await expect(chatPrivacy.headerToggle()).toHaveAttribute(
           'data-state',
@@ -965,10 +983,10 @@ test.describe('Journey 50: Chat Privacy', () => {
     //               (Disabled → data-state="on"; Normal → data-state="off"),
     //               both with data-source="user".
     test('cp-profile-05: selecting Normal reverts the header toggle to off while the user tier stays the source', async ({
-      page,
-      chatPage,
+      nonadminPage,
+      nonadminChatPage,
     }) => {
-      const chatPrivacy = new ChatPrivacyPage(page);
+      const chatPrivacy = new ChatPrivacyPage(nonadminPage);
       const originalMode =
         (await chatPrivacy.readProfilePrivateMode()) ?? 'normal';
 
@@ -978,8 +996,8 @@ test.describe('Journey 50: Chat Privacy', () => {
         await chatPrivacy.ensureProfilePrivateMode('disabled');
         await chatPrivacy.ensureProfilePrivateMode('normal');
 
-        await chatPage.startNewChat();
-        await waitForPageReady(page);
+        await nonadminChatPage.startNewChat();
+        await waitForPageReady(nonadminPage);
 
         // Auto-retry so we wait for the chat-privacy-effective refetch to
         // land — a bare getAttribute races the post-mutation re-render.
