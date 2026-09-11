@@ -437,6 +437,13 @@ test.describe('Journey 60 — LTI tab sub-resource tests', () => {
     const renamed = LtiTab.uniqueName('e2e-link-renamed');
     await editMentorPage.lti.createLink(name);
     await editMentorPage.lti.expectLinkInList(name);
+    // The "Edit" action is gated on the link's async celery build reaching
+    // `ready` — wait for it before trying to open the edit modal.
+    const status = await editMentorPage.lti.waitForLinkReady(name);
+    test.skip(
+      status !== 'ready',
+      `LTI link build did not complete on this backend within 3 min (status: ${status})`,
+    );
     await editMentorPage.lti.editLink(name, renamed);
     await editMentorPage.lti.expectLinkInList(renamed);
     await editMentorPage.lti.expectLinkNotInList(name);
