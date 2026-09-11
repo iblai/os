@@ -32,8 +32,12 @@ const dmBaseCache = new WeakMap<Page, string>();
  */
 const dmBaseFailed = new WeakSet<Page>();
 
+/** Last DM base seen on any observed page — lets cleanup paths without a live page still resolve. */
+let observedBase = '';
+const observedPages = new WeakSet<Page>();
+
 /** Env overrides, most explicit first. `DM_URL` already exists in `.env.example`. */
-function baseFromEnv(): string {
+export function dmBaseFromEnv(): string {
   const raw =
     process.env.DM_URL ||
     process.env.E2E_DM_API_BASE ||
@@ -41,6 +45,33 @@ function baseFromEnv(): string {
       ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/dm`
       : '');
   return raw ? raw.replace(/\/+$/, '') : '';
+}
+
+const seen = (url: string): string | null => {
+  const m = url.match(DM_API_URL_RE);
+  return m ? m[1] : null;
+};
+
+/**
+ * Records the DM base off `page`'s traffic as it happens, so later lookups
+ * (cleanup, teardown) never need to wait for or force a request. Idempotent.
+ */
+export function observeDmBase(page: Page): void {
+  if (observedPages.has(page)) return;
+  observedPages.add(page);
+  page.on('request', (req) => {
+    if (observedBase) return;
+    const base = seen(req.url());
+    if (base) {
+      observedBase = base;
+      logger.info(`[dm-api] Observed DM API base: ${base}`);
+    }
+  });
+}
+
+/** Env override, else whatever base `observeDmBase` has seen so far. */
+export function knownDmBase(): string {
+  return dmBaseFromEnv() || observedBase;
 }
 
 /**
@@ -63,16 +94,11 @@ export async function resolveDmApiBase(
     throw new Error('[dm-api] DM API base lookup already failed for this page');
   }
 
-  const fromEnv = baseFromEnv();
+  const fromEnv = dmBaseFromEnv() || observedBase;
   if (fromEnv) {
     dmBaseCache.set(page, fromEnv);
     return fromEnv;
   }
-
-  const seen = (url: string): string | null => {
-    const m = url.match(DM_API_URL_RE);
-    return m ? m[1] : null;
-  };
 
   // A DM call may already be in flight; if not, the reload below forces one.
   const pending = page
