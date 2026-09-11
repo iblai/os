@@ -9,12 +9,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": [
-      "dmg",
-      "app",
-      "nsis",
-      "msi"
-    ],
+    "targets": ["dmg", "app", "nsis", "msi"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -70,13 +65,12 @@
       "capabilities": [
         "default",
         "offline-server-access",
-        "macos-permissions"
+        "macos-permissions",
+        "mobile-pairing"
       ],
       "assetProtocol": {
         "enable": true,
-        "scope": [
-          "**"
-        ]
+        "scope": ["**"]
       }
     },
     "windows": []
@@ -92,34 +86,22 @@
       "mobile": [
         {
           "host": "mentorai.iblai.app",
-          "pathPrefix": [
-            "/"
-          ]
+          "pathPrefix": ["/"]
         },
         {
           "host": "os.ibl.ai",
-          "pathPrefix": [
-            "/"
-          ]
+          "pathPrefix": ["/"]
         },
         {
           "host": "login.iblai.app",
-          "pathPrefix": [
-            "/"
-          ]
+          "pathPrefix": ["/"]
         },
         {
-          "scheme": [
-            "iblai-mentor",
-            "ai.ibl.mentorai"
-          ]
+          "scheme": ["iblai-mentor", "ai.ibl.mentorai"]
         }
       ],
       "desktop": {
-        "schemes": [
-          "iblai-mentor",
-          "ai.ibl.mentorai"
-        ]
+        "schemes": ["iblai-mentor", "ai.ibl.mentorai"]
       }
     },
     "updater": {

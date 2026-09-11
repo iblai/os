@@ -38,7 +38,20 @@ fn main() {
     println!("cargo:rerun-if-changed=.env.production");
     println!("cargo:rerun-if-changed=.env");
     if let Some(url) = dev_url_from_env_files() {
-        println!("cargo:rustc-env=TAURI_DEV_URL={url}");
+        // Release binaries must never carry a dev-server URL: a forgotten
+        // `TAURI_DEV_URL=http://…` in a shell or dotenv file would point a
+        // shipped app at a developer's machine. Only https URLs (a hosted
+        // platform, e.g. the org deployment) may be baked into release;
+        // anything else is dropped with a visible warning and the binary
+        // falls back to its built-in production URL.
+        let release = std::env::var("PROFILE").as_deref() == Ok("release");
+        if release && !url.starts_with("https://") {
+            println!(
+                "cargo:warning=TAURI_DEV_URL '{url}' is not https — ignored for a release build"
+            );
+        } else {
+            println!("cargo:rustc-env=TAURI_DEV_URL={url}");
+        }
     }
     tauri_build::build()
 }

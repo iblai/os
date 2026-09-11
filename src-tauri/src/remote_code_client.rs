@@ -405,6 +405,11 @@ pub async fn remote_code_clear_host() -> Result<(), String> {
     cfg.alt_urls.clear();
     cfg.alt_mgmt.clear();
     cfg.sessions.clear();
+    // Folder maps hold ABSOLUTE paths on the unpaired desktop; carried into
+    // a pairing with a different machine they point at folders that do not
+    // exist there, and every session lands in a broken directory.
+    cfg.directories.clear();
+    cfg.mentor_directories.clear();
     write_config(&cfg)
 }
 
@@ -707,6 +712,36 @@ fn last_user_text(messages: &[Value]) -> Option<String> {
     })
 }
 
+/// The chat's real id arrived (an unsaved chat's ephemeral id became real):
+/// BOTH maps follow it, or the chat loses its server conversation and its
+/// chosen folder in one stroke. Idempotent — once the new id owns entries,
+/// the prior key is left alone. MUST run before anything resolves the
+/// chat's directory: resolving first minted a fresh folder under the real
+/// id, and the migration then skipped, leaving the turn's session in folder
+/// A while its events and prompts targeted folder B.
+fn migrate_chat_key(session_id: &str, new_chat_key: Option<&str>) {
+    let Some(prior) = new_chat_key.filter(|k| *k != session_id) else {
+        return;
+    };
+    let mut cfg = read_config();
+    let mut changed = false;
+    if !cfg.sessions.contains_key(session_id) {
+        if let Some(remote) = cfg.sessions.remove(prior) {
+            cfg.sessions.insert(session_id.to_string(), remote);
+            changed = true;
+        }
+    }
+    if !cfg.directories.contains_key(session_id) {
+        if let Some(dir) = cfg.directories.remove(prior) {
+            cfg.directories.insert(session_id.to_string(), dir);
+            changed = true;
+        }
+    }
+    if changed {
+        let _ = write_config(&cfg);
+    }
+}
+
 /// The chat's server session, creating (and persisting) one on first use.
 /// `new_chat_key` migration mirrors the desktop: when a brand-new chat gains
 /// its real id, the mapping follows it so one chat keeps one session.
@@ -718,27 +753,8 @@ async fn ensure_session(
     mentor: Option<&str>,
     new_chat_key: Option<&str>,
 ) -> Result<String, String> {
+    migrate_chat_key(session_id, new_chat_key);
     let mut cfg = read_config();
-    if let Some(prior) = new_chat_key.filter(|k| *k != session_id) {
-        // The chat's real id arrived: BOTH maps follow it, or the chat loses
-        // its server conversation and its chosen folder in one stroke.
-        let mut changed = false;
-        if !cfg.sessions.contains_key(session_id) {
-            if let Some(remote) = cfg.sessions.remove(prior) {
-                cfg.sessions.insert(session_id.to_string(), remote);
-                changed = true;
-            }
-        }
-        if !cfg.directories.contains_key(session_id) {
-            if let Some(dir) = cfg.directories.remove(prior) {
-                cfg.directories.insert(session_id.to_string(), dir);
-                changed = true;
-            }
-        }
-        if changed {
-            let _ = write_config(&cfg);
-        }
-    }
     if let Some(remote) = cfg.sessions.get(session_id) {
         return Ok(remote.clone());
     }
@@ -774,6 +790,37 @@ fn prompt_model(spec: Option<&str>) -> Result<Option<Value>, String> {
         );
     }
     Ok(Some(json!({ "providerID": "iblai", "modelID": spec })))
+}
+
+/// What a quiet-stream status probe concluded about the turn's session.
+///
+/// A FAILED request is `Unknown`, never idle: the probe only runs when the
+/// stream has been silent, which is exactly when a Wi-Fi blip or a briefly
+/// sleeping desktop also fails the probe — and two such failures 15s apart
+/// used to close a mid-generation turn as complete with partial text.
+#[derive(Debug, PartialEq, Eq)]
+enum ProbeVerdict {
+    Retry,
+    Idle,
+    Busy,
+    Unknown,
+}
+
+fn classify_probe(resp: Result<Value, String>, remote: &str) -> ProbeVerdict {
+    match resp {
+        Err(_) => ProbeVerdict::Unknown,
+        Ok(v) => match v
+            .get(remote)
+            .and_then(|s| s.get("type"))
+            .and_then(|t| t.as_str())
+        {
+            Some("retry") => ProbeVerdict::Retry,
+            // The server not knowing the session at all reads as idle too —
+            // it is a POSITIVE answer from a reachable desktop.
+            None | Some("idle") => ProbeVerdict::Idle,
+            Some(_) => ProbeVerdict::Busy,
+        },
+    }
 }
 
 /// opencode is multi-project: each working directory is its own instance,
@@ -891,6 +938,11 @@ async fn run_turn(
 ) -> Result<(), String> {
     let (base, pw) = host()?;
     let text = last_user_text(messages).ok_or("no user message to send to opencode")?;
+    // Key migration FIRST: resolving the directory before it minted a fresh
+    // folder under the chat's real id while the server session stayed in
+    // the ephemeral id's folder — the turn then prompted one project and
+    // listened to another for the rest of the chat.
+    migrate_chat_key(session_id, new_chat_key);
     let turn_dir = ensure_directory(session_id, tenant, mentor).await;
     let remote = ensure_session(&base, &pw, session_id, tenant, mentor, new_chat_key).await?;
     println!("[RemoteCode] session {remote} ready (dir={turn_dir:?}); prompting");
@@ -1002,21 +1054,19 @@ async fn run_turn(
                 // No progress from OUR session for a while: ask the server
                 // what's happening rather than trusting silence.
                 last_probe = std::time::Instant::now();
-                let status = get_json(&base, &pw, &scoped("/session/status", turn_dir.as_deref()))
-                    .await
-                    .ok()
-                    .and_then(|v| {
-                        v.get(&remote)
-                            .and_then(|s| s.get("type"))
-                            .and_then(|t| t.as_str())
-                            .map(String::from)
-                    })
-                    .unwrap_or_else(|| "idle".to_string());
-                match status.as_str() {
-                    "retry" => {
+                let probe =
+                    get_json(&base, &pw, &scoped("/session/status", turn_dir.as_deref())).await;
+                match classify_probe(probe, &remote) {
+                    // Couldn't reach the desktop: no information either way.
+                    // The counters stay put; a real outage still ends at the
+                    // turn deadline rather than as a fake completion.
+                    ProbeVerdict::Unknown => {}
+                    ProbeVerdict::Retry => {
                         retry_probes += 1;
                         if retry_probes >= 3 {
-                            let msg = "The desktop's model connection keeps failing —                                        open the desktop app's Code popover to refresh                                        Phone access, then try again."
+                            let msg = "The desktop's model connection keeps failing — open the \
+                                desktop app's Code popover to refresh Phone \
+                                Access, then try again."
                                 .to_string();
                             sink.emit(
                                 "ollama:error",
@@ -1025,11 +1075,27 @@ async fn run_turn(
                             return Err(msg);
                         }
                     }
-                    "idle" => {
+                    ProbeVerdict::Idle => {
                         // Idle with a quiet stream twice in a row = the done
                         // event was missed; close the turn cleanly.
                         idle_probes += 1;
                         if idle_probes >= 2 {
+                            // Idle with NOTHING produced is a failed turn,
+                            // not an empty success — mirror the done-event
+                            // branch, which also refuses a contentless done.
+                            if full_content.is_empty()
+                                && pending_token.is_empty()
+                                && last_tool_emit.is_empty()
+                            {
+                                let msg =
+                                    "The desktop went idle without producing a reply — try again."
+                                        .to_string();
+                                sink.emit(
+                                    "ollama:error",
+                                    json!({ "generation_id": generation_id, "error": msg }),
+                                );
+                                return Err(msg);
+                            }
                             flush_stream_buffers(
                                 sink,
                                 generation_id,
@@ -1048,7 +1114,7 @@ async fn run_turn(
                             return Ok(());
                         }
                     }
-                    _ => {
+                    ProbeVerdict::Busy => {
                         retry_probes = 0;
                         idle_probes = 0;
                     }
@@ -1471,6 +1537,31 @@ mod tests {
     }
 
     #[test]
+    fn a_failed_status_probe_is_unknown_not_idle() {
+        // The bug this pins (PR review finding): a failed probe request fell
+        // through .ok() into the "idle" default, and two Wi-Fi blips 15s
+        // apart closed a mid-generation turn as complete with partial text.
+        assert_eq!(
+            classify_probe(Err("connect timed out".into()), "ses_1"),
+            ProbeVerdict::Unknown
+        );
+        // A reachable desktop that doesn't know the session IS an answer.
+        assert_eq!(classify_probe(Ok(json!({})), "ses_1"), ProbeVerdict::Idle);
+        assert_eq!(
+            classify_probe(Ok(json!({ "ses_1": { "type": "idle" } })), "ses_1"),
+            ProbeVerdict::Idle
+        );
+        assert_eq!(
+            classify_probe(Ok(json!({ "ses_1": { "type": "retry" } })), "ses_1"),
+            ProbeVerdict::Retry
+        );
+        assert_eq!(
+            classify_probe(Ok(json!({ "ses_1": { "type": "working" } })), "ses_1"),
+            ProbeVerdict::Busy
+        );
+    }
+
+    #[test]
     fn last_user_text_takes_newest_user_message() {
         let messages = vec![
             json!({ "role": "user", "content": "first" }),
@@ -1479,6 +1570,59 @@ mod tests {
         ];
         assert_eq!(last_user_text(&messages).as_deref(), Some("second\npart"));
         assert!(last_user_text(&[json!({ "role": "assistant", "content": "x" })]).is_none());
+    }
+
+    #[tokio::test]
+    async fn a_turn_migrates_the_chat_key_before_resolving_its_folder() {
+        // The bug this pins (PR review finding): run_turn resolved the
+        // directory BEFORE the new_chat_key migration. A no-mentor chat that
+        // gained its real id then minted/used a different folder than the
+        // one its server session lives in — every later turn prompted one
+        // project and listened to another.
+        let _guard = CONFIG_TEST_LOCK.lock().await;
+        test_config("http://127.0.0.1:9");
+        let mut cfg = read_config();
+        cfg.directories
+            .insert("chat-eph".to_string(), "/tmp/folder-a".to_string());
+        write_config(&cfg).unwrap();
+
+        // What run_turn now does first:
+        migrate_chat_key("chat-real", Some("chat-eph"));
+        let dir = ensure_directory("chat-real", None, None).await;
+        assert_eq!(
+            dir.as_deref(),
+            Some("/tmp/folder-a"),
+            "the real id must inherit the ephemeral id's folder for the SAME turn"
+        );
+        // And the map moved rather than duplicated.
+        let cfg = read_config();
+        assert!(!cfg.directories.contains_key("chat-eph"));
+        assert_eq!(
+            cfg.directories.get("chat-real").map(String::as_str),
+            Some("/tmp/folder-a")
+        );
+    }
+
+    #[tokio::test]
+    async fn unpairing_forgets_the_old_desktop_folders() {
+        // The bug this pins (PR review finding): clear_host kept
+        // `directories`/`mentor_directories`, so pairing with a SECOND
+        // desktop resolved absolute paths from the first machine.
+        let _guard = CONFIG_TEST_LOCK.lock().await;
+        test_config("http://127.0.0.1:9");
+        let mut cfg = read_config();
+        cfg.sessions.insert("c1".into(), "ses_1".into());
+        cfg.directories.insert("c1".into(), "/old/machine/a".into());
+        cfg.mentor_directories
+            .insert(mentor_key("t", "m"), "/old/machine/b".into());
+        write_config(&cfg).unwrap();
+
+        remote_code_clear_host().await.unwrap();
+
+        let cfg = read_config();
+        assert!(cfg.sessions.is_empty());
+        assert!(cfg.directories.is_empty());
+        assert!(cfg.mentor_directories.is_empty());
     }
 
     #[test]

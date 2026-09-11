@@ -403,9 +403,19 @@ pub fn stop_ollama_server() -> Result<(), String> {
 
 /// Check available disk space on the drive where models are stored
 pub fn check_disk_space() -> Result<f64, String> {
-    // iOS: models land in the app sandbox, so measure that filesystem.
+    // Mobile: measure the filesystem the models actually land on — the
+    // app-data models dir remembered at local_llm startup. NOT `$HOME`:
+    // iOS happens to set it to the sandbox, but Android leaves it unset and
+    // statvfs on `/` reports 0 bytes available to an app, which blocked
+    // every download with "0.0 GB available".
     #[cfg(any(target_os = "ios", target_os = "android"))]
     {
+        if let Some(dir) = crate::local_llm::models_dir() {
+            // The dir may not exist before the first pull; statvfs needs a
+            // real path.
+            let _ = std::fs::create_dir_all(&dir);
+            return crate::local_llm::available_disk_gb(&dir);
+        }
         let home = std::env::var("HOME").unwrap_or_else(|_| "/".to_string());
         return crate::local_llm::available_disk_gb(std::path::Path::new(&home));
     }

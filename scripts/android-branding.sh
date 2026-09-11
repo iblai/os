@@ -110,9 +110,42 @@ for f in "$RES/values/themes.xml" "$RES/values-night/themes.xml"; do
         <item name="android:windowBackground">@drawable/splash_screen</item>
         <item name="android:windowSplashScreenBackground" tools:targetApi="31">@color/splash_background</item>
         <item name="android:windowSplashScreenAnimatedIcon" tools:targetApi="31">@drawable/splash_icon</item>
+        <!-- Fitted (non-edge-to-edge) layout: the WebView cannot read the
+             display-cutout insets from CSS, so drawing under the notch hides
+             the app's top bar. Android 15 forces edge-to-edge for
+             targetSdk 35+ unless opted out. Bars are white with dark icons,
+             matching the app's header. -->
+        <item name="android:windowOptOutEdgeToEdgeEnforcement" tools:targetApi="35">true</item>
+        <item name="android:statusBarColor">@color/splash_background</item>
+        <item name="android:navigationBarColor">@color/splash_background</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="23">true</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="27">true</item>
     </style>
 </resources>
 XML
 done
+
+# 5. Fitted layout: the template's MainActivity calls enableEdgeToEdge(),
+# which puts the webview under the notch/status bar while the WebView
+# reports env(safe-area-inset-*) as 0 - the app's top bar becomes
+# unreachable. Rewrite it to plain fitted decor (the theme above also opts
+# out of Android 15's edge-to-edge enforcement).
+cat > "$RES/../java/ai/ibl/mentorai/MainActivity.kt" <<'KT'
+package ai.ibl.mentorai
+
+import android.os.Bundle
+
+class MainActivity : TauriActivity() {
+  override fun onCreate(savedInstanceState: Bundle?) {
+    // Deliberately NOT calling enableEdgeToEdge() (the template default):
+    // Android's WebView reports env(safe-area-inset-*) as 0, so an
+    // edge-to-edge webview puts the app's top bar behind the notch/status
+    // bar with no way for CSS to compensate. Fitted decor lays the webview
+    // out below the status bar; the theme paints that bar white with dark
+    // icons to match the app's header.
+    super.onCreate(savedInstanceState)
+  }
+}
+KT
 
 echo "Android branding applied (icons + adaptive icon + splash)."

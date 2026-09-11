@@ -106,10 +106,21 @@ fn free_port() -> Result<u16, String> {
 }
 
 fn status_locked(host: &mut Option<Host>) -> RemoteCodeStatus {
-    // A crashed/killed server must read as stopped, not haunt the UI.
+    // A crashed/killed server must read as stopped, not haunt the UI — and
+    // it gets the SAME teardown as every other path: abort the companion
+    // (or its server squats port+1 and the next enable lands on a random
+    // port that hand-typed pairings can't derive), drop the pid file, and
+    // unregister the proxy secret holding the platform token.
     if let Some(h) = host.as_mut() {
         if h.child.try_wait().ok().flatten().is_some() {
-            *host = None;
+            if let Some(dead) = host.take() {
+                dead.companion.abort();
+                let _ = std::fs::remove_file(serve_pid_file());
+                let secret = dead.proxy_secret;
+                tauri::async_runtime::spawn(async move {
+                    crate::opencode_proxy::unregister(&secret).await;
+                });
+            }
         }
     }
     match host.as_ref() {
@@ -497,6 +508,12 @@ pub async fn remote_code_enable(
     crate::opencode_proxy::set_app(&app);
     let proxy_secret = crate::opencode_proxy::new_secret();
     crate::opencode_proxy::register(&proxy_secret, upstream, token.clone()).await;
+    // From here to the host store, EVERY early return must unregister the
+    // secret — it holds the user's platform token in the loopback proxy,
+    // and each failed enable retry used to stack another live secret. The
+    // guard fires on any exit path; it is defused once the secret's
+    // lifetime is owned by the stored Host (disable/shutdown unregister it).
+    let mut secret_guard = ProxySecretGuard::armed(&proxy_secret);
     // The ibl.ai guidance travels as the per-session AGENTS.md (written by
     // apply_opencode_model below), the same delivery every desktop spawn
     // uses — the retired proxy body-injection path must not come back.
@@ -546,7 +563,7 @@ pub async fn remote_code_enable(
         st.running.then_some(st)
     };
     if let Some(st) = already {
-        crate::opencode_proxy::unregister(&proxy_secret).await;
+        // secret_guard unregisters on return.
         return Ok(st);
     }
 
@@ -619,6 +636,9 @@ pub async fn remote_code_enable(
         });
         port
     }; // lock released before the await below
+       // The Host now owns the secret's lifetime — but hold the guard armed
+       // until the serve actually answers: the failure branch below tears the
+       // Host down again and must still unregister.
 
     if !wait_until_serving(port, 15).await {
         {
@@ -629,11 +649,45 @@ pub async fn remote_code_enable(
                 let _ = std::fs::remove_file(serve_pid_file());
             }
         }
-        crate::opencode_proxy::unregister(&proxy_secret).await;
+        // secret_guard unregisters on return.
         return Err("opencode serve did not come up (is opencode installed?)".to_string());
     }
 
+    secret_guard.defuse();
     Ok(status_locked(&mut HOST.lock().expect("remote code lock")))
+}
+
+/// Unregisters a loopback-proxy secret when dropped, unless defused. The
+/// enable flow registers the secret early (the served process needs it in
+/// its config) and has many fallible steps before the Host takes ownership;
+/// this guarantees no early return leaves a token-bearing secret live.
+struct ProxySecretGuard {
+    secret: String,
+    armed: bool,
+}
+
+impl ProxySecretGuard {
+    fn armed(secret: &str) -> Self {
+        Self {
+            secret: secret.to_string(),
+            armed: true,
+        }
+    }
+
+    fn defuse(&mut self) {
+        self.armed = false;
+    }
+}
+
+impl Drop for ProxySecretGuard {
+    fn drop(&mut self) {
+        if self.armed {
+            let secret = std::mem::take(&mut self.secret);
+            tauri::async_runtime::spawn(async move {
+                crate::opencode_proxy::unregister(&secret).await;
+            });
+        }
+    }
 }
 
 /// The QR the phone scans to pair: an SVG encoding every candidate address
@@ -688,6 +742,38 @@ pub async fn remote_code_disable() -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
+    #[tokio::test]
+    async fn an_armed_secret_guard_unregisters_on_drop() {
+        // The bug this pins (PR review finding): every `?` between proxy
+        // registration and the Host store returned without unregistering,
+        // leaving a token-bearing secret live in the loopback proxy per
+        // failed enable attempt.
+        let secret = crate::opencode_proxy::new_secret();
+        crate::opencode_proxy::register(&secret, "http://up".into(), "tok".into()).await;
+        assert!(crate::opencode_proxy::is_registered(&secret).await);
+
+        drop(ProxySecretGuard::armed(&secret));
+        // Drop unregisters via a spawned task; give it a beat.
+        for _ in 0..50 {
+            if !crate::opencode_proxy::is_registered(&secret).await {
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+        }
+        assert!(!crate::opencode_proxy::is_registered(&secret).await);
+
+        // A DEFUSED guard leaves the registration alone (the success path —
+        // the stored Host owns the secret's lifetime from then on).
+        let kept = crate::opencode_proxy::new_secret();
+        crate::opencode_proxy::register(&kept, "http://up".into(), "tok".into()).await;
+        let mut guard = ProxySecretGuard::armed(&kept);
+        guard.defuse();
+        drop(guard);
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        assert!(crate::opencode_proxy::is_registered(&kept).await);
+        crate::opencode_proxy::unregister(&kept).await;
+    }
+
     use super::*;
 
     /// Both port tests touch PREFERRED_PORT; running them in parallel makes
@@ -792,8 +878,8 @@ mod tests {
         assert!(st.urls.is_empty());
     }
 
-    #[test]
-    fn status_reaps_a_dead_child() {
+    #[tokio::test(flavor = "multi_thread")]
+    async fn status_reaps_a_dead_child() {
         // A child that exits (here: `true`, immediately) must flip the status
         // back to stopped instead of advertising a dead server to the phone.
         let child = Command::new(if cfg!(windows) { "cmd" } else { "true" })
@@ -815,8 +901,22 @@ mod tests {
         });
         // Give the trivial process a moment to exit.
         std::thread::sleep(std::time::Duration::from_millis(200));
+        let companion = host.as_ref().unwrap().companion.inner().abort_handle();
+        // Registered secret must be torn down with the dead host (PR review
+        // finding: this branch skipped every teardown shutdown_sync does).
+        crate::opencode_proxy::register("sec", "http://up".into(), "tok".into()).await;
         let st = status_locked(&mut host);
         assert!(!st.running);
         assert!(host.is_none());
+        // Companion aborted, not left squatting port+1…
+        assert!(companion.is_finished());
+        // …and the token-bearing secret unregistered (async, give it a beat).
+        for _ in 0..50 {
+            if !crate::opencode_proxy::is_registered("sec").await {
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+        }
+        assert!(!crate::opencode_proxy::is_registered("sec").await);
     }
 }

@@ -2,13 +2,8 @@
   "$schema": "../gen/schemas/mobile-schema.json",
   "identifier": "mobile-pairing",
   "description": "Mobile-only: camera QR scanning for Code pairing",
-  "platforms": [
-    "iOS",
-    "android"
-  ],
-  "windows": [
-    "main"
-  ],
+  "platforms": ["iOS", "android"],
+  "windows": ["main"],
   "remote": {
     "urls": [
       "https://*.iblai.app/*",

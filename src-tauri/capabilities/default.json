@@ -2,9 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Default capabilities for the Mentor AI app",
-  "windows": [
-    "main"
-  ],
+  "windows": ["main"],
   "local": true,
   "remote": {
     "urls": [

@@ -695,6 +695,12 @@ pub async fn ensure_started() -> Result<u16, String> {
     Ok(p)
 }
 
+/// Whether a secret is currently registered — test support for the enable
+/// flow's leak guard (a failed enable must leave no token-bearing secret).
+pub(crate) async fn is_registered(secret: &str) -> bool {
+    sessions().read().await.contains_key(secret)
+}
+
 /// Register a session's upstream + real token against its throwaway secret.
 pub async fn register(secret: &str, base: String, token: String) {
     sessions()

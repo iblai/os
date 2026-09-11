@@ -1,6 +1,7 @@
 // Hide console window on Windows in release builds
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod app_update;
 mod cua_driver_installer;
 mod cua_driver_mcp;
 mod foundry_installer;
@@ -2216,6 +2217,11 @@ fn main() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_dialog::init())
+        // In-place self-update: the desktop binary must register the SAME
+        // updater surface lib.rs does, or `check_app_update` rejects with
+        // "command not found" and the feature is silently dead on desktop
+        // while the release workflows sign and publish the feed.
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             // Keep the managed opencode on the pinned version — a pin bump would
             // otherwise never reach a machine that already has a runnable copy.
@@ -2572,8 +2578,14 @@ fn main() {
                         }
                     }
 
-                    // Allow navigation within the app's domains and localhost
-                    let allowed = url_str.starts_with("http://localhost")
+                    // Allow navigation within the app's domains and localhost.
+                    // The CONFIGURED app URL is always allowed first: the list
+                    // below is hardcoded, and pointing TAURI_APP_URL at another
+                    // deployment (e.g. the org platform) used to make the app
+                    // block its own initial navigation — a white window.
+                    let app_origin = get_app_url();
+                    let allowed = url_str.starts_with(app_origin.trim_end_matches('/'))
+                        || url_str.starts_with("http://localhost")
                         || url_str.starts_with("http://127.0.0.1")
                         || url_str.starts_with("https://mentorai.iblai.app")
                         || url_str.starts_with("https://os.ibl.ai")
@@ -2801,6 +2813,8 @@ fn main() {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            app_update::check_app_update,
+            app_update::install_app_update,
             install_ollama,
             stop_ollama,
             check_ollama_status,

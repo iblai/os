@@ -143,12 +143,19 @@ fn write_manifest(dir: &Path, m: &serde_json::Map<String, Value>) -> Result<(), 
 }
 
 /// The GGUF path for an installed model id, if present in the manifest.
+///
+/// A TAGGED request (`llama3.2:3b`) matches only its exact tag: the catalog
+/// deliberately maps `llama3.2` and `llama3.2:3b` to different weights, and
+/// the old base-name match made a pull of the larger variant short-circuit
+/// as "already installed" while chat then served the smaller one. Only an
+/// untagged request (`llama3.2` — how the SDK refers to models) may fall
+/// back to any installed tag of that base.
 pub fn installed_model_path(dir: &Path, model: &str) -> Option<PathBuf> {
     let manifest = read_manifest(dir);
-    let base = model.split(':').next().unwrap_or(model);
+    let untagged = !model.contains(':');
     manifest.iter().find_map(|(tag, v)| {
         let tag_base = tag.split(':').next().unwrap_or(tag);
-        if tag == model || tag_base == base {
+        if tag == model || (untagged && tag_base == model) {
             let file = v.get("file")?.as_str()?;
             let path = dir.join(file);
             path.exists().then_some(path)
@@ -514,6 +521,14 @@ static SERVER_URL: OnceLock<String> = OnceLock::new();
 /// launch-time start can be retried later (see `ensure_started`).
 static MODELS_DIR: OnceLock<PathBuf> = OnceLock::new();
 
+/// Where models are stored, as remembered by the first `start` attempt.
+/// The disk-space check measures THIS filesystem: on Android there is no
+/// meaningful `$HOME` (statvfs on `/` reports 0 bytes available to apps),
+/// while the app-data models dir is on the real writable partition.
+pub fn models_dir() -> Option<PathBuf> {
+    MODELS_DIR.get().cloned()
+}
+
 /// Start the embedded server if it is not up yet, using the models dir from
 /// the first `start` call. The recovery path for a launch-time start failure:
 /// callers (e.g. a model download) invoke this instead of giving up.
@@ -864,10 +879,15 @@ impl Utf8Stream {
             Err(e) => {
                 let valid = e.valid_up_to();
                 // An unfinished sequence can be at most 3 bytes; anything
-                // longer held back means genuinely invalid bytes — drop them.
+                // longer held back means genuinely invalid bytes. Emit the
+                // VALID PREFIX and drop only the bad tail — clearing the
+                // whole buffer here used to throw away already-valid text
+                // that arrived in the same chunk as the bad bytes.
                 if self.pending.len() - valid > 3 {
+                    let out = (valid > 0)
+                        .then(|| String::from_utf8_lossy(&self.pending[..valid]).into_owned());
                     self.pending.clear();
-                    return None;
+                    return out;
                 }
                 if valid == 0 {
                     return None;
@@ -902,6 +922,31 @@ mod tests {
         assert!(resolve("gpt-oss:20b").is_none());
         assert!(resolve("gemma4:31b").is_none());
         assert!(resolve("unknown-model").is_none());
+    }
+
+    #[test]
+    fn tagged_model_requests_never_fall_back_to_another_variant() {
+        // The bug this pins (PR review finding): with llama3.2:1b installed,
+        // a pull of llama3.2:3b short-circuited as "already installed" via
+        // the base-name match — and chat then served the 1B weights while
+        // claiming to be the 3B model. Tagged requests must match exactly;
+        // only an untagged base name may take any installed variant.
+        let dir = std::env::temp_dir().join(format!("ibl-tagmatch-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("small.gguf"), b"x").unwrap();
+        let mut m = serde_json::Map::new();
+        m.insert(
+            "llama3.2:1b".to_string(),
+            json!({ "file": "small.gguf", "size": 1 }),
+        );
+        write_manifest(&dir, &m).unwrap();
+
+        // Exact tag and untagged base both find the installed variant…
+        assert!(installed_model_path(&dir, "llama3.2:1b").is_some());
+        assert!(installed_model_path(&dir, "llama3.2").is_some());
+        // …but a DIFFERENT tag of the same base must not.
+        assert!(installed_model_path(&dir, "llama3.2:3b").is_none());
     }
 
     #[test]
@@ -949,11 +994,66 @@ mod tests {
     }
 
     #[test]
+    fn utf8_stream_keeps_the_valid_prefix_before_invalid_bytes() {
+        // The bug this pins (PR review finding): >3 invalid trailing bytes
+        // cleared the WHOLE buffer, discarding valid text that arrived in
+        // the same chunk.
+        let mut s = Utf8Stream::default();
+        let mut bytes = b"hello ".to_vec();
+        bytes.extend_from_slice(&[0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
+        assert_eq!(s.push(&bytes).as_deref(), Some("hello "));
+        // The bad tail is gone, not held: clean text flows right after.
+        assert_eq!(s.push(b"world").as_deref(), Some("world"));
+    }
+
+    #[test]
     fn utf8_stream_drops_invalid_bytes() {
         let mut s = Utf8Stream::default();
         // 4 continuation bytes can never complete a sequence.
         assert_eq!(s.push(&[0x80, 0x80, 0x80, 0x80]), None);
         assert_eq!(s.push(b"next").as_deref(), Some("next"));
+    }
+
+    /// End-to-end liveness: start() must yield a server that actually
+    /// ANSWERS — a thread that binds, registers the URL, then dies leaves
+    /// server_url() pointing at a dead port and every download failing with
+    /// "embedded model server is not responding".
+    #[tokio::test(flavor = "multi_thread")]
+    async fn embedded_server_answers_version_after_start() {
+        let dir = std::env::temp_dir()
+            .join(format!("ibl-live-{}", std::process::id()))
+            .join("models");
+        let url = start(dir).expect("start embedded server");
+        let mut last_err = String::new();
+        for _ in 0..50 {
+            match reqwest::get(format!("{url}/api/version")).await {
+                Ok(r) if r.status().is_success() => {
+                    let v: Value = r.json().await.expect("version json");
+                    assert!(v.get("version").is_some());
+                    return;
+                }
+                Ok(r) => last_err = format!("status {}", r.status()),
+                Err(e) => last_err = e.to_string(),
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        }
+        panic!("embedded server never answered /api/version: {last_err}");
+    }
+
+    #[test]
+    fn models_dir_is_recorded_by_start_attempts_and_probeable() {
+        // The disk check measures models_dir(), not $HOME — on Android HOME
+        // is unset and statvfs("/") reports 0 bytes, which blocked every
+        // download. start() must record the dir even when binding fails,
+        // and a just-created dir must probe to a real, positive number.
+        let dir = std::env::temp_dir()
+            .join(format!("ibl-models-dir-{}", std::process::id()))
+            .join("models");
+        let _ = start(dir.clone());
+        assert_eq!(models_dir().as_deref(), Some(dir.as_path()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let gb = available_disk_gb(&dir).expect("probe fresh models dir");
+        assert!(gb > 0.0, "created dir must report positive space, got {gb}");
     }
 
     #[test]
