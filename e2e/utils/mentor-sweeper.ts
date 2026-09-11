@@ -163,6 +163,7 @@ interface MentorListItem {
 interface MentorListResponse {
   results?: MentorListItem[];
   num_pages?: number;
+  next?: string | null;
 }
 
 // ── Sweeper logic ─────────────────────────────────────────────────────────────
@@ -191,8 +192,8 @@ async function sweepStaleMentors(
   let skipped = 0;
   let failed = 0;
 
-  for (let page = 1; page <= MAX_PAGES; page++) {
-    const listUrl = `${baseListUrl}?page=${page}&page_size=100`;
+  let listUrl: string | null = `${baseListUrl}?page=1&page_size=100`;
+  for (let page = 1; page <= MAX_PAGES && listUrl; page++) {
     let res: { status: number; body: string };
     try {
       res = await httpRequest(listUrl, 'GET', headers);
@@ -221,6 +222,9 @@ async function sweepStaleMentors(
       ? data
       : (data.results ?? []);
     const numPages: number = Array.isArray(data) ? 1 : (data.num_pages ?? 1);
+    const next: string | null | undefined = Array.isArray(data)
+      ? undefined
+      : data.next;
 
     for (const item of items) {
       const name = item.name;
@@ -258,7 +262,14 @@ async function sweepStaleMentors(
       }
     }
 
-    if (page >= numPages || items.length === 0) break;
+    listUrl =
+      items.length === 0
+        ? null
+        : typeof next === 'string'
+          ? next
+          : page < numPages
+            ? `${baseListUrl}?page=${page + 1}&page_size=100`
+            : null;
   }
 
   console.log(
