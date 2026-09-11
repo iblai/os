@@ -1,5 +1,47 @@
 # Changelog
 
+## [0.142.6](https://github.com/iblai/os/compare/v0.142.5...v0.142.6) (2026-09-10)
+
+### CI
+
+* build a PR test image on demand, without the e2e suite ([ede4100](https://github.com/iblai/os/commit/ede4100e7bf61ad8a1f51964e44fce711da94af5))
+* let the PR image builder take an explicit ref ([589b6f5](https://github.com/iblai/os/commit/589b6f5b0f2d64114f977b59f6f2253662064722))
+
+## [0.142.5](https://github.com/iblai/os/compare/v0.142.4...v0.142.5) (2026-09-10)
+
+### Bug Fixes
+
+* **tenant-switch:** complete auth handoff and pull in SDK loader-hang fix ([cf8c48c](https://github.com/iblai/os/commit/cf8c48caeb1ed28e98625e9ede7b9a59ec4b7895))
+
+## [0.142.4](https://github.com/iblai/os/compare/v0.142.3...v0.142.4) (2026-09-10)
+
+### Bug Fixes
+
+* **deploy:** default a scheme-less NEXT_PUBLIC_ASSET_CDN to https:// ([05cb3b0](https://github.com/iblai/os/commit/05cb3b07759dd25b08e8ebfee8d9fa933c0465d1))
+
+### Performance
+
+* **sentry:** cut Session Replay recording cost and trace sampling ([a0908f0](https://github.com/iblai/os/commit/a0908f03cb01f78a64a0aa871443f340cd22b35a))
+
+## [0.142.3](https://github.com/iblai/os/compare/v0.142.2...v0.142.3) (2026-09-09)
+
+### Bug Fixes
+
+* **e2e:** adding test fixme for history test ([4249278](https://github.com/iblai/os/commit/42492786cf479c716faa369d068d25f6e665e0b5))
+* **mentor:** adding fixes for history, memory and canvas ([9e01e2c](https://github.com/iblai/os/commit/9e01e2ca04c967e372f4dff64c729048612786b3))
+
+## [0.142.2](https://github.com/iblai/os/compare/v0.142.1...v0.142.2) (2026-09-09)
+
+### Chores
+
+* bump iblai-js to 2.9.7 ([5813323](https://github.com/iblai/os/commit/58133234470efdf8e277ff726f896fa8469b5971))
+
+## [0.142.1](https://github.com/iblai/os/compare/v0.142.0...v0.142.1) (2026-09-09)
+
+### Bug Fixes
+
+* **chunk-error:** auto-reload N times then show a recoverable error page ([5df329b](https://github.com/iblai/os/commit/5df329bdfd7a4c0535e54f354d3a69cac0be64c2))
+
 ## [0.142.0](https://github.com/iblai/os/compare/v0.141.1...v0.142.0) (2026-09-08)
 
 ### Features
