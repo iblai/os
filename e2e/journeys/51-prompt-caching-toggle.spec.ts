@@ -38,8 +38,6 @@ import * as fs from 'fs';
 import { test, expect } from '../fixtures/mentor-test';
 import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
-import { parsePlatformUrl } from '../utils/navigation';
-import { workerTracker } from '../utils/resource-tracker';
 import { logger } from '@iblai/iblai-js/playwright';
 
 // Temp file used to persist the shared mentor URL across serial-retry workers.
@@ -111,9 +109,6 @@ test.describe.fixme('Journey 46: Prompt Caching Toggle', () => {
       // First run: create a fresh mentor.
       await createMentorPage.openAndCreate();
       sharedMentorUrl = page.url();
-      // Shared across serial-retry workers: leave it to the run-level
-      // residue teardown, not this worker's.
-      workerTracker().releaseMentor(parsePlatformUrl(sharedMentorUrl).mentorId);
       // Write to temp file so Playwright serial-retry workers (new processes)
       // can read the URL and skip re-creation.
       writeSharedMentorUrl(sharedMentorUrl);

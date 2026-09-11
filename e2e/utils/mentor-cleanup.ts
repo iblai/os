@@ -8,9 +8,11 @@
  *    dm_token, username, and tenantKey from localStorage so no extra
  *    credentials are needed. Falls back silently on any error.
  *
- * 2. `MentorTracker` — legacy `afterAll` flush of this worker's
- *    `resource-tracker`. Mentors are registered by construction when
- *    `CreateMentorPage.createWithName` returns, so new specs need neither.
+ * 2. `MentorTracker` — legacy no-op kept only so the ~17 specs that already
+ *    call `tracker.deleteAll()` in `afterAll` keep compiling. Mentors are
+ *    registered by construction when `CreateMentorPage.createWithName`
+ *    returns, and only the run-level `residue.teardown.ts` deletes them now
+ *    (see `resource-tracker.ts`) — new specs need neither.
  *
  * API endpoint used:
  *   DELETE {dmBase}/api/ai-mentor/orgs/{tenantKey}/users/{username}/{mentorId}/
@@ -137,8 +139,8 @@ export async function deleteMentorById(
 /**
  * Kept for the specs that predate by-construction registration (see
  * `resource-tracker.ts`). `add` is a no-op for ids the page object already
- * registered; `deleteAll` flushes this worker's tracker early, in `afterAll`,
- * instead of waiting for worker shutdown.
+ * registered; `deleteAll` is also a no-op now — deletion happens only once,
+ * at the run level, in `residue.teardown.ts`.
  */
 export class MentorTracker {
   add(mentorId: string): void {
@@ -150,6 +152,6 @@ export class MentorTracker {
   }
 
   async deleteAll(_browser: Browser, _testInfo: TestInfo): Promise<void> {
-    await workerTracker().deleteAll();
+    // No-op — see the class doc comment above.
   }
 }

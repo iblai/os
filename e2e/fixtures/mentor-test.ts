@@ -102,9 +102,11 @@ export const test = base.extend<
   },
   {
     /**
-     * Auto worker fixture: every mentor/project registered on this worker
-     * (by construction, from the page objects) is deleted when the worker
-     * shuts down — after the file's `afterAll` hooks, on pass, fail or retry.
+     * Auto worker fixture: registers this worker's `resource-tracker` and
+     * keeps it configured for the worker's lifetime. Deletion no longer
+     * happens here — mid-run worker deletes raced other workers' in-flight
+     * tests (auto-resolved mentor 404s). The run-level `residue.teardown.ts`
+     * is now the only deleter, once every journey project has finished.
      */
     createdResources: ReturnType<typeof workerTracker>;
   }
@@ -114,7 +116,6 @@ export const test = base.extend<
       const tracker = workerTracker();
       tracker.configure(workerInfo);
       await use(tracker);
-      await tracker.deleteAll();
     },
     { scope: 'worker', auto: true, timeout: 300_000 },
   ],

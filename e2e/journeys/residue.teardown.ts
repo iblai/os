@@ -25,7 +25,7 @@ import { E2E_PROJECT_RE } from '../utils/project-sweeper';
  * `E2E_STRICT_COUNTS=1`). Any problem goes through `failLoudly`.
  */
 teardown('reap and assert run residue', async ({}, info) => {
-  teardown.setTimeout(300_000);
+  teardown.setTimeout(600_000);
   const browser = browserOf(info.project.name);
   const snapshot = readSnapshot(browser);
   const dmBase = dmBaseFromEnv() || snapshot?.dmBase || '';

@@ -9,7 +9,6 @@ import {
 } from '@playwright/test';
 import { logger } from '@iblai/iblai-js/playwright';
 
-import { knownDmBase } from './dm-api';
 import { parsePlatformUrl } from './navigation';
 import { findProjectIdByName } from './project-cleanup';
 
@@ -250,7 +249,7 @@ async function deleteResourceOnce(
     });
     const ok = res.ok() || res.status() === 404;
     const line = `[resource-tracker] DELETE ${describeResource(r)} → ${res.status()}`;
-    if (ok) logger.info(line);
+    if (ok) console.log(line);
     else logger.warn(line);
     return { ok, retryable: !ok && res.status() >= 500 };
   } catch (err) {
@@ -293,7 +292,7 @@ export async function isGone(
   }
 }
 
-/** Deletes `items` four at a time; returns the ones that could not be deleted. */
+/** Deletes `items` eight at a time; returns the ones that could not be deleted. */
 export async function deleteResources(
   dmBase: string,
   tokensFor: (username: string) => AuthTokens | undefined,
@@ -304,7 +303,7 @@ export async function deleteResources(
   try {
     const pending = [...items];
     while (pending.length) {
-      const batch = pending.splice(0, 4);
+      const batch = pending.splice(0, 8);
       await Promise.all(
         batch.map(async (r) => {
           const tokens = tokensFor(r.username);
@@ -396,9 +395,11 @@ const userBase = (dmBase: string, auth: StorageAuth) =>
 const mentorsFirst = (users: string) => `${users}?page=1&page_size=100`;
 const mentorsNext =
   (users: string) => (data: Record<string, unknown>, page: number) =>
-    page < Number(data.num_pages ?? 1)
-      ? `${users}?page=${page + 1}&page_size=100`
-      : null;
+    typeof data.next === 'string'
+      ? data.next
+      : page < Number(data.num_pages ?? 1)
+        ? `${users}?page=${page + 1}&page_size=100`
+        : null;
 const projectsFirst = (users: string) => `${users}projects/?limit=100&offset=0`;
 const projectsNext =
   (users: string) => (data: Record<string, unknown>, page: number) =>
@@ -463,13 +464,11 @@ export async function countResources(
 
 class ResourceTracker {
   project = '';
-  private storageState = '';
   private readonly items = new Map<string, TrackedResource>();
   private readonly tokens = new Map<string, AuthTokens>();
 
   configure(workerInfo: WorkerInfo): void {
     this.project = workerInfo.project.name;
-    this.storageState = String(workerInfo.project.use.storageState ?? '');
   }
 
   add(entry: TrackedResource, tokens: AuthTokens): void {
@@ -478,56 +477,13 @@ class ResourceTracker {
     this.items.set(key, entry);
     if (tokens.dmToken) this.tokens.set(entry.username, tokens);
     appendResidue(entry);
-    logger.info(`[resource-tracker] Registered ${describeResource(entry)}`);
-  }
-
-  /** Drop `mentorId` from this worker's teardown; the run-level teardown still reaps it. */
-  releaseMentor(mentorId: string): void {
-    for (const [key, r] of this.items) {
-      if (r.kind === 'mentor' && r.mentorId === mentorId)
-        this.items.delete(key);
-    }
+    console.log(`[resource-tracker] Registered ${describeResource(entry)}`);
   }
 
   hasMentor(mentorId: string): boolean {
     return [...this.items.values()].some(
       (r) => r.kind === 'mentor' && r.mentorId === mentorId,
     );
-  }
-
-  async deleteAll(): Promise<void> {
-    const items = [...this.items.values()];
-    if (!items.length) return;
-    this.items.clear();
-
-    const dmBase =
-      knownDmBase() || readSnapshot(browserOf(this.project))?.dmBase || '';
-    if (!dmBase) {
-      failLoudly(
-        `Cannot resolve the DM API base — ${items.length} resource(s) left for the run-level teardown (set DM_URL)`,
-      );
-      return;
-    }
-    const fallback = this.storageState
-      ? readAuthFromStorageState(this.storageState)
-      : null;
-    const failed = await deleteResources(
-      dmBase,
-      (username) =>
-        this.tokens.get(username) ??
-        (fallback?.username === username ? fallback : undefined),
-      items,
-    );
-    logger.info(
-      `[resource-tracker] Worker teardown: deleted ${items.length - failed.length}/${items.length} resource(s)`,
-    );
-    if (failed.length) {
-      failLoudly(
-        `Worker teardown could not delete ${failed.length} resource(s): ${failed
-          .map(describeResource)
-          .join(', ')}`,
-      );
-    }
   }
 }
 
