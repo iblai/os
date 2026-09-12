@@ -106,6 +106,26 @@ export class AnalyticsPage {
     );
   }
 
+  async navigateToCosts(): Promise<void> {
+    // Costs has no on-page tab either — like Memory and Data Reports it is a
+    // sidebar sub-item (i18n key `appSidebarIndex.analyticsCosts`) that
+    // deep-links to `/analytics/financial`. `navigateToTab('costs')` looked
+    // for `role=tab name=/costs/i`, which has not existed since Analytics
+    // moved to the collapsible sidebar, so it timed out rather than failing
+    // on the assertion.
+    await this.expandSidebarAnalytics();
+    const costsLink = this.sidebar
+      .getByTestId('sidebar-nav')
+      .getByRole('button', { name: 'Costs', exact: true });
+    await expect(costsLink).toBeVisible({ timeout: 10_000 });
+    await costsLink.click();
+    await safeWaitForURL(
+      this.page,
+      (url) => /\/analytics\/financial\/?$/.test(url.href),
+      { timeout: 60_000 },
+    );
+  }
+
   async navigateToDataReports(): Promise<void> {
     // Sidebar Analytics is a collapsible section now (see `goto()`).
     // Expand it, then click the "Data Reports" sub-item which deep-links
