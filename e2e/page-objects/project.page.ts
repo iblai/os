@@ -1,6 +1,8 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { safeWaitForURL } from '../utils/navigation';
 import { isVisibleWithin } from '../utils/resilient';
+import { observeDmBase } from '../utils/dm-api';
+import { registerProject } from '../utils/resource-tracker';
 
 export class ProjectPage {
   readonly page: Page;
@@ -87,7 +89,8 @@ export class ProjectPage {
    * check can fail (network error → mentorExists=false), redirecting back to the
    * default mentor page. We therefore leave navigation to the caller to control.
    */
-  async createFromSidebar(name: string): Promise<void> {
+  async createFromSidebar(name: string): Promise<string | null> {
+    observeDmBase(this.page);
     // 1. Navigate to the projects index via the sidebar "Projects" button
     await this.navigateViaProjectsSidebarButton();
 
@@ -140,6 +143,7 @@ export class ProjectPage {
     await this.navigateViaProjectsSidebarButton();
     const card = this.page.locator('h3', { hasText: name });
     await expect(card).toBeVisible({ timeout: 15_000 });
+    return registerProject(this.page, name);
   }
 
   /**

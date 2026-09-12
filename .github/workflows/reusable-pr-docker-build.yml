@@ -46,6 +46,15 @@ on:
         required: false
         type: string
         default: 'ubuntu-22.04'
+      ref:
+        description: >-
+          Commit SHA or ref to build. Empty (the default) keeps the historic behaviour of building
+          the ref the workflow was triggered on, which is correct for pull_request. A manual
+          workflow_dispatch must pass the PR head SHA explicitly, otherwise checkout silently
+          builds the default branch and the image is labelled with a PR it does not contain.
+        required: false
+        type: string
+        default: ''
     outputs:
       image-uri:
         description: 'Full image URI (registry/repo:tag)'
@@ -70,6 +79,9 @@ jobs:
     steps:
       - name: Checkout source repo
         uses: actions/checkout@v4
+        with:
+          # Empty resolves to the triggering ref, so pull_request builds are unchanged.
+          ref: ${{ inputs.ref }}
 
       - name: Checkout ops actions
         uses: actions/checkout@v4

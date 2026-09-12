@@ -9,6 +9,7 @@ import {
   fillLinkName,
   fillToolForm,
   getLinkModal,
+  getLinkRow,
   getToolModal,
   openCreateLinkModal,
   openCreateToolModal,
@@ -298,6 +299,45 @@ export class LtiTab {
     await openCreateLinkModal(this.dialog);
     await fillLinkName(this.dialog, name);
     await this.submitLinkModal();
+  }
+
+  /**
+   * Wait for a link's async build (celery-backed edX course creation) to
+   * reach the `ready` status badge — `expectLinkInList` passing only means
+   * the row exists, not that its "Edit" action (gated on `ready`, hidden
+   * while `pending`/`building`) is available yet.
+   *
+   * Deliberately NOT the SDK's own `waitForLinkReady`: that helper polls by
+   * clicking the header's "Refresh" button, which only renders while the
+   * SDK's in-memory link list still flags a row as in-progress — on this
+   * backend that flag can go stale before the badge itself updates, so the
+   * button disappears and the click hangs for a full 30s per attempt. Force
+   * the refetch by leaving and re-entering the Links sub-tab instead, which
+   * remounts the query and needs no conditionally-rendered element.
+   *
+   * Returns the terminal `data-status` value: `'ready'` on success, or the
+   * last-observed non-terminal status (`'building'`, `'pending'`, etc.) if
+   * `timeoutMs` elapses first. Callers should treat a non-`'ready'` return as
+   * a capability gap (skip), not a failure. A `'failed'` status still throws.
+   */
+  async waitForLinkReady(name: string, timeoutMs = 180_000): Promise<string> {
+    const badge = getLinkRow(this.dialog, name).getByTestId(
+      LtiTab.TEST_IDS.links.status,
+    );
+    const deadline = Date.now() + timeoutMs;
+    for (;;) {
+      const status = await badge.getAttribute('data-status').catch(() => null);
+      if (status === 'ready') return status;
+      if (status === 'failed') {
+        throw new Error(`LTI link build failed: ${name}`);
+      }
+      if (Date.now() >= deadline) {
+        return status ?? 'unknown';
+      }
+      await this.page.waitForTimeout(5_000);
+      await this.switchToSubTab('keys');
+      await this.switchToSubTab('agentLinks');
+    }
   }
 
   /**
