@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.143.1](https://github.com/iblai/os/compare/v0.143.0...v0.143.1) (2026-09-12)
+
+### Bug Fixes
+
+* **mentorai:** fix for the chat history ([656e016](https://github.com/iblai/os/commit/656e016534a7a6fb1e7813fd397ff83c52783ff5))
+
 ## [0.143.0](https://github.com/iblai/os/compare/v0.142.6...v0.143.0) (2026-09-11)
 
 ### Features
