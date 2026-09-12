@@ -1,10 +1,10 @@
 {
   "version": 2,
-  "lastUpdated": "2026-09-08",
+  "lastUpdated": "2026-09-12",
   "summary": {
-    "totalCheckpoints": 712,
-    "coveredCheckpoints": 670,
-    "deprecatedCheckpoints": 16,
+    "totalCheckpoints": 715,
+    "coveredCheckpoints": 672,
+    "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 15,
     "pendingCheckpoints": 11,
     "percent": 100,
@@ -769,7 +769,9 @@
         {
           "id": "emb-01",
           "description": "Non-anonymous embed with voice call, voice record, and attachment renders",
-          "status": "covered"
+          "status": "deprecated",
+          "deprecatedIn": "#2476",
+          "deprecatedReason": "The Embed tab's Show Attachment / Show Voice Record / Show Voice Call toggles were removed entirely; those capabilities are now owned per-surface by Settings -> Capabilities (see the new 'Surface Capabilities' matrix)."
         },
         {
           "id": "emb-02",
@@ -793,7 +795,7 @@
         },
         {
           "id": "emb-06",
-          "description": "Show Catalogue toggle in the embed tab flips and does not affect sibling toggles (Voice Call / Voice Record / Attachment)",
+          "description": "Show Catalogue toggle in the embed tab flips (issue #2476: the sibling Voice Call / Voice Record / Attachment toggles this checkpoint used to also assert were unaffected were removed from the Embed tab entirely)",
           "status": "covered"
         },
         {
@@ -849,6 +851,11 @@
         {
           "id": "emb-17",
           "description": "Embed tab footer contains only the \"Create Embed\" button (the standalone footer Save button was removed); Advanced CSS / Advanced JavaScript panels elsewhere in the tab keep their own working Save buttons",
+          "status": "covered"
+        },
+        {
+          "id": "emb-18",
+          "description": "Issue #2476 regression guard: saving the Embed tab's own form does not overwrite mentor_visibility set via Settings -> Discovery — the two tabs used to write the same backend field from independent forms, so an Embed save could silently revert a Settings change",
           "status": "covered"
         }
       ]

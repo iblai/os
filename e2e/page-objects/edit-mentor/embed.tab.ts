@@ -7,9 +7,6 @@ export class EmbedTab {
 
   readonly embedCodeBlock: Locator;
   readonly copyButton: Locator;
-  readonly voiceCallToggle: Locator;
-  readonly voiceRecordToggle: Locator;
-  readonly attachmentToggle: Locator;
   readonly showCatalogueToggle: Locator;
   readonly optimizePageContextToggle: Locator;
   readonly websiteUrlInput: Locator;
@@ -19,8 +16,6 @@ export class EmbedTab {
   readonly submitButton: Locator;
   readonly embedCodeDialog: Locator;
   readonly shareableLinkUrlBlock: Locator;
-  readonly whoCanViewSelect: Locator;
-  readonly whoCanChatSelect: Locator;
   readonly footer: Locator;
   readonly iconSelectionSelect: Locator;
   readonly iconEditorButton: Locator;
@@ -46,13 +41,6 @@ export class EmbedTab {
       name: /create embed|generating embed/i,
     });
     this.copyButton = dialog.getByRole('button', { name: /copy/i }).first();
-    this.voiceCallToggle = dialog.getByRole('switch', { name: /voice call/i });
-    this.voiceRecordToggle = dialog.getByRole('switch', {
-      name: /voice record|voice input/i,
-    });
-    this.attachmentToggle = dialog.getByRole('switch', {
-      name: /attachment|attach/i,
-    });
     this.showCatalogueToggle = dialog.getByRole('switch', {
       name: /show catalogue/i,
     });
@@ -91,16 +79,6 @@ export class EmbedTab {
     // rather than relying on DOM order.
     this.shareableLinkUrlBlock = dialog.locator('pre').filter({
       hasText: '?token=',
-    });
-    // "Who Can View?" — bound to `mentor_visibility` (tabsEmbedTab.
-    // selectWhoCanViewAriaLabel = "Select who can view").
-    this.whoCanViewSelect = dialog.getByRole('combobox', {
-      name: /select who can view/i,
-    });
-    // "Who Can Chat?" — bound to `allow_anonymous` (tabsEmbedTab.
-    // selectWhoCanChatAriaLabel = "Select who can chat").
-    this.whoCanChatSelect = dialog.getByRole('combobox', {
-      name: /select who can chat/i,
     });
     // The footer holds exactly one button ("Create Embed" / "Generating
     // Embed") — the Save button was removed from here (issue #789 follow-up).
@@ -391,20 +369,6 @@ export class EmbedTab {
       );
     }
     return match[1];
-  }
-
-  /** Selects an option in the "Who Can View?" Radix Select (mentor_visibility). */
-  async setWhoCanView(label: string): Promise<void> {
-    await expect(this.whoCanViewSelect).toBeVisible({ timeout: 10_000 });
-    await this.whoCanViewSelect.click();
-    await this.selectRadixOption(label);
-  }
-
-  /** Selects an option in the "Who Can Chat?" Radix Select (allow_anonymous). */
-  async setWhoCanChat(label: string): Promise<void> {
-    await expect(this.whoCanChatSelect).toBeVisible({ timeout: 10_000 });
-    await this.whoCanChatSelect.click();
-    await this.selectRadixOption(label);
   }
 
   /** Clicks the open Radix Select popup's option matching `label`. */
