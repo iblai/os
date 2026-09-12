@@ -561,6 +561,10 @@ fn router(models_dir: PathBuf) -> Router {
 
 /// The base URL of the running embedded server, once [`start`] has bound it.
 static SERVER_URL: OnceLock<String> = OnceLock::new();
+/// Serializes `start`'s check → bind → spawn → publish: without it two
+/// concurrent callers both see no URL, both bind and spawn a server, and the
+/// loser's server lives forever on a port nobody is told about.
+static START_LOCK: Mutex<()> = Mutex::new(());
 /// Where models live, remembered at every `start` attempt so a failed
 /// launch-time start can be retried later (see `ensure_started`). A plain
 /// Mutex rather than a OnceLock: production only ever passes one dir, but
@@ -599,15 +603,27 @@ pub fn server_url() -> Option<String> {
 /// 11434 so direct-URL callers keep working; falls back to an OS-assigned port
 /// (reachable via [`server_url`]) rather than failing when 11434 is taken.
 ///
-/// Idempotent: repeat calls return the already-bound URL.
+/// Idempotent: repeat (or concurrent) calls return the already-bound URL.
 pub fn start(models_dir: PathBuf) -> Result<String, String> {
     // Remember the dir even when the bind below fails, so `ensure_started`
     // can retry the start later with the same location.
     if let Ok(mut dir) = MODELS_DIR.lock() {
         *dir = Some(models_dir.clone());
     }
-    if let Some(url) = server_url() {
-        return Ok(url);
+    start_into(&SERVER_URL, &START_LOCK, models_dir)
+}
+
+/// `start` against explicit state, so the race guard is testable on a fresh
+/// slot (a `OnceLock` can never be reset once another test has started the
+/// global server).
+fn start_into(
+    url_slot: &OnceLock<String>,
+    lock: &Mutex<()>,
+    models_dir: PathBuf,
+) -> Result<String, String> {
+    let _serialized = lock.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    if let Some(url) = url_slot.get() {
+        return Ok(url.clone());
     }
     let listener = std::net::TcpListener::bind("127.0.0.1:11434")
         .or_else(|_| std::net::TcpListener::bind("127.0.0.1:0"))
@@ -633,7 +649,7 @@ pub fn start(models_dir: PathBuf) -> Result<String, String> {
         })
         .map_err(|e| e.to_string())?;
 
-    let _ = SERVER_URL.set(url.clone());
+    let _ = url_slot.set(url.clone());
     println!("[LocalLLM] embedded server listening on {url}");
     Ok(url)
 }
@@ -1145,6 +1161,39 @@ mod tests {
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
         }
         panic!("embedded server never answered /api/version: {last_err}");
+    }
+
+    /// `start()` used to check the URL and only publish it AFTER binding and
+    /// spawning, so concurrent callers could each bind their own port and
+    /// return DIFFERENT urls (the losers' servers orphaned). A fresh slot,
+    /// since the global one may already be started by another test.
+    #[test]
+    fn concurrent_starts_share_one_server() {
+        static URL: OnceLock<String> = OnceLock::new();
+        static LOCK: Mutex<()> = Mutex::new(());
+        let dir = std::env::temp_dir()
+            .join(format!("ibl-race-{}", std::process::id()))
+            .join("models");
+        let callers = 8;
+        let barrier = std::sync::Arc::new(std::sync::Barrier::new(callers));
+        let handles: Vec<_> = (0..callers)
+            .map(|_| {
+                let barrier = barrier.clone();
+                let dir = dir.clone();
+                std::thread::spawn(move || {
+                    barrier.wait();
+                    start_into(&URL, &LOCK, dir)
+                })
+            })
+            .collect();
+        let urls: Vec<String> = handles
+            .into_iter()
+            .map(|h| h.join().unwrap().expect("start"))
+            .collect();
+        assert!(
+            urls.iter().all(|u| u == &urls[0]),
+            "every caller must get the same url, got {urls:?}"
+        );
     }
 
     #[test]
