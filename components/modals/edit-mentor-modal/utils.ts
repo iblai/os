@@ -209,7 +209,11 @@ const getUrl = (
 
 export const getEmbedCode = async (
   tenant: string,
-  settings: EmbedFormValues,
+  // `allow_anonymous` is owned by Settings -> Discovery and is no longer an
+  // embed-form field (#2476), but the generated snippet still needs it to
+  // decide whether to redirect to auth — the caller passes it in alongside the
+  // form values.
+  settings: EmbedFormValues & { allow_anonymous: boolean },
   redirectToken: string,
   useCustomFloatingBubble?: boolean,
   customFloatingBubbleConfig?: CustomFloatingBubbleConfig,

@@ -2,7 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Capture what sentry.client.config passes to Sentry without running the real SDK.
 const init = vi.fn();
-const replayIntegration = vi.fn(() => ({ name: 'Replay' }));
+// Typed with the options argument the real `replayIntegration` receives;
+// a zero-arg implementation makes `mock.calls[0][0]` a type error.
+const replayIntegration = vi.fn((_options?: Record<string, unknown>) => ({
+  name: 'Replay',
+}));
 const captureConsoleIntegration = vi.fn(() => ({ name: 'CaptureConsole' }));
 
 vi.mock('@sentry/nextjs', () => ({

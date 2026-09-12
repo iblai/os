@@ -23,9 +23,10 @@ import { logger } from '@iblai/iblai-js/playwright';
  * the frontend never trusts the token by itself.
  *
  * This journey proves that end-to-end against a LIVE backend using real
- * access restrictions configured through the Embed tab's "Who Can View?" /
- * "Who Can Chat?" selects (no `page.route` mocking of RBAC — see the note
- * below on why an anonymous-visitor scenario can't be built this way). Each
+ * access restrictions configured through Settings -> Discovery's "Who Can
+ * View?" / "Who Can Chat?" selects (moved off the Embed tab entirely by
+ * issue #2476 — no `page.route` mocking of RBAC — see the note below on why
+ * an anonymous-visitor scenario can't be built this way). Each
  * test provisions its OWN fresh mentor rather than sharing one fixture
  * mentor across cases, so a failure or leftover state in one case can never
  * bleed into another.
@@ -74,11 +75,12 @@ function mentorUrl(platformKey: string, mentorId: string): string {
 
 /**
  * Creates a fresh mentor via the admin `page`, locks down its "Who Can
- * View?" / "Who Can Chat?" Embed settings, mints a shareable link, and
- * VERIFIES all three actually persisted (by re-opening a clean Embed tab
- * view and re-reading the selects/toggle) before handing control back to
- * the test. This guards against silently proceeding to the RBAC assertions
- * on a mentor whose settings never actually saved.
+ * View?" / "Who Can Chat?" Settings -> Discovery settings, mints a
+ * shareable link (still on Embed), and VERIFIES all three actually
+ * persisted (by re-opening a clean dialog view and re-reading the
+ * selects/toggle) before handing control back to the test. This guards
+ * against silently proceeding to the RBAC assertions on a mentor whose
+ * settings never actually saved.
  */
 async function provisionMentor(
   page: Page,
@@ -108,21 +110,25 @@ async function provisionMentor(
   // later assertion in this test throws.
   tracker.add(mentorId);
 
-  await editMentorPage.open('Embed');
+  // "Who Can View?" / "Who Can Chat?" now live solely on Settings ->
+  // Discovery (issue #2476 removed the duplicate Embed-tab controls that
+  // used to write the same mentor_visibility/allow_anonymous fields — an
+  // Embed-tab save could silently revert a value just set here).
+  await editMentorPage.open('Settings');
   await waitForPageReady(page);
+  await editMentorPage.settings.setVisibility(opts.whoCanView);
+  await editMentorPage.settings.setChatAccess(opts.whoCanChat);
+  await expect(editMentorPage.settings.saveButton).toBeEnabled({
+    timeout: 5_000,
+  });
+  await editMentorPage.settings.saveButton.click();
+  await expect(
+    page.getByText(/agent updated successfully/i).first(),
+  ).toBeVisible({ timeout: 30_000 });
 
-  await editMentorPage.embed.setWhoCanView(opts.whoCanView);
-  await editMentorPage.embed.setWhoCanChat(opts.whoCanChat);
-  if (opts.whoCanChat === 'Authenticated Users') {
-    // "Who Can Chat? = Authenticated Users" reveals the Website URL field
-    // (allow_anonymous=false) — syncEmbedSettings() requires a valid URL to
-    // persist mentor_visibility/allow_anonymous at all; without it "Create
-    // Embed" silently no-ops on the visibility/chat fields. "Anyone" does
-    // not render this field.
-    await editMentorPage.embed.fillWebsiteUrl('https://example.com');
-  }
-  await editMentorPage.embed.submit();
-
+  // Shareable-link minting is unaffected by #2476 — still lives on Embed.
+  await editMentorPage.navigateToTab('Embed');
+  await waitForPageReady(page);
   await editMentorPage.embed.enableShareableLink();
   const shareableToken = await editMentorPage.embed.getShareableLinkToken();
   expect(
@@ -132,19 +138,22 @@ async function provisionMentor(
   await editMentorPage.close();
 
   // Verify the mentor is actually working as configured: re-open a clean
-  // Embed tab view (not the one we just submitted from) and confirm the
-  // Who Can View / Who Can Chat selections and the shareable link toggle
-  // all reflect what we just set, i.e. they really persisted server-side.
-  await editMentorPage.open('Embed');
+  // dialog view (not the one we just submitted from) and confirm the Who Can
+  // View / Who Can Chat selections and the shareable link toggle all reflect
+  // what we just set, i.e. they really persisted server-side.
+  await editMentorPage.open('Settings');
   await waitForPageReady(page);
-  await expect(editMentorPage.embed.whoCanViewSelect).toContainText(
+  await editMentorPage.settings.selectSubTab('Discovery');
+  await expect(editMentorPage.settings.visibilityCombobox).toContainText(
     new RegExp(opts.whoCanView, 'i'),
     { timeout: 15_000 },
   );
-  await expect(editMentorPage.embed.whoCanChatSelect).toContainText(
+  await expect(editMentorPage.settings.chatAccessCombobox).toContainText(
     new RegExp(opts.whoCanChat, 'i'),
     { timeout: 15_000 },
   );
+  await editMentorPage.navigateToTab('Embed');
+  await waitForPageReady(page);
   await expect(editMentorPage.embed.shareableLinkToggle).toHaveAttribute(
     'aria-checked',
     'true',

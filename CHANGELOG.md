@@ -4,118 +4,118 @@
 
 ### Features
 
-* **e2e:** add resource tracker with run ledger and loud-failure rule ([5fc8a60](https://github.com/iblai/os/commit/5fc8a607f84de98cb1973cde3d0e570267da7362))
-* **e2e:** add run-level residue snapshot and teardown projects ([2123707](https://github.com/iblai/os/commit/2123707b4deb8ea967d1a3a7d154c4642a60fd4a))
-* **e2e:** register every created mentor and project at creation ([25d9e33](https://github.com/iblai/os/commit/25d9e33b02f9ef277305dc032105e05735e41ec6))
+- **e2e:** add resource tracker with run ledger and loud-failure rule ([5fc8a60](https://github.com/iblai/os/commit/5fc8a607f84de98cb1973cde3d0e570267da7362))
+- **e2e:** add run-level residue snapshot and teardown projects ([2123707](https://github.com/iblai/os/commit/2123707b4deb8ea967d1a3a7d154c4642a60fd4a))
+- **e2e:** register every created mentor and project at creation ([25d9e33](https://github.com/iblai/os/commit/25d9e33b02f9ef277305dc032105e05735e41ec6))
 
 ### Bug Fixes
 
-* **e2e:** delete tracked resources only in the run-level teardown ([a9999be](https://github.com/iblai/os/commit/a9999be041dff1aa876e1705f695acbb3747f682))
-* **e2e:** dismiss the LLM selection dialog before picking a provider ([37e638b](https://github.com/iblai/os/commit/37e638b2cb7905c45183f710e8397316c28102a4))
-* **e2e:** follow next links when the sweeper lists mentors ([30ee3c3](https://github.com/iblai/os/commit/30ee3c37c17003c24c8ecb9b9578fe28e945b342))
-* **e2e:** give bare-navigate journeys their own mentor ([0670ff9](https://github.com/iblai/os/commit/0670ff946aa1acbc3731db2a068743874ae784cc))
-* **e2e:** resolve the DM API base via DM_URL in project cleanup ([0c06ce3](https://github.com/iblai/os/commit/0c06ce32d4cbd49a62a153fbae25ee7a4bd1e192))
-* **e2e:** run chat-privacy profile tests as the non-admin user ([f7bb902](https://github.com/iblai/os/commit/f7bb90252582c7fb8665c91535e8543b344de3df))
-* **e2e:** run the stale sweepers on DM_URL and cover copied mentors ([6656aa1](https://github.com/iblai/os/commit/6656aa1c95a04d4a67ebe2392983ee911d16644c))
-* **e2e:** wait for streaming to finish before asserting Read Aloud ([39e8309](https://github.com/iblai/os/commit/39e8309ffb5e95c6d8e604ef1f965ccdaf60e781))
-* **e2e:** wait for the LTI link build before renaming it ([d7d0f1b](https://github.com/iblai/os/commit/d7d0f1be28d35b6b5cbba65e3a15a504d3d3c5d5))
+- **e2e:** delete tracked resources only in the run-level teardown ([a9999be](https://github.com/iblai/os/commit/a9999be041dff1aa876e1705f695acbb3747f682))
+- **e2e:** dismiss the LLM selection dialog before picking a provider ([37e638b](https://github.com/iblai/os/commit/37e638b2cb7905c45183f710e8397316c28102a4))
+- **e2e:** follow next links when the sweeper lists mentors ([30ee3c3](https://github.com/iblai/os/commit/30ee3c37c17003c24c8ecb9b9578fe28e945b342))
+- **e2e:** give bare-navigate journeys their own mentor ([0670ff9](https://github.com/iblai/os/commit/0670ff946aa1acbc3731db2a068743874ae784cc))
+- **e2e:** resolve the DM API base via DM_URL in project cleanup ([0c06ce3](https://github.com/iblai/os/commit/0c06ce32d4cbd49a62a153fbae25ee7a4bd1e192))
+- **e2e:** run chat-privacy profile tests as the non-admin user ([f7bb902](https://github.com/iblai/os/commit/f7bb90252582c7fb8665c91535e8543b344de3df))
+- **e2e:** run the stale sweepers on DM_URL and cover copied mentors ([6656aa1](https://github.com/iblai/os/commit/6656aa1c95a04d4a67ebe2392983ee911d16644c))
+- **e2e:** wait for streaming to finish before asserting Read Aloud ([39e8309](https://github.com/iblai/os/commit/39e8309ffb5e95c6d8e604ef1f965ccdaf60e781))
+- **e2e:** wait for the LTI link build before renaming it ([d7d0f1b](https://github.com/iblai/os/commit/d7d0f1be28d35b6b5cbba65e3a15a504d3d3c5d5))
 
 ### Chores
 
-* prettier-format files inherited from main ([2d3638e](https://github.com/iblai/os/commit/2d3638ebaf040449eee1549a6925a1c95f1b508b))
+- prettier-format files inherited from main ([2d3638e](https://github.com/iblai/os/commit/2d3638ebaf040449eee1549a6925a1c95f1b508b))
 
 ### Documentation
 
-* **e2e:** document run-end deletion and the new env flags ([dc1f2df](https://github.com/iblai/os/commit/dc1f2df522be486e5357a103f192f7af2c12ad98))
-* **e2e:** document the cleanup architecture ([8dd39f2](https://github.com/iblai/os/commit/8dd39f2e2a7e745550189705e1a1ca3567e4bc03))
+- **e2e:** document run-end deletion and the new env flags ([dc1f2df](https://github.com/iblai/os/commit/dc1f2df522be486e5357a103f192f7af2c12ad98))
+- **e2e:** document the cleanup architecture ([8dd39f2](https://github.com/iblai/os/commit/8dd39f2e2a7e745550189705e1a1ca3567e4bc03))
 
 ### Tests
 
-* **e2e:** add per-journey residue bisect script ([47b495e](https://github.com/iblai/os/commit/47b495e953eaaa78e8eca357b7a915881e623fbc))
-* **e2e:** drop inline cleanup from journeys now covered by the tracker ([1b4c529](https://github.com/iblai/os/commit/1b4c529ee7f91e853f08dadb93dbb8d0f67f0f9d))
-* **e2e:** guard benchmark and ecommerce journeys on backend capability ([ae51ef0](https://github.com/iblai/os/commit/ae51ef0fa9822928016f8e6f99e75f4a03a2fc08))
-* **e2e:** remove cleanup.spec.ts ([9499232](https://github.com/iblai/os/commit/9499232a4d228122a204404170337039eceff83c))
+- **e2e:** add per-journey residue bisect script ([47b495e](https://github.com/iblai/os/commit/47b495e953eaaa78e8eca357b7a915881e623fbc))
+- **e2e:** drop inline cleanup from journeys now covered by the tracker ([1b4c529](https://github.com/iblai/os/commit/1b4c529ee7f91e853f08dadb93dbb8d0f67f0f9d))
+- **e2e:** guard benchmark and ecommerce journeys on backend capability ([ae51ef0](https://github.com/iblai/os/commit/ae51ef0fa9822928016f8e6f99e75f4a03a2fc08))
+- **e2e:** remove cleanup.spec.ts ([9499232](https://github.com/iblai/os/commit/9499232a4d228122a204404170337039eceff83c))
 
 ## [0.142.6](https://github.com/iblai/os/compare/v0.142.5...v0.142.6) (2026-09-10)
 
 ### CI
 
-* build a PR test image on demand, without the e2e suite ([ede4100](https://github.com/iblai/os/commit/ede4100e7bf61ad8a1f51964e44fce711da94af5))
-* let the PR image builder take an explicit ref ([589b6f5](https://github.com/iblai/os/commit/589b6f5b0f2d64114f977b59f6f2253662064722))
+- build a PR test image on demand, without the e2e suite ([ede4100](https://github.com/iblai/os/commit/ede4100e7bf61ad8a1f51964e44fce711da94af5))
+- let the PR image builder take an explicit ref ([589b6f5](https://github.com/iblai/os/commit/589b6f5b0f2d64114f977b59f6f2253662064722))
 
 ## [0.142.5](https://github.com/iblai/os/compare/v0.142.4...v0.142.5) (2026-09-10)
 
 ### Bug Fixes
 
-* **tenant-switch:** complete auth handoff and pull in SDK loader-hang fix ([cf8c48c](https://github.com/iblai/os/commit/cf8c48caeb1ed28e98625e9ede7b9a59ec4b7895))
+- **tenant-switch:** complete auth handoff and pull in SDK loader-hang fix ([cf8c48c](https://github.com/iblai/os/commit/cf8c48caeb1ed28e98625e9ede7b9a59ec4b7895))
 
 ## [0.142.4](https://github.com/iblai/os/compare/v0.142.3...v0.142.4) (2026-09-10)
 
 ### Bug Fixes
 
-* **deploy:** default a scheme-less NEXT_PUBLIC_ASSET_CDN to https:// ([05cb3b0](https://github.com/iblai/os/commit/05cb3b07759dd25b08e8ebfee8d9fa933c0465d1))
+- **deploy:** default a scheme-less NEXT_PUBLIC_ASSET_CDN to https:// ([05cb3b0](https://github.com/iblai/os/commit/05cb3b07759dd25b08e8ebfee8d9fa933c0465d1))
 
 ### Performance
 
-* **sentry:** cut Session Replay recording cost and trace sampling ([a0908f0](https://github.com/iblai/os/commit/a0908f03cb01f78a64a0aa871443f340cd22b35a))
+- **sentry:** cut Session Replay recording cost and trace sampling ([a0908f0](https://github.com/iblai/os/commit/a0908f03cb01f78a64a0aa871443f340cd22b35a))
 
 ## [0.142.3](https://github.com/iblai/os/compare/v0.142.2...v0.142.3) (2026-09-09)
 
 ### Bug Fixes
 
-* **e2e:** adding test fixme for history test ([4249278](https://github.com/iblai/os/commit/42492786cf479c716faa369d068d25f6e665e0b5))
-* **mentor:** adding fixes for history, memory and canvas ([9e01e2c](https://github.com/iblai/os/commit/9e01e2ca04c967e372f4dff64c729048612786b3))
+- **e2e:** adding test fixme for history test ([4249278](https://github.com/iblai/os/commit/42492786cf479c716faa369d068d25f6e665e0b5))
+- **mentor:** adding fixes for history, memory and canvas ([9e01e2c](https://github.com/iblai/os/commit/9e01e2ca04c967e372f4dff64c729048612786b3))
 
 ## [0.142.2](https://github.com/iblai/os/compare/v0.142.1...v0.142.2) (2026-09-09)
 
 ### Chores
 
-* bump iblai-js to 2.9.7 ([5813323](https://github.com/iblai/os/commit/58133234470efdf8e277ff726f896fa8469b5971))
+- bump iblai-js to 2.9.7 ([5813323](https://github.com/iblai/os/commit/58133234470efdf8e277ff726f896fa8469b5971))
 
 ## [0.142.1](https://github.com/iblai/os/compare/v0.142.0...v0.142.1) (2026-09-09)
 
 ### Bug Fixes
 
-* **chunk-error:** auto-reload N times then show a recoverable error page ([5df329b](https://github.com/iblai/os/commit/5df329bdfd7a4c0535e54f354d3a69cac0be64c2))
+- **chunk-error:** auto-reload N times then show a recoverable error page ([5df329b](https://github.com/iblai/os/commit/5df329bdfd7a4c0535e54f354d3a69cac0be64c2))
 
 ## [0.142.0](https://github.com/iblai/os/compare/v0.141.1...v0.142.0) (2026-09-08)
 
 ### Features
 
-* agent based lesson completion > iblai-js bump ([3f41c06](https://github.com/iblai/os/commit/3f41c06f175f997e4dae297879f4c8f235495263))
+- agent based lesson completion > iblai-js bump ([3f41c06](https://github.com/iblai/os/commit/3f41c06f175f997e4dae297879f4c8f235495263))
 
 ### Chores
 
-* untrack .claude/worktrees scratch dirs ([98bcd5d](https://github.com/iblai/os/commit/98bcd5d3084033c9d869704311e096edad619bc8))
+- untrack .claude/worktrees scratch dirs ([98bcd5d](https://github.com/iblai/os/commit/98bcd5d3084033c9d869704311e096edad619bc8))
 
 ## [0.140.6-patch-1](https://github.com/iblai/os/compare/v0.141.1...v0.142.0) (2026-09-04)
 
 ### Features
 
-* agent based lesson completion > version patch org ([0b119c2](https://github.com/iblai/os/commit/0b119c2f11089a31ef5692f3bc87d8f9c13c0ae5))
+- agent based lesson completion > version patch org ([0b119c2](https://github.com/iblai/os/commit/0b119c2f11089a31ef5692f3bc87d8f9c13c0ae5))
 
 ## [0.139.0-patch-1](https://github.com/iblai/os/compare/v0.141.1...v0.142.0) (2026-09-03)
 
 ### Features
 
-* agent based lesson completion ([0c80fd1](https://github.com/iblai/os/commit/0c80fd158521dddaffb50e473a5a6c28da67927c))
-* agent based lesson completion ([e99baa5](https://github.com/iblai/os/commit/e99baa5dae9221251e5120714cd9f62815e96980))
-* agent based lesson completion > iblai-js bump ([638a228](https://github.com/iblai/os/commit/638a22880cd5d7a642424d531ce476280b897e01))
-* agent based lesson completion > version patch org ([6e906e7](https://github.com/iblai/os/commit/6e906e7e85f47e44c5ef20fa9d7c2a3336e3a103))
+- agent based lesson completion ([0c80fd1](https://github.com/iblai/os/commit/0c80fd158521dddaffb50e473a5a6c28da67927c))
+- agent based lesson completion ([e99baa5](https://github.com/iblai/os/commit/e99baa5dae9221251e5120714cd9f62815e96980))
+- agent based lesson completion > iblai-js bump ([638a228](https://github.com/iblai/os/commit/638a22880cd5d7a642424d531ce476280b897e01))
+- agent based lesson completion > version patch org ([6e906e7](https://github.com/iblai/os/commit/6e906e7e85f47e44c5ef20fa9d7c2a3336e3a103))
 
 ## [0.141.1](https://github.com/iblai/os/compare/v0.141.0...v0.141.1) (2026-09-07)
 
 ### Bug Fixes
 
-* **markdown:** guard the unguarded position reads in @ziloen/remark-math ([a64576f](https://github.com/iblai/os/commit/a64576f7559d26485d040234138ff13d29fc425d)), closes [#2441](https://github.com/iblai/os/issues/2441)
-* **markdown:** stop an em dash dragging prose into an autolink's host ([abb1c31](https://github.com/iblai/os/commit/abb1c311b11603534cf37e57b22e8e8500203535))
+- **markdown:** guard the unguarded position reads in @ziloen/remark-math ([a64576f](https://github.com/iblai/os/commit/a64576f7559d26485d040234138ff13d29fc425d)), closes [#2441](https://github.com/iblai/os/issues/2441)
+- **markdown:** stop an em dash dragging prose into an autolink's host ([abb1c31](https://github.com/iblai/os/commit/abb1c311b11603534cf37e57b22e8e8500203535))
 
 ### Tests
 
-* **e2e:** assert the voice capability toggle instead of skipping past it ([63fe161](https://github.com/iblai/os/commit/63fe1613773b0bba1071daf97f687d703ca2f726))
-* **e2e:** give journey 48 its own agent and stop leaking journey 13's ([efdac49](https://github.com/iblai/os/commit/efdac49c6b1e48fd61b73e93baf87073686db9ff))
-* **e2e:** let project chat settle on a reply or the User Agreement ([214dd59](https://github.com/iblai/os/commit/214dd59c3056f372cab9c8e4abc8e2ea9f82a731))
-* **markdown:** cover the autolink crash the guard actually fixes ([85f4625](https://github.com/iblai/os/commit/85f4625db10f3d1225925fc9e034ac921a0f43de))
+- **e2e:** assert the voice capability toggle instead of skipping past it ([63fe161](https://github.com/iblai/os/commit/63fe1613773b0bba1071daf97f687d703ca2f726))
+- **e2e:** give journey 48 its own agent and stop leaking journey 13's ([efdac49](https://github.com/iblai/os/commit/efdac49c6b1e48fd61b73e93baf87073686db9ff))
+- **e2e:** let project chat settle on a reply or the User Agreement ([214dd59](https://github.com/iblai/os/commit/214dd59c3056f372cab9c8e4abc8e2ea9f82a731))
+- **markdown:** cover the autolink crash the guard actually fixes ([85f4625](https://github.com/iblai/os/commit/85f4625db10f3d1225925fc9e034ac921a0f43de))
 
 ## [0.141.0](https://github.com/iblai/os/compare/v0.140.6...v0.141.0) (2026-09-04)
 

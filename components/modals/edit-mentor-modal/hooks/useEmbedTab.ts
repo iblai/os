@@ -36,8 +36,6 @@ export interface EmbedFormValues {
   description: string;
   website_url: string;
   mode: ChatMode;
-  allow_anonymous: boolean;
-  mentor_visibility: string | null;
   is_context_aware: boolean;
   safety_disclaimer: boolean;
   sso: boolean;
@@ -50,9 +48,6 @@ export interface EmbedFormValues {
     safety_disclaimer: boolean;
   };
   icon_selection: string;
-  embed_show_attachment: boolean;
-  embed_show_voice_call: boolean;
-  embed_show_voice_record: boolean;
   show_catalogue: boolean;
   starter_prompts: 'guided_prompt' | 'suggested_prompt';
   strip_page_content_html: boolean;
@@ -93,8 +88,6 @@ const defaultEmbedFormValues: EmbedFormValues = {
   description: '',
   website_url: '',
   mode: 'default',
-  allow_anonymous: false,
-  mentor_visibility: null,
   is_context_aware: false,
   safety_disclaimer: false,
   sso: false,
@@ -107,13 +100,24 @@ const defaultEmbedFormValues: EmbedFormValues = {
   },
   slug: '',
   icon_selection: 'default',
-  embed_show_attachment: true,
-  embed_show_voice_call: true,
-  embed_show_voice_record: true,
   show_catalogue: true,
   starter_prompts: 'guided_prompt',
   strip_page_content_html: false,
 };
+
+// Fields the Settings tab owns (#2476): "Who can view" / "Who can chat" live
+// under Settings -> Discovery and the three embed capability toggles under
+// Settings -> Capabilities. They are no longer embed-form fields, but the embed
+// PUT sends the whole form, so a stray copy would silently overwrite whatever
+// the user just set in Settings. Strip them from the payload as well, so the
+// bug cannot come back by someone re-adding a field to the form.
+const SETTINGS_OWNED_FIELDS = [
+  'mentor_visibility',
+  'allow_anonymous',
+  'embed_show_attachment',
+  'embed_show_voice_record',
+  'embed_show_voice_call',
+] as const;
 
 const useEmbedTab = () => {
   const [embedCode, setEmbedCode] = useState('');
@@ -136,6 +140,12 @@ const useEmbedTab = () => {
     { mentor: mentorId, org: params.tenantKey, userId: username ?? '' },
     { skip: !username || !mentorId || !params.tenantKey },
   );
+  // Read-only projection of the persisted "Who can chat" setting, which is now
+  // owned by Settings -> Discovery (#2476). The embed flow still needs to know
+  // whether anonymous chat is allowed (it decides whether a redirect token is
+  // required and how the generated snippet handles auth), but it must never
+  // write the value back.
+  const allowAnonymous = mentorPublicSettings?.allow_anonymous ?? false;
   const [
     createRedirectToken,
     { isLoading: isCreateTokenLoading, data: redirectTokenData },
@@ -211,7 +221,9 @@ const useEmbedTab = () => {
     // Update mentor settings
     const valid_values = Object.fromEntries(
       Object.entries(formValues).filter(
-        ([key, value]) => value !== '' || key === 'custom_css',
+        ([key, value]) =>
+          !(SETTINGS_OWNED_FIELDS as readonly string[]).includes(key) &&
+          (value !== '' || key === 'custom_css'),
       ),
     );
 
@@ -297,7 +309,7 @@ const useEmbedTab = () => {
 
     // Validate website URL if not anonymous
     if (
-      !value.allow_anonymous &&
+      !allowAnonymous &&
       (!value.website_url ||
         !z.string().url().safeParse(value.website_url).success)
     ) {
@@ -308,7 +320,7 @@ const useEmbedTab = () => {
     let redirectTokenResponse: { data?: { token?: string } } | null = null;
 
     // Create redirect token if not anonymous
-    if (!value.allow_anonymous) {
+    if (!allowAnonymous) {
       try {
         const response = await createRedirectToken({
           org: params.tenantKey,
@@ -398,15 +410,7 @@ const useEmbedTab = () => {
       ...defaultEmbedFormValues,
       slug: mentorId,
       generateShareableLink: false,
-      allow_anonymous: mentorPublicSettings?.allow_anonymous ?? false,
-      mentor_visibility: mentorPublicSettings?.mentor_visibility ?? '',
       custom_css: mentorPublicSettings?.custom_css ?? '',
-      embed_show_attachment:
-        mentorPublicSettings?.embed_show_attachment ?? true,
-      embed_show_voice_call:
-        mentorPublicSettings?.embed_show_voice_call ?? true,
-      embed_show_voice_record:
-        mentorPublicSettings?.embed_show_voice_record ?? true,
       // `show_catalogue` is exposed by the backend but not yet reflected in the
       // published MentorSettingsPublic type — read it via a narrow cast.
       show_catalogue:
@@ -450,7 +454,7 @@ const useEmbedTab = () => {
       const embed = await getEmbedCode(
         params.tenantKey,
         // @ts-expect-error - value is not typed correctly
-        value,
+        { ...value, allow_anonymous: allowAnonymous },
         syncResult.redirectToken ?? '',
         value.icon_selection === 'custom',
         customFloatingBubbleConfig,
@@ -543,6 +547,7 @@ const useEmbedTab = () => {
     useState(false);
 
   return {
+    allowAnonymous,
     createTokenHandler,
     form,
     createTokenError,

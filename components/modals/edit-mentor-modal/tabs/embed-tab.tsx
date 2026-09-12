@@ -63,7 +63,7 @@ import Image from 'next/image';
 import { Tabs, TabsContent, TabsList } from '@/components/ui/tabs';
 import { TabsTrigger } from '@/components/tabs';
 import { Label } from '@/components/ui/label';
-import { MENTOR_VISIBILITY, QUERY_PARAMS } from '@/lib/constants';
+import { QUERY_PARAMS } from '@/lib/constants';
 import type { ChatMode } from '@iblai/iblai-js/web-utils';
 import { toast as sonnerToast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -227,6 +227,7 @@ export function EmbedTab() {
     setShareableToken(shareableTokenData);
   }, [shareableTokenData]);
   const {
+    allowAnonymous,
     form,
     createTokenHandler,
     createTokenError,
@@ -1118,183 +1119,51 @@ export function EmbedTab() {
                   )}
                 </form.Field>
 
-                <WithFormPermissions
-                  name="mentor_visibility"
-                  // @ts-ignore
-                  permissions={mentorSettings?.permissions?.field}
-                >
-                  {({ disabled }) => (
-                    <form.Field name="mentor_visibility">
+                {!allowAnonymous && (
+                  <>
+                    <form.Field
+                      name="website_url"
+                      validators={{
+                        onChange: ({ value }) => validateWebsiteUrl(value),
+                      }}
+                    >
                       {(field) => (
                         <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <Label className="text-sm font-medium text-[#646464]">
-                              {t('whoCanViewLabel')}
-                            </Label>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger
-                                  aria-label={t('moreInfoChatAccess')}
-                                >
-                                  <Info className="h-4 w-4 text-gray-400" />
-                                </TooltipTrigger>
-                                <TooltipContent className="ibl-tooltip-content">
-                                  <p>{t('whoCanViewTooltip')}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </div>
-                          <Select
-                            value={
-                              typeof field.state.value === 'string'
-                                ? field.state.value
-                                : ''
-                            }
-                            onValueChange={(value) => field.handleChange(value)}
-                            disabled={form.state.isSubmitting || disabled}
-                          >
-                            <SelectTrigger
-                              className="text-[#646464]"
-                              aria-label={t('selectWhoCanViewAriaLabel')}
-                            >
-                              <SelectValue
-                                placeholder={t('selectWhoCanViewPlaceholder')}
-                                className="text-[#646464]"
-                              />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {MENTOR_VISIBILITY.map((visibility) => (
-                                <SelectItem
-                                  key={visibility.value}
-                                  value={visibility.value}
-                                  className="text-[#646464]"
-                                >
-                                  {visibility.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <h3 className="text-sm font-medium text-[#646464]">
+                            {t('websiteUrlLabel')}
+                          </h3>
+                          <Input
+                            placeholder="https://ibl.ai"
+                            type="url"
+                            value={field.state.value}
+                            onChange={(e) => {
+                              setCreateTokenError('');
+                              field.handleChange(e.target.value);
+                            }}
+                            disabled={form.state.isSubmitting}
+                          />
+                          <p className="text-sm text-red-500">
+                            {field.state.meta.errors?.[0] ?? createTokenError}
+                          </p>
                         </div>
                       )}
                     </form.Field>
-                  )}
-                </WithFormPermissions>
-
-                <WithFormPermissions
-                  name="allow_anonymous"
-                  // @ts-ignore
-                  permissions={mentorSettings?.permissions?.field}
-                >
-                  {({ disabled }) => (
-                    <form.Field name="allow_anonymous">
-                      {(field) => (
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <Label className="text-sm font-medium text-[#646464]">
-                              {t('whoCanChatLabel')}
-                            </Label>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger
-                                  aria-label={t('moreInfoChatAccess')}
-                                >
-                                  <Info className="h-4 w-4 text-gray-400" />
-                                </TooltipTrigger>
-                                <TooltipContent className="ibl-tooltip-content">
-                                  <p>{t('whoCanChatTooltip')}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </div>
-                          <Select
-                            value={field.state.value ? 'true' : 'false'}
-                            onValueChange={(value) =>
-                              field.handleChange(value === 'true')
-                            }
-                            disabled={form.state.isSubmitting || disabled}
-                          >
-                            <SelectTrigger
-                              className="text-[#646464]"
-                              aria-label={t('selectWhoCanChatAriaLabel')}
-                            >
-                              <SelectValue
-                                placeholder={t('selectWhoCanChatPlaceholder')}
-                                className="text-[#646464]"
-                              />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem
-                                value="true"
-                                className="text-[#646464]"
-                              >
-                                {t('anyone')}
-                              </SelectItem>
-                              <SelectItem
-                                value="false"
-                                className="text-[#646464]"
-                              >
-                                {t('authenticatedUsers')}
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
-                    </form.Field>
-                  )}
-                </WithFormPermissions>
-
-                <form.Subscribe
-                  selector={(formState) => [formState.values.allow_anonymous]}
-                >
-                  {([allowAnonymous]) =>
-                    !allowAnonymous && (
-                      <>
-                        <form.Field
-                          name="website_url"
-                          validators={{
-                            onChange: ({ value }) => validateWebsiteUrl(value),
-                          }}
-                        >
-                          {(field) => (
-                            <div className="space-y-2">
-                              <h3 className="text-sm font-medium text-[#646464]">
-                                {t('websiteUrlLabel')}
-                              </h3>
-                              <Input
-                                placeholder="https://ibl.ai"
-                                type="url"
-                                value={field.state.value}
-                                onChange={(e) => {
-                                  setCreateTokenError('');
-                                  field.handleChange(e.target.value);
-                                }}
-                                disabled={form.state.isSubmitting}
-                              />
-                              <p className="text-sm text-red-500">
-                                {field.state.meta.errors?.[0] ??
-                                  createTokenError}
-                              </p>
-                            </div>
-                          )}
-                        </form.Field>
-                        {redirectTokenData?.token && (
-                          <CopyCodeBlock code={redirectTokenData?.token} />
-                        )}
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="w-full bg-gray-50 text-gray-700 hover:bg-gray-100"
-                          onClick={createTokenHandler}
-                          disabled={form.state.isSubmitting}
-                        >
-                          {isCreateTokenLoading
-                            ? t('generatingToken')
-                            : t('getToken')}
-                        </Button>
-                      </>
-                    )
-                  }
-                </form.Subscribe>
+                    {redirectTokenData?.token && (
+                      <CopyCodeBlock code={redirectTokenData?.token} />
+                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full bg-gray-50 text-gray-700 hover:bg-gray-100"
+                      onClick={createTokenHandler}
+                      disabled={form.state.isSubmitting}
+                    >
+                      {isCreateTokenLoading
+                        ? t('generatingToken')
+                        : t('getToken')}
+                    </Button>
+                  </>
+                )}
 
                 <form.Field name="is_context_aware">
                   {(field) => (
@@ -1425,13 +1294,9 @@ export function EmbedTab() {
                   </form.Field>
                 )}
                 <form.Subscribe
-                  selector={(formState) => [
-                    formState.values.sso,
-                    formState.values.allow_anonymous,
-                    form,
-                  ]}
+                  selector={(formState) => [formState.values.sso, form]}
                 >
-                  {([ssoProvider, allowAnonymous]) =>
+                  {([ssoProvider]) =>
                     ssoProvider &&
                     !allowAnonymous && (
                       <form.Field name="sso_provider">
@@ -1500,114 +1365,6 @@ export function EmbedTab() {
                           field.state.value
                             ? t('openByDefaultEnabled')
                             : t('openByDefaultDisabled')
-                        }
-                      />
-                    </div>
-                  )}
-                </form.Field>
-
-                <form.Field name="embed_show_attachment">
-                  {(field) => (
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-[#646464]">
-                          {t('showAttachmentLabel')}
-                        </span>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger
-                              aria-label={t('moreInfoShowAttachment')}
-                            >
-                              <Info className="h-4 w-4 text-gray-400" />
-                            </TooltipTrigger>
-                            <TooltipContent className="ibl-tooltip-content">
-                              <p>{t('showAttachmentTooltip')}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                      <Switch
-                        checked={field.state.value}
-                        onCheckedChange={(checked) =>
-                          field.handleChange(checked)
-                        }
-                        disabled={form.state.isSubmitting}
-                        aria-label={
-                          field.state.value
-                            ? t('showAttachmentEnabled')
-                            : t('showAttachmentDisabled')
-                        }
-                      />
-                    </div>
-                  )}
-                </form.Field>
-
-                <form.Field name="embed_show_voice_call">
-                  {(field) => (
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-[#646464]">
-                          {t('showVoiceCallLabel')}
-                        </span>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger
-                              aria-label={t('moreInfoShowVoiceCall')}
-                            >
-                              <Info className="h-4 w-4 text-gray-400" />
-                            </TooltipTrigger>
-                            <TooltipContent className="ibl-tooltip-content">
-                              <p>{t('showVoiceCallTooltip')}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                      <Switch
-                        checked={field.state.value}
-                        onCheckedChange={(checked) =>
-                          field.handleChange(checked)
-                        }
-                        disabled={form.state.isSubmitting}
-                        aria-label={
-                          field.state.value
-                            ? t('showVoiceCallEnabled')
-                            : t('showVoiceCallDisabled')
-                        }
-                      />
-                    </div>
-                  )}
-                </form.Field>
-
-                <form.Field name="embed_show_voice_record">
-                  {(field) => (
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-[#646464]">
-                          {t('showVoiceRecordLabel')}
-                        </span>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger
-                              aria-label={t('moreInfoShowVoiceRecord')}
-                            >
-                              <Info className="h-4 w-4 text-gray-400" />
-                            </TooltipTrigger>
-                            <TooltipContent className="ibl-tooltip-content">
-                              <p>{t('showVoiceRecordTooltip')}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                      <Switch
-                        checked={field.state.value}
-                        onCheckedChange={(checked) =>
-                          field.handleChange(checked)
-                        }
-                        disabled={form.state.isSubmitting}
-                        aria-label={
-                          field.state.value
-                            ? t('showVoiceRecordEnabled')
-                            : t('showVoiceRecordDisabled')
                         }
                       />
                     </div>
