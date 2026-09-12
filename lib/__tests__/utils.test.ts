@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   cn,
+  hasCoarsePointer,
   hasNonExpiredAuthToken,
   isJwtExpired,
   redirectToAuthSpa,
@@ -3406,6 +3407,29 @@ describe('markdownToHtml function - preprocess paths', () => {
     // href is invalid → preprocessor never produces an <a> tag for it
     expect(html).not.toContain('href="not-a-url"');
     expect(html).not.toContain('<a ');
+  });
+});
+
+describe('hasCoarsePointer', () => {
+  const originalMatchMedia = window.matchMedia;
+  afterEach(() => {
+    window.matchMedia = originalMatchMedia;
+  });
+
+  it('is true when the primary pointer is coarse (touch)', () => {
+    window.matchMedia = vi.fn().mockReturnValue({ matches: true }) as never;
+    expect(hasCoarsePointer()).toBe(true);
+    expect(window.matchMedia).toHaveBeenCalledWith('(pointer: coarse)');
+  });
+
+  it('is false for a fine pointer (mouse / trackpad)', () => {
+    window.matchMedia = vi.fn().mockReturnValue({ matches: false }) as never;
+    expect(hasCoarsePointer()).toBe(false);
+  });
+
+  it('is false when matchMedia is unavailable', () => {
+    window.matchMedia = undefined as never;
+    expect(hasCoarsePointer()).toBe(false);
   });
 });
 

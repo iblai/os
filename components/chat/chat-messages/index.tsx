@@ -132,20 +132,27 @@ export function ChatMessages({
     <>
       {visibleMessages.map((message, i) =>
         message.role === 'user' ? (
-          <UserMessageBubble
+          // content-visibility: offscreen rows skip layout + paint, which is
+          // what keeps scrolling through a long, streaming conversation
+          // responsive on phone webviews. Onscreen rows are unaffected.
+          <div
             key={`message-${message.id}-${i}`}
-            message={message}
-            isHighlighted={highlightedMessageId === i}
-            profileImage={profileImage}
-            mentorName={mentorName}
-            messages={messages}
-            onHighlightMessage={handleHighlightMessage}
-            onPreviewImage={setPreviewImage}
-          />
+            className="[contain-intrinsic-size:auto_120px] [content-visibility:auto]"
+          >
+            <UserMessageBubble
+              message={message}
+              isHighlighted={highlightedMessageId === i}
+              profileImage={profileImage}
+              mentorName={mentorName}
+              messages={messages}
+              onHighlightMessage={handleHighlightMessage}
+              onPreviewImage={setPreviewImage}
+            />
+          </div>
         ) : (
           <div
             key={i}
-            className={`transition-all duration-300 ${highlightedMessageId === i ? 'rounded-lg bg-blue-100' : ''}`}
+            className={`transition-all duration-300 [contain-intrinsic-size:auto_240px] [content-visibility:auto] ${highlightedMessageId === i ? 'rounded-lg bg-blue-100' : ''}`}
           >
             <AIMessageBubble
               content={message.content}

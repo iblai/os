@@ -2389,7 +2389,27 @@
     "permissionDialogTitle": "¿Cómo debe pedir permiso Code?",
     "permissionDialogDescription": "Code puede editar archivos y ejecutar comandos en tu espacio de trabajo. Elige si debe consultarte antes; podrás cambiarlo más tarde en el panel de Code.",
     "permissionDialogManualAction": "Preguntarme cada vez",
-    "permissionDialogAutoAction": "Aprobar automáticamente"
+    "permissionDialogAutoAction": "Aprobar automáticamente",
+    "connectTitle": "Tu computadora",
+    "connectHint": "En la app de escritorio, abre Code y activa el acceso desde el teléfono; luego ingresa aquí su dirección y contraseña.",
+    "connectedTo": "Conectado a",
+    "desktopUnreachable": "No se puede alcanzar tu computadora. ¿La app de escritorio está abierta en la misma red?",
+    "hostPasswordLabel": "Contraseña",
+    "connect": "Conectar",
+    "connecting": "Conectando…",
+    "disconnect": "Desconectar",
+    "phoneAccess": "Acceso desde el teléfono",
+    "phoneAccessEnable": "Activar",
+    "phoneAccessDisable": "Desactivar",
+    "phoneAccessAddress": "Dirección",
+    "phoneAccessHint": "En tu teléfono, abre Code e ingresa esta dirección y contraseña.",
+    "phoneAccessOffHint": "Permite que tu teléfono use Code en esta computadora.",
+    "scanQr": "Escanear código QR",
+    "orTypeManually": "o ingrésalo manualmente",
+    "cameraDenied": "Se denegó el acceso a la cámara: ingresa la dirección manualmente.",
+    "notAPairingCode": "Ese código QR no es un código de emparejamiento de Code.",
+    "closeScanner": "Cerrar escáner",
+    "scanHint": "Apunta la cámara al código QR de emparejamiento que se muestra en tu computadora."
   },
   "chatCodePermissionCard": {
     "title": "Código necesita tu permiso",
@@ -2407,5 +2427,13 @@
     },
     "allow": "Permitir",
     "deny": "Denegar"
+  },
+  "appUpdatePrompt": {
+    "title": "Actualización disponible",
+    "description": "La versión {version} está lista para instalar. Estás usando una versión anterior.",
+    "updateNow": "Actualizar ahora",
+    "updating": "Actualizando…",
+    "later": "Más tarde",
+    "skip": "Omitir esta versión"
   }
 }

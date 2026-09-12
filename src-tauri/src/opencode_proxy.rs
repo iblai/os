@@ -695,6 +695,12 @@ pub async fn ensure_started() -> Result<u16, String> {
     Ok(p)
 }
 
+/// Whether a secret is currently registered — test support for the enable
+/// flow's leak guard (a failed enable must leave no token-bearing secret).
+pub(crate) async fn is_registered(secret: &str) -> bool {
+    sessions().read().await.contains_key(secret)
+}
+
 /// Register a session's upstream + real token against its throwaway secret.
 pub async fn register(secret: &str, base: String, token: String) {
     sessions()
@@ -1203,7 +1209,14 @@ mod tests {
     #[tokio::test]
     async fn the_composed_guidance_is_the_base_text_plus_identity() {
         let _state = learner_state_lock();
-        set_learner("codey", "codey@example.com", "https://dm.example/dm", "", "").await;
+        set_learner(
+            "codey",
+            "codey@example.com",
+            "https://dm.example/dm",
+            "",
+            "",
+        )
+        .await;
 
         let g = guidance_with_identity("acme").await;
         assert!(g.starts_with(IBLAI_INSTRUCTIONS), "base text comes first");

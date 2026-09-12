@@ -55,13 +55,19 @@
     },
     "android": {
       "minSdkVersion": 24
-    }
+    },
+    "createUpdaterArtifacts": true
   },
   "app": {
     "withGlobalTauri": true,
     "security": {
       "csp": null,
-      "capabilities": ["default", "offline-server-access", "macos-permissions"],
+      "capabilities": [
+        "default",
+        "offline-server-access",
+        "macos-permissions",
+        "mobile-pairing"
+      ],
       "assetProtocol": {
         "enable": true,
         "scope": ["**"]
@@ -78,14 +84,31 @@
     },
     "deep-link": {
       "mobile": [
-        { "host": "mentorai.iblai.app", "pathPrefix": ["/"] },
-        { "host": "os.ibl.ai", "pathPrefix": ["/"] },
-        { "host": "login.iblai.app", "pathPrefix": ["/"] },
-        { "scheme": ["iblai-mentor", "ai.ibl.mentorai"] }
+        {
+          "host": "mentorai.iblai.app",
+          "pathPrefix": ["/"]
+        },
+        {
+          "host": "os.ibl.ai",
+          "pathPrefix": ["/"]
+        },
+        {
+          "host": "login.iblai.app",
+          "pathPrefix": ["/"]
+        },
+        {
+          "scheme": ["iblai-mentor", "ai.ibl.mentorai"]
+        }
       ],
       "desktop": {
         "schemes": ["iblai-mentor", "ai.ibl.mentorai"]
       }
+    },
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDVFMUFFMUYwNThGOTVBQzgKUldUSVd2bFk4T0VhWHBIbWp3ditUTkVTbmxGUnRNY2p6cDA2YUhCNXJtSVhwYVlDUzNjcFd2M28K",
+      "endpoints": [
+        "https://github.com/iblai/os/releases/download/app-latest/latest-{{target}}-{{arch}}.json"
+      ]
     }
   }
 }

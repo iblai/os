@@ -363,3 +363,18 @@ body {
 .katex:not(.katex-display *) {
   font-size: 1em;
 }
+
+/* QR pairing scanner (Tauri mobile): while scanning, the barcode-scanner
+   plugin renders the camera BEHIND the webview, so the page itself must go
+   transparent and everything except the scan overlay must vanish — any
+   opaque pixel would hide the camera. Scoped to the html class the scanner
+   toggles; the overlay is a direct <body> child via portal, so hiding the
+   app root (and every other body child, e.g. open popover portals) leaves
+   only the overlay visible. */
+html.qr-scan-active,
+html.qr-scan-active body {
+  background: transparent !important;
+}
+html.qr-scan-active body > *:not(.qr-scan-overlay) {
+  visibility: hidden;
+}

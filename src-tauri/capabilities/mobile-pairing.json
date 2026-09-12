@@ -1,0 +1,25 @@
+{
+  "$schema": "../gen/schemas/mobile-schema.json",
+  "identifier": "mobile-pairing",
+  "description": "Mobile-only: camera QR scanning for Code pairing",
+  "platforms": ["iOS", "android"],
+  "windows": ["main"],
+  "remote": {
+    "urls": [
+      "https://*.iblai.app/*",
+      "https://*.iblai.org/*",
+      "https://*.ibl.ai/*",
+      "http://127.0.0.1:*/*",
+      "http://localhost:*/*",
+      "mentor://localhost/*"
+    ]
+  },
+  "local": true,
+  "permissions": [
+    "barcode-scanner:allow-scan",
+    "barcode-scanner:allow-cancel",
+    "barcode-scanner:allow-check-permissions",
+    "barcode-scanner:allow-request-permissions",
+    "barcode-scanner:allow-open-app-settings"
+  ]
+}
