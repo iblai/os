@@ -130,7 +130,19 @@ done
 # reports env(safe-area-inset-*) as 0 - the app's top bar becomes
 # unreachable. Rewrite it to plain fitted decor (the theme above also opts
 # out of Android 15's edge-to-edge enforcement).
-cat > "$RES/../java/ai/ibl/mentorai/MainActivity.kt" <<'KT'
+#
+# The package dir must already exist (the template created it). Writing into
+# a freshly minted directory would produce a file the build never picks up,
+# so a missing dir (identifier changed? template moved to kotlin/?) aborts
+# loudly instead.
+ACTIVITY_DIR="$RES/../java/ai/ibl/mentorai"
+if [ ! -d "$ACTIVITY_DIR" ]; then
+  echo "Expected Android package dir $ACTIVITY_DIR is missing — the app" >&2
+  echo "identifier or template layout changed; update android-branding.sh" >&2
+  echo "before re-running (icons were already applied, activity was not)." >&2
+  exit 1
+fi
+cat > "$ACTIVITY_DIR/MainActivity.kt" <<'KT'
 package ai.ibl.mentorai
 
 import android.os.Bundle

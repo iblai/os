@@ -34,6 +34,7 @@ import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
 import { isTauriOfflineMode } from '@/hooks/use-tauri-offline';
 import { config } from '@/lib/config';
 import { getUserOS } from '@/lib/utils';
+import { isTauriMobile } from '@/types/tauri';
 import type { OpencodeSkillSync } from '@/hooks/use-opencode-skill-sync';
 
 const ENABLED_KEY = 'ibl_coding_mode_enabled';
@@ -95,22 +96,6 @@ async function callTauri<T = unknown>(
 ): Promise<T> {
   const { invoke } = await (tauriCore ??= import('@tauri-apps/api/core'));
   return invoke<T>(cmd, args);
-}
-
-/**
- * True on Tauri mobile (iOS/Android). Mobile Code runs against a PAIRED
- * desktop's opencode server (the phone's Rust side proxies the `opencode_*`
- * commands over HTTP+SSE), so mobile skips `check_opencode_status` — that
- * probe is desktop-only — and gates on the pairing state instead.
- */
-async function isTauriMobile(): Promise<boolean> {
-  try {
-    const { platform } = await import('@tauri-apps/plugin-os');
-    const os = platform();
-    return os === 'ios' || os === 'android';
-  } catch {
-    return false;
-  }
 }
 
 /**
@@ -272,9 +257,12 @@ export function CodingModeButton({
   // Code off on every load in local mode.
   const localVerdictBad =
     isLocal && !!local && (!local.running || local.tools_supported === false);
+  // On mobile the on-device model never drives Code (remote turns are
+  // cloud-only), so the local-model verdict must not gate the switch there —
+  // and the probe that produces it is a desktop-only command anyway.
   const blocked =
     !sandboxReady ||
-    (isLocal ? !local || localVerdictBad : false) ||
+    (isLocal && !mobile ? !local || localVerdictBad : false) ||
     (mobile && !remoteHost?.connected);
 
   /** Refresh the phone↔desktop pairing state and mirror it for the SDK. */
@@ -675,7 +663,7 @@ export function CodingModeButton({
   // On-device: ask the backend which runtime serves the selected local model and
   // whether it can drive Code. Rust auto-detects Ollama vs Foundry Local.
   useEffect(() => {
-    if (!isLocal || sandboxed !== false) return;
+    if (!isLocal || sandboxed !== false || mobile) return;
     let cancelled = false;
     void (async () => {
       try {

@@ -10,6 +10,8 @@ mod cua_driver_mcp;
 // the same arrangement as `foundry_manager` below.
 #[allow(dead_code)]
 mod local_llm;
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
+mod nav_guard;
 // Gated exactly like `opencode_acp`, which is its only consumer here: Code uses
 // `get_foundry_service_endpoint` to reach Foundry Local's OpenAI-compatible API.
 // The rest of the module is exercised by the desktop bin (see main.rs).
@@ -46,7 +48,7 @@ use model_manager::{
     cancel_download, check_disk_space, check_ollama_installed, get_timestamp, is_model_installed,
     is_ollama_running, list_installed_models, pull_model, start_ollama_server, stop_ollama_server,
     wait_for_ollama_ready, DiskSpaceError, DownloadProgress, InstallationLog, OllamaStatus,
-    SystemMemory, REQUIRED_FREE_SPACE_GB,
+    SystemMemory,
 };
 #[cfg(not(any(target_os = "ios", target_os = "android")))]
 use offline_server::{get_server_url, start_offline_server};
@@ -936,18 +938,8 @@ async fn check_ollama_status(app: AppHandle) -> Result<OllamaStatus, String> {
     Ok(status)
 }
 
-/// How much free space a download of `model` actually needs. Mobile knows the
-/// exact GGUF byte size from the embedded catalog, so it budgets model + 1 GB
-/// of headroom — a 0.8 GB model must not demand the desktop's blanket 5 GB on
-/// a phone. Desktop pulls through Ollama (sizes unknown here) and keeps the
-/// blanket requirement.
 fn required_space_gb_for(model: Option<&str>) -> f64 {
-    #[cfg(any(target_os = "ios", target_os = "android"))]
-    if let Some(entry) = model.and_then(local_llm::resolve) {
-        return entry.size as f64 / (1024.0 * 1024.0 * 1024.0) + 1.0;
-    }
-    let _ = model;
-    REQUIRED_FREE_SPACE_GB
+    model_manager::required_space_gb(model, cfg!(any(target_os = "ios", target_os = "android")))
 }
 
 /// Check if there's enough disk space for the model download. `model` is
@@ -2572,7 +2564,13 @@ pub fn run() {
                         }
                         return false;
                     }
-                    true
+                    // Same allowlist as the shipped desktop entry point
+                    // (main.rs) — the twin guards must never drift.
+                    let allowed = nav_guard::navigation_allowed(url_str, &get_app_url());
+                    if !allowed {
+                        println!("[ibl.ai] Blocked external navigation to: {}", url_str);
+                    }
+                    allowed
                 })
                 .build()
                 .expect("Failed to create main window");

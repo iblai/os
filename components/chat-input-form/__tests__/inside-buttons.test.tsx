@@ -80,12 +80,18 @@ vi.mock('../coding-mode-button', () => ({
 
 let mockIsTauri = false;
 const mockIsTauriApp = vi.fn(() => mockIsTauri);
+let mockTauriPlatform = 'linux';
 vi.mock('@/types/tauri', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/types/tauri')>()),
   isTauriApp: () => mockIsTauriApp(),
+  // Mirrors the real probe (Tauri + iOS/Android OS) against THIS file's
+  // mocks — the original closes over its own unmocked `isTauriApp`. Reads
+  // the flag directly so the Code gate's `isTauriApp` call count stays exact.
+  isTauriMobile: async () =>
+    mockIsTauri &&
+    (mockTauriPlatform === 'ios' || mockTauriPlatform === 'android'),
 }));
 
-let mockTauriPlatform = 'linux';
 vi.mock('@tauri-apps/plugin-os', () => ({
   platform: () => mockTauriPlatform,
 }));
@@ -1293,6 +1299,7 @@ describe('InsideButtons', () => {
     });
 
     it('hides Cowork entirely on Tauri mobile (a phone has no desktop to drive)', async () => {
+      mockIsTauri = true;
       mockTauriPlatform = 'ios';
       mockDriverAvailable = true;
       render(<InsideButtons {...defaultProps} />);

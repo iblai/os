@@ -86,9 +86,17 @@ export function AppUpdatePrompt() {
   const startUpdate = async () => {
     const { invoke } = await import('@tauri-apps/api/core');
     if (update.url) {
-      // Mobile: the store owns installation.
-      await invoke('open_external_url', { url: update.url }).catch(() => {});
-      setDismissed(true);
+      // Mobile: the store owns installation. Through the opener plugin —
+      // NOT `open_external_url`, whose iOS arm is an ASWebAuthenticationSession
+      // that would load the App Store page inside an OAuth sheet.
+      try {
+        const { openUrl } = await import('@tauri-apps/plugin-opener');
+        await openUrl(update.url);
+        setDismissed(true);
+      } catch (err) {
+        // Keep the prompt so the user can retry instead of losing it for a day.
+        setInstallError(err instanceof Error ? err.message : String(err));
+      }
       return;
     }
     // Desktop: install in place; the app relaunches itself on success.

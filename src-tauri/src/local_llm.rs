@@ -19,7 +19,7 @@
 
 use std::io::Write as _;
 use std::path::{Path, PathBuf};
-use std::sync::OnceLock;
+use std::sync::{Mutex, OnceLock};
 
 use axum::body::Body;
 use axum::extract::State;
@@ -152,6 +152,11 @@ fn write_manifest(dir: &Path, m: &serde_json::Map<String, Value>) -> Result<(), 
 /// back to any installed tag of that base.
 pub fn installed_model_path(dir: &Path, model: &str) -> Option<PathBuf> {
     let manifest = read_manifest(dir);
+    // `:latest` is Ollama's spelling of "no tag": the catalog installs under
+    // concrete tags (qwen3 -> qwen3:1.7b), so `qwen3:latest` must match by
+    // base like `qwen3` does — otherwise a pull reports success and chat
+    // 404s.
+    let model = model.strip_suffix(":latest").unwrap_or(model);
     let untagged = !model.contains(':');
     manifest.iter().find_map(|(tag, v)| {
         let tag_base = tag.split(':').next().unwrap_or(tag);
@@ -205,6 +210,35 @@ fn ndjson(v: Value) -> String {
 /// `POST /api/pull` — download the mapped GGUF, streaming Ollama-style
 /// progress lines. The `digest` field is required by `pull_model`'s progress
 /// accumulator (lines without one are ignored for byte counts).
+/// Models with a pull in flight, keyed by catalog tag. Two concurrent pulls
+/// of one model used to interleave writes into the same `.part` file and
+/// record the corrupt result as installed; Ollama coordinates this on the
+/// desktop, so the embedded server must too.
+static IN_FLIGHT_PULLS: Mutex<Option<std::collections::HashSet<String>>> = Mutex::new(None);
+
+/// The in-flight key for a model request: its catalog tag when it resolves,
+/// else the raw name.
+fn pull_key(model: &str) -> String {
+    resolve(model)
+        .map(|e| e.tag.to_string())
+        .unwrap_or_else(|| model.trim().to_string())
+}
+
+/// Claim `key` for a pull; false when one is already running for it.
+fn begin_pull(key: &str) -> bool {
+    let mut guard = IN_FLIGHT_PULLS.lock().unwrap_or_else(|e| e.into_inner());
+    guard
+        .get_or_insert_with(Default::default)
+        .insert(key.to_string())
+}
+
+fn end_pull(key: &str) {
+    let mut guard = IN_FLIGHT_PULLS.lock().unwrap_or_else(|e| e.into_inner());
+    if let Some(set) = guard.as_mut() {
+        set.remove(key);
+    }
+}
+
 async fn post_pull(State(state): State<AppState>, Json(body): Json<Value>) -> Response {
     let name = body
         .get("name")
@@ -212,6 +246,15 @@ async fn post_pull(State(state): State<AppState>, Json(body): Json<Value>) -> Re
         .and_then(|v| v.as_str())
         .unwrap_or_default()
         .to_string();
+
+    let key = pull_key(&name);
+    if !begin_pull(&key) {
+        return (
+            StatusCode::CONFLICT,
+            Json(json!({ "error": format!("model \"{name}\" is already downloading") })),
+        )
+            .into_response();
+    }
 
     let (tx, rx) = mpsc::channel::<String>(16);
     let dir = state.models_dir.clone();
@@ -221,6 +264,7 @@ async fn post_pull(State(state): State<AppState>, Json(body): Json<Value>) -> Re
         if let Err(e) = pull_into(&dir, &name, &tx).await {
             let _ = tx.send(ndjson(json!({ "error": e }))).await;
         }
+        end_pull(&key);
     });
 
     let stream = tokio_stream::wrappers::ReceiverStream::new(rx)
@@ -517,16 +561,20 @@ fn router(models_dir: PathBuf) -> Router {
 
 /// The base URL of the running embedded server, once [`start`] has bound it.
 static SERVER_URL: OnceLock<String> = OnceLock::new();
-/// Where models live, remembered at the first `start` attempt so a failed
-/// launch-time start can be retried later (see `ensure_started`).
-static MODELS_DIR: OnceLock<PathBuf> = OnceLock::new();
+/// Where models live, remembered at every `start` attempt so a failed
+/// launch-time start can be retried later (see `ensure_started`). A plain
+/// Mutex rather than a OnceLock: production only ever passes one dir, but
+/// set-once semantics made any two tests that call `start()` with
+/// different dirs order-dependent (the loser's recording was silently
+/// dropped).
+static MODELS_DIR: Mutex<Option<PathBuf>> = Mutex::new(None);
 
 /// Where models are stored, as remembered by the first `start` attempt.
 /// The disk-space check measures THIS filesystem: on Android there is no
 /// meaningful `$HOME` (statvfs on `/` reports 0 bytes available to apps),
 /// while the app-data models dir is on the real writable partition.
 pub fn models_dir() -> Option<PathBuf> {
-    MODELS_DIR.get().cloned()
+    MODELS_DIR.lock().ok().and_then(|d| d.clone())
 }
 
 /// Start the embedded server if it is not up yet, using the models dir from
@@ -536,8 +584,8 @@ pub fn ensure_started() -> Result<String, String> {
     if let Some(url) = server_url() {
         return Ok(url);
     }
-    match MODELS_DIR.get() {
-        Some(dir) => start(dir.clone()),
+    match models_dir() {
+        Some(dir) => start(dir),
         None => Err("embedded local LLM server is not running".to_string()),
     }
 }
@@ -555,7 +603,9 @@ pub fn server_url() -> Option<String> {
 pub fn start(models_dir: PathBuf) -> Result<String, String> {
     // Remember the dir even when the bind below fails, so `ensure_started`
     // can retry the start later with the same location.
-    let _ = MODELS_DIR.set(models_dir.clone());
+    if let Ok(mut dir) = MODELS_DIR.lock() {
+        *dir = Some(models_dir.clone());
+    }
     if let Some(url) = server_url() {
         return Ok(url);
     }
@@ -867,36 +917,43 @@ pub struct Utf8Stream {
 }
 
 impl Utf8Stream {
-    /// Feed bytes; returns the longest valid UTF-8 prefix now available.
+    /// Feed bytes; returns all valid text now available. Invalid sequences
+    /// are SKIPPED wherever they sit — leading, mid-buffer or trailing —
+    /// and only a genuinely incomplete trailing sequence (≤3 bytes by
+    /// UTF-8's shape, reported by `error_len() == None`) is held for the
+    /// next push. Earlier versions cleared the whole buffer around invalid
+    /// bytes, losing valid text before them (tail case) or after them
+    /// (head case: a stale partial sequence at index 0 swallowed the entire
+    /// next chunk).
     pub fn push(&mut self, bytes: &[u8]) -> Option<String> {
         self.pending.extend_from_slice(bytes);
-        match std::str::from_utf8(&self.pending) {
-            Ok(s) => {
-                let out = s.to_string();
-                self.pending.clear();
-                Some(out)
-            }
-            Err(e) => {
-                let valid = e.valid_up_to();
-                // An unfinished sequence can be at most 3 bytes; anything
-                // longer held back means genuinely invalid bytes. Emit the
-                // VALID PREFIX and drop only the bad tail — clearing the
-                // whole buffer here used to throw away already-valid text
-                // that arrived in the same chunk as the bad bytes.
-                if self.pending.len() - valid > 3 {
-                    let out = (valid > 0)
-                        .then(|| String::from_utf8_lossy(&self.pending[..valid]).into_owned());
+        let mut out = String::new();
+        loop {
+            match std::str::from_utf8(&self.pending) {
+                Ok(s) => {
+                    out.push_str(s);
                     self.pending.clear();
-                    return out;
+                    break;
                 }
-                if valid == 0 {
-                    return None;
+                Err(e) => {
+                    let valid = e.valid_up_to();
+                    out.push_str(&String::from_utf8_lossy(&self.pending[..valid]));
+                    match e.error_len() {
+                        // Invalid sequence: skip it and keep scanning what
+                        // follows in the same buffer.
+                        Some(bad) => {
+                            self.pending.drain(..valid + bad);
+                        }
+                        // Incomplete trailing sequence: hold it back.
+                        None => {
+                            self.pending.drain(..valid);
+                            break;
+                        }
+                    }
                 }
-                let out = String::from_utf8_lossy(&self.pending[..valid]).into_owned();
-                self.pending.drain(..valid);
-                Some(out)
             }
         }
+        (!out.is_empty()).then_some(out)
     }
 }
 
@@ -922,6 +979,40 @@ mod tests {
         assert!(resolve("gpt-oss:20b").is_none());
         assert!(resolve("gemma4:31b").is_none());
         assert!(resolve("unknown-model").is_none());
+    }
+
+    #[test]
+    fn a_second_pull_of_the_same_model_is_refused_while_one_runs() {
+        // Two concurrent pulls interleaved into one .part file and recorded
+        // a corrupt GGUF as installed. The in-flight guard makes the second
+        // request a clean refusal; the key follows the catalog tag so
+        // `llama3.2` and `llama3.2:1b` are the same download.
+        let key = pull_key("llama3.2");
+        assert_eq!(key, "llama3.2:1b");
+        assert!(begin_pull(&key));
+        assert!(!begin_pull(&pull_key("llama3.2:1b")));
+        end_pull(&key);
+        assert!(begin_pull(&key));
+        end_pull(&key);
+    }
+
+    #[test]
+    fn latest_tag_matches_the_installed_base_variant() {
+        // `qwen3:latest` is Ollama's "no tag"; the catalog installs qwen3
+        // under a concrete tag, and the pull reports success — chat must
+        // then find it rather than 404.
+        let dir = std::env::temp_dir().join(format!("ibl-latest-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("q.gguf"), b"x").unwrap();
+        let mut m = serde_json::Map::new();
+        m.insert(
+            "qwen3:1.7b".to_string(),
+            json!({ "file": "q.gguf", "size": 1 }),
+        );
+        write_manifest(&dir, &m).unwrap();
+        assert!(installed_model_path(&dir, "qwen3:latest").is_some());
+        assert!(installed_model_path(&dir, "qwen3:4b").is_none());
     }
 
     #[test]
@@ -1007,6 +1098,17 @@ mod tests {
     }
 
     #[test]
+    fn utf8_stream_keeps_text_after_a_stale_partial_sequence() {
+        // The head case (PR review follow-up): a partial sequence held from
+        // an earlier push turns invalid when unrelated text follows; the
+        // old code cleared the whole buffer and lost all eleven good
+        // characters.
+        let mut s = Utf8Stream::default();
+        assert_eq!(s.push(&[0xF0, 0x9F]), None); // plausible partial, held
+        assert_eq!(s.push(b"hello world").as_deref(), Some("hello world"));
+    }
+
+    #[test]
     fn utf8_stream_drops_invalid_bytes() {
         let mut s = Utf8Stream::default();
         // 4 continuation bytes can never complete a sequence.
@@ -1014,12 +1116,17 @@ mod tests {
         assert_eq!(s.push(b"next").as_deref(), Some("next"));
     }
 
+    /// `start()` records into process-wide state (MODELS_DIR, SERVER_URL),
+    /// so the tests that call it must not interleave.
+    static START_TEST_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
     /// End-to-end liveness: start() must yield a server that actually
     /// ANSWERS — a thread that binds, registers the URL, then dies leaves
     /// server_url() pointing at a dead port and every download failing with
     /// "embedded model server is not responding".
     #[tokio::test(flavor = "multi_thread")]
     async fn embedded_server_answers_version_after_start() {
+        let _guard = START_TEST_LOCK.lock().await;
         let dir = std::env::temp_dir()
             .join(format!("ibl-live-{}", std::process::id()))
             .join("models");
@@ -1042,6 +1149,7 @@ mod tests {
 
     #[test]
     fn models_dir_is_recorded_by_start_attempts_and_probeable() {
+        let _guard = START_TEST_LOCK.blocking_lock();
         // The disk check measures models_dir(), not $HOME — on Android HOME
         // is unset and statvfs("/") reports 0 bytes, which blocked every
         // download. start() must record the dir even when binding fails,

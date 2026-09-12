@@ -18,6 +18,8 @@ permissions = [
     "allow-download-model",
     "allow-cancel-model-download",
     "allow-check-network-status",
+    "allow-check-app-update",
+    "allow-install-app-update",
     "allow-ollama-chat",
     "allow-ollama-chat-stream",
     "allow-get-mcp-config-path",
@@ -139,6 +141,18 @@ identifier = "allow-check-network-status"
 description = "Enables checking network status"
 [permission.commands]
 allow = ["check_network_status"]
+
+[[permission]]
+identifier = "allow-check-app-update"
+description = "Enables checking for a newer app version (updater feed / store lookup)"
+[permission.commands]
+allow = ["check_app_update"]
+
+[[permission]]
+identifier = "allow-install-app-update"
+description = "Enables installing a pending desktop update in place"
+[permission.commands]
+allow = ["install_app_update"]
 
 [[permission]]
 identifier = "allow-ollama-chat"

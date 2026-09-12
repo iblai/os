@@ -105,18 +105,30 @@ fn free_port() -> Result<u16, String> {
         .map_err(|e| format!("no bindable port for remote code: {e}"))
 }
 
+impl Host {
+    /// The ONE teardown every exit path uses: kill + reap the serve child,
+    /// abort the companion (or its server squats port+1 and the next enable
+    /// lands on a random port hand-typed pairings can't derive), drop the
+    /// pid file, and hand back the proxy secret for the caller to unregister
+    /// in its own sync/async style. Four hand-written copies of this had
+    /// already drifted (one skipped wait(), one never unregistered).
+    fn teardown(mut self) -> String {
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+        self.companion.abort();
+        let _ = std::fs::remove_file(serve_pid_file());
+        self.proxy_secret
+    }
+}
+
 fn status_locked(host: &mut Option<Host>) -> RemoteCodeStatus {
     // A crashed/killed server must read as stopped, not haunt the UI — and
-    // it gets the SAME teardown as every other path: abort the companion
-    // (or its server squats port+1 and the next enable lands on a random
-    // port that hand-typed pairings can't derive), drop the pid file, and
-    // unregister the proxy secret holding the platform token.
+    // it gets the SAME teardown as every other path, including unregistering
+    // the proxy secret holding the platform token.
     if let Some(h) = host.as_mut() {
         if h.child.try_wait().ok().flatten().is_some() {
             if let Some(dead) = host.take() {
-                dead.companion.abort();
-                let _ = std::fs::remove_file(serve_pid_file());
-                let secret = dead.proxy_secret;
+                let secret = dead.teardown();
                 tauri::async_runtime::spawn(async move {
                     crate::opencode_proxy::unregister(&secret).await;
                 });
@@ -210,7 +222,7 @@ fn companion_router(password: String) -> axum::Router {
         headers
             .get(axum::http::header::AUTHORIZATION)
             .and_then(|v| v.to_str().ok())
-            .map(|v| v == expect)
+            .map(|v| ct_eq(v.as_bytes(), expect.as_bytes()))
             .unwrap_or(false)
     }
 
@@ -304,7 +316,15 @@ fn read_persisted() -> PersistedHost {
 fn write_persisted(p: &PersistedHost) {
     let _ = std::fs::create_dir_all(crate::opencode_acp::iblai_data_dir());
     if let Ok(s) = serde_json::to_string_pretty(p) {
-        let _ = std::fs::write(persisted_host_file(), s);
+        let path = persisted_host_file();
+        let _ = std::fs::write(&path, s);
+        // The file holds the pairing password: owner-only on a multi-user
+        // machine.
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let _ = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600));
+        }
     }
 }
 
@@ -313,21 +333,46 @@ fn write_persisted(p: &PersistedHost) {
 /// Kill an opencode process squatting `port` (checked by command name, so an
 /// unrelated program on the port is never touched). Zombies there predate the
 /// pid file, so the recorded-pid reaper can't see them.
+/// Constant-time byte comparison for the companion's password check: an
+/// early-exit `==` leaks the matching prefix length through timing on a
+/// listener that allows unlimited attempts. (Length is not hidden — it is
+/// fixed by the password format anyway.)
+fn ct_eq(a: &[u8], b: &[u8]) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    a.iter().zip(b).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
+}
+
+/// Whether a process command line is one of OUR `opencode serve` children
+/// (the exact argv shape `remote_code_enable` spawns). Anything else on the
+/// port — a developer's own `opencode serve` / TUI on 4096 — must be left
+/// alone: the reaper used to kill any listener whose argv merely contained
+/// "opencode".
+fn is_our_serve(cmdline: &str, port: u16) -> bool {
+    cmdline.contains("opencode")
+        && cmdline.contains("serve")
+        && cmdline.contains("--hostname 0.0.0.0")
+        && cmdline.contains(&format!("--port {port}"))
+}
+
 fn reap_port_squatter(port: u16) {
+    // -n -P: no host/service name resolution — without them lsof routinely
+    // takes seconds on macOS.
     let Ok(out) = Command::new("lsof")
-        .args(["-ti", &format!("tcp:{port}"), "-sTCP:LISTEN"])
+        .args(["-nP", "-ti", &format!("tcp:{port}"), "-sTCP:LISTEN"])
         .output()
     else {
         return;
     };
     for pid in String::from_utf8_lossy(&out.stdout).split_whitespace() {
-        let is_opencode = Command::new("ps")
+        let ours = Command::new("ps")
             .args(["-p", pid, "-o", "command="])
             .output()
             .ok()
-            .map(|o| String::from_utf8_lossy(&o.stdout).contains("opencode"))
+            .map(|o| is_our_serve(&String::from_utf8_lossy(&o.stdout), port))
             .unwrap_or(false);
-        if is_opencode {
+        if ours {
             println!("[RemoteCode] reaping zombie opencode serve (pid {pid}) on port {port}");
             let _ = Command::new("kill").arg(pid).output();
         }
@@ -357,11 +402,10 @@ fn reap_stale_serve() {
 /// exit handler — the one shot we get to not leave an orphan behind.
 pub fn shutdown_sync() {
     let mut host = HOST.lock().expect("remote code lock");
-    if let Some(mut h) = host.take() {
-        let _ = h.child.kill();
-        let _ = h.child.wait();
-        h.companion.abort();
-        let _ = std::fs::remove_file(serve_pid_file());
+    if let Some(h) = host.take() {
+        // Process exit: the proxy (and its registrations) die with us, so
+        // the returned secret needs no async unregister here.
+        let _secret = h.teardown();
     }
 }
 
@@ -447,6 +491,26 @@ fn register_models_in_config(models: &[String]) -> Result<(), String> {
     .map_err(|e| e.to_string())
 }
 
+/// The platform API base for this desktop: the caller's explicit value, else
+/// the default derived from the signed-in platform domain.
+async fn resolve_api_base(api_base: Option<String>) -> String {
+    match api_base.filter(|b| !b.trim().is_empty()) {
+        Some(b) => b,
+        None => crate::opencode_acp::default_api_base(
+            &crate::opencode_proxy::platform_base_domain().await,
+        ),
+    }
+}
+
+/// The tenant-scoped OpenAI-compatible upstream the loopback proxy forwards to.
+fn upstream_for(api_base: &str, tenant: &str) -> String {
+    format!(
+        "{}/api/ai-mentor/orgs/{}/v1",
+        api_base.trim_end_matches('/'),
+        tenant
+    )
+}
+
 /// Start (or return the already-running) opencode server for remote Code.
 ///
 /// `tenant` + `token` come from the signed-in desktop UI; they provision the
@@ -472,9 +536,16 @@ pub async fn remote_code_enable(
             }
         };
         if let Some((secret, st)) = secret {
-            // Already running: refresh the held DM token — it expires, and a
-            // stale one makes every phone turn spin in silent model retries.
-            if !token.trim().is_empty() {
+            // Already running: re-register the proxy upstream + token. The
+            // token expires (a stale one makes every phone turn spin in
+            // silent model retries), and the upstream embeds the TENANT — a
+            // desktop tenant switch used to leave phone turns sending the
+            // new tenant's token to the old tenant's org URL (401 forever).
+            if !tenant.trim().is_empty() && !token.trim().is_empty() {
+                let api_base = resolve_api_base(api_base.clone()).await;
+                let upstream = upstream_for(&api_base, &tenant);
+                crate::opencode_proxy::register(&secret, upstream, token.clone()).await;
+            } else if !token.trim().is_empty() {
                 crate::opencode_proxy::set_token(&secret, &token).await;
             }
             return Ok(st);
@@ -484,26 +555,23 @@ pub async fn remote_code_enable(
     // machine-global coordination — reap it before starting fresh. Zombies
     // squatting the preferred ports also push the new server onto random
     // ports while phones stay paired to the corpse.
-    reap_stale_serve();
-    reap_port_squatter(PREFERRED_PORT);
-    reap_port_squatter(PREFERRED_PORT + 1);
+    // lsof/ps/kill are blocking process spawns — keep them off the async
+    // runtime's worker threads (this also runs at every launch via
+    // auto_enable).
+    let _ = tokio::task::spawn_blocking(|| {
+        reap_stale_serve();
+        reap_port_squatter(PREFERRED_PORT);
+        reap_port_squatter(PREFERRED_PORT + 1);
+    })
+    .await;
 
     // Model provider: the loopback proxy holds the real token; the served
     // process gets only a throwaway secret (same arrangement as ACP spawns).
     if tenant.trim().is_empty() || token.trim().is_empty() {
         return Err("sign in on this desktop before enabling phone access".to_string());
     }
-    let api_base = match api_base.filter(|b| !b.trim().is_empty()) {
-        Some(b) => b,
-        None => crate::opencode_acp::default_api_base(
-            &crate::opencode_proxy::platform_base_domain().await,
-        ),
-    };
-    let upstream = format!(
-        "{}/api/ai-mentor/orgs/{}/v1",
-        api_base.trim_end_matches('/'),
-        tenant
-    );
+    let api_base = resolve_api_base(api_base).await;
+    let upstream = upstream_for(&api_base, &tenant);
     let proxy_port = crate::opencode_proxy::ensure_started().await?;
     crate::opencode_proxy::set_app(&app);
     let proxy_secret = crate::opencode_proxy::new_secret();
@@ -582,7 +650,7 @@ pub async fn remote_code_enable(
             .unwrap_or_else(crate::opencode_proxy::new_secret);
         persisted.password = Some(password.clone());
         persisted.port = Some(port);
-        persisted.enabled = true;
+        // `enabled` is written only once the server answers (see below).
         write_persisted(&persisted);
         // Companion right next door (port+1 when free) so a manually-typed
         // pairing can find it; the QR carries the exact port either way.
@@ -643,16 +711,21 @@ pub async fn remote_code_enable(
     if !wait_until_serving(port, 15).await {
         {
             let mut host = HOST.lock().expect("remote code lock");
-            if let Some(mut h) = host.take() {
-                let _ = h.child.kill();
-                h.companion.abort();
-                let _ = std::fs::remove_file(serve_pid_file());
+            if let Some(h) = host.take() {
+                let _secret = h.teardown(); // secret_guard unregisters on return
             }
         }
-        // secret_guard unregisters on return.
         return Err("opencode serve did not come up (is opencode installed?)".to_string());
     }
 
+    // Only a CONFIRMED-serving host is remembered as enabled: recording it
+    // before the spawn made a machine with no runnable opencode retry the
+    // whole 15 s enable dance on every launch via auto_enable, forever.
+    {
+        let mut persisted = read_persisted();
+        persisted.enabled = true;
+        write_persisted(&persisted);
+    }
     secret_guard.defuse();
     Ok(status_locked(&mut HOST.lock().expect("remote code lock")))
 }
@@ -723,16 +796,14 @@ pub async fn remote_code_pairing_qr() -> Result<String, String> {
 pub async fn remote_code_disable() -> Result<(), String> {
     let mut persisted = read_persisted();
     persisted.enabled = false;
+    // Disabling is the user cutting phones off, so it is also the revoke
+    // path: drop the password and the next enable mints a fresh one (the
+    // QR must be re-scanned). Restarts of an ENABLED host still reuse it.
+    persisted.password = None;
     write_persisted(&persisted);
     let secret = {
         let mut host = HOST.lock().expect("remote code lock");
-        host.take().map(|mut h| {
-            let _ = h.child.kill();
-            let _ = h.child.wait();
-            h.companion.abort();
-            let _ = std::fs::remove_file(serve_pid_file());
-            h.proxy_secret
-        })
+        host.take().map(Host::teardown)
     };
     if let Some(secret) = secret {
         crate::opencode_proxy::unregister(&secret).await;
@@ -798,6 +869,31 @@ mod tests {
         if squatter.is_ok() {
             assert_ne!(port, PREFERRED_PORT);
         }
+    }
+
+    #[test]
+    fn the_port_reaper_only_recognizes_our_own_serve_argv() {
+        // A developer's own `opencode serve` (default port 4096) or TUI on
+        // the same port must never be killed — only our exact spawn shape.
+        assert!(is_our_serve(
+            "opencode serve --hostname 0.0.0.0 --port 4096",
+            4096
+        ));
+        assert!(!is_our_serve(
+            "opencode serve --hostname 0.0.0.0 --port 4096",
+            4097
+        ));
+        assert!(!is_our_serve("opencode serve --port 4096", 4096)); // theirs
+        assert!(!is_our_serve("opencode --port 4096", 4096)); // TUI
+        assert!(!is_our_serve("node some-opencode-tool", 4096));
+    }
+
+    #[test]
+    fn companion_password_compare_is_constant_time_shaped() {
+        assert!(ct_eq(b"abc", b"abc"));
+        assert!(!ct_eq(b"abc", b"abd"));
+        assert!(!ct_eq(b"abc", b"ab"));
+        assert!(ct_eq(b"", b""));
     }
 
     #[test]
@@ -897,7 +993,11 @@ mod tests {
             password: "pw".into(),
             proxy_secret: "sec".into(),
             companion_port: 4243,
-            companion: tauri::async_runtime::spawn(async {}),
+            // A future that never completes on its own — only status_locked's
+            // abort() can finish it, so the is_finished assertion below
+            // actually proves the abort ran (an `async {}` completed
+            // immediately and made the assertion vacuous).
+            companion: tauri::async_runtime::spawn(std::future::pending::<()>()),
         });
         // Give the trivial process a moment to exit.
         std::thread::sleep(std::time::Duration::from_millis(200));
@@ -908,7 +1008,15 @@ mod tests {
         let st = status_locked(&mut host);
         assert!(!st.running);
         assert!(host.is_none());
-        // Companion aborted, not left squatting port+1…
+        // Companion aborted, not left squatting port+1. Abort is processed
+        // by the runtime, so poll briefly rather than asserting instantly —
+        // with a never-completing future only the abort can finish it.
+        for _ in 0..50 {
+            if companion.is_finished() {
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+        }
         assert!(companion.is_finished());
         // …and the token-bearing secret unregistered (async, give it a beat).
         for _ in 0..50 {

@@ -34,9 +34,17 @@ fn main() {
     // lib.rs bakes this via option_env! for mobile builds — without these a
     // changed URL (shell or dotenv) would leave a stale binary.
     println!("cargo:rerun-if-env-changed=TAURI_DEV_URL");
-    println!("cargo:rerun-if-changed=.env.local");
-    println!("cargo:rerun-if-changed=.env.production");
-    println!("cargo:rerun-if-changed=.env");
+    // Only files that EXIST: Cargo treats a missing rerun-if-changed path as
+    // always stale, which re-ran this script — and recompiled the whole
+    // crate — on every single build/test on any machine lacking one of
+    // them (measured: a zero-change build took 1m13s). A file that appears
+    // later is picked up by the next build via the env-changed lines above
+    // plus the usual source-change triggers.
+    for f in [".env.local", ".env.production", ".env"] {
+        if std::path::Path::new(f).exists() {
+            println!("cargo:rerun-if-changed={f}");
+        }
+    }
     if let Some(url) = dev_url_from_env_files() {
         // Release binaries must never carry a dev-server URL: a forgotten
         // `TAURI_DEV_URL=http://…` in a shell or dotenv file would point a

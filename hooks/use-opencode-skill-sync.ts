@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { isTauriApp } from '@/types/tauri';
+import { isTauriApp, isTauriMobile } from '@/types/tauri';
 import {
   useLazyGetAgentSkillResourcesQuery,
   useLazyGetAgentSkillsQuery,
@@ -91,6 +91,10 @@ export function useOpencodeSkillSync({
   // Tauri injects its globals after load — poll briefly instead of latching a
   // render-time false (same pattern as inside-buttons).
   const [inTauri, setInTauri] = useState(false);
+  // Any Tauri build, mobile included: the mentor key the Code popover and
+  // the mobile transport read to bucket desktop folders per mentor must be
+  // written on phones too — only the skills SYNC is desktop-only.
+  const [inAnyTauri, setInAnyTauri] = useState(false);
   useEffect(() => {
     let cancelled = false;
     // Skills sync is desktop-only: on Tauri mobile the paired desktop's server
@@ -98,13 +102,8 @@ export function useOpencodeSkillSync({
     // and the sync commands aren't registered there — running would only
     // raise the "skills couldn't be synced" banner on every chat.
     const markDesktopTauri = async () => {
-      try {
-        const { platform } = await import('@tauri-apps/plugin-os');
-        const os = platform();
-        if (os === 'ios' || os === 'android') return;
-      } catch {
-        /* no OS plugin → desktop-era build */
-      }
+      if (!cancelled) setInAnyTauri(true);
+      if (await isTauriMobile()) return;
       if (!cancelled) setInTauri(true);
     };
     if (isTauriApp()) {
@@ -146,10 +145,10 @@ export function useOpencodeSkillSync({
   // whenever known (not only while Code is on) so the very first enable
   // already has it; never cleared on unmount — another composer may live.
   useEffect(() => {
-    if (inTauri && mentorUniqueId) {
+    if (inAnyTauri && mentorUniqueId) {
       localStorage.setItem(MENTOR_KEY, mentorUniqueId);
     }
-  }, [inTauri, mentorUniqueId]);
+  }, [inAnyTauri, mentorUniqueId]);
 
   const [fetchAssignments] = useLazyGetMentorSkillAssignmentsQuery();
   const [fetchCatalog] = useLazyGetAgentSkillsQuery();

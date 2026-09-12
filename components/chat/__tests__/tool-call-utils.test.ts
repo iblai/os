@@ -150,7 +150,10 @@ describe('getQueryLabel', () => {
       expect(getQueryLabel(tc)).toBeNull();
     });
 
-    it('returns null for malformed JSON in log', () => {
+    it('returns null for malformed JSON in log without logging', () => {
+      // Malformed logs are routine during streaming (the JSON arrives in
+      // pieces), so the parse failure must stay silent — a console.error per
+      // render was flooding the console on long tool-heavy turns.
       const consoleSpy = vi
         .spyOn(console, 'error')
         .mockImplementation(() => {});
@@ -158,10 +161,7 @@ describe('getQueryLabel', () => {
         log: 'Calling tool with `{not valid json}`',
       });
       expect(getQueryLabel(tc)).toBeNull();
-      expect(consoleSpy).toHaveBeenCalledWith(
-        '[ToolCallIndicator] Failed to parse log string:',
-        expect.any(Error),
-      );
+      expect(consoleSpy).not.toHaveBeenCalled();
       consoleSpy.mockRestore();
     });
 

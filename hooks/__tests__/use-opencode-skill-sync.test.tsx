@@ -24,6 +24,7 @@ vi.mock('@tauri-apps/api/core', () => ({
 }));
 vi.mock('@/types/tauri', () => ({
   isTauriApp: () => tauriFlag.current,
+  isTauriMobile: async () => false,
 }));
 vi.mock('@iblai/iblai-js/data-layer', () => ({
   useLazyGetMentorSkillAssignmentsQuery: () => [

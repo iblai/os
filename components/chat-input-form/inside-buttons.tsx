@@ -51,7 +51,7 @@ import { MemoryButton } from './memory-button';
 import { CodingModeButton } from './coding-mode-button';
 import { estimatePillWidth, useOverflowFit } from './use-overflow-fit';
 import { MemoryMenu } from './memory-menu';
-import { isTauriApp } from '@/types/tauri';
+import { isTauriApp, isTauriMobile } from '@/types/tauri';
 import type { OpencodeSkillSync } from '@/hooks/use-opencode-skill-sync';
 
 /** One tool pill in the composer row (inline) or the ••• overflow menu. */
@@ -170,17 +170,9 @@ export const InsideButtons = ({
   const [tauriMobile, setTauriMobile] = useState(false);
   useEffect(() => {
     let cancelled = false;
-    void (async () => {
-      try {
-        const { platform } = await import('@tauri-apps/plugin-os');
-        const os = platform();
-        if (!cancelled && (os === 'ios' || os === 'android')) {
-          setTauriMobile(true);
-        }
-      } catch {
-        /* no OS plugin → desktop/web */
-      }
-    })();
+    void isTauriMobile().then((mobile) => {
+      if (!cancelled && mobile) setTauriMobile(true);
+    });
     return () => {
       cancelled = true;
     };

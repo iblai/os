@@ -111,6 +111,21 @@ struct OllamaModel {
 pub const OLLAMA_API_URL: &str = "http://localhost:11434";
 pub const REQUIRED_FREE_SPACE_GB: f64 = 5.0;
 
+/// How much free space a download of `model` actually needs. Mobile knows the
+/// exact GGUF byte size from the embedded catalog, so it budgets model + 1 GB
+/// of headroom — a 0.8 GB model must not demand the desktop's blanket 5 GB on
+/// a phone. Desktop pulls through Ollama (sizes unknown here) and keeps the
+/// blanket requirement. `mobile` is passed in so the rule is testable on any
+/// host.
+pub fn required_space_gb(model: Option<&str>, mobile: bool) -> f64 {
+    if mobile {
+        if let Some(entry) = model.and_then(crate::local_llm::resolve) {
+            return entry.size as f64 / (1024.0 * 1024.0 * 1024.0) + 1.0;
+        }
+    }
+    REQUIRED_FREE_SPACE_GB
+}
+
 /// The model-manager API base: Ollama on desktop, the embedded llama.cpp
 /// server on iOS (which also prefers port 11434, but may have fallen back to
 /// another port — so never assume the constant there).
@@ -205,18 +220,6 @@ pub fn check_ollama_installed() -> bool {
     #[cfg(any(target_os = "ios", target_os = "android"))]
     {
         true
-    }
-
-    // Any other platform has no model manager.
-    #[cfg(not(any(
-        target_os = "windows",
-        target_os = "macos",
-        target_os = "linux",
-        target_os = "ios",
-        target_os = "android"
-    )))]
-    {
-        false
     }
 }
 
@@ -325,18 +328,6 @@ pub fn start_ollama_server() -> Result<(), String> {
         return crate::local_llm::ensure_started().map(|_| ());
     }
 
-    // Any other platform has no model manager.
-    #[cfg(not(any(
-        target_os = "windows",
-        target_os = "macos",
-        target_os = "linux",
-        target_os = "ios",
-        target_os = "android"
-    )))]
-    {
-        return Err("Ollama is not supported on this platform".to_string());
-    }
-
     #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
     {
         // The MCP bridge runs alongside Ollama, so bring it up with the server.
@@ -418,18 +409,6 @@ pub fn check_disk_space() -> Result<f64, String> {
         }
         let home = std::env::var("HOME").unwrap_or_else(|_| "/".to_string());
         return crate::local_llm::available_disk_gb(std::path::Path::new(&home));
-    }
-
-    // Any other platform has no model manager.
-    #[cfg(not(any(
-        target_os = "windows",
-        target_os = "macos",
-        target_os = "linux",
-        target_os = "ios",
-        target_os = "android"
-    )))]
-    {
-        return Err("Disk space check is not supported on this platform".to_string());
     }
 
     #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
@@ -901,6 +880,23 @@ pub fn cancel_download() -> Result<(), String> {
     any(target_os = "windows", target_os = "macos", target_os = "linux")
 ))]
 mod tests {
+    #[test]
+    fn mobile_disk_budget_is_model_size_plus_headroom() {
+        // The phone download fix: a 0.8 GB model must budget ~1.75 GB, not
+        // the desktop's blanket 5 GB; unknown/desktop stays at the blanket.
+        let gb = required_space_gb(Some("llama3.2"), true);
+        assert!(gb > 1.7 && gb < 1.8, "got {gb}");
+        assert_eq!(
+            required_space_gb(Some("no-such-model"), true),
+            REQUIRED_FREE_SPACE_GB
+        );
+        assert_eq!(
+            required_space_gb(Some("llama3.2"), false),
+            REQUIRED_FREE_SPACE_GB
+        );
+        assert_eq!(required_space_gb(None, true), REQUIRED_FREE_SPACE_GB);
+    }
+
     use super::*;
     use crate::mcp_bridge_manager::{bridge_state_lock, set_bridge_port_for_test};
 

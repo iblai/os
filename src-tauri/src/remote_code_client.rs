@@ -68,6 +68,14 @@ struct HostConfig {
     /// Absent = the server's default project (the shared phone workspace).
     #[serde(default)]
     directories: HashMap<String, String>,
+    /// chat session id → the desktop directory its server session was
+    /// CREATED in. When the chat's resolved directory later differs (the
+    /// mentor's folder changed from another chat), the session must be
+    /// recreated there: opencode scopes events and status per directory, so
+    /// a session living in the old folder is invisible to a turn scoped to
+    /// the new one.
+    #[serde(default)]
+    session_dirs: HashMap<String, String>,
     /// "tenant::mentor" → directory. Preferred over the per-chat entry, like
     /// the desktop's mentor workspaces: chat session ids CHANGE (an unsaved
     /// chat's ephemeral id becomes real after the first send), and keying by
@@ -209,11 +217,17 @@ fn host() -> Result<(String, String), String> {
     }
 }
 
-fn http() -> reqwest::Client {
-    reqwest::Client::builder()
-        .connect_timeout(std::time::Duration::from_secs(10))
-        .build()
-        .expect("http client")
+/// One shared client: a fresh `reqwest::Client` per request (the old shape)
+/// threw away the connection pool, so every probe and prompt re-handshaked
+/// with the desktop. Per-request `.timeout()` is applied at the call sites.
+fn http() -> &'static reqwest::Client {
+    static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
+    CLIENT.get_or_init(|| {
+        reqwest::Client::builder()
+            .connect_timeout(std::time::Duration::from_secs(10))
+            .build()
+            .expect("http client")
+    })
 }
 
 async fn get_json(base: &str, pw: &str, path: &str) -> Result<Value, String> {
@@ -410,6 +424,7 @@ pub async fn remote_code_clear_host() -> Result<(), String> {
     // exist there, and every session lands in a broken directory.
     cfg.directories.clear();
     cfg.mentor_directories.clear();
+    cfg.session_dirs.clear();
     write_config(&cfg)
 }
 
@@ -694,21 +709,25 @@ impl EventSink for TauriSink {
 /// The newest user message's text — the prompt. Same extraction rule as the
 /// desktop: last `role == "user"`, content as a string or `[{text}, …]`.
 fn last_user_text(messages: &[Value]) -> Option<String> {
+    // Mirrors `opencode_acp::last_user_text` (that module is desktop-only,
+    // so it cannot be shared across the cfg boundary): multipart text is
+    // concatenated as-is, and a user message with no text at all (image
+    // only) is skipped in favor of the previous one — the phone and the
+    // desktop must send the same prompt for the same chat.
     messages.iter().rev().find_map(|m| {
         if m.get("role").and_then(|r| r.as_str()) != Some("user") {
             return None;
         }
-        match m.get("content") {
-            Some(Value::String(s)) => Some(s.clone()),
-            Some(Value::Array(parts)) => Some(
-                parts
-                    .iter()
-                    .filter_map(|p| p.get("text").and_then(|t| t.as_str()))
-                    .collect::<Vec<_>>()
-                    .join("\n"),
-            ),
-            _ => None,
-        }
+        let text = match m.get("content") {
+            Some(Value::String(s)) => s.clone(),
+            Some(Value::Array(parts)) => parts
+                .iter()
+                .filter_map(|p| p.get("text").and_then(|t| t.as_str()))
+                .collect::<Vec<_>>()
+                .join(""),
+            _ => String::new(),
+        };
+        (!text.trim().is_empty()).then_some(text)
     })
 }
 
@@ -755,14 +774,26 @@ async fn ensure_session(
 ) -> Result<String, String> {
     migrate_chat_key(session_id, new_chat_key);
     let mut cfg = read_config();
+    let dir = ensure_directory(session_id, tenant, mentor).await;
     if let Some(remote) = cfg.sessions.get(session_id) {
-        return Ok(remote.clone());
+        // Reuse only if the session lives where this turn will look for it.
+        // (Sessions recorded before session_dirs existed have no entry and
+        // are trusted, so an upgrade never churns existing chats.)
+        let stale = cfg
+            .session_dirs
+            .get(session_id)
+            .is_some_and(|created_in| Some(created_in) != dir.as_ref());
+        if !stale {
+            return Ok(remote.clone());
+        }
+        println!("[RemoteCode] session for {session_id} lives in another folder; recreating");
+        cfg.sessions.remove(session_id);
     }
     // A chosen folder scopes the session via opencode's documented
     // `?directory=` parameter; without one the server's default project (the
     // shared phone workspace) applies.
-    let create_path = match ensure_directory(session_id, tenant, mentor).await {
-        Some(dir) => format!("/session?directory={}", urlencoding::encode(&dir)),
+    let create_path = match dir.as_deref() {
+        Some(dir) => format!("/session?directory={}", urlencoding::encode(dir)),
         None => "/session".to_string(),
     };
     println!("[RemoteCode] creating server session via {create_path}");
@@ -773,8 +804,26 @@ async fn ensure_session(
         .ok_or("desktop did not return a session id")?
         .to_string();
     cfg.sessions.insert(session_id.to_string(), remote.clone());
+    match &dir {
+        Some(d) => {
+            cfg.session_dirs.insert(session_id.to_string(), d.clone());
+        }
+        None => {
+            cfg.session_dirs.remove(session_id);
+        }
+    }
     write_config(&cfg)?;
     Ok(remote)
+}
+
+/// Whether a `post_json` error means the desktop REJECTED the prompt (a 4xx
+/// response — e.g. an unregistered model id) as opposed to an ambiguous
+/// transport failure or 5xx after which the prompt may already be queued.
+/// Errors are shaped `"desktop returned {status}: {body}"` for responses and
+/// `"could not reach the desktop: …"` for transport.
+fn is_prompt_rejection(err: &str) -> bool {
+    err.strip_prefix("desktop returned 4")
+        .is_some_and(|rest| rest.chars().take(2).all(|c| c.is_ascii_digit()))
 }
 
 /// `{providerID, modelID}` for the prompt, from the app's model spec. Cloud
@@ -842,44 +891,42 @@ fn scoped(path: &str, dir: Option<&str>) -> String {
 /// generation) and while a permission waits on the user — ending the turn on
 /// the first one truncated multi-step work to a single tool call.
 async fn session_is_idle(base: &str, pw: &str, remote: &str, dir: Option<&str>) -> bool {
-    match get_json(base, pw, &scoped("/session/status", dir)).await {
-        Ok(v) => v
-            .get(remote)
-            .map(|s| s.get("type").and_then(|t| t.as_str()) == Some("idle"))
-            // Absent from the map = nothing running for it = idle.
-            .unwrap_or(true),
-        // Can't tell → treat as idle rather than risk hanging the turn.
-        Err(_) => true,
-    }
+    // Same verdict rules as the quiet-stream probe: a FAILED request is
+    // unknown, never idle — treating it as idle closed live turns on a
+    // Wi-Fi blip. An unknown answer keeps streaming; the turn deadline and
+    // the quiet-stream probes still end a genuinely dead turn.
+    matches!(
+        classify_probe(
+            get_json(base, pw, &scoped("/session/status", dir)).await,
+            remote
+        ),
+        ProbeVerdict::Idle
+    )
 }
 
-/// Flush coalesced stream buffers (see EMIT_WINDOW in `run_turn`): called
-/// before any non-delta event so ordering is preserved — a tool call or the
-/// final done must never appear ahead of text that came before it.
-#[allow(clippy::too_many_arguments)]
+/// Flush coalesced stream buffers: called before any other event (tool
+/// call, permission, done, error) so ordering matches what the desktop
+/// emits — text/reasoning that arrived before the event must render
+/// before it.
 fn flush_stream_buffers(
     sink: &dyn EventSink,
     generation_id: &str,
-    pending_token: &mut String,
-    full_content: &str,
-    pending_reasoning: &mut String,
+    text: &mut TokenCoalescer,
+    reasoning: &mut TokenCoalescer,
 ) {
-    if !pending_reasoning.is_empty() {
+    if let Some(delta) = reasoning.flush() {
         sink.emit(
             "opencode:reasoning",
-            json!({
-                "generation_id": generation_id,
-                "delta": std::mem::take(pending_reasoning),
-            }),
+            json!({ "generation_id": generation_id, "delta": delta }),
         );
     }
-    if !pending_token.is_empty() {
+    if let Some(batch) = text.flush() {
         sink.emit(
             "ollama:token",
             json!({
                 "generation_id": generation_id,
-                "token": std::mem::take(pending_token),
-                "full_content": full_content,
+                "token": batch,
+                "full_content": text.full_content(),
             }),
         );
     }
@@ -976,9 +1023,12 @@ async fn run_turn(
         &prompt,
     )
     .await;
-    if prompted.is_err() && model.is_some() {
+    if model.is_some() && prompted.as_ref().is_err_and(|e| is_prompt_rejection(e)) {
         // The configured provider may not list this exact model id — retry on
-        // the server's default rather than failing the turn.
+        // the server's default rather than failing the turn. ONLY on a
+        // definite 4xx rejection: on a timeout or 5xx the server may already
+        // have queued the turn, and re-posting would run a (possibly
+        // destructive) instruction twice.
         let fallback = json!({ "parts": [{ "type": "text", "text": text }] });
         post_json(
             &base,
@@ -992,27 +1042,15 @@ async fn run_turn(
     }
 
     let auto_mode = read_config().permission_mode.as_deref() == Some(MODE_AUTO);
-    let mut full_content = String::new();
+    // Streamed text and reasoning are batched by TokenCoalescer (first delta
+    // immediately, then an adaptive 200ms→1s window) — the same policy the
+    // embedded local-LLM stream uses, in one implementation.
+    let mut text = TokenCoalescer::new();
+    let mut reasoning = TokenCoalescer::new();
+    // Raw SSE bytes; events are newline-delimited.
     let mut buffer = Vec::new();
-    // Streaming coalescers — the phone equivalent of the desktop's
-    // TOKEN_EMIT_WINDOW: a fast model emits hundreds of deltas a second, and
-    // forwarding each as its own Tauri event re-render-storms the webview
-    // until iOS kills the frozen app. First delta goes out immediately (so
-    // the reply appears instantly); after that, at most one emit per window,
-    // with the remainder flushed before any other event.
+    // Per-tool-call rate limit window (terminal states always pass).
     const EMIT_WINDOW: std::time::Duration = std::time::Duration::from_millis(200);
-    // Each token emit makes the webview re-render the WHOLE reply (markdown
-    // included), so render cost grows with message length. Scale the window
-    // with size — snappy at the start, calmer as the reply gets heavy — which
-    // is what keeps long turns smooth instead of increasingly janky.
-    fn token_window(len: usize) -> std::time::Duration {
-        let extra_ms = (len / 4096) as u64 * 100;
-        std::time::Duration::from_millis((200 + extra_ms).min(1000))
-    }
-    let mut pending_token = String::new();
-    let mut last_token_emit = std::time::Instant::now() - EMIT_WINDOW;
-    let mut pending_reasoning = String::new();
-    let mut last_reasoning_emit = std::time::Instant::now() - EMIT_WINDOW;
     // Per-tool-call rate limit (terminal states always pass).
     let mut last_tool_emit: HashMap<String, std::time::Instant> = HashMap::new();
     // part id → is-reasoning, learned from part.updated events; deltas carry
@@ -1083,10 +1121,7 @@ async fn run_turn(
                             // Idle with NOTHING produced is a failed turn,
                             // not an empty success — mirror the done-event
                             // branch, which also refuses a contentless done.
-                            if full_content.is_empty()
-                                && pending_token.is_empty()
-                                && last_tool_emit.is_empty()
-                            {
+                            if text.full_content().is_empty() && last_tool_emit.is_empty() {
                                 let msg =
                                     "The desktop went idle without producing a reply — try again."
                                         .to_string();
@@ -1096,18 +1131,12 @@ async fn run_turn(
                                 );
                                 return Err(msg);
                             }
-                            flush_stream_buffers(
-                                sink,
-                                generation_id,
-                                &mut pending_token,
-                                &full_content,
-                                &mut pending_reasoning,
-                            );
+                            flush_stream_buffers(sink, generation_id, &mut text, &mut reasoning);
                             sink.emit(
                                 "ollama:done",
                                 json!({
                                     "generation_id": generation_id,
-                                    "full_content": full_content,
+                                    "full_content": text.full_content(),
                                     "stop_reason": Value::Null,
                                 }),
                             );
@@ -1164,31 +1193,21 @@ async fn run_turn(
                     }
                     let part_id = props.get("partID").and_then(|p| p.as_str()).unwrap_or("");
                     if reasoning_parts.get(part_id).copied().unwrap_or(false) {
-                        pending_reasoning.push_str(delta);
-                        if last_reasoning_emit.elapsed() >= EMIT_WINDOW {
+                        if let Some(batch) = reasoning.push(delta) {
                             sink.emit(
                                 "opencode:reasoning",
-                                json!({
-                                    "generation_id": generation_id,
-                                    "delta": std::mem::take(&mut pending_reasoning),
-                                }),
+                                json!({ "generation_id": generation_id, "delta": batch }),
                             );
-                            last_reasoning_emit = std::time::Instant::now();
                         }
-                    } else {
-                        full_content.push_str(delta);
-                        pending_token.push_str(delta);
-                        if last_token_emit.elapsed() >= token_window(full_content.len()) {
-                            sink.emit(
-                                "ollama:token",
-                                json!({
-                                    "generation_id": generation_id,
-                                    "token": std::mem::take(&mut pending_token),
-                                    "full_content": full_content,
-                                }),
-                            );
-                            last_token_emit = std::time::Instant::now();
-                        }
+                    } else if let Some(batch) = text.push(delta) {
+                        sink.emit(
+                            "ollama:token",
+                            json!({
+                                "generation_id": generation_id,
+                                "token": batch,
+                                "full_content": text.full_content(),
+                            }),
+                        );
                     }
                 }
                 "message.part.updated" => {
@@ -1223,13 +1242,7 @@ async fn run_turn(
                                 }
                             }
                             last_tool_emit.insert(call_id.to_string(), std::time::Instant::now());
-                            flush_stream_buffers(
-                                sink,
-                                generation_id,
-                                &mut pending_token,
-                                &full_content,
-                                &mut pending_reasoning,
-                            );
+                            flush_stream_buffers(sink, generation_id, &mut text, &mut reasoning);
                             sink.emit(
                                 "opencode:tool_call",
                                 json!({
@@ -1292,13 +1305,7 @@ async fn run_turn(
                         .get("permission")
                         .and_then(|p| p.as_str())
                         .unwrap_or("tool");
-                    flush_stream_buffers(
-                        sink,
-                        generation_id,
-                        &mut pending_token,
-                        &full_content,
-                        &mut pending_reasoning,
-                    );
+                    flush_stream_buffers(sink, generation_id, &mut text, &mut reasoning);
                     sink.emit(
                         "opencode:permission_request",
                         json!({
@@ -1334,18 +1341,12 @@ async fn run_turn(
                     // A user-initiated Stop surfaces as an abort error — that's
                     // a normal end of turn, not a failure.
                     if name == "MessageAbortedError" {
-                        flush_stream_buffers(
-                            sink,
-                            generation_id,
-                            &mut pending_token,
-                            &full_content,
-                            &mut pending_reasoning,
-                        );
+                        flush_stream_buffers(sink, generation_id, &mut text, &mut reasoning);
                         sink.emit(
                             "ollama:done",
                             json!({
                                 "generation_id": generation_id,
-                                "full_content": full_content,
+                                "full_content": text.full_content(),
                                 "stop_reason": "aborted",
                             }),
                         );
@@ -1357,13 +1358,7 @@ async fn run_turn(
                         .and_then(|m| m.as_str())
                         .map(|s| s.to_string())
                         .unwrap_or_else(|| error.to_string());
-                    flush_stream_buffers(
-                        sink,
-                        generation_id,
-                        &mut pending_token,
-                        &full_content,
-                        &mut pending_reasoning,
-                    );
+                    flush_stream_buffers(sink, generation_id, &mut text, &mut reasoning);
                     sink.emit(
                         "ollama:error",
                         json!({ "generation_id": generation_id, "error": msg }),
@@ -1381,7 +1376,7 @@ async fn run_turn(
                     if !session_is_idle(&base, &pw, &remote, turn_dir.as_deref()).await {
                         continue;
                     }
-                    if full_content.is_empty() && seen_tools.is_empty() {
+                    if text.full_content().is_empty() && seen_tools.is_empty() {
                         // Nothing streamed yet — likely the queued turn hasn't
                         // started. Give it one more beat before calling it
                         // genuinely empty.
@@ -1390,18 +1385,12 @@ async fn run_turn(
                             continue;
                         }
                     }
-                    flush_stream_buffers(
-                        sink,
-                        generation_id,
-                        &mut pending_token,
-                        &full_content,
-                        &mut pending_reasoning,
-                    );
+                    flush_stream_buffers(sink, generation_id, &mut text, &mut reasoning);
                     sink.emit(
                         "ollama:done",
                         json!({
                             "generation_id": generation_id,
-                            "full_content": full_content,
+                            "full_content": text.full_content(),
                             "stop_reason": Value::Null,
                         }),
                     );
@@ -1562,13 +1551,85 @@ mod tests {
     }
 
     #[test]
+    fn the_prompt_fallback_fires_only_on_a_definite_rejection() {
+        // A 4xx means the desktop refused the prompt (e.g. unregistered model
+        // id) and it is safe to retry without a model. A timeout or 5xx may
+        // have already queued the turn — resending would run a possibly
+        // destructive instruction twice.
+        assert!(is_prompt_rejection("desktop returned 404 Not Found: {}"));
+        assert!(is_prompt_rejection(
+            "desktop returned 422 Unprocessable Entity: model"
+        ));
+        assert!(!is_prompt_rejection(
+            "desktop returned 500 Internal Server Error: boom"
+        ));
+        assert!(!is_prompt_rejection(
+            "could not reach the desktop: operation timed out"
+        ));
+        assert!(!is_prompt_rejection(""));
+    }
+
+    #[tokio::test]
+    async fn a_session_created_in_another_folder_is_recreated_there() {
+        // Mentor folder switched from a sibling chat: this chat's session
+        // still lives in the OLD folder, but turns are scoped to the new one
+        // — reusing it made the turn listen to a project its session isn't
+        // in. The recorded creation dir detects the mismatch.
+        let _guard = CONFIG_TEST_LOCK.lock().await;
+        let created = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let counter = created.clone();
+        let app = Router::new()
+            .route(
+                "/path",
+                get(|| async { Json(json!({ "directory": "/srv" })) }),
+            )
+            .route(
+                "/session",
+                post(move || {
+                    let n = counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
+                    async move { Json(json!({ "id": format!("ses_{n}") })) }
+                }),
+            );
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        test_config(&format!("http://{addr}"));
+
+        // Chat B's session was created in /old.
+        let mut cfg = read_config();
+        cfg.sessions.insert("chat-b".into(), "ses_old".into());
+        cfg.session_dirs.insert("chat-b".into(), "/old".into());
+        // Meanwhile the mentor's folder moved to /new (from chat A).
+        cfg.mentor_directories
+            .insert(mentor_key("t", "m"), "/new".into());
+        write_config(&cfg).unwrap();
+
+        let base = format!("http://{addr}");
+        let remote = ensure_session(&base, "pw", "chat-b", Some("t"), Some("m"), None)
+            .await
+            .unwrap();
+        assert_eq!(remote, "ses_1", "stale session must be recreated in /new");
+        let cfg = read_config();
+        assert_eq!(
+            cfg.session_dirs.get("chat-b").map(String::as_str),
+            Some("/new")
+        );
+
+        // And the fresh one is reused thereafter (no churn).
+        let again = ensure_session(&base, "pw", "chat-b", Some("t"), Some("m"), None)
+            .await
+            .unwrap();
+        assert_eq!(again, "ses_1");
+    }
+
+    #[test]
     fn last_user_text_takes_newest_user_message() {
         let messages = vec![
             json!({ "role": "user", "content": "first" }),
             json!({ "role": "assistant", "content": "reply" }),
             json!({ "role": "user", "content": [{ "text": "second" }, { "text": "part" }] }),
         ];
-        assert_eq!(last_user_text(&messages).as_deref(), Some("second\npart"));
+        assert_eq!(last_user_text(&messages).as_deref(), Some("secondpart"));
         assert!(last_user_text(&[json!({ "role": "assistant", "content": "x" })]).is_none());
     }
 

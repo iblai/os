@@ -6,9 +6,14 @@ mod cua_driver_installer;
 mod cua_driver_mcp;
 mod foundry_installer;
 mod foundry_manager;
+// Mobile-only catalog (`local_llm::resolve`) that `model_manager::required_space_gb`
+// consults; the engine inside is cfg-gated so this compiles on desktop like lib.rs.
+#[allow(dead_code)]
+mod local_llm;
 mod mcp_bridge_installer;
 mod mcp_bridge_manager;
 mod model_manager;
+mod nav_guard;
 mod oauth;
 mod offline_server;
 mod ollama_installer;
@@ -2578,28 +2583,10 @@ fn main() {
                         }
                     }
 
-                    // Allow navigation within the app's domains and localhost.
-                    // The CONFIGURED app URL is always allowed first: the list
-                    // below is hardcoded, and pointing TAURI_APP_URL at another
-                    // deployment (e.g. the org platform) used to make the app
-                    // block its own initial navigation — a white window.
-                    let app_origin = get_app_url();
-                    let allowed = url_str.starts_with(app_origin.trim_end_matches('/'))
-                        || url_str.starts_with("http://localhost")
-                        || url_str.starts_with("http://127.0.0.1")
-                        || url_str.starts_with("https://mentorai.iblai.app")
-                        || url_str.starts_with("https://os.ibl.ai")
-                        || url_str.starts_with("https://auth.iblai.org")
-                        || url_str.starts_with("https://login.iblai.app")
-                        || url_str.starts_with("https://base.manager.iblai.app")
-                        || url_str.starts_with("https://base.manager.iblai.org")
-                        || url_str.starts_with("https://api.iblai.app")
-                        || url_str.starts_with("https://api.iblai.org")
-                        || url_str.starts_with("https://learn.iblai.app")
-                        || url_str.starts_with("https://learn.iblai.org")
-                        || url_str.starts_with("tauri://")
-                        || url_str.starts_with("asset://")
-                        || url_str.starts_with("mentor://");
+                    // Allow navigation within the app's domains and localhost —
+                    // shared predicate (see nav_guard.rs): configured app URL
+                    // first, static list second, empty origin allows nothing.
+                    let allowed = nav_guard::navigation_allowed(url_str, &get_app_url());
 
                     if !allowed {
                         println!("[ibl.ai] Blocked external navigation to: {}", url_str);
