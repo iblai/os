@@ -15,6 +15,25 @@ export const ADVERTISING_TENANT_MENTOR_URL =
   process.env.ADVERTISING_TENANT_MENTOR_URL || '';
 export const AUTH_NEXTJS_HOST = process.env.AUTH_NEXTJS_HOST || '';
 
+// Full mentor URL (`{host}/platform/{tenantKey}/{mentorId}`) for a SECOND
+// tenant that the primary `PLAYWRIGHT_USERNAME` account also belongs to,
+// distinct from their default/home tenant. Used to lock in the direct-URL
+// SSO-redirect invariant: visiting this URL while unauthenticated, or while
+// signed into the primary/home tenant, must land back on THIS exact
+// tenant+mentor rather than the default tenant (the regression fixed by
+// resolveSsoRedirectPath in lib/sso-redirect.ts).
+export const SECOND_TENANT_MENTOR_URL =
+  process.env.SECOND_TENANT_MENTOR_URL || '';
+
+// Full mentor URL for a tenant the primary `PLAYWRIGHT_USERNAME` account does
+// NOT belong to, and which does not allow self-service auto-join (invite-only
+// / join disabled) — self-join succeeding would silently grant access and
+// defeat the point of this fixture. Used to verify that a user with no access
+// is denied (see the "no access" test in Journey 32) rather than silently
+// bounced to the default tenant or the visited tenant.
+export const NO_ACCESS_TENANT_MENTOR_URL =
+  process.env.NO_ACCESS_TENANT_MENTOR_URL || '';
+
 // ── Credentials ──────────────────────────────────────────────────────────────
 
 export const PLAYWRIGHT_USERNAME = process.env.PLAYWRIGHT_USERNAME || '';
