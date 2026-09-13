@@ -210,6 +210,38 @@ async function placeComposerCaret(
   }, index);
 }
 
+/**
+ * Asserts a skill row renders its name and `/slug` as a COLUMN — the full
+ * name on top, the slug on its own line beneath — rather than the old
+ * side-by-side row whose `truncate`d name clipped to "canvas-course-b…".
+ * Checks real geometry (bounding boxes + scrollWidth), not class names.
+ */
+async function expectNameStackedOverSlug(
+  row: Locator,
+  nameTestId: string,
+  slugTestId: string,
+  expectedName: string,
+  expectedSlug: string,
+): Promise<void> {
+  const name = row.getByTestId(nameTestId);
+  const slug = row.getByTestId(slugTestId);
+  await expect(name).toHaveText(expectedName);
+  await expect(slug).toHaveText(expectedSlug);
+  const [nameBox, slugBox] = await Promise.all([
+    name.boundingBox(),
+    slug.boundingBox(),
+  ]);
+  expect(nameBox).not.toBeNull();
+  expect(slugBox).not.toBeNull();
+  // Slug starts at or below where the name ends → stacked, not inline.
+  expect(slugBox!.y).toBeGreaterThanOrEqual(nameBox!.y + nameBox!.height - 1);
+  // The name is not horizontally clipped (no ellipsis truncation).
+  const clipped = await name.evaluate(
+    (el) => el.scrollWidth > el.clientWidth + 1,
+  );
+  expect(clipped).toBe(false);
+}
+
 const SLASH_SKILLS: EffectiveSkillFixture[] = [
   {
     unique_id: 'e2e-skill-web-research',
@@ -750,6 +782,16 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
     await expect(
       chatPage.slashSkillPicker.getByText('Research a topic on the open web.'),
     ).toHaveCount(0);
+    // Name stacked OVER the slug (column, not a row) so long names never
+    // get clipped to "canvas-course-b…": the name box sits fully above the
+    // slug box and is never wider than its container.
+    await expectNameStackedOverSlug(
+      chatPage.getSlashSkillOption('Web Research'),
+      'slash-skill-picker-option-name',
+      'slash-skill-picker-option-slug',
+      'Web Research',
+      '/web-research',
+    );
   });
 
   // ── slash-03: Filtering narrows by name and by slug ──────────────────────
@@ -1061,6 +1103,14 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
     // Name only — descriptions live in the `/` picker, not this menu.
     await expect(webItem).not.toContainText(
       'Research a topic on the open web.',
+    );
+    // Same stacked name-over-slug layout as the `/` picker rows.
+    await expectNameStackedOverSlug(
+      webItem,
+      'skills-menu-item-name',
+      'skills-menu-item-slug',
+      'Web Research',
+      '/web-research',
     );
     // Disabled skills never reach the menu.
     await expect(chatPage.getSkillsMenuItem('disabled-skill')).toHaveCount(0);

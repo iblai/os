@@ -36,15 +36,17 @@
  * API endpoints used (confirmed by capturing live network traffic against
  * the app — see `@iblai/data-layer`'s `PROJECTS_CUSTOM_ENDPOINTS`):
  *
- *   LIST:   GET    {NEXT_PUBLIC_API_BASE_URL}/dm/api/ai-mentor/orgs/{tenantKey}/users/{username}/projects/
- *   DELETE: DELETE {NEXT_PUBLIC_API_BASE_URL}/dm/api/ai-mentor/orgs/{tenantKey}/users/{username}/projects/{id}/
+ *   LIST:   GET    {dmBase}/api/ai-mentor/orgs/{tenantKey}/users/{username}/projects/
+ *   DELETE: DELETE {dmBase}/api/ai-mentor/orgs/{tenantKey}/users/{username}/projects/{id}/
  *   Authorization: Token {axd_token}
  *
- * NOTE the `/dm` prefix: projects are served by the "AXD" service in the
+ * The DM base is resolved at runtime by `dm-api.ts` (env override, else read
+ * off the app's own traffic) — the same contract mentor-cleanup.ts uses.
+ *
+ * NOTE the `/dm` base: projects are served by the "AXD" service in the
  * data-layer's service enum, but `getServiceUrl()` resolves AXD to the same
- * base as the DM service (`config.dmUrl()` = `${NEXT_PUBLIC_API_BASE_URL}/dm`),
- * NOT `config.axdUrl()` (`${NEXT_PUBLIC_API_BASE_URL}/axd`) — the latter is
- * defined but unused by the data-layer's URL resolution. This was verified
+ * base as the DM service (`config.dmUrl()`), NOT `config.axdUrl()` — the
+ * latter is defined but unused by the data-layer's URL resolution. This was verified
  * by capturing real requests, not just reading source, since the naming is
  * misleading. The AUTH TOKEN, however, does follow the AXD branch of
  * `getHeaders()` — it reads `axd_token` from localStorage, not `dm_token`.
@@ -66,7 +68,7 @@
 import type { Page } from '@playwright/test';
 import { logger } from '@iblai/iblai-js/playwright';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+import { tryResolveDmApiBase } from './dm-api';
 
 interface ProjectAuthContext {
   axdToken: string | null;
@@ -101,8 +103,22 @@ async function getProjectAuthContext(page: Page): Promise<ProjectAuthContext> {
   });
 }
 
-function projectsBaseUrl(tenantKey: string, username: string): string {
-  return `${API_BASE}/dm/api/ai-mentor/orgs/${encodeURIComponent(tenantKey)}/users/${encodeURIComponent(username)}/projects/`;
+async function projectsBaseUrl(
+  page: Page,
+  tenantKey: string,
+  username: string,
+): Promise<string | null> {
+  const dmBase = await tryResolveDmApiBase(page, {
+    allowReload: false,
+    timeout: 10_000,
+  });
+  if (!dmBase) {
+    logger.warn(
+      '[project-cleanup] Could not resolve the DM API base (set DM_URL to override)',
+    );
+    return null;
+  }
+  return `${dmBase}/api/ai-mentor/orgs/${encodeURIComponent(tenantKey)}/users/${encodeURIComponent(username)}/projects/`;
 }
 
 /**
@@ -120,13 +136,6 @@ export async function findProjectIdByName(
   page: Page,
   name: string,
 ): Promise<string | null> {
-  if (!API_BASE) {
-    logger.warn(
-      '[project-cleanup] NEXT_PUBLIC_API_BASE_URL is not set — cannot look up project id',
-    );
-    return null;
-  }
-
   const { axdToken, username, tenantKey } = await getProjectAuthContext(page);
   if (!axdToken || !username || !tenantKey) {
     logger.warn(
@@ -135,7 +144,9 @@ export async function findProjectIdByName(
     return null;
   }
 
-  const url = `${projectsBaseUrl(tenantKey, username)}?search=${encodeURIComponent(name)}&limit=50`;
+  const base = await projectsBaseUrl(page, tenantKey, username);
+  if (!base) return null;
+  const url = `${base}?search=${encodeURIComponent(name)}&limit=50`;
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
@@ -170,12 +181,6 @@ export async function deleteProjectById(
   projectId: string,
 ): Promise<void> {
   try {
-    if (!API_BASE) {
-      logger.warn(
-        '[project-cleanup] NEXT_PUBLIC_API_BASE_URL is not set — skipping API delete',
-      );
-      return;
-    }
     if (!projectId) return;
 
     const { axdToken, username, tenantKey } = await getProjectAuthContext(page);
@@ -186,7 +191,9 @@ export async function deleteProjectById(
       return;
     }
 
-    const url = `${projectsBaseUrl(tenantKey, username)}${encodeURIComponent(projectId)}/`;
+    const base = await projectsBaseUrl(page, tenantKey, username);
+    if (!base) return;
+    const url = `${base}${encodeURIComponent(projectId)}/`;
     const res = await page.request.delete(url, {
       headers: { Authorization: `Token ${axdToken}` },
       timeout: 20_000,

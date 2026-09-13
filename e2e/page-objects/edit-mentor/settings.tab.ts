@@ -33,6 +33,20 @@ export class SettingsTab {
   readonly allowFileAttachmentsToggle: Locator;
 
   /**
+   * Capabilities sub-tab (issue #2476). The Embed tab's old "Show
+   * Attachment" / "Show Voice Record" / "Show Voice Call" toggles were
+   * removed entirely — Settings -> Capabilities is now the sole owner of
+   * those fields, split per-surface (in-app chat vs. embed widget) in a
+   * matrix instead of a single embed-only switch.
+   */
+  readonly capabilitiesPerSurfaceBanner: Locator;
+  readonly capabilitiesGlobalSettingsBanner: Locator;
+  readonly capabilityMatrixHeader: Locator;
+  readonly capabilityMatrixRowAttachment: Locator;
+  readonly capabilityMatrixRowVoiceRecord: Locator;
+  readonly capabilityMatrixRowVoiceCall: Locator;
+
+  /**
    * Basic sub-tab. The Category combobox (iblai-platform#2289 regression
    * coverage). Trigger's aria-label is a fixed SDK translation
    * (`tabsSettingsTab.categorySelectAriaLabel`) — it does NOT change with
@@ -139,6 +153,27 @@ export class SettingsTab {
     this.allowFileAttachmentsToggle = dialog.getByRole('switch', {
       name: /enable file attachments/i,
     });
+    // Capabilities sub-tab (issue #2476, @iblai/iblai-js 2.10.2). Resolved by
+    // `data-testid` — this whole banner/matrix block is SDK-rendered and has
+    // no stable accessible name of its own to key off.
+    this.capabilitiesPerSurfaceBanner = dialog.getByTestId(
+      'capabilities-per-surface-banner',
+    );
+    this.capabilitiesGlobalSettingsBanner = dialog.getByTestId(
+      'capabilities-global-settings-banner',
+    );
+    this.capabilityMatrixHeader = dialog.getByTestId(
+      'capability-matrix-header',
+    );
+    this.capabilityMatrixRowAttachment = dialog.getByTestId(
+      'capability-matrix-row-attachment',
+    );
+    this.capabilityMatrixRowVoiceRecord = dialog.getByTestId(
+      'capability-matrix-row-voice-record',
+    );
+    this.capabilityMatrixRowVoiceCall = dialog.getByTestId(
+      'capability-matrix-row-voice-call',
+    );
     this.categoryTrigger = dialog.getByRole('combobox', {
       name: 'Select a category',
       exact: true,
@@ -147,6 +182,43 @@ export class SettingsTab {
     this.categoryEmptyState = dialog.getByText('No Category found.', {
       exact: true,
     });
+  }
+
+  /** Visible label backing each Capabilities matrix row (issue #2476). */
+  private static readonly CAPABILITY_ROW_LABEL: Record<
+    'attachment' | 'voice-record' | 'voice-call',
+    string
+  > = {
+    attachment: 'Show Attachment',
+    'voice-record': 'Show Voice Record',
+    'voice-call': 'Show Voice Call',
+  };
+
+  /**
+   * The per-surface switch for one row of the Capabilities "Surface
+   * Capabilities" matrix (issue #2476). Each row exposes two independent
+   * switches — "In-app chat" (left) and "Embed widget" (right) — persisting
+   * the same per-surface field the removed Embed-tab "Show Attachment" /
+   * "Show Voice Record" / "Show Voice Call" toggles used to write only for
+   * the embed widget. The accessible name is always
+   * "<Label> enabled"/"disabled"; the embed-widget column additionally
+   * inserts "(embed widget)" before that suffix, so the "chat" pattern is
+   * anchored end-to-end to avoid also matching its embed sibling.
+   *
+   * Callers must switch to the Capabilities sub-tab themselves first (see
+   * `selectSubTab`) — this is a pure locator accessor, like `categoryOption`.
+   */
+  capabilitySurfaceToggle(
+    capability: 'attachment' | 'voice-record' | 'voice-call',
+    surface: 'chat' | 'embed',
+  ): Locator {
+    const row = this.dialog.getByTestId(`capability-matrix-row-${capability}`);
+    const label = SettingsTab.CAPABILITY_ROW_LABEL[capability];
+    const name =
+      surface === 'embed'
+        ? new RegExp(`^${label} \\(embed widget\\) (enabled|disabled)$`, 'i')
+        : new RegExp(`^${label} (enabled|disabled)$`, 'i');
+    return row.getByRole('switch', { name });
   }
 
   /**

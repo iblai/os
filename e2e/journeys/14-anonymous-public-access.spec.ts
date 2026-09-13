@@ -32,7 +32,7 @@ test.describe('Journey 14: Anonymous / Public Access', () => {
       // Create a new mentor for anonymous access testing
       const createMentorPage = new CreateMentorPage(setupPage);
       const mentorName = await createMentorPage.openAndCreate(
-        `Anon Test ${Date.now()}`,
+        `E2E Anon Test ${Date.now()}`,
       );
       logger.info(`Created mentor: ${mentorName}`);
 
@@ -72,39 +72,6 @@ test.describe('Journey 14: Anonymous / Public Access', () => {
     } finally {
       await setupPage.close();
       await setupContext.close();
-    }
-  });
-
-  test.afterAll(async ({ browser }, testInfo) => {
-    // Clean up: delete the mentor created for this test suite
-    if (!mentorId || !platformKey) return;
-    const browserKey = testInfo.project.name
-      .replace('mentor-desktop-', '')
-      .toLowerCase();
-    const authFile = path.join(
-      __dirname,
-      `../../playwright/.auth/user-${browserKey}.json`,
-    );
-    const cleanupContext = await browser.newContext({ storageState: authFile });
-    const cleanupPage = await cleanupContext.newPage();
-
-    try {
-      const mentorUrl = `${MENTOR_NEXTJS_HOST}/platform/${platformKey}/${mentorId}`;
-      await cleanupPage.goto(mentorUrl, {
-        waitUntil: 'domcontentloaded',
-        timeout: 60_000,
-      });
-      await waitForPageReady(cleanupPage);
-
-      const editMentorPage = new EditMentorPage(cleanupPage);
-      await editMentorPage.open('Settings');
-      await editMentorPage.settings.deleteMentor();
-      logger.info(`Deleted mentor ${mentorId}`);
-    } catch (err) {
-      logger.warn(`Failed to clean up mentor ${mentorId}: ${err}`);
-    } finally {
-      await cleanupPage.close();
-      await cleanupContext.close();
     }
   });
 

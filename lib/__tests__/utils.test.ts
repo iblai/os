@@ -2291,6 +2291,20 @@ describe('markdownToHtml function', () => {
     expect(result).not.toContain('tel:');
   });
 
+  // Regression: csv table cells are wrapped in <samp> by the canvas; the
+  // sup/sub and phone rewrites dropped characters from ids like
+  // `2026-09-08_1109` and re-applied on every save, growing the cell.
+  it('should leave <samp> content literal: no subscript, no tel: link', () => {
+    const markdown =
+      '| run_id |\n| --- |\n| <samp>2026-09-08_1109 555-123-4567</samp> |';
+    const result = markdownToHtml(markdown);
+    expect(result).toContain('<samp>2026-09-08_1109 555-123-4567</samp>');
+    expect(result).not.toContain('<sub>');
+    expect(result).not.toContain('tel:');
+    // Prose outside <samp> keeps the existing behaviour.
+    expect(markdownToHtml('run 2026-09-08_1109')).toContain('<sub>1109</sub>');
+  });
+
   it('should render code blocks with code elements', () => {
     const markdown = '```\nconst x = 1;\n```';
     const result = markdownToHtml(markdown);

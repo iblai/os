@@ -66,6 +66,7 @@ test.describe('Journey 40: AI Message Read Aloud', () => {
   }) => {
     await chatPage.sendMessage('Hello, can you help me?');
     await chatPage.waitForAIResponse();
+    await chatPage.waitForStreamingComplete();
 
     const speakButton = page
       .getByRole('button', { name: 'Read Aloud' })
@@ -80,6 +81,7 @@ test.describe('Journey 40: AI Message Read Aloud', () => {
   }) => {
     await chatPage.sendMessage('Say something I can listen to.');
     await chatPage.waitForAIResponse();
+    await chatPage.waitForStreamingComplete();
 
     const speakButton = page
       .getByRole('button', { name: 'Read Aloud' })
@@ -106,6 +108,7 @@ test.describe('Journey 40: AI Message Read Aloud', () => {
   }) => {
     await chatPage.sendMessage('Another message for read aloud toggle.');
     await chatPage.waitForAIResponse();
+    await chatPage.waitForStreamingComplete();
 
     const speakButton = page
       .getByRole('button', { name: 'Read Aloud' })
