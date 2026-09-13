@@ -312,6 +312,7 @@ jobs:
           echo "DM_URL=${{ vars.DM_URL }}" >> .env.oci
           echo "ECOMMERCE_CREDIT_CLEANUP_TOKEN=${{ secrets.ECOMMERCE_CREDIT_CLEANUP_TOKEN }}" >> .env.oci
           echo "EXTERNAL_STRIPE_PRICING_URL=${{ vars.EXTERNAL_STRIPE_PRICING_URL }}" >> .env.oci
+          echo "ECOMMERCE_CHECKOUT_URL=${{ vars.ECOMMERCE_CHECKOUT_URL }}" >> .env.oci
           echo "IBL_MENTOR_DISABLED_TABS=${{ vars.IBL_MENTOR_DISABLED_TABS }}" >> .env.oci
           echo "NEW_MENTOR_NAME=${{ vars.NEW_MENTOR_NAME }}" >> .env.oci
           echo "NEW_MENTOR_DESCRIPTION=${{ vars.NEW_MENTOR_DESCRIPTION }}" >> .env.oci
@@ -456,6 +457,7 @@ jobs:
             "DM_URL": "${DM_URL:-}",
             "ECOMMERCE_CREDIT_CLEANUP_TOKEN": "${ECOMMERCE_CREDIT_CLEANUP_TOKEN:-}",
             "EXTERNAL_STRIPE_PRICING_URL": "${EXTERNAL_STRIPE_PRICING_URL:-}",
+            "ECOMMERCE_CHECKOUT_URL": "${ECOMMERCE_CHECKOUT_URL:-}",
             "IBL_MENTOR_DISABLED_TABS": "${IBL_MENTOR_DISABLED_TABS:-}",
             "NEW_MENTOR_NAME": "${NEW_MENTOR_NAME:-}",
             "NEW_MENTOR_DESCRIPTION": "${NEW_MENTOR_DESCRIPTION:-}",
