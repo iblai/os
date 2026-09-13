@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.144.0](https://github.com/iblai/os/compare/v0.143.1...v0.144.0) (2026-09-13)
+
+### Features
+
+* **mentor:** move the duplicated Embed controls into Settings ([1cbb850](https://github.com/iblai/os/commit/1cbb8508851d38e2cee65227c821691dff3196ff))
+
+### Bug Fixes
+
+* **deps:** clear the high and critical advisories blocking the audit gate ([c0aab3a](https://github.com/iblai/os/commit/c0aab3a315a888651b5c4abf30fcc999a1d958dd)), closes [#2476](https://github.com/iblai/os/issues/2476)
+* **e2e:** reach analytics Costs through the sidebar, not a tab ([d969750](https://github.com/iblai/os/commit/d969750aa579db7e62924699b720fc1fe8a5984a)), closes [#2476](https://github.com/iblai/os/issues/2476)
+* **mentor:** stop an Embed save overwriting the Settings tab ([2337a91](https://github.com/iblai/os/commit/2337a91a0702c87e59c5e1b225d428d86df3bead))
+* **test:** type the Sentry replayIntegration mock so main typechecks ([4295bdd](https://github.com/iblai/os/commit/4295bdd297496e841a7ce06f0c8ddd1ee704d3e7)), closes [#2476](https://github.com/iblai/os/issues/2476)
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.10.2 ([a1e260f](https://github.com/iblai/os/commit/a1e260faff92037bd58608988dad1d28035a0e2b))
+* **format:** normalise CHANGELOG bullet style ([3d98f97](https://github.com/iblai/os/commit/3d98f97578cf4744e29d24af75fb41f441c0ed80)), closes [#2476](https://github.com/iblai/os/issues/2476)
+
+### Tests
+
+* **e2e:** update the suite for the controls that moved to Settings ([8e0cf73](https://github.com/iblai/os/commit/8e0cf7388ace9cf6b7e2b1a13ec2979f593ac54a))
+* **mentor:** cover the Embed payload fix and the new labels ([9bee2f2](https://github.com/iblai/os/commit/9bee2f2f7bda93dcbfa8569330ea0190476ad9aa))
+
 ## [0.143.1](https://github.com/iblai/os/compare/v0.143.0...v0.143.1) (2026-09-12)
 
 ### Bug Fixes
