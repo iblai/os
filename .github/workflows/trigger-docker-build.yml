@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - 'v*'
+  # Recovery path. The tag filter above is the ONLY trigger this workflow had, so a tag that
+  # did not match it (e.g. `0.139.0-patch-1`, missing the `v`) left NO way to build at all —
+  # the fix was to push another tag. Dispatch lets you build any existing ref, including a
+  # mistyped tag, by selecting it in the ref dropdown. See also tag-guard.yml, which makes the
+  # mistake visible instead of silent.
+  workflow_dispatch:
 
 run-name: 'Build os ${{ github.ref_name }}'
 
@@ -17,6 +23,22 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
+      # A dispatch MUST target a tag. The reusable names the image from package.json and also
+      # moves `latest`, so dispatching from a branch would rebuild an already-released image tag
+      # and repoint `latest` at it. Before workflow_dispatch existed the only entry was a `v*` tag
+      # push — a deliberate release act — and this keeps that property: dispatch is a RECOVERY
+      # path for a ref that is already tagged, not a way to build a branch.
+      - name: Refuse a dispatch that is not a tag
+        if: github.event_name == 'workflow_dispatch' && !startsWith(github.ref, 'refs/tags/')
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          MSG="This workflow builds and pushes an image named from package.json, and also moves"
+          MSG="$MSG 'latest'. Running it against '$REF_NAME' would overwrite a released image tag."
+          MSG="$MSG Select a TAG in the ref dropdown instead."
+          echo "::error title=Dispatch must target a tag::$MSG"
+          exit 1
+
       - uses: actions/checkout@v4
 
       - name: Extract version from package.json
