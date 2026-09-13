@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.145.0](https://github.com/iblai/os/compare/v0.144.0...v0.145.0) (2026-09-13)
+
+### Features
+
+* **chat:** add download control with a scope picker dialog ([074ca65](https://github.com/iblai/os/commit/074ca6518c764410fe613d65ecd2cc6579840256))
+* **chat:** add plain-text chat transcript builders ([c833901](https://github.com/iblai/os/commit/c833901e1349fadd0b25d8c490d39cff4e2f17ac))
+* **chat:** show the download control in the AI message toolbar ([3debef6](https://github.com/iblai/os/commit/3debef65fe24111dc88a20c3bf3403ff74dad30e))
+* **i18n:** add chat download strings ([b1806b5](https://github.com/iblai/os/commit/b1806b50d44566a22ec78c7ea064c00c96f789aa))
+
+### Bug Fixes
+
+* **e2e:** send messages through the role-agnostic composer locator ([e8a744c](https://github.com/iblai/os/commit/e8a744c505bfbc5220ecb0e035b239e4a3fe00a2))
+
+### Chores
+
+* **format:** apply prettier to CHANGELOG.md ([408b4e2](https://github.com/iblai/os/commit/408b4e2efff23c9f5737cfa1dc0ddc8e8c8e6cad))
+* **format:** reapply prettier to CHANGELOG.md after the main merge ([77e1607](https://github.com/iblai/os/commit/77e16076a543c6d37811629100146e161e4cccc6))
+
+### Documentation
+
+* **e2e:** record the chat download checkpoints ([54f93c2](https://github.com/iblai/os/commit/54f93c225a28f114c7c5b2c311089570b754ea6a))
+
+### Tests
+
+* **e2e:** cover downloading a chat as plain text ([0292a13](https://github.com/iblai/os/commit/0292a13213192a9253729c25fa72bd0c41f258d0))
+
 ## [0.144.0](https://github.com/iblai/os/compare/v0.143.1...v0.144.0) (2026-09-13)
 
 ### Features
