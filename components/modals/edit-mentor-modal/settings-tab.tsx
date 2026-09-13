@@ -83,8 +83,19 @@ export function SettingsTab() {
     },
     sections: {
       chatExperience: t('chatExperienceHeading'),
-      voiceCalls: t('voiceCallsHeading'),
       advanced: t('advancedHeading'),
+      perSurface: t('perSurfaceHeading'),
+      globalSettings: t('globalSettingsHeading'),
+    },
+    surfaces: {
+      inAppChat: t('inAppChatSurfaceLabel'),
+      embedWidget: t('embedWidgetSurfaceLabel'),
+    },
+    notes: {
+      perSurface: t('perSurfaceNote'),
+      globalSettings: t('globalSettingsNote'),
+      inAppChat: t('inAppChatNote'),
+      embedWidget: t('embedWidgetNote'),
     },
     fields: {
       name: {
@@ -137,13 +148,27 @@ export function SettingsTab() {
         label: t('enableVoiceRecordingsLabel'),
         tooltip: t('enableVoiceRecordingsTooltip'),
       },
+      showVoiceCall: {
+        label: t('enableVoiceCallsLabel'),
+        tooltip: t('enableVoiceCallsTooltip'),
+      },
+      embedShowAttachment: {
+        label: t('embedShowAttachmentLabel'),
+      },
+      embedShowVoiceRecord: {
+        label: t('embedShowVoiceRecordLabel'),
+      },
+      embedShowVoiceCall: {
+        label: t('embedShowVoiceCallLabel'),
+      },
       allowCopies: {
         label: t('enableCopiesLabel'),
         tooltip: t('enableCopiesTooltip'),
       },
       showReasoning: {
         label: 'Enable verbose reasoning',
-        tooltip: 'Show the agent’s reasoning steps while it responds.',
+        tooltip:
+          'Show the agent’s reasoning steps while it responds. This setting has one value, so it applies to both in-app chat and the embed widget.',
       },
       enhancedDocRetrieval: {
         label: t('enhancedDocRetrievalLabel'),
@@ -156,7 +181,7 @@ export function SettingsTab() {
       privateMode: {
         label: 'Enable private mode',
         tooltip:
-          'When on, every conversation with this agent runs in private mode — no chat history or memory is stored for any user. Use this for sensitive or compliance-bound deployments.',
+          'When on, every conversation with this agent runs in private mode — no chat history or memory is stored for any user. Use this for sensitive or compliance-bound deployments. This setting has one value, so it applies to both in-app chat and the embed widget.',
       },
       smartDocRetrieval: {
         label: t('smartDocRetrievalLabel'),

@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-09-08 | 722 checkpoints (680 covered, 11 pending/fixme, 15 not-reproducible in default env, 16 deprecated) | 77 journeys (76 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-09-14 | 731 checkpoints (688 covered, 11 pending/fixme, 15 not-reproducible in default env, 17 deprecated) | 77 journeys (76 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -50,11 +50,11 @@ When adding a new page or modifying an existing user flow:
 - [x] "My Mentors" button is NOT present in the header (removed in feat-1431); mentor dropdown still shows New Chat item
 - [x] Fresh signup (unauthenticated context, real `/account/create` registration) lands on the main tenant and the profile dropdown shows exactly 3 items: Profile, Help, Log out
 - [x] Sidebar admin-only buttons (e.g. New Project) show upgrade/auth dialog for non-admins when visible
-- [x] Non-admin in the main OR an advertising tenant sees full admin sidebar (New Agent, Workflows, Analytics, Invites, Management, Integrations, Monetization, Advanced) and clicking any trial-gated entry opens the upgrade/pricing dialog; gracefully skips when paywall is off
+- [x] Non-admin in the main OR an advertising tenant sees full admin sidebar (New Agent, Workflows, Analytics, Invites, Management, Integrations, Monetization, Memory, Advanced) and clicking any trial-gated entry opens the upgrade/pricing dialog; gracefully skips when paywall is off
 
 ---
 
-## Journey 4: User Profile Management (14 checkpoints) — `journeys/04-user-profile-management.spec.ts`
+## Journey 4: User Profile Management (16 checkpoints) — `journeys/04-user-profile-management.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/user-profile.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`
 
@@ -72,6 +72,8 @@ When adding a new page or modifying an existing user flow:
 - [x] Security tab: Send Password Reset Link button is visible; no Save button present
 - [x] Profile modal has proper ARIA attributes (tablist, tabpanel, aria-selected, aria-controls)
 - [x] User avatar with initials and Admin badge (for admins) are visible
+- [x] History tab on the user's own profile loads (rows or the "No conversations found" empty state) and never shows the 403 permission notice
+- [x] Tenant admin opens another user's profile via sidebar Management → Users → "View profile for …": preview mode (no Security tab) still offers the History tab, which loads that user's history instead of the permission notice (skips without PLAYWRIGHT_NONADMIN_USERNAME or the RBAC-gated Management entry)
 
 ---
 
@@ -211,9 +213,9 @@ Binary artifacts (pdf, xlsx, zip, …) are a read-only variant of the canvas art
 
 ---
 
-## Journey 12: Chat Sharing (6 checkpoints) — `journeys/12-chat-sharing.spec.ts`
+## Journey 12: Chat Sharing (10 checkpoints) — `journeys/12-chat-sharing.spec.ts`
 
-**Source files:** `app/share/chat/[sessionId]/page.tsx`, `app/share/chat/[sessionId]/[tenantKey]/[mentorId]/page.tsx`, `components/chat/ai-message-share.tsx`, `hooks/use-shared-chat-messages.ts`
+**Source files:** `app/share/chat/[sessionId]/page.tsx`, `app/share/chat/[sessionId]/[tenantKey]/[mentorId]/page.tsx`, `components/chat/ai-message-share.tsx`, `hooks/use-shared-chat-messages.ts`, `components/chat/ai-message-download.tsx`, `components/chat/chat-transcript.ts`
 
 - [x] Shared chat URL is created and matches the `/share/chat/{uuid}` pattern
 - [x] Unauthenticated user can access shared chat and sees the chat history
@@ -222,18 +224,25 @@ Binary artifacts (pdf, xlsx, zip, …) are a read-only variant of the canvas art
 - [x] "Sign up for Free" button on shared chat redirects to the auth host
 - [x] Chat textarea is not shown (or is disabled) for unauthenticated users on shared chat
 
+The **download-chat** checkpoints (sh-07 … sh-10, issue #2464) cover the "Download this chat" control that sits beside share in the AI message toolbar (`ai-message-download.tsx`, same `!showingSharedChat && !chatPrivacyActive` render gate). Each downloads a real file via `page.waitForEvent('download')` and asserts on the file's actual content, not just its name.
+
+- [x] sh-07: Download dialog opens with "Entire chat" preselected and both option descriptions visible
+- [x] sh-08: Default "Entire chat" download produces a `chat-*.txt` file whose content contains both conversation turns
+- [x] sh-09: Selecting "This message only" produces a `message-*.txt` file whose content contains the AI reply but not the earlier user message
+- [x] sh-10: Pressing Escape dismisses the download dialog without triggering a download
+
 ---
 
-## Journey 13: Shareable Links & Embed Integration (17 checkpoints) — `journeys/13-shareable-links-and-embed-integration.spec.ts`
+## Journey 13: Shareable Links & Embed Integration (18 checkpoints; 1 deprecated) — `journeys/13-shareable-links-and-embed-integration.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/embed-tab.tsx`, `components/modals/edit-mentor-modal/hooks/useEmbedTab.ts`, `components/modals/edit-mentor-modal/utils.ts`, `components/logo.tsx`, `hooks/use-mentors/use-mentor-settings.ts`, `hooks/use-embed-mode.ts`, `components/chat-input-form/voice-call-button.tsx`, `components/chat-input-form/voice-chat-button.tsx`, `components/chat-input-form/screen-sharing-button.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`
 
-- [x] Non-anonymous embed with voice call, voice record, and attachment buttons renders correctly
+- [x] ~~Non-anonymous embed with voice call, voice record, and attachment buttons renders correctly~~ _(deprecated in #2476 — the Embed tab's Show Attachment / Show Voice Record / Show Voice Call toggles were removed entirely; owned per-surface by Settings -> Capabilities now)_
 - [x] Authenticated flow in embed: user can send a message and receive an AI response
 - [x] Advanced anonymous embed (Anyone visibility, no context awareness) renders and allows chatting
 - [x] Advanced anonymous embed with context awareness sends message with injected context
 - [x] WCAG 2.4.3: pressing Escape inside embedded iframe closes the widget via postMessage
-- [x] Show Catalogue toggle in the embed tab flips and does not affect sibling toggles (Voice Call / Voice Record / Attachment)
+- [x] Show Catalogue toggle in the embed tab flips _(issue #2476 removed the sibling Voice Call / Voice Record / Attachment toggles this checkpoint used to also assert were unaffected)_
 - [x] Embed view sidebar logo is not clickable when Show Catalogue is disabled (configured via the embed UI on a fresh mentor, verified at the embed URL)
 - [x] Embed view sidebar logo is clickable when Show Catalogue is enabled (configured via the embed UI on a fresh mentor, verified at the embed URL)
 - [x] Embed mode renders a minimal sidebar: New Chat present (and Chats when the user is logged in); Agents (New Agent), Workflows, Analytics, Projects, and Support/docs footer link all absent — holds for both expanded and rail-collapsed layouts regardless of user role
@@ -245,6 +254,7 @@ Binary artifacts (pdf, xlsx, zip, …) are a read-only variant of the canvas art
 - [x] Issue #789: a custom embed icon (Icon Selection = Custom, uploaded via the Icon Editor's Content tab) persists after a full page reload as a real uploaded URL, not the local data: preview
 - [x] Issue #789: "Remove Image" persists immediately (own PUT, independent of Create Embed) with a "Custom icon removed" toast, Icon Selection reverting to Default, and the removal surviving a reload (guards the RTK cache invalidation behind the fix)
 - [x] Embed tab footer contains only the "Create Embed" button (the standalone footer Save button was removed); Advanced CSS / Advanced JavaScript panels elsewhere in the tab keep their own working Save buttons
+- [x] Issue #2476 regression guard: saving the Embed tab's own form does not overwrite mentor_visibility set via Settings -> Discovery — the two tabs used to write the same backend field from independent forms, so an Embed save could silently revert a Settings change
 
 ---
 
@@ -504,7 +514,7 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 
 ---
 
-## Journey 28: App Overview & Navigation UI (13 checkpoints) — `journeys/28-app-overview-and-navigation-ui.spec.ts`
+## Journey 28: App Overview & Navigation UI (14 checkpoints) — `journeys/28-app-overview-and-navigation-ui.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/modals/llm-provider-selection-modal.tsx`
 
@@ -521,6 +531,7 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 - [x] Admin: nav does not overflow on mobile (Pixel 5); with credit balance visible the LLM name span shrinks to ≤100 px _(navbar overflow fix: ov-11)_
 - [x] Admin: nav does not overflow on mobile when credit balance is hidden; LLM name span stays ≤150 px _(navbar overflow fix: ov-12)_
 - [x] Admin opens the navbar LLM selector modal (`navbarPage.openLlmProviderModal`, dialog name "LLM Providers") and the "LLM Configuration" heading/description are absent — proves the OS wrapper's `showConfigurationHeader={false}` prop reaches the SDK `AgentLLMTab` component _(ov-13)_
+- [x] Admin sidebar footer mirrors the SDK tenant-settings (`Account`) rail: a "Memory" entry sits next to Integrations/Advanced (admin-only — no dedicated RBAC permission, so a non-admin never gets it via RBAC alone; hidden when an admin flips to learner mode) and clicking it opens the Account dialog titled "Memory" ("Manage user global memories and agent memories.") hosting the SDK `MemoryAdminTab` — Global / Agent sub-tabs (or the memsearch-disabled notice); the Agent sub-tab renders the agents section and Escape closes the dialog _(ov-14)_
 
 ---
 
@@ -956,7 +967,7 @@ Standalone top-level tab rendered by the SDK's `AgentScreenShareTab` (`@iblai/we
 
 ---
 
-## Journey 50: Chat Privacy (27 checkpoints) — `journeys/50-chat-privacy.spec.ts`
+## Journey 50: Chat Privacy (28 checkpoints) — `journeys/50-chat-privacy.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`
 
@@ -964,7 +975,7 @@ Covers all four user-facing surfaces of the chat-privacy feature and verifies th
 
 The **agent kill switch** tests (cp-agent-03) are the regression anchor for `dispatch(chatPrivacyApiSlice.util.invalidateTags(['ChatPrivacyEffective']))` wiring in `settings-tab.tsx` (feat/mentor/1797): after saving, the header toggle reflects mentor-locked state **without a page refresh**.
 
-The **private chat round-trip** tests (cp-chat-\*) cover the end-to-end happy path: enable private mode via the header toggle on a fresh chat, send a message, and confirm the assistant still replies — once as the admin and once as a non-admin (separate browser context). Six additional feature-interaction checkpoints (cp-chat-04 … cp-chat-09) exercise prompts, voice/screen, multi-turn context, file attachments, the memory button, and the AI-bubble share button while private mode is active. cp-chat-08 (memory button) and cp-chat-09 (share button) have their in-repo gates implemented; cp-chat-04/05/06 are **live regression gates** expected to be red until the backend fixes land.
+The **private chat round-trip** tests (cp-chat-\*) cover the end-to-end happy path: enable private mode via the header toggle on a fresh chat, send a message, and confirm the assistant still replies — once as the admin and once as a non-admin (separate browser context). Seven additional feature-interaction checkpoints (cp-chat-04 … cp-chat-10) exercise prompts, voice/screen, multi-turn context, file attachments, the memory button, and the AI-bubble share/download buttons while private mode is active. cp-chat-08 (memory button), cp-chat-09 (share button), and cp-chat-10 (download button) have their in-repo gates implemented; cp-chat-04/05/06 are **live regression gates** expected to be red until the backend fixes land.
 
 ### Tenant gate (cp-tenant-\*)
 
@@ -1007,6 +1018,7 @@ The **private chat round-trip** tests (cp-chat-\*) cover the end-to-end happy pa
 - [ ] cp-chat-07: File attachment (drag-drop) works in private mode — chip appears, message sends, assistant replies; pins that `selectSessionId` follows the private session id _(pending: expected to pass today; included as regression gate)_
 - [x] cp-chat-08: Memory button is hidden while `data-state="on"` and reappears when private mode is off _(frontend gate implemented — `chat-input-form.tsx` derives `chatPrivacyActive` from `useChatPrivacy` and passes `isPrivate` into `InsideButtons`; unit-tested in `inside-buttons.test.tsx`)_
 - [x] cp-chat-09: "Share this chat" button in the AI message bubble is hidden in private mode (temporary chat — no durable session to share) and visible in normal mode _(frontend gate implemented — `ai-message-bubble.tsx` gates `<AIMessageShare>` on `!chatPrivacyActive`; unit-tested in `ai-message-bubble.test.tsx`)_
+- [x] cp-chat-10: "Download this chat" button in the AI message bubble is hidden in private mode (same gate as cp-chat-09 — a private session has no durable record to export) and visible in normal mode _(frontend gate implemented — `ai-message-bubble.tsx` gates `<AIMessageDownload>` on `!chatPrivacyActive`, right after `<AIMessageShare>`)_
 
 ## Journey 51: Prompt Caching Toggle (3 checkpoints) — `journeys/51-prompt-caching-toggle.spec.ts`
 
@@ -1019,8 +1031,6 @@ Covers the "Enable prompt caching" toggle added to the Capabilities sub-tab of t
 - [x] PC-03: Toggle ON → click OFF → `aria-checked=false` immediately in UI → Save → success toast (verifies toggle interaction and API round-trip; persistence of `false` via multipart is a pre-existing backend limitation shared with `enable_multi_query_rag`)
 
 ---
-
-> **Note:** `cleanup.spec.ts` runs after all journeys to delete test artifacts. It is not a user journey.
 
 ## Journey 52: Tool Call Indicator & Reasoning Section (8 checkpoints) — `journeys/52-tool-call-indicator-and-reasoning.spec.ts`
 
@@ -1123,7 +1133,7 @@ Full-lifecycle regression guard for the ecommerce credits/upgrade flow, run as a
 - [x] ecu-01: New user signs up via `/account/create` and lands authenticated on `<base-url>/platform/main/<mentor-id>` with the mentor dropdown ready
 - [x] ecu-02: Credit balance dropdown shows a Free plan badge, a positive remaining balance, and an Upgrade Plan button on the main tenant
 - [x] ecu-03: Profile dropdown shows exactly Profile / Help / Log Out on a brand-new free-trial account
-- [x] ecu-04: Every gated sidebar entry (Agents > New Agent/My Agents, Workflows > My Workflows, Projects > My Projects, Analytics > Overview, Invites, Management, Integrations, Monetization, Advanced) opens the shared "Subscribe to unlock full features" dialog with an "Upgrade for free" CTA
+- [x] ecu-04: Every gated sidebar entry (Agents > New Agent/My Agents, Workflows > My Workflows, Projects > My Projects, Analytics > Overview, Invites, Management, Integrations, Monetization, Memory, Advanced) opens the shared "Subscribe to unlock full features" dialog with an "Upgrade for free" CTA
 - [x] ecu-05: Zero credits (via the DM service credit-cleanup admin endpoint) blocks chat submission on the main tenant and surfaces the same subscribe dialog instead of an AI response
 - [x] ecu-06: Clicking "Upgrade for free" redirects to a zero-cost Stripe-hosted checkout; submitting it completes the SSO redirect chain onto a real (non-"main") platform id with a fresh Free-plan credit balance and working chat
 - [x] ecu-07: The profile dropdown's Account item opens the User Profile dialog; its Billing tab (`?profileTab=billing`) shows the Free plan, Current badge, Upgrade button, and a positive credit balance
@@ -1230,8 +1240,9 @@ backend has accepted it and returned a session (`hasChatPermission =
 no-token denial or letting token _presence alone_ grant free access. Each test
 provisions its own Administrators-only / Authenticated-Users-chat mentor live
 against the running backend (Journey 14's isolation pattern), configured through
-the Embed tab's real "Who Can View? / Who Can Chat?" selects and a real "Generate
-Shareable Link" token — no `page.route` mocking. All three checkpoints were run
+Settings -> Discovery's real "Who Can View? / Who Can Chat?" selects (moved off
+the Embed tab entirely by issue #2476) and a real "Generate Shareable Link" token
+on the Embed tab — no `page.route` mocking. All three checkpoints were run
 and verified passing against a live `pnpm build && pnpm start` server.
 
 There is deliberately no anonymous-visitor checkpoint: `@iblai/web-utils`'s
@@ -1387,7 +1398,7 @@ surfaces:
 - [x] ags-06: NON-ADMIN — the Skills tab is absent from the Edit Mentor modal (the segment is ADMIN-only via userTypes in `MENTOR_SEGMENTS`)
 - [x] ags-07: View-only RBAC (`view_skill_assignments` granted, create/write/delete denied via the same permission-check mock) — the Agent Skills sub-tab renders with its empty state, while the Available Skills sub-tab and the New Skill button are absent from the DOM
 - [x] slash-01: Mentor with no effective skills — chat composer stays a plain textbox (no combobox role) and typing "/" opens nothing
-- [x] slash-02: Mentor with skills — composer gets `role=combobox` wiring and "/" opens the picker listing only enabled skills as name + slug, no descriptions (assignment rows carry none; the platform-wide agent-skills catalog is never fetched from chat)
+- [x] slash-02: Mentor with skills — composer gets `role=combobox` wiring and "/" opens the picker listing only enabled skills as name stacked over `/slug` (column layout — full name, never truncated; geometry-asserted), no descriptions (assignment rows carry none; the platform-wide agent-skills catalog is never fetched from chat)
 - [x] slash-03: Typing after "/" filters the picker by both skill name and slug as the query narrows; no match closes the picker
 - [x] slash-04: ArrowDown/ArrowUp cycle the active picker option and the composer's `aria-activedescendant` follows the active option's id
 - [x] slash-05: Enter completes the active option IN PLACE — `/<slug> ` lands at the typed token's index and the backdrop layer (`skill-token-highlight`) paints an active-pill background behind it; nothing is submitted
@@ -1399,7 +1410,7 @@ surfaces:
 - [x] slash-11: A mid-sentence token is removed atomically and the seam space collapses ("say /web-research please" → "say please")
 - [x] slash-12: Multiple skill invocations in one message are each highlighted; unknown or disabled slugs never highlight
 - [x] slash-13: Typing "/" while the assignments fetch (the composer's only skill source) is still in flight shows the "Loading skills…" popover (`slash-skill-loading`, `role=status`), which yields to the picker once the list resolves
-- [x] slash-16: Skills dropdown (next to Canvas) lists enabled skills as name + `/slug`; selecting inserts the token AT THE CARET with context-aware spacing; the active pill shows the armed name + the standard ✕ (disarms without opening the menu); toggling removes cleanly; arming another replaces (single selection); `/`-picker arming updates the button — one composer-text source of truth
+- [x] slash-16: Skills dropdown (next to Canvas) lists enabled skills as name stacked over `/slug` (same column layout as the `/` picker — full name, never truncated; geometry-asserted); selecting inserts the token AT THE CARET with context-aware spacing; the active pill shows the armed name + the standard ✕ (disarms without opening the menu); toggling removes cleanly; arming another replaces (single selection); `/`-picker arming updates the button — one composer-text source of truth
 - [x] slash-15: NON-ADMIN — with the assignments endpoint readable (mocked granted state; a 403 degrades to an inactive picker) the "/" picker offers skills; selecting completes the token and the sent invocation message receives a live AI reply — skips when the environment denies the non-admin CHAT permission entirely (composer disabled with a "you don't have permission to chat" placeholder): the picker rides on top of chat access
 - [x] slash-14: A "/" token typed after existing text (caret-adjacent, preceded by whitespace) opens the picker; selecting completes the invocation at that index keeping the sentence. A "/" glued inside a word (and/or, URLs) never triggers
 

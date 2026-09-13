@@ -1,4 +1,5 @@
 import { htmlToMarkdown } from '@/lib/utils';
+import { delimitedTextToMarkdownTable } from '@/components/canvas/csv-table-utils';
 
 /**
  * Resolve artifact ID from multiple sources with priority order
@@ -122,25 +123,33 @@ export const escapeHtml = (value: string): string =>
 /**
  * Normalize content to markdown format - converts HTML to markdown if needed
  */
-export const normalizeContentToMarkdown = (content?: string): string => {
+export const normalizeContentToMarkdown = (
+  content?: string,
+  fileExtension?: string | null,
+): string => {
   if (!content) return '';
   const trimmed = content.trim();
   if (trimmed.startsWith('<')) {
     return htmlToMarkdown(trimmed);
   }
-  return trimmed;
+  // csv/tsv bodies are not markdown — render them as a table (idempotent:
+  // an already-converted table passes through unchanged).
+  return delimitedTextToMarkdownTable(trimmed, fileExtension);
 };
 
 /**
  * Get initial editor content - converts HTML to markdown if needed
  */
-export const getInitialEditorContent = (content?: string): string => {
+export const getInitialEditorContent = (
+  content?: string,
+  fileExtension?: string | null,
+): string => {
   if (content && content.trim() !== '') {
     const trimmed = content.trim();
     if (trimmed.startsWith('<')) {
       return htmlToMarkdown(trimmed);
     }
-    return trimmed;
+    return delimitedTextToMarkdownTable(trimmed, fileExtension);
   }
   return '';
 };

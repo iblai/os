@@ -104,6 +104,30 @@ vi.mock('@/lib/hooks', () => ({
   useAppDispatch: () => mockDispatch,
 }));
 
+// The shape the public-settings GET returns. It still carries the five fields
+// the Settings tab owns (#2476) - the API keeps serving them - which is exactly
+// what makes the regression tests below meaningful: they are present at mount
+// and must still never reach the embed PUT.
+const basePublicSettings = {
+  allow_anonymous: false,
+  mentor_visibility: 'public',
+  custom_css: '',
+  embed_show_attachment: true,
+  embed_show_voice_call: true,
+  embed_show_voice_record: true,
+  show_catalogue: true,
+  mentor_unique_id: 'mentor-123',
+};
+
+// `allow_anonymous` is server state read from the public settings, not an embed
+// form field, so tests steer the anonymous / non-anonymous branches here rather
+// than through `form.setFieldValue`. Call it BEFORE `renderHook`.
+const setAllowAnonymous = (allowAnonymous: boolean) => {
+  vi.mocked(dataLayer.useGetMentorPublicSettingsQuery).mockReturnValue({
+    data: { ...basePublicSettings, allow_anonymous: allowAnonymous },
+  } as any);
+};
+
 describe('useEmbedTab', () => {
   let mockCreateRedirectTokenFn: ReturnType<typeof vi.fn>;
   let mockUpdateMentorSettingsFn: ReturnType<typeof vi.fn>;
@@ -148,16 +172,7 @@ describe('useEmbedTab', () => {
     // subsequent tests — `vi.clearAllMocks` clears call history but not the
     // implementation set via `mockReturnValue`.
     vi.mocked(dataLayer.useGetMentorPublicSettingsQuery).mockReturnValue({
-      data: {
-        allow_anonymous: false,
-        mentor_visibility: 'public',
-        custom_css: '',
-        embed_show_attachment: true,
-        embed_show_voice_call: true,
-        embed_show_voice_record: true,
-        show_catalogue: true,
-        mentor_unique_id: 'mentor-123',
-      },
+      data: { ...basePublicSettings },
     } as any);
   });
 
@@ -378,11 +393,11 @@ describe('useEmbedTab', () => {
         data: { success: true },
       });
 
+      setAllowAnonymous(true);
       const { result } = renderHook(() => useEmbedTab());
 
       // Set form values to anonymous mode
       await act(async () => {
-        result.current.form.setFieldValue('allow_anonymous', true);
         result.current.form.setFieldValue('website_url', '');
       });
 
@@ -410,10 +425,10 @@ describe('useEmbedTab', () => {
         data: { success: true },
       });
 
+      setAllowAnonymous(false);
       const { result } = renderHook(() => useEmbedTab());
 
       await act(async () => {
-        result.current.form.setFieldValue('allow_anonymous', false);
         result.current.form.setFieldValue('website_url', 'https://example.com');
       });
 
@@ -437,10 +452,10 @@ describe('useEmbedTab', () => {
     });
 
     it('should fail validation when non-anonymous mode has no URL', async () => {
+      setAllowAnonymous(false);
       const { result } = renderHook(() => useEmbedTab());
 
       await act(async () => {
-        result.current.form.setFieldValue('allow_anonymous', false);
         result.current.form.setFieldValue('website_url', '');
       });
 
@@ -458,10 +473,10 @@ describe('useEmbedTab', () => {
     });
 
     it('should fail validation when non-anonymous mode has invalid URL', async () => {
+      setAllowAnonymous(false);
       const { result } = renderHook(() => useEmbedTab());
 
       await act(async () => {
-        result.current.form.setFieldValue('allow_anonymous', false);
         result.current.form.setFieldValue('website_url', 'not-a-valid-url');
       });
 
@@ -487,10 +502,10 @@ describe('useEmbedTab', () => {
         },
       });
 
+      setAllowAnonymous(false);
       const { result } = renderHook(() => useEmbedTab());
 
       await act(async () => {
-        result.current.form.setFieldValue('allow_anonymous', false);
         result.current.form.setFieldValue('website_url', 'https://example.com');
       });
 
@@ -514,10 +529,10 @@ describe('useEmbedTab', () => {
         .spyOn(console, 'error')
         .mockImplementation(() => {});
 
+      setAllowAnonymous(false);
       const { result } = renderHook(() => useEmbedTab());
 
       await act(async () => {
-        result.current.form.setFieldValue('allow_anonymous', false);
         result.current.form.setFieldValue('website_url', 'https://example.com');
       });
 
@@ -547,11 +562,8 @@ describe('useEmbedTab', () => {
         .spyOn(console, 'error')
         .mockImplementation(() => {});
 
+      setAllowAnonymous(true);
       const { result } = renderHook(() => useEmbedTab());
-
-      await act(async () => {
-        result.current.form.setFieldValue('allow_anonymous', true);
-      });
 
       let syncResult;
       await act(async () => {
@@ -569,10 +581,10 @@ describe('useEmbedTab', () => {
         data: { success: true },
       });
 
+      setAllowAnonymous(true);
       const { result } = renderHook(() => useEmbedTab());
 
       await act(async () => {
-        result.current.form.setFieldValue('allow_anonymous', true);
         result.current.form.setFieldValue('show_catalogue', true);
       });
 
@@ -594,10 +606,10 @@ describe('useEmbedTab', () => {
         data: { success: true },
       });
 
+      setAllowAnonymous(true);
       const { result } = renderHook(() => useEmbedTab());
 
       await act(async () => {
-        result.current.form.setFieldValue('allow_anonymous', true);
         result.current.form.setFieldValue('strip_page_content_html', true);
       });
 
@@ -619,10 +631,10 @@ describe('useEmbedTab', () => {
         data: { success: true },
       });
 
+      setAllowAnonymous(true);
       const { result } = renderHook(() => useEmbedTab());
 
       await act(async () => {
-        result.current.form.setFieldValue('allow_anonymous', true);
         result.current.form.setFieldValue('mode', 'advanced');
       });
 
@@ -641,6 +653,148 @@ describe('useEmbedTab', () => {
     });
   });
 
+  // #2476: Settings -> Discovery owns "Who can view" / "Who can chat" and
+  // Settings -> Capabilities owns the three embed capability toggles. The embed
+  // save PUTs the WHOLE form, so as long as those fields lived in the form they
+  // were re-sent on every embed save with whatever value they held at mount -
+  // silently reverting a change the user had just made in Settings.
+  describe('settings-owned fields never reach the embed PUT', () => {
+    const SETTINGS_OWNED = [
+      'mentor_visibility',
+      'allow_anonymous',
+      'embed_show_attachment',
+      'embed_show_voice_record',
+      'embed_show_voice_call',
+    ];
+
+    it('does not expose them as embed form fields', () => {
+      const { result } = renderHook(() => useEmbedTab());
+
+      for (const key of SETTINGS_OWNED) {
+        expect(result.current.form.state.values).not.toHaveProperty(key);
+      }
+    });
+
+    it('omits every settings-owned field from the multipart PUT body', async () => {
+      mockUpdateMentorSettingsFn.mockResolvedValueOnce({
+        data: { success: true },
+      });
+
+      // The mount-time settings carry all five fields.
+      setAllowAnonymous(true);
+      const { result } = renderHook(() => useEmbedTab());
+
+      await act(async () => {
+        await result.current.syncEmbedSettings();
+      });
+
+      const { formData } = mockUpdateMentorSettingsFn.mock.calls[0][0];
+      for (const key of SETTINGS_OWNED) {
+        expect(formData).not.toHaveProperty(key);
+      }
+      // The embed-owned fields still go out.
+      expect(formData).toHaveProperty('show_catalogue');
+      expect(formData).toHaveProperty('mode');
+    });
+
+    it('does not resurrect the mentor_visibility the mentor had at mount', async () => {
+      vi.mocked(dataLayer.useGetMentorPublicSettingsQuery).mockReturnValue({
+        data: {
+          ...basePublicSettings,
+          allow_anonymous: true,
+          mentor_visibility: 'private',
+        },
+      } as any);
+      mockUpdateMentorSettingsFn.mockResolvedValueOnce({
+        data: { success: true },
+      });
+
+      const { result } = renderHook(() => useEmbedTab());
+
+      await act(async () => {
+        await result.current.syncEmbedSettings();
+      });
+
+      const { formData } = mockUpdateMentorSettingsFn.mock.calls[0][0];
+      expect(formData).not.toHaveProperty('mentor_visibility');
+      expect(JSON.stringify(formData)).not.toContain('private');
+    });
+
+    it('strips them from the payload even if they are re-added to the form', async () => {
+      mockUpdateMentorSettingsFn.mockResolvedValueOnce({
+        data: { success: true },
+      });
+
+      setAllowAnonymous(true);
+      const { result } = renderHook(() => useEmbedTab());
+
+      // Simulate a regression where someone re-adds the fields to the form.
+      await act(async () => {
+        const form = result.current.form as unknown as {
+          setFieldValue: (key: string, value: unknown) => void;
+        };
+        form.setFieldValue('mentor_visibility', 'private');
+        form.setFieldValue('allow_anonymous', false);
+        form.setFieldValue('embed_show_attachment', false);
+        form.setFieldValue('embed_show_voice_record', false);
+        form.setFieldValue('embed_show_voice_call', false);
+      });
+
+      await act(async () => {
+        await result.current.syncEmbedSettings();
+      });
+
+      const { formData } = mockUpdateMentorSettingsFn.mock.calls[0][0];
+      for (const key of SETTINGS_OWNED) {
+        expect(formData).not.toHaveProperty(key);
+      }
+      // The stray `allow_anonymous: false` must not have flipped the flow into
+      // the redirect-token branch either - that value comes from settings.
+      expect(mockCreateRedirectTokenFn).not.toHaveBeenCalled();
+    });
+
+    it('exposes the persisted allow_anonymous for the embed UI to read', () => {
+      setAllowAnonymous(true);
+      const { result } = renderHook(() => useEmbedTab());
+
+      expect(result.current.allowAnonymous).toBe(true);
+    });
+
+    it('defaults allowAnonymous to false when the settings have not loaded', () => {
+      vi.mocked(dataLayer.useGetMentorPublicSettingsQuery).mockReturnValue({
+        data: undefined,
+      } as any);
+
+      const { result } = renderHook(() => useEmbedTab());
+
+      expect(result.current.allowAnonymous).toBe(false);
+    });
+
+    it('passes the persisted allow_anonymous to the embed snippet builder', async () => {
+      mockUpdateMentorSettingsFn.mockResolvedValueOnce({
+        data: { success: true },
+      });
+      mockGetEmbedCode.mockResolvedValueOnce('<embed>');
+
+      setAllowAnonymous(true);
+      const { result } = renderHook(() => useEmbedTab());
+
+      await act(async () => {
+        await result.current.form.handleSubmit();
+      });
+
+      await waitFor(() => {
+        expect(mockGetEmbedCode).toHaveBeenCalledWith(
+          'test-tenant',
+          expect.objectContaining({ allow_anonymous: true }),
+          '',
+          false,
+          expect.any(Object),
+        );
+      });
+    });
+  });
+
   describe('removeCustomImage', () => {
     const previewDataUrl =
       'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
@@ -648,11 +802,11 @@ describe('useEmbedTab', () => {
     it('issues a JSON settings write clearing the image and the icon JSON, then resets the local preview and mode', async () => {
       mockEditMentorJsonFn.mockResolvedValueOnce({ data: { success: true } });
 
+      setAllowAnonymous(false);
       const { result } = renderHook(() => useEmbedTab());
 
       await act(async () => {
         result.current.form.setFieldValue('icon_selection', 'custom');
-        result.current.form.setFieldValue('allow_anonymous', false);
         result.current.form.setFieldValue('website_url', '');
         result.current.updateMultipleConfig({ image: previewDataUrl });
       });
@@ -821,10 +975,10 @@ describe('useEmbedTab', () => {
         data: { success: true },
       });
 
+      setAllowAnonymous(true);
       const { result } = renderHook(() => useEmbedTab());
 
       await act(async () => {
-        result.current.form.setFieldValue('allow_anonymous', true);
         result.current.form.setFieldValue('icon_selection', 'custom');
         result.current.updateMultipleConfig({
           title: 'Ask me',
@@ -861,10 +1015,10 @@ describe('useEmbedTab', () => {
         data: { success: true },
       });
 
+      setAllowAnonymous(true);
       const { result } = renderHook(() => useEmbedTab());
 
       await act(async () => {
-        result.current.form.setFieldValue('allow_anonymous', true);
         result.current.form.setFieldValue('icon_selection', 'default');
         // Even if a data-URL image lingers in config, default mode must not
         // upload it.
@@ -891,10 +1045,10 @@ describe('useEmbedTab', () => {
         data: { success: true },
       });
 
+      setAllowAnonymous(true);
       const { result } = renderHook(() => useEmbedTab());
 
       await act(async () => {
-        result.current.form.setFieldValue('allow_anonymous', true);
         result.current.form.setFieldValue('icon_selection', 'custom');
         result.current.updateMultipleConfig({ image: dataUrl });
       });
@@ -913,10 +1067,10 @@ describe('useEmbedTab', () => {
         data: { success: true },
       });
 
+      setAllowAnonymous(true);
       const { result } = renderHook(() => useEmbedTab());
 
       await act(async () => {
-        result.current.form.setFieldValue('allow_anonymous', true);
         result.current.form.setFieldValue('icon_selection', 'custom');
         // Default image is a resolved thumbnail URL, not a data URL.
       });
@@ -934,10 +1088,10 @@ describe('useEmbedTab', () => {
         data: { success: true },
       });
 
+      setAllowAnonymous(true);
       const { result } = renderHook(() => useEmbedTab());
 
       await act(async () => {
-        result.current.form.setFieldValue('allow_anonymous', true);
         result.current.form.setFieldValue('icon_selection', 'custom');
         result.current.updateMultipleConfig({ image: null });
       });
@@ -1091,9 +1245,9 @@ describe('useEmbedTab', () => {
       });
 
       // First mount: user uploads + saves.
+      setAllowAnonymous(true);
       const first = renderHook(() => useEmbedTab());
       await act(async () => {
-        first.result.current.form.setFieldValue('allow_anonymous', true);
         first.result.current.form.setFieldValue('icon_selection', 'custom');
         first.result.current.updateMultipleConfig({
           image: dataUrl,
@@ -1367,10 +1521,10 @@ describe('useEmbedTab', () => {
       });
       mockGetEmbedCode.mockResolvedValueOnce('<generated-embed-code>');
 
+      setAllowAnonymous(true);
       const { result } = renderHook(() => useEmbedTab());
 
       await act(async () => {
-        result.current.form.setFieldValue('allow_anonymous', true);
         result.current.form.setFieldValue('icon_selection', 'default');
       });
 
@@ -1399,11 +1553,8 @@ describe('useEmbedTab', () => {
         .spyOn(console, 'error')
         .mockImplementation(() => {});
 
+      setAllowAnonymous(true);
       const { result } = renderHook(() => useEmbedTab());
-
-      await act(async () => {
-        result.current.form.setFieldValue('allow_anonymous', true);
-      });
 
       await act(async () => {
         await result.current.form.handleSubmit();
@@ -1424,10 +1575,10 @@ describe('useEmbedTab', () => {
       });
       mockGetEmbedCode.mockResolvedValueOnce('<custom-embed-code>');
 
+      setAllowAnonymous(true);
       const { result } = renderHook(() => useEmbedTab());
 
       await act(async () => {
-        result.current.form.setFieldValue('allow_anonymous', true);
         result.current.form.setFieldValue('icon_selection', 'custom');
       });
 
