@@ -91,17 +91,37 @@ export class AnalyticsPage {
   async navigateToMemory(): Promise<void> {
     // Memory has no on-page tab — it is reached through the sidebar's
     // "Memory" sub-item (rendered right after Transcripts), which
-    // deep-links to `/analytics/memory`.
+    // deep-links to `/analytics/memory`. Scoped to the nav (`sidebar-nav`)
+    // because the admin footer also has a "Memory" entry (tenant Memory tab).
     await this.expandSidebarAnalytics();
-    const memoryLink = this.sidebar.getByRole('button', {
-      name: 'Memory',
-      exact: true,
-    });
+    const memoryLink = this.sidebar
+      .getByTestId('sidebar-nav')
+      .getByRole('button', { name: 'Memory', exact: true });
     await expect(memoryLink).toBeVisible({ timeout: 10_000 });
     await memoryLink.click();
     await safeWaitForURL(
       this.page,
       (url) => /\/analytics\/memory\/?$/.test(url.href),
+      { timeout: 60_000 },
+    );
+  }
+
+  async navigateToCosts(): Promise<void> {
+    // Costs has no on-page tab either — like Memory and Data Reports it is a
+    // sidebar sub-item (i18n key `appSidebarIndex.analyticsCosts`) that
+    // deep-links to `/analytics/financial`. `navigateToTab('costs')` looked
+    // for `role=tab name=/costs/i`, which has not existed since Analytics
+    // moved to the collapsible sidebar, so it timed out rather than failing
+    // on the assertion.
+    await this.expandSidebarAnalytics();
+    const costsLink = this.sidebar
+      .getByTestId('sidebar-nav')
+      .getByRole('button', { name: 'Costs', exact: true });
+    await expect(costsLink).toBeVisible({ timeout: 10_000 });
+    await costsLink.click();
+    await safeWaitForURL(
+      this.page,
+      (url) => /\/analytics\/financial\/?$/.test(url.href),
       { timeout: 60_000 },
     );
   }

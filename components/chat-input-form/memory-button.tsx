@@ -22,6 +22,7 @@ export function MemoryButton({ tenantKey, username }: MemoryButtonProps) {
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <Button
+          data-testid="chat-memory-button"
           variant="ghost"
           size="sm"
           type="button"

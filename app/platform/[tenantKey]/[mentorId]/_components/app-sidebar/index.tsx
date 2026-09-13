@@ -12,6 +12,7 @@ import { useDispatch } from 'react-redux';
 import {
   Bell,
   BookOpen,
+  Brain,
   ChevronDown,
   ChevronRight,
   Coins,
@@ -55,6 +56,7 @@ import {
   IntegrationsTab,
   BillingTab,
   MonetizationTab,
+  MemoryAdminTab,
   AdvancedTab,
 } from '@iblai/iblai-js/web-containers';
 
@@ -447,6 +449,7 @@ type AccountTab =
   | 'management'
   | 'integrations'
   | 'monetization'
+  | 'memory'
   | 'advanced'
   | 'billing';
 
@@ -1015,6 +1018,16 @@ export function AppSidebar() {
           icon: Coins,
         });
       }
+      // Memory mirrors the SDK `Account` rail exactly: it sits between
+      // Monetization and Advanced and, like Integrations/Advanced, has no
+      // dedicated RBAC permission — the rail filters it on `isAdmin`, so
+      // here it follows the live-admin gate (and the trial/anonymous
+      // cluster below). Non-admins never get it via RBAC alone.
+      actions.push({
+        id: 'footer-memory',
+        label: t('memory'),
+        icon: Brain,
+      });
       actions.push({
         id: 'footer-settings',
         label: t('advanced'),
@@ -1042,6 +1055,11 @@ export function AppSidebar() {
         icon: Coins,
       });
       actions.push({
+        id: 'footer-memory',
+        label: t('memory'),
+        icon: Brain,
+      });
+      actions.push({
         id: 'footer-settings',
         label: t('advanced'),
         icon: Settings,
@@ -1052,8 +1070,9 @@ export function AppSidebar() {
       // Analytics permission gate. We MUST guard on `config.enableRBAC()`
       // because `checkRbacPermission` returns true when RBAC is off, which
       // would otherwise expose these to every non-admin. `!isAdmin` keeps an
-      // admin-in-learner-mode excluded. Integrations and Advanced have no
-      // dedicated RBAC permission, so they stay admin/trial/anonymous-only.
+      // admin-in-learner-mode excluded. Integrations, Memory and Advanced
+      // have no dedicated RBAC permission (the SDK `Account` rail filters
+      // them on `isAdmin`), so they stay admin/trial/anonymous-only.
       if (hasInviteUserPermission) {
         actions.push({ id: 'footer-invites', label: t('invites'), icon: Mail });
       }
@@ -1114,6 +1133,9 @@ export function AppSidebar() {
           return;
         case 'footer-monetization':
           openAccountTab('monetization');
+          return;
+        case 'footer-memory':
+          openAccountTab('memory');
           return;
         case 'footer-settings':
           openAccountTab('advanced');
@@ -1213,6 +1235,7 @@ export function AppSidebar() {
           {/* Body */}
           {railCollapsed ? (
             <nav
+              data-testid="sidebar-nav"
               className="flex min-h-0 flex-1 flex-col items-center gap-1 overflow-y-auto px-2 pt-1 pb-2"
               aria-label={t('mainNavigation')}
             >
@@ -1308,7 +1331,10 @@ export function AppSidebar() {
               )}
             </nav>
           ) : (
-            <nav className="min-h-0 flex-1 overflow-y-auto px-2 pt-1 pb-2">
+            <nav
+              data-testid="sidebar-nav"
+              className="min-h-0 flex-1 overflow-y-auto px-2 pt-1 pb-2"
+            >
               <div className="space-y-0.5">
                 {newChatAllowed && (
                   <div className="px-0 pb-0.5">
@@ -1409,10 +1435,16 @@ export function AppSidebar() {
           )}
 
           {/* Footer — fully hidden in embed mode (minimal sidebar:
-              only New Chat + chat history, matching the pre-rewrite UI). */}
+              only New Chat + chat history, matching the pre-rewrite UI).
+              `data-testid="sidebar-footer"` lets tests scope footer entries
+              whose label also appears in the nav above (e.g. "Memory" is
+              both an Analytics sub-item and the tenant Memory footer entry). */}
           {!embedMode &&
             (railCollapsed ? (
-              <div className="flex shrink-0 flex-col items-center gap-0.5 border-t border-[#e2e8f0] px-2 py-3">
+              <div
+                data-testid="sidebar-footer"
+                className="flex shrink-0 flex-col items-center gap-0.5 border-t border-[#e2e8f0] px-2 py-3"
+              >
                 {footerActions.map((action) => {
                   const Icon = action.icon;
                   return (
@@ -1449,7 +1481,10 @@ export function AppSidebar() {
                 )}
               </div>
             ) : (
-              <div className="shrink-0 space-y-0.5 border-t border-[#e2e8f0] px-2 py-2">
+              <div
+                data-testid="sidebar-footer"
+                className="shrink-0 space-y-0.5 border-t border-[#e2e8f0] px-2 py-2"
+              >
                 {footerActions.map((action) => {
                   const Icon = action.icon;
                   return (
@@ -1529,7 +1564,8 @@ export function AppSidebar() {
 /**
  * Renders one of the SDK's organization-level tab components in its
  * own dialog — `Admin` (Users), `IntegrationsTab` (API), `BillingTab`,
- * `MonetizationTab`, `AdvancedTab` (Settings). Each footer action opens
+ * `MonetizationTab`, `MemoryAdminTab` (user global + agent memories),
+ * `AdvancedTab` (Settings). Each footer action opens
  * this dialog with a different `tab`; the body switches the SDK
  * component, so there's no shared tab rail and nothing to hide.
  *
@@ -1560,6 +1596,7 @@ function AccountSheet({
     management: t('management'),
     integrations: t('integrations'),
     monetization: t('monetization'),
+    memory: t('memory'),
     advanced: t('advanced'),
     billing: t('accountTabBilling'),
   };
@@ -1569,6 +1606,7 @@ function AccountSheet({
     management: t('accountDescManagement'),
     integrations: t('accountDescIntegrations'),
     monetization: t('accountDescMonetization'),
+    memory: t('accountDescMemory'),
     advanced: t('accountDescAdvanced'),
     billing: t('accountDescBilling'),
   };
@@ -1632,6 +1670,9 @@ function AccountSheet({
               platformKey={tenantKey}
               authURL={config.authUrl()}
             />
+          )}
+          {tab === 'memory' && (
+            <MemoryAdminTab tenantKey={tenantKey} username={username} />
           )}
           {tab === 'advanced' && (
             <AdvancedTab

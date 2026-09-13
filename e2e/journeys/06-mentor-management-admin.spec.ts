@@ -178,6 +178,68 @@ test.describe('Journey 6: Mentor Management — Admin', () => {
       return;
     }
 
+    // The `finally` block below restores this mentor's LLM to Anthropic
+    // claude-haiku-4-5-20251001. Confirm that model is actually selectable
+    // on this backend *before* mutating anything — a disabled/unavailable
+    // model button never becomes clickable, so the restore step itself would
+    // throw and leave the mentor stuck on ibl.ai for later tests.
+    await editMentorPage.llm.providerCard('Anthropic').click();
+    await expect(editMentorPage.llm.llmSelectionDialog).toBeVisible({
+      timeout: 10_000,
+    });
+    const restoreModelButton = editMentorPage.llm.llmSelectionDialog.locator(
+      '[data-model="claude-haiku-4-5-20251001"]',
+    );
+    let canRestore = false;
+    try {
+      await restoreModelButton.waitFor({ state: 'visible', timeout: 10_000 });
+      canRestore = await restoreModelButton.isEnabled();
+    } catch {
+      canRestore = false;
+    }
+    await page.keyboard.press('Escape');
+    await expect(editMentorPage.llm.llmSelectionDialog).not.toBeVisible({
+      timeout: 5_000,
+    });
+    if (!canRestore) {
+      await editMentorPage.close();
+      test.skip(
+        true,
+        'restore target model (Anthropic claude-haiku-4-5-20251001) is disabled or unavailable on this backend',
+      );
+      return;
+    }
+
+    // Confirm the provider actually offers an iblai-pro model row before
+    // committing to the full selection + navbar-badge flow — some backends
+    // list the ibl.ai provider card with no models behind it.
+    await editMentorPage.llm.providerCard('ibl.ai').click();
+    await expect(editMentorPage.llm.llmSelectionDialog).toBeVisible({
+      timeout: 10_000,
+    });
+    const iblaiProRow = editMentorPage.llm.llmSelectionDialog.locator(
+      '[data-model="iblai-pro"]',
+    );
+    let hasIblaiProModel = false;
+    try {
+      await iblaiProRow.waitFor({ state: 'visible', timeout: 10_000 });
+      hasIblaiProModel = true;
+    } catch {
+      hasIblaiProModel = false;
+    }
+    if (!hasIblaiProModel) {
+      await page.keyboard.press('Escape');
+      await expect(editMentorPage.llm.llmSelectionDialog).not.toBeVisible({
+        timeout: 5_000,
+      });
+      await editMentorPage.close();
+      test.skip(
+        true,
+        'ibl.ai provider offers no iblai-pro model on this backend',
+      );
+      return;
+    }
+
     try {
       // Display label ("ibl.ai"), not the raw provider key — providerCard()
       // matches on the rendered alt text ("<label> logo"), same label the
@@ -400,18 +462,15 @@ test.describe('Journey 6: Mentor Management — Admin', () => {
   test('admin goes to edit mentor settings tab and deletes a mentor', async ({
     page,
     editMentorPage,
+    createMentorPage,
   }) => {
-    // Only run if a deletable test mentor exists — skip gracefully otherwise
+    // A freshly created mentor always has the delete button, so this test
+    // owns its own subject rather than deleting whatever mentor the page
+    // happened to land on.
+    await createMentorPage.openAndCreate();
+    await waitForPageReady(page);
     await editMentorPage.open('Settings');
     await waitForPageReady(page);
-    const deleteBtn = editMentorPage.settings.deleteButton;
-    const visible = await deleteBtn
-      .isVisible({ timeout: 5_000 })
-      .catch(() => false);
-    if (!visible) {
-      test.skip(true, 'No deletable mentor available in this environment');
-      return;
-    }
     await editMentorPage.settings.deleteMentor();
     await expect(page).toHaveURL(/\/platform\//, { timeout: 15_000 });
   });

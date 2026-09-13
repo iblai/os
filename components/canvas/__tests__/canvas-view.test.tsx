@@ -15,6 +15,7 @@ vi.mock('../canvas-component', () => ({
       data-testid="canvas-component"
       data-title={props.title}
       data-content={props.content}
+      data-file-extension={props.fileExtension}
     >
       <span>Document Canvas: {props.title}</span>
       <span>Artifact ID: {props.artifactId}</span>
@@ -104,6 +105,23 @@ describe('CanvasView', () => {
       closeButton.click();
 
       expect(onClose).toHaveBeenCalled();
+    });
+
+    // Regression: the extension was dropped here, so the text canvas could
+    // not tell a csv artifact apart from prose and rendered it as plain text.
+    it('passes fileExtension to CanvasComponent so csv/tsv render as tables', () => {
+      render(
+        <CanvasView
+          {...defaultProps}
+          canvasContent="a,b\n1,2"
+          fileExtension="csv"
+        />,
+      );
+
+      expect(screen.getByTestId('canvas-component')).toHaveAttribute(
+        'data-file-extension',
+        'csv',
+      );
     });
   });
 

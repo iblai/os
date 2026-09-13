@@ -492,12 +492,21 @@ export const InsideButtons = ({
                 onClick={() => onToggleSkill(skill)}
                 className="flex items-start gap-2"
               >
-                <span className="flex min-w-0 flex-1 items-baseline gap-1.5">
-                  <span className="truncate text-sm text-gray-800">
+                {/* Name stacked over the slug: the full name wraps instead of
+                    truncating to "canvas-course-b…", and the slug below it
+                    gets the row's whole width too. */}
+                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span
+                    data-testid="skills-menu-item-name"
+                    className="text-sm break-words text-gray-800"
+                  >
                     {skill.name}
                   </span>
                   {/* Slash-invocation form, mirroring the `/` picker's rows */}
-                  <span className="shrink-0 text-xs text-gray-400">
+                  <span
+                    data-testid="skills-menu-item-slug"
+                    className="text-xs break-all text-gray-400"
+                  >
                     /{skill.slug}
                   </span>
                 </span>
