@@ -50,15 +50,26 @@ export function isPerTabAuthEnabled(): boolean {
   return value === true || value === 'true';
 }
 
+/**
+ * Read a key from a Web Storage area, tolerating environments where the area is
+ * missing or not a functional `Storage` (SSR, and tests that install a partial
+ * `localStorage` stub without `getItem`) by returning null. A `getItem` that
+ * exists but throws (e.g. disabled storage) is left to propagate so callers
+ * like `useLocalStorage` can apply their own fallback + warning.
+ */
+function readStorage(storage: Storage | undefined, key: string): string | null {
+  return typeof storage?.getItem === 'function' ? storage.getItem(key) : null;
+}
+
 export function getAuthItem(key: string): string | null {
   if (typeof window === 'undefined') return null;
   if (!isPerTabAuthEnabled() || !isAuthKey(key)) {
-    return window.localStorage.getItem(key);
+    return readStorage(window.localStorage, key);
   }
-  const sessionValue = window.sessionStorage.getItem(key);
+  const sessionValue = readStorage(window.sessionStorage, key);
   return sessionValue !== null
     ? sessionValue
-    : window.localStorage.getItem(key);
+    : readStorage(window.localStorage, key);
 }
 
 export function setAuthItem(key: string, value: string): void {
