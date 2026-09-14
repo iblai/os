@@ -167,6 +167,10 @@ test.describe('Journey 59: Ecommerce Credits & Upgrade', () => {
       !DM_URL || !ECOMMERCE_CREDIT_CLEANUP_TOKEN,
       'DM_URL / ECOMMERCE_CREDIT_CLEANUP_TOKEN not configured for this environment',
     );
+    test.skip(
+      process.env.ECOMMERCE_E2E !== '1',
+      'ECOMMERCE_E2E not enabled for this environment',
+    );
 
     // Fresh, unauthenticated context — the signup flow provisions +
     // authenticates its own account.

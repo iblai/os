@@ -48,12 +48,14 @@ test.describe('Journey 18: Analytics Dashboard', () => {
     },
   );
 
-  test('admin goes to analytics page and views the costs tab with cost cards', async ({
+  test('admin opens Costs from the Analytics sidebar and lands on the financial analytics page', async ({
     analyticsPage,
     page,
   }) => {
-    await analyticsPage.navigateToTab('costs');
-    await expect(page).toHaveURL(/financial/, { timeout: 15_000 });
+    await analyticsPage.navigateToCosts();
+    await expect(page).toHaveURL(/\/analytics\/financial\/?$/, {
+      timeout: 15_000,
+    });
   });
 
   test('admin opens the Memory sub-item from the Analytics sidebar and lands on the memory analytics page', async ({

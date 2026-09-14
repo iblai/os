@@ -6,6 +6,8 @@ import {
   isVisibleWithin,
 } from '../utils/resilient';
 import { SidebarPage } from './sidebar.page';
+import { observeDmBase } from '../utils/dm-api';
+import { registerMentor } from '../utils/resource-tracker';
 
 export class CreateMentorPage {
   readonly page: Page;
@@ -57,6 +59,7 @@ export class CreateMentorPage {
    * Agents first and only then click New Agent.
    */
   async open(): Promise<void> {
+    observeDmBase(this.page);
     // "New Agent" only mounts at full sidebar width, and the sidebar starts in
     // its icon-rail form unless a `sidebar_state=true` cookie is present.
     await new SidebarPage(this.page).ensureExpanded();
@@ -170,6 +173,7 @@ export class CreateMentorPage {
       },
     );
     await waitForPageReady(this.page);
+    await registerMentor(this.page, mentorName);
     return mentorName;
   }
 

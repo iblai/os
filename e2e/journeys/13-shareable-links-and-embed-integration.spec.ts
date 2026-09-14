@@ -87,8 +87,14 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
   });
 
   // fixme: embed configuration times out — setVisibility method error
+  //
+  // emb-01's original title referenced the Embed tab's "voice call, voice
+  // record, and attachment" toggles — those were removed entirely by issue
+  // #2476 (Settings -> Capabilities now owns them per-surface); this test's
+  // body never exercised them directly, so it's left as a basic embed-code
+  // smoke check. See coverage.json emb-01 (marked deprecated).
   test.fixme(
-    'admin goes to embed tab and configures a non-anonymous embed with voice call, voice record, and attachment buttons',
+    'admin goes to embed tab and the embed code renders for a non-anonymous mentor',
     async ({ page, editMentorPage }) => {
       await editMentorPage.open('Embed');
       await waitForPageReady(page);
@@ -202,10 +208,13 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
       await editMentorPage.close();
     });
 
-    // emb-06: The Show Catalogue toggle works in the embed tab and is independent
-    // of the sibling toggles. Stays in-modal so it neither mutates backend state
-    // nor depends on cache invalidation; persistence is covered by emb-07.
-    test('embed tab Show Catalogue toggle flips and leaves sibling toggles unaffected', async ({
+    // emb-06: The Show Catalogue toggle works in the embed tab in isolation.
+    // Stays in-modal so it neither mutates backend state nor depends on cache
+    // invalidation; persistence is covered by emb-07. (Issue #2476 removed
+    // the sibling Voice Call / Voice Record / Attachment toggles this test
+    // used to also assert were unaffected — they no longer exist on the
+    // Embed tab at all, so there is nothing left to check them against.)
+    test('embed tab Show Catalogue toggle flips', async ({
       editMentorPage,
     }) => {
       await editMentorPage.open('Embed');
@@ -215,17 +224,6 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
 
       const original = await editMentorPage.embed.getShowCatalogueState();
 
-      // Capture sibling toggle states before touching Show Catalogue.
-      const voiceCallBefore = await editMentorPage.embed.voiceCallToggle
-        .getAttribute('aria-checked')
-        .catch(() => null);
-      const voiceRecordBefore = await editMentorPage.embed.voiceRecordToggle
-        .getAttribute('aria-checked')
-        .catch(() => null);
-      const attachmentBefore = await editMentorPage.embed.attachmentToggle
-        .getAttribute('aria-checked')
-        .catch(() => null);
-
       // Toggle Show Catalogue and confirm the switch flips.
       await editMentorPage.embed.toggleShowCatalogue();
       await expect(editMentorPage.embed.showCatalogueToggle).toHaveAttribute(
@@ -233,26 +231,6 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
         original ? 'false' : 'true',
         { timeout: 5_000 },
       );
-
-      // Sibling toggles must be unchanged after toggling Show Catalogue.
-      if (voiceCallBefore !== null) {
-        await expect(editMentorPage.embed.voiceCallToggle).toHaveAttribute(
-          'aria-checked',
-          voiceCallBefore,
-        );
-      }
-      if (voiceRecordBefore !== null) {
-        await expect(editMentorPage.embed.voiceRecordToggle).toHaveAttribute(
-          'aria-checked',
-          voiceRecordBefore,
-        );
-      }
-      if (attachmentBefore !== null) {
-        await expect(editMentorPage.embed.attachmentToggle).toHaveAttribute(
-          'aria-checked',
-          attachmentBefore,
-        );
-      }
 
       // Restore the original state (UI only — nothing is persisted).
       await editMentorPage.embed.setShowCatalogue(original);
@@ -932,6 +910,71 @@ test.describe('Journey 13: Shareable Links & Embed Integration', () => {
         timeout: 10_000,
       });
 
+      await editMentorPage.close();
+    });
+  });
+
+  // Issue #2476: Settings -> Discovery and the Embed tab used to write the
+  // SAME mentor_visibility / allow_anonymous fields from two independent
+  // forms — saving the Embed tab could silently revert a visibility change
+  // just made in Settings. The fix removes the Embed tab's "Who Can View?" /
+  // "Who Can Chat?" controls (and the embed_show_* capability toggles)
+  // entirely; Settings -> Discovery is now the sole owner of both fields.
+  // This is the direct regression guard for that bug.
+  test.describe('Embed save does not clobber Settings -> Discovery visibility (issue #2476)', () => {
+    const visibilityTracker = new MentorTracker();
+
+    test.afterAll(async ({ browser }, testInfo) => {
+      await visibilityTracker.deleteAll(browser, testInfo);
+    });
+
+    // emb-18: set a distinctive, non-default visibility via Settings ->
+    // Discovery, save an unrelated Embed tab form, then confirm the
+    // visibility set in Settings still holds — proving the Embed tab no
+    // longer has (or writes) a competing mentor_visibility field.
+    test('embed tab save does not overwrite mentor visibility set in Settings -> Discovery', async ({
+      page,
+      createMentorPage,
+      editMentorPage,
+    }) => {
+      test.setTimeout(240_000);
+
+      await createMentorPage.openAndCreate(
+        `E2E Embed Visibility ${Date.now()}`,
+      );
+      const { mentorId } = await getPlatformContext(page);
+      visibilityTracker.add(mentorId);
+
+      // Set a distinctive, non-default visibility via Settings -> Discovery.
+      await editMentorPage.open('Settings');
+      await waitForPageReady(page);
+      await editMentorPage.settings.setVisibility('Administrators');
+      await expect(editMentorPage.settings.saveButton).toBeEnabled({
+        timeout: 5_000,
+      });
+      await editMentorPage.settings.saveButton.click();
+      await expect(
+        page.getByText(/agent updated successfully/i).first(),
+      ).toBeVisible({ timeout: 30_000 });
+      await editMentorPage.close();
+
+      // Save the (unrelated) Embed tab form. A non-anonymous mentor requires
+      // a Website URL before "Create Embed" will persist anything.
+      await editMentorPage.open('Embed');
+      await waitForPageReady(page);
+      await editMentorPage.embed.fillWebsiteUrl('https://example.com');
+      await editMentorPage.embed.submit();
+      await editMentorPage.close();
+
+      // The Embed tab no longer has — or writes — mentor_visibility at all;
+      // Settings -> Discovery must still read back the value set above.
+      await editMentorPage.open('Settings');
+      await waitForPageReady(page);
+      await editMentorPage.settings.selectSubTab('Discovery');
+      await expect(editMentorPage.settings.visibilityCombobox).toContainText(
+        /Administrators/i,
+        { timeout: 15_000 },
+      );
       await editMentorPage.close();
     });
   });

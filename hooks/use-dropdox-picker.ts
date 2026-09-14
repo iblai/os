@@ -28,6 +28,7 @@ const useDropboxPicker = ({
   const [dropboxReady, setDropboxReady] = useState(false);
   const [openChooser, setOpenChooser] = useState(false);
   const [appKey, setAppKey] = useState(null);
+  const [credentialsLoaded, setCredentialsLoaded] = useState(false);
 
   // Use RTK Query hooks
   const [getCredentials] = useLazyGetCredentialsQuery();
@@ -55,6 +56,7 @@ const useDropboxPicker = ({
         } catch (error) {
           console.error(JSON.stringify({ tenant: tenantKey, error }));
         }
+        setCredentialsLoaded(true);
       }
     };
 
@@ -170,6 +172,8 @@ const useDropboxPicker = ({
     openChooser: onChoose,
     dropboxReady,
     appKey,
+    credentialsLoaded,
+    isConfigured: Boolean(appKey),
   };
 };
 
