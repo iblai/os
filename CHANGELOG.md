@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.146.3](https://github.com/iblai/os/compare/v0.146.2...v0.146.3) (2026-09-14)
+
+### Tests
+
+* **e2e:** direct-mentor-URL redirect invariant (Journey 32, mt-12..15) ([9868899](https://github.com/iblai/os/commit/98688996d42eb73a49c37b8c3372d8443abd0557))
+
 ## [0.146.2](https://github.com/iblai/os/compare/v0.146.1...v0.146.2) (2026-09-14)
 
 ### Bug Fixes
