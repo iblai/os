@@ -803,20 +803,22 @@ async fn ensure_session(
     // write); the snapshot this function writes back must be taken after
     // that, or the minted folder is lost and the next turn mints again.
     let dir = ensure_directory(session_id, tenant, mentor).await;
-    let mut cfg = read_config();
-    if let Some(remote) = cfg.sessions.get(session_id) {
-        // Reuse only if the session lives where this turn will look for it.
-        // (Sessions recorded before session_dirs existed have no entry and
-        // are trusted, so an upgrade never churns existing chats.)
-        let stale = cfg
-            .session_dirs
-            .get(session_id)
-            .is_some_and(|created_in| Some(created_in) != dir.as_ref());
-        if !stale {
-            return Ok(remote.clone());
+    {
+        let cfg = read_config();
+        if let Some(remote) = cfg.sessions.get(session_id) {
+            // Reuse only if the session lives where this turn will look for
+            // it. (Sessions recorded before session_dirs existed have no
+            // entry and are trusted, so an upgrade never churns existing
+            // chats.)
+            let stale = cfg
+                .session_dirs
+                .get(session_id)
+                .is_some_and(|created_in| Some(created_in) != dir.as_ref());
+            if !stale {
+                return Ok(remote.clone());
+            }
+            println!("[RemoteCode] session for {session_id} lives in another folder; recreating");
         }
-        println!("[RemoteCode] session for {session_id} lives in another folder; recreating");
-        cfg.sessions.remove(session_id);
     }
     // A chosen folder scopes the session via opencode's documented
     // `?directory=` parameter; without one the server's default project (the
@@ -832,6 +834,13 @@ async fn ensure_session(
         .and_then(|i| i.as_str())
         .ok_or("desktop did not return a session id")?
         .to_string();
+    // Re-read AFTER the network round-trip and merge only THIS chat's two
+    // entries: a snapshot taken before the await carried every other chat's
+    // state across it, so a config write in that window (another chat
+    // creating its session, a folder pick, a re-pair) was silently undone —
+    // that chat's next turn found no session and minted a second one, and
+    // its conversation was gone.
+    let mut cfg = read_config();
     cfg.sessions.insert(session_id.to_string(), remote.clone());
     match &dir {
         Some(d) => {
@@ -2446,6 +2455,75 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(again, "ses_minted");
+    }
+
+    /// The bug this pins (PR review round 5, blocking): `ensure_session`
+    /// snapshotted the config, awaited the session-create request, then
+    /// wrote the whole snapshot back — so a config write that landed during
+    /// that request (here: chat B recording its own new session, the
+    /// "send in A, switch to B, send" flow) was overwritten. B's next turn
+    /// then found no session, minted a second server session, and its
+    /// conversation was lost. The fake server blocks A's create until B has
+    /// written, so the window is hit deterministically.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn a_session_created_during_another_chats_create_request_is_kept() {
+        let _guard = CONFIG_TEST_LOCK.lock().await;
+        // The create request for chat A parks until this is released.
+        let gate = Arc::new(tokio::sync::Notify::new());
+        let gate_route = gate.clone();
+        let app = Router::new().route(
+            "/session",
+            post(move |Json(body): Json<Value>| {
+                let gate = gate_route.clone();
+                async move {
+                    if body["title"] == "Phone chat" {
+                        gate.notified().await;
+                    }
+                    Json(json!({ "id": "ses_a" }))
+                }
+            }),
+        );
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        let base = format!("http://{addr}");
+        test_config(&base);
+
+        // Chat A starts creating its session and is now parked inside the
+        // request, holding whatever snapshot it took.
+        let base_a = base.clone();
+        let turn_a =
+            tokio::spawn(
+                async move { ensure_session(&base_a, "pw", "chat-a", None, None, None).await },
+            );
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+
+        // Meanwhile chat B records its own session — the exact write the
+        // old snapshot used to clobber.
+        let mut cfg = read_config();
+        cfg.sessions.insert("chat-b".into(), "ses_b".into());
+        cfg.session_dirs
+            .insert("chat-b".into(), "/desktop/b".into());
+        write_config(&cfg).unwrap();
+
+        gate.notify_one();
+        let remote_a = turn_a.await.unwrap().unwrap();
+        assert_eq!(remote_a, "ses_a");
+
+        let cfg = read_config();
+        assert_eq!(
+            cfg.sessions.get("chat-b").map(String::as_str),
+            Some("ses_b"),
+            "chat B's session must survive chat A's write-back"
+        );
+        assert_eq!(
+            cfg.session_dirs.get("chat-b").map(String::as_str),
+            Some("/desktop/b")
+        );
+        assert_eq!(
+            cfg.sessions.get("chat-a").map(String::as_str),
+            Some("ses_a")
+        );
     }
 
     /// The bug this pins (PR review finding): scanning ANOTHER desktop's QR
