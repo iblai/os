@@ -160,10 +160,11 @@ test.describe('Journey 6: Mentor Management — Admin', () => {
     await editMentorPage.close();
   });
 
-  // Issue #2318 regression guard: getLLMProviderDetails had no `iblai` entry
-  // so the card fell through to the generic default logo/label. Skips
-  // gracefully if this tenant's LLM list doesn't include the ibl.ai provider.
-  test('admin goes to edit mentor LLM tab and sees the ibl.ai provider card with its own logo and label', async ({
+  // Issue #2318 regression guard: the ibl.ai card used to fall through to a
+  // generic default label. The label now comes from the backend registry's
+  // `display_name` (issue #2502). Skips gracefully if this tenant's LLM list
+  // doesn't include the ibl.ai provider.
+  test('admin goes to edit mentor LLM tab and sees the ibl.ai provider card with its own label', async ({
     page,
     editMentorPage,
   }) => {
@@ -188,18 +189,10 @@ test.describe('Journey 6: Mentor Management — Admin', () => {
 
     // The label span is always LAST in DOM order — a provider with no
     // backend logo renders a placeholder `<span role="img">` (single-letter
-    // initial) ahead of it inside the logo wrapper (issue #2502).
+    // initial) ahead of it inside the logo wrapper (issue #2502). Only the
+    // label is asserted: the logo is backend registry data now (null on
+    // environments that have not uploaded one), not something the app owns.
     await expect(iblaiCard.locator('span').last()).toHaveText('ibl.ai');
-
-    const logo = iblaiCard.locator('img');
-    await expect(logo).toBeVisible();
-    const naturalWidth = await logo.evaluate(
-      (img: HTMLImageElement) => img.naturalWidth,
-    );
-    expect(
-      naturalWidth,
-      'ibl.ai provider logo failed to load (naturalWidth 0 renders blank — the #2318 bug signature)',
-    ).toBeGreaterThan(0);
 
     await editMentorPage.close();
   });
