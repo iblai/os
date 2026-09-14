@@ -4,9 +4,11 @@ import userEvent from '@testing-library/user-event';
 import { AppUpdatePrompt } from '../app-update-prompt';
 
 /**
- * The update prompt's contract: check once (throttled), prompt only for a
- * real, un-skipped update, and route the Update button per platform —
- * install-in-place on desktop (no `url`), store page on mobile (`url`).
+ * The update prompt's contract: check on EVERY open of the app, prompt
+ * whenever a newer version exists (no skip, no day-long throttle), let
+ * "Later" silence it for the current session only, and route the Update
+ * button per platform — install-in-place on desktop (no `url`), store page on
+ * mobile (`url`).
  */
 
 const { invoke, listen, openUrl, isTauri } = vi.hoisted(() => ({
@@ -40,10 +42,14 @@ function backend(update: unknown) {
   });
 }
 
+const checks = () =>
+  invoke.mock.calls.filter(([cmd]) => cmd === 'check_app_update').length;
+
 describe('AppUpdatePrompt', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    sessionStorage.clear();
     isTauri.current = true;
   });
 
@@ -71,36 +77,60 @@ describe('AppUpdatePrompt', () => {
     expect(screen.getByText('description 0.96.0')).toBeInTheDocument();
   });
 
-  it('throttles: no second check within 24 hours', async () => {
-    localStorage.setItem('ibl_app_update_last_check', String(Date.now()));
+  it('offers only Later and Update Now — no "skip this version"', async () => {
     backend({ available: true, version: '0.96.0' });
-    const { container } = render(<AppUpdatePrompt />);
-    await Promise.resolve();
-    expect(invoke).not.toHaveBeenCalled();
-    expect(container).toBeEmptyDOMElement();
+    render(<AppUpdatePrompt />);
+    await screen.findByTestId('app-update-prompt');
+    const names = screen.getAllByRole('button').map((b) => b.textContent);
+    expect(names).toEqual(['later', 'updateNow']);
   });
 
-  it('respects a skipped version, but prompts for a newer one', async () => {
-    localStorage.setItem('ibl_app_update_skip_version', '0.96.0');
+  it('checks on every open of the app, not once a day', async () => {
+    // The old persistent 24 h throttle hid an update the user never acted on
+    // (the SSO round-trip reloads the page right after sign-in, unmounting
+    // the prompt; the remount then saw "checked recently" and stayed quiet).
     backend({ available: true, version: '0.96.0' });
-    const { container, unmount } = render(<AppUpdatePrompt />);
-    await waitFor(() => expect(invoke).toHaveBeenCalled());
-    expect(container).toBeEmptyDOMElement();
-    unmount();
+    const first = render(<AppUpdatePrompt />);
+    await first.findByTestId('app-update-prompt');
+    first.unmount();
 
-    localStorage.removeItem('ibl_app_update_last_check');
-    backend({ available: true, version: '0.97.0' });
+    render(<AppUpdatePrompt />);
+    expect(await screen.findByTestId('app-update-prompt')).toBeInTheDocument();
+    expect(checks()).toBe(2);
+    // …and it left nothing behind in persistent storage to throttle on.
+    expect(localStorage.length).toBe(0);
+  });
+
+  it('Later hides the prompt for the rest of this session only', async () => {
+    backend({ available: true, version: '0.96.0' });
+    const first = render(<AppUpdatePrompt />);
+    await first.findByTestId('app-update-prompt');
+    await userEvent.click(screen.getByRole('button', { name: 'later' }));
+    expect(screen.queryByTestId('app-update-prompt')).toBeNull();
+    first.unmount();
+
+    // Same session (a reload): still checks, still quiet.
+    const second = render(<AppUpdatePrompt />);
+    await waitFor(() => expect(checks()).toBe(2));
+    expect(second.container).toBeEmptyDOMElement();
+    second.unmount();
+
+    // Next launch (sessionStorage gone): asks again.
+    sessionStorage.clear();
     render(<AppUpdatePrompt />);
     expect(await screen.findByTestId('app-update-prompt')).toBeInTheDocument();
   });
 
-  it('Skip This Version persists and dismisses', async () => {
+  it('a newer version than the one deferred prompts again in the same session', async () => {
     backend({ available: true, version: '0.96.0' });
+    const first = render(<AppUpdatePrompt />);
+    await first.findByTestId('app-update-prompt');
+    await userEvent.click(screen.getByRole('button', { name: 'later' }));
+    first.unmount();
+
+    backend({ available: true, version: '0.97.0' });
     render(<AppUpdatePrompt />);
-    await screen.findByTestId('app-update-prompt');
-    await userEvent.click(screen.getByRole('button', { name: 'skip' }));
-    expect(localStorage.getItem('ibl_app_update_skip_version')).toBe('0.96.0');
-    expect(screen.queryByTestId('app-update-prompt')).toBeNull();
+    expect(await screen.findByText('description 0.97.0')).toBeInTheDocument();
   });
 
   it('desktop: Update Now runs the in-place install command', async () => {
@@ -137,13 +167,14 @@ describe('AppUpdatePrompt', () => {
       expect.anything(),
     );
     expect(invoke).not.toHaveBeenCalledWith('install_app_update');
-    // The store owns the rest — the prompt goes away.
+    // The store owns the rest — the prompt goes away for this session.
     expect(screen.queryByTestId('app-update-prompt')).toBeNull();
+    expect(sessionStorage.getItem('ibl_app_update_later')).toBe('1.2.0');
   });
 
   it('mobile: a failed store hand-off keeps the prompt and shows why', async () => {
     // Before the fix the prompt dismissed BEFORE the opener resolved, so a
-    // blocked/failed open lost the prompt for a day with no feedback.
+    // blocked/failed open lost the prompt with no feedback.
     backend({
       available: true,
       version: '1.2.0',
@@ -155,16 +186,7 @@ describe('AppUpdatePrompt', () => {
     await userEvent.click(screen.getByRole('button', { name: 'updateNow' }));
     expect(await screen.findByText('no handler for URL')).toBeInTheDocument();
     expect(screen.getByTestId('app-update-prompt')).toBeInTheDocument();
-  });
-
-  it('Later dismisses without skipping the version', async () => {
-    backend({ available: true, version: '0.96.0' });
-    render(<AppUpdatePrompt />);
-    await screen.findByTestId('app-update-prompt');
-    await userEvent.click(screen.getByRole('button', { name: 'later' }));
-    expect(screen.queryByTestId('app-update-prompt')).toBeNull();
-    // Not a skip: the same version prompts again on the next check.
-    expect(localStorage.getItem('ibl_app_update_skip_version')).toBeNull();
+    expect(sessionStorage.getItem('ibl_app_update_later')).toBeNull();
   });
 
   it('desktop: sized progress events drive the download bar', async () => {
@@ -218,5 +240,8 @@ describe('AppUpdatePrompt', () => {
     await userEvent.click(screen.getByRole('button', { name: 'updateNow' }));
     expect(await screen.findByText('download failed')).toBeInTheDocument();
     expect(screen.getByTestId('app-update-prompt')).toBeInTheDocument();
+    // Buttons come back so the user can retry or defer.
+    expect(screen.getByRole('button', { name: 'updateNow' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'later' })).toBeEnabled();
   });
 });

@@ -2432,7 +2432,6 @@
     "description": "Version {version} is ready to install. You are running an older version.",
     "updateNow": "Update Now",
     "updating": "Updating…",
-    "later": "Later",
-    "skip": "Skip This Version"
+    "later": "Later"
   }
 }

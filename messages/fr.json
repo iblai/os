@@ -2432,7 +2432,6 @@
     "description": "La version {version} est prête à être installée. Vous utilisez une version plus ancienne.",
     "updateNow": "Mettre à jour",
     "updating": "Mise à jour…",
-    "later": "Plus tard",
-    "skip": "Ignorer cette version"
+    "later": "Plus tard"
   }
 }

@@ -54,7 +54,7 @@ re-renders).
 release-build updater endpoint to point at, and the mobile halves open real
 store pages. Coverage lives in the Rust `app_update` `mod tests` (version
 comparison, iTunes lookup parsing, Play listing parsing) and the
-`app-update-prompt` Vitest suite (throttle, skip-version persistence,
+`app-update-prompt` Vitest suite (check on every open, session-only "Later",
 desktop install vs mobile store routing, install-failure surfacing). The CI
 halves — signing env + `latest-<target>-<arch>.json` publishing — live in the
 two vendored release workflows and are exercised by real releases.

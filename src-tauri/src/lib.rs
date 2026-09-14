@@ -890,13 +890,24 @@ async fn stop_ollama(app: AppHandle) -> Result<(), String> {
 /// the lock across threads. `run_on_main_thread` only posts to the event loop (it
 /// does not block and preserves FIFO order), so it is safe to call from async
 /// code and keeps streamed events (e.g. `ollama:token`) in order.
-fn emit_on_main<S>(app: &AppHandle, event: &'static str, payload: S)
+///
+/// On iOS this is not a race but a certain deadlock once the timing lines up:
+/// with tauri's `tracing` feature on (pulled in by `tauri-plugin-devtools`, in
+/// every profile), `Webview::eval` is a blocking round-trip to the main thread
+/// (`tauri-runtime-wry`'s `getter!` path), and `emit` performs it while
+/// holding the webview-manager mutex — so a worker emitting while the main
+/// thread is inside IPC or a window event (both take that mutex) hangs both,
+/// and the watchdog kills the app after 10 s (`0x8BADF00D`; crash reports of
+/// 2026-09-14 23:30 and 2026-09-15 00:59 during phone Code turns). Every
+/// background emit on mobile must go through here.
+pub(crate) fn emit_on_main<S>(app: &AppHandle, event: &str, payload: S)
 where
     S: serde::Serialize + Clone + Send + 'static,
 {
     let handle = app.clone();
+    let name = event.to_string();
     if let Err(err) = app.run_on_main_thread(move || {
-        let _ = handle.emit(event, payload);
+        let _ = handle.emit(&name, payload);
     }) {
         eprintln!("[emit_on_main] could not schedule '{event}' on main thread: {err}");
     }
@@ -1506,8 +1517,12 @@ async fn ollama_chat_stream(
         messages.len()
     );
 
+    // Inactivity bound, not a total one: a streamed reply is alive as long
+    // as bytes keep arriving. A total timeout cut on-device generation
+    // (an embedded 3B model on an older phone runs a long reply for many
+    // minutes) mid-reply with "error decoding response body".
     let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(300))
+        .read_timeout(std::time::Duration::from_secs(300))
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
 
@@ -3154,6 +3169,16 @@ pub fn run() {
     ]);
 
     builder
-        .run(tauri::generate_context!())
-        .expect("error while running tauri app");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri app")
+        .run(|_app, _event| {
+            // Same exit hook as main.rs: the phone-access opencode server
+            // must die with the app (an orphan with a dead password poisons
+            // opencode's machine-global coordination for every later one).
+            // Desktop only — `remote_code` is not compiled for mobile.
+            #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+            if let tauri::RunEvent::Exit = _event {
+                remote_code::shutdown_sync();
+            }
+        });
 }

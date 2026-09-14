@@ -10,9 +10,10 @@
 //! reachability is the point — so a password is always set, never optional.
 //!
 //! Lifecycle: `remote_code_enable` is idempotent (re-enabling returns the
-//! running host), `remote_code_disable` kills it. Like the other managed
-//! children (Ollama, the MCP bridge) the process is not yet reaped on app
-//! exit; a RunEvent-based cleanup is a known follow-up.
+//! running host, restarting it only when the platform/tenant changed),
+//! `remote_code_disable` kills it, and both entry points (`main.rs` and
+//! `lib.rs`) reap it from their `RunEvent::Exit` handler via
+//! [`shutdown_sync`].
 
 use serde::Serialize;
 use std::net::{IpAddr, TcpListener};
@@ -33,12 +34,41 @@ struct Host {
     /// Loopback-proxy secret registered for this host; unregistered on disable
     /// so the credentials don't outlive the server.
     proxy_secret: String,
+    /// Which platform tenant / API base the served config was provisioned
+    /// for (its model catalog and upstream). A re-enable for a different
+    /// pair restarts the server: the running one only knows the previous
+    /// platform's model ids, and an unknown id dies as a silent async
+    /// ProviderModelNotFoundError — no event, no message, just a phone turn
+    /// spinning to its deadline.
+    tenant: String,
+    api_base: String,
+    /// The AGENTS.md guidance (policy + per-user identity lines) last
+    /// written for this host; refreshed in place when the signed-in user
+    /// changes, since opencode re-reads the file on every model call.
+    guidance: String,
     /// Companion workspace-management API (see [`companion_router`]).
     companion_port: u16,
     companion: tauri::async_runtime::JoinHandle<()>,
 }
 
 static HOST: Mutex<Option<Host>> = Mutex::new(None);
+
+/// Serializes `remote_code_enable` end to end. Two concurrent enables (the
+/// launch auto-restore racing the popover's Enable) each provisioned the
+/// shared serve config with their OWN proxy secret; the loser then
+/// unregistered its secret while the config still named it, and every
+/// phone turn 401'd until the next enable.
+static ENABLE_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
+/// The served process's nominal model: the loopback "iblai" provider with a
+/// placeholder id; the tenant's real catalog is registered on top.
+fn serve_model_spec() -> crate::opencode_acp::ModelSpec {
+    crate::opencode_acp::ModelSpec {
+        provider: "iblai",
+        model: "openai/gpt-4o".to_string(),
+        local: false,
+    }
+}
 
 /// What the pairing UI shows: where to connect and with which credential.
 /// `urls` lists every candidate (one per LAN interface), primary first — the
@@ -103,6 +133,16 @@ fn free_port() -> Result<u16, String> {
         .and_then(|l| l.local_addr())
         .map(|a| a.port())
         .map_err(|e| format!("no bindable port for remote code: {e}"))
+}
+
+/// The companion's listener: the serve port's neighbour when free, else any
+/// OS-assigned port. `checked_add`: a serve port of 65535 has no neighbour —
+/// fall through instead of wrapping to 0 (a debug panic, a random port in
+/// release).
+fn companion_listener_for(port: u16) -> std::io::Result<TcpListener> {
+    port.checked_add(1)
+        .and_then(|p| TcpListener::bind(("0.0.0.0", p)).ok())
+        .map_or_else(|| TcpListener::bind("0.0.0.0:0"), Ok)
 }
 
 impl Host {
@@ -525,43 +565,97 @@ pub async fn remote_code_enable(
     token: String,
     api_base: Option<String>,
 ) -> Result<RemoteCodeStatus, String> {
+    let _serialized = ENABLE_LOCK.lock().await;
     {
-        let secret = {
+        let running = {
             let mut host = HOST.lock().expect("remote code lock");
             let st = status_locked(&mut host);
             if st.running {
-                host.as_ref().map(|h| (h.proxy_secret.clone(), st))
+                host.as_ref().map(|h| {
+                    (
+                        h.proxy_secret.clone(),
+                        h.tenant.clone(),
+                        h.api_base.clone(),
+                        h.guidance.clone(),
+                        st,
+                    )
+                })
             } else {
                 None
             }
         };
-        if let Some((secret, st)) = secret {
+        if let Some((secret, host_tenant, host_api_base, host_guidance, st)) = running {
             // Already running: re-register the proxy upstream + token. The
             // token expires (a stale one makes every phone turn spin in
             // silent model retries), and the upstream embeds the TENANT — a
             // desktop tenant switch used to leave phone turns sending the
             // new tenant's token to the old tenant's org URL (401 forever).
-            if !tenant.trim().is_empty() && !token.trim().is_empty() {
-                let api_base = resolve_api_base(api_base.clone()).await;
+            if tenant.trim().is_empty() || token.trim().is_empty() {
+                if !token.trim().is_empty() {
+                    crate::opencode_proxy::set_token(&secret, &token).await;
+                }
+                return Ok(st);
+            }
+            let api_base = resolve_api_base(api_base.clone()).await;
+            if host_tenant == tenant && host_api_base == api_base {
                 let upstream = upstream_for(&api_base, &tenant);
                 crate::opencode_proxy::register(&secret, upstream, token.clone()).await;
-            } else if !token.trim().is_empty() {
-                crate::opencode_proxy::set_token(&secret, &token).await;
+                // Same platform, possibly a different signed-in user: the
+                // identity lines live in AGENTS.md, which the served process
+                // re-reads on every model call — rewrite that file alone.
+                // (opencode.json is NOT touched: a running serve never
+                // re-reads it, verified against the pinned binary.)
+                let guidance = crate::opencode_proxy::guidance_with_identity(&tenant).await;
+                if guidance != host_guidance {
+                    crate::opencode_acp::write_iblai_guidance(
+                        &crate::opencode_acp::config_home(SERVE_CONFIG_KEY),
+                        Some(guidance.as_str()),
+                    )?;
+                    if let Some(h) = HOST.lock().expect("remote code lock").as_mut() {
+                        h.guidance = guidance;
+                    }
+                }
+                return Ok(st);
             }
-            return Ok(st);
+            // A different platform/tenant: the served config only registers
+            // the PREVIOUS catalog, so restart on the same port + password
+            // (both persisted) — paired phones never notice.
+            println!(
+                "[RemoteCode] platform changed ({host_tenant}@{host_api_base} -> \
+                 {tenant}@{api_base}); restarting phone Code"
+            );
+            let secret = {
+                let mut host = HOST.lock().expect("remote code lock");
+                host.take().map(Host::teardown)
+            };
+            if let Some(secret) = secret {
+                crate::opencode_proxy::unregister(&secret).await;
+            }
         }
     }
     // A serve child orphaned by a force-killed app poisons opencode's
     // machine-global coordination — reap it before starting fresh. Zombies
     // squatting the preferred ports also push the new server onto random
-    // ports while phones stay paired to the corpse.
+    // ports while phones stay paired to the corpse. The port a previous
+    // enable actually bound (persisted; not necessarily the preferred one)
+    // gets the same treatment, or an orphan there pushes THIS enable onto
+    // yet another port and every phone's stored address goes stale.
     // lsof/ps/kill are blocking process spawns — keep them off the async
     // runtime's worker threads (this also runs at every launch via
     // auto_enable).
-    let _ = tokio::task::spawn_blocking(|| {
+    let persisted_port = read_persisted().port;
+    let _ = tokio::task::spawn_blocking(move || {
         reap_stale_serve();
-        reap_port_squatter(PREFERRED_PORT);
-        reap_port_squatter(PREFERRED_PORT + 1);
+        let mut ports = vec![PREFERRED_PORT];
+        if let Some(p) = persisted_port.filter(|p| *p != PREFERRED_PORT) {
+            ports.push(p);
+        }
+        for p in ports {
+            reap_port_squatter(p);
+            if let Some(companion) = p.checked_add(1) {
+                reap_port_squatter(companion);
+            }
+        }
     })
     .await;
 
@@ -591,11 +685,7 @@ pub async fn remote_code_enable(
     // permission policy pinned to "ask" (the phone answers the prompts), the
     // result-only build prompt, and the synced skills — all via the same
     // config writer ACP spawns use.
-    let spec = crate::opencode_acp::ModelSpec {
-        provider: "iblai",
-        model: "openai/gpt-4o".to_string(),
-        local: false,
-    };
+    let spec = serve_model_spec();
     crate::opencode_acp::apply_opencode_model(
         SERVE_CONFIG_KEY,
         None,
@@ -654,8 +744,7 @@ pub async fn remote_code_enable(
         write_persisted(&persisted);
         // Companion right next door (port+1 when free) so a manually-typed
         // pairing can find it; the QR carries the exact port either way.
-        let companion_listener = TcpListener::bind(("0.0.0.0", port + 1))
-            .or_else(|_| TcpListener::bind("0.0.0.0:0"))
+        let companion_listener = companion_listener_for(port)
             .map_err(|e| format!("no port for workspace management: {e}"))?;
         companion_listener
             .set_nonblocking(true)
@@ -699,6 +788,9 @@ pub async fn remote_code_enable(
             port,
             password,
             proxy_secret: proxy_secret.clone(),
+            tenant: tenant.clone(),
+            api_base: api_base.clone(),
+            guidance: guidance.clone(),
             companion_port,
             companion,
         });
@@ -813,6 +905,14 @@ pub async fn remote_code_disable() -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn the_companion_falls_through_when_the_serve_port_has_no_neighbour() {
+        // 65535 + 1 used to overflow the u16 (panic in debug, port 0 in
+        // release, i.e. a random port instead of the neighbour).
+        let listener = super::companion_listener_for(65535).expect("some port binds");
+        assert_ne!(listener.local_addr().unwrap().port(), 0);
+    }
+
     #[tokio::test]
     async fn an_armed_secret_guard_unregisters_on_drop() {
         // The bug this pins (PR review finding): every `?` between proxy
@@ -992,6 +1092,9 @@ mod tests {
             port: 4242,
             password: "pw".into(),
             proxy_secret: "sec".into(),
+            tenant: "acme".into(),
+            api_base: "https://acme.example".into(),
+            guidance: String::new(),
             companion_port: 4243,
             // A future that never completes on its own — only status_locked's
             // abort() can finish it, so the is_finished assertion below

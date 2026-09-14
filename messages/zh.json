@@ -2432,7 +2432,6 @@
     "description": "版本 {version} 已可安装。您正在使用旧版本。",
     "updateNow": "立即更新",
     "updating": "正在更新…",
-    "later": "稍后",
-    "skip": "跳过此版本"
+    "later": "稍后"
   }
 }

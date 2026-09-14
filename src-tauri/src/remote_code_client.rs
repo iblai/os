@@ -23,7 +23,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use tauri::command;
 #[cfg(any(target_os = "ios", target_os = "android"))]
-use tauri::{AppHandle, Emitter};
+use tauri::AppHandle;
 
 /// Where the pairing (and per-chat session map) persists. Set once at app
 /// setup on mobile; absent on desktop, where none of this is registered.
@@ -276,7 +276,8 @@ fn normalize_url(u: &str) -> String {
 fn companion_of(url: &str) -> Option<String> {
     let (base, port) = url.rsplit_once(':')?;
     let p: u16 = port.parse().ok()?;
-    Some(format!("{base}:{}", p + 1))
+    let p = p.checked_add(1)?;
+    Some(format!("{base}:{p}"))
 }
 
 /// Pair with a desktop: verify the URL + password actually answer, then
@@ -318,6 +319,33 @@ pub async fn remote_code_set_host(
     }
 
     let mut cfg = read_config();
+    // Session and folder maps hold ids/absolute paths that belong to ONE
+    // desktop. Re-pairing with another machine (scanning desktop B's QR
+    // while A is unreachable never passes through clear_host) must drop
+    // them, or every turn scopes itself to a folder that does not exist
+    // there. Same desktop = the new address is one we already know, or
+    // the new payload lists the address we were paired to.
+    let known_addresses: Vec<String> = urls
+        .clone()
+        .unwrap_or_default()
+        .iter()
+        .map(|u| normalize_url(u))
+        .chain(std::iter::once(url.clone()))
+        .collect();
+    let same_desktop = cfg.url.is_none()
+        || cfg.url.as_deref() == Some(url.as_str())
+        || cfg.alt_urls.contains(&url)
+        || cfg
+            .url
+            .as_ref()
+            .is_some_and(|stored| known_addresses.iter().any(|u| u == stored));
+    if !same_desktop {
+        println!("[RemoteCode] pairing moved to another desktop; forgetting its folders");
+        cfg.sessions.clear();
+        cfg.session_dirs.clear();
+        cfg.directories.clear();
+        cfg.mentor_directories.clear();
+    }
     cfg.url = Some(url.clone());
     cfg.password = Some(password);
     cfg.mgmt = mgmt_url;
@@ -681,12 +709,6 @@ pub async fn opencode_chat_stream(
     )
     .await;
     println!("[RemoteCode] turn finished: gen={generation_id} result={result:?}");
-    if let Err(e) = &result {
-        sink.emit(
-            "ollama:error",
-            json!({ "generation_id": generation_id, "error": e }),
-        );
-    }
     result
 }
 
@@ -702,7 +724,11 @@ struct TauriSink(AppHandle);
 #[cfg(any(target_os = "ios", target_os = "android"))]
 impl EventSink for TauriSink {
     fn emit(&self, event: &str, payload: Value) {
-        let _ = self.0.emit(event, payload);
+        // NEVER `self.0.emit` here: the turn runs on a tokio worker, and a
+        // direct emit from a worker deadlocks the app on iOS (see
+        // `crate::emit_on_main` — the phone's Code-mode freezes were exactly
+        // this, per the watchdog crash reports).
+        crate::emit_on_main(&self.0, event, payload);
     }
 }
 
@@ -773,8 +799,11 @@ async fn ensure_session(
     new_chat_key: Option<&str>,
 ) -> Result<String, String> {
     migrate_chat_key(session_id, new_chat_key);
-    let mut cfg = read_config();
+    // ensure_directory may mint a folder and RECORD it (its own config
+    // write); the snapshot this function writes back must be taken after
+    // that, or the minted folder is lost and the next turn mints again.
     let dir = ensure_directory(session_id, tenant, mentor).await;
+    let mut cfg = read_config();
     if let Some(remote) = cfg.sessions.get(session_id) {
         // Reuse only if the session lives where this turn will look for it.
         // (Sessions recorded before session_dirs existed have no entry and
@@ -908,6 +937,86 @@ async fn session_is_idle(base: &str, pw: &str, remote: &str, dir: Option<&str>) 
 /// call, permission, done, error) so ordering matches what the desktop
 /// emits — text/reasoning that arrived before the event must render
 /// before it.
+/// opencode's `question` tool PARKS the session: the turn cannot finish until
+/// someone answers over `/question/{id}/reply` (or rejects). The desktop's
+/// ACP path gets that as a permission request with options; over HTTP it is a
+/// `question.asked` event plus a `GET /question` list of what is pending.
+/// The phone has no question UI, so the question is rendered into the reply
+/// as numbered options, the turn ends, and the NEXT message the user types
+/// is delivered as the answer.
+async fn pending_question(base: &str, pw: &str, remote: &str, dir: Option<&str>) -> Option<Value> {
+    let list = get_json(base, pw, &scoped("/question", dir)).await.ok()?;
+    list.as_array()?
+        .iter()
+        .find(|q| q.get("sessionID").and_then(|s| s.as_str()) == Some(remote))
+        .cloned()
+}
+
+/// The option labels of one question request entry.
+fn question_labels(question: &Value) -> Vec<String> {
+    question
+        .get("options")
+        .and_then(|o| o.as_array())
+        .map(|a| {
+            a.iter()
+                .filter_map(|o| o.get("label").and_then(|l| l.as_str()))
+                .map(str::to_string)
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// What to send back for one question, from what the user typed: an option
+/// number, an option's label (or an unambiguous prefix of it), a plain
+/// yes/no for a yes/no-shaped choice — otherwise the typed text itself, as a
+/// custom answer the agent reads verbatim.
+fn answer_for(question: &Value, typed: &str) -> String {
+    let typed = typed.trim();
+    let labels = question_labels(question);
+    if labels.is_empty() {
+        return typed.to_string();
+    }
+    let bare = typed.trim_end_matches(['.', ')']).trim();
+    if !bare.is_empty() && bare.chars().all(|c| c.is_ascii_digit()) {
+        if let Some(label) = bare
+            .parse::<usize>()
+            .ok()
+            .and_then(|n| n.checked_sub(1))
+            .and_then(|i| labels.get(i))
+        {
+            return label.clone();
+        }
+    }
+    let lower = typed.to_lowercase();
+    if let Some(label) = labels.iter().find(|l| l.to_lowercase() == lower) {
+        return label.clone();
+    }
+    if lower.len() >= 3 {
+        if let Some(label) = labels.iter().find(|l| l.to_lowercase().starts_with(&lower)) {
+            return label.clone();
+        }
+    }
+    let first_word: String = lower.chars().take_while(|c| c.is_alphanumeric()).collect();
+    let yes = matches!(
+        first_word.as_str(),
+        "y" | "yes" | "yeah" | "yep" | "yup" | "sure" | "ok" | "okay" | "default" | "recommended"
+    );
+    let no = matches!(first_word.as_str(), "n" | "no" | "nope" | "nah");
+    if yes {
+        if let Some(label) = labels.iter().find(|l| {
+            l.to_lowercase().starts_with("yes") || l.to_lowercase().contains("(recommended)")
+        }) {
+            return label.clone();
+        }
+    }
+    if no {
+        if let Some(label) = labels.iter().find(|l| l.to_lowercase().starts_with("no")) {
+            return label.clone();
+        }
+    }
+    typed.to_string()
+}
+
 fn flush_stream_buffers(
     sink: &dyn EventSink,
     generation_id: &str,
@@ -973,7 +1082,42 @@ fn acp_status(status: &str) -> &'static str {
 }
 
 #[allow(clippy::too_many_arguments)]
+/// One turn end to end. The SINGLE place a failed turn is reported to the
+/// webview: every `Err` out of the engine becomes exactly one `ollama:error`
+/// (the engine's own early returns used to emit too, and the command
+/// boundary re-emitted, so the phone painted two errors per failure).
 async fn run_turn(
+    sink: &dyn EventSink,
+    session_id: &str,
+    messages: &[Value],
+    generation_id: &str,
+    model: Option<&str>,
+    tenant: Option<&str>,
+    mentor: Option<&str>,
+    new_chat_key: Option<&str>,
+) -> Result<(), String> {
+    let result = run_turn_inner(
+        sink,
+        session_id,
+        messages,
+        generation_id,
+        model,
+        tenant,
+        mentor,
+        new_chat_key,
+    )
+    .await;
+    if let Err(e) = &result {
+        sink.emit(
+            "ollama:error",
+            json!({ "generation_id": generation_id, "error": e }),
+        );
+    }
+    result
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn run_turn_inner(
     sink: &dyn EventSink,
     session_id: &str,
     messages: &[Value],
@@ -1012,33 +1156,57 @@ async fn run_turn(
     }
     let mut stream = events.bytes_stream();
 
-    let mut prompt = json!({ "parts": [{ "type": "text", "text": text }] });
-    if let Some(m) = model.clone() {
-        prompt["model"] = m;
-    }
-    let prompted = post_json(
-        &base,
-        &pw,
-        &format!("/session/{remote}/prompt_async"),
-        &prompt,
-    )
-    .await;
-    if model.is_some() && prompted.as_ref().is_err_and(|e| is_prompt_rejection(e)) {
-        // The configured provider may not list this exact model id — retry on
-        // the server's default rather than failing the turn. ONLY on a
-        // definite 4xx rejection: on a timeout or 5xx the server may already
-        // have queued the turn, and re-posting would run a (possibly
-        // destructive) instruction twice.
-        let fallback = json!({ "parts": [{ "type": "text", "text": text }] });
+    // A session parked on the agent's own question (see `pending_question`)
+    // takes the typed message AS the answer: a new prompt would queue behind
+    // the unanswered question and the agent would only ask again.
+    if let Some(request) = pending_question(&base, &pw, &remote, turn_dir.as_deref()).await {
+        let qid = request
+            .get("id")
+            .and_then(|i| i.as_str())
+            .unwrap_or_default()
+            .to_string();
+        let answers: Vec<Vec<String>> = request
+            .get("questions")
+            .and_then(|q| q.as_array())
+            .map(|qs| qs.iter().map(|q| vec![answer_for(q, &text)]).collect())
+            .unwrap_or_else(|| vec![vec![text.clone()]]);
+        println!("[RemoteCode] answering pending question {qid} with {answers:?}");
         post_json(
             &base,
             &pw,
-            &format!("/session/{remote}/prompt_async"),
-            &fallback,
+            &scoped(&format!("/question/{qid}/reply"), turn_dir.as_deref()),
+            &json!({ "answers": answers }),
         )
         .await?;
     } else {
-        prompted?;
+        let mut prompt = json!({ "parts": [{ "type": "text", "text": text }] });
+        if let Some(m) = model.clone() {
+            prompt["model"] = m;
+        }
+        let prompted = post_json(
+            &base,
+            &pw,
+            &format!("/session/{remote}/prompt_async"),
+            &prompt,
+        )
+        .await;
+        if model.is_some() && prompted.as_ref().is_err_and(|e| is_prompt_rejection(e)) {
+            // The configured provider may not list this exact model id —
+            // retry on the server's default rather than failing the turn.
+            // ONLY on a definite 4xx rejection: on a timeout or 5xx the
+            // server may already have queued the turn, and re-posting would
+            // run a (possibly destructive) instruction twice.
+            let fallback = json!({ "parts": [{ "type": "text", "text": text }] });
+            post_json(
+                &base,
+                &pw,
+                &format!("/session/{remote}/prompt_async"),
+                &fallback,
+            )
+            .await?;
+        } else {
+            prompted?;
+        }
     }
 
     let auto_mode = read_config().permission_mode.as_deref() == Some(MODE_AUTO);
@@ -1106,10 +1274,6 @@ async fn run_turn(
                                 desktop app's Code popover to refresh Phone \
                                 Access, then try again."
                                 .to_string();
-                            sink.emit(
-                                "ollama:error",
-                                json!({ "generation_id": generation_id, "error": msg }),
-                            );
                             return Err(msg);
                         }
                     }
@@ -1125,10 +1289,6 @@ async fn run_turn(
                                 let msg =
                                     "The desktop went idle without producing a reply — try again."
                                         .to_string();
-                                sink.emit(
-                                    "ollama:error",
-                                    json!({ "generation_id": generation_id, "error": msg }),
-                                );
                                 return Err(msg);
                             }
                             flush_stream_buffers(sink, generation_id, &mut text, &mut reasoning);
@@ -1170,11 +1330,14 @@ async fn run_turn(
             };
             let etype = event.get("type").and_then(|t| t.as_str()).unwrap_or("");
             let props = event.get("properties").cloned().unwrap_or(Value::Null);
-            let for_us = props
-                .get("sessionID")
-                .and_then(|s| s.as_str())
-                .map(|s| s == remote)
-                .unwrap_or(false);
+            // `session.error` is the ONE event whose sessionID upstream
+            // declares optional (an unattributed provider/auth failure).
+            // Dropping it left the phone streaming nothing until the idle
+            // probe reported a bogus "went idle without a reply".
+            let for_us = match props.get("sessionID").and_then(|s| s.as_str()) {
+                Some(sid) => sid == remote,
+                None => etype == "session.error",
+            };
             if !for_us {
                 continue;
             }
@@ -1335,6 +1498,29 @@ async fn run_turn(
                         sink.emit("opencode:permission_resolved", json!({ "request_id": req }));
                     }
                 }
+                "question.asked" => {
+                    // Safety net only: the desktop denies this tool on every
+                    // spawn (`opencode_acp::enforce_permission_policy`), so
+                    // the agent asks in prose. If an older desktop still
+                    // offers it, the session is now waiting for an answer
+                    // and no idle will ever end this turn — hand the turn
+                    // back so the user can type the answer (delivered by
+                    // the next turn's `pending_question` branch).
+                    println!(
+                        "[RemoteCode] question {} asked; ending the turn for the answer",
+                        props.get("id").and_then(|i| i.as_str()).unwrap_or("?")
+                    );
+                    flush_stream_buffers(sink, generation_id, &mut text, &mut reasoning);
+                    sink.emit(
+                        "ollama:done",
+                        json!({
+                            "generation_id": generation_id,
+                            "full_content": text.full_content(),
+                            "stop_reason": Value::Null,
+                        }),
+                    );
+                    return Ok(());
+                }
                 "session.error" => {
                     let error = props.get("error").cloned().unwrap_or(Value::Null);
                     let name = error.get("name").and_then(|n| n.as_str()).unwrap_or("");
@@ -1359,10 +1545,6 @@ async fn run_turn(
                         .map(|s| s.to_string())
                         .unwrap_or_else(|| error.to_string());
                     flush_stream_buffers(sink, generation_id, &mut text, &mut reasoning);
-                    sink.emit(
-                        "ollama:error",
-                        json!({ "generation_id": generation_id, "error": msg }),
-                    );
                     return Err(msg);
                 }
                 "session.idle" => {
@@ -1722,6 +1904,229 @@ mod tests {
         assert!(prompt_model(Some("foundry/phi")).is_err());
     }
 
+    fn template_question() -> Value {
+        json!({
+            "question": "Start from our default template?",
+            "header": "Template choice",
+            "options": [
+                { "label": "Yes, use default template (Recommended)",
+                  "description": "Fastest and most reliable." },
+                { "label": "No, build it from scratch",
+                  "description": "A plain site with no scaffolding." }
+            ]
+        })
+    }
+
+    #[test]
+    fn a_typed_answer_maps_onto_the_question_options() {
+        let q = template_question();
+        let yes = "Yes, use default template (Recommended)";
+        let no = "No, build it from scratch";
+        // Option numbers, with the punctuation people type.
+        assert_eq!(answer_for(&q, "1"), yes);
+        assert_eq!(answer_for(&q, " 2. "), no);
+        assert_eq!(answer_for(&q, "2)"), no);
+        // The label itself, any case, or an unambiguous prefix of it.
+        assert_eq!(answer_for(&q, "no, build it from scratch"), no);
+        assert_eq!(answer_for(&q, "Yes, use"), yes);
+        // A plain yes/no for a yes/no-shaped question.
+        assert_eq!(answer_for(&q, "yes"), yes);
+        assert_eq!(answer_for(&q, "Yes please"), yes);
+        assert_eq!(answer_for(&q, "ok"), yes);
+        assert_eq!(answer_for(&q, "default template"), yes);
+        assert_eq!(answer_for(&q, "nope"), no);
+        assert_eq!(answer_for(&q, "n"), no);
+        // Anything else is a custom answer the agent reads verbatim; an
+        // out-of-range number is text, not a silent first option.
+        assert_eq!(
+            answer_for(&q, "use Next.js with tailwind"),
+            "use Next.js with tailwind"
+        );
+        assert_eq!(answer_for(&q, "7"), "7");
+        // No options at all: the text is the answer.
+        assert_eq!(answer_for(&json!({ "question": "Name?" }), " Ada "), "Ada");
+    }
+
+    /// The agent's question tool parks the session — no idle ever follows. The
+    /// turn must show the choices and END so the user can type an answer,
+    /// instead of sitting on the stop button until the turn deadline.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn a_question_from_the_agent_ends_the_turn() {
+        let _guard = CONFIG_TEST_LOCK.lock().await;
+        let app = Router::new()
+            .route("/session", post(|| async { Json(json!({ "id": "ses_q" })) }))
+            .route("/question", get(|| async { Json(json!([])) }))
+            .route(
+                "/session/{sid}/prompt_async",
+                post(|| async { Json(json!({})) }),
+            )
+            .route(
+                "/event",
+                get(|| async {
+                    let events: Vec<Result<Event, std::convert::Infallible>> = vec![
+                        json!({ "type": "message.part.delta", "properties": {
+                            "sessionID": "ses_q", "messageID": "m1", "partID": "px",
+                            "field": "text", "delta": "Want to start from our default template?" } }),
+                        json!({ "type": "question.asked", "properties": {
+                            "id": "que_1", "sessionID": "ses_q",
+                            "questions": [template_question()],
+                            "tool": { "messageID": "m1", "callID": "call1" } } }),
+                        // The server would now wait forever; nothing else comes.
+                    ]
+                    .into_iter()
+                    .map(|v| Ok(Event::default().data(v.to_string())))
+                    .collect();
+                    Sse::new(tokio_stream::iter(events).chain(tokio_stream::pending()))
+                }),
+            );
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        test_config(&format!("http://{addr}"));
+
+        let sink = Arc::new(VecSink(Mutex::new(Vec::new())));
+        tokio::time::timeout(
+            std::time::Duration::from_secs(10),
+            run_turn(
+                sink.as_ref(),
+                "chat-q",
+                &[json!({ "role": "user", "content": "create a todo list website" })],
+                "gen-q",
+                None,
+                None,
+                None,
+                None,
+            ),
+        )
+        .await
+        .expect("the turn must end on the question, not hang")
+        .expect("a question is a normal end of turn");
+
+        let events = sink.0.lock().unwrap().clone();
+        let names: Vec<&str> = events.iter().map(|(n, _)| n.as_str()).collect();
+        assert_eq!(
+            names.iter().filter(|n| **n == "ollama:done").count(),
+            1,
+            "got: {names:?}"
+        );
+        assert_eq!(names.last().copied(), Some("ollama:done"));
+        // Exactly what the agent said, nothing appended: the phone follows
+        // the desktop (prose question, user replies by typing).
+        assert_eq!(
+            events.last().unwrap().1["full_content"],
+            "Want to start from our default template?"
+        );
+    }
+
+    /// With a question pending, the next message is the ANSWER: it goes to
+    /// `/question/{id}/reply` (mapped onto the option the user meant) and no
+    /// new prompt is queued — a prompt would just make the agent ask again.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn the_next_message_answers_a_pending_question_instead_of_prompting() {
+        let _guard = CONFIG_TEST_LOCK.lock().await;
+        let prompts = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let prompts_route = prompts.clone();
+        let replies: Arc<Mutex<Vec<Value>>> = Arc::new(Mutex::new(Vec::new()));
+        let replies_route = replies.clone();
+        let app = Router::new()
+            .route(
+                "/session",
+                post(|| async { Json(json!({ "id": "ses_q" })) }),
+            )
+            .route(
+                "/question",
+                get(|| async {
+                    Json(json!([
+                        { "id": "que_other", "sessionID": "ses_other", "questions": [] },
+                        { "id": "que_1", "sessionID": "ses_q", "questions": [template_question()] }
+                    ]))
+                }),
+            )
+            .route(
+                "/question/{qid}/reply",
+                post(move |Json(body): Json<Value>| {
+                    let replies = replies_route.clone();
+                    async move {
+                        replies.lock().unwrap().push(body);
+                        Json(json!({}))
+                    }
+                }),
+            )
+            .route(
+                "/session/{sid}/prompt_async",
+                post(move || {
+                    let prompts = prompts_route.clone();
+                    async move {
+                        prompts.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                        Json(json!({}))
+                    }
+                }),
+            )
+            .route(
+                "/session/status",
+                get(|| async { Json(json!({ "ses_q": { "type": "idle" } })) }),
+            )
+            .route(
+                "/event",
+                get(|| async {
+                    let events: Vec<Result<Event, std::convert::Infallible>> = vec![
+                        json!({ "type": "question.replied", "properties": {
+                            "sessionID": "ses_q", "requestID": "que_1",
+                            "answers": [["Yes, use default template (Recommended)"]] } }),
+                        json!({ "type": "message.part.delta", "properties": {
+                            "sessionID": "ses_q", "messageID": "m1", "partID": "px",
+                            "field": "text", "delta": "Scaffolding the template now." } }),
+                        json!({ "type": "session.idle", "properties": { "sessionID": "ses_q" } }),
+                    ]
+                    .into_iter()
+                    .map(|v| Ok(Event::default().data(v.to_string())))
+                    .collect();
+                    Sse::new(tokio_stream::iter(events))
+                }),
+            );
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        test_config(&format!("http://{addr}"));
+
+        let sink = Arc::new(VecSink(Mutex::new(Vec::new())));
+        run_turn(
+            sink.as_ref(),
+            "chat-q",
+            &[
+                json!({ "role": "user", "content": "create a todo list website" }),
+                json!({ "role": "assistant", "content": "Start from our default template?" }),
+                json!({ "role": "user", "content": "yes" }),
+            ],
+            "gen-a",
+            None,
+            None,
+            None,
+            None,
+        )
+        .await
+        .expect("the answered turn completes");
+
+        assert_eq!(
+            prompts.load(std::sync::atomic::Ordering::SeqCst),
+            0,
+            "no new prompt while a question is pending"
+        );
+        let replies = replies.lock().unwrap().clone();
+        assert_eq!(replies.len(), 1);
+        assert_eq!(
+            replies[0]["answers"],
+            json!([["Yes, use default template (Recommended)"]])
+        );
+        let events = sink.0.lock().unwrap().clone();
+        let names: Vec<&str> = events.iter().map(|(n, _)| n.as_str()).collect();
+        assert_eq!(names.last().copied(), Some("ollama:done"), "got: {names:?}");
+        assert_eq!(
+            events.last().unwrap().1["full_content"],
+            "Scaffolding the template now."
+        );
+    }
+
     /// A full simulated turn against a fake opencode server: session created,
     /// prompt accepted, SSE streams reasoning → SPURIOUS idle (a background
     /// sub-task finishing — the bug that truncated real turns to one tool) →
@@ -1934,6 +2339,203 @@ mod tests {
         let full = done.1["full_content"].as_str().unwrap();
         assert!(full.starts_with("w0 ") && full.ends_with("w199 "));
         assert_eq!(full.matches(' ').count(), 200);
+    }
+
+    /// `session.error` is the one event upstream declares `sessionID`
+    /// optional for (an unattributed provider/auth failure). The bug this
+    /// pins: the session gate dropped it, the phone streamed nothing, and
+    /// the idle probe later reported a bogus "went idle without a reply".
+    /// Also pins that a failed turn reports EXACTLY one `ollama:error`
+    /// (the engine and the command boundary used to both emit).
+    #[tokio::test(flavor = "multi_thread")]
+    async fn an_unattributed_session_error_surfaces_once() {
+        let _guard = CONFIG_TEST_LOCK.lock().await;
+        let app = Router::new()
+            .route(
+                "/session",
+                post(|| async { Json(json!({ "id": "ses_err" })) }),
+            )
+            .route(
+                "/session/{sid}/prompt_async",
+                post(|| async { Json(json!({})) }),
+            )
+            .route(
+                "/event",
+                get(|| async {
+                    let events: Vec<Result<Event, std::convert::Infallible>> =
+                        vec![json!({ "type": "session.error", "properties": {
+                            "error": { "name": "ProviderAuthError",
+                                       "data": { "message": "invalid platform token" } } } })]
+                        .into_iter()
+                        .map(|v| Ok(Event::default().data(v.to_string())))
+                        .collect();
+                    Sse::new(tokio_stream::iter(events))
+                }),
+            );
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        test_config(&format!("http://{addr}"));
+
+        let sink = Arc::new(VecSink(Mutex::new(Vec::new())));
+        let err = run_turn(
+            sink.as_ref(),
+            "chat-err",
+            &[json!({ "role": "user", "content": "hi" })],
+            "gen-err",
+            None,
+            None,
+            None,
+            None,
+        )
+        .await
+        .expect_err("the real cause reaches the caller");
+        assert_eq!(err, "invalid platform token");
+        let events = sink.0.lock().unwrap().clone();
+        let errors: Vec<_> = events.iter().filter(|(n, _)| n == "ollama:error").collect();
+        assert_eq!(errors.len(), 1, "exactly one error event, got {events:?}");
+        assert_eq!(errors[0].1["error"], "invalid platform token");
+        assert_eq!(errors[0].1["generation_id"], "gen-err");
+    }
+
+    /// The bug this pins (PR review finding): `ensure_session` snapshotted
+    /// the config BEFORE `ensure_directory` minted + recorded a folder, then
+    /// wrote the stale snapshot back — the minted folder was lost and the
+    /// next turn minted (and re-created a server session) again.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn a_folder_minted_during_session_creation_survives_the_write_back() {
+        let _guard = CONFIG_TEST_LOCK.lock().await;
+        let app = Router::new()
+            .route(
+                "/session",
+                post(|| async { Json(json!({ "id": "ses_minted" })) }),
+            )
+            .route(
+                "/workspaces",
+                post(|| async { Json(json!({ "path": "/desktop/phone-minted" })) }),
+            );
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        let base = format!("http://{addr}");
+        test_config(&base);
+        let mut cfg = read_config();
+        cfg.mgmt = Some(base.clone());
+        write_config(&cfg).unwrap();
+
+        let remote = ensure_session(&base, "pw", "chat-mint", None, None, None)
+            .await
+            .unwrap();
+        assert_eq!(remote, "ses_minted");
+        let cfg = read_config();
+        assert_eq!(
+            cfg.directories.get("chat-mint").map(String::as_str),
+            Some("/desktop/phone-minted"),
+            "the folder minted inside ensure_directory must survive"
+        );
+        assert_eq!(
+            cfg.sessions.get("chat-mint").map(String::as_str),
+            Some("ses_minted")
+        );
+        assert_eq!(
+            cfg.session_dirs.get("chat-mint").map(String::as_str),
+            Some("/desktop/phone-minted")
+        );
+        // And the next turn reuses both instead of minting again.
+        let again = ensure_session(&base, "pw", "chat-mint", None, None, None)
+            .await
+            .unwrap();
+        assert_eq!(again, "ses_minted");
+    }
+
+    /// The bug this pins (PR review finding): scanning ANOTHER desktop's QR
+    /// while the current one is unreachable re-pairs without clear_host, so
+    /// the first machine's absolute folder paths and session ids were
+    /// carried over. Re-pairing with the SAME desktop (a known address, or
+    /// a payload that lists the stored one) must keep them.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn re_pairing_with_another_desktop_forgets_its_folders() {
+        let _guard = CONFIG_TEST_LOCK.lock().await;
+        let app = Router::new().route(
+            "/path",
+            get(|| async { Json(json!({ "directory": "/desktop-b/phone" })) }),
+        );
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        let desktop_b = format!("http://{addr}");
+
+        let seed = |url: &str, alt: Vec<String>| {
+            test_config(url);
+            let mut cfg = read_config();
+            cfg.alt_urls = alt;
+            cfg.sessions.insert("c1".into(), "ses_a".into());
+            cfg.session_dirs.insert("c1".into(), "/desktop-a/x".into());
+            cfg.directories.insert("c1".into(), "/desktop-a/x".into());
+            cfg.mentor_directories
+                .insert(mentor_key("t", "m"), "/desktop-a/y".into());
+            write_config(&cfg).unwrap();
+        };
+
+        // Another machine: everything desktop-specific goes.
+        seed("http://192.168.1.10:4096", vec![]);
+        remote_code_set_host(desktop_b.clone(), "pw".into(), None, None)
+            .await
+            .unwrap();
+        let cfg = read_config();
+        assert_eq!(cfg.url.as_deref(), Some(desktop_b.as_str()));
+        assert!(cfg.sessions.is_empty());
+        assert!(cfg.session_dirs.is_empty());
+        assert!(cfg.directories.is_empty());
+        assert!(cfg.mentor_directories.is_empty());
+
+        // Same machine, re-scanned: kept.
+        seed(&desktop_b, vec![]);
+        remote_code_set_host(desktop_b.clone(), "pw".into(), None, None)
+            .await
+            .unwrap();
+        assert_eq!(
+            read_config().sessions.get("c1").map(String::as_str),
+            Some("ses_a")
+        );
+
+        // Same machine reached through another interface — the new payload
+        // still lists the address we were paired to: kept.
+        seed("http://10.8.0.2:4096", vec![]);
+        remote_code_set_host(
+            desktop_b.clone(),
+            "pw".into(),
+            None,
+            Some(vec!["http://10.8.0.2:4096".into(), desktop_b.clone()]),
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            read_config().sessions.get("c1").map(String::as_str),
+            Some("ses_a")
+        );
+
+        // Same machine, the new address is one of the stored alternates: kept.
+        seed("http://10.8.0.2:4096", vec![desktop_b.clone()]);
+        remote_code_set_host(desktop_b.clone(), "pw".into(), None, None)
+            .await
+            .unwrap();
+        assert_eq!(
+            read_config().sessions.get("c1").map(String::as_str),
+            Some("ses_a")
+        );
+    }
+
+    #[test]
+    fn companion_port_does_not_wrap_past_the_last_port() {
+        // A hand-typed URL reaches this: 65535 + 1 panicked in debug and
+        // wrapped to port 0 in release.
+        assert_eq!(
+            companion_of("http://10.0.0.2:4096").as_deref(),
+            Some("http://10.0.0.2:4097")
+        );
+        assert!(companion_of("http://10.0.0.2:65535").is_none());
+        assert!(companion_of("http://no-port").is_none());
     }
 
     /// An abort error ends the turn as a normal done, not a failure — a Stop

@@ -463,8 +463,25 @@ export function CodingModeButton({
   // Desktop: phone access that was ON before the app restarted comes back up
   // by itself — otherwise every desktop restart silently bricks the paired
   // phones (their stored password stops matching a server that isn't there).
+  // The enable needs the signed-in tenant + token; when they are not in
+  // storage yet (auth still landing at launch) the restore WAITS for the
+  // storage write instead of firing once, failing, and never retrying.
+  const [authTick, setAuthTick] = useState(0);
   useEffect(() => {
-    if (mobile || sandboxed !== false) return;
+    const bump = () => setAuthTick((t) => t + 1);
+    window.addEventListener('local-storage', bump);
+    window.addEventListener('storage', bump);
+    return () => {
+      window.removeEventListener('local-storage', bump);
+      window.removeEventListener('storage', bump);
+    };
+  }, []);
+  const phoneAccessRestoredRef = useRef(false);
+  useEffect(() => {
+    if (mobile || sandboxed !== false || phoneAccessRestoredRef.current) return;
+    const tenant = localStorage.getItem('tenant') || '';
+    const token = localStorage.getItem('dm_token') || '';
+    if (!tenant || !token) return;
     let cancelled = false;
     void (async () => {
       try {
@@ -472,18 +489,18 @@ export function CodingModeButton({
           'remote_code_status',
         );
         if (cancelled || !st?.auto_enable) return;
-        await callTauri('remote_code_enable', {
-          tenant: localStorage.getItem('tenant') || '',
-          token: localStorage.getItem('dm_token') || '',
-        });
-      } catch {
-        /* best-effort; the popover's Enable button remains */
+        await callTauri('remote_code_enable', { tenant, token });
+        phoneAccessRestoredRef.current = true;
+      } catch (e) {
+        // Not silent: paired phones are down until this succeeds or the
+        // user opens the popover and enables by hand.
+        console.warn('[Code] phone access auto-restore failed:', e);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [mobile, sandboxed]);
+  }, [mobile, sandboxed, authTick]);
 
   // Desktop: load the phone-access server state whenever the popover opens.
   useEffect(() => {
@@ -578,9 +595,13 @@ export function CodingModeButton({
     }
   };
 
+  // `mobile` and the pairing state matter too: on a phone the folder is only
+  // knowable once paired, and a QR pair while the popover is open must show
+  // the folder Select/New act on rather than an empty line until reopen.
+  const remoteConnected = !!remoteHost?.connected;
   useEffect(() => {
     if (isOpen) void refresh();
-  }, [isOpen, sessionId, tenantKey, mentorUniqueId]);
+  }, [isOpen, sessionId, tenantKey, mentorUniqueId, mobile, remoteConnected]);
 
   // Read the locally cached mode first so the popover renders the real value
   // immediately; DM reconciles below. Only ever `null` once — that's the signal

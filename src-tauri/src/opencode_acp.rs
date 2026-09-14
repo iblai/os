@@ -1994,7 +1994,23 @@ fn same_model(a: &str, b: &str) -> bool {
 /// agent unprompted access for the whole session. Nothing else confines Code, so this is
 /// enforced rather than defaulted: whatever is there gets overwritten.
 fn enforce_permission_policy(root: &mut serde_json::Map<String, Value>) {
-    root.insert("permission".to_string(), json!("ask"));
+    // `*: ask` is the bare-string "ask" policy in its object form (opencode
+    // normalizes the string to exactly this), which is what lets one more
+    // rule ride along: the `question` tool is DENIED, i.e. never offered to
+    // the model. That tool parks the session until a client answers over
+    // `/question/{id}/reply`; neither of our clients has that UI — under ACP
+    // opencode already withholds it (the tool is gated to the app/cli/desktop
+    // clients), but the phone talks to `opencode serve`, where it was on, so
+    // the agent's setup questions parked every phone turn instead of being
+    // asked in prose the way they are on the desktop. Written as a
+    // permission rather than the `tools: {question: false}` shorthand: opencode
+    // turns that shorthand into a permission rule which a top-level string
+    // policy then overwrites (verified against 1.18.13 — the model still got
+    // the tool).
+    root.insert(
+        "permission".to_string(),
+        json!({ "*": "ask", "question": "deny" }),
+    );
     // A per-agent `permission` block takes precedence over the top-level one, so leaving
     // one in place would quietly defeat the line above. Drop them; everything else about
     // those agents is left alone.
@@ -3044,11 +3060,28 @@ mod tests {
 
         enforce_permission_policy(&mut cfg);
 
-        // The bare string covers every key opencode knows about — including `read`,
-        // and including any it adds later.
-        assert_eq!(cfg.get("permission").unwrap(), &json!("ask"));
+        // The wildcard covers every key opencode knows about — including `read`,
+        // and including any it adds later; the stale `allow`s are gone.
+        assert_eq!(cfg["permission"]["*"], json!("ask"));
+        assert!(cfg["permission"].get("edit").is_none());
+        assert!(cfg["permission"].get("bash").is_none());
         // Unrelated config is left alone.
         assert_eq!(cfg.get("model").unwrap(), "openai/gpt-4o");
+    }
+
+    /// The agent's `question` tool holds a session open until a client answers
+    /// it, and neither client can (the phone showed the question and then sat
+    /// on the stop button forever). It is denied on every spawn so the agent
+    /// asks in prose and the turn ends — the desktop behaviour, on both paths.
+    #[test]
+    fn the_question_tool_is_denied_on_every_spawn() {
+        let mut cfg: serde_json::Map<String, Value> =
+            serde_json::from_str(r#"{ "permission": { "question": "allow" } }"#).unwrap();
+        enforce_permission_policy(&mut cfg);
+        assert_eq!(cfg["permission"]["question"], json!("deny"));
+        // …and only that tool: everything else is still asked about, not denied.
+        assert_eq!(cfg["permission"]["*"], json!("ask"));
+        assert_eq!(cfg["permission"].as_object().unwrap().len(), 2);
     }
 
     /// Per-agent blocks override the top level, so an `allow` hidden in one would
@@ -3081,7 +3114,10 @@ mod tests {
     fn a_config_without_a_policy_gains_one() {
         let mut cfg = serde_json::Map::new();
         enforce_permission_policy(&mut cfg);
-        assert_eq!(cfg.get("permission").unwrap(), &json!("ask"));
+        assert_eq!(
+            cfg.get("permission").unwrap(),
+            &json!({ "*": "ask", "question": "deny" })
+        );
     }
 
     /// Every spawn pins the build agent's prompt (suppressing opencode's

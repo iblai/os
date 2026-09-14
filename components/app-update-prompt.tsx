@@ -13,12 +13,12 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 
-/** At most one update check per this window (per launch is fine too — the
- * check also runs when the app was simply left open across a day). */
-const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
-const LAST_CHECK_KEY = 'ibl_app_update_last_check';
-/** "Skip This Version" persists here; a LATER version prompts again. */
-const SKIP_KEY = 'ibl_app_update_skip_version';
+/** "Later" silences the prompt for the rest of THIS app session only — the
+ * value lives in sessionStorage, which dies with the webview, so the next
+ * launch asks again. There is deliberately no persistent throttle and no
+ * "skip this version": as long as a newer build exists, every open of the
+ * app says so. */
+const LATER_KEY = 'ibl_app_update_later';
 
 interface UpdateInfo {
   available: boolean;
@@ -27,7 +27,6 @@ interface UpdateInfo {
   /** Present on mobile: the store page to open. Absent on desktop, where the
    * host installs the update in place. */
   url?: string;
-  notes?: string;
 }
 
 /**
@@ -37,8 +36,12 @@ interface UpdateInfo {
  * Update button does differs: desktop runs `install_app_update` (download +
  * signature check + install + relaunch, progress via `app-update:progress`),
  * mobile opens the App Store / Play Store page from the check's `url`.
- * Renders nothing outside Tauri, in dev builds, in the Mac App Store build
- * (all report unsupported/unavailable), or for a version the user skipped.
+ * Renders nothing outside Tauri, in dev builds, or in the Mac App Store build
+ * (all report unsupported/unavailable).
+ *
+ * Checks on every mount — i.e. every launch, and every full reload (the SSO
+ * round-trip does one right after sign-in, which used to unmount a prompt
+ * that a persistent 24 h throttle then hid for a day).
  */
 export function AppUpdatePrompt() {
   const t = useTranslations('appUpdatePrompt');
@@ -52,24 +55,15 @@ export function AppUpdatePrompt() {
   useEffect(() => {
     if (!isTauriApp() || checked.current) return;
     checked.current = true;
-    try {
-      const last = Number(localStorage.getItem(LAST_CHECK_KEY) || 0);
-      if (Date.now() - last < CHECK_INTERVAL_MS) return;
-    } catch {
-      /* storage unavailable — check anyway */
-    }
     void (async () => {
       try {
         const { invoke } = await import('@tauri-apps/api/core');
         const info = await invoke<UpdateInfo>('check_app_update');
-        try {
-          localStorage.setItem(LAST_CHECK_KEY, String(Date.now()));
-        } catch {
-          /* best-effort */
-        }
         if (!info?.available || !info.version) return;
         try {
-          if (localStorage.getItem(SKIP_KEY) === info.version) return;
+          // Deferred THIS session — but a newer version than the deferred
+          // one is news again.
+          if (sessionStorage.getItem(LATER_KEY) === info.version) return;
         } catch {
           /* best-effort */
         }
@@ -83,6 +77,15 @@ export function AppUpdatePrompt() {
 
   if (!update || dismissed) return null;
 
+  const deferForSession = () => {
+    try {
+      sessionStorage.setItem(LATER_KEY, update.version ?? '');
+    } catch {
+      /* best-effort */
+    }
+    setDismissed(true);
+  };
+
   const startUpdate = async () => {
     const { invoke } = await import('@tauri-apps/api/core');
     if (update.url) {
@@ -92,9 +95,11 @@ export function AppUpdatePrompt() {
       try {
         const { openUrl } = await import('@tauri-apps/plugin-opener');
         await openUrl(update.url);
-        setDismissed(true);
+        // Off to the store; don't nag again when the user switches back. The
+        // next launch checks afresh (and stays quiet once the store updated).
+        deferForSession();
       } catch (err) {
-        // Keep the prompt so the user can retry instead of losing it for a day.
+        // Keep the prompt so the user can retry instead of losing it.
         setInstallError(err instanceof Error ? err.message : String(err));
       }
       return;
@@ -102,48 +107,45 @@ export function AppUpdatePrompt() {
     // Desktop: install in place; the app relaunches itself on success.
     setInstalling(true);
     setInstallError('');
-    const { listen } = await import('@tauri-apps/api/event');
-    const unlisten = await listen<{ downloaded: number; total?: number }>(
-      'app-update:progress',
-      (e) => {
-        const { downloaded, total } = e.payload || { downloaded: 0 };
-        if (total) setProgress(Math.min(100, (downloaded / total) * 100));
-      },
-    );
+    // Everything after `installing` flips on lives inside the try: the
+    // dynamic import can reject (a stale chunk after a deploy), and an
+    // unhandled rejection here left every button disabled behind a dialog
+    // that nothing could dismiss.
+    let unlisten: (() => void) | undefined;
     try {
+      const { listen } = await import('@tauri-apps/api/event');
+      unlisten = await listen<{ downloaded: number; total?: number }>(
+        'app-update:progress',
+        (e) => {
+          const { downloaded, total } = e.payload || { downloaded: 0 };
+          if (total) setProgress(Math.min(100, (downloaded / total) * 100));
+        },
+      );
       await invoke('install_app_update');
     } catch (err) {
       setInstalling(false);
       setProgress(null);
       setInstallError(err instanceof Error ? err.message : String(err));
     } finally {
-      unlisten();
+      unlisten?.();
     }
-  };
-
-  const skipThisVersion = () => {
-    try {
-      localStorage.setItem(SKIP_KEY, update.version || '');
-    } catch {
-      /* best-effort */
-    }
-    setDismissed(true);
   };
 
   return (
     <AlertDialog open>
-      <AlertDialogContent data-testid="app-update-prompt">
+      {/* Phone-safe: never edge-to-edge, always rounded, and the two actions
+          stack full-width below `sm` (the footer primitive already flips to
+          a column there). */}
+      <AlertDialogContent
+        data-testid="app-update-prompt"
+        className="w-[calc(100%-2rem)] max-w-md rounded-lg"
+      >
         <AlertDialogHeader>
           <AlertDialogTitle>{t('title')}</AlertDialogTitle>
           <AlertDialogDescription>
             {t('description', { version: update.version ?? '' })}
           </AlertDialogDescription>
         </AlertDialogHeader>
-        {update.notes && (
-          <p className="max-h-32 overflow-y-auto text-xs whitespace-pre-wrap text-gray-500">
-            {update.notes}
-          </p>
-        )}
         {installing && (
           <div
             data-testid="app-update-progress"
@@ -159,28 +161,21 @@ export function AppUpdatePrompt() {
         {installError && (
           <p className="text-xs break-all text-red-600">{installError}</p>
         )}
-        <AlertDialogFooter>
+        <AlertDialogFooter className="gap-2 sm:gap-0">
           <Button
             variant="ghost"
             size="sm"
             type="button"
+            className="w-full sm:w-auto"
             disabled={installing}
-            onClick={skipThisVersion}
-          >
-            {t('skip')}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            type="button"
-            disabled={installing}
-            onClick={() => setDismissed(true)}
+            onClick={deferForSession}
           >
             {t('later')}
           </Button>
           <Button
             size="sm"
             type="button"
+            className="w-full sm:w-auto"
             disabled={installing}
             onClick={() => void startUpdate()}
           >

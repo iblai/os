@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { CodingModeButton } from '../coding-mode-button';
@@ -791,7 +791,40 @@ describe('CodingModeButton', () => {
       );
     });
 
+    it('waits for the sign-in to land instead of failing the restore once', async () => {
+      // The bug this pins: the restore read tenant/token from storage on
+      // mount, Rust rejected the empty pair, the bare catch swallowed it
+      // and nothing ever retried — phone access stayed down all session.
+      extend({
+        remote_code_status: () => ({ running: false, auto_enable: true }),
+      });
+      renderButton();
+      await waitFor(() =>
+        expect(invoke).toHaveBeenCalledWith('check_opencode_status', undefined),
+      );
+      expect(invoke).not.toHaveBeenCalledWith(
+        'remote_code_enable',
+        expect.anything(),
+      );
+      // Auth lands: the storage write is announced the way the app does it.
+      localStorage.setItem('tenant', 'acme');
+      localStorage.setItem('dm_token', 'jwt-late-token');
+      act(() => {
+        window.dispatchEvent(
+          new StorageEvent('local-storage', { key: 'dm_token' }),
+        );
+      });
+      await waitFor(() =>
+        expect(invoke).toHaveBeenCalledWith('remote_code_enable', {
+          tenant: 'acme',
+          token: 'jwt-late-token',
+        }),
+      );
+    });
+
     it('leaves a deliberately disabled host alone on launch', async () => {
+      localStorage.setItem('tenant', 'acme');
+      localStorage.setItem('dm_token', 'jwt-test-token');
       extend({
         remote_code_status: () => ({ running: false, auto_enable: false }),
       });

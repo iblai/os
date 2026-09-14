@@ -2432,7 +2432,6 @@
     "description": "La versión {version} está lista para instalar. Estás usando una versión anterior.",
     "updateNow": "Actualizar ahora",
     "updating": "Actualizando…",
-    "later": "Más tarde",
-    "skip": "Omitir esta versión"
+    "later": "Más tarde"
   }
 }

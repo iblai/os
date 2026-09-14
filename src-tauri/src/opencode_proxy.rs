@@ -82,7 +82,9 @@ improvising the same work by hand.
 - Building a web app moves through three loose steps, in order: 1. the \
 default-template question, 2. the local-preview question, 3. the deploy \
 question. Keep the steps distinct — finish one before starting the next — \
-and stay conversational, never a rigid wizard.
+and stay conversational, never a rigid wizard. Ask each of these questions \
+as plain text in your reply and end your turn there — the user's next \
+message is the answer. There is no question tool: never try to call one.
 - Step 1, the template: when the user asks to build a website or web app, \
 first ask ONE short \
 question: whether to start from our default template, recommending it (\"it's \
@@ -1716,6 +1718,15 @@ mod tests {
                 && text.contains("Step 2")
                 && text.contains("Step 3"),
             "the 3-step arc must survive edits: {text}"
+        );
+        // Neither client can answer opencode's `question` tool (it is denied on
+        // every spawn), and a model that reaches for it anyway gets an
+        // "unavailable tool" error and tends to skip the question altogether —
+        // the setup questions must be plain reply text that ends the turn.
+        assert!(
+            text.contains("as plain text in your reply")
+                && text.contains("There is no question tool"),
+            "the ask-in-prose rule must survive edits: {text}"
         );
         assert!(
             text.contains("pnpm dev")
