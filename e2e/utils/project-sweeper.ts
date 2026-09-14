@@ -5,11 +5,11 @@
  * sweeper lists all projects owned by the admin user and deletes any that:
  *   1. Have a name matching the E2E test-created pattern (starts with "E2E
  *      Project " and contains a 13-digit Unix-millisecond timestamp), AND
- *   2. Were created more than STALE_AFTER_MS ago (2 hours).
+ *   2. Were created more than STALE_AFTER_MS ago (30 minutes).
  *
  * The age gate guarantees that a concurrent/just-started run's projects are
  * never reaped — a freshly created project is at most a few seconds old, far
- * below the 2-hour floor.
+ * below the 30-minute floor.
  *
  * This is the safety-net counterpart to the `testProject` fixture's per-test
  * API delete (see `utils/project-cleanup.ts`): the fixture is the first line
@@ -22,10 +22,11 @@
  *   • Only names matching E2E_PROJECT_RE are considered. Any real user
  *     project never matches (it does not start with "E2E Project " followed
  *     by a bare 13-digit timestamp).
- *   • Only stale (> 2h) matches are deleted. A parallel run's live projects
+ *   • Only stale (> 30 min) matches are deleted. A parallel run's live projects
  *     are never touched.
- *   • Everything is best-effort: a failed delete is logged and skipped.
- *     A sweep failure NEVER causes the Playwright process to exit non-zero.
+ *   • A failed delete, an unresolvable DM base, or missing auth goes through
+ *     `failLoudly` (resource-tracker.ts): it throws — failing the run — when
+ *     CI or DM_URL is set, and is a `console.error` line otherwise.
  *
  * Auth: reads axd_token, username (user_nicename), and tenantKey (key)
  * directly from the saved storageState JSON (`playwright/.auth/user-chrome.json`)
@@ -46,8 +47,8 @@
  *     string `unique_id` slug.
  *
  * API used:
- *   GET  {API_BASE}/dm/api/ai-mentor/orgs/{org}/users/{username}/projects/?limit=N&offset=M
- *   DELETE {API_BASE}/dm/api/ai-mentor/orgs/{org}/users/{username}/projects/{id}/
+ *   GET  {dmBase}/api/ai-mentor/orgs/{org}/users/{username}/projects/?limit=N&offset=M
+ *   DELETE {dmBase}/api/ai-mentor/orgs/{org}/users/{username}/projects/{id}/
  *   Authorization: Token {axd_token}
  *
  * Name pattern produced by `generateProjectName()` in test-data.ts:
@@ -59,9 +60,12 @@ import path from 'path';
 import https from 'https';
 import http from 'http';
 
+import { dmBaseFromEnv } from './dm-api';
+import { anySnapshotDmBase, failLoudly } from './resource-tracker';
+
 // ── Configuration ─────────────────────────────────────────────────────────────
 
-const STALE_AFTER_MS = 2 * 60 * 60 * 1000; // 2 hours
+const STALE_AFTER_MS = 30 * 60 * 1000; // 30 minutes
 const PAGE_SIZE = 100;
 const MAX_PAGES = 50; // cap page-walk to avoid runaway loops
 
@@ -182,7 +186,7 @@ function isStale(name: string | undefined): boolean {
 }
 
 async function sweepStaleProjects(
-  apiBase: string,
+  dmBase: string,
   auth: AuthContext,
 ): Promise<void> {
   const { axdToken, username, tenantKey } = auth;
@@ -194,10 +198,11 @@ async function sweepStaleProjects(
   // The AXD/projects endpoint lives under the `/dm` path on the API base, same
   // as mentors — see the note in project-cleanup.ts on why the AXD service
   // resolves to config.dmUrl() rather than config.axdUrl().
-  const baseListUrl = `${apiBase}/dm/api/ai-mentor/orgs/${encodeURIComponent(tenantKey)}/users/${encodeURIComponent(username)}/projects/`;
+  const baseListUrl = `${dmBase}/api/ai-mentor/orgs/${encodeURIComponent(tenantKey)}/users/${encodeURIComponent(username)}/projects/`;
 
   let reaped = 0;
   let skipped = 0;
+  let failed = 0;
   let offset = 0;
 
   for (let page = 1; page <= MAX_PAGES; page++) {
@@ -259,13 +264,13 @@ async function sweepStaleProjects(
           console.warn(
             `[project-sweeper] DELETE ${id} → ${delRes.status} — skipping`,
           );
-          skipped++;
+          failed++;
         }
       } catch (err) {
         console.warn(
           `[project-sweeper] DELETE ${id} failed: ${err} — skipping`,
         );
-        skipped++;
+        failed++;
       }
     }
 
@@ -274,18 +279,24 @@ async function sweepStaleProjects(
   }
 
   console.log(
-    `[project-sweeper] Done — reaped ${reaped}, skipped/failed ${skipped}`,
+    `[project-sweeper] Done — reaped ${reaped}, skipped ${skipped}, failed ${failed}`,
   );
+  if (failed > 0)
+    failLoudly(`project-sweeper could not delete ${failed} stale project(s)`);
 }
 
 // ── Playwright globalTeardown entry point ─────────────────────────────────────
 
 export default async function globalTeardown(): Promise<void> {
+  if (process.env.E2E_SKIP_SWEEP === '1') {
+    console.log('[project-sweeper] E2E_SKIP_SWEEP=1 — sweep skipped');
+    return;
+  }
   try {
-    const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL;
-    if (!apiBase) {
-      console.log(
-        '[project-sweeper] NEXT_PUBLIC_API_BASE_URL not set — skipping sweep',
+    const dmBase = dmBaseFromEnv() || anySnapshotDmBase();
+    if (!dmBase) {
+      failLoudly(
+        'project-sweeper: cannot resolve the DM API base (set DM_URL) — sweep skipped',
       );
       return;
     }
@@ -314,15 +325,16 @@ export default async function globalTeardown(): Promise<void> {
     }
 
     if (!auth) {
-      console.log(
-        '[project-sweeper] No valid admin auth found in storageState files — skipping sweep',
+      failLoudly(
+        'project-sweeper: no valid admin auth in playwright/.auth — sweep skipped',
       );
       return;
     }
 
-    await sweepStaleProjects(apiBase, auth);
+    await sweepStaleProjects(dmBase, auth);
   } catch (err) {
-    // Best-effort — never let teardown failure affect the exit code.
-    console.warn(`[project-sweeper] Unexpected error: ${err}`);
+    if (err instanceof Error && err.message.startsWith('[e2e-residue]'))
+      throw err;
+    failLoudly(`project-sweeper: unexpected error: ${err}`);
   }
 }

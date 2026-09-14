@@ -109,25 +109,37 @@ struct OllamaModel {
 }
 
 pub const OLLAMA_API_URL: &str = "http://localhost:11434";
-/// The ollama-mcp-bridge listens here (Ollama-API-compatible + MCP tools).
-pub const BRIDGE_API_URL: &str = "http://localhost:8000";
 pub const REQUIRED_FREE_SPACE_GB: f64 = 5.0;
 
-/// Base URL chat must stream from: the MCP bridge on :8000 — the one and only
-/// chat port. Plain Ollama on :11434 is reserved for status/version/pull checks,
-/// never chat. A non-tool-capable model can't use the bridge (Ollama would 400
-/// the injected `tools` field), so we refuse rather than route anywhere.
+/// Base URL chat must stream from: the MCP bridge — the one and only chat port.
+/// Plain Ollama on :11434 is reserved for status/version/pull checks, never
+/// chat. A non-tool-capable model can't use the bridge (Ollama would 400 the
+/// injected `tools` field), so we refuse rather than route anywhere.
 /// `tool_support` is the selected model's catalog flag, forwarded by the SDK.
-pub fn chat_base_url(tool_support: bool) -> Result<&'static str, String> {
+///
+/// The port comes from the running bridge rather than a constant: it prefers
+/// 8000 but takes any free port when that one is busy. No bridge of ours
+/// running is an error, never a guessed URL — assuming 8000 is what used to
+/// send chat at whatever unrelated server happened to hold the port.
+pub fn chat_base_url(tool_support: bool) -> Result<String, String> {
     if !tool_support {
         let msg = "Local chat requires a tool-capable model — streaming only runs \
-                   through the MCP bridge on :8000, and the selected model has \
+                   through the MCP bridge, and the selected model has \
                    tool_support=false"
             .to_string();
         println!("[McpBridge] {msg}");
         return Err(msg);
     }
-    Ok(BRIDGE_API_URL)
+    match crate::mcp_bridge_manager::bridge_port() {
+        Some(port) => Ok(format!("http://localhost:{port}")),
+        None => {
+            let msg = "Local chat needs the MCP bridge, which isn't running — \
+                       toggle local models off and on to start it"
+                .to_string();
+            println!("[McpBridge] {msg}");
+            Err(msg)
+        }
+    }
 }
 
 /// Get the current timestamp in RFC3339 format
@@ -792,4 +804,48 @@ pub fn cancel_download() -> Result<(), String> {
     });
 
     Ok(())
+}
+
+#[cfg(all(
+    test,
+    any(target_os = "windows", target_os = "macos", target_os = "linux")
+))]
+mod tests {
+    use super::*;
+    use crate::mcp_bridge_manager::{bridge_state_lock, set_bridge_port_for_test};
+
+    /// Chat streams from whatever port the bridge actually took — the number is
+    /// read from the running bridge, never assumed to be 8000.
+    #[test]
+    fn the_chat_url_follows_the_port_the_bridge_took() {
+        let _guard = bridge_state_lock();
+        set_bridge_port_for_test(Some(8137));
+        assert_eq!(
+            chat_base_url(true).unwrap(),
+            "http://localhost:8137",
+            "a fallback port must reach the chat URL"
+        );
+        set_bridge_port_for_test(None);
+    }
+
+    /// No bridge of ours running is an ERROR. Guessing 8000 here is what used
+    /// to send chat at an unrelated server that happened to hold the port.
+    #[test]
+    fn no_running_bridge_is_an_error_not_a_guessed_url() {
+        let _guard = bridge_state_lock();
+        set_bridge_port_for_test(None);
+        let err = chat_base_url(true).expect_err("a missing bridge must not yield a URL");
+        assert!(err.contains("MCP bridge"), "{err}");
+    }
+
+    /// The pre-existing rule: a model without tool support can't use the
+    /// bridge at all, and that refusal comes before any port lookup.
+    #[test]
+    fn a_model_without_tool_support_is_refused_whatever_the_port() {
+        let _guard = bridge_state_lock();
+        set_bridge_port_for_test(Some(8000));
+        let err = chat_base_url(false).expect_err("non-tool models are refused");
+        assert!(err.contains("tool_support=false"), "{err}");
+        set_bridge_port_for_test(None);
+    }
 }

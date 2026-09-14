@@ -33,7 +33,13 @@ function renderLatex(latex: string, displayMode: boolean): string {
 /**
  * Inline math node for TipTap.
  * Parses <span class="katex"> from KaTeX HTML and <span data-math-latex> from getHTML() output.
- * Both must be inline since KaTeX output appears inside <p> tags.
+ * Both must be inline. Inline math lands inside a <p>. Display math does NOT:
+ * under the unified pipeline @ziloen emits <pre><code class="language-math
+ * math-display">, and rehype-katex replaces the <pre> itself, so
+ * <span class="katex-display"> ends up as a ROOT-level sibling of the
+ * paragraphs rather than nested in one. ProseMirror then wraps that stray
+ * inline node into a paragraph of its own, which is why an inline node still
+ * matches. Declaring either as a block node would reject the inline case.
  */
 export const MathInline = Node.create({
   name: 'mathInline',
@@ -97,12 +103,13 @@ export const MathInline = Node.create({
 /**
  * Display math node for TipTap.
  * Parses <span class="katex-display"> from KaTeX HTML.
- * Must be inline (not block) because KaTeX display math appears inside <p> tags.
+ * Must be inline (not block): see the note above — the wrapper is a <div>
+ * under the unified pipeline, and ProseMirror re-wraps it into a paragraph.
  * Rendered visually as a block via CSS in the NodeView.
  */
 export const MathBlock = Node.create({
   name: 'mathBlock',
-  // Must be inline because KaTeX wraps display math inside <p> tags
+  // Inline for the reason documented above the node definition
   group: 'inline',
   inline: true,
   atom: true,

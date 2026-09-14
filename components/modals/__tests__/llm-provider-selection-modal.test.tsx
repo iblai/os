@@ -5,7 +5,7 @@ import { LLMProviderSelectionModal } from '../llm-provider-selection-modal';
 
 // LLMTab is a heavy data-driven tab; replace it with a deterministic marker
 // that records the prop it is given so we can assert wiring.
-vi.mock('../edit-mentor-modal/tabs', () => ({
+vi.mock('../edit-mentor-modal/llm-tab', () => ({
   LLMTab: ({
     showConfigurationHeader,
   }: {

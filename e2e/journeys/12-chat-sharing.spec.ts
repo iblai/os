@@ -2,6 +2,7 @@ import { test, expect } from '../fixtures/mentor-test';
 import { navigateToMentorApp } from '../utils/auth';
 import { safeWaitForURL } from '../utils/navigation';
 import { MENTOR_NEXTJS_HOST, AUTH_HOST } from '../fixtures/test-data';
+import type { ChatPage } from '../page-objects/chat.page';
 
 test.describe('Journey 12: Chat Sharing', () => {
   test.describe.configure({ mode: 'serial' });
@@ -193,5 +194,143 @@ test.describe('Journey 12: Chat Sharing', () => {
     } finally {
       await anonContext.close();
     }
+  });
+
+  // ── Chat download (sh-07 … sh-10, issue #2464) ───────────────────────────
+  //
+  // The download control (`ai-message-download.tsx`) sits in the same AI
+  // message toolbar as share, gated by the same
+  // `!showingSharedChat && !chatPrivacyActive` condition (see cp-chat-09 in
+  // journey 50 for the private-mode side of that gate). Its accessible name
+  // is "Download this chat" — an exact-name query, so it never collides with
+  // "Share this chat" above. Each test sends its own message (independent,
+  // no shared state) and reads the actual downloaded file content, not just
+  // the filename — a filename-only assertion would pass even for an empty
+  // transcript.
+  test.describe('Chat download (sh-07 … sh-10)', () => {
+    const TEST_MESSAGE =
+      'Hello, this is a test message for downloading the chat transcript.';
+
+    test.beforeEach(async ({ page }) => {
+      await navigateToMentorApp(page);
+    });
+
+    /** Sends `TEST_MESSAGE` and waits for a complete AI reply. */
+    async function sendAndAwaitReply(chatPage: ChatPage): Promise<void> {
+      await chatPage.sendMessage(TEST_MESSAGE);
+      await expect(chatPage.userMessages.first()).toBeVisible({
+        timeout: 30_000,
+      });
+      await chatPage.waitForAIResponse();
+      await chatPage.waitForStreamingComplete(120_000);
+    }
+
+    test('sh-07: download dialog opens with Entire chat preselected and both option descriptions visible', async ({
+      chatPage,
+    }) => {
+      await sendAndAwaitReply(chatPage);
+      await chatPage.openDownloadDialog();
+
+      await expect(chatPage.downloadScopeChatRadio).toBeChecked();
+      await expect(chatPage.downloadScopeMessageRadio).not.toBeChecked();
+      await expect(
+        chatPage.downloadDialog.getByText(
+          'Every message in this conversation.',
+        ),
+      ).toBeVisible();
+      await expect(
+        chatPage.downloadDialog.getByText('Only the reply you selected.'),
+      ).toBeVisible();
+    });
+
+    test('sh-08: default Entire chat download produces a chat-*.txt file containing both conversation turns', async ({
+      page,
+      chatPage,
+    }) => {
+      await sendAndAwaitReply(chatPage);
+      await chatPage.openDownloadDialog();
+
+      const downloadPromise = page.waitForEvent('download', {
+        timeout: 15_000,
+      });
+      await chatPage.downloadConfirmButton.click();
+      const download = await downloadPromise;
+
+      expect(download.suggestedFilename()).toMatch(/^chat-.*\.txt$/);
+
+      const content = await chatPage.readDownloadText(download);
+      // The user's own message, verbatim, proves the user turn made it in.
+      expect(content).toContain(TEST_MESSAGE);
+      // Two messages (user + AI) means two "----" separators.
+      const separatorCount = (content.match(/----/g) ?? []).length;
+      expect(
+        separatorCount,
+        `Expected at least 2 "----" separators (one per message) in:\n${content}`,
+      ).toBeGreaterThanOrEqual(2);
+    });
+
+    test('sh-09: selecting This message only produces a message-*.txt file with the AI reply but not the earlier user message', async ({
+      page,
+      chatPage,
+    }) => {
+      await sendAndAwaitReply(chatPage);
+      const aiReplyText = (await chatPage.aiMessages.first().innerText())
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      await chatPage.openDownloadDialog();
+      // Click the <Label>, not the radio directly — exercises the
+      // htmlFor/id label-click wiring described in ai-message-download.tsx.
+      await chatPage.downloadDialog
+        .getByText('This message only', { exact: true })
+        .click();
+      await expect(chatPage.downloadScopeMessageRadio).toBeChecked();
+
+      const downloadPromise = page.waitForEvent('download', {
+        timeout: 15_000,
+      });
+      await chatPage.downloadConfirmButton.click();
+      const download = await downloadPromise;
+
+      expect(download.suggestedFilename()).toMatch(/^message-.*\.txt$/);
+
+      const content = await chatPage.readDownloadText(download);
+      expect(content).not.toContain(TEST_MESSAGE);
+
+      // A prefix of the rendered AI reply should still be recoverable from
+      // the flattened transcript text (whitespace-insensitive compare —
+      // markdown flattening can shift line breaks without changing words).
+      const normalizedContent = content.replace(/\s+/g, ' ').trim();
+      const aiSnippet = aiReplyText.slice(0, 40);
+      if (aiSnippet) {
+        expect(normalizedContent).toContain(aiSnippet);
+      }
+    });
+
+    test('sh-10: pressing Escape dismisses the download dialog without triggering a download', async ({
+      page,
+      chatPage,
+    }) => {
+      await sendAndAwaitReply(chatPage);
+      await chatPage.openDownloadDialog();
+
+      // Bounded race, not a plain waitForEvent — a download that never
+      // fires would otherwise hang until Playwright's default timeout.
+      const downloadPromise = page
+        .waitForEvent('download', { timeout: 3_000 })
+        .catch(() => null);
+      await page.keyboard.press('Escape');
+
+      await expect(
+        chatPage.downloadDialog,
+        'Escape must close the Download Chat dialog',
+      ).not.toBeVisible({ timeout: 5_000 });
+
+      const download = await downloadPromise;
+      expect(
+        download,
+        'Escape must dismiss the dialog without triggering a download',
+      ).toBeNull();
+    });
   });
 });

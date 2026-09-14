@@ -26,17 +26,21 @@ import {
   GripVertical,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { LoadingMessage } from '@/components/chat/loading-message';
+import {
+  AIWorkingMessage,
+  hasVisibleBubbleContent,
+} from '@/components/chat/ai-message-frame';
+import { useCodePermissionRequests } from '@/components/chat/code-permission-card';
 import {
   ANONYMOUS_USERNAME,
   Message as BaseMessage,
+  type ChatPhase,
   chatActions,
   MessageAction,
   selectToken,
   selectTokenEnabled,
   selectShowingSharedChat,
   selectStreamingReasoningContent,
-  selectIsReasoning,
   selectStreamingToolCalls,
   selectCurrentStreamingMessage,
   useMentorTools,
@@ -45,9 +49,11 @@ import {
   CHAT_AREA_SIZE,
   FileReference,
   TOOLS,
+  use401TokenRefresh,
 } from '@iblai/iblai-js/web-utils';
 import {
   cn,
+  formatRelativeDate,
   getAuthSpaJoinUrl,
   isInIframe,
   isLoggedIn,
@@ -59,7 +65,6 @@ import { toast } from 'sonner';
 import { config } from '@/lib/config';
 import { AdvancedChatHeader } from '@/components/advanced-chat/advanced-chat-header';
 import { advancedTabs } from '@iblai/iblai-js/web-utils';
-import { LiveKitChat } from '../live-kit-voice-chat';
 import { GuidedSuggestedPrompts } from '../guided-suggested-prompts';
 import {
   Dialog,
@@ -80,12 +85,6 @@ import { useParams, useSearchParams } from 'next/navigation';
 import { TenantKeyMentorIdParams } from '@/lib/types';
 import { ChatMessages } from './chat-messages';
 import type { CanvasOpenPayload } from './chat-messages/types';
-import {
-  getBinaryStreamBehavior,
-  resolveBinaryMimeType,
-  resolveEffectiveFileExtension,
-  shouldUseBinaryCanvas,
-} from '@/components/canvas/binary-artifact-utils';
 import { useNavigate } from '@/hooks/user-navigate';
 import { AdvancedStaticChatBuilder } from '../advanced-chat/advanced-chat-builder';
 import eventBus, { RemoteEvents } from '@/lib/eventBus';
@@ -93,7 +92,6 @@ import { useDebouncedCallback } from 'use-debounce';
 import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { useUserAgreement } from '@/hooks/use-user-agreement';
 import { CSS_CLASS_NAMES, LOCAL_STORAGE_KEYS } from '@/lib/constants';
-import { LiveKitScreenSharing } from '../live-kit-screen-sharing';
 import { WelcomeChatNew } from '../welcome-chat-new';
 import { Spinner } from '@/components/spinner';
 import { useEmbedMode } from '@/hooks/use-embed-mode';
@@ -121,6 +119,29 @@ const DisclaimerModal = dynamic(
   () =>
     import('@/components/modals/disclaimer-modal').then(
       (mod) => mod.DisclaimerModal,
+    ),
+  {
+    ssr: false,
+  },
+);
+
+// Voice call + screen sharing pull in the heavy LiveKit client, but both only
+// mount when the user starts a call/share. Load them lazily so LiveKit stays
+// off the main chat bundle until then.
+/* istanbul ignore next -- @preserve dynamic import */
+const LiveKitChat = dynamic(
+  () =>
+    import('@/components/live-kit-voice-chat').then((mod) => mod.LiveKitChat),
+  {
+    ssr: false,
+  },
+);
+
+/* istanbul ignore next -- @preserve dynamic import */
+const LiveKitScreenSharing = dynamic(
+  () =>
+    import('@/components/live-kit-screen-sharing').then(
+      (mod) => mod.LiveKitScreenSharing,
     ),
   {
     ssr: false,
@@ -202,12 +223,11 @@ type Props = {
 type CanvasState = {
   title: string;
   content: string;
-  type: 'document' | 'code' | 'binary';
+  type: 'document' | 'code';
   artifactId?: number;
   org?: string;
   userId?: string;
   fileExtension?: string;
-  mimeType?: string;
   metadata?: Record<string, unknown>;
 };
 
@@ -309,6 +329,7 @@ export function Chat({
   );
 
   const { handle402Error } = use402ErrorCheck();
+  const { handle401Error } = use401TokenRefresh({ tenantKey });
   const tokenEnabled = useAppSelector(selectTokenEnabled);
   const token = useAppSelector(selectToken);
   const showingSharedChat = useAppSelector(selectShowingSharedChat);
@@ -319,7 +340,6 @@ export function Chat({
   const streamingReasoningContent = useAppSelector(
     selectStreamingReasoningContent,
   );
-  const isReasoning = useAppSelector(selectIsReasoning);
   const streamingToolCalls = useAppSelector(selectStreamingToolCalls);
   const currentStreamingMsg = useAppSelector(selectCurrentStreamingMessage);
   const TOAST_DURATION = 1000 * 60 * 2; // 2 minutes
@@ -349,7 +369,7 @@ export function Chat({
   const {
     changeTab,
     activeTab,
-    currentStreamingMessage,
+    chatPhase,
     enabledGuidedPrompts,
     isStreaming,
     mentorName,
@@ -432,6 +452,7 @@ export function Chat({
         !searchParams.get('token')),
     mentorShareableToken: searchParams.get('token'),
     on402Error: handle402Error,
+    on401Error: handle401Error,
     cachedSessionId,
     onStartNewChat: (sessionId: string) => {
       dispatch(chatActions.updateSessionIds(sessionId));
@@ -511,7 +532,12 @@ export function Chat({
 
   useEffect(() => {
     if (isStreaming) {
-      setMentorAccessibilityMessage(t('mentorGenerating', { mentorName }));
+      // While a turn is in flight the WorkingIndicator's own polite live region
+      // owns the announcements (throttled, phase-aware). Announcing
+      // "…is generating a response" here as well would give screen readers two
+      // regions racing over the same event, so this one stays quiet until the
+      // answer lands.
+      setMentorAccessibilityMessage('');
     }
     if (
       !isStreaming &&
@@ -790,17 +816,7 @@ export function Chat({
 
   const resolveCanvasType = (
     payload: CanvasOpenPayload,
-  ): 'document' | 'code' | 'binary' => {
-    if (
-      payload.toolType === 'binary' ||
-      shouldUseBinaryCanvas({
-        isBinary: payload.isBinary,
-        mimeType: payload.mimeType,
-        fileExtension: payload.fileExtension,
-      })
-    ) {
-      return 'binary';
-    }
+  ): 'document' | 'code' => {
     if (payload.toolType === 'code') {
       return 'code';
     }
@@ -871,7 +887,6 @@ export function Chat({
       org: resolvedOrg,
       userId: resolvedUserId,
       fileExtension: payload.fileExtension,
-      mimeType: payload.mimeType,
       metadata: payload.metadata,
     };
 
@@ -887,22 +902,12 @@ export function Chat({
 
     // If we have an artifactId in the payload, also update currentCanvasArtifact
     // This ensures executeSubmit can use it even if canvas-active event hasn't fired yet
-    // Binary artifacts are excluded: they are view/export-only, so they must
-    // not be pinned to outgoing messages as an editable artifact context.
-    if (payload.artifactId && newCanvasState.type !== 'binary') {
+    if (payload.artifactId) {
       setCurrentCanvasArtifact({
         artifactId: payload.artifactId,
         title: resolvedTitle,
         file_extension: payload.fileExtension || 'txt',
       });
-    } else if (newCanvasState.type === 'binary') {
-      // The same artifact may have been pinned moments earlier by a
-      // mid-stream text-canvas open (before it was known to be a file) —
-      // clear any stale pin so the view/export-only artifact never rides
-      // along on outgoing messages as editable context.
-      setCurrentCanvasArtifact((current) =>
-        current && current.artifactId === payload.artifactId ? null : current,
-      );
     }
 
     // Always force refresh when opening a canvas to ensure it loads correctly
@@ -1317,23 +1322,6 @@ export function Chat({
         const artifactIdNum = Number(artifactId);
         setStreamingArtifactId(artifactIdNum); // Track streaming artifact
 
-        // Binary artifacts (pdf, zip, svg, …) have nothing to stream into
-        // the text editor and their file only exists on the detail endpoint
-        // once the version is finalized — defer canvas opening to stream end.
-        // The stream event's file_extension can be a "txt" placeholder while
-        // the artifact is really a file (the backend titles those by
-        // filename, e.g. "report.pdf"), so resolve against the title too —
-        // otherwise the text canvas opens mid-stream for a binary file.
-        const effectiveExtension = resolveEffectiveFileExtension(
-          fileExtension,
-          title,
-        );
-        if (
-          !getBinaryStreamBehavior(effectiveExtension).openCanvasOnStreamStart
-        ) {
-          return;
-        }
-
         const newArtifactPayload: CanvasOpenPayload = {
           title: title || t('untitledArtifact'),
           content: '', // Start with empty content, will be streamed
@@ -1381,47 +1369,18 @@ export function Chat({
         setStreamingArtifactId(undefined);
       }
 
-      if (!isUpdate && artifactId) {
-        // Every artifact opens at stream end — types the canvas can't render
-        // (zip, xlsx, …) get the binary canvas's no-preview message with the
-        // Export action. Resolve the extension against the title too: stream
-        // events can carry a "txt" placeholder for what is really a file.
-        const effectiveExtension = resolveEffectiveFileExtension(
-          fileExtension,
-          title,
-        );
-        const { isBinary } = getBinaryStreamBehavior(effectiveExtension);
-
-        // Binary content always wins over any streamed text rendering: if
-        // the text canvas opened mid-stream for THIS artifact (the stream
-        // start couldn't yet tell it was a file), switch it to the binary
-        // viewer now. Never hijack a canvas showing a different artifact.
-        const sameArtifactOpenAsText =
-          isCanvasOpen &&
-          canvasState.artifactId === Number(artifactId) &&
-          canvasState.type !== 'binary';
-        const shouldOpen =
-          !isCanvasOpen || (isBinary && sameArtifactOpenAsText);
-        if (!shouldOpen) {
-          return;
-        }
-
+      // If canvas is not open yet (fallback case), open it now with the final content
+      if (!isUpdate && artifactId && !isCanvasOpen) {
         const newArtifactPayload: CanvasOpenPayload = {
           title: title || t('untitledArtifact'),
-          content: isBinary ? '' : content || '',
-          toolType: isBinary
-            ? 'binary'
-            : CODE_FILE_EXTENSIONS.has(fileExtension?.toLowerCase() || '')
-              ? 'code'
-              : 'canvas',
+          content: content || '',
+          toolType: CODE_FILE_EXTENSIONS.has(fileExtension?.toLowerCase() || '')
+            ? 'code'
+            : 'canvas',
           artifactId: Number(artifactId),
           org: tenantKey,
           userId: username ?? undefined,
-          fileExtension: effectiveExtension ?? fileExtension,
-          isBinary,
-          mimeType: isBinary
-            ? resolveBinaryMimeType(effectiveExtension)
-            : undefined,
+          fileExtension: fileExtension,
           metadata: {
             sessionId: artifactSessionId || sessionId,
             versionNumber,
@@ -1664,38 +1623,75 @@ export function Chat({
     [enabledGuidedPrompts, tenantKey, sessionId, username, handleSubmit],
   );
 
-  // Gate for the "Just a sec..." loading placeholder.
-  // It must only appear in the brief window where a response is pending but
-  // nothing has rendered yet. Without the checks below, an unstable socket
-  // that retries/duplicates a generation renders "Just a sec..." next to an
-  // answer that is already streaming (or finished) in the current/previous
-  // bubble — the duplicate "stream showing while another stream is incoming"
-  // bug. So also hide it when the current stream already has reasoning/tool
-  // output, or when the last assistant message already shows any output.
-  const lastMessage =
-    messages.length > 0 ? messages[messages.length - 1] : undefined;
-  // Reasoning steps and tool calls only count as visible "output" when Verbose
-  // Reasoning is enabled. With it off those surfaces are hidden in the bubble,
-  // so they must not suppress the typing indicator — otherwise the user sees
-  // nothing while the agent reasons before any text streams in.
-  const verboseReasoningEnabled = mentorSettings.showReasoning;
-  const lastAssistantHasOutput =
-    lastMessage?.role === 'assistant' &&
-    ((lastMessage.content ?? '').trim().length > 0 ||
-      (verboseReasoningEnabled &&
-        ((lastMessage.reasoningContent ?? '').trim().length > 0 ||
-          (lastMessage.toolCalls?.length ?? 0) > 0)) ||
-      (lastMessage.artifactVersions?.length ?? 0) > 0);
-  const currentStreamHasOutput =
-    (currentStreamingMessage?.content ?? '').trim().length > 0 ||
-    (verboseReasoningEnabled &&
-      (isReasoning ||
-        (streamingReasoningContent ?? '').trim().length > 0 ||
-        (streamingToolCalls?.length ?? 0) > 0));
-  const showLoadingMessage =
-    (isPending || isStreaming) &&
-    !currentStreamHasOutput &&
-    !lastAssistantHasOutput;
+  // The working indicator stays up for the WHOLE turn, not just the silent gap
+  // before the first token. The previous placeholder hid itself as soon as any
+  // token/reasoning/tool output existed, which is exactly the long agentic turn
+  // where the user cannot tell whether the agent is still working or the app
+  // has hung. `isPending` covers the window between pressing send and the
+  // `generation_id` frame; `isStreaming` covers the rest of the turn.
+  const isTurnInFlight = isPending || isStreaming;
+  // Until the socket reports a more specific phase, "Thinking…" is the honest
+  // label — the request is in flight and nothing has come back yet. The
+  // optional chain also covers the gap while a host app runs against an SDK
+  // build that predates `chatPhase`.
+  const workingPhase: ChatPhase =
+    !chatPhase || chatPhase.kind === 'idle' ? { kind: 'thinking' } : chatPhase;
+
+  // The turn's own clock, captured once when it starts. The placeholder's
+  // header has to look like a real message header, and a header whose timestamp
+  // re-derives on every phase change would visibly tick during a long turn.
+  const turnStartedAtRef = useRef('');
+  if (!isTurnInFlight) {
+    turnStartedAtRef.current = '';
+  } else if (!turnStartedAtRef.current) {
+    turnStartedAtRef.current = formatRelativeDate(new Date().toISOString());
+  }
+
+  // Once the streaming bubble has anything to show it owns the working line
+  // (rendered inside its own bubble by `AIMessageBubble`), so the standalone
+  // placeholder must stand down. Both sides ask the same predicate, which is
+  // what keeps it to exactly one agent frame — and one shimmer — per turn.
+  const streamingMessage = currentStreamingMsg?.id
+    ? messages.find((message) => message.id === currentStreamingMsg.id)
+    : undefined;
+  // A waiting Code permission prompt is enough to make the bubble render, so
+  // the placeholder has to count it too or the two frames would sit on screen
+  // together. Same store and same match rule as `AIMessageBubble`: a streaming
+  // assistant message's id IS the generation id.
+  // Code turns (`opencode-<ts>` ids) force the collapsed activity surfaces on
+  // regardless of the mentor's show_reasoning setting — see ai-message-bubble.
+  // The container has to apply the same rule or the predicate would disagree
+  // with the bubble on a Code turn and both frames would render.
+  const streamIsCodeTurn =
+    typeof streamingMessage?.id === 'string' &&
+    streamingMessage.id.startsWith('opencode-');
+  const permissionRequests = useCodePermissionRequests();
+  const hasPermissionPrompts =
+    isStreaming &&
+    !!streamingMessage &&
+    permissionRequests.some((r) => r.generation_id === streamingMessage.id);
+  const isStreamingBubbleVisible =
+    isStreaming &&
+    !!streamingMessage &&
+    streamingMessage.visible === true &&
+    hasVisibleBubbleContent({
+      content: streamingMessage.content,
+      message: streamingMessage,
+      reasoningContent: streamingReasoningContent,
+      toolCalls: streamingToolCalls,
+      showReasoning: mentorSettings.showReasoning || streamIsCodeTurn,
+      hasPermissionPrompts,
+    });
+
+  const workingIndicator =
+    isTurnInFlight && !isStreamingBubbleVisible ? (
+      <AIWorkingMessage
+        phase={workingPhase}
+        mentorName={mentorName}
+        profileImage={profileImage}
+        timestamp={turnStartedAtRef.current}
+      />
+    ) : null;
 
   return (
     <div
@@ -1914,9 +1910,9 @@ export function Chat({
                       isStreaming={isStreaming}
                       streamingReasoningContent={streamingReasoningContent}
                       streamingToolCalls={streamingToolCalls}
-                      isReasoning={isReasoning}
                       showReasoning={mentorSettings.showReasoning}
                       currentStreamingMessageId={currentStreamingMsg?.id}
+                      workingPhase={isTurnInFlight ? workingPhase : undefined}
                     />
                   ) : (
                     <div className="flex h-full items-center justify-center text-sm text-gray-500">
@@ -1935,13 +1931,9 @@ export function Chat({
                     {mentorAccessibilityMessage}
                   </div>
 
-                  {/* Loading indicator - hide if last message has canvas preview or reasoning is active */}
-                  {showLoadingMessage && (
-                    <LoadingMessage
-                      mentorName={mentorName}
-                      profileImage={profileImage}
-                    />
-                  )}
+                  {/* Placeholder agent message for the window before the streaming
+                      bubble has anything to show. Stands down as soon as it does. */}
+                  {workingIndicator}
 
                   {/* Guided prompts in canvas view */}
                   {!showingSharedChat && guidedPrompts}
@@ -2038,7 +2030,6 @@ export function Chat({
               org={canvasState.org}
               userId={canvasState.userId}
               fileExtension={canvasState.fileExtension}
-              mimeType={canvasState.mimeType}
               metadata={canvasState.metadata}
               sessionId={sessionId}
               tenantKey={tenantKey}
@@ -2151,21 +2142,17 @@ export function Chat({
                   isStreaming={isStreaming}
                   streamingReasoningContent={streamingReasoningContent}
                   streamingToolCalls={streamingToolCalls}
-                  isReasoning={isReasoning}
                   showReasoning={mentorSettings.showReasoning}
                   currentStreamingMessageId={currentStreamingMsg?.id}
+                  workingPhase={isTurnInFlight ? workingPhase : undefined}
                 />
                 <div aria-live="polite" role="status" className="sr-only">
                   {mentorAccessibilityMessage}
                 </div>
 
-                {/* Loading indicator - hide if last message has canvas preview or reasoning is active */}
-                {showLoadingMessage && (
-                  <LoadingMessage
-                    mentorName={mentorName}
-                    profileImage={profileImage}
-                  />
-                )}
+                {/* Placeholder agent message for the window before the streaming
+                    bubble has anything to show. Stands down as soon as it does. */}
+                {workingIndicator}
 
                 {/* Guided prompts in normal view */}
                 {!showingSharedChat && guidedPrompts}

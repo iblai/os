@@ -6,6 +6,7 @@ import {
   fireEvent,
   waitFor,
   cleanup,
+  within,
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -39,6 +40,7 @@ const mockSetFocusEditCustomFloatingBubble = vi.fn();
 const mockUpdateConfig = vi.fn();
 const mockUpdateMultipleConfig = vi.fn();
 const mockFormHandleSubmit = vi.fn();
+const mockRemoveCustomImage = vi.fn();
 
 // next/navigation
 vi.mock('next/navigation', () => ({
@@ -194,6 +196,9 @@ vi.mock('@/components/ui/select', () => ({
     <div
       data-testid="select-root"
       data-value={value ?? defaultValue}
+      // Expose how the Select is bound so tests can assert a Select is
+      // *controlled* (driven by `value`) rather than uncontrolled (`defaultValue`).
+      data-controlled={value !== undefined ? 'true' : 'false'}
       data-disabled={disabled}
     >
       {React.Children.map(children, (child: any) =>
@@ -314,6 +319,10 @@ const defaultMentorSettings = {
 
 function buildUseEmbedTabReturn(overrides: Partial<any> = {}) {
   return {
+    // #2476: "Who can chat" is server state read from the mentor settings, not
+    // an embed form field. The tab reads it off the hook to gate the website
+    // URL / redirect-token controls.
+    allowAnonymous: true,
     form: makeForm(overrides.formValues ?? {}),
     createTokenHandler: mockCreateTokenHandler,
     createTokenError: '',
@@ -331,6 +340,8 @@ function buildUseEmbedTabReturn(overrides: Partial<any> = {}) {
     updateConfig: mockUpdateConfig,
     updateMultipleConfig: mockUpdateMultipleConfig,
     syncEmbedSettings: mockSyncEmbedSettings,
+    removeCustomImage: mockRemoveCustomImage,
+    isRemovingImage: false,
     ...overrides,
   };
 }
@@ -339,16 +350,11 @@ const defaultFormValues = {
   icon_selection: 'default',
   mode: 'default',
   starter_prompts: 'guided_prompt',
-  mentor_visibility: 'viewable_by_tenant_admins',
-  allow_anonymous: true,
   website_url: '',
   is_context_aware: false,
   sso: false,
   sso_provider: '',
   auto_open: false,
-  embed_show_attachment: true,
-  embed_show_voice_call: false,
-  embed_show_voice_record: false,
   generateShareableLink: false,
   strip_page_content_html: false,
 };
@@ -537,8 +543,18 @@ describe('EmbedTab', () => {
     expect(screen.getByText('Advanced CSS')).toBeInTheDocument();
     expect(screen.getByText('Advanced JavaScript')).toBeInTheDocument();
     expect(screen.getByText('Mode Selection')).toBeInTheDocument();
-    expect(screen.getByText('Who Can View?')).toBeInTheDocument();
-    expect(screen.getByText('Who Can Chat?')).toBeInTheDocument();
+  });
+
+  // #2476: the duplicated Discovery / Capabilities controls now live in
+  // Settings and were removed from this tab entirely.
+  it('no longer renders the controls that moved to Settings', () => {
+    renderEmbedTab();
+
+    expect(screen.queryByText('Who Can View?')).not.toBeInTheDocument();
+    expect(screen.queryByText('Who Can Chat?')).not.toBeInTheDocument();
+    expect(screen.queryByText('Show Attachment')).not.toBeInTheDocument();
+    expect(screen.queryByText('Show Voice Record')).not.toBeInTheDocument();
+    expect(screen.queryByText('Show Voice Call')).not.toBeInTheDocument();
   });
 
   it('expands and collapses the Advanced CSS card', async () => {
@@ -745,6 +761,15 @@ describe('EmbedTab', () => {
     expect(mockFormHandleSubmit).toHaveBeenCalled();
   });
 
+  it('renders Create Embed as the only footer button', () => {
+    renderEmbedTab();
+    const createEmbed = screen.getByRole('button', { name: 'Create Embed' });
+    expect(createEmbed).toBeInTheDocument();
+    expect(createEmbed.className).toContain('bg-gradient-to-r');
+    const footer = createEmbed.parentElement as HTMLElement;
+    expect(within(footer).getAllByRole('button')).toHaveLength(1);
+  });
+
   it('submits the form via the form element onSubmit', () => {
     const { container } = renderEmbedTab();
     const formEl = container.querySelector('form') as HTMLFormElement;
@@ -753,10 +778,11 @@ describe('EmbedTab', () => {
   });
 
   it('renders website url + token controls for authenticated-only mode', () => {
-    renderEmbedTab(
-      { createTokenError: 'Bad URL', redirectTokenData: { token: 'tok-123' } },
-      { ...defaultFormValues, allow_anonymous: false },
-    );
+    renderEmbedTab({
+      allowAnonymous: false,
+      createTokenError: 'Bad URL',
+      redirectTokenData: { token: 'tok-123' },
+    });
     expect(screen.getByText('Website URL')).toBeInTheDocument();
     expect(screen.getByText('Bad URL')).toBeInTheDocument();
     expect(screen.getByText('Get Token')).toBeInTheDocument();
@@ -771,10 +797,7 @@ describe('EmbedTab', () => {
   });
 
   it('shows the token-generating label while loading', () => {
-    renderEmbedTab(
-      { isCreateTokenLoading: true },
-      { ...defaultFormValues, allow_anonymous: false },
-    );
+    renderEmbedTab({ allowAnonymous: false, isCreateTokenLoading: true });
     expect(screen.getByText('Generating Token...')).toBeInTheDocument();
   });
 
@@ -786,11 +809,12 @@ describe('EmbedTab', () => {
   it('renders the SSO provider select when sso enabled and not anonymous', () => {
     renderEmbedTab(
       {
+        allowAnonymous: false,
         integratedSsoProviders: {
           providers: [{ backend_uri: 'uri-1', slug: 'google' }],
         },
       },
-      { ...defaultFormValues, sso: true, allow_anonymous: false },
+      { ...defaultFormValues, sso: true },
     );
     expect(screen.getByText('Single Sign On')).toBeInTheDocument();
     expect(screen.getByText('google')).toBeInTheDocument();
@@ -801,6 +825,32 @@ describe('EmbedTab', () => {
     const editorBtn = screen.getByRole('button', { name: 'Icon Editor' });
     fireEvent.click(editorBtn);
     expect(mockSetFocusEditCustomFloatingBubble).toHaveBeenCalledWith(true);
+  });
+
+  // Regression for issue #789: the Icon Selection Select must be *controlled*
+  // (bound via `value`, not `defaultValue`) so that when the form field is
+  // hydrated to 'custom' asynchronously after settings load, the trigger label
+  // reflects it instead of being stuck on "Default".
+  it('renders a controlled Icon Selection Select that reflects the field value', () => {
+    renderEmbedTab({}, { ...defaultFormValues, icon_selection: 'custom' });
+
+    const iconHeading = screen.getByRole('heading', { name: 'Icon Selection' });
+    const iconBlock = iconHeading.parentElement as HTMLElement;
+    const select = within(iconBlock).getByTestId('select-root');
+
+    expect(select).toHaveAttribute('data-controlled', 'true');
+    expect(select).toHaveAttribute('data-value', 'custom');
+  });
+
+  it('Icon Selection Select reflects the default field value', () => {
+    renderEmbedTab({}, { ...defaultFormValues, icon_selection: 'default' });
+
+    const iconHeading = screen.getByRole('heading', { name: 'Icon Selection' });
+    const iconBlock = iconHeading.parentElement as HTMLElement;
+    const select = within(iconBlock).getByTestId('select-root');
+
+    expect(select).toHaveAttribute('data-controlled', 'true');
+    expect(select).toHaveAttribute('data-value', 'default');
   });
 
   it('renders the floating bubble editor dialog and its tabs', () => {
@@ -826,11 +876,49 @@ describe('EmbedTab', () => {
     expect(mockUpdateConfig).toHaveBeenCalledWith('subtitle', 'Sub');
   });
 
-  it('removes the floating bubble icon image', () => {
+  it('persists the icon image removal instead of only clearing the preview', () => {
     renderEmbedTab({ focusEditCustomFloatingBubble: true });
     const removeBtn = screen.getByRole('button', { name: 'Remove Image' });
+    expect(removeBtn).toBeEnabled();
     fireEvent.click(removeBtn);
-    expect(mockUpdateMultipleConfig).toHaveBeenCalledWith({ image: null });
+    expect(mockRemoveCustomImage).toHaveBeenCalled();
+    expect(mockUpdateMultipleConfig).not.toHaveBeenCalled();
+  });
+
+  it('disables the Remove Image button while the removal is in flight', () => {
+    renderEmbedTab({
+      focusEditCustomFloatingBubble: true,
+      isRemovingImage: true,
+    });
+    expect(screen.getByRole('button', { name: 'Remove Image' })).toBeDisabled();
+  });
+
+  it('reads an uploaded icon image as a data URL and stores it in config', async () => {
+    renderEmbedTab({ focusEditCustomFloatingBubble: true });
+
+    const fileInput = document.getElementById('iconImage') as HTMLInputElement;
+    expect(fileInput).toBeTruthy();
+
+    const file = new File(['icon-bytes'], 'icon.png', { type: 'image/png' });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    // FileReader.readAsDataURL resolves asynchronously.
+    await waitFor(() => {
+      expect(mockUpdateMultipleConfig).toHaveBeenCalledWith(
+        expect.objectContaining({
+          image: expect.stringMatching(/^data:image\/png;base64,/),
+        }),
+      );
+    });
+  });
+
+  it('ignores the icon upload when no file is selected', () => {
+    renderEmbedTab({ focusEditCustomFloatingBubble: true });
+
+    const fileInput = document.getElementById('iconImage') as HTMLInputElement;
+    fireEvent.change(fileInput, { target: { files: [] } });
+
+    expect(mockUpdateMultipleConfig).not.toHaveBeenCalled();
   });
 
   it('renders the generated embed code dialog', () => {
@@ -865,12 +953,13 @@ describe('EmbedTab', () => {
   it('fires every select onValueChange handler', () => {
     renderEmbedTab(
       {
+        allowAnonymous: false,
         integratedSsoProviders: {
           providers: [{ backend_uri: 'uri-1', slug: 'google' }],
         },
         focusEditCustomFloatingBubble: true,
       },
-      { ...defaultFormValues, sso: true, allow_anonymous: false },
+      { ...defaultFormValues, sso: true },
     );
     // Click every rendered option to drive all onValueChange callbacks.
     screen.getAllByRole('option').forEach((opt) => fireEvent.click(opt));
@@ -1158,8 +1247,8 @@ describe('EmbedTab', () => {
       unwrap: vi.fn().mockResolvedValue({}),
     });
     renderEmbedTab(
-      {},
-      { ...defaultFormValues, allow_anonymous: false, website_url: '' },
+      { allowAnonymous: false },
+      { ...defaultFormValues, website_url: '' },
     );
 
     const toggle = screen.getByLabelText(/Generate \/ Revoke shareable link/);
@@ -1187,8 +1276,8 @@ describe('EmbedTab', () => {
       unwrap: vi.fn().mockResolvedValue({}),
     });
     renderEmbedTab(
-      {},
-      { ...defaultFormValues, allow_anonymous: false, website_url: '' },
+      { allowAnonymous: false },
+      { ...defaultFormValues, website_url: '' },
     );
 
     const toggle = screen.getByLabelText(/Generate \/ Revoke shareable link/);
@@ -1212,8 +1301,8 @@ describe('EmbedTab', () => {
       unwrap: vi.fn().mockResolvedValue({}),
     });
     renderEmbedTab(
-      {},
-      { ...defaultFormValues, allow_anonymous: false, website_url: '' },
+      { allowAnonymous: false },
+      { ...defaultFormValues, website_url: '' },
     );
 
     const toggle = screen.getByLabelText(/Generate \/ Revoke shareable link/);
@@ -1239,8 +1328,8 @@ describe('EmbedTab', () => {
       unwrap: vi.fn().mockResolvedValue({}),
     });
     const { container } = renderEmbedTab(
-      {},
-      { ...defaultFormValues, allow_anonymous: false, website_url: '' },
+      { allowAnonymous: false },
+      { ...defaultFormValues, website_url: '' },
     );
 
     const refresh = container.querySelector('.lucide-refresh-cw');

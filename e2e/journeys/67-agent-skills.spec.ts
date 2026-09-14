@@ -210,6 +210,38 @@ async function placeComposerCaret(
   }, index);
 }
 
+/**
+ * Asserts a skill row renders its name and `/slug` as a COLUMN — the full
+ * name on top, the slug on its own line beneath — rather than the old
+ * side-by-side row whose `truncate`d name clipped to "canvas-course-b…".
+ * Checks real geometry (bounding boxes + scrollWidth), not class names.
+ */
+async function expectNameStackedOverSlug(
+  row: Locator,
+  nameTestId: string,
+  slugTestId: string,
+  expectedName: string,
+  expectedSlug: string,
+): Promise<void> {
+  const name = row.getByTestId(nameTestId);
+  const slug = row.getByTestId(slugTestId);
+  await expect(name).toHaveText(expectedName);
+  await expect(slug).toHaveText(expectedSlug);
+  const [nameBox, slugBox] = await Promise.all([
+    name.boundingBox(),
+    slug.boundingBox(),
+  ]);
+  expect(nameBox).not.toBeNull();
+  expect(slugBox).not.toBeNull();
+  // Slug starts at or below where the name ends → stacked, not inline.
+  expect(slugBox!.y).toBeGreaterThanOrEqual(nameBox!.y + nameBox!.height - 1);
+  // The name is not horizontally clipped (no ellipsis truncation).
+  const clipped = await name.evaluate(
+    (el) => el.scrollWidth > el.clientWidth + 1,
+  );
+  expect(clipped).toBe(false);
+}
+
 const SLASH_SKILLS: EffectiveSkillFixture[] = [
   {
     unique_id: 'e2e-skill-web-research',
@@ -267,6 +299,13 @@ test.describe('Journey 67: Agent Skills — Edit Mentor Skills tab gating', () =
     await createMentorPage.openAndCreate();
     const { mentorId } = await getPlatformContext(page);
     tracker.add(mentorId);
+
+    // The SDK section RBAC-gates the Available Skills sub-tab (and every
+    // row affordance) on the mentor permission check — grant the full set
+    // explicitly so this full-admin-view assert doesn't depend on the
+    // environment's grant rollout. Registered before open(): the modal
+    // fires the check when it opens. The deny path is ags-07.
+    await editMentorPage.skills.grantAllSkillAssignmentPerms();
 
     await editMentorPage.open('Settings');
     await editMentorPage.navigateToTab('Skills');
@@ -378,6 +417,58 @@ test.describe('Journey 67: Agent Skills — Edit Mentor Skills tab gating', () =
 
     await editMentorPage.close();
   });
+
+  // ── ags-07: view-only RBAC — catalog sub-tab and New Skill hidden ────────
+  //
+  // The SDK section gates the whole Available Skills sub-tab plus the New
+  // Skill button on `create_skill_assignment` (mentorai passes `mentorDbId`,
+  // opting into the gating). Per-grant row affordances (Switch disabled
+  // without write, Remove hidden without delete) are covered by the SDK's
+  // own unit tests; this checkpoint pins the user-visible tab-level hiding
+  // end to end. Deny is forced via the same permission-check mock that
+  // ags-01 uses to grant — hermetic in both directions.
+
+  test('view-only RBAC hides the Available Skills sub-tab and New Skill button but keeps Agent Skills', async ({
+    page,
+    createMentorPage,
+    editMentorPage,
+  }) => {
+    await createMentorPage.openAndCreate();
+    const { mentorId } = await getPlatformContext(page);
+    tracker.add(mentorId);
+
+    await editMentorPage.skills.mockSkillAssignmentGrants({
+      view_skill_assignments: true,
+      create_skill_assignment: false,
+      write_skill_assignment: false,
+      delete_skill_assignment: false,
+    });
+
+    await editMentorPage.open('Settings');
+    await editMentorPage.navigateToTab('Skills');
+
+    // Element-first readiness: the SDK section and its (sole) sub-tab.
+    await expect(page.getByTestId('agent-skills-content')).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(page.getByTestId('agent-skills-tab-agent')).toBeVisible({
+      timeout: 10_000,
+    });
+    // A fresh mentor has no assignments — the view grant renders the
+    // Agent Skills panel's empty state, not a blank section.
+    await expect(
+      page.getByText(/No skills enabled for this agent yet/i),
+    ).toBeVisible({ timeout: 10_000 });
+
+    // The section rendered above, so these absence checks aren't racing a
+    // still-mounting UI.
+    await expect(page.getByTestId('agent-skills-tab-available')).toHaveCount(0);
+    await expect(
+      editMentorPage.dialog.getByRole('button', { name: /New Skill/i }),
+    ).toHaveCount(0);
+
+    await editMentorPage.close();
+  });
 });
 
 // ─── Skills section management (SDK AgentSkills component) ────────────────
@@ -410,6 +501,12 @@ test.describe('Journey 67: Agent Skills — skills section management', () => {
     await createMentorPage.openAndCreate();
     const { mentorId } = await getPlatformContext(page);
     tracker.add(mentorId);
+
+    // Every flow here needs the full RBAC grant set (catalog to attach,
+    // write for the Switch, delete for Remove) — grant it deterministically
+    // instead of depending on the environment's rollout; see ags-01's note.
+    // The mutations themselves still hit the real backend.
+    await editMentorPage.skills.grantAllSkillAssignmentPerms();
 
     await editMentorPage.open('Settings');
     await editMentorPage.navigateToTab('Skills');
@@ -685,6 +782,16 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
     await expect(
       chatPage.slashSkillPicker.getByText('Research a topic on the open web.'),
     ).toHaveCount(0);
+    // Name stacked OVER the slug (column, not a row) so long names never
+    // get clipped to "canvas-course-b…": the name box sits fully above the
+    // slug box and is never wider than its container.
+    await expectNameStackedOverSlug(
+      chatPage.getSlashSkillOption('Web Research'),
+      'slash-skill-picker-option-name',
+      'slash-skill-picker-option-slug',
+      'Web Research',
+      '/web-research',
+    );
   });
 
   // ── slash-03: Filtering narrows by name and by slug ──────────────────────
@@ -997,6 +1104,14 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
     await expect(webItem).not.toContainText(
       'Research a topic on the open web.',
     );
+    // Same stacked name-over-slug layout as the `/` picker rows.
+    await expectNameStackedOverSlug(
+      webItem,
+      'skills-menu-item-name',
+      'skills-menu-item-slug',
+      'Web Research',
+      '/web-research',
+    );
     // Disabled skills never reach the menu.
     await expect(chatPage.getSkillsMenuItem('disabled-skill')).toHaveCount(0);
     await webItem.click();
@@ -1122,6 +1237,10 @@ test.describe('Journey 67: Agent Skills — chat composer slash skill picker', (
     page,
     chatPage,
   }) => {
+    // The held fetch below only ever fires for users granted
+    // `view_skill_assignments` — grant it explicitly so the test doesn't
+    // depend on the environment's grant rollout.
+    await chatPage.grantSkillAssignmentsRead();
     let releaseSkills!: () => void;
     const gate = new Promise<void>((resolve) => (releaseSkills = resolve));
     await page.route(

@@ -1,8 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { act, render, screen, fireEvent, within } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 import { AIMessageBubble, getLastUserMessage } from '../ai-message-bubble';
+import { STALLED_STREAM_DELAY_MS } from '../working-indicator';
+import { CSS_CLASS_NAMES } from '@/lib/constants';
 import type { Message } from '@iblai/iblai-js/web-utils';
 
 // Mock dependencies
@@ -106,6 +108,20 @@ vi.mock('@/components/chat/ai-message-share', () => ({
   ),
 }));
 
+vi.mock('@/components/chat/ai-message-download', () => ({
+  AIMessageDownload: ({
+    mentorName,
+    messages,
+  }: {
+    mentorName: string;
+    messages: unknown[];
+  }) => (
+    <button data-testid="ai-message-download">
+      Download: {mentorName} ({messages.length})
+    </button>
+  ),
+}));
+
 vi.mock('@/components/chat/ai-message-rating', () => ({
   AIMessageRating: () => <div data-testid="ai-message-rating">Rating</div>,
 }));
@@ -138,21 +154,23 @@ vi.mock('@/components/chat/chat-messages/message-preview', () => ({
   ),
 }));
 
+// Both verbose surfaces take their content plus a single `isActive` liveness
+// flag — nothing else. `data-extra-props` lets the tests assert that no
+// streaming/reasoning flag leaks back in.
 vi.mock('@/components/chat/reasoning-section', () => ({
   ReasoningSection: ({
     reasoningContent,
-    isReasoning,
-    isCurrentlyStreaming,
+    isActive,
+    ...rest
   }: {
     reasoningContent: string;
-    isReasoning: boolean;
-    isCurrentlyStreaming?: boolean;
+    isActive?: boolean;
   }) => (
     <div
       data-testid="reasoning-section"
       data-reasoning-content={reasoningContent}
-      data-is-reasoning={isReasoning}
-      data-is-currently-streaming={isCurrentlyStreaming ?? false}
+      data-active={String(!!isActive)}
+      data-extra-props={Object.keys(rest).join(',')}
     >
       {reasoningContent}
     </div>
@@ -162,15 +180,17 @@ vi.mock('@/components/chat/reasoning-section', () => ({
 vi.mock('@/components/chat/tool-call-indicator', () => ({
   ToolCallIndicator: ({
     toolCalls,
-    isCurrentlyStreaming,
+    isActive,
+    ...rest
   }: {
     toolCalls: unknown[];
-    isCurrentlyStreaming?: boolean;
+    isActive?: boolean;
   }) => (
     <div
       data-testid="tool-call-indicator"
       data-tool-calls-count={toolCalls.length}
-      data-is-currently-streaming={isCurrentlyStreaming ?? false}
+      data-active={String(!!isActive)}
+      data-extra-props={Object.keys(rest).join(',')}
     />
   ),
 }));
@@ -438,6 +458,31 @@ describe('AIMessageBubble', () => {
       mockShowingSharedChat = false; // Reset for other tests
     });
 
+    // Issue #2464: the download button rides the same gate as share — a
+    // per-message toolbar action on AI bubbles only, hidden in shared-chat and
+    // private-mode views.
+    it('should render download button when not in shared chat and not private', () => {
+      renderWithRedux(<AIMessageBubble {...defaultProps} />);
+      expect(screen.getByTestId('ai-message-download')).toBeInTheDocument();
+    });
+
+    it('should not render download button when in shared chat', () => {
+      mockShowingSharedChat = true;
+      renderWithRedux(<AIMessageBubble {...defaultProps} />, true);
+      expect(
+        screen.queryByTestId('ai-message-download'),
+      ).not.toBeInTheDocument();
+      mockShowingSharedChat = false;
+    });
+
+    it('should not render download button when chat private mode is active', () => {
+      mockChatPrivacyMode = 'disabled';
+      renderWithRedux(<AIMessageBubble {...defaultProps} />);
+      expect(
+        screen.queryByTestId('ai-message-download'),
+      ).not.toBeInTheDocument();
+    });
+
     it('should render rating component when logged in and not shared chat', () => {
       renderWithRedux(<AIMessageBubble {...defaultProps} />);
       expect(screen.getByTestId('ai-message-rating')).toBeInTheDocument();
@@ -691,7 +736,6 @@ describe('AIMessageBubble', () => {
         <AIMessageBubble
           {...defaultProps}
           reasoningContent="Let me think..."
-          isReasoning={true}
         />,
       );
       expect(screen.getByTestId('reasoning-section')).toBeInTheDocument();
@@ -713,42 +757,19 @@ describe('AIMessageBubble', () => {
       expect(screen.queryByTestId('reasoning-section')).not.toBeInTheDocument();
     });
 
-    it('should pass isReasoning to ReasoningSection', () => {
+    it('should pass no streaming/reasoning flags to ReasoningSection, even mid-stream', () => {
+      // The trigger wording is fixed ("Thought"); `isActive` is the only extra
+      // input it gets, and it drives motion alone.
       renderWithRedux(
         <AIMessageBubble
           {...defaultProps}
           reasoningContent="thinking"
-          isReasoning={true}
-        />,
-      );
-      expect(screen.getByTestId('reasoning-section')).toHaveAttribute(
-        'data-is-reasoning',
-        'true',
-      );
-    });
-
-    it('should default isReasoning to false for ReasoningSection', () => {
-      renderWithRedux(
-        <AIMessageBubble {...defaultProps} reasoningContent="done thinking" />,
-      );
-      expect(screen.getByTestId('reasoning-section')).toHaveAttribute(
-        'data-is-reasoning',
-        'false',
-      );
-    });
-
-    it('should pass isCurrentlyStreaming to ReasoningSection', () => {
-      renderWithRedux(
-        <AIMessageBubble
-          {...defaultProps}
-          reasoningContent="thinking"
-          isReasoning={true}
           isCurrentlyStreaming={true}
         />,
       );
       expect(screen.getByTestId('reasoning-section')).toHaveAttribute(
-        'data-is-currently-streaming',
-        'true',
+        'data-extra-props',
+        '',
       );
     });
 
@@ -757,7 +778,6 @@ describe('AIMessageBubble', () => {
         <AIMessageBubble
           {...defaultProps}
           reasoningContent="Let me think..."
-          isReasoning={true}
           showReasoning={false}
         />,
       );
@@ -769,7 +789,6 @@ describe('AIMessageBubble', () => {
         <AIMessageBubble
           {...defaultProps}
           reasoningContent="Let me think..."
-          isReasoning={true}
           showReasoning={undefined}
         />,
       );
@@ -790,7 +809,6 @@ describe('AIMessageBubble', () => {
           reasoningContent="hidden thoughts"
           toolCalls={mockToolCalls}
           showReasoning={false}
-          isReasoning={true}
           isCurrentlyStreaming={true}
         />,
       );
@@ -801,6 +819,64 @@ describe('AIMessageBubble', () => {
       expect(
         screen.queryByTestId('tool-call-indicator'),
       ).not.toBeInTheDocument();
+    });
+
+    /**
+     * Code is told to keep its visible text terse, and in automatic-approval
+     * mode it raises no permission cards either — so with verbose reasoning off
+     * (the default) a turn that spends minutes running commands would show
+     * nothing at all. Code turns are identified by the `opencode-` generation
+     * id the SDK mints (see opencode-client), and always keep the collapsed
+     * progress surfaces.
+     */
+    it('keeps the collapsed progress surfaces on a Code turn with verbose reasoning off', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          message={{ ...defaultProps.message, id: 'opencode-1700000000000' }}
+          content=""
+          reasoningContent="checking the API"
+          toolCalls={mockToolCalls}
+          showReasoning={false}
+          isCurrentlyStreaming={true}
+        />,
+      );
+      expect(screen.getByTestId('tool-call-indicator')).toBeInTheDocument();
+      expect(screen.getByTestId('reasoning-section')).toBeInTheDocument();
+    });
+
+    it('still hides them on an ordinary turn with verbose reasoning off', () => {
+      const { container } = renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          message={{ ...defaultProps.message, id: 'msg-2' }}
+          content=""
+          reasoningContent="hidden thoughts"
+          toolCalls={mockToolCalls}
+          showReasoning={false}
+          isCurrentlyStreaming={true}
+        />,
+      );
+      expect(container).toBeEmptyDOMElement();
+    });
+
+    it('survives a message id that is not a string', () => {
+      // Ids are typed as strings but several producers feed this component;
+      // a numeric one must not throw on the prefix check.
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          message={
+            {
+              ...defaultProps.message,
+              id: 42,
+            } as unknown as (typeof defaultProps)['message']
+          }
+          content="Done"
+          showReasoning={false}
+        />,
+      );
+      expect(screen.getByTestId('message-preview')).toBeInTheDocument();
     });
 
     it('renders when there is text content even with verbose reasoning off', () => {
@@ -821,7 +897,6 @@ describe('AIMessageBubble', () => {
           content=""
           reasoningContent="visible thoughts"
           showReasoning={true}
-          isReasoning={true}
           isCurrentlyStreaming={true}
         />,
       );
@@ -895,7 +970,9 @@ describe('AIMessageBubble', () => {
       ).not.toBeInTheDocument();
     });
 
-    it('should pass isCurrentlyStreaming to ToolCallIndicator', () => {
+    it('should pass no streaming flag to ToolCallIndicator, even mid-stream', () => {
+      // The header wording is fixed ("Used N tools"); `isActive` is the only
+      // extra input it gets, and it drives motion alone.
       renderWithRedux(
         <AIMessageBubble
           {...defaultProps}
@@ -904,8 +981,8 @@ describe('AIMessageBubble', () => {
         />,
       );
       expect(screen.getByTestId('tool-call-indicator')).toHaveAttribute(
-        'data-is-currently-streaming',
-        'true',
+        'data-extra-props',
+        '',
       );
     });
 
@@ -1094,6 +1171,314 @@ describe('AIMessageBubble', () => {
         />,
       );
       expect(container).toBeEmptyDOMElement();
+    });
+  });
+
+  describe('working line', () => {
+    it('renders nothing extra when no phase is supplied', () => {
+      renderWithRedux(<AIMessageBubble {...defaultProps} />);
+
+      expect(
+        screen.queryByTestId('chat-working-indicator'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('shimmers inside the bubble while the turn is still running', () => {
+      const { container } = renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          isCurrentlyStreaming
+          workingPhase={{ kind: 'tool', name: 'web_search' }}
+        />,
+      );
+
+      const bubble = container.querySelector(
+        `.${CSS_CLASS_NAMES.CHAT.AI_MESSAGE_RESPONSE}`,
+      ) as HTMLElement;
+      expect(
+        within(bubble).getByTestId('chat-working-indicator'),
+      ).toBeInTheDocument();
+      expect(within(bubble).getByText('Using web_search…')).toBeInTheDocument();
+    });
+
+    it('stands down once tokens are visibly streaming — the text is the progress', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          content="Sure — let me look that up for you."
+          isCurrentlyStreaming
+          workingPhase={{ kind: 'writing' }}
+        />,
+      );
+
+      expect(
+        screen.getByText('Sure — let me look that up for you.'),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByTestId('chat-working-indicator'),
+      ).not.toBeInTheDocument();
+      // Exactly one avatar/name/timestamp header for the turn.
+      expect(screen.getAllByText('Test Mentor')).toHaveLength(1);
+      expect(screen.getAllByText('10:30 AM')).toHaveLength(1);
+    });
+
+    it('still labels the writing phase before the first token reaches the bubble', () => {
+      // The bubble is on screen because the reasoning row is, but no answer
+      // text has landed yet — so there is nothing for the user to watch.
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          content=""
+          reasoningContent="Let me think..."
+          isCurrentlyStreaming
+          workingPhase={{ kind: 'writing' }}
+        />,
+      );
+
+      expect(screen.getByText('Writing response…')).toBeInTheDocument();
+    });
+
+    it('cannot shimmer on a bubble that has nothing to show', () => {
+      renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          content=""
+          showReasoning={false}
+          isCurrentlyStreaming
+          workingPhase={{ kind: 'thinking' }}
+        />,
+      );
+
+      expect(
+        screen.queryByTestId('chat-working-indicator'),
+      ).not.toBeInTheDocument();
+    });
+
+    describe('standing down for a row that already says it', () => {
+      const workingToolCalls = [
+        { id: 'tc1', name: 'web_search_call', log: '', result: '' },
+      ];
+
+      it('stays quiet while the reasoning row states the thinking phase', () => {
+        renderWithRedux(
+          <AIMessageBubble
+            {...defaultProps}
+            reasoningContent="Let me think..."
+            isCurrentlyStreaming
+            workingPhase={{ kind: 'thinking' }}
+          />,
+        );
+
+        expect(screen.getByTestId('reasoning-section')).toBeInTheDocument();
+        expect(
+          screen.queryByTestId('chat-working-indicator'),
+        ).not.toBeInTheDocument();
+      });
+
+      it('stays quiet while the tool row states the tool phase', () => {
+        renderWithRedux(
+          <AIMessageBubble
+            {...defaultProps}
+            toolCalls={workingToolCalls}
+            isCurrentlyStreaming
+            workingPhase={{ kind: 'tool', name: 'web_search' }}
+          />,
+        );
+
+        expect(screen.getByTestId('tool-call-indicator')).toBeInTheDocument();
+        expect(
+          screen.queryByTestId('chat-working-indicator'),
+        ).not.toBeInTheDocument();
+      });
+
+      it('leaves both rows static while writing — neither is the live phase', () => {
+        // `defaultProps.content` is non-empty, so the answer text is already
+        // moving and the line stands down for that reason, not restatement.
+        renderWithRedux(
+          <AIMessageBubble
+            {...defaultProps}
+            reasoningContent="Let me think..."
+            toolCalls={workingToolCalls}
+            isCurrentlyStreaming
+            workingPhase={{ kind: 'writing' }}
+          />,
+        );
+
+        expect(screen.getByTestId('reasoning-section')).toHaveAttribute(
+          'data-active',
+          'false',
+        );
+        expect(screen.getByTestId('tool-call-indicator')).toHaveAttribute(
+          'data-active',
+          'false',
+        );
+        expect(
+          screen.queryByTestId('chat-working-indicator'),
+        ).not.toBeInTheDocument();
+      });
+
+      it('still shimmers while writing with both rows on screen but no text yet', () => {
+        renderWithRedux(
+          <AIMessageBubble
+            {...defaultProps}
+            content=""
+            reasoningContent="Let me think..."
+            toolCalls={workingToolCalls}
+            isCurrentlyStreaming
+            workingPhase={{ kind: 'writing' }}
+          />,
+        );
+
+        expect(screen.getByTestId('reasoning-section')).toBeInTheDocument();
+        expect(screen.getByTestId('tool-call-indicator')).toBeInTheDocument();
+        expect(screen.getByText('Writing response…')).toBeInTheDocument();
+      });
+
+      it('shimmers the thinking phase when verbose reasoning hides the row', () => {
+        renderWithRedux(
+          <AIMessageBubble
+            {...defaultProps}
+            reasoningContent="Let me think..."
+            showReasoning={false}
+            isCurrentlyStreaming
+            workingPhase={{ kind: 'thinking' }}
+          />,
+        );
+
+        expect(
+          screen.queryByTestId('reasoning-section'),
+        ).not.toBeInTheDocument();
+        expect(screen.getByText('Thinking…')).toBeInTheDocument();
+      });
+
+      it('shimmers the tool phase when no tool row has rendered yet', () => {
+        renderWithRedux(
+          <AIMessageBubble
+            {...defaultProps}
+            toolCalls={[]}
+            isCurrentlyStreaming
+            workingPhase={{ kind: 'tool', name: 'web_search' }}
+          />,
+        );
+
+        expect(
+          screen.queryByTestId('tool-call-indicator'),
+        ).not.toBeInTheDocument();
+        expect(screen.getByText('Using web_search…')).toBeInTheDocument();
+      });
+    });
+
+    // The row that animates is exactly the row that silences the working line:
+    // both come off the same pair of booleans, so there is always exactly one
+    // thing moving on screen.
+    describe('handing liveness to the active row', () => {
+      const workingToolCalls = [
+        { id: 'tc1', name: 'web_search_call', log: '', result: '' },
+      ];
+
+      it('marks the reasoning row active while the agent is thinking', () => {
+        renderWithRedux(
+          <AIMessageBubble
+            {...defaultProps}
+            reasoningContent="Let me think..."
+            toolCalls={workingToolCalls}
+            isCurrentlyStreaming
+            workingPhase={{ kind: 'thinking' }}
+          />,
+        );
+
+        expect(screen.getByTestId('reasoning-section')).toHaveAttribute(
+          'data-active',
+          'true',
+        );
+        expect(screen.getByTestId('tool-call-indicator')).toHaveAttribute(
+          'data-active',
+          'false',
+        );
+        expect(
+          screen.queryByTestId('chat-working-indicator'),
+        ).not.toBeInTheDocument();
+      });
+
+      it('marks the tool row active while a tool is running', () => {
+        renderWithRedux(
+          <AIMessageBubble
+            {...defaultProps}
+            reasoningContent="Let me think..."
+            toolCalls={workingToolCalls}
+            isCurrentlyStreaming
+            workingPhase={{ kind: 'tool', name: 'web_search' }}
+          />,
+        );
+
+        expect(screen.getByTestId('tool-call-indicator')).toHaveAttribute(
+          'data-active',
+          'true',
+        );
+        expect(screen.getByTestId('reasoning-section')).toHaveAttribute(
+          'data-active',
+          'false',
+        );
+        expect(
+          screen.queryByTestId('chat-working-indicator'),
+        ).not.toBeInTheDocument();
+      });
+
+      it('leaves finished rows static once the turn is over', () => {
+        renderWithRedux(
+          <AIMessageBubble
+            {...defaultProps}
+            reasoningContent="Let me think..."
+            toolCalls={workingToolCalls}
+          />,
+        );
+
+        expect(screen.getByTestId('reasoning-section')).toHaveAttribute(
+          'data-active',
+          'false',
+        );
+        expect(screen.getByTestId('tool-call-indicator')).toHaveAttribute(
+          'data-active',
+          'false',
+        );
+      });
+    });
+
+    describe('a stream that stops moving', () => {
+      beforeEach(() => {
+        vi.useFakeTimers();
+      });
+
+      afterEach(() => {
+        vi.useRealTimers();
+      });
+
+      it('brings the line back after the stall window with the same content', () => {
+        // The working line is never unmounted to hide it, so the stall clock
+        // keeps running across the silent stretch.
+        renderWithRedux(
+          <AIMessageBubble
+            {...defaultProps}
+            content="Two sentences so far."
+            isCurrentlyStreaming
+            workingPhase={{ kind: 'writing' }}
+          />,
+        );
+
+        expect(
+          screen.queryByTestId('chat-working-indicator'),
+        ).not.toBeInTheDocument();
+
+        act(() => {
+          vi.advanceTimersByTime(STALLED_STREAM_DELAY_MS);
+        });
+
+        expect(
+          screen.getByText(
+            'Still working — longer tasks can take a few minutes.',
+          ),
+        ).toBeInTheDocument();
+      });
     });
   });
 });

@@ -5,6 +5,7 @@ import {
   fireEvent,
   waitFor,
   act,
+  within,
 } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
@@ -66,6 +67,32 @@ vi.mock('next/dynamic', () => ({
       };
       Component.displayName = 'DisclaimerModal';
       return Component;
+    } else if (
+      loaderStr.includes('live-kit-voice-chat') ||
+      loaderStr.includes('LiveKitChat')
+    ) {
+      // LiveKitChat is now lazy-loaded via next/dynamic; mirror the module mock.
+      const Component = (props: { isOpen?: boolean; onClose?: () => void }) =>
+        props.isOpen ? (
+          <div data-testid="live-kit-chat">
+            <button onClick={props.onClose}>Close</button>
+          </div>
+        ) : null;
+      Component.displayName = 'LiveKitChat';
+      return Component;
+    } else if (
+      loaderStr.includes('live-kit-screen-sharing') ||
+      loaderStr.includes('LiveKitScreenSharing')
+    ) {
+      // LiveKitScreenSharing is now lazy-loaded via next/dynamic too.
+      const Component = (props: { isOpen?: boolean; onClose?: () => void }) =>
+        props.isOpen ? (
+          <div data-testid="live-kit-screen-sharing">
+            <button onClick={props.onClose}>Close</button>
+          </div>
+        ) : null;
+      Component.displayName = 'LiveKitScreenSharing';
+      return Component;
     } else {
       // Default fallback (CanvasView for backward compatibility)
       const Component = (props: {
@@ -100,6 +127,22 @@ vi.mock('next/navigation', () => ({
   useSearchParams: vi.fn(() => new URLSearchParams()),
 }));
 
+// Id of the message the socket is currently streaming into. Empty by default:
+// most tests never reach the point where an assistant bubble exists.
+// Mutable so a test can put the streaming turn in a tool-running state; the
+// selector below is otherwise a constant for every other test.
+const { streamingToolCalls } = vi.hoisted(() => ({
+  streamingToolCalls: { current: [] as unknown[] },
+}));
+
+const mockCurrentStreamingMessage = {
+  id: '',
+  content: '',
+  reasoningContent: '',
+  toolCalls: [] as unknown[],
+  isReasoning: false,
+};
+
 vi.mock('@iblai/iblai-js/web-utils', async () => {
   const actual = await vi.importActual('@iblai/iblai-js/web-utils');
   return {
@@ -124,14 +167,8 @@ vi.mock('@iblai/iblai-js/web-utils', async () => {
     selectShowingSharedChat: vi.fn(() => false),
     selectStreamingReasoningContent: () => '',
     selectIsReasoning: () => false,
-    selectStreamingToolCalls: () => [],
-    selectCurrentStreamingMessage: () => ({
-      id: '',
-      content: '',
-      reasoningContent: '',
-      toolCalls: [],
-      isReasoning: false,
-    }),
+    selectStreamingToolCalls: () => streamingToolCalls.current,
+    selectCurrentStreamingMessage: () => mockCurrentStreamingMessage,
     selectActiveTab: () => 'default',
     useMentorTools: vi.fn(() => ({
       enableWebBrowsing: true,
@@ -201,6 +238,11 @@ vi.mock('@/lib/utils', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/utils')>();
   return {
     ...actual,
+    // Wrapped, not replaced: the real formatting still applies, but the spy
+    // lets a test prove the placeholder's timestamp is computed once per turn.
+    formatRelativeDate: vi.fn((date: string) =>
+      actual.formatRelativeDate(date),
+    ),
     cn: (...args: unknown[]) =>
       args
         .flatMap((arg) =>
@@ -395,8 +437,9 @@ vi.mock('@/components/chat/chat-messages', () => ({
     handleHighlightMessage,
     streamingReasoningContent,
     streamingToolCalls,
-    isReasoning,
     currentStreamingMessageId,
+    workingPhase,
+    ...rest
   }: {
     messages: any[];
     handleSubmit: (content: string) => void;
@@ -405,15 +448,16 @@ vi.mock('@/components/chat/chat-messages', () => ({
     handleHighlightMessage?: (messageIndex: number) => void;
     streamingReasoningContent?: string;
     streamingToolCalls?: any[];
-    isReasoning?: boolean;
     currentStreamingMessageId?: string;
+    workingPhase?: { kind: string };
   }) => (
     <div
       data-testid="chat-messages"
       data-streaming-reasoning={streamingReasoningContent || ''}
       data-streaming-tool-calls-count={streamingToolCalls?.length ?? 0}
-      data-is-reasoning={isReasoning ?? false}
+      data-has-is-reasoning={Object.keys(rest).includes('isReasoning')}
       data-current-streaming-id={currentStreamingMessageId || ''}
+      data-working-phase={workingPhase?.kind ?? ''}
     >
       <span data-testid="message-count">{messages.length}</span>
       <button data-testid="retry-btn" onClick={() => handleSubmit('Retry')}>
@@ -575,8 +619,12 @@ vi.mock('@/components/advanced-chat/advanced-chat-builder', () => ({
   ),
 }));
 
-vi.mock('@/components/chat/loading-message', () => ({
-  LoadingMessage: () => <div data-testid="loading-message">Loading...</div>,
+vi.mock('@/components/chat/working-indicator', () => ({
+  WorkingIndicator: ({ phase }: { phase: { kind: string } }) => (
+    <div data-testid="chat-working-indicator" data-phase={phase.kind}>
+      Working...
+    </div>
+  ),
 }));
 
 vi.mock('@/components/chat/canvas-view', () => ({
@@ -1017,7 +1065,7 @@ describe('Chat', () => {
 
       renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
 
-      expect(screen.getByTestId('loading-message')).toBeInTheDocument();
+      expect(screen.getByTestId('chat-working-indicator')).toBeInTheDocument();
     });
   });
 
@@ -2585,7 +2633,7 @@ describe('Chat', () => {
   });
 
   describe('artifacts loading indicator', () => {
-    it('should hide loading message when last message has artifact versions', async () => {
+    it('should keep the working indicator up when the last message has artifact versions', async () => {
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
@@ -2625,8 +2673,7 @@ describe('Chat', () => {
 
       renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
 
-      // Loading message should not be shown when last message has artifact versions
-      expect(screen.queryByTestId('loading-message')).not.toBeInTheDocument();
+      expect(screen.getByTestId('chat-working-indicator')).toBeInTheDocument();
     });
   });
 
@@ -5192,7 +5239,7 @@ describe('Chat', () => {
   });
 
   describe('loading states with artifact versions', () => {
-    it('should hide loading message when last message has artifact versions', async () => {
+    it('should keep the working indicator up when the last message has artifact versions', async () => {
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
@@ -5233,7 +5280,7 @@ describe('Chat', () => {
       renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
 
       // Loading message should NOT be shown because last message has artifact versions
-      expect(screen.queryByTestId('loading-message')).not.toBeInTheDocument();
+      expect(screen.getByTestId('chat-working-indicator')).toBeInTheDocument();
     });
   });
 
@@ -5461,7 +5508,70 @@ describe('Chat', () => {
   });
 
   describe('current streaming message content', () => {
-    it('should not show loading message when currentStreamingMessage has content', async () => {
+    it('stands the placeholder down on a Code turn that is only running tools', async () => {
+      // Code turns keep their collapsed tool list visible whatever the mentor's
+      // verbose-reasoning setting says (see ai-message-bubble), so that list IS
+      // visible output — the bubble owns the working line and the standalone
+      // placeholder must not sit beside it.
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      (useAdvancedChat as any).mockReturnValue({
+        changeTab: vi.fn(),
+        activeTab: 'chat',
+        currentStreamingMessage: {
+          id: 'opencode-1700000000000',
+          role: 'assistant',
+          content: '',
+          timestamp: new Date().toISOString(),
+          visible: true,
+        },
+        enabledGuidedPrompts: [],
+        isStreaming: true,
+        mentorName: 'Test Mentor',
+        messages: [
+          {
+            id: '1',
+            role: 'user',
+            content: 'Build me a site',
+            timestamp: new Date().toISOString(),
+            visible: true,
+          },
+          // The bubble only renders for a message that is in the array; the SDK
+          // inserts it as soon as the turn starts.
+          {
+            id: 'opencode-1700000000000',
+            role: 'assistant',
+            content: '',
+            timestamp: new Date().toISOString(),
+            visible: true,
+          },
+        ],
+        profileImage: '/avatar.png',
+        sendMessage: vi.fn(),
+        setMessage: vi.fn(),
+        stopGenerating: vi.fn(),
+        uniqueMentorId: 'unique-mentor-123',
+        sessionId: 'session-123',
+        startNewChat: vi.fn(),
+        enableSafetyDisclaimer: false,
+        isPending: false,
+        isLoadingChats: false,
+      });
+      mockCurrentStreamingMessage.id = 'opencode-1700000000000';
+      streamingToolCalls.current = [
+        { id: 'tc1', name: 'bash', log: '', result: '' },
+      ];
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      expect(
+        screen.queryByTestId('chat-working-message'),
+      ).not.toBeInTheDocument();
+
+      streamingToolCalls.current = [];
+      mockCurrentStreamingMessage.id = '';
+    });
+
+    it('should keep the working indicator up when currentStreamingMessage has content', async () => {
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
@@ -5500,7 +5610,7 @@ describe('Chat', () => {
       renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
 
       // Loading message should NOT be shown when currentStreamingMessage has content
-      expect(screen.queryByTestId('loading-message')).not.toBeInTheDocument();
+      expect(screen.getByTestId('chat-working-indicator')).toBeInTheDocument();
     });
   });
 
@@ -8618,10 +8728,10 @@ describe('Chat', () => {
 
       renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
 
-      expect(screen.getByTestId('loading-message')).toBeInTheDocument();
+      expect(screen.getByTestId('chat-working-indicator')).toBeInTheDocument();
     });
 
-    it('should hide loading when currentStreamingMessage has content', async () => {
+    it('should keep the working indicator up while tokens stream in', async () => {
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
@@ -8660,7 +8770,7 @@ describe('Chat', () => {
       renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
 
       // Loading message should be hidden when streaming has content
-      expect(screen.queryByTestId('loading-message')).not.toBeInTheDocument();
+      expect(screen.getByTestId('chat-working-indicator')).toBeInTheDocument();
     });
   });
 
@@ -10513,7 +10623,7 @@ describe('Chat', () => {
   });
 
   describe('mentorAccessibilityMessage updates', () => {
-    it('should set accessibility message when streaming starts', async () => {
+    it('should stay silent while streaming so the working indicator owns the announcement', async () => {
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
@@ -10537,14 +10647,20 @@ describe('Chat', () => {
 
       renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
 
-      // The accessibility message should indicate streaming
+      // Two live regions racing over the same event is a screen-reader
+      // anti-pattern, so this one stays empty for the duration of the turn —
+      // the WorkingIndicator's own polite region carries the phase updates.
       await waitFor(() => {
-        const srOnlyElements = screen.getAllByRole('status');
-        const accessibilityStatus = srOnlyElements.find((el) =>
-          el.textContent?.includes('generating a response'),
-        );
-        expect(accessibilityStatus).toBeInTheDocument();
+        expect(
+          screen.getByTestId('chat-working-indicator'),
+        ).toBeInTheDocument();
       });
+      const srOnlyElements = screen.getAllByRole('status');
+      expect(
+        srOnlyElements.find((el) =>
+          el.textContent?.includes('generating a response'),
+        ),
+      ).toBeUndefined();
     });
 
     it('should set accessibility message with assistant response when streaming ends', async () => {
@@ -13178,10 +13294,10 @@ describe('Chat', () => {
 
       renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
 
-      expect(screen.getByTestId('loading-message')).toBeInTheDocument();
+      expect(screen.getByTestId('chat-working-indicator')).toBeInTheDocument();
     });
 
-    it('should hide loading message when streaming message has content', async () => {
+    it('should keep the working indicator up while the streaming message has content', async () => {
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
 
       (useAdvancedChat as any).mockReturnValue({
@@ -13214,10 +13330,10 @@ describe('Chat', () => {
 
       renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
 
-      expect(screen.queryByTestId('loading-message')).not.toBeInTheDocument();
+      expect(screen.getByTestId('chat-working-indicator')).toBeInTheDocument();
     });
 
-    it('should hide loading message when last message has artifact versions', async () => {
+    it('should keep the working indicator up when the last message has artifact versions', async () => {
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
 
       (useAdvancedChat as any).mockReturnValue({
@@ -13259,7 +13375,7 @@ describe('Chat', () => {
       renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
 
       // Loading message should be hidden because last message has artifactVersions
-      expect(screen.queryByTestId('loading-message')).not.toBeInTheDocument();
+      expect(screen.getByTestId('chat-working-indicator')).toBeInTheDocument();
     });
   });
 
@@ -17201,10 +17317,10 @@ describe('Chat', () => {
       });
 
       // Loading message should be visible in the canvas split view
-      expect(screen.getByTestId('loading-message')).toBeInTheDocument();
+      expect(screen.getByTestId('chat-working-indicator')).toBeInTheDocument();
     });
 
-    it('should hide loading indicator when last message has artifactVersions', async () => {
+    it('should keep the working indicator up when the last message has artifactVersions', async () => {
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
@@ -17252,7 +17368,7 @@ describe('Chat', () => {
       });
 
       // Loading message should NOT be visible because last message has artifactVersions
-      expect(screen.queryByTestId('loading-message')).not.toBeInTheDocument();
+      expect(screen.getByTestId('chat-working-indicator')).toBeInTheDocument();
     });
   });
 
@@ -17598,10 +17714,10 @@ describe('Chat', () => {
       renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
 
       // Loading message should be visible in normal view
-      expect(screen.getByTestId('loading-message')).toBeInTheDocument();
+      expect(screen.getByTestId('chat-working-indicator')).toBeInTheDocument();
     });
 
-    it('should hide loading indicator in normal view when last message has artifactVersions', async () => {
+    it('should keep the working indicator up in normal view when the last message has artifactVersions', async () => {
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
@@ -17643,7 +17759,7 @@ describe('Chat', () => {
 
       // Loading message should NOT be visible because last message has artifactVersions
       // This covers Branch 148[2,3] and 149[0,1] in the normal view (lines 1643-1650)
-      expect(screen.queryByTestId('loading-message')).not.toBeInTheDocument();
+      expect(screen.getByTestId('chat-working-indicator')).toBeInTheDocument();
     });
   });
 
@@ -18007,7 +18123,7 @@ describe('Chat', () => {
   });
 
   describe('loading indicator with artifactVersions in both views', () => {
-    it('should hide loading in canvas view when last message has non-empty artifactVersions', async () => {
+    it('should keep the working indicator up in canvas view with non-empty artifactVersions', async () => {
       const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
@@ -18056,7 +18172,7 @@ describe('Chat', () => {
 
       // Loading message should NOT be visible because last message has artifactVersions
       // This covers Branch 148[2,3] (lines 1492-1494) and Branch 149[0,1] (line 1495)
-      expect(screen.queryByTestId('loading-message')).not.toBeInTheDocument();
+      expect(screen.getByTestId('chat-working-indicator')).toBeInTheDocument();
     });
 
     it('should show loading in canvas view when isPending and last message has empty artifactVersions', async () => {
@@ -18107,7 +18223,7 @@ describe('Chat', () => {
       });
 
       // Loading should be visible because artifactVersions is empty (length is 0)
-      expect(screen.getByTestId('loading-message')).toBeInTheDocument();
+      expect(screen.getByTestId('chat-working-indicator')).toBeInTheDocument();
     });
 
     it('should show loading in normal view when isPending and no artifactVersions', async () => {
@@ -18152,7 +18268,7 @@ describe('Chat', () => {
 
       // Loading should be visible in normal view
       // This covers Branch 161[1] (line 1649) - artifactVersions being undefined
-      expect(screen.getByTestId('loading-message')).toBeInTheDocument();
+      expect(screen.getByTestId('chat-working-indicator')).toBeInTheDocument();
     });
   });
 
@@ -18641,7 +18757,7 @@ describe('Chat', () => {
 
       // Loading message should be visible since last message is user (not assistant with artifactVersions)
       // This covers Branch 149[1] and 161[1] - messages[last].role !== 'assistant'
-      expect(screen.getByTestId('loading-message')).toBeInTheDocument();
+      expect(screen.getByTestId('chat-working-indicator')).toBeInTheDocument();
     });
 
     it('should show loading when assistant message has undefined artifactVersions', async () => {
@@ -18687,7 +18803,7 @@ describe('Chat', () => {
       // Loading message should be visible - artifactVersions is undefined
       // The condition checks: messages[last]?.artifactVersions (undefined = falsy)
       // So it short-circuits and the loading shows
-      expect(screen.getByTestId('loading-message')).toBeInTheDocument();
+      expect(screen.getByTestId('chat-working-indicator')).toBeInTheDocument();
     });
 
     it('should show loading in canvas view when assistant message has null artifactVersions and isPending', async () => {
@@ -18741,7 +18857,7 @@ describe('Chat', () => {
 
       // Loading should be visible since artifactVersions is null (falsy)
       // This covers the branches at lines 1492-1495 in the canvas split view
-      expect(screen.getByTestId('loading-message')).toBeInTheDocument();
+      expect(screen.getByTestId('chat-working-indicator')).toBeInTheDocument();
     });
   });
 
@@ -19205,7 +19321,7 @@ describe('Chat', () => {
       renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
 
       // With empty artifactVersions array, the loading message SHOULD show because (0 > 0) is false
-      expect(screen.getByTestId('loading-message')).toBeInTheDocument();
+      expect(screen.getByTestId('chat-working-indicator')).toBeInTheDocument();
     });
 
     it('should show loading indicator when last message has no artifactVersions property', async () => {
@@ -19250,7 +19366,7 @@ describe('Chat', () => {
 
       // The loading message should appear since artifactVersions is undefined
       // covers ?. operator returning undefined and ?? 0 fallback
-      expect(screen.getByTestId('loading-message')).toBeInTheDocument();
+      expect(screen.getByTestId('chat-working-indicator')).toBeInTheDocument();
     });
   });
 
@@ -19461,17 +19577,15 @@ describe('Chat', () => {
           'data-streaming-tool-calls-count',
           '0',
         );
-        expect(chatMessages).toHaveAttribute('data-is-reasoning', 'false');
+        // `isReasoning` is no longer plumbed to ChatMessages at all — the
+        // reasoning surface is a static record and the shimmering
+        // WorkingIndicator is the turn's only live signal.
+        expect(chatMessages).toHaveAttribute('data-has-is-reasoning', 'false');
       });
     });
 
-    it('should not show loading indicator when isReasoning is true', async () => {
-      const { useAdvancedChat, selectIsReasoning } = await import(
-        '@iblai/iblai-js/web-utils'
-      );
-
-      // Override selectIsReasoning to return true
-      (selectIsReasoning as any).mockReturnValue = undefined;
+    it('should render the message list while a turn is streaming', async () => {
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
 
       (useAdvancedChat as any).mockReturnValue({
         changeTab: vi.fn(),
@@ -19504,9 +19618,8 @@ describe('Chat', () => {
 
       renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
 
-      // The loading message should be suppressed when reasoning is active
-      // (The default mock returns isReasoning=false, so loading may show.
-      //  This verifies the component renders without errors with the streaming selectors.)
+      // Verifies the component renders without errors with the streaming
+      // selectors wired up.
       await waitFor(() => {
         expect(screen.getByTestId('chat-messages')).toBeInTheDocument();
       });
@@ -20060,6 +20173,206 @@ describe('Chat', () => {
       });
 
       expect(scrollToSpy).toHaveBeenCalled();
+    });
+  });
+  describe('working indicator (issue #2217)', () => {
+    const mockChat = async (overrides: Record<string, unknown>) => {
+      const { useAdvancedChat } = await import('@iblai/iblai-js/web-utils');
+      (useAdvancedChat as any).mockReturnValue({
+        changeTab: vi.fn(),
+        activeTab: 'chat',
+        currentStreamingMessage: null,
+        enabledGuidedPrompts: [],
+        isStreaming: false,
+        mentorName: 'Test Mentor',
+        messages: [{ id: '1', role: 'user', content: 'Hi', visible: true }],
+        profileImage: '/avatar.png',
+        sendMessage: vi.fn(),
+        setMessage: vi.fn(),
+        stopGenerating: vi.fn(),
+        uniqueMentorId: 'unique-mentor-123',
+        sessionId: 'session-123',
+        startNewChat: vi.fn(),
+        enableSafetyDisclaimer: false,
+        isPending: false,
+        isLoadingChats: false,
+        ...overrides,
+      });
+    };
+
+    const streamedAnswer = {
+      id: 'stream-1',
+      role: 'assistant',
+      content: 'Sure — let me look that up for you.',
+      timestamp: new Date().toISOString(),
+      visible: true,
+    };
+
+    beforeEach(() => {
+      mockCurrentStreamingMessage.id = '';
+      mockCurrentStreamingMessage.content = '';
+    });
+
+    afterEach(() => {
+      mockCurrentStreamingMessage.id = '';
+      mockCurrentStreamingMessage.content = '';
+    });
+
+    it('shows the indicator while the request is pending, before any frame', async () => {
+      await mockChat({ isPending: true, chatPhase: { kind: 'idle' } });
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      expect(screen.getByTestId('chat-working-indicator')).toHaveAttribute(
+        'data-phase',
+        'thinking',
+      );
+    });
+
+    it('forwards the reported phase straight through to the indicator', async () => {
+      await mockChat({
+        isStreaming: true,
+        chatPhase: { kind: 'tool', name: 'wikipedia' },
+      });
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      expect(screen.getByTestId('chat-working-indicator')).toHaveAttribute(
+        'data-phase',
+        'tool',
+      );
+    });
+
+    it('hides the indicator once the turn is over', async () => {
+      await mockChat({
+        isStreaming: false,
+        isPending: false,
+        chatPhase: { kind: 'idle' },
+      });
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      expect(
+        screen.queryByTestId('chat-working-indicator'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('frames the placeholder as an agent message, not a bare line', async () => {
+      await mockChat({ isPending: true, chatPhase: { kind: 'idle' } });
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      const placeholder = screen.getByTestId('chat-working-message');
+      expect(
+        within(placeholder).getByTestId('chat-working-indicator'),
+      ).toBeInTheDocument();
+      // Avatar (initials fallback), mentor name and a wall-clock timestamp —
+      // the same header the real bubble renders.
+      expect(within(placeholder).getByText('TE')).toBeInTheDocument();
+      expect(within(placeholder).getByText('Test Mentor')).toBeInTheDocument();
+      expect(
+        within(placeholder).getByText(/^\d{1,2}:\d{2}(am|pm)$/i),
+      ).toBeInTheDocument();
+    });
+
+    it('freezes the placeholder timestamp for the whole turn', async () => {
+      const { formatRelativeDate } = await import('@/lib/utils');
+      vi.mocked(formatRelativeDate).mockClear();
+
+      await mockChat({ isPending: true, chatPhase: { kind: 'thinking' } });
+
+      const { rerender } = renderWithRedux(
+        <Chat mode="default" isPreviewMode={false} />,
+      );
+      const firstStamp =
+        screen.getByTestId('chat-working-message').textContent ?? '';
+
+      await mockChat({
+        isPending: true,
+        chatPhase: { kind: 'tool', name: 'wikipedia' },
+      });
+      act(() => {
+        rerender(
+          <Provider store={createMockStore({})}>
+            <Chat mode="default" isPreviewMode={false} />
+          </Provider>,
+        );
+      });
+
+      expect(screen.getByTestId('chat-working-message').textContent).toBe(
+        firstStamp,
+      );
+      expect(vi.mocked(formatRelativeDate)).toHaveBeenCalledTimes(1);
+    });
+
+    it('stands down once the streaming bubble has content of its own', async () => {
+      mockCurrentStreamingMessage.id = 'stream-1';
+      await mockChat({
+        isStreaming: true,
+        chatPhase: { kind: 'writing' },
+        messages: [
+          { id: '1', role: 'user', content: 'Hi', visible: true },
+          streamedAnswer,
+        ],
+      });
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      // Exactly one shimmer: the bubble owns it now.
+      expect(
+        screen.queryByTestId('chat-working-message'),
+      ).not.toBeInTheDocument();
+      expect(screen.getByTestId('chat-messages')).toHaveAttribute(
+        'data-working-phase',
+        'writing',
+      );
+    });
+
+    it('keeps the placeholder while the streaming message is still empty', async () => {
+      mockCurrentStreamingMessage.id = 'stream-1';
+      await mockChat({
+        isStreaming: true,
+        chatPhase: { kind: 'tool', name: 'wikipedia' },
+        messages: [
+          { id: '1', role: 'user', content: 'Hi', visible: true },
+          { ...streamedAnswer, content: '' },
+        ],
+      });
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      expect(screen.getByTestId('chat-working-message')).toBeInTheDocument();
+    });
+
+    it('keeps the placeholder for a streaming message hidden from the thread', async () => {
+      mockCurrentStreamingMessage.id = 'stream-1';
+      await mockChat({
+        isStreaming: true,
+        chatPhase: { kind: 'writing' },
+        messages: [
+          { id: '1', role: 'user', content: 'Hi', visible: true },
+          { ...streamedAnswer, visible: false },
+        ],
+      });
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      expect(screen.getByTestId('chat-working-message')).toBeInTheDocument();
+    });
+
+    it('withholds the phase from the thread between turns', async () => {
+      await mockChat({
+        isStreaming: false,
+        isPending: false,
+        chatPhase: { kind: 'idle' },
+      });
+
+      renderWithRedux(<Chat mode="default" isPreviewMode={false} />);
+
+      expect(screen.getByTestId('chat-messages')).toHaveAttribute(
+        'data-working-phase',
+        '',
+      );
     });
   });
 });

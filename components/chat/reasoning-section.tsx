@@ -12,14 +12,26 @@ import { cn } from '@/lib/utils';
 
 interface ReasoningSectionProps {
   reasoningContent: string;
-  isReasoning: boolean;
-  isCurrentlyStreaming?: boolean;
+  /**
+   * True while this row *is* the live phase of the turn. Adds bouncing dots and
+   * nothing else — the wording never changes.
+   */
+  isActive?: boolean;
 }
 
+/**
+ * Collapsible record of the model's reasoning for a turn.
+ *
+ * The trigger always reads as the completed record ("Thought"), streaming or
+ * not: the shimmering `WorkingIndicator` owns the word "Thinking", and having
+ * both on screen was the duplication this design removed. While the agent is
+ * actively reasoning this row carries the liveness instead — the working line
+ * stands down and the dots below take over — but it carries it as motion, not
+ * as a second copy of the same sentence.
+ */
 export function ReasoningSection({
   reasoningContent,
-  isReasoning,
-  isCurrentlyStreaming = false,
+  isActive = false,
 }: ReasoningSectionProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -44,12 +56,12 @@ export function ReasoningSection({
             isOpen && 'rotate-90',
           )}
         />
-        <span>{isReasoning ? 'Thinking' : 'Thought'}</span>
-        {isReasoning && isCurrentlyStreaming && (
-          <span className="inline-flex gap-0.5">
-            <span className="inline-block h-1 w-1 animate-bounce rounded-full bg-gray-500 [animation-delay:0ms]" />
-            <span className="inline-block h-1 w-1 animate-bounce rounded-full bg-gray-500 [animation-delay:150ms]" />
-            <span className="inline-block h-1 w-1 animate-bounce rounded-full bg-gray-500 [animation-delay:300ms]" />
+        <span>Thought</span>
+        {isActive && (
+          <span className="inline-flex gap-0.5" aria-hidden="true">
+            <span className="inline-block h-1 w-1 animate-bounce rounded-full bg-gray-500 [animation-delay:0ms] motion-reduce:animate-none" />
+            <span className="inline-block h-1 w-1 animate-bounce rounded-full bg-gray-500 [animation-delay:150ms] motion-reduce:animate-none" />
+            <span className="inline-block h-1 w-1 animate-bounce rounded-full bg-gray-500 [animation-delay:300ms] motion-reduce:animate-none" />
           </span>
         )}
       </CollapsibleTrigger>

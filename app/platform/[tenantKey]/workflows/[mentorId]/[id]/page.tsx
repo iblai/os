@@ -367,13 +367,25 @@ export default function WorkflowDetailPage() {
     validateWorkflow,
   ]);
 
+  const clickedItemTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  useEffect(
+    () => () => {
+      if (clickedItemTimerRef.current)
+        clearTimeout(clickedItemTimerRef.current);
+    },
+    [],
+  );
+
   const handleItemClick = (item: {
     id: string;
     label: string;
     type: string;
   }) => {
     setClickedItem(item);
-    setTimeout(() => setClickedItem(null), 100);
+    if (clickedItemTimerRef.current) clearTimeout(clickedItemTimerRef.current);
+    clickedItemTimerRef.current = setTimeout(() => setClickedItem(null), 100);
   };
 
   const handlePreviewClick = () => {

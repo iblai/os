@@ -5,19 +5,21 @@ import { MENTOR_NEXTJS_HOST } from '../fixtures/test-data';
 /**
  * Journey 61: LaTeX / Math Rendering
  *
- * Covers the fix for GitHub issue #2109 ("Improve latex compatibility for
- * rendering chat messages and artifacts"). The bug: `preprocessLaTeX`
- * (`lib/utils.ts`) escapes a `$` immediately followed by a digit into `\$`
- * so currency amounts render literally (e.g. "I have $5") — but that same
- * escape was corrupting backslash-free / digit-leading inline math like
- * `$3x + 5$` and `$x = 4$`, and a leading currency amount could swallow the
- * opening `$` of a real math span later on the same line.
+ * Covers the behaviour first fixed for GitHub issue #2109 ("Improve latex
+ * compatibility for rendering chat messages and artifacts"): currency like
+ * "I have $5" must stay literal text, while backslash-free / digit-leading
+ * inline math like `$3x + 5$` and `$x = 4$` must still render, and a leading
+ * currency amount must not swallow the opening `$` of a real math span later
+ * on the same line.
  *
- * The fix adds:
- *   1. A predicate (`isInlineMath`): a `$...$` span is math when it has a
- *      backslash command OR no 2+ letter prose word inside it.
- *   2. A rewind scan: when a span is judged NOT math, only the opening `$`
- *      is consumed, so a following real math span's delimiter survives.
+ * Issue #2441 replaced the hand-rolled `preprocessLaTeX` string rewriter that
+ * originally implemented this with a maintained tokenizer: `@ziloen/remark-math`
+ * (patched) decides `$...$` at the micromark level using Pandoc's
+ * `tex_math_dollars` rule — an opening `$` must be followed by a non-space, a
+ * closing `$` preceded by a non-space and not followed by a digit. Currency
+ * therefore never opens a span in the first place, so no escaping and no
+ * rewind scan is needed. The user-visible contract asserted below is
+ * unchanged, which is the point of keeping this journey.
  *
  * Deterministic seam: live chat streams over a raw WebSocket
  * (`useChat` in `@iblai/web-utils`), which has no practical Playwright
@@ -29,7 +31,7 @@ import { MENTOR_NEXTJS_HOST } from '../fixtures/test-data';
  * `ChatMessages` -> `AIMessageBubble` -> `MessagePreview` -> `<Markdown>`
  * component tree as live chat. `ChatPage.mockSharedChatSession` intercepts
  * that GET with `page.route` and injects a FIXED assistant markdown message,
- * so every assertion below is against real KaTeX/react-markdown rendering of
+ * so every assertion below is against real KaTeX/Streamdown rendering of
  * known-in-advance content — no LLM in the loop, no flakiness from varying
  * model output.
  */
@@ -101,13 +103,11 @@ test.describe('Journey 61: LaTeX / Math Rendering', () => {
     page,
     chatPage,
   }) => {
-    // `remark-math` only classifies a `$$...$$` span as BLOCK (display) math
-    // when the delimiters each sit alone on their own line. `preprocessLaTeX`
-    // now expands a whole-line single-line `$$3x + 5$$` into this fenced form
-    // (issue #2109 fix 9), so the fence below is both what LLMs naturally
-    // emit for standalone equations and the canonical shape every whole-line
-    // `$$...$$` is normalized to before rendering — the realistic case for
-    // the "block math" checkpoint.
+    // The fenced form below — `$$` alone on its own line either side — is the
+    // canonical shape for display math and what LLMs naturally emit for a
+    // standalone equation, so it is the realistic case for this checkpoint.
+    // (A single-line `$$3x + 5$$` also renders as display math; that variant
+    // is pinned by unit tests rather than here.)
     const content = [
       '$$',
       '3x + 5',

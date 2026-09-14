@@ -14,6 +14,7 @@ import { config } from '@/lib/config';
 import { getUserEmail, getUserName } from '@/features/utils';
 import { useUserTenants } from '@/hooks/use-user';
 import { useCurrentTenant } from '@/hooks/use-user';
+import { useHelpCenter } from '@/hooks/use-help-center';
 import { useSubscriptionHandlerV2 } from '@iblai/iblai-js/web-utils';
 import {
   SUBSCRIPTION_DIALOG_BTN_LABELS,
@@ -35,6 +36,7 @@ export function FreeTrialDialog({ isOpen, onClose }: Props) {
     (state) => state.subscription.subscriptionStatus,
   );
   const { currentTenant } = useCurrentTenant();
+  const { supportEmail } = useHelpCenter(currentTenant?.key);
   const { userTenants } = useUserTenants();
   const subscriptionFlow = new MentorSubscriptionFlowV2({
     platformName: config.iblPlatform(),
@@ -77,7 +79,7 @@ export function FreeTrialDialog({ isOpen, onClose }: Props) {
               For organizations needing enterprise solutions,{' '}
               <a
                 className="cursor-pointer text-[#2563EB]"
-                href="mailto:support@iblai.zendesk.com"
+                href={`mailto:${supportEmail}`}
               >
                 contact our team
               </a>{' '}
@@ -100,7 +102,7 @@ export function FreeTrialDialog({ isOpen, onClose }: Props) {
               For questions about your access or institutional features,{' '}
               <a
                 className="cursor-pointer text-[#2563EB]"
-                href="mailto:support@iblai.zendesk.com"
+                href={`mailto:${supportEmail}`}
               >
                 contact support
               </a>
@@ -124,7 +126,7 @@ export function FreeTrialDialog({ isOpen, onClose }: Props) {
               For enterprise solutions or high-volume needs,{' '}
               <a
                 className="cursor-pointer text-[#2563EB]"
-                href="mailto:support@iblai.zendesk.com"
+                href={`mailto:${supportEmail}`}
               >
                 contact our sales team
               </a>{' '}
@@ -145,7 +147,7 @@ export function FreeTrialDialog({ isOpen, onClose }: Props) {
               companies —{' '}
               <a
                 className="cursor-pointer text-[#2563EB]"
-                href="mailto:support@iblai.zendesk.com"
+                href={`mailto:${supportEmail}`}
               >
                 contact our partnerships team.
               </a>

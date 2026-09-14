@@ -1,6 +1,11 @@
 import { test, expect } from '../fixtures/mentor-test';
-import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
+import {
+  navigateToMentorApp,
+  checkAdminStatus,
+  getPlatformContext,
+} from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
+import { MentorTracker } from '../utils/mentor-cleanup';
 
 /**
  * Journey 48 — Mentor Screen Tab (screen sharing).
@@ -37,16 +42,32 @@ import { waitForPageReady } from '../utils/resilient';
  * refactors on either side.
  */
 test.describe('Journey 48: Mentor Screen Tab', () => {
-  test.beforeEach(async ({ page, editMentorPage }) => {
+  const tracker48 = new MentorTracker();
+
+  test.beforeEach(async ({ page, editMentorPage, createMentorPage }) => {
     await navigateToMentorApp(page);
     const isAdmin = await checkAdminStatus(page);
     if (!isAdmin) {
       test.skip(true, 'Screen share tab requires admin access');
       return;
     }
+
+    // These tests persist enable_video, so they need a mentor no other test
+    // or worker can select. Without this they ran against whichever agent
+    // navigateToMentorApp happened to resolve — shared with every other
+    // journey — and leaned on a best-effort restore that never runs when a
+    // test fails mid-way. Mirrors journey 47's per-test isolation.
+    await createMentorPage.openAndCreate();
+    const { mentorId } = await getPlatformContext(page);
+    tracker48.add(mentorId);
+
     // The Screen tab is always mounted now — open straight to it.
     await editMentorPage.open('Screen');
     await waitForPageReady(page);
+  });
+
+  test.afterAll(async ({ browser }, testInfo) => {
+    await tracker48.deleteAll(browser, testInfo);
   });
 
   // SS-01: Screen tab stays visible even when "Enable screen sharing"

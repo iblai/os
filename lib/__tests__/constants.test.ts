@@ -235,6 +235,9 @@ describe('mentor constants', () => {
       expect(CSS_CLASS_NAMES.CHAT.STOP_STREAMING_BUTTON).toBe(
         'chat-stop-streaming-button',
       );
+      expect(CSS_CLASS_NAMES.CHAT.WORKING_INDICATOR).toBe(
+        'chat-working-indicator',
+      );
     });
 
     it('should have app layout class names', () => {
