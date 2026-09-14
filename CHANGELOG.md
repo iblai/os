@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.146.1](https://github.com/iblai/os/compare/v0.146.0...v0.146.1) (2026-09-14)
+
+### Bug Fixes
+
+* **sso:** prefer localStorage redirect-to; only let embed URLs override ([3f87a7d](https://github.com/iblai/os/commit/3f87a7d81910481febab668c569b27b95a247525))
+
 ## [0.146.0](https://github.com/iblai/os/compare/v0.145.0...v0.146.0) (2026-09-14)
 
 ### Features
