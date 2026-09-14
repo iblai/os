@@ -265,6 +265,28 @@ describe('AddResourceModal', () => {
       expect(mockPickOneDriveFile).not.toHaveBeenCalled();
     });
 
+    it('keeps the accessible name exactly the provider name when not configured', () => {
+      googleDriveState.isConfigured = false;
+      dropboxState.isConfigured = false;
+      oneDriveState.isConfigured = false;
+
+      render(<AddResourceModal {...defaultProps} />);
+
+      // The "not configured" hint is rendered aria-hidden and duplicated into
+      // `title`. If it ever joins the accessible name instead, name-based
+      // lookups break — journey 74's Dropbox locator is /^Dropbox$/i, which an
+      // appended hint silently defeats.
+      expect(
+        screen.getByRole('button', { name: /^Dropbox$/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /^Google Drive$/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /^Microsoft OneDrive$/i }),
+      ).toBeInTheDocument();
+    });
+
     it('leaves non-cloud resources unaffected by credential state', () => {
       googleDriveState.isConfigured = false;
       dropboxState.isConfigured = false;

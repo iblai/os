@@ -154,7 +154,14 @@ export function AddResourceModal({ isOpen, onClose }: AddResourceModalProps) {
                       <span className="flex flex-col items-start text-left">
                         <span className="text-gray-700">{resource.name}</span>
                         {notConfigured && (
-                          <span className="text-xs text-gray-500">
+                          // aria-hidden: the same text is already the button's
+                          // `title`, so exposing it here too would append it to
+                          // the accessible name ("Dropbox Not configured for
+                          // this tenant") and break name-based lookups.
+                          <span
+                            aria-hidden="true"
+                            className="text-xs text-gray-500"
+                          >
                             {t('notConfigured')}
                           </span>
                         )}
