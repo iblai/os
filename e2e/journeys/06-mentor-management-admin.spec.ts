@@ -1,6 +1,61 @@
+import type { Page } from '@playwright/test';
 import { test, expect } from '../fixtures/mentor-test';
-import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
+import {
+  navigateToMentorApp,
+  checkAdminStatus,
+  getPlatformContext,
+} from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
+import { resolveDmApiBase } from '../utils/dm-api';
+
+/** One provider row from the live `mentor-llms` catalogue, as far as naming goes. */
+interface LlmCatalogueRow {
+  name: string;
+  display_name?: string | null;
+  logo?: string | null;
+  chat_models?: Array<{ llm_name: string; display_name?: string | null }>;
+}
+
+/**
+ * Fetches the mentor-llms catalogue directly via `page.request` rather than
+ * intercepting the UI-triggered GET — RTK Query caches this query per
+ * {org, userId, mentorId}, so a UI action that reuses an already-warm cache
+ * entry (e.g. re-opening the LLM tab on a mentor a prior test in this file
+ * already visited) never issues a new network request, and a
+ * `page.waitForResponse` registered around it times out. A direct request
+ * bypasses the cache entirely and is deterministic regardless of prior
+ * navigation in this worker.
+ */
+async function fetchLlmCatalogue(page: Page): Promise<LlmCatalogueRow[]> {
+  const { tenantKey, mentorId } = await getPlatformContext(page);
+  const dmBase = await resolveDmApiBase(page);
+  const dmToken = await page.evaluate(() => localStorage.getItem('dm_token'));
+  const username = await page.evaluate(() => {
+    try {
+      const raw = localStorage.getItem('userData');
+      return raw ? JSON.parse(raw)?.user_nicename : null;
+    } catch {
+      return null;
+    }
+  });
+  if (!dmToken || !username) {
+    throw new Error(
+      'Missing dm_token or username — cannot fetch the LLM catalogue directly',
+    );
+  }
+  const url = `${dmBase}/api/ai-mentor/orgs/${tenantKey}/users/${username}/mentor-llms/?mentor_id=${mentorId}`;
+  // Matches mentor-cleanup.ts's established convention for this exact
+  // `/dm/api/ai-mentor/...` domain — DRF Token auth, not Bearer.
+  const response = await page.request.get(url, {
+    headers: { Authorization: `Token ${dmToken}` },
+  });
+  if (!response.ok()) {
+    throw new Error(
+      `mentor-llms fetch failed: ${response.status()} ${response.statusText()}`,
+    );
+  }
+  return response.json();
+}
 
 test.describe('Journey 6: Mentor Management — Admin', () => {
   test.beforeEach(async ({ page }) => {
@@ -131,7 +186,10 @@ test.describe('Journey 6: Mentor Management — Admin', () => {
       return;
     }
 
-    await expect(iblaiCard.locator('span').first()).toHaveText('ibl.ai');
+    // The label span is always LAST in DOM order — a provider with no
+    // backend logo renders a placeholder `<span role="img">` (single-letter
+    // initial) ahead of it inside the logo wrapper (issue #2502).
+    await expect(iblaiCard.locator('span').last()).toHaveText('ibl.ai');
 
     const logo = iblaiCard.locator('img');
     await expect(logo).toBeVisible();
@@ -361,6 +419,155 @@ test.describe('Journey 6: Mentor Management — Admin', () => {
     }
 
     await page.keyboard.press('Escape');
+    await editMentorPage.close();
+  });
+
+  // Issue #2502: provider naming/artwork moved from a frontend map to the
+  // backend `mentor-llms` catalogue. Capture the live GET response the LLM
+  // tab itself triggers and assert every rendered card matches it exactly —
+  // this is what actually proves "backend-owned" rather than a hardcoded
+  // guess about what the backend currently returns.
+  test('admin goes to edit mentor LLM tab and provider card labels/logos match the live mentor-llms catalogue', async ({
+    page,
+    editMentorPage,
+  }) => {
+    await editMentorPage.open('LLM');
+    const catalogue = await fetchLlmCatalogue(page);
+    await waitForPageReady(page);
+    await expect(editMentorPage.llm.providerCards.first()).toBeVisible({
+      timeout: 15_000,
+    });
+
+    const cards = await editMentorPage.llm.getProviderCardsInfo();
+    expect(cards.length).toBeGreaterThan(0);
+
+    let checked = 0;
+    for (const card of cards) {
+      const row = catalogue.find((r) => r.name === card.provider);
+      if (!row) continue; // an on-device-only provider has no backend row
+      checked++;
+
+      const expectedLabel = row.display_name?.trim() || row.name;
+      expect(
+        card.label,
+        `provider "${card.provider}" label should be display_name ?? name`,
+      ).toBe(expectedLabel);
+
+      const cardLocator = editMentorPage.llm.providerCardByKey(card.provider);
+      if (row.logo) {
+        // Next.js's <Image> rewrites `src` to its own optimizer proxy
+        // (`/_next/image?url=<encoded original>&w=..&q=..`) rather than the
+        // raw backend URL — assert the backend logo is embedded as that
+        // encoded `url` param instead of an exact match.
+        await expect(cardLocator.locator('img')).toHaveAttribute(
+          'src',
+          new RegExp(
+            `[?&]url=${encodeURIComponent(row.logo).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(&|$)`,
+          ),
+        );
+      } else {
+        await expect(
+          cardLocator.locator('[data-testid="llm-provider-logo-placeholder"]'),
+        ).toBeVisible();
+      }
+    }
+    expect(
+      checked,
+      'no rendered provider card matched a row in the live mentor-llms catalogue',
+    ).toBeGreaterThan(0);
+
+    await editMentorPage.close();
+  });
+
+  // Issue #2502: model rows in the LLM Selection picker must show the
+  // backend's chat_models[].display_name (falling back to the raw llm_name),
+  // verified against the same live catalogue response rather than a guess.
+  test('admin goes to edit mentor LLM tab and model row labels match the live catalogue chat_models', async ({
+    page,
+    editMentorPage,
+  }) => {
+    await editMentorPage.open('LLM');
+    const catalogue = await fetchLlmCatalogue(page);
+    await waitForPageReady(page);
+    await expect(editMentorPage.llm.providerCards.first()).toBeVisible({
+      timeout: 15_000,
+    });
+
+    const cards = await editMentorPage.llm.getProviderCardsInfo();
+    const withModels = cards.find((c) => {
+      const row = catalogue.find((r) => r.name === c.provider);
+      return (row?.chat_models?.length ?? 0) > 0;
+    });
+    if (!withModels) {
+      test.skip(true, 'No provider in this tenant lists chat_models');
+      return;
+    }
+
+    await editMentorPage.llm.providerCardByKey(withModels.provider).click();
+    await expect(editMentorPage.llm.llmSelectionDialog).toBeVisible({
+      timeout: 10_000,
+    });
+
+    const row = catalogue.find((r) => r.name === withModels.provider)!;
+    for (const model of row.chat_models!.slice(0, 5)) {
+      const expectedLabel = model.display_name?.trim() || model.llm_name;
+      const modelButton = editMentorPage.llm.llmSelectionDialog.locator(
+        `[data-model="${model.llm_name}"]`,
+      );
+      // Each row repeats the PROVIDER's logo next to its own label; when
+      // that provider has no backend logo it renders the same placeholder
+      // `<span role="img">` (single-letter initial) as the LLM tab's cards,
+      // which `toHaveText` on the whole button would fold into the text.
+      // The label is always the LAST `<span>` in the row.
+      await expect(modelButton.locator('span').last()).toHaveText(
+        expectedLabel,
+      );
+    }
+
+    await page.keyboard.press('Escape');
+    await editMentorPage.close();
+  });
+
+  // Issue #2502: the 15 provider images this change deletes from `public/`
+  // must never be requested again while browsing the LLM tab / picker — a
+  // stray reference would 404 in production since the files are gone.
+  test('admin goes to edit mentor LLM tab and no requests are made for the deleted static /llm-*-provider.* images', async ({
+    page,
+    editMentorPage,
+  }) => {
+    const badRequests: string[] = [];
+    const onRequest = (req: import('@playwright/test').Request) => {
+      const url = req.url();
+      if (
+        /\/llm-[a-z]+-provider(-\d+)?\.(png|jpe?g|webp|svg)(\?|$)/i.test(url)
+      ) {
+        badRequests.push(url);
+      }
+    };
+    page.on('request', onRequest);
+
+    try {
+      await editMentorPage.open('LLM');
+      await waitForPageReady(page);
+      await expect(editMentorPage.llm.providerCards.first()).toBeVisible({
+        timeout: 15_000,
+      });
+      const cards = await editMentorPage.llm.getProviderCardsInfo();
+      if (cards.length > 0) {
+        await editMentorPage.llm.providerCardByKey(cards[0].provider).click();
+        await expect(editMentorPage.llm.llmSelectionDialog).toBeVisible({
+          timeout: 10_000,
+        });
+        await page.keyboard.press('Escape');
+      }
+    } finally {
+      page.off('request', onRequest);
+    }
+
+    expect(
+      badRequests,
+      `unexpected requests for deleted static provider images: ${badRequests.join(', ')}`,
+    ).toEqual([]);
     await editMentorPage.close();
   });
 
