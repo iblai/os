@@ -3596,6 +3596,16 @@
           "id": "ecu-10",
           "description": "Post-payment, the account modal auto-opens on the Billing tab showing the Premium plan and a Manage Billing button with a restored credit balance; chat continues to work with the new balance",
           "status": "covered"
+        },
+        {
+          "id": "ecu-11",
+          "description": "Before the first credit exhaustion (main tenant), three long agent conversations each deduct credits: after every reply the exact available_credits from the credit dropdown's /api/billing/account/ refetch drops below its pre-turn value, and the dropdown renders that balance",
+          "status": "covered"
+        },
+        {
+          "id": "ecu-12",
+          "description": "Before the second credit exhaustion (upgraded non-\"main\" tenant), three long agent conversations each deduct credits, asserted the same way per turn",
+          "status": "covered"
         }
       ]
     },

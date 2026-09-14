@@ -15,6 +15,7 @@ import {
 import { parsePlatformUrl, safeWaitForURL } from '../utils/navigation';
 import {
   closeCreditBalanceDropdown,
+  creditBalancePanel,
   creditBalancePlanBadge,
   creditBalanceTrigger,
   getBillingPlanLabel,
@@ -37,7 +38,9 @@ import {
 //            sidebar's visible items, the "Subscribe to unlock full
 //            features" paywall dialog on every gated sidebar entry, and a
 //            working chat.
-//   Flow 1 — cleanup credits via the DM service's admin cleanup endpoint.
+//   Flow 1 — three long agent conversations, each asserted to deduct
+//            credits, then cleanup credits via the DM service's admin
+//            cleanup endpoint.
 //   Flow 2 — zero credits on the "main" tenant blocks chat and surfaces the
 //            same paywall dialog (CTA: "Upgrade for free").
 //   Flow 3 — clicking "Upgrade for free" redirects to a Stripe-hosted,
@@ -48,7 +51,8 @@ import {
 //   Flow 5 — the profile dropdown's "Account" item opens the "User Profile"
 //            dialog; its Billing tab (?profileTab=billing) shows the Free
 //            plan, an Upgrade button, and a positive credit balance.
-//   Flow 6 — cleanup credits again on the upgraded tenant.
+//   Flow 6 — three more long conversations, each asserted to deduct credits,
+//            then cleanup credits again on the upgraded tenant.
 //   Flow 7 — zero credits on the upgraded tenant auto-opens the Billing tab
 //            (admin 402 handling redirects straight to ?profileTab=billing)
 //            showing 0 credits.
@@ -126,6 +130,109 @@ async function sendMessageAndAwaitNewResponse(
 }
 
 /**
+ * Long prompts that each ask for a long reply, so every turn burns a
+ * measurable amount of credits. Plain-knowledge topics that need no tools
+ * (web search, canvas), keeping the turns fast and the charge purely LLM.
+ */
+const LONG_CONVERSATION_PROMPTS = [
+  'I am preparing a lesson for first-year university biology students and ' +
+    'need a thorough explanation of photosynthesis. Please cover the light-' +
+    'dependent reactions, the Calvin cycle, the role of chlorophyll and ' +
+    'accessory pigments, and how factors like light intensity, carbon ' +
+    'dioxide concentration, and temperature affect the overall rate. Write ' +
+    'about 400 words in clear paragraphs.',
+  'Continuing the teaching theme, I also run an introductory programming ' +
+    'course. Compare bubble sort, merge sort, and quicksort for my students: ' +
+    'describe how each algorithm works step by step, give the best, average, ' +
+    'and worst-case time complexity of each, explain their memory usage and ' +
+    'stability, and say when each is a sensible choice in practice. Write ' +
+    'about 400 words in clear paragraphs.',
+  'Finally, one of my students has final exams in both biology and computer ' +
+    'science in two weeks and is feeling overwhelmed. Draft a detailed ' +
+    'day-by-day two-week study plan that balances both subjects, mixes ' +
+    'active recall and practice problems with rest, includes a mock exam ' +
+    'for each subject, and ends with advice for the night before and the ' +
+    'morning of each exam. Write about 400 words.',
+];
+
+/**
+ * Reads the signed-in user's exact credit balance. The credit dropdown
+ * renders `parseInt(available_credits)`, so a sub-credit charge never moves
+ * the visible number — instead this captures the raw `available_credits`
+ * from the `GET <DM>/api/billing/account/` refetch that every dropdown open
+ * fires, then asserts the dropdown shows that same balance.
+ */
+async function readCreditBalance(page: Page): Promise<number> {
+  // Opening only refetches on a closed → open transition.
+  if (await creditBalancePanel(page).isVisible()) {
+    await closeCreditBalanceDropdown(page);
+  }
+  const billingResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === 'GET' &&
+      new URL(response.url()).pathname.endsWith('/api/billing/account/') &&
+      response.ok(),
+    { timeout: 30_000 },
+  );
+  await openCreditBalanceDropdown(page);
+  const { available_credits } = (await (await billingResponse).json()) as {
+    available_credits?: string;
+  };
+  const exact = Number.parseFloat(available_credits ?? '');
+  expect(
+    Number.isFinite(exact),
+    `expected a numeric available_credits, got ${available_credits}`,
+  ).toBe(true);
+  // The helper's parser drops a minus sign, so only compare non-negative
+  // balances against the rendered value.
+  if (exact >= 0) {
+    await expect
+      .poll(() => getCreditBalanceRemaining(page), { timeout: 10_000 })
+      .toBe(Math.trunc(exact));
+  }
+  await closeCreditBalanceDropdown(page);
+  return exact;
+}
+
+/**
+ * Holds three long conversation turns with the agent and asserts the exact
+ * credit balance drops after each one. Charges are recorded server-side
+ * after the reply streams, so each check re-opens the dropdown (refetching)
+ * until the balance falls below its pre-turn value.
+ */
+async function converseAndExpectCreditsDeducted(
+  page: Page,
+  chatPage: ChatPage,
+  tenantLabel: string,
+): Promise<void> {
+  await expect(chatPage.stopStreamingButton).toBeHidden({ timeout: 180_000 });
+  let balance = await readCreditBalance(page);
+  logger.info(`[ecommerce] ${tenantLabel}: ${balance} credits before chatting`);
+
+  for (const [index, prompt] of LONG_CONVERSATION_PROMPTS.entries()) {
+    const turn = `turn ${index + 1}/${LONG_CONVERSATION_PROMPTS.length}`;
+    const before = balance;
+    await sendMessageAndAwaitNewResponse(chatPage, prompt);
+    await chatPage.waitForStreamingComplete(180_000);
+    await expect(chatPage.stopStreamingButton).toBeHidden({
+      timeout: 180_000,
+    });
+
+    await expect(async () => {
+      balance = await readCreditBalance(page);
+      expect(
+        balance,
+        `${tenantLabel} ${turn}: expected credits to drop below ${before}`,
+      ).toBeLessThan(before);
+    }).toPass({ timeout: 90_000, intervals: [3_000, 5_000] });
+    logger.info(
+      `[ecommerce] ${tenantLabel} ${turn}: ${before} -> ${balance} credits ` +
+        `(deducted ${before - balance})`,
+    );
+  }
+}
+
+/**
  * The `UpgradePackageModal` gated-feature dialog (`@iblai/web-containers`)
  * shown for both the sidebar paywall gates and the zero-credit chat block on
  * the "main" tenant. Its title/CTA default to "Subscribe to unlock full
@@ -154,10 +261,11 @@ async function expectSubscribeModalAndClose(page: Page): Promise<void> {
 }
 
 test.describe('Journey 59: Ecommerce Credits & Upgrade', () => {
-  // Signup + two full Stripe checkouts + four agent chats + two credit
-  // cleanups — give the whole lifecycle plenty of room.
+  // Signup + two full Stripe checkouts + four agent chats + two rounds of
+  // three long credit-metered conversations + two credit cleanups — give the
+  // whole lifecycle plenty of room.
   test.use({ storageState: { cookies: [], origins: [] } });
-  test.setTimeout(600_000);
+  test.setTimeout(1_200_000);
 
   test('new user signs up for a free trial, exhausts credits, upgrades to the free plan via Stripe, exhausts credits again, and upgrades to Premium with a test card', async ({
     browser,
@@ -392,7 +500,14 @@ test.describe('Journey 59: Ecommerce Credits & Upgrade', () => {
         },
       );
 
-      // ── Flow 1: cleanup credits (round 1) ──────────────────────────────
+      // ── Flow 1: metered conversations, then cleanup credits (round 1) ──
+      await step(
+        'Flow 1: three long conversations each deduct credits on the main tenant',
+        async () => {
+          await converseAndExpectCreditsDeducted(page, chatPage, 'main tenant');
+        },
+      );
+
       await step('Flow 1: cleanup credits on the main tenant', async () => {
         await cleanupCredits(page);
       });
@@ -571,7 +686,18 @@ test.describe('Journey 59: Ecommerce Credits & Upgrade', () => {
         },
       );
 
-      // ── Flow 6: cleanup credits (round 2) ──────────────────────────────
+      // ── Flow 6: metered conversations, then cleanup credits (round 2) ──
+      await step(
+        'Flow 6: three long conversations each deduct credits on the upgraded tenant',
+        async () => {
+          await converseAndExpectCreditsDeducted(
+            page,
+            chatPage,
+            'upgraded tenant',
+          );
+        },
+      );
+
       await step(
         'Flow 6: cleanup credits again on the upgraded tenant',
         async () => {
