@@ -36,6 +36,19 @@ global.URL.revokeObjectURL = vi.fn();
 // MOCKS
 // ============================================================================
 
+type LlmsQueryResult = {
+  data?: unknown;
+  isLoading: boolean;
+  isSuccess: boolean;
+};
+const idleLlmsQuery: LlmsQueryResult = {
+  data: undefined,
+  isLoading: false,
+  isSuccess: true,
+};
+const mockUseGetLlmsQuery = vi.fn<(...args: unknown[]) => LlmsQueryResult>(
+  () => idleLlmsQuery,
+);
 const pushMock = vi.fn();
 let mockSearchParamsRaw = '';
 let mockPathname = '/platform/tenant123/mentor456';
@@ -228,13 +241,10 @@ vi.mock('@iblai/iblai-js/data-layer', async (importOriginal) => {
       isLoading: false,
       isSuccess: true,
     }),
-    // The nav-bar badge resolves the model label through useLlmDisplayName,
-    // which falls back to this catalogue when settings carry no `llm_config`.
-    useGetLlmsQuery: () => ({
-      data: undefined,
-      isLoading: false,
-      isSuccess: true,
-    }),
+    // The nav-bar badge resolves the model label through useLlmDisplayName
+    // (which falls back to this catalogue when settings carry no
+    // `llm_config`) and the provider logo through useLlmProviderCatalogue.
+    useGetLlmsQuery: (...args: unknown[]) => mockUseGetLlmsQuery(...args),
     useGetMemsearchStatusQuery: () => ({
       data: { enable_memsearch: false },
       isLoading: false,
@@ -318,7 +328,6 @@ vi.mock('@/lib/config', () => ({
 
 vi.mock('@/lib/utils', () => ({
   cn: (...classes: string[]) => classes.filter(Boolean).join(' '),
-  getLLMProviderDetails: () => ({ logo: '/llm-logo.png', name: 'GPT-4' }),
   // Mirrors the real helper: map the keys that are not presentable, pass the
   // rest through untouched.
   getLLMModelDisplayName: (llmName?: string | null) =>
@@ -582,6 +591,8 @@ describe('NavBar', () => {
   beforeEach(() => {
     cleanup();
     pushMock.mockReset();
+    mockUseGetLlmsQuery.mockClear();
+    mockUseGetLlmsQuery.mockReturnValue(idleLlmsQuery);
     mockSearchParamsRaw = '';
     mockPathname = '/platform/tenant123/mentor456';
     mockProjectId = undefined;
@@ -699,6 +710,84 @@ describe('NavBar', () => {
       );
 
       expect(screen.getByLabelText('LLM Model Selector')).toBeInTheDocument();
+    });
+
+    it("renders the active provider's backend logo on the model selector", () => {
+      mockIsAdmin = true;
+      mockUserIsStudent = false;
+      mockPathname = '/platform/tenant123/mentor456';
+      mockUseGetLlmsQuery.mockReturnValue({
+        data: [
+          {
+            id: 1,
+            name: 'openai',
+            display_name: 'OpenAI',
+            logo: 'https://api.example.com/media/openai.png',
+          },
+        ],
+        isLoading: false,
+        isSuccess: true,
+      });
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      // Admins subscribe to the catalogue with the page identity.
+      expect(mockUseGetLlmsQuery).toHaveBeenCalledWith(
+        { org: 'tenant123', userId: 'testuser', mentorId: 'mentor456' },
+        { skip: false },
+      );
+      const selector = screen.getByLabelText('LLM Model Selector');
+      expect(selector.querySelector('img')).toHaveAttribute(
+        'src',
+        'https://api.example.com/media/openai.png',
+      );
+    });
+
+    it('falls back to the icon when the catalogue has no logo for the active provider', () => {
+      mockIsAdmin = true;
+      mockUserIsStudent = false;
+      mockPathname = '/platform/tenant123/mentor456';
+      mockUseGetLlmsQuery.mockReturnValue({
+        data: [{ id: 1, name: 'openai', logo: null }],
+        isLoading: false,
+        isSuccess: true,
+      });
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      const selector = screen.getByLabelText('LLM Model Selector');
+      expect(selector.querySelector('img')).toBeNull();
+      expect(selector.querySelector('svg')).toBeInTheDocument();
+    });
+
+    it('does not subscribe non-admins to the LLM catalogue for the provider logo', () => {
+      mockIsAdmin = false;
+      mockUserIsStudent = true;
+      mockPathname = '/platform/tenant123/mentor456';
+      const store = createTestStore();
+
+      render(
+        <Provider store={store}>
+          <NavBar />
+        </Provider>,
+      );
+
+      // The model badge is admin-only, so the provider-logo subscription is
+      // gated off (org blanked) and skipped for a student.
+      expect(mockUseGetLlmsQuery).toHaveBeenCalledWith(
+        { org: '', userId: 'testuser', mentorId: 'mentor456' },
+        { skip: true },
+      );
     });
 
     it('shows the on-device model badge and hides the cloud selector when local mode is on', () => {

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -12,7 +13,9 @@ import {
 import { ChevronDown, Check } from 'lucide-react';
 import { MentorFacet } from '@iblai/iblai-api';
 import { ExplorePageFilters } from './explore-page-context';
-import { getLLMProviderDetails } from '@/lib/utils';
+import { useUsername } from '@/hooks/use-user';
+import { useLlmProviderCatalogue } from '@/hooks/use-llm-provider-details';
+import { TenantKeyMentorIdParams } from '@/lib/types';
 
 interface MentorCategoriesProps {
   facets?: Record<string, MentorFacet>;
@@ -42,6 +45,15 @@ export function MentorCategories({
     'me' | 'my-organization' | 'community' | ''
   >('');
   const t = useTranslations('exploreMentorCategories');
+  // The facet terms are raw provider keys; their labels come from the backend
+  // LLM catalogue.
+  const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
+  const username = useUsername();
+  const resolveLlmProvider = useLlmProviderCatalogue({
+    org: tenantKey,
+    userId: username,
+    mentorId,
+  });
 
   // Extract facet options from API response
   const categories = facets?.categories?.terms
@@ -374,7 +386,7 @@ export function MentorCategories({
             >
               <span>
                 {selectedLlmProvider
-                  ? getLLMProviderDetails(selectedLlmProvider).name
+                  ? resolveLlmProvider(selectedLlmProvider).displayName
                   : t('llmProvider')}
               </span>
               <ChevronDown className="h-3 w-3" aria-hidden="true" />
@@ -402,7 +414,7 @@ export function MentorCategories({
                   {selectedLlmProvider === llmProvider && (
                     <Check className="h-4 w-4" />
                   )}
-                  <span>{getLLMProviderDetails(llmProvider).name}</span>
+                  <span>{resolveLlmProvider(llmProvider).displayName}</span>
                 </div>
                 {/* {facets?.llm_providers?.terms[llmProvider] && (
                   <span className="text-xs text-gray-400">

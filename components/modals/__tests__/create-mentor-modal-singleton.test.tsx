@@ -94,6 +94,9 @@ vi.mock('@iblai/iblai-js/data-layer', async (importOriginal) => {
     ...actual,
     useEditMentorAndRefreshListMutation: () => [vi.fn(), { isLoading: false }],
     useGetMentorCategoriesQuery: () => ({ data: [], isLoading: false }),
+    // SettingsModal labels its provider column from the LLM catalogue; the
+    // test store does not mount llmsApiSlice, so stub the query.
+    useGetLlmsQuery: () => ({ data: undefined, isLoading: false }),
   };
 });
 
