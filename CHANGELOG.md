@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.146.2](https://github.com/iblai/os/compare/v0.146.1...v0.146.2) (2026-09-14)
+
+### Bug Fixes
+
+* **app:** render LanguagePreferenceSync at the top of the provider tree ([c10fcc9](https://github.com/iblai/os/commit/c10fcc9d586fd895a8f6fd06037c08855546d593))
+
 ## [0.146.1](https://github.com/iblai/os/compare/v0.146.0...v0.146.1) (2026-09-14)
 
 ### Bug Fixes
