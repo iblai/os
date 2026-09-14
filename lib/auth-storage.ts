@@ -104,3 +104,22 @@ export function clearPerTabSession(opts?: {
     }
   }
 }
+
+/**
+ * The auth snapshot to hand to a host/parent frame (e.g. the embed
+ * `sendMessageToParentWebsite({ auth })` handoff): the full localStorage view
+ * with the per-tab auth keys overlaid from THIS tab's session, so the host
+ * tracks the active tab's session rather than whichever tab logged in last (the
+ * shared seed). A no-op overlay when per-tab is off — identical to
+ * `{ ...localStorage }`.
+ */
+export function getPerTabAuthSnapshot(): Record<string, string> {
+  if (typeof window === 'undefined') return {};
+  const snapshot: Record<string, string> = { ...window.localStorage };
+  for (const key of PER_TAB_AUTH_KEYS) {
+    const value = getAuthItem(key);
+    if (value === null) delete snapshot[key];
+    else snapshot[key] = value;
+  }
+  return snapshot;
+}
