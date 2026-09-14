@@ -7,12 +7,15 @@
  * - Tauri detection via custom header or message from app
  */
 
-const CACHE_VERSION = 'v13';
+const CACHE_VERSION = 'v14';
 const CACHE_NAME = `mentor-cache-${CACHE_VERSION}`;
 
 // Track if we're running in Tauri (set via message from app)
 let isTauri = false;
 let isOffline = false;
+// The last cached mentor home route (set via SET_HOME_ROUTE from the app). When
+// offline, uncached navigations are redirected here instead of a dead-end page.
+let homeRoute = null;
 
 /**
  * Install event
@@ -122,11 +125,26 @@ function getOfflineFallback(request) {
     );
   }
 
-  // Page/navigation
+  // Page/navigation — instead of a dead-end "You're Offline" page, send the user
+  // back to the cached mentor home (which stays available offline). Only when we
+  // don't know the home route, or we're already navigating to it, do we fall
+  // back to a minimal message (avoids a redirect loop to an uncached home).
   if (
     request.mode === 'navigate' ||
     (request.headers.get('accept') || '').includes('text/html')
   ) {
+    try {
+      if (homeRoute) {
+        const requestedPath = new URL(url).pathname;
+        if (requestedPath !== homeRoute) {
+          const target = new URL(homeRoute, url).href;
+          return Response.redirect(target, 302);
+        }
+      }
+    } catch (e) {
+      // fall through to the minimal message
+    }
+
     return new Response(
       `<!DOCTYPE html>
       <html>
@@ -136,16 +154,16 @@ function getOfflineFallback(request) {
           <style>
             body { font-family: system-ui; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #f5f5f5; }
             .container { text-align: center; padding: 2rem; }
-            h1 { font-size: 2rem; margin-bottom: 1rem; }
+            h1 { font-size: 1.5rem; margin-bottom: 1rem; }
             p { color: #666; margin-bottom: 1.5rem; }
             button { background: linear-gradient(to right, #2563EB, #93C5FD); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; cursor: pointer; }
           </style>
         </head>
         <body>
           <div class="container">
-            <h1>You're Offline</h1>
-            <p>Please check your internet connection.</p>
-            <button onclick="window.location.reload()">Try Again</button>
+            <h1>You're offline</h1>
+            <p>This page isn't available offline yet. Reconnect to load it.</p>
+            <button onclick="window.location.reload()">Try again</button>
           </div>
         </body>
       </html>`,
@@ -171,6 +189,11 @@ self.addEventListener('message', (event) => {
     case 'SET_OFFLINE':
       isOffline = !!data;
       console.log('[SW] Offline status:', isOffline);
+      break;
+
+    case 'SET_HOME_ROUTE':
+      homeRoute = typeof data === 'string' && data ? data : null;
+      console.log('[SW] Home route:', homeRoute);
       break;
 
     case 'SKIP_WAITING':

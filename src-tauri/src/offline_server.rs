@@ -213,8 +213,16 @@ async fn serve_file(
         decoded_path
     ));
 
-    // Handle API routes specially - check cache first, then return mock responses
-    if decoded_path.starts_with("api/") {
+    // Handle API routes specially - check cache first, then return mock responses.
+    // Requests arrive either as bare `api/...` or service-prefixed `dm/api/...`,
+    // `axd/api/...`, `lms/api/...` — config derives dm/axd/lms from
+    // NEXT_PUBLIC_API_BASE_URL, which offline mode points at this server, so the
+    // /dm|/axd|/lms prefix is carried through (and preserved for cache lookup).
+    if decoded_path.starts_with("api/")
+        || decoded_path.starts_with("dm/api/")
+        || decoded_path.starts_with("axd/api/")
+        || decoded_path.starts_with("lms/api/")
+    {
         return handle_api_offline_with_cache(&state, decoded_path).await;
     }
 
@@ -386,6 +394,8 @@ async fn handle_post_api_offline_with_cache(
 
         // Try different URL patterns that might have been cached
         let api_hosts = [
+            "https://api.iblai.app",
+            "https://api.iblai.org",
             "https://base.manager.iblai.app",
             "https://base.manager.iblai.org",
             "https://learn.iblai.app",
@@ -516,6 +526,11 @@ async fn handle_api_offline_with_cache(state: &AppState, path: &str) -> Response
         for search_path in &search_paths {
             // Try different URL patterns that might have been cached
             let possible_urls = vec![
+                // Current architecture: NEXT_PUBLIC_API_BASE_URL host, path keeps
+                // its /dm|/axd|/lms prefix (e.g. https://api.iblai.app/dm/api/...).
+                format!("https://api.iblai.app/{}", search_path),
+                format!("https://api.iblai.org/{}", search_path),
+                // Legacy direct hosts (pre NEXT_PUBLIC_API_BASE_URL).
                 format!("https://base.manager.iblai.app/{}", search_path),
                 format!("https://base.manager.iblai.org/{}", search_path),
                 format!("https://learn.iblai.app/{}", search_path),

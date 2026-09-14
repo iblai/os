@@ -195,6 +195,19 @@ export function setOfflineStatus(isOffline: boolean): void {
 }
 
 /**
+ * Tell the service worker the cached mentor home route, so it can redirect
+ * uncached offline navigations there instead of a dead-end "offline" page.
+ */
+export function setOfflineHomeRoute(route: string | null): void {
+  if (navigator.serviceWorker?.controller) {
+    navigator.serviceWorker.controller.postMessage({
+      type: 'SET_HOME_ROUTE',
+      data: route,
+    });
+  }
+}
+
+/**
  * Request cache status from service worker
  */
 export async function getCacheStatus(): Promise<Record<string, number> | null> {

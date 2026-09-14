@@ -1692,8 +1692,12 @@ const URL_MONITOR_SCRIPT_OFFLINE: &str = r#"
 
     var OFFLINE_SERVER = '__OFFLINE_SERVER_URL__';
 
-    // Override __ENV__ to route API calls through our offline server
+    // Override __ENV__ to route API calls through our offline server.
+    // config derives dm/axd/lms from NEXT_PUBLIC_API_BASE_URL (`${base}/dm` etc.),
+    // so that is the key that actually matters now; the individual *_URL keys are
+    // kept for older code paths / belt-and-suspenders.
     window.__ENV__ = window.__ENV__ || {};
+    window.__ENV__.NEXT_PUBLIC_API_BASE_URL = OFFLINE_SERVER;
     window.__ENV__.NEXT_PUBLIC_DM_URL = OFFLINE_SERVER;
     window.__ENV__.NEXT_PUBLIC_AXD_URL = OFFLINE_SERVER;
     window.__ENV__.NEXT_PUBLIC_LMS_URL = OFFLINE_SERVER;
