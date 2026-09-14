@@ -540,6 +540,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <WebContainersLocaleProvider>
       <SentryInit />
+      <LanguagePreferenceSync />
       <MentorTimeTrackingProvider intervalSeconds={30} enabled={true} />
 
       <AuthProvider

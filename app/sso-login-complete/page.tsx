@@ -4,6 +4,7 @@ import React, { Suspense, useEffect } from 'react';
 import { SsoLogin as SsoLoginComponent } from '@iblai/iblai-js/web-containers/next';
 import { LOCAL_STORAGE_KEYS } from '@/lib/constants';
 import { hideInitialLoader } from '@/lib/initial-loader';
+import { resolveSsoRedirectPath } from '@/lib/sso-redirect';
 
 // Prevent static generation - this page uses browser APIs
 export const dynamic = 'force-dynamic';
@@ -26,40 +27,16 @@ function SsoLoginCompleteContent() {
       resolveRedirectPath={(
         redirectPath: string,
         parsedData: Record<string, string>,
-      ): string => {
-        // Prefer an explicit `?redirect-path=` on the URL over any value
-        // SsoLogin resolved from localStorage. The Chrome side-panel routes the
-        // partitioned mentor iframe through this page to install the session,
-        // and a prior failed-auth cycle can leave a stale `redirect-to` in that
-        // iframe's storage that would otherwise win and drop the embed params
-        // (embed / mode / component / extra-body-classes) the panel asked for.
-        //
-        // Only honor an in-app, same-origin path: SsoLogin navigates to
-        // `location.origin + redirectPath`, so an unvalidated value like
-        // `@evil.com` or `//evil.com` would be an open redirect. Require a
-        // single leading slash with no protocol-relative `//` or `/\` authority.
-        if (typeof window !== 'undefined') {
-          const explicit = new URLSearchParams(window.location.search).get(
-            'redirect-path',
-          );
-          if (explicit && /^\/(?![/\\])/.test(explicit)) {
-            redirectPath = explicit;
-          }
-        }
-
-        // Check if redirectPath contains a platform key that doesn't match the authenticated tenant
-        const platformKeyMatch = redirectPath.match(/^\/platform\/([^/]+)/);
-        if (platformKeyMatch) {
-          const pathPlatformKey = platformKeyMatch[1];
-          const authenticatedTenant = parsedData.tenant;
-
-          if (authenticatedTenant && pathPlatformKey !== authenticatedTenant) {
-            // Platform key in path doesn't match authenticated tenant, reset to default
-            redirectPath = '/';
-          }
-        }
-        return redirectPath;
-      }}
+      ): string =>
+        // localStorage `redirect-to` wins by default; an explicit same-origin
+        // `?redirect-path=` overrides it only when it carries embed context
+        // (the Chrome side-panel case). See resolveSsoRedirectPath.
+        resolveSsoRedirectPath(
+          redirectPath,
+          parsedData,
+          typeof window !== 'undefined' ? window.location.search : '',
+        )
+      }
     />
   );
 }

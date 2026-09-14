@@ -1,30 +1,71 @@
 # Changelog
 
+## [0.146.2](https://github.com/iblai/os/compare/v0.146.1...v0.146.2) (2026-09-14)
+
+### Bug Fixes
+
+* **app:** render LanguagePreferenceSync at the top of the provider tree ([c10fcc9](https://github.com/iblai/os/commit/c10fcc9d586fd895a8f6fd06037c08855546d593))
+
+## [0.146.1](https://github.com/iblai/os/compare/v0.146.0...v0.146.1) (2026-09-14)
+
+### Bug Fixes
+
+* **sso:** prefer localStorage redirect-to; only let embed URLs override ([3f87a7d](https://github.com/iblai/os/commit/3f87a7d81910481febab668c569b27b95a247525))
+
+## [0.146.0](https://github.com/iblai/os/compare/v0.145.0...v0.146.0) (2026-09-14)
+
+### Features
+
+* **datasets:** report cloud-picker credential state from the hooks ([495ae38](https://github.com/iblai/os/commit/495ae386844c67ec63342fa6fa169ed0cc16f69f))
+* **e2e:** add cloud picker locators to DatasetsTab page object ([ee85683](https://github.com/iblai/os/commit/ee8568322e05302c0cdf30ddae05ae0b631883a4))
+* **i18n:** add the cloud-picker "not configured" label ([9430ec7](https://github.com/iblai/os/commit/9430ec7d686a5d141885afd562381deb0b1fc439))
+
+### Bug Fixes
+
+* **datasets:** disable cloud pickers the tenant has no credential for ([16090e3](https://github.com/iblai/os/commit/16090e368aa84328de61e57f8bc7e0ce93e0346b))
+* **datasets:** keep the "not configured" hint out of the accessible name ([d7cb1db](https://github.com/iblai/os/commit/d7cb1db6a7c49883a81543830804190d7b1e03f2)), closes [#188](https://github.com/iblai/os/issues/188)
+* **workflows:** clear the pending clicked-item timer on unmount ([8431f5e](https://github.com/iblai/os/commit/8431f5eb55780e637c2fd9ff6d2bbff8ec66d35f))
+
+### Documentation
+
+* **e2e:** add coverage entries for journeys 44 and 45 ([59c7c56](https://github.com/iblai/os/commit/59c7c56e421b9de2bc4de4a44c29cddc6380e5a7))
+* **e2e:** describe journey 74's two-branch cloud-picker coverage ([2d8c36a](https://github.com/iblai/os/commit/2d8c36aafe34da1780831bb943841c5032fd1f12))
+
+### Tests
+
+* **e2e:** add a reader for the tenant's cloud integration credentials ([5db82e1](https://github.com/iblai/os/commit/5db82e1b5da839e55c77ccbdc659970588f389be))
+* **e2e:** add journey 44 — datasets cloud pickers ([0ab87b5](https://github.com/iblai/os/commit/0ab87b5886a4622056633c53c47909940f439fa3)), closes [#1677](https://github.com/iblai/os/issues/1677)
+* **e2e:** add journey 45 — dataset upload types ([899455e](https://github.com/iblai/os/commit/899455e4c921a610fc9954e548c97b14425ed681))
+* **e2e:** add xlsx fixture for Excel dataset upload coverage ([a4fd999](https://github.com/iblai/os/commit/a4fd9991974b422ec214180d5dbd02fc7d7c8dd8))
+* **e2e:** branch journey 74 on the tenant's credential state ([ae7d23f](https://github.com/iblai/os/commit/ae7d23f83ffc331a4b10c48739c8eed47be1f827))
+* **e2e:** resolve journey 72's help URL from the app's runtime config ([e050e60](https://github.com/iblai/os/commit/e050e6073b6022303c1a3e9888634bf401a68c25))
+* **hooks:** cover the OneDrive picker's SDK, OAuth and message paths ([449a690](https://github.com/iblai/os/commit/449a690ab933be4f1e5e758fed8ca20c5c0df724))
+
 ## [0.145.0](https://github.com/iblai/os/compare/v0.144.0...v0.145.0) (2026-09-13)
 
 ### Features
 
-* **chat:** add download control with a scope picker dialog ([074ca65](https://github.com/iblai/os/commit/074ca6518c764410fe613d65ecd2cc6579840256))
-* **chat:** add plain-text chat transcript builders ([c833901](https://github.com/iblai/os/commit/c833901e1349fadd0b25d8c490d39cff4e2f17ac))
-* **chat:** show the download control in the AI message toolbar ([3debef6](https://github.com/iblai/os/commit/3debef65fe24111dc88a20c3bf3403ff74dad30e))
-* **i18n:** add chat download strings ([b1806b5](https://github.com/iblai/os/commit/b1806b50d44566a22ec78c7ea064c00c96f789aa))
+- **chat:** add download control with a scope picker dialog ([074ca65](https://github.com/iblai/os/commit/074ca6518c764410fe613d65ecd2cc6579840256))
+- **chat:** add plain-text chat transcript builders ([c833901](https://github.com/iblai/os/commit/c833901e1349fadd0b25d8c490d39cff4e2f17ac))
+- **chat:** show the download control in the AI message toolbar ([3debef6](https://github.com/iblai/os/commit/3debef65fe24111dc88a20c3bf3403ff74dad30e))
+- **i18n:** add chat download strings ([b1806b5](https://github.com/iblai/os/commit/b1806b50d44566a22ec78c7ea064c00c96f789aa))
 
 ### Bug Fixes
 
-* **e2e:** send messages through the role-agnostic composer locator ([e8a744c](https://github.com/iblai/os/commit/e8a744c505bfbc5220ecb0e035b239e4a3fe00a2))
+- **e2e:** send messages through the role-agnostic composer locator ([e8a744c](https://github.com/iblai/os/commit/e8a744c505bfbc5220ecb0e035b239e4a3fe00a2))
 
 ### Chores
 
-* **format:** apply prettier to CHANGELOG.md ([408b4e2](https://github.com/iblai/os/commit/408b4e2efff23c9f5737cfa1dc0ddc8e8c8e6cad))
-* **format:** reapply prettier to CHANGELOG.md after the main merge ([77e1607](https://github.com/iblai/os/commit/77e16076a543c6d37811629100146e161e4cccc6))
+- **format:** apply prettier to CHANGELOG.md ([408b4e2](https://github.com/iblai/os/commit/408b4e2efff23c9f5737cfa1dc0ddc8e8c8e6cad))
+- **format:** reapply prettier to CHANGELOG.md after the main merge ([77e1607](https://github.com/iblai/os/commit/77e16076a543c6d37811629100146e161e4cccc6))
 
 ### Documentation
 
-* **e2e:** record the chat download checkpoints ([54f93c2](https://github.com/iblai/os/commit/54f93c225a28f114c7c5b2c311089570b754ea6a))
+- **e2e:** record the chat download checkpoints ([54f93c2](https://github.com/iblai/os/commit/54f93c225a28f114c7c5b2c311089570b754ea6a))
 
 ### Tests
 
-* **e2e:** cover downloading a chat as plain text ([0292a13](https://github.com/iblai/os/commit/0292a13213192a9253729c25fa72bd0c41f258d0))
+- **e2e:** cover downloading a chat as plain text ([0292a13](https://github.com/iblai/os/commit/0292a13213192a9253729c25fa72bd0c41f258d0))
 
 ## [0.144.0](https://github.com/iblai/os/compare/v0.143.1...v0.144.0) (2026-09-13)
 
