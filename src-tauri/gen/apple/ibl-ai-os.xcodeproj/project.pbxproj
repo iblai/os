@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		30706BFCA3AB4D298F1DA770 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 6A87122A816447F59949C64F /* PrivacyInfo.xcprivacy */; };
 		0A11E5EACCE1E4A700000001 /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A11E5EACCE1E4A700000002 /* Accelerate.framework */; };
 		0B12AC1C979EF13E8C7DA70B /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F170601A6F39AD89D9B8D45C /* Security.framework */; };
 		0C44612881265C872F9BC954 /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = 01DD5326020038D98382F4D6 /* main.mm */; };
@@ -58,6 +59,7 @@
 		EA5A6F7FDB1A1B0D5E6F8B22 /* foundry_manager.rs */ = {isa = PBXFileReference; path = foundry_manager.rs; sourceTree = "<group>"; };
 		F170601A6F39AD89D9B8D45C /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
 		F4BA08F2F28D1C6BE1AC82A0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		6A87122A816447F59949C64F /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -198,6 +200,7 @@
 			children = (
 				A399C28CF92BF11034159205 /* ibl-ai-os_iOS.entitlements */,
 				F4BA08F2F28D1C6BE1AC82A0 /* Info.plist */,
+				6A87122A816447F59949C64F /* PrivacyInfo.xcprivacy */,
 			);
 			path = "ibl-ai-os_iOS";
 			sourceTree = "<group>";
@@ -270,6 +273,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				30706BFCA3AB4D298F1DA770 /* PrivacyInfo.xcprivacy in Resources */,
 				E1B0874924572A2AD17E1CA2 /* Assets.xcassets in Resources */,
 				FC34CF86F03CE80602D475FF /* LaunchScreen.storyboard in Resources */,
 				797D7B101C6962F60AB9997F /* assets in Resources */,

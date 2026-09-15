@@ -1013,13 +1013,20 @@ mod tests {
     #[test]
     fn release_builds_ignore_the_checkout_dotenv() {
         let manifest = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
-        let has_local =
-            manifest.join(".env.local").exists() || manifest.join(".env.production").exists();
+        // Whether either dotenv file actually SETS the key — a file that
+        // exists without it must not fail the debug assertion (review N3).
+        let sets_key = [".env.local", ".env.production"].iter().any(|f| {
+            std::fs::read_to_string(manifest.join(f))
+                .ok()
+                .and_then(|t| env_file_lookup(&t, "IBLAI_PLATFORM_DOMAIN"))
+                .is_some()
+        });
         let value = local_env("IBLAI_PLATFORM_DOMAIN");
         if cfg!(debug_assertions) {
-            // Debug: reads the file when there is one (contents are the dev's).
-            assert!(
-                value.is_some() || !has_local,
+            // Debug: reads the value exactly when a checkout file provides it.
+            assert_eq!(
+                value.is_some(),
+                sets_key,
                 "debug builds read the checkout dotenv"
             );
         } else {

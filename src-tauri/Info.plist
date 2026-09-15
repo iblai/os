@@ -5,5 +5,22 @@
   <dict>
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
+    <!-- Usage descriptions for everything the web app asks the OS for. Merged
+         over gen/apple's Info.plist on every `cargo tauri ios build`, so a
+         regenerated Xcode project keeps them. Without the microphone string a
+         getUserMedia({audio}) call terminates the app; App Store review
+         rejects a binary that uses a resource without its string. -->
+    <key>UIBackgroundModes</key>
+    <array>
+    	<string>audio</string>
+    </array>
+    <key>NSCameraUsageDescription</key>
+    <string>The camera scans your computer's Code pairing QR code and takes photos to send in chat.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>The microphone is used for voice chat, voice calls and recording voice messages.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>The photo library lets you pick images to send in chat or use as a mentor image.</string>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>Code mode connects to the desktop app on your computer over your local network.</string>
   </dict>
 </plist>
