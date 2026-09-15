@@ -22,11 +22,8 @@ import { useIsAdmin, useUserIsStudent, useUsername } from '@/hooks/use-user';
 import { useAppSelector } from '@/lib/hooks';
 import { selectRbacPermissions } from '@/features/rbac/rbac-slice';
 import { checkRbacPermission } from '@/hoc/withPermissions';
-import {
-  formatDateString,
-  getLLMProviderDetails,
-  getLLMModelDisplayName,
-} from '@/lib/utils';
+import { formatDateString, getLLMModelDisplayName } from '@/lib/utils';
+import { useLlmProviderCatalogue } from '@/hooks/use-llm-provider-details';
 import { useNavigate } from '@/hooks/user-navigate';
 import { MODALS } from '@/lib/constants';
 import { IblPagination } from '@/components/ibl-pagination';
@@ -60,9 +57,15 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const studentCanCreateMentors =
     !isAdmin && checkRbacPermission(rbacPermissions, '/mentors/#create');
   const canEditMentors = !userIsStudent || studentCanCreateMentors;
-  const { tenantKey } = useParams<TenantKeyMentorIdParams>();
+  const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
   const [editMentorAndRefresh, { isLoading: isEditingMentor }] =
     useEditMentorAndRefreshListMutation();
+  // Provider column labels come from the backend LLM catalogue.
+  const resolveLlmProvider = useLlmProviderCatalogue({
+    org: tenantKey,
+    userId: username,
+    mentorId,
+  });
 
   const {
     mentors,
@@ -220,8 +223,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                               <div className="text-sm text-gray-900">
                                 {
                                   // @ts-expect-error llm_provider property may not exist on mentor type
-                                  getLLMProviderDetails(mentor?.llm_provider)
-                                    .name
+                                  resolveLlmProvider(mentor?.llm_provider)
+                                    .displayName
                                 }
                               </div>
                             </TableCell>

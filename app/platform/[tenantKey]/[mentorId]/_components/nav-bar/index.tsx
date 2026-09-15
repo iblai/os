@@ -60,7 +60,6 @@ import { AuthModal } from '@/components/modals/auth-modal';
 
 import {
   cn,
-  getLLMProviderDetails,
   isLoggedIn,
   isStripeActivated,
   redirectToAuthSpa,
@@ -82,6 +81,7 @@ import {
 } from '@/features/analytics/slice';
 import { useMentorSettings } from '@/hooks/use-mentors/use-mentor-settings';
 import { useLlmDisplayName } from '@/hooks/use-llm-display-name';
+import { useLlmProviderCatalogue } from '@/hooks/use-llm-provider-details';
 import { config } from '@/lib/config';
 import { MentorVisibilityEnum } from '@iblai/iblai-api';
 import { toast } from 'sonner';
@@ -221,9 +221,18 @@ export function NavBar() {
 
   const { filteredSegments } = useMentorSegments();
 
-  const llmProviderDetails = getLLMProviderDetails(
-    mentorSettingsCombinedPublicAndPrivate?.llmProvider ?? '',
-    mentorSettingsCombinedPublicAndPrivate?.llmName,
+  // Provider logos come from the backend's LLM catalogue (matched on the
+  // provider key settings persist); a provider it does not list renders the
+  // icon fallback below. Only admins see the model badge, so only they
+  // subscribe to the catalogue -- the same entry the model picker fills.
+  const canChooseLlm = isAdmin && !userIsStudent;
+  const resolveLlmProvider = useLlmProviderCatalogue({
+    org: canChooseLlm ? tenantKey : null,
+    userId: username,
+    mentorId,
+  });
+  const llmProviderDetails = resolveLlmProvider(
+    mentorSettingsCombinedPublicAndPrivate?.llmProvider,
   );
 
   const { toggleSidebar, open: openSidebar, isMobile } = useSidebar();
@@ -257,17 +266,13 @@ export function NavBar() {
   // cloud model would be misleading). Reactive to picks + the master toggle.
   const selectedLocal = useSelectedLocalModel();
   const localModelLogo = selectedLocal.model
-    ? getLLMProviderDetails(
-        selectedLocal.model.provider,
-        selectedLocal.model.name,
-      ).logo
+    ? resolveLlmProvider(selectedLocal.model.provider).logo
     : '';
   const localModelName =
     selectedLocal.model?.name ?? selectedLocal.modelId ?? '';
   // Admins (non-students) can switch the mentor's LLM; for them the on-device
   // badge doubles as the entry point to the model picker (mirrors the cloud
   // selector's gate). Others get a plain, non-interactive indicator.
-  const canChooseLlm = isAdmin && !userIsStudent;
   const localModelBadgeInner = (
     <>
       <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white">
