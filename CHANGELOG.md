@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.148.0](https://github.com/iblai/os/compare/v0.147.0...v0.148.0) (2026-09-15)
+
+### Features
+
+* **tauri:** code for ios and android ([c47715a](https://github.com/iblai/os/commit/c47715a15765c60daf4ba5bf4bd3f62defe99b83))
+
+### Bug Fixes
+
+* **mentor:** adding fixes for ios and android tauri ([255c792](https://github.com/iblai/os/commit/255c79242ea0404aaedbc93f0862c918ed415126))
+* **mentor:** fixing for auto update mac app ([14a1573](https://github.com/iblai/os/commit/14a157369331bc3ea7d6fe9378480e33f84c426b))
+* **mentor:** version bump for sdk ([d92bd76](https://github.com/iblai/os/commit/d92bd76ac6d20fff57c7c4330ac10f2bb98cc73d))
+* **tauir:** adding more code review fixes for tauri ios and android ([25fa23a](https://github.com/iblai/os/commit/25fa23a00ba8db61402892442cbfb5d477de2e6a))
+* **tauri:** adding fix for the remote code multiple chat session ([c53681d](https://github.com/iblai/os/commit/c53681d1054bf6dcf9da345aa980f05c023cd89d))
+* **tauri:** adding fixes for the code mode, code review & auto update ([a7b02cd](https://github.com/iblai/os/commit/a7b02cd052b0c2dd3dcc3dcde36a5b1a6c38b1b3))
+* **tauri:** adding fixes for the tauri issues ios android ([260ef53](https://github.com/iblai/os/commit/260ef53008139715d7ac5248cb6e898ab0d68028))
+* **tauri:** fixing race condition when the app starts and thread for local llm ([75796cc](https://github.com/iblai/os/commit/75796ccc853a1d17d152dd8c67131d9503ed6492))
+
+### Chores
+
+* **tauri:** release app-v0.95.20 ([c704f42](https://github.com/iblai/os/commit/c704f4294471edde8446a3671820c80024c9f947))
+
 ## [0.147.0](https://github.com/iblai/os/compare/v0.146.3...v0.147.0) (2026-09-15)
 
 ### Features
