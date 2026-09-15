@@ -7,11 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		30706BFCA3AB4D298F1DA770 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 6A87122A816447F59949C64F /* PrivacyInfo.xcprivacy */; };
 		0A11E5EACCE1E4A700000001 /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A11E5EACCE1E4A700000002 /* Accelerate.framework */; };
 		0B12AC1C979EF13E8C7DA70B /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F170601A6F39AD89D9B8D45C /* Security.framework */; };
 		0C44612881265C872F9BC954 /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = 01DD5326020038D98382F4D6 /* main.mm */; };
 		1616F677CBA800557AD79686 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01E1F21D7C65096DD8F44FD /* UIKit.framework */; };
-		4CC5A62371BA382C95D146C8 /* libapp.a in Resources */ = {isa = PBXBuildFile; fileRef = 5BCCB488F86B549D13F4F970 /* libapp.a */; };
 		5D4E47E8097C657103F2B215 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E58D8E5A66D812FBE71D95C5 /* Metal.framework */; };
 		71DEA7B1F8EE8F49AC4A0F35 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 17AA255698C9F9BFFEF3A8D5 /* QuartzCore.framework */; };
 		797D7B101C6962F60AB9997F /* assets in Resources */ = {isa = PBXBuildFile; fileRef = AD334AF54F50061743732938 /* assets */; };
@@ -59,6 +59,7 @@
 		EA5A6F7FDB1A1B0D5E6F8B22 /* foundry_manager.rs */ = {isa = PBXFileReference; path = foundry_manager.rs; sourceTree = "<group>"; };
 		F170601A6F39AD89D9B8D45C /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
 		F4BA08F2F28D1C6BE1AC82A0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		6A87122A816447F59949C64F /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -199,6 +200,7 @@
 			children = (
 				A399C28CF92BF11034159205 /* ibl-ai-os_iOS.entitlements */,
 				F4BA08F2F28D1C6BE1AC82A0 /* Info.plist */,
+				6A87122A816447F59949C64F /* PrivacyInfo.xcprivacy */,
 			);
 			path = "ibl-ai-os_iOS";
 			sourceTree = "<group>";
@@ -271,10 +273,10 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				30706BFCA3AB4D298F1DA770 /* PrivacyInfo.xcprivacy in Resources */,
 				E1B0874924572A2AD17E1CA2 /* Assets.xcassets in Resources */,
 				FC34CF86F03CE80602D475FF /* LaunchScreen.storyboard in Resources */,
 				797D7B101C6962F60AB9997F /* assets in Resources */,
-				4CC5A62371BA382C95D146C8 /* libapp.a in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -300,7 +302,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "cargo tauri ios xcode-script -v --platform ${PLATFORM_DISPLAY_NAME:?} --sdk-root ${SDKROOT:?} --framework-search-paths \"${FRAMEWORK_SEARCH_PATHS:?}\" --header-search-paths \"${HEADER_SEARCH_PATHS:?}\" --gcc-preprocessor-definitions \"${GCC_PREPROCESSOR_DEFINITIONS:-}\" --configuration ${CONFIGURATION:?} ${FORCE_COLOR} ${ARCHS:?}";
+			shellScript = "\"$SRCROOT/build-rust.sh\"";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -399,7 +401,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -488,7 +490,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
