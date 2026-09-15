@@ -335,6 +335,16 @@ fn env_file_lookup(text: &str, key: &str) -> Option<String> {
 /// point — the dev platform (e.g. iblai.org) is a development-time target.
 /// Read per use — it's a dev knob, not a hot path.
 fn local_env(key: &str) -> Option<String> {
+    // Debug builds only. The manifest path is compiled in, so a RELEASE
+    // binary built on a dev machine kept reading the checkout's .env.local:
+    // a DMG built here, signed into production, took the DEV platform domain
+    // from it, asked *.iblai.org for the tenant's model list (401), and
+    // registered no models — every phone Code turn then failed with "Model
+    // not found". Release builds use only what the frontend delivers, then
+    // the production defaults, exactly like a CI-built DMG.
+    if !cfg!(debug_assertions) {
+        return None;
+    }
     let manifest = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
     let candidates = [
         manifest.join(".env.local"),
@@ -996,6 +1006,29 @@ async fn forward(req: Request) -> Response {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The checkout's dotenv files are a DEV knob: a release binary must not
+    /// read them, whatever they contain (a DMG built on a dev Mac otherwise
+    /// took the dev platform domain and registered no models for the phone).
+    #[test]
+    fn release_builds_ignore_the_checkout_dotenv() {
+        let manifest = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+        let has_local =
+            manifest.join(".env.local").exists() || manifest.join(".env.production").exists();
+        let value = local_env("IBLAI_PLATFORM_DOMAIN");
+        if cfg!(debug_assertions) {
+            // Debug: reads the file when there is one (contents are the dev's).
+            assert!(
+                value.is_some() || !has_local,
+                "debug builds read the checkout dotenv"
+            );
+        } else {
+            assert!(
+                value.is_none(),
+                "release builds must ignore the checkout dotenv"
+            );
+        }
+    }
 
     #[test]
     fn secrets_are_unique_and_long_enough_to_not_guess() {
