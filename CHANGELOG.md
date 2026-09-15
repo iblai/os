@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.147.0](https://github.com/iblai/os/compare/v0.146.3...v0.147.0) (2026-09-15)
+
+### Features
+
+* **mentor:** add useLlmProviderCatalogue hook ([8644f76](https://github.com/iblai/os/commit/8644f7621be738fa6e2ca9b94da8c85989b6ed8c))
+
+### Refactors
+
+* **mentor:** remove frontend llm provider map and bundled logos ([9a3ce7f](https://github.com/iblai/os/commit/9a3ce7f0722d183b6ab219fd60c8e272163934e3))
+* **mentor:** render backend llm provider names and logos ([6fbcc60](https://github.com/iblai/os/commit/6fbcc60e8e0911bbbdc68f9d0b0acea85f3424e2))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.11.2 ([5476eb5](https://github.com/iblai/os/commit/5476eb565390caf696adafc8a3c49537be79f24e)), closes [iblai-platform#2502](https://github.com/iblai/iblai-platform/issues/2502)
+
+### Documentation
+
+* **e2e:** bump coverage for backend llm provider naming ([80a0bdc](https://github.com/iblai/os/commit/80a0bdc7059cda8856cb72848f1379f2b7d6c4a0))
+* **e2e:** recount coverage summary after merging main ([35100cb](https://github.com/iblai/os/commit/35100cb56d8b4eed5268405d864a6f5d7f758ad9))
+
+### Tests
+
+* **chat:** expose the AI reply body via data-testid ([8164af4](https://github.com/iblai/os/commit/8164af4692ca3d67193cbe286f98ce134ebfd249))
+* **e2e:** assert the ibl.ai provider card by label only ([319f02d](https://github.com/iblai/os/commit/319f02dbee94f0204819724575849d130836ec8a)), closes [#2318](https://github.com/iblai/os/issues/2318)
+* **e2e:** cover backend llm provider naming and sandbox picker stacking ([a413a9f](https://github.com/iblai/os/commit/a413a9fd13258d8d9e681fc8d1d007abb268d520))
+* **e2e:** make the journey 6 ibl.ai badge test own its mentor ([907d845](https://github.com/iblai/os/commit/907d845684f41935f2432b50e16fd86eca947572))
+* **e2e:** scrape only the reply body in journey 12 sh-09 ([5d25ec9](https://github.com/iblai/os/commit/5d25ec9d9d0f2e8d5493e0a74c5332c93353e1ad))
+* **e2e:** skip journey 52 tool-call checks when no tool_call frames arrive ([340656f](https://github.com/iblai/os/commit/340656fba631ff9f022800055027d11143c5834e))
+
 ## [0.146.3](https://github.com/iblai/os/compare/v0.146.2...v0.146.3) (2026-09-14)
 
 ### Tests
