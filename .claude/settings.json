@@ -1,4 +1,18 @@
 {
+  "permissions": {
+    "allow": [
+      "Read(//Users/macbookpro/ibl-projects/spa-app/frontend/**)",
+      "Bash(pnpm prettier *)",
+      "Bash(PORT=3000 pnpm start)",
+      "Bash(xargs -r kill)",
+      "Bash(xargs -r kill -9)",
+      "Bash(python3 -c ' *)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(d.get\\('include'\\)\\); print\\(d.get\\('exclude'\\)\\)\")",
+      "Bash(node e2e/scripts/check-journey-coverage.mjs --no-regress)",
+      "Bash(python3 -c \"import json; d=json.load\\(open\\('e2e/coverage.json'\\)\\); print\\(json.dumps\\(d['summary'], indent=1\\)[:600]\\)\")",
+      "Bash(python3 -c \"import json; d=json.load\\(open\\('/Users/user/dev/IBL/web/mentorai/e2e/coverage.json'\\)\\); print\\(json.dumps\\(d['summary'], indent=1\\)[:400]\\)\")"
+    ]
+  },
   "hooks": {
     "PostToolUse": [
       {
@@ -12,15 +26,6 @@
           }
         ]
       }
-    ]
-  },
-  "permissions": {
-    "allow": [
-      "Read(//Users/macbookpro/ibl-projects/spa-app/frontend/**)",
-      "Bash(pnpm prettier *)",
-      "Bash(PORT=3000 pnpm start)",
-      "Bash(xargs -r kill)",
-      "Bash(xargs -r kill -9)"
     ]
   }
 }

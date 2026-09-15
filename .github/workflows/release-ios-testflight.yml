@@ -1,0 +1,140 @@
+name: Release iOS (TestFlight)
+
+# Builds the Tauri iOS app and uploads it to TestFlight. Triggered by the same
+# `app-v*` tag that tauri-autoversion.yml pushes for macOS/Windows releases, so a
+# single version bump ships every native surface — plus a manual "Run workflow"
+# button for on-demand builds while iterating.
+#
+# ── Required repo/org secrets ────────────────────────────────────────────────
+# Reused from the macOS pipeline (already configured):
+#   APPLE_CERTIFICATE            base64 of an "Apple Distribution" .p12 (valid for
+#                                iOS App Store signing — same cert type the macOS
+#                                MAS/DevID build uses).
+#   APPLE_CERTIFICATE_PASSWORD   password for that .p12.
+#   APPLE_TEAM_ID                Apple Developer team id (e.g. L4FWRM8W5Z).
+# NEW — App Store Connect API key (App Store Connect → Users and Access → Integrations
+# → App Store Connect API → generate a key with the "App Manager" role):
+#   ASC_KEY_ID                   the key's Key ID.
+#   ASC_ISSUER_ID                the Issuer ID shown above the keys list.
+#   ASC_API_KEY_P8               base64 of the downloaded AuthKey_<KeyID>.p8.
+#
+# ⚠️ iOS CI signing is fiddly and can't be dry-run outside Apple's toolchain.
+#    Run this via "Run workflow" first and expect to tweak the two steps flagged
+#    "FIRST-RUN" below (signing/export options and the .ipa path) once.
+
+on:
+  push:
+    tags:
+      - 'app-v*'
+  workflow_dispatch:
+
+concurrency:
+  group: release-ios-testflight-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  testflight:
+    runs-on: macos-latest # Apple Silicon; has Xcode + the iOS SDKs
+    env:
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '25.3.0'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup Rust (+ iOS target)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios
+
+      - name: Cache Rust build
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      # cargo-tauri is the CLI the repo builds with locally (`cargo tauri …`).
+      # Cached by rust-cache after the first run.
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --locked
+
+      # ── Signing material ──────────────────────────────────────────────────
+      - name: Import Apple Distribution certificate
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          KEYCHAIN="$RUNNER_TEMP/app-signing.keychain-db"
+          KP="$(uuidgen)" # throwaway keychain password
+          security create-keychain -p "$KP" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KP" "$KEYCHAIN"
+          echo "$APPLE_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -A -t cert -f pkcs12 -k "$KEYCHAIN"
+          # Make the temp keychain the default search list so xcodebuild finds the identity.
+          security list-keychains -d user -s "$KEYCHAIN" login.keychain-db
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KP" "$KEYCHAIN" >/dev/null
+          security find-identity -v -p codesigning "$KEYCHAIN"
+
+      - name: Stage App Store Connect API key
+        env:
+          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          set -euo pipefail
+          # `xcrun altool` and xcodebuild automatic signing look for the key here.
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          echo "$ASC_API_KEY_P8" | base64 --decode \
+            > "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+
+      # ── Build the iOS app for App Store distribution ──────────────────────
+      # FIRST-RUN: how the CLI wants signing/export options is version-specific.
+      # If xcodebuild fails on provisioning, the usual fix is automatic signing
+      # with the API key — either add `--` passthrough args here, or drop an
+      # ExportOptions.plist (method=app-store-connect, teamID, and
+      # <key>signingStyle</key><string>automatic</string> with the API-key keys)
+      # and point the CLI at it. Keep the target `aarch64-apple-ios`.
+      - name: Build iOS (.ipa) for the App Store
+        env:
+          APPLE_DEVELOPMENT_TEAM: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          # Tauri derives CFBundleShortVersionString/CFBundleVersion from
+          # tauri.conf.json `version`. On the primary path this is fine — every
+          # release bumps the version (tauri-autoversion.yml pushes app-v<new>),
+          # so each tag build is unique on TestFlight. FIRST-RUN: for repeated
+          # *manual* runs of the SAME version, give CFBundleVersion a unique
+          # value (e.g. `agvtool new-version -all ${{ github.run_number }}` in the
+          # generated src-tauri/gen/apple/*.xcodeproj) or TestFlight will reject
+          # the duplicate build number.
+          cargo tauri ios build --export-method app-store-connect
+
+      # ── Upload to TestFlight ──────────────────────────────────────────────
+      # FIRST-RUN: confirm the .ipa path the build emits (printed in the build
+      # log). Tauri writes it under src-tauri/gen/apple/build/… — the glob below
+      # picks the freshest .ipa, but pin it once you see the real path.
+      - name: Upload to TestFlight
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          IPA="$(find src-tauri/gen/apple -name '*.ipa' -print0 | xargs -0 ls -t | head -1)"
+          if [ -z "${IPA:-}" ]; then echo "No .ipa found under src-tauri/gen/apple"; exit 1; fi
+          echo "Uploading $IPA to TestFlight…"
+          xcrun altool --upload-app --type ios --file "$IPA" \
+            --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
+          echo "::notice::Uploaded $(basename "$IPA") to TestFlight (build ${{ github.run_number }})."

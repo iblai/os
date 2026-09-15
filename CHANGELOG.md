@@ -4,42 +4,42 @@
 
 ### Bug Fixes
 
-* **embed:** do not write the shared auth cookies from inside an iframe ([4563352](https://github.com/iblai/os/commit/4563352d17cf3d11e3c05f39d341f4d4ea38add2))
+- **embed:** do not write the shared auth cookies from inside an iframe ([4563352](https://github.com/iblai/os/commit/4563352d17cf3d11e3c05f39d341f4d4ea38add2))
 
 ## [0.140.4](https://github.com/iblai/os/compare/v0.140.3...v0.140.4) (2026-09-04)
 
 ### Bug Fixes
 
-* **e2e:** fixing e2e tests for 66 and 71 journeys ([74ac324](https://github.com/iblai/os/commit/74ac32408261f1555741ac487d3f5c58461efb2f))
+- **e2e:** fixing e2e tests for 66 and 71 journeys ([74ac324](https://github.com/iblai/os/commit/74ac32408261f1555741ac487d3f5c58461efb2f))
 
 ## [0.140.3](https://github.com/iblai/os/compare/v0.140.2...v0.140.3) (2026-09-04)
 
 ### Bug Fixes
 
-* **embed:** accept auth data sent as a JSON string from the host ([c57f250](https://github.com/iblai/os/commit/c57f25056cb3eaecf251401ccc8312b855aec37f))
+- **embed:** accept auth data sent as a JSON string from the host ([c57f250](https://github.com/iblai/os/commit/c57f25056cb3eaecf251401ccc8312b855aec37f))
 
 ## [0.140.2](https://github.com/iblai/os/compare/v0.140.1...v0.140.2) (2026-09-04)
 
 ### Chores
 
-* **deps:** bump iblai-js to 2.8.3 ([a362126](https://github.com/iblai/os/commit/a3621266f019da211272c3209498a9bf8b7728ec))
-* **deps:** bump iblai-js to 2.8.4 ([9fd9a3b](https://github.com/iblai/os/commit/9fd9a3bff5c7561a1a37e50e0dc1ac1e1ce6e3c9))
+- **deps:** bump iblai-js to 2.8.3 ([a362126](https://github.com/iblai/os/commit/a3621266f019da211272c3209498a9bf8b7728ec))
+- **deps:** bump iblai-js to 2.8.4 ([9fd9a3b](https://github.com/iblai/os/commit/9fd9a3bff5c7561a1a37e50e0dc1ac1e1ce6e3c9))
 
 ## [0.140.1](https://github.com/iblai/os/compare/v0.140.0...v0.140.1) (2026-09-03)
 
 ### Bug Fixes
 
-* **embed:** fall back to '*' when the referrer is our own origin ([ae68842](https://github.com/iblai/os/commit/ae68842f43db9b44133bf19f174dddd44b3bc8cc))
+- **embed:** fall back to '\*' when the referrer is our own origin ([ae68842](https://github.com/iblai/os/commit/ae68842f43db9b44133bf19f174dddd44b3bc8cc))
 
 ## [0.140.0](https://github.com/iblai/os/compare/v0.139.0...v0.140.0) (2026-09-03)
 
 ### Features
 
-* **code-mode:** removed pre-tool narration in the reply ([73e8962](https://github.com/iblai/os/commit/73e896299a328a7691f857b8f99c2e8a546c9f68))
+- **code-mode:** removed pre-tool narration in the reply ([73e8962](https://github.com/iblai/os/commit/73e896299a328a7691f857b8f99c2e8a546c9f68))
 
 ### Chores
 
-* **tauri:** release app-v0.95.19 ([6da75d2](https://github.com/iblai/os/commit/6da75d2ff824224af37ebe8b33b6f0d6b9a4b180))
+- **tauri:** release app-v0.95.19 ([6da75d2](https://github.com/iblai/os/commit/6da75d2ff824224af37ebe8b33b6f0d6b9a4b180))
 
 ## [0.139.0](https://github.com/iblai/os/compare/v0.138.2...v0.139.0) (2026-09-03)
 

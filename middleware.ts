@@ -126,7 +126,7 @@ function assetCdnOrigin(): string[] {
   }
 }
 
-function buildCsp(nonce: string): string {
+function buildCsp(nonce: string, upgradeInsecure: boolean): string {
   const extra = apiBaseOrigin();
   const assetCdn = assetCdnOrigin();
   const partners = partnerHosts();
@@ -195,8 +195,12 @@ function buildCsp(nonce: string): string {
     // NOTE: intentionally NO `frame-ancestors` — the app runs in EMBED mode
     // inside arbitrary customer sites, so framing must not be restricted here.
     // `upgrade-insecure-requests` is a no-op (and warns) in a report-only
-    // policy, so it's only emitted when enforcing.
-    ...(isEnforce() ? { 'upgrade-insecure-requests': [] } : {}),
+    // policy, and on a plain-http localhost origin it would rewrite every
+    // subresource to https:// — which has no listener on the dev server, so the
+    // desktop app (or a browser) pointed at http://localhost:3000 white-screens
+    // when every chunk/style/font fails with a TLS error. Emit it only when
+    // enforcing AND not on a localhost origin (see `middleware()`).
+    ...(upgradeInsecure ? { 'upgrade-insecure-requests': [] } : {}),
   };
 
   const policy = Object.entries(directives)
@@ -218,7 +222,13 @@ function generateNonce(): string {
 
 export function middleware(request: NextRequest) {
   const nonce = generateNonce();
-  const csp = buildCsp(nonce);
+  // Never upgrade-insecure-requests on a localhost origin: the dev server (and
+  // the Tauri desktop app pointed at it via TAURI_APP_URL=http://localhost:3000)
+  // serve plain http, so upgrading subresources to https:// makes them all fail
+  // with a TLS error → white screen. Production hosts still get the directive.
+  const host = request.nextUrl.hostname;
+  const isLocalhost = host === 'localhost' || host === '127.0.0.1';
+  const csp = buildCsp(nonce, isEnforce() && !isLocalhost);
 
   // Next.js reads the nonce from the CSP on the REQUEST headers to stamp its own
   // scripts; `x-nonce` lets our components read it too when they need to inline.
