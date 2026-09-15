@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.148.1](https://github.com/iblai/os/compare/v0.148.0...v0.148.1) (2026-09-15)
+
+### Chores
+
+* bumped iblai-js to 2.12.0 ([76a75df](https://github.com/iblai/os/commit/76a75df54a0b36f6c8bc1891fb937e514c078937))
+
 ## [0.148.0](https://github.com/iblai/os/compare/v0.147.0...v0.148.0) (2026-09-15)
 
 ### Features
