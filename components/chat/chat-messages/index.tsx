@@ -91,6 +91,30 @@ export function ChatMessages({
 
   const lastAIMessage =
     lastAIMessageIndex >= 0 ? visibleMessages[lastAIMessageIndex] : null;
+
+  // Offscreen rows skip layout + paint (content-visibility) — but their
+  // placeholder height is only trustworthy once the row has been laid out
+  // for real, when `contain-intrinsic-size: auto …` remembers the true
+  // height. The chat's scroll arithmetic (scroll-to-bottom on open, the
+  // load-older restore, reply-to jumps) reads scrollHeight, so a freshly
+  // loaded conversation renders every row first and the skipping switches
+  // on a couple of frames later, after the initial scroll has landed.
+  const [skipOffscreen, setSkipOffscreen] = React.useState(false);
+  const hasMessages = visibleMessages.length > 0;
+  React.useEffect(() => {
+    setSkipOffscreen(false);
+    if (!hasMessages) return;
+    let second = 0;
+    const first = requestAnimationFrame(() => {
+      second = requestAnimationFrame(() => setSkipOffscreen(true));
+    });
+    return () => {
+      cancelAnimationFrame(first);
+      cancelAnimationFrame(second);
+    };
+  }, [sessionId, hasMessages]);
+  const offscreen = (placeholder: string) =>
+    skipOffscreen ? `[content-visibility:auto] ${placeholder}` : '';
   const lastAIMessageId = lastAIMessage?.id ?? null;
   const lastAIMessageContent = lastAIMessage?.content ?? '';
 
@@ -132,20 +156,27 @@ export function ChatMessages({
     <>
       {visibleMessages.map((message, i) =>
         message.role === 'user' ? (
-          <UserMessageBubble
+          // content-visibility: offscreen rows skip layout + paint, which is
+          // what keeps scrolling through a long, streaming conversation
+          // responsive on phone webviews. Onscreen rows are unaffected.
+          <div
             key={`message-${message.id}-${i}`}
-            message={message}
-            isHighlighted={highlightedMessageId === i}
-            profileImage={profileImage}
-            mentorName={mentorName}
-            messages={messages}
-            onHighlightMessage={handleHighlightMessage}
-            onPreviewImage={setPreviewImage}
-          />
+            className={offscreen('[contain-intrinsic-size:auto_120px]')}
+          >
+            <UserMessageBubble
+              message={message}
+              isHighlighted={highlightedMessageId === i}
+              profileImage={profileImage}
+              mentorName={mentorName}
+              messages={messages}
+              onHighlightMessage={handleHighlightMessage}
+              onPreviewImage={setPreviewImage}
+            />
+          </div>
         ) : (
           <div
             key={i}
-            className={`transition-all duration-300 ${highlightedMessageId === i ? 'rounded-lg bg-blue-100' : ''}`}
+            className={`transition-all duration-300 ${offscreen('[contain-intrinsic-size:auto_240px]')} ${highlightedMessageId === i ? 'rounded-lg bg-blue-100' : ''}`}
           >
             <AIMessageBubble
               content={message.content}

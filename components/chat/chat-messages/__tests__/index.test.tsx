@@ -407,6 +407,36 @@ describe('ChatMessages', () => {
     });
   });
 
+  describe('offscreen row skipping', () => {
+    // The bug this pins: rows carried content-visibility from their first
+    // render, so a freshly opened conversation reported placeholder heights
+    // to the chat's scroll arithmetic and scroll-to-bottom landed
+    // mid-conversation. Rows must lay out for real first; the skipping
+    // switches on a couple of frames later.
+    const skipped = (container: HTMLElement) =>
+      container.querySelectorAll('[class*="content-visibility"]').length;
+
+    it('renders every row for real first, then skips offscreen ones', async () => {
+      const { container } = renderWithRedux(<ChatMessages {...defaultProps} />);
+      expect(skipped(container)).toBe(0);
+      await waitFor(() => expect(skipped(container)).toBe(2));
+    });
+
+    it('starts over when the conversation changes', async () => {
+      const { container, rerender } = renderWithRedux(
+        <ChatMessages {...defaultProps} />,
+      );
+      await waitFor(() => expect(skipped(container)).toBe(2));
+      rerender(
+        <Provider store={createMockStore()}>
+          <ChatMessages {...defaultProps} sessionId="session-456" />
+        </Provider>,
+      );
+      expect(skipped(container)).toBe(0);
+      await waitFor(() => expect(skipped(container)).toBe(2));
+    });
+  });
+
   describe('multiple messages', () => {
     it('should render multiple messages in order', () => {
       const messages: Message[] = [

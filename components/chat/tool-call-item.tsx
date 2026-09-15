@@ -21,7 +21,28 @@ interface ToolCallItemProps {
   isCurrentlyStreaming: boolean;
 }
 
-export function ToolCallItem({
+// Memoized against streaming ticks: the tool list is rebuilt per event, so
+// object identity changes even when nothing this row renders has — and a
+// Code turn re-rendering a dozen expanded tool rows several times a second
+// is a big share of what froze phone webviews. Compare the fields the render
+// actually reads (name, input/log via getQueryLabel, result) plus the flags.
+export function toolCallItemPropsEqual(
+  prev: ToolCallItemProps,
+  next: ToolCallItemProps,
+): boolean {
+  return (
+    prev.shouldPulse === next.shouldPulse &&
+    prev.isCurrentlyStreaming === next.isCurrentlyStreaming &&
+    prev.toolCall.name === next.toolCall.name &&
+    prev.toolCall.result === next.toolCall.result &&
+    prev.toolCall.log === next.toolCall.log &&
+    // `input` is an object; a cheap JSON identity check would allocate every
+    // tick, so compare the derived label instead — it is all the render uses.
+    getQueryLabel(prev.toolCall) === getQueryLabel(next.toolCall)
+  );
+}
+
+function ToolCallItemInner({
   toolCall,
   shouldPulse,
   isCurrentlyStreaming,
@@ -100,3 +121,8 @@ export function ToolCallItem({
     </Collapsible>
   );
 }
+
+export const ToolCallItem = React.memo(
+  ToolCallItemInner,
+  toolCallItemPropsEqual,
+);
