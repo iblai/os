@@ -33,6 +33,16 @@ vi.mock('react-redux', () => ({
   useDispatch: () => mockDispatch,
 }));
 
+// use-user.ts imports getAuthItem (a value) from the SDK; without mocking it the
+// real @iblai/iblai-js/web-utils SDK loads its full runtime here (redux-toolkit
+// query → react-redux `batch`, which this file's react-redux mock omits). Mock it
+// to the flag-OFF localStorage passthrough — matching how the hook behaves today.
+vi.mock('@iblai/iblai-js/web-utils', () => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ...(globalThis as any).__iblAuthStorageMock,
+  Tenant: {},
+}));
+
 vi.mock('@/lib/hooks', () => ({
   useAppSelector: (selector: (state: unknown) => unknown) =>
     mockUseAppSelector(selector),

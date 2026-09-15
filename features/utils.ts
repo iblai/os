@@ -9,6 +9,7 @@ import type {
 import { config } from '@/lib/config';
 import { SERVICES } from './constants';
 import { LOCAL_STORAGE_KEYS } from '../lib/constants';
+import { getAuthItem } from '@/lib/auth-storage';
 
 export interface CustomQueryArgs extends Omit<FetchArgs, 'url'> {
   url: string;
@@ -46,19 +47,19 @@ function getHeaders(service: SERVICES) {
   switch (service) {
     case SERVICES.LMS:
       return {
-        Authorization: `JWT ${window.localStorage.getItem(LOCAL_STORAGE_KEYS.EDX_TOKEN_KEY)}`,
+        Authorization: `JWT ${getAuthItem(LOCAL_STORAGE_KEYS.EDX_TOKEN_KEY)}`,
       };
     case SERVICES.DM:
       return {
-        Authorization: `Token ${window.localStorage.getItem(LOCAL_STORAGE_KEYS.DM_TOKEN_KEY)}`,
+        Authorization: `Token ${getAuthItem(LOCAL_STORAGE_KEYS.DM_TOKEN_KEY)}`,
       };
     case SERVICES.AXD:
       return {
-        Authorization: `Token ${window.localStorage.getItem(LOCAL_STORAGE_KEYS.AXD_TOKEN_KEY)}`,
+        Authorization: `Token ${getAuthItem(LOCAL_STORAGE_KEYS.AXD_TOKEN_KEY)}`,
       };
     default:
       return {
-        Authorization: `Token ${window.localStorage.getItem(LOCAL_STORAGE_KEYS.DM_TOKEN_KEY)}`,
+        Authorization: `Token ${getAuthItem(LOCAL_STORAGE_KEYS.DM_TOKEN_KEY)}`,
       };
   }
 }
@@ -144,7 +145,7 @@ export const getUserName = () => {
   )
     return null;
   try {
-    return JSON.parse(localStorage.getItem('userData')!)?.user_nicename;
+    return JSON.parse(getAuthItem('userData')!)?.user_nicename;
   } catch {
     return null;
   }
@@ -157,7 +158,7 @@ export const getUserId = () => {
   )
     return null;
   try {
-    return JSON.parse(localStorage.getItem('userData')!)?.user_id;
+    return JSON.parse(getAuthItem('userData')!)?.user_id;
   } catch {
     return null;
   }
@@ -170,7 +171,7 @@ export const getUserEmail = () => {
   )
     return null;
   try {
-    return JSON.parse(localStorage.getItem('userData')!)?.user_email;
+    return JSON.parse(getAuthItem('userData')!)?.user_email;
   } catch {
     return null;
   }

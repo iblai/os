@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Code2, Folder, Info, Loader2, X } from 'lucide-react';
+import { getAuthItem } from '@/lib/auth-storage';
 import {
   useGetUserPlatformMetadataQuery,
   useUpdateUserPlatformMetadataMutation,
@@ -109,8 +110,8 @@ async function resolveCodingModel(
 ): Promise<{ model: string; matched: boolean }> {
   const model = `${provider}/${name}`;
   try {
-    const tenant = localStorage.getItem('tenant') || '';
-    const token = localStorage.getItem('dm_token') || '';
+    const tenant = getAuthItem('tenant') || '';
+    const token = getAuthItem('dm_token') || '';
     if (!tenant || !token) return { model, matched: false };
     const res = await fetch(
       `${config.dmUrl()}/api/ai-mentor/orgs/${tenant}/v1/models`,
@@ -170,7 +171,7 @@ export function CodingModeButton({
   const t = useTranslations('chatInputFormCodingModeButton');
 
   const tenantKey =
-    typeof window === 'undefined' ? '' : localStorage.getItem('tenant') || '';
+    typeof window === 'undefined' ? '' : getAuthItem('tenant') || '';
   const mentorUniqueId =
     typeof window === 'undefined' ? '' : localStorage.getItem(MENTOR_KEY) || '';
 
@@ -394,8 +395,7 @@ export function CodingModeButton({
   useEffect(() => {
     if (sandboxed !== false || blocked) return;
     if (localStorage.getItem(ENABLED_KEY) !== null) return;
-    const loggedIn =
-      !!localStorage.getItem('tenant') && !!localStorage.getItem('dm_token');
+    const loggedIn = !!getAuthItem('tenant') && !!getAuthItem('dm_token');
     if (!loggedIn) return;
     localStorage.setItem(ENABLED_KEY, 'true');
     window.dispatchEvent(new Event('local-storage'));
@@ -481,8 +481,8 @@ export function CodingModeButton({
   // time was routinely missing from the very session that needed it.
   // Best-effort: a learner who can't mint simply proceeds without it.
   const prewarmPlatformKey = () => {
-    const tenant = localStorage.getItem('tenant');
-    const token = localStorage.getItem('dm_token');
+    const tenant = getAuthItem('tenant');
+    const token = getAuthItem('dm_token');
     if (!tenant || !token) return;
     callTauri('ensure_opencode_platform_key', { tenant, token }).catch((e) =>
       console.error('[coding-mode] platform key prewarm failed', e),
