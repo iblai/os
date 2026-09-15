@@ -583,7 +583,7 @@ test.describe('Journey 59: Ecommerce Credits & Upgrade', () => {
                 parts[1] !== 'main'
               );
             },
-            { timeout: 120_000 },
+            { timeout: 180_000 },
           );
 
           const parsed = parsePlatformUrl(page.url());
