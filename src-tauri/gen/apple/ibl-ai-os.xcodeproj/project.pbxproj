@@ -7,9 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0A11E5EACCE1E4A700000001 /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A11E5EACCE1E4A700000002 /* Accelerate.framework */; };
 		0B12AC1C979EF13E8C7DA70B /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F170601A6F39AD89D9B8D45C /* Security.framework */; };
 		0C44612881265C872F9BC954 /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = 01DD5326020038D98382F4D6 /* main.mm */; };
 		1616F677CBA800557AD79686 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D01E1F21D7C65096DD8F44FD /* UIKit.framework */; };
+		4CC5A62371BA382C95D146C8 /* libapp.a in Resources */ = {isa = PBXBuildFile; fileRef = 5BCCB488F86B549D13F4F970 /* libapp.a */; };
 		5D4E47E8097C657103F2B215 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E58D8E5A66D812FBE71D95C5 /* Metal.framework */; };
 		71DEA7B1F8EE8F49AC4A0F35 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 17AA255698C9F9BFFEF3A8D5 /* QuartzCore.framework */; };
 		797D7B101C6962F60AB9997F /* assets in Resources */ = {isa = PBXBuildFile; fileRef = AD334AF54F50061743732938 /* assets */; };
@@ -24,22 +26,32 @@
 /* Begin PBXFileReference section */
 		01DD5326020038D98382F4D6 /* main.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = "<group>"; };
 		03890FD47ACABAA9BCD7F4BC /* oauth.rs */ = {isa = PBXFileReference; path = oauth.rs; sourceTree = "<group>"; };
+		06FE56A7B4F1A588462D4596 /* opencode_proxy.rs */ = {isa = PBXFileReference; path = opencode_proxy.rs; sourceTree = "<group>"; };
+		0914C9AE0A7358614E9F0947 /* opencode_acp.rs */ = {isa = PBXFileReference; path = opencode_acp.rs; sourceTree = "<group>"; };
 		0A56C3BA4923CDCABEF3934E /* foundry_installer.rs */ = {isa = PBXFileReference; path = foundry_installer.rs; sourceTree = "<group>"; };
 		12236236D53A1D85FFCF4049 /* ibl-ai-os_iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "ibl-ai-os_iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		124200EF7C04A9ADD2BAF87C /* model_manager.rs */ = {isa = PBXFileReference; path = model_manager.rs; sourceTree = "<group>"; };
+		0A11E5EACCE1E4A700000002 /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = System/Library/Frameworks/Accelerate.framework; sourceTree = SDKROOT; };
 		12B4043A1332554C95657574 /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
 		13F38E2AED9B980B4CB40A1E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		17AA255698C9F9BFFEF3A8D5 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
 		19CC12D5BCCCF48F335F9050 /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
+		36C983BC62ED3E7D214A649A /* opencode_installer.rs */ = {isa = PBXFileReference; path = opencode_installer.rs; sourceTree = "<group>"; };
 		43FBF1D0E72EC89B9A91CB69 /* main.rs */ = {isa = PBXFileReference; path = main.rs; sourceTree = "<group>"; };
 		59DA4705E22AADC994D5E687 /* lib.rs */ = {isa = PBXFileReference; path = lib.rs; sourceTree = "<group>"; };
+		5BCCB488F86B549D13F4F970 /* libapp.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libapp.a; sourceTree = "<group>"; };
+		61D551F8B61B72843C297132 /* opencode_build_prompt.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = opencode_build_prompt.txt; sourceTree = "<group>"; };
 		76BA59E47CB0FADF2B9BA8FD /* libapp.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libapp.a; sourceTree = "<group>"; };
+		7C129D932F0284B366094696 /* mcp_bridge_installer.rs */ = {isa = PBXFileReference; path = mcp_bridge_installer.rs; sourceTree = "<group>"; };
 		892AB11436B265D48C370312 /* bindings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = bindings.h; sourceTree = "<group>"; };
 		8F4143BC23E2B81F3919EA56 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
+		97D5F26BA2F6A6B152B668D7 /* cua_driver_mcp.rs */ = {isa = PBXFileReference; path = cua_driver_mcp.rs; sourceTree = "<group>"; };
 		9C46EFA76B3E98FB80A591D8 /* web_cache.rs */ = {isa = PBXFileReference; path = web_cache.rs; sourceTree = "<group>"; };
 		A399C28CF92BF11034159205 /* ibl-ai-os_iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "ibl-ai-os_iOS.entitlements"; sourceTree = "<group>"; };
+		A9943612C63C56D6721D1274 /* cua_driver_installer.rs */ = {isa = PBXFileReference; path = cua_driver_installer.rs; sourceTree = "<group>"; };
 		AD334AF54F50061743732938 /* assets */ = {isa = PBXFileReference; lastKnownFileType = folder; path = assets; sourceTree = SOURCE_ROOT; };
 		BEA8664DE1A5A5D9045FC760 /* ollama_installer.rs */ = {isa = PBXFileReference; path = ollama_installer.rs; sourceTree = "<group>"; };
+		C66C4944F7FF91C98078AADC /* mcp_bridge_manager.rs */ = {isa = PBXFileReference; path = mcp_bridge_manager.rs; sourceTree = "<group>"; };
 		D01E1F21D7C65096DD8F44FD /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		D3EE3AA8A70C42520E41C6CD /* offline_server.rs */ = {isa = PBXFileReference; path = offline_server.rs; sourceTree = "<group>"; };
 		E2FEC487735927A76CD5B596 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
@@ -55,6 +67,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B867CC34E95B11F479A37F08 /* libapp.a in Frameworks */,
+				0A11E5EACCE1E4A700000001 /* Accelerate.framework in Frameworks */,
 				9D36CDD4A7484839B36A0D43 /* CoreGraphics.framework in Frameworks */,
 				5D4E47E8097C657103F2B215 /* Metal.framework in Frameworks */,
 				DDEE89B45EE2B6873129C4E0 /* MetalKit.framework in Frameworks */,
@@ -71,6 +84,7 @@
 		09B302929453D7B27AADFE1C /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				0A11E5EACCE1E4A700000002 /* Accelerate.framework */,
 				E2FEC487735927A76CD5B596 /* CoreGraphics.framework */,
 				76BA59E47CB0FADF2B9BA8FD /* libapp.a */,
 				E58D8E5A66D812FBE71D95C5 /* Metal.framework */,
@@ -91,21 +105,45 @@
 			path = bindings;
 			sourceTree = "<group>";
 		};
+		5BF01BD3E71BB6B9F65DA890 /* debug */ = {
+			isa = PBXGroup;
+			children = (
+				5BCCB488F86B549D13F4F970 /* libapp.a */,
+			);
+			path = debug;
+			sourceTree = "<group>";
+		};
 		634339791682E057B7A4664C /* src */ = {
 			isa = PBXGroup;
 			children = (
+				A9943612C63C56D6721D1274 /* cua_driver_installer.rs */,
+				97D5F26BA2F6A6B152B668D7 /* cua_driver_mcp.rs */,
 				0A56C3BA4923CDCABEF3934E /* foundry_installer.rs */,
 				EA5A6F7FDB1A1B0D5E6F8B22 /* foundry_manager.rs */,
 				59DA4705E22AADC994D5E687 /* lib.rs */,
 				43FBF1D0E72EC89B9A91CB69 /* main.rs */,
+				7C129D932F0284B366094696 /* mcp_bridge_installer.rs */,
+				C66C4944F7FF91C98078AADC /* mcp_bridge_manager.rs */,
 				124200EF7C04A9ADD2BAF87C /* model_manager.rs */,
 				03890FD47ACABAA9BCD7F4BC /* oauth.rs */,
 				D3EE3AA8A70C42520E41C6CD /* offline_server.rs */,
 				BEA8664DE1A5A5D9045FC760 /* ollama_installer.rs */,
+				0914C9AE0A7358614E9F0947 /* opencode_acp.rs */,
+				61D551F8B61B72843C297132 /* opencode_build_prompt.txt */,
+				36C983BC62ED3E7D214A649A /* opencode_installer.rs */,
+				06FE56A7B4F1A588462D4596 /* opencode_proxy.rs */,
 				9C46EFA76B3E98FB80A591D8 /* web_cache.rs */,
 			);
 			name = src;
 			path = ../../src;
+			sourceTree = "<group>";
+		};
+		73C24CF52817D30348F0DBF7 /* arm64 */ = {
+			isa = PBXGroup;
+			children = (
+				5BF01BD3E71BB6B9F65DA890 /* debug */,
+			);
+			path = arm64;
 			sourceTree = "<group>";
 		};
 		7F8D2E3ACBE909905F7D1208 = {
@@ -143,6 +181,7 @@
 		A6E2199EE3915CDB6F39FDEF /* Externals */ = {
 			isa = PBXGroup;
 			children = (
+				73C24CF52817D30348F0DBF7 /* arm64 */,
 			);
 			path = Externals;
 			sourceTree = "<group>";
@@ -162,6 +201,13 @@
 				F4BA08F2F28D1C6BE1AC82A0 /* Info.plist */,
 			);
 			path = "ibl-ai-os_iOS";
+			sourceTree = "<group>";
+		};
+		"TEMP_809AA92A-0F83-47EF-8836-E31D08624B6A" /* x86_64 */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = x86_64;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -228,6 +274,7 @@
 				E1B0874924572A2AD17E1CA2 /* Assets.xcassets in Resources */,
 				FC34CF86F03CE80602D475FF /* LaunchScreen.storyboard in Resources */,
 				797D7B101C6962F60AB9997F /* assets in Resources */,
+				4CC5A62371BA382C95D146C8 /* libapp.a in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -275,7 +322,6 @@
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ARCHS = (
 					arm64,
-					x86_64,
 				);
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = "ibl-ai-os_iOS/ibl-ai-os_iOS.entitlements";
@@ -298,7 +344,7 @@
 				PRODUCT_NAME = "ibl.ai";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				VALID_ARCHS = "arm64  x86_64";
+				VALID_ARCHS = arm64;
 			};
 			name = debug;
 		};
@@ -371,7 +417,6 @@
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ARCHS = (
 					arm64,
-					x86_64,
 				);
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = "ibl-ai-os_iOS/ibl-ai-os_iOS.entitlements";
@@ -394,7 +439,7 @@
 				PRODUCT_NAME = "ibl.ai";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				VALID_ARCHS = "arm64  x86_64";
+				VALID_ARCHS = arm64;
 			};
 			name = release;
 		};

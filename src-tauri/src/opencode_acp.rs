@@ -34,7 +34,7 @@ use tokio::sync::{oneshot, Mutex};
 /// `api.<domain>/dm` gateway (which 500s on chat). Full model endpoint:
 /// `{default_api_base(..)}/api/ai-mentor/orgs/<tenant>/v1`. With the default
 /// domain this is exactly the historical `https://asgi.data.iblai.app`.
-fn default_api_base(platform_domain: &str) -> String {
+pub(crate) fn default_api_base(platform_domain: &str) -> String {
     format!("https://asgi.data.{platform_domain}")
 }
 
@@ -1288,7 +1288,7 @@ pub async fn new_opencode_workspace(
 /// git. The snapshots themselves were revert-safety for the auto-approve era — now that
 /// every write is individually approved they only added noise to the user's history, and
 /// two concurrent sessions would have collided on `.git/index.lock`.
-fn ensure_workspace(dir: &PathBuf) -> Result<(), String> {
+pub(crate) fn ensure_workspace(dir: &PathBuf) -> Result<(), String> {
     std::fs::create_dir_all(dir).map_err(|e| format!("workspace create failed: {e}"))?;
     if !dir.join(".git").exists() {
         let _ = std::process::Command::new("git")
@@ -1942,13 +1942,13 @@ async fn handle_update(app: &AppHandle, v: &Value, turn: &Arc<Mutex<TurnState>>)
 /// The model string doubles as the routing signal so the SDK wire format doesn't have
 /// to change: `ollama/<id>` and `foundry/<id>` are on-device, anything else is a
 /// cloud ibl.ai compat id that already carries its own prefix (`openai/gpt-5.5`).
-struct ModelSpec {
+pub(crate) struct ModelSpec {
     /// opencode provider key: "ollama" | "foundry" | "iblai".
-    provider: &'static str,
+    pub(crate) provider: &'static str,
     /// Bare model id as the runtime knows it (routing prefix stripped for local).
-    model: String,
+    pub(crate) model: String,
     /// On-device runtimes need an explicit baseURL and no ibl.ai auth.
-    local: bool,
+    pub(crate) local: bool,
 }
 
 fn parse_model_spec(model: &str) -> ModelSpec {
@@ -1994,7 +1994,23 @@ fn same_model(a: &str, b: &str) -> bool {
 /// agent unprompted access for the whole session. Nothing else confines Code, so this is
 /// enforced rather than defaulted: whatever is there gets overwritten.
 fn enforce_permission_policy(root: &mut serde_json::Map<String, Value>) {
-    root.insert("permission".to_string(), json!("ask"));
+    // `*: ask` is the bare-string "ask" policy in its object form (opencode
+    // normalizes the string to exactly this), which is what lets one more
+    // rule ride along: the `question` tool is DENIED, i.e. never offered to
+    // the model. That tool parks the session until a client answers over
+    // `/question/{id}/reply`; neither of our clients has that UI — under ACP
+    // opencode already withholds it (the tool is gated to the app/cli/desktop
+    // clients), but the phone talks to `opencode serve`, where it was on, so
+    // the agent's setup questions parked every phone turn instead of being
+    // asked in prose the way they are on the desktop. Written as a
+    // permission rather than the `tools: {question: false}` shorthand: opencode
+    // turns that shorthand into a permission rule which a top-level string
+    // policy then overwrites (verified against 1.18.13 — the model still got
+    // the tool).
+    root.insert(
+        "permission".to_string(),
+        json!({ "*": "ask", "question": "deny" }),
+    );
     // A per-agent `permission` block takes precedence over the top-level one, so leaving
     // one in place would quietly defeat the line above. Drop them; everything else about
     // those agents is left alone.
@@ -2047,7 +2063,7 @@ fn enforce_build_prompt(root: &mut serde_json::Map<String, Value>) {
 // ponytail: patches the single shared config at ~/.config/iblai/agents/opencode —
 // fine for one Code session at a time; give each session its own XDG_CONFIG_HOME if
 // concurrent Code sessions with different models ever matter.
-fn apply_opencode_model(
+pub(crate) fn apply_opencode_model(
     session_id: &str,
     mentor: Option<&str>,
     spec: &ModelSpec,
@@ -3044,11 +3060,28 @@ mod tests {
 
         enforce_permission_policy(&mut cfg);
 
-        // The bare string covers every key opencode knows about — including `read`,
-        // and including any it adds later.
-        assert_eq!(cfg.get("permission").unwrap(), &json!("ask"));
+        // The wildcard covers every key opencode knows about — including `read`,
+        // and including any it adds later; the stale `allow`s are gone.
+        assert_eq!(cfg["permission"]["*"], json!("ask"));
+        assert!(cfg["permission"].get("edit").is_none());
+        assert!(cfg["permission"].get("bash").is_none());
         // Unrelated config is left alone.
         assert_eq!(cfg.get("model").unwrap(), "openai/gpt-4o");
+    }
+
+    /// The agent's `question` tool holds a session open until a client answers
+    /// it, and neither client can (the phone showed the question and then sat
+    /// on the stop button forever). It is denied on every spawn so the agent
+    /// asks in prose and the turn ends — the desktop behaviour, on both paths.
+    #[test]
+    fn the_question_tool_is_denied_on_every_spawn() {
+        let mut cfg: serde_json::Map<String, Value> =
+            serde_json::from_str(r#"{ "permission": { "question": "allow" } }"#).unwrap();
+        enforce_permission_policy(&mut cfg);
+        assert_eq!(cfg["permission"]["question"], json!("deny"));
+        // …and only that tool: everything else is still asked about, not denied.
+        assert_eq!(cfg["permission"]["*"], json!("ask"));
+        assert_eq!(cfg["permission"].as_object().unwrap().len(), 2);
     }
 
     /// Per-agent blocks override the top level, so an `allow` hidden in one would
@@ -3081,7 +3114,10 @@ mod tests {
     fn a_config_without_a_policy_gains_one() {
         let mut cfg = serde_json::Map::new();
         enforce_permission_policy(&mut cfg);
-        assert_eq!(cfg.get("permission").unwrap(), &json!("ask"));
+        assert_eq!(
+            cfg.get("permission").unwrap(),
+            &json!({ "*": "ask", "question": "deny" })
+        );
     }
 
     /// Every spawn pins the build agent's prompt (suppressing opencode's
@@ -4305,11 +4341,18 @@ mod tests {
             last_emit: Instant::now(),
         };
         ts.reset("g1".to_string());
-        assert_eq!(ts.take_narration(), None, "nothing streamed → nothing to reclassify");
+        assert_eq!(
+            ts.take_narration(),
+            None,
+            "nothing streamed → nothing to reclassify"
+        );
 
         ts.full_content.push_str("Let me check the files.");
         ts.pending_delta.push_str("files.");
-        assert_eq!(ts.take_narration().as_deref(), Some("Let me check the files."));
+        assert_eq!(
+            ts.take_narration().as_deref(),
+            Some("Let me check the files.")
+        );
         assert!(
             ts.full_content.is_empty() && ts.pending_delta.is_empty(),
             "the reply buffer restarts after the tool call"

@@ -111,6 +111,32 @@ struct OllamaModel {
 pub const OLLAMA_API_URL: &str = "http://localhost:11434";
 pub const REQUIRED_FREE_SPACE_GB: f64 = 5.0;
 
+/// How much free space a download of `model` actually needs. Mobile knows the
+/// exact GGUF byte size from the embedded catalog, so it budgets model + 1 GB
+/// of headroom — a 0.8 GB model must not demand the desktop's blanket 5 GB on
+/// a phone. Desktop pulls through Ollama (sizes unknown here) and keeps the
+/// blanket requirement. `mobile` is passed in so the rule is testable on any
+/// host.
+pub fn required_space_gb(model: Option<&str>, mobile: bool) -> f64 {
+    if mobile {
+        if let Some(entry) = model.and_then(crate::local_llm::resolve) {
+            return entry.size as f64 / (1024.0 * 1024.0 * 1024.0) + 1.0;
+        }
+    }
+    REQUIRED_FREE_SPACE_GB
+}
+
+/// The model-manager API base: Ollama on desktop, the embedded llama.cpp
+/// server on iOS (which also prefers port 11434, but may have fallen back to
+/// another port — so never assume the constant there).
+pub fn api_base_url() -> String {
+    #[cfg(any(target_os = "ios", target_os = "android"))]
+    if let Some(url) = crate::local_llm::server_url() {
+        return url;
+    }
+    OLLAMA_API_URL.to_string()
+}
+
 /// Base URL chat must stream from: the MCP bridge — the one and only chat port.
 /// Plain Ollama on :11434 is reserved for status/version/pull checks, never
 /// chat. A non-tool-capable model can't use the bridge (Ollama would 400 the
@@ -122,22 +148,34 @@ pub const REQUIRED_FREE_SPACE_GB: f64 = 5.0;
 /// running is an error, never a guessed URL — assuming 8000 is what used to
 /// send chat at whatever unrelated server happened to hold the port.
 pub fn chat_base_url(tool_support: bool) -> Result<String, String> {
-    if !tool_support {
-        let msg = "Local chat requires a tool-capable model — streaming only runs \
-                   through the MCP bridge, and the selected model has \
-                   tool_support=false"
-            .to_string();
-        println!("[McpBridge] {msg}");
-        return Err(msg);
+    // iOS chats against the embedded server directly: there is no MCP bridge
+    // on mobile (it's a spawned Node process), and the embedded /api/chat
+    // takes no `tools` field, so tool support doesn't gate anything.
+    #[cfg(any(target_os = "ios", target_os = "android"))]
+    {
+        let _ = tool_support;
+        return crate::local_llm::server_url()
+            .ok_or_else(|| "embedded local LLM server is not running".to_string());
     }
-    match crate::mcp_bridge_manager::bridge_port() {
-        Some(port) => Ok(format!("http://localhost:{port}")),
-        None => {
-            let msg = "Local chat needs the MCP bridge, which isn't running — \
-                       toggle local models off and on to start it"
+    #[cfg(not(any(target_os = "ios", target_os = "android")))]
+    {
+        if !tool_support {
+            let msg = "Local chat requires a tool-capable model — streaming only runs \
+                       through the MCP bridge, and the selected model has \
+                       tool_support=false"
                 .to_string();
             println!("[McpBridge] {msg}");
-            Err(msg)
+            return Err(msg);
+        }
+        match crate::mcp_bridge_manager::bridge_port() {
+            Some(port) => Ok(format!("http://localhost:{port}")),
+            None => {
+                let msg = "Local chat needs the MCP bridge, which isn't running — \
+                           toggle local models off and on to start it"
+                    .to_string();
+                println!("[McpBridge] {msg}");
+                Err(msg)
+            }
         }
     }
 }
@@ -177,16 +215,17 @@ pub fn check_ollama_installed() -> bool {
         return Path::new(ollama_path).exists();
     }
 
-    // Mobile platforms (iOS, Android) don't support Ollama
-    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+    // iOS ships its model manager inside the binary (local_llm.rs) — nothing
+    // to install, so it always reads as installed.
+    #[cfg(any(target_os = "ios", target_os = "android"))]
     {
-        false
+        true
     }
 }
 
 /// Check if Ollama server is running by pinging the API
 pub async fn is_ollama_running() -> bool {
-    let Ok(resp) = reqwest::get(format!("{}/api/version", OLLAMA_API_URL)).await else {
+    let Ok(resp) = reqwest::get(format!("{}/api/version", api_base_url())).await else {
         return false;
     };
     let Ok(json) = resp.json::<Value>().await else {
@@ -281,10 +320,12 @@ pub fn start_ollama_server() -> Result<(), String> {
         }
     }
 
-    // Mobile platforms don't support Ollama
-    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+    // Mobile: the embedded server is started at app setup; retry that start
+    // here (idempotent) so a launch-time failure is recoverable on the next
+    // download instead of being permanent until the app restarts.
+    #[cfg(any(target_os = "ios", target_os = "android"))]
     {
-        return Err("Ollama is not supported on this platform".to_string());
+        return crate::local_llm::ensure_started().map(|_| ());
     }
 
     #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
@@ -299,6 +340,15 @@ pub fn start_ollama_server() -> Result<(), String> {
 /// service, falling back to killing the process; on macOS/Windows kill the
 /// process directly.
 pub fn stop_ollama_server() -> Result<(), String> {
+    // iOS: the embedded HTTP server stays up (it's cheap), but the loaded
+    // model is dropped — that's the ~1 GB a phone actually wants back when
+    // local models are switched off.
+    #[cfg(any(target_os = "ios", target_os = "android"))]
+    {
+        let _ = crate::local_llm::engine_unload();
+        return Ok(());
+    }
+
     #[cfg(target_os = "windows")]
     {
         create_command("taskkill")
@@ -333,18 +383,32 @@ pub fn stop_ollama_server() -> Result<(), String> {
         }
     }
 
-    // The MCP bridge follows Ollama's lifecycle: stop it with the server.
-    crate::mcp_bridge_manager::stop_bridge();
+    #[cfg(not(any(target_os = "ios", target_os = "android")))]
+    {
+        // The MCP bridge follows Ollama's lifecycle: stop it with the server.
+        crate::mcp_bridge_manager::stop_bridge();
 
-    Ok(())
+        Ok(())
+    }
 }
 
 /// Check available disk space on the drive where models are stored
 pub fn check_disk_space() -> Result<f64, String> {
-    // Mobile platforms don't support disk space checks for Ollama
-    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+    // Mobile: measure the filesystem the models actually land on — the
+    // app-data models dir remembered at local_llm startup. NOT `$HOME`:
+    // iOS happens to set it to the sandbox, but Android leaves it unset and
+    // statvfs on `/` reports 0 bytes available to an app, which blocked
+    // every download with "0.0 GB available".
+    #[cfg(any(target_os = "ios", target_os = "android"))]
     {
-        return Err("Disk space check is not supported on this platform".to_string());
+        if let Some(dir) = crate::local_llm::models_dir() {
+            // The dir may not exist before the first pull; statvfs needs a
+            // real path.
+            let _ = std::fs::create_dir_all(&dir);
+            return crate::local_llm::available_disk_gb(&dir);
+        }
+        let home = std::env::var("HOME").unwrap_or_else(|_| "/".to_string());
+        return crate::local_llm::available_disk_gb(std::path::Path::new(&home));
     }
 
     #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
@@ -437,6 +501,11 @@ pub fn get_system_memory() -> SystemMemory {
     #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
     {
         SystemMemory {
+            // iOS: real physical RAM so the "model too big for this device"
+            // warnings work; 0 elsewhere (unknown).
+            #[cfg(any(target_os = "ios", target_os = "android"))]
+            ram_total: crate::local_llm::physical_ram_bytes(),
+            #[cfg(not(any(target_os = "ios", target_os = "android")))]
             ram_total: 0,
             vram_total: get_vram_total(),
         }
@@ -447,7 +516,7 @@ pub fn get_system_memory() -> SystemMemory {
 pub async fn is_model_installed(model_name: &str) -> bool {
     let client = Client::new();
     let response = client
-        .get(format!("{}/api/tags", OLLAMA_API_URL))
+        .get(format!("{}/api/tags", api_base_url()))
         .timeout(std::time::Duration::from_secs(5))
         .send()
         .await;
@@ -477,7 +546,7 @@ pub async fn is_model_installed(model_name: &str) -> bool {
 pub async fn list_installed_models() -> Option<Vec<String>> {
     let client = Client::new();
     let response = match client
-        .get(format!("{}/api/tags", OLLAMA_API_URL))
+        .get(format!("{}/api/tags", api_base_url()))
         .timeout(std::time::Duration::from_secs(5))
         .send()
         .await
@@ -546,7 +615,7 @@ where
     });
 
     let response = client
-        .post(format!("{}/api/pull", OLLAMA_API_URL))
+        .post(format!("{}/api/pull", api_base_url()))
         .json(&serde_json::json!({ "name": model_name, "stream": true }))
         .send()
         .await
@@ -811,6 +880,23 @@ pub fn cancel_download() -> Result<(), String> {
     any(target_os = "windows", target_os = "macos", target_os = "linux")
 ))]
 mod tests {
+    #[test]
+    fn mobile_disk_budget_is_model_size_plus_headroom() {
+        // The phone download fix: a 0.8 GB model must budget ~1.75 GB, not
+        // the desktop's blanket 5 GB; unknown/desktop stays at the blanket.
+        let gb = required_space_gb(Some("llama3.2"), true);
+        assert!(gb > 1.7 && gb < 1.8, "got {gb}");
+        assert_eq!(
+            required_space_gb(Some("no-such-model"), true),
+            REQUIRED_FREE_SPACE_GB
+        );
+        assert_eq!(
+            required_space_gb(Some("llama3.2"), false),
+            REQUIRED_FREE_SPACE_GB
+        );
+        assert_eq!(required_space_gb(None, true), REQUIRED_FREE_SPACE_GB);
+    }
+
     use super::*;
     use crate::mcp_bridge_manager::{bridge_state_lock, set_bridge_port_for_test};
 

@@ -549,7 +549,15 @@ export function useModelDownload() {
         }));
 
         // Check disk space first
-        const hasSpace = await invoke<boolean>(TAURI_COMMANDS.CHECK_DISK_SPACE);
+        // The model id lets mobile budget the model's REAL size + 1 GB instead
+        // of the desktop's blanket 5 GB (hosts that don't know the id fall
+        // back to the blanket check).
+        const hasSpace = await invoke<boolean>(
+          TAURI_COMMANDS.CHECK_DISK_SPACE,
+          {
+            model: modelId,
+          },
+        );
         if (!hasSpace) {
           return; // Error will be emitted via event
         }

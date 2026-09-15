@@ -1,51 +1,80 @@
 # Changelog
 
+## [0.147.0](https://github.com/iblai/os/compare/v0.146.3...v0.147.0) (2026-09-15)
+
+### Features
+
+* **mentor:** add useLlmProviderCatalogue hook ([8644f76](https://github.com/iblai/os/commit/8644f7621be738fa6e2ca9b94da8c85989b6ed8c))
+
+### Refactors
+
+* **mentor:** remove frontend llm provider map and bundled logos ([9a3ce7f](https://github.com/iblai/os/commit/9a3ce7f0722d183b6ab219fd60c8e272163934e3))
+* **mentor:** render backend llm provider names and logos ([6fbcc60](https://github.com/iblai/os/commit/6fbcc60e8e0911bbbdc68f9d0b0acea85f3424e2))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.11.2 ([5476eb5](https://github.com/iblai/os/commit/5476eb565390caf696adafc8a3c49537be79f24e)), closes [iblai-platform#2502](https://github.com/iblai/iblai-platform/issues/2502)
+
+### Documentation
+
+* **e2e:** bump coverage for backend llm provider naming ([80a0bdc](https://github.com/iblai/os/commit/80a0bdc7059cda8856cb72848f1379f2b7d6c4a0))
+* **e2e:** recount coverage summary after merging main ([35100cb](https://github.com/iblai/os/commit/35100cb56d8b4eed5268405d864a6f5d7f758ad9))
+
+### Tests
+
+* **chat:** expose the AI reply body via data-testid ([8164af4](https://github.com/iblai/os/commit/8164af4692ca3d67193cbe286f98ce134ebfd249))
+* **e2e:** assert the ibl.ai provider card by label only ([319f02d](https://github.com/iblai/os/commit/319f02dbee94f0204819724575849d130836ec8a)), closes [#2318](https://github.com/iblai/os/issues/2318)
+* **e2e:** cover backend llm provider naming and sandbox picker stacking ([a413a9f](https://github.com/iblai/os/commit/a413a9fd13258d8d9e681fc8d1d007abb268d520))
+* **e2e:** make the journey 6 ibl.ai badge test own its mentor ([907d845](https://github.com/iblai/os/commit/907d845684f41935f2432b50e16fd86eca947572))
+* **e2e:** scrape only the reply body in journey 12 sh-09 ([5d25ec9](https://github.com/iblai/os/commit/5d25ec9d9d0f2e8d5493e0a74c5332c93353e1ad))
+* **e2e:** skip journey 52 tool-call checks when no tool_call frames arrive ([340656f](https://github.com/iblai/os/commit/340656fba631ff9f022800055027d11143c5834e))
+
 ## [0.146.3](https://github.com/iblai/os/compare/v0.146.2...v0.146.3) (2026-09-14)
 
 ### Tests
 
-* **e2e:** direct-mentor-URL redirect invariant (Journey 32, mt-12..15) ([9868899](https://github.com/iblai/os/commit/98688996d42eb73a49c37b8c3372d8443abd0557))
+- **e2e:** direct-mentor-URL redirect invariant (Journey 32, mt-12..15) ([9868899](https://github.com/iblai/os/commit/98688996d42eb73a49c37b8c3372d8443abd0557))
 
 ## [0.146.2](https://github.com/iblai/os/compare/v0.146.1...v0.146.2) (2026-09-14)
 
 ### Bug Fixes
 
-* **app:** render LanguagePreferenceSync at the top of the provider tree ([c10fcc9](https://github.com/iblai/os/commit/c10fcc9d586fd895a8f6fd06037c08855546d593))
+- **app:** render LanguagePreferenceSync at the top of the provider tree ([c10fcc9](https://github.com/iblai/os/commit/c10fcc9d586fd895a8f6fd06037c08855546d593))
 
 ## [0.146.1](https://github.com/iblai/os/compare/v0.146.0...v0.146.1) (2026-09-14)
 
 ### Bug Fixes
 
-* **sso:** prefer localStorage redirect-to; only let embed URLs override ([3f87a7d](https://github.com/iblai/os/commit/3f87a7d81910481febab668c569b27b95a247525))
+- **sso:** prefer localStorage redirect-to; only let embed URLs override ([3f87a7d](https://github.com/iblai/os/commit/3f87a7d81910481febab668c569b27b95a247525))
 
 ## [0.146.0](https://github.com/iblai/os/compare/v0.145.0...v0.146.0) (2026-09-14)
 
 ### Features
 
-* **datasets:** report cloud-picker credential state from the hooks ([495ae38](https://github.com/iblai/os/commit/495ae386844c67ec63342fa6fa169ed0cc16f69f))
-* **e2e:** add cloud picker locators to DatasetsTab page object ([ee85683](https://github.com/iblai/os/commit/ee8568322e05302c0cdf30ddae05ae0b631883a4))
-* **i18n:** add the cloud-picker "not configured" label ([9430ec7](https://github.com/iblai/os/commit/9430ec7d686a5d141885afd562381deb0b1fc439))
+- **datasets:** report cloud-picker credential state from the hooks ([495ae38](https://github.com/iblai/os/commit/495ae386844c67ec63342fa6fa169ed0cc16f69f))
+- **e2e:** add cloud picker locators to DatasetsTab page object ([ee85683](https://github.com/iblai/os/commit/ee8568322e05302c0cdf30ddae05ae0b631883a4))
+- **i18n:** add the cloud-picker "not configured" label ([9430ec7](https://github.com/iblai/os/commit/9430ec7d686a5d141885afd562381deb0b1fc439))
 
 ### Bug Fixes
 
-* **datasets:** disable cloud pickers the tenant has no credential for ([16090e3](https://github.com/iblai/os/commit/16090e368aa84328de61e57f8bc7e0ce93e0346b))
-* **datasets:** keep the "not configured" hint out of the accessible name ([d7cb1db](https://github.com/iblai/os/commit/d7cb1db6a7c49883a81543830804190d7b1e03f2)), closes [#188](https://github.com/iblai/os/issues/188)
-* **workflows:** clear the pending clicked-item timer on unmount ([8431f5e](https://github.com/iblai/os/commit/8431f5eb55780e637c2fd9ff6d2bbff8ec66d35f))
+- **datasets:** disable cloud pickers the tenant has no credential for ([16090e3](https://github.com/iblai/os/commit/16090e368aa84328de61e57f8bc7e0ce93e0346b))
+- **datasets:** keep the "not configured" hint out of the accessible name ([d7cb1db](https://github.com/iblai/os/commit/d7cb1db6a7c49883a81543830804190d7b1e03f2)), closes [#188](https://github.com/iblai/os/issues/188)
+- **workflows:** clear the pending clicked-item timer on unmount ([8431f5e](https://github.com/iblai/os/commit/8431f5eb55780e637c2fd9ff6d2bbff8ec66d35f))
 
 ### Documentation
 
-* **e2e:** add coverage entries for journeys 44 and 45 ([59c7c56](https://github.com/iblai/os/commit/59c7c56e421b9de2bc4de4a44c29cddc6380e5a7))
-* **e2e:** describe journey 74's two-branch cloud-picker coverage ([2d8c36a](https://github.com/iblai/os/commit/2d8c36aafe34da1780831bb943841c5032fd1f12))
+- **e2e:** add coverage entries for journeys 44 and 45 ([59c7c56](https://github.com/iblai/os/commit/59c7c56e421b9de2bc4de4a44c29cddc6380e5a7))
+- **e2e:** describe journey 74's two-branch cloud-picker coverage ([2d8c36a](https://github.com/iblai/os/commit/2d8c36aafe34da1780831bb943841c5032fd1f12))
 
 ### Tests
 
-* **e2e:** add a reader for the tenant's cloud integration credentials ([5db82e1](https://github.com/iblai/os/commit/5db82e1b5da839e55c77ccbdc659970588f389be))
-* **e2e:** add journey 44 — datasets cloud pickers ([0ab87b5](https://github.com/iblai/os/commit/0ab87b5886a4622056633c53c47909940f439fa3)), closes [#1677](https://github.com/iblai/os/issues/1677)
-* **e2e:** add journey 45 — dataset upload types ([899455e](https://github.com/iblai/os/commit/899455e4c921a610fc9954e548c97b14425ed681))
-* **e2e:** add xlsx fixture for Excel dataset upload coverage ([a4fd999](https://github.com/iblai/os/commit/a4fd9991974b422ec214180d5dbd02fc7d7c8dd8))
-* **e2e:** branch journey 74 on the tenant's credential state ([ae7d23f](https://github.com/iblai/os/commit/ae7d23f83ffc331a4b10c48739c8eed47be1f827))
-* **e2e:** resolve journey 72's help URL from the app's runtime config ([e050e60](https://github.com/iblai/os/commit/e050e6073b6022303c1a3e9888634bf401a68c25))
-* **hooks:** cover the OneDrive picker's SDK, OAuth and message paths ([449a690](https://github.com/iblai/os/commit/449a690ab933be4f1e5e758fed8ca20c5c0df724))
+- **e2e:** add a reader for the tenant's cloud integration credentials ([5db82e1](https://github.com/iblai/os/commit/5db82e1b5da839e55c77ccbdc659970588f389be))
+- **e2e:** add journey 44 — datasets cloud pickers ([0ab87b5](https://github.com/iblai/os/commit/0ab87b5886a4622056633c53c47909940f439fa3)), closes [#1677](https://github.com/iblai/os/issues/1677)
+- **e2e:** add journey 45 — dataset upload types ([899455e](https://github.com/iblai/os/commit/899455e4c921a610fc9954e548c97b14425ed681))
+- **e2e:** add xlsx fixture for Excel dataset upload coverage ([a4fd999](https://github.com/iblai/os/commit/a4fd9991974b422ec214180d5dbd02fc7d7c8dd8))
+- **e2e:** branch journey 74 on the tenant's credential state ([ae7d23f](https://github.com/iblai/os/commit/ae7d23f83ffc331a4b10c48739c8eed47be1f827))
+- **e2e:** resolve journey 72's help URL from the app's runtime config ([e050e60](https://github.com/iblai/os/commit/e050e6073b6022303c1a3e9888634bf401a68c25))
+- **hooks:** cover the OneDrive picker's SDK, OAuth and message paths ([449a690](https://github.com/iblai/os/commit/449a690ab933be4f1e5e758fed8ca20c5c0df724))
 
 ## [0.145.0](https://github.com/iblai/os/compare/v0.144.0...v0.145.0) (2026-09-13)
 

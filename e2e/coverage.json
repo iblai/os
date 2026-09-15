@@ -2,8 +2,8 @@
   "version": 2,
   "lastUpdated": "2026-09-14",
   "summary": {
-    "totalCheckpoints": 731,
-    "coveredCheckpoints": 688,
+    "totalCheckpoints": 741,
+    "coveredCheckpoints": 698,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 15,
     "pendingCheckpoints": 11,
@@ -313,6 +313,7 @@
         "app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx",
         "components/modals/edit-mentor-modal/llm-tab.tsx",
         "hooks/use-llm-display-name.ts",
+        "hooks/use-llm-provider-details.ts",
         "lib/utils.ts",
         "app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx"
       ],
@@ -394,7 +395,7 @@
         },
         {
           "id": "mgmt-16",
-          "description": "Issue #2318: ibl.ai provider card (data-provider=iblai) shows the ibl.ai logo and label instead of falling through to the generic default (the original bug — a missing map entry rendered a blank/404 logo); skips gracefully if the tenant's LLM list omits ibl.ai",
+          "description": "Issue #2318: ibl.ai provider card (data-provider=iblai) shows the ibl.ai label from the backend registry display_name instead of falling through to a generic default (the original bug — a missing frontend map entry; logos are backend data and may be null per environment); skips gracefully if the tenant's LLM list omits ibl.ai",
           "status": "covered"
         },
         {
@@ -410,6 +411,21 @@
         {
           "id": "mgmt-19",
           "description": "getLLMModelDisplayName navbar rewrite: after selecting the ibl.ai provider/model (wire key \"iblai-pro\") on the LLM tab, the navbar badge renders the display name \"ibl.ai\" exactly — not the raw wire key; skips gracefully if the tenant's LLM list omits ibl.ai",
+          "status": "covered"
+        },
+        {
+          "id": "mgmt-20",
+          "description": "Issue #2502: LLM tab provider card labels and logos are backend-owned \u2014 captures the live mentor-llms GET response and asserts every rendered card's label equals display_name ?? name, and its logo <img src> equals the backend logo URL (or the llm-provider-logo-placeholder testid renders when logo is null)",
+          "status": "covered"
+        },
+        {
+          "id": "mgmt-21",
+          "description": "Issue #2502: LLM Selection model picker rows render the backend's chat_models[].display_name (falling back to llm_name), verified against the same live mentor-llms catalogue response rather than a hard-coded guess",
+          "status": "covered"
+        },
+        {
+          "id": "mgmt-22",
+          "description": "Issue #2502: no network requests are made for the 15 deleted static /llm-*-provider.* images while opening the LLM tab and its model picker",
           "status": "covered"
         }
       ]
@@ -2846,6 +2862,11 @@
           "id": "claw-16",
           "description": "Claw kind switch (enable_claw) is disabled when the user only has read access to the field (RBAC) — unit-covered in sandbox-tab.test.tsx; not e2e-reproducible without RBAC field-permission seeding",
           "status": "not-reproducible"
+        },
+        {
+          "id": "claw-17",
+          "description": "Issue #2502: on a Claw-connected mentor, opening the agent's \"Select Provider\" picker and choosing a provider opens the \"LLM Selection\" model picker ON TOP while the provider picker stays MOUNTED underneath (the PR description's stated fix \u2014 previously it unmounted). The provider dialog is marked aria-hidden by Radix while the model picker is on top, so the assertion uses a `getByRole('dialog', { includeHidden: true })` locator and `toBeAttached()` to prove it is still mounted rather than a plain `toBeVisible()` (which would incorrectly resolve to 0 elements). Escape on the model picker reveals the still-mounted provider picker again (now visible, no longer aria-hidden); a second Escape closes it. Skips gracefully if no connectable OpenClaw instance or no LLM providers are available.",
+          "status": "covered"
         }
       ]
     },

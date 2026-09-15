@@ -274,7 +274,8 @@ test.describe('Journey 12: Chat Sharing', () => {
       chatPage,
     }) => {
       await sendAndAwaitReply(chatPage);
-      const aiReplyText = (await chatPage.aiMessages.first().innerText())
+      // Body only — the bubble may also hold a collapsed "Thought" reasoning row.
+      const aiReplyText = (await chatPage.getAiMessageBody().innerText())
         .replace(/\s+/g, ' ')
         .trim();
 

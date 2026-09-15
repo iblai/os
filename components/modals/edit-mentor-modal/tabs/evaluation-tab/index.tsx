@@ -15,7 +15,6 @@ import { useUsername } from '@/hooks/use-user';
 import { useShowFreeTrialDialog } from '@/hooks/user-user-actions';
 import { config } from '@/lib/config';
 import { TenantKeyMentorIdParams } from '@/lib/types';
-import { getLLMProviderDetails } from '@/lib/utils';
 
 export function EvaluationTab() {
   const { tenantKey, mentorId } = useParams<TenantKeyMentorIdParams>();
@@ -46,10 +45,7 @@ export function EvaluationTab() {
       rbacPermissions={rbacPermissions}
       executeGatedAction={executeWithTrialCheck}
     >
-      <AgentEvaluationTab
-        getLLMProviderDetails={getLLMProviderDetails}
-        PaginationComponent={IblPagination}
-      />
+      <AgentEvaluationTab PaginationComponent={IblPagination} />
     </AgentSettingsProvider>
   );
 }
