@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-09-14 | 731 checkpoints (688 covered, 11 pending/fixme, 15 not-reproducible in default env, 17 deprecated) | 77 journeys (76 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-09-14 | 739 checkpoints (696 covered, 11 pending/fixme, 15 not-reproducible in default env, 17 deprecated) | 77 journeys (76 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -97,7 +97,7 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 6: Mentor Management — Admin (19 checkpoints) — `journeys/06-mentor-management-admin.spec.ts`
+## Journey 6: Mentor Management — Admin (22 checkpoints) — `journeys/06-mentor-management-admin.spec.ts`
 
 **Source files:** `components/modals/create-mentor-modal.tsx`, `components/modals/edit-mentor-modal/index.tsx`, `components/modals/edit-mentor-modal/tabs/settings-tab.tsx`, `components/modals/edit-mentor-modal/llm-tab.tsx`, `components/modals/edit-mentor-modal/tabs/tools-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `components/modals/settings-modal.tsx`, `hooks/use-mentors.ts`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `lib/utils.ts`, `app/platform/[tenantKey]/[mentorId]/_components/nav-bar/index.tsx`
 
@@ -118,10 +118,13 @@ _Note: the LLM tab is served by the SDK's `AgentLLMTab`; `components/modals/edit
 - [ ] _(not-reproducible — RBAC off in default env)_ Student with `/mentors/#create` RBAC permission (`studentCanCreateMentors`) sees New Agent + My Agents in sidebar and can click a row to open Edit Agent dialog — unit-covered
 - [ ] _(not-reproducible — RBAC off in default env)_ Analytics shown to student mentor-creator only when `created_by===username` or holding per-mentor `/mentors/{id}/#view_analytics` permission — unit-covered
 - [x] Issue #2318: LLM tab provider grid renders usable (`canAccessProvider`) providers before unusable ones, each group alphabetical by display label (`data-testid=llm-provider-card`, `data-disabled`) — asserts the ordering invariants rather than a hard-coded provider list
-- [x] Issue #2318: ibl.ai provider card (`data-provider=iblai`) shows the ibl.ai logo and label instead of falling through to the generic default (the original bug — a missing map entry rendered a blank/404 logo); skips gracefully if the tenant's LLM list omits ibl.ai
+- [x] Issue #2318: ibl.ai provider card (`data-provider=iblai`) shows the ibl.ai label from the backend registry display_name instead of falling through to a generic default (the original bug — a missing frontend map entry; logos are backend data and may be null per environment); skips gracefully if the tenant's LLM list omits ibl.ai
 - [x] Issue #2318: a grayed (no-credential) provider card stays clickable and opens the LLM Selection model picker; skips gracefully if every provider in the tenant is usable
 - [x] Issue #2318: LLM Selection model picker rows render a non-blank human-readable label (`display_name || llm_name`) and searching a substring of that label finds the row
 - [x] `getLLMModelDisplayName` navbar rewrite: after selecting the ibl.ai provider/model (wire key `iblai-pro`) on the LLM tab, the navbar badge renders the display name `ibl.ai` exactly — never the raw wire key; skips gracefully if the tenant's LLM list omits ibl.ai
+- [x] Issue #2502: LLM tab provider card labels and logos are backend-owned — captures the live `mentor-llms` GET response (via a direct `page.request` fetch, bypassing RTK Query cache) and asserts every rendered card's label equals `display_name ?? name`, and its logo `<img src>` embeds the backend logo URL (via Next.js's `/_next/image` optimizer) or the `llm-provider-logo-placeholder` testid renders when logo is null
+- [x] Issue #2502: LLM Selection model picker rows render the backend's `chat_models[].display_name` (falling back to `llm_name`), verified against the same live catalogue response
+- [x] Issue #2502: no network requests are made for the 15 deleted static `/llm-*-provider.*` images while opening the LLM tab and its model picker
 
 ---
 
@@ -599,7 +602,7 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 
 ---
 
-## Journey 32: Multi-Tenancy, Advertising & Auth Customization (11 checkpoints; 1 deprecated) — `journeys/32-multi-tenancy-advertising-and-auth-customization.spec.ts`
+## Journey 32: Multi-Tenancy, Advertising & Auth Customization (15 checkpoints; 1 deprecated) — `journeys/32-multi-tenancy-advertising-and-auth-customization.spec.ts`
 
 **Source files:** `app/platform/[tenantKey]/[mentorId]/page.tsx`, `app/platform/[tenantKey]/[mentorId]/_components/app-sidebar/index.tsx`, `components/modals/create-mentor-modal.tsx`, `app/sso-login/page.tsx`
 
@@ -614,6 +617,10 @@ The "Remember past conversations" (`enable_memory_component`) master toggle move
 - [x] Help Center toggle controls dropdown and embed visibility _(serial mode added to prevent parallel browser interference)_
 - [x] Help Center URL updates correctly in the dropdown and embed menu _(serial mode added)_
 - [x] ~~Enterprise tenant: new mentor can be created from the My Mentors dialog~~ _(deprecated in #1431 — MyMentorsModal removed; covered by sidebar dialog flow above)_
+- [x] Direct-URL redirect invariant: an unauthenticated visit to a mentor URL lands on that exact tenant+mentor after logging in, not the default tenant _(env-gated: set SECOND_TENANT_MENTOR_URL; locks in the `resolveSsoRedirectPath` fix in `lib/sso-redirect.ts`)_
+- [x] Direct-URL redirect invariant: visiting a second tenant's mentor URL while signed into a different tenant lands on that exact tenant+mentor _(env-gated: SECOND_TENANT_MENTOR_URL)_
+- [x] Direct-URL redirect invariant: visiting a mentor URL while already signed into that same tenant lands there directly with no auth/tenant-switch detour
+- [x] Direct-URL redirect invariant: a user with no access to the visited tenant is denied (routed to `/error/403`), not silently redirected to the default or visited tenant _(env-gated: set NO_ACCESS_TENANT_MENTOR_URL to a tenant with self-join disabled; see the discovery notes in the spec — there is no 409 "no access" page in the current codebase)_
 
 ---
 
@@ -786,7 +793,7 @@ Requires `DM_URL` env var. Tests are skipped when `DM_URL` is unset.
 
 ---
 
-## Journey 44: CLAW Advanced Sandbox (13 checkpoints) — `journeys/44-claw-advanced-sandbox.spec.ts`
+## Journey 44: CLAW Advanced Sandbox (14 checkpoints) — `journeys/44-claw-advanced-sandbox.spec.ts`
 
 **Source files:** `components/modals/edit-mentor-modal/tabs/sandbox-tab.tsx`, `components/modals/edit-mentor-modal/tabs/prompts-tab.tsx`, `hooks/use-mentor-segments.ts`
 
@@ -805,6 +812,7 @@ The Sandbox tab used to wrap the SDK's `SandboxConfig` component in an app-level
 - [x] Admin connects a sandbox instance via the dedicated per-row Connect button (no longer a dropdown item) and the Connected Instance heading appears
 - [x] Admin edits an Agent Configuration field in the Prompts tab: edit modal closes and the new value is persisted
 - [ ] _(not-reproducible — RBAC off in default env)_ Claw kind switch (`enable_claw`) is disabled when the user only has read access — unit-covered in `sandbox-tab.test.tsx`
+- [x] Issue #2502: picking a provider in the agent's "Select Provider" picker opens the "LLM Selection" model picker ON TOP while the provider picker stays MOUNTED underneath (the PR's stated fix). The provider dialog is marked `aria-hidden` by Radix while the model picker is on top, so the checkpoint asserts `toBeAttached()` via an `includeHidden: true` locator rather than plain visibility; Escape on the model picker reveals the still-mounted provider picker (visible again), and a second Escape closes it.
 
 ---
 
