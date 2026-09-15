@@ -176,6 +176,13 @@ jobs:
           # Compile-time tenant lock (empty = multi-tenant). Read at Rust compile
           # time via option_env!("IBL_TENANT") -> the get_locked_tenant command.
           IBL_TENANT: ${{ inputs.ibl_tenant }}
+          # --- In-app updater (tauri-plugin-updater) ---
+          # Minisign key that signs the update artifacts (installer .sig); the
+          # matching pubkey is pinned in tauri.conf.json. Without the secret
+          # the build still succeeds — the manifest step below just skips.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          # Empty unless the key was generated with a password (then set the secret).
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           # MSI/WiX doesn't support arm64, so restrict to NSIS (the only Tauri
           # bundle type that builds for both x64 and arm64). tauri-action reads
@@ -240,6 +247,59 @@ jobs:
           fi
           gh release upload "$RELEASE_TAG" "${files[@]}" --clobber
           echo "Attached ${#files[@]} installer(s) to $RELEASE_TAG"
+
+      # Release builds only (never tenant-locked ones — those must not feed
+      # the generic updater feed): publish this arch's in-app updater
+      # manifest. The apps poll the rolling `app-latest` release for
+      # latest-windows-<arch>.json; each matrix leg
+      # writes only its own file, so the concurrent legs never race. Skips
+      # quietly when the signing secret isn't configured yet.
+      - name: Publish updater manifest (latest-windows-${{ matrix.arch }})
+        if: ${{ inputs.release_tag != '' && inputs.ibl_tenant == '' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EXE_GLOB: src-tauri/target/${{ matrix.rust_target }}/release/bundle/nsis/*-setup.exe
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          RUST_TARGET: ${{ matrix.rust_target }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=($EXE_GLOB)
+          if [ ${#files[@]} -eq 0 ]; then echo "No installer found"; exit 1; fi
+          exe="${files[0]}"
+          sig="${exe}.sig"
+          if [ ! -f "$sig" ]; then
+            echo "No updater signature next to $(basename "$exe") — TAURI_SIGNING_PRIVATE_KEY not set? Skipping manifest."
+            exit 0
+          fi
+          ver="$(jq -r .version src-tauri/tauri.conf.json)"
+          # x86_64-pc-windows-msvc -> x86_64 (the updater's {{arch}} value).
+          arch="${RUST_TARGET%%-*}"
+          url="https://github.com/${REPO}/releases/download/${RELEASE_TAG}/$(basename "$exe")"
+          jq -n \
+            --arg version "$ver" \
+            --arg url "$url" \
+            --arg sig "$(cat "$sig")" \
+            --arg date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg platform "windows-${arch}" \
+            '{version: $version, pub_date: $date, platforms: {($platform): {signature: $sig, url: $url}}}' \
+            > "latest-windows-${arch}.json"
+          gh release upload "$RELEASE_TAG" "$sig" "latest-windows-${arch}.json" --clobber
+
+          # Rolling "app-latest" release — the FIXED URL the apps poll
+          # (tauri.conf.json > plugins.updater.endpoints). GitHub's
+          # releases/latest is simply the most recently created release, which
+          # here is usually a web v* release, so it cannot serve the feed.
+          # The manifests still point at this version's assets above.
+          if ! gh release view app-latest >/dev/null 2>&1; then
+            gh release create app-latest --latest=false \
+              --title "ibl.ai desktop — in-app updater feed" \
+              --notes "Rolling updater manifests for the desktop apps. Do not delete: every installed app polls this release for updates." || true
+          fi
+          gh release upload app-latest "latest-windows-${arch}.json" --clobber
+          echo "Updater manifest published for windows-${arch} $ver (app-latest feed updated)"
 
       # Tenant-locked build: tenant-suffix this arch's installer, publish it to a
       # per-tenant release (app-v<version>-<tenant>, shared with the other arch and

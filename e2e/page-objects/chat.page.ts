@@ -1,4 +1,11 @@
-import { Page, Locator, Route, WebSocketRoute, expect } from '@playwright/test';
+import {
+  Page,
+  Locator,
+  Route,
+  WebSocketRoute,
+  Download,
+  expect,
+} from '@playwright/test';
 
 /**
  * Minimal shape accepted by `mockEffectiveSkills` — mirrors the SDK's
@@ -24,6 +31,13 @@ export class ChatPage {
   readonly newChatButton: Locator;
   readonly userMessages: Locator;
   readonly aiMessages: Locator;
+  /**
+   * The runtime "User Agreement" consent modal. An agent with the agreement
+   * enabled gates chatting behind it, so a sent message produces this instead
+   * of a reply until it is accepted.
+   */
+  readonly userAgreementDialog: Locator;
+  readonly userAgreementAccept: Locator;
   /**
    * The composer's "Canvas" tool chip (inside-buttons row). Artifacts are
    * only produced for a session while this tool is active — without it the
@@ -113,6 +127,22 @@ export class ChatPage {
   readonly skillsMenuClear: Locator;
   /** The Skills dropdown's content panel (Radix portal), when open. */
   readonly skillsMenuContent: Locator;
+  /**
+   * The AI message toolbar's download trigger — sr-only accessible name
+   * "Download this chat" (`ai-message-download.tsx`), rendered right after
+   * the share button under the same `!showingSharedChat && !chatPrivacyActive`
+   * gate. One instance per AI bubble; scope with `.first()`/`.last()` or
+   * `getDownloadButton(scope)` when more than one reply is on screen.
+   */
+  readonly downloadButton: Locator;
+  /** The "Download Chat" dialog opened by `downloadButton` — a radio-group scope picker. */
+  readonly downloadDialog: Locator;
+  /** "Entire chat" radio inside the download dialog — preselected on every open. */
+  readonly downloadScopeChatRadio: Locator;
+  /** "This message only" radio inside the download dialog. */
+  readonly downloadScopeMessageRadio: Locator;
+  /** The dialog's single primary action button ("Download"). There is no Cancel — dismiss via Escape or the dialog's built-in close. */
+  readonly downloadConfirmButton: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -124,6 +154,12 @@ export class ChatPage {
     this.newChatButton = page.getByRole('button', { name: 'New Chat' });
     this.userMessages = page.locator('.chat-user-message-query');
     this.aiMessages = page.locator('.chat-ai-message-response');
+    this.userAgreementDialog = page.getByRole('dialog', {
+      name: /user agreement/i,
+    });
+    this.userAgreementAccept = this.userAgreementDialog.getByRole('button', {
+      name: /i accept/i,
+    });
     this.canvasToggle = page.getByRole('button', { name: /canvas/i });
     this.canvasMessagePreview = page.getByTestId('canvas-message-preview');
     this.canvasOpenButton = page.getByTestId('canvas-open-button');
@@ -146,11 +182,13 @@ export class ChatPage {
     // memory was off (toggle still visible) and let `toBeVisible()` pass off the
     // toggle even when the real button was gone. The MemoryButton renders text
     // "Memory" with only decorative icons, so its accessible name is exactly
-    // "Memory" — which the privacy toggle never matches.
-    this.memoryButton = page.getByRole('button', {
-      name: 'Memory',
-      exact: true,
-    });
+    // "Memory" — which the privacy toggle never matches. Pinned further to its
+    // `chat-memory-button` test id because an admin's sidebar footer now also
+    // has a "Memory" button (tenant Memory tab), which an unscoped exact-name
+    // match would resolve as well (strict-mode violation).
+    this.memoryButton = page
+      .getByTestId('chat-memory-button')
+      .and(page.getByRole('button', { name: 'Memory', exact: true }));
     this.createMentorDialog = page.getByRole('dialog', {
       name: /create.*mentor/i,
     });
@@ -194,11 +232,32 @@ export class ChatPage {
     this.skillsMenuClear =
       this.skillsMenuTrigger.getByTestId('skills-menu-clear');
     this.skillsMenuContent = page.getByTestId('skills-menu-content');
+    this.downloadButton = page.getByRole('button', {
+      name: 'Download this chat',
+    });
+    this.downloadDialog = page.getByRole('dialog', { name: 'Download Chat' });
+    this.downloadScopeChatRadio = this.downloadDialog.getByRole('radio', {
+      name: 'Entire chat',
+    });
+    this.downloadScopeMessageRadio = this.downloadDialog.getByRole('radio', {
+      name: 'This message only',
+    });
+    this.downloadConfirmButton = this.downloadDialog.getByRole('button', {
+      name: 'Download',
+      exact: true,
+    });
   }
 
   async sendMessage(text: string): Promise<void> {
-    await expect(this.chatInput).toBeVisible({ timeout: 15_000 });
-    await this.chatInput.fill(text);
+    // Role-agnostic id-based locator, NOT `this.chatInput` — the composer's
+    // accessible role flips from `textbox` to `combobox` whenever the
+    // current mentor has any enabled skills (see the "`/` skill picker"
+    // section below), which `sendMessage` has no business caring about. Any
+    // mentor with skills configured made every caller of `sendMessage`
+    // (nearly every journey) fail on `chatInput` alone (issue #2464 sh-07).
+    const composer = this.getComposerTextarea();
+    await expect(composer).toBeVisible({ timeout: 15_000 });
+    await composer.fill(text);
     await expect(this.sendButton).toBeEnabled({ timeout: 10_000 });
     await this.page.waitForTimeout(5_000);
     await this.sendButton.click();
@@ -206,6 +265,35 @@ export class ChatPage {
 
   async waitForAIResponse(timeout = 60_000): Promise<void> {
     await expect(this.aiMessages.first()).toBeVisible({ timeout });
+  }
+
+  /**
+   * Resolves on whichever the agent produces first: its reply, or the User
+   * Agreement modal that gates the reply.
+   *
+   * Whether an agent carries a user agreement is a property of the agent, not
+   * of the flow under test, so a caller that only needs "the chat is live"
+   * cannot assume a reply. Callers that specifically test replies should keep
+   * using waitForAIResponse.
+   */
+  async waitForAIResponseOrUserAgreement(
+    timeout = 60_000,
+  ): Promise<'response' | 'user-agreement'> {
+    try {
+      return await Promise.any([
+        this.aiMessages
+          .first()
+          .waitFor({ state: 'visible', timeout })
+          .then(() => 'response' as const),
+        this.userAgreementDialog
+          .waitFor({ state: 'visible', timeout })
+          .then(() => 'user-agreement' as const),
+      ]);
+    } catch {
+      throw new Error(
+        `Neither an assistant reply nor the User Agreement modal appeared within ${timeout}ms`,
+      );
+    }
   }
 
   async waitForUserMessage(text: string, timeout = 30_000): Promise<void> {
@@ -668,8 +756,8 @@ export class ChatPage {
   // ── Agent task list (write_todos) mocking helpers — Journey 68 ─────────────
   //
   // `AgentTodoList` (components/chat/agent-todo-list.tsx) renders only when
-  // `showReasoning` (mentor-settings `show_reasoning`, default `false`) is on
-  // AND the assistant turn's `toolCalls` contains a `write_todos` entry
+  // `showReasoning` (mentor-settings `show_reasoning`; the backend default
+  // may be `true`) is on AND the assistant turn's `toolCalls` contains a `write_todos` entry
   // (`extractLatestTodos` in `@iblai/iblai-js/web-utils`). Two independent
   // seams are needed to exercise it deterministically:
   //   - REST: patch the mentor-settings GET(s) to flip `show_reasoning`, and
@@ -1070,5 +1158,50 @@ export class ChatPage {
    */
   getBounceDots(scope?: Locator): Locator {
     return (scope ?? this.page).locator('span.animate-bounce');
+  }
+
+  // ── Chat download (issue #2464) ─────────────────────────────────────────
+
+  /** Returns the reply body within `scope` (default: first AI bubble) — excludes the reasoning/tool-call/todo/permission rows rendered above it. */
+  getAiMessageBody(scope: Locator = this.aiMessages.first()): Locator {
+    return scope.getByTestId('ai-message-body');
+  }
+
+  /** Returns the download trigger within `scope` (default: whole page) — disambiguates when multiple AI bubbles are on screen. */
+  getDownloadButton(scope?: Locator): Locator {
+    return (scope ?? this.page).getByRole('button', {
+      name: 'Download this chat',
+    });
+  }
+
+  /**
+   * Opens the download dialog via `trigger` (default: the first
+   * "Download this chat" button on the page) and waits for it to render.
+   * The scope selection always resets to "Entire chat" on open — callers
+   * that want "This message only" must select it explicitly every time.
+   */
+  async openDownloadDialog(trigger?: Locator): Promise<void> {
+    const button = trigger ?? this.downloadButton.first();
+    await expect(button).toBeVisible({ timeout: 15_000 });
+    await button.click();
+    await expect(this.downloadDialog).toBeVisible({ timeout: 10_000 });
+  }
+
+  /**
+   * Reads a triggered `Download`'s full content as UTF-8 text. Uses
+   * `createReadStream()` rather than `download.path()` — the stream works
+   * the same across Chromium/Firefox/WebKit, while `path()` is not always
+   * available depending on how the download was accepted.
+   */
+  async readDownloadText(download: Download): Promise<string> {
+    const stream = await download.createReadStream();
+    if (!stream) return '';
+    const chunks: Buffer[] = [];
+    await new Promise<void>((resolve, reject) => {
+      stream.on('data', (chunk: Buffer) => chunks.push(chunk));
+      stream.on('end', () => resolve());
+      stream.on('error', reject);
+    });
+    return Buffer.concat(chunks).toString('utf-8');
   }
 }

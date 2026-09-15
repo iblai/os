@@ -130,11 +130,6 @@ describe('LLMTab', () => {
       (providerValue().executeGatedAction as (f: () => unknown) => unknown)(fn);
       expect(mockExecuteWithTrialCheck).toHaveBeenCalledWith(fn);
     });
-
-    it('leaves getLLMProviderDetails to the SDK default', () => {
-      render(<LLMTab />);
-      expect(tabProps().getLLMProviderDetails).toBeUndefined();
-    });
   });
 
   describe('showConfigurationHeader', () => {

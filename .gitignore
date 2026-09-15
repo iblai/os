@@ -90,6 +90,7 @@ e2e/playwright-report
 e2e/test-results.json
 playwright/.auth
 e2e/playwright/.auth
+e2e/.residue
 
 
 # harnesses
@@ -102,3 +103,6 @@ CLAUDE.local.md
 # Generated render gallery (scripts/build-gallery.test.tsx) — a ~1MB build
 # artifact regenerated on demand, never committed.
 public/markdown-gallery.html
+
+# Claude Code review worktrees (local scratch, never committed)
+.claude/worktrees/

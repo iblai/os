@@ -22,6 +22,10 @@ SKIP_COVERAGE_FILES=(
   # App-router pages/components are exercised via E2E (see vitest.config.ts
   # coverage.exclude: app/platform/**, app/provider-association/**).
   "app/layout.tsx"
+  # Error boundaries — thin render glue; their chunk-error decision logic
+  # (isChunkLoadError / reload budget) lives in lib/chunk-retry.ts (unit-tested).
+  "app/error.tsx"
+  "app/global-error.tsx"
   "explore/_components/all-mentors-section.tsx"
   "explore/_components/search-section.tsx"
   "job-scout/page.tsx"

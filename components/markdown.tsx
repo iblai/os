@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { Pluggable } from 'unified';
 import { Streamdown } from 'streamdown';
 import rehypeKatex from 'rehype-katex';
@@ -13,6 +14,7 @@ import { rehypeAlignedMath } from '@/lib/rehype-aligned-math';
 import { rehypeVerbCode } from '@/lib/rehype-verb-code';
 import { remarkLatexIslands } from '@/lib/remark-latex-islands';
 import { remarkLatexLineBreaks } from '@/lib/remark-latex-line-breaks';
+import { remarkTrimAutolinkHost } from '@/lib/remark-trim-autolink-host';
 import { parseLatexAwareBlocks } from '@/lib/latex-aware-blocks';
 import { rehypeReportMathErrors } from '@/lib/markdown-math-error-reporter';
 import { KATEX_ERROR_COLOR } from '@/lib/katex-options';
@@ -58,6 +60,10 @@ const math = {
       // literal behind. Strip the residue before remark-breaks turns the
       // newline itself into the <br> the author meant.
       remarkLatexLineBreaks,
+      // GFM leaves an em dash glued to a bare autolink inside the host, so
+      // `www.google.com—has` links to a domain that is not google.com. See
+      // lib/remark-trim-autolink-host.ts.
+      remarkTrimAutolinkHost,
       remarkBreaks,
     ],
   } as Pluggable,
@@ -91,7 +97,28 @@ const controls = { table: { fullscreen: false } };
 // Streamdown's documented opt-out and restores full height.
 const TABLE_MAX_HEIGHT = 'none';
 
-export default function Markdown({ children, className }: Props) {
+// Module-level, NOT an inline closure: every prop handed to Streamdown must
+// be referentially stable, or its internal per-block memoization is busted
+// and every streaming tick re-parses every block of every message — the
+// jank/crash a phone webview cannot absorb.
+const urlTransform = (url: string) => {
+  // Allow mailto:, tel:, and http(s): protocols
+  if (
+    url.startsWith('mailto:') ||
+    url.startsWith('tel:') ||
+    url.startsWith('https://') ||
+    url.startsWith('http://')
+  ) {
+    return url;
+  }
+  return '';
+};
+
+// memo: a chat re-renders ALL its bubbles on every streaming tick, and
+// markdown (remark + KaTeX) is the expensive part of each. With the wrapper
+// memoized on (children, className), only the message actually receiving
+// tokens pays for markdown; finished messages reconcile to nothing.
+function MarkdownInner({ children, className }: Props) {
   return (
     <div className={cn('space-y-4', className)}>
       <Streamdown
@@ -112,21 +139,13 @@ export default function Markdown({ children, className }: Props) {
         linkSafety={linkSafety}
         controls={controls}
         tableMaxHeight={TABLE_MAX_HEIGHT}
-        urlTransform={(url) => {
-          // Allow mailto:, tel:, and http(s): protocols
-          if (
-            url.startsWith('mailto:') ||
-            url.startsWith('tel:') ||
-            url.startsWith('http://') ||
-            url.startsWith('https://')
-          ) {
-            return url;
-          }
-          return '';
-        }}
+        urlTransform={urlTransform}
       >
         {normalizeListIndentation(children ?? '')}
       </Streamdown>
     </div>
   );
 }
+
+const Markdown = memo(MarkdownInner);
+export default Markdown;

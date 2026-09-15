@@ -116,6 +116,7 @@ export function CanvasView({
         artifactId={artifactId}
         org={org}
         userId={userId}
+        fileExtension={fileExtension}
         metadata={metadata}
         sessionId={sessionId}
         tenantKey={tenantKey}

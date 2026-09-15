@@ -108,6 +108,20 @@ vi.mock('@/components/chat/ai-message-share', () => ({
   ),
 }));
 
+vi.mock('@/components/chat/ai-message-download', () => ({
+  AIMessageDownload: ({
+    mentorName,
+    messages,
+  }: {
+    mentorName: string;
+    messages: unknown[];
+  }) => (
+    <button data-testid="ai-message-download">
+      Download: {mentorName} ({messages.length})
+    </button>
+  ),
+}));
+
 vi.mock('@/components/chat/ai-message-rating', () => ({
   AIMessageRating: () => <div data-testid="ai-message-rating">Rating</div>,
 }));
@@ -444,6 +458,31 @@ describe('AIMessageBubble', () => {
       mockShowingSharedChat = false; // Reset for other tests
     });
 
+    // Issue #2464: the download button rides the same gate as share — a
+    // per-message toolbar action on AI bubbles only, hidden in shared-chat and
+    // private-mode views.
+    it('should render download button when not in shared chat and not private', () => {
+      renderWithRedux(<AIMessageBubble {...defaultProps} />);
+      expect(screen.getByTestId('ai-message-download')).toBeInTheDocument();
+    });
+
+    it('should not render download button when in shared chat', () => {
+      mockShowingSharedChat = true;
+      renderWithRedux(<AIMessageBubble {...defaultProps} />, true);
+      expect(
+        screen.queryByTestId('ai-message-download'),
+      ).not.toBeInTheDocument();
+      mockShowingSharedChat = false;
+    });
+
+    it('should not render download button when chat private mode is active', () => {
+      mockChatPrivacyMode = 'disabled';
+      renderWithRedux(<AIMessageBubble {...defaultProps} />);
+      expect(
+        screen.queryByTestId('ai-message-download'),
+      ).not.toBeInTheDocument();
+    });
+
     it('should render rating component when logged in and not shared chat', () => {
       renderWithRedux(<AIMessageBubble {...defaultProps} />);
       expect(screen.getByTestId('ai-message-rating')).toBeInTheDocument();
@@ -704,6 +743,29 @@ describe('AIMessageBubble', () => {
         'data-reasoning-content',
         'Let me think...',
       );
+    });
+
+    it('keeps the reasoning section outside the ai-message-body reply hook', () => {
+      const { container } = renderWithRedux(
+        <AIMessageBubble
+          {...defaultProps}
+          content="Hello! How can I help?"
+          reasoningContent="Thought about the greeting"
+        />,
+      );
+
+      const bubble = container.querySelector(
+        `.${CSS_CLASS_NAMES.CHAT.AI_MESSAGE_RESPONSE}`,
+      ) as HTMLElement;
+      const body = screen.getByTestId('ai-message-body');
+
+      expect(bubble).toContainElement(body);
+      expect(bubble.textContent).toContain('Thought about the greeting');
+      expect(body.textContent).toContain('Hello! How can I help?');
+      expect(body.textContent).not.toContain('Thought');
+      expect(
+        within(body).queryByTestId('reasoning-section'),
+      ).not.toBeInTheDocument();
     });
 
     it('should not render ReasoningSection when reasoningContent is empty', () => {

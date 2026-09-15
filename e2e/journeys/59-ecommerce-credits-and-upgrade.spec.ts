@@ -167,6 +167,10 @@ test.describe('Journey 59: Ecommerce Credits & Upgrade', () => {
       !DM_URL || !ECOMMERCE_CREDIT_CLEANUP_TOKEN,
       'DM_URL / ECOMMERCE_CREDIT_CLEANUP_TOKEN not configured for this environment',
     );
+    test.skip(
+      process.env.ECOMMERCE_E2E !== '1',
+      'ECOMMERCE_E2E not enabled for this environment',
+    );
 
     // Fresh, unauthenticated context — the signup flow provisions +
     // authenticates its own account.
@@ -316,6 +320,9 @@ test.describe('Journey 59: Ecommerce Credits & Upgrade', () => {
           await expect(sidebarPage.monetizationButton).toBeVisible({
             timeout: 10_000,
           });
+          await expect(sidebarPage.memoryButton).toBeVisible({
+            timeout: 10_000,
+          });
           await expect(sidebarPage.settingsButton).toBeVisible({
             timeout: 10_000,
           });
@@ -365,6 +372,9 @@ test.describe('Journey 59: Ecommerce Credits & Upgrade', () => {
           await expectSubscribeModalAndClose(page);
 
           await sidebarPage.monetizationButton.click();
+          await expectSubscribeModalAndClose(page);
+
+          await sidebarPage.memoryButton.click();
           await expectSubscribeModalAndClose(page);
 
           await sidebarPage.settingsButton.click();
