@@ -13,9 +13,6 @@ const CACHE_NAME = `mentor-cache-${CACHE_VERSION}`;
 // Track if we're running in Tauri (set via message from app)
 let isTauri = false;
 let isOffline = false;
-// The last cached mentor home route (set via SET_HOME_ROUTE from the app). When
-// offline, uncached navigations are redirected here instead of a dead-end page.
-let homeRoute = null;
 
 /**
  * Install event
@@ -125,26 +122,13 @@ function getOfflineFallback(request) {
     );
   }
 
-  // Page/navigation — instead of a dead-end "You're Offline" page, send the user
-  // back to the cached mentor home (which stays available offline). Only when we
-  // don't know the home route, or we're already navigating to it, do we fall
-  // back to a minimal message (avoids a redirect loop to an uncached home).
+  // Page/navigation. In-app navigation is blocked client-side while offline
+  // (OfflineNavigationGuard), so this only fires for a full-page load of an
+  // uncached route — show a minimal offline notice rather than a dead app.
   if (
     request.mode === 'navigate' ||
     (request.headers.get('accept') || '').includes('text/html')
   ) {
-    try {
-      if (homeRoute) {
-        const requestedPath = new URL(url).pathname;
-        if (requestedPath !== homeRoute) {
-          const target = new URL(homeRoute, url).href;
-          return Response.redirect(target, 302);
-        }
-      }
-    } catch (e) {
-      // fall through to the minimal message
-    }
-
     return new Response(
       `<!DOCTYPE html>
       <html>
@@ -189,11 +173,6 @@ self.addEventListener('message', (event) => {
     case 'SET_OFFLINE':
       isOffline = !!data;
       console.log('[SW] Offline status:', isOffline);
-      break;
-
-    case 'SET_HOME_ROUTE':
-      homeRoute = typeof data === 'string' && data ? data : null;
-      console.log('[SW] Home route:', homeRoute);
       break;
 
     case 'SKIP_WAITING':

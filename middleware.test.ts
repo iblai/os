@@ -41,6 +41,22 @@ describe('CSP middleware', () => {
     expect(csp).not.toContain('frame-ancestors'); // app runs embedded
   });
 
+  it('omits upgrade-insecure-requests on localhost even when enforcing', () => {
+    // The desktop app pointed at http://localhost:3000 (TAURI_APP_URL) serves
+    // plain http; upgrading subresources to https:// would TLS-fail and
+    // white-screen it. It must still ENFORCE (not silently downgrade).
+    for (const url of [
+      'http://localhost:3000/platform/acme/m1',
+      'http://127.0.0.1:3000/',
+    ]) {
+      const res = middleware(req(url));
+      const csp = res.headers.get('Content-Security-Policy');
+      expect(csp).toBeTruthy(); // still enforcing
+      expect(res.headers.get('Content-Security-Policy-Report-Only')).toBeNull();
+      expect(csp).not.toContain('upgrade-insecure-requests');
+    }
+  });
+
   it('allows the asset CDN origin in style/font/connect when NEXT_PUBLIC_ASSET_CDN is set', () => {
     // Static served cross-origin from the CDN (assets.ibl.ai). Accepts a bare
     // host — assetCdnOrigin() normalizes it to https:// like next.config.ts.

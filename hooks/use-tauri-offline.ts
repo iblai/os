@@ -3,7 +3,6 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { isTauriApp } from '@/types/tauri';
-import { setOfflineHomeRoute } from '@/lib/register-sw';
 
 // localStorage keys for Tauri offline mode
 const LAST_MENTOR_ROUTE_KEY = 'tauri_last_mentor_route';
@@ -67,10 +66,6 @@ export function useTauriOffline(): TauriOfflineState & {
         console.log('[TauriOffline] Saving mentor route:', pathname);
         localStorage.setItem(LAST_MENTOR_ROUTE_KEY, pathname);
         lastSavedRoute.current = pathname;
-
-        // Tell the service worker the current cached home so it can redirect
-        // uncached offline navigations back here instead of a dead-end page.
-        setOfflineHomeRoute(pathname);
 
         // Trigger pre-caching via Tauri command
         triggerPrecache(pathname);
