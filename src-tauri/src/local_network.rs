@@ -122,9 +122,11 @@ fn probe(
             return verdict(last);
         }
         if !active() {
-            // The prompt is on screen: wait for the answer.
+            // The prompt is on screen: wait for the answer. Running out of
+            // window is not an answer — the user simply has not tapped
+            // yet — so it is no verdict, and nothing is remembered.
             if std::time::Instant::now() >= deadline {
-                return LocalNetwork::Denied;
+                return LocalNetwork::Undetermined;
             }
             std::thread::sleep(Duration::from_millis(300));
             continue;
@@ -491,9 +493,11 @@ mod tests {
         assert!(started.elapsed() < Duration::from_millis(500));
     }
 
-    /// The prompt never gets answered: the window, not forever.
+    /// The prompt never gets answered inside the window: give up without
+    /// a verdict (the user did not say no — the UI must not send them to
+    /// Settings, and the ask must not count as answered).
     #[test]
-    fn an_unanswered_prompt_ends_at_the_window() {
+    fn an_unanswered_prompt_ends_at_the_window_with_no_verdict() {
         let started = std::time::Instant::now();
         let v = probe(
             Duration::from_millis(700),
@@ -501,7 +505,7 @@ mod tests {
             || Attempt::NoRoute,
             || false,
         );
-        assert_eq!(v, LocalNetwork::Denied);
+        assert_eq!(v, LocalNetwork::Undetermined);
         assert!(started.elapsed() >= Duration::from_millis(700));
         assert!(started.elapsed() < Duration::from_secs(3));
     }

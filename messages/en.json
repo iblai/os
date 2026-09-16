@@ -2398,7 +2398,7 @@
     "connecting": "Connecting…",
     "localNetworkHint": "If your phone asks to find devices on your local network, tap Allow.",
     "localNetworkChecking": "Checking local network access…",
-    "localNetworkDenied": "Local Network access is off for ibl.ai, so Code can't reach your computer. Turn it on in Settings, then come back here.",
+    "localNetworkDenied": "Local Network access is off for ibl.ai, so Code can’t reach your computer. Turn it on in Settings, then come back here.",
     "openSettings": "Open Settings",
     "disconnect": "Disconnect",
     "phoneAccess": "Phone Access",
