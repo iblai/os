@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.149.1](https://github.com/iblai/os/compare/v0.149.0...v0.149.1) (2026-09-16)
+
+### Bug Fixes
+
+* **tauri:** adding fix for code review and ios permissions ([037ee3a](https://github.com/iblai/os/commit/037ee3a551c9911d28ed8fda24d1c9234fa34cb7))
+* **tauri:** adding fix for icons, minimum os version & os platform for model id ([52b99db](https://github.com/iblai/os/commit/52b99db75b0ec34dec9bc9ef8d6ad01f537132f3))
+
+### Chores
+
+* **tauri:** release app-v0.95.21 ([e8da75b](https://github.com/iblai/os/commit/e8da75b45db2548915194fcf81799c3896b6dba9))
+
 ## [0.149.0](https://github.com/iblai/os/compare/v0.148.1...v0.149.0) (2026-09-16)
 
 ### Features
