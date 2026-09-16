@@ -51,7 +51,8 @@
       }
     },
     "iOS": {
-      "developmentTeam": "L4FWRM8W5Z"
+      "developmentTeam": "L4FWRM8W5Z",
+      "minimumSystemVersion": "15.0"
     },
     "android": {
       "minSdkVersion": 24
