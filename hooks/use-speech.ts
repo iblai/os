@@ -6,6 +6,7 @@ import type { Message } from '@iblai/iblai-js/web-utils';
 
 import { config } from '@/lib/config';
 import { LOCAL_STORAGE_KEYS } from '@/lib/constants';
+import { getAuthItem } from '@/lib/auth-storage';
 import { useUsername } from '@/providers/use-user';
 import { useMentorSettings } from './use-mentors/use-mentor-settings';
 
@@ -112,7 +113,7 @@ async function loadTtsAudio(
 ): Promise<boolean> {
   const token =
     typeof window !== 'undefined'
-      ? window.localStorage.getItem(LOCAL_STORAGE_KEYS.DM_TOKEN_KEY)
+      ? getAuthItem(LOCAL_STORAGE_KEYS.DM_TOKEN_KEY)
       : null;
   const url = `${config.dmUrl()}/api/ai-mentor/orgs/${org}/users/${userId}/chat-messages/${chatMessageId}/tts`;
   const response = await fetch(url, {
