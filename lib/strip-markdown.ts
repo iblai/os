@@ -11,16 +11,15 @@
  * run from the same characters inside a fenced code block, and cannot tell a
  * `$5` price from a `$x$` equation; an mdast walk gets both right for free.
  * The processor is configured with the same plugins as `components/markdown.tsx`
- * (remark-gfm, remark-math) and the same pre-passes (`preprocessLaTeX`,
- * `normalizeListIndentation`), so the node types walked here are exactly the
+ * (remark-gfm, @ziloen/remark-math) and the same pre-pass
+ * (`normalizeListIndentation`), so the node types walked here are exactly the
  * node types the user is looking at while they listen.
  */
 
 import { remark } from 'remark';
 import remarkGfm from 'remark-gfm';
-import remarkMath from 'remark-math';
+import zilMath from '@ziloen/remark-math';
 
-import { preprocessLaTeX } from './preprocess-latex';
 import { normalizeListIndentation } from './normalize-list-indentation';
 
 /**
@@ -45,9 +44,9 @@ type MdastNode = {
  *   transform has no locale to render such a placeholder in. An English
  *   placeholder read to a French listener is a worse outcome than silence.
  * - `math` / `inlineMath`: `\frac{a}{b}` read literally is gibberish. Dropped
- *   for the same reason, and dropping is why `preprocessLaTeX` runs first --
- *   it escapes prices, so "it costs $5 or $6" stays prose instead of being
- *   parsed as an equation and silently deleted.
+ *   for the same reason; @ziloen/remark-math tells a `$5` price from a `$x$`
+ *   equation at the tokenizer level, so "it costs $5 or $6" stays prose
+ *   instead of being parsed as an equation and silently deleted.
  * - `image` / `imageReference`: the picture cannot be spoken and its alt text
  *   is, in practice, a filename or a caption already repeated in the prose.
  * - `definition`: a link-reference definition is a URL, and URLs are never read.
@@ -184,7 +183,9 @@ function toSpokenText(text: string): string {
     .join('\n');
 }
 
-const processor = remark().use(remarkGfm).use(remarkMath);
+const processor = remark()
+  .use(remarkGfm)
+  .use(zilMath, { singleDollarTextMath: true });
 
 /**
  * Strips markdown syntax from `markdown`, leaving only what should be spoken.
@@ -197,7 +198,7 @@ export function stripMarkdownForSpeech(markdown: string): string {
   if (typeof markdown !== 'string' || markdown.trim() === '') return '';
 
   try {
-    const source = normalizeListIndentation(preprocessLaTeX(markdown));
+    const source = normalizeListIndentation(markdown);
     const tree = processor.parse(source) as unknown as MdastNode;
     return toSpokenText(renderNode(tree));
   } catch {

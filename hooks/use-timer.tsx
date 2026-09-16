@@ -8,6 +8,7 @@ export function useTimer() {
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<Date | null>(null);
+  const isRunningRef = useRef(false);
 
   useEffect(() => {
     if (isRunning && startTimeRef.current) {
@@ -34,16 +35,18 @@ export function useTimer() {
   }, []);
 
   const start = useCallback(() => {
-    if (!isRunning) {
+    if (!isRunningRef.current) {
       const now = new Date();
+      isRunningRef.current = true;
       setStartTime(now);
       setIsRunning(true);
       startTimeRef.current = now;
     }
-  }, [isRunning]);
+  }, []);
 
   const stop = useCallback(() => {
-    if (isRunning) {
+    if (isRunningRef.current) {
+      isRunningRef.current = false;
       setIsRunning(false);
 
       if (intervalRef.current) {
@@ -51,7 +54,7 @@ export function useTimer() {
         intervalRef.current = null;
       }
     }
-  }, [isRunning]);
+  }, []);
 
   return {
     startTime,

@@ -14,7 +14,7 @@ import { Message } from '@iblai/iblai-js/web-utils';
 import { MENTOR_CHAT_DOCUMENTS_EXTENSIONS } from '@iblai/iblai-js/web-utils';
 import { useAccessingPublicRoute } from '@/hooks/use-anonymous-mentor';
 import { useChatFileUpload } from '@/hooks/use-chat-file-upload';
-import { cn, isLoggedIn } from '@/lib/utils';
+import { cn, hasCoarsePointer, isLoggedIn } from '@/lib/utils';
 import { extractFilesFromClipboard } from '@/lib/clipboard';
 import useVoiceChat from '@/hooks/use-voice-chat';
 import { VoiceChatButton } from './chat-input-form/voice-chat-button';
@@ -694,7 +694,10 @@ export function ChatInputForm({
 
   const { handleMicrophoneBtnClick, processing, recording, time } =
     useVoiceChat({
-      sendMessage: handleSelectPrompt,
+      onTranscript: (text) =>
+        setInputValue(
+          inputValue.trim() ? `${inputValue.trim()} ${text}` : text,
+        ),
     });
 
   // Get attached files from Redux store with a fallback for when the state is not yet available
@@ -718,6 +721,16 @@ export function ChatInputForm({
     onSubmit(inputValue);
     setInputValue('');
     setFileAddedNotification(null);
+    // Touch devices: sending is the end of typing, so drop focus to close
+    // the on-screen keyboard — otherwise it covers the incoming reply.
+    // Desktop keeps focus for rapid follow-up messages. (The textarea also
+    // skips its mount-time auto-focus on touch, so a composer that remounts
+    // after the send cannot reopen the keyboard.)
+    if (hasCoarsePointer()) {
+      const textarea = document.getElementById('chat-input-textarea');
+      (textarea as HTMLElement | null)?.blur?.();
+      (document.activeElement as HTMLElement | null)?.blur?.();
+    }
   };
 
   const openPromptGallery = () => {
@@ -1030,7 +1043,8 @@ export function ChatInputForm({
                 />
               )}
 
-              <div className="ml-auto flex">
+              {/* `shrink-0`: the tool row (flex-1) gives way, never these. */}
+              <div className="ml-auto flex shrink-0">
                 {visibleToLoggedInUsersOnly && !compactMode && (
                   <ScreenSharingButton
                     onClick={onScreenSharingClick}

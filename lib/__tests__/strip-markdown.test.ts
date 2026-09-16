@@ -1210,14 +1210,14 @@ describe('stripMarkdownForSpeech', () => {
 // `strip-markdown-fallback.test.ts`, where the `remark` mock can be hoisted.
 describe('stripMarkdownForSpeech failure fallback', () => {
   afterEach(() => {
-    vi.doUnmock('../preprocess-latex');
+    vi.doUnmock('../normalize-list-indentation');
     vi.resetModules();
   });
 
   it('falls back when the pre-pass throws', async () => {
     vi.resetModules();
-    vi.doMock('../preprocess-latex', () => ({
-      preprocessLaTeX: () => {
+    vi.doMock('../normalize-list-indentation', () => ({
+      normalizeListIndentation: () => {
         throw new Error('boom');
       },
     }));

@@ -146,6 +146,10 @@ vi.mock('@/lib/utils', () => ({
   cn: (...args: (string | boolean | undefined)[]) =>
     args.filter(Boolean).join(' '),
   isLoggedIn: vi.fn(() => mockIsLoggedIn),
+  // Mirrors the real helper so the touch-device tests below can drive it
+  // through window.matchMedia.
+  hasCoarsePointer: () =>
+    window.matchMedia?.('(pointer: coarse)')?.matches ?? false,
 }));
 
 vi.mock('@/hooks/use-voice-chat', () => ({
@@ -670,6 +674,46 @@ describe('ChatInputForm', () => {
 
       // Check that the action to clear input was dispatched
       expect(mockOnSubmit).toHaveBeenCalled();
+    });
+
+    it('closes the on-screen keyboard after sending on touch devices', () => {
+      // Touch device: pointer is coarse. Sending must blur the composer so
+      // iOS drops the keyboard instead of covering the incoming reply.
+      const originalMatchMedia = window.matchMedia;
+      window.matchMedia = vi.fn().mockReturnValue({ matches: true }) as never;
+      try {
+        renderWithRedux(<ChatInputForm {...defaultProps} />, {
+          chatInput: { textareaInput: 'Hello AI!' },
+        });
+        const textarea = screen.getByTestId(
+          'auto-resize-textarea',
+        ) as HTMLElement;
+        textarea.focus();
+        const blurSpy = vi.spyOn(textarea, 'blur');
+        fireEvent.submit(textarea.closest('form')!);
+        expect(blurSpy).toHaveBeenCalled();
+      } finally {
+        window.matchMedia = originalMatchMedia;
+      }
+    });
+
+    it('keeps composer focus after sending on fine-pointer (desktop) devices', () => {
+      const originalMatchMedia = window.matchMedia;
+      window.matchMedia = vi.fn().mockReturnValue({ matches: false }) as never;
+      try {
+        renderWithRedux(<ChatInputForm {...defaultProps} />, {
+          chatInput: { textareaInput: 'Hello AI!' },
+        });
+        const textarea = screen.getByTestId(
+          'auto-resize-textarea',
+        ) as HTMLElement;
+        textarea.focus();
+        const blurSpy = vi.spyOn(textarea, 'blur');
+        fireEvent.submit(textarea.closest('form')!);
+        expect(blurSpy).not.toHaveBeenCalled();
+      } finally {
+        window.matchMedia = originalMatchMedia;
+      }
     });
 
     it('should prevent submission while files are uploading', async () => {
@@ -1280,6 +1324,75 @@ describe('ChatInputForm', () => {
 
       expect(screen.queryByText(/Uploading 1 file/i)).not.toBeInTheDocument();
       vi.useRealTimers();
+    });
+  });
+
+  describe('voice transcript insertion', () => {
+    /** Render, capturing the onTranscript callback the form hands the hook. */
+    const renderCapturingTranscript = async () => {
+      const useVoiceChat = (await import('@/hooks/use-voice-chat')).default;
+      let onTranscript!: (text: string) => void;
+      (useVoiceChat as any).mockImplementation((props: any) => {
+        onTranscript = props.onTranscript;
+        return {
+          handleMicrophoneBtnClick: vi.fn(),
+          cancelRecording: vi.fn(),
+          processing: false,
+          recording: false,
+          time: 0,
+        };
+      });
+      renderWithRedux(<ChatInputForm {...defaultProps} />);
+      return {
+        textarea: screen.getByTestId('auto-resize-textarea'),
+        emit: (text: string) => onTranscript(text),
+      };
+    };
+
+    it('inserts the transcript into an empty composer', async () => {
+      const { textarea, emit } = await renderCapturingTranscript();
+
+      await act(async () => {
+        emit('hello world');
+      });
+
+      await waitFor(() => expect(textarea).toHaveValue('hello world'));
+    });
+
+    it('appends onto the latest composer text, not a stale snapshot', async () => {
+      const { textarea, emit } = await renderCapturingTranscript();
+
+      await act(async () => {
+        fireEvent.change(textarea, { target: { value: 'first' } });
+      });
+      // simulates the user continuing to type after hitting record
+      await act(async () => {
+        fireEvent.change(textarea, { target: { value: 'first second' } });
+      });
+      await act(async () => {
+        emit('dictated');
+      });
+
+      await waitFor(() =>
+        expect(textarea).toHaveValue('first second dictated'),
+      );
+    });
+
+    // iblai-platform#2402: dictation used to replace the composer contents,
+    // destroying anything the user had already typed.
+    it('appends the transcript after existing text instead of replacing it', async () => {
+      const { textarea, emit } = await renderCapturingTranscript();
+
+      await act(async () => {
+        fireEvent.change(textarea, { target: { value: 'already typed' } });
+      });
+      await act(async () => {
+        emit('and dictated');
+      });
+
+      await waitFor(() =>
+        expect(textarea).toHaveValue('already typed and dictated'),
+      );
     });
   });
 

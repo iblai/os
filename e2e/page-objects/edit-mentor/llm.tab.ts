@@ -50,9 +50,20 @@ export class LlmTab {
    * Returns the clickable provider card for a given provider (e.g. "OpenAI").
    * Each card renders the provider logo (alt "<Provider> logo") and the
    * provider name; clicking it opens the LLM Selection model picker.
+   *
+   * `exact: true` is required (issue #2502): Playwright's accessible-name
+   * filter is a substring match by default, and a provider with no backend
+   * logo now renders a `<span role="img" aria-label="{label} logo">`
+   * placeholder — "OpenAI logo" is a substring of "Azure OpenAI logo", so a
+   * loose match against "OpenAI" resolves to BOTH the OpenAI card's real
+   * `<img>` and the unrelated Azure OpenAI card's placeholder span, a strict
+   * mode violation. Exact matching disambiguates them.
    */
   providerCard(providerName: string): Locator {
-    return this.dialog.getByRole('img', { name: `${providerName} logo` });
+    return this.dialog.getByRole('img', {
+      name: `${providerName} logo`,
+      exact: true,
+    });
   }
 
   /**
@@ -69,6 +80,19 @@ export class LlmTab {
   }
 
   /**
+   * The logo element for a provider card, resolved by raw API key. Provider
+   * artwork is backend-owned (`LLMResponse.logo`): when the backend ships a
+   * logo URL the card renders a real `<img>`; when it doesn't, it renders a
+   * `data-testid="llm-provider-logo-placeholder"` `<span role="img">` with
+   * the label's first letter instead — there is no bundled fallback image
+   * any more. `getByRole('img', ...)` matches either shape since the
+   * placeholder also carries `role="img"`.
+   */
+  providerLogo(providerKey: string): Locator {
+    return this.providerCardByKey(providerKey).getByRole('img');
+  }
+
+  /**
    * Snapshots every provider card in DOM (render) order — the data needed to
    * assert the two-group ordering invariant (usable providers first, both
    * groups alphabetical by display label) without depending on which
@@ -81,8 +105,15 @@ export class LlmTab {
       const card = this.providerCards.nth(i);
       const provider = (await card.getAttribute('data-provider')) ?? '';
       const disabled = (await card.getAttribute('data-disabled')) === 'true';
+      // Issue #2502: when the backend ships no logo for a provider, the card
+      // renders a `<span role="img">` PLACEHOLDER (single-letter initial)
+      // INSIDE the logo wrapper, ahead of the label `<span>` in DOM order —
+      // `.first()` would grab that placeholder's single letter instead of
+      // the real label for any such provider. The label span is always the
+      // LAST `<span>` in the card (a top-level sibling after the logo
+      // wrapper closes), regardless of whether a placeholder is present.
       const label = (
-        (await card.locator('span').first().textContent()) ?? ''
+        (await card.locator('span').last().textContent()) ?? ''
       ).trim();
       infos.push({ provider, disabled, label });
     }
@@ -107,6 +138,27 @@ export class LlmTab {
     providerName: string,
     modelKey: string,
   ): Promise<void> {
+    // A prior selection can leave the LLM Selection dialog open (e.g. a
+    // caller that peeked at its model rows before calling this method) —
+    // dismiss it first so the provider-card click below isn't intercepted
+    // by the dialog's interaction layer.
+    let dialogOpen = false;
+    try {
+      await this.llmSelectionDialog.waitFor({
+        state: 'visible',
+        timeout: 1_000,
+      });
+      dialogOpen = true;
+    } catch {
+      dialogOpen = false;
+    }
+    if (dialogOpen) {
+      await this.page.keyboard.press('Escape');
+      await expect(this.llmSelectionDialog).not.toBeVisible({
+        timeout: 5_000,
+      });
+    }
+
     const card = this.providerCard(providerName);
     await expect(card).toBeVisible({ timeout: 15_000 });
     await card.click();

@@ -1,8 +1,17 @@
 // Hide console window on Windows in release builds
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod app_update;
 mod cua_driver_installer;
 mod cua_driver_mcp;
+// Embedded on-device LLM runtime (iOS). Compiled everywhere so its HTTP layer
+// and tests build on the host; the llama.cpp engine inside is iOS/feature-gated.
+// Desktop builds don't call it (Ollama serves them), hence the dead_code allow —
+// the same arrangement as `foundry_manager` below.
+#[allow(dead_code)]
+mod local_llm;
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
+mod nav_guard;
 // Gated exactly like `opencode_acp`, which is its only consumer here: Code uses
 // `get_foundry_service_endpoint` to reach Foundry Local's OpenAI-compatible API.
 // The rest of the module is exercised by the desktop bin (see main.rs).
@@ -21,15 +30,25 @@ mod opencode_acp;
 mod opencode_installer;
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 mod opencode_proxy;
+// Remote Code host — desktop only, like everything opencode: it spawns the
+// managed binary in `serve` mode for mobile clients to connect to.
+#[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+mod remote_code;
+// Phone-side Code: the opencode_* commands as proxies to a paired desktop's
+// opencode server. Compiled everywhere so its tests run on the host; the
+// commands are registered only on mobile.
+#[allow(dead_code)]
+mod remote_code_client;
 #[cfg(not(any(target_os = "ios", target_os = "android")))]
 mod web_cache;
 
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
 use mcp_bridge_installer::install_mcp_bridge;
 use model_manager::{
     cancel_download, check_disk_space, check_ollama_installed, get_timestamp, is_model_installed,
     is_ollama_running, list_installed_models, pull_model, start_ollama_server, stop_ollama_server,
     wait_for_ollama_ready, DiskSpaceError, DownloadProgress, InstallationLog, OllamaStatus,
-    SystemMemory, REQUIRED_FREE_SPACE_GB,
+    SystemMemory,
 };
 #[cfg(not(any(target_os = "ios", target_os = "android")))]
 use offline_server::{get_server_url, start_offline_server};
@@ -95,15 +114,12 @@ fn get_app_url() -> String {
         return url.to_string();
     }
 
-    // Mobile platforms: .org for debug, .app for release
+    // Mobile release default: the same production host the desktop apps use
+    // (os.ibl.ai). A debug build with no TAURI_DEV_URL baked in has nothing
+    // sensible to fall back to, so it lands on production too rather than a
+    // stale LAN address.
     #[cfg(any(target_os = "ios", target_os = "android"))]
-    {
-        #[cfg(debug_assertions)]
-        return "http://192.168.1.46:3001".to_string();
-
-        #[cfg(not(debug_assertions))]
-        return "https://mentorai.iblai.app".to_string();
-    }
+    return "https://os.ibl.ai".to_string();
 
     // Desktop default app URL (override with TAURI_DEV_URL) — same for debug and release
     #[cfg(not(any(target_os = "ios", target_os = "android")))]
@@ -635,7 +651,9 @@ fn handle_deep_link_url(app_handle: &AppHandle, raw_url: &str) {
 
     // Handle both custom URI schemes and Universal Links (https with our domain)
     let is_custom_scheme = scheme == "iblai-mentor" || scheme == "ai.ibl.mentorai";
-    let is_universal_link = scheme == "https" && host == "mentorai.iblai.app";
+    // Both production hosts are in the associated-domains entitlement.
+    let is_universal_link =
+        scheme == "https" && (host == "os.ibl.ai" || host == "mentorai.iblai.app");
     println!(
         "[ibl.ai] is_custom_scheme: {}, is_universal_link: {}",
         is_custom_scheme, is_universal_link
@@ -820,10 +838,19 @@ async fn install_ollama() -> Result<String, String> {
 /// comes up even when Ollama was already running and the server start was
 /// skipped. `start_bridge` is idempotent (no-ops if not installed or already up).
 async fn ensure_mcp_bridge() {
-    if let Err(e) = install_mcp_bridge().await {
-        println!("[McpBridge] Warning: failed to install ollama-mcp-bridge: {e}");
+    // No bridge on mobile: it's a spawned Node process, and the embedded
+    // iOS server serves chat directly (see model_manager::chat_base_url).
+    #[cfg(any(target_os = "ios", target_os = "android"))]
+    {
+        return;
     }
-    mcp_bridge_manager::start_bridge();
+    #[cfg(not(any(target_os = "ios", target_os = "android")))]
+    {
+        if let Err(e) = install_mcp_bridge().await {
+            println!("[McpBridge] Warning: failed to install ollama-mcp-bridge: {e}");
+        }
+        mcp_bridge_manager::start_bridge();
+    }
 }
 
 /// Absolute path to the user-editable `mcp-config.json`. MCP servers are managed
@@ -862,13 +889,24 @@ async fn stop_ollama(app: AppHandle) -> Result<(), String> {
 /// the lock across threads. `run_on_main_thread` only posts to the event loop (it
 /// does not block and preserves FIFO order), so it is safe to call from async
 /// code and keeps streamed events (e.g. `ollama:token`) in order.
-fn emit_on_main<S>(app: &AppHandle, event: &'static str, payload: S)
+///
+/// On iOS this is not a race but a certain deadlock once the timing lines up:
+/// with tauri's `tracing` feature on (pulled in by `tauri-plugin-devtools`, in
+/// every profile), `Webview::eval` is a blocking round-trip to the main thread
+/// (`tauri-runtime-wry`'s `getter!` path), and `emit` performs it while
+/// holding the webview-manager mutex — so a worker emitting while the main
+/// thread is inside IPC or a window event (both take that mutex) hangs both,
+/// and the watchdog kills the app after 10 s (`0x8BADF00D`; crash reports of
+/// 2026-09-14 23:30 and 2026-09-15 00:59 during phone Code turns). Every
+/// background emit on mobile must go through here.
+pub(crate) fn emit_on_main<S>(app: &AppHandle, event: &str, payload: S)
 where
     S: serde::Serialize + Clone + Send + 'static,
 {
     let handle = app.clone();
+    let name = event.to_string();
     if let Err(err) = app.run_on_main_thread(move || {
-        let _ = handle.emit(event, payload);
+        let _ = handle.emit(&name, payload);
     }) {
         eprintln!("[emit_on_main] could not schedule '{event}' on main thread: {err}");
     }
@@ -910,18 +948,24 @@ async fn check_ollama_status(app: AppHandle) -> Result<OllamaStatus, String> {
     Ok(status)
 }
 
-/// Check if there's enough disk space for the model download
-#[command]
-async fn check_disk_space_for_model(app: AppHandle) -> Result<bool, String> {
-    let available_gb = check_disk_space()?;
+fn required_space_gb_for(model: Option<&str>) -> f64 {
+    model_manager::required_space_gb(model, cfg!(any(target_os = "ios", target_os = "android")))
+}
 
-    if available_gb < REQUIRED_FREE_SPACE_GB {
+/// Check if there's enough disk space for the model download. `model` is
+/// optional so older SDK builds that don't send it keep working (they get the
+/// blanket requirement).
+#[command]
+async fn check_disk_space_for_model(app: AppHandle, model: Option<String>) -> Result<bool, String> {
+    let available_gb = check_disk_space()?;
+    let required_gb = required_space_gb_for(model.as_deref());
+
+    if available_gb < required_gb {
         let error = DiskSpaceError {
-            required_gb: REQUIRED_FREE_SPACE_GB,
+            required_gb,
             available_gb,
             message: format!(
-                "Insufficient disk space. {:.1} GB available, {:.1} GB required.",
-                available_gb, REQUIRED_FREE_SPACE_GB
+                "Insufficient disk space. {available_gb:.1} GB available, {required_gb:.1} GB required."
             ),
         };
         emit_on_main(&app, EVENT_DISK_SPACE_ERROR, error);
@@ -993,6 +1037,25 @@ async fn download_ollama_model(app: AppHandle, model: String) -> Result<(), Stri
         // Wait for it to actually become ready (it can take several seconds; a
         // fixed short delay raced the server and made downloads fail).
         if !wait_for_ollama_ready(30).await {
+            // Mobile: there is no "manually" — the server is embedded. Say
+            // what the probe actually saw so a failure is diagnosable from
+            // the error toast alone (device stdout is not readable in dev).
+            #[cfg(any(target_os = "ios", target_os = "android"))]
+            {
+                let url = crate::local_llm::server_url();
+                let probe = match url.as_deref() {
+                    Some(u) => match reqwest::get(format!("{u}/api/version")).await {
+                        Ok(r) => format!("HTTP {}", r.status()),
+                        Err(e) => format!("{e}"),
+                    },
+                    None => "embedded server never started".to_string(),
+                };
+                return Err(format!(
+                    "Embedded model server is not responding (url: {}, probe: {probe})",
+                    url.as_deref().unwrap_or("none")
+                ));
+            }
+            #[cfg(not(any(target_os = "ios", target_os = "android")))]
             return Err("Could not start Ollama server. Please start Ollama manually.".to_string());
         }
 
@@ -1007,15 +1070,16 @@ async fn download_ollama_model(app: AppHandle, model: String) -> Result<(), Stri
         );
     }
 
-    // Check disk space
+    // Check disk space (mobile: the model's real size + headroom, see
+    // `required_space_gb_for`)
     let available_gb = check_disk_space()?;
-    if available_gb < REQUIRED_FREE_SPACE_GB {
+    let required_gb = required_space_gb_for(Some(&model));
+    if available_gb < required_gb {
         let error = DiskSpaceError {
-            required_gb: REQUIRED_FREE_SPACE_GB,
+            required_gb,
             available_gb,
             message: format!(
-                "Insufficient disk space. {:.1} GB available, {:.1} GB required.",
-                available_gb, REQUIRED_FREE_SPACE_GB
+                "Insufficient disk space. {available_gb:.1} GB available, {required_gb:.1} GB required."
             ),
         };
         emit_on_main(&app, EVENT_DISK_SPACE_ERROR, error.clone());
@@ -1452,8 +1516,12 @@ async fn ollama_chat_stream(
         messages.len()
     );
 
+    // Inactivity bound, not a total one: a streamed reply is alive as long
+    // as bytes keep arriving. A total timeout cut on-device generation
+    // (an embedded 3B model on an older phone runs a long reply for many
+    // minutes) mid-reply with "error decoding response body".
     let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(300))
+        .read_timeout(std::time::Duration::from_secs(300))
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
 
@@ -1482,7 +1550,14 @@ async fn ollama_chat_stream(
     // must NOT stop on the first `done` — only a `done` with no tool calls is
     // the final answer. Intermediate tool rounds just log "running tool...".
     let mut stream = response.bytes_stream();
-    let mut full_content = String::new();
+    // Bounded-rate token emits on MOBILE ONLY — unthrottled per-token events
+    // (each carrying the whole reply so far) drowned phone webviews; see
+    // TokenCoalescer. Desktop never had the problem, so its per-token
+    // cadence stays exactly as it was (passthrough).
+    #[cfg(any(target_os = "ios", target_os = "android"))]
+    let mut tokens = crate::remote_code_client::TokenCoalescer::new();
+    #[cfg(not(any(target_os = "ios", target_os = "android")))]
+    let mut tokens = crate::remote_code_client::TokenCoalescer::passthrough();
     let mut round_has_tool_calls = false;
 
     use futures_util::StreamExt;
@@ -1502,17 +1577,17 @@ async fn ollama_chat_stream(
                             .and_then(|m| m.get("content"))
                             .and_then(|c| c.as_str())
                         {
-                            full_content.push_str(content);
-                            // Emit token event
-                            emit_on_main(
-                                &app,
-                                "ollama:token",
-                                serde_json::json!({
-                                    "generation_id": generation_id,
-                                    "token": content,
-                                    "full_content": full_content
-                                }),
-                            );
+                            if let Some(batch) = tokens.push(content) {
+                                emit_on_main(
+                                    &app,
+                                    "ollama:token",
+                                    serde_json::json!({
+                                        "generation_id": generation_id,
+                                        "token": batch,
+                                        "full_content": tokens.full_content()
+                                    }),
+                                );
+                            }
                         }
                         // The model requested MCP tools this round (bridge only).
                         if json
@@ -1532,13 +1607,25 @@ async fn ollama_chat_stream(
                                 round_has_tool_calls = false;
                                 continue;
                             }
-                            // No tool calls -> final answer.
+                            // No tool calls -> final answer. Flush the
+                            // buffered tail first so no text is lost.
+                            if let Some(batch) = tokens.flush() {
+                                emit_on_main(
+                                    &app,
+                                    "ollama:token",
+                                    serde_json::json!({
+                                        "generation_id": generation_id,
+                                        "token": batch,
+                                        "full_content": tokens.full_content()
+                                    }),
+                                );
+                            }
                             emit_on_main(
                                 &app,
                                 "ollama:done",
                                 serde_json::json!({
                                     "generation_id": generation_id,
-                                    "full_content": full_content
+                                    "full_content": tokens.full_content()
                                 }),
                             );
                             return Ok(());
@@ -1561,12 +1648,23 @@ async fn ollama_chat_stream(
     }
 
     // Stream closed without a tool-free `done` — emit done with what we have.
+    if let Some(batch) = tokens.flush() {
+        emit_on_main(
+            &app,
+            "ollama:token",
+            serde_json::json!({
+                "generation_id": generation_id,
+                "token": batch,
+                "full_content": tokens.full_content()
+            }),
+        );
+    }
     emit_on_main(
         &app,
         "ollama:done",
         serde_json::json!({
             "generation_id": generation_id,
-            "full_content": full_content
+            "full_content": tokens.full_content()
         }),
     );
 
@@ -2006,6 +2104,7 @@ const URL_MONITOR_SCRIPT_ONLINE: &str = r#"
 ///
 /// `__OFFLINE_SERVER_URL__` is substituted by [`url_monitor_script_offline`] —
 /// the offline server's port is allocated at startup, so it cannot be baked in.
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
 const URL_MONITOR_SCRIPT_OFFLINE: &str = r#"
 (function() {
     // Only run once per page
@@ -2166,17 +2265,24 @@ const URL_MONITOR_SCRIPT_OFFLINE: &str = r#"
 /// [`URL_MONITOR_SCRIPT_OFFLINE`] with the offline server's real URL patched in.
 /// Twin of `main.rs::url_monitor_script_offline`; both entry points must resolve
 /// the port at window-creation time rather than bake one in.
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
 fn url_monitor_script_offline() -> String {
     URL_MONITOR_SCRIPT_OFFLINE.replace("__OFFLINE_SERVER_URL__", &offline_server::get_server_url())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Dev-checkout overrides first: src-tauri/.env.local, then .env.production.
-    // The path is compile-time CARGO_MANIFEST_DIR, so installed builds have
-    // neither and skip straight on. Loaded before anything reads env; dotenvy
-    // never overrides already-set vars, so shell env > .env.local >
-    // .env.production > .env. Keys documented in src-tauri/.env.example.
+    // Dev-checkout overrides first: src-tauri/.env.local, then .env.production,
+    // read via the compile-time CARGO_MANIFEST_DIR path. Loaded before anything
+    // reads env; dotenvy never overrides already-set vars, so shell env >
+    // .env.local > .env.production > .env. Keys documented in .env.example.
+    // Debug builds only: a RELEASE binary built on a dev machine kept reading
+    // the checkout's .env.local through that absolute path, so a DMG built
+    // here opened the developer's localhost (and hung on "Loading…" with no
+    // dev server up) while the same DMG from CI went to production. Release
+    // builds behave the same everywhere: shell env, then the bundled/cwd
+    // `.env` below, then the compiled-in default.
+    #[cfg(debug_assertions)]
     for f in [".env.local", ".env.production"] {
         let _ = dotenvy::from_path(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(f));
     }
@@ -2214,13 +2320,70 @@ pub fn run() {
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
-        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_dialog::init());
+    // In-place self-update (desktop only; mobile updates go through the
+    // stores, and the MAS build refuses at runtime via is_sandboxed).
+    #[cfg(not(any(target_os = "ios", target_os = "android")))]
+    let builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
+    // QR pairing: the phone scans the desktop's Code pairing code.
+    #[cfg(any(target_os = "ios", target_os = "android"))]
+    let builder = builder.plugin(tauri_plugin_barcode_scanner::init());
+    let builder = builder
         .setup(|app| {
             let app_url = get_app_url();
             println!("[ibl.ai] ============================================");
             println!("[ibl.ai] App URL resolved to: {}", app_url);
             println!("[ibl.ai] TAURI_DEV_URL at compile time: {:?}", option_env!("TAURI_DEV_URL"));
             println!("[ibl.ai] ============================================");
+
+            // Dev builds load the frontend from the Mac's dev server over plain
+            // HTTP on a LAN address. The static capability can't name that
+            // origin (it changes per network, and URLPattern hostname
+            // wildcards don't match dotted IPs), so grant the STATIC default
+            // capability's permissions to the actual dev origin at runtime.
+            // Debug-only: release loads pinned HTTPS origins.
+            #[cfg(debug_assertions)]
+            {
+                let origin = app_url.trim_end_matches('/');
+                if origin.starts_with("http://")
+                    && !origin.contains("localhost")
+                    && !origin.contains("127.0.0.1")
+                {
+                    match serde_json::from_str::<serde_json::Value>(include_str!(
+                        "../capabilities/default.json"
+                    )) {
+                        Ok(mut cap) => {
+                            cap["identifier"] =
+                                serde_json::Value::from("dev-frontend-origin");
+                            cap["remote"] =
+                                serde_json::json!({ "urls": [format!("{origin}/*")] });
+                            // Mobile-only permissions live in a separate
+                            // platform-scoped capability; the dev origin needs
+                            // them too (QR pairing camera).
+                            #[cfg(any(target_os = "ios", target_os = "android"))]
+                            if let Some(perms) =
+                                cap["permissions"].as_array_mut()
+                            {
+                                for p in [
+                                    "barcode-scanner:allow-scan",
+                                    "barcode-scanner:allow-cancel",
+                                    "barcode-scanner:allow-check-permissions",
+                                    "barcode-scanner:allow-request-permissions",
+                                    "barcode-scanner:allow-open-app-settings",
+                                ] {
+                                    perms.push(serde_json::Value::from(p));
+                                }
+                            }
+                            if let Err(e) = app.add_capability(cap.to_string()) {
+                                eprintln!("[ibl.ai] dev origin capability failed: {e}");
+                            } else {
+                                println!("[ibl.ai] dev origin capability added for {origin}");
+                            }
+                        }
+                        Err(e) => eprintln!("[ibl.ai] default capability unreadable: {e}"),
+                    }
+                }
+            }
 
             #[cfg(any(target_os = "ios", target_os = "android"))]
             {
@@ -2251,6 +2414,24 @@ pub fn run() {
                     }
                 });
                 println!("[ibl.ai] Deep link event listener registered");
+            }
+
+            // Mobile: bring up the embedded Ollama-compatible LLM server so
+            // local model download + chat work with no external process.
+            // Started here (not lazily) so `is_ollama_running` reads true
+            // from the first status check on.
+            #[cfg(any(target_os = "ios", target_os = "android"))]
+            {
+                match app.path().app_data_dir() {
+                    Ok(dir) => {
+                        if let Err(e) = local_llm::start(dir.join("models")) {
+                            eprintln!("[LocalLLM] failed to start embedded server: {e}");
+                        }
+                        // Phone Code: pairing + per-chat session map storage.
+                        remote_code_client::init(dir.clone());
+                    }
+                    Err(e) => eprintln!("[LocalLLM] no app data dir: {e}"),
+                }
             }
 
             // =====================
@@ -2403,7 +2584,13 @@ pub fn run() {
                         }
                         return false;
                     }
-                    true
+                    // Same allowlist as the shipped desktop entry point
+                    // (main.rs) — the twin guards must never drift.
+                    let allowed = nav_guard::navigation_allowed(url_str, &get_app_url());
+                    if !allowed {
+                        println!("[ibl.ai] Blocked external navigation to: {}", url_str);
+                    }
+                    allowed
                 })
                 .build()
                 .expect("Failed to create main window");
@@ -2771,6 +2958,19 @@ pub fn run() {
                         println!("[ibl.ai] [MOBILE] Returning false to prevent webview navigation");
                         return false;
                     }
+                    // Our own deep-link schemes, navigated INSIDE the webview
+                    // (the SSO flow ends by redirecting to
+                    // iblai-mentor:///sso-login-complete?data=…). iOS hands
+                    // such navigations to the OS, which loops them back via
+                    // the deep-link plugin — but Android's WebView just fails
+                    // with ERR_UNKNOWN_URL_SCHEME, so route them into the
+                    // same handler ourselves and block the navigation.
+                    let scheme = url.scheme();
+                    if scheme == "iblai-mentor" || scheme == "ai.ibl.mentorai" {
+                        println!("[ibl.ai] [MOBILE] In-webview deep link intercepted: {url_str}");
+                        handle_deep_link_url(&app_handle, url_str);
+                        return false;
+                    }
                     println!("[ibl.ai] [MOBILE] Allowing normal navigation");
                     true
                 })
@@ -2911,6 +3111,7 @@ pub fn run() {
         navigate_to,
         ollama_chat,
         ollama_chat_stream,
+        log_fe,
         opencode_acp::opencode_chat_stream,
         opencode_acp::opencode_stop,
         opencode_acp::opencode_permission_respond,
@@ -2928,6 +3129,12 @@ pub fn run() {
         opencode_acp::check_code_local_model,
         opencode_acp::set_opencode_learner,
         opencode_acp::ensure_opencode_platform_key,
+        app_update::check_app_update,
+        app_update::install_app_update,
+        remote_code::remote_code_status,
+        remote_code::remote_code_enable,
+        remote_code::remote_code_disable,
+        remote_code::remote_code_pairing_qr,
     ]);
 
     // Mobile platforms get only basic commands (no offline/cache features)
@@ -2949,9 +3156,34 @@ pub fn run() {
         navigate_to,
         ollama_chat,
         ollama_chat_stream,
+        log_fe,
+        app_update::check_app_update,
+        remote_code_client::remote_code_set_host,
+        remote_code_client::remote_code_get_host,
+        remote_code_client::remote_code_clear_host,
+        remote_code_client::opencode_chat_stream,
+        remote_code_client::opencode_stop,
+        remote_code_client::opencode_close,
+        remote_code_client::opencode_permission_respond,
+        remote_code_client::get_opencode_permission_mode,
+        remote_code_client::set_opencode_permission_mode,
+        remote_code_client::get_opencode_workspace,
+        remote_code_client::set_opencode_workspace,
+        remote_code_client::new_opencode_workspace,
+        remote_code_client::remote_code_list_workspaces,
     ]);
 
     builder
-        .run(tauri::generate_context!())
-        .expect("error while running tauri app");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri app")
+        .run(|_app, _event| {
+            // Same exit hook as main.rs: the phone-access opencode server
+            // must die with the app (an orphan with a dead password poisons
+            // opencode's machine-global coordination for every later one).
+            // Desktop only — `remote_code` is not compiled for mobile.
+            #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+            if let tauri::RunEvent::Exit = _event {
+                remote_code::shutdown_sync();
+            }
+        });
 }

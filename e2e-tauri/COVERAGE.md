@@ -1,6 +1,6 @@
 # Tauri Desktop E2E Coverage — Journey Checklist
 
-> Last updated: 2026-08-29 | 37 checkpoints (20 covered, 17 pending) | 3 journeys | 100% of reproducible checkpoints covered | Driver: WebdriverIO + tauri-driver
+> Last updated: 2026-09-03 | 39 checkpoints (20 covered, 19 pending) | 3 journeys | 100% of reproducible checkpoints covered | Driver: WebdriverIO + tauri-driver
 
 This is the desktop counterpart to the web `e2e/COVERAGE.md`. It tracks only what
 is exercised by driving the **built desktop binary** through `tauri-driver` (see
@@ -25,6 +25,39 @@ checkpoint count has not regressed (`--no-regress`).
 
 Platform support (same as `e2e-tauri/README.md`): Linux (`WebKitWebDriver`) and
 Windows (`msedgedriver`) only — `tauri-driver` has no macOS support.
+
+**iOS note:** the mobile app's embedded on-device LLM runtime
+(`src-tauri/src/local_llm.rs` — the Ollama-compatible server that backs
+Journey 2's commands on iPhones) cannot be driven by `tauri-driver` (no
+iOS support). Its coverage lives in the Rust unit tests (`local_llm.rs`
+`mod tests`, including an opt-in real-inference test:
+`IBL_LLM_TEST_MODEL=… cargo test --features embedded-llm -- --ignored`) and
+the Vitest suites (`coding-mode-button` mobile gating,
+`__tests__/web-utils-ios-local-llm-patch.test.ts`). The same applies to the
+phone↔desktop Code pairing (`src-tauri/src/remote_code_client.rs`): its Rust
+`mod tests` cover turn translation, delta coalescing, and the multi-address
+pairing failover (a pairing heals to an alternate advertised address when
+the primary dies), and the Vitest suites cover the pairing UI (full `urls` list
+persisted for failover) plus the phone composer ergonomics (icon-only tool
+pills below 520px, keyboard dismissed on send for coarse pointers —
+`chat-input-form.test.tsx`). Streaming-performance guards (unthrottled
+per-token re-renders froze/crashed phone webviews): the shared
+`TokenCoalescer` batches the local-LLM stream ON MOBILE ONLY — desktop keeps
+its original per-token cadence via the passthrough mode — both pinned in the
+`remote_code_client` Rust tests; the render side is pinned in
+`markdown-memo.test.tsx` (memoized wrapper + referentially stable Streamdown
+props) and `tool-call-item-memo.test.tsx` (tool rows skip identity-only
+re-renders).
+
+**App self-update note:** the update prompt (`components/app-update-prompt.tsx`,
+`src-tauri/src/app_update.rs`) cannot be e2e-driven either — tauri-driver has no
+release-build updater endpoint to point at, and the mobile halves open real
+store pages. Coverage lives in the Rust `app_update` `mod tests` (version
+comparison, iTunes lookup parsing, Play listing parsing) and the
+`app-update-prompt` Vitest suite (check on every open, session-only "Later",
+desktop install vs mobile store routing, install-failure surfacing). The CI
+halves — signing env + `latest-<target>-<arch>.json` publishing — live in the
+two vendored release workflows and are exercised by real releases.
 
 ---
 
@@ -64,7 +97,7 @@ Windows (`msedgedriver`) only — `tauri-driver` has no macOS support.
 
 ---
 
-## Journey 3: Code Mode (opencode) (26 checkpoints: 13 covered, 13 pending) — `journeys/03-code-mode.spec.ts`
+## Journey 3: Code Mode (opencode) (28 checkpoints: 13 covered, 15 pending) — `journeys/03-code-mode.spec.ts`
 
 > **Partly covered.** The installer and per-chat state (code-01…07) run against
 > the REAL compiled binary through the live Tauri IPC bridge (`window.__TAURI__`):
@@ -124,3 +157,5 @@ Windows (`msedgedriver`) only — `tauri-driver` has no macOS support.
 - [ ] `code-24` The Code popover offers New Workspace and a platform-named Open Folder button (Finder / Explorer / the probed Linux file manager) _(needs an authenticated UI session, and clicking Open Folder would spawn a real file manager; labels and disabled states covered by the coding-mode-button Vitest cases)_
 - [ ] `code-25` A between-turn opencode death (crash, idle reap, LRU eviction) is invisible: the next turn `session/load`s the same conversation back, and when a load isn't possible the frontend's transcript is resent so the agent continues; a mid-turn death keeps the input busy — the Stop button stays Stop and no suggested prompts appear while the backend silently respawns _(needs an authenticated chat driving real opencode turns; covered meanwhile by the Rust resume-map + `prompt_with_history` tests in `opencode_acp.rs` and the SDK transcript/restart + mentor-socket-guard Vitest cases)_
 - [ ] `code-26` A managed opencode older than the pinned version is re-downloaded at boot, and a user's own PATH copy is never replaced _(the upgrade downloads a ~100MB release, too heavy for the harness; the decision is covered by `only_a_present_and_outdated_managed_copy_wants_an_upgrade` in `opencode_installer.rs`)_
+- [ ] `code-27` A new web project walks the 3-step flow: the default-template question, then the local-preview question (dev server + browser open at http://localhost:3000 only on yes), then one deploy question per project (yes = deploy now and auto-redeploy on later changes, no = deploy only on request), and replies never name the hosting provider _(needs a tool-calling model driving real turns, the same harness gap as code-08..10/15; the instruction text is covered meanwhile by `the_iblai_guidance_keeps_its_load_bearing_lines` in `opencode_proxy.rs`)_
+- [ ] `code-28` Text the agent emits before a tool call lands in the thinking section, never the reply bubble; the visible reply is what follows the last tool call _(needs a tool-calling model driving real turns, the same harness gap as code-08..10/15; the reclassification is covered meanwhile by `pre_tool_text_is_reclassified_as_narration` in `opencode_acp.rs`)_

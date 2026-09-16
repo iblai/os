@@ -319,6 +319,10 @@ const defaultMentorSettings = {
 
 function buildUseEmbedTabReturn(overrides: Partial<any> = {}) {
   return {
+    // #2476: "Who can chat" is server state read from the mentor settings, not
+    // an embed form field. The tab reads it off the hook to gate the website
+    // URL / redirect-token controls.
+    allowAnonymous: true,
     form: makeForm(overrides.formValues ?? {}),
     createTokenHandler: mockCreateTokenHandler,
     createTokenError: '',
@@ -346,16 +350,11 @@ const defaultFormValues = {
   icon_selection: 'default',
   mode: 'default',
   starter_prompts: 'guided_prompt',
-  mentor_visibility: 'viewable_by_tenant_admins',
-  allow_anonymous: true,
   website_url: '',
   is_context_aware: false,
   sso: false,
   sso_provider: '',
   auto_open: false,
-  embed_show_attachment: true,
-  embed_show_voice_call: false,
-  embed_show_voice_record: false,
   generateShareableLink: false,
   strip_page_content_html: false,
 };
@@ -544,8 +543,18 @@ describe('EmbedTab', () => {
     expect(screen.getByText('Advanced CSS')).toBeInTheDocument();
     expect(screen.getByText('Advanced JavaScript')).toBeInTheDocument();
     expect(screen.getByText('Mode Selection')).toBeInTheDocument();
-    expect(screen.getByText('Who Can View?')).toBeInTheDocument();
-    expect(screen.getByText('Who Can Chat?')).toBeInTheDocument();
+  });
+
+  // #2476: the duplicated Discovery / Capabilities controls now live in
+  // Settings and were removed from this tab entirely.
+  it('no longer renders the controls that moved to Settings', () => {
+    renderEmbedTab();
+
+    expect(screen.queryByText('Who Can View?')).not.toBeInTheDocument();
+    expect(screen.queryByText('Who Can Chat?')).not.toBeInTheDocument();
+    expect(screen.queryByText('Show Attachment')).not.toBeInTheDocument();
+    expect(screen.queryByText('Show Voice Record')).not.toBeInTheDocument();
+    expect(screen.queryByText('Show Voice Call')).not.toBeInTheDocument();
   });
 
   it('expands and collapses the Advanced CSS card', async () => {
@@ -769,10 +778,11 @@ describe('EmbedTab', () => {
   });
 
   it('renders website url + token controls for authenticated-only mode', () => {
-    renderEmbedTab(
-      { createTokenError: 'Bad URL', redirectTokenData: { token: 'tok-123' } },
-      { ...defaultFormValues, allow_anonymous: false },
-    );
+    renderEmbedTab({
+      allowAnonymous: false,
+      createTokenError: 'Bad URL',
+      redirectTokenData: { token: 'tok-123' },
+    });
     expect(screen.getByText('Website URL')).toBeInTheDocument();
     expect(screen.getByText('Bad URL')).toBeInTheDocument();
     expect(screen.getByText('Get Token')).toBeInTheDocument();
@@ -787,10 +797,7 @@ describe('EmbedTab', () => {
   });
 
   it('shows the token-generating label while loading', () => {
-    renderEmbedTab(
-      { isCreateTokenLoading: true },
-      { ...defaultFormValues, allow_anonymous: false },
-    );
+    renderEmbedTab({ allowAnonymous: false, isCreateTokenLoading: true });
     expect(screen.getByText('Generating Token...')).toBeInTheDocument();
   });
 
@@ -802,11 +809,12 @@ describe('EmbedTab', () => {
   it('renders the SSO provider select when sso enabled and not anonymous', () => {
     renderEmbedTab(
       {
+        allowAnonymous: false,
         integratedSsoProviders: {
           providers: [{ backend_uri: 'uri-1', slug: 'google' }],
         },
       },
-      { ...defaultFormValues, sso: true, allow_anonymous: false },
+      { ...defaultFormValues, sso: true },
     );
     expect(screen.getByText('Single Sign On')).toBeInTheDocument();
     expect(screen.getByText('google')).toBeInTheDocument();
@@ -945,12 +953,13 @@ describe('EmbedTab', () => {
   it('fires every select onValueChange handler', () => {
     renderEmbedTab(
       {
+        allowAnonymous: false,
         integratedSsoProviders: {
           providers: [{ backend_uri: 'uri-1', slug: 'google' }],
         },
         focusEditCustomFloatingBubble: true,
       },
-      { ...defaultFormValues, sso: true, allow_anonymous: false },
+      { ...defaultFormValues, sso: true },
     );
     // Click every rendered option to drive all onValueChange callbacks.
     screen.getAllByRole('option').forEach((opt) => fireEvent.click(opt));
@@ -1238,8 +1247,8 @@ describe('EmbedTab', () => {
       unwrap: vi.fn().mockResolvedValue({}),
     });
     renderEmbedTab(
-      {},
-      { ...defaultFormValues, allow_anonymous: false, website_url: '' },
+      { allowAnonymous: false },
+      { ...defaultFormValues, website_url: '' },
     );
 
     const toggle = screen.getByLabelText(/Generate \/ Revoke shareable link/);
@@ -1267,8 +1276,8 @@ describe('EmbedTab', () => {
       unwrap: vi.fn().mockResolvedValue({}),
     });
     renderEmbedTab(
-      {},
-      { ...defaultFormValues, allow_anonymous: false, website_url: '' },
+      { allowAnonymous: false },
+      { ...defaultFormValues, website_url: '' },
     );
 
     const toggle = screen.getByLabelText(/Generate \/ Revoke shareable link/);
@@ -1292,8 +1301,8 @@ describe('EmbedTab', () => {
       unwrap: vi.fn().mockResolvedValue({}),
     });
     renderEmbedTab(
-      {},
-      { ...defaultFormValues, allow_anonymous: false, website_url: '' },
+      { allowAnonymous: false },
+      { ...defaultFormValues, website_url: '' },
     );
 
     const toggle = screen.getByLabelText(/Generate \/ Revoke shareable link/);
@@ -1319,8 +1328,8 @@ describe('EmbedTab', () => {
       unwrap: vi.fn().mockResolvedValue({}),
     });
     const { container } = renderEmbedTab(
-      {},
-      { ...defaultFormValues, allow_anonymous: false, website_url: '' },
+      { allowAnonymous: false },
+      { ...defaultFormValues, website_url: '' },
     );
 
     const refresh = container.querySelector('.lucide-refresh-cw');

@@ -14,10 +14,11 @@ import { CreateMentorPage } from '../page-objects/create-mentor.page';
 import { ChatSearchDialogPage } from '../page-objects/chat-search-dialog.pom';
 import { generateProjectName } from './test-data';
 import {
-  findProjectIdByName,
   deleteProjectById,
   deleteProjectByName,
 } from '../utils/project-cleanup';
+import { observeDmBase } from '../utils/dm-api';
+import { workerTracker } from '../utils/resource-tracker';
 
 export type StepFn = (title: string, fn: () => unknown) => Promise<void>;
 
@@ -51,53 +52,79 @@ export interface TestProject {
  *   // Non-admin tests use the nonadmin fixtures:
  *   test('non-admin goes to ...', async ({ nonadminChatPage }) => { ... });
  */
-export const test = base.extend<{
-  step: StepFn;
-  // ── Admin page objects (default storageState) ──────────────────────────────
-  chatPage: ChatPage;
-  sidebarPage: SidebarPage;
-  navbarPage: NavbarPage;
-  explorePage: ExplorePage;
-  editMentorPage: EditMentorPage;
-  createMentorPage: CreateMentorPage;
-  chatSearchDialogPage: ChatSearchDialogPage;
-  analyticsPage: AnalyticsPage;
-  profilePage: ProfilePage;
-  projectPage: ProjectPage;
-  notificationsPage: NotificationsPage;
-  billingPage: BillingPage;
-  /**
-   * Creates a uniquely-named project (via the projects index "New Project"
-   * UI flow, matching how a real admin creates one) before the test runs,
-   * and deletes it via the DM API after — regardless of whether the test
-   * passed, failed, or renamed/deleted the project itself (API delete is
-   * idempotent; see utils/project-cleanup.ts).
-   *
-   * Requires the page to already be authenticated and navigated into the
-   * app (i.e. call `navigateToMentorApp` in `beforeEach` first) — the
-   * fixture does not navigate on its own.
-   *
-   * Tests that are specifically exercising the CREATE flow itself should
-   * not use this fixture (it would create a redundant project) — see the
-   * dedicated "creates a new project" test in 26-projects.spec.ts for the
-   * pattern used there instead (manual describe-scoped cleanup).
-   */
-  testProject: TestProject;
-  // ── Non-admin page + page objects ──────────────────────────────────────────
-  nonadminPage: import('@playwright/test').Page;
-  nonadminChatPage: ChatPage;
-  nonadminSidebarPage: SidebarPage;
-  nonadminNavbarPage: NavbarPage;
-  nonadminExplorePage: ExplorePage;
-  nonadminEditMentorPage: EditMentorPage;
-  nonadminCreateMentorPage: CreateMentorPage;
-  nonadminChatSearchDialogPage: ChatSearchDialogPage;
-  nonadminAnalyticsPage: AnalyticsPage;
-  nonadminProfilePage: ProfilePage;
-  nonadminProjectPage: ProjectPage;
-  nonadminNotificationsPage: NotificationsPage;
-  nonadminBillingPage: BillingPage;
-}>({
+export const test = base.extend<
+  {
+    step: StepFn;
+    // ── Admin page objects (default storageState) ──────────────────────────────
+    chatPage: ChatPage;
+    sidebarPage: SidebarPage;
+    navbarPage: NavbarPage;
+    explorePage: ExplorePage;
+    editMentorPage: EditMentorPage;
+    createMentorPage: CreateMentorPage;
+    chatSearchDialogPage: ChatSearchDialogPage;
+    analyticsPage: AnalyticsPage;
+    profilePage: ProfilePage;
+    projectPage: ProjectPage;
+    notificationsPage: NotificationsPage;
+    billingPage: BillingPage;
+    /**
+     * Creates a uniquely-named project (via the projects index "New Project"
+     * UI flow, matching how a real admin creates one) before the test runs,
+     * and deletes it via the DM API after — regardless of whether the test
+     * passed, failed, or renamed/deleted the project itself (API delete is
+     * idempotent; see utils/project-cleanup.ts).
+     *
+     * Requires the page to already be authenticated and navigated into the
+     * app (i.e. call `navigateToMentorApp` in `beforeEach` first) — the
+     * fixture does not navigate on its own.
+     *
+     * Tests that are specifically exercising the CREATE flow itself should
+     * not use this fixture (it would create a redundant project) — see the
+     * dedicated "creates a new project" test in 26-projects.spec.ts for the
+     * pattern used there instead (manual describe-scoped cleanup).
+     */
+    testProject: TestProject;
+    // ── Non-admin page + page objects ──────────────────────────────────────────
+    nonadminPage: import('@playwright/test').Page;
+    nonadminChatPage: ChatPage;
+    nonadminSidebarPage: SidebarPage;
+    nonadminNavbarPage: NavbarPage;
+    nonadminExplorePage: ExplorePage;
+    nonadminEditMentorPage: EditMentorPage;
+    nonadminCreateMentorPage: CreateMentorPage;
+    nonadminChatSearchDialogPage: ChatSearchDialogPage;
+    nonadminAnalyticsPage: AnalyticsPage;
+    nonadminProfilePage: ProfilePage;
+    nonadminProjectPage: ProjectPage;
+    nonadminNotificationsPage: NotificationsPage;
+    nonadminBillingPage: BillingPage;
+  },
+  {
+    /**
+     * Auto worker fixture: registers this worker's `resource-tracker` and
+     * keeps it configured for the worker's lifetime. Deletion no longer
+     * happens here — mid-run worker deletes raced other workers' in-flight
+     * tests (auto-resolved mentor 404s). The run-level `residue.teardown.ts`
+     * is now the only deleter, once every journey project has finished.
+     */
+    createdResources: ReturnType<typeof workerTracker>;
+  }
+>({
+  createdResources: [
+    async ({}, use, workerInfo) => {
+      const tracker = workerTracker();
+      tracker.configure(workerInfo);
+      await use(tracker);
+    },
+    { scope: 'worker', auto: true, timeout: 300_000 },
+  ],
+
+  page: async ({ page }, use) => {
+    observeDmBase(page);
+    await use(page);
+  },
+
   step: async ({}, use) => {
     await use(async (title, fn) => {
       await base.step(title, fn);
@@ -143,8 +170,7 @@ export const test = base.extend<{
   },
   testProject: async ({ page, projectPage }, use) => {
     const name = generateProjectName();
-    await projectPage.createFromSidebar(name);
-    const id = await findProjectIdByName(page, name);
+    const id = await projectPage.createFromSidebar(name);
 
     await use({ name, id });
 
@@ -175,6 +201,7 @@ export const test = base.extend<{
     );
     const context = await browser.newContext({ storageState: authFile });
     const page = await context.newPage();
+    observeDmBase(page);
     await use(page);
     await context.close();
   },

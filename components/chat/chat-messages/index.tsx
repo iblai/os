@@ -6,6 +6,7 @@ import React from 'react';
 import { formatRelativeDate } from '@/lib/utils';
 import {
   Message as BaseMessage,
+  type ChatPhase,
   type ToolCallInfo,
 } from '@iblai/iblai-js/web-utils';
 import { AIMessageBubble } from '@/components/chat/ai-message-bubble';
@@ -40,9 +41,14 @@ type Props = {
   isStreaming?: boolean;
   streamingReasoningContent?: string;
   streamingToolCalls?: ToolCallInfo[];
-  isReasoning?: boolean;
   showReasoning?: boolean;
   currentStreamingMessageId?: string;
+  /**
+   * Phase of the in-flight turn, already derived by the chat container.
+   * `undefined` between turns. Forwarded to the streaming bubble only, so the
+   * working line renders once, inside the message it belongs to.
+   */
+  workingPhase?: ChatPhase;
   handleHighlightMessage: (messageId: number) => void;
   handleSubmit: (content: string) => void;
   onReply?: (message: Message) => void;
@@ -64,9 +70,9 @@ export function ChatMessages({
   isStreaming = false,
   streamingReasoningContent,
   streamingToolCalls,
-  isReasoning,
   showReasoning,
   currentStreamingMessageId,
+  workingPhase,
 }: Props) {
   const [previewImage, setPreviewImage] = React.useState<string | null>(null);
   const { speak, stop } = useSpeech({ mentorId, tenantKey });
@@ -85,6 +91,30 @@ export function ChatMessages({
 
   const lastAIMessage =
     lastAIMessageIndex >= 0 ? visibleMessages[lastAIMessageIndex] : null;
+
+  // Offscreen rows skip layout + paint (content-visibility) — but their
+  // placeholder height is only trustworthy once the row has been laid out
+  // for real, when `contain-intrinsic-size: auto …` remembers the true
+  // height. The chat's scroll arithmetic (scroll-to-bottom on open, the
+  // load-older restore, reply-to jumps) reads scrollHeight, so a freshly
+  // loaded conversation renders every row first and the skipping switches
+  // on a couple of frames later, after the initial scroll has landed.
+  const [skipOffscreen, setSkipOffscreen] = React.useState(false);
+  const hasMessages = visibleMessages.length > 0;
+  React.useEffect(() => {
+    setSkipOffscreen(false);
+    if (!hasMessages) return;
+    let second = 0;
+    const first = requestAnimationFrame(() => {
+      second = requestAnimationFrame(() => setSkipOffscreen(true));
+    });
+    return () => {
+      cancelAnimationFrame(first);
+      cancelAnimationFrame(second);
+    };
+  }, [sessionId, hasMessages]);
+  const offscreen = (placeholder: string) =>
+    skipOffscreen ? `[content-visibility:auto] ${placeholder}` : '';
   const lastAIMessageId = lastAIMessage?.id ?? null;
   const lastAIMessageContent = lastAIMessage?.content ?? '';
 
@@ -126,20 +156,27 @@ export function ChatMessages({
     <>
       {visibleMessages.map((message, i) =>
         message.role === 'user' ? (
-          <UserMessageBubble
+          // content-visibility: offscreen rows skip layout + paint, which is
+          // what keeps scrolling through a long, streaming conversation
+          // responsive on phone webviews. Onscreen rows are unaffected.
+          <div
             key={`message-${message.id}-${i}`}
-            message={message}
-            isHighlighted={highlightedMessageId === i}
-            profileImage={profileImage}
-            mentorName={mentorName}
-            messages={messages}
-            onHighlightMessage={handleHighlightMessage}
-            onPreviewImage={setPreviewImage}
-          />
+            className={offscreen('[contain-intrinsic-size:auto_120px]')}
+          >
+            <UserMessageBubble
+              message={message}
+              isHighlighted={highlightedMessageId === i}
+              profileImage={profileImage}
+              mentorName={mentorName}
+              messages={messages}
+              onHighlightMessage={handleHighlightMessage}
+              onPreviewImage={setPreviewImage}
+            />
+          </div>
         ) : (
           <div
             key={i}
-            className={`transition-all duration-300 ${highlightedMessageId === i ? 'rounded-lg bg-blue-100' : ''}`}
+            className={`transition-all duration-300 ${offscreen('[contain-intrinsic-size:auto_240px]')} ${highlightedMessageId === i ? 'rounded-lg bg-blue-100' : ''}`}
           >
             <AIMessageBubble
               content={message.content}
@@ -166,17 +203,22 @@ export function ChatMessages({
                   ? streamingToolCalls
                   : message.toolCalls
               }
-              isReasoning={
-                message.id === currentStreamingMessageId ? isReasoning : false
-              }
               showReasoning={showReasoning}
               // Only "currently streaming" while a stream is actually active.
               // currentStreamingMessageId keeps pointing at the last assistant
               // message after the stream ends, so without the isStreaming gate
-              // the tool-call indicator's bounce dots never stop and the action
-              // toolbar stays hidden once the response completes.
+              // the action toolbar would stay hidden once the response
+              // completes.
               isCurrentlyStreaming={
                 isStreaming && message.id === currentStreamingMessageId
+              }
+              // Only the message actually being streamed carries the working
+              // line; every other bubble gets `undefined` so a turn can never
+              // shimmer in two places.
+              workingPhase={
+                isStreaming && message.id === currentStreamingMessageId
+                  ? workingPhase
+                  : undefined
               }
             />
           </div>
