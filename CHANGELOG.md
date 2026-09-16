@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.149.0](https://github.com/iblai/os/compare/v0.148.1...v0.149.0) (2026-09-16)
+
+### Features
+
+* credit deduction playwright test update ([8006b63](https://github.com/iblai/os/commit/8006b63bcef31d6637eb929fa97f87bd7248eff2))
+* credit deduction playwright test update ([22c021f](https://github.com/iblai/os/commit/22c021f41054ecf834a8160fbb5c98d5b3e962d8))
+
 ## [0.148.1](https://github.com/iblai/os/compare/v0.148.0...v0.148.1) (2026-09-15)
 
 ### Chores
