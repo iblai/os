@@ -14,6 +14,9 @@ let mockReduxState: {
   chat: {
     activeTab: number;
     sessionIds: Record<number, string>;
+    enableGrading?: boolean;
+    enableLessonCompletion?: boolean;
+    metadata?: { edxCourseId: string; edxUsageId: string };
   };
 };
 
@@ -30,6 +33,13 @@ vi.mock('@/lib/hooks', () => ({
 vi.mock('@iblai/iblai-js/web-utils', () => ({
   selectActiveTab: (state: typeof mockReduxState) => state.chat.activeTab,
   selectSessionIds: (state: typeof mockReduxState) => state.chat.sessionIds,
+  selectEnableGrading: (state: typeof mockReduxState) =>
+    state.chat.enableGrading ?? false,
+  selectEnableLessonCompletion: (state: typeof mockReduxState) =>
+    state.chat.enableLessonCompletion ?? false,
+  // Mirrors the slice's initial metadata: always present, empty course id.
+  selectMetadata: (state: typeof mockReduxState) =>
+    state.chat.metadata ?? { edxCourseId: '', edxUsageId: '' },
 }));
 
 // Mock TimeTrackingProvider to verify props
@@ -186,6 +196,66 @@ describe('useMentorTimeTrackingConfig', () => {
       render(<HookHarness onReady={(api) => (hookApi = api)} />);
 
       expect(hookApi!.getSessionUuid()).toBeUndefined();
+    });
+  });
+
+  describe('getCourseId', () => {
+    const courseMetadata = {
+      edxCourseId: 'course-v1:ibl+CS101+2026',
+      edxUsageId: '',
+    };
+
+    it('returns undefined when neither grading nor lesson completion is enabled', () => {
+      mockReduxState.chat.metadata = courseMetadata;
+      let hookApi: ReturnType<typeof useMentorTimeTrackingConfig> | null = null;
+
+      render(<HookHarness onReady={(api) => (hookApi = api)} />);
+
+      expect(hookApi!.getCourseId()).toBeUndefined();
+    });
+
+    it('returns the edX course id when grading is enabled', () => {
+      mockReduxState.chat.enableGrading = true;
+      mockReduxState.chat.metadata = courseMetadata;
+      let hookApi: ReturnType<typeof useMentorTimeTrackingConfig> | null = null;
+
+      render(<HookHarness onReady={(api) => (hookApi = api)} />);
+
+      expect(hookApi!.getCourseId()).toBe('course-v1:ibl+CS101+2026');
+    });
+
+    it('returns the edX course id when lesson completion is enabled', () => {
+      mockReduxState.chat.enableLessonCompletion = true;
+      mockReduxState.chat.metadata = courseMetadata;
+      let hookApi: ReturnType<typeof useMentorTimeTrackingConfig> | null = null;
+
+      render(<HookHarness onReady={(api) => (hookApi = api)} />);
+
+      expect(hookApi!.getCourseId()).toBe('course-v1:ibl+CS101+2026');
+    });
+
+    it('returns undefined when enabled but the host has not sent a course id', () => {
+      mockReduxState.chat.enableGrading = true;
+      let hookApi: ReturnType<typeof useMentorTimeTrackingConfig> | null = null;
+
+      render(<HookHarness onReady={(api) => (hookApi = api)} />);
+
+      expect(hookApi!.getCourseId()).toBeUndefined();
+    });
+
+    it('picks up a course id that arrives after the flag', () => {
+      mockReduxState.chat.enableLessonCompletion = true;
+      let hookApi: ReturnType<typeof useMentorTimeTrackingConfig> | null = null;
+
+      const { rerender } = render(
+        <HookHarness onReady={(api) => (hookApi = api)} />,
+      );
+      expect(hookApi!.getCourseId()).toBeUndefined();
+
+      mockReduxState.chat.metadata = courseMetadata;
+      rerender(<HookHarness onReady={(api) => (hookApi = api)} />);
+
+      expect(hookApi!.getCourseId()).toBe('course-v1:ibl+CS101+2026');
     });
   });
 
@@ -416,8 +486,29 @@ describe('MentorTimeTrackingProvider', () => {
         getCurrentUrl: expect.any(Function),
         onRouteChange: expect.any(Function),
         getSessionUuid: expect.any(Function),
+        getCourseId: expect.any(Function),
       }),
     );
+  });
+
+  it('passes the edX course id as the course getter when grading is enabled', () => {
+    mockReduxState.chat.enableGrading = true;
+    mockReduxState.chat.metadata = {
+      edxCourseId: 'course-v1:ibl+CS101+2026',
+      edxUsageId: '',
+    };
+
+    render(<MentorTimeTrackingProvider />);
+
+    const passedProps = TimeTrackingProviderMock.mock.calls[0][0] as Record<
+      string,
+      unknown
+    >;
+    expect(
+      (passedProps.getCourseId as (url: string) => string | undefined)(
+        'https://example.com/platform/tenant123/mentor456',
+      ),
+    ).toBe('course-v1:ibl+CS101+2026');
   });
 
   it('passes custom intervalSeconds prop', () => {
