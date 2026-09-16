@@ -1,15 +1,15 @@
 {
   "version": 2,
-  "lastUpdated": "2026-09-14",
+  "lastUpdated": "2026-09-16",
   "summary": {
-    "totalCheckpoints": 741,
-    "coveredCheckpoints": 698,
+    "totalCheckpoints": 746,
+    "coveredCheckpoints": 703,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 15,
     "pendingCheckpoints": 11,
     "percent": 100,
-    "totalJourneys": 77,
-    "activeJourneys": 76
+    "totalJourneys": 78,
+    "activeJourneys": 77
   },
   "journeys": [
     {
@@ -4711,6 +4711,47 @@
         {
           "id": "du-08",
           "description": "Admin uploads an Excel (.xlsx) file via the Add Resources modal and the file row appears in the dataset list",
+          "status": "covered"
+        }
+      ]
+    },
+    {
+      "id": "tts-provider-routing",
+      "name": "On-device TTS Provider Routing (issue #2341)",
+      "spec": "76-tts-provider-routing.spec.ts",
+      "sourceFiles": [
+        "lib/tts/iblai-routing.ts",
+        "lib/tts/model-cache.ts",
+        "lib/tts/config.ts",
+        "lib/tts/tts-endpoint.ts",
+        "lib/tts/kokoro-session.ts",
+        "hooks/use-speech.ts",
+        "components/chat/ai-message-speak.tsx"
+      ],
+      "checkpoints": [
+        {
+          "id": "ttsr-01",
+          "description": "Loading a mentor configured with the `iblai` (Kokoro) voice provider makes zero requests to the Kokoro model host before any Read Aloud interaction — `primeIblaiRoute`'s mount-time WebGPU probe and Cache Storage lookup are read-only",
+          "status": "covered"
+        },
+        {
+          "id": "ttsr-02",
+          "description": "With a cold on-device cache, clicking Read Aloud serves the message through the cloud `/tts/` endpoint (the button toggles to \"Stop Reading Aloud\") and still makes zero requests to the model host",
+          "status": "covered"
+        },
+        {
+          "id": "ttsr-03",
+          "description": "The cold-cache read's background warm-up (`startIblaiWarmUp`) fetches the model weights and voice tensor pinned to the exact `NEXT_PUBLIC_TTS_KOKORO_MODEL_REVISION` sha, never the library's default `resolve/main` — verified via intercepted (fake-byte-fulfilled) requests to the model host",
+          "status": "covered"
+        },
+        {
+          "id": "ttsr-04",
+          "description": "Once both Cache Storage entries (`transformers-cache`, `kokoro-voices`) the warm-up writes are populated, re-reading the same message aloud is served on-device (`peekIblaiRoute` flips to `device` in the same tab, no reload) with no additional call to the cloud `/tts/` endpoint — the on-device worker is stubbed to answer instantly so the assertion tests the routing decision itself rather than racing a real ~310 MB model load",
+          "status": "covered"
+        },
+        {
+          "id": "ttsr-05",
+          "description": "On an emulated mobile device (`navigator.userAgentData.mobile`/UA stub), Read Aloud always serves through the cloud `/tts/` endpoint and never contacts the Kokoro model host — `isMobileDevice()` short-circuits the arbiter to cloud before any WebGPU/cache check",
           "status": "covered"
         }
       ]

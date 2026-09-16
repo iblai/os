@@ -290,6 +290,15 @@ export function useMentorSettings({
         // @ts-ignore - voice_provider may not be exposed on the typed settings shape
         effectivePublicSettings?.voice_provider,
 
+      // The chosen on-device voice, returned as the catalogue row's *name* --
+      // which for this provider is the model's own voice id (`af_heart`), so
+      // it can be handed to the synthesiser without a second lookup.
+      iblaiVoice:
+        // @ts-ignore - iblai_voice is not on the published settings type
+        effectiveSettings?.iblai_voice ??
+        // @ts-ignore - iblai_voice is not on the published settings type
+        effectivePublicSettings?.iblai_voice,
+
       // show_reasoning ("Verbose Reasoning") gates the reasoning steps and tool
       // call UI in chat. Exists in the API response but not the published type;
       // defaults to false so the verbose UI stays hidden when unset.
