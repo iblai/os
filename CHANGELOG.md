@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.150.2](https://github.com/iblai/os/compare/v0.150.1...v0.150.2) (2026-09-17)
+
+### Bug Fixes
+
+* **e2e:** read notification tab state atomically in the auto-open test ([90a0030](https://github.com/iblai/os/commit/90a00308d930106e166c4fa7ef08028d44119c35))
+* **tauri:** adding claude review fixes ([0554cf9](https://github.com/iblai/os/commit/0554cf93bea1a11941d99bbbe283f419f13cba3f))
+* **tauri:** adding fix for the ios code and UI responsive ([4479dd5](https://github.com/iblai/os/commit/4479dd5a768d5338585ede5da374f3623c0e7905))
+
 ## [0.150.1](https://github.com/iblai/os/compare/v0.150.0...v0.150.1) (2026-09-17)
 
 ### Documentation
