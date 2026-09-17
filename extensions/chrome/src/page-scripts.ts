@@ -249,10 +249,33 @@ export function actOnPage(
   }
 
   if (action === 'type') {
-    const autocomplete = (el.getAttribute('autocomplete') || '').toLowerCase();
+    // Everything the user has to type themselves. The prompt tells the model
+    // not to touch these; this is what makes it true, and it is the only thing
+    // that does — Approvals = Automatic raises no card, and a `type` without
+    // `submit` raises none in either mode.
+    //
+    // `autocomplete` is a TOKEN LIST: an optional `section-*`, then an optional
+    // `shipping`/`billing`, then the field name, optionally `webauthn`. So
+    // `billing cc-number` is as ordinary as `cc-number` on a real checkout, and
+    // testing the attribute as a whole let it through.
+    const SECRET_FIELDS = [
+      'current-password',
+      'new-password',
+      'one-time-code',
+      'cc-number',
+      'cc-csc',
+      'cc-exp',
+      'cc-exp-month',
+      'cc-exp-year',
+      'cc-name',
+      'cc-type',
+    ];
+    const tokens = (el.getAttribute('autocomplete') || '')
+      .toLowerCase()
+      .split(/\s+/);
     const secret =
       (el instanceof HTMLInputElement && el.type === 'password') ||
-      /^(current-password|new-password|cc-number|cc-csc)$/.test(autocomplete);
+      tokens.some((token) => SECRET_FIELDS.includes(token));
     if (secret) {
       return {
         ok: false,

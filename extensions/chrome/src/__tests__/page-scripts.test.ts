@@ -256,6 +256,30 @@ describe('actOnPage', () => {
     expect(actOnPage(10, 'type', '4242', false).error).toMatch(/^Refused:/);
   });
 
+  // `autocomplete` is a token list, so a checkout's `billing cc-number` has to
+  // be refused as surely as a bare `cc-number`. Its own DOM: the shared fixture's
+  // element numbers are asserted by index all over this file.
+  it('refuses every secret field, prefixed tokens and one-time codes included', () => {
+    document.body.innerHTML = `
+      <input id="a" autocomplete="billing cc-number">
+      <input id="b" autocomplete="section-pay shipping cc-csc">
+      <input id="c" autocomplete="ONE-TIME-CODE">
+      <input id="d" autocomplete="cc-exp-month">
+      <input id="e" autocomplete="cc-name">
+      <input id="f" autocomplete="current-password webauthn">
+      <input id="g" autocomplete="email">`;
+    snapshotPage(200, 100);
+
+    for (const n of [1, 2, 3, 4, 5, 6]) {
+      expect(actOnPage(n, 'type', 'x', false).error).toMatch(/^Refused:/);
+    }
+    // Not everything carrying an autocomplete hint is a secret.
+    expect(actOnPage(7, 'type', 'jane@example.com', false).ok).toBe(true);
+    expect(document.querySelector<HTMLInputElement>('#g')!.value).toBe(
+      'jane@example.com',
+    );
+  });
+
   it('types into a contenteditable and refuses elements that take no text', () => {
     snapshotPage(200, 100);
     const editor = document.querySelector('#ed')!;
