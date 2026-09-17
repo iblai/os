@@ -71,15 +71,15 @@ Most AI apps make you choose a device. ibl.ai/os meets your users wherever they 
 
 <div align="center">
 
-| Platform    |     | Status                                                                                                |
-| ----------- | --- | ----------------------------------------------------------------------------------------------------- |
-| **Web**     | 🌐  | Live at **[os.ibl.ai](https://os.ibl.ai)** — any modern browser                                       |
+| Platform    |     | Status                                                                                                                                                         |
+| ----------- | --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Web**     | 🌐  | Live at **[os.ibl.ai](https://os.ibl.ai)** — any modern browser                                                                                                |
 | **Chrome**  | 🧩  | Side-panel extension — [Chrome Web Store](https://chromewebstore.google.com/detail/iblai/gppjhejgkdljdhnmlfghfbalfhgaepfd) (chat with your agents on any page) |
-| **macOS**   | 🍎  | Native app — [download universal .dmg](docs/DOWNLOADS.md) (Intel + Apple Silicon, signed & notarized) |
-| **Windows** | 🪟  | Native app — [download installer](docs/DOWNLOADS.md) (x64 + ARM64)                                    |
-| **iOS**     | 📱  | Native app — [App Store](https://apps.apple.com/us/app/ibl-ai/id6504929071)                           |
-| **Android** | 🤖  | Native app — [Google Play](https://play.google.com/store/apps/details?id=ai.ibl.mentorai)             |
-| **Linux**   | 🐧  | Native app — [build from source](docs/development.md)                                                 |
+| **macOS**   | 🍎  | Native app — [download universal .dmg](docs/DOWNLOADS.md) (Intel + Apple Silicon, signed & notarized)                                                          |
+| **Windows** | 🪟  | Native app — [download installer](docs/DOWNLOADS.md) (x64 + ARM64)                                                                                             |
+| **iOS**     | 📱  | Native app — [App Store](https://apps.apple.com/us/app/ibl-ai/id6504929071)                                                                                    |
+| **Android** | 🤖  | Native app — [Google Play](https://play.google.com/store/apps/details?id=ai.ibl.mentorai)                                                                      |
+| **Linux**   | 🐧  | Native app — [build from source](docs/development.md)                                                                                                          |
 
 </div>
 
