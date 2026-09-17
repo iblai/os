@@ -47,31 +47,31 @@ export class NotificationsPage {
     );
   }
 
-  // Read the panel, not the trigger. Both carry data-state, but the trigger's
-  // flip lags the panel's by a render — a trace of the CI failure showed
-  // alerts-tab-content already `active` while both triggers still read
-  // `inactive`, settling to aria-selected="true" only afterwards. The panel is
-  // also what waitForTabsToSettle() waits on, so this reads a value that has
-  // demonstrably arrived rather than one that may still be in flight.
-  async isAlertsTabActive(): Promise<boolean> {
-    return (
-      (await this.alertsContent
-        .getAttribute('data-state')
-        .catch(() => null)) === 'active'
-    );
+  // Both panels' data-state are read in ONE evaluate so a tab switch cannot
+  // land between two reads: the CI trace showed alerts-tab-content sampled
+  // `inactive` just before the empty-inbox auto-switch and inbox-tab-content
+  // `inactive` just after it. 'inbox' is only terminal once the list has
+  // rendered; while loading or empty the auto-switch to alerts may still fire.
+  private readActiveTab(): Promise<'inbox' | 'alerts' | null> {
+    return this.page.evaluate(() => {
+      const state = (id: string) =>
+        document
+          .querySelector(`[data-testid="${id}"]`)
+          ?.getAttribute('data-state');
+      if (state('alerts-tab-content') === 'active') return 'alerts';
+      if (
+        state('inbox-tab-content') === 'active' &&
+        document.querySelector('[data-testid="notifications-list"]')
+      )
+        return 'inbox';
+      return null;
+    });
   }
 
-  async isInboxTabActive(): Promise<boolean> {
-    return (
-      (await this.inboxContent.getAttribute('data-state').catch(() => null)) ===
-      'active'
-    );
-  }
-
-  async waitForTabsToSettle(): Promise<void> {
-    await this.page.waitForSelector(
-      '[data-testid="inbox-tab-content"][data-state="active"], [data-testid="alerts-tab-content"][data-state="active"]',
-      { timeout: 30_000 },
-    );
+  async waitForActiveTab(): Promise<'inbox' | 'alerts'> {
+    await expect
+      .poll(() => this.readActiveTab(), { timeout: 30_000 })
+      .not.toBeNull();
+    return (await this.readActiveTab()) as 'inbox' | 'alerts';
   }
 }
