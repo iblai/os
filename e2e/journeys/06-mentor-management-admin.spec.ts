@@ -1,6 +1,61 @@
+import type { Page } from '@playwright/test';
 import { test, expect } from '../fixtures/mentor-test';
-import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
+import {
+  navigateToMentorApp,
+  checkAdminStatus,
+  getPlatformContext,
+} from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
+import { resolveDmApiBase } from '../utils/dm-api';
+
+/** One provider row from the live `mentor-llms` catalogue, as far as naming goes. */
+interface LlmCatalogueRow {
+  name: string;
+  display_name?: string | null;
+  logo?: string | null;
+  chat_models?: Array<{ llm_name: string; display_name?: string | null }>;
+}
+
+/**
+ * Fetches the mentor-llms catalogue directly via `page.request` rather than
+ * intercepting the UI-triggered GET — RTK Query caches this query per
+ * {org, userId, mentorId}, so a UI action that reuses an already-warm cache
+ * entry (e.g. re-opening the LLM tab on a mentor a prior test in this file
+ * already visited) never issues a new network request, and a
+ * `page.waitForResponse` registered around it times out. A direct request
+ * bypasses the cache entirely and is deterministic regardless of prior
+ * navigation in this worker.
+ */
+async function fetchLlmCatalogue(page: Page): Promise<LlmCatalogueRow[]> {
+  const { tenantKey, mentorId } = await getPlatformContext(page);
+  const dmBase = await resolveDmApiBase(page);
+  const dmToken = await page.evaluate(() => localStorage.getItem('dm_token'));
+  const username = await page.evaluate(() => {
+    try {
+      const raw = localStorage.getItem('userData');
+      return raw ? JSON.parse(raw)?.user_nicename : null;
+    } catch {
+      return null;
+    }
+  });
+  if (!dmToken || !username) {
+    throw new Error(
+      'Missing dm_token or username — cannot fetch the LLM catalogue directly',
+    );
+  }
+  const url = `${dmBase}/api/ai-mentor/orgs/${tenantKey}/users/${username}/mentor-llms/?mentor_id=${mentorId}`;
+  // Matches mentor-cleanup.ts's established convention for this exact
+  // `/dm/api/ai-mentor/...` domain — DRF Token auth, not Bearer.
+  const response = await page.request.get(url, {
+    headers: { Authorization: `Token ${dmToken}` },
+  });
+  if (!response.ok()) {
+    throw new Error(
+      `mentor-llms fetch failed: ${response.status()} ${response.statusText()}`,
+    );
+  }
+  return response.json();
+}
 
 test.describe('Journey 6: Mentor Management — Admin', () => {
   test.beforeEach(async ({ page }) => {
@@ -105,10 +160,11 @@ test.describe('Journey 6: Mentor Management — Admin', () => {
     await editMentorPage.close();
   });
 
-  // Issue #2318 regression guard: getLLMProviderDetails had no `iblai` entry
-  // so the card fell through to the generic default logo/label. Skips
-  // gracefully if this tenant's LLM list doesn't include the ibl.ai provider.
-  test('admin goes to edit mentor LLM tab and sees the ibl.ai provider card with its own logo and label', async ({
+  // Issue #2318 regression guard: the ibl.ai card used to fall through to a
+  // generic default label. The label now comes from the backend registry's
+  // `display_name` (issue #2502). Skips gracefully if this tenant's LLM list
+  // doesn't include the ibl.ai provider.
+  test('admin goes to edit mentor LLM tab and sees the ibl.ai provider card with its own label', async ({
     page,
     editMentorPage,
   }) => {
@@ -131,17 +187,12 @@ test.describe('Journey 6: Mentor Management — Admin', () => {
       return;
     }
 
-    await expect(iblaiCard.locator('span').first()).toHaveText('ibl.ai');
-
-    const logo = iblaiCard.locator('img');
-    await expect(logo).toBeVisible();
-    const naturalWidth = await logo.evaluate(
-      (img: HTMLImageElement) => img.naturalWidth,
-    );
-    expect(
-      naturalWidth,
-      'ibl.ai provider logo failed to load (naturalWidth 0 renders blank — the #2318 bug signature)',
-    ).toBeGreaterThan(0);
+    // The label span is always LAST in DOM order — a provider with no
+    // backend logo renders a placeholder `<span role="img">` (single-letter
+    // initial) ahead of it inside the logo wrapper (issue #2502). Only the
+    // label is asserted: the logo is backend registry data now (null on
+    // environments that have not uploaded one), not something the app owns.
+    await expect(iblaiCard.locator('span').last()).toHaveText('ibl.ai');
 
     await editMentorPage.close();
   });
@@ -154,11 +205,28 @@ test.describe('Journey 6: Mentor Management — Admin', () => {
   // so this exercises that second call site end-to-end. Skips gracefully if
   // this tenant's LLM list doesn't include the ibl.ai provider (same
   // precondition as the card test above).
+  // Owns a throwaway mentor so nothing needs restoring afterwards (a restore
+  // to a BYOK-only model 400s on backends without that credential).
   test('admin switches to the ibl.ai model and the navbar badge shows the display name, not the raw wire key', async ({
     page,
     editMentorPage,
     navbarPage,
+    createMentorPage,
   }) => {
+    // The sidebar "New Agent" click occasionally produces no dialog; retry.
+    let created = false;
+    for (let attempt = 0; attempt < 3 && !created; attempt++) {
+      try {
+        await createMentorPage.open();
+        created = true;
+      } catch {
+        await page.keyboard.press('Escape');
+      }
+    }
+    expect(created).toBe(true);
+    await createMentorPage.createWithName();
+    await waitForPageReady(page);
+
     await editMentorPage.open('LLM');
     await waitForPageReady(page);
     await expect(editMentorPage.llm.providerCards.first()).toBeVisible({
@@ -178,56 +246,34 @@ test.describe('Journey 6: Mentor Management — Admin', () => {
       return;
     }
 
-    // The `finally` block below restores this mentor's LLM to Anthropic
-    // claude-haiku-4-5-20251001. Confirm that model is actually selectable
-    // on this backend *before* mutating anything — a disabled/unavailable
-    // model button never becomes clickable, so the restore step itself would
-    // throw and leave the mentor stuck on ibl.ai for later tests.
-    await editMentorPage.llm.providerCard('Anthropic').click();
-    await expect(editMentorPage.llm.llmSelectionDialog).toBeVisible({
-      timeout: 10_000,
-    });
-    const restoreModelButton = editMentorPage.llm.llmSelectionDialog.locator(
-      '[data-model="claude-haiku-4-5-20251001"]',
-    );
-    let canRestore = false;
-    try {
-      await restoreModelButton.waitFor({ state: 'visible', timeout: 10_000 });
-      canRestore = await restoreModelButton.isEnabled();
-    } catch {
-      canRestore = false;
-    }
-    await page.keyboard.press('Escape');
-    await expect(editMentorPage.llm.llmSelectionDialog).not.toBeVisible({
-      timeout: 5_000,
-    });
-    if (!canRestore) {
-      await editMentorPage.close();
-      test.skip(
-        true,
-        'restore target model (Anthropic claude-haiku-4-5-20251001) is disabled or unavailable on this backend',
-      );
-      return;
-    }
+    // The card label is backend-owned (display_name, or the raw key when the
+    // backend ships none), so read it off the logo alt rather than assuming.
+    const providerLabel = (
+      await editMentorPage.llm
+        .providerLogo('iblai')
+        .evaluate(
+          (el) => el.getAttribute('alt') ?? el.getAttribute('aria-label') ?? '',
+        )
+    ).replace(/ logo$/, '');
+    expect(providerLabel).not.toBe('');
 
-    // Confirm the provider actually offers an iblai-pro model row before
-    // committing to the full selection + navbar-badge flow — some backends
-    // list the ibl.ai provider card with no models behind it.
-    await editMentorPage.llm.providerCard('ibl.ai').click();
+    // Pick an ibl.ai model that is not already active — a fresh mentor may
+    // default to one of them, and the active row is rendered disabled.
+    await iblaiCard.click();
     await expect(editMentorPage.llm.llmSelectionDialog).toBeVisible({
       timeout: 10_000,
     });
-    const iblaiProRow = editMentorPage.llm.llmSelectionDialog.locator(
-      '[data-model="iblai-pro"]',
-    );
-    let hasIblaiProModel = false;
+    const selectableRow = editMentorPage.llm.llmSelectionDialog
+      .locator('[data-model]:not([disabled])')
+      .first();
+    let hasSelectableModel = false;
     try {
-      await iblaiProRow.waitFor({ state: 'visible', timeout: 10_000 });
-      hasIblaiProModel = true;
+      await selectableRow.waitFor({ state: 'visible', timeout: 10_000 });
+      hasSelectableModel = true;
     } catch {
-      hasIblaiProModel = false;
+      hasSelectableModel = false;
     }
-    if (!hasIblaiProModel) {
+    if (!hasSelectableModel) {
       await page.keyboard.press('Escape');
       await expect(editMentorPage.llm.llmSelectionDialog).not.toBeVisible({
         timeout: 5_000,
@@ -235,36 +281,36 @@ test.describe('Journey 6: Mentor Management — Admin', () => {
       await editMentorPage.close();
       test.skip(
         true,
-        'ibl.ai provider offers no iblai-pro model on this backend',
+        'ibl.ai provider offers no selectable model on this backend',
       );
       return;
     }
+    const modelKey = (await selectableRow.getAttribute('data-model')) ?? '';
+    const modelLabel = (await selectableRow.innerText())
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .pop() as string;
+    expect(modelKey).not.toBe('');
+    expect(modelLabel).not.toBe(modelKey);
 
+    // The model key is the wire value (llm_name) the picker row carries as
+    // data-model.
+    await editMentorPage.llm.selectProviderAndModel(providerLabel, modelKey);
     try {
-      // Display label ("ibl.ai"), not the raw provider key — providerCard()
-      // matches on the rendered alt text ("<label> logo"), same label the
-      // #2318 card test asserts above. The model key is the wire value
-      // (llm_name), which for this tenant's sole ibl.ai model is "iblai-pro".
-      await editMentorPage.llm.selectProviderAndModel('ibl.ai', 'iblai-pro');
       await editMentorPage.close();
-
-      // The navbar badge must render the display name ("ibl.ai"), never the
-      // raw wire key ("iblai-pro") the API returns as llm_name — an exact
-      // match, not a substring/regex, so a regression that renders the raw
-      // key fails this assertion instead of silently passing it.
-      await expect(navbarPage.llmNameSpan).toHaveText('ibl.ai Pro', {
-        timeout: 15_000,
-      });
-    } finally {
-      // Restore the mentor's original provider/model so later tests in this
-      // (and other) journeys don't inherit an ibl.ai-selected mentor.
-      await editMentorPage.open('LLM');
-      await editMentorPage.llm.selectProviderAndModel(
-        'Anthropic',
-        'claude-haiku-4-5-20251001',
-      );
-      await editMentorPage.close();
+    } catch {
+      await page.keyboard.press('Escape');
+      await expect(editMentorPage.dialog).not.toBeVisible({ timeout: 15_000 });
     }
+
+    // The navbar badge must render the model's display label, never the raw
+    // wire key the API returns as llm_name — an exact match, not a
+    // substring/regex, so a regression that renders the raw key fails this
+    // assertion instead of silently passing it.
+    await expect(navbarPage.llmNameSpan).toHaveText(modelLabel, {
+      timeout: 15_000,
+    });
   });
 
   // A grayed (no-credential) provider card must stay clickable — graying is a
@@ -361,6 +407,155 @@ test.describe('Journey 6: Mentor Management — Admin', () => {
     }
 
     await page.keyboard.press('Escape');
+    await editMentorPage.close();
+  });
+
+  // Issue #2502: provider naming/artwork moved from a frontend map to the
+  // backend `mentor-llms` catalogue. Capture the live GET response the LLM
+  // tab itself triggers and assert every rendered card matches it exactly —
+  // this is what actually proves "backend-owned" rather than a hardcoded
+  // guess about what the backend currently returns.
+  test('admin goes to edit mentor LLM tab and provider card labels/logos match the live mentor-llms catalogue', async ({
+    page,
+    editMentorPage,
+  }) => {
+    await editMentorPage.open('LLM');
+    const catalogue = await fetchLlmCatalogue(page);
+    await waitForPageReady(page);
+    await expect(editMentorPage.llm.providerCards.first()).toBeVisible({
+      timeout: 15_000,
+    });
+
+    const cards = await editMentorPage.llm.getProviderCardsInfo();
+    expect(cards.length).toBeGreaterThan(0);
+
+    let checked = 0;
+    for (const card of cards) {
+      const row = catalogue.find((r) => r.name === card.provider);
+      if (!row) continue; // an on-device-only provider has no backend row
+      checked++;
+
+      const expectedLabel = row.display_name?.trim() || row.name;
+      expect(
+        card.label,
+        `provider "${card.provider}" label should be display_name ?? name`,
+      ).toBe(expectedLabel);
+
+      const cardLocator = editMentorPage.llm.providerCardByKey(card.provider);
+      if (row.logo) {
+        // Next.js's <Image> rewrites `src` to its own optimizer proxy
+        // (`/_next/image?url=<encoded original>&w=..&q=..`) rather than the
+        // raw backend URL — assert the backend logo is embedded as that
+        // encoded `url` param instead of an exact match.
+        await expect(cardLocator.locator('img')).toHaveAttribute(
+          'src',
+          new RegExp(
+            `[?&]url=${encodeURIComponent(row.logo).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(&|$)`,
+          ),
+        );
+      } else {
+        await expect(
+          cardLocator.locator('[data-testid="llm-provider-logo-placeholder"]'),
+        ).toBeVisible();
+      }
+    }
+    expect(
+      checked,
+      'no rendered provider card matched a row in the live mentor-llms catalogue',
+    ).toBeGreaterThan(0);
+
+    await editMentorPage.close();
+  });
+
+  // Issue #2502: model rows in the LLM Selection picker must show the
+  // backend's chat_models[].display_name (falling back to the raw llm_name),
+  // verified against the same live catalogue response rather than a guess.
+  test('admin goes to edit mentor LLM tab and model row labels match the live catalogue chat_models', async ({
+    page,
+    editMentorPage,
+  }) => {
+    await editMentorPage.open('LLM');
+    const catalogue = await fetchLlmCatalogue(page);
+    await waitForPageReady(page);
+    await expect(editMentorPage.llm.providerCards.first()).toBeVisible({
+      timeout: 15_000,
+    });
+
+    const cards = await editMentorPage.llm.getProviderCardsInfo();
+    const withModels = cards.find((c) => {
+      const row = catalogue.find((r) => r.name === c.provider);
+      return (row?.chat_models?.length ?? 0) > 0;
+    });
+    if (!withModels) {
+      test.skip(true, 'No provider in this tenant lists chat_models');
+      return;
+    }
+
+    await editMentorPage.llm.providerCardByKey(withModels.provider).click();
+    await expect(editMentorPage.llm.llmSelectionDialog).toBeVisible({
+      timeout: 10_000,
+    });
+
+    const row = catalogue.find((r) => r.name === withModels.provider)!;
+    for (const model of row.chat_models!.slice(0, 5)) {
+      const expectedLabel = model.display_name?.trim() || model.llm_name;
+      const modelButton = editMentorPage.llm.llmSelectionDialog.locator(
+        `[data-model="${model.llm_name}"]`,
+      );
+      // Each row repeats the PROVIDER's logo next to its own label; when
+      // that provider has no backend logo it renders the same placeholder
+      // `<span role="img">` (single-letter initial) as the LLM tab's cards,
+      // which `toHaveText` on the whole button would fold into the text.
+      // The label is always the LAST `<span>` in the row.
+      await expect(modelButton.locator('span').last()).toHaveText(
+        expectedLabel,
+      );
+    }
+
+    await page.keyboard.press('Escape');
+    await editMentorPage.close();
+  });
+
+  // Issue #2502: the 15 provider images this change deletes from `public/`
+  // must never be requested again while browsing the LLM tab / picker — a
+  // stray reference would 404 in production since the files are gone.
+  test('admin goes to edit mentor LLM tab and no requests are made for the deleted static /llm-*-provider.* images', async ({
+    page,
+    editMentorPage,
+  }) => {
+    const badRequests: string[] = [];
+    const onRequest = (req: import('@playwright/test').Request) => {
+      const url = req.url();
+      if (
+        /\/llm-[a-z]+-provider(-\d+)?\.(png|jpe?g|webp|svg)(\?|$)/i.test(url)
+      ) {
+        badRequests.push(url);
+      }
+    };
+    page.on('request', onRequest);
+
+    try {
+      await editMentorPage.open('LLM');
+      await waitForPageReady(page);
+      await expect(editMentorPage.llm.providerCards.first()).toBeVisible({
+        timeout: 15_000,
+      });
+      const cards = await editMentorPage.llm.getProviderCardsInfo();
+      if (cards.length > 0) {
+        await editMentorPage.llm.providerCardByKey(cards[0].provider).click();
+        await expect(editMentorPage.llm.llmSelectionDialog).toBeVisible({
+          timeout: 10_000,
+        });
+        await page.keyboard.press('Escape');
+      }
+    } finally {
+      page.off('request', onRequest);
+    }
+
+    expect(
+      badRequests,
+      `unexpected requests for deleted static provider images: ${badRequests.join(', ')}`,
+    ).toEqual([]);
     await editMentorPage.close();
   });
 
@@ -467,7 +662,18 @@ test.describe('Journey 6: Mentor Management — Admin', () => {
     // A freshly created mentor always has the delete button, so this test
     // owns its own subject rather than deleting whatever mentor the page
     // happened to land on.
-    await createMentorPage.openAndCreate();
+    // The sidebar "New Agent" click occasionally produces no dialog; retry.
+    let created = false;
+    for (let attempt = 0; attempt < 3 && !created; attempt++) {
+      try {
+        await createMentorPage.open();
+        created = true;
+      } catch {
+        await page.keyboard.press('Escape');
+      }
+    }
+    expect(created).toBe(true);
+    await createMentorPage.createWithName();
     await waitForPageReady(page);
     await editMentorPage.open('Settings');
     await waitForPageReady(page);

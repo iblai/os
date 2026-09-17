@@ -756,8 +756,8 @@ export class ChatPage {
   // ── Agent task list (write_todos) mocking helpers — Journey 68 ─────────────
   //
   // `AgentTodoList` (components/chat/agent-todo-list.tsx) renders only when
-  // `showReasoning` (mentor-settings `show_reasoning`, default `false`) is on
-  // AND the assistant turn's `toolCalls` contains a `write_todos` entry
+  // `showReasoning` (mentor-settings `show_reasoning`; the backend default
+  // may be `true`) is on AND the assistant turn's `toolCalls` contains a `write_todos` entry
   // (`extractLatestTodos` in `@iblai/iblai-js/web-utils`). Two independent
   // seams are needed to exercise it deterministically:
   //   - REST: patch the mentor-settings GET(s) to flip `show_reasoning`, and
@@ -1161,6 +1161,11 @@ export class ChatPage {
   }
 
   // ── Chat download (issue #2464) ─────────────────────────────────────────
+
+  /** Returns the reply body within `scope` (default: first AI bubble) — excludes the reasoning/tool-call/todo/permission rows rendered above it. */
+  getAiMessageBody(scope: Locator = this.aiMessages.first()): Locator {
+    return scope.getByTestId('ai-message-body');
+  }
 
   /** Returns the download trigger within `scope` (default: whole page) — disambiguates when multiple AI bubbles are on screen. */
   getDownloadButton(scope?: Locator): Locator {

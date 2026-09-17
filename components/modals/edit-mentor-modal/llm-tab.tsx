@@ -29,10 +29,9 @@ type Props = {
  * the OS's existing next-intl wording, while the provider grid, the provider
  * modal and the on-device download flow all live inside the SDK component.
  *
- * `getLLMProviderDetails` is deliberately NOT passed — the SDK's default
- * resolver is byte-identical to the OS copy in `@/lib/utils` (same logo paths,
- * same display names, same OpenAI/Google model-specific overrides), and OS
- * already serves those assets from `public/`.
+ * Provider names and logos are backend-owned: the SDK grid renders each LLM
+ * row's `display_name`/`logo` straight from the API, so nothing is passed for
+ * them here.
  *
  * The OS-local `LLMTab` in `./tabs/llm-tab.tsx` is intentionally left in place
  * so this swap can be reverted by changing the two call sites back.

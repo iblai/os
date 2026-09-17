@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   cn,
+  hasCoarsePointer,
   hasNonExpiredAuthToken,
   isJwtExpired,
   redirectToAuthSpa,
@@ -28,7 +29,6 @@ import {
   handleTenantSwitch,
   convertFromBytes,
   formatRelativeDate,
-  getLLMProviderDetails,
   getLLMModelDisplayName,
   getProviderName,
   sendMessageToParentWebsite,
@@ -1129,222 +1129,6 @@ describe('getLLMModelDisplayName function', () => {
     expect(getLLMModelDisplayName(undefined)).toBe('');
     expect(getLLMModelDisplayName(null)).toBe('');
     expect(getLLMModelDisplayName('')).toBe('');
-  });
-});
-
-describe('getLLMProviderDetails function', () => {
-  it('should return Groq details', () => {
-    const result = getLLMProviderDetails('groq');
-    expect(result).toEqual({ logo: '/llm-groq-provider.png', name: 'Groq' });
-  });
-
-  it('should return NVIDIA details for IBLChatNvidia', () => {
-    const result = getLLMProviderDetails('IBLChatNvidia');
-    expect(result).toEqual({
-      logo: '/llm-nvidia-provider.webp',
-      name: 'NVIDIA',
-    });
-  });
-
-  it('should return NVIDIA details for nvidia', () => {
-    const result = getLLMProviderDetails('nvidia');
-    expect(result).toEqual({
-      logo: '/llm-nvidia-provider.webp',
-      name: 'NVIDIA',
-    });
-  });
-
-  it('should return Microsoft details', () => {
-    const result = getLLMProviderDetails('azure_openai');
-    expect(result).toEqual({
-      logo: '/llm-microsoft-provider.png',
-      name: 'Microsoft',
-    });
-  });
-
-  it('should return OpenAI details with model name', () => {
-    const result = getLLMProviderDetails('openai', 'gpt-4');
-    expect(result).toEqual({
-      logo: '/llm-openai-provider.jpg',
-      name: 'OpenAI',
-    });
-  });
-
-  it('should return OpenAI details without model name', () => {
-    const result = getLLMProviderDetails('openai');
-    expect(result).toEqual({
-      logo: '/llm-openai-provider-2.svg',
-      name: 'OpenAI',
-    });
-  });
-
-  it('should return Mistral details', () => {
-    const result = getLLMProviderDetails('mistral');
-    expect(result).toEqual({
-      logo: '/llm-mistral-provider.jpeg',
-      name: 'Mistral',
-    });
-  });
-
-  it('should return Google details with model name', () => {
-    const result = getLLMProviderDetails('google', 'gemini');
-    expect(result).toEqual({
-      logo: '/llm-gemini-provider.png',
-      name: 'Google',
-    });
-  });
-
-  it('should return Google details without model name', () => {
-    const result = getLLMProviderDetails('google');
-    expect(result).toEqual({
-      logo: '/llm-google-provider.svg',
-      name: 'Google',
-    });
-  });
-
-  it('should return Meta details', () => {
-    const result = getLLMProviderDetails('llama');
-    expect(result).toEqual({ logo: '/llm-llama-provider.jpeg', name: 'Meta' });
-  });
-
-  it('should return Anthropic details for IBLChatAnthropic', () => {
-    const result = getLLMProviderDetails('IBLChatAnthropic');
-    expect(result).toEqual({
-      logo: '/llm-claude-provider.png',
-      name: 'Anthropic',
-    });
-  });
-
-  it('should return Anthropic details for anthropic', () => {
-    const result = getLLMProviderDetails('anthropic');
-    expect(result).toEqual({
-      logo: '/llm-claude-provider.png',
-      name: 'Anthropic',
-    });
-  });
-
-  it('should return Perplexity details', () => {
-    const result = getLLMProviderDetails('perplexity');
-    expect(result).toEqual({
-      logo: '/llm-perplexity-provider.webp',
-      name: 'Perplexity',
-    });
-  });
-
-  it('should return DeepSeek details', () => {
-    const result = getLLMProviderDetails('deepseek');
-    expect(result).toEqual({
-      logo: '/llm-deepseek-provider.png',
-      name: 'DeepSeek',
-    });
-  });
-
-  it('should return xAI details', () => {
-    const result = getLLMProviderDetails('xai');
-    expect(result).toEqual({ logo: '/llm-xai-provider.jpg', name: 'xAI' });
-  });
-
-  it('should return NVIDIA details for nvidia provider', () => {
-    const result = getLLMProviderDetails('nvidia');
-    expect(result).toEqual({
-      logo: '/llm-nvidia-provider.webp',
-      name: 'NVIDIA',
-    });
-  });
-
-  it('should return Amazon details for bedrock', () => {
-    const result = getLLMProviderDetails('bedrock');
-    expect(result).toEqual({
-      logo: '/llm-amazon-provider.png',
-      name: 'Amazon',
-    });
-  });
-
-  it('should return Amazon details for amazon-bedrock', () => {
-    const result = getLLMProviderDetails('amazon-bedrock');
-    expect(result).toEqual({
-      logo: '/llm-amazon-provider.png',
-      name: 'Amazon',
-    });
-  });
-
-  it('should return Amazon details for amazon_bedrock', () => {
-    const result = getLLMProviderDetails('amazon_bedrock');
-    expect(result).toEqual({
-      logo: '/llm-amazon-provider.png',
-      name: 'Amazon',
-    });
-  });
-
-  it('should return Amazon details for IBLChatBedrock', () => {
-    const result = getLLMProviderDetails('IBLChatBedrock');
-    expect(result).toEqual({
-      logo: '/llm-amazon-provider.png',
-      name: 'Amazon',
-    });
-  });
-
-  it('should return generic details for unknown provider', () => {
-    const result = getLLMProviderDetails('unknown-provider');
-    expect(result).toEqual({
-      logo: '/llm-generic-provider.png',
-      name: 'unknown-provider',
-    });
-  });
-
-  it('resolves local provider labels to real logos (no generic fallback)', () => {
-    // Local model providers (from LOCAL_MODELS) resolve through the canonical
-    // name, so they get proper icons instead of /llm-generic-provider.png.
-    expect(getLLMProviderDetails('Meta')).toEqual({
-      logo: '/llm-llama-provider.jpeg',
-      name: 'Meta',
-    });
-    expect(getLLMProviderDetails('Microsoft')).toEqual({
-      logo: '/llm-microsoft-provider.png',
-      name: 'Microsoft',
-    });
-    expect(getLLMProviderDetails('Alibaba')).toEqual({
-      logo: '/llm-alibaba-provider.png',
-      name: 'Alibaba',
-    });
-    expect(getLLMProviderDetails('IBM')).toEqual({
-      logo: '/llm-ibm-provider.png',
-      name: 'IBM',
-    });
-  });
-
-  it.each([
-    'iblai',
-    'IBLAI',
-    'ibl.ai',
-    'ibl_ai',
-    'ibl-ai',
-    'IBL AI',
-    'ibl',
-    'IBLChatIBL',
-    'IBLChatIBLAI',
-  ])('should return ibl.ai details for %s', (provider) => {
-    expect(getLLMProviderDetails(provider)).toEqual({
-      logo: '/llm-iblai-provider.png',
-      name: 'ibl.ai',
-    });
-  });
-
-  it('keeps the ibl.ai logo when a concrete model name is supplied', () => {
-    expect(getLLMProviderDetails('iblai', 'ibl-chat-1')).toEqual({
-      logo: '/llm-iblai-provider.png',
-      name: 'ibl.ai',
-    });
-  });
-
-  it('does not swallow the other ibl-hosted providers into ibl.ai', () => {
-    // Regression guard: the IBLChat<Vendor> providers keep their own logos.
-    expect(getLLMProviderDetails('IBLChatNvidia').name).toBe('NVIDIA');
-    expect(getLLMProviderDetails('IBLChatAnthropic').name).toBe('Anthropic');
-    expect(getLLMProviderDetails('IBLChatBedrock').name).toBe('Amazon');
-    // "ibm"/"granite" sit next to the new "ibl" alias — they must not collide.
-    expect(getLLMProviderDetails('IBM').name).toBe('IBM');
-    expect(getLLMProviderDetails('granite').name).toBe('IBM');
   });
 });
 
@@ -3406,6 +3190,29 @@ describe('markdownToHtml function - preprocess paths', () => {
     // href is invalid → preprocessor never produces an <a> tag for it
     expect(html).not.toContain('href="not-a-url"');
     expect(html).not.toContain('<a ');
+  });
+});
+
+describe('hasCoarsePointer', () => {
+  const originalMatchMedia = window.matchMedia;
+  afterEach(() => {
+    window.matchMedia = originalMatchMedia;
+  });
+
+  it('is true when the primary pointer is coarse (touch)', () => {
+    window.matchMedia = vi.fn().mockReturnValue({ matches: true }) as never;
+    expect(hasCoarsePointer()).toBe(true);
+    expect(window.matchMedia).toHaveBeenCalledWith('(pointer: coarse)');
+  });
+
+  it('is false for a fine pointer (mouse / trackpad)', () => {
+    window.matchMedia = vi.fn().mockReturnValue({ matches: false }) as never;
+    expect(hasCoarsePointer()).toBe(false);
+  });
+
+  it('is false when matchMedia is unavailable', () => {
+    window.matchMedia = undefined as never;
+    expect(hasCoarsePointer()).toBe(false);
   });
 });
 

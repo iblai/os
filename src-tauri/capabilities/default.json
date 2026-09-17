@@ -70,7 +70,14 @@
     "opener:default",
     {
       "identifier": "opener:allow-open-path",
-      "allow": [{ "path": "$HOME/**" }, { "path": "/**" }]
+      "allow": [
+        {
+          "path": "$HOME/**"
+        },
+        {
+          "path": "/**"
+        }
+      ]
     },
     "shell:allow-open",
     "dialog:allow-open",
@@ -85,6 +92,16 @@
     "allow-cache-api-response",
     "allow-get-offline-context",
     "allow-save-offline-context",
-    "allow-save-last-mentor-route"
+    "allow-save-last-mentor-route",
+    "allow-check-app-update",
+    "allow-install-app-update",
+    "allow-remote-code-status",
+    "allow-remote-code-enable",
+    "allow-remote-code-disable",
+    "allow-remote-code-set-host",
+    "allow-remote-code-get-host",
+    "allow-remote-code-clear-host",
+    "allow-remote-code-pairing-qr",
+    "allow-remote-code-list-workspaces"
   ]
 }

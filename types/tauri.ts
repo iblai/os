@@ -97,6 +97,22 @@ export const isTauriApp = (): boolean => {
 };
 
 /**
+ * True on Tauri iOS/Android — the ONE probe every mobile gate shares (Code
+ * pairing, Cowork visibility, skills sync, …). Resolves false outside Tauri
+ * or when the OS plugin is unavailable (a desktop-era build).
+ */
+export const isTauriMobile = async (): Promise<boolean> => {
+  if (!isTauriApp()) return false;
+  try {
+    const { platform } = await import('@tauri-apps/plugin-os');
+    const os = platform();
+    return os === 'ios' || os === 'android';
+  } catch {
+    return false;
+  }
+};
+
+/**
  * Tauri event names
  */
 export const TAURI_EVENTS = {

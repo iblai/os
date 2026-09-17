@@ -1,13 +1,19 @@
 // Hide console window on Windows in release builds
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod app_update;
 mod cua_driver_installer;
 mod cua_driver_mcp;
 mod foundry_installer;
 mod foundry_manager;
+// Mobile-only catalog (`local_llm::resolve`) that `model_manager::required_space_gb`
+// consults; the engine inside is cfg-gated so this compiles on desktop like lib.rs.
+#[allow(dead_code)]
+mod local_llm;
 mod mcp_bridge_installer;
 mod mcp_bridge_manager;
 mod model_manager;
+mod nav_guard;
 mod oauth;
 mod offline_server;
 mod ollama_installer;
@@ -17,6 +23,7 @@ mod opencode_acp;
 mod opencode_installer;
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 mod opencode_proxy;
+mod remote_code;
 mod web_cache;
 
 use foundry_installer::{
@@ -2231,11 +2238,17 @@ async fn open_external_url(app: AppHandle, url: String) -> Result<(), String> {
 }
 
 fn main() {
-    // Dev-checkout overrides first: src-tauri/.env.local, then .env.production.
-    // The path is compile-time CARGO_MANIFEST_DIR, so installed builds have
-    // neither and skip straight on. Loaded before anything reads env; dotenvy
-    // never overrides already-set vars, so shell env > .env.local >
-    // .env.production > .env. Keys documented in src-tauri/.env.example.
+    // Dev-checkout overrides first: src-tauri/.env.local, then .env.production,
+    // read via the compile-time CARGO_MANIFEST_DIR path. Loaded before anything
+    // reads env; dotenvy never overrides already-set vars, so shell env >
+    // .env.local > .env.production > .env. Keys documented in .env.example.
+    // Debug builds only: a RELEASE binary built on a dev machine kept reading
+    // the checkout's .env.local through that absolute path, so a DMG built
+    // here opened the developer's localhost (and hung on "Loading…" with no
+    // dev server up) while the same DMG from CI went to production. Release
+    // builds behave the same everywhere: shell env, then the bundled/cwd
+    // `.env` below, then the compiled-in default.
+    #[cfg(debug_assertions)]
     for f in [".env.local", ".env.production"] {
         let _ = dotenvy::from_path(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(f));
     }
@@ -2282,6 +2295,11 @@ fn main() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_dialog::init())
+        // In-place self-update: the desktop binary must register the SAME
+        // updater surface lib.rs does, or `check_app_update` rejects with
+        // "command not found" and the feature is silently dead on desktop
+        // while the release workflows sign and publish the feed.
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             // Keep the managed opencode on the pinned version — a pin bump would
             // otherwise never reach a machine that already has a runnable copy.
@@ -2718,22 +2736,10 @@ fn main() {
                         return true;
                     }
 
-                    // Allow navigation within the app's domains and localhost
-                    let allowed = url_str.starts_with("http://localhost")
-                        || url_str.starts_with("http://127.0.0.1")
-                        || url_str.starts_with("https://mentorai.iblai.app")
-                        || url_str.starts_with("https://os.ibl.ai")
-                        || url_str.starts_with("https://auth.iblai.org")
-                        || url_str.starts_with("https://login.iblai.app")
-                        || url_str.starts_with("https://base.manager.iblai.app")
-                        || url_str.starts_with("https://base.manager.iblai.org")
-                        || url_str.starts_with("https://api.iblai.app")
-                        || url_str.starts_with("https://api.iblai.org")
-                        || url_str.starts_with("https://learn.iblai.app")
-                        || url_str.starts_with("https://learn.iblai.org")
-                        || url_str.starts_with("tauri://")
-                        || url_str.starts_with("asset://")
-                        || url_str.starts_with("mentor://");
+                    // Allow navigation within the app's domains and localhost —
+                    // shared predicate (see nav_guard.rs): configured app URL
+                    // first, static list second, empty origin allows nothing.
+                    let allowed = nav_guard::navigation_allowed(url_str, &get_app_url());
 
                     if !allowed {
                         println!("[ibl.ai] Blocked external navigation to: {}", url_str);
@@ -2947,6 +2953,8 @@ fn main() {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            app_update::check_app_update,
+            app_update::install_app_update,
             install_ollama,
             stop_ollama,
             check_ollama_status,
@@ -3010,9 +3018,21 @@ fn main() {
             opencode_acp::check_code_local_model,
             opencode_acp::set_opencode_learner,
             opencode_acp::ensure_opencode_platform_key,
+            remote_code::remote_code_status,
+            remote_code::remote_code_enable,
+            remote_code::remote_code_disable,
+            remote_code::remote_code_pairing_qr,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri app");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri app")
+        .run(|_app, event| {
+            // The phone-access opencode server must die with the app: opencode
+            // instances coordinate through a machine-global port, and an
+            // orphan with a dead password poisons auth for every later one.
+            if let tauri::RunEvent::Exit = event {
+                remote_code::shutdown_sync();
+            }
+        });
 }
 
 #[cfg(test)]

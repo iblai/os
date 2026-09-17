@@ -18,7 +18,6 @@ const mockUseAppSelector = vi.fn();
 const mockUseShowFreeTrialDialog = vi.fn();
 const mockUseGetMentorSettingsQuery = vi.fn();
 const mockEnableRBAC = vi.fn();
-const mockGetLLMProviderDetails = vi.fn();
 const mockExecuteWithTrialCheck = vi.fn((fn: () => unknown) => fn?.());
 const mockAgentSettingsProvider = vi.fn();
 const mockAgentEvaluationTab = vi.fn();
@@ -48,11 +47,6 @@ vi.mock('@/lib/config', () => ({
   config: {
     enableRBAC: () => mockEnableRBAC(),
   },
-}));
-
-vi.mock('@/lib/utils', () => ({
-  getLLMProviderDetails: (...args: unknown[]) =>
-    mockGetLLMProviderDetails(...args),
 }));
 
 vi.mock('@iblai/iblai-js/data-layer', () => ({
@@ -161,15 +155,12 @@ describe('EvaluationTab', () => {
       expect(result).toBe('return-value');
     });
 
-    it('passes getLLMProviderDetails and IblPagination through to AgentEvaluationTab', () => {
+    it('passes IblPagination through to AgentEvaluationTab and no provider resolver', () => {
       render(<EvaluationTab />);
       const props = mockAgentEvaluationTab.mock.calls[0][0];
-      expect(typeof props.getLLMProviderDetails).toBe('function');
       expect(typeof props.PaginationComponent).toBe('function');
-
-      // The forwarded getLLMProviderDetails should delegate to the local helper.
-      props.getLLMProviderDetails('openai', 'gpt-4');
-      expect(mockGetLLMProviderDetails).toHaveBeenCalledWith('openai', 'gpt-4');
+      // Provider naming is backend-owned now; the SDK reads it from the API.
+      expect(props).not.toHaveProperty('getLLMProviderDetails');
     });
 
     it('reads RBAC permissions via selectRbacPermissions', () => {
