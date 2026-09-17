@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.150.1](https://github.com/iblai/os/compare/v0.150.0...v0.150.1) (2026-09-17)
+
+### Documentation
+
+* **readme:** add Chrome Web Store extension to downloadables ([7801524](https://github.com/iblai/os/commit/7801524c7a7a098ed3d5f9461c64e1f60bb1f539))
+
 ## [0.150.0](https://github.com/iblai/os/compare/v0.149.2...v0.150.0) (2026-09-17)
 
 ### Features
