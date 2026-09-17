@@ -22,9 +22,9 @@ Build, deploy, and manage intelligent conversational agents — from prototype t
 &nbsp;
 <a href="https://chromewebstore.google.com/detail/gppjhejgkdljdhnmlfghfbalfhgaepfd"><img src="https://img.shields.io/badge/Add_to_Chrome-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Add to Chrome" height="42"></a>
 &nbsp;
-<a href="https://github.com/iblai/os/releases/download/app-v0.95.21/ibl.ai_0.95.21_universal.dmg"><img src="https://img.shields.io/badge/Download_for_macOS-000000?style=for-the-badge&logo=apple&logoColor=white" alt="Download for macOS" height="42"></a>
+<a href="https://github.com/iblai/os/releases/download/app-v0.95.22/ibl.ai_0.95.22_universal.dmg"><img src="https://img.shields.io/badge/Download_for_macOS-000000?style=for-the-badge&logo=apple&logoColor=white" alt="Download for macOS" height="42"></a>
 &nbsp;
-<a href="https://github.com/iblai/os/releases/download/app-v0.95.21/ibl.ai_0.95.21_x64-setup.exe"><img src="https://img.shields.io/badge/Download_for_Windows-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Download for Windows" height="42"></a>
+<a href="https://github.com/iblai/os/releases/download/app-v0.95.22/ibl.ai_0.95.22_x64-setup.exe"><img src="https://img.shields.io/badge/Download_for_Windows-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Download for Windows" height="42"></a>
 
 <a href="https://apps.apple.com/us/app/ibl-ai/id6504929071"><img src="https://img.shields.io/badge/Download_for_iOS-000000?style=for-the-badge&logo=apple&logoColor=white" alt="Download for iOS" height="42"></a>
 &nbsp;
