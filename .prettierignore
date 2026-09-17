@@ -39,3 +39,6 @@ src-tauri/gen/
 
 # Sentry
 .sentryclirc
+
+# Vendored third-party bundle; kept byte-for-byte as published
+extensions/chrome/public/vendor/
