@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.149.2](https://github.com/iblai/os/compare/v0.149.1...v0.149.2) (2026-09-17)
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.12.2 ([0f018c7](https://github.com/iblai/os/commit/0f018c70337da0efc98a3ab2f81ddc3c7839e925))
+
 ## [0.149.1](https://github.com/iblai/os/compare/v0.149.0...v0.149.1) (2026-09-16)
 
 ### Bug Fixes
