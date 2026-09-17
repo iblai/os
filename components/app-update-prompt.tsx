@@ -133,13 +133,7 @@ export function AppUpdatePrompt() {
 
   return (
     <AlertDialog open>
-      {/* Phone-safe: never edge-to-edge, always rounded, and the two actions
-          stack full-width below `sm` (the footer primitive already flips to
-          a column there). */}
-      <AlertDialogContent
-        data-testid="app-update-prompt"
-        className="w-[calc(100%-2rem)] max-w-md rounded-lg"
-      >
+      <AlertDialogContent data-testid="app-update-prompt" className="max-w-md">
         <AlertDialogHeader>
           <AlertDialogTitle>{t('title')}</AlertDialogTitle>
           <AlertDialogDescription>
@@ -161,7 +155,7 @@ export function AppUpdatePrompt() {
         {installError && (
           <p className="text-xs break-all text-red-600">{installError}</p>
         )}
-        <AlertDialogFooter className="gap-2 sm:gap-0">
+        <AlertDialogFooter>
           <Button
             variant="ghost"
             size="sm"

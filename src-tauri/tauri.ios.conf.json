@@ -3,7 +3,7 @@
   "version": "1.1.20",
   "bundle": {
     "iOS": {
-      "bundleVersion": "2"
+      "bundleVersion": "6"
     }
   }
 }

@@ -31,7 +31,11 @@ targets:
     sources:
       - path: Sources
       - path: Assets.xcassets
+      # Visible in Xcode only: libapp.a is linked through LIBRARY_SEARCH_PATHS
+      # (see dependencies), and a build phase here copied it INTO the app
+      # bundle, which App Store validation rejects.
       - path: Externals
+        buildPhase: none
       - path: ibl-ai-os_iOS
       - path: assets
         buildPhase: resources
@@ -53,12 +57,21 @@ targets:
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
         CFBundleShortVersionString: 1.1.20
-        CFBundleVersion: "2"
+        CFBundleVersion: "6"
         UIBackgroundModes: [audio]
         NSCameraUsageDescription: The camera scans your computer's Code pairing QR code and takes photos to send in chat.
         NSMicrophoneUsageDescription: The microphone is used for voice chat, voice calls and recording voice messages.
         NSPhotoLibraryUsageDescription: The photo library lets you pick images to send in chat or use as a mentor image.
         NSLocalNetworkUsageDescription: Code mode connects to the desktop app on your computer over your local network.
+        # Deep links (SSO callback / mentor links) and the settings below were
+        # only in the generated Info.plist; the spec must carry everything the
+        # plist has, or a regeneration silently drops them.
+        CFBundleURLTypes:
+          - CFBundleURLName: iblai-mentor
+            CFBundleURLSchemes: [iblai-mentor, ai.ibl.mentorai]
+        ITSAppUsesNonExemptEncryption: false
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
     entitlements:
       path: ibl-ai-os_iOS/ibl-ai-os_iOS.entitlements
     scheme:
@@ -87,7 +100,10 @@ targets:
       - sdk: UIKit.framework
       - sdk: WebKit.framework
     preBuildScripts:
-      - script: cargo tauri ios xcode-script -v --platform ${PLATFORM_DISPLAY_NAME:?} --sdk-root ${SDKROOT:?} --framework-search-paths "${FRAMEWORK_SEARCH_PATHS:?}" --header-search-paths "${HEADER_SEARCH_PATHS:?}" --gcc-preprocessor-definitions "${GCC_PREPROCESSOR_DEFINITIONS:-}" --configuration ${CONFIGURATION:?} ${FORCE_COLOR} ${ARCHS:?}
+      # build-rust.sh, not `cargo tauri ios xcode-script`: the latter needs
+      # a parent tauri CLI to talk to and fails with "Connection refused"
+      # from a plain Xcode archive. Keep in step with project.pbxproj.
+      - script: '"$SRCROOT/build-rust.sh"'
         name: Build Rust Code
         basedOnDependencyAnalysis: false
         outputFiles:
