@@ -57,6 +57,24 @@ describe('CSP middleware', () => {
     }
   });
 
+  it('detects localhost from the Host header when nextUrl.hostname is blank', () => {
+    // The standalone server (`node .next/standalone/server.js`, used by
+    // `pnpm run start`) does not populate request.nextUrl.hostname the way
+    // `next start` does — so localhost must be derived from the Host header,
+    // else the desktop app white-screens on upgraded-to-https subresources.
+    const request = new NextRequest('http://localhost:3000/platform/acme/m1', {
+      headers: { host: 'localhost:3000' },
+    });
+    // Simulate the standalone quirk: nextUrl.hostname reads empty.
+    Object.defineProperty(request.nextUrl, 'hostname', {
+      value: '',
+      configurable: true,
+    });
+    const csp = middleware(request).headers.get('Content-Security-Policy');
+    expect(csp).toBeTruthy();
+    expect(csp).not.toContain('upgrade-insecure-requests');
+  });
+
   it('allows the asset CDN origin in style/font/connect when NEXT_PUBLIC_ASSET_CDN is set', () => {
     // Static served cross-origin from the CDN (assets.ibl.ai). Accepts a bare
     // host — assetCdnOrigin() normalizes it to https:// like next.config.ts.
@@ -176,6 +194,18 @@ describe('CSP middleware', () => {
     // <bucket>.s3.amazonaws.com must match the wildcard so uploads/downloads
     // to iblai-app-dm-media etc. are not blocked.
     expect(connectSrc).toContain('https://*.s3.amazonaws.com');
+  });
+
+  it('allows the Tauri IPC origins in connect-src (desktop invoke)', () => {
+    const csp = cspOf(middleware(req())) ?? '';
+    const connectSrc = csp
+      .split(';')
+      .map((d) => d.trim())
+      .find((d) => d.startsWith('connect-src '));
+    // Inside the Tauri webview, window.__TAURI__.invoke connects to these; the
+    // enforced CSP otherwise blocks IPC and forces the slow postMessage bridge.
+    expect(connectSrc).toContain('ipc://localhost'); // macOS/Linux
+    expect(connectSrc).toContain('http://ipc.localhost'); // Windows
   });
 
   it('allows the GitHub REST API in connect-src (dataset branch lookup)', () => {

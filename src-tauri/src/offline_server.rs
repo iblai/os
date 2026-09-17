@@ -78,7 +78,8 @@ fn get_app_origin() -> String {
         return url;
     }
 
-    // Default app origin (override with TAURI_APP_URL) — same for debug and release
+    // Must match get_app_url() so offline cache lookups hit. Override with
+    // TAURI_APP_URL (e.g. http://localhost:3000 for local frontend dev).
     #[cfg(debug_assertions)]
     return "https://os.ibl.ai".to_string();
 

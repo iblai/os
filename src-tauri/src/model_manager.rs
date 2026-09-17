@@ -227,24 +227,26 @@ pub async fn wait_for_ollama_ready(timeout_secs: u64) -> bool {
 pub fn start_ollama_server() -> Result<(), String> {
     #[cfg(target_os = "macos")]
     {
-        // Prefer the GUI app when present; otherwise start the Homebrew CLI
-        // server directly (`brew install ollama` provides no .app bundle).
-        if Path::new("/Applications/Ollama.app").exists() {
-            create_command("open")
-                .arg("-a")
-                .arg("Ollama")
-                .spawn()
-                .map_err(|e| format!("Failed to start Ollama: {}", e))?;
-        } else {
-            let bin = ["/opt/homebrew/bin/ollama", "/usr/local/bin/ollama"]
-                .into_iter()
-                .find(|p| Path::new(p).exists())
-                .unwrap_or("ollama");
-            create_command(bin)
-                .arg("serve")
-                .spawn()
-                .map_err(|e| format!("Failed to start Ollama: {}", e))?;
-        }
+        // Start the server HEADLESS — never `open -a Ollama`, which launches the
+        // Ollama GUI/menubar app (and its chat window on newer versions). We use
+        // Ollama purely as a background model server, so run `ollama serve` from
+        // the CLI. Search Homebrew paths first, then the CLI bundled inside
+        // Ollama.app (the DMG install ships it under Contents/Resources).
+        let bin = [
+            "/opt/homebrew/bin/ollama",
+            "/usr/local/bin/ollama",
+            "/Applications/Ollama.app/Contents/Resources/ollama",
+            "/Applications/Ollama.app/Contents/MacOS/ollama",
+        ]
+        .into_iter()
+        .find(|p| Path::new(p).exists())
+        .unwrap_or("ollama");
+        create_command(bin)
+            .arg("serve")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+            .map_err(|e| format!("Failed to start Ollama: {}", e))?;
     }
 
     #[cfg(target_os = "windows")]

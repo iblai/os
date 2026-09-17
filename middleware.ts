@@ -71,6 +71,15 @@ const STRIPE = ['https://js.stripe.com', 'https://api.stripe.com'];
 // the browser (github-file-upload-modal.tsx), so it is a fetch connection, not a
 // server-side call. connect-src only; nothing here is framed or scripted.
 const GITHUB = ['https://api.github.com'];
+// Tauri desktop IPC. When the app runs inside the Tauri webview (loading this
+// site as remote content), `window.__TAURI__.invoke` talks to the Rust backend
+// over a custom-protocol origin that the browser treats as a `connect-src`
+// fetch: `ipc://localhost` on macOS/Linux (WKWebView/WebKitGTK), and
+// `http://ipc.localhost` on Windows (WebView2). Without these, the enforced CSP
+// blocks IPC ("Refused to connect to ipc://localhost/…"), Tauri falls back to
+// the slower postMessage bridge, and commands can fail. Inert in a real browser
+// (nothing ever connects to these), so they're safe to send everywhere.
+const TAURI_IPC = ['ipc://localhost', 'http://ipc.localhost'];
 // S3 presigned URLs for media (e.g. iblai-app-dm-media) — chat file uploads PUT
 // straight to the bucket and downloads GET from it, which the browser treats as
 // fetch/XHR connections, so the bucket host must be in connect-src. Virtual-hosted
@@ -165,6 +174,7 @@ function buildCsp(nonce: string, upgradeInsecure: boolean): string {
       ...STRIPE,
       ...GITHUB,
       ...AWS_S3,
+      ...TAURI_IPC,
       ...assetCdn,
       ...partners,
       ...partnerWs,
@@ -224,8 +234,20 @@ export function middleware(request: NextRequest) {
   // the Tauri desktop app pointed at it via TAURI_APP_URL=http://localhost:3000)
   // serve plain http, so upgrading subresources to https:// makes them all fail
   // with a TLS error → white screen. Production hosts still get the directive.
-  const host = request.nextUrl.hostname;
-  const isLocalhost = host === 'localhost' || host === '127.0.0.1';
+  //
+  // Read the Host HEADER first, not just `request.nextUrl.hostname`:
+  // `nextUrl.hostname` is populated under `next start`, but comes back
+  // empty/unreliable under the STANDALONE server (`node .next/standalone/server.js`,
+  // which `pnpm run start` uses) — so the skip silently failed there and the
+  // desktop app white-screened on TLS errors. The Host header (`localhost:3000`)
+  // is always present and is what the browser resolves subresources against.
+  const localhostNames = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
+  const hostHeader = (request.headers.get('host') || '')
+    .split(':')[0]
+    .toLowerCase();
+  const nextHost = (request.nextUrl.hostname || '').toLowerCase();
+  const isLocalhost =
+    localhostNames.has(hostHeader) || localhostNames.has(nextHost);
   const csp = buildCsp(nonce, isEnforce() && !isLocalhost);
 
   // Next.js reads the nonce from the CSP on the REQUEST headers to stamp its own

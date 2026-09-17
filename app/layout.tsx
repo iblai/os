@@ -15,7 +15,6 @@ import { Spinner } from '@/components/spinner';
 import ConsoleSetup from '@/lib/logger';
 import { IblDataHandler } from '@/components/ibl-data-handler';
 import { ServiceWorkerProvider } from '@/components/service-worker-provider';
-import { OfflineNavigationGuard } from '@/components/offline-navigation-guard';
 import { ChunkErrorRecovery } from '@/components/chunk-error-recovery';
 import { buildMetadata, getSiteUrl } from '@/lib/seo';
 import { SiteJsonLd } from '@/components/seo/json-ld';
@@ -125,7 +124,6 @@ export default async function RootLayout({
                 }
               >
                 <IblDataHandler />
-                <OfflineNavigationGuard />
                 <Providers>{children}</Providers>
               </Suspense>
             </ServiceWorkerProvider>

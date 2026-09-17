@@ -70,6 +70,38 @@ use {
 static WEB_CACHE: std::sync::OnceLock<Arc<RwLock<Option<web_cache::WebCache>>>> =
     std::sync::OnceLock::new();
 
+// Live connectivity state read by the desktop `on_navigation` guard. Seeded by
+// the boot network check and kept current by `set_cache_online_status`. Twin of
+// main.rs::APP_ONLINE — keep the two in sync.
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
+static APP_ONLINE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
+
+/// If `url` targets exactly `origin`, return the cache-server URL for the same
+/// path, else `None`. Boundary guard prevents look-alike domains from matching.
+/// Twin of main.rs::offline_rewrite_for_origin.
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
+fn offline_rewrite_for_origin(url: &str, origin: &str) -> Option<String> {
+    if let Some(rest) = url.strip_prefix(origin) {
+        if rest.is_empty() {
+            return Some(format!("{}/", get_server_url()));
+        }
+        if rest.starts_with('/') {
+            return Some(format!("{}{}", get_server_url(), rest));
+        }
+    }
+    None
+}
+
+/// Redirect a full-page navigation aimed at a real remote app origin to the same
+/// path on the cache server. The caller also checks the configured app origin
+/// via [`offline_rewrite_for_origin`]. Twin of main.rs::offline_rewrite_target.
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
+fn offline_rewrite_target(url: &str) -> Option<String> {
+    ["https://os.ibl.ai", "https://mentorai.iblai.app"]
+        .into_iter()
+        .find_map(|origin| offline_rewrite_for_origin(url, origin))
+}
+
 // Global storage for last mentor route (persists across origins)
 static LAST_MENTOR_ROUTE: std::sync::OnceLock<Arc<RwLock<Option<String>>>> =
     std::sync::OnceLock::new();
@@ -1128,6 +1160,8 @@ async fn cancel_model_download(app: AppHandle) -> Result<(), String> {
 #[cfg(not(any(target_os = "ios", target_os = "android")))]
 #[command]
 async fn set_cache_online_status(is_online: bool) -> Result<(), String> {
+    // Keep the navigation guard's view of connectivity current (twin of main.rs).
+    APP_ONLINE.store(is_online, std::sync::atomic::Ordering::Relaxed);
     let cache_lock = get_web_cache().read().await;
     if let Some(cache) = cache_lock.as_ref() {
         cache.set_online(is_online).await;
@@ -1740,6 +1774,9 @@ const URL_MONITOR_SCRIPT_ONLINE: &str = r#"
     window.__TAURI_OFFLINE_MODE__ = false;
     localStorage.setItem('tauri_offline_mode', 'false');
 
+    // The local cache server — requests that fail on the network fall back here.
+    var OFFLINE_SERVER = '__OFFLINE_SERVER_URL__';
+
     // Intercept fetch to cache API responses for offline use (GET and POST)
     var originalFetch = window.fetch;
     window.fetch = function(input, init) {
@@ -1747,46 +1784,56 @@ const URL_MONITOR_SCRIPT_ONLINE: &str = r#"
         var method = (init && init.method) ? init.method.toUpperCase() : 'GET';
         var requestBody = (init && init.body) ? init.body : null;
 
-        // Only cache when on the mentor app domain - prevents errors on auth app
-        var isMentorDomain = window.location.hostname === 'mentorai.iblai.app' ||
-                            window.location.hostname === 'os.ibl.ai' ||
-                            window.location.hostname === 'localhost' ||
-                            window.location.hostname === '127.0.0.1';
-
-        var isApiCall = url.includes('/api/') && (
-            url.includes('manager.iblai') ||
-            url.includes('learn.iblai') ||
-            url.includes('ai-mentor') ||
-            url.includes('custom-domains') ||
-            url.includes('mentor') ||
-            url.includes('tenant') ||
-            url.includes('ibl/users') ||
-            url.includes('rbac')
-        );
-
-        // Also cache JavaScript and CSS chunks for offline use
-        var isAsset = url.includes('/_next/static/') || url.includes('/static/');
-
-        // Cache API calls (GET and POST) and static assets (GET only)
-        // BUT only when on mentor domain to avoid cross-origin issues
-        var shouldCache = isMentorDomain && (
-            (isApiCall && (method === 'GET' || method === 'POST')) ||
-            (isAsset && method === 'GET')
-        );
+        // Cache-EVERYTHING: cache every GET response (HTML, JS, CSS, JSON, XHR,
+        // fonts, images, media) plus POST API responses (twin of main.rs).
+        var isApiCall = url.indexOf('/api/') !== -1;
+        var shouldCache = method === 'GET' || (isApiCall && method === 'POST');
 
         return originalFetch.apply(this, arguments).then(function(response) {
-            // Cache successful API responses (both GET and POST)
             if (shouldCache && response.ok) {
+                var contentType = response.headers.get('Content-Type') || 'application/json';
+                var ct = contentType.toLowerCase();
+
+                // Never buffer a live stream (SSE) — it would never resolve.
+                if (ct.indexOf('text/event-stream') !== -1) {
+                    return response;
+                }
+
                 // Clone the response so we can read the body
                 var clonedResponse = response.clone();
-                clonedResponse.text().then(function(body) {
+
+                // Binary bodies read as base64; text bodies as text.
+                var isBinaryContent =
+                    ct.indexOf('image/') === 0 ||
+                    ct.indexOf('font/') === 0 ||
+                    ct.indexOf('audio/') === 0 ||
+                    ct.indexOf('video/') === 0 ||
+                    ct.indexOf('application/octet-stream') === 0 ||
+                    ct.indexOf('application/wasm') === 0 ||
+                    ct.indexOf('application/font') !== -1 ||
+                    ct.indexOf('woff') !== -1 ||
+                    ct.indexOf('ttf') !== -1 ||
+                    ct.indexOf('otf') !== -1;
+                var bodyPromise = isBinaryContent ?
+                    clonedResponse.arrayBuffer().then(function(buffer) {
+                        var bytes = new Uint8Array(buffer);
+                        var binary = '';
+                        for (var i = 0; i < bytes.length; i++) {
+                            binary += String.fromCharCode(bytes[i]);
+                        }
+                        return btoa(binary);
+                    }) :
+                    clonedResponse.text();
+
+                bodyPromise.then(function(body) {
                     // Cache via Tauri command
                     if (window.__TAURI__ && window.__TAURI__.core && window.__TAURI__.core.invoke) {
                         var cacheParams = {
                             url: url,
                             body: body,
-                            contentType: response.headers.get('Content-Type') || 'application/json',
-                            method: method
+                            contentType: contentType,
+                            method: method,
+                            isBase64: isBinaryContent
                         };
 
                         // For POST requests, include the request body for cache key generation
@@ -1818,10 +1865,23 @@ const URL_MONITOR_SCRIPT_ONLINE: &str = r#"
                 });
             }
             return response;
+        }).catch(function(err) {
+            // Network-first, cache-fallback: when a request fails (offline), retry
+            // it against the local cache server so the app keeps working —
+            // including data fetches for a route the user just navigated to.
+            try {
+                if (url.indexOf(OFFLINE_SERVER) === 0) throw err;
+                var u = new URL(url, window.location.origin);
+                var fallbackUrl = OFFLINE_SERVER + u.pathname + u.search;
+                console.log('[MentorRouteMonitor] Network failed, serving from cache:', url, '->', fallbackUrl);
+                return originalFetch(fallbackUrl, init);
+            } catch (e) {
+                throw err;
+            }
         });
     };
 
-    console.log('[MentorRouteMonitor] Fetch interceptor installed for API caching (GET + POST)');
+    console.log('[MentorRouteMonitor] Fetch interceptor installed (cache-everything + offline fallback)');
 
     // Cache the current page HTML and assets for offline use
     // Wait for the page to fully load and render before caching
@@ -2174,6 +2234,13 @@ fn url_monitor_script_offline() -> String {
     URL_MONITOR_SCRIPT_OFFLINE.replace("__OFFLINE_SERVER_URL__", &offline_server::get_server_url())
 }
 
+/// [`URL_MONITOR_SCRIPT_ONLINE`] with the cache server's real URL patched in, so
+/// failed (offline) requests can fall back to it. Twin of main.rs.
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
+fn url_monitor_script_online() -> String {
+    URL_MONITOR_SCRIPT_ONLINE.replace("__OFFLINE_SERVER_URL__", &offline_server::get_server_url())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // Dev-checkout overrides first: src-tauri/.env.local, then .env.production.
@@ -2325,17 +2392,71 @@ pub fn run() {
                 std::thread::sleep(std::time::Duration::from_millis(500));
                 println!("[MentorAI] Offline server should be running at {}", get_server_url());
 
-                // Check network status to decide initial URL
-                let is_online = reqwest::blocking::Client::builder()
-                    .timeout(std::time::Duration::from_secs(3))
-                    .build()
-                    .ok()
-                    .and_then(|client| {
-                        client.head(&app_url)
-                            .send()
-                            .ok()
-                    })
-                    .is_some();
+                // Connectivity — offline-FIRST: "online" == the app origin is
+                // reachable (not general internet). TAURI_FORCE_OFFLINE /
+                // TAURI_FORCE_ONLINE override for deterministic testing.
+                let is_online = if std::env::var("TAURI_FORCE_OFFLINE").is_ok() {
+                    false
+                } else if std::env::var("TAURI_FORCE_ONLINE").is_ok() {
+                    true
+                } else {
+                    reqwest::blocking::Client::builder()
+                        .timeout(std::time::Duration::from_secs(2))
+                        .connect_timeout(std::time::Duration::from_secs(1))
+                        .build()
+                        .ok()
+                        .and_then(|client| client.head(&app_url).send().ok())
+                        .map(|r| r.status().is_success() || r.status().is_redirection())
+                        .unwrap_or(false)
+                };
+
+                // Seed the live connectivity flag the navigation guard reads.
+                APP_ONLINE.store(is_online, std::sync::atomic::Ordering::Relaxed);
+
+                // Background connectivity poller (twin of main.rs) — WKWebView
+                // online/offline events are unreliable, so poll app-origin
+                // reachability and keep APP_ONLINE current. Debounced.
+                {
+                    let poll_url = app_url.clone();
+                    std::thread::spawn(move || {
+                        let client = reqwest::blocking::Client::builder()
+                            .timeout(std::time::Duration::from_secs(2))
+                            .connect_timeout(std::time::Duration::from_secs(1))
+                            .build()
+                            .ok();
+                        let mut consecutive_fail: u32 = 0;
+                        loop {
+                            std::thread::sleep(std::time::Duration::from_secs(3));
+                            let reachable = if std::env::var("TAURI_FORCE_OFFLINE").is_ok() {
+                                false
+                            } else if std::env::var("TAURI_FORCE_ONLINE").is_ok() {
+                                true
+                            } else if let Some(c) = client.as_ref() {
+                                c.head(&poll_url)
+                                    .send()
+                                    .map(|r| {
+                                        r.status().is_success() || r.status().is_redirection()
+                                    })
+                                    .unwrap_or(false)
+                            } else {
+                                false
+                            };
+                            if reachable {
+                                consecutive_fail = 0;
+                                if !APP_ONLINE.swap(true, std::sync::atomic::Ordering::Relaxed) {
+                                    println!("[MentorAI] Connectivity: back ONLINE ({})", poll_url);
+                                }
+                            } else {
+                                consecutive_fail += 1;
+                                if consecutive_fail >= 2
+                                    && APP_ONLINE.swap(false, std::sync::atomic::Ordering::Relaxed)
+                                {
+                                    println!("[MentorAI] Connectivity: now OFFLINE ({})", poll_url);
+                                }
+                            }
+                        }
+                    });
+                }
 
                 println!("[MentorAI] Network check: is_online = {} (checking {})", is_online, app_url);
 
@@ -2376,12 +2497,15 @@ pub fn run() {
 
                 let app_handle = app.handle().clone();
 
-                // Create main window with appropriate URL monitoring script
+                // Create main window with appropriate URL monitoring script.
                 let init_script = if is_online {
-                    URL_MONITOR_SCRIPT_ONLINE.to_string()
+                    url_monitor_script_online()
                 } else {
                     url_monitor_script_offline()
                 };
+                // The configured app origin — pinned to the cache server when
+                // offline (twin of main.rs).
+                let app_origin_for_nav = app_url.clone();
 
                 let _window = tauri::WebviewWindowBuilder::new(
                     app,
@@ -2393,7 +2517,7 @@ pub fn run() {
                 .min_inner_size(800.0, 600.0)
                 .maximized(true)
                 .center()
-                .initialization_script(init_script)
+                .initialization_script(&init_script)
                 .on_navigation(move |url| {
                     let url_str = url.as_str();
                     if is_oauth_url(url_str) {
@@ -2406,6 +2530,32 @@ pub fn run() {
                             return true;
                         }
                         return false;
+                    }
+
+                    // Offline: pin navigations to cached content. Redirect a
+                    // full-page nav to a real remote app origin OR the configured
+                    // app origin onto the cache server; block other remote
+                    // origins (twin of main.rs).
+                    if !APP_ONLINE.load(std::sync::atomic::Ordering::Relaxed) {
+                        let offline_server_url = offline_server::get_server_url();
+                        let target = offline_rewrite_target(url_str)
+                            .or_else(|| offline_rewrite_for_origin(url_str, &app_origin_for_nav));
+                        if let Some(target) = target {
+                            println!("[ibl.ai] Offline: redirecting {} -> {}", url_str, target);
+                            if let Some(main_win) = app_handle.get_webview_window("main") {
+                                let _ = main_win
+                                    .eval(&format!("window.location.href = '{}';", target));
+                            }
+                            return false;
+                        }
+                        let is_local = url_str.starts_with(&offline_server_url)
+                            || url_str.starts_with("tauri://")
+                            || url_str.starts_with("asset://")
+                            || url_str.starts_with("mentor://");
+                        if !is_local {
+                            println!("[ibl.ai] Offline: blocked navigation to {}", url_str);
+                            return false;
+                        }
                     }
                     true
                 })
@@ -2958,4 +3108,74 @@ pub fn run() {
     builder
         .run(tauri::generate_context!())
         .expect("error while running tauri app");
+}
+
+#[cfg(all(test, not(any(target_os = "ios", target_os = "android"))))]
+mod tests {
+    use super::*;
+
+    /// Offline navigations to the real app origins are rewritten to the offline
+    /// server (twin of main.rs's regression test for the multi-click nav bug).
+    #[test]
+    fn offline_rewrite_target_maps_app_origins_to_offline_server() {
+        let base = get_server_url();
+        assert_eq!(
+            offline_rewrite_target("https://os.ibl.ai/platform/foo/bar"),
+            Some(format!("{}/platform/foo/bar", base))
+        );
+        assert_eq!(
+            offline_rewrite_target("https://mentorai.iblai.app/x?q=1#h"),
+            Some(format!("{}/x?q=1#h", base))
+        );
+        assert_eq!(
+            offline_rewrite_target("https://os.ibl.ai"),
+            Some(format!("{}/", base))
+        );
+    }
+
+    /// Local origins, custom schemes and look-alike domains are left alone.
+    #[test]
+    fn offline_rewrite_target_ignores_local_and_lookalike_origins() {
+        assert_eq!(
+            offline_rewrite_target("http://127.0.0.1:3457/platform/x/y"),
+            None
+        );
+        assert_eq!(offline_rewrite_target("tauri://localhost/index.html"), None);
+        assert_eq!(
+            offline_rewrite_target("https://accounts.google.com/o/oauth2"),
+            None
+        );
+        assert_eq!(
+            offline_rewrite_target("https://os.ibl.ai.evil.com/steal"),
+            None
+        );
+        assert_eq!(
+            offline_rewrite_target("https://mentorai.iblai.app.evil.com/x"),
+            None
+        );
+    }
+
+    /// The configured app origin (e.g. the localhost:3000 dev server) is pinned
+    /// to the cache server when offline, with the same boundary guard.
+    #[test]
+    fn offline_rewrite_for_origin_pins_the_configured_app_origin() {
+        let base = get_server_url();
+        let origin = "http://localhost:3000";
+        assert_eq!(
+            offline_rewrite_for_origin("http://localhost:3000/platform/a/b", origin),
+            Some(format!("{}/platform/a/b", base))
+        );
+        assert_eq!(
+            offline_rewrite_for_origin("http://localhost:3000", origin),
+            Some(format!("{}/", base))
+        );
+        assert_eq!(
+            offline_rewrite_for_origin("http://localhost:30001/x", origin),
+            None
+        );
+        assert_eq!(
+            offline_rewrite_for_origin("https://os.ibl.ai/x", origin),
+            None
+        );
+    }
 }

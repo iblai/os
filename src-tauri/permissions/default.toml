@@ -40,6 +40,11 @@ permissions = [
     "allow-check-opencode-status",
     "allow-check-code-local-model",
     "allow-set-opencode-learner",
+    "allow-precache-app",
+    "allow-cache-api-response",
+    "allow-get-offline-context",
+    "allow-save-offline-context",
+    "allow-save-last-mentor-route",
 ]
 
 [[permission]]
@@ -281,3 +286,36 @@ identifier = "allow-set-opencode-permission-mode"
 description = "Enables choosing whether Coding Mode asks before each operation or approves automatically"
 [permission.commands]
 allow = ["set_opencode_permission_mode"]
+
+# Offline caching — invoked from the injected MentorRouteMonitor script while the
+# webview loads the remote app, so they must be granted to the remote origin.
+
+[[permission]]
+identifier = "allow-precache-app"
+description = "Enables pre-caching the current page's HTML and assets for offline use"
+[permission.commands]
+allow = ["precache_app"]
+
+[[permission]]
+identifier = "allow-cache-api-response"
+description = "Enables caching an API response so it can be served offline"
+[permission.commands]
+allow = ["cache_api_response"]
+
+[[permission]]
+identifier = "allow-get-offline-context"
+description = "Enables reading the saved offline context snapshot (localStorage restore)"
+[permission.commands]
+allow = ["get_offline_context"]
+
+[[permission]]
+identifier = "allow-save-offline-context"
+description = "Enables saving the offline context snapshot (localStorage) for restore"
+[permission.commands]
+allow = ["save_offline_context"]
+
+[[permission]]
+identifier = "allow-save-last-mentor-route"
+description = "Enables recording the last visited mentor route for the offline shell"
+[permission.commands]
+allow = ["save_last_mentor_route"]
