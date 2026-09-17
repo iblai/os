@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.150.0](https://github.com/iblai/os/compare/v0.149.2...v0.150.0) (2026-09-17)
+
+### Features
+
+* course_id passed to time tracker on lesson completion & grading ([33e8dad](https://github.com/iblai/os/commit/33e8dad981952100fba724800c2a6a84a832906c))
+
 ## [0.149.2](https://github.com/iblai/os/compare/v0.149.1...v0.149.2) (2026-09-17)
 
 ### Chores
