@@ -10,6 +10,9 @@ mod cua_driver_mcp;
 // the same arrangement as `foundry_manager` below.
 #[allow(dead_code)]
 mod local_llm;
+// Only the phone asks; desktop builds carry the module unused.
+#[cfg_attr(not(any(target_os = "ios", target_os = "android")), allow(dead_code))]
+mod local_network;
 #[cfg(not(any(target_os = "ios", target_os = "android")))]
 mod nav_guard;
 // Gated exactly like `opencode_acp`, which is its only consumer here: Code uses
@@ -2429,9 +2432,22 @@ pub fn run() {
                         }
                         // Phone Code: pairing + per-chat session map storage.
                         remote_code_client::init(dir.clone());
+                        local_network::init(dir.clone());
+                        // A turn the last run left mid-flight (the app was
+                        // force-quit or killed) is stopped on the desktop.
+                        tauri::async_runtime::spawn(remote_code_client::abort_abandoned_turns());
                     }
                     Err(e) => eprintln!("[LocalLLM] no app data dir: {e}"),
                 }
+                // Ask for Local Network access at first open (iOS prompts
+                // once), so the first pairing scan is not the first thing
+                // to hit the prompt. Off the main thread; nothing waits on
+                // it. A beat after launch so the window is up to host the
+                // prompt.
+                std::thread::spawn(|| {
+                    std::thread::sleep(std::time::Duration::from_secs(2));
+                    local_network::ensure(local_network::LAUNCH_WINDOW);
+                });
             }
 
             // =====================
@@ -3171,6 +3187,8 @@ pub fn run() {
         remote_code_client::set_opencode_workspace,
         remote_code_client::new_opencode_workspace,
         remote_code_client::remote_code_list_workspaces,
+        local_network::local_network_status,
+        local_network::open_app_settings,
     ]);
 
     builder
@@ -3184,6 +3202,17 @@ pub fn run() {
             #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
             if let tauri::RunEvent::Exit = _event {
                 remote_code::shutdown_sync();
+            }
+            // Phone back in the foreground: the OS reclaims a suspended
+            // app's sockets, so a Code turn streaming from the desktop
+            // reconnects and catches up (see remote_code_client).
+            #[cfg(any(target_os = "ios", target_os = "android"))]
+            if let tauri::RunEvent::WindowEvent {
+                event: tauri::WindowEvent::Resumed,
+                ..
+            } = _event
+            {
+                remote_code_client::app_resumed();
             }
         });
 }

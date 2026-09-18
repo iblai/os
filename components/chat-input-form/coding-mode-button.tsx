@@ -184,6 +184,12 @@ export function CodingModeButton({
   const [hostPassword, setHostPassword] = useState('');
   const [connecting, setConnecting] = useState(false);
   const [connectError, setConnectError] = useState('');
+  // iOS Local Network permission, which every socket to the desktop needs.
+  // 'denied' replaces the pairing UI with the way to Settings; 'checking'
+  // means the host is asking (the system prompt may be up right now).
+  const [localNetwork, setLocalNetwork] = useState<
+    'unknown' | 'checking' | 'granted' | 'denied' | 'undetermined'
+  >('unknown');
   // Fullscreen QR scanner overlay (mobile). While true, the barcode-scanner
   // plugin shows the camera behind a transparent webview and the overlay
   // below renders the only visible UI — including the close button that was
@@ -291,7 +297,58 @@ export function CodingModeButton({
     void refreshRemoteHost();
   }, [mobile, isOpen]);
 
-  /** Try candidate addresses in order until one answers with this password. */
+  /**
+   * Ask the host whether Local Network access is granted — raising the
+   * system prompt when it was never answered. Asked afresh on every panel
+   * open and every return to the app: the switch in Settings changes it
+   * live in both directions. A host without the command (older build,
+   * Android) counts as no verdict.
+   */
+  const checkLocalNetwork = async () => {
+    setLocalNetwork((current) =>
+      current === 'granted' ? current : 'checking',
+    );
+    try {
+      const verdict = await callTauri<'granted' | 'denied' | 'undetermined'>(
+        'local_network_status',
+      );
+      setLocalNetwork(verdict);
+    } catch {
+      setLocalNetwork('undetermined');
+    }
+  };
+
+  useEffect(() => {
+    if (!mobile || !isOpen) return;
+    void checkLocalNetwork();
+    // Back from the Settings app (where the switch lives): ask again, and
+    // re-probe the desktop — access switched off makes it unreachable,
+    // switched on makes it reachable again.
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      void checkLocalNetwork();
+      void refreshRemoteHost();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [mobile, isOpen]);
+
+  const openAppSettings = async () => {
+    try {
+      await callTauri('open_app_settings');
+    } catch {
+      /* best-effort */
+    }
+  };
+
+  /**
+   * Pair with the desktop. ONE host call carrying every candidate address:
+   * the host probes them all at once and keeps probing for a while (iOS
+   * fails the first local-network sockets while its permission prompt is
+   * up), so a per-address loop here would only multiply that wait.
+   * `urls` also lets the phone remember EVERY address this desktop
+   * advertises and fail over when one stops answering.
+   */
   const pairWith = async (
     urls: string[],
     password: string,
@@ -300,25 +357,19 @@ export function CodingModeButton({
     setConnecting(true);
     setConnectError('');
     try {
-      let lastError = '';
-      for (const url of urls) {
-        try {
-          // `urls` rides along so the phone remembers EVERY address this
-          // desktop advertises and can fail over when one stops answering.
-          await callTauri('remote_code_set_host', {
-            url,
-            password,
-            mgmt,
-            urls,
-          });
-          setHostPassword('');
-          await refreshRemoteHost();
-          return;
-        } catch (e) {
-          lastError = e instanceof Error ? e.message : String(e);
-        }
-      }
-      setConnectError(lastError || 'no address answered');
+      // Callers never pass an empty list (the scan and manual paths both
+      // guard), but if one did, '' makes the host answer "no address to
+      // connect to" instead of failing on a missing argument.
+      await callTauri('remote_code_set_host', {
+        url: urls[0] ?? '',
+        password,
+        mgmt,
+        urls,
+      });
+      setHostPassword('');
+      await refreshRemoteHost();
+    } catch (e) {
+      setConnectError(e instanceof Error ? e.message : String(e));
     } finally {
       setConnecting(false);
     }
@@ -943,7 +994,10 @@ export function CodingModeButton({
           Deliberate: both answers set a security posture, so neither can be
           the silent default. */}
       <AlertDialog open={needsModeChoice}>
-        <AlertDialogContent data-testid="code-permission-mode-dialog">
+        <AlertDialogContent
+          data-testid="code-permission-mode-dialog"
+          className="max-w-md"
+        >
           <AlertDialogHeader>
             <AlertDialogTitle>{t('permissionDialogTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
@@ -952,12 +1006,15 @@ export function CodingModeButton({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogAction
-              className="ibl-btn-secondary"
+              className="ibl-btn-secondary w-full sm:w-auto"
               onClick={() => void chooseMode('manual')}
             >
               {t('permissionDialogManualAction')}
             </AlertDialogAction>
-            <AlertDialogAction onClick={() => void chooseMode('auto')}>
+            <AlertDialogAction
+              className="w-full sm:w-auto"
+              onClick={() => void chooseMode('auto')}
+            >
               {t('permissionDialogAutoAction')}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -1015,7 +1072,7 @@ export function CodingModeButton({
         </Tooltip>
         <PopoverContent
           align="start"
-          className="w-96 max-w-[calc(100vw-1rem)] rounded-lg border border-gray-200 bg-white p-4 shadow-xl"
+          className="w-96 max-w-[calc(100vw-2rem)] rounded-lg border border-gray-200 bg-white p-4 shadow-xl"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -1199,60 +1256,109 @@ export function CodingModeButton({
                   <p className="mt-2 text-[11px] text-gray-500">
                     {t('connectHint')}
                   </p>
-                  {remoteHost?.configured && !remoteHost.connected && (
-                    <p
-                      data-testid="code-remote-unreachable"
-                      className="mt-1 text-[11px] text-amber-600"
-                    >
-                      {t('desktopUnreachable')}
-                    </p>
+                  {remoteHost?.configured &&
+                    !remoteHost.connected &&
+                    localNetwork !== 'denied' && (
+                      <p
+                        data-testid="code-remote-unreachable"
+                        className="mt-1 text-[11px] text-amber-600"
+                      >
+                        {t('desktopUnreachable')}
+                      </p>
+                    )}
+                  {localNetwork === 'denied' ? (
+                    // No pairing can work without Local Network access, so
+                    // the scan and the fields are pointless: say why, and
+                    // put the one useful action in their place.
+                    <>
+                      <p
+                        data-testid="code-local-network-denied"
+                        className="mt-1 text-[11px] text-amber-600"
+                      >
+                        {t('localNetworkDenied')}
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        data-testid="code-open-app-settings"
+                        className="mt-2 h-8 w-full text-xs"
+                        onClick={() => void openAppSettings()}
+                      >
+                        {t('openSettings')}
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      {localNetwork === 'checking' && (
+                        <p
+                          data-testid="code-local-network-checking"
+                          className="mt-1 text-[11px] text-gray-500"
+                        >
+                          {t('localNetworkChecking')}
+                        </p>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        data-testid="code-remote-scan"
+                        className="mt-2 h-8 w-full text-xs"
+                        disabled={connecting || localNetwork === 'checking'}
+                        onClick={() => void scanPairingQr()}
+                      >
+                        {t('scanQr')}
+                      </Button>
+                      <p className="mt-2 text-center text-[10px] text-gray-400">
+                        {t('orTypeManually')}
+                      </p>
+                      <input
+                        data-testid="code-remote-url"
+                        className="mt-2 h-8 w-full rounded-md border border-gray-200 px-2 font-mono text-xs"
+                        placeholder="http://192.168.0.10:4096"
+                        value={hostUrl}
+                        onChange={(e) => setHostUrl(e.target.value)}
+                        autoCapitalize="none"
+                        autoCorrect="off"
+                      />
+                      <input
+                        data-testid="code-remote-password"
+                        className="mt-2 h-8 w-full rounded-md border border-gray-200 px-2 font-mono text-xs"
+                        placeholder={t('hostPasswordLabel')}
+                        type="password"
+                        value={hostPassword}
+                        onChange={(e) => setHostPassword(e.target.value)}
+                      />
+                      {connectError && (
+                        <p className="mt-1 text-[11px] break-all text-red-600">
+                          {connectError}
+                        </p>
+                      )}
+                      {connecting && (
+                        <p
+                          data-testid="code-remote-connecting-hint"
+                          className="mt-1 text-[11px] text-gray-500"
+                        >
+                          {t('localNetworkHint')}
+                        </p>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        className="mt-2 h-7 w-full text-xs"
+                        disabled={
+                          connecting ||
+                          localNetwork === 'checking' ||
+                          !hostUrl.trim() ||
+                          !hostPassword
+                        }
+                        onClick={() => void connectToDesktop()}
+                      >
+                        {connecting ? t('connecting') : t('connect')}
+                      </Button>
+                    </>
                   )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    type="button"
-                    data-testid="code-remote-scan"
-                    className="mt-2 h-8 w-full text-xs"
-                    disabled={connecting}
-                    onClick={() => void scanPairingQr()}
-                  >
-                    {t('scanQr')}
-                  </Button>
-                  <p className="mt-2 text-center text-[10px] text-gray-400">
-                    {t('orTypeManually')}
-                  </p>
-                  <input
-                    data-testid="code-remote-url"
-                    className="mt-2 h-8 w-full rounded-md border border-gray-200 px-2 font-mono text-xs"
-                    placeholder="http://192.168.0.10:4096"
-                    value={hostUrl}
-                    onChange={(e) => setHostUrl(e.target.value)}
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                  />
-                  <input
-                    data-testid="code-remote-password"
-                    className="mt-2 h-8 w-full rounded-md border border-gray-200 px-2 font-mono text-xs"
-                    placeholder={t('hostPasswordLabel')}
-                    type="password"
-                    value={hostPassword}
-                    onChange={(e) => setHostPassword(e.target.value)}
-                  />
-                  {connectError && (
-                    <p className="mt-1 text-[11px] break-all text-red-600">
-                      {connectError}
-                    </p>
-                  )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    type="button"
-                    className="mt-2 h-7 w-full text-xs"
-                    disabled={connecting || !hostUrl.trim() || !hostPassword}
-                    onClick={() => void connectToDesktop()}
-                  >
-                    {connecting ? t('connecting') : t('connect')}
-                  </Button>
                 </>
               )}
             </div>
