@@ -510,7 +510,13 @@
     "coworkConsentConfirm": "Continue",
     "coworkNeedsAccessibility": "Cowork needs Accessibility access to control your computer. Grant it in System Settings › Privacy & Security › Accessibility, then restart the app and turn Cowork on again.",
     "coworkNeedsScreenRecording": "Cowork needs Screen Recording access to read your windows. Grant it in System Settings › Privacy & Security › Screen Recording, then restart the app and turn Cowork on again.",
-    "skills": "Skills"
+    "skills": "Skills",
+    "coworkNeedsSession": "Sign in first — Cowork needs your platform session to reach the model.",
+    "coworkTabNote": "Reads this tab and acts on it for you — never password or payment fields. What it reads goes to ibl.ai to decide what to do next.",
+    "coworkApprovalsLabel": "Approvals",
+    "coworkApprovalsManual": "Ask Me",
+    "coworkApprovalsAuto": "Automatic",
+    "coworkApprovalsAutoHint": "Cowork clicks, types and submits without asking. Use it only on sites you trust."
   },
   "chatInputFormMemoryMenu": {
     "yourMemory": "Your Memory",

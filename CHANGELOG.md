@@ -4,51 +4,51 @@
 
 ### Bug Fixes
 
-* **e2e:** read notification tab state atomically in the auto-open test ([90a0030](https://github.com/iblai/os/commit/90a00308d930106e166c4fa7ef08028d44119c35))
-* **tauri:** adding claude review fixes ([0554cf9](https://github.com/iblai/os/commit/0554cf93bea1a11941d99bbbe283f419f13cba3f))
-* **tauri:** adding fix for the ios code and UI responsive ([4479dd5](https://github.com/iblai/os/commit/4479dd5a768d5338585ede5da374f3623c0e7905))
+- **e2e:** read notification tab state atomically in the auto-open test ([90a0030](https://github.com/iblai/os/commit/90a00308d930106e166c4fa7ef08028d44119c35))
+- **tauri:** adding claude review fixes ([0554cf9](https://github.com/iblai/os/commit/0554cf93bea1a11941d99bbbe283f419f13cba3f))
+- **tauri:** adding fix for the ios code and UI responsive ([4479dd5](https://github.com/iblai/os/commit/4479dd5a768d5338585ede5da374f3623c0e7905))
 
 ## [0.150.1](https://github.com/iblai/os/compare/v0.150.0...v0.150.1) (2026-09-17)
 
 ### Documentation
 
-* **readme:** add Chrome Web Store extension to downloadables ([7801524](https://github.com/iblai/os/commit/7801524c7a7a098ed3d5f9461c64e1f60bb1f539))
+- **readme:** add Chrome Web Store extension to downloadables ([7801524](https://github.com/iblai/os/commit/7801524c7a7a098ed3d5f9461c64e1f60bb1f539))
 
 ## [0.150.0](https://github.com/iblai/os/compare/v0.149.2...v0.150.0) (2026-09-17)
 
 ### Features
 
-* course_id passed to time tracker on lesson completion & grading ([33e8dad](https://github.com/iblai/os/commit/33e8dad981952100fba724800c2a6a84a832906c))
+- course_id passed to time tracker on lesson completion & grading ([33e8dad](https://github.com/iblai/os/commit/33e8dad981952100fba724800c2a6a84a832906c))
 
 ## [0.149.2](https://github.com/iblai/os/compare/v0.149.1...v0.149.2) (2026-09-17)
 
 ### Chores
 
-* **deps:** bump @iblai/iblai-js to 2.12.2 ([0f018c7](https://github.com/iblai/os/commit/0f018c70337da0efc98a3ab2f81ddc3c7839e925))
+- **deps:** bump @iblai/iblai-js to 2.12.2 ([0f018c7](https://github.com/iblai/os/commit/0f018c70337da0efc98a3ab2f81ddc3c7839e925))
 
 ## [0.149.1](https://github.com/iblai/os/compare/v0.149.0...v0.149.1) (2026-09-16)
 
 ### Bug Fixes
 
-* **tauri:** adding fix for code review and ios permissions ([037ee3a](https://github.com/iblai/os/commit/037ee3a551c9911d28ed8fda24d1c9234fa34cb7))
-* **tauri:** adding fix for icons, minimum os version & os platform for model id ([52b99db](https://github.com/iblai/os/commit/52b99db75b0ec34dec9bc9ef8d6ad01f537132f3))
+- **tauri:** adding fix for code review and ios permissions ([037ee3a](https://github.com/iblai/os/commit/037ee3a551c9911d28ed8fda24d1c9234fa34cb7))
+- **tauri:** adding fix for icons, minimum os version & os platform for model id ([52b99db](https://github.com/iblai/os/commit/52b99db75b0ec34dec9bc9ef8d6ad01f537132f3))
 
 ### Chores
 
-* **tauri:** release app-v0.95.21 ([e8da75b](https://github.com/iblai/os/commit/e8da75b45db2548915194fcf81799c3896b6dba9))
+- **tauri:** release app-v0.95.21 ([e8da75b](https://github.com/iblai/os/commit/e8da75b45db2548915194fcf81799c3896b6dba9))
 
 ## [0.149.0](https://github.com/iblai/os/compare/v0.148.1...v0.149.0) (2026-09-16)
 
 ### Features
 
-* credit deduction playwright test update ([8006b63](https://github.com/iblai/os/commit/8006b63bcef31d6637eb929fa97f87bd7248eff2))
-* credit deduction playwright test update ([22c021f](https://github.com/iblai/os/commit/22c021f41054ecf834a8160fbb5c98d5b3e962d8))
+- credit deduction playwright test update ([8006b63](https://github.com/iblai/os/commit/8006b63bcef31d6637eb929fa97f87bd7248eff2))
+- credit deduction playwright test update ([22c021f](https://github.com/iblai/os/commit/22c021f41054ecf834a8160fbb5c98d5b3e962d8))
 
 ## [0.148.1](https://github.com/iblai/os/compare/v0.148.0...v0.148.1) (2026-09-15)
 
 ### Chores
 
-* bumped iblai-js to 2.12.0 ([76a75df](https://github.com/iblai/os/commit/76a75df54a0b36f6c8bc1891fb937e514c078937))
+- bumped iblai-js to 2.12.0 ([76a75df](https://github.com/iblai/os/commit/76a75df54a0b36f6c8bc1891fb937e514c078937))
 
 ## [0.148.0](https://github.com/iblai/os/compare/v0.147.0...v0.148.0) (2026-09-15)
 

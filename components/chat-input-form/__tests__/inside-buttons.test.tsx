@@ -140,6 +140,10 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
 }));
 
 let mockHasRemoteAi = false;
+let mockInExtensionPanel = false;
+vi.mock('@/hooks/use-in-extension-panel', () => ({
+  useInExtensionPanel: () => mockInExtensionPanel,
+}));
 vi.mock('@iblai/iblai-js/web-utils', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@iblai/iblai-js/web-utils')>()),
   hasRemoteAiConfig: () => mockHasRemoteAi,
@@ -186,6 +190,7 @@ describe('InsideButtons', () => {
     mockAccessibilityGrant = null;
     mockScreenRecordingGrant = null;
     mockHasRemoteAi = false;
+    mockInExtensionPanel = false;
     localStorage.clear();
   });
 
@@ -1187,6 +1192,196 @@ describe('InsideButtons', () => {
       } finally {
         vi.useRealTimers();
       }
+    });
+  });
+
+  // In the Chrome extension's side panel the SAME pill is the browser driver.
+  // The Cua Driver is desktop-only, so nothing here may touch it — that is the
+  // regression these cover.
+  describe('Cowork in the extension panel (no Cua Driver)', () => {
+    beforeEach(() => {
+      mockInExtensionPanel = true;
+      mockHasRemoteAi = true;
+    });
+
+    it('offers Cowork even though no desktop driver is available', () => {
+      render(<InsideButtons {...defaultProps} />);
+
+      expect(screen.getByText('Cowork')).toBeInTheDocument();
+    });
+
+    it('is absent in a plain browser', () => {
+      mockInExtensionPanel = false;
+      render(<InsideButtons {...defaultProps} />);
+
+      expect(screen.queryByText('Cowork')).not.toBeInTheDocument();
+    });
+
+    // Driving the tab is what the panel is for, so Cowork starts on — and the
+    // PREF is written, not just the local state: the SDK routes on
+    // `isCoworkEnabled()` and so does the submit in components/chat/index.tsx.
+    it('opens with Cowork already on and persists it', async () => {
+      const user = userEvent.setup();
+      render(<InsideButtons {...defaultProps} />);
+
+      expect(mockSetCoworkEnabled).toHaveBeenCalledWith(true);
+      expect(localStorage.getItem('ibl_cowork_enabled')).toBe('true');
+      expect(screen.getByTestId('cowork-pill')).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+      await user.click(screen.getByTestId('cowork-pill'));
+      expect(
+        within(screen.getByTestId('cowork-panel')).getByRole('switch'),
+      ).toHaveAttribute('aria-checked', 'true');
+      // Nothing was confirmed and nothing was asked of the OS.
+      expect(screen.queryByText('Let Cowork use your computer?')).toBeNull();
+      expect(mockRequestPermissions).not.toHaveBeenCalled();
+      expect(mockGhostInstall).not.toHaveBeenCalled();
+    });
+
+    // `setCoworkEnabled` writes "true"/"false", so an explicit off is a stored
+    // value rather than an absent one — the default must not talk over it.
+    it('stays off when the user has switched it off before', () => {
+      localStorage.setItem('ibl_cowork_enabled', 'false');
+      render(<InsideButtons {...defaultProps} />);
+
+      expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
+      expect(screen.getByTestId('cowork-pill')).toHaveAttribute(
+        'aria-pressed',
+        'false',
+      );
+    });
+
+    it('enables from the switch with no dialog and no Cua Driver', async () => {
+      const user = userEvent.setup();
+      localStorage.setItem('ibl_cowork_enabled', 'false');
+      render(<InsideButtons {...defaultProps} />);
+
+      // The pill opens the panel; the switch inside it is what enables Cowork.
+      await user.click(screen.getByTestId('cowork-pill'));
+      expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
+      await user.click(
+        within(screen.getByTestId('cowork-panel')).getByRole('switch'),
+      );
+
+      expect(screen.queryByText('Let Cowork use your computer?')).toBeNull();
+      expect(mockSetCoworkEnabled).toHaveBeenCalledWith(true);
+      expect(localStorage.getItem('ibl_cowork_enabled')).toBe('true');
+      // No OS grants and no driver fetch: the extension's permissions come from
+      // its manifest, and requestDriverPermissions is a Tauri command here.
+      expect(mockRequestPermissions).not.toHaveBeenCalled();
+      expect(mockGhostInstall).not.toHaveBeenCalled();
+    });
+
+    // What the dialog used to say, in the one place it can still be read once
+    // Cowork switches itself on.
+    it('states what Cowork does to the tab inside the panel', async () => {
+      const user = userEvent.setup();
+      render(<InsideButtons {...defaultProps} />);
+
+      await user.click(screen.getByTestId('cowork-pill'));
+
+      expect(screen.getByTestId('cowork-tab-note')).toHaveTextContent(
+        /never password or payment fields/i,
+      );
+    });
+
+    it('needs a session before it can be switched on', async () => {
+      const user = userEvent.setup();
+      mockHasRemoteAi = false;
+      // An explicit off, so the click below is a real off → on.
+      localStorage.setItem('ibl_cowork_enabled', 'false');
+      render(<InsideButtons {...defaultProps} />);
+
+      await user.click(screen.getByTestId('cowork-pill'));
+      await user.click(
+        within(screen.getByTestId('cowork-panel')).getByRole('switch'),
+      );
+
+      expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
+      expect(mockToastWarning).toHaveBeenCalled();
+    });
+
+    it('switches off without stopping a driver that was never started', async () => {
+      const user = userEvent.setup();
+      mockCoworkOn = true;
+      localStorage.setItem('ibl_cowork_enabled', 'true');
+      render(<InsideButtons {...defaultProps} />);
+
+      await user.click(screen.getByTestId('cowork-pill'));
+      await user.click(
+        within(screen.getByTestId('cowork-panel')).getByRole('switch'),
+      );
+
+      expect(mockSetCoworkEnabled).toHaveBeenCalledWith(false);
+      expect(mockGhostStop).not.toHaveBeenCalled();
+    });
+
+    // The confirm gate in the extension fires on ANY form submission, so a plain
+    // search prompted. Automatic is the default because of that; Ask Me puts the
+    // card back.
+    it('defaults Approvals to Automatic and says what that means', async () => {
+      const user = userEvent.setup();
+      render(<InsideButtons {...defaultProps} />);
+
+      await user.click(screen.getByTestId('cowork-pill'));
+      const panel = within(screen.getByTestId('cowork-panel'));
+
+      expect(panel.getByRole('radio', { name: 'Automatic' })).toHaveAttribute(
+        'aria-checked',
+        'true',
+      );
+      expect(panel.getByRole('radio', { name: 'Ask Me' })).toHaveAttribute(
+        'aria-checked',
+        'false',
+      );
+      expect(screen.getByTestId('cowork-auto-mode-hint')).toBeInTheDocument();
+    });
+
+    it('remembers Ask Me, and drops the hint with it', async () => {
+      const user = userEvent.setup();
+      render(<InsideButtons {...defaultProps} />);
+
+      await user.click(screen.getByTestId('cowork-pill'));
+      await user.click(
+        within(screen.getByTestId('cowork-panel')).getByRole('radio', {
+          name: 'Ask Me',
+        }),
+      );
+
+      expect(localStorage.getItem('ibl_cowork_approvals')).toBe('manual');
+      await waitFor(() =>
+        expect(
+          within(screen.getByTestId('cowork-panel')).getByRole('radio', {
+            name: 'Ask Me',
+          }),
+        ).toHaveAttribute('aria-checked', 'true'),
+      );
+      expect(screen.queryByTestId('cowork-auto-mode-hint')).toBeNull();
+    });
+
+    it('opens on the choice already saved', async () => {
+      const user = userEvent.setup();
+      localStorage.setItem('ibl_cowork_approvals', 'manual');
+      render(<InsideButtons {...defaultProps} />);
+
+      await user.click(screen.getByTestId('cowork-pill'));
+
+      expect(
+        within(screen.getByTestId('cowork-panel')).getByRole('radio', {
+          name: 'Ask Me',
+        }),
+      ).toHaveAttribute('aria-checked', 'true');
+    });
+
+    it('never reconciles a driver install in the panel', () => {
+      mockCoworkOn = true;
+      mockDriverStatus = { installed: false, supported: true };
+      localStorage.setItem('ibl_cowork_enabled', 'true');
+      render(<InsideButtons {...defaultProps} />);
+
+      expect(mockGhostInstall).not.toHaveBeenCalled();
     });
   });
 

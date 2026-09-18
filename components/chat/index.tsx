@@ -31,6 +31,9 @@ import {
   hasVisibleBubbleContent,
 } from '@/components/chat/ai-message-frame';
 import { useCodePermissionRequests } from '@/components/chat/code-permission-card';
+import { useBrowseRun } from '@/hooks/use-browse-run';
+import { useInExtensionPanel } from '@/hooks/use-in-extension-panel';
+import { isCoworkEnabled } from '@iblai/iblai-js/web-containers';
 import {
   ANONYMOUS_USERNAME,
   Message as BaseMessage,
@@ -342,6 +345,10 @@ export function Chat({
   );
   const streamingToolCalls = useAppSelector(selectStreamingToolCalls);
   const currentStreamingMsg = useAppSelector(selectCurrentStreamingMessage);
+  // Browse is the same pill as Cowork (`ibl_cowork_enabled`), driven by the
+  // extension's service worker rather than the Tauri Cua Driver.
+  const inExtensionPanel = useInExtensionPanel();
+  const browse = useBrowseRun();
   const TOAST_DURATION = 1000 * 60 * 2; // 2 minutes
 
   // Offline mode detection (for Tauri desktop app)
@@ -1546,7 +1553,26 @@ export function Chat({
     );
   };
 
+  // The composer swaps Send for Stop while a turn streams, and a Browse run
+  // streams the same way — so that Stop has to reach the run, not just the
+  // WebSocket chat, or there is no way out of one.
+  const stopAnyGeneration = () => {
+    if (browse.isRunning) {
+      browse.stop();
+      return;
+    }
+    stopGenerating();
+  };
+
   const handleSubmit = (content: string) => {
+    // In the extension's side panel, Browse takes the turn: the goal goes to the
+    // service worker, which drives the tab and streams the run back as this same
+    // assistant message. Everything below is the ordinary mentor path.
+    if (inExtensionPanel && isCoworkEnabled()) {
+      browse.run(content);
+      return;
+    }
+
     if (!isLoggedIn()) {
       if (!mentorSettings.allowAnonymous && (!token || !tokenEnabled)) {
         const userMessage: Message = {
@@ -1833,7 +1859,7 @@ export function Chat({
                 }
                 setIsPhoneCallModalOpen(true);
               }}
-              stopGenerating={stopGenerating}
+              stopGenerating={stopAnyGeneration}
               tenantKey={tenantKey}
               username={username ?? ''}
               enableWebBrowsing={enableWebBrowsing}
@@ -1946,7 +1972,7 @@ export function Chat({
               <ChatInputForm
                 sessionId={sessionId}
                 onSubmit={handleSubmit}
-                stopGenerating={stopGenerating}
+                stopGenerating={stopAnyGeneration}
                 onScreenSharingClick={() => {
                   if (enableChatPopupActions && isInIframe()) {
                     sendMessageToParentWebsite({
@@ -2045,7 +2071,7 @@ export function Chat({
               <ChatInputForm
                 sessionId={sessionId}
                 onSubmit={handleSubmit}
-                stopGenerating={stopGenerating}
+                stopGenerating={stopAnyGeneration}
                 onScreenSharingClick={() => {
                   if (enableChatPopupActions && isInIframe()) {
                     sendMessageToParentWebsite({
@@ -2200,7 +2226,7 @@ export function Chat({
             <ChatInputForm
               sessionId={cachedSessionId?.[mentorId] ?? sessionId}
               onSubmit={handleSubmit}
-              stopGenerating={stopGenerating}
+              stopGenerating={stopAnyGeneration}
               onScreenSharingClick={() => {
                 if (enableChatPopupActions && isInIframe()) {
                   sendMessageToParentWebsite({

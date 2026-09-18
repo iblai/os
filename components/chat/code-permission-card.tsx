@@ -8,8 +8,10 @@
  * it wants to perform emits `opencode:permission_request` and lands inside the
  * assistant's reply bubble, styled to match the tool-call list it sits under — the
  * prompt is part of the agent's activity, not an alert interrupting it. Every operation
- * means every one: reading a file as much as writing one, shell, grep, fetch. There is
- * no auto-approval, so expect several per turn.
+ * means every one: reading a file as much as writing one, shell, grep, fetch. In manual
+ * mode expect several per turn; Approvals = Automatic answers them in Rust
+ * (`handle_permission_request`) and no card is raised at all. Cowork in the Chrome
+ * extension reuses these cards the same way, gated by its own Approvals setting.
  *
  * Deliberately NOT a modal. A dialog stealing focus on every one of those is how people
  * learn to click Allow without reading, which would defeat the point. The policy is
@@ -26,7 +28,7 @@ import { useTranslations } from 'next-intl';
 import { ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-interface PermissionRequest {
+export interface PermissionRequest {
   request_id: string;
   /** The turn that produced it — the streaming assistant message's own id. */
   generation_id: string;
@@ -38,6 +40,12 @@ interface PermissionRequest {
   command: string | null;
   allow_option_id: string | null;
   reject_option_id: string | null;
+  /**
+   * Answer this request directly instead of telling Rust. Set for prompts that
+   * did not come from opencode — the extension's Browse runs raise them over a
+   * port, and there is no `opencode_permission_respond` to invoke.
+   */
+  respond?: (optionId: string | null) => void;
 }
 
 function isTauriApp(): boolean {
@@ -95,6 +103,21 @@ function subscribe(notify: () => void) {
 }
 
 /** Permission requests currently awaiting an answer. Stable reference while unchanged. */
+/**
+ * Raise a prompt that did not come from opencode. Same store, same card, same
+ * `generation_id` scoping — a second prompt UI for the Browse runs would be a
+ * second thing to keep in step with this one.
+ */
+export function addPermissionRequest(request: PermissionRequest): void {
+  if (pending.some((p) => p.request_id === request.request_id)) return;
+  publish([...pending, request]);
+}
+
+/** Withdraw a prompt nobody can answer any more (the run ended or was stopped). */
+export function dropPermissionRequest(requestId: string): void {
+  drop(requestId);
+}
+
 export function useCodePermissionRequests(): PermissionRequest[] {
   return useSyncExternalStore(
     subscribe,
@@ -157,6 +180,10 @@ export function CodePermissionCards({
     // Drop it first: the answer is one-way and a second click would resolve an id
     // Rust has already forgotten.
     drop(request.request_id);
+    if (request.respond) {
+      request.respond(optionId);
+      return;
+    }
     try {
       const { invoke } = await import('@tauri-apps/api/core');
       await invoke('opencode_permission_respond', {
