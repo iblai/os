@@ -55,6 +55,8 @@ permissions = [
     "allow-remote-code-clear-host",
     "allow-remote-code-pairing-qr",
     "allow-remote-code-list-workspaces",
+    "allow-local-network-status",
+    "allow-open-app-settings",
 ]
 
 [[permission]]
@@ -389,3 +391,15 @@ identifier = "allow-remote-code-list-workspaces"
 description = "Enables listing the paired desktop's Code folders (phone)"
 [permission.commands]
 allow = ["remote_code_list_workspaces"]
+
+[[permission]]
+identifier = "allow-local-network-status"
+description = "Enables reading (and asking for) iOS Local Network access, which Code pairing needs (phone)"
+[permission.commands]
+allow = ["local_network_status"]
+
+[[permission]]
+identifier = "allow-open-app-settings"
+description = "Enables opening the app's page in the Settings app, where the user re-enables Local Network access (phone)"
+[permission.commands]
+allow = ["open_app_settings"]

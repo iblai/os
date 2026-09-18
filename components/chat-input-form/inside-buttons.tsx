@@ -14,7 +14,9 @@ import {
   Popover,
   PopoverAnchor,
   PopoverContent,
+  PopoverTrigger,
 } from '@/components/ui/popover';
+import { Switch } from '@/components/ui/switch';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,6 +32,7 @@ import {
   BookOpen,
   Archive,
   Check,
+  ChevronDown,
   Terminal,
   Monitor,
   Sparkles,
@@ -38,6 +41,12 @@ import {
 import type { EffectiveAgentSkill } from '@iblai/iblai-js/data-layer';
 import { toast } from 'sonner';
 import { DeepSearchIcon, CanvasIcon } from '@/components/icons/svg-icons';
+import {
+  coworkPrefSet,
+  readCoworkApprovals,
+  writeCoworkApprovals,
+  type CoworkApprovals,
+} from '@/lib/cowork-approvals';
 import { TOOLS, hasRemoteAiConfig } from '@iblai/iblai-js/web-utils';
 import {
   useCuaDriver,
@@ -53,6 +62,7 @@ import { estimatePillWidth, useOverflowFit } from './use-overflow-fit';
 import { MemoryMenu } from './memory-menu';
 import { isTauriApp, isTauriMobile } from '@/types/tauri';
 import type { OpencodeSkillSync } from '@/hooks/use-opencode-skill-sync';
+import { useInExtensionPanel } from '@/hooks/use-in-extension-panel';
 
 /** One tool pill in the composer row (inline) or the ••• overflow menu. */
 interface ToolPill {
@@ -178,6 +188,11 @@ export const InsideButtons = ({
     };
   }, []);
 
+  // In the Chrome extension's side panel the SAME pill is the browser driver:
+  // there is no machine to drive, but there is a tab, and the extension's service
+  // worker does the driving. The Cua Driver is never touched on that path.
+  const inExtensionPanel = useInExtensionPanel();
+
   // Cowork = the Tauri Cua Driver assistant (useCuaDriver install/stop +
   // localStorage pref), no backend round-trip. Reads the pref on mount; cross-tab sync not
   // polled. Local state is `coworkOn` so it doesn't shadow the imported
@@ -187,12 +202,38 @@ export const InsideButtons = ({
   // Switching Cowork ON explains itself first: it is about to read the contents
   // of the user's windows and send them off-device. Open = awaiting that consent.
   const [coworkConsentOpen, setCoworkConsentOpen] = useState(false);
+  // The panel behind the pill in the extension, holding the on/off switch and
+  // Approvals — the same shape as Code's popover, because it is the same choice.
+  const [coworkPanelOpen, setCoworkPanelOpen] = useState(false);
+  const [approvals, setApprovals] = useState<CoworkApprovals>('auto');
+  // After mount, never during render: the pref is read from localStorage, and a
+  // render-time read would mismatch the prerendered HTML during hydration.
+  useEffect(() => setApprovals(readCoworkApprovals()), []);
+
+  const chooseApprovals = (mode: CoworkApprovals) => {
+    setApprovals(mode);
+    writeCoworkApprovals(mode);
+  };
 
   const toggleCowork = () => {
     if (coworkOn) {
       setCoworkOn(false);
       setCoworkEnabled(false);
-      cuaDriver.stop();
+      // Nothing to stop in the extension: the run ends with the port.
+      if (!inExtensionPanel) cuaDriver.stop();
+      return;
+    }
+    // In the panel the only backend is the remote AI, and there is no driver to
+    // fetch, permission to request or screen to read — just the tab the user is
+    // already looking at. No dialog on this surface: Chrome asked at install
+    // time, and the note in the panel says what it does.
+    if (inExtensionPanel) {
+      if (!hasRemoteAiConfig()) {
+        toast.warning(t('coworkNeedsSession'));
+        return;
+      }
+      setCoworkOn(true);
+      setCoworkEnabled(true);
       return;
     }
     // Guard before anything user-visible. Cowork runs on EITHER a large local
@@ -216,7 +257,8 @@ export const InsideButtons = ({
 
   /**
    * The user accepted the explanation: ask for the OS grants, and only switch
-   * Cowork on if it actually has them.
+   * Cowork on if it actually has them. Desktop only — the panel enables
+   * straight from its switch and never raises the dialog.
    */
   const acceptCoworkConsent = async () => {
     setCoworkConsentOpen(false);
@@ -274,21 +316,39 @@ export const InsideButtons = ({
     // unsupported one renders the pill DISABLED with the reason rather than
     // hiding it. The chatbox is Cowork's only surface: hide it and a KDE user is
     // left with no way to find out why the feature they read about is missing.
-    isEnabled: cuaDriver.isAvailable,
-    disabledReason: cuaDriver.isSupported
+    // In the panel the pill is always usable: the driver support checks below
+    // describe a desktop that is not involved.
+    isEnabled: inExtensionPanel || cuaDriver.isAvailable,
+    disabledReason: inExtensionPanel
       ? undefined
-      : unsupportedCoworkReason(cuaDriver.unsupportedReason),
+      : cuaDriver.isSupported
+        ? undefined
+        : unsupportedCoworkReason(cuaDriver.unsupportedReason),
   };
   // Deliberately NOT `coworkButton.isEnabled`: that is now true on any desktop so
   // the pill can render disabled-with-a-reason. Fetching a driver unattended
   // must still require a session the driver can actually drive.
   const coworkAvailable = cuaDriver.isAvailable && cuaDriver.isSupported;
 
-  // Cowork is deliberately opt-in: it reads the contents of the user's windows
-  // and sends them off-device, and switching it on raises OS permission prompts.
-  // Nothing here enables it — that only happens through `toggleCowork`, behind
-  // the consent dialog. (Code mode still defaults itself on; it asks for no OS
+  // On the desktop Cowork is deliberately opt-in: it reads the contents of the
+  // user's windows and sends them off-device, and switching it on raises OS
+  // permission prompts. Nothing enables it there but `toggleCowork`, behind the
+  // consent dialog. (Code mode still defaults itself on; it asks for no OS
   // permissions, so it is left as it was.)
+  //
+  // The extension panel is the exception: driving the tab is what the panel is
+  // for, so Cowork starts on. The PREF is written, not just `coworkOn` — the SDK
+  // routes on `isCoworkEnabled()` (`shouldUseRemoteAiChat`, the Cowork tool list)
+  // and so does the submit in `components/chat/index.tsx`, so a UI-only default
+  // would show an active pill while the turn took the ordinary WebSocket path.
+  // Only an UNSET pref defaults on: `setCoworkEnabled` writes "true"/"false", so
+  // a user who switched it off is remembered. The panel's iframe has its own
+  // partitioned storage, so this never reaches the user's ordinary tabs.
+  useEffect(() => {
+    if (!inExtensionPanel || coworkPrefSet()) return;
+    setCoworkEnabled(true);
+    setCoworkOn(true);
+  }, [inExtensionPanel]);
 
   // The PREFERENCE persists across runs; the install does not. A user whose first
   // install failed comes back to a toggle that reads ON with no driver behind it,
@@ -302,11 +362,12 @@ export const InsideButtons = ({
   const ensuredDriverInstall = useRef(false);
   useEffect(() => {
     if (ensuredDriverInstall.current) return;
+    if (inExtensionPanel) return;
     if (!coworkAvailable || !coworkOn) return;
     if (cuaDriver.status?.installed !== false) return;
     ensuredDriverInstall.current = true;
     cuaDriver.install();
-  }, [coworkAvailable, coworkOn, cuaDriver]);
+  }, [coworkAvailable, coworkOn, cuaDriver, inExtensionPanel]);
 
   const allInsideButtons: ToolPill[] = [
     {
@@ -607,6 +668,119 @@ export const InsideButtons = ({
           dropdown slots in right after Canvas so Canvas stays the first
           tool pill. */}
       {visibleInsideButtons.map((button) => {
+        // In the extension the pill opens a panel instead of toggling: the
+        // browser driver has an Approvals choice to make, and the desktop Cua
+        // Driver has no confirmation gate for it to control.
+        if (button.name === 'Cowork' && inExtensionPanel) {
+          return (
+            <div
+              key={button.name}
+              ref={fit.itemRef(button.name)}
+              className="relative"
+              data-overflow-key={button.name}
+            >
+              <Popover open={coworkPanelOpen} onOpenChange={setCoworkPanelOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    type="button"
+                    data-testid="cowork-pill"
+                    disabled={disabled}
+                    aria-pressed={button.isActive}
+                    className={`flex h-8 items-center gap-1.5 rounded-lg px-2 text-sm transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 ${
+                      button.isActive
+                        ? 'border border-[#D0E0FF] bg-[#F5F8FF] text-[#38A1E5]'
+                        : 'text-gray-600 hover:border hover:border-[#D0E0FF] hover:bg-[#F5F8FF]'
+                    }`}
+                  >
+                    <span
+                      className={
+                        button.isActive ? 'text-[#38A1E5]' : 'text-gray-600'
+                      }
+                    >
+                      {button.icon}
+                    </span>
+                    <span>{button.label}</span>
+                    <ChevronDown className="h-3 w-3 opacity-60" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  align="start"
+                  data-testid="cowork-panel"
+                  className="w-72 rounded-lg border border-gray-200 bg-white p-3 shadow-xl"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      data-testid="cowork-panel-title"
+                      className="text-sm text-gray-700"
+                    >
+                      {button.label}
+                    </span>
+                    <Switch
+                      checked={button.isActive}
+                      aria-label={button.label}
+                      onCheckedChange={() => button.action()}
+                    />
+                  </div>
+                  {/* What the dialog used to say, where it does not interrupt:
+                      the panel enables Cowork on open, so the disclosure has to
+                      live somewhere it can be read afterwards. Same quiet grey
+                      as the Approvals hint below — it states a fact, it is not
+                      asking for anything. */}
+                  <p
+                    data-testid="cowork-tab-note"
+                    className="mt-1 text-[11px] text-gray-400"
+                  >
+                    {t('coworkTabNote')}
+                  </p>
+                  {/* Approvals. A quiet segmented pair rather than a second
+                      Switch, matching the Code panel's row exactly: the two
+                      modes have names worth showing, and this must not compete
+                      with the on/off control above it. */}
+                  <div className="mt-3 flex items-center justify-between gap-2">
+                    <span className="text-xs font-medium text-gray-600">
+                      {t('coworkApprovalsLabel')}
+                    </span>
+                    <div
+                      role="radiogroup"
+                      aria-label={t('coworkApprovalsLabel')}
+                      className="flex items-center gap-0.5 rounded-md border border-gray-200 p-0.5"
+                    >
+                      {(['manual', 'auto'] as const).map((mode) => (
+                        <button
+                          key={mode}
+                          type="button"
+                          role="radio"
+                          aria-checked={approvals === mode}
+                          onClick={() => chooseApprovals(mode)}
+                          className={`h-6 rounded px-2 text-[11px] transition-colors ${
+                            approvals === mode
+                              ? 'bg-gray-100 text-gray-900'
+                              : 'text-gray-500 hover:text-gray-700'
+                          }`}
+                        >
+                          {mode === 'manual'
+                            ? t('coworkApprovalsManual')
+                            : t('coworkApprovalsAuto')}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {approvals === 'auto' && (
+                    <p
+                      data-testid="cowork-auto-mode-hint"
+                      className="mt-1 text-[11px] text-gray-400"
+                    >
+                      {t('coworkApprovalsAutoHint')}
+                    </p>
+                  )}
+                </PopoverContent>
+              </Popover>
+            </div>
+          );
+        }
+
         if (button.name === 'Memory') {
           return (
             <div
@@ -722,7 +896,9 @@ export const InsideButtons = ({
 
       {/* Switching Cowork on grants it the run of the machine, so it says what
           that means before any OS prompt appears. Dismissing leaves Cowork off
-          and asks the system for nothing. */}
+          and asks the system for nothing. Desktop only: the extension panel
+          drives one tab, which Chrome already asked about at install time, and
+          says so in the panel instead of interrupting. */}
       <AlertDialog open={coworkConsentOpen} onOpenChange={setCoworkConsentOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

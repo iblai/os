@@ -117,6 +117,8 @@ function backend(
     permissionMode?: string | null;
     /** Phone↔desktop pairing state (Tauri mobile). */
     remoteHost?: unknown;
+    /** iOS Local Network verdict (Tauri mobile); granted unless a test says. */
+    localNetwork?: 'granted' | 'denied' | 'undetermined';
   } = {},
 ) {
   invoke.mockImplementation(async (cmd: string) => {
@@ -146,6 +148,10 @@ function backend(
       case 'remote_code_set_host':
         return { ok: true };
       case 'remote_code_clear_host':
+        return undefined;
+      case 'local_network_status':
+        return overrides.localNetwork ?? 'granted';
+      case 'open_app_settings':
         return undefined;
       default:
         return undefined;
@@ -412,6 +418,134 @@ describe('CodingModeButton', () => {
       expect(screen.getByRole('switch')).toBeDisabled();
     });
 
+    describe('Local Network permission (iOS)', () => {
+      it('asks the host for Local Network access when the pairing panel opens', async () => {
+        renderButton();
+        await openPopover();
+        await waitFor(() =>
+          expect(invoke).toHaveBeenCalledWith(
+            'local_network_status',
+            undefined,
+          ),
+        );
+        // Granted: the pairing UI is the normal one.
+        expect(screen.getByTestId('code-remote-scan')).toBeEnabled();
+        expect(screen.queryByTestId('code-local-network-denied')).toBeNull();
+      });
+
+      it('replaces scan and fields with the way to Settings when access is denied', async () => {
+        backend({ localNetwork: 'denied' });
+        renderButton();
+        await openPopover();
+        expect(
+          await screen.findByTestId('code-local-network-denied'),
+        ).toHaveTextContent(/Local Network access is off/);
+        expect(screen.queryByTestId('code-remote-scan')).toBeNull();
+        expect(screen.queryByTestId('code-remote-url')).toBeNull();
+        expect(screen.queryByTestId('code-remote-password')).toBeNull();
+        await userEvent.click(screen.getByTestId('code-open-app-settings'));
+        await waitFor(() =>
+          expect(invoke).toHaveBeenCalledWith('open_app_settings', undefined),
+        );
+      });
+
+      it('asks again when the app comes back from Settings and restores the pairing UI', async () => {
+        backend({ localNetwork: 'denied' });
+        renderButton();
+        await openPopover();
+        await screen.findByTestId('code-local-network-denied');
+        // The user flipped the switch in Settings and came back.
+        extend({ local_network_status: () => 'granted' });
+        Object.defineProperty(document, 'visibilityState', {
+          value: 'visible',
+          configurable: true,
+        });
+        await act(async () => {
+          document.dispatchEvent(new Event('visibilitychange'));
+        });
+        expect(await screen.findByTestId('code-remote-scan')).toBeEnabled();
+        expect(screen.queryByTestId('code-local-network-denied')).toBeNull();
+      });
+
+      it('holds the scan while the host is still asking', async () => {
+        let settle: (v: string) => void = () => {};
+        extend({
+          local_network_status: () =>
+            new Promise<string>((resolve) => {
+              settle = resolve;
+            }),
+        });
+        renderButton();
+        await openPopover();
+        expect(
+          await screen.findByTestId('code-local-network-checking'),
+        ).toHaveTextContent(/Checking local network access/);
+        expect(screen.getByTestId('code-remote-scan')).toBeDisabled();
+        await act(async () => settle('undetermined'));
+        // No verdict is not a denial: pairing itself raises the prompt.
+        await waitFor(() =>
+          expect(screen.getByTestId('code-remote-scan')).toBeEnabled(),
+        );
+        expect(screen.queryByTestId('code-local-network-checking')).toBeNull();
+      });
+
+      it('asks again on every open — the switch can be turned off in Settings', async () => {
+        renderButton();
+        await openPopover();
+        await waitFor(() =>
+          expect(invoke).toHaveBeenCalledWith(
+            'local_network_status',
+            undefined,
+          ),
+        );
+        expect(screen.getByTestId('code-remote-scan')).toBeInTheDocument();
+        // Off in Settings, panel reopened: the pairing UI gives way.
+        extend({ local_network_status: () => 'denied' });
+        await userEvent.keyboard('{Escape}');
+        await openPopover();
+        expect(
+          await screen.findByTestId('code-local-network-denied'),
+        ).toBeInTheDocument();
+        expect(screen.queryByTestId('code-remote-scan')).toBeNull();
+        expect(
+          invoke.mock.calls.filter(([c]) => c === 'local_network_status'),
+        ).toHaveLength(2);
+      });
+
+      it('re-probes the desktop when the app comes back, so a paired desktop reads unreachable once access is off', async () => {
+        backend({
+          remoteHost: {
+            configured: true,
+            connected: true,
+            url: 'http://192.168.0.10:4096',
+            directory: '/Users/me/phone',
+          },
+        });
+        renderButton();
+        await openPopover();
+        // Paired and reachable: the connected view.
+        expect(await screen.findByText(/Connected To/i)).toBeInTheDocument();
+        // Access switched off in Settings, back to the app.
+        extend({
+          local_network_status: () => 'denied',
+          remote_code_get_host: () => ({ configured: true, connected: false }),
+        });
+        Object.defineProperty(document, 'visibilityState', {
+          value: 'visible',
+          configurable: true,
+        });
+        await act(async () => {
+          document.dispatchEvent(new Event('visibilitychange'));
+        });
+        expect(
+          await screen.findByTestId('code-local-network-denied'),
+        ).toBeInTheDocument();
+        // One explanation, not two: the unreachable note stays out.
+        expect(screen.queryByTestId('code-remote-unreachable')).toBeNull();
+        expect(screen.queryByTestId('code-remote-scan')).toBeNull();
+      });
+    });
+
     describe('QR pairing', () => {
       /** Start a scan and hand back the resolver the fake camera will use. */
       async function startScan() {
@@ -505,16 +639,18 @@ describe('CodingModeButton', () => {
         expect(screen.queryByTestId('qr-scan-overlay')).toBeNull();
       });
 
-      it('falls over to the next advertised address when the first refuses', async () => {
+      it('pairs in ONE host call and shows its failure — the host races the addresses', async () => {
+        // The host probes every address at once and keeps probing while
+        // iOS's local-network prompt is up; looping here per address would
+        // only multiply that wait. So: one call, and its error is the error.
         let attempts = 0;
+        let settle: () => void = () => {};
         extend({
-          remote_code_set_host: (args) => {
-            attempts += 1;
-            if ((args as { url: string }).url.includes('192.168.0.10')) {
-              throw new Error('connection refused');
-            }
-            return { ok: true };
-          },
+          remote_code_set_host: () =>
+            new Promise((_, reject) => {
+              attempts += 1;
+              settle = () => reject(new Error('connection failed: no route'));
+            }),
         });
         await startScan();
         scannerState.resolveScan!({
@@ -525,12 +661,17 @@ describe('CodingModeButton', () => {
               password: 'pw',
             }),
         });
-        await waitFor(() => expect(attempts).toBe(2));
-        expect(invoke).toHaveBeenLastCalledWith(
-          'remote_code_get_host',
-          undefined,
-        );
-        expect(screen.queryByText('connection refused')).toBeNull();
+        await waitFor(() => expect(attempts).toBe(1));
+        // While the host probes, the user is told what the phone may ask.
+        expect(
+          await screen.findByTestId('code-remote-connecting-hint'),
+        ).toHaveTextContent(/tap Allow/);
+        await act(async () => settle());
+        expect(
+          await screen.findByText('connection failed: no route'),
+        ).toBeInTheDocument();
+        expect(attempts).toBe(1);
+        expect(screen.queryByTestId('code-remote-connecting-hint')).toBeNull();
       });
 
       it('shows a scanner failure that was not the user closing it', async () => {

@@ -102,6 +102,8 @@
     "allow-remote-code-get-host",
     "allow-remote-code-clear-host",
     "allow-remote-code-pairing-qr",
-    "allow-remote-code-list-workspaces"
+    "allow-remote-code-list-workspaces",
+    "allow-local-network-status",
+    "allow-open-app-settings"
   ]
 }
