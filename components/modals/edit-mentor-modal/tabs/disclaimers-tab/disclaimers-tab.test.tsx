@@ -21,6 +21,8 @@ const mockGetMentorId = vi.fn();
 const mockGetDisclaimersQuery = vi.fn();
 const mockGetMentorSettingsQuery = vi.fn();
 let mockUsername: string | null = 'testuser';
+let mockHasPermission = true;
+const mockAgreementsModal = vi.fn();
 
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
@@ -75,6 +77,21 @@ vi.mock('next/dynamic', () => ({
     // Return a mock component for rendering
     return (props: any) => {
       if (props.open === undefined) return null;
+
+      if (props.disclaimerId !== undefined) {
+        // This is AgreementsModal
+        mockAgreementsModal(props);
+        return props.open ? (
+          <div data-testid="disclaimer-agreements">
+            <button
+              onClick={() => props.onOpenChange(false)}
+              data-testid="close-agreements"
+            >
+              Close
+            </button>
+          </div>
+        ) : null;
+      }
 
       // Check which modal based on props
       if (props.onSave && props.content !== undefined) {
@@ -162,7 +179,12 @@ vi.mock(
 
 vi.mock('@/hoc/withPermissions', () => ({
   default: ({ children }: any) => children({ disabled: false }),
-  WithPermissions: ({ children }: any) => children({ hasPermission: true }),
+  WithPermissions: ({ children }: any) =>
+    children({ hasPermission: mockHasPermission }),
+}));
+
+vi.mock('./agreements-modal', () => ({
+  AgreementsModal: () => null,
 }));
 
 vi.mock('@/lib/utils', () => ({
@@ -182,7 +204,9 @@ describe('DisclaimersTab', () => {
     mockGetMentorId.mockReset();
     mockGetDisclaimersQuery.mockReset();
     mockGetMentorSettingsQuery.mockReset();
+    mockAgreementsModal.mockReset();
     mockUsername = 'testuser';
+    mockHasPermission = true;
     mockUseParams.mockReturnValue({
       tenantKey: 'test-tenant',
       mentorId: 'test-mentor',
@@ -971,6 +995,100 @@ describe('DisclaimersTab', () => {
       render(<DisclaimersTab />);
 
       expect(screen.getByText('User Agreement')).toBeInTheDocument();
+    });
+  });
+
+  describe('View Agreements', () => {
+    const disclaimerRecord = {
+      id: 'disc-1',
+      content: 'Existing agreement',
+      active: true,
+    };
+
+    function withRecord(record = disclaimerRecord) {
+      mockGetDisclaimersQuery.mockReturnValue({
+        data: { results: [record] },
+        isLoading: false,
+      });
+    }
+
+    it('shows the button for an admin once the user agreement is active', () => {
+      withRecord();
+
+      render(<DisclaimersTab />);
+
+      expect(screen.getByTestId('view-agreements-button')).toHaveTextContent(
+        'View Agreements',
+      );
+      // The modal is mounted (closed) with the record's id.
+      expect(mockAgreementsModal).toHaveBeenCalledWith(
+        expect.objectContaining({
+          open: false,
+          org: 'test-tenant',
+          userId: 'testuser',
+          mentorId: 'test-mentor',
+          disclaimerId: 'disc-1',
+        }),
+      );
+      expect(
+        screen.queryByTestId('disclaimer-agreements'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('opens the agreements modal on click and closes it via onOpenChange', () => {
+      withRecord();
+
+      render(<DisclaimersTab />);
+
+      fireEvent.click(screen.getByTestId('view-agreements-button'));
+      expect(screen.getByTestId('disclaimer-agreements')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByTestId('close-agreements'));
+      expect(
+        screen.queryByTestId('disclaimer-agreements'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('hides the button and never mounts the modal when no record exists', () => {
+      render(<DisclaimersTab />);
+
+      expect(
+        screen.queryByTestId('view-agreements-button'),
+      ).not.toBeInTheDocument();
+      expect(mockAgreementsModal).not.toHaveBeenCalled();
+    });
+
+    it('hides the button while the user agreement is inactive', () => {
+      withRecord({ ...disclaimerRecord, active: false });
+
+      render(<DisclaimersTab />);
+
+      expect(
+        screen.queryByTestId('view-agreements-button'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('hides the button without the view_disclaimers permission', () => {
+      mockHasPermission = false;
+      withRecord();
+
+      render(<DisclaimersTab />);
+
+      expect(screen.queryByText('User Agreement')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('view-agreements-button'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('falls back to an empty userId when no username is available', () => {
+      mockUsername = null;
+      withRecord();
+
+      render(<DisclaimersTab />);
+
+      expect(mockAgreementsModal).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: '' }),
+      );
     });
   });
 
