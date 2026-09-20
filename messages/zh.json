@@ -744,7 +744,21 @@
     "agentUpdatedError": "更新智能体失败",
     "userAgreementUpdatedSuccess": "用户协议更新成功",
     "userAgreementUpdatedError": "更新用户协议失败",
-    "userAgreementToggledSuccess": "用户协议已{status}成功"
+    "userAgreementToggledSuccess": "用户协议已{status}成功",
+    "viewAgreements": "查看同意记录"
+  },
+  "disclaimersTabAgreements": {
+    "title": "同意记录",
+    "totalAgreements": "共 {count} 条同意记录",
+    "searchPlaceholder": "按用户名搜索",
+    "searchAriaLabel": "按用户名搜索同意记录",
+    "columnUser": "用户",
+    "columnAgreedAt": "同意时间",
+    "summaryDescription": "查看已接受此智能体用户协议的用户。每条记录显示用户的姓名、邮箱和同意时间。尚未接受的用户不会列出。搜索需与用户名完全匹配。",
+    "empty": "尚无同意记录",
+    "emptyDescription": "接受用户协议的用户将与其同意时间一起显示在此处。",
+    "noMatches": "没有匹配的用户",
+    "noMatchesDescription": "搜索需与用户名完全匹配，请尝试输入完整的用户名。"
   },
   "editMentorModalIndex": {
     "dialogDescription": "编辑代理设置、提示词、工具、安全、流程、历史记录、数据集和 API 密钥",

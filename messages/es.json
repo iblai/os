@@ -744,7 +744,21 @@
     "agentUpdatedError": "Error al actualizar el agente",
     "userAgreementUpdatedSuccess": "Acuerdo de usuario actualizado correctamente",
     "userAgreementUpdatedError": "Error al actualizar el acuerdo de usuario",
-    "userAgreementToggledSuccess": "Acuerdo de usuario {status} correctamente"
+    "userAgreementToggledSuccess": "Acuerdo de usuario {status} correctamente",
+    "viewAgreements": "Ver aceptaciones"
+  },
+  "disclaimersTabAgreements": {
+    "title": "Aceptaciones",
+    "totalAgreements": "{count} aceptaciones en total",
+    "searchPlaceholder": "Buscar por nombre de usuario",
+    "searchAriaLabel": "Buscar aceptaciones por nombre de usuario",
+    "columnUser": "Usuario",
+    "columnAgreedAt": "Aceptado el",
+    "summaryDescription": "Revisa los usuarios que han aceptado el Acuerdo de usuario de este agente. Cada entrada muestra el nombre y el correo electrónico del usuario y cuándo lo aceptó. Los usuarios que aún no lo han aceptado no aparecen. La búsqueda coincide con el nombre de usuario exacto.",
+    "empty": "Aún no hay aceptaciones",
+    "emptyDescription": "Los usuarios que acepten el Acuerdo de usuario aparecerán aquí con la hora en que lo aceptaron.",
+    "noMatches": "Ningún usuario coincide con tu búsqueda",
+    "noMatchesDescription": "La búsqueda coincide con el nombre de usuario exacto: prueba con el nombre de usuario completo."
   },
   "editMentorModalIndex": {
     "dialogDescription": "Editar configuración del agente, indicaciones, herramientas, seguridad, flujo, historial, conjuntos de datos y claves API",
