@@ -4,20 +4,20 @@
 
 ### Features
 
-* drive the browser from Cowork in the Chrome extension side panel (1.1.0) ([16d36ce](https://github.com/iblai/os/commit/16d36cefddb167d146450a3e7161b981c1ed897d))
+- drive the browser from Cowork in the Chrome extension side panel (1.1.0) ([16d36ce](https://github.com/iblai/os/commit/16d36cefddb167d146450a3e7161b981c1ed897d))
 
 ### Bug Fixes
 
-* refuse every password and payment field, not just unprefixed autocomplete tokens ([ada9a51](https://github.com/iblai/os/commit/ada9a51242ac6e2de106905d2467c0455f65f66d))
+- refuse every password and payment field, not just unprefixed autocomplete tokens ([ada9a51](https://github.com/iblai/os/commit/ada9a51242ac6e2de106905d2467c0455f65f66d))
 
 ### Chores
 
-* **tauri:** release app-v0.95.22 ([8c94a9f](https://github.com/iblai/os/commit/8c94a9f0506a45d1d3050cd598ca9c5827615887))
-* update ext build command ([6256855](https://github.com/iblai/os/commit/6256855a063c9a6cea8c478820493186b93e8c99))
+- **tauri:** release app-v0.95.22 ([8c94a9f](https://github.com/iblai/os/commit/8c94a9f0506a45d1d3050cd598ca9c5827615887))
+- update ext build command ([6256855](https://github.com/iblai/os/commit/6256855a063c9a6cea8c478820493186b93e8c99))
 
 ### Tests
 
-* cover the extension's own permission answer and the card's server snapshot ([b8f955a](https://github.com/iblai/os/commit/b8f955abf164f8268f56026cf5ee5a88bf59bf02))
+- cover the extension's own permission answer and the card's server snapshot ([b8f955a](https://github.com/iblai/os/commit/b8f955abf164f8268f56026cf5ee5a88bf59bf02))
 
 ## [0.150.2](https://github.com/iblai/os/compare/v0.150.1...v0.150.2) (2026-09-17)
 
