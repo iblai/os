@@ -2105,6 +2105,8 @@
     "highlightFeaturedLabel": "Destacar en listados destacados",
     "highlightFeaturedInfoAriaLabel": "Más información sobre destacar en listados destacados",
     "highlightFeaturedTooltip": "Destaque este agente para resaltarlo en los listados.",
+    "showExploreMentorsLabel": "Mostrar agentes adicionales",
+    "showExploreMentorsTooltip": "Permite que los usuarios descubran otros agentes junto a este.",
     "enableLtiLabel": "Habilitar lanzamientos LTI",
     "enableLtiInfoAriaLabel": "Más información sobre habilitar lanzamientos LTI",
     "enableLtiTooltip": "Habilita que este agente sea accesible mediante lanzamientos LTI. Deseleccionar esto eliminará inmediatamente el acceso para todos los usuarios que hayan accedido mediante LTI.",

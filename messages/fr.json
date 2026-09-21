@@ -2105,6 +2105,8 @@
     "highlightFeaturedLabel": "Mettre en avant dans les listings",
     "highlightFeaturedInfoAriaLabel": "Plus d'infos sur la mise en avant dans les listings",
     "highlightFeaturedTooltip": "Mettez cet agent en avant pour le faire ressortir dans les listings.",
+    "showExploreMentorsLabel": "Afficher des agents supplémentaires",
+    "showExploreMentorsTooltip": "Permet aux utilisateurs de découvrir d'autres agents à côté de celui-ci.",
     "enableLtiLabel": "Activer les lancements LTI",
     "enableLtiInfoAriaLabel": "Plus d'infos sur l'activation des lancements LTI",
     "enableLtiTooltip": "Permet à cet agent d'être accessible via des lancements LTI. Décocher cette option supprimera immédiatement l'accès pour tous les utilisateurs ayant lancé cet agent via LTI.",
