@@ -223,8 +223,8 @@ describe('MentorCardWithStar', () => {
         name: /Remove from favorites/i,
       });
       const starIcon = starButton.querySelector('svg');
-      expect(starIcon).toHaveClass('text-[#38A1E5]');
-      expect(starIcon).toHaveClass('fill-current');
+      expect(starIcon).toHaveClass('fill-amber-400');
+      expect(starIcon).toHaveClass('text-amber-400');
     });
 
     it('prevents event propagation when star button is clicked', async () => {
