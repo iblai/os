@@ -1466,10 +1466,7 @@
       "name": "Disclaimers & User Agreement",
       "spec": "22-disclaimers-and-user-agreement.spec.ts",
       "sourceFiles": [
-        "components/modals/edit-mentor-modal/tabs/disclaimers-tab/index.tsx",
-        "components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-disclaimer-modal.tsx",
-        "components/modals/edit-mentor-modal/tabs/disclaimers-tab/edit-user-agreement-modal.tsx",
-        "components/modals/edit-mentor-modal/tabs/disclaimers-tab/agreements-modal.tsx",
+        "components/modals/edit-mentor-modal/disclaimers-tab.tsx",
         "components/modals/disclaimer-modal.tsx",
         "hooks/use-user-agreement.ts",
         "constants/disclaimer.ts"
