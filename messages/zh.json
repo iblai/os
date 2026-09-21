@@ -749,6 +749,7 @@
   },
   "disclaimersTabAgreements": {
     "title": "同意记录",
+    "dialogDescription": "已接受此智能体用户协议的用户。",
     "totalAgreements": "共 {count} 条同意记录",
     "searchPlaceholder": "按用户名搜索",
     "searchAriaLabel": "按用户名搜索同意记录",

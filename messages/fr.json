@@ -749,6 +749,7 @@
   },
   "disclaimersTabAgreements": {
     "title": "Acceptations",
+    "dialogDescription": "Utilisateurs ayant accepté l'Accord utilisateur de cet agent.",
     "totalAgreements": "{count} acceptations au total",
     "searchPlaceholder": "Rechercher par nom d'utilisateur",
     "searchAriaLabel": "Rechercher les acceptations par nom d'utilisateur",

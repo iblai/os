@@ -118,7 +118,7 @@ function AgreementsBody({
           {t('title')}
         </DialogTitle>
         <DialogDescription className="sr-only">
-          {t('summaryDescription')}
+          {t('dialogDescription')}
         </DialogDescription>
       </DialogHeader>
       <div className="scrollbar-hide flex-1 overflow-y-auto p-4">

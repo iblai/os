@@ -749,6 +749,7 @@
   },
   "disclaimersTabAgreements": {
     "title": "Agreements",
+    "dialogDescription": "Users who have accepted this agent's User Agreement.",
     "totalAgreements": "{count} Total Agreements",
     "searchPlaceholder": "Search by username",
     "searchAriaLabel": "Search agreements by username",
