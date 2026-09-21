@@ -16,6 +16,7 @@ import ConsoleSetup from '@/lib/logger';
 import { IblDataHandler } from '@/components/ibl-data-handler';
 import { ServiceWorkerProvider } from '@/components/service-worker-provider';
 import { ChunkErrorRecovery } from '@/components/chunk-error-recovery';
+import { AppUpdatePrompt } from '@/components/app-update-prompt';
 import { buildMetadata, getSiteUrl } from '@/lib/seo';
 import { SiteJsonLd } from '@/components/seo/json-ld';
 
@@ -129,6 +130,10 @@ export default async function RootLayout({
             </ServiceWorkerProvider>
           </StoreProvider>
           <Toaster />
+          {/* Tauri only (renders nothing on the web): "a newer version is
+              available" prompt — self-installs on desktop, opens the store
+              page on mobile. */}
+          <AppUpdatePrompt />
         </NextIntlClientProvider>
       </body>
     </html>

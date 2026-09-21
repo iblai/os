@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/tooltip';
 import { AIMessageCopy } from './ai-message-copy';
 import { AIMessageShare } from './ai-message-share';
+import { AIMessageDownload } from './ai-message-download';
 import { AIMessageSpeak } from './ai-message-speak';
 import {
   selectShowingSharedChat,
@@ -226,7 +227,10 @@ export function AIMessageBubble({
             {hasPermissionPrompts && (
               <CodePermissionCards generationId={message.id} />
             )}
-            <div className="overflow-x-auto text-sm/6 text-gray-800 [&_.katex-display]:overflow-x-auto [&_.katex-display]:overflow-y-hidden [&_code]:rounded [&_code]:bg-gray-200 [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_em]:italic [&_li]:mb-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_pre]:overflow-x-auto [&_pre]:rounded [&_pre]:bg-gray-200 [&_pre]:p-2 [&_strong]:font-bold [&_ul]:list-disc [&_ul]:pl-4">
+            <div
+              data-testid="ai-message-body"
+              className="overflow-x-auto text-sm/6 text-gray-800 [&_.katex-display]:overflow-x-auto [&_.katex-display]:overflow-y-hidden [&_code]:rounded [&_code]:bg-gray-200 [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_em]:italic [&_li]:mb-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_pre]:overflow-x-auto [&_pre]:rounded [&_pre]:bg-gray-200 [&_pre]:p-2 [&_strong]:font-bold [&_ul]:list-disc [&_ul]:pl-4"
+            >
               <MessagePreview
                 content={content}
                 artifactVersions={message?.artifactVersions}
@@ -285,7 +289,14 @@ export function AIMessageBubble({
             )}
 
             {!showingSharedChat && !chatPrivacyActive && (
-              <AIMessageShare sessionId={sessionId} tenantKey={tenantKey} />
+              <>
+                <AIMessageShare sessionId={sessionId} tenantKey={tenantKey} />
+                <AIMessageDownload
+                  message={message}
+                  messages={messages}
+                  mentorName={mentorName}
+                />
+              </>
             )}
 
             {isLoggedIn() &&

@@ -6,6 +6,10 @@ const root = path.resolve(__dirname, '.');
 dotenv.config({ path: path.join(root, '.env.local'), override: true });
 dotenv.config({ path: path.join(root, '.env') });
 
+// One token per run, inherited by every worker and by globalTeardown: names
+// the residue ledger (e2e/.residue/<runId>.jsonl) and the count snapshots.
+process.env.E2E_RUN_ID = process.env.E2E_RUN_ID || String(Date.now());
+
 const testTimeout = process.env.TEST_TIMEOUT
   ? parseInt(process.env.TEST_TIMEOUT, 10)
   : process.env.CI
@@ -88,14 +92,80 @@ const config = defineConfig({
       use: { ...devices['Desktop Edge'] },
     },
 
-    // ── Test projects: each depends on admin + non-admin setup ───────────────
+    // ── Residue guard: count snapshot before the journeys, reap + assert after ─
+    // `snapshot-<browser>` needs the admin storageState (depends on setup) and
+    // registers `residue-<browser>` as its teardown, which Playwright runs once
+    // every project depending on the snapshot has finished.
+    {
+      name: 'snapshot-chrome',
+      testMatch: /residue\.setup\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'playwright/.auth/user-chrome.json',
+      },
+      dependencies: ['setup-chrome'],
+      teardown: 'residue-chrome',
+    },
+    {
+      name: 'residue-chrome',
+      testMatch: /residue\.teardown\.ts/,
+      use: { storageState: 'playwright/.auth/user-chrome.json' },
+    },
+    {
+      name: 'snapshot-firefox',
+      testMatch: /residue\.setup\.ts/,
+      use: {
+        ...devices['Desktop Firefox'],
+        storageState: 'playwright/.auth/user-firefox.json',
+      },
+      dependencies: ['setup-firefox'],
+      teardown: 'residue-firefox',
+    },
+    {
+      name: 'residue-firefox',
+      testMatch: /residue\.teardown\.ts/,
+      use: { storageState: 'playwright/.auth/user-firefox.json' },
+    },
+    {
+      name: 'snapshot-safari',
+      testMatch: /residue\.setup\.ts/,
+      use: {
+        ...devices['Desktop Safari'],
+        storageState: 'playwright/.auth/user-safari.json',
+      },
+      dependencies: ['setup-safari'],
+      teardown: 'residue-safari',
+    },
+    {
+      name: 'residue-safari',
+      testMatch: /residue\.teardown\.ts/,
+      use: { storageState: 'playwright/.auth/user-safari.json' },
+    },
+    {
+      name: 'snapshot-edge',
+      testMatch: /residue\.setup\.ts/,
+      use: {
+        ...devices['Desktop Edge'],
+        storageState: 'playwright/.auth/user-edge.json',
+      },
+      dependencies: ['setup-edge'],
+      teardown: 'residue-edge',
+    },
+    {
+      name: 'residue-edge',
+      testMatch: /residue\.teardown\.ts/,
+      use: { storageState: 'playwright/.auth/user-edge.json' },
+    },
+
+    // ── Test projects: each depends on the residue snapshot (→ admin setup) +
+    //    non-admin setup ─────────────────────────────────────────────────────
     {
       name: 'mentor-desktop-chrome',
       use: {
         ...devices['Desktop Chrome'],
         storageState: 'playwright/.auth/user-chrome.json',
       },
-      dependencies: ['setup-chrome', 'setup-nonadmin-chrome'],
+      dependencies: ['snapshot-chrome', 'setup-nonadmin-chrome'],
     },
     {
       name: 'mentor-desktop-firefox',
@@ -103,7 +173,7 @@ const config = defineConfig({
         ...devices['Desktop Firefox'],
         storageState: 'playwright/.auth/user-firefox.json',
       },
-      dependencies: ['setup-firefox', 'setup-nonadmin-firefox'],
+      dependencies: ['snapshot-firefox', 'setup-nonadmin-firefox'],
     },
     {
       name: 'mentor-desktop-safari',
@@ -111,7 +181,7 @@ const config = defineConfig({
         ...devices['Desktop Safari'],
         storageState: 'playwright/.auth/user-safari.json',
       },
-      dependencies: ['setup-safari', 'setup-nonadmin-safari'],
+      dependencies: ['snapshot-safari', 'setup-nonadmin-safari'],
     },
     {
       name: 'mentor-desktop-edge',
@@ -119,7 +189,7 @@ const config = defineConfig({
         ...devices['Desktop Edge'],
         storageState: 'playwright/.auth/user-edge.json',
       },
-      dependencies: ['setup-edge', 'setup-nonadmin-edge'],
+      dependencies: ['snapshot-edge', 'setup-nonadmin-edge'],
     },
   ],
   webServer: process.env.MENTOR_NEXTJS_HOST
@@ -135,8 +205,8 @@ const config = defineConfig({
 // Enable video recording when PLAYWRIGHT_VIDEO env var is set
 if (process.env.PLAYWRIGHT_VIDEO && config.projects) {
   config.projects = config.projects.map((project) => {
-    // Only add video to non-setup projects
-    if (!project.name?.startsWith('setup')) {
+    // Only add video to journey projects
+    if (project.name?.startsWith('mentor-desktop-')) {
       return {
         ...project,
         use: {

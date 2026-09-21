@@ -80,9 +80,20 @@ vi.mock('../coding-mode-button', () => ({
 
 let mockIsTauri = false;
 const mockIsTauriApp = vi.fn(() => mockIsTauri);
+let mockTauriPlatform = 'linux';
 vi.mock('@/types/tauri', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/types/tauri')>()),
   isTauriApp: () => mockIsTauriApp(),
+  // Mirrors the real probe (Tauri + iOS/Android OS) against THIS file's
+  // mocks — the original closes over its own unmocked `isTauriApp`. Reads
+  // the flag directly so the Code gate's `isTauriApp` call count stays exact.
+  isTauriMobile: async () =>
+    mockIsTauri &&
+    (mockTauriPlatform === 'ios' || mockTauriPlatform === 'android'),
+}));
+
+vi.mock('@tauri-apps/plugin-os', () => ({
+  platform: () => mockTauriPlatform,
 }));
 
 let mockDriverAvailable = false;
@@ -129,6 +140,10 @@ vi.mock('@iblai/iblai-js/web-containers', () => ({
 }));
 
 let mockHasRemoteAi = false;
+let mockInExtensionPanel = false;
+vi.mock('@/hooks/use-in-extension-panel', () => ({
+  useInExtensionPanel: () => mockInExtensionPanel,
+}));
 vi.mock('@iblai/iblai-js/web-utils', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@iblai/iblai-js/web-utils')>()),
   hasRemoteAiConfig: () => mockHasRemoteAi,
@@ -165,6 +180,7 @@ describe('InsideButtons', () => {
     // tests below see only the responsive buttons.
     mockIsTauri = false;
     mockDriverAvailable = false;
+    mockTauriPlatform = 'linux';
     mockDriverSupported = true;
     mockUnsupportedReason = undefined;
     mockDriverStatus = null;
@@ -174,6 +190,7 @@ describe('InsideButtons', () => {
     mockAccessibilityGrant = null;
     mockScreenRecordingGrant = null;
     mockHasRemoteAi = false;
+    mockInExtensionPanel = false;
     localStorage.clear();
   });
 
@@ -1178,6 +1195,196 @@ describe('InsideButtons', () => {
     });
   });
 
+  // In the Chrome extension's side panel the SAME pill is the browser driver.
+  // The Cua Driver is desktop-only, so nothing here may touch it — that is the
+  // regression these cover.
+  describe('Cowork in the extension panel (no Cua Driver)', () => {
+    beforeEach(() => {
+      mockInExtensionPanel = true;
+      mockHasRemoteAi = true;
+    });
+
+    it('offers Cowork even though no desktop driver is available', () => {
+      render(<InsideButtons {...defaultProps} />);
+
+      expect(screen.getByText('Cowork')).toBeInTheDocument();
+    });
+
+    it('is absent in a plain browser', () => {
+      mockInExtensionPanel = false;
+      render(<InsideButtons {...defaultProps} />);
+
+      expect(screen.queryByText('Cowork')).not.toBeInTheDocument();
+    });
+
+    // Driving the tab is what the panel is for, so Cowork starts on — and the
+    // PREF is written, not just the local state: the SDK routes on
+    // `isCoworkEnabled()` and so does the submit in components/chat/index.tsx.
+    it('opens with Cowork already on and persists it', async () => {
+      const user = userEvent.setup();
+      render(<InsideButtons {...defaultProps} />);
+
+      expect(mockSetCoworkEnabled).toHaveBeenCalledWith(true);
+      expect(localStorage.getItem('ibl_cowork_enabled')).toBe('true');
+      expect(screen.getByTestId('cowork-pill')).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+      await user.click(screen.getByTestId('cowork-pill'));
+      expect(
+        within(screen.getByTestId('cowork-panel')).getByRole('switch'),
+      ).toHaveAttribute('aria-checked', 'true');
+      // Nothing was confirmed and nothing was asked of the OS.
+      expect(screen.queryByText('Let Cowork use your computer?')).toBeNull();
+      expect(mockRequestPermissions).not.toHaveBeenCalled();
+      expect(mockGhostInstall).not.toHaveBeenCalled();
+    });
+
+    // `setCoworkEnabled` writes "true"/"false", so an explicit off is a stored
+    // value rather than an absent one — the default must not talk over it.
+    it('stays off when the user has switched it off before', () => {
+      localStorage.setItem('ibl_cowork_enabled', 'false');
+      render(<InsideButtons {...defaultProps} />);
+
+      expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
+      expect(screen.getByTestId('cowork-pill')).toHaveAttribute(
+        'aria-pressed',
+        'false',
+      );
+    });
+
+    it('enables from the switch with no dialog and no Cua Driver', async () => {
+      const user = userEvent.setup();
+      localStorage.setItem('ibl_cowork_enabled', 'false');
+      render(<InsideButtons {...defaultProps} />);
+
+      // The pill opens the panel; the switch inside it is what enables Cowork.
+      await user.click(screen.getByTestId('cowork-pill'));
+      expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
+      await user.click(
+        within(screen.getByTestId('cowork-panel')).getByRole('switch'),
+      );
+
+      expect(screen.queryByText('Let Cowork use your computer?')).toBeNull();
+      expect(mockSetCoworkEnabled).toHaveBeenCalledWith(true);
+      expect(localStorage.getItem('ibl_cowork_enabled')).toBe('true');
+      // No OS grants and no driver fetch: the extension's permissions come from
+      // its manifest, and requestDriverPermissions is a Tauri command here.
+      expect(mockRequestPermissions).not.toHaveBeenCalled();
+      expect(mockGhostInstall).not.toHaveBeenCalled();
+    });
+
+    // What the dialog used to say, in the one place it can still be read once
+    // Cowork switches itself on.
+    it('states what Cowork does to the tab inside the panel', async () => {
+      const user = userEvent.setup();
+      render(<InsideButtons {...defaultProps} />);
+
+      await user.click(screen.getByTestId('cowork-pill'));
+
+      expect(screen.getByTestId('cowork-tab-note')).toHaveTextContent(
+        /never password or payment fields/i,
+      );
+    });
+
+    it('needs a session before it can be switched on', async () => {
+      const user = userEvent.setup();
+      mockHasRemoteAi = false;
+      // An explicit off, so the click below is a real off → on.
+      localStorage.setItem('ibl_cowork_enabled', 'false');
+      render(<InsideButtons {...defaultProps} />);
+
+      await user.click(screen.getByTestId('cowork-pill'));
+      await user.click(
+        within(screen.getByTestId('cowork-panel')).getByRole('switch'),
+      );
+
+      expect(mockSetCoworkEnabled).not.toHaveBeenCalled();
+      expect(mockToastWarning).toHaveBeenCalled();
+    });
+
+    it('switches off without stopping a driver that was never started', async () => {
+      const user = userEvent.setup();
+      mockCoworkOn = true;
+      localStorage.setItem('ibl_cowork_enabled', 'true');
+      render(<InsideButtons {...defaultProps} />);
+
+      await user.click(screen.getByTestId('cowork-pill'));
+      await user.click(
+        within(screen.getByTestId('cowork-panel')).getByRole('switch'),
+      );
+
+      expect(mockSetCoworkEnabled).toHaveBeenCalledWith(false);
+      expect(mockGhostStop).not.toHaveBeenCalled();
+    });
+
+    // The confirm gate in the extension fires on ANY form submission, so a plain
+    // search prompted. Automatic is the default because of that; Ask Me puts the
+    // card back.
+    it('defaults Approvals to Automatic and says what that means', async () => {
+      const user = userEvent.setup();
+      render(<InsideButtons {...defaultProps} />);
+
+      await user.click(screen.getByTestId('cowork-pill'));
+      const panel = within(screen.getByTestId('cowork-panel'));
+
+      expect(panel.getByRole('radio', { name: 'Automatic' })).toHaveAttribute(
+        'aria-checked',
+        'true',
+      );
+      expect(panel.getByRole('radio', { name: 'Ask Me' })).toHaveAttribute(
+        'aria-checked',
+        'false',
+      );
+      expect(screen.getByTestId('cowork-auto-mode-hint')).toBeInTheDocument();
+    });
+
+    it('remembers Ask Me, and drops the hint with it', async () => {
+      const user = userEvent.setup();
+      render(<InsideButtons {...defaultProps} />);
+
+      await user.click(screen.getByTestId('cowork-pill'));
+      await user.click(
+        within(screen.getByTestId('cowork-panel')).getByRole('radio', {
+          name: 'Ask Me',
+        }),
+      );
+
+      expect(localStorage.getItem('ibl_cowork_approvals')).toBe('manual');
+      await waitFor(() =>
+        expect(
+          within(screen.getByTestId('cowork-panel')).getByRole('radio', {
+            name: 'Ask Me',
+          }),
+        ).toHaveAttribute('aria-checked', 'true'),
+      );
+      expect(screen.queryByTestId('cowork-auto-mode-hint')).toBeNull();
+    });
+
+    it('opens on the choice already saved', async () => {
+      const user = userEvent.setup();
+      localStorage.setItem('ibl_cowork_approvals', 'manual');
+      render(<InsideButtons {...defaultProps} />);
+
+      await user.click(screen.getByTestId('cowork-pill'));
+
+      expect(
+        within(screen.getByTestId('cowork-panel')).getByRole('radio', {
+          name: 'Ask Me',
+        }),
+      ).toHaveAttribute('aria-checked', 'true');
+    });
+
+    it('never reconciles a driver install in the panel', () => {
+      mockCoworkOn = true;
+      mockDriverStatus = { installed: false, supported: true };
+      localStorage.setItem('ibl_cowork_enabled', 'true');
+      render(<InsideButtons {...defaultProps} />);
+
+      expect(mockGhostInstall).not.toHaveBeenCalled();
+    });
+  });
+
   describe('Cowork button', () => {
     /** Cowork is offered wherever the driver is present. */
     const enableCowork = () => {
@@ -1284,6 +1491,17 @@ describe('InsideButtons', () => {
       render(<InsideButtons {...defaultProps} />);
 
       expect(mockGhostInstall).not.toHaveBeenCalled();
+    });
+
+    it('hides Cowork entirely on Tauri mobile (a phone has no desktop to drive)', async () => {
+      mockIsTauri = true;
+      mockTauriPlatform = 'ios';
+      mockDriverAvailable = true;
+      render(<InsideButtons {...defaultProps} />);
+      // The async platform check resolves after mount; the pill must then be gone.
+      await waitFor(() =>
+        expect(screen.queryByText('Cowork')).not.toBeInTheDocument(),
+      );
     });
 
     it('does not default Cowork on for an unsupported session', () => {
@@ -1760,5 +1978,221 @@ describe('InsideButtons', () => {
         name.compareDocumentPosition(slug) & Node.DOCUMENT_POSITION_FOLLOWING,
       ).toBeTruthy();
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Progressive overflow — driven by MEASURED widths, not a breakpoint.
+// ---------------------------------------------------------------------------
+
+/**
+ * Stub layout for the tool row: the row reports `root` px, each inline pill
+ * reports the width given for its `data-overflow-key` (or `fallback`).
+ */
+function stubRowLayout(
+  root: number,
+  pills: Record<string, number>,
+  fallback = 100,
+) {
+  const original = Element.prototype.getBoundingClientRect;
+  Element.prototype.getBoundingClientRect = function () {
+    const el = this as HTMLElement;
+    let width = 0;
+    if (el.getAttribute?.('data-testid') === 'inside-buttons-row') {
+      width = root;
+    } else {
+      const key = el.getAttribute?.('data-overflow-key');
+      if (key) width = pills[key] ?? fallback;
+    }
+    return {
+      top: 0,
+      left: 0,
+      bottom: 0,
+      right: 0,
+      width,
+      height: 0,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    } as DOMRect;
+  };
+  return () => {
+    Element.prototype.getBoundingClientRect = original;
+  };
+}
+
+describe('InsideButtons progressive overflow (measured)', () => {
+  const onOptionClick = vi.fn();
+  // Canvas, Prompts, Deep Research — in that sequence.
+  const props = {
+    activeOptions: [] as string[],
+    onOptionClick,
+    deepResearch: true,
+    studyMode: false,
+    artifactsEnabled: true,
+    promptsIsEnabled: true,
+    onOpenPromptGallery: vi.fn(),
+    // Wide by the breakpoint rule, so every pill starts inline and gets
+    // measured; the measured fit then decides.
+    containerWidth: 1000,
+  };
+  const widths = { Canvas: 80, Prompts: 90, 'Deep Research': 130 };
+
+  let restore: (() => void) | undefined;
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockIsTauri = false;
+    mockDriverAvailable = false;
+    mockDriverSupported = true;
+    mockUnsupportedReason = undefined;
+    mockTauriPlatform = 'linux';
+  });
+  afterEach(() => {
+    restore?.();
+    restore = undefined;
+  });
+
+  const inlineNames = () =>
+    Array.from(
+      screen
+        .getByTestId('inside-buttons-row')
+        .querySelectorAll('[data-overflow-key]'),
+    ).map((el) => el.getAttribute('data-overflow-key'));
+
+  const menuNames = async () => {
+    await userEvent.click(screen.getByText('•••').closest('button')!);
+    await waitFor(() => expect(screen.getByRole('menu')).toBeInTheDocument());
+    return screen.getAllByRole('menuitem').map((i) => i.textContent?.trim());
+  };
+
+  it('keeps everything inline when the row is wide enough', async () => {
+    // 80 + 90 + 130 + 2 gaps = 312
+    restore = stubRowLayout(312, widths);
+    render(<InsideButtons {...props} />);
+    await waitFor(() =>
+      expect(inlineNames()).toEqual(['Canvas', 'Prompts', 'Deep Research']),
+    );
+    expect(screen.queryByText('•••')).not.toBeInTheDocument();
+  });
+
+  it('collapses the LAST pill first when one pill no longer fits', async () => {
+    // Two inline + trigger: 80 + 90 + 32 + 2 gaps = 214
+    restore = stubRowLayout(250, widths);
+    render(<InsideButtons {...props} />);
+    await waitFor(() => expect(inlineNames()).toEqual(['Canvas', 'Prompts']));
+    expect(await menuNames()).toEqual(['Deep Research']);
+  });
+
+  it('keeps collapsing one by one, in sequence, as the row narrows', async () => {
+    // One inline + trigger: 80 + 32 + 1 gap = 118
+    restore = stubRowLayout(150, widths);
+    render(<InsideButtons {...props} />);
+    await waitFor(() => expect(inlineNames()).toEqual(['Canvas']));
+    expect(await menuNames()).toEqual(['Prompts', 'Deep Research']);
+  });
+
+  it('collapses everything into ••• when not even the first pill fits', async () => {
+    restore = stubRowLayout(100, widths);
+    render(<InsideButtons {...props} />);
+    await waitFor(() => expect(inlineNames()).toEqual([]));
+    expect(await menuNames()).toEqual(['Canvas', 'Prompts', 'Deep Research']);
+  });
+
+  it('fits active pills at their (wider) measured size', async () => {
+    // An active Canvas pill carries the ✕ and measures 110 instead of 80:
+    // 110 + 90 + 32 + 12 = 244 > 240, so Prompts drops as well.
+    restore = stubRowLayout(240, { ...widths, Canvas: 110 });
+    render(<InsideButtons {...props} activeOptions={['canvas']} />);
+    await waitFor(() => expect(inlineNames()).toEqual(['Canvas']));
+    expect(await menuNames()).toEqual(['Prompts', 'Deep Research']);
+  });
+
+  it('pills always show their label inline — never icon-only', async () => {
+    restore = stubRowLayout(312, widths);
+    render(<InsideButtons {...props} />);
+    await waitFor(() => expect(inlineNames()).toHaveLength(3));
+    for (const label of ['Canvas', 'Prompts', 'Deep Research']) {
+      expect(screen.getByText(label).className).not.toContain('hidden');
+    }
+  });
+
+  it('takes the always-inline Code pill out of the available space first', async () => {
+    mockIsTauri = true;
+    // 250 fits Canvas + Prompts alone (214); a 100px Code pill + gap leaves
+    // 144, which only fits Canvas (118).
+    restore = stubRowLayout(250, { ...widths, Code: 100 });
+    render(<InsideButtons {...props} sessionId="chat-1" />);
+    await waitFor(() => expect(inlineNames()).toEqual(['Code', 'Canvas']));
+    expect(screen.getByTestId('coding-mode-button')).toBeInTheDocument();
+    expect(await menuNames()).toEqual(['Prompts', 'Deep Research']);
+  });
+
+  it('Cowork is first in the sequence and the last to collapse', async () => {
+    mockDriverAvailable = true;
+    // Cowork 90 + Canvas 80 + trigger 32 + 2 gaps = 214
+    restore = stubRowLayout(214, { ...widths, Cowork: 90 });
+    render(<InsideButtons {...props} />);
+    await waitFor(() => expect(inlineNames()).toEqual(['Cowork', 'Canvas']));
+    expect(await menuNames()).toEqual(['Prompts', 'Deep Research']);
+  });
+
+  it('a collapsed Cowork stays disabled in the menu, with its reason', async () => {
+    mockDriverAvailable = true;
+    mockDriverSupported = false;
+    mockUnsupportedReason = 'kde_unproven';
+    restore = stubRowLayout(50, { ...widths, Cowork: 90 });
+    render(<InsideButtons {...props} />);
+    await waitFor(() => expect(inlineNames()).toEqual([]));
+    await userEvent.click(screen.getByText('•••').closest('button')!);
+    const cowork = await screen.findByRole('menuitem', { name: /Cowork/ });
+    expect(cowork).toHaveAttribute('aria-disabled', 'true');
+    expect(cowork).toHaveAttribute('title');
+  });
+
+  it('falls back to the breakpoint rule until the row has been measured', () => {
+    // jsdom default: every width is 0 → unmeasured → containerWidth decides.
+    render(<InsideButtons {...props} containerWidth={500} />);
+    expect(inlineNames()).toEqual([]);
+    expect(screen.getByText('•••')).toBeInTheDocument();
+  });
+});
+
+describe('Skills pill label on phone widths', () => {
+  const skills = [
+    {
+      unique_id: 's1',
+      name: 'Web Research',
+      slug: 'web-research',
+      enabled: true,
+    },
+  ];
+  const base = {
+    activeOptions: [] as string[],
+    onOptionClick: vi.fn(),
+    deepResearch: false,
+    studyMode: false,
+    artifactsEnabled: false,
+    containerWidth: 1000,
+    skills,
+    onToggleSkill: vi.fn(),
+    onClearSkills: vi.fn(),
+  };
+
+  const labelSpan = () =>
+    Array.from(
+      screen.getByTestId('skills-menu-trigger').querySelectorAll('span'),
+    ).find((span) => /Skills|Web Research/.test(span.textContent ?? ''))!;
+
+  it('is icon-only on phones while no skill is armed', () => {
+    render(<InsideButtons {...base} activeSkillSlugs={new Set()} />);
+    expect(labelSpan().className).toContain('max-[520px]:hidden');
+  });
+
+  it('always shows the armed skill name once one is selected', () => {
+    render(
+      <InsideButtons {...base} activeSkillSlugs={new Set(['web-research'])} />,
+    );
+    expect(labelSpan()).toHaveTextContent('Web Research');
+    expect(labelSpan().className).not.toContain('max-[520px]:hidden');
   });
 });

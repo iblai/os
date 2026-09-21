@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test';
 import { test, expect } from '../fixtures/mentor-test';
 import { navigateToMentorApp, getPlatformContext } from '../utils/auth';
+import { waitForPageReady } from '../utils/resilient';
 import { MENTOR_NEXTJS_HOST } from '../fixtures/test-data';
 import { ChatPage } from '../page-objects/chat.page';
 
@@ -50,12 +51,11 @@ import { ChatPage } from '../page-objects/chat.page';
  * `navigateToMentorApp` login; every following test reuses the cached
  * `tenantKey`/`mentorId` and navigates directly. Each test still gets
  * Playwright's default fresh page/context, so per-test WS/REST mocks never
- * leak across tests. No mentor is ever created by this spec (unlike Journey
- * 52), so there is nothing to track/clean up: the "verbose reasoning"
+ * leak across tests. The mentor created for this spec (see `beforeEach`) is
+ * only ever navigated to, never mutated: the "verbose reasoning"
  * (`show_reasoning`) setting is toggled via `ChatPage.mockShowReasoning()` —
- * a REST route patch — rather than by mutating the shared default mentor's
- * real settings, so parallel/subsequent runs against the same tenant are
- * unaffected.
+ * a REST route patch — rather than by mutating the mentor's real settings,
+ * so parallel/subsequent runs against the same tenant are unaffected.
  */
 test.describe('Journey 73: Agent Working Indicator', () => {
   test.describe.configure({ mode: 'serial' });
@@ -63,9 +63,11 @@ test.describe('Journey 73: Agent Working Indicator', () => {
   let tenantKey = '';
   let mentorId = '';
 
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page, createMentorPage }) => {
     if (!tenantKey || !mentorId) {
       await navigateToMentorApp(page);
+      await createMentorPage.openAndCreate();
+      await waitForPageReady(page);
       ({ tenantKey, mentorId } = await getPlatformContext(page));
     }
   });

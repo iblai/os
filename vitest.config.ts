@@ -101,11 +101,18 @@ export default defineConfig({
         'contexts/**/*.{ts,tsx}',
         'actions/**/*.{ts,tsx}',
         'app/share/**/*.{ts,tsx}',
+        'extensions/chrome/src/**/*.{ts,tsx}',
       ],
       exclude: [
         // Playwright / WebdriverIO E2E tests (not unit coverage)
         'e2e/**',
         'e2e-tauri/**',
+
+        // The extension's two mounts: createRoot glue and the service worker's
+        // addListener wiring. Both are entry points with nothing to assert; the
+        // worker's actual protocol lives in browse-worker.ts, which is covered.
+        'extensions/chrome/src/main.tsx',
+        'extensions/chrome/src/background.ts',
 
         // Default exclusions
         'node_modules/**',

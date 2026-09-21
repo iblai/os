@@ -1,0 +1,97 @@
+{
+  "actionBack": {
+    "message": "Go back"
+  },
+  "actionClick": {
+    "message": "Click"
+  },
+  "actionNavigate": {
+    "message": "Open"
+  },
+  "actionReadPage": {
+    "message": "Read page"
+  },
+  "actionScroll": {
+    "message": "Scroll"
+  },
+  "actionSelect": {
+    "message": "Select in"
+  },
+  "actionTitle": {
+    "message": "Open ibl.ai"
+  },
+  "actionType": {
+    "message": "Type into"
+  },
+  "actionWait": {
+    "message": "Wait"
+  },
+  "appDescription": {
+    "message": "Chat with your ibl.ai agents from a Chrome side panel, on any page, and let them browse for you."
+  },
+  "appName": {
+    "message": "ibl.ai"
+  },
+  "declined": {
+    "message": "Declined."
+  },
+  "errorAccess": {
+    "message": "Your session is no longer valid. Sign in again."
+  },
+  "errorCredits": {
+    "message": "Not enough credits on this platform."
+  },
+  "errorGeneric": {
+    "message": "Something went wrong: $MESSAGE$",
+    "placeholders": {
+      "message": {
+        "content": "$1"
+      }
+    }
+  },
+  "errorRunInProgress": {
+    "message": "A run is already in progress."
+  },
+  "errorWorkerGone": {
+    "message": "The extension stopped responding, so the run ended. Try again."
+  },
+  "hostBlocked": {
+    "message": "$HOST$ is not an http or https page, so it cannot be driven.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "noActiveTab": {
+    "message": "$URL$ can’t be driven — only http and https pages can. Switch to the page you want it to work on.",
+    "placeholders": {
+      "url": {
+        "content": "$1"
+      }
+    }
+  },
+  "noModels": {
+    "message": "No models are available on this platform."
+  },
+  "refused": {
+    "message": "Refused: $REASON$",
+    "placeholders": {
+      "reason": {
+        "content": "$1"
+      }
+    }
+  },
+  "signIn": {
+    "message": "Sign in"
+  },
+  "signInFailed": {
+    "message": "Sign-in failed. Try again."
+  },
+  "stepLimit": {
+    "message": "Stopped after the maximum number of steps."
+  },
+  "tokenLimit": {
+    "message": "Stopped: the run used up its token budget."
+  }
+}

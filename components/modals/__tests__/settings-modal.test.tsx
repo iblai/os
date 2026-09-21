@@ -50,6 +50,17 @@ vi.mock('@/hooks/use-user', () => ({
   useIsAdmin: () => mockIsAdminModal,
 }));
 
+// Provider column labels come from the backend LLM catalogue; the resolver is
+// stubbed so the table tests stay independent of the RTK Query cache.
+const mockUseLlmProviderCatalogue = vi.fn();
+const mockResolveLlmProvider = vi.fn<
+  (key?: string | null) => { logo: string | null; displayName: string }
+>((key) => ({ logo: null, displayName: key ?? '' }));
+vi.mock('@/hooks/use-llm-provider-details', () => ({
+  useLlmProviderCatalogue: (...args: unknown[]) =>
+    mockUseLlmProviderCatalogue(...args),
+}));
+
 // Controllable RBAC check — drives whether a non-admin can edit the
 // agents they created (the "Student Mentor Creation" capability).
 let mockCheckRbacPermissionModal: (
@@ -226,6 +237,13 @@ describe('SettingsModal', () => {
     mockEditMentorAndRefresh.mockReturnValue({
       unwrap: vi.fn().mockResolvedValue({}),
     });
+    mockResolveLlmProvider.mockReset();
+    mockResolveLlmProvider.mockImplementation((key?: string | null) => ({
+      logo: null,
+      displayName: key ?? '',
+    }));
+    mockUseLlmProviderCatalogue.mockReset();
+    mockUseLlmProviderCatalogue.mockReturnValue(mockResolveLlmProvider);
   });
 
   afterEach(() => {
@@ -510,6 +528,33 @@ describe('SettingsModal', () => {
       expect(screen.getByText('GPT-4')).toBeInTheDocument();
       expect(screen.getByText('OpenAI')).toBeInTheDocument();
       expect(screen.getByText('A test mentor')).toBeInTheDocument();
+    });
+
+    it('labels the provider column from the backend LLM catalogue', () => {
+      mockResolveLlmProvider.mockImplementation((key?: string | null) =>
+        key === 'OpenAI'
+          ? {
+              logo: 'https://api.example.com/openai.png',
+              displayName: 'Open AI',
+            }
+          : { logo: null, displayName: key ?? '' },
+      );
+      const store = createTestStore([]);
+
+      render(
+        <Provider store={store}>
+          <SettingsModal isOpen={true} onClose={vi.fn()} />
+        </Provider>,
+      );
+
+      expect(mockUseLlmProviderCatalogue).toHaveBeenCalledWith({
+        org: 'tenant123',
+        userId: 'testuser',
+        mentorId: 'mentor456',
+      });
+      expect(mockResolveLlmProvider).toHaveBeenCalledWith('OpenAI');
+      expect(screen.getByText('Open AI')).toBeInTheDocument();
+      expect(screen.queryByText('OpenAI')).not.toBeInTheDocument();
     });
 
     it('renders featured toggle switch for each mentor', () => {

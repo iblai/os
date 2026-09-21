@@ -273,9 +273,37 @@ describe('SettingsTab', () => {
       });
       expect(labels.sections).toEqual({
         chatExperience: 'chatExperienceHeading',
-        voiceCalls: 'voiceCallsHeading',
         advanced: 'advancedHeading',
+        perSurface: 'perSurfaceHeading',
+        globalSettings: 'globalSettingsHeading',
       });
+      // #2476: the Capabilities sub-tab renders a two-column surface matrix,
+      // so the wrapper must supply the column headings and the embed-column
+      // labels alongside the in-app ones.
+      expect(labels.surfaces).toEqual({
+        inAppChat: 'inAppChatSurfaceLabel',
+        embedWidget: 'embedWidgetSurfaceLabel',
+      });
+      // The two group banners and the per-column tooltips are host-supplied.
+      expect(labels.notes).toEqual({
+        perSurface: 'perSurfaceNote',
+        globalSettings: 'globalSettingsNote',
+        inAppChat: 'inAppChatNote',
+        embedWidget: 'embedWidgetNote',
+      });
+      expect(labels.fields.showVoiceCall).toEqual({
+        label: 'enableVoiceCallsLabel',
+        tooltip: 'enableVoiceCallsTooltip',
+      });
+      expect(labels.fields.embedShowAttachment.label).toBe(
+        'embedShowAttachmentLabel',
+      );
+      expect(labels.fields.embedShowVoiceRecord.label).toBe(
+        'embedShowVoiceRecordLabel',
+      );
+      expect(labels.fields.embedShowVoiceCall.label).toBe(
+        'embedShowVoiceCallLabel',
+      );
       expect(labels.fields.enhancedDocRetrieval.label).toBe(
         'enhancedDocRetrievalLabel',
       );

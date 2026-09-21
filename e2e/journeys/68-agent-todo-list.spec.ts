@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test';
 import { test, expect } from '../fixtures/mentor-test';
 import { navigateToMentorApp, getPlatformContext } from '../utils/auth';
+import { waitForPageReady } from '../utils/resilient';
 import { MENTOR_NEXTJS_HOST } from '../fixtures/test-data';
 import { ChatPage } from '../page-objects/chat.page';
 
@@ -56,9 +57,11 @@ test.describe('Journey 68: Agent Task List', () => {
   let tenantKey = '';
   let mentorId = '';
 
-  test.beforeEach(async ({ page, chatPage }) => {
+  test.beforeEach(async ({ page, chatPage, createMentorPage }) => {
     if (!tenantKey || !mentorId) {
       await navigateToMentorApp(page);
+      await createMentorPage.openAndCreate();
+      await waitForPageReady(page);
       ({ tenantKey, mentorId } = await getPlatformContext(page));
     }
     void chatPage;

@@ -118,12 +118,8 @@ test.describe('Journey 17: Notifications — Admin', () => {
     const isAdmin = await checkAdminStatus(page);
     test.skip(!isAdmin, 'Auto-open alerts tab requires admin access');
     await notificationsPage.goto();
-    await notificationsPage.waitForTabsToSettle();
-    const alertsActive = await notificationsPage.isAlertsTabActive();
-    const inboxActive = await notificationsPage.isInboxTabActive();
-    // One of the two tabs must be active
-    expect(alertsActive || inboxActive).toBe(true);
-    if (alertsActive) {
+    const active = await notificationsPage.waitForActiveTab();
+    if (active === 'alerts') {
       await expect(notificationsPage.alertsContent).toBeVisible({
         timeout: 10_000,
       });

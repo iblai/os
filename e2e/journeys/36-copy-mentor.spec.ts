@@ -3,6 +3,7 @@ import { navigateToMentorApp, checkAdminStatus } from '../utils/auth';
 import { waitForPageReady } from '../utils/resilient';
 import { safeWaitForURL, logger } from '@iblai/iblai-js/playwright';
 import path from 'path';
+import { registerMentor } from '../utils/resource-tracker';
 
 const FILES_DIR = path.resolve(__dirname, '../files/testing_folder');
 const PDF_FILE = path.join(
@@ -135,6 +136,7 @@ test.describe('Journey 36: Copy Mentor', () => {
       .locator('h1:not(.sr-only)')
       .filter({ hasText: new RegExp(expectedCopyName) });
     await expect(mentorHeading).toBeVisible({ timeout: 30_000 });
+    await registerMentor(page, expectedCopyName);
     logger.info(`Navigated to copied mentor: ${expectedCopyName}`);
   });
 
@@ -161,6 +163,7 @@ test.describe('Journey 36: Copy Mentor', () => {
       .locator('h1:not(.sr-only)')
       .filter({ hasText: new RegExp(`^${customName}$`) });
     await expect(mentorHeading).toBeVisible({ timeout: 30_000 });
+    await registerMentor(page, customName);
     logger.info(`Navigated to custom-named copy: ${customName}`);
   });
 
@@ -212,6 +215,7 @@ test.describe('Journey 36: Copy Mentor', () => {
       .locator('h1:not(.sr-only)')
       .filter({ hasText: new RegExp(expectedCopyName) });
     await expect(mentorHeading).toBeVisible({ timeout: 30_000 });
+    await registerMentor(page, expectedCopyName);
     logger.info(`Copied mentor without training data: ${expectedCopyName}`);
   });
 
@@ -221,7 +225,7 @@ test.describe('Journey 36: Copy Mentor', () => {
     editMentorPage,
   }) => {
     test.setTimeout(400_000);
-    await createMentorPage.openAndCreate();
+    const mentorName = await createMentorPage.openAndCreate();
 
     // Upload 2 files to the Datasets tab
     await editMentorPage.open('Datasets');
@@ -250,6 +254,7 @@ test.describe('Journey 36: Copy Mentor', () => {
     logger.info('Include training data is ON');
 
     await copyMentorDialog.submitCopy();
+    await registerMentor(page, `Copy of ${mentorName}`);
     logger.info('Mentor copied with training data');
 
     // Verify the copied mentor has datasets (dialog stays open after copy).
@@ -281,7 +286,7 @@ test.describe('Journey 36: Copy Mentor', () => {
     editMentorPage,
   }) => {
     test.setTimeout(400_000);
-    await createMentorPage.openAndCreate();
+    const mentorName = await createMentorPage.openAndCreate();
 
     // Upload 2 files to the Datasets tab
     await editMentorPage.open('Datasets');
@@ -310,6 +315,7 @@ test.describe('Journey 36: Copy Mentor', () => {
     logger.info('Include training data is OFF');
 
     await copyMentorDialog.submitCopy();
+    await registerMentor(page, `Copy of ${mentorName}`);
     logger.info('Mentor copied without training data');
 
     // Verify the copied mentor has NO datasets (dialog stays open after copy)
@@ -326,7 +332,7 @@ test.describe('Journey 36: Copy Mentor', () => {
     createMentorPage,
     editMentorPage,
   }) => {
-    await createMentorPage.openAndCreate();
+    const mentorName = await createMentorPage.openAndCreate();
 
     await editMentorPage.open('Settings');
     await waitForPageReady(page);
@@ -389,6 +395,9 @@ test.describe('Journey 36: Copy Mentor', () => {
     await waitForPageReady(page);
 
     logger.info(`Tenant switch completed — landed at: ${page.url()}`);
+    await registerMentor(page, `Copy of ${mentorName}`).catch((err) =>
+      logger.warn(`Cross-tenant copy not registered: ${err}`),
+    );
 
     expect(page.url()).not.toContain(`/platform/${currentTenantKey}/`);
     logger.info('Cross-tenant copy verified — no longer on original tenant');

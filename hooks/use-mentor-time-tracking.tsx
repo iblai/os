@@ -3,7 +3,13 @@
 import { useParams, usePathname } from 'next/navigation';
 import { useCallback, useEffect, useRef } from 'react';
 import { TimeTrackingProvider } from '@iblai/iblai-js/web-containers';
-import { selectActiveTab, selectSessionIds } from '@iblai/iblai-js/web-utils';
+import {
+  selectActiveTab,
+  selectEnableGrading,
+  selectEnableLessonCompletion,
+  selectMetadata,
+  selectSessionIds,
+} from '@iblai/iblai-js/web-utils';
 import { useAppSelector } from '@/lib/hooks';
 
 // Next.js specific wrapper that provides routing integration
@@ -12,6 +18,9 @@ export function useMentorTimeTrackingConfig() {
   const pathname = usePathname();
   const activeTab = useAppSelector(selectActiveTab);
   const sessionIds = useAppSelector(selectSessionIds);
+  const enableGrading = useAppSelector(selectEnableGrading);
+  const enableLessonCompletion = useAppSelector(selectEnableLessonCompletion);
+  const { edxCourseId } = useAppSelector(selectMetadata);
   const routeChangeCallbackRef = useRef<(() => void) | null>(null);
 
   const getTenantKey = useCallback(() => {
@@ -83,6 +92,14 @@ export function useMentorTimeTrackingConfig() {
     return sessionIds[activeTab];
   }, [sessionIds, activeTab]);
 
+  // Sent as `course_id`. Only when the edX host has enabled grading or lesson
+  // completion (MENTOR:ENABLE_* in lib/handlers.ts) is the course id it posted
+  // (MENTOR:EDX_COURSE_ID) one this time should be attributed to.
+  const getCourseId = useCallback(() => {
+    if (!enableGrading && !enableLessonCompletion) return undefined;
+    return edxCourseId || undefined;
+  }, [enableGrading, enableLessonCompletion, edxCourseId]);
+
   // React to pathname changes directly (additional detection for Next.js app router)
   useEffect(() => {
     if (routeChangeCallbackRef.current) {
@@ -106,6 +123,7 @@ export function useMentorTimeTrackingConfig() {
     getCurrentUrl,
     onRouteChange: enhancedOnRouteChange,
     getSessionUuid,
+    getCourseId,
   };
 }
 

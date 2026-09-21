@@ -2,7 +2,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderHook } from '@testing-library/react';
+import { renderToString } from 'react-dom/server';
 import {
+  addPermissionRequest,
   CodePermissionCards,
   resetCodePermissionsForTests,
   useCodePermissionSessions,
@@ -104,6 +106,34 @@ describe('CodePermissionCards', () => {
     await waitFor(() =>
       expect(screen.queryByText('Run a shell command')).not.toBeInTheDocument(),
     );
+  });
+
+  // A Browse run's prompt does not come from opencode: it arrives over the
+  // extension's port and carries its own responder, because there is no
+  // `opencode_permission_respond` to invoke on that path.
+  it('answers a Browse prompt through its own responder, never Tauri', async () => {
+    const respond = vi.fn();
+    render(<CodePermissionCards generationId={GENERATION} />);
+    act(() => addPermissionRequest({ ...REQUEST, respond }));
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Allow' }));
+
+    expect(respond).toHaveBeenCalledWith('allow-once');
+    expect(invoke).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(screen.queryByText('Run a shell command')).not.toBeInTheDocument(),
+    );
+  });
+
+  // `useSyncExternalStore`'s third argument. The store is module-level, so on a
+  // server render it would otherwise hand one request's prompts to whoever is
+  // rendering next; the server snapshot is empty on purpose.
+  it('renders nothing on the server, whatever the store holds', () => {
+    addPermissionRequest(REQUEST);
+
+    expect(
+      renderToString(<CodePermissionCards generationId={GENERATION} />),
+    ).toBe('');
   });
 
   it('sends the reject option on Deny', async () => {

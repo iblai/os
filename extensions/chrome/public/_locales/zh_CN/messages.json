@@ -1,0 +1,97 @@
+{
+  "actionBack": {
+    "message": "返回"
+  },
+  "actionClick": {
+    "message": "点击"
+  },
+  "actionNavigate": {
+    "message": "打开"
+  },
+  "actionReadPage": {
+    "message": "读取页面"
+  },
+  "actionScroll": {
+    "message": "滚动"
+  },
+  "actionSelect": {
+    "message": "选择"
+  },
+  "actionTitle": {
+    "message": "打开 ibl.ai"
+  },
+  "actionType": {
+    "message": "输入到"
+  },
+  "actionWait": {
+    "message": "等待"
+  },
+  "appDescription": {
+    "message": "在 Chrome 侧边栏中与你的 ibl.ai 智能体对话，适用于任何页面，并让它替你浏览网页。"
+  },
+  "appName": {
+    "message": "ibl.ai"
+  },
+  "declined": {
+    "message": "已拒绝。"
+  },
+  "errorAccess": {
+    "message": "你的会话已失效，请重新登录。"
+  },
+  "errorCredits": {
+    "message": "此平台的额度不足。"
+  },
+  "errorGeneric": {
+    "message": "出了点问题：$MESSAGE$",
+    "placeholders": {
+      "message": {
+        "content": "$1"
+      }
+    }
+  },
+  "errorRunInProgress": {
+    "message": "已有一个任务正在运行。"
+  },
+  "errorWorkerGone": {
+    "message": "扩展停止响应，任务已结束。请重试。"
+  },
+  "hostBlocked": {
+    "message": "$HOST$ 不是 http 或 https 页面，因此无法操作。",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "noActiveTab": {
+    "message": "无法操作 $URL$——只能操作 http 和 https 页面。请切换到你希望它处理的页面。",
+    "placeholders": {
+      "url": {
+        "content": "$1"
+      }
+    }
+  },
+  "noModels": {
+    "message": "此平台上没有可用的模型。"
+  },
+  "refused": {
+    "message": "已拒绝：$REASON$",
+    "placeholders": {
+      "reason": {
+        "content": "$1"
+      }
+    }
+  },
+  "signIn": {
+    "message": "登录"
+  },
+  "signInFailed": {
+    "message": "登录失败，请重试。"
+  },
+  "stepLimit": {
+    "message": "已达到最大步骤数，已停止。"
+  },
+  "tokenLimit": {
+    "message": "已停止：本次运行用完了令牌预算。"
+  }
+}

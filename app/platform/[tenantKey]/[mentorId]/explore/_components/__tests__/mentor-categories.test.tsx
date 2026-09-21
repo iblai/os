@@ -4,16 +4,24 @@ import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { MentorCategories } from '../mentor-categories';
 
-vi.mock('@/lib/utils', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/utils')>();
-  return {
-    ...actual,
-    getLLMProviderDetails: (provider: string) => ({
-      name: provider,
-      icon: null,
-    }),
-  };
-});
+vi.mock('next/navigation', () => ({
+  useParams: () => ({ tenantKey: 'tenant123', mentorId: 'mentor456' }),
+}));
+
+vi.mock('@/hooks/use-user', () => ({
+  useUsername: () => 'testuser',
+}));
+
+// Provider facet labels come from the backend LLM catalogue; the resolver is
+// stubbed so the dropdown tests stay independent of the RTK Query cache.
+const mockUseLlmProviderCatalogue = vi.fn();
+const mockResolveLlmProvider = vi.fn<
+  (key?: string | null) => { logo: string | null; displayName: string }
+>((key) => ({ logo: null, displayName: key ?? '' }));
+vi.mock('@/hooks/use-llm-provider-details', () => ({
+  useLlmProviderCatalogue: (...args: unknown[]) =>
+    mockUseLlmProviderCatalogue(...args),
+}));
 
 /**
  * Test suite for MentorCategories component
@@ -65,6 +73,61 @@ describe('MentorCategories', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockResolveLlmProvider.mockImplementation((key?: string | null) => ({
+      logo: null,
+      displayName: key ?? '',
+    }));
+    mockUseLlmProviderCatalogue.mockReturnValue(mockResolveLlmProvider);
+  });
+
+  describe('LLM Provider labels', () => {
+    it('labels facet keys from the backend LLM catalogue and filters by the raw key', async () => {
+      mockResolveLlmProvider.mockImplementation((key?: string | null) =>
+        key === 'OpenAI'
+          ? { logo: null, displayName: 'Open AI (backend)' }
+          : { logo: null, displayName: key ?? '' },
+      );
+      const user = userEvent.setup();
+      render(
+        <MentorCategories
+          facets={mockFacets}
+          onFiltersChange={mockOnFiltersChange}
+        />,
+      );
+
+      expect(mockUseLlmProviderCatalogue).toHaveBeenCalledWith({
+        org: 'tenant123',
+        userId: 'testuser',
+        mentorId: 'mentor456',
+      });
+
+      const llmButton = screen.getByRole('button', { name: /LLM Provider/i });
+      await user.click(llmButton);
+
+      const option = await screen.findByRole('menuitem', {
+        name: /Open AI \(backend\)/i,
+      });
+      // Unlisted keys fall back to the raw facet term.
+      expect(
+        screen.getByRole('menuitem', { name: /Anthropic/i }),
+      ).toBeInTheDocument();
+      await user.click(option);
+
+      // The filter sends the raw key; the trigger shows the backend label.
+      expect(mockOnFiltersChange).toHaveBeenCalledWith(
+        expect.objectContaining({ llm_providers: 'OpenAI' }),
+      );
+      // The menu is still open (its trigger sits behind aria-hidden), so
+      // include hidden nodes when reading the trigger's new label.
+      await waitFor(() => {
+        expect(
+          screen.getByRole('button', {
+            name: /Open AI \(backend\)/i,
+            hidden: true,
+          }),
+        ).toBeInTheDocument();
+      });
+    });
   });
 
   describe('Basic rendering', () => {

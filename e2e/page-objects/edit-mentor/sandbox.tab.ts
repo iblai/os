@@ -112,6 +112,19 @@ export class SandboxTab {
   readonly autoPushToggle: Locator;
   readonly pushButton: Locator;
 
+  // ── Agent-config LLM provider/model picker (connected state) ────────────
+  // Issue #2502: provider naming/artwork here is backend-owned, same as the
+  // top-level LLM tab. Selecting a provider opens the model picker ON TOP —
+  // the provider picker stays mounted underneath (bug fix under #2502), so
+  // dismissing the model picker returns to the still-open provider list.
+  readonly modelTrigger: Locator;
+  readonly providerPickerDialog: Locator;
+  readonly providerPickerSearchInput: Locator;
+  /** Provider card buttons only — excludes the dialog's own Close (X)
+   * button, which is also a `<button>` and would otherwise be `.first()`. */
+  readonly providerPickerCards: Locator;
+  readonly modelPickerDialog: Locator;
+
   constructor(page: Page, dialog: Locator) {
     this.page = page;
     this.dialog = dialog;
@@ -197,6 +210,48 @@ export class SandboxTab {
       name: /auto push/i,
     });
     this.pushButton = dialog.getByRole('button', { name: /^push$/i });
+
+    // Agent-config LLM provider/model picker. The trigger reads "Select
+    // Model" before an agent config exists, "Change model" (aria-label)
+    // once one does — match either via its accessible name substring.
+    this.modelTrigger = dialog.getByRole('button', {
+      name: /select model|change model/i,
+    });
+    // Both the provider picker and the model picker are OverlayModal
+    // instances portalled to document.body (not scoped to `dialog`), same
+    // pattern as New/Edit Instance above.
+    //
+    // `includeHidden: true` (issue #2502 stacking fix): once the model
+    // picker opens on top, Radix marks this dialog `aria-hidden="true"`
+    // (a DismissableLayer inert convention for background dialogs) while
+    // leaving it fully mounted and visually rendered underneath. A default
+    // `getByRole('dialog', ...)` query EXCLUDES aria-hidden branches from
+    // the accessibility tree entirely, so it would resolve to zero matches
+    // — not "found but hidden" — while the element is still there.
+    // `includeHidden: true` makes the role query see it regardless, so
+    // `.toBeAttached()`/`.toBeVisible()` reflect the DOM/CSS reality rather
+    // than the transient aria-hidden state.
+    this.providerPickerDialog = page.getByRole('dialog', {
+      name: 'Select Provider',
+      exact: true,
+      includeHidden: true,
+    });
+    this.providerPickerSearchInput =
+      this.providerPickerDialog.getByPlaceholder(/search providers/i);
+    // Cards (not the Close button) always contain an img-role element — a
+    // real <img> when the backend ships a logo, else the placeholder
+    // <span role="img">. The Close button's icon is a bare SVG with no
+    // role, so this filter reliably excludes it.
+    this.providerPickerCards = this.providerPickerDialog
+      .locator('button')
+      .filter({ has: page.getByRole('img') });
+    // The model picker shares its title ("LLM Selection") with the
+    // top-level LLM tab's picker — safe here since only one Edit Mentor
+    // dialog (and thus only one such nested picker) is ever open at a time.
+    this.modelPickerDialog = page.getByRole('dialog', {
+      name: 'LLM Selection',
+      exact: true,
+    });
   }
 
   // ── Sandbox kind selector ────────────────────────────────────────────────
@@ -709,5 +764,32 @@ export class SandboxTab {
     await expect(
       this.page.getByText('Configuration push queued', { exact: true }),
     ).toBeVisible();
+  }
+
+  // ── Agent-config LLM provider/model picker ───────────────────────────────
+
+  /**
+   * Opens the "Select Provider" picker (only rendered once the sandbox is
+   * connected to a Claw instance — see `ensureConnected`).
+   */
+  async openProviderPicker(): Promise<void> {
+    await expect(this.modelTrigger).toBeVisible({ timeout: 10_000 });
+    await this.modelTrigger.click();
+    await expect(this.providerPickerDialog).toBeVisible({ timeout: 10_000 });
+  }
+
+  /**
+   * A provider card button inside the (already open) provider picker,
+   * resolved by its rendered label. The picker does not tag cards with a
+   * `data-provider` attribute the way the top-level LLM tab's grid does, and
+   * the button's ACCESSIBLE NAME also folds in the logo's alt text ("{label}
+   * logo"), so matching on accessible name alone is unreliable — instead
+   * filter buttons to the one containing a descendant with this EXACT label
+   * text (the card's label `<span>`).
+   */
+  providerPickerCard(label: string): Locator {
+    return this.providerPickerDialog
+      .locator('button')
+      .filter({ has: this.page.getByText(label, { exact: true }) });
   }
 }
