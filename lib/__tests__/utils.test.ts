@@ -520,6 +520,37 @@ describe('redirectToAuthSpaJoinTenant function', () => {
     expect(locationHrefSpy).toContain(encodeURIComponent(customUrl));
   });
 
+  it('saves the current path and query as redirect-to before joining', () => {
+    localStorageMock.clear();
+    Object.defineProperty(window, 'localStorage', {
+      value: localStorageMock,
+      writable: true,
+      configurable: true,
+    });
+    Object.defineProperty(window, 'location', {
+      value: {
+        pathname: '/platform/test-tenant/mentor',
+        search: '?ref=email',
+        set href(value: string) {
+          locationHrefSpy = value;
+        },
+        get href() {
+          return 'https://example.com/platform/test-tenant/mentor?ref=email';
+        },
+      },
+      writable: true,
+      configurable: true,
+    });
+
+    redirectToAuthSpaJoinTenant('my-tenant');
+
+    // The join round-trip loses the original location, so it's stored first and
+    // read back on return.
+    expect(localStorageMock.getItem(LOCAL_STORAGE_KEYS.REDIRECT_TO)).toBe(
+      '/platform/test-tenant/mentor?ref=email',
+    );
+  });
+
   it('should fall back to redirectToAuthSpa when no tenant key is resolved', async () => {
     // Mock a location without a tenant key in the pathname
     Object.defineProperty(window, 'location', {
