@@ -38,14 +38,16 @@ vi.mock('@/lib/utils', async (importOriginal) => {
   };
 });
 
-// Mock WithPermissions HOC
+// Mock WithPermissions HOC with the real render-prop contract: children get
+// `{ hasPermission }`, not a bare boolean (reading the object as a boolean is
+// what used to show the create card to everyone).
 let mockHasPermission = true;
 vi.mock('@/hoc/withPermissions', () => ({
   WithPermissions: ({
     children,
   }: {
-    children: (hasPermission: boolean) => React.ReactNode;
-  }) => children(mockHasPermission),
+    children: (props: { hasPermission: boolean }) => React.ReactNode;
+  }) => children({ hasPermission: mockHasPermission }),
 }));
 
 // Mock UI components
@@ -162,11 +164,11 @@ describe('CustomMentorsSection', () => {
   });
 
   describe('Basic rendering', () => {
-    it('renders the Custom heading', () => {
+    it('renders the My agents heading', () => {
       renderWithContext();
 
       expect(
-        screen.getByRole('heading', { name: /^Custom$/i, level: 2 }),
+        screen.getByRole('heading', { name: /^My agents$/i, level: 2 }),
       ).toBeInTheDocument();
     });
 
@@ -179,7 +181,7 @@ describe('CustomMentorsSection', () => {
       renderWithContext();
 
       expect(
-        screen.getByRole('heading', { name: /^Custom$/i, level: 2 }),
+        screen.getByRole('heading', { name: /^My agents$/i, level: 2 }),
       ).toBeInTheDocument();
     });
 
@@ -192,7 +194,7 @@ describe('CustomMentorsSection', () => {
       renderWithContext();
 
       expect(
-        screen.getByRole('heading', { name: /^Custom$/i, level: 2 }),
+        screen.getByRole('heading', { name: /^My agents$/i, level: 2 }),
       ).toBeInTheDocument();
     });
 
@@ -217,7 +219,6 @@ describe('CustomMentorsSection', () => {
       expect(
         screen.getByText(/Build your own custom agent tailored/i),
       ).toBeInTheDocument();
-      expect(screen.getByText('Get started today')).toBeInTheDocument();
     });
 
     it('does not render create mentor card when user does not have permission', () => {
@@ -229,6 +230,33 @@ describe('CustomMentorsSection', () => {
 
       renderWithContext();
 
+      expect(screen.queryByText('Create Custom Agent')).not.toBeInTheDocument();
+    });
+
+    it('hides the whole section when there are no custom mentors and no permission to create one', () => {
+      mockHasPermission = false;
+      mockUseGetPersonnalizedMentorsQuery.mockReturnValue({
+        data: { results: [], next: null },
+        isFetching: false,
+      });
+
+      const { container } = renderWithContext();
+
+      expect(
+        screen.queryByRole('heading', { name: /^My agents$/i }),
+      ).not.toBeInTheDocument();
+      expect(container).toBeEmptyDOMElement();
+    });
+
+    it('shows skeleton cards instead of the create card while the first page loads', () => {
+      mockUseGetPersonnalizedMentorsQuery.mockReturnValue({
+        data: undefined,
+        isFetching: true,
+      });
+
+      renderWithContext();
+
+      expect(screen.getByTestId('mentor-grid-skeleton')).toBeInTheDocument();
       expect(screen.queryByText('Create Custom Agent')).not.toBeInTheDocument();
     });
 
@@ -245,9 +273,10 @@ describe('CustomMentorsSection', () => {
       renderWithContext();
 
       expect(
-        screen.getByRole('list', { name: /Custom agents/i }),
+        screen.getByRole('list', { name: /My agents/i }),
       ).toBeInTheDocument();
-      expect(screen.getAllByRole('listitem')).toHaveLength(2);
+      // Two mentors plus the create tile at the end of the grid
+      expect(screen.getAllByRole('listitem')).toHaveLength(3);
     });
 
     it('shows create mentor card below mentors when there are mentors', () => {
@@ -306,6 +335,31 @@ describe('CustomMentorsSection', () => {
         }),
         expect.anything(),
       );
+    });
+
+    it('passes featured when the Featured filter is on', () => {
+      renderWithContext({
+        filters: {
+          categories: null,
+          subjects: null,
+          llm_providers: null,
+          types: null,
+          is_featured: 'true',
+        },
+      });
+
+      expect(mockUseGetPersonnalizedMentorsQuery).toHaveBeenCalledWith(
+        expect.objectContaining({ featured: true }),
+        expect.anything(),
+      );
+    });
+
+    it('does not pass featured when the Featured filter is off', () => {
+      renderWithContext();
+
+      expect(
+        mockUseGetPersonnalizedMentorsQuery.mock.calls.at(-1)?.[0]?.featured,
+      ).toBeUndefined();
     });
 
     it('skips query when username is not available', () => {
@@ -374,7 +428,7 @@ describe('CustomMentorsSection', () => {
       renderWithContext();
 
       const seeMoreButton = screen.getByRole('button', {
-        name: /Load more custom agents/i,
+        name: /Load more of my agents/i,
       });
       expect(seeMoreButton).toBeDisabled();
     });
@@ -577,7 +631,7 @@ describe('CustomMentorsSection', () => {
       renderWithContext();
 
       expect(
-        screen.getByRole('button', { name: /Load more custom agents/i }),
+        screen.getByRole('button', { name: /Load more of my agents/i }),
       ).toBeInTheDocument();
     });
 
@@ -590,7 +644,7 @@ describe('CustomMentorsSection', () => {
       renderWithContext();
 
       expect(
-        screen.queryByRole('button', { name: /Load more custom agents/i }),
+        screen.queryByRole('button', { name: /Load more of my agents/i }),
       ).not.toBeInTheDocument();
     });
 
@@ -604,7 +658,7 @@ describe('CustomMentorsSection', () => {
       renderWithContext();
 
       const seeMoreButton = screen.getByRole('button', {
-        name: /Load more custom agents/i,
+        name: /Load more of my agents/i,
       });
       await user.click(seeMoreButton);
 
@@ -624,10 +678,10 @@ describe('CustomMentorsSection', () => {
       renderWithContext();
 
       const heading = screen.getByRole('heading', {
-        name: /^Custom$/i,
+        name: /^My agents$/i,
         level: 2,
       });
-      expect(heading).toHaveAttribute('aria-level', '2');
+      expect(heading.tagName).toBe('H2');
     });
 
     it('create mentor card has proper role and aria-label', () => {
@@ -654,7 +708,8 @@ describe('CustomMentorsSection', () => {
       const createCard = screen.getByRole('button', {
         name: /Create Custom Agent/i,
       });
-      expect(createCard).toHaveAttribute('tabindex', '0');
+      // A native button: focusable and Enter/Space-activated without tabindex
+      expect(createCard.tagName).toBe('BUTTON');
     });
   });
 });

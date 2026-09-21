@@ -2,8 +2,8 @@
   "version": 2,
   "lastUpdated": "2026-09-21",
   "summary": {
-    "totalCheckpoints": 750,
-    "coveredCheckpoints": 707,
+    "totalCheckpoints": 753,
+    "coveredCheckpoints": 710,
     "deprecatedCheckpoints": 17,
     "notReproducibleCheckpoints": 15,
     "pendingCheckpoints": 11,
@@ -231,7 +231,16 @@
       "spec": "05-mentor-discovery-explore-page.spec.ts",
       "sourceFiles": [
         "app/platform/[tenantKey]/[mentorId]/explore/page.tsx",
-        "app/platform/[tenantKey]/explore/page.tsx"
+        "app/platform/[tenantKey]/explore/page.tsx",
+        "app/platform/[tenantKey]/[mentorId]/explore/_components/explore-page-content.tsx",
+        "app/platform/[tenantKey]/[mentorId]/explore/_components/mentor-categories.tsx",
+        "app/platform/[tenantKey]/[mentorId]/explore/_components/section.tsx",
+        "app/platform/[tenantKey]/[mentorId]/explore/_components/mentor-card-with-star.tsx",
+        "app/platform/[tenantKey]/[mentorId]/explore/_components/custom-mentors-section.tsx",
+        "app/platform/[tenantKey]/[mentorId]/explore/_components/default-mentors-section.tsx",
+        "app/platform/[tenantKey]/[mentorId]/explore/_components/featured-mentors-section.tsx",
+        "app/platform/[tenantKey]/[mentorId]/explore/_components/starred-mentors-section.tsx",
+        "app/platform/[tenantKey]/[mentorId]/explore/_components/empty-state.tsx"
       ],
       "checkpoints": [
         {
@@ -297,6 +306,21 @@
         {
           "id": "exp-13",
           "description": "Star/unstar a mentor updates the Favorites section",
+          "status": "covered"
+        },
+        {
+          "id": "exp-14",
+          "description": "Header Create Agent button opens the create dialog for admins",
+          "status": "covered"
+        },
+        {
+          "id": "exp-15",
+          "description": "Clear search button empties the search box",
+          "status": "covered"
+        },
+        {
+          "id": "exp-16",
+          "description": "Featured filter toggles on and off with a single click",
           "status": "covered"
         }
       ]

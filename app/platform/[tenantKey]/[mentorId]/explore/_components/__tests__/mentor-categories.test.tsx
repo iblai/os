@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { MentorCategories } from '../mentor-categories';
@@ -8,8 +14,11 @@ vi.mock('next/navigation', () => ({
   useParams: () => ({ tenantKey: 'tenant123', mentorId: 'mentor456' }),
 }));
 
+const mockUseIsAdmin = vi.fn(() => true);
+const mockUseUsername = vi.fn((): string | null => 'testuser');
 vi.mock('@/hooks/use-user', () => ({
-  useUsername: () => 'testuser',
+  useUsername: () => mockUseUsername(),
+  useIsAdmin: () => mockUseIsAdmin(),
 }));
 
 // Provider facet labels come from the backend LLM catalogue; the resolver is
@@ -18,9 +27,16 @@ const mockUseLlmProviderCatalogue = vi.fn();
 const mockResolveLlmProvider = vi.fn<
   (key?: string | null) => { logo: string | null; displayName: string }
 >((key) => ({ logo: null, displayName: key ?? '' }));
+// Logos come from the tenant's credentials schema, keyed by display name.
+const mockUseCredentialsSchemaLogos = vi.fn();
+const mockLogoFromCredentialsSchema = vi.fn<
+  (displayName?: string | null) => string | null
+>(() => null);
 vi.mock('@/hooks/use-llm-provider-details', () => ({
   useLlmProviderCatalogue: (...args: unknown[]) =>
     mockUseLlmProviderCatalogue(...args),
+  useCredentialsSchemaLogos: (...args: unknown[]) =>
+    mockUseCredentialsSchemaLogos(...args),
 }));
 
 /**
@@ -78,6 +94,12 @@ describe('MentorCategories', () => {
       displayName: key ?? '',
     }));
     mockUseLlmProviderCatalogue.mockReturnValue(mockResolveLlmProvider);
+    mockLogoFromCredentialsSchema.mockImplementation(() => null);
+    mockUseCredentialsSchemaLogos.mockReturnValue(
+      mockLogoFromCredentialsSchema,
+    );
+    mockUseIsAdmin.mockReturnValue(true);
+    mockUseUsername.mockReturnValue('testuser');
   });
 
   describe('LLM Provider labels', () => {
@@ -128,6 +150,143 @@ describe('MentorCategories', () => {
         ).toBeInTheDocument();
       });
     });
+  });
+
+  describe('LLM Provider order', () => {
+    it('lists providers alphabetically by their shown label, ignoring case', async () => {
+      // Facet order is by agent count; "iblai" is shown as "ibl.ai".
+      mockResolveLlmProvider.mockImplementation((key?: string | null) => ({
+        logo: null,
+        displayName: key === 'iblai' ? 'ibl.ai' : (key ?? ''),
+      }));
+      const user = userEvent.setup();
+      render(
+        <MentorCategories
+          facets={{
+            ...mockFacets,
+            llm_providers: {
+              total: 50,
+              terms: { OpenAI: 20, iblai: 15, xAI: 8, Google: 5, Anthropic: 2 },
+              other: 0,
+            },
+          }}
+        />,
+      );
+
+      await user.click(screen.getByRole('button', { name: /LLM Provider/i }));
+      const menu = await screen.findByRole('menu', { name: /LLM Provider/i });
+
+      expect(
+        within(menu)
+          .getAllByRole('menuitem')
+          .map((item) => item.textContent),
+      ).toEqual(['Anthropic', 'Google', 'ibl.ai', 'OpenAI', 'xAI']);
+    });
+  });
+
+  describe('LLM Provider logos', () => {
+    const openLlmMenu = async (user: ReturnType<typeof userEvent.setup>) => {
+      await user.click(screen.getByRole('button', { name: /LLM Provider/i }));
+      return screen.findByRole('menu', { name: /LLM Provider/i });
+    };
+
+    it('shows each provider logo from the credentials schema, matched on display name', async () => {
+      mockLogoFromCredentialsSchema.mockImplementation((name) =>
+        name === 'OpenAI' ? 'https://cdn.example.com/openai.jpg' : null,
+      );
+      const user = userEvent.setup();
+      render(<MentorCategories facets={mockFacets} />);
+
+      const menu = await openLlmMenu(user);
+      const openAiItem = within(menu).getByRole('menuitem', { name: /OpenAI/ });
+      expect(
+        within(openAiItem).getByTestId('llm-provider-logo'),
+      ).toHaveAttribute('src', 'https://cdn.example.com/openai.jpg');
+      expect(mockLogoFromCredentialsSchema).toHaveBeenCalledWith('Anthropic');
+    });
+
+    it('falls back to the catalogue logo, then to a neutral glyph', async () => {
+      mockResolveLlmProvider.mockImplementation((key?: string | null) => ({
+        logo: key === 'Google' ? 'https://cdn.example.com/google.png' : null,
+        displayName: key ?? '',
+      }));
+      const user = userEvent.setup();
+      render(<MentorCategories facets={mockFacets} />);
+
+      const menu = await openLlmMenu(user);
+      const googleItem = within(menu).getByRole('menuitem', { name: /Google/ });
+      expect(
+        within(googleItem).getByTestId('llm-provider-logo'),
+      ).toHaveAttribute('src', 'https://cdn.example.com/google.png');
+      const anthropicItem = within(menu).getByRole('menuitem', {
+        name: /Anthropic/,
+      });
+      expect(
+        within(anthropicItem).getByTestId('llm-provider-logo-fallback'),
+      ).toBeInTheDocument();
+    });
+
+    it('swaps a logo that fails to load for the neutral glyph', async () => {
+      mockLogoFromCredentialsSchema.mockImplementation((name) =>
+        name === 'OpenAI' ? 'https://cdn.example.com/broken.jpg' : null,
+      );
+      const user = userEvent.setup();
+      render(<MentorCategories facets={mockFacets} />);
+
+      const menu = await openLlmMenu(user);
+      const openAiItem = within(menu).getByRole('menuitem', { name: /OpenAI/ });
+      fireEvent.error(within(openAiItem).getByTestId('llm-provider-logo'));
+
+      expect(
+        within(openAiItem).getByTestId('llm-provider-logo-fallback'),
+      ).toBeInTheDocument();
+    });
+
+    it('shows the selected provider logo in the trigger', async () => {
+      mockLogoFromCredentialsSchema.mockImplementation((name) =>
+        name === 'OpenAI' ? 'https://cdn.example.com/openai.jpg' : null,
+      );
+      const user = userEvent.setup();
+      render(
+        <MentorCategories
+          facets={mockFacets}
+          onFiltersChange={mockOnFiltersChange}
+        />,
+      );
+
+      const menu = await openLlmMenu(user);
+      await user.click(within(menu).getByRole('menuitem', { name: /OpenAI/ }));
+      await user.keyboard('{Escape}');
+
+      const trigger = screen.getByRole('button', { name: 'OpenAI' });
+      expect(within(trigger).getByTestId('llm-provider-logo')).toHaveAttribute(
+        'src',
+        'https://cdn.example.com/openai.jpg',
+      );
+    });
+
+    it.each([
+      ['a signed-in admin', true, 'testuser', true],
+      [
+        'a signed-in non-admin (the schema would 403)',
+        false,
+        'testuser',
+        false,
+      ],
+      ['a signed-out visitor (a 401 would log them out)', true, null, false],
+    ])(
+      'queries the credentials schema only for %s',
+      (_label, isAdmin, username, enabled) => {
+        mockUseIsAdmin.mockReturnValue(isAdmin);
+        mockUseUsername.mockReturnValue(username);
+        render(<MentorCategories facets={mockFacets} />);
+
+        expect(mockUseCredentialsSchemaLogos).toHaveBeenCalledWith({
+          org: 'tenant123',
+          enabled,
+        });
+      },
+    );
   });
 
   describe('Basic rendering', () => {
@@ -261,6 +420,29 @@ describe('MentorCategories', () => {
           screen.getByRole('menuitem', { name: /Me/i }),
         ).toBeInTheDocument();
       });
+    });
+
+    it('keeps the "Created By" context in the trigger label after picking an option', async () => {
+      const user = userEvent.setup();
+      render(
+        <MentorCategories
+          facets={mockFacets}
+          showCreatedByFilter={true}
+          includeMeToCreatedByFilter={true}
+          onFiltersChange={mockOnFiltersChange}
+          onCreatedByChange={mockOnCreatedByChange}
+        />,
+      );
+
+      await user.click(screen.getByRole('button', { name: /Created By/i }));
+      await user.click(await screen.findByRole('menuitem', { name: /^Me$/i }));
+
+      expect(mockOnCreatedByChange).toHaveBeenCalledWith('me');
+      // Picking an option keeps the menu open; close it to read the trigger.
+      await user.keyboard('{Escape}');
+      expect(
+        screen.getByRole('button', { name: 'Created By: Me' }),
+      ).toBeInTheDocument();
     });
 
     it('does not include Me option when includeMeToCreatedByFilter is false', async () => {
@@ -669,8 +851,8 @@ describe('MentorCategories', () => {
     });
   });
 
-  describe('Promotion/Featured filter', () => {
-    it('renders Promotion dropdown', () => {
+  describe('Featured filter', () => {
+    it('renders Featured as a toggle button, not pressed by default', () => {
       render(
         <MentorCategories
           facets={mockFacets}
@@ -678,11 +860,11 @@ describe('MentorCategories', () => {
         />,
       );
       expect(
-        screen.getByRole('button', { name: /Promotion/i }),
+        screen.getByRole('button', { name: 'Featured', pressed: false }),
       ).toBeInTheDocument();
     });
 
-    it('calls onFiltersChange when Featured is selected from Promotion dropdown', async () => {
+    it('turns the Featured filter on and off with single clicks', async () => {
       const user = userEvent.setup();
       render(
         <MentorCategories
@@ -691,22 +873,17 @@ describe('MentorCategories', () => {
         />,
       );
 
-      const promotionButton = screen.getByRole('button', {
-        name: /Promotion/i,
-      });
-      await user.click(promotionButton);
+      await user.click(screen.getByRole('button', { name: 'Featured' }));
+      expect(mockOnFiltersChange).toHaveBeenLastCalledWith(
+        expect.objectContaining({ is_featured: 'true' }),
+      );
+      expect(
+        screen.getByRole('button', { name: 'Featured', pressed: true }),
+      ).toBeInTheDocument();
 
-      await waitFor(async () => {
-        const featuredOption = screen.getByRole('menuitem', {
-          name: /Featured/i,
-        });
-        await user.click(featuredOption);
-      });
-
-      expect(mockOnFiltersChange).toHaveBeenCalledWith(
-        expect.objectContaining({
-          is_featured: 'true',
-        }),
+      await user.click(screen.getByRole('button', { name: 'Featured' }));
+      expect(mockOnFiltersChange).toHaveBeenLastCalledWith(
+        expect.objectContaining({ is_featured: null }),
       );
     });
   });

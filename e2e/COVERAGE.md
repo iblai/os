@@ -1,6 +1,6 @@
 # MentorAI E2E Coverage — User Journey Checklist
 
-> Last updated: 2026-09-21 | 750 checkpoints (707 covered, 11 pending/fixme, 15 not-reproducible in default env, 17 deprecated) | 78 journeys (77 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
+> Last updated: 2026-09-21 | 753 checkpoints (710 covered, 11 pending/fixme, 15 not-reproducible in default env, 17 deprecated) | 78 journeys (77 active, 1 deprecated in #1431) | 100% covered | Auth: admin + non-admin storageState
 
 ## How This Works
 
@@ -77,11 +77,11 @@ When adding a new page or modifying an existing user flow:
 
 ---
 
-## Journey 5: Mentor Discovery — Explore Page (13 checkpoints) — `journeys/05-mentor-discovery-explore-page.spec.ts`
+## Journey 5: Mentor Discovery — Explore Page (16 checkpoints) — `journeys/05-mentor-discovery-explore-page.spec.ts`
 
-**Source files:** `app/platform/[tenantKey]/[mentorId]/explore/page.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/explore-page-content.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/search-section.tsx`
+**Source files:** `app/platform/[tenantKey]/[mentorId]/explore/page.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/explore-page-content.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/search-section.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/mentor-categories.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/section.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/mentor-card-with-star.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/custom-mentors-section.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/default-mentors-section.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/featured-mentors-section.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/starred-mentors-section.tsx`, `app/platform/[tenantKey]/[mentorId]/explore/_components/empty-state.tsx`
 
-- [x] Explore page title ("All Mentors") and description are visible
+- [x] Explore page title ("Explore agents") and description are visible
 - [x] Mentor cards display correct information
 - [x] Search input filters the mentor list
 - [x] "See more" button loads additional mentors
@@ -94,6 +94,9 @@ When adding a new page or modifying an existing user flow:
 - [x] Clicking a mentor card navigates to that mentor and allows chatting
 - [x] Custom mentor creation button is visible for admins
 - [x] Star/unstar a mentor updates the Favorites section
+- [x] Header "Create Agent" button opens the create dialog for admins
+- [x] Clear search button empties the search box
+- [x] "Featured" filter toggles on and off with a single click
 
 ---
 

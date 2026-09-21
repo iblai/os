@@ -765,20 +765,17 @@
     "seeMore": "See more"
   },
   "exploreCustomMentorsSection": {
-    "sectionHeading": "Custom",
-    "listAriaLabel": "Custom agents",
-    "loadMoreAriaLabel": "Load more custom agents",
+    "sectionHeading": "My agents",
+    "listAriaLabel": "My agents",
+    "loadMoreAriaLabel": "Load more of my agents",
     "loadingMore": "Loading more",
     "seeMore": "See more",
     "createAgentAriaLabel": "Create Custom Agent",
     "createAgentHeading": "Create Custom Agent",
-    "createAgentDescription": "Build your own custom agent tailored to your specific learning needs",
-    "getStartedToday": "Get started today"
+    "createAgentDescription": "Build your own custom agent tailored to your specific learning needs"
   },
   "exploreDefaultMentorsSection": {
     "loadingAgents": "Loading agents...",
-    "createAgentAriaLabel": "Create new agent",
-    "createAgentButton": "Create Agent",
     "allAgentsListAriaLabel": "All agents",
     "exploreAgentAriaLabel": "Explore agent: {name}",
     "loadMoreAriaLabel": "Load more agents",
@@ -789,27 +786,30 @@
     "llmProviderTitle": "{provider} Agents",
     "llmProviderSubtext": "Explore agents powered by {provider}.",
     "allAgentsTitle": "All Agents",
-    "allAgentsSubtext": "Explore agents and specialized learning assistants."
+    "allAgentsSubtext": "Explore agents and specialized learning assistants.",
+    "searchResultsTitle": "Results for “{query}”",
+    "searchResultsSubtext": "{count, plural, =0 {No agents match your search.} one {# agent matches your search.} other {# agents match your search.}}",
+    "emptyStateHint": "Try a different search term or clear your filters."
   },
   "exploreExplorePageContent": {
     "skipToMainContent": "Skip to main content",
     "agentExplorationPage": "Agent exploration page",
     "discoverAndCreateAgents": "Discover and create agents that combine subject expertise, resources, and skills",
     "searchAgentsLabel": "Search agents",
-    "searchPlaceholder": "Search",
-    "searchAgentsInputLabel": "Search agents"
+    "searchPlaceholder": "Search agents",
+    "searchAgentsInputLabel": "Search agents",
+    "pageTitle": "Explore agents",
+    "clearSearch": "Clear search",
+    "createAgentButton": "Create Agent",
+    "createAgentAriaLabel": "Create new agent"
   },
   "exploreFeaturedMentorsSection": {
     "heading": "Featured",
     "loadMoreAriaLabel": "Load more featured agents",
     "loadingMore": "Loading more",
-    "seeMore": "See more",
-    "emptyStateTitle": "Featured Agents",
-    "emptyStateDescription": "Discover handpicked agents recommended by our community",
-    "emptyStateNoAgents": "No featured agents available"
+    "seeMore": "See more"
   },
   "exploreMentorCategories": {
-    "promotion": "Promotion",
     "featured": "Featured",
     "category": "Category",
     "subject": "Subject",
@@ -834,9 +834,17 @@
     "loadingMore": "Loading more",
     "seeMore": "See more",
     "addToFavoritesCardAriaLabel": "Add to Favorites - Sign up to star agents",
-    "addToFavoritesTitle": "Add to Favorites",
     "addToFavoritesDescription": "Star your favorite agents to quickly access them here",
     "noFavoritesYet": "No favorites yet"
+  },
+  "exploreSection": {
+    "countAriaLabel": "{count, plural, one {# agent} other {# agents}}"
+  },
+  "exploreMentorCard": {
+    "featured": "Featured",
+    "addToFavorites": "Add to favorites",
+    "removeFromFavorites": "Remove from favorites",
+    "updatedOn": "Updated on {date}"
   },
   "flaggedPromptsDeleteModerationLogModal": {
     "title": "Delete Moderation Log",

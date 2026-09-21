@@ -2,7 +2,10 @@
 
 import { useCallback, useMemo } from 'react';
 
-import { useGetLlmsQuery } from '@iblai/iblai-js/data-layer';
+import {
+  useGetCredentialsSchemaQuery,
+  useGetLlmsQuery,
+} from '@iblai/iblai-js/data-layer';
 
 /** One provider row from the mentor-llms catalogue, as far as naming goes. */
 type LlmCatalogueProvider = {
@@ -76,5 +79,52 @@ export function useLlmProviderCatalogue({
       };
     },
     [rowsByName],
+  );
+}
+
+type UseCredentialsSchemaLogosArgs = {
+  org?: string | null;
+  /**
+   * The credentials schema endpoint is tenant-admin only: members get a 403
+   * and signed-out visitors a 401, which the app treats as a logout. Callers
+   * pass `false` for anyone who isn't a signed-in admin so neither fires.
+   */
+  enabled: boolean;
+};
+
+/**
+ * A resolver from an LLM provider's display name (what the mentor-search
+ * `llm_providers` facet carries, e.g. `OpenAI`, `Microsoft`) to the logo the
+ * tenant's credentials schema publishes for it, matched on
+ * `service_info.display_name`. Resolves to `null` when disabled, still
+ * loading, or when no schema row carries that name.
+ */
+export function useCredentialsSchemaLogos({
+  org,
+  enabled,
+}: UseCredentialsSchemaLogosArgs) {
+  const { data: schemas } = useGetCredentialsSchemaQuery(
+    { org: org ?? '' },
+    { skip: !org || !enabled },
+  );
+
+  // First row wins on a duplicate display name, as `Array.find` would.
+  const logosByDisplayName = useMemo(() => {
+    const byName = new Map<string, string>();
+    if (!Array.isArray(schemas)) return byName;
+    for (const schema of schemas) {
+      const displayName = schema?.service_info?.display_name;
+      const logo = schema?.service_info?.logo;
+      if (displayName && logo && !byName.has(displayName)) {
+        byName.set(displayName, logo);
+      }
+    }
+    return byName;
+  }, [schemas]);
+
+  return useCallback(
+    (displayName?: string | null): string | null =>
+      (displayName && logosByDisplayName.get(displayName)) || null,
+    [logosByDisplayName],
   );
 }
