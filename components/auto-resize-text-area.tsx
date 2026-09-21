@@ -5,6 +5,7 @@ import React, {
   TextareaHTMLAttributes,
 } from 'react';
 import { useAppSelector } from '@/lib/hooks';
+import { hasCoarsePointer } from '@/lib/utils';
 import { selectNumberOfActiveChatMessages } from '@iblai/iblai-js/web-utils';
 
 interface AutoResizeTextareaProps
@@ -103,13 +104,19 @@ const AutoResizeTextarea: React.FC<AutoResizeTextareaProps> = ({
   // messages-view composer that replaces the empty-state composer after the
   // first message). Only focus when the textarea is actually enabled and not
   // in embed mode, where stealing focus from a host page is undesirable.
+  //
+  // Never on touch devices: there, focus raises the on-screen keyboard. The
+  // composer blurs itself on send so the keyboard closes and the reply is
+  // visible — and since sending the FIRST message swaps in this very
+  // composer, an unconditional focus here would pop the keyboard straight
+  // back up.
   useEffect(() => {
     const isTextareaDisabled =
       (!sessionId && !allowAnonymousAccess) ||
       (isPreviewMode && !allowAnonymousAccess) ||
       disabled;
 
-    if (!isTextareaDisabled && !embedMode) {
+    if (!isTextareaDisabled && !embedMode && !hasCoarsePointer()) {
       textareaRef.current?.focus();
     }
   }, []);

@@ -82,7 +82,9 @@ improvising the same work by hand.
 - Building a web app moves through three loose steps, in order: 1. the \
 default-template question, 2. the local-preview question, 3. the deploy \
 question. Keep the steps distinct — finish one before starting the next — \
-and stay conversational, never a rigid wizard.
+and stay conversational, never a rigid wizard. Ask each of these questions \
+as plain text in your reply and end your turn there — the user's next \
+message is the answer. There is no question tool: never try to call one.
 - Step 1, the template: when the user asks to build a website or web app, \
 first ask ONE short \
 question: whether to start from our default template, recommending it (\"it's \
@@ -333,6 +335,16 @@ fn env_file_lookup(text: &str, key: &str) -> Option<String> {
 /// point — the dev platform (e.g. iblai.org) is a development-time target.
 /// Read per use — it's a dev knob, not a hot path.
 fn local_env(key: &str) -> Option<String> {
+    // Debug builds only. The manifest path is compiled in, so a RELEASE
+    // binary built on a dev machine kept reading the checkout's .env.local:
+    // a DMG built here, signed into production, took the DEV platform domain
+    // from it, asked *.iblai.org for the tenant's model list (401), and
+    // registered no models — every phone Code turn then failed with "Model
+    // not found". Release builds use only what the frontend delivers, then
+    // the production defaults, exactly like a CI-built DMG.
+    if !cfg!(debug_assertions) {
+        return None;
+    }
     let manifest = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
     let candidates = [
         manifest.join(".env.local"),
@@ -695,6 +707,12 @@ pub async fn ensure_started() -> Result<u16, String> {
     Ok(p)
 }
 
+/// Whether a secret is currently registered — test support for the enable
+/// flow's leak guard (a failed enable must leave no token-bearing secret).
+pub(crate) async fn is_registered(secret: &str) -> bool {
+    sessions().read().await.contains_key(secret)
+}
+
 /// Register a session's upstream + real token against its throwaway secret.
 pub async fn register(secret: &str, base: String, token: String) {
     sessions()
@@ -989,6 +1007,36 @@ async fn forward(req: Request) -> Response {
 mod tests {
     use super::*;
 
+    /// The checkout's dotenv files are a DEV knob: a release binary must not
+    /// read them, whatever they contain (a DMG built on a dev Mac otherwise
+    /// took the dev platform domain and registered no models for the phone).
+    #[test]
+    fn release_builds_ignore_the_checkout_dotenv() {
+        let manifest = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+        // Whether either dotenv file actually SETS the key — a file that
+        // exists without it must not fail the debug assertion (review N3).
+        let sets_key = [".env.local", ".env.production"].iter().any(|f| {
+            std::fs::read_to_string(manifest.join(f))
+                .ok()
+                .and_then(|t| env_file_lookup(&t, "IBLAI_PLATFORM_DOMAIN"))
+                .is_some()
+        });
+        let value = local_env("IBLAI_PLATFORM_DOMAIN");
+        if cfg!(debug_assertions) {
+            // Debug: reads the value exactly when a checkout file provides it.
+            assert_eq!(
+                value.is_some(),
+                sets_key,
+                "debug builds read the checkout dotenv"
+            );
+        } else {
+            assert!(
+                value.is_none(),
+                "release builds must ignore the checkout dotenv"
+            );
+        }
+    }
+
     #[test]
     fn secrets_are_unique_and_long_enough_to_not_guess() {
         let a = new_secret();
@@ -1203,7 +1251,14 @@ mod tests {
     #[tokio::test]
     async fn the_composed_guidance_is_the_base_text_plus_identity() {
         let _state = learner_state_lock();
-        set_learner("codey", "codey@example.com", "https://dm.example/dm", "", "").await;
+        set_learner(
+            "codey",
+            "codey@example.com",
+            "https://dm.example/dm",
+            "",
+            "",
+        )
+        .await;
 
         let g = guidance_with_identity("acme").await;
         assert!(g.starts_with(IBLAI_INSTRUCTIONS), "base text comes first");
@@ -1703,6 +1758,15 @@ mod tests {
                 && text.contains("Step 2")
                 && text.contains("Step 3"),
             "the 3-step arc must survive edits: {text}"
+        );
+        // Neither client can answer opencode's `question` tool (it is denied on
+        // every spawn), and a model that reaches for it anyway gets an
+        // "unavailable tool" error and tends to skip the question altogether —
+        // the setup questions must be plain reply text that ends the turn.
+        assert!(
+            text.contains("as plain text in your reply")
+                && text.contains("There is no question tool"),
+            "the ask-in-prose rule must survive edits: {text}"
         );
         assert!(
             text.contains("pnpm dev")

@@ -1,5 +1,136 @@
 # Changelog
 
+## [0.151.0](https://github.com/iblai/os/compare/v0.150.2...v0.151.0) (2026-09-18)
+
+### Features
+
+* drive the browser from Cowork in the Chrome extension side panel (1.1.0) ([16d36ce](https://github.com/iblai/os/commit/16d36cefddb167d146450a3e7161b981c1ed897d))
+
+### Bug Fixes
+
+* refuse every password and payment field, not just unprefixed autocomplete tokens ([ada9a51](https://github.com/iblai/os/commit/ada9a51242ac6e2de106905d2467c0455f65f66d))
+
+### Chores
+
+* **tauri:** release app-v0.95.22 ([8c94a9f](https://github.com/iblai/os/commit/8c94a9f0506a45d1d3050cd598ca9c5827615887))
+* update ext build command ([6256855](https://github.com/iblai/os/commit/6256855a063c9a6cea8c478820493186b93e8c99))
+
+### Tests
+
+* cover the extension's own permission answer and the card's server snapshot ([b8f955a](https://github.com/iblai/os/commit/b8f955abf164f8268f56026cf5ee5a88bf59bf02))
+
+## [0.150.2](https://github.com/iblai/os/compare/v0.150.1...v0.150.2) (2026-09-17)
+
+### Bug Fixes
+
+- **e2e:** read notification tab state atomically in the auto-open test ([90a0030](https://github.com/iblai/os/commit/90a00308d930106e166c4fa7ef08028d44119c35))
+- **tauri:** adding claude review fixes ([0554cf9](https://github.com/iblai/os/commit/0554cf93bea1a11941d99bbbe283f419f13cba3f))
+- **tauri:** adding fix for the ios code and UI responsive ([4479dd5](https://github.com/iblai/os/commit/4479dd5a768d5338585ede5da374f3623c0e7905))
+
+## [0.150.1](https://github.com/iblai/os/compare/v0.150.0...v0.150.1) (2026-09-17)
+
+### Documentation
+
+- **readme:** add Chrome Web Store extension to downloadables ([7801524](https://github.com/iblai/os/commit/7801524c7a7a098ed3d5f9461c64e1f60bb1f539))
+
+## [0.150.0](https://github.com/iblai/os/compare/v0.149.2...v0.150.0) (2026-09-17)
+
+### Features
+
+- course_id passed to time tracker on lesson completion & grading ([33e8dad](https://github.com/iblai/os/commit/33e8dad981952100fba724800c2a6a84a832906c))
+
+## [0.149.2](https://github.com/iblai/os/compare/v0.149.1...v0.149.2) (2026-09-17)
+
+### Chores
+
+- **deps:** bump @iblai/iblai-js to 2.12.2 ([0f018c7](https://github.com/iblai/os/commit/0f018c70337da0efc98a3ab2f81ddc3c7839e925))
+
+## [0.149.1](https://github.com/iblai/os/compare/v0.149.0...v0.149.1) (2026-09-16)
+
+### Bug Fixes
+
+- **tauri:** adding fix for code review and ios permissions ([037ee3a](https://github.com/iblai/os/commit/037ee3a551c9911d28ed8fda24d1c9234fa34cb7))
+- **tauri:** adding fix for icons, minimum os version & os platform for model id ([52b99db](https://github.com/iblai/os/commit/52b99db75b0ec34dec9bc9ef8d6ad01f537132f3))
+
+### Chores
+
+- **tauri:** release app-v0.95.21 ([e8da75b](https://github.com/iblai/os/commit/e8da75b45db2548915194fcf81799c3896b6dba9))
+
+## [0.149.0](https://github.com/iblai/os/compare/v0.148.1...v0.149.0) (2026-09-16)
+
+### Features
+
+- credit deduction playwright test update ([8006b63](https://github.com/iblai/os/commit/8006b63bcef31d6637eb929fa97f87bd7248eff2))
+- credit deduction playwright test update ([22c021f](https://github.com/iblai/os/commit/22c021f41054ecf834a8160fbb5c98d5b3e962d8))
+
+## [0.148.1](https://github.com/iblai/os/compare/v0.148.0...v0.148.1) (2026-09-15)
+
+### Chores
+
+- bumped iblai-js to 2.12.0 ([76a75df](https://github.com/iblai/os/commit/76a75df54a0b36f6c8bc1891fb937e514c078937))
+
+## [0.148.0](https://github.com/iblai/os/compare/v0.147.0...v0.148.0) (2026-09-15)
+
+### Features
+
+- **tauri:** code for ios and android ([c47715a](https://github.com/iblai/os/commit/c47715a15765c60daf4ba5bf4bd3f62defe99b83))
+
+### Bug Fixes
+
+- **mentor:** adding fixes for ios and android tauri ([255c792](https://github.com/iblai/os/commit/255c79242ea0404aaedbc93f0862c918ed415126))
+- **mentor:** fixing for auto update mac app ([14a1573](https://github.com/iblai/os/commit/14a157369331bc3ea7d6fe9378480e33f84c426b))
+- **mentor:** version bump for sdk ([d92bd76](https://github.com/iblai/os/commit/d92bd76ac6d20fff57c7c4330ac10f2bb98cc73d))
+- **tauir:** adding more code review fixes for tauri ios and android ([25fa23a](https://github.com/iblai/os/commit/25fa23a00ba8db61402892442cbfb5d477de2e6a))
+- **tauri:** adding fix for the remote code multiple chat session ([c53681d](https://github.com/iblai/os/commit/c53681d1054bf6dcf9da345aa980f05c023cd89d))
+- **tauri:** adding fixes for the code mode, code review & auto update ([a7b02cd](https://github.com/iblai/os/commit/a7b02cd052b0c2dd3dcc3dcde36a5b1a6c38b1b3))
+- **tauri:** adding fixes for the tauri issues ios android ([260ef53](https://github.com/iblai/os/commit/260ef53008139715d7ac5248cb6e898ab0d68028))
+- **tauri:** fixing race condition when the app starts and thread for local llm ([75796cc](https://github.com/iblai/os/commit/75796ccc853a1d17d152dd8c67131d9503ed6492))
+
+### Chores
+
+- **tauri:** release app-v0.95.20 ([c704f42](https://github.com/iblai/os/commit/c704f4294471edde8446a3671820c80024c9f947))
+
+## [0.147.0](https://github.com/iblai/os/compare/v0.146.3...v0.147.0) (2026-09-15)
+
+### Features
+
+- **mentor:** add useLlmProviderCatalogue hook ([8644f76](https://github.com/iblai/os/commit/8644f7621be738fa6e2ca9b94da8c85989b6ed8c))
+
+### Refactors
+
+- **mentor:** remove frontend llm provider map and bundled logos ([9a3ce7f](https://github.com/iblai/os/commit/9a3ce7f0722d183b6ab219fd60c8e272163934e3))
+- **mentor:** render backend llm provider names and logos ([6fbcc60](https://github.com/iblai/os/commit/6fbcc60e8e0911bbbdc68f9d0b0acea85f3424e2))
+
+### Chores
+
+- **deps:** bump @iblai/iblai-js to 2.11.2 ([5476eb5](https://github.com/iblai/os/commit/5476eb565390caf696adafc8a3c49537be79f24e)), closes [iblai-platform#2502](https://github.com/iblai/iblai-platform/issues/2502)
+
+### Documentation
+
+- **e2e:** bump coverage for backend llm provider naming ([80a0bdc](https://github.com/iblai/os/commit/80a0bdc7059cda8856cb72848f1379f2b7d6c4a0))
+- **e2e:** recount coverage summary after merging main ([35100cb](https://github.com/iblai/os/commit/35100cb56d8b4eed5268405d864a6f5d7f758ad9))
+
+### Tests
+
+- **chat:** expose the AI reply body via data-testid ([8164af4](https://github.com/iblai/os/commit/8164af4692ca3d67193cbe286f98ce134ebfd249))
+- **e2e:** assert the ibl.ai provider card by label only ([319f02d](https://github.com/iblai/os/commit/319f02dbee94f0204819724575849d130836ec8a)), closes [#2318](https://github.com/iblai/os/issues/2318)
+- **e2e:** cover backend llm provider naming and sandbox picker stacking ([a413a9f](https://github.com/iblai/os/commit/a413a9fd13258d8d9e681fc8d1d007abb268d520))
+- **e2e:** make the journey 6 ibl.ai badge test own its mentor ([907d845](https://github.com/iblai/os/commit/907d845684f41935f2432b50e16fd86eca947572))
+- **e2e:** scrape only the reply body in journey 12 sh-09 ([5d25ec9](https://github.com/iblai/os/commit/5d25ec9d9d0f2e8d5493e0a74c5332c93353e1ad))
+- **e2e:** skip journey 52 tool-call checks when no tool_call frames arrive ([340656f](https://github.com/iblai/os/commit/340656fba631ff9f022800055027d11143c5834e))
+
+## [0.146.3](https://github.com/iblai/os/compare/v0.146.2...v0.146.3) (2026-09-14)
+
+### Tests
+
+- **e2e:** direct-mentor-URL redirect invariant (Journey 32, mt-12..15) ([9868899](https://github.com/iblai/os/commit/98688996d42eb73a49c37b8c3372d8443abd0557))
+
+## [0.146.2](https://github.com/iblai/os/compare/v0.146.1...v0.146.2) (2026-09-14)
+
+### Bug Fixes
+
+- **app:** render LanguagePreferenceSync at the top of the provider tree ([c10fcc9](https://github.com/iblai/os/commit/c10fcc9d586fd895a8f6fd06037c08855546d593))
+
 ## [0.146.1](https://github.com/iblai/os/compare/v0.146.0...v0.146.1) (2026-09-14)
 
 ### Bug Fixes

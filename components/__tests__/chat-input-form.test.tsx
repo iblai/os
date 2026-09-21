@@ -146,6 +146,10 @@ vi.mock('@/lib/utils', () => ({
   cn: (...args: (string | boolean | undefined)[]) =>
     args.filter(Boolean).join(' '),
   isLoggedIn: vi.fn(() => mockIsLoggedIn),
+  // Mirrors the real helper so the touch-device tests below can drive it
+  // through window.matchMedia.
+  hasCoarsePointer: () =>
+    window.matchMedia?.('(pointer: coarse)')?.matches ?? false,
 }));
 
 vi.mock('@/hooks/use-voice-chat', () => ({
@@ -670,6 +674,46 @@ describe('ChatInputForm', () => {
 
       // Check that the action to clear input was dispatched
       expect(mockOnSubmit).toHaveBeenCalled();
+    });
+
+    it('closes the on-screen keyboard after sending on touch devices', () => {
+      // Touch device: pointer is coarse. Sending must blur the composer so
+      // iOS drops the keyboard instead of covering the incoming reply.
+      const originalMatchMedia = window.matchMedia;
+      window.matchMedia = vi.fn().mockReturnValue({ matches: true }) as never;
+      try {
+        renderWithRedux(<ChatInputForm {...defaultProps} />, {
+          chatInput: { textareaInput: 'Hello AI!' },
+        });
+        const textarea = screen.getByTestId(
+          'auto-resize-textarea',
+        ) as HTMLElement;
+        textarea.focus();
+        const blurSpy = vi.spyOn(textarea, 'blur');
+        fireEvent.submit(textarea.closest('form')!);
+        expect(blurSpy).toHaveBeenCalled();
+      } finally {
+        window.matchMedia = originalMatchMedia;
+      }
+    });
+
+    it('keeps composer focus after sending on fine-pointer (desktop) devices', () => {
+      const originalMatchMedia = window.matchMedia;
+      window.matchMedia = vi.fn().mockReturnValue({ matches: false }) as never;
+      try {
+        renderWithRedux(<ChatInputForm {...defaultProps} />, {
+          chatInput: { textareaInput: 'Hello AI!' },
+        });
+        const textarea = screen.getByTestId(
+          'auto-resize-textarea',
+        ) as HTMLElement;
+        textarea.focus();
+        const blurSpy = vi.spyOn(textarea, 'blur');
+        fireEvent.submit(textarea.closest('form')!);
+        expect(blurSpy).not.toHaveBeenCalled();
+      } finally {
+        window.matchMedia = originalMatchMedia;
+      }
     });
 
     it('should prevent submission while files are uploading', async () => {

@@ -510,7 +510,13 @@
     "coworkConsentConfirm": "继续",
     "coworkNeedsAccessibility": "Cowork 需要“辅助功能”权限才能控制您的电脑。请在“系统设置 › 隐私与安全性 › 辅助功能”中授权，然后重启应用并重新开启 Cowork。",
     "coworkNeedsScreenRecording": "Cowork 需要“屏幕录制”权限才能读取窗口内容。请在“系统设置 › 隐私与安全性 › 屏幕录制”中授权，然后重启应用并重新开启 Cowork。",
-    "skills": "技能"
+    "skills": "技能",
+    "coworkNeedsSession": "请先登录——Cowork 需要你的平台会话才能访问模型。",
+    "coworkTabNote": "读取当前标签页并代你操作，但绝不会填写密码或支付字段。它读取的内容会发送到 ibl.ai 以决定下一步。",
+    "coworkApprovalsLabel": "操作审批",
+    "coworkApprovalsManual": "每次询问",
+    "coworkApprovalsAuto": "自动批准",
+    "coworkApprovalsAutoHint": "Cowork 将直接点击、输入并提交表单，不再询问。请仅在受信任的网站上使用。"
   },
   "chatInputFormMemoryMenu": {
     "yourMemory": "您的记忆",
@@ -2388,7 +2394,31 @@
     "permissionDialogTitle": "Code 应如何请求授权？",
     "permissionDialogDescription": "Code 可以在你的工作区中编辑文件并执行命令。请选择它是否需要先征得你的同意；稍后可在 Code 面板中更改。",
     "permissionDialogManualAction": "每次都询问我",
-    "permissionDialogAutoAction": "自动批准"
+    "permissionDialogAutoAction": "自动批准",
+    "connectTitle": "你的电脑",
+    "connectHint": "在桌面应用中打开 Code 并启用手机访问，然后在此输入其地址和密码。",
+    "connectedTo": "已连接到",
+    "desktopUnreachable": "无法连接到你的电脑 — 桌面应用是否在同一网络上运行？",
+    "hostPasswordLabel": "密码",
+    "connect": "连接",
+    "connecting": "连接中…",
+    "localNetworkHint": "如果手机询问是否查找本地网络上的设备，请点按“允许”。",
+    "localNetworkChecking": "正在检查本地网络访问权限…",
+    "localNetworkDenied": "ibl.ai 的本地网络访问权限已关闭，Code 无法连接到你的电脑。请在“设置”中开启后返回此处。",
+    "openSettings": "打开设置",
+    "disconnect": "断开连接",
+    "phoneAccess": "手机访问",
+    "phoneAccessEnable": "启用",
+    "phoneAccessDisable": "停用",
+    "phoneAccessAddress": "地址",
+    "phoneAccessHint": "在手机上打开 Code，输入此地址和密码。",
+    "phoneAccessOffHint": "允许你的手机在这台电脑上使用 Code。",
+    "scanQr": "扫描二维码",
+    "orTypeManually": "或手动输入",
+    "cameraDenied": "相机访问被拒绝 — 请手动输入地址。",
+    "notAPairingCode": "该二维码不是 Code 配对码。",
+    "closeScanner": "关闭扫描器",
+    "scanHint": "将相机对准电脑上显示的配对二维码。"
   },
   "chatCodePermissionCard": {
     "title": "代码模式需要你的许可",
@@ -2406,5 +2436,12 @@
     },
     "allow": "允许",
     "deny": "拒绝"
+  },
+  "appUpdatePrompt": {
+    "title": "有可用更新",
+    "description": "版本 {version} 已可安装。您正在使用旧版本。",
+    "updateNow": "立即更新",
+    "updating": "正在更新…",
+    "later": "稍后"
   }
 }

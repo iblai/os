@@ -510,7 +510,13 @@
     "coworkConsentConfirm": "Continuer",
     "coworkNeedsAccessibility": "Cowork a besoin de l’accès Accessibilité pour contrôler votre ordinateur. Accordez-le dans Réglages Système › Confidentialité et sécurité › Accessibilité, puis redémarrez l’app et réactivez Cowork.",
     "coworkNeedsScreenRecording": "Cowork a besoin de l’accès Enregistrement de l’écran pour lire vos fenêtres. Accordez-le dans Réglages Système › Confidentialité et sécurité › Enregistrement de l’écran, puis redémarrez l’app et réactivez Cowork.",
-    "skills": "Compétences"
+    "skills": "Compétences",
+    "coworkNeedsSession": "Connectez-vous d’abord : Cowork a besoin de votre session de plateforme pour joindre le modèle.",
+    "coworkTabNote": "Lit cet onglet et agit dessus à votre place — jamais dans les champs de mot de passe ou de paiement. Ce qu’il lit est envoyé à ibl.ai pour déterminer l’étape suivante.",
+    "coworkApprovalsLabel": "Approbations",
+    "coworkApprovalsManual": "Me demander",
+    "coworkApprovalsAuto": "Automatique",
+    "coworkApprovalsAutoHint": "Cowork clique, saisit et soumet des formulaires sans demander. À utiliser uniquement sur des sites de confiance."
   },
   "chatInputFormMemoryMenu": {
     "yourMemory": "Votre mémoire",
@@ -2388,7 +2394,31 @@
     "permissionDialogTitle": "Comment Code doit-il demander votre accord ?",
     "permissionDialogDescription": "Code peut modifier des fichiers et exécuter des commandes dans votre espace de travail. Choisissez s’il doit vous consulter d’abord ; vous pourrez le changer plus tard dans le panneau Code.",
     "permissionDialogManualAction": "Me demander à chaque fois",
-    "permissionDialogAutoAction": "Approuver automatiquement"
+    "permissionDialogAutoAction": "Approuver automatiquement",
+    "connectTitle": "Votre ordinateur",
+    "connectHint": "Dans l'app de bureau, ouvrez Code et activez l'accès depuis le téléphone, puis saisissez ici son adresse et son mot de passe.",
+    "connectedTo": "Connecté à",
+    "desktopUnreachable": "Votre ordinateur est injoignable — l'app de bureau est-elle ouverte sur le même réseau ?",
+    "hostPasswordLabel": "Mot de passe",
+    "connect": "Se connecter",
+    "connecting": "Connexion…",
+    "localNetworkHint": "Si votre téléphone demande à trouver des appareils sur votre réseau local, touchez Autoriser.",
+    "localNetworkChecking": "Vérification de l’accès au réseau local…",
+    "localNetworkDenied": "L’accès au réseau local est désactivé pour ibl.ai, donc Code ne peut pas joindre votre ordinateur. Activez-le dans Réglages, puis revenez ici.",
+    "openSettings": "Ouvrir les Réglages",
+    "disconnect": "Se déconnecter",
+    "phoneAccess": "Accès depuis le téléphone",
+    "phoneAccessEnable": "Activer",
+    "phoneAccessDisable": "Désactiver",
+    "phoneAccessAddress": "Adresse",
+    "phoneAccessHint": "Sur votre téléphone, ouvrez Code et saisissez cette adresse et ce mot de passe.",
+    "phoneAccessOffHint": "Autorisez votre téléphone à utiliser Code sur cet ordinateur.",
+    "scanQr": "Scanner le code QR",
+    "orTypeManually": "ou saisissez-le manuellement",
+    "cameraDenied": "Accès à la caméra refusé — saisissez l'adresse manuellement.",
+    "notAPairingCode": "Ce code QR n'est pas un code d'appairage Code.",
+    "closeScanner": "Fermer le scanner",
+    "scanHint": "Pointez la caméra vers le code QR d'appairage affiché sur votre ordinateur."
   },
   "chatCodePermissionCard": {
     "title": "Code a besoin de votre autorisation",
@@ -2406,5 +2436,12 @@
     },
     "allow": "Autoriser",
     "deny": "Refuser"
+  },
+  "appUpdatePrompt": {
+    "title": "Mise à jour disponible",
+    "description": "La version {version} est prête à être installée. Vous utilisez une version plus ancienne.",
+    "updateNow": "Mettre à jour",
+    "updating": "Mise à jour…",
+    "later": "Plus tard"
   }
 }

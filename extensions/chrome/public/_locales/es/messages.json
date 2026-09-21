@@ -1,0 +1,97 @@
+{
+  "actionBack": {
+    "message": "Volver atrás"
+  },
+  "actionClick": {
+    "message": "Clic en"
+  },
+  "actionNavigate": {
+    "message": "Abrir"
+  },
+  "actionReadPage": {
+    "message": "Leer la página"
+  },
+  "actionScroll": {
+    "message": "Desplazar"
+  },
+  "actionSelect": {
+    "message": "Seleccionar en"
+  },
+  "actionTitle": {
+    "message": "Abrir ibl.ai"
+  },
+  "actionType": {
+    "message": "Escribir en"
+  },
+  "actionWait": {
+    "message": "Esperar"
+  },
+  "appDescription": {
+    "message": "Chatea con tus agentes de ibl.ai desde un panel lateral de Chrome, en cualquier página, y deja que naveguen por ti."
+  },
+  "appName": {
+    "message": "ibl.ai"
+  },
+  "declined": {
+    "message": "Rechazado."
+  },
+  "errorAccess": {
+    "message": "Tu sesión ya no es válida. Inicia sesión de nuevo."
+  },
+  "errorCredits": {
+    "message": "No hay créditos suficientes en esta plataforma."
+  },
+  "errorGeneric": {
+    "message": "Algo salió mal: $MESSAGE$",
+    "placeholders": {
+      "message": {
+        "content": "$1"
+      }
+    }
+  },
+  "errorRunInProgress": {
+    "message": "Ya hay una ejecución en curso."
+  },
+  "errorWorkerGone": {
+    "message": "La extensión dejó de responder, así que la ejecución terminó. Vuelve a intentarlo."
+  },
+  "hostBlocked": {
+    "message": "$HOST$ no es una página http o https, así que no se puede controlar.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "noActiveTab": {
+    "message": "$URL$ no se puede controlar: solo las páginas http y https. Cambia a la página en la que quieres que trabaje.",
+    "placeholders": {
+      "url": {
+        "content": "$1"
+      }
+    }
+  },
+  "noModels": {
+    "message": "No hay modelos disponibles en esta plataforma."
+  },
+  "refused": {
+    "message": "Rechazado: $REASON$",
+    "placeholders": {
+      "reason": {
+        "content": "$1"
+      }
+    }
+  },
+  "signIn": {
+    "message": "Iniciar sesión"
+  },
+  "signInFailed": {
+    "message": "No se pudo iniciar sesión. Inténtalo de nuevo."
+  },
+  "stepLimit": {
+    "message": "Detenido tras el número máximo de pasos."
+  },
+  "tokenLimit": {
+    "message": "Detenido: la ejecución agotó su presupuesto de tokens."
+  }
+}

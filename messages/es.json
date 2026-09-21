@@ -510,7 +510,13 @@
     "coworkConsentConfirm": "Continuar",
     "coworkNeedsAccessibility": "Cowork necesita acceso de Accesibilidad para controlar tu equipo. Concédelo en Ajustes del Sistema › Privacidad y seguridad › Accesibilidad, reinicia la app y vuelve a activar Cowork.",
     "coworkNeedsScreenRecording": "Cowork necesita acceso de Grabación de pantalla para leer tus ventanas. Concédelo en Ajustes del Sistema › Privacidad y seguridad › Grabación de pantalla, reinicia la app y vuelve a activar Cowork.",
-    "skills": "Habilidades"
+    "skills": "Habilidades",
+    "coworkNeedsSession": "Inicia sesión primero: Cowork necesita tu sesión de la plataforma para acceder al modelo.",
+    "coworkTabNote": "Lee esta pestaña y actúa en ella por ti: nunca en campos de contraseña o de pago. Lo que lee se envía a ibl.ai para decidir el siguiente paso.",
+    "coworkApprovalsLabel": "Aprobaciones",
+    "coworkApprovalsManual": "Preguntarme",
+    "coworkApprovalsAuto": "Automático",
+    "coworkApprovalsAutoHint": "Cowork hace clic, escribe y envía formularios sin preguntar. Úsalo solo en sitios de confianza."
   },
   "chatInputFormMemoryMenu": {
     "yourMemory": "Tu memoria",
@@ -2388,7 +2394,31 @@
     "permissionDialogTitle": "¿Cómo debe pedir permiso Code?",
     "permissionDialogDescription": "Code puede editar archivos y ejecutar comandos en tu espacio de trabajo. Elige si debe consultarte antes; podrás cambiarlo más tarde en el panel de Code.",
     "permissionDialogManualAction": "Preguntarme cada vez",
-    "permissionDialogAutoAction": "Aprobar automáticamente"
+    "permissionDialogAutoAction": "Aprobar automáticamente",
+    "connectTitle": "Tu computadora",
+    "connectHint": "En la app de escritorio, abre Code y activa el acceso desde el teléfono; luego ingresa aquí su dirección y contraseña.",
+    "connectedTo": "Conectado a",
+    "desktopUnreachable": "No se puede alcanzar tu computadora. ¿La app de escritorio está abierta en la misma red?",
+    "hostPasswordLabel": "Contraseña",
+    "connect": "Conectar",
+    "connecting": "Conectando…",
+    "localNetworkHint": "Si tu teléfono pide buscar dispositivos en tu red local, toca Permitir.",
+    "localNetworkChecking": "Comprobando el acceso a la red local…",
+    "localNetworkDenied": "El acceso a la red local está desactivado para ibl.ai, así que Code no puede conectarse a tu ordenador. Actívalo en Ajustes y vuelve aquí.",
+    "openSettings": "Abrir Ajustes",
+    "disconnect": "Desconectar",
+    "phoneAccess": "Acceso desde el teléfono",
+    "phoneAccessEnable": "Activar",
+    "phoneAccessDisable": "Desactivar",
+    "phoneAccessAddress": "Dirección",
+    "phoneAccessHint": "En tu teléfono, abre Code e ingresa esta dirección y contraseña.",
+    "phoneAccessOffHint": "Permite que tu teléfono use Code en esta computadora.",
+    "scanQr": "Escanear código QR",
+    "orTypeManually": "o ingrésalo manualmente",
+    "cameraDenied": "Se denegó el acceso a la cámara: ingresa la dirección manualmente.",
+    "notAPairingCode": "Ese código QR no es un código de emparejamiento de Code.",
+    "closeScanner": "Cerrar escáner",
+    "scanHint": "Apunta la cámara al código QR de emparejamiento que se muestra en tu computadora."
   },
   "chatCodePermissionCard": {
     "title": "Código necesita tu permiso",
@@ -2406,5 +2436,12 @@
     },
     "allow": "Permitir",
     "deny": "Denegar"
+  },
+  "appUpdatePrompt": {
+    "title": "Actualización disponible",
+    "description": "La versión {version} está lista para instalar. Estás usando una versión anterior.",
+    "updateNow": "Actualizar ahora",
+    "updating": "Actualizando…",
+    "later": "Más tarde"
   }
 }

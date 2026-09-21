@@ -567,49 +567,15 @@ const PROVIDER_NAME_BY_ALIAS: Record<string, string> = {
  * `getProviderName('Microsoft') === 'azure_openai'`,
  * `getProviderName('Meta') === 'llama'`, `getProviderName('Google') === 'google'`.
  * Unknown providers return their normalized (lowercased, alphanumeric-only) form.
- * This is the single source of truth for provider identity (dedup/merge) and
- * for logo/name resolution via {@link getLLMProviderDetails}.
+ * This is the single source of truth for provider identity (dedup/merge).
+ * Provider display names and logos are backend-owned; see
+ * `hooks/use-llm-provider-details.ts`.
  */
 export function getProviderName(llmProvider: string): string {
   const normalized = (llmProvider ?? '')
     .toLowerCase()
     .replace(/[^a-z0-9]/g, '');
   return PROVIDER_NAME_BY_ALIAS[normalized] ?? normalized;
-}
-
-// Logo + display name keyed by canonical provider name (see getProviderName).
-const PROVIDER_DETAILS_BY_NAME: Record<string, { logo: string; name: string }> =
-  {
-    groq: { logo: '/llm-groq-provider.png', name: 'Groq' },
-    nvidia: { logo: '/llm-nvidia-provider.webp', name: 'NVIDIA' },
-    azure_openai: { logo: '/llm-microsoft-provider.png', name: 'Microsoft' },
-    openai: { logo: '/llm-openai-provider-2.svg', name: 'OpenAI' },
-    mistral: { logo: '/llm-mistral-provider.jpeg', name: 'Mistral' },
-    google: { logo: '/llm-google-provider.svg', name: 'Google' },
-    llama: { logo: '/llm-llama-provider.jpeg', name: 'Meta' },
-    anthropic: { logo: '/llm-claude-provider.png', name: 'Anthropic' },
-    perplexity: { logo: '/llm-perplexity-provider.webp', name: 'Perplexity' },
-    deepseek: { logo: '/llm-deepseek-provider.png', name: 'DeepSeek' },
-    xai: { logo: '/llm-xai-provider.jpg', name: 'xAI' },
-    bedrock: { logo: '/llm-amazon-provider.png', name: 'Amazon' },
-    alibaba: { logo: '/llm-alibaba-provider.png', name: 'Alibaba' },
-    ibm: { logo: '/llm-ibm-provider.png', name: 'IBM' },
-    iblai: { logo: '/llm-iblai-provider.png', name: 'ibl.ai' },
-  };
-
-export function getLLMProviderDetails(llmProvider: string, llmName?: string) {
-  const name = getProviderName(llmProvider);
-  // OpenAI and Google use a model-specific logo when a concrete model is named.
-  if (name === 'openai' && llmName)
-    return { logo: '/llm-openai-provider.jpg', name: 'OpenAI' };
-  if (name === 'google' && llmName)
-    return { logo: '/llm-gemini-provider.png', name: 'Google' };
-  return (
-    PROVIDER_DETAILS_BY_NAME[name] ?? {
-      logo: '/llm-generic-provider.png',
-      name: llmProvider,
-    }
-  );
 }
 
 // Model wire keys whose raw form is not presentable, keyed the same way as
@@ -1454,6 +1420,17 @@ export function getUserOS() {
     return 'Android';
   }
   return 'Unknown OS';
+}
+
+/**
+ * True on devices whose primary pointer is a finger (phones, tablets) — where
+ * focusing a text field raises an on-screen keyboard. Unlike `isMobileOS`,
+ * this is capability-based, so it also covers touch-first desktop builds.
+ */
+export function hasCoarsePointer(): boolean {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function')
+    return false;
+  return window.matchMedia('(pointer: coarse)')?.matches ?? false;
 }
 
 export function isMobileOS(): boolean {

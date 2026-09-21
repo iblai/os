@@ -30,8 +30,11 @@ export function getQueryLabel(toolCall: ToolCallInfo): string | null {
         const parsed = JSON.parse(match[1].replace(/'/g, '"'));
         const val = parsed.query ?? parsed.q ?? parsed.input;
         if (val) return val;
-      } catch (e) {
-        console.error('[ToolCallIndicator] Failed to parse log string:', e);
+      } catch {
+        // Not every log snippet is JSON (apostrophes inside the payload break
+        // the quote swap above). That is expected input, not an error — and
+        // this runs inside a memo comparator on every streaming tick, so
+        // logging here flooded the console on phones.
       }
     }
   }

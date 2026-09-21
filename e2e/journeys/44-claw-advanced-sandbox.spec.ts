@@ -780,6 +780,142 @@ test.describe('Journey 44: CLAW Advanced Sandbox — deeper lifecycle', () => {
     }
   });
 
+  // ── TC17: Agent-config LLM provider/model picker stacking (issue #2502) ──
+  //
+  // Picking a provider in the Sandbox tab's "Select Provider" picker opens
+  // the model picker ON TOP, with the provider picker staying MOUNTED
+  // underneath (previously it unmounted — the bug this fixes). Escape on
+  // the model picker returns to the still-open provider list; a second
+  // Escape dismisses the provider picker itself.
+  //
+  // Radix marks the underlying "Select Provider" dialog `aria-hidden="true"`
+  // (a DismissableLayer inert convention) while the model picker sits on
+  // top of it — it stays fully mounted and rendered, just excluded from the
+  // accessibility tree. A plain `getByRole('dialog', ...)` query respects
+  // that exclusion and resolves to ZERO elements while it's inert (matching
+  // "element(s) not found", not "found but hidden"), which is why an
+  // earlier pass at this test misread the stacking fix as broken.
+  // `SandboxTab.providerPickerDialog` is built with `includeHidden: true`
+  // specifically so this checkpoint can tell "aria-hidden but still
+  // attached" apart from "actually unmounted".
+  test('admin opens the Claw agent model picker and the provider picker stays mounted under the model picker', async ({
+    page,
+    editMentorPage,
+  }) => {
+    // claw-17
+    await editMentorPage.navigateToTab('Sandbox');
+    await waitForPageReady(page);
+
+    const sandbox = new SandboxTab(page, editMentorPage.dialog);
+    const originalKind = await sandbox.getActiveKind();
+    let createdConnectionHere = false;
+
+    try {
+      if (originalKind !== 'claw') {
+        await sandbox.selectKind('claw');
+      }
+
+      const connected = await sandbox.ensureConnected();
+      if (!connected.instanceName) {
+        test.skip(
+          true,
+          'No connectable OpenClaw instance available — the agent model picker requires a wired sandbox',
+        );
+        return;
+      }
+      createdConnectionHere = connected.createdConnection;
+
+      await sandbox.openProviderPicker();
+
+      const noProviders = sandbox.providerPickerDialog.getByText(
+        /no providers available|failed to load providers/i,
+      );
+      let noProvidersVisible = false;
+      try {
+        await noProviders.waitFor({ state: 'visible', timeout: 5_000 });
+        noProvidersVisible = true;
+      } catch {
+        noProvidersVisible = false;
+      }
+      if (noProvidersVisible) {
+        await page.keyboard.press('Escape');
+        test.skip(
+          true,
+          'This tenant/user has no LLM providers configured for the agent picker',
+        );
+        return;
+      }
+
+      // NOT sandbox.providerPickerDialog.locator('button').first() — the
+      // dialog's own Close (X) button is also a <button> and renders before
+      // the provider grid, so .first() would hit Close instead of a card.
+      const firstProviderCard = sandbox.providerPickerCards.first();
+      await expect(firstProviderCard).toBeVisible({ timeout: 10_000 });
+      await firstProviderCard.click();
+
+      // The model picker opens ON TOP of the still-mounted provider picker
+      // — this is the core #2502 fix (the provider picker previously
+      // unmounted when a provider was picked). It is now `aria-hidden`
+      // (Radix's inert convention for a background dialog), so the proof
+      // that it's still MOUNTED — not just present-and-visible — is
+      // `toBeAttached()` via the `includeHidden: true` locator, which
+      // sees past that aria-hidden state.
+      await expect(sandbox.modelPickerDialog).toBeVisible({
+        timeout: 10_000,
+      });
+      await expect(sandbox.providerPickerDialog).toBeAttached();
+
+      // Dismissing the model picker (Escape) reveals the still-mounted
+      // provider picker again — it becomes a normal, non-aria-hidden
+      // dialog once more.
+      await page.keyboard.press('Escape');
+      await expect(sandbox.modelPickerDialog).not.toBeVisible({
+        timeout: 10_000,
+      });
+      await expect(sandbox.providerPickerDialog).toBeVisible({
+        timeout: 10_000,
+      });
+
+      // A second Escape dismisses the provider picker itself.
+      await page.keyboard.press('Escape');
+      await expect(sandbox.providerPickerDialog).not.toBeVisible({
+        timeout: 10_000,
+      });
+    } finally {
+      if (createdConnectionHere) {
+        try {
+          await editMentorPage.navigateToTab('Sandbox');
+          await waitForPageReady(page);
+          if (await sandbox.isConnected(5_000)) {
+            await sandbox.disconnect();
+          }
+        } catch {
+          // Best-effort
+        }
+      }
+      if (originalKind !== 'claw') {
+        // Best-effort: closing two stacked OverlayModal pickers can leave a
+        // stale `[data-iblai-dialog-interaction-layer]` backdrop intercepting
+        // clicks (an SDK quirk under this nested-picker flow, not something
+        // this test needs to work around further) — this mentor is deleted
+        // in afterAll regardless, so failing to restore its original kind
+        // is harmless.
+        try {
+          await editMentorPage.navigateToTab('Sandbox');
+          await waitForPageReady(page);
+          await sandbox.selectKind(originalKind);
+        } catch {
+          // Best-effort
+        }
+      }
+      try {
+        await editMentorPage.close();
+      } catch {
+        // Best-effort — mentor is deleted in afterAll regardless.
+      }
+    }
+  });
+
   test.afterAll(async ({ browser }, testInfo) => {
     await tracker44B.deleteAll(browser, testInfo);
   });
