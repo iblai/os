@@ -9,6 +9,20 @@ export class DisclaimersTab {
   // H20 fix: the Edit button is just labeled "Edit", not "Edit Agreement"
   readonly editButtons: Locator;
 
+  // #2507: "View Agreements" button + the agreements list dialog it opens.
+  // The button lives inside the Disclaimers tab (scoped to `dialog`), but the
+  // dialog it opens is a Radix Dialog rendered via Portal to document.body —
+  // a sibling of the Edit Agent dialog, not a descendant — so everything
+  // below is scoped from `page`, not `dialog`.
+  readonly viewAgreementsButton: Locator;
+  readonly agreementsDialog: Locator;
+  readonly agreementsSummary: Locator;
+  readonly agreementsCount: Locator;
+  readonly agreementsBanner: Locator;
+  readonly agreementsSearch: Locator;
+  readonly agreementsEmpty: Locator;
+  readonly agreementsLoading: Locator;
+
   constructor(page: Page, dialog: Locator) {
     this.page = page;
     this.dialog = dialog;
@@ -19,6 +33,50 @@ export class DisclaimersTab {
     // H20 fix: buttons are just "Edit" — first is User Agreement, second is Advisory
     this.editButtons = dialog.getByRole('button', { name: 'Edit' });
     this.saveButton = dialog.getByRole('button', { name: /save/i }).first();
+
+    this.viewAgreementsButton = dialog.getByTestId('view-agreements-button');
+    this.agreementsDialog = page.getByTestId('disclaimer-agreements');
+    this.agreementsSummary = this.agreementsDialog.getByTestId(
+      'disclaimer-agreements-summary',
+    );
+    this.agreementsCount = this.agreementsDialog.getByTestId(
+      'disclaimer-agreements-count',
+    );
+    this.agreementsBanner = this.agreementsDialog.getByTestId(
+      'disclaimer-agreements-banner',
+    );
+    this.agreementsSearch = this.agreementsDialog.getByTestId(
+      'disclaimer-agreements-search',
+    );
+    this.agreementsEmpty = this.agreementsDialog.getByTestId(
+      'disclaimer-agreements-empty',
+    );
+    this.agreementsLoading = this.agreementsDialog.getByTestId(
+      'disclaimer-agreements-loading',
+    );
+  }
+
+  /** A single agreement row, scoped by the platform username on `data-username`. */
+  agreementRow(username: string): Locator {
+    return this.agreementsDialog.locator(
+      `[data-testid="disclaimer-agreement-row"][data-username="${username}"]`,
+    );
+  }
+
+  async openAgreements(): Promise<void> {
+    await expect(this.viewAgreementsButton).toBeVisible({ timeout: 10_000 });
+    await this.viewAgreementsButton.click();
+    await expect(this.agreementsDialog).toBeVisible({ timeout: 10_000 });
+  }
+
+  async closeAgreements(): Promise<void> {
+    // Click the dialog's own Close button rather than pressing Escape: an open
+    // Radix tooltip (e.g. after hovering an agreed-at cell) swallows the first
+    // Escape, which would leave the dialog open.
+    await this.agreementsDialog
+      .getByRole('button', { name: /^close$/i })
+      .click();
+    await expect(this.agreementsDialog).not.toBeVisible({ timeout: 10_000 });
   }
 
   async enableUserAgreement(): Promise<void> {

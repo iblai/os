@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.152.0](https://github.com/iblai/os/compare/v0.151.1...v0.152.0) (2026-09-22)
+
+### Features
+
+* **mentor:** add AgreementsModal listing who accepted the user agreement ([2c51bde](https://github.com/iblai/os/commit/2c51bdee4ef19b223395aa64c1ddd670f489c8ce))
+* **mentor:** open the agreements list from the Disclaimers tab ([0dfded5](https://github.com/iblai/os/commit/0dfded5084a0fa723d0612a56ba19b88ab6a89de))
+
+### Refactors
+
+* **mentor:** give the agreements dialog a short accessible description ([d385ca6](https://github.com/iblai/os/commit/d385ca69c84be849b59e8253dbfd74807aa4e710))
+
+### Chores
+
+* **deps:** bump @iblai/iblai-js to 2.15.0 ([d16bc3a](https://github.com/iblai/os/commit/d16bc3a0a1203e1f89f6c0c423ddde14e1564e18)), closes [#2092](https://github.com/iblai/os/issues/2092)
+
+### Documentation
+
+* **e2e:** register disc-15..disc-19 for the agreements dialog ([e92b667](https://github.com/iblai/os/commit/e92b667b5b5467989185294b10ebb933223b8f12))
+
+### Styles
+
+* format CHANGELOG.md with prettier ([b5533a0](https://github.com/iblai/os/commit/b5533a0f8a2b0416ef500131545b10fd4c867976))
+
+### Tests
+
+* **e2e:** cover the Disclaimers agreements dialog (journey 22-F) ([a26b629](https://github.com/iblai/os/commit/a26b629c50b1f8c68edd2c3d77c642544440775b))
+* **mentor:** cover the agreements modal and the View Agreements gating ([40342be](https://github.com/iblai/os/commit/40342be2a3a1da590d3f0bc26fd898df9caeb51c))
+
 ## [0.151.1](https://github.com/iblai/os/compare/v0.151.0...v0.151.1) (2026-09-21)
 
 ### Bug Fixes
