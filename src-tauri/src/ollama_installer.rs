@@ -166,8 +166,8 @@ pub async fn download_and_install_ollama() -> Result<(), String> {
         // 3) Last resort: the official install script. On macOS it downloads
         //    Ollama-darwin.zip and installs /Applications/Ollama.app. (The
         //    /usr/local/bin symlink step may want sudo and is skipped when run
-        //    non-interactively — the app still works and we launch it with
-        //    `open -a Ollama`.)
+        //    non-interactively — the app still works; we run the server headless
+        //    via `ollama serve`, never `open -a Ollama` (no GUI).)
         println!("[Ollama] Installing via install script (curl -fsSL https://ollama.com/install.sh | sh)...");
         let status = create_command("sh")
             .arg("-c")

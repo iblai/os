@@ -50,7 +50,8 @@ pub fn is_windows() -> bool {
     cfg!(target_os = "windows")
 }
 
-/// Check if the current OS supports Foundry Local (Windows or macOS)
+/// Check if the current OS supports Foundry Local (Windows or macOS). Other
+/// platforms (Linux) use Ollama.
 pub fn is_foundry_supported_os() -> bool {
     cfg!(any(target_os = "windows", target_os = "macos"))
 }
@@ -618,4 +619,22 @@ pub fn load_foundry_model(model_id: &str) -> Result<(), String> {
 
     println!("[FoundryManager] Model loaded successfully: {}", model_id);
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Foundry Local is supported on Windows and macOS; Linux falls through to
+    /// Ollama.
+    #[test]
+    fn foundry_is_supported_on_windows_and_macos() {
+        assert_eq!(
+            is_foundry_supported_os(),
+            cfg!(any(target_os = "windows", target_os = "macos"))
+        );
+
+        #[cfg(target_os = "linux")]
+        assert!(!is_foundry_supported_os(), "Linux uses Ollama, not Foundry");
+    }
 }
