@@ -32,7 +32,7 @@
 
 ### Bug Fixes
 
-* **auth:** save current location as redirect-to before join-tenant ([42d62ec](https://github.com/iblai/os/commit/42d62ec36277bc8c9a8c85224dfb13e0d8c57afd))
+- **auth:** save current location as redirect-to before join-tenant ([42d62ec](https://github.com/iblai/os/commit/42d62ec36277bc8c9a8c85224dfb13e0d8c57afd))
 
 ## [0.151.0](https://github.com/iblai/os/compare/v0.150.2...v0.151.0) (2026-09-18)
 
