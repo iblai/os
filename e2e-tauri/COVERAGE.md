@@ -1,6 +1,6 @@
 # Tauri Desktop E2E Coverage — Journey Checklist
 
-> Last updated: 2026-09-03 | 39 checkpoints (20 covered, 19 pending) | 3 journeys | 100% of reproducible checkpoints covered | Driver: WebdriverIO + tauri-driver
+> Last updated: 2026-09-23 | 40 checkpoints (20 covered, 20 pending) | 3 journeys | 100% of reproducible checkpoints covered | Driver: WebdriverIO + tauri-driver
 
 This is the desktop counterpart to the web `e2e/COVERAGE.md`. It tracks only what
 is exercised by driving the **built desktop binary** through `tauri-driver` (see
@@ -97,7 +97,7 @@ two vendored release workflows and are exercised by real releases.
 
 ---
 
-## Journey 3: Code Mode (opencode) (28 checkpoints: 13 covered, 15 pending) — `journeys/03-code-mode.spec.ts`
+## Journey 3: Code Mode (opencode) (29 checkpoints: 13 covered, 16 pending) — `journeys/03-code-mode.spec.ts`
 
 > **Partly covered.** The installer and per-chat state (code-01…07) run against
 > the REAL compiled binary through the live Tauri IPC bridge (`window.__TAURI__`):
@@ -159,3 +159,4 @@ two vendored release workflows and are exercised by real releases.
 - [ ] `code-26` A managed opencode older than the pinned version is re-downloaded at boot, and a user's own PATH copy is never replaced _(the upgrade downloads a ~100MB release, too heavy for the harness; the decision is covered by `only_a_present_and_outdated_managed_copy_wants_an_upgrade` in `opencode_installer.rs`)_
 - [ ] `code-27` A new web project walks the 3-step flow: the default-template question, then the local-preview question (dev server + browser open at http://localhost:3000 only on yes), then one deploy question per project (yes = deploy now and auto-redeploy on later changes, no = deploy only on request), and replies never name the hosting provider _(needs a tool-calling model driving real turns, the same harness gap as code-08..10/15; the instruction text is covered meanwhile by `the_iblai_guidance_keeps_its_load_bearing_lines` in `opencode_proxy.rs`)_
 - [ ] `code-28` Text the agent emits before a tool call lands in the thinking section, never the reply bubble; the visible reply is what follows the last tool call _(needs a tool-calling model driving real turns, the same harness gap as code-08..10/15; the reclassification is covered meanwhile by `pre_tool_text_is_reclassified_as_narration` in `opencode_acp.rs`)_
+- [ ] `code-29` A dev server the agent starts for the local preview is still running after the reply and after the opencode process of that chat is torn down _(needs a tool-calling model driving real turns, the same harness gap as code-08..10/15; covered meanwhile by `the_prescribed_dev_server_start_outlives_the_shell_call_and_opencode` in `opencode_installer.rs`, which drives the pinned binary's shell tool with a scripted model)_

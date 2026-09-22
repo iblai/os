@@ -71,6 +71,16 @@ rare and succinct — only where the code alone would cost the reader time.
 - For searching, prefer the Glob and Grep tools, and run independent tool \
 calls (especially file reads) in parallel. Never chain shell commands with \
 printed separators like `echo \"====\"` just to batch their output.
+- Long-running processes — dev servers (`pnpm dev`, `next dev`), \
+watchers, anything that does not exit on its own — MUST run in the \
+background, never in the foreground: redirect all of their output to a \
+log file and end the command with `&`, as a shell call of its own with \
+nothing chained after it, then read the log in a separate call. A \
+foreground run, a timeout (the call's or a `timeout` wrapper), a bare \
+`cmd &` with its output still attached, or a failing command chained \
+after it all end with the shell tool killing the process before you \
+reply — the user then finds nothing running. This supersedes any skill \
+that says `pnpm dev &`.
 - Git safety: the worktree may carry the user's own changes — NEVER revert \
 or undo changes you did not make, never run destructive commands like \
 `git reset --hard` or `git checkout --`, do not amend commits, and use \
@@ -108,12 +118,14 @@ its expected configuration).
 never skipped: after building or changing a website, ask ONE short \
 question — whether they want a local preview at http://localhost:3000. \
 Never start a dev server or open a browser at localhost without that \
-yes. On yes: start the dev server (`pnpm dev`, in the background) unless \
-one is already running — never spawn a second — then give the user the \
+yes. On yes: start the dev server unless one is already running — never \
+spawn a second — with exactly \
+`pnpm dev > \"${TMPDIR:-/tmp}/iblai-dev-${PWD##*/}.log\" 2>&1 &` as a \
+shell call of its own and read that log in a separate call, then give the user the \
 URL and open it in their browser — macOS: `open -a \"Google Chrome\" \
 <url>` (plain `open <url>` as a fallback), Linux: `xdg-open <url>`, \
 Windows: `start <url>`. The URL is http://localhost:3000 unless \
-`pnpm dev` prints a different one (busy port) — report the URL it \
+the log shows a different one (busy port) — report the URL it \
 actually prints. While the server keeps running, later changes \
 hot-reload — do not re-ask and do not reopen the browser. If they \
 decline, move on — they can ask for the preview any time. Run no checks \
@@ -1775,6 +1787,26 @@ mod tests {
                 && text.contains("Never start a dev server")
                 && text.contains("already running"),
             "the ask-first local-preview rule must survive edits: {text}"
+        );
+        // opencode's shell tool SIGTERMs everything a call started when the
+        // call times out, fails or is stopped — a dev server run in the
+        // foreground died right before the reply that said it was running.
+        // `the_prescribed_dev_server_start_outlives_the_shell_call_and_opencode`
+        // (opencode_installer.rs) proves this exact command survives.
+        assert!(
+            text.contains("`pnpm dev > \"${TMPDIR:-/tmp}/iblai-dev-${PWD##*/}.log\" 2>&1 &`")
+                && text.contains("as a shell call of its own")
+                && text.contains("read that log in a separate call"),
+            "the detached dev-server start must survive edits: {text}"
+        );
+        assert!(
+            text.contains("Long-running processes")
+                && text.contains("MUST run in the background, never in the foreground")
+                && text.contains("redirect all of their output to a log file")
+                && text.contains("a `timeout` wrapper")
+                && text.contains("a bare `cmd &` with its output still attached")
+                && text.contains("supersedes any skill that says `pnpm dev &`"),
+            "the long-running-process rule must survive edits: {text}"
         );
         assert!(
             text.contains("iblai-vibe-ops-deploy")

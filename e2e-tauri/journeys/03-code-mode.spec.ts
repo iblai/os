@@ -607,5 +607,13 @@ describe('Journey 3: Code Mode (opencode)', () => {
          meanwhile by pre_tool_text_is_reclassified_as_narration in
          opencode_acp.rs */
     });
+
+    it.skip('code-29: a dev server the agent starts for the local preview is still running after the reply and after the opencode process of that chat is torn down', () => {
+      /* pending — needs a tool-calling model driving real turns (the same
+         harness gap as code-08..10/15); covered meanwhile by
+         the_prescribed_dev_server_start_outlives_the_shell_call_and_opencode
+         in opencode_installer.rs, which drives the pinned binary's shell
+         tool with a scripted model */
+    });
   });
 });

@@ -975,6 +975,27 @@ data: {\"id\":\"c1\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\
 data: {\"id\":\"c1\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\n\
 data: [DONE]\n\n";
 
+        /// A completion that calls opencode's shell tool (`bash`) with `command`
+        /// and a `timeout` — the shape the agent's own tool calls take.
+        fn bash_call_sse(command: &str, timeout_ms: u64) -> String {
+            let args = json!({ "command": command, "timeout": timeout_ms }).to_string();
+            let call = json!({ "id": "c2", "object": "chat.completion.chunk", "choices": [{
+                "index": 0,
+                "delta": { "role": "assistant", "tool_calls": [{
+                    "index": 0, "id": "call_1", "type": "function",
+                    "function": { "name": "bash", "arguments": args }
+                }] },
+                "finish_reason": null
+            }] });
+            let stop = json!({ "id": "c2", "object": "chat.completion.chunk", "choices": [
+                { "index": 0, "delta": {}, "finish_reason": "tool_calls" }
+            ] });
+            format!(
+                "HTTP/1.1 200 OK\r\ncontent-type: text/event-stream\r\nconnection: close\r\n\r\n\
+data: {call}\n\ndata: {stop}\n\ndata: [DONE]\n\n"
+            )
+        }
+
         /// A stub model endpoint on loopback: accepts until the test's runtime
         /// dies, records every request as `(method, path, body)`
         /// (content-length framing, same shape as the proxy tests'
@@ -986,12 +1007,25 @@ data: [DONE]\n\n";
             std::net::SocketAddr,
             std::sync::Arc<tokio::sync::Mutex<Vec<(String, String, String)>>>,
         ) {
+            stub_completions_server_with(|_| STUB_SSE.to_string()).await
+        }
+
+        /// [`stub_completions_server`] answering each request with
+        /// `respond(body)` — how a test scripts the model's side of a turn.
+        #[allow(clippy::type_complexity)]
+        async fn stub_completions_server_with(
+            respond: impl Fn(&str) -> String + Send + Sync + 'static,
+        ) -> (
+            std::net::SocketAddr,
+            std::sync::Arc<tokio::sync::Mutex<Vec<(String, String, String)>>>,
+        ) {
             use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
             let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
             let addr = listener.local_addr().unwrap();
             let seen = std::sync::Arc::new(tokio::sync::Mutex::new(Vec::new()));
             let log = seen.clone();
+            let respond = std::sync::Arc::new(respond);
 
             tokio::spawn(async move {
                 loop {
@@ -1001,6 +1035,7 @@ data: [DONE]\n\n";
                     // Per-connection task: opencode can hold several calls open
                     // at once (e.g. a title call beside the turn's own call).
                     let log = log.clone();
+                    let respond = respond.clone();
                     tokio::spawn(async move {
                         let mut data = Vec::new();
                         let mut split = None;
@@ -1031,8 +1066,9 @@ data: [DONE]\n\n";
                         let path = start.next().unwrap_or_default().to_string();
                         let body = String::from_utf8_lossy(&data[(head_end + 4).min(data.len())..])
                             .to_string();
+                        let reply = respond(&body);
                         log.lock().await.push((method, path, body));
-                        let _ = sock.write_all(STUB_SSE.as_bytes()).await;
+                        let _ = sock.write_all(reply.as_bytes()).await;
                         let _ = sock.shutdown().await;
                     });
                 }
@@ -1086,8 +1122,15 @@ data: [DONE]\n\n";
         /// across calls on purpose: that is where the session for `--continue`
         /// persists. Deliberately NOT setting `OPENCODE_CONFIG_CONTENT`: the
         /// point is the on-disk opencode.json + AGENTS.md path production
-        /// uses. Panics loudly with output tails on timeout or non-zero exit.
-        async fn run_opencode_turn(bin: &Path, scratch: &Path, args: &[&str], secs: u64) {
+        /// uses. `env` is layered on last, so it can replace `PATH`. Panics
+        /// loudly with output tails on timeout or non-zero exit.
+        async fn run_opencode_turn(
+            bin: &Path,
+            scratch: &Path,
+            args: &[&str],
+            env: &[(&str, &std::ffi::OsStr)],
+            secs: u64,
+        ) -> std::process::Output {
             let mut cmd = tokio::process::Command::new(bin);
             cmd.arg("run")
                 .args(args)
@@ -1106,6 +1149,7 @@ data: [DONE]\n\n";
                 .env("OPENCODE_DISABLE_AUTOCOMPACT", "1")
                 .env("OPENCODE_DISABLE_MODELS_FETCH", "1")
                 .env("OPENCODE_AUTH_CONTENT", "{}")
+                .envs(env.iter().copied())
                 .stdin(std::process::Stdio::null())
                 .stdout(std::process::Stdio::piped())
                 .stderr(std::process::Stdio::piped())
@@ -1121,6 +1165,7 @@ data: [DONE]\n\n";
                 tail(&out.stdout),
                 tail(&out.stderr),
             );
+            out
         }
 
         /// The guidance delivery contract, end to end against the REAL pinned
@@ -1160,7 +1205,7 @@ data: [DONE]\n\n";
             )
             .expect("guidance write A");
 
-            run_opencode_turn(&bin, s.path(), &["hi"], 120).await;
+            run_opencode_turn(&bin, s.path(), &["hi"], &[], 120).await;
             let first_turn_calls = seen.lock().await.len();
             assert!(first_turn_calls >= 1, "turn 1 never reached the stub");
 
@@ -1172,7 +1217,7 @@ data: [DONE]\n\n";
             )
             .expect("guidance write B");
 
-            run_opencode_turn(&bin, s.path(), &["--continue", "and again"], 60).await;
+            run_opencode_turn(&bin, s.path(), &["--continue", "and again"], &[], 60).await;
 
             let calls = seen.lock().await;
             assert!(
@@ -1228,6 +1273,127 @@ auxiliary path needs examining\n--- body tail ---\n{}",
                 turn2.iter().any(|b| b.contains("TURN-MARKER-B")),
                 "no turn-2 agent call carried the rewritten AGENTS.md — the per-call re-read is broken"
             );
+        }
+
+        /// The dev-server start `IBLAI_INSTRUCTIONS` prescribes must leave the
+        /// server running after its shell call AND after opencode exits — end
+        /// to end against the REAL pinned binary's shell tool.
+        ///
+        /// Upstream's shell tool waits on a call until every output pipe
+        /// closes, and SIGTERMs the call's whole process group when it times
+        /// out, exits non-zero or is aborted. A server run in the foreground
+        /// (what the agent did: dead right before its "the server is running"
+        /// reply) or as `pnpm dev &` with its output attached dies at the
+        /// call's timeout; both ride along as the control that proves this
+        /// harness sees the kill. A stand-in `pnpm` on PATH plays the server:
+        /// it records its pid and turns the SIGTERM into a marker file.
+        #[tokio::test]
+        async fn the_prescribed_dev_server_start_outlives_the_shell_call_and_opencode() {
+            const START: &str = r#"pnpm dev > "${TMPDIR:-/tmp}/iblai-dev-${PWD##*/}.log" 2>&1 &"#;
+            assert!(
+                crate::opencode_proxy::IBLAI_INSTRUCTIONS.contains(START),
+                "the guidance no longer prescribes the command this test proves"
+            );
+
+            let bin = ensure_pinned_opencode().await;
+            let s = Scratch::new("dev-server-e2e");
+            for dir in [
+                "home", "config", "data", "state", "cache", "project", "bin", "tmp",
+            ] {
+                std::fs::create_dir_all(s.path().join(dir)).unwrap();
+            }
+            let pid_file = s.path().join("server.pid");
+            let term_file = s.path().join("server.term");
+            let fake = s.path().join("bin").join("pnpm");
+            // Bounded `sleep`: a stand-in this test fails to clean up still exits.
+            std::fs::write(
+                &fake,
+                format!(
+                    "#!/bin/sh\necho $$ > '{}'\ntrap 'echo TERM >> \"{}\"; kill $! 2>/dev/null; exit 143' TERM\n\
+echo '  - Local:        http://localhost:3000'\nsleep 60 &\nwait\n",
+                    pid_file.display(),
+                    term_file.display(),
+                ),
+            )
+            .unwrap();
+            {
+                use std::os::unix::fs::PermissionsExt;
+                std::fs::set_permissions(&fake, std::fs::Permissions::from_mode(0o755)).unwrap();
+            }
+
+            // The turn's first call runs the command; the title call and the
+            // follow-up carrying the tool result (`call_1`) end the turn.
+            let command = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
+            let next = command.clone();
+            let (addr, _) = stub_completions_server_with(move |body| {
+                if body.contains("Generate a title") || body.contains("call_1") {
+                    STUB_SSE.to_string()
+                } else {
+                    bash_call_sse(&next.lock().unwrap(), 2_000)
+                }
+            })
+            .await;
+            write_stub_config(&s.path().join("config"), addr.port());
+
+            let path = std::env::join_paths(std::iter::once(s.path().join("bin")).chain(
+                std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default()),
+            ))
+            .unwrap();
+            let tmp = s.path().join("tmp");
+            let env = [("PATH", path.as_os_str()), ("TMPDIR", tmp.as_os_str())];
+
+            for (cmd, survives) in [("pnpm dev", false), ("pnpm dev &", false), (START, true)] {
+                let _ = std::fs::remove_file(&pid_file);
+                let _ = std::fs::remove_file(&term_file);
+                *command.lock().unwrap() = cmd.to_string();
+                let out = run_opencode_turn(
+                    &bin,
+                    s.path(),
+                    &[
+                        "--dangerously-skip-permissions",
+                        "--print-logs",
+                        "start the preview",
+                    ],
+                    &env,
+                    120,
+                )
+                .await;
+                let tails = format!(
+                    "--- stdout tail ---\n{}\n--- stderr tail ---\n{}",
+                    tail(&out.stdout),
+                    tail(&out.stderr)
+                );
+                let pid = std::fs::read_to_string(&pid_file).unwrap_or_else(|_| {
+                    panic!("`{cmd}` never started the stand-in server — the stub's bash call did not run\n{tails}")
+                });
+                let pid = pid.trim();
+                // Read before the cleanup kill below, which the trap also marks.
+                let sigtermed = term_file.exists();
+                if survives {
+                    let alive = std::process::Command::new("kill")
+                        .args(["-0", pid])
+                        .status()
+                        .is_ok_and(|st| st.success());
+                    let _ = std::process::Command::new("kill").arg(pid).status();
+                    assert!(
+                        alive && !sigtermed,
+                        "`{cmd}` must leave the server running after its call and after opencode \
+exits (alive: {alive}, SIGTERMed: {sigtermed})\n{tails}"
+                    );
+                    let log = std::fs::read_to_string(tmp.join("iblai-dev-project.log"))
+                        .unwrap_or_default();
+                    assert!(
+                        log.contains("http://localhost:3000"),
+                        "the server's output must land in the log the guidance says to read: {log:?}"
+                    );
+                } else {
+                    assert!(
+                        sigtermed,
+                        "control `{cmd}`: the shell tool must SIGTERM the server — without that kill \
+this harness proves nothing\n{tails}"
+                    );
+                }
+            }
         }
     }
 }
