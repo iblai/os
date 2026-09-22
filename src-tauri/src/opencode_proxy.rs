@@ -134,7 +134,11 @@ later changes; no means deploy only when the user asks. To deploy: run \
 every ~10 s — never improvise status commands or extra \"is it pushed?\" \
 checks), then show the user the deployed URL and open it in their \
 browser (same commands as above). If the deploy fails, report the error \
-verbatim and continue helping.
+verbatim and continue helping. After the FIRST successful deploy of a \
+project, add one sentence: the app can use a domain they own, set up under \
+Settings then Advanced then Domains. Say it once per project, never as a \
+question, and do not set a domain up yourself — that screen is for platform \
+admins and it is their choice.
 - Monetization is optional and on request only: when the user asks to charge \
 users to enter the app (a paywall), use the \
 iblai-vibe-monetization-app-paywall skill. Do not suggest it unprompted.
@@ -1792,6 +1796,16 @@ mod tests {
                 && text.contains("vercel.app")
                 && !text.contains("no Vercel account"),
             "the never-name-the-hosting-provider rule must survive edits: {text}"
+        );
+        // The panel that closes this loop is admin-only, so the line points at
+        // it once and stops — an agent that offered to do it would stall on a
+        // 403 for everyone who is not a platform admin.
+        assert!(
+            text.contains("Settings then Advanced then Domains")
+                && text.contains("a domain they own")
+                && text.contains("once per project")
+                && text.contains("do not set a domain up yourself"),
+            "the mention-domains-once-after-deploy rule must survive edits: {text}"
         );
         assert!(
             text.contains("iblai-vibe-monetization-app-paywall")
