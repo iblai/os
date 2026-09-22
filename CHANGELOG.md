@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.153.0](https://github.com/iblai/os/compare/v0.152.0...v0.153.0) (2026-09-22)
+
+### Features
+
+* **history:** add attachment renderer for chat-history messages ([0b18990](https://github.com/iblai/os/commit/0b18990443793f61478fdfa5620286f0149ace49))
+
+### Bug Fixes
+
+* **history:** render uploaded files and images in the history tab ([66e516b](https://github.com/iblai/os/commit/66e516bd2120786ca6dc0a86888a9195ca3e05f6))
+
+### Chores
+
+* **format:** apply prettier to CHANGELOG and pr-gate workflow ([c3c0416](https://github.com/iblai/os/commit/c3c041681e7831de1986e40b84cdba1f7059d9b3))
+
 ## [0.152.0](https://github.com/iblai/os/compare/v0.151.1...v0.152.0) (2026-09-22)
 
 ### Features
